@@ -161,13 +161,16 @@ The population test, `the_census_refuses_every_member_of_the_binding_population`
 alone (a7049a43) beside the unchanged census. Red: `panicked at
 crates/progression/tests/xp_census.rs:953:5:` by assertion, `class members: examined 30`, and all 30
 members escaped the census. The fix (f94ee7eb) makes it green: 11 passed, the same 30 members
-refused and the 10 controls, each a crate that is not progression in the same spelling, accepted.
+refused and the 30 controls (the 10 binding forms naming a crate that is not progression, in the
+same spelling, each with the three caller shapes) accepted.
 Its green commit edits a test file, `xp_census.rs`, because the census is that file's own code. Its
 two helper bindings were renamed (`fill` to `expand`, `file` to `caller`) for clippy's
 `similar_names`; no assertion changed.
 
-The three tests of the class rule replayed red at the same base: 7 passed, 3 failed, each by
-assertion, `the_census_reads_a_raw_identifier_as_its_plain_name`,
+The three tests of the class rule, applied alone to the census of 724b8d74 (the round-2 head, the
+census a7049a43 leaves unchanged), are red: 7 passed, 3 failed, each by assertion (at
+`xp_census.rs:811`, `:893` and `:963` in the order named),
+`the_census_reads_a_raw_identifier_as_its_plain_name`,
 `the_census_follows_a_crate_alias_however_it_is_written` and
 `the_census_follows_a_crate_renamed_by_a_manifest`; green at f94ee7eb.
 
@@ -176,3 +179,30 @@ S07235-CENSUS-RAW-IDENTIFIER, each `KILLED: its killer passed without the mutant
 on a committed tree. A12 on the real tree reads 160 crate source files, 15 migrations, 8 planted
 crate source files; the file count is one higher than round 1 because the merged base added a
 source file.
+
+Addendum (2026-09-30, round 3 of the review of issue 397). The class of callers was reopened across
+member crates and past comments, so the population test is regenerated from tables and the census
+takes one rule.
+
+The generated population test, and the manifest test's unreadable manifest, were committed alone
+(dddd87e2) beside the unchanged census. Red, each by assertion:
+`panicked at crates/progression/tests/xp_census.rs:1697:5:`, "members that escape the census: 864
+of 12307", the first escaping member `comment in a manifest: F07 manifest table /
+crates/@M/Cargo.toml / after a header, line 0`, the test printing `class members: examined 12307`
+and `class members escaping: 864; class controls refused: 9153`; and
+`panicked at crates/progression/tests/xp_census.rs:1906:5:` in
+`the_census_follows_a_crate_renamed_by_a_manifest`, whose refused list lacked the unreadable
+manifest; 9 passed, 2 failed. The rule (24a77705) makes both green: 11 passed,
+`class members escaping: 0; class controls refused: 0`, the 12307 members refused, the 12338
+controls accepted and every manifest read to its end. Its green commit edits a test file,
+`xp_census.rs`, because the census is that file's own code; no assertion changed between the red
+and the green.
+
+A stratified sample of 2571 cases of the population, every axis value with members and controls,
+was compiled under the pinned toolchain (cargo 1.97.0 `metadata`, rustc 1.97.0 `--emit=metadata`,
+edition 2024): rc 0 for each. Each member was compiled beside progression as the one crate that
+defines `settle`, and each control beside another crate in its place, but for a private glob's
+control, which is compiled beside progression and calls its holder's own function.
+
+A12 on the real tree reads 160 crate source files, 15 migrations, 8 planted crate source files, and
+refuses none, as before the round.

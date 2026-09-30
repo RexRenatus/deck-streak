@@ -51,14 +51,23 @@ refusal and examined count as it was.
 
 - Good, because a renamed re-export can no longer hide a caller, and the refusal names the file,
   the alias and the original.
-- Good, because a source that never names the progression crate cannot be refused for a common
-  word, so a homonym elsewhere is not a false refusal.
+- Good, because a source in a member that neither globs progression's crate root nor names any
+  name the census binds to the crate cannot be refused for a common word, so a homonym there is not
+  a false refusal.
+- Bad, because a glob of the crate root opens every file of the member that holds it: in any file
+  of that member, the member's own function called `settle`, or a homonym of one of progression's
+  renamings, is refused, even where the member's own item shadows the glob. It is a loud failure,
+  not a silent pass.
+- Bad, because the names that denote the crate are one set for the workspace: a name bound to the
+  crate in one member, or a module another member exports the crate by, is followed in every
+  member, so a member's own module of that name that holds its own `settle` is refused. It is a
+  loud failure, not a silent pass.
 - Bad, because the reading is textual: a public wrapper function that calls `settle` inside
   progression is not a `pub use` or a `pub type` and is not followed, and neither is a re-export that a
   `macro_rules!` macro in progression writes, since the census does not expand macros (a
   metavariable such as `$name` in such a macro is read as a name too, which can refuse an
   unrelated caller: a loud failure, not a silent pass). Both are progression's own code, and a
-  reviewer sees them there.
+  reviewer sees them there. Issue 445 tracks both.
 
 ### Confirmation
 
@@ -76,14 +85,45 @@ which the first decision already rejected. A wrapper function stays a residual.
 
 ### Decision, round 2
 
-The census follows a crate alias however it is written: renamed inside a group (`{self as prog}`),
-in raw spelling (`r#prog`), through a chain of aliases read in any file order, by an `extern crate`,
-by a glob of the crate (which opens every file of the member that holds it, since a glob import is
-visible to the whole member as `crate::name`), and by a manifest's `package` rename in the
-workspace's or a member's manifest. It reads a raw identifier as its plain name, so `r#tally` is
-`tally`. It was chosen against naming each spelling a residual, which would leave the crate alias of
-round 1 open in five other spellings, and against refusing every non-canonical spelling at its
-source, which would refuse legitimate code in crates the census does not own.
+The census follows a crate alias in each of these binding forms: renamed inside a group (`{self as
+prog}`), in raw spelling (`r#prog`), through a chain of aliases read in any file order, by an
+`extern crate`, by a glob of the crate (which opens every file of the member that holds it, since a
+glob import is visible to the whole member as `crate::name`), and by a manifest's `package` rename
+in the workspace's or a member's manifest. It reads a raw identifier as its plain name, so `r#tally`
+is `tally`. A source that reaches `settle` by any of those names (`x::settle` in a path or a `use`,
+or a bare `settle` in a member that globs the root) is refused as a direct caller. It was chosen
+against naming each spelling a residual, which would leave the crate alias of round 1 open in five
+other spellings, and against refusing every non-canonical spelling at its source, which would refuse
+legitimate code in crates the census does not own.
+
+### Decision, round 3
+
+The census follows the crate across members and past every comment. A member that exports the
+crate root to another member (a plain `pub use` or `pub extern crate` whose path passes through a
+name of the crate, as a glob or an alias, at its root or in a module), or that re-exports the
+operation or one of its renamings, makes its own crate name, or the module that holds the export,
+a name of the crate; the names run to one fixpoint across every member. Rust is read by one lexer
+that makes every comment a space (nested blocks and doc comments included) and every literal
+empty before any name is read, and manifests by one TOML reader that removes comments outside
+strings and reads headers and keys as keys; a manifest it cannot read to its end is refused.
+
+The rule was measured against two others over a population generated from the test's own tables
+(12307 members and 12338 controls, a stratified sample of which compiles under the pinned
+toolchain):
+
+- one set for each member crate plus the names each member exports: every control accepted, but six
+  members escaped, each a file that sits in one member's `src` and that another member compiles by
+  `#[path]`, where the binding is the compiling member's private name;
+- the global set that also lets a member's own item shadow its glob: every control accepted, but
+  three members escaped, each a glob member whose own homonym stands in another module while the
+  caller reaches the operation through the glob.
+
+The global set was chosen, because it is the only one of the three with no escape, and it refuses
+no control of the population. Its false refusals are the two Bad consequences above, and each is a
+loud failure. A parser was not an option this round: `syn` and `toml` are in the lock only as other
+crates' dependencies, and making either a dependency of the test is a new edge, which the drivers
+above rule out. A wrapper function and a macro-written re-export stay the residuals named above,
+tracked by issue 445.
 
 ## More Information
 
