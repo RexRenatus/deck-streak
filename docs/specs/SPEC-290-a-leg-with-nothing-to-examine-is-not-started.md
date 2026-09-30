@@ -198,3 +198,15 @@ KILLED on a committed tree with `python3 scripts/mutation_rows.py prove --band S
 
 Issue #435; ADR-290; ADR-057; SPEC-039 R3, R4, R11 and R18; SPEC-038; the GitHub Actions docs on
 `jobs.<job_id>.if`, the `needs` context and skipped required checks, as ADR-290 quotes them.
+
+## 9. Amendment, 2026-09-30: the recorded runs belong to two pull requests (#455)
+
+Made after the delivery, insert-only: every earlier byte is kept in order. Sections 1 and 4 cite
+two recorded CI runs as "run 36604153634 (#362)" and "run 36624231257 (#396)". #362 and #396 are
+issues. The runs were on pull requests: run 36604153634 ran on the branch `fix/agent-gate-362`,
+pull request #388, at 24077ccbcb1e; run 36624231257 ran on the branch `fix/refusal-enum-396`, pull
+request #410, at 26b60f17b260. Read every earlier citation of those two runs with the pull request
+in place of the issue: `empty/` is run 36604153634 of #388, and `listed/` is run 36624231257 of
+#410. The fixtures, the run ids and every measurement stand as written.
+
+This section inserts nothing else, and issue #455 records the correction.
