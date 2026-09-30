@@ -2,6 +2,7 @@
 #![allow(clippy::expect_used)]
 
 use deck_streak_kernel::Db;
+use proc_macro2::{Delimiter, Group, Ident, Literal, TokenStream, TokenTree};
 
 /// The index migration `004302` creates, named like the ledger's other `*_by_*` indexes.
 const INDEX: &str = "agent_runs_by_created_at";
@@ -21,147 +22,155 @@ const PRUNE: &str = prune_statement!();
 /// The table the prune deletes from, named apart so the fixtures below never write the statement.
 const TABLE: &str = "agent_runs";
 
-/// `source` lower-cased with every run of whitespace collapsed to one space, so a second
-/// statement cannot hide behind a different case or a wider gap.
-fn normalized(source: &str) -> String {
-    source
-        .split_whitespace()
+/// `text` lower-cased with every run of whitespace collapsed to one space, so a statement cannot
+/// hide behind a different case or a wider gap.
+fn normalized(text: &str) -> String {
+    text.split_whitespace()
         .collect::<Vec<_>>()
         .join(" ")
         .to_lowercase()
 }
 
-/// The byte ranges of every comment in `source`, in every form: `//`, `///`, `//!`, and `/* */`
-/// with its doc forms, nested blocks included. A marker inside a string, a raw string or a
-/// character literal opens none, so a prune written after one is never hidden.
-fn comment_spans(source: &str) -> Vec<(usize, usize)> {
-    let bytes = source.as_bytes();
-    let mut spans = Vec::new();
-    let mut at = 0;
-    while at < bytes.len() {
-        if !source.is_char_boundary(at) {
-            at += 1;
-            continue;
+/// `source` as rustc's lexer reads it (SPEC-043 R16b): no comment is a token, a doc comment is a
+/// `doc` attribute, a literal of any kind is one token whatever it holds, and whitespace is what
+/// separates tokens. A source that does not lex, an unclosed delimiter in it among others, is an
+/// error, and the pin refuses it.
+fn tokens_of(source: &str) -> Result<Vec<TokenTree>, String> {
+    source
+        .parse::<TokenStream>()
+        .map(|stream| stream.into_iter().collect())
+        .map_err(|error| error.to_string())
+}
+
+/// The tokens a delimited group holds.
+fn tokens_in(group: &Group) -> Vec<TokenTree> {
+    group.stream().into_iter().collect()
+}
+
+/// An identifier as rustc resolves it: `r#delete` is `delete`.
+fn name_of(ident: &Ident) -> String {
+    let name = ident.to_string();
+    name.strip_prefix("r#")
+        .map_or_else(|| name.clone(), str::to_owned)
+}
+
+/// The text rustc cooks from a string, byte-string or C-string literal, raw or not: escapes and
+/// line continuations are applied, a raw form is read as written. `None` for any other literal.
+fn text_of(literal: &Literal) -> Option<String> {
+    match syn::Lit::new(literal.clone()) {
+        syn::Lit::Str(text) => Some(text.value()),
+        syn::Lit::ByteStr(bytes) => Some(String::from_utf8_lossy(&bytes.value()).into_owned()),
+        syn::Lit::CStr(text) => Some(text.value().to_string_lossy().into_owned()),
+        _ => None,
+    }
+}
+
+/// Whether `token` is the punctuation `ch`.
+fn is_punct(token: Option<&TokenTree>, ch: char) -> bool {
+    matches!(token, Some(TokenTree::Punct(punct)) if punct.as_char() == ch)
+}
+
+/// Whether `group`, after the tokens `before`, is a doc attribute: `#[doc ..]` or `#![doc ..]`,
+/// which every doc comment becomes. Its text is prose that runs nothing.
+fn is_doc_attribute(before: &[TokenTree], group: &Group) -> bool {
+    let hash = match before {
+        [.., before_bang, _] if is_punct(before.last(), '!') => is_punct(Some(before_bang), '#'),
+        _ => is_punct(before.last(), '#'),
+    };
+    group.delimiter() == Delimiter::Bracket
+        && hash
+        && matches!(tokens_in(group).first(), Some(TokenTree::Ident(doc)) if name_of(doc) == "doc")
+}
+
+/// Every text the code in `tokens` writes, at any depth: each identifier and each string-like
+/// literal's cooked text. A comment is no token, and a doc attribute's text is not read.
+fn code_texts(tokens: &[TokenTree], texts: &mut Vec<String>) {
+    for (at, token) in tokens.iter().enumerate() {
+        match token {
+            TokenTree::Ident(ident) => texts.push(name_of(ident)),
+            TokenTree::Literal(literal) => texts.extend(text_of(literal)),
+            TokenTree::Group(group) if !is_doc_attribute(&tokens[..at], group) => {
+                code_texts(&tokens_in(group), texts);
+            }
+            TokenTree::Group(_) | TokenTree::Punct(_) => {}
         }
-        let rest = &source[at..];
-        if rest.starts_with("//") {
-            let end = rest.find('\n').map_or(bytes.len(), |n| at + n);
-            spans.push((at, end));
-            at = end;
-        } else if rest.starts_with("/*") {
-            let (mut depth, mut end) = (0_usize, at);
-            while end < bytes.len() {
-                if bytes[end..].starts_with(b"/*") {
-                    depth += 1;
-                    end += 2;
-                } else if bytes[end..].starts_with(b"*/") {
-                    depth -= 1;
-                    end += 2;
-                    if depth == 0 {
-                        break;
-                    }
-                } else {
-                    end += 1;
+    }
+}
+
+/// Whether the tokens `before` end in `sqlx::query!`, each identifier as rustc resolves it.
+fn ends_in_the_query_macro(before: &[TokenTree]) -> bool {
+    let is = |token: &TokenTree, text: &str| match token {
+        TokenTree::Ident(ident) => name_of(ident) == text,
+        TokenTree::Punct(punct) => punct.as_char().to_string() == text,
+        TokenTree::Group(_) | TokenTree::Literal(_) => false,
+    };
+    before.len() >= 5
+        && ["sqlx", ":", ":", "query", "!"]
+            .iter()
+            .zip(&before[before.len() - 5..])
+            .all(|(text, token)| is(token, text))
+}
+
+/// Whether the macro arguments `group` open with the tested statement: a string literal whose
+/// cooked text is the statement, alone or before a comma.
+fn opens_with_the_statement(group: &Group) -> bool {
+    match tokens_in(group).as_slice() {
+        [TokenTree::Literal(statement), rest @ ..] => {
+            matches!(syn::Lit::new(statement.clone()), syn::Lit::Str(text) if text.value() == PRUNE)
+                && match rest.first() {
+                    None => true,
+                    Some(TokenTree::Punct(comma)) => comma.as_char() == ',',
+                    Some(_) => false,
                 }
-            }
-            spans.push((at, end));
-            at = end;
-        } else if bytes[at] == b'r' && raw_string_len(rest).is_some() {
-            at += raw_string_len(rest).unwrap_or(1);
-        } else if bytes[at] == b'"' {
-            at += 1;
-            while at < bytes.len() && bytes[at] != b'"' {
-                at += if bytes[at] == b'\\' { 2 } else { 1 };
-            }
-            at += 1;
-        } else if bytes[at] == b'\'' {
-            at += char_literal_len(rest);
-        } else {
-            at += 1;
         }
-    }
-    spans
-}
-
-/// The length of the raw string `rest` opens (`r"..."`, `r#"..."#`), or `None` when it opens none.
-fn raw_string_len(rest: &str) -> Option<usize> {
-    let hashes = rest[1..].bytes().take_while(|b| *b == b'#').count();
-    if rest.as_bytes().get(1 + hashes) != Some(&b'"') {
-        return None;
-    }
-    let closer = format!("\"{}", "#".repeat(hashes));
-    let body = 2 + hashes;
-    Some(
-        rest[body..]
-            .find(&closer)
-            .map_or(rest.len(), |n| body + n + closer.len()),
-    )
-}
-
-/// The length of the character literal `rest` opens, or 1 when the quote is a lifetime's. An
-/// escape's closing quote is looked for after the escaped character, so `'\''` is four bytes long
-/// and its middle quote closes nothing.
-fn char_literal_len(rest: &str) -> usize {
-    let mut chars = rest[1..].chars();
-    match chars.next() {
-        Some('\\') => rest
-            .get(3..)
-            .and_then(|tail| tail.find('\''))
-            .map_or(1, |n| 3 + n + 1),
-        Some(c) if rest[1 + c.len_utf8()..].starts_with('\'') => 2 + c.len_utf8(),
-        _ => 1,
+        _ => false,
     }
 }
 
-/// `source` as the compiler reads it: every comment, in any form and whatever it holds, is gone.
-/// A comment runs nothing, so it is never the statement that runs and writes no keyword: a copy
-/// of the statement moved into one, quoted or not, leaves the code without it.
-fn code_of(source: &str) -> String {
-    let mut code = String::new();
-    let mut from = 0;
-    for (start, end) in comment_spans(source) {
-        code.push_str(&source[from..start]);
-        code.push(' ');
-        from = end;
-    }
-    code.push_str(&source[from..]);
-    code
+/// How many times `tokens`, at any depth, hand the tested statement to `sqlx::query!`: a copy in
+/// a comment or inside any literal is no call, and a spelling rustc reads as the same call (spaces
+/// in the path, any delimiter, any string form) is one.
+fn statements_run_in(tokens: &[TokenTree]) -> usize {
+    tokens
+        .iter()
+        .enumerate()
+        .map(|(at, token)| match token {
+            TokenTree::Group(group) => {
+                statements_run_in(&tokens_in(group))
+                    + usize::from(
+                        ends_in_the_query_macro(&tokens[..at]) && opens_with_the_statement(group),
+                    )
+            }
+            TokenTree::Ident(_) | TokenTree::Punct(_) | TokenTree::Literal(_) => 0,
+        })
+        .sum()
 }
 
-/// How many times the code of `source` hands the tested statement, quoted whole, to
-/// `sqlx::query!`: a copy in a comment, a constant, a doc attribute or any other literal is not
-/// the statement that runs.
-fn statements_run_in(source: &str) -> usize {
-    let code = code_of(source);
-    code.match_indices(&format!("\"{PRUNE}\""))
-        .filter(|(at, _)| code[..*at].trim_end().ends_with("sqlx::query!("))
-        .count()
-}
-
-/// How many times `source` writes a delete from the run table, quoted or not, code or comment.
-fn delete_statements_in(source: &str) -> usize {
-    normalized(source)
-        .matches(&format!("delete from {TABLE}").to_lowercase())
-        .count()
-}
-
-/// What is wrong with a prune's source text: an empty list when it holds exactly one delete
-/// statement and that statement is the tested one, handed whole to `sqlx::query!` exactly once.
+/// What is wrong with a prune's source (SPEC-043 R16b): an empty list when its tokens hand the
+/// tested statement to `sqlx::query!` exactly once and its code writes the word delete exactly
+/// once, as an identifier or in any literal's cooked text.
 fn prune_pin_problems(source: &str) -> Vec<String> {
+    let tokens = match tokens_of(source) {
+        Ok(tokens) => tokens,
+        Err(error) => return vec![format!("the source does not lex as Rust: {error}")],
+    };
     let mut problems = Vec::new();
-    let run = statements_run_in(source);
+    let run = statements_run_in(&tokens);
     if run != 1 {
         problems.push(format!(
             "the code hands the statement to sqlx::query! {run} times, not once"
         ));
     }
-    let statements = delete_statements_in(source);
-    if statements != 1 {
-        problems.push(format!(
-            "the source holds {statements} delete statements, not one"
-        ));
-    }
-    let keywords = delete_keywords_in(source);
+    let mut texts = Vec::new();
+    code_texts(&tokens, &mut texts);
+    let keywords: usize = texts
+        .iter()
+        .map(|text| {
+            text.split(|ch: char| !(ch.is_ascii_alphanumeric() || ch == '_'))
+                .filter(|word| word.eq_ignore_ascii_case("delete"))
+                .count()
+        })
+        .sum();
     if keywords != 1 {
         problems.push(format!(
             "the source writes the word delete {keywords} times, not once"
@@ -170,26 +179,22 @@ fn prune_pin_problems(source: &str) -> Vec<String> {
     problems
 }
 
-/// How many times `source` writes `delete` as a word of its own, in any case, whatever follows
-/// it: a table spelled `main.agent_runs` or `"agent_runs"`, or an SQL comment after the keyword,
-/// still counts, where `delete_statements_in` sees only the one spelling. No comment is read.
-fn delete_keywords_in(source: &str) -> usize {
-    let lower = code_of(source).to_lowercase();
-    let bytes = lower.as_bytes();
-    let is_word = |at: Option<&u8>| at.is_some_and(|b| b.is_ascii_alphanumeric() || *b == b'_');
-    lower
-        .match_indices("delete")
-        .filter(|(at, _)| {
-            let before = at.checked_sub(1).and_then(|i| bytes.get(i));
-            !is_word(before) && !is_word(bytes.get(at + "delete".len()))
-        })
-        .count()
-}
-
-/// What is wrong with this test file's own text: an empty list when only the macro writes the
-/// statement, so the plan's text is derived from it and no changed copy can stand beside it.
+/// What is wrong with this test file's own text (SPEC-043 A22): an empty list when exactly one
+/// literal holds a delete from the run table in its cooked text, the macro's, so the plan's text is
+/// derived from it and no changed copy can stand beside it.
 fn own_statement_problems(test_source: &str) -> Vec<String> {
-    let statements = delete_statements_in(test_source);
+    let mut texts = Vec::new();
+    if let Ok(tokens) = tokens_of(test_source) {
+        code_texts(&tokens, &mut texts);
+    }
+    let statements: usize = texts
+        .iter()
+        .map(|text| {
+            normalized(text)
+                .matches(&format!("delete from {TABLE}"))
+                .count()
+        })
+        .sum();
     if statements == 1 {
         Vec::new()
     } else {
@@ -247,15 +252,12 @@ async fn the_prune_reads_agent_runs_through_the_created_at_index() {
         !details.iter().any(|d| d.starts_with("SCAN")),
         "the prune scans the table: {details:?}"
     );
-    // The statement as one whole string literal, its closing quote included, so an added
+    // The statement as the cooked text of the one literal handed to `sqlx::query!`, so an added
     // predicate (`... < ?1 OR ...`) is another statement, never a superstring that still matches.
-    let source = include_str!("../src/runs.rs");
     assert_eq!(
-        source.matches(&format!("\"{PRUNE}\"")).count(),
-        1,
-        "the tested statement is not the one the repository runs"
+        prune_pin_problems(include_str!("../src/runs.rs")),
+        Vec::<String>::new()
     );
-    assert_eq!(prune_pin_problems(source), Vec::<String>::new());
     assert_eq!(
         own_statement_problems(include_str!("runs.rs")),
         Vec::<String>::new()

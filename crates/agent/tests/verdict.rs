@@ -2,40 +2,16 @@
 //! attribute is pinned because nothing else observes it.
 #![allow(clippy::expect_used)]
 
-/// Whether `line` is one whole attribute: the bracket that closes `#[` is the last character, so
-/// a trailing `// ]` after an item is not read as an attribute's end.
-fn is_one_whole_attribute(line: &str) -> bool {
-    let line = line.trim();
-    // A bracket inside a string, a character or a comment would be counted as the attribute's
-    // own, so a line holding a quote or a comment marker is never one whole attribute: it fails
-    // closed, and the scan stops there.
-    if !line.starts_with("#[") || line.contains(['"', '\'']) || line.contains("//") {
-        return false;
-    }
-    if line.contains("/*") || line.contains("*/") {
-        return false;
-    }
-    let mut depth = 0_usize;
-    for (at, ch) in line.char_indices() {
-        match ch {
-            '[' => depth += 1,
-            ']' => {
-                depth = depth.saturating_sub(1);
-                if depth == 0 {
-                    return at + 1 == line.len();
-                }
-            }
-            _ => {}
-        }
-    }
-    false
-}
+use proc_macro2::{Delimiter, TokenStream, TokenTree};
 
-/// Whether `line` is a doc comment the scan may pass: one that cannot close a string or a block
-/// comment opened above it, so an attribute hidden inside either is never read.
-fn is_a_plain_doc_line(line: &str) -> bool {
-    let line = line.trim();
-    line.starts_with("///") && !line.contains('"') && !line.contains("/*") && !line.contains("*/")
+/// `source` as rustc's lexer reads it (SPEC-043 R12b): no comment is a token, a doc comment is a
+/// `doc` attribute, a literal of any kind is one token whatever it holds, and whitespace is what
+/// separates tokens. A source that does not lex yields nothing, and the pin refuses it.
+fn tokens_of(source: &str) -> Vec<TokenTree> {
+    source
+        .parse::<TokenStream>()
+        .map(|stream| stream.into_iter().collect())
+        .unwrap_or_default()
 }
 
 /// `text` with every raw-identifier prefix removed: identifiers and attribute paths compare by the
@@ -44,76 +20,107 @@ fn without_raw_prefixes(text: &str) -> String {
     text.replace("r#", "")
 }
 
-/// The byte offsets at which `source` declares the verdict enum: every word `enum` followed,
-/// across any whitespace or comment, by the name `Verdict`, its raw prefix removed. Every line is
-/// read, comments and strings included, so a copy anywhere, compiled out or not, and an enum
-/// spelled any way (a wider gap under `#[rustfmt::skip]`, a line break or a comment between the
-/// words, another visibility) each count: no copy can stand in for the enum that compiles.
-fn declarations_in(source: &str) -> Vec<usize> {
-    let bytes = source.as_bytes();
-    source
-        .match_indices("enum")
-        .filter(|(at, _)| {
-            let before = at.checked_sub(1).and_then(|i| bytes.get(i));
-            !before.is_some_and(|b| b.is_ascii_alphanumeric() || *b == b'_')
-                && name_after(&source[at + "enum".len()..]) == Some("Verdict")
+/// Whether `tokens[at]` begins a declaration of the verdict enum: the keyword `enum`, then the
+/// name `Verdict`, its raw prefix removed.
+fn declares_the_verdict(tokens: &[TokenTree], at: usize) -> bool {
+    matches!(
+        (&tokens[at], tokens.get(at + 1)),
+        (TokenTree::Ident(keyword), Some(TokenTree::Ident(name)))
+            if *keyword == "enum" && without_raw_prefixes(&name.to_string()) == "Verdict"
+    )
+}
+
+/// How many times `tokens`, at any depth, declare the verdict enum: one at the top of the file,
+/// inside a module, a function, a macro's body or any other group, compiled out or not.
+fn declarations(tokens: &[TokenTree]) -> usize {
+    tokens
+        .iter()
+        .enumerate()
+        .map(|(at, token)| {
+            usize::from(declares_the_verdict(tokens, at))
+                + match token {
+                    TokenTree::Group(group) => {
+                        declarations(&group.stream().into_iter().collect::<Vec<_>>())
+                    }
+                    TokenTree::Ident(_) | TokenTree::Punct(_) | TokenTree::Literal(_) => 0,
+                }
         })
-        .map(|(at, _)| at)
-        .collect()
+        .sum()
 }
 
-/// The identifier `rest` starts with once whitespace and comments are skipped, its raw prefix
-/// removed, or `None` when `rest` continues the word before it.
-fn name_after(rest: &str) -> Option<&str> {
-    if rest.starts_with(|c: char| c.is_alphanumeric() || c == '_') {
-        return None;
-    }
-    let mut rest = rest.trim_start();
-    loop {
-        if let Some(line) = rest.strip_prefix("//") {
-            rest = line.find('\n').map_or("", |n| &line[n..]).trim_start();
-        } else if rest.starts_with("/*") {
-            rest = rest[block_comment_len(rest)..].trim_start();
-        } else {
-            break;
-        }
-    }
-    let rest = rest.strip_prefix("r#").unwrap_or(rest);
-    let len = rest
-        .find(|c: char| !(c.is_alphanumeric() || c == '_'))
-        .unwrap_or(rest.len());
-    Some(&rest[..len])
-}
-
-/// The length of the block comment `text` opens, nested blocks included.
-fn block_comment_len(text: &str) -> usize {
-    let bytes = text.as_bytes();
-    let (mut depth, mut end) = (0_usize, 0);
-    while end < bytes.len() {
-        if bytes[end..].starts_with(b"/*") {
-            depth += 1;
-            end += 2;
-        } else if bytes[end..].starts_with(b"*/") {
-            depth = depth.saturating_sub(1);
-            end += 2;
-            if depth == 0 {
-                break;
-            }
-        } else {
-            end += 1;
-        }
-    }
-    end
-}
-
-/// How many times `source` declares the verdict enum.
+/// How many times `source` declares the verdict enum, compiled out or not: a copy under `cfg`, in
+/// a module or in a macro's body is a declaration, and a copy in a comment or a literal is none.
 fn declarations_of(source: &str) -> usize {
-    declarations_in(source).len()
+    declarations(&tokens_of(source))
 }
 
-/// Whether `attribute` is `#[must_use]`, its raw prefix removed.
+/// `tokens` written out with no whitespace but a space between two words, so one attribute reads
+/// the same however it was spaced: `# [ derive ( Clone ) ]` is `#[derive(Clone)]`.
+fn rendered(tokens: TokenStream) -> String {
+    let mut text = String::new();
+    for token in tokens {
+        let piece = match &token {
+            TokenTree::Group(group) => {
+                let (open, close) = match group.delimiter() {
+                    Delimiter::Parenthesis => ("(", ")"),
+                    Delimiter::Bracket => ("[", "]"),
+                    Delimiter::Brace => ("{", "}"),
+                    Delimiter::None => ("", ""),
+                };
+                format!("{open}{}{close}", rendered(group.stream()))
+            }
+            TokenTree::Ident(_) | TokenTree::Punct(_) | TokenTree::Literal(_) => token.to_string(),
+        };
+        let word = |ch: char| ch.is_alphanumeric() || ch == '_' || ch == '"';
+        if text.ends_with(word) && piece.starts_with(word) {
+            text.push(' ');
+        }
+        text.push_str(&piece);
+    }
+    text
+}
+
+/// The outer attributes directly before the declaration of the verdict enum at the top of
+/// `source`, each written out by `rendered`: the `#[..]` pairs that precede its visibility, up to
+/// the first token that is not one. Empty when no declaration stands at the top of the file.
+fn attributes_of(source: &str) -> Vec<String> {
+    let tokens = tokens_of(source);
+    let Some(mut first) = (0..tokens.len()).find(|&at| declares_the_verdict(&tokens, at)) else {
+        return Vec::new();
+    };
+    let is_pub =
+        |token: Option<&TokenTree>| matches!(token, Some(TokenTree::Ident(word)) if *word == "pub");
+    if first >= 2
+        && matches!(&tokens[first - 1], TokenTree::Group(scope) if scope.delimiter() == Delimiter::Parenthesis)
+        && is_pub(tokens.get(first - 2))
+    {
+        first -= 2;
+    } else if first >= 1 && is_pub(tokens.get(first - 1)) {
+        first -= 1;
+    }
+    let mut attributes = Vec::new();
+    while first >= 2 {
+        match (&tokens[first - 2], &tokens[first - 1]) {
+            (TokenTree::Punct(hash), TokenTree::Group(body))
+                if hash.as_char() == '#' && body.delimiter() == Delimiter::Bracket =>
+            {
+                attributes.push(format!("#[{}]", rendered(body.stream())));
+                first -= 2;
+            }
+            _ => break,
+        }
+    }
+    attributes.reverse();
+    attributes
+}
+
+/// Whether `attribute` is `#[must_use]`, bare or with a reason, its raw prefix removed.
 fn is_must_use(attribute: &str) -> bool {
-    without_raw_prefixes(attribute) == "#[must_use]"
+    let attribute = without_raw_prefixes(attribute);
+    attribute == "#[must_use]"
+        || attribute
+            .strip_prefix("#[must_use=")
+            .is_some_and(|reason| reason.starts_with('"') && reason.ends_with("\"]"))
 }
 
 /// Whether `attribute` is conditional: the last segment of its path, raw prefix removed, is `cfg`
@@ -131,25 +138,6 @@ fn is_conditional(attribute: &str) -> bool {
         path.rsplit("::").next().map(str::trim),
         Some("cfg" | "cfg_attr")
     )
-}
-
-/// The attribute lines directly above the first declaration of the verdict enum in `source`.
-fn attributes_of(source: &str) -> Vec<String> {
-    let first = *declarations_in(source)
-        .first()
-        .expect("the verdict enum is declared in the source");
-    let lines: Vec<&str> = source.lines().collect();
-    let at = source[..first].matches('\n').count();
-    lines[..at]
-        .iter()
-        .rev()
-        .take_while(|line| {
-            // One whole attribute per line: `#[rustfmt::skip] fn f() {}` is an item, not an attribute.
-            is_one_whole_attribute(line) || is_a_plain_doc_line(line)
-        })
-        .filter(|line| line.trim_start().starts_with("#["))
-        .map(|line| line.trim().to_owned())
-        .collect()
 }
 
 /// What is wrong with a module's declaration of the verdict enum (SPEC-043 R12b): an empty list
