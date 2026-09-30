@@ -524,3 +524,81 @@ A25: cargo test -p deck-streak-coordination --test relight_settle -- --exact a_s
 | id | criterion | decided by |
 |---|---|---|
 | A23 | an empty history is answered with the stored anchor or the horizon, equal to the golden `lapse_anchor_beyond_the_walk`'s empty-history cases | `an_empty_history_is_anchored_as_the_predecessor_anchors_it` |
+
+## 15. Acceptance criteria of the 2026-09-30 mutation-hardening amendment
+
+Insert-only. Every rule of the streaks crate, its views, routes and reply is pinned by ONE
+population per function, generated at test time, counted and asserted, with an oracle written from
+this SPEC's words and never by calling the function it judges. The class rules:
+
+- Date arithmetic (`civil_month`): every day from 135000 days before the epoch to 48300 after, with
+  probes at month, year and era distances, must share a calendar month exactly when the SPEC's
+  calendar says so.
+- Comparisons at a boundary (`freeze_events_for`, the law row, `anchor_beyond_the_walk`, the
+  standby notice, `persists`): the boundary less one, the boundary and the boundary plus one, for
+  every input axis.
+- Boolean rules: the full truth table of the inputs, every subset of the days the run reads.
+- Deleted arms, fields and lists: a stored-then-read population whose oracle is a raw read-back of
+  the row, so an arm, a field or a list that is dropped changes what is read.
+- Views, routes and commands: status, body shape and stored effect per handler, and every refusal
+  names its reason (`database_not_open`, `streak_unreadable`).
+- The silence walk (R11): the walk is bounded. It reads at most `SILENCE_WALK_CAP_DAYS + 1` days
+  by a counted `for`, and the other counter loops (`language`, `law`, `fold`, `bridged_streak`) run
+  over the range of epoch days they read, so no mutant of a counter can spin. `open_lapse` ends by
+  `checked_sub` over a finite window and is left as it was: converting it would change what it
+  answers at the smallest epoch day. The bounded walk answers what the earlier open loop answered,
+  measured against a test-only copy of that loop.
+- The streak screen, its readers and its page (web): the date rule over a population of valid and
+  invalid dates and non-string lookalikes; the readers over every bad body, count and verdict; the
+  screen over the law runs, freeze combinations, stakes and governor cases; the client and page over
+  the calls they make.
+
+| id | criterion | decided by |
+|---|---|---|
+| A26 | every day falls in the calendar month the drop cap reads | `every_day_falls_in_the_calendar_month_the_cap_reads` |
+| A27 | the freeze events follow the flags and the freezes gained | `the_freeze_events_follow_the_flags_and_the_freezes_gained` |
+| A28 | the law row follows the run over every assignment of eight days | `the_law_row_follows_the_run_over_every_assignment_of_eight_days` |
+| A29 | the language row and its events follow the rules over every subset of twelve days | `the_language_row_and_events_follow_the_rules_over_every_subset_of_twelve_days` |
+| A30 | the heat tier counts the thresholds reached for every length | `the_heat_tier_counts_the_thresholds_reached_for_every_length` |
+| A31 | the fold stores today, yesterday and the first run's window | `the_fold_stores_today_yesterday_and_the_first_run_window` |
+| A32 | the silence walk and the stored anchor follow the run at every distance | `the_silence_walk_and_the_stored_anchor_follow_the_run_at_every_distance` |
+| A33 | what the store writes is what it reads back, for the state, the strength, the governor row, the events, the outside freezes and a freeze added | `store_effects` |
+| A34 | the views name what is at stake and the heat for every stored pair, read a missing row as the start state and give the governor's verdict for every stored row | `streak_views` |
+| A35 | the streak step carries its name, and the outside freezes join the language row within zero and three | `the_step_is_named_for_the_fold_report`, `the_outside_freezes_join_the_language_row_within_zero_and_three` |
+| A36 | the law leads only above zero and the noun follows the freezes | `the_law_leads_only_above_zero_and_the_noun_follows_the_freezes` |
+| A37 | the streak routes name why they cannot answer | `the_streak_routes_name_why_they_cannot_answer` |
+| A38 | the bounded silence walk answers what the earlier loop answered | `the_bounded_walk_answers_what_the_reference_walk_answers` |
+| A39 | the walk stops at the cap, from the SPEC's words | `the_walk_stops_at_the_cap_from_the_specs_words` |
+| A40 | the web mutation check of the five streak files reports survived 0 and no coverage 0 apart from the recorded equivalents | `web/app/src/lib/streak/streak.test.ts`, `streak-screen-population.test.ts`, `api-streak.test.ts`, `routes/streak.test.ts` |
+
+```acceptance
+A26: cargo test -p deck-streak-streaks --test population_rules -- --exact every_day_falls_in_the_calendar_month_the_cap_reads
+A27: cargo test -p deck-streak-streaks --test population_rules -- --exact the_freeze_events_follow_the_flags_and_the_freezes_gained
+A28: cargo test -p deck-streak-streaks --test population_rules -- --exact the_law_row_follows_the_run_over_every_assignment_of_eight_days
+A29: cargo test -p deck-streak-streaks --test population_rules -- --exact the_language_row_and_events_follow_the_rules_over_every_subset_of_twelve_days
+A30: cargo test -p deck-streak-streaks --test population_rules -- --exact the_heat_tier_counts_the_thresholds_reached_for_every_length
+A31: cargo test -p deck-streak-streaks --test population_rules -- --exact the_fold_stores_today_yesterday_and_the_first_run_window
+A32: cargo test -p deck-streak-streaks --test population_rules -- --exact the_silence_walk_and_the_stored_anchor_follow_the_run_at_every_distance
+A33: cargo test -p deck-streak-streaks --test store_effects
+A34: cargo test -p deck-streak-coordination --test streak_views
+A35: cargo test -p deck-streak-coordination --test streak_fold -- --exact the_step_is_named_for_the_fold_report
+A36: cargo test -p deck-streak-bot --test streak_commands -- --exact the_law_leads_only_above_zero_and_the_noun_follows_the_freezes
+A37: cargo test -p deck-streak-api --test streak_routes -- --exact the_streak_routes_name_why_they_cannot_answer
+A38: cargo test -p deck-streak-streaks --test silence_walk_bound -- --exact the_bounded_walk_answers_what_the_reference_walk_answers
+A39: cargo test -p deck-streak-streaks --test silence_walk_bound -- --exact the_walk_stops_at_the_cap_from_the_specs_words
+A40: pnpm exec vitest run web/app/src/lib/streak/streak.test.ts web/app/src/lib/streak/streak-screen-population.test.ts web/app/src/lib/api-streak.test.ts web/app/src/routes/streak.test.ts
+```
+
+The silence walk's bound is not a timeout. Two alternatives were rejected: leaving the open loop
+and raising the job's timeout, because a mutant that never advances its counter then costs the
+whole budget of the shard and hides the mutants behind it; and a per-test timeout, because it makes
+the answer depend on the machine's speed and kills a spinning test without pinning the rule.
+
+Eight mutants of `civil_month` in `freeze.rs` are equivalent and are recorded in
+`scripts/mutation-equivalent.d/deck-streak-streaks.json`: each relabels the month or the year
+without moving two days across a month boundary, which was measured over the whole range above.
+
+Manifest additions: `crates/streaks/tests/population_rules.rs`, `store_effects.rs` and
+`silence_walk_bound.rs`; `crates/coordination/tests/streak_views.rs`; the streak fold, bot and api
+test files gain the criteria above; `crates/streaks/src/governor.rs`, `replay.rs`, `strength.rs` and
+`law.rs` (changed: the counter loops are bounded); the row `S07611`; and the record file above.

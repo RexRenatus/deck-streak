@@ -90,6 +90,15 @@
         "    let qualifies = reviews.is_some_and(|n| n > RELIGHT_CARDS) && granted == 0;\n",
         "relight_rule::the_relight_rule_matches_the_parity_golden",
         "a return day relights at three reviews (SPEC-076 R12)"
+      ],
+      [
+        "S07611-THE-SILENCE-WALK-READS-ONE-PAST-THE-CAP",
+        "streaks",
+        "src/governor.rs",
+        "    for _ in 0..=SILENCE_WALK_CAP_DAYS {\n",
+        "    for _ in 0..SILENCE_WALK_CAP_DAYS {\n",
+        "silence_walk_bound::the_walk_stops_at_the_cap_from_the_specs_words",
+        "the silence walk counts up to one day past the cap, then reports exhausted (SPEC-076 R11)"
       ]
     ]
   }

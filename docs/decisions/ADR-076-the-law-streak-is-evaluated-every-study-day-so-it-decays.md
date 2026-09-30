@@ -104,3 +104,17 @@ the orchestrator's ruling at the third dispatch (SPEC-076, section 12):
 - Rejected: a grant after the fold has run, because R18's same-recompute base would not hold.
 - Rejected: a second write inside the fold, because the one writer would deadlock against the fold's
   held transaction.
+
+## Amendment, 2026-09-30: the counter loops are bounded by the range they read
+
+The silence walk and the replay, fold and bridge loops move a counter that a mutant can stop
+moving, so a mutant of the counter never ended and cost a shard its whole budget. Each loop now
+runs over a counted range: the walk over `0..=SILENCE_WALK_CAP_DAYS`, the others over the epoch
+days they read. The answer is unchanged, proved by a generated population against a test-only copy
+of the earlier walk.
+
+- Rejected: leaving the loop and raising the job's timeout, because it is a workflow setting the
+  owner alone changes and it hides the spinning mutant instead of removing it.
+- Rejected: a per-test timeout, because the verdict would then depend on the machine's speed.
+- Rejected: converting `open_lapse`, because it ends by `checked_sub` over a finite window and a
+  conversion would change its answer at the smallest epoch day.

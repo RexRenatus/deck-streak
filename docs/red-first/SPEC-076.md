@@ -91,3 +91,30 @@ A25: green at 5ac898b6
   menu assertion in `crates/bot/tests/commands.rs` from six commands to seven and the expected
   help and start messages under `crates/bot/tests/messages/`, because the streak command joins the
   menu; those files are the streak command's own surface.
+
+## Addendum, 2026-09-30: the mutation-hardening tests (A26 to A40)
+
+These tests pin rules that already held, so each is green at the head and is recorded `not red`,
+with the mutant that turns it red, applied by hand under a 16 GiB address-space cap.
+
+- **A26 not red.** `civil_month`'s `era * 400` replaced by `era + 400` (freeze.rs:19:26) fails at
+  `population_rules.rs:107`: `day -134712 against day 11017`.
+- **A27 to A32 not red.** `persists`' `age <= 1` replaced by `age < 1` fails
+  `the_fold_stores_today_yesterday_and_the_first_run_window` at `population_rules.rs:432`
+  (`left: false, right: true`). The other mutants of the crate's rules named in the run of the
+  changed files are caught, and eight `civil_month` mutants are recorded as equivalent.
+- **A33 not red.** The store mutants of the run are caught by the raw read-back oracles.
+- **A34 not red.** `AtStake::as_str`'s `"none"` replaced by `""` fails
+  `what_is_at_stake_is_named_in_the_views_words` at `streak_views.rs:136`
+  (`left: ["freeze", "break", ""]`).
+- **A36 not red.** The bot's `view.law.current > 0` replaced by `>= 0` fails
+  `the_law_leads_only_above_zero_and_the_noun_follows_the_freezes` at `streak_commands.rs:104`.
+- **A37 not red.** The route's `streak_unreadable` replaced by `x` fails
+  `the_streak_routes_name_why_they_cannot_answer` at `streak_routes.rs:325`.
+- **A38 and A39 not red.** `0..=SILENCE_WALK_CAP_DAYS` replaced by `0..SILENCE_WALK_CAP_DAYS` fails
+  both, A38 with `silent_days: 120` against `121`, A39 at distance 121; `number -= 1` replaced by
+  `number += 1` fails both with `first_silent: StudyDay(120)` against `StudyDay(-120)`. The bound
+  itself is a production change, made after the test-only commits.
+- **A40 not red.** The web tests are new files with no prior head: `$` dropped from the date
+  regex, `law.current >= 0`, the freezes `&&` to `||`, the stake test to `true`, `?? 1`, the
+  governor URL typo, `{void 0}`, and `typeof ... !== 'string'` to `false` each turn one red.
