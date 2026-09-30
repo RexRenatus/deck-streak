@@ -261,7 +261,7 @@ closed by one rule, not by a fourth rule in the hand lexer (ADR-293).
   `a_commented_copy_of_the_enum_above_it_is_refused` asserted the decoy is two declarations and now
   asserts it is refused. The verdict fixtures gain a body (`{ A }`) so each lexes, and the four
   assertions of `the_verdict_type_is_must_use` are gathered, unchanged, into `verdict_pin_problems`.
-- The green commit changes one assertion: `the_prune_reads_agent_runs_through_the_created_at_index`
+- The green commit (834dd9a) changes one assertion: `the_prune_reads_agent_runs_through_the_created_at_index`
   asserted the source writes the quoted statement once, and the run count now requires the cooked
   text of the literal handed to `sqlx::query!` to equal the statement, so the separate assertion is
   removed. No other assertion changed between the two.
