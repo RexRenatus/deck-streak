@@ -448,7 +448,7 @@ def cargo_targets(root: pathlib.Path, crate: str) -> tuple[list[tuple[str, str]]
         found = [
             (name, path)
             for name, path in (inferred.items() if auto else [])
-            if name not in names and posixpath.normpath(path) not in paths
+            if name not in names and path not in paths
         ]
         targets[kind] = explicit + found
     return targets["bin"], [name for name, _path in targets["test"]]

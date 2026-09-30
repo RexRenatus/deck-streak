@@ -71,6 +71,17 @@ BINARY_LAYOUTS = {
         "",
         {"src/bin/a/main.rs": MAIN, "src/bin/a/util.rs": LEAF},
     ),
+    "a bin directory named like a file": ("", "", {"src/bin/odd.rs/main.rs": MAIN}),
+    "a [[bin]] at a dotted path": (
+        "",
+        '[[bin]]\nname = "fixbin"\npath = "./src/main.rs"\n',
+        {"src/main.rs": MAIN},
+    ),
+    "a [[bin]] named for a bin file, at another path": (
+        "",
+        '[[bin]]\nname = "a"\npath = "app/a.rs"\n',
+        {"app/a.rs": MAIN, "src/bin/a.rs": MAIN},
+    ),
     "two bin files": ("", "", {"src/bin/a.rs": MAIN, "src/bin/b.rs": MAIN}),
     "main and a bin file": ("", "", {"src/main.rs": MAIN, "src/bin/a.rs": MAIN}),
     "two bin files and a directory with no main": (
@@ -115,6 +126,16 @@ TEST_LAYOUTS = {
     "no test target": ("", "", {}),
     "tests/bin.rs": ("", "", {"tests/bin.rs": TEST_FILE}),
     "tests/bin/main.rs": ("", "", {"tests/bin/main.rs": TEST_FILE}),
+    "a [[test]] named for a test file, at another path": (
+        "",
+        '[[test]]\nname = "other"\npath = "spec/o.rs"\n',
+        {"spec/o.rs": TEST_FILE, "tests/other.rs": TEST_FILE},
+    ),
+    "a [[test]] at a dotted path of a test file": (
+        "",
+        '[[test]]\nname = "x"\npath = "./tests/bin.rs"\n',
+        {"tests/bin.rs": TEST_FILE},
+    ),
     "tests/other.rs": ("", "", {"tests/other.rs": TEST_FILE}),
     "a [[test]] bin at another path": (
         "",
@@ -582,6 +603,14 @@ class ThePlantedShapesOfTheIssue(unittest.TestCase):
                 member = self.member((keys, layout[1], layout[2]))
                 with self.assertRaisesRegex(runner.KillerUnresolved, pattern):
                     runner.locate_killer(member.root, killer_row(runner))
+        # A table with no path and no file to infer one from still names its target: a binary
+        # defaults to the package's own root, and a declared test named bin shadows with no file.
+        unpathed = self.member(("", '[[bin]]\nname = "tool"\n', {"src/main.rs": MAIN}))
+        found = runner.locate_killer(unpathed.root, killer_row(runner))
+        self.assertEqual((found.binary, found.file), ("tool", f"crates/{PACKAGE}/src/main.rs"))
+        ghost = self.member(("", '[[test]]\nname = "bin"\n', {"src/main.rs": MAIN}))
+        with self.assertRaisesRegex(runner.KillerUnresolved, "has a test target bin"):
+            runner.locate_killer(ghost.root, killer_row(runner))
         nothing = self.member(("autobins = false\n", "", {"src/main.rs": MAIN}))
         with self.assertRaisesRegex(runner.KillerUnresolved, "holds 0 binaries,"):
             runner.locate_killer(nothing.root, killer_row(runner))
