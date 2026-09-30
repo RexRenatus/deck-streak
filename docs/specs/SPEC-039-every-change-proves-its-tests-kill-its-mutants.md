@@ -885,16 +885,29 @@ run that could not start a check said "a mutant survived". ADR-291 decides the c
 section states it.
 
 - **The rule.** Every process the runner spawns, under every verb that reaches it, ends the verb
-  with ONE line naming the tool and exit 2 (`EXIT_REFUSED`) when its executable cannot be run:
-  absent from `PATH`, present but not executable, or a directory at the name. It is never a
-  traceback, never exit 1, never a verdict line and never `KILLED`. A mutant that was installed
+  with ONE line naming the tool and exit 2 (`EXIT_REFUSED`) when its executable cannot be run,
+  for any reason the operating system gives. Six modes are read: absent from `PATH`, present but
+  not executable, a directory at the name, a script whose interpreter line names a missing
+  program, an empty file with the execute bit (the kernel will not execute it), and a wrapper
+  whose interpreter line resolves but whose program is missing (it starts and ends with exit
+  127, or 126 behind a `PATH` entry the runner cannot search). The tool may sit alone in `PATH` or
+  behind an entry the runner cannot look at (a name too long to stat), which is passed over as the
+  spawn's own search passes over it. It is never a traceback, never exit 1, never a verdict line
+  and never `KILLED`. A mutant that was installed
   is restored byte for byte, by digest, before the verb ends. The line reads
   `<verb>: REFUSED: missing tool: <name as spawned>: <why>`, with the verb `prove` or `retired`.
 - **One place.** The executable is resolved in one place, before the spawn: `run_tool` for a
   command that is run to its end, and `run_in_own_group` for a killer. A spawn that still fails
-  for its executable after resolution passed is mapped to the same refusal. `main` alone turns the
-  refusal into the line and the exit code. No other function spawns a process, and the census of
-  the module's own source (A47) refuses a function that does.
+  for its executable after resolution passed is mapped to the same refusal: both helpers catch
+  every `OSError` of the spawn (an error that names the working directory is still re-raised), and
+  both read exit 126 and exit 127 of the tool they spawned as the refusal, `cannot be run` and `is
+  not found`. `main` alone turns the refusal into the line and the exit code. No other function
+  spawns a process, and the census of the module's own source (A47, A51, A52) refuses a function
+  that does, by any name the standard library gives a spawner (`subprocess`, `os.system`,
+  `os.popen`, `os.exec*`, `os.spawn*`, `os.posix_spawn*`, `os.fork*`, `os.startfile`, `pty`,
+  `asyncio`'s subprocess calls and the loop's `subprocess_exec` and `subprocess_shell`) and through
+  every import that reaches one (`import subprocess as sp`, `from subprocess import run as r`,
+  `from os import *`).
 - **A missing parser joins the class.** Section 12 (A41) made a shell that is not installed leave
   the mutant unchecked and VOID. That clause, and only that clause, is superseded: a shell that
   cannot be run is the same fact as a missing killer tool, the runner could not run a check, so it
@@ -912,21 +925,28 @@ section states it.
 
 | id | criterion | decided by |
 |---|---|---|
-| A46 | for every spawn site of the runner, every tool it can spawn (`git`, `cargo`, the interpreter, `bash`, `sh`), every one of the three unrunnable modes and every verb that reaches the site, the verb exits 2, prints exactly one `REFUSED` line naming the tool, prints no traceback and no verdict line, and leaves the target's bytes and the tree's tracked state as they were; the population's count is printed | `test_mutation_rows_missing_tool.py` |
-| A47 | the spawn sites read from the module's own source are exactly the sites the population covers, and no function outside `run_tool` and `run_in_own_group` calls `subprocess.run` or `subprocess.Popen` | `test_mutation_rows_missing_tool.py` |
+| A46 | for every spawn site of the runner, every tool it can spawn (`git`, `cargo`, the interpreter, `bash`, `sh`), every one of the six unrunnable modes and every verb that reaches the site, the verb exits 2, prints exactly one `REFUSED` line naming the tool, prints no traceback and no verdict line, and leaves the target's bytes and the tree's tracked state as they were; the population's count is printed | `test_mutation_rows_missing_tool.py` |
+| A47 | the spawn sites read from the module's own source are exactly the sites the population covers, and no function outside `run_tool` and `run_in_own_group` spawns a process by any name (A51) | `test_mutation_rows_missing_tool.py` |
 | A48 | `count`, `ids` and `census` spawn nothing and succeed with every tool unrunnable | `test_mutation_rows_missing_tool.py` |
 | A49 | a shell parser that cannot be run refuses the proof naming it, exit 2 and no verdict, where section 12 left the mutant VOID | `test_mutation_rows.py` |
+| A50 | a tool behind a `PATH` entry the runner cannot look at is found as the spawn finds it, and `prove` does not end in a traceback | `test_mutation_rows_missing_tool.py` |
+| A51 | no function outside the two helpers spawns a process by any name the standard library documents for a spawner, or through an aliasing import | `test_mutation_rows_missing_tool.py` |
+| A52 | the census reads every documented spawner, spelled every way of reaching it | `test_mutation_rows_missing_tool.py` |
 
 ```acceptance
 A46: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb
 A47: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k every_spawn_site_the_module_holds_has_a_scenario_and_owns_no_raw_spawn
 A48: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k a_verb_that_spawns_nothing_runs_with_every_tool_unrunnable
 A49: python3 -m unittest discover -s scripts/tests -p test_mutation_rows.py -k a_missing_parser_is_a_refusal_naming_it
+A50: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k a_path_entry_the_runner_cannot_look_at_is_passed_over_as_the_spawn_passes_it
+A51: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k no_code_outside_the_helpers_spawns_a_process_by_any_other_name
+A52: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k the_census_reads_every_documented_spawner_by_every_way_of_reaching_it
 ```
 
 A46 to A48 build a temporary git repository per member with the suite's own fixture, and run the
 runner as a child process whose `PATH` holds real `git`, `bash` and `sh` except the tool under
-test, which is absent, a file without the execute bit, or a directory (the interpreter's case
-replaces `sys.executable` in the child). The cargo build site's member serves the control run from
+test, which is in one of the six modes above (the interpreter's case replaces `sys.executable` in
+the child). The population is 180 members: every site, tool, mode and verb alone in `PATH`, and
+the searched tools again behind the entry the runner cannot look at. The cargo build site's member serves the control run from
 a shim that then makes itself unrunnable, so the refusal comes from the mutant's build and the
 member asserts the shim was reached. A49's test keeps A41's fixture and its bare `PATH`.

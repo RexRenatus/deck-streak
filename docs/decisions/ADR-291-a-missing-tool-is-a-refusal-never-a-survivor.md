@@ -8,11 +8,15 @@ decision-makers: "@RexRenatus (owner), the DeckStreak architect"
 
 ## Context and Problem Statement
 
-`scripts/mutation_rows.py prove` spawns `git`, the interpreter, `cargo`, `bash` and `sh`. When
+`scripts/mutation_rows.py prove` spawns `git`, the interpreter, `cargo`, `bash` and `sh`, and the
+`retired` verb spawns `git`. When
 `cargo` was not on `PATH`, the cargo killer's spawn raised an uncaught `FileNotFoundError`, and the
 process ended with exit 1, which is `EXIT_SURVIVED` (#431). A check that could not start read as a
 surviving mutant. The same fact, a tool that cannot be run, is met at every spawn under every verb
-and in three shapes: absent from `PATH`, present but not executable, and a directory at the name.
+and in six shapes: absent from `PATH`, present but not executable, a directory at the name, a script
+whose interpreter line names a missing program, an empty file with the execute bit, and a wrapper
+whose program is missing (it starts and exits 127, or 126 behind a `PATH` entry that cannot be
+searched).
 Which exit code and which one place decide it for all of them, and does a missing shell parser,
 which section 12 (A41) reads as VOID, belong to the same rule?
 
@@ -29,7 +33,7 @@ which section 12 (A41) reads as VOID, belong to the same rule?
 
 - Resolve in one place before each spawn, map to a named refusal, `main` prints it — chosen: one check covers every spawn, mode and verb.
   `main` alone prints the line and exits 2 (`EXIT_REFUSED`), and a census of the module's own
-  source refuses a spawn that skips the check.
+  source refuses a spawn that skips the check, by any name the standard library gives a spawner.
 - Catch `FileNotFoundError` at the one cargo site only — lost: it fixes the reported spawn and
   leaves `git`, the interpreter, the build check and both parsers as tracebacks, and it misses a
   file without the execute bit (`PermissionError`) and a directory at the name (`PermissionError`
@@ -56,9 +60,11 @@ the runner already gives every other input it cannot examine.
 
 - `run_tool` wraps every `subprocess.run`, and `run_in_own_group` resolves before its `Popen`. Both
   raise `ToolMissing(tool, why)` for an executable that is absent, not executable, or a directory.
-  A spawn that still fails for its executable after resolution passed (an interpreter line naming a
-  program that does not exist) maps the `OSError` to the same refusal, unless the error names the
-  working directory.
+  A candidate along `PATH` that cannot be looked at is passed over, as the spawn's own search passes
+  over it. A spawn that still fails for its executable after resolution passed (an interpreter line
+  naming a program that does not exist, an empty file the kernel will not execute) maps every
+  `OSError` to the same refusal, unless the error names the working directory, and an exit of 126 or
+  127 from the spawned tool is read as the refusal too (`cannot be run`, `is not found`).
 - `main` alone catches `ToolMissing` under `prove` and `retired` and prints one line,
   `<verb>: REFUSED: missing tool: <name as spawned>: <why>`, then returns `EXIT_REFUSED`.
   `prove_row`'s `finally` restores the target, so the digest is unchanged.
@@ -73,6 +79,8 @@ the runner already gives every other input it cannot examine.
 - `mutation-verdict.py` `judge_rows` reads a selected row set with no report as
   `verdict.void("... selected and no rows report")`, and the battery check reads a missing
   `rows.json` as "MISSING rows". A refusal is therefore a VOID at the verdict, never a pass.
+- `.github/workflows/ci.yml` also runs `python3 scripts/mutation_rows.py retired --base HEAD^1` as a
+  step of its own, with no `|| rc=$?`, so the refusal's exit 2 fails that step.
 - `.github/workflows/mutation-weekly.yml` runs `prove --all` and `prove --row ...` as steps, so a
   non-zero exit fails the step.
 
@@ -91,11 +99,13 @@ No consumer reads 2 as a pass, a skip or a usage error to ignore.
 
 `scripts/tests/test_mutation_rows_missing_tool.py` generates its population: the spawn sites are
 read from the module's source with `ast` (a new spawn joins the population and fails the census
-until a scenario covers it), and each member is one site, tool, mode (absent, not executable,
-directory, a script whose interpreter line names a missing program) and verb, run as a child
+until a scenario covers it), the census reads every spawner name of the `subprocess`, `os`, `pty`
+and `asyncio` documentation and every import that reaches one, and each member is one site, tool,
+mode (absent, not executable, directory, a script whose interpreter line names a missing program,
+an empty file, a wrapper whose program is missing), position in `PATH` and verb, run as a child
 process in a temporary repository. It asserts exit 2, one line naming the tool and the reason, no
 traceback, no verdict line, and the target's digest and the tree's state unchanged. Rows S03960
-to S03970 pin the resolution, each spawn and the mapping.
+to S03982 pin the resolution, each spawn, the mapping, the exits and the census.
 
 ## More Information
 

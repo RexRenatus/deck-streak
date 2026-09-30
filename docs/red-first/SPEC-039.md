@@ -339,8 +339,9 @@ e  the spawn-error backstop removed:          FAILED (failures=24)  AssertionErr
 ```
 
 Four plants stayed green at 932358d's test and were closed by the strengthening at 27646b2: the
-last four rows of the block above (unexecutable file, directory, the PATH search, and the killer
-group's resolution, whose spawn-error backstop alone still mapped the refusal, but with the
+unexecutable file, the directory, the PATH search and the killer group's resolution (four rows
+of the block above, which are not its last four rows: the last row is the backstop's; the
+resolution's spawn-error backstop alone still mapped the refusal, but with the
 system's `Permission denied` as its reason). The backstop alone removed reads red only because the
 interpreter-line mode joined the population. One plant is EQUIVALENT: the slash in a name searched
 along `PATH` (`if False:` for the path branch of `resolve_tool`). The runner spawns a bare name or
@@ -358,3 +359,72 @@ beside the recorder, so that they read the same fact on a machine without cargo,
 errored at the rule's own refusal (`mutation_rows.ToolMissing: missing tool: cargo: not found on PATH`)
 in the failure-set measurement. Every assertion stands, and the measurement without cargo on `PATH`
 now differs from dev's by the new tests alone.
+
+## Addendum, 2026-09-30: a tool the runner cannot run is refused for any reason (issue #431, round 1)
+
+The addendum above stands as history; where it counts modes or members, this one is the reading at
+the head. The head's population is 180 members, over six modes (absent, not executable, a directory,
+a script whose interpreter line names a missing program, an empty file with the execute bit, and a
+wrapper whose program is missing), and every searched tool again behind a `PATH` entry the runner
+cannot look at, plus 3 quiet verbs, 4 spawn sites and 127 spawner spellings. A50 to A52 are the
+criteria this round adds to section 20.
+
+The killer file was committed alone at adf4fbf8, against the runner as the earlier commits left it,
+and read `FAILED (failures=80)` over `Ran 5 tests`, `examined 180 missing-tool member(s)`, by
+assertion in every case. The rule and the census extension are green at 8574e9f4, with `Ran 6 tests`
+and `OK`. A50 is red at adf4fbf8; A51 passes there because the census the file already held reads
+the two spellings it named. A52 is the census's own test and was added at 8574e9f4.
+
+```red-first
+A50: red at adf4fbf8: AssertionError: 1 != 0 : Traceback (most recent call last):
+A50: green at 8574e9f4
+A51: not red: the census at adf4fbf8 reads the spellings it holds, so it exits OK there; a spawn by another stdlib name planted in `git` reds it (S03981)
+A52: not red: it is new at 8574e9f4, beside the census it tests; against the census without `os.startfile`, the loop's two methods and `from os import *` it reads `FAILED (failures=28)`
+```
+
+**A51 and A52 are `not red`, and take no green line.** A52's red is a measurement, not a commit:
+the test was run against the census as it stood before its extension and failed by assertion
+(`AssertionError: [] == [] : from os import *`, and the `os.startfile` spellings), then the census
+was extended and the test passed.
+
+**The plants at the head.** Each row of S03960 to S03982 is one plant, a scratch mutant of
+`scripts/mutation_rows.py` at the head run against `test_mutation_rows_missing_tool.py` with no
+`cargo` on `PATH`, restored after, with the first assertion line and the failure count it reads.
+The counts of the first addendum's plants a to e were made at b1bd758 and do not reproduce at the
+head, where the population is larger (plant a reads 174 here, not 72); this table is what
+reproduces.
+
+```text
+S03960-A46-MISSING-TOOL-READS-AS-A-SURVIVOR                  (failures=174)   AssertionError: 1 != 2 : prove: REFUSED: missing tool: git: not found on PATH
+S03961-A46-MISSING-TOOL-READS-AS-VOID                        (failures=174)   AssertionError: 3 != 2 : prove: REFUSED: missing tool: git: not found on PATH
+S03962-A46-RETIRED-MISSING-TOOL-READS-AS-OK                  (failures=6)     AssertionError: 0 != 2 : retired: REFUSED: missing tool: git: not found on PATH
+S03963-A47-GIT-SPAWNS-WITHOUT-THE-CHECK                      (failures=35)    AssertionError: 'Traceback' unexpectedly found in 'Traceback (most recent call last):
+S03964-A47-PARSER-SPAWNS-WITHOUT-THE-CHECK                   (failures=62)    AssertionError: 'Traceback' unexpectedly found in 'Traceback (most recent call last):
+S03965-A47-BUILD-SPAWNS-WITHOUT-THE-CHECK                    (failures=32)    AssertionError: 'Traceback' unexpectedly found in 'Traceback (most recent call last):
+S03966-A46-KILLER-GROUP-SPAWNS-WITHOUT-RESOLVING             (failures=19)    AssertionError: False is not true : prove: REFUSED: missing tool: cargo: Permission denied
+S03967-A46-A-REFUSED-PROOF-KEEPS-ITS-MUTANT                  (failures=90)    AssertionError: 4 != 2 : prove: RESTORE FAILED: crates/fix/src/lib.rs was not restored byte for byte after S00002-CARGO
+S03968-A46-THE-REFUSAL-LINE-DROPS-THE-TOOL                   (failures=174)   AssertionError: 'git' not found in 'prove: REFUSED' : prove: REFUSED
+S03969-A46-A-FILE-WITHOUT-THE-EXECUTE-BIT-RESOLVES           (failures=30)    AssertionError: False is not true : prove: REFUSED: missing tool: git: Permission denied
+S03970-A46-A-DIRECTORY-READS-AS-ABSENT                       (failures=30)    AssertionError: False is not true : prove: REFUSED: missing tool: git: not found on PATH
+S03971-A46-THE-PATH-SEARCH-IGNORES-THE-CHILDS-PATH           (failures=90)    AssertionError: False is not true : prove: REFUSED: missing tool: git: Permission denied
+S03972-A46-A-SPAWN-THAT-FAILS-AFTER-RESOLUTION-IS-A-TRACEBAC (failures=58)    AssertionError: 'Traceback' unexpectedly found in 'Traceback (most recent call last):
+S03973-A46-A-PATH-ENTRY-THE-RUNNER-CANNOT-LOOK-AT-STOPS-THE- (failures=55)    AssertionError: 1 != 0 : Traceback (most recent call last):
+S03974-A46-RUN-TOOL-CATCHES-ONLY-THREE-SPAWN-ERRORS          (failures=24)    AssertionError: 'Traceback' unexpectedly found in 'Traceback (most recent call last):
+S03975-A46-THE-PROCESS-GROUP-SPAWN-CATCHES-ONLY-THREE-ERRORS (failures=10)    AssertionError: 'Traceback' unexpectedly found in 'Traceback (most recent call last):
+S03976-A46-A-CHECKED-EXIT-OF-A-MISSING-PROGRAM-IS-A-TRACEBAC (failures=6)     AssertionError: 'Traceback' unexpectedly found in 'Traceback (most recent call last):
+S03977-A46-RUN-TOOL-READS-EXIT-126-127-AS-A-RESULT           (failures=15)    AssertionError: 3 != 2 : S00002-CARGO: VOID: the mutant does not build
+S03978-A46-THE-PROCESS-GROUP-READS-EXIT-126-127-AS-A-RESULT  (failures=9)     AssertionError: 3 != 2 : S00002-CARGO: VOID: its killer selected 0 tests, not one
+S03979-A46-EXIT-126-IS-NOT-A-REFUSAL                         (failures=5)     AssertionError: 'Traceback' unexpectedly found in 'Traceback (most recent call last):
+S03980-A46-EXIT-127-IS-NOT-A-REFUSAL                         (failures=25)    AssertionError: 'Traceback' unexpectedly found in 'Traceback (most recent call last):
+S03981-A47-A-SPAWN-BY-ANOTHER-STDLIB-NAME-SKIPS-THE-TOOL-CHE (failures=35)    AssertionError: 'Traceback' unexpectedly found in 'Traceback (most recent call last):
+S03982-A47-AN-ALIASING-IMPORT-OF-A-SPAWNER-IS-NOT-SEEN       (failures=1)     AssertionError: Lists differ: ['import subprocess as sp'] != []
+```
+
+Two more plants were run and have no row of their own. Removing the spawn-error backstop reads
+`FAILED (failures=58)`, and is the same plant as S03972's `if False:` in another spelling. Reading
+the search's `PATH` from this process's environment instead of the child's reads `OK`: the tests'
+parent and child agree on the tools they name, so the two are not told apart by this file, and
+S03971's plant (`path = os.defpath`) is the one that is.
+
+Plants that are not expressible as rows: none. All ten of this round's plants are rows S03973 to
+S03982, and S03971 and S03972 were the round's first two.
