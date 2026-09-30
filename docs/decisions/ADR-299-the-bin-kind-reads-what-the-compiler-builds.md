@@ -62,8 +62,8 @@ absent, because a skipped oracle would read as a pass.
 - Good, because every member of the population is read as the tools read it or is refused by name,
   and the three planted shapes of the issue are members of it.
 - Good, because a layout a later change adds to an axis table is judged by the tools at once.
-- Bad, because the suite needs a Rust toolchain on the machine that runs it, and runs two tools
-  per member. Measured: the suite reads in tens of seconds, not minutes.
+- Bad, because the suite needs a Rust toolchain on the machine that runs it, and runs a tool per
+  member, so it is slower than a table of answers would be.
 - Bad, because a `cfg` predicate outside `test`, `not`, `all` and `any` is refused by name, so a
   binary that gates a module on a feature cannot carry a `bin::` killer until the reader decides
   that predicate.
