@@ -189,6 +189,78 @@
         "    if false {\n",
         "streak_views::a_studied_day_puts_nothing_at_stake_on_either_track",
         "nothing is at stake on a track whose open study day has a study review (SPEC-076 R30, A49)"
+      ],
+      [
+        "S07622-A-FAILED-ROUTE-LEAVES-THE-DAY-DUE",
+        "coordination",
+        "src/relight.rs",
+        "            Err(error) => tracing::error!(%error, \"the relight line could not be raised\"),\n",
+        "            Err(error) => {\n                tracing::error!(%error, \"the relight line could not be raised\");\n                due.routed(db, day).await?;\n            }\n",
+        "relight_order::a_route_that_fails_leaves_the_day_due_and_a_later_cycle_celebrates_it_once",
+        "a day whose route fails stays due, so a later cycle celebrates it once (SPEC-076 R27, A51)"
+      ],
+      [
+        "S07623-A-DAY-LEAVES-THE-LIST-ONLY-AFTER-ITS-ROUTE",
+        "coordination",
+        "src/relight.rs",
+        "        match announce_relight(router, day, today).await {\n            Ok(_) => due.routed(db, day).await?,\n            Err(error) => tracing::error!(%error, \"the relight line could not be raised\"),\n        }\n",
+        "        due.routed(db, day).await?;\n        if let Err(error) = announce_relight(router, day, today).await {\n            tracing::error!(%error, \"the relight line could not be raised\");\n        }\n",
+        "relight_order::every_failed_route_leaves_its_day_due_until_one_celebration",
+        "the day is marked routed only once the router has decided it, never before its route (SPEC-076 R27, A52)"
+      ],
+      [
+        "S07624-A-FAILED-ROUTE-IS-NOT-READ-AS-DECIDED",
+        "coordination",
+        "src/relight.rs",
+        "    router.route(&occasion).await.map(Some)\n",
+        "    Ok(router.route(&occasion).await.ok())\n",
+        "relight_order::every_failed_route_leaves_its_day_due_until_one_celebration",
+        "the route's error reaches the cycle, which keeps the day due (SPEC-076 R27, A52)"
+      ],
+      [
+        "S07625-THE-HEAT-PLACE-HOLDS-NO-AT-STAKE-WORD",
+        "bot",
+        "src/streak_commands.rs",
+        "        format!(\" {}\", escape_html(view.language_heat))\n",
+        "        format!(\" {}\", escape_html(view.language_at_stake.as_str()))\n",
+        "streak_commands::the_language_line_carries_its_runs_heat_in_the_heats_own_place",
+        "the language line's heat is its run's, not the at-stake word (SPEC-076 R31 restated, A50)"
+      ],
+      [
+        "S07626-THE-HEAT-PLACE-HOLDS-NO-NOUN",
+        "bot",
+        "src/streak_commands.rs",
+        "        format!(\" {}\", escape_html(view.language_heat))\n",
+        "        format!(\" {}\", if view.language.freezes == 1 { \"freeze\" } else { \"freezes\" })\n",
+        "streak_commands::the_language_line_carries_its_runs_heat_in_the_heats_own_place",
+        "the language line's heat is its run's, not the freezes' noun (SPEC-076 R31 restated, A50)"
+      ],
+      [
+        "S07627-THE-HEAT-PLACE-HOLDS-NO-BEST",
+        "bot",
+        "src/streak_commands.rs",
+        "        format!(\" {}\", escape_html(view.language_heat))\n",
+        "        format!(\" {}\", view.language.longest)\n",
+        "streak_commands::the_language_line_carries_its_runs_heat_in_the_heats_own_place",
+        "the language line's heat is its run's, not its best (SPEC-076 R31 restated, A50)"
+      ],
+      [
+        "S07628-THE-HEAT-PLACE-HOLDS-NO-LAW-RUN",
+        "bot",
+        "src/streak_commands.rs",
+        "        format!(\" {}\", escape_html(view.language_heat))\n",
+        "        format!(\" {}\", view.law.current)\n",
+        "streak_commands::the_language_line_carries_its_runs_heat_in_the_heats_own_place",
+        "the language line's heat is its run's, not the law run (SPEC-076 R31 restated, A50)"
+      ],
+      [
+        "S07629-A-RUN-ABOVE-ZERO-SHOWS-ITS-HEAT",
+        "bot",
+        "src/streak_commands.rs",
+        "    let heat = if view.language_heat.is_empty() {\n",
+        "    let heat = if true {\n",
+        "streak_commands::the_language_line_carries_its_runs_heat_in_the_heats_own_place",
+        "a language run above zero shows its heat on the line (SPEC-076 R31 restated, A50)"
       ]
     ]
   }
