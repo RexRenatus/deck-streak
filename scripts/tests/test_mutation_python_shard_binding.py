@@ -272,5 +272,193 @@ class TheReportIsBoundToItsSlotAndItsListing(unittest.TestCase):
         self.assertIn("0 missing () and 1 extra (?)", output)
 
 
+#: The plans the one-reader population is generated over: this many shards each.
+READER_COUNTS = (1, 2, 3, 4)
+#: A path the Python lane does not read: a document, a Rust file, an empty path, no path at all, the
+#: oracle's path (a class that does not apply in these plans), and a test module.
+UNREAD_PATHS = (
+    "README.md",
+    "crates/core/src/lib.rs",
+    "",
+    None,
+    "tools/parity-oracle/generate.py",
+    "scripts/tests/test_guard.py",
+)
+#: A container of another JSON type than the list a `mutants` holds, truthy and falsy.
+NOT_A_LIST = (5, 1.5, True, "abc", None, 0, False, "", {})
+#: A `files` of another JSON type than the list a report holds.
+FILES_NOT_A_LIST = (5, None, True, "abc", {})
+#: An outcome the runner's own vocabulary does not hold, spelled as a report might carry it.
+ABSENT = object()
+OFF_VOCABULARY = (
+    ABSENT,
+    None,
+    1,
+    [],
+    "pending",
+    "KILLED",
+    "killed ",
+    "Survived",
+    " survived",
+    "survived\n",
+    "survive",
+)
+
+
+def runner_outcomes():
+    """The runner's own outcome vocabulary, read from the runner module."""
+    from test_mutation_python_verdict import runner
+
+    return tuple(runner().OUTCOMES)
+
+
+def read_entry(document, path=SCRIPT):
+    """The entry of `document` that holds its mutants, made when a report has none."""
+    if not document["files"]:
+        document["files"].append({"path": path, "modules": [], "byte_readers": [], "mutants": []})
+    return document["files"][0]
+
+
+def reader_members(plan):
+    """(family, label, slots, wrong slots) for the one-reader class: every way a shard's report
+    holds a container of another JSON type, an outcome off the runner's vocabulary, or a listed
+    mutant under an entry the lane does not read, generated from the plan's own shards. The
+    binding and the judge must read each alike: refused by name, never a crash, never accepted."""
+    for k in range(plan.count):
+        held = plan.reports[k]["files"][0]["mutants"] if plan.reports[k]["files"] else []
+        for value in NOT_A_LIST:
+            if value:
+                slots = plan.correct()
+                read_entry(slots[k])["mutants"] = value
+                yield "mutants", f"shard {k}: its entry's mutants is {value!r}", slots, {k}
+            slots = plan.correct()
+            read_entry(slots[k])
+            slots[k]["files"].append({"path": SCRIPT, "mutants": value})
+            yield "extra entry", f"shard {k}: an extra entry whose mutants is {value!r}", slots, {k}
+        for value in FILES_NOT_A_LIST:
+            slots = plan.correct()
+            slots[k]["files"] = value
+            yield "files", f"shard {k}: its files is {value!r}", slots, {k}
+        for entry_value in (5, None, "abc", []):
+            slots = plan.correct()
+            read_entry(slots[k])
+            slots[k]["files"].append(entry_value)
+            yield "entry", f"shard {k}: an entry that is {entry_value!r}", slots, {k}
+        for index in (0,) if held else ():
+            for value in OFF_VOCABULARY:
+                slots = plan.correct()
+                record = slots[k]["files"][0]["mutants"][index]
+                if value is ABSENT:
+                    del record["outcome"]
+                else:
+                    record["outcome"] = value
+                shown = "absent" if value is ABSENT else repr(value)
+                yield "outcome", f"shard {k}: mutant {index}'s outcome is {shown}", slots, {k}
+            for path in UNREAD_PATHS:
+                for outcome in ("killed", "survived"):
+                    slots = plan.correct()
+                    record = slots[k]["files"][0]["mutants"].pop(index)
+                    record["outcome"] = outcome
+                    moved = {"path": path, "mutants": [record]}
+                    if path is None:
+                        del moved["path"]
+                    slots[k]["files"].append(moved)
+                    yield (
+                        "unread entry",
+                        f"shard {k}: mutant {index}, {outcome}, filed under path {path!r}",
+                        slots,
+                        {k},
+                    )
+
+
+class TheBindingAndTheJudgeReadOneReport(unittest.TestCase):
+    """SPEC-126 A10: one reader yields exactly the records the judge judges, so a report whose
+    containers are of another JSON type, whose outcome is off the runner's vocabulary, or whose
+    listed mutant sits under an entry the lane does not read, is VOID naming its shard."""
+
+    def tally(self, plan, members, what):
+        """Judge every member; each lands in exactly one bucket: refused (exit 3 naming exactly its
+        wrong slots), crashed (a traceback), accepted (exit 0) or other. A crash is caught and
+        counted here, never raised, so the count reads the rule and not the harness."""
+        counts = {"refused": 0, "crashed": 0, "accepted": 0, "other": 0}
+        firsts = {}
+        for family, label, slots, wrong in examined(what, list(members)):
+            code, named, output = plan.lay(slots)
+            if code == 1 and "Traceback" in output:
+                bucket = "crashed"
+            elif code == 0:
+                bucket = "accepted"
+            elif code == 3 and named == wrong:
+                bucket = "refused"
+            else:
+                bucket = "other"
+            counts[bucket] += 1
+            if bucket != "refused":
+                firsts.setdefault((family, bucket), label)
+        return counts, firsts
+
+    def test_the_runner_vocabulary_is_read_from_the_runner(self):
+        self.assertIn("killed", runner_outcomes())
+        self.assertNotIn("KILLED", runner_outcomes())
+
+    def test_a_report_is_read_as_the_judge_reads_it(self):
+        totals = {"refused": 0, "crashed": 0, "accepted": 0, "other": 0}
+        firsts = {}
+        families = set()
+        for count in READER_COUNTS:
+            plan = Plan(self, count)
+            code, named, output = plan.lay(plan.correct())
+            self.assertEqual((code, named), (0, set()), f"the control, {count} shards: {output}")
+            families |= {member[0] for member in reader_members(plan)}
+            counts, found = self.tally(plan, reader_members(plan), f"members of {count} shards")
+            firsts.update({key: label for key, label in found.items() if key not in firsts})
+            for bucket, number in counts.items():
+                totals[bucket] += number
+        total = sum(totals.values())
+        print(
+            f"examined {total} member(s), {totals['refused']} refused, {totals['crashed']} "
+            f"crashed, {totals['accepted']} accepted"
+        )
+        for (family, bucket), label in sorted(firsts.items()):
+            print(f"  {bucket}: {family}: {label}")
+        self.assertEqual(
+            sorted(families),
+            ["entry", "extra entry", "files", "mutants", "outcome", "unread entry"],
+        )
+        self.assertEqual(totals["refused"], total, totals)
+
+    def test_a_shard_that_lists_no_mutant_reads_its_empty_report_and_refuses_the_rest(self):
+        plan = EmptyReaderPlan(self)
+        code, named, output = plan.lay(plan.correct())
+        self.assertEqual((code, named), (3, set()), output)
+        self.assertIn("the scripts class applies and nothing was examined", output)
+        counts, firsts = self.tally(plan, reader_members(plan), "empty-listing members")
+        total = sum(counts.values())
+        print(
+            f"examined {total} member(s), {counts['refused']} refused, {counts['crashed']} "
+            f"crashed, {counts['accepted']} accepted"
+        )
+        for (family, bucket), label in sorted(firsts.items()):
+            print(f"  {bucket}: {family}: {label}")
+        self.assertEqual(counts["refused"], total, counts)
+
+
+class EmptyReaderPlan(Plan):
+    """A plan whose one shard lists no mutant: the planner's own output for zero listed mutants."""
+
+    def __init__(self, test):
+        self.test = test
+        self.text = "def f0(x):\n    return x + 0\n"
+        self.fixture = changed_fixture(test, head_text=self.text)
+        self.listing = []
+        shard_the_plan(self.fixture, [])
+        plan = json.loads((self.fixture.out / "plan.json").read_text(encoding="utf-8"))
+        self.count = plan["python"]["count"]
+        test.assertEqual(self.count, 1)
+        test.assertEqual({s["shard"]: s["mutants"] for s in plan["python"]["shards"]}, {0: []})
+        self.reports = {0: report_of([], shard="0/1")}
+        self.laid = 0
+
+
 if __name__ == "__main__":
     unittest.main()
