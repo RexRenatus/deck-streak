@@ -223,3 +223,44 @@ their finds left with the old reading. Four rows are re-anchored on the new read
 S19246, S19247) and S19256's killer moves to the generated test. S19241 is deleted, because the new
 reading makes its rewrite equivalent. Fifteen rows pin the arms of the new reading (S19263 to
 S19277), each proved KILLED by full id. The band holds fifty-six script rows.
+
+## Addendum, 2026-09-30, round 5: the guard reads Rust with rustc's lexer
+
+R8's class is drawn at rustc's lexer: for every source rustc accepts, the guard reads a module
+declaration as the implementation's test module exactly when rustc compiles that declaration under
+`--cfg test` and not without it, whatever else is configured, and reads it from the source rustc
+reads for it; otherwise it refuses. Two shapes lie outside that sentence, disclosed and not claimed:
+a file that a second declaration compiles without `test` (#458), and an item that a `cfg` removes
+inside a compiled test module (#449). Its axes are the Reference's token grammar: whitespace and comments at every place
+between an attribute's `#`, `!` and `[`, doc comments of each kind among the attributes, every
+literal prefix and hash count, macro token trees of each delimiter, raw identifiers, a byte order
+mark, a shebang, CRLF, and the `cfg` literals `true` and `false`. A fifth review found an inner
+attribute whose tokens a space, a newline or a comment separated (`# ![cfg(any())]`), which the
+guard did not read, and a raw C string, which it misread so that a later spelling counted. The rule
+reads every file with a tokenizer for the Reference's grammar and reads attributes and declarations
+as tokens; it refuses a source it cannot tokenize, and it reads the own file's test modules only
+when a crate root reaches that file through declarations kept under `--cfg test`. Criteria A13 and
+A15 cover it; this round adds no criterion.
+
+The tests were committed alone at 103e5af0, against the guard as the head left it: the generated
+test's new members, drawn from that grammar, and a C string before a spelling in A15's test of a
+`//` inside a literal. The generated test asks rustc, at test time, which sources each member
+compiles under all eight settings of `test` and two other options, and it fails closed: each rustc
+run must exit 1 and count exactly the errors it printed, and every member rustc compiles must fire
+its root's probe in every run, so a rustc that compiles nothing is no answer. It fails, and never
+skips, when rustc is not on PATH. Both tests are red there by assertion. The rule commit
+71173419 edits the guard, which lives in the same file, and leaves the tests' own hunks as
+committed at 103e5af0.
+
+```text
+A13: red at 103e5af0: Ran 24 tests, FAILED (failures=2): AssertionError: Lists differ: [...] != [] : 397 of 7703 members, the first lib.rs ool crlf=0 '#[cfg(test)]\nmod tests' '# ![cfg(any())]\n': a source rustc does not compile only under test is read (test_every_module_file_choice_is_read_from_rustcs_file_or_refused)
+A15: red at 103e5af0: AssertionError: Lists differ: ['demo::Depth (src/depth.rs) "a whole depth"'] != [] : cr#"a" // /* "# (test_a_shape_a_test_spells_after_a_url_on_its_line_is_pinned)
+A13: green at 71173419: Ran 24 tests, OK, examined 24 Setting impl(s), examined 6251 R8 member(s) judged against rustc
+```
+
+Nineteen rows are re-anchored on the token reader and eight are deleted: four lost their arms, three
+became another row's, and S19267 is equivalent on source rustc accepts. Twenty-two rows pin the new
+arms (S19278 to S19299), each proved KILLED by full id. The band holds seventy script rows.
+S19241's deletion above rested on a claim the fifth review measured false: a string after a `;`
+among a macro's arguments can follow the end of an item. The token reader reads a string as one
+token, and A13's tests plant that string among a macro's arguments in each delimiter.
