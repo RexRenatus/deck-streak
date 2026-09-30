@@ -56,6 +56,7 @@ fn a_reader_error_passes_through_untouched() {
 fn the_real_walk_reads_a_varint_field_and_a_length_field() {
     let data = [0x08_u8, 0x96, 0x01, 0x12, 0x02, b'h', b'i'];
     let got = walk(&data).expect("walk");
+    println!("examined {} fields", got.len());
     assert_eq!(got.len(), 2);
     assert_eq!(got[0].number, 1);
     assert_eq!(got[0].value, WireValue::Varint(150));
