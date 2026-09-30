@@ -236,15 +236,45 @@ and writes nothing through the link. The removal checks the same four names as t
 previous copy, the candidate and the Caddyfile's previous copy, each absent or a plain file with one
 link, and refuses with the write's own message. Only the install promises the refusal on every early
 exit; the removal promises no message on every exit. A33 to A37 pin these guards and the two tests that
-the moved rows S12725 and S12730 need. A38 generates the class over the path settings: each directory
-(the Caddy directory, and the Caddyfile's directory beside it and set apart) in each state (writable,
-read-only, read-only holding a stale writable previous copy), for each step (a first install, a
-re-install, a removal) and each trigger (none, a failed rename, a failed reload). Every member either
-succeeds, or exits 1 with that script's refusal (or with the reload's own message when a reload fails
-after a write) and leaves both directories and the live Caddyfile byte for byte as they were. A
-removal whose rename fails in a writable directory is not a member: it fails after its writes, the
-removal promises no message on every exit, and A7 pins it. A39 reads the settings the Caddy functions consume from `deploy.sh` and
-requires that they be exactly the settings A38 varies, so a new path setting fails until it is an axis.
+the moved rows S12725 and S12730 need.
+A38 measures the places instead of listing them. It runs each Caddy step through its eight exits (a
+first install, a re-install, a removal, an install refused at validation, a reload that fails, a rename
+that fails in each script and an install with no configuration), in both layouts, the Caddyfile beside
+the Caddy directory and set apart, with each listed setting the layout does not give pointed at a
+directory of its own, and diffs the whole tree around each step. Each directory a step changes is a
+place. Bash's execution trace and python's audit hook name every path each step touches, and each such
+path must lie in a place. A second pass makes every path but the places read-only and must change
+exactly what the first pass changed. Each place, in each state (writable, read-only, read-only with a
+stale writable previous copy), for a first install, a re-install and a removal, with no trigger, a
+failed rename and a failed reload, is then a member that either succeeds, or exits 1 with that script's
+refusal (or with the reload's own message when a reload fails after a write) and leaves the tree byte
+for byte as it was. A removal whose rename fails in a writable directory is not a member: it fails
+after its writes and the removal promises no message on every exit; A7 pins that exit in the default
+layout, and A38's measured runs take it in both layouts. The test fails closed: a step that changes no
+block, a trace that names no block, and a second pass that makes nothing read-only each fail it. A
+listed setting that chooses where a step writes adds a place to the diff, and that place's read-only
+members fail A38 until the step checks the place before its first write.
+
+Each Caddy step also refuses, before it reads or writes anything else, every environment name that
+starts with `DECKSTREAK_DEPLOY_` and is not one of the settings `deploy.sh` lists in `SETTINGS`, and
+names the one it refused. Bash itself enumerates the names (`${!DECKSTREAK_DEPLOY_@}`), so the refusal
+is default-deny over the whole prefix: no unlisted deploy setting reaches any function, trap, sourced
+file, child shell, host body or the renderer, whatever form reads it and whether or not a test runs the
+branch that reads it. `rollback.sh caddy-remove` runs only the lines that find `deploy.sh` and exec it.
+A39 proves the refusal for the bare prefix and for each listed setting with a suffix, on both steps,
+with the tree unchanged, and compares every command bash's DEBUG trap records before the refusal
+(installed through `BASH_ENV` with `set -T`, so functions, subshells and the exec'd `deploy.sh` report
+too) with the declared opening, exactly, so no command added before the refusal can read a setting
+first. The Caddy functions consume `DECKSTREAK_DEPLOY_HOST`, `DECKSTREAK_DEPLOY_ELEVATE` and
+`DECKSTREAK_DEPLOY_CHECKOUT` through their helpers, and each is listed. A new setting is refused until
+it is listed.
+
+Names outside that prefix are not settings: `PATH`, `HOME`, `TMPDIR`, the locale and the host
+command's own names belong to the tools a step runs, and the refusal leaves them alone (ADR-198).
+Neither test reads a script's text for the names it uses: a scan of read forms recognises only the forms
+it lists, so it cannot close the names outside the prefix, and it is not a check here. A write on a
+branch that none of the eight exits reaches in either layout is not measured by A38. Both limits are
+left open by design (ADR-198).
 
 The insertions this amendment makes are these two sections, appended after the file's last line,
 and nothing above them is edited (SPEC-038 section 8, ruling (i)).
@@ -275,8 +305,8 @@ and nothing above them is edited (SPEC-038 section 8, ruling (i)).
 | A35 | a first install, a re-install and a removal in a Caddy directory that cannot be written, with a stale file in it, exit non-zero with their own refusal before any write and leave the stale file and the live Caddyfile as they were (#423, #424) | `test_deploy_scripts.py` `a_read_only_caddy_directory_is_refused_before_any_write` |
 | A36 | an install whose block cannot be read exits non-zero, prints the refusal and leaves the block, the live Caddyfile and every other file as they were (#423) | `test_deploy_scripts.py` `an_install_whose_block_cannot_be_read_refuses_before_writing` |
 | A37 | a first install refused at validation with its block already gone still exits non-zero and prints the refusal (#423) | `test_deploy_scripts.py` `a_first_install_refused_with_its_block_already_gone_still_says_so` |
-| A38 | for each directory the two scripts write or undo in (the Caddy directory, and the live Caddyfile's own directory beside it and set apart), in each state (writable, read-only, read-only with a stale writable previous copy), for a first install, a re-install and a removal, with no trigger, a failed rename and a failed reload, every member succeeds, or exits 1 with that script's refusal (or the reload's own message when a reload fails after a write) and leaves both directories and the live Caddyfile byte for byte unchanged; a removal whose rename fails in a writable directory fails after its writes and is not a member (#423, #424) | `test_deploy_scripts.py` `every_directory_a_caddy_script_writes_or_undoes_is_checked_before_the_first_write` |
-| A39 | the settings the Caddy functions of `deploy.sh` consume are exactly the path settings A38 varies plus the one input file, so a new setting fails until it is classified (#423) | `test_deploy_scripts.py` `the_caddy_functions_read_only_the_settings_the_directory_population_varies` |
+| A38 | each Caddy step, run through its eight exits (a first install, a re-install, a removal, an install refused at validation, a reload that fails, a rename that fails in each script, an install with no configuration) in both layouts, changes and names paths only in the places its whole-tree diff measures, and changes the same paths when every other path is read-only; for each place in each state (writable, read-only, read-only with a stale writable previous copy), for a first install, a re-install and a removal, with no trigger, a failed rename and a failed reload, every member succeeds, or exits 1 with that script's refusal (or the reload's own message when a reload fails after a write) and leaves the tree byte for byte unchanged; a removal whose rename fails in a writable directory fails after its writes and is not a member; a step that changes or names no block, or a pass that makes nothing read-only, fails it (#423, #424) | `test_deploy_scripts.py` `every_directory_a_caddy_script_writes_or_undoes_is_checked_before_the_first_write` |
+| A39 | each Caddy step, before it reads or writes anything else, refuses every `DECKSTREAK_DEPLOY_` name that `deploy.sh`'s `SETTINGS` does not list, exits 1 naming it and leaves the tree unchanged (the bare prefix and each listed setting with a suffix, on both steps); and before the refusal each step runs exactly its declared opening, as bash's DEBUG trap records it (#423) | `test_deploy_scripts.py` `a_caddy_step_reads_only_the_settings_it_names_and_refuses_any_other` |
 
 ```acceptance
 A16: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k with_no_candidate_still_undoes
@@ -302,22 +332,29 @@ A35: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k 
 A36: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k an_install_whose_block_cannot_be_read_refuses_before_writing
 A37: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k a_first_install_refused_with_its_block_already_gone_still_says_so
 A38: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k every_directory_a_caddy_script_writes_or_undoes_is_checked_before_the_first_write
-A39: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k the_caddy_functions_read_only_the_settings_the_directory_population_varies
+A39: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k a_caddy_step_reads_only_the_settings_it_names_and_refuses_any_other
 ```
 
 The test file's `World.run` now starts the script in its own session and kills the whole group on a
-timeout, so a stuck stub cannot orphan the host script. Rows S12718 to S12737 in
+timeout, so a stuck stub cannot orphan the host script. Rows S12718 to S12740 in
 `scripts/mutation-rows.d/S12700-S12799.json` pin the absent-candidate guard of the undo (killer A16),
 the undo after the block write (A18), after the candidate copy (A31) and after the import append
 (A19), the removal's link guard (A20), the install's path guard (A23, A24), the absent-block undo
 (A37), the undo of the kept copy and of the rename (A29, A30), the removal's guard for a hard link or
 a pipe (A25), the refusal of a block copy that fails (A36), the Caddyfile checks of both scripts (A34),
-the removal's four-name guard (A33), and the directory checks and the directory line of each script (A38). Files changed: `deploy/deploy.sh`,
+the removal's four-name guard (A33), the directory checks and the directory line of each script (A38),
+and the refusal of a setting the script does not list: its exit, the two steps it covers and the
+whole prefix it reads (A39). Files changed: `deploy/deploy.sh`, `deploy/README.md`,
 `scripts/tests/test_deploy_scripts.py`, `scripts/mutation-rows.d/S12700-S12799.json`,
 `docs/red-first/SPEC-127.md`, `docs/decisions/ADR-198-the-install-undoes-every-write-and-a-linked-candidate-is-refused.md`
 and `changelog.d/fix-caddy-undo-423.md`.
 
 ### What this amendment does NOT do
 
-- It does not change what a successful install or removal does (#423, #424).
+- It does not change what a successful install or removal does when every deploy setting in the
+  environment is listed (#423, #424).
 - It does not change the removal's refusal of a link at its candidate path, which stays A20 and A21 (#424).
+- It does not refuse or classify an environment name outside the `DECKSTREAK_DEPLOY_` prefix, and A38
+  does not measure a write on a branch that none of its eight exits reaches (ADR-198; #423).
+- It does not name a failed temporary directory of the operator's own (#451), nor check the site
+  import when the Caddyfile is set apart (#452).

@@ -228,3 +228,26 @@ With the setting in both, A38 fails with
 the line `a setting is no place`, and A39 passes. With the setting in the
 script only, A39 fails with the line `a new setting is an axis`. Both plants
 were run in a scratch copy, never in the worktree.
+
+## Amendment 2026-09-30, fifth round (issues #423 and #424)
+
+The tests of A38 and A39 were rewritten and committed first (c6d9c1cb9315156b8e98e194953e8f93269b3f78) against `deploy.sh` as it
+stood, and run whole under `LC_ALL=C`: the test of A39 was red by assertion, with no error, and the
+fifty-five other tests stayed green. A39 already holds its one line in the fence above, so this
+round's red and green are quoted here. The red line names a setting: it is the first setting the
+test sets that the script does not list, and the name it prints is the bare `DECKSTREAK_DEPLOY_`
+prefix.
+
+```text
+A39: red at c6d9c1cb9315156b8e98e194953e8f93269b3f78: AssertionError: 0 != 1 : DECKSTREAK_DEPLOY_ : a step ran with a setting it does not name
+A39: green at 1630451088450a3125d70859f9d7da52a747e86e
+```
+
+The rewritten test of A38 is green at that commit: it measures every path each Caddy step
+changes, on every exit, success included, and the head's `deploy.sh` already writes only in the
+places it checks. The fix followed (1630451088450a3125d70859f9d7da52a747e86e), which changes `deploy.sh` and edits no test file:
+each Caddy step refuses a deploy setting it does not list before it runs anything else. After it,
+fifty-six tests pass.
+
+The rows S12738 to S12740 were added in a later commit. Each is killed by the test of A39, and
+every row of the band is proved killed by its full id on a clean committed tree.
