@@ -116,3 +116,19 @@ The A5 red line above quotes a failure that came from `check_judge` comparing a 
 `f'"{path}"'`; its comparison changed to `path` between that red (2bf4a9a) and its green (11469f9),
 because the reader's representation changed from quoted words to shell-split words. The fixtures
 and the test methods stayed byte-identical across the change.
+
+## Addendum, 2026-09-30 (issue #438): A15 and A16, a report bound to its slot and its listing
+
+The red commit adds `test_mutation_python_shard_binding.py` against the unchanged verdict and
+changes nothing else: the correct layout passes as the control, and the verdict accepts 129 of the
+129 slot-binding members and 302 of the 311 listing-binding members (only the missing-report family
+was refused). Both tests fail by assertion. The green commit changes `python_reports` in the
+verdict and the fixtures of five earlier tests that laid one report in several slots or listed no
+shards; the population then reads 129 refused of 129 and 311 refused of 311, none accepted.
+
+```red-first
+A15: red at 11ab33f: AssertionError: 129 != 0 : 129 of 129 members accepted
+A15: green at 7fa6ed7
+A16: red at 11ab33f: AssertionError: 302 != 0 : 302 of 311 members accepted
+A16: green at 7fa6ed7
+```
