@@ -14,7 +14,7 @@ pub enum AtStake {
     Freeze,
     /// A missed day would break the streak.
     Break,
-    /// Nothing: there is no streak to lose.
+    /// Nothing: there is no streak to lose, or the day already has a study review.
     Nothing,
 }
 
@@ -53,6 +53,16 @@ pub struct StreakView {
     pub law_at_stake: AtStake,
 }
 
+/// What a missed day costs `track`, given what its run alone puts at stake: nothing once `today`
+/// already has a study review, since a missed day can then no longer be `today` (R20).
+fn once_studied(stake: AtStake, track: &StreakState, today: StudyDay) -> AtStake {
+    if track.last_study_day == Some(today) {
+        AtStake::Nothing
+    } else {
+        stake
+    }
+}
+
 /// The view for `today`.
 ///
 /// # Errors
@@ -76,6 +86,8 @@ pub async fn streak_view(db: &Db, today: StudyDay) -> Result<StreakView, KernelE
     } else {
         AtStake::Break
     };
+    let language_at_stake = once_studied(language_at_stake, &language, today);
+    let law_at_stake = once_studied(law_at_stake, &law, today);
     Ok(StreakView {
         study_day: today,
         language,
