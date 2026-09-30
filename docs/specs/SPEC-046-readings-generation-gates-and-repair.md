@@ -213,10 +213,10 @@ that repair text.
 The rule is proved in the build the tests run; code the build configuration or environment selects is outside it (#473).
 Four measured shapes stay open there, and ADR-046's amendment records them:
 
-- E1: a second class declaration that the build profile selects.
-- E2: a class name computed from the build profile.
-- E3: a class name read from the build environment.
-- E4: a consumer branch that the build profile selects; it lets a member's finding through and changes no class.
+- E1, a second class declaration that the build profile selects.
+- E2, a class name computed from the build profile.
+- E3, a class name read from the build environment.
+- E4, a consumer branch that the build profile selects; it lets a member's finding through and changes no class.
 
 No production caller runs the generation yet: nothing outside the tests calls
 `generate_readings` or builds its gate from `ai-safety.json`. The delivery that wires them
