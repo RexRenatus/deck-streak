@@ -41,7 +41,7 @@ fn month_length(year: i64, month: i64) -> i64 {
 /// one day at a time from 1970-01-01.
 #[test]
 fn every_day_falls_in_the_calendar_month_the_cap_reads() {
-    const LOW: i64 = -135_000; // 1600-08
+    const LOW: i64 = -135_000; // 1600-05
     const HIGH: i64 = 48_300; // 2102-03
     let mut months: Vec<(i64, i64)> = Vec::new(); // index = epoch day - LOW
     let mut back: Vec<(i64, i64)> = Vec::new(); // epoch days -1, -2, ...
