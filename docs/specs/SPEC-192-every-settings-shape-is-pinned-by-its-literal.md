@@ -173,15 +173,38 @@ prints `examined 24`. Each of the seven that stay green is equivalent on valid R
   hold;
 - leaving a `//` comment at the end of a file with no newline unhandled (L1) leaves at most the
   file's last character unblanked, and one character spells no shape.
-R8. An out-of-line `#[cfg(test)] mod name;` is read as the implementation file's own test module
-only when rustc's choice of its file is not in doubt. The guard lists every file rustc could read
-for it: `name.rs` and `name/mod.rs`, below the implementation file's own directory and beside the
-file, since a crate root, a `src/bin` file, a `mod.rs` and a file loaded through `#[path]` all read
-their modules beside themselves. It reads the one of them that exists. When two exist, or none, or
-an attribute of the declaration carries `path` in any spelling (`#[path = "..."]`, a raw string,
-spaces inside the brackets, or `cfg_attr` under any predicate), it reads no file, so a shape only
-that module spells stays refused. It does not follow a `mod tests;` declared inside an inline
-`mod inner { }` either. Each limit fails closed, and #433 tracks the inline module.
+R8. A module that the implementation's own file declares, inline (`mod name { }`) or out-of-line
+(`mod name;`), in any visibility and as `name` or `r#name`, is its test module only when rustc
+compiles the declaration under `--cfg test` and not without it, whatever else is configured. The
+guard reads the declaration's whole attribute run: the outer attributes, which must follow the end
+of an item or open the file, and the inner attributes that open the module's body or file. It
+evaluates the run in three-valued logic in which `test` is the one known option. `all`, `any` and
+`not` combine true, false and unknown; any other option or key-value (`unix`, `debug_assertions`,
+`feature = "slow"`) is unknown; a `cfg` keeps the module when its predicate holds; a `cfg_attr`
+keeps it when its predicate fails or when every attribute it applies keeps it; and any other
+attribute keeps it. The module is a test module when the run is true with `test` and false without
+it. A run the guard cannot read whole, or a predicate it cannot parse, makes no test module.
+
+The zero-file case is refused. When the run removes the declaration under `--cfg test`
+(`#[cfg(test)] #[cfg(any())] mod tests;`, or `#[cfg(test)] #[cfg(feature = "slow")] mod tests;`
+with the feature off), rustc reads no module file, and a stale `tests.rs` spelling the shape pins
+nothing. A module that may also compile without `test` is refused as well.
+
+An out-of-line test module is read only when rustc's choice of its file is not in doubt. The guard
+lists every file rustc could read for it: `name.rs` and `name/mod.rs`, below the implementation
+file's own directory and beside the file, since a crate root, a `src/bin` file, a `mod.rs` and a
+file loaded through `#[path]` all read their modules beside themselves. It reads the one of them
+that exists. When two exist, or none, or an attribute of the declaration carries `path` in any
+spelling (`#[path = "..."]`, a raw string, spaces inside the brackets, or `cfg_attr` under any
+predicate), it reads no file. A test module declared inside another module, inline or
+out-of-line, is not followed.
+
+Each limit fails closed, so a shape that only such a module spells stays refused. Measured against
+rustc's own reading of a generated population, the rule reads no module that rustc compiles out
+under `--cfg test` or compiles without it, and it refuses valid members for four reasons: 20,295
+where an attribute chooses the file, 8,044 where the run names an option other than `test`, 6,457
+where the test module is declared inside another module (#433), and 1,397 where two candidate
+files exist.
 R9. `impl Setting for` is read from comment-free source, so one inside a block comment is not
 examined.
 R10. Each of the eight rewrites and each of the three further arm rewrites has one row in the band
@@ -192,8 +215,16 @@ and the depth check of R8 (S19229 to S19256). A third review moved R8 to the uni
 removes the reading of a `#[path]` value: the five rows of that reading (S19239, S19240, S19242,
 S19243 and S19244) lost their finds and are deleted, and six rows pin the arms of the union rule
 (S19257 to S19262: the `path` word, the place beside the file, the module directory, the
-one-file requirement, the `name/mod.rs` leaf and the `name.rs` leaf). That is forty-two rows, S19216
-to S19262 less the five deleted ids, each proved by its full id.
+one-file requirement, the `name/mod.rs` leaf and the `name.rs` leaf). A fourth review moved R8 to
+the three-valued reading of the attribute run, which removes the substring test for `#[cfg(test)]`
+and the two patterns of a declaration. Four rows are re-anchored on the new reading (S19227,
+S19238, S19246 and S19247), and S19256's killer moves to the generated test of A13. S19241 is
+deleted: the new reading makes its rewrite equivalent, since a declaration spelled inside a string
+cannot follow the end of an item. Fifteen rows pin the arms of the new reading (S19263 to S19277:
+the three operators, the removal without `test`, the whole outer run, the inner run, a partly read
+inner run, a key-value option, another option, both halves of `cfg_attr`, a test module inside
+another module, a span opened only by `{`, a file read only for `;`, and `r#name`). That is
+fifty-six rows, S19216 to S19277 less the six deleted ids, each proved by its full id.
 
 Insertions into the criteria of section 3 (the section is not edited, which keeps this file's earlier
 bytes as they were; the criteria are defined below, by insertion of new A-numbers, as SPEC-038 §8
@@ -201,13 +232,13 @@ ruling (i) allows):
 
 - A13 (out-of-line test modules) and A14 (an impl in a comment) are new tests, red first.
 - A15 is the set of assertions added inside the existing tests of A11 and A12, recorded `not red`
-  because the base guard already passed them; the forty-two rows prove each kills its rewrite.
+  because the base guard already passed them; the fifty-six rows prove each kills its rewrite.
 
 ## 9. Amendment acceptance criteria
 
 | id | criterion | decided by |
 |---|---|---|
-| A13 | an out-of-line `#[cfg(test)] mod`, beside the file, in a `mod.rs` directory, or below a `lib.rs`, is the implementation's own test module when it is the one file rustc could read; an ambiguous choice, or any `path` attribute, is read as none | `python3 -m unittest discover -s scripts/tests -p test_setting_shapes.py -k TheGuardReadsOutOfLineTestModules` |
+| A13 | a module whose attributes keep it under `--cfg test` and remove it without, with every other option unknown, is the implementation's own test module, inline or out-of-line; an out-of-line one, beside the file, in a `mod.rs` directory, or below a `lib.rs`, is read when it is the one file rustc could read; an ambiguous choice, any `path` attribute, or a module rustc compiles out is read as none; every generated member is read from the source rustc compiles only under `test`, or refused | `python3 -m unittest discover -s scripts/tests -p test_setting_shapes.py -k TheGuardReadsOutOfLineTestModules` |
 | A14 | an `impl Setting for` inside a block comment is not examined | `python3 -m unittest discover -s scripts/tests -p test_setting_shapes.py -k TheGuardIgnoresAnImplementationInAComment` |
 | A15 | the strengthened assertions of A11 and A12 refuse each of the six lexer rewrites and the two selection rewrites | `python3 -m unittest discover -s scripts/tests -p test_setting_shapes.py -k TheGuardJudgesAPlantedTree -k TheGuardReadsRustSource` |
 
@@ -222,8 +253,10 @@ A15: python3 -m unittest discover -s scripts/tests -p test_setting_shapes.py -k 
 - It does not change any production line, `SHAPE` literal or setting (#336).
 - It does not make the lexer a full Rust parser: a `#[cfg(test)]` module written by a macro is
   still not counted (#441).
-- It does not follow a `mod tests;` declared inside an inline module, so a shape only that module
-  spells stays refused (#433).
+- It does not follow a test module declared inside another module, inline or out-of-line, so a
+  shape only that module spells stays refused (#433).
+- It does not read the items of a compiled test module one by one: an item that a `cfg` removes
+  inside it is still read as test code (#449).
 - It does not read a C raw string `cr#"..."#`: the guard misreads it, and the misreading fails
   closed (#434).
 - It does not examine an implementation whose line does not open with `impl Setting for`: a raw

@@ -110,7 +110,7 @@ A13: red at faaf43ec: AssertionError: Lists differ: ['demo::Depth (src/depth.rs)
 A13: green at 77ed28a0
 A14: red at faaf43ec: AssertionError: 2 != 1 : test_a_block_comment_holding_an_impl_is_not_examined
 A14: green at 77ed28a0
-A15: not red: the base guard already passed the assertions added inside A11's and A12's tests; the rows S19216 to S19256 prove each kills its rewrite
+A15: not red: the base guard already passed the assertions added inside A11's and A12's tests; the rows S19216 to S19277, less the six deleted ids, prove each kills its rewrite
 ```
 
 The red run (`Ran 23 tests`, `FAILED (failures=5)`; one is the `lib.rs` case, `Lists differ:
@@ -191,3 +191,35 @@ with that reading and are deleted. Six rows pin the arms of the union rule (S192
 proved KILLED by full id, and each red by assertion under its mutant. None of the six finds exists at
 the previous head, so their survival there is not measurable; the killer's red under each mutant, on
 the new code, is the evidence. The band holds forty-two script rows.
+
+## Addendum, 2026-09-30, round 4: the guard reads a test module when rustc compiles it only under test
+
+R8's class is every module the implementation's own file declares, inline or out-of-line, in any
+visibility, as `name` or `r#name`: the guard reads a test module's source exactly when rustc
+compiles the declaration under `--cfg test` and not without it, and reads exactly the source rustc
+reads; otherwise it refuses, including when rustc reads no module file at all. A fourth review found
+a `#[cfg(test)] mod tests;` whose attribute run also carries a `cfg` that removes it
+(`#[cfg(any())]`, `#[cfg(not(test))]`, `#[cfg_attr(test, cfg(any()))]`, a feature that is off):
+rustc reads no module file, and the guard read a stale `tests.rs` and pinned. The inline reading
+admitted the same run. The rule reads the whole run, outer and leading inner, in three-valued logic
+in which `test` is the one known option, and a module is a test module only when the run is true
+with `test` and false without. Criteria A13 and A15 cover it; this round adds no criterion.
+
+The generated test, with the operator table it is built from, was committed alone at 09074a62,
+against the guard as the head left it. It builds its members from the guard's own operators and
+asks rustc, at test time, which module sources each member compiles with `test` on and off under
+every setting of two other options; when rustc is not on PATH it fails rather than skip. It is red
+there by assertion. The rule commit 57842f68 edits the guard, which lives in the same file as the
+generated test, and leaves the test's own hunks as committed at 09074a62.
+
+```text
+A13: red at 09074a62: Ran 24 tests, FAILED (failures=1): AssertionError: Lists differ: [...] != [] : 1683 of 4768 members, the first lib.rs #[cfg(x)] #[cfg(test)] mod tests; at tests.rs: reads ['tests.rs'], only under test [] (test_every_module_file_choice_is_read_from_rustcs_file_or_refused, line 682)
+A13: green at 57842f68: Ran 24 tests, OK, examined 24 Setting impl(s), examined 3320 R8 member(s) judged against rustc
+```
+
+The replay of the 73 rewrites and the union rule's six against the committed tests turns 55 red;
+exactly the seven equivalents (X11, T8, R3, R4, C3, C4, L1) survive, and 17 no longer apply because
+their finds left with the old reading. Four rows are re-anchored on the new reading (S19227, S19238,
+S19246, S19247) and S19256's killer moves to the generated test. S19241 is deleted, because the new
+reading makes its rewrite equivalent. Fifteen rows pin the arms of the new reading (S19263 to
+S19277), each proved KILLED by full id. The band holds fifty-six script rows.
