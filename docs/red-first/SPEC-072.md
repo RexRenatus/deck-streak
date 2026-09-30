@@ -279,3 +279,10 @@ The killer's counts do not change with the speed-ups: `killer examined 2218 tree
 escaping: 0; controls judged wrongly: 0`, each of its 17 axes printing the same examined members and
 controls before and after the change that keeps one target for each worker. A12 on the real tree
 reads 170 crate source files, 16 migrations and 13 planted crate source files, and refuses none.
+
+A35, round 7: the record in the form the probes read.
+
+```red-first
+A35: red at 8c883728: assertion `left == right` failed: every build-script member is refused, naming its package; left: 0, right: 104
+A35: green at dfd9ca1e
+```
