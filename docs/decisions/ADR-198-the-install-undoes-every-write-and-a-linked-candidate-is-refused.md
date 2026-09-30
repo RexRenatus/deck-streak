@@ -26,6 +26,7 @@ stop safely at every early exit?
 - Refuse, before any write, a path that exists and is not a plain file with one link — chosen, because it leaves the file state as found, prints the refusal or the write's message and is one test line per script before any write; `cp -p` cannot stand in for it, because it writes through a link to any other existing file and refuses only a link to its own source or to nothing.
 - Remove the link and go on — because it deletes a file the script did not create and hides that a stranger put something at its path, it lost.
 - Write the candidate with `mktemp` in the same directory — because a fresh name removes the shared path but adds a second cleanup and a name the tests and rows cannot anchor on, it lost.
+- Refuse a Caddyfile outside the Caddy directory — because `DECKSTREAK_DEPLOY_CADDYFILE` is a documented setting and refusing it would remove a documented configuration rather than guard it, it lost.
 - For the install, an explicit `|| undo` on each write — chosen, because each write's failure is then visible in the script at the line that can fail and each has its own row and test.
 - For the install, one `trap` on exit that undoes — because a trap also fires on the success path and on the `mv` steps after the point of no return, so it would need a flag to tell them apart, it lost.
 - For the install, a guard on the candidate path alone — because the block, the block's previous copy and the Caddyfile's previous copy are written through the same way, so a guard on one name leaves three, it lost.
@@ -37,7 +38,10 @@ Chosen option: "refuse a path that is not a plain file with one link" for both s
 every guard one test and one mutation row. The install checks its four fixed names (the block, the
 block's previous copy, the candidate and the Caddyfile's previous copy) before its first write, and
 the removal checks the same four names; both scripts also refuse, before any write, a Caddy directory
-they cannot write and a live Caddyfile that is not a regular file. The undo tolerates an absent candidate and an absent block, never
+they cannot write and a live Caddyfile that is not a regular file. The directories come from the path
+settings: the Caddy directory and the live Caddyfile's own directory, which holds the rename target
+and the Caddyfile's previous copy, and which differs from the first when `DECKSTREAK_DEPLOY_CADDYFILE`
+names a Caddyfile elsewhere. The undo tolerates an absent candidate and an absent block, never
 deletes a block path that is not a file, and its helpers are defined before the first write.
 
 ### Consequences
@@ -55,7 +59,7 @@ deletes a block path that is not a file, and its helpers are defined before the 
 
 ### Confirmation
 
-SPEC-127 criteria A16 to A37 in `scripts/tests/test_deploy_scripts.py`, and rows S12718 to S12735,
+SPEC-127 criteria A16 to A39 in `scripts/tests/test_deploy_scripts.py`, and rows S12718 to S12737,
 each proved killed by its full id.
 
 ## More Information

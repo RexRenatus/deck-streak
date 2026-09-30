@@ -57,6 +57,8 @@ A34: red at 9c1ac0df482428d364ced130cbad6447fecc1ffe: AssertionError: deploy.sh 
 A35: red at 9c1ac0df482428d364ced130cbad6447fecc1ffe: AssertionError: 'the Caddy configuration was refused' not found in "deck-streak-host: line 23: /tmp/tmp96dogtc2/host/etc/caddy/deck-streak.caddy: Permission denied\nfind: cannot delete '/tmp/tmp96dogtc2/host/etc/caddy/deck-streak.candidate': Permission denied\n" : the refusal is printed
 A36: not red: the test passes at the head's `deploy.sh`, whose install already refuses a block it cannot copy aside, so it is the killer that S12730 needs once the install guard refuses a directory it cannot write (see the addendum below the fence)
 A37: not red: the test passes at the head's `deploy.sh`, whose undo already tolerates an absent block, so it is the killer that S12725 needs once the install guard refuses before the undo runs (see the addendum below the fence)
+A38: red at ccc7a07165cf9bd5a3ecfa389df1ab1055cde766: AssertionError: False is not true : no refusal line: "cp: cannot create regular file '/tmp/tmpmooww968/host/etc/cfdir/Caddyfile.previous': Permission denied\n"
+A39: not red: the test passes at the head that holds A38's red test, because `deploy.sh` already reads only the settings the population varies; it is the guard that keeps the population's axes complete (see the addendum below the fence)
 A16: green at 28588e0fbbb556f5c686ac937c2180377c78bfbd
 A17: green at 28588e0fbbb556f5c686ac937c2180377c78bfbd
 A18: green at 28588e0fbbb556f5c686ac937c2180377c78bfbd
@@ -75,6 +77,7 @@ A32: green at 2c25d22b82dd41f8f38a0754039e3549a496f45d
 A33: green at dc8e42216b229361a1def85bd1230884c9f11e00
 A34: green at dc8e42216b229361a1def85bd1230884c9f11e00
 A35: green at dc8e42216b229361a1def85bd1230884c9f11e00
+A38: green at b46e2daa3a29f0a4db575f971f107febb989e105
 ```
 
 ## Fix round 1 (PR #357)
@@ -195,10 +198,23 @@ before the copy and before the undo, which turns the old killers of those two ro
 followed (dc8e4221), which changes `deploy.sh` and edits no test file. After it, fifty-four tests
 pass.
 
-One later commit edits a test file: the test of A14 plants a file with mode 0 at the Caddyfile in place of
+One later commit (bacacc2b) edits a test file: the test of A14 plants a file with mode 0 at the Caddyfile in place of
 a directory, because the removal's new precondition refuses a directory first and turned the old plant
 into a no-op for the row S12714. It changes no verdict: fifty-four tests still pass.
 
 The rows S12725 and S12730 moved to the tests of A37 and A36, and the rows S12731 to S12735 were added;
 each moved row's mutant survives its old killer and is killed by its new one, and every row of the band
 is proved killed by its full id on a clean committed tree.
+
+## Amendment 2026-09-29, fourth round (issues #423 and #424)
+
+The test of A38 was committed first (ccc7a071) against `deploy.sh` as it stood, and run whole under
+`LC_ALL=C`: twelve of its seventy-eight members were red by assertion, with no error, and the fifty-five
+other tests stayed green. The red line above is the first member to fail. The test of A39 is green at
+that commit, because it reads the settings and passes at the head's `deploy.sh`. The fix followed
+(b46e2daa), which changes `deploy.sh` and edits no test file. After it, fifty-six tests pass and A38
+examines seventy-eight members.
+
+The rows S12736 and S12737 were added in the next commit; each mutant survives the fifty-four tests
+that the previous head held and is killed by the test of A38, and every row of the band is proved
+killed by its full id on a clean committed tree.
