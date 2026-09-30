@@ -19,7 +19,7 @@ use std::future::Future;
 use std::pin::Pin;
 use std::time::Duration;
 
-use crate::photo::{FileId, Photo};
+use crate::photo::{FileId, Photo, PhotoError};
 use crate::router::Pass;
 
 /// A push's future: boxed, so the port stays a trait object the router can hold.
@@ -72,6 +72,8 @@ pub enum Prepared {
         /// The prepared message's id.
         id: String,
     },
+    /// The caption breaks the Bot API's bound, so nothing was attempted.
+    Refused(PhotoError),
     /// The Bot API refused it or could not be reached.
     Failed,
     /// The transport has no such call, so nothing was attempted.
