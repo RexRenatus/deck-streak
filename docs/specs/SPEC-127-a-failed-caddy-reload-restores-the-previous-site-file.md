@@ -382,6 +382,75 @@ and `changelog.d/fix-caddy-undo-423.md`.
 
 ## Amendment, 2026-09-30: a temporary path that cannot be made is a named refusal
 
+`deploy.sh` makes temporary paths of two kinds: three made by `mktemp` (the release step's working
+directory in `install_tag`, the Caddy install's working directory in `caddy_install`, and the host
+script's check file) and paths the host script makes under a temporary name without `mktemp` (the
+`releases/<tag>.partial` directory that an install unpacks into and renames, and the pid-named
+`.current.<pid>` link that is renamed over `current`). When the temporary directory is absent or
+not writable, or the tool cannot run, each of them ended the script under `set -e` with only the
+tool's message and no `deploy:` line, and some of them failed after the unit files and the daemon
+reload had been written (#451).
+
+Each is now guarded in one form. The local calls end with `|| die "..."`. The host script is a
+separate shell without `die`, so its guards end with `refuse "..."`, which prints
+`deploy: the host step ...` and exits 1. Before its first write the host script checks that the unit
+directory and every existing unit drop-in directory take a write; the pid-named
+link is made before the unit files are installed, so its failure leaves no unit and no reload; an
+`EXIT` trap deletes the check file, the pid-named link and an unfinished unpack; and a failed rename
+over `current` puts the previous units back, reloads, and removes an install's new release. A step
+that cannot make its path prints one `deploy:` line naming the step (the release step, the Caddy
+step or the host step), exits non-zero and writes nothing (ADR-297).
+
+The test of A40 derives the `mktemp` sites by reading `deploy.sh` and runs each with each verb that
+reaches it under each failure mode (eighteen members). The test of A41 measures instead of reading:
+for each of the release, the release's rollback and the rollback of a kept release it runs the verb
+once in its fixture and takes the directories whose contents changed as the population (five, five
+and four places), confirms that the verb still succeeds with every other directory read-only, and
+then makes each place absent and not writable, and makes each call the host step makes to `mktemp`,
+`mkdir`, `tar`, `ln` and `mv` fail in turn. The count it prints, `examined 47 measured
+temporary-path member(s)`, is asserted equal to the measured size and to the figure the test derives
+from the places and calls it expects. Only what the run touches joins that population; a path the
+measured runs do not reach is not covered by it. Every member asserts a non-zero exit, exactly one
+`deploy:` line that is the last line, no traceback and every path of the fixture byte equal before
+and after, and names the step where the failure names one.
+
+## Acceptance criteria of the 2026-09-30 amendment
+
+| id | criterion | test |
+|---|---|---|
+| A40 | every `mktemp` call `deploy.sh` makes, when its path cannot be made (directory absent, not writable, or `mktemp` unrunnable), ends its verb with one `deploy:` line naming the step, a non-zero exit and no write (#451) | `test_deploy_scripts.py` `every_temporary_path_that_cannot_be_made_is_a_named_refusal` |
+| A41 | every directory each of three verbs writes in, measured from a real run, and every host call to a tool that makes a path, when it fails, ends the verb with one `deploy:` line, a non-zero exit and no write (#451) | `test_deploy_scripts.py` `every_place_a_verb_writes_in_and_every_temporary_path_call_is_refused` |
+
+```acceptance
+A40: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k every_temporary_path_that_cannot_be_made_is_a_named_refusal
+A41: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k every_place_a_verb_writes_in_and_every_temporary_path_call_is_refused
+```
+
+Rows S12747 to S12751 pin the host step's check-file guard, its refusal line and its exit, and the
+trap that deletes the check file; S12752 pins the Caddy install refusal's step name. The rows from
+S12753 pin each guard the fix added (the releases directory, the partial directory, the unpack, the
+rename into place, the link, the pre-check of the directories and the undo of a failed switch), the
+local refusal lines, the release step's name, and the exit of each refusal, each killed by the test
+named in its row. Files changed: `deploy/deploy.sh`, `scripts/tests/test_deploy_scripts.py`,
+`scripts/mutation-rows.d/S12700-S12799.json`, `docs/red-first/SPEC-127.md`,
+`docs/decisions/ADR-297-every-temporary-path-deploy-sh-makes-is-guarded-by-a-named-refusal.md` and
+`changelog.d/fix-release-tmp-451.md`.
+
+### What this amendment does NOT do
+
+- It does not change what a successful install or removal does when every deploy setting in the
+  environment is listed (#423, #424).
+- It does not change the removal's refusal of a link at its candidate path, which stays A20 and A21 (#424).
+- It does not refuse or classify an environment name outside the `DECKSTREAK_DEPLOY_` prefix, nor
+  keep one that the shell reads as code when it starts from running before the refusal (an entry that
+  makes the shell run start-up code can already run any code in the step, more than an unlisted setting
+  can do), and A38
+  does not measure a write on a branch that none of its eight exits reaches (ADR-198; #423).
+- It does not name a failed temporary directory of the operator's own (#451), nor check the site
+  import when the Caddyfile is set apart (#452).
+
+## Amendment, 2026-09-30: a temporary path that cannot be made is a named refusal
+
 `deploy.sh` makes three temporary paths: the release step's working directory (`install_tag`), the
 Caddy install's working directory (`caddy_install`) and the host script's check file. When the
 temporary directory is absent or not writable, or `mktemp` cannot run, each call ended the script

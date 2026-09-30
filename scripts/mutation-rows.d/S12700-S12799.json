@@ -416,6 +416,158 @@
         "die \"could not make its working directory\"",
         "the Caddy install refusal names the step that stopped (SPEC-127 A40)",
         "test_deploy_scripts.ATemporaryPathThatCannotBeMadeIsANamedRefusal.test_every_temporary_path_that_cannot_be_made_is_a_named_refusal"
+      ],
+      [
+        "S12753-A-THE-RELEASES-DIRECTORY-GUARD-STAYS",
+        "deploy/deploy.sh",
+        "mkdir -p \"$root/releases\" || refuse \"could not make its releases directory\"",
+        "mkdir -p \"$root/releases\"",
+        "the host step refuses when the releases directory cannot be made (SPEC-127 A41)",
+        "test_deploy_scripts.EveryDirectoryAVerbWritesInIsMeasuredAndItsTemporaryPathsAreRefused.test_every_place_a_verb_writes_in_and_every_temporary_path_call_is_refused"
+      ],
+      [
+        "S12754-A-THE-PARTIAL-DIRECTORY-GUARD-STAYS",
+        "deploy/deploy.sh",
+        "mkdir \"$rel.partial\" || refuse \"could not make its partial release directory\"",
+        "mkdir \"$rel.partial\"",
+        "the host step refuses when the partial release directory cannot be made (SPEC-127 A41)",
+        "test_deploy_scripts.EveryDirectoryAVerbWritesInIsMeasuredAndItsTemporaryPathsAreRefused.test_every_place_a_verb_writes_in_and_every_temporary_path_call_is_refused"
+      ],
+      [
+        "S12755-A-THE-UNPACK-GUARD-STAYS",
+        "deploy/deploy.sh",
+        "tar -xzf - --no-same-owner -C \"$rel.partial\" || refuse \"could not unpack the release\"",
+        "tar -xzf - --no-same-owner -C \"$rel.partial\"",
+        "the host step refuses when the release cannot be unpacked (SPEC-127 A41)",
+        "test_deploy_scripts.EveryDirectoryAVerbWritesInIsMeasuredAndItsTemporaryPathsAreRefused.test_every_place_a_verb_writes_in_and_every_temporary_path_call_is_refused"
+      ],
+      [
+        "S12756-A-THE-RENAME-INTO-PLACE-GUARD-STAYS",
+        "deploy/deploy.sh",
+        "mv -T \"$rel.partial\" \"$rel\" || refuse \"could not move the release into place\"",
+        "mv -T \"$rel.partial\" \"$rel\"",
+        "the host step refuses when the unpacked release cannot be moved into place (SPEC-127 A41)",
+        "test_deploy_scripts.EveryDirectoryAVerbWritesInIsMeasuredAndItsTemporaryPathsAreRefused.test_every_place_a_verb_writes_in_and_every_temporary_path_call_is_refused"
+      ],
+      [
+        "S12757-A-THE-NEW-RELEASE-LINK-GUARD-STAYS",
+        "deploy/deploy.sh",
+        "stage_link \"$rel\" || refuse \"could not make the link for the new release\"",
+        "stage_link \"$rel\"",
+        "the host step refuses when the install's link cannot be made (SPEC-127 A41)",
+        "test_deploy_scripts.EveryDirectoryAVerbWritesInIsMeasuredAndItsTemporaryPathsAreRefused.test_every_place_a_verb_writes_in_and_every_temporary_path_call_is_refused"
+      ],
+      [
+        "S12758-A-THE-KEPT-RELEASE-LINK-GUARD-STAYS",
+        "deploy/deploy.sh",
+        "stage_link \"$rel\" || refuse \"could not make the link for the kept release\"",
+        "stage_link \"$rel\"",
+        "the host step refuses when the rollback's link cannot be made (SPEC-127 A41)",
+        "test_deploy_scripts.EveryDirectoryAVerbWritesInIsMeasuredAndItsTemporaryPathsAreRefused.test_every_place_a_verb_writes_in_and_every_temporary_path_call_is_refused"
+      ],
+      [
+        "S12759-A-THE-UNIT-DIRECTORY-IS-CHECKED-FIRST",
+        "deploy/deploy.sh",
+        "writable \"$unitdir\" || refuse \"cannot write in its unit directory\"",
+        "writable \"$unitdir\" || true",
+        "the host step refuses before its first write when the unit directory cannot take one (SPEC-127 A41)",
+        "test_deploy_scripts.EveryDirectoryAVerbWritesInIsMeasuredAndItsTemporaryPathsAreRefused.test_every_place_a_verb_writes_in_and_every_temporary_path_call_is_refused"
+      ],
+      [
+        "S12760-A-THE-DROP-IN-DIRECTORIES-ARE-CHECKED-FIRST",
+        "deploy/deploy.sh",
+        "[ ! -e \"$d\" ] || writable \"$d\" || refuse \"cannot write in a unit drop-in directory\"",
+        "[ ! -e \"$d\" ] || writable \"$d\" || true",
+        "the host step refuses before its first write when a unit drop-in directory cannot take one (SPEC-127 A41)",
+        "test_deploy_scripts.EveryDirectoryAVerbWritesInIsMeasuredAndItsTemporaryPathsAreRefused.test_every_place_a_verb_writes_in_and_every_temporary_path_call_is_refused"
+      ],
+      [
+        "S12761-A-THE-HOST-REFUSAL-EXITS-NON-ZERO-ON-EVERY-PATH",
+        "deploy/deploy.sh",
+        "refuse() { echo \"deploy: the host step $*\" >&2; exit 1; }",
+        "refuse() { echo \"deploy: the host step $*\" >&2; exit 0; }",
+        "the host step's shared refusal exits non-zero (SPEC-127 A41)",
+        "test_deploy_scripts.EveryDirectoryAVerbWritesInIsMeasuredAndItsTemporaryPathsAreRefused.test_every_place_a_verb_writes_in_and_every_temporary_path_call_is_refused"
+      ],
+      [
+        "S12762-A-THE-HOST-REFUSAL-NAMES-THE-HOST-STEP",
+        "deploy/deploy.sh",
+        "refuse() { echo \"deploy: the host step $*\" >&2; exit 1; }",
+        "refuse() { echo \"deploy: $*\" >&2; exit 1; }",
+        "the host step's shared refusal names the host step (SPEC-127 A41)",
+        "test_deploy_scripts.EveryDirectoryAVerbWritesInIsMeasuredAndItsTemporaryPathsAreRefused.test_every_place_a_verb_writes_in_and_every_temporary_path_call_is_refused"
+      ],
+      [
+        "S12763-A-THE-RELEASE-REFUSAL-IS-A-DEPLOY-LINE",
+        "deploy/deploy.sh",
+        "die \"the release step could not make its working directory\"",
+        "exit 1",
+        "the release step's refusal is a `deploy:` line, not a bare exit (SPEC-127 A41)",
+        "test_deploy_scripts.EveryDirectoryAVerbWritesInIsMeasuredAndItsTemporaryPathsAreRefused.test_every_place_a_verb_writes_in_and_every_temporary_path_call_is_refused"
+      ],
+      [
+        "S12764-A-THE-CADDY-REFUSAL-IS-A-DEPLOY-LINE",
+        "deploy/deploy.sh",
+        "die \"the Caddy step could not make its working directory\"",
+        "exit 1",
+        "the Caddy install's refusal is a `deploy:` line, not a bare exit (SPEC-127 A40)",
+        "test_deploy_scripts.ATemporaryPathThatCannotBeMadeIsANamedRefusal.test_every_temporary_path_that_cannot_be_made_is_a_named_refusal"
+      ],
+      [
+        "S12765-A-THE-RELEASE-REFUSAL-NAMES-ITS-STEP",
+        "deploy/deploy.sh",
+        "die \"the release step could not make its working directory\"",
+        "die \"could not make its working directory\"",
+        "the release step's refusal names the step that stopped (SPEC-127 A41)",
+        "test_deploy_scripts.EveryDirectoryAVerbWritesInIsMeasuredAndItsTemporaryPathsAreRefused.test_every_place_a_verb_writes_in_and_every_temporary_path_call_is_refused"
+      ],
+      [
+        "S12766-A-THE-EXIT-DELETES-THE-STAGED-LINK",
+        "deploy/deploy.sh",
+        "[ ! -L \"$root/.current.$$\" ] || find \"$root/.current.$$\" -delete",
+        "true",
+        "every exit deletes the pid-named link it made (SPEC-127 A41)",
+        "test_deploy_scripts.EveryDirectoryAVerbWritesInIsMeasuredAndItsTemporaryPathsAreRefused.test_every_place_a_verb_writes_in_and_every_temporary_path_call_is_refused"
+      ],
+      [
+        "S12767-A-THE-EXIT-DELETES-AN-UNFINISHED-UNPACK",
+        "deploy/deploy.sh",
+        "[ -z \"$made_partial\" ] || [ ! -e \"$rel.partial\" ] || find \"$rel.partial\" -delete",
+        "true",
+        "every exit deletes an unfinished unpack (SPEC-127 A41)",
+        "test_deploy_scripts.EveryDirectoryAVerbWritesInIsMeasuredAndItsTemporaryPathsAreRefused.test_every_place_a_verb_writes_in_and_every_temporary_path_call_is_refused"
+      ],
+      [
+        "S12768-A-A-FAILED-SWITCH-RESTORES-THE-PREVIOUS-UNITS",
+        "deploy/deploy.sh",
+        "[ -z \"$prev\" ] || install_units \"$prev\"",
+        "[ -z \"$prev\" ] || true",
+        "a failed rename over current puts the previous units back (SPEC-127 A41)",
+        "test_deploy_scripts.EveryDirectoryAVerbWritesInIsMeasuredAndItsTemporaryPathsAreRefused.test_every_place_a_verb_writes_in_and_every_temporary_path_call_is_refused"
+      ],
+      [
+        "S12769-A-A-FAILED-SWITCH-REMOVES-THE-NEW-RELEASE",
+        "deploy/deploy.sh",
+        "[ \"$mode\" != install ] || find \"$rel\" -delete",
+        "true",
+        "a failed rename over current removes an install's new release (SPEC-127 A41)",
+        "test_deploy_scripts.EveryDirectoryAVerbWritesInIsMeasuredAndItsTemporaryPathsAreRefused.test_every_place_a_verb_writes_in_and_every_temporary_path_call_is_refused"
+      ],
+      [
+        "S12770-A-A-UNIT-WRITE-CANNOT-COME-BEFORE-THE-DIRECTORY-CHECK",
+        "deploy/deploy.sh",
+        "check_dirs \"$rel\"",
+        "install_units \"$rel\"; check_dirs \"$rel\"",
+        "no unit file is written before the directories are checked (SPEC-127 A41)",
+        "test_deploy_scripts.EveryDirectoryAVerbWritesInIsMeasuredAndItsTemporaryPathsAreRefused.test_every_place_a_verb_writes_in_and_every_temporary_path_call_is_refused"
+      ],
+      [
+        "S12771-A-THE-RENAME-OVER-CURRENT-IS-GUARDED",
+        "deploy/deploy.sh",
+        "mv -T \"$root/.current.$$\" \"$root/current\" || switch_failed",
+        "mv -T \"$root/.current.$$\" \"$root/current\" || true",
+        "a failed rename over current ends the verb with a refusal (SPEC-127 A41)",
+        "test_deploy_scripts.EveryDirectoryAVerbWritesInIsMeasuredAndItsTemporaryPathsAreRefused.test_every_place_a_verb_writes_in_and_every_temporary_path_call_is_refused"
       ]
     ]
   }

@@ -117,7 +117,49 @@ port=${port:-8080}
 # The check file is made before the first write, so a temporary directory that cannot be used
 # leaves the host as it was (ADR-297); every exit deletes it.
 checked=$(mktemp) || { echo "deploy: the host step could not make its check file" >&2; exit 1; }
-trap '[ ! -f "$checked" ] || find "$checked" -delete' EXIT
+made_partial=
+refuse() { echo "deploy: the host step $*" >&2; exit 1; }
+# Every exit removes what this step made under a temporary name: the check file, the pid-named
+# link and an unfinished unpack; each test is an `if`-shaped list, so the trap cannot end the
+# shell early.
+host_cleanup() {
+    [ ! -f "$checked" ] || find "$checked" -delete
+    [ ! -L "$root/.current.$$" ] || find "$root/.current.$$" -delete
+    [ -z "$made_partial" ] || [ ! -e "$rel.partial" ] || find "$rel.partial" -delete
+    return 0
+}
+trap host_cleanup EXIT
+
+# The directories the unit files are written in must take a write, checked before the first write
+# so that a host that cannot be written in is refused with nothing changed. One argument: a
+# release directory whose drop-in directories are named too (none when it does not exist yet).
+writable() { [ -d "$1" ] && [ -w "$1" ] && [ -x "$1" ]; }
+check_dirs() {
+    local d
+    writable "$unitdir" || refuse "cannot write in its unit directory"
+    for d in "$unitdir"/deck-streak-*@*.d "${1:-/nonexistent}"/deploy/systemd/*@*.d; do
+        [ -d "$d" ] || continue
+        d=$unitdir/$(basename "$d")
+        [ ! -e "$d" ] || writable "$d" || refuse "cannot write in a unit drop-in directory"
+    done
+}
+
+# The link that becomes `current` is made under a pid-named name and renamed over it.
+stage_link() {
+    ln -sfn "$1" "$root/.current.$$"
+}
+
+drop_release() {
+    [ "$mode" != install ] || find "$rel" -delete
+}
+
+# The rename over `current` failed after the units were installed: put the previous ones back.
+switch_failed() {
+    [ -z "$prev" ] || install_units "$prev"
+    systemctl daemon-reload
+    drop_release
+    refuse "could not switch the current link"
+}
 
 install_units() {
     local src=$1/deploy/systemd f d n c base
@@ -145,8 +187,7 @@ install_units() {
 }
 
 switch_to() {
-    ln -sfn "$1" "$root/.current.$$"
-    mv -T "$root/.current.$$" "$root/current"
+    stage_link "$1" && mv -T "$root/.current.$$" "$root/current"
 }
 
 restart() {
@@ -179,15 +220,22 @@ back() {
 
 if [ "$mode" = install ]; then
     [ ! -e "$rel" ] || { echo "deploy: $tag is already installed; use the rollback" >&2; exit 1; }
-    mkdir -p "$root/releases"
+    check_dirs
+    mkdir -p "$root/releases" || refuse "could not make its releases directory"
     [ -e "$rel.partial" ] && find "$rel.partial" -delete
-    mkdir "$rel.partial"
-    tar -xzf - --no-same-owner -C "$rel.partial"
+    mkdir "$rel.partial" || refuse "could not make its partial release directory"
+    made_partial=1
+    tar -xzf - --no-same-owner -C "$rel.partial" || refuse "could not unpack the release"
     (cd "$rel.partial" && sha256sum -c --quiet MANIFEST.sha256) ||
         { echo "deploy: the unpacked release does not match its MANIFEST.sha256" >&2; find "$rel.partial" -delete; exit 1; }
-    mv -T "$rel.partial" "$rel"
+    check_dirs "$rel.partial"
+    stage_link "$rel" || refuse "could not make the link for the new release"
+    mv -T "$rel.partial" "$rel" || refuse "could not move the release into place"
+    made_partial=
 else
     [ -d "$rel" ] || { echo "deploy: $tag is not kept on the host" >&2; exit 1; }
+    check_dirs "$rel"
+    stage_link "$rel" || refuse "could not make the link for the kept release"
 fi
 
 install_units "$rel"
@@ -204,7 +252,7 @@ python3 "$rel/deploy/scripts/effective-check.py" --root "$rel" "$checked" ||
       [ "$mode" = install ] && find "$rel" -delete; exit 1; }
 find "$checked" -delete
 
-switch_to "$rel"
+mv -T "$root/.current.$$" "$root/current" || switch_failed
 restart deck-streak-api.service || back deck-streak-api.service
 ready || back deck-streak-api.service
 restart deck-streak-bot.service || back deck-streak-bot.service
