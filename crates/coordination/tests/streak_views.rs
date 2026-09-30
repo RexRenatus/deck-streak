@@ -198,3 +198,68 @@ async fn the_verdict_follows_the_lapse_and_standby_over_every_stored_row() {
     println!("governor-view population: {cases} stored rows");
     assert_eq!(cases, 8);
 }
+
+/// A rule (A49; R20, R30): once the open study day has a study review, a missed day can no longer
+/// be that day, so nothing is at stake on that track, whatever its run and freezes; a track not yet
+/// studied today keeps what its run and freezes put at stake. Every run, freeze count and studied
+/// flag of both tracks, over stored rows.
+#[tokio::test]
+async fn a_studied_day_puts_nothing_at_stake_on_either_track() {
+    let mut cases = 0_u32;
+    for current in [0_u32, 1, 7] {
+        for freezes in 0..=1_u32 {
+            for law in [0_u32, 1] {
+                for (language_studied, law_studied) in
+                    [(false, false), (false, true), (true, false), (true, true)]
+                {
+                    let scratch = TempDir::new().expect("a scratch directory");
+                    let db = database(&scratch).await;
+                    let mut write = db.write().await.expect("a write");
+                    for (track, run, held, studied) in [
+                        ("language", current, freezes, language_studied),
+                        ("law", law, 0, law_studied),
+                    ] {
+                        sqlx::query(
+                            "INSERT INTO streak_state (track, current_days, longest_days, \
+                             freezes, last_study_day, comeback_armed, created_at) \
+                             VALUES (?1, ?2, ?3, ?4, ?5, 0, 1)",
+                        )
+                        .bind(track)
+                        .bind(i64::from(run))
+                        .bind(i64::from(run) + 2)
+                        .bind(i64::from(held))
+                        .bind(if studied { TODAY } else { TODAY - 1 })
+                        .execute(&mut *write)
+                        .await
+                        .expect("a streak row");
+                    }
+                    write.commit().await.expect("the commit");
+                    let view = streak_view(&db, StudyDay::from_epoch_day(TODAY))
+                        .await
+                        .expect("the view");
+                    let language_at_stake = if language_studied || current == 0 {
+                        AtStake::Nothing
+                    } else if freezes == 0 {
+                        AtStake::Break
+                    } else {
+                        AtStake::Freeze
+                    };
+                    let law_at_stake = if law_studied || law == 0 {
+                        AtStake::Nothing
+                    } else {
+                        AtStake::Break
+                    };
+                    assert_eq!(
+                        (view.language_at_stake, view.law_at_stake),
+                        (language_at_stake, law_at_stake),
+                        "language {current}/{freezes}/{language_studied}, law {law}/{law_studied}"
+                    );
+                    cases += 1;
+                    db.close().await;
+                }
+            }
+        }
+    }
+    println!("studied-day population: {cases} stored pairs");
+    assert_eq!(cases, 3 * 2 * 2 * 4);
+}
