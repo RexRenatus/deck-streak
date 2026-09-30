@@ -112,6 +112,102 @@
         "  group: ${{ github.ref }}\n",
         "release.yml's group starts with text of its own, so no other block can render as it for any run of any tag (SPEC-190 R11)",
         "test_workflow_concurrency.EveryReleaseWorkflowQueuesEveryRun.test_every_workflow_that_can_hold_two_runs_of_a_release_queues_them"
+      ],
+      [
+        "S19015-THE-RELEASE-CANCEL-IN-PROGRESS-IS-THE-BOOLEAN-FALSE",
+        ".github/workflows/release.yml",
+        "  cancel-in-progress: false\n",
+        "  cancel-in-progress: 'false'\n",
+        "release.yml's cancel-in-progress is the boolean false as YAML types it, never a quoted string GitHub's parser refuses (SPEC-190 R12)",
+        "test_workflow_concurrency.EveryReleaseWorkflowQueuesEveryRun.test_every_workflow_that_can_hold_two_runs_of_a_release_queues_them"
+      ],
+      [
+        "S19016-A-TAB-NEVER-INDENTS-A-RELEASE-WORKFLOW-LINE",
+        ".github/workflows/release.yml",
+        "    timeout-minutes: 90\n",
+        "    \ttimeout-minutes: 90\n",
+        "no line of release.yml is indented with a tab, which YAML refuses, so the workflow is read as GitHub reads it (SPEC-190 R12)",
+        "test_workflow_concurrency.EveryReleaseWorkflowQueuesEveryRun.test_every_workflow_that_can_hold_two_runs_of_a_release_queues_them"
+      ],
+      [
+        "S19017-EVERY-RELEASE-EXPRESSION-IS-CLOSED",
+        ".github/workflows/release.yml",
+        "  group: release-${{ github.ref }}\n",
+        "  group: release-${{ github.ref\n",
+        "every expression release.yml holds is closed, since GitHub's parser refuses an unclosed one (SPEC-190 R12)",
+        "test_workflow_concurrency.EveryReleaseWorkflowQueuesEveryRun.test_every_workflow_that_can_hold_two_runs_of_a_release_queues_them"
+      ],
+      [
+        "S19018-A-RELEASE-EVENT-HOLDS-ONLY-WHAT-THE-PARSER-DEFINES",
+        ".github/workflows/release.yml",
+        "      - 'v[0-9]+.[0-9]+.[0-9]+'\n",
+        "      - 'v[0-9]+.[0-9]+.[0-9]+'\n  create:\n    types: [tag]\n",
+        "each event release.yml declares holds only the keys and types GitHub's parser defines for it (SPEC-190 R12)",
+        "test_workflow_concurrency.EveryReleaseWorkflowQueuesEveryRun.test_every_workflow_that_can_hold_two_runs_of_a_release_queues_them"
+      ],
+      [
+        "S19019-THE-RELEASE-ROOT-PERMISSIONS-HOLD-ONLY-DEFINED-SCOPES",
+        ".github/workflows/release.yml",
+        "permissions:\n  contents: read\n",
+        "permissions:\n  Contents: read\n",
+        "release.yml's root permissions name only scopes GitHub's parser defines, read with case (SPEC-190 R12)",
+        "test_workflow_concurrency.EveryReleaseWorkflowQueuesEveryRun.test_every_workflow_that_can_hold_two_runs_of_a_release_queues_them"
+      ],
+      [
+        "S19020-THE-RELEASE-ROOT-DEFAULTS-HOLD-ONLY-DEFINED-KEYS",
+        ".github/workflows/release.yml",
+        "\njobs:\n",
+        "\ndefaults:\n  Run:\n    shell: bash\n\njobs:\n",
+        "release.yml's root defaults hold only keys GitHub's parser defines, read with case (SPEC-190 R12)",
+        "test_workflow_concurrency.EveryReleaseWorkflowQueuesEveryRun.test_every_workflow_that_can_hold_two_runs_of_a_release_queues_them"
+      ],
+      [
+        "S19021-A-RELEASE-EVENT-TAKES-ITS-DEFINED-TYPE",
+        ".github/workflows/release.yml",
+        "      - 'v[0-9]+.[0-9]+.[0-9]+'\n",
+        "      - 'v[0-9]+.[0-9]+.[0-9]+'\n  release:\n    - published\n",
+        "an event release.yml declares takes the type GitHub's parser defines for it, never a list where a mapping or nothing is due (SPEC-190 R12)",
+        "test_workflow_concurrency.EveryReleaseWorkflowQueuesEveryRun.test_every_workflow_that_can_hold_two_runs_of_a_release_queues_them"
+      ],
+      [
+        "S19022-A-RELEASE-DISPATCH-HOLDS-ONLY-DEFINED-KEYS",
+        ".github/workflows/release.yml",
+        "      - 'v[0-9]+.[0-9]+.[0-9]+'\n",
+        "      - 'v[0-9]+.[0-9]+.[0-9]+'\n  workflow_dispatch:\n    Inputs:\n      tag:\n        type: string\n",
+        "a dispatch trigger on release.yml holds only the keys GitHub's parser defines, read with case (SPEC-190 R12)",
+        "test_workflow_concurrency.EveryReleaseWorkflowQueuesEveryRun.test_every_workflow_that_can_hold_two_runs_of_a_release_queues_them"
+      ],
+      [
+        "S19023-A-RELEASE-WORKFLOW-CALLS-NO-REMOTE-WORKFLOW",
+        ".github/workflows/release.yml",
+        "jobs:\n  release:\n",
+        "jobs:\n  publish:\n    uses: octo-org/tools/.github/workflows/publish.yml@0123456789abcdef0123456789abcdef01234567\n  release:\n",
+        "release.yml calls no workflow outside this repository's tree, whose concurrency block the check cannot read (SPEC-190 R12)",
+        "test_workflow_concurrency.EveryReleaseWorkflowQueuesEveryRun.test_every_workflow_that_can_hold_two_runs_of_a_release_queues_them"
+      ],
+      [
+        "S19024-A-RELEASE-WORKFLOW-CALLS-ONLY-A-CALLABLE-WORKFLOW",
+        ".github/workflows/release.yml",
+        "jobs:\n  release:\n",
+        "jobs:\n  cache:\n    uses: ./.github/workflows/rust-cache.yml\n  release:\n",
+        "release.yml calls only a workflow file here that takes workflow_call (SPEC-190 R12)",
+        "test_workflow_concurrency.EveryReleaseWorkflowQueuesEveryRun.test_every_workflow_that_can_hold_two_runs_of_a_release_queues_them"
+      ],
+      [
+        "S19025-THE-RELEASE-JOB-PERMISSIONS-HOLD-ONLY-DEFINED-SCOPES",
+        ".github/workflows/release.yml",
+        "      contents: write\n",
+        "      Contents: write\n",
+        "release.yml's job permissions name only scopes GitHub's parser defines, read with case (SPEC-190 R12)",
+        "test_workflow_concurrency.EveryReleaseWorkflowQueuesEveryRun.test_every_workflow_that_can_hold_two_runs_of_a_release_queues_them"
+      ],
+      [
+        "S19026-A-TAB-NEVER-INDENTS-A-RELEASE-BLOCK-SCALAR",
+        ".github/workflows/release.yml",
+        "          echo \"$PROTOC_SHA256  /tmp/protoc.zip\" | sha256sum -c -\n",
+        "         \techo \"$PROTOC_SHA256  /tmp/protoc.zip\" | sha256sum -c -\n",
+        "no line of a block scalar in release.yml has a tab inside the block's indentation, which YAML refuses (SPEC-190 R12)",
+        "test_workflow_concurrency.EveryReleaseWorkflowQueuesEveryRun.test_every_workflow_that_can_hold_two_runs_of_a_release_queues_them"
       ]
     ]
   }
