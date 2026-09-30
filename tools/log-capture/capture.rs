@@ -15,14 +15,33 @@
 // Each including test binary calls only the entry it needs.
 #![allow(dead_code)]
 
-use tracing::Subscriber;
-use tracing::subscriber::DefaultGuard;
+use std::sync::OnceLock;
+
+use tracing::subscriber::{DefaultGuard, NoSubscriber};
+use tracing::{Dispatch, Subscriber};
+
+/// A dispatcher registered for the life of the test binary and never dropped.
+///
+/// `tracing-core` computes a new callsite's interest from every registered dispatcher only while
+/// two or more are registered (`Dispatchers::rebuilder`); with exactly one it asks the reaching
+/// thread's default alone (`dispatcher::get_default`). A thread with no subscriber that first
+/// reaches a line while a capture is the only registered dispatcher therefore caches the line as
+/// never enabled, and the capture on another thread never sees it. This dispatcher is registered
+/// before any capture, so a capture is never the only one, and a callsite's interest always
+/// includes the capture's.
+static FLOOR: OnceLock<Dispatch> = OnceLock::new();
+
+/// Registers the floor dispatcher before a capture registers its own.
+fn register_floor() {
+    FLOOR.get_or_init(|| Dispatch::new(NoSubscriber::default()));
+}
 
 /// Runs `body` with `subscriber` as this thread's default, and returns what it returns.
 pub fn with_capture<S, T>(subscriber: S, body: impl FnOnce() -> T) -> T
 where
     S: Subscriber + Send + Sync + 'static,
 {
+    register_floor();
     tracing::subscriber::with_default(subscriber, body)
 }
 
@@ -31,5 +50,6 @@ pub fn hold_capture<S>(subscriber: S) -> DefaultGuard
 where
     S: Subscriber + Send + Sync + 'static,
 {
+    register_floor();
     tracing::subscriber::set_default(subscriber)
 }

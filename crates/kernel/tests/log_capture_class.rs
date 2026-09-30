@@ -185,7 +185,10 @@ fn every_capture_in_the_workspace_goes_through_the_helper() {
         .to_path_buf();
     let mut files = Vec::new();
     sources(&crates, &mut files);
-    files.retain(|path| path.file_name().is_some_and(|name| name != "log_capture_class.rs"));
+    files.retain(|path| {
+        path.file_name()
+            .is_some_and(|name| name != "log_capture_class.rs")
+    });
 
     let scoped = ["subscriber::with_default(", "subscriber::set_default("];
     let global = "subscriber::set_global_default(";

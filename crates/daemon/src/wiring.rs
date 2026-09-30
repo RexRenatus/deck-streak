@@ -534,6 +534,11 @@ impl deck_streak_agent::MemoryPort for DrillGradesMemory {
     }
 }
 
+/// The one way a test captures log lines (SPEC-024, the 2026-09-30 amendment).
+#[cfg(test)]
+#[path = "../../../tools/log-capture/capture.rs"]
+mod log_capture;
+
 #[cfg(test)]
 mod tests {
     use std::ffi::OsString;
@@ -560,6 +565,8 @@ mod tests {
     use deck_streak_coordination::recompute::xp::XP_STEP;
 
     use super::{OwnerSyncCycle, RecomputeSetup, TransportMarker, answer_of, recompute_fold};
+
+    use super::log_capture;
 
     /// A run of the given outcome, with synthetic instants.
     fn run(outcome: Result<(), ReasonCode>) -> SyncRun {
@@ -965,14 +972,13 @@ mod tests {
     struct Refusals(Arc<Mutex<Vec<Logged>>>);
 
     impl Refusals {
-        /// Captures the refusals logged on the test's thread while the guard and the second
-        /// dispatcher live. `tracing` asks only the reaching thread's dispatcher about a callsite
-        /// while one dispatcher is registered, so a refusal another test's thread reached first
-        /// would be cached as never enabled; a second dispatcher makes it ask every live one.
-        fn capture() -> (Self, tracing::subscriber::DefaultGuard, tracing::Dispatch) {
+        /// Captures the refusals logged on the test's thread while the guard lives. The capture
+        /// goes through `log_capture`, so a refusal another test's thread reached first is not
+        /// cached as never enabled.
+        fn capture() -> (Self, tracing::subscriber::DefaultGuard) {
             let refusals = Self::default();
-            let guard = tracing::subscriber::set_default(refusals.clone());
-            (refusals, guard, tracing::Dispatch::new(Self::default()))
+            let guard = log_capture::hold_capture(refusals.clone());
+            (refusals, guard)
         }
 
         /// The refusals logged since the last call.
@@ -1069,7 +1075,7 @@ mod tests {
     /// each time on a fresh ledger, and refuses by its step's code, logged under the step's name.
     #[tokio::test(flavor = "multi_thread")]
     async fn every_failing_step_refuses_the_owners_sync_by_its_own_code_and_name() {
-        let (refusals, _logging, _every) = Refusals::capture();
+        let (refusals, _logging) = Refusals::capture();
         for (step, code) in RUN_STEPS.iter().chain(CYCLE_STEPS) {
             let mut drives = 0;
             for _ in 0..2 {
