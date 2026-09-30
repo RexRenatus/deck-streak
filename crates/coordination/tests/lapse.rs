@@ -185,7 +185,7 @@ fn a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary() {
             for t in instants {
                 let d = day_of(offset, hour, t);
                 assert_eq!(
-                    day_judge(the_rule, begins(offset, hour, d)),
+                    day_judge(the_rule, t),
                     d,
                     "offset {offset}, rollover {hour}, instant {t}: the rule's day"
                 );
@@ -193,7 +193,7 @@ fn a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary() {
                 // decides: silent on d+1, d+2, d+3 opens a lapse with id d+1.
                 let reviews = vec![
                     review_at(begins(offset, hour, d - 10) + HOUR_MS),
-                    review_at(begins(offset, hour, d)),
+                    review_at(t),
                 ];
                 for (now, want) in [
                     (begins(offset, hour, d + 3), Some(d + 1)),
