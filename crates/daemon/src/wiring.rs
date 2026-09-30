@@ -417,19 +417,21 @@ fn answer_of(report: &CycleReport) -> SyncAnswer {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
+    use std::ffi::OsString;
+    use std::sync::{Arc, Mutex, PoisonError};
 
-    use deck_streak_bot::{ApiUrl, Scores, Sent, SyncOutcome, Transport};
+    use deck_streak_bot::{ApiUrl, Scores, Sent, SyncAnswer, SyncOutcome, Transport};
     use deck_streak_coordination::delivery::{DeliveryCounts, DeliveryMarker};
-    use deck_streak_coordination::sync_cycle::{CycleError, CycleReport, Recompute};
-    use deck_streak_ingest::gate::{GateError, RunReason};
+    use deck_streak_coordination::sync_cycle::{CycleReport, Recompute};
+    use deck_streak_ingest::engine::{AnkiEngine, RslibEngine};
+    use deck_streak_ingest::gate::RunReason;
+    use deck_streak_ingest::settings::SyncSettings;
     use deck_streak_ingest::state::{RefusalReason, SqliteIngestState};
-    use deck_streak_ingest::sync::{SyncError, SyncReport};
+    use deck_streak_ingest::sync::SyncReport;
     use deck_streak_ingest::sync_runs::{ReasonCode, SyncRun, Trigger};
-    use deck_streak_ingest::window::WindowError;
     use deck_streak_kernel::{
-        CredentialLoader, CredentialsDirectory, Db, Environment, KernelError, Offload,
-        OffloadWorkers, Redactor, StudyDay, StudyDayRule, SystemClock, UtcMillis,
+        CredentialLoader, CredentialsDirectory, Db, Environment, Offload, OffloadWorkers, Redactor,
+        StudyDay, StudyDayRule, SystemClock, UtcMillis,
     };
 
     use deck_streak_analytics::settings::AnalyticsSettings;
@@ -438,9 +440,7 @@ mod tests {
     use deck_streak_coordination::recompute::day_bonuses::DAY_BONUSES_STEP;
     use deck_streak_coordination::recompute::xp::XP_STEP;
 
-    use super::{
-        OwnerSyncCycle, RecomputeSetup, TransportMarker, answer_of, cycle_reason, recompute_fold,
-    };
+    use super::{OwnerSyncCycle, RecomputeSetup, TransportMarker, answer_of, recompute_fold};
 
     /// A run of the given outcome, with synthetic instants.
     fn run(outcome: Result<(), ReasonCode>) -> SyncRun {
@@ -503,35 +503,6 @@ mod tests {
             assert_eq!(answer.sync, told);
             assert_eq!(answer.scores, scores);
         }
-    }
-
-    #[test]
-    fn a_cycle_that_cannot_finish_is_refused_with_its_steps_reason_code() {
-        let cause = || KernelError::LoggingInstalled;
-        assert_eq!(
-            cycle_reason(&CycleError::History(cause())),
-            RefusalReason::SyncRecordFailed
-        );
-        assert_eq!(
-            cycle_reason(&CycleError::Sync(SyncError::Store(cause()))),
-            RefusalReason::SyncRecordFailed
-        );
-        assert_eq!(
-            cycle_reason(&CycleError::Obligations(cause())),
-            RefusalReason::ObligationsUnreadable
-        );
-        assert_eq!(
-            cycle_reason(&CycleError::Gate(GateError::Record(cause()))),
-            RefusalReason::RecomputeFailed
-        );
-        assert_eq!(
-            cycle_reason(&CycleError::Window(WindowError::State(cause()))),
-            RefusalReason::RecomputeFailed
-        );
-        assert_eq!(
-            cycle_reason(&CycleError::Recompute(cause())),
-            RefusalReason::RecomputeFailed
-        );
     }
 
     #[test]
@@ -685,6 +656,390 @@ mod tests {
             );
         }
         db.close().await;
+    }
+
+    /// The steps `run` refuses from before the cycle, in the order it reaches them, each with the
+    /// code SPEC-128 gives its refusal (A16). The code is the specification's, never read from the
+    /// code under test, so a remap in the code is a failure here and not a new expectation.
+    const RUN_STEPS: &[(&str, RefusalReason)] = &[
+        ("rescore", RefusalReason::RescoreUnrecorded),
+        ("settings", RefusalReason::SyncSettingsRefused),
+        ("credentials", RefusalReason::CredentialsDirectoryRefused),
+        ("scope", RefusalReason::ScopeSettingsRefused),
+    ];
+
+    /// The cycle's steps whose failure refuses the owner's sync at the cycle's own site, one for
+    /// each kind of the cycle's own step errors, each with the code SPEC-128 gives its refusal
+    /// (A16).
+    const CYCLE_STEPS: &[(&str, RefusalReason)] = &[
+        ("history", RefusalReason::SyncRecordFailed),
+        ("sync", RefusalReason::SyncRecordFailed),
+        ("obligations", RefusalReason::ObligationsUnreadable),
+        ("gate_probe", RefusalReason::RecomputeFailed),
+        ("gate_record", RefusalReason::RecomputeFailed),
+        ("window_read", RefusalReason::RecomputeFailed),
+        ("window_base", RefusalReason::RecomputeFailed),
+        ("recompute", RefusalReason::RecomputeFailed),
+    ];
+
+    /// The run record moved out of the cycle's reach: the cycle's first read of it fails.
+    const UNREAD_RUNS: &str = "ALTER TABLE sync_runs RENAME TO sync_runs_unread";
+
+    /// Every run the sync writes is refused, after the history has read the record.
+    const REFUSED_RUN: &str = "CREATE TRIGGER refused_run BEFORE INSERT ON sync_runs \
+         BEGIN SELECT RAISE(ABORT, 'refused'); END";
+
+    /// Each run the sync writes brings a second, `ok` run whose study day cannot be evaluated. The
+    /// history reads only ids and statuses and the sync only writes, so the first read of a run's
+    /// study day, the obligations', is the one that fails.
+    const UNREADABLE_DAY: [&str; 3] = [
+        "ALTER TABLE sync_runs RENAME TO sync_runs_base",
+        "CREATE VIEW sync_runs AS SELECT id, trigger, \
+         CASE WHEN attempts = 424242 THEN abs(id * 0 + (-9223372036854775807 - 1)) \
+         ELSE study_day END AS study_day, \
+         started_at, finished_at, status, reason, attempts, full_download, created_at \
+         FROM sync_runs_base",
+        "CREATE TRIGGER sync_runs_write INSTEAD OF INSERT ON sync_runs BEGIN \
+         INSERT INTO sync_runs_base (trigger, study_day, started_at, finished_at, status, reason, \
+         attempts, full_download, created_at) VALUES (NEW.trigger, NEW.study_day, \
+         NEW.started_at, NEW.finished_at, NEW.status, NEW.reason, NEW.attempts, \
+         NEW.full_download, NEW.created_at); \
+         INSERT INTO sync_runs_base (trigger, study_day, started_at, finished_at, status, reason, \
+         attempts, full_download, created_at) VALUES (NEW.trigger, NEW.study_day, \
+         NEW.started_at, NEW.finished_at, 'ok', NULL, 424242, 0, NEW.created_at); END",
+    ];
+
+    /// The gate's anchor cannot be written: the probe, the window and the recompute have run.
+    const REFUSED_ANCHOR: &str = "CREATE TRIGGER refused_anchor \
+         BEFORE UPDATE OF anchor_recomputed_at ON ingest_state \
+         BEGIN SELECT RAISE(ABORT, 'refused'); END";
+
+    /// The copy's decks moved out of the window's reach: the gate probes only reviews and cards.
+    const UNREAD_DECKS: &str = "ALTER TABLE decks RENAME TO decks_unread";
+
+    /// The window's base cannot be written: the gate has read the state and decided to run.
+    const REFUSED_WINDOW: &str = "CREATE TRIGGER refused_window \
+         BEFORE UPDATE OF window_floor ON ingest_state BEGIN SELECT RAISE(ABORT, 'refused'); END";
+
+    /// The XP ledger moved out of the recompute's reach, after the window was read.
+    const UNREAD_XP: &str = "ALTER TABLE xp_ledger RENAME TO xp_ledger_unread";
+
+    /// An owner's sync on a fresh ledger and state directory, with one step's fault installed.
+    struct Refusing {
+        _directory: tempfile::TempDir,
+        db: Db,
+        cycle: OwnerSyncCycle,
+    }
+
+    /// The fault table, keyed by the step: an owner's sync in which `step`, and no step before it,
+    /// fails. `None` for a step the table has no fault for. Every sync runs with an empty
+    /// credentials directory, so it fails at once and records a failed run.
+    async fn failing_at(step: &str) -> Option<Refusing> {
+        let directory = tempfile::tempdir().expect("a temporary directory");
+        let credentials = directory.path().join("credentials");
+        std::fs::create_dir(&credentials).expect("the credentials directory is made");
+        let db = Db::open(&directory.path().join("deck_streak.db"))
+            .await
+            .expect("the database opens");
+        let mut variables = vec![
+            (
+                "DECKSTREAK_SYNC_ENDPOINT",
+                OsString::from("http://127.0.0.1:9/"),
+            ),
+            ("STATE_DIRECTORY", directory.path().as_os_str().to_owned()),
+            ("CREDENTIALS_DIRECTORY", credentials.as_os_str().to_owned()),
+        ];
+        let mut ledger: &[&'static str] = &[];
+        // The statements run in a copy of the collection the engine creates, when the step's
+        // fault needs one; without a copy the gate's probe is the first step to fail.
+        let mut copy: Option<&[&'static str]> = None;
+        match step {
+            // The ledger is closed once the cycle is built; no copy of the collection exists.
+            "rescore" | "gate_probe" => {}
+            "settings" => variables.clear(),
+            "credentials" => variables.truncate(2),
+            "scope" => variables.push((
+                "DECKSTREAK_LAW_DECK_ROOT",
+                OsString::from("Law\u{1f}Evidence"),
+            )),
+            "history" => ledger = &[UNREAD_RUNS],
+            "sync" => ledger = &[REFUSED_RUN],
+            "obligations" => ledger = &UNREADABLE_DAY,
+            "gate_record" => {
+                copy = Some(&[]);
+                ledger = &[REFUSED_ANCHOR];
+            }
+            "window_read" => copy = Some(&[UNREAD_DECKS]),
+            "window_base" => {
+                copy = Some(&[]);
+                ledger = &[REFUSED_WINDOW];
+            }
+            "recompute" => {
+                copy = Some(&[]);
+                ledger = &[UNREAD_XP];
+            }
+            _ => return None,
+        }
+        let env = Environment::from_vars(variables);
+        if let Some(copy) = copy {
+            let settings = SyncSettings::from_env(&env).expect("the sync's settings");
+            RslibEngine
+                .new_card_queue(&settings.copy_path())
+                .expect("the engine creates the copy");
+            // A rename re-reads the copy's schema, whose indexes name the engine's collation.
+            let options = sqlx::sqlite::SqliteConnectOptions::new()
+                .filename(settings.copy_path())
+                .collation("unicase", str::cmp);
+            let mut connection =
+                <sqlx::SqliteConnection as sqlx::Connection>::connect_with(&options)
+                    .await
+                    .expect("the copy opens");
+            for statement in copy {
+                sqlx::query(*statement)
+                    .execute(&mut connection)
+                    .await
+                    .expect("the step's fault is installed in the copy");
+            }
+            sqlx::Connection::close(connection)
+                .await
+                .expect("the copy closes");
+        }
+        let mut write = db.write().await.expect("a write");
+        for statement in ledger {
+            sqlx::query(*statement)
+                .execute(&mut *write)
+                .await
+                .expect("the step's fault is installed");
+        }
+        write.commit().await.expect("the fault commits");
+        let recompute = RecomputeSetup::load(&env, &db)
+            .await
+            .expect("no courses and no taxonomy are configured");
+        let cycle = OwnerSyncCycle::new(
+            env,
+            Redactor::new(),
+            db.clone(),
+            Offload::new(
+                OffloadWorkers::new(1).expect("one worker is in range"),
+                Arc::new(SystemClock),
+            ),
+            StudyDayRule::default(),
+            recompute,
+        );
+        if step == "rescore" {
+            db.close().await;
+        }
+        Some(Refusing {
+            _directory: directory,
+            db,
+            cycle,
+        })
+    }
+
+    /// One refusal as `refused` logs it: the step it names and the code it gives.
+    type Logged = (Option<String>, Option<String>);
+
+    /// The refusals logged on the test's thread.
+    #[derive(Clone, Default)]
+    struct Refusals(Arc<Mutex<Vec<Logged>>>);
+
+    impl Refusals {
+        /// Captures the refusals logged on the test's thread while the guard and the second
+        /// dispatcher live. `tracing` asks only the reaching thread's dispatcher about a callsite
+        /// while one dispatcher is registered, so a refusal another test's thread reached first
+        /// would be cached as never enabled; a second dispatcher makes it ask every live one.
+        fn capture() -> (Self, tracing::subscriber::DefaultGuard, tracing::Dispatch) {
+            let refusals = Self::default();
+            let guard = tracing::subscriber::set_default(refusals.clone());
+            (refusals, guard, tracing::Dispatch::new(Self::default()))
+        }
+
+        /// The refusals logged since the last call.
+        fn take(&self) -> Vec<Logged> {
+            std::mem::take(&mut *self.0.lock().unwrap_or_else(PoisonError::into_inner))
+        }
+    }
+
+    /// One event's step, code and message.
+    #[derive(Default)]
+    struct Fields {
+        step: Option<String>,
+        reason: Option<String>,
+        message: String,
+    }
+
+    impl tracing::field::Visit for Fields {
+        fn record_str(&mut self, field: &tracing::field::Field, value: &str) {
+            match field.name() {
+                "step" => self.step = Some(value.to_owned()),
+                "reason" => self.reason = Some(value.to_owned()),
+                "message" => value.clone_into(&mut self.message),
+                _ => {}
+            }
+        }
+
+        fn record_debug(&mut self, field: &tracing::field::Field, value: &dyn std::fmt::Debug) {
+            if field.name() == "message" {
+                self.message = format!("{value:?}");
+            }
+        }
+    }
+
+    impl tracing::Subscriber for Refusals {
+        fn enabled(&self, _metadata: &tracing::Metadata<'_>) -> bool {
+            true
+        }
+
+        fn new_span(&self, _span: &tracing::span::Attributes<'_>) -> tracing::span::Id {
+            tracing::span::Id::from_u64(1)
+        }
+
+        fn record(&self, _span: &tracing::span::Id, _values: &tracing::span::Record<'_>) {}
+
+        fn record_follows_from(&self, _span: &tracing::span::Id, _follows: &tracing::span::Id) {}
+
+        fn event(&self, event: &tracing::Event<'_>) {
+            let mut fields = Fields::default();
+            event.record(&mut fields);
+            if fields.message == "the owner's sync could not run" {
+                self.0
+                    .lock()
+                    .unwrap_or_else(PoisonError::into_inner)
+                    .push((fields.step, fields.reason));
+            }
+        }
+
+        fn enter(&self, _span: &tracing::span::Id) {}
+
+        fn exit(&self, _span: &tracing::span::Id) {}
+    }
+
+    /// Asserts that `answer` refused the owner's sync by `code`, and that the one refusal `logged`
+    /// names `step` and gives `code`. An answer is a failure swallowed into an `Ok`.
+    fn refuses(
+        answer: &Result<SyncAnswer, RefusalReason>,
+        logged: &[Logged],
+        step: &str,
+        code: RefusalReason,
+    ) {
+        match answer {
+            Ok(answer) => panic!("the {step} step's failure was answered: {answer:?}"),
+            Err(reason) => assert_eq!(*reason, code, "the {step} step refuses by its own code"),
+        }
+        assert_eq!(
+            logged,
+            [(Some(step.to_owned()), Some(code.as_str().to_owned()))],
+            "the {step} step's refusal is logged once, under its own name"
+        );
+    }
+
+    /// Asserts that `step` was driven twice: a refusal right on the first run and wrong on a
+    /// retry is caught only by the second drive.
+    fn driven_twice(step: &str, drives: usize) {
+        assert_eq!(
+            drives, 2,
+            "the {step} step is driven twice, each time on a fresh ledger"
+        );
+    }
+
+    /// A16: every step whose failure refuses the owner's sync is driven by its own fault, twice,
+    /// each time on a fresh ledger, and refuses by its step's code, logged under the step's name.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn every_failing_step_refuses_the_owners_sync_by_its_own_code_and_name() {
+        let (refusals, _logging, _every) = Refusals::capture();
+        for (step, code) in RUN_STEPS.iter().chain(CYCLE_STEPS) {
+            let mut drives = 0;
+            for _ in 0..2 {
+                let refusing = failing_at(step)
+                    .await
+                    .expect("the fault table has a fault for every step");
+                let answer = refusing.cycle.run().await;
+                refuses(&answer, &refusals.take(), step, *code);
+                refusing.db.close().await;
+                drives += 1;
+            }
+            driven_twice(step, drives);
+        }
+    }
+
+    /// A17: the table has a row for every step the source gives a refusal: each `?` in `run`
+    /// before the cycle's own site, and each kind of cycle error `Step::of` names. A new step with
+    /// no row fails here, and so does a row with no step.
+    #[test]
+    fn the_table_has_a_row_for_every_step_that_refuses_the_owners_sync() {
+        let source = include_str!("wiring.rs");
+        let (code, _) = source
+            .split_once("#[cfg(test)]\nmod tests")
+            .expect("the tests follow the code");
+        let (_, run) = code
+            .split_once("    pub async fn run(&self)")
+            .expect("run is declared");
+        let (run, _) = run.split_once("\n    }\n").expect("run ends");
+        let sites: usize = run
+            .lines()
+            .filter(|line| !line.trim_start().starts_with("//"))
+            .map(|line| line.matches('?').count())
+            .sum();
+        let arms: usize = code
+            .lines()
+            .filter(|line| line.contains("=>"))
+            .map(|line| line.matches("CycleError::").count())
+            .sum();
+        assert_eq!(
+            sites,
+            RUN_STEPS.len() + 1,
+            "each `?` in run before the cycle's own is a step in the table"
+        );
+        assert_eq!(
+            arms,
+            CYCLE_STEPS.len(),
+            "each kind of cycle error `Step::of` names is a step in the table"
+        );
+    }
+
+    /// The table's check refuses an answer: a step's failure swallowed into an `Ok` fails it.
+    #[test]
+    #[should_panic(expected = "was answered")]
+    fn the_table_fails_a_step_whose_failure_is_answered() {
+        let answer = Ok(SyncAnswer {
+            sync: SyncOutcome::Reused,
+            scores: Scores::Unchanged,
+        });
+        let logged = [(
+            Some("gate_probe".to_owned()),
+            Some(RefusalReason::RecomputeFailed.as_str().to_owned()),
+        )];
+        refuses(
+            &answer,
+            &logged,
+            "gate_probe",
+            RefusalReason::RecomputeFailed,
+        );
+    }
+
+    /// The table's check refuses a refusal logged under another step's name, though its code is the
+    /// step's own: two steps that give one code are told apart by the name.
+    #[test]
+    #[should_panic(expected = "under its own name")]
+    fn the_table_fails_a_refusal_logged_under_another_steps_name() {
+        let logged = [(
+            Some("gate_probe".to_owned()),
+            Some(RefusalReason::RecomputeFailed.as_str().to_owned()),
+        )];
+        refuses(
+            &Err(RefusalReason::RecomputeFailed),
+            &logged,
+            "window_base",
+            RefusalReason::RecomputeFailed,
+        );
+    }
+
+    /// The table's check refuses a step driven once: a retry that answers by another code is
+    /// caught only by the second drive.
+    #[test]
+    #[should_panic(expected = "driven twice")]
+    fn the_table_fails_a_step_driven_once() {
+        driven_twice("window_base", 1);
     }
 
     #[tokio::test]
