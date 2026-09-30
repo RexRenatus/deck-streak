@@ -7,10 +7,10 @@
  */
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
-import { type Node, Parser } from 'commonmark';
 import mermaid from 'mermaid';
 import { describe, expect, it } from 'vitest';
 import { GRAMMAR, digestOf, fenceMembers } from './docs-mermaid-fences.js';
+import { readMermaid } from './docs-mermaid-read.js';
 
 /**
  * The repository's `docs/`, found by walking up to the workspace root. A fixed `../../../../` would
@@ -40,63 +40,6 @@ interface Block {
   name: string;
   line: number;
   source: string;
-}
-
-/**
- * commonmark.js 0.31.2's state while it opens a block, which the fence offset below reads: its block
- * starts (a block quote, an ATX heading, then a fenced code block, ...), the block just opened, and
- * the offsets into the line.
- */
-interface ParserState {
-  blockStarts: ((parser: ParserState, container: Node) => number)[];
-  tip: Node & { _fenceOffset: number };
-  offset: number;
-  nextNonspace: number;
-}
-
-const FENCED_CODE = 2;
-
-/**
- * A CommonMark parser that opens a fenced code block as GitHub's cmark-gfm does. CommonMark counts a
- * fence's indentation in columns and cmark-gfm in characters, so when a container prefix consumes
- * part of a tab, GitHub's block keeps the tab's remaining columns on each line. The wrapper runs the
- * fenced code start and then sets the offset cmark-gfm would.
- */
-function gfmParser(): Parser {
-  const parser = new Parser();
-  const state = parser as unknown as ParserState;
-  const starts = [...state.blockStarts];
-  const fenced = starts[FENCED_CODE];
-  starts[FENCED_CODE] = (current, container) => {
-    const { offset, nextNonspace } = current;
-    const started = fenced(current, container);
-    if (started === 2) current.tip._fenceOffset = nextNonspace - offset;
-    return started;
-  };
-  state.blockStarts = starts;
-  return parser;
-}
-
-/** The word GitHub keys a diagram on: the info string up to its first ASCII blank. */
-function language(info: string | null): string {
-  return (info ?? '').split(/[ \t\n\v\f\r]/)[0];
-}
-
-/**
- * The head's reader, which refuses no form: every fenced code block, in any container, whose
- * language word is `mermaid` and whose text is not blank, with the text GitHub renders as the diagram.
- */
-function readMermaid(text: string): { blocks: Omit<Block, 'name'>[]; refused: { line: number; form: string }[] } {
-  const blocks: Omit<Block, 'name'>[] = [];
-  const walker = gfmParser().parse(text).walker();
-  for (let step = walker.next(); step; step = walker.next()) {
-    const { node } = step;
-    const source = node.literal ?? '';
-    if (step.entering && node.type === 'code_block' && language(node.info) === 'mermaid' && /[^ \t\n\v\f\r]/.test(source)) {
-      blocks.push({ line: node.sourcepos[0][0], source });
-    }
-  }
-  return { blocks, refused: [] };
 }
 
 /**

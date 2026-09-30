@@ -9,30 +9,7 @@
  * the most lists it reads a fence in, so an entry added to one of them is a member too.
  */
 import { createHash } from 'node:crypto';
-
-/** Stand-ins for the reader's tables, which the next commit adds. */
-const REFUSED_CHARACTERS = /** @type {[number, number][]} */ ([
-  [0x00, 0x08],
-  [0x0b, 0x0c],
-  [0x0e, 0x1f],
-  [0x7f, 0x9f],
-  [0x2028, 0x2029],
-  [0xfdd0, 0xfdef],
-  [0xfeff, 0xfeff],
-  ...Array.from({ length: 17 }, (_, plane) => /** @type {[number, number]} */ ([plane * 0x10000 + 0xfffe, plane * 0x10000 + 0xffff]))
-]);
-const SPECIAL_TAGS = [
-  'address', 'applet', 'area', 'article', 'aside', 'base', 'basefont', 'bgsound', 'blockquote', 'body',
-  'br', 'button', 'caption', 'center', 'col', 'colgroup', 'dd', 'details', 'dialog', 'dir', 'div', 'dl',
-  'dt', 'embed', 'fieldset', 'figcaption', 'figure', 'footer', 'form', 'frame', 'frameset', 'h1', 'h2',
-  'h3', 'h4', 'h5', 'h6', 'head', 'header', 'hgroup', 'hr', 'html', 'iframe', 'image', 'img', 'input',
-  'keygen', 'legend', 'li', 'link', 'listing', 'main', 'marquee', 'math', 'menu', 'menuitem', 'meta',
-  'nav', 'noembed', 'noframes', 'noscript', 'object', 'ol', 'optgroup', 'option', 'p', 'param',
-  'plaintext', 'pre', 'script', 'search', 'section', 'select', 'source', 'style', 'summary', 'svg',
-  'table', 'tbody', 'td', 'template', 'textarea', 'tfoot', 'th', 'thead', 'title', 'tr', 'track', 'ul',
-  'wbr', 'xmp'
-];
-const LIST_DEPTH = 99;
+import { LIST_DEPTH, REFUSED_CHARACTERS, SPECIAL_TAGS } from './docs-mermaid-read.js';
 
 /** A byte-order mark, which cmark-gfm skips at the start of a document and nowhere else. */
 const BOM = '\uFEFF';
