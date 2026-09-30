@@ -162,3 +162,28 @@ A20 replay: green at 76d4aac219157962e3b58c03c34f3dc9949a8d76: examined 448 roll
 
 Rows S04927 and S04928 carry the two folds; each is KILLED by full id on the committed tree. The
 window test is unchanged and still prints `examined 2252 window member(s), 1916 distinct`.
+
+### Fix round 2: the walk's boundary
+
+The distinct counts do not see a fold that keeps every member different and empties a class of what
+the lapse judge branches on. The judge folds its reviews into a count per study day and asks whether
+a day holds more than none, so a study day of exactly one review is its boundary. Moving the earlier
+review onto the later one's day (`review_at(t)` for the earlier review) keeps 448 examined, 448
+distinct and 112 distinct day members, and leaves no such day. A20 now counts, inside the lapse
+judge's wrapper and with the test's own definition of the day, the study days that hold one review
+of the reviews it is handed (`ONE_REVIEW_DAYS`, 896, two for each member), asserts it beside the
+distinct counts and prints it. The window test hands its judge each day's count as given and derives
+none, so it needs no such count.
+
+The count was committed beside the planted fold (af4e9c9073027b247bbad5146e767e0c55007eba), and the plant was removed in
+5ed1c5eeefe1fcee6abd453f4647605db1289c25. The round-1 replay of the day judge's spread above (32 distinct of 112) was read from an
+uncommitted tree, with the lapse plant removed from the committed one; only the lapse judge's red
+was committed.
+
+```text
+A20 replay: red at af4e9c9073027b247bbad5146e767e0c55007eba: the walk's boundary: 0 study day(s) holding one review (left: 0, right: 896), with the examined count held at 448 and the distinct counts at 448 and 112
+A20 replay: green at 5ed1c5eeefe1fcee6abd453f4647605db1289c25: examined 448 rollover member(s), 448 distinct, over 112 distinct day member(s), 896 study day(s) holding one review
+A19 replay: green at 5ed1c5eeefe1fcee6abd453f4647605db1289c25: examined 2252 window member(s), 1916 distinct
+```
+
+Row S04929 carries the plant; it is KILLED by full id on the committed tree.

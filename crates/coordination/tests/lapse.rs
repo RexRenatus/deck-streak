@@ -160,8 +160,8 @@ const fn rule_key(rule: StudyDayRule) -> RuleKey {
 fn a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary() {
     let mut examined: u64 = 0;
     let mut opened: u64 = 0;
-    // Each judge records its member from the arguments it is handed, so a fold of one judge's
-    // input shows in that judge's count while the other judge still reads the value.
+    // Each judge records its member from the arguments it is handed, so a fold that merges one
+    // judge's members shows in that judge's count while the other judge still reads the value.
     let mut distinct: BTreeSet<LapseMember> = BTreeSet::new();
     let mut days: BTreeSet<(RuleKey, i64)> = BTreeSet::new();
     let mut one_review_days: usize = 0;
