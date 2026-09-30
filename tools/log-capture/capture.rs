@@ -1,19 +1,19 @@
 //! The one way a test captures log lines (SPEC-024, the 2026-09-30 amendment).
 //!
-//! A test that captures lines receives every line its thread emits, whichever thread first reached
-//! that line's callsite, in a binary where nothing but this helper registers a dispatcher or a
-//! callsite (the killer's census holds every file to that). A line emitted inside a dispatcher's
-//! own call, such as the closure `tracing::dispatcher::get_default` runs, reaches no subscriber:
-//! `tracing` drops it by design, with or without this helper. This file is compiled into a test
-//! binary, and never into production code:
+//! A test that captures lines receives every line its thread emits, provided the floor is
+//! installed first and nothing but this helper registers a dispatcher or a callsite. The killer's
+//! census holds every test file to that. A line emitted inside a dispatcher's own call, such as the
+//! closure `tracing::dispatcher::get_default` runs, reaches no subscriber: `tracing` drops it by
+//! design, with or without this helper. This file is compiled into a test binary, and never into
+//! production code:
 //!
 //! ```text
 //! #[path = "../../../tools/log-capture/capture.rs"]
 //! mod log_capture;
 //! ```
 //!
-//! It is one file included by path, so every capture in the workspace is made one way and the
-//! killer in `crates/kernel/tests/log_capture_class.rs` proves that way for all of them.
+//! It is one file included by path, so every capture in the workspace is made one way. The killer
+//! in `crates/kernel/tests/log_capture_class.rs` checks that no test captures another way.
 
 // Each including test binary calls only the entry it needs.
 #![allow(dead_code)]
@@ -28,18 +28,19 @@ use tracing::{Dispatch, Event, Id, Metadata, Subscriber};
 /// The default of every thread that holds no capture: installed once, as the global default,
 /// before any capture, and never dropped.
 ///
-/// `tracing-core` caches a callsite's interest when a thread first reaches it. While at most one
-/// dispatcher was registered at the last registration (`Dispatchers::rebuilder`), it asks only the
-/// reaching thread's default (`dispatcher::get_default`) and takes no lock, so that answer can be
-/// stored after a capture registered on another thread and overwrite the capture's. A thread with
-/// no capture has this floor as its default, and the floor answers every callsite `sometimes` and
-/// enables nothing, so an answer computed once it is installed is never `never`: each event asks
-/// the emitting thread's own default. An answer a thread with no default computed BEFORE it was
-/// installed is `never`, and it can still be stored after a capture registered, so nothing may
-/// register a callsite before the floor. No `tracing` macro does: the level filter starts `OFF`,
-/// the floor's hint is `OFF`, and the filter rises only when a capture registers, provided nothing
-/// but this helper registers a dispatcher (a `Dispatch` made anywhere raises it) or a callsite,
-/// which the killer's census enforces.
+/// `tracing-core` caches a callsite's interest when a thread first reaches it.
+/// While at most one dispatcher was registered at the last registration (`Dispatchers::rebuilder`),
+/// it asks only the reaching thread's default (`dispatcher::get_default`) and takes no lock.
+/// That answer can be stored after a capture registered on another thread, overwriting the
+/// capture's.
+///
+/// A thread holding no capture has this floor as its default. The floor answers every callsite
+/// `sometimes` and enables nothing, so an answer computed once it is installed is never `never`.
+///
+/// An answer computed before the floor is installed can be `never`, and can still be stored after
+/// a capture registers. So nothing may register a dispatcher or a callsite before the floor.
+/// No `tracing` macro does: the level filter starts `OFF` and rises only when a dispatcher
+/// registers. A `Dispatch` made outside this helper would raise it, and the census refuses one.
 struct Floor;
 
 impl Subscriber for Floor {

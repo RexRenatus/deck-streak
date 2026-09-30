@@ -264,34 +264,33 @@ Made under issue #461, insert-only under ruling (i) of SPEC-038 section 8: every
 kept in order, so the amendment is these two new last sections and nothing above them is edited.
 Its criteria, A17 and A18, are defined in the section below.
 
-- **The class.** A test that captures log lines receives every line its code emits, whichever
-  thread first reached that line's callsite, and whatever the other tests in the same binary did
-  first. No capture depends on another test's cached callsite interest.
-- **The defect.** Tests, `init_data_never_reaches_the_log` among them, capture through a
-  thread-local default and register no global one. `tracing-core` 0.1.36 computes a new callsite's
-  interest from every registered dispatcher only while two or more are registered; with exactly
-  one, `Dispatchers::rebuilder` returns `JustOne` and `rebuild_callsite_interest` asks
-  `dispatcher::get_default`, the reaching thread's own default. A thread with no subscriber that
-  reaches a line first, while a capture is the only registered dispatcher, caches the line as
-  `Interest::never()`; the capture on another thread never sees it. The code under test is
-  unchanged between a passing run and a failing one.
-- **The mechanism, one for the class.** `tools/log-capture/capture.rs`, included by path into each
-  test binary that captures, offers `with_capture` and `hold_capture`. Both first install a floor
-  subscriber as the global default, once and never dropped, then make the capture. The floor
-  answers every callsite "sometimes", enables nothing and hints `OFF`, so it costs nothing while
-  it is alone. The floor is every thread's default until it installs a capture. A thread with no
-  capture therefore answers "sometimes" rather than "never", and interest is asked again at each
-  event. The single-dispatcher path it
-  closes is `Dispatchers::rebuilder` returning `JustOne`, then `rebuild_callsite_interest` asking
-  `dispatcher::get_default` and caching that answer. A per-test retry, a single-thread pin and a
-  sleep were rejected: each hides the loss, none removes it.
-- **The population, derived.** Every call of `set_default`, `with_default`, `set_global_default`,
-  `init`, `try_init` and `with_subscriber` in `crates/`, read from the tree with comments,
-  strings and character literals blanked, in any spelling that reaches them: 13 routed through
-  the helper, none raw, and 1 production global default (`crates/kernel/src/logging.rs`), which
-  this amendment measures and does not change. The
-  daemon's `wiring` tests had already held a second dispatcher for their own capture; they now
-  use the helper like the rest.
+- **The class.** A test that captures log lines receives every line its thread emits while it holds the capture, whichever thread first reached that line's callsite, provided two preconditions hold.
+  The floor is the global default before any dispatcher is created in the test binary, and no interest answer computed before the floor is stored after a capture registers.
+  Every install of a subscriber or dispatcher, and every creation or registration of a dispatcher or callsite, by a test goes through the helper, in any spelling.
+  The one exception is the production global default, and the census reads every file the test binaries compile.
+- **Carved out, by kind.** A line emitted inside a dispatcher's own call reaches no subscriber, because `tracing` drops it by design.
+  A doctest written as a `#[doc = "..."]` string, and an install hidden by a proc-macro from an external crate beyond the named ones, are outside the census.
+  A second global default is refused by the census in every test file, so the helper's assertion never has to meet one.
+- **The defect.** Tests, `init_data_never_reaches_the_log` among them, capture through a thread-local default and register no global one.
+  The pinned `tracing-core` computes a new callsite's interest from every registered dispatcher only while two or more are registered.
+  With at most one, `Dispatchers::rebuilder` returns `JustOne` and `rebuild_callsite_interest` asks `dispatcher::get_default`, the reaching thread's own default.
+  A thread with no subscriber that reaches a line first, while a capture is the only registered dispatcher, caches the line as `Interest::never()`, and the capture on another thread never sees it.
+  The code under test is unchanged between a passing run and a failing one.
+- **The mechanism.** `tools/log-capture/capture.rs`, included by path into each test binary that captures, offers `with_capture` and `hold_capture`.
+  Both first install a floor subscriber as the global default, once and never dropped, then make the capture.
+  The floor answers every callsite "sometimes", enables nothing and hints `OFF`, so it costs nothing while it is alone.
+  The floor is the default of every thread that holds no capture, so an answer such a thread computes after the floor is installed is "sometimes", never "never".
+  An answer computed before the floor is installed can be "never", and can be stored after a capture registers.
+  So nothing registers a dispatcher or a callsite before the floor: the level filter stays `OFF`, so no macro registers one, until a dispatcher registers.
+  The census refuses any test that creates a dispatcher or registers a callsite outside the helper.
+  What the helper closes is the path where `Dispatchers::rebuilder` returns `JustOne` and `rebuild_callsite_interest` asks the reaching thread's default: with the floor installed, that default answers "sometimes".
+  A per-test retry, a single-thread pin and a sleep were rejected: each hides the loss, none removes it.
+- **The population, derived.** The census reads every `.rs` file under `crates/` and `tools/`, skipping no directory, and every file they bring in by a path attribute, `include!` or `include_str!`.
+  It reads doctests in the same way and counts tokens, with comments, strings and character literals blanked.
+  The install tokens are `set_default`, `with_default`, `set_global_default`, `init`, `try_init` and `with_subscriber`.
+  The registration tokens are `Dispatch`, `callsite`, `DefaultCallsite` and `rebuild_interest_cache`, and the hidden tokens are `paste`, `pastey`, `concat_idents`, `traced_test` and `test_log`.
+  Result: 13 capturing calls routed through the helper, none raw, and 1 production global default (`crates/kernel/src/logging.rs`), which this amendment measures and does not change.
+  The daemon's `wiring` tests had already held a second dispatcher for their own capture; they now use the helper like the rest.
 - **Files this amendment touches.** `tools/log-capture/capture.rs`,
   `crates/kernel/tests/log_capture_class.rs`, the capturing tests
   `crates/coordination/tests/drill_paid_count.rs` (its capture lines only),
@@ -305,8 +304,8 @@ Its criteria, A17 and A18, are defined in the section below.
 
 | id | criterion | decided by |
 |---|---|---|
-| A17 | a capture made with either entry of the helper keeps a line another thread reached first, even when that thread's callsite registration straddled the capture's, in a child of the test binary whose dispatcher registry starts empty | `log_capture_class` test |
-| A18 | every call of the install functions the census names, in any spelling that reaches them, goes through the helper: 13 routed, none raw, and the one production global default is the only other | `log_capture_class` test |
+| A17 | a capture made with either entry of the helper keeps a line another thread reached first, even when that thread's callsite registration straddled the capture's, and registers only after the floor is the global default, in a child whose dispatcher registry starts empty | `log_capture_class` test |
+| A18 | every install, creation or registration token the census names, in any file the test binaries compile, goes through the helper: 13 routed, none raw, and the one production global default is the only other | `log_capture_class` test |
 
 ```acceptance
 A17: cargo test -p deck-streak-kernel --test log_capture_class -- --exact a_capture_keeps_a_line_another_thread_reached_first

@@ -89,3 +89,9 @@ straddled scenarios lose the line and the plain ones do not; over the new floor 
 ```text
 A17: red over the earlier floor: 2 of 4 scenarios lost a line another thread reached first: ["scoped-straddled", "held-straddled"]; green: 4 run, 0 lost
 ```
+
+The killer then gained a precondition check and a census of every spelling. Over the earlier killer, the census escapes and two helper variants that install the floor after a capture registers stay green. Over the new killer every escape is red and both variants fail.
+
+```text
+A17, A18: over the earlier killer the escapes are green and the floor-after variants survive; over the new killer the escapes are red and the variants fail with "registered before the floor was the global default"
+```
