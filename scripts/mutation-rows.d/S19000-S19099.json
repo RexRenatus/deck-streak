@@ -64,6 +64,22 @@
         "jobs:\n  release:\n    'concurrency':\n      group: release-job\n",
         "no release job sets a concurrency block of its own, under a quoted key too, so the job never waits in a group of its own that replaces it (SPEC-190 R10)",
         "test_workflow_concurrency.EveryReleaseWorkflowQueuesEveryRun.test_every_workflow_that_can_hold_two_runs_of_a_release_queues_them"
+      ],
+      [
+        "S19009-THE-RELEASE-BLOCK-SPELLS-EACH-KEY-AS-GITHUB-DEFINES-IT",
+        ".github/workflows/release.yml",
+        "  cancel-in-progress: false\n",
+        "  Cancel-In-Progress: false\n",
+        "release.yml's block spells each key as GitHub's workflow parser defines it, with case, so the parser never refuses the workflow before a tag's run starts (SPEC-190 R10)",
+        "test_workflow_concurrency.EveryReleaseWorkflowQueuesEveryRun.test_every_workflow_that_can_hold_two_runs_of_a_release_queues_them"
+      ],
+      [
+        "S19010-THE-RELEASE-BLOCK-HOLDS-NO-KEY-TWICE",
+        ".github/workflows/release.yml",
+        "  queue: max\n",
+        "  queue: max\n  Queue: max\n",
+        "release.yml's block holds no key twice, read without case, so GitHub's workflow parser never refuses the workflow before a tag's run starts (SPEC-190 R10)",
+        "test_workflow_concurrency.EveryReleaseWorkflowQueuesEveryRun.test_every_workflow_that_can_hold_two_runs_of_a_release_queues_them"
       ]
     ]
   }
