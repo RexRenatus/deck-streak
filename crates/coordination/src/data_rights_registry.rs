@@ -35,7 +35,8 @@ static AGENT: AgentDataRights = AgentDataRights;
 /// The vault's port: the law drill answers and grades exported and erased, and never a note
 /// (SPEC-110, ADR-118).
 static VAULT: VaultDataRights = VaultDataRights;
-/// Coordination's own port: the cron-fire ledger exempt.
+/// Coordination's own port: the cron-fire ledger exempt, the instrument reports exported and
+/// erased (SPEC-094).
 static COORDINATION: CoordinationDataRights = CoordinationDataRights;
 
 /// Every stateful context's port, in the order an erase runs them: the kernel, ingest, analytics
