@@ -396,3 +396,5 @@ warn: wiring::tests::every_failing_step_refuses_the_owners_sync_by_its_own_code_
 info: the same test, the same line, the same left and right
 debug: the same test, the same line, the same left and right
 ```
+
+2026-09-30, at the head of round 6 the lines quoted in the round 5 addendum for the table test, the guard and the meta tests all read 42 higher: the table test's code assertion is at `crates/daemon/src/wiring.rs:1050` (quoted as 1008), `the_table_fails_a_step_whose_failure_is_answered` at 1126 (quoted as 1084), and the level plants above fail at 1052:9 (quoted as 1014:9).
