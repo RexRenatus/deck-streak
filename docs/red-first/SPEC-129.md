@@ -125,3 +125,18 @@ module. The whole test file at the red commit fails only that test, by assertion
 A8 replay: red at d9cdca86: FAILED (failures=1), AssertionError: Lists differ: ['cargo mutants --timeout 300 --build-time[59 chars]e\n'] != []
 A8 replay: green at 3ce1d37d: Ran 19 tests, OK, examined 2004 class members, examined 4 in-word hashes, examined 3 ci.yml commands, examined 4 mutation-weekly.yml commands
 ```
+
+## Addendum, 2026-09-30 (issue #395, round 6): a context left open at its line's end
+
+The lines above stand, and A8 keeps its one red and one green line; this replay is quoted below
+them. The red commit 2b3a7b33 adds to the generated class each context left open at its line's
+end or continued inside it, with its closer and a `#` on the next line or the one after, and the
+bounds after an unbounded command on a continued line; the green commit 0046be9d changes only
+the guard's comment rule and its docstring, in `scripts/tests/test_dispatch_shards.py`, because
+the guard lives in the test module. The whole test file at the red commit fails only that test, by
+assertion.
+
+```text
+A8 replay: red at 2b3a7b33: FAILED (failures=1), AssertionError: Lists differ: ['cargo mutants --timeout 300 --build-time[40 chars]e\n'] != []
+A8 replay: green at 0046be9d: Ran 19 tests, OK, examined 4291 class members, examined 4 in-word hashes, examined 3 ci.yml commands, examined 4 mutation-weekly.yml commands
+```

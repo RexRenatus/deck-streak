@@ -161,13 +161,15 @@ this section and the next, and nothing else. Issue #395.
   at the `#` too. The guard trusts that reading of a line only up to the first place where bash
   reads in a mode the guard does not model: a substitution or an expansion (`$( )`, `${ }`,
   `$(( ))`, `$[ ]`), a backquote, an ANSI-C string (`$' '`), a `(` glued to what comes before it
-  (`<( )`, `>( )`, `(( ))`, `a=( )`), a subscript or `[[`; and not at all on a continued line or
-  on any line after a here-document. Past that place a `#` glued to a word is text, and any other
-  `#` ends the command before it without hiding what follows. So a `)` that closes a
-  substitution starts no comment, and inside `${ }` an operator is text: the `#` in `$(true)#` or
-  `${X//;#/}` hides nothing, and the command after it is still read. A `#` inside quotes is text.
-  The guard can refuse a line bash would pass, as when the bounds follow such a `#`, but it passes
-  no line whose unbounded command bash runs (#395).
+  (`<( )`, `>( )`, `(( ))`, `a=( )`), a subscript or `[[`; and not at all on a continued line, on
+  any line after a here-document, or on a line after one that ends inside a quote or past such a
+  place, where bash may still be inside it. Past that place a `#` glued to a word is text, and any
+  other `#` ends the command before it without hiding what follows. So a `)` that closes a
+  substitution starts no comment, on its own line or on a later one, and inside `${ }` an operator
+  is text: the `#` in `$(true)#` or `${X//;#/}` hides nothing, and the command after it is still
+  read. A `#` inside quotes is text. The guard can refuse a line bash would pass, as when the
+  bounds follow such a `#`, or when a comment on a later line holds a command, but it hides no
+  command that bash runs (#395).
 - **A plant per shape.** Three tests write one workflow each into a temporary directory: one with
   a toolchain spelling, one with the binary form, and one with two commands on a line (the first
   bounded, the second not). Each asserts that every command is found and, for the last, that the
@@ -183,12 +185,14 @@ this section and the next, and nothing else. Issue #395.
   (`#`, `;#`, `)#`, `}#`, `"}"`, `')'`, `"#"`, `\#`, `a#`, `\'`, `;;`) in each context (bare, the
   substitutions, backquotes, `$(( ))`, `${ }`, the three quotes, a here-string, `(( ))`, `a=( )`,
   `[[ =~ ]]`, and a case, a brace group and a subshell, alone and inside each substitution),
-  followed by a `#` and an unbounded command, by the bounds, or by a continued line. Bash reads
+  followed by a `#` and an unbounded command, by the bounds, or by a continued line; and each
+  context left open at its line's end or continued inside it, with its closer and a `#` on the
+  next line or the one after, then an unbounded command or the bounds. Bash reads
   every member, run without `-e`, with `cargo` a function that logs its words and no other
   command on the path, and the guard must find each unbounded command bash runs. The test asserts
   and prints the member count (#395).
-- **Out of scope, named.** A quote that spans lines is read line by line, and a `#` inside shell
-  quotes on a plain `run:` line, where YAML itself cuts a comment, is kept as text (#395).
+- **Out of scope, named.** A `#` inside shell quotes on a plain `run:` line, where YAML itself
+  cuts a comment, is kept as text (#395).
 - Files: `scripts/tests/test_dispatch_shards.py`, this SPEC, `docs/red-first/SPEC-129.md` and a
   changelog fragment (#395).
 - It changes no Rust, no workflow and no Python outside the test (#395).
