@@ -38,8 +38,8 @@ pub fn open_lapse(
     let window_start = review_counts.keys().next()?.epoch_day();
     let mut silent: u32 = 0;
     let mut first_silent = None;
-    let mut number = today.epoch_day();
-    while number >= window_start {
+    // A bounded walk: the window's days, newest first, so no arithmetic on a counter can spin it.
+    for number in (window_start..=today.epoch_day()).rev() {
         let day = StudyDay::from_epoch_day(number);
         if review_counts.get(&day).copied().unwrap_or(0) > 0 {
             break;
@@ -48,7 +48,11 @@ pub fn open_lapse(
             silent = silent.saturating_add(1);
             first_silent = Some(day);
         }
-        number = number.checked_sub(1)?;
+        // The walk has no day before the smallest epoch day, so it answers nothing there, as the
+        // earlier `checked_sub` step did (A41).
+        if number == i64::MIN {
+            return None;
+        }
     }
     if silent >= silent_days_to_open {
         first_silent
