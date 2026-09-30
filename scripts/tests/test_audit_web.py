@@ -5,6 +5,8 @@ pnpm that records its arguments, prints a planted report and exits with a plante
 asks the registry. The reports are synthetic, in pnpm 11's JSON shape."""
 
 import json
+import os
+import runpy
 import subprocess
 import sys
 import tempfile
@@ -269,6 +271,36 @@ class TheWebAuditPrintsItsCount(unittest.TestCase):
         self.assertRegex(summary(done), r"^ok +audit-web ")
         self.assertIn("CHECK OK: 1 stage(s)", done.stdout)
         self.assertEqual(done.returncode, 0, done.stdout)
+
+
+class TheVerdictScriptStatesItself(unittest.TestCase):
+    """What only the script's own bytes and its usage text show: the two mutants of
+    `scripts/audit-web-verdict.py` that the stage's runs cannot tell apart."""
+
+    SCRIPT = REPO / "scripts" / "audit-web-verdict.py"
+
+    def test_the_verdict_script_writes_no_bytecode(self):
+        kept = sys.dont_write_bytecode
+        sys.dont_write_bytecode = False
+        try:
+            runpy.run_path(str(self.SCRIPT), run_name="audit_web_verdict_probe")
+            written = sys.dont_write_bytecode
+        finally:
+            sys.dont_write_bytecode = kept
+        self.assertIs(written, True)
+
+    def test_the_usage_text_opens_with_the_scripts_first_line(self):
+        done = subprocess.run(
+            ["python3", str(self.SCRIPT), "--help"],
+            capture_output=True,
+            text=True,
+            check=False,
+            env={"PATH": os.environ.get("PATH", ""), "COLUMNS": "200"},
+        )
+        self.assertEqual(done.returncode, 0, done.stderr)
+        first = self.SCRIPT.read_text(encoding="utf-8").split('"""', 2)[1].splitlines()[0]
+        self.assertIn(first, done.stdout)
+        self.assertIn("audit-web-verdict: the gate's web audit", done.stdout)
 
 
 if __name__ == "__main__":

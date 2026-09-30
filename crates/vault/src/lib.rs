@@ -25,12 +25,17 @@ use std::io;
 
 pub mod atomic;
 pub mod config;
+pub mod data_rights;
+pub mod drill_notes;
+pub mod drill_store;
+pub mod drills;
 pub mod fs;
 pub mod note;
 pub mod rails;
 pub mod readings_tree;
 pub mod sha256;
 pub mod staged;
+pub(crate) mod unicode_other;
 
 pub use config::{FolderName, StartRefusal, VaultPaths, VaultRoot, VaultSettings};
 pub use fs::{DirEntry, EntryKind, RealFs, VaultFile, VaultFs};
@@ -101,6 +106,9 @@ pub enum VaultError {
     /// A rolled note did not read back as it was written, so its source stays (R7).
     #[error("the rolled note did not read back as written, so its source stays")]
     ReadBack,
+    /// The database refused a read or a write (SPEC-110 R6).
+    #[error("the database refused the drill record")]
+    Database(#[from] deck_streak_kernel::KernelError),
     /// A file-system step failed; `step` names it.
     #[error("the vault could not {step}")]
     Io {

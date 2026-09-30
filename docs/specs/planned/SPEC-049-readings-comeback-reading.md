@@ -277,3 +277,65 @@ Inserted at the end of section 4's table:
 | `scripts/mutation-rows.d/S04900-S04999.json` | repo | added by the amendment: the slice's rows S04901 to S04909; the remainder's from S04910 |
 | `docs/decisions/ADR-088-the-lapse-slice-is-delivered-before-the-comeback-reading.md` | docs | added by the amendment: proposed, accepted by the slice |
 | `changelog.d/` | repo | added by the amendment: one fragment per delivery, named for its branch |
+
+## 8. Amendment, 2026-09-29: the lapse walk's first day and the rollover boundary
+
+Made for issue #422, insert-only: every earlier byte is kept in order, and the sections below are new
+last sections. It decides nothing new. It pins two rules the slice already follows, R13's window and
+R15's study day, so that a program that breaks either one fails a test.
+
+- **Class W, the walk's bounds.** `open_lapse` reads every day of its window, from the window's first
+  day (the earliest key the caller read) up to the current study day, and no day outside it. The
+  criteria table's A16 is decided by a population the test generates: silent runs that end on the
+  current study day, of one short of the threshold, the threshold and one more, and that start at
+  every position of a window whose earlier days number zero to six, the window's first day
+  included; each run under every subset of its days as skip days; the days before the run filled
+  three ways; a row of no reviews on the window's first day; a study review after the current day;
+  and other thresholds. The oracle is a function written in the test from R13's words (the latest
+  study day, then the days after it that are not skip days), and it never calls `open_lapse`. A16's
+  neighbour, A18, names the two cases the issue gave: a window whose only silent run starts on its
+  first day.
+- **Class R, the rollover boundary.** A review counts on the study day the configured rule gives its
+  instant (R15; SPEC-020's rule), at every boundary. A17 is decided by a population the test
+  generates: the offsets -720, -300, -210, 0, 330, 345, 540 and 840 minutes, the rollover hours 0 and
+  4, and instants one millisecond before the day begins, at its beginning, one millisecond after it,
+  and at 23:59, 00:01, 03:59 and 04:01 local time. The oracle is a `begins(day)` written from the
+  rule's definition (the day is the span from its beginning to the next day's), and each member
+  asserts the day and whether the lapse opens where that day decides it. The zone west of UTC with a
+  04:00 rollover is one of the members, and its four local times are also asserted by name.
+- **Rows.** This amendment writes S04907 to S04919 of this SPEC's band, one for each plant a row
+  admits: seven on the walk's bounds (A16) and six on the mapping (A17). The remainder's rows
+  start at S04921.
+- **Text fixes.** The comment in A15's test no longer says a window of only non-study entries opens
+  no lapse of its own, which R13 contradicts; and `docs/red-first/SPEC-049.md` gains an addendum
+  that reads A15's red panic as measured.
+
+Files this amendment adds or changes:
+
+| file | package | what |
+|---|---|---|
+| `crates/streaks/tests/lapse.rs` | `deck-streak-streaks` | A16 and A18 |
+| `crates/coordination/tests/lapse.rs` | `deck-streak-coordination` | A17, and the comment fix in A15's test |
+| `scripts/mutation-rows.d/S04900-S04999.json` | repo | thirteen rows |
+| `docs/red-first/SPEC-049.md` | docs | an insert-only addendum |
+| `changelog.d/lapse-walk-422.md` | repo | the fragment |
+
+Not covered here, each with its owner:
+
+- The lapse walk's production code is unchanged, because it already satisfies R13 and R15 (#422).
+- A different study-day rule than SPEC-020's, or a rollover other than 0 and 4, is not in the
+  population (#422).
+
+## 9. Acceptance criteria of the 2026-09-29 lapse walk amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A16 | the lapse walk reads every day of its window, the first included, and none outside it: for every generated window and run the answer equals R13's, and the count examined is reported | `the_walk_reads_every_day_of_its_window_and_none_outside_it` |
+| A17 | a review counts on the study day the configured rule gives its instant at every boundary of the generated offsets, rollover hours and instants, and the lapse opens where that day decides it, with the count examined reported | `a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary` |
+| A18 | a window whose only silent run starts on its first day answers the run's first day at the threshold and no lapse one day short | `a_silent_run_on_the_windows_first_day_is_read` |
+
+```acceptance
+A16: cargo test -p deck-streak-streaks --test lapse -- --exact the_walk_reads_every_day_of_its_window_and_none_outside_it
+A17: cargo test -p deck-streak-coordination --test lapse -- --exact a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary
+A18: cargo test -p deck-streak-streaks --test lapse -- --exact a_silent_run_on_the_windows_first_day_is_read
+```
