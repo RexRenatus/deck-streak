@@ -747,7 +747,21 @@ fn a_suppression_of_the_rule_or_of_its_group_is_refused_wherever_it_is_planted()
         .into_iter()
         .filter(|(path, _)| path.starts_with("crates/bot/src/") && is_rust(path))
         .collect();
-    assert_eq!(sources.len(), 8, "the bot's eight sources are examined");
+    let on_disk = std::fs::read_dir(root.join("crates/bot/src"))
+        .expect("the bot's source directory reads")
+        .filter_map(Result::ok)
+        .filter(|entry| entry.path().extension().is_some_and(|ext| ext == "rs"))
+        .count();
+    assert!(on_disk > 0, "the bot has sources to examine");
+    assert_eq!(
+        sources.len(),
+        on_disk,
+        "every one of the bot's sources on disk is examined"
+    );
+    assert!(
+        sources.iter().any(|(path, _)| path.ends_with("transport.rs")),
+        "the transport source is among those examined"
+    );
 
     let mut members = 0;
     let mut refused = 0;
