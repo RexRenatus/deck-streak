@@ -322,7 +322,7 @@ fn the_state_debug_line_says_which_ports_it_holds() {
     let bare = format!("{:?}", ApiState::new(Readiness::new()));
     assert!(bare.starts_with("ApiState { readiness: "), "{bare}");
     assert!(
-        bare.ends_with(", owner: None, instruments: false, law_tiers: false }"),
+        bare.ends_with(", owner: None, instruments: false, law_tiers: false, drills: false }"),
         "{bare}"
     );
     let served = format!(
@@ -330,7 +330,7 @@ fn the_state_debug_line_says_which_ports_it_holds() {
         ApiState::new(Readiness::new()).with_instruments(Arc::new(Broken))
     );
     assert!(
-        served.ends_with(", owner: None, instruments: true, law_tiers: false }"),
+        served.ends_with(", owner: None, instruments: true, law_tiers: false, drills: false }"),
         "{served}"
     );
 }
