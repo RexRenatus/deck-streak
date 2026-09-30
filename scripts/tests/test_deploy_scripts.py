@@ -1328,35 +1328,248 @@ class TheCaddyInstall(Case):
         self.assertEqual(caddyfile.read_text(), original, "the Caddyfile is as it was")
         self.assertEqual(sorted(p.name for p in w.caddy_dir.iterdir()), ["Caddyfile"])
 
-    # The directories every write and every undo of the two scripts touch come from the path
-    # SETTINGS, so each setting is an axis of the population below: a new one fails the first
-    # test until it is classified, and the second until its directory is a place.
-    PATH_SETTINGS = ("DECKSTREAK_DEPLOY_CADDY_DIR", "DECKSTREAK_DEPLOY_CADDYFILE")
-    READ_SETTINGS = ("DECKSTREAK_DEPLOY_CADDY_CONFIG",)
-    DIRECTORY_OF = {
-        "DECKSTREAK_DEPLOY_CADDY_DIR": "caddy-dir",
-        "DECKSTREAK_DEPLOY_CADDYFILE": "caddyfile-dir",
-    }
+    # Where a Caddy step writes is MEASURED, not listed: each step runs in each layout the tests
+    # install, on each of its exits, the whole synthetic tree is compared around it, and every
+    # directory holding a path it added, removed or changed is a place. A second pass makes the
+    # rest of the tree read-only, so a path a step adds and removes again within one run fails it.
+    # The population below then makes each place unwritable in turn, so a step that writes
+    # anywhere it did not check first fails the test.
+    STEPS = (
+        ("install, rename fails", DEPLOY, ("caddy-install", "v1.0.0"), "app.example.org", 1),
+        ("install first", DEPLOY, ("caddy-install", "v1.0.0"), "app.example.org", 0),
+        ("install again", DEPLOY, ("caddy-install", "v1.0.0"), "new.example.org", 0),
+        ("removal, rename fails", ROLLBACK, ("caddy-remove",), "new.example.org", 1),
+        ("removal", ROLLBACK, ("caddy-remove",), "new.example.org", 0),
+        ("install refused", DEPLOY, ("caddy-install", "v1.0.0"), "app.example.org", 1),
+        ("reload fails", DEPLOY, ("caddy-install", "v1.0.0"), "app.example.org", 1),
+        ("no configuration", DEPLOY, ("caddy-install", "v1.0.0"), "app.example.org", 1),
+    )
+    TRIGGERS = {"install refused": "caddy-refuses", "reload fails": "caddy-reload-fails"}
+    # Paths a step may write that are the operator's own, not the host's: its temporary
+    # directory, the checkout's git directory, and the stand-ins' log.
+    OPERATOR = (Path("tmpdir"), Path("checkout") / ".git", Path("log"))
+    # Every command bash runs, as bash reports it before running it, with the file it comes from
+    # and the run of bash it belongs to.
+    BASH_RECORD = r"""set -T
+record_run="$$ $SRANDOM"
+trap 'printf "%s\0%s\0%s\0" "$record_run" "${BASH_SOURCE[0]:-}" "$BASH_COMMAND" >>"$RECORD_LOG"' DEBUG
+"""
+    # Every path bash names in a command it runs, expanded, and every path python opens, looks
+    # at or changes, for the named-path check.
+    BASH_TRACE = r"""exec {TRACE_FD}>>"$TRACE_LOG"
+BASH_XTRACEFD=$TRACE_FD
+PS4='+ '
+set -x
+"""
+    PYTHON_TRACE = r"""#!/bin/bash
+PATH=${PATH#*:}
+exec python3 -c '
+import os, runpy, sys
+log = open(os.environ["TRACE_LOG"], "a", encoding="utf-8")
+def note(path):
+    if isinstance(path, (str, bytes, os.PathLike)):
+        log.write("+py " + os.fsdecode(path) + "\n")
+        log.flush()
+def hook(event, args):
+    if event == "open" or event.startswith(("os.", "shutil.")):
+        for arg in args[:2]:
+            note(arg)
+sys.addaudithook(hook)
+for name in ("stat", "lstat"):
+    def looked(path, *rest, _real=getattr(os, name), **options):
+        note(path)
+        return _real(path, *rest, **options)
+    setattr(os, name, looked)
+sys.argv = sys.argv[1:]
+runpy.run_path(sys.argv[0], run_name="__main__")
+' "$@"
+"""
+    PREFIX = "DECKSTREAK_DEPLOY_"
+    # All a Caddy step runs before its refusal, as bash reports each command: rollback.sh only
+    # finds and execs deploy.sh, and deploy.sh sets its options and its settings. The refusal
+    # stops a setting only if nothing before it could read one.
+    ROLLBACK_RUN = (
+        "set -euo pipefail",
+        'here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)',
+        'cd "$(dirname "${BASH_SOURCE[0]}")"',
+        'dirname "${BASH_SOURCE[0]}"',
+        "pwd",
+        'case "${1:-}" in ',
+        'exec "$here/deploy.sh" caddy-remove',
+    )
+    REFUSAL = "for name in ${!DECKSTREAK_DEPLOY_@}"
 
-    def test_the_caddy_functions_read_only_the_settings_the_directory_population_varies(self):
+    @staticmethod
+    def tree(root):
+        """Each path under root but the stubs' own log: its type, mode, and bytes or link target."""
+        seen = {}
+        for path in sorted(root.rglob("*")):
+            relative = path.relative_to(root)
+            if relative.parts[0] == "log":
+                continue
+            info = path.lstat()
+            data = None
+            if stat.S_ISLNK(info.st_mode):
+                data = os.readlink(path)
+            elif stat.S_ISREG(info.st_mode):
+                data = path.read_bytes()
+            seen[relative] = (stat.S_IFMT(info.st_mode), stat.S_IMODE(info.st_mode), data)
+        return seen
+
+    @staticmethod
+    def settings():
+        """The settings deploy.sh names."""
         text = DEPLOY.read_text(encoding="utf-8")
-        start = text.index("caddy_install() {")
-        body = text[start : text.index('case "${1:-}" in')]
-        read = set(re.findall(r"DECKSTREAK_DEPLOY_[A-Z_]+", body))
-        for name, setting in re.findall(
-            r"^([A-Z_]+)=\$\{(DECKSTREAK_DEPLOY_[A-Z_]+):-", text[:start], re.MULTILINE
+        found = re.search(r"^SETTINGS='([^']*)'", text, re.MULTILINE)
+        return found.group(1).split() if found else []
+
+    @staticmethod
+    def locked(root, places, operator):
+        """Make every directory and file under root read-only but the places, the files directly
+        in them, and the operator's paths; return each changed path's mode, to restore."""
+        modes = {}
+        for path in [root, *root.rglob("*")]:
+            relative = path.relative_to(root)
+            if path.is_symlink() or relative in places or relative.parent in places:
+                continue
+            if any(o == relative or o in relative.parents for o in operator):
+                continue
+            mode = stat.S_IMODE(path.lstat().st_mode)
+            if mode & 0o222:
+                modes[path] = mode
+                path.chmod(mode & ~0o222)
+        return modes
+
+    def measured(self, layout, record=False, places=None, trace=False):
+        """A new world laid out as `layout`, the paths each of STEPS changed in it, and the world
+        paths each step named.
+
+        The operator's temporary directory and home, and each named setting the world does not
+        give, are directories of the world, so a write through any of them is measured too. With
+        `places`, every other path of the world is read-only while each step runs. The site's web
+        root lies outside the world: it is text the block holds, not a path a step touches."""
+        w = self.fresh_world()
+        cfdir = w.tmp / "host" / "etc" / "cfdir" if layout == "apart" else w.caddy_dir
+        cfdir.mkdir(exist_ok=True)
+        caddyfile = cfdir / "Caddyfile"
+        caddyfile.write_text("example.org {\n\trespond 200\n}\n", encoding="utf-8")
+        w.ship("v1.0.0")
+        env = {"DECKSTREAK_DEPLOY_CADDYFILE": str(caddyfile)}
+        given = {"TMPDIR": w.tmp / "tmpdir", "HOME": w.tmp / "home"}
+        provided = {**w.env, **self.config(), **env}
+        for name in self.settings():
+            if name not in provided:
+                given[name] = w.tmp / "setting" / name
+        for name, directory in given.items():
+            directory.mkdir(parents=True)
+            env[name] = str(directory)
+        if record:
+            (w.stub / "record.bash").write_text(self.BASH_RECORD, encoding="utf-8")
+            env |= {"BASH_ENV": str(w.stub / "record.bash"), "RECORD_LOG": str(w.log / "record")}
+        if trace:
+            w.script("python3", self.PYTHON_TRACE)
+            (w.stub / "trace.bash").write_text(self.BASH_TRACE, encoding="utf-8")
+            env |= {"BASH_ENV": str(w.stub / "trace.bash"), "TRACE_LOG": str(w.log / "trace")}
+        self.ok(w.run(DEPLOY, "caddy-install", "v1.0.0", **self.config(), **env))
+        self.ok(w.run(ROLLBACK, "caddy-remove", **self.config(), **env))
+        changed, named = {}, {}
+        world = re.compile(re.escape(str(w.tmp)) + r"(?:/[^\s'\"]*)?")
+        for op, script, args, host, code in self.STEPS:
+            step = {**self.config(host=host, web_root="/srv/deck-streak/current/web"), **env}
+            start = (w.log / "trace").stat().st_size if (w.log / "trace").exists() else 0
+            if op == "no configuration":
+                step["DECKSTREAK_DEPLOY_CADDY_CONFIG"] = str(w.tmp / "tmpdir" / "absent.json")
+            if op.endswith("rename fails"):
+                self.failing_rename(".candidate")
+            if op in self.TRIGGERS:
+                (w.log / self.TRIGGERS[op]).write_text("1", encoding="utf-8")
+            before = self.tree(w.tmp)
+            modes = self.locked(w.tmp, places, self.OPERATOR) if places is not None else {}
+            if places is not None:
+                self.assertTrue(modes, f"{op}: nothing was made read-only: nothing was confined")
+            try:
+                done = w.run(script, *args, **step)
+            finally:
+                for path, mode in modes.items():
+                    path.chmod(mode)
+            after = self.tree(w.tmp)
+            w.script("mv", LOGGED.replace("@NAME@", "mv"))
+            if op in self.TRIGGERS:
+                (w.log / self.TRIGGERS[op]).unlink(missing_ok=True)
+            self.assertEqual(done.returncode, code, f"{op}: {done.stderr}")
+            changed[op] = {p for p in before.keys() | after.keys() if before.get(p) != after.get(p)}
+            if trace:
+                with (w.log / "trace").open(encoding="utf-8", errors="replace") as log:
+                    log.seek(start)
+                    found = {Path(p).relative_to(w.tmp) for p in world.findall(log.read())}
+                # A setting's own value, the working directory and the operator's paths are named
+                # by every step; what is left must lie in a place.
+                values = {v for v in {**w.env, **step}.values() if v.startswith(f"{w.tmp}/")}
+                values = {Path(v).relative_to(w.tmp) for v in values} | {Path(".")}
+                named[op] = {
+                    p
+                    for p in found - values
+                    if not any(o == p or o in p.parents for o in (*self.OPERATOR, Path("stub")))
+                }
+        block = (w.caddy_dir / "deck-streak.caddy").relative_to(w.tmp)
+        for op in ("install first", "install again", "removal"):
+            self.assertIn(block, changed[op], f"{op} changed no block: nothing was measured")
+            if trace:
+                self.assertIn(block, named[op], f"{op} named no block: nothing was traced")
+        return w, cfdir, changed, named
+
+    def test_a_caddy_step_reads_only_the_settings_it_names_and_refuses_any_other(self):
+        w, cfdir, _, _ = self.measured("apart", record=True)
+        record = w.log / "record"
+        self.assertTrue(record.is_file(), "bash recorded no command: nothing was recorded")
+        fields = [field.decode() for field in record.read_bytes().split(b"\0")[:-1]]
+        records = list(zip(fields[0::3], fields[1::3], fields[2::3], strict=True))
+        unnamed = {self.PREFIX} | {n + extra for n in self.settings() for extra in ("2", "_BACKUP")}
+        # Without an unnamed setting both steps succeed, so a refusal below is the setting's.
+        steps = {step[0]: step for step in self.STEPS}
+        plain = {**self.config(), "DECKSTREAK_DEPLOY_CADDYFILE": str(cfdir / "Caddyfile")}
+        for op in ("install first", "removal"):
+            script, args = steps[op][1:3]
+            self.ok(w.run(script, *args, **plain))
+        for i, name in enumerate(
+            examined("unnamed setting(s)", sorted(unnamed - {*self.settings()}))
         ):
-            if re.search(r"\$\{?" + name + r"\b", body):
-                read.add(setting)
-        self.assertEqual(
-            read, {*self.PATH_SETTINGS, *self.READ_SETTINGS}, "a new setting is an axis"
-        )
+            (w.tmp / "unnamed" / name).mkdir(parents=True)
+            script, args = steps[("install first", "removal")[i % 2]][1:3]
+            step = {**plain, name: str(w.tmp / "unnamed" / name)}
+            before = self.tree(w.tmp)
+            done = w.run(script, *args, **step)
+            self.assertEqual(
+                done.returncode, 1, f"{name} : a step ran with a setting it does not name"
+            )
+            self.assertIn(f"deploy: {name} is not a setting", done.stderr)
+            self.assertEqual(self.tree(w.tmp), before, f"{name} : the refusal changed the tree")
+        # Nothing a step runs before its refusal is anything but what ROLLBACK_RUN and deploy.sh
+        # declare, so no read, in any form, comes before the refusal can stop it.
+        runs = {}
+        for run, source, command in records:
+            if source in (str(DEPLOY), str(ROLLBACK)):
+                runs.setdefault((run, source), []).append(command)
+        settings = re.search(r"^SETTINGS='[^']*'", DEPLOY.read_text(encoding="utf-8"), re.M)
+        opening = ("set -euo pipefail", settings.group(0) if settings else "", 'case "${1:-}" in ')
+        declared = {str(ROLLBACK): self.ROLLBACK_RUN, str(DEPLOY): (*opening, self.REFUSAL)}
+        self.assertEqual({source for _, source in runs}, set(declared), "a script never ran")
+        for (_, source), commands in examined("script run(s)", sorted(runs.items())):
+            first = declared[source]
+            self.assertEqual(
+                tuple(commands[: len(first)]),
+                first,
+                f"{Path(source).name} runs something before the refusal",
+            )
 
     @staticmethod
     def listing(*directories):
         """Each directory's mode and each entry's type, mode, link count and bytes."""
         seen = {}
         for directory in directories:
+            if not directory.is_dir():
+                seen[str(directory)] = None
+                continue
             entries = {}
             for path in sorted(directory.iterdir()):
                 info = path.lstat()
@@ -1375,9 +1588,22 @@ class TheCaddyInstall(Case):
     ):
         stales = {"caddy-dir": ("deck-streak.candidate",), "caddyfile-dir": ("Caddyfile.previous",)}
         stales["shared"] = stales["caddy-dir"] + stales["caddyfile-dir"]
-        self.assertEqual(set(self.DIRECTORY_OF), set(self.PATH_SETTINGS), "a setting is no place")
-        places = (("beside", "shared"),)
-        places += tuple(("apart", self.DIRECTORY_OF[s]) for s in self.PATH_SETTINGS)
+        places = []
+        for layout in ("beside", "apart"):
+            w, cfdir, changed, named = self.measured(layout, trace=True)
+            measured = {p.parent for paths in changed.values() for p in paths}
+            _, _, again, _ = self.measured(layout, places=measured)
+            self.assertEqual(again, changed, f"{layout}: a step writes outside its places")
+            for op, paths in examined(f"{layout} step(s) named paths", sorted(named.items())):
+                elsewhere = sorted(str(p) for p in paths if not {p, p.parent} & measured)
+                self.assertEqual(
+                    elsewhere, [], f"{layout}, {op}: a step names a path outside its places"
+                )
+            named = {w.caddy_dir: "shared"}
+            if layout == "apart":
+                named = {w.caddy_dir: "caddy-dir", cfdir: "caddyfile-dir"}
+            for directory in sorted(w.tmp / p for p in measured):
+                places.append((layout, named.get(directory, str(directory.relative_to(w.tmp)))))
         states = ("writable", "read-only", "read-only with a stale writable copy")
         ops = ("install first", "install again", "removal")
         triggers = ("none", "the rename fails", "the reload fails")
@@ -1395,7 +1621,6 @@ class TheCaddyInstall(Case):
             for m in members
             if not (m[1] == "writable" and m[2:] == ("removal", "the rename fails"))
         ]
-        self.assertEqual(len(members), 78, "3 places x 3 states x 3 ops x 3 triggers, minus 3")
         for (layout, target), state, op, trigger in examined("directory member(s)", members):
             with self.subTest(layout=layout, target=target, state=state, op=op, trigger=trigger):
                 w = self.fresh_world()
@@ -1412,9 +1637,11 @@ class TheCaddyInstall(Case):
                 if trigger == "the reload fails":
                     (w.log / "caddy-reload-fails").write_text("1")
                 where = {"shared": cfdir, "caddy-dir": w.caddy_dir, "caddyfile-dir": cfdir}
-                directory = where[target]
+                directory = where.get(target, w.tmp / target)
+                looked = [where.get(t, w.tmp / t) for place, t in places if place == layout]
+                directory.mkdir(parents=True, exist_ok=True)
                 if state.endswith("stale writable copy"):
-                    for name in stales[target]:
+                    for name in stales.get(target, ()):
                         (directory / name).write_text("stale\n", encoding="utf-8")
                 if state != "writable":
                     directory.chmod(0o555)
@@ -1423,16 +1650,16 @@ class TheCaddyInstall(Case):
                     if op == "removal"
                     else (DEPLOY, ("caddy-install", "v1.0.0"), self.REFUSED)
                 )
-                before = self.listing(w.caddy_dir, cfdir)
+                before = self.listing(*looked)
                 bytes_before = caddyfile.read_bytes()
                 try:
                     done = w.run(script, *args, **self.config(host="new.example.org"), **setting)
                 except subprocess.TimeoutExpired:
                     directory.chmod(0o755)
                     self.fail(f"{script.name} waited")
-                after = self.listing(w.caddy_dir, cfdir)
+                after = self.listing(*looked)
                 directory.chmod(0o755)
-                if done.returncode == 0:
+                if done.returncode == 0 and state == "writable":
                     continue
                 self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
                 said = refusal in done.stderr or (
