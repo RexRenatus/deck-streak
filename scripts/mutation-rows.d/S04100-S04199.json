@@ -486,6 +486,33 @@
         "            if true {",
         "one_router::no_delivery_goes_around_the_port",
         "a request the census cannot read is refused outside its named request site (SPEC-041 A16, #429); the census is test code, which cargo-mutants never mutates, and the mutant takes every mention as a site's, so the planted celebrations' raw requests are no longer refused"
+      ],
+      [
+        "S04156-A-REQUEST-PATH-LEFT-OFF-THE-CLIPPY-CONFIG-IS-REFUSED",
+        "notifications",
+        "../../clippy.toml",
+        "{ path = \"reqwest::Client::builder\"",
+        "{ path = \"reqwest::Client::builders\"",
+        "request_allow_list::clippy_names_the_four_paths_that_make_reqwests_client",
+        "clippy.toml names the four paths through which reqwest's client is made, so a request through any name the compiler resolves to one of them is flagged (SPEC-041 A18, #429); the config is not code cargo-mutants reaches, and the mutant names a path no code resolves to, so the entry is gone"
+      ],
+      [
+        "S04157-A-SUPPRESSION-SPELLING-LEFT-OUT-OF-THE-CENSUS-IS-REFUSED",
+        "notifications",
+        "tests/request_allow_list.rs",
+        "    for level in [\"allow\", \"expect\"] {",
+        "    for level in [\"expect\"] {",
+        "request_allow_list::a_suppression_of_the_rule_or_of_its_group_is_refused_wherever_it_is_planted",
+        "the allow-list test reads every allow and expect around a lint of the rule or of a group that holds it (SPEC-041 A18); the audit is test code, which cargo-mutants never mutates, and the mutant leaves the allow spelling unread, so the generated suppression population is no longer refused"
+      ],
+      [
+        "S04158-AN-ALLOW-AT-A-NAMED-SITE-IS-REFUSED",
+        "notifications",
+        "tests/request_allow_list.rs",
+        "            && suppression.level == \"expect\"",
+        "            && true",
+        "request_allow_list::the_audit_reads_code_and_only_code",
+        "a named transport site is accepted only as an expect with a reason, so a site that stops needing its suppression is itself a warning (SPEC-041 A18); the audit is test code, which cargo-mutants never mutates, and the mutant accepts an allow at a named site"
       ]
     ],
     "CARGO_KILLED_SCRIPT_MUTATIONS": [
