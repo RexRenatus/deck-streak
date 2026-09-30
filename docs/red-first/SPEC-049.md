@@ -172,8 +172,8 @@ review onto the later one's day (`review_at(t)` for the earlier review) keeps 44
 distinct and 112 distinct day members, and leaves no such day. A20 now counts, inside the lapse
 judge's wrapper and with the test's own definition of the day, the study days that hold one review
 of the reviews it is handed (`ONE_REVIEW_DAYS`, 896, two for each member), asserts it beside the
-distinct counts and prints it. The window test hands its judge each day's count as given and derives
-none, so it needs no such count.
+distinct counts and prints it. The window judge derives the silent run and compares it with the threshold,
+the walk's reach and the skip days, so round 3 pins each of those boundaries.
 
 The count was committed beside the planted fold (af4e9c9073027b247bbad5146e767e0c55007eba), and the plant was removed in
 5ed1c5eeefe1fcee6abd453f4647605db1289c25. The round-1 replay of the day judge's spread above (32 distinct of 112) was read from an
@@ -187,3 +187,31 @@ A19 replay: green at 5ed1c5eeefe1fcee6abd453f4647605db1289c25: examined 2252 win
 ```
 
 Row S04929 carries the plant; it is KILLED by full id on the committed tree.
+
+### Fix round 3: every boundary each judge compares
+
+The two populations pinned one boundary each, or none, while their judges compare derived values
+at several. The class rule is one sentence: a population pins, by its own oracle over the arguments
+its judge is handed, how many members sit at each boundary that judge compares. It asserts each
+count beside the examined and distinct counts and prints it. The boundaries were read from the
+code (the study day's floor on a review's instant, on now and on the day judge's instant; in the
+walk, the empty window, a day's count against none, the skip days, the walk's reach and the
+threshold), and the folds that test the rule were generated one input at one call site at a time.
+A20 now pins eight boundary counts and A19 seven; "empty windows" pins 0, because A19's
+population never reaches that boundary, and `an_empty_window_holds_no_lapse` decides it.
+
+The counts were committed in c3c4c1007c81d2ee9b3aced1b569224a5d016c25 with no plant beside them. Three folds were planted in an
+uncommitted tree over that test, one at the study day's floor on a review's instant (a review at
+the rollover moved 2 ms after), one at the threshold (the silent run of the threshold made one
+day longer) and one at the skip days (every skip day moved 1000 days later). Each plant was
+red by the boundary assertion, and each was removed with the files restored byte for byte.
+
+```text
+A20 replay: red under the uncommitted review plant: panicked at crates/coordination/tests/lapse.rs:233:5, the boundaries' members: "reviews at a rollover": 0, where the head's map holds 64
+A20 replay: red under the uncommitted threshold plant: panicked at crates/coordination/tests/lapse.rs:233:5, the boundaries' members: "runs of silent days at the threshold": 0, where the head's map holds 224
+A19 replay: red under the uncommitted skip-day plant: panicked at crates/streaks/tests/lapse.rs:282:5, the boundaries' members: "walks that pass a skip day": 0, where the head's map holds 2000
+A20 replay: green at c3c4c1007c81d2ee9b3aced1b569224a5d016c25: examined 448 rollover member(s), 448 distinct, over 112 distinct day member(s), 896 study day(s) holding one review
+A20 replay: green at c3c4c1007c81d2ee9b3aced1b569224a5d016c25: boundary members: {"day instants a millisecond before one": 16, "day instants at a rollover": 16, "nows a millisecond before one": 224, "nows at a rollover": 224, "reviews a millisecond before one": 64, "reviews at a rollover": 64, "runs of silent days at the threshold": 224, "runs of silent days one short of it": 224}
+A19 replay: green at c3c4c1007c81d2ee9b3aced1b569224a5d016c25: examined 2252 window member(s), 1916 distinct
+A19 replay: green at c3c4c1007c81d2ee9b3aced1b569224a5d016c25: boundary members: {"closing days of one review": 1349, "empty windows": 0, "runs of silent days at the threshold": 403, "runs of silent days one short of it": 800, "todays before the window": 2, "walks that end at the window's first day": 229, "walks that pass a skip day": 2000}
+```

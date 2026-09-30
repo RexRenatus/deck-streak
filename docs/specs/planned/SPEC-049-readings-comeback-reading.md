@@ -344,8 +344,10 @@ A18: cargo test -p deck-streak-streaks --test lapse -- --exact a_silent_run_on_t
 
 Made for issue #453, insert-only: every earlier byte is kept in order, and the sections below are new
 last sections. It decides nothing new. The two generated populations of section 8 each assert how
-many members they generate; this amendment says what that count pins, and adds the second count
-that pins the rest.
+many members they generate; this amendment says what that count pins, and adds the counts that pin
+every boundary the two judges compare: the study day's floor on a review's instant, on now and on
+the day judge's instant, the silent run against the threshold and one short of it, a day's count
+against none, the skip days a walk passes, and where a walk ends against the window's first day.
 
 - **What the examined count pins.** It is the number of times the generator's loops reach the
   judge: the product of their axes. A generator that keeps its loops but changes what they produce
@@ -368,6 +370,18 @@ that pins the rest.
   member hands the lapse judge, the study days that hold exactly one, reading each review's day with
   the test's own definition of the day: 896, two for each member. Moving the earlier review onto
   the day of the later one keeps every member different and leaves no such day.
+- **What the boundary counts pin.** Each population also counts, by its own oracle over the
+  arguments its judge is handed, how many members sit at each boundary that judge compares, asserts
+  each count beside the examined and distinct counts, and prints them. A20 counts eight (reviews,
+  nows and day instants at a rollover and a millisecond before one, and silent runs at the
+  threshold and one short of it). A19 counts seven (closing days of one review, empty windows,
+  silent runs at the threshold and one short of it, todays before the window, walks that end at the
+  window's first day, and walks that pass a skip day). A generator fold that keeps every member
+  different and moves members across one boundary fails the count of that boundary. The class rule
+  is one sentence: a population pins how many members sit at each boundary its judge compares.
+  The boundaries were read from the judges' code, and the folds that test them were generated one
+  input at one call site at a time. "Empty windows" pins 0, because A19's population never reaches
+  that boundary; the test `an_empty_window_holds_no_lapse` decides it.
 - **Why members of the walk's population repeat.** 336 of the 2,252 members repeat an earlier one,
   for two reasons. The days before a run are filled three ways when the window has earlier days,
   and two ways when it has none. When the window has one or two earlier days (`before` of 1 or 2),
@@ -384,7 +398,7 @@ that pins the rest.
 - **Criteria.** A19 asserts A16's population is 2,252 members and 1,916 distinct, and prints both.
   A20 asserts A17's population is 448 members, 448 distinct lapse members and 112 distinct day
   members, and prints all three; it also asserts, and prints, that the members hold 896 study days
-  of one review.
+  of one review. A19 and A20 each also assert and print their boundary counts.
 - **Rows.** This amendment writes S04921 to S04929 of this SPEC's band, one for each class of
   generator fold: a skip mask that never reaches the run's first day, a fill replaced by a copy of
   another, and an axis collapsed to one value, on the walk's population (A19); two offsets made
@@ -401,7 +415,7 @@ Files this amendment adds or changes:
 |---|---|---|
 | `crates/streaks/tests/lapse.rs` | `deck-streak-streaks` | A19: the distinct count of A16's population |
 | `crates/coordination/tests/lapse.rs` | `deck-streak-coordination` | A20: the distinct count of A17's population |
-| `scripts/mutation-rows.d/S04900-S04999.json` | repo | eight rows |
+| `scripts/mutation-rows.d/S04900-S04999.json` | repo | nine rows |
 | `docs/red-first/SPEC-049.md` | docs | an insert-only addendum |
 | `changelog.d/lapse-spread-453.md` | repo | the fragment |
 
