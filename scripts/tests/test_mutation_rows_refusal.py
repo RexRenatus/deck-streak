@@ -97,7 +97,8 @@ class TheRefusalIsReadWhole(unittest.TestCase):
         self.assertEqual(len(members), len(REASONS) * len(ROUTES))
         for reason, route in members:
             with self.subTest(reason=reason, route=route):
-                root = Path(tempfile.mkdtemp(dir=self.root))
+                root = self.root / f"{list(REASONS).index(reason)}-{ROUTES.index(route)}"
+                root.mkdir()
                 bin_dir = root / "bin"
                 bin_dir.mkdir()
                 command = place(bin_dir, reason)
