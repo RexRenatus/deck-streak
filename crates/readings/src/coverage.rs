@@ -445,7 +445,15 @@ pub struct GateFailure {
 /// finding lines are a probe's output about the model's text, so none of them is a finding here
 /// (SPEC-046 R7).
 fn named(pack: &PackFailure) -> Vec<String> {
-    vec![format!("the {} check refused the reading", pack.class)]
+    let class = if matches!(pack.class.as_str(), "void" | "examined-nothing") {
+        pack.findings
+            .first()
+            .and_then(|f| f.split(':').next())
+            .unwrap_or(&pack.class)
+    } else {
+        &pack.class
+    };
+    vec![format!("the {class} check refused the reading")]
 }
 
 /// The first failure across the own gates and the pack gate, in the gate order: complete, roster,
