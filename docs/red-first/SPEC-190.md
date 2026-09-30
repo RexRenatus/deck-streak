@@ -95,3 +95,34 @@ A10's replay over the same grammar members, quoted as text because A10 is record
 A10: red at b2fa82a: ["grammar: release.yml line 1 starting '@' is accepted", ...] (120 members) != []
 A10: green at c78bbc8
 ```
+
+Round 7 (R12 part 1's line end and tab refusals). The tests of A11 and of A10's population (81b3204)
+ran against the reader as it stood: A11 failed by assertion, naming 297 of its 2573 generated forms
+the reader read, or refused, otherwise than R12 part 1 requires, the first a carriage return that
+does not end a line read as a line end, and A10 failed by assertion, naming 500 of its 1081 members
+the class did not refuse, the first a tab-indented comment line. They were the only tests of the two
+files that failed (A11's file ran 31 tests with 1 failure, A10's file ran 15 with 1). The reader that
+ends a line only at a line feed or a carriage return and a line feed, and refuses a tab in every
+line's indentation (a2899a2), turned both green. Both are quoted as text, because A10 and A11 are
+recorded above:
+
+```text
+A11: red at 81b3204: [('a carriage return that does not end a line at the end of a value', ...), ...] (297 forms) != []
+A11: green at a2899a2
+A10: red at 81b3204: ['tabs: a tab-indented comment line is accepted', ...] (500 members) != []
+A10: green at a2899a2
+```
+
+The tests read a workflow file's bytes as GitHub does (ee89d8e): a workflow file planted with a lone
+carriage return in the concurrency block, or inside a block scalar's text, was read by four of the
+tests' loaders as a file without it, and the census of the test modules' file reads named no loader.
+Two of the four new tests failed by assertion, 9 checks in all (8 loader reads of a planted file
+and the census); the CRLF and the planted-census tests passed from the start, as controls. The one
+loader that reads the bytes (81ff76b) turned all four green. Quoted as text:
+
+```text
+loaders: red at ee89d8e: the file was read, not refused (8 reads: 2 shapes x 4 loaders)
+census: red at ee89d8e: 'def workflow_file_text(' not found in the test module
+loaders: green at 81ff76b
+census: green at 81ff76b
+```
