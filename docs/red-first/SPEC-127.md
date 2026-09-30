@@ -279,7 +279,7 @@ as it stood on dev: it was red by assertion, all eighteen members (three calls, 
 reaches it, three failure modes) read the tool's bare message with no `deploy:` line, and it printed
 `examined 18 temporary-path member(s)`. No member was green at dev.
 
-```text
+```red-first
 A40: red at 0929355b58816672227e2bbd645f3eb94b8df11b: AssertionError: 0 != 1 : install_tag / install / absent
 A40: green at 53764d6320c899ae41d30518363d150c5a414a89
 ```
