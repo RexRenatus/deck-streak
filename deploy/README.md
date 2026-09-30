@@ -192,8 +192,10 @@ of the Caddyfile, runs `caddy validate` and `caddy adapt --validate` on the copy
 place and reloads; a refusal leaves the live file as it was, and a reload that fails puts the
 previous block and Caddyfile back, reloads them and exits non-zero (SPEC-127).
 `rollback.sh caddy-remove` reverses it under the same rule. Either Caddy step refuses, before it
-reads or writes anything, a `DECKSTREAK_DEPLOY_` variable that is not one of the settings above, and
-names it.
+reads or writes anything, any entry of its environment whose name starts with `DECKSTREAK_DEPLOY_` and
+is not one of the settings above, whatever follows the prefix, and a setting given twice or without a
+value, and names it. It reads its environment from `/proc/self/environ`, so it runs only where that
+file is readable (Linux).
 
 ## The host budget
 

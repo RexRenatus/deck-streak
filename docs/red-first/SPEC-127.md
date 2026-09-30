@@ -251,3 +251,23 @@ fifty-six tests pass.
 
 The rows S12738 to S12740 were added in a later commit. Each is killed by the test of A39, and
 every row of the band is proved killed by its full id on a clean committed tree.
+
+## Amendment 2026-09-30, sixth round (issues #423 and #424)
+
+The test of A39 was rewritten and committed first (dafbbbbbcf6d5845493c215f04ff96f870925984) against `deploy.sh` as it stood, and
+run whole under `LC_ALL=C`: the test of A39 was red by assertion, with no error, and the fifty-five
+other tests stayed green. The red line names a setting: it is the first name the test sets that the
+script does not refuse, the `DECKSTREAK_DEPLOY_` prefix followed by the byte 0x01.
+
+```text
+A39: red at dafbbbbbcf6d5845493c215f04ff96f870925984: AssertionError: 0 != 1 : b'DECKSTREAK_DEPLOY_\x01' : a step ran with a setting it does not name
+A39: green at ea32c2452934332d613a237d1e2ad4ffc16db0ee
+```
+
+The fix followed (ea32c2452934332d613a237d1e2ad4ffc16db0ee), which changes `deploy.sh` and edits no test file: each Caddy step also
+reads the environment it received and refuses every entry with the deploy prefix that it does not
+list, whatever bytes follow the prefix, a listed setting given twice or without a value, and a run in
+which it can read no environment. After it, fifty-six tests pass.
+
+The rows S12741 to S12746 were added in a later commit. Each is killed by the test of A39, and every
+row of the band is proved killed by its full id on a clean committed tree.
