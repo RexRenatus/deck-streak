@@ -1,0 +1,236 @@
+{
+  "cases": [
+    {
+      "input": {
+        "raw": ""
+      },
+      "output": ""
+    },
+    {
+      "input": {
+        "raw": "   "
+      },
+      "output": ""
+    },
+    {
+      "input": {
+        "raw": ">"
+      },
+      "output": ""
+    },
+    {
+      "input": {
+        "raw": "|-"
+      },
+      "output": ""
+    },
+    {
+      "input": {
+        "raw": ">+"
+      },
+      "output": ""
+    },
+    {
+      "input": {
+        "raw": "plain reason"
+      },
+      "output": "plain reason"
+    },
+    {
+      "input": {
+        "raw": "  two   spaces  "
+      },
+      "output": "two spaces"
+    },
+    {
+      "input": {
+        "raw": "tab\there"
+      },
+      "output": "tabhere"
+    },
+    {
+      "input": {
+        "raw": "line\nbreak"
+      },
+      "output": "linebreak"
+    },
+    {
+      "input": {
+        "raw": "zero\u200dwidth joiner"
+      },
+      "output": "zerowidth joiner"
+    },
+    {
+      "input": {
+        "raw": "private\ue000use"
+      },
+      "output": "privateuse"
+    },
+    {
+      "input": {
+        "raw": "unassigned\u0378point"
+      },
+      "output": "unassignedpoint"
+    },
+    {
+      "input": {
+        "raw": "c1\u0085control"
+      },
+      "output": "c1control"
+    },
+    {
+      "input": {
+        "raw": "format\u202eoverride"
+      },
+      "output": "formatoverride"
+    },
+    {
+      "input": {
+        "raw": "nbsp\u00a0here\u3000ideographic\u2003em"
+      },
+      "output": "nbsp here ideographic em"
+    },
+    {
+      "input": {
+        "raw": "sep\u2028line\u2029para"
+      },
+      "output": "sep line para"
+    },
+    {
+      "input": {
+        "raw": "\u0000\u001f\u007f\u009f"
+      },
+      "output": ""
+    },
+    {
+      "input": {
+        "raw": "e\u0301 combining"
+      },
+      "output": "e\u0301 combining"
+    },
+    {
+      "input": {
+        "raw": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "output": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "input": {
+        "raw": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "output": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "input": {
+        "raw": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "output": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\u2026"
+    },
+    {
+      "input": {
+        "raw": "word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word "
+      },
+      "output": "word word word word word word word word word word word word word word word word word word word word word word word word\u2026"
+    },
+    {
+      "input": {
+        "raw": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx yy"
+      },
+      "output": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\u2026"
+    },
+    {
+      "input": {
+        "raw": "\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026"
+      },
+      "output": "\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026"
+    },
+    {
+      "input": {
+        "raw": "\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00"
+      },
+      "output": "\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\u2026"
+    },
+    {
+      "input": {
+        "raw": "\ufeffbom"
+      },
+      "output": "bom"
+    },
+    {
+      "input": {
+        "raw": "\u180emongolian"
+      },
+      "output": "mongolian"
+    },
+    {
+      "input": {
+        "raw": "\udb40\udc01tag\udb40\udc7f"
+      },
+      "output": "tag"
+    },
+    {
+      "input": {
+        "raw": "\udbff\udffd"
+      },
+      "output": ""
+    },
+    {
+      "input": {
+        "raw": "\ud83f\udffe"
+      },
+      "output": ""
+    },
+    {
+      "input": {
+        "raw": "c\u00a0\ue000a-- c\u200d\u00a0>|-\u0378\u0378\u00a0"
+      },
+      "output": "c a-- c >|-"
+    },
+    {
+      "input": {
+        "raw": "\u00a0\u00a0- >\u202e \u0378\u0085b\u0378c \u0378\t\n\n\t\ue000ca\t\u0085\u0085\u0085ba\n\t\u200d\u00a0|\u200d\t-\ue000\ue000\u202ec\u200d"
+      },
+      "output": "- > bc caba |-c"
+    },
+    {
+      "input": {
+        "raw": "-\u3000\u0085cb\u0378-\ue000\ue000 c\na\u00a0\u202e|b\ue000c|\u00a0a c \u00a0\t \nba\u0378\u0085a\ue000a\u200d"
+      },
+      "output": "- cb- ca |bc| a c baaa"
+    },
+    {
+      "input": {
+        "raw": "\u200d-\tc\u202ec\u0378\u0085\u0378\u0085c\n\u200d\u202e\u200d |>a"
+      },
+      "output": "-ccc |>a"
+    },
+    {
+      "input": {
+        "raw": "\u0378\n\u202ec\n\u0378\u3000\n\u200dca"
+      },
+      "output": "c ca"
+    },
+    {
+      "input": {
+        "raw": "b\u202e\u3000\n\u202e|c >\u0378a \u00a0a\ue000\t\n"
+      },
+      "output": "b |c >a a"
+    },
+    {
+      "input": {
+        "raw": "cab\u0378\u0378\u202e \u3000\n|b\u200d\u202e\u202e\u202e\ta| >\u00a0\u0085\u0378\n|\u00a0\u202e\u0378b\u3000\u200d \u3000ac>\u0085\u200d"
+      },
+      "output": "cab |ba| > | b ac>"
+    }
+  ],
+  "function": "vault_bridge._sanitise_defer_reason",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "function",
+  "registry": "tools/parity-oracle/registry/spec_110.py",
+  "registry_sha256": "d058393f8eb4b64bb586d0f495e756d6bb23e9dfee189e8f89def4160897befe",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

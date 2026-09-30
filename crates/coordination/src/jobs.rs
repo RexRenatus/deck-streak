@@ -84,8 +84,16 @@ pub const LIVENESS: Job = Job {
     catch_up: false,
 };
 
+/// The hourly law drill post-back (SPEC-110 R9): it records each graded drill and pays it once, at
+/// a minute the predecessor never uses and no other job of the table takes.
+pub const DRILL_POSTBACK: Job = Job {
+    id: "drill_postback",
+    schedule: Schedule::Hourly { minute: 19 },
+    catch_up: false,
+};
+
 /// The one schedule: every job a timer may start.
-pub const TABLE: [Job; 3] = [SYNC, MAINTENANCE, LIVENESS];
+pub const TABLE: [Job; 4] = [SYNC, MAINTENANCE, LIVENESS, DRILL_POSTBACK];
 
 /// The table's job with `id`, or `None` when the table holds none.
 #[must_use]

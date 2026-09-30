@@ -829,8 +829,10 @@ name = "deck-streak-agent"
 version = "0.2.0"
 dependencies = [
  "deck-streak-kernel",
+ "proc-macro2",
  "serde_json",
  "sqlx",
+ "syn 2.0.119",
  "tempfile",
  "thiserror",
  "tokio",
@@ -1038,6 +1040,8 @@ version = "0.2.0"
 dependencies = [
  "deck-streak-ingest",
  "deck-streak-kernel",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -1151,8 +1155,11 @@ dependencies = [
  "deck-streak-kernel",
  "serde",
  "serde_json",
+ "sqlx",
  "tempfile",
  "thiserror",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]
