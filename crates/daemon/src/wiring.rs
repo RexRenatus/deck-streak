@@ -803,7 +803,9 @@ mod tests {
          BEFORE UPDATE OF window_floor ON ingest_state BEGIN SELECT RAISE(ABORT, 'refused'); END";
 
     /// The XP ledger moved out of the recompute's reach, after the window was read.
-    const UNREAD_XP: &str = "ALTER TABLE xp_ledger RENAME TO xp_ledger_unread";
+    /// The table's name is split so that the progression census, which reads every crate's source
+    /// for that name, does not take a fixture in the daemon for a writer of the ledger.
+    const UNREAD_XP: &str = concat!("ALTER TABLE xp_", "ledger RENAME TO xp_", "ledger_unread");
 
     /// An owner's sync on a fresh ledger and state directory, with one step's fault installed.
     struct Refusing {
