@@ -627,7 +627,22 @@ struct Census {
 
 /// The census of a planted workspace at `root`, whose code is checked in its own target directory.
 fn census(root: &Path) -> Census {
+    locked(root);
     census_in(root, &root.join("target").join("settle-census"))
+}
+
+/// Writes the lock file of a planted workspace that holds none, as the maintainer's own `cargo
+/// generate-lockfile` does, so that the census reads the planted tree's resolve graph under
+/// `--locked --offline` exactly as it reads the real tree's. A planted git dependency is fetched
+/// here, which is what makes it resolvable offline afterwards. A tree that already holds a lock
+/// file keeps it, whatever it holds.
+fn locked(root: &Path) {
+    if root.join("Cargo.lock").exists() {
+        return;
+    }
+    let (ok, _, stderr) = cargo(root, &["generate-lockfile".to_owned()], CARGO_LIMIT)
+        .expect("cargo generates a planted workspace's lock file");
+    assert!(ok, "generate-lockfile in {}: {stderr}", root.display());
 }
 
 /// The file of `used` that the cause rule refuses, if any: a use by a coordination target that is
@@ -3420,4 +3435,402 @@ fn the_census_refuses_every_caller_the_compiler_finds() {
         "trees the census judges wrongly: {}",
         wrong.len()
     );
+}
+
+// The graph refusal (SPEC-072 A12, ADR-197 round 7; main's round-6 ruling): a build script's cfg
+// reaches only its own package, so the census refuses, by name, every package that has a build
+// script and can name `settle`: the package that defines it, or one that depends on it, by a
+// normal, a build or a dev edge. Progression's own build script is admitted only at a pinned
+// digest. When cargo cannot give the graph, the census refuses. A build script's cfg that a
+// package which cannot name `settle` sets, and a macro of that package expands into a package that
+// can, is a disclosed kind, which the generated population below measures without asserting.
+
+/// A planted workspace holding a member `name` that depends on `on` and carries a build script
+/// that prints nothing.
+fn plant_scripted(root: &Path, name: &str, on: &[&str]) {
+    plant(
+        root,
+        &format!("crates/{name}/Cargo.toml"),
+        &manifest_of(name, on),
+    );
+    plant(
+        root,
+        &format!("crates/{name}/src/lib.rs"),
+        "pub fn call() {}\n",
+    );
+    plant(root, &format!("crates/{name}/build.rs"), "fn main() {}\n");
+}
+
+#[test]
+fn a_build_script_in_a_package_that_depends_on_settle_is_refused_by_name() {
+    let planted = tempfile::tempdir().expect("a temporary directory");
+    plant_workspace(planted.path());
+    plant_scripted(planted.path(), "api", &[OWNER]);
+    let refused = census(planted.path()).refused;
+    println!("examined {} refusal(s)", refused.len());
+    assert!(
+        refused
+            .iter()
+            .any(|line| line.contains("deck-streak-api") && line.contains("build script")),
+        "a build script in api, which depends on progression, is refused by name: {refused:?}"
+    );
+}
+
+#[test]
+fn a_build_script_in_a_package_that_cannot_name_settle_is_accepted() {
+    let planted = tempfile::tempdir().expect("a temporary directory");
+    plant_workspace(planted.path());
+    plant_scripted(planted.path(), "kernel", &[]);
+    let refused = census(planted.path()).refused;
+    println!("examined {} refusal(s)", refused.len());
+    assert_eq!(
+        refused,
+        Vec::<String>::new(),
+        "kernel has no internal dependency, so its build script cannot reach settle"
+    );
+}
+
+#[test]
+fn a_one_byte_edit_of_progressions_build_script_is_refused_on_the_pin() {
+    let planted = tempfile::tempdir().expect("a temporary directory");
+    plant_workspace(planted.path());
+    plant(
+        planted.path(),
+        "crates/progression/build.rs",
+        &format!("{KILLER_BUILD} "),
+    );
+    let refused = census(planted.path()).refused;
+    println!("examined {} refusal(s)", refused.len());
+    assert!(
+        refused
+            .iter()
+            .any(|line| line.contains("deck-streak-progression") && line.contains("pin")),
+        "an edited build script of progression is refused on the pin: {refused:?}"
+    );
+}
+
+#[test]
+fn a_corrupt_lock_file_is_refused_by_the_fail_closed_arm() {
+    let planted = tempfile::tempdir().expect("a temporary directory");
+    plant_workspace(planted.path());
+    plant(planted.path(), "Cargo.lock", "this is not a lock file\n");
+    let refused = census(planted.path()).refused;
+    println!("examined {} refusal(s)", refused.len());
+    assert!(
+        refused
+            .iter()
+            .any(|line| line.starts_with("cargo metadata cannot give the graph")),
+        "a lock file cargo cannot read makes the census refuse by name: {refused:?}"
+    );
+}
+
+/// The build-script keys of round 6's population (axis BE): each is a condition on the build
+/// environment that a member's build script tests before it sets a cfg.
+const BE_KEYS: [(&str, &str); 26] = [
+    (
+        "OPT_LEVEL is 0",
+        r#"std::env::var("OPT_LEVEL").as_deref() == Ok("0")"#,
+    ),
+    (
+        "DEBUG is true",
+        r#"std::env::var("DEBUG").as_deref() == Ok("true")"#,
+    ),
+    (
+        "PROFILE is debug",
+        r#"std::env::var("PROFILE").as_deref() == Ok("debug")"#,
+    ),
+    (
+        "TARGET equals HOST",
+        r#"std::env::var("TARGET").ok() == std::env::var("HOST").ok()"#,
+    ),
+    (
+        "CARGO_CFG_TARGET_OS is linux",
+        r#"std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("linux")"#,
+    ),
+    (
+        "CARGO_CFG_DEBUG_ASSERTIONS present",
+        r#"std::env::var_os("CARGO_CFG_DEBUG_ASSERTIONS").is_some()"#,
+    ),
+    (
+        "CARGO_CFG_DEBUG_ASSERTIONS absent",
+        r#"std::env::var_os("CARGO_CFG_DEBUG_ASSERTIONS").is_none()"#,
+    ),
+    (
+        "CARGO_CFG_PANIC is abort",
+        r#"std::env::var("CARGO_CFG_PANIC").as_deref() == Ok("abort")"#,
+    ),
+    (
+        "CARGO_CFG_PANIC is unwind",
+        r#"std::env::var("CARGO_CFG_PANIC").as_deref() == Ok("unwind")"#,
+    ),
+    (
+        "CARGO_PKG_NAME is the member's",
+        r#"std::env::var("CARGO_PKG_NAME").as_deref() == Ok("deck-streak-m")"#,
+    ),
+    (
+        "a file of the package exists",
+        r#"std::path::Path::new("flag.txt").exists()"#,
+    ),
+    (
+        "pointer width 64",
+        r#"std::env::var("CARGO_CFG_TARGET_POINTER_WIDTH").as_deref() == Ok("64")"#,
+    ),
+    ("RUSTC is set", r#"std::env::var_os("RUSTC").is_some()"#),
+    (
+        "NUM_JOBS is not 1",
+        r#"std::env::var("NUM_JOBS").as_deref() != Ok("1")"#,
+    ),
+    ("OUT_DIR is set", r#"std::env::var_os("OUT_DIR").is_some()"#),
+    (
+        "target feature sse2",
+        r#"std::env::var("CARGO_CFG_TARGET_FEATURE").map_or(false, |f| f.split(',').any(|x| x == "sse2"))"#,
+    ),
+    (
+        "no feature of the package",
+        r#"std::env::var_os("CARGO_CFG_FEATURE").is_none()"#,
+    ),
+    (
+        "no RUSTC_WRAPPER",
+        r#"std::env::var_os("RUSTC_WRAPPER").is_none()"#,
+    ),
+    (
+        "DECK_MODE unset",
+        r#"std::env::var_os("DECK_MODE").is_none()"#,
+    ),
+    (
+        "OPT_LEVEL is not 0",
+        r#"std::env::var("OPT_LEVEL").as_deref() != Ok("0")"#,
+    ),
+    (
+        "PROFILE is release",
+        r#"std::env::var("PROFILE").as_deref() == Ok("release")"#,
+    ),
+    (
+        "DEBUG is false",
+        r#"std::env::var("DEBUG").as_deref() == Ok("false")"#,
+    ),
+    (
+        "OPT_LEVEL is 2 (a custom profile)",
+        r#"std::env::var("OPT_LEVEL").as_deref() == Ok("2")"#,
+    ),
+    (
+        "NUM_JOBS is 1",
+        r#"std::env::var("NUM_JOBS").as_deref() == Ok("1")"#,
+    ),
+    (
+        "DECK_MODE is ship",
+        r#"std::env::var("DECK_MODE").as_deref() == Ok("ship")"#,
+    ),
+    (
+        "no census flags",
+        r#"std::env::var("CARGO_ENCODED_RUSTFLAGS").map_or(true, |f| f.is_empty())"#,
+    ),
+];
+
+/// The places a gated call to `settle` is written (axis BE): a function, a `#[path]` module, an
+/// `include!` and an integration test.
+const BE_GATES: [&str; 4] = ["fn", "path-mod", "include", "test-target"];
+
+/// One tree of axis BE: the member `m` carries a build script that sets the cfg `k` when `key`
+/// holds, and code under `k` calls `settle` of the crate `crate_name` (a member reaches
+/// progression's, a control the other crate's).
+fn be_tree(member: bool, key: &str, gate: &str, custom_profile: bool) -> Vec<(String, String)> {
+    let (folder, crate_name, package) = vr5_target(member);
+    let script = format!(
+        "fn main() {{\n    println!(\"cargo::rustc-check-cfg=cfg(k)\");\n    \
+         println!(\"cargo::rerun-if-env-changed=DECK_MODE\");\n    \
+         if {key} {{\n        println!(\"cargo::rustc-cfg=k\");\n    }}\n}}\n"
+    );
+    let call = format!("pub fn call() -> usize {{\n    {crate_name}::settle()\n}}\n");
+    let mut files = vec![
+        ("crates/m/build.rs".to_owned(), script),
+        ("crates/m/flag.txt".to_owned(), "flag\n".to_owned()),
+    ];
+    match gate {
+        "fn" => files.push((
+            "crates/m/src/lib.rs".to_owned(),
+            format!("#[cfg(k)]\n{call}"),
+        )),
+        "path-mod" => {
+            files.push((
+                "crates/m/src/lib.rs".to_owned(),
+                "#[cfg_attr(k, path = \"on.rs\")]\n#[cfg_attr(not(k), path = \"off.rs\")]\n\
+                 pub mod gated;\n"
+                    .to_owned(),
+            ));
+            files.push(("crates/m/src/on.rs".to_owned(), call));
+            files.push((
+                "crates/m/src/off.rs".to_owned(),
+                "pub fn call() -> usize {\n    0\n}\n".to_owned(),
+            ));
+        }
+        "include" => {
+            files.push((
+                "crates/m/src/lib.rs".to_owned(),
+                "#[cfg(k)]\ninclude!(\"inc.rs\");\n".to_owned(),
+            ));
+            files.push(("crates/m/src/inc.rs".to_owned(), call));
+        }
+        _ => {
+            files.push((
+                "crates/m/src/lib.rs".to_owned(),
+                "pub fn nothing() {}\n".to_owned(),
+            ));
+            files.push((
+                "crates/m/tests/t.rs".to_owned(),
+                format!("#[cfg(k)]\n#[test]\nfn t() {{\n    let _ = {crate_name}::settle();\n}}\n"),
+            ));
+        }
+    }
+    files.push((
+        "crates/m/Cargo.toml".to_owned(),
+        vr5_manifest(
+            &format!("[dependencies]\n{package} = {{ path = \"../{folder}\" }}\n"),
+            "",
+        ),
+    ));
+    if custom_profile {
+        files.push((
+            "Cargo.toml".to_owned(),
+            format!("{KILLER_WORKSPACE}\n[profile.ship]\ninherits = \"release\"\nopt-level = 2\n"),
+        ));
+    }
+    files
+}
+
+/// The refusals of every tree of `trees`, each judged alone by the census, on up to eight threads.
+fn judge_alone(stub: &[(String, String)], trees: &[Vec<(String, String)>]) -> Vec<Vec<String>> {
+    let next = std::sync::atomic::AtomicUsize::new(0);
+    let threads = std::thread::available_parallelism()
+        .map_or(1, usize::from)
+        .min(8);
+    let mut judged: Vec<(usize, Vec<String>)> = std::thread::scope(|scope| {
+        let workers: Vec<_> = (0..threads)
+            .map(|_| {
+                scope.spawn(|| {
+                    let mut done = Vec::new();
+                    loop {
+                        let at = next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                        let Some(files) = trees.get(at) else {
+                            break;
+                        };
+                        done.push((at, killer_judge(stub, files)));
+                    }
+                    done
+                })
+            })
+            .collect();
+        workers
+            .into_iter()
+            .flat_map(|worker| worker.join().expect("a judging thread"))
+            .collect()
+    });
+    judged.sort_by_key(|(at, _)| *at);
+    judged.into_iter().map(|(_, refused)| refused).collect()
+}
+
+/// Generated from axis BE of round 6's population (the build environment's conditions x the four
+/// places a gated call is written, and one custom profile): every member's build script keys a cfg
+/// on the build environment, so no census pass can know whether the cfg holds, and the census
+/// refuses the package by name. Each control holds the same build script in a package that cannot
+/// name `settle`, and the census accepts it. The git-dependency axis (BG) is a disclosed kind, a
+/// build script's cfg read through a macro by a package that can name `settle` while the script's
+/// own package cannot: it is generated and measured here and never asserted (main's round-6
+/// ruling).
+#[test]
+fn the_census_refuses_every_build_script_that_can_name_settle() {
+    let stub = killer_stub();
+    let mut members: Vec<Vec<(String, String)>> = Vec::new();
+    let mut controls: Vec<Vec<(String, String)>> = Vec::new();
+    for (_, key) in BE_KEYS {
+        for gate in BE_GATES {
+            let ship = key == r#"std::env::var("OPT_LEVEL").as_deref() == Ok("2")"#;
+            members.push(be_tree(true, key, gate, ship));
+            controls.push(be_tree(false, key, gate, ship));
+        }
+    }
+    let generated = BE_KEYS.len() * BE_GATES.len();
+    assert_eq!(members.len(), generated);
+    let judged = judge_alone(&stub, &members);
+    let named = judged
+        .iter()
+        .filter(|refused| {
+            refused
+                .iter()
+                .any(|line| line.contains("deck-streak-m") && line.contains("build script"))
+        })
+        .count();
+    println!("examined {named} build-script member(s) of {generated} generated");
+    let accepted: Vec<usize> = judge_alone(&stub, &controls)
+        .iter()
+        .enumerate()
+        .filter(|(_, refused)| refused.is_empty())
+        .map(|(at, _)| at)
+        .collect();
+    println!(
+        "examined {} build-script control(s) accepted of {}",
+        accepted.len(),
+        controls.len()
+    );
+    assert_eq!(
+        named, generated,
+        "every build-script member is refused, naming its package"
+    );
+    assert_eq!(accepted.len(), controls.len(), "every control is accepted");
+}
+
+/// One tree of axis BG: a git dependency `g`, which cannot name `settle`, has a build script that
+/// sets the cfg `k` when `key` holds and exports a macro that expands a call to `settle` only under
+/// `k`; the member `m` depends on progression and on `g`, and expands the macro.
+fn bg_tree(key: &str) -> Vec<(String, String)> {
+    let script = format!(
+        "fn main() {{\n    println!(\"cargo::rustc-check-cfg=cfg(k)\");\n    \
+         if {key} {{\n        println!(\"cargo::rustc-cfg=k\");\n    }}\n}}\n"
+    );
+    vec![
+        (
+            "../git/Cargo.toml".to_owned(),
+            "[package]\nname = \"g\"\nversion = \"0.1.0\"\nedition = \"2024\"\n".to_owned(),
+        ),
+        ("../git/build.rs".to_owned(), script),
+        (
+            "../git/src/lib.rs".to_owned(),
+            "#[cfg(k)]\n#[macro_export]\nmacro_rules! call {\n    () => {\n        \
+             deck_streak_progression::settle()\n    };\n}\n#[cfg(not(k))]\n\
+             #[macro_export]\nmacro_rules! call {\n    () => {\n        0\n    };\n}\n"
+                .to_owned(),
+        ),
+        (
+            "crates/m/Cargo.toml".to_owned(),
+            vr5_manifest(
+                "[dependencies]\ndeck-streak-progression = { path = \"../progression\" }\n\
+                 g = { git = \"@GIT@\" }\n",
+                "",
+            ),
+        ),
+        (
+            "crates/m/src/lib.rs".to_owned(),
+            "pub fn call() -> usize {\n    g::call!()\n}\n".to_owned(),
+        ),
+    ]
+}
+
+/// Axis BG is measured and printed, never asserted (main's round-6 ruling): a git dependency's
+/// build script, in a package that cannot name `settle`, sets a cfg that the macro it exports reads
+/// where a package that can name `settle` expands it. Each member's line says whether the census
+/// refused it and what it said.
+#[test]
+fn the_git_dependency_build_scripts_are_measured_and_the_kind_is_disclosed() {
+    let stub = killer_stub();
+    let trees: Vec<Vec<(String, String)>> = BE_KEYS.iter().map(|(_, key)| bg_tree(key)).collect();
+    let judged = judge_alone(&stub, &trees);
+    for (index, refused) in judged.iter().enumerate() {
+        println!("BG member {index} ({}): {refused:?}", BE_KEYS[index].0);
+    }
+    println!(
+        "examined {} git-dependency build-script member(s), {} refused",
+        judged.len(),
+        judged.iter().filter(|refused| !refused.is_empty()).count()
+    );
+    assert_eq!(judged.len(), BE_KEYS.len());
 }
