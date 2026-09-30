@@ -805,7 +805,16 @@ class TheSyncLogin(unittest.TestCase):
         # Each arm follows its job's name: one iterator pairs them, name then arm.
         pairs = iter(parts[1:])
         arms = dict(zip(pairs, pairs, strict=True))
-        self.assertEqual(sorted(arms), sorted(names), "run_job's arms are the table's jobs")
+        # The post-back needs the drill notes' reader, which run_job's arguments do not carry, so
+        # the job role hands it to the runner beside run_job (SPEC-110 R9); no other job is outside.
+        outside = {"DRILL_POSTBACK"}
+        role_source = (crates / "daemon" / "src" / "role_job.rs").read_text(encoding="utf-8")
+        for name in outside:
+            self.assertIn(name, role_source, "the job role dispatches the job outside run_job")
+            self.assertIn(name, names, "the job is in the table")
+        self.assertEqual(
+            sorted(arms), sorted(set(names) - outside), "run_job's arms are the table's other jobs"
+        )
         works = {
             work: module for module, work in re.findall(r"use crate::(\w+)::(\w+Work);", runner)
         }

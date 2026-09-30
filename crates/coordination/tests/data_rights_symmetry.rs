@@ -148,6 +148,14 @@ const SEEDS: [&str; 20] = [
      i, i % 2, 1000 * i FROM n",
     "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 101) \
      INSERT INTO buffs (study_day, kind, created_at) SELECT 20000 + i, 'ascendant', 1000 * i FROM n",
+    "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 101) \
+     INSERT INTO drill_answers (drill_id, study_day, surface, created_at) \
+     SELECT 'synthetic-drill-' || i, 20000 + i, CASE i % 2 WHEN 0 THEN 'bot' ELSE 'mini_app' END, \
+     1000 * i FROM n",
+    "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 101) \
+     INSERT INTO drill_grades (drill_id, drill_type, subject, xp, study_day, created_at) \
+     SELECT 'synthetic-drill-' || i, 'irac', 'synthetic subject ' || i, 10 + i % 16, 20000 + i, \
+     1000 * i FROM n",
 ];
 
 /// Prints how many items a check examined and refuses zero (the tdd pack's examined contract).

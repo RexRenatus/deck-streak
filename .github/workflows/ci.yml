@@ -291,6 +291,9 @@ jobs:
       rows: ${{ steps.plan.outputs.rows }}
       shards: ${{ steps.shards.outputs.shards }}
       matrix: ${{ steps.shards.outputs.matrix }}
+      python_shards: ${{ steps.shards.outputs.python_shards }}
+      python_matrix: ${{ steps.shards.outputs.python_matrix }}
+      listed: ${{ steps.shards.outputs.listed }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -328,9 +331,15 @@ jobs:
       - name: the whole tree's mutants, which every record is bound against
         if: ${{ steps.plan.outputs.rust == 'true' }}
         run: cargo mutants --no-shuffle --list --json --timeout 300 --build-timeout 600 > "$RUNNER_TEMP/mutation/whole.json"
+      # The repository's own Python (SPEC-087, ADR-073): the runner lists the diff's mutants and the
+      # whole population's, running no test, and the plan sizes the Python matrix from the first.
+      - name: the diff's Python mutants, as the runner itself lists them
+        run: python3 scripts/mutation_python.py list --plan "$RUNNER_TEMP/mutation/plan.json" --out "$RUNNER_TEMP/mutation/python-listed.json"
+      - name: the whole Python population's mutants, which every Python record is bound against
+        run: python3 scripts/mutation_python.py list --all --out "$RUNNER_TEMP/mutation/python-whole.json"
       - name: the shards, the fewest whose slowest is projected within its bound
         id: shards
-        run: python3 scripts/mutation-verdict.py shards --plan "$RUNNER_TEMP/mutation/plan.json" --listed "$RUNNER_TEMP/mutation/listed.json"
+        run: python3 scripts/mutation-verdict.py shards --plan "$RUNNER_TEMP/mutation/plan.json" --listed "$RUNNER_TEMP/mutation/listed.json" --python-listed "$RUNNER_TEMP/mutation/python-listed.json"
       - name: keep the plan, the diff and the listing for every job after it
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -341,9 +350,11 @@ jobs:
 
   # One job per shard of the plan: cargo-mutants over the same diff, in place, the shard's mutants
   # round-robin as the plan projected them. Its exit is recorded and its report kept; the verdict's
-  # job reads them.
+  # job reads them. It is not started when the plan's listing holds no mutant, which the verdict's
+  # `legs` check reads from the listing, never from the leg's absence (SPEC-290 R2).
   mutation-rust:
     needs: [mutation-plan]
+    if: ${{ needs.mutation-plan.outputs.listed != '0' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     strategy:
@@ -410,7 +421,7 @@ jobs:
           out="$RUNNER_TEMP/shards/mutation-rust-shard-$SHARD"
           mkdir -p "$out"
           rc=0
-          cargo mutants --no-shuffle -vV --in-place --in-diff "$RUNNER_TEMP/mutation/git.diff" --sharding round-robin --shard "$SHARD/$SHARDS" --timeout 300 --build-timeout 600 --output "$out" || rc=$?
+          python3 scripts/memory_scope.py --report "$out" -- cargo mutants --no-shuffle -vV --in-place --in-diff "$RUNNER_TEMP/mutation/git.diff" --sharding round-robin --shard "$SHARD/$SHARDS" --timeout 300 --build-timeout 600 --output "$out" || rc=$?
           echo "$rc" > "$out/cargo-mutants.exit"
           echo "cargo-mutants exited $rc"
       - name: keep the shard's report
@@ -421,10 +432,57 @@ jobs:
           path: ${{ runner.temp }}/shards/
           if-no-files-found: warn
 
+  # One job per shard of the plan's Python matrix: the runner over the diff's Python mutants, each
+  # shard's mutants round-robin as the plan sized them, stopping a file at its first survivor. It
+  # runs on every event and names its case, is never skipped, and restores no cache and saves none.
+  # Its report is kept whatever the run returned; the verdict's job reads them.
+  mutation-python:
+    needs: [mutation-plan]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON(needs.mutation-plan.outputs.python_matrix) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: mutation-plan
+          path: ${{ runner.temp }}/mutation
+      - name: this shard's case, by name
+        env:
+          CASE: ${{ needs.mutation-plan.outputs.case }}
+          SHARD: ${{ matrix.shard }}
+          SHARDS: ${{ needs.mutation-plan.outputs.python_shards }}
+        run: |
+          echo "mutation-python: shard $SHARD of $SHARDS: $CASE"
+      - name: the runner, one shard of the diff's Python mutants (its exit is recorded; the verdict reads its report)
+        env:
+          SHARD: ${{ matrix.shard }}
+          SHARDS: ${{ needs.mutation-plan.outputs.python_shards }}
+        run: |
+          out="$RUNNER_TEMP/python-shards/mutation-python-shard-$SHARD"
+          mkdir -p "$out"
+          rc=0
+          python3 scripts/mutation_python.py run --plan "$RUNNER_TEMP/mutation/plan.json" --shard "$SHARD/$SHARDS" --failfast --report "$out/report.json" || rc=$?
+          echo "mutation-python exited $rc"
+      - name: keep the shard's report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mutation-python-shard-${{ matrix.shard }}
+          path: ${{ runner.temp }}/python-shards/
+          if-no-files-found: warn
+
   # The hand-proved rows the diff selects, and the retirement check: no row leaves while its target
-  # stays, unless the maintainer approved it.
+  # stays, unless the maintainer approved it. It is not started only when the plan selects no row
+  # and no retirement check is due, which is a push that merges a pull request (SPEC-290 R3).
   mutation-rows:
     needs: [mutation-plan]
+    if: ${{ needs.mutation-plan.outputs.rows == 'true' || needs.mutation-plan.outputs.scope == 'diff' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     env:
@@ -491,7 +549,7 @@ jobs:
   # counted, one missing or partial is VOID by name, and the shards' reports must hold every listed
   # mutant once; then the rows, for the Rust class and the oracle's.
   mutation-verdict:
-    needs: [mutation-plan, mutation-rust, mutation-rows]
+    needs: [mutation-plan, mutation-rust, mutation-python, mutation-rows]
     if: ${{ always() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -521,14 +579,28 @@ jobs:
           pattern: mutation-rust-shard-*
           merge-multiple: true
           path: ${{ runner.temp }}/reports
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: mutation-python-shard-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/reports
       - name: the verdict, from every shard's report and the rows' (the plan names a not-applicable case)
+        env:
+          RUST_LEG: ${{ needs.mutation-rust.result }}
+          ROWS_LEG: ${{ needs.mutation-rows.result }}
         run: |
           reports="$RUNNER_TEMP/reports"
           status=0
           python3 scripts/mutation-verdict.py judge --plan "$reports/mutation-plan/plan.json" --class rust --shard-reports "$reports" --rows "$reports/mutation-rows/rows.json" --whole "$reports/mutation-plan/whole.json" || status=$?
           oracle=0
-          python3 scripts/mutation-verdict.py judge --plan "$reports/mutation-plan/plan.json" --class oracle --rows "$reports/mutation-rows/rows.json" || oracle=$?
+          python3 scripts/mutation-verdict.py judge --plan "$reports/mutation-plan/plan.json" --class oracle --python "$reports" --rows "$reports/mutation-rows/rows.json" --python-whole "$reports/mutation-plan/python-whole.json" || oracle=$?
           if [ "$status" -eq 0 ]; then status=$oracle; fi
+          scripts=0
+          python3 scripts/mutation-verdict.py judge --plan "$reports/mutation-plan/plan.json" --class scripts --python "$reports" --rows "$reports/mutation-rows/rows.json" --python-whole "$reports/mutation-plan/python-whole.json" || scripts=$?
+          if [ "$status" -eq 0 ]; then status=$scripts; fi
+          legs=0
+          python3 scripts/mutation-verdict.py legs --plan "$reports/mutation-plan/plan.json" --rust-leg "$RUST_LEG" --rows-leg "$ROWS_LEG" || legs=$?
+          if [ "$status" -eq 0 ]; then status=$legs; fi
           exit "$status"
 
   # StrykerJS over every web production file the diff changes, whole, so a survivor already on a
@@ -630,11 +702,31 @@ jobs:
   ci:
     name: ${{ github.event_name == 'pull_request' && 'ci' || 'ci (push)' }}
     if: ${{ always() }}
-    needs: [rust, engine, web, hygiene, mutation-plan, mutation-rust, mutation-rows, mutation-verdict, mutation-web, workflow-lint, base-is-dev]
+    needs: [rust, engine, web, hygiene, mutation-plan, mutation-rust, mutation-python, mutation-rows, mutation-verdict, mutation-web, workflow-lint, base-is-dev]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
+      # A skipped job reads as passing to a required check, so a skip is admitted from the two legs
+      # the plan's listing can give nothing and from nowhere else, once for each leg whose own
+      # result is `skipped`; `mutation-verdict`, which must succeed, judged each against the listing
+      # (SPEC-290 R8).
       - name: every required job succeeded
         env:
           RESULTS: ${{ join(needs.*.result, ' ') }}
-        run: for result in $RESULTS; do test "$result" = success || exit 1; done
+          RUST_LEG: ${{ needs.mutation-rust.result }}
+          ROWS_LEG: ${{ needs.mutation-rows.result }}
+        run: |
+          admitted=0
+          for leg in "mutation-rust:$RUST_LEG" "mutation-rows:$ROWS_LEG"; do
+            if [ "${leg#*:}" = skipped ]; then
+              echo "ci: ${leg%%:*} was not started; mutation-verdict judged it against the plan's listing"
+              admitted=$((admitted + 1))
+            fi
+          done
+          for result in $RESULTS; do
+            if [ "$result" = skipped ] && [ "$admitted" -gt 0 ]; then
+              admitted=$((admitted - 1))
+              continue
+            fi
+            test "$result" = success || exit 1
+          done

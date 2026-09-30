@@ -23,6 +23,7 @@
 #![warn(missing_docs, clippy::all)]
 
 pub mod analytics_routes;
+pub mod drill_routes;
 pub mod health;
 pub mod notifications_routes;
 pub mod router;
