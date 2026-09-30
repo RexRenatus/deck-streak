@@ -1,0 +1,29 @@
+{
+  "adapter": "sorted_names",
+  "cases": [
+    {
+      "input": {},
+      "output": {
+        "names": [
+          "Card",
+          "Deck",
+          "FrontSide",
+          "Subdeck",
+          "Tags",
+          "Type"
+        ]
+      }
+    }
+  ],
+  "function": "darkfields.SPECIAL_FIELD_NAMES",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Returns the predecessor's special field names, a set, as a sorted list; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_094.py",
+  "registry_sha256": "65b653c5282152fc891e68568d1df2e994b7beb4822b1cd96a6bbac9b2bae5e6",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

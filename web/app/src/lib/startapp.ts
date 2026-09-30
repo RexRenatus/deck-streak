@@ -9,6 +9,7 @@ import { TODAY, type RoutePath } from './routes';
 const TOKENS: ReadonlyMap<string, RoutePath> = new Map<string, RoutePath>([
   ['today', TODAY],
   ['about', '/about'],
+  ['insights', '/insights'],
   ['score', '/score'],
   ['level', '/level'],
   ['streak', '/streak']

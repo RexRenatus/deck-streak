@@ -25,6 +25,7 @@
 pub mod analytics_routes;
 pub mod drill_routes;
 pub mod health;
+pub mod insights_routes;
 pub mod notifications_routes;
 pub mod router;
 pub mod serve;

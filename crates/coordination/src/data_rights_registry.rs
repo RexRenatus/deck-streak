@@ -38,6 +38,8 @@ static AGENT: AgentDataRights = AgentDataRights;
 static VAULT: VaultDataRights = VaultDataRights;
 /// Coordination's own port: the cron-fire ledger exempt.
 static STREAKS: StreaksDataRights = StreaksDataRights;
+/// Coordination's own port: the cron-fire ledger exempt, the instrument reports exported and
+/// erased (SPEC-094).
 static COORDINATION: CoordinationDataRights = CoordinationDataRights;
 
 /// Every stateful context's port, in the order an erase runs them: the kernel, ingest, analytics

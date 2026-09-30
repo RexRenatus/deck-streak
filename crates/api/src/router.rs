@@ -33,6 +33,7 @@ use axum::http::header::{AUTHORIZATION, COOKIE, SET_COOKIE};
 use axum::http::{HeaderName, StatusCode};
 use axum::{BoxError, Router};
 use deck_streak_coordination::drills::{DrillNotes, RealFs};
+use deck_streak_coordination::instruments::InstrumentService;
 use deck_streak_coordination::progression::level_view::LawTierSource;
 use tower::ServiceBuilder;
 use tower::limit::GlobalConcurrencyLimitLayer;
@@ -50,6 +51,7 @@ use tracing::Level;
 use crate::analytics_routes;
 use crate::drill_routes;
 use crate::health::{self, Readiness};
+use crate::insights_routes;
 use crate::notifications_routes;
 use crate::session_routes::{self, OwnerAccess};
 use crate::streak_routes;
@@ -68,12 +70,26 @@ pub const BODY_LIMIT_BYTES: usize = 2 * 1024 * 1024;
 pub const REQUEST_ID_HEADER: &str = "x-request-id";
 
 /// What the API's handlers share.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct ApiState {
     readiness: Readiness,
     owner: Option<OwnerAccess>,
+    instruments: Option<Arc<dyn InstrumentService>>,
     law_tiers: Option<Arc<dyn LawTierSource>>,
     drills: Option<Arc<DrillNotes<RealFs>>>,
+}
+
+impl std::fmt::Debug for ApiState {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("ApiState")
+            .field("readiness", &self.readiness)
+            .field("owner", &self.owner)
+            .field("instruments", &self.instruments.is_some())
+            .field("law_tiers", &self.law_tiers.is_some())
+            .field("drills", &self.drills.is_some())
+            .finish()
+    }
 }
 
 impl ApiState {
@@ -83,9 +99,17 @@ impl ApiState {
         Self {
             readiness,
             owner: None,
+            instruments: None,
             law_tiers: None,
             drills: None,
         }
+    }
+
+    /// This state, serving the instruments' routes (SPEC-094) over `service` too.
+    #[must_use]
+    pub fn with_instruments(mut self, service: Arc<dyn InstrumentService>) -> Self {
+        self.instruments = Some(service);
+        self
     }
 
     /// This state, serving the owner's session routes over `access` too (SPEC-024).
@@ -124,25 +148,32 @@ impl ApiState {
 pub fn router(state: ApiState) -> Router {
     let owner = state.owner.clone();
     let readiness = state.readiness.clone();
+    let instruments = state.instruments.clone();
     let law_tiers = state.law_tiers.clone();
     let drills = state.drills.clone();
     let routes = health::routes().with_state(state);
     let routes = match owner {
-        Some(access) => routes
-            .merge(analytics_routes::routes(access.clone(), readiness.clone()))
-            .merge(xp_routes::routes(
-                access.clone(),
-                readiness.clone(),
-                law_tiers,
-            ))
-            .merge(streak_routes::routes(access.clone(), readiness.clone()))
-            .merge(session_routes::routes(access.clone()))
-            .merge(drill_routes::routes(
-                access.clone(),
-                readiness.clone(),
-                drills,
-            ))
-            .merge(notifications_routes::routes(access, readiness)),
+        Some(access) => {
+            let routes = routes
+                .merge(analytics_routes::routes(access.clone(), readiness.clone()))
+                .merge(xp_routes::routes(
+                    access.clone(),
+                    readiness.clone(),
+                    law_tiers,
+                ))
+                .merge(streak_routes::routes(access.clone(), readiness.clone()))
+                .merge(session_routes::routes(access.clone()))
+                .merge(drill_routes::routes(
+                    access.clone(),
+                    readiness.clone(),
+                    drills,
+                ))
+                .merge(notifications_routes::routes(access.clone(), readiness));
+            match instruments {
+                Some(service) => routes.merge(insights_routes::routes(access, service)),
+                None => routes,
+            }
+        }
         None => routes,
     };
     layered(routes)

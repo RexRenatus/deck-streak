@@ -54,5 +54,17 @@
   "streak_at_stake_break": "Studying today keeps this streak going.",
   "governor_armed": "Armed: your habit is strong.",
   "governor_standby": "Standby: your habit strength is below the arming level.",
-  "governor_lapse": "Lapse: {count} reviews on one day relight it."
+  "governor_lapse": "Lapse: {count} reviews on one day relight it.",
+  "insights_title": "Insights",
+  "insights_none": "No instrument has reported yet.",
+  "insights_no_report": "This instrument has not run yet.",
+  "insights_failed_read": "This read failed, so nothing is claimed: {reads}.",
+  "insights_run": "Run now",
+  "insights_running": "A run is in progress. Try again in a moment.",
+  "dark_fields_title": "Dark fields",
+  "dark_fields_none": "Checked {types} note types over {notes} reviewed notes: no dark fields.",
+  "dark_fields_cold": "There was nothing to check yet.",
+  "dark_fields_item": "{noteType}: {field} ({notes} reviewed notes)",
+  "dark_fields_more": "{count} more not shown.",
+  "dark_fields_unparseable": "Templates that could not be verified: {names}."
 }
