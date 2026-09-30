@@ -2502,6 +2502,7 @@ class TheMemoryScopeRunsTheWordsAfterItsSeparator(unittest.TestCase):
             if member[0] in WRAPPER_DECLARED and member[1] == "bounded"
         ]
         examined("declared-form members", members)
+        self.assertEqual(len(members), len(WRAPPER_DECLARED) * len(WRAPPER_CONTEXTS))
         scripts = [UNBOUNDED + "\n", f"{LEAD}\n"] + [member[3] for _, member in members]
         unbounded, bounded = bash_runs(scripts)
         verdicts = self.outcomes([member[3] for _, member in members])
