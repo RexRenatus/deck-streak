@@ -39,6 +39,8 @@ A15: green at c30e673b
 A16: red at 95907c06: 0 != 1 : mutation: rust: crates/fix/src/lib.rs: 1 changed code line(s)
 A16: green at c30e673b
 A17: not red: the rehearsal's command, its file and its examined sum were already the ones before this SPEC; the criterion pins that they stay so
+A18: red at 4c5d005f: True is not False : {'in_force': True, 'max': 0, 'oom': 0, 'oom_kill': 0, 'peak_percent': 0, 'reason': None, 'state': 'done'}
+A18: green at a85509f7
 ```
 
 ## Measured on the runner
@@ -64,3 +66,14 @@ A17: not red: the rehearsal's command, its file and its examined sum were alread
   `*** <scenario>`. The fixture's logs opened with the `***` line, so a shard whose report is not
   whole named its stopped mutant by the log's file name on the real shape. The fixture follows the
   real opening, the verdict reads the first line that is not blank, and row S19630 holds the arm.
+- Log opening (round 1): the class test is a generated population, six openings (no blank line, one
+  blank line, several blank and whitespace-only lines, each with LF and CRLF) crossed with three kill
+  places, so `examined 18 log openings by kill places`. At 9453fba6 against the head's line
+  `first = lines[0].removeprefix("*** ").strip() if lines else ""` eight members failed, the two
+  partial-shard places crossed with the four openings that lead with a blank line; after 6ae1a170 all
+  eighteen pass.
+- Counts read after the command (round 1): A18 is a generated population, eight states of
+  `memory.events` crossed with six of `memory.peak`, so
+  `examined 48 counts read after the command`. At 4c5d005f against the head's `run()` 47 of the 48
+  members failed (39 by assertion, 8 by a `ValueError` from a malformed peak) and the one whole member
+  passed; at a85509f7 all 48 pass.
