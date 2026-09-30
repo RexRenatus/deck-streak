@@ -3400,21 +3400,86 @@ fn committed(directory: &Path) {
     }
 }
 
-/// What the census refuses in a tree of its own holding `stub` and then `files`, planted at
-/// `<temporary>/ws`. A file under `../git/` is planted beside the workspace and committed as a git
-/// repository, whose URL replaces `@GIT@` in every file.
-fn killer_judge(stub: &[(String, String)], files: &[(String, String)]) -> Vec<String> {
-    let planted = tempfile::tempdir().expect("a temporary directory");
-    let root = planted.path().join("ws");
-    let git = planted.path().join("git");
-    let url = format!("file://{}", git.display());
-    for (path, text) in stub.iter().chain(files) {
-        plant(&root, path, &text.replace("@GIT@", &url));
+/// One judging thread's workspace, planted at one fixed path for every tree it judges, with a
+/// target directory the census keeps between them. A tree is still judged alone: before each one,
+/// everything in the workspace but the stub and the target is removed (the previous tree's members,
+/// its `Cargo.lock` and its git repository), and a stub file is rewritten only when its text
+/// differs, so the stub's modification times hold and cargo recompiles only what a tree changed.
+/// Cargo's fingerprints decide what to recompile, so a tree's report is the one a fresh build gives.
+struct KillerWorker {
+    _planted: tempfile::TempDir,
+    root: PathBuf,
+    trees: std::cell::Cell<usize>,
+}
+
+impl KillerWorker {
+    fn new() -> Self {
+        let planted = tempfile::tempdir().expect("a temporary directory");
+        let root = planted.path().join("ws");
+        Self {
+            _planted: planted,
+            root,
+            trees: std::cell::Cell::new(0),
+        }
     }
-    if git.exists() {
-        committed(&git);
+
+    /// What the census refuses in the tree holding `stub` and then `files`. A file under `../git/`
+    /// is planted beside the workspace and committed as a git repository, whose URL replaces
+    /// `@GIT@` in every file.
+    fn judge(&self, stub: &[(String, String)], files: &[(String, String)]) -> Vec<String> {
+        // A git repository of its own for each tree, so that its URL is one cargo has never seen.
+        let number = self.trees.get();
+        self.trees.set(number + 1);
+        let folder = format!("git{number}");
+        let git = self.root.with_file_name(&folder);
+        if number > 0 {
+            let previous = self.root.with_file_name(format!("git{}", number - 1));
+            if previous.exists() {
+                fs::remove_dir_all(&previous).expect("the previous tree's git repository");
+            }
+        }
+        if self.root.exists() {
+            let kept: BTreeSet<PathBuf> =
+                stub.iter().map(|(path, _)| self.root.join(path)).collect();
+            Self::prune(&self.root, &self.root, &kept);
+        }
+        let url = format!("file://{}", git.display());
+        for (path, text) in stub {
+            let file = self.root.join(path);
+            if fs::read_to_string(&file).ok().as_deref() != Some(text) {
+                plant(&self.root, path, text);
+            }
+        }
+        for (path, text) in files {
+            let path = path.replace("../git/", &format!("../{folder}/"));
+            plant(&self.root, &path, &text.replace("@GIT@", &url));
+        }
+        if git.exists() {
+            committed(&git);
+        }
+        census(&self.root).refused
     }
-    census(&root).refused
+
+    /// Removes what `kept` does not hold under `directory`, and the folders that hold none of it,
+    /// apart from the target directory of the workspace's root.
+    fn prune(root: &Path, directory: &Path, kept: &BTreeSet<PathBuf>) {
+        for entry in fs::read_dir(directory).expect("the workspace's folder") {
+            let path = entry.expect("an entry").path();
+            let is_folder = fs::symlink_metadata(&path).is_ok_and(|meta| meta.is_dir());
+            if is_folder {
+                if directory == root && path.file_name().is_some_and(|name| name == "target") {
+                    continue;
+                }
+                if kept.iter().any(|file| file.starts_with(&path)) {
+                    Self::prune(root, &path, kept);
+                } else {
+                    fs::remove_dir_all(&path).expect("a folder of the previous tree");
+                }
+            } else if !kept.contains(&path) {
+                fs::remove_file(&path).expect("a file of the previous tree");
+            }
+        }
+    }
 }
 
 #[test]
@@ -3432,11 +3497,12 @@ fn the_census_refuses_every_caller_the_compiler_finds() {
         let workers: Vec<_> = (0..threads)
             .map(|_| {
                 scope.spawn(|| {
+                    let worker = KillerWorker::new();
                     let mut wrong = Vec::new();
                     while let Some(case) =
                         cases.get(next.fetch_add(1, std::sync::atomic::Ordering::Relaxed))
                     {
-                        let refused = killer_judge(&stub, &case.files);
+                        let refused = worker.judge(&stub, &case.files);
                         // Every case compiles, so a census that could not compile one has judged
                         // nothing there, and that is wrong whatever the case expects.
                         let unjudged = refused.iter().any(|refusal| {
@@ -3842,13 +3908,14 @@ fn judge_alone(stub: &[(String, String)], trees: &[Vec<(String, String)>]) -> Ve
         let workers: Vec<_> = (0..threads)
             .map(|_| {
                 scope.spawn(|| {
+                    let worker = KillerWorker::new();
                     let mut done = Vec::new();
                     loop {
                         let at = next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                         let Some(files) = trees.get(at) else {
                             break;
                         };
-                        done.push((at, killer_judge(stub, files)));
+                        done.push((at, worker.judge(stub, files)));
                     }
                     done
                 })
