@@ -240,6 +240,9 @@ fn a_silent_run_on_the_windows_first_day_is_read() {
     assert_eq!(open(T, &counts(&[T - 3], &[]), &[]), Some(T - 2));
 }
 
+/// A window member: `today`, the rows, the skip days and the threshold.
+type Member = (i64, BTreeMap<i64, u32>, BTreeSet<i64>, u32);
+
 /// The distinct members of the window population: `before` of 1 or 2 makes the second and third
 /// fills coincide, so 336 of the 2252 members repeat an earlier one.
 const DISTINCT_WINDOW_MEMBERS: usize = 1916;
@@ -251,7 +254,7 @@ fn the_walk_reads_every_day_of_its_window_and_none_outside_it() {
     let threshold = LAPSE_AFTER_SILENT_DAYS;
     let k = i64::from(threshold);
     // A member is every input the judge reads: `today`, the rows, the skip days and the threshold.
-    let mut distinct: BTreeSet<(i64, BTreeMap<i64, u32>, BTreeSet<i64>, u32)> = BTreeSet::new();
+    let mut distinct: BTreeSet<Member> = BTreeSet::new();
     let mut record = |today: i64, rows: &BTreeMap<i64, u32>, skipped: &BTreeSet<i64>, at: u32| {
         let answer = judge_window(today, rows, skipped, at);
         distinct.insert((today, rows.clone(), skipped.clone(), at));
@@ -313,30 +316,14 @@ fn the_walk_reads_every_day_of_its_window_and_none_outside_it() {
         }
     }
     // A `today` before the window, and one long past its only row.
-    record(
-        T,
-        &BTreeMap::from([(T + 2, 0)]),
-        &BTreeSet::new(),
-        threshold,
-    );
-    record(
-        T,
-        &BTreeMap::from([(T + 2, 1)]),
-        &BTreeSet::new(),
-        threshold,
-    );
-    record(
-        T + 40,
-        &BTreeMap::from([(T, 0)]),
-        &BTreeSet::new(),
-        threshold,
-    );
-    record(
-        T + 40,
-        &BTreeMap::from([(T, 1)]),
-        &BTreeSet::new(),
-        threshold,
-    );
+    for (today, row, count) in [(T, T + 2, 0), (T, T + 2, 1), (T + 40, T, 0), (T + 40, T, 1)] {
+        record(
+            today,
+            &BTreeMap::from([(row, count)]),
+            &BTreeSet::new(),
+            threshold,
+        );
+    }
     // A threshold of one and of five over the same windows.
     for other in [1_u32, 5] {
         for before in 0..=3_i64 {
