@@ -26,9 +26,7 @@ fn a_name_no_class_declares_is_refused() {
 
 #[test]
 fn no_two_classes_share_a_name() {
-    for (at, class) in GateClass::ALL.iter().enumerate() {
-        for other in &GateClass::ALL[at + 1..] {
-            assert_ne!(class.name(), other.name());
-        }
-    }
+    let names: std::collections::BTreeSet<&str> =
+        GateClass::ALL.iter().map(|class| class.name()).collect();
+    assert_eq!(names.len(), GateClass::ALL.len());
 }
