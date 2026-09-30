@@ -55,6 +55,24 @@ silently dropped?
   alone as indentation and never read a called workflow. A key in another event's mapping or under
   the root's `permissions` or `defaults`, a tab in the indentation and a remote call passed it;
   GitHub's parser refuses the first two, and the rule cannot read what the third runs.
+- Chosen for reading each file: a reader that is default-deny over its grammar. It reads only the
+  forms SPEC-190 R12 part 1 names, each resting on a YAML 1.2.2 production (yaml.org/spec/1.2.2,
+  read 2026-09-30): plain names as keys, `- ` items, a plain scalar whose first character YAML does
+  not reserve, a quoted scalar, a `|` or `|-` block, and a flow list of plain items with at most one
+  trailing comma. Every other form is refused by its line, by a message that names the form.
+- Extending the reader's refusal list by each form found to pass it (a block scalar header other
+  than `|` and `|-`, a value starting with a character YAML reserves, a sequence item that is a
+  sequence or an explicit key, and a flow list with an empty entry): rejected. A refusal list closes
+  only the forms it lists; a form it does not list is read as its text, whatever YAML reads there.
+  Measured over a population generated from YAML's own constants, the extended list still accepted
+  42 files whose value differs from YAML's reading (a `|-` block kept its final line feed), where
+  the default-deny reader accepted none.
+- Narrowing the class to the forms this repository's workflows use: not needed. The default-deny
+  reader reads every form they use as YAML does, and refuses the rest, so nothing is left out.
+- Reading each workflow in the test with the YAML library GitHub's parser uses: rejected. The test
+  would run a JavaScript package the repository does not carry, and the class would be only as
+  closed as that call's pinning. The library verifies the reader outside the repository and never
+  runs in the test.
 
 ## Decision Outcome
 
@@ -64,15 +82,16 @@ to SPEC-190 R12, never by rendering a sample of another workflow's group. A rele
 a tag can start (a push whose filters admit a tag, a `create` or a `release`) and every workflow
 such a workflow calls, at any depth; every other workflow is a reacher. Each file is read as
 GitHub's parser reads it: YAML 1.2's core schema types each scalar, so a quoted `false` is a string,
-and a tab in the indentation is refused. Every value a release workflow holds, down to a job's own
-keys, is of a type the parser's schema defines there, read with case, and no string holds an
-unclosed `${{`. Every call in a workflow that runs is to a workflow file of this repository that
+and a tab in the indentation is refused. The reader reads only the named forms of SPEC-190
+R12 part 1 and refuses every other form by its line. Every value a release workflow holds, down to a
+job's own keys, is of a type the parser's schema defines there, read with case, and no string holds
+an unclosed `${{`. Every call in a workflow that runs is to a workflow file of this repository that
 takes `workflow_call`, walked with no cycle. Every block a release run holds, its own or a callee's,
 has a group of text of its own followed by `github.ref` alone, a `cancel-in-progress` absent or the
 boolean false, and `queue: max`; a release workflow holds no job-level block. No other block starts
 with text a release group's start can be, read without case. A workflow the reader cannot read is
 refused. The test prints how many it examined, and derives the class from the rule, never from a
-name. Twenty-two hand-proved rows (S19005 to S19026) prove the killers. SPEC-190 R12 lists the
+name. Thirty-four hand-proved rows (S19005 to S19038) prove the killers. SPEC-190 R12 lists the
 rule's advisory over-refusals and the remainder it does not read: the contents of a job's steps,
 strategy, container and services and of its runs-on, environment and snapshot mappings, expression
 grammar, function names and the contexts a bare `if:` reads, and a workflow file the directory scan
@@ -86,6 +105,11 @@ does not select, are follow-up #464's.
   read, while no other block can start as a release group does. A new tag-triggered workflow, a
   called workflow or a job's block therefore cannot land with the default queue or share a
   release's group, outside the remainder SPEC-190 R12 names (#464).
+- Good, because a form the reader does not name is refused rather than read as its text, so a form
+  YAML reads otherwise, or refuses, cannot pass the rule unseen.
+- Bad, because the reader refuses forms YAML reads that no workflow here uses, such as a folded
+  block or a block header followed by a comment; SPEC-190 R12 lists a form the reader does not read
+  as an advisory over-refusal.
 - Bad, because the rule refuses some shapes GitHub runs with a tag's runs kept, such as a
   workflow's block that can equal a release group only under an event that never holds a tag's
   ref; SPEC-190 R12 lists them as advisory.
@@ -102,11 +126,13 @@ does not select, are follow-up #464's.
 
 ### Confirmation
 
-SPEC-190's A7 to A10, rows S19005 to S19026, and the first real tag run's history.
+SPEC-190's A7 to A11, rows S19005 to S19038, and the first real tag run's history.
 
 ## What would make this wrong
 
 - GitHub changing the meaning or the limit of `queue: max`: the test reads the key, not the platform.
+- A workflow here needing a form the reader does not name: the reader refuses that file, and the
+  form joins SPEC-190 R12 part 1's named forms with the production it rests on.
 
 ## More Information
 

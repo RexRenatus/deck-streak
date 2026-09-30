@@ -241,9 +241,9 @@ A9: python3 -m unittest discover -s scripts/tests -p test_workflow_concurrency.p
 
 ## 12. Amendment of 2026-09-30 (round 5): the release class read as GitHub parses it (ADR-292, #377)
 
-This amendment adds R12 and A10. It corrects three sentences of section 10 in place: R11(3), the
-sentence on a new workflow's caller, and the disclosed remainder, which now points here. R11's other
-parts stand; where R11 and R12 differ, R12 decides.
+This amendment adds R12, A10 and A11. It corrects three sentences of section 10 in place: R11(3),
+the sentence on a new workflow's caller, and the disclosed remainder, which now points here. R11's
+other parts stand; where R11 and R12 differ, R12 decides.
 
 R12. **No run a tag can start is cancelled, or replaced while it waits below the queue's depth, by
 any concurrency block of this repository.**
@@ -261,11 +261,32 @@ whose run holds the block, which for a called workflow is its caller's (the reus
 
 The rule, over every workflow file:
 1. Reading. Each file is read as GitHub's parser reads it, with YAML 1.2's core schema: a quoted or
-   block `false` is a string, `no` and `off` are strings, and `False` is the boolean false. A tab in
-   a line's indentation, a block scalar's line indented less than its first line of text, and a blank
-   line above that text indented more than it are refused, as YAML refuses them. A form the reader
-   does not read (an anchor or alias, a flow mapping, a `---`, an escape or a byte-order mark) is
-   refused (SPEC-034 R7).
+   block `false` is a string, `no` and `off` are strings, and `False` is the boolean false. The
+   reader reads only these named forms, each as YAML 1.2.2 defines it:
+   - a block mapping whose keys are plain names, bare or in matching quotes, that the core schema
+     types as strings, and a block sequence of `- ` items;
+   - a plain scalar on one line whose first character is not a YAML indicator, or is `-`, `?` or `:`
+     before a character that is not white space (ns-plain-first);
+   - a single- or double-quoted scalar on one line, a double-quoted one holding no escape;
+   - a literal block scalar under the header `|` (its text keeps one final line feed) or `|-` (it
+     keeps none), with nothing after the header;
+   - a flow list on one line of such plain items, `[]` when it holds none, with at most one trailing
+     comma;
+   - blank lines, comment lines and a ` #` comment after a value.
+   Every other form is refused by its line, by a message that names it (SPEC-034 R7): a character
+   other than printable ASCII and the tab, a byte-order mark included; a tab in a line's
+   indentation; a key that is not such a name, and a plain value holding `: `, which YAML reads as a
+   key; a key a mapping already holds, read without case; a value whose first character is any other
+   YAML indicator (`,[]{}#&*!|>'"%@` or the backtick) or `-`, `?` or `:` before a space or the
+   line's end, so a sequence item that is itself a sequence or an explicit key is refused; an empty
+   sequence item; an anchor, alias or tag; a flow mapping; a flow list whose items are not plain, or
+   with an empty entry other than one trailing comma; a quoted value that does not end at its
+   closing quote, and a double-quoted value holding an escape; a block scalar header other than `|`
+   or `|-`; a block scalar's line indented less than its first line of text, a blank line above that
+   text indented more than it, and a blank line of it that holds a tab; and a line the reader cannot
+   place, a `---` among them. GitHub's parser refuses a file YAML refuses ("The file is not valid
+   YAML"), and a form YAML reads otherwise than as the text the reader would return is misread, so
+   each is refused rather than read.
 2. Schema. Every value a release workflow holds is of a type GitHub's workflow parser defines there,
    read with case: each key, each constant, and each mapping, sequence or scalar. This holds from its
    root through `on:` and every event's mapping, `permissions`, `defaults`, `env`, `concurrency` and
@@ -311,10 +332,12 @@ that renders empty; the rule refuses all three.
 
 | id | criterion | decided by |
 |---|---|---|
-| A10 | the class is read as GitHub parses it (R12), by a population generated from constants and never listed, each member a set of workflow files beside a release workflow: each `cancel-in-progress` and `queue` a YAML 1.2 reader types, quoted, in a block or as a YAML 1.1 word; a tab in each line's indentation, and a block scalar's line indented less than its text or a blank line above it indented more, against a tab inside a value; each unclosed expression; every event of the parser's schema with each wrong kind of value, and each root and job key with one; callees one to three calls deep, local, remote, missing and in a cycle, and a callee holding a key the parser does not define; a release group that splits one tag's runs, and a job's own block; and every block that can render as a release group, in each context and event. A member GitHub refuses, or whose tag run can be cancelled or replaced, is refused, and a member GitHub runs with its tag's runs kept is not. The membership census is derived from R12's rule, never pinned by name | `test_workflow_concurrency.py` `the_release_class_is_read_as_github_parses_it` |
+| A10 | the class is read as GitHub parses it (R12), by a population generated from constants and never listed, each member a set of workflow files beside a release workflow: each `cancel-in-progress` and `queue` a YAML 1.2 reader types, quoted, in a block or as a YAML 1.1 word; a tab in each line's indentation, and a block scalar's line indented less than its text or a blank line above it indented more, against a tab inside a value; each character YAML reserves as a plain scalar's first (`@`, the backtick, `%`, `,`, `]` and `}`, and `-`, `?` or `:` before a space on a mapping's value) at every scalar line of a release workflow, a second tag workflow and a called workflow, and a tag filter written as a flow list with an empty entry; each unclosed expression; every event of the parser's schema with each wrong kind of value, and each root and job key with one; callees one to three calls deep, local, remote, missing and in a cycle, and a callee holding a key the parser does not define; a release group that splits one tag's runs, and a job's own block; and every block that can render as a release group, in each context and event. A member GitHub refuses, or whose tag run can be cancelled or replaced, is refused, and a member GitHub runs with its tag's runs kept is not. The membership census is derived from R12's rule, never pinned by name | `test_workflow_concurrency.py` `the_release_class_is_read_as_github_parses_it` |
+| A11 | the reader reads only R12 part 1's named forms, by a population generated from YAML 1.2.2's constants: every printable ASCII character first in a plain value, a sequence item and a flow item, each against the same text quoted; a character outside printable ASCII first; every block scalar header YAML defines, with and without text; a literal block's trailing blank lines and a blank line of it holding a tab; a flow list with an empty entry at every place, alone and before one trailing comma; each key the core schema types, against it quoted; and a comment after each one-line form, after a space or a tab, a comment line, a `#` inside a value and a blank line. A named form reads as YAML reads it, and every other form is refused by its line with the message that names it | `test_ci_workflows.py` `the_reader_reads_only_its_named_forms` |
 
 ```acceptance
 A10: python3 -m unittest discover -s scripts/tests -p test_workflow_concurrency.py -k the_release_class_is_read_as_github_parses_it
+A11: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k the_reader_reads_only_its_named_forms
 ```
 
 ### File manifest of the round 5 amendment
@@ -322,8 +345,8 @@ A10: python3 -m unittest discover -s scripts/tests -p test_workflow_concurrency.
 | file | context | change |
 |---|---|---|
 | `scripts/tests/test_workflow_concurrency.py` | repo | changed: R12 and A10; A7 applies R12 to every workflow file; the membership census is derived from R12 |
-| `scripts/tests/test_ci_workflows.py` | repo | changed: the reader keeps a scalar's quoting and types it by YAML 1.2's core schema, and refuses a tab in a line's indentation and a block scalar's line indented against its text |
-| `scripts/mutation-rows.d/S19000-S19099.json` | repo | changed: S19015 to S19026, one row per arm of R12 |
+| `scripts/tests/test_ci_workflows.py` | repo | changed: the reader keeps a scalar's quoting and types it by YAML 1.2's core schema, reads only R12 part 1's named forms and refuses every other form by its line (A11) |
+| `scripts/mutation-rows.d/S19000-S19099.json` | repo | changed: S19015 to S19038, one row per arm of R12 |
 | `docs/decisions/ADR-292-a-release-tags-runs-never-replace-a-waiting-run.md` | repo | changed: Decision Outcome, Consequences and considered options hold for R12 |
-| `docs/red-first/SPEC-190.md` | repo | changed: A10 |
+| `docs/red-first/SPEC-190.md` | repo | changed: A10 and A11 |
 | `changelog.d/ci-release-queue-377.md` | repo | changed: the rule of R12 |

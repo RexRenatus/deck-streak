@@ -74,3 +74,19 @@ A10: green at 3a0eb6d
 ```
 
 DISCLOSURE, a test body changed after its green: test_only_the_tag_or_release_workflows_are_in_the_class gained a planted fixture at 229cf07. A second workflow a tag starts and a workflow the release calls must each be classed as release workflows, and a reacher must not. With membership reduced to the tag-started workflows, or to release.yml alone, the test fails.
+
+## Addendum: A10 and A11, the reader default-deny over its grammar (#456, round 6)
+
+The tests of A11 (`the_reader_reads_only_its_named_forms`) and of A10's grammar members (b2fa82a)
+ran against the reader as it stood: A11 failed by assertion, naming 498 of its 2262 generated forms
+the reader read, or refused, otherwise than R12 part 1 requires, the first an item `#x` read as
+text, and A10 failed by assertion, naming 120 of its 616 members the class did not refuse, the
+first a release workflow's name starting with `@`. They were the only tests of the two files that
+failed. The named-form reader (c78bbc8) turned both green.
+
+```red-first
+A10: red at b2fa82a: ["grammar: release.yml line 1 starting '@' is accepted", ...] (120 members) != []
+A10: green at c78bbc8
+A11: red at b2fa82a: [("item '#x'", ('read', {'k': ['#x']}), ...), ...] (498 forms) != []
+A11: green at c78bbc8
+```
