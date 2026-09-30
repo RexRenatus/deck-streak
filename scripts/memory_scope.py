@@ -19,6 +19,7 @@ in bytes.
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -27,6 +28,8 @@ from pathlib import Path
 REFUSED = 78
 SCOPE_NAME = "memory-scope"
 RECORD = "memory-scope.json"
+COUNTER = re.compile(r"[0-9]{1,20}")
+EVENT_LINE = re.compile(r"([a-z_]+) ([0-9]{1,20})")
 
 
 class Refused(Exception):
@@ -97,20 +100,63 @@ def write_record(report: Path, record: dict[str, object]) -> None:
     os.replace(temporary, report / RECORD)
 
 
-def read_text(path: Path) -> str | None:
+def read_raw(path: Path) -> str | None:
+    """The file's text exactly as written, or None when it cannot be read as UTF-8.
+
+    Bytes are decoded strictly and no newline is translated, so a CRLF, a stray byte or a NUL
+    reaches the parser as itself and is refused there, and never crashes it.
+    """
     try:
-        return path.read_text(encoding="utf-8").strip()
-    except OSError:
+        return path.read_bytes().decode("utf-8")
+    except (OSError, UnicodeDecodeError):
         return None
 
 
-def events_of(group: Path) -> dict[str, int]:
+def read_text(path: Path) -> str | None:
+    raw = read_raw(path)
+    return None if raw is None else raw.strip()
+
+
+def counter_of(word: str) -> int | None:
+    """A kernel counter: one to twenty ASCII decimal digits (an unsigned 64-bit value), else None."""
+    return int(word) if COUNTER.fullmatch(word) else None
+
+
+def lines_of(path: Path) -> list[str] | None:
+    """The file's lines as the kernel writes them (each ends in a newline), or None if unreadable."""
+    raw = read_raw(path)
+    if raw is None:
+        return None
+    if not raw:
+        return []
+    return raw.removesuffix("\n").split("\n")
+
+
+def events_of(group: Path) -> dict[str, int] | None:
+    """The counts in `memory.events`, or None unless the file is whole.
+
+    The kernel writes one `<key> <digits>` line per key, and each key once. A file that is
+    unreadable, holds any other line, or names a key twice is not whole: taking the last of two
+    lines would read a real kill as a clean run.
+    """
+    lines = lines_of(group / "memory.events")
+    if lines is None:
+        return None
     counts: dict[str, int] = {}
-    for line in (read_text(group / "memory.events") or "").splitlines():
-        words = line.split()
-        if len(words) == 2 and words[1].isdigit():
-            counts[words[0]] = int(words[1])
+    for line in lines:
+        match = EVENT_LINE.fullmatch(line)
+        if match is None or match[1] in counts:
+            return None
+        counts[match[1]] = int(match[2])
     return counts
+
+
+def peak_of(group: Path) -> int | None:
+    """The count in `memory.peak`, or None unless the file is one whole ASCII number."""
+    lines = lines_of(group / "memory.peak")
+    if lines is None or len(lines) != 1:
+        return None
+    return counter_of(lines[0])
 
 
 def unread_after(group: Path) -> str | None:
@@ -120,11 +166,12 @@ def unread_after(group: Path) -> str | None:
     absence of a measurement, so the record is not in force and says which value it lacks.
     """
     events = events_of(group)
+    if events is None:
+        return "memory.events is not whole after the command"
     for name in ("oom", "oom_kill", "max"):
         if name not in events:
             return f"memory.events holds no {name} count after the command"
-    peak = read_text(group / "memory.peak")
-    if peak is None or not peak.isdigit():
+    if peak_of(group) is None:
         return "memory.peak holds no count after the command"
     return None
 
@@ -154,8 +201,11 @@ def check_in_force(
         if found != wanted:
             raise Refused(f"{name} is not what the scope was asked for")
     events = events_of(here)
-    if "oom_kill" not in events:
-        raise Refused("memory.events holds no oom_kill count")
+    if events is None:
+        raise Refused("memory.events is not whole")
+    for name in ("oom", "oom_kill"):
+        if name not in events:
+            raise Refused(f"memory.events holds no {name} count")
     if events.get("oom") != 0 or events["oom_kill"] != 0:
         raise Refused("memory.events counts an out-of-memory event before the command ran")
     shown = subprocess.run(
@@ -239,8 +289,8 @@ def run(
     )
     code = subprocess.run(command, check=False).returncode
     why = unread_after(here)
-    events = events_of(here) if why is None else {}
-    percent = int(read_text(here / "memory.peak") or "0") * 100 // cap if why is None else 0
+    events = (events_of(here) or {}) if why is None else {}
+    percent = (peak_of(here) or 0) * 100 // cap if why is None else 0
     record = {
         "in_force": why is None,
         "state": "done",
