@@ -836,3 +836,129 @@ fn a_source_that_does_not_lex_is_refused() {
         "a source that does not lex was read: {source}: {problems:?}"
     );
 }
+
+#[test]
+fn a_first_line_rustc_removes_as_a_shebang_is_refused() {
+    // rustc removes a first line opening with `#!` unless `[` follows past whitespace and plain
+    // comments, so a call written on it is no code: the pin refuses the source. `\u{a0}` and
+    // `\u{3000}` are whitespace to `proc-macro2` and not to rustc, which removes those lines too.
+    let call = a_good_prune_source();
+    let mut members = 0;
+    for bom in ["", "\u{feff}"] {
+        for gap in [
+            "",
+            " ",
+            "\t",
+            "/usr/bin/env run-cargo-script ",
+            " /* c */ ",
+            " /** d */ ",
+            "\u{a0}[allow(unused)] ",
+            "\u{3000}[allow(unused)] ",
+        ] {
+            let source = format!("{bom}#!{gap}{call}\nfn prune_before() {{}}\n");
+            let problems = prune_pin_problems(&source);
+            assert!(
+                problems.iter().any(|problem| problem.contains("shebang")),
+                "a shebang line was read as code: {source:?}: {problems:?}"
+            );
+            members += 1;
+        }
+    }
+    assert_eq!(members, 16, "the population changed");
+    // An inner attribute is no shebang: the call under `#![allow(unused)]` is read.
+    assert_eq!(
+        prune_pin_problems(&format!("#![allow(unused)]\n{call}")),
+        Vec::<String>::new()
+    );
+}
+
+/// Macros that keep an item and discard the doc attribute before it, each matching a doc attribute
+/// written with a call as its tokens: an expression, a token tree, an inner attribute, and a raw
+/// `r#doc`, which rustc resolves as `doc` and both counts skip as one.
+const DOC_DISCARDERS: [(&str, &str); 4] = [
+    (
+        "macro_rules! keep { (#[doc = $e:expr] $i:item) => { $i }; }",
+        "#[doc = @]",
+    ),
+    (
+        "macro_rules! keep { (#[doc($($t:tt)*)] $i:item) => { $i }; }",
+        "#[doc(@)]",
+    ),
+    (
+        "macro_rules! keep { (#![doc = $e:expr] $i:item) => { $i }; }",
+        "#![doc = @]",
+    ),
+    (
+        "macro_rules! keep { (# $attribute:tt $i:item) => { $i }; }",
+        "#[r#doc = @]",
+    ),
+];
+
+#[test]
+fn a_query_written_inside_a_doc_attribute_is_neither_a_run_nor_a_word() {
+    // A macro takes a doc attribute whose tokens are a copy of the call and discards it, keeping
+    // the item: rustc runs only the prune in the item. Each member was labelled by rustc 1.97.0
+    // through a stand-in `sqlx` whose `run` logs the statement: only the tested prune runs it.
+    let copy = a_copy_of_the_call();
+    let none_run = "the code hands the statement to sqlx::query! 0 times, not once";
+    let lives = [
+        (
+            format!(
+                "sqlx::query(\"DELETE FROM {TABLE} WHERE created_at + 0 < ?1\").bind(cutoff).run();"
+            ),
+            vec![none_run],
+        ),
+        (
+            format!(
+                "sqlx::query!(\"DELETE FROM main.{TABLE} WHERE created_at < ?1\", cutoff).run();"
+            ),
+            vec![none_run],
+        ),
+        (format!("{copy}.run();"), vec![]),
+        (
+            "let _ = cutoff;".to_owned(),
+            vec![
+                none_run,
+                "the source writes the word delete 0 times, not once",
+            ],
+        ),
+    ];
+    let mut members = 0;
+    for (discarder, attribute) in DOC_DISCARDERS {
+        let attribute = attribute.replace('@', &copy);
+        for (live, expected) in &lives {
+            let prune = format!("pub fn prune_before(cutoff: i64) {{ {live} }}");
+            for source in [
+                format!("{discarder}\nkeep!({attribute} {prune});\n"),
+                format!("{discarder}\nkeep!({attribute} struct Kept;);\n{prune}\n"),
+            ] {
+                assert_eq!(
+                    prune_pin_problems(&source),
+                    *expected,
+                    "a call inside a doc attribute was read as code: {source}"
+                );
+                members += 1;
+            }
+        }
+    }
+    assert_eq!(members, 32, "the population changed");
+    eprintln!("examined {members} doc-attribute copies");
+}
+
+#[test]
+fn each_count_names_the_number_it_read() {
+    // Two calls are two runs and two words; a text holding no statement is refused by the test
+    // file's own count as well as by one statement too many.
+    let twice = format!("{}\n{}", a_good_prune_source(), a_good_prune_source());
+    assert_eq!(
+        prune_pin_problems(&twice),
+        [
+            "the code hands the statement to sqlx::query! 2 times, not once",
+            "the source writes the word delete 2 times, not once",
+        ]
+    );
+    assert_eq!(
+        own_statement_problems("fn plan() {}"),
+        ["the test file writes the statement 0 times, not once"]
+    );
+}

@@ -598,3 +598,49 @@ fn every_gap_rustc_reads_between_the_enums_tokens_is_whitespace() {
     assert_eq!(members, 113, "the population changed");
     eprintln!("examined {members} gaps and spellings");
 }
+
+#[test]
+fn a_first_line_rustc_removes_as_a_shebang_is_refused() {
+    // rustc removes a first line opening with `#!` unless `[` follows past whitespace and plain
+    // comments, so a `#[must_use]` written on it is not the enum's: the pin refuses the source.
+    // `\u{a0}` and `\u{3000}` are whitespace to `proc-macro2` and not to rustc.
+    let enum_below = "#[derive(Clone)]\npub enum Verdict {\n    A,\n}\n";
+    let mut members = 0;
+    for bom in ["", "\u{feff}"] {
+        for gap in [
+            "",
+            " ",
+            "\t",
+            "/usr/bin/env run-cargo-script ",
+            " /* c */ ",
+            " /** d */ ",
+            "\u{a0}[allow(unused)] ",
+            "\u{3000}[allow(unused)] ",
+        ] {
+            let source = format!("{bom}#!{gap}#[must_use]\n{enum_below}");
+            let problems = verdict_pin_problems(&source);
+            assert!(
+                problems.iter().any(|problem| problem.contains("shebang")),
+                "a shebang line was read as the enum's attribute: {source:?}: {problems:?}"
+            );
+            members += 1;
+        }
+    }
+    assert_eq!(members, 16, "the population changed");
+    // An inner attribute is no shebang: the enum under `#![allow(unused)]` is read.
+    assert_eq!(
+        verdict_pin_problems(&format!("#![allow(unused)]\n#[must_use]\n{enum_below}")),
+        Vec::<String>::new()
+    );
+}
+
+#[test]
+fn a_copy_of_the_enum_compiled_out_beside_it_is_refused_as_a_second_declaration() {
+    // The pin evaluates no `cfg` (SPEC-043 section 10): a copy of the enum in code beside it is a
+    // second declaration, and the source is refused whatever either copy carries.
+    let source = "#[cfg(any())]\nmod dead {\n    #[must_use]\n    enum Verdict {}\n}\n#[must_use]\n#[derive(Clone)]\npub enum Verdict { A }";
+    assert_eq!(
+        verdict_pin_problems(source),
+        ["the verdict enum is declared 2 times, not once"]
+    );
+}
