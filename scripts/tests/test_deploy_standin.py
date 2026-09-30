@@ -17,13 +17,13 @@ real program."""
 
 import ast
 import os
-import re
 import stat
 import subprocess
 import tempfile
 import unittest
 from pathlib import Path
 
+import _standin_checks as checks
 import test_deploy_scripts as deploy_tests
 from _support import REPO, examined
 
@@ -52,43 +52,11 @@ def refusal(name):
     return f"host stand-in: refusing {name}: not a command the deploy tests use\n"
 
 
-def elevate_values(tree):
-    """Every string the module gives `DECKSTREAK_DEPLOY_ELEVATE`, in a dict or a keyword; a value the
-    tree cannot read as a constant is refused, so no environment escapes the derivation."""
-    values = []
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Dict):
-            for key, value in zip(node.keys, node.values, strict=True):
-                if isinstance(key, ast.Constant) and key.value == ELEVATE:
-                    values.append(value)
-        if isinstance(node, ast.keyword) and node.arg == ELEVATE:
-            values.append(node.value)
-    found = []
-    for value in values:
-        assert isinstance(value, ast.Constant) and isinstance(value.value, str), (
-            f"line {value.lineno}: an elevation value that is not a string constant"
-        )
-        found.append(value.value)
-    return found
-
-
 def derived_argv0():
-    """The `argv[0]` values the stand-in receives from the calls the tests make: the word deploy.sh
-    puts after the elevation command, when the tests give the setting empty, and the first word of
-    each non-empty elevation command the tests give."""
-    text = DEPLOY.read_text(encoding="utf-8")
-    shape = re.compile(
-        re.escape('"${HOST_CMD[@]}" ${ELEVATE_CMD[@]+"${ELEVATE_CMD[@]}"} ') + r"(\S+) -c "
+    """The `argv[0]` values the stand-in receives from the calls the tests make."""
+    return checks.derived_argv0(
+        DEPLOY.read_text(encoding="utf-8"), SOURCE.read_text(encoding="utf-8")
     )
-    found = shape.findall(text)
-    assert len(found) == 1, f"deploy.sh makes {len(found)} host calls of the shape read: {found}"
-    values = elevate_values(ast.parse(SOURCE.read_text(encoding="utf-8")))
-    assert values, "no test environment gives the elevation setting"
-    argv0 = set()
-    for value in values:
-        words = value.split()
-        argv0.add(words[0] if words else found[0])
-    return argv0
 
 
 def write_script(path, text):
@@ -123,23 +91,8 @@ class TheAllowedShapes(unittest.TestCase):
         self.assertEqual(set(seen), set(listed), "the stand-in received a shape that is not listed")
 
     def test_the_only_stub_that_runs_its_first_argument_is_the_host_stand_in(self):
-        tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
-        runs_argv = re.compile(
-            r"^\s*(?:(?:exec|command|eval|env|nohup|builtin)\s+)*\"?\$(?:@|\{@\}|1|\{1\})\"?(?=\s|$)",
-            re.MULTILINE,
-        )
-        names = set()
-        scanned = 0
-        for node in ast.walk(tree):
-            if not isinstance(node, ast.Assign):
-                continue
-            for part in ast.walk(node.value):
-                if isinstance(part, ast.Constant) and isinstance(part.value, str):
-                    scanned += 1
-                    if runs_argv.search(part.value):
-                        names |= {t.id for t in node.targets if isinstance(t, ast.Name)}
-        examined("string constant(s)", range(scanned))
-        self.assertEqual(names, {"HOST"}, f"stubs that run their argv: {sorted(names)}")
+        source = SOURCE.read_text(encoding="utf-8")
+        examined("string constant(s)", range(checks.check_stubs(source)))
 
 
 class TheStandInRefusesWhatItDoesNotKnow(unittest.TestCase):
@@ -323,58 +276,17 @@ class EveryEnvironmentNamesTheSetting(unittest.TestCase):
                 launch([str(Path(tmp) / "absent-program")], w.env)
 
 
+def tests_texts():
+    """Every module beside this one, by name, as text."""
+    return {
+        p.stem: p.read_text(encoding="utf-8") for p in sorted(Path(__file__).parent.glob("*.py"))
+    }
+
+
 class NoOtherCallSiteStartsAProgram(unittest.TestCase):
-    STARTERS = {
-        "subprocess": {"run", "Popen", "call", "check_call", "check_output", "getoutput"},
-        "os": {"system", "popen"},
-    }
-    ALLOWED = {
-        "launch": "every deploy script, through the helper that refuses an unnamed environment",
-        "World.git": "git, in a synthetic repository",
-        "NoDeployScriptNamesAPrivateValue.test_no_deploy_script_names_a_private_value": (
-            "the public scrub, on a copy of a file"
-        ),
-    }
-
-    def starters(self, tree):
-        """Each call that can start a program, by the function that holds it."""
-        found = {}
-
-        def visit(node, scope):
-            if isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
-                scope = [*scope, node.name]
-            if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
-                base = node.func.value
-                if isinstance(base, ast.Name) and base.id in self.STARTERS:
-                    named = node.func.attr in self.STARTERS[base.id]
-                    if named or (base.id == "os" and node.func.attr.startswith(("exec", "spawn"))):
-                        found.setdefault(".".join(scope), []).append(node.lineno)
-            for child in ast.iter_child_nodes(node):
-                visit(child, scope)
-
-        visit(tree, [])
-        return found
-
     def test_only_the_helper_the_git_wrapper_and_the_scrub_call_start_a_program(self):
-        tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
-        imports = [
-            node
-            for node in ast.walk(tree)
-            if (isinstance(node, ast.ImportFrom) and node.module in ("subprocess", "os", "pty"))
-            or (isinstance(node, ast.Import) and any(a.asname for a in node.names))
-        ]
-        self.assertEqual(
-            [n.lineno for n in imports], [], "a name that starts a program is imported bare"
-        )
-        found = self.starters(tree)
-        self.assertEqual(
-            set(found),
-            set(self.ALLOWED),
-            "a call site that starts a program is not the helper, the git wrapper or the scrub",
-        )
-        examined(
-            "call site(s) that start a program", [s for lines in found.values() for s in lines]
-        )
+        sites = checks.check_census(tests_texts(), deploy_tests.__name__)
+        examined("call site(s) that start a program", sites)
 
     def test_the_helper_names_the_setting_before_it_starts_anything(self):
         tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
@@ -406,6 +318,310 @@ class NoOtherCallSiteStartsAProgram(unittest.TestCase):
         self.assertLess(
             min(r.lineno for r in raises), starts[0], "the refusal comes after the start"
         )
+
+
+# --- the killers: a generated population per check, each member planted into a copy of the text
+# the check reads; the REAL check must refuse every member, and the failure names each it passed.
+
+STUB_HEAD = '#!/bin/bash\necho "planted $*" >> "$STUB_LOG/planted.log"\n'
+# Each route by which a stub's body can run what its arguments name (members.txt's routes; the one
+# route that hands the arguments to the shell's evaluator is closed by construction, not planted).
+STUB_ROUTES = {
+    "a semicolon after the list": '"$@"; true',
+    "a brace group": '{ "$@"; }',
+    "the last pipeline stage": 'echo x | "$@"',
+    "NUL-separated into xargs env": "printf '%s\\0' \"$@\" | xargs -0 env",
+    "sh -c of the joined arguments": 'sh -c "$*"',
+    "bash -c of the first": 'bash -c "$1"',
+    "source of the first": "source $1",
+    "the dot builtin on the first": '. "$1"',
+    "a command substitution": 'out=$("$@")',
+    "a here-string into bash": 'bash <<<"$*"',
+    "exec --": 'exec -- "$@"',
+    "exec -a": 'exec -a stand "$@"',
+    "env -i": 'env -i "$@"',
+    "the time keyword": 'time "$@"',
+    "the condition of an if": 'if "$@"; then :; fi',
+    "an array copy, expanded": 'args=("$@"); "${args[@]}"',
+    "a slice from 1": '"${@:1}"',
+    "python runpy on the first": (
+        "exec python3 -c 'import runpy, sys; runpy.run_path(sys.argv[1])' \"$@\""
+    ),
+    "exec of the quoted list": 'exec "$@"',
+    "the bare quoted list": '"$@"',
+    "exec of the unquoted list": "exec $@",
+    "the first pipeline stage": '"$@" | cat',
+    "the command prefix": 'command "$@"',
+    "the nohup prefix": 'nohup "$@"',
+}
+# Each way a stub's text can be built or installed, round one positive body.
+POSITIVE = 'exec "$@"'
+STUB_FORMS = {
+    "an annotated assignment": f'PLANT: str = r"""{STUB_HEAD}{POSITIVE}\n"""',
+    "passed straight to script()": f'_w.script("planted", r"""{STUB_HEAD}{POSITIVE}\n""")',
+    "bytes": f'PLANT = b"""{STUB_HEAD}{POSITIVE}\n"""',
+    "concatenated from pieces": "PLANT = \"#!/bin/bash\\nexec \" + '\"$' + '@\"\\n'",
+    "percent-formatted": 'PLANT = "#!/bin/bash\\nexec %s\\n" % \'"$@"\'',
+    "str.format": 'PLANT = "#!/bin/bash\\nexec {}\\n".format(\'"$@"\')',
+    "joined lines": 'PLANT = "\\n".join(["#!/bin/bash", \'exec "$\' + \'@"\'])',
+    "a placeholder replaced": (
+        'PLANT = "#!/bin/bash\\nexec @X@\\n".replace("@X@", \'"$\' + \'@"\')'
+    ),
+    "an f-string over a built name": (
+        '_arg = "$" + "@"\nPLANT = f\'#!/bin/bash\\nexec "{_arg}"\\n\''
+    ),
+    "a dollar before an unreadable piece": (
+        'PLANT = "#!/bin/bash\\nexec \\"$" + _piece() + "\\"\\n"'
+    ),
+}
+
+
+def python_trace_text(source):
+    """The text of the in-tree stub PYTHON_TRACE, read from the tree."""
+    for node in ast.walk(ast.parse(source)):
+        if isinstance(node, ast.Assign) and any(
+            isinstance(t, ast.Name) and t.id == "PYTHON_TRACE" for t in node.targets
+        ):
+            return ast.literal_eval(node.value)
+    raise AssertionError("PYTHON_TRACE is not in the module")
+
+
+def stub_members(source):
+    members = []
+    for label, line in STUB_ROUTES.items():
+        body = f'\nPLANT = r"""{STUB_HEAD}{line}\n"""\n'
+        members.append((f"route: {label}", source + body))
+    for label, text in STUB_FORMS.items():
+        members.append((f"form: {label}", source + "\n" + text + "\n"))
+    traced = python_trace_text(source)
+    members.append(("the in-tree PYTHON_TRACE route", source + f'\nPLANT = r"""{traced}"""\n'))
+    return members
+
+
+def report(kind, passed, total):
+    return f"{len(passed)} of {total} {kind} member(s) passed the check: {passed}"
+
+
+class TheStubScanFindsEveryRoute(unittest.TestCase):
+    def test_every_route_by_which_a_stub_runs_its_arguments_is_refused(self):
+        source = SOURCE.read_text(encoding="utf-8")
+        checks.check_stubs(source)
+        harmless = source + f'\nPLANT = r"""{STUB_HEAD}exit 0\n"""\n'
+        checks.check_stubs(harmless)
+        members = list(examined("stub member(s)", stub_members(source)))
+        passed = []
+        for label, text in members:
+            try:
+                checks.check_stubs(text)
+            except AssertionError:
+                continue
+            passed.append(label)
+        self.assertGreaterEqual(len(members), 20, "the population shrank")
+        self.assertEqual(passed, [], report("stub", passed, len(members)))
+
+
+# One extra host call, spelled one way, placed after the call deploy.sh makes.
+HOST_CALL_PLANTS = {
+    "the host array unquoted, then the elevation, then sh -c": (
+        '${HOST_CMD[@]} ${ELEVATE_CMD[@]+"${ELEVATE_CMD[@]}"} sh -c "$script" deck-streak-host'
+    ),
+    "a heredoc into sh -s": (
+        '"${HOST_CMD[@]}" ${ELEVATE_CMD[@]+"${ELEVATE_CMD[@]}"} sh -s <<\'PLANT\'\n:\nPLANT'
+    ),
+    "the host variable, no array": '$DECKSTREAK_DEPLOY_HOST sh -c "$script" deck-streak-host',
+    "the host array, no elevation": '"${HOST_CMD[@]}" sh -c "$script" deck-streak-host',
+    "a literal privilege word": '"${HOST_CMD[@]}" sudo -n bash -c "$script" deck-streak-host',
+    "the elevation array fully quoted": '"${HOST_CMD[@]}" "${ELEVATE_CMD[@]}" sh -c "$script"',
+    "a function wrapper called with python3": (
+        'plant_host() { "${HOST_CMD[@]}" "$@"; }\nplant_host python3 render.py'
+    ),
+}
+# One statement that gives the elevation setting the value `sudo`, in the module the tests read.
+ELEVATION_PLANTS = {
+    "a dict keyed by the ELEVATE name": '_e = {ELEVATE: "sudo"}',
+    "a subscript with the constant key": '_e = {}\n_e["DECKSTREAK_DEPLOY_ELEVATE"] = "sudo"',
+    "a subscript with the ELEVATE name": "_e = {}\n_e[ELEVATE] = 'sudo'",
+    "a bytes NAME=value entry": '_e = [b"DECKSTREAK_DEPLOY_ELEVATE=sudo"]',
+    "a str NAME=value entry": '_e = ["DECKSTREAK_DEPLOY_ELEVATE=sudo"]',
+    "a dict key built by concatenation": '_e = {"DECKSTREAK_DEPLOY_" + "ELEVATE": "sudo"}',
+    "setdefault": '_e = {}\n_e.setdefault("DECKSTREAK_DEPLOY_ELEVATE", "sudo")',
+    "a line in a sourced file": (
+        '_held.write_text("DECKSTREAK_DEPLOY_ELEVATE=sudo\\n", encoding="utf-8")'
+    ),
+    "an assignment into os.environ": 'os.environ["DECKSTREAK_DEPLOY_ELEVATE"] = "sudo"',
+}
+
+
+def derivation_members(deploy, source):
+    call = next(
+        line for line in deploy.splitlines() if line.lstrip().startswith('"${HOST_CMD[@]}"')
+    )
+    indent = call[: len(call) - len(call.lstrip())]
+    members = []
+    for label, plant in HOST_CALL_PLANTS.items():
+        extra = "\n".join(indent + line for line in plant.splitlines())
+        members.append((f"host call: {label}", (deploy.replace(call, call + "\n" + extra), source)))
+    for label, plant in ELEVATION_PLANTS.items():
+        members.append((f"elevation value: {label}", (deploy, source + "\n" + plant + "\n")))
+    return members
+
+
+class TheDerivationReadsEveryHostCallAndEveryValue(unittest.TestCase):
+    def test_every_host_call_and_every_elevation_value_adds_to_the_set_or_is_refused(self):
+        deploy = DEPLOY.read_text(encoding="utf-8")
+        source = SOURCE.read_text(encoding="utf-8")
+        base = checks.derived_argv0(deploy, source)
+        self.assertEqual(base, set(deploy_tests.HOST_ALLOWED), "the control is not the list")
+        members = list(examined("derivation member(s)", derivation_members(deploy, source)))
+        passed = []
+        for label, (planted_deploy, planted_source) in members:
+            try:
+                got = checks.derived_argv0(planted_deploy, planted_source)
+            except AssertionError:
+                continue
+            if got == base:
+                passed.append(label)
+        self.assertGreaterEqual(len(members), 16, "the population shrank")
+        self.assertEqual(passed, [], report("derivation", passed, len(members)))
+
+
+def census_members(texts):
+    source = texts[deploy_tests.__name__]
+    standin = texts[Path(__file__).stem]
+    starts = {
+        "subprocess.getstatusoutput": 'subprocess.getstatusoutput("bash deploy/deploy.sh")',
+        "os.posix_spawn": 'os.posix_spawn("/bin/bash", ["bash", "deploy/deploy.sh"], {})',
+        "os.posix_spawnp": 'os.posix_spawnp("bash", ["bash", "deploy/deploy.sh"], {})',
+        "pty.spawn after a plain import": 'import pty\n        pty.spawn(["bash", "deploy/deploy.sh"])',
+        "asyncio.create_subprocess_exec": (
+            "import asyncio\n        asyncio.create_subprocess_exec('bash', 'deploy/deploy.sh')"
+        ),
+        "asyncio.create_subprocess_shell": (
+            "import asyncio\n        asyncio.create_subprocess_shell('bash deploy/deploy.sh')"
+        ),
+        "getattr of the module": 'getattr(subprocess, "run")(["bash", "deploy/deploy.sh"])',
+        "functools.partial of the starter": (
+            'import functools\n        functools.partial(subprocess.run, ["bash", "x"])()'
+        ),
+        "the starter bound to a local name": (
+            'start = subprocess.run\n        start(["bash", "deploy/deploy.sh"])'
+        ),
+        "importlib.import_module": (
+            'import importlib\n        importlib.import_module("subprocess").run(["bash", "x"])'
+        ),
+        "__import__": '__import__("subprocess").run(["bash", "deploy/deploy.sh"])',
+        "a git alias through World.git": (
+            'w.git("config", "alias.go", "!bash deploy/deploy.sh", cwd=w.tmp)\n'
+            '        w.git("go", cwd=w.tmp)'
+        ),
+    }
+    members = []
+    for label, start in starts.items():
+        planted = f"\n\nclass PlantedStart:\n    def test_it(self):\n        {start}\n"
+        members.append((f"start: {label}", {**texts, deploy_tests.__name__: source + planted}))
+    anchor = '        assert done.returncode == 0, f"git {args}: {done.stderr}"\n'
+    assert source.count(anchor) == 1, "the git wrapper's anchor moved"
+    second = source.replace(
+        anchor, anchor + '        subprocess.run(["bash", "deploy/deploy.sh"])\n'
+    )
+    members.append(
+        ("start: a second start inside World.git", {**texts, deploy_tests.__name__: second})
+    )
+    planted = "\n\nclass PlantedStart:\n    def test_it(self):\n        subprocess.run(['bash'])\n"
+    members.append(
+        ("start: written in the standin module", {**texts, Path(__file__).stem: standin + planted})
+    )
+    importer = (
+        "import subprocess\nfrom test_deploy_scripts import launch\n\n"
+        "subprocess.run(['bash', 'deploy/deploy.sh'])\n"
+    )
+    members.append(
+        ("start: a new module that imports the deploy tests", {**texts, "test_zz_new": importer})
+    )
+    named = 'import importlib\n\nimportlib.import_module("test_deploy_scripts")\n'
+    members.append(
+        (
+            "start: a module that names the deploy tests without importing",
+            {**texts, "test_zz_named": named},
+        )
+    )
+    return members
+
+
+class TheCensusFindsEveryStart(unittest.TestCase):
+    def test_every_start_spelling_is_found_or_refused(self):
+        texts = tests_texts()
+        checks.check_census(texts, deploy_tests.__name__)
+        members = list(examined("start member(s)", census_members(texts)))
+        passed = []
+        for label, planted in members:
+            try:
+                checks.check_census(planted, deploy_tests.__name__)
+            except AssertionError:
+                continue
+            passed.append(label)
+        self.assertGreaterEqual(len(members), 16, "the population shrank")
+        self.assertEqual(passed, [], report("launch census", passed, len(members)))
+
+
+class TheLaunchRefusalJudgesWhatTheProgramSees(unittest.TestCase):
+    def test_an_environment_the_program_will_see_unset_is_refused(self):
+        launch = deploy_tests.launch
+        named = {ELEVATE: ""}
+        with tempfile.TemporaryDirectory() as tmp:
+            absent = str(Path(tmp) / "absent-program")
+            files = {}
+            for label, body in (
+                ("a dead branch", f"if false; then\n{ELEVATE}=x\nfi\n"),
+                ("set, then unset", f"{ELEVATE}=x\nunset {ELEVATE}\n"),
+            ):
+                path = Path(tmp) / f"{len(files)}.bash"
+                path.write_text(body, encoding="utf-8")
+                files[label] = path
+            members = [
+                (
+                    "received names it; env is a mapping without it",
+                    [absent],
+                    named,
+                    {"PATH": "/usr/bin"},
+                    None,
+                ),
+                (
+                    "received names it; env is a bytes mapping without it",
+                    [absent],
+                    named,
+                    {b"PATH": b"/usr/bin"},
+                    None,
+                ),
+                ("received names it; env=None, so the child inherits", [absent], named, None, None),
+                (
+                    "the sourced file names it only in a dead branch",
+                    [absent],
+                    [],
+                    {},
+                    files["a dead branch"],
+                ),
+                (
+                    "the sourced file sets it, then unsets it",
+                    [absent],
+                    [],
+                    {},
+                    files["set, then unset"],
+                ),
+            ]
+            members = list(examined("launch member(s)", members))
+            admitted = []
+            for label, argv, received, env, sourced in members:
+                try:
+                    launch(argv, received, env=env, sourced=sourced)
+                except AssertionError:
+                    continue
+                except FileNotFoundError:
+                    admitted.append(label)
+                    continue
+                admitted.append(label + " (started something)")
+            self.assertGreaterEqual(len(members), 5, "the population shrank")
+            self.assertEqual(admitted, [], report("launch", admitted, len(members)))
 
 
 if __name__ == "__main__":
