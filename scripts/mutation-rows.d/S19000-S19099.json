@@ -80,6 +80,38 @@
         "  queue: max\n  Queue: max\n",
         "release.yml's block holds no key twice, read without case, so GitHub's workflow parser never refuses the workflow before a tag's run starts (SPEC-190 R10)",
         "test_workflow_concurrency.EveryReleaseWorkflowQueuesEveryRun.test_every_workflow_that_can_hold_two_runs_of_a_release_queues_them"
+      ],
+      [
+        "S19011-THE-RELEASE-WORKFLOW-HOLDS-ONLY-KEYS-GITHUB-DEFINES",
+        ".github/workflows/release.yml",
+        "    timeout-minutes: 90\n",
+        "    timeout-minutes: 90\n    timeout-minute: 90\n",
+        "every key release.yml holds in a job is one GitHub's workflow parser defines there, so the parser never refuses the workflow before a tag's run starts (SPEC-190 R11)",
+        "test_workflow_concurrency.EveryReleaseWorkflowQueuesEveryRun.test_every_workflow_that_can_hold_two_runs_of_a_release_queues_them"
+      ],
+      [
+        "S19012-THE-RELEASE-GROUP-READS-THE-REF-AND-NOTHING-ELSE",
+        ".github/workflows/release.yml",
+        "  group: release-${{ github.ref }}\n",
+        "  group: release-${{ github.ref }}-${{ github.event_name }}\n",
+        "release.yml's group reads github.ref and nothing else, so every run of one tag takes one group whatever the event (SPEC-190 R11)",
+        "test_workflow_concurrency.EveryReleaseWorkflowQueuesEveryRun.test_every_workflow_that_can_hold_two_runs_of_a_release_queues_them"
+      ],
+      [
+        "S19013-THE-RELEASE-CANCEL-IN-PROGRESS-IS-THE-LITERAL-FALSE",
+        ".github/workflows/release.yml",
+        "  cancel-in-progress: false\n",
+        "  cancel-in-progress: ${{ false }}\n",
+        "release.yml's cancel-in-progress is the literal false as written, so no run's value can cancel a tag's running build (SPEC-190 R11)",
+        "test_workflow_concurrency.EveryReleaseWorkflowQueuesEveryRun.test_every_workflow_that_can_hold_two_runs_of_a_release_queues_them"
+      ],
+      [
+        "S19014-THE-RELEASE-GROUP-STARTS-WITH-TEXT-OF-ITS-OWN",
+        ".github/workflows/release.yml",
+        "  group: release-${{ github.ref }}\n",
+        "  group: ${{ github.ref }}\n",
+        "release.yml's group starts with text of its own, so no other block can render as it for any run of any tag (SPEC-190 R11)",
+        "test_workflow_concurrency.EveryReleaseWorkflowQueuesEveryRun.test_every_workflow_that_can_hold_two_runs_of_a_release_queues_them"
       ]
     ]
   }
