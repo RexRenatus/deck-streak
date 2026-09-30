@@ -1,0 +1,309 @@
+{
+  "adapter": "queue",
+  "cases": [
+    {
+      "input": {
+        "notes": {},
+        "today": 300
+      },
+      "output": {
+        "awaiting_grading": 0,
+        "deferred": 0,
+        "unanswered": []
+      }
+    },
+    {
+      "class": "mixed",
+      "input": {
+        "notes": {
+          "case-brief-{day:80}": "---\ntype: drill-case-brief\nsubject: \"Contracts\"\ncreated: {day:80}\nstatus: active\n---\n# A synthetic drill\n\nThe prompt of A synthetic drill.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [x] **Ready for grading**\n",
+          "evidence-outline-{day:90}": "---\nsubject: \"Evidence\"\nstatus: active\n---\n# Hearsay\n\nThe prompt of Hearsay.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [ ] **Ready for grading**\n",
+          "extra-0-{day:4955}": "---\ntype: drill-outline\nsubject: \"Torts\"\ncreated: {day:10730}\nstatus: active\n---\n# A synthetic drill\n\nThe prompt of A synthetic drill.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [X] **Ready for grading**\n",
+          "extra-1-{day:885}": "---\ntype: drill-case-brief\nsubject: \"Constitutional Law\"\ncreated: {day:2458}\nstatus: active\n---\n# A synthetic drill\n\nThe prompt of A synthetic drill.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [ ] **Ready for grading**\n",
+          "extra-2-{day:10458}": "---\ntype: drill-case-brief\nsubject: \"Evidence\"\ncreated: {day:14726}\nstatus: active\n---\n# A synthetic drill\n\nThe prompt of A synthetic drill.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [x] **Ready for grading**\n",
+          "extra-3-{day:6548}": "---\ntype: drill-outline\nsubject: \"Trusts & Estates\"\ncreated: {day:10773}\nstatus: active\n---\n# A synthetic drill\n\nThe prompt of A synthetic drill.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [x] **Ready for grading**\n",
+          "folded-{day:50}": "---\ntype: drill-irac\nsubject: \"TRUSTS and ESTATES\"\ncreated: {day:50}\nstatus: active\ndefer_reason: >\n---\n# A synthetic drill\n\nThe prompt of A synthetic drill.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [x] **Ready for grading**\n",
+          "folder-note": null,
+          "irac-{day:100}": "---\ntype: drill-irac\nsubject: \"Torts\"\ncreated: {day:100}\nstatus: active\n---\n# A synthetic drill\n\nThe prompt of A synthetic drill.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [ ] **Ready for grading**\n",
+          "nofm": "# no frontmatter\n- [ ] **Ready for grading**\n",
+          "quoted-{day:60}": "---\ntype: drill-\"irac\"\nsubject: \"Trusts & Estates\"\ncreated: {day:60}\nstatus: active\n---\n# A synthetic drill\n\nThe prompt of A synthetic drill.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [ ] **Ready for grading**\n",
+          "rule-{day:70}": "---\ntype: drill-rule-statement\nsubject: \"Torts\"\ncreated: {badday}\nstatus: active\ndefer_reason: needs the source\n---\n# A synthetic drill\n\nThe prompt of A synthetic drill.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [X] **Ready for grading**\n",
+          "spaced-{day:40}": "---\ntype: drill-irac\nsubject: \"  Torts  \"\ncreated: {day:40}\nstatus: active\ndefer_reason:   too\u200b hard\u0085 \u00a0now  \n---\n# A synthetic drill\n\nThe prompt of A synthetic drill.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [x] **Ready for grading**\n",
+          "untitled": "---\ntype: drill-outline\nstatus: active\n---\nno heading here\n- [ ] **Ready for grading**\n"
+        },
+        "today": 90
+      },
+      "output": {
+        "awaiting_grading": 7,
+        "deferred": 3,
+        "unanswered": [
+          {
+            "age_days": 0,
+            "answered": false,
+            "created": "{day:90}",
+            "deferred": false,
+            "drill_id": "evidence-outline-{day:90}",
+            "subject": "Evidence",
+            "title": "Hearsay",
+            "type": "evidence-outline"
+          },
+          {
+            "age_days": 0,
+            "answered": false,
+            "created": "{day:2458}",
+            "deferred": false,
+            "drill_id": "extra-1-{day:885}",
+            "subject": "Constitutional Law",
+            "title": "A synthetic drill",
+            "type": "case-brief"
+          },
+          {
+            "age_days": 0,
+            "answered": false,
+            "created": "{day:100}",
+            "deferred": false,
+            "drill_id": "irac-{day:100}",
+            "subject": "Torts",
+            "title": "A synthetic drill",
+            "type": "irac"
+          },
+          {
+            "age_days": null,
+            "answered": false,
+            "created": null,
+            "deferred": false,
+            "drill_id": "nofm",
+            "subject": "",
+            "title": "no frontmatter",
+            "type": ""
+          },
+          {
+            "age_days": 30,
+            "answered": false,
+            "created": "{day:60}",
+            "deferred": false,
+            "drill_id": "quoted-{day:60}",
+            "subject": "Trusts & Estates",
+            "title": "A synthetic drill",
+            "type": "\"irac"
+          },
+          {
+            "age_days": null,
+            "answered": false,
+            "created": null,
+            "deferred": false,
+            "drill_id": "untitled",
+            "subject": "",
+            "title": "untitled",
+            "type": "outline"
+          }
+        ]
+      }
+    },
+    {
+      "class": "mixed",
+      "input": {
+        "notes": {
+          "case-brief-{day:80}": "---\ntype: drill-case-brief\nsubject: \"Contracts\"\ncreated: {day:80}\nstatus: active\n---\n# A synthetic drill\n\nThe prompt of A synthetic drill.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [x] **Ready for grading**\n",
+          "evidence-outline-{day:90}": "---\nsubject: \"Evidence\"\nstatus: active\n---\n# Hearsay\n\nThe prompt of Hearsay.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [ ] **Ready for grading**\n",
+          "extra-0-{day:16969}": "---\ntype: drill-case-brief\nsubject: \"Constitutional Law\"\ncreated: {day:2670}\nstatus: active\ndefer_reason: long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long \n---\n# A synthetic drill\n\nThe prompt of A synthetic drill.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [ ] **Ready for grading**\n",
+          "extra-1-{day:7951}": "---\ntype: drill-irac\nsubject: \"Contracts\"\ncreated: {day:3098}\nstatus: active\n---\n# A synthetic drill\n\nThe prompt of A synthetic drill.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [ ] **Ready for grading**\n",
+          "extra-2-{day:8305}": "---\ntype: drill-outline\nsubject: \"Trusts & Estates\"\ncreated: {day:8415}\nstatus: active\ndefer_reason: long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long \n---\n# A synthetic drill\n\nThe prompt of A synthetic drill.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [ ] **Ready for grading**\n",
+          "extra-3-{day:3857}": "---\ntype: drill-irac\nsubject: \"Trusts & Estates\"\ncreated: {day:7667}\nstatus: active\ndefer_reason: long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long \n---\n# A synthetic drill\n\nThe prompt of A synthetic drill.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [ ] **Ready for grading**\n",
+          "folded-{day:50}": "---\ntype: drill-irac\nsubject: \"TRUSTS and ESTATES\"\ncreated: {day:50}\nstatus: active\ndefer_reason: >\n---\n# A synthetic drill\n\nThe prompt of A synthetic drill.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [x] **Ready for grading**\n",
+          "folder-note": null,
+          "irac-{day:100}": "---\ntype: drill-irac\nsubject: \"Torts\"\ncreated: {day:100}\nstatus: active\n---\n# A synthetic drill\n\nThe prompt of A synthetic drill.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [ ] **Ready for grading**\n",
+          "nofm": "# no frontmatter\n- [ ] **Ready for grading**\n",
+          "quoted-{day:60}": "---\ntype: drill-\"irac\"\nsubject: \"Trusts & Estates\"\ncreated: {day:60}\nstatus: active\n---\n# A synthetic drill\n\nThe prompt of A synthetic drill.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [ ] **Ready for grading**\n",
+          "rule-{day:70}": "---\ntype: drill-rule-statement\nsubject: \"Torts\"\ncreated: {badday}\nstatus: active\ndefer_reason: needs the source\n---\n# A synthetic drill\n\nThe prompt of A synthetic drill.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [X] **Ready for grading**\n",
+          "spaced-{day:40}": "---\ntype: drill-irac\nsubject: \"  Torts  \"\ncreated: {day:40}\nstatus: active\ndefer_reason:   too\u200b hard\u0085 \u00a0now  \n---\n# A synthetic drill\n\nThe prompt of A synthetic drill.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [x] **Ready for grading**\n",
+          "untitled": "---\ntype: drill-outline\nstatus: active\n---\nno heading here\n- [ ] **Ready for grading**\n"
+        },
+        "today": 301
+      },
+      "output": {
+        "awaiting_grading": 4,
+        "deferred": 3,
+        "unanswered": [
+          {
+            "age_days": 211,
+            "answered": false,
+            "created": "{day:90}",
+            "deferred": false,
+            "drill_id": "evidence-outline-{day:90}",
+            "subject": "Evidence",
+            "title": "Hearsay",
+            "type": "evidence-outline"
+          },
+          {
+            "age_days": 0,
+            "answered": false,
+            "created": "{day:2670}",
+            "deferred": true,
+            "drill_id": "extra-0-{day:16969}",
+            "subject": "Constitutional Law",
+            "title": "A synthetic drill",
+            "type": "case-brief"
+          },
+          {
+            "age_days": 0,
+            "answered": false,
+            "created": "{day:3098}",
+            "deferred": false,
+            "drill_id": "extra-1-{day:7951}",
+            "subject": "Contracts",
+            "title": "A synthetic drill",
+            "type": "irac"
+          },
+          {
+            "age_days": 0,
+            "answered": false,
+            "created": "{day:8415}",
+            "deferred": true,
+            "drill_id": "extra-2-{day:8305}",
+            "subject": "Trusts & Estates",
+            "title": "A synthetic drill",
+            "type": "outline"
+          },
+          {
+            "age_days": 0,
+            "answered": false,
+            "created": "{day:7667}",
+            "deferred": true,
+            "drill_id": "extra-3-{day:3857}",
+            "subject": "Trusts & Estates",
+            "title": "A synthetic drill",
+            "type": "irac"
+          },
+          {
+            "age_days": 201,
+            "answered": false,
+            "created": "{day:100}",
+            "deferred": false,
+            "drill_id": "irac-{day:100}",
+            "subject": "Torts",
+            "title": "A synthetic drill",
+            "type": "irac"
+          },
+          {
+            "age_days": null,
+            "answered": false,
+            "created": null,
+            "deferred": false,
+            "drill_id": "nofm",
+            "subject": "",
+            "title": "no frontmatter",
+            "type": ""
+          },
+          {
+            "age_days": 241,
+            "answered": false,
+            "created": "{day:60}",
+            "deferred": false,
+            "drill_id": "quoted-{day:60}",
+            "subject": "Trusts & Estates",
+            "title": "A synthetic drill",
+            "type": "\"irac"
+          },
+          {
+            "age_days": null,
+            "answered": false,
+            "created": null,
+            "deferred": false,
+            "drill_id": "untitled",
+            "subject": "",
+            "title": "untitled",
+            "type": "outline"
+          }
+        ]
+      }
+    },
+    {
+      "class": "mixed",
+      "input": {
+        "notes": {
+          "case-brief-{day:80}": "---\ntype: drill-case-brief\nsubject: \"Contracts\"\ncreated: {day:80}\nstatus: active\n---\n# A synthetic drill\n\nThe prompt of A synthetic drill.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [x] **Ready for grading**\n",
+          "evidence-outline-{day:90}": "---\nsubject: \"Evidence\"\nstatus: active\n---\n# Hearsay\n\nThe prompt of Hearsay.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [ ] **Ready for grading**\n",
+          "extra-0-{day:1836}": "---\ntype: drill-irac\nsubject: \"Evidence\"\ncreated: {day:9855}\nstatus: active\n---\n# A synthetic drill\n\nThe prompt of A synthetic drill.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [x] **Ready for grading**\n",
+          "extra-1-{day:11006}": "---\ntype: drill-case-brief\nsubject: \"Contracts\"\ncreated: {day:8972}\nstatus: active\ndefer_reason: later\n---\n# A synthetic drill\n\nThe prompt of A synthetic drill.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [X] **Ready for grading**\n",
+          "folded-{day:50}": "---\ntype: drill-irac\nsubject: \"TRUSTS and ESTATES\"\ncreated: {day:50}\nstatus: active\ndefer_reason: >\n---\n# A synthetic drill\n\nThe prompt of A synthetic drill.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [x] **Ready for grading**\n",
+          "folder-note": null,
+          "irac-{day:100}": "---\ntype: drill-irac\nsubject: \"Torts\"\ncreated: {day:100}\nstatus: active\n---\n# A synthetic drill\n\nThe prompt of A synthetic drill.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [ ] **Ready for grading**\n",
+          "nofm": "# no frontmatter\n- [ ] **Ready for grading**\n",
+          "quoted-{day:60}": "---\ntype: drill-\"irac\"\nsubject: \"Trusts & Estates\"\ncreated: {day:60}\nstatus: active\n---\n# A synthetic drill\n\nThe prompt of A synthetic drill.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [ ] **Ready for grading**\n",
+          "rule-{day:70}": "---\ntype: drill-rule-statement\nsubject: \"Torts\"\ncreated: {badday}\nstatus: active\ndefer_reason: needs the source\n---\n# A synthetic drill\n\nThe prompt of A synthetic drill.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [X] **Ready for grading**\n",
+          "spaced-{day:40}": "---\ntype: drill-irac\nsubject: \"  Torts  \"\ncreated: {day:40}\nstatus: active\ndefer_reason:   too\u200b hard\u0085 \u00a0now  \n---\n# A synthetic drill\n\nThe prompt of A synthetic drill.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [x] **Ready for grading**\n",
+          "untitled": "---\ntype: drill-outline\nstatus: active\n---\nno heading here\n- [ ] **Ready for grading**\n"
+        },
+        "today": 512
+      },
+      "output": {
+        "awaiting_grading": 6,
+        "deferred": 4,
+        "unanswered": [
+          {
+            "age_days": 422,
+            "answered": false,
+            "created": "{day:90}",
+            "deferred": false,
+            "drill_id": "evidence-outline-{day:90}",
+            "subject": "Evidence",
+            "title": "Hearsay",
+            "type": "evidence-outline"
+          },
+          {
+            "age_days": 412,
+            "answered": false,
+            "created": "{day:100}",
+            "deferred": false,
+            "drill_id": "irac-{day:100}",
+            "subject": "Torts",
+            "title": "A synthetic drill",
+            "type": "irac"
+          },
+          {
+            "age_days": null,
+            "answered": false,
+            "created": null,
+            "deferred": false,
+            "drill_id": "nofm",
+            "subject": "",
+            "title": "no frontmatter",
+            "type": ""
+          },
+          {
+            "age_days": 452,
+            "answered": false,
+            "created": "{day:60}",
+            "deferred": false,
+            "drill_id": "quoted-{day:60}",
+            "subject": "Trusts & Estates",
+            "title": "A synthetic drill",
+            "type": "\"irac"
+          },
+          {
+            "age_days": null,
+            "answered": false,
+            "created": null,
+            "deferred": false,
+            "drill_id": "untitled",
+            "subject": "",
+            "title": "untitled",
+            "type": "outline"
+          }
+        ]
+      }
+    }
+  ],
+  "function": "pipeline_layers.nudges.NudgesLayer.drill_queue",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Calls the queue on a layer holding only its settings and its day; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_110.py",
+  "registry_sha256": "d058393f8eb4b64bb586d0f495e756d6bb23e9dfee189e8f89def4160897befe",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

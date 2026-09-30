@@ -575,7 +575,7 @@ closing runs.
 
 | order | crate | listed | killed | equivalent | unexplained | unviable | PR |
 |---|---|---|---|---|---|---|---|
-| 1 | `deck-streak-vault` | 939 | 861 | 11 | 0 | 67 | #277 (runs 36438243392, 36483219611) |
+| 1 | `deck-streak-vault` | 941 | 861 | 13 | 0 | 67 | #277 (runs 36438243392, 36483219611) |
 | 2 | `deck-streak-ingest` | 309 | 239 | 3 | 0 | 67 | #313 (runs 36502008965, 36505515113) |
 | 3 | `deck-streak-kernel` | 423 | 367 | 0 | 0 | 56 | #312 (runs 36502933533, 36508893368) |
 | 4 | `deck-streak-identity` | 143 | 110 | 3 | 0 | 30 | #317 (runs 36511057164, 36511654824) |
@@ -588,6 +588,10 @@ closing runs.
 | 11 | `miniapp` | 274 | 193 | 0 | 81 | 0 | open (#240) |
 
 A delivered row's PR cell reads `#<pull request> (runs <opening>, <closing>)`.
+
+2026-09-29 note: the `deck-streak-vault` row's counts and its runs are #277's. Pull request #412 (SPEC-110, the law
+drills) has since added vault mutation rows in `S11000-S11099` and edited `drills.rs` and `drill_notes.rs`, so
+the row is not re-measured for it: its counts read the vault at #277.
 
 What each delivery meets first, from section 1:
 

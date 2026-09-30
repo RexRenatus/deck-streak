@@ -66,6 +66,13 @@
     },
     {
       "unit": "deck-streak-job@.timer",
+      "instance": "drill_postback",
+      "section": "Timer",
+      "key": "OnCalendar",
+      "neutral": ["*-*-* *:19:00 UTC"]
+    },
+    {
+      "unit": "deck-streak-job@.timer",
       "instance": "liveness",
       "section": "Timer",
       "key": "OnCalendar",
