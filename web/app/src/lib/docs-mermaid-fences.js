@@ -9,15 +9,17 @@
  * the most lists it reads a fence in, so an entry added to one of them is a member too.
  */
 import { createHash } from 'node:crypto';
-import { FENCE_PREFIX, LIST_DEPTH, REFUSED_CHARACTERS, SPECIAL_TAGS } from './docs-mermaid-read.js';
-
-/** The reader's bounds the class members meet at their edges; the reader's own commit exports them. */
-const CONTAINER_DEPTH = LIST_DEPTH;
-const PAGE_DEPTH = 240;
-const LINE_END = /\r\n|\r|\n/;
-const CODE_TICKS = 80;
-const LINK_PARENS = 32;
-const LABEL_UNITS = 250;
+import {
+  CODE_TICKS,
+  CONTAINER_DEPTH,
+  FENCE_PREFIX,
+  LABEL_UNITS,
+  LINE_END,
+  LINK_PARENS,
+  PAGE_DEPTH,
+  REFUSED_CHARACTERS,
+  SPECIAL_TAGS
+} from './docs-mermaid-read.js';
 
 /** A byte-order mark, which cmark-gfm skips at the start of a document and nowhere else. */
 const BOM = '\uFEFF';

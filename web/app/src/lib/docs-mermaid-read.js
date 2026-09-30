@@ -4,11 +4,13 @@
  * `<pre lang="mermaid">` in the HTML it makes from a Markdown text, and it makes that element from a
  * fenced code block whose language word is `mermaid`, or from raw HTML. The reader reads a declared
  * subset of Markdown, on which a CommonMark 0.31.2 parse (commonmark.js) opens the same fences as
- * GitHub's cmark-gfm with the same text, and it refuses by name everything outside that subset that
- * could make, hide or change a diagram. It reads nothing it has not positively read: every line on
- * which cmark-gfm could open a `mermaid` fence, in any container, is either a block it reads or a
- * line it refuses. Its tables are exported, and the check's generated test (`docs-mermaid-fences.js`)
- * draws members from them, so an entry added here is a member there with no test edit.
+ * GitHub's cmark-gfm with the same text, and it refuses by name every form outside that subset that it
+ * has found could make, hide or change a diagram: a line on which cmark-gfm could open a `mermaid`
+ * fence and the reader reads none, a block deeper than cmark-gfm opens one, a block GitHub may nest
+ * past its HTML depth, a line that may open raw HTML, and a tag a CommonMark reading may hide in a
+ * construct cmark-gfm does not form. Its tables are exported, and the check's generated test
+ * (`docs-mermaid-fences.js`) draws members from them, so an entry added here is a member there with no
+ * test edit.
  */
 import { Parser } from 'commonmark';
 
@@ -66,14 +68,57 @@ export const MERMAID_INFO = /mermaid|&/i;
 /** The one info string the reader reads a `mermaid` fence by: the word, and blanks around it. */
 export const MERMAID_WORD = /^[ \t]*mermaid[ \t]*$/;
 
-/** The most lists a fence the reader reads may stand in: cmark-gfm opens no list deeper (`MAX_LIST_DEPTH`). */
-export const LIST_DEPTH = 99;
+/**
+ * The most block quotes and list items together a block the reader reads may stand in. cmark-gfm opens
+ * no list item as the 100th or later block it opens on one line (`MAX_LIST_DEPTH`), and it counts block
+ * quotes among those blocks.
+ */
+export const CONTAINER_DEPTH = 99;
+
+/**
+ * The most elements the reader lets GitHub's HTML nest around the text of a block. GitHub draws no
+ * diagram at or after the first point where its HTML nests more than 254 elements deep (a paragraph
+ * holds 253 nested tags and not 254), so the reader refuses a block whose bound passes this one, with
+ * room to spare: a block quote counts one, a list item two, and each character that may open an
+ * element inside the block (`*`, `~`, `[`, `<`, and `_` not between letters or digits), with every
+ * tag earlier or later in the text, one more.
+ */
+export const PAGE_DEPTH = 240;
+
+/** What ends a line for cmark-gfm: a line feed, a carriage return and line feed, or a carriage return alone. */
+export const LINE_END = /\r\n|\r|\n/;
+
+/** The longest run of backticks cmark-gfm opens a code span with (`MAXBACKTICKS`); commonmark.js has no such limit. */
+export const CODE_TICKS = 80;
+
+/** The most parentheses cmark-gfm nests in a link destination; commonmark.js has no such limit. */
+export const LINK_PARENS = 32;
+
+/**
+ * The fewest characters in brackets the reader takes for a link label cmark-gfm may refuse. cmark-gfm
+ * refuses a label of more than 1,000 bytes and commonmark.js one of more than 1,000 characters, and no
+ * character takes more than four bytes, so a shorter label is one both parsers take or both refuse.
+ */
+export const LABEL_UNITS = 250;
 
 const OPENER = new RegExp(`^${FENCE_PREFIX}(?:\`{3,}|~{3,})(.*)$`);
-const TAG = /^<\/?([A-Za-z][A-Za-z0-9-]*)/;
 const SPECIAL = new Set(SPECIAL_TAGS);
-/** What follows a `<` that opens a tag: a letter, or `/` and a letter. */
-const MARKUP = /^\/?[A-Za-z]/;
+/** A `<` that may begin raw HTML: `!` or `?`, or a tag name after an optional `/`, the name captured. */
+const MARKUP = /<(?:[!?]|\/?([A-Za-z][A-Za-z0-9-]*))/g;
+/** Characters that may open an element inside a block. */
+const OPENS = /[*~[<]|(?<![\p{L}\p{N}])_|_(?![\p{L}\p{N}])/gu;
+/**
+ * A backslash escape of a character the reader's counts read: a parenthesis, a bracket or a backslash.
+ * cmark-gfm and commonmark.js both skip it as a pair, so it opens, closes and ends nothing.
+ */
+const ESCAPE = /\\[()[\]\\]/g;
+/**
+ * A backtick after text cmark-gfm's extended autolink may take up to it: it stops only at an ASCII blank
+ * or `<`. The lines it is tested on are joined with a line feed, so no carriage return is among them.
+ */
+const AUTOLINK = /(?::\/\/|www\.)[^ \t\n<]*`/i;
+/** A table's delimiter row, in the shape cmark-gfm opens a table with, and wider. */
+const DELIMITER = /^[|: \t-]*-[|: \t-]*$/;
 
 /**
  * The refused characters as one pattern. It is built each time a text is read, not when the module
@@ -133,22 +178,11 @@ function gfmParser(/** @type {Fence[]} */ fences) {
  * A `mermaid` block: its first line in the text, counted from 1, and the text GitHub renders as the diagram.
  *
  * @typedef {{ line: number, form: string }} Refusal
- * A form the reader does not read: its line, counted from 1 (for raw HTML inside a paragraph, the
- * paragraph's first line), and what it is.
+ * A form the reader does not read: its line, counted from 1 (for a block GitHub may nest too deep, the
+ * block's first line), and what it is.
  *
  * @typedef {{ blocks: Block[], refused: Refusal[] }} Reading
  */
-
-/** Whether an inline raw HTML node is the first thing on its line. */
-function opensLine(/** @type {import('commonmark').Node} */ node) {
-  return node.prev === null || node.prev.type === 'softbreak' || node.prev.type === 'linebreak';
-}
-
-/** The line a node stands on: its own, or its nearest block's. */
-function lineOf(/** @type {import('commonmark').Node | null} */ node) {
-  for (let at = node; at; at = at.parent) if (at.sourcepos) return at.sourcepos[0][0];
-  return 1;
-}
 
 /**
  * Reads `text`: the `mermaid` blocks, in order, each a fenced code block whose info string is
@@ -160,39 +194,101 @@ export function readMermaid(/** @type {string} */ text) {
   const blocks = [];
   /** @type {Refusal[]} */
   const refused = [];
-  const lines = text.split(/\r\n|\r|\n/);
+  const lines = text.split(LINE_END);
   const refusedCharacter = refusedPattern();
   lines.forEach((line, at) => {
     if (refusedCharacter.test(line)) refused.push({ line: at + 1, form: 'a character GitHub reads otherwise' });
   });
-  // Every node examined below is a leaf, which the walker visits once, entering.
   /** @type {Fence[]} */
   const fences = [];
   const walker = gfmParser(fences).parse(text).walker();
+  const prefix = new RegExp(`^${FENCE_PREFIX}`);
+  const lineStart = new RegExp(`^${FENCE_PREFIX}<(?:[!?]|/?([A-Za-z][A-Za-z0-9-]*)(?=[\\s/>]|$)(.*>[ \\t]*$)?)`);
+  const body = new Set();
+  for (const { node } of fences) for (let n = node.sourcepos[0][0] + 1; n <= node.sourcepos[1][0]; n += 1) body.add(n);
+  /** Each line outside every fence's body, with its index: the lines raw HTML may stand on. */
+  const outside = [...lines.entries()].filter(([at]) => !body.has(at + 1));
+  const tags = outside.map(([, line]) => line).join('\n').match(/<[A-Za-z]/g)?.length ?? 0;
+  /** @type {(line: string) => number} */
+  const special = (line) => [...line.matchAll(MARKUP)].filter((m) => m[1] === undefined || SPECIAL.has(m[1].toLowerCase())).length;
+  /** @typedef {{ node: import('commonmark').Node, code: number, breaks: number, risk: boolean, url: boolean }} Leaf */
+  /** @type {Map<number, Leaf>} */
+  const owner = new Map();
+  let quotes = 0;
+  let items = 0;
+  /** @type {Leaf | undefined} */
+  let leaf;
   for (let step = walker.next(); step; step = walker.next()) {
-    const { node } = step;
-    if (node.type === 'html_block') refused.push({ line: lineOf(node), form: 'a raw HTML block' });
-    // Only a text node or a code span holds `<` alone; the rule refuses a line-opening `<` in either.
-    if (node.literal === '<' && opensLine(node)) {
-      const next = node.next?.type === 'text' ? /** @type {string} */ (node.next.literal) : '';
-      if (MARKUP.test(next)) refused.push({ line: lineOf(node), form: 'a `<` that may open raw HTML' });
-    }
-    if (node.type === 'html_inline') {
-      const name = TAG.exec(/** @type {string} */ (node.literal))?.[1].toLowerCase();
-      if (name === undefined || SPECIAL.has(name) || opensLine(node)) {
-        refused.push({ line: lineOf(node), form: `raw HTML \`${node.literal}\`` });
+    const { node, entering } = step;
+    const container = node.type === 'block_quote' || node.type === 'item';
+    if (container) {
+      const change = entering ? 1 : -1;
+      if (node.type === 'item') items += change;
+      else quotes += change;
+      if (entering && quotes + items > CONTAINER_DEPTH) {
+        refused.push({ line: node.sourcepos[0][0], form: `a block in more than ${CONTAINER_DEPTH} block quotes and list items` });
       }
     }
+    if (leaf && (node.type === 'softbreak' || node.type === 'linebreak')) leaf.breaks += 1;
+    if (leaf && node.type === 'text' && /:\/\/|www\./i.test(/** @type {string} */ (node.literal))) leaf.url = true;
+    if (node.type === 'code' && leaf) {
+      const literal = /** @type {string} */ (node.literal);
+      if (literal.includes('|')) leaf.risk = true;
+      leaf.code += special(literal);
+    }
+    if (!entering || !node.sourcepos || container || node.type === 'list' || node.type === 'document') continue;
+    const [first, last] = [node.sourcepos[0][0], node.sourcepos[1][0]];
+    let opens = 0;
+    if (node.type !== 'code_block') {
+      for (let n = first; n <= last; n += 1) {
+        const line = /** @type {string} */ (lines[n - 1]);
+        opens += line.slice(/** @type {RegExpExecArray} */ (prefix.exec(line))[0].length).match(OPENS)?.length ?? 0;
+      }
+    }
+    if (quotes + 2 * items + opens + tags > PAGE_DEPTH) {
+      refused.push({ line: first, form: `a block GitHub may nest more than ${PAGE_DEPTH} elements deep` });
+    }
+    leaf = { node, code: 0, breaks: 0, risk: false, url: false };
+    for (let n = first; n <= last; n += 1) owner.set(n, leaf);
   }
+  const labels = new RegExp(`\\[[^[\\]]{${LABEL_UNITS},}\\]`).test(text.replace(ESCAPE, '__'));
+  const ticks = new RegExp(`\`{${CODE_TICKS + 1},}`);
+  /**
+   * Whether each special tag of a block stands in a code span that cmark-gfm forms as commonmark.js
+   * does. Only a paragraph or a heading holds a code span, so a tag on a line of any other block, or of
+   * none, is never trusted. It is asked only for a line that holds such a tag, so a text with none pays
+   * nothing for it.
+   */
+  const trusted = (/** @type {Leaf} */ { node, code, breaks, risk, url }) => {
+    const held = lines.slice(node.sourcepos[0][0] - 1, node.sourcepos[1][0]);
+    const all = held.reduce((sum, line) => sum + special(line), 0);
+    const raw = held.join('\n');
+    const plain = raw.replace(ESCAPE, '__');
+    const table = held.some((line) => DELIMITER.test(line.replace(prefix, '')));
+    let parens = 0;
+    let deepest = 0;
+    for (const c of plain) {
+      parens += c === '(' ? 1 : c === ')' && parens > 0 ? -1 : 0;
+      deepest = Math.max(deepest, parens);
+    }
+    const cells = table && (risk || breaks < held.length - 1 || raw.includes('\\|'));
+    return all === code && !cells && !labels && deepest <= LINK_PARENS && !ticks.test(raw) && !(url && AUTOLINK.test(raw)) && !/\]\[[^[\]]*`/.test(plain);
+  };
+  outside.forEach(([at, line]) => {
+    const start = lineStart.exec(line);
+    if (start && (start[1] === undefined || SPECIAL.has(start[1].toLowerCase()) || start[2] !== undefined)) {
+      refused.push({ line: at + 1, form: 'a line that may open raw HTML' });
+    } else if (special(line) > 0) {
+      const leaf = owner.get(at + 1);
+      if (leaf === undefined || !trusted(leaf)) refused.push({ line: at + 1, form: 'raw HTML a CommonMark reading may hide' });
+    }
+  });
   for (const { node, info } of fences) {
     const line = node.sourcepos[0][0];
     if (MERMAID_INFO.test(info) && !MERMAID_WORD.test(info)) {
       refused.push({ line, form: 'a fence whose info string is not `mermaid` alone' });
     } else if (MERMAID_WORD.test(info)) {
-      let lists = 0;
-      for (let at = node.parent; at; at = at.parent) if (at.type === 'list') lists += 1;
-      if (lists > LIST_DEPTH) refused.push({ line, form: `a fence in more than ${LIST_DEPTH} lists` });
-      else if (!/\S/u.test(/** @type {string} */ (node.literal))) refused.push({ line, form: 'a `mermaid` block that holds no diagram' });
+      if (!/\S/u.test(/** @type {string} */ (node.literal))) refused.push({ line, form: 'a `mermaid` block that holds no diagram' });
       else blocks.push({ line, source: /** @type {string} */ (node.literal) });
     }
   }
