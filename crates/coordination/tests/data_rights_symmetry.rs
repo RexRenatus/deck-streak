@@ -364,8 +364,10 @@ async fn seeds_tell_every_column_apart(probe: &Probe, table: &str) -> usize {
         let Value::Object(columns) = row else {
             panic!("a row of {table} is a JSON object");
         };
-        let named: Vec<(&String, &Value)> =
-            columns.iter().filter(|(_, value)| !value.is_null()).collect();
+        let named: Vec<(&String, &Value)> = columns
+            .iter()
+            .filter(|(_, value)| !value.is_null())
+            .collect();
         for (i, (left, a)) in named.iter().enumerate() {
             for (right, b) in &named[i + 1..] {
                 if std::mem::discriminant(*a) == std::mem::discriminant(*b) {

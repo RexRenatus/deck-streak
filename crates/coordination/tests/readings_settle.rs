@@ -592,5 +592,8 @@ async fn the_settle_and_the_tap_read_the_configured_study_day() {
         "every offset by every rollover hour"
     );
     assert_eq!(examined, 16, "eight offsets by two rollover hours");
-    assert!(instants_examined >= 16 * 4, "each rule is read at its instants");
+    assert!(
+        instants_examined >= 16 * 4,
+        "each rule is read at its instants"
+    );
 }

@@ -32,7 +32,7 @@ use deck_streak_coordination::readings::generate::{
     StudyDayResolver, VaultWriteFailed, generate_readings,
 };
 use deck_streak_coordination::readings::resolve::{ResolveError, Resolved};
-use deck_streak_kernel::{Db, ManualClock, StudyDay, StudyDayRule, UtcMillis};
+use deck_streak_kernel::{Db, Hour, ManualClock, StudyDay, StudyDayRule, UtcMillis, UtcOffset};
 use deck_streak_readings::attempts::AttemptOutcome;
 use deck_streak_readings::day_set::{ActiveTopic, StudyDayResolution, TopicEnd, TopicResolution};
 use deck_streak_readings::seed::SeedNote;
@@ -364,6 +364,16 @@ impl Rig {
         &self,
         route: AiRoute,
     ) -> deck_streak_coordination::readings::generate::Generated {
+        self.generate_at(route, StudyDayRule::default(), START)
+            .await
+    }
+
+    async fn generate_at(
+        &self,
+        route: AiRoute,
+        rule: StudyDayRule,
+        instant: i64,
+    ) -> deck_streak_coordination::readings::generate::Generated {
         let parts = GenerateParts {
             route,
             roster: &self.roster,
@@ -373,8 +383,8 @@ impl Rig {
             notes: &self.notes,
             vault: &self.vault,
             store: self.store.clone(),
-            clock: Arc::new(ManualClock::new(UtcMillis::from_epoch_millis(START))),
-            rule: StudyDayRule::default(),
+            clock: Arc::new(ManualClock::new(UtcMillis::from_epoch_millis(instant))),
+            rule,
             taxonomy: Some(self.taxonomy.clone()),
             prompt: PromptTexts {
                 rules: &self.texts[0],
@@ -693,4 +703,65 @@ async fn a_law_topic_never_asks_for_new_words() {
         0,
         "new words are fetched only for a language topic"
     );
+}
+
+const HOUR_MS: i64 = 3_600_000;
+/// The rollover hours and the offsets, in minutes east of UTC, the rule population is the product of.
+const HOURS: [i64; 2] = [0, 4];
+const OFFSETS: [i64; 8] = [-720, -300, -210, 0, 330, 345, 540, 840];
+
+/// The UTC instant study day `day` begins at, written from the definition.
+fn begins(day: i64, hour: i64, offset: i64) -> i64 {
+    day * DAY_MS + hour * HOUR_MS - offset * 60_000
+}
+
+#[tokio::test]
+async fn the_generation_dates_its_run_and_readings_in_the_configured_study_day() {
+    let mut examined = 0;
+    let mut instants_examined = 0;
+    for offset in OFFSETS {
+        for hour in HOURS {
+            let rule = StudyDayRule::new(
+                Hour::new(u8::try_from(hour).expect("an hour")).expect("an hour"),
+                UtcOffset::from_minutes(i16::try_from(offset).expect("minutes"))
+                    .expect("an offset"),
+            );
+            let mut instants = std::collections::BTreeSet::new();
+            for day in [20_001, 20_002] {
+                let own = begins(day, hour, offset);
+                let default = day * DAY_MS + 4 * HOUR_MS;
+                instants.extend([own - 1, own, default - 1, default]);
+            }
+            for instant in instants {
+                let day = (instant + offset * 60_000 - hour * HOUR_MS).div_euclid(DAY_MS);
+                let configured = StudyDay::from_epoch_day(day);
+                let rig = Rig::new(one_topic(), good()).await;
+                rig.generate_at(AiRoute::Proxy, rule, instant).await;
+                let stored = readings(&rig).await;
+                assert_eq!(stored.len(), 1, "a reading");
+                assert_eq!(
+                    stored[0].reading.study_day, configured,
+                    "offset {offset}, hour {hour}, instant {instant}: the reading is dated by the configured day"
+                );
+                let days = rig.store.topic_days(configured).await.expect("topic days");
+                assert!(
+                    !days.is_empty(),
+                    "offset {offset}, hour {hour}, instant {instant}: the topic day is dated by the configured day"
+                );
+                let absent = Rig::new(one_topic(), good()).await;
+                absent.generate_at(AiRoute::Absent, rule, instant).await;
+                let runs = absent.store.runs().await.expect("runs");
+                assert_eq!(
+                    runs.last().expect("a run").1.study_day,
+                    configured,
+                    "offset {offset}, hour {hour}, instant {instant}: the absent-route run is dated by the configured day"
+                );
+                instants_examined += 1;
+            }
+            examined += 1;
+        }
+    }
+    println!("examined {examined} configured rule(s), {instants_examined} instant(s)");
+    assert_eq!(examined, OFFSETS.len() * HOURS.len());
+    assert_eq!(examined, 16, "eight offsets by two rollover hours");
 }
