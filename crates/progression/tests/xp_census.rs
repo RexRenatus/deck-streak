@@ -2371,3 +2371,1847 @@ fn the_census_follows_a_crate_renamed_by_a_manifest() {
         ]
     );
 }
+
+/// One tree of round 5's population (VR5): its files, whether it is a member (it reaches
+/// progression's `settle`) or a control (the same text reaching another crate's), and whether the
+/// census must refuse it.
+struct Planted {
+    axis: &'static str,
+    label: String,
+    member: bool,
+    refused: bool,
+    files: Vec<(String, String)>,
+}
+
+/// The crate a VR5 case reaches: progression's for a member, `deck-streak-other`'s for a control,
+/// as (folder, crate, package).
+const fn vr5_target(member: bool) -> (&'static str, &'static str, &'static str) {
+    if member {
+        (
+            "progression",
+            "deck_streak_progression",
+            "deck-streak-progression",
+        )
+    } else {
+        ("other", "deck_streak_other", "deck-streak-other")
+    }
+}
+
+/// The member `m`'s manifest, with `extra` in its `[package]` table and then `dependencies`.
+fn vr5_manifest(dependencies: &str, extra: &str) -> String {
+    format!(
+        "[package]\nname = \"deck-streak-m\"\nversion = \"0.1.0\"\nedition = \"2024\"\n{extra}\n\
+         {dependencies}"
+    )
+}
+
+/// A plain path dependency of `m` on the case's crate.
+fn vr5_dependency(member: bool) -> String {
+    let (folder, _, package) = vr5_target(member);
+    format!("[dependencies]\n{package} = {{ path = \"../{folder}\" }}\n")
+}
+
+/// A function that calls `settle` below `name`, as a path or through a `use`.
+fn vr5_call(name: &str, shape: &str) -> String {
+    let body = if shape == "path" {
+        format!("{name}::settle()")
+    } else {
+        format!("{{ use {name}::settle as go; go() }}")
+    };
+    format!("pub fn call() -> usize {{\n    {body}\n}}\n")
+}
+
+/// The workspace's manifest with its members.
+fn vr5_root(members: &str, extra: &str) -> (String, String) {
+    (
+        "Cargo.toml".to_owned(),
+        format!("[workspace]\nmembers = {members}\nresolver = \"3\"\n{extra}"),
+    )
+}
+
+/// VR5's population, generated from the axes of Cargo's "Specifying Dependencies", "Workspaces"
+/// and "Cargo Targets", TOML 1.0 and the Rust Reference (read 2026-09-30). rustc 1.97.0 compiled
+/// every tree, with a deprecation on each crate's `settle`: each member fired progression's in its
+/// caller and each control fired the other crate's, so each member is a caller by the compiler's
+/// own reading. A control the census cannot read as rustc does is refused too: the rule fails
+/// closed there, loudly.
+#[allow(clippy::too_many_lines)]
+fn vr5_population() -> Vec<Planted> {
+    let mut cases = Vec::new();
+    let mut add = |axis, label: String, member, refused, files: Vec<(String, String)>| {
+        cases.push(Planted {
+            axis,
+            label,
+            member,
+            refused: member || refused,
+            files,
+        });
+    };
+    let root = vr5_root("[\"crates/*\"]", "");
+    // R: files rustc compiles by `#[path]` or `include!`, in and out of the census's reading.
+    for mechanism in ["include-items", "include-expr", "path-mod", "cfg-attr-path"] {
+        for (location, real, written) in [
+            ("src", "crates/m/src/", ""),
+            ("src-sub", "crates/m/src/sub/", "sub/"),
+            ("member-outside-src", "crates/m/extra/", "../extra/"),
+            ("repo-outside-crates", "shared/", "../../../shared/"),
+        ] {
+            for extension in [".rs", ".in", ".inc", ".txt", "", ".RS", ".rs.in"] {
+                let shapes: &[&str] = if mechanism == "include-expr" {
+                    &["path"]
+                } else {
+                    &["path", "use"]
+                };
+                for shape in shapes {
+                    for member in [true, false] {
+                        let (_, name, _) = vr5_target(member);
+                        let literal = format!("{written}call{extension}");
+                        let (lib, payload) = match mechanism {
+                            "include-expr" => (
+                                format!(
+                                    "pub fn call() -> usize {{\n    include!(\"{literal}\")\n}}\n"
+                                ),
+                                format!("{name}::settle()\n"),
+                            ),
+                            "include-items" => {
+                                (format!("include!(\"{literal}\");\n"), vr5_call(name, shape))
+                            }
+                            "path-mod" => (
+                                format!("#[path = \"{literal}\"]\npub mod call;\n"),
+                                vr5_call(name, shape),
+                            ),
+                            _ => (
+                                format!(
+                                    "#[cfg_attr(all(), path = \"{literal}\")]\npub mod call;\n"
+                                ),
+                                vr5_call(name, shape),
+                            ),
+                        };
+                        add(
+                            "R reading scope",
+                            format!("{mechanism} / {location} / ext '{extension}' / {shape}"),
+                            member,
+                            false,
+                            vec![
+                                root.clone(),
+                                (
+                                    "crates/m/Cargo.toml".to_owned(),
+                                    vr5_manifest(&vr5_dependency(member), ""),
+                                ),
+                                ("crates/m/src/lib.rs".to_owned(), lib),
+                                (format!("{real}call{extension}"), payload),
+                            ],
+                        );
+                    }
+                }
+            }
+        }
+    }
+    // W: crates Cargo builds outside `crates/<member>/src`.
+    for shape in ["path", "use"] {
+        for member in [true, false] {
+            let (folder, name, package) = vr5_target(member);
+            let body = vr5_call(name, shape);
+            let tool = |up: &str| {
+                format!(
+                    "[package]\nname = \"deck-streak-t\"\nversion = \"0.1.0\"\nedition = \"2024\"\n\n\
+                     [dependencies]\n{package} = {{ path = \"{up}crates/{folder}\" }}\n"
+                )
+            };
+            for (label, members, at) in [
+                (
+                    "member by glob tools/*",
+                    "[\"crates/*\", \"tools/*\"]",
+                    "tools/t",
+                ),
+                (
+                    "member by path tools/t",
+                    "[\"crates/*\", \"tools/t\"]",
+                    "tools/t",
+                ),
+                ("member at the root t", "[\"crates/*\", \"t\"]", "t"),
+            ] {
+                let up = "../".repeat(at.split('/').count());
+                add(
+                    "W workspace layout",
+                    format!("{label} / {shape}"),
+                    member,
+                    false,
+                    vec![
+                        vr5_root(members, ""),
+                        (format!("{at}/Cargo.toml"), tool(&up)),
+                        (format!("{at}/src/lib.rs"), body.clone()),
+                    ],
+                );
+            }
+            add(
+                "W workspace layout",
+                format!("path dependency auto-member tools/t / {shape}"),
+                member,
+                false,
+                vec![
+                    root.clone(),
+                    ("tools/t/Cargo.toml".to_owned(), tool("../../")),
+                    ("tools/t/src/lib.rs".to_owned(), body.clone()),
+                    (
+                        "crates/m/Cargo.toml".to_owned(),
+                        vr5_manifest(
+                            "[dependencies]\ndeck-streak-t = { path = \"../../tools/t\" }\n",
+                            "",
+                        ),
+                    ),
+                    (
+                        "crates/m/src/lib.rs".to_owned(),
+                        "pub use deck_streak_t;\n".to_owned(),
+                    ),
+                ],
+            );
+            for (label, written, real) in [
+                ("[lib] path at the member root", "lib.rs", "crates/m/lib.rs"),
+                (
+                    "[lib] path with extension .in",
+                    "src/lib.in",
+                    "crates/m/src/lib.in",
+                ),
+                (
+                    "[lib] path outside crates",
+                    "../../shared/m.rs",
+                    "shared/m.rs",
+                ),
+            ] {
+                add(
+                    "W workspace layout",
+                    format!("{label} / {shape}"),
+                    member,
+                    false,
+                    vec![
+                        root.clone(),
+                        (
+                            "crates/m/Cargo.toml".to_owned(),
+                            vr5_manifest(
+                                &vr5_dependency(member),
+                                &format!("\n[lib]\npath = \"{written}\"\n"),
+                            ),
+                        ),
+                        (real.to_owned(), body.clone()),
+                    ],
+                );
+            }
+        }
+    }
+    // T: a manifest's rename, in every key and value spelling TOML 1.0 reads and every place Cargo
+    // reads a dependency.
+    let keys = [
+        ("bare", "bound"),
+        ("basic", "\"bound\""),
+        ("literal", "'bound'"),
+        ("basic \\u", "\"\\u0062ound\""),
+        ("basic \\U", "\"\\U00000062ound\""),
+        ("basic mid \\u", "\"bo\\u0075nd\""),
+    ];
+    let caller = "pub fn call() -> usize {\n    bound::settle()\n}\n";
+    for (key_name, key) in keys {
+        for member in [true, false] {
+            let (folder, _, package) = vr5_target(member);
+            let (head, rest) = package.split_once('-').expect("a package with a dash");
+            let values = [
+                ("basic", format!("\"{package}\"")),
+                ("literal", format!("'{package}'")),
+                (
+                    "basic \\u letter",
+                    format!("\"{}\"", package.replacen('d', "\\u0064", 1)),
+                ),
+                (
+                    "basic \\u dash",
+                    format!("\"{}\"", package.replacen('-', "\\u002d", 1)),
+                ),
+                ("ml-basic first newline", format!("\"\"\"\n{package}\"\"\"")),
+                ("ml-literal first newline", format!("'''\n{package}'''")),
+                (
+                    "ml-basic line-ending backslash",
+                    format!("\"\"\"{head}-\\\n    {rest}\"\"\""),
+                ),
+                ("ml-basic", format!("\"\"\"{package}\"\"\"")),
+            ];
+            for (value_name, value) in &values {
+                let path = format!("path = \"../{folder}\"");
+                let inherited = format!(
+                    "\n[workspace.dependencies]\n{key} = {{ package = {value}, path = \"crates/{folder}\" }}\n"
+                );
+                let placements = [
+                    (
+                        "inline",
+                        format!("[dependencies]\n{key} = {{ package = {value}, {path} }}\n"),
+                        String::new(),
+                    ),
+                    (
+                        "table",
+                        format!("[dependencies.{key}]\npackage = {value}\n{path}\n"),
+                        String::new(),
+                    ),
+                    (
+                        "dotted",
+                        format!("[dependencies]\n{key}.package = {value}\n{key}.{path}\n"),
+                        String::new(),
+                    ),
+                    (
+                        "dotted, spaces around the dot",
+                        format!("[dependencies]\n{key} . package = {value}\n{key} . {path}\n"),
+                        String::new(),
+                    ),
+                    (
+                        "header, spaces around the dot",
+                        format!("[ dependencies . {key} ]\npackage = {value}\n{path}\n"),
+                        String::new(),
+                    ),
+                    (
+                        "target inline",
+                        format!(
+                            "[target.'cfg(unix)'.dependencies]\n{key} = {{ package = {value}, {path} }}\n"
+                        ),
+                        String::new(),
+                    ),
+                    (
+                        "target table",
+                        format!(
+                            "[target.\"cfg(unix)\".dependencies.{key}]\npackage = {value}\n{path}\n"
+                        ),
+                        String::new(),
+                    ),
+                    (
+                        "workspace inherited",
+                        format!("[dependencies]\n{key} = {{ workspace = true }}\n"),
+                        inherited.clone(),
+                    ),
+                    (
+                        "workspace inherited, member key bare",
+                        "[dependencies]\nbound = { workspace = true }\n".to_owned(),
+                        inherited.clone(),
+                    ),
+                ];
+                for (place, dependencies, extra) in placements {
+                    add(
+                        "T manifests",
+                        format!("key {key_name} / value {value_name} / {place}"),
+                        member,
+                        false,
+                        vec![
+                            vr5_root("[\"crates/*\"]", &extra),
+                            (
+                                "crates/m/Cargo.toml".to_owned(),
+                                vr5_manifest(&dependencies, ""),
+                            ),
+                            ("crates/m/src/lib.rs".to_owned(), caller.to_owned()),
+                        ],
+                    );
+                }
+            }
+        }
+    }
+    for (label, description) in [
+        ("ml-basic holding #", "\"\"\"a # b\"\"\""),
+        (
+            "ml-basic holding a header",
+            "\"\"\"\n[dependencies]\nbound = 1\n\"\"\"",
+        ),
+        ("ml-literal holding #", "'''a # b'''"),
+        (
+            "ml-literal holding a comment and a header",
+            "'''\n# c\n[x]\n'''",
+        ),
+        (
+            "ml-basic holding two quotes and #",
+            "\"\"\"a \"\" b # c\"\"\"",
+        ),
+        (
+            "ml-basic holding an escaped triple quote",
+            "\"\"\"a \\\"\"\" # c\"\"\"",
+        ),
+        ("literal holding a quote and #", "'a \"# b'"),
+        ("basic holding an apostrophe and #", "\"a '# b\""),
+        ("ml-basic ending in four quotes", "\"\"\"a\"\"\"\""),
+        ("ml-literal ending in four apostrophes", "'''a''''"),
+    ] {
+        for member in [true, false] {
+            let (folder, _, package) = vr5_target(member);
+            add(
+                "T manifests",
+                format!("a [package] description {label}, then a plain rename"),
+                member,
+                false,
+                vec![
+                    root.clone(),
+                    (
+                        "crates/m/Cargo.toml".to_owned(),
+                        vr5_manifest(
+                            &format!(
+                                "[dependencies]\nbound = {{ package = \"{package}\", path = \"../{folder}\" }}\n"
+                            ),
+                            &format!("description = {description}\n"),
+                        ),
+                    ),
+                    ("crates/m/src/lib.rs".to_owned(), caller.to_owned()),
+                ],
+            );
+        }
+    }
+    // U: identifiers rustc reads in NFC, and connectors it joins into one.
+    let letters = [
+        ("e-acute", "\u{e9}", "e\u{301}"),
+        ("n-tilde", "\u{f1}", "n\u{303}"),
+        ("a-ring", "\u{e5}", "a\u{30a}"),
+        ("o-umlaut", "\u{f6}", "o\u{308}"),
+        ("hangul-ga", "\u{ac00}", "\u{1100}\u{1161}"),
+    ];
+    let mut spellings = Vec::new();
+    for (letter, nfc, nfd) in letters {
+        for (place, before, after) in [("mid", "pr", "g"), ("end", "pr", "")] {
+            for (pair, bound, called) in [
+                ("NFC/NFD", nfc, nfd),
+                ("NFD/NFC", nfd, nfc),
+                ("NFD/NFD", nfd, nfd),
+                ("NFC/NFC", nfc, nfc),
+            ] {
+                spellings.push((
+                    format!("{letter} {place} {pair}"),
+                    format!("{before}{bound}{after}"),
+                    format!("{before}{called}{after}"),
+                ));
+            }
+        }
+    }
+    for (connector, character) in [
+        ("undertie", '\u{203f}'),
+        ("middle-dot", '\u{b7}'),
+        ("dashed-low-line", '\u{fe4f}'),
+        ("character-tie", '\u{2040}'),
+    ] {
+        spellings.push((
+            connector.to_owned(),
+            format!("pr{character}g"),
+            format!("pr{character}g"),
+        ));
+    }
+    for (spelling, bound, called) in &spellings {
+        for form in [
+            "use as",
+            "extern crate as",
+            "{self as}",
+            "progression op alias",
+        ] {
+            for shape in ["path", "use"] {
+                for member in [true, false] {
+                    let (_, name, _) = vr5_target(member);
+                    let mut files = vec![
+                        root.clone(),
+                        (
+                            "crates/m/Cargo.toml".to_owned(),
+                            vr5_manifest(&vr5_dependency(member), ""),
+                        ),
+                    ];
+                    let lib = match form {
+                        "use as" => format!("use {name} as {bound};\n{}", vr5_call(called, shape)),
+                        "extern crate as" => {
+                            format!(
+                                "extern crate {name} as {bound};\n{}",
+                                vr5_call(called, shape)
+                            )
+                        }
+                        "{self as}" => {
+                            format!(
+                                "use {name}::{{self as {bound}}};\n{}",
+                                vr5_call(called, shape)
+                            )
+                        }
+                        _ => {
+                            let (owner, text) = if member {
+                                (
+                                    "crates/progression/src/lib.rs",
+                                    format!("{KILLER_LIB}pub use settle::settle as t{bound};\n"),
+                                )
+                            } else {
+                                (
+                                    VR5_OTHER.0,
+                                    format!("{}pub use self::settle as t{bound};\n", VR5_OTHER.1),
+                                )
+                            };
+                            files.push((owner.to_owned(), text));
+                            if shape == "path" {
+                                format!("pub fn call() -> usize {{\n    {name}::t{called}()\n}}\n")
+                            } else {
+                                format!(
+                                    "use {name}::t{called};\npub fn call() -> usize {{\n    t{called}()\n}}\n"
+                                )
+                            }
+                        }
+                    };
+                    files.push(("crates/m/src/lib.rs".to_owned(), lib));
+                    add(
+                        "U identifiers",
+                        format!("{form} / {spelling} / {shape}"),
+                        member,
+                        false,
+                        files,
+                    );
+                }
+            }
+        }
+    }
+    // M: macros by example in a member.
+    let macros = [
+        (
+            "ident crate, literal op",
+            "macro_rules! go {\n    ($c:ident) => { $c::settle() };\n}\npub fn call() -> usize {\n    go!(@N)\n}\n",
+        ),
+        (
+            "ident crate, ident op",
+            "macro_rules! go {\n    ($c:ident, $f:ident) => { $c::$f() };\n}\npub fn call() -> usize {\n    go!(@N, settle)\n}\n",
+        ),
+        (
+            "literal crate, ident op",
+            "macro_rules! go {\n    ($f:ident) => { @N::$f() };\n}\npub fn call() -> usize {\n    go!(settle)\n}\n",
+        ),
+        (
+            "path fragment",
+            "macro_rules! go {\n    ($c:path) => { $c() };\n}\npub fn call() -> usize {\n    go!(@N::settle)\n}\n",
+        ),
+        (
+            "macro writes the use",
+            "macro_rules! go {\n    ($c:ident) => { use $c as p; };\n}\ngo!(@N);\npub fn call() -> usize {\n    p::settle()\n}\n",
+        ),
+        (
+            "macro writes the fn",
+            "macro_rules! go {\n    ($c:ident) => { pub fn call() -> usize { $c::settle() } };\n}\ngo!(@N);\n",
+        ),
+        (
+            "tt passthrough",
+            "macro_rules! go {\n    ($($t:tt)*) => { $($t)* };\n}\npub fn call() -> usize {\n    go!(@N::settle())\n}\n",
+        ),
+        (
+            "returns the fn item",
+            "macro_rules! go {\n    ($c:ident) => { $c::settle };\n}\npub fn call() -> usize {\n    (go!(@N))()\n}\n",
+        ),
+        (
+            "two macros",
+            "macro_rules! b {\n    ($c:ident, $f:ident) => { $c::$f() };\n}\nmacro_rules! a {\n    ($c:ident) => { b!($c, settle) };\n}\npub fn call() -> usize {\n    a!(@N)\n}\n",
+        ),
+    ];
+    for (label, text) in macros {
+        for spelled in ["canonical", "alias"] {
+            for member in [true, false] {
+                let (_, name, _) = vr5_target(member);
+                let lib = if spelled == "canonical" {
+                    text.replace("@N", name)
+                } else {
+                    format!("use {name} as p2;\n{}", text.replace("@N", "p2"))
+                };
+                add(
+                    "M member macros",
+                    format!("{label} / {spelled}"),
+                    member,
+                    false,
+                    vec![
+                        root.clone(),
+                        (
+                            "crates/m/Cargo.toml".to_owned(),
+                            vr5_manifest(&vr5_dependency(member), ""),
+                        ),
+                        ("crates/m/src/lib.rs".to_owned(), lib),
+                    ],
+                );
+            }
+        }
+    }
+    // P: paths the Reference admits; the other crate has no `settle` module, so the two paths
+    // through progression's module have no control.
+    let paths = [
+        (
+            "leading ::",
+            "pub fn call() -> usize {\n    ::@N::settle()\n}\n",
+            true,
+        ),
+        (
+            "crate:: after extern crate",
+            "extern crate @N;\npub fn call() -> usize {\n    crate::@N::settle()\n}\n",
+            true,
+        ),
+        (
+            "self:: after extern crate",
+            "extern crate @N;\npub fn call() -> usize {\n    self::@N::settle()\n}\n",
+            true,
+        ),
+        (
+            "empty turbofish",
+            "pub fn call() -> usize {\n    @N::settle::<>()\n}\n",
+            true,
+        ),
+        (
+            "block-scope glob",
+            "pub fn call() -> usize {\n    use @N::*;\n    settle()\n}\n",
+            true,
+        ),
+        (
+            "module then fn",
+            "pub fn call() -> usize {\n    @N::settle::settle()\n}\n",
+            false,
+        ),
+        (
+            "group of the module self",
+            "use @N::{settle::{self}};\npub fn call() -> usize {\n    settle::settle()\n}\n",
+            false,
+        ),
+        (
+            "fn pointer const",
+            "pub const F: fn() -> usize = @N::settle;\npub fn call() -> usize {\n    F()\n}\n",
+            true,
+        ),
+    ];
+    for (label, text, controlled) in paths {
+        for member in [true, false] {
+            if !member && !controlled {
+                continue;
+            }
+            let (_, name, _) = vr5_target(member);
+            add(
+                "P paths",
+                label.to_owned(),
+                member,
+                false,
+                vec![
+                    root.clone(),
+                    (
+                        "crates/m/Cargo.toml".to_owned(),
+                        vr5_manifest(&vr5_dependency(member), ""),
+                    ),
+                    ("crates/m/src/lib.rs".to_owned(), text.replace("@N", name)),
+                ],
+            );
+        }
+    }
+    cases
+}
+
+/// VR5's baseline, lexer and export axes (v5pop.py `baseline`, `gen_paths_lexer`, `gen_exports`):
+/// every oracle-VALID case. The glob of the other crate's `settle` module is not one, since the
+/// other crate has none.
+fn vr5_rest() -> Vec<Planted> {
+    let mut cases = Vec::new();
+    let mut add = |axis, label: &str, member, files: Vec<(String, String)>| {
+        cases.push(Planted {
+            axis,
+            label: label.to_owned(),
+            member,
+            refused: member,
+            files,
+        });
+    };
+    add("0 baseline", "stubs only", false, Vec::new());
+    add(
+        "0 baseline",
+        "canonical call",
+        true,
+        vec![
+            (
+                "crates/m/Cargo.toml".to_owned(),
+                vr5_manifest(&vr5_dependency(true), ""),
+            ),
+            (
+                "crates/m/src/lib.rs".to_owned(),
+                vr5_call("deck_streak_progression", "path"),
+            ),
+        ],
+    );
+    let preludes = [
+        ("char quote", "let _ = '\"';"),
+        ("byte char quote", "let _ = b'\"';"),
+        ("escaped backslash string", "let _ = \"\\\\\";"),
+        ("raw string holding // and /*", "let _ = r#\"\" // /*\"#;"),
+        ("c string holding //", "let _ = c\"//\";"),
+        ("nested block comment holding a quote", "/* /* */ \" */"),
+        ("doc line holding a quote", "/// \"\n    let _ = 0;"),
+        ("escaped apostrophe char", "let _ = '\\'';"),
+        ("label", "'a: loop {\n        break 'a;\n    }"),
+        (
+            "lifetime then apostrophe string",
+            "fn f<'a>(_: &'a str) {}\n    let _ = \"'\";",
+        ),
+        (
+            "raw byte string with a short hash run",
+            "let _ = br##\"x\"#\"##;",
+        ),
+        ("unicode escape char of a quote", "let _ = '\\u{22}';"),
+        ("string holding a block opener", "let _ = \"/*\";"),
+    ];
+    for (label, prelude) in preludes {
+        for member in [true, false] {
+            let (_, name, _) = vr5_target(member);
+            add(
+                "L lexer",
+                label,
+                member,
+                vec![
+                    (
+                        "crates/m/Cargo.toml".to_owned(),
+                        vr5_manifest(&vr5_dependency(member), ""),
+                    ),
+                    (
+                        "crates/m/src/lib.rs".to_owned(),
+                        format!(
+                            "pub fn call() -> usize {{\n    {prelude}\n    {name}::settle()\n}}\n"
+                        ),
+                    ),
+                ],
+            );
+        }
+    }
+    let routes = [
+        (
+            "renamed op re-export in a holder",
+            "pub use @N::settle as go;\n",
+            "deck_streak_h::go()",
+        ),
+        (
+            "op re-export in a holder's module",
+            "pub mod inner {\n    pub use @N::settle;\n}\n",
+            "deck_streak_h::inner::settle()",
+        ),
+        (
+            "glob of progression's module",
+            "pub use @N::settle::*;\n",
+            "deck_streak_h::settle()",
+        ),
+        (
+            "pub extern crate, no alias",
+            "pub extern crate @N;\n",
+            "deck_streak_h::@N::settle()",
+        ),
+        (
+            "holder renamed by the caller's manifest",
+            "pub use @N::*;\n",
+            "h2::settle()",
+        ),
+    ];
+    for (label, holder, call) in routes {
+        for member in [true, false] {
+            if !member && holder.contains("::settle::*") {
+                continue;
+            }
+            let (_, name, _) = vr5_target(member);
+            let dependency = if call.starts_with("h2") {
+                "[dependencies]\nh2 = { package = \"deck-streak-h\", path = \"../h\" }\n"
+            } else {
+                "[dependencies]\ndeck-streak-h = { path = \"../h\" }\n"
+            };
+            add(
+                "X exports",
+                label,
+                member,
+                vec![
+                    (
+                        "crates/h/Cargo.toml".to_owned(),
+                        format!("{}\n{}", killer_package("h"), vr5_dependency(member)),
+                    ),
+                    ("crates/h/src/lib.rs".to_owned(), holder.replace("@N", name)),
+                    (
+                        "crates/m/Cargo.toml".to_owned(),
+                        vr5_manifest(dependency, ""),
+                    ),
+                    (
+                        "crates/m/src/lib.rs".to_owned(),
+                        format!(
+                            "pub fn call() -> usize {{\n    {}\n}}\n",
+                            call.replace("@N", name)
+                        ),
+                    ),
+                ],
+            );
+        }
+    }
+    cases
+}
+
+/// A proc-macro crate `deck-streak-pm` at `crates/pm` with `body` as its root and `dependencies`.
+fn s2_proc_macro(body: &str, dependencies: &str) -> Vec<(String, String)> {
+    vec![
+        (
+            "crates/pm/Cargo.toml".to_owned(),
+            format!(
+                "{}\n[lib]\nproc-macro = true\n\n{dependencies}",
+                killer_package("pm")
+            ),
+        ),
+        (
+            "crates/pm/src/lib.rs".to_owned(),
+            format!("use proc_macro::TokenStream;\n\n{body}"),
+        ),
+    ]
+}
+
+/// The round-6 axes (S2) the earlier rounds did not measure, generated from Cargo's "Build
+/// Scripts", "Cargo Targets", "Specifying Dependencies" and "Profiles" and the Reference's
+/// "Procedural Macros", "Macros By Example", "Conditional compilation" and "Diagnostic attributes"
+/// (read 2026-09-30). Each case is a tree of its own, for a member reaching progression's `settle`
+/// and a control reaching the other crate's; a case whose text reaches `settle` in code no build
+/// compiles is a control for both.
+#[allow(clippy::too_many_lines)]
+fn s2_population() -> Vec<Planted> {
+    let mut cases = Vec::new();
+    let mut add = |axis, label: String, member, refused, files: Vec<(String, String)>| {
+        cases.push(Planted {
+            axis,
+            label,
+            member,
+            refused: member || refused,
+            files,
+        });
+    };
+    for target in [true, false] {
+        let (folder, name, package) = vr5_target(target);
+        let dependency = format!("{package} = {{ path = \"../{folder}\" }}\n");
+        let normal = format!("[dependencies]\n{dependency}");
+        let call = vr5_call(name, "path");
+        let main = format!("fn main() {{\n    let _ = {name}::settle();\n}}\n");
+        let check = format!("#[test]\nfn check() {{\n    let _ = {name}::settle();\n}}\n");
+        // B: build scripts and their build dependencies.
+        let written = |text: &str| {
+            format!(
+                "fn main() {{\n    let out = std::env::var(\"OUT_DIR\").expect(\"OUT_DIR\");\n    \
+                 std::fs::write(std::path::Path::new(&out).join(\"gen.rs\"), {text})\n        \
+                 .expect(\"gen.rs\");\n}}\n"
+            )
+        };
+        let builds = [
+            (
+                "build.rs calls settle through [build-dependencies]",
+                vr5_manifest(&format!("[build-dependencies]\n{dependency}"), ""),
+                "build.rs",
+                main.clone(),
+                String::new(),
+            ),
+            (
+                "a build script declared by package.build calls settle",
+                vr5_manifest(
+                    &format!("[build-dependencies]\n{dependency}"),
+                    "build = \"gen/make.rs\"",
+                ),
+                "gen/make.rs",
+                main.clone(),
+                String::new(),
+            ),
+            (
+                "build.rs writes the call into OUT_DIR, and the lib includes it",
+                vr5_manifest(&normal, ""),
+                "build.rs",
+                written(&format!("{call:?}")),
+                "include!(concat!(env!(\"OUT_DIR\"), \"/gen.rs\"));\n".to_owned(),
+            ),
+            (
+                "build.rs writes the call's name in two pieces",
+                vr5_manifest(&normal, ""),
+                "build.rs",
+                written(&format!(
+                    "concat!(\"pub fn call() -> usize {{ {name}::set\", \"tle() }}\")"
+                )),
+                "include!(concat!(env!(\"OUT_DIR\"), \"/gen.rs\"));\n".to_owned(),
+            ),
+            (
+                "build.rs sets the cfg the call needs",
+                vr5_manifest(&normal, ""),
+                "build.rs",
+                "fn main() {\n    println!(\"cargo::rustc-check-cfg=cfg(made)\");\n    \
+                 println!(\"cargo::rustc-cfg=made\");\n}\n"
+                    .to_owned(),
+                format!("#[cfg(made)]\n{call}"),
+            ),
+            (
+                "build.rs names the file the lib includes",
+                vr5_manifest(&normal, ""),
+                "build.rs",
+                "fn main() {\n    println!(\"cargo::rustc-env=CALL_FILE=call.in\");\n}\n"
+                    .to_owned(),
+                "include!(env!(\"CALL_FILE\"));\n".to_owned(),
+            ),
+        ];
+        for (label, manifest, script, text, lib) in builds {
+            let mut files = vec![
+                ("crates/m/Cargo.toml".to_owned(), manifest),
+                (format!("crates/m/{script}"), text),
+                ("crates/m/src/lib.rs".to_owned(), lib),
+            ];
+            if label.contains("names the file") {
+                files.push(("crates/m/src/call.in".to_owned(), call.clone()));
+            }
+            add("S2 B build scripts", label.to_owned(), target, false, files);
+        }
+        add(
+            "S2 B build scripts",
+            format!("build = false leaves a build.rs naming {folder}'s settle uncompiled"),
+            false,
+            false,
+            vec![
+                (
+                    "crates/m/Cargo.toml".to_owned(),
+                    vr5_manifest(
+                        &format!("[build-dependencies]\n{dependency}"),
+                        "build = false",
+                    ),
+                ),
+                ("crates/m/build.rs".to_owned(), main.clone()),
+                ("crates/m/src/lib.rs".to_owned(), String::new()),
+            ],
+        );
+        // P: proc-macro crates, whose output rustc compiles in the caller.
+        let user = |lib: &str| {
+            vec![
+                (
+                    "crates/m/Cargo.toml".to_owned(),
+                    vr5_manifest(
+                        &format!("{normal}deck-streak-pm = {{ path = \"../pm\" }}\n"),
+                        "",
+                    ),
+                ),
+                ("crates/m/src/lib.rs".to_owned(), lib.to_owned()),
+            ]
+        };
+        let tokens = format!("{:?}", call.replace('\n', " "));
+        let macros = [
+            (
+                "a function-like macro writes the call",
+                format!(
+                    "#[proc_macro]\npub fn call(_: TokenStream) -> TokenStream {{\n    \
+                     {tokens}.parse().expect(\"tokens\")\n}}\n"
+                ),
+                "deck_streak_pm::call!();\n",
+            ),
+            (
+                "a function-like macro joins the call's name from two pieces",
+                format!(
+                    "#[proc_macro]\npub fn call(_: TokenStream) -> TokenStream {{\n    \
+                     concat!(\"pub fn call() -> usize {{ {name}::set\", \"tle() }}\")\n        \
+                     .parse()\n        .expect(\"tokens\")\n}}\n"
+                ),
+                "deck_streak_pm::call!();\n",
+            ),
+            (
+                "an attribute macro adds the call beside its item",
+                format!(
+                    "#[proc_macro_attribute]\npub fn add(_: TokenStream, item: TokenStream) -> \
+                     TokenStream {{\n    let mut out: TokenStream = {tokens}.parse().expect(\
+                     \"tokens\");\n    out.extend(item);\n    out\n}}\n"
+                ),
+                "#[deck_streak_pm::add]\npub struct S;\n",
+            ),
+            (
+                "a derive writes the call into an impl",
+                format!(
+                    "#[proc_macro_derive(Go)]\npub fn go(_: TokenStream) -> TokenStream {{\n    \
+                     \"impl S {{ pub fn call() -> usize {{ {name}::settle() }} }}\"\n        \
+                     .parse()\n        .expect(\"tokens\")\n}}\n"
+                ),
+                "#[derive(deck_streak_pm::Go)]\npub struct S;\n",
+            ),
+        ];
+        for (label, body, lib) in macros {
+            let mut files = s2_proc_macro(&body, "");
+            files.extend(user(lib));
+            add(
+                "S2 P proc-macro crates",
+                label.to_owned(),
+                target,
+                true,
+                files,
+            );
+        }
+        let mut files = s2_proc_macro(
+            &format!(
+                "#[proc_macro]\npub fn at(_: TokenStream) -> TokenStream {{\n    let _ = \
+                 {name}::settle();\n    TokenStream::new()\n}}\n"
+            ),
+            &normal,
+        );
+        files.extend([
+            (
+                "crates/m/Cargo.toml".to_owned(),
+                vr5_manifest(
+                    "[dependencies]\ndeck-streak-pm = { path = \"../pm\" }\n",
+                    "",
+                ),
+            ),
+            (
+                "crates/m/src/lib.rs".to_owned(),
+                "deck_streak_pm::at!();\n".to_owned(),
+            ),
+        ]);
+        add(
+            "S2 P proc-macro crates",
+            "the macro calls settle while it expands".to_owned(),
+            target,
+            true,
+            files,
+        );
+        let mut files = s2_proc_macro(
+            "#[proc_macro_attribute]\npub fn drop_it(_: TokenStream, _: TokenStream) -> \
+             TokenStream {\n    TokenStream::new()\n}\n",
+            "",
+        );
+        files.extend(user(&format!("#[deck_streak_pm::drop_it]\n{call}")));
+        add(
+            "S2 P proc-macro crates",
+            format!("an attribute macro drops the item that names {folder}'s settle"),
+            false,
+            true,
+            files,
+        );
+        // A derive's expansion hides a use from rustc's deprecation, so a proc-macro crate is
+        // refused wherever it is a path package: in the workspace, or outside it.
+        let mut files = s2_proc_macro(
+            &format!(
+                "#[proc_macro_derive(Go)]\npub fn go(_: TokenStream) -> TokenStream {{\n    \
+                 \"impl S {{ pub fn call() -> usize {{ {name}::settle() }} }}\"\n        \
+                 .parse()\n        .expect(\"tokens\")\n}}\n"
+            ),
+            "",
+        );
+        for file in &mut files {
+            file.0 = file.0.replace("crates/pm/", "../pm/");
+        }
+        files.extend([
+            (
+                "crates/m/Cargo.toml".to_owned(),
+                vr5_manifest(
+                    &format!("{normal}deck-streak-pm = {{ path = \"../../../pm\" }}\n"),
+                    "",
+                ),
+            ),
+            (
+                "crates/m/src/lib.rs".to_owned(),
+                "#[derive(deck_streak_pm::Go)]\npub struct S;\n".to_owned(),
+            ),
+        ]);
+        add(
+            "S2 P proc-macro crates",
+            "a derive from a path package outside the repository writes the call".to_owned(),
+            target,
+            true,
+            files,
+        );
+        // T: targets, auto-discovered and declared.
+        let targets = [
+            (
+                "tests/t.rs auto-discovered",
+                "",
+                "tests/t.rs",
+                check.clone(),
+            ),
+            (
+                "benches/b.rs auto-discovered",
+                "",
+                "benches/b.rs",
+                check.clone(),
+            ),
+            (
+                "examples/e.rs auto-discovered",
+                "",
+                "examples/e.rs",
+                main.clone(),
+            ),
+            (
+                "src/bin/b.rs auto-discovered",
+                "",
+                "src/bin/b.rs",
+                main.clone(),
+            ),
+            (
+                "src/main.rs beside the lib",
+                "",
+                "src/main.rs",
+                main.clone(),
+            ),
+            (
+                "tests/t/main.rs auto-discovered",
+                "",
+                "tests/t/main.rs",
+                check.clone(),
+            ),
+            (
+                "benches/b/main.rs auto-discovered",
+                "",
+                "benches/b/main.rs",
+                check.clone(),
+            ),
+            (
+                "examples/e/main.rs auto-discovered",
+                "",
+                "examples/e/main.rs",
+                main.clone(),
+            ),
+            (
+                "src/bin/b/main.rs auto-discovered",
+                "",
+                "src/bin/b/main.rs",
+                main.clone(),
+            ),
+            (
+                "[[test]] at checks/t.rs",
+                "\n[[test]]\nname = \"t\"\npath = \"checks/t.rs\"\n",
+                "checks/t.rs",
+                check.clone(),
+            ),
+            (
+                "[[bench]] at perf/b.rs without a harness",
+                "\n[[bench]]\nname = \"b\"\npath = \"perf/b.rs\"\nharness = false\n",
+                "perf/b.rs",
+                main.clone(),
+            ),
+            (
+                "[[example]] at demos/e.rs",
+                "\n[[example]]\nname = \"e\"\npath = \"demos/e.rs\"\n",
+                "demos/e.rs",
+                main.clone(),
+            ),
+            (
+                "[[bin]] at tools/b.rs",
+                "\n[[bin]]\nname = \"b\"\npath = \"tools/b.rs\"\n",
+                "tools/b.rs",
+                main.clone(),
+            ),
+        ];
+        for (label, extra, path, text) in targets {
+            add(
+                "S2 T targets",
+                label.to_owned(),
+                target,
+                false,
+                vec![
+                    (
+                        "crates/m/Cargo.toml".to_owned(),
+                        format!("{}{extra}", vr5_manifest(&normal, "")),
+                    ),
+                    ("crates/m/src/lib.rs".to_owned(), String::new()),
+                    (format!("crates/m/{path}"), text),
+                ],
+            );
+        }
+        add(
+            "S2 T targets",
+            "tests/t.rs through a dev-dependency".to_owned(),
+            target,
+            false,
+            vec![
+                (
+                    "crates/m/Cargo.toml".to_owned(),
+                    vr5_manifest(&format!("[dev-dependencies]\n{dependency}"), ""),
+                ),
+                ("crates/m/src/lib.rs".to_owned(), String::new()),
+                ("crates/m/tests/t.rs".to_owned(), check.clone()),
+            ],
+        );
+        for (flag, path, text) in [
+            ("autotests", "tests/t.rs", &check),
+            ("autobenches", "benches/b.rs", &check),
+            ("autoexamples", "examples/e.rs", &main),
+            ("autobins", "src/bin/b.rs", &main),
+        ] {
+            add(
+                "S2 T targets",
+                format!("{flag} = false leaves {path} naming {folder}'s settle uncompiled"),
+                false,
+                false,
+                vec![
+                    (
+                        "crates/m/Cargo.toml".to_owned(),
+                        vr5_manifest(&normal, &format!("{flag} = false")),
+                    ),
+                    ("crates/m/src/lib.rs".to_owned(), String::new()),
+                    (format!("crates/m/{path}"), text.clone()),
+                ],
+            );
+        }
+        // D: dependencies from outside `crates/`.
+        let vendored = vec![
+            (
+                "vendor/v/Cargo.toml".to_owned(),
+                format!(
+                    "{}\n[dependencies]\n{package} = {{ path = \"../../crates/{folder}\" }}\n",
+                    killer_package("v")
+                ),
+            ),
+            ("vendor/v/src/lib.rs".to_owned(), call.clone()),
+            (
+                "crates/m/Cargo.toml".to_owned(),
+                vr5_manifest(
+                    "[dependencies]\ndeck-streak-v = { path = \"../../vendor/v\" }\n",
+                    "",
+                ),
+            ),
+            (
+                "crates/m/src/lib.rs".to_owned(),
+                "pub use deck_streak_v::call;\n".to_owned(),
+            ),
+        ];
+        add(
+            "S2 D dependencies",
+            "a path dependency under vendor/ is a member by being one".to_owned(),
+            target,
+            false,
+            vendored.clone(),
+        );
+        let mut excluded = vendored;
+        excluded.push((
+            "Cargo.toml".to_owned(),
+            "[workspace]\nmembers = [\"crates/*\"]\nexclude = [\"vendor/v\"]\nresolver = \"3\"\n"
+                .to_owned(),
+        ));
+        add(
+            "S2 D dependencies",
+            "a path dependency excluded from the workspace".to_owned(),
+            target,
+            true,
+            excluded,
+        );
+        add(
+            "S2 D dependencies",
+            "a git dependency patched onto the workspace's crate".to_owned(),
+            target,
+            false,
+            vec![
+                (
+                    "Cargo.toml".to_owned(),
+                    format!(
+                        "[workspace]\nmembers = [\"crates/*\"]\nresolver = \"3\"\n\n\
+                         [patch.\"@GIT@\"]\n{package} = {{ path = \"crates/{folder}\" }}\n"
+                    ),
+                ),
+                (
+                    "../git/g/Cargo.toml".to_owned(),
+                    format!(
+                        "{}\n[dependencies]\n{package} = {{ git = \"@GIT@\" }}\n",
+                        killer_package("g")
+                    ),
+                ),
+                ("../git/g/src/lib.rs".to_owned(), call.clone()),
+                ("../git/p/Cargo.toml".to_owned(), killer_package(folder)),
+                (
+                    "../git/p/src/lib.rs".to_owned(),
+                    "pub fn settle() -> usize {\n    1\n}\n".to_owned(),
+                ),
+                (
+                    "crates/m/Cargo.toml".to_owned(),
+                    vr5_manifest("[dependencies]\ndeck-streak-g = { git = \"@GIT@\" }\n", ""),
+                ),
+                (
+                    "crates/m/src/lib.rs".to_owned(),
+                    "pub use deck_streak_g::call;\n".to_owned(),
+                ),
+            ],
+        );
+        // M: macros by example beyond VR5's.
+        let exported = vec![
+            (
+                "crates/h/Cargo.toml".to_owned(),
+                format!("{}\n{normal}", killer_package("h")),
+            ),
+            (
+                "crates/h/src/lib.rs".to_owned(),
+                format!(
+                    "pub use {name} as reached;\n#[macro_export]\nmacro_rules! go {{\n    () => \
+                     {{ $crate::reached::settle() }};\n}}\n"
+                ),
+            ),
+            (
+                "crates/m/Cargo.toml".to_owned(),
+                vr5_manifest("[dependencies]\ndeck-streak-h = { path = \"../h\" }\n", ""),
+            ),
+            (
+                "crates/m/src/lib.rs".to_owned(),
+                "pub fn call() -> usize {\n    deck_streak_h::go!()\n}\n".to_owned(),
+            ),
+        ];
+        add(
+            "S2 M macros",
+            "another member's exported macro calls settle through $crate".to_owned(),
+            target,
+            false,
+            exported,
+        );
+        for (label, lib) in [
+            (
+                "$m! names the macro that calls",
+                format!(
+                    "macro_rules! inner {{\n    () => {{ {name}::settle() }};\n}}\nmacro_rules! go \
+                     {{\n    ($m:ident) => {{ $m!() }};\n}}\npub fn call() -> usize {{\n    \
+                     go!(inner)\n}}\n"
+                ),
+            ),
+            (
+                "a macro defines the macro that calls",
+                format!(
+                    "macro_rules! def {{\n    ($n:ident, $c:ident) => {{\n        macro_rules! $n \
+                     {{\n            () => {{ $c::settle() }};\n        }}\n    }};\n}}\ndef!(made, \
+                     {name});\npub fn call() -> usize {{\n    made!()\n}}\n"
+                ),
+            ),
+        ] {
+            add(
+                "S2 M macros",
+                label.to_owned(),
+                target,
+                false,
+                vec![
+                    ("crates/m/Cargo.toml".to_owned(), vr5_manifest(&normal, "")),
+                    ("crates/m/src/lib.rs".to_owned(), lib),
+                ],
+            );
+        }
+        // C: configuration a build can set.
+        let configured = [
+            ("#[cfg(debug_assertions)]", "", "#[cfg(debug_assertions)]\n"),
+            (
+                "#[cfg(not(debug_assertions))]",
+                "",
+                "#[cfg(not(debug_assertions))]\n",
+            ),
+            (
+                "#[cfg(panic = \"abort\")] under a release profile that aborts",
+                "\n[profile.release]\npanic = \"abort\"\n",
+                "#[cfg(panic = \"abort\")]\n",
+            ),
+            (
+                "#[cfg(panic = \"unwind\")] under a dev profile that aborts",
+                "\n[profile.dev]\npanic = \"abort\"\n",
+                "#[cfg(panic = \"unwind\")]\n",
+            ),
+            (
+                "#[cfg(all(not(debug_assertions), panic = \"abort\"))]",
+                "\n[profile.release]\npanic = \"abort\"\n",
+                "#[cfg(all(not(debug_assertions), panic = \"abort\"))]\n",
+            ),
+            (
+                "#[cfg(not(settle_census))], the census's own cfg",
+                "",
+                "#[cfg(not(settle_census))]\n",
+            ),
+            (
+                "a build script's own debug assertions off",
+                "\n[profile.dev.build-override]\ndebug-assertions = true\n",
+                "",
+            ),
+        ];
+        for (label, profile, attribute) in configured {
+            let mut files = vec![
+                (
+                    "Cargo.toml".to_owned(),
+                    format!("[workspace]\nmembers = [\"crates/*\"]\nresolver = \"3\"\n{profile}"),
+                ),
+                (
+                    "crates/m/Cargo.toml".to_owned(),
+                    vr5_manifest(&format!("{normal}\n[build-dependencies]\n{dependency}"), ""),
+                ),
+                (
+                    "crates/m/src/lib.rs".to_owned(),
+                    format!("{attribute}{call}"),
+                ),
+            ];
+            if label.contains("build script") {
+                files.push((
+                    "crates/m/build.rs".to_owned(),
+                    format!(
+                        "fn main() {{\n    #[cfg(not(debug_assertions))]\n    let _ = \
+                         {name}::settle();\n}}\n"
+                    ),
+                ));
+                files[2].1 = String::new();
+            }
+            add("S2 C configuration", label.to_owned(), target, false, files);
+        }
+        add(
+            "S2 C configuration",
+            "#[cfg(test)] module of the lib".to_owned(),
+            target,
+            false,
+            vec![
+                ("crates/m/Cargo.toml".to_owned(), vr5_manifest(&normal, "")),
+                (
+                    "crates/m/src/lib.rs".to_owned(),
+                    format!("#[cfg(test)]\nmod tests {{\n    {check}}}\n"),
+                ),
+            ],
+        );
+        add(
+            "S2 C configuration",
+            format!("#[cfg(settle_census)] in a member leaves {folder}'s settle uncompiled"),
+            false,
+            false,
+            vec![
+                ("crates/m/Cargo.toml".to_owned(), vr5_manifest(&normal, "")),
+                (
+                    "crates/m/src/lib.rs".to_owned(),
+                    format!("#[cfg(settle_census)]\n{call}"),
+                ),
+            ],
+        );
+        add(
+            "S2 C configuration",
+            "a feature gates the call".to_owned(),
+            target,
+            true,
+            vec![
+                (
+                    "crates/m/Cargo.toml".to_owned(),
+                    vr5_manifest(&format!("{normal}\n[features]\nslow = []\n"), ""),
+                ),
+                (
+                    "crates/m/src/lib.rs".to_owned(),
+                    format!("#[cfg(not(feature = \"slow\"))]\n{call}"),
+                ),
+            ],
+        );
+        add(
+            "S2 C configuration",
+            "a cargo configuration sets a cfg".to_owned(),
+            target,
+            true,
+            vec![
+                (
+                    ".cargo/config.toml".to_owned(),
+                    "[build]\nrustflags = [\"--cfg\", \"hidden\"]\n".to_owned(),
+                ),
+                ("crates/m/Cargo.toml".to_owned(), vr5_manifest(&normal, "")),
+                (
+                    "crates/m/src/lib.rs".to_owned(),
+                    format!("#[cfg(not(hidden))]\n{call}"),
+                ),
+            ],
+        );
+        // S: attributes and manifests that would silence the probe.
+        for (label, extra, lib) in [
+            (
+                "#[allow(deprecated)] on the call",
+                "",
+                format!("#[allow(deprecated)]\n{call}"),
+            ),
+            (
+                "#![allow(deprecated)] on the crate",
+                "",
+                format!("#![allow(deprecated)]\n{call}"),
+            ),
+            (
+                "#[expect(deprecated)] on the call",
+                "",
+                format!("#[expect(deprecated)]\n{call}"),
+            ),
+            (
+                "#![allow(warnings)] on the crate",
+                "",
+                format!("#![allow(warnings)]\n{call}"),
+            ),
+            (
+                "#![forbid(deprecated)] on the crate",
+                "",
+                format!("#![forbid(deprecated)]\n{call}"),
+            ),
+            (
+                "[lints.rust] deprecated = \"allow\"",
+                "\n[lints.rust]\ndeprecated = \"allow\"\n",
+                call.clone(),
+            ),
+        ] {
+            add(
+                "S2 S silencing",
+                label.to_owned(),
+                target,
+                false,
+                vec![
+                    (
+                        "crates/m/Cargo.toml".to_owned(),
+                        format!("{}{extra}", vr5_manifest(&normal, "")),
+                    ),
+                    ("crates/m/src/lib.rs".to_owned(), lib),
+                ],
+            );
+        }
+    }
+    // A: coordination's attribution, every case reaching progression's `settle`.
+    let coordination = |files: &[(&str, &str)]| -> Vec<(String, String)> {
+        let mut planted = vec![(
+            "crates/coordination/Cargo.toml".to_owned(),
+            format!(
+                "{}\n[dependencies]\ndeck-streak-progression = {{ path = \"../progression\" }}\n",
+                killer_package("coordination")
+            ),
+        )];
+        planted.extend(
+            files
+                .iter()
+                .map(|(path, text)| (format!("crates/coordination/{path}"), (*text).to_owned())),
+        );
+        if !files.iter().any(|(path, _)| *path == "src/lib.rs") {
+            planted.push(("crates/coordination/src/lib.rs".to_owned(), String::new()));
+        }
+        planted
+    };
+    let recompute = "let _ = deck_streak_progression::settle::SettleCause::Recompute;\n    \
+                     let _ = deck_streak_progression::settle();";
+    let correction = "let _ = deck_streak_progression::settle::SettleCause::OwnersCorrection;\n    \
+                      let _ = deck_streak_progression::settle();";
+    let in_main = |body: &str| format!("fn main() {{\n    {body}\n}}\n");
+    let in_test = |body: &str| format!("#[test]\nfn check() {{\n    {body}\n}}\n");
+    for (label, member, files) in [
+        (
+            "src/bin/fix.rs passes the recompute cause",
+            true,
+            coordination(&[("src/bin/fix.rs", &in_main(recompute))]),
+        ),
+        (
+            "src/bin/fix.rs passes the owner's correction",
+            false,
+            coordination(&[("src/bin/fix.rs", &in_main(correction))]),
+        ),
+        (
+            "tests/t.rs passes the recompute cause",
+            false,
+            coordination(&[("tests/t.rs", &in_test(recompute))]),
+        ),
+        (
+            "benches/b.rs passes the recompute cause",
+            false,
+            coordination(&[("benches/b.rs", &in_test(recompute))]),
+        ),
+        (
+            "examples/e.rs passes the recompute cause",
+            false,
+            coordination(&[("examples/e.rs", &in_main(recompute))]),
+        ),
+        (
+            "the lib's own test module passes the recompute cause",
+            true,
+            coordination(&[(
+                "src/lib.rs",
+                &format!("#[cfg(test)]\nmod tests {{\n    {}}}\n", in_test(recompute)),
+            )]),
+        ),
+        (
+            "include! brings a recompute-cause call into a file passing the correction",
+            true,
+            coordination(&[
+                (
+                    "src/lib.rs",
+                    "pub fn fix() {\n    let _ = \
+                     deck_streak_progression::settle::SettleCause::OwnersCorrection;\n    \
+                     include!(\"step.in\");\n}\n",
+                ),
+                ("src/step.in", &format!("{{\n    {recompute}\n}}\n")),
+            ]),
+        ),
+        (
+            "include! brings a correction-cause call into a file passing the correction",
+            false,
+            coordination(&[
+                (
+                    "src/lib.rs",
+                    "pub fn fix() {\n    let _ = \
+                     deck_streak_progression::settle::SettleCause::OwnersCorrection;\n    \
+                     include!(\"step.in\");\n}\n",
+                ),
+                ("src/step.in", &format!("{{\n    {correction}\n}}\n")),
+            ]),
+        ),
+        (
+            "a recompute step's macro called outside the steps",
+            true,
+            coordination(&[
+                (
+                    "src/lib.rs",
+                    "pub mod recompute;\npub fn fix() {\n    crate::step!();\n}\n",
+                ),
+                (
+                    "src/recompute/mod.rs",
+                    &format!(
+                        "#[macro_export]\nmacro_rules! step {{\n    () => {{{{\n    {recompute}\n    \
+                         }}}};\n}}\n"
+                    ),
+                ),
+            ]),
+        ),
+        (
+            "a correction macro from outside the steps called in a step",
+            false,
+            coordination(&[
+                (
+                    "src/lib.rs",
+                    &format!(
+                        "#[macro_export]\nmacro_rules! fix {{\n    () => {{{{\n    {correction}\n    \
+                         }}}};\n}}\npub mod recompute;\n"
+                    ),
+                ),
+                (
+                    "src/recompute/mod.rs",
+                    "pub fn step() {\n    crate::fix!();\n}\n",
+                ),
+            ]),
+        ),
+        (
+            "a #[path] through recompute/.. reaches a file outside the steps",
+            true,
+            coordination(&[
+                (
+                    "src/lib.rs",
+                    "pub mod recompute;\n#[path = \"recompute/../fixer.rs\"]\npub mod fixer;\n",
+                ),
+                ("src/recompute/mod.rs", ""),
+                (
+                    "src/fixer.rs",
+                    &format!("pub fn fix() {{\n    {recompute}\n}}\n"),
+                ),
+            ]),
+        ),
+        (
+            "a recompute step passes the recompute cause",
+            false,
+            coordination(&[
+                ("src/lib.rs", "pub mod recompute;\n"),
+                (
+                    "src/recompute/mod.rs",
+                    &format!("pub fn step() {{\n    {recompute}\n}}\n"),
+                ),
+            ]),
+        ),
+        (
+            "a #[path] module outside coordination's folder passes the recompute cause",
+            true,
+            {
+                let mut files = coordination(&[(
+                    "src/lib.rs",
+                    "pub fn fix() {\n    let _ = \
+                     deck_streak_progression::settle::SettleCause::OwnersCorrection;\n}\n\
+                     #[path = \"../../../shared/call.rs\"]\nmod call;\n",
+                )]);
+                files.push((
+                    "shared/call.rs".to_owned(),
+                    format!("pub fn call() {{\n    {recompute}\n}}\n"),
+                ));
+                files
+            },
+        ),
+    ] {
+        add(
+            "S2 A coordination's attribution",
+            label.to_owned(),
+            member,
+            false,
+            files,
+        );
+    }
+    cases
+}
+
+// The killer (SPEC-072 A12, ADR-197 round 6): one generated population, judged by the census tree
+// by tree, each tree alone. It holds round 5's population (VR5, every case cargo and rustc compile)
+// and the axes no earlier round measured (S2: build scripts, proc-macro crates, targets,
+// dependencies, macros, configuration, silencing, and coordination's attribution). A member reaches
+// progression's `settle` in code cargo compiles, so the census must refuse its tree; a control
+// holds the same text reaching another crate's `settle`, or text no build compiles, so the census
+// must accept it, unless the census refuses it by construction (a feature, a cargo configuration, a
+// proc-macro crate, a package outside the workspace), which its case says.
+
+/// A killer package's manifest.
+fn killer_package(name: &str) -> String {
+    format!("[package]\nname = \"deck-streak-{name}\"\nversion = \"0.1.0\"\nedition = \"2024\"\n")
+}
+
+/// The workspace manifest every killer tree holds.
+const KILLER_WORKSPACE: &str = "[workspace]\nmembers = [\"crates/*\"]\nresolver = \"3\"\n";
+
+/// Progression's build script as every killer tree holds it. It is the census's own, and
+/// `the_killer_plants_progressions_own_probe` holds it equal to `crates/progression/build.rs`.
+const KILLER_BUILD: &str = r#"//! Arms the settle census's probe (SPEC-072 A12, ADR-197): when the census compiles the workspace
+//! it sets `SETTLE_CENSUS`, and progression alone is then compiled with the `settle_census` cfg,
+//! under which `settle` carries a deprecation that rustc reports at every use. No other crate sees
+//! the cfg, so no other crate compiles differently under the census.
+
+#[allow(
+    clippy::print_stdout,
+    reason = "cargo reads a build script's instructions from its standard output"
+)]
+fn main() {
+    println!("cargo::rustc-check-cfg=cfg(settle_census)");
+    println!("cargo::rerun-if-env-changed=SETTLE_CENSUS");
+    if std::env::var_os("SETTLE_CENSUS").is_some() {
+        println!("cargo::rustc-cfg=settle_census");
+    }
+}
+"#;
+
+/// Progression's root as every killer tree holds it: the module, the operation re-exported under
+/// its own name and another, and a type that is not the operation.
+const KILLER_LIB: &str = "pub mod settle;\npub use settle::settle;\npub use settle::settle as tally;\npub struct Level;\n";
+
+/// Progression's `settle` module as every killer tree holds it, with the probe written as
+/// `crates/progression/src/settle.rs` writes it.
+const KILLER_SETTLE: &str = "pub struct SettleRequest;\npub struct SettledRow;\n\
+     pub enum SettleCause {\n    Recompute,\n    OwnersCorrection,\n}\n\
+     #[cfg_attr(\n    settle_census,\n    \
+     deprecated(note = \"the settle census's probe: SPEC-072 A12 names every caller by it\")\n)]\n\
+     pub fn settle() -> usize {\n    0\n}\n\
+     pub fn settled_of_day() -> usize {\n    0\n}\n\
+     pub const Q: &str = \"INSERT INTO xp_settlement (amount) VALUES (1)\";\n";
+
+/// The workspace, progression (its real build script, and a `settle` carrying the real probe) and
+/// the other crate, as every killer tree holds them.
+fn killer_stub() -> Vec<(String, String)> {
+    [
+        ("Cargo.toml", KILLER_WORKSPACE.to_owned()),
+        ("crates/progression/Cargo.toml", killer_package(OWNER)),
+        ("crates/progression/build.rs", KILLER_BUILD.to_owned()),
+        ("crates/progression/src/lib.rs", KILLER_LIB.to_owned()),
+        ("crates/progression/src/settle.rs", KILLER_SETTLE.to_owned()),
+        ("crates/other/Cargo.toml", killer_package("other")),
+        (VR5_OTHER.0, VR5_OTHER.1.to_owned()),
+    ]
+    .into_iter()
+    .map(|(path, text)| (path.to_owned(), text))
+    .collect()
+}
+
+/// The other crate every VR5 and S2 tree holds beside progression.
+const VR5_OTHER: (&str, &str) = (
+    "crates/other/src/lib.rs",
+    "pub fn settle() -> usize {\n    0\n}\npub struct Level;\n",
+);
+
+/// Commits the planted git repository at `directory`, so that cargo can fetch it.
+fn committed(directory: &Path) {
+    let steps: [&[&str]; 3] = [
+        &["init", "--quiet"],
+        &["add", "--all"],
+        &[
+            "-c",
+            "user.name=census",
+            "-c",
+            "user.email=census@invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "commit",
+            "--quiet",
+            "--message",
+            "planted",
+        ],
+    ];
+    for arguments in steps {
+        let status = std::process::Command::new("git")
+            .args(arguments)
+            .current_dir(directory)
+            .env_remove("GIT_DIR")
+            .env_remove("GIT_WORK_TREE")
+            .env_remove("GIT_INDEX_FILE")
+            .status()
+            .expect("git runs");
+        assert!(
+            status.success(),
+            "git {arguments:?} in {}",
+            directory.display()
+        );
+    }
+}
+
+/// What the census refuses in a tree of its own holding `stub` and then `files`, planted at
+/// `<temporary>/ws`. A file under `../git/` is planted beside the workspace and committed as a git
+/// repository, whose URL replaces `@GIT@` in every file.
+fn killer_judge(stub: &[(String, String)], files: &[(String, String)]) -> Vec<String> {
+    let planted = tempfile::tempdir().expect("a temporary directory");
+    let root = planted.path().join("ws");
+    let git = planted.path().join("git");
+    let url = format!("file://{}", git.display());
+    for (path, text) in stub.iter().chain(files) {
+        plant(&root, path, &text.replace("@GIT@", &url));
+    }
+    if git.exists() {
+        committed(&git);
+    }
+    census(&root).refused
+}
+
+#[test]
+fn the_census_refuses_every_caller_the_compiler_finds() {
+    let started = std::time::Instant::now();
+    let mut cases = vr5_population();
+    cases.extend(vr5_rest());
+    cases.extend(s2_population());
+    let stub = killer_stub();
+    let next = std::sync::atomic::AtomicUsize::new(0);
+    let threads = std::thread::available_parallelism()
+        .map_or(1, usize::from)
+        .min(8);
+    let wrong: Vec<String> = std::thread::scope(|scope| {
+        let workers: Vec<_> = (0..threads)
+            .map(|_| {
+                scope.spawn(|| {
+                    let mut wrong = Vec::new();
+                    while let Some(case) =
+                        cases.get(next.fetch_add(1, std::sync::atomic::Ordering::Relaxed))
+                    {
+                        let refused = killer_judge(&stub, &case.files);
+                        // Every case compiles, so a census that could not compile one has judged
+                        // nothing there, and that is wrong whatever the case expects.
+                        let unjudged = refused.iter().any(|refusal| {
+                            refusal.starts_with("the workspace does not compile")
+                                || refusal.starts_with("cargo cannot read the workspace")
+                        });
+                        if unjudged || refused.is_empty() == case.refused {
+                            wrong.push(format!(
+                                "{} {}: {} | {}",
+                                if case.member { "member" } else { "control" },
+                                case.axis,
+                                case.label,
+                                refused.first().map_or("accepted", String::as_str)
+                            ));
+                        }
+                    }
+                    wrong
+                })
+            })
+            .collect();
+        workers
+            .into_iter()
+            .flat_map(|worker| worker.join().expect("a judging thread"))
+            .collect()
+    });
+    let mut axes: BTreeMap<&str, [usize; 3]> = BTreeMap::new();
+    for case in &cases {
+        let counts = axes.entry(case.axis).or_default();
+        counts[if case.member {
+            0
+        } else if case.refused {
+            1
+        } else {
+            2
+        }] += 1;
+    }
+    for (axis, [members, refused, accepted]) in &axes {
+        println!(
+            "examined {members} member(s) and {} control(s) of {axis} ({refused} refused by \
+             construction)",
+            refused + accepted
+        );
+    }
+    for line in wrong.iter().take(40) {
+        println!("wrong: {line}");
+    }
+    let escaping = wrong
+        .iter()
+        .filter(|line| line.starts_with("member "))
+        .count();
+    println!(
+        "killer examined {} tree(s) in {:?}; members escaping: {escaping}; controls judged \
+         wrongly: {}",
+        cases.len(),
+        started.elapsed(),
+        wrong.len() - escaping
+    );
+    assert_eq!(
+        wrong.first(),
+        None,
+        "trees the census judges wrongly: {}",
+        wrong.len()
+    );
+}
