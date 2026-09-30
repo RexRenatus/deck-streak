@@ -2521,6 +2521,7 @@ exec /usr/bin/@NAME@ "$@"
                 done, before, after = self.outcome(w, argv, planted, [])
                 self.judge(f"{verb} / new unit / failed switch", done, before, after, "host step")
                 self.assertFalse((w.units / "deck-streak-extra.timer").exists(), verb)
+                self.assertTrue((w.units / API).is_file(), f"{verb}: the unit the host had is gone")
 
 
 if __name__ == "__main__":
