@@ -286,3 +286,19 @@ A40: green at 53764d6320c899ae41d30518363d150c5a414a89
 
 The `EXIT` trap that deletes the check file is outside this class, which is about a temporary path
 that cannot be made: it acts only after a check file was made, so the test of A40 does not reach it and no row pins it.
+
+## Amendment 2026-09-30, round one of the fix (issue #451)
+
+The test of A41 was committed alone (f215692640dff9724fe78883e722bbd91499e117) against the `deploy.sh`
+of the first round. It measures the places each verb writes in, refuses every temporary-path call in
+each place, and printed `examined 47 measured temporary-path member(s)`. Thirty-six members were red
+by assertion; each read the tool's bare message with no `deploy:` line, or a run that ended with a
+write left behind.
+
+```red-first
+A41: red at f215692640dff9724fe78883e722bbd91499e117: AssertionError: 0 != 1 : install / host/usr/local/lib/deck-streak/releases / absent
+A41: green at 6109795b0e719607527adc0b271c87e087fd753d
+```
+
+The fix (6109795b0e719607527adc0b271c87e087fd753d) changes `deploy.sh`, the rows S12753 to S12771, the
+SPEC and the ADR; it edits no test file.
