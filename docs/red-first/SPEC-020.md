@@ -73,3 +73,12 @@ A26: green at fd002b9
 
 No test sleeps: A9 drives a `ManualClock`, A16 holds its blocking tasks on channels the test releases
 one at a time, and A18 runs two writers against one file in a temporary directory.
+
+The 2026-09-30 amendment (#420) adds A27. The test was committed against the file as it stood
+(589bf0bd9fedf6692a6464edfde277cfe5a41b3c) and failed by assertion, then the two rows were removed
+(d5bdc47255dce7645382d3c3390d5892af9085d4).
+
+```red-first
+A27: red at 589bf0bd9fedf6692a6464edfde277cfe5a41b3c: AssertionError: Lists differ: ["register 'v9 table' repeats buffs", "register 'v9 table' has 65 unique names, prose says 64"] != []
+A27: green at d5bdc47255dce7645382d3c3390d5892af9085d4
+```

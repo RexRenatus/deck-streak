@@ -318,3 +318,43 @@ red by assertion, selecting one test (`24 was admitted as an hour`: left `Some(H
 `None`), while A1's golden test and A6's malformed-setting test both passed. The file was then
 restored byte for byte, its sha256
 `3668d29d0cf56a289719a20a89df5d0b27f113f6549de1355d027dbd3d246854` before and after.
+
+## 8. Amendment, 2026-09-30: the predecessor's register counts to its prose
+
+Issue #420. The ownership register in `docs/CONTEXT-MAP.md` starts from the predecessor's 64 tables,
+and two rows that belong to DeckStreak's own schema (`xp_settlement` and `buffs`) had been added to
+it, so it named 66 rows (65 unique names) where its prose counts 64. Nothing read the register, and
+the v9 import maps the predecessor's tables one by one from it.
+
+R16. Every count the section's prose states (a number beside `tables`, `rows` or `names`) equals
+the unique names of the register it describes; no name repeats inside one register; and a name in
+both the predecessor's register and DeckStreak's own is a carried table, which both give the same
+owning context. A register with a qualifier in its header (`v9 table`) pairs with the count
+sentence that says the same word before its number, and a sentence or a qualified register that
+pairs with nothing is refused by name. The predecessor's register loses the two rows, and the
+section "DeckStreak's own tables" is unchanged byte for byte.
+
+Two readings of the class are stated because the file decides them. Five names sit in both
+registers on purpose (`sync_runs`, `xp_ledger`, `cron_fires`, `daily_rollup`, `daily_lang_stats`),
+tables the predecessor had and DeckStreak keeps under the same name, so the rule is "same owner in
+both", and a strict disjointness would refuse the file the issue asks for. DeckStreak's own register
+states no count, so a row dropped from it is not expressible as a mismatch.
+
+The check is `scripts/tests/test_context_map_registers.py`. Its population was generated from the
+file: one altered copy per register row (dropped, repeated, moved to the other register) and one per
+count sentence (one more, one fewer), 257 in all. 236 turned the check red by an assertion, and the
+21 that did not are the rows dropped from DeckStreak's own register. The file was unchanged by
+sha256 after every copy.
+
+Files: `scripts/tests/test_context_map_registers.py` (new), `docs/CONTEXT-MAP.md` (two rows
+removed), `docs/red-first/SPEC-020.md`, `changelog.d/predecessor-register-420.md`.
+
+## 9. Acceptance criteria of the 2026-09-30 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A27 | the predecessor's register holds as many unique names as its prose counts, repeats none, and shares with DeckStreak's own register only names both give the same owner | `python3 -m unittest discover -s scripts/tests -p test_context_map_registers.py` |
+
+```acceptance
+A27: python3 -m unittest discover -s scripts/tests -p test_context_map_registers.py
+```
