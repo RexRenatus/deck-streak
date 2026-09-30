@@ -298,12 +298,13 @@ def uncommented(text):
     that bash starts one. Bash starts a comment at a `#` that begins a word outside every quote,
     and a `#` inside a word or a quote is text. The reader models quotes, blanks and the operators,
     and trusts that model on a line only up to the first place bash reads in a mode it lacks (see
-    `opens`), and not at all on a continued line or after a here-document. Before that place a `#`
+    `opens`), and not at all on a continued line, after a here-document, or after a line that ends
+    inside a quote or past such a place, where bash may still be inside it. Before that place a `#`
     that begins a word cuts the rest of the line: its text is no command, and bounds written in it
     bound nothing. After it a `#` glued to a word is text, and any other `#` ends the command before
     it and hides nothing, so a command after it is still read. So a `#` after the `)` that closes a
     substitution, or after an operator inside `${ }`, is no comment, and the reader can refuse a
-    line bash would pass but never pass a line whose unbounded command bash runs."""
+    line bash would pass but never hides a command that bash runs."""
     kept, continued, heredoc = [], False, False
     for line in text.split("\n"):
         pieces, piece, i, cut = [], 0, 0, False
@@ -334,7 +335,7 @@ def uncommented(text):
             i += 1
         pieces.append(line[piece:i].rstrip(" \t") if cut else line[piece:])
         kept.append("\n".join(pieces))
-        continued = not cut and pieces[-1].endswith("\\")
+        continued = not cut and (pieces[-1].endswith("\\") or quote is not None or not sure)
         heredoc = heredoc or bool(HEREDOC.search(kept[-1]))
     return "\n".join(kept)
 
