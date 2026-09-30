@@ -202,8 +202,9 @@ ESCAPE is a member the option accepts, and FALSE REFUSAL is a control it refuses
 - Bad, because the census now compiles the workspace: four `cargo check` passes of every target, and
   four of the libraries and binaries alone when a member has a dev-dependency (the real tree has),
   in a target directory of its own, in the `rust` CI job, beside the test that drives it. The killer
-  compiles each of its 2218 trees alone, so the `rust` job grows by minutes (SPEC-072 section 12
-  gives the times measured).
+  compiles each of its trees alone, so the `rust` job grows by minutes; the census's target is kept
+  between runs and the killer builds its stub once for each worker, which brings the job back
+  within its budget (the pull request's body carries the job's times, read from CI).
 - Bad, because a test that runs for minutes meets the mutation battery's per-mutant timeout of 300
   s: a mutant of progression that no faster test kills would be reported as a timeout rather than as
   missed, and a timeout neither fails the pull request's verdict nor counts as a survivor in the
@@ -219,15 +220,61 @@ ESCAPE is a member the option accepts, and FALSE REFUSAL is a control it refuses
   are refused by construction; a wrapper function, a function pointer or a generic in progression's
   own code that calls `settle` is a new operation in progression's own code and stays issue 445's;
   and the census judges the code of this repository compiled by this toolchain on this platform, in
-  builds that compile every package in one state and resolve the workspace's features, not doctests,
-  not code a build script or a proc-macro writes only when it sees the census's variable, not a
-  registry or git package's own code, and not a compile trybuild runs at test time. SPEC-072 section
-  12 lists each.
+  builds that resolve the workspace's features, not doctests, not code a proc-macro writes only when
+  it sees the census's variable, not a registry or git package's own code, and not a compile
+  trybuild runs at test time. SPEC-072 section 12 lists each, by kind, and issue 445 tracks them.
+
+### Decision, round 7: a build script's cfg is closed by the graph
+
+Round 6's review found a class the four passes cannot close: a build script sets a cfg from the
+profile or from a build environment variable, and code under that cfg calls `settle`, so the passes
+never compile it. A build script's cfg reaches its own package alone, so the census now reads the
+resolve graph (`cargo metadata --format-version 1 --locked --offline`, which compiles nothing) and
+refuses, by name, every package that has a `custom-build` target and can name `settle`: the package
+that defines it, or one that depends on it by a normal, a build or a dev edge at any depth. Where a
+package can name `settle`, its script's cfg is the census's escape; where it cannot, the cfg
+governs code that cannot reach `settle`. Progression's own script is admitted at one SHA-256, held
+in one constant, and a script that hashes otherwise is refused by name: the pin is the only
+admission. A graph cargo cannot give (a failed command, output that is not JSON, or one without the
+resolve graph) is a refusal by name, so no step of the census is skipped.
+
+The options were chosen against, each on what it does to the real tree:
+
+- (A) words alone, disclosing a third kind of build the census does not compile. Rejected: it is a
+  narrowing that the graph refusal makes needless, since the class is closed by construction.
+- (B) release and custom-profile passes. Rejected: it closes the profile-keyed scripts only, the
+  variable-keyed scripts stay open, and it at least doubles the passes, so the `rust` job's cost
+  grows for a partial closure.
+- (C) refusing every build script outside progression. Rejected: it refuses the real tree's kernel
+  build script, which has no path to `settle`, so a false refusal of a real file would be the
+  failure.
+- (C') the graph refusal above, chosen: it refuses exactly the packages whose script's cfg can reach
+  code that names `settle`, and on the real tree it lists progression alone, whose script is the
+  pinned one.
+
+The disclosed kind that (C') leaves, decided by main's round-6 ruling and named in SPEC-072 section
+12: a build script's cfg in a package that cannot name `settle`, read by a macro that package
+exports, where the macro expands a call to `settle` inside a package that can name it. The package
+with the script is not refused, for it has no path to `settle`. It holds for a git, a registry and a
+workspace package, and kernel's admitted script is of the same kind. The population of round 6
+measured such a member for each condition of the build environment, and the census's test prints
+what it says of each without asserting it. The other kind left open is an `include!` of a
+recompute file from outside the folder, within one crate: rustc names the included file alone, so
+the census names it too (issue 481's "the outermost file the compiler points to"); no textual
+reader of `include!` is added. Both are tracked by issue 445.
+
+Two speed-ups keep every tree, control, pass and test. The census's target lies under
+`target/tmp/settle-census`, which the job's `cargo clean --workspace` leaves alone, and it is kept
+between runs under a cache key of the toolchain pin and `Cargo.lock`; cargo fingerprints every unit
+and recompiles a member whose source changed, so a stale entry is never served, and the census
+reads what its own passes compile. The killer builds its stub once for each worker: a worker plants
+its trees at one fixed path with a kept target, so only the files of a case recompile. A cold run
+with no cache judges the same trees.
 
 The textual census of rounds 1 to 3 is removed with its tables, its population test and its rows
 S07230 to S07240. Round 6's rows, S07241 to S07275, pin the census's refusals by design, its passes,
 its attribution, its bounds, its environment and the probe itself, each killed by a planted-tree
-test.
+test; round 7's rows pin the graph refusal, its edges and its pin.
 
 ## More Information
 

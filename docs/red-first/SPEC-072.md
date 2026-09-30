@@ -240,3 +240,42 @@ accepted.
 
 A12 on the real tree compiles every target of every workspace package in the four passes, and its
 libraries and binaries alone in four more, since members have dev-dependencies, and refuses none.
+
+Addendum (2026-09-30, round 7 of the review of issue 397). Round 6's review found that a build
+script's cfg, read by code in a package that cannot name `settle`, can hide a call the census's
+four passes never compile. ADR-197's decision of round 7 refuses the shape by the resolve graph:
+every package with a build script that is, or depends on, progression is refused, and progression's
+own build script is admitted at one pinned digest.
+
+The tests were committed alone (8c883728) beside the unchanged census of round 6, whose file is
+`crates/progression/tests/xp_census.rs`. Six tests are new; on the unchanged census four are red by
+assertion and two are green, as they are meant to be:
+
+- `a_build_script_in_a_package_that_depends_on_settle_is_refused_by_name` is red: the package with
+  the build script is accepted (`refused by name: []`).
+- `a_one_byte_edit_of_progressions_build_script_is_refused_on_the_pin` is red (`refused on the pin:
+  []`).
+- `a_corrupt_lock_file_is_refused_by_the_fail_closed_arm` is red: the census refuses, but with
+  cargo's own words and not the census's by-name refusal that the test reads.
+- `the_census_refuses_every_build_script_that_can_name_settle` is red: "every build-script member is
+  refused, naming its package", `left: 0`, `right: 104`, the test printing `examined 0 build-script
+  member(s) of 104 generated`.
+- `a_build_script_in_a_package_that_cannot_name_settle_is_accepted` is green, as a control: nothing
+  refuses a build script that cannot reach `settle`.
+- `the_git_dependency_build_scripts_are_measured_and_the_kind_is_disclosed` is green, since it only
+  prints: it reports `examined 26 git-dependency build-script member(s), 15 refused`, the same 15
+  by their caller's file as the census of round 6 refuses, and it asserts nothing about the rest,
+  which are the disclosed kind (SPEC-072 section 12).
+
+The graph refusal (dfd9ca1e) makes the four green: 104 of 104 build-script members are refused,
+naming their package, and 104 of 104 controls are accepted. The green commit edits the census, which
+is that file's own code, and adds `sha2` to progression's dev-dependencies for the pin. Three more
+tests came with the green commit and were never red: the edge kinds, a build script reached through
+a build dependency, through a dev dependency, and in a package that depends on progression by name.
+Their red is that of the tests above (a build script beside a dependency on progression is accepted
+by the earlier census), and each is pinned by a row (S07276 to S07286).
+
+The killer's counts do not change with the speed-ups: `killer examined 2218 tree(s)` with `members
+escaping: 0; controls judged wrongly: 0`, each of its 17 axes printing the same examined members and
+controls before and after the change that keeps one target for each worker. A12 on the real tree
+reads 170 crate source files, 16 migrations and 13 planted crate source files, and refuses none.

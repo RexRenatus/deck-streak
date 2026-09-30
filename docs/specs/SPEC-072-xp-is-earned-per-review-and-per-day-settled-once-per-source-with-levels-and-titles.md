@@ -536,7 +536,8 @@ gave an outside caller two names that the census never looks for, and the caller
   test-only diff as `not-applicable` (SPEC-039 section 11; SPEC-057 R22), so the census's own
   fixpoint, its `pub(` close and its grouped `self` rename are pinned by hand-proved rows.
 - **Files.** `crates/progression/tests/xp_census.rs` (A32), `docs/decisions/ADR-197-*.md`,
-  `docs/red-first/SPEC-072.md` and `changelog.d/settle-census-397.md`.
+  `.github/workflows/ci.yml` (the census's cache), `crates/progression/Cargo.toml` (`sha2`, a
+  dev-dependency), `docs/red-first/SPEC-072.md` and `changelog.d/settle-census-397.md`.
 
 ## 11. Acceptance criteria of the 2026-09-29 amendment
 
@@ -588,7 +589,9 @@ stands, and the compiler decides it.
   the package cargo compiled it in. Progression's own is accepted. Any other package's but
   coordination's is refused as `<file> calls settle, and only coordination's code may`. A use is
   named by the outermost file of the repository it is written in: rustc's span, then each macro call
-  site and each `include!` it expanded from, each by its real path (every `..` and link resolved).
+  site it expanded from, each by its real path (every `..` and link resolved). Text an `include!`
+  reads is named by the included file, as a `#[path]` module is, and not by the file that includes
+  it (issue 481's "the outermost file the compiler points to").
   Coordination's use by a test, a bench or an example is accepted. Any other use by coordination is
   refused as `<file> calls settle outside the recompute steps, and only the owner's correction may`,
   unless every repository file of its expansion lies in `crates/coordination/src/recompute/` or
@@ -600,8 +603,21 @@ stands, and the compiler decides it.
 - **Refused by design.** What cargo is not asked to compile, or what rustc cannot report, the census
   refuses by name before it reads a use, rather than guess:
   - a workspace cargo cannot read, a `Cargo.lock` cargo would have to update among them (`cargo
-    cannot read the workspace`), or one that does not compile in any pass (`the workspace does not
+    metadata cannot give the graph`), or one that does not compile in any pass (`the workspace does not
     compile`);
+  - a package that has a build script and can name `settle`, since a build script's cfg reaches its
+    own package alone and the census's passes never set a cfg from the build environment (`has a
+    build script and can name settle`). The census reads the resolve graph, `cargo metadata
+    --format-version 1 --locked --offline`, and refuses by name every package with a `custom-build`
+    target that is, or depends on by a normal, a build or a dev edge at any depth, the package that
+    defines `settle`. Progression's own script is admitted at one SHA-256, the constant
+    `PROGRESSION_BUILD_SHA256`, and a script that hashes otherwise is refused (`is not the one pinned
+    by PROGRESSION_BUILD_SHA256`); no other admission exists. A graph cargo cannot give (a command
+    that fails, output that is not JSON, or one without the resolve graph) is refused, never
+    skipped. The graph is read once, and the passes then compile the same tree, so an actor that
+    changes a manifest or the lock file between the read and the passes can change what the census
+    compiled but not what it read; the `--locked` of every pass makes a lock file that changed a
+    refusal;
   - a member that declares a feature, since the census compiles none (`declares a feature, and the
     census compiles none`);
   - a proc-macro member, since rustc reports no deprecation inside a derive's expansion (`is a
@@ -614,20 +630,30 @@ stands, and the compiler decides it.
     (`configures cargo, and the census compiles with cargo's own defaults`);
   - a use expanded through more than 1024 macro calls, and a cargo run past 1800 seconds, each a
     failure by name rather than a walk or a wait without end.
-- **Out of the census's reach.** Each is disclosed, and issue 445 tracks them:
+- **Out of the census's reach.** Each is disclosed by kind, as main's round-6 ruling decided, and issue 445 tracks them with pull request 425 named:
   - a wrapper function, a function pointer or a generic in progression's own code that calls
     `settle`: it is a new operation in the owner's code, which rustc reports as progression's own
     use, and a reviewer sees it there;
   - code no `cargo check --all-targets` compiles here: a doctest, a compile trybuild runs while a
-    test runs, and code under a cfg the census's build never sets (another target, `doc`, `miri`);
-  - code a build script or a proc-macro writes only when it sees the census's variable or flags;
+    test runs, and code under a cfg no build script sets and no pass sets (another target, `doc`,
+    `miri`);
+  - code a proc-macro writes only when it sees the census's variable or flags;
+  - a build script's cfg in a package that cannot name `settle`, read by a macro that package
+    exports, where the macro expands a call to `settle` inside a package that can name it. The
+    package with the script cannot be refused for it, since it has no path to `settle`, and it is
+    the kind the graph refusal leaves: it holds for a git, a registry and a workspace package, and
+    the admitted script of kernel is of the same kind;
+  - an `include!` of a file of `crates/coordination/src/recompute/` written outside that folder, in
+    one crate: rustc names the included file alone, so the census reads the call as a recompute
+    step's; it is disclosed, and no textual reader of `include!` is added;
   - a registry or git package's own code, a derive from one among it; such a package is a
     dependency, and ADR-022's supply-chain rule admits it;
   - a build that compiles its packages in different debug-assertion states (a manifest's per-package
     or custom profile, `[profile.release.package.<dependency>]` among them, or the invoking
     machine's configuration), where a dependency's or another member's macro or re-export reaches
-    `settle` only in a state its caller is not compiled in: the census compiles every package in one
-    state per pass;
+    `settle` only in a state its caller is not compiled in: the census compiles the workspace's
+    packages in one state per pass, and a profile or a variable that a build script turns into a
+    cfg is closed by the graph refusal above, not by a pass;
   - a build that selects some members only (`cargo build -p <member>`), whose dependencies resolve
     fewer features than the workspace's, where a dependency's macro reaches `settle` only without a
     feature another member asks for: the census compiles the workspace's own resolution;
@@ -674,7 +700,9 @@ stands, and the compiler decides it.
   A12 runs eight passes (four over every target, four over libraries and binaries, since members
   have dev-dependencies), and the killer judges its 2218 trees, each by its own compile. Both run in
   the `rust` job beside `check.sh`'s own build and tests, and the census's target directory lies
-  under the job's `target/tmp`, which its cache keeps. The pull request's body carries the `rust`
+  under the job's `target/tmp`, which the job keeps between runs under a cache key of its own (the
+  toolchain pin and `Cargo.lock`), and the killer builds its stub once for each worker and lets only
+  a case's own files recompile. A cold run, with no cache, judges the same trees and passes. The pull request's body carries the `rust`
   job's wall time before and after, read from CI. The `mutation-rows` job proves the rows a diff
   selects one after another within its 90 minutes; S07274 and S07275 each compile the real tree
   twice. The mutation battery (SPEC-039) runs progression's tests for each mutant of progression's
@@ -682,15 +710,18 @@ stands, and the compiler decides it.
   would be reported as a timeout rather than as missed: the pull request's verdict passes a timeout,
   and the weekly table counts one as killed. This amendment does not take that decision; ADR-197's
   round 6 brings it to the owner.
-- **Rows.** Thirty-five, S07241 to S07275 in this SPEC's band: S07241 to S07252 pin each refusal by
+- **Rows.** Forty-six, S07241 to S07286 in this SPEC's band: S07241 to S07252 pin each refusal by
   design and the census's return of them; S07253, S07254 and S07256 to S07271 its passes, the
   packages each names, its flags, its reading of rustc's report and its attribution; S07255 and
-  S07273 its scrubbed environment; S07272 its expansion bound; and S07274 and S07275 the probe
-  itself (the build script's arming and the attribute on `settle`). Each is killed by a test of
+  S07273 its scrubbed environment; S07272 its expansion bound; S07274 and S07275 the probe
+  itself (the build script's arming and the attribute on `settle`); and S07276 to S07286 the graph
+  refusal (the reached package, its name, the pin, the build-script target, the transitive walk, its
+  start, each edge, the locked graph, the pinned digest, the refusals it returns and the graph it
+  cannot read). Each is killed by a test of
   `xp_census.rs`, S07274 and S07275 by A12's own, and each was proved KILLED by its full id on a
   committed tree.
 - **Files.** `crates/progression/build.rs` (new), `crates/progression/src/settle.rs` (the probe),
-  `crates/progression/tests/xp_census.rs` (A12, A32, A33, A34),
+  `crates/progression/tests/xp_census.rs` (A12, A32, A33, A34, A35),
   `scripts/mutation-rows.d/S07200-S07299.json`, `docs/decisions/ADR-197-*.md`,
   `docs/red-first/SPEC-072.md` and `changelog.d/settle-census-397.md`.
 
@@ -700,8 +731,10 @@ stands, and the compiler decides it.
 |---|---|---|
 | A33 | a crate alias of progression's crate (`pub use deck_streak_progression as prog;` in another member) does not hide its caller: the caller that reaches `settle` through it is refused by file | progression `xp_census` tests: `the_census_follows_a_crate_alias` and the killer's identifier, export and manifest axes |
 | A34 | every use of `settle` rustc reports in any target of any workspace package, in any of its passes, is a caller: refused in a package but progression and coordination, and judged by the cause rule in coordination; a tree the compiler is not asked about is refused by name; the census compiles with cargo's own defaults, and bounds its cargo runs and its expansion chains with a failure by name | progression `xp_census` tests: `the_census_refuses_every_caller_the_compiler_finds`, `the_census_refuses_what_the_compiler_is_not_asked`, `the_census_names_each_use_in_its_package_and_file`, `the_census_compiles_with_cargos_own_defaults`, `the_census_fails_by_name_past_its_expansion_limit`, `the_census_fails_by_name_past_its_cargo_limit` and `the_killer_plants_progressions_own_probe` |
+| A35 | a package with a build script that is progression, or depends on it by a normal, build or dev edge of the resolve graph, is refused by name, but for progression's own build script at its pinned digest; a graph cargo cannot give is refused by name | progression `xp_census` tests: `a_build_script_in_a_package_that_depends_on_settle_is_refused_by_name`, `a_build_script_in_a_package_that_cannot_name_settle_is_accepted`, `a_one_byte_edit_of_progressions_build_script_is_refused_on_the_pin`, `a_corrupt_lock_file_is_refused_by_the_fail_closed_arm`, `a_build_script_reached_through_a_build_dependency_is_refused`, `a_build_script_reached_through_a_dev_dependency_is_refused` and `the_census_refuses_every_build_script_that_can_name_settle` |
 
 ```acceptance
 A33: cargo test -p deck-streak-progression --test xp_census -- --exact the_census_follows_a_crate_alias
 A34: cargo test -p deck-streak-progression --test xp_census -- --exact the_census_refuses_every_caller_the_compiler_finds
+A35: cargo test -p deck-streak-progression --test xp_census -- --exact the_census_refuses_every_build_script_that_can_name_settle
 ```

@@ -11,3 +11,11 @@
   owner's-correction rule. What the compiler is not asked to compile (a member's feature, a
   proc-macro member, a package outside the workspace, a cargo configuration) is refused by name
   (ADR-197).
+
+- The census now reads the resolve graph (`cargo metadata --locked --offline`) and refuses, by name,
+  every package that has a build script and can name `settle`: the package that defines it, or one
+  that depends on it by a normal, a build or a dev edge. Progression's own script is admitted at
+  one pinned SHA-256, and a graph cargo cannot give is a refusal. A build script's cfg in a package
+  that cannot name `settle`, read by a macro that package exports, and an `include!` of a
+  recompute file from outside the folder remain disclosed by kind (SPEC-072 section 12, ADR-197).
+  The census's target is kept between CI runs, and the killer builds its stub once for each worker.
