@@ -759,7 +759,9 @@ fn a_suppression_of_the_rule_or_of_its_group_is_refused_wherever_it_is_planted()
         "every one of the bot's sources on disk is examined"
     );
     assert!(
-        sources.iter().any(|(path, _)| path.ends_with("transport.rs")),
+        sources
+            .iter()
+            .any(|(path, _)| path.ends_with("transport.rs")),
         "the transport source is among those examined"
     );
 
