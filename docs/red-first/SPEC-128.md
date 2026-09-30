@@ -378,3 +378,21 @@ their killer. Each is killed when installed alone over the daemon's whole suite.
 in this round, so each row whose find has an equivalent at the head was installed there, and each
 survives (59 passed, 0 failed, 1 ignored, over 9 binaries). `S12825` and `S12827` log a
 step's failure under a sibling's name, which the head cannot do, since it names no step.
+
+## Addendum, 2026-09-30, round 6: a refusal is pinned at the error level it is logged at (#396)
+
+A16's log capture answered every level, so a refusal logged at warn, at info or at debug was still
+counted as named. It now enables error events only, the level the service keeps and alerts on
+(85749242). A16's fence lines are unchanged: the pin narrows what its table test accepts. Each
+plant lowers the level of the one `refused` log call. Without the pin (acf615ca) each is green over
+the daemon's library tests (13 passed, 0 failed); with it each turns the table test red by
+assertion, at the rescore step, the first step driven:
+
+```text
+warn: wiring::tests::every_failing_step_refuses_the_owners_sync_by_its_own_code_and_name
+  panicked at crates/daemon/src/wiring.rs:1014:9
+  left: []
+ right: [(Some("rescore"), Some("rescore_unrecorded"))]
+info: the same test, the same line, the same left and right
+debug: the same test, the same line, the same left and right
+```

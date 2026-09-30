@@ -177,7 +177,8 @@ defined in the section below.
   once and leaves four of its steps undriven. The class rule: for every step whose failure refuses the
   owner's sync, a behaviour test drives `OwnerSyncCycle::run` so that exactly that step fails, and
   asserts the code the step refuses by, that the answer is not an `Ok`, and that the refusal is
-  logged once under that step's name. The steps are read from the code, and A17 holds the table to
+  logged once under that step's name, at the error level. The steps are read from the code, and
+  A17 holds the table to
   them: each `?` in `run` before the cycle's own (`rescore`, `settings`, `credentials`, `scope`), and
   each kind of cycle error that `Step::of` maps at the cycle's site. A `CycleError` variant is one
   step where its error is a shared cause (`history`, `obligations`, `recompute`), and each kind of
@@ -248,7 +249,7 @@ defined in the section below.
 |---|---|---|
 | A14 | each variant's string form is the code stored today, no two variants share one, and the owner cycle's refusal type is the enum | `cargo test -p deck-streak-daemon --test roles -- --exact a_refusal_code_is_a_variant_of_the_closed_enum` |
 | A15 | the credentials directory's and the rescore request's refusal sites refuse the owner's sync by their own codes, and the bot answers a request its store cannot record by the rescore code: either site swallowed into an `Ok` answer or a discarded result is caught | the three tests this amendment adds, in the fence below; every other step is A16's |
-| A16 | every step whose failure refuses the owner's sync, driven through `run` by its own fault with no step before it failing, refuses by the code section 7 gives it, is not answered with an `Ok`, and is logged once under its own name: a step whose failure is remapped, hard-coded, answered, discarded or logged as a sibling's is caught | `cargo test -p deck-streak-daemon --lib -- --exact wiring::tests::every_failing_step_refuses_the_owners_sync_by_its_own_code_and_name` |
+| A16 | every step whose failure refuses the owner's sync, driven through `run` by its own fault with no step before it failing, refuses by the code section 7 gives it, is not answered with an `Ok`, and is logged once, at the error level, under its own name: a step whose failure is remapped, hard-coded, answered, discarded or logged as a sibling's is caught | `cargo test -p deck-streak-daemon --lib -- --exact wiring::tests::every_failing_step_refuses_the_owners_sync_by_its_own_code_and_name` |
 | A17 | the step table has a row for every step the code gives a refusal, and the table's check fails on its own faults: a step with no row, a failure answered with an `Ok`, a refusal logged under another step's name, a step driven once | the four tests in the fence below |
 
 ```acceptance
