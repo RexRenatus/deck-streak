@@ -23,6 +23,7 @@ EXPECTED = {
     "axioms": ["propext", "Classical.choice", "Quot.sound"],
     "owner_signers": "config/owner-allowed-signers",
     "tlc_slot": {"capacity": 1, "wait_seconds": 1800},
+    "toolchain": {"identity": "a2518571360483e12161e99b64695e6c3e8845230129ce0ad179b5bddf9a8dc4"},
 }
 
 # The reader's rules per field: (path, kind, required). The kinds are the checker's own.
@@ -36,6 +37,7 @@ FIELDS = [
     (("owner_signers",), "path", True),
     (("tlc_slot", "capacity"), "posint", False),
     (("tlc_slot", "wait_seconds"), "posint", False),
+    (("toolchain", "identity"), "hex64", True),
 ]
 
 # One value of every JSON type. A kind admits the types named here, and a value of any other type is
@@ -56,6 +58,7 @@ ADMITS = {
     "posint-map": {"object"},
     "strings": {"array"},
     "path": {"string"},
+    "hex64": {"string"},
     "string": {"string"},
 }
 # The object levels of the document: the root is the empty prefix.
@@ -74,8 +77,21 @@ ARM = {
     "posint-map": "posint-map",
     "strings": "strings-list",
     "path": "path",
+    "hex64": "hex64",
 }
 BAD_PATHS = ("/abs", "../up", "a/../b", "")
+HEX_DIGITS = "0123456789abcdef"
+# The string values a digest kind refuses, each derived from the declared digest by one edit, so the
+# members follow the declared value: one digit short, one digit long, an uppercase digit, a
+# non-hex digit, an empty string and a trailing newline.
+BAD_HEX = {
+    "63 digits": lambda good: good[:-1],
+    "65 digits": lambda good: good + "0",
+    "an uppercase digit": lambda good: good.upper(),
+    "a non-hex digit": lambda good: "g" + good[1:],
+    "an empty string": lambda good: "",
+    "a trailing newline": lambda good: good + "\n",
+}
 
 
 class Refused(Exception):
@@ -97,6 +113,10 @@ def is_repo_relative(value):
         and not value.startswith("/")
         and ".." not in value.split("/")
     )
+
+
+def is_hex64(value):
+    return isinstance(value, str) and len(value) == 64 and all(c in HEX_DIGITS for c in value)
 
 
 def get(doc, path):
@@ -144,6 +164,8 @@ def read(doc):
                 raise Refused("axiom-added", f"{name} adds {extra}")
         if kind == "path" and not is_repo_relative(value):
             raise Refused("path", f"{name} is not a repo-relative path")
+        if kind == "hex64" and not is_hex64(value):
+            raise Refused("hex64", f"{name} is not 64 lowercase hex digits")
     return doc
 
 
@@ -298,6 +320,9 @@ def planted_faults():
         if kind == "path":
             for bad in BAD_PATHS:
                 faults.append((f"{name} = {bad!r}", with_value(path, bad)))
+        if kind == "hex64":
+            for label, make in BAD_HEX.items():
+                faults.append((f"{name} = {label}", with_value(path, make(get(EXPECTED, path)[0]))))
     return faults
 
 
@@ -416,7 +441,11 @@ class FormalConfig(unittest.TestCase):
 
     def test_the_reader_refuses_each_planted_fault(self):
         """A3: each planted fault is refused by the test's own reader; the committed file is not."""
-        self.assertIs(read(load()) is not None, True, "presence control: the file is admitted")
+        try:
+            admitted_doc = read(load())
+        except Refused as refusal:
+            self.fail(f"presence control: the file is refused: {refusal}")
+        self.assertIsNotNone(admitted_doc, "presence control: the file is admitted")
         faults = examined("planted faults", planted_faults())
         admitted = []
         reached = set()
@@ -435,6 +464,56 @@ class FormalConfig(unittest.TestCase):
         arms = examined("refusal arms of the reader", reader_arms())
         self.assertEqual(set(arms) - reached, set(), "a refusal arm no planted fault reaches")
         self.assertEqual(reached - set(arms), set())
+
+    def test_the_toolchain_identity_is_named_and_a_malformed_one_is_refused(self):
+        """A6: the committed file names the checker's toolchain by one 64-digit lowercase hex
+        identity, and the test's own reader admits it and refuses every fault generated from the
+        table for a digest field: a `toolchain` that is no object, an extra key beside `identity`,
+        an identity missing, of every other JSON type, one digit short, one digit long, with an
+        uppercase or a non-hex digit, empty or with a trailing newline, each by the kind's own arm."""
+        doc = load()
+        value, present = get(doc, ("toolchain", "identity"))
+        self.assertTrue(present, "toolchain.identity is named")
+        self.assertTrue(is_hex64(value), f"{value!r} is not 64 lowercase hex digits")
+        self.assertEqual(list(doc["toolchain"]), ["identity"])
+        self.assertIsNotNone(read(doc), "presence control: the committed file is admitted")
+        places = examined(
+            "digest fields", [(path, ".".join(path)) for path, kind, _ in FIELDS if kind == "hex64"]
+        )
+        faults = []
+        for path, name in places:
+            good = get(EXPECTED, path)[0]
+            faults.append((f"missing {name}", "missing-field", without(path)))
+            for type_name, bad in JSON_TYPES.items():
+                if type_name not in ADMITS["hex64"]:
+                    faults.append((f"{name} = {type_name}", "hex64", with_value(path, bad)))
+            for label, make in BAD_HEX.items():
+                faults.append((f"{name} = {label}", "hex64", with_value(path, make(good))))
+            parent = path[:-1]
+            for type_name, bad in JSON_TYPES.items():
+                if type_name not in ADMITS["object"]:
+                    faults.append(
+                        (
+                            f"{'.'.join(parent)} = {type_name}",
+                            "wrong-kind-object",
+                            with_value(parent, bad),
+                        )
+                    )
+            extra = copy.deepcopy(EXPECTED)
+            get(extra, parent)[0]["planted_field"] = 1
+            faults.append((f"extra key beside {name}", "unknown-field", extra))
+        faults = examined("planted digest faults", faults)
+        wrong = []
+        for name, arm, bad_doc in faults:
+            try:
+                read(bad_doc)
+            except Refused as refusal:
+                if refusal.arm != arm:
+                    wrong.append(f"{name}: refused by {refusal.arm}, not {arm}")
+                continue
+            wrong.append(f"{name}: admitted")
+        self.assertEqual(wrong, [], "a planted digest fault the reader did not refuse by its arm")
+        self.assertGreaterEqual(len(faults), len(BAD_HEX) + 1 + len(JSON_TYPES) - 1)
 
 
 if __name__ == "__main__":
