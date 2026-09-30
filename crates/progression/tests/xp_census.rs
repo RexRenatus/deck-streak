@@ -3409,6 +3409,11 @@ fn the_census_refuses_every_caller_the_compiler_finds() {
         started.elapsed(),
         wrong.len() - escaping
     );
+    assert!(
+        cases.len() >= 2218,
+        "the killer's population holds {} tree(s), fewer than the 2218 it was measured with",
+        cases.len()
+    );
     assert_eq!(
         wrong.first(),
         None,
