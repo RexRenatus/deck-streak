@@ -225,6 +225,24 @@
         "                    (begins(offset, hour, d + 3), Some(d + 1)),\n",
         "lapse::a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary",
         "the rollover population's four instants of now are four, so one replaced by a copy of another keeps the examined count and drops distinct (SPEC-049 A20)"
+      ],
+      [
+        "S04927-THE-LAPSE-JUDGE-IS-HANDED-EACH-INSTANT",
+        "coordination",
+        "tests/lapse.rs",
+        "                    review_at(t),\n",
+        "                    review_at(begins(offset, hour, d)),\n",
+        "lapse::a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary",
+        "the lapse judge is handed the review at each of the seven instants, so the review folded to its day's first instant keeps the examined count, still feeds the day judge every instant, and drops the lapse judge's distinct members (SPEC-049 A20)"
+      ],
+      [
+        "S04928-THE-DAY-JUDGE-IS-HANDED-EACH-INSTANT",
+        "coordination",
+        "tests/lapse.rs",
+        "                    day_judge(the_rule, t),\n",
+        "                    day_judge(the_rule, begins(offset, hour, d)),\n",
+        "lapse::a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary",
+        "the day judge is handed each of the seven instants, so the instant folded to its day's first keeps the examined count, still feeds the lapse judge every review, and drops the day judge's distinct members (SPEC-049 A20)"
       ]
     ]
   }
