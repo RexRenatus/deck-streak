@@ -222,6 +222,17 @@
       "erase": "delete"
     },
     {
+      "id": "relight-due",
+      "data": "the study days whose relight was granted and whose celebration is not yet decided",
+      "source": "derived",
+      "stores": ["relight_due.*"],
+      "purpose": "celebrating each relight once, also when DeckStreak restarts before the celebration is sent",
+      "lawful_basis": "contract",
+      "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "delete"
+    },
+    {
       "id": "governor-state",
       "data": "the governor's one row: the day a lapse began, whether it is on standby and the day you were last told",
       "source": "derived",

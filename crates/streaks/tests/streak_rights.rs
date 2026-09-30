@@ -1,6 +1,7 @@
-//! Streaks' data-rights port (SPEC-076 A19; R20; CHARTER 13): the streak rows, the freeze ledger and
-//! the habit strength are exported whole and erased, the governor's row is reset in place, and an
-//! erase returns both tracks to their start state. Every row here is synthetic.
+//! Streaks' data-rights port (SPEC-076 A19; R20, R27; CHARTER 13): the streak rows, the freeze
+//! ledger, the habit strength and the relight's due list are exported whole and erased, the
+//! governor's row is reset in place, and an erase returns both tracks to their start state. Every
+//! row here is synthetic.
 
 #![allow(clippy::expect_used)]
 
@@ -27,6 +28,7 @@ async fn an_erase_returns_both_tracks_to_their_start_state() {
             "streak_state",
             "freeze_events",
             "habit_strength",
+            "relight_due",
             "governor_state"
         ]
     );
@@ -57,6 +59,10 @@ async fn an_erase_returns_both_tracks_to_their_start_state() {
         .execute(&mut *write)
         .await
         .expect("a strength row");
+    sqlx::query("INSERT INTO relight_due VALUES (19999, 1000)")
+        .execute(&mut *write)
+        .await
+        .expect("a due row");
     sqlx::query("UPDATE governor_state SET lapse_since = 19990, standby = 1, notified_day = 19995")
         .execute(&mut *write)
         .await
@@ -69,6 +75,7 @@ async fn an_erase_returns_both_tracks_to_their_start_state() {
     assert_eq!(rows(&exported, "streak_state").len(), 2);
     assert_eq!(rows(&exported, "freeze_events").len(), 1);
     assert_eq!(rows(&exported, "habit_strength").len(), 1);
+    assert_eq!(rows(&exported, "relight_due").len(), 1);
     assert_eq!(rows(&exported, "governor_state").len(), 1);
 
     StreaksDataRights
@@ -79,7 +86,12 @@ async fn an_erase_returns_both_tracks_to_their_start_state() {
         .export(&mut write)
         .await
         .expect("the export runs");
-    for table in ["streak_state", "freeze_events", "habit_strength"] {
+    for table in [
+        "streak_state",
+        "freeze_events",
+        "habit_strength",
+        "relight_due",
+    ] {
         assert!(
             rows(&after, table).is_empty(),
             "{table} is empty after an erase"

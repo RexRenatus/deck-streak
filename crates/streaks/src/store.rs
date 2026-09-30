@@ -1,5 +1,6 @@
-//! What the fold writes for the streaks context (SPEC-076 R16, R17): the two streak rows, the
-//! freeze events, the habit strength and the governor's one row, on the connection the fold holds.
+//! What the fold writes for the streaks context (SPEC-076 R16, R17, R27): the two streak rows, the
+//! freeze events, the habit strength, the governor's one row and the relight's due list, on the
+//! connection the fold holds.
 //!
 //! The context owns these tables, so every statement that names them lives here. Instants are epoch
 //! milliseconds and days are epoch days, as the tables store them.
@@ -270,4 +271,59 @@ pub async fn add_freeze(
         reason,
     };
     insert_events(connection, &[event], at).await
+}
+
+/// Records `day` as due its relight celebration, in the write that grants its relight, so the day is
+/// due exactly when the grant commits (R27). A day already due is left as it is.
+///
+/// # Errors
+///
+/// [`KernelError`] when the write fails.
+pub async fn put_relight_due(
+    connection: &mut SqliteConnection,
+    day: StudyDay,
+    at: UtcMillis,
+) -> Result<(), KernelError> {
+    let day = day.epoch_day();
+    let created = at.epoch_millis();
+    sqlx::query!(
+        "INSERT INTO relight_due (study_day, created_at) VALUES (?1, ?2)
+         ON CONFLICT (study_day) DO NOTHING",
+        day,
+        created
+    )
+    .execute(&mut *connection)
+    .await?;
+    Ok(())
+}
+
+/// Every study day still due its relight celebration, oldest first (R27).
+///
+/// # Errors
+///
+/// [`KernelError`] when the read fails.
+pub async fn relight_due(connection: &mut SqliteConnection) -> Result<Vec<StudyDay>, KernelError> {
+    let rows = sqlx::query!("SELECT study_day FROM relight_due ORDER BY study_day")
+        .fetch_all(&mut *connection)
+        .await?;
+    Ok(rows
+        .into_iter()
+        .map(|row| StudyDay::from_epoch_day(row.study_day))
+        .collect())
+}
+
+/// Removes `day` from the due list, once the router has decided its celebration (R27).
+///
+/// # Errors
+///
+/// [`KernelError`] when the write fails.
+pub async fn clear_relight_due(
+    connection: &mut SqliteConnection,
+    day: StudyDay,
+) -> Result<(), KernelError> {
+    let day = day.epoch_day();
+    sqlx::query!("DELETE FROM relight_due WHERE study_day = ?1", day)
+        .execute(&mut *connection)
+        .await?;
+    Ok(())
 }

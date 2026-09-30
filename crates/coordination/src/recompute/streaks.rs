@@ -5,8 +5,6 @@
 //! Every rule is streaks' or progression's; the step only chooses which, for the day the fold
 //! evaluates, and stores what they answer.
 
-use std::sync::{Arc, Mutex, PoisonError};
-
 use std::collections::BTreeSet;
 
 use deck_streak_ingest::reader::is_study_event;
@@ -26,12 +24,12 @@ use super::{DayEvaluation, DayStep, Evaluation, Phase};
 /// The name the fold's report gives this step.
 pub const STREAKS_STEP: &str = "streaks.streaks_and_governor";
 
-/// The study days whose relight a recompute answered as due, for the caller to route after the
-/// fold's commit (SPEC-076 R27).
+/// The relight's due list (SPEC-076 R27): the study days whose relight grant committed and whose
+/// celebration the router has not yet decided. The step writes a day in the same write as its grant,
+/// so a day is due exactly when that write commits, and the list outlives a restart between the
+/// commit and the route.
 #[derive(Clone, Debug, Default)]
-pub struct RelightDue {
-    days: Arc<Mutex<Vec<StudyDay>>>,
-}
+pub struct RelightDue;
 
 impl RelightDue {
     /// Every day still due, oldest first.
@@ -39,18 +37,9 @@ impl RelightDue {
     /// # Errors
     ///
     /// [`KernelError`] when the due days cannot be read.
-    #[expect(
-        clippy::unused_async,
-        reason = "the head's list is held in memory; the stored list awaits its read"
-    )]
-    pub async fn pending(&self, _db: &Db) -> Result<Vec<StudyDay>, KernelError> {
-        let mut days = self
-            .days
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .clone();
-        days.sort_unstable();
-        Ok(days)
+    pub async fn pending(&self, db: &Db) -> Result<Vec<StudyDay>, KernelError> {
+        let mut read = db.reader().acquire().await?;
+        store::relight_due(&mut read).await
     }
 
     /// Marks `day` routed: the router has decided its celebration, so it is no longer due.
@@ -58,31 +47,23 @@ impl RelightDue {
     /// # Errors
     ///
     /// [`KernelError`] when the mark cannot be written.
-    #[expect(
-        clippy::unused_async,
-        reason = "the head's list is held in memory; the stored list awaits its write"
-    )]
-    pub async fn routed(&self, _db: &Db, day: StudyDay) -> Result<(), KernelError> {
-        self.days
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .retain(|due| *due != day);
+    pub async fn routed(&self, db: &Db, day: StudyDay) -> Result<(), KernelError> {
+        let mut write = db.write().await?;
+        store::clear_relight_due(&mut write, day).await?;
+        write.commit().await?;
         Ok(())
     }
 }
 
 /// The streaks and governor step.
 #[derive(Clone, Debug, Default)]
-pub struct StreaksStep {
-    due: RelightDue,
-}
+pub struct StreaksStep;
 
 impl StreaksStep {
     /// A step, and the handle its caller routes the relights from.
     #[must_use]
     pub fn new() -> (Self, RelightDue) {
-        let due = RelightDue::default();
-        (Self { due: due.clone() }, due)
+        (Self, RelightDue)
     }
 }
 
@@ -158,7 +139,6 @@ impl StreaksStep {
     }
 
     async fn relight(
-        &self,
         day: StudyDay,
         facts: &super::RecomputeFacts<'_>,
         lapse_open: bool,
@@ -188,11 +168,9 @@ impl StreaksStep {
             scope: GrantScope::Once,
         };
         let _ = grant_on(write, &request, facts.now).await?;
-        let mut days = self.due.days.lock().unwrap_or_else(PoisonError::into_inner);
-        if !days.contains(&day) {
-            days.push(day);
-        }
-        Ok(())
+        // The day is due in the grant's own write: a write that rolls back leaves no day due, and
+        // one that commits leaves it due until the router decides it (R27).
+        store::put_relight_due(write, day, facts.now).await
     }
 
     async fn govern(
@@ -232,8 +210,7 @@ impl DayStep for StreaksStep {
             let stored = store::governor(write).await?;
             Self::streaks(day.day, day.evaluation, &days, facts, write).await?;
             if day.evaluation.runs_today_only_rules() {
-                self.relight(day.day, facts, stored.lapse_since.is_some(), write)
-                    .await?;
+                Self::relight(day.day, facts, stored.lapse_since.is_some(), write).await?;
             }
             if matches!(day.evaluation, Evaluation::Settle { .. }) {
                 Self::govern(day.day, &days, stored, facts, write).await?;

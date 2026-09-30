@@ -1,9 +1,11 @@
-//! Streaks' data-rights port (SPEC-076 R20; CHARTER 13): the streak rows, the freeze ledger and the
-//! habit strength are the owner's data, exported whole and erased; the governor's one row is reset
-//! in place, so an erase returns both tracks and the governor to their start state.
+//! Streaks' data-rights port (SPEC-076 R20, R27; CHARTER 13): the streak rows, the freeze ledger,
+//! the habit strength and the relight's due list are the owner's data, exported whole and erased;
+//! the governor's one row is reset in place, so an erase returns both tracks and the governor to
+//! their start state.
 
 use deck_streak_kernel::{
-    DataRights, DataRightsError, Declaration, Disposition, ExportedTable, PortFuture, TableRights,
+    DataRights, DataRightsError, Declaration, Disposition, ExportedTable, KernelError, PortFuture,
+    TableRights,
 };
 use serde_json::{Map, Value, json};
 use sqlx::SqliteConnection;
@@ -19,6 +21,24 @@ pub const FREEZE_EVENTS_TABLE: &str = "freeze_events";
 pub const HABIT_STRENGTH_TABLE: &str = "habit_strength";
 /// The table holding the governor's one row.
 pub const GOVERNOR_STATE_TABLE: &str = "governor_state";
+/// The table holding the relight's due list (`migrations/007602_streaks_relight_due.sql`).
+pub const RELIGHT_DUE_TABLE: &str = "relight_due";
+
+/// The relight's due list, one exported row per day (R27).
+async fn relight_due_rows(connection: &mut SqliteConnection) -> Result<Vec<Value>, KernelError> {
+    let rows = sqlx::query!("SELECT study_day, created_at FROM relight_due ORDER BY study_day")
+        .fetch_all(connection)
+        .await?;
+    Ok(rows
+        .into_iter()
+        .map(|row| {
+            json!({
+                "study_day": row.study_day,
+                "created_at": row.created_at,
+            })
+        })
+        .collect())
+}
 
 /// Streaks' implementation of the kernel's data-rights port.
 #[derive(Clone, Copy, Debug, Default)]
@@ -34,6 +54,7 @@ impl DataRights for StreaksDataRights {
             STREAK_STATE_TABLE,
             FREEZE_EVENTS_TABLE,
             HABIT_STRENGTH_TABLE,
+            RELIGHT_DUE_TABLE,
         ]
         .into_iter()
         .map(|table| TableRights {
@@ -70,6 +91,7 @@ impl DataRights for StreaksDataRights {
             )
             .fetch_all(&mut *connection)
             .await?;
+            let due = relight_due_rows(&mut *connection).await?;
             let governor = sqlx::query!(
                 "SELECT id, lapse_since, standby, notified_day, created_at FROM governor_state"
             )
@@ -122,6 +144,10 @@ impl DataRights for StreaksDataRights {
                         .collect(),
                 },
                 ExportedTable {
+                    table: RELIGHT_DUE_TABLE,
+                    rows: due,
+                },
+                ExportedTable {
                     table: GOVERNOR_STATE_TABLE,
                     rows: governor
                         .into_iter()
@@ -149,6 +175,9 @@ impl DataRights for StreaksDataRights {
                 .execute(&mut *connection)
                 .await?;
             sqlx::query!("DELETE FROM habit_strength")
+                .execute(&mut *connection)
+                .await?;
+            sqlx::query!("DELETE FROM relight_due")
                 .execute(&mut *connection)
                 .await?;
             // The governor's one row stays, at its start state, so the fold never finds it absent.
