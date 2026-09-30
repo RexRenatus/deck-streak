@@ -108,6 +108,8 @@ R11. CHARTER 10's eleven anti-goals bind this SPEC as one block; the ones it tou
 | A14 | a refused or unreachable Bot API answers `Failed` from both calls, with no retry | `a_refused_photo_or_share_answers_failed` |
 | A15 | the policy's bot transport list and the census hold `push_photo` and `prepare_share` | `the_policy_names_every_bot_call` |
 | A16 | a caption is counted in UTF-16 units: 512 characters outside the BMP (1,024 units) are taken, 513 (1,026) are refused `photo_invalid`, and a combining sequence counts each of its units | `a_caption_is_counted_in_utf16_units` |
+| A17 | a share's caption is bounded as the photo's is: over a generated population of captions (eight character classes, ASCII, BMP, CJK, astral, combining, ZWJ, flag and variation-selector, each at 1,023, 1,024 and 1,025 UTF-16 units, plain and inside each of eight entity tags and beside each of four character references, written and parsed at the bound), the share takes a caption exactly when the photo does, refuses every other with `Refused` and no transport call, and takes none whose text after its entities are parsed is over 1,024 units | `a_share_caption_is_bounded_as_the_photo_caption_is` |
+| A18 | the photo and the share ask one bound function: the notifications sources count UTF-16 units in one place, `check_caption`, which `Photo::new` and `prepare_share` both call | `the_share_and_the_photo_read_one_bound_function` |
 
 ```acceptance
 A1: cargo test -p deck-streak-notifications --test photo_render -- --exact a_transport_without_push_photo_answers_unsupported
@@ -126,6 +128,8 @@ A13: cargo test -p deck-streak-bot --test photo_transport -- --exact prepare_sha
 A14: cargo test -p deck-streak-bot --test photo_transport -- --exact a_refused_photo_or_share_answers_failed
 A15: cargo test -p deck-streak-notifications --test one_router -- --exact the_policy_names_every_bot_call
 A16: cargo test -p deck-streak-notifications --test photo_render -- --exact a_caption_is_counted_in_utf16_units
+A17: cargo test -p deck-streak-notifications --test share_caption -- --exact a_share_caption_is_bounded_as_the_photo_caption_is
+A18: cargo test -p deck-streak-notifications --test share_caption -- --exact the_share_and_the_photo_read_one_bound_function
 ```
 
 ## 3a. What the box run judges
@@ -149,6 +153,7 @@ each judges. The delivery hands back an empty JSON diff and says so.
 | `crates/notifications/src/lib.rs` | `deck-streak-notifications` | changed: the module |
 | `crates/notifications/tests/photo_render.rs` | `deck-streak-notifications` | added: A1 to A11 |
 | `crates/notifications/tests/photo_jpeg.rs` | `deck-streak-notifications` | added: the JPEG size reader's paths, for the mutation gate |
+| `crates/notifications/tests/share_caption.rs` | `deck-streak-notifications` | added: A17 and A18 |
 | `crates/notifications/tests/one_router.rs` | `deck-streak-notifications` | changed: A15 |
 | `crates/notifications/tests/ladder_policy.rs` | `deck-streak-notifications` | changed: the port's call list includes the two new calls |
 | `crates/notifications/tests/policy.rs` | `deck-streak-notifications` | changed: the required withhold reasons include `photo_unsupported` |
@@ -163,6 +168,7 @@ each judges. The delivery hands back an empty JSON diff and says so.
 | `docs/decisions/ADR-136-a-share-is-a-prepared-inline-message-the-owner-sends-from-telegrams-share-sheet.md` | docs | changed: a delivered-so-far line; it stays proposed until SPEC-136 delivers the route and the client |
 | `scripts/mutation-rows.d/S13200-S13299.json` | repo | added: §9's rows |
 | `changelog.d/` fragment | repo | added |
+| `crates/notifications/src/photo.rs`, `crates/notifications/src/router.rs`, `crates/notifications/src/transport.rs` | `deck-streak-notifications` | changed (#430): `check_caption`, the share's call of it, `Prepared::Refused` |
 
 ## 5. What this does NOT do
 
@@ -172,6 +178,9 @@ each judges. The delivery hands back an empty JSON diff and says so.
 - It adds no photo to the Mini App's in-app feed; the gallery shows images (#125).
 - It changes no tier of the ladder's table (#120).
 - It does not route a share photo through the ladder's tier (#125).
+- It bounds no caption by what Telegram parses: the caption is counted as written, which only
+  over-counts its markup, so a caption whose parsed text fits but whose markup does not is
+  refused, as the photo's is (#430).
 
 ## 6. Risks
 
@@ -205,3 +214,18 @@ None. The deliveries go into SPEC-041's decision ledger.
 | `S13208-SIZE-BOUND` | `crates/notifications/src/photo.rs` | 10,000,000 bytes; the test names 10,000,000 and 10,000,001 | `photo_render::an_oversized_photo_is_refused_before_any_call` |
 | `S13209-SHARE-NO-RECORD` | `crates/notifications/src/router.rs` | a prepared share records no delivery | `photo_render::a_prepared_share_records_no_delivery` |
 | `S13210-LARGEST-SIZE` | `crates/bot/src/transport.rs` | the file id of the largest size | `photo_transport::push_photo_is_one_send_photo_to_the_owner` |
+| `S13213-THE-SHARE-ASKS-THE-BOUND` | `crates/notifications/src/router.rs` | the prepared share asks the photo's bound before any call | `share_caption::a_share_caption_is_bounded_as_the_photo_caption_is` |
+| `S13214-THE-SHARE-REFUSES-BY-NAME` | `crates/notifications/src/router.rs` | an over-long share caption answers `Refused`, not `Failed` | `share_caption::a_share_caption_is_bounded_as_the_photo_caption_is` |
+| `S13215-THE-PHOTO-ASKS-THE-SAME-BOUND` | `crates/notifications/src/photo.rs` | the photo and the share ask one bound function | `share_caption::a_share_caption_is_bounded_as_the_photo_caption_is` |
+| `S13216-A-CAPTION-AT-THE-LIMIT-IS-TAKEN` | `crates/notifications/src/photo.rs` | the caption limit is inclusive: 1,024 units are taken | `share_caption::a_share_caption_is_bounded_as_the_photo_caption_is` |
+
+## 10. Amendments at delivery
+
+- **A17 and A18: the share's caption bound (#430).** `prepare_share` took a caption with no bound, so
+  a caption over the Bot API's limit reached `savePreparedInlineMessage` and came back `Failed`,
+  which reads as an outage. The photo's bound became one function, `check_caption`, that `Photo::new`
+  and `prepare_share` both call, and a caption over it answers `Prepared::Refused` before any call.
+  `Refused` is a new variant of `Prepared`; nothing outside the tests matches it exhaustively. The
+  bound stays the photo's own count as written; the Bot API counts after entities are parsed, so
+  the count only ever over-counts markup, and the test's independent parse checks that no caption
+  the bound takes is over the limit as the Bot API measures it.

@@ -270,6 +270,10 @@ def shard_artifact(shard, family="rust"):
     inside = posixpath.relpath(out, root)
     prefix = "" if inside == "." else inside + "/"
     files = {prefix + leaf for leaf in leaves}
+    if family == "rust":
+        # The Rust leg runs inside the memory scope, which writes its record beside the report
+        # (SPEC-196 R8).
+        files.add(f"{prefix}memory-scope.json")
     return name, files
 
 

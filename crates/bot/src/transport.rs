@@ -366,6 +366,14 @@ impl Transport {
         timeout: Duration,
         waits: Arc<dyn Waits>,
     ) -> Result<Self, TransportError> {
+        #[expect(
+            clippy::disallowed_types,
+            reason = "the transport is the one place the bot's HTTP client is made"
+        )]
+        #[expect(
+            clippy::disallowed_methods,
+            reason = "the transport is the one place the bot's HTTP client is made"
+        )]
         let client = reqwest::Client::builder()
             .connect_timeout(timeout)
             .timeout(timeout)

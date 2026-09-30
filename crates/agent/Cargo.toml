@@ -23,8 +23,11 @@ thiserror.workspace = true
 sqlx.workspace = true
 tokio = { workspace = true, features = ["process", "time", "io-util", "rt", "macros"] }
 
-# A temporary directory outside the repository for the roster (ADR-020), and the async runtime for
-# the ports' tests (ADR-003). Test support only.
+# A temporary directory outside the repository for the roster (ADR-020), the async runtime for
+# the ports' tests (ADR-003), and the lexer the source pins read `src/runs.rs` and `src/verdict.rs`
+# with (ADR-293). Test support only.
 [dev-dependencies]
+proc-macro2.workspace = true
+syn.workspace = true
 tempfile.workspace = true
 tokio = { workspace = true, features = ["macros", "rt"] }
