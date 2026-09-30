@@ -58,3 +58,26 @@ A15: green at fd245da
 A16: red at bab6593: a missing credential refuses start: OwnerGate { key: WebAppKey(..), owner: Owner(..), freshness: Freshness { max_age: 3600s } } (the gate loaded with owner-user-id missing)
 A16: green at fd245da
 ```
+
+
+## Addendum, 2026-09-30: a log capture cannot lose a line to another thread (#461)
+
+The killer (`crates/kernel/tests/log_capture_class.rs`) was committed at 4e81676 beside
+the helper in its plain form, whose two entries make the capture exactly as the workspace's tests
+did: a thread-local default and nothing else. Both tests are red there by assertion, and
+deterministically: A17 runs each scenario in a child of the test binary with one test thread, so
+the dispatcher registry starts empty and no other test can register a second dispatcher, and A18
+counts the tree. The helper gains its floor dispatcher and the thirteen capturing calls are routed
+through it at 29a8b0f, where both are green. The tests were not changed between the two commits
+but for a formatter's layout of one line.
+
+```red-first
+A17: red at 4e81676: 2 of 2 scenarios lost a line another thread reached first: ["scoped", "held"] (the capture, the only dispatcher registered, was never asked about a line a thread with no subscriber reached first)
+A17: green at 29a8b0f
+A18: red at 4e81676: capture population: 341 file(s) read; 13 raw capture(s), 0 routed, 1 global default(s) (assertion `left == right` failed, left: 0, right: 13)
+A18: green at 29a8b0f
+```
+
+At 29a8b0f the killer prints `log capture scenarios: 2 run, 0 lost the line` and `capture
+population: 341 file(s) read; 0 raw capture(s), 13 routed, 1 global default(s)`. The RED count at
+4e81676 is 2 of 2 tests and 13 of 13 capturing calls unrouted.

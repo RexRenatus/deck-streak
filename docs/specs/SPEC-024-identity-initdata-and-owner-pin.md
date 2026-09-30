@@ -257,3 +257,61 @@ refused the launch 60 seconds ahead (left `Err(InitDataStale)`, right `Ok(Telegr
 and 61 and 120 admitted the one 61 seconds ahead (left `Ok(Caller { user: TelegramUserId(4242) })`,
 right `Err(InitDataStale)`). The file was restored byte for byte after each, its sha256
 `51ff9221e1d770fa958e3be7b33a6b33a2eb2f7a2d2d8d08ce836eb623006823` before and after.
+
+## 8. Amendment, 2026-09-30: a log capture cannot lose a line to another thread
+
+Made under issue #461, insert-only under ruling (i) of SPEC-038 section 8: every earlier byte is
+kept in order, so the amendment is these two new last sections and nothing above them is edited.
+Its criteria, A17 and A18, are defined in the section below.
+
+- **The class.** A test that captures log lines receives every line its code emits, whichever
+  thread first reached that line's callsite, and whatever the other tests in the same binary did
+  first. No capture depends on another test's cached callsite interest.
+- **The defect.** Tests, `init_data_never_reaches_the_log` among them, capture through a
+  thread-local default and register no global one. `tracing-core` 0.1.36 computes a new callsite's
+  interest from every registered dispatcher only while two or more are registered; with exactly
+  one, `Dispatchers::rebuilder` returns `JustOne` and `rebuild_callsite_interest` asks
+  `dispatcher::get_default`, the reaching thread's own default. A thread with no subscriber that
+  reaches a line first, while a capture is the only registered dispatcher, caches the line as
+  `Interest::never()`; the capture on another thread never sees it. The code under test is
+  unchanged between a passing run and a failing one.
+- **The mechanism, one for the class.** `tools/log-capture/capture.rs`, included by path into each
+  test binary that captures, offers `with_capture` and `hold_capture`. Both first register a
+  process-wide `Dispatch` over `NoSubscriber` that is never dropped, then make the capture. With
+  the floor registered first, a capture is never the only registered dispatcher, so
+  `rebuilder` returns the read lock over every live dispatcher, and a callsite's interest includes
+  the capture's whichever thread reached it first. The doc lines it rests on are
+  `Dispatch::new`'s call to `register_dispatch`, which adds the dispatcher to the list and
+  rebuilds every callsite, and `rebuild_callsite_interest`, which combines every dispatcher's
+  interest with `Interest::and` and defaults to never only when there are none. A per-test retry,
+  a single-thread pin and a sleep were rejected: each hides the loss, none removes it.
+- **The population, derived.** Every `set_default(`, `with_default(` and `set_global_default(` in
+  `crates/`, read from the tree with comments and whitespace removed: 13 scoped captures in 9
+  files, all routed through the helper, and 1 production global default
+  (`crates/kernel/src/logging.rs`), which this amendment measures and does not change. The
+  daemon's `wiring` tests had already held a second dispatcher for their own capture; they now
+  use the helper like the rest.
+- **Files this amendment touches.** `tools/log-capture/capture.rs`,
+  `crates/kernel/tests/log_capture_class.rs`, the capturing tests
+  `crates/coordination/tests/drill_paid_count.rs` (its capture lines only),
+  `crates/coordination/tests/settle_fold.rs`, `crates/daemon/src/wiring.rs` (its test module only),
+  `crates/daemon/tests/lifecycle.rs`, `crates/identity/tests/owner.rs`,
+  `crates/ingest/tests/scope.rs`, `crates/ingest/tests/settings.rs`,
+  `crates/ingest/tests/window.rs`, `crates/kernel/tests/offload.rs`, `docs/red-first/SPEC-024.md`
+  and `changelog.d/fix-log-capture-461.md`.
+
+## 9. Acceptance criteria of the 2026-09-30 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A17 | a capture made with either entry of the helper keeps a line that a thread with no subscriber reached first, in a child of the test binary whose dispatcher registry starts empty | `log_capture_class` test |
+| A18 | every capturing call in `crates/` goes through the helper: 13 routed, none raw, and the one production global default is the only one | `log_capture_class` test |
+
+```acceptance
+A17: cargo test -p deck-streak-kernel --test log_capture_class -- --exact a_capture_keeps_a_line_another_thread_reached_first
+A18: cargo test -p deck-streak-kernel --test log_capture_class -- --exact every_capture_in_the_workspace_goes_through_the_helper
+```
+
+A17 runs each entry of the helper in a child process of the test binary, one test thread, so the
+loss does not depend on what the binary's other tests registered. A18 prints the population it
+counted and asserts it.
