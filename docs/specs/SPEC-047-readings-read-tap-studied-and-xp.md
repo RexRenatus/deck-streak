@@ -97,7 +97,7 @@ A11: cargo test -p deck-streak-api --test readings_read -- --exact the_read_rout
 A12: cargo test -p deck-streak-readings --test studied -- --exact the_window_follows_the_configured_offset
 A13: cargo test -p deck-streak-coordination --test readings_settle -- --exact a_failed_stamp_leaves_the_reading_open_for_the_next_pass
 A14: cargo test -p deck-streak-coordination --test readings_settle -- --exact the_settle_and_the_tap_read_the_configured_study_day
-A15: cargo test -p deck-streak-coordination --test readings_generate -- --exact the_generation_dates_its_run_and_readings_in_the_configured_study_day
+A15: cargo test -p deck-streak-coordination --test readings_generate_rule -- --exact the_generation_dates_its_run_and_readings_in_the_configured_study_day
 A16: cargo test -p deck-streak-coordination --test readings_resolve -- --exact the_resolution_reads_the_pause_window_and_the_day_in_the_configured_rule
 A17: cargo test -p deck-streak-coordination --test data_rights_symmetry -- --exact the_exported_tables_equal_the_erased_tables_over_every_port
 ```
@@ -120,6 +120,8 @@ A17: cargo test -p deck-streak-coordination --test data_rights_symmetry -- --exa
 | `crates/coordination/src/readings/settle.rs` | `deck-streak-coordination` | added |
 | `crates/coordination/tests/readings_read_tap.rs` | `deck-streak-coordination` | added |
 | `crates/coordination/tests/readings_settle.rs` | `deck-streak-coordination` | added |
+| `crates/coordination/tests/readings_generate_rule.rs` | `deck-streak-coordination` | added: generation in the configured rule, in its own file so the stacked change to `readings_generate.rs` never shares its lines |
+| `crates/coordination/tests/readings_resolve.rs` | `deck-streak-coordination` | changed: the pause window and the run's day in the configured rule |
 | `crates/coordination/tests/data_rights_symmetry.rs` | `deck-streak-coordination` | changed: the seeded reading rows carry distinct read and studied values |
 | `crates/coordination/tests/readings_census.rs` | `deck-streak-coordination` | added |
 | `crates/api/src/readings_routes.rs` | `deck-streak-api` | added: the read route |

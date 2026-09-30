@@ -160,7 +160,7 @@
         "src/readings/generate.rs",
         "parts.rule.study_day(parts.clock.now())",
         "StudyDayRule::default().study_day(parts.clock.now())",
-        "readings_generate::the_generation_dates_its_run_and_readings_in_the_configured_study_day",
+        "readings_generate_rule::the_generation_dates_its_run_and_readings_in_the_configured_study_day",
         "generation reads the topic's days by the configured rule (SPEC-047 A15)"
       ],
       [
@@ -169,7 +169,7 @@
         "src/readings/generate.rs",
         "let study_day = parts.rule.study_day(now);",
         "let study_day = StudyDayRule::default().study_day(now);",
-        "readings_generate::the_generation_dates_its_run_and_readings_in_the_configured_study_day",
+        "readings_generate_rule::the_generation_dates_its_run_and_readings_in_the_configured_study_day",
         "generation dates its run and its readings by the configured rule (SPEC-047 A15)"
       ],
       [

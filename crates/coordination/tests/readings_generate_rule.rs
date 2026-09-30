@@ -1,9 +1,9 @@
-//! The readings' generation (SPEC-046 A7, A8, A10 to A15, A18, A19): each topic's persona writes its
-//! reading through a fake runner, the reading is held to every gate, repaired once, and stored only
-//! when it passed.
+//! Generation reads the configured study day (SPEC-047 A15): the run and each reading are dated by
+//! the configured rule, never the default, over sixteen generated rules.
 //!
-//! Nothing reaches a model or a network: the runner, the gate, the notes, the resolution and the
-//! vault are fakes, and every note text and reading here is synthetic.
+//! This file carries its own small copy of `readings_generate.rs`'s fakes so that the stacked
+//! change to that file (SPEC-046) and this one never edit the same lines. Nothing reaches a model
+//! or a network, and every note text and reading here is synthetic.
 
 // An integration test is test code: its helpers panic on a failed fixture.
 #![allow(
@@ -32,20 +32,16 @@ use deck_streak_coordination::readings::generate::{
     StudyDayResolver, VaultWriteFailed, generate_readings,
 };
 use deck_streak_coordination::readings::resolve::{ResolveError, Resolved};
-use deck_streak_kernel::{Db, ManualClock, StudyDay, StudyDayRule, UtcMillis};
-use deck_streak_readings::attempts::AttemptOutcome;
+use deck_streak_kernel::{Db, Hour, ManualClock, StudyDay, StudyDayRule, UtcMillis, UtcOffset};
 use deck_streak_readings::day_set::{ActiveTopic, StudyDayResolution, TopicEnd, TopicResolution};
 use deck_streak_readings::seed::SeedNote;
-use deck_streak_readings::state::{AgentCause, FailedReason, ReadingGate, RunOutcome, TopicState};
-use deck_streak_readings::store::{
-    ReadingRun, RunTrigger, SqliteReadings, StoredReading, VaultStatus,
-};
+use deck_streak_readings::state::RunOutcome;
+use deck_streak_readings::store::{ReadingRun, RunTrigger, SqliteReadings, StoredReading};
 use deck_streak_readings::topic::TopicKey;
 use serde_json::json;
 
 const DAY_MS: i64 = 86_400_000;
 const START: i64 = 20_000 * DAY_MS + 5 * 3_600_000;
-const ZEBRA: &str = "The distinctive rejected line about zebras crossing the synthetic record.";
 const TAXONOMY: &str = r#"{
   "schema": "deckstreak.readings.taxonomy.v1",
   "law": {"roots": ["Casebook"], "bands": []},
@@ -122,12 +118,6 @@ impl FakeRunner {
             respond,
             prompts: Mutex::new(Vec::new()),
         }
-    }
-    fn calls(&self) -> usize {
-        self.prompts.lock().unwrap().len()
-    }
-    fn prompt(&self, at: usize) -> String {
-        self.prompts.lock().unwrap()[at].clone()
     }
 }
 
@@ -360,9 +350,11 @@ impl Rig {
         }
     }
 
-    async fn generate(
+    async fn generate_at(
         &self,
         route: AiRoute,
+        rule: StudyDayRule,
+        instant: i64,
     ) -> deck_streak_coordination::readings::generate::Generated {
         let parts = GenerateParts {
             route,
@@ -373,8 +365,8 @@ impl Rig {
             notes: &self.notes,
             vault: &self.vault,
             store: self.store.clone(),
-            clock: Arc::new(ManualClock::new(UtcMillis::from_epoch_millis(START))),
-            rule: StudyDayRule::default(),
+            clock: Arc::new(ManualClock::new(UtcMillis::from_epoch_millis(instant))),
+            rule,
             taxonomy: Some(self.taxonomy.clone()),
             prompt: PromptTexts {
                 rules: &self.texts[0],
@@ -397,300 +389,67 @@ fn one_topic() -> Vec<(TopicKey, Vec<i64>, Vec<i64>)> {
     vec![(topic("law/evidence"), vec![11, 12], vec![401, 402])]
 }
 
-fn state_of(
-    generated: &deck_streak_coordination::readings::generate::Generated,
-    key: &str,
-) -> TopicState {
-    generated
-        .topics
-        .iter()
-        .find(|(topic, _)| topic.as_str() == key)
-        .map(|(_, state)| *state)
-        .expect("the topic ended the day")
-}
-
 async fn readings(rig: &Rig) -> Vec<StoredReading> {
     rig.store.readings().await.expect("the readings")
 }
 
-#[tokio::test]
-async fn a_gate_failure_is_repaired_once_naming_the_gate() {
-    let rig = Rig::new(
-        one_topic(),
-        Box::new(|attempt, prompt| {
-            let extra = if attempt == 1 {
-                format!("TOOSHORT {ZEBRA}")
-            } else {
-                String::new()
-            };
-            Ok(body_for(&ids_in(prompt), &extra))
-        }),
-    )
-    .await;
-    let generated = rig.generate(AiRoute::Proxy).await;
-    assert_eq!(state_of(&generated, "law/evidence"), TopicState::Ready);
-    assert_eq!(rig.runner.calls(), 2);
-    let second = rig.runner.prompt(1);
-    assert!(second.contains("band"), "the repair names the gate");
-    assert!(second.contains("the primer prose holds 12 words"));
-    assert!(
-        !second.contains("zebras"),
-        "the rejected text is never quoted"
-    );
-    assert!(
-        !rig.runner.prompt(0).contains("band"),
-        "attempt one carries no repair"
-    );
-    assert_eq!(readings(&rig).await.len(), 1);
+const HOUR_MS: i64 = 3_600_000;
+/// The rollover hours and the offsets, in minutes east of UTC, the rule population is the product of.
+const HOURS: [i64; 2] = [0, 4];
+const OFFSETS: [i64; 8] = [-720, -300, -210, 0, 330, 345, 540, 840];
+
+/// The UTC instant study day `day` begins at, written from the definition.
+fn begins(day: i64, hour: i64, offset: i64) -> i64 {
+    day * DAY_MS + hour * HOUR_MS - offset * 60_000
 }
 
 #[tokio::test]
-async fn a_second_failure_writes_nothing_and_records_its_reason() {
-    let rig = Rig::new(
-        one_topic(),
-        Box::new(|_, prompt| Ok(body_for(&ids_in(prompt), "TOOSHORT"))),
-    )
-    .await;
-    let generated = rig.generate(AiRoute::Proxy).await;
-    assert_eq!(
-        state_of(&generated, "law/evidence"),
-        TopicState::Failed(FailedReason::GateFailed(ReadingGate::Band))
-    );
-    assert_eq!(rig.runner.calls(), 2, "one repair, never a third attempt");
-    assert!(readings(&rig).await.is_empty());
-    assert!(rig.vault.written.lock().unwrap().is_empty());
-    let days = rig
-        .store
-        .topic_days(StudyDay::from_epoch_day(20_000))
-        .await
-        .expect("days");
-    assert_eq!(
-        days[0].day.state,
-        TopicState::Failed(FailedReason::GateFailed(ReadingGate::Band))
-    );
-}
-
-#[tokio::test]
-async fn every_attempt_is_recorded_with_tokens_latency_and_verdict() {
-    let rig = Rig::new(
-        one_topic(),
-        Box::new(|attempt, prompt| {
-            let extra = if attempt == 1 { "TOOSHORT" } else { "" };
-            Ok(body_for(&ids_in(prompt), extra))
-        }),
-    )
-    .await;
-    let generated = rig.generate(AiRoute::Proxy).await;
-    let attempts = rig
-        .store
-        .attempts(generated.run)
-        .await
-        .expect("the attempts");
-    assert_eq!(attempts.len(), 2);
-    assert_eq!(attempts[0].attempt, 1);
-    assert_eq!(attempts[0].repair_gate, None);
-    assert_eq!(
-        attempts[0].outcome,
-        AttemptOutcome::GateFailed {
-            gate: ReadingGate::Band,
-            class: "reading-length".to_owned()
+async fn the_generation_dates_its_run_and_readings_in_the_configured_study_day() {
+    let mut examined = 0;
+    let mut instants_examined = 0;
+    for offset in OFFSETS {
+        for hour in HOURS {
+            let rule = StudyDayRule::new(
+                Hour::new(u8::try_from(hour).expect("an hour")).expect("an hour"),
+                UtcOffset::from_minutes(i16::try_from(offset).expect("minutes"))
+                    .expect("an offset"),
+            );
+            let mut instants = std::collections::BTreeSet::new();
+            for day in [20_001, 20_002] {
+                let own = begins(day, hour, offset);
+                let default = day * DAY_MS + 4 * HOUR_MS;
+                instants.extend([own - 1, own, default - 1, default]);
+            }
+            for instant in instants {
+                let day = (instant + offset * 60_000 - hour * HOUR_MS).div_euclid(DAY_MS);
+                let configured = StudyDay::from_epoch_day(day);
+                let rig = Rig::new(one_topic(), good()).await;
+                rig.generate_at(AiRoute::Proxy, rule, instant).await;
+                let stored = readings(&rig).await;
+                assert_eq!(stored.len(), 1, "a reading");
+                assert_eq!(
+                    stored[0].reading.study_day, configured,
+                    "offset {offset}, hour {hour}, instant {instant}: the reading is dated by the configured day"
+                );
+                let days = rig.store.topic_days(configured).await.expect("topic days");
+                assert!(
+                    !days.is_empty(),
+                    "offset {offset}, hour {hour}, instant {instant}: the topic day is dated by the configured day"
+                );
+                let absent = Rig::new(one_topic(), good()).await;
+                absent.generate_at(AiRoute::Absent, rule, instant).await;
+                let runs = absent.store.runs().await.expect("runs");
+                assert_eq!(
+                    runs.last().expect("a run").1.study_day,
+                    configured,
+                    "offset {offset}, hour {hour}, instant {instant}: the absent-route run is dated by the configured day"
+                );
+                instants_examined += 1;
+            }
+            examined += 1;
         }
-    );
-    assert_eq!(attempts[1].attempt, 2);
-    assert_eq!(attempts[1].repair_gate, Some(ReadingGate::Band));
-    assert_eq!(attempts[1].outcome, AttemptOutcome::Passed);
-    for attempt in &attempts {
-        assert_eq!(attempt.telemetry.turns, 3);
-        assert_eq!(attempt.telemetry.input_tokens, 100);
-        assert_eq!(attempt.telemetry.output_tokens, 50);
-        assert_eq!(attempt.telemetry.cost_micro_usd, 12_000);
-        assert_eq!(attempt.telemetry.duration_ms, 900);
-        assert_eq!(attempt.topic.as_str(), "law/evidence");
     }
-}
-
-#[tokio::test]
-async fn every_topic_with_new_cards_gets_a_reading_with_no_daily_cap() {
-    let topics: Vec<_> = (0..12)
-        .map(|n| {
-            (
-                topic(&format!("law/topic-{n}")),
-                vec![100 + n],
-                vec![500 + n],
-            )
-        })
-        .collect();
-    let rig = Rig::new(topics, good()).await;
-    let generated = rig.generate(AiRoute::Proxy).await;
-    assert_eq!(generated.topics.len(), 12);
-    assert!(
-        generated
-            .topics
-            .iter()
-            .all(|(_, state)| *state == TopicState::Ready)
-    );
-    assert_eq!(readings(&rig).await.len(), 12);
-    assert_eq!(rig.vault.written.lock().unwrap().len(), 12);
-    assert_eq!(rig.runner.calls(), 12);
-}
-
-#[tokio::test]
-async fn an_unusable_seed_fails_before_any_model_call() {
-    let topics = vec![
-        (topic("law/unbound"), vec![1], vec![401]),
-        (topic("law/empty"), vec![2], vec![9_999]),
-        (topic("law/short"), vec![3], vec![403]),
-    ];
-    let mut rig = Rig::new(topics, good()).await;
-    rig.notes.0.insert(403, "short".to_owned());
-    rig.notes.0.remove(&9_999);
-    let generated = rig.generate(AiRoute::Proxy).await;
-    assert_eq!(
-        state_of(&generated, "law/unbound"),
-        TopicState::Failed(FailedReason::FormUnregistered)
-    );
-    assert_eq!(
-        state_of(&generated, "law/empty"),
-        TopicState::Failed(FailedReason::SeedEmpty)
-    );
-    assert_eq!(
-        state_of(&generated, "law/short"),
-        TopicState::Failed(FailedReason::AnchorUnusableAll)
-    );
-    assert_eq!(rig.runner.calls(), 0);
-    assert!(
-        rig.store
-            .attempts(generated.run)
-            .await
-            .expect("attempts")
-            .is_empty()
-    );
-}
-
-#[tokio::test]
-async fn no_reading_is_stored_or_written_unless_every_gate_passed() {
-    // The reading omits note 402's words, so the anchors gate refuses it twice.
-    let rig = Rig::new(one_topic(), Box::new(|_, _| Ok(body_for(&[401], "")))).await;
-    let generated = rig.generate(AiRoute::Proxy).await;
-    assert_eq!(
-        state_of(&generated, "law/evidence"),
-        TopicState::Failed(FailedReason::GateFailed(ReadingGate::Roster))
-    );
-    assert!(readings(&rig).await.is_empty());
-    assert!(rig.vault.written.lock().unwrap().is_empty());
-    // A reading that passed is stored with exactly what the vault was given.
-    let rig = Rig::new(one_topic(), good()).await;
-    rig.generate(AiRoute::Proxy).await;
-    let stored = readings(&rig).await;
-    let written = rig.vault.written.lock().unwrap();
-    assert_eq!(stored.len(), 1);
-    assert_eq!(written.len(), 1);
-    assert_eq!(stored[0].reading.text, written[0].2);
-    assert!(stored[0].reading.text.starts_with("---\n"));
-    assert!(stored[0].reading.text.contains("x-new-cards: 2"));
-}
-
-#[tokio::test]
-async fn an_unchanged_day_set_carries_its_reading_without_a_model_call() {
-    let rig = Rig::new(one_topic(), good()).await;
-    rig.generate(AiRoute::Proxy).await;
-    assert_eq!(rig.runner.calls(), 1);
-    let again = rig.generate(AiRoute::Proxy).await;
-    assert_eq!(rig.runner.calls(), 1, "no second model call");
-    assert_eq!(state_of(&again, "law/evidence"), TopicState::Ready);
-    let stored = readings(&rig).await;
-    assert_eq!(stored.len(), 1);
-    assert_eq!(stored[0].carried_nights, 1);
-    assert_eq!(rig.vault.written.lock().unwrap().len(), 1);
-}
-
-#[tokio::test]
-async fn a_vault_write_failure_keeps_the_reading_and_records_it() {
-    let mut rig = Rig::new(one_topic(), good()).await;
-    rig.vault.fail = true;
-    let generated = rig.generate(AiRoute::Proxy).await;
-    assert_eq!(state_of(&generated, "law/evidence"), TopicState::Ready);
-    let stored = readings(&rig).await;
-    assert_eq!(stored.len(), 1);
-    assert_eq!(stored[0].reading.vault, VaultStatus::Failed);
-}
-
-#[tokio::test]
-async fn a_reading_with_a_date_or_countdown_is_never_delivered() {
-    let rig = Rig::new(
-        one_topic(),
-        Box::new(|_, prompt| Ok(body_for(&ids_in(prompt), "COUNTDOWN"))),
-    )
-    .await;
-    let generated = rig.generate(AiRoute::Proxy).await;
-    assert_eq!(
-        state_of(&generated, "law/evidence"),
-        TopicState::Failed(FailedReason::GateFailed(ReadingGate::Contract))
-    );
-    assert_eq!(rig.runner.calls(), 2, "repaired once, then refused");
-    assert!(readings(&rig).await.is_empty());
-    assert!(rig.vault.written.lock().unwrap().is_empty());
-}
-
-#[tokio::test]
-async fn an_unavailable_route_ends_the_topic_with_no_retry() {
-    let rig = Rig::new(one_topic(), Box::new(|_, _| Err(Cause::CapacityExhausted))).await;
-    let generated = rig.generate(AiRoute::Proxy).await;
-    assert_eq!(
-        state_of(&generated, "law/evidence"),
-        TopicState::Failed(FailedReason::AgentUnavailable(
-            AgentCause::CapacityExhausted
-        ))
-    );
-    assert_eq!(rig.runner.calls(), 1);
-}
-
-#[tokio::test]
-async fn an_absent_route_ends_every_topic_ai_route_absent_with_no_attempt() {
-    let rig = Rig::new(one_topic(), good()).await;
-    rig.generate(AiRoute::Proxy).await;
-    let before = readings(&rig).await;
-    let calls = rig.runner.calls();
-    let generated = rig.generate(AiRoute::Absent).await;
-    assert_eq!(
-        rig.resolver.calls.load(Ordering::SeqCst),
-        1,
-        "no day set is resolved"
-    );
-    assert_eq!(rig.runner.calls(), calls);
-    assert_eq!(generated.outcome, RunOutcome::AiRouteAbsent);
-    assert_eq!(
-        state_of(&generated, "law/evidence"),
-        TopicState::AiRouteAbsent
-    );
-    assert_eq!(
-        state_of(&generated, "language/qaa"),
-        TopicState::AiRouteAbsent
-    );
-    assert!(
-        rig.store
-            .attempts(generated.run)
-            .await
-            .expect("attempts")
-            .is_empty()
-    );
-    assert_eq!(readings(&rig).await, before);
-    assert_eq!(rig.vault.written.lock().unwrap().len(), 1);
-    let runs = rig.store.runs().await.expect("runs");
-    assert_eq!(
-        runs.last().expect("a run").1.outcome,
-        RunOutcome::AiRouteAbsent
-    );
-}
-
-#[tokio::test]
-async fn a_law_topic_never_asks_for_new_words() {
-    let rig = Rig::new(one_topic(), good()).await;
-    let generated = rig.generate(AiRoute::Proxy).await;
-    assert_eq!(state_of(&generated, "law/evidence"), TopicState::Ready);
-    assert_eq!(
-        rig.notes.1.load(Ordering::SeqCst),
-        0,
-        "new words are fetched only for a language topic"
-    );
+    println!("examined {examined} configured rule(s), {instants_examined} instant(s)");
+    assert_eq!(examined, OFFSETS.len() * HOURS.len());
+    assert_eq!(examined, 16, "eight offsets by two rollover hours");
 }
