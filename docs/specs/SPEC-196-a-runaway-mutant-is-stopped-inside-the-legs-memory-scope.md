@@ -98,8 +98,8 @@ tallied nowhere), and every other outcome in the shard is judged as before. The 
 shard is VOID, one tested more often than listed fails), the whole-report rule (a missing report, an exit
 other than 0, 2 or 3, or counts short of the report's total is VOID) and the zero-examined VOID are unchanged.
 
-R13. **A count the scope reads is whole, or the record is not in force.** The scope reads `memory.events` and `memory.peak`
-before the command (in `check_in_force`) and after it (in `run()`), by one parse. `memory.events` is whole only when every
+R13. **A count the scope reads is whole, or the record is not in force.** The scope reads `memory.events`
+before the command (in `check_in_force`), and `memory.events` and `memory.peak` after it (in `run()`), by one parse. `memory.events` is whole only when every
 line reads `<key> <ASCII decimal digits>` (at most 20 digits, a kernel counter), each key appears once, and `oom`,
 `oom_kill` and, after the command, `max` are all present. `memory.peak` is whole only when it is one line of ASCII decimal
 digits. Any other shape (a duplicated key, whether the two lines agree or not, a digit that is not ASCII, bytes that are not

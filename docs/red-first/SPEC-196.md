@@ -47,7 +47,8 @@ A19: green at 3a7f8459
 
 Round 2 reopened the class (R13): after the command a duplicated key kept its last line, a digit that
 is not ASCII reached `int()` and bytes that are not UTF-8 raised. The tests of A19 (2f723b97) came alone, on the merged tree:
-456 failures, none an import error, among them the crash above and `True is not False` for a duplicated `oom_kill`. The rule
+456 failures, none an import error, among them the crash above and, for a duplicated `oom_kill`,
+`{'in_force': True, 'max': 3, 'oom': 1, 'oom_kill': 1, [47 chars]one'} != {'in_force': False, 'state': 'done', 'reason': 'memory[89 chars]': 0}`. The rule
 (3a7f8459) turned all of them green: 13 tests, the populations printing `examined 510 counts read after the command, whole
 or not`, `examined 37 control-group files read before the command` and `examined 3 counters at the width of a kernel counter`.
 
