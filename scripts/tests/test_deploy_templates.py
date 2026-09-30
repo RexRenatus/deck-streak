@@ -267,6 +267,8 @@ WAIVED = {
     (f"{JOB_TEMPLATE}@sync.timer", "randomized-delay-missing"),
     (f"{JOB_TEMPLATE}@maintenance.timer", "randomized-delay-missing"),
     (f"{JOB_TEMPLATE}@maintenance.timer", "calendar-not-persistent"),
+    (f"{JOB_TEMPLATE}@drill_postback.timer", "randomized-delay-missing"),
+    (f"{JOB_TEMPLATE}@drill_postback.timer", "calendar-not-persistent"),
     (f"{JOB_TEMPLATE}@liveness.timer", "randomized-delay-missing"),
     (f"{JOB_TEMPLATE}@liveness.timer", "calendar-not-persistent"),
     ("deck-streak-slo.timer", "calendar-not-persistent"),
