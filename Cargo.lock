@@ -829,8 +829,10 @@ name = "deck-streak-agent"
 version = "0.2.0"
 dependencies = [
  "deck-streak-kernel",
+ "proc-macro2",
  "serde_json",
  "sqlx",
+ "syn 2.0.119",
  "tempfile",
  "thiserror",
  "tokio",
