@@ -8,10 +8,15 @@
  *   node web/app/scripts/record-docs-mermaid-fences.js
  *
  * It renders through GitHub's Markdown API (`gh api markdown`, mode gfm, this repository as the
- * context), a read. Distinct texts go in batches, each followed by a separator paragraph; a batch
- * whose separators do not all come back once (a fence left open swallows one) is split in half until
- * every text is rendered alone. Then a sample of members is rendered one per request, and the file is
- * written only if every one agrees with its batch.
+ * context), a read, one request about every 1.1 s. Distinct texts go in batches, each followed by a
+ * control diagram that names it; a text whose control does not come back as the next diagram (a fence
+ * or HTML block left open, or GitHub's HTML parse left inside a tag, a comment or a table) is rendered
+ * alone and the batch resumes after it, and a batch that renders a diagram after its last control is
+ * split in half. A text that opens with a byte-order mark or holds a `<` is rendered alone: a mark
+ * acts only at the start of a document, and raw HTML can leave GitHub's HTML parse in a state (a
+ * table, a foreign element, a template) that changes how the next text's raw HTML is read without
+ * moving any control. Then a sample of members is rendered one per request, and the file is written
+ * only if every one agrees with its batch.
  */
 import { execFileSync } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
@@ -22,9 +27,14 @@ const REPOSITORY = 'RexRenatus/deck-streak';
 const TRUTH = resolve(import.meta.dirname, '../src/lib/docs-mermaid.fences.json');
 const BATCH = 250;
 const CONTROLS = 40;
+const PACE_MS = 1100;
+let last = 0;
 
-/** GitHub's HTML for `text`. */
+/** GitHub's HTML for `text`, one request at a time and about `PACE_MS` apart. */
 function render(/** @type {string} */ text) {
+  const wait = last + PACE_MS - Date.now();
+  if (wait > 0) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, wait);
+  last = Date.now();
   const input = JSON.stringify({ text, mode: 'gfm', context: REPOSITORY });
   return execFileSync('gh', ['api', 'markdown', '--input', '-'], { input, encoding: 'utf8', maxBuffer: 1 << 28 });
 }
@@ -46,7 +56,13 @@ function sourcesOf(/** @type {string} */ fragment) {
   );
 }
 
-/** GitHub's diagram sources for each of `texts`, batched and split until every separator comes back once. */
+/**
+ * GitHub's diagram sources for each of `texts`, rendered in one request with a control diagram after
+ * each, whose text names it. A text whose control is not the next diagram, once and in order (it left
+ * a fence or an HTML block open, or left GitHub's HTML parse inside a tag, a comment or a table), is
+ * rendered alone, the texts before it keep their rendering, and the rest go again; when a diagram
+ * follows the last control, the batch is split in half.
+ */
 function batch(/** @type {string[]} */ texts, /** @type {string} */ tag) {
   /** @type {Map<string, string[]>} */
   const out = new Map();
@@ -54,16 +70,22 @@ function batch(/** @type {string[]} */ texts, /** @type {string} */ tag) {
     out.set(texts[0], sourcesOf(render(texts[0])));
     return out;
   }
-  const mark = (/** @type {number} */ i) => `ZZSEP${tag}x${i}ZZ`;
-  let rest = render(texts.map((text, i) => `${text}\n\n${mark(i)}\n\n`).join('\n'));
+  const mark = (/** @type {number} */ i) => `ZZSEP${tag}x${i}ZZ\n`;
+  const got = sourcesOf(render(texts.map((text, i) => `${text}\n\n\`\`\`mermaid\n${mark(i)}\`\`\`\n\n`).join('')));
+  let at = 0;
   for (const [i, text] of texts.entries()) {
-    const parts = rest.split(`<p dir="auto">${mark(i)}</p>`);
-    if (parts.length !== 2) {
-      const half = Math.ceil(texts.length / 2);
-      return new Map([...batch(texts.slice(0, half), `${tag}a`), ...batch(texts.slice(half), `${tag}b`)]);
+    const end = got.indexOf(mark(i), at);
+    const own = got.slice(at, end);
+    if (end < 0 || own.some((source) => source.startsWith('ZZSEP')) || got.lastIndexOf(mark(i)) !== end) {
+      out.set(text, sourcesOf(render(text)));
+      return i + 1 < texts.length ? new Map([...out, ...batch(texts.slice(i + 1), `${tag}r`)]) : out;
     }
-    out.set(text, sourcesOf(parts[0]));
-    rest = parts[1];
+    out.set(text, own);
+    at = end + 1;
+  }
+  if (got.length > at) {
+    const half = Math.ceil(texts.length / 2);
+    return new Map([...batch(texts.slice(0, half), `${tag}a`), ...batch(texts.slice(half), `${tag}b`)]);
   }
   return out;
 }
@@ -72,8 +94,11 @@ const members = fenceMembers(GRAMMAR);
 const distinct = [...new Set(members.map((member) => member.text))];
 /** @type {Map<string, string[]>} */
 const rendered = new Map();
-for (let at = 0; at < distinct.length; at += BATCH) {
-  for (const [text, sources] of batch(distinct.slice(at, at + BATCH), `${at}`)) rendered.set(text, sources);
+const ownRequest = (/** @type {string} */ text) => text.startsWith('\uFEFF') || text.includes('<');
+for (const text of distinct.filter(ownRequest)) rendered.set(text, sourcesOf(render(text)));
+const batched = distinct.filter((text) => !ownRequest(text));
+for (let at = 0; at < batched.length; at += BATCH) {
+  for (const [text, sources] of batch(batched.slice(at, at + BATCH), `${at}`)) rendered.set(text, sources);
 }
 const step = Math.max(1, Math.floor(members.length / CONTROLS));
 for (let at = 0; at < members.length; at += step) {

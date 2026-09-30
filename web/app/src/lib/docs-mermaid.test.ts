@@ -36,13 +36,6 @@ function markdownFiles(dir: string): string[] {
     });
 }
 
-/**
- * A line that opens a `mermaid` fence in any container: blanks, `>` and list markers, three or more
- * backticks or tildes, blanks, `mermaid`. It is not the reader; it cross-checks the reader on the
- * documents.
- */
-const OPENER_LINE = /^[ \t>*+\-0-9.)]*(?:\x60{3,}|~{3,})[ \t]*mermaid(?![^ \t])/;
-
 interface Block {
   name: string;
   line: number;
@@ -90,21 +83,33 @@ function language(info: string | null): string {
 }
 
 /**
- * The `mermaid` blocks of one file, each named `<file> block <n>` counted from 1: every fenced code
- * block, in any container, whose language word is `mermaid` and whose text is not blank, with the
- * text GitHub renders as the diagram. A blank one GitHub shows as code, so it is not a block.
+ * The head's reader, which refuses no form: every fenced code block, in any container, whose
+ * language word is `mermaid` and whose text is not blank, with the text GitHub renders as the diagram.
  */
-function blocksOf(name: string, text: string): Block[] {
-  const blocks: Block[] = [];
+function readMermaid(text: string): { blocks: Omit<Block, 'name'>[]; refused: { line: number; form: string }[] } {
+  const blocks: Omit<Block, 'name'>[] = [];
   const walker = gfmParser().parse(text).walker();
   for (let step = walker.next(); step; step = walker.next()) {
     const { node } = step;
     const source = node.literal ?? '';
     if (step.entering && node.type === 'code_block' && language(node.info) === 'mermaid' && /[^ \t\n\v\f\r]/.test(source)) {
-      blocks.push({ name: `${name} block ${blocks.length + 1}`, line: node.sourcepos[0][0], source });
+      blocks.push({ line: node.sourcepos[0][0], source });
     }
   }
-  return blocks;
+  return { blocks, refused: [] };
+}
+
+/**
+ * The `mermaid` blocks of one file, each named `<file> block <n>` counted from 1: the blocks GitHub
+ * renders as diagrams, as `docs-mermaid-read.js` reads them, with the text of each.
+ */
+function blocksOf(name: string, text: string): Block[] {
+  return readMermaid(text).blocks.map((block, at) => ({ name: `${name} block ${at + 1}`, ...block }));
+}
+
+/** Each form of one file the reader refuses, named `<file>:<line> <form>`. */
+function refusedOf(name: string, text: string): string[] {
+  return readMermaid(text).refused.map((refusal) => `${name}:${refusal.line} ${refusal.form}`);
 }
 
 /** Whether Mermaid's own parser accepts the diagram. */
@@ -135,7 +140,13 @@ interface Truth {
 const TRUTH: Truth = JSON.parse(readFileSync(resolve(import.meta.dirname, 'docs-mermaid.fences.json'), 'utf8'));
 
 /** The size of the generated fence population, so a shrunken grammar is visible in the diff. */
-const FENCE_MEMBERS = 3241;
+const FENCE_MEMBERS = 8750;
+
+/**
+ * The generated members the reader reads without refusing any form, so a reader that refuses more or
+ * fewer of them is visible in the diff.
+ */
+const READ_MEMBERS = 2711;
 
 /** Every generated member GitHub renders as a diagram, with the diagram sources GitHub renders. */
 function renderedMembers() {
@@ -148,32 +159,32 @@ function renderedMembers() {
   return members.map((member) => ({ ...member, rendered: TRUTH.renders[member.id].map((at) => TRUTH.sources[at]) }));
 }
 
-const BLOCKS = markdownFiles(DOCS).flatMap((file) =>
-  blocksOf(relative(DOCS, file), readFileSync(file, 'utf8'))
-);
+/**
+ * Every `mermaid` block under `docs/`. It is read inside the test that asks for it, not when the file
+ * loads, so a reader that throws fails that test by name rather than the file's import, which the
+ * mutation run would count as no test failing.
+ */
+function docsBlocks(): Block[] {
+  return markdownFiles(DOCS).flatMap((file) => blocksOf(relative(DOCS, file), readFileSync(file, 'utf8')));
+}
 
 describe('the Mermaid diagrams under docs', () => {
   it('reads every fenced block', () => {
-    examined('mermaid blocks', BLOCKS);
-    const read = new Set(BLOCKS.map((block) => `${block.name.replace(/ block \d+$/, '')}:${block.line}`));
-    const unread = markdownFiles(DOCS).flatMap((file) =>
-      readFileSync(file, 'utf8')
-        .split('\n')
-        .flatMap((line, at) => (OPENER_LINE.test(line) ? [`${relative(DOCS, file)}:${at + 1}`] : []))
-        .filter((opener) => !read.has(opener))
-    );
+    const blocks = examined('mermaid blocks', docsBlocks());
+    const refused = markdownFiles(DOCS).flatMap((file) => refusedOf(relative(DOCS, file), readFileSync(file, 'utf8')));
 
-    expect(BLOCKS.length).toBeGreaterThan(100);
-    expect(unread).toEqual([]);
+    expect(blocks.length).toBeGreaterThan(100);
+    expect(refused).toEqual([]);
   });
 
   it('parses every block', async () => {
+    const blocks = examined('mermaid blocks', docsBlocks());
     const refused: string[] = [];
-    for (const block of examined('mermaid blocks', BLOCKS)) {
+    for (const block of blocks) {
       if (!(await parses(block.source))) refused.push(block.name);
     }
 
-    expect(BLOCKS.length).toBeGreaterThan(100);
+    expect(blocks.length).toBeGreaterThan(100);
     expect(refused).toEqual([]);
   }, 60_000);
 
@@ -215,23 +226,43 @@ describe('the Mermaid diagrams under docs', () => {
     }
   });
 
-  it('reads exactly the fences GitHub renders as diagrams, in every generated container form', () => {
+  it('reads exactly the fences GitHub renders as diagrams, or refuses by name, in every generated container form', () => {
     const members = renderedMembers();
     console.log(`examined ${members.length} generated container forms`);
-    const escaped = members.flatMap((member) => {
-      const read = blocksOf('planted.md', member.text).map((block) => block.source);
-      return JSON.stringify(read) === JSON.stringify(member.rendered)
+    const read = members.filter((member) => refusedOf('planted.md', member.text).length === 0);
+    console.log(`read ${read.length} generated container forms, refused ${members.length - read.length} by name`);
+    const escaped = read.flatMap((member) => {
+      const sources = blocksOf('planted.md', member.text).map((block) => block.source);
+      return JSON.stringify(sources) === JSON.stringify(member.rendered)
         ? []
-        : [`${member.id} ${JSON.stringify(member.text)}: read ${JSON.stringify(read)}, GitHub renders ${JSON.stringify(member.rendered)}`];
+        : [`${member.id} ${JSON.stringify(member.text)}: read ${JSON.stringify(sources)}, GitHub renders ${JSON.stringify(member.rendered)}`];
     });
 
     expect(members.length).toBe(FENCE_MEMBERS);
-    expect(escaped.slice(0, 3), `${escaped.length} of ${members.length} members read otherwise`).toEqual([]);
+    expect(escaped.slice(0, 3), `${escaped.length} of ${read.length} members read otherwise`).toEqual([]);
+    expect(read.length, 'the reader refuses another set of members').toBe(READ_MEMBERS);
   });
 
-  it('refuses a grammar whose body names no row, and says which', () => {
+  it('refuses a generated container form it cannot write or read, and says which', () => {
+    const members = new Map(fenceMembers().map((member) => [member.id, member.text]));
+    const refusals = (id: string) => refusedOf('planted.md', members.get(id) ?? '');
+    const opener = 'a line that may open a `mermaid` fence and is not read as one';
+
     expect(() => fenceMembers({ ...GRAMMAR, body: ['no-such-row'] })).toThrow('no body named no-such-row');
     expect(fenceMembers().length).toBe(FENCE_MEMBERS);
+    expect(refusals('body.b.top')).toEqual([
+      'planted.md:1 a `mermaid` block that holds no diagram',
+      `planted.md:1 ${opener}`,
+      'planted.md:2 a character GitHub reads otherwise'
+    ]);
+    expect(refusals('html.start.0.opening.top')).toEqual(['planted.md:1 a raw HTML block', `planted.md:2 ${opener}`]);
+    expect(refusals('html.source.3.opening.top')).toEqual(['planted.md:1 a `<` that may open raw HTML']);
+    expect(refusals('inline.select.0')).toEqual(['planted.md:3 raw HTML `<select>`']);
+    expect(refusals('top:f030:b0')).toEqual([
+      'planted.md:1 a fence whose info string is not `mermaid` alone',
+      `planted.md:1 ${opener}`
+    ]);
+    expect(refusals('depth.100')).toEqual(['planted.md:1 a fence in more than 99 lists', `planted.md:1 ${opener}`]);
   });
 
   it('refuses every generated container form planted unparsable by name, and accepts it planted valid', async () => {
@@ -240,7 +271,9 @@ describe('the Mermaid diagrams under docs', () => {
       if (!verdicts.has(source)) verdicts.set(source, await parses(source));
       return verdicts.get(source);
     };
-    const planted = renderedMembers().filter((member) => member.rendered.length > 0 && member.body !== 'lazy');
+    const planted = renderedMembers().filter(
+      (member) => member.rendered.length > 0 && member.body !== 'lazy' && refusedOf('planted.md', member.text).length === 0
+    );
     const wrong: string[] = [];
     for (const member of examined('generated container forms planted', planted)) {
       const refused: string[] = [];
