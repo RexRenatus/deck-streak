@@ -48,6 +48,22 @@
         "group: release-${{ github.run_id }}",
         "two runs of one tag share one group, so their release steps never run at once (SPEC-190 R10)",
         "test_workflow_concurrency.EveryReleaseWorkflowQueuesEveryRun.test_every_workflow_that_can_hold_two_runs_of_a_release_queues_them"
+      ],
+      [
+        "S19007-THE-RELEASE-BLOCK-NAMES-A-GROUP",
+        ".github/workflows/release.yml",
+        "  group: release-${{ github.ref }}\n",
+        "",
+        "release.yml's block names a group, which GitHub's workflow parser requires, so a tag's push is never refused before it runs (SPEC-190 R10)",
+        "test_workflow_concurrency.EveryReleaseWorkflowQueuesEveryRun.test_every_workflow_that_can_hold_two_runs_of_a_release_queues_them"
+      ],
+      [
+        "S19008-NO-RELEASE-JOB-SETS-A-BLOCK-OF-ITS-OWN",
+        ".github/workflows/release.yml",
+        "jobs:\n  release:\n",
+        "jobs:\n  release:\n    'concurrency':\n      group: release-job\n",
+        "no release job sets a concurrency block of its own, under a quoted key too, so the job never waits in a group of its own that replaces it (SPEC-190 R10)",
+        "test_workflow_concurrency.EveryReleaseWorkflowQueuesEveryRun.test_every_workflow_that_can_hold_two_runs_of_a_release_queues_them"
       ]
     ]
   }
