@@ -256,3 +256,24 @@ A45 has two tests, and the fence holds one line for the criterion; the other tes
 ```text
 test_a_bin_killer_beside_a_tests_bin_rs_is_refused: AssertionError: 'census: S00060-BIN-SHADOW: its killer bin::tests::three_triples_to_nine crates/fix has a test target bin, which the bin kind shadows' not found in 'examined 1 row(s)\n'
 ```
+
+## Addendum: the `bin` kind reads what the compiler builds (section 19, issue #405)
+
+The tests of A46 to A49 were committed first, alone, at a3d4ff9b, against the runner as it stood
+on `dev`. They fail by assertion, not by error: the generated population agreed with the oracle on
+75 of its 165 members, and each planted shape of the issue failed
+for its own reason. The runner's fix went green at 9595183f. The population was then widened (over
+`cfg`, lexemes and blocks at e43c60ef, over target dedupe, dotted paths and unpathed tables at
+349d2423) and A50's refusals and A51's predicate test were added with them (A51 at da82cca3), each green on arrival against the fixed
+reader and proved by the mutants listed in the pull request.
+
+```text
+A46: red at a3d4ff9b: AssertionError: 75 != 165 : a member was neither agreed nor refused
+A46: red at a3d4ff9b: AssertionError: 'crates/fix has a test target bin, which the bin kind shadows' is not None : cargo builds exactly one binary: [('fix', 'src/main.rs')]
+A47: red at a3d4ff9b: AssertionError: Lists differ: ['src/main.rs', 'src/x.rs'] != ['src/main.rs']
+A48: red at a3d4ff9b: AssertionError: KillerUnresolved not raised
+A49: red at a3d4ff9b: AssertionError: "holds 2 binaries," does not match "crates/fix holds 3 binaries, and a bin killer names none of them"
+A46: green at 9595183f: examined 207 generated crate layouts / agreed with the oracle 186, refused by name 21
+A46: green at da82cca3: examined 268 generated crate layouts / agreed with the oracle 247, refused by name 21
+A51: green at da82cca3: examined 2406 predicates / 329 decided, every one equal to rustc's value
+```

@@ -876,3 +876,80 @@ What it amends, and why: the Python that guards the repository was proved only b
 rows, so a weak test of a guard script had no measure. The decision and what it was chosen
 against are ADR-073; the requirements and criteria are SPEC-087's. The criteria of this SPEC
 stand; SPEC-087's A1 to A22 are added beside them.
+
+## 19. Amendment, 2026-09-30: the `bin` killer kind reads what the compiler builds (issue #405)
+
+Made by ADR-299, insert-only under ruling (i) of SPEC-038 section 8: every earlier byte is kept in
+order. Section 15 gave a `bin::<path>` killer a binary of its own, and three readings in it were
+wrong for a crate whose layout the compiler reads differently from the runner:
+
+1. a `mod` declaration carrying a `#[path]` attribute contributed the file `name.rs` to the module
+   walk, so a stray default file the compiler never builds was read as the binary's module;
+2. the refusal of a crate that shadows the kind read only `tests/bin.rs` and `tests/bin/main.rs`,
+   so a `[[test]]` target named `bin` at any other path was not refused;
+3. the refusal's binary count came from the manifest's tables and the files under `src/bin/`, and
+   could count a module file as a binary.
+
+The rule that replaces them is one rule, and not three patches: the `bin` kind's census,
+selection and refusal read the crate's source files, test targets and binaries exactly as the
+compiler and cargo define them. No file the compiler does not build is read as a module, no target
+cargo builds is missed, and every count a message states equals cargo's own. Anything the reader
+cannot decide is refused by name and never read open.
+
+What the reader now does, each clause decided by the tests of section 20:
+
+- **Targets.** Binaries and test targets are the explicit `[[bin]]` and `[[test]]` tables plus
+  what cargo infers: `src/main.rs` named for the package, `src/bin/*.rs` and `src/bin/*/main.rs`,
+  `tests/*.rs` and `tests/*/main.rs`. `autobins = false` and `autotests = false` switch inference
+  off, `src/main.rs` included. An inferred target is dropped when an explicit one has its name or
+  its path, and a table with no path takes the path inferred for its name. A switch that is not a
+  boolean, and a table with no name and no path, are refused by name.
+- **The shadow.** A test target named `bin`, declared or inferred, at any path, is refused.
+- **The count.** The binaries of a crate are the set above. A crate that does not hold exactly one
+  is refused with its count, and a binary whose file does not exist is refused by name.
+- **Modules.** The walk reads a root file as `rustc --test` does: a `mod name;` reads `name.rs` or
+  `name/mod.rs` beside its parent (under the parent's own directory when the parent is not a
+  `mod.rs` or the root), an inline `mod name { }` adds a directory level, and a `#[path]` module,
+  or one under a `cfg` that is false in a test build, contributes no file and its inline body is
+  skipped. The `cfg` predicates decided are `test` and `not`, `all` and `any` over it, and any
+  other predicate is refused by name. The lexemes of strings, raw strings, characters, lifetimes,
+  raw identifiers and comments are read as the compiler reads them. An inner `#![cfg`, an
+  `include!`, a `cfg_attr` on a module, and a file module declared inside a block the compiler
+  builds, are refused by name.
+
+The killer of the rule is a generated population with a compiler oracle, never a hand list: binary
+layouts crossed with test layouts are judged against `cargo metadata --no-deps`, module layouts
+crossed with crate-root positions against `rustc --test --emit=dep-info`, and a generated set of
+`cfg` predicates against `rustc`. Every member agrees with the oracle or is refused by name, and
+each test prints and asserts its `examined` figure. A new layout row in an axis table joins the
+population by itself. The oracle runs cargo and rustc in scratch crates only.
+
+The rows `S03986` to `S03995` pin the lines this amendment changes, and the four rows of section
+15's band that anchored on moved lines (`S03947`, `S03949`, `S03950`, `S03951`) are re-anchored.
+
+## 20. Acceptance criteria of the 2026-09-30 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A46 | every member of the generated population (binary layouts x test layouts, module layouts x root positions) is read as cargo and the compiler read it, or is refused by name, and the figure examined equals the one the axis tables derive | `test_bin_kind_census.py` |
+| A47 | a `mod` with `#[path]` contributes no source file, so a stray default `name.rs` is not read as a module of the binary | `test_bin_kind_census.py` |
+| A48 | a `[[test]]` target named `bin` at any path is refused as the kind's shadow | `test_bin_kind_census.py` |
+| A49 | the refusal's binary count is cargo's own and never counts a module file | `test_bin_kind_census.py` |
+| A50 | what the reader cannot decide (a non-boolean switch, a table with no name or path, a file module in a block, a malformed declaration, a missing binary file) is refused by name | `test_bin_kind_census.py` |
+| A51 | every `cfg` predicate over `test`, `not`, `all` and `any` that the reader decides is the value `rustc --test` gives it, and one over `test` and logic alone is always decided | `test_bin_kind_census.py` |
+
+```acceptance
+A46: python3 -m unittest discover -s scripts/tests -p test_bin_kind_census.py -k test_every_layout_agrees_with_cargo_and_the_compiler_or_is_refused_by_name
+A47: python3 -m unittest discover -s scripts/tests -p test_bin_kind_census.py -k test_a_path_module_contributes_no_source_file_so_a_stray_default_is_not_read
+A48: python3 -m unittest discover -s scripts/tests -p test_bin_kind_census.py -k test_a_declared_test_target_named_bin_is_refused_at_any_path
+A49: python3 -m unittest discover -s scripts/tests -p test_bin_kind_census.py -k test_the_refusal_counts_binaries_as_cargo_does_and_never_a_module_file
+A50: python3 -m unittest discover -s scripts/tests -p test_bin_kind_census.py -k test_what_the_reader_cannot_decide_is_refused_by_name
+A51: python3 -m unittest discover -s scripts/tests -p test_bin_kind_census.py -k test_every_decided_predicate_is_what_rustc_builds_and_the_rest_is_undecided
+```
+
+File manifest of the amendment: `scripts/mutation_rows.py` (the reader),
+`scripts/tests/test_bin_kind_census.py` (new), `scripts/mutation-rows.d/S03900-S03999.json` (the
+rows), `docs/decisions/ADR-299-the-bin-kind-reads-what-the-compiler-builds.md`,
+`docs/red-first/SPEC-039.md`, and a changelog fragment.
+
+Issue #405 is closed by this delivery.
