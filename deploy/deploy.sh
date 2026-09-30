@@ -23,6 +23,25 @@
 #   _READY_SECONDS, _READY_POLL, _KEEP   the host's paths and the readiness and keep settings
 set -euo pipefail
 
+# Every setting the script reads, named once (ADR-198). A Caddy step refuses any other deploy
+# setting in its environment before it reads or writes anything, so a name it does not list can
+# never choose where it writes.
+SETTINGS='
+DECKSTREAK_DEPLOY_REPO DECKSTREAK_DEPLOY_HOST DECKSTREAK_DEPLOY_ELEVATE DECKSTREAK_DEPLOY_CHECKOUT
+DECKSTREAK_DEPLOY_ROOT DECKSTREAK_DEPLOY_UNIT_DIR DECKSTREAK_DEPLOY_ENV_FILE
+DECKSTREAK_DEPLOY_CADDY_DIR DECKSTREAK_DEPLOY_CADDYFILE DECKSTREAK_DEPLOY_CADDY_CONFIG
+DECKSTREAK_DEPLOY_READY_SECONDS DECKSTREAK_DEPLOY_READY_POLL DECKSTREAK_DEPLOY_KEEP
+'
+case "${1:-}" in
+caddy-install | caddy-remove)
+    for name in ${!DECKSTREAK_DEPLOY_@}; do
+        named=
+        for setting in $SETTINGS; do [ "$name" != "$setting" ] || named=1; done
+        [ -n "$named" ] || { echo "deploy: $name is not a setting of deploy.sh" >&2; exit 1; }
+    done
+    ;;
+esac
+
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 ROOT=${DECKSTREAK_DEPLOY_ROOT:-/usr/local/lib/deck-streak}
 UNIT_DIR=${DECKSTREAK_DEPLOY_UNIT_DIR:-/etc/systemd/system}
