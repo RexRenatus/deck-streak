@@ -1,0 +1,15 @@
+# The drill post-back job's timer (SPEC-110 R9; ADR-027): every hour, at minute 19, each graded
+# drill is recorded and paid once. The job table in crates/coordination/src/jobs.rs is the one
+# schedule, and crates/coordination/tests/job_table.rs holds this calendar equal to it. The
+# calendar is written in UTC, the neutral zone; the private rail renders the deployment's own zone
+# (deploy/README.md). With no Unit=, the timer starts the job instance of its own name.
+[Unit]
+Description=DeckStreak's hourly drill post-back, at minute 19
+X-DurableServices-Waive=calendar-not-persistent the job table makes the post-back no catch-up job (ADR-027): it runs every hour, so the next poll replaces one missed while the host was down
+X-DurableServices-Waive=randomized-delay-missing the job table places each job on its own minute (ADR-027), and a random delay would move each fire off its minute
+
+[Timer]
+OnCalendar=*-*-* *:19:00 UTC
+
+[Install]
+WantedBy=timers.target
