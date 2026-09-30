@@ -453,3 +453,55 @@ describe("the API client's level", () => {
     expect(await api.level()).toEqual({ kind: 'unavailable' });
   });
 });
+
+describe("the API client's insights", () => {
+  function reading(bodies: Record<string, unknown>) {
+    const sent: string[] = [];
+    const fetch = vi.fn(async (input: RequestInfo | URL, init: RequestInit = {}) => {
+      sent.push(`${init.method ?? 'GET'} ${String(input)}`);
+      return String(input) in bodies
+        ? Response.json(bodies[String(input)])
+        : new Response(null, { status: 200 });
+    });
+    const api = createApi({
+      launchData: () => LAUNCH,
+      fetch: fetch as unknown as typeof globalThis.fetch
+    });
+    return { api, sent };
+  }
+
+  it('lists the instruments from /api/insights', async () => {
+    const { api, sent } = reading({
+      '/api/insights': { instruments: [{ id: 'dark_fields', cadence: 'weekly', study_day: null }] }
+    });
+    expect(await api.insights()).toEqual({
+      kind: 'ok',
+      value: [{ id: 'dark_fields', cadence: 'weekly', studyDay: null }]
+    });
+    expect(sent).toEqual(['POST /api/session', 'GET /api/insights']);
+  });
+
+  it('answers unavailable when the listing is not one', async () => {
+    const { api } = reading({ '/api/insights': { nope: 1 } });
+    expect(await api.insights()).toEqual({ kind: 'unavailable' });
+  });
+
+  it('reads one instrument by its encoded id, and a not-yet-run report as null', async () => {
+    const stored = { study_day: 3, failed_reads: [], report: { a: 1 } };
+    const { api, sent } = reading({
+      '/api/insights/a%20b': { instrument: 'a b', report: stored },
+      '/api/insights/fresh': { instrument: 'fresh', report: null }
+    });
+    expect(await api.insight('a b')).toEqual({
+      kind: 'ok',
+      value: { instrument: 'a b', studyDay: 3, failedReads: [], report: { a: 1 } }
+    });
+    expect(await api.insight('fresh')).toEqual({ kind: 'ok', value: null });
+    expect(sent).toContain('GET /api/insights/a%20b');
+  });
+
+  it('answers unavailable when an instrument body is not an envelope', async () => {
+    const { api } = reading({ '/api/insights/x': { oops: true } });
+    expect(await api.insight('x')).toEqual({ kind: 'unavailable' });
+  });
+});

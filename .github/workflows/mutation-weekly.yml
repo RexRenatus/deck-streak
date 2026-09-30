@@ -87,7 +87,11 @@ jobs:
         if: ${{ inputs.package && inputs.package != 'miniapp' }}
         run: |
           mkdir -p "$RUNNER_TEMP/size"
-          cargo mutants --no-shuffle --list --json --in-place ${PACKAGE:+--package "$PACKAGE"} --timeout 300 --build-timeout 600 > "$RUNNER_TEMP/size/package.json"
+          if [ -n "$PACKAGE" ]; then
+            cargo mutants --no-shuffle --list --json --in-place --package="$PACKAGE" --timeout 300 --build-timeout 600 > "$RUNNER_TEMP/size/package.json"
+          else
+            cargo mutants --no-shuffle --list --json --in-place --timeout 300 --build-timeout 600 > "$RUNNER_TEMP/size/package.json"
+          fi
       - name: the shards, the fewest whose slowest is projected within its bound
         id: size
         run: python3 scripts/mutation-verdict.py size ${PACKAGE:+--package "$PACKAGE"} --listed "$RUNNER_TEMP/size/package.json"
@@ -160,7 +164,11 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/mutation"
           rc=0
-          python3 scripts/memory_scope.py --report "$RUNNER_TEMP/mutation" -- cargo mutants --no-shuffle -vV --in-place ${PACKAGE:+--package "$PACKAGE"} --sharding round-robin --shard "$SHARD/$SHARDS" --timeout 300 --build-timeout 600 --output "$RUNNER_TEMP/mutation" || rc=$?
+          if [ -n "$PACKAGE" ]; then
+            python3 scripts/memory_scope.py --report "$RUNNER_TEMP/mutation" -- cargo mutants --no-shuffle -vV --in-place --package="$PACKAGE" --sharding round-robin --shard "$SHARD/$SHARDS" --timeout 300 --build-timeout 600 --output "$RUNNER_TEMP/mutation" || rc=$?
+          else
+            python3 scripts/memory_scope.py --report "$RUNNER_TEMP/mutation" -- cargo mutants --no-shuffle -vV --in-place --sharding round-robin --shard "$SHARD/$SHARDS" --timeout 300 --build-timeout 600 --output "$RUNNER_TEMP/mutation" || rc=$?
+          fi
           echo "$rc" > "$RUNNER_TEMP/mutation/cargo-mutants.exit"
           echo "cargo-mutants exited $rc"
           exit "$rc"
