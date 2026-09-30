@@ -3,13 +3,18 @@ fields the formal checker reads and no other, with each value and type as ADR-29
 
 import ast
 import copy
+import itertools
 import json
+import tempfile
 import unittest
 from pathlib import Path
 
 from _support import REPO, examined
 
 CONFIG = REPO / "config" / "formal.json"
+# R6: the formal checker takes its toolchain from ONE source, either `toolchain.identity` in the
+# settings file or a committed pin file at this path, and this repository names the identity.
+PIN_FILE = Path("config") / "formal-toolchain.json"
 
 # R1: the declared file, as data. Every check below is generated from this one table.
 EXPECTED = {
@@ -167,6 +172,15 @@ def read(doc):
         if kind == "hex64" and not is_hex64(value):
             raise Refused("hex64", f"{name} is not 64 lowercase hex digits")
     return doc
+
+
+def toolchain_sources(doc, root):
+    """The toolchain sources the tree at `root` names, as the checker reads them: the settings
+    field when the document names it, and the pin file when the tree holds one."""
+    named = []
+    if get(doc, ("toolchain", "identity"))[1]:
+        named.append("toolchain.identity")
+    return named
 
 
 def load():
@@ -514,6 +528,35 @@ class FormalConfig(unittest.TestCase):
             wrong.append(f"{name}: admitted")
         self.assertEqual(wrong, [], "a planted digest fault the reader did not refuse by its arm")
         self.assertGreaterEqual(len(faults), len(BAD_HEX) + 1 + len(JSON_TYPES) - 1)
+
+    def test_the_tree_names_one_toolchain_source_the_identity(self):
+        """R6: the tree names the checker's toolchain by one source, the identity in the settings
+        file, and holds no pin file. The population is every combination of the two sources the
+        checker reads, each built in a scratch root, and only the identity alone is admitted."""
+        self.assertEqual(toolchain_sources(load(), REPO), ["toolchain.identity"], "the tree")
+        combinations = examined(
+            "toolchain source combinations", list(itertools.product((True, False), repeat=2))
+        )
+        self.assertEqual(set(combinations), set(itertools.product((True, False), repeat=2)))
+        sources = {}
+        for named, pinned in combinations:
+            doc = EXPECTED if named else without(("toolchain",))
+            with tempfile.TemporaryDirectory() as scratch:
+                root = Path(scratch)
+                (root / "config").mkdir()
+                if pinned:
+                    (root / "config" / "formal-toolchain.json").write_text("{}\n", encoding="utf-8")
+                sources[(named, pinned)] = toolchain_sources(doc, root)
+        self.assertEqual(
+            sources,
+            {
+                (True, True): ["toolchain.identity", "config/formal-toolchain.json"],
+                (True, False): ["toolchain.identity"],
+                (False, True): ["config/formal-toolchain.json"],
+                (False, False): [],
+            },
+            "the sources each combination names, as the checker reads them (R6)",
+        )
 
 
 if __name__ == "__main__":
