@@ -1397,7 +1397,7 @@ def python_reports(verdict: Verdict, plan: dict, directory: str | None) -> list[
     """(where, report) for each Python shard report the plan promised, from 0 to n-1: one missing,
     unreadable, not of the runner's schema, that records a failed restore, whose shard field is not
     its slot's, or that examined other mutants than the plan lists for that shard is VOID by name
-    (SPEC-087 R11; SPEC-126 A15 and A16)."""
+    (SPEC-087 R11; SPEC-126 A8 and A9)."""
     planned = (plan.get("python") or {}).get("count") or 0
     if not planned:
         verdict.void("the plan names no python shards, so no shard's report was promised")

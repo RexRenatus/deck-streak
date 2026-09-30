@@ -232,10 +232,10 @@ this section and section 14 and nothing else. Issue #438.
 
 | id | criterion | decided by |
 |---|---|---|
-| A15 | a report counts only in the slot its own shard field names: a copy, a swap and an absent or malformed field are each refused by name | `test_mutation_python_shard_binding.py` `test_a_report_counts_only_in_its_own_slot` |
-| A16 | a report counts only the mutants the plan lists for its shard: a trimmed, extra, repeated, swapped or missing report is refused by name | `test_mutation_python_shard_binding.py` `test_a_report_counts_only_the_mutants_its_shard_lists` |
+| A8 | a report counts only in the slot its own shard field names: a copy, a swap and an absent or malformed field are each refused by name | `test_mutation_python_shard_binding.py` `test_a_report_counts_only_in_its_own_slot` |
+| A9 | a report counts only the mutants the plan lists for its shard: a trimmed, extra, repeated, swapped or missing report is refused by name | `test_mutation_python_shard_binding.py` `test_a_report_counts_only_the_mutants_its_shard_lists` |
 
 ```acceptance
-A15: python3 -m unittest discover -s scripts/tests -p test_mutation_python_shard_binding.py -k test_a_report_counts_only_in_its_own_slot
-A16: python3 -m unittest discover -s scripts/tests -p test_mutation_python_shard_binding.py -k test_a_report_counts_only_the_mutants_its_shard_lists
+A8: python3 -m unittest discover -s scripts/tests -p test_mutation_python_shard_binding.py -k test_a_report_counts_only_in_its_own_slot
+A9: python3 -m unittest discover -s scripts/tests -p test_mutation_python_shard_binding.py -k test_a_report_counts_only_the_mutants_its_shard_lists
 ```

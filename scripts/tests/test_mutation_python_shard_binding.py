@@ -1,5 +1,5 @@
 """The Python lane's verdict counts a shard's work only from the report bound to that shard
-(SPEC-126 A15 and A16, issue #438).
+(SPEC-126 A8 and A9, issue #438).
 
 The class rule: the verdict reads a report only when the report's own `shard` field equals the slot
 it sits in (`mutation-python-shard-<k>` holds `k/<count>`), and the mutants it examined equal the

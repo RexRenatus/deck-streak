@@ -117,7 +117,7 @@ The A5 red line above quotes a failure that came from `check_judge` comparing a 
 because the reader's representation changed from quoted words to shell-split words. The fixtures
 and the test methods stayed byte-identical across the change.
 
-## Addendum, 2026-09-30 (issue #438): A15 and A16, a report bound to its slot and its listing
+## Addendum, 2026-09-30 (issue #438): A8 and A9, a report bound to its slot and its listing
 
 The red commit adds `test_mutation_python_shard_binding.py` against the unchanged verdict and
 changes nothing else: the correct layout passes as the control, and the verdict accepts 129 of the
@@ -132,8 +132,8 @@ the literal 81, the listing's size, where it was three times the mutants of one 
 assertion is dropped or weakened. The population then reads 129 refused of 129 and 311 refused of 311, none accepted.
 
 ```red-first
-A15: red at 11ab33f: AssertionError: 129 != 0 : 129 of 129 members accepted
-A15: green at 7fa6ed7
-A16: red at 11ab33f: AssertionError: 302 != 0 : 302 of 311 members accepted
-A16: green at 7fa6ed7
+A8: red at 11ab33f: AssertionError: 129 != 0 : 129 of 129 members accepted
+A8: green at 7fa6ed7
+A9: red at 11ab33f: AssertionError: 302 != 0 : 302 of 311 members accepted
+A9: green at 7fa6ed7
 ```
