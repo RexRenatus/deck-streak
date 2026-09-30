@@ -1,0 +1,411 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S04601-THE-BAND-FLOOR-IS-800-WORDS",
+        "readings",
+        "src/form.rs",
+        "pub const BAND_FLOOR_WORDS: u32 = 800;",
+        "pub const BAND_FLOOR_WORDS: u32 = 799;",
+        "form::the_word_target_grows_with_new_cards_inside_the_band",
+        "the word band's floor is 800 words, and one new card sits on it (SPEC-046 R2, A1)"
+      ],
+      [
+        "S04602-THE-BAND-CEILING-IS-1500-WORDS",
+        "readings",
+        "src/form.rs",
+        "pub const BAND_CEILING_WORDS: u32 = 1500;",
+        "pub const BAND_CEILING_WORDS: u32 = 1501;",
+        "form::the_word_target_grows_with_new_cards_inside_the_band",
+        "the word band's ceiling is 1500 words however many cards are new (SPEC-046 R2, A1)"
+      ],
+      [
+        "S04603-EACH-NEW-CARD-ADDS-FIFTY-WORDS",
+        "readings",
+        "src/form.rs",
+        "pub const WORDS_PER_NEW_CARD: u32 = 50;",
+        "pub const WORDS_PER_NEW_CARD: u32 = 51;",
+        "form::the_word_target_grows_with_new_cards_inside_the_band",
+        "each further new card adds fifty words to the target (SPEC-046 R2, A1)"
+      ],
+      [
+        "S04604-AN-ANCHOR-IS-CUT-TO-48-CHARACTERS",
+        "readings",
+        "src/coverage.rs",
+        "pub const ANCHOR_MAX_CHARS: usize = 48;",
+        "pub const ANCHOR_MAX_CHARS: usize = 49;",
+        "coverage::the_anchor_bounds_are_pinned",
+        "an anchor is the note's text cut to 48 characters (SPEC-046 R6, A6)"
+      ],
+      [
+        "S04605-AN-ANCHOR-IS-USABLE-AT-8-CHARACTERS",
+        "readings",
+        "src/coverage.rs",
+        "pub const ANCHOR_MIN_USABLE_CHARS: usize = 8;",
+        "pub const ANCHOR_MIN_USABLE_CHARS: usize = 9;",
+        "coverage::the_anchor_bounds_are_pinned",
+        "an anchor is usable at 8 characters or more (SPEC-046 R6, A6)"
+      ],
+      [
+        "S04606-A-READING-ID-KEEPS-32-HEX-DIGITS",
+        "readings",
+        "src/reading.rs",
+        "pub const ID_HEX_DIGITS: usize = 32;",
+        "pub const ID_HEX_DIGITS: usize = 31;",
+        "minutes::the_reading_id_is_32_hex_digits_of_the_topic_the_first_day_and_the_digest",
+        "a reading's id is the first 32 hex digits of the digest (SPEC-046 R9, A16)"
+      ],
+      [
+        "S04607-A-LEARNER-READS-200-WORDS-A-MINUTE",
+        "readings",
+        "src/reading.rs",
+        "pub const WORDS_PER_MINUTE: u32 = 200;",
+        "pub const WORDS_PER_MINUTE: u32 = 201;",
+        "minutes::reading_minutes_count_words_at_200_per_minute",
+        "minutes are counted at 200 words a minute (SPEC-046 R9, A16)"
+      ],
+      [
+        "S04608-CHINESE-COUNTS-15-TENTHS-PER-WORD",
+        "readings",
+        "src/reading.rs",
+        "const ZH_CHARS_PER_WORD_TENTHS: u32 = 15;",
+        "const ZH_CHARS_PER_WORD_TENTHS: u32 = 16;",
+        "minutes::chinese_and_japanese_count_characters_at_a_word_rate",
+        "Chinese characters count at a word rate of 1.5 to a word (SPEC-046 R9, A16)"
+      ],
+      [
+        "S04609-JAPANESE-COUNTS-20-TENTHS-PER-WORD",
+        "readings",
+        "src/reading.rs",
+        "const JA_CHARS_PER_WORD_TENTHS: u32 = 20;",
+        "const JA_CHARS_PER_WORD_TENTHS: u32 = 21;",
+        "minutes::chinese_and_japanese_count_characters_at_a_word_rate",
+        "Japanese characters count at a word rate of 2 to a word (SPEC-046 R9, A16)"
+      ],
+      [
+        "S04610-AN-ATTEMPT-IS-KEPT-NINETY-DAYS",
+        "readings",
+        "src/attempts.rs",
+        "pub const RETAIN_DAYS: i64 = 90;",
+        "pub const RETAIN_DAYS: i64 = 91;",
+        "attempts::an_attempt_is_kept_for_exactly_ninety_whole_days",
+        "reading_attempts are retained 90 days (SPEC-046 R10, A17)"
+      ],
+      [
+        "S04611-A-RETENTION-DAY-IS-86400000-MILLISECONDS",
+        "readings",
+        "src/attempts.rs",
+        "const DAY_MILLIS: i64 = 86_400_000;",
+        "const DAY_MILLIS: i64 = 86_400_001;",
+        "attempts::an_attempt_is_kept_for_exactly_ninety_whole_days",
+        "the retention cutoff counts whole days of 86 400 000 milliseconds (SPEC-046 R10)"
+      ],
+      [
+        "S04612-A-TOPIC-GETS-TWO-ATTEMPTS",
+        "readings",
+        "src/repair.rs",
+        "pub const MAX_ATTEMPTS: u32 = 2;",
+        "pub const MAX_ATTEMPTS: u32 = 3;",
+        "repair::a_topic_gets_the_first_attempt_and_exactly_one_repair",
+        "a topic gets the first attempt and one repair, never more (SPEC-046 R7, A8)"
+      ],
+      [
+        "S04613-A-SECOND-FAILURE-ENDS-THE-TOPIC",
+        "readings",
+        "src/repair.rs",
+        "    if attempt >= MAX_ATTEMPTS {",
+        "    if attempt > MAX_ATTEMPTS {",
+        "repair::a_topic_gets_the_first_attempt_and_exactly_one_repair",
+        "the attempt that reaches the cap ends the topic instead of asking for another repair (SPEC-046 R7, A8)"
+      ],
+      [
+        "S04614-A-QUOTE-IS-A-LINE-OF-16-CHARACTERS",
+        "readings",
+        "src/repair.rs",
+        "const QUOTE_MIN_CHARS: usize = 16;",
+        "const QUOTE_MIN_CHARS: usize = 17;",
+        "repair::a_finding_that_repeats_a_long_rejected_line_is_dropped",
+        "a finding that repeats a rejected line of 16 characters or more is not sent back (SPEC-046 R7, A14)"
+      ],
+      [
+        "S04615-THE-BAND-GATE-FOLLOWS-THE-ANCHORS",
+        "readings",
+        "src/coverage.rs",
+        "    if let Some(p) = pack_of(&[BAND_CLASS]) {",
+        "    if let Some(p) = pack_of(&[GateClass::Void]) {",
+        "coverage::the_first_failure_decides_in_the_gate_order",
+        "the band gate is the pack's reading-length class, ranked after the anchors and before the list markers (SPEC-046 R6, A5)"
+      ],
+      [
+        "S04616-THE-ROSTER-GATE-READS-THE-PACK-ROSTER-CLASSES",
+        "readings",
+        "src/coverage.rs",
+        "pub const ROSTER_CLASSES: [GateClass; 2] = [GateClass::CitationsResolve, GateClass::I1Glosses];",
+        "pub const ROSTER_CLASSES: [GateClass; 2] = [GateClass::CitationsResolve, GateClass::Void];",
+        "coverage::the_first_failure_decides_in_the_gate_order",
+        "the roster gate is the pack's citations-resolve and i1-glosses classes, ranked before the anchors (SPEC-046 R6, A5)"
+      ],
+      [
+        "S04617-THE-LIST-MARKERS-COME-BEFORE-THE-CONTRACT",
+        "readings",
+        "src/coverage.rs",
+        "    if !own.no_list_markers.is_empty() {",
+        "    if false {",
+        "coverage::the_first_failure_decides_in_the_gate_order",
+        "a list marker is refused before the contract's own class is read (SPEC-046 R6, A5)"
+      ],
+      [
+        "S04618-A-COMPLETE-GATE-COMES-FIRST",
+        "readings",
+        "src/coverage.rs",
+        "    if !own.complete.is_empty() {",
+        "    if false {",
+        "coverage::the_first_failure_decides_in_the_gate_order",
+        "an incomplete reading fails the complete gate before any other (SPEC-046 R6, A5)"
+      ],
+      [
+        "S04619-THE-ANCHORS-GATE-FOLLOWS-THE-ROSTER",
+        "readings",
+        "src/coverage.rs",
+        "    if !own.anchors.is_empty() {",
+        "    if false {",
+        "coverage::the_first_failure_decides_in_the_gate_order",
+        "a reading missing an anchor fails the anchors gate after the roster and before the band (SPEC-046 R6, A5)"
+      ],
+      [
+        "S04620-AN-UNAVAILABLE-VERDICT-IS-NOT-RETRIED",
+        "coordination",
+        "src/readings/generate.rs",
+        "                return Ok(TopicState::Failed(FailedReason::AgentUnavailable(cause)));",
+        "                continue;",
+        "readings_generate::an_unavailable_route_ends_the_topic_with_no_retry",
+        "an unavailable verdict ends the topic failed:agent_unavailable with no retry (SPEC-046 R7, A11)"
+      ],
+      [
+        "S04621-EVERY-UNTRUSTED-INPUT-IS-CHECKED-BEFORE-A-CALL",
+        "coordination",
+        "src/readings/generate.rs",
+        "    for untrusted in [NO_MEMORY, cards.as_str()] {",
+        "    for untrusted in [NO_MEMORY; 0] {",
+        "readings_generate::an_untrusted_input_is_checked_before_any_call",
+        "each untrusted input of a topic goes through the input check before any model call (SPEC-046 R6, SPEC-043 R11)"
+      ],
+      [
+        "S04622-A-FAILED-INPUT-CHECK-ENDS-THE-TOPIC-WITH-NO-CALL",
+        "coordination",
+        "src/readings/generate.rs",
+        "        if let GateOutcome::Failed { .. } = parts.gate.check_input(untrusted).await {",
+        "        if let GateOutcome::Passed = parts.gate.check_input(untrusted).await {",
+        "readings_generate::an_untrusted_input_is_checked_before_any_call",
+        "a failed input check fails the topic with no model call and no attempt (SPEC-046 R6)"
+      ],
+      [
+        "S04623-A-FINDING-QUOTING-THE-REJECTED-TEXT-IS-DROPPED",
+        "readings",
+        "src/repair.rs",
+        "        || quoted_spans(finding).any(|span| rejected.contains(span))",
+        "        || quoted_spans(finding).any(|span| span.is_empty())",
+        "repair::a_finding_quoting_a_span_of_the_rejected_text_is_dropped",
+        "a finding that quotes a span of the rejected text never reaches the repair (SPEC-046 R7)"
+      ],
+      [
+        "S04624-THE-NEW-WORDS-STAY-OUT-OF-THE-TRUSTED-INSTRUCTION",
+        "readings",
+        "src/form.rs",
+        "                    seed.new_words.len()",
+        "                    seed.new_words.join(\", \")",
+        "form::a_language_instruction_counts_the_new_words_and_never_names_one",
+        "the language instruction names the count of new words and never a word itself (SPEC-046 R1)"
+      ],
+      [
+        "S04625-AN-UNCLOSED-TAG-KEEPS-THE-REST-OF-THE-TEXT",
+        "readings",
+        "src/coverage.rs",
+        "        let Some(close) = rest[open..].find('>') else {\n            break;",
+        "        let Some(close) = rest[open..].find('>') else {\n            return out;",
+        "coverage::an_unclosed_tag_leaves_the_rest_of_the_text_as_it_is",
+        "a less-than sign with no greater-than after it ends the tag walk and the rest stays (SPEC-046 R6)"
+      ],
+      [
+        "S04626-A-READING-ID-IS-NOT-LONGER-THAN-32-HEX-DIGITS",
+        "readings",
+        "src/reading.rs",
+        "pub const ID_HEX_DIGITS: usize = 32;",
+        "pub const ID_HEX_DIGITS: usize = 33;",
+        "stored::a_reading_id_parses_only_as_thirty_two_lowercase_hex_digits",
+        "a stored reading's id parses at exactly 32 hex digits, so a longer id is refused (SPEC-046 R9, A16)"
+      ],
+      [
+        "S04627-A-FINDING-QUOTING-AN-UNPROVEN-SPAN-IS-DROPPED",
+        "readings",
+        "src/repair.rs",
+        "        || quoted_spans(finding).any(is_unproven)",
+        "        || quoted_spans(finding).any(|span| span.is_empty())",
+        "repair::a_finding_quoting_an_escaped_span_is_dropped",
+        "the repair slot drops an escaped span (SPEC-046 R7)"
+      ],
+      [
+        "S04628-A-PACK-FINDING-NEVER-REACHES-THE-REPAIR",
+        "readings",
+        "src/coverage.rs",
+        "    let class = pack.class.name();\n    vec![format!(\"the {class} check refused the reading\")]",
+        "    pack.findings.clone()",
+        "repair::a_pack_finding_never_reaches_the_trusted_repair_slot",
+        "a pack gate's failure carries the engine's words naming the check, never a probe's finding line (SPEC-046 R7)"
+      ],
+      [
+        "S04629-A-SPAN-HOLDING-A-QUOTE-IS-DROPPED",
+        "readings",
+        "src/repair.rs",
+        "    span.contains(['\\\\', '\\'', '\"'])",
+        "    span.contains(['\\\\'])",
+        "repair::a_finding_quoting_a_span_that_holds_a_quote_is_dropped",
+        "the repair slot drops an escaped span (SPEC-046 R7)"
+      ],
+      [
+        "S04630-A-CONTRACT-GATE-FAILURE-NAMES-THE-CHECK",
+        "readings",
+        "src/coverage.rs",
+        "        findings: named(p),",
+        "        findings: p.findings.clone(),",
+        "repair::every_pack_class_reaches_the_repair_only_as_the_name_of_the_check",
+        "the contract gate's failure carries the engine's words naming the check, for every configured pack class (SPEC-046 R7, A28)"
+      ],
+      [
+        "S04631-A-GATE-OUTCOME-CLASS-NAMES-THE-CHECK",
+        "coordination",
+        "../readings/src/coverage.rs",
+        "        findings: named(p),",
+        "        findings: if matches!(p.class, GateClass::Void | GateClass::ExaminedNothing) { p.findings.clone() } else { named(p) },",
+        "readings_trust::a_gate_outcome_class_reaches_the_repair_only_as_the_name_of_the_check",
+        "the contract gate's failure carries the engine's words naming the check, for the gate's own classes too (SPEC-046 R7, A28)"
+      ],
+      [
+        "S04632-A-FORGED-HEAD-NEVER-NAMES-THE-CHECK",
+        "coordination",
+        "../readings/src/coverage.rs",
+        "    let class = pack.class.name();\n    vec![format!(\"the {class} check refused the reading\")]",
+        "    let class = if matches!(pack.class, GateClass::Void | GateClass::ExaminedNothing) {\n        pack.findings.first().and_then(|f| f.split(':').next()).unwrap_or(pack.class.name())\n    } else {\n        pack.class.name()\n    };\n    vec![format!(\"the {class} check refused the reading\")]",
+        "readings_trust::a_gate_outcome_class_reaches_the_repair_only_as_the_name_of_the_check",
+        "the check a failure names is the gate's own class, never a head a probe's output wrote (SPEC-046 R7, A28)"
+      ],
+      [
+        "S04633-THE-CONTRACT-GATE-CARRIES-NO-EXAMINED-LINE",
+        "coordination",
+        "../readings/src/coverage.rs",
+        "        findings: named(p),",
+        "        findings: {\n            let mut named = named(p);\n            if matches!(p.class, GateClass::Void | GateClass::ExaminedNothing) {\n                named.extend(p.findings.iter().rev().find(|f| f.starts_with(\"examined\")).cloned());\n            }\n            named\n        },",
+        "readings_trust::a_gate_outcome_class_reaches_the_repair_only_as_the_name_of_the_check",
+        "the contract gate's failure carries no line of the probe's report, not even its examined count (SPEC-046 R7, A28)"
+      ],
+      [
+        "S04634-THE-CALLER-ADDS-NO-GATE-CLASS-FINDING",
+        "coordination",
+        "src/readings/generate.rs",
+        "                repair_text = text;",
+        "                repair_text = match &pack {\n                    Some(p) if matches!(\n                        p.class,\n                        deck_streak_kernel::GateClass::Void\n                            | deck_streak_kernel::GateClass::ExaminedNothing\n                    ) => {\n                        format!(\"{text}\\n- {}\", p.findings.join(\" \"))\n                    }\n                    _ => text,\n                };",
+        "readings_trust::a_gate_outcome_class_reaches_the_prompt_only_as_the_name_of_the_check",
+        "the attempt loop sends the repair text as the engine wrote it, adding no finding of the gate's own classes (SPEC-046 R7, A28)"
+      ],
+      [
+        "S04635-THE-CALLER-ADDS-NO-CONFIGURED-CLASS-FINDING",
+        "coordination",
+        "src/readings/generate.rs",
+        "                repair_text = text;",
+        "                repair_text = match &pack {\n                    Some(p) if p.class == deck_streak_kernel::GateClass::OutputLinks => {\n                        format!(\"{text}\\n- {}\", p.findings.join(\" \"))\n                    }\n                    _ => text,\n                };",
+        "readings_trust::a_gate_outcome_class_reaches_the_prompt_only_as_the_name_of_the_check",
+        "the attempt loop sends the repair text as the engine wrote it, adding no finding of a configured class (SPEC-046 R7, A28)"
+      ],
+      [
+        "S04636-THE-NAME-OF-A-GATE-CLASS-IS-ENGINE-TEXT",
+        "coordination",
+        "../readings/src/coverage.rs",
+        "    let class = pack.class.name();\n    vec![format!(\"the {class} check refused the reading\")]",
+        "    if matches!(pack.class, GateClass::Void | GateClass::ExaminedNothing) {\n        return vec![pack.findings.join(\" \")];\n    }\n    let class = pack.class.name();\n    vec![format!(\"the {class} check refused the reading\")]",
+        "readings_trust::a_gate_outcome_class_reaches_the_repair_only_as_the_name_of_the_check",
+        "the gate's own classes are named by the engine's words, never by the probe's report (SPEC-046 R7, A28)"
+      ],
+      [
+        "S04637-NO-CLASS-IS-READ-FROM-A-FINDING-HEAD",
+        "coordination",
+        "../readings/src/coverage.rs",
+        "    let class = pack.class.name();\n    vec![format!(\"the {class} check refused the reading\")]",
+        "    let class = pack.findings.first().and_then(|f| f.split(':').next()).unwrap_or(pack.class.name());\n    vec![format!(\"the {class} check refused the reading\")]",
+        "readings_trust::a_gate_outcome_class_reaches_the_repair_only_as_the_name_of_the_check",
+        "the check a failure names is the class the gate reported, for every class, never a finding's head (SPEC-046 R7, A28)"
+      ],
+      [
+        "S04638-A-SILENT-FAILURE-STILL-NAMES-THE-CHECK",
+        "coordination",
+        "../readings/src/coverage.rs",
+        "    let class = pack.class.name();\n    vec![format!(\"the {class} check refused the reading\")]",
+        "    if pack.findings.is_empty() {\n        return Vec::new();\n    }\n    let class = pack.class.name();\n    vec![format!(\"the {class} check refused the reading\")]",
+        "readings_trust::a_gate_outcome_class_reaches_the_repair_only_as_the_name_of_the_check",
+        "a failure with no finding line still names its check, so the repair is never an empty instruction (SPEC-046 R7, A28)"
+      ],
+      [
+        "S04639-THE-VOID-CLASS-IS-NEVER-READ-FROM-A-PROBE",
+        "agent",
+        "src/gate.rs",
+        "            _ => failed(GateClass::Void, findings),",
+        "            _ => failed(\n                text.lines()\n                    .next()\n                    .and_then(|line| line.split(':').next())\n                    .and_then(|name| name.parse().ok())\n                    .unwrap_or(GateClass::Void),\n                findings,\n            ),",
+        "gate::a_probe_that_cannot_run_or_examined_nothing_fails_closed",
+        "a probe that cannot report is void, never a class its output names (SPEC-043 R9, SPEC-046 R7)"
+      ],
+      [
+        "S04641-AN-ABSENT-ROUTE-ENDS-THE-CONFIGURED-STUDY-DAY",
+        "coordination",
+        "src/readings/generate.rs",
+        "        let day = TopicDay {\n            study_day,\n            topic: topic.clone(),\n            state: TopicState::AiRouteAbsent,",
+        "        let day = TopicDay {\n            study_day: StudyDayRule::default().study_day(now),\n            topic: topic.clone(),\n            state: TopicState::AiRouteAbsent,",
+        "readings_generate::an_absent_route_ends_every_topic_on_the_configured_study_day",
+        "with the route absent, every topic ends the configured study day, not the default rule's (SPEC-046 R16)"
+      ],
+      [
+        "S04642-TEXT-BECOMES-A-CLASS-ONLY-AS-A-DECLARED-NAME",
+        "coordination",
+        "../kernel/src/gate_class.rs",
+        "            .find(|class| class.name() == name)",
+        "            .find(|class| name.starts_with(class.name()))",
+        "readings_trust::a_name_no_class_declares_never_reaches_the_repair_or_the_prompt",
+        "text becomes a gate class only when it is a declared name, exactly (SPEC-046 R7, A28)"
+      ],
+      [
+        "S04643-ALL-LISTS-EVERY-DECLARED-CLASS",
+        "coordination",
+        "../kernel/src/gate_class.rs",
+        "            pub const ALL: &'static [Self] = &[$(Self::$variant,)+];",
+        "            pub const ALL: &'static [Self] = &[Self::Void, Self::ExaminedNothing];",
+        "readings_trust::a_gate_outcome_class_reaches_the_repair_only_as_the_name_of_the_check",
+        "the population walks every class the declaration yields (SPEC-046 R7, A28)"
+      ],
+      [
+        "S04644-A-CLASS-IS-NAMED-AS-THE-PACKS-SPELL-IT",
+        "coordination",
+        "../kernel/src/gate_class.rs",
+        "                    $(Self::$variant => $name,)+",
+        "                    $(Self::$variant => stringify!($variant),)+",
+        "readings_trust::a_gate_outcome_class_reaches_the_repair_only_as_the_name_of_the_check",
+        "a class's name is the name the packs and the probe protocol spell (SPEC-046 R7, A28)"
+      ],
+      [
+        "S04645-A-TEXT-PARSES-ONLY-TO-THE-CLASS-IT-NAMES-EXACTLY",
+        "kernel",
+        "src/gate_class.rs",
+        "            .find(|class| class.name() == name)",
+        "            .find(|class| !name.is_empty() && class.name().starts_with(name))",
+        "gate_class::a_text_parses_only_to_the_class_it_names_exactly",
+        "a text that is a non-empty prefix of a declared name is never a class (SPEC-046 R7, A28)"
+      ],
+      [
+        "S04646-THE-PARSE-IS-PINNED-TO-ONE-COMPARISON-OF-THE-TEXT",
+        "kernel",
+        "src/gate_class.rs",
+        "            .find(|class| class.name() == name)",
+        "            .find(|class| class.name() == name.trim_matches('\\u{00A0}'))",
+        "gate_class::the_parse_is_pinned_to_one_comparison_of_the_text_with_each_declared_name",
+        "a text parses to a class only through the pinned comparison, so the class it yields is named by exactly that text (SPEC-046 R7, A31)"
+      ]
+    ]
+  }
+}

@@ -5,7 +5,7 @@ mod support;
 
 use deck_streak_agent::compose::Parts;
 use deck_streak_agent::duty::{AlertKind, DutyEngine, DutyInput, DutySpec};
-use deck_streak_agent::gate::GateOutcome;
+use deck_streak_agent::gate::{GateClass, GateOutcome};
 use deck_streak_agent::route::{AI_ROUTE, AiRoute};
 use deck_streak_agent::runs::AgentRuns;
 use deck_streak_agent::verdict::{Cause, Verdict};
@@ -26,6 +26,9 @@ fn input() -> DutyInput<'static> {
             duty: "d",
             memory: "m",
             cards: "c",
+            form: "",
+            word_target: "",
+            repair: "",
         },
     }
 }
@@ -155,7 +158,7 @@ async fn an_output_failing_a_blocking_class_is_withheld_and_recorded() {
     let rig = rig().await;
     let runner = FixedRunner::replying("see https://evil.example/x");
     let gate = FixedGate(GateOutcome::Failed {
-        class: "output-links".to_owned(),
+        class: GateClass::OutputLinks,
         findings: vec!["output-links: finding".to_owned()],
     });
     let verdict = run(&rig, AiRoute::Proxy, &runner, &gate).await;
@@ -183,7 +186,7 @@ async fn a_withheld_verdict_raises_one_alert_carrying_only_the_class() {
     let rig = rig().await;
     let runner = FixedRunner::replying("SECRET CONTENT");
     let gate = FixedGate(GateOutcome::Failed {
-        class: "output-links".to_owned(),
+        class: GateClass::OutputLinks,
         findings: vec!["SECRET CONTENT".to_owned()],
     });
     let _verdict = run(&rig, AiRoute::Proxy, &runner, &gate).await;

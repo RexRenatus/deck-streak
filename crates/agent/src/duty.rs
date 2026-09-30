@@ -63,7 +63,7 @@ impl DutySpec {
 use deck_streak_kernel::{Clock, KernelError};
 
 use crate::compose::{Parts, compose};
-use crate::gate::{GateOutcome, OutputGate};
+use crate::gate::{GateClass, GateOutcome, OutputGate};
 use crate::route::AiRoute;
 use crate::runner::Runner;
 use crate::runs::{AgentRuns, RunRecord};
@@ -209,7 +209,8 @@ impl DutyEngine<'_> {
         Verdict::Unavailable(cause)
     }
 
-    fn withhold(&self, duty: &DutySpec, class: String, findings: Vec<String>) -> Verdict {
+    fn withhold(&self, duty: &DutySpec, class: GateClass, findings: Vec<String>) -> Verdict {
+        let class = class.name().to_owned();
         self.alerts.raise(AgentAlert {
             duty: duty.name.to_owned(),
             kind: AlertKind::Withheld(class.clone()),

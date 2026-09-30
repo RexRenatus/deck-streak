@@ -3,7 +3,7 @@
     fake-probe.py --root R --subject OUT [--subject TEMPLATE] check <class>
 
 Exit 0 is green, 1 a finding. The classes: output-links (an http link), output-invisible (a
-zero-width character) and output-identity (a claim to be human). Every report ends `examined N`.
+zero-width character) and no-human-claim (a claim to be human). Every report ends `examined N`.
 """
 
 import sys
@@ -15,7 +15,7 @@ text = open(subjects[0], encoding="utf-8").read()
 findings = {
     "output-links": "http" in text,
     "output-invisible": any(c in text for c in "​‌‍⁠﻿"),
-    "output-identity": "i am a human" in text.lower(),
+    "no-human-claim": "i am a human" in text.lower(),
 }
 if klass not in findings:
     print(f"{klass}: VOID unknown class")

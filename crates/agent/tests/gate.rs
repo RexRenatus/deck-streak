@@ -6,7 +6,7 @@ mod support;
 use std::path::PathBuf;
 
 use deck_streak_agent::gate::{
-    CLASS_EMPTY, CLASS_VOID, GateBuildError, GateClassSpec, GateOutcome, OutputGate, ProbeGate,
+    GateBuildError, GateClass, GateClassSpec, GateOutcome, OutputGate, ProbeGate,
 };
 use support::script;
 
@@ -14,20 +14,20 @@ fn probe() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/fake-probe.py")
 }
 
-fn spec(class: &str) -> GateClassSpec {
+fn spec(class: GateClass) -> GateClassSpec {
     GateClassSpec {
         probe: probe(),
-        class: class.to_owned(),
+        class,
         with_template: false,
     }
 }
 
-fn gate(dir: &std::path::Path, classes: &[&str]) -> ProbeGate {
+fn gate(dir: &std::path::Path, classes: &[GateClass]) -> ProbeGate {
     ProbeGate::new(
         dir.to_path_buf(),
         dir.to_path_buf(),
-        classes.iter().map(|c| spec(c)).collect(),
-        Some(spec("output-invisible")),
+        classes.iter().map(|c| spec(*c)).collect(),
+        Some(spec(GateClass::OutputInvisible)),
         true,
     )
     .expect("a gate with its classes and its input class")
@@ -38,7 +38,11 @@ async fn a_clean_output_passes_every_class() {
     let dir = tempfile::tempdir().expect("a directory");
     let g = gate(
         dir.path(),
-        &["output-links", "output-invisible", "output-identity"],
+        &[
+            GateClass::OutputLinks,
+            GateClass::OutputInvisible,
+            GateClass::NoHumanClaim,
+        ],
     );
     assert_eq!(g.check("a plain reading", "tpl").await, GateOutcome::Passed);
 }
@@ -46,23 +50,27 @@ async fn a_clean_output_passes_every_class() {
 #[tokio::test]
 async fn the_first_failing_class_names_the_refusal() {
     let dir = tempfile::tempdir().expect("a directory");
-    let g = gate(dir.path(), &["output-links", "output-identity"]);
+    let g = gate(
+        dir.path(),
+        &[GateClass::OutputLinks, GateClass::NoHumanClaim],
+    );
     let GateOutcome::Failed { class, findings } = g.check("see http://x.example", "tpl").await
     else {
         panic!("expected a refusal")
     };
-    assert_eq!(class, "output-links");
+    assert_eq!(class, GateClass::OutputLinks);
     assert_eq!(findings, ["output-links: finding", "examined 1"]);
 }
 
 #[tokio::test]
 async fn a_probe_that_cannot_run_or_examined_nothing_fails_closed() {
     let dir = tempfile::tempdir().expect("a directory");
-    let void = gate(dir.path(), &["unknown-class"]);
+    // The fake probe knows three classes, so it answers `no-dates` as a class it does not know.
+    let void = gate(dir.path(), &[GateClass::NoDates]);
     let GateOutcome::Failed { class, .. } = void.check("ok", "tpl").await else {
         panic!("VOID must not pass")
     };
-    assert_eq!(class, CLASS_VOID);
+    assert_eq!(class, GateClass::Void);
     let empty = script(dir.path(), "empty.py", "");
     std::fs::write(
         &empty,
@@ -74,7 +82,7 @@ async fn a_probe_that_cannot_run_or_examined_nothing_fails_closed() {
         dir.path().to_path_buf(),
         vec![GateClassSpec {
             probe: empty,
-            class: "output-links".to_owned(),
+            class: GateClass::OutputLinks,
             with_template: false,
         }],
         None,
@@ -84,13 +92,13 @@ async fn a_probe_that_cannot_run_or_examined_nothing_fails_closed() {
     let GateOutcome::Failed { class, .. } = g.check("ok", "tpl").await else {
         panic!("examined 0 must not pass")
     };
-    assert_eq!(class, CLASS_EMPTY);
+    assert_eq!(class, GateClass::ExaminedNothing);
     let missing = ProbeGate::new(
         dir.path().to_path_buf(),
         dir.path().to_path_buf(),
         vec![GateClassSpec {
             probe: dir.path().join("absent.py"),
-            class: "x".to_owned(),
+            class: GateClass::OutputLinks,
             with_template: false,
         }],
         None,
@@ -106,12 +114,12 @@ async fn a_probe_that_cannot_run_or_examined_nothing_fails_closed() {
 #[tokio::test]
 async fn an_untrusted_input_with_an_invisible_character_is_refused_before_it_is_fenced() {
     let dir = tempfile::tempdir().expect("a directory");
-    let g = gate(dir.path(), &["output-links"]);
+    let g = gate(dir.path(), &[GateClass::OutputLinks]);
     assert_eq!(g.check_input("plain").await, GateOutcome::Passed);
     let GateOutcome::Failed { class, .. } = g.check_input("a\u{200b}b").await else {
         panic!("expected a refusal")
     };
-    assert_eq!(class, "output-invisible");
+    assert_eq!(class, GateClass::OutputInvisible);
 }
 
 #[tokio::test]
@@ -131,7 +139,7 @@ async fn a_template_flag_adds_the_template_as_a_second_subject() {
         dir.path().to_path_buf(),
         vec![GateClassSpec {
             probe: recorder,
-            class: "persona".to_owned(),
+            class: GateClass::OutputContract,
             with_template: true,
         }],
         None,
@@ -141,7 +149,7 @@ async fn a_template_flag_adds_the_template_as_a_second_subject() {
     assert_eq!(g.check("out", "tpl").await, GateOutcome::Passed);
     let argv = std::fs::read_to_string(dir.path().join("argv")).expect("argv");
     assert_eq!(argv.matches("--subject").count(), 2);
-    assert!(argv.ends_with("check persona"));
+    assert!(argv.ends_with("check output-contract"));
 }
 
 #[test]
@@ -151,7 +159,7 @@ fn an_empty_class_list_is_refused_at_construction() {
         dir.path().to_path_buf(),
         dir.path().to_path_buf(),
         Vec::new(),
-        Some(spec("output-invisible")),
+        Some(spec(GateClass::OutputInvisible)),
         true,
     );
     assert_eq!(refused.err(), Some(GateBuildError::NoOutputClass));
@@ -159,8 +167,8 @@ fn an_empty_class_list_is_refused_at_construction() {
     let built = ProbeGate::new(
         dir.path().to_path_buf(),
         dir.path().to_path_buf(),
-        vec![spec("output-links")],
-        Some(spec("output-invisible")),
+        vec![spec(GateClass::OutputLinks)],
+        Some(spec(GateClass::OutputInvisible)),
         true,
     );
     assert!(built.is_ok());
@@ -173,7 +181,7 @@ fn a_duty_that_reads_inputs_needs_an_input_class() {
         ProbeGate::new(
             dir.path().to_path_buf(),
             dir.path().to_path_buf(),
-            vec![spec("output-links")],
+            vec![spec(GateClass::OutputLinks)],
             input_class,
             reads_inputs,
         )
@@ -181,5 +189,5 @@ fn a_duty_that_reads_inputs_needs_an_input_class() {
     assert_eq!(build(None, true).err(), Some(GateBuildError::NoInputClass));
     // A duty that reads no input needs none, and a duty that reads inputs is built with one.
     assert!(build(None, false).is_ok());
-    assert!(build(Some(spec("output-invisible")), true).is_ok());
+    assert!(build(Some(spec(GateClass::OutputInvisible)), true).is_ok());
 }

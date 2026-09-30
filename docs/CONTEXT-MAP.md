@@ -10,7 +10,7 @@ that amends this file in the same change. Never add an edge to make code compile
 ## The map
 
 ```context-map
-deck-streak-kernel        (shared kernel: ids, study day, track, verdict, errors, config, Db, data-rights port)  depends on: nothing
+deck-streak-kernel        (shared kernel: ids, study day, track, verdict, gate class, errors, config, Db, data-rights port)  depends on: nothing
 deck-streak-ingest        (anti-corruption layer for Anki: sync, read, change gate, new-card queue, skip day)  depends on: kernel
 deck-streak-identity      (Telegram initData, the owner allow-list, sessions, linked sign-in)  depends on: kernel
 deck-streak-analytics     (daily rollup, per-language stats, five-pillar score, today snapshot)  depends on: kernel, ingest
@@ -200,6 +200,8 @@ context each migration names equal to the owner this register gives each table i
 | `owner_last_message` | `notifications` | `migrations/008401_notifications_owner_last_message.sql` (SPEC-084) | reset in place: no message |
 | `reading_runs` | `readings` | `migrations/004501_readings_topic_days_and_runs.sql` (SPEC-045) | exported and erased |
 | `reading_topic_days` | `readings` | `migrations/004501_readings_topic_days_and_runs.sql` (SPEC-045) | exported and erased |
+| `readings` | `readings` | `migrations/004601_readings_and_attempts.sql` (SPEC-046) | exported and erased |
+| `reading_attempts` | `readings` | `migrations/004601_readings_and_attempts.sql` (SPEC-046) | exported and erased |
 | `agent_runs` | `agent` | `migrations/004301_agent_runs.sql` (SPEC-043) | exported and erased |
 | `daily_rollup` | `analytics` | `migrations/007101_analytics_daily_rollup.sql` (SPEC-071) | exported and erased |
 | `daily_lang_stats` | `analytics` | `migrations/007101_analytics_daily_rollup.sql` (SPEC-071) | exported and erased |

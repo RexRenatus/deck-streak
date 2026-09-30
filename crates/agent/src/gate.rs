@@ -13,12 +13,14 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use tokio::process::Command;
 
+pub use deck_streak_kernel::GateClass;
+
 /// Numbers each staged subject, so two checks in one process never share a file.
 static STAGE_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 /// The class a gate that could not run reports: an unproven output is never delivered.
-pub const CLASS_VOID: &str = "void";
+pub const CLASS_VOID: &str = GateClass::Void.name();
 /// The class an output that examined nothing reports.
-pub const CLASS_EMPTY: &str = "examined-nothing";
+pub const CLASS_EMPTY: &str = GateClass::ExaminedNothing.name();
 
 /// A future a gate returns.
 pub type GateFuture<'a> = Pin<Box<dyn Future<Output = GateOutcome> + Send + 'a>>;
@@ -30,8 +32,8 @@ pub enum GateOutcome {
     Passed,
     /// A blocking class refused the output.
     Failed {
-        /// The class that refused it.
-        class: String,
+        /// The class that refused it: a value of a closed type, so never text a probe wrote.
+        class: GateClass,
         /// The probe's finding lines.
         findings: Vec<String>,
     },
@@ -51,8 +53,8 @@ pub trait OutputGate: Send + Sync {
 pub struct GateClassSpec {
     /// The probe script.
     pub probe: PathBuf,
-    /// The class name the probe checks.
-    pub class: String,
+    /// The class the probe checks.
+    pub class: GateClass,
     /// Whether the probe also takes the template as a second subject.
     pub with_template: bool,
 }
@@ -127,19 +129,19 @@ impl ProbeGate {
         }
         command
             .arg("check")
-            .arg(&spec.class)
+            .arg(spec.class.name())
             .stdin(Stdio::null())
             .kill_on_drop(true);
         let Ok(done) = command.output().await else {
-            return failed(CLASS_VOID, Vec::new());
+            return failed(GateClass::Void, Vec::new());
         };
         let text = String::from_utf8_lossy(&done.stdout).into_owned();
         let findings: Vec<String> = text.lines().map(str::to_owned).collect();
         match done.status.code() {
             Some(0) if examined_something(&text) => GateOutcome::Passed,
-            Some(0) => failed(CLASS_EMPTY, findings),
-            Some(1) => failed(&spec.class, findings),
-            _ => failed(CLASS_VOID, findings),
+            Some(0) => failed(GateClass::ExaminedNothing, findings),
+            Some(1) => failed(spec.class, findings),
+            _ => failed(GateClass::Void, findings),
         }
     }
 
@@ -178,11 +180,8 @@ fn examined_something(report: &str) -> bool {
         .is_some_and(|count| count > 0)
 }
 
-fn failed(class: &str, findings: Vec<String>) -> GateOutcome {
-    GateOutcome::Failed {
-        class: class.to_owned(),
-        findings,
-    }
+fn failed(class: GateClass, findings: Vec<String>) -> GateOutcome {
+    GateOutcome::Failed { class, findings }
 }
 
 impl OutputGate for ProbeGate {
@@ -192,7 +191,7 @@ impl OutputGate for ProbeGate {
                 self.stage("output.md", output).await,
                 self.stage("template.md", template).await,
             ) else {
-                return failed(CLASS_VOID, Vec::new());
+                return failed(GateClass::Void, Vec::new());
             };
             let mut outcome = GateOutcome::Passed;
             for spec in &self.classes {
@@ -214,7 +213,7 @@ impl OutputGate for ProbeGate {
                 return GateOutcome::Passed;
             };
             let Ok(path) = self.stage("input.md", input).await else {
-                return failed(CLASS_VOID, Vec::new());
+                return failed(GateClass::Void, Vec::new());
             };
             let outcome = self.run_class(spec, &path, &path).await;
             let _ = std::fs::remove_file(&path);

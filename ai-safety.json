@@ -20,6 +20,18 @@
           "source": "duty"
         },
         {
+          "slot": "form",
+          "source": "template"
+        },
+        {
+          "slot": "word_target",
+          "source": "config"
+        },
+        {
+          "slot": "repair",
+          "source": "config"
+        },
+        {
           "slot": "memory",
           "source": "memory"
         },
@@ -65,6 +77,18 @@
         {
           "slot": "duty_rules",
           "source": "duty"
+        },
+        {
+          "slot": "form",
+          "source": "template"
+        },
+        {
+          "slot": "word_target",
+          "source": "config"
+        },
+        {
+          "slot": "repair",
+          "source": "config"
         },
         {
           "slot": "memory",

@@ -1,8 +1,10 @@
 //! # deck-streak-kernel
 //!
 //! What this context owns: The shared kernel: identifiers, the study day and its 04:00 rollover,
-//! the track (language or law), the verdict type, the error type, typed configuration and
-//! credentials, the clock, the redacting log setup, the bounded offload for blocking work, and the
+//! the track (language or law), the verdict type, the gate class (the closed name of a check an
+//! output gate runs, which the agent's gate reports and the readings rank), the error type, typed
+//! configuration and credentials, the clock, the redacting log setup, the bounded offload for
+//! blocking work, and the
 //! `SQLite` repository base (WAL, foreign keys, busy timeout, `BEGIN IMMEDIATE`) with the
 //! data-rights port every context implements (SPEC-020).
 //!
@@ -22,6 +24,7 @@ pub mod credentials;
 pub mod data_rights;
 pub mod db;
 pub mod error;
+pub mod gate_class;
 pub mod ids;
 pub mod logging;
 pub mod offload;
@@ -40,6 +43,7 @@ pub use data_rights::{
 };
 pub use db::{Db, ForeignDb, MIGRATOR};
 pub use error::{CredentialError, DataRightsError, IsoDateError, KernelError, SettingsError};
+pub use gate_class::{GateClass, UnknownGateClass};
 pub use ids::TelegramUserId;
 pub use offload::Offload;
 pub use redact::Redactor;

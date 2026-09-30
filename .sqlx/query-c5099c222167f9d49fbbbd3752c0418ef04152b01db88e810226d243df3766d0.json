@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT topic AS \"topic!\" FROM (\n                   SELECT topic FROM reading_topic_days UNION SELECT topic FROM readings\n               ) ORDER BY topic",
+  "describe": {
+    "columns": [
+      {
+        "name": "topic!",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "topic"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "c5099c222167f9d49fbbbd3752c0418ef04152b01db88e810226d243df3766d0"
+}

@@ -1,0 +1,182 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id, topic, study_day, digest, persona, text, word_count, reading_minutes,\n                      note_count, card_ids, generated_at, vault_status, vault_path, carried_nights\n               FROM readings ORDER BY generated_at, rowid",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "topic",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "topic"
+          }
+        }
+      },
+      {
+        "name": "study_day",
+        "ordinal": 2,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "study_day"
+          }
+        }
+      },
+      {
+        "name": "digest",
+        "ordinal": 3,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "digest"
+          }
+        }
+      },
+      {
+        "name": "persona",
+        "ordinal": 4,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "persona"
+          }
+        }
+      },
+      {
+        "name": "text",
+        "ordinal": 5,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "text"
+          }
+        }
+      },
+      {
+        "name": "word_count",
+        "ordinal": 6,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "word_count"
+          }
+        }
+      },
+      {
+        "name": "reading_minutes",
+        "ordinal": 7,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "reading_minutes"
+          }
+        }
+      },
+      {
+        "name": "note_count",
+        "ordinal": 8,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "note_count"
+          }
+        }
+      },
+      {
+        "name": "card_ids",
+        "ordinal": 9,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "card_ids"
+          }
+        }
+      },
+      {
+        "name": "generated_at",
+        "ordinal": 10,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "generated_at"
+          }
+        }
+      },
+      {
+        "name": "vault_status",
+        "ordinal": 11,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "vault_status"
+          }
+        }
+      },
+      {
+        "name": "vault_path",
+        "ordinal": 12,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "vault_path"
+          }
+        }
+      },
+      {
+        "name": "carried_nights",
+        "ordinal": 13,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "carried_nights"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "7fcb958f707c6b92c0d588d9bb8a189869444b4b2368c0e29ab8bcdc597dd209"
+}

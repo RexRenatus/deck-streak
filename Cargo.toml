@@ -60,6 +60,11 @@ sqlx = { version = "0.9.0", default-features = false, features = ["runtime-tokio
 tokio = "~1.53"
 thiserror = "2.0.21"
 tracing = "0.1.44"
+# ADR-046: the anchor normaliser and the word counter (SPEC-046 R6, R9). html-escape decodes the
+# entities, unicode-normalization folds to NFKC, unicode-segmentation counts the words.
+html-escape = "0.2.15"
+unicode-normalization = "0.1.25"
+unicode-segmentation = "1.13.3"
 tracing-subscriber = { version = "0.3.23", default-features = false, features = ["fmt", "json", "env-filter"] }
 # ADR-020: a temporary database or collection, in tests only.
 tempfile = "3.27.0"

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO readings (id, topic, study_day, digest, persona, text, word_count, reading_minutes, new_cards, note_count, card_ids, generated_at, version, vault_status, vault_path, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, 1, ?13, ?14, ?12)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 14
+    },
+    "nullable": []
+  },
+  "hash": "132f19405704ca63f4555c88aa192b109bcd41dfc3736bae180c048c0086d68b"
+}
