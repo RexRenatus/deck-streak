@@ -31,6 +31,7 @@
   "scripts/mutation_rows.py": {
     "dir": "scripts/tests",
     "modules": [
+      "test_mutation_rows_refusal",
       "test_mutation_rows",
       "test_mutation_verdict",
       "test_mutation_equivalent"

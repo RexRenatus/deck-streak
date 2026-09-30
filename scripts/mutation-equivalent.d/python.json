@@ -8,6 +8,15 @@
       "evidence": "pathlib.Path('') == pathlib.Path('.') is True and both resolve to the working directory, so an empty sys.path entry is kept or dropped exactly as before.",
       "issue": "#340",
       "reached_by": "test_mutation_python_lister_kills.TheChildReportsWhatFailed.test_the_child_keeps_its_own_main_module_and_reports_a_pass"
+    },
+    {
+      "file": "scripts/mutation_rows.py",
+      "mutant": "replace \".\" with \"\" in resolve_tool",
+      "anchor": "pathlib.Path(part or \".\") / name",
+      "reason": "An empty path and the current directory are one path to pathlib.",
+      "evidence": "pathlib.Path('') == pathlib.Path('.') is True, so an empty PATH entry names the working directory as a candidate exactly as the dot does; measured by the plant run, every other mutant of resolve_tool, _backstop, _exit_refusal and run_tool is killed by the whole-value test module.",
+      "issue": "#431",
+      "reached_by": "test_mutation_rows_refusal.TheRefusalIsReadWhole.test_an_empty_or_dot_path_entry_is_the_working_directory"
     }
   ]
 }
