@@ -677,7 +677,7 @@ stops recognising a raw `r#doc` (both killed by
 of the prune and S04364 a test file that writes the statement nowhere (both killed by
 `runs::each_count_names_the_number_it_read`); S04363 accepts a source that writes the word `delete`
 nowhere (killed by the doc-attribute test); S04365 accepts two declarations of the enum (killed by
-`verdict::a_copy_of_the_enum_compiled_out_beside_it_is_refused_as_a_second_declaration`). S04362 to
+`verdict::a_copy_of_the_enum_compiled_out_beside_it_is_refused_as_a_second_declaration`). S04361 to
 S04365 mutate comparisons the head already had, and each survived the tests as they stood before
 this section.
 
