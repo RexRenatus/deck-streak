@@ -77,8 +77,8 @@
         "S12809-THE-CYCLES-SETTINGS-REFUSAL-NAMES-ITS-OWN-VARIANT",
         "daemon",
         "src/wiring.rs",
-        "refused(RefusalReason::SyncSettingsRefused, &error)",
-        "refused(RefusalReason::CredentialsDirectoryRefused, &error)",
+        "Self::Settings => RefusalReason::SyncSettingsRefused,",
+        "Self::Settings => RefusalReason::CredentialsDirectoryRefused,",
         "lib::wiring::tests::the_owners_sync_marks_the_rescore_before_it_reads_its_settings",
         "the owner is told the setting that refused the sync; another variant names a step that did not (SPEC-128 amendment, #396)"
       ],
@@ -86,17 +86,17 @@
         "S12810-A-FAILED-OBLIGATIONS-READ-IS-NAMED-BY-ITS-OWN-VARIANT",
         "daemon",
         "src/wiring.rs",
-        "CycleError::Obligations(_) => RefusalReason::ObligationsUnreadable,",
-        "CycleError::Obligations(_) => RefusalReason::RecomputeFailed,",
-        "lib::wiring::tests::a_cycle_that_cannot_finish_is_refused_with_its_steps_reason_code",
+        "Self::Obligations => RefusalReason::ObligationsUnreadable,",
+        "Self::Obligations => RefusalReason::RecomputeFailed,",
+        "lib::wiring::tests::every_failing_step_refuses_the_owners_sync_by_its_own_code_and_name",
         "the answer's line for a refusal after the run must name the step that failed (SPEC-128 R5, amendment #396)"
       ],
       [
         "S12811-THE-REFUSAL-RETURNED-IS-THE-ONE-LOGGED-AND-GIVEN",
         "daemon",
         "src/wiring.rs",
-        "\"the owner's sync could not run\");\n    reason\n}",
-        "\"the owner's sync could not run\");\n    RefusalReason::RecomputeFailed\n}",
+        "\"the owner's sync could not run\"\n    );\n    reason\n}",
+        "\"the owner's sync could not run\"\n    );\n    RefusalReason::RecomputeFailed\n}",
         "lib::wiring::tests::the_owners_sync_marks_the_rescore_before_it_reads_its_settings",
         "the closed enum is the only refusal type, and the site must hand back the variant it was given (SPEC-128 amendment, #396)"
       ],
@@ -104,8 +104,8 @@
         "S12812-A-SWALLOWED-CREDENTIALS-DIRECTORY-REFUSAL-IS-NOT-AN-ANSWER",
         "daemon",
         "src/wiring.rs",
-        "        let directory = CredentialsDirectory::from_env(&self.env)\n            .map_err(|error| refused(RefusalReason::CredentialsDirectoryRefused, &error))?;\n",
-        "        let directory = match CredentialsDirectory::from_env(&self.env) {\n            Ok(directory) => directory,\n            Err(error) => {\n                let _ = refused(RefusalReason::CredentialsDirectoryRefused, &error);\n                return Ok(SyncAnswer {\n                    sync: SyncOutcome::Reused,\n                    scores: Scores::Unchanged,\n                });\n            }\n        };\n",
+        "        let directory = CredentialsDirectory::from_env(&self.env)\n            .map_err(|error| refused(Step::Credentials, &error))?;\n",
+        "        let directory = match CredentialsDirectory::from_env(&self.env) {\n            Ok(directory) => directory,\n            Err(error) => {\n                let _ = refused(Step::Credentials, &error);\n                return Ok(SyncAnswer {\n                    sync: SyncOutcome::Reused,\n                    scores: Scores::Unchanged,\n                });\n            }\n        };\n",
         "lib::wiring::tests::the_owners_sync_without_a_credentials_directory_is_refused_by_its_own_code",
         "a refusal turned into an Ok answer tells the owner a sync was reused when none ran; each refusal site must refuse by its own code (SPEC-128 amendment, #396)"
       ],
@@ -113,7 +113,7 @@
         "S12813-A-SWALLOWED-RESCORE-REQUEST-REFUSAL-IS-NOT-IGNORED",
         "daemon",
         "src/wiring.rs",
-        "        gate.state()\n            .request_rescore(clock.now())\n            .await\n            .map_err(|error| refused(RefusalReason::RescoreUnrecorded, &error))?;\n",
+        "        gate.state()\n            .request_rescore(clock.now())\n            .await\n            .map_err(|error| refused(Step::Rescore, &error))?;\n",
         "        let _ = gate.state().request_rescore(clock.now()).await;\n",
         "lib::wiring::tests::the_owners_sync_that_cannot_mark_the_rescore_is_refused_by_its_own_code",
         "a rescore request that cannot be marked must refuse the sync, or the owner's request is lost while the cycle goes on (SPEC-128 amendment, #396)"
@@ -122,46 +122,136 @@
         "S12814-THE-CYCLES-OWN-REFUSAL-IS-RECORDED-BY-THE-CODE-ITS-STEP-GIVES",
         "daemon",
         "src/wiring.rs",
-        ".map_err(|error| refused(cycle_reason(&error), &error))?;",
-        ".map_err(|error| refused(match cycle_reason(&error) { RefusalReason::RecomputeFailed => RefusalReason::SyncRecordFailed, other => other }, &error))?;",
+        ".map_err(|error| refused(Step::of(&error), &error))?;",
+        ".map_err(|error| match refused(Step::of(&error), &error) { RefusalReason::RecomputeFailed => RefusalReason::SyncRecordFailed, other => other })?;",
         "roles::a_refusal_after_the_owners_run_answers_the_request_beside_the_run",
-        "the code recorded for a cycle that could not finish is the one its failing step gives; a remap that still calls the mapper stores another code with the refusal present (SPEC-128 amendment, #396)"
+        "the code recorded for a cycle that could not finish is the one its failing step gives; a remap after the refusal is logged stores another code with the refusal present (SPEC-128 amendment, #396)"
       ],
       [
         "S12815-A-SYNC-STEP-FAILURE-IS-REFUSED-BY-THE-SYNC-CODE",
         "daemon",
         "src/wiring.rs",
-        "CycleError::History(_) | CycleError::Sync(_) => RefusalReason::SyncRecordFailed,",
-        "CycleError::History(_) => RefusalReason::SyncRecordFailed,\n        CycleError::Sync(_) => RefusalReason::RecomputeFailed,",
-        "lib::wiring::tests::a_cycle_that_cannot_finish_is_refused_with_its_steps_reason_code",
+        "Self::History | Self::Sync => RefusalReason::SyncRecordFailed,",
+        "Self::History => RefusalReason::SyncRecordFailed,\n            Self::Sync => RefusalReason::RecomputeFailed,",
+        "lib::wiring::tests::every_failing_step_refuses_the_owners_sync_by_its_own_code_and_name",
         "the sync step's failure is named by the sync code, not the recompute code (SPEC-128 amendment, #396)"
       ],
       [
         "S12816-A-GATE-STEP-FAILURE-IS-REFUSED-BY-THE-RECOMPUTE-CODE",
         "daemon",
         "src/wiring.rs",
-        "CycleError::Gate(_) | CycleError::Window(_) | CycleError::Recompute(_) => {",
-        "CycleError::Gate(_) => RefusalReason::SyncRecordFailed,\n        CycleError::Window(_) | CycleError::Recompute(_) => {",
-        "lib::wiring::tests::a_cycle_that_cannot_finish_is_refused_with_its_steps_reason_code",
+        "            Self::GateProbe\n            | Self::GateRecord\n            | Self::WindowRead\n            | Self::WindowBase\n            | Self::Recompute => RefusalReason::RecomputeFailed,",
+        "            Self::GateProbe | Self::GateRecord => RefusalReason::SyncRecordFailed,\n            Self::WindowRead | Self::WindowBase | Self::Recompute => RefusalReason::RecomputeFailed,",
+        "lib::wiring::tests::every_failing_step_refuses_the_owners_sync_by_its_own_code_and_name",
         "the gate step's failure is named by the recompute code, not the sync code (SPEC-128 amendment, #396)"
       ],
       [
         "S12817-A-WINDOW-STEP-FAILURE-IS-REFUSED-BY-THE-RECOMPUTE-CODE",
         "daemon",
         "src/wiring.rs",
-        "CycleError::Gate(_) | CycleError::Window(_) | CycleError::Recompute(_) => {",
-        "CycleError::Window(_) => RefusalReason::SyncRecordFailed,\n        CycleError::Gate(_) | CycleError::Recompute(_) => {",
-        "lib::wiring::tests::a_cycle_that_cannot_finish_is_refused_with_its_steps_reason_code",
+        "            Self::GateProbe\n            | Self::GateRecord\n            | Self::WindowRead\n            | Self::WindowBase\n            | Self::Recompute => RefusalReason::RecomputeFailed,",
+        "            Self::WindowRead | Self::WindowBase => RefusalReason::SyncRecordFailed,\n            Self::GateProbe | Self::GateRecord | Self::Recompute => RefusalReason::RecomputeFailed,",
+        "lib::wiring::tests::every_failing_step_refuses_the_owners_sync_by_its_own_code_and_name",
         "the window step's failure is named by the recompute code, not the sync code (SPEC-128 amendment, #396)"
       ],
       [
         "S12818-A-RUN-RECORD-THE-CYCLE-CANNOT-READ-IS-REFUSED-BY-THE-SYNC-CODE",
         "daemon",
         "src/wiring.rs",
-        ".map_err(|error| refused(cycle_reason(&error), &error))?;",
-        ".map_err(|error| refused(match cycle_reason(&error) { RefusalReason::SyncRecordFailed => RefusalReason::RecomputeFailed, other => other }, &error))?;",
+        ".map_err(|error| refused(Step::of(&error), &error))?;",
+        ".map_err(|error| match refused(Step::of(&error), &error) { RefusalReason::SyncRecordFailed => RefusalReason::RecomputeFailed, other => other })?;",
         "lib::wiring::tests::the_owners_cycle_that_cannot_read_its_run_record_is_refused_by_the_sync_code",
-        "a cycle whose run record cannot be read is refused by the sync code at the cycle's own site; a remap that still calls the mapper stores the recompute code (SPEC-128 amendment, #396)"
+        "a cycle whose run record cannot be read is refused by the sync code at the cycle's own site; a remap after the refusal is logged stores the recompute code (SPEC-128 amendment, #396)"
+      ],
+      [
+        "S12819-AN-OBLIGATIONS-FAILURE-IS-NOT-REMAPPED-AT-THE-CYCLES-SITE",
+        "daemon",
+        "src/wiring.rs",
+        ".map_err(|error| refused(Step::of(&error), &error))?;",
+        ".map_err(|error| match refused(Step::of(&error), &error) { RefusalReason::ObligationsUnreadable => RefusalReason::SyncRecordFailed, other => other })?;",
+        "lib::wiring::tests::every_failing_step_refuses_the_owners_sync_by_its_own_code_and_name",
+        "a cycle whose obligations cannot be read is refused by the obligations code; a remap after the refusal is logged tells the owner the sync's record failed (SPEC-128 amendment, #396)"
+      ],
+      [
+        "S12820-A-SYNC-STEP-FAILURE-IS-NOT-REMAPPED-AT-THE-CYCLES-SITE",
+        "daemon",
+        "src/wiring.rs",
+        ".map_err(|error| refused(Step::of(&error), &error))?;",
+        ".map_err(|error| match (&error, refused(Step::of(&error), &error)) { (CycleError::Sync(_), _) => RefusalReason::RecomputeFailed, (_, code) => code })?;",
+        "lib::wiring::tests::every_failing_step_refuses_the_owners_sync_by_its_own_code_and_name",
+        "the sync step's failure is refused by the sync code at the cycle's site, whichever step before it shares that code (SPEC-128 amendment, #396)"
+      ],
+      [
+        "S12821-A-GATE-STEP-FAILURE-IS-NOT-REMAPPED-AT-THE-CYCLES-SITE",
+        "daemon",
+        "src/wiring.rs",
+        ".map_err(|error| refused(Step::of(&error), &error))?;",
+        ".map_err(|error| match (&error, refused(Step::of(&error), &error)) { (CycleError::Gate(_), _) => RefusalReason::SyncRecordFailed, (_, code) => code })?;",
+        "lib::wiring::tests::every_failing_step_refuses_the_owners_sync_by_its_own_code_and_name",
+        "the change gate's failure is refused by the recompute code at the cycle's site (SPEC-128 amendment, #396)"
+      ],
+      [
+        "S12822-A-WINDOW-STEP-FAILURE-IS-NOT-REMAPPED-AT-THE-CYCLES-SITE",
+        "daemon",
+        "src/wiring.rs",
+        ".map_err(|error| refused(Step::of(&error), &error))?;",
+        ".map_err(|error| match (&error, refused(Step::of(&error), &error)) { (CycleError::Window(_), _) => RefusalReason::SyncRecordFailed, (_, code) => code })?;",
+        "lib::wiring::tests::every_failing_step_refuses_the_owners_sync_by_its_own_code_and_name",
+        "the window's failure is refused by the recompute code at the cycle's site (SPEC-128 amendment, #396)"
+      ],
+      [
+        "S12823-A-SYNC-STEP-FAILURE-IS-NOT-ANSWERED",
+        "daemon",
+        "src/wiring.rs",
+        "        let report = sync_cycle(&parts, Trigger::Owner)\n            .await\n            .map_err(|error| refused(Step::of(&error), &error))?;\n",
+        "        let report = match sync_cycle(&parts, Trigger::Owner).await {\n            Ok(report) => report,\n            Err(CycleError::Sync(_)) => return Ok(SyncAnswer { sync: SyncOutcome::Reused, scores: Scores::Unchanged }),\n            Err(error) => return Err(refused(Step::of(&error), &error)),\n        };\n",
+        "lib::wiring::tests::every_failing_step_refuses_the_owners_sync_by_its_own_code_and_name",
+        "a sync step that failed must refuse the owner's sync; an answer tells the owner a sync was reused when none ran (SPEC-128 amendment, #396)"
+      ],
+      [
+        "S12824-A-GATE-STEP-FAILURE-IS-NOT-ANSWERED",
+        "daemon",
+        "src/wiring.rs",
+        "        let report = sync_cycle(&parts, Trigger::Owner)\n            .await\n            .map_err(|error| refused(Step::of(&error), &error))?;\n",
+        "        let report = match sync_cycle(&parts, Trigger::Owner).await {\n            Ok(report) => report,\n            Err(CycleError::Gate(_)) => return Ok(SyncAnswer { sync: SyncOutcome::Reused, scores: Scores::Unchanged }),\n            Err(error) => return Err(refused(Step::of(&error), &error)),\n        };\n",
+        "lib::wiring::tests::every_failing_step_refuses_the_owners_sync_by_its_own_code_and_name",
+        "a change gate that failed must refuse the owner's sync; an answer tells the owner the scores stood when the gate never decided (SPEC-128 amendment, #396)"
+      ],
+      [
+        "S12825-A-WINDOW-STEP-FAILURE-IS-LOGGED-UNDER-ITS-OWN-NAME",
+        "daemon",
+        "src/wiring.rs",
+        "CycleError::Window(WindowError::State(_)) => Self::WindowBase,",
+        "CycleError::Window(WindowError::State(_)) => Self::GateRecord,",
+        "lib::wiring::tests::every_failing_step_refuses_the_owners_sync_by_its_own_code_and_name",
+        "a refusal is logged under the step that failed; a window failure logged as the gate's names a step that did not fail, and a fault that trips a sibling step passes for its own (SPEC-128 amendment, #396)"
+      ],
+      [
+        "S12826-A-NEW-STEP-IN-RUN-HAS-A-ROW-IN-THE-TABLE",
+        "daemon",
+        "src/wiring.rs",
+        "            ScopeSettings::from_env(&self.env).map_err(|error| refused(Step::Scope, &error))?;\n",
+        "            ScopeSettings::from_env(&self.env).map_err(|error| refused(Step::Scope, &error))?;\n        let _again =\n            SyncSettings::from_env(&self.env).map_err(|error| refused(Step::Settings, &error))?;\n",
+        "lib::wiring::tests::the_table_has_a_row_for_every_step_that_refuses_the_owners_sync",
+        "a step added to the owner's sync must have a row and a fault in the table, or its failure's code goes undriven (SPEC-128 amendment, #396)"
+      ],
+      [
+        "S12827-A-GATE-RECORD-FAILURE-IS-LOGGED-UNDER-ITS-OWN-NAME",
+        "daemon",
+        "src/wiring.rs",
+        "CycleError::Gate(GateError::Record(_)) => Self::GateRecord,",
+        "CycleError::Gate(GateError::Record(_)) => Self::GateProbe,",
+        "lib::wiring::tests::every_failing_step_refuses_the_owners_sync_by_its_own_code_and_name",
+        "each kind of a step's error is its own step; a gate that cannot record logged as its probe lets a fault that trips the probe pass for the record's (SPEC-128 amendment, #396)"
+      ],
+      [
+        "S12828-A-WINDOW-READ-FAILURE-IS-NOT-ANSWERED",
+        "daemon",
+        "src/wiring.rs",
+        "        let report = sync_cycle(&parts, Trigger::Owner)\n            .await\n            .map_err(|error| refused(Step::of(&error), &error))?;\n",
+        "        let report = match sync_cycle(&parts, Trigger::Owner).await {\n            Ok(report) => report,\n            Err(CycleError::Window(WindowError::Read(_))) => return Ok(SyncAnswer { sync: SyncOutcome::Reused, scores: Scores::Unchanged }),\n            Err(error) => return Err(refused(Step::of(&error), &error)),\n        };\n",
+        "lib::wiring::tests::every_failing_step_refuses_the_owners_sync_by_its_own_code_and_name",
+        "a window that cannot be read must refuse the owner's sync; an answer tells the owner the scores stood when no window was read (SPEC-128 amendment, #396)"
       ]
     ]
   }
