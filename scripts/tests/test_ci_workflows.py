@@ -351,6 +351,13 @@ class WorkflowsAreHardened(unittest.TestCase):
         # judged as well. The checker reads a script's space as a space and its break as the end of
         # a command, so the two kinds name a clone's command apart.
         clone = "#||git clone https://github.com/example-org/other-repository.git"
+
+        def refusal_of(character):
+            """A line-break character is refused by its name, any other by the generic message."""
+            if character in LINE_BREAKS:
+                return LINE_BREAKS[character] + NOT_READ
+            return "a character the reader does not read"
+
         planted = [(name, c, "false ", "planted ") for name, c in PLANTED_SPACES.items()]
         planted += [(name, c, "", "") for name, c in PLANTED_BREAKS.items()]
         for name, character, run, block in planted:
@@ -359,7 +366,7 @@ class WorkflowsAreHardened(unittest.TestCase):
                     planted_problems(PLANTED_CHARACTERS.replace("<C>", character)),
                     [
                         *(
-                            f"planted.yml:line {n}: a character the reader does not read"
+                            f"planted.yml:line {n}: {refusal_of(character)}"
                             for n in (12, 13, 14, 15, 16, 17, 19, 22)
                         ),
                         "planted.yml:line 15: a flow list whose items are not plain is not read",
@@ -386,7 +393,7 @@ class WorkflowsAreHardened(unittest.TestCase):
                     self.assertEqual(
                         planted_problems(template.replace("<C>", character)),
                         [
-                            f"planted.yml:line {line}: a character the reader does not read",
+                            f"planted.yml:line {line}: {refusal_of(character)}",
                             "planted.yml:jobs.build.steps[0].run: reads the secret "
                             + secret.replace("<C>", character),
                         ],
@@ -921,7 +928,8 @@ class TheReaderReadsOnlyItsNamedForms(unittest.TestCase):
                 if char == "\r" and "{c}\n" in template:
                     continue  # a carriage return before a line feed ends a line with it
                 text = template.replace("{c}", char)
-                row = text[: text.index(char)].count("\n") + 1
+                first = re.search(re.escape(char) + ("(?!\n)" if char == "\r" else ""), text)
+                row = text[: first.start()].count("\n") + 1
                 members.append((f"{phrase} {place}", text, ("named", [(row, phrase)])))
         for label, text, value in (
             ("CRLF lines", "k: x\r\nj: y\r\n", {"k": "x", "j": "y"}),
@@ -1079,35 +1087,64 @@ class Unread(AssertionError):
         self.refused, self.workflow = refused, workflow
 
 
+# A line ends at a line feed, and a carriage return just before one is dropped with it. Every other
+# character either parser could take for a line break, and a byte-order mark, is refused by name,
+# wherever it stands in the file (SPEC-190 R12).
+LINE_BREAKS = {
+    "\r": "a carriage return that does not end a line",
+    "\x0b": "a vertical tab",
+    "\x0c": "a form feed",
+    "\x1c": "the control character U+001C",
+    "\x1d": "the control character U+001D",
+    "\x1e": "the control character U+001E",
+    "\x85": "the next-line character U+0085",
+    "\u2028": "the line separator U+2028",
+    "\u2029": "the paragraph separator U+2029",
+    "\ufeff": "a byte-order mark",
+}
+NOT_READ = " is not a character the reader reads"
+
+
 def read_workflow(text):
     """A workflow as dicts, lists and strings, read without a YAML library. It reads the named forms
     and no other (SPEC-190 R12): mappings keyed by plain names that YAML types as strings, `- `
     sequences, `|` and `|-` block scalars, one-line flow lists of plain items with at most one
     trailing comma, plain scalars whose first character is not a YAML indicator (`PLAIN_FIRST`),
     and quoted one-line scalars, a quote doubled inside single quotes read as one. Blank lines,
-    comment lines and a ` #` comment after a value are dropped. It ends a line only at a line feed
-    or a carriage return, and reads a space or a tab as white space and nothing else, as YAML
-    does. A quoted or block scalar is read as `Quoted`, a string that keeps its style, so `kind`
+    comment lines and a ` #` comment after a value are dropped. It ends a line
+    only at a line feed, a carriage return just before one dropped with it, as GitHub's parser
+    does: a lone carriage return is a character of its line, and the line's character scan
+    refuses it. It reads a space or a tab as white space and nothing else. A quoted or block scalar is read as `Quoted`, a string that keeps its style, so `kind`
     types a value as GitHub's parser does.
     It fails closed (SPEC-034 R7). A line that holds a character other than a tab or printable
-    ASCII, a double-quoted value that holds an escape, a quoted value that does not end at its
+    ASCII, a byte-order mark and a carriage return that does not end a line included, a
+    double-quoted value that holds an escape, a quoted value that does not end at its
     closing quote, an anchor, alias or tag, a flow mapping, a flow list whose items are not plain,
-    a key that is not a plain name, a tab in a line's indentation, and every form the named forms
+    a key that is not a plain name, a tab in any line's indentation, a comment or blank line
+    outside a block scalar's text included, and every form the named forms
     do not hold (`_unnamed`: a value's first character, a block scalar's header, a flow list's
     empty entry, a blank line of a block that holds a tab) are each refused by their line, never
     guessed at, and the file raises Unread once it is read. A key a mapping already holds, read
     without case, is refused by its line too: GitHub's workflow parser refuses a workflow that
     holds one (SPEC-190 R10). A line it cannot place refuses the whole file at once."""
-    lines = re.split(r"\r\n|\r|\n", text)
-    refused = [
-        f"line {at + 1}: a character the reader does not read"
-        for at, line in enumerate(lines)
-        if re.search(r"[^\t\x20-\x7e]", line)
-    ]
-    value, at = _mapping(lines, _skip(lines, 0), 0, refused)
-    at = _skip(lines, at)
-    if at < len(lines):
-        raise AssertionError(f"line {at + 1} was not read: {lines[at]!r}")
+    lines = re.split(r"\r\n|\n", text)
+    refused = []
+    for at, line in enumerate(lines):
+        named = [LINE_BREAKS[c] for c in dict.fromkeys(line) if c in LINE_BREAKS]
+        refused += [f"line {at + 1}: {name}{NOT_READ}" for name in named]
+        if re.search(r"[^\t\x20-\x7e" + "".join(LINE_BREAKS) + "]", line):
+            refused.append(f"line {at + 1}: a character the reader does not read")
+    try:
+        value, at = _mapping(lines, _skip(lines, 0, refused), 0, refused)
+        at = _skip(lines, at, refused)
+        if at < len(lines):
+            raise AssertionError(f"line {at + 1} was not read: {lines[at]!r}")
+    except Unread:
+        raise
+    except AssertionError as why:
+        if refused:
+            raise AssertionError(f"{why}; the reader does not read " + "; ".join(refused)) from None
+        raise
     if refused:
         raise Unread(refused, value)
     return value
@@ -1122,14 +1159,18 @@ def _tabbed(lines, at, refused):
     package GitHub's parser reads with refuses the file ("Tabs are not allowed as indentation"). A
     tab inside a value, or in a block scalar's text, is text and is read."""
     line = lines[at]
-    if "\t" in line[: len(line) - len(line.lstrip(" \t"))]:
-        refused.append(f"line {at + 1}: a tab in the indentation, which YAML refuses")
+    why = f"line {at + 1}: a tab in the indentation, which YAML refuses"
+    if "\t" in line[: len(line) - len(line.lstrip(" \t"))] and why not in refused:
+        refused.append(why)
 
 
-def _skip(lines, at):
+def _skip(lines, at, refused):
+    """Skip the blank and comment lines, refusing each whose indentation holds a tab: a comment or
+    blank line outside a block scalar's text is indented with spaces like any other line."""
     while at < len(lines) and (
         not lines[at].strip(" \t") or lines[at].lstrip(" \t").startswith("#")
     ):
+        _tabbed(lines, at, refused)
         at += 1
     return at
 
@@ -1238,7 +1279,7 @@ def _block(lines, at, indent, refused):
 def _mapping(lines, at, indent, refused):
     found = {}
     while True:
-        at = _skip(lines, at)
+        at = _skip(lines, at, refused)
         if at >= len(lines) or _indent(lines[at]) != indent or _item(lines[at], indent):
             return found, at
         _tabbed(lines, at, refused)
@@ -1292,7 +1333,7 @@ def _mapping(lines, at, indent, refused):
             text = "".join(line[width:] + "\n" for _row, line, _leading in body)
             found[key] = Quoted((text[:-1] + BLOCK_HEADERS[header]) if text else "")
         elif not rest or rest.startswith("#"):
-            child = _skip(lines, at + 1)
+            child = _skip(lines, at + 1, refused)
             if child < len(lines) and _indent(lines[child]) > indent:
                 found[key], at = _block(lines, child, _indent(lines[child]), refused)
             else:
@@ -1304,7 +1345,7 @@ def _mapping(lines, at, indent, refused):
 def _sequence(lines, at, indent, refused):
     found = []
     while True:
-        at = _skip(lines, at)
+        at = _skip(lines, at, refused)
         if at >= len(lines) or _indent(lines[at]) != indent or not _item(lines[at], indent):
             return found, at
         _tabbed(lines, at, refused)
