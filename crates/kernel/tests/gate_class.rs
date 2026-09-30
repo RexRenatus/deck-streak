@@ -1,5 +1,6 @@
 //! Text becomes a gate class only as a declared name, exactly (SPEC-046, ADR-046's amendment).
 //! The kernel's own tests pin the parse, since a mutant of it is judged by this package's tests.
+#![allow(clippy::expect_used)]
 
 use deck_streak_kernel::{GateClass, UnknownGateClass};
 
@@ -124,7 +125,12 @@ fn the_parse_is_pinned_to_one_comparison_of_the_text_with_each_declared_name() {
         .expect("the walk reads gate_class.rs");
     assert_eq!(walked, &gate, "{WHY}");
 
-    for (what, pinned) in [("parse", PARSE), ("type", TYPE), ("macro arm", ARM), ("name", NAME)] {
+    for (what, pinned) in [
+        ("parse", PARSE),
+        ("type", TYPE),
+        ("macro arm", ARM),
+        ("name", NAME),
+    ] {
         assert!(
             gate.contains(&squashed(pinned)),
             "the {what} is not the pinned text: {WHY}"
@@ -164,7 +170,10 @@ fn the_parse_is_pinned_to_one_comparison_of_the_text_with_each_declared_name() {
         );
     }
     // No other file of the kernel names the type, so none can implement a trait for it.
-    for (path, text) in sources.iter().filter(|(path, _)| !path.ends_with("gate_class.rs")) {
+    for (path, text) in sources
+        .iter()
+        .filter(|(path, _)| !path.ends_with("gate_class.rs"))
+    {
         let rest = text
             .replace("pubmodgate_class;", "")
             .replace("pubusegate_class::{GateClass,UnknownGateClass};", "");
