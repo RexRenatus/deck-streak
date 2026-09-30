@@ -242,6 +242,7 @@ Two more tests pin the rule that the repair slot drops an escaped span:
 | `crates/agent/src/compose.rs` | `deck-streak-agent` | changed: the form, word-target and repair slots are trusted text, fence-checked (amendment; orchestrator ruling) |
 | `crates/agent/tests/compose.rs`, `duty.rs`, `redteam.rs`, `persona.rs` | `deck-streak-agent` | changed: the new slots' tests, the golden roster names the second law golden, and the tests name each class by the gate class type |
 | `crates/kernel/src/gate_class.rs` | `deck-streak-kernel` | added: the gate class, one closed type declared once with its names and its list (amendment, ADR-046) |
+| `crates/kernel/tests/gate_class.rs` | `deck-streak-kernel` | added: the gate class parses only a declared name, and no two classes share one |
 | `crates/kernel/src/lib.rs` | `deck-streak-kernel` | changed: exports the gate class |
 | `crates/agent/src/gate.rs`, `duty.rs` | `deck-streak-agent` | changed: a gate failure and a configured class hold the gate class (amendment) |
 | `crates/agent/tests/gate.rs`, `crates/agent/tests/fixtures/fake-probe.py` | `deck-streak-agent` | changed: the tests name each class by the type, and the fake probe knows declared classes only |
