@@ -116,8 +116,9 @@ Printed lines on the green tree: `examined 2252 window member(s), 1916 distinct`
 distinct members of 2252: 336 repeat, because for one or two earlier days the second and third fills
 are the same map, and each repeat follows its first occurrence, so none changes a verdict.
 
-Further plants, each applied to a clean copy of the committed tests, with the first red line by
-assertion. Each keeps the examined count and drops the distinct count:
+Further plants, each applied to a clean copy of the tests at 2ad7e316058f2b958f4985a857c063d67e3b6feb
+(the line numbers are that file's; a later commit only fits the walk's test to clippy's line limit),
+with the first red line by assertion. Each keeps the examined count and drops the distinct count:
 
 ```text
 W fold, and the walk's `|| number == window_start` on the skip test, together
