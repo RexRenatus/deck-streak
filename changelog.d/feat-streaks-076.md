@@ -10,3 +10,5 @@
 - The relight's celebration is due in the same write as its grant, so it is sent once for each
   committed grant, also across a failed sync or a restart; nothing is at stake once the day has a
   study review; and every value the streak and governor routes serve is read in its own place.
+- A celebration whose route fails stays due, so a later sync sends it once, and the streak
+  reply's heat is read in its own place on the language line; both are pinned by tests.

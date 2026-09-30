@@ -759,3 +759,50 @@ The relight-order amendment (sections 18 to 20) adds three files that no row of 
 `crates/coordination/tests/relight_order.rs` (added: A44 to A46),
 `migrations/007602_streaks_relight_due.sql` (added: R29, the relight's due day stored in the
 grant's own write) and `web/app/src/lib/streak/streak-served-population.test.ts` (added: A48).
+
+## 22. Amendment, 2026-09-30: a failed route leaves the day due, and the reply's heat is read in its own place
+
+Insert-only: every earlier byte is kept in order, and this section and the next are the only
+insertions.
+
+R31 (restated). Every value `GET /api/streak` and `GET /api/governor` serve is judged, by the api's
+    route test and by the web reader's test, over one generated population in which each pair of
+    served values differs in some member, so a route or a reader that puts one served value in
+    another's place is red (A47, A48). The bot's reply is judged by A42 for each line's run and
+    best and the lines' order, and by A50 for the language line's heat. A50's language runs cross
+    run 0, whose heat is empty, and three heat bands, and every other value on the line differs
+    from the run's heat. A50 reads the whole language line, so a served value put in the heat's
+    place, or the heat dropped, is red. This supersedes R31's last sentence, "The bot's reply is
+    judged the same way by A42": A42's language runs lie in one heat band, so its heat is the same
+    in every reply, and no test read the heat's place.
+
+- A failed route leaves the day due. R27 (restated in section 19) is unchanged, and A51 and A52
+  now decide its sentence "A day whose route fails stays due". A route fails when the router
+  answers an error for a due day: its claim of the day's key is not written, so nothing is claimed
+  or sent, or its decision record is not written after the claim committed and the line was sent.
+  The cycle leaves the day on the list and goes on to the next due day, and the next cycle routes
+  it again. A day the router already claimed is then answered as already sent, so it is sent once.
+  A failed route is not a decision, so it clears nothing.
+- A52's population is generated: the cycle whose route fails (the one whose fold committed the
+  grants, or the first after a restart), which of two due days fails, which of the router's two
+  ledger writes fails, one or two consecutive failed routes, and a restart, or none, before the
+  retry. R28's S1, S2 and L1 hold in every member, and the proof that they hold with a failing
+  route is #477.
+
+Manifest additions: `crates/bot/tests/streak_commands.rs` (changed: A50);
+`crates/coordination/tests/relight_order.rs` (changed: A51, A52); the rows `S07622` to `S07629`;
+and `docs/red-first/SPEC-076.md` (changed: the addendum of this date).
+
+## 23. Acceptance criteria of the 2026-09-30 failed-route and heat amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A50 | the language line carries its run's heat in the heat's own place, over language runs that cross run 0 and three heat bands, at one freeze and at two | `the_language_line_carries_its_runs_heat_in_the_heats_own_place` |
+| A51 | a route whose claim fails leaves the day due, and a later cycle celebrates it once | `a_route_that_fails_leaves_the_day_due_and_a_later_cycle_celebrates_it_once` |
+| A52 | over every failing cycle, failing due day, failing ledger write, run of consecutive failed routes and restart before the retry, each committed grant is celebrated once, no other day is, and the due list empties | `every_failed_route_leaves_its_day_due_until_one_celebration` |
+
+```acceptance
+A50: cargo test -p deck-streak-bot --test streak_commands -- --exact the_language_line_carries_its_runs_heat_in_the_heats_own_place
+A51: cargo test -p deck-streak-coordination --test relight_order -- --exact a_route_that_fails_leaves_the_day_due_and_a_later_cycle_celebrates_it_once
+A52: cargo test -p deck-streak-coordination --test relight_order -- --exact every_failed_route_leaves_its_day_due_until_one_celebration
+```

@@ -186,3 +186,26 @@ this delivery does not serve or draw (SPEC-076 section 18).
   screen section that no acceptance of #81 to #84 asks for.
 - Rejected: moving #81 from `Closes` to `Refs`, because its acceptance list is met; the calendar
   appears only in its prose.
+
+## Amendment, 2026-09-30: a failed route leaves the day due
+
+The relight-order amendment leaves a day due when its route fails (SPEC-076 R27 restated), but
+its model had no failing route, and no test made the router answer an error. The model now has
+one: the router's route of a taken day fails, before its claim is written or after the claim
+committed and the line was sent, and the cycle goes on. S1, S2 and L1 were checked again with that
+step, and the rejected order below, a failed route that clears the day, was checked as a witness
+and violates L1 (SPEC-076 section 22, A51, A52; the proof is #477).
+
+- Chosen: a failed route leaves the day on the list, because only a decided day may leave it.
+  The cycle goes on to the next due day, the next cycle routes the failed one again, and the
+  router's once-ever key answers a day it already claimed as already sent. This is the cycle's
+  order at this amendment; A51 and A52 now decide it.
+- Rejected: clearing the day when its route fails, because a day whose claim was never written
+  is then never celebrated, so L1 fails.
+- Rejected: ending the cycle's route at the first failed route, because one day whose route keeps
+  failing would hold back every later day's celebration, while going on routes each day alone.
+- Rejected: returning the failed day to a list held in memory for a retry, because the stored
+  list already holds the day, and a list held in memory is lost at a restart.
+- Rejected: retrying the failed route within the same cycle, because the next cycle's route is
+  already that retry, and a loop in the cycle would add a bound and a wait that the stored list
+  makes unneeded.
