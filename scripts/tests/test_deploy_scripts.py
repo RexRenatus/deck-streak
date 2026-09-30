@@ -2013,5 +2013,238 @@ exec /usr/bin/mktemp "$@"
                 self.member(site, verb, mode)
 
 
+class EveryDirectoryAVerbWritesInIsMeasuredAndItsTemporaryPathsAreRefused(Case):
+    """The places each verb writes in, measured from a real run, each made to fail in turn
+    (SPEC-127 A40; ADR-297, #451). The release, the release's rollback and the rollback of a kept
+    release are each run once in a fixture, and the directories whose contents changed are the
+    population; then every place is made absent and unwritable, and every call the host step
+    makes to a tool that makes a path is made to fail, one at a time. A member holds when the
+    verb ends non-zero with one `deploy:` line, last, and no path of the world changed."""
+
+    VERBS = ("install", "rollback-unkept", "rollback-kept")
+    TOOLS = ("mktemp", "mkdir", "tar", "ln", "mv")
+    HOST_SIDE = ATemporaryPathThatCannotBeMadeIsANamedRefusal.HOST_SIDE
+    TOOL = r"""#!/bin/bash
+side=${STUB_SIDE:-local}
+n=$(grep -c "^@NAME@ $side$" "$STUB_LOG/tools.log" 2>/dev/null || true)
+echo "@NAME@ $side" >> "$STUB_LOG/tools.log"
+[ "${TOOL_FAILS-}" != "@NAME@:$side:$((n + 1))" ] || { echo "@NAME@: cannot be run" >&2; exit 126; }
+exec /usr/bin/@NAME@ "$@"
+"""
+    # The calls each verb makes to a tool that makes a path, by side: what a run of the verb is
+    # known to do, so that a call that appears or goes is seen here.
+    CALLS = {
+        "install": {
+            ("mktemp", "local"): 1,
+            ("mktemp", "host"): 1,
+            ("mkdir", "host"): 2,
+            ("tar", "host"): 1,
+            ("ln", "host"): 1,
+            ("mv", "host"): 2,
+        },
+        "rollback-unkept": {
+            ("mktemp", "local"): 1,
+            ("mktemp", "host"): 1,
+            ("mkdir", "host"): 2,
+            ("tar", "host"): 1,
+            ("ln", "host"): 1,
+            ("mv", "host"): 2,
+        },
+        "rollback-kept": {("mktemp", "host"): 1, ("ln", "host"): 1, ("mv", "host"): 1},
+    }
+    # The temporary directory and the four places the host writes in, then the drop-in directories.
+    BASE_PLACES = ("tmpdir", "host/etc/systemd/system", "host/usr/local/lib/deck-streak")
+
+    @staticmethod
+    def good(w):
+        directory = w.tmp / "tmpdir"
+        directory.mkdir()
+        return {"TMPDIR": str(directory), "HOST_TMPDIR": str(directory)}
+
+    def prepare(self, w, verb, good):
+        w.script("host", self.HOST_SIDE)
+        for name in self.TOOLS:
+            w.script(name, self.TOOL.replace("@NAME@", name))
+        (w.log / "tools.log").write_text("", encoding="utf-8")
+        w.ship("v1.0.0")
+        self.ok(w.deploy("v1.0.0", **good))
+        if verb == "rollback-kept":
+            w.ship("v1.1.0")
+            self.ok(w.deploy("v1.1.0", **good))
+            argv = [ROLLBACK, "v1.0.0"]
+        else:
+            w.ship("v1.1.0")
+            argv = [DEPLOY, "v1.1.0"] if verb == "install" else [ROLLBACK, "v1.1.0"]
+        (w.log / "tools.log").write_text("", encoding="utf-8")
+        return argv
+
+    @staticmethod
+    def stamps(w):
+        """Each path of the world with its type, mode, bytes or target, and a directory's
+        modification time, which moves when a path is made or removed in it."""
+        seen = {}
+        for path in sorted(w.tmp.rglob("*")):
+            relative = path.relative_to(w.tmp)
+            if relative.parts[0] in {"log", "stub", "other", "origin.git"} or relative.parts[
+                :2
+            ] == (
+                "checkout",
+                ".git",
+            ):
+                continue
+            info = path.lstat()
+            data = None
+            if stat.S_ISLNK(info.st_mode):
+                data = os.readlink(path)
+            elif stat.S_ISREG(info.st_mode):
+                data = sha(path.read_bytes())
+            elif stat.S_ISDIR(info.st_mode):
+                data = info.st_mtime_ns
+            seen[relative] = (stat.S_IFMT(info.st_mode), stat.S_IMODE(info.st_mode), data)
+        return seen
+
+    def measure(self, verb):
+        """(the places the verb wrote in, the calls it made to each tool), from one real run."""
+        with tempfile.TemporaryDirectory() as tmp:
+            w = World(tmp)
+            good = self.good(w)
+            argv = self.prepare(w, verb, good)
+            before = self.stamps(w)
+            self.ok(w.run(*argv, **good))
+            after = self.stamps(w)
+            calls = {}
+            for line in (w.log / "tools.log").read_text(encoding="utf-8").splitlines():
+                tool, side = line.split()
+                calls[(tool, side)] = calls.get((tool, side), 0) + 1
+        changed = {path for path in before if before[path] != after.get(path)}
+        places = set()
+        for path in changed:
+            if stat.S_ISDIR(before[path][0]):
+                places.add(path)
+            elif path.parent in before:
+                places.add(path.parent)
+        expected = {Path(name) for name in self.BASE_PLACES}
+        expected |= {
+            path
+            for path, (kind, _, _) in before.items()
+            if kind == stat.S_IFDIR
+            and path.parent == Path("host/etc/systemd/system")
+            and "@" in path.name
+            and path.name.endswith(".d")
+        }
+        if verb != "rollback-kept":
+            expected.add(Path("host/usr/local/lib/deck-streak/releases"))
+        return sorted(places), sorted(expected), calls
+
+    @staticmethod
+    def restore(modes):
+        for path, mode in modes:
+            path.chmod(mode)
+
+    def outcome(self, w, argv, planted, modes):
+        before = ATemporaryPathThatCannotBeMadeIsANamedRefusal.snapshot(w)
+        try:
+            done = w.run(*argv, **planted)
+            after = ATemporaryPathThatCannotBeMadeIsANamedRefusal.snapshot(w)
+        finally:
+            self.restore(modes)
+        return done, before, after
+
+    def judge(self, label, done, before, after, step):
+        lines = [ln for ln in done.stderr.splitlines() if ln.strip()]
+        refusals = [ln for ln in lines if ln.startswith("deploy:")]
+        self.assertNotEqual(done.returncode, 0, f"{label}: the verb went on: {done.stderr}")
+        self.assertEqual(len(refusals), 1, f"{label}: {done.stderr!r}")
+        self.assertEqual(lines[-1], refusals[0], f"{label}: the last line is not the refusal")
+        if step:
+            self.assertIn(step, refusals[0], f"{label}: the step is not named")
+        self.assertNotIn("Traceback", done.stderr, label)
+        self.assertEqual(after, before, f"{label}: a path changed")
+
+    def place_member(self, verb, place, mode):
+        with tempfile.TemporaryDirectory() as tmp:
+            w = World(tmp)
+            good = self.good(w)
+            argv = self.prepare(w, verb, good)
+            path = w.tmp / place
+            modes = []
+            if mode == "unwritable":
+                modes.append((path, stat.S_IMODE(path.lstat().st_mode)))
+                path.chmod(0o555)
+                self.assertFalse(os.access(path, os.W_OK), f"{place} is writable")
+            else:
+                aside = w.tmp / "aside"
+                aside.mkdir()
+                parent = path.parent
+                modes.append((parent, stat.S_IMODE(parent.lstat().st_mode)))
+                os.rename(path, aside / "moved")
+                parent.chmod(0o555)
+            step = None
+            if str(place) == "tmpdir":
+                step = "host step" if verb == "rollback-kept" else "release step"
+            elif mode == "unwritable":
+                step = "host step"
+            done, before, after = self.outcome(w, argv, good, modes)
+            self.judge(f"{verb} / {place} / {mode}", done, before, after, step)
+
+    def tool_member(self, verb, tool, side, index):
+        with tempfile.TemporaryDirectory() as tmp:
+            w = World(tmp)
+            good = self.good(w)
+            argv = self.prepare(w, verb, good)
+            planted = {**good, "TOOL_FAILS": f"{tool}:{side}:{index}"}
+            done, before, after = self.outcome(w, argv, planted, [])
+            step = "host step" if side == "host" else ("release step" if tool == "mktemp" else None)
+            self.judge(f"{verb} / {tool} {side} call {index}", done, before, after, step)
+
+    def confined(self, verb, places):
+        """The verb run with every directory but its places read-only: it must still succeed."""
+        with tempfile.TemporaryDirectory() as tmp:
+            w = World(tmp)
+            good = self.good(w)
+            argv = self.prepare(w, verb, good)
+            keep = {Path(place) for place in places}
+            modes = []
+            for path in sorted(w.tmp.rglob("*")):
+                relative = path.relative_to(w.tmp)
+                if relative.parts[0] in {"log", "stub", "other", "origin.git"} or relative.parts[
+                    :2
+                ] == ("checkout", ".git"):
+                    continue
+                if path.is_dir() and not path.is_symlink() and relative not in keep:
+                    modes.append((path, stat.S_IMODE(path.lstat().st_mode)))
+            try:
+                for path, _ in reversed(modes):
+                    path.chmod(0o555)
+                done = w.run(*argv, **good)
+            finally:
+                self.restore(modes)
+            self.ok(done)
+
+    def test_every_place_a_verb_writes_in_and_every_temporary_path_call_is_refused(self):
+        members, measured_total, derived_total = [], 0, 0
+        for verb in self.VERBS:
+            places, expected, calls = self.measure(verb)
+            self.assertEqual(places, expected, f"{verb}: the places it wrote in")
+            self.assertEqual(calls, self.CALLS[verb], f"{verb}: its calls to path-making tools")
+            self.confined(verb, places)
+            measured_total += 2 * len(places) + sum(calls.values())
+            derived_total += 2 * len(expected) + sum(self.CALLS[verb].values())
+            for place in places:
+                for mode in ("absent", "unwritable"):
+                    members.append(("place", verb, place, mode))
+            for (tool, side), count in sorted(calls.items()):
+                for index in range(1, count + 1):
+                    members.append(("tool", verb, tool, side, index))
+        self.assertEqual(len(members), measured_total)
+        self.assertEqual(len(members), derived_total)
+        for member in examined("measured temporary-path member(s)", members):
+            with self.subTest(member=member):
+                if member[0] == "place":
+                    self.place_member(*member[1:])
+                else:
+                    self.tool_member(*member[1:])
+
+
 if __name__ == "__main__":
     unittest.main()
