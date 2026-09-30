@@ -1,0 +1,78 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S29800-THE-ELEVATION-FALLBACK-TREATS-AN-EMPTY-SETTING-AS-UNSET",
+        "deploy/deploy.sh",
+        "${DECKSTREAK_DEPLOY_ELEVATE-sudo}",
+        "${DECKSTREAK_DEPLOY_ELEVATE:-sudo}",
+        "an empty elevation setting falls back to a privilege command, which the host stand-in refuses by name (SPEC-298 A3)",
+        "test_deploy_standin.TheFallbackIsNeverReachedByTheTests.test_an_empty_elevation_setting_runs_the_host_step_with_no_privilege_command"
+      ],
+      [
+        "S29801-THE-HOST-STAND-IN-RUNS-ANY-COMMAND",
+        "scripts/tests/test_deploy_scripts.py",
+        "if [ -z \"$ok\" ]; then",
+        "if false; then",
+        "the stand-in runs an argv[0] that is not listed, as it did when it ran its arguments unconditionally (SPEC-298 A2)",
+        "test_deploy_standin.TheStandInRefusesWhatItDoesNotKnow.test_a_command_outside_the_list_is_refused_by_name_and_run_by_nothing"
+      ],
+      [
+        "S29802-THE-HOST-STAND-IN-REFUSES-WITH-STATUS-ZERO",
+        "scripts/tests/test_deploy_scripts.py",
+        "  exit 97\n",
+        "  exit 0\n",
+        "the stand-in's refusal of an unlisted command exits 0 (SPEC-298 A2)",
+        "test_deploy_standin.TheStandInRefusesWhatItDoesNotKnow.test_a_command_outside_the_list_is_refused_by_name_and_run_by_nothing"
+      ],
+      [
+        "S29803-THE-HOST-STAND-IN-REFUSES-WITHOUT-NAMING-THE-COMMAND",
+        "scripts/tests/test_deploy_scripts.py",
+        "refusing %s: not a command the deploy tests use\\n' \"${1-}\" >&2",
+        "refusing: not a command the deploy tests use\\n' >&2",
+        "the stand-in's refusal line does not name the command it refused (SPEC-298 A2)",
+        "test_deploy_standin.TheStandInRefusesWhatItDoesNotKnow.test_a_command_outside_the_list_is_refused_by_name_and_run_by_nothing"
+      ],
+      [
+        "S29804-THE-HOST-STAND-IN-LISTS-NO-SHAPE",
+        "scripts/tests/test_deploy_scripts.py",
+        "HOST_ALLOWED = (\"bash\",)",
+        "HOST_ALLOWED = ()",
+        "the list of shapes the stand-in runs loses the one the tests use (SPEC-298 A1)",
+        "test_deploy_standin.TheAllowedShapes.test_the_list_lives_in_one_place_and_equals_the_shapes_the_calls_make"
+      ],
+      [
+        "S29805-THE-STAND-IN-LOGS-NO-ARGV0",
+        "scripts/tests/test_deploy_scripts.py",
+        "printf '%s\\n' \"${1-}\" >> \"$STUB_LOG/host-argv0.log\"\n",
+        "",
+        "the stand-in stops logging the argv[0] it receives, so the set the tests make is no longer measured (SPEC-298 A1)",
+        "test_deploy_standin.TheAllowedShapes.test_the_list_lives_in_one_place_and_equals_the_shapes_the_calls_make"
+      ],
+      [
+        "S29806-THE-SHARED-ENVIRONMENT-LEAVES-THE-SETTING-UNNAMED",
+        "scripts/tests/test_deploy_scripts.py",
+        "            \"DECKSTREAK_DEPLOY_ELEVATE\": \"\",\n",
+        "",
+        "the shared test environment stops naming the elevation setting (SPEC-298 A4)",
+        "test_deploy_standin.EveryEnvironmentNamesTheSetting.test_the_shared_environment_names_the_setting"
+      ],
+      [
+        "S29807-THE-HELPER-ADMITS-AN-UNNAMED-ENVIRONMENT",
+        "scripts/tests/test_deploy_scripts.py",
+        "if ELEVATE.encode() not in setting_names(received, sourced):",
+        "if False:",
+        "the helper that starts a deploy script stops refusing an environment that does not name the setting (SPEC-298 A4)",
+        "test_deploy_standin.EveryEnvironmentNamesTheSetting.test_a_call_whose_environment_leaves_the_setting_unset_is_refused_by_name"
+      ],
+      [
+        "S29808-A-CALL-SITE-STARTS-A-DEPLOY-SCRIPT-DIRECTLY",
+        "scripts/tests/test_deploy_scripts.py",
+        "return launch([\"bash\", str(script), *args], merged, cwd=self.tmp, env=merged, text=True)",
+        "return subprocess.run([\"bash\", str(script), *args], cwd=self.tmp, env=merged, text=True, capture_output=True, check=False)",
+        "a call site starts a deploy script without the helper (SPEC-298 A5)",
+        "test_deploy_standin.NoOtherCallSiteStartsAProgram.test_only_the_helper_the_git_wrapper_and_the_scrub_call_start_a_program"
+      ]
+    ]
+  }
+}
