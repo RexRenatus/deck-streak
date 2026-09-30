@@ -91,6 +91,7 @@ R10. Replacing a reading's body (a regeneration of the same reading, SPEC-048) k
 R11. A write whose resolved path (after `..` and symbolic links) leaves the configured readings
     folder, or a staged run's duty folders, is refused.
 R12. The vault context owns no table and depends on the kernel only.
+     Amended 2026-09-29 by SPEC-110 R17: the vault context now owns `drill_answers` and `drill_grades`; it still depends on the kernel only.
 
 ## 3. Acceptance criteria
 
