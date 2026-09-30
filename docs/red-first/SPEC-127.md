@@ -304,3 +304,22 @@ A41: green at 89fff8d984432f8bda93d729b3106aa387c77c75
 The fix (6109795b0e719607527adc0b271c87e087fd753d, then 09a79d98fbd66bdde8b5890543c1da99eda8b0db, then
 89fff8d984432f8bda93d729b3106aa387c77c75, the first commit whose CI run killed the older row S06207) changes `deploy.sh`, the rows
 S12753 to S12771, the SPEC and the ADR; it edits no test file.
+
+## Amendment 2026-09-30, round two of the fix (issue #451)
+
+The test of A42 was committed alone against the `deploy.sh` of round one. Its first commit
+(62410760) ran seven members into a naming error, which is an error and not a red; the state builder
+was renamed in 24bc441f3bfcc51da992ac7131345ff321eccf80 and the run of that commit ended `FAILED (failures=8)`, every member red by
+assertion and none by error. The census member read the host body and found no `cp` call where the
+test expects one; each state-and-call member, the stale-unpack member and the failed-switch member
+ran a verb whose refusal left a path changed (a unit only the new release ships, or a stale unpack
+that could not be removed) or ended without a `deploy:` line; the test of A41 also went red on the
+count of `mkdir` calls its table now expects.
+
+```red-first
+A42: red at 24bc441f3bfcc51da992ac7131345ff321eccf80: AssertionError: Lists differ: ['find', 'install', 'ln', 'mkdir', 'mktemp', 'mv', 'tar'] != ['cp', 'find', 'install', 'ln', 'mkdir', 'mktemp', 'mv', 'tar'] : the tools the runs reached
+A42: green at ec80b1e84c21a06ebbc3af006f1a127eb7e99ecb
+```
+
+The fix (acdbb5b5c7a50e7284e471758e1a0224b2e2cdda, then ec80b1e84c21a06ebbc3af006f1a127eb7e99ecb, which adds a presence assertion beside the absence one) changes
+`deploy.sh`, one test file, the rows S12772 to S12792, the SPEC and the ADR.
