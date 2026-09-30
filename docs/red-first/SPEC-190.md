@@ -21,9 +21,22 @@ A6: not red: no workflow cancelled a run that is not a pull request's, and no jo
 The test of A7 (b51b933) ran against the unchanged `release.yml`: the criterion's test failed by
 assertion on the workflow's missing queue, and no other test failed. The workflow change (6696ef6)
 turned it green.
+Measured again on 2026-09-30 at b51b933 with the final test body, two tests fail: A7's and `test_a_shape_that_replaces_drops_or_runs_two_at_once_is_refused`, through its `planted(queue, queue)` precondition, so "no other test failed" holds for the first body only.
 
 ```red-first
 A7: red at b51b933: ['release.yml: queue is None, so a third run of a tag replaces the waiting second'] != []
 A7: green at 6696ef6
 ```
 
+
+## Addendum: A8, the class as GitHub reads it (#456, verification round 2)
+
+The test of A8 (`the_release_class_is_read_as_github_reads_it`, ff6c290) ran with its tables and its planting helper against the class helpers and reader as they
+stood: it failed by assertion, naming 33 planted shapes the class did not refuse, the first a create
+named alone, and no other test in the module failed. Reading `create`, each workflow's own name and
+events, the block's keys with their case and a key held twice (d09c26b) turned it green.
+
+```red-first
+A8: red at ff6c290: ["create as a name: ['queue is None, so a third run of a tag replaces the waiting second']", ...] (33 shapes) != []
+A8: green at d09c26b
+```

@@ -45,12 +45,14 @@ silently dropped?
 
 `release.yml`'s workflow-level block becomes `group: release-${{ github.ref }}`,
 `cancel-in-progress: false`, `queue: max`. `test_workflow_concurrency.py` derives from the directory
-every workflow that runs for a tag, as GitHub's filters read it: a `release` trigger, or a `push`
-trigger with a `tags` or `tags-ignore` filter or with neither a branch nor a tag filter. It prints how
-many it examined and holds each to that shape: one workflow-level block and no job's own, a group that
-is present, one for two runs of one tag under each event that runs it for a tag and no other
-workflow's, no cancellation, `queue: max`. A workflow the reader cannot read, or a group it cannot
-render, is refused. Four hand-proved rows (S19005 to S19008) prove the killer.
+every workflow that runs for a tag, as GitHub's docs read it: a `release` or a `create` trigger, or a
+`push` trigger with a `tags` or `tags-ignore` filter or with neither a branch nor a tag filter. It
+prints how many it examined and holds each to that shape: one workflow-level block and no job's own,
+only the keys GitHub's parser defines, spelt with their case, and no key held twice, a group that is
+present, one for two runs of one tag under each event that runs it for a tag and no other workflow's
+(each rendered with its own name, under each event it declares whose ref can be a tag), no
+cancellation, `queue: max`. A workflow the reader cannot read, or a group it cannot render, is
+refused. Six hand-proved rows (S19005 to S19010) prove the killer.
 
 ### Consequences
 
@@ -60,7 +62,7 @@ render, is refused. Four hand-proved rows (S19005 to S19008) prove the killer.
 
 ### Confirmation
 
-SPEC-190's A7, rows S19005 and S19006, and the first real tag run's history.
+SPEC-190's A7 and A8, rows S19005 to S19010, and the first real tag run's history.
 
 ## What would make this wrong
 
