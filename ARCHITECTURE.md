@@ -32,7 +32,7 @@ flowchart LR
 
 | path | what lives there |
 |---|---|
-| `crates/kernel/` | the shared kernel: ids, study day, track, verdict, errors, config, the SQLite base, the data-rights port |
+| `crates/kernel/` | the shared kernel: ids, study day, track, verdict, gate class, errors, config, the SQLite base, the data-rights port |
 | `crates/ingest/` | the Anki anti-corruption layer: sync, read, change gate, new-card queue, skip day |
 | `crates/identity/` | Telegram `initData`, the owner allow-list, sessions, linked sign-in |
 | `crates/{analytics,progression,streaks,curriculum,economy,quests,habits,focus,discipline,markets}/` | the game's domain contexts |

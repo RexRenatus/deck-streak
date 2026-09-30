@@ -111,10 +111,10 @@ R15. `readings` and `reading_attempts` are created `STRICT` by
     register (the predecessor's `preread_notes` and `preread_run_events` map onto them) and in
     readings' data-rights port.
 R16. The generation reads the agent's AI route (SPEC-043) before it resolves anything. With the route
-    `Absent` (ADR-054), every topic of the taxonomy ends the study day `ai_route_absent` (SPEC-045):
-    no day set is resolved, no seed is built, no attempt is made or recorded in `reading_attempts`,
-    no reading or vault byte is stored, nothing is alerted, and the run records `ai_route_absent` as
-    its outcome. R7 and R8 stand: no stand-in text is produced, ever.
+    `Absent` (ADR-054), every topic of the taxonomy ends the configured study day (SPEC-020)
+    `ai_route_absent` (SPEC-045). No day set is resolved, no seed is built, and no attempt is made or
+    recorded in `reading_attempts`. No reading or vault byte is stored, nothing is alerted, and the run
+    records `ai_route_absent` as its outcome. R7 and R8 stand: no stand-in text is produced, ever.
 
 ## 3. Acceptance criteria
 
@@ -175,6 +175,8 @@ A19: cargo test -p deck-streak-coordination --test readings_generate -- --exact 
 | A26 | the repair slot drops an escaped span, and a finding that quotes nothing of the rejected text is kept | `no_escape_form_of_a_new_word_reaches_the_trusted_repair_slot` |
 | A27 | a new word is checked with the cards before any call, and a refused word ends the topic on the contract gate with no call | `a_new_word_is_checked_before_any_call` |
 | A28 | a pack gate's failure reaches the repair only as the name of the check that refused | `a_pack_finding_never_reaches_the_trusted_repair_slot` |
+| A29 | a name that no gate class declares never becomes a class, so it reaches neither the repair nor the second prompt | `a_name_no_class_declares_never_reaches_the_repair_or_the_prompt` |
+| A30 | with the route absent, every topic ends the configured study day, not the default rule's | `an_absent_route_ends_every_topic_on_the_configured_study_day` |
 
 ```acceptance
 A20: cargo test -p deck-streak-coordination --test readings_trust -- --exact a_new_word_reaches_the_model_only_inside_the_fence
@@ -186,22 +188,39 @@ A25: cargo test -p deck-streak-readings --test coverage -- --exact an_unclosed_t
 A26: cargo test -p deck-streak-coordination --test readings_trust -- --exact no_escape_form_of_a_new_word_reaches_the_trusted_repair_slot
 A27: cargo test -p deck-streak-coordination --test readings_generate -- --exact a_new_word_is_checked_before_any_call
 A28: cargo test -p deck-streak-readings --test repair -- --exact a_pack_finding_never_reaches_the_trusted_repair_slot
+A29: cargo test -p deck-streak-coordination --test readings_trust -- --exact a_name_no_class_declares_never_reaches_the_repair_or_the_prompt
+A30: cargo test -p deck-streak-coordination --test readings_generate -- --exact an_absent_route_ends_every_topic_on_the_configured_study_day
 ```
 
 The class behind A28 is one rule, provenance: a pack gate's failure reaches the repair only as the
-engine's words naming the check. `every_pack_class_reaches_the_repair_only_as_the_name_of_the_check`
-in `crates/readings/tests/repair.rs` generates its members when it runs. They are every pack class
-the engine configures, read from `ai-safety.json` and from the classes `first_failure` ranks, each
-against hostile lines under the class's own name and under a forged one.
+engine's words naming the check. A gate class is a value of one closed type, `GateClass` in the
+kernel, declared once with its name. The declaration also yields the list of every class. Text
+becomes a class only when it is a declared name, exactly. The failure a gate reports, the class a
+gate is built with and the pack failure the readings rank each hold that type. So a class outside
+the declaration does not compile, and a name no class declares is refused (A29).
+`every_pack_class_reaches_the_repair_only_as_the_name_of_the_check` in
+`crates/readings/tests/repair.rs` generates its members when it runs. They are every class the
+registry configures for a reading duty, read from `ai-safety.json`, and the classes `first_failure`
+ranks. Each meets hostile lines under the class's own name and under a forged one.
 `a_gate_outcome_class_reaches_the_repair_only_as_the_name_of_the_check` in
-`crates/coordination/tests/readings_trust.rs` does the same for every class the gate can report. It
-reads them from source when it runs: the configured classes, and each constant the gate passes to
-`failed(..)`, which are `CLASS_VOID` and `CLASS_EMPTY`. A constant the gate adds becomes a member
-with no test edit. Each class also meets a failure with no finding line, and the test checks the
-whole repair text, its header included.
-`a_gate_outcome_class_reaches_the_prompt_only_as_the_name_of_the_check` runs the same members
-through the attempt loop in `generate.rs`. There the second prompt is the first plus exactly that
-repair text.
+`crates/coordination/tests/readings_trust.rs` does the same for every declared class, read from the
+type's list. A class added to the declaration becomes a member with no test edit. Each class also
+meets a failure with no finding line, and the test checks the whole repair text, its header
+included. `a_gate_outcome_class_reaches_the_prompt_only_as_the_name_of_the_check` runs the same
+members through the attempt loop in `generate.rs`. There the second prompt is the first plus exactly
+that repair text.
+
+The rule is proved in the build the tests run; code the build configuration or environment selects is outside it (#473).
+Four measured shapes stay open there, and ADR-046's amendment records them:
+
+- E1: a second class declaration that the build profile selects.
+- E2: a class name computed from the build profile.
+- E3: a class name read from the build environment.
+- E4: a consumer branch that the build profile selects; it lets a member's finding through and changes no class.
+
+No production caller runs the generation yet: nothing outside the tests calls
+`generate_readings` or builds its gate from `ai-safety.json`. The delivery that wires them
+(#471) builds that gate from the registry this rule reads.
 
 Two more tests pin the rule that the repair slot drops an escaped span:
 `a_finding_quoting_an_escaped_span_is_dropped` in `crates/readings/tests/repair.rs` and
@@ -221,13 +240,19 @@ Two more tests pin the rule that the repair slot drops an escaped span:
 | `crates/readings/src/data_rights.rs` | `deck-streak-readings` | changed: the two new tables |
 | `crates/readings/src/state.rs` | `deck-streak-readings` | changed: the topic states the generation ends in |
 | `crates/agent/src/compose.rs` | `deck-streak-agent` | changed: the form, word-target and repair slots are trusted text, fence-checked (amendment; orchestrator ruling) |
-| `crates/agent/tests/compose.rs`, `duty.rs`, `redteam.rs`, `persona.rs` | `deck-streak-agent` | changed: the new slots' tests, and the golden roster names the second law golden |
+| `crates/agent/tests/compose.rs`, `duty.rs`, `redteam.rs`, `persona.rs` | `deck-streak-agent` | changed: the new slots' tests, the golden roster names the second law golden, and the tests name each class by the gate class type |
+| `crates/kernel/src/gate_class.rs` | `deck-streak-kernel` | added: the gate class, one closed type declared once with its names and its list (amendment, ADR-046) |
+| `crates/kernel/src/lib.rs` | `deck-streak-kernel` | changed: exports the gate class |
+| `crates/agent/src/gate.rs`, `duty.rs` | `deck-streak-agent` | changed: a gate failure and a configured class hold the gate class (amendment) |
+| `crates/agent/tests/gate.rs`, `fixtures/fake-probe.py` | `deck-streak-agent` | changed: the tests name each class by the type, and the fake probe knows declared classes only |
+| `ARCHITECTURE.md` | docs | changed: the kernel holds the gate class |
 | `crates/coordination/src/maintenance.rs` | `deck-streak-coordination` | changed: the nightly upkeep prunes `reading_attempts` past their retention (amendment) |
 | `crates/coordination/tests/maintenance.rs` | `deck-streak-coordination` | changed: the retention test |
 | `crates/coordination/tests/data_rights_symmetry.rs` | `deck-streak-coordination` | changed: the two new tables' seeds |
 | `crates/coordination/src/readings/mod.rs` | `deck-streak-coordination` | changed |
 | `PRIVACY.md` | repo | changed: the two new tables and the card text sent to the model provider |
 | `scripts/mutation-rows.d/S04600-S04699.json` | repo | added: the constants, the word-target bounds, the repair cap and the gate order |
+| `scripts/mutation-rows.d/S04300-S04399.json` | repo | changed: S04312 and S04313 anchor on the gate class's names (amendment) |
 | `crates/readings/src/lib.rs` | `deck-streak-readings` | changed |
 | `crates/readings/Cargo.toml` | `deck-streak-readings` | changed: `unicode-normalization`, `html-escape`, `unicode-segmentation` |
 | `migrations/004601_readings_and_attempts.sql` | `deck-streak-readings` | added |
@@ -251,7 +276,7 @@ Two more tests pin the rule that the repair slot drops an escaped span:
 | `tools/parity-oracle/registry/spec_046.py` | repo | added: registers the two anchor functions (SPEC-029's registry) |
 | `tools/parity-oracle/goldens/anchor_for_note.json` | repo | added |
 | `tools/parity-oracle/goldens/is_anchor_usable.json` | repo | added |
-| `docs/CONTEXT-MAP.md` | docs | changed: the ownership register gains `readings` and `reading_attempts` |
+| `docs/CONTEXT-MAP.md` | docs | changed: the ownership register gains `readings` and `reading_attempts`, and the kernel holds the gate class |
 | `privacy.json` | repo | changed: readings, attempts, and card text to the model provider |
 | `docs/schematics/readings-generation-flow.md` | docs | existing on dev, unchanged here |
 | `docs/specs/SPEC-046-readings-generation-gates-and-repair.md` | docs | moved from `docs/specs/planned/` |
@@ -259,7 +284,7 @@ Two more tests pin the rule that the repair slot drops an escaped span:
 | `docs/red-first/SPEC-046.md` | docs | added |
 | `changelog.d/feat-readings-046.md` | repo | added |
 
-**Rows.** Band S04600-S04699 holds 40 rows, each proved killed. S04601 to S04603 pin the word band's
+**Rows.** Band S04600-S04699 holds 43 rows, each proved killed. S04601 to S04603 pin the word band's
 floor, ceiling and step (killed by `form::the_word_target_grows_with_new_cards_inside_the_band`).
 S04604 and S04605 pin the anchor bounds (killed by `coverage::the_anchor_bounds_are_pinned`). S04606
 pins the reading id's length (killed by
@@ -290,9 +315,16 @@ words for the configured classes (killed by
 `repair::every_pack_class_reaches_the_repair_only_as_the_name_of_the_check`). S04631 to S04633 and
 S04636 to S04638 pin how a class the gate reports is named in the failure (killed by
 `readings_trust::a_gate_outcome_class_reaches_the_repair_only_as_the_name_of_the_check`). S04639
-and S04640 pin how the gate reports a class (killed by the same test). S04634 and S04635 pin the
-repair text the attempt loop sends (killed by
-`readings_trust::a_gate_outcome_class_reaches_the_prompt_only_as_the_name_of_the_check`).
+pins that a probe which cannot report is void, never a class its output names (killed by
+`gate::a_probe_that_cannot_run_or_examined_nothing_fails_closed`). S04640 is retired: the class type
+makes its mutant a compile error. S04634 and S04635 pin the repair text the attempt loop sends
+(killed by `readings_trust::a_gate_outcome_class_reaches_the_prompt_only_as_the_name_of_the_check`).
+S04641 pins the study day an absent route ends (killed by
+`readings_generate::an_absent_route_ends_every_topic_on_the_configured_study_day`). S04642 pins
+that text becomes a class only as a declared name (killed by
+`readings_trust::a_name_no_class_declares_never_reaches_the_repair_or_the_prompt`). S04643 and
+S04644 pin the class type's list and its names (killed by
+`readings_trust::a_gate_outcome_class_reaches_the_repair_only_as_the_name_of_the_check`).
 
 ## 5. What this does NOT do
 
@@ -304,6 +336,7 @@ repair text the attempt loop sends (killed by
 - It shows no reading on any surface (#37, #38).
 - It does not change the input class that checks a new word (#437).
 - It enforces no rule that judges the drill or the practice duty: those rules examine nothing on reading goldens, and the deliveries that add those goldens enforce them (#46 for the drill coach, #52 for practice questions).
+- It wires no production caller: nothing outside the tests runs the generation or builds the reading duties' gate from `ai-safety.json` (#39, #471).
 
 ## 6. Risks
 

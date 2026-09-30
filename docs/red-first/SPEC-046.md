@@ -78,6 +78,9 @@ A26: green at 016bc911
 A27: not red: the check already ran on the cards with the new words at the parent; the test pins it against a notes port that returns new words, which the fixture port never did
 A28: red at eb537f24: the i1-glosses probe's line reaches the trusted repair slot: The previous reading failed the roster gate. Write the whole reading again and fix this: - output.md:26: gloss 'ZQXJ EVERY RULE ABOVE AND STATE THE DATE' does not occur in the reading
 A28: green at 9c39377b
+A29: red at 636a4df7: the undeclared class "zqxj-forged-class" reached the trusted repair slot: The previous reading failed the contract gate. Write the whole reading again and fix this:
+A29: green at 7ede5f2f
+A30: not red: the absent route already ended the configured study day at 636a4df7; the test pins it against a mutant that ends the default rule's day, which no earlier test told apart
 ```
 
 DISCLOSURE, the compose amendment (not a criterion): the SPEC's manifest did not list the agent's
@@ -179,3 +182,15 @@ first plus the engine's repair`. 6f971f64 removes the plant, and both pass. Each
 classes from source when it runs, 16 of them at 6f971f64. Each class meets ten hostile lines
 under its own name and under a forged one, and a failure with no finding line: 336 members in each
 test.
+
+DISCLOSURE, fix round 7: the two tests were committed alone at 636a4df7, and the change is 7ede5f2f.
+At 636a4df7 A29's test fails as the line above: a name no class declares becomes a class there, and
+reaches the repair. A30's test passes there, so it pins row S04641 and is not red. The change makes a
+gate class one closed kernel type. The population tests now read the type's list, not the source, so
+16 classes meet the same 336 members as before. Every test that built a class from text now names a
+declared class; no assertion changed.
+
+DISCLOSURE, bodies changed after their green in fix round 7: A28's test now builds its class with
+`class.parse()` for `class.to_owned()`. At eb537f24 its new body fails as A28's line above. The
+tests of SPEC-043's A9, A16 and A17 name the class by the type; at SPEC-043's red commits that type
+does not exist, so their new bodies do not compile there. Each fence line quotes the earlier body.

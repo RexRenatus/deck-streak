@@ -67,3 +67,49 @@ the blocking rows of study-duties, learning-science, law-professors and language
 SPEC-046; ADR-019; the predecessor's `preread.py:check_coverage`; the study-duties ("The law band"),
 law-professors ("The law output contract") and language-mentors ("The output contract") packs;
 docs/schematics/readings-generation-flow.md.
+
+## Amendment, fix round 7: a gate class is a closed kernel type
+
+### Context
+
+The repair names the check that refused a reading, so the class a gate reports is trusted text. The
+tests read the classes the gate could report from its source, by spelling. The compiler decides what
+the gate reports by name resolution, so a spelling reader missed classes it could not see.
+
+### Considered options
+
+- A reader of the gate's source, by spelling or by tokens: rejected. A class reached through an alias,
+  a glob import, `Self`, a local binding, a shadowing constant or another file is decided by name
+  resolution. No reader of text or tokens performs it.
+- The agent's own closed type, with text at the readings boundary: rejected, because the readings
+  would still rank a class they receive as text, and a text class outside the set would still compile.
+- A mirror type in the readings, converted in coordination: rejected, because two declarations need a
+  mapping between them, and a mapping arm can send one class to another with no compile error.
+- A new edge from the readings to the agent: rejected, because it makes the readings depend on the
+  agent's runtime to name a check.
+- Dropping the findings from the failure: rejected, because SPEC-043 R12's withheld verdict carries the
+  finding lines, and the repair's rule is about the slot, not the verdict.
+
+### Decision
+
+A gate class is `GateClass`, a fieldless enum in the kernel. One `macro_rules!` declaration emits the
+enum, its list `ALL` and a constant `name` for each class. Text becomes a class only through `FromStr`,
+which accepts a declared name exactly. The agent's failure and configured class, and the readings'
+pack failure, hold the type. The crate graph gains no edge.
+
+### Consequences
+
+- Good, because every class from the gate to the ranking is a value of one type. A class outside the
+  declaration is a compile error, and a new class is a test member with no test edit.
+- Good, because a registry entry naming no declared class fails its test at once.
+- Bad, because the kernel holds a list of the packs' check names, and a pack's new class needs a
+  kernel edit.
+- Bad, because the rule is proved in the build the tests run; code the build configuration or environment selects is outside
+  it (#473). Four measured shapes stay open: E1, a second class declaration that the build profile selects; E2, a class name
+  computed from the build profile; E3, a class name read from the build environment; E4, a consumer branch that the build
+  profile selects, which lets a member's finding through and changes no class.
+
+### Confirmation
+
+SPEC-046 A28 and A29, the two population tests in `readings_trust.rs` and the configured-class test in
+`repair.rs`, and rows S04642 to S04644, which pin the parse, the list and the names.

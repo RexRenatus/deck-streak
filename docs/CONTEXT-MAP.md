@@ -10,7 +10,7 @@ that amends this file in the same change. Never add an edge to make code compile
 ## The map
 
 ```context-map
-deck-streak-kernel        (shared kernel: ids, study day, track, verdict, errors, config, Db, data-rights port)  depends on: nothing
+deck-streak-kernel        (shared kernel: ids, study day, track, verdict, gate class, errors, config, Db, data-rights port)  depends on: nothing
 deck-streak-ingest        (anti-corruption layer for Anki: sync, read, change gate, new-card queue, skip day)  depends on: kernel
 deck-streak-identity      (Telegram initData, the owner allow-list, sessions, linked sign-in)  depends on: kernel
 deck-streak-analytics     (daily rollup, per-language stats, five-pillar score, today snapshot)  depends on: kernel, ingest
