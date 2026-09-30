@@ -17,23 +17,65 @@
 
 use std::sync::OnceLock;
 
-use tracing::subscriber::{DefaultGuard, NoSubscriber};
-use tracing::{Dispatch, Subscriber};
+use tracing::level_filters::LevelFilter;
+use tracing::span::{Attributes, Record};
+use tracing::subscriber::{DefaultGuard, Interest};
+use tracing::{Dispatch, Event, Id, Metadata, Subscriber};
 
-/// A dispatcher registered for the life of the test binary and never dropped.
+/// The default of every thread that holds no capture: installed once, as the global default,
+/// before any capture, and never dropped.
 ///
-/// `tracing-core` computes a new callsite's interest from every registered dispatcher only while
-/// two or more are registered (`Dispatchers::rebuilder`); with exactly one it asks the reaching
-/// thread's default alone (`dispatcher::get_default`). A thread with no subscriber that first
-/// reaches a line while a capture is the only registered dispatcher therefore caches the line as
-/// never enabled, and the capture on another thread never sees it. This dispatcher is registered
-/// before any capture, so a capture is never the only one, and a callsite's interest always
-/// includes the capture's.
-static FLOOR: OnceLock<Dispatch> = OnceLock::new();
+/// `tracing-core` caches a callsite's interest when a thread first reaches it. While at most one
+/// dispatcher was registered at the last registration (`Dispatchers::rebuilder`), it asks only the
+/// reaching thread's default (`dispatcher::get_default`) and takes no lock, so that answer can be
+/// stored after a capture registered on another thread and overwrite the capture's. A thread with
+/// no capture has this floor as its default, and the floor answers every callsite `sometimes` and
+/// enables nothing, so once it is installed no path caches a callsite as never: each event asks
+/// the emitting thread's own default, and a capture receives every line its thread emits. Its max
+/// level hint is `OFF`, so while it is the only registered dispatcher the level filter stays `OFF`
+/// and no `tracing` macro registers a callsite before the floor is installed.
+struct Floor;
 
-/// Registers the floor dispatcher before a capture registers its own.
+impl Subscriber for Floor {
+    fn register_callsite(&self, _: &'static Metadata<'static>) -> Interest {
+        Interest::sometimes()
+    }
+
+    fn enabled(&self, _: &Metadata<'_>) -> bool {
+        false
+    }
+
+    fn max_level_hint(&self) -> Option<LevelFilter> {
+        Some(LevelFilter::OFF)
+    }
+
+    fn new_span(&self, _: &Attributes<'_>) -> Id {
+        Id::from_u64(0xDEAD)
+    }
+
+    fn record(&self, _: &Id, _: &Record<'_>) {}
+
+    fn record_follows_from(&self, _: &Id, _: &Id) {}
+
+    fn event(&self, _: &Event<'_>) {}
+
+    fn enter(&self, _: &Id) {}
+
+    fn exit(&self, _: &Id) {}
+}
+
+/// Set once the floor is the global default.
+static FLOOR: OnceLock<()> = OnceLock::new();
+
+/// Installs the floor as the global default before a capture registers its own dispatcher.
 fn register_floor() {
-    FLOOR.get_or_init(|| Dispatch::new(NoSubscriber::default()));
+    FLOOR.get_or_init(|| {
+        let installed = tracing::dispatcher::set_global_default(Dispatch::new(Floor));
+        assert!(
+            installed.is_ok(),
+            "a test binary that captures lines installs no other global default"
+        );
+    });
 }
 
 /// Runs `body` with `subscriber` as this thread's default, and returns what it returns.
