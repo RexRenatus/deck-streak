@@ -79,9 +79,23 @@ NO_SUCH_PROGRAM = "mutation-rows-no-such-program-431"
 #: or an import that reaches one under another name, is a spawn the site census would not see.
 ANY_SPAWN = re.compile(
     r"^(subprocess\.(run|Popen|call|check_call|check_output|getoutput|getstatusoutput)"
-    r"|os\.(system|popen|fork|forkpty|posix_spawnp?|exec[lv]p?e?|spawn[lv]p?e?)"
+    r"|os\.(system|popen|fork|forkpty|posix_spawnp?|startfile|exec[lv]p?e?|spawn[lv]p?e?)"
     r"|pty\.(spawn|fork)|asyncio\.create_subprocess_(exec|shell))$"
 )
+#: The event loop's own two spawners, called on whatever the loop is named.
+LOOP_SPAWN = re.compile(r"\.subprocess_(exec|shell)$")
+#: The names the standard library documents as starting a process (read from the `subprocess`,
+#: `os` "Process Management", `pty` and `asyncio` subprocess pages on 2026-09-30).
+DOCUMENTED_SPAWNERS = {
+    "subprocess": "run Popen call check_call check_output getoutput getstatusoutput".split(),
+    "os": (
+        "system popen fork forkpty posix_spawn posix_spawnp startfile "
+        "execl execle execlp execlpe execv execve execvp execvpe "
+        "spawnl spawnle spawnlp spawnlpe spawnv spawnve spawnvp spawnvpe"
+    ).split(),
+    "pty": ["spawn", "fork"],
+    "asyncio": ["create_subprocess_exec", "create_subprocess_shell"],
+}
 SPAWNING_MODULES = ("subprocess", "os", "pty", "asyncio")
 ID = "S00001-DOUBLE"
 BAND = "S00000-S00099"
@@ -146,11 +160,11 @@ def unrunnable(path, mode):
         path.chmod(0o755)
 
 
-def raw_spawns():
+def raw_spawns(source=None):
     """(spawns the two helpers own, spawns and imports anywhere else) read from the module's
-    source by every name the standard library starts a process by, not only the four the site
-    census reads."""
-    tree = ast.parse(MODULE.read_text(encoding="utf-8"))
+    source (or from `source`) by every name the standard library starts a process by, not only
+    the four the site census reads."""
+    tree = ast.parse(MODULE.read_text(encoding="utf-8") if source is None else source)
     owned, outside, inside = [], [], {}
     for function in ast.walk(tree):
         if isinstance(function, ast.FunctionDef) and function.name in HELPERS:
@@ -161,7 +175,7 @@ def raw_spawns():
             outside += [
                 f"from {node.module} import {alias.name}"
                 for alias in node.names
-                if node.module != "os" or ANY_SPAWN.match("os." + alias.name)
+                if node.module != "os" or alias.name == "*" or ANY_SPAWN.match("os." + alias.name)
             ]
         elif isinstance(node, ast.Import):
             outside += [
@@ -172,7 +186,9 @@ def raw_spawns():
             outside += [
                 f"import {alias.name}" for alias in node.names if alias.name in ("pty", "asyncio")
             ]
-        elif isinstance(node, ast.Call) and ANY_SPAWN.match(ast.unparse(node.func)):
+        elif isinstance(node, ast.Call) and (
+            ANY_SPAWN.match(ast.unparse(node.func)) or LOOP_SPAWN.search(ast.unparse(node.func))
+        ):
             where = inside.get(id(node))
             spawn = f"{where or 'outside the helpers'}: {ast.unparse(node.func)}"
             (owned if where else outside).append(spawn)
@@ -378,6 +394,32 @@ class TheMissingToolPopulation(unittest.TestCase):
         self.assertEqual(
             outside, [], "a spawn by a name the site census does not read skips the tool check"
         )
+
+    def test_the_census_reads_every_documented_spawner_by_every_way_of_reaching_it(self):
+        forms = (
+            "import {m}\n{m}.{n}(x)\n",
+            "import {m} as alias\nalias.{n}(x)\n",
+            "from {m} import {n} as other\nother(x)\n",
+            "from {m} import *\n",
+        )
+        examined = 0
+        for module, names in DOCUMENTED_SPAWNERS.items():
+            for name in names:
+                for form in forms:
+                    if form.startswith("from {m} import *") and module != "os":
+                        continue
+                    with self.subTest(module=module, name=name, form=form):
+                        _, outside = raw_spawns(form.format(m=module, n=name))
+                        self.assertNotEqual(outside, [], form.format(m=module, n=name))
+                        examined += 1
+        for loop_call in ("loop.subprocess_exec(f, x)", "self.loop.subprocess_shell(f, x)"):
+            with self.subTest(loop_call=loop_call):
+                self.assertNotEqual(raw_spawns(loop_call + "\n")[1], [])
+                examined += 1
+        expected = 3 * sum(map(len, DOCUMENTED_SPAWNERS.values()))
+        expected += len(DOCUMENTED_SPAWNERS["os"]) + 2
+        self.assertEqual(examined, expected)
+        print(f"examined {examined} spawner spelling(s)")
 
     def test_a_path_entry_the_runner_cannot_look_at_is_passed_over_as_the_spawn_passes_it(self):
         member = Member(

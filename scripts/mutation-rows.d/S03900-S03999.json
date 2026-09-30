@@ -496,6 +496,22 @@
         "        if candidate.is_file():",
         "a directory at the tool's name is reported as an absent tool, not as what it is (SPEC-039 A46)",
         "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03971-A46-THE-PATH-SEARCH-IGNORES-THE-CHILDS-PATH",
+        "scripts/mutation_rows.py",
+        "        path = (env if env is not None else os.environ).get(\"PATH\", os.defpath)",
+        "        path = os.defpath",
+        "the tool is searched along the default PATH, not the one the child gets, so a tool the child cannot run is taken for one it can (SPEC-039 A46)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03972-A46-A-SPAWN-THAT-FAILS-AFTER-RESOLUTION-IS-A-TRACEBACK",
+        "scripts/mutation_rows.py",
+        "    if error.filename == command[0] or error.filename is None:",
+        "    if False:",
+        "a spawn that fails for its executable after resolution passed (a bad interpreter line, a file the kernel will not execute) is a traceback, not the refusal (SPEC-039 A46)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
       ]
     ]
   }
