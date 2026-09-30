@@ -150,11 +150,11 @@ criterion.
   empty list for a folder that was not present is gone; it calls `confined()` and lists. The two
   differ only for a folder that appears between its resolve and its listing.
 - Test: `drill_kills::a_folder_that_cannot_be_resolved_is_an_io_error_and_only_a_missing_one_is_none`
-  is a post-green killer. Not red: it pins. It has no red at the code before it: it passes at `3b492c32`, whose
-  `confined()` already made a resolve failure other than `NotFound` an I/O error. Its red is the
-  mutant CI's `mutation-verdict` named at `90347860`, the `NotFound` guard in `confined()` replaced
-  with `true`: the test fails by assertion with `a resolve failure: []`, exit 101. At `6f2522c3` it
-  passes.
+  is a post-green killer. Not red: it pins a resolve failure other than `NotFound` as an I/O error;
+  its red is the mutant CI's `mutation-verdict` named at `90347860`, the `NotFound` guard in
+  `confined()` replaced with `true`. It has no red at the code before it: it passes at `3b492c32`,
+  whose `confined()` already made that failure an I/O error. Under the mutant the test fails by
+  assertion with `a resolve failure: []`, exit 101. At `6f2522c3` it passes.
 
 ## 2026-09-29: amendment, round 2 of review
 
