@@ -244,7 +244,7 @@ Two more tests pin the rule that the repair slot drops an escaped span:
 | `crates/kernel/src/gate_class.rs` | `deck-streak-kernel` | added: the gate class, one closed type declared once with its names and its list (amendment, ADR-046) |
 | `crates/kernel/src/lib.rs` | `deck-streak-kernel` | changed: exports the gate class |
 | `crates/agent/src/gate.rs`, `duty.rs` | `deck-streak-agent` | changed: a gate failure and a configured class hold the gate class (amendment) |
-| `crates/agent/tests/gate.rs`, `fixtures/fake-probe.py` | `deck-streak-agent` | changed: the tests name each class by the type, and the fake probe knows declared classes only |
+| `crates/agent/tests/gate.rs`, `crates/agent/tests/fixtures/fake-probe.py` | `deck-streak-agent` | changed: the tests name each class by the type, and the fake probe knows declared classes only |
 | `ARCHITECTURE.md` | docs | changed: the kernel holds the gate class |
 | `crates/coordination/src/maintenance.rs` | `deck-streak-coordination` | changed: the nightly upkeep prunes `reading_attempts` past their retention (amendment) |
 | `crates/coordination/tests/maintenance.rs` | `deck-streak-coordination` | changed: the retention test |
