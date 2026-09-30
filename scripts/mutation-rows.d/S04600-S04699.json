@@ -387,6 +387,15 @@
         "                    $(Self::$variant => stringify!($variant),)+",
         "readings_trust::a_gate_outcome_class_reaches_the_repair_only_as_the_name_of_the_check",
         "a class's name is the name the packs and the probe protocol spell (SPEC-046 R7, A28)"
+      ],
+      [
+        "S04645-A-TEXT-PARSES-ONLY-TO-THE-CLASS-IT-NAMES-EXACTLY",
+        "kernel",
+        "src/gate_class.rs",
+        "            .find(|class| class.name() == name)",
+        "            .find(|class| !name.is_empty() && class.name().starts_with(name))",
+        "gate_class::a_text_parses_only_to_the_class_it_names_exactly",
+        "a text that is a non-empty prefix of a declared name is never a class (SPEC-046 R7, A28)"
       ]
     ]
   }
