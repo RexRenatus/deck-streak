@@ -99,6 +99,51 @@
         "    for _ in 0..SILENCE_WALK_CAP_DAYS {\n",
         "silence_walk_bound::the_walk_stops_at_the_cap_from_the_specs_words",
         "the silence walk counts up to one day past the cap, then reports exhausted (SPEC-076 R11)"
+      ],
+      [
+        "S07612-THE-OPEN-LAPSE-WALK-INCLUDES-TODAY",
+        "streaks",
+        "src/lapse.rs",
+        "    for number in (window_start..=today.epoch_day()).rev() {\n",
+        "    for number in (window_start..today.epoch_day()).rev() {\n",
+        "open_lapse_bound::the_bounded_lapse_walk_answers_what_the_reference_walk_answers",
+        "the open lapse walk reads today and every day back to the window's first (SPEC-076 A41)"
+      ],
+      [
+        "S07613-THE-OPEN-LAPSE-ANSWERS-NOTHING-AT-THE-SMALLEST-DAY",
+        "streaks",
+        "src/lapse.rs",
+        "        if number == i64::MIN {\n",
+        "        if false {\n",
+        "open_lapse_bound::the_bounded_lapse_walk_answers_what_the_reference_walk_answers",
+        "the open lapse answers nothing at the smallest epoch day, as the earlier walk did (SPEC-076 A41)"
+      ],
+      [
+        "S07614-THE-LAW-LINE-LEADS-BY-ITS-RUN",
+        "bot",
+        "src/streak_commands.rs",
+        "    let lines = if view.law.current > 0 {\n",
+        "    let lines = if view.law.longest > 0 {\n",
+        "streak_commands::each_line_names_its_own_run_and_best_and_the_law_leads_by_its_run",
+        "the streak reply leads with the law line when the law run is above zero (SPEC-076 A42)"
+      ],
+      [
+        "S07615-THE-LANGUAGE-LINE-NAMES-ITS-RUN-AND-BEST",
+        "bot",
+        "src/streak_commands.rs",
+        "        view.language.current, view.language.longest\n",
+        "        view.language.longest, view.language.current\n",
+        "streak_commands::each_line_names_its_own_run_and_best_and_the_law_leads_by_its_run",
+        "the language line shows its run first and its best after it (SPEC-076 A42)"
+      ],
+      [
+        "S07616-THE-LAW-LINE-NAMES-ITS-RUN-AND-BEST",
+        "bot",
+        "src/streak_commands.rs",
+        "    let law = format!(\"Law: {} (best {})\", view.law.current, view.law.longest);\n",
+        "    let law = format!(\"Law: {} (best {})\", view.law.longest, view.law.current);\n",
+        "streak_commands::each_line_names_its_own_run_and_best_and_the_law_leads_by_its_run",
+        "the law line shows its run first and its best after it (SPEC-076 A42)"
       ]
     ]
   }
