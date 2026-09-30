@@ -198,9 +198,12 @@ its rule's population.
   after the raw prefix is removed. Population: 12 copies of the enum times 6 spellings of the live
   one, 72 members.
 - The tests were committed alone first, against the head's helper bodies (the round's red tree is
-  the tests with `char_literal_len`, `code_of`, `statements_run_in`, `declarations_in` and
-  `is_must_use` as they stood at 229cf0c1), and the helpers followed in the green commit.
-  No assertion changed between the two.
+  the tests with `char_literal_len` and `code_of` as they stood at 229cf0c1, and with
+  `statements_run_in`, `declarations_in` and `is_must_use` extracted in 616bd997 from 229cf0c1's
+  inline expressions with the same behaviour), and the helpers followed in the green commit. The
+  green commit also added two population-count assertions (`assert_eq!(members, 63, ..)` and
+  `assert_eq!(literals.len(), 13, ..)`, each true at both commits) and five `eprintln!` lines; no
+  other assertion changed between the two.
 
 ```text
 A21: red at 616bd997928bfc9cd990eb172feb788cf78f523e: a copy that does not run was read as the prune: // "DELETE FROM agent_runs WHERE created_at < ?1": [] (runs.rs:495)
@@ -210,4 +213,71 @@ A21: red at 616bd997928bfc9cd990eb172feb788cf78f523e: a benign delete word in a 
 A21: green at 2ebc705c3b2679f421b300c9f5910668b2f604f9
 A23: red at 616bd997928bfc9cd990eb172feb788cf78f523e: #[r#must_use] #[derive(Clone)] pub enum Verdict {: ["#[derive(Clone)]", "#[r#must_use]"] (verdict.rs:357)
 A23: green at 2ebc705c3b2679f421b300c9f5910668b2f604f9
+```
+
+## Round 5
+
+PR #414's fifth round (issue #404); the `Round 5 addendum` above belongs to SPEC-043's first
+delivery. The round-4 review reopened the lexical class a third time: a raw literal holding the call
+was read as the call, a string or block comment closing on the declaration's line lent the enum its
+`#[must_use]`, and U+200E or U+200F between `enum` and `Verdict` hid the declaration. The class is
+closed by one rule, not by a fourth rule in the hand lexer (ADR-293).
+
+- Class rule, both pins: each source is read as the tokens `proc-macro2`'s lexer produces, and each
+  string, byte-string or C-string literal as the value `syn` cooks. A comment is no token, a doc
+  comment is a `doc` attribute whose text is prose, whitespace is whatever separates two tokens, a
+  call or an attribute is read only where the token tree puts it, and a source that does not lex is
+  refused.
+- Populations, each generated from axis tables and asserted by count in its test. Prune pin: 84
+  literal holders of the call, 168 members
+  (`a_literal_of_any_kind_holding_the_call_is_not_the_call`); 32 comment holders of the statement,
+  64 members (`a_comment_of_any_kind_holding_the_statement_is_not_read`); 130 spellings of the call
+  (`every_spelling_of_the_call_rustc_reads_as_the_call_is_the_call`); five prunes spelled by an
+  escape, a continuation, a raw string or `stringify!`, each beside four copies of the call that
+  never run, 20 members
+  (`a_prune_spelled_by_an_escape_a_continuation_or_tokens_beside_a_dead_copy_is_refused`). Verdict
+  pin: 72 copies by spellings
+  (`a_copy_of_the_enum_in_code_is_a_declaration_and_in_a_comment_or_a_literal_is_none`); 60 holders
+  of `#[must_use]`, 120 members (`a_must_use_held_by_a_literal_or_a_comment_is_not_the_enums`); 60
+  holders of a copy of the enum, 120 members
+  (`a_copy_of_the_enum_held_by_a_literal_or_a_comment_is_no_declaration`); 113 gaps and spellings
+  (`every_gap_rustc_reads_between_the_enums_tokens_is_whitespace`).
+- The hand lexer is deleted. From `runs.rs`: `comment_spans`, `raw_string_len`, `char_literal_len`,
+  `code_of`, `delete_statements_in` and `delete_keywords_in`. From `verdict.rs`:
+  `is_one_whole_attribute`, `is_a_plain_doc_line`, `declarations_in`, `name_after`,
+  `block_comment_len` and `attributes_of_the_verdict`. `statements_run_in`, `prune_pin_problems`,
+  `own_statement_problems`, `declarations_of`, `attributes_of` and `is_must_use` are rewritten over
+  the tokens.
+- The tests were committed alone first, against the head's helpers, and every red is an assertion.
+  The red commit changes assertions it inherits, each because rustc reads a comment as no code: a
+  commented copy of the statement, asserted refused as a second statement in
+  `prose_that_names_the_delete_beside_the_prune_is_not_counted` (1 member) and in the comment-forms
+  test (16 members), is now asserted not refused, and that test is renamed
+  `a_delete_word_or_the_statement_in_any_comment_form_is_not_counted`;
+  `every_copy_of_the_enum_beside_every_spelling_of_it_is_a_second_declaration` is renamed
+  `a_copy_of_the_enum_in_code_is_a_declaration_and_in_a_comment_or_a_literal_is_none`, its nine
+  copies in code stay a second declaration and its three held copies (a block comment, line comments
+  and a string, 18 of its 72 members) are now none;
+  `a_commented_copy_of_the_enum_above_it_is_refused` asserted the decoy is two declarations and now
+  asserts it is refused. The verdict fixtures gain a body (`{ A }`) so each lexes, and the four
+  assertions of `the_verdict_type_is_must_use` are gathered, unchanged, into `verdict_pin_problems`.
+- The green commit changes one assertion: `the_prune_reads_agent_runs_through_the_created_at_index`
+  asserted the source writes the quoted statement once, and the run count now requires the cooked
+  text of the literal handed to `sqlx::query!` to equal the statement, so the separate assertion is
+  removed. No other assertion changed between the two.
+
+```text
+A21: red at 35fa6ddc1f050da28da8e0dcc2f3fc7893289e9e: a literal holding the call was not counted, or was read as the call: let _ = "sqlx::query!(\"DELETE FROM agent_runs WHERE created_at < ?1\", cutoff)";: left ["the source holds 2 delete statements, not one", "the source writes the word delete 2 times, not once"] right ["the source writes the word delete 2 times, not once"] (runs.rs:654)
+A21: red at 35fa6ddc1f050da28da8e0dcc2f3fc7893289e9e: a commented copy of the statement was read as code: // DELETE FROM agent_runs WHERE created_at < ?1: left ["the source holds 2 delete statements, not one"] right [] (runs.rs:443)
+A21: red at 35fa6ddc1f050da28da8e0dcc2f3fc7893289e9e: a comment was read as code: // sqlx::query!("DELETE FROM agent_runs WHERE created_at < ?1", cutoff): left ["the source holds 2 delete statements, not one"] right [] (runs.rs:699)
+A21: red at 35fa6ddc1f050da28da8e0dcc2f3fc7893289e9e: a prune spelled around the word count was not refused: fn _unused(cutoff: i64) { let _ = sqlx::query!("DELETE FROM agent_runs WHERE created_at < ?1", cutoff); }: left [] right ["the source writes the word delete 2 times, not once"] (runs.rs:813)
+A21: red at 35fa6ddc1f050da28da8e0dcc2f3fc7893289e9e: a spelling rustc reads as the call was refused: "let done = sqlx\t::query!(\"DELETE FROM agent_runs WHERE created_at < ?1\", cutoff);": left ["the code hands the statement to sqlx::query! 0 times, not once"] right [] (runs.rs:780)
+A21: red at 35fa6ddc1f050da28da8e0dcc2f3fc7893289e9e: a source that does not lex was read: let done = sqlx::query!("DELETE FROM agent_runs WHERE created_at < ?1", cutoff;: [] (runs.rs:830)
+A21: red at 35fa6ddc1f050da28da8e0dcc2f3fc7893289e9e: a commented copy of the statement was read as code: left ["the source holds 2 delete statements, not one"] right [] (runs.rs:388)
+A21: green at 834dd9a52979e868b99eb0c9cd15d519f8e7591a
+A23: red at 35fa6ddc1f050da28da8e0dcc2f3fc7893289e9e: a held #[must_use] was read as the enum's: const _HELD: &str = "\n#[must_use]\n#[derive(Clone)]\n"; #[derive(Clone, Debug)] pub enum Verdict { (verdict.rs:508)
+A23: red at 35fa6ddc1f050da28da8e0dcc2f3fc7893289e9e: a copy in a comment or a literal was read as a declaration: /*: left 2 right 1 (verdict.rs:389)
+A23: red at 35fa6ddc1f050da28da8e0dcc2f3fc7893289e9e: a held copy was read as a declaration: const _HELD: &str = "#[must_use] (verdict.rs:535)
+A23: red at 35fa6ddc1f050da28da8e0dcc2f3fc7893289e9e: whitespace rustc skips was not skipped: "#\t[must_use]\n#[derive(Clone)]\npub enum Verdict {\n    A,\n}\n": left ["the enum lost its #[must_use]: [\"#[derive(Clone)]\"]"] right [] (verdict.rs:575)
+A23: green at 834dd9a52979e868b99eb0c9cd15d519f8e7591a
 ```
