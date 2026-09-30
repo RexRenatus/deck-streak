@@ -144,6 +144,51 @@
         "    let law = format!(\"Law: {} (best {})\", view.law.longest, view.law.current);\n",
         "streak_commands::each_line_names_its_own_run_and_best_and_the_law_leads_by_its_run",
         "the law line shows its run first and its best after it (SPEC-076 A42)"
+      ],
+      [
+        "S07617-THE-DUE-DAY-IS-WRITTEN-IN-THE-GRANTS-OWN-WRITE",
+        "coordination",
+        "src/recompute/streaks.rs",
+        "        store::put_relight_due(write, day, facts.now).await\n",
+        "        Ok(())\n",
+        "relight_order::a_crash_between_the_commit_and_the_route_is_recovered_at_the_next_cycle",
+        "a relit day is due in the same write as its grant, so a restart before the route still celebrates it (SPEC-076 R27, A45)"
+      ],
+      [
+        "S07618-A-ROUTED-DAY-LEAVES-THE-DUE-LIST",
+        "coordination",
+        "src/recompute/streaks.rs",
+        "        store::clear_relight_due(&mut write, day).await?;\n",
+        "        let _ = day;\n",
+        "relight_settle::a_second_recompute_routes_the_relight_and_one_send_is_recorded",
+        "a day the router has decided leaves the due list (SPEC-076 R27, A25)"
+      ],
+      [
+        "S07619-THE-CYCLE-READS-THE-STORED-DUE-DAYS",
+        "coordination",
+        "src/recompute/streaks.rs",
+        "        store::relight_due(&mut read).await\n",
+        "        store::relight_due(&mut read).await.map(|_| Vec::new())\n",
+        "relight_order::every_failure_point_later_sync_and_crash_keeps_one_celebration_per_committed_grant",
+        "the cycle routes every day the stored due list holds (SPEC-076 R27, A46)"
+      ],
+      [
+        "S07620-A-DECIDED-ROUTE-MARKS-THE-DAY-ROUTED",
+        "coordination",
+        "src/relight.rs",
+        "            Ok(_) => due.routed(db, day).await?,\n",
+        "            Ok(_) => {}\n",
+        "relight_settle::a_second_recompute_routes_the_relight_and_one_send_is_recorded",
+        "the cycle marks a day routed once the router has decided its celebration (SPEC-076 R27, A25)"
+      ],
+      [
+        "S07621-A-STUDIED-DAY-PUTS-NOTHING-AT-STAKE",
+        "coordination",
+        "src/streak_views.rs",
+        "    if track.last_study_day == Some(today) {\n",
+        "    if false {\n",
+        "streak_views::a_studied_day_puts_nothing_at_stake_on_either_track",
+        "nothing is at stake on a track whose open study day has a study review (SPEC-076 R30, A49)"
       ]
     ]
   }
