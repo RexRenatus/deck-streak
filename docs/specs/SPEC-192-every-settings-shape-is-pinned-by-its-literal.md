@@ -317,3 +317,27 @@ A15: python3 -m unittest discover -s scripts/tests -p test_setting_shapes.py -k 
   identifier (`impl r#Setting`), the trait under a `use ... as` alias, a one-line `macro_rules!`
   body, and an implementation after an attribute or a closing brace on its line are not found, so
   their shapes are not judged (#436).
+
+## 11. Amendment, 2026-09-30: a module written by a macro is read
+
+Section 6 says a `#[cfg(test)]` module written by a macro is not counted, so the guard errs toward
+refusing. That is wrong for one shape, and it is corrected here. A `macro_rules!` that declares a
+`#[cfg(not(test))]` `#[path = ...]` module, invoked beside a `#[cfg(test)] mod tests;`, gives rustc
+two declarations of one file: the macro's, which compiles it without `test`, and the test module's.
+The guard's reader does not look inside a macro's token tree, so it sees only the test declaration
+and reads that file. Such a module is READ, not refused, and so the shape is a miss toward reading,
+not toward refusing: section 6's "errs toward refusing" does not hold for it. It is the sibling of
+the shape recorded under #458, a file that a second declaration compiles without `test`, and it is
+filed with that issue (#458). A run of the guard against a crate whose `lib.rs` declares the macro,
+invokes it and declares the test module reads the file the macro's module also compiles.
+
+The band continues at S19300 to S19309, because S19200 to S19299 is full, and a pin's row still
+lives in the delivering SPEC's band (ADR-192). The five rows S19300 to S19304 are in
+`scripts/mutation-rows.d/S19300-S19399.json`, a file whose name spans S19300 to S19399 and that holds
+only ids from S19300 to S19309, so the file's name and the ids of this SPEC's rows differ by design. They
+pin five arms of the reader: a shebang after a byte order mark, the walk's refusal of an undecided
+declaration, a `path` spelled as a raw identifier, a block comment of three stars, and a `cfg_attr`
+that lists two attributes. The five rows share one killer by design, because the five members that
+kill them were added to one test,
+`test_every_module_file_choice_is_read_from_rustcs_file_or_refused`: each row's proof still runs
+that one test green without the mutant and red with it.

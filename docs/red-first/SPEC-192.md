@@ -264,3 +264,21 @@ arms (S19278 to S19299), each proved KILLED by full id. The band holds seventy s
 S19241's deletion above rested on a claim the fifth review measured false: a string after a `;`
 among a macro's arguments can follow the end of an item. The token reader reads a string as one
 token, and A13's tests plant that string among a macro's arguments in each delimiter.
+
+## Addendum, 2026-09-30, round 6: five members for the arms a fifth review found unpinned
+
+This round adds no criterion. Five members join the generated test of A13, and each is red by
+assertion under one rewrite of the reader: a byte order mark before a shebang line, a declaration
+whose attribute leaves its file undecided, a raw `r#path`, a `/***` comment, and a `cfg_attr` that
+carries two attributes. The members are committed at 7d31b7a3 with the guard as the head left it,
+so the module is green there; the replay below rewrites the reader once per member in a scratch copy
+of that commit and runs the generated test.
+
+```text
+A13: green at 7d31b7a3: Ran 24 tests, OK, examined 24 Setting impl(s), examined 6309 R8 member(s) judged against rustc
+A13: replay of the byte order mark rewrite: FAILED (failures=1): AssertionError: Lists differ: [...] != [] (test_every_module_file_choice_is_read_from_rustcs_file_or_refused)
+A13: replay of the undecided declaration rewrite: FAILED (failures=1): AssertionError: Lists differ: [...] != [] (test_every_module_file_choice_is_read_from_rustcs_file_or_refused)
+A13: replay of the raw path rewrite: FAILED (failures=1): AssertionError: Lists differ: [...] != [] (test_every_module_file_choice_is_read_from_rustcs_file_or_refused)
+A13: replay of the triple star comment rewrite: FAILED (failures=1): AssertionError: Lists differ: [...] != [] (test_every_module_file_choice_is_read_from_rustcs_file_or_refused)
+A13: replay of the two attribute cfg_attr rewrite: FAILED (failures=1): AssertionError: Lists differ: [...] != [] (test_every_module_file_choice_is_read_from_rustcs_file_or_refused)
+```
