@@ -5,6 +5,7 @@ directory; the workflow is read as text with the helpers `test_mutation_workflow
 plants put the fixed 32 back into each place that must read the one count.
 """
 
+import itertools
 import json
 import os
 import re
@@ -363,7 +364,9 @@ def plant_workflow(run):
 # The class (#395) is where a `#` starts a comment, as bash reads it. Its members are generated: a
 # fragment that carries a would-be comment or a would-be closer, in a context (and a group inside
 # each substitution), then a `#` glued or after a blank, then an unbounded command after the bounded
-# one, or the bounds after an unbounded one, or a continued line. Bash reads every member.
+# one, or the bounds after an unbounded one, or a continued line with a `#` and either after it; or
+# a context left open at its line's end or continued inside, its closer and a `#` on the next line
+# or the one after, and an unbounded command or the bounds after it. Bash reads every member.
 CLASS_WORDS = (
     "@",
     "$(@)",
@@ -382,7 +385,7 @@ CLASS_WORDS = (
 CLASS_GROUPS = ("case x in x) @;; esac", "case x in (x) @;; esac", "{ @; }", "( @ )")
 CLASS_COMMANDS = CLASS_GROUPS + ("(( @ ))", "a=(@)", "[[ x =~ @ ]]")
 CLASS_FRAGMENTS = ("#", ";#", ")#", "}#", '"}"', "')'", '"#"', "\\#", "a#", "\\'", ";;", "true")
-CLASS_SIZE = 2004
+CLASS_SIZE = 4291
 UNBOUNDED = "cargo mutants --in-place"
 # Bash runs each member from a list, without `-e`, with `cargo` a function that logs its words and
 # no other command on the path; a substitution's `cargo` is awaited through the pipe it holds.
@@ -417,10 +420,22 @@ def class_members():
             if text in words:
                 members.append(f"{UNBOUNDED} {text}{mark} {BOUNDS}\n")
         members.append(f"{lead}{text} \\\n  #; {UNBOUNDED}\n")
+        if text in words:
+            members.append(f"{UNBOUNDED} {text} \\\n  # {BOUNDS}\n")
     for group in CLASS_GROUPS:
         for fragment in CLASS_FRAGMENTS[:-3] + CLASS_FRAGMENTS[-2:]:
             for mark in ("#", " #"):
                 members.append(f"{group.replace('@', f'{UNBOUNDED} {fragment}')}{mark} {BOUNDS}\n")
+    for context in CLASS_WORDS + CLASS_COMMANDS:
+        start, _, closer = context.partition("@")
+        word = context in CLASS_WORDS
+        lead = f"cargo mutants {BOUNDS}{' ' if word else '; '}"
+        for f in CLASS_FRAGMENTS if closer.strip() else ():
+            if f != "\\'" or context[-1] in "\"'":
+                for end, line in itertools.product(("", "\\", "\n"), (f"{closer}#", f"#{closer}")):
+                    members.append(f"{lead}{start}{f}{end}\n{line}; {UNBOUNDED}\n")
+                    if word:
+                        members.append(f"{UNBOUNDED} {start}{f}{end}\n{line} {BOUNDS}\n")
     return list(dict.fromkeys(members))  # `"#"` bare and `#` in `"@"` are one member
 
 
