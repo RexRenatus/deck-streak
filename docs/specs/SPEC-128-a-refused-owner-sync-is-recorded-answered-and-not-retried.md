@@ -144,3 +144,122 @@ ADR-066 is not edited. The reply for `NotRun` is the existing one; only a refusa
   scans the seven refusal-code literals in `impl OwnerSyncCycle::run` (4) and `cycle_reason` (3)
   and requires each to parse as a `RefusalReason`. A4 walks the set and the migration `CHECK`
   refuses an unknown code as a further line (A1).
+
+## 7. Amendment, 2026-09-29: a refusal's reason is a closed enum
+
+Made by ADR-193 and issue #396, insert-only under ruling (i) of SPEC-038 section 8: every earlier
+byte is kept in order, so the amendment is these two new last sections and nothing above them is
+edited. It inserts no line into section 3's table or fence; its new criteria, A14 to A17, are
+defined in the section below.
+
+- **The strengthened rule.** R1 says the closed set is enforced by the type `RefusalReason`. That held
+  where a reason is stored and read; where a reason is PRODUCED it was a string, and the guard on
+  it was A13's scan of the sources of `impl OwnerSyncCycle` for code literals. A code defined in
+  a new file and recorded through the composition root was not read by that scan, so A13 passed while
+  the code bypassed it. The rule now holds at the producer: `OwnerSyncCycle::run` returns
+  `Result<SyncAnswer, RefusalReason>`, the private `refused` in `wiring.rs` takes the failing `Step`
+  and gives the `RefusalReason` that `Step::reason` names for it, `Step::of` takes a `&CycleError`
+  and gives the cycle's step it is the failure of, and the job records the value it is given, with no
+  `parse` on that path. A code outside the eight does not compile. `RefusalReason::parse` stays for reading a stored row.
+- **No stored code changes.** Each variant's string form equals the code the migration's `CHECK`
+  already allows, byte for byte (A14 holds the table), so there is no migration and no `.sqlx/` change.
+  The bot's own two reasons for a `/sync` that could not be asked (`sync_request_unwritten`,
+  `sync_progress_unread`) are not refusals the job records and are not part of the set (#396).
+- **A13's test is replaced, not renamed.** Its function name and its fence line stand. Its body no
+  longer scans sources: it reads the codes the migration's `CHECK` allows and requires that each
+  parses as a `RefusalReason` and that each variant is one of them. The third risk in section 6
+  stands as the record of the state before this amendment.
+- **The scan's count is replaced by a behaviour test per failing step.** The scan also held, by
+  counting the codes it found, that every site of the owner's sync still refuses; a site swallowed
+  into an `Ok` answer or a discarded result left the count short and turned it red, and the closed
+  enum cannot see that. The class is drawn by step, not by code: the cycle's one site refuses for
+  eight steps, and five of them give one code, so a population of (site, code) pairs counts that code
+  once and leaves four of its steps undriven. The class rule: for every step whose failure refuses the
+  owner's sync, a behaviour test drives `OwnerSyncCycle::run` so that exactly that step fails, and
+  asserts the code the step refuses by, that the answer is not an `Ok`, and that the refusal is
+  logged once under that step's name, at the error level. The steps are read from the code, and
+  A17 holds the table to
+  them: each `?` in `run` before the cycle's own (`rescore`, `settings`, `credentials`, `scope`), and
+  each kind of cycle error that `Step::of` maps at the cycle's site. A `CycleError` variant is one
+  step where its error is a shared cause (`history`, `obligations`, `recompute`), and each kind of
+  the sync's, the gate's and the window's own errors is a step of its own (`sync`; `gate_probe`,
+  `gate_record`; `window_read`, `window_base`). The line stops at the shared causes `KernelError` and
+  `ReadError`: a kind names which part of a step failed, and a cause names the store or the copy that
+  failed under any step. Their codes, in the cycle's order, are `rescore_unrecorded`,
+  `sync_settings_refused`, `credentials_directory_refused`, `scope_settings_refused`,
+  `sync_record_failed` twice, `obligations_unreadable` and `recompute_failed` five times.
+  `recompute_refused` is given by the job's load of the recompute setup, outside `run`. Every step
+  is reached in-process, and none is disclosed as unreachable.
+  `refused` logs the step's name beside its code, so two steps that give one code are told apart, and
+  a fault built for one step that trips another fails the test instead of passing for it.
+  A16's test, `every_failing_step_refuses_the_owners_sync_by_its_own_code_and_name`, iterates a
+  table of the twelve steps with the code this section gives each. It installs each step's fault from a
+  table keyed by the step, and drives each step twice, on a fresh ledger each time. The faults are:
+  - a closed ledger (`rescore`);
+  - no sync endpoint (`settings`);
+  - no credentials directory (`credentials`);
+  - a malformed law-deck root (`scope`);
+  - the run record renamed away (`history`);
+  - a trigger refusing the sync's write of its run (`sync`);
+  - a run whose study day cannot be evaluated, a column the history and the sync do not read
+    (`obligations`);
+  - no copy of the collection (`gate_probe`);
+  - a trigger refusing the gate's write of its anchor, after the window and the recompute have run
+    (`gate_record`);
+  - the copy's decks renamed away, a table the gate's probe does not read (`window_read`);
+  - a trigger refusing the window's base (`window_base`);
+  - the analytics rollup renamed away, the first table the fold reads (`recompute`).
+
+  A17's test, `the_table_has_a_row_for_every_step_that_refuses_the_owners_sync`, counts the `?` in
+  `run` and the kinds of cycle error named in `Step::of`'s arms. It fails when a step has no row, or a
+  row has no step. A17's three other tests fail the table's check on a failure answered with an
+  `Ok`, on a refusal logged under another step's name, and on a step driven once, since a code that
+  changes on a retry is caught only by the second drive.
+
+  The site tests beside the table keep their own codes:
+  `the_owners_sync_marks_the_rescore_before_it_reads_its_settings`,
+  `the_owners_sync_without_a_credentials_directory_is_refused_by_its_own_code`,
+  `the_owners_sync_that_cannot_mark_the_rescore_is_refused_by_its_own_code`,
+  `a_refused_owner_request_is_recorded_and_the_next_run_does_not_retry_it`,
+  `the_owners_cycle_that_cannot_read_its_run_record_is_refused_by_the_sync_code` and
+  `a_refusal_after_the_owners_run_answers_the_request_beside_the_run`.
+  `a_cycle_that_cannot_finish_is_refused_with_its_steps_reason_code` is removed: it pinned each arm's
+  code without driving `run`, and the table drives through `run` every step it pinned. The bot's
+  answer to a request its store cannot record is pinned by
+  `a_request_the_store_cannot_record_is_refused_with_the_rescore_code`.
+- **Rows.** `S12809` to `S12828` are in the band file, and `S12804`'s anchor moves to the arm's new
+  indentation.
+  - `S12812` and `S12813` are the swallowed-site mutants that A15's tests kill.
+  - `S12809`, `S12810` and `S12815` to `S12817` give one step, or the gate's or the window's steps,
+    another code in `Step::reason`.
+  - `S12811` makes `refused` return one fixed code.
+  - `S12814` and `S12818` remap the cycle site's code after its refusal is logged.
+  - `S12819` to `S12822` remap one step's code at the cycle's site.
+  - `S12823`, `S12824` and `S12828` answer one step's failure with an `Ok`.
+  - `S12825` and `S12827` log a step's failure under a sibling's name.
+  - `S12826` adds a step to `run` with no row in the table.
+- **Files this amendment touches.** `crates/daemon/src/wiring.rs`, `crates/daemon/src/role_job.rs`,
+  `crates/daemon/src/sync_request.rs`, `crates/daemon/tests/roles.rs`,
+  `crates/daemon/tests/sync_request.rs`, `scripts/mutation-rows.d/S12800-S12899.json`, `docs/red-first/SPEC-128.md`,
+  `docs/decisions/ADR-193-*.md` and `changelog.d/fix-refusal-enum-396.md`.
+
+## 8. Acceptance criteria of the 2026-09-29 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A14 | each variant's string form is the code stored today, no two variants share one, and the owner cycle's refusal type is the enum | `cargo test -p deck-streak-daemon --test roles -- --exact a_refusal_code_is_a_variant_of_the_closed_enum` |
+| A15 | the credentials directory's and the rescore request's refusal sites refuse the owner's sync by their own codes, and the bot answers a request its store cannot record by the rescore code: either site swallowed into an `Ok` answer or a discarded result is caught | the three tests this amendment adds, in the fence below; every other step is A16's |
+| A16 | every step whose failure refuses the owner's sync, driven through `run` by its own fault with no step before it failing, refuses by the code section 7 gives it, is not answered with an `Ok`, and is logged once, at the error level, under its own name: a step whose failure is remapped, hard-coded, answered, discarded or logged as a sibling's is caught | `cargo test -p deck-streak-daemon --lib -- --exact wiring::tests::every_failing_step_refuses_the_owners_sync_by_its_own_code_and_name` |
+| A17 | the step table has a row for every step the code gives a refusal, and the table's check fails on its own faults: a step with no row, a failure answered with an `Ok`, a refusal logged under another step's name, a step driven once | the four tests in the fence below |
+
+```acceptance
+A14: cargo test -p deck-streak-daemon --test roles -- --exact a_refusal_code_is_a_variant_of_the_closed_enum
+A15: cargo test -p deck-streak-daemon --lib -- --exact wiring::tests::the_owners_sync_without_a_credentials_directory_is_refused_by_its_own_code
+A15: cargo test -p deck-streak-daemon --lib -- --exact wiring::tests::the_owners_sync_that_cannot_mark_the_rescore_is_refused_by_its_own_code
+A15: cargo test -p deck-streak-daemon --test sync_request -- --exact a_request_the_store_cannot_record_is_refused_with_the_rescore_code
+A16: cargo test -p deck-streak-daemon --lib -- --exact wiring::tests::every_failing_step_refuses_the_owners_sync_by_its_own_code_and_name
+A17: cargo test -p deck-streak-daemon --lib -- --exact wiring::tests::the_table_has_a_row_for_every_step_that_refuses_the_owners_sync
+A17: cargo test -p deck-streak-daemon --lib -- --exact wiring::tests::the_table_fails_a_step_whose_failure_is_answered
+A17: cargo test -p deck-streak-daemon --lib -- --exact wiring::tests::the_table_fails_a_refusal_logged_under_another_steps_name
+A17: cargo test -p deck-streak-daemon --lib -- --exact wiring::tests::the_table_fails_a_step_driven_once
+```

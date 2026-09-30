@@ -91,3 +91,194 @@ with `cargo test -p <crate> --tests --no-fail-fast`.
 
 Fifteen rows in this delivery's band (S19201 to S19215); seven implementations pinned before it by
 rows of other bands (five of them by #354) and two by tests alone.
+
+## Addendum, 2026-09-29: the guard's tests kill every lexer-arm mutant
+
+Criteria A13, A14 and A15 join the fence (SPEC-192 section 9). The eight rewrites of issue #406 (six of the
+lexer, two of the selection of spellings) each survived the base guard (`Ran 17 tests`, `OK`, `examined 24 Setting impl(s)`). 7034826c
+strengthens assertions inside the existing tests of A11 and A12, so each rewrite now turns the module
+red by assertion, and the unmodified guard prints the same `examined 24 Setting impl(s)`; that
+commit edits a test file, so A15 is recorded `not red`.
+
+The new tests of A13 (five) and A14 (one) were committed alone at faaf43ec against the guard as
+7034826c left it: five of the six fail by assertion; the sixth,
+`test_a_file_that_is_no_declared_test_module_is_not_read_as_one`, passes there, because it pins a
+refusal the guard already made.
+
+```red-first
+A13: red at faaf43ec: AssertionError: Lists differ: ['demo::Depth (src/depth.rs) "a whole depth"'] != [] : four of the five tests of TheGuardReadsOutOfLineTestModules, each naming the implementation's file
+A13: green at 77ed28a0
+A14: red at faaf43ec: AssertionError: 2 != 1 : test_a_block_comment_holding_an_impl_is_not_examined
+A14: green at 77ed28a0
+A15: not red: the base guard already passed the assertions added inside A11's and A12's tests; the rows S19216 to S19277, less the six deleted ids, prove each kills its rewrite
+```
+
+The red run (`Ran 23 tests`, `FAILED (failures=5)`; one is the `lib.rs` case, `Lists differ:
+['demo::Depth (src/lib.rs) "a whole depth"'] != []`). The guard change at 77ed28a0 edits the test file itself
+(the guard and its tests are one module: the guard code and its docstring, no assertion); it turns the whole module green (`Ran 23 tests`,
+`OK`, `examined 24 Setting impl(s)`). Thirteen rows (S19216 to S19228) are proved KILLED by full id.
+
+## Addendum, 2026-09-29, round 1 fix: three more arms are pinned
+
+Three rewrites of the guard were planted in a scratch copy, one at a time, and each one survived the
+tests as the head had them (`Ran 23 tests`, `OK`). e195540e adds a fixture line and an assertion (X10), edits an existing
+string (X2) and adds a tuple element (H3) in three existing tests (no test is renamed or removed), so each rewrite now turns the module red by
+assertion; the unmodified guard prints `Ran 23 tests`, `OK`, `examined 24 Setting impl(s)`. The
+commit edits a test file. It also changed the A13 and A15 fence lines and SPEC-192's A15
+acceptance line (6f04f76d); these arms are recorded here and not as new criteria: they belong to
+A13 and A15. Rows S19226 to S19228 are proved KILLED by full id.
+
+```text
+X2 (a `//` comment kept in the skeleton): survives before; after, line 349, AssertionError: 0 != 1 : test_a_production_line_after_the_own_files_test_module_is_refused
+H3 (the `#[cfg(test)]` requirement deleted from the out-of-line reading): survives before; after, line 413, AssertionError: 0 != 1 : #[allow(dead_code)] : test_a_file_that_is_no_declared_test_module_is_not_read_as_one
+X10 (a raw string closed without its hashes): survives before; after, line 332, AssertionError: Lists differ: ['demo::Depth (src/depth.rs) "a whole depth"'] != [] : test_a_shape_a_test_spells_after_a_url_on_its_line_is_pinned
+```
+
+A15's decider now selects `TheGuardJudgesAPlantedTree` and `TheGuardReadsRustSource` (16 tests, `OK`).
+Run under that selection alone, each of the eight rewrites turns it red.
+
+## Addendum, 2026-09-29, round 2: the guard's tests kill every arm of its reader
+
+A second mutation review planted 72 rewrites of the guard's reader in a scratch copy. At the head
+(6f04f76d) 27 of them changed a verdict on a valid Rust tree and survived: nine of the lexer, seven
+of the out-of-line reading and eleven of the selection of spellings. Seven more are equivalent on
+valid Rust and are named in SPEC-192 section 8. Criteria A13 and A15 cover them; this round adds no
+criterion.
+
+The new assertions and fixture lines were committed alone at 58448ad2, against the guard as the head
+left it. Only one is red there, by assertion: the guard follows a `mod tests;` declared inside an
+inline `mod inner { }`, and reads a file the compiler would not.
+
+```text
+A13: red at 58448ad2: Ran 23 tests, FAILED (failures=1): AssertionError: 0 != 1 : mod inner {  (test_a_file_that_is_no_declared_test_module_is_not_read_as_one)
+A13: green at 45515771: Ran 23 tests, OK, examined 24 Setting impl(s)
+```
+
+Every other new assertion passes at 58448ad2 (`not red`): each pins behaviour the head already had,
+and the head's tests did not check it, so the proof is the row, not a red run. The guard change at
+45515771 is the depth check in `out_of_line`: a declaration at brace depth above zero is skipped.
+
+The replay ran the 73 rewrites (the 72, with the depth check deleted as the seventy-third) against
+the committed tests: 66 turn the module red, and exactly the seven equivalents survive (X11, T8, R3,
+R4, C3, C4, L1). S12 turns red by assertion, not by an error: the killer now catches the guard's
+TypeError and fails with `a shape with no literal must be refused, not crash the guard`.
+
+The 28 rows S19229 to S19256 are proved KILLED by full id; the band holds forty-one script rows,
+S19216 to S19256.
+
+## Addendum, 2026-09-29, round 3: the guard reads a module's file as rustc does, or refuses
+
+R8's class is "the file the guard reads for an out-of-line test module". A third review found that a
+stale `tests.rs` spelling could still pin the guard where rustc reads a different file, through
+`cfg_attr`, other spellings of a `path` attribute, a `src/bin` file and a file loaded through
+`#[path]`. The class rule is the union rule: the guard lists every file rustc could read for the
+declaration and reads the one that exists; two, none, or any `path` attribute in any spelling read
+none, so the shape stays refused. The population test generates the class: six declaring-file kinds,
+seven attributes, a stale spelling at each other place rustc could look, and the shape spelled or not,
+408 members. Criteria A13 and A15 cover it; this round adds no criterion.
+
+The population test and the renamed path-attribute test were committed alone at 202a9529, against the
+guard as the head left it. Both are red by assertion there.
+
+```text
+A13: red at 202a9529: Ran 24 tests, FAILED (failures=2): AssertionError: 0 != 1 : #[cfg(test)] #[path = "words/shape.rs"] mod tests; (test_a_module_whose_file_an_attribute_chooses_is_not_read, line 452)
+A13: red at 202a9529: AssertionError: [tests.rs, tests/mod.rs] not found in ([tests.rs], []) : lib.rs '' stale=tests/mod.rs spelled=True (test_every_module_file_choice_is_read_from_rustcs_file_or_refused, line 526, the first member rejected)
+A13: green at 52c898f7: Ran 24 tests, OK, examined 24 Setting impl(s), R8 population: 408 members
+```
+
+The five rows that read a `#[path]` value (S19239, S19240, S19242, S19243, S19244) lost their finds
+with that reading and are deleted. Six rows pin the arms of the union rule (S19257 to S19262), each
+proved KILLED by full id, and each red by assertion under its mutant. None of the six finds exists at
+the previous head, so their survival there is not measurable; the killer's red under each mutant, on
+the new code, is the evidence. The band holds forty-two script rows.
+
+## Addendum, 2026-09-30, round 4: the guard reads a test module when rustc compiles it only under test
+
+R8's class is every module the implementation's own file declares, inline or out-of-line, in any
+visibility, as `name` or `r#name`: the guard reads a test module's source exactly when rustc
+compiles the declaration under `--cfg test` and not without it, and reads exactly the source rustc
+reads; otherwise it refuses, including when rustc reads no module file at all. A fourth review found
+a `#[cfg(test)] mod tests;` whose attribute run also carries a `cfg` that removes it
+(`#[cfg(any())]`, `#[cfg(not(test))]`, `#[cfg_attr(test, cfg(any()))]`, a feature that is off):
+rustc reads no module file, and the guard read a stale `tests.rs` and pinned. The inline reading
+admitted the same run. The rule reads the whole run, outer and leading inner, in three-valued logic
+in which `test` is the one known option, and a module is a test module only when the run is true
+with `test` and false without. Criteria A13 and A15 cover it; this round adds no criterion.
+
+The generated test, with the operator table it is built from, was committed alone at 09074a62,
+against the guard as the head left it. It builds its members from the guard's own operators and
+asks rustc, at test time, which module sources each member compiles with `test` on and off under
+every setting of two other options; when rustc is not on PATH it fails rather than skip. It is red
+there by assertion. The rule commit 57842f68 edits the guard, which lives in the same file as the
+generated test, and leaves the test's own hunks as committed at 09074a62.
+
+```text
+A13: red at 09074a62: Ran 24 tests, FAILED (failures=1): AssertionError: Lists differ: [...] != [] : 1683 of 4768 members, the first lib.rs #[cfg(x)] #[cfg(test)] mod tests; at tests.rs: reads ['tests.rs'], only under test [] (test_every_module_file_choice_is_read_from_rustcs_file_or_refused, line 682)
+A13: green at 57842f68: Ran 24 tests, OK, examined 24 Setting impl(s), examined 3320 R8 member(s) judged against rustc
+```
+
+The replay of the 73 rewrites and the union rule's six against the committed tests turns 55 red;
+exactly the seven equivalents (X11, T8, R3, R4, C3, C4, L1) survive, and 17 no longer apply because
+their finds left with the old reading. Four rows are re-anchored on the new reading (S19227, S19238,
+S19246, S19247) and S19256's killer moves to the generated test. S19241 is deleted, because the new
+reading makes its rewrite equivalent. Fifteen rows pin the arms of the new reading (S19263 to
+S19277), each proved KILLED by full id. The band holds fifty-six script rows.
+
+## Addendum, 2026-09-30, round 5: the guard reads Rust with rustc's lexer
+
+R8's class is drawn at rustc's lexer: for every source rustc accepts, the guard reads a module
+declaration as the implementation's test module exactly when rustc compiles that declaration under
+`--cfg test` and not without it, whatever else is configured, and reads it from the source rustc
+reads for it; otherwise it refuses. Two shapes lie outside that sentence, disclosed and not claimed:
+a file that a second declaration compiles without `test` (#458), and an item that a `cfg` removes
+inside a compiled test module (#449). Its axes are the Reference's token grammar: whitespace and comments at every place
+between an attribute's `#`, `!` and `[`, doc comments of each kind among the attributes, every
+literal prefix and hash count, macro token trees of each delimiter, raw identifiers, a byte order
+mark, a shebang, CRLF, and the `cfg` literals `true` and `false`. A fifth review found an inner
+attribute whose tokens a space, a newline or a comment separated (`# ![cfg(any())]`), which the
+guard did not read, and a raw C string, which it misread so that a later spelling counted. The rule
+reads every file with a tokenizer for the Reference's grammar and reads attributes and declarations
+as tokens; it refuses a source it cannot tokenize, and it reads the own file's test modules only
+when a crate root reaches that file through declarations kept under `--cfg test`. Criteria A13 and
+A15 cover it; this round adds no criterion.
+
+The tests were committed alone at 103e5af0, against the guard as the head left it: the generated
+test's new members, drawn from that grammar, and a C string before a spelling in A15's test of a
+`//` inside a literal. The generated test asks rustc, at test time, which sources each member
+compiles under all eight settings of `test` and two other options, and it fails closed: each rustc
+run must exit 1 and count exactly the errors it printed, and every member rustc compiles must fire
+its root's probe in every run, so a rustc that compiles nothing is no answer. It fails, and never
+skips, when rustc is not on PATH. Both tests are red there by assertion. The rule commit
+71173419 edits the guard, which lives in the same file, and leaves the tests' own hunks as
+committed at 103e5af0.
+
+```text
+A13: red at 103e5af0: Ran 24 tests, FAILED (failures=2): AssertionError: Lists differ: [...] != [] : 397 of 7703 members, the first lib.rs ool crlf=0 '#[cfg(test)]\nmod tests' '# ![cfg(any())]\n': a source rustc does not compile only under test is read (test_every_module_file_choice_is_read_from_rustcs_file_or_refused)
+A15: red at 103e5af0: AssertionError: Lists differ: ['demo::Depth (src/depth.rs) "a whole depth"'] != [] : cr#"a" // /* "# (test_a_shape_a_test_spells_after_a_url_on_its_line_is_pinned)
+A13: green at 71173419: Ran 24 tests, OK, examined 24 Setting impl(s), examined 6251 R8 member(s) judged against rustc
+```
+
+Nineteen rows are re-anchored on the token reader and eight are deleted: four lost their arms, three
+became another row's, and S19267 is equivalent on source rustc accepts. Twenty-two rows pin the new
+arms (S19278 to S19299), each proved KILLED by full id. The band holds seventy script rows.
+S19241's deletion above rested on a claim the fifth review measured false: a string after a `;`
+among a macro's arguments can follow the end of an item. The token reader reads a string as one
+token, and A13's tests plant that string among a macro's arguments in each delimiter.
+
+## Addendum, 2026-09-30, round 6: five members for the arms a fifth review found unpinned
+
+This round adds no criterion. Five members join the generated test of A13, and each is red by
+assertion under one rewrite of the reader: a byte order mark before a shebang line, a declaration
+whose attribute leaves its file undecided, a raw `r#path`, a `/***` comment, and a `cfg_attr` that
+carries two attributes. The members are committed at 7d31b7a3 with the guard as the head left it,
+so the module is green there; the replay below rewrites the reader once per member in a scratch copy
+of that commit and runs the generated test.
+
+```text
+A13: green at 7d31b7a3: Ran 24 tests, OK, examined 24 Setting impl(s), examined 6309 R8 member(s) judged against rustc
+A13: replay of the byte order mark rewrite: FAILED (failures=1): AssertionError: Lists differ: [...] != [] (test_every_module_file_choice_is_read_from_rustcs_file_or_refused)
+A13: replay of the undecided declaration rewrite: FAILED (failures=1): AssertionError: Lists differ: [...] != [] (test_every_module_file_choice_is_read_from_rustcs_file_or_refused)
+A13: replay of the raw path rewrite: FAILED (failures=1): AssertionError: Lists differ: [...] != [] (test_every_module_file_choice_is_read_from_rustcs_file_or_refused)
+A13: replay of the triple star comment rewrite: FAILED (failures=1): AssertionError: Lists differ: [...] != [] (test_every_module_file_choice_is_read_from_rustcs_file_or_refused)
+A13: replay of the two attribute cfg_attr rewrite: FAILED (failures=1): AssertionError: Lists differ: [...] != [] (test_every_module_file_choice_is_read_from_rustcs_file_or_refused)
+```
