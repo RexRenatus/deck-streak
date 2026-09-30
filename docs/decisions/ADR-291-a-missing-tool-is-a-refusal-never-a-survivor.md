@@ -52,6 +52,8 @@ which section 12 (A41) reads as VOID, belong to the same rule?
   came from. A41's other readings stay: a parse check that outlives its bound is VOID, and a mutant
   that does not parse is VOID.
 - Enumerate the dynamic spellings the census will read (`getattr(m, "run")`, `__import__("os")`) — lost: each new spelling is a new way to skip the check, and a list is one behind the language. The census refuses the ways of reaching a spawner by a name built at run time instead (`getattr`, `__import__`, `importlib`, `vars`/`globals`/`locals`, `__dict__` and `sys.modules`, `eval`, `exec`), whatever they are given, so a spelling not yet invented is refused by default.
+- Resolve a relative `PATH` candidate in the runner's own directory, as the first two rounds did — lost: the spawn reads the candidate in the directory the child runs in, so the file judged and the file run could differ. The resolver takes the child's `cwd` and reads each relative candidate there, and both spawn helpers pass the `cwd` they spawn with.
+- Census only the spellings already seen, or only the runner's own imports — lost: a spawner reached by reference (an alias, `partial`, `attrgetter`, a subclass, a default argument, another module's `os`) or through an import the census has not read is a spawn no list of spellings covers. The census refuses the reference and the unread import, and derives the modules it reads from the runner's own imports.
 - Assert only that a refusal happened, or that its line holds a word of the reason — lost: CI
   generated 14 surviving mutants of the refusal's text and branches (round 1). Every refusal is
   compared whole, over populations read from the operating system's own tables (every errno, every
@@ -70,6 +72,7 @@ the runner already gives every other input it cannot examine.
   naming a program that does not exist, an empty file the kernel will not execute) maps every
   `OSError` to the same refusal, unless the error names the working directory, and an exit of 126 or
   127 from the spawned tool is read as the refusal too (`cannot be run`, `is not found`).
+- Resolution is against the child's `PATH`, and a relative candidate (an empty entry, `.`, a relative entry, a name holding a `/`) is read in the directory the child runs in: `resolve_tool(command, env, cwd)`, with `cwd` passed by `run_tool` and `run_in_own_group`. The tool judged is the tool run.
 - `main` alone catches `ToolMissing` under `prove` and `retired` and prints one line,
   `<verb>: REFUSED: missing tool: <name as spawned>: <why>`, then returns `EXIT_REFUSED`.
   `prove_row`'s `finally` restores the target, so the digest is unchanged.
@@ -118,6 +121,8 @@ whole `ToolMissing`; it is the first module the mutation map runs for the runner
 mutant no test could tell from the original, `replace "." with "" in resolve_tool`
 (`Path("") == Path(".")`), was chosen against recording it as equivalent: the runner reads
 `Path(part)` and the mutant no longer exists. The census refuses dynamic reach (SPEC-039 A54).
+
+Round 3 states the class as one rule: the tool the runner judges is the tool the spawn runs, and every refusal is one whole outcome, for every spawn route. Its tests generate 384 child-directory members and 768 whole-outcome members; the census reads 442 spawner-reference members and 568 unread-import members and each is refused, so its escape population of 1010 has 0 escapes (SPEC-039 A55 to A57). Every generated mutant of the runner's resolution and spawn helpers (136) is red by assertion except 1 equivalent, and of the census (88) all but 3 equivalent are red by assertion, with none red by an error alone.
 
 ## More Information
 

@@ -992,10 +992,57 @@ class; this section states it as criteria.
 
 | id | criterion | decided by |
 |---|---|---|
-| A53 | every refusal's whole text and tool, and each branch that chooses it, at every spawn route, for every reason, errno and exit | `test_mutation_rows_refusal.py` |
-| A54 | the census refuses every way of reaching a spawner by a name built at run time, for every documented spawner, and refuses nothing the runner's source holds | `test_mutation_rows_missing_tool.py` |
+| A53 | every refusal's whole text and tool, and each branch that chooses it, at each spawn route, over the population it generates: 16 reasons by route, 260 errnos, 768 exits | `test_mutation_rows_refusal.py` |
+| A54 | the census refuses each of 17 ways of reaching a spawner by a name built at run time, crossed with the 34 documented spawners (578 members), and refuses nothing the runner's source holds | `test_mutation_rows_missing_tool.py` |
 
 ```acceptance
 A53: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_refusal.py -k each_reason_is_refused_whole_at_every_route
 A54: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k the_census_refuses_every_spelling_it_cannot_read_by_every_way_of_reaching_a_spawner
+```
+
+## 23. Amendment, 2026-09-30: the judged tool is the tool the spawn runs
+
+Rounds 1 and 2 of #431 resolved a tool in one place and spawned it in another, and the two did not
+read the same directory. A relative `PATH` candidate (an empty entry, `.`, a relative entry, or a
+name holding a `/`) is read by the spawn in the directory the CHILD runs in, and the resolver read
+it in the runner's own. A tool could be judged runnable in one directory and be run, or be refused,
+in another. ADR-291 states the class; this section states it as criteria.
+
+- **The rule.** The tool the runner judges is the tool the spawn runs, and every refusal is one
+  whole outcome, for every spawn route. `resolve_tool(command, env, cwd)` searches the child's
+  `PATH` and reads each relative candidate in the child's working directory, and `run_tool` and
+  `run_in_own_group` each pass the `cwd` they spawn with. With no `cwd` the child inherits the
+  runner's, which is the directory the resolver reads.
+- **The census reaches a spawner by any name.** It refuses a spawner reached by reference or
+  through another module: an alias, `functools.partial`, `operator.attrgetter`, `__getattribute__`,
+  a subclass, a default argument, `posixpath.os`, `os.path.os`, and the other modules that spawn.
+  It refuses an import it has not read: the modules the runner imports are derived
+  (`READ_MODULES`), not listed, and a module the census does not read is refused by name.
+- **The populations are generated and their counts are asserted.** The child's working directory
+  is crossed with the search entries and the layouts of the tool: 384 members. Every exit crossed
+  with every route: 768. The census reads 442 spawner-reference members and 568 unread-import
+  members, and each is refused. Its escape population is those 1010 members and their count of
+  escapes is 0.
+- **Every mutant is red by assertion.** The generated mutants of `resolve_tool`, `_backstop`,
+  `_exit_refusal`, `run_tool` and `run_in_own_group` and the six unrunnable-exit targets number 136
+  once duplicates are removed: 135 fail a test by assertion and 1 is equivalent, and none is red
+  by an error alone. The generated mutants of the census number 88: 85 fail by assertion and 3 are
+  equivalent (a fallback name that no source reads, `names[0]` against `names[-1]` over a list of
+  one, and a `return None` against falling off the end).
+- **What it does NOT do.** It does not read a spawn built by a caller outside
+  `scripts/mutation_rows.py`, as A47 does not (#431). It changes no timeout, drops no test and
+  narrows no mutation diff (#431).
+
+## 24. Acceptance criteria of the 2026-09-30 (#431) round 3
+
+| id | criterion | decided by |
+|---|---|---|
+| A55 | a relative `PATH` candidate is read in the directory the child runs in, so the file judged is the file run, at every spawn route | `test_mutation_rows_refusal.py` |
+| A56 | the census refuses a spawner reached by reference or through another module, for every documented spawner | `test_mutation_rows_missing_tool.py` |
+| A57 | the census refuses an import it has not read, for every module a spawner can be reached through | `test_mutation_rows_missing_tool.py` |
+
+```acceptance
+A55: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_refusal.py -k test_a_relative_candidate_is_read_in_the_directory_the_child_runs_in
+A56: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k test_the_census_refuses_a_spawner_it_reaches_by_reference_or_through_another_module
+A57: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k test_the_census_refuses_an_import_it_has_not_read
 ```

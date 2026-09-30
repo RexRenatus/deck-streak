@@ -435,15 +435,48 @@ A53 and A54 are the criteria of section 22. Round 1 pushed with `mutation-verdic
 mutants of the refusal's own lines survived. The whole-value tests are green at 1361a265 (`Ran 9
 tests`, `OK`, 5 examined member lists: 16 reasons by route, 260 errno members, 768 exit members) and
 are `not red` at the head they test, because the code already refuses correctly; the plants are
-the measurement. Applied to a scratch copy of `scripts/mutation_rows.py`, 30 of the 31 mutants
-of `resolve_tool`, `_backstop`, `_exit_refusal` and `run_tool` fail the module by assertion, and
-the one that survives, `replace "." with "" in resolve_tool`, could not be told from the original
-(`Path("") == Path(".")`), so the runner now reads `Path(part)` and the mutant is gone. The
+the measurement. Applied to a scratch copy of `scripts/mutation_rows.py`, 26 of the 31 mutants
+of `resolve_tool`, `_backstop`, `_exit_refusal` and `run_tool` failed the module by assertion, 4 failed by
+error only, and the one that survived, `replace "." with "" in resolve_tool`, could not be told from the original
+(`Path("") == Path(".")`), so the runner now reads `Path(part)` and the mutant is gone; round 3 closes the 4. The
 census test was committed alone at edb24a2c and reads `FAILED (failures=551)` over 578 members; the
 census that refuses them is green at 23b303b9.
 
 ```red-first
-A53: not red: the code at dev + round 1 already refuses correctly; 30 of the 31 mutants of resolve_tool, _backstop, _exit_refusal and run_tool fail the module by assertion (the 31st is removed with `or "."`, which named the working directory twice)
+A53: not red: the code at dev + round 1 already refuses correctly; the generated mutants of the refusal and spawn helpers are measured at round 3 (136 examined: 135 red by assertion, 1 equivalent, 0 error-only)
 A54: red at edb24a2c: AssertionError: [] == [] : import os
 A54: green at 23b303b9
+```
+
+## Addendum, 2026-09-30: the judged tool is the tool the spawn runs (issue #431, round 3)
+
+A55 to A57 are the criteria of section 24. The tests were committed alone at 3c8a340a: the child
+directory test with the refusal module, and the two census tests over a census that read neither a
+reference nor an import it had not been given. Each fails by assertion and by no error: the child
+directory test reads `FAILED (failures=180)` over 384 members, the reference and other-module test
+398 of 442, and the unread-import test 558 of 568. The resolver that reads each relative candidate in
+the child's directory and the census that refuses a reference and an unread import went green at
+fecfe85e: the refusal module `Ran 11 tests`, `OK`, and the missing-tool module `Ran 10 tests`, `OK`.
+
+```text
+examined 384 child working directory member(s), 768 whole outcome member(s), 768 exit member(s), 260 spawn errno member(s), 16 refusal member(s), 7 path entry member(s), 5 name-shape member(s)
+examined 442 spawner reference member(s), 568 unread import member(s), 578 dynamic spelling(s), refused all; 5 benign source(s), refused none
+```
+
+The mutants of the round were generated from the code and run against the modules with no `cargo`
+on `PATH`: the 136 generated mutants of `resolve_tool`, `_backstop`,
+`_exit_refusal`, `run_tool` and `run_in_own_group`, with the six unrunnable exits, read `red 135,
+error-only 0, survived 1` (120 by the refusal module, 10 by the missing-tool module and 5 by the
+row census; the one survivor replaces `return None` in `_backstop` with `pass`, which is the same
+function). The 88 generated mutants of the census read `red 85, error-only 0, survived 3`; the three
+survivors change a fallback name that no source reads, `names[0]` to `names[-1]` over a list of
+one, and a `return None` that ends the function anyway.
+
+```red-first
+A55: red at 3c8a340a: AssertionError: Tuples differ: ('refused', 'missing tool: refusal-probe-tool: not found on PATH') != ('ran', 'CHILD')
+A55: green at fecfe85e
+A56: red at 3c8a340a: AssertionError: [] == [] : import subprocess
+A56: green at fecfe85e
+A57: red at 3c8a340a: AssertionError: [] == [] : import _abc
+A57: green at fecfe85e
 ```
