@@ -187,7 +187,8 @@ install_units() {
 }
 
 switch_to() {
-    stage_link "$1" && mv -T "$root/.current.$$" "$root/current"
+    stage_link "$1" || return 1
+    mv -T "$root/.current.$$" "$root/current"
 }
 
 restart() {
