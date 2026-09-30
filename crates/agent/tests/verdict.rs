@@ -14,6 +14,16 @@ fn tokens_of(source: &str) -> Vec<TokenTree> {
         .unwrap_or_default()
 }
 
+/// Whether rustc removes `source`'s first line before it lexes anything (the Reference's input
+/// format: a byte order mark is removed, then a first line opening with `#!` is a shebang unless
+/// `[` follows). rustc's lookahead skips only `Pattern_White_Space` and non-doc comments, and
+/// `proc-macro2` skips more, so the pin does not re-derive it: every source that opens with `#!`
+/// but not `#![` is refused, and the tokens it reads are always tokens rustc reads.
+fn opens_with_a_shebang(source: &str) -> bool {
+    let text = source.strip_prefix('\u{feff}').unwrap_or(source);
+    text.starts_with("#!") && !text.starts_with("#![")
+}
+
 /// `text` with every raw-identifier prefix removed: identifiers and attribute paths compare by the
 /// name the compiler reads, so `r#Verdict` is `Verdict` and `r#cfg` is `cfg`.
 fn without_raw_prefixes(text: &str) -> String {
@@ -144,6 +154,12 @@ fn is_conditional(attribute: &str) -> bool {
 /// when the module declares it exactly once, its attributes are read, derive included, one is
 /// `#[must_use]` and none is conditional.
 fn verdict_pin_problems(source: &str) -> Vec<String> {
+    if opens_with_a_shebang(source) {
+        return vec![
+            "the source opens with a first line rustc removes as a shebang before it lexes"
+                .to_owned(),
+        ];
+    }
     let declarations = declarations_of(source);
     if declarations != 1 {
         return vec![format!(

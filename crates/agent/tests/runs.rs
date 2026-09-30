@@ -42,6 +42,16 @@ fn tokens_of(source: &str) -> Result<Vec<TokenTree>, String> {
         .map_err(|error| error.to_string())
 }
 
+/// Whether rustc removes `source`'s first line before it lexes anything (the Reference's input
+/// format: a byte order mark is removed, then a first line opening with `#!` is a shebang unless
+/// `[` follows). rustc's lookahead skips only `Pattern_White_Space` and non-doc comments, and
+/// `proc-macro2` skips more, so the pin does not re-derive it: every source that opens with `#!`
+/// but not `#![` is refused, and the tokens it reads are always tokens rustc reads.
+fn opens_with_a_shebang(source: &str) -> bool {
+    let text = source.strip_prefix('\u{feff}').unwrap_or(source);
+    text.starts_with("#!") && !text.starts_with("#![")
+}
+
 /// The tokens a delimited group holds.
 fn tokens_in(group: &Group) -> Vec<TokenTree> {
     group.stream().into_iter().collect()
@@ -129,12 +139,15 @@ fn opens_with_the_statement(group: &Group) -> bool {
 
 /// How many times `tokens`, at any depth, hand the tested statement to `sqlx::query!`: a copy in
 /// a comment or inside any literal is no call, and a spelling rustc reads as the same call (spaces
-/// in the path, any delimiter, any string form) is one.
+/// in the path, any delimiter, any string form) is one. A doc attribute is prose here as it is to
+/// `code_texts`: a call written as tokens inside `#[doc ..]` is one a macro can discard, and when
+/// both counts skip the same groups every call counted is also a word counted.
 fn statements_run_in(tokens: &[TokenTree]) -> usize {
     tokens
         .iter()
         .enumerate()
         .map(|(at, token)| match token {
+            TokenTree::Group(group) if is_doc_attribute(&tokens[..at], group) => 0,
             TokenTree::Group(group) => {
                 statements_run_in(&tokens_in(group))
                     + usize::from(
@@ -150,6 +163,12 @@ fn statements_run_in(tokens: &[TokenTree]) -> usize {
 /// tested statement to `sqlx::query!` exactly once and its code writes the word delete exactly
 /// once, as an identifier or in any literal's cooked text.
 fn prune_pin_problems(source: &str) -> Vec<String> {
+    if opens_with_a_shebang(source) {
+        return vec![
+            "the source opens with a first line rustc removes as a shebang before it lexes"
+                .to_owned(),
+        ];
+    }
     let tokens = match tokens_of(source) {
         Ok(tokens) => tokens,
         Err(error) => return vec![format!("the source does not lex as Rust: {error}")],
