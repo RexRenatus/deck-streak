@@ -98,7 +98,17 @@ Chosen against:
 - Relying on the runner's timeout: it does not protect a small runner from memory.
 
 The same guard is applied to the template token scan of Dark Fields (`tokens_with` over `token_step`
-in `crates/insights/src/dark_fields.rs`), whose stalled mutants spun a test for its whole timeout.
+in `crates/insights/src/dark_fields.rs`), whose stalled mutants spun a test for its whole timeout:
+`tokens_with` refuses a step that does not strictly advance with the named refusal
+`TOKEN_NO_PROGRESS`, and `config_tokens_with` marks that template failed, as a wire walk's
+`NO_PROGRESS` does, so its note type is named unparseable. Its tests are
+`crates/insights/tests/token_progress.rs`. Chosen against for the scan: ending it with `break` and
+answering the tokens it kept. A stalled scan then judges a note type on part of its templates and
+reports fields they do render as dark, with no failure named.
+
+The class rule, as a guard: `scripts/tests/test_callee_offset_loops.py` enumerates every loop under
+`crates/*/src` whose integer position comes from a callee (two: `walk_with` and `tokens_with`), and
+refuses one with no strict-advance compare, or one whose compare does not return an `Err`.
 
 Class sweep of the loops this delivery adds or touches (ingest and insights): `wire.rs` `varint` (each pass takes one byte
 from `data` and ends at its end), `wire.rs` `walk_with` (guarded), `dark_fields.rs` `tokens_with` (guarded), `sync.rs` `attempts` (a counter

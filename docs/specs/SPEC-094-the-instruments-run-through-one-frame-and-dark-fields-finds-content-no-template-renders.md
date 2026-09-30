@@ -306,16 +306,29 @@ predecessor at `27ee2bc` (SPEC-029). Every case is synthetic.
 
 | row | target | what it guards | killer |
 |---|---|---|---|
-| `S09401-MIN-DARK-NOTES` | `crates/insights/src/dark_fields.rs` | a dark field needs 3 reviewed notes | `dark_fields::dark_fields_match_the_predecessors_golden` |
-| `S09402-SHOWN-CAP` | `crates/insights/src/dark_fields.rs` | 40 dark fields shown | `dark_fields::the_dark_fields_constants_equal_the_predecessors` |
-| `S09403-SPECIAL-NAMES` | `crates/insights/src/dark_fields.rs` | the six special names | `dark_fields::template_tokens_match_the_predecessors_golden` |
-| `S09404-PRESENCE-BATCH` | `crates/ingest/src/structure.rs` | the batch of 400 notes | `structure::the_presence_read_reduces_each_batch_of_400` |
-| `S09405-WIRE-TRUNCATION` | `crates/ingest/src/wire.rs` | a truncated varint is an error | `structure::the_wire_walk_matches_the_predecessors_golden` |
-| `S09406-WEEKLY-SEVEN` | `crates/coordination/src/instruments.rs` | a weekly instrument's 7 study days | `instruments_step::a_weekly_instrument_runs_once_in_seven_study_days` |
-| `S09407-FORBIDDEN-TOKENS` | `crates/kernel/src/conventions.rs` | the three forbidden direction tokens | `conventions::a_forbidden_direction_label_refuses_start` |
-| `S09408-ONE-ROW-PER-INSTRUMENT` | `migrations/009401_coordination_instrument_reports.sql` | the key on `instrument_reports (instrument)` (a script row; the cargo killer) | `instrument_reports::a_report_replaces_its_instruments_previous_one` |
-| `S09409-INSTRUMENT-LOCK-NO-WAIT` | `crates/ingest/src/lock.rs` | the instrument lock's take never waits: the mutant makes the take wait for the holder (`File::lock` for `File::try_lock`, with the error converted by `From` so the mutant builds); the killer bounds its wait with a timeout that fails the test | `instruments_step::a_run_while_one_runs_starts_nothing` |
-| `S09410-INSTRUMENT-LOCK-ALWAYS-TAKEN` | `crates/ingest/src/lock.rs` | the instrument lock's take holds the lock: the mutant returns from the take without holding it, so a second run starts | `instruments_step::a_run_while_one_runs_starts_nothing` |
+| `S09401-MIN-DARK-NOTES` | `crates/insights/src/dark_fields.rs` | a field is dark only when three reviewed notes have content in it, as the predecessor's constant says | `dark_fields::the_dark_fields_constants_equal_the_predecessors` |
+| `S09402-DARK-FIELDS-SHOWN-CAP` | `crates/insights/src/dark_fields.rs` | a report shows at most forty dark fields and counts the rest | `dark_fields::a_report_shows_at_most_the_cap_and_counts_the_rest` |
+| `S09403-UNPARSEABLE-SHOWN-CAP` | `crates/insights/src/dark_fields.rs` | the unparseable list is capped at the predecessor's twenty | `dark_fields::the_dark_fields_constants_equal_the_predecessors` |
+| `S09404-SPECIAL-FIELD-NAMES` | `crates/insights/src/dark_fields.rs` | Anki's own template names are never read as field references, exactly the predecessor's six | `dark_fields::the_dark_fields_constants_equal_the_predecessors` |
+| `S09405-PRESENCE-BATCH` | `crates/ingest/src/structure.rs` | the presence read holds no more than 400 notes' content at once | `structure::the_presence_read_reduces_each_batch_of_400` |
+| `S09406-WIRE-VARINT-LIMIT` | `crates/ingest/src/wire.rs` | a varint at or past seventy bits of shift is refused, as the predecessor refuses it | `structure::the_wire_walk_matches_the_predecessors_golden` |
+| `S09407-WEEKLY-SEVEN-DAYS` | `crates/coordination/src/instruments.rs` | a weekly instrument is due at seven study days | `instruments_step::a_weekly_instrument_runs_once_in_seven_study_days` |
+| `S09408-WEEKLY-DUE-AT-SEVEN` | `crates/coordination/src/instruments.rs` | a report exactly seven study days old is due, not one day later | `instruments_step::a_weekly_instrument_runs_once_in_seven_study_days` |
+| `S09412-CONVENTIONS-PATH-STATES-ITS-SHAPE` | `crates/kernel/src/conventions.rs` | a refused conventions path names the shape the setting accepts, word for word | `conventions::a_malformed_conventions_file_refuses_start` |
+| `S09409-FORBIDDEN-TOKENS` | `crates/kernel/src/conventions.rs` | a direction label naming recall or recognition is refused at start in each spelling | `conventions::a_forbidden_direction_label_refuses_start` |
+| `S09410-INSTRUMENT-LOCK-NO-WAIT` | `crates/coordination/src/instruments.rs` | a run requested while one runs returns without waiting for the holder | `instruments_step::a_run_while_one_runs_starts_nothing` |
+| `S09413-INSTRUMENTS-STEP-RUNS-AFTER-SYNC` | `crates/coordination/src/sync_cycle.rs` | a sync cycle that holds instruments runs the instruments step after the recompute and stores its reports | `instruments_cycle::a_cycle_with_instruments_runs_the_step_after_its_sync` |
+| `S09414-LATE-INSTRUMENTS-FILL` | `crates/daemon/src/wiring.rs` | the api role's holder keeps the instruments it is filled with and answers ready afterwards | `instruments_wiring::the_late_holder_answers_not_ready_until_it_is_filled` |
+| `S09415-ROLE-WIRES-VALID-INSTRUMENTS` | `crates/daemon/src/wiring.rs` | a role whose settings are valid is handed the built instruments and not none | `instruments_wiring::a_role_with_valid_settings_gets_the_instruments` |
+| `S09416-ONLY-THE-SYNC-JOB-LOADS-CONVENTIONS` | `crates/daemon/src/role_job.rs` | only the sync job builds the instruments and reads the owner's conventions, every other job never does | `roles::only_the_sync_job_loads_the_owners_conventions` |
+| `S09417-BOT-HOLDS-THE-INSTRUMENTS` | `crates/bot/src/commands.rs` | the command handlers answer the instruments they were handed and none before | `commands::the_handlers_hold_the_instruments_only_once_they_are_handed_them` |
+| `S09418-WIRE-STALLED-STEP-IS-REFUSED` | `crates/ingest/src/wire.rs` | a wire walk step that stays where it began is refused by name, so a reader that stalls ends in a named failure and not in memory (SPEC-094 R3) | `wire_progress::a_reader_that_stays_is_refused_with_nothing_kept` |
+| `S09419-TOKEN-STALLED-STEP-IS-REFUSED` | `crates/insights/src/dark_fields.rs` | a token scan step that stays where it began is refused by name, so a reader that stalls ends in a named failure and not in memory (SPEC-094 R10) | `token_progress::a_reader_that_stays_is_refused_with_nothing_kept` |
+| `S09420-TOKEN-REFUSAL-IS-NOT-A-BREAK` | `crates/insights/src/dark_fields.rs` | a stalled token scan answers its refusal and never the tokens kept so far (SPEC-094 R10) | `token_progress::a_reader_that_stays_is_refused_with_nothing_kept` |
+| `S09421-WIRE-REFUSAL-IS-NOT-A-BREAK` | `crates/ingest/src/wire.rs` | a stalled wire walk answers its refusal and never the fields kept so far (SPEC-094 R3) | `wire_progress::a_reader_that_stays_is_refused_with_nothing_kept` |
+| `S09422-REFUSED-SCAN-FAILS-ITS-TEMPLATE` | `crates/insights/src/dark_fields.rs` | a template whose token scan refuses is named unparseable and never judged on part of its tokens (SPEC-094 R10) | `token_progress::a_scan_that_refuses_marks_its_template_failed_with_no_tokens` |
+| `S09423-TOKEN-STEP-ADVANCES-BY-ONE` | `crates/insights/src/dark_fields.rs` | the real token step moves one byte past a position that starts no token, so the real scan never refuses a template (SPEC-094 R10) | `token_progress::the_real_scan_finds_two_tokens_and_skips_a_broken_pair` |
+| `S09412-ONE-REPORT-PER-INSTRUMENT` | `migrations/009401_coordination_instrument_reports.sql` | the instrument's id is the table's key, so a second report replaces the first and the table never holds two (a script row; the cargo killer) | `instrument_reports::a_report_replaces_its_instruments_previous_one` |
 
 ## 10. Amendments
 
@@ -345,6 +358,8 @@ The delivery touched these files beyond the rows above:
 - `crates/ingest/tests/lock.rs`
 - `crates/ingest/tests/wire_progress.rs`
 - `crates/insights/tests/token_progress.rs`
+- `scripts/tests/test_callee_offset_loops.py`
+- `docs/red-first/SPEC-094.md`
 
 Rows the delivery leaves unchanged:
 - `crates/kernel/src/settings.rs` is unchanged; the conventions file is read by the existing loader.
