@@ -31,9 +31,8 @@ silently dropped?
   workflow syntax adds: "The combination of queue: max and cancel-in-progress: true is not allowed and
   will result in a workflow validation error." The group still serialises a tag's runs, so the first
   guarantee holds, and a run waits instead of being replaced, so the second holds up to a hundred
-  waiting runs of one tag. A hundred-and-first is cancelled; the `release tags` ruleset lets a `v*` tag
-  be pushed once and never moved, so only re-runs of that tag's one run can wait, far fewer than a
-  hundred.
+  waiting runs of one tag. A hundred-and-first is cancelled and lists as a cancelled run, so it is
+  seen and not lost.
 - A group keyed by the run's id (`release-${{ github.run_id }}`): rejected. Every run is its own group,
   so no run is dropped, but two runs of one tag run at once and can both write the draft release and
   publish it, which breaks the first guarantee. It drops the queue between runs of one tag.
@@ -64,7 +63,8 @@ the killers. A key deeper than a job and an upper-case workflow file extension a
   group's own text, so a new tag-triggered workflow, a called workflow or a job's block cannot land
   with the default queue or share a release's group.
 - Bad, because the key is newer than the default behaviour; a run beyond a hundred waiting is
-  cancelled, and shows as cancelled.
+  cancelled, and shows as cancelled. The block sets `queue: max`, so the depth is a hundred where the
+  default is one.
 - Bad, because a model of the queue's interleavings is owed until `covers` accepts a workflow file
   (#467).
 

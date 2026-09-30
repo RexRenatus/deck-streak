@@ -146,8 +146,8 @@ ref can be a tag (`push`, `create`, `release`, `workflow_dispatch`, `registry_pa
 only when a person or a package picks it, so such a workflow is not in the class, and its group is
 still held to be no release's. Its `cancel-in-progress` is false for every such run, and it sets `queue: max`, so a
 run waits behind the one running and none is replaced (ADR-292). GitHub keeps at most a hundred waiting
-runs in one group and cancels any run beyond them (ADR-292); the `release tags` ruleset lets a `v*` tag
-be pushed once and never moved, so only re-runs of one tag's run can wait. The test derives the
+runs in one group and cancels any run beyond them, which lists as a cancelled run and is not lost
+unseen (ADR-292). The test derives the
 workflows from the directory and prints how many it examined (today one, `release.yml`); a workflow it
 cannot read, or a group it cannot render, is refused.
 
@@ -210,10 +210,13 @@ model of the tag queue, its interleavings of a running run, a waiting run and a 
 queue, is owed once `covers` accepts a workflow file, which follow-up #467 tracks; `covers` today
 takes only `.rs`, `.py` and `.sh`.
 
-A run of a tag is never lost without a trace. GitHub's workflow syntax page says
-"Up to 100 jobs or workflow runs can be `pending` in the concurrency group." and that once the queue is full, further
-runs are canceled; a cancelled run is listed as cancelled. The `release tags` ruleset lets a `v*` tag
-be pushed once and never moved, so only re-runs of one tag's run can wait.
+Eviction, as `release.yml`'s block configures it. That block sets `queue: max`, so the depth of its
+group is a hundred and not the default's one: GitHub's workflow syntax page (read 2026-09-30) says
+"Up to 100 jobs or workflow runs can be `pending` in the concurrency group." and that once the queue is
+full, further runs are canceled. Without the key, the default keeps one pending run and a newer run
+replaces it, and the replaced run lists as cancelled. Either way an evicted run is a visible cancelled
+run, never a silent loss. `release.yml` runs on a push of a SemVer tag and nothing else, and
+`.github/rulesets/release-tags.json` allows no deletion, no update and no non-fast-forward of a `v*` tag.
 
 ## 11. Acceptance criteria of the 2026-09-30 round 3 amendment
 
