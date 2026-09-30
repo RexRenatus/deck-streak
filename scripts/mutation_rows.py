@@ -283,7 +283,7 @@ def resolve_tool(command: list[str], env: dict[str, str] | None) -> None:
         candidates = [pathlib.Path(name)]
     else:
         path = (env if env is not None else os.environ).get("PATH", os.defpath)
-        candidates = [pathlib.Path(part or ".") / name for part in path.split(os.pathsep)]
+        candidates = [pathlib.Path(part) / name for part in path.split(os.pathsep)]
     failure = "not found on PATH" if "/" not in name else "no such file"
     for candidate in candidates:
         try:

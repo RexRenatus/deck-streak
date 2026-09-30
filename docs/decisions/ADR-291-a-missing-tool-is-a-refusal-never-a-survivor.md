@@ -118,9 +118,10 @@ to S03982 pin the resolution, each spawn, the mapping, the exits and the census.
 
 Round 2 adds `scripts/tests/test_mutation_rows_refusal.py`, whose members are every reason, every
 errno of `errno.errorcode` and every exit from 0 to 255 at every spawn route, each asserting the
-whole `ToolMissing`; it is the first module the mutation map runs for the runner. One generated
-mutant, `replace "." with "" in resolve_tool`, is equivalent (`Path("") == Path(".")`) and is
-recorded as such. The census refuses dynamic reach (SPEC-039 A54).
+whole `ToolMissing`; it is the first module the mutation map runs for the runner. The one
+mutant no test could tell from the original, `replace "." with "" in resolve_tool`
+(`Path("") == Path(".")`), was chosen against recording it as equivalent: the runner reads
+`Path(part)` and the mutant no longer exists. The census refuses dynamic reach (SPEC-039 A54).
 
 ## More Information
 

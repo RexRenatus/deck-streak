@@ -437,12 +437,13 @@ tests`, `OK`, 5 examined member lists: 16 reasons by route, 260 errno members, 7
 are `not red` at the head they test, because the code already refuses correctly; the plants are
 the measurement. Applied to a scratch copy of `scripts/mutation_rows.py`, 30 of the 31 mutants
 of `resolve_tool`, `_backstop`, `_exit_refusal` and `run_tool` fail the module by assertion, and
-the one that survives, `replace "." with "" in resolve_tool`, is equivalent and recorded. The
+the one that survives, `replace "." with "" in resolve_tool`, could not be told from the original
+(`Path("") == Path(".")`), so the runner now reads `Path(part)` and the mutant is gone. The
 census test was committed alone at edb24a2c and reads `FAILED (failures=551)` over 578 members; the
 census that refuses them is green at 23b303b9.
 
 ```red-first
-A53: not red: the code at dev + round 1 already refuses correctly; 30 of the 31 mutants of resolve_tool, _backstop, _exit_refusal and run_tool fail the module by assertion (the 31st is equivalent)
+A53: not red: the code at dev + round 1 already refuses correctly; 30 of the 31 mutants of resolve_tool, _backstop, _exit_refusal and run_tool fail the module by assertion (the 31st is removed with `or "."`, which named the working directory twice)
 A54: red at edb24a2c: AssertionError: [] == [] : import os
 A54: green at 23b303b9
 ```

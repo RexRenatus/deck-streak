@@ -970,10 +970,11 @@ class; this section states it as criteria.
   their own tables and crossed with the spawn routes, and the member counts are printed and
   asserted. The tests are in `test_mutation_rows_refusal.py`, which the map in
   `scripts/mutation-python.json` runs first against every generated mutant of the runner.
-- **One mutant is equivalent.** `pathlib.Path(part or ".")` reads `Path("")` for an empty `PATH`
-  entry, and `Path("") == Path(".")`; replacing `"."` with `""` changes no path. It is recorded in
-  `scripts/mutation-equivalent.d/python.json` under the verdict's own rule, with its span, its
-  reason and the test that reaches it (#431).
+- **No mutant is declared equivalent.** `pathlib.Path(part or ".")` named the working directory
+  twice, because `Path("") == Path(".")`, so replacing `"."` with `""` changed no path and no test
+  could tell them apart. The runner now reads `pathlib.Path(part)`: an empty `PATH` entry is the
+  working directory by pathlib's own reading, and the test that pins both spellings stays green.
+  The equivalent mutant is removed rather than recorded (#431).
 - **The census refuses a spawner it cannot read.** A spawner reached by a name built at run time
   is a spawn no reading of the source can see. The census refuses the way of reaching one, wherever
   it appears and whatever it is given, and does not list spellings: the names `getattr`, `vars`,
