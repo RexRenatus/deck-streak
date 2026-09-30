@@ -1874,11 +1874,11 @@ class EveryMutationCommandKeepsTheGatesBounds(unittest.TestCase):
 #: The head's two package-bearing commands, verbatim: the literal the pin measures the rewrite against.
 HEAD_COMMANDS = {
     "size": (
-        "cargo mutants --no-shuffle --list --json --in-place ${PACKAGE:+--package \"$PACKAGE\"} "
+        'cargo mutants --no-shuffle --list --json --in-place ${PACKAGE:+--package "$PACKAGE"} '
         '--timeout 300 --build-timeout 600 > "$RUNNER_TEMP/size/package.json"'
     ),
     "rust": (
-        "cargo mutants --no-shuffle -vV --in-place ${PACKAGE:+--package \"$PACKAGE\"} "
+        'cargo mutants --no-shuffle -vV --in-place ${PACKAGE:+--package "$PACKAGE"} '
         '--sharding round-robin --shard "$SHARD/$SHARDS" --timeout 300 --build-timeout 600 '
         '--output "$RUNNER_TEMP/mutation" || rc=$?'
     ),
@@ -1929,7 +1929,7 @@ def argv_of(script, package):
         (root / "size").mkdir()
         log = root / "argv.log"
         stub = root / "bin" / "cargo"
-        stub.write_text("#!/bin/bash\nprintf '%s\\0' \"$@\" >> \"$STUB_LOG\"\n", encoding="utf-8")
+        stub.write_text('#!/bin/bash\nprintf \'%s\\0\' "$@" >> "$STUB_LOG"\n', encoding="utf-8")
         stub.chmod(0o700)
         file = root / "step.sh"
         file.write_text(script, encoding="utf-8")
@@ -1990,7 +1990,15 @@ class TheWeeklySweepNamesItsPackageInLiteralWords(unittest.TestCase):
             dashed = [v for v in HOSTILE_PACKAGES if v.startswith("-")]
             for value in examined("dash-led values", dashed):
                 done = subprocess.run(
-                    [sys.executable, str(VERDICT), "size", "--package", value, "--listed", str(listing)],
+                    [
+                        sys.executable,
+                        str(VERDICT),
+                        "size",
+                        "--package",
+                        value,
+                        "--listed",
+                        str(listing),
+                    ],
                     capture_output=True,
                     text=True,
                     timeout=30,
@@ -2005,7 +2013,9 @@ class TheWeeklySweepNamesItsPackageInLiteralWords(unittest.TestCase):
 
     def test_the_rewritten_blocks_are_the_only_package_words_in_the_two_cargo_commands(self):
         text = workflow(WEEKLY)
-        self.assertNotIn("${PACKAGE:+--package", "\n".join(re.findall(r"cargo mutants [^\n]*", text)))
+        self.assertNotIn(
+            "${PACKAGE:+--package", "\n".join(re.findall(r"cargo mutants [^\n]*", text))
+        )
 
 
 # R5 (#465's remainder, closed by refusal): a word before the bounds that bash can expand to exactly
@@ -2014,7 +2024,18 @@ class TheWeeklySweepNamesItsPackageInLiteralWords(unittest.TestCase):
 # a literal before it or after it, a literal between two), each segment quoted or not, over the
 # literal contents none, `-`, `--`, other. The oracle is bash: a member can be `--` where it runs
 # cargo mutants with the bounds after a `--` (`X`, `$1` and `$@` hold `--` in the preamble).
-R5_EXPANSIONS = ("$X", "${X}", "${X:-y}", "${X:+--}", "$@", "$*", "$1", "$(echo --)", "`echo --`", "$((1))")
+R5_EXPANSIONS = (
+    "$X",
+    "${X}",
+    "${X:-y}",
+    "${X:+--}",
+    "$@",
+    "$*",
+    "$1",
+    "$(echo --)",
+    "`echo --`",
+    "$((1))",
+)
 R5_LITERALS = ("-", "--", "a", "-a")
 R5_PREAMBLE = "X=--; set -- --; "
 R5_SIZE = 980
@@ -2027,8 +2048,12 @@ def r5_quote(kind, text, style):
 
 def r5_members():
     """[(segments, word, script)]: every word shape over every expansion, quoting and literal."""
-    shapes = [("E",)] + [("l", "E", l) for l in R5_LITERALS] + [("E", "l", l) for l in R5_LITERALS]
-    shapes += [("E", "l", "E", l) for l in R5_LITERALS]
+    shapes = (
+        [("E",)]
+        + [("l", "E", lit) for lit in R5_LITERALS]
+        + [("E", "l", lit) for lit in R5_LITERALS]
+    )
+    shapes += [("E", "l", "E", lit) for lit in R5_LITERALS]
     members = []
     for expansion in R5_EXPANSIONS:
         for shape in shapes:
@@ -2040,7 +2065,9 @@ def r5_members():
             ):
                 word = "".join(r5_quote(k, t, st) for (k, t), st in zip(plan, styles))
                 script = f"{R5_PREAMBLE}cargo mutants --in-place {word} {BOUNDS}\n"
-                members.append((tuple(zip((k for k, _ in plan), (t for _, t in plan), styles)), word, script))
+                members.append(
+                    (tuple(zip((k for k, _ in plan), (t for _, t in plan), styles)), word, script)
+                )
     return list(dict.fromkeys(members))
 
 
@@ -2077,12 +2104,10 @@ class AComputedWordBeforeTheBoundsIsRefused(unittest.TestCase):
         runs = sorted(n - 2 for n in unbounded if n >= 2)
         examined("R5 members bash runs without the bounds", runs)
         verdicts = self.outcomes([script for _, _, script in members])
-        escaped = [
-            members[n][2]
-            for n in runs
-            if all(BOUNDED.search(line) for line in verdicts[n])
-        ]
-        self.assertEqual(escaped[:1], [], f"{len(escaped)} of {len(runs)} members that lose the bounds pass")
+        escaped = [members[n][2] for n in runs if all(BOUNDED.search(line) for line in verdicts[n])]
+        self.assertEqual(
+            escaped[:1], [], f"{len(escaped)} of {len(runs)} members that lose the bounds pass"
+        )
 
     def test_the_rule_refuses_exactly_an_unquoted_expansion_or_one_with_no_literal_but_dash(self):
         members = examined("R5 members", r5_members())
@@ -2093,7 +2118,9 @@ class AComputedWordBeforeTheBoundsIsRefused(unittest.TestCase):
             if r5_refused_by_rule(segments)
             != any(line.startswith("refused") for line in verdicts[n])
         ]
-        self.assertEqual(wrong[:1], [], f"{len(wrong)} of {len(members)} members differ from the rule")
+        self.assertEqual(
+            wrong[:1], [], f"{len(wrong)} of {len(members)} members differ from the rule"
+        )
 
     def test_the_designs_three_members_are_refused(self):
         scripts = [
