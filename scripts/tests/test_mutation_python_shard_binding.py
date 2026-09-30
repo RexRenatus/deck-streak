@@ -269,7 +269,8 @@ class TheReportIsBoundToItsSlotAndItsListing(unittest.TestCase):
         plan.mutants(slots[0]).append("not an object")
         code, named, output = plan.lay(slots)
         self.assertEqual((code, named), (3, {0}), output)
-        self.assertIn("0 missing () and 1 extra (?)", output)
+        self.assertIn("a mutant record of", output)
+        self.assertIn("not an object", output)
 
 
 #: The plans the one-reader population is generated over: this many shards each.

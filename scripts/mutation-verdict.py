@@ -98,6 +98,7 @@ from dataclasses import dataclass, field
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
+import mutation_python  # noqa: E402
 import mutation_rows  # noqa: E402
 
 EXIT_OK, EXIT_FAIL, EXIT_USAGE, EXIT_VOID = 0, 1, 2, 3
@@ -1396,8 +1397,8 @@ def memory_cap(
 def python_reports(verdict: Verdict, plan: dict, directory: str | None) -> list[tuple[str, dict]]:
     """(where, report) for each Python shard report the plan promised, from 0 to n-1: one missing,
     unreadable, not of the runner's schema, that records a failed restore, whose shard field is not
-    its slot's, or that examined other mutants than the plan lists for that shard is VOID by name
-    (SPEC-087 R11; SPEC-126 A8 and A9)."""
+    its slot's, that `read_python_shard` refuses, or that examined other mutants than the plan
+    lists for that shard is VOID by name (SPEC-087 R11; SPEC-126 A8 and A9)."""
     planned = (plan.get("python") or {}).get("count") or 0
     if not planned:
         verdict.void("the plan names no python shards, so no shard's report was promised")
@@ -1413,6 +1414,10 @@ def python_reports(verdict: Verdict, plan: dict, directory: str | None) -> list[
         except (OSError, ValueError):
             verdict.void(f"{where}: unreadable")
             continue
+        refusal = None
+        if isinstance(report, dict):
+            entries, refusal = read_python_shard(plan, report)
+            report = {**report, "files": entries}
         if not isinstance(report, dict) or report.get("schema") != PYTHON_SCHEMA:
             verdict.void(f"{where}: not of the schema {PYTHON_SCHEMA}")
         elif report.get("exit") == 4 or report.get("restore_failed"):
@@ -1422,6 +1427,8 @@ def python_reports(verdict: Verdict, plan: dict, directory: str | None) -> list[
                 f"{where}: the report's shard field {report.get('shard')!r} is not this slot's "
                 f"{shard}/{planned}, so it is not this shard's work"
             )
+        elif refusal is not None:
+            verdict.void(f"{where}: {refusal}")
         elif (drift := shard_listing_drift(plan, shard, report)) is not None:
             verdict.void(f"{where}: {drift}")
         else:
@@ -1429,9 +1436,52 @@ def python_reports(verdict: Verdict, plan: dict, directory: str | None) -> list[
     return whole
 
 
+def read_python_shard(plan: dict, report: dict) -> tuple[list[dict], str | None]:
+    """The one reader of a shard's report: (the file entries the verdict will judge, None), or
+    ([], why the report is refused). Both the listing binding and the judge read this yield and
+    nothing else, so they cannot read a report differently. A container of another JSON type, a
+    mutant whose outcome is not the runner's, and a mutant filed under a path no applicable class
+    reads are all refused; a missing container reads as empty, as it always did."""
+    classes = plan.get("classes") or {}
+    served = {
+        name
+        for name in ("scripts", "oracle")
+        if isinstance(classes.get(name), dict) and classes[name].get("applies")
+    }
+    files = report.get("files", [])
+    if not isinstance(files, list):
+        return [], f"its files is a {type(files).__name__}, not a list"
+    read = []
+    for entry in files:
+        if not isinstance(entry, dict):
+            return [], f"an entry of its files is a {type(entry).__name__}, not an object"
+        path = str(entry.get("path"))
+        mutants = entry.get("mutants", [])
+        if not isinstance(mutants, list):
+            return [], f"the mutants of {path} is a {type(mutants).__name__}, not a list"
+        if classify(path) not in served:
+            if mutants:
+                return [], f"it files {len(mutants)} mutant(s) under {path}, which no class reads"
+            continue
+        readers = entry.get("byte_readers")
+        if readers and not isinstance(readers, list):
+            return [], f"the byte readers of {path} is a {type(readers).__name__}, not a list"
+        for mutant in mutants:
+            if not isinstance(mutant, dict):
+                return [], f"a mutant record of {path} is a {type(mutant).__name__}, not an object"
+            outcome = mutant.get("outcome")
+            if not isinstance(outcome, str) or outcome not in mutation_python.OUTCOMES:
+                return [], (
+                    f"a mutant of {path} has the outcome {outcome!r}, which is none of the "
+                    f"runner's {', '.join(mutation_python.OUTCOMES)}"
+                )
+        read.append(entry)
+    return read, None
+
+
 def shard_listing_drift(plan: dict, shard: int, report: dict) -> str | None:
-    """Why `report` did not examine exactly the mutants the plan lists for `shard`, or None when it
-    did. Each side is a multiset of names, so a duplicate, a missing mutant and an extra one all
+    """Why `report` (as `read_python_shard` yields it) did not examine exactly the mutants the plan
+    lists for `shard`, or None when it did. Each side is a multiset of names, so a duplicate, a missing mutant and an extra one all
     differ, and a report that holds as many mutants as listed but not the same ones differs too."""
     held = next(
         (
@@ -1443,13 +1493,9 @@ def shard_listing_drift(plan: dict, shard: int, report: dict) -> str | None:
     )
     if held is None or not isinstance(held.get("mutants"), list):
         return "the plan lists no mutants for this shard"
-    files = report.get("files")
     listed = Counter(str(name) for name in held["mutants"])
     examined = Counter(
-        str(mutant.get("name")) if isinstance(mutant, dict) else "?"
-        for entry in (files if isinstance(files, list) else [])
-        if isinstance(entry, dict)
-        for mutant in entry.get("mutants") or []
+        str(mutant.get("name")) for entry in report["files"] for mutant in entry.get("mutants", [])
     )
     missing = sorted((listed - examined).elements())
     extra = sorted((examined - listed).elements())
