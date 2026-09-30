@@ -205,3 +205,13 @@ written against, so they have no red commit. With that mutant installed, two of 
 fail. The last test was written to kill a parse that accepts a non-empty prefix, a non-empty
 suffix or an undeclared alias of a declared name; with any of those installed, it fails and the
 other tests pass.
+
+DISCLOSURE, the parse's form test (A31): `the_parse_is_pinned_to_one_comparison_of_the_text_with_each_declared_name`
+was written at 4969e88e, after the code, because it pins code that is already exact, so it has no
+red commit. Its non-vacuity is measured by planting parses that accept other texts (surrounding
+whitespace, case folds, separators, repeats, nearest names and one extra character): each fails the
+pin.
+
+```red-first
+A31: not red: the parse was already exact at 9697ee13; the test pins its form, and a parse that accepts another text fails it
+```

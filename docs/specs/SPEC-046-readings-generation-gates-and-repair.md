@@ -352,3 +352,28 @@ S04644 pin the class type's list and its names (killed by
   (R13).
 - **Two writers of the readings folder** while both run side by side. Prevented by the first live
   night's one-writer prerequisite (SPEC-053).
+
+## 7. Amendment, 2026-09-30: the parse's form is pinned
+
+Section 4 says text becomes a class only when it is a declared name, exactly. The parse's tests give
+it a fixed list of near texts, which covers the texts they list and no others. A second test now
+reads the kernel's sources and pins the parse's form: one comparison of the text with each declared
+name, and no other way for text to become a class. With that form fixed, a text parses to a class
+only when the class's name equals the text, whatever the names and the list are.
+
+| file | crate | change |
+|---|---|---|
+| `crates/kernel/tests/gate_class.rs` | `deck-streak-kernel` | added: a test pins the parse's form (A31) |
+| `scripts/mutation-rows.d/S04600-S04699.json` | (rows) | added: S04646 pins the parse's form (killed by `gate_class::the_parse_is_pinned_to_one_comparison_of_the_text_with_each_declared_name`) |
+
+A source-form pin is a text test, so a reformat of the parse updates the pin in the same commit.
+
+## 8. Acceptance criteria of the 2026-09-30 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A31 | a text parses to a class only through the pinned form, so the class it yields is named by exactly that text | `the_parse_is_pinned_to_one_comparison_of_the_text_with_each_declared_name` |
+
+```acceptance
+A31: cargo test -p deck-streak-kernel --test gate_class -- --exact the_parse_is_pinned_to_one_comparison_of_the_text_with_each_declared_name
+```

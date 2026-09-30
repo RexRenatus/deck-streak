@@ -113,3 +113,37 @@ pack failure, hold the type. The crate graph gains no edge.
 
 SPEC-046 A28 and A29, the two population tests in `readings_trust.rs` and the configured-class test in
 `repair.rs`, and rows S04642 to S04644, which pin the parse, the list and the names.
+
+## Amendment, 2026-09-30: the parse's form is pinned
+
+### Context
+
+The exact parse was tested on a fixed list of near texts. A list of texts closes the shapes it
+names, so a parse that differs from the exact one only on texts outside the list passed every test.
+
+### Considered options
+
+- Pinning the parse's form with one test of the kernel's sources: chosen, because with the form fixed
+  a text parses to a class only when the class's name equals the text, for any names and any list.
+- A wider list of near texts: rejected, because it is still a finite list, so the class stays open
+  and the next text outside it passes.
+- Narrowing the words to the texts the test lists: rejected, because it leaves the rule in section 4
+  of SPEC-046 unproved in code.
+
+### Decision
+
+A kernel test reads every source file of the kernel and pins the parse's whole text, with whitespace
+removed, and asserts that no other trait impl, derive, conversion or module can turn text into a
+class. Section 4 of SPEC-046 and the word "exactly" above stay: the pin makes them true in code.
+
+### Consequences
+
+- Good, because the rule holds by construction for every text, not for the listed ones.
+- Bad, because a source-form pin is a text test, so a reformat of the parse updates the pin in the
+  same commit.
+- Bad, because code the build selects stays outside it (#473), as before.
+
+### Confirmation
+
+SPEC-046 A31, and row S04646, which installs a parse that changes the comparison and is killed by
+the pin.
