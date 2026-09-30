@@ -545,9 +545,15 @@ class Word:
     `raw` as written, `dynamic` when an expansion decides it, `io` for a redirection's number,
     and `texts`, what it hands on: its value, an assignment's value, or a here-document's body."""
 
-    def __init__(self, value, raw, dynamic, io, texts=None):
+    def __init__(self, value, raw, dynamic, io, texts=None, bare=False):
         self.value, self.raw, self.dynamic, self.io = value, raw, dynamic, io
         self.texts = [] if texts is None else texts
+        self.bare = bare  # an expansion stands outside double quotes, where bash splits its result
+
+    def can_be_dashes(self):
+        """Whether an expansion can leave the word as exactly `--`: bash splits an unquoted one into
+        words of its own, and a word with no literal character besides `-` is whatever it expands to."""
+        return "\0" in self.value and (self.bare or all(c in "\0-" for c in self.value))
 
     def shown(self):
         text = self.raw if self.dynamic else self.value
@@ -650,11 +656,11 @@ class Shell:
         self.commands.append(words)
 
     def word(self, element=False):
-        start, value, dynamic = self.i, [], False
+        start, value, dynamic, bare = self.i, [], False, False
         if self.text.startswith(("<(", ">("), self.i):
             self.i += 2
             self.read(closer=True)
-            value, dynamic = ["\0"], True
+            value, dynamic, bare = ["\0"], True, True
         while True:
             c = self.at()
             if not c or c in " \t\n;&|<>)":
@@ -669,7 +675,7 @@ class Shell:
                 if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*\+?=", self.text[start : self.i]):
                     break
                 self.array()
-                value, dynamic = value + ["\0"], True
+                value, dynamic, bare = value + ["\0"], True, True
             elif c == "\\":
                 if self.at(1) != "\n":
                     value.append(self.at(1) or "\\")
@@ -683,10 +689,12 @@ class Shell:
             elif c == '"':
                 dynamic = self.double_quoted(value) or dynamic
             elif c == "$":
+                expansions = value.count("\0")
                 dynamic = self.dollar(value, quoted=False) or dynamic
+                bare = bare or value.count("\0") > expansions
             elif c == "`":
                 self.backquote()
-                value, dynamic = value + ["\0"], True
+                value, dynamic, bare = value + ["\0"], True, True
             elif c == "[" and (
                 # bash reads a subscript as one word after a name, and at an array element's start
                 re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", self.text[start : self.i])
@@ -713,7 +721,7 @@ class Shell:
         assignment = ASSIGNMENT.match(text)
         texts = [text] if SPECIAL.search(text) else []
         texts = [t for t in texts + [text[assignment.end() :] if assignment else ""] if suspect(t)]
-        return Word(text, raw, dynamic or "\0" in text, io, texts)
+        return Word(text, raw, dynamic or "\0" in text, io, texts, bare)
 
     def double_quoted(self, value):
         self.i += 1
@@ -979,6 +987,21 @@ def mutants_of(words, handed=False):
             if w.value == "mutants":
                 args = [x.shown() for x in words[p:]]
                 cut = next((k for k in range(q - p, len(args)) if args[k] == "--"), len(args))
+                # R5: a word before the bounds that bash can expand to exactly `--` ends cargo's
+                # options there, so the bounds after it are the test tool's, and the guard cannot
+                # tell from the text whether it does.
+                bounds = BOUNDS.split()
+                where = next(
+                    (
+                        k
+                        for k in range(q - p, len(args))
+                        if args[k : k + len(bounds)] == bounds and k < cut
+                    ),
+                    len(args),
+                )
+                for early in words[q + 1 : p + where]:
+                    if early.can_be_dashes():
+                        raise Refused(f"a word bash computes before the bounds: {early.raw}")
                 found.append(
                     " ".join(args[:cut] + (["\\x20".join(args[cut:])] if args[cut:] else []))
                 )
