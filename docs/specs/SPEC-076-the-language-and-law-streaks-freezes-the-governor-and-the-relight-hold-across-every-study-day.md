@@ -350,6 +350,15 @@ accessibility packs stay enforced, and no row is deferred for this delivery.
 | `docs/decisions/ADR-076-the-law-streak-is-evaluated-every-study-day-so-it-decays.md` | docs | changed: accepted |
 | `docs/red-first/SPEC-076.md` | docs | added |
 | `changelog.d/feat-streaks-076.md` | repo | added: the changelog fragment |
+| `crates/streaks/tests/population_rules.rs` | `deck-streak-streaks` | added: the generated populations of A26 to A32 |
+| `crates/streaks/tests/store_effects.rs` | `deck-streak-streaks` | added: the store's read-back populations (A33) |
+| `crates/streaks/tests/silence_walk_bound.rs` | `deck-streak-streaks` | added: the bounded walk against a test-only copy of the earlier loop, and its cap edge (A38, A39) |
+| `crates/coordination/tests/streak_views.rs` | `deck-streak-coordination` | added: the views' populations (A34) |
+| `scripts/mutation-equivalent.d/deck-streak-streaks.json` | repo | added: the eight equivalent mutants of `civil_month` |
+| `web/app/src/lib/streak/streak.test.ts` | repo | added: the date rule and the readers' populations (A40) |
+| `web/app/src/lib/streak/streak-screen-population.test.ts` | repo | added: the screen's populations (A40) |
+| `web/app/src/lib/api-streak.test.ts` | repo | added: the client's call record (A40) |
+| `web/app/src/routes/streak.test.ts` | repo | added: the page's call record (A40) |
 
 ## 5. What this does NOT do
 
@@ -445,6 +454,7 @@ selects exactly one test, and each is proved with its file restored byte for byt
 | `S07608-STRENGTH-HALVES-IN-THIRTEEN-DAYS` | `crates/streaks/src/constants.rs` | the strength half-life | `governor_goldens::strength_and_the_verdict_match_the_parity_goldens` |
 | `S07609-ONE-STANDBY-NOTICE-A-WEEK` | `crates/streaks/src/governor.rs` | no notice within 7 days of the last | `governor_goldens::the_standby_notice_rule_matches_the_parity_golden` |
 | `S07610-THE-RELIGHT-NEEDS-THREE-REVIEWS` | `crates/streaks/src/constants.rs` | a return day relights at 3 reviews | `relight_rule::the_relight_rule_matches_the_parity_golden` |
+| `S07611-THE-SILENCE-WALK-READS-ONE-PAST-THE-CAP` | `crates/streaks/src/governor.rs` | the walk counts up to one day past the cap | `silence_walk_bound::the_walk_stops_at_the_cap_from_the_specs_words` |
 
 ## 10. Amendment, 2026-09-29: the prerequisite is SPEC-049's lapse slice, not the whole of SPEC-049
 

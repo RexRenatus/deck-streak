@@ -118,3 +118,21 @@ with the mutant that turns it red, applied by hand under a 16 GiB address-space 
 - **A40 not red.** The web tests are new files with no prior head: `$` dropped from the date
   regex, `law.current >= 0`, the freezes `&&` to `||`, the stake test to `true`, `?? 1`, the
   governor URL typo, `{void 0}`, and `typeof ... !== 'string'` to `false` each turn one red.
+
+```red-first
+A26: not red: the test pins a rule the code already held, so it is green at the head; the mutant that turns it red is named in this addendum
+A27: not red: the test pins a rule the code already held, so it is green at the head; the mutant that turns it red is named in this addendum
+A28: not red: the test pins a rule the code already held, so it is green at the head; the mutant that turns it red is named in this addendum
+A29: not red: the test pins a rule the code already held, so it is green at the head; the mutant that turns it red is named in this addendum
+A30: not red: the test pins a rule the code already held, so it is green at the head; the mutant that turns it red is named in this addendum
+A31: not red: the test pins a rule the code already held, so it is green at the head; the mutant that turns it red is named in this addendum
+A32: not red: the test pins a rule the code already held, so it is green at the head; the mutant that turns it red is named in this addendum
+A33: not red: the test pins a rule the code already held, so it is green at the head; the mutant that turns it red is named in this addendum
+A34: not red: the test pins a rule the code already held, so it is green at the head; the mutant that turns it red is named in this addendum
+A35: not red: the test pins a rule the code already held, so it is green at the head; the mutant that turns it red is named in this addendum
+A36: not red: the test pins a rule the code already held, so it is green at the head; the mutant that turns it red is named in this addendum
+A37: not red: the test pins a rule the code already held, so it is green at the head; the mutant that turns it red is named in this addendum
+A38: not red: the test pins a rule the code already held, so it is green at the head; the mutant that turns it red is named in this addendum
+A39: not red: the test pins a rule the code already held, so it is green at the head; the mutant that turns it red is named in this addendum
+A40: not red: the test pins a rule the code already held, so it is green at the head; the mutant that turns it red is named in this addendum
+```
