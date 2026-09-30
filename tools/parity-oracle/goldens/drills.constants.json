@@ -1,0 +1,79 @@
+{
+  "cases": [
+    {
+      "input": {
+        "name": "vault_bridge.DRILL_POSTBACK_XP"
+      },
+      "output": 15
+    },
+    {
+      "input": {
+        "name": "vault_bridge.DRILL_XP_MIN"
+      },
+      "output": 10
+    },
+    {
+      "input": {
+        "name": "vault_bridge.DRILL_XP_MAX"
+      },
+      "output": 25
+    },
+    {
+      "input": {
+        "name": "vault_bridge.DEFER_REASON_MAX_LEN"
+      },
+      "output": 120
+    },
+    {
+      "input": {
+        "name": "vault_bridge._READY_UNTICKED"
+      },
+      "output": "- [ ] **Ready for grading**"
+    },
+    {
+      "input": {
+        "name": "vault_bridge._READY_TICKED"
+      },
+      "output": "- [x] **Ready for grading**"
+    },
+    {
+      "input": {
+        "name": "bot._MAX_CALLBACK_DATA"
+      },
+      "output": 64
+    },
+    {
+      "input": {
+        "name": "bot._DRILL_TOKEN_HASH_LEN"
+      },
+      "output": 20
+    },
+    {
+      "input": {
+        "name": "bot._DRILLS_KEYBOARD_LIMIT"
+      },
+      "output": 12
+    },
+    {
+      "input": {
+        "name": "curriculum.LAW_DRILL_ALIASES"
+      },
+      "output": {
+        "c": "case-brief",
+        "i": "irac",
+        "o": "outline",
+        "u": "rule-statement"
+      }
+    }
+  ],
+  "function": "drills.constants",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "constants",
+  "registry": "tools/parity-oracle/registry/spec_110.py",
+  "registry_sha256": "d058393f8eb4b64bb586d0f495e756d6bb23e9dfee189e8f89def4160897befe",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

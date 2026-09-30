@@ -1151,8 +1151,11 @@ dependencies = [
  "deck-streak-kernel",
  "serde",
  "serde_json",
+ "sqlx",
  "tempfile",
  "thiserror",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]

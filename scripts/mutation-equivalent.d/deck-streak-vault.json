@@ -98,6 +98,24 @@
       "evidence": "Under && the pre-check never refuses (all() holds on no digits); i128's from_str accepts exactly an optional '+' or '-' and one or more ASCII digits, the shape the pre-check requires, and parse's map_err gives Malformed::RollsNotAWholeNumber as the pre-check did.",
       "reached_by": "roll::rolling_a_note_matches_the_parity_golden",
       "issue": "#276"
+    },
+    {
+      "file": "crates/vault/src/drills.rs",
+      "mutant": "replace match guard at > 0 with true in type_of",
+      "anchor": "Some(at) if at > 0",
+      "reason": "A guard that always holds sends a date at the stem's start to the first arm, whose empty prefix equals the fallback arm's empty string.",
+      "evidence": "With at == 0, stem[..0].trim_end_matches('-') is the empty string, which is what the fallback arm's String::new() returns, so the guard changes no result; a match at 0 is the only input the guard refuses.",
+      "reached_by": "drill_goldens::the_drill_views_match_the_predecessors_golden",
+      "issue": "#136"
+    },
+    {
+      "file": "crates/vault/src/drills.rs",
+      "mutant": "replace > with >= in type_of",
+      "anchor": "if at > 0 =>",
+      "reason": "Admitting a date at the stem's start to the first arm gives its empty prefix, the same empty string as the fallback arm.",
+      "evidence": "With at == 0, stem[..0].trim_end_matches('-') is the empty string, which is what the fallback arm's String::new() returns, so the guard changes no result; a match at 0 is the only input the guard refuses.",
+      "reached_by": "drill_goldens::the_drill_views_match_the_predecessors_golden",
+      "issue": "#136"
     }
   ]
 }

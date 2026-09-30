@@ -194,7 +194,7 @@ fn the_daily_sync_slot_keeps_off_the_predecessors_ticks_and_every_other_slot() {
     println!("examined {compared} slot(s) of the other jobs against the sync's");
     assert_eq!(
         compared,
-        24 * 25,
+        24 * 49,
         "every other job's slots, at every rollover hour"
     );
 }
@@ -434,6 +434,33 @@ fn neutral_calendar(schedule: Schedule, rule: StudyDayRule) -> String {
         let minute = schedule.minute();
         format!("*-*-* *:{minute:02}:00 UTC")
     }
+}
+
+#[test]
+fn the_job_table_holds_the_drill_postback() {
+    assert!(
+        TABLE.contains(&jobs::DRILL_POSTBACK),
+        "the table lists the drill post-back"
+    );
+    let job = jobs::job("drill_postback").unwrap_or(jobs::DRILL_POSTBACK);
+    assert_eq!(
+        jobs::job("drill_postback"),
+        Some(job),
+        "the table looks the job up by its id"
+    );
+    assert_eq!(job, jobs::DRILL_POSTBACK, "the table's entry");
+    assert_eq!(
+        job.schedule,
+        Schedule::Hourly { minute: 19 },
+        "hourly, at minute 19"
+    );
+    assert!(!job.catch_up, "a missed post-back is not run late");
+    assert!(TABLE.contains(&job), "the table lists the job");
+    assert!(
+        !RESERVED_MINUTES.contains(&i64::from(job.schedule.minute())),
+        "a reserved minute"
+    );
+    println!("examined {} job(s) of the table", TABLE.len());
 }
 
 #[test]

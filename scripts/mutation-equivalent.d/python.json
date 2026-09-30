@@ -1,0 +1,13 @@
+{
+  "records": [
+    {
+      "file": "scripts/mutation_python.py",
+      "mutant": "replace \".\" with \"\" in child",
+      "anchor": "pathlib.Path(entry or \".\").resolve() != here",
+      "reason": "An empty path and the current directory are one path to pathlib.",
+      "evidence": "pathlib.Path('') == pathlib.Path('.') is True and both resolve to the working directory, so an empty sys.path entry is kept or dropped exactly as before.",
+      "issue": "#340",
+      "reached_by": "test_mutation_python_lister_kills.TheChildReportsWhatFailed.test_the_child_keeps_its_own_main_module_and_reports_a_pass"
+    }
+  ]
+}

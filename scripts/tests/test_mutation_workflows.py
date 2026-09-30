@@ -22,6 +22,15 @@ WEEKLY = WORKFLOWS / "mutation-weekly.yml"
 CI = WORKFLOWS / "ci.yml"
 VERDICT = REPO / "scripts" / "mutation-verdict.py"
 BRIEF = REPO / "docs" / "BUILDER-BRIEF.md"
+ZERO_SCOPE = {
+    "in_force": True,
+    "state": "done",
+    "reason": None,
+    "oom": 0,
+    "oom_kill": 0,
+    "max": 0,
+    "peak_percent": 0,
+}
 EXAMINED = re.compile(r"^examined (\d+)", re.MULTILINE)
 INSTALL = re.compile(r"(?m)^\s*tool: cargo-mutants@27\.1\.0$")
 #: Each mutation job's job-level conditions (SPEC-290): the plan and the web job always start, the
@@ -376,7 +385,8 @@ class TheShardsAreThePlans(unittest.TestCase):
         # The verdict runs whatever the shards returned, reads every artifact, and counts the
         # shards the plan promised rather than the ones that reported.
         self.assertRegex(
-            verdict, r"(?m)^    needs: \[mutation-plan, mutation-rust, mutation-rows\]$"
+            verdict,
+            r"(?m)^    needs: \[mutation-plan, mutation-rust, mutation-python, mutation-rows\]$",
         )
         self.assertRegex(verdict, r"(?m)^    if: \$\{\{ always\(\) \}\}$")
         self.assertRegex(verdict, r"(?m)^\s+pattern: mutation-rust-shard-\*$")
@@ -488,6 +498,7 @@ def shard(reports, number, entries, code="2"):
     """Shard `number`'s artifact: its exit and, unless `entries` is None, its outcomes.json."""
     directory = reports / f"mutants-shard-{number}"
     (directory / "mutants.out").mkdir(parents=True)
+    (directory / "memory-scope.json").write_text(json.dumps(ZERO_SCOPE), encoding="utf-8")
     (directory / "cargo-mutants.exit").write_text(f"{code}\n", encoding="utf-8")
     if entries is None:
         return
