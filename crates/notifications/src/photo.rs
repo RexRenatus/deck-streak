@@ -78,6 +78,21 @@ impl FileId {
     }
 }
 
+/// Whether `caption` is within the Bot API's caption bound, in UTF-16 units. The photo and the
+/// prepared share both ask this one function, so what one accepts the other accepts. The Bot API
+/// counts a caption after its entities are parsed; the caption is counted as written, which only
+/// ever over-counts its markup, so no caption the bound accepts is one Telegram would cut.
+///
+/// # Errors
+///
+/// [`PhotoError::Caption`] when the caption is over the bound.
+pub fn check_caption(caption: &str) -> Result<(), PhotoError> {
+    if caption.encode_utf16().count() > MAX_CAPTION_UTF16 {
+        return Err(PhotoError::Caption);
+    }
+    Ok(())
+}
+
 /// A photo the router may send.
 #[derive(Clone, PartialEq, Eq)]
 pub struct Photo {
@@ -113,9 +128,7 @@ impl Photo {
             return Err(PhotoError::Ratio);
         }
         let caption = caption.into();
-        if caption.encode_utf16().count() > MAX_CAPTION_UTF16 {
-            return Err(PhotoError::Caption);
-        }
+        check_caption(&caption)?;
         Ok(Self { bytes, caption })
     }
 
