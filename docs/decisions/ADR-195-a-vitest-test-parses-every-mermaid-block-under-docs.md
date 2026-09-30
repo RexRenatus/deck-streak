@@ -121,7 +121,7 @@ generator unexamined, which would make the mutation run examine nothing for it. 
 Both are exact devDependencies of `web/app`. They come from the existing lockfile through the
 existing `pnpm install --frozen-lockfile` step. That step runs first in the `web` job, whose
 `scripts/check.sh web` runs `pnpm -r test` (its log on this pull request shows the install, then
-`examined 191 mermaid blocks`), and in both Stryker jobs (`mutation-web` and the weekly battery's
+`examined 193 mermaid blocks`), and in both Stryker jobs (`mutation-web` and the weekly battery's
 `web`) before Stryker starts Vitest. Nothing is fetched at test time, and no step is added. `pnpm audit` over the lockfile reports no advisory. The test
 imports the parser statically, so without it the test file fails to load and the `web` job fails:
 it is never skipped.
@@ -159,19 +159,19 @@ or reads with other text; a CODE-READ is a text GitHub shows as code that the re
 Each rule that reads a text as it judges GitHub does reads some otherwise, because GitHub's reading
 of a fence depends on its HTML parse of the whole page: raw HTML anywhere before a fence can take
 its `<pre>` into an element or an attribute value, and each new form of that is a new escape. A
-reader widened by more forms does not close the class. The chosen reader closes it by construction.
-It reads a declared subset, on which commonmark.js and cmark-gfm open the same fences with the same
-text: the subset leaves out each difference cmark-gfm's source shows (a byte-order mark, the
-vertical tab and form feed, the line and paragraph separators, raw HTML, a character reference in the
-info string) and corrects the one it keeps (a fence's indentation). Every line on which cmark-gfm
-could open a `mermaid` fence is either the first line of a block the reader reads or a line it
-refuses, and all raw HTML that could write, take in or drop a `<pre>` is refused. So a diagram
-GitHub draws is either read or named, and a form the reader does not know is refused, not read. It
-read 50,329 texts as GitHub renders them, refused 42,462 by name, and read none
-otherwise. Of the 38,789 distinct texts it refuses, GitHub draws a diagram in
-13,640, and SPEC-195 §6 names them by form, as refused by design. The documents hold
-none of those forms: they read 191 blocks, the same 191 with the same text, and nothing is refused.
-It adds no dependency.
+reader widened by more forms does not close the class. The chosen reader was built to close it by
+construction. It reads a declared subset, on which commonmark.js and cmark-gfm open the same fences
+with the same text: the subset leaves out each difference cmark-gfm's source shows (a byte-order
+mark, the vertical tab and form feed, the line and paragraph separators, raw HTML, a character
+reference in the info string) and corrects the one it keeps (a fence's indentation). Every line on
+which cmark-gfm could open a `mermaid` fence is either the first line of a block the reader reads or
+a line it refuses, and the raw HTML it found could write, take in or drop a `<pre>` is refused.
+Review of this round found two forms it read that GitHub shows as code, a fence in 100 or more block
+quotes and list items and a raw HTML line hidden from a CommonMark reading, and round 7 below closes
+both. It read 50,329 texts as GitHub renders them, refused 42,462 by name, and read none otherwise.
+Of the 38,789 distinct texts it refuses, GitHub draws a diagram in 13,640, and SPEC-195 §6 names
+them by form, as refused by design. The documents hold none of those forms: they read 191 blocks,
+the same 191 with the same text, and nothing is refused. It adds no dependency.
 
 Each part is needed. With one dropped at a time, over the 86,912 distinct texts:
 
@@ -218,11 +218,77 @@ before a letter is refused too; no member and no document holds one), none survi
 against recording the twenty as equivalent mutants, which they are not: each changes what the reader
 does, and the test fails on it once it fails inside a test.
 
-- Good, because a form the check does not read as GitHub does fails by name, so the class holds for
-  forms nobody has listed.
-- Bad, because a document cannot hold a diagram in a form the reader refuses (a word after
-  `mermaid`, a byte-order mark, raw HTML at the start of a line before it), though GitHub draws one in
-  some of them; the refusal names the line, and the writer moves the diagram out of the form.
+- Good, because each form the reader lists fails by name, with its line, rather than being read.
+- Bad, because a document could not hold a diagram in a form this reader refused, though GitHub drew
+  one in 13,640 of the 38,789 distinct texts it refused, counted under the first form: a refused
+  character 795 of 1,544, a raw HTML block 869 of 3,347, raw inline HTML 799 of 870, a `<` at the
+  start of a line 188 of 206, an info string that holds `mermaid` or a `&` and is not `mermaid`
+  alone 10,989 of 18,340, a fence in more than 99 lists 0 of 1, a blank block 0 of 3,560, and a line
+  that may open a fence and is not read 0 of 10,921; the refusal names the line, and the writer
+  moves the diagram out of the form.
+
+## Amendment, round 7: each refusal is derived from a limit or a start condition of cmark-gfm
+
+The decision above is unchanged, and so are the round-5 parse and the round-6 subset. Review of
+round 6 rendered 7,880 new texts and found 1,993 the reader read that GitHub shows as code, in two
+forms: a list item opened as the 100th or later block on its line, where cmark-gfm's depth limit
+counts block quotes as well as lists, and a line that opens raw HTML after a line that begins an
+inline construct (a code span, an attribute value, a link title or a lazy line), which a CommonMark
+reading takes as text inside the construct and cmark-gfm's block parse reads as the start of an HTML
+block. The class is unchanged. This round takes its refusals from cmark-gfm's own limits and start
+conditions rather than from the forms found, read on 2026-09-30 from cmark-gfm's `blocks.c`
+(`MAX_LIST_DEPTH` 100, counted over every block opened on a line and tested only for list items and
+footnote definitions), `inlines.c` (`MAXBACKTICKS` 80, the 32 nested parentheses of a link
+destination, and `MAX_LINK_LABEL_LENGTH` 1,000 bytes), its extended autolink, which takes text up to
+an ASCII blank or `<` while it parses inlines, its table extension, which splits a row at each `|`
+before it parses inlines and opens a table after the paragraph lines above it, and GitHub's page
+nesting, measured: a paragraph of 253 nested tags draws the diagram after it and one of 254 does
+not, and no diagram is drawn at or after that point.
+
+| rule | escapes, earlier populations (100,671 texts) | escapes, this round (2,379) | refused and drawn, distinct design texts | documents refused |
+|---|---|---|---|---|
+| round 6's reader | 1,993 | 249 | 13,640 | 0 |
+| (a) review's probe: block quotes and list items counted against 99, and every line that opens with `<` and a letter, `/`, `!` or `?` refused | 0 | 110 | 13,643 | 10 lines |
+| (b) (a) with a tag name folded to lower case, a list marker before a tab, and a lone carriage return as a line end | 0 | 110 | 13,643 | 10 lines |
+| (c) chosen: (a)'s depth, a page bound, the seven HTML block start conditions, and a tag trusted only in a code span cmark-gfm forms alike | 0 | 0 | 13,439 | 0 |
+
+(b) reads every text as (a) does: the round-6 reader already folds a tag name, takes a list marker
+before a tab and splits on a lone carriage return, so the three are gaps in the test, not in the
+reader, and this round's test holds each. (a) refuses ten lines of the documents at this head and at
+dev: a code span that opens its line with a placeholder tag name, and an autolink that opens its
+line. It also reads 110 of this round's texts that GitHub shows as code: a special tag hidden in a
+code span of 81 backticks, in a link destination of 33 parentheses or a long label, after an
+extended autolink, or in a table cell, and a paragraph nested past GitHub's bound. The chosen rule
+refuses a line only where cmark-gfm could open raw HTML on it, and a tag inside a line only where a
+code span may hide it from a CommonMark reading. A first form of the chosen rule read 55 of this
+round's texts otherwise, each where it approximated cmark-gfm on decoded text (a character reference
+or a no-break space in an autolink's tail, an escaped backslash before a parenthesis, an escaped
+bracket in a long label, a code span across a table's first row); the chosen rule reads those on the
+source text. The test's generator draws 244 more members: 193 from the reader's exported bounds and
+lists (`CONTAINER_DEPTH`, `PAGE_DEPTH`, `LINE_END`, `FENCE_PREFIX`, `CODE_TICKS`, `LINK_PARENS`,
+`LABEL_UNITS` and the tag list in upper case), each at its bound and past it, so a bound that moves
+moves a member, with each term of the page bound on its own and a list whose items pass it only
+together, the escapes, stray parentheses and parentheses closed and opened again that the reader's
+counts skip or keep, each character one of the reader's patterns decides on at the edge it decides,
+a special tag on the last line of a fence its text or its block quote closes, in a heading's code
+span and on a line of no paragraph or heading, and 51 that put a line that may open raw HTML inside
+each of 17 inline constructs that carry text across a line end (a code span, a link destination or
+title, an attribute value, a reference definition, emphasis, an image's text and a plain paragraph),
+as round 6's review rendered them. The test pins which members the reader reads, by a digest, beside
+how many: a reader that stopped skipping escapes before counting parentheses read one member more
+and one fewer, and the count alone held it.
+
+- Good, because each refusal names a limit or a start condition that cmark-gfm's source states, or
+  GitHub's page nesting as measured, and the test meets each bound the reader exports at its edge,
+  rather than listing the forms found.
+- Bad, because a document cannot hold a diagram in a form the reader refuses, though GitHub draws
+  one in 13,439 of the 38,588 distinct texts it refuses, counted under the first form: a refused
+  character 795 of 1,544, a block in more than 99 block quotes and list items 0 of 1, a block GitHub
+  may nest more than 240 elements deep 0 of 0, a line that may open raw HTML 1,345 of 3,908, raw
+  HTML a CommonMark reading may hide 256 of 260, an info string that holds `mermaid` or a `&` and is
+  not `mermaid` alone 10,989 of 18,340, a blank block 0 of 3,560, and a line that may open a fence
+  and is not read 54 of 10,975 (SPEC-195 §6); the refusal names the line, and the writer moves the
+  diagram out of the form.
 
 ## More Information
 

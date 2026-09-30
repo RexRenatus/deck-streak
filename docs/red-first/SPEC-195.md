@@ -111,3 +111,12 @@ A5: green at 071043ea
 ```
 
 At the reader's commit all nine tests pass, the reader reads 2,711 of the 8,750 generated members and refuses the other 6,039 by name, and 191 blocks are examined, the same 191 with the same text.
+
+Round 7 took each refusal from a limit or a start condition of cmark-gfm: a block in more than 99 block quotes and list items, a block GitHub may nest more than 240 elements deep, a line on which cmark-gfm may open raw HTML, and a special tag inside a line unless it stands in a code span both readers form alike. A5's generator draws 244 more members: each bound the reader exports, met at its edge and past it, with each term of the page bound on its own, and a line that may open raw HTML inside each inline construct that carries text across a line end: 8,994 members. The test, the generator and the re-recorded rendering were committed alone (b3b1bdbc) against the unchanged reader, with the bounds written in the generator, and the reader (55227769), which exports them, turned all nine tests green. The ninth test asserts fourteen members' refusals, form for form. The replay of A5 at the red commit, over the whole file, printed `Tests  2 failed | 7 passed (9)`. The first member read otherwise is `bound.qi.100`, a fence inside 100 block quotes and list items, alternating, where cmark-gfm opens no more than 99 on a line, which GitHub shows as code and round 6's reader reads:
+
+```text
+A5: red at b3b1bdbc: AssertionError: 39 of 2840 members read otherwise: expected [ …(3) ] to deeply equal []: round 6's reader read 39 of the 8,994 generated members otherwise than GitHub renders them, each a text GitHub shows as code, so two tests failed
+A5: green at 55227769
+```
+
+At the reader's commit all nine tests pass, the reader reads 2,934 of the 8,994 generated members and refuses the other 6,060 by name, and 191 blocks are examined, the same 191 with the same text.
