@@ -60,10 +60,11 @@ silently dropped?
   read 2026-09-30): plain names as keys, `- ` items, a plain scalar whose first character YAML does
   not reserve, a quoted scalar, a `|` or `|-` block, and a flow list of plain items with at most one
   trailing comma. Every other form is refused by its line, by a message that names the form.
-- Extending the reader's refusal list by each form found to pass it (a block scalar header other
-  than `|` and `|-`, a value starting with a character YAML reserves, a sequence item that is a
-  sequence or an explicit key, and a flow list with an empty entry): rejected. A refusal list closes
-  only the forms it lists; a form it does not list is read as its text, whatever YAML reads there.
+- Extending the reader's refusal list by each form found to pass it: rejected because a refusal
+  list closes only the forms it lists, and a form it does not list is read as its text, whatever
+  YAML reads there (the forms found were a block scalar header other than `|` and `|-`, a value
+  starting with a character YAML reserves, a sequence item that is a sequence or an explicit key,
+  and a flow list with an empty entry).
   Measured over a population generated from YAML's own constants, the extended list still accepted
   42 files whose value differs from YAML's reading (a `|-` block kept its final line feed), where
   the default-deny reader accepted none.

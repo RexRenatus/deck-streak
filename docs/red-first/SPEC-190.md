@@ -85,8 +85,13 @@ first a release workflow's name starting with `@`. They were the only tests of t
 failed. The named-form reader (c78bbc8) turned both green.
 
 ```red-first
-A10: red at b2fa82a: ["grammar: release.yml line 1 starting '@' is accepted", ...] (120 members) != []
-A10: green at c78bbc8
 A11: red at b2fa82a: [("item '#x'", ('read', {'k': ['#x']}), ...), ...] (498 forms) != []
 A11: green at c78bbc8
+```
+
+A10's replay over the same grammar members, quoted as text because A10 is recorded above:
+
+```text
+A10: red at b2fa82a: ["grammar: release.yml line 1 starting '@' is accepted", ...] (120 members) != []
+A10: green at c78bbc8
 ```
