@@ -20,6 +20,8 @@
 //! resolving. Its population is generated: every spelling of a lint, in every form of an
 //! attribute, at every place, planted in the bot's shipped sources.
 
+#![allow(clippy::expect_used)]
+
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -112,7 +114,7 @@ fn code_view(text: &str) -> String {
                 }
             }
         } else if let Some((quote, hashes)) = raw_string(&chars, at) {
-            out.extend(&chars[at..quote + 1]);
+            out.extend(&chars[at..=quote]);
             at = quote + 1;
             while at < chars.len() && !raw_end(&chars, at, hashes) {
                 out.push(emptied(chars[at]));
@@ -438,11 +440,11 @@ fn toml_key(code: &[char], key: &str) -> Option<usize> {
     let mut offset = 0;
     for line in text.split_inclusive('\n') {
         let rest = line.trim_start();
-        if let Some(after) = rest.strip_prefix(key) {
-            if after.trim_start().starts_with('=') {
-                let position = offset + (line.len() - rest.len()) + key.len();
-                return Some(text[..position].chars().count());
-            }
+        if let Some(after) = rest.strip_prefix(key)
+            && after.trim_start().starts_with('=')
+        {
+            let position = offset + (line.len() - rest.len()) + key.len();
+            return Some(text[..position].chars().count());
         }
         offset += line.len();
     }
@@ -562,11 +564,12 @@ fn workspace_files(root: &Path) -> Vec<(String, String)> {
                 continue;
             }
             let extension = path.extension().and_then(|e| e.to_str()).unwrap_or("");
-            if kind.is_file() && ["rs", "toml", "sh", "yml", "yaml"].contains(&extension) {
-                if let Ok(text) = fs::read_to_string(&path) {
-                    let relative = path.strip_prefix(root).expect("under the root");
-                    found.push((relative.to_string_lossy().replace('\\', "/"), text));
-                }
+            if kind.is_file()
+                && ["rs", "toml", "sh", "yml", "yaml"].contains(&extension)
+                && let Ok(text) = fs::read_to_string(&path)
+            {
+                let relative = path.strip_prefix(root).expect("under the root");
+                found.push((relative.to_string_lossy().replace('\\', "/"), text));
             }
         }
     }
@@ -579,7 +582,7 @@ fn audit(files: &[(String, String)]) -> (Vec<String>, Vec<(String, String, Strin
     let mut refused = Vec::new();
     let mut sites = Vec::new();
     for (path, text) in files {
-        if path.ends_with(".rs") {
+        if is_rust(path) {
             let (faults, found) = audit_source(path, text);
             refused.extend(faults);
             sites.extend(
@@ -594,6 +597,13 @@ fn audit(files: &[(String, String)]) -> (Vec<String>, Vec<(String, String, Strin
         }
     }
     (refused, sites)
+}
+
+/// Whether `path` names a Rust source.
+fn is_rust(path: &str) -> bool {
+    Path::new(path)
+        .extension()
+        .is_some_and(|extension| extension == "rs")
 }
 
 fn root() -> PathBuf {
@@ -715,11 +725,7 @@ fn the_only_suppression_of_the_rule_is_an_expect_at_a_named_transport_site() {
         files.len()
     );
     assert!(
-        files
-            .iter()
-            .filter(|(path, _)| path.ends_with(".rs"))
-            .count()
-            > 100,
+        files.iter().filter(|(path, _)| is_rust(path)).count() > 100,
         "the census examined the workspace's Rust sources"
     );
 }
@@ -729,7 +735,7 @@ fn a_suppression_of_the_rule_or_of_its_group_is_refused_wherever_it_is_planted()
     let root = root();
     let sources: Vec<(String, String)> = workspace_files(&root)
         .into_iter()
-        .filter(|(path, _)| path.starts_with("crates/bot/src/") && path.ends_with(".rs"))
+        .filter(|(path, _)| path.starts_with("crates/bot/src/") && is_rust(path))
         .collect();
     assert_eq!(sources.len(), 8, "the bot's eight sources are examined");
 

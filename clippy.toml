@@ -3,3 +3,14 @@ allow-unwrap-in-tests = true
 allow-expect-in-tests = true
 allow-dbg-in-tests = true
 allow-print-in-tests = true
+
+# Request capability is named by the compiler's resolved path (SPEC-041 A18): reqwest's client is
+# made only at the bot transport's annotated site, whatever name a source binds it to.
+disallowed-types = [
+    { path = "reqwest::Client", reason = "a request to the Bot API is made only by the bot transport's annotated site" },
+]
+disallowed-methods = [
+    { path = "reqwest::get", reason = "a request to the Bot API is made only by the bot transport's annotated site" },
+    { path = "reqwest::Client::new", reason = "a request to the Bot API is made only by the bot transport's annotated site" },
+    { path = "reqwest::Client::builder", reason = "a request to the Bot API is made only by the bot transport's annotated site" },
+]
