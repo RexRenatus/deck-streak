@@ -70,8 +70,12 @@ pub fn api_state(
     access: OwnerAccess,
 ) -> ApiState {
     let state = ApiState::new(readiness).with_owner(access);
-    match law_tier_source(env, offload) {
+    let state = match law_tier_source(env, offload) {
         Some(source) => state.with_law_tiers(source),
+        None => state,
+    };
+    match crate::drill_vault::open(env) {
+        Some(notes) => state.with_drills(notes),
         None => state,
     }
 }

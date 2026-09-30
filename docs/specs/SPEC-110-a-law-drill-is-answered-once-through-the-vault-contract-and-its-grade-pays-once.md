@@ -12,8 +12,8 @@
   files never deleted).
 - **Prerequisites:** SPEC-020, SPEC-021, SPEC-026, SPEC-027, SPEC-029, SPEC-040, SPEC-041, SPEC-042
   and SPEC-044. **Mutation band:** `S11000-S11099`.
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-110.md` (ADR-016).
+- **Status:** built: moved from `docs/specs/planned/` to `docs/specs/` by the delivery that
+  carries its tests and `docs/red-first/SPEC-110.md` (ADR-016).
 
 ## 1. The problem, measured
 
@@ -36,7 +36,9 @@
 - **Traps a hand port falls into.**
   - The override is read with Python's `int()`, which accepts surrounding whitespace, a sign and
     digit underscores, and refuses a decimal; a non-integer falls back to 15, never to 0. Rust's
-    integer parse differs on each of these, so the golden's cases name every one.
+    integer parse differs on each of these, so the golden's cases name every one. A full-width
+    digit is not an integer here (an ASCII digit is), where Python reads it, as the code's own
+    comment says; the value then falls back to 15.
   - `_parse_graded_drill` returns nothing, never an error, for a note with no frontmatter, a status
     other than `graded`, or an empty stem. Its outcome set is exactly {paid at the clamped XP, not
     gradeable}.
@@ -62,7 +64,17 @@ R1. The drills folder is the layout's `drill-coach` folder (`crates/vault/data/l
     its `Active` and `Graded` subfolders are the predecessor's (`drills.constants`). A missing
     `Active` or `Graded` folder is an empty list, never an error. A drill's id is its note's stem,
     and a stem that is empty or holds `/`, `\` or `..` is refused before any read
-    (`vault_bridge.py:_safe_stem`).
+    (`vault_bridge.py:_safe_stem`). Amended after review: every path the adapter lists, reads or
+    writes passes one gate (`DrillNotes::confined`, then the kind check of `regular_note`). It
+    follows no link, whether to a file, a directory, a link, nothing or a place inside the vault,
+    and whether the link is the note or the `Active` or `Graded` folder that holds it (the
+    adapter's rule, `crates/vault/src/fs.rs`), where the predecessor followed links. A link that is
+    the note reads as no note. A link at the `Active` or `Graded` folder is read by its resolve: a
+    link that resolves to another place is refused with `NotAFolder`; a link whose resolve finds
+    nothing (`NotFound`, a dangling link) reads as a missing folder (an empty list, and `NotActive`
+    for an answer); and a link whose resolve fails in any other way (a cycle of links, a path
+    through a file, a folder it may not search, a name too long) is an I/O error at the step `resolve a folder`.
+    The gate stands before `list_active`, `graded`, `view` and `answer` reach the file system.
 R2. The list, the unanswered list and the single view equal `goldens/drill_meta.json`
     (`vault_bridge.py:_read_drill_meta`, `list_active_drills`, `list_unanswered_drills`,
     `read_active_drill`): the id, the type (`_drill_type`), the subject, the title, the age in study
@@ -106,8 +118,10 @@ R9. The job `drill_postback` in `coordination::jobs::TABLE` (SPEC-027 R1), hourl
     parsed note, records the grade and asks the grant port (SPEC-040) for the clamped amount on the
     study day of the poll, source `drill:<drill id>`, track `law`, scope `once`. A missing vault
     root is the job's error (SPEC-027 R7 pages it once); a missing `Graded` folder pays nothing.
-    `economy.json` declares the pay once, as `xp.bonuses.drill_postback` (15, between 10 and 25).
-R10. A drill id is kept as-is when `drill:<id>` fits SPEC-040 R2's grammar (128 characters at most)
+    The pay (15, between 10 and 25) is declared once, as the vault's constants `POSTBACK_XP`, `XP_MIN` and `XP_MAX`
+    (ADR-047's one-home rule: the game-economy pack refuses a key its reference lacks, so `economy.json` does not carry it).
+R10. A drill id is kept as-is when `drill:<id>` fits SPEC-040 R2's grammar (128 characters at most,
+    so the id holds 128 less the six of `drill:`, derived from that constant and not restated)
     and the id does not begin with `h.`; every other id is keyed `drill:h.` followed by the first 32
     hex characters of the SHA-256 of the id (ADR-110), so a kept key never equals a hashed one.
 R11. `drill_grades` (the same migration) holds one row per drill: the type, the subject, the
@@ -218,7 +232,7 @@ when it merges.
 |---|---|---|
 | B1 | over `privacy.json`, `PRIVACY.md` and `crates/vault/src/data_rights.rs`: the `law-drills` category names `drill_answers` and `drill_grades` with purpose, basis and retention, and export and erase cover both | the privacy-gdpr pack |
 | B2 | over `crates/bot/src/drill_commands.rs` and `crates/bot/src/commands.rs`: every callback datum the drill keyboards build is 1 to 64 bytes, and every drill reply stays within the message length | the telegram-platform pack |
-| B3 | over `economy.json`'s `xp` section: the drill pay's 15, 10 and 25 are declared once | the game-economy pack |
+| B3 | over `economy.json`: its `xp` section is unchanged by this delivery and the pack still passes; the drill pay lives in the vault's constants only | the game-economy pack |
 
 ## 4. File manifest
 
@@ -236,7 +250,7 @@ when it merges.
 | `migrations/011001_vault_drills.sql` | `deck-streak-vault` | added: `drill_answers` and `drill_grades` |
 | `crates/coordination/src/drills.rs` | `deck-streak-coordination` | added: the answer use case and the post-back step |
 | `crates/coordination/src/jobs.rs` | `deck-streak-coordination` | changed: `drill_postback` |
-| `crates/coordination/src/runner.rs` | `deck-streak-coordination` | changed: the job's entrance |
+| `crates/coordination/src/runner.rs` | `deck-streak-coordination` | unchanged (amendment): the job's entrance is the daemon's job role, which dispatches the drill post-back |
 | `crates/coordination/src/lib.rs` | `deck-streak-coordination` | changed: the module |
 | `crates/coordination/src/data_rights_registry.rs` | `deck-streak-coordination` | changed: the vault's port and its two tables |
 | `crates/coordination/tests/data_rights_symmetry.rs` | `deck-streak-coordination` | changed: a seeded row in each table |
@@ -253,7 +267,6 @@ when it merges.
 | `crates/api/src/drill_routes.rs` | `deck-streak-api` | added: the three routes |
 | `crates/api/src/router.rs` | `deck-streak-api` | changed: the routes are mounted; `ApiState` gains the port |
 | `crates/api/tests/drill_routes.rs` | `deck-streak-api` | added: A19 |
-| `economy.json` | repo | changed: `xp.bonuses.drill_postback` |
 | `docs/CONTEXT-MAP.md` | docs | changed: the own-tables rows for `drill_answers` and `drill_grades` |
 | `privacy.json` | repo | changed: the `law-drills` category |
 | `PRIVACY.md` | docs | changed: one line for the category |
@@ -262,12 +275,39 @@ when it merges.
 | `scripts/mutation-rows.d/S11000-S11099.json` | repo | added: the rows of §9 |
 | `Cargo.lock`, `.sqlx/` | workspace | changed |
 | `docs/specs/SPEC-110-a-law-drill-is-answered-once-through-the-vault-contract-and-its-grade-pays-once.md` | docs | moved from `docs/specs/planned/` |
-| `docs/schematics/law-drill-answer-grade-and-pay.md` | docs | added by the W6 architect turn; this delivery corrects it only where the code proves it wrong |
+| `docs/schematics/law-drill-answer-grade-and-pay.md` | docs | unchanged (amendment): added by the W6 architect turn; the code proved no correction necessary |
 | `docs/red-first/SPEC-110.md` | docs | added |
 | `crates/daemon/src/role_job.rs` | `deck-streak-daemon` | changed: the `job` role dispatches `drill_postback` |
 | `crates/daemon/src/role_bot.rs` | `deck-streak-daemon` | changed: the bot role hands the drill notes' reader and the answer's writer to its commands at start (R13) |
 | `crates/daemon/src/role_api.rs` | `deck-streak-daemon` | changed: the api role hands the drill notes' reader and the answer's writer to `ApiState` at start |
 | `changelog.d/` fragment | repo | added |
+| `crates/vault/src/unicode_other.rs` | `deck-streak-vault` | changed (amendment): the drill Unicode table, a lookup compared at each boundary |
+| `crates/daemon/src/drill_vault.rs` | `deck-streak-daemon` | added (amendment): the roles open the drill notes from the environment; an unset vault is not a start refusal |
+| `crates/daemon/tests/roles.rs` | `deck-streak-daemon` | changed (amendment): the job usage line names the drill post-back |
+| `crates/coordination/src/lib.rs` | `deck-streak-coordination` | changed (amendment): the re-exports the bot and the api open the drills with |
+| `crates/api/src/session_routes.rs`, `crates/api/src/lib.rs` | `deck-streak-api` | changed (amendment): the state-change guard is crate-visible and the module is declared |
+| `crates/bot/tests/messages/help.msg.json`, `crates/bot/tests/messages/start.msg.json` | `deck-streak-bot` | changed (amendment): the menu goldens list the two drill commands |
+| `crates/bot/tests/commands.rs` | `deck-streak-bot` | changed (amendment): the menu entries |
+| `economy.json` | repo | dropped (amendment): ADR-047 keeps an amount v9's template lacks as a constant of its own context, and the game-economy pack refuses the key; R9's pay is the vault's constants, pinned by A21's golden and rows S11004-S11006 |
+| `crates/bot/src/lib.rs` | deck-streak-bot | changed (amendment): the drill modules are declared |
+| `crates/daemon/src/lib.rs` | deck-streak-daemon | changed (amendment): the `drill_vault` module is declared |
+| `crates/vault/src/drill_notes.rs` | deck-streak-vault | added (amendment): the drill notes' reader and answer writer |
+| `crates/vault/src/unicode_other_tests.rs` | deck-streak-vault | added (amendment): the literal boundary tests of the Unicode table |
+| `deploy/rail-contract.json` | deploy | changed (amendment): the `drill_postback` timer joins the rail census |
+| `deploy/README.md` | deploy | changed (amendment): the job list and table name `drill_postback` |
+| `deploy/scripts/effective-check.py` | deploy | changed (amendment): the instance pattern admits an underscore |
+| `scripts/tests/test_deploy_templates.py` | repo | changed (amendment): two waivers for the `drill_postback` timer |
+| `scripts/tests/test_rail_contract.py` | repo | changed (amendment): the `run_job` arms test excludes the drill post-back, which the job role dispatches |
+| `docs/decisions/ADR-110-a-graded-drill-is-recorded-once-and-paid-as-a-once-grant-keyed-by-its-drill.md` | docs | changed (amendment): accepted, with the Unicode amendment |
+| `docs/specs/SPEC-042-vault-adapter-core-and-readings-date-tree.md` | docs | changed (amendment): the dated amendment line R12 is owed |
+| `crates/vault/tests/drill_kills.rs` | deck-streak-vault | added (amendment): the post-green killers of the vault's drill mutants |
+| `crates/coordination/tests/drill_paid_count.rs` | deck-streak-coordination | added (amendment): the post-green killer of the post-back's paid count |
+| `crates/bot/tests/drill_replies.rs` | deck-streak-bot | added (amendment): the post-green killers of the drill label, list and view |
+| `crates/daemon/tests/drill_vault.rs` | deck-streak-daemon | added (amendment): the post-green killer of the drill vault's open |
+| `crates/daemon/tests/drill_routes_composed.rs` | deck-streak-daemon | added (amendment): the drill routes served through the composed router |
+| `scripts/mutation-equivalent.d/deck-streak-vault.json` | repo | changed (amendment): the two `type_of` equivalence records |
+| `crates/coordination/tests/drill_key_population.rs` | deck-streak-coordination | added (amendment): the population of ids of every length 1 to the grammar's limit plus 8, each key accepted by the grammar and the bound equal to the grammar's less the prefix |
+| `docs/specs/planned/SPEC-057-every-surviving-mutant-is-killed-or-recorded-equivalent-before-the-first-mutation-gated-release.md` | docs | changed (amendment): §7's vault row counts the two equivalents |
 
 ## 5. What this does NOT do
 
@@ -279,6 +319,10 @@ when it merges.
 - It adds no drill line to the morning brief (#122).
 - It imports no predecessor row; the v9 import does (#61).
 - It builds no settings screen for a drill setting (#57).
+- It cannot tell a hard link from a regular file: the adapter sees both as a file, so a note hard
+  linked to a file outside the vault is read (#442).
+- It closes no swap between the gate and the open: a link put in place after the gate has passed
+  and before the file is opened is followed (#442).
 
 ## 6. Risks
 
