@@ -7,6 +7,7 @@ secret but the default token, or checks out or fetches another repository (SPEC-
 a `.yaml` workflow is held to the hardening rules as a `.yml` one is, the hardening tests reading
 keys the way the checker does (A13)."""
 
+import collections
 import json
 import math
 import os
@@ -2714,6 +2715,169 @@ def planted_problems(text):
     with tempfile.TemporaryDirectory() as scratch:
         (Path(scratch) / "planted.yml").write_text(text, encoding="utf-8")
         return secret_and_checkout_problems(Path(scratch))[0]
+
+
+def read_primitives(source):
+    """Every call that reads a file in a module's source, as (enclosing function, receiver text)
+    pairs: `read_text`, `read_bytes` and `open`, the loader's own body left out. A call outside any
+    function is named `<module>`, so no read is one the census cannot place."""
+    import ast
+
+    tree = ast.parse(source)
+    parent = {child: node for node in ast.walk(tree) for child in ast.iter_child_nodes(node)}
+    found = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        name = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", "")
+        if name not in ("read_text", "read_bytes", "open"):
+            continue
+        scope = node
+        while scope in parent and not isinstance(scope, ast.FunctionDef):
+            scope = parent[scope]
+        inside = scope.name if isinstance(scope, ast.FunctionDef) else "<module>"
+        if inside != LOADER:
+            found.append(
+                (inside, ast.unparse(func.value) if isinstance(func, ast.Attribute) else name)
+            )
+    return found
+
+
+LOADER = "workflow_file_text"
+# The reads of a file that is no workflow: a script, a lock file, a configuration, a brief, a
+# ruleset, a log, a plan. Each is (module, function): how many reads that function makes.
+NOT_WORKFLOW_READS = {
+    ("test_ci_workflows", "gate_stages"): 1,
+    ("test_ci_workflows", "required_contexts"): 1,
+    ("test_ci_workflows", "run_step"): 1,
+    ("test_ci_workflows", "test_a_yaml_workflow_is_held_to_the_same_hardening_rules"): 1,
+    ("test_ci_workflows", "test_ci_runs_every_stage_of_the_local_gate"): 1,
+    ("test_ci_workflows", "test_the_browser_cache_is_keyed_on_the_locked_playwright_version"): 1,
+    (
+        "test_mutation_workflows",
+        "test_every_job_that_runs_cargo_mutants_installs_the_test_tool_it_names",
+    ): 1,
+    ("test_mutation_workflows", "test_the_builder_brief_teaches_the_equivalence_record"): 4,
+    ("test_mutation_workflows", "test_the_builder_brief_teaches_the_mutation_rules"): 1,
+    (
+        "test_mutation_workflows",
+        "test_the_configuration_check_refuses_what_stryker_would_read_otherwise",
+    ): 1,
+    ("test_mutation_workflows", "test_the_tool_configurations_load_under_their_own_rules"): 2,
+    ("test_mutation_workflows", "test_the_verdict_binds_every_record_against_the_whole_listing"): 3,
+    ("test_not_started_legs", "planned"): 1,
+    ("test_not_started_legs", "rewrite"): 1,
+    (
+        "test_not_started_legs",
+        "test_a_listed_leg_that_is_missing_or_not_started_is_refused_by_name",
+    ): 1,
+    ("test_not_started_legs", "test_an_examined_sum_that_differs_from_the_listing_is_refused"): 1,
+    ("test_not_started_legs", "test_the_verdict_step_fails_on_the_legs_check"): 1,
+}
+
+
+class WorkflowFilesAreReadAsBytes(unittest.TestCase):
+    """A workflow file reaches the reader as GitHub's parser is given it: its bytes, decoded as
+    UTF-8 and not translated (SPEC-190 R12). Every read of a workflow file in the test modules goes
+    through one loader, and a census of those modules' file reads is closed."""
+
+    RELEASE = (WORKFLOWS / "release.yml").read_text(encoding="utf-8")
+    BLOCK = "jobs:\n  a:\n    steps:\n      - run: |\n          echo a__\n          echo b\n"
+
+    def said(self, why):
+        return "; ".join(why.refused) if isinstance(why, Unread) else str(why)
+
+    def shapes(self):
+        """(label, bytes, what a read says): a lone carriage return in a committed-shape workflow,
+        one inside a block scalar's text, and a byte-order mark; each refused by name."""
+        held = "  cancel-in-progress: false\n  queue: max\n"
+        self.assertEqual(self.RELEASE.count(held), 1)
+        return (
+            (
+                "a carriage return inside the concurrency block",
+                self.RELEASE.replace(held, held.replace("\n  queue", "\r  queue", 1)).encode(),
+                "a carriage return that does not end a line",
+            ),
+            (
+                "a carriage return inside a block scalar",
+                self.BLOCK.replace("__", "\r").encode(),
+                "a carriage return that does not end a line",
+            ),
+            ("a byte-order mark", b"\xef\xbb\xbf" + self.RELEASE.encode(), "a byte-order mark"),
+        )
+
+    def readers(self, directory):
+        """Every loader the test modules read a workflow file with, each as a function of a name in
+        `directory`, the module's workflow directory pointed at it."""
+        import test_rust_cache_workflow as rust_cache
+        import test_workflow_concurrency as concurrency
+
+        here = sys.modules[__name__]
+
+        def through_concurrency(name):
+            with mock.patch.object(concurrency, "WORKFLOWS", directory):
+                (found,) = concurrency.read_all()
+            return found[1]
+
+        def through_rust_cache(name):
+            with mock.patch.object(rust_cache, "WORKFLOWS", directory):
+                return rust_cache.load(name)
+
+        def through_load(name):
+            with mock.patch.object(here, "WORKFLOWS", directory):
+                return load(name)
+
+        return (
+            ("load", through_load),
+            ("read_hardened", lambda name: read_hardened(directory / name)),
+            ("read_all", through_concurrency),
+            ("the cache tests' load", through_rust_cache),
+        )
+
+    def test_a_lone_carriage_return_or_a_byte_order_mark_in_a_file_is_refused_by_name(self):
+        for label, raw, phrase in self.shapes():
+            with tempfile.TemporaryDirectory() as scratch:
+                directory = Path(scratch)
+                (directory / "release.yml").write_bytes(raw)
+                for reader, read in self.readers(directory):
+                    with self.subTest(shape=label, reader=reader):
+                        try:
+                            read("release.yml")
+                        except AssertionError as why:
+                            self.assertIn(phrase, self.said(why))
+                        else:
+                            self.fail("the file was read, not refused")
+
+    def test_a_file_that_ends_its_lines_in_crlf_reads_as_the_same_file_ending_in_lf(self):
+        for text in (self.RELEASE, self.BLOCK.replace("__", "")):
+            with tempfile.TemporaryDirectory() as scratch:
+                directory = Path(scratch)
+                (directory / "release.yml").write_bytes(text.replace("\n", "\r\n").encode())
+                for reader, read in self.readers(directory):
+                    with self.subTest(reader=reader):
+                        self.assertEqual(read("release.yml"), read_workflow(text))
+
+    def test_every_file_read_in_the_test_modules_is_the_loader_or_a_named_non_workflow_read(self):
+        sites = collections.Counter()
+        modules = 0
+        for path in sorted(Path(__file__).parent.glob("test_*.py")):
+            source = path.read_text(encoding="utf-8")
+            if path.stem != Path(__file__).stem and "test_ci_workflows" not in source:
+                continue
+            modules += 1
+            for function, _receiver in read_primitives(source):
+                sites[(path.stem, function)] += 1
+        examined("test modules that read workflows", range(modules))
+        self.assertIn(f"def {LOADER}(", Path(__file__).read_text(encoding="utf-8"))
+        self.assertEqual(dict(sites), NOT_WORKFLOW_READS)
+
+    def test_the_census_is_red_on_a_read_it_does_not_name(self):
+        planted = "def extra(path):\n    return read_workflow(path.read_text(encoding='utf-8'))\n"
+        self.assertEqual(read_primitives(planted), [("extra", "path")])
+        self.assertEqual(read_primitives("TEXT = open('x').read()\n"), [("<module>", "open")])
+        loader = f"def {LOADER}(path):\n    return path.read_bytes().decode('utf-8')\n"
+        self.assertEqual(read_primitives(loader), [])
 
 
 if __name__ == "__main__":
