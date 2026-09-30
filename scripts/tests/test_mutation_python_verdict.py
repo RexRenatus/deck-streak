@@ -16,7 +16,7 @@ import unittest
 from pathlib import Path
 
 from _support import REPO, examined
-from test_mutation_verdict import Fixture, outcomes, stryker
+from test_mutation_verdict import Fixture, outcomes, stryker, write_scope
 
 SCHEMA = "deckstreak.mutation-python.v1"
 SCRIPT = "scripts/guard.py"
@@ -632,6 +632,7 @@ class TheVerdictReadsThePythonReports(unittest.TestCase):
         crate = fixture.out / "crate"
         (crate / "mutants-shard-0" / "mutants.out").mkdir(parents=True)
         (crate / "mutants-shard-0" / "cargo-mutants.exit").write_text("0\n", encoding="utf-8")
+        write_scope(crate / "mutants-shard-0")
         (crate / "mutants-shard-0" / "mutants.out" / "outcomes.json").write_text(
             json.dumps(outcomes(caught=1)), encoding="utf-8"
         )
