@@ -537,9 +537,12 @@ class TheBatteryTakesAScope(unittest.TestCase):
         rust = found.get("rust", "")
         self.assertRegex(rust, r"(?m)^    if: \$\{\{ [^\n]*inputs\.package != 'miniapp'")
         self.assertRegex(rust, r"(?m)^\s+PACKAGE: \$\{\{ inputs\.package \}\}$")
-        command = re.search(r"cargo mutants [^\n]*", rust).group(0)
-        self.assertIn(SCOPED, command)
-        self.assertIn('--shard "$SHARD/$SHARDS"', command)
+        commands = re.findall(r"cargo mutants [^\n]*", rust)
+        self.assertEqual(len(commands), 2, "the shard runs one branch per package state")
+        self.assertIn('--package="$PACKAGE"', commands[0])
+        self.assertNotIn("--package", commands[1])
+        for command in commands:
+            self.assertIn('--shard "$SHARD/$SHARDS"', command)
         self.assertRegex(rust, r"(?m)^\s+SHARD: \$\{\{ matrix\.shard \}\}$")
         self.assertRegex(rust, r"(?m)^\s+SHARDS: \$\{\{ needs\.size\.outputs\.shards \}\}$")
         for name, job in examined("battery jobs", list(found.items())):

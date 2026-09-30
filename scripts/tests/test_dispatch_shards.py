@@ -14,10 +14,12 @@ import string
 import subprocess
 import sys
 import tempfile
+import textwrap
+import tomllib
 import unittest
 from pathlib import Path
 
-from _support import examined
+from _support import REPO, examined
 from test_mutation_workflows import VERDICT, WEEKLY, WORKFLOWS, jobs, listed, shard, workflow
 
 WHOLE = 32
@@ -193,8 +195,8 @@ class TheWorkflowReadsTheOneCount(unittest.TestCase):
 
     def test_the_size_job_lists_the_package_with_the_gates_own_bounds_and_sizes_it(self):
         size_job = jobs(workflow(WEEKLY)).get("size", "")
-        command = re.search(r"cargo mutants [^\n]*", size_job)
-        self.assertIsNotNone(command, "the size job lists nothing")
+        commands = re.findall(r"cargo mutants [^\n]*", size_job)
+        self.assertEqual(len(commands), 2, "the size job lists in one branch per package state")
         for flag in (
             "--no-shuffle",
             "--list",
@@ -202,9 +204,11 @@ class TheWorkflowReadsTheOneCount(unittest.TestCase):
             "--in-place",
             "--timeout 300",
             "--build-timeout 600",
-            '${PACKAGE:+--package "$PACKAGE"}',
         ):
-            self.assertIn(flag, command.group(0))
+            for command in commands:
+                self.assertIn(flag, command)
+        self.assertIn('--package="$PACKAGE"', commands[0])
+        self.assertNotIn("--package", commands[1])
         for block in re.findall(r"(?ms)^        run: [|]?\n?(.*?)(?=^      - |\Z)", size_job):
             self.assertNotIn("inputs.package", block, "the size job interpolates the input")
         self.assertIn("mutation-verdict.py size", size_job)
@@ -1815,6 +1819,7 @@ class EveryMutationCommandKeepsTheGatesBounds(unittest.TestCase):
         for name in ("ci.yml", "mutation-weekly.yml"):
             self.assertIn(name, found, f"{name} runs no cargo mutants command")
             self.assertGreaterEqual(len(found[name]), 1, name)
+        self.assertEqual(len(found["mutation-weekly.yml"]), 6, "each package branch is a command")
         for name, lines in examined("workflow files", list(found.items())):
             for line in examined(f"{name} commands", lines):
                 self.assertRegex(line, BOUNDED, f"{name}: {line}")
@@ -1841,6 +1846,143 @@ class EveryMutationCommandKeepsTheGatesBounds(unittest.TestCase):
             if all(BOUNDED.search(line) for line in found.get(f"m{n}.yml", []))
         ]
         self.assertEqual(missed[:1], [], f"{len(missed)} of {len(runs)} unbounded members pass")
+
+
+#: The head's two package-bearing commands, verbatim: the literal the pin measures the rewrite against.
+HEAD_COMMANDS = {
+    "size": (
+        "cargo mutants --no-shuffle --list --json --in-place ${PACKAGE:+--package \"$PACKAGE\"} "
+        '--timeout 300 --build-timeout 600 > "$RUNNER_TEMP/size/package.json"'
+    ),
+    "rust": (
+        "cargo mutants --no-shuffle -vV --in-place ${PACKAGE:+--package \"$PACKAGE\"} "
+        '--sharding round-robin --shard "$SHARD/$SHARDS" --timeout 300 --build-timeout 600 '
+        '--output "$RUNNER_TEMP/mutation" || rc=$?'
+    ),
+}
+#: Values a package input could hold that no workspace declares: each is one shell word to bash.
+HOSTILE_PACKAGES = [
+    "a b",
+    "*",
+    "a=b",
+    "-",
+    "--",
+    "-x",
+    "-p",
+    "--package",
+    "--scratch",
+    "a\nb",
+    'a"b',
+    "a'b",
+    "$(echo x)",
+    "`echo x`",
+]
+
+
+def workspace_packages():
+    """Every package name the repository's Cargo.toml files declare, read without cargo."""
+    names = set()
+    for manifest in sorted(REPO.rglob("Cargo.toml")):
+        if "target" in manifest.relative_to(REPO).parts:
+            continue
+        declared = tomllib.loads(manifest.read_text(encoding="utf-8")).get("package", {})
+        if "name" in declared:
+            names.add(declared["name"])
+    return sorted(names)
+
+
+def rewritten_blocks(text):
+    """The two if/else blocks of the weekly workflow, dedented, in file order (size, then rust)."""
+    pattern = r'(?ms)^( +)if \[ -n "\$PACKAGE" \]; then\n.*?^\1fi\n'
+    blocks = [m.group(0) for m in re.finditer(pattern, text)]
+    return [textwrap.dedent(block) for block in blocks]
+
+
+def argv_of(script, package):
+    """The argv the stub cargo received when bash ran the script; PACKAGE unset when None."""
+    with tempfile.TemporaryDirectory() as scratch:
+        root = Path(scratch)
+        (root / "bin").mkdir()
+        (root / "size").mkdir()
+        log = root / "argv.log"
+        stub = root / "bin" / "cargo"
+        stub.write_text("#!/bin/bash\nprintf '%s\\0' \"$@\" >> \"$STUB_LOG\"\n", encoding="utf-8")
+        stub.chmod(0o700)
+        file = root / "step.sh"
+        file.write_text(script, encoding="utf-8")
+        env = {
+            "PATH": f"{root / 'bin'}:/usr/bin:/bin",
+            "STUB_LOG": str(log),
+            "RUNNER_TEMP": str(root),
+            "SHARD": "3",
+            "SHARDS": "8",
+        }
+        if package is not None:
+            env["PACKAGE"] = package
+        done = subprocess.run(["bash", str(file)], env=env, capture_output=True, timeout=30)
+        assert done.returncode == 0, (done.returncode, done.stderr)
+        argv = log.read_bytes().replace(str(root).encode(), b"<tmp>").split(b"\0")[:-1]
+        return argv
+
+
+class TheWeeklySweepNamesItsPackageInLiteralWords(unittest.TestCase):
+    """`--package=V` and `--package V` are one option to the parser cargo-mutants uses.
+
+    clap's tutorial gives both spellings the one value (`--name=bob` and `--name bob`), and its
+    `require_equals` documentation reads: "Requires that options use the `--option=val` syntax.
+    Setting this requires that the option have an equals sign between it and the associated value."
+    cargo-mutants declares `--package` as a plain `Vec<String>` option without `require_equals` or
+    `allow_hyphen_values`, so a value that begins with `-` is an unknown argument in the spaced form
+    and a package name that matches nothing in the equals form: neither selects a mutant.
+    """
+
+    def test_the_rewrite_hands_cargo_exactly_the_words_the_head_did(self):
+        blocks = rewritten_blocks(workflow(WEEKLY))
+        self.assertEqual(len(blocks), 2, "one block per package-bearing command")
+        population = [None, ""] + workspace_packages() + HOSTILE_PACKAGES
+        examined("package values", population)
+        self.assertGreaterEqual(len(population), 2 + len(HOSTILE_PACKAGES) + 1)
+        members = 0
+        for step, block in zip(("size", "rust"), blocks):
+            old = "rc=0\n" + HEAD_COMMANDS[step] + "\n"
+            new = "rc=0\n" + block
+            for value in population:
+                before, after = argv_of(old, value), argv_of(new, value)
+                members += 1
+                if value in (None, ""):
+                    self.assertEqual(before, after, f"{step}: {value!r}")
+                    self.assertNotIn(b"--package", after)
+                    continue
+                at = before.index(b"--package")
+                self.assertEqual(before[at + 1], value.encode(), f"{step}: {value!r}")
+                expected = before[:at] + [b"--package=" + value.encode()] + before[at + 2 :]
+                self.assertEqual(after, expected, f"{step}: {value!r}")
+        examined("old-against-new argvs", range(members))
+        self.assertEqual(members, 2 * len(population))
+
+    def test_a_dash_led_value_selects_nothing_in_the_step_after_the_listing(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            listing = Path(scratch) / "package.json"
+            listing.write_text("[]", encoding="utf-8")
+            dashed = [v for v in HOSTILE_PACKAGES if v.startswith("-")]
+            for value in examined("dash-led values", dashed):
+                done = subprocess.run(
+                    [sys.executable, str(VERDICT), "size", "--package", value, "--listed", str(listing)],
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                )
+                out = done.stdout + done.stderr
+                first = (done.stderr.splitlines() or done.stdout.splitlines() or [""])[0]
+                print(f"size --package {value!r}: exit {done.returncode}: {first}")
+                self.assertTrue(
+                    done.returncode == 2 or "0 listed mutant(s)" in out,
+                    f"{value!r}: exit {done.returncode}: {out}",
+                )
+
+    def test_the_rewritten_blocks_are_the_only_package_words_in_the_two_cargo_commands(self):
+        text = workflow(WEEKLY)
+        self.assertNotIn("${PACKAGE:+--package", "\n".join(re.findall(r"cargo mutants [^\n]*", text)))
 
 
 if __name__ == "__main__":
