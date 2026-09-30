@@ -30,10 +30,10 @@ stop safely at every early exit?
 - For the install, an explicit `|| undo` on each write — chosen, because each write's failure is then visible in the script at the line that can fail and each has its own row and test.
 - For the install, one `trap` on exit that undoes — because a trap also fires on the success path and on the `mv` steps after the point of no return, so it would need a flag to tell them apart, it lost.
 - For the install, a guard on the candidate path alone — because the block, the block's previous copy and the Caddyfile's previous copy are written through the same way, so a guard on one name leaves three, it lost.
-- For the settings, a refusal at the start of each Caddy step of every entry of the environment it received whose name starts with `DECKSTREAK_DEPLOY_` and that `SETTINGS` in `deploy.sh` does not list, read from `/proc/self/environ` by bash's `mapfile` builtin, together with every such variable of the step's own shell — chosen, because the kernel's copy holds every entry the step received, whatever bytes its name holds, a name given twice and a name with no `=`, and nothing runs before the refusal reads it, so the refusal is default-deny over the whole prefix: no unlisted deploy setting reaches anything the step runs, in any form and on any branch, tested or not. Its price is one block at the top of `deploy.sh`, and it narrows what an operator can do: a stray, mistyped, repeated or valueless deploy setting stops a Caddy step, with a message naming it, and a Caddy step needs a readable `/proc/self/environ`. The release and rollback steps are unchanged.
+- For the settings, a refusal at the start of each Caddy step of every entry of the environment it received whose name starts with `DECKSTREAK_DEPLOY_` and that `SETTINGS` in `deploy.sh` does not list, read from `/proc/self/environ` by bash's `mapfile` builtin, together with every such variable of the step's own shell — chosen, because the kernel's copy holds every entry the step received, whatever bytes its name holds, a name given twice and a name with no `=`, and the script runs no command of its own before the refusal reads it, so the refusal is default-deny over the whole prefix: no unlisted deploy setting reaches anything the step runs, in any form and on any branch, tested or not, unless a name outside the prefix has the shell run code before the refusal (the limit below). Its price is one block at the top of `deploy.sh`, and it narrows what an operator can do: a stray, mistyped, repeated or valueless deploy setting stops a Caddy step, with a message naming it, and a Caddy step needs a readable `/proc/self/environ`. The release and rollback steps are unchanged.
 - For the settings, bash's own list of the names (`${!DECKSTREAK_DEPLOY_@}`) alone — because bash makes a variable only of a name it can spell and hands every other entry to what it runs, the list does not hold every entry the step received, and it lost; it stays beside the chosen read, for a variable made before the step starts.
 - For the settings, the entries `env -0` prints — because it runs a program found through `PATH` before the refusal, and it prints what bash hands on, one entry per name and none without `=`, it cannot see a setting given twice or without a value, and it lost; `command -p env -0` drops the `PATH` search and keeps the rest.
-- For the settings, `/proc/self/environ` alone — because a variable made by the step's own shell before the refusal (from the file `BASH_ENV` names) is in bash's list and not in the kernel's copy, it would miss a variable the list it replaces refuses, and it lost.
+- For the settings, `/proc/self/environ` alone — because a variable made by the step's own shell before the refusal (from the file `BASH_ENV` names) is in bash's list and not in the kernel's copy, it would miss a variable the list it replaces refuses, and it lost; that file's name is outside the prefix, so the member belongs to the limit below, and its measured result is a refusal, not proof that the refusal covers start-up code.
 - For the settings, a census of the names the scripts read, from their text or from what they execute — because a census recognises only the read forms it knows, it cannot close the class, and it lost; neither test keeps it.
 - For the settings, each Caddy step run with its environment emptied but for the listed settings — because the tools a step runs (the host command, the elevation, the locale) read names of their own, which would need a second list kept in step with them, it was not taken in this change.
 - For the places, a list of the directories each step writes, kept in the test — because a list closes only the places it names, it lost; the test measures the places from a diff of the whole tree around every exit instead.
@@ -55,9 +55,13 @@ received whose name starts with `DECKSTREAK_DEPLOY_` and that `SETTINGS` does no
 follow the prefix, a listed setting it received twice or without a value, an unlisted deploy variable
 of its own shell, and a run in which it can read no environment; `rollback.sh caddy-remove` does
 nothing but find and exec that step.
-Names outside the prefix are the environment of the tools a step runs, not settings, and a write on a
-branch that none of the measured exits reaches is outside what the places test measures; this change
-closes neither.
+Names outside the prefix are the environment of the tools a step runs, not settings, and one that the
+shell reads as code when it starts can run before the refusal and stop it, because an entry that makes
+the shell run start-up code can already run any code in the step, which is strictly more than an
+unlisted setting can do, and the refusal guards against a misconfigured setting, not against code
+already placed in the step's environment; a write on a branch that
+none of the measured exits reaches is outside what the places test measures; this change closes
+neither.
 
 ### Consequences
 

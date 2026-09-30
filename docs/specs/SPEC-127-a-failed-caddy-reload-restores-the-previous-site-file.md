@@ -258,19 +258,22 @@ members fail A38 until the step checks the place before its first write.
 Each Caddy step also refuses, before it reads or writes anything else, every entry of the environment
 it received whose name starts with `DECKSTREAK_DEPLOY_` and is not one of the settings `deploy.sh`
 lists in `SETTINGS`, whatever bytes follow the prefix, and names the one it refused. It reads the
-entries as the kernel keeps them (`/proc/self/environ`, through bash's `mapfile` builtin, so nothing
-runs first), because bash makes a variable only of a name it can spell and hands every other entry to
-each program it runs. It also refuses a listed setting it received twice or without a value, a deploy
+entries as the kernel keeps them (`/proc/self/environ`, through bash's `mapfile` builtin, so the
+script runs no command of its own first), because bash makes a variable only of a name it can spell
+and hands every other entry to each program it runs. It also refuses a listed setting it received twice or without a value, a deploy
 variable of its own shell that `SETTINGS` does not list (`${!DECKSTREAK_DEPLOY_@}`), and a run in which
 it can read no environment at all, so the refusal is default-deny over the whole prefix: no unlisted
 deploy setting reaches any function, trap, sourced file, child shell, host body or the renderer,
-whatever form reads it and whether or not a test runs the branch that reads it. A Caddy step therefore
+whatever form reads it and whether or not a test runs the branch that reads it, unless a name outside
+the prefix has the shell run code before the refusal (the first limit below). A Caddy step therefore
 needs a readable `/proc/self/environ`. `rollback.sh caddy-remove` runs only the lines that find
 `deploy.sh` and exec it. A39 proves the refusal for the bare prefix, for each listed setting with a
 suffix and for the prefix with each byte a name may hold (any but NUL and `=`) first, in the middle and
 last, on both steps, with the tree unchanged; proves it for a listed setting given twice or without a
 value, a prefixed entry without `=`, a run that received no environment and a deploy variable made
-before the step starts; and compares every command bash's DEBUG trap records before the refusal
+before the step starts by the file `BASH_ENV` names (a name outside the prefix, so it belongs to the first
+limit below; the measured result for that member is a refusal, which does not show that the refusal covers
+start-up code); and compares every command bash's DEBUG trap records before the refusal
 (installed through `BASH_ENV` with `set -T`, so functions, subshells and the exec'd `deploy.sh` report
 too) with the declared opening, exactly, so no command added before the refusal can read a setting
 first. The Caddy functions consume `DECKSTREAK_DEPLOY_HOST`, `DECKSTREAK_DEPLOY_ELEVATE` and
@@ -279,6 +282,11 @@ it is listed.
 
 Names outside that prefix are not settings: `PATH`, `HOME`, `TMPDIR`, the locale and the host
 command's own names belong to the tools a step runs, and the refusal leaves them alone (ADR-198).
+A name outside the prefix that the shell reads as code when it starts can run before the refusal
+and stop it, and it is part of this limit. The reason it is left open: an entry that makes the shell
+run start-up code can already run any code in the step, which is strictly more than an unlisted setting
+can do, and the refusal guards against a misconfigured setting, not against code already placed in the
+step's environment.
 Neither test reads a script's text for the names it uses: a scan of read forms recognises only the forms
 it lists, so it cannot close the names outside the prefix, and it is not a check here. A write on a
 branch that none of the eight exits reaches in either layout is not measured by A38. Both limits are
@@ -314,7 +322,7 @@ and nothing above them is edited (SPEC-038 section 8, ruling (i)).
 | A36 | an install whose block cannot be read exits non-zero, prints the refusal and leaves the block, the live Caddyfile and every other file as they were (#423) | `test_deploy_scripts.py` `an_install_whose_block_cannot_be_read_refuses_before_writing` |
 | A37 | a first install refused at validation with its block already gone still exits non-zero and prints the refusal (#423) | `test_deploy_scripts.py` `a_first_install_refused_with_its_block_already_gone_still_says_so` |
 | A38 | each Caddy step, run through its eight exits (a first install, a re-install, a removal, an install refused at validation, a reload that fails, a rename that fails in each script, an install with no configuration) in both layouts, changes and names paths only in the places its whole-tree diff measures, and changes the same paths when every other path is read-only; for each place in each state (writable, read-only, read-only with a stale writable previous copy), for a first install, a re-install and a removal, with no trigger, a failed rename and a failed reload, every member succeeds, or exits 1 with that script's refusal (or the reload's own message when a reload fails after a write) and leaves the tree byte for byte unchanged; a removal whose rename fails in a writable directory fails after its writes and is not a member; a step that changes or names no block, or a pass that makes nothing read-only, fails it (#423, #424) | `test_deploy_scripts.py` `every_directory_a_caddy_script_writes_or_undoes_is_checked_before_the_first_write` |
-| A39 | each Caddy step, before it reads or writes anything else, refuses every entry of the environment it received whose name starts with `DECKSTREAK_DEPLOY_` and that `deploy.sh`'s `SETTINGS` does not list, whatever bytes follow the prefix, exits 1 naming it and leaves the tree unchanged (the bare prefix, each listed setting with a suffix, and the prefix with each byte but NUL and `=` first, in the middle and last, on both steps); refuses a listed setting given twice or without a value, a run that received no environment, and a deploy variable made before the step starts; and before the refusal each step runs exactly its declared opening, as bash's DEBUG trap records it (#423) | `test_deploy_scripts.py` `a_caddy_step_reads_only_the_settings_it_names_and_refuses_any_other` |
+| A39 | each Caddy step, before it reads or writes anything else, refuses every entry of the environment it received whose name starts with `DECKSTREAK_DEPLOY_` and that `deploy.sh`'s `SETTINGS` does not list, whatever bytes follow the prefix, exits 1 naming it and leaves the tree unchanged (the bare prefix, each listed setting with a suffix, and the prefix with each byte but NUL and `=` first, in the middle and last, on both steps); refuses a listed setting given twice or without a value, a run that received no environment, and a deploy variable made before the step starts by the file `BASH_ENV` names (a name outside the prefix: the first limit, with a refusal as its measured result); and before the refusal each step's own commands are exactly its declared opening, as bash's DEBUG trap records them (#423) | `test_deploy_scripts.py` `a_caddy_step_reads_only_the_settings_it_names_and_refuses_any_other` |
 
 ```acceptance
 A16: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k with_no_candidate_still_undoes
@@ -364,7 +372,10 @@ and `changelog.d/fix-caddy-undo-423.md`.
 - It does not change what a successful install or removal does when every deploy setting in the
   environment is listed (#423, #424).
 - It does not change the removal's refusal of a link at its candidate path, which stays A20 and A21 (#424).
-- It does not refuse or classify an environment name outside the `DECKSTREAK_DEPLOY_` prefix, and A38
+- It does not refuse or classify an environment name outside the `DECKSTREAK_DEPLOY_` prefix, nor
+  keep one that the shell reads as code when it starts from running before the refusal (an entry that
+  makes the shell run start-up code can already run any code in the step, more than an unlisted setting
+  can do), and A38
   does not measure a write on a branch that none of its eight exits reaches (ADR-198; #423).
 - It does not name a failed temporary directory of the operator's own (#451), nor check the site
   import when the Caddyfile is set apart (#452).
