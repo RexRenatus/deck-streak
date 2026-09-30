@@ -271,3 +271,15 @@ which it can read no environment. After it, fifty-six tests pass.
 
 The rows S12741 to S12746 were added in a later commit. Each is killed by the test of A39, and every
 row of the band is proved killed by its full id on a clean committed tree.
+
+## Amendment 2026-09-30, seventh round (issue #451)
+
+The test of A40 was committed first (0929355b58816672227e2bbd645f3eb94b8df11b) against `deploy.sh`
+as it stood on dev: it was red by assertion, all eighteen members (three calls, each verb that
+reaches it, three failure modes) read the tool's bare message with no `deploy:` line, and it printed
+`examined 18 temporary-path member(s)`. No member was green at dev.
+
+```text
+A40: red at 0929355b58816672227e2bbd645f3eb94b8df11b: AssertionError: 0 != 1 : install_tag / install / absent
+A40: green at 53764d6320c899ae41d30518363d150c5a414a89
+```

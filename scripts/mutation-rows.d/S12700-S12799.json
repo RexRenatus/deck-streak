@@ -368,6 +368,54 @@
         "case $given in *\" $key \"*) echo \"deploy: $key is given twice\" >&2 ;; esac",
         "a Caddy step stops on a listed setting it received twice (SPEC-127 A39)",
         "test_deploy_scripts.TheCaddyInstall.test_a_caddy_step_reads_only_the_settings_it_names_and_refuses_any_other"
+      ],
+      [
+        "S12747-A-THE-RELEASE-STEP-REFUSES-A-WORKING-DIRECTORY-IT-CANNOT-MAKE",
+        "deploy/deploy.sh",
+        "release_tmp=$(mktemp -d) || die \"the release step could not make its working directory\"",
+        "release_tmp=$(mktemp -d)",
+        "the release step names its refusal when its working directory cannot be made (SPEC-127 A40)",
+        "test_deploy_scripts.ATemporaryPathThatCannotBeMadeIsANamedRefusal.test_every_temporary_path_that_cannot_be_made_is_a_named_refusal"
+      ],
+      [
+        "S12748-A-THE-CADDY-STEP-REFUSES-A-WORKING-DIRECTORY-IT-CANNOT-MAKE",
+        "deploy/deploy.sh",
+        "release_tmp=$(mktemp -d) || die \"the Caddy step could not make its working directory\"",
+        "release_tmp=$(mktemp -d)",
+        "the Caddy install names its refusal when its working directory cannot be made (SPEC-127 A40)",
+        "test_deploy_scripts.ATemporaryPathThatCannotBeMadeIsANamedRefusal.test_every_temporary_path_that_cannot_be_made_is_a_named_refusal"
+      ],
+      [
+        "S12749-A-THE-HOST-STEP-REFUSES-A-CHECK-FILE-IT-CANNOT-MAKE",
+        "deploy/deploy.sh",
+        "checked=$(mktemp) || { echo \"deploy: the host step could not make its check file\" >&2; exit 1; }",
+        "checked=$(mktemp)",
+        "the host script stops when its check file cannot be made (SPEC-127 A40)",
+        "test_deploy_scripts.ATemporaryPathThatCannotBeMadeIsANamedRefusal.test_every_temporary_path_that_cannot_be_made_is_a_named_refusal"
+      ],
+      [
+        "S12750-A-THE-HOST-REFUSAL-PRINTS-ITS-LINE",
+        "deploy/deploy.sh",
+        "echo \"deploy: the host step could not make its check file\" >&2; exit 1; }",
+        "exit 1; }",
+        "the host script prints its refusal line before it stops (SPEC-127 A40)",
+        "test_deploy_scripts.ATemporaryPathThatCannotBeMadeIsANamedRefusal.test_every_temporary_path_that_cannot_be_made_is_a_named_refusal"
+      ],
+      [
+        "S12751-A-THE-HOST-REFUSAL-EXITS-NON-ZERO",
+        "deploy/deploy.sh",
+        "could not make its check file\" >&2; exit 1; }",
+        "could not make its check file\" >&2; exit 0; }",
+        "the host script exits non-zero when its check file cannot be made (SPEC-127 A40)",
+        "test_deploy_scripts.ATemporaryPathThatCannotBeMadeIsANamedRefusal.test_every_temporary_path_that_cannot_be_made_is_a_named_refusal"
+      ],
+      [
+        "S12752-A-THE-CADDY-REFUSAL-NAMES-ITS-STEP",
+        "deploy/deploy.sh",
+        "die \"the Caddy step could not make its working directory\"",
+        "die \"could not make its working directory\"",
+        "the Caddy install refusal names the step that stopped (SPEC-127 A40)",
+        "test_deploy_scripts.ATemporaryPathThatCannotBeMadeIsANamedRefusal.test_every_temporary_path_that_cannot_be_made_is_a_named_refusal"
       ]
     ]
   }
