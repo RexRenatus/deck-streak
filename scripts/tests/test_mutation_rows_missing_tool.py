@@ -22,6 +22,7 @@ passes over.
 """
 
 import ast
+import importlib
 import json
 import os
 import re
@@ -30,6 +31,7 @@ import stat
 import subprocess
 import sys
 import tempfile
+import types
 import unittest
 from pathlib import Path
 
@@ -102,6 +104,21 @@ SPAWNING_MODULES = ("subprocess", "os", "pty", "asyncio")
 READ_MODULES = frozenset(
     "__future__ argparse ast contextlib dataclasses hashlib json os pathlib posixpath re signal "
     "subprocess sys tempfile tomllib".split()
+)
+#: The attributes that reach a frame's own tables (its globals, builtins, locals, caller), read from
+#: the frame-bearing types themselves: a spawning module reached through one is a spawn the census
+#: cannot read, whatever the frame came from.
+FRAME_ATTRIBUTES = frozenset(
+    name
+    for kind in (
+        types.FrameType,
+        types.TracebackType,
+        types.GeneratorType,
+        types.CoroutineType,
+        types.AsyncGeneratorType,
+    )
+    for name in dir(kind)
+    if name.startswith(("f_", "tb_", "gi_", "cr_", "ag_"))
 )
 #: The ways of reaching a name that is built at run time. A spawner reached by one is a spawn the
 #: census cannot read, so each is refused wherever it appears, whatever it is given: the census
@@ -232,6 +249,45 @@ def raw_spawns(source=None):
             (owned if where else outside).append(spawn)
     outside += referenced(tree, inside)
     return owned, outside
+
+
+def not_read(value):
+    """True when `value` is a module the census has not read, or one that spawns."""
+    return isinstance(value, types.ModuleType) and (
+        value.__name__ in SPAWNING_MODULES or value.__name__.split(".")[0] not in READ_MODULES
+    )
+
+
+def reached_module(node, bound):
+    """The module an attribute chain names, read through the interpreter's own modules from a
+    name the source binds to a module the census has read, or None."""
+    if isinstance(node, ast.Name):
+        return bound.get(node.id)
+    if isinstance(node, ast.Attribute):
+        base = reached_module(node.value, bound)
+        value = getattr(base, node.attr, None) if base is not None else None
+        return value if isinstance(value, types.ModuleType) else None
+    return None
+
+
+#: The nodes that make an annotation code rather than a type: each runs when the line runs.
+CODE_NODES = (
+    ast.Call,
+    ast.Lambda,
+    ast.NamedExpr,
+    ast.ListComp,
+    ast.SetComp,
+    ast.DictComp,
+    ast.GeneratorExp,
+    ast.Await,
+    ast.Yield,
+    ast.YieldFrom,
+)
+
+
+def runs_code(node):
+    """True when `node` is code an annotation evaluates rather than a name it only reads."""
+    return isinstance(node, CODE_NODES)
 
 
 def referenced(tree, inside):
@@ -672,6 +728,127 @@ class TheMissingToolPopulation(unittest.TestCase):
             with self.subTest(source=source):
                 self.assertNotEqual(raw_spawns(source)[1], [], source)
         self.assertEqual(raw_spawns()[1], [])
+
+    def test_the_census_refuses_every_name_that_reaches_what_it_has_not_read(self):
+        """A module the census has read holds other modules (`tempfile._os`, `dataclasses.inspect`,
+        `subprocess.builtins`); a spawning module holds private spawners (`os._execvpe`,
+        `subprocess._fork_exec`); a frame, a traceback or a generator holds a module's globals; and
+        the class graph holds `Popen`. Each is a spawn the census cannot read, so each is refused
+        by every spelling that reaches it: generated from the interpreter's own modules and types,
+        through the read modules' own names, an alias, and `from ... import`, bare and aliased."""
+        members, seen = [], set()
+        walk = [(name, importlib.import_module(name)) for name in sorted(READ_MODULES)]
+        while walk:
+            spelled, module = walk.pop(0)
+            if module.__name__ in seen:
+                continue
+            seen.add(module.__name__)
+            root = spelled.split(".")[0]
+            for name, value in sorted(vars(module).items()):
+                if not isinstance(value, types.ModuleType):
+                    continue
+                if not_read(value):
+                    members += [
+                        f"import {root}\n{spelled}.{name}.thing(x)\n",
+                        f"import {root} as alias\nalias{spelled[len(root) :]}.{name}.thing(x)\n",
+                        f"from {spelled} import {name} as o\no.thing(x)\n",
+                        f"from {spelled} import {name}\n{name}.thing(x)\n",
+                    ]
+                else:
+                    walk.append((f"{spelled}.{name}", value))
+        held = len(members)
+        for name in sorted(READ_MODULES):
+            members += [
+                f"import {name}\n{name}.{attribute}(x)\n"
+                for attribute in dir(importlib.import_module(name))
+                if attribute.startswith("_") and attribute != "__init__"
+            ]
+        private = len(members) - held
+        members += [f"x.{attribute}\n" for attribute in sorted(FRAME_ATTRIBUTES)]
+        members += [
+            f"x.{attribute}\n"
+            for attribute in sorted(dir(type))
+            if attribute.startswith("__") and attribute != "__init__"
+        ]
+        members += [
+            'import subprocess, tempfile\nsubprocess.builtins.getattr(tempfile, "_o" + "s")\n',
+            'import dataclasses\ndataclasses.inspect.currentframe().f_globals["os"].system(x)\n',
+            'import sys\nsys._getframe(0).f_globals["os"].system(x)\n',
+            'import sys\nsys.exc_info()[2].tb_frame.f_globals["os"].system(x)\n',
+            'g = (i for i in ())\ng.gi_frame.f_globals["os"].system(x)\n',
+            '[c for c in object.__subclasses__() if c.__name__ == "Popen"][0](x)\n',
+            "from os.path import os as o\no.system(x)\n",
+            "import os\nos._execvpe(x, [x])\n",
+            "import subprocess\nsubprocess._fork_exec(x)\n",
+        ]
+        examined("unread reach member(s)", members)
+        self.assertGreater(held, 0)
+        self.assertGreater(private, 0)
+        for source in members:
+            with self.subTest(source=source):
+                self.assertNotEqual(raw_spawns(source)[1], [], source)
+        self.assertEqual(raw_spawns()[1], [])
+
+    def test_the_census_names_each_refusal_and_reads_annotations_and_dotted_names_whole(self):
+        """Each refusal names where it is and what it reached, word for word; an annotation that
+        holds code is read as code, because the line that holds it runs it, while a type named by
+        names is passed over; a dotted import is read by its first name, and a relative import is
+        refused. Every reading is an assertion: a census that raises is refused by name here."""
+
+        def outside(source):
+            try:
+                return raw_spawns(source)[1]
+            except Exception as error:  # noqa: BLE001 - a census that raises is itself the finding
+                self.fail(f"the census raised {error!r} on {source!r}")
+
+        named = {
+            "import zlib\n": "outside the helpers: import zlib: a module the census has not read",
+            "from zlib import crc32\n": (
+                "outside the helpers: from zlib import: a module the census has not read"
+            ),
+            "import posixpath\nx = posixpath.os\n": (
+                "outside the helpers: posixpath.os: os reached through another module"
+            ),
+            "import subprocess\nx = subprocess\n": (
+                "outside the helpers: subprocess: subprocess reached as a value, not called"
+            ),
+            "import subprocess\nx = subprocess.run\n": (
+                "outside the helpers: subprocess.run: subprocess reached as a value, not called"
+            ),
+            "import subprocess\ndef run_tool(c):\n    f = subprocess.run\n": (
+                "run_tool: subprocess.run: subprocess reached as a value, not called"
+            ),
+        }
+        code = [
+            'import subprocess\nx: (lambda: subprocess.run)()(["t"]) = None\n',
+            'import subprocess\nx: (g := subprocess.run) = None\ng(["t"])\n',
+            'import subprocess\ndef f() -> (g := subprocess.run):\n    pass\ng(["t"])\n',
+            'import subprocess\ndef f(a: (lambda: subprocess.run)()(["t"])):\n    pass\n',
+            "import subprocess\nx: [subprocess.run for _ in ()] = None\n",
+        ]
+        admitted = [
+            "import subprocess\ndef f(x: subprocess.Popen, y) -> subprocess.Popen:\n"
+            "    return x\ndef g(y):\n    return y\nz: subprocess.Popen = None\n",
+            "import os.path\n",
+            "from os.path import join\n",
+        ]
+        refused = [
+            "import zlib.os\n",
+            "from zlib.os import system\n",
+            "from . import x\n",
+            "import asyncio.events\n",
+            "import pty.tty\n",
+        ]
+        examined("census reading member(s)", [*named, *code, *admitted, *refused])
+        for source, line in named.items():
+            with self.subTest(source=source):
+                self.assertIn(line, outside(source), source)
+        for source in code + refused:
+            with self.subTest(source=source):
+                self.assertNotEqual(outside(source), [], source)
+        for source in admitted:
+            with self.subTest(source=source):
+                self.assertEqual(outside(source), [], source)
 
     def test_a_path_entry_the_runner_cannot_look_at_is_passed_over_as_the_spawn_passes_it(self):
         member = Member(

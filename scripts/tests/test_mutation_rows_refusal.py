@@ -84,6 +84,19 @@ WHY_STATE = {"not executable": "not executable", "a directory": "is a directory"
 CWD_ROUTES = ("run_tool", "run_tool checked", "run_in_own_group")
 
 
+#: A file the resolver's check passes (a regular file with the execute bit) that the kernel will not
+#: run, and the reason its spawn gives. The spawn's own search passes over such a file and starts a
+#: LATER candidate, so the file the runner judged would not be the file the spawn ran.
+KERNEL_REFUSES = {
+    "a bad interpreter line": (b"#!/nonexistent/interpreter-431\n", "No such file or directory"),
+    "an empty file": (b"", "Exec format error"),
+    "an unknown format": (b"\x7fELF\x02\x01\x01not-an-image\n", "Exec format error"),
+    "an interpreter without the execute bit": (None, "Permission denied"),
+}
+#: Where the file the kernel will not run sits: its PATH entry, and the directory it names.
+KERNEL_POSITIONS = ("an absolute entry", "a relative entry", "an empty entry")
+
+
 def plant(path, state, label):
     """Put a candidate in `state` at `path`; a runnable one prints `label`."""
     if state == "absent":
@@ -273,6 +286,76 @@ class TheRefusalIsReadWhole(unittest.TestCase):
                 finally:
                     os.chdir(before)
                 self.assertEqual(got, want)
+
+    def spawned(self, route, env, cwd):
+        """What a spawn by `route` ended with: ("ran", what the tool printed) or ("refused", why)."""
+        try:
+            done = go(route, [TOOL], env, cwd)
+        except runner.ToolMissing as refusal:
+            return ("refused", str(refusal))
+        out = done.stdout.decode() if isinstance(done.stdout, bytes) else done.stdout
+        return ("ran", out.strip())
+
+    def test_the_spawn_runs_the_file_it_judged_by_every_route(self):
+        """The file the runner judges is the file the spawn runs. A candidate the resolver accepts
+        and the kernel will not run, with a runnable copy LATER on PATH, is refused for its own
+        reason, and the later copy never runs, at every position and route; and a PATH changed
+        between the judgement and the spawn (in the env passed, or in this process's) still runs
+        the file judged."""
+        members = [
+            (kind, where, route)
+            for kind in KERNEL_REFUSES
+            for where in KERNEL_POSITIONS
+            for route in CWD_ROUTES
+        ]
+        members += [
+            ("a PATH changed after the judgement", held, route)
+            for held in ("the env passed", "this process's")
+            for route in ("run_tool", "run_tool checked")
+        ]
+        examined("judged-file member(s)", members)
+        self.assertEqual(
+            len(members), len(KERNEL_REFUSES) * len(KERNEL_POSITIONS) * len(CWD_ROUTES) + 4
+        )
+        for number, (kind, where, route) in enumerate(members):
+            with self.subTest(kind=kind, where=where, route=route):
+                base = self.root / f"judged-{number}"
+                child, first, later = base / "child", base / "first", base / "later"
+                for directory in (child, first, later):
+                    directory.mkdir(parents=True)
+                plant(later / TOOL, "runnable", "LATER")
+                if kind in KERNEL_REFUSES:
+                    body, why = KERNEL_REFUSES[kind]
+                    if body is None:
+                        interpreter = base / "interpreter"
+                        interpreter.write_text("#!/bin/sh\n", encoding="utf-8")
+                        interpreter.chmod(0o644)
+                        body = f"#!{interpreter}\n".encode()
+                    entry, directory = {
+                        "an absolute entry": (str(first), first),
+                        "a relative entry": ("rel", child / "rel"),
+                        "an empty entry": ("", child),
+                    }[where]
+                    directory.mkdir(parents=True, exist_ok=True)
+                    (directory / TOOL).write_bytes(body)
+                    (directory / TOOL).chmod(0o755)
+                    got = self.spawned(route, {"PATH": entry + os.pathsep + str(later)}, child)
+                    self.assertEqual(got, ("refused", f"missing tool: {TOOL}: {why}"))
+                    continue
+                plant(first / TOOL, "runnable", "JUDGED")
+                env = {"PATH": str(first)} if where == "the env passed" else None
+                real = os.access
+
+                def access(path, mode, *args, env=env, later=later, **kwargs):
+                    answer = real(path, mode, *args, **kwargs)
+                    if mode == os.X_OK and answer:
+                        (env if env is not None else os.environ)["PATH"] = str(later)
+                    return answer
+
+                with mock.patch.dict(os.environ, {"PATH": str(first)}):
+                    with mock.patch.object(runner.os, "access", access):
+                        got = self.spawned(route, env, child)
+                self.assertEqual(got, ("ran", "JUDGED"))
 
     def test_every_errno_at_the_spawn_is_the_same_refusal_naming_the_tool(self):
         members = [(number, route) for number in ERRNOS for route in ("run_tool", "own_group")]
