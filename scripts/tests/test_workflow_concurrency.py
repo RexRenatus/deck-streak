@@ -1926,6 +1926,44 @@ class EveryReleaseWorkflowQueuesEveryRun(unittest.TestCase):
                     harmful,
                 )
             )
+        # A value YAML refuses to start a plain scalar with (a c-indicator it reserves or gives to
+        # flow collections, and `-`, `?` or `:` before a space on a mapping's value) and a flow list
+        # with an empty entry, at every scalar position of the release workflow, a second tag
+        # workflow and a called workflow: GitHub refuses the file, so the class rule refuses it
+        # (SPEC-190 R12 part 1).
+        homes = {
+            "release.yml": ({}, release),
+            "publish.yml": (
+                {"release.yml": release},
+                second_workflow(tag, "publish-${{ github.ref }}", "publish", "  queue: max\n"),
+            ),
+            "stage.yml": (
+                {"release.yml": calling("./.github/workflows/stage.yml")},
+                callee("stage", steps, "stage-${{ github.ref }}", "  queue: max\n"),
+            ),
+        }
+        for home, (beside, text) in homes.items():
+            members.append(("grammar", f"{home} as it is", dict(beside, **{home: text}), False))
+            lines = text.split("\n")
+            for n, line in enumerate(lines):
+                entry = re.fullmatch(r"( *(?:- )?[\w.-]+: )(.+)", line)
+                item = re.fullmatch(r"( *- )(.+)", line)
+                starts = ["@", "`", "%", ",", "]", "}"]
+                if entry:
+                    (prefix, value), starts = entry.groups(), starts + ["- ", "? ", ": "]
+                elif item:
+                    prefix, value = item.groups()
+                else:
+                    continue
+                for start in starts:
+                    planted = "\n".join(lines[:n] + [prefix + start + value] + lines[n + 1 :])
+                    label = f"{home} line {n + 1} starting {start!r}"
+                    members.append(("grammar", label, dict(beside, **{home: planted}), True))
+            for flow in ("[v1,,v2]", "[, v1]", "[v1, ,]", "[,]"):
+                if "tags: [v1]" in text:
+                    planted = text.replace("tags: [v1]", f"tags: {flow}", 1)
+                    label = f"{home} tags {flow}"
+                    members.append(("grammar", label, dict(beside, **{home: planted}), True))
         judged = examined("workflow sets GitHub parses", members)
         wrong = []
         for axis, label, files, harmful in judged:

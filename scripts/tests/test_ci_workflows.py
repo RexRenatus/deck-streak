@@ -637,6 +637,248 @@ class OnlyThisRepositorysDevReachesMain(unittest.TestCase):
         self.assertIn("feature/probe", done.stdout)
 
 
+class TheReaderReadsOnlyItsNamedForms(unittest.TestCase):
+    def test_the_reader_reads_only_its_named_forms(self):
+        """SPEC-190 R12 part 1's named forms, generated from YAML 1.2.2's own constants: every
+        printable ASCII character first in a plain value, a sequence item and a flow item, each
+        quoted as its control; every block-scalar header YAML defines, with and without text; flow
+        lists with an empty entry at every place and with one trailing comma; each key the core
+        schema types; and a comment after each one-line form, a comment line and a blank line. A
+        named form reads as YAML reads it; every other form is refused by its line, the one refusal
+        naming the form it met."""
+        # c-indicator (YAML 1.2.2 5.3): no plain scalar starts with one, but `-`, `?` and `:` may
+        # before a character that is not white space (ns-plain-first).
+        indicators = "-?:,[]{}#&*!|>'\"%@`"
+        printable = [chr(code) for code in range(0x21, 0x7F)]
+        unnamed = "is not a form the reader reads"
+
+        def outcome(text):
+            try:
+                return ("read", read_workflow(text))
+            except Unread as why:
+                return ("refused", why.refused)
+            except AssertionError as why:
+                return ("unplaced", str(why).split(":")[0])
+
+        def starts(value):
+            first = value[:2] if value[0] in "-?:" else value[0]
+            return [f"line 1: a value that starts with {first!r} {unnamed}"]
+
+        def plain(value, context):
+            """What YAML reads for `value` first in a plain scalar, as the reader must read it."""
+            first, rest = value[0], value[1:]
+            if first not in indicators or (first in "-?:" and rest[:1] not in ("", " ")):
+                if context == "flow" and first in "?:":
+                    return ["line 1: a flow list whose items are not plain is not read"]
+                return value
+            if first in "&*!":
+                return ["line 1: an anchor, alias or tag is not read"]
+            if context == "flow" and first in "[]{}'\"#:?":
+                return ["line 1: a flow list whose items are not plain is not read"]
+            if context == "flow" and first == ",":
+                return [f"line 1: a flow list with an empty entry {unnamed}"]
+            if first in "'\"":
+                return ["line 1: a quoted value that does not end at its closing quote is not read"]
+            if first == "[":
+                return ["line 1: a flow list whose items are not plain is not read"]
+            if first == "{":
+                return ["line 1: a flow mapping is not read"]
+            if first == "#" and context == "value":
+                return None
+            if first in "|>":
+                if value == "|" and context == "value":
+                    return Quoted("")
+                return [f"line 1: the block scalar header {value!r} {unnamed}"]
+            return starts(value)
+
+        members = []
+        for first in printable:
+            for value in (first + "x", first + " x", first):
+                for context, text, wrap in (
+                    ("value", f"k: {value}\n", lambda v: v),
+                    ("item", f"k:\n  - {value}\n", lambda v: [v]),
+                    ("flow", f"k: [{value}]\n", lambda v: [v]),
+                ):
+                    expected = plain(value, context)
+                    if isinstance(expected, list):
+                        if context == "item":
+                            expected = [line.replace("line 1:", "line 2:") for line in expected]
+                        members.append((f"{context} {value!r}", text, ("refused", expected)))
+                    else:
+                        members.append(
+                            (f"{context} {value!r}", text, ("read", {"k": wrap(expected)}))
+                        )
+                for context, text, wrap in (
+                    ("quoted value", f"k: '{value.replace(chr(39), chr(39) * 2)}'\n", lambda v: v),
+                    (
+                        "quoted item",
+                        f"k:\n  - '{value.replace(chr(39), chr(39) * 2)}'\n",
+                        lambda v: [v],
+                    ),
+                ):
+                    members.append((f"{context} {value!r}", text, ("read", {"k": wrap(value)})))
+        # A character outside printable ASCII first is refused once, by its line's character scan.
+        for first in ("\x80", "\xa0", "\N{EM SPACE}"):
+            for context, text, row in (
+                ("value", f"k: {first}x\n", 1),
+                ("item", f"k:\n  - {first}x\n", 2),
+                ("flow", f"k: [{first}x]\n", 1),
+            ):
+                refusal = [f"line {row}: a character the reader does not read"]
+                members.append((f"{context} {first!r}x", text, ("refused", refusal)))
+        # Every block-scalar header (c-b-block-header): `|` or `>`, an indentation indicator 1-9
+        # and a chomping indicator `-` or `+` in either order or alone, with and without a comment.
+        # `|` clips its text to one final line feed and `|-` strips it; any other is refused, and
+        # the text under a refused header is a line the reader cannot place.
+        bodies = [""]
+        bodies += list("123456789") + list("-+")
+        bodies += [d + c for d in "123456789" for c in "-+"] + [
+            c + d for c in "-+" for d in "123456789"
+        ]
+        read_as = {"|": ("", "x\n"), "|-": ("", "x")}
+        for header in [s + b + c for s in "|>" for b in bodies for c in ("", " # c")]:
+            for context, text, row, wrap in (
+                ("value", f"k: {header}\n", 1, lambda v: v),
+                ("item", f"k:\n  - {header}\n", 2, lambda v: [v]),
+            ):
+                if context == "value" and header in read_as:
+                    empty, full = read_as[header]
+                    members.append((f"header {header!r}", text, ("read", {"k": Quoted(empty)})))
+                    members.append(
+                        (
+                            f"header {header!r} with text",
+                            text + "  x\n",
+                            ("read", {"k": Quoted(full)}),
+                        )
+                    )
+                    continue
+                refusal = [f"line {row}: the block scalar header {header!r} {unnamed}"]
+                members.append((f"{context} header {header!r}", text, ("refused", refusal)))
+                indent = " " * (2 * row)
+                members.append(
+                    (
+                        f"{context} header {header!r} with text",
+                        text + indent + "x\n",
+                        ("unplaced", f"line {row + 1} was not read"),
+                    )
+                )
+        # A block's trailing blank lines are dropped, but one indented more than its text is text,
+        # with the blank lines above it; a blank line that holds a tab is refused.
+        for header, clip in (("|", "\n"), ("|-", "")):
+            members.append(
+                (
+                    f"{header} a blank line indented more",
+                    f"k: {header}\n  x\n\n    \n\n",
+                    ("read", {"k": Quoted("x\n\n  " + clip)}),
+                )
+            )
+            members.append(
+                (
+                    f"{header} blank lines at its end",
+                    f"k: {header}\n  x\n  \n\n",
+                    ("read", {"k": Quoted("x" + clip)}),
+                )
+            )
+            for blank in ("\t", "  \t", "    \t", "  \t  "):
+                refusal = (
+                    "line 3: a tab in the indentation, which YAML refuses"
+                    if "\t" in blank[:2]
+                    else f"line 3: a blank line of a block scalar that holds a tab {unnamed}"
+                )
+                members.append(
+                    (
+                        f"{header} a blank line {blank!r}",
+                        f"k: {header}\n  x\n{blank}\n  y\n",
+                        ("refused", [refusal]),
+                    )
+                )
+        # Flow lists of plain items: an empty entry at every place, alone and before one trailing
+        # comma. YAML reads `[]` as empty and one trailing comma as the list's end, and refuses
+        # any other empty entry.
+        for count in range(3):
+            items = ["x", "y"][:count]
+            members.append((f"flow {count}", f"k: [{', '.join(items)}]\n", ("read", {"k": items})))
+            if count:
+                members.append(
+                    (f"flow {count},", f"k: [{', '.join(items)},]\n", ("read", {"k": items}))
+                )
+            for at in range(count + 1):
+                entries = items[:at] + [" "] + items[at:]
+                for tail in ("", ","):
+                    flow = "[" + ",".join(entries) + tail + "]"
+                    if at == count and not tail:
+                        expected = ("read", {"k": items})
+                    else:
+                        expected = (
+                            "refused",
+                            [f"line 1: a flow list with an empty entry {unnamed}"],
+                        )
+                    members.append((f"flow {flow}", f"k: {flow}\n", expected))
+        # A key YAML types by the core schema is read as that value, not as its text: refused, and
+        # read when quoted.
+        for key in (
+            "true",
+            "False",
+            "NULL",
+            "null",
+            "1",
+            "-1",
+            "0o7",
+            "0x1F",
+            ".inf",
+            "-.Inf",
+            ".nan",
+            "1.5",
+            "1e3",
+            ".5",
+        ):
+            members.append(
+                (
+                    f"key {key}",
+                    f"{key}: x\n",
+                    ("refused", ["line 1: a key that is not a plain name is not read"]),
+                )
+            )
+            members.append((f"key '{key}'", f"'{key}': x\n", ("read", {key: "x"})))
+        # Comments and blank lines are dropped (l-comment, c-nb-comment-text): a comment after each
+        # one-line form, after a space or a tab; a comment line at any indentation; and a blank
+        # line. A `#` with no white space before it is text.
+        for form, text, value in (
+            ("value", "k: x", "x"),
+            ("item", "k:\n  - x", ["x"]),
+            ("flow list", "k: [x]", ["x"]),
+            ("single-quoted value", "k: 'x'", Quoted("x")),
+            ("double-quoted value", 'k: "x"', Quoted("x")),
+        ):
+            for space in (" ", "\t"):
+                members.append(
+                    (
+                        f"a comment after a {form}, after {space!r}",
+                        f"{text}{space}# c\n",
+                        ("read", {"k": value}),
+                    )
+                )
+        for label, text, value in (
+            ("a comment line", "# c\nk: x\n", {"k": "x"}),
+            ("an indented comment line", "k:\n  # c\n  - x\n", {"k": ["x"]}),
+            ("a comment line after a block", "k: |\n  x\n# c\n", {"k": Quoted("x\n")}),
+            ("a `#` inside a value", "k: x#y\n", {"k": "x#y"}),
+            ("blank lines", "\nk: x\n\n", {"k": "x"}),
+            ("a blank line in a mapping", "k:\n\n  j: x\n", {"k": {"j": "x"}}),
+            ("a blank line of spaces in a sequence", "k:\n  \n  - x\n", {"k": ["x"]}),
+        ):
+            members.append((label, text, ("read", value)))
+        members.append(
+            ("an empty item", "k:\n  - \n", ("refused", [f"line 2: an empty value {unnamed}"]))
+        )
+        wrong = [
+            (label, outcome(text), expected)
+            for label, text, expected in examined("forms the reader meets", members)
+            if outcome(text) != expected
+        ]
+        self.assertEqual(wrong, [])
+
+
 # ------------------------------------------------------------------ reading a workflow (SPEC-038)
 
 # A key the reader reads: a plain name, bare or in matching quotes (SPEC-034 R7).
