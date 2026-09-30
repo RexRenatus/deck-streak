@@ -176,3 +176,17 @@ resolver (9d0daeb4) runs the step under the resolved shell and refuses the undri
 
 Rows S08766 to S08773 are the companions of the killing test of A24, each proved KILLED by its
 full id on a clean committed tree.
+
+A26 and A27 (round 2 of #454). The populations of the resolver (57 placements) and of the census
+(30 plants) were committed (e4a543d1) against the resolver and census as round 1 left them, which
+read a `shell:` or `defaults:` it could not parse as absent and judged a line only when it held
+`$?` or a pipe status. Both tests fail by assertion: the resolver population had 27 placements
+read as a shell GitHub does not run, and the census population passed 27 of its 30 plants unseen.
+The default-deny resolver and census (8414b6c5) turn both green with 0 escaping and 0 silent.
+
+```red-first
+A26: red at e4a543d1: AssertionError: step template bash {0}: read ['bash', '-e'] where GitHub runs ['bash']
+A26: green at 8414b6c5
+A27: red at e4a543d1: AssertionError: N2 `if ! cmd; then other=1; fi`: passed the census unseen
+A27: green at 8414b6c5
+```

@@ -526,7 +526,18 @@ byte is kept in order. It inserts sections 10 and 11 only.
   is itself a finding. The step is run with the shell GitHub runs it with, resolved from the
   workflow text (the step's `shell:`, else the job's and then the workflow's `defaults.run.shell`,
   else `bash -e {0}`), never a fixed stronger shell, so an exit a pipeline loses in CI is lost in
-  the test too.
+  the test too. The self-test's expectation for a pass-through pipe derives from that resolved
+  shell: under a shell with `pipefail` the pipe keeps the exit, under `bash -e` or `sh -e` it
+  loses it, and the harness must agree with the shell either way.
+- **The harness is default-deny, in two arms.** The resolver reads every line naming `shell` or
+  `defaults` (run scalars removed) in the step, in its job outside its steps, and at the workflow's
+  top level; a value it cannot read in its canonical form (`bash`, `sh`, or a template whose first
+  word is bash or sh, whose flags are known and whose last word is `{0}`) is refused by name and is
+  never treated as absent, and only a truly absent placement falls through to the next. The census
+  matches every logical line of the step's script (a backslash-newline joins two physical lines)
+  against the four shapes it can drive (an assignment, a judge command collecting its exit, the
+  fold, and the final exit) and refuses any other line by name, because the place a command sits
+  decides whether its exit reaches the step's.
 - **The population is derived, never listed.** The test reads the commands from the step's own
   script (each line that runs `scripts/mutation-verdict.py`, keyed by its verb and its `--class`),
   prints how many it found and asserts that count against the number of runs of the tool in the
@@ -551,22 +562,26 @@ The rows join `S08700-S08799` (`SCRIPT_MUTATIONS`), each with the one killer of 
 | S08772 | the legs check's collected exit is never folded into the status |
 | S08773 | the step exits success whatever its status is |
 
-Sections 3 and 7 are left as they stand: no earlier line of this SPEC is edited, so the criterion
-of this amendment, A24 and A25, are defined in the criteria table and fence of section 11. Files added or
+Sections 3 and 7 are left as they stand: no earlier line of this SPEC is edited, so the criteria
+of this amendment, A24 to A27, are defined in the criteria table and fence of section 11. Files added or
 changed by this amendment: `scripts/tests/test_verdict_folds.py` (added),
 `scripts/mutation-rows.d/S08700-S08799.json` (eight rows), `docs/red-first/SPEC-087.md` (a dated
 addendum), `scripts/tests/test_not_started_legs.py` (the run helper takes the resolved shell, and
 its callers pass it) and `changelog.d/test-verdict-folds-454.md` (added). It changes no Rust and no workflow
 (#454).
 
-## 11. Acceptance criteria of the amendment of 2026-09-30 (A24 and A25, #454)
+## 11. Acceptance criteria of the amendment of 2026-09-30 (A24 to A27, #454)
 
 | id | criterion | decided by |
 |---|---|---|
 | A24 | for each command the verdict step runs (found in its script: 4, each collecting its exit), the step, run under the shell the workflow resolves for the step, exits with that command's own non-zero exit when it alone fails, for each of the tool's non-zero exits, and exits zero when none fails; every run calls every command, and the count of runs examined is printed | `test_verdict_folds.py` `the_step_fails_when_any_one_command_alone_fails_with_any_of_its_exits` |
-| A25 | the harness sees a pass-through pipe that loses a recorded exit: for each command the census derives (4) and each of 3 pass-through pipe forms (`\| tee`, `\| cat`, `2>&1 \| cat`) applied to that command's line in memory (12 examined, printed and asserted), that command alone failing with each non-zero exit fails the exit-code assertion; a captured command the harness cannot drive is refused by name; and the shell resolver returns the shell GitHub runs for each placement (step, job, workflow, none) and each precedence | `test_verdict_folds.py` `the_harness_sees_a_pipe_that_loses_a_recorded_exit`, `a_captured_command_the_harness_cannot_drive_is_refused_by_name`, `each_placement_and_the_precedence_resolve_to_the_shell_github_runs` |
+| A25 | the harness sees a pass-through pipe that loses a recorded exit: for each command the census derives (4) and each of 3 pass-through pipe forms (`\| tee`, `\| cat`, `2>&1 \| cat`) applied to that command's line in memory (12 examined, printed and asserted), that command alone failing with each non-zero exit is judged as the resolved shell judges it: the exit is kept under a shell with `pipefail` and lost under `bash -e` or `sh -e`, and the harness agrees with the shell either way | `test_verdict_folds.py` `the_harness_sees_a_pipe_that_loses_a_recorded_exit`, `each_placement_and_the_precedence_resolve_to_the_shell_github_runs` |
+| A26 | the resolver is default-deny: a generated population of 57 shell placements (step, job and workflow, each in several spellings, with each precedence) is each read as the shell GitHub runs or refused by name, none read as another shell (28 correct, 29 refused, 0 escaping; the count is printed and asserted) | `test_verdict_folds.py` `every_placement_of_the_shell_is_read_correctly_or_refused_by_name` |
+| A27 | the census is default-deny: a generated population of 30 plants (a command in a condition, negated, left of `\|\|` or `&&`, in `$(...)`, backgrounded, piped, under `set +e`, continued across lines, and the rest) is each refused by name or driven and judged, none passing unseen (29 refused, 1 driven, 0 silent; the count is printed and asserted) | `test_verdict_folds.py` `every_command_form_is_driven_by_the_harness_or_refused_by_name` |
 
 ```acceptance
 A24: python3 -m unittest discover -s scripts/tests -p test_verdict_folds.py -k the_step_fails_when_any_one_command_alone_fails_with_any_of_its_exits
-A25: python3 -m unittest discover -s scripts/tests -p test_verdict_folds.py -k the_harness_sees_a_pipe_that_loses_a_recorded_exit -k a_captured_command_the_harness_cannot_drive_is_refused_by_name -k each_placement_and_the_precedence_resolve_to_the_shell_github_runs
+A25: python3 -m unittest discover -s scripts/tests -p test_verdict_folds.py -k the_harness_sees_a_pipe_that_loses_a_recorded_exit -k each_placement_and_the_precedence_resolve_to_the_shell_github_runs
+A26: python3 -m unittest discover -s scripts/tests -p test_verdict_folds.py -k every_placement_of_the_shell_is_read_correctly_or_refused_by_name
+A27: python3 -m unittest discover -s scripts/tests -p test_verdict_folds.py -k every_command_form_is_driven_by_the_harness_or_refused_by_name
 ```
