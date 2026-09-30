@@ -132,17 +132,22 @@ no longer replaces a waiting second. R5's other statements stand: `release.yml` 
 trigger, never cancels a run in progress and keeps its tag's ref as its group.
 
 R10. **Every workflow whose concurrency group can hold two runs of one release queues them.** A
-workflow with a `push: tags` or a `release` trigger carries one workflow-level block whose group is the
-same for two runs of one tag, whose `cancel-in-progress` is false for every run, and which sets
-`queue: max`, so a run waits behind the one running and none is replaced (ADR-292). The test derives the
+workflow that runs for a tag is one with a `release` trigger or a `push` trigger whose filters admit a
+tag: a `tags` or `tags-ignore` filter, or neither a branch nor a tag filter, since GitHub then runs it
+for tags too. It carries one workflow-level block and no job's own. Its group is present, is the same
+for two runs of one tag under each event that runs it for a tag, and is no other workflow's, read
+without case (R8). Its `cancel-in-progress` is false for every such run, and it sets `queue: max`, so a
+run waits behind the one running and none is replaced (ADR-292). GitHub keeps at most a hundred waiting
+runs in one group and cancels any run beyond them (ADR-292); the `release tags` ruleset lets a `v*` tag
+be pushed once and never moved, so only re-runs of one tag's run can wait. The test derives the
 workflows from the directory and prints how many it examined (today one, `release.yml`); a workflow it
-cannot read is refused.
+cannot read, or a group it cannot render, is refused.
 
 ## 9. Acceptance criteria of the 2026-09-30 amendment
 
 | id | criterion | decided by |
 |---|---|---|
-| A7 | every workflow with a `push: tags` or a `release` trigger has one group for two runs of one tag, cancels no run and sets `queue: max`; a tag group with no queue, `queue: single`, a group keyed by the run id, `cancel-in-progress` true, a job-level block, a missing block and an unreadable workflow are each refused | `test_workflow_concurrency.py` `every_workflow_that_can_hold_two_runs_of_a_release_queues_them` |
+| A7 | every workflow that runs for a tag (R10) has one workflow-level block and no job's own, a group that is present, one for two runs of one tag under each event that runs it for a tag and no other workflow's, cancels no run and sets `queue: max`; a tag group with no queue, `queue: single`, a group keyed by the run id, `cancel-in-progress` true, a job-level block (under a quoted key too), a missing block, a block with no group, a group another workflow renders in another case, a release event's run-id group or cancel, and an unreadable workflow are each refused; a push with a `tags-ignore` filter, a paths filter only or no filter, a push named in a list and a release are each in the class, and a push of branches only is not | `test_workflow_concurrency.py` `every_workflow_that_can_hold_two_runs_of_a_release_queues_them` |
 
 ```acceptance
 A7: python3 -m unittest discover -s scripts/tests -p test_workflow_concurrency.py -k every_workflow_that_can_hold_two_runs_of_a_release_queues_them
@@ -153,8 +158,8 @@ A7: python3 -m unittest discover -s scripts/tests -p test_workflow_concurrency.p
 | file | context | change |
 |---|---|---|
 | `.github/workflows/release.yml` | repo | changed: R10, `queue: max` |
-| `scripts/tests/test_workflow_concurrency.py` | repo | changed: A7 and its planted shapes |
-| `scripts/mutation-rows.d/S19000-S19099.json` | repo | changed: S19005 and S19006 |
+| `scripts/tests/test_workflow_concurrency.py` | repo | changed: A7, its planted shapes and its planted triggers |
+| `scripts/mutation-rows.d/S19000-S19099.json` | repo | changed: S19005 to S19008 |
 | `docs/decisions/ADR-292-a-release-tags-runs-never-replace-a-waiting-run.md` | repo | added |
 | `docs/red-first/SPEC-190.md` | repo | changed: A7 |
 | `changelog.d/ci-release-queue-377.md` | repo | added |
