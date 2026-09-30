@@ -88,5 +88,5 @@ identity and also commits a pin file. The considered options:
   one version apart (#504).
 
 Cost: a checker rebuilt with another pin refuses every check as drift until this field is changed,
-and that change is reviewed here. Confirmation: SPEC-295's A1, A3 and A6.
+and that change is reviewed here. Confirmation: SPEC-295's A1, A3 and A6 to A8; the test reads the working tree, so an untracked pin file turns it red, which is fail-closed by design.
 

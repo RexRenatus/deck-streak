@@ -90,3 +90,21 @@ kind hex64 at 1 fields`, `examined 28 planted values of the kind object at 4 fie
 arms of the reader` (it was 8) and `examined 22 planted digest faults`. The nine mutant rows
 S29500 to S29508 keep their anchors, each occurring once in the test file.
 
+## Amendment addendum, 2026-09-30 (issue #504, round 1)
+
+The tests of A7 and A8 were committed alone (bfa66c37) and the module read `FAILED (failures=3)`,
+each by assertion and none by error. The reader change and the assertions in the loader and in the
+presence controls (00937178) turned them green.
+
+```red-first
+A7: red at bfa66c37: AssertionError: the sources each combination names, as the checker reads them (R6): the combination of the field named and a pin file committed lists one source, not two
+A7: green at 00937178
+A8: red at bfa66c37: AssertionError: ['test_the_toolchain_identity_is_named_and_a_malformed_one_is_refused line 493'] != [] : a call of the reader whose refusal would escape as an error
+A8: red at bfa66c37: AssertionError: a refusal escaped a test as an error, not a failure, for 159 of the 182 planted refusals of the committed file
+A8: green at 00937178
+```
+
+The green run reads `Ran 9 tests ... OK` and prints `examined 4 toolchain source combinations`,
+`examined 182 planted refusals of the committed file`, `examined 5 tests that load the committed
+file`, `examined 6 calls of the reader` and `examined 2 presence controls of the committed file`.
+The rows S29510 to S29513 are each killed on a clean committed detached head.
