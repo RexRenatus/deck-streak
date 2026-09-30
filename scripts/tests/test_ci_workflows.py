@@ -876,6 +876,7 @@ class TheReaderReadsOnlyItsNamedForms(unittest.TestCase):
             for label, text, expected in examined("forms the reader meets", members)
             if outcome(text) != expected
         ]
+        self.assertGreater(len(members), 2000, "the population of named forms shrank")
         self.assertEqual(wrong, [])
 
 
