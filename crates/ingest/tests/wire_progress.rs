@@ -4,6 +4,13 @@
 
 use deck_streak_ingest::wire::{NO_PROGRESS, WireError, WireField, WireValue, walk, walk_with};
 
+/// Reports how many fields a walk examined, so an empty walk cannot pass unseen.
+#[allow(clippy::print_stdout)]
+fn examined(what: &str, count: usize) -> usize {
+    println!("examined {count} {what}");
+    count
+}
+
 fn field(number: u128) -> WireField<'static> {
     WireField {
         number,
@@ -56,8 +63,7 @@ fn a_reader_error_passes_through_untouched() {
 fn the_real_walk_reads_a_varint_field_and_a_length_field() {
     let data = [0x08_u8, 0x96, 0x01, 0x12, 0x02, b'h', b'i'];
     let got = walk(&data).expect("walk");
-    println!("examined {} fields", got.len());
-    assert_eq!(got.len(), 2);
+    assert_eq!(examined("fields", got.len()), 2);
     assert_eq!(got[0].number, 1);
     assert_eq!(got[0].value, WireValue::Varint(150));
     assert_eq!(got[1].number, 2);
