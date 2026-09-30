@@ -15,7 +15,7 @@ import unittest
 from pathlib import Path
 
 from _support import REPO, examined
-from test_ci_workflows import workflow_files
+from test_ci_workflows import workflow_file_text, workflow_files
 
 WORKFLOWS = REPO / ".github" / "workflows"
 WEEKLY = WORKFLOWS / "mutation-weekly.yml"
@@ -52,7 +52,7 @@ def workflow(path):
     """The workflow's text; its absence is the criterion failing, never a crash."""
     if not path.is_file():
         raise AssertionError(f"{path.relative_to(REPO)} does not exist")
-    return path.read_text(encoding="utf-8")
+    return workflow_file_text(path)
 
 
 def jobs(text):
@@ -398,7 +398,7 @@ def mutants_commands(directory):
     return [
         (path.name, command)
         for path in workflow_files(directory)
-        for command in re.findall(r"cargo mutants [^\n]*", path.read_text(encoding="utf-8"))
+        for command in re.findall(r"cargo mutants [^\n]*", workflow_file_text(path))
     ]
 
 
@@ -407,7 +407,7 @@ def mutants_jobs(directory):
     return [
         (path.name, name, job)
         for path in workflow_files(directory)
-        for name, job in jobs(path.read_text(encoding="utf-8")).items()
+        for name, job in jobs(workflow_file_text(path)).items()
         if "cargo mutants" in job
     ]
 

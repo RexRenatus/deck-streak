@@ -69,6 +69,14 @@ CACHE_BY_THEMSELVES = (
 )
 
 
+def workflow_file_text(path):
+    """A workflow file's text as GitHub's parser is given it: the file's bytes, decoded as UTF-8
+    strictly and not translated. `Path.read_text` turns a lone carriage return into a line feed
+    before the reader sees it, so no test reads a workflow file with it, and `utf-8-sig` would drop
+    a byte-order mark the reader refuses by name (SPEC-190 R12)."""
+    return Path(path).read_bytes().decode("utf-8")
+
+
 def workflow_files(directory):
     """The workflow files of a directory: every `.yml` and `.yaml` file in it, as GitHub reads both
     (SPEC-034 R7). A directory with none is VOID, never a pass."""
@@ -102,7 +110,7 @@ class WorkflowsAreHardened(unittest.TestCase):
         runners = []
         for path in self.files:
             workflow = read_hardened(path)
-            code = re.sub(r"(?m)#.*$", "", path.read_text())
+            code = re.sub(r"(?m)#.*$", "", workflow_file_text(path))
             self.assertNotIn("pull_request_target", code, path.name)
             runners += [(path.name, runner) for runner in entries(workflow, "runs-on")]
         for name, runner in examined("runs-on values", runners):
@@ -111,13 +119,13 @@ class WorkflowsAreHardened(unittest.TestCase):
 
     def test_ci_runs_every_stage_of_the_local_gate(self):
         stages = STAGES.search((REPO / "scripts" / "check.sh").read_text()).group(1).split()
-        ci = (WORKFLOWS / "ci.yml").read_text()
+        ci = workflow_file_text(WORKFLOWS / "ci.yml")
         for stage in examined("gate stages", stages):
             named = rf"bash scripts/check\.sh [a-z -]*(?<![\w-]){re.escape(stage)}(?![\w-])"
             self.assertRegex(ci, named, stage)
 
     def test_the_aggregate_check_needs_every_job_and_always_runs(self):
-        ci = (WORKFLOWS / "ci.yml").read_text()
+        ci = workflow_file_text(WORKFLOWS / "ci.yml")
         jobs = re.findall(r"(?m)^  ([a-z-]+):\n", ci.split("\njobs:\n", 1)[1])
         aggregate = re.search(r"(?ms)^  ci:\n(.*?)(?=^  [a-z-]+:\n|\Z)", ci).group(1)
         self.assertIn("if: ${{ always() }}", aggregate)
@@ -451,7 +459,7 @@ class WorkflowsAreHardened(unittest.TestCase):
         # The SHA-pin test admits an action only in its plain form: the hardened control, its action
         # written with an empty part, a trailing slash or a backslash, or its SHA cut short, is
         # refused by that reference.
-        control = (PLANTED_HARDENING / "hardened.yml").read_text(encoding="utf-8")
+        control = workflow_file_text(PLANTED_HARDENING / "hardened.yml")
         pinned = CONTROL_STEP.split("uses: ", 1)[1]
         for written in (
             pinned.replace("actions/checkout@", "actions//checkout@"),
@@ -512,7 +520,7 @@ def triggers(workflow):
 
 class CiRunsOnDevAndMain(unittest.TestCase):
     def test_the_ci_workflow_runs_on_pull_requests_into_dev_and_main(self):
-        ci = triggers((WORKFLOWS / "ci.yml").read_text(encoding="utf-8"))
+        ci = triggers(workflow_file_text(WORKFLOWS / "ci.yml"))
         for event in examined("ci triggers", ["pull_request", "push"]):
             self.assertIn(event, ci, f"ci.yml does not run on {event}")
             for branch in ("dev", "main"):
@@ -613,7 +621,7 @@ class TheRequiredCiCheckIsThePullRequestsOwn(unittest.TestCase):
 
 def run_base_is_dev(context):
     """Run base-is-dev's own step from ci.yml under `bash -e`, its env taken from `context`."""
-    ci = (WORKFLOWS / "ci.yml").read_text(encoding="utf-8")
+    ci = workflow_file_text(WORKFLOWS / "ci.yml")
     job = re.search(r"(?ms)^  base-is-dev:\n(.*?)(?=^  [a-z-]+:\n|\Z)", ci).group(1)
     names = re.findall(r"(?m)^          ([A-Z_]+): \$\{\{ ([a-z_.]+) \}\}$", job)
     script = textwrap.dedent(re.search(r"(?ms)^        run: \|\n(.*?)(?=^\S|\Z)", job).group(1))
@@ -1362,7 +1370,7 @@ def _sequence(lines, at, indent, refused):
 
 
 def load(name):
-    return read_workflow((WORKFLOWS / name).read_text(encoding="utf-8"))
+    return read_workflow(workflow_file_text(WORKFLOWS / name))
 
 
 def read_hardened(path):
@@ -1370,7 +1378,7 @@ def read_hardened(path):
     they read its keys the way the checker does (SPEC-034 R7). A form the reader does not read, or a
     line it cannot place, fails the test that reads it, named by the file and the line."""
     try:
-        return read_workflow(path.read_text(encoding="utf-8"))
+        return read_workflow(workflow_file_text(path))
     except AssertionError as refused:
         raise AssertionError(f"{path.name}: {refused}") from None
 
@@ -1799,7 +1807,7 @@ def cache_scan(directory):
     """`cache_problems` over every workflow of a directory: the problems, then the saves found."""
     problems, saves = [], []
     for path in workflow_files(directory):
-        found_problems, found = cache_problems(path.name, read_workflow(path.read_text("utf-8")))
+        found_problems, found = cache_problems(path.name, read_workflow(workflow_file_text(path)))
         problems += found_problems
         saves += found
     return problems, saves
@@ -1810,7 +1818,7 @@ def protoc_pins(directory):
     return [
         (path.name, digest)
         for path in workflow_files(directory)
-        for digest in re.findall(r"PROTOC_SHA256: ([0-9a-f]+)", path.read_text())
+        for digest in re.findall(r"PROTOC_SHA256: ([0-9a-f]+)", workflow_file_text(path))
     ]
 
 
@@ -1899,7 +1907,7 @@ class OnlyAPushSavesACache(unittest.TestCase):
         self.assertIn("planted.yml:build:any push: saves on a pushed tag", problems)
 
     def test_only_a_superseded_pull_request_run_is_cancelled(self):
-        ci = (WORKFLOWS / "ci.yml").read_text(encoding="utf-8")
+        ci = workflow_file_text(WORKFLOWS / "ci.yml")
         self.assertEqual(
             len(re.findall(r"(?m)^\s*concurrency:", ci)), 1, "a job sets its own group"
         )
@@ -2646,7 +2654,7 @@ def secret_and_checkout_problems(directory):
     judged = {"expressions": [], "checkouts": [], "run steps": []}
     for path in files:
         try:
-            workflow, refused = read_workflow(path.read_text(encoding="utf-8")), []
+            workflow, refused = read_workflow(workflow_file_text(path)), []
         except Unread as unread:
             workflow, refused = unread.workflow, unread.refused
         problems += [f"{path.name}:{why}" for why in refused]
@@ -2748,6 +2756,10 @@ LOADER = "workflow_file_text"
 # The reads of a file that is no workflow: a script, a lock file, a configuration, a brief, a
 # ruleset, a log, a plan. Each is (module, function): how many reads that function makes.
 NOT_WORKFLOW_READS = {
+    (
+        "test_ci_workflows",
+        "test_every_file_read_in_the_test_modules_is_the_loader_or_a_named_non_workflow_read",
+    ): 2,
     ("test_ci_workflows", "gate_stages"): 1,
     ("test_ci_workflows", "required_contexts"): 1,
     ("test_ci_workflows", "run_step"): 1,
@@ -2782,8 +2794,8 @@ class WorkflowFilesAreReadAsBytes(unittest.TestCase):
     UTF-8 and not translated (SPEC-190 R12). Every read of a workflow file in the test modules goes
     through one loader, and a census of those modules' file reads is closed."""
 
-    RELEASE = (WORKFLOWS / "release.yml").read_text(encoding="utf-8")
-    BLOCK = "jobs:\n  a:\n    steps:\n      - run: |\n          echo a__\n          echo b\n"
+    RELEASE = workflow_file_text(WORKFLOWS / "release.yml")
+    BLOCK = "jobs:\n  a:\n    steps:\n      - run: |\n          echo a__b\n          echo c\n"
 
     def said(self, why):
         return "; ".join(why.refused) if isinstance(why, Unread) else str(why)

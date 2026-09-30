@@ -23,6 +23,7 @@ from test_ci_workflows import (
     rendered,
     Unread,
     kind,
+    workflow_file_text,
     workflow_files,
 )
 
@@ -34,14 +35,14 @@ def read_all():
     """Every workflow file of the directory as (file name, its read content, its text)."""
     found = []
     for path in workflow_files(WORKFLOWS):
-        text = path.read_text(encoding="utf-8")
+        text = workflow_file_text(path)
         found.append((path.name, read_workflow(text), text))
     return found
 
 
 def workflow_texts():
     """Every workflow file of the directory as {file name: its text}."""
-    return {path.name: path.read_text(encoding="utf-8") for path in workflow_files(WORKFLOWS)}
+    return {path.name: workflow_file_text(path) for path in workflow_files(WORKFLOWS)}
 
 
 def with_pull_request(found):
@@ -1130,7 +1131,7 @@ def other_block(on, key, value, where, name="publish"):
 
 def planted(old, new):
     """release.yml's text with one shape planted in place of the ADR-292 shape."""
-    text = (WORKFLOWS / "release.yml").read_text(encoding="utf-8")
+    text = workflow_file_text(WORKFLOWS / "release.yml")
     assert old in text, old
     return text.replace(old, new, 1)
 
