@@ -164,12 +164,6 @@ fn decode_formats(config: Option<&[u8]>) -> (String, String, bool) {
     (front, back, false)
 }
 
-/// Every `{{...}}` whose inside holds no brace, left to right and not overlapping, as the
-/// predecessor's pattern `\{\{([^{}]+)\}\}` finds them.
-fn tokens_in(text: &str) -> Vec<&str> {
-    tokens_with(text, token_step)
-}
-
 /// What one scan step found: the token's byte range if a token starts there, and the position
 /// after the step.
 pub type Step = (Option<(usize, usize)>, usize);
@@ -191,12 +185,22 @@ pub fn token_step(bytes: &[u8], at: usize) -> Step {
     (None, at + 1)
 }
 
-/// The token scan with its per-step reader injected, so the progress guard is testable alone.
+/// The refusal text of a token scan step that did not move the scan forward.
+pub const TOKEN_NO_PROGRESS: &str = "template token scan made no progress";
+
+/// Every `{{...}}` whose inside holds no brace, left to right and not overlapping, as the
+/// predecessor's pattern `\{\{([^{}]+)\}\}` finds them, with the per-step reader injected so
+/// the progress guard is testable alone.
 ///
-/// A step that does not strictly advance the position ends the scan before anything is kept:
-/// a stalled reader would otherwise spin or push without bound, which costs memory and CPU
-/// rather than a test failure.
-pub fn tokens_with<F>(text: &str, mut step: F) -> Vec<&str>
+/// A step that does not strictly advance the position is refused with [`TOKEN_NO_PROGRESS`]
+/// before anything is kept, as the wire walk refuses one: a stalled reader would otherwise spin
+/// or push without bound, and a scan that stopped and answered what it had kept would judge a
+/// note type on part of its templates, reporting fields they do render as dark.
+///
+/// # Errors
+///
+/// [`TOKEN_NO_PROGRESS`] when a step stays or steps back.
+pub fn tokens_with<F>(text: &str, mut step: F) -> Result<Vec<&str>, &'static str>
 where
     F: FnMut(&[u8], usize) -> Step,
 {
@@ -206,14 +210,14 @@ where
     while at + 1 < bytes.len() {
         let (token, next) = step(bytes, at);
         if next <= at {
-            break;
+            return Err(TOKEN_NO_PROGRESS);
         }
         if let Some((start, end)) = token {
             found.push(&text[start..end]);
         }
         at = next;
     }
-    found
+    Ok(found)
 }
 
 /// One captured token as a field name, or none for a special name or an empty one.
@@ -236,10 +240,27 @@ fn normalise(raw: &str) -> Option<String> {
 /// The fields one template config references, and whether it failed to decode.
 #[must_use]
 pub fn config_tokens(config: Option<&[u8]>) -> (BTreeSet<String>, bool) {
+    config_tokens_with(config, token_step)
+}
+
+/// [`config_tokens`] with the scan step injected. A scan that refuses marks the template as
+/// failed to decode, as a wire walk that refuses does, so its note type is named unparseable
+/// rather than judged on a partial token set.
+#[must_use]
+pub fn config_tokens_with<F>(config: Option<&[u8]>, mut step: F) -> (BTreeSet<String>, bool)
+where
+    F: FnMut(&[u8], usize) -> Step,
+{
     let (front, back, failed) = decode_formats(config);
-    let tokens = tokens_in(&front)
+    let (Ok(front_tokens), Ok(back_tokens)) = (
+        tokens_with(&front, &mut step),
+        tokens_with(&back, &mut step),
+    ) else {
+        return (BTreeSet::new(), true);
+    };
+    let tokens = front_tokens
         .into_iter()
-        .chain(tokens_in(&back))
+        .chain(back_tokens)
         .filter_map(normalise)
         .collect();
     (tokens, failed)

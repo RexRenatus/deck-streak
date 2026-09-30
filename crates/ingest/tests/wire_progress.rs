@@ -34,11 +34,17 @@ fn a_reader_that_stays_is_refused_with_nothing_kept() {
 #[test]
 fn a_reader_that_steps_back_is_refused() {
     let data = [1_u8, 2, 3];
-    let got = walk_with(&data, |_, at| Ok((field(9), at.saturating_sub(1))));
+    let mut calls = 0;
+    let got = walk_with(&data, |_, at| {
+        calls += 1;
+        assert!(calls < 3, "the walk went on past a stalled pass");
+        Ok((field(9), at.saturating_sub(1)))
+    });
     assert_eq!(got, Err(WireError(NO_PROGRESS.to_owned())));
     let mut position = 0;
     let later = walk_with(&data, |_, at| {
         position += 1;
+        assert!(position < 4, "the walk went on past a step back");
         Ok((field(9), if position == 1 { at + 2 } else { at - 1 }))
     });
     assert_eq!(later, Err(WireError(NO_PROGRESS.to_owned())));
@@ -47,15 +53,33 @@ fn a_reader_that_steps_back_is_refused() {
 #[test]
 fn a_reader_that_advances_by_one_keeps_every_field_in_order() {
     let data = [1_u8, 2, 3];
-    let got = walk_with(&data, |_, at| Ok((field(at as u128), at + 1))).expect("walk");
+    let mut calls = 0;
+    let got = walk_with(&data, |_, at| {
+        calls += 1;
+        assert!(calls < 5, "the walk read past the blob's end");
+        Ok((field(at as u128), at + 1))
+    })
+    .expect("walk");
     assert_eq!(got, vec![field(0), field(1), field(2)]);
-    assert_eq!(walk_with(&[], |_, at| Ok((field(0), at + 1))), Ok(vec![]));
+    let mut empty = 0;
+    let none = walk_with(&[], |_, at| {
+        empty += 1;
+        assert!(empty < 2, "the walk read an empty blob");
+        Ok((field(0), at + 1))
+    });
+    assert_eq!(none, Ok(vec![]));
+    assert_eq!(empty, 0, "an empty blob is never read");
 }
 
 #[test]
 fn a_reader_error_passes_through_untouched() {
     let data = [1_u8];
-    let got = walk_with(&data, |_, _| Err(WireError("the read failed".to_owned())));
+    let mut calls = 0;
+    let got = walk_with(&data, |_, _| {
+        calls += 1;
+        assert!(calls < 2, "the walk went on past a failed read");
+        Err(WireError("the read failed".to_owned()))
+    });
     assert_eq!(got, Err(WireError("the read failed".to_owned())));
 }
 
