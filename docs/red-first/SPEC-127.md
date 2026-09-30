@@ -35,6 +35,49 @@ A15: not red: grep keeping no line already succeeded at 24b880e; the test pins t
 A12: green at dcfcc9cf4f3173bcdbeecfee48f493a66cd7757a
 A13: green at dcfcc9cf4f3173bcdbeecfee48f493a66cd7757a
 A14: green at dcfcc9cf4f3173bcdbeecfee48f493a66cd7757a
+A16: red at da30fb25261d1fafaa295e59e206010bd1063605: AssertionError: 'the Caddy configuration was refused' not found in "find: '/tmp/tmpons55uop/host/etc/caddy/deck-streak.candidate': No such file or directory\n" : the refusal is printed
+A17: red at da30fb25261d1fafaa295e59e206010bd1063605: AssertionError: 'the Caddy configuration was refused' not found in 'grep: /tmp/tmpwuzhmnj1/host/etc/caddy/deck-streak.candidate: Is a directory\ndeck-streak-host: line 11: /tmp/tmpwuzhmnj1/host/etc/caddy/deck-streak.candidate: Is a directory\n' : the refusal is printed
+A18: red at da30fb25261d1fafaa295e59e206010bd1063605: AssertionError: 'the Caddy configuration was refused' not found in 'deck-streak-host: line 9: /tmp/tmpwak27vmv/host/etc/caddy/deck-streak.caddy: Permission denied\n' : the refusal is printed
+A19: red at da30fb25261d1fafaa295e59e206010bd1063605: AssertionError: 'the Caddy configuration was refused' not found in 'deck-streak-host: line 11: /tmp/tmp1413f6eo/host/etc/caddy/deck-streak.candidate: Permission denied\n' : the refusal is printed
+A20: red at da30fb25261d1fafaa295e59e206010bd1063605: AssertionError: b'' != b'example.org {\n\trespond 200\n}\nimport deck-streak.caddy\n' : the live Caddyfile is byte for byte
+A21: red at da30fb25261d1fafaa295e59e206010bd1063605: AssertionError: 0 == 0 : a dangling link refuses the removal
+A22: not red: the test was added with the fix already in place (5192f49); see the replay below the fence
+A23: red at 159b1877c6207ef0596e20ea9793276745b3c911: AssertionError: 0 == 0 : a linked candidate refuses the install
+A24: red at 159b1877c6207ef0596e20ea9793276745b3c911: AssertionError: 0 == 0 : a hard-linked block refuses the install
+A25: red at 159b1877c6207ef0596e20ea9793276745b3c911: AssertionError: b'' != b'example.org {\n\trespond 200\n}\nimport deck-streak.caddy\n' : the live Caddyfile is byte for byte
+A26: red at 159b1877c6207ef0596e20ea9793276745b3c911: AssertionError: the removal waited for a reader of a FIFO at its candidate path
+A27: red at 159b1877c6207ef0596e20ea9793276745b3c911: AssertionError: 'the Caddy configuration was refused' not found in "deck-streak-host: line 18: /tmp/tmptfxp_pw2/host/etc/caddy/deck-streak.caddy: Permission denied\nfind: '/tmp/tmptfxp_pw2/host/etc/caddy/deck-streak.caddy': No such file or directory\n" : the refusal is printed
+A28: red at 159b1877c6207ef0596e20ea9793276745b3c911: AssertionError: False is not true : the directory and its file are kept
+A29: red at 159b1877c6207ef0596e20ea9793276745b3c911: AssertionError: 'the Caddy configuration was refused' not found in "cp: cannot create regular file '/tmp/tmpfevq3l54/host/etc/caddy/Caddyfile.previous': Permission denied\n" : the refusal is printed
+A30: red at 159b1877c6207ef0596e20ea9793276745b3c911: AssertionError: 'the Caddy configuration was refused' not found in '' : the refusal is printed
+A32: red at 159b1877c6207ef0596e20ea9793276745b3c911: AssertionError: 'the Caddy configuration was refused' not found in "cp: cannot create regular file '/tmp/tmph36m10n5/host/etc/caddy/deck-streak.caddy.previous': Permission denied\n" : the refusal is printed
+A31: not red: the test passes at 159b187's and the head's `deploy.sh` (on dev's it fails: the install there has no undo for the copy), so it is the killer that S12720 needs once the install guard refuses a link before the copy (see the addendum below the fence)
+A33: red at 9c1ac0df482428d364ced130cbad6447fecc1ffe: AssertionError: 0 == 0 : the removal refuses
+A34: red at 9c1ac0df482428d364ced130cbad6447fecc1ffe: AssertionError: deploy.sh waited on a FIFO at the live Caddyfile
+A35: red at 9c1ac0df482428d364ced130cbad6447fecc1ffe: AssertionError: 'the Caddy configuration was refused' not found in "deck-streak-host: line 23: /tmp/tmp96dogtc2/host/etc/caddy/deck-streak.caddy: Permission denied\nfind: cannot delete '/tmp/tmp96dogtc2/host/etc/caddy/deck-streak.candidate': Permission denied\n" : the refusal is printed
+A36: not red: the test passes at the head's `deploy.sh`, whose install already refuses a block it cannot copy aside, so it is the killer that S12730 needs once the install guard refuses a directory it cannot write (see the addendum below the fence)
+A37: not red: the test passes at the head's `deploy.sh`, whose undo already tolerates an absent block, so it is the killer that S12725 needs once the install guard refuses before the undo runs (see the addendum below the fence)
+A38: red at ccc7a07165cf9bd5a3ecfa389df1ab1055cde766: AssertionError: False is not true : no refusal line: "cp: cannot create regular file '/tmp/tmpmooww968/host/etc/cfdir/Caddyfile.previous': Permission denied\n"
+A39: not red: the test passes at the head that holds A38's red test, because `deploy.sh` already reads only the settings the population varies; it is the guard that keeps the population's axes complete (see the addendum below the fence)
+A16: green at 28588e0fbbb556f5c686ac937c2180377c78bfbd
+A17: green at 28588e0fbbb556f5c686ac937c2180377c78bfbd
+A18: green at 28588e0fbbb556f5c686ac937c2180377c78bfbd
+A19: green at 28588e0fbbb556f5c686ac937c2180377c78bfbd
+A20: green at 28588e0fbbb556f5c686ac937c2180377c78bfbd
+A21: green at 28588e0fbbb556f5c686ac937c2180377c78bfbd
+A23: green at 2c25d22b82dd41f8f38a0754039e3549a496f45d
+A24: green at 2c25d22b82dd41f8f38a0754039e3549a496f45d
+A25: green at 2c25d22b82dd41f8f38a0754039e3549a496f45d
+A26: green at 2c25d22b82dd41f8f38a0754039e3549a496f45d
+A27: green at 2c25d22b82dd41f8f38a0754039e3549a496f45d
+A28: green at 2c25d22b82dd41f8f38a0754039e3549a496f45d
+A29: green at 2c25d22b82dd41f8f38a0754039e3549a496f45d
+A30: green at 2c25d22b82dd41f8f38a0754039e3549a496f45d
+A32: green at 2c25d22b82dd41f8f38a0754039e3549a496f45d
+A33: green at dc8e42216b229361a1def85bd1230884c9f11e00
+A34: green at dc8e42216b229361a1def85bd1230884c9f11e00
+A35: green at dc8e42216b229361a1def85bd1230884c9f11e00
+A38: green at b46e2daa3a29f0a4db575f971f107febb989e105
 ```
 
 ## Fix round 1 (PR #357)
@@ -102,3 +145,129 @@ succeeded. The fix and rows S12713 to S12717 came in dcfcc9c. dcfcc9c changes `d
 the one later commit that edits a test file is f369d2f, which adds a presence assertion to A15 (the
 removal's reload ran) so the probe's absence-only rule passes, and A15 stays `not red`. Rows S12711 and
 S12712 keep their killers and are re-anchored on the changed lines.
+
+## Amendment 2026-09-29 (issues #423 and #424)
+
+The tests of A16 to A21 were committed first (da30fb2) against dev's `deploy.sh` and run under
+`LC_ALL=C`, because `find` and `mv` quote differently by locale: exactly seven tests were red by
+assertion (A16 has two, one per refusal) and the thirty-one tests that dev holds stayed green. The one
+red line of A16 above is the validation test's; the adapt test's is the same message. The fix
+followed (28588e0), which changes `deploy.sh` and edits no test file. After it, thirty-eight tests
+pass. The tests' subprocess now runs in its own session and the whole group is killed on a timeout.
+
+A link to `/dev/full` at the candidate path was not made a test: the run ends in under a second with a
+non-zero status at dev and at the head, so it pins nothing that a plain unwritable path does not.
+
+A22 covers the install with a link to the live Caddyfile at its candidate path. The row S12720 was
+first pinned by A17, whose test still passed with the row's mutant because the later import append
+refuses a directory too, so the test of A22 was added (5192f49, the only later commit that edits a test
+file) and the row's killer moved to it. On dev's `deploy.sh` the test is red by assertion, replayed under `LC_ALL=C`:
+
+```text
+A22: red on dev's deploy.sh: AssertionError: 'the Caddy configuration was refused' not found in "cp: '/tmp/tmp2vnj2dok/host/etc/caddy/Caddyfile' and '/tmp/tmp2vnj2dok/host/etc/caddy/deck-streak.candidate' are the same file\n" : the refusal is printed
+```
+
+With it, thirty-nine tests pass at the head.
+
+## Amendment 2026-09-29, second round (issues #423 and #424)
+
+The tests of A23 to A32 were committed first (159b187) against `deploy.sh` as it stood, and run whole
+under `LC_ALL=C`: nine tests were red by assertion, and the thirty-nine that stood stayed green. The
+test of A26 turns a timeout into a failure, so a hang is red by assertion and not an error. The test
+of A31 is green at that commit: it is the killer that the row S12720 needs, because the install guard
+now refuses a link at the candidate path before the copy, which turns A22's test into a no-op for that
+row. The fix followed (2c25d22), which changes `deploy.sh` and edits no test file. After it, forty-nine
+tests pass.
+
+One later commit edits a test file (5cd0e70): the tests of A30 and A31 gain a presence assertion on the
+live Caddyfile, beside their absence assertions. It changes no verdict: A30 stays red at 159b187 and green
+at 2c25d22, and forty-nine tests still pass.
+
+The rows S12701 and S12704 were re-anchored to the changed lines, the killer of S12720 moved to the
+test of A31, and the rows S12723 to S12730 were added; every row of the band is proved killed by its
+full id on a clean committed tree.
+
+## Amendment 2026-09-29, third round (issues #423 and #424)
+
+The tests of A33 to A37 were committed first (9c1ac0df) against `deploy.sh` as it stood, and run whole
+under `LC_ALL=C`: fifteen subtests of three tests were red by assertion (A33 ten, A34 two, A35 three),
+with no error, and the fifty-one other tests stayed green. Every pipe case turns a timeout
+into a failure, so a hang is red by assertion and not an error. The tests of A36 and A37 are green at
+that commit: they are the killers that the rows S12730 and S12725 need, because the guard now refuses
+before the copy and before the undo, which turns the old killers of those two rows into no-ops. The fix
+followed (dc8e4221), which changes `deploy.sh` and edits no test file. After it, fifty-four tests
+pass.
+
+One later commit (bacacc2b) edits a test file: the test of A14 plants a file with mode 0 at the Caddyfile in place of
+a directory, because the removal's new precondition refuses a directory first and turned the old plant
+into a no-op for the row S12714. It changes no verdict: fifty-four tests still pass.
+
+The rows S12725 and S12730 moved to the tests of A37 and A36, and the rows S12731 to S12735 were added;
+each moved row's mutant survives its old killer and is killed by its new one, and every row of the band
+is proved killed by its full id on a clean committed tree.
+
+## Amendment 2026-09-29, fourth round (issues #423 and #424)
+
+The test of A38 was committed first (ccc7a071) against `deploy.sh` as it stood, and run whole under
+`LC_ALL=C`: twelve of its seventy-eight members were red by assertion, with no error, and the fifty-five
+other tests stayed green. The red line above is the first member to fail. The test of A39 is green at
+that commit, because it reads the settings and passes at the head's `deploy.sh`. The fix followed
+(b46e2daa), which changes `deploy.sh` and edits no test file. After it, fifty-six tests pass and A38
+examines seventy-eight members.
+
+The rows S12736 and S12737 were added in the next commit, and the rows S12731 and S12733 moved to the
+test of A38, because the new line turns the old killer of each into a no-op. Each of the four mutants
+survives the tests that the previous head held and is killed by the test of A38, and every row of the
+band is proved killed by its full id on a clean committed tree.
+
+The fourth round's next change derives the places of A38 from the path settings through a map, and the
+test asserts that the map's keys equal the settings list. It is a test-only strengthening that pins
+behaviour already so at the head, with no production change. Its red is a further path setting in the
+script and in the settings list, and the test of A39 has its own red with the setting in the script alone.
+With the setting in both, A38 fails with
+the line `a setting is no place`, and A39 passes. With the setting in the
+script only, A39 fails with the line `a new setting is an axis`. Both plants
+were run in a scratch copy, never in the worktree.
+
+## Amendment 2026-09-30, fifth round (issues #423 and #424)
+
+The tests of A38 and A39 were rewritten and committed first (c6d9c1cb9315156b8e98e194953e8f93269b3f78) against `deploy.sh` as it
+stood, and run whole under `LC_ALL=C`: the test of A39 was red by assertion, with no error, and the
+fifty-five other tests stayed green. A39 already holds its one line in the fence above, so this
+round's red and green are quoted here. The red line names a setting: it is the first setting the
+test sets that the script does not list, and the name it prints is the bare `DECKSTREAK_DEPLOY_`
+prefix.
+
+```text
+A39: red at c6d9c1cb9315156b8e98e194953e8f93269b3f78: AssertionError: 0 != 1 : DECKSTREAK_DEPLOY_ : a step ran with a setting it does not name
+A39: green at 1630451088450a3125d70859f9d7da52a747e86e
+```
+
+The rewritten test of A38 is green at that commit: it measures every path each Caddy step
+changes, on every exit, success included, and the head's `deploy.sh` already writes only in the
+places it checks. The fix followed (1630451088450a3125d70859f9d7da52a747e86e), which changes `deploy.sh` and edits no test file:
+each Caddy step refuses a deploy setting it does not list before it runs anything else. After it,
+fifty-six tests pass.
+
+The rows S12738 to S12740 were added in a later commit. Each is killed by the test of A39, and
+every row of the band is proved killed by its full id on a clean committed tree.
+
+## Amendment 2026-09-30, sixth round (issues #423 and #424)
+
+The test of A39 was rewritten and committed first (dafbbbbbcf6d5845493c215f04ff96f870925984) against `deploy.sh` as it stood, and
+run whole under `LC_ALL=C`: the test of A39 was red by assertion, with no error, and the fifty-five
+other tests stayed green. The red line names a setting: it is the first name the test sets that the
+script does not refuse, the `DECKSTREAK_DEPLOY_` prefix followed by the byte 0x01.
+
+```text
+A39: red at dafbbbbbcf6d5845493c215f04ff96f870925984: AssertionError: 0 != 1 : b'DECKSTREAK_DEPLOY_\x01' : a step ran with a setting it does not name
+A39: green at ea32c2452934332d613a237d1e2ad4ffc16db0ee
+```
+
+The fix followed (ea32c2452934332d613a237d1e2ad4ffc16db0ee), which changes `deploy.sh` and edits no test file: each Caddy step also
+reads the environment it received and refuses every entry with the deploy prefix that it does not
+list, whatever bytes follow the prefix, a listed setting given twice or without a value, and a run in
+which it can read no environment. After it, fifty-six tests pass.
+
+The rows S12741 to S12746 were added in a later commit. Each is killed by the test of A39, and every
+row of the band is proved killed by its full id on a clean committed tree.

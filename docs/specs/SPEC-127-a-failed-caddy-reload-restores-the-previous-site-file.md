@@ -193,3 +193,189 @@ the `caddy` stub gains a flag file that deletes the candidate before it refuses.
 `deploy/deploy.sh`, `scripts/tests/test_deploy_scripts.py`, `scripts/mutation-rows.d/S12700-S12799.json`
 (rows S12711 and S12712 re-anchored on the changed lines, S12713 to S12717 added),
 `docs/red-first/SPEC-127.md` and `changelog.d/fix-candidate-write-384.md`.
+
+## Amendment, 2026-09-29: the install undoes every write it made, and a linked candidate is refused
+
+Issues #423 and #424, both found in the review of #415. The install's `undo` began with an unguarded
+`find "$copy" -delete`; with the candidate absent that `find` failed under `set -e`, and the script
+exited before it printed `deploy: the Caddy configuration was refused`, the same shape #384 removed
+from the removal. Three writes of the install also had no undo at all: the block's `cat >"$block"`,
+the candidate's `cp -p "$file" "$copy"`, the import line's append, the kept copy of the Caddyfile and
+the rename of the candidate onto it. A failure of any of them left the new block, or a half-written
+candidate, in place with a silent exit. The strengthened rule: every write the install makes is
+followed by the undo, the undo tolerates an absent candidate and an absent block, and every path that
+undoes prints the refusal and exits non-zero. The copy that sets the previous block aside is followed
+by the refusal alone, because nothing has been written yet. The helpers the undo uses are defined
+before the first write.
+
+The removal's `: >"$copy"` follows a symbolic link. A link at the candidate path that names the live
+Caddyfile made the write empty the live Caddyfile, and a link to nowhere made the write create its
+target, so the later rename put the link itself in the live Caddyfile's place. The removal now
+refuses a candidate path that is a link, with the write's own message, before any write.
+
+The class the guards refuse: a candidate, block or previous-copy path that exists and is not a plain
+file with one link. The install checks the block, the block's previous copy, the candidate and the
+Caddyfile's previous copy before it writes anything, and refuses with its refusal when one of them is a
+link of either kind, a directory, a pipe, a socket, a device or a file with more than one link. The
+removal refuses a candidate that is a link, a pipe, a socket, a device or a file with more than one
+link, with the write's own message: it deletes nothing for a pipe, a socket, a device or a file with
+more than one link, and its cleanup deletes a link to a regular file, which is the run's own candidate
+name. A candidate that is a directory is refused by the write itself (A12). A12 pins a candidate path that cannot be written and plants a
+directory there; the class is every candidate path that is not a plain file with one link, of which A20
+and A21 pin the two links that changed the live state and A22 to A26 pin the rest. `cp -p` alone is
+not a guard: it writes through a link to any other existing file.
+
+Both scripts also check, before their first write and with nothing written or deleted when a check
+fails, that every directory their writes and their undo touch is writable: the Caddy directory and
+the live Caddyfile's own directory, which holds the rename target and the Caddyfile's previous copy.
+The two are one directory by default and two when `DECKSTREAK_DEPLOY_CADDYFILE` names a Caddyfile
+elsewhere, so both are derived from the path settings and neither from the test layout. The
+Caddyfile must be a regular file (a pipe there would hang the run). When the live Caddyfile is a
+link to a regular file, a step that replaces or restores it leaves a regular file with the same bytes
+and writes nothing through the link. The removal checks the same four names as the install, the block, the block's
+previous copy, the candidate and the Caddyfile's previous copy, each absent or a plain file with one
+link, and refuses with the write's own message. Only the install promises the refusal on every early
+exit; the removal promises no message on every exit. A33 to A37 pin these guards and the two tests that
+the moved rows S12725 and S12730 need.
+A38 measures the places instead of listing them. It runs each Caddy step through its eight exits (a
+first install, a re-install, a removal, an install refused at validation, a reload that fails, a rename
+that fails in each script and an install with no configuration), in both layouts, the Caddyfile beside
+the Caddy directory and set apart, with each listed setting the layout does not give pointed at a
+directory of its own, and diffs the whole tree around each step. Each directory a step changes is a
+place. Bash's execution trace and python's audit hook name every path each step touches, and each such
+path must lie in a place. A second pass makes every path but the places read-only and must change
+exactly what the first pass changed. Each place, in each state (writable, read-only, read-only with a
+stale writable previous copy), for a first install, a re-install and a removal, with no trigger, a
+failed rename and a failed reload, is then a member that either succeeds, or exits 1 with that script's
+refusal (or with the reload's own message when a reload fails after a write) and leaves the tree byte
+for byte as it was. A removal whose rename fails in a writable directory is not a member: it fails
+after its writes and the removal promises no message on every exit; A7 pins that exit in the default
+layout, and A38's measured runs take it in both layouts. The test fails closed: a step that changes no
+block, a trace that names no block, and a second pass that makes nothing read-only each fail it. A
+listed setting that chooses where a step writes adds a place to the diff, and that place's read-only
+members fail A38 until the step checks the place before its first write.
+
+Each Caddy step also refuses, before it reads or writes anything else, every entry of the environment
+it received whose name starts with `DECKSTREAK_DEPLOY_` and is not one of the settings `deploy.sh`
+lists in `SETTINGS`, whatever bytes follow the prefix, and names the one it refused. It reads the
+entries as the kernel keeps them (`/proc/self/environ`, through bash's `mapfile` builtin, so the
+script runs no command of its own first), because bash makes a variable only of a name it can spell
+and hands every other entry to each program it runs. It also refuses a listed setting it received twice or without a value, a deploy
+variable of its own shell that `SETTINGS` does not list (`${!DECKSTREAK_DEPLOY_@}`), and a run in which
+it can read no environment at all, so the refusal is default-deny over the whole prefix: no unlisted
+deploy setting reaches any function, trap, sourced file, child shell, host body or the renderer,
+whatever form reads it and whether or not a test runs the branch that reads it, unless a name outside
+the prefix has the shell run code before the refusal (the first limit below). A Caddy step therefore
+needs a readable `/proc/self/environ`. `rollback.sh caddy-remove` runs only the lines that find
+`deploy.sh` and exec it. A39 proves the refusal for the bare prefix, for each listed setting with a
+suffix and for the prefix with each byte a name may hold (any but NUL and `=`) first, in the middle and
+last, on both steps, with the tree unchanged; proves it for a listed setting given twice or without a
+value, a prefixed entry without `=`, a run that received no environment and a deploy variable made
+before the step starts by the file `BASH_ENV` names (a name outside the prefix, so it belongs to the first
+limit below; the measured result for that member is a refusal, which does not show that the refusal covers
+start-up code); and compares every command bash's DEBUG trap records before the refusal
+(installed through `BASH_ENV` with `set -T`, so functions, subshells and the exec'd `deploy.sh` report
+too) with the declared opening, exactly, so no command added before the refusal can read a setting
+first. The Caddy functions consume `DECKSTREAK_DEPLOY_HOST`, `DECKSTREAK_DEPLOY_ELEVATE` and
+`DECKSTREAK_DEPLOY_CHECKOUT` through their helpers, and each is listed. A new setting is refused until
+it is listed.
+
+Names outside that prefix are not settings: `PATH`, `HOME`, `TMPDIR`, the locale and the host
+command's own names belong to the tools a step runs, and the refusal leaves them alone (ADR-198).
+A name outside the prefix that the shell reads as code when it starts can run before the refusal
+and stop it, and it is part of this limit. The reason it is left open: an entry that makes the shell
+run start-up code can already run any code in the step, which is strictly more than an unlisted setting
+can do, and the refusal guards against a misconfigured setting, not against code already placed in the
+step's environment.
+Neither test reads a script's text for the names it uses: a scan of read forms recognises only the forms
+it lists, so it cannot close the names outside the prefix, and it is not a check here. A write on a
+branch that none of the eight exits reaches in either layout is not measured by A38. Both limits are
+left open by design (ADR-198).
+
+The insertions this amendment makes are these two sections, appended after the file's last line,
+and nothing above them is edited (SPEC-038 section 8, ruling (i)).
+
+## Acceptance criteria of the 2026-09-29 install-undo amendment
+
+| id | criterion | test |
+|---|---|---|
+| A16 | an install refused at validation, and one refused at the adapt check, each exit non-zero, print `the Caddy configuration was refused`, put the previous block back and leave no previous copy when the candidate is already absent (#423) | `test_deploy_scripts.py` `an_install_refused_at_validation_with_no_candidate_still_undoes` and `an_install_refused_at_the_adapt_check_with_no_candidate_still_undoes` |
+| A17 | an install whose candidate path cannot be written exits non-zero, prints the refusal, puts the previous block back and leaves the live Caddyfile unchanged (#423) | `test_deploy_scripts.py` `an_install_whose_candidate_path_cannot_be_written_undoes_and_says_so` |
+| A18 | an install whose block cannot be written exits non-zero, prints the refusal and leaves the previous block's text and the live Caddyfile unchanged (#423) | `test_deploy_scripts.py` `an_install_whose_block_cannot_be_written_undoes_and_says_so` |
+| A19 | an install whose import line cannot be added exits non-zero, prints the refusal, removes the new block and leaves the live Caddyfile unchanged (#423) | `test_deploy_scripts.py` `an_install_whose_import_line_cannot_be_added_undoes_and_says_so` |
+| A20 | a removal whose candidate path is a link to the live Caddyfile exits non-zero, prints the write's message and leaves the live Caddyfile byte for byte unchanged (#424) | `test_deploy_scripts.py` `a_removal_whose_candidate_is_a_link_to_the_caddyfile_refuses_before_writing` |
+| A21 | a removal whose candidate path is a link to a missing file exits non-zero, prints the write's message, leaves the live Caddyfile unchanged and creates nothing at the link's target (#424) | `test_deploy_scripts.py` `a_removal_whose_candidate_is_a_dangling_link_refuses_before_writing` |
+| A22 | an install whose candidate path is a link to the live Caddyfile exits non-zero, prints the refusal, puts the previous block back and leaves the live Caddyfile a file with its bytes unchanged (#423) | `test_deploy_scripts.py` `an_install_whose_candidate_is_a_link_to_the_caddyfile_refuses_and_undoes` |
+| A23 | an install whose candidate path is a link to another existing file exits non-zero, prints the refusal, writes nothing through the link and leaves the live Caddyfile a file with its bytes unchanged (#423) | `test_deploy_scripts.py` `an_install_whose_candidate_links_to_another_file_refuses_before_writing` |
+| A24 | an install whose block path is a hard link to the live Caddyfile exits non-zero, prints the refusal, leaves the live Caddyfile byte for byte unchanged and leaves no previous copy (#423) | `test_deploy_scripts.py` `an_install_whose_block_is_a_hard_link_to_the_caddyfile_refuses_before_writing` |
+| A25 | a removal whose candidate path is a hard link to the live Caddyfile exits non-zero, prints the write's message and leaves the live Caddyfile byte for byte unchanged (#424) | `test_deploy_scripts.py` `a_removal_whose_candidate_is_a_hard_link_to_the_caddyfile_refuses_before_writing` |
+| A26 | a removal whose candidate path is a pipe exits non-zero without waiting, prints the write's message and leaves the live Caddyfile byte for byte unchanged (#424) | `test_deploy_scripts.py` `a_removal_whose_candidate_is_a_fifo_refuses_before_writing` |
+| A27 | a first install into a Caddy directory that cannot be written exits non-zero, prints the refusal and leaves the Caddyfile and the directory as they were (#423) | `test_deploy_scripts.py` `a_first_install_into_a_read_only_caddy_directory_says_so` |
+| A28 | a first install whose block path is a directory exits non-zero, prints the refusal and keeps the directory and the file inside it (#423) | `test_deploy_scripts.py` `a_first_install_never_deletes_a_directory_at_the_block_path` |
+| A29 | an install whose previous Caddyfile copy cannot be written exits non-zero, prints the refusal, puts the previous block back, leaves the live Caddyfile unchanged and leaves no candidate (#423) | `test_deploy_scripts.py` `an_install_whose_previous_caddyfile_copy_cannot_be_written_undoes_and_says_so` |
+| A30 | an install whose candidate cannot be renamed onto the Caddyfile exits non-zero, prints the refusal, puts the previous block back and leaves the live Caddyfile unchanged and no candidate or previous copy (#423) | `test_deploy_scripts.py` `an_install_whose_candidate_rename_fails_undoes_and_says_so` |
+| A31 | an install whose live Caddyfile cannot be read exits non-zero, prints the refusal, puts the previous block back and leaves no candidate or previous copy (#423) | `test_deploy_scripts.py` `an_install_whose_caddyfile_cannot_be_read_undoes_and_says_so` |
+| A32 | an install that cannot copy the previous block aside exits non-zero, prints the refusal, leaves the block and the live Caddyfile unchanged and leaves no previous copy (#423) | `test_deploy_scripts.py` `an_install_that_cannot_copy_the_block_in_a_read_only_directory_says_so` |
+| A33 | a removal whose block copy, or whose Caddyfile copy, is a link of either kind, a directory or a pipe, or a file with more than one link, exits non-zero, prints the write's own message and leaves the live Caddyfile and the block unchanged (#423, #424) | `test_deploy_scripts.py` `a_removal_refuses_every_previous_copy_that_is_not_a_plain_file` |
+| A34 | neither script waits on a pipe at the live Caddyfile: each exits non-zero with its own refusal and writes nothing (#423, #424) | `test_deploy_scripts.py` `neither_script_waits_on_a_fifo_at_the_live_caddyfile` |
+| A35 | a first install, a re-install and a removal in a Caddy directory that cannot be written, with a stale file in it, exit non-zero with their own refusal before any write and leave the stale file and the live Caddyfile as they were (#423, #424) | `test_deploy_scripts.py` `a_read_only_caddy_directory_is_refused_before_any_write` |
+| A36 | an install whose block cannot be read exits non-zero, prints the refusal and leaves the block, the live Caddyfile and every other file as they were (#423) | `test_deploy_scripts.py` `an_install_whose_block_cannot_be_read_refuses_before_writing` |
+| A37 | a first install refused at validation with its block already gone still exits non-zero and prints the refusal (#423) | `test_deploy_scripts.py` `a_first_install_refused_with_its_block_already_gone_still_says_so` |
+| A38 | each Caddy step, run through its eight exits (a first install, a re-install, a removal, an install refused at validation, a reload that fails, a rename that fails in each script, an install with no configuration) in both layouts, changes and names paths only in the places its whole-tree diff measures, and changes the same paths when every other path is read-only; for each place in each state (writable, read-only, read-only with a stale writable previous copy), for a first install, a re-install and a removal, with no trigger, a failed rename and a failed reload, every member succeeds, or exits 1 with that script's refusal (or the reload's own message when a reload fails after a write) and leaves the tree byte for byte unchanged; a removal whose rename fails in a writable directory fails after its writes and is not a member; a step that changes or names no block, or a pass that makes nothing read-only, fails it (#423, #424) | `test_deploy_scripts.py` `every_directory_a_caddy_script_writes_or_undoes_is_checked_before_the_first_write` |
+| A39 | each Caddy step, before it reads or writes anything else, refuses every entry of the environment it received whose name starts with `DECKSTREAK_DEPLOY_` and that `deploy.sh`'s `SETTINGS` does not list, whatever bytes follow the prefix, exits 1 naming it and leaves the tree unchanged (the bare prefix, each listed setting with a suffix, and the prefix with each byte but NUL and `=` first, in the middle and last, on both steps); refuses a listed setting given twice or without a value, a run that received no environment, and a deploy variable made before the step starts by the file `BASH_ENV` names (a name outside the prefix: the first limit, with a refusal as its measured result); and before the refusal each step's own commands are exactly its declared opening, as bash's DEBUG trap records them (#423) | `test_deploy_scripts.py` `a_caddy_step_reads_only_the_settings_it_names_and_refuses_any_other` |
+
+```acceptance
+A16: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k with_no_candidate_still_undoes
+A17: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k an_install_whose_candidate_path_cannot_be_written_undoes_and_says_so
+A18: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k an_install_whose_block_cannot_be_written_undoes_and_says_so
+A19: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k an_install_whose_import_line_cannot_be_added_undoes_and_says_so
+A20: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k a_removal_whose_candidate_is_a_link_to_the_caddyfile_refuses_before_writing
+A21: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k a_removal_whose_candidate_is_a_dangling_link_refuses_before_writing
+A22: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k an_install_whose_candidate_is_a_link_to_the_caddyfile_refuses_and_undoes
+A23: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k an_install_whose_candidate_links_to_another_file_refuses_before_writing
+A24: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k an_install_whose_block_is_a_hard_link_to_the_caddyfile_refuses_before_writing
+A25: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k a_removal_whose_candidate_is_a_hard_link_to_the_caddyfile_refuses_before_writing
+A26: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k a_removal_whose_candidate_is_a_fifo_refuses_before_writing
+A27: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k a_first_install_into_a_read_only_caddy_directory_says_so
+A28: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k a_first_install_never_deletes_a_directory_at_the_block_path
+A29: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k an_install_whose_previous_caddyfile_copy_cannot_be_written_undoes_and_says_so
+A30: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k an_install_whose_candidate_rename_fails_undoes_and_says_so
+A31: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k an_install_whose_caddyfile_cannot_be_read_undoes_and_says_so
+A32: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k an_install_that_cannot_copy_the_block_in_a_read_only_directory_says_so
+A33: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k a_removal_refuses_every_previous_copy_that_is_not_a_plain_file
+A34: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k neither_script_waits_on_a_fifo_at_the_live_caddyfile
+A35: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k a_read_only_caddy_directory_is_refused_before_any_write
+A36: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k an_install_whose_block_cannot_be_read_refuses_before_writing
+A37: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k a_first_install_refused_with_its_block_already_gone_still_says_so
+A38: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k every_directory_a_caddy_script_writes_or_undoes_is_checked_before_the_first_write
+A39: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k a_caddy_step_reads_only_the_settings_it_names_and_refuses_any_other
+```
+
+The test file's `World.run` now starts the script in its own session and kills the whole group on a
+timeout, so a stuck stub cannot orphan the host script. Rows S12718 to S12746 in
+`scripts/mutation-rows.d/S12700-S12799.json` pin the absent-candidate guard of the undo (killer A16),
+the undo after the block write (A18), after the candidate copy (A31) and after the import append
+(A19), the removal's link guard (A20), the install's path guard (A23, A24), the absent-block undo
+(A37), the undo of the kept copy and of the rename (A29, A30), the removal's guard for a hard link or
+a pipe (A25), the refusal of a block copy that fails (A36), the Caddyfile checks of both scripts (A34),
+the removal's four-name guard (A33), the directory checks and the directory line of each script (A38),
+and the refusal of a setting the script does not list: its exit, the two steps it covers, the whole
+prefix it reads, the environment it reads it from, the refusal of an environment it cannot read, and
+its refusal of an entry it received unlisted, without a value or twice (A39). Files changed:
+`deploy/deploy.sh`, `deploy/README.md`, `scripts/tests/test_deploy_scripts.py`,
+`scripts/mutation-rows.d/S12700-S12799.json`,
+`docs/red-first/SPEC-127.md`, `docs/decisions/ADR-198-the-install-undoes-every-write-and-a-linked-candidate-is-refused.md`
+and `changelog.d/fix-caddy-undo-423.md`.
+
+### What this amendment does NOT do
+
+- It does not change what a successful install or removal does when every deploy setting in the
+  environment is listed (#423, #424).
+- It does not change the removal's refusal of a link at its candidate path, which stays A20 and A21 (#424).
+- It does not refuse or classify an environment name outside the `DECKSTREAK_DEPLOY_` prefix, nor
+  keep one that the shell reads as code when it starts from running before the refusal (an entry that
+  makes the shell run start-up code can already run any code in the step, more than an unlisted setting
+  can do), and A38
+  does not measure a write on a branch that none of its eight exits reaches (ADR-198; #423).
+- It does not name a failed temporary directory of the operator's own (#451), nor check the site
+  import when the Caddyfile is set apart (#452).
