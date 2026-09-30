@@ -2,9 +2,9 @@
 
 Class rule: every count the Ownership register's prose states equals the unique names of the
 register it describes, no name repeats inside one register, and a name that sits in both the
-predecessor's register and DeckStreak's own is a carried table, so both registers give it the
-same owning context. A count sentence is a digit run beside `tables`, `rows` or `names`; a
-register is a markdown table whose first header cell ends in `table`. A qualifier before that word
+predecessor's register and DeckStreak's own has the same owning context in both. A count
+sentence is a digit run beside `tables`, `rows` or `names`; a register is a markdown table whose
+first header cell ends in `table`. A qualifier before that word
 (`v9 table`) pairs the register with the sentences that say the same word before their number.
 The section is read as GitHub renders it: every table in it is a register, and a table's rows run
 to the first blank line or block, with or without their outer pipes. Names compare as SQLite

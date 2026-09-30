@@ -89,3 +89,5 @@ red is a plant, because the file it guards was already right. A copy of the file
 without the arm and failed it with the arm, by assertion: `AssertionError: Lists differ:
 ["register 'v9 table' names xp_settlement, which is not one of the predecessor's"] != []`. The
 copy was read through `CONTEXT_MAP_PATH`, and the file itself was not edited.
+
+A later plant reads the section as it renders. Issue #420's two rows, `buffs` and `xp_settlement`, appended to the predecessor's register as a continuation row in each of three spellings (no leading pipe, a one-space indent, a bare name), passed the check before (`Ran 1 test ... OK`, rc 0) and failed it after, by assertion (rc 1): `AssertionError: Lists differ: ["register 'v9 table' repeats buffs", ...] != []`. Each copy was read through `CONTEXT_MAP_PATH`.
