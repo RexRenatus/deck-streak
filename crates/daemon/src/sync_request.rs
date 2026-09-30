@@ -12,7 +12,7 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use deck_streak_bot::{OwnerSync, Scores, SyncAnswer, SyncOutcome, SyncRefusal};
-use deck_streak_ingest::state::SqliteIngestState;
+use deck_streak_ingest::state::{RefusalReason, SqliteIngestState};
 use deck_streak_ingest::sync_runs::{RunStatus, SqliteSyncRuns};
 use deck_streak_kernel::{Clock, Db, Environment, KernelError, Setting, SettingsError, UtcMillis};
 use deck_streak_notifications::Router;
@@ -179,7 +179,7 @@ impl<C: Clock, L: RequestLedger, D: Doorbell, P: Pause, F: Flush> SyncRequester<
         self.ledger.request(since).await.map_err(|error| {
             tracing::error!(%error, "the owner's request could not be stored");
             SyncRefusal {
-                reason: "rescore_unrecorded",
+                reason: RefusalReason::RescoreUnrecorded.as_str(),
             }
         })?;
         self.ring().await?;
