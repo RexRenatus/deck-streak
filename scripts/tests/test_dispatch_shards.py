@@ -1985,5 +1985,115 @@ class TheWeeklySweepNamesItsPackageInLiteralWords(unittest.TestCase):
         self.assertNotIn("${PACKAGE:+--package", "\n".join(re.findall(r"cargo mutants [^\n]*", text)))
 
 
+# R5 (#465's remainder, closed by refusal): a word before the bounds that bash can expand to exactly
+# `--` ends cargo's options there, so the bounds after it belong to the test tool. Its members are
+# generated: each expansion form the reading reads, in a word of one to three segments (an expansion,
+# a literal before it or after it, a literal between two), each segment quoted or not, over the
+# literal contents none, `-`, `--`, other. The oracle is bash: a member can be `--` where it runs
+# cargo mutants with the bounds after a `--` (`X`, `$1` and `$@` hold `--` in the preamble).
+R5_EXPANSIONS = ("$X", "${X}", "${X:-y}", "${X:+--}", "$@", "$*", "$1", "$(echo --)", "`echo --`", "$((1))")
+R5_LITERALS = ("-", "--", "a", "-a")
+R5_PREAMBLE = "X=--; set -- --; "
+R5_SIZE = 980
+
+
+def r5_quote(kind, text, style):
+    """One segment as written: an expansion in no quotes or double; a literal in none, single or double."""
+    return {"none": text, "double": f'"{text}"', "single": f"'{text}'"}[style]
+
+
+def r5_members():
+    """[(segments, word, script)]: every word shape over every expansion, quoting and literal."""
+    shapes = [("E",)] + [("l", "E", l) for l in R5_LITERALS] + [("E", "l", l) for l in R5_LITERALS]
+    shapes += [("E", "l", "E", l) for l in R5_LITERALS]
+    members = []
+    for expansion in R5_EXPANSIONS:
+        for shape in shapes:
+            kinds = [k for k in shape if k in ("E", "l")]
+            literal = shape[-1] if shape[-1] not in ("E", "l") else ""
+            plan = [(k, expansion if k == "E" else literal) for k in kinds]
+            for styles in itertools.product(
+                *[("none", "double") if k == "E" else ("none", "single", "double") for k, _ in plan]
+            ):
+                word = "".join(r5_quote(k, t, st) for (k, t), st in zip(plan, styles))
+                script = f"{R5_PREAMBLE}cargo mutants --in-place {word} {BOUNDS}\n"
+                members.append((tuple(zip((k for k, _ in plan), (t for _, t in plan), styles)), word, script))
+    return list(dict.fromkeys(members))
+
+
+def r5_refused_by_rule(segments):
+    """The rule as specified: (i) an unquoted expansion, or (ii) an expansion and no literal
+    character besides `-`."""
+    unquoted_expansion = any(k == "E" and style == "none" for k, _, style in segments)
+    other_literal = any(c != "-" for k, t, _ in segments if k == "l" for c in t)
+    return unquoted_expansion or not other_literal
+
+
+def r5_workflow(script):
+    body = "".join(f"          {line}\n" for line in script.split("\n")[:-1])
+    return f"jobs:\n  shard:\n    runs-on: ubuntu-24.04\n    steps:\n      - run: |\n{body}"
+
+
+class AComputedWordBeforeTheBoundsIsRefused(unittest.TestCase):
+    def outcomes(self, scripts):
+        """{index: what the guard says of that script, as its workflow}: the found lines."""
+        verdicts = {}
+        with tempfile.TemporaryDirectory() as scratch:
+            for n, script in enumerate(scripts):
+                (Path(scratch) / f"m{n}.yml").write_text(r5_workflow(script), encoding="utf-8")
+            found = mutants_commands(Path(scratch))
+        for n in range(len(scripts)):
+            verdicts[n] = found.get(f"m{n}.yml", [])
+        return verdicts
+
+    def test_every_word_bash_can_expand_to_dashes_before_the_bounds_is_refused(self):
+        members = examined("R5 members", r5_members())
+        self.assertEqual(len(members), R5_SIZE)
+        scripts = [UNBOUNDED + "\n", f"{LEAD}\n"] + [script for _, _, script in members]
+        unbounded, _ = bash_runs(scripts)
+        runs = sorted(n - 2 for n in unbounded if n >= 2)
+        examined("R5 members bash runs without the bounds", runs)
+        verdicts = self.outcomes([script for _, _, script in members])
+        escaped = [
+            members[n][2]
+            for n in runs
+            if all(BOUNDED.search(line) for line in verdicts[n])
+        ]
+        self.assertEqual(escaped[:1], [], f"{len(escaped)} of {len(runs)} members that lose the bounds pass")
+
+    def test_the_rule_refuses_exactly_an_unquoted_expansion_or_one_with_no_literal_but_dash(self):
+        members = examined("R5 members", r5_members())
+        verdicts = self.outcomes([script for _, _, script in members])
+        wrong = [
+            (word, r5_refused_by_rule(segments), verdicts[n])
+            for n, (segments, word, _) in enumerate(members)
+            if r5_refused_by_rule(segments)
+            != any(line.startswith("refused") for line in verdicts[n])
+        ]
+        self.assertEqual(wrong[:1], [], f"{len(wrong)} of {len(members)} members differ from the rule")
+
+    def test_the_designs_three_members_are_refused(self):
+        scripts = [
+            f"X=--; cargo mutants $X {BOUNDS}\n",
+            f'X=--; cargo mutants "$X" {BOUNDS}\n',
+            f'set -- --; cargo mutants "$@" {BOUNDS}\n',
+        ]
+        verdicts = self.outcomes(examined("named R5 members", scripts))
+        self.assertEqual(
+            [any(line.startswith("refused") for line in verdicts[n]) for n in range(3)],
+            [True, True, True],
+        )
+
+    def test_the_real_tree_commands_are_found_bounded_and_not_refused(self):
+        found = mutants_commands(WORKFLOWS)
+        lines = examined("weekly commands", found["mutation-weekly.yml"])
+        self.assertEqual(len(lines), 6)
+        examined("real-tree commands", [line for ls in found.values() for line in ls])
+        for name, commands in found.items():
+            for line in commands:
+                self.assertFalse(line.startswith("refused"), f"{name}: {line}")
+                self.assertRegex(line, BOUNDED, f"{name}: {line}")
+
+
 if __name__ == "__main__":
     unittest.main()
