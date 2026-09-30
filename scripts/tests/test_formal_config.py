@@ -405,6 +405,7 @@ class FormalConfig(unittest.TestCase):
         for prefix in sorted(OBJECTS - {()}):
             if not any(required for path, _, required in FIELDS if path[: len(prefix)] == prefix):
                 docs.append((f"without {'.'.join(prefix)}", without(prefix)))
+        self.assertGreaterEqual(len(docs), len(ELEMENT_KIND) + 1, "presence: documents are planted")
         refused = []
         for name, doc in examined("admitted documents", docs):
             try:
