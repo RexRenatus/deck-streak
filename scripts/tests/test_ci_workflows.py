@@ -884,6 +884,16 @@ class TheReaderReadsOnlyItsNamedForms(unittest.TestCase):
 # A key the reader reads: a plain name, bare or in matching quotes (SPEC-034 R7).
 KEY = re.compile(r"(['\"]?)([\w.-]+)\1")
 
+# The forms the reader reads, each named by the YAML 1.2.2 production it rests on (yaml.org/spec/
+# 1.2.2, read 2026-09-30), so the reader is default-deny over its grammar (SPEC-190 R12): a form not
+# named here is refused by `_unnamed`, which names the form it met.
+# A plain scalar starts with a character that is not a YAML indicator, or with `-`, `?` or `:` before
+# one that is not white space (ns-plain-first).
+PLAIN_FIRST = re.compile(r"[A-Za-z0-9$()+./;<=\\^_~]|[-?:][^ \t]")
+# A block scalar is literal and clipped to one final line feed, `|`, or stripped of it, `|-`
+# (c-l+literal, c-chomping-indicator), with nothing after its header.
+BLOCK_HEADERS = {"|": "\n", "|-": ""}
+
 
 class Quoted(str):
     """A scalar YAML reads as a string whatever its text: a quoted one or a block. A plain scalar is
@@ -928,20 +938,24 @@ class Unread(AssertionError):
 
 
 def read_workflow(text):
-    """A workflow as dicts, lists and strings, read without a YAML library. It reads the block YAML
-    the workflows here use: mappings keyed by plain names, `- ` sequences, `|` block scalars, flow
-    lists of plain items, and plain or quoted one-line scalars, a quote doubled inside single
-    quotes read as one. Blank lines, comment lines and a ` #` comment after a value are dropped.
-    It ends a line only at a line feed or a carriage return, and reads a space or a tab as white
-    space and nothing else, as YAML does. A quoted or block scalar is read as `Quoted`, a string
-    that keeps its style, so `kind` types a value as GitHub's parser does (SPEC-190 R12).
+    """A workflow as dicts, lists and strings, read without a YAML library. It reads the named forms
+    and no other (SPEC-190 R12): mappings keyed by plain names that YAML types as strings, `- `
+    sequences, `|` and `|-` block scalars, one-line flow lists of plain items with at most one
+    trailing comma, plain scalars whose first character is not a YAML indicator (`PLAIN_FIRST`),
+    and quoted one-line scalars, a quote doubled inside single quotes read as one. Blank lines,
+    comment lines and a ` #` comment after a value are dropped. It ends a line only at a line feed
+    or a carriage return, and reads a space or a tab as white space and nothing else, as YAML
+    does. A quoted or block scalar is read as `Quoted`, a string that keeps its style, so `kind`
+    types a value as GitHub's parser does.
     It fails closed (SPEC-034 R7). A line that holds a character other than a tab or printable
     ASCII, a double-quoted value that holds an escape, a quoted value that does not end at its
     closing quote, an anchor, alias or tag, a flow mapping, a flow list whose items are not plain,
-    a key that is not a plain name, and a tab in a line's indentation are each refused by their
-    line, never guessed at, and the file raises Unread once it is read. A key a mapping already
-    holds, read without case, is refused by its line too: GitHub's workflow parser refuses a
-    workflow that holds one (SPEC-190 R10). A line it cannot place refuses the whole file at once."""
+    a key that is not a plain name, a tab in a line's indentation, and every form the named forms
+    do not hold (`_unnamed`: a value's first character, a block scalar's header, a flow list's
+    empty entry, a blank line of a block that holds a tab) are each refused by their line, never
+    guessed at, and the file raises Unread once it is read. A key a mapping already holds, read
+    without case, is refused by its line too: GitHub's workflow parser refuses a workflow that
+    holds one (SPEC-190 R10). A line it cannot place refuses the whole file at once."""
     lines = re.split(r"\r\n|\r|\n", text)
     refused = [
         f"line {at + 1}: a character the reader does not read"
@@ -988,17 +1002,35 @@ def _read(reader, text, at, refused):
 
 
 def _key(text):
+    """A plain name, bare or in matching quotes. A bare one YAML types as other than a string
+    (`true`, `null`, `1`) is refused: YAML reads it as that value, not as its text."""
     key = KEY.fullmatch(text.strip(" \t"))
-    if not key:
+    if not key or (not key.group(1) and kind(key.group(2)) != "string"):
         raise ValueError("a key that is not a plain name is not read")
     return key.group(2)
+
+
+def _unnamed(form):
+    """The one refusal for a form the named forms do not hold (SPEC-190 R12): it names the form the
+    reader met, so a form is never read because nothing refused it."""
+    return ValueError(f"{form} is not a form the reader reads")
+
+
+def _form(text):
+    """The form a value takes that `PLAIN_FIRST` does not name, as its refusal names it: a block
+    scalar's header, the character it starts with (`-`, `?` and `:` with the one after), or none."""
+    if not text:
+        return "an empty value"
+    if text[0] in ("|", ">"):
+        return f"the block scalar header {text!r}"
+    return f"a value that starts with {text[:2] if text[0] in ('-', '?', ':') else text[0]!r}"
 
 
 def _scalar(text):
     """A one-line scalar or flow list as YAML reads it, or ValueError naming a form the reader does
     not read: an anchor, alias or tag, a flow mapping, a flow list whose items are not plain (a
-    quoted or nested item, or a `#`, `:` or `?` inside it), and a plain value that holds `: `, which
-    YAML reads as a key."""
+    quoted or nested item, or a `#`, `:` or `?` inside it), a plain value that holds `: `, which
+    YAML reads as a key, and a value whose first character `PLAIN_FIRST` does not name."""
     text = text.strip(" \t")
     if text[:1] in ("&", "*", "!"):
         raise ValueError("an anchor, alias or tag is not read")
@@ -1007,14 +1039,32 @@ def _scalar(text):
     if text[:1] == "{":
         raise ValueError("a flow mapping is not read")
     if text[:1] == "[":
-        items = re.fullmatch(r"\[([^\[\]{}'\"#:?]*)\](?:[ \t]+#.*)?", text)
-        if not items:
-            raise ValueError("a flow list whose items are not plain is not read")
-        return [_scalar(part) for part in items.group(1).split(",") if part.strip()]
+        return _flow(text)
+    # A value that starts with a character outside printable ASCII is refused once, by its line's
+    # character scan, and read, so what it holds is still judged.
+    if not PLAIN_FIRST.match(text) and not re.match(r"[^\t\x20-\x7e]", text):
+        raise _unnamed(_form(text))
     text = re.sub(r"[ \t]#.*$", "", text).strip(" \t")
     if re.search(r":(?:[ \t]|$)", text):
         raise ValueError("a key that is not a plain name is not read")
     return text
+
+
+def _flow(text):
+    """A flow list on one line, as YAML reads one (c-flow-sequence): plain items split by commas,
+    one trailing comma ending the list, and `[]` empty. An empty entry anywhere else is refused,
+    since YAML refuses it."""
+    items = re.fullmatch(r"\[([^\[\]{}'\"#:?]*)\](?:[ \t]+#.*)?", text)
+    if not items:
+        raise ValueError("a flow list whose items are not plain is not read")
+    if not items.group(1).strip(" \t"):
+        return []
+    parts = items.group(1).split(",")
+    if len(parts) > 1 and not parts[-1].strip(" \t"):
+        parts.pop()
+    if any(not part.strip(" \t") for part in parts):
+        raise _unnamed("a flow list with an empty entry")
+    return [_scalar(part) for part in parts]
 
 
 def _quoted(text):
@@ -1060,26 +1110,36 @@ def _mapping(lines, at, indent, refused):
         key, rest = _read(_key, key, at, refused), rest.strip(" \t")
         if key and key.casefold() in {held.casefold() for held in found}:
             refused.append(f"line {at + 1}: a key the mapping already holds, read without case")
-        if rest in ("|", "|-"):
-            at += 1
+        if rest in BLOCK_HEADERS:
+            header, at = rest, at + 1
             body, width = [], None
             while at < len(lines) and (not lines[at].strip(" \t") or _indent(lines[at]) > indent):
                 if lines[at].strip(" \t") and width is None:
                     width = _indent(lines[at])
                 body.append((at, lines[at], width is None))
                 at += 1
-            while body and not body[-1][1].strip(" \t"):
+            # YAML drops a block's trailing blank lines but keeps one indented more than its
+            # text, and the blank lines above it, as text.
+            while body and not body[-1][1].strip(" "):
+                if width is not None and len(body[-1][1]) > width:
+                    break
                 body.pop()
             width = width or 0
             for row, line, leading in body:
                 # YAML takes a block's indentation from its first line of text: a line of text
                 # indented less ends the block, and a blank line above it indented more, or a tab
-                # inside the indentation, is an error. A line the character scan refuses already
-                # is refused once, by that scan.
+                # inside the indentation, is an error. A blank line that holds a tab is text to
+                # YAML and a blank to this reader, so it is refused. A line the character scan
+                # refuses already is refused once, by that scan.
                 if re.search(r"[^\t\x20-\x7e]", line):
                     continue
                 if "\t" in line[:width]:
                     refused.append(f"line {row + 1}: a tab in the indentation, which YAML refuses")
+                elif not line.strip(" \t") and "\t" in line:
+                    refused.append(
+                        f"line {row + 1}: "
+                        + str(_unnamed("a blank line of a block scalar that holds a tab"))
+                    )
                 elif line.strip(" \t") and _indent(line) < width:
                     refused.append(f"line {row + 1}: a line indented less than its block's text")
                 elif leading and _indent(line) > width:
@@ -1087,7 +1147,8 @@ def _mapping(lines, at, indent, refused):
                         f"line {row + 1}: a blank line indented more than its block's text"
                     )
             width = min((_indent(line) for _r, line, _l in body if line.strip(" \t")), default=0)
-            found[key] = Quoted("".join(line[width:] + "\n" for _row, line, _leading in body))
+            text = "".join(line[width:] + "\n" for _row, line, _leading in body)
+            found[key] = Quoted((text[:-1] + BLOCK_HEADERS[header]) if text else "")
         elif not rest or rest.startswith("#"):
             child = _skip(lines, at + 1)
             if child < len(lines) and _indent(lines[child]) > indent:
