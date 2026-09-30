@@ -51,6 +51,7 @@ A12: not red: the studied window already read the configured offset, so the test
 A13: not red: the settle already leaves a reading whose stamp failed open and uncounted, so the test passes at the code it was written against (c265d2d3); the plants that turn it red are P10 and P11 below
 A14: not red: the settle and the tap already read the configured rule at every point, so the test passes at the code it was written against (09e1dfc2); the plants that turn it red are P22 to P27 below
 A15: not red: generation already dates its run and readings in the configured rule, so the test passes at the code it was written against (09e1dfc2); the plants that turn it red are P28 and P29 below
+A15 note: the test first lived in readings_generate.rs and moved to readings_generate_rule.rs, because the stacked change (#386) edits readings_generate.rs and the two would conflict; it drives the same entry point, and P28 and P29 were re-measured against the new file
 A16: not red: the resolution already reads its pause window and dates its run in the configured rule, so the test passes at the code it was written against (09e1dfc2); the plants that turn it red are P30 to P33 below
 A17: not red: the export already writes every reading column from its own column, so the test passes at the code it was written against (09e1dfc2); the plants that turn it red are the 462 swap plants below
 ```
@@ -175,15 +176,15 @@ red:   thread 'the_settle_and_the_tap_read_the_configured_study_day' panicked at
 P28 (generation reads the topic's days in the default rule; A15)
 -parts.rule.study_day(parts.clock.now())
 +StudyDayRule::default().study_day(parts.clock.now())
-red:   thread 'the_generation_dates_its_run_and_readings_in_the_configured_study_day' panicked at crates/coordination/tests/readings_generate.rs:742:17:
+red:   thread 'the_generation_dates_its_run_and_readings_in_the_configured_study_day' panicked at crates/coordination/tests/readings_generate_rule.rs:430:17:
        assertion `left == right` failed: offset -720, hour 0, instant 1728100800000: the reading is dated by the configured day
-       test result: FAILED. 12 passed; 1 failed
+       test result: FAILED. 0 passed; 1 failed
 P29 (generation dates its run and readings in the default rule; A15)
 -let study_day = parts.rule.study_day(now);
 +let study_day = StudyDayRule::default().study_day(now);
-red:   thread 'the_generation_dates_its_run_and_readings_in_the_configured_study_day' panicked at crates/coordination/tests/readings_generate.rs:754:17:
+red:   thread 'the_generation_dates_its_run_and_readings_in_the_configured_study_day' panicked at crates/coordination/tests/readings_generate_rule.rs:442:17:
        assertion `left == right` failed: offset -720, hour 0, instant 1728100800000: the absent-route run is dated by the configured day
-       test result: FAILED. 12 passed; 1 failed
+       test result: FAILED. 0 passed; 1 failed
 P30 (the resolution dates its run in the default rule; A16)
 -parts.rule.study_day(started_at)
 +StudyDayRule::default().study_day(started_at)
