@@ -1,4 +1,4 @@
-"""A mutants run's memory scope (SPEC-196 A1 to A8 and A17).
+"""A mutants run's memory scope (SPEC-196 A1 to A8, A17 and A18).
 
 `scripts/memory_scope.py` is loaded by path and driven through `run()` and its keyword-only seams,
 never through an option, so no test can set the cap. A `sudo` and a `systemctl` that record their
@@ -26,6 +26,7 @@ WORKFLOWS = REPO / ".github" / "workflows"
 CI = WORKFLOWS / "ci.yml"
 WEEKLY = WORKFLOWS / "mutation-weekly.yml"
 PAGE = 4096
+DIRECTORY = object()
 EVENTS = "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\n"
 SCOPED = re.compile(r"python3 scripts/memory_scope\.py --report (\S+) -- cargo mutants ")
 OUTPUT = re.compile(r"--output (\S+)")
@@ -334,6 +335,57 @@ class TheScope(ScriptCase):
         for text in (out, record.read_text("utf-8")):
             self.assertNotIn(str(plant.cap), text)
             self.assertNotIn(str(plant.cap // 2), text)
+
+
+    def test_a_count_read_after_the_command_that_is_missing_or_unreadable_is_not_in_force(self):
+        events = {
+            "present": (EVENTS, True),
+            "absent": (None, False),
+            "unreadable": (DIRECTORY, False),
+            "garbage": ("no counts here\n", False),
+            "no oom line": ("low 0\nhigh 0\nmax 0\noom_kill 0\n", False),
+            "no max line": ("low 0\nhigh 0\noom 0\noom_kill 0\n", False),
+            "no oom_kill line": ("low 0\nhigh 0\nmax 0\noom 0\n", False),
+            "oom_kill not a number": ("max 0\noom 0\noom_kill many\n", False),
+        }
+        peaks = {
+            "present": ("0\n", True),
+            "absent": (None, False),
+            "unreadable": (DIRECTORY, False),
+            "garbage": ("lots\n", False),
+            "empty": ("", False),
+            "negative": ("-5\n", False),
+        }
+        members = [(e, p) for e in events for p in peaks]
+        self.assertEqual(len(members), len(events) * len(peaks))
+        examined("counts read after the command", members)
+        for event_shape, peak_shape in members:
+            with self.subTest(events=event_shape, peak=peak_shape):
+                with tempfile.TemporaryDirectory() as directory:
+                    plant = Plant(directory).build()
+                    steps = ["import os, shutil"]
+                    for name, (text, _) in (
+                        ("memory.events", events[event_shape]),
+                        ("memory.peak", peaks[peak_shape]),
+                    ):
+                        target = str(plant.group / name)
+                        steps.append(f"os.unlink({target!r})")
+                        if text is DIRECTORY:
+                            steps.append(f"os.mkdir({target!r})")
+                        elif text is not None:
+                            steps.append(f"open({target!r}, 'w').write({text!r})")
+                    steps.append("raise SystemExit(3)")
+                    command = [sys.executable, "-c", "\n".join(steps)]
+                    code, out, record = plant.go(self.module, command)
+                    self.assertEqual(code, 3, out)
+                    self.assertEqual(record["state"], "done", record)
+                    whole = events[event_shape][1] and peaks[peak_shape][1]
+                    self.assertIs(record["in_force"], whole, record)
+                    if whole:
+                        self.assertIsNone(record["reason"], record)
+                    else:
+                        self.assertTrue(record["reason"], record)
+                        self.assertIn("NOT IN FORCE", out)
 
 
 def workflow_commands():
