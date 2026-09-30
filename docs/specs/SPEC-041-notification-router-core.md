@@ -115,6 +115,7 @@ R14. The typed policy reads every key of the file, and names the key `defer_fanf
 | A13 | the in-app feed serves its items to the owner's session and refuses any other caller with no item | `the_in_app_feed_answers_only_the_owner` |
 | A14 | the notifications data-rights port lists its five tables as exported and erased, and an erase empties them | `the_notification_tables_are_exported_and_erased` |
 | A15 | the census reads every shipped source of these kinds: the Rust, Python and web source files, the Mini App's HTML among them, the shell scripts by extension or by a `#!` first line, and the systemd units of every type and their drop-ins; it leaves out symlinks, test files, test directories outside a `src/`, and in a Rust file its comments and `#[cfg(test)]` modules. In what it reads, no name it holds appears outside its place: outside the bot's sources nothing names the Bot API's host, a send or delivery method of the pinned client's table, or the bot's `DEFAULT_API_URL`, SPEC-031's alert path aside; inside them such a method is named only by its own named send; the bot's `send_html`, `edit_html` and command handler are used only at named sites, and the handler's own replies and dispatch are called only by their named callers; only the router's modules name the in-app feed or the held queue, and in the notifications crate only they name its ledger, the root's declaration of it aside; no source of that crate carries `#[path]`, `#[macro_export]` or `#[macro_use]`, or re-exports the ledger, its feed's and queue's tables or its writes to the feed and the queue by a `pub use`; every method of the pinned client's table is a send, a delivery or not a delivery, in one class only; and each of the eight named sends is found once | `no_delivery_goes_around_the_port` |
+| A16 | the census refuses a hand-built Bot API send URL wherever the transport builds it: the bot's `api_url` is read only by `Transport::send_document` and `Transport::send_photo`, the two multipart sends the pinned client cannot make, and by the constructor `Transport::with_waits`, which composes it once with the token; every other read of it, in a `format!`, a `concat!`, a `String` push, a helper function, a `const`'s path, or a string literal's inline argument, is refused, over every Bot API method the transport names, every form, and every function of the transport outside the named sites, and each named site's own read is found once | `a_hand_built_send_url_is_refused_wherever_the_transport_builds_it` |
 
 ```acceptance
 A1: cargo test -p deck-streak-notifications --test policy -- --exact the_typed_policy_reads_every_key_of_the_file
@@ -132,6 +133,7 @@ A12: cargo test -p deck-streak-notifications --test deferral -- --exact a_flush_
 A13: cargo test -p deck-streak-api --test notifications_feed -- --exact the_in_app_feed_answers_only_the_owner
 A14: cargo test -p deck-streak-notifications --test rights -- --exact the_notification_tables_are_exported_and_erased
 A15: cargo test -p deck-streak-notifications --test one_router -- --exact no_delivery_goes_around_the_port
+A16: cargo test -p deck-streak-notifications --test one_router -- --exact a_hand_built_send_url_is_refused_wherever_the_transport_builds_it
 ```
 
 ## 3a. What the box run judges
@@ -231,6 +233,10 @@ the verdict of a run with that wiring is posted as the `box/packs` status at the
     a `pub` wrapper: a function, a macro or a constant that hands out a write to the feed or the
     held queue, or a table's name, under a name the census does not hold, or a reply of the bot's
     command handler made `pub` and called from outside the handler's module (#297).
+  - the bot's base URL read without the field's name: through an accessor or a `Debug` print of the
+    pinned client's bot, and a name for it that a macro assembles, which no text census reads. Every
+    form that names the field `api_url`, as an identifier or inside a string literal's inline
+    argument, is read, and one it cannot read is refused rather than passed (#429).
 
 ## 6. Risks
 
@@ -407,3 +413,14 @@ the verdict of a run with that wiring is posted as the `box/packs` status at the
   - The command handler: its replies (`send`, and `export`, `ask_erase`, `sync` and `score`, which send one)
     and its dispatch (`on_message`, `on_callback`) are called only by their named callers, the
     handler and the dispatch, each of which the census finds in the tree.
+- **A16: the transport's base URL (#429).** `api_url` joins the census's guarded names, beside
+  `send_html`, `edit_html` and `handle`, defined in `crates/bot/src/transport.rs`: every use of it is
+  a named site or a refusal, so a request URL built from it anywhere else is refused whatever builds
+  the URL. The named sites are the two sends that make a multipart request by hand and the
+  constructor that composes the base URL with the token once. The constructor is a third site than
+  the issue named: the census cannot read the builder's argument without it, and it makes no
+  request. A read of the name inside a string literal, which the census blanks, is refused at any
+  other place, so the inline form `{api_url}` is not a way round. The three planted requests of
+  A15 that hold `api_url` (`celebrate.rs`, `copy.rs` and `rich.rs`) gain the refusals this rule
+  adds, so their expected lines grew by two each; no line was removed. The population is read from
+  the transport: the methods it names, six forms and every function outside the named sites.

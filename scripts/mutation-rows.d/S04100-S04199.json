@@ -432,6 +432,42 @@
         "    \"editChatInviteLink\",\n    \"editChatInviteLink\",",
         "one_router::no_delivery_goes_around_the_port",
         "the name an invite link carries is text the bot chooses and administrators see, so the invite-link methods are held with the sends (SPEC-041 A15); the census is test code, which cargo-mutants never mutates, and the mutant swaps one for a second copy of the next name, so the list keeps its length, letting the planted named invite link through"
+      ],
+      [
+        "S04150-THE-BOT-BASE-URL-IS-GUARDED",
+        "notifications",
+        "tests/one_router.rs",
+        "    (API_URL, TRANSPORT),",
+        "    (BOT_SEND, TRANSPORT),",
+        "one_router::a_hand_built_send_url_is_refused_wherever_the_transport_builds_it",
+        "the bot's base URL is a guarded name defined in the transport, so a request URL built from it anywhere else is refused whatever builds it (SPEC-041 A16, #429); the census is test code, which cargo-mutants never mutates, and the mutant guards a second copy of the send's name instead, so the array keeps its length and every planted hand-built URL passes"
+      ],
+      [
+        "S04151-A-BASE-URL-IN-A-LITERAL-IS-REFUSED",
+        "notifications",
+        "tests/one_router.rs",
+        "                if structure[at..at + API_URL.len()].trim().is_empty() {",
+        "                if false {",
+        "one_router::a_hand_built_send_url_is_refused_wherever_the_transport_builds_it",
+        "the base URL named inside a string literal, an inline format argument the census blanks, is refused at any place that is not a named site, so a form the census cannot read fails closed (SPEC-041 A16, #429); the census is test code, which cargo-mutants never mutates, and the mutant turns the rule off, letting every inline-argument URL through"
+      ],
+      [
+        "S04152-THE-NAMED-SITES-OF-THE-BASE-URL-ARE-ACCEPTED",
+        "notifications",
+        "tests/one_router.rs",
+        "        || API_URL_SITES.contains(&(path, function, name))",
+        "        || false",
+        "one_router::no_delivery_goes_around_the_port",
+        "the two multipart sends and the constructor read the bot's base URL and are accepted, so the shipped transport is clean (SPEC-041 A16, #429); the census is test code, which cargo-mutants never mutates, and the mutant accepts no site, so the shipped reads are refused"
+      ],
+      [
+        "S04153-THE-BASE-URL-IS-READ-AT-EACH-NAMED-SITE",
+        "notifications",
+        "tests/one_router.rs",
+        "    (TRANSPORT, \"Transport::with_waits\", \"api_url\"),",
+        "    (TRANSPORT, \"Transport::send_photo\", \"api_url\"),",
+        "one_router::no_delivery_goes_around_the_port",
+        "each named site of the bot's base URL is found once in the tree, so a site that stopped reading it, or a table that names a site twice, fails (SPEC-041 A16, #429); the census is test code, which cargo-mutants never mutates, and the mutant names the photo send twice and the constructor never, so the constructor's read is refused"
       ]
     ],
     "CARGO_KILLED_SCRIPT_MUTATIONS": [

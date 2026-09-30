@@ -440,3 +440,18 @@ Rows S04148 and S04149 (ea4df18, mutants corrected at bfe514d): a Passport error
 invite link's name, each held with the sends; the killer is `no_delivery_goes_around_the_port`, and
 the mutant swaps the name for a copy of `editChatInviteLink`, a name no planted case calls, so `DELIVERY_METHODS` keeps its length and
 the target builds.
+
+A16 is a new criterion (#429). The population is 2,904 hand-built send URLs, 11 methods (each Bot
+API method the transport's own code names, read from the source) by 6 forms (`format!`, `concat!`,
+a `String` push, a helper function, a `const` path and a string literal's inline argument) by 44
+functions of the transport outside its named sites. At the red commit every one was accepted, since
+`api_url` was not a guarded name. Fifteen controls, five non-helper forms planted inside each of
+the three named sites with that site's own method, and the transport as shipped, are accepted at
+the red commit and at green, so no member is red for want of a control. The planted requests of A15
+that hold `api_url` gained three literal refusals and three uses, which is an edit of A15's
+expected list at the green commit (1ac918e43fe5), disclosed here and in SPEC-041 §7.
+
+```red-first
+A16: red at 3010dd186f95: 2904 of 2904 hand-built send URLs are not refused, e.g. format form of sendMessage in ApiUrl::new at line 101 is not refused
+A16: green at 1ac918e43fe5
+```
