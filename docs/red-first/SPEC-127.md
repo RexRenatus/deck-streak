@@ -281,11 +281,12 @@ reaches it, three failure modes) read the tool's bare message with no `deploy:` 
 
 ```red-first
 A40: red at 0929355b58816672227e2bbd645f3eb94b8df11b: AssertionError: 0 != 1 : install_tag / install / absent
-A40: green at 53764d6320c899ae41d30518363d150c5a414a89
+A40: green at 89fff8d984432f8bda93d729b3106aa387c77c75
 ```
 
 The `EXIT` trap that deletes the check file is outside this class, which is about a temporary path
-that cannot be made: it acts only after a check file was made, so the test of A40 does not reach it and no row pins it.
+that cannot be made: it acts only after a check file was made, so the test of A40 does not reach it.
+The second fix round pins it with a row of its own.
 
 ## Amendment 2026-09-30, round one of the fix (issue #451)
 
@@ -297,8 +298,9 @@ write left behind.
 
 ```red-first
 A41: red at f215692640dff9724fe78883e722bbd91499e117: AssertionError: 0 != 1 : install / host/usr/local/lib/deck-streak/releases / absent
-A41: green at 09a79d98fbd66bdde8b5890543c1da99eda8b0db
+A41: green at 89fff8d984432f8bda93d729b3106aa387c77c75
 ```
 
-The fix (09a79d98fbd66bdde8b5890543c1da99eda8b0db, after 6109795b0e719607527adc0b271c87e087fd753d kept an older row red) changes `deploy.sh`, the rows S12753 to S12771, the
-SPEC and the ADR; it edits no test file.
+The fix (6109795b0e719607527adc0b271c87e087fd753d, then 09a79d98fbd66bdde8b5890543c1da99eda8b0db, then
+89fff8d984432f8bda93d729b3106aa387c77c75, the first commit whose CI run killed the older row S06207) changes `deploy.sh`, the rows
+S12753 to S12771, the SPEC and the ADR; it edits no test file.

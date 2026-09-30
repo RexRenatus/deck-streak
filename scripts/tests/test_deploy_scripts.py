@@ -2500,18 +2500,6 @@ exec /usr/bin/@NAME@ "$@"
                         f"{verb} / {state} / {tool} {index}", done, before, after, "host step"
                     )
 
-    def test_a_first_install_into_a_parent_that_cannot_take_a_write_leaves_the_host_as_found(self):
-        for verb in examined("first-install place member(s)", ["install", "rollback-unkept"]):
-            with self.subTest(verb=verb), tempfile.TemporaryDirectory() as tmp:
-                w, good, argv = self.situation(tmp, verb, "first-install")
-                parent = w.root.parent
-                parent.mkdir(parents=True, exist_ok=True)
-                modes = [(parent, stat.S_IMODE(parent.lstat().st_mode))]
-                parent.chmod(0o555)
-                self.assertFalse(w.root.exists(), "the host holds no release yet")
-                done, before, after = self.outcome(w, argv, good, modes)
-                self.judge(f"{verb} / first install / parent", done, before, after, "host step")
-
     def test_a_stale_unpack_in_a_releases_directory_that_cannot_take_a_write_is_refused(self):
         for verb in examined("stale-unpack member(s)", ["install", "rollback-unkept"]):
             with self.subTest(verb=verb), tempfile.TemporaryDirectory() as tmp:

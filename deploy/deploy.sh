@@ -114,21 +114,29 @@ prev=
 [ "$prev" != "$rel" ] || { echo "deploy: $tag is already current" >&2; exit 1; }
 port=$(sed -n 's/^DECKSTREAK_API_LISTEN=.*:\([0-9][0-9]*\)$/\1/p' "$envfile" 2>/dev/null | tail -n 1)
 port=${port:-8080}
-# The check file is made before the first write, so a temporary directory that cannot be used
-# leaves the host as it was (ADR-297); every exit deletes it.
+# The check file is the first thing this step makes, before any write to the host, so a
+# temporary directory that cannot be used leaves the host as it was (ADR-297); every exit deletes it.
 checked=$(mktemp) || { echo "deploy: the host step could not make its check file" >&2; exit 1; }
+saved=$checked.saved
 made_partial=
+made_top=
+finished=
 refuse() { echo "deploy: the host step $*" >&2; exit 1; }
-# Every exit removes what this step made under a temporary name: the check file, the pid-named
-# link and an unfinished unpack; each test is an `if`-shaped list, so the trap cannot end the
+# Every exit removes what this step made under a temporary name: the check file, the saved unit
+# files, the pid-named link and an unfinished unpack; a run that did not finish also removes the
+# release root it had to make (the topmost directory that was missing), so a refused first install
+# leaves the host as it found it. Each test is an `if`-shaped list, so the trap cannot end the
 # shell early.
 host_cleanup() {
     [ ! -f "$checked" ] || find "$checked" -delete
+    [ ! -d "$saved" ] || find "$saved" -delete
     [ ! -L "$root/.current.$$" ] || find "$root/.current.$$" -delete
     [ -z "$made_partial" ] || [ ! -e "$rel.partial" ] || find "$rel.partial" -delete
+    [ -z "$made_top" ] || [ -n "$finished" ] || [ ! -e "$made_top" ] || find "$made_top" -delete
     return 0
 }
 trap host_cleanup EXIT
+mkdir -m 0700 "$saved" || refuse "could not make its directory for the saved unit files"
 
 # The directories the unit files are written in must take a write, checked before the first write
 # so that a host that cannot be written in is refused with nothing changed. One argument: a
@@ -150,28 +158,58 @@ stage_link() {
 }
 
 drop_release() {
-    [ "$mode" != install ] || find "$rel" -delete
+    [ "$mode" != install ] || find "$rel" -delete || return 1
 }
 
-# The rename over `current` failed after the units were installed: put the previous ones back.
-switch_failed() {
-    [ -z "$prev" ] || install_units "$prev"
+# The unit files as the host had them, kept in the saved directory before the first write to the
+# unit directory, so that an undo puts back exactly what was there (and removes what was not).
+save_units() {
+    local f
+    for f in "$unitdir"/deck-streak-*; do
+        [ -e "$f" ] || [ -L "$f" ] || continue
+        cp -a "$f" "$saved/" || return 1
+    done
+}
+
+# Put the unit files back as saved, reload, and drop an install's new release.
+unwind() {
+    local f
+    for f in "$unitdir"/deck-streak-*; do
+        [ -e "$f" ] || [ -L "$f" ] || continue
+        find "$f" -delete || return 1
+    done
+    for f in "$saved"/*; do
+        [ -e "$f" ] || [ -L "$f" ] || continue
+        cp -a "$f" "$unitdir/" || return 1
+    done
     systemctl daemon-reload
     drop_release
-    refuse "could not switch the current link"
+}
+
+# A write after the first change to the host failed: undo, then refuse with the words given.
+undo_and_refuse() {
+    unwind || refuse "$* and could not put its unit files back"
+    refuse "$*"
+}
+
+# The rename over `current` failed after the units were installed.
+switch_failed() {
+    undo_and_refuse "could not switch the current link"
 }
 
 install_units() {
     local src=$1/deploy/systemd f d n c base
     for f in "$src"/*.service "$src"/*.timer "$src"/*.socket "$src"/*.path; do
-        [ -f "$f" ] && install -m 0644 "$f" "$unitdir/$(basename "$f")"
+        [ -f "$f" ] || continue
+        install -m 0644 "$f" "$unitdir/$(basename "$f")" || return 1
     done
     for d in "$src"/*@*.d; do
         [ -d "$d" ] || continue
         n=$(basename "$d")
-        install -d -m 0755 "$unitdir/$n"
+        install -d -m 0755 "$unitdir/$n" || return 1
         for c in "$d"/*.conf; do
-            [ -f "$c" ] && install -m 0644 "$c" "$unitdir/$n/$(basename "$c")"
+            [ -f "$c" ] || continue
+            install -m 0644 "$c" "$unitdir/$n/$(basename "$c")" || return 1
         done
     done
     for d in "$unitdir"/deck-streak-*@*.d; do
@@ -181,7 +219,7 @@ install_units() {
             [ -f "$c" ] || continue
             base=$(basename "$c")
             [ "$base" = 10-rail.conf ] && continue
-            [ -f "$src/$n/$base" ] || find "$c" -delete
+            [ -f "$src/$n/$base" ] || find "$c" -delete || return 1
         done
     done
 }
@@ -223,11 +261,20 @@ back() {
     exit 1
 }
 
+save_units || refuse "could not save its unit files"
 if [ "$mode" = install ]; then
     [ ! -e "$rel" ] || { echo "deploy: $tag is already installed; use the rollback" >&2; exit 1; }
     check_dirs
+    top=$root/releases
+    while [ ! -e "$top" ]; do
+        made_top=$top
+        top=$(dirname "$top")
+    done
     mkdir -p "$root/releases" || refuse "could not make its releases directory"
-    [ -e "$rel.partial" ] && find "$rel.partial" -delete
+    writable "$root/releases" || refuse "cannot write in its releases directory"
+    if [ -e "$rel.partial" ]; then
+        find "$rel.partial" -delete || refuse "could not remove an unfinished unpack"
+    fi
     mkdir "$rel.partial" || refuse "could not make its partial release directory"
     made_partial=1
     tar -xzf - --no-same-owner -C "$rel.partial" || refuse "could not unpack the release"
@@ -243,7 +290,7 @@ else
     stage_link "$rel" || refuse "could not make the link for the kept release"
 fi
 
-install_units "$rel"
+install_units "$rel" || undo_and_refuse "could not install its unit files"
 systemctl daemon-reload
 for f in "$rel"/deploy/systemd/*.service "$rel"/deploy/systemd/*@*.d; do
     [ -e "$f" ] || continue
@@ -253,15 +300,15 @@ for f in "$rel"/deploy/systemd/*.service "$rel"/deploy/systemd/*@*.d; do
 done
 python3 "$rel/deploy/scripts/effective-check.py" --root "$rel" "$checked" ||
     { echo "deploy: the effective configuration is refused" >&2; find "$checked" -delete
-      [ -n "$prev" ] && install_units "$prev"; systemctl daemon-reload
-      [ "$mode" = install ] && find "$rel" -delete; exit 1; }
-find "$checked" -delete
+      unwind; exit 1; }
+find "$checked" -delete || undo_and_refuse "could not delete its check file"
 
 switch_current || switch_failed
 restart deck-streak-api.service || back deck-streak-api.service
 ready || back deck-streak-api.service
 restart deck-streak-bot.service || back deck-streak-bot.service
 
+finished=1
 if [ "$mode" = install ]; then
     prevname=
     [ -n "$prev" ] && prevname=$(basename "$prev")
