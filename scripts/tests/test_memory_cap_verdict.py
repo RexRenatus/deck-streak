@@ -55,11 +55,25 @@ def slug(name):
     return re.sub(r"[^A-Za-z0-9]+", "_", name).strip("_")[:80]
 
 
-def write_log(directory, base, first, lines):
-    (directory / "mutants.out" / "log" / f"{base}.log").write_text(
-        "\n".join([f"*** {first}", "     PASS [   0.004s] fix tests::other", *lines, ""]),
-        encoding="utf-8",
+# How a scenario log opens. cargo-mutants 27.1.0 opens every log with one blank line, then
+# `*** <scenario>`; the axis crosses the blank and whitespace-only lines before that line with the
+# line ending, so the verdict's reading is judged on every opening and not on the one it was built on.
+LEADS = {
+    "no blank line": [],
+    "one blank line": [""],
+    "several blank and whitespace-only lines": ["", "  ", "\t", ""],
+}
+ENDINGS = {"LF": "\n", "CRLF": "\r\n"}
+OPENINGS = [(lead, ending) for lead in LEADS for ending in ENDINGS]
+REAL_OPENING = ("one blank line", "LF")
+
+
+def write_log(directory, base, first, lines, opening=REAL_OPENING):
+    lead, ending = opening
+    text = ENDINGS[ending].join(
+        [*LEADS[lead], f"*** {first}", "", "     PASS [   0.004s] fix tests::other", *lines, ""]
     )
+    (directory / "mutants.out" / "log" / f"{base}.log").write_bytes(text.encode("utf-8"))
 
 
 def cap_shard(
@@ -73,6 +87,7 @@ def cap_shard(
     code="0",
     record=ZERO_SCOPE,
     package="fix",
+    opening=REAL_OPENING,
 ):
     """One leg's artifact: `report`, each outcome's log (`kills` maps a mutant to the lines its
     log holds, `ghosts` the same for a scenario whose outcome was never written), the exit and the
@@ -88,9 +103,9 @@ def cap_shard(
             scenario["Mutant"]["package"] = package
             base, first, lines = slug(name), name, (kills or {}).get(name, [])
         outcome["log_path"] = f"log/{base}.log"
-        write_log(directory, base, first, lines)
+        write_log(directory, base, first, lines, opening)
     for name, lines in (ghosts or {}).items():
-        write_log(directory, slug(name), name, lines)
+        write_log(directory, slug(name), name, lines, opening)
     (directory / "mutants.out" / "outcomes.json").write_text(json.dumps(report), encoding="utf-8")
     (directory / "cargo-mutants.exit").write_text(f"{code}\n", encoding="utf-8")
     if record is not None:
@@ -315,31 +330,56 @@ class TheBaselineAndThePartialShard(Scenes):
     def test_a_cap_kill_in_the_baseline_or_a_partial_shard_fails_by_name(self):
         self.world()
         names = self.planned[0]
-        baseline = self.judge(
-            self.write_all("baseline", k0={"record": scope(1, 1), "baseline": [IN_RUN, SUMMARY]})
-        )
-        self.assertEqual(baseline.returncode, 1, baseline.stdout + baseline.stderr)
-        found = [x for x in mutation_lines(baseline) if "MEMORY-CAP" in x]
-        self.assertEqual(len(found), 1, baseline.stdout)
-        self.assertTrue(
-            found[0].startswith("mutation-rust-shard-0: MEMORY-CAP the unmutated baseline"), found
-        )
-        # A shard cut short at exit 137: VOID as before, and the kill named all the same.
         partial = shard_outcomes(names[:5], total=len(names))
-        for label, kills, ghosts in (
-            ("a mutant with an outcome", {names[3]: [IN_RUN, SUMMARY]}, None),
-            ("a mutant with a log and no outcome", {}, {names[9]: [IN_RUN, SUMMARY]}),
-        ):
-            with self.subTest(kill=label):
+        shapes = {
+            "the baseline": ("baseline", {}, None),
+            "a mutant with an outcome": ("partial", {names[3]: [IN_RUN, SUMMARY]}, None),
+            "a mutant with a log and no outcome": (
+                "partial",
+                {},
+                {names[9]: [IN_RUN, SUMMARY]},
+            ),
+        }
+        # The population: every opening of a scenario log crossed with every place a kill sits.
+        members = [(opening, label) for opening in OPENINGS for label in shapes]
+        members = examined("log openings by kill places", members)
+        self.assertEqual(len(members), len(LEADS) * len(ENDINGS) * len(shapes))
+        for opening, label in members:
+            kind, kills, ghosts = shapes[label]
+            with self.subTest(opening=opening, kill=label):
+                key = f"{slug(label)}-{slug(opening[0])}-{opening[1]}"
+                if kind == "baseline":
+                    done = self.judge(
+                        self.write_all(
+                            f"baseline-{key}",
+                            k0={
+                                "record": scope(1, 1),
+                                "baseline": [IN_RUN, SUMMARY],
+                                "opening": opening,
+                            },
+                        )
+                    )
+                    self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+                    found = [x for x in mutation_lines(done) if "MEMORY-CAP" in x]
+                    self.assertEqual(len(found), 1, done.stdout)
+                    self.assertTrue(
+                        found[0].startswith(
+                            "mutation-rust-shard-0: MEMORY-CAP the unmutated baseline"
+                        ),
+                        found,
+                    )
+                    continue
+                # A shard cut short at exit 137: VOID as before, and the kill named all the same.
                 stopped = names[3] if kills else names[9]
                 root = self.write_all(
-                    f"partial-{slug(label)}",
+                    f"partial-{key}",
                     k0={
                         "report": json.loads(json.dumps(partial)),
                         "code": "137",
                         "record": scope(1, 1),
                         "kills": kills,
                         "ghosts": ghosts,
+                        "opening": opening,
                     },
                 )
                 done = self.judge(root)
