@@ -25,3 +25,24 @@ at 29df06f stands as the earlier body's failure, the loader's `AssertionError` t
 missing file. Each later body reads the same file through the same loader first, so at 29df06f it
 fails at the same line: the current body, run with `config/formal.json` absent, reads
 `FAILED (failures=3)`, each at that `AssertionError`.
+
+## Amendment addendum, 2026-09-30 (issue #488)
+
+The test of A4 was committed at 654f96f690037bfdeec1daafba8f6d80eee6634a against the development branch's reader, which already
+refuses every planted value, so A4 and A5 were green at their first commit and neither has a red
+line. What makes them evidence is the mutant table: of 17 mutants of the reader's integer and map
+arms, nine survived the development branch's tests (an integral float admitted as an integer or as a
+map value, a null, a float, a string, an array and an object admitted as map values, and a map judged
+by its first value alone and by its last alone), and every one of the nine is red under the new
+population. The other eight were red before and stay red. The nine rows S29500 to S29508 are each
+killed on a clean committed detached head.
+
+```red-first
+A4: not red: the reader already refused every planted value; nine mutants of it that the earlier population let survive are each red under this test, and the rows S29500 to S29508 prove it
+A5: not red: the reader already refused every planted value; the rows S29500 to S29508 prove the population kills each mutant
+```
+
+The green run reads `Ran 4 tests ... OK` and prints `examined 102 planted value types`,
+`examined 54 planted values of the kind posint at 6 fields`, `examined 34 planted values of the kind
+posint-map at 1 fields`, `examined 7 planted values of the kind path at 1 fields`, `examined 7 planted
+values of the kind strings at 1 fields` and `examined 137 planted faults`.
