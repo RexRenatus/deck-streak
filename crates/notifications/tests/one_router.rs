@@ -555,12 +555,18 @@ const ORACLE: &str = "tools/parity-oracle";
 /// The bot's sources, where the Bot API is named: a send method only by its own named send.
 const BOT_SOURCES: &str = "crates/bot/src/";
 
+/// The bot's base URL for the Bot API, read from the pinned client's builder: a request URL built
+/// from it is a send the client never makes, so it is a way around the port whatever it builds.
+const API_URL: &str = "api_url";
+
 /// The bot's own ways to reach the owner's chat that take no pass, each with the file that defines
 /// it: every use of one is its definition there or at a named call site. Its send; its edit of a
-/// message, which only the port's reveal calls (SPEC-084 R8); and its command handler, which
-/// answers an update with a reply the router never decides.
-const GUARDED: [(&str, &str); 3] = [
+/// message, which only the port's reveal calls (SPEC-084 R8); its command handler, which answers
+/// an update with a reply the router never decides; and its base URL, which only the two
+/// multipart sends and the constructor read (SPEC-041 A16).
+const GUARDED: [(&str, &str); 4] = [
     (BOT_SEND, "crates/bot/src/transport.rs"),
+    (API_URL, TRANSPORT),
     ("edit_html", "crates/bot/src/transport.rs"),
     ("handle", "crates/bot/src/commands.rs"),
 ];
@@ -1393,6 +1399,11 @@ struct Census {
     /// Each named caller of the command handler's replies and dispatch found, as (path, function,
     /// what it calls), in order and once.
     callers: Vec<(String, String, String)>,
+    /// Each read of the bot's base URL at a named site, as (path, function), in order.
+    api_urls: Vec<(String, String)>,
+    /// Each name of a request the census cannot read, at its named request site, as (path,
+    /// function, name), in order: once per mention.
+    requests: Vec<(String, String, String)>,
 }
 
 impl Census {
@@ -1402,6 +1413,30 @@ impl Census {
             .iter()
             .map(|(path, line, what)| format!("{path}:{line}: {what}"))
             .collect()
+    }
+}
+
+/// A form the census cannot read is refused: the base URL named inside a string literal (an
+/// inline format argument) is blanked in `structure`, so the identifier search cannot see it.
+fn literal_refusals(
+    path: &str,
+    code: &str,
+    structure: &str,
+    refusals: &mut Vec<(String, usize, String)>,
+) {
+    for at in identifiers(code, API_URL) {
+        if structure[at..at + API_URL.len()].trim().is_empty() {
+            let function = enclosing(structure, at);
+            if !at_a_named_site(path, &function, API_URL) {
+                refusals.push((
+                    path.to_string(),
+                    line_of(code, at),
+                    format!(
+                        "reads {API_URL} inside a literal in {function}, not a named call site"
+                    ),
+                ));
+            }
+        }
     }
 }
 
@@ -1431,6 +1466,9 @@ fn census(sources: &[(String, String)]) -> Census {
                     ));
                 }
             }
+            if rust {
+                request_refusals(&mut found, path, &code, &structure);
+            }
         } else if path != ALERT_PATH {
             for (at, name) in names_of_the_bot_api(&code) {
                 found
@@ -1459,7 +1497,11 @@ fn census(sources: &[(String, String)]) -> Census {
                         continue;
                     }
                     let function = enclosing(&structure, at);
-                    if !at_a_named_site(path, &function, name) {
+                    if at_a_named_site(path, &function, name) {
+                        if name == API_URL {
+                            found.api_urls.push((path.clone(), function));
+                        }
+                    } else {
                         let how = if called(&structure, at, name) {
                             "calls"
                         } else {
@@ -1473,6 +1515,7 @@ fn census(sources: &[(String, String)]) -> Census {
                     }
                 }
             }
+            literal_refusals(path, &code, &structure, &mut found.refusals);
             for (at, send) in sends(&code, &structure) {
                 let function = enclosing(&structure, at);
                 found.sends.push((path.clone(), function, send));
@@ -1496,7 +1539,31 @@ fn census(sources: &[(String, String)]) -> Census {
     found.sends.sort();
     found.callers.sort();
     found.callers.dedup();
+    found.api_urls.sort();
+    found.requests.sort();
     found
+}
+
+/// Each name of `REQUEST_NAMES` in the bot's source `path`, found at its named request site or
+/// refused. A request made through one of them carries its Bot API method as a string or a URL,
+/// which no identifier search reads, so it is refused wherever it is not named (fail closed).
+fn request_refusals(found: &mut Census, path: &str, code: &str, structure: &str) {
+    for name in REQUEST_NAMES {
+        for at in identifiers(structure, name) {
+            let function = enclosing(structure, at);
+            if REQUEST_SITES.contains(&(path, function.as_str(), name)) {
+                found
+                    .requests
+                    .push((path.to_owned(), function, name.to_owned()));
+            } else {
+                found.refusals.push((
+                    path.to_owned(),
+                    line_of(code, at),
+                    format!("names {name} in {function}, not a named request site"),
+                ));
+            }
+        }
+    }
 }
 
 /// Each use of the command handler's replies and dispatch in the handler's module at `path`, found
@@ -1526,7 +1593,9 @@ fn command_callers(found: &mut Census, path: &str, code: &str, structure: &str) 
 /// Whether `name` is used in `function` of `path` at one of its named call sites: a named send, or
 /// the command handler's entry.
 fn at_a_named_site(path: &str, function: &str, name: &str) -> bool {
-    NAMED_SENDS.contains(&(path, function, name)) || HANDLER_ENTRY == (path, function, name)
+    NAMED_SENDS.contains(&(path, function, name))
+        || HANDLER_ENTRY == (path, function, name)
+        || API_URL_SITES.contains(&(path, function, name))
 }
 
 /// Whether the Bot API method `name`, in either spelling, is named in `function` of `path` by the
@@ -2168,15 +2237,27 @@ fn no_delivery_goes_around_the_port() {
             "crates/api/src/notifications_routes.rs:3: names api.telegram.org",
             "crates/api/src/notifications_routes.rs:3: names sendMessage",
             "crates/api/src/router.rs:6: names FEED_TABLE",
+            "crates/bot/src/celebrate.rs:4: uses api_url in no function, not a named call site",
             "crates/bot/src/celebrate.rs:5: names sendMessage in celebrate, not a named call site",
+            "crates/bot/src/celebrate.rs:5: reads api_url inside a literal in celebrate, not a named \
+             call site",
+            "crates/bot/src/celebrate.rs:7: names reqwest in celebrate, not a named request site",
             "crates/bot/src/commands.rs:4: calls send in Commands::celebrate, not a named caller",
             "crates/bot/src/commands.rs:9: calls on_message in Commands::celebrate_by_a_command, \
              not a named caller",
             "crates/bot/src/commands.rs:14: calls ask_erase in Commands::celebrate_by_a_prompt, \
              not a named caller",
+            "crates/bot/src/copy.rs:4: uses api_url in no function, not a named call site",
             "crates/bot/src/copy.rs:5: names copyMessage in celebrate, not a named call site",
+            "crates/bot/src/copy.rs:5: reads api_url inside a literal in celebrate, not a named call \
+             site",
+            "crates/bot/src/copy.rs:7: names reqwest in celebrate, not a named request site",
+            "crates/bot/src/rich.rs:4: uses api_url in no function, not a named call site",
             "crates/bot/src/rich.rs:5: names sendRichMessage in celebrate_richly, not a named call \
              site",
+            "crates/bot/src/rich.rs:5: reads api_url inside a literal in celebrate_richly, not a \
+             named call site",
+            "crates/bot/src/rich.rs:7: names reqwest in celebrate_richly, not a named request site",
             "crates/bot/src/transport.rs:9: names edit_message_text in \
              Transport::celebrate_by_an_edit, not a named call site",
             "crates/coordination/src/sync_cycle.rs:6: names QUEUE_TABLE",
@@ -2323,6 +2404,26 @@ fn no_delivery_goes_around_the_port() {
         "every named caller of the command handler's replies and dispatch calls it"
     );
 
+    let mut api_urls: Vec<(String, String)> = API_URL_SITES
+        .iter()
+        .map(|&(path, function, _)| (path.to_owned(), function.to_owned()))
+        .collect();
+    api_urls.sort();
+    assert_eq!(
+        tree.api_urls, api_urls,
+        "the bot's base URL is read once at each named site, and nowhere else"
+    );
+    let mut requests: Vec<(String, String, String)> = REQUEST_SITES
+        .iter()
+        .map(|&(path, function, name)| (path.to_owned(), function.to_owned(), name.to_owned()))
+        .collect();
+    requests.sort();
+    assert_eq!(
+        tree.requests, requests,
+        "each name of a request the census cannot read is found at its named site, as often as \
+         the site names it, and nowhere else"
+    );
+
     // The one exception is needed: the alert path's text is refused anywhere else.
     let (_, alert) = sources
         .iter()
@@ -2449,4 +2550,407 @@ fn the_policy_names_every_bot_call() {
             "the census names {function} as the call of {send}"
         );
     }
+}
+
+/// The bot transport, where the Bot API's base URL is read: the only file that holds `api_url`.
+const TRANSPORT: &str = "crates/bot/src/transport.rs";
+
+/// The three places the transport may read its `api_url`, as (path, function, name): the two sends
+/// that build a multipart request the pinned client cannot make (`sendDocument` and `sendPhoto`),
+/// and the constructor that composes the base URL with the bot's token once.
+const API_URL_SITES: [(&str, &str, &str); 3] = [
+    (TRANSPORT, "Transport::send_document", "api_url"),
+    (TRANSPORT, "Transport::send_photo", "api_url"),
+    (TRANSPORT, "Transport::with_waits", "api_url"),
+];
+
+/// The names through which the bot can make a request whose Bot API method the census does not
+/// read: the pinned client's generic requests, which take the method as a string; its HTTP
+/// client; and the HTTP crate, by which any other client or request is built. Any other path to
+/// the Bot API is a typed call of the client, whose method the census reads by its name.
+const REQUEST_NAMES: [&str; 5] = [
+    "request",
+    "request_with_form_data",
+    "request_with_possible_form_data",
+    "client",
+    "reqwest",
+];
+
+/// Every mention of a `REQUEST_NAMES` name in the bot's shipped sources, as (path, function,
+/// name), once per mention: the update poll's generic request, the constructor that builds the
+/// client, the two multipart sends and their forms, and the transport's use of the crate and its
+/// error types (in no function). A second mention at a site is a second request, and is refused.
+const REQUEST_SITES: [(&str, &str, &str); 21] = [
+    (TRANSPORT, "no function", "reqwest"),
+    (TRANSPORT, "no function", "reqwest"),
+    (TRANSPORT, "no function", "reqwest"),
+    (TRANSPORT, "no function", "reqwest"),
+    (TRANSPORT, "no function", "reqwest"),
+    (TRANSPORT, "no function", "reqwest"),
+    (TRANSPORT, "no function", "reqwest"),
+    (TRANSPORT, "no function", "reqwest"),
+    (TRANSPORT, "Transport::with_waits", "client"),
+    (TRANSPORT, "Transport::with_waits", "client"),
+    (TRANSPORT, "Transport::with_waits", "client"),
+    (TRANSPORT, "Transport::with_waits", "reqwest"),
+    (TRANSPORT, "Transport::send_document", "client"),
+    (TRANSPORT, "Transport::send_document", "client"),
+    (TRANSPORT, "Transport::send_document", "client"),
+    (TRANSPORT, "Transport::send_photo", "client"),
+    (TRANSPORT, "Transport::get_updates", "request"),
+    (TRANSPORT, "document_form", "reqwest"),
+    (TRANSPORT, "document_form", "reqwest"),
+    (TRANSPORT, "photo_form", "reqwest"),
+    (TRANSPORT, "photo_form", "reqwest"),
+];
+
+/// Each way to build a Bot API request URL from `api_url`, by name. `url_statement` writes each as
+/// a statement planted on a line of its own inside a function body.
+const URL_FORMS: [&str; 6] = ["format", "concat", "push", "helper", "constant", "inline"];
+
+/// The statement that builds the URL for `method` in the form `form`.
+fn url_statement(form: &str, method: &str) -> String {
+    match form {
+        "format" => format!(r#"let _u = format!("{{}}/{method}", self.bot.api_url);"#),
+        "concat" => {
+            format!(r#"let _u = format!("{{}}{{}}", self.bot.api_url, concat!("/", "{method}"));"#)
+        }
+        "push" => format!(
+            r#"let mut _u = self.bot.api_url.clone(); _u.push_str("/"); _u.push_str("{method}");"#
+        ),
+        "helper" => {
+            format!(r#"fn _url(bot: &Bot) -> String {{ format!("{{}}/{method}", bot.api_url) }}"#)
+        }
+        "constant" => format!(
+            r#"const _PATH: &str = "/{method}"; let _u = format!("{{}}{{}}", self.bot.api_url, _PATH);"#
+        ),
+        "inline" => format!(r#"let _u = format!("{{api_url}}/{method}");"#),
+        other => panic!("no such form {other}"),
+    }
+}
+
+/// `text` with `statement` planted on its own line just past the brace at `open`, and the line the
+/// text `api_url` is then on.
+fn planted_after(text: &str, open: usize, statement: &str) -> (String, usize) {
+    let mut planted = String::with_capacity(text.len() + statement.len() + 1);
+    planted.push_str(&text[..=open]);
+    planted.push('\n');
+    let at = planted.len()
+        + statement
+            .find("api_url")
+            .expect("a statement that names api_url");
+    planted.push_str(statement);
+    planted.push_str(&text[open + 1..]);
+    let line = line_of(&planted, at);
+    (planted, line)
+}
+
+/// The refusals of the transport `text` that name `api_url`, each as its line and what it says.
+fn api_url_refusals(text: &str) -> Vec<(usize, String)> {
+    census(&[(TRANSPORT.to_owned(), text.to_owned())])
+        .refusals
+        .into_iter()
+        .filter(|(_, _, what)| what.contains("api_url"))
+        .map(|(_, line, what)| (line, what))
+        .collect()
+}
+
+/// Every function of `text` that has a body, as its name (as the census names it) and the byte of
+/// its opening brace.
+fn functions_of(text: &str) -> Vec<(String, usize)> {
+    let (_, structure) = rust_code(text);
+    identifiers(&structure, "fn")
+        .filter(|&start| {
+            structure[start + 2..]
+                .trim_start()
+                .starts_with(|c: char| c.is_alphabetic() || c == '_')
+        })
+        .filter_map(|start| body(&structure, start).map(|(open, _)| open))
+        .map(|open| (enclosing(&structure, open + 1), open))
+        .collect()
+}
+
+/// Every Bot API method the transport's own code names, in either spelling, as the pinned client's
+/// spelling of it: read from the source, not listed.
+fn methods_the_transport_names(text: &str) -> Vec<&'static str> {
+    let (code, _) = rust_code(text);
+    methods()
+        .filter(|method| {
+            [(*method).to_owned(), snake(method)]
+                .iter()
+                .any(|spelling| identifiers(&code, spelling).next().is_some())
+        })
+        .collect()
+}
+
+// One test holds both halves of the class: the accepted control, and the refused population.
+#[allow(clippy::too_many_lines)]
+#[test]
+fn a_hand_built_send_url_is_refused_wherever_the_transport_builds_it() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .ancestors()
+        .nth(2)
+        .expect("the tree's root");
+    let real = fs::read_to_string(root.join(TRANSPORT)).expect("the bot transport");
+    let sites: Vec<&str> = API_URL_SITES
+        .iter()
+        .map(|&(_, function, _)| function)
+        .collect();
+
+    // The controls first: the transport as shipped, and every form that is not a helper planted
+    // inside a named site with that site's own method, are accepted. A helper is its own function,
+    // so it is a place outside the named sites even when it is written inside one.
+    assert_eq!(
+        api_url_refusals(&real),
+        [],
+        "the transport as shipped reads api_url only at its named sites"
+    );
+    let functions = functions_of(&real);
+    let mut controls = 0_usize;
+    for (site, method) in [
+        ("Transport::send_document", "sendDocument"),
+        ("Transport::send_photo", "sendPhoto"),
+        ("Transport::with_waits", "sendMessage"),
+    ] {
+        let (_, open) = functions
+            .iter()
+            .find(|(function, _)| function == site)
+            .unwrap_or_else(|| panic!("the transport defines {site}"));
+        for form in URL_FORMS.iter().filter(|&&form| form != "helper") {
+            let (text, _) = planted_after(&real, *open, &url_statement(form, method));
+            let found = api_url_refusals(&text);
+            assert!(
+                found.is_empty(),
+                "{form} form of {method} inside {site} is a named site's own, yet refused: {found:?}"
+            );
+            controls += 1;
+        }
+    }
+    println!("examined {controls} named-site controls, each accepted");
+
+    // The population: every method the transport names, by every form, planted in every function
+    // of the transport outside the named sites.
+    let names = methods_the_transport_names(&real);
+    let places: Vec<&(String, usize)> = functions
+        .iter()
+        .filter(|(function, _)| !sites.contains(&function.as_str()))
+        .collect();
+    let mut members = Vec::new();
+    for method in &names {
+        for form in URL_FORMS {
+            for place in &places {
+                members.push((*method, form, place));
+            }
+        }
+    }
+    assert_eq!(
+        members.len(),
+        names.len() * URL_FORMS.len() * places.len(),
+        "the population is the product of its three axes"
+    );
+    assert!(
+        names.len() >= 5 && places.len() >= 20,
+        "the transport names {} methods and has {} places outside its named sites",
+        names.len(),
+        places.len()
+    );
+    let workers = std::thread::available_parallelism().map_or(4, std::num::NonZero::get);
+    let chunk = members.len().div_ceil(workers);
+    let missed: Vec<String> = std::thread::scope(|scope| {
+        let handles: Vec<_> = members
+            .chunks(chunk)
+            .map(|part| {
+                let real = &real;
+                scope.spawn(move || {
+                    let mut missed = Vec::new();
+                    for &(method, form, place) in part {
+                        let (function, open) = place;
+                        let (text, line) =
+                            planted_after(real, *open, &url_statement(form, method));
+                        let found = api_url_refusals(&text);
+                        if !found.iter().any(|(at, _)| *at == line) {
+                            missed.push(format!(
+                                "{form} form of {method} in {function} at line {line} is not refused"
+                            ));
+                        }
+                    }
+                    missed
+                })
+            })
+            .collect();
+        handles
+            .into_iter()
+            .flat_map(|handle| handle.join().expect("a worker"))
+            .collect()
+    });
+    println!(
+        "examined {} hand-built send URLs ({} methods x {} forms x {} places)",
+        members.len(),
+        names.len(),
+        URL_FORMS.len(),
+        places.len()
+    );
+    assert!(
+        missed.is_empty(),
+        "{} of {} hand-built send URLs are not refused, e.g. {}",
+        missed.len(),
+        members.len(),
+        missed.first().map_or("", String::as_str)
+    );
+}
+
+/// Each way the bot can make a request whose Bot API method the census does not read, as a
+/// statement naming the method in lower case: the Bot API takes it ("All methods in the Bot API
+/// are case-insensitive"), and no identifier search finds it.
+const REQUEST_FORMS: [(&str, &str); 8] = [
+    (
+        "generic",
+        r#"let _r = self.bot.request::<_, Value>("sendmessage", None::<()>);"#,
+    ),
+    (
+        "form-data",
+        r#"let _r = self.bot.request_with_form_data::<_, Value>("sendmessage", (), vec![]);"#,
+    ),
+    (
+        "possible-form-data",
+        r#"let _r = self.bot.request_with_possible_form_data::<_, Value>("sendmessage", (), vec![]);"#,
+    ),
+    (
+        "client-post",
+        r#"let _r = self.bot.client.post(format!("{}/sendmessage", self.base));"#,
+    ),
+    (
+        "client-get",
+        r#"let _r = self.bot.client.get(format!("{}/sendmessage", self.base));"#,
+    ),
+    (
+        "new-client",
+        r#"let _r = reqwest::Client::new().post(format!("{}/sendmessage", self.base));"#,
+    ),
+    (
+        "free-get",
+        r#"let _r = reqwest::get(format!("{}/sendmessage", self.base));"#,
+    ),
+    (
+        "built-client",
+        r#"let _r = reqwest::Client::builder().build().map(|c| c.get(format!("{}/sendmessage", self.base)));"#,
+    ),
+];
+
+/// The places outside a function where the bot can make a request: a static's initialiser, a
+/// nested module's function, and a new type's method, each appended to a bot source with `STMT`.
+const REQUEST_PLACES: [(&str, &str); 3] = [
+    (
+        "static",
+        "\nstatic PROBE: std::sync::LazyLock<()> = std::sync::LazyLock::new(|| {\nSTMT\n});\n",
+    ),
+    (
+        "nested-mod",
+        "\nmod probe {\n    use super::*;\n    pub(super) fn probe() {\nSTMT\n    }\n}\n",
+    ),
+    (
+        "new-impl",
+        "\nstruct Probe;\nimpl Probe {\n    fn probe(&self) {\nSTMT\n    }\n}\n",
+    ),
+];
+
+/// `text` with `statement` on its own line just past the brace at `open`, and that line.
+fn planted_line(text: &str, open: usize, statement: &str) -> (String, usize) {
+    let mut planted = String::with_capacity(text.len() + statement.len() + 1);
+    planted.push_str(&text[..=open]);
+    planted.push('\n');
+    let at = planted.len();
+    planted.push_str(statement);
+    planted.push_str(&text[open + 1..]);
+    let line = line_of(&planted, at);
+    (planted, line)
+}
+
+// One population: every form of a request the census cannot read, in every function of every bot
+// source and at every place outside one; each is refused at its line, or, at a named request
+// site, found one more time than the site names it.
+#[allow(clippy::too_many_lines)]
+#[test]
+fn a_request_the_census_cannot_read_is_refused_wherever_the_bot_makes_it() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .ancestors()
+        .nth(2)
+        .expect("the tree's root");
+    let bot: Vec<(String, String)> = shipped_sources(root)
+        .into_iter()
+        .filter(|(path, _)| {
+            path.starts_with(BOT_SOURCES)
+                && Path::new(path)
+                    .extension()
+                    .is_some_and(|extension| extension == "rs")
+        })
+        .collect();
+    let bot = examined("bot source(s)", bot);
+    let mut members: Vec<(String, String, &str, String, usize)> = Vec::new();
+    for (path, text) in &bot {
+        for (form, statement) in REQUEST_FORMS {
+            for (function, open) in functions_of(text) {
+                let (planted, line) = planted_line(text, open, statement);
+                members.push((path.clone(), function, form, planted, line));
+            }
+            for (place, template) in REQUEST_PLACES {
+                let at = text.len() + template.find("STMT").expect("a statement's place");
+                let planted = format!("{text}{}", template.replace("STMT", statement));
+                let line = line_of(&planted, at);
+                members.push((path.clone(), place.to_owned(), form, planted, line));
+            }
+        }
+    }
+    let members = examined("planted request(s)", members);
+    let unplanted: Vec<(String, Census)> = bot
+        .iter()
+        .map(|(path, text)| (path.clone(), census(&[(path.clone(), text.clone())])))
+        .collect();
+    let workers = std::thread::available_parallelism().map_or(4, std::num::NonZero::get);
+    let chunk = members.len().div_ceil(workers);
+    let missed: Vec<String> = std::thread::scope(|scope| {
+        let handles: Vec<_> = members
+            .chunks(chunk)
+            .map(|part| {
+                let unplanted = &unplanted;
+                scope.spawn(move || {
+                    let mut missed = Vec::new();
+                    for (path, place, form, planted, line) in part {
+                        let (_, before) = unplanted
+                            .iter()
+                            .find(|(p, _)| p == path)
+                            .expect("an unplanted census");
+                        let after = census(&[(path.clone(), planted.clone())]);
+                        let at_its_line = after.refusals.iter().any(|(_, at, _)| at == line);
+                        if !at_its_line && after.requests == before.requests {
+                            missed.push(format!(
+                                "{form} in {place} of {path} at line {line} is not refused"
+                            ));
+                        }
+                    }
+                    missed
+                })
+            })
+            .collect();
+        handles
+            .into_iter()
+            .flat_map(|handle| handle.join().expect("a worker"))
+            .collect()
+    });
+    let named: usize = unplanted
+        .iter()
+        .map(|(_, found)| found.requests.len())
+        .sum();
+    assert_eq!(
+        named,
+        REQUEST_SITES.len(),
+        "the population's base reads every named request site once"
+    );
+    assert!(
+        missed.is_empty(),
+        "{} of {} requests the census cannot read are not refused, e.g. {}",
+        missed.len(),
+        members.len(),
+        missed.first().map_or("", String::as_str)
+    );
 }
