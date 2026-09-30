@@ -432,6 +432,96 @@
         ".is_some_and(|_| false)",
         "verdict::every_gap_rustc_reads_between_the_enums_tokens_is_whitespace",
         "`#[must_use = \"..\"]` with a string reason is must_use (SPEC-043 fifth round, issue 404)"
+      ],
+      [
+        "S04356-A-SHEBANG-LINE-IS-NOT-READ-AS-THE-PRUNE",
+        "agent",
+        "tests/runs.rs",
+        "text.starts_with(\"#!\") && !text.starts_with(\"#![\")",
+        "false",
+        "runs::a_first_line_rustc_removes_as_a_shebang_is_refused",
+        "a first line rustc removes as a shebang is refused, never read as the prune's code (SPEC-043 seventh round, issue 404)"
+      ],
+      [
+        "S04357-A-SHEBANG-LINE-IS-NOT-READ-AS-THE-VERDICTS-ATTRIBUTE",
+        "agent",
+        "tests/verdict.rs",
+        "text.starts_with(\"#!\") && !text.starts_with(\"#![\")",
+        "false",
+        "verdict::a_first_line_rustc_removes_as_a_shebang_is_refused",
+        "a first line rustc removes as a shebang is refused, never read as the enum's attribute (SPEC-043 seventh round, issue 404)"
+      ],
+      [
+        "S04358-AN-INNER-ATTRIBUTE-IS-NO-SHEBANG",
+        "agent",
+        "tests/runs.rs",
+        " && !text.starts_with(\"#![\")",
+        "",
+        "runs::a_first_line_rustc_removes_as_a_shebang_is_refused",
+        "a source opening with an inner attribute `#![` is read, not refused as a shebang (SPEC-043 seventh round, issue 404)"
+      ],
+      [
+        "S04359-A-BYTE-ORDER-MARK-DOES-NOT-HIDE-A-SHEBANG",
+        "agent",
+        "tests/runs.rs",
+        "source.strip_prefix('\\u{feff}').unwrap_or(source)",
+        "source",
+        "runs::a_first_line_rustc_removes_as_a_shebang_is_refused",
+        "the shebang check reads the source after the one byte order mark rustc removes (SPEC-043 seventh round, issue 404)"
+      ],
+      [
+        "S04360-BOTH-COUNTS-SKIP-A-DOC-ATTRIBUTE",
+        "agent",
+        "tests/runs.rs",
+        "TokenTree::Group(group) if is_doc_attribute(&tokens[..at], group) => 0,",
+        "",
+        "runs::a_query_written_inside_a_doc_attribute_is_neither_a_run_nor_a_word",
+        "the run count skips every doc attribute the word count skips, so a call in one is neither (SPEC-043 seventh round, issue 404)"
+      ],
+      [
+        "S04361-A-RAW-DOC-IS-A-DOC-ATTRIBUTE",
+        "agent",
+        "tests/runs.rs",
+        "TokenTree::Ident(doc)) if name_of(doc)",
+        "TokenTree::Ident(doc)) if doc.to_string()",
+        "runs::a_query_written_inside_a_doc_attribute_is_neither_a_run_nor_a_word",
+        "`#[r#doc ..]` is the doc attribute rustc resolves, skipped by both counts (SPEC-043 seventh round, issue 404)"
+      ],
+      [
+        "S04362-THE-PRUNE-RUNS-EXACTLY-ONCE",
+        "agent",
+        "tests/runs.rs",
+        "if run != 1 {",
+        "if run < 1 {",
+        "runs::each_count_names_the_number_it_read",
+        "the run count refuses two runs, not only none (SPEC-043 seventh round, issue 404)"
+      ],
+      [
+        "S04363-THE-WORD-DELETE-IS-WRITTEN-AT-LEAST-ONCE",
+        "agent",
+        "tests/runs.rs",
+        "if keywords != 1 {",
+        "if keywords > 1 {",
+        "runs::a_query_written_inside_a_doc_attribute_is_neither_a_run_nor_a_word",
+        "the word count refuses a source that writes the word delete nowhere (SPEC-043 seventh round, issue 404)"
+      ],
+      [
+        "S04364-THE-PLAN-TEXT-HOLDS-THE-STATEMENT-EXACTLY-ONCE",
+        "agent",
+        "tests/runs.rs",
+        "if statements == 1 {",
+        "if statements <= 1 {",
+        "runs::each_count_names_the_number_it_read",
+        "the test file's own count refuses a statement written nowhere, not only twice (SPEC-043 seventh round, issue 404)"
+      ],
+      [
+        "S04365-A-COMPILED-OUT-COPY-OF-THE-ENUM-IS-A-SECOND-DECLARATION",
+        "agent",
+        "tests/verdict.rs",
+        "if declarations != 1 {",
+        "if declarations < 1 {",
+        "verdict::a_copy_of_the_enum_compiled_out_beside_it_is_refused_as_a_second_declaration",
+        "a copy of the enum compiled out beside it is a second declaration and is refused (SPEC-043 seventh round, issue 404)"
       ]
     ],
     "SCRIPT_MUTATIONS": [

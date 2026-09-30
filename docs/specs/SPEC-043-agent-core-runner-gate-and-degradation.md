@@ -557,3 +557,157 @@ A21: cargo test -p deck-streak-agent --test runs -- --exact the_prune_reads_agen
 A22: cargo test -p deck-streak-agent --test runs -- --exact the_prune_reads_agent_runs_through_the_created_at_index a_changed_copy_of_the_statement_in_the_plan_string_is_refused
 A23: cargo test -p deck-streak-agent --test verdict -- --exact the_verdict_type_is_must_use an_item_ending_in_a_bracket_comment_is_not_an_attribute a_bracket_inside_a_string_or_a_comment_never_closes_an_attribute a_commented_copy_of_the_enum_above_it_is_refused a_raw_identifier_declaration_is_the_verdict_enum a_conditional_attribute_on_the_enum_is_refused every_spelling_of_the_declaration_and_of_a_conditional_attribute_is_read a_copy_of_the_enum_in_code_is_a_declaration_and_in_a_comment_or_a_literal_is_none a_must_use_held_by_a_literal_or_a_comment_is_not_the_enums a_copy_of_the_enum_held_by_a_literal_or_a_comment_is_no_declaration every_gap_rustc_reads_between_the_enums_tokens_is_whitespace
 ```
+
+## 11. Amendment, 2026-09-30: the pins read the source as rustc receives it
+
+Issue #404, the sixth review of section 9's delivery. Sections 1 to 10 stand as written and this
+section only adds to them. Where a sentence of section 9 claims more than the pins read, it stays
+where it is, and the reading this section gives supersedes it. The pins it strengthens are R16b's
+(criterion A21) and R12b's (criterion A23); its criteria, A24 and A25, are in section 12.
+
+**What the review found.** Two members of the lexical class were still open. rustc removes a first
+line that opens with `#!` and is not an inner attribute (a shebang) before it lexes, and
+`proc-macro2`'s lexer has no such step, so a copy of the call, or a `#[must_use]`, written on that
+line was read as code. And the run count read the tokens of a `doc` attribute that the word count
+skips, so a copy of the call written as a doc attribute's value, which a macro then discards, was
+counted as the prune beside a prune that runs another statement. Four mutants of the counts'
+comparisons also survived every test: they accepted two runs of the prune, a source that writes the
+word `delete` nowhere, a test file that writes the statement nowhere, and two declarations of the
+enum.
+
+**R16c. Both pins read the source as rustc receives it, and every count reads one token set.** Both
+pins read the tokens rustc's lexer produces for the source as rustc receives it, each string-like
+literal read as the value rustc cooks. rustc's input format removes one byte order mark, reads CRLF
+as LF, and removes a first line that opens with `#!` when the next token, past whitespace and plain
+comments, is not `[`. The pins remove one byte order mark as rustc does, and refuse every source
+that then opens with `#!` and not `#![`: `proc-macro2` skips more between `#!` and `[` than rustc
+does, so the pins do not re-derive rustc's lookahead, and the tokens they read are always tokens
+rustc reads. A CRLF line ending moves no count: the tested statement holds no line break, so a
+literal holding one is not the statement in either reading, and a word ends at any whitespace. Every
+count reads that one token set and skips the same groups: a `doc` attribute, outer (`#[doc ..]`) or
+inner (`#![doc ..]`), its name raw (`r#doc`) or not, whatever its value, is neither a run nor a
+word. A source the pins cannot lex is refused. What rustc does after it lexes (expanding a macro,
+evaluating a `cfg`, running one path and not another) is not read, and issue #444 tracks it.
+
+**R12c. The verdict pin reads `verdict.rs` as R16c reads `runs.rs`.** A source that opens with `#!`
+and not `#![`, after one byte order mark, is refused. A copy of the enum in code compiled out beside
+it stays a second declaration, as R12b says, and is refused.
+
+**Section 9, read as this section says.**
+
+- Section 9's opening paragraph says "Both pins read the tokens rustc's lexer produces (ADR-293), so
+  a decoy spelled any way rustc lexes the same is read as rustc reads it". It reads: both pins read
+  the tokens rustc's lexer produces for the source as rustc receives it (R16c), a first line rustc
+  removes as a shebang is refused rather than read, and both counts skip the same groups; so a decoy
+  spelled any way rustc's lexer reads as the same tokens is read as those tokens, and what a macro,
+  a `cfg` or a path that never runs does with those tokens is not read (issue #444).
+- R16b says "The pin reads `runs.rs` as the tokens rustc's lexer produces" and "a doc comment, outer
+  or inner, becomes a `doc` attribute whose text is prose". They read: the pin reads `runs.rs` as
+  R16c says; a doc comment becomes a `doc` attribute, and a `doc` attribute of any spelling is
+  skipped by both counts whatever its value, so a macro that captures a doc attribute's text or
+  tokens and makes code of them is not followed (issue #444).
+- R16b says "A second statement turns the test red". It reads: a second statement turns the test red
+  when a count reads it, as a second `sqlx::query!` call of the tested statement or as a second word
+  `delete` in an identifier or a literal's cooked text; a second statement whose keyword the count
+  cannot read (split across `concat!` parts, or held in another file), and one a macro makes from a
+  doc attribute, stay green, and issue #444 tracks them.
+
+**Refused although it would build correctly, each failing closed.** Each refusal below makes the pin
+report a problem and the test fail; none lets a source through. New with this section: a source that
+opens with `#!` and not `#![`, after one byte order mark, whatever the line holds, including a first
+line rustc reads as an inner attribute because whitespace or a comment stands between `#!` and `[`;
+and a prune that only a macro makes from a doc attribute's value, which both counts skip, so the pin
+reads no prune. Named by section 9 and measured again here: a literal whose cooked text writes the
+word `delete` beside the one prune; a copy of the call beside the one prune in code that never runs
+(an item compiled out by `cfg`, a `cfg_attr` whose condition is false, an attribute a macro
+discards), which is a second call or a second word; the tested statement handed to `sqlx::query!`
+twice, both running; `r#delete` written as an identifier beside the prune; a source that does not
+lex, a string whose line continuation skips a lone carriage return (which rustc accepts and
+`proc-macro2` does not lex) included; on the verdict side, a copy of the enum in code compiled out
+beside it, a conditional attribute on the enum (`#[cfg_attr(all(), must_use)]` included, raw path or
+not), and an enum made by a macro or renamed by a `use` or an alias. Also refused and failing
+closed, and named here for the first time: a `#[must_use]` whose reason is a raw string (`#[must_use
+= r"why"]`, with any number of hashes) or a macro call (`#[must_use = concat!("why")]`), and an
+attribute before the enum whose path is written raw (`#[r#derive(Clone)]`).
+
+**Measured.** Each member of each population below was labelled by compiling it with rustc 1.97.0,
+edition 2024, as ADR-293 records (the prune's truth through a stand-in `sqlx` that logs each
+statement it runs, the verdict's under `#![deny(unused_must_use)]`), and read by the pins as they
+stood before this section and as it leaves them. An escape is a member the pin passes and rustc's
+truth fails; it is in the lexical class when a reader of the same tokens, given the text rustc lexes
+after its input format, refuses it. After this section, 0 in-class escapes in every population:
+
+| population | members | rustc accepts | in-class escapes before | in-class escapes after | out-of-class escapes after | refused although correct, after |
+|---|---|---|---|---|---|---|
+| section 9's generated population | 7,058 | 5,518 | 0 | 0 | 12 | 101 |
+| the sixth review's population | 1,369 | 1,039 | 37 (a shebang line) | 0 | 32 | 46 |
+| the sixth review's doc-attribute members, first set | 40 | 24 | 12 (the counts read different groups) | 0 | 0 | 0 |
+| the sixth review's doc-attribute members, second set | 24 | 24 | 12 (the counts read different groups) | 0 | 0 | 0 |
+| raw `r#doc` members | 8 | 8 | 4 (the counts read different groups) | 0 | 0 | 0 |
+| the fifth round's planted sources (truth by construction) | 83 | not compiled | 0 | 0 | 3 | 0 |
+| new: input format, group symmetry, raw identifiers | 860 | 741 | 92 (60 a shebang line, 32 the counts read different groups) | 0 | 18 | 141 |
+
+The new members come from the Rust Reference's lexical chapters: the input format (a byte order
+mark, CRLF, a lone CR, a first line opening with `#!` with and without an attribute after it, NUL
+and other control characters), every group one count might skip and the other read (`#[doc ..]`,
+`#![doc ..]`, `#[doc(..)]`, `#[cfg_attr(.., doc = ..)]`, attributes inside a macro's input), and raw
+identifiers. Every out-of-class escape is an issue #444 shape: a keyword the count cannot read (9),
+a copy that never runs beside a prune the count cannot read (21), a macro that captures a doc
+attribute's text or tokens (18), and a copy that never runs, with or without a prune beside it (17);
+none is unclassified.
+
+**Files.**
+
+| file | context | change |
+|---|---|---|
+| `crates/agent/tests/runs.rs` | `deck-streak-agent` | changed: the shebang refusal, the doc-attribute skip in the run count, and three tests |
+| `crates/agent/tests/verdict.rs` | `deck-streak-agent` | changed: the shebang refusal and two tests |
+| `scripts/mutation-rows.d/S04300-S04399.json` | repo | changed: rows S04356 to S04365 |
+| `docs/red-first/SPEC-043.md` | docs | changed: a `Round 7` section with its red and green lines |
+| `docs/specs/SPEC-043-agent-core-runner-gate-and-degradation.md` | docs | changed: this section and section 12 |
+| `docs/decisions/ADR-293-the-agent-pins-read-rust-as-tokens.md` | docs | changed: an amendment |
+
+**Rows.** S04356 and S04357 stop refusing a first line rustc removes as a shebang in the prune pin
+and the verdict pin (killed by `runs::a_first_line_rustc_removes_as_a_shebang_is_refused` and
+`verdict::a_first_line_rustc_removes_as_a_shebang_is_refused`); S04358 refuses an inner attribute
+`#![` as a shebang and S04359 stops removing the byte order mark before the check (both killed by
+the prune pin's shebang test). S04360 lets the run count read a doc attribute's tokens and S04361
+stops recognising a raw `r#doc` (both killed by
+`runs::a_query_written_inside_a_doc_attribute_is_neither_a_run_nor_a_word`). S04362 accepts two runs
+of the prune and S04364 a test file that writes the statement nowhere (both killed by
+`runs::each_count_names_the_number_it_read`); S04363 accepts a source that writes the word `delete`
+nowhere (killed by the doc-attribute test); S04365 accepts two declarations of the enum (killed by
+`verdict::a_copy_of_the_enum_compiled_out_beside_it_is_refused_as_a_second_declaration`). S04362 to
+S04365 mutate comparisons the head already had, and each survived the tests as they stood before
+this section.
+
+**The tests.** `runs::a_first_line_rustc_removes_as_a_shebang_is_refused` and
+`verdict::a_first_line_rustc_removes_as_a_shebang_is_refused` each put a first line opening with
+`#!`, with and without a byte order mark, before the call or the `#[must_use]`, with eight gaps
+after `#!` (none, a space, a tab, an interpreter path, a plain and a doc block comment, and NBSP or
+U+3000 before a bracket, which rustc does not skip): 16 members each, and each reads a source that
+opens with the inner attribute `#![allow(unused)]`.
+`runs::a_query_written_inside_a_doc_attribute_is_neither_a_run_nor_a_word` hands a doc attribute
+holding a copy of the call to four macros that discard it (matched as an expression, as token trees,
+as an inner attribute, and a raw `r#doc` as one token tree), each around the prune or beside it,
+against four prunes (a changed statement through `sqlx::query`, a changed table through
+`sqlx::query!`, the tested prune, and none): 32 members. `runs::each_count_names_the_number_it_read`
+asserts the number each count reads.
+`verdict::a_copy_of_the_enum_compiled_out_beside_it_is_refused_as_a_second_declaration` refuses a
+copy of the enum compiled out beside it.
+
+This amendment changes no production code, no dependency and no other requirement. Its criteria are
+A24 (the prune pin) and A25 (the verdict pin), listed in section 12, which follow the last A-number
+of section 10.
+
+## 12. Acceptance criteria of the 2026-09-30 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A24 | the prune pin reads `runs.rs` as rustc receives it: after one byte order mark, a source that opens with `#!` and not `#![` is refused and one that opens with `#![` is read; the run count and the word count skip the same groups, so a copy of the call written as a doc attribute's value, outer or inner, raw or not, is neither a run nor a word; and each count refuses every number but one, the test file's own count of the statement included | `a_first_line_rustc_removes_as_a_shebang_is_refused`, `a_query_written_inside_a_doc_attribute_is_neither_a_run_nor_a_word`, `each_count_names_the_number_it_read` |
+| A25 | the verdict pin reads `verdict.rs` as rustc receives it: after one byte order mark, a source that opens with `#!` and not `#![` is refused and one that opens with `#![` is read; a copy of the enum compiled out beside it is a second declaration and is refused | `a_first_line_rustc_removes_as_a_shebang_is_refused`, `a_copy_of_the_enum_compiled_out_beside_it_is_refused_as_a_second_declaration` |
+
+```acceptance
+A24: cargo test -p deck-streak-agent --test runs -- --exact a_first_line_rustc_removes_as_a_shebang_is_refused a_query_written_inside_a_doc_attribute_is_neither_a_run_nor_a_word each_count_names_the_number_it_read
+A25: cargo test -p deck-streak-agent --test verdict -- --exact a_first_line_rustc_removes_as_a_shebang_is_refused a_copy_of_the_enum_compiled_out_beside_it_is_refused_as_a_second_declaration
+```

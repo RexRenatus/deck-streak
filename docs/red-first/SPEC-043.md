@@ -281,3 +281,40 @@ A23: red at 35fa6ddc1f050da28da8e0dcc2f3fc7893289e9e: a held copy was read as a 
 A23: red at 35fa6ddc1f050da28da8e0dcc2f3fc7893289e9e: whitespace rustc skips was not skipped: "#\t[must_use]\n#[derive(Clone)]\npub enum Verdict {\n    A,\n}\n": left ["the enum lost its #[must_use]: [\"#[derive(Clone)]\"]"] right [] (verdict.rs:575)
 A23: green at 834dd9a52979e868b99eb0c9cd15d519f8e7591a
 ```
+
+## Round 7
+
+PR #414's sixth review (issue #404). Two members of the lexical class were still open: a first line
+rustc removes as a shebang before it lexes was read as code by both pins, and the prune pin's run
+count read the tokens of a `doc` attribute that its word count skips. Four mutants of the counts'
+comparisons also survived. SPEC-043 section 11 gives the rule; its criteria are A24 and A25.
+
+- Class rule, both pins: each source is read as the tokens rustc's lexer produces for it as rustc
+  receives it. One byte order mark is removed, a source that then opens with `#!` and not `#![` is
+  refused, and every count reads one token set and skips the same groups: a `doc` attribute, outer
+  or inner, its name raw or not.
+- Populations, each asserted by count in its test: 16 first lines opening with `#!` before the call
+  (`runs::a_first_line_rustc_removes_as_a_shebang_is_refused`) and 16 before `#[must_use]`
+  (`verdict::a_first_line_rustc_removes_as_a_shebang_is_refused`), each beside a source opening with
+  `#![allow(unused)]` that is read; 32 copies of the call inside a doc attribute a macro discards
+  (`runs::a_query_written_inside_a_doc_attribute_is_neither_a_run_nor_a_word`).
+  `runs::each_count_names_the_number_it_read` and
+  `verdict::a_copy_of_the_enum_compiled_out_beside_it_is_refused_as_a_second_declaration` kill
+  mutants of comparisons the head already had (rows S04362, S04364 and S04365); both pass at the red
+  commit, so neither has a red line.
+- The tests were committed alone first, against the head's helpers, and every red is an assertion.
+  The red commit adds tests and changes no assertion it inherits. The green commit (f4faaee)
+  adds `opens_with_a_shebang` to both pins, calls it first in `prune_pin_problems` and
+  `verdict_pin_problems`, and makes `statements_run_in` skip the `doc` attribute groups `code_texts`
+  already skipped; it changes no assertion. No other assertion changed between the two.
+
+A24 has two reds and the fence quotes the first, the prune pin's shebang test. The second, a
+copy of the call inside a doc attribute that a macro discards, failed at the red commit as
+`left [] right ["the code hands the statement to sqlx::query! 0 times, not once"]` (runs.rs:935).
+
+```red-first
+A24: red at 0493da89fc927bd00b98ac27f4c30fd5bc865355: a shebang line was read as code: "#!let done = sqlx::query!(\"DELETE FROM agent_runs WHERE created_at < ?1\", cutoff);\nfn prune_before() {}\n": [] (runs.rs:860)
+A24: green at f4faaee57b92bb5610d06a4675460dca312c2c3b
+A25: red at 0493da89fc927bd00b98ac27f4c30fd5bc865355: a shebang line was read as the enum's attribute: "#!#[must_use]\n#[derive(Clone)]\npub enum Verdict {\n    A,\n}\n": [] (verdict.rs:622)
+A25: green at f4faaee57b92bb5610d06a4675460dca312c2c3b
+```
