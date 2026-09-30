@@ -97,6 +97,16 @@ DOCUMENTED_SPAWNERS = {
     "asyncio": ["create_subprocess_exec", "create_subprocess_shell"],
 }
 SPAWNING_MODULES = ("subprocess", "os", "pty", "asyncio")
+#: The ways of reaching a name that is built at run time. A spawner reached by one is a spawn the
+#: census cannot read, so each is refused wherever it appears, whatever it is given: the census
+#: refuses what it cannot read rather than listing the spellings it can (ADR-291).
+DYNAMIC_NAMES = frozenset(
+    "getattr vars globals locals eval exec compile __import__ import_module __builtins__".split()
+)
+DYNAMIC_ATTRIBUTES = frozenset(
+    "__import__ import_module __dict__ __builtins__ __globals__ modules".split()
+)
+DYNAMIC_MODULES = frozenset("importlib builtins imp runpy code codeop".split())
 ID = "S00001-DOUBLE"
 BAND = "S00000-S00099"
 PROVE_VERBS = ("prove-id", "prove-band", "prove-all", "prove-rows-from")
@@ -160,6 +170,25 @@ def unrunnable(path, mode):
         path.chmod(0o755)
 
 
+def dynamic_reach(node):
+    """The way `node` reaches a name built at run time, or None: a name, an attribute or an
+    import from the sets above, refused by what it is and never by what it is given."""
+    if isinstance(node, ast.Name) and node.id in DYNAMIC_NAMES:
+        return f"dynamic reach: {node.id}"
+    if isinstance(node, ast.Attribute) and node.attr in DYNAMIC_ATTRIBUTES:
+        return f"dynamic reach: .{node.attr}"
+    if isinstance(node, ast.ImportFrom) and (node.module or "").split(".")[0] in DYNAMIC_MODULES:
+        return f"dynamic reach: from {node.module} import"
+    if isinstance(node, ast.ImportFrom) and node.module == "sys":
+        names = [alias.name for alias in node.names if alias.name in ("modules", "*")]
+        return f"dynamic reach: from sys import {names[0]}" if names else None
+    if isinstance(node, ast.Import):
+        for alias in node.names:
+            if alias.name.split(".")[0] in DYNAMIC_MODULES:
+                return f"dynamic reach: import {alias.name}"
+    return None
+
+
 def raw_spawns(source=None):
     """(spawns the two helpers own, spawns and imports anywhere else) read from the module's
     source (or from `source`) by every name the standard library starts a process by, not only
@@ -171,6 +200,9 @@ def raw_spawns(source=None):
             for call in ast.walk(function):
                 inside[id(call)] = function.name
     for node in ast.walk(tree):
+        dynamic = dynamic_reach(node)
+        if dynamic:
+            outside.append(f"{inside.get(id(node), 'outside the helpers')}: {dynamic}")
         if isinstance(node, ast.ImportFrom) and node.module in SPAWNING_MODULES:
             outside += [
                 f"from {node.module} import {alias.name}"
