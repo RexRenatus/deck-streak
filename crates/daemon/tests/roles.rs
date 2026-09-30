@@ -272,7 +272,7 @@ async fn the_job_role_runs_a_job_by_id_and_refuses_an_unknown_one() {
         );
         let usage = first.1["message"].as_str().unwrap_or_default().to_owned();
         assert!(
-            usage.ends_with("the jobs are: sync, maintenance, liveness"),
+            usage.ends_with("the jobs are: sync, maintenance, liveness, drill_postback"),
             "{arguments:?}: {usage}"
         );
     }

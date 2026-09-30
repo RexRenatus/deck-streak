@@ -17,10 +17,13 @@ workspace = true
 [dependencies]
 deck-streak-kernel.workspace = true
 serde_json.workspace = true
+sqlx.workspace = true
 thiserror.workspace = true
+tracing.workspace = true
 
 # The parity oracle's golden reader, compiled into this crate's tests by path (ADR-029), and a
 # temporary vault for every test (ADR-020). Test support only.
 [dev-dependencies]
 serde.workspace = true
 tempfile.workspace = true
+tokio = { workspace = true, features = ["macros", "rt", "rt-multi-thread"] }

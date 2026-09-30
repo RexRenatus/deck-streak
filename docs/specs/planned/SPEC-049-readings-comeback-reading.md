@@ -137,6 +137,7 @@ R16. While a lapse is open, the morning readings job takes this comeback branch 
 | A12 | three silent study days open a lapse and two do not, and a skip day inside the run neither counts nor ends it | `a_skip_day_neither_counts_nor_ends_a_silent_run` |
 | A13 | every day of one episode reports the same lapse id, and the next study day with a qualifying review closes it | `one_episode_keeps_one_lapse_id_until_a_study_day_closes_it` |
 | A14 | no morning line is raised during a lapse (taken over from SPEC-052) | `no_morning_line_during_a_lapse` |
+| A15 | the open lapse coordination hands on is counted from the study reviews its caller read: three study days with none after a study day open a lapse whose id is the first of them, a study review closes it, and no skip day is passed | `the_open_lapse_is_counted_from_the_study_reviews_read` |
 
 ```acceptance
 A1: cargo test -p deck-streak-coordination --test readings_comeback -- --exact one_comeback_reading_is_chosen_per_lapse_id
@@ -153,6 +154,7 @@ A11: cargo test -p deck-streak-streaks --test lapse -- --exact the_open_lapse_ma
 A12: cargo test -p deck-streak-streaks --test lapse -- --exact a_skip_day_neither_counts_nor_ends_a_silent_run
 A13: cargo test -p deck-streak-streaks --test lapse -- --exact one_episode_keeps_one_lapse_id_until_a_study_day_closes_it
 A14: cargo test -p deck-streak-coordination --test readings_morning -- --exact no_morning_line_during_a_lapse
+A15: cargo test -p deck-streak-coordination --test lapse -- --exact the_open_lapse_is_counted_from_the_study_reviews_read
 ```
 
 ## 4. File manifest
@@ -194,6 +196,10 @@ A14: cargo test -p deck-streak-coordination --test readings_morning -- --exact n
 | `docs/specs/SPEC-049-readings-comeback-reading.md` | docs | moved from `docs/specs/planned/` |
 | `docs/decisions/ADR-049-the-comeback-reading-chosen-once-per-lapse.md` | docs | added |
 | `docs/red-first/SPEC-049.md` | docs | added |
+| `crates/coordination/tests/lapse.rs` | `deck-streak-coordination` | added by the amendment: A15 (the slice) |
+| `scripts/mutation-rows.d/S04900-S04999.json` | repo | added by the amendment: the slice's rows S04901 to S04909; the remainder's from S04910 |
+| `docs/decisions/ADR-088-the-lapse-slice-is-delivered-before-the-comeback-reading.md` | docs | added by the amendment: proposed, accepted by the slice |
+| `changelog.d/` | repo | added by the amendment: one fragment per delivery, named for its branch |
 
 ## 5. What this does NOT do
 
@@ -226,3 +232,110 @@ A14: cargo test -p deck-streak-coordination --test readings_morning -- --exact n
   day brings fresh readings.
 - **A comeback text drifts into shame or loss wording.** Refused by nudge-duties' `no-shame-framing`
   on the golden envelopes (A5); the text is the pack's template, not generated.
+
+## 7. Amendment, 2026-09-29: the lapse slice is delivered first, on its own
+
+Made under ADR-088, insert-only: every earlier byte is kept in order. It inserts row A15 of the
+criteria table after A14's row and line A15 of the acceptance fence after A14's line (section 3),
+the four rows of section 4 marked "by the amendment", and this section.
+
+- **Two deliveries.** This SPEC is built by two deliveries, as SPEC-057 is built by several:
+  - *the slice*: R12, R13, R14 and R15 without its hand-off to the readings use cases, decided by
+    A11, A12, A13 and A15. Its prerequisites are SPEC-020, SPEC-023, SPEC-029 and SPEC-071, all
+    delivered, so it may be built at once. It reads no readings table and writes no file that
+    SPEC-046, SPEC-047, SPEC-048, SPEC-051 or SPEC-052 lists.
+  - *the remainder*: R1 to R11, R15's hand-off to the readings use cases, and R16, decided by A1
+    to A10 and A14. Section 1's prerequisites and build order are the remainder's, and it needs
+    the slice.
+- **Planned until the remainder.** The slice leaves this SPEC in `docs/specs/planned/`, because its
+  fence names tests the slice does not add (ADR-016). The slice adds `docs/red-first/SPEC-049.md`
+  with its own section; the remainder appends its own, accepts ADR-049 and moves this SPEC to
+  `docs/specs/`.
+- **R15, as the slice builds it.** `crates/coordination/src/lapse.rs` counts the study reviews of
+  the window its caller read (SPEC-023's `Review`, by SPEC-020's study-day rule), passes an empty
+  skip set (#108) and returns the open lapse's id, if any, as the kernel's `StudyDay`, which an
+  occasion's lapse context carries as it is (SPEC-041 R3). It opens no collection. Its callers come
+  later, SPEC-076's streak step and this SPEC's remainder, and it lies outside
+  `crates/coordination/src/readings/`, so SPEC-047's census (its A10) stays green.
+- **A15 is R15's criterion.** Without it the slice's coordination module would have no test in its
+  own delivery, and SPEC-039's diff-scoped mutation run would find its mutants unkilled.
+- **Rows.** This SPEC owns `S04900-S04999` (SPEC-039 R8). The slice writes S04901 to S04909 and the
+  remainder S04910 onward, so the two deliveries never write one id.
+- **When SPEC-076 lands before the remainder,** R15's module also passes the stored anchor (SPEC-076
+  R15, R16). The remainder reads the open lapse through that module as R3 says, and its fixtures
+  hold the streaks store the module then reads.
+
+Inserted in section 3, after A14's row and after A14's fence line:
+
+| A15 | the open lapse coordination hands on is counted from the study reviews its caller read: three study days with none after a study day open a lapse whose id is the first of them, a study review closes it, and no skip day is passed | `the_open_lapse_is_counted_from_the_study_reviews_read` |
+
+A15: cargo test -p deck-streak-coordination --test lapse -- --exact the_open_lapse_is_counted_from_the_study_reviews_read
+
+Inserted at the end of section 4's table:
+
+| `crates/coordination/tests/lapse.rs` | `deck-streak-coordination` | added by the amendment: A15 (the slice) |
+| `scripts/mutation-rows.d/S04900-S04999.json` | repo | added by the amendment: the slice's rows S04901 to S04909; the remainder's from S04910 |
+| `docs/decisions/ADR-088-the-lapse-slice-is-delivered-before-the-comeback-reading.md` | docs | added by the amendment: proposed, accepted by the slice |
+| `changelog.d/` | repo | added by the amendment: one fragment per delivery, named for its branch |
+
+## 8. Amendment, 2026-09-29: the lapse walk's first day and the rollover boundary
+
+Made for issue #422, insert-only: every earlier byte is kept in order, and the sections below are new
+last sections. It decides nothing new. It pins two rules the slice already follows, R13's window and
+R15's study day, so that a program that breaks either one fails a test.
+
+- **Class W, the walk's bounds.** `open_lapse` reads every day of its window, from the window's first
+  day (the earliest key the caller read) up to the current study day, and no day outside it. The
+  criteria table's A16 is decided by a population the test generates: silent runs that end on the
+  current study day, of one short of the threshold, the threshold and one more, and that start at
+  every position of a window whose earlier days number zero to six, the window's first day
+  included; each run under every subset of its days as skip days; the days before the run filled
+  three ways; a row of no reviews on the window's first day; a study review after the current day;
+  and other thresholds. The oracle is a function written in the test from R13's words (the latest
+  study day, then the days after it that are not skip days), and it never calls `open_lapse`. A16's
+  neighbour, A18, names the two cases the issue gave: a window whose only silent run starts on its
+  first day.
+- **Class R, the rollover boundary.** A review counts on the study day the configured rule gives its
+  instant (R15; SPEC-020's rule), at every boundary. A17 is decided by a population the test
+  generates: the offsets -720, -300, -210, 0, 330, 345, 540 and 840 minutes, the rollover hours 0 and
+  4, and instants one millisecond before the day begins, at its beginning, one millisecond after it,
+  and at 23:59, 00:01, 03:59 and 04:01 local time. The oracle is a `begins(day)` written from the
+  rule's definition (the day is the span from its beginning to the next day's), and each member
+  asserts the day and whether the lapse opens where that day decides it. The zone west of UTC with a
+  04:00 rollover is one of the members, and its four local times are also asserted by name.
+- **Rows.** This amendment writes S04907 to S04919 of this SPEC's band, one for each plant a row
+  admits: seven on the walk's bounds (A16) and six on the mapping (A17). The remainder's rows
+  start at S04921.
+- **Text fixes.** The comment in A15's test no longer says a window of only non-study entries opens
+  no lapse of its own, which R13 contradicts; and `docs/red-first/SPEC-049.md` gains an addendum
+  that reads A15's red panic as measured.
+
+Files this amendment adds or changes:
+
+| file | package | what |
+|---|---|---|
+| `crates/streaks/tests/lapse.rs` | `deck-streak-streaks` | A16 and A18 |
+| `crates/coordination/tests/lapse.rs` | `deck-streak-coordination` | A17, and the comment fix in A15's test |
+| `scripts/mutation-rows.d/S04900-S04999.json` | repo | thirteen rows |
+| `docs/red-first/SPEC-049.md` | docs | an insert-only addendum |
+| `changelog.d/lapse-walk-422.md` | repo | the fragment |
+
+Not covered here, each with its owner:
+
+- The lapse walk's production code is unchanged, because it already satisfies R13 and R15 (#422).
+- A different study-day rule than SPEC-020's, or a rollover other than 0 and 4, is not in the
+  population (#422).
+
+## 9. Acceptance criteria of the 2026-09-29 lapse walk amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A16 | the lapse walk reads every day of its window, the first included, and none outside it: for every generated window and run the answer equals R13's, and the count examined is reported | `the_walk_reads_every_day_of_its_window_and_none_outside_it` |
+| A17 | a review counts on the study day the configured rule gives its instant at every boundary of the generated offsets, rollover hours and instants, and the lapse opens where that day decides it, with the count examined reported | `a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary` |
+| A18 | a window whose only silent run starts on its first day answers the run's first day at the threshold and no lapse one day short | `a_silent_run_on_the_windows_first_day_is_read` |
+
+```acceptance
+A16: cargo test -p deck-streak-streaks --test lapse -- --exact the_walk_reads_every_day_of_its_window_and_none_outside_it
+A17: cargo test -p deck-streak-coordination --test lapse -- --exact a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary
+A18: cargo test -p deck-streak-streaks --test lapse -- --exact a_silent_run_on_the_windows_first_day_is_read
+```

@@ -29,6 +29,7 @@ pub mod ladder;
 pub mod ledger;
 pub mod occasion;
 pub mod owner_message;
+pub mod photo;
 pub mod policy;
 pub mod quiet;
 pub mod router;
@@ -38,6 +39,9 @@ pub use occasion::{
     Class, DedupeKey, DedupeScope, Kind, LapseContext, Occasion, OccasionError, StreakFacts,
     Surface, Tier,
 };
+pub use photo::{FileId, Photo, PhotoError};
 pub use policy::{Policy, PolicyError};
-pub use router::{Decision, Flushed, Hold, Pass, Reason, Router};
-pub use transport::{BotTransport, PushFuture, Pushed};
+pub use router::{Decision, Flushed, Hold, NotNow, Pass, PhotoDecision, Reason, Router};
+pub use transport::{
+    BotTransport, PhotoFuture, PhotoPushed, Prepared, PushFuture, Pushed, ShareFuture,
+};

@@ -27,6 +27,7 @@ use deck_streak_kernel::{
 };
 use deck_streak_notifications::{Policy, PolicyError};
 
+use crate::drill_vault;
 use crate::lifecycle::{self, Notifier, NotifyState, ShutdownSignal};
 use crate::sync_request::{self, FileDoorbell, SqliteRequestLedger, SyncRequester, TokioPause};
 use crate::wiring::{self, StateDirectory, WiringError};
@@ -126,6 +127,9 @@ pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), BotRoleEr
     );
     if let Some(instruments) = instruments {
         commands = commands.with_instruments(instruments);
+    }
+    if let Some(notes) = drill_vault::open(env) {
+        commands = commands.with_drills(notes);
     }
 
     let heartbeat = Cell::new(None);

@@ -14,7 +14,7 @@ maintainer's machine, only when run there (SPEC-062, below).
 | `systemd/deck-streak-api.service` | the `api` role: the HTTP service the Mini App calls, `Type=notify` with a watchdog |
 | `systemd/deck-streak-bot.service` | the `bot` role: the Telegram bot's long-polling transport, `Type=notify` with a watchdog |
 | `systemd/deck-streak-job@.service` | one run of one job of coordination's job table, `deckstreakd job <id>`, a `oneshot` |
-| `systemd/deck-streak-job@<id>.timer` | one timer per job of the table (`sync`, `maintenance`, `liveness`), each starting the job instance of its own name |
+| `systemd/deck-streak-job@<id>.timer` | one timer per job of the table (`sync`, `maintenance`, `liveness`, `drill_postback`), each starting the job instance of its own name |
 | `systemd/deck-streak-job@sync (path unit)` | the owner's `/sync` doorbell: a change of the request file starts `deck-streak-job@sync` (service unit), and it loads no credential (SPEC-059) |
 | `tmpfiles.d/deck-streak-sync-request.conf` | the request directory, the service user's alone, mode `0700`; only the bot unit may write it (SPEC-059) |
 | `systemd/deck-streak-alert@.service` | the one alert path, a `oneshot` every other service names with `OnFailure=`: it pages the owner on Telegram that its instance failed (SPEC-031) |
@@ -113,6 +113,7 @@ job's slot (ADR-027).
 | `sync` | daily, the rollover hour, minute 7 | `*-*-* 04:07:00 UTC` | `true`: the table's one catch-up job |
 | `maintenance` | daily, the rollover hour, minute 28 | `*-*-* 04:28:00 UTC` | none, waived with its why |
 | `liveness` | hourly, minute 14 | `*-*-* *:14:00 UTC` | none, waived with its why |
+| `drill_postback` | hourly, minute 19 | `*-*-* *:19:00 UTC` | none, waived with its why |
 
 The owner's `/sync` adds no slot and no timer: the bot stores the request and touches the request
 file, `deck-streak-job@sync` (path unit) starts the sync job, and the job serves the stored request before

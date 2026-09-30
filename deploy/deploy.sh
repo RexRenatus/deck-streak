@@ -293,9 +293,15 @@ block=$dir/deck-streak.caddy
 copy=$dir/deck-streak.candidate
 kept=$file.previous
 had=
-grep -vxF "$line" "$file" >"$copy" || true
-caddy validate --adapter caddyfile --config "$copy" || { find "$copy" -delete; echo "deploy: refused" >&2; exit 1; }
-caddy adapt --adapter caddyfile --config "$copy" --validate >/dev/null || { find "$copy" -delete; echo "deploy: refused" >&2; exit 1; }
+unwritten() {
+    [ ! -f "$copy" ] || find "$copy" -delete
+    echo "deploy: the candidate Caddyfile could not be written" >&2
+    exit 1
+}
+: >"$copy" || unwritten
+grep -vxF "$line" "$file" >"$copy" || [ "$?" -eq 1 ] || unwritten
+caddy validate --adapter caddyfile --config "$copy" || { [ ! -f "$copy" ] || find "$copy" -delete; echo "deploy: refused" >&2; exit 1; }
+caddy adapt --adapter caddyfile --config "$copy" --validate >/dev/null || { [ ! -f "$copy" ] || find "$copy" -delete; echo "deploy: refused" >&2; exit 1; }
 cp -p "$file" "$kept"
 mv -T "$copy" "$file"
 [ -f "$block" ] && { had=$block.previous; mv -T "$block" "$had"; }

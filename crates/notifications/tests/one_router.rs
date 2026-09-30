@@ -569,15 +569,21 @@ const GUARDED: [(&str, &str); 3] = [
 /// dispatch are private to it, so only it can call them.
 const COMMANDS: (&str, &str) = ("crates/bot/src/commands.rs", "crates/bot/src/commands/");
 
-/// The command handler's replies, `send` and the five that send one (`export`, `ask_erase`, `sync`,
-/// `score` and `level`), and its dispatch, `on_message` and `on_callback`.
-const COMMAND_REPLIES: [&str; 8] = [
+/// The command handler's replies, `send` and the ten that send one (`export`, `ask_erase`, `sync`,
+/// `score`, `level`, and the drill replies `drills`, `drill`, `drill_view`, `drill_ask` and
+/// `drill_answer`, SPEC-110 R16), and its dispatch, `on_message` and `on_callback`.
+const COMMAND_REPLIES: [&str; 13] = [
     "send",
     "export",
     "ask_erase",
     "sync",
     "score",
     "level",
+    "drills",
+    "drill",
+    "drill_view",
+    "drill_ask",
+    "drill_answer",
     "on_message",
     "on_callback",
 ];
@@ -586,7 +592,7 @@ const COMMAND_REPLIES: [&str; 8] = [
 /// the handler, which dispatches an update the long poll hands it, and the dispatch, which answers
 /// it. A call anywhere else in the handler's module sends a reply the router never decides, though
 /// no update asked for it.
-const COMMAND_CALLERS: [(&str, &str); 13] = [
+const COMMAND_CALLERS: [(&str, &str); 23] = [
     ("Commands::handle", "on_message"),
     ("Commands::handle", "on_callback"),
     ("Commands::on_message", "send"),
@@ -595,11 +601,21 @@ const COMMAND_CALLERS: [(&str, &str); 13] = [
     ("Commands::on_message", "sync"),
     ("Commands::on_message", "score"),
     ("Commands::on_message", "level"),
+    ("Commands::on_message", "drills"),
+    ("Commands::on_message", "drill"),
+    ("Commands::on_message", "drill_answer"),
     ("Commands::on_callback", "send"),
+    ("Commands::on_callback", "drill_view"),
+    ("Commands::on_callback", "drill_ask"),
     ("Commands::export", "send"),
     ("Commands::sync", "send"),
     ("Commands::score", "send"),
     ("Commands::level", "send"),
+    ("Commands::drills", "send"),
+    ("Commands::drill", "send"),
+    ("Commands::drill_view", "send"),
+    ("Commands::drill_ask", "send"),
+    ("Commands::drill_answer", "send"),
 ];
 
 /// The one use of the bot's command handler: the bot's entry, the long poll, hands it each update
@@ -673,7 +689,7 @@ const LEDGER_NAMES: [&str; 8] = [
 const ALERT_PATH: &str = "deploy/scripts/alert-telegram.sh";
 
 /// Every send, and where it is made: (file, function, send). The census finds each once.
-const NAMED_SENDS: [(&str, &str, &str); 20] = [
+const NAMED_SENDS: [(&str, &str, &str); 24] = [
     // The bot's command replies (#257): the erase prompt, every other reply, and the export.
     (
         "crates/bot/src/commands.rs",
@@ -779,6 +795,28 @@ const NAMED_SENDS: [(&str, &str, &str); 20] = [
         "crates/bot/src/transport.rs",
         "Transport::send_document",
         "sendDocument",
+    ),
+    // The photo (SPEC-132): the port's call of the transport's upload, which is posted by the
+    // transport's own request, and the share's prepared message, which the port's call saves.
+    (
+        "crates/bot/src/transport.rs",
+        "OwnerChat::push_photo",
+        "send_photo",
+    ),
+    (
+        "crates/bot/src/transport.rs",
+        "OwnerChat::prepare_share",
+        "save_prepared_inline_message",
+    ),
+    (
+        "crates/bot/src/transport.rs",
+        "Transport::send_photo",
+        "sendPhoto",
+    ),
+    (
+        "crates/bot/src/transport.rs",
+        "Transport::save_prepared_inline_message",
+        "save_prepared_inline_message",
     ),
 ];
 
@@ -2364,4 +2402,51 @@ fn the_census_classifies_every_method_of_the_pinned_client() {
         "every method of the pinned client is a send, a delivery or not a delivery, in one class \
          only: {faults:#?}"
     );
+}
+
+/// SPEC-132 A15: the policy's bot transport list names every delivery call the port declares, the
+/// photo and the prepared share among them, and the census names where each reaches the Bot API.
+#[test]
+fn the_policy_names_every_bot_call() {
+    let source = fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("src/transport.rs"))
+        .expect("the port's source");
+    let port: Vec<String> = source
+        .split("fn ")
+        .skip(1)
+        .filter_map(|rest| {
+            let name: String = rest
+                .chars()
+                .take_while(|c| c.is_ascii_alphanumeric() || *c == '_')
+                .collect();
+            (name.starts_with("push_") || name == "prepare_share").then_some(name)
+        })
+        .collect();
+    assert!(port.contains(&"push_photo".to_owned()));
+    assert!(port.contains(&"prepare_share".to_owned()));
+
+    let policy = deck_streak_notifications::Policy::compiled().expect("the compiled policy parses");
+    let written = serde_json::to_value(&policy).expect("the policy writes back");
+    let bot: Vec<String> = serde_json::from_value(written["router"]["transport"]["bot"].clone())
+        .expect("the bot's calls");
+    assert_eq!(
+        bot, port,
+        "the policy names every bot call the port declares, in its order"
+    );
+
+    for (function, send) in [
+        ("Transport::send_photo", "sendPhoto"),
+        (
+            "Transport::save_prepared_inline_message",
+            "savePreparedInlineMessage",
+        ),
+    ] {
+        assert!(
+            NAMED_SENDS.iter().any(|&(path, named, name)| {
+                path == "crates/bot/src/transport.rs"
+                    && named == function
+                    && name.replace('_', "").eq_ignore_ascii_case(send)
+            }),
+            "the census names {function} as the call of {send}"
+        );
+    }
 }
