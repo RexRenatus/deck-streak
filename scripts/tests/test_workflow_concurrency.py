@@ -1341,6 +1341,29 @@ class EveryReleaseWorkflowQueuesEveryRun(unittest.TestCase):
                 if classes[name] == "release" and called:
                     self.assertEqual(classes.get(called.group(1)), "release", uses)
         self.assertEqual({place for _name, place in judged} - {"release", "reacher"}, set())
+        self.assertTrue(classes, "the census holds no workflow")
+        self.assertEqual(classes.get("release.yml"), "release")
+        # A planted directory: the census finds a second workflow a tag starts and a workflow the
+        # release calls, and leaves a reacher out, from the rule's own text helpers.
+        tag = "on:\n  push:\n    tags: [v1]\n"
+        plain = "jobs:\n  publish:\n    runs-on: ubuntu-24.04\n    timeout-minutes: 5\n"
+        plain += "    steps:\n      - run: echo publish\n"
+        caller = "jobs:\n  build:\n    uses: ./.github/workflows/called.yml\n"
+        planted_files = {
+            "release.yml": second_workflow(tag, name="release").replace(plain, caller),
+            "second.yml": second_workflow(tag, name="second"),
+            "called.yml": second_workflow("on:\n  workflow_call:\n", name="called"),
+            "reacher.yml": second_workflow("on:\n  pull_request:\n", name="reacher"),
+        }
+        self.assertEqual(
+            membership(planted_files),
+            {
+                "release.yml": "release",
+                "second.yml": "release",
+                "called.yml": "release",
+                "reacher.yml": "reacher",
+            },
+        )
 
     def test_the_release_class_is_closed_by_construction(self):
         """SPEC-190 R11's population, generated, never listed: a release's group read through every
