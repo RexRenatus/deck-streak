@@ -62,6 +62,20 @@ jobs:
           key: rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}
           restore-keys: |
             rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-
+      # SPEC-072 A12 (ADR-197): the settle census compiles the real tree in a target of its own,
+      # under target/tmp/settle-census, which the job's `cargo clean --workspace` leaves alone. It
+      # is kept between runs under a key of its own, so that it lands before the next toolchain or
+      # Cargo.lock change. A stale entry cannot be served: cargo fingerprints every unit and
+      # recompiles a member whose source changed (a fresh checkout's files are newer than any
+      # fingerprint), and the census reads the code its own passes compile, never the cache.
+      - name: restore the settle census's target, keyed on the toolchain pin and Cargo.lock
+        id: census-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: target/tmp/settle-census
+          key: census-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            census-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-
       - name: fmt, clippy (-D warnings), test (nextest), doctest and audit-rust (cargo deny)
         env:
           CHECK_LOG_DIR: ${{ runner.temp }}/check-logs
@@ -79,6 +93,12 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ steps.rust-cache.outputs.cache-primary-key }}
+      - name: save the settle census's target
+        if: ${{ success() && steps.census-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: target/tmp/settle-census
+          key: ${{ steps.census-cache.outputs.cache-primary-key }}
       - name: upload stage logs
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
