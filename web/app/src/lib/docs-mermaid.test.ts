@@ -118,63 +118,6 @@ function docsBlocks(): Block[] {
 }
 
 describe('the Mermaid diagrams under docs', () => {
-  it('reads every fenced block', () => {
-    const blocks = examined('mermaid blocks', docsBlocks());
-    const refused = markdownFiles(DOCS).flatMap((file) => refusedOf(relative(DOCS, file), readFileSync(file, 'utf8')));
-
-    expect(blocks.length).toBeGreaterThan(100);
-    expect(refused).toEqual([]);
-  });
-
-  it('parses every block', async () => {
-    const blocks = examined('mermaid blocks', docsBlocks());
-    const refused: string[] = [];
-    for (const block of blocks) {
-      if (!(await parses(block.source))) refused.push(block.name);
-    }
-
-    expect(blocks.length).toBeGreaterThan(100);
-    expect(refused).toEqual([]);
-  }, 60_000);
-
-  it('refuses a block whose node id is a reserved word', async () => {
-    const planted = blocksOf('planted.md', '```mermaid\nflowchart TD\n  call --> done\n```\n');
-
-    expect(planted.map((block) => block.name)).toEqual(['planted.md block 1']);
-    expect(await parses(planted[0].source)).toBe(false);
-  });
-
-  it('accepts the same block once its node id is not a reserved word', async () => {
-    const planted = blocksOf('planted.md', '```mermaid\nflowchart TD\n  caller --> done\n```\n');
-
-    expect(await parses(planted[0].source)).toBe(true);
-  });
-
-  it('reads an indented fence and refuses one that does not parse', async () => {
-    const inList = blocksOf('planted.md', '- item\n\n  ```mermaid\n  flowchart TD\n    call --> done\n  ```\n');
-    const indented = blocksOf('planted.md', '   ```mermaid\n   flowchart TD\n     call --> done\n   ```\n');
-
-    expect(inList.map((block) => block.name)).toEqual(['planted.md block 1']);
-    expect(await parses(inList[0].source)).toBe(false);
-    expect(indented.map((block) => block.name)).toEqual(['planted.md block 1']);
-    expect(await parses(indented[0].source)).toBe(false);
-  });
-
-  it('accepts an indented valid block of each diagram type the docs use', async () => {
-    const sources = [
-      'sequenceDiagram\n  Alice->>Bob: hello\n',
-      'flowchart TD\n  caller --> done\n',
-      'stateDiagram-v2\n  [*] --> Idle\n  Idle --> [*]\n'
-    ];
-    for (const source of sources) {
-      const text = `1. step\n\n   \`\`\`mermaid\n${source.replace(/^(.)/gm, '   $1')}   \`\`\`\n`;
-      const planted = blocksOf('planted.md', text);
-
-      expect(planted.map((block) => block.name)).toEqual(['planted.md block 1']);
-      expect(await parses(planted[0].source)).toBe(true);
-    }
-  });
-
   it('reads exactly the fences GitHub renders as diagrams, or refuses by name, in every generated container form', () => {
     const members = renderedMembers();
     console.log(`examined ${members.length} generated container forms`);
@@ -247,5 +190,62 @@ describe('the Mermaid diagrams under docs', () => {
 
     expect(planted.length).toBeGreaterThan(0);
     expect(wrong.slice(0, 3), `${wrong.length} of ${planted.length} members judged otherwise`).toEqual([]);
+  });
+
+  it('reads every fenced block', () => {
+    const blocks = examined('mermaid blocks', docsBlocks());
+    const refused = markdownFiles(DOCS).flatMap((file) => refusedOf(relative(DOCS, file), readFileSync(file, 'utf8')));
+
+    expect(blocks.length).toBeGreaterThan(100);
+    expect(refused).toEqual([]);
+  });
+
+  it('parses every block', async () => {
+    const blocks = examined('mermaid blocks', docsBlocks());
+    const refused: string[] = [];
+    for (const block of blocks) {
+      if (!(await parses(block.source))) refused.push(block.name);
+    }
+
+    expect(blocks.length).toBeGreaterThan(100);
+    expect(refused).toEqual([]);
+  }, 60_000);
+
+  it('refuses a block whose node id is a reserved word', async () => {
+    const planted = blocksOf('planted.md', '```mermaid\nflowchart TD\n  call --> done\n```\n');
+
+    expect(planted.map((block) => block.name)).toEqual(['planted.md block 1']);
+    expect(await parses(planted[0].source)).toBe(false);
+  });
+
+  it('accepts the same block once its node id is not a reserved word', async () => {
+    const planted = blocksOf('planted.md', '```mermaid\nflowchart TD\n  caller --> done\n```\n');
+
+    expect(await parses(planted[0].source)).toBe(true);
+  });
+
+  it('reads an indented fence and refuses one that does not parse', async () => {
+    const inList = blocksOf('planted.md', '- item\n\n  ```mermaid\n  flowchart TD\n    call --> done\n  ```\n');
+    const indented = blocksOf('planted.md', '   ```mermaid\n   flowchart TD\n     call --> done\n   ```\n');
+
+    expect(inList.map((block) => block.name)).toEqual(['planted.md block 1']);
+    expect(await parses(inList[0].source)).toBe(false);
+    expect(indented.map((block) => block.name)).toEqual(['planted.md block 1']);
+    expect(await parses(indented[0].source)).toBe(false);
+  });
+
+  it('accepts an indented valid block of each diagram type the docs use', async () => {
+    const sources = [
+      'sequenceDiagram\n  Alice->>Bob: hello\n',
+      'flowchart TD\n  caller --> done\n',
+      'stateDiagram-v2\n  [*] --> Idle\n  Idle --> [*]\n'
+    ];
+    for (const source of sources) {
+      const text = `1. step\n\n   \`\`\`mermaid\n${source.replace(/^(.)/gm, '   $1')}   \`\`\`\n`;
+      const planted = blocksOf('planted.md', text);
+
+      expect(planted.map((block) => block.name)).toEqual(['planted.md block 1']);
+      expect(await parses(planted[0].source)).toBe(true);
+    }
   });
 });
