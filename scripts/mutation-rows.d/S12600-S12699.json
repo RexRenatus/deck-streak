@@ -6,7 +6,7 @@
         "scripts/mutation-verdict.py",
         "        elif report.get(\"shard\") != f\"{shard}/{planned}\":\n",
         "        elif False:\n",
-        "a report is read only when its own shard field names the slot it sits in, so a copy of another shard's report, or a swap, is refused by name (SPEC-126 A7)",
+        "a report is read only when its own shard field names the slot it sits in, so a copy of another shard's report, or a swap, is refused by name (SPEC-126 A15)",
         "test_mutation_python_shard_binding.TheReportIsBoundToItsSlotAndItsListing.test_a_report_counts_only_in_its_own_slot"
       ],
       [
@@ -14,7 +14,7 @@
         "scripts/mutation-verdict.py",
         "        elif report.get(\"shard\") != f\"{shard}/{planned}\":\n",
         "        elif report.get(\"shard\") is None:\n",
-        "a shard field that names another slot is refused as much as an absent one (SPEC-126 A7)",
+        "a shard field that names another slot is refused as much as an absent one (SPEC-126 A15)",
         "test_mutation_python_shard_binding.TheReportIsBoundToItsSlotAndItsListing.test_a_report_counts_only_in_its_own_slot"
       ],
       [
@@ -22,7 +22,7 @@
         "scripts/mutation-verdict.py",
         "        elif (drift := shard_listing_drift(plan, shard, report)) is not None:\n",
         "        elif False:\n",
-        "a report is read only when it examined the mutants the plan lists for its shard (SPEC-126 A8)",
+        "a report is read only when it examined the mutants the plan lists for its shard (SPEC-126 A16)",
         "test_mutation_python_shard_binding.TheReportIsBoundToItsSlotAndItsListing.test_a_report_counts_only_the_mutants_its_shard_lists"
       ],
       [
@@ -30,7 +30,7 @@
         "scripts/mutation-verdict.py",
         "    if not missing and not extra:\n",
         "    if len(missing) == len(extra):\n",
-        "a report holding as many mutants as listed, but not the same ones, differs from the listing (SPEC-126 A8)",
+        "a report holding as many mutants as listed, but not the same ones, differs from the listing (SPEC-126 A16)",
         "test_mutation_python_shard_binding.TheReportIsBoundToItsSlotAndItsListing.test_a_report_counts_only_the_mutants_its_shard_lists"
       ],
       [
@@ -38,7 +38,7 @@
         "scripts/mutation-verdict.py",
         "    extra = sorted((examined - listed).elements())\n",
         "    extra = []\n",
-        "a mutant the plan did not list for the shard, another shard's or none's, or a repeat of its own, is refused (SPEC-126 A8)",
+        "a mutant the plan did not list for the shard, another shard's or none's, or a repeat of its own, is refused (SPEC-126 A16)",
         "test_mutation_python_shard_binding.TheReportIsBoundToItsSlotAndItsListing.test_a_report_counts_only_the_mutants_its_shard_lists"
       ],
       [
@@ -46,7 +46,7 @@
         "scripts/mutation-verdict.py",
         "    missing = sorted((listed - examined).elements())\n",
         "    missing = []\n",
-        "a report trimmed of a listed mutant is refused, so the verdict never counts less work than the plan promised (SPEC-126 A8)",
+        "a report trimmed of a listed mutant is refused, so the verdict never counts less work than the plan promised (SPEC-126 A16)",
         "test_mutation_python_shard_binding.TheReportIsBoundToItsSlotAndItsListing.test_a_report_counts_only_the_mutants_its_shard_lists"
       ],
       [
@@ -54,7 +54,7 @@
         "scripts/mutation-verdict.py",
         "            if isinstance(entry, dict) and entry.get(\"shard\") == shard\n",
         "            if isinstance(entry, dict)\n",
-        "a shard report is held against the listing of its own shard and no other (SPEC-126 A8)",
+        "a shard report is held against the listing of its own shard and no other (SPEC-126 A16)",
         "test_mutation_python_shard_binding.TheReportIsBoundToItsSlotAndItsListing.test_a_report_counts_only_in_its_own_slot"
       ],
       [
@@ -62,7 +62,7 @@
         "scripts/mutation-verdict.py",
         "        elif report.get(\"shard\") != f\"{shard}/{planned}\":\n",
         "        elif str(report.get(\"shard\")).split(\"/\")[0] != str(shard):\n",
-        "the shard field is compared whole, so a report of a run sized to another count is refused (SPEC-126 A7)",
+        "the shard field is compared whole, so a report of a run sized to another count is refused (SPEC-126 A15)",
         "test_mutation_python_shard_binding.TheReportIsBoundToItsSlotAndItsListing.test_a_report_counts_only_in_its_own_slot"
       ]
     ]
