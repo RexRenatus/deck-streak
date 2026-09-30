@@ -30,3 +30,40 @@ fn no_two_classes_share_a_name() {
         GateClass::ALL.iter().map(|class| class.name()).collect();
     assert_eq!(names.len(), GateClass::ALL.len());
 }
+
+#[test]
+fn a_text_parses_only_to_the_class_it_names_exactly() {
+    let mut examined = 0_usize;
+    for class in GateClass::ALL {
+        let name = class.name();
+        let mut texts = vec![
+            name.to_owned(),
+            name.to_uppercase(),
+            name.replace('-', "_"),
+            format!("{name} "),
+            format!(" {name}"),
+            format!("{name}\n"),
+            format!("{name}x"),
+            format!("x{name}"),
+        ];
+        for (at, character) in name.char_indices() {
+            texts.push(name[..at].to_owned());
+            texts.push(name[at..].to_owned());
+            let mut dropped = name.to_owned();
+            dropped.replace_range(at..at + character.len_utf8(), "");
+            texts.push(dropped);
+        }
+        for text in &texts {
+            if let Ok(parsed) = text.parse::<GateClass>() {
+                assert_eq!(
+                    parsed.name(),
+                    text.as_str(),
+                    "{text:?} parsed to {parsed:?}"
+                );
+            }
+            examined += 1;
+        }
+    }
+    println!("examined {examined} text(s) near the declared names");
+    assert!(examined > GateClass::ALL.len());
+}
