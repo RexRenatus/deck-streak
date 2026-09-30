@@ -7,8 +7,11 @@ sentence is a digit run beside `tables`, `rows` or `names`; a register is a mark
 first header cell ends in `table`. A qualifier before that word
 (`v9 table`) pairs the register with the sentences that say the same word before their number.
 The section is read as GitHub renders it: every table in it is a register, and a table's rows run
-to the first blank line or block, with or without their outer pipes. Names compare as SQLite
-compares table names: the code span's text, trimmed, with ASCII case folded.
+to the first blank line or block, with or without their outer pipes. A blank line holds only spaces
+and tabs, a block is one CommonMark opens (a heading, a fence, a quote, an HTML block, indented
+code), a header has as many cells as its delimiter row, and a table inside a quote is a table.
+Names compare as SQLite compares table names: the cell's one code span's text, trimmed, with ASCII
+case folded, and nothing else folded. Counts are read from the prose as it renders.
 The predecessor's register (`v9 table`) names exactly the predecessor's tables, a closed set,
 because a name in both registers with the same owner cannot tell a carried table from one
 only DeckStreak has.
@@ -17,6 +20,7 @@ only DeckStreak has.
 by this same check.
 """
 
+import html
 import os
 import re
 import unittest
@@ -109,52 +113,197 @@ def section(text):
     return found[0]
 
 
-DELIMITER = re.compile(r"^ {0,3}\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$")
-BLOCK = ("#", "```", "~~~", ">")
+DELIMITER = re.compile(r"^ {0,3}\|?[ \t]*:?-+:?[ \t]*(\|[ \t]*:?-+:?[ \t]*)*\|?[ \t]*$")
+FENCE = re.compile(r"^ {0,3}(`{3,}|~{3,})(.*)$")
+HEADING = re.compile(r"^ {0,3}#{1,6}(?:[ \t]|$)")
+QUOTE = re.compile(r"^ {0,3}> ?")
+COMMENT = re.compile(r"^ {0,3}<!--")
+LIST = re.compile(r"^ {0,3}(?:[-+*]|\d{1,9}[.)])( {1,4})(?=\S)")
+HTML_BLOCK = re.compile(
+    r"^ {0,3}</?(?:address|article|aside|blockquote|details|dialog|div|dl|fieldset|figure|footer"
+    r"|form|h[1-6]|header|hr|li|main|nav|ol|p|pre|section|summary|table|tbody|td|th|thead|tr|ul)"
+    r"(?:[ \t>]|/>|$)",
+    re.IGNORECASE,
+)
+CODE = re.compile(r"(?<!`)(`+)(?!`)(.+?)(?<!`)\1(?!`)|<code>(.*?)</code>", re.DOTALL)
+INLINE = (
+    (re.compile(r"<!--.*?-->", re.DOTALL), ""),
+    (re.compile(r"!?\[([^\]]*)\]\([^)]*\)"), r"\1"),
+    (re.compile(r"<[^>]+>"), ""),
+    (re.compile(r"[`*_~]"), ""),
+)
 
 
 def cells(line):
-    """A table line's cells as GitHub renders them: outer pipes optional, indentation dropped."""
-    return [c.strip() for c in line.strip().removeprefix("|").removesuffix("|").split("|")]
+    """A table line's cells as GitHub renders them: outer pipes optional, an escaped pipe kept."""
+    text = line.strip()
+    text = text[1:] if text.startswith("|") else text
+    text = text[:-1] if text.endswith("|") and not text.endswith("\\|") else text
+    return [c.replace("\\|", "|").strip() for c in re.split(r"(?<!\\)\|", text)]
+
+
+def fold(text):
+    """ASCII case folding only: SQLite folds no other letter when it compares table names."""
+    return "".join(chr(ord(c) + 32) if "A" <= c <= "Z" else c for c in text)
 
 
 def key(cell):
-    """A name as SQLite compares table names: the code span's text, trimmed, ASCII case folded."""
-    return cell.strip().strip("`").strip().lower()
+    """A name as the cell renders and SQLite compares it: its one code span's text, else the cell's
+    text; trimmed, with ASCII case folded."""
+    spans = [m.group(2) if m.group(1) else m.group(3) for m in CODE.finditer(cell)]
+    return fold((spans[0] if len(spans) == 1 else cell).strip())
+
+
+def blank(line):
+    """Blank as CommonMark reads it: spaces and tabs only, and no other whitespace."""
+    return not line.strip(" \t")
+
+
+def indent(line):
+    """The line's indentation in columns, a tab reaching the next multiple of four."""
+    column = 0
+    for char in line:
+        if char == " ":
+            column += 1
+        elif char == "\t":
+            column += 4 - column % 4
+        else:
+            break
+    return column
+
+
+def unquote(line):
+    """The line without its blockquote markers, and how many it had."""
+    depth = 0
+    while match := QUOTE.match(line):
+        line, depth = line[match.end() :], depth + 1
+    return depth, line
+
+
+def fence_of(line):
+    """The (character, length) of the code fence the line opens, or None: a backtick fence's info
+    string holds no backtick."""
+    match = FENCE.match(line)
+    if match and (match.group(1)[0] == "~" or "`" not in match.group(2)):
+        return match.group(1)[0], len(match.group(1))
+    return None
+
+
+def closes(line, fence):
+    """Whether the line closes the fence: the same character, at least as long, nothing after."""
+    match = FENCE.match(line)
+    return bool(
+        match
+        and match.group(1)[0] == fence[0]
+        and len(match.group(1)) >= fence[1]
+        and blank(match.group(2))
+    )
+
+
+def interrupts(line):
+    """A line that ends a table: blank, a heading, a fence, a quote, an HTML block, or code."""
+    return (
+        blank(line)
+        or HEADING.match(line)
+        or fence_of(line)
+        or QUOTE.match(line)
+        or COMMENT.match(line)
+        or HTML_BLOCK.match(line)
+        or indent(line) >= 4
+    )
+
+
+def contained(lines):
+    """Each line as (container, content): the quote depth and list item it sits in, their markers
+    and the item's indentation removed, so a table inside a quote or an item is still a table."""
+    out, item, width = [], 0, None
+    for raw in lines:
+        depth, content = unquote(raw)
+        if width is not None and (blank(content) or indent(content) >= width):
+            content = "" if blank(content) else content[width:]
+        else:
+            width = None
+            match = LIST.match(content)
+            if match:
+                item, width = item + 1, match.end()
+                content = content[match.end() :]
+        out.append(((depth, item if width is not None else 0), content))
+    return out
+
+
+def blocks(body):
+    """The section as GitHub renders it: its tables as (header, rows), and its prose lines."""
+    lines = body.replace("\r\n", "\n").replace("\r", "\n").split("\n")
+    entries = contained(lines)
+    tables, prose = [], []
+    index, fence, paragraph = 0, None, False
+    while index < len(lines):
+        depth, line = entries[index]
+        if fence:
+            fence = None if closes(line, fence) else fence
+            index += 1
+            continue
+        if fence_of(line):
+            fence, paragraph = fence_of(line), False
+            index += 1
+            continue
+        if COMMENT.match(line):
+            while index < len(lines) and "-->" not in lines[index]:
+                index += 1
+            index, paragraph = index + 1, False
+            continue
+        if HTML_BLOCK.match(line):
+            while index < len(lines) and not blank(entries[index][1]):
+                prose.append(entries[index][1])
+                index += 1
+            paragraph = False
+            continue
+        following = entries[index + 1] if index + 1 < len(lines) else (depth, "")
+        if (
+            not blank(line)
+            and indent(line) < 4
+            and "|" in line
+            and following[0] == depth
+            and DELIMITER.match(following[1])
+            and len(cells(line)) == len(cells(following[1]))
+        ):
+            rows = []
+            index += 2
+            while index < len(lines):
+                row_depth, row = entries[index]
+                if row_depth != depth or interrupts(row):
+                    break
+                rows.append(row)
+                index += 1
+            tables.append((line, rows))
+            paragraph = False
+            continue
+        if blank(line):
+            paragraph = False
+        elif paragraph or indent(line) < 4:
+            prose.append(line)
+            paragraph = True
+        index += 1
+    return tables, prose
 
 
 def registers(body):
     """Each table of the section as (qualifier, [(name, owner)]), read as GitHub renders it."""
     found = []
-    lines = body.splitlines()
-    index, fenced = 0, False
-    while index < len(lines):
-        line = lines[index]
-        if line.lstrip().startswith(("```", "~~~")):
-            fenced = not fenced
-        header = index + 1 < len(lines) and "|" in line and DELIMITER.match(lines[index + 1])
-        if not fenced and header:
-            rows = []
-            index += 2
-            while index < len(lines) and lines[index].strip():
-                if lines[index].lstrip().startswith(BLOCK):
-                    break
-                row = cells(lines[index]) + [""]
-                rows.append((key(row[0]), key(row[1])))
-                index += 1
-            found.append((key(cells(line)[0]).removesuffix("table").strip(), rows))
-            continue
-        index += 1
+    for header, rows in blocks(body)[0]:
+        pairs = [(key((cells(row) + [""])[0]), key((cells(row) + [""])[1])) for row in rows]
+        found.append((key(cells(header)[0]).removesuffix("table").strip(), pairs))
     return found
 
 
 def count_sentences(body):
-    """Each (number, words before it) the prose states, tables and code fences left out."""
-    prose = re.sub(r"(?m)^\|.*$", "", re.sub(r"(?s)```.*?```", "", body))
-    prose = re.sub(r"\s+", " ", prose)
+    """Each (number, words before it) the rendered prose states, tables and code left out."""
+    text = " ".join(blocks(body)[1])
+    for pattern, replacement in INLINE:
+        text = pattern.sub(replacement, text)
+    text = re.sub(r"\s+", " ", html.unescape(text))
     return [
-        (int(m.group(1)), prose[max(0, m.start() - LEAD) : m.start()])
-        for m in COUNT.finditer(prose)
+        (int(m.group(1)), text[max(0, m.start() - LEAD) : m.start()]) for m in COUNT.finditer(text)
     ]
 
 
