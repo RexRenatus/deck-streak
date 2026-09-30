@@ -487,6 +487,9 @@ The test-file change of the green commit, 41932f6, is that one; it rewrites the 
 relative path and no assertion of a verdict.
 A later commit adds the examined contract to the file walk (a printed count and a refusal of zero),
 so the tdd pack reads the walk as reporting what it examined; it changes no assertion and no member.
+The commit 0e10511 replaces the fixed count of the bot's sources with the count read from the tree, and
+asserts that count is above zero and that the transport source is among those examined; no assertion
+of a verdict changes.
 
 ```red-first
 A18: red at 031e72526af5: clippy.toml does not name reqwest::Client under disallowed-types, and the bot transport carries none of its 2 named #[expect] sites
