@@ -6,6 +6,9 @@ predecessor's register and DeckStreak's own is a carried table, so both register
 same owning context. A count sentence is a digit run beside `tables`, `rows` or `names`; a
 register is a markdown table whose first header cell ends in `table`. A qualifier before that word
 (`v9 table`) pairs the register with the sentences that say the same word before their number.
+The section is read as GitHub renders it: every table in it is a register, and a table's rows run
+to the first blank line or block, with or without their outer pipes. Names compare as SQLite
+compares table names: the code span's text, trimmed, with ASCII case folded.
 The predecessor's register (`v9 table`) names exactly the predecessor's tables, a closed set,
 because a name in both registers with the same owner cannot tell a carried table from one
 only DeckStreak has.
@@ -106,22 +109,40 @@ def section(text):
     return found[0]
 
 
+DELIMITER = re.compile(r"^ {0,3}\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$")
+BLOCK = ("#", "```", "~~~", ">")
+
+
+def cells(line):
+    """A table line's cells as GitHub renders them: outer pipes optional, indentation dropped."""
+    return [c.strip() for c in line.strip().removeprefix("|").removesuffix("|").split("|")]
+
+
+def key(cell):
+    """A name as SQLite compares table names: the code span's text, trimmed, ASCII case folded."""
+    return cell.strip().strip("`").strip().lower()
+
+
 def registers(body):
-    """Each register as (qualifier, [(name, owner)]), read from the section's tables."""
+    """Each table of the section as (qualifier, [(name, owner)]), read as GitHub renders it."""
     found = []
     lines = body.splitlines()
-    index = 0
+    index, fenced = 0, False
     while index < len(lines):
         line = lines[index]
-        cells = [c.strip() for c in line.strip().strip("|").split("|")] if line[:1] == "|" else []
-        if cells and cells[0].endswith("table") and index + 1 < len(lines):
+        if line.lstrip().startswith(("```", "~~~")):
+            fenced = not fenced
+        header = index + 1 < len(lines) and "|" in line and DELIMITER.match(lines[index + 1])
+        if not fenced and header:
             rows = []
             index += 2
-            while index < len(lines) and lines[index][:1] == "|":
-                row = [c.strip() for c in lines[index].strip().strip("|").split("|")]
-                rows.append((row[0].strip("`"), row[1].strip("`")))
+            while index < len(lines) and lines[index].strip():
+                if lines[index].lstrip().startswith(BLOCK):
+                    break
+                row = cells(lines[index]) + [""]
+                rows.append((key(row[0]), key(row[1])))
                 index += 1
-            found.append((cells[0].removesuffix("table").strip(), rows))
+            found.append((key(cells(line)[0]).removesuffix("table").strip(), rows))
             continue
         index += 1
     return found
