@@ -1,6 +1,6 @@
 //! Text becomes a gate class only as a declared name, exactly (SPEC-046, ADR-046's amendment).
 //! The kernel's own tests pin the parse, since a mutant of it is judged by this package's tests.
-#![allow(clippy::expect_used)]
+#![allow(clippy::expect_used, clippy::print_stdout)]
 
 use deck_streak_kernel::{GateClass, UnknownGateClass};
 
@@ -69,6 +69,16 @@ fn a_text_parses_only_to_the_class_it_names_exactly() {
     assert!(examined > GateClass::ALL.len());
 }
 
+/// Prints how many items a check examined and refuses zero (the tdd pack's examined contract).
+fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
+    println!("examined {} {what}", items.len());
+    assert!(
+        !items.is_empty(),
+        "examined 0 {what}: the population is empty, so nothing was judged"
+    );
+    items
+}
+
 /// The kernel's sources with every full-line comment and every whitespace character removed, so a
 /// reformat that keeps the tokens keeps the pin.
 fn squashed(source: &str) -> String {
@@ -117,7 +127,7 @@ fn the_parse_is_pinned_to_one_comparison_of_the_text_with_each_declared_name() {
     const NAME: &str = "pub const fn name(self) -> &'static str {";
 
     let gate = squashed(include_str!("../src/gate_class.rs"));
-    let sources = kernel_sources();
+    let sources = examined("kernel source file(s)", kernel_sources());
     assert!(sources.len() > 1, "the walk read no kernel source: {WHY}");
     let (_, walked) = sources
         .iter()
