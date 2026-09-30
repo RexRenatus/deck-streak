@@ -492,7 +492,7 @@ def cfg_value(tokens: list[str]) -> bool | None:
                 parts[-1].append(token)
         values = [cfg_value(part) for part in parts if part]
         if tokens[0] == "not":
-            return None if values == [None] else not values[0]
+            return None if len(values) != 1 or values[0] is None else not values[0]
         if tokens[0] == "all":
             return False if False in values else (None if None in values else True)
         return True if True in values else (None if None in values else False)
@@ -621,7 +621,7 @@ def module_files(file: pathlib.Path, root_file: pathlib.Path) -> list[pathlib.Pa
             if built and followed:
                 if "block" in frames:
                     raise KillerUnresolved(f"{where} declares mod {name} inside a block")
-                base = home.joinpath(*[f for f in frames if f not in ("block", "skip")])
+                base = home.joinpath(*frames)
                 for child in (base / f"{name}.rs", base / name / "mod.rs"):
                     if child.is_file():
                         children.append(child)

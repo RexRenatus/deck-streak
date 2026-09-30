@@ -355,6 +355,42 @@ def module_layouts(home):
             set(),
             False,
         ),
+        "an escaped quote in a character and in a string": (
+            'const D: char = \'\\"\';\nmod x;\nconst T: &str = "q";\nconst Y: &str = "\\" mod ghost; ";\n',
+            {at(home, "x.rs"): LEAF, at(home, "ghost.rs"): LEAF},
+            set(),
+            False,
+        ),
+        "an identifier named include and a stray hash in a macro body": (
+            "fn include() {}\nmod outer {\n    macro_rules! m { () => { # { } }; }\n    mod x;\n}\n",
+            {at(home, "outer/x.rs"): LEAF, at(home, "x.rs"): LEAF},
+            set(),
+            False,
+        ),
+        "an inner cfg_attr before a module": (
+            "#![cfg_attr(not(test), no_std)]\nmod x;\n",
+            {at(home, "x.rs"): LEAF},
+            set(),
+            False,
+        ),
+        "two cfgs on one module, the false one first": (
+            "#[cfg(not(test))]\n#[cfg(test)]\nmod x;\nmod y;\n",
+            {at(home, "x.rs"): LEAF, at(home, "y.rs"): LEAF},
+            set(),
+            False,
+        ),
+        "a false cfg on a module does not reach the next module": (
+            '#[cfg(not(test))]\nmod a;\n#[path = "impl/p.rs"]\nmod b;\nmod x;\n',
+            {at(home, "a.rs"): LEAF, at(home, "impl/p.rs"): LEAF, at(home, "x.rs"): LEAF},
+            {at(home, "impl/p.rs")},
+            False,
+        ),
+        "a cfg on a function with a body does not reach the next module": (
+            "#[cfg(not(test))]\nfn f() {}\nmod x;\n",
+            {at(home, "x.rs"): LEAF},
+            set(),
+            False,
+        ),
         "a skipped inline module holding blocks and a declaration": (
             "#[cfg(not(test))]\nmod gone {\n    fn f() { if true { } }\n    mod inner;\n}\nmod x;\n",
             {at(home, "x.rs"): LEAF, at(home, "gone/inner.rs"): LEAF, at(home, "inner.rs"): LEAF},
@@ -628,6 +664,19 @@ class ThePlantedShapesOfTheIssue(unittest.TestCase):
         block = self.member(("", "", {"src/main.rs": "fn main() {\n    mod x;\n}\n"}))
         with self.assertRaisesRegex(runner.KillerUnresolved, "declares mod x inside a block"):
             runner.module_sources(block.crate / "src/main.rs")
+        for text, pattern in {
+            '#![cfg(feature = "f")]\nmod x;\n': "carries an inner cfg attribute",
+            "#![cfg(test)]\n": "carries an inner cfg attribute",
+            "mod x fn;\n": "a mod declaration the reader",
+            "#[cfg = all(test)]\nmod x;\n": "holds a cfg on mod x the reader cannot decide",
+        }.items():
+            with self.subTest(text=text):
+                planted = self.member(("", "", {"src/main.rs": text, "src/x.rs": LEAF}))
+                with self.assertRaisesRegex(runner.KillerUnresolved, pattern):
+                    runner.module_sources(planted.crate / "src/main.rs")
+        for predicate in ("not()", "not(test, test)", 'not(feature = "f")'):
+            with self.subTest(predicate=predicate):
+                self.assertIsNone(runner.cfg_value(runner.rust_tokens(predicate)))
         weird = self.member(("", "", {"src/main.rs": "mod ;\n"}))
         with self.assertRaisesRegex(runner.KillerUnresolved, "a mod declaration the reader"):
             runner.module_sources(weird.crate / "src/main.rs")
