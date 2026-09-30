@@ -383,6 +383,34 @@ class FormalConfig(unittest.TestCase):
         refused = examined("bad paths", [p for p in BAD_PATHS if not is_repo_relative(p)])
         self.assertEqual(len(refused), 4)
 
+    def test_the_reader_admits_each_value_a_kind_admits(self):
+        """The admission side of the class: a container kind holding good values only, and the
+        document without each optional field and each object level that holds no required field,
+        are each admitted, so a reader that refuses what a kind admits is caught."""
+        docs = []
+        for path, kind, required in FIELDS:
+            name = ".".join(path)
+            if kind in ELEMENT_KIND:
+                good = GOOD[ELEMENT_KIND[kind]]
+                entries = (
+                    {"good_entry": good, "other_entry": good}
+                    if "object" in ADMITS[kind]
+                    else [good, good]
+                )
+                docs.append((f"{name} holds good values", with_value(path, entries)))
+            if not required:
+                docs.append((f"without {name}", without(path)))
+        for prefix in sorted(OBJECTS - {()}):
+            if not any(required for path, _, required in FIELDS if path[: len(prefix)] == prefix):
+                docs.append((f"without {'.'.join(prefix)}", without(prefix)))
+        refused = []
+        for name, doc in examined("admitted documents", docs):
+            try:
+                read(doc)
+            except Refused as refusal:
+                refused.append(f"{name}: refused by {refusal.arm}: {refusal}")
+        self.assertEqual(refused, [], "the reader refused a document its kinds admit")
+
     def test_the_reader_refuses_each_planted_fault(self):
         """A3: each planted fault is refused by the test's own reader; the committed file is not."""
         self.assertIs(read(load()) is not None, True, "presence control: the file is admitted")
