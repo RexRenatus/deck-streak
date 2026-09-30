@@ -554,8 +554,8 @@
         "S07277-CENSUS-NAMES-THE-SCRIPTED-PACKAGE",
         "progression",
         "tests/xp_census.rs",
-        "if name != PROGRESSION_PACKAGE {",
-        "if name == PROGRESSION_PACKAGE {",
+        "{name} has a build script and can name settle",
+        "a package has a build script and can name settle",
         "xp_census::a_build_script_in_a_package_that_depends_on_settle_is_refused_by_name",
         "a build script beside a dependency on progression is refused, naming its package (SPEC-072 A35)"
       ],
@@ -590,8 +590,8 @@
         "S07281-CENSUS-STARTS-AT-PROGRESSION",
         "progression",
         "tests/xp_census.rs",
-        ".find(|package| package[\"name\"] == PROGRESSION_PACKAGE)",
-        ".find(|package| package[\"name\"] != PROGRESSION_PACKAGE)",
+        "owner.into_iter().collect()",
+        "Vec::new()",
         "xp_census::a_build_script_in_a_package_that_depends_on_settle_is_refused_by_name",
         "the reaching set starts at the package that defines settle (SPEC-072 A35)"
       ],
@@ -610,7 +610,7 @@
         "tests/xp_census.rs",
         "[\"metadata\", \"--format-version\", \"1\", \"--locked\", \"--offline\"]",
         "[\"metadata\", \"--format-version\", \"1\", \"--offline\"]",
-        "xp_census::a_corrupt_lock_file_is_refused_by_the_fail_closed_arm",
+        "xp_census::the_census_refuses_what_the_compiler_is_not_asked",
         "cargo metadata runs with the lock file as it is, never resolving a new one (SPEC-072 A35)"
       ],
       [
@@ -635,8 +635,8 @@
         "S07286-CENSUS-REFUSES-A-GRAPH-IT-CANNOT-READ",
         "progression",
         "tests/xp_census.rs",
-        "\"cargo metadata cannot give the graph ({what})\"",
-        "\"cargo metadata gives the graph ({what})\"",
+        "\"cargo metadata cannot give the graph ({}), so the census cannot see its callers\"",
+        "\"cargo metadata gives the graph ({}), so the census cannot see its callers\"",
         "xp_census::the_census_refuses_every_caller_the_compiler_finds",
         "a graph cargo cannot give is refused by name, never read as empty (SPEC-072 A35)"
       ]
