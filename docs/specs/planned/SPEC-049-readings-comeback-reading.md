@@ -339,3 +339,66 @@ A16: cargo test -p deck-streak-streaks --test lapse -- --exact the_walk_reads_ev
 A17: cargo test -p deck-streak-coordination --test lapse -- --exact a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary
 A18: cargo test -p deck-streak-streaks --test lapse -- --exact a_silent_run_on_the_windows_first_day_is_read
 ```
+
+## 10. Amendment, 2026-09-30: what each population count pins
+
+Made for issue #453, insert-only: every earlier byte is kept in order, and the sections below are new
+last sections. It decides nothing new. The two generated populations of section 8 each assert how
+many members they generate; this amendment says what that count pins, and adds the second count
+that pins the rest.
+
+- **What the examined count pins.** It is the number of times the generator's loops reach the
+  judge: the product of their axes. A generator that keeps its loops but changes what they produce
+  leaves it unchanged, so it cannot notice a fold, an axis that has collapsed to one value, or a
+  member replaced by a copy of another.
+- **What the distinct count pins.** A member's identity is every input the judge reads. For the
+  walk's population (A16) that is the current study day, the days that carry a row and each row's
+  count, the skip days and the threshold. For the mapping's population (A17) it is the offset, the
+  rollover hour, the review's instant, its study day and the instant of now. The distinct count is
+  the number of different such members, so it pins the coverage: every axis holds all its values
+  and no member is a copy.
+- **Why members of the walk's population repeat.** The days before a run are filled three ways
+  when the window has earlier days, and two ways when it has none. When the window has one or two
+  earlier days (`before` of 1 or 2), the second fill (every earlier day a row of no reviews but the
+  day right before the run, studied) and the third (only the first day a row of no reviews, and the
+  day right before the run studied) are the same map, so the third repeats the second. That is 336
+  of the 2,252 members, and the distinct count of the population is 1,916. The judge is pure and
+  each repeat follows its first occurrence, so no repeat changes a verdict, and the repeats are
+  kept because removing them would change the examined count of A16 for no gain. The rollover
+  population has no repeat: its 448 members are 448 distinct.
+- **Criteria.** A19 asserts A16's population is 2,252 members and 1,916 distinct, and prints both.
+  A20 asserts A17's population is 448 members and 448 distinct, and prints both.
+- **Rows.** This amendment writes S04921 to S04926 of this SPEC's band, one for each class of
+  generator fold: a skip mask that never reaches the run's first day, a fill replaced by a copy of
+  another, and an axis collapsed to one value, on the walk's population (A19); two offsets made
+  equal, the hour axis collapsed to one value, and one instant of now replaced by a copy of another,
+  on the mapping's (A20). Each row's mutant edits the test's generator, and its killer is the same
+  test. The remainder's rows start at S04927.
+
+Files this amendment adds or changes:
+
+| file | package | what |
+|---|---|---|
+| `crates/streaks/tests/lapse.rs` | `deck-streak-streaks` | A19: the distinct count of A16's population |
+| `crates/coordination/tests/lapse.rs` | `deck-streak-coordination` | A20: the distinct count of A17's population |
+| `scripts/mutation-rows.d/S04900-S04999.json` | repo | six rows |
+| `docs/red-first/SPEC-049.md` | docs | an insert-only addendum |
+| `changelog.d/lapse-spread-453.md` | repo | the fragment |
+
+Not covered here, each with its owner:
+
+- The lapse walk's production code is unchanged, because it already satisfies R13 and R15 (#453).
+- Other tests in the workspace that assert an exact examined count over a generated population are
+  not changed here (#453).
+
+## 11. Acceptance criteria of the 2026-09-30 population-spread amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A19 | the walk's generated population holds 2,252 members of which 1,916 are distinct, both counts printed, so a fold of its generator fails while the examined count holds | `the_walk_reads_every_day_of_its_window_and_none_outside_it` |
+| A20 | the mapping's generated population holds 448 members of which 448 are distinct, both counts printed, so a fold of its generator fails while the examined count holds | `a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary` |
+
+```acceptance
+A19: cargo test -p deck-streak-streaks --test lapse -- --exact the_walk_reads_every_day_of_its_window_and_none_outside_it
+A20: cargo test -p deck-streak-coordination --test lapse -- --exact a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary
+```

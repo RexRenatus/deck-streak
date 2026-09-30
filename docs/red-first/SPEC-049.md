@@ -94,3 +94,46 @@ No plant stayed green, so none is recorded as equivalent. Rows S04907 to S04919 
 (a), (b) and (e1) to (e5) of the walk (S04907, S04908, S04913 to S04917), and (c), (d) and (e1) to (e4) of the
 mapping (S04909 to S04912, S04918, S04919). Over dev's tests, (a), (b) and (e4) of the walk and every plant of
 the mapping pass; (e1), (e2), (e3) and (e5) of the walk are killed there by the existing tests as well.
+
+## The lapse populations pin their spread (issue 453; the 2026-09-30 amendment)
+
+The counts already hold at the base, so the new distinct assertions cannot be red on their own. They
+were committed beside two planted folds of the generators (9c46b04a5d561f716150f0236a9ce94664077b92):
+in the walk's generator, place 0 of the run never enters the skip mask; in the mapping's, the offset
+345 is written 330. Both plants keep the examined count and drop the distinct count, so the examined
+assertions stay green and the distinct ones are red by assertion. The plants were removed in
+2ad7e316058f2b958f4985a857c063d67e3b6feb.
+
+```red-first
+A19: red at 9c46b04a5d561f716150f0236a9ce94664077b92: assertion `left == right` failed: the population's spread: 964 distinct of 2252; left: 964, right: 1916
+A19: green at 2ad7e316058f2b958f4985a857c063d67e3b6feb
+A20: red at 9c46b04a5d561f716150f0236a9ce94664077b92: assertion `left == right` failed: the population's spread: 392 distinct of 448; left: 392, right: 448
+A20: green at 2ad7e316058f2b958f4985a857c063d67e3b6feb
+```
+
+Printed lines on the green tree: `examined 2252 window member(s), 1916 distinct` and
+`examined 448 rollover member(s), 448 distinct`. At the base the walk's population also holds 1916
+distinct members of 2252: 336 repeat, because for one or two earlier days the second and third fills
+are the same map, and each repeat follows its first occurrence, so none changes a verdict.
+
+Further plants, each applied to a clean copy of the committed tests, with the first red line by
+assertion. Each keeps the examined count and drops the distinct count:
+
+```text
+W fold, and the walk's `|| number == window_start` on the skip test, together
+    panicked at crates/streaks/tests/lapse.rs:359:5: 964 distinct of 2252 (left: 964, right: 1916)
+    (the walk plant alone is red by the oracle: the walk differs from R13; the fold alone hid it at the base)
+W a fill replaced by a copy of another        1468 distinct of 2252
+W the future-study axis is [false, false]     964 distinct of 2252
+W the closing-day axis is [false, false]      1020 distinct of 2252
+R two offsets made equal                      392 distinct of 448
+R the hour axis is [4, 4]                     224 distinct of 448
+R an instant replaced by a copy of another    384 distinct of 448
+R a now replaced by a copy of another         336 distinct of 448
+```
+
+A plant that changes the examined count (a run length listed twice: 2572 members) is red by the
+examined assertion, as before. No plant stayed green, so none is recorded as equivalent. Rows S04921
+to S04926 carry one plant of each class (the walk's mask fold, fill copy and axis collapse; the
+mapping's offset fold, hour collapse and now copy). Each is KILLED by full id on the committed tree,
+and each survives over the base tests, which assert no distinct count.
