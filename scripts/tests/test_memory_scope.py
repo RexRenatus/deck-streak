@@ -336,7 +336,6 @@ class TheScope(ScriptCase):
             self.assertNotIn(str(plant.cap), text)
             self.assertNotIn(str(plant.cap // 2), text)
 
-
     def test_a_count_read_after_the_command_that_is_missing_or_unreadable_is_not_in_force(self):
         events = {
             "present": (EVENTS, True),

@@ -98,6 +98,13 @@ tallied nowhere), and every other outcome in the shard is judged as before. The 
 shard is VOID, one tested more often than listed fails), the whole-report rule (a missing report, an exit
 other than 0, 2 or 3, or counts short of the report's total is VOID) and the zero-examined VOID are unchanged.
 
+R13. **A count the scope reads after the command is required, and its absence is not a clean run.** After the command,
+`run()` reads `memory.events` and `memory.peak`. An `oom`, `oom_kill` or `max` count that is absent, an unreadable or
+malformed `memory.events`, and a `memory.peak` that is absent, unreadable or not a whole number each write the record
+with `in_force` false, `state` `done`, a `reason` naming the value it lacks and zero counts, and print
+`memory-scope: NOT IN FORCE after the command: <reason>`. The command's exit status is still the script's. The consumers
+already void a record that is not in force, by name.
+
 ## 3. Acceptance criteria
 
 | id | criterion | decided by |
@@ -119,6 +126,7 @@ other than 0, 2 or 3, or counts short of the report's total is VOID) and the zer
 | A15 | `score_memory_cap` is the only function that writes `MEMORY-CAP` for a named mutant: the test replaces it once and every one of `judge`, `battery` and `table` follows the replacement with no other change | `test_memory_cap_verdict.py` `a_named_cap_kill_is_scored_in_one_place` |
 | A16 | the plant: a shard modelled on the proof (the plant's mutants caught but one, whose log holds nextest's `SIGKILL` status line and its summary repeat, and a record counting one kill) fails with exactly one finding, `MEMORY-CAP` naming that mutant, and an examined count one less than the plant's viable mutants; and, on this pull request's own CI at the plant commit, the `mutation-verdict` log names that mutant and only it | `test_memory_cap_verdict.py` `the_plant_fails_its_leg_naming_that_mutant_and_only_it`, and the CI run of the plant commit |
 | A17 | the `rehearsal` step's wrapped command, its file and the sum it prints as examined are the ones before this SPEC, and on this pull request's own CI that job, whose cargo-mutants runs inside the scope, prints the same examined count as the same job printed for dev's tree and command in this pull request's first run | `test_memory_scope.py` `the_rehearsal_counts_what_it_counted_before`, and the CI run of the head |
+| A18 | across a generated population of every state of `memory.events` (present, absent, unreadable, garbage, each of `oom`, `max` and `oom_kill` missing, `oom_kill` not a number) crossed with every state of `memory.peak` (present, absent, unreadable, garbage, empty, negative), each altered by the command after the scope began, the record is in force only when both are whole, and otherwise `in_force` is false with a reason and the exit status is the command's; the test prints the member count and asserts it | `test_memory_scope.py` `a_count_read_after_the_command_that_is_missing_or_unreadable_is_not_in_force` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_memory_scope.py -k the_cap_is_fifteen_sixteenths_of_the_machine_in_whole_pages_and_never_given
@@ -138,6 +146,7 @@ A14: python3 -m unittest discover -s scripts/tests -p test_memory_cap_verdict.py
 A15: python3 -m unittest discover -s scripts/tests -p test_memory_cap_verdict.py -k a_named_cap_kill_is_scored_in_one_place
 A16: python3 -m unittest discover -s scripts/tests -p test_memory_cap_verdict.py -k the_plant_fails_its_leg_naming_that_mutant_and_only_it
 A17: python3 -m unittest discover -s scripts/tests -p test_memory_scope.py -k the_rehearsal_counts_what_it_counted_before
+A18: python3 -m unittest discover -s scripts/tests -p test_memory_scope.py -k a_count_read_after_the_command_that_is_missing_or_unreadable_is_not_in_force
 ```
 
 The script tests plant a `/proc/meminfo` text, a control-group directory and a `sudo` and a `systemctl` that record their
@@ -162,13 +171,14 @@ count the same job printed for dev's tree and dev's command, in this pull reques
 
 | file | context | change |
 |---|---|---|
-| `scripts/memory_scope.py` | repo | added: R1 to R5 |
-| `scripts/tests/test_memory_scope.py` | repo | added: A1 to A8, A17 |
+| `scripts/memory_scope.py` | repo | added: R1 to R5, R13 |
+| `scripts/tests/test_memory_scope.py` | repo | added: A1 to A8, A17, A18 |
 | `scripts/mutation-verdict.py` | repo | changed: R8 to R12, in `judge`'s rust class, `battery` and `table`; the whole-report rule, the partition and the exit sets unchanged |
 | `scripts/tests/test_memory_cap_verdict.py` | repo | added: A9 to A16 |
 | `scripts/tests/test_mutation_verdict.py` | repo | changed: its shard fixtures write the record every leg now writes, with no kill counted (R8, R9); no assertion changes |
 | `scripts/tests/test_mutation_workflows.py` | repo | changed: its shard fixture writes the same record (R8, R9); no assertion changes |
 | `scripts/tests/test_verdict_download.py` | repo | changed: its shard fixture writes the same record (R8, R9); no assertion changes |
+| `scripts/tests/fixtures/not-started-legs/listed/mutation-rust-shard-0/memory-scope.json` | repo | added: the record #443's listed shard fixture lacked (R8); no assertion changes |
 | `.github/workflows/ci.yml` | repo | changed: R6, the `mutation-rust` step's command line only |
 | `.github/workflows/mutation-weekly.yml` | repo | changed: R6, the rust step's and the `rehearsal` step's command lines only |
 | `scripts/mutation-rows.d/S19600-S19699.json` | repo | added: hand-proved rows, one per guard arm of the script, the three wrapped lines and the verdict's reading |

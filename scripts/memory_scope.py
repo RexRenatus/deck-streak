@@ -113,6 +113,22 @@ def events_of(group: Path) -> dict[str, int]:
     return counts
 
 
+def unread_after(group: Path) -> str | None:
+    """Why a value read after the command cannot be trusted, or None when every one can.
+
+    A count that is absent, unreadable or malformed must not read as a clean run: it is the
+    absence of a measurement, so the record is not in force and says which value it lacks.
+    """
+    events = events_of(group)
+    for name in ("oom", "oom_kill", "max"):
+        if name not in events:
+            return f"memory.events holds no {name} count after the command"
+    peak = read_text(group / "memory.peak")
+    if peak is None or not peak.isdigit():
+        return "memory.peak holds no count after the command"
+    return None
+
+
 def group_of(proc_cgroup: Path) -> str:
     text = read_text(proc_cgroup) or ""
     return text.splitlines()[-1].split("::", 1)[-1] if text else ""
@@ -222,24 +238,27 @@ def run(
         },
     )
     code = subprocess.run(command, check=False).returncode
-    events = events_of(here)
-    peak = int(read_text(here / "memory.peak") or "0")
-    percent = peak * 100 // cap
+    why = unread_after(here)
+    events = events_of(here) if why is None else {}
+    percent = int(read_text(here / "memory.peak") or "0") * 100 // cap if why is None else 0
     record = {
-        "in_force": True,
+        "in_force": why is None,
         "state": "done",
-        "reason": None,
+        "reason": why,
         "oom": events.get("oom", 0),
         "oom_kill": events.get("oom_kill", 0),
         "max": events.get("max", 0),
         "peak_percent": percent,
     }
     write_record(report, record)
-    print(
-        f"memory-scope: peak {percent}% of the cap; the kernel stopped "
-        f"{record['oom_kill']} process(es) at the cap",
-        flush=True,
-    )
+    if why is None:
+        print(
+            f"memory-scope: peak {percent}% of the cap; the kernel stopped "
+            f"{record['oom_kill']} process(es) at the cap",
+            flush=True,
+        )
+    else:
+        print(f"memory-scope: NOT IN FORCE after the command: {why}", flush=True)
     return 128 - code if code < 0 else code
 
 

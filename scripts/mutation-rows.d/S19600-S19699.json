@@ -248,6 +248,14 @@
         "        opening = lines[0] if lines else \"\"\n",
         "a kill in a shard whose report is not whole is named by the scenario its log's `***` line names, after the blank line cargo-mutants writes first, and never by the log's file name (SPEC-196 R10)",
         "test_memory_cap_verdict.TheBaselineAndThePartialShard.test_a_cap_kill_in_the_baseline_or_a_partial_shard_fails_by_name"
+      ],
+      [
+        "S19631-COUNT-AFTER-THE-COMMAND-IS-REQUIRED",
+        "scripts/memory_scope.py",
+        "    for name in (\"oom\", \"oom_kill\", \"max\"):\n",
+        "    for name in (\"oom\",):\n",
+        "a count read after the command that is absent, unreadable or malformed makes the record not in force, and never reads as a clean run (SPEC-196 R13)",
+        "test_memory_scope.TheScope.test_a_count_read_after_the_command_that_is_missing_or_unreadable_is_not_in_force"
       ]
     ]
   }
