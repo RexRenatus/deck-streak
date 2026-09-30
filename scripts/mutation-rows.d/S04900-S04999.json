@@ -243,6 +243,15 @@
         "                    day_judge(the_rule, begins(offset, hour, d)),\n",
         "lapse::a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary",
         "the day judge is handed each of the seven instants, so the instant folded to its day's first keeps the examined count, still feeds the lapse judge every review, and drops the day judge's distinct members (SPEC-049 A20)"
+      ],
+      [
+        "S04929-THE-EARLIER-REVIEW-IS-ON-ITS-OWN-STUDY-DAY",
+        "coordination",
+        "tests/lapse.rs",
+        "                    review_at(begins(offset, hour, d - 10) + HOUR_MS),\n",
+        "                    review_at(t),\n",
+        "lapse::a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary",
+        "each member hands the lapse judge two study days of one review, so the earlier review moved onto the day of the later one keeps the examined count and every distinct count and drops the study days holding one review (SPEC-049 A20)"
       ]
     ]
   }
