@@ -255,3 +255,11 @@ decides when it names a shell; else `.bash` is bash and `.sh` is sh. It was chos
 Note (2026-09-29): a repeated key in a band file is refused at every read, naming the file and the
 key, because git merges two added tables under one key without a conflict and the last-key read
 dropped the rows silently. ADR-122 decides it and records what it was chosen against.
+
+## Note, 2026-09-29
+
+The Python of the repository is mutated too, by a runner of its own, `scripts/mutation_python.py`,
+which restores each file by digest and runs its tests once per mutant; its shards are the CI job
+`mutation-python`. This is ADR-073 (SPEC-087, SPEC-039 section 18). The decisions above are
+unchanged: a survivor still fails, an equivalent mutant is still recorded and never skipped, and
+no annotation hides a mutant.
