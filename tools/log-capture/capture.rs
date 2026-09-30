@@ -1,8 +1,11 @@
 //! The one way a test captures log lines (SPEC-024, the 2026-09-30 amendment).
 //!
-//! A test that captures lines receives every line its code emits, whichever thread first reached
-//! that line's callsite and whatever the other tests in its binary did first. This file is
-//! compiled into a test binary, and never into production code:
+//! A test that captures lines receives every line its thread emits, whichever thread first reached
+//! that line's callsite, in a binary where nothing but this helper registers a dispatcher or a
+//! callsite (the killer's census holds every file to that). A line emitted inside a dispatcher's
+//! own call, such as the closure `tracing::dispatcher::get_default` runs, reaches no subscriber:
+//! `tracing` drops it by design, with or without this helper. This file is compiled into a test
+//! binary, and never into production code:
 //!
 //! ```text
 //! #[path = "../../../tools/log-capture/capture.rs"]
@@ -30,10 +33,13 @@ use tracing::{Dispatch, Event, Id, Metadata, Subscriber};
 /// reaching thread's default (`dispatcher::get_default`) and takes no lock, so that answer can be
 /// stored after a capture registered on another thread and overwrite the capture's. A thread with
 /// no capture has this floor as its default, and the floor answers every callsite `sometimes` and
-/// enables nothing, so once it is installed no path caches a callsite as never: each event asks
-/// the emitting thread's own default, and a capture receives every line its thread emits. Its max
-/// level hint is `OFF`, so while it is the only registered dispatcher the level filter stays `OFF`
-/// and no `tracing` macro registers a callsite before the floor is installed.
+/// enables nothing, so an answer computed once it is installed is never `never`: each event asks
+/// the emitting thread's own default. An answer a thread with no default computed BEFORE it was
+/// installed is `never`, and it can still be stored after a capture registered, so nothing may
+/// register a callsite before the floor. No `tracing` macro does: the level filter starts `OFF`,
+/// the floor's hint is `OFF`, and the filter rises only when a capture registers, provided nothing
+/// but this helper registers a dispatcher (a `Dispatch` made anywhere raises it) or a callsite,
+/// which the killer's census enforces.
 struct Floor;
 
 impl Subscriber for Floor {
