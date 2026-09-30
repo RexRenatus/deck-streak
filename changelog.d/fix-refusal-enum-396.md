@@ -5,6 +5,6 @@
   variants replaces the source scan.
 - Each refusal site of the owner's sync is pinned by a test of its own, so a site that stops
   refusing fails a test.
-- The cycle's own refusal of a run record it cannot read (the sync code) and of a failed recompute
-  (the recompute code), and each step's reason code, are pinned by their code, so a site that refuses
-  either with another code fails a test.
+- Every step whose failure refuses the owner's sync is driven through the sync by its own fault, and
+  its refusal is logged under the step's name, so a step whose failure is refused by another code,
+  answered, or logged as another step's fails a test.
