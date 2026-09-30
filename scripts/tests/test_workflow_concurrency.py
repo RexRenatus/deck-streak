@@ -473,7 +473,33 @@ def closed_by_construction(name, content, others):
     group whatever its event or its tag; its cancel-in-progress is `false` as written; and no other
     block in any workflow file, a workflow's or a job's, starts with text its group's start can be,
     so no other block renders as its group for any run of any tag."""
-    return []
+    found = []
+    undefined = undefined_keys(content)
+    if undefined:
+        found.append(f"it holds {undefined}, which GitHub's parser does not define there")
+    block = content.get("concurrency")
+    if not isinstance(block, dict):
+        return found
+    group = group_of(block)
+    reads = [part.strip() for part in EXPRESSION.findall(group)]
+    allowed = {"github.ref"} | (
+        {"github.workflow"} if "workflow_call" not in declared(content) else set()
+    )
+    if any(part not in allowed for part in reads):
+        found.append(f"its group reads {reads}, not github.ref alone, so one tag's runs can split")
+    cancel = str(block.get("cancel-in-progress", "false")).strip()
+    if cancel != "false":
+        found.append(f"cancel-in-progress is {cancel!r}, not false as written, so a run can cancel")
+    mine = literal_prefix(name, content, group)
+    if mine is None:
+        found.append("its group starts with no text of its own, so another group can render as it")
+        return found
+    for other, other_content in others:
+        for where, other_block in blocks(other, other_content):
+            theirs = literal_prefix(other, other_content, group_of(other_block))
+            if theirs is None or theirs.startswith(mine) or mine.startswith(theirs):
+                found.append(f"{where}'s group can render as its group, so it can replace its runs")
+    return found
 
 
 def other_block(on, key, value, where, name="publish"):
