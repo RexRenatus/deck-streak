@@ -252,6 +252,15 @@
         "                    review_at(t),\n",
         "lapse::a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary",
         "each member hands the lapse judge two study days of one review, so the earlier review moved onto the day of the later one keeps the examined count and every distinct count and drops the study days holding one review (SPEC-049 A20)"
+      ],
+      [
+        "S04930-AN-ANSWER-OF-EASE-ONE-IS-A-STUDY-REVIEW",
+        "coordination",
+        "src/lapse.rs",
+        "            let studied = u32::from(is_study_event(review.kind, review.ease));\n",
+        "            let studied = u32::from(is_study_event(review.kind, review.ease) && review.ease > 1);\n",
+        "lapse::a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary",
+        "an answer of ease 1 is a study review, so a count that reads only an ease above 1 closes no run on a day of ease-1 answers; the population hands both reviews at ease 0, 1 and 2 with every kind from -1 to 4, and the ease boundary moved one step up decides 128 of its members (SPEC-049 A20)"
       ]
     ]
   }
