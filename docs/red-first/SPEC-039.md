@@ -480,3 +480,32 @@ A56: green at fecfe85e
 A57: red at 3c8a340a: AssertionError: [] == [] : import _abc
 A57: green at fecfe85e
 ```
+
+## Addendum, 2026-09-30: the spawn runs the file the runner judged (issue #431, round 4)
+
+A58 to A60 are the criteria of section 26. The tests were committed alone at 146eb84c: the judged-file
+test with the refusal module, and the two census tests over a census that reads neither what a read
+module reaches nor an annotation that holds code. Each fails by assertion and by no error: the
+judged-file test reads `FAILED (failures=40)` over 40 members, the unread-reach test 603 of 679 and
+the annotation test 5 of 19. The spawn that executes the judged file and the census that refuses an
+unread reach went green at d5420d4b: the refusal module `Ran 12 tests`, `OK`, and the missing-tool
+module `Ran 12 tests`, `OK`.
+
+One more test was added at cc0dc969 and is not red: it reads the judged file from a relative working
+directory, where the code at d5420d4b already returns an absolute path. It exists for the one mutant
+of `resolve_tool` that returns the relative path, which the other tests did not tell from the
+original; with that mutant it fails by assertion.
+
+```text
+examined 384 child working directory member(s), 768 whole outcome member(s), 768 exit member(s), 260 spawn errno member(s), 16 refusal member(s), 7 path entry member(s), 5 name-shape member(s), 40 judged-file member(s)
+examined 442 spawner reference member(s), 568 unread import member(s), 679 unread reach member(s), 578 dynamic spelling(s), refused all; 5 benign source(s), refused none
+```
+
+```red-first
+A58: red at 146eb84c: AssertionError: Tuples differ: ('ran', 'LATER') != ('refused', 'missing tool: refusal-probe-tool: No such file or directory')
+A58: green at d5420d4b
+A59: red at 146eb84c: AssertionError: [] == [] : import argparse
+A59: green at d5420d4b
+A60: red at 146eb84c: AssertionError: [] == [] : import subprocess
+A60: green at d5420d4b
+```

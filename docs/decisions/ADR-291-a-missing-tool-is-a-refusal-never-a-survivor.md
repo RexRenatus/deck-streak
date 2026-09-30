@@ -124,6 +124,17 @@ mutant no test could tell from the original, `replace "." with "" in resolve_too
 
 Round 3 states the class as one rule: the tool the runner judges is the tool the spawn runs, and every refusal is one whole outcome, for every spawn route. Its tests generate 384 child-directory members and 768 whole-outcome members; the census reads 442 spawner-reference members and 568 unread-import members and each is refused, so its escape population of 1010 has 0 escapes (SPEC-039 A55 to A57). Every generated mutant of the runner's resolution and spawn helpers (136) is red by assertion except 1 equivalent, and of the census (88) all but 3 equivalent are red by assertion, with none red by an error alone.
 
+Round 4 closes the last route by which the judged file and the run file could differ. The resolver
+returns the judged file and `run_tool` and `run_in_own_group` spawn it with `executable=` that
+path, so a candidate the kernel refuses (a bad interpreter line, an empty or unknown-format file, an
+interpreter without the execute bit) is one whole refusal and never a run of a later copy on
+`PATH`. It was chosen against keeping the spawn's own `PATH` search and mapping its errors: that
+search continues past the refused candidate, so the error it reports belongs to a file other than
+the one that ran. The census refuses a name that reaches what it has not read (a module, a private
+name, a frame's tables, the dunders of the class graph) and reads an annotation that holds code as
+code. The scope is stated: a `PATH` that changes between the judge and the spawn is not closed,
+because the runner has no writer between the two statements (#431).
+
 ## More Information
 
 Issue #431. SPEC-039 sections 19 and 20 (A46 to A49), which amend section 12 (A41). ADR-057,

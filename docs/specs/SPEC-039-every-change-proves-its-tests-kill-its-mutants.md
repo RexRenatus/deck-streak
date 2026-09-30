@@ -1046,3 +1046,59 @@ A55: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_refusal
 A56: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k test_the_census_refuses_a_spawner_it_reaches_by_reference_or_through_another_module
 A57: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k test_the_census_refuses_an_import_it_has_not_read
 ```
+
+## 25. Amendment, 2026-09-30: the spawn runs the file the runner judged
+
+Round 3 made the resolver read a relative candidate where the child reads it. The spawn still
+searched `PATH` a second time, and CPython's search continues past any candidate the kernel refuses
+to execute (a bad interpreter line, an empty or unknown-format file, an interpreter without the
+execute bit) to a LATER copy on `PATH`. The file the runner judged and the file that ran could then
+be two files. ADR-291 states the class; this section states it as criteria.
+
+- **The rule.** `resolve_tool(command, env, cwd)` returns the judged file as a path that reads the
+  same from any directory, and `run_tool` and `run_in_own_group` spawn it with `executable=` that
+  path. A candidate the kernel refuses is one whole refusal, `missing tool: <name>: <why>`, and never
+  a run of a later copy. `_backstop` reads the judged path as the filename of the error it maps.
+- **Scope.** This holds for every working directory, every `PATH`, every position of the judged
+  file on `PATH` and every spawn route. It does not hold when `PATH` is changed between the judge
+  and the spawn. The runner has no writer between those two statements, so that axis is out of scope
+  and is not claimed closed (#431).
+- **The census refuses a name that reaches what it has not read.** A name reached through a module
+  the census reads is refused unless what it reaches is itself read: a module the census has not
+  read, a private name of a read module, a frame's own tables, and the dunders of the class graph.
+  An annotation that holds code (a call, a lambda, an assignment expression, a comprehension) is
+  read as code, since it runs when the function or the variable is defined.
+- **The populations are generated and their counts are asserted.** The judged-file test crosses four
+  kernel refusals with three positions on `PATH` and three spawn routes, and adds four members in
+  which `PATH` changes: 40 members. The unread-reach test generates 679 members (held modules and
+  private names of every read module, frame attributes, the dunders of `type`, and nine named
+  forms), and the annotation test 19. The census escape population is those members and its count
+  of escapes is 0, with five benign sources refused by none.
+- **Every mutant is red by assertion.** The 171 generated mutants of `referenced`, `READ_MODULES`
+  and the census's new lines: 124 fail a test by assertion when the modules run, and of the other
+  47 (three of which failed by an error alone) 44 fail by assertion form by form, each form one
+  source that the unmutated census handles and the mutant does not. Three are equivalent: a fallback
+  that is never read, and `importlib` and `runpy` added to the read modules, which change the
+  verdict of no form because `dynamic_reach` already refuses each of them. The 140 generated mutants
+  of the resolver and spawn helpers at this head number 138 red by assertion and 2 equivalent (a
+  `return None` replaced by `pass` in `_backstop`, and a join of an absolute candidate to the
+  working directory, which returns the candidate); none is red by an error alone. The 88 of the
+  census replay as before. One test reads the judged file from a relative working directory, where
+  the resolver must return an absolute path, since the spawn changes directory before it runs it.
+- **What it does NOT do.** It does not hold when `PATH` changes between the judge and the spawn
+  (#431). It reads the runner's one file, as A47 does (#431). It changes no timeout, drops no test
+  and narrows no mutation diff (#431).
+
+## 26. Acceptance criteria of the 2026-09-30 (#431) round 4
+
+| id | criterion | decided by |
+|---|---|---|
+| A58 | the file the kernel executes is the file the runner judged, for four kernel refusals, three positions on `PATH` and three spawn routes, and a `PATH` that changes | `test_mutation_rows_refusal.py` |
+| A59 | the census refuses every name that reaches what it has not read, over 679 generated members | `test_mutation_rows_missing_tool.py` |
+| A60 | the census reads an annotation that holds code as code, and names each refusal whole | `test_mutation_rows_missing_tool.py` |
+
+```acceptance
+A58: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_refusal.py -k test_the_spawn_runs_the_file_it_judged_by_every_route
+A59: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k test_the_census_refuses_every_name_that_reaches_what_it_has_not_read
+A60: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k test_the_census_names_each_refusal_and_reads_annotations_and_dotted_names_whole
+```

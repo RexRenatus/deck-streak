@@ -5,4 +5,6 @@
   `sh`) is absent from `PATH`, not executable, or a directory, every verb now ends with one line
   naming the tool and exit 2, never a traceback and never exit 1, and a mutant that was installed
   is restored byte for byte. A shell parser that cannot be run now refuses the proof the same way,
-  where it used to leave the mutant VOID.
+  where it used to leave the mutant VOID. The spawn executes the file the runner judged, so a file the kernel refuses is one refusal and
+  never a run of a later copy on `PATH`, and the row census refuses a name that reaches what it has
+  not read.
