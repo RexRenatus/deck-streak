@@ -208,6 +208,102 @@
         "         \techo \"$PROTOC_SHA256  /tmp/protoc.zip\" | sha256sum -c -\n",
         "no line of a block scalar in release.yml has a tab inside the block's indentation, which YAML refuses (SPEC-190 R12)",
         "test_workflow_concurrency.EveryReleaseWorkflowQueuesEveryRun.test_every_workflow_that_can_hold_two_runs_of_a_release_queues_them"
+      ],
+      [
+        "S19027-A-RELEASE-VALUE-NEVER-STARTS-WITH-AN-AT-SIGN",
+        ".github/workflows/release.yml",
+        "        run: rustup show\n",
+        "        run: @rustup show\n",
+        "no plain value in release.yml starts with `@`, a character YAML reserves, so the file is never one GitHub's parser refuses (SPEC-190 R12)",
+        "test_workflow_concurrency.EveryReleaseWorkflowQueuesEveryRun.test_every_workflow_that_can_hold_two_runs_of_a_release_queues_them"
+      ],
+      [
+        "S19028-A-RELEASE-VALUE-NEVER-STARTS-WITH-A-BACKTICK",
+        ".github/workflows/release.yml",
+        "    runs-on: ubuntu-24.04\n",
+        "    runs-on: `ubuntu-24.04\n",
+        "no plain value in release.yml starts with a backtick, a character YAML reserves (SPEC-190 R12)",
+        "test_workflow_concurrency.EveryReleaseWorkflowQueuesEveryRun.test_every_workflow_that_can_hold_two_runs_of_a_release_queues_them"
+      ],
+      [
+        "S19029-A-RELEASE-VALUE-NEVER-STARTS-WITH-A-PERCENT-SIGN",
+        ".github/workflows/release.yml",
+        "      - name: the pinned Rust toolchain (rust-toolchain.toml)\n",
+        "      - name: %the pinned Rust toolchain (rust-toolchain.toml)\n",
+        "no plain value in release.yml starts with `%`, YAML's directive indicator (SPEC-190 R12)",
+        "test_workflow_concurrency.EveryReleaseWorkflowQueuesEveryRun.test_every_workflow_that_can_hold_two_runs_of_a_release_queues_them"
+      ],
+      [
+        "S19030-A-RELEASE-VALUE-NEVER-STARTS-WITH-A-FLOW-INDICATOR",
+        ".github/workflows/release.yml",
+        "      - name: the release binary\n",
+        "      - name: ,the release binary\n",
+        "no plain value in release.yml starts with a flow indicator such as `,` (SPEC-190 R12)",
+        "test_workflow_concurrency.EveryReleaseWorkflowQueuesEveryRun.test_every_workflow_that_can_hold_two_runs_of_a_release_queues_them"
+      ],
+      [
+        "S19031-A-RELEASE-VALUE-IS-NEVER-A-DASH-AND-A-SPACE",
+        ".github/workflows/release.yml",
+        "name: release\n",
+        "name: - release\n",
+        "no mapping value in release.yml starts with `- `, which YAML refuses there (SPEC-190 R12)",
+        "test_workflow_concurrency.EveryReleaseWorkflowQueuesEveryRun.test_every_workflow_that_can_hold_two_runs_of_a_release_queues_them"
+      ],
+      [
+        "S19032-A-RELEASE-VALUE-IS-NEVER-A-QUESTION-MARK-AND-A-SPACE",
+        ".github/workflows/release.yml",
+        "        run: pnpm install --frozen-lockfile\n",
+        "        run: ? pnpm install --frozen-lockfile\n",
+        "no mapping value in release.yml starts with `? `, which YAML refuses there (SPEC-190 R12)",
+        "test_workflow_concurrency.EveryReleaseWorkflowQueuesEveryRun.test_every_workflow_that_can_hold_two_runs_of_a_release_queues_them"
+      ],
+      [
+        "S19033-A-RELEASE-TAG-FILTER-ITEM-IS-NEVER-A-SEQUENCE",
+        ".github/workflows/release.yml",
+        "      - 'v[0-9]+.[0-9]+.[0-9]+'\n",
+        "      - - 'v[0-9]+.[0-9]+.[0-9]+'\n",
+        "each item of release.yml's tag filter is a string, never a sequence nested in the item (SPEC-190 R12)",
+        "test_workflow_concurrency.EveryReleaseWorkflowQueuesEveryRun.test_every_workflow_that_can_hold_two_runs_of_a_release_queues_them"
+      ],
+      [
+        "S19034-A-RELEASE-TAG-FILTER-ITEM-IS-NEVER-AN-EXPLICIT-KEY",
+        ".github/workflows/release.yml",
+        "      - 'v[0-9]+.[0-9]+.[0-9]+'\n",
+        "      - ? 'v[0-9]+.[0-9]+.[0-9]+'\n",
+        "each item of release.yml's tag filter is a string, never an explicit key (SPEC-190 R12)",
+        "test_workflow_concurrency.EveryReleaseWorkflowQueuesEveryRun.test_every_workflow_that_can_hold_two_runs_of_a_release_queues_them"
+      ],
+      [
+        "S19035-A-RELEASE-BLOCK-HEADER-IS-A-NAMED-ONE",
+        ".github/workflows/release.yml",
+        "name: release\n",
+        "name: >\n",
+        "release.yml holds no block scalar header but `|` and `|-`, since YAML reads any other otherwise than as its text (SPEC-190 R12)",
+        "test_workflow_concurrency.EveryReleaseWorkflowQueuesEveryRun.test_every_workflow_that_can_hold_two_runs_of_a_release_queues_them"
+      ],
+      [
+        "S19036-A-RELEASE-FLOW-LIST-HOLDS-NO-EMPTY-ENTRY",
+        ".github/workflows/release.yml",
+        "    tags:\n      - 'v[0-9]+.[0-9]+.[0-9]+'\n",
+        "    tags: [v*,,]\n",
+        "a flow list in release.yml holds no empty entry but one trailing comma, since YAML refuses one (SPEC-190 R12)",
+        "test_workflow_concurrency.EveryReleaseWorkflowQueuesEveryRun.test_every_workflow_that_can_hold_two_runs_of_a_release_queues_them"
+      ],
+      [
+        "S19037-A-RELEASE-BLOCK-BLANK-LINE-HOLDS-NO-TAB",
+        ".github/workflows/release.yml",
+        "          git fetch --no-tags origin '+refs/heads/main:refs/remotes/origin/main'\n",
+        "          git fetch --no-tags origin '+refs/heads/main:refs/remotes/origin/main'\n          \t\n",
+        "no blank line of a block scalar in release.yml holds a tab, which YAML reads as text (SPEC-190 R12)",
+        "test_workflow_concurrency.EveryReleaseWorkflowQueuesEveryRun.test_every_workflow_that_can_hold_two_runs_of_a_release_queues_them"
+      ],
+      [
+        "S19038-A-RELEASE-KEY-IS-A-STRING",
+        ".github/workflows/release.yml",
+        "      CARGO_INCREMENTAL: \"0\"\n",
+        "      CARGO_INCREMENTAL: \"0\"\n      true: \"1\"\n",
+        "every key in release.yml is a plain name YAML types as a string, never a boolean, null or number (SPEC-190 R12)",
+        "test_workflow_concurrency.EveryReleaseWorkflowQueuesEveryRun.test_every_workflow_that_can_hold_two_runs_of_a_release_queues_them"
       ]
     ]
   }
