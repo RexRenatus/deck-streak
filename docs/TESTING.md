@@ -112,5 +112,9 @@ request cancels the run it supersedes; a push to `dev` or `main` is never cancel
 
 ## Coverage and mutation
 
+The repository's Python guard scripts are mutated by `scripts/mutation_python.py`, one CI job
+`mutation-python` per shard (ADR-073); a survivor fails the verdict unless it is recorded in
+`scripts/mutation-equivalent.d/python.json`.
+
 A test proves something only if it fails on a wrong program. Mutation rows (the mutation-rows
 pack's practice) are added for game math and gates as they land.

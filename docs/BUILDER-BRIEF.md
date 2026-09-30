@@ -57,13 +57,14 @@ A test proves something only when it fails on code that is wrong (SPEC-039, ADR-
 stays the rule; beyond it, every behaviour change proves that its tests kill mutants of the changed
 code.
 
-- **Five CI jobs judge every pull request,** a release into `main` included, each a need of `ci`.
+- **Six CI jobs judge every pull request,** a release into `main` included, each a need of `ci`.
   `mutation-plan` reads the diff and sizes the shards from cargo-mutants' own listing;
   `mutation-rust` runs cargo-mutants over the diff (`--in-diff`, `--in-place`), one job per shard;
   `mutation-rows` proves the hand-proved rows the diff selects and checks that no row left while
   its target stayed; `mutation-verdict` counts every shard's report, binds every equivalence record
   against the whole tree's listing, and judges; `mutation-web` runs StrykerJS over every changed Mini
-  App file, whole. Read the verdict's counts, never only its colour: a class of production code the
+  App file, whole; `mutation-python` runs `scripts/mutation_python.py` over the changed guard
+  scripts and the parity oracle's Python, one job per shard (ADR-073). Read the verdict's counts, never only its colour: a class of production code the
   diff changed that examined nothing is VOID, a shard that never reported is VOID by name, and VOID
   fails the job. A diff of comments and blank lines reads `not-applicable`, by name.
 - **A surviving mutant is yours.** Kill it with a test that asserts the behaviour: in the mutated
@@ -82,6 +83,11 @@ code.
   an uncovered Mini App mutant is UNCOVERED, never excused, until a test reaches it. Nothing is
   excluded or skipped: `mutation-verdict.py exclusions` refuses every form that would hide a
   mutant. A survivor or a VOID already on a file you touch is yours too.
+- **A surviving Python mutant is yours, and it is resolved one of two ways.** Either kill it with a
+  test that asserts the behaviour, in a module the runner runs for that file, or record it
+  EQUIVALENT in `scripts/mutation-equivalent.d/python.json` with the same fields as any record. There
+  is no third way: nothing in a Python file hides a mutant from the run. `mutation_python.py`
+  lists (`list`), runs (`run`) and checks (`census`) it; run one file locally, on a committed tree.
 - **What the tool cannot mutate takes a row.** cargo-mutants never mutates a constant, an attribute
   or a string, and never looks inside a method named `new`. An invariant there (a security check, a
   parity comparison, a bound, streak and economy maths) gets a hand-proved row in
