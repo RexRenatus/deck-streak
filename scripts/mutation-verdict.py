@@ -1395,8 +1395,9 @@ def memory_cap(
 
 def python_reports(verdict: Verdict, plan: dict, directory: str | None) -> list[tuple[str, dict]]:
     """(where, report) for each Python shard report the plan promised, from 0 to n-1: one missing,
-    unreadable, not of the runner's schema, or that records a failed restore is VOID by name
-    (SPEC-087 R11)."""
+    unreadable, not of the runner's schema, that records a failed restore, whose shard field is not
+    its slot's, or that examined other mutants than the plan lists for that shard is VOID by name
+    (SPEC-087 R11; SPEC-126 A7 and A8)."""
     planned = (plan.get("python") or {}).get("count") or 0
     if not planned:
         verdict.void("the plan names no python shards, so no shard's report was promised")
@@ -1416,9 +1417,48 @@ def python_reports(verdict: Verdict, plan: dict, directory: str | None) -> list[
             verdict.void(f"{where}: not of the schema {PYTHON_SCHEMA}")
         elif report.get("exit") == 4 or report.get("restore_failed"):
             verdict.void(f"{where}: a restore failed: {report.get('restore_failed') or 'exit 4'}")
+        elif report.get("shard") != f"{shard}/{planned}":
+            verdict.void(
+                f"{where}: the report's shard field {report.get('shard')!r} is not this slot's "
+                f"{shard}/{planned}, so it is not this shard's work"
+            )
+        elif (drift := shard_listing_drift(plan, shard, report)) is not None:
+            verdict.void(f"{where}: {drift}")
         else:
             whole.append((where, report))
     return whole
+
+
+def shard_listing_drift(plan: dict, shard: int, report: dict) -> str | None:
+    """Why `report` did not examine exactly the mutants the plan lists for `shard`, or None when it
+    did. Each side is a multiset of names, so a duplicate, a missing mutant and an extra one all
+    differ, and a report that holds as many mutants as listed but not the same ones differs too."""
+    held = next(
+        (
+            entry
+            for entry in (plan.get("python") or {}).get("shards") or []
+            if isinstance(entry, dict) and entry.get("shard") == shard
+        ),
+        None,
+    )
+    if held is None or not isinstance(held.get("mutants"), list):
+        return "the plan lists no mutants for this shard"
+    files = report.get("files")
+    listed = Counter(str(name) for name in held["mutants"])
+    examined = Counter(
+        str(mutant.get("name")) if isinstance(mutant, dict) else "?"
+        for entry in (files if isinstance(files, list) else [])
+        if isinstance(entry, dict)
+        for mutant in entry.get("mutants") or []
+    )
+    missing = sorted((listed - examined).elements())
+    extra = sorted((examined - listed).elements())
+    if not missing and not extra:
+        return None
+    return (
+        f"it did not examine the mutants the plan lists for it: {len(missing)} missing "
+        f"({', '.join(missing[:3])}) and {len(extra)} extra ({', '.join(extra[:3])})"
+    )
 
 
 def python_mutant(entry: object) -> Mutant | None:
