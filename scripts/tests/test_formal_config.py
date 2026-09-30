@@ -45,6 +45,7 @@ JSON_TYPES = {
     "boolean": True,
     "integer": 1,
     "number": 1.5,
+    "integral number": 20.0,
     "string": "x",
     "array": [],
     "object": {},
@@ -55,6 +56,18 @@ ADMITS = {
     "posint-map": {"object"},
     "strings": {"array"},
     "path": {"string"},
+}
+# A map kind's values are judged as an element kind, so each value type the element kind refuses is
+# planted as a map value too.
+ELEMENT_KIND = {"posint-map": "posint"}
+# The values a kind refuses that are of a type it admits: an integer below one.
+OUT_OF_RANGE = {"posint": (0, -1)}
+# The arm of the reader that refuses a kind's value.
+ARM = {
+    "posint": "posint",
+    "posint-map": "posint-map",
+    "strings": "strings-list",
+    "path": "path",
 }
 BAD_PATHS = ("/abs", "../up", "a/../b", "")
 
@@ -163,6 +176,50 @@ def without(path):
     return doc
 
 
+def element_plants(kind):
+    """Every value a map kind's element kind refuses, as (label, value): each JSON type it does not
+    admit and each out-of-range value of a type it does. Empty for a kind that is no map."""
+    element = ELEMENT_KIND.get(kind)
+    if element is None:
+        return []
+    plants = [
+        (type_name, bad)
+        for type_name, bad in JSON_TYPES.items()
+        if type_name not in ADMITS[element]
+    ]
+    return plants + [(f"out of range {bad!r}", bad) for bad in OUT_OF_RANGE.get(element, ())]
+
+
+def map_shapes(bad):
+    """A map holding the bad value alone, after a good value and before one, so a reader that
+    judges only the first or only the last value is caught."""
+    return [
+        (f"holds {bad!r} alone", {"planted_entry": bad}),
+        (f"holds {bad!r} after a good value", {"good_entry": 20, "planted_entry": bad}),
+        (f"holds {bad!r} before a good value", {"planted_entry": bad, "good_entry": 20}),
+    ]
+
+
+def type_plants():
+    """The population of the class, from FIELDS, ADMITS and ELEMENT_KIND alone: (kind, field, what,
+    document) for every value type each field's kind refuses and, inside a map kind, every value
+    its element kind refuses. Nothing is listed by hand, so it grows with the kinds."""
+    plants = []
+    for path, kind, _ in FIELDS:
+        if kind == "object":
+            continue
+        name = ".".join(path)
+        for type_name, bad in JSON_TYPES.items():
+            if type_name not in ADMITS[kind]:
+                plants.append((kind, name, type_name, with_value(path, bad)))
+        for bad in OUT_OF_RANGE.get(kind, ()):
+            plants.append((kind, name, f"out of range {bad!r}", with_value(path, bad)))
+        for label, bad in element_plants(kind):
+            for shape, entries in map_shapes(bad):
+                plants.append((kind, name, f"{label} {shape}", with_value(path, entries)))
+    return plants
+
+
 def planted_faults():
     """The faults generated from the table, per kind, so each refusal arm of the reader is
     reached: an extra field at each object level, each required field missing, a value of every
@@ -193,12 +250,11 @@ def planted_faults():
         for kind_name, bad in JSON_TYPES.items():
             if kind_name not in ADMITS[kind]:
                 faults.append((f"{name} = {bad!r}", with_value(path, bad)))
-        if kind == "posint":
-            for bad in (0, -1):
-                faults.append((f"{name} = {bad!r}", with_value(path, bad)))
-        if kind == "posint-map":
-            for bad in (0, -1, True):
-                faults.append((f"{name} holds {bad!r}", with_value(path, {"planted_entry": bad})))
+        for bad in OUT_OF_RANGE.get(kind, ()):
+            faults.append((f"{name} = {bad!r}", with_value(path, bad)))
+        for _, bad in element_plants(kind):
+            for label, entries in map_shapes(bad):
+                faults.append((f"{name} {label}", with_value(path, entries)))
         if kind == "strings":
             faults.append(
                 (
@@ -232,6 +288,52 @@ def reader_arms():
 
 
 class FormalConfig(unittest.TestCase):
+    def test_every_value_type_a_kind_refuses_is_planted_and_refused_by_name(self):
+        """A4: for each kind the reader judges, each JSON value type it does not admit, an integral
+        float wherever an integer is required included, is planted at every field of the kind and,
+        inside a map kind, as each value, and the reader refuses each by the kind's own arm."""
+        plants = examined("planted value types", type_plants())
+        kinds = {kind for _, kind, _ in FIELDS} - {"object"}
+        self.assertEqual({kind for kind, *_ in plants}, kinds)
+        for kind in sorted(kinds):
+            members = [plant for plant in plants if plant[0] == kind]
+            fields = {".".join(path) for path, k, _ in FIELDS if k == kind}
+            print(
+                f"examined {len(members)} planted values of the kind {kind} at {len(fields)} fields"
+            )
+            refused = [t for t in JSON_TYPES if t not in ADMITS[kind]]
+            values = len(element_plants(kind)) * len(map_shapes(None))
+            self.assertEqual(
+                len(members),
+                len(fields) * (len(refused) + len(OUT_OF_RANGE.get(kind, ())) + values),
+            )
+            for field in fields:
+                seen = {what for _, name, what, _ in members if name == field}
+                for type_name in JSON_TYPES:
+                    if type_name not in ADMITS[kind]:
+                        self.assertIn(type_name, seen, f"{field}: {type_name} is not planted")
+            element = ELEMENT_KIND.get(kind)
+            for type_name in JSON_TYPES if element else ():
+                if type_name not in ADMITS[element]:
+                    self.assertTrue(
+                        any(what.startswith(f"{type_name} ") for _, _, what, _ in members),
+                        f"{kind}: {type_name} is not planted as a value",
+                    )
+        self.assertEqual(sum(1 for kind, *_ in plants if kind in kinds), len(plants))
+        integral = JSON_TYPES["integral number"]
+        self.assertTrue(isinstance(integral, float) and integral.is_integer())
+        self.assertNotIn("integral number", ADMITS["posint"])
+        wrong = []
+        for kind, field, what, doc in plants:
+            try:
+                read(doc)
+            except Refused as refusal:
+                if refusal.arm != ARM[kind]:
+                    wrong.append(f"{field} {what}: refused by {refusal.arm}")
+                continue
+            wrong.append(f"{field} {what}: admitted")
+        self.assertEqual(wrong, [], "a planted value the reader did not refuse by its arm")
+
     def test_the_committed_file_holds_exactly_the_declared_fields(self):
         """A1: the key set, each value and each type equal R1's, one field per line."""
         doc = load()
