@@ -167,23 +167,51 @@ fn decode_formats(config: Option<&[u8]>) -> (String, String, bool) {
 /// Every `{{...}}` whose inside holds no brace, left to right and not overlapping, as the
 /// predecessor's pattern `\{\{([^{}]+)\}\}` finds them.
 fn tokens_in(text: &str) -> Vec<&str> {
+    tokens_with(text, token_step)
+}
+
+/// What one scan step found: the token's byte range if a token starts there, and the position
+/// after the step.
+pub type Step = (Option<(usize, usize)>, usize);
+
+/// The scan at `at` (which must have a byte after it): a token and the position after it, or no
+/// token and the next byte.
+#[must_use]
+pub fn token_step(bytes: &[u8], at: usize) -> Step {
+    if bytes[at] == b'{' && bytes[at + 1] == b'{' {
+        let start = at + 2;
+        let end = bytes[start..]
+            .iter()
+            .position(|byte| *byte == b'{' || *byte == b'}')
+            .map_or(bytes.len(), |found| start + found);
+        if end > start && bytes.get(end) == Some(&b'}') && bytes.get(end + 1) == Some(&b'}') {
+            return (Some((start, end)), end + 2);
+        }
+    }
+    (None, at + 1)
+}
+
+/// The token scan with its per-step reader injected, so the progress guard is testable alone.
+///
+/// A step that does not strictly advance the position ends the scan before anything is kept:
+/// a stalled reader would otherwise spin or push without bound, which costs memory and CPU
+/// rather than a test failure.
+pub fn tokens_with<F>(text: &str, mut step: F) -> Vec<&str>
+where
+    F: FnMut(&[u8], usize) -> Step,
+{
     let bytes = text.as_bytes();
     let mut found = Vec::new();
     let mut at = 0;
     while at + 1 < bytes.len() {
-        if bytes[at] == b'{' && bytes[at + 1] == b'{' {
-            let start = at + 2;
-            let mut end = start;
-            while end < bytes.len() && bytes[end] != b'{' && bytes[end] != b'}' {
-                end += 1;
-            }
-            if end > start && bytes.get(end) == Some(&b'}') && bytes.get(end + 1) == Some(&b'}') {
-                found.push(&text[start..end]);
-                at = end + 2;
-                continue;
-            }
+        let (token, next) = step(bytes, at);
+        if next <= at {
+            break;
         }
-        at += 1;
+        if let Some((start, end)) = token {
+            found.push(&text[start..end]);
+        }
+        at = next;
     }
     found
 }
