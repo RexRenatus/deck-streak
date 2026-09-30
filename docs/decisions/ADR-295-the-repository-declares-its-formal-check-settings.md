@@ -59,7 +59,8 @@ SPEC-295's A1 to A3 (`scripts/tests/test_formal_config.py`).
 ## What would make this wrong
 
 - A field the checker starts to read that the file lacks: if it starts to require that field, it
-  would refuse the file as incomplete. A1 pins the file to the fields R1 lists, so the change is an amendment and not silent drift.
+  would refuse the file as incomplete. A1 pins the file to the fields R1 lists, so the change is an
+  amendment and not silent drift.
 - A value of `k` that is too small or too large for the development branch's pace of merges: it is
   a ratchet, so changing it is a signed ruling.
 
