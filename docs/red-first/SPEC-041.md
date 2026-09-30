@@ -483,6 +483,8 @@ and S04158, each of which leaves one spelling or one level unread and turns its 
 row S04156 turns the first test red with a path removed from `clippy.toml`. The green commit changes
 the test file once more, for the workspace's lints (a range, a `let` chain, a file-extension helper
 and an `expect` allowance for a test crate), and no assertion.
+The test-file change of the green commit, 41932f6, is that one; it rewrites the line that reads a
+relative path and no assertion of a verdict.
 A later commit adds the examined contract to the file walk (a printed count and a refusal of zero),
 so the tdd pack reads the walk as reporting what it examined; it changes no assertion and no member.
 
