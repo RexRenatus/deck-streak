@@ -1,11 +1,13 @@
 //! The relight's celebration (SPEC-076 R27): one line through the router, after the fold's commit,
 //! under the policy's celebration kind with the key `relight:<epoch day>`.
 
-use deck_streak_kernel::{KernelError, StudyDay};
+use deck_streak_kernel::{Db, KernelError, StudyDay};
 use deck_streak_notifications::{
     Decision, DedupeKey, LapseContext, Occasion, Policy, Router, Surface, Tier,
 };
 use deck_streak_streaks::constants::RELIGHT_XP;
+
+use crate::recompute::streaks::RelightDue;
 
 /// The event the line is raised for: the policy's celebration kind, which has no `record` of its
 /// own.
@@ -38,6 +40,28 @@ pub async fn announce_relight(
     )
     .map_err(refused)?;
     router.route(&occasion).await.map(Some)
+}
+
+/// Routes every relight `due` still names, oldest first, raised on `today`, after a fold's commit
+/// (SPEC-076 R27), and marks each routed once the router has decided it. A day whose route fails
+/// stays due, so the next cycle routes it; the router's once-ever key answers a day routed twice.
+///
+/// # Errors
+///
+/// [`KernelError`] when the due days cannot be read, or a decided day cannot be marked routed.
+pub async fn route_due_relights(
+    router: &Router,
+    due: &RelightDue,
+    db: &Db,
+    today: StudyDay,
+) -> Result<(), KernelError> {
+    for day in due.pending(db).await? {
+        match announce_relight(router, day, today).await {
+            Ok(_) => due.routed(db, day).await?,
+            Err(error) => tracing::error!(%error, "the relight line could not be raised"),
+        }
+    }
+    Ok(())
 }
 
 /// A refusal the line cannot recover from, as the database error kind the cycle already reports.

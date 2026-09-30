@@ -33,7 +33,7 @@ use crate::level_up::announce_level_up;
 use crate::obligations::{ObligationSource, Obligations};
 use crate::recompute::streaks::RelightDue;
 use crate::recompute::{Fold, FoldInput};
-use crate::relight::announce_relight;
+use crate::relight::route_due_relights;
 
 /// The name of the settle a closed study day is owed, as an obligation (SPEC-071 R15): the source's
 /// name, and the label of its deadline, which the gate's reason and the log carry.
@@ -315,12 +315,10 @@ where
                     if let Err(error) = announce_level_up(router, before, after, today).await {
                         tracing::error!(%error, "the level-up line could not be raised");
                     }
-                    if let Some(due) = &cycle.relights {
-                        for day in due.take() {
-                            if let Err(error) = announce_relight(router, day, today).await {
-                                tracing::error!(%error, "the relight line could not be raised");
-                            }
-                        }
+                    if let Some(due) = &cycle.relights
+                        && let Err(error) = route_due_relights(router, due, &fold.db, today).await
+                    {
+                        tracing::error!(%error, "the due relights could not be read");
                     }
                 }
             }

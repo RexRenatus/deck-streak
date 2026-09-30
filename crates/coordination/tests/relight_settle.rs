@@ -12,7 +12,7 @@ use deck_streak_analytics::settings::AnalyticsSettings;
 use deck_streak_coordination::recompute::analytics_step::AnalyticsStep;
 use deck_streak_coordination::recompute::streaks::{RelightDue, StreaksStep};
 use deck_streak_coordination::recompute::{DayEvaluation, DayStep, Fold, FoldInput, Phase};
-use deck_streak_coordination::relight::announce_relight;
+use deck_streak_coordination::relight::route_due_relights;
 use deck_streak_ingest::reader::{Card, CollectionData, Review};
 use deck_streak_kernel::{Db, ManualClock, PortFuture, StudyDay, StudyDayRule, Track, UtcMillis};
 use deck_streak_notifications::{BotTransport, Pass, Policy, PushFuture, Pushed, Router};
@@ -259,17 +259,19 @@ async fn a_second_recompute_routes_the_relight_and_one_send_is_recorded() {
     let today = StudyDay::from_epoch_day(D0);
     for now in [at(D0, 12), at(D0, 18)] {
         recompute(&fold, &db, &history(3), now, D0).await;
-        let days = due.take();
         assert_eq!(
-            days,
+            due.pending(&db).await.expect("the due relights read"),
             vec![today],
             "every qualifying recompute answers the relight as due"
         );
-        for day in days {
-            announce_relight(&router, day, today)
-                .await
-                .expect("the relight routes");
-        }
+        route_due_relights(&router, &due, &db, today)
+            .await
+            .expect("the relight routes");
+        assert_eq!(
+            due.pending(&db).await.expect("the due relights read"),
+            Vec::<StudyDay>::new(),
+            "a relight the router decided is no longer due"
+        );
     }
     assert_eq!(
         bot.pushes().len(),

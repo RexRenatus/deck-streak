@@ -10,7 +10,7 @@ use std::sync::{Arc, Mutex, PoisonError};
 use std::collections::BTreeSet;
 
 use deck_streak_ingest::reader::is_study_event;
-use deck_streak_kernel::{KernelError, PortFuture, StudyDay, Track, UtcMillis};
+use deck_streak_kernel::{Db, KernelError, PortFuture, StudyDay, Track, UtcMillis};
 use deck_streak_progression::grant::{GrantRequest, GrantScope, GrantSource};
 use deck_streak_progression::ledger::grant_on;
 use deck_streak_progression::xp::XpAmount;
@@ -34,11 +34,40 @@ pub struct RelightDue {
 }
 
 impl RelightDue {
-    /// Takes every day the step answered as due since the last take, oldest first.
-    #[must_use]
-    pub fn take(&self) -> Vec<StudyDay> {
-        let mut days = self.days.lock().unwrap_or_else(PoisonError::into_inner);
-        std::mem::take(&mut *days)
+    /// Every day still due, oldest first.
+    ///
+    /// # Errors
+    ///
+    /// [`KernelError`] when the due days cannot be read.
+    #[expect(
+        clippy::unused_async,
+        reason = "the head's list is held in memory; the stored list awaits its read"
+    )]
+    pub async fn pending(&self, _db: &Db) -> Result<Vec<StudyDay>, KernelError> {
+        let mut days = self
+            .days
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone();
+        days.sort_unstable();
+        Ok(days)
+    }
+
+    /// Marks `day` routed: the router has decided its celebration, so it is no longer due.
+    ///
+    /// # Errors
+    ///
+    /// [`KernelError`] when the mark cannot be written.
+    #[expect(
+        clippy::unused_async,
+        reason = "the head's list is held in memory; the stored list awaits its write"
+    )]
+    pub async fn routed(&self, _db: &Db, day: StudyDay) -> Result<(), KernelError> {
+        self.days
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .retain(|due| *due != day);
+        Ok(())
     }
 }
 
@@ -159,11 +188,10 @@ impl StreaksStep {
             scope: GrantScope::Once,
         };
         let _ = grant_on(write, &request, facts.now).await?;
-        self.due
-            .days
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .push(day);
+        let mut days = self.due.days.lock().unwrap_or_else(PoisonError::into_inner);
+        if !days.contains(&day) {
+            days.push(day);
+        }
         Ok(())
     }
 
