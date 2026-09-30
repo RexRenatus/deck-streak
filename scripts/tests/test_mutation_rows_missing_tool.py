@@ -3,7 +3,10 @@ ADR-291, issue #431).
 
 THE CLASS. Every process `scripts/mutation_rows.py` spawns, under every verb that reaches it, ends
 the verb with ONE line naming the tool and exit 2 (`EXIT_REFUSED`) when its executable cannot be
-run: absent from `PATH`, present but not executable, or a directory at the name. Never a traceback,
+run: absent from `PATH`, present but not executable, a directory at the name, a script whose
+interpreter line names a missing program, an empty file the kernel will not execute, or a wrapper
+whose `#!/usr/bin/env` line names a missing program, so it exits 127 (126 when a `PATH` entry
+could not be searched on the way). Never a traceback,
 never exit 1 (`EXIT_SURVIVED`), never a verdict, and the target's bytes are the ones it started
 with.
 
@@ -13,7 +16,9 @@ outside the two helpers that own a raw spawn), so a new spawn joins the populati
 fails the census until a scenario covers it. Each site carries the tools it can spawn and the
 verbs that reach it; each member is one (site, tool, unrunnable mode, verb) built in a temporary
 git repository with the suite's own fixture, run as a child process with a `PATH` (or, for the
-interpreter, a `sys.executable`) that makes the tool unrunnable.
+interpreter, a `sys.executable`) that makes the tool unrunnable. The tool's place in `PATH` is an
+axis too: alone, or behind an entry the runner cannot even look at, which the spawn's own search
+passes over.
 """
 
 import ast
@@ -43,14 +48,41 @@ MODULE = REPO / "scripts" / "mutation_rows.py"
 HELPERS = ("run_tool", "run_in_own_group")
 #: What a spawn looks like in the source: the names the population is derived from.
 SPAWN_NAMES = ("subprocess.run", "subprocess.Popen", "run_in_own_group", "run_tool")
-MODES = ("absent", "not executable", "a directory", "bad interpreter")
+MODES = (
+    "absent",
+    "not executable",
+    "a directory",
+    "bad interpreter",
+    "an empty file",
+    "a wrapper whose program is missing",
+)
 #: What the refusal line says about each mode: the reason is part of the line, not only the name.
 WHY = {
     "absent": ("not found on path", "no such file"),
     "not executable": ("not executable",),
     "a directory": ("is a directory",),
     "bad interpreter": ("no such file",),
+    "an empty file": ("exec format error",),
+    "a wrapper whose program is missing": ("exit 127", "exit 126"),
 }
+#: Where the tool sits in `PATH`: alone, or behind an entry whose name is too long to look at,
+#: which raises on a look for any user (root included) and which the spawn passes over.
+POSITIONS = ("alone", "behind an entry it cannot look at")
+UNREADABLE_ENTRY = "n" * 300
+#: The modes whose file resolution accepts, so the spawn itself fails. Its error is the first one
+#: its own `PATH` search met, which behind the unreadable entry is that entry's, not the file's.
+SPAWN_FAILS = ("bad interpreter", "an empty file")
+#: A program no machine has: a wrapper naming it on its `#!/usr/bin/env` line exits 127, or 126
+#: when `env` met an entry it could not search on the way.
+NO_SUCH_PROGRAM = "mutation-rows-no-such-program-431"
+#: Every name the standard library starts a process by. A call to one outside the two helpers,
+#: or an import that reaches one under another name, is a spawn the site census would not see.
+ANY_SPAWN = re.compile(
+    r"^(subprocess\.(run|Popen|call|check_call|check_output|getoutput|getstatusoutput)"
+    r"|os\.(system|popen|fork|forkpty|posix_spawnp?|exec[lv]p?e?|spawn[lv]p?e?)"
+    r"|pty\.(spawn|fork)|asyncio\.create_subprocess_(exec|shell))$"
+)
+SPAWNING_MODULES = ("subprocess", "os", "pty", "asyncio")
 ID = "S00001-DOUBLE"
 BAND = "S00000-S00099"
 PROVE_VERBS = ("prove-id", "prove-band", "prove-all", "prove-rows-from")
@@ -106,6 +138,45 @@ def unrunnable(path, mode):
     elif mode == "bad interpreter":
         path.write_text("#!/nonexistent/interpreter\n", encoding="utf-8")
         path.chmod(0o755)
+    elif mode == "an empty file":
+        path.write_bytes(b"")
+        path.chmod(0o755)
+    elif mode == "a wrapper whose program is missing":
+        path.write_text(f"#!/usr/bin/env {NO_SUCH_PROGRAM}\n", encoding="utf-8")
+        path.chmod(0o755)
+
+
+def raw_spawns():
+    """(spawns the two helpers own, spawns and imports anywhere else) read from the module's
+    source by every name the standard library starts a process by, not only the four the site
+    census reads."""
+    tree = ast.parse(MODULE.read_text(encoding="utf-8"))
+    owned, outside, inside = [], [], {}
+    for function in ast.walk(tree):
+        if isinstance(function, ast.FunctionDef) and function.name in HELPERS:
+            for call in ast.walk(function):
+                inside[id(call)] = function.name
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom) and node.module in SPAWNING_MODULES:
+            outside += [
+                f"from {node.module} import {alias.name}"
+                for alias in node.names
+                if node.module != "os" or ANY_SPAWN.match("os." + alias.name)
+            ]
+        elif isinstance(node, ast.Import):
+            outside += [
+                f"import {alias.name} as {alias.asname}"
+                for alias in node.names
+                if alias.name in SPAWNING_MODULES and alias.asname
+            ]
+            outside += [
+                f"import {alias.name}" for alias in node.names if alias.name in ("pty", "asyncio")
+            ]
+        elif isinstance(node, ast.Call) and ANY_SPAWN.match(ast.unparse(node.func)):
+            where = inside.get(id(node))
+            spawn = f"{where or 'outside the helpers'}: {ast.unparse(node.func)}"
+            (owned if where else outside).append(spawn)
+    return owned, outside
 
 
 CARGO_SHIM = """#!{python}
@@ -132,14 +203,21 @@ elif mode == "a directory":
 elif mode == "bad interpreter":
     me.write_text("#!/nonexistent/interpreter\\n")
     me.chmod(0o755)
+elif mode == "an empty file":
+    me.write_bytes(b"")
+    me.chmod(0o755)
+elif mode == "a wrapper whose program is missing":
+    me.write_text("#!/usr/bin/env {missing}\\n")
+    me.chmod(0o755)
 """
 
 
 class Member:
     """One (site, tool, mode, verb) built in a temporary repository and run to its verdict."""
 
-    def __init__(self, test, site, tool, mode, verb):
+    def __init__(self, test, site, tool, mode, verb, position="alone"):
         self.site, self.tool, self.mode, self.verb = site, tool, mode, verb
+        self.position = position
         cargo = tool == "cargo"
         parse = site == "parses"
         rows, files = [], None
@@ -202,7 +280,8 @@ class Member:
             return
         if self.tool == "cargo" and self.site == "builds":
             subject.write_text(
-                CARGO_SHIM.format(python=sys.executable, mode=self.mode), encoding="utf-8"
+                CARGO_SHIM.format(python=sys.executable, mode=self.mode, missing=NO_SUCH_PROGRAM),
+                encoding="utf-8",
             )
             subject.chmod(subject.stat().st_mode | stat.S_IXUSR)
             return
@@ -213,6 +292,8 @@ class Member:
         env = {k: v for k, v in os.environ.items() if k != "CARGO_TARGET_DIR"}
         env["PYTHONDONTWRITEBYTECODE"] = "1"
         env["PATH"] = str(self.bindir)
+        if self.position != "alone":
+            env["PATH"] = os.pathsep.join([str(self.scratch / UNREADABLE_ENTRY), str(self.bindir)])
         args = [*self.arguments(), "--root", str(self.fixture.root)]
         if self.python is not None:
             driver = (
@@ -247,18 +328,28 @@ class TheMissingToolPopulation(unittest.TestCase):
         )
 
     def test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb(self):
+        # Every verb reaches the resolution the same way, so the position axis is crossed with
+        # one verb; the interpreter is spawned by its absolute path, so no position applies to it.
         members = [
-            (site, tool, mode, verb)
+            (site, tool, mode, verb, POSITIONS[0])
             for site, tool, verbs in SCENARIOS
             for mode in MODES
             for verb in verbs
+        ] + [
+            (site, tool, mode, "prove-id", position)
+            for site, tool, _verbs in SCENARIOS
+            if tool != "python"
+            for mode in MODES
+            for position in POSITIONS[1:]
         ]
+        searched = sum(1 for _site, tool, _verbs in SCENARIOS if tool != "python")
         expected = sum(len(verbs) for _site, _tool, verbs in SCENARIOS) * len(MODES)
+        expected += searched * len(MODES) * (len(POSITIONS) - 1)
         examined("missing-tool member(s)", members)
         self.assertEqual(len(members), expected)
-        for site, tool, mode, verb in members:
-            with self.subTest(site=site, tool=tool, mode=mode, verb=verb):
-                member = Member(self, site, tool, mode, verb)
+        for site, tool, mode, verb, position in members:
+            with self.subTest(site=site, tool=tool, mode=mode, verb=verb, position=position):
+                member = Member(self, site, tool, mode, verb, position)
                 before = sha256(member.fixture.root / member.target)
                 done = member.run()
                 output = done.stdout + done.stderr
@@ -267,7 +358,10 @@ class TheMissingToolPopulation(unittest.TestCase):
                 lines = [line for line in output.splitlines() if "REFUSED" in line]
                 self.assertEqual(len(lines), 1, output)
                 self.assertIn(member.named(), lines[0], output)
-                self.assertTrue(any(why in lines[0].lower() for why in WHY[mode]), lines[0])
+                reasons = WHY[mode]
+                if position != "alone" and mode in SPAWN_FAILS:
+                    reasons += ("file name too long",)
+                self.assertTrue(any(why in lines[0].lower() for why in reasons), lines[0])
                 self.assertIsNone(VERDICT_LINE.search(output), output)
                 if site == "builds":
                     served = member.bindir / "served"
@@ -275,6 +369,36 @@ class TheMissingToolPopulation(unittest.TestCase):
                 self.assertEqual(sha256(member.fixture.root / member.target), before)
                 changed = git(member.fixture.root, "status", "--porcelain", "--untracked-files=no")
                 self.assertEqual(changed, "")
+
+    def test_no_code_outside_the_helpers_spawns_a_process_by_any_other_name(self):
+        owned, outside = raw_spawns()
+        self.assertEqual(
+            sorted(owned), ["run_in_own_group: subprocess.Popen", "run_tool: subprocess.run"]
+        )
+        self.assertEqual(
+            outside, [], "a spawn by a name the site census does not read skips the tool check"
+        )
+
+    def test_a_path_entry_the_runner_cannot_look_at_is_passed_over_as_the_spawn_passes_it(self):
+        member = Member(
+            self, "git", "git", "absent", "prove-id", position="behind an entry it cannot look at"
+        )
+        for name in ("git", "bash", "sh"):
+            (member.bindir / name).symlink_to(shutil.which(name))
+        env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
+        env["PATH"] = os.pathsep.join([str(member.scratch / UNREADABLE_ENTRY), str(member.bindir)])
+        done = subprocess.run(
+            [sys.executable, str(RUNNER), *member.arguments(), "--root", str(member.fixture.root)],
+            capture_output=True,
+            text=True,
+            env=env,
+            timeout=600,
+            check=False,
+        )
+        output = done.stdout + done.stderr
+        self.assertEqual(done.returncode, 0, output)
+        self.assertIn(f"{ID}: KILLED", output)
+        self.assertNotIn("REFUSED", output)
 
     def test_a_verb_that_spawns_nothing_runs_with_every_tool_unrunnable(self):
         fixture = Fixture(
