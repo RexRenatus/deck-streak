@@ -3,6 +3,13 @@ import { DARK_FIELDS_ID, parseDarkFields, parseEnvelope, parseListings } from '.
 
 // SPEC-094 R18, R19. The client reads what the server stores and claims nothing it cannot parse:
 // a malformed body is null (or undefined for an envelope), never a partial value.
+/** Reports how many values a test examined, and refuses a population of zero. */
+function examined<T>(what: string, items: T[]): T[] {
+  console.log(`examined ${items.length} ${what}`);
+  expect(items.length, `examined 0 ${what}: the population is empty, so nothing was judged`).toBeGreaterThan(0);
+  return items;
+}
+
 const STORED = {
   dark_fields: [{ note_type: 'Type A', field: 'Extra', reviewed_notes: 7 }],
   dark_fields_total: 9,
@@ -107,5 +114,18 @@ describe('insight parsers', () => {
     expect(bad({ unparseable: [null] })).toBeNull();
     expect(bad({ unparseable: [{ note_type: 1, note_type_id: 1 }] })).toBeNull();
     expect(bad({ unparseable: [{ note_type: 'n', note_type_id: 'x' }] })).toBeNull();
+  });
+
+  it('refuses a report the stored envelope does not hold, and every value that is no report', () => {
+    // The page hands parseDarkFields an envelope's report, which is undefined when the stored
+    // envelope has no report key: a value no JSON body parses to, refused like every JSON shape.
+    const envelope = parseEnvelope({ instrument: DARK_FIELDS_ID, report: { study_day: 3, failed_reads: [] } });
+    expect(envelope).toEqual({ instrument: DARK_FIELDS_ID, studyDay: 3, failedReads: [], report: undefined });
+    expect(parseDarkFields(envelope?.report)).toBeNull();
+    const values = [undefined, null, true, false, 0, 3, '', 'text', [], [STORED], { nested: {} }];
+    for (const value of examined('values that are no report', values)) {
+      expect(parseDarkFields(value), String(value)).toBeNull();
+    }
+    expect(parseDarkFields(STORED)?.darkFieldsTotal).toBe(9);
   });
 });

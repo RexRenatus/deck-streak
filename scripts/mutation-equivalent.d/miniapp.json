@@ -52,52 +52,7 @@
       "file": "web/app/src/lib/insights/insights.ts",
       "mutant": "ConditionalExpression: true",
       "anchor": "return value !== null && typeof value === 'object' && !Array.isArray(value)",
-      "span": "value !== null && typeof value === 'object' && !Array.isArray(value)",
-      "reason": "A body that is no plain object holds none of the keys the callers read, so the key tests after record() refuse it whether or not record() does.",
-      "evidence": "Every caller reads only named keys from what record() returns and then tests those keys' own types, and a parsed JSON body that is no plain object (null, a boolean, a number, a string or an array) has none of those keys, so each such value is refused by the key test after it exactly as record() refuses it here.",
-      "issue": "#294"
-    },
-    {
-      "file": "web/app/src/lib/insights/insights.ts",
-      "mutant": "LogicalOperator: value !== null && typeof value === 'object' || !Array.isArray(value)",
-      "anchor": "return value !== null && typeof value === 'object' && !Array.isArray(value)",
-      "span": "value !== null && typeof value === 'object' && !Array.isArray(value)",
-      "reason": "A body that is no plain object holds none of the keys the callers read, so the key tests after record() refuse it whether or not record() does.",
-      "evidence": "Every caller reads only named keys from what record() returns and then tests those keys' own types, and a parsed JSON body that is no plain object (null, a boolean, a number, a string or an array) has none of those keys, so each such value is refused by the key test after it exactly as record() refuses it here.",
-      "issue": "#294"
-    },
-    {
-      "file": "web/app/src/lib/insights/insights.ts",
-      "mutant": "ConditionalExpression: true",
-      "anchor": "return value !== null && typeof value === 'object' && !Array.isArray(value)",
-      "span": "value !== null && typeof value === 'object'",
-      "reason": "A body that is no plain object holds none of the keys the callers read, so the key tests after record() refuse it whether or not record() does.",
-      "evidence": "Every caller reads only named keys from what record() returns and then tests those keys' own types, and a parsed JSON body that is no plain object (null, a boolean, a number, a string or an array) has none of those keys, so each such value is refused by the key test after it exactly as record() refuses it here.",
-      "issue": "#294"
-    },
-    {
-      "file": "web/app/src/lib/insights/insights.ts",
-      "mutant": "LogicalOperator: value !== null || typeof value === 'object'",
-      "anchor": "return value !== null && typeof value === 'object' && !Array.isArray(value)",
-      "span": "value !== null && typeof value === 'object'",
-      "reason": "A body that is no plain object holds none of the keys the callers read, so the key tests after record() refuse it whether or not record() does.",
-      "evidence": "Every caller reads only named keys from what record() returns and then tests those keys' own types, and a parsed JSON body that is no plain object (null, a boolean, a number, a string or an array) has none of those keys, so each such value is refused by the key test after it exactly as record() refuses it here.",
-      "issue": "#294"
-    },
-    {
-      "file": "web/app/src/lib/insights/insights.ts",
-      "mutant": "ConditionalExpression: true",
-      "anchor": "return value !== null && typeof value === 'object' && !Array.isArray(value)",
       "span": "value !== null",
-      "reason": "A body that is no plain object holds none of the keys the callers read, so the key tests after record() refuse it whether or not record() does.",
-      "evidence": "Every caller reads only named keys from what record() returns and then tests those keys' own types, and a parsed JSON body that is no plain object (null, a boolean, a number, a string or an array) has none of those keys, so each such value is refused by the key test after it exactly as record() refuses it here.",
-      "issue": "#294"
-    },
-    {
-      "file": "web/app/src/lib/insights/insights.ts",
-      "mutant": "ConditionalExpression: true",
-      "anchor": "return value !== null && typeof value === 'object' && !Array.isArray(value)",
-      "span": "typeof value === 'object'",
       "reason": "A body that is no plain object holds none of the keys the callers read, so the key tests after record() refuse it whether or not record() does.",
       "evidence": "Every caller reads only named keys from what record() returns and then tests those keys' own types, and a parsed JSON body that is no plain object (null, a boolean, a number, a string or an array) has none of those keys, so each such value is refused by the key test after it exactly as record() refuses it here.",
       "issue": "#294"

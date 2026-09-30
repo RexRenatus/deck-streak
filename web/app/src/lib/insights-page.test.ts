@@ -107,6 +107,14 @@ describe('the insights screen', () => {
     expect(screen.getByRole('heading', { name: 'Dark fields' })).toBeTruthy();
   });
 
+  it('says the server is unavailable when the stored envelope holds no report', async () => {
+    insights.mockResolvedValue({ kind: 'ok', value: [LISTING] });
+    insight.mockResolvedValue({ kind: 'ok', value: envelope({ report: undefined }) });
+    render(Page);
+    await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('could not reach'));
+    expect(screen.getByRole('heading', { name: 'Dark fields' })).toBeTruthy();
+  });
+
   it('draws nothing for an instrument it has no view for, and links back to today', async () => {
     insights.mockResolvedValue({ kind: 'ok', value: [{ ...LISTING, id: 'other' }] });
     insight.mockResolvedValue({ kind: 'ok', value: envelope({ instrument: 'other' }) });
