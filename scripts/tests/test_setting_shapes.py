@@ -837,6 +837,7 @@ class TheGuardReadsOutOfLineTestModules(unittest.TestCase):
         '#[path="t.rs"]\n',
         '#[ path = "t.rs" ]\n',
         '#[path = r"t.rs"]\n',
+        '#[r#path = "t.rs"]\n',
         '#[cfg_attr(test, path = "t.rs")]\n',
         '#[cfg_attr(all(test, unix), path = "t.rs")]\n',
     )
@@ -894,6 +895,7 @@ class TheGuardReadsOutOfLineTestModules(unittest.TestCase):
         attributes = [f"cfg({p})" for p in every]
         attributes += [f"cfg_attr({p}, cfg({q}))" for p in negated for q in negated]
         attributes += [f"cfg_attr({p}, allow(dead_code))" for p in self.LEAVES]
+        attributes += ["cfg_attr(test, allow(dead_code), cfg(any()))"]
         runs = []
         for a in attributes:
             known = not self.UNKNOWN.search(a)
@@ -976,9 +978,11 @@ class TheGuardReadsOutOfLineTestModules(unittest.TestCase):
     OPENINGS = (
         ("", ""),
         ("\ufeff#![cfg(any())]\n", ""),
+        ("\ufeff#!/bin/tool\n#![cfg(any())]\n", ""),
         ("#!/bin/tool\n#![cfg(any())]\n", ""),
         ("#! [cfg(any())]\n", ""),
         ("#!/**/[cfg(any())]\n", ""),
+        ("/*** c */\n#![cfg(any())]\n", ""),
         ("", "#![cfg(not(test))]\n"),
         ("", "# ! [cfg(any())]\n"),
         ("", "//! d\n#![cfg(test)]\n"),
@@ -988,6 +992,7 @@ class TheGuardReadsOutOfLineTestModules(unittest.TestCase):
         "#[cfg(not(test))]\nmod a;\n",
         "#[cfg(test)]\nmod a;\n",
         "# [cfg(any())]\nmod a;\n",
+        "#[cfg(x)]\nmod a;\n",
     )
 
     def literals(self):
