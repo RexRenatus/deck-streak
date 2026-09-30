@@ -131,7 +131,8 @@ prints `examined 16 configured rule(s)` and asserts the count. Every begins-inst
 the definition of a study day, never derived from the code under test.
 
 Plants P28 to P31 were not red under the settle test alone, so generation and the resolution each
-gained a test on the same generated population (A15 and A16). Plant P24 and P25 keep the head's
+gained a test on the same generated population (A15 and A16). Plants P26 and P27 were already killed at the head by the studied tests of A12 (rows S04710 and
+S04711 own them), so they take no new row. Plants P24 and P25 keep the head's
 choice of day (the instant the pass runs at); they change only which rule reads it.
 
 ```text

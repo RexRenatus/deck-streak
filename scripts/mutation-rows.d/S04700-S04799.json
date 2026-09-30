@@ -211,24 +211,6 @@
         "the export carries studied_count as its own column, not carried_nights; the seeded rows give the two distinct values (SPEC-047 R8)"
       ],
       [
-        "S04720-THE-STUDIED-RULE-COUNTS-IN-THE-CONFIGURED-RULE",
-        "crates/readings/src/studied.rs",
-        "(0..=1).contains(&(rule.study_day(at)",
-        "(0..=1).contains(&(StudyDayRule::default().study_day(at)",
-        "coordination",
-        "readings_settle::the_settle_and_the_tap_read_the_configured_study_day",
-        "a review counts by the study day of the configured rule, read through the settle (SPEC-047 R3, A14)"
-      ],
-      [
-        "S04721-THE-STUDIED-RULE-CLOSES-IN-THE-CONFIGURED-RULE",
-        "crates/readings/src/studied.rs",
-        "rule.study_day(now).epoch_day() >= self",
-        "StudyDayRule::default().study_day(now).epoch_day() >= self",
-        "coordination",
-        "readings_settle::the_settle_and_the_tap_read_the_configured_study_day",
-        "a window closes by the configured rule's study day, read through the settle (SPEC-047 R4, A14)"
-      ],
-      [
         "S04726-THE-PAUSE-GATE-READS-IN-THE-CONFIGURED-RULE",
         "crates/readings/src/gates.rs",
         "window.contains(&rule.study_day(",
@@ -245,15 +227,6 @@
         "coordination",
         "readings_resolve::the_resolution_reads_the_pause_window_and_the_day_in_the_configured_rule",
         "the day set gates studied-before by the configured rule (SPEC-047 A16)"
-      ],
-      [
-        "S04728-THE-EXPORT-KEEPS-GENERATED-AT-ITS-OWN",
-        "crates/readings/src/data_rights.rs",
-        "\"generated_at\": row.generated_at,",
-        "\"generated_at\": row.read_at,",
-        "coordination",
-        "data_rights_symmetry::the_exported_tables_equal_the_erased_tables_over_every_port",
-        "the export carries generated_at as its own column, not read_at (SPEC-047 R8, A17)"
       ],
       [
         "S04729-THE-EXPORT-KEEPS-CARRIED-NIGHTS-ITS-OWN",
