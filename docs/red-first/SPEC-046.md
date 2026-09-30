@@ -194,3 +194,14 @@ DISCLOSURE, bodies changed after their green in fix round 7: A28's test now buil
 `class.parse()` for `class.to_owned()`. At eb537f24 its new body fails as A28's line above. The
 tests of SPEC-043's A9, A16 and A17 name the class by the type; at SPEC-043's red commits that type
 does not exist, so their new bodies do not compile there. Each fence line quotes the earlier body.
+
+DISCLOSURE, tests added after green in fix round 7 (not criteria): `crates/kernel/tests/gate_class.rs`
+was added at 228c9bf9, its `no_two_classes_share_a_name` was rewritten at 7e30d266 to count the
+distinct names, and `a_text_parses_only_to_the_class_it_names_exactly` was added at 0eb6026e. CI's
+mutation run at f0600777 missed the mutant `replace == with != in <impl std::str::FromStr for
+GateClass>::from_str` (`crates/kernel/src/gate_class.rs:84:40`): the parse was tested only in other
+packages, and a mutant is judged by its own package's tests. The tests pass on the code they were
+written against, so they have no red commit. With that mutant installed, two of the first three
+fail. The last test was written to kill a parse that accepts a non-empty prefix, a non-empty
+suffix or an undeclared alias of a declared name; with any of those installed, it fails and the
+other tests pass.
