@@ -179,3 +179,38 @@ A41: not red: the test pins a rule the conversion keeps, so it is green at the h
 A42: not red: the test pins a rule the code already held, so it is green at the head; the mutant that turns it red is named in this addendum
 A43: not red: the test pins a rule the code already held, so it is green at the head; the mutant that turns it red is named in this addendum
 ```
+
+## Addendum, 2026-09-30: the relight's order, the served pairs and the studied day (A44 to A49), A30's two sites and A33's due list
+
+- **A44 to A46.** The tests were committed at e146cbca with the head's order: the due days held in
+  memory and answered inside the per-day write. The cycle's take was reshaped into a read of the
+  days still due and a mark once the router decides a day, both still in memory, so the tests
+  compile and fail by assertion. The stored due list is the fix at fb0244ae.
+- **A33, the due list.** The store's three due-list functions are new at fb0244ae, so
+  `the_relight_due_list_holds_each_day_once_until_it_is_cleared` is green at its commit d6b1c572. Its
+  red is each function replaced by its constant answer, `put_relight_due` and `clear_relight_due` by
+  `Ok(())` and `relight_due` by `Ok(vec![])`: each left the streaks crate green before this test and
+  fails it now. A33's `not red` line above stands for it.
+- **A47 and A49.** Each is red by assertion at its test commit, 5ace2cc3 and 991bdb2c: a day that
+  already has a study review was served, and put in the view, as a break or a freeze (R30). The fix
+  is at 66bc4479.
+- **A48 not red.** The reader was right. Its red is `parseStreak` reading the language track's
+  freeze cap as its heat and its heat as its freeze cap, which passed every earlier web test and
+  fails `reads each served value of the streak into its own place, for every member`.
+- **A30, both sites.** The heat's `days >= *threshold` replaced by `days > *threshold` matches two
+  sites. The failure the addendum above quotes, at `population_rules.rs:412`, is `heat_tier`'s.
+  `heat_for`'s mutant passes A30 and fails A1, A2 and A3, at `streak_goldens.rs:147` for A3.
+
+```red-first
+A44: red at e146cbca: thread 'a_celebration_is_sent_only_for_a_grant_that_committed' (1163965) panicked at crates/coordination/tests/relight_order.rs:362:5:
+A44: green at fb0244ae
+A45: red at e146cbca: thread 'a_crash_between_the_commit_and_the_route_is_recovered_at_the_next_cycle' (1163966) panicked at crates/coordination/tests/relight_order.rs:398:5:
+A45: green at fb0244ae
+A46: red at e146cbca: thread 'every_failure_point_later_sync_and_crash_keeps_one_celebration_per_committed_grant' (1163967) panicked at crates/coordination/tests/relight_order.rs:414:5:
+A46: green at fb0244ae
+A47: red at 5ace2cc3: thread 'every_served_value_is_read_where_each_pair_of_served_values_differs' (1746089) panicked at crates/api/tests/streak_routes.rs:583:13:
+A47: green at 66bc4479
+A48: not red: the test pins a rule the reader already held, so it is green at the head; the mutant that turns it red is named in this addendum
+A49: red at 991bdb2c: thread 'a_studied_day_puts_nothing_at_stake_on_either_track' (1811440) panicked at crates/coordination/tests/streak_views.rs:252:21:
+A49: green at 66bc4479
+```
