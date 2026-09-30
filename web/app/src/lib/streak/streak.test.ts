@@ -253,6 +253,13 @@ describe('the governor body reading', () => {
     for (const bad of ['1', undefined, true, {}]) {
       expect(parseGovernor(governorBody({ relight_cards: bad })), `relight ${String(bad)}`).toBeNull();
     }
+    expect(parseGovernor(governorBody()), 'the same body with every field valid').toEqual({
+      verdict: 'armed',
+      strength: 0.75,
+      lapseSince: null,
+      why: null,
+      relightCards: null
+    });
   });
 
   it('refuses a body that is not an object, or that lacks any key', () => {
@@ -263,5 +270,12 @@ describe('the governor body reading', () => {
       delete body[key];
       expect(parseGovernor(body), key).toBeNull();
     }
+    expect(parseGovernor(governorBody()), 'the same body with every field valid').toEqual({
+      verdict: 'armed',
+      strength: 0.75,
+      lapseSince: null,
+      why: null,
+      relightCards: null
+    });
   });
 });
