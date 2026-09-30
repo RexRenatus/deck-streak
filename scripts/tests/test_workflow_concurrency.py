@@ -274,6 +274,220 @@ def second_workflow(on, group="publish-${{ github.ref }}", name="publish", queue
     )
 
 
+# The keys GitHub's workflow parser defines at a workflow's root, in a job that runs steps, in a job
+# that calls a workflow, and in a push or a release filter. Each of these mappings is strict in the
+# parser's schema (actions/languageservices, workflow-parser/src/workflow-v1.0.json), so the parser
+# refuses a workflow that holds any other key there, read with case (SPEC-190 R11).
+ROOT_KEYS = (
+    "name",
+    "run-name",
+    "description",
+    "on",
+    "permissions",
+    "env",
+    "defaults",
+    "concurrency",
+    "jobs",
+)
+JOB_KEYS = (
+    "name",
+    "needs",
+    "permissions",
+    "if",
+    "runs-on",
+    "snapshot",
+    "environment",
+    "concurrency",
+    "outputs",
+    "env",
+    "defaults",
+    "steps",
+    "timeout-minutes",
+    "cancel-timeout-minutes",
+    "strategy",
+    "continue-on-error",
+    "container",
+    "services",
+)
+CALL_KEYS = (
+    "name",
+    "uses",
+    "with",
+    "secrets",
+    "needs",
+    "if",
+    "permissions",
+    "concurrency",
+    "strategy",
+)
+FILTER_KEYS = {
+    "push": ("branches", "branches-ignore", "paths", "paths-ignore", "tags", "tags-ignore"),
+    "release": ("types",),
+}
+# The events GitHub's workflow parser defines under `on:`, a strict mapping in the same schema.
+ON_EVENTS = (
+    "branch_protection_rule",
+    "check_run",
+    "check_suite",
+    "create",
+    "delete",
+    "deployment",
+    "deployment_status",
+    "discussion",
+    "discussion_comment",
+    "fork",
+    "gollum",
+    "image_version",
+    "issue_comment",
+    "issues",
+    "label",
+    "merge_group",
+    "milestone",
+    "page_build",
+    "project",
+    "project_card",
+    "project_column",
+    "public",
+    "pull_request",
+    "pull_request_comment",
+    "pull_request_review",
+    "pull_request_review_comment",
+    "pull_request_target",
+    "push",
+    "registry_package",
+    "release",
+    "repository_dispatch",
+    "schedule",
+    "status",
+    "watch",
+    "workflow_call",
+    "workflow_dispatch",
+    "workflow_run",
+)
+# Every property of the github context, as GitHub's contexts page lists them: the population a
+# release's group or cancel-in-progress could read besides github.ref (SPEC-190 R11).
+GITHUB_PROPERTIES = (
+    "action",
+    "action_path",
+    "action_ref",
+    "action_repository",
+    "action_status",
+    "actor",
+    "actor_id",
+    "api_url",
+    "base_ref",
+    "env",
+    "event",
+    "event_name",
+    "event_path",
+    "graphql_url",
+    "head_ref",
+    "job",
+    "path",
+    "ref",
+    "ref_name",
+    "ref_protected",
+    "ref_type",
+    "repository",
+    "repository_id",
+    "repository_owner",
+    "repository_owner_id",
+    "retention_days",
+    "run_attempt",
+    "run_id",
+    "run_number",
+    "secret_source",
+    "server_url",
+    "sha",
+    "token",
+    "triggering_actor",
+    "workflow",
+    "workflow_ref",
+    "workflow_sha",
+    "workspace",
+)
+EXPRESSION = re.compile(r"\$\{\{(.*?)\}\}")
+WORKFLOW_FIRST = re.compile(r"\$\{\{\s*github\.workflow\s*\}\}")
+
+
+def blocks(name, content):
+    """Every concurrency block a workflow holds, its own and each job's, as (where, block), the key
+    read without case: GitHub reads a job's group in the one repository-wide namespace a workflow's
+    group is in, so a job's block can replace a release's waiting run as a workflow's can."""
+    found = [
+        (name, value) for key, value in content.items() if str(key).casefold() == "concurrency"
+    ]
+    for job_id, job in (content.get("jobs") or {}).items():
+        if isinstance(job, dict):
+            found += [
+                (f"{name} job {job_id}", value)
+                for key, value in job.items()
+                if str(key).casefold() == "concurrency"
+            ]
+    return found
+
+
+def group_of(block):
+    """A block's group: a mapping's `group`, or the block itself when it is a name alone."""
+    return str(block.get("group", "") if isinstance(block, dict) else block or "")
+
+
+def literal_prefix(name, content, group):
+    """The text every rendering of a group starts with, read without case, or None when a run can
+    choose it: a group that starts with an expression, or with `github.workflow` in a workflow another
+    workflow can call (a called workflow reads its caller's name there). A leading `github.workflow`
+    is otherwise the workflow's own name, or its file's path when it has none."""
+    lead, rest = "", group
+    first = WORKFLOW_FIRST.match(group)
+    if first:
+        if "workflow_call" in declared(content):
+            return None
+        lead, rest = workflow_name(name, content), group[first.end() :]
+    return (lead + rest.split("${{", 1)[0]).casefold() or None
+
+
+def undefined_keys(content):
+    """The keys a workflow holds at its root, in a job and in a push or release filter that GitHub's
+    parser does not define there, read with case as the parser reads them."""
+    found = [str(key) for key in content if key not in ROOT_KEYS]
+    for job_id, job in (content.get("jobs") or {}).items():
+        allowed = CALL_KEYS if isinstance(job, dict) and "uses" in job else JOB_KEYS
+        found += [
+            f"{job_id}.{key}"
+            for key in (job if isinstance(job, dict) else {})
+            if key not in allowed
+        ]
+    events = declared(content)
+    found += [f"on.{event}" for event in events if event not in ON_EVENTS]
+    for event, keys in FILTER_KEYS.items():
+        filters = events.get(event)
+        if isinstance(filters, dict):
+            found += [f"{event}.{key}" for key in filters if key not in keys]
+    return sorted(found)
+
+
+def closed_by_construction(name, content, others):
+    """The release class closed by construction, never by rendering a sample (SPEC-190 R11): every
+    key it holds is one GitHub's parser defines; its group reads `github.ref` and nothing else (a
+    leading `github.workflow` too, where no workflow can call it), so every run of one tag takes one
+    group whatever its event or its tag; its cancel-in-progress is `false` as written; and no other
+    block in any workflow file, a workflow's or a job's, starts with text its group's start can be,
+    so no other block renders as its group for any run of any tag."""
+    return []
+
+
+def other_block(on, key, value, where, name="publish"):
+    """A planted workflow with one block under `key`, at its root or in its job: `value` is a
+    mapping's text or a group's name."""
+    block = f"{key}:{value}"
+    root = block + "\n" if where == "the workflow" else ""
+    job = "".join(f"    {line}\n" for line in block.splitlines()) if where == "a job" else ""
+    return (
+        f"name: {name}\n\n{on}\npermissions:\n  contents: read\n\n{root}\njobs:\n  publish:\n"
+        f"    runs-on: ubuntu-24.04\n    timeout-minutes: 5\n{job}    steps:\n      - run: echo publish\n"
+    )
+
+
 def planted(old, new):
     """release.yml's text with one shape planted in place of the ADR-292 shape."""
     text = (WORKFLOWS / "release.yml").read_text(encoding="utf-8")
@@ -293,6 +507,7 @@ class EveryReleaseWorkflowQueuesEveryRun(unittest.TestCase):
         for name, content, text in judged:
             others = [(other, c) for other, c, _t in everything if other != name]
             problems = release_problems(content, text, others, name)
+            problems += closed_by_construction(name, content, others)
             found += [f"{name}: {problem}" for problem in problems]
         self.assertEqual(found, [])
 
@@ -472,6 +687,127 @@ class EveryReleaseWorkflowQueuesEveryRun(unittest.TestCase):
             n for n, content, _t in examined("workflows", read_all()) if releases_a_tag(content)
         ]
         self.assertEqual(names, ["release.yml"])
+
+    def test_the_release_class_is_closed_by_construction(self):
+        """SPEC-190 R11's population, generated, never listed: a release's group read through every
+        github property and every other context a block can read, in each operator form; each
+        cancellation; every other block, a workflow's or a job's, under each key spelling and form,
+        for each event a run takes, whose group can render as the release's; and every key GitHub's
+        parser defines, misspelt, at the root, in a job and in a filter. A group another workflow
+        spells with text of its own is admitted, so the rule refuses by construction, not by name."""
+        release = second_workflow(
+            "on:\n  push:\n    tags: [v1]\n",
+            "release-${{ github.ref }}",
+            "release",
+            "  queue: max\n",
+        )
+        good = read_workflow(release)
+        self.assertEqual(closed_by_construction("release.yml", good, []), [])
+        missed = []
+        contexts = [f"github.{p}" for p in GITHUB_PROPERTIES]
+        contexts += ["inputs.tag", "vars.GROUP", "env.GROUP", "needs.build.result", "matrix.tag"]
+        forms = (
+            "{0}",
+            "{0} || github.ref",
+            "github.ref == 'refs/tags/v2.0.0' && {0} || github.ref",
+            "format('{{0}}', {0})",
+        )
+        reads = [form.format(c) for c in contexts for form in forms]
+        reads = [r for r in reads if r not in ("github.ref", "github.workflow")]
+        for read in examined("groups a release reads besides github.ref", reads):
+            text = release.replace("release-${{ github.ref }}", f"release-${{{{ {read} }}}}", 1)
+            if not closed_by_construction("release.yml", read_workflow(text), []):
+                missed.append(f"a group reading {read}")
+        cancels = [
+            "true",
+            *(f"${{{{ {r} }}}}" for r in reads + ["github.ref == 'refs/tags/v2.0.0'"]),
+        ]
+        for cancel in examined("cancellations a release reads", cancels):
+            text = release.replace("cancel-in-progress: false", f"cancel-in-progress: {cancel}", 1)
+            if not closed_by_construction("release.yml", read_workflow(text), []):
+                missed.append(f"cancel-in-progress: {cancel}")
+        called = release.replace("tags: [v1]\n", "tags: [v1]\n  workflow_call:\n", 1).replace(
+            "release-${{ github.ref }}", "${{ github.workflow }}-${{ github.ref }}", 1
+        )
+        if not closed_by_construction("release.yml", read_workflow(called), []):
+            missed.append("a release another workflow can call reads github.workflow")
+        wf = "${{ github.workflow }}-${{ github.ref }}"
+        shares = [
+            ("publish", "release-${{ github.ref }}"),
+            ("Release", wf),
+            ("RELEASE", wf),
+            ("publish", "release-refs/tags/v2.0.0"),
+            ("publish", "RELEASE-refs/tags/${{ github.ref_name }}"),
+            ("publish", "${{ inputs.group }}"),
+            ("publish", "${{ vars.GROUP }}"),
+        ]
+        events = [*TAG_REF_EVENTS, "workflow_call", "schedule"]
+        keys = ("concurrency", "'concurrency'", '"concurrency"')
+        places = ("the workflow", "a job")
+        shapes = [
+            (f"on:\n  {event}:\n", key, place, name, value)
+            for name, group in shares
+            for event in events
+            for key in keys
+            for place in places
+            for value in (f"\n  group: {group}\n  cancel-in-progress: false", f" {group}")
+        ]
+        shapes += [
+            ("on:\n  workflow_call:\n", key, place, "publish", value)
+            for key in keys
+            for place in places
+            for value in (f"\n  group: {wf}\n  cancel-in-progress: false", f" {wf}")
+        ]
+        for on, key, place, name, value in examined(
+            "blocks that can render as a release's", shapes
+        ):
+            other = read_workflow(other_block(on, key, value, place, name))
+            if not closed_by_construction("release.yml", good, [("publish.yml", other)]):
+                missed.append(f"{place}'s {key}{value!r} under {on!r}, named {name}")
+        admitted = [
+            (f"on:\n  {event}:\n", key, place, value)
+            for event in events
+            for key in keys
+            for place in places
+            for group in ("publish-${{ github.ref }}", *((wf,) if event != "workflow_call" else ()))
+            for value in (f"\n  group: {group}\n  cancel-in-progress: false", f" {group}")
+        ]
+        for on, key, place, value in examined("blocks of text of their own", admitted):
+            other = read_workflow(other_block(on, key, value, place))
+            if closed_by_construction("release.yml", good, [("publish.yml", other)]):
+                missed.append(f"{place}'s {key}{value!r} under {on!r} is refused")
+        spelt = [
+            (where, key, variant)
+            for where, population in (
+                ("root", ROOT_KEYS),
+                ("on", ON_EVENTS),
+                ("job", sorted(set(JOB_KEYS) | set(CALL_KEYS))),
+                ("push", FILTER_KEYS["push"]),
+                ("release", FILTER_KEYS["release"]),
+            )
+            for key in population
+            for variant in (key.upper(), key.title(), key[:-1])
+            if variant not in population
+        ]
+        for where, key, variant in examined("keys GitHub's parser does not define there", spelt):
+            text = {
+                "root": lambda: release.replace("\njobs:\n", f"\n{variant}: x\njobs:\n", 1),
+                "on": lambda: release.replace("  push:\n", f"  {variant}:\n  push:\n", 1),
+                "job": lambda: release.replace(
+                    "  publish:\n", f"  publish:\n    {variant}: x\n", 1
+                ),
+                "push": lambda: release.replace("  push:\n", f"  push:\n    {variant}: [v1]\n", 1),
+                "release": lambda: release.replace(
+                    "tags: [v1]\n", f"tags: [v1]\n  release:\n    {variant}: [published]\n", 1
+                ),
+            }[where]()
+            try:
+                problems = closed_by_construction("release.yml", read_workflow(text), [])
+            except Unread:
+                continue
+            if not any("does not define there" in p for p in problems):
+                missed.append(f"{variant} for {where}.{key}")
+        self.assertEqual(missed, [])
 
 
 if __name__ == "__main__":
