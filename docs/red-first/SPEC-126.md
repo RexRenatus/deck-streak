@@ -202,3 +202,5 @@ A10: green at 5810a754
 A11: red at 1c4c0d45: AssertionError: 2 != 22 : {'refused': 2, 'crashed': 12, 'accepted': 0, 'other': 8}
 A11: green at 5810a754
 ```
+
+The same populations, judged in process with one end-to-end control per family, are red at 8a9295b7 by the same assertion, in prose so that A10 keeps its one red and one green line above: `AssertionError: 150 != 570 : {'refused': 150, 'crashed': 110, 'accepted': 310, 'other': 0}`; green at 473388e3.
