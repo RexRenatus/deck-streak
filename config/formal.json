@@ -1,0 +1,19 @@
+{
+  "k": 20,
+  "budgets": {
+    "tla_seconds": 300,
+    "lean_seconds": 600,
+    "entry_seconds": 300,
+    "entries": {}
+  },
+  "axioms": [
+    "propext",
+    "Classical.choice",
+    "Quot.sound"
+  ],
+  "owner_signers": "config/owner-allowed-signers",
+  "tlc_slot": {
+    "capacity": 1,
+    "wait_seconds": 1800
+  }
+}
