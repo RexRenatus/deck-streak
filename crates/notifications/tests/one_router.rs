@@ -2434,3 +2434,210 @@ fn the_policy_names_every_bot_call() {
         );
     }
 }
+
+/// The bot transport, where the Bot API's base URL is read: the only file that holds `api_url`.
+const TRANSPORT: &str = "crates/bot/src/transport.rs";
+
+/// The three places the transport may read its `api_url`, as (path, function, name): the two sends
+/// that build a multipart request the pinned client cannot make (`sendDocument` and `sendPhoto`),
+/// and the constructor that composes the base URL with the bot's token once.
+const API_URL_SITES: [(&str, &str, &str); 3] = [
+    (TRANSPORT, "Transport::send_document", "api_url"),
+    (TRANSPORT, "Transport::send_photo", "api_url"),
+    (TRANSPORT, "Transport::with_waits", "api_url"),
+];
+
+/// Each way to build a Bot API request URL from `api_url`, by name. `url_statement` writes each as
+/// a statement planted on a line of its own inside a function body.
+const URL_FORMS: [&str; 6] = ["format", "concat", "push", "helper", "constant", "inline"];
+
+/// The statement that builds the URL for `method` in the form `form`.
+fn url_statement(form: &str, method: &str) -> String {
+    match form {
+        "format" => format!(r#"let _u = format!("{{}}/{method}", self.bot.api_url);"#),
+        "concat" => {
+            format!(r#"let _u = format!("{{}}{{}}", self.bot.api_url, concat!("/", "{method}"));"#)
+        }
+        "push" => format!(
+            r#"let mut _u = self.bot.api_url.clone(); _u.push_str("/"); _u.push_str("{method}");"#
+        ),
+        "helper" => {
+            format!(r#"fn _url(bot: &Bot) -> String {{ format!("{{}}/{method}", bot.api_url) }}"#)
+        }
+        "constant" => format!(
+            r#"const _PATH: &str = "/{method}"; let _u = format!("{{}}{{}}", self.bot.api_url, _PATH);"#
+        ),
+        "inline" => format!(r#"let _u = format!("{{api_url}}/{method}");"#),
+        other => panic!("no such form {other}"),
+    }
+}
+
+/// `text` with `statement` planted on its own line just past the brace at `open`, and the line the
+/// text `api_url` is then on.
+fn planted_after(text: &str, open: usize, statement: &str) -> (String, usize) {
+    let mut planted = String::with_capacity(text.len() + statement.len() + 1);
+    planted.push_str(&text[..=open]);
+    planted.push('\n');
+    let at = planted.len()
+        + statement
+            .find("api_url")
+            .expect("a statement that names api_url");
+    planted.push_str(statement);
+    planted.push_str(&text[open + 1..]);
+    let line = line_of(&planted, at);
+    (planted, line)
+}
+
+/// The refusals of the transport `text` that name `api_url`, each as its line and what it says.
+fn api_url_refusals(text: &str) -> Vec<(usize, String)> {
+    census(&[(TRANSPORT.to_owned(), text.to_owned())])
+        .refusals
+        .into_iter()
+        .filter(|(_, _, what)| what.contains("api_url"))
+        .map(|(_, line, what)| (line, what))
+        .collect()
+}
+
+/// Every function of `text` that has a body, as its name (as the census names it) and the byte of
+/// its opening brace.
+fn functions_of(text: &str) -> Vec<(String, usize)> {
+    let (_, structure) = rust_code(text);
+    identifiers(&structure, "fn")
+        .filter(|&start| {
+            structure[start + 2..]
+                .trim_start()
+                .starts_with(|c: char| c.is_alphabetic() || c == '_')
+        })
+        .filter_map(|start| body(&structure, start).map(|(open, _)| open))
+        .map(|open| (enclosing(&structure, open + 1), open))
+        .collect()
+}
+
+/// Every Bot API method the transport's own code names, in either spelling, as the pinned client's
+/// spelling of it: read from the source, not listed.
+fn methods_the_transport_names(text: &str) -> Vec<&'static str> {
+    let (code, _) = rust_code(text);
+    methods()
+        .filter(|method| {
+            [(*method).to_owned(), snake(method)]
+                .iter()
+                .any(|spelling| identifiers(&code, spelling).next().is_some())
+        })
+        .collect()
+}
+
+// One test holds both halves of the class: the accepted control, and the refused population.
+#[allow(clippy::too_many_lines)]
+#[test]
+fn a_hand_built_send_url_is_refused_wherever_the_transport_builds_it() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .ancestors()
+        .nth(2)
+        .expect("the tree's root");
+    let real = fs::read_to_string(root.join(TRANSPORT)).expect("the bot transport");
+    let sites: Vec<&str> = API_URL_SITES
+        .iter()
+        .map(|&(_, function, _)| function)
+        .collect();
+
+    // The controls first: the transport as shipped, and every form that is not a helper planted
+    // inside a named site with that site's own method, are accepted. A helper is its own function,
+    // so it is a place outside the named sites even when it is written inside one.
+    assert_eq!(
+        api_url_refusals(&real),
+        [],
+        "the transport as shipped reads api_url only at its named sites"
+    );
+    let functions = functions_of(&real);
+    let mut controls = 0_usize;
+    for (site, method) in [
+        ("Transport::send_document", "sendDocument"),
+        ("Transport::send_photo", "sendPhoto"),
+        ("Transport::with_waits", "sendMessage"),
+    ] {
+        let (_, open) = functions
+            .iter()
+            .find(|(function, _)| function == site)
+            .unwrap_or_else(|| panic!("the transport defines {site}"));
+        for form in URL_FORMS.iter().filter(|&&form| form != "helper") {
+            let (text, _) = planted_after(&real, *open, &url_statement(form, method));
+            let found = api_url_refusals(&text);
+            assert!(
+                found.is_empty(),
+                "{form} form of {method} inside {site} is a named site's own, yet refused: {found:?}"
+            );
+            controls += 1;
+        }
+    }
+    println!("examined {controls} named-site controls, each accepted");
+
+    // The population: every method the transport names, by every form, planted in every function
+    // of the transport outside the named sites.
+    let names = methods_the_transport_names(&real);
+    let places: Vec<&(String, usize)> = functions
+        .iter()
+        .filter(|(function, _)| !sites.contains(&function.as_str()))
+        .collect();
+    let mut members = Vec::new();
+    for method in &names {
+        for form in URL_FORMS {
+            for place in &places {
+                members.push((*method, form, place));
+            }
+        }
+    }
+    assert_eq!(
+        members.len(),
+        names.len() * URL_FORMS.len() * places.len(),
+        "the population is the product of its three axes"
+    );
+    assert!(
+        names.len() >= 5 && places.len() >= 20,
+        "the transport names {} methods and has {} places outside its named sites",
+        names.len(),
+        places.len()
+    );
+    let workers = std::thread::available_parallelism().map_or(4, std::num::NonZero::get);
+    let chunk = members.len().div_ceil(workers);
+    let missed: Vec<String> = std::thread::scope(|scope| {
+        let handles: Vec<_> = members
+            .chunks(chunk)
+            .map(|part| {
+                let real = &real;
+                scope.spawn(move || {
+                    let mut missed = Vec::new();
+                    for &(method, form, place) in part {
+                        let (function, open) = place;
+                        let (text, line) =
+                            planted_after(real, *open, &url_statement(form, method));
+                        let found = api_url_refusals(&text);
+                        if !found.iter().any(|(at, _)| *at == line) {
+                            missed.push(format!(
+                                "{form} form of {method} in {function} at line {line} is not refused"
+                            ));
+                        }
+                    }
+                    missed
+                })
+            })
+            .collect();
+        handles
+            .into_iter()
+            .flat_map(|handle| handle.join().expect("a worker"))
+            .collect()
+    });
+    println!(
+        "examined {} hand-built send URLs ({} methods x {} forms x {} places)",
+        members.len(),
+        names.len(),
+        URL_FORMS.len(),
+        places.len()
+    );
+    assert!(
+        missed.is_empty(),
+        "{} of {} hand-built send URLs are not refused, e.g. {}",
+        missed.len(),
+        members.len(),
+        missed.first().map_or("", String::as_str)
+    );
+}
