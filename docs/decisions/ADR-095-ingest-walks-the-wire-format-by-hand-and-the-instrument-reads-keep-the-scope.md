@@ -74,3 +74,30 @@ scoped counts; SPEC-099's scoped Can-Do read.
 ## More Information
 
 ADR-012; SPEC-023; SPEC-094 to SPEC-099.
+
+## Amendment 2026-09-29: the wire walk refuses a pass that does not advance
+
+The walk loop took its next position from a callee. A mutant, or a future edit, that let a pass
+return the position it started from would push one field per pass without bound. That is an
+allocation problem, not a time one, and the per-run timeout of the mutation lane does not protect a
+small runner from it. Measured with a 240 s timeout on `varint -> Ok((0, 0))`: 247 s of test time
+and a peak resident size of about 116 GB.
+
+Decision: `walk(data)` stays the public entry and calls `walk_with(data, step)`, which refuses a
+pass that does not strictly advance with the named refusal `NO_PROGRESS` before keeping its field.
+The guard's own mutants are killed by `crates/ingest/tests/wire_progress.rs`, three readers (one
+that stays, one that steps back, one that advances by one), so no equivalent record is added and
+the closed campaign row for `deck-streak-ingest` keeps its count.
+
+Chosen against:
+
+- A workflow `--exclude-re`, a timeout change or a memory change: each weakens the lane and needs
+  the owner's signed ruling.
+- A bound on the field count, with equivalent records: it is untested unreachable code, and the
+  campaign row for the crate is closed.
+- Relying on the runner's timeout: it does not protect a small runner from memory.
+
+Class sweep of the loops in `crates/ingest/src`: `wire.rs` `varint` (each pass takes one byte
+from `data` and ends at its end), `wire.rs` `walk_with` (guarded), `sync.rs` `attempts` (a counter
+that returns at `schedule.attempts`) and `sync.rs` `reopening` (a counter bounded by
+`schedule.open_retries`). Four loops, one guarded, three bounded by their own counter or input.

@@ -101,3 +101,9 @@ Test edit disclosed: 29dfd0e1 extends `instruments_cycle::a_cycle_without_instru
 with a closing presence assertion (the same deployment, run with instruments, stores the alpha
 report for the study day), because the tdd probe refuses a test whose only assertions are absences.
 No expected value of any earlier assertion changed.
+
+Wire walk progress guard (2026-09-29, ADR-095 amendment): mutants of `walk` that stop the position
+advancing pushed fields without bound. `walk_with` now refuses a pass that does not strictly
+advance, and `crates/ingest/tests/wire_progress.rs` (a reader that stays, one that steps back, one
+that advances by one, one that fails, and the real walk on two fields) kills the guard's own
+mutants. It adds no equivalent record; the ingest campaign row keeps its count.
