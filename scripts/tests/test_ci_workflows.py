@@ -871,10 +871,151 @@ class TheReaderReadsOnlyItsNamedForms(unittest.TestCase):
         members.append(
             ("an empty item", "k:\n  - \n", ("refused", [f"line 2: an empty value {unnamed}"]))
         )
+        # A line ends at a line feed, and a carriage return just before one is dropped with it
+        # (SPEC-190 R12 part 1). Every other line-break character, and a byte-order mark, is
+        # refused by its name and by the line GitHub's parser numbers, wherever it stands.
+        characters = (
+            ("\r", "a carriage return that does not end a line"),
+            ("\x0b", "a vertical tab"),
+            ("\x0c", "a form feed"),
+            ("\x1c", "the control character U+001C"),
+            ("\x1d", "the control character U+001D"),
+            ("\x1e", "the control character U+001E"),
+            ("\x85", "the next-line character U+0085"),
+            ("\u2028", "the line separator U+2028"),
+            ("\u2029", "the paragraph separator U+2029"),
+            ("\ufeff", "a byte-order mark"),
+        )
+        suffix = " is not a character the reader reads"
+        named_pattern = (
+            r"line (\d+): ("
+            + "|".join(re.escape(phrase) for _char, phrase in characters)
+            + ")"
+            + re.escape(suffix)
+        )
+        places = (
+            ("at the end of a value", "k: x{c}j: y\n"),
+            ("in a plain value", "k: x{c}y\n"),
+            ("in a key", "k{c}j: x\n"),
+            ("first in a file", "{c}k: x\n"),
+            ("alone in a line", "k: x\n{c} \nj: y\n"),
+            ("alone in an indented line", "k:\n  {c} \n  j: x\n"),
+            ("in a comment line", "# a{c}b\nk: x\n"),
+            ("in a comment after a value", "k: x # a{c}j: y\n"),
+            ("in a single-quoted value", "k: 'x{c}y'\n"),
+            ("in a double-quoted value", 'k: "x{c}y"\n'),
+            ("in a flow list", "k: [x{c}y]\n"),
+            ("in a sequence item", "k:\n  - x{c}y\n"),
+            ("in a block scalar's text", "k: |\n  x{c}y\n"),
+            ("in a block scalar's text under |-", "k: |-\n  x\n  y{c}z\n  w\n"),
+            ("in a comment after a block scalar", "k: |\n  x\n# a{c}b\n"),
+            ("before a carriage return and a line feed", "k: x{c}\r\nj: y\n"),
+            ("twice in a line", "k: x{c}{c}y\n"),
+            ("at the end of a file", "k: x{c}"),
+            ("after the last line", "k: x\n{c}"),
+            ("after a line that ends CRLF", "k: x\r\n{c}j: y\r\n"),
+            ("before a line feed", "k: x{c}\nj: y\n"),
+        )
+        for char, phrase in characters:
+            for place, template in places:
+                if char == "\r" and "{c}\n" in template:
+                    continue  # a carriage return before a line feed ends a line with it
+                text = template.replace("{c}", char)
+                row = text[: text.index(char)].count("\n") + 1
+                members.append((f"{phrase} {place}", text, ("named", [(row, phrase)])))
+        for label, text, value in (
+            ("CRLF lines", "k: x\r\nj: y\r\n", {"k": "x", "j": "y"}),
+            ("LF then CRLF lines", "k: x\nj: y\r\n", {"k": "x", "j": "y"}),
+            ("CRLF then LF lines", "k: x\r\nj: y\n", {"k": "x", "j": "y"}),
+            ("a CRLF blank line", "k: x\r\n\r\nj: y\r\n", {"k": "x", "j": "y"}),
+            ("CRLF block lines", "k: |\r\n  x\r\n  y\r\n", {"k": Quoted("x\ny\n")}),
+            ("a CRLF inside a block", "k: |\n  x\r\n  y\n", {"k": Quoted("x\ny\n")}),
+        ):
+            members.append((f"control: {label}", text, ("read", value)))
+        # A tab in any line's indentation is refused, a comment line and a blank line outside a
+        # block scalar's text included; a tab past the indentation, in a block's text or a comment's
+        # text, is text and is read. A tab after a sequence's dash is refused too.
+        tab_refusal = "a tab in the indentation, which YAML refuses"
+        for run in ("\t", "\t\t", " \t", "\t "):
+            for body, what in (("# c", "a comment line"), ("", "a blank line")):
+                line = run + body
+                for place, template, row in (
+                    ("after a value", "k: x\n{t}\nj: y\n", 2),
+                    ("first in a file", "{t}\nk: x\n", 1),
+                    ("last in a file", "k: x\n{t}\n", 2),
+                    ("in a file of that line alone", "{t}\n", 1),
+                    ("between a key and its entries", "k:\n{t}\n  j: x\n", 2),
+                    ("after a nested mapping", "k:\n  j: x\n{t}\n  i: y\n", 3),
+                    ("inside a nested mapping", "k:\n  j: x\n  {t}\n  i: y\n", 3),
+                    ("after a sequence", "k:\n  - x\n{t}\n  - y\n", 3),
+                    ("inside a sequence", "k:\n  - x\n  {t}\n  - y\n", 3),
+                ):
+                    members.append(
+                        (
+                            f"{what} {run!r} {place}",
+                            template.replace("{t}", line),
+                            ("refused", [f"line {row}: {tab_refusal}"]),
+                        )
+                    )
+        for run in ("\t", "\t\t"):
+            for header in ("|", "|-"):
+                for place, template, row in (
+                    ("after a block scalar's text", "k: {h}\n  x\n{t}# c\nj: y\n", 3),
+                    ("at a block scalar's first line", "k: {h}\n{t}# c\nj: y\n", 2),
+                    ("after a nested block scalar", "a:\n  k: {h}\n    x\n{t}# c\n  j: y\n", 4),
+                    (
+                        "after a block scalar of a sequence item",
+                        "s:\n  - run: {h}\n      x\n{t}# c\n  - y\n",
+                        4,
+                    ),
+                ):
+                    members.append(
+                        (
+                            f"a comment line {run!r} {place} under {header}",
+                            template.replace("{h}", header).replace("{t}", run),
+                            ("refused", [f"line {row}: {tab_refusal}"]),
+                        )
+                    )
+        for label, text, value in (
+            ("a tab in a block's text past its width", "k: |\n  \tx\n", {"k": Quoted("\tx\n")}),
+            ("a tab inside a block's text", "k: |\n  x\ty\n", {"k": Quoted("x\ty\n")}),
+            ("a tab in a comment line's text", "k: x\n# a\tb\n", {"k": "x"}),
+            ("a tab in an indented comment's text", "k:\n  # a\tb\n  j: x\n", {"k": {"j": "x"}}),
+        ):
+            members.append((f"control: {label}", text, ("read", value)))
+        for label, text, expected in (
+            ("a tab after a dash", "k:\n  -\tx\n", ("unplaced", "line 2 is not a mapping entry")),
+            ("a tab after a top dash", "-\tx\n", ("unplaced", "line 1 is not a mapping entry")),
+            (
+                "a tab after a dash, empty",
+                "k:\n  -\t\n  - y\n",
+                ("unplaced", "line 2 is not a mapping entry"),
+            ),
+            (
+                "a tab after a dash, a mapping",
+                "k:\n  -\tj: v\n",
+                ("refused", ["line 2: a key that is not a plain name is not read"]),
+            ),
+        ):
+            members.append((label, text, expected))
+
+        def named(text):
+            """The refusals that name a line-break character or a byte-order mark, however the
+            reader raised them, as (line, name)."""
+            try:
+                read_workflow(text)
+            except AssertionError as why:
+                said = "; ".join(why.refused) if isinstance(why, Unread) else str(why)
+                return ("named", [(int(n), p) for n, p in re.findall(named_pattern, said)])
+            return ("read", [])
+
+        def judged(text, expected):
+            return named(text) if expected[0] == "named" else outcome(text)
+
         wrong = [
-            (label, outcome(text), expected)
+            (label, judged(text, expected), expected)
             for label, text, expected in examined("forms the reader meets", members)
-            if outcome(text) != expected
+            if judged(text, expected) != expected
         ]
         self.assertGreater(len(members), 2000, "the population of named forms shrank")
         self.assertEqual(wrong, [])

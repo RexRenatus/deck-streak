@@ -1546,7 +1546,7 @@ class EveryReleaseWorkflowQueuesEveryRun(unittest.TestCase):
                 "tabs",
                 "a tab-indented comment line",
                 swap("\njobs:\n", "\n\t# the jobs\njobs:\n"),
-                False,
+                True,
             ),
             (
                 "tabs",
@@ -1964,10 +1964,97 @@ class EveryReleaseWorkflowQueuesEveryRun(unittest.TestCase):
                     planted = text.replace("tags: [v1]", f"tags: {flow}", 1)
                     label = f"{home} tags {flow}"
                     members.append(("grammar", label, dict(beside, **{home: planted}), True))
+        # A line ends at a line feed, and a carriage return just before one is dropped with it
+        # (SPEC-190 R12 part 1). Every other line-break character and a byte-order mark is refused
+        # by its name wherever it stands in the release workflow, and a tab in the indentation of
+        # a comment line or a blank line is refused too.
+        characters = (
+            ("\r", "a carriage return that does not end a line"),
+            ("\x0b", "a vertical tab"),
+            ("\x0c", "a form feed"),
+            ("\x1c", "the control character U+001C"),
+            ("\x1d", "the control character U+001D"),
+            ("\x1e", "the control character U+001E"),
+            ("\x85", "the next-line character U+0085"),
+            ("\u2028", "the line separator U+2028"),
+            ("\u2029", "the paragraph separator U+2029"),
+            ("\ufeff", "a byte-order mark"),
+        )
+        named = {}
+        rows = release.splitlines(keepends=True)
+        for at, row in enumerate(rows):
+            body, after = row.rstrip("\n"), "".join(rows[at + 1 :])
+            for char, phrase in characters:
+                ends = char + "\r\n" if char == "\r" else char + "\n"
+                plants = {
+                    f"{phrase} for line {at + 1}'s end": body + char,
+                    f"{phrase} before line {at + 1}'s end": body + ends,
+                }
+                if char == "\r" and after.startswith("\n"):
+                    del plants[f"{phrase} for line {at + 1}'s end"]
+                for label, end in plants.items():
+                    text = "".join(rows[:at]) + end + after
+                    members.append(("line ends", label, {"release.yml": text}, True))
+                    named[label] = phrase
+            for run in ("\t", "\t\t", " \t"):
+                text = "".join(rows[: at + 1]) + run + "# c\n" + after
+                label = f"a comment line {run!r} after line {at + 1}"
+                members.append(("tabs", label, {"release.yml": text}, True))
+        members.append(("line ends", "as it is", {"release.yml": release}, False))
+        for label, text in (
+            ("CRLF throughout", release.replace("\n", "\r\n")),
+            (
+                "a CRLF inside a block",
+                swap("- run: echo publish\n", "- run: |\r\n          echo\r\n"),
+            ),
+        ):
+            members.append(("line ends", label, {"release.yml": text}, False))
+        for label, text in (
+            (
+                "a carriage return after a value's text",
+                swap("  queue: max\n", "  queue: max # a\r  queue: max\n"),
+            ),
+            (
+                "a carriage return after a comment's text",
+                swap(cancel, "  cancel-in-progress: false # the queue below\r  queue: max\n"),
+            ),
+            (
+                "a carriage return after the group's comment",
+                swap(
+                    "  group: release-${{ github.ref }}\n",
+                    "  group: release-${{ github.ref }} # a\r  queue: max\n",
+                ),
+            ),
+            (
+                "a carriage return after the queue's text",
+                swap("  queue: max\n", "  queue: max # waits\r  cancel-in-progress: false\n"),
+            ),
+            (
+                "a carriage return inside a comment above the block",
+                swap("concurrency:\n", "# a\rconcurrency:\r"),
+            ),
+        ):
+            members.append(("line ends", label, {"release.yml": text}, True))
+            named[label] = "a carriage return that does not end a line"
+        members.append(
+            (
+                "tabs",
+                "a comment line after a block's text",
+                {
+                    "release.yml": swap(
+                        "- run: echo publish\n",
+                        "- run: |\n          echo one\n\t# end of the block\n",
+                    )
+                },
+                True,
+            )
+        )
         judged = examined("workflow sets GitHub parses", members)
         wrong = []
         for axis, label, files, harmful in judged:
             problems = release_class_problems(files)
+            if label in named and named[label] not in " ".join(problems):
+                wrong.append(f"{axis}: {label} is not refused by its name: {problems[:1]}")
             if harmful and not problems:
                 wrong.append(f"{axis}: {label} is accepted")
             if not harmful and problems:
