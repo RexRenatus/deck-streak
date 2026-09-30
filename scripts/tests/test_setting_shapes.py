@@ -331,6 +331,7 @@ class TheGuardJudgesAPlantedTree(unittest.TestCase):
         (root / "crates" / "demo" / "tests").mkdir()
         (root / "scripts" / "mutation-rows.d").mkdir(parents=True)
         (root / "crates" / "demo" / "src" / "depth.rs").write_text(IMPL_TEXT, encoding="utf-8")
+        (root / "crates" / "demo" / "src" / "lib.rs").write_text("mod depth;\n", encoding="utf-8")
         if test_text is not None:
             (root / "crates" / "demo" / "tests" / "depth.rs").write_text(
                 test_text, encoding="utf-8"
@@ -354,6 +355,7 @@ class TheGuardJudgesAPlantedTree(unittest.TestCase):
         pad = IMPL_TEXT.index('"a whole depth"') - len(module) - len("const Y: &str = ")
         module += " " * pad + 'const Y: &str = "a whole depth";\n}\n'
         (twin / "crates" / "twin" / "src").mkdir(parents=True)
+        (twin / "crates" / "twin" / "src" / "lib.rs").write_text("mod depth;\n", encoding="utf-8")
         (twin / "crates" / "twin" / "src" / "depth.rs").write_text(
             module + IMPL_TEXT.replace("Depth", "Twin"), encoding="utf-8"
         )
@@ -487,6 +489,9 @@ class TheGuardReadsRustSource(unittest.TestCase):
         self.assertEqual(unpinned(hashed), [])
         byte = self.tree('let (b, shape) = (br##"a"# // " // "##, "a whole depth");')
         self.assertEqual(unpinned(byte), [])
+        for literal in ('c"a \\" // /*"', 'cr"a // /*"', 'cr#"a" // /* "#', 'cr##"a"# // /* "##'):
+            c = self.tree(f'let (c, shape) = ({literal}, "a whole depth");')
+            self.assertEqual(unpinned(c), [], literal)
 
     def test_a_shape_only_a_block_comment_spells_is_refused(self):
         root = self.tree('/* "a whole depth" */\nlet shape = Depth::SHAPE;')
@@ -529,6 +534,8 @@ class TheGuardReadsOutOfLineTestModules(unittest.TestCase):
         src = root / "crates" / "demo" / "src"
         if own != "depth.rs":
             (src / "depth.rs").unlink()
+            stem = Path(own).parts[0].removesuffix(".rs")
+            (src / "lib.rs").write_text(f"mod {stem};\n", encoding="utf-8")
         (src / own).parent.mkdir(parents=True, exist_ok=True)
         (src / own).write_text(text + declaration, encoding="utf-8")
         for name, body in files:
@@ -580,6 +587,9 @@ class TheGuardReadsOutOfLineTestModules(unittest.TestCase):
             "mod inner {\n    #[cfg(test)]\n    mod tests;\n}\n",
             "#[allow(dead_code)]\nmod tests;\n",
             'const D: &str = "#[cfg(test)] mod tests;";\n',
+            'const D: &str = "; #[cfg(test)] mod tests;";\n',
+            'macro_rules! m {\n    ($($t:tt)*) => {};\n}\nm!(a; "#[cfg(test)] mod tests;");\n',
+            'macro_rules! m {\n    ($($t:tt)*) => {};\n}\nm!{a; r#"#[cfg(test)] mod tests;"#}\n',
         ):
             root = self.declared(declaration, elsewhere)
             self.assertEqual(len(implementations(root)), 1)
@@ -648,6 +658,7 @@ class TheGuardReadsOutOfLineTestModules(unittest.TestCase):
 
         def add(case, files, own, decided, root=None):
             files = {**files, own: files[own] + probe("own")}
+            files = {**files, root or own: files[root or own] + probe("root")}
             files = {
                 path: text.replace("PROBE ", f"PROBE {len(found)} ") for path, text in files.items()
             }
@@ -698,13 +709,142 @@ class TheGuardReadsOutOfLineTestModules(unittest.TestCase):
                 for misplaced in (None, *stale):
                     files = {**dict(extra), own: f"{gate}{attribute}mod tests;\n"}
                     files.update({place: probe(place) for place in (chosen, misplaced) if place})
-                    decided = not attribute and misplaced is None
+                    decided = not attribute and misplaced is None and root == own
                     add(f"{own} {attribute!r} stale={misplaced}", files, own, decided, root)
+        every = list(itertools.product(("lib.rs", "a.rs"), ("ool", "inline"), (0, 1)))
+        for outer, inner, pre, decided, crossed in self.lexer_runs():
+            for kind, form, crlf in every if crossed else (every[0], every[-1]):
+                opened = pre + outer + "mod tests"
+                lib = {"a.rs": "mod a;\n"}.get(kind, "")
+                files = {"lib.rs": lib, "a.rs": ""} if kind == "a.rs" else {"lib.rs": ""}
+                folder = "a/" if kind == "a.rs" else ""
+                if form == "ool":
+                    files[kind] += opened + ";\n"
+                    files[f"{folder}tests.rs"] = inner + probe(f"{folder}tests.rs")
+                else:
+                    files[kind] += f"{opened} {{\n{inner}{probe('inline')}}}\n"
+                    files[f"{folder}tests.rs"] = probe(f"{folder}tests.rs")
+                if crlf:
+                    files = {path: text.replace("\n", "\r\n") for path, text in files.items()}
+                add(
+                    f"{kind} {form} crlf={crlf} {opened!r} {inner!r}",
+                    files,
+                    kind,
+                    decided,
+                    "lib.rs",
+                )
+        for opening, lib in itertools.product(self.OPENINGS, self.CHAINS):
+            files = {"lib.rs": lib, "a.rs": f"{opening[1]}{gate}mod tests;\n"}
+            files["a/tests.rs"] = opening[0] + probe("a/tests.rs")
+            add(f"a.rs {opening!r} {lib!r}", files, "a.rs", True, "lib.rs")
+        for body in (";\n", f" {{\n{probe('inline')}}}\n"):
+            opened = "#![cfg(test)]\n#[cfg(any(test, x))]\nmod tests"
+            files = {"lib.rs": "mod a;\n", "a.rs": opened + body, "a/tests.rs": probe("a/tests.rs")}
+            add(f"a.rs {opened + body!r}", files, "a.rs", True, "lib.rs")
+        for sep in self.SEPARATORS:
+            split = f"#{sep}[{sep}cfg(test){sep}]\n"
+            add(
+                f"lib.rs {split!r}",
+                {"lib.rs": split + "mod tests;\n", "tests.rs": probe("tests.rs")},
+                "lib.rs",
+                True,
+            )
+        return found
+
+    SEPARATORS = (" ", "\n", "\t", "\r", "\x0c", "\u2028", "/**/", "/* a /* b */ c */", "// c\n")
+    OPENINGS = (
+        ("", ""),
+        ("\ufeff#![cfg(any())]\n", ""),
+        ("#!/bin/tool\n#![cfg(any())]\n", ""),
+        ("#! [cfg(any())]\n", ""),
+        ("#!/**/[cfg(any())]\n", ""),
+        ("", "#![cfg(not(test))]\n"),
+        ("", "# ! [cfg(any())]\n"),
+        ("", "//! d\n#![cfg(test)]\n"),
+    )
+    CHAINS = (
+        "mod a;\n",
+        "#[cfg(not(test))]\nmod a;\n",
+        "#[cfg(test)]\nmod a;\n",
+        "# [cfg(any())]\nmod a;\n",
+    )
+
+    def literals(self):
+        """Every literal form of the Reference with each prefix and 0 to 3 hashes, holding what a
+        reader could take for a quote, an escape, a comment or a brace, and the text after it that
+        closes a misreading: `#[cfg(any())]` hides behind it only when the literal is misread."""
+        found = []
+        for prefix in ("", "b", "c"):
+            for content in ("\\\\", '\\"', "*/", "}"):
+                found.append((f'{prefix}"{content}"', '"'))
+        for prefix, hashes in itertools.product(("r", "br", "cr"), range(4)):
+            fence = "#" * hashes
+            for content in ("\\", *(('a"b',) if hashes else ()), "*/", "}"):
+                found.append((f'{prefix}{fence}"{content}"{fence}', '"' + fence))
+        return found + [("'\"'", "'"), ("'\\''", "'"), ("b'\"'", "'")]
+
+    def lexer_runs(self):
+        """(outer run, inner run, text before the run, decided, crossed), drawn from the Reference's
+        token grammar: whitespace and comments at every place between an attribute's `#`, `!` and
+        `[`, doc comments of each kind among the attributes, literals of every prefix before the
+        run, macro token trees of each delimiter, and each spelling of `cfg` the guard does not
+        read. A crossed run is planted in every module kind, form and line ending; the others in
+        two plantings that between them take each value of each."""
+        gate, found = "#[cfg(test)]\n", []
+        for sep, mask in itertools.product(self.SEPARATORS, ({1}, {2}, {3}, {1, 2, 3, 4})):
+            one, two, three, four = (sep if i in mask else "" for i in (1, 2, 3, 4))
+            for predicate in ("any()", "not(test)"):
+                found.append((gate, f"#{one}!{two}[{three}cfg({predicate}){four}]\n", "", True, 1))
+                second = f"#{one}[{three}cfg({predicate}){four}]\n"
+                found += [(gate + second, "", "", True, 1), (second + gate, "", "", True, 1)]
+        macros = "macro_rules! m {\n    ($($t:tt)*) => {};\n}\n"
+        for literal, close in self.literals():
+            for holder in (
+                "const _: () = {{ let _ = {}; }};\n",
+                "m!({});\n",
+                "m![{}];\n",
+                "m!{{{}}}\n",
+            ):
+                pre = macros + holder.format(literal)
+                found.append((f"#[cfg(any())] // {close};\n{gate}", "", pre, True, 0))
+                found.append((gate, "", pre, True, 0))
+        for doc in ("/// d\n", '/** " */\n', "//// d\n", "/***/\n", '/* /* " */ */\n', '// "\n'):
+            found += [
+                (doc + gate + "#[cfg(any())]\n", "", "", True, 1),
+                (gate + doc, "", "", True, 1),
+            ]
+        for doc in ("//! d\n", '/*! " */\n', "/* /* */ #![cfg(any())] */\n"):
+            found += [(gate, doc + "#![cfg(any())]\n", "", True, 1), (gate, doc, "", True, 1)]
+        for call in (
+            'm!(a; "#[cfg(test)] mod tests;");\n',
+            'm![a; "; #[cfg(test)] mod tests;"];\n',
+            "m!{ #[cfg(test)] mod tests; }\n",
+            'const D: &str = "; #[cfg(test)] mod tests;";\n',
+        ):
+            found += [("", "", macros + call, True, 0), (gate, "", macros + call, True, 0)]
+        for value in ('"slow"', 'r"slow"', 'r#"slow"#'):
+            found += [
+                (f"#[cfg_attr(feature = {value}, allow(dead_code))]\n{gate}", "", "", True, 0),
+                (gate, f"#![cfg(any(test, feature = {value}))]\n", "", True, 0),
+            ]
+        for literal in ("true", "false", "all(test, true)", "any(test, false)", "not(false)"):
+            found += [
+                (f"#[cfg({literal})]\n", "", "", True, 0),
+                (gate, f"#![cfg({literal})]\n", "", True, 0),
+            ]
+        for spelling in ("cfg(r#test)", "r#cfg(any())", "core::prelude::v1::cfg(any())"):
+            found += [
+                (gate + f"#[{spelling}]\n", "", "", False, 0),
+                (f"#[{spelling}]\n", "", "", False, 0),
+            ]
         return found
 
     def compiled(self, src, count):
         """What rustc compiles of each member under every setting of `test`, `x` and a feature:
-        (compiled in every run with `--cfg test`, compiled in any run without, members in error)."""
+        (compiled in every run with `--cfg test`, compiled in any run without, members in error).
+        The reading fails closed: each run must exit 1 and count exactly the errors it printed, and
+        each member not in error must have its root's probe fire in every run, so a rustc that
+        compiles nothing, or stops early, is no answer."""
         rustc = shutil.which("rustc")
         if rustc is None:
             self.fail("rustc is not on PATH, so R8's oracle cannot run: this test never skips")
@@ -714,37 +854,56 @@ class TheGuardReadsOutOfLineTestModules(unittest.TestCase):
             flags = [flag for on, pair in zip(chosen, switches) if on for flag in pair]
             log = (src.parent / f"{len(runs)}.log").open("w", encoding="utf-8")
             command = [rustc, "--edition", "2024", "--crate-type", "lib", "-A", "warnings"]
-            command += ["--error-format=json", "--emit=dep-info", "-o", f"{log.name}.d", *flags]
+            command += ["--error-format=json", "--emit=metadata", "-o", f"{log.name}.rmeta", *flags]
             process = subprocess.Popen([*command, str(src / "lib.rs")], cwd=REPO, stderr=log)
             runs.append((chosen[0], process, log))
-        under, without, broken = [None] * count, [set() for _ in range(count)], set()
+        under, without, broken, fired = [None] * count, [set() for _ in range(count)], set(), []
         for test, process, log in runs:
             process.wait()
             log.close()
-            places = [set() for _ in range(count)]
+            self.assertEqual(process.returncode, 1, f"rustc exited {process.returncode}, not 1")
+            places, errors, aborted = [set() for _ in range(count)], 0, None
             for line in Path(log.name).read_text(encoding="utf-8").splitlines():
                 message = json.loads(line) if line.startswith("{") else {}
                 if message.get("level") != "error":
                     continue
+                abort = re.fullmatch(r"aborting due to (\d+) previous errors?", message["message"])
+                if abort:
+                    aborted = int(abort.group(1))
+                    continue
+                errors += 1
                 words = message["message"].split(" ", 2)
                 if words[0] == "PROBE":
                     places[int(words[1])].add(words[2])
                     continue
                 owners = {re.search(r"/m(\d+)/", s["file_name"]) for s in message["spans"]}
-                if None in owners or not owners and not words[0].startswith("aborting"):
+                if None in owners or not owners:
                     self.fail(f"rustc failed outside the population: {message['message']}")
                 broken |= {int(owner.group(1)) for owner in owners}
+            self.assertEqual(aborted, errors, "rustc's count of its errors is not the oracle's")
+            fired.append(places)
             for index, compiled in enumerate(places):
                 if test:
                     under[index] = compiled if under[index] is None else under[index] & compiled
                 else:
                     without[index] |= compiled
+        silent = [
+            i for i in range(count) if i not in broken and any("root" not in p[i] for p in fired)
+        ]
+        self.assertEqual(silent[:1], [], f"{len(silent)} member(s) whose root probe did not fire")
         return under, without, broken
 
+    SETTINGS = (
+        'impl Setting for Depth {\n    const SHAPE: &\'static str = "a whole depth";\n}\n'
+        'impl Setting for Width {\n    const SHAPE: &\'static str = "a whole width";\n}\n'
+    )
+
     def test_every_module_file_choice_is_read_from_rustcs_file_or_refused(self):
-        """R8's class, generated from the guard's grammar and judged by rustc: the guard reads only
-        a source that rustc compiles under `--cfg test` and never without it, whatever else is
-        configured, and a decided member exactly that source; otherwise it refuses."""
+        """R8's class, generated from rustc's token grammar and judged by rustc: planted as a crate
+        whose own file implements two settings, each member spells `Depth`'s shape in every source
+        rustc compiles only under `--cfg test`, whatever else is configured, and `Width`'s in every
+        other source a probe stands in. The guard must refuse `Width` always, and pin `Depth` for a
+        decided member that has such a source; otherwise it may refuse."""
         members = self.members()
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
@@ -753,26 +912,35 @@ class TheGuardReadsOutOfLineTestModules(unittest.TestCase):
         for index, (_, files, root, _, _) in enumerate(members):
             for path, text in files.items():
                 (src / f"m{index}" / path).parent.mkdir(parents=True, exist_ok=True)
-                (src / f"m{index}" / path).write_text(text, encoding="utf-8")
+                (src / f"m{index}" / path).write_bytes(text.encode("utf-8"))
             roots.append(f'#[path = "m{index}/{root}"]\nmod m{index};\n')
         (src / "lib.rs").write_text("".join(roots), encoding="utf-8")
         under, without, broken = self.compiled(src, len(members))
         wrong, judged = [], []
-        for index, (case, _, _, own, decided) in enumerate(members):
+        for index, (case, files, _, _, decided) in enumerate(members):
             if decided and index in broken:
                 wrong.append(f"{case}: a decided member does not compile")
             if index in broken:
                 continue
             judged.append(case)
-            base = src / f"m{index}"
-            text = (base / own).read_text(encoding="utf-8")
-            reads = {path.relative_to(base).as_posix() for path in out_of_line(base / own)}
-            spans = cfg_test_spans(lexed(text)[1])
-            probes = re.finditer(r'PROBE \d+ (\S+)"', text)
-            reads |= {p.group(1) for p in probes for s, e in spans if s <= p.start() < e}
-            only = under[index] - without[index]
-            if not reads <= only or (decided and reads != only):
-                wrong.append(f"{case}: reads {sorted(reads)}, only under test {sorted(only)}")
+            only = under[index] - without[index] - {"own", "root"}
+            spell = {"own": self.SETTINGS, "root": ""}
+            width = self.SPELLING.replace("depth", "width")
+            tree = Path(directory.name) / f"t{index}"
+            for path, text in files.items():
+                text = re.sub(
+                    r'compile_error!\("PROBE \d+ (\S+)"\);',
+                    lambda p: spell.get(p.group(1), self.SPELLING if p.group(1) in only else width),
+                    text,
+                )
+                (tree / "crates" / "demo" / "src" / path).parent.mkdir(parents=True, exist_ok=True)
+                (tree / "crates" / "demo" / "src" / path).write_bytes(text.encode("utf-8"))
+            (tree / "scripts" / "mutation-rows.d").mkdir(parents=True)
+            refused = " ".join(unpinned(tree))
+            if "demo::Width " not in refused:
+                wrong.append(f"{case}: a source rustc does not compile only under test is read")
+            if decided and only and "demo::Depth " in refused:
+                wrong.append(f"{case}: refused, and rustc compiles {sorted(only)} only under test")
         examined("R8 member(s) judged against rustc", judged)
         self.assertGreater(len(judged), 0)
         self.assertEqual(wrong[:1], [], f"{len(wrong)} of {len(members)} members")
