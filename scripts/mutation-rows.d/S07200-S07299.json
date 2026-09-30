@@ -540,6 +540,105 @@
         "    any(),\n    deprecated(note = \"the settle census's probe",
         "xp_census::only_progression_writes_xp_settlement_and_only_coordination_settles",
         "under the settle_census cfg, settle carries the probe's deprecation (SPEC-072 A12, A34)"
+      ],
+      [
+        "S07276-CENSUS-REFUSES-A-REACHED-BUILD-SCRIPT",
+        "progression",
+        "tests/xp_census.rs",
+        "if !reaching.contains(id) {",
+        "if reaching.contains(id) {",
+        "xp_census::a_build_script_in_a_package_that_cannot_name_settle_is_accepted",
+        "a build script of a package that cannot name settle is accepted, one that can is refused (SPEC-072 A35)"
+      ],
+      [
+        "S07277-CENSUS-NAMES-THE-SCRIPTED-PACKAGE",
+        "progression",
+        "tests/xp_census.rs",
+        "if name != PROGRESSION_PACKAGE {",
+        "if name == PROGRESSION_PACKAGE {",
+        "xp_census::a_build_script_in_a_package_that_depends_on_settle_is_refused_by_name",
+        "a build script beside a dependency on progression is refused, naming its package (SPEC-072 A35)"
+      ],
+      [
+        "S07278-CENSUS-PINS-PROGRESSIONS-BUILD-SCRIPT",
+        "progression",
+        "tests/xp_census.rs",
+        "if digest.ok().as_deref() != Some(PROGRESSION_BUILD_SHA256) {",
+        "if digest.ok().as_deref() == Some(PROGRESSION_BUILD_SHA256) {",
+        "xp_census::a_one_byte_edit_of_progressions_build_script_is_refused_on_the_pin",
+        "progression's own build script is admitted at its pinned digest and no other (SPEC-072 A35)"
+      ],
+      [
+        "S07279-CENSUS-READS-THE-CUSTOM-BUILD-TARGET",
+        "progression",
+        "tests/xp_census.rs",
+        ".any(|kind| kind == \"custom-build\")",
+        ".any(|kind| kind == \"custom-builds\")",
+        "xp_census::a_build_script_in_a_package_that_depends_on_settle_is_refused_by_name",
+        "a package's build script is the target of kind custom-build (SPEC-072 A35)"
+      ],
+      [
+        "S07280-CENSUS-REACHES-TRANSITIVELY",
+        "progression",
+        "tests/xp_census.rs",
+        "queue.extend(dependents.get(id).into_iter().flatten());",
+        "queue.extend(dependents.get(\"\").into_iter().flatten());",
+        "xp_census::the_census_refuses_every_build_script_that_can_name_settle",
+        "the packages that reach progression are found through every dependency in between (SPEC-072 A35)"
+      ],
+      [
+        "S07281-CENSUS-STARTS-AT-PROGRESSION",
+        "progression",
+        "tests/xp_census.rs",
+        ".find(|package| package[\"name\"] == PROGRESSION_PACKAGE)",
+        ".find(|package| package[\"name\"] != PROGRESSION_PACKAGE)",
+        "xp_census::a_build_script_in_a_package_that_depends_on_settle_is_refused_by_name",
+        "the reaching set starts at the package that defines settle (SPEC-072 A35)"
+      ],
+      [
+        "S07282-CENSUS-READS-EVERY-EDGE",
+        "progression",
+        "tests/xp_census.rs",
+        "dependents.entry(target).or_default().push(id);",
+        "dependents.entry(id).or_default().push(target);",
+        "xp_census::a_build_script_reached_through_a_build_dependency_is_refused",
+        "a dependency edge is read from the dependent to what it depends on, of any kind (SPEC-072 A35)"
+      ],
+      [
+        "S07283-CENSUS-LOCKS-THE-GRAPH",
+        "progression",
+        "tests/xp_census.rs",
+        "[\"metadata\", \"--format-version\", \"1\", \"--locked\", \"--offline\"]",
+        "[\"metadata\", \"--format-version\", \"1\", \"--offline\"]",
+        "xp_census::a_corrupt_lock_file_is_refused_by_the_fail_closed_arm",
+        "cargo metadata runs with the lock file as it is, never resolving a new one (SPEC-072 A35)"
+      ],
+      [
+        "S07284-CENSUS-PIN-IS-THE-BUILD-SCRIPT",
+        "progression",
+        "tests/xp_census.rs",
+        "\"a55c986660b4a75d5f8be32d91e3ae82b8140245eb7e40cba6d5306eb9c3815a\"",
+        "\"b55c986660b4a75d5f8be32d91e3ae82b8140245eb7e40cba6d5306eb9c3815a\"",
+        "xp_census::only_progression_writes_xp_settlement_and_only_coordination_settles",
+        "the pinned digest is that of the build script the tree holds (SPEC-072 A35)"
+      ],
+      [
+        "S07285-CENSUS-RETURNS-THE-BUILD-SCRIPT-REFUSALS",
+        "progression",
+        "tests/xp_census.rs",
+        "let mut refused = build_scripts(root, &metadata)?;",
+        "let mut refused = { build_scripts(root, &metadata)?; Vec::new() };",
+        "xp_census::the_census_refuses_every_build_script_that_can_name_settle",
+        "the refusals of the graph are the census's own (SPEC-072 A35)"
+      ],
+      [
+        "S07286-CENSUS-REFUSES-A-GRAPH-IT-CANNOT-READ",
+        "progression",
+        "tests/xp_census.rs",
+        "\"cargo metadata cannot give the graph ({what})\"",
+        "\"cargo metadata gives the graph ({what})\"",
+        "xp_census::the_census_refuses_every_caller_the_compiler_finds",
+        "a graph cargo cannot give is refused by name, never read as empty (SPEC-072 A35)"
       ]
     ],
     "CARGO_KILLED_SCRIPT_MUTATIONS": [
