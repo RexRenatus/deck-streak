@@ -325,3 +325,62 @@ async fn a_freeze_added_raises_the_held_count_by_one_and_is_recorded() {
     println!("add-freeze population: {cases} starting counts");
     assert_eq!(cases, 4);
 }
+
+/// Every day in the relight's due list, read with a raw query the store does not own.
+async fn due_days(connection: &mut SqliteConnection) -> Vec<(i64, i64)> {
+    sqlx::query("SELECT study_day, created_at FROM relight_due ORDER BY study_day")
+        .fetch_all(connection)
+        .await
+        .expect("the due rows")
+        .iter()
+        .map(|row| (row.get(0), row.get(1)))
+        .collect()
+}
+
+/// A rule (A33, R27): the relight's due list keeps a day at its first write, is read oldest first,
+/// loses a day once it is cleared, and holds no day a rolled-back write put in it. The three
+/// functions are called only from coordination, so this crate's own tests read each one back.
+#[tokio::test]
+async fn the_relight_due_list_holds_each_day_once_until_it_is_cleared() {
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let db = open(&directory).await;
+    let mut write = db.write().await.expect("a write");
+    let later = UtcMillis::from_epoch_millis(AT + 5);
+    store::put_relight_due(&mut write, day(19_995), at())
+        .await
+        .expect("written");
+    store::put_relight_due(&mut write, day(19_990), at())
+        .await
+        .expect("written");
+    store::put_relight_due(&mut write, day(19_995), later)
+        .await
+        .expect("a day already due is left as it is");
+    assert_eq!(due_days(&mut write).await, [(19_990, AT), (19_995, AT)]);
+    sqlx::query("INSERT INTO relight_due (study_day, created_at) VALUES (19985, 1)")
+        .execute(&mut *write)
+        .await
+        .expect("a raw row");
+    assert_eq!(
+        store::relight_due(&mut write).await.expect("read"),
+        [day(19_985), day(19_990), day(19_995)]
+    );
+    store::clear_relight_due(&mut write, day(19_990))
+        .await
+        .expect("cleared");
+    store::clear_relight_due(&mut write, day(20_000))
+        .await
+        .expect("a day never due clears nothing");
+    assert_eq!(due_days(&mut write).await, [(19_985, 1), (19_995, AT)]);
+    write.commit().await.expect("committed");
+
+    let mut rolled = db.write().await.expect("a write");
+    store::put_relight_due(&mut rolled, day(20_001), at())
+        .await
+        .expect("written");
+    rolled.rollback().await.expect("rolled back");
+    let mut read = db.write().await.expect("a write");
+    assert_eq!(
+        store::relight_due(&mut read).await.expect("read"),
+        [day(19_985), day(19_995)]
+    );
+}
