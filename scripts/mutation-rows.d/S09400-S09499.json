@@ -144,6 +144,60 @@
         "None",
         "commands::the_handlers_hold_the_instruments_only_once_they_are_handed_them",
         "the command handlers answer the instruments they were handed and none before (SPEC-094 R8)"
+      ],
+      [
+        "S09418-WIRE-STALLED-STEP-IS-REFUSED",
+        "ingest",
+        "src/wire.rs",
+        "if next <= at {",
+        "if next < at {",
+        "wire_progress::a_reader_that_stays_is_refused_with_nothing_kept",
+        "a wire walk step that stays where it began is refused by name, so a reader that stalls ends in a named failure and not in memory (SPEC-094 R4)"
+      ],
+      [
+        "S09419-TOKEN-STALLED-STEP-IS-REFUSED",
+        "insights",
+        "src/dark_fields.rs",
+        "if next <= at {",
+        "if next < at {",
+        "token_progress::a_reader_that_stays_is_refused_with_nothing_kept",
+        "a token scan step that stays where it began is refused by name, so a reader that stalls ends in a named failure and not in memory (SPEC-094 R9)"
+      ],
+      [
+        "S09420-TOKEN-REFUSAL-IS-NOT-A-BREAK",
+        "insights",
+        "src/dark_fields.rs",
+        "return Err(TOKEN_NO_PROGRESS);",
+        "break;",
+        "token_progress::a_reader_that_stays_is_refused_with_nothing_kept",
+        "a stalled token scan answers its refusal and never the tokens kept so far (SPEC-094 R9)"
+      ],
+      [
+        "S09421-WIRE-REFUSAL-IS-NOT-A-BREAK",
+        "ingest",
+        "src/wire.rs",
+        "return Err(WireError(NO_PROGRESS.to_owned()));",
+        "break;",
+        "wire_progress::a_reader_that_stays_is_refused_with_nothing_kept",
+        "a stalled wire walk answers its refusal and never the fields kept so far (SPEC-094 R4)"
+      ],
+      [
+        "S09422-REFUSED-SCAN-FAILS-ITS-TEMPLATE",
+        "insights",
+        "src/dark_fields.rs",
+        "return (BTreeSet::new(), true);",
+        "return (BTreeSet::new(), false);",
+        "token_progress::a_scan_that_refuses_marks_its_template_failed_with_no_tokens",
+        "a template whose token scan refuses is named unparseable and never judged on part of its tokens (SPEC-094 R9)"
+      ],
+      [
+        "S09423-TOKEN-STEP-ADVANCES-BY-ONE",
+        "insights",
+        "src/dark_fields.rs",
+        "    (None, at + 1)\n}",
+        "    (None, at)\n}",
+        "token_progress::the_real_scan_finds_two_tokens_and_skips_a_broken_pair",
+        "the real token step moves one byte past a position that starts no token, so the real scan never refuses a template (SPEC-094 R9)"
       ]
     ],
     "CARGO_KILLED_SCRIPT_MUTATIONS": [
