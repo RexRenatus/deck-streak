@@ -23,15 +23,13 @@ const TABLE: &str = "xp_settlement";
 const OWNER: &str = "progression";
 /// The one context that calls `settle`.
 const CALLER: &str = "coordination";
-/// How a source names the operation: its module's path in progression's crate.
-const OPERATION: &str = "deck_streak_progression::settle";
-/// The request type `settle` takes. A grouped import never spells `OPERATION` contiguously, and
-/// nothing can call `settle` without building this by name.
+/// The request type `settle` takes. A grouped import never spells the operation's path
+/// contiguously, and nothing can call `settle` without building this by name.
 const REQUEST: &str = "SettleRequest";
 /// The crate's name in a path: a source that never names it cannot reach progression's re-exports.
 const PROGRESSION_CRATE: &str = "deck_streak_progression";
-/// The crate's package name, which a manifest may bind to another name (`package = "..."`).
-const PROGRESSION_PACKAGE: &str = "deck-streak-progression";
+/// The prefix every member's crate name carries (`crates/habits` is `deck_streak_habits`).
+const CRATE_PREFIX: &str = "deck_streak_";
 /// The names progression's own re-exports and aliases are followed from: the operation, its
 /// request type, and (through `settle`) its module.
 const ORIGINALS: [&str; 2] = ["settle", REQUEST];
@@ -78,29 +76,123 @@ fn files(directory: &Path, extension: &str) -> Vec<PathBuf> {
     found
 }
 
-/// The lines of Rust `text` that are code: a whole-line comment is prose, and so is what follows
-/// ` //` on a line.
-fn code_lines(text: &str) -> Vec<&str> {
-    text.lines()
-        .map(str::trim_start)
-        .filter(|line| !line.starts_with("//"))
-        .map(|line| line.split(" //").next().unwrap_or_default())
-        .collect()
+/// Rust `text` as the compiler reads it, by one lexer: every comment (a `//` or doc line, or a
+/// `/* */` block, which nests) is the space it stands for, and each literal (a string, a raw, byte
+/// or C string, or a character) is kept whole when `literals` is true and emptied when it is
+/// false. The census reads the table from code and its literals, where SQL lives, and every name
+/// from code alone. A lifetime (`'a`) is code, and `r#name` is left to the tokens.
+fn strip(text: &str, literals: bool) -> String {
+    let characters: Vec<char> = text.chars().collect();
+    let at_char = |index: usize| characters.get(index).copied();
+    let mut code = String::new();
+    let mut at = 0;
+    while let Some(character) = at_char(at) {
+        let next = at_char(at + 1);
+        if character == '/' && next == Some('/') {
+            while at_char(at).is_some_and(|line| line != '\n') {
+                at += 1;
+            }
+            code.push(' ');
+            continue;
+        }
+        if character == '/' && next == Some('*') {
+            let mut depth = 0_usize;
+            while let Some(opened) = at_char(at) {
+                if opened == '/' && at_char(at + 1) == Some('*') {
+                    depth += 1;
+                    at += 2;
+                } else if opened == '*' && at_char(at + 1) == Some('/') {
+                    depth -= 1;
+                    at += 2;
+                    if depth == 0 {
+                        break;
+                    }
+                } else {
+                    at += 1;
+                }
+            }
+            code.push(' ');
+            continue;
+        }
+        let end = literal_end(&characters, at);
+        if let Some(end) = end {
+            if literals {
+                code.extend(&characters[at..end]);
+            } else {
+                code.push_str("\"\"");
+            }
+            at = end;
+            continue;
+        }
+        code.push(character);
+        at += 1;
+    }
+    code
 }
 
-/// Whether Rust source text names `needle` on a line of code.
-fn rust_names(text: &str, needle: &str) -> bool {
-    code_lines(text).iter().any(|line| line.contains(needle))
-}
-
-/// Whether Rust source text names the operation's path itself, not a longer name that begins with
-/// it (`settled_of_day`).
-fn names_the_operation(text: &str) -> bool {
-    code_lines(text).iter().any(|line| {
-        line.match_indices(OPERATION).any(|(at, _)| {
-            !line[at + OPERATION.len()..].starts_with(|c: char| c.is_alphanumeric() || c == '_')
+/// Where the literal that opens at `at` ends, or `None` when no literal opens there. A literal
+/// opens at a quote, or at `r`, `b`, `c`, `br` or `cr` that starts a word and stands before one
+/// (or, raw, before `#`s and one); a `'` opens a character only when it closes one character
+/// later or escapes, and is otherwise a lifetime's or a label's.
+fn literal_end(characters: &[char], at: usize) -> Option<usize> {
+    let at_char = |index: usize| characters.get(index).copied();
+    let word_start = at == 0 || !at_char(at - 1).is_some_and(|c| c.is_alphanumeric() || c == '_');
+    let prefix = ["br", "cr", "r", "b", "c", ""]
+        .into_iter()
+        .find(|prefix| {
+            word_start
+                && prefix.chars().zip(&characters[at..]).all(|(a, b)| a == *b)
+                && characters.len() > at + prefix.len()
         })
-    })
+        .unwrap_or_default();
+    let open = at + prefix.len();
+    let raw = prefix.ends_with('r');
+    let hashes = if raw {
+        characters[open..].iter().take_while(|c| **c == '#').count()
+    } else {
+        0
+    };
+    match at_char(open + hashes)? {
+        '"' => {
+            let mut end = open + hashes + 1;
+            loop {
+                match at_char(end) {
+                    Some('\\') if !raw => end += 2,
+                    Some('"')
+                        if characters[end + 1..]
+                            .iter()
+                            .take(hashes)
+                            .filter(|c| **c == '#')
+                            .count()
+                            == hashes =>
+                    {
+                        return Some(end + 1 + hashes);
+                    }
+                    Some(_) => end += 1,
+                    None => return Some(characters.len()),
+                }
+            }
+        }
+        '\'' if !raw && matches!(prefix, "" | "b") => {
+            match (at_char(open + 1), at_char(open + 2)) {
+                (Some('\\'), _) => {
+                    let mut end = open + 3;
+                    while at_char(end).is_some_and(|c| c != '\'') {
+                        end += 1;
+                    }
+                    Some((end + 1).min(characters.len()))
+                }
+                (Some(_), Some('\'')) => Some(open + 3),
+                _ => None,
+            }
+        }
+        _ => None,
+    }
+}
+
+/// Whether Rust source text names the table in its code or its literals, outside every comment.
+fn names_the_table(text: &str) -> bool {
+    text.contains(TABLE) && strip(text, true).contains(TABLE)
 }
 
 /// Whether SQL text names the table outside a `--` comment.
@@ -138,6 +230,7 @@ fn tokens(text: &str) -> Vec<String> {
 }
 
 /// One leaf of a `use` tree: the path to it, and the name it is bound under when it is renamed.
+#[derive(Clone)]
 struct Leaf {
     path: Vec<String>,
     alias: Option<String>,
@@ -192,25 +285,80 @@ fn use_tree(tokens: &[String], at: &mut usize, prefix: &[String], out: &mut Vec<
     }
 }
 
-/// Every leaf of every `pub use` (of any visibility, at any depth of module) in Rust `text`.
-fn reexports(text: &str) -> Vec<Leaf> {
-    let words = tokens(&code_lines(text).join(" "));
-    let mut leaves = Vec::new();
-    for (index, word) in words.iter().enumerate() {
-        let public = index > 0
-            && match words[index - 1].as_str() {
-                "pub" => true,
-                ")" => words[..index - 1]
-                    .iter()
-                    .rposition(|open| open == "(")
-                    .is_some_and(|open| open > 0 && words[open - 1] == "pub"),
-                _ => false,
-            };
-        if word == "use" && public {
-            use_tree(&words, &mut (index + 1), &[], &mut leaves);
+/// Whether the item whose keyword is `words[index]` is public to another module: `pub` before
+/// it, or a `)` that closes `pub(`. An attribute's `)` does not make an item public.
+fn public(words: &[String], index: usize) -> bool {
+    index > 0
+        && match words[index - 1].as_str() {
+            "pub" => true,
+            ")" => words[..index - 1]
+                .iter()
+                .rposition(|open| open == "(")
+                .is_some_and(|open| open > 0 && words[open - 1] == "pub"),
+            _ => false,
         }
+}
+
+/// A name a `use` or an `extern crate` binds: its leaf; whether it is public to another module,
+/// and whether to another crate (a plain `pub`, the one visibility that crosses a crate); and the
+/// inline module (`mod name { .. }`) it sits in, if any.
+#[derive(Clone)]
+struct Import {
+    leaf: Leaf,
+    public: bool,
+    exported: bool,
+    module: Option<String>,
+}
+
+/// Every leaf of every `use` tree and every `extern crate` in Rust `words`, of any visibility.
+fn imports(words: &[String]) -> Vec<Import> {
+    let mut found = Vec::new();
+    let mut modules: Vec<(String, usize)> = Vec::new();
+    let mut depth = 0_usize;
+    for (index, word) in words.iter().enumerate() {
+        if word == "{" {
+            if index > 1 && words[index - 2] == "mod" {
+                modules.push((words[index - 1].clone(), depth));
+            }
+            depth += 1;
+        } else if word == "}" {
+            depth = depth.saturating_sub(1);
+            if modules.last().is_some_and(|(_, open)| *open == depth) {
+                modules.pop();
+            }
+        }
+        // `extern crate x as y;` binds a name exactly as `use x as y;` does.
+        let keyword = match word.as_str() {
+            "use" => index,
+            "crate" if index > 0 && words[index - 1] == "extern" => index - 1,
+            _ => continue,
+        };
+        let mut leaves = Vec::new();
+        use_tree(words, &mut (index + 1), &[], &mut leaves);
+        let module = modules.last().map(|(name, _)| name.clone());
+        found.extend(leaves.into_iter().map(|leaf| Import {
+            leaf,
+            public: public(words, keyword),
+            exported: keyword > 0 && words[keyword - 1] == "pub",
+            module: module.clone(),
+        }));
+    }
+    found
+}
+
+/// Every leaf of every public `use` (of any visibility but private, at any depth of module) in a
+/// source, and every `pub type` alias.
+fn reexports(source: &Source) -> Vec<Leaf> {
+    let words = &source.words;
+    let mut leaves: Vec<Leaf> = source
+        .imports
+        .iter()
+        .filter(|import| import.public)
+        .map(|import| import.leaf.clone())
+        .collect();
+    for (index, word) in words.iter().enumerate() {
         // `pub type Alias<'a> = path::Original<'a>;` names the original as `Alias`.
-        if word == "type" && public {
+        if word == "type" && public(words, index) {
             let equals = words[index..].iter().position(|next| next == "=");
             if let (Some(alias), Some(equals)) = (words.get(index + 1), equals) {
                 let path: Vec<String> = words[index + equals + 1..]
@@ -230,13 +378,75 @@ fn reexports(text: &str) -> Vec<Leaf> {
     leaves
 }
 
-/// The names progression's own `src` gives `settle`, its request and its module by a renaming
-/// `pub use`, each with the original it stands for. A renamed name is followed too, so a chain of
-/// renamings ends at the original.
-fn progression_aliases(root: &Path) -> BTreeMap<String, String> {
-    let leaves: Vec<Leaf> = files(&root.join("crates").join(OWNER).join("src"), "rs")
+/// The workspace's members, by path.
+fn members(root: &Path) -> Vec<PathBuf> {
+    let mut members: Vec<PathBuf> = fs::read_dir(root.join("crates"))
+        .expect("crates/ is readable")
+        .map(|entry| entry.expect("a directory entry").path())
+        .filter(|path| path.is_dir())
+        .collect();
+    members.sort();
+    members
+}
+
+/// A Rust source of a member, read once: its path and text, its code (every comment removed and
+/// every literal emptied), the code's words, and every name its `use`s and `extern crate`s bind.
+struct Source {
+    path: PathBuf,
+    text: String,
+    code: String,
+    words: Vec<String>,
+    imports: Vec<Import>,
+}
+
+/// A member of the workspace: its directory's name, the names its crate goes by in another
+/// crate's paths, and its `src`.
+struct Member {
+    context: String,
+    crate_names: Vec<String>,
+    sources: Vec<Source>,
+}
+
+/// The workspace at `root`, every member's every source read once.
+fn workspace(root: &Path) -> Vec<Member> {
+    members(root)
+        .into_iter()
+        .map(|member| Member {
+            context: member
+                .file_name()
+                .and_then(|name| name.to_str())
+                .expect("a UTF-8 crate directory")
+                .to_owned(),
+            crate_names: member_crate_names(&member),
+            sources: files(&member.join("src"), "rs")
+                .into_iter()
+                .map(|path| {
+                    let text = fs::read_to_string(&path).expect("a readable source");
+                    let code = strip(&text, false);
+                    let words = tokens(&code);
+                    let imports = imports(&words);
+                    Source {
+                        path,
+                        text,
+                        code,
+                        words,
+                        imports,
+                    }
+                })
+                .collect(),
+        })
+        .collect()
+}
+
+/// The names progression's `settle`, its request and its module are given by a renaming public
+/// `use` or a `pub type` in any member's `src`, each with the original it stands for. A renamed
+/// name is followed too, so a chain of renamings ends at the original, in whatever member each
+/// link is written.
+fn aliases(workspace: &[Member]) -> BTreeMap<String, String> {
+    let leaves: Vec<Leaf> = workspace
         .iter()
-        .flat_map(|source| reexports(&fs::read_to_string(source).expect("a readable source")))
+        .flat_map(|member| &member.sources)
+        .flat_map(reexports)
         .collect();
     let mut aliases: BTreeMap<String, String> = BTreeMap::new();
     loop {
@@ -260,104 +470,346 @@ fn progression_aliases(root: &Path) -> BTreeMap<String, String> {
     }
 }
 
-/// Every leaf of every `use` tree in Rust `words`, of any visibility.
-fn use_leaves(words: &[String]) -> Vec<Leaf> {
-    let mut leaves = Vec::new();
-    for (index, word) in words.iter().enumerate() {
-        if word == "use" {
-            use_tree(words, &mut (index + 1), &[], &mut leaves);
-        }
-    }
-    leaves
+/// A TOML text, read by one reader: every comment is removed outside a string before anything
+/// else is read, a key's parts may be bare, quoted or dotted, and a table may be a header or
+/// inline (spanning lines, as TOML 1.1 allows).
+struct Toml {
+    text: Vec<char>,
+    at: usize,
 }
 
-/// The tokens of every Rust source in `member`'s `src`.
-fn member_words(member: &Path) -> Vec<Vec<String>> {
-    files(&member.join("src"), "rs")
-        .iter()
-        .map(|source| {
-            let text = fs::read_to_string(source).expect("a readable source");
-            tokens(&code_lines(&text).join(" "))
-        })
+impl Toml {
+    fn new(text: &str) -> Self {
+        let mut code = String::new();
+        let mut quote: Option<&str> = None;
+        let mut rest = text;
+        while let Some(character) = rest.chars().next() {
+            let opens = ["\"\"\"", "'''", "\"", "'"]
+                .into_iter()
+                .find(|open| rest.starts_with(open));
+            let taken = match quote {
+                Some(close) if rest.starts_with(close) => {
+                    quote = None;
+                    close.len()
+                }
+                Some(close) if close.starts_with('"') && character == '\\' => {
+                    let escaped = rest[1..].chars().next().map_or(0, char::len_utf8);
+                    1 + escaped
+                }
+                None if character == '#' => {
+                    rest = &rest[rest.find('\n').unwrap_or(rest.len())..];
+                    continue;
+                }
+                None if opens.is_some() => {
+                    quote = opens;
+                    opens.map_or(1, str::len)
+                }
+                _ => character.len_utf8(),
+            };
+            code.push_str(&rest[..taken]);
+            rest = &rest[taken..];
+        }
+        Self {
+            text: code.chars().collect(),
+            at: 0,
+        }
+    }
+
+    fn peek(&self) -> Option<char> {
+        self.text.get(self.at).copied()
+    }
+
+    /// Skips spaces, and line ends too when `lines` is true.
+    fn blank(&mut self, lines: bool) {
+        while self
+            .peek()
+            .is_some_and(|c| c == ' ' || c == '\t' || c == '\r' || (lines && c == '\n'))
+        {
+            self.at += 1;
+        }
+    }
+
+    fn eat(&mut self, expected: char) -> bool {
+        let found = self.peek() == Some(expected);
+        self.at += usize::from(found);
+        found
+    }
+
+    /// A string, whole: basic or literal, on one line or three-quoted.
+    fn string(&mut self) -> Option<String> {
+        let quote = self.peek().filter(|c| *c == '"' || *c == '\'')?;
+        let triple = self
+            .text
+            .get(self.at..self.at + 3)
+            .is_some_and(|three| three.iter().all(|c| *c == quote));
+        let width = if triple { 3 } else { 1 };
+        self.at += width;
+        let mut value = String::new();
+        loop {
+            let character = self.peek()?;
+            if self.text[self.at..]
+                .iter()
+                .take(width)
+                .filter(|c| **c == quote)
+                .count()
+                == width
+            {
+                self.at += width;
+                return Some(value);
+            }
+            if character == '\\' && quote == '"' {
+                self.at += 1;
+                value.push(self.peek()?);
+            } else {
+                value.push(character);
+            }
+            self.at += 1;
+        }
+    }
+
+    /// A key: its parts, each bare or quoted, joined by `.`.
+    fn key(&mut self) -> Option<Vec<String>> {
+        let mut parts = Vec::new();
+        loop {
+            self.blank(false);
+            let part = if matches!(self.peek(), Some('"' | '\'')) {
+                self.string()?
+            } else {
+                let start = self.at;
+                while self
+                    .peek()
+                    .is_some_and(|c| c.is_alphanumeric() || c == '_' || c == '-')
+                {
+                    self.at += 1;
+                }
+                (self.at > start).then(|| self.text[start..self.at].iter().collect())?
+            };
+            parts.push(part);
+            self.blank(false);
+            if !self.eat('.') {
+                return Some(parts);
+            }
+        }
+    }
+
+    /// Reads the value at the cursor, pushing every string in it by its full key into `out`.
+    fn value(&mut self, key: &[String], out: &mut Vec<(Vec<String>, String)>) -> Option<()> {
+        match self.peek()? {
+            '"' | '\'' => {
+                let value = self.string()?;
+                out.push((key.to_vec(), value));
+            }
+            '{' => {
+                self.at += 1;
+                loop {
+                    self.blank(true);
+                    if self.eat('}') {
+                        break;
+                    }
+                    self.pair(key, out)?;
+                    self.blank(true);
+                    if !self.eat(',') {
+                        self.blank(true);
+                        self.eat('}').then_some(())?;
+                        break;
+                    }
+                }
+            }
+            '[' => {
+                self.at += 1;
+                loop {
+                    self.blank(true);
+                    if self.eat(']') {
+                        break;
+                    }
+                    self.value(key, out)?;
+                    self.blank(true);
+                    if !self.eat(',') {
+                        self.blank(true);
+                        self.eat(']').then_some(())?;
+                        break;
+                    }
+                }
+            }
+            _ => {
+                let start = self.at;
+                while self
+                    .peek()
+                    .is_some_and(|c| !matches!(c, ',' | '}' | ']' | '\n' | ' ' | '\t' | '\r'))
+                {
+                    self.at += 1;
+                }
+                (self.at > start).then_some(())?;
+            }
+        }
+        Some(())
+    }
+
+    /// `key = value`, below the table `table`.
+    fn pair(&mut self, table: &[String], out: &mut Vec<(Vec<String>, String)>) -> Option<()> {
+        let key = [table.to_vec(), self.key()?].concat();
+        self.blank(false);
+        self.eat('=').then_some(())?;
+        self.blank(false);
+        self.value(&key, out)
+    }
+
+    /// Every string the text gives, by its full key (`dependencies.prog.package`), up to the first
+    /// place this reader cannot read, and that place's offset if there is one: a manifest it cannot
+    /// read to its end is refused, rather than let it hide a rename.
+    fn strings(mut self) -> (Vec<(Vec<String>, String)>, Option<usize>) {
+        let mut found = Vec::new();
+        let mut table: Vec<String> = Vec::new();
+        loop {
+            self.blank(true);
+            let read = match self.peek() {
+                None => return (found, None),
+                Some('[') => {
+                    self.at += 1;
+                    let array = self.eat('[');
+                    self.key().and_then(|key| {
+                        self.eat(']').then_some(())?;
+                        (!array || self.eat(']')).then_some(())?;
+                        table = key;
+                        Some(())
+                    })
+                }
+                Some(_) => self.pair(&table, &mut found),
+            };
+            self.blank(false);
+            if read.is_none() || !matches!(self.peek(), None | Some('\n')) {
+                return (found, Some(self.at));
+            }
+        }
+    }
+}
+
+/// Every string of the manifest (TOML) at `path` that the reader reads, by its full key, and the
+/// offset it stops at if it cannot read the manifest to its end; none for a missing file.
+fn manifest(path: &Path) -> (Vec<(Vec<String>, String)>, Option<usize>) {
+    fs::read_to_string(path).map_or_else(|_| (Vec::new(), None), |text| Toml::new(&text).strings())
+}
+
+/// The workspace's manifest and every member's.
+fn manifests(root: &Path) -> Vec<PathBuf> {
+    std::iter::once(root.join("Cargo.toml"))
+        .chain(
+            members(root)
+                .into_iter()
+                .map(|member| member.join("Cargo.toml")),
+        )
         .collect()
 }
 
-/// The workspace's members, by path.
-fn members(root: &Path) -> Vec<PathBuf> {
-    let mut members: Vec<PathBuf> = fs::read_dir(root.join("crates"))
-        .expect("crates/ is readable")
-        .map(|entry| entry.expect("a directory entry").path())
-        .filter(|path| path.is_dir())
-        .collect();
-    members.sort();
-    members
+/// A crate or package name as a path writes it: `-` is `_`.
+fn path_name(name: &str) -> String {
+    name.replace('-', "_")
 }
 
-/// The names a manifest (the workspace's or a member's) binds progression's package to:
-/// `prog = { package = "deck-streak-progression", .. }`, `prog.package = ..`, or a
-/// `[dependencies.prog]` table with that `package`, whose key's `-` is `_` in a path.
-fn manifest_names(root: &Path) -> BTreeSet<String> {
-    let needle = format!("package={PROGRESSION_PACKAGE}");
-    let mut names = BTreeSet::new();
-    let manifests = std::iter::once(root.join("Cargo.toml")).chain(
-        members(root)
-            .into_iter()
-            .map(|member| member.join("Cargo.toml")),
-    );
-    for manifest in manifests {
-        let Ok(text) = fs::read_to_string(&manifest) else {
-            continue;
-        };
-        let mut table = String::new();
-        for line in text.lines() {
-            // The line without its spaces and quotes: `prog={package=deck-streak-progression}`.
-            let line: String = line
-                .chars()
-                .filter(|character| !character.is_whitespace() && !matches!(character, '"' | '\''))
-                .collect();
-            let renames = line.match_indices(&needle).any(|(at, _)| {
-                !line[at + needle.len()..]
-                    .starts_with(|c: char| c.is_alphanumeric() || c == '_' || c == '-')
-            });
-            if line.starts_with('[') {
-                line.trim_matches(['[', ']']).clone_into(&mut table);
-            } else if renames {
-                let key = if line.starts_with("package=") {
-                    table.rsplit('.').next().unwrap_or_default()
-                } else {
-                    line.split(['=', '.']).next().unwrap_or_default()
-                };
-                names.insert(key.replace('-', "_"));
-            }
+/// The names a member's crate goes by in another crate's paths: its directory's under the
+/// workspace's prefix, and its manifest's `[package]` and `[lib]` names.
+fn member_crate_names(member: &Path) -> Vec<String> {
+    let directory = member
+        .file_name()
+        .and_then(|name| name.to_str())
+        .expect("a UTF-8 crate directory");
+    let mut names = vec![path_name(&format!("{CRATE_PREFIX}{directory}"))];
+    for (key, value) in manifest(&member.join("Cargo.toml")).0 {
+        if key == ["package", "name"] || key == ["lib", "name"] {
+            names.push(path_name(&value));
         }
     }
     names
 }
 
-/// The names a source reaches progression's crate by: its own; every name a manifest binds its
-/// package to; and every name a `use` or an `extern crate` in any crate's `src` binds one of those
-/// to (`as prog`, `{self as prog}`, `as r#prog`, or through a name already found), to a fixpoint.
-fn crate_names(root: &Path) -> BTreeSet<String> {
+/// Every dependency a manifest (the workspace's or a member's) renames by `package`, as
+/// (the name a path writes, the package's name as a path writes it): the inline, table and
+/// dotted-key forms, under `dependencies`, a target's or the workspace's.
+fn manifest_renames(root: &Path) -> Vec<(String, String)> {
+    manifests(root)
+        .iter()
+        .flat_map(|path| manifest(path).0)
+        .filter_map(|(key, package)| match key.as_slice() {
+            [.., table, name, last] if last == "package" && table.ends_with("dependencies") => {
+                Some((path_name(name), path_name(&package)))
+            }
+            _ => None,
+        })
+        .collect()
+}
+
+/// The name of the module a source file is, or `None` for a crate's root file.
+fn module_of(source: &Path) -> Option<String> {
+    match source.file_stem()?.to_str()? {
+        "lib" | "main" => None,
+        "mod" => Some(source.parent()?.file_name()?.to_str()?.to_owned()),
+        stem => Some(stem.to_owned()),
+    }
+}
+
+/// The names a source reaches progression's crate root by, across every member, to a fixpoint:
+/// - its own name, and every name a manifest renames a package of one of these names to;
+/// - every name an `as` (a `use`, a grouped `{self as x}`, an `extern crate`) binds one to;
+/// - and every name that exports one to other crates: a public `use` or `extern crate` that
+///   passes through one of these names makes the crate that holds it (at its root) or the module
+///   it sits in a name of progression's root too, and so does one that re-exports the operation
+///   itself (by a name `aliases` follows) from progression or from a member that names one of
+///   these names anywhere in its `src`.
+///
+/// The set is one for the workspace, not one for each member: a name bound in one member is
+/// followed in every member, which fails closed.
+fn crate_names(
+    root: &Path,
+    workspace: &[Member],
+    aliases: &BTreeMap<String, String>,
+) -> BTreeSet<String> {
     let mut names = BTreeSet::from([PROGRESSION_CRATE.to_owned()]);
-    names.extend(manifest_names(root));
+    let renames = manifest_renames(root);
+    let operation =
+        |name: &String| ORIGINALS.contains(&name.as_str()) || aliases.contains_key(name.as_str());
     let mut links: Vec<(String, String)> = Vec::new();
-    for words in members(root).iter().flat_map(|member| member_words(member)) {
-        for window in words.windows(3) {
-            if window[1] == "as" {
-                links.push((window[0].clone(), window[2].clone()));
+    let mut exports: Vec<(usize, Vec<String>, Leaf)> = Vec::new();
+    let mut vocabulary: Vec<(bool, BTreeSet<String>)> = Vec::new();
+    for member in workspace {
+        let mut spoken = BTreeSet::new();
+        for source in &member.sources {
+            spoken.extend(source.words.iter().cloned());
+            for import in &source.imports {
+                if let (Some(last), Some(alias)) = (import.leaf.path.last(), &import.leaf.alias) {
+                    links.push((last.clone(), alias.clone()));
+                }
+                if import.exported {
+                    let module = import.module.clone().or_else(|| module_of(&source.path));
+                    exports.push((
+                        vocabulary.len(),
+                        module.map_or_else(|| member.crate_names.clone(), |name| vec![name]),
+                        import.leaf.clone(),
+                    ));
+                }
             }
         }
-        links.extend(
-            use_leaves(&words)
-                .into_iter()
-                .filter_map(|leaf| Some((leaf.path.last()?.clone(), leaf.alias?))),
-        );
+        vocabulary.push((member.context == OWNER, spoken));
     }
     loop {
         let before = names.len();
+        let by_manifest: Vec<String> = renames
+            .iter()
+            .filter(|(_, package)| names.contains(package))
+            .map(|(name, _)| name.clone())
+            .collect();
+        names.extend(by_manifest);
         for (original, alias) in &links {
             if names.contains(original) {
                 names.insert(alias.clone());
+            }
+        }
+        for (member, exported, leaf) in &exports {
+            let (owner, spoken) = &vocabulary[*member];
+            let reaches = *owner || spoken.iter().any(|word| names.contains(word));
+            if leaf.path.iter().any(|segment| names.contains(segment))
+                || (reaches && leaf.path.last().is_some_and(operation))
+            {
+                names.extend(exported.iter().cloned());
             }
         }
         if names.len() == before {
@@ -369,34 +821,36 @@ fn crate_names(root: &Path) -> BTreeSet<String> {
 /// The members whose `src` imports progression's crate, or a module of it, whole with a glob of
 /// any visibility (`use prog::*`): each of their files reaches progression's names as
 /// `crate::name` or `super::name` without naming the crate.
-fn glob_members(root: &Path, crate_names: &BTreeSet<String>) -> BTreeSet<String> {
-    members(root)
+fn glob_members(workspace: &[Member], crate_names: &BTreeSet<String>) -> BTreeSet<String> {
+    workspace
         .iter()
         .filter(|member| {
-            member_words(member).iter().any(|words| {
-                use_leaves(words).iter().any(|leaf| {
-                    leaf.path.last().is_some_and(|last| last == "*")
-                        && leaf
+            member.sources.iter().any(|source| {
+                source.imports.iter().any(|import| {
+                    import.leaf.path.last().is_some_and(|last| last == "*")
+                        && import
+                            .leaf
                             .path
                             .iter()
                             .any(|segment| crate_names.contains(segment))
                 })
             })
         })
-        .filter_map(|member| member.file_name()?.to_str().map(str::to_owned))
+        .map(|member| member.context.clone())
         .collect()
 }
 
 /// Whether a source reaches the operation itself through a name that denotes progression's crate:
 /// `alias::settle` in a path, a `use` or a grouped `use`, or, in a member that globs the crate's
 /// root, `settle` as a word (`crate::settle`).
-fn reaches_settle(words: &[String], crate_names: &BTreeSet<String>, globbed: bool) -> bool {
+fn reaches_settle(source: &Source, crate_names: &BTreeSet<String>, globbed: bool) -> bool {
     let step = |pair: &[String]| crate_names.contains(&pair[0]) && pair[1] == ORIGINALS[0];
-    (globbed && words.iter().any(|word| word == ORIGINALS[0]))
-        || words.windows(2).any(step)
-        || use_leaves(words)
+    (globbed && source.words.iter().any(|word| word == ORIGINALS[0]))
+        || source.words.windows(2).any(step)
+        || source
+            .imports
             .iter()
-            .any(|leaf| leaf.path.windows(2).any(step))
+            .any(|import| import.leaf.path.windows(2).any(step))
 }
 
 /// The census of a tree at `root`.
@@ -416,19 +870,24 @@ fn census(root: &Path) -> Census {
         calling: BTreeSet::new(),
         refused: Vec::new(),
     };
-    let aliases = progression_aliases(root);
-    let crate_names = crate_names(root);
-    let globbed = glob_members(root, &crate_names);
-    for member in members(root) {
-        let context = member
-            .file_name()
-            .and_then(|name| name.to_str())
-            .expect("a UTF-8 crate directory")
-            .to_owned();
-        for source in files(&member.join("src"), "rs") {
-            let name = relative(root, &source);
-            let text = fs::read_to_string(&source).expect("a readable source");
-            if rust_names(&text, TABLE) {
+    let workspace = workspace(root);
+    let aliases = aliases(&workspace);
+    let crate_names = crate_names(root, &workspace, &aliases);
+    let globbed = glob_members(&workspace, &crate_names);
+    for path in manifests(root) {
+        if let (_, Some(at)) = manifest(&path) {
+            census.refused.push(format!(
+                "{} is a manifest the census cannot read past character {at}, so it may rename \
+                 {OWNER}'s crate unseen",
+                relative(root, &path)
+            ));
+        }
+    }
+    for member in &workspace {
+        let context = &member.context;
+        for source in &member.sources {
+            let name = relative(root, &source.path);
+            if names_the_table(&source.text) {
                 census.naming.insert(name.clone());
                 if context != OWNER {
                     census
@@ -436,24 +895,19 @@ fn census(root: &Path) -> Census {
                         .push(format!("{name} names {TABLE}, and only {OWNER}'s code may"));
                 }
             }
-            let source_words = tokens(&code_lines(&text).join(" "));
-            let direct = names_the_operation(&text)
-                || rust_names(&text, REQUEST)
-                || reaches_settle(&source_words, &crate_names, globbed.contains(&context));
+            let direct = source.code.contains(REQUEST)
+                || reaches_settle(source, &crate_names, globbed.contains(context));
             // A source that names progression's crate and one of progression's own renamings
             // reaches `settle` without spelling it.
-            let words: BTreeSet<String> =
-                tokens(&code_lines(&text).join(" ")).into_iter().collect();
+            let words: BTreeSet<&String> = source.words.iter().collect();
             let through: Vec<(&String, &String)> = if context != OWNER
                 && !direct
-                && (globbed.contains(&context)
-                    || crate_names
-                        .iter()
-                        .any(|crate_name| words.contains(crate_name)))
+                && (globbed.contains(context)
+                    || words.iter().any(|word| crate_names.contains(*word)))
             {
                 aliases
                     .iter()
-                    .filter(|(alias, _)| words.contains(*alias))
+                    .filter(|(alias, _)| words.contains(alias))
                     .collect()
             } else {
                 Vec::new()
@@ -473,7 +927,8 @@ fn census(root: &Path) -> Census {
                         ));
                     }
                 } else if !name.starts_with(RECOMPUTE_DIR)
-                    && (!rust_names(&text, CORRECTION_CAUSE) || rust_names(&text, RECOMPUTE_CAUSE))
+                    && (!source.code.contains(CORRECTION_CAUSE)
+                        || source.code.contains(RECOMPUTE_CAUSE))
                 {
                     census.refused.push(format!(
                         "{name} calls settle outside the recompute steps, and only the owner's \
