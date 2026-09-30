@@ -68,7 +68,10 @@ R1. The drills folder is the layout's `drill-coach` folder (`crates/vault/data/l
     writes passes one gate (`DrillNotes::confined`, then the kind check of `regular_note`). It
     refuses a link to a file, a link to a directory, a link to a link, a dangling link and a link to
     a place inside the vault, whether the link is the note or the `Active` or `Graded` folder that
-    holds it (the adapter's rule, `crates/vault/src/fs.rs`), where the predecessor followed links.
+    holds it (the adapter's rule, `crates/vault/src/fs.rs`), where the predecessor followed links. A
+    dangling link at the `Active` or `Graded` folder resolves nowhere, so it reads as a missing
+    folder (an empty list, and `NotActive` for an answer) and nothing is followed; every other link
+    at a folder is refused with `NotAFolder`.
     The gate stands before `list_active`, `graded`, `view` and `answer` reach the file system.
 R2. The list, the unanswered list and the single view equal `goldens/drill_meta.json`
     (`vault_bridge.py:_read_drill_meta`, `list_active_drills`, `list_unanswered_drills`,
