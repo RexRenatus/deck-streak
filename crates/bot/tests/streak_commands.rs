@@ -116,3 +116,82 @@ async fn the_law_leads_only_above_zero_and_the_noun_follows_the_freezes() {
     println!("streak-reply population: {cases} replies");
     assert_eq!(cases, 12);
 }
+
+/// A rule (A42): each track's line names its own run and its own best, and the law track leads by
+/// its run, never by its best. Law runs 0, 1 and 2, each with a best of the run, one more and seven
+/// more, over language bests of 9, 10 and 16 on a language run of 9, each pair stored as its own row
+/// and read through `/streak`. A run equal to its best hides a swap of the two, and a law run of zero
+/// with a best above zero is the state in which leading by the best differs from leading by the run.
+#[tokio::test]
+async fn each_line_names_its_own_run_and_best_and_the_law_leads_by_its_run() {
+    let mut cases = 0_u32;
+    let mut idle_law_with_a_best = 0_u32;
+    for law in [0_i64, 1, 2] {
+        for law_more in [0_i64, 1, 7] {
+            for language_more in [0_i64, 1, 7] {
+                let law_best = law + law_more;
+                let language_best = 9 + language_more;
+                let bench = Bench::start().await;
+                {
+                    let mut write = bench.db.write().await.expect("a write");
+                    for (track, current, longest, held) in [
+                        ("language", 9_i64, language_best, 2_i64),
+                        ("law", law, law_best, 0),
+                    ] {
+                        sqlx::query(
+                            "INSERT INTO streak_state \
+                             (track, current_days, longest_days, freezes, last_study_day, comeback_armed, created_at) \
+                             VALUES (?1, ?2, ?3, ?4, ?5, 0, 1000)",
+                        )
+                        .bind(track)
+                        .bind(current)
+                        .bind(longest)
+                        .bind(held)
+                        .bind(TODAY - 1)
+                        .execute(&mut *write)
+                        .await
+                        .expect("the synthetic streak row is written");
+                    }
+                    write.commit().await.expect("the commit");
+                }
+                bench
+                    .clock
+                    .set(UtcMillis::from_epoch_millis(TODAY * DAY_MS + 5 * 3_600_000));
+                let mut commands = bench.commands(ScriptedSync::default());
+                commands.handle(incoming(owner_says(1, "/streak"))).await;
+                let text = last_text(&bench);
+                let lines: Vec<&str> = text.split('\n').collect();
+                assert_eq!(lines.len(), 3, "{text}");
+                assert_eq!(lines[0], "<b>Streaks</b>", "{text}");
+                let (law_line, language_line) = if law > 0 {
+                    (lines[1], lines[2])
+                } else {
+                    (lines[2], lines[1])
+                };
+                assert_eq!(
+                    law_line,
+                    format!("Law: {law} (best {law_best})"),
+                    "law {law} best {law_best} in {text}"
+                );
+                assert!(
+                    language_line.starts_with("Language: 9"),
+                    "language best {language_best} in {text}"
+                );
+                assert!(
+                    language_line.ends_with(&format!(" (best {language_best}, 2 freezes)")),
+                    "language best {language_best} in {text}"
+                );
+                cases += 1;
+                if law == 0 && law_best > 0 {
+                    idle_law_with_a_best += 1;
+                }
+            }
+        }
+    }
+    println!(
+        "streak-reply best population: {cases} replies, {idle_law_with_a_best} with an idle law \
+         run and a best"
+    );
+    assert_eq!(cases, 27);
+    assert_eq!(idle_law_with_a_best, 6);
+}
