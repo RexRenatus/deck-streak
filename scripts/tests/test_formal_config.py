@@ -180,13 +180,18 @@ def toolchain_sources(doc, root):
     named = []
     if get(doc, ("toolchain", "identity"))[1]:
         named.append("toolchain.identity")
+    if (root / PIN_FILE).exists():
+        named.append(PIN_FILE.as_posix())
     return named
 
 
 def load():
     if not CONFIG.is_file():
         raise AssertionError("config/formal.json is absent: the formal checker reads none")
-    return json.loads(CONFIG.read_text(encoding="utf-8"))
+    try:
+        return json.loads(CONFIG.read_text(encoding="utf-8"))
+    except ValueError as error:  # a file that is no JSON is a failure, never an error
+        raise AssertionError(f"config/formal.json is not JSON: {error}") from error
 
 
 def same(a, b):
@@ -417,7 +422,8 @@ class FormalConfig(unittest.TestCase):
 
     def test_the_signers_path_is_repo_relative(self):
         """A2: `owner_signers` is repo-relative, with no `..` segment and no leading `/`."""
-        value = load()["owner_signers"]
+        value, present = get(load(), ("owner_signers",))
+        self.assertTrue(present, "owner_signers is named")
         self.assertTrue(is_repo_relative(value), value)
         self.assertFalse(value.startswith("/"))
         self.assertNotIn("..", value.split("/"))
@@ -490,7 +496,11 @@ class FormalConfig(unittest.TestCase):
         self.assertTrue(present, "toolchain.identity is named")
         self.assertTrue(is_hex64(value), f"{value!r} is not 64 lowercase hex digits")
         self.assertEqual(list(doc["toolchain"]), ["identity"])
-        self.assertIsNotNone(read(doc), "presence control: the committed file is admitted")
+        try:
+            admitted_doc = read(doc)
+        except Refused as refusal:
+            self.fail(f"presence control: the committed file is refused: {refusal}")
+        self.assertIsNotNone(admitted_doc, "presence control: the committed file is admitted")
         places = examined(
             "digest fields", [(path, ".".join(path)) for path, kind, _ in FIELDS if kind == "hex64"]
         )

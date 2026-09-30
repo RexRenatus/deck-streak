@@ -72,6 +72,38 @@
         "all(is_posint(v) for v in list(value.values())[-1:])",
         "an integer map judged by its last value alone admits a bad value that precedes a good one (SPEC-295 A3 and A4)",
         "test_formal_config.FormalConfig.test_the_reader_refuses_each_planted_fault"
+      ],
+      [
+        "S29510-THE-PIN-FILE-IS-NEVER-LOOKED-FOR",
+        "scripts/tests/test_formal_config.py",
+        "if (root / PIN_FILE).exists():",
+        "if False:",
+        "a tree that commits the pin file beside the settings field names one source: the reader that never looks for the pin file misses the second (SPEC-295 A7)",
+        "test_formal_config.FormalConfig.test_the_tree_names_one_toolchain_source_the_identity"
+      ],
+      [
+        "S29511-THE-IDENTITY-IS-ALWAYS-NAMED",
+        "scripts/tests/test_formal_config.py",
+        "if get(doc, (\"toolchain\", \"identity\"))[1]:",
+        "if True:",
+        "a document that does not name the identity is counted as naming it, so the no-source combinations read wrong (SPEC-295 A7)",
+        "test_formal_config.FormalConfig.test_the_tree_names_one_toolchain_source_the_identity"
+      ],
+      [
+        "S29512-THE-COMMITTED-PRESENCE-CONTROL-PASSES",
+        "scripts/tests/test_formal_config.py",
+        "self.fail(f\"presence control: the committed file is refused: {refusal}\")",
+        "pass",
+        "the presence control of the toolchain test swallows the refusal instead of failing by assertion (SPEC-295 A8)",
+        "test_formal_config_presence.PresenceControls.test_every_call_of_the_reader_fails_by_assertion_when_it_refuses"
+      ],
+      [
+        "S29513-THE-FILE-PRESENCE-CONTROL-PASSES",
+        "scripts/tests/test_formal_config.py",
+        "self.fail(f\"presence control: the file is refused: {refusal}\")",
+        "pass",
+        "the presence control of the planted-fault test swallows the refusal instead of failing by assertion (SPEC-295 A8)",
+        "test_formal_config_presence.PresenceControls.test_every_call_of_the_reader_fails_by_assertion_when_it_refuses"
       ]
     ]
   }
