@@ -25,7 +25,12 @@ are the killers added for them, committed alone at b4c65f62 with the checks stil
 by assertion. The job hygiene of that commit printed `Ran 666 tests`, `FAILED (failures=4)`; the four failing
 lines are the A10 to A13 lines below, each naming every member the old check passed (the stub scan passed 27 of
 its 35 members, the other 8 were already refused). The green was measured by CI at the commit that adds this
-record, whose test code equals the green code commit's.
+record, whose test code equals that of 47f31731. The first green push (59e4752f) still failed one test by an
+error and not by an assertion, a defect in the body of the A7 test, printed by CI as
+`TypeError: 'int' object is not iterable` (the test handed a count where a population was expected); 47f31731
+repairs that body and nothing else. The A7 body has therefore changed since its red commit, and the failure
+of its newest body against the old checks was not measured; the red line of A7 below is the one its first
+body printed.
 
 The bodies of the tests of A5 and A6 changed after their red commits: they pass an `env=` to the helper. That
 keyword already existed in the old helper, so the new bodies do not fail against it, and the failing evidence for
@@ -34,30 +39,30 @@ before the change.
 
 ```red-first
 A1: red at 0154acbc: AssertionError: unexpectedly None : the stand-in's allowed shapes are not listed: HOST_ALLOWED
-A1: green at 0eb6d89b
+A1: green at 47f31731
 A2: red at 52cd5f5d: AssertionError: '<dir>/host: line 3: exec: : not found\n' != 'host stand-in: refusing : not a command the deploy tests use\n'
-A2: green at 0eb6d89b
+A2: green at 47f31731
 A3: red at 0154acbc: AssertionError: unexpectedly None : the stand-in's allowed shapes are not listed: HOST_ALLOWED
-A3: green at 0eb6d89b
+A3: green at 47f31731
 A4: red at 0154acbc: AssertionError: False is not true : the stand-in logged no argv[0]
-A4: green at 0eb6d89b
+A4: green at 47f31731
 A5: red at 0154acbc: AssertionError: False is not true : no one helper starts a deploy script: launch
-A5: green at 0eb6d89b
+A5: green at 47f31731
 A6: red at 0154acbc: AssertionError: False is not true : no one helper starts a deploy script: launch
-A6: green at 0eb6d89b
+A6: green at 47f31731
 A7: red at 0154acbc: AssertionError: Items in the first set but not the second:
-A7: green at 0eb6d89b
+A7: green at 47f31731
 A8: red at 0154acbc: AssertionError: 0 != 1 : no one helper starts a deploy script: launch
-A8: green at 0eb6d89b
+A8: green at 47f31731
 A9: not red: at b4c65f62 it passed, because the stubs of the module that run their first argument were already the ones it lists
 A10: red at b4c65f62: AssertionError: Lists differ: ['route: a semicolon after the list', 'rou[793 chars]ute'] != [] : 27 of 35 stub member(s) passed the check
-A10: green at the commit that adds this record
+A10: green at 47f31731
 A11: red at b4c65f62: AssertionError: Lists differ: ['host call: the host array unquoted, then[711 chars]ron'] != [] : 16 of 16 derivation member(s) passed the check
-A11: green at the commit that adds this record
+A11: green at 47f31731
 A12: red at b4c65f62: AssertionError: Lists differ: ['start: subprocess.getstatusoutput', 'sta[579 chars]ing'] != [] : 16 of 16 launch census member(s) passed the check
-A12: green at the commit that adds this record
+A12: green at 47f31731
 A13: red at b4c65f62: AssertionError: Lists differ: ['received names it; env is a mapping with[208 chars] it'] != [] : 5 of 5 launch member(s) passed the check
-A13: green at the commit that adds this record
+A13: green at 47f31731
 ```
 
 ## Not measured locally
