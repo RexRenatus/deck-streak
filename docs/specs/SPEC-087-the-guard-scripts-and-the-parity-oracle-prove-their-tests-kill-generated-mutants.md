@@ -508,3 +508,59 @@ SPEC-038 section 8 (insert-only amendments), ADR-057 (D1, D4), ADR-070, ADR-073,
   that the stage's runs cannot tell apart.
 - **The plan's changelog fragment** `changelog.d/docs-python-mutants-087.md` is unchanged by the delivery:
   it landed with the plan.
+
+## 10. Amendment, 2026-09-30: the verdict step fails on each judge alone
+
+Issue #454, following #218. The `mutation-verdict` job's verdict step runs the Rust, oracle and
+scripts judges and the legs check, collects each exit and folds it into one status. Measured at
+`dev` 4f9b55e: removing the scripts judge's fold left every workflow test green, because the one
+test that runs the step answers the scripts judge with a constant success.
+
+Made by issue #454's delivery, insert-only under ruling (i) of SPEC-038 section 8: every earlier
+byte is kept in order. It inserts sections 10 and 11 only.
+
+- **R17. Every exit the verdict step collects is folded into its status.** For each command of
+  the step that runs the verdict tool, the step exits non-zero when that command alone fails and
+  every other one succeeds, whichever non-zero exit the command returns, and it exits zero when
+  every command succeeds. A command whose exit the step does not collect (no `|| <variable>=$?`)
+  is itself a finding.
+- **The population is derived, never listed.** The test reads the commands from the step's own
+  script (each line that runs `scripts/mutation-verdict.py`, keyed by its verb and its `--class`),
+  prints how many it found and asserts that count against the number of runs of the tool in the
+  script. The non-zero exits are read from the tool's own exit constants. The population is each
+  command failing alone, crossed with each such exit, plus the control in which none fails; it is
+  run through a stand-in for the tool that logs each call, and every run must also have called every
+  command, so a step that stops early is refused.
+- **A mutant per fold.** Each of the eight folds of the step (the collecting of each of the four
+  commands' exits, the combining of the three later ones into the status, and the final exit) is
+  deleted or neutralised in a scratch copy of `ci.yml`, and every one fails the test by assertion.
+
+The rows join `S08700-S08799` (`SCRIPT_MUTATIONS`), each with the one killer of A24:
+
+| row | mutant |
+|---|---|
+| S08766 | the Rust judge's exit is thrown away where the step collects it |
+| S08767 | the oracle judge's exit is thrown away where the step collects it |
+| S08768 | the oracle judge's collected exit is never folded into the status |
+| S08769 | the scripts judge's exit is thrown away where the step collects it |
+| S08770 | the scripts judge's collected exit is never folded into the status |
+| S08771 | the legs check's exit is thrown away where the step collects it |
+| S08772 | the legs check's collected exit is never folded into the status |
+| S08773 | the step exits success whatever its status is |
+
+Sections 3 and 7 are left as they stand: no earlier line of this SPEC is edited, so the criterion
+of this amendment, A24, is defined in the criteria table and fence of section 11. Files added or
+changed by this amendment: `scripts/tests/test_verdict_folds.py` (added),
+`scripts/mutation-rows.d/S08700-S08799.json` (eight rows), `docs/red-first/SPEC-087.md` (a dated
+addendum) and `changelog.d/test-verdict-folds-454.md` (added). It changes no Rust and no workflow
+(#454).
+
+## 11. Acceptance criteria of the amendment of 2026-09-30 (A24, #454)
+
+| id | criterion | decided by |
+|---|---|---|
+| A24 | for each command the verdict step runs (found in its script: 4, each collecting its exit), the step exits with that command's own non-zero exit when it alone fails, for each of the tool's non-zero exits, and exits zero when none fails; every run calls every command, and the count of runs examined is printed | `test_verdict_folds.py` `the_step_fails_when_any_one_command_alone_fails_with_any_of_its_exits` |
+
+```acceptance
+A24: python3 -m unittest discover -s scripts/tests -p test_verdict_folds.py -k the_step_fails_when_any_one_command_alone_fails_with_any_of_its_exits
+```

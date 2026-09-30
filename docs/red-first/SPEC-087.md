@@ -154,3 +154,17 @@ A22: green at 1e386cf
 A23: red at 6394621: AssertionError: False is not true : mutation-python uploads mutation-python-shard-0 and the verdict downloads nothing that matches it
 A23: green at 63b9336
 ```
+
+Addendum, 2026-09-30 (issue #454, the amendment's A24). The test of A24 was committed
+(d632590d) beside one planted fold removal in `ci.yml`, the scripts judge's line
+`if [ "$status" -eq 0 ]; then status=$scripts; fi`, because the folds already hold at `dev`, so a
+new test alone cannot be red. The whole file ran one test, red by assertion for the planted
+removal. Restoring the line (4cb52f6e) turned it green; the green commit edits no test file.
+
+```red-first
+A24: red at d632590d: AssertionError: 0 != 1 : judge:scripts alone, exit 1:
+A24: green at 4cb52f6e
+```
+
+Rows S08766 to S08773 are the companions of the killing test of A24, each proved KILLED by its
+full id on a clean committed tree.
