@@ -644,6 +644,265 @@ def refusal(line):
     return None
 
 
+class Flushed(io.StringIO):
+    """A stdout that counts its flushes: a line the scope prints must reach a log at once."""
+
+    def __init__(self):
+        super().__init__()
+        self.flushes = 0
+
+    def flush(self):
+        self.flushes += 1
+        super().flush()
+
+
+class TheWholeValues(ScriptCase):
+    """Every value the script writes, prints or defaults, asserted whole (SPEC-196 A19)."""
+
+    def go_flushed(self, plant, command=None):
+        out = Flushed()
+        with contextlib.redirect_stdout(out):
+            code = self.module.run(command or plant.marker_command(), plant.report, **plant.seams())
+        return code, out
+
+    def test_the_record_is_whole_before_and_after_the_command(self):
+        plant = self.plant().build()
+        seen = self.tmp / "record-seen.json"
+        record = plant.report / "memory-scope.json"
+        copy = f"import shutil\nshutil.copy({str(record)!r}, {str(seen)!r})\n"
+        code, out, done = plant.go(self.module, [sys.executable, "-c", copy])
+        self.assertEqual(code, 0, out)
+        running = {
+            "in_force": True,
+            "state": "running",
+            "reason": None,
+            "oom": 0,
+            "oom_kill": 0,
+            "max": 0,
+            "peak_percent": 0,
+        }
+        self.assertEqual(json.loads(seen.read_text("utf-8")), running)
+        self.assertEqual(done, {**running, "state": "done"})
+        with tempfile.TemporaryDirectory() as directory:
+            plant = Plant(directory).build()
+            (plant.group / "memory.peak").write_text("x\n", "utf-8")
+            code, out, done = plant.go(self.module, [sys.executable, "-c", "pass"])
+        why = "memory.peak holds no count after the command"
+        self.assertEqual(done, {**running, "in_force": False, "state": "done", "reason": why})
+        self.assertEqual(
+            out.splitlines()[-1], f"memory-scope: NOT IN FORCE after the command: {why}"
+        )
+
+    def test_a_refusal_is_whole(self):
+        plant = self.plant(text="MemFree: 1 kB\n").build()
+        code, out, done = plant.go(self.module)
+        self.assertEqual(code, 78)
+        why = "no cap can be measured: MemTotal is unreadable (MemTotal is absent from the meminfo)"
+        self.assertEqual(out, f"memory-scope: REFUSED: {why}\n")
+        self.assertEqual(
+            done,
+            {
+                "in_force": False,
+                "state": "done",
+                "reason": why,
+                "oom": 0,
+                "oom_kill": 0,
+                "max": 0,
+                "peak_percent": 0,
+            },
+        )
+
+    def test_each_printed_line_is_flushed(self):
+        plant = self.plant(text="MemFree: 1 kB\n").build()
+        code, out = self.go_flushed(plant)
+        self.assertEqual((code, out.flushes), (78, 1))
+        with tempfile.TemporaryDirectory() as directory:
+            plant = Plant(directory).build()
+            code, out = self.go_flushed(plant)
+            self.assertEqual((code, out.flushes), (0, 1), out.getvalue())
+        with tempfile.TemporaryDirectory() as directory:
+            plant = Plant(directory).build()
+            (plant.group / "memory.peak").write_text("x\n", "utf-8")
+            code, out = self.go_flushed(plant)
+            self.assertEqual((code, out.flushes), (0, 1), out.getvalue())
+
+    def test_a_record_file_is_sorted_json_and_ends_in_a_newline(self):
+        report = self.tmp / "made" / "twice"
+        self.module.write_record(report, {"b": 2, "a": 1})
+        self.assertEqual((report / "memory-scope.json").read_text("utf-8"), '{"a": 1, "b": 2}\n')
+        self.assertEqual(sorted(x.name for x in report.iterdir()), ["memory-scope.json"])
+        self.module.write_record(report, {"c": 3})
+        self.assertEqual((report / "memory-scope.json").read_text("utf-8"), '{"c": 3}\n')
+
+    def test_the_control_group_is_the_last_path_of_the_processs_own_line(self):
+        cases = {
+            "0::/a/b/unit.scope\n": "/a/b/unit.scope",
+            "0::/a::b/c\n": "/a::b/c",
+            "1:name=x:/first\n0::/last/one\n": "/last/one",
+            "": "",
+        }
+        for text, wanted in examined("cgroup files", list(cases.items())):
+            with self.subTest(text=text):
+                path = self.tmp / "cgroup"
+                path.write_text(text, "utf-8")
+                self.assertEqual(self.module.group_of(path), wanted)
+        self.assertEqual(self.module.group_of(self.tmp / "absent"), "")
+        self.assertEqual(self.module.unit_of("/a/b/unit.scope"), "unit.scope")
+        self.assertEqual(self.module.unit_of("unit.scope"), "unit.scope")
+        self.assertEqual(self.module.unit_of(""), "")
+
+    def test_the_manager_is_asked_for_the_policy_and_its_failure_refuses(self):
+        plant = self.plant().build()
+        code, out, _ = plant.go(self.module)
+        self.assertEqual(code, 0, out)
+        self.assertEqual(
+            plant.systemctl_log.read_text("utf-8").splitlines(),
+            ["show", "--property=OOMPolicy", "--value", plant.unit],
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            broken = Plant(directory).build()
+            broken.stub("systemctl", "exit 1\n")
+            code, out, done = broken.go(self.module)
+            self.assertEqual(code, 78, out)
+            self.assertEqual(done["reason"], "the unit's OOMPolicy is not continue")
+            self.assertFalse(broken.marker.exists())
+
+    def test_the_seams_default_to_this_machine(self):
+        import inspect
+
+        defaults = {
+            name: parameter.default
+            for name, parameter in inspect.signature(self.module.run).parameters.items()
+        }
+        self.assertEqual(
+            defaults,
+            {
+                "command": inspect.Parameter.empty,
+                "report": inspect.Parameter.empty,
+                "meminfo": Path("/proc/meminfo"),
+                "page": None,
+                "sudo": ("sudo",),
+                "systemctl": ("systemctl",),
+                "proc_cgroup": Path("/proc/self/cgroup"),
+                "cgroup_root": Path("/sys/fs/cgroup"),
+                "reads": 50,
+            },
+        )
+
+    def test_the_page_size_is_the_machines_when_none_is_given(self):
+        plant = self.plant().build()
+        asked = []
+
+        def sysconf(name):
+            asked.append(name)
+            return PAGE
+
+        seams = {k: v for k, v in plant.seams().items() if k != "page"}
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), mock.patch.object(self.module.os, "sysconf", sysconf):
+            code = self.module.run(plant.marker_command(), plant.report, **seams)
+        self.assertEqual((code, asked), (0, ["SC_PAGE_SIZE"]), out.getvalue())
+
+    def test_the_scope_is_read_until_it_holds_the_process_and_no_longer(self):
+        plant = self.plant().build()
+        unit_group = f"/system.slice/{plant.unit}"
+        for arrives, reads, expected_reads in ((3, 5, 3), (9, 3, 3), (1, 4, 1), (2, 2, 2)):
+            with self.subTest(arrives=arrives, reads=reads):
+                calls, sleeps = [], []
+
+                def group_of(path, arrives=arrives, calls=calls):
+                    calls.append(path)
+                    return unit_group if len(calls) >= arrives else "/user.slice/x"
+
+                seams = {**plant.seams(), "reads": reads}
+                out = io.StringIO()
+                with (
+                    contextlib.redirect_stdout(out),
+                    mock.patch.object(self.module, "group_of", group_of),
+                    mock.patch.object(self.module.time, "sleep", sleeps.append),
+                ):
+                    code = self.module.run(plant.marker_command(), plant.report, **seams)
+                self.assertEqual(len(calls), expected_reads)
+                self.assertEqual(sleeps, [0.1] * (expected_reads - 1))
+                self.assertEqual(code, 0 if arrives <= reads else 78, out.getvalue())
+
+
+class TheCommandLine(ScriptCase):
+    def parse(self, *argv):
+        return self.module.build_parser().parse_args(list(argv))
+
+    def test_the_parser_names_itself_and_its_two_arguments(self):
+        parser = self.module.build_parser()
+        self.assertEqual(parser.prog, "memory_scope.py")
+        self.assertEqual(
+            parser.description,
+            "Run a command inside a memory scope and record what the kernel did.",
+        )
+        helps = {a.dest: a.help for a in parser._actions if a.dest != "help"}
+        self.assertEqual(
+            helps, {"report": "directory for the record", "command": "-- and the command to run"}
+        )
+
+    def test_a_command_line_without_a_report_directory_is_a_usage_error(self):
+        ran = []
+        with (
+            mock.patch.object(self.module, "run", lambda *a: ran.append(a)),
+            contextlib.redirect_stderr(io.StringIO()) as err,
+            self.assertRaises(SystemExit) as raised,
+        ):
+            self.module.main(["--", "echo", "a"])
+        self.assertEqual(raised.exception.code, 2)
+        self.assertEqual(ran, [])
+        self.assertIn("the following arguments are required: --report", err.getvalue())
+
+    def test_main_strips_one_leading_double_dash_and_runs_the_rest(self):
+        calls = []
+
+        def run(command, report):
+            calls.append((command, report))
+            return 7
+
+        cases = [
+            (["--report", "r", "--", "echo", "a"], ["echo", "a"]),
+            (["--report", "r", "echo", "a"], ["echo", "a"]),
+            (["--report", "r", "--", "--", "x"], ["--", "x"]),
+            (["--report", "r", "--", "a", "--", "b"], ["a", "--", "b"]),
+        ]
+        for argv, command in examined("command lines", cases):
+            with self.subTest(argv=argv), mock.patch.object(self.module, "run", run):
+                calls.clear()
+                self.assertEqual(self.module.main(argv), 7)
+                self.assertEqual(calls, [(command, Path("r"))])
+        with (
+            mock.patch.object(self.module, "run", run),
+            mock.patch.object(sys, "argv", ["memory_scope.py", "--report", "q", "--", "z"]),
+        ):
+            calls.clear()
+            self.assertEqual(self.module.main(), 7)
+            self.assertEqual(calls, [(["z"], Path("q"))])
+
+    def test_a_command_line_with_no_command_is_refused_by_the_parser(self):
+        for argv in (["--report", "r"], ["--report", "r", "--"]):
+            with self.subTest(argv=argv):
+                err = io.StringIO()
+                with contextlib.redirect_stderr(err), self.assertRaises(SystemExit) as raised:
+                    self.module.main(argv)
+                self.assertEqual(raised.exception.code, 2)
+                self.assertTrue(err.getvalue().rstrip().endswith("no command after --"))
+
+    def test_the_file_run_as_a_script_calls_main(self):
+        import subprocess
+
+        done = subprocess.run(
+            [sys.executable, str(SCRIPT), "--report", str(self.tmp / "r")],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(done.returncode, 2)
+        self.assertTrue(done.stderr.rstrip().endswith("no command after --"), done.stderr)
+
+
 class TheWorkflows(unittest.TestCase):
     def test_every_mutants_run_that_runs_tests_is_inside_the_scope(self):
         refused = [

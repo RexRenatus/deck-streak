@@ -404,6 +404,7 @@ class TheVerdictReadsTheToolsOwnReport(unittest.TestCase):
         )
         self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
         self.assertIn("examined 0 by cargo-mutants and 1 by rows", done.stdout)
+        self.assertEqual(done.stdout.splitlines()[-1], "examined 1")
         # A row that did not kill fails the job, even when the tool examined something.
         rows = fixture.report(
             "rows.json", [{"id": "S00050-LAST-HOUR", "verdict": "SURVIVED", "target": LIB}]
@@ -1014,6 +1015,7 @@ class TheVerdictCountsEveryShard(unittest.TestCase):
         carried = fixture.judge("rust", "--shard-reports", nothing, "--rows", str(rows))
         self.assertEqual(carried.returncode, 0, carried.stdout + carried.stderr)
         self.assertIn("examined 0 by cargo-mutants and 1 by rows", carried.stdout)
+        self.assertEqual(carried.stdout.splitlines()[-1], "examined 1")
         # With no row to carry it, the changed code line examined nothing: VOID.
         bare = fixture.judge("rust", "--shard-reports", nothing)
         self.assertEqual(bare.returncode, 3, bare.stdout + bare.stderr)
