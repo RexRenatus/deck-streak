@@ -11,10 +11,12 @@ its crate (its `tests/`, or the `#[cfg(test)]` module of the implementation's ow
 mutation row that targets the implementation's own file. It reads Rust source as the compiler
 does: comments of both forms (`//` and nested `/* */`) do not count, and neither does an
 implementation inside one, a `//` inside a string is not a comment, and only a `#[cfg(test)]`
-module of the implementation's own file counts, not a line after it. An out-of-line module
-(`#[cfg(test)] mod tests;`) is that file's own test module, read only from the one file rustc
-could read for it; an ambiguous or attribute-made choice is refused. A literal that two implementations of one crate share is pinned only by a row on
-each implementation's file.
+module of the implementation's own file counts, not a line after it. A module is a test module
+when its attributes keep it under `--cfg test` and remove it without, read in three-valued logic
+in which every option but `test` is unknown (R8). An out-of-line one (`mod tests;`) is read only
+from the one file rustc could read for it; an ambiguous or attribute-made choice is refused. A
+literal that two implementations of one crate share is pinned only by a row on each
+implementation's file.
 """
 
 import functools
@@ -32,18 +34,21 @@ from _support import REPO, examined
 IMPL = re.compile(
     r"^\s*impl\b\s*(?:<[^{};]*>)?\s*(?:\$?[\w:]+::)?Setting\s+for\s+(\$?\w+)", re.MULTILINE
 )
-TEST_MODULE = re.compile(
-    r"#\[cfg\(test\)\]\s*(?:#\[[^\]]*\]\s*)*(?:pub(?:\([^)]*\))?\s+)?mod\s+\w+\s*\{"
+DECLARATION = re.compile(
+    r"((?:#\[[^\]]*\]\s*)*)(?:pub(?:\([^)]*\))?\s+)?mod\s+(?:r#)?(\w+)\s*([;{])"
 )
-TOKEN = re.compile(r"//|/\*|(?<![\w])b?r#*\"|\"|'")
-RAW = re.compile(r"b?r(#*)\"")
-OUT_OF_LINE = re.compile(r"((?:#\[[^\]]*\]\s*)+)(?:pub(?:\([^)]*\))?\s+)?mod\s+(\w+)\s*;")
-PATH_WORD = re.compile(r"\bpath\b")
+ATTRIBUTE = re.compile(r"#\[([^\]]*)\]")
+INNER = re.compile(r"\s*#!\[([^\]]*)\]")
+WORD = re.compile(r"(?:r#)?(\w+)|::|\S")
+SPACE = " \t\n\r\x0b\x0c\x85\u200e\u200f\u2028\u2029\ufeff"
 KLEENE = {
     "all": lambda values: False if False in values else None if None in values else True,
     "any": lambda values: True if True in values else None if None in values else False,
     "not": lambda values: None if len(values) != 1 or values[0] is None else not values[0],
 }
+TOKEN = re.compile(r"//|/\*|(?<![\w])b?r#*\"|\"|'")
+RAW = re.compile(r"b?r(#*)\"")
+PATH_WORD = re.compile(r"\bpath\b")
 CHAR = re.compile(r"'(?:\\(?:x[0-9a-fA-F]{2}|u\{[0-9a-fA-F]{1,6}\}|.)|[^\\'\n])'")
 SHAPE = re.compile(r'const\s+SHAPE\s*:\s*&\'static\s+str\s*=\s*("(?:[^"\\]|\\.)*")\s*;')
 BANDS = REPO / "scripts" / "mutation-rows.d"
@@ -119,33 +124,122 @@ def lexed(text):
     return "".join(bare), "".join(skeleton)
 
 
+def predicate(words, at, test):
+    """The configuration predicate at `words[at]` and the index after it. `test` is the one option
+    known here; any other option or key-value is None (unknown), and `all`, `any` and `not` combine
+    values in three-valued logic, so a True or False holds whatever else is configured."""
+    word = words[at]
+    if word in KLEENE and words[at + 1] == "(":
+        values, at = [], at + 2
+        while words[at] != ")":
+            value, at = predicate(words, at, test)
+            values.append(value)
+            if words[at] not in (",", ")"):
+                raise ValueError(words[at])
+            at += words[at] == ","
+        return KLEENE[word](values), at + 1
+    if not word.isidentifier():
+        raise ValueError(word)
+    if words[at + 1] == "=":
+        return None, at + 2
+    return (test if word == "test" else None), at + 1
+
+
+def applied(words):
+    """The attributes a `cfg_attr` applies, split at its top-level commas."""
+    attributes, depth = [[]], 0
+    for word in words:
+        depth += (word in ("(", "[", "{")) - (word in (")", "]", "}"))
+        if word == "," and depth == 0:
+            attributes.append([])
+        else:
+            attributes[-1].append(word)
+    return [attribute for attribute in attributes if attribute]
+
+
+def condition(words, test):
+    """Whether one attribute keeps its item: a `cfg` when its predicate holds, a `cfg_attr` when its
+    predicate fails or every attribute it applies keeps the item, and any other attribute always."""
+    if words[0] not in ("cfg", "cfg_attr"):
+        return True
+    if words[1] != "(" or words[-1] != ")":
+        raise ValueError(words)
+    value, at = predicate(words, 2, test)
+    if words[0] == "cfg":
+        if at != len(words) - 1:
+            raise ValueError(words)
+        return value
+    if words[at] != ",":
+        raise ValueError(words)
+    kept = [condition(attribute, test) for attribute in applied(words[at + 1 : -1])]
+    return KLEENE["any"]([KLEENE["not"]([value]), KLEENE["all"](kept)])
+
+
+def test_only(attributes):
+    """True when `attributes` keep a module under `--cfg test` and remove it without, whatever
+    else is configured (R8). A malformed attribute, or a run that could not be read whole (None),
+    decides nothing, so the module is not read."""
+    if attributes is None:
+        return False
+    words = [[word.group(1) or word.group(0) for word in WORD.finditer(a)] for a in attributes]
+    try:
+        held = [KLEENE["all"]([condition(each, test) for each in words]) for test in (True, False)]
+    except (IndexError, ValueError):
+        return False
+    return held == [True, False]
+
+
+def attributes(skeleton, declaration, body, at):
+    """The attributes that decide whether `declaration` is compiled: its outer run, and the inner
+    attributes that open its body (`body` from `at`). None when either run may not be whole: the
+    outer one when something other than an item's end comes before it, the inner one when an
+    attribute is left unread."""
+    if skeleton[: declaration.start()].rstrip(SPACE)[-1:] not in ("", ";", "}"):
+        return None
+    inner = []
+    while (attribute := INNER.match(body, at)) is not None:
+        inner.append(attribute.group(1))
+        at = attribute.end()
+    if body[at:].lstrip(SPACE).startswith(("#!", "]")):
+        return None
+    return ATTRIBUTE.findall(declaration.group(1)) + inner
+
+
 def cfg_test_spans(skeleton):
-    """The spans of the `#[cfg(test)] mod name { ... }` blocks, braces matched outside comments and
-    literals."""
+    """The spans of the file's top-level inline test modules (`mod name { ... }` that only
+    `--cfg test` compiles), braces matched outside comments and literals. One declared inside
+    another module is not read (#433)."""
     spans = []
-    for module in TEST_MODULE.finditer(skeleton):
-        depth, end = 1, module.end()
+    for block in DECLARATION.finditer(skeleton):
+        if block.group(3) != "{":
+            continue
+        if skeleton[: block.start()].count("{") != skeleton[: block.start()].count("}"):
+            continue
+        if not test_only(attributes(skeleton, block, skeleton, block.end())):
+            continue
+        depth, end = 1, block.end()
         while end < len(skeleton) and depth:
             depth += {"{": 1, "}": -1}.get(skeleton[end], 0)
             end += 1
-        spans.append((module.start(), end))
+        spans.append((block.start(), end))
     return spans
 
 
 def out_of_line(own):
-    """The file of each `#[cfg(test)] mod name;` that `own` declares, read only when rustc's choice
-    is not in doubt (R8): of every file rustc could read for it (`name.rs` or `name/mod.rs`, in
-    `own`'s module directory or beside `own`, since a crate root, a `src/bin` file, a `mod.rs` and
-    a file an attribute loaded all read their modules beside themselves), exactly one exists, and
-    no attribute of the declaration carries `path` in any spelling (`#[path]`, a raw string,
-    `cfg_attr` under any predicate). Any other declaration is not read, so a shape only it spells
-    is refused. A declaration inside an inline module or a block is not followed."""
+    """The file of each out-of-line test module (`mod name;`) that `own` declares, read only when
+    rustc's choice is not in doubt (R8): of every file rustc could read for it (`name.rs` or
+    `name/mod.rs`, in `own`'s module directory or beside `own`, since a crate root, a `src/bin`
+    file, a `mod.rs` and a file an attribute loaded all read their modules beside themselves),
+    exactly one exists, no attribute of the declaration carries `path` in any spelling (`#[path]`,
+    a raw string, `cfg_attr` under any predicate), and the declaration's attributes with that
+    file's inner ones make it a test module. Any other declaration is not read, so a shape only it
+    spells is refused. A declaration inside an inline module or a block is not followed (#433)."""
     bare, skeleton = lexed(own.read_text(encoding="utf-8"))
     files = []
-    for module in OUT_OF_LINE.finditer(skeleton):
+    for module in DECLARATION.finditer(skeleton):
         if skeleton.count("{", 0, module.start()) != skeleton.count("}", 0, module.start()):
             continue
-        if "#[cfg(test)]" not in module.group(1):
+        if module.group(3) != ";":
             continue
         if PATH_WORD.search(module.group(1)):
             continue
@@ -157,7 +251,9 @@ def out_of_line(own):
             if path.is_file()
         ]
         if len(found) == 1:
-            files += found
+            _, file = lexed(found[0].read_text(encoding="utf-8"))
+            if test_only(attributes(skeleton, module, file, 0)):
+                files += found
     return files
 
 
