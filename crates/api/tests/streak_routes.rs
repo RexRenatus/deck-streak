@@ -92,6 +92,11 @@ async fn seed(db: &Db) {
 /// The API as the daemon builds it, over a migrated database holding the two tracks, for the
 /// synthetic owner and bot, on a manual clock.
 async fn app(scratch: &TempDir) -> (Db, Router) {
+    app_with(scratch, true).await
+}
+
+/// The same app; when `open` is false the readiness never learns of the database.
+async fn app_with(scratch: &TempDir, open: bool) -> (Db, Router) {
     let db = Db::open(&scratch.path().join("deck_streak.db"))
         .await
         .expect("the database opens");
@@ -104,7 +109,9 @@ async fn app(scratch: &TempDir) -> (Db, Router) {
     );
     let access = OwnerAccess::new(gate, clock, StudyDayRule::default());
     let readiness = Readiness::new();
-    readiness.database_opened(db.clone());
+    if open {
+        readiness.database_opened(db.clone());
+    }
     (db, router(ApiState::new(readiness).with_owner(access)))
 }
 
@@ -274,4 +281,58 @@ async fn the_streak_routes_answer_only_the_owner() {
     assert_eq!(verdict["verdict"], "armed");
     assert!(verdict.get("strength").is_some(), "the strength is served");
     db.close().await;
+}
+
+/// A rule (A37): a streak route answers 503 `database_not_open` while the database is not open and
+/// 500 `streak_unreadable` when its table cannot be read, each as JSON, for both routes.
+#[tokio::test]
+async fn the_streak_routes_name_why_they_cannot_answer() {
+    let mut refusals = 0_u32;
+    for (path, table) in [
+        (STREAK_PATH, "streak_state"),
+        (GOVERNOR_PATH, "governor_state"),
+    ] {
+        let scratch = tempfile::tempdir().expect("a temporary directory");
+        let (_db, closed) = app_with(&scratch, false).await;
+        let owner = cookie_of(&handshake(&closed, OWNER_PAYLOAD).await);
+        let refused = get(&closed, path, Some(&owner)).await;
+        assert_eq!(refused.status, StatusCode::SERVICE_UNAVAILABLE, "{path}");
+        assert_eq!(
+            refused.json(),
+            json!({"reason": "database_not_open"}),
+            "{path}"
+        );
+        assert_eq!(
+            refused.headers.get(CONTENT_TYPE).map(HeaderValue::as_bytes),
+            Some(&b"application/json"[..])
+        );
+
+        let scratch = tempfile::tempdir().expect("a temporary directory");
+        let (db, open) = app(&scratch).await;
+        let owner = cookie_of(&handshake(&open, OWNER_PAYLOAD).await);
+        let mut write = db.write().await.expect("a write");
+        let rename = match table {
+            "streak_state" => "ALTER TABLE streak_state RENAME TO gone_streak_state",
+            _ => "ALTER TABLE governor_state RENAME TO gone_governor_state",
+        };
+        sqlx::query(rename)
+            .execute(&mut *write)
+            .await
+            .expect("the table is renamed away");
+        write.commit().await.expect("the commit");
+        let broken = get(&open, path, Some(&owner)).await;
+        assert_eq!(broken.status, StatusCode::INTERNAL_SERVER_ERROR, "{path}");
+        assert_eq!(
+            broken.json(),
+            json!({"reason": "streak_unreadable"}),
+            "{path}"
+        );
+        assert_eq!(
+            broken.headers.get(CONTENT_TYPE).map(HeaderValue::as_bytes),
+            Some(&b"application/json"[..])
+        );
+        refusals += 2;
+    }
+    println!("streak-route refusals: {refusals}");
+    assert_eq!(refusals, 4);
 }

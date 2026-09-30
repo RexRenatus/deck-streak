@@ -9,7 +9,7 @@ use std::collections::BTreeMap;
 use deck_streak_analytics::settings::AnalyticsSettings;
 use deck_streak_coordination::recompute::analytics_step::AnalyticsStep;
 use deck_streak_coordination::recompute::streaks::StreaksStep;
-use deck_streak_coordination::recompute::{Fold, Phase};
+use deck_streak_coordination::recompute::{DayStep, Fold, Phase};
 use deck_streak_ingest::reader::{Card, CollectionData, Review};
 use deck_streak_kernel::{Db, StudyDay, StudyDayRule, Track, UtcMillis};
 use sqlx::Row;
@@ -234,4 +234,41 @@ async fn one_episode_keeps_its_anchor_across_recomputes() {
         Some(D0 - 121),
         "the next day's recompute keeps the episode's anchor"
     );
+}
+
+#[tokio::test]
+async fn the_step_is_named_for_the_fold_report() {
+    let (step, _due) = StreaksStep::new();
+    assert_eq!(step.name(), "streaks.streaks_and_governor");
+    assert_eq!(step.phase(), Phase::StreaksAndGovernor);
+}
+
+/// A rule (A35): the freezes the outside paid join the language row's, held between zero and the
+/// cap of three; the nets tried are -5, -1, 0, 1, 2 and 5 over the one freeze a track starts with.
+#[tokio::test]
+async fn the_outside_freezes_join_the_language_row_within_zero_and_three() {
+    let mut held = Vec::new();
+    for outside in [-5_i64, -1, 0, 1, 2, 5] {
+        let scratch = TempDir::new().expect("a scratch directory");
+        let db = database(&scratch).await;
+        {
+            let mut write = db.write().await.expect("a write");
+            sqlx::query(
+                "INSERT INTO freeze_events (study_day, delta, reason, created_at) \
+                 VALUES (19000, ?1, 'chest', 1)",
+            )
+            .bind(outside)
+            .execute(&mut *write)
+            .await
+            .expect("an outside freeze");
+            write.commit().await.expect("the commit");
+        }
+        let data = collection(language_run(D0 - 1, D0 - 1));
+        recompute(&fold(), &db, &data, at(D0, 12), D0).await;
+        let row = streak(&db, "language").await.expect("a language row");
+        assert_eq!(row.2, (1 + outside).clamp(0, 3), "outside net {outside}");
+        held.push(row.2);
+    }
+    println!("outside-freeze population: held {held:?}");
+    assert_eq!(held, [0, 0, 1, 2, 3, 3]);
 }
