@@ -523,7 +523,10 @@ byte is kept in order. It inserts sections 10 and 11 only.
   the step that runs the verdict tool, the step exits non-zero when that command alone fails and
   every other one succeeds, whichever non-zero exit the command returns, and it exits zero when
   every command succeeds. A command whose exit the step does not collect (no `|| <variable>=$?`)
-  is itself a finding.
+  is itself a finding. The step is run with the shell GitHub runs it with, resolved from the
+  workflow text (the step's `shell:`, else the job's and then the workflow's `defaults.run.shell`,
+  else `bash -e {0}`), never a fixed stronger shell, so an exit a pipeline loses in CI is lost in
+  the test too.
 - **The population is derived, never listed.** The test reads the commands from the step's own
   script (each line that runs `scripts/mutation-verdict.py`, keyed by its verb and its `--class`),
   prints how many it found and asserts that count against the number of runs of the tool in the
@@ -549,18 +552,21 @@ The rows join `S08700-S08799` (`SCRIPT_MUTATIONS`), each with the one killer of 
 | S08773 | the step exits success whatever its status is |
 
 Sections 3 and 7 are left as they stand: no earlier line of this SPEC is edited, so the criterion
-of this amendment, A24, is defined in the criteria table and fence of section 11. Files added or
+of this amendment, A24 and A25, are defined in the criteria table and fence of section 11. Files added or
 changed by this amendment: `scripts/tests/test_verdict_folds.py` (added),
 `scripts/mutation-rows.d/S08700-S08799.json` (eight rows), `docs/red-first/SPEC-087.md` (a dated
-addendum) and `changelog.d/test-verdict-folds-454.md` (added). It changes no Rust and no workflow
+addendum), `scripts/tests/test_not_started_legs.py` (the run helper takes the resolved shell, and
+its callers pass it) and `changelog.d/test-verdict-folds-454.md` (added). It changes no Rust and no workflow
 (#454).
 
-## 11. Acceptance criteria of the amendment of 2026-09-30 (A24, #454)
+## 11. Acceptance criteria of the amendment of 2026-09-30 (A24 and A25, #454)
 
 | id | criterion | decided by |
 |---|---|---|
-| A24 | for each command the verdict step runs (found in its script: 4, each collecting its exit), the step exits with that command's own non-zero exit when it alone fails, for each of the tool's non-zero exits, and exits zero when none fails; every run calls every command, and the count of runs examined is printed | `test_verdict_folds.py` `the_step_fails_when_any_one_command_alone_fails_with_any_of_its_exits` |
+| A24 | for each command the verdict step runs (found in its script: 4, each collecting its exit), the step, run under the shell the workflow resolves for the step, exits with that command's own non-zero exit when it alone fails, for each of the tool's non-zero exits, and exits zero when none fails; every run calls every command, and the count of runs examined is printed | `test_verdict_folds.py` `the_step_fails_when_any_one_command_alone_fails_with_any_of_its_exits` |
+| A25 | the harness sees a pass-through pipe that loses a recorded exit: for each command the census derives (4) and each of 3 pass-through pipe forms (`\| tee`, `\| cat`, `2>&1 \| cat`) applied to that command's line in memory (12 examined, printed and asserted), that command alone failing with each non-zero exit fails the exit-code assertion; a captured command the harness cannot drive is refused by name; and the shell resolver returns the shell GitHub runs for each placement (step, job, workflow, none) and each precedence | `test_verdict_folds.py` `the_harness_sees_a_pipe_that_loses_a_recorded_exit`, `a_captured_command_the_harness_cannot_drive_is_refused_by_name`, `each_placement_and_the_precedence_resolve_to_the_shell_github_runs` |
 
 ```acceptance
 A24: python3 -m unittest discover -s scripts/tests -p test_verdict_folds.py -k the_step_fails_when_any_one_command_alone_fails_with_any_of_its_exits
+A25: python3 -m unittest discover -s scripts/tests -p test_verdict_folds.py -k the_harness_sees_a_pipe_that_loses_a_recorded_exit -k a_captured_command_the_harness_cannot_drive_is_refused_by_name -k each_placement_and_the_precedence_resolve_to_the_shell_github_runs
 ```

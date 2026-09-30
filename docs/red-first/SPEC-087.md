@@ -164,7 +164,15 @@ removal. Restoring the line (4cb52f6e) turned it green; the green commit edits n
 ```red-first
 A24: red at d632590d: AssertionError: 0 != 1 : judge:scripts alone, exit 1:
 A24: green at 4cb52f6e
+A25: red at 12a45d84: AssertionError: 1 == 1 : judge:rust piped through | tee "$RUNNER_TEMP/{n}.log" kept its exit 1
+A25: green at 9d0daeb4
 ```
+
+A25 (round 1 of #454). Its test was committed (12a45d84) beside the run helper as it stood, which
+ran the step under `bash -eo pipefail`, a stronger shell than the one GitHub resolves for a step
+naming none (`bash -e {0}`). Under pipefail a piped command keeps its exit, so the harness
+self-test failed by assertion, and so did the census test, whose first cut refused nothing. The
+resolver (9d0daeb4) runs the step under the resolved shell and refuses the undrivable capture.
 
 Rows S08766 to S08773 are the companions of the killing test of A24, each proved KILLED by its
 full id on a clean committed tree.
