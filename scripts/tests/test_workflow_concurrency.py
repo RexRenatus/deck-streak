@@ -162,25 +162,35 @@ TAG_REF_EVENTS = (
 BLOCK_KEYS = ("group", "cancel-in-progress", "queue")
 
 
-def tag_events(content):
-    """The events that start a run of a workflow for a tag, as GitHub's workflow syntax reads its
-    filters: a push whose filters admit a tag (a `tags` or `tags-ignore` filter, or neither a
-    branch nor a tag filter) and a release. `on:` is read as a name, a list or a mapping."""
+def declared(content):
+    """A workflow's events as {event: its filters}, `on:` read as a name, a list or a mapping."""
     events = content.get("on")
     if isinstance(events, str):
-        events = {events: None}
-    elif isinstance(events, list):
-        events = dict.fromkeys(events)
-    elif not isinstance(events, dict):
+        return {events: None}
+    if isinstance(events, list):
+        return dict.fromkeys(events)
+    if not isinstance(events, dict):
         raise AssertionError(f"an `on:` the reader does not model: {events!r}")
+    return events
+
+
+def tag_events(content):
+    """The events that start a run of a workflow for a tag, as GitHub's docs read them: a push whose
+    filters admit a tag (a `tags` or `tags-ignore` filter, or neither a branch nor a tag filter), a
+    create, which runs for every branch or tag created and takes no filter, and a release."""
+    events = declared(content)
     found = []
     if "push" in events:
         filters = set(events["push"] or {})
         if filters & {"tags", "tags-ignore"} or not filters & {"branches", "branches-ignore"}:
             found.append("push")
-    if "release" in events:
-        found.append("release")
+    found += [event for event in ("create", "release") if event in events]
     return found
+
+
+def workflow_name(name, content):
+    """`github.workflow` for a workflow: its `name`, or its file's path when it has none."""
+    return content.get("name") or f".github/workflows/{name}"
 
 
 def releases_a_tag(content):
@@ -189,27 +199,31 @@ def releases_a_tag(content):
     return bool(tag_events(content))
 
 
-def tag_run(event, run_id):
-    """A run of `event` for the tag v1.0.0 with the given run id."""
-    return dict(push("refs/tags/v1.0.0", run_id=run_id), **{"github.event_name": event})
+def tag_run(event, run_id, workflow="ci"):
+    """A run of `event` for the tag v1.0.0 with the given run id, of the workflow named so."""
+    run = push("refs/tags/v1.0.0", run_id=run_id)
+    return dict(run, **{"github.event_name": event, "github.workflow": workflow})
 
 
 def rendered_groups(name, content):
-    """Every group another workflow's block renders in the scenarios the tests model, read without
-    case, as GitHub reads a group's name across the repository."""
+    """Every group another workflow's block renders, read without case, as GitHub reads a group's
+    name across the repository: with the workflow's own name as `github.workflow`, in the scenarios
+    the tests model and in a run for a tag of each event it declares whose ref can be a tag."""
     block = content.get("concurrency")
     group = block.get("group", "") if isinstance(block, dict) else block or ""
+    own = {"github.workflow": workflow_name(name, content)}
     scenarios = [*other_events("201").values(), pull_request("dev")]
-    scenarios += [tag_run(event, "201") for event in ("push", "release")]
+    events = {"push", "release"} | (set(declared(content)) & set(TAG_REF_EVENTS))
+    scenarios += [tag_run(event, "201") for event in sorted(events)]
     try:
-        return {rendered(group, context).casefold() for context in scenarios}
+        return {rendered(group, dict(context, **own)).casefold() for context in scenarios}
     except AssertionError as why:
         raise AssertionError(f"{name}'s group cannot be rendered: {why}") from why
 
 
-def release_problems(content, text, others=()):
+def release_problems(content, text, others=(), name="release.yml"):
     """What a release workflow's concurrency gets wrong (SPEC-190 R10, ADR-292): one workflow-level
-    block and no job's own, a group that is not empty, is the same for two runs of one tag under
+    block and no job's own, only the keys GitHub's parser defines, a group that is not empty, is the same for two runs of one tag under
     every event that runs it for a tag and is no other workflow's (`others`, as (name, content)),
     no run cancelled, and a group that queues every requested run, not one kept and replaced."""
     found = []
@@ -217,18 +231,22 @@ def release_problems(content, text, others=()):
     if blocks != 1:
         found.append(f"{blocks} concurrency blocks, so a job's own or none")
     for job_id, job in (content.get("jobs") or {}).items():
-        if isinstance(job, dict) and "concurrency" in job:
+        if isinstance(job, dict) and any(str(key).casefold() == "concurrency" for key in job):
             found.append(f"job {job_id} sets a concurrency block of its own")
     block = content.get("concurrency")
     if block is None:
         return found + ["carries no concurrency block"]
     if not isinstance(block, dict):
         return found + [f"its block is the group {block!r} alone, so queue is the default"]
+    unknown = sorted(str(key) for key in block if key not in BLOCK_KEYS)
+    if unknown:
+        found.append(f"its block holds {unknown}, which GitHub's parser does not define")
     group, cancel = block.get("group", ""), block.get("cancel-in-progress", "false")
+    workflow = workflow_name(name, content)
     if not str(group).strip():
         found.append("has no group, which GitHub's workflow parser requires")
     for event in tag_events(content):
-        first, second = tag_run(event, "201"), tag_run(event, "202")
+        first, second = tag_run(event, "201", workflow), tag_run(event, "202", workflow)
         if rendered(group, first) != rendered(group, second):
             found.append(
                 f"two runs of one tag have two groups ({event}), so their release steps run at once"
@@ -274,7 +292,8 @@ class EveryReleaseWorkflowQueuesEveryRun(unittest.TestCase):
         found = []
         for name, content, text in judged:
             others = [(other, c) for other, c, _t in everything if other != name]
-            found += [f"{name}: {problem}" for problem in release_problems(content, text, others)]
+            problems = release_problems(content, text, others, name)
+            found += [f"{name}: {problem}" for problem in problems]
         self.assertEqual(found, [])
 
     def test_the_release_class_is_read_as_github_reads_it(self):

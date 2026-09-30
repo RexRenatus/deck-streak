@@ -664,7 +664,9 @@ def read_workflow(text):
     ASCII, a double-quoted value that holds an escape, a quoted value that does not end at its
     closing quote, an anchor, alias or tag, a flow mapping, a flow list whose items are not plain,
     and a key that is not a plain name are each refused by their line, never guessed at, and the
-    file raises Unread once it is read. A line it cannot place refuses the whole file at once."""
+    file raises Unread once it is read. A key a mapping already holds, read without case, is refused
+    by its line too: GitHub's workflow parser refuses a workflow that holds one (SPEC-190 R10). A
+    line it cannot place refuses the whole file at once."""
     lines = re.split(r"\r\n|\r|\n", text)
     refused = [
         f"line {at + 1}: a character the reader does not read"
@@ -771,6 +773,8 @@ def _mapping(lines, at, indent, refused):
         else:
             raise AssertionError(f"line {at + 1} is not a mapping entry: {lines[at]!r}")
         key, rest = _read(_key, key, at, refused), rest.strip(" \t")
+        if key and key.casefold() in {held.casefold() for held in found}:
+            refused.append(f"line {at + 1}: a key the mapping already holds, read without case")
         if rest in ("|", "|-"):
             at += 1
             body = []
