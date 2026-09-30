@@ -15,12 +15,22 @@ import unittest
 from pathlib import Path
 
 from _support import REPO, examined
+from test_ci_workflows import workflow_files
 
 WORKFLOWS = REPO / ".github" / "workflows"
 WEEKLY = WORKFLOWS / "mutation-weekly.yml"
 CI = WORKFLOWS / "ci.yml"
 VERDICT = REPO / "scripts" / "mutation-verdict.py"
 BRIEF = REPO / "docs" / "BUILDER-BRIEF.md"
+ZERO_SCOPE = {
+    "in_force": True,
+    "state": "done",
+    "reason": None,
+    "oom": 0,
+    "oom_kill": 0,
+    "max": 0,
+    "peak_percent": 0,
+}
 EXAMINED = re.compile(r"^examined (\d+)", re.MULTILINE)
 INSTALL = re.compile(r"(?m)^\s*tool: cargo-mutants@27\.1\.0$")
 #: Each mutation job's job-level conditions (SPEC-290): the plan and the web job always start, the
@@ -383,16 +393,48 @@ class TheShardsAreThePlans(unittest.TestCase):
         self.assertRegex(verdict, r"judge [^\n]*--class rust [^\n]*--shard-reports ")
 
 
+def mutants_commands(directory):
+    """(workflow name, command line) for every `cargo mutants` line of the directory's workflows."""
+    return [
+        (path.name, command)
+        for path in workflow_files(directory)
+        for command in re.findall(r"cargo mutants [^\n]*", path.read_text(encoding="utf-8"))
+    ]
+
+
+def mutants_jobs(directory):
+    """(workflow name, job name, job block) for every job that runs `cargo mutants`."""
+    return [
+        (path.name, name, job)
+        for path in workflow_files(directory)
+        for name, job in jobs(path.read_text(encoding="utf-8")).items()
+        if "cargo mutants" in job
+    ]
+
+
+PLANTED_MUTANTS = (
+    "name: planted\njobs:\n  shard:\n    runs-on: ubuntu-24.04\n    steps:\n"
+    "      - run: cargo mutants --in-place\n"
+)
+
+
 class EveryRunIsBounded(unittest.TestCase):
+    def test_the_mutants_command_scan_reads_a_workflow_saved_with_the_yaml_suffix(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            (Path(scratch) / "planted.yaml").write_text(PLANTED_MUTANTS, encoding="utf-8")
+            commands = mutants_commands(Path(scratch))
+        self.assertEqual(commands, [("planted.yaml", "cargo mutants --in-place")])
+
+    def test_the_mutants_job_scan_reads_a_workflow_saved_with_the_yaml_suffix(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            (Path(scratch) / "planted.yaml").write_text(PLANTED_MUTANTS, encoding="utf-8")
+            running = mutants_jobs(Path(scratch))
+        self.assertEqual([(name, job) for name, job, _ in running], [("planted.yaml", "shard")])
+
     def test_every_cargo_mutants_command_bounds_its_builds_and_its_tests(self):
         # --timeout bounds each test run; under --in-place no build is bounded unless
         # --build-timeout says so (the tool's own timeouts chapter).
-        commands = [
-            (path.name, command)
-            for path in sorted(WORKFLOWS.glob("*.yml"))
-            for command in re.findall(r"cargo mutants [^\n]*", path.read_text(encoding="utf-8"))
-        ]
-        for name, command in examined("cargo-mutants commands", commands):
+        for name, command in examined("cargo-mutants commands", mutants_commands(WORKFLOWS)):
             self.assertRegex(command, r"--timeout \d+", f"{name}: {command}")
             self.assertRegex(command, r"--build-timeout \d+", f"{name}: {command}")
 
@@ -426,12 +468,7 @@ class CargoMutantsRunsTheGatesTestTool(unittest.TestCase):
         # binary, unless its configuration says otherwise (SPEC-039 R1, measured in section 8).
         config = (REPO / ".cargo" / "mutants.toml").read_text(encoding="utf-8")
         self.assertRegex(config, r'(?m)^test_tool = "nextest"$')
-        running = [
-            (path.name, name, job)
-            for path in sorted(WORKFLOWS.glob("*.yml"))
-            for name, job in jobs(path.read_text(encoding="utf-8")).items()
-            if "cargo mutants" in job
-        ]
+        running = mutants_jobs(WORKFLOWS)
         for workflow_name, name, job in examined("jobs that run cargo-mutants", running):
             self.assertRegex(
                 job,
@@ -461,6 +498,7 @@ def shard(reports, number, entries, code="2"):
     """Shard `number`'s artifact: its exit and, unless `entries` is None, its outcomes.json."""
     directory = reports / f"mutants-shard-{number}"
     (directory / "mutants.out").mkdir(parents=True)
+    (directory / "memory-scope.json").write_text(json.dumps(ZERO_SCOPE), encoding="utf-8")
     (directory / "cargo-mutants.exit").write_text(f"{code}\n", encoding="utf-8")
     if entries is None:
         return
@@ -510,9 +548,12 @@ class TheBatteryTakesAScope(unittest.TestCase):
         rust = found.get("rust", "")
         self.assertRegex(rust, r"(?m)^    if: \$\{\{ [^\n]*inputs\.package != 'miniapp'")
         self.assertRegex(rust, r"(?m)^\s+PACKAGE: \$\{\{ inputs\.package \}\}$")
-        command = re.search(r"cargo mutants [^\n]*", rust).group(0)
-        self.assertIn(SCOPED, command)
-        self.assertIn('--shard "$SHARD/$SHARDS"', command)
+        commands = re.findall(r"cargo mutants [^\n]*", rust)
+        self.assertEqual(len(commands), 2, "the shard runs one branch per package state")
+        self.assertIn('--package="$PACKAGE"', commands[0])
+        self.assertNotIn("--package", commands[1])
+        for command in commands:
+            self.assertIn('--shard "$SHARD/$SHARDS"', command)
         self.assertRegex(rust, r"(?m)^\s+SHARD: \$\{\{ matrix\.shard \}\}$")
         self.assertRegex(rust, r"(?m)^\s+SHARDS: \$\{\{ needs\.size\.outputs\.shards \}\}$")
         for name, job in examined("battery jobs", list(found.items())):
