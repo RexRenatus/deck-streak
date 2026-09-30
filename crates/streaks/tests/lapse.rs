@@ -248,6 +248,79 @@ type Member = (i64, BTreeMap<i64, u32>, BTreeSet<i64>, u32);
 /// `before` of 0 there is no closing day to skip, so that pass repeats the one before it.
 const DISTINCT_WINDOW_MEMBERS: usize = 1916;
 
+/// How many members sit at each boundary the walk compares, read by R13's reading of the arguments
+/// the judge is handed. The walk reads no day when `today` is before the window's first day, and
+/// ends at that first day when no day from it to `today` holds a review; it passes a skip day
+/// without counting it; it stops at a day whose count is more than none, so a closing day of one
+/// review is that boundary; and it opens a lapse when its silent days reach the threshold, so a run
+/// of exactly the threshold and one a day short are the two sides of that. A fold that keeps every
+/// member distinct can still move every member off one side, and these counts show it.
+const WALK_BOUNDARY_MEMBERS: [(&str, usize); 7] = [
+    ("empty windows", 0),
+    ("todays before the window", 2),
+    ("walks that end at the window's first day", 229),
+    ("walks that pass a skip day", 2000),
+    ("closing days of one review", 1349),
+    ("runs of silent days at the threshold", 403),
+    ("runs of silent days one short of it", 800),
+];
+
+/// The tally of members at each boundary, every boundary at zero.
+fn zero_tally() -> BTreeMap<&'static str, usize> {
+    WALK_BOUNDARY_MEMBERS.iter().map(|&(k, _)| (k, 0)).collect()
+}
+
+/// Adds one member's sides, from [`walk_sides`], to the tally.
+fn tally(sides: &mut BTreeMap<&'static str, usize>, member: [bool; 7]) {
+    for (&(name, _), side) in WALK_BOUNDARY_MEMBERS.iter().zip(member) {
+        *sides.entry(name).or_default() += usize::from(side);
+    }
+}
+
+/// The tally equals [`WALK_BOUNDARY_MEMBERS`].
+fn assert_walk_sides(sides: &BTreeMap<&str, usize>) {
+    assert_eq!(
+        *sides,
+        BTreeMap::from(WALK_BOUNDARY_MEMBERS),
+        "the boundaries' members: {sides:?}"
+    );
+}
+
+/// Where one window member sits against each boundary of [`WALK_BOUNDARY_MEMBERS`], by R13.
+fn walk_sides(
+    today: i64,
+    rows: &BTreeMap<i64, u32>,
+    skipped: &BTreeSet<i64>,
+    threshold: u32,
+) -> [bool; 7] {
+    let Some(&first) = rows.keys().next() else {
+        return [true, false, false, false, false, false, false];
+    };
+    if today < first {
+        return [false, true, false, false, false, false, false];
+    }
+    let latest_study = rows
+        .range(first..=today)
+        .filter(|(_, count)| **count > 0)
+        .map(|(number, _)| *number)
+        .max();
+    let run_start = latest_study.map_or(first, |number| number + 1);
+    let passes_a_skip = (run_start..=today).any(|number| skipped.contains(&number));
+    let silent = (run_start..=today)
+        .filter(|number| !skipped.contains(number))
+        .count();
+    let threshold = usize::try_from(threshold).unwrap_or(usize::MAX);
+    [
+        false,
+        false,
+        latest_study.is_none(),
+        passes_a_skip,
+        latest_study.is_some_and(|number| rows.get(&number) == Some(&1)),
+        silent == threshold,
+        silent + 1 == threshold,
+    ]
+}
+
 #[test]
 fn the_walk_reads_every_day_of_its_window_and_none_outside_it() {
     let mut examined: u64 = 0;
@@ -256,8 +329,10 @@ fn the_walk_reads_every_day_of_its_window_and_none_outside_it() {
     let k = i64::from(threshold);
     // A member is every input the judge reads: `today`, the rows, the skip days and the threshold.
     let mut distinct: BTreeSet<Member> = BTreeSet::new();
+    let mut sides = zero_tally();
     let mut record = |today: i64, rows: &BTreeMap<i64, u32>, skipped: &BTreeSet<i64>, at: u32| {
         let answer = judge_window(today, rows, skipped, at);
+        tally(&mut sides, walk_sides(today, rows, skipped, at));
         distinct.insert((today, rows.clone(), skipped.clone(), at));
         examined += 1;
         if answer.is_some() {
@@ -340,6 +415,7 @@ fn the_walk_reads_every_day_of_its_window_and_none_outside_it() {
         "examined {examined} window member(s), {} distinct",
         distinct.len()
     );
+    println!("boundary members: {sides:?}");
     assert_eq!(
         examined, 2252,
         "the population is generated, not listed: {examined}"
@@ -354,4 +430,5 @@ fn the_walk_reads_every_day_of_its_window_and_none_outside_it() {
         opened > 0 && closed > 0,
         "both answers occur: {opened} open, {closed} none"
     );
+    assert_walk_sides(&sides);
 }

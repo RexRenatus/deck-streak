@@ -7,6 +7,7 @@ use deck_streak_coordination::lapse::open_lapse;
 use deck_streak_coordination::recompute::RecomputeFacts;
 use deck_streak_ingest::reader::{CollectionData, Review};
 use deck_streak_kernel::{Hour, StudyDay, StudyDayRule, UtcMillis, UtcOffset};
+use deck_streak_streaks::lapse::LAPSE_AFTER_SILENT_DAYS;
 
 const DAY_MS: i64 = 86_400_000;
 const HOUR_MS: i64 = 3_600_000;
@@ -151,6 +152,90 @@ const DISTINCT_DAY_MEMBERS: usize = 112;
 /// asks whether a day holds more than none, so one review is the day at that boundary; a fold that
 /// keeps every member distinct can still stack the reviews on one day, and this count shows it.
 const ONE_REVIEW_DAYS: usize = 896;
+/// How many members sit at each other boundary a judge compares, read with the test's own day from
+/// the members each judge was handed. The kernel's day turns at the rollover, so an instant at a
+/// day's first millisecond and one at its last are the two sides of it, for the day judge's
+/// instant, each review the lapse judge is handed and its `now`. The walk opens a lapse when its run
+/// of silent days reaches the threshold, so a run of exactly the threshold and one a day short are
+/// the two sides of that. A fold that keeps every member distinct can still move every member off
+/// one side, and these counts show it.
+const BOUNDARY_MEMBERS: [(&str, usize); 8] = [
+    ("day instants at a rollover", 16),
+    ("day instants a millisecond before one", 16),
+    ("reviews at a rollover", 64),
+    ("reviews a millisecond before one", 64),
+    ("nows at a rollover", 224),
+    ("nows a millisecond before one", 224),
+    ("runs of silent days at the threshold", 224),
+    ("runs of silent days one short of it", 224),
+];
+
+/// Where instant `t` sits against the rollover under the rule: at a day's first millisecond, or at
+/// its last.
+fn rollover_sides(offset: i64, hour: i64, t: i64) -> (bool, bool) {
+    let d = day_of(offset, hour, t);
+    (
+        t == begins(offset, hour, d),
+        t + 1 == begins(offset, hour, d + 1),
+    )
+}
+
+/// The run of silent study days that ends on `now`'s day, by the test's own day: the days after
+/// the latest day holding a study review (kind 0 to 3, ease at least 1), or from the first day any
+/// review is on when none holds one. Each review is its instant, kind and ease.
+fn silent_run(offset: i64, hour: i64, now: i64, reviews: &[(i64, i64, i64)]) -> i64 {
+    let today = day_of(offset, hour, now);
+    let Some(first) = reviews.iter().map(|r| day_of(offset, hour, r.0)).min() else {
+        return 0;
+    };
+    let latest = reviews
+        .iter()
+        .filter(|r| (0..=3).contains(&r.1) && r.2 >= 1)
+        .map(|r| day_of(offset, hour, r.0))
+        .filter(|&n| n <= today)
+        .max();
+    (today - latest.unwrap_or(first - 1)).max(0)
+}
+
+/// The members at each boundary of [`BOUNDARY_MEMBERS`], from the members each judge was handed.
+fn boundary_sides(
+    days: &BTreeSet<(RuleKey, i64)>,
+    lapses: &BTreeSet<LapseMember>,
+) -> BTreeMap<&'static str, usize> {
+    let mut sides: BTreeMap<&'static str, usize> =
+        BOUNDARY_MEMBERS.iter().map(|&(k, _)| (k, 0)).collect();
+    let mut add = |name: &'static str, on: bool| *sides.entry(name).or_default() += usize::from(on);
+    for &((offset, hour), t) in days {
+        let (at, before) = rollover_sides(i64::from(offset), i64::from(hour), t);
+        add("day instants at a rollover", at);
+        add("day instants a millisecond before one", before);
+    }
+    let threshold = i64::from(LAPSE_AFTER_SILENT_DAYS);
+    for &((offset, hour), now, ref handed) in lapses {
+        let (o, h) = (i64::from(offset), i64::from(hour));
+        for &(t, _, _) in handed {
+            let (at, before) = rollover_sides(o, h, t);
+            add("reviews at a rollover", at);
+            add("reviews a millisecond before one", before);
+        }
+        let (at, before) = rollover_sides(o, h, now);
+        add("nows at a rollover", at);
+        add("nows a millisecond before one", before);
+        let run = silent_run(o, h, now, handed);
+        add("runs of silent days at the threshold", run == threshold);
+        add("runs of silent days one short of it", run + 1 == threshold);
+    }
+    sides
+}
+
+/// The members at each boundary equal [`BOUNDARY_MEMBERS`].
+fn assert_sides(sides: &BTreeMap<&str, usize>) {
+    assert_eq!(
+        *sides,
+        BTreeMap::from(BOUNDARY_MEMBERS),
+        "the boundaries' members: {sides:?}"
+    );
+}
 
 const fn rule_key(rule: StudyDayRule) -> RuleKey {
     (rule.utc_offset().minutes(), rule.rollover_hour().get())
@@ -231,6 +316,8 @@ fn a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary() {
         distinct.len(),
         days.len()
     );
+    let sides = boundary_sides(&days, &distinct);
+    println!("boundary members: {sides:?}");
     assert_eq!(examined, 448, "the population is generated: {examined}");
     assert_eq!(
         distinct.len(),
@@ -252,6 +339,7 @@ fn a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary() {
         opened > 0 && opened < examined,
         "both answers occur: {opened} open of {examined}"
     );
+    assert_sides(&sides);
     // The zone west of UTC with a 04:00 rollover: 03:59 local is still the day before, 04:01 is
     // the day itself.
     let west = rule(-300, 4);
