@@ -1716,7 +1716,7 @@ fn vr5_root(members: &str, extra: &str) -> (String, String) {
 }
 
 /// VR5's population, generated from the axes of Cargo's "Specifying Dependencies", "Workspaces"
-/// and "Cargo Targets", TOML 1.0 and the Rust Reference (read 2026-09-30). rustc 1.97.0 compiled
+/// and "Cargo Targets", the TOML specification and the Rust Reference (read 2026-09-30). rustc compiled
 /// every tree, with a deprecation on each crate's `settle`: each member fired progression's in its
 /// caller and each control fired the other crate's, so each member is a caller by the compiler's
 /// own reading. A control the census cannot read as rustc does is refused too: the rule fails
