@@ -9,7 +9,15 @@
  * the most lists it reads a fence in, so an entry added to one of them is a member too.
  */
 import { createHash } from 'node:crypto';
-import { LIST_DEPTH, REFUSED_CHARACTERS, SPECIAL_TAGS } from './docs-mermaid-read.js';
+import { FENCE_PREFIX, LIST_DEPTH, REFUSED_CHARACTERS, SPECIAL_TAGS } from './docs-mermaid-read.js';
+
+/** The reader's bounds the class members meet at their edges; the reader's own commit exports them. */
+const CONTAINER_DEPTH = LIST_DEPTH;
+const PAGE_DEPTH = 240;
+const LINE_END = /\r\n|\r|\n/;
+const CODE_TICKS = 80;
+const LINK_PARENS = 32;
+const LABEL_UNITS = 250;
 
 /** A byte-order mark, which cmark-gfm skips at the start of a document and nowhere else. */
 const BOM = '\uFEFF';
@@ -103,7 +111,7 @@ export const GRAMMAR = {
   },
   inline: {
     tags: ['a', 'b', 'code', 'em', 'font', 'kbd', 'nobr', 'rt', 'span', 'sub', 'u', 'x-y', 'select', 'pre', 'textarea', 'plaintext'],
-    form: ['<{}>', '</{}>'],
+    form: ['<{}>', '</{}>', '<{U}>'],
     starts: ['<!-- x -->', '<? x ?>', '<!X x>', '<![CDATA[ x ]]>', '<!-- <b> -->'],
     text: ['<x-y x', '<source x', '< x', '<= x', '</ x']
   },
@@ -431,7 +439,9 @@ function* classMembers(/** @type {Grammar} */ g) {
   // reader refuses, in each form; each other inline start; and each `<` that opens no tag.
   const inline = (/** @type {string} */ line) => nest('top', ['Text.', '', line, '', ...fenced('```mermaid')]);
   for (const tag of union(g.inline.tags, SPECIAL_TAGS)) {
-    for (const [at, form] of g.inline.form.entries()) yield [`inline.${tag}.${at}`, inline(`Text ${form.replace('{}', tag)} x.`)];
+    for (const [at, form] of g.inline.form.entries()) {
+      yield [`inline.${tag}.${at}`, inline(`Text ${form.replace('{}', tag).replace('{U}', tag.toUpperCase())} x.`)];
+    }
   }
   for (const [at, start] of g.inline.starts.entries()) yield [`inline.start.${at}`, inline(`Text ${start} x.`)];
   for (const [at, text] of g.inline.text.entries()) yield [`inline.text.${at}`, inline(`Text ${text}.`)];
@@ -442,9 +452,141 @@ function* classMembers(/** @type {Grammar} */ g) {
     yield [`gfm.${at}`, `${form.flatMap((line) => (line.endsWith('{}') ? rows.map((row) => line.slice(0, -2) + row) : [line])).join('\n')}\n`];
   }
   for (const [at, line] of g.opener.entries()) yield [`opener.${at}`, nest('top', [line, ...rows, '```'])];
-  for (const depth of [LIST_DEPTH, LIST_DEPTH + 1]) {
+  for (const depth of [CONTAINER_DEPTH, CONTAINER_DEPTH + 1]) {
     const indent = ' '.repeat(2 * depth);
     yield [`depth.${depth}`, `${'- '.repeat(depth)}${fenced('```mermaid').map((line, at) => (at === 0 ? line : indent + line)).join('\n')}\n`];
+  }
+  yield* boundMembers();
+}
+
+/**
+ * The members drawn from the reader's own bounds and tables, each met at its edge, so a bound or an
+ * entry that moves there moves a member here: a fence in `CONTAINER_DEPTH` block quotes and list items
+ * and in one more, in each order on its line, and after a paragraph; a paragraph whose tags nest to
+ * the reader's page bound, one past it, and to GitHub's own and one past that, and one whose block
+ * quotes, list items, openers of each kind or upper-case tags meet the page bound and pass it, a list
+ * whose items hold more openers together than the bound and fewer each, and an indented code block,
+ * whose openers the bound does not count; a raw HTML block after a paragraph, with each line end
+ * `LINE_END` splits on; a special tag on the last line of a fence the text's end closes and of one its
+ * block quote closes; a line that may open raw HTML after each list marker and blank `FENCE_PREFIX`
+ * takes, and none after ten digits, which it does not; each construct cmark-gfm forms otherwise than
+ * commonmark.js, at the reader's bound and past it, with a special tag the construct hides from a
+ * CommonMark reading, and the escapes, stray parentheses and parentheses closed and opened again that
+ * the reader's counts skip or keep; each character a pattern of the reader's decides on, at the edge
+ * it decides (a digit beside `_`, a `*` list marker, a `<` at a line end, a hard line break, each
+ * blank of a delimiter row, a blank, a line end or a `<` after an autolink, a bracket before a code
+ * span, each escape the counts skip); a special tag in a heading's code span, and on a line of no
+ * paragraph or heading; and a line that may open raw HTML, a special tag in either case or an ordinary
+ * one, inside each inline construct that carries text across a line end, where a CommonMark reading
+ * takes it as text.
+ */
+function* boundMembers() {
+  const opens = /** @type {Record<string, [string, string]>} */ ({ q: ['> ', '> '], i: ['- ', '  '] });
+  for (const order of ['q', 'qi', 'iq']) {
+    for (const depth of [CONTAINER_DEPTH, CONTAINER_DEPTH + 1]) {
+      const kinds = [...order.repeat(depth)].slice(0, depth);
+      const [first, other] = [0, 1].map((at) => kinds.map((kind) => opens[kind][at]).join(''));
+      const text = `${fenced('```mermaid').map((line, at) => (at === 0 ? first : other) + line).join('\n')}\n`;
+      yield [`bound.${order}.${depth}`, text];
+      if (order === 'qi') yield [`bound.${order}.${depth}.after`, `Text.\n\n${text}`];
+    }
+  }
+  const tags = (/** @type {number} */ count) => Array.from({ length: count }, (_, at) => `<b a="${at}">`).join('');
+  for (const count of [PAGE_DEPTH / 2, PAGE_DEPTH / 2 + 1, PAGE_DEPTH + 13, PAGE_DEPTH + 14]) {
+    yield [`page.${count}`, nest('top', [`Text ${tags(count)} x.`, '', ...fenced('```mermaid')])];
+  }
+  const paged = (/** @type {string} */ prefix, /** @type {string} */ tail = '') => [`${prefix}Text ${tags(PAGE_DEPTH / 2 - 10)} ${tail}x.`, '', ...fenced('```mermaid')];
+  for (const count of [20, 21]) yield [`page.quotes.${count}`, `${paged('> '.repeat(count)).join('\n')}\n`];
+  for (const count of [10, 11]) yield [`page.items.${count}`, `${paged('- '.repeat(count)).join('\n')}\n`];
+  for (const count of [10, 11]) yield [`page.stars.${count}`, `${paged('* '.repeat(count)).join('\n')}\n`];
+  yield ['page.list', nest('top', [...Array.from({ length: 3 }, () => `- a ${'*'.repeat(PAGE_DEPTH / 2 - 20)}`), '', ...fenced('```mermaid')])];
+  for (const opener of ['*', '~', '[', '<', '_']) {
+    for (const count of [20, 21]) yield [`page.opens.${hexOf(opener)}.${count}`, `${paged('', `${opener.repeat(count)} `).join('\n')}\n`];
+  }
+  yield ['page.word', `${paged('', `${'*'.repeat(20)} a_b `).join('\n')}\n`];
+  yield ['page.digit', `${paged('', `${'*'.repeat(20)} 1_2 `).join('\n')}\n`];
+  yield ['page.split', `${paged('', `${'*'.repeat(19)} <\n`).join('\n')}\n`];
+  for (const count of [20, 21]) {
+    yield [`page.upper.${count}`, `${paged('', `${'*'.repeat(count)} `).join('\n').replaceAll('<b ', '<B ')}\n`];
+  }
+  yield ['page.code', `${[`    ${'*'.repeat(PAGE_DEPTH + 1)}`, '', ...fenced('```mermaid')].join('\n')}\n`];
+  for (const end of LINE_END.source.split('|').map((end) => end.replaceAll('\\r', '\r').replaceAll('\\n', '\n'))) {
+    yield [`end.${[...end].map(hexOf).join('.')}`, `${['Text.', '<div>', ...fenced('```mermaid')].join(end)}${end}`];
+  }
+  yield ['body.end', nest('top', [...fenced('```mermaid'), '', '```', '<select>'])];
+  yield ['body.quote', nest('top', ['> ```', '> <select>', '', ...fenced('```mermaid')])];
+  const prefix = new RegExp(`^${FENCE_PREFIX}$`);
+  for (const marker of ['-', '*', '+', '1.', '1)', '>', '1234567890.']) {
+    for (const blank of [' ', '\t']) {
+      if (prefix.test(marker + blank)) {
+        yield [`prefix.${[...(marker + blank)].map(hexOf).join('.')}`, nest('top', [`${marker}${blank}<x-y>`, '', ...fenced('```mermaid')])];
+      }
+    }
+  }
+  const hidden = (/** @type {string[]} */ lines) => nest('top', [...lines, '', ...fenced('```mermaid')]);
+  for (const count of [CODE_TICKS, CODE_TICKS + 1]) {
+    const run = '`'.repeat(count);
+    yield [`trust.ticks.${count}`, hidden([`Text ${run} a <select> b ${run} x.`])];
+  }
+  for (const count of [LINK_PARENS, LINK_PARENS + 1]) {
+    yield [`trust.parens.${count}`, hidden([`[a](${'\\\\('.repeat(count)}x\`y${'\\\\)'.repeat(count)}) \`<select>\` z`])];
+  }
+  yield ['trust.parens.close', hidden([`) [a](${'\\\\('.repeat(LINK_PARENS)}x\`y${'\\\\)'.repeat(LINK_PARENS)}) \`<select>\` z`])];
+  yield ['trust.parens.escaped', hidden([`a ${'\\('.repeat(LINK_PARENS + 1)} \`<select>\` z`])];
+  yield ['trust.parens.escaped.close', hidden([`a ${'('.repeat(LINK_PARENS)}\\)( \`<select>\` z`])];
+  yield ['trust.parens.reopen', hidden([`a ${'('.repeat(LINK_PARENS)})( \`<select>\` z`])];
+  const label = (/** @type {number} */ count) => `${'\u4e2d'.repeat(count)}\\]`.repeat(2);
+  for (const count of [LABEL_UNITS / 2 - 25, LABEL_UNITS - 10]) {
+    yield [`trust.label.${count}`, hidden([`[${label(count)}x\`y]: /u`, 'y `<select>` z'])];
+  }
+  yield ['trust.label.escaped', hidden([`[${'a'.repeat(LABEL_UNITS - 2)}\\(] \`<select>\` z`])];
+  yield ['trust.label.opening', hidden([`[${'a'.repeat(LABEL_UNITS)}\\[] \`<select>\` z`])];
+  yield ['trust.reference.long', hidden([`[${label(LABEL_UNITS - 10)}x\`y]: /u`, '', `[t][${label(LABEL_UNITS - 10)}x\`y] \`<select>\` z`])];
+  yield ['trust.reference.fold', hidden(['[\u1e9ex`y]: /u', '', '[t][SSx`y] `<select>` z'])];
+  yield ['trust.reference.escaped', hidden(['[x\\`y]: /u', '', '[t][x\\`y] `<select>` z'])];
+  yield ['trust.reference.split', hidden(['[t]\\([x `<select>` y] z'])];
+  yield ['trust.bracket', hidden(['[a `<select>` b] z'])];
+  yield ['trust.heading', hidden(['# a `<select>` b'])];
+  for (const [at, gap] of ['&#32;', '\u00a0', '&lt;', ' ', '\t', '<'].entries()) yield [`trust.autolink.${at}`, hidden([`http://a.b/${gap}\`<select>\` z`])];
+  yield ['trust.autolink.www', hidden(['www.a.b&#32;`<select>` z'])];
+  yield ['trust.autolink.line', hidden(['http://a.b/', '`<select>` z'])];
+  const tables = [
+    ['x `a', 'e <select>` | b', '-|-'],
+    ['a | b', '-|-', 'c `x', 'e <select>` d'],
+    ['a | b', '-|-', '`x | <select> | y` | d'],
+    ['a | b', '-|-', 'c \\| `<select>` | d'],
+    ['a | b', '-|-', '`<select>` | d'],
+    ['| a |', ':-:', '| `x | <select> | y` |'],
+    ['a | b  ', '-|-  ', '`<select>` | d'],
+    ['| a |', '| - |', '| `x | <select> | y` |'],
+    ['| a |', '|\t-\t|', '| `x | <select> | y` |'],
+    ['a `x | <select> | y` -']
+  ];
+  for (const [at, rows] of tables.entries()) yield [`trust.table.${at}`, hidden(rows)];
+  for (const [at, rows] of [['    a <select> b'], ['[r]: /u "a <select> b"']].entries()) yield [`trust.leafless.${at}`, hidden(rows)];
+  const carriers = /** @type {Record<string, string[]>} */ ({
+    plain: ['a', '{}'],
+    emph: ['*a', '{}*'],
+    alt: ['![a', '{}](u)'],
+    code1: ['`a', '{}`'],
+    code1n: ['`a', '{}', 'b`'],
+    code2n: ['``a', '{}', 'b``'],
+    code3n: ['x ```a', '{}', 'b```'],
+    dest: ['[a](', '{})'],
+    destn: ['[a](', '{}', ')'],
+    titled: ['[a](/u "', '{}', '")'],
+    titles: ["[a](/u '", '{}', "')"],
+    titlep: ['[a](/u (', '{}', '))'],
+    attrd: ['x <b title="', '{}', '">'],
+    attrs: ["x <span data-x='", '{}', "'>"],
+    refd: ['[r]: /u "', '{}', '"'],
+    refs: ["[r]: /u '", '{}', "'"],
+    refdest: ['[r]:', '{}']
+  });
+  for (const [name, rows] of Object.entries(carriers)) {
+    for (const line of ['<source>', '<SOURCE>', '<span>']) {
+      yield [`carry.${name}.${line.slice(1, -1)}`, `${[...rows.map((row) => row.replace('{}', line)), ...fenced('```mermaid')].join('\n')}\n`];
+    }
   }
 }
 

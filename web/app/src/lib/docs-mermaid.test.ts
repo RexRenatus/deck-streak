@@ -83,13 +83,19 @@ interface Truth {
 const TRUTH: Truth = JSON.parse(readFileSync(resolve(import.meta.dirname, 'docs-mermaid.fences.json'), 'utf8'));
 
 /** The size of the generated fence population, so a shrunken grammar is visible in the diff. */
-const FENCE_MEMBERS = 8750;
+const FENCE_MEMBERS = 8994;
 
 /**
  * The generated members the reader reads without refusing any form, so a reader that refuses more or
  * fewer of them is visible in the diff.
  */
-const READ_MEMBERS = 2711;
+const READ_MEMBERS = 2934;
+
+/**
+ * Which members those are, by `digestOf`, so a reader that reads one member more and another one fewer,
+ * leaving the count as it was, fails too.
+ */
+const READ_DIGEST = '5b39c990669cfb05f3d65041b4d3f900e8dcaa73083ba825a6d2f57227b7c736';
 
 /** Every generated member GitHub renders as a diagram, with the diagram sources GitHub renders. */
 function renderedMembers() {
@@ -184,12 +190,16 @@ describe('the Mermaid diagrams under docs', () => {
     expect(members.length).toBe(FENCE_MEMBERS);
     expect(escaped.slice(0, 3), `${escaped.length} of ${read.length} members read otherwise`).toEqual([]);
     expect(read.length, 'the reader refuses another set of members').toBe(READ_MEMBERS);
+    expect(digestOf(read), 'the reader reads another set of members').toBe(READ_DIGEST);
   });
 
   it('refuses a generated container form it cannot write or read, and says which', () => {
     const members = new Map(fenceMembers().map((member) => [member.id, member.text]));
     const refusals = (id: string) => refusedOf('planted.md', members.get(id) ?? '');
     const opener = 'a line that may open a `mermaid` fence and is not read as one';
+    const raw = 'a line that may open raw HTML';
+    const hidden = 'raw HTML a CommonMark reading may hide';
+    const deep = 'a block in more than 99 block quotes and list items';
 
     expect(() => fenceMembers({ ...GRAMMAR, body: ['no-such-row'] })).toThrow('no body named no-such-row');
     expect(fenceMembers().length).toBe(FENCE_MEMBERS);
@@ -198,14 +208,22 @@ describe('the Mermaid diagrams under docs', () => {
       `planted.md:1 ${opener}`,
       'planted.md:2 a character GitHub reads otherwise'
     ]);
-    expect(refusals('html.start.0.opening.top')).toEqual(['planted.md:1 a raw HTML block', `planted.md:2 ${opener}`]);
-    expect(refusals('html.source.3.opening.top')).toEqual(['planted.md:1 a `<` that may open raw HTML']);
-    expect(refusals('inline.select.0')).toEqual(['planted.md:3 raw HTML `<select>`']);
+    expect(refusals('html.start.0.opening.top')).toEqual([`planted.md:1 ${raw}`, `planted.md:2 ${opener}`]);
+    expect(refusals('html.source.3.opening.top')).toEqual([`planted.md:1 ${raw}`]);
+    expect(refusals('inline.select.0')).toEqual([`planted.md:3 ${hidden}`]);
+    expect(refusals('inline.select.2')).toEqual([`planted.md:3 ${hidden}`]);
     expect(refusals('top:f030:b0')).toEqual([
       'planted.md:1 a fence whose info string is not `mermaid` alone',
       `planted.md:1 ${opener}`
     ]);
-    expect(refusals('depth.100')).toEqual(['planted.md:1 a fence in more than 99 lists', `planted.md:1 ${opener}`]);
+    expect(refusals('depth.100')).toEqual([`planted.md:1 ${deep}`]);
+    expect(refusals('bound.qi.100')).toEqual([`planted.md:1 ${deep}`]);
+    expect(refusals('bound.qi.100.after')).toEqual([`planted.md:3 ${deep}`]);
+    expect(refusals('carry.code1.SOURCE')).toEqual([`planted.md:2 ${raw}`]);
+    expect(refusals('page.121')).toEqual(['planted.md:1 a block GitHub may nest more than 240 elements deep']);
+    expect(refusals('end.d')).toEqual([`planted.md:2 ${raw}`, `planted.md:3 ${opener}`]);
+    expect(refusals('prefix.2d.9')).toEqual([`planted.md:1 ${raw}`]);
+    expect(refusals('trust.parens.33')).toEqual([`planted.md:1 ${hidden}`]);
   });
 
   it('refuses every generated container form planted unparsable by name, and accepts it planted valid', async () => {
