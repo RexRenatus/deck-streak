@@ -320,6 +320,54 @@
         "for name in ${!DECKSTREAK_DEPLOY_CADDY@}; do",
         "a Caddy step refuses every unlisted name with the deploy prefix, not only a narrower one (SPEC-127 A39)",
         "test_deploy_scripts.TheCaddyInstall.test_a_caddy_step_reads_only_the_settings_it_names_and_refuses_any_other"
+      ],
+      [
+        "S12741-A-CADDY-STEP-READS-THE-ENVIRONMENT-IT-RECEIVED",
+        "deploy/deploy.sh",
+        "mapfile -t -d '' received </proc/self/environ &&",
+        "mapfile -t -d '' received < <(for n in ${!DECKSTREAK_DEPLOY_@}; do printf '%s=%s\\0' \"$n\" \"${!n}\"; done) &&",
+        "a Caddy step reads every entry of the environment it received, not only the names bash makes variables of (SPEC-127 A39)",
+        "test_deploy_scripts.TheCaddyInstall.test_a_caddy_step_reads_only_the_settings_it_names_and_refuses_any_other"
+      ],
+      [
+        "S12742-A-CADDY-STEP-REFUSES-AN-ENVIRONMENT-IT-CANNOT-READ",
+        "deploy/deploy.sh",
+        "received </proc/self/environ && [ \"${#received[@]}\" -gt 0 ] ||",
+        "received </proc/self/environ ||",
+        "a Caddy step refuses to run when it reads no environment at all (SPEC-127 A39)",
+        "test_deploy_scripts.TheCaddyInstall.test_a_caddy_step_reads_only_the_settings_it_names_and_refuses_any_other"
+      ],
+      [
+        "S12743-A-CADDY-STEP-STOPS-ON-AN-UNLISTED-ENTRY-IT-RECEIVED",
+        "deploy/deploy.sh",
+        "[ -n \"$named\" ] || { echo \"deploy: $key is not a setting of deploy.sh\" >&2; exit 1; }",
+        "[ -n \"$named\" ] || { echo \"deploy: $key is not a setting of deploy.sh\" >&2; }",
+        "a Caddy step stops on an entry it received with the deploy prefix that deploy.sh does not list (SPEC-127 A39)",
+        "test_deploy_scripts.TheCaddyInstall.test_a_caddy_step_reads_only_the_settings_it_names_and_refuses_any_other"
+      ],
+      [
+        "S12744-THE-RECEIVED-ENTRIES-CHECKED-ARE-THE-WHOLE-PREFIX",
+        "deploy/deploy.sh",
+        "case $key in DECKSTREAK_DEPLOY_*) ;; *) continue ;; esac",
+        "case $key in DECKSTREAK_DEPLOY_CADDY*) ;; *) continue ;; esac",
+        "a Caddy step checks every received entry with the deploy prefix, not only a narrower one (SPEC-127 A39)",
+        "test_deploy_scripts.TheCaddyInstall.test_a_caddy_step_reads_only_the_settings_it_names_and_refuses_any_other"
+      ],
+      [
+        "S12745-A-SETTING-GIVEN-WITHOUT-A-VALUE-STOPS-A-CADDY-STEP",
+        "deploy/deploy.sh",
+        "[ \"$key\" != \"$entry\" ] || { echo \"deploy: $key is given without a value\" >&2; exit 1; }",
+        "[ \"$key\" != \"$entry\" ] || { echo \"deploy: $key is given without a value\" >&2; }",
+        "a Caddy step stops on a listed setting it received without a value (SPEC-127 A39)",
+        "test_deploy_scripts.TheCaddyInstall.test_a_caddy_step_reads_only_the_settings_it_names_and_refuses_any_other"
+      ],
+      [
+        "S12746-A-SETTING-GIVEN-TWICE-STOPS-A-CADDY-STEP",
+        "deploy/deploy.sh",
+        "case $given in *\" $key \"*) echo \"deploy: $key is given twice\" >&2; exit 1 ;; esac",
+        "case $given in *\" $key \"*) echo \"deploy: $key is given twice\" >&2 ;; esac",
+        "a Caddy step stops on a listed setting it received twice (SPEC-127 A39)",
+        "test_deploy_scripts.TheCaddyInstall.test_a_caddy_step_reads_only_the_settings_it_names_and_refuses_any_other"
       ]
     ]
   }
