@@ -240,8 +240,10 @@ the moved rows S12725 and S12730 need. A38 generates the class over the path set
 (the Caddy directory, and the Caddyfile's directory beside it and set apart) in each state (writable,
 read-only, read-only holding a stale writable previous copy), for each step (a first install, a
 re-install, a removal) and each trigger (none, a failed rename, a failed reload). Every member either
-succeeds, or exits 1 with that script's refusal and leaves both directories and the live Caddyfile
-byte for byte as they were. A39 reads the settings the Caddy functions consume from `deploy.sh` and
+succeeds, or exits 1 with that script's refusal (or with the reload's own message when a reload fails
+after a write) and leaves both directories and the live Caddyfile byte for byte as they were. A
+removal whose rename fails in a writable directory is not a member: it fails after its writes, the
+removal promises no message on every exit, and A7 pins it. A39 reads the settings the Caddy functions consume from `deploy.sh` and
 requires that they be exactly the settings A38 varies, so a new path setting fails until it is an axis.
 
 The insertions this amendment makes are these two sections, appended after the file's last line,
@@ -273,7 +275,7 @@ and nothing above them is edited (SPEC-038 section 8, ruling (i)).
 | A35 | a first install, a re-install and a removal in a Caddy directory that cannot be written, with a stale file in it, exit non-zero with their own refusal before any write and leave the stale file and the live Caddyfile as they were (#423, #424) | `test_deploy_scripts.py` `a_read_only_caddy_directory_is_refused_before_any_write` |
 | A36 | an install whose block cannot be read exits non-zero, prints the refusal and leaves the block, the live Caddyfile and every other file as they were (#423) | `test_deploy_scripts.py` `an_install_whose_block_cannot_be_read_refuses_before_writing` |
 | A37 | a first install refused at validation with its block already gone still exits non-zero and prints the refusal (#423) | `test_deploy_scripts.py` `a_first_install_refused_with_its_block_already_gone_still_says_so` |
-| A38 | for each directory the two scripts write or undo in (the Caddy directory, and the live Caddyfile's own directory beside it and set apart), in each state (writable, read-only, read-only with a stale writable previous copy), for a first install, a re-install and a removal, with no trigger, a failed rename and a failed reload, every member succeeds or exits 1 with that script's refusal, and both directories and the live Caddyfile are byte for byte unchanged (#423, #424) | `test_deploy_scripts.py` `every_directory_a_caddy_script_writes_or_undoes_is_checked_before_the_first_write` |
+| A38 | for each directory the two scripts write or undo in (the Caddy directory, and the live Caddyfile's own directory beside it and set apart), in each state (writable, read-only, read-only with a stale writable previous copy), for a first install, a re-install and a removal, with no trigger, a failed rename and a failed reload, every member succeeds, or exits 1 with that script's refusal (or the reload's own message when a reload fails after a write) and leaves both directories and the live Caddyfile byte for byte unchanged; a removal whose rename fails in a writable directory fails after its writes and is not a member (#423, #424) | `test_deploy_scripts.py` `every_directory_a_caddy_script_writes_or_undoes_is_checked_before_the_first_write` |
 | A39 | the settings the Caddy functions of `deploy.sh` consume are exactly the path settings A38 varies plus the one input file, so a new setting fails until it is classified (#423) | `test_deploy_scripts.py` `the_caddy_functions_read_only_the_settings_the_directory_population_varies` |
 
 ```acceptance
@@ -306,11 +308,11 @@ A39: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k 
 The test file's `World.run` now starts the script in its own session and kills the whole group on a
 timeout, so a stuck stub cannot orphan the host script. Rows S12718 to S12737 in
 `scripts/mutation-rows.d/S12700-S12799.json` pin the absent-candidate guard of the undo (killer A16),
-the undo after the block write (A18), after the candidate copy (A22) and after the import append
+the undo after the block write (A18), after the candidate copy (A31) and after the import append
 (A19), the removal's link guard (A20), the install's path guard (A23, A24), the absent-block undo
 (A37), the undo of the kept copy and of the rename (A29, A30), the removal's guard for a hard link or
-a pipe (A25), the refusal of a block copy that fails (A36), the directory and Caddyfile checks of both
-scripts (A34, A35) the removal's four-name guard (A33) and the directory line of each script (A38). Files changed: `deploy/deploy.sh`,
+a pipe (A25), the refusal of a block copy that fails (A36), the Caddyfile checks of both scripts (A34),
+the removal's four-name guard (A33), and the directory checks and the directory line of each script (A38). Files changed: `deploy/deploy.sh`,
 `scripts/tests/test_deploy_scripts.py`, `scripts/mutation-rows.d/S12700-S12799.json`,
 `docs/red-first/SPEC-127.md`, `docs/decisions/ADR-198-the-install-undoes-every-write-and-a-linked-candidate-is-refused.md`
 and `changelog.d/fix-caddy-undo-423.md`.
