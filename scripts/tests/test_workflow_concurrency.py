@@ -200,26 +200,18 @@ class EveryReleaseWorkflowQueuesEveryRun(unittest.TestCase):
         self.assertEqual(found, [])
 
     def test_a_shape_that_replaces_drops_or_runs_two_at_once_is_refused(self):
-        group = "  group: release-${{ github.ref }}\n"
+        queue = "  queue: max\n"
         shapes = {
-            "the tag group with no queue (today)": (
-                "  cancel-in-progress: false\n",
-                "  cancel-in-progress: false\n",
-                "queue is None",
-            ),
-            "queue: single": (
-                "  cancel-in-progress: false\n",
-                "  cancel-in-progress: false\n  queue: single\n",
-                "queue is 'single'",
-            ),
+            "the tag group with no queue (today)": (queue, "", "queue is None"),
+            "queue: single": (queue, "  queue: single\n", "queue is 'single'"),
             "a group keyed by the run id": (
-                group,
-                "  group: release-${{ github.run_id }}\n  queue: max\n",
+                "group: release-${{ github.ref }}",
+                "group: release-${{ github.run_id }}",
                 "two runs of one tag have two groups",
             ),
             "cancel-in-progress true": (
-                "  cancel-in-progress: false\n",
-                "  cancel-in-progress: true\n  queue: max\n",
+                "cancel-in-progress: false",
+                "cancel-in-progress: true",
                 "cancels the run before it",
             ),
         }
@@ -227,9 +219,7 @@ class EveryReleaseWorkflowQueuesEveryRun(unittest.TestCase):
             text = planted(old, new)
             problems = release_problems(read_workflow(text), text)
             self.assertTrue(any(expected in problem for problem in problems), (label, problems))
-        text = planted(
-            "  cancel-in-progress: false\n", "  cancel-in-progress: false\n  queue: max\n"
-        )
+        text = planted(queue, queue)
         self.assertEqual(release_problems(read_workflow(text), text), [])
 
     def test_a_job_level_block_and_a_missing_block_are_refused(self):
