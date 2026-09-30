@@ -276,19 +276,20 @@ Its criteria, A17 and A18, are defined in the section below.
   `Interest::never()`; the capture on another thread never sees it. The code under test is
   unchanged between a passing run and a failing one.
 - **The mechanism, one for the class.** `tools/log-capture/capture.rs`, included by path into each
-  test binary that captures, offers `with_capture` and `hold_capture`. Both first register a
-  process-wide `Dispatch` over `NoSubscriber` that is never dropped, then make the capture. With
-  the floor registered first, a capture is never the only registered dispatcher, so
-  `rebuilder` returns the read lock over every live dispatcher, and a callsite's interest includes
-  the capture's whichever thread reached it first. The doc lines it rests on are
-  `Dispatch::new`'s call to `register_dispatch`, which adds the dispatcher to the list and
-  rebuilds every callsite, and `rebuild_callsite_interest`, which combines every dispatcher's
-  interest with `Interest::and` and defaults to never only when there are none. A per-test retry,
-  a single-thread pin and a sleep were rejected: each hides the loss, none removes it.
-- **The population, derived.** Every `set_default(`, `with_default(` and `set_global_default(` in
-  `crates/`, read from the tree with comments and whitespace removed: 13 scoped captures in 9
-  files, all routed through the helper, and 1 production global default
-  (`crates/kernel/src/logging.rs`), which this amendment measures and does not change. The
+  test binary that captures, offers `with_capture` and `hold_capture`. Both first install a floor
+  subscriber as the global default, once and never dropped, then make the capture. The floor
+  answers every callsite "sometimes", enables nothing and hints `OFF`, so it costs nothing while
+  it is alone. The floor is every thread's default until it installs a capture. A thread with no
+  capture therefore answers "sometimes" rather than "never", and interest is asked again at each
+  event. The single-dispatcher path it
+  closes is `Dispatchers::rebuilder` returning `JustOne`, then `rebuild_callsite_interest` asking
+  `dispatcher::get_default` and caching that answer. A per-test retry, a single-thread pin and a
+  sleep were rejected: each hides the loss, none removes it.
+- **The population, derived.** Every call of `set_default`, `with_default`, `set_global_default`,
+  `init`, `try_init` and `with_subscriber` in `crates/`, read from the tree with comments,
+  strings and character literals blanked, in any spelling that reaches them: 13 routed through
+  the helper, none raw, and 1 production global default (`crates/kernel/src/logging.rs`), which
+  this amendment measures and does not change. The
   daemon's `wiring` tests had already held a second dispatcher for their own capture; they now
   use the helper like the rest.
 - **Files this amendment touches.** `tools/log-capture/capture.rs`,
@@ -304,8 +305,8 @@ Its criteria, A17 and A18, are defined in the section below.
 
 | id | criterion | decided by |
 |---|---|---|
-| A17 | a capture made with either entry of the helper keeps a line that a thread with no subscriber reached first, in a child of the test binary whose dispatcher registry starts empty | `log_capture_class` test |
-| A18 | every capturing call in `crates/` goes through the helper: 13 routed, none raw, and the one production global default is the only one | `log_capture_class` test |
+| A17 | a capture made with either entry of the helper keeps a line another thread reached first, even when that thread's callsite registration straddled the capture's, in a child of the test binary whose dispatcher registry starts empty | `log_capture_class` test |
+| A18 | every call of the install functions the census names, in any spelling that reaches them, goes through the helper: 13 routed, none raw, and the one production global default is the only other | `log_capture_class` test |
 
 ```acceptance
 A17: cargo test -p deck-streak-kernel --test log_capture_class -- --exact a_capture_keeps_a_line_another_thread_reached_first

@@ -81,3 +81,11 @@ A18: green at 29a8b0f
 At 29a8b0f the killer prints `log capture scenarios: 2 run, 0 lost the line` and `capture
 population: 341 file(s) read; 0 raw capture(s), 13 routed, 1 global default(s)`. The RED count at
 4e81676 is 2 of 2 tests and 13 of 13 capturing calls unrouted.
+
+The floor was then made the global default and the killer gained two scenarios in which another
+thread's registration of the callsite straddles the capture's. Over the earlier helper, the
+straddled scenarios lose the line and the plain ones do not; over the new floor all four keep it.
+
+```text
+A17: red over the earlier floor: 2 of 4 scenarios lost a line another thread reached first: ["scoped-straddled", "held-straddled"]; green: 4 run, 0 lost
+```
