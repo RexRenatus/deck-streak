@@ -2921,6 +2921,15 @@ fn a_request_the_census_cannot_read_is_refused_wherever_the_bot_makes_it() {
             .flat_map(|handle| handle.join().expect("a worker"))
             .collect()
     });
+    let named: usize = unplanted
+        .iter()
+        .map(|(_, found)| found.requests.len())
+        .sum();
+    assert_eq!(
+        named,
+        REQUEST_SITES.len(),
+        "the population's base reads every named request site once"
+    );
     assert!(
         missed.is_empty(),
         "{} of {} requests the census cannot read are not refused, e.g. {}",
