@@ -111,6 +111,6 @@ The class rule, as a guard: `scripts/tests/test_callee_offset_loops.py` enumerat
 refuses one with no strict-advance compare, or one whose compare does not return an `Err`.
 
 Class sweep of the loops this delivery adds or touches (ingest and insights): `wire.rs` `varint` (each pass takes one byte
-from `data` and ends at its end), `wire.rs` `walk_with` (guarded), `dark_fields.rs` `tokens_with` (guarded), `sync.rs` `attempts` (a counter
-that returns at `schedule.attempts`) and `sync.rs` `reopening` (a counter bounded by
-`schedule.open_retries`). Five loops, two guarded, three bounded by their own counter or input.
+from `data` and ends at its end), `wire.rs` `walk_with` (guarded) and `dark_fields.rs` `tokens_with` (guarded). Three loops, two guarded, one bounded by its input.
+The sweep names only loops in files this delivery changes, and its count is the `while` and `loop` constructs the delivery adds under
+`crates/ingest/src` and `crates/insights/src`, counted by script.

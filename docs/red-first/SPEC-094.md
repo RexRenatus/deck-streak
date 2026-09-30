@@ -93,9 +93,12 @@ No Rust mutant is recorded equivalent. Four Mini App mutants of `web/app/src/lib
 are, in `scripts/mutation-equivalent.d/miniapp.json` (issue #294): each changes a branch whose value
 is the same either way (`record(null)` answers its own `null`, `Number.isInteger` refuses what
 `typeof value === 'number'` refused, `names(undefined)` refuses a missing `stored`, and a `null`
-report is kept as `null`). The two `Debug` impls of `ApiState` and `Instruments` are killed by
-whole-line assertions (`insights_routes::the_state_debug_line_says_which_ports_it_holds`,
-`instruments_step::the_debug_line_names_the_instruments_and_counts_their_runners`). The refresh path's
+report is kept as `null`). The `Debug` impl of `Instruments` is killed by a whole-line assertion
+(`instruments_step::the_debug_line_names_the_instruments_and_counts_their_runners`). The `Debug`
+impl of `ApiState` is checked by a prefix and a suffix
+(`insights_routes::the_state_debug_line_says_which_ports_it_holds`), not the whole line; a future
+field the impl omits is caught by clippy's `missing_fields_in_debug` under `-D warnings` in CI's rust
+job, not by this test. The refresh path's
 mutants also carry rows S09413 to S09417, each proved killed by its full id. The two operator swaps
 in the template token scan, once thought equivalent, are killed by the scan's split into `token_step`
 and `tokens_with` (below), whose tests read a broken pair and a step.
@@ -173,3 +176,36 @@ mutant in `tokens_with` fails with `the scan went on past a stalled step`. Two p
 stalled callee handed to `token_step` (its test fails with `called Result::unwrap() on an Err value:
 "template token scan made no progress"`, a fixture and not a source line), and a stalled callee in
 `walk_with`, which no one-line source change expresses.
+
+## Addendum, 2026-09-30: every post-green edit of an existing test line, named by sha (PR #403, round 3)
+
+Rule: every non-merge commit in `dev..head` that rewrites a line of an existing test (a removed
+line in a test file it modifies) is named here by its sha, with what changed and why. It was found
+by generating the population: each non-merge commit of the range, each test file it modifies, each
+removed line. Four were not named; the killer that lists them printed `not named by sha 4` at
+692c6598, and the four are named below.
+
+Disclosure: 5e7bf997 rewrote the two `ends_with` expectations of
+`insights_routes::the_state_debug_line_says_which_ports_it_holds` in `crates/api/tests/insights_routes.rs`.
+Each gained `, drills: false`, because the Debug line now names the drills port that the dev merge
+4f49a97d brought into `ApiState`, and clippy's `missing_fields_in_debug` refused the impl without
+it. Red at the merge with this test: `panicked at crates/api/tests/insights_routes.rs:324:5:
+ApiState { readiness: …, owner: None, instruments: false, law_tiers: false }`, rc 101. Green at
+692c6598: the Debug names all 5 fields. The test asserts a prefix plus a suffix of the line, so an
+omitted future field is caught by clippy's `missing_fields_in_debug` in CI's rust job, not by this
+test.
+
+Disclosure: b8451ebe (`crates/ingest/tests/structure.rs`) renamed the local counter in
+`the_wire_walk_matches_the_predecessors_golden` from `examined` to `cases` and added an `examined`
+helper that prints the count, for the tdd examined-counts rule. No assertion changed.
+
+Disclosure: 8bfa4c64 (`crates/ingest/tests/wire_progress.rs`, `crates/insights/tests/token_progress.rs`)
+made each injected reader count its calls and assert a bound, and changed the token scan's stay and
+step-back tests to expect `Err(TOKEN_NO_PROGRESS)`, because a stalled walk or scan must end with a
+named failure rather than an unbounded run. The disclosures above, under the 2026-09-30 addendum,
+say the same in more detail.
+
+Disclosure: 9fd0b7a2 (`web/app/src/lib/insights/insights.test.ts`) replaced
+`expect(parseListings({ instruments: [] })).toEqual([])` with a one-listing expectation
+(`{ id: 'a', cadence: 'w', study_day: 0 }` parses to `{ id: 'a', cadence: 'w', studyDay: 0 }`),
+because an empty list proves nothing about the parse. It is not a criterion test.
