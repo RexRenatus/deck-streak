@@ -186,6 +186,8 @@ count the same job printed for dev's tree and dev's command, in this pull reques
 | `scripts/tests/test_mutation_verdict.py` | repo | changed: its shard fixtures write the record every leg now writes, with no kill counted (R8, R9); no assertion changes |
 | `scripts/tests/test_mutation_workflows.py` | repo | changed: its shard fixture writes the same record (R8, R9); no assertion changes |
 | `scripts/tests/test_verdict_download.py` | repo | changed: its shard fixture writes the same record (R8, R9); no assertion changes |
+| `scripts/mutation-python.json` | repo | changed: maps `scripts/memory_scope.py` to `test_memory_scope` in the Python mutation census, so #340's census does not refuse the new file |
+| `scripts/tests/test_mutation_python_verdict.py` | repo | changed: its shard fixture writes the scope record (R8, R9); no assertion changes |
 | `scripts/tests/fixtures/not-started-legs/listed/mutation-rust-shard-0/memory-scope.json` | repo | added: the record #443's listed shard fixture lacked (R8); no assertion changes |
 | `.github/workflows/ci.yml` | repo | changed: R6, the `mutation-rust` step's command line only |
 | `.github/workflows/mutation-weekly.yml` | repo | changed: R6, the rust step's and the `rehearsal` step's command lines only |
