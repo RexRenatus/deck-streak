@@ -140,3 +140,56 @@ assertion.
 A8 replay: red at 2b3a7b33: FAILED (failures=1), AssertionError: Lists differ: ['cargo mutants --timeout 300 --build-time[40 chars]e\n'] != []
 A8 replay: green at 0046be9d: Ran 19 tests, OK, examined 4291 class members, examined 4 in-word hashes, examined 3 ci.yml commands, examined 4 mutation-weekly.yml commands
 ```
+
+## Addendum, 2026-09-30 (issues #395 and #447, round 8): the reading at the grammars
+
+The lines above stand, and A8 keeps its one red and one green line; its replay is quoted below
+them. A9, A10 and A11 are new. The red commit a2b3b953 adds three tests. The first generates the
+members of the grammar class (each shell text of an axis, crossed with each YAML spelling that
+reads back as that text) and has bash run each text. The second takes from those members the texts
+that bash computes and hands to a shell or to a builtin that reads them as shell, and three literal
+texts handed to one, and expects each refused. The third states the declared reading: a bounded
+command after each leading word, which bash runs bounded, is found as it is, and a change to how
+bash reads, a continued line in an expanded here-document and an unstated expression are refused
+for that. The red commit also changes one expectation of the comment test: a command found before
+a `;` is shown without the `;`. The green commit d76d8f2b changes only the guard and its
+docstrings, in `scripts/tests/test_dispatch_shards.py`, because the guard lives in the test module:
+it reads each `run:` value as YAML and bash read it, or refuses it. The whole test file at the red
+commit fails only those four tests, by assertion.
+
+```red-first
+A9: red at a2b3b953: AssertionError: Lists differ: ['jobs:\n  shard:\n    runs-on: ubuntu-24.[114 chars]0\n'] != [] : 1371 of 2812 unbounded members pass
+A9: green at d76d8f2b
+A10: red at a2b3b953: AssertionError: Lists differ: ['cargo mutants --timeout 300 --build-timeout 600\')"'] != ['refused: a text bash computes for `bash` to read as shell']
+A10: green at d76d8f2b
+A11: red at a2b3b953: AssertionError: Lists differ: ['cargo mutants --timeout 300 --build-timeout 600; then :; fi'] != ['cargo mutants --timeout 300 --build-timeout 600']
+A11: green at d76d8f2b
+```
+
+```text
+A8 replay: red at a2b3b953: FAILED (failures=4), AssertionError: {'planted.yml': ['cargo mutants --in-place;']} != {'planted.yml': ['cargo mutants --in-place']}
+A8 replay: green at d76d8f2b: Ran 22 tests, OK, examined 6485 grammar members, examined 22 computed texts, examined 3 literal texts, examined 13 leading words, examined 12 texts the reading does not read, examined 4291 class members, examined 4 in-word hashes, examined 3 ci.yml commands, examined 4 mutation-weekly.yml commands
+```
+
+## Addendum, 2026-09-30 (issues #395 and #447, round 8): a computed word before the bounds, and the weekly sweep in literal words
+
+The lines above stand. A12 and A13 are new. The weekly sweep's two package-bearing `cargo mutants`
+commands change spelling in `.github/workflows/mutation-weekly.yml`, and a pin test holds the
+head's two commands as literals and has bash run both spellings with a stub cargo. Commit 484c8da0
+adds the pin test with the workflow. Its plant is a copy of the rewritten block that drops the
+package word from the set branch; the pin test reads it red, by assertion. Commit 903b9cd2 adds the
+R5 tests, which fail at the guard of commit 3 by assertion, and commit 154d51e8 changes only the
+guard. The whole test file at 903b9cd2 fails only the R5 tests. The green line is the whole module
+at 154d51e8.
+
+```red-first
+A13: red at 484c8da0 (plant: the set branch drops the package word): AssertionError: Lists differ: [b'mu[47 chars] b'--sharding', b'round-robin', b'--shard', b'[82 chars]ion'] != [b'mu[47 chars] b'--package=deck-streak-agent', b'--sharding'[114 chars]ion']
+A13: green at 484c8da0: Ran 25 tests, OK, examined 6 mutation-weekly.yml commands, examined 40 package values, examined 80 old-against-new argvs, examined 6 dash-led values
+A12: red at 903b9cd2: AssertionError: Lists differ: ['X=--; set -- --; cargo mutants --in-plac[37 chars]0\n'] != [] : 20 of 20 members that lose the bounds pass
+A12: green at 154d51e8
+```
+
+```text
+A12 replay: red at 903b9cd2: FAILED (failures=3), AssertionError: Lists differ: [False, False, False] != [True, True, True]
+A12 replay: green at 154d51e8: Ran 29 tests, OK, examined 980 R5 members, examined 20 R5 members bash runs without the bounds, examined 3 named R5 members, examined 6 weekly commands, examined 9 real-tree commands, examined 6485 grammar members, examined 4291 class members, examined 6 mutation-weekly.yml commands, examined 3 ci.yml commands
+```
