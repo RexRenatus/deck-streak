@@ -214,3 +214,29 @@ A48: not red: the test pins a rule the reader already held, so it is green at th
 A49: red at 991bdb2c: thread 'a_studied_day_puts_nothing_at_stake_on_either_track' (1811440) panicked at crates/coordination/tests/streak_views.rs:252:21:
 A49: green at 66bc4479
 ```
+
+
+## Addendum, 2026-09-30: the failed route and the reply's heat (A50 to A52)
+
+- **A50 not red.** The reply already carried each run's heat in its place. Its red is each of five
+  mutants of the language line's heat, which passed every earlier bot test: the heat's place given
+  the language track's at-stake word, the freezes' noun, the language best or the law run, and a
+  run above zero shown with no heat (the rows S07625 to S07629). Each fails A50 at
+  `streak_commands.rs:251`.
+- **A51 and A52 not red.** The cycle already left a day whose route failed on the due list. Their
+  red is a failed route that clears the day, spelled in the error arm (S07622), before the route
+  (S07623), or by reading the route's error as a decided route that sent nothing (S07624). The
+  first passed every earlier test of the coordination, streaks, daemon and notifications crates.
+  Each fails A51 at `relight_order.rs:749` (`left: []`, `right: [StudyDay(20000)]`) and A52 at
+  `relight_order.rs:798`, in each of its 24 members whose claim fails. A member whose decision
+  record fails stays green under each: its claim and its line were written before the failure, so
+  no celebration is lost.
+- **A44 to A46, their helper.** `relight_order.rs`'s `cycle` now runs its fold through a helper
+  that A51 and A52 share. What A44 to A46 run and assert is unchanged, and their red lines above
+  stand at their red commit.
+
+```red-first
+A50: not red: the test pins a rule the reply already held, so it is green at the head; the mutant that turns it red is named in this addendum
+A51: not red: the test pins a rule the cycle already held, so it is green at the head; the mutant that turns it red is named in this addendum
+A52: not red: the test pins a rule the cycle already held, so it is green at the head; the mutant that turns it red is named in this addendum
+```
