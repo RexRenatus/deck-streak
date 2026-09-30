@@ -3,10 +3,10 @@
 Class rule: every count the Ownership register's prose states equals the unique names of the
 register it describes, no name repeats inside one register, and a name that sits in both the
 predecessor's register and DeckStreak's own has the same owning context in both. A count
-sentence is a digit run beside `tables`, `rows` or `names`; a register is a markdown table whose
-first header cell ends in `table`. A qualifier before that word
-(`v9 table`) pairs the register with the sentences that say the same word before their number.
-The section is read as GitHub renders it: every table in it is a register, and a table's rows run
+sentence is a digit run beside `tables`, `rows` or `names`. A register is a table of the section
+as rendered: every table in it is a register, and there are exactly two. A register's qualifier is
+its first header cell without the trailing `table` (`v9 table` gives `v9`); it pairs the register
+with the sentences that say the same word before their number. A table's rows run
 to the first blank line or block, with or without their outer pipes. A blank line holds only spaces
 and tabs, a block is one CommonMark opens (a heading, a fence, a quote, an HTML block, indented
 code), a header has as many cells as its delimiter row, and a table inside a quote is a table.
