@@ -21,6 +21,7 @@ from test_ci_workflows import (
     push,
     read_workflow,
     rendered,
+    Unread,
     workflow_files,
 )
 
@@ -144,6 +145,111 @@ class EveryWorkflowFollowsTheRule(unittest.TestCase):
             )
         self.assertEqual(found["ci.yml"]["name"], "ci")
         self.assertEqual(found["mutation-weekly.yml"]["name"], "mutation-weekly")
+
+
+def releases_a_tag(content):
+    """Whether a workflow runs on a pushed tag or on a release event: the workflows whose group can
+    hold two runs of one release."""
+    events = content.get("on", {})
+    pushed = events.get("push")
+    return bool((isinstance(pushed, dict) and "tags" in pushed) or "release" in events)
+
+
+def release_problems(content, text):
+    """What a release workflow's concurrency gets wrong (SPEC-190 R10, ADR-292): its group must hold
+    two runs of one tag so they never run at once, no run may be cancelled, and the group must
+    queue every requested run, not keep one pending run and replace it (`queue: max`)."""
+    found = []
+    blocks = len(re.findall(r"(?m)^\s*concurrency:", text))
+    if blocks != 1:
+        found.append(f"{blocks} concurrency blocks, so a job's own or none")
+    block = content.get("concurrency")
+    if block is None:
+        return found + ["carries no concurrency block"]
+    group, cancel = block.get("group", ""), block.get("cancel-in-progress", "false")
+    first, second = push("refs/tags/v1.0.0", run_id="201"), push("refs/tags/v1.0.0", run_id="202")
+    if rendered(group, first) != rendered(group, second):
+        found.append("two runs of one tag have two groups, so their release steps run at once")
+    for scenario, context in (("a first run", first), ("a second run", second)):
+        if condition(cancel, context):
+            found.append(f"{scenario} of a tag cancels the run before it")
+    if block.get("queue") != "max":
+        found.append(
+            f"queue is {block.get('queue')!r}, so a third run of a tag replaces the waiting second"
+        )
+    return found
+
+
+def planted(old, new):
+    """release.yml's text with one shape planted in place of the ADR-292 shape."""
+    text = (WORKFLOWS / "release.yml").read_text(encoding="utf-8")
+    assert old in text, old
+    return text.replace(old, new, 1)
+
+
+class EveryReleaseWorkflowQueuesEveryRun(unittest.TestCase):
+    def test_every_workflow_that_can_hold_two_runs_of_a_release_queues_them(self):
+        judged = examined(
+            "release workflows (push of tags or release event)",
+            [item for item in read_all() if releases_a_tag(item[1])],
+        )
+        self.assertIn("release.yml", [item[0] for item in judged])
+        found = []
+        for name, content, text in judged:
+            found += [f"{name}: {problem}" for problem in release_problems(content, text)]
+        self.assertEqual(found, [])
+
+    def test_a_shape_that_replaces_drops_or_runs_two_at_once_is_refused(self):
+        group = "  group: release-${{ github.ref }}\n"
+        shapes = {
+            "the tag group with no queue (today)": (
+                "  cancel-in-progress: false\n",
+                "  cancel-in-progress: false\n",
+                "queue is None",
+            ),
+            "queue: single": (
+                "  cancel-in-progress: false\n",
+                "  cancel-in-progress: false\n  queue: single\n",
+                "queue is 'single'",
+            ),
+            "a group keyed by the run id": (
+                group,
+                "  group: release-${{ github.run_id }}\n  queue: max\n",
+                "two runs of one tag have two groups",
+            ),
+            "cancel-in-progress true": (
+                "  cancel-in-progress: false\n",
+                "  cancel-in-progress: true\n  queue: max\n",
+                "cancels the run before it",
+            ),
+        }
+        for label, (old, new, expected) in shapes.items():
+            text = planted(old, new)
+            problems = release_problems(read_workflow(text), text)
+            self.assertTrue(any(expected in problem for problem in problems), (label, problems))
+        text = planted(
+            "  cancel-in-progress: false\n", "  cancel-in-progress: false\n  queue: max\n"
+        )
+        self.assertEqual(release_problems(read_workflow(text), text), [])
+
+    def test_a_job_level_block_and_a_missing_block_are_refused(self):
+        text = planted(
+            "jobs:\n  release:\n", "jobs:\n  release:\n    concurrency:\n      group: x\n"
+        )
+        self.assertIn("2 concurrency blocks", " ".join(release_problems(read_workflow(text), text)))
+        bare = planted("concurrency:\n", "x-unused:\n")
+        self.assertIn("no concurrency block", " ".join(release_problems(read_workflow(bare), bare)))
+
+    def test_a_release_workflow_the_reader_cannot_read_is_refused(self):
+        text = planted("jobs:\n", "jobs:\n  anchor: &a b\n")
+        with self.assertRaises(Unread):
+            read_workflow(text)
+
+    def test_only_the_tag_or_release_workflows_are_in_the_class(self):
+        names = [
+            n for n, content, _t in examined("workflows", read_all()) if releases_a_tag(content)
+        ]
+        self.assertEqual(names, ["release.yml"])
 
 
 if __name__ == "__main__":
