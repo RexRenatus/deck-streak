@@ -113,8 +113,8 @@
         "S04114-A-SEND-IS-CALLED-ONLY-AT-ITS-NAMED-CALL-SITE",
         "notifications",
         "tests/one_router.rs",
-        "                    if !at_a_named_site(path, &function, name) {",
         "                    if at_a_named_site(path, &function, name) {",
+        "                    if !at_a_named_site(path, &function, name) {",
         "one_router::no_delivery_goes_around_the_port",
         "a use of the bot's send_html, edit_html or command handler anywhere but its named call site is refused (SPEC-041 A15); the census is test code, which cargo-mutants never mutates, and the mutant lets the planted sends through the bot's own transport"
       ],
@@ -432,6 +432,87 @@
         "    \"editChatInviteLink\",\n    \"editChatInviteLink\",",
         "one_router::no_delivery_goes_around_the_port",
         "the name an invite link carries is text the bot chooses and administrators see, so the invite-link methods are held with the sends (SPEC-041 A15); the census is test code, which cargo-mutants never mutates, and the mutant swaps one for a second copy of the next name, so the list keeps its length, letting the planted named invite link through"
+      ],
+      [
+        "S04150-THE-BOT-BASE-URL-IS-GUARDED",
+        "notifications",
+        "tests/one_router.rs",
+        "    (API_URL, TRANSPORT),",
+        "    (BOT_SEND, TRANSPORT),",
+        "one_router::a_hand_built_send_url_is_refused_wherever_the_transport_builds_it",
+        "the bot's base URL is a guarded name defined in the transport, so a request URL built from it anywhere else is refused whatever builds it (SPEC-041 A16, #429); the census is test code, which cargo-mutants never mutates, and the mutant guards a second copy of the send's name instead, so the array keeps its length and every planted hand-built URL passes"
+      ],
+      [
+        "S04151-A-BASE-URL-IN-A-LITERAL-IS-REFUSED",
+        "notifications",
+        "tests/one_router.rs",
+        "        if structure[at..at + API_URL.len()].trim().is_empty() {",
+        "        if false {",
+        "one_router::a_hand_built_send_url_is_refused_wherever_the_transport_builds_it",
+        "the base URL named inside a string literal, an inline format argument the census blanks, is refused at any place that is not a named site, so a form the census cannot read fails closed (SPEC-041 A16, #429); the census is test code, which cargo-mutants never mutates, and the mutant turns the rule off, letting every inline-argument URL through"
+      ],
+      [
+        "S04152-THE-NAMED-SITES-OF-THE-BASE-URL-ARE-ACCEPTED",
+        "notifications",
+        "tests/one_router.rs",
+        "        || API_URL_SITES.contains(&(path, function, name))",
+        "        || false",
+        "one_router::no_delivery_goes_around_the_port",
+        "the two multipart sends and the constructor read the bot's base URL and are accepted, so the shipped transport is clean (SPEC-041 A16, #429); the census is test code, which cargo-mutants never mutates, and the mutant accepts no site, so the shipped reads are refused"
+      ],
+      [
+        "S04153-THE-BASE-URL-IS-READ-AT-EACH-NAMED-SITE",
+        "notifications",
+        "tests/one_router.rs",
+        "    (TRANSPORT, \"Transport::with_waits\", \"api_url\"),",
+        "    (TRANSPORT, \"Transport::send_photo\", \"api_url\"),",
+        "one_router::no_delivery_goes_around_the_port",
+        "each named site of the bot's base URL is found once in the tree, so a site that stopped reading it, or a table that names a site twice, fails (SPEC-041 A16, #429); the census is test code, which cargo-mutants never mutates, and the mutant names the photo send twice and the constructor never, so the constructor's read is refused"
+      ],
+      [
+        "S04154-EVERY-NAME-OF-AN-UNREAD-REQUEST-IS-READ",
+        "notifications",
+        "tests/one_router.rs",
+        "    for name in REQUEST_NAMES {",
+        "    for name in [\"reqwest\"] {",
+        "one_router::a_request_the_census_cannot_read_is_refused_wherever_the_bot_makes_it",
+        "the census reads every name through which the bot can make a request whose Bot API method it cannot read: the client's generic requests, its HTTP client and the HTTP crate (SPEC-041 A16, #429); the census is test code, which cargo-mutants never mutates, and the mutant reads the crate alone, so a generic request or the pinned client's post in any bot function is accepted"
+      ],
+      [
+        "S04155-AN-UNREAD-REQUEST-OUTSIDE-ITS-SITE-IS-REFUSED",
+        "notifications",
+        "tests/one_router.rs",
+        "            if REQUEST_SITES.contains(&(path, function.as_str(), name)) {",
+        "            if true {",
+        "one_router::no_delivery_goes_around_the_port",
+        "a request the census cannot read is refused outside its named request site (SPEC-041 A16, #429); the census is test code, which cargo-mutants never mutates, and the mutant takes every mention as a site's, so the planted celebrations' raw requests are no longer refused"
+      ],
+      [
+        "S04156-A-REQUEST-PATH-LEFT-OFF-THE-CLIPPY-CONFIG-IS-REFUSED",
+        "notifications",
+        "../../clippy.toml",
+        "{ path = \"reqwest::Client::builder\"",
+        "{ path = \"reqwest::Client::builders\"",
+        "request_allow_list::clippy_names_the_four_paths_that_make_reqwests_client",
+        "clippy.toml names the four paths through which reqwest's client is made, so a request through any name the compiler resolves to one of them is flagged (SPEC-041 A18, #429); the config is not code cargo-mutants reaches, and the mutant names a path no code resolves to, so the entry is gone"
+      ],
+      [
+        "S04157-A-SUPPRESSION-SPELLING-LEFT-OUT-OF-THE-CENSUS-IS-REFUSED",
+        "notifications",
+        "tests/request_allow_list.rs",
+        "    for level in [\"allow\", \"expect\"] {",
+        "    for level in [\"expect\"] {",
+        "request_allow_list::a_suppression_of_the_rule_or_of_its_group_is_refused_wherever_it_is_planted",
+        "the allow-list test reads every allow and expect around a lint of the rule or of a group that holds it (SPEC-041 A18); the audit is test code, which cargo-mutants never mutates, and the mutant leaves the allow spelling unread, so the generated suppression population is no longer refused"
+      ],
+      [
+        "S04158-AN-ALLOW-AT-A-NAMED-SITE-IS-REFUSED",
+        "notifications",
+        "tests/request_allow_list.rs",
+        "            && suppression.level == \"expect\"",
+        "            && true",
+        "request_allow_list::the_audit_reads_code_and_only_code",
+        "a named transport site is accepted only as an expect with a reason, so a site that stops needing its suppression is itself a warning (SPEC-041 A18); the audit is test code, which cargo-mutants never mutates, and the mutant accepts an allow at a named site"
       ]
     ],
     "CARGO_KILLED_SCRIPT_MUTATIONS": [

@@ -440,3 +440,67 @@ Rows S04148 and S04149 (ea4df18, mutants corrected at bfe514d): a Passport error
 invite link's name, each held with the sends; the killer is `no_delivery_goes_around_the_port`, and
 the mutant swaps the name for a copy of `editChatInviteLink`, a name no planted case calls, so `DELIVERY_METHODS` keeps its length and
 the target builds.
+
+A16 is a new criterion (#429). The population is 2,904 hand-built send URLs, 11 methods (each Bot
+API method the transport's own code names, read from the source) by 6 forms (`format!`, `concat!`,
+a `String` push, a helper function, a `const` path and a string literal's inline argument) by 44
+functions of the transport outside its named sites. At the red commit every one was accepted, since
+`api_url` was not a guarded name. Fifteen controls, five non-helper forms planted inside each of
+the three named sites with that site's own method, and the transport as shipped, are accepted at
+the red commit and at green, so no member is red for want of a control. The planted requests of A15
+that hold `api_url` gained three literal refusals and three uses, which is an edit of A15's
+expected list at the green commit (1ac918e43fe5), disclosed here and in SPEC-041 §7.
+
+```red-first
+A16: red at 3010dd186f95: 2904 of 2904 hand-built send URLs are not refused, e.g. format form of sendMessage in ApiUrl::new at line 101 is not refused
+A16: green at 1ac918e43fe5
+```
+
+A17 is a new criterion (#429, round 1). The population is 1,048 planted requests: 8 request forms
+(the pinned client's `request`, `request_with_form_data` and `request_with_possible_form_data`, the
+client's `post` and `get`, `reqwest::Client::new`, `reqwest::get` and a built `reqwest` client, each
+naming its method in lower case) by every function of the 8 bot sources and 3 places outside a
+function (a static, a nested module and a new type's method). At the red commit the census's
+request check was not called, so every member was accepted. The two edits to `no_delivery_goes_around_the_port`
+(the three planted requests of A15 gained one refusal each, and the tree's mentions are asserted
+against `REQUEST_SITES`) are in the green commit (0f2ed408694a), so A15 is not red at the red commit.
+The killer gained one positive assertion in the commit after the green one (the population's base
+reads every named request site once); it changes no member and no verdict.
+
+```red-first
+A17: red at fb75909d3e93: 1048 of 1048 requests the census cannot read are not refused, e.g. generic in Piece::units of crates/bot/src/chunk.rs at line 36 is not refused
+A17: green at 0f2ed408694a
+```
+
+A18 is a new criterion (#429, round 2). The killer is `request_allow_list.rs`, whose tests audit the
+allow-list of the compiler's request rule. At the red commit `clippy.toml` names none of the four
+paths and the bot transport carries none of its two `#[expect]` annotations, so two of the five tests
+are red: the one that reads `clippy.toml` and the one that finds the named sites. Not red: the
+generated suppression population (1,920 planted suppressions), the manifest and flag test and the
+test of the audit's own reading, because the audit that refuses them is in the test itself and a
+tree that has no annotation has no suppression to refuse; their red is the mutant of the rows S04157
+and S04158, each of which leaves one spelling or one level unread and turns its test red, and the
+row S04156 turns the first test red with a path removed from `clippy.toml`. The green commit changes
+the test file once more, for the workspace's lints (a range, a `let` chain, a file-extension helper
+and an `expect` allowance for a test crate), and no assertion.
+The test-file change of the green commit, 41932f6, is that one; it rewrites the line that reads a
+relative path and no assertion of a verdict.
+A later commit adds the examined contract to the file walk (a printed count and a refusal of zero),
+so the tdd pack reads the walk as reporting what it examined; it changes no assertion and no member.
+The commit 0e10511 replaces the fixed count of the bot's sources with the count read from the tree, and
+asserts that count is above zero and that the transport source is among those examined; no assertion
+of a verdict changes.
+
+```red-first
+A18: red at 031e72526af5: clippy.toml does not name reqwest::Client under disallowed-types, and the bot transport carries none of its 2 named #[expect] sites
+A18: green at 41932f6d3623
+```
+
+Two post-green commits that edit a test line are named here by sha, appended and read from
+`git show`. The commit 682716c9 is the one whose sentence above says it "changes no assertion":
+it did add one. Its `examined()` helper asserts that the examined list of workspace files is
+non-empty, and it prints the count, so the walk now refuses an empty population (the file also
+widens its `allow` to `clippy::print_stdout`). No assertion of a verdict and no member changed; the
+test file's numstat for it is 12 inserted and 2 deleted. The commit 029fc3e7 is a formatter-only
+edit of the same test file: it splits one chained call over three lines, changes no assertion and no
+member, and its numstat is 3 inserted and 1 deleted.
