@@ -186,9 +186,13 @@ install_units() {
     done
 }
 
+switch_current() {
+    mv -T "$root/.current.$$" "$root/current"
+}
+
 switch_to() {
     stage_link "$1" || return 1
-    mv -T "$root/.current.$$" "$root/current"
+    switch_current
 }
 
 restart() {
@@ -253,7 +257,7 @@ python3 "$rel/deploy/scripts/effective-check.py" --root "$rel" "$checked" ||
       [ "$mode" = install ] && find "$rel" -delete; exit 1; }
 find "$checked" -delete
 
-mv -T "$root/.current.$$" "$root/current" || switch_failed
+switch_current || switch_failed
 restart deck-streak-api.service || back deck-streak-api.service
 ready || back deck-streak-api.service
 restart deck-streak-bot.service || back deck-streak-bot.service

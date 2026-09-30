@@ -564,8 +564,8 @@
       [
         "S12771-A-THE-RENAME-OVER-CURRENT-IS-GUARDED",
         "deploy/deploy.sh",
-        "mv -T \"$root/.current.$$\" \"$root/current\" || switch_failed",
-        "mv -T \"$root/.current.$$\" \"$root/current\" || true",
+        "switch_current || switch_failed",
+        "switch_current || true",
         "a failed rename over current ends the verb with a refusal (SPEC-127 A41)",
         "test_deploy_scripts.EveryDirectoryAVerbWritesInIsMeasuredAndItsTemporaryPathsAreRefused.test_every_place_a_verb_writes_in_and_every_temporary_path_call_is_refused"
       ]
