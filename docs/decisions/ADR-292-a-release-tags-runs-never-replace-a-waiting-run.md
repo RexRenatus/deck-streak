@@ -89,6 +89,11 @@ does not select, are follow-up #464's.
 - Bad, because the rule refuses some shapes GitHub runs with a tag's runs kept, such as a
   workflow's block that can equal a release group only under an event that never holds a tag's
   ref; SPEC-190 R12 lists them as advisory.
+- Neutral, because the census test no longer pins the class to one file by name, and a check that
+  checks less is recorded here. The pin also refused a second tag workflow that GitHub runs safely.
+  The census now derives the class from the membership rule, so such a workflow joins the class and
+  is judged by it. The class rule itself refuses every harmful second workflow, and the census still
+  finds a planted second member.
 - Bad, because the key is newer than the default behaviour; a run beyond a hundred waiting is
   cancelled, and shows as cancelled. The block sets `queue: max`, so the depth is a hundred where the
   default is one.
