@@ -12,8 +12,8 @@ A2: not red: the reader finds the blocks on the unfixed tree too, since a block 
 A3: not red: the parser refuses a reserved-word id on any tree; the criterion pins that the check itself can refuse
 A4: red at cbb4047b: AssertionError: expected [] to deeply equal [ 'planted.md block 1' ]: the reader found no block in an indented fence, in a list item or by three spaces, so both new tests failed
 A4: green at 5855fa5b
-A5: red at 63fb9832: AssertionError: 1665 of 3241 members read otherwise: expected [ …(3) ] to deeply equal []: the fence-line reader read 1,665 of the 3,241 generated container forms otherwise than GitHub renders them, so both new tests failed
-A5: green at 57bc9aec
+A5: red at a5881aba: AssertionError: 946 of 8750 members read otherwise: expected [ …(3) ] to deeply equal []: round 5's reader read 946 of the 8,750 generated members otherwise than GitHub renders them and refused none by name, so all three A5 tests failed
+A5: green at 071043ea
 ```
 
 The reader was then extended to read an indented fence. Its test (A4) was committed alone
@@ -101,4 +101,13 @@ A5: green at 57bc9aec
 
 At 57bc9aec all eight tests pass and 191 blocks are examined, the same 191 with the same text.
 
-After the reader change, the test file gained a presence assertion in each A5 test and spells its opener cross-check regular expression with `\x60` for the backtick, so the tdd probe reads the file as written: the assertions and the pattern change no verdict, and the failure quoted above is the failure of the test as committed at 63fb9832.
+After the reader change, the test file gained a presence assertion in each A5 test and spells its opener cross-check regular expression with `\x60` for the backtick, so the tdd probe reads the file as written: the assertions and the pattern change no verdict, and the failure quoted above is the failure of the test as committed at 63fb9832. Then c5f53771 moved the generator to `web/app/src/lib/docs-mermaid-fences.js`, changed the test's import to it, found `docs/` by walking up to `pnpm-workspace.yaml`, and added a ninth test, `refuses a grammar whose body names no row, and says which`; none changes a verdict of the eight.
+
+Round 6 made the reader read only a declared subset of Markdown, on which commonmark.js opens the same fences as GitHub's cmark-gfm, and refuse by name every form outside it that could make, hide or change a diagram, and moved the reader into `web/app/src/lib/docs-mermaid-read.js`. A5's generator draws the class members from the reader's exported lists: 8,750 members. The test, the generator, the refresh script and the re-recorded rendering were committed alone (a5881aba) against the unchanged reader, and the reader (071043ea) turned all nine tests green. The test and the generator are unchanged between those two commits except that the red commit carries round 5's reader in the test and the reader's three lists in the generator, where the reader's commit imports them. The ninth test is renamed `refuses a generated container form it cannot write or read, and says which`, so A5 selects it with the two comparison tests. The replay of A5 at the red commit, over the whole file, printed `Tests  3 failed | 6 passed (9)`. The first member read otherwise is `info.20.decimal0.before.top`, a character reference for a space before `mermaid` at the top level, which GitHub draws as a diagram and round 5's reader does not read:
+
+```text
+A5: red at a5881aba: AssertionError: 946 of 8750 members read otherwise: expected [ …(3) ] to deeply equal []: round 5's reader read 946 of the 8,750 generated members otherwise than GitHub renders them and refused none by name, so all three A5 tests failed
+A5: green at 071043ea
+```
+
+At the reader's commit all nine tests pass, the reader reads 2,711 of the 8,750 generated members and refuses the other 6,039 by name, and 191 blocks are examined, the same 191 with the same text.
