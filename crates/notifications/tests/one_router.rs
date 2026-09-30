@@ -1385,6 +1385,9 @@ struct Census {
     callers: Vec<(String, String, String)>,
     /// Each read of the bot's base URL at a named site, as (path, function), in order.
     api_urls: Vec<(String, String)>,
+    /// Each name of a request the census cannot read, at its named request site, as (path,
+    /// function, name), in order: once per mention.
+    requests: Vec<(String, String, String)>,
 }
 
 impl Census {
@@ -1518,7 +1521,30 @@ fn census(sources: &[(String, String)]) -> Census {
     found.callers.sort();
     found.callers.dedup();
     found.api_urls.sort();
+    found.requests.sort();
     found
+}
+
+/// Each name of `REQUEST_NAMES` in the bot's source `path`, found at its named request site or
+/// refused. A request made through one of them carries its Bot API method as a string or a URL,
+/// which no identifier search reads, so it is refused wherever it is not named (fail closed).
+fn request_refusals(found: &mut Census, path: &str, code: &str, structure: &str) {
+    for name in REQUEST_NAMES {
+        for at in identifiers(structure, name) {
+            let function = enclosing(structure, at);
+            if REQUEST_SITES.contains(&(path, function.as_str(), name)) {
+                found
+                    .requests
+                    .push((path.to_owned(), function, name.to_owned()));
+            } else {
+                found.refusals.push((
+                    path.to_owned(),
+                    line_of(code, at),
+                    format!("names {name} in {function}, not a named request site"),
+                ));
+            }
+        }
+    }
 }
 
 /// Each use of the command handler's replies and dispatch in the handler's module at `path`, found
@@ -2506,6 +2532,46 @@ const API_URL_SITES: [(&str, &str, &str); 3] = [
     (TRANSPORT, "Transport::with_waits", "api_url"),
 ];
 
+/// The names through which the bot can make a request whose Bot API method the census does not
+/// read: the pinned client's generic requests, which take the method as a string; its HTTP
+/// client; and the HTTP crate, by which any other client or request is built. Any other path to
+/// the Bot API is a typed call of the client, whose method the census reads by its name.
+const REQUEST_NAMES: [&str; 5] = [
+    "request",
+    "request_with_form_data",
+    "request_with_possible_form_data",
+    "client",
+    "reqwest",
+];
+
+/// Every mention of a `REQUEST_NAMES` name in the bot's shipped sources, as (path, function,
+/// name), once per mention: the update poll's generic request, the constructor that builds the
+/// client, the two multipart sends and their forms, and the transport's use of the crate and its
+/// error types (in no function). A second mention at a site is a second request, and is refused.
+const REQUEST_SITES: [(&str, &str, &str); 21] = [
+    (TRANSPORT, "no function", "reqwest"),
+    (TRANSPORT, "no function", "reqwest"),
+    (TRANSPORT, "no function", "reqwest"),
+    (TRANSPORT, "no function", "reqwest"),
+    (TRANSPORT, "no function", "reqwest"),
+    (TRANSPORT, "no function", "reqwest"),
+    (TRANSPORT, "no function", "reqwest"),
+    (TRANSPORT, "no function", "reqwest"),
+    (TRANSPORT, "Transport::with_waits", "client"),
+    (TRANSPORT, "Transport::with_waits", "client"),
+    (TRANSPORT, "Transport::with_waits", "client"),
+    (TRANSPORT, "Transport::with_waits", "reqwest"),
+    (TRANSPORT, "Transport::send_document", "client"),
+    (TRANSPORT, "Transport::send_document", "client"),
+    (TRANSPORT, "Transport::send_document", "client"),
+    (TRANSPORT, "Transport::send_photo", "client"),
+    (TRANSPORT, "Transport::get_updates", "request"),
+    (TRANSPORT, "document_form", "reqwest"),
+    (TRANSPORT, "document_form", "reqwest"),
+    (TRANSPORT, "photo_form", "reqwest"),
+    (TRANSPORT, "photo_form", "reqwest"),
+];
+
 /// Each way to build a Bot API request URL from `api_url`, by name. `url_statement` writes each as
 /// a statement planted on a line of its own inside a function body.
 const URL_FORMS: [&str; 6] = ["format", "concat", "push", "helper", "constant", "inline"];
@@ -2695,6 +2761,153 @@ fn a_hand_built_send_url_is_refused_wherever_the_transport_builds_it() {
     assert!(
         missed.is_empty(),
         "{} of {} hand-built send URLs are not refused, e.g. {}",
+        missed.len(),
+        members.len(),
+        missed.first().map_or("", String::as_str)
+    );
+}
+
+/// Each way the bot can make a request whose Bot API method the census does not read, as a
+/// statement naming the method in lower case: the Bot API takes it ("All methods in the Bot API
+/// are case-insensitive"), and no identifier search finds it.
+const REQUEST_FORMS: [(&str, &str); 8] = [
+    (
+        "generic",
+        r#"let _r = self.bot.request::<_, Value>("sendmessage", None::<()>);"#,
+    ),
+    (
+        "form-data",
+        r#"let _r = self.bot.request_with_form_data::<_, Value>("sendmessage", (), vec![]);"#,
+    ),
+    (
+        "possible-form-data",
+        r#"let _r = self.bot.request_with_possible_form_data::<_, Value>("sendmessage", (), vec![]);"#,
+    ),
+    (
+        "client-post",
+        r#"let _r = self.bot.client.post(format!("{}/sendmessage", self.base));"#,
+    ),
+    (
+        "client-get",
+        r#"let _r = self.bot.client.get(format!("{}/sendmessage", self.base));"#,
+    ),
+    (
+        "new-client",
+        r#"let _r = reqwest::Client::new().post(format!("{}/sendmessage", self.base));"#,
+    ),
+    (
+        "free-get",
+        r#"let _r = reqwest::get(format!("{}/sendmessage", self.base));"#,
+    ),
+    (
+        "built-client",
+        r#"let _r = reqwest::Client::builder().build().map(|c| c.get(format!("{}/sendmessage", self.base)));"#,
+    ),
+];
+
+/// The places outside a function where the bot can make a request: a static's initialiser, a
+/// nested module's function, and a new type's method, each appended to a bot source with `STMT`.
+const REQUEST_PLACES: [(&str, &str); 3] = [
+    (
+        "static",
+        "\nstatic PROBE: std::sync::LazyLock<()> = std::sync::LazyLock::new(|| {\nSTMT\n});\n",
+    ),
+    (
+        "nested-mod",
+        "\nmod probe {\n    use super::*;\n    pub(super) fn probe() {\nSTMT\n    }\n}\n",
+    ),
+    (
+        "new-impl",
+        "\nstruct Probe;\nimpl Probe {\n    fn probe(&self) {\nSTMT\n    }\n}\n",
+    ),
+];
+
+/// `text` with `statement` on its own line just past the brace at `open`, and that line.
+fn planted_line(text: &str, open: usize, statement: &str) -> (String, usize) {
+    let mut planted = String::with_capacity(text.len() + statement.len() + 1);
+    planted.push_str(&text[..=open]);
+    planted.push('\n');
+    let at = planted.len();
+    planted.push_str(statement);
+    planted.push_str(&text[open + 1..]);
+    let line = line_of(&planted, at);
+    (planted, line)
+}
+
+// One population: every form of a request the census cannot read, in every function of every bot
+// source and at every place outside one; each is refused at its line, or, at a named request
+// site, found one more time than the site names it.
+#[allow(clippy::too_many_lines)]
+#[test]
+fn a_request_the_census_cannot_read_is_refused_wherever_the_bot_makes_it() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .ancestors()
+        .nth(2)
+        .expect("the tree's root");
+    let bot: Vec<(String, String)> = shipped_sources(root)
+        .into_iter()
+        .filter(|(path, _)| {
+            path.starts_with(BOT_SOURCES)
+                && Path::new(path)
+                    .extension()
+                    .is_some_and(|extension| extension == "rs")
+        })
+        .collect();
+    let bot = examined("bot source(s)", bot);
+    let mut members: Vec<(String, String, &str, String, usize)> = Vec::new();
+    for (path, text) in &bot {
+        for (form, statement) in REQUEST_FORMS {
+            for (function, open) in functions_of(text) {
+                let (planted, line) = planted_line(text, open, statement);
+                members.push((path.clone(), function, form, planted, line));
+            }
+            for (place, template) in REQUEST_PLACES {
+                let at = text.len() + template.find("STMT").expect("a statement's place");
+                let planted = format!("{text}{}", template.replace("STMT", statement));
+                let line = line_of(&planted, at);
+                members.push((path.clone(), place.to_owned(), form, planted, line));
+            }
+        }
+    }
+    let members = examined("planted request(s)", members);
+    let unplanted: Vec<(String, Census)> = bot
+        .iter()
+        .map(|(path, text)| (path.clone(), census(&[(path.clone(), text.clone())])))
+        .collect();
+    let workers = std::thread::available_parallelism().map_or(4, std::num::NonZero::get);
+    let chunk = members.len().div_ceil(workers);
+    let missed: Vec<String> = std::thread::scope(|scope| {
+        let handles: Vec<_> = members
+            .chunks(chunk)
+            .map(|part| {
+                let unplanted = &unplanted;
+                scope.spawn(move || {
+                    let mut missed = Vec::new();
+                    for (path, place, form, planted, line) in part {
+                        let (_, before) = unplanted
+                            .iter()
+                            .find(|(p, _)| p == path)
+                            .expect("an unplanted census");
+                        let after = census(&[(path.clone(), planted.clone())]);
+                        let at_its_line = after.refusals.iter().any(|(_, at, _)| at == line);
+                        if !at_its_line && after.requests == before.requests {
+                            missed.push(format!(
+                                "{form} in {place} of {path} at line {line} is not refused"
+                            ));
+                        }
+                    }
+                    missed
+                })
+            })
+            .collect();
+        handles
+            .into_iter()
+            .flat_map(|handle| handle.join().expect("a worker"))
+            .collect()
+    });
+    assert!(
+        missed.is_empty(),
+        "{} of {} requests the census cannot read are not refused, e.g. {}",
         missed.len(),
         members.len(),
         missed.first().map_or("", String::as_str)
