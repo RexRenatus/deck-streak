@@ -97,7 +97,10 @@ Chosen against:
   campaign row for the crate is closed.
 - Relying on the runner's timeout: it does not protect a small runner from memory.
 
-Class sweep of the loops in `crates/ingest/src`: `wire.rs` `varint` (each pass takes one byte
-from `data` and ends at its end), `wire.rs` `walk_with` (guarded), `sync.rs` `attempts` (a counter
+The same guard is applied to the template token scan of Dark Fields (`tokens_with` over `token_step`
+in `crates/insights/src/dark_fields.rs`), whose stalled mutants spun a test for its whole timeout.
+
+Class sweep of the loops this delivery adds or touches (ingest and insights): `wire.rs` `varint` (each pass takes one byte
+from `data` and ends at its end), `wire.rs` `walk_with` (guarded), `dark_fields.rs` `tokens_with` (guarded), `sync.rs` `attempts` (a counter
 that returns at `schedule.attempts`) and `sync.rs` `reopening` (a counter bounded by
-`schedule.open_retries`). Four loops, one guarded, three bounded by their own counter or input.
+`schedule.open_retries`). Five loops, two guarded, three bounded by their own counter or input.

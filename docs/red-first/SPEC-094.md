@@ -89,13 +89,12 @@ killer was run against its mutant: it survived before the test and was caught af
 | eb415974 | `insights_routes::an_unreadable_store_answers_500_with_a_reason_code_alone`; `commands::the_handlers_hold_the_instruments_only_once_they_are_handed_them` | `unreadable`, `Commands::instruments` |
 | 4bb144d9 | `instruments_wiring::a_role_with_valid_settings_gets_the_instruments`, `instruments_wiring::the_late_holder_answers_not_ready_until_it_is_filled`; `roles::only_the_sync_job_loads_the_owners_conventions` | `instruments_for_role`, `LateInstruments::fill`, `role_job` gate |
 
-Two mutants no test can tell apart are recorded equivalent, each with its reason, in
-`scripts/mutation-equivalent.d/deck-streak-insights.json`: the two operator swaps in `tokens_in`
-(`>` to `>=` at line 180 and `+` to `-` at line 182), which change only which bytes are rescanned,
-never a token. The two `Debug` impls of `ApiState` and `Instruments` are killed by whole-line
-assertions (`insights_routes::the_state_debug_line_says_which_ports_it_holds`,
+No mutant is recorded equivalent. The two `Debug` impls of `ApiState` and `Instruments` are killed by
+whole-line assertions (`insights_routes::the_state_debug_line_says_which_ports_it_holds`,
 `instruments_step::the_debug_line_names_the_instruments_and_counts_their_runners`). The refresh path's
-mutants also carry rows S09413 to S09417, each proved killed by its full id.
+mutants also carry rows S09413 to S09417, each proved killed by its full id. The two operator swaps
+in the template token scan, once thought equivalent, are killed by the scan's split into `token_step`
+and `tokens_with` (below), whose tests read a broken pair and a step.
 
 Test edit disclosed: 29dfd0e1 extends `instruments_cycle::a_cycle_without_instruments_stores_no_report`
 with a closing presence assertion (the same deployment, run with instruments, stores the alpha
@@ -107,3 +106,10 @@ advancing pushed fields without bound. `walk_with` now refuses a pass that does 
 advance, and `crates/ingest/tests/wire_progress.rs` (a reader that stays, one that steps back, one
 that advances by one, one that fails, and the real walk on two fields) kills the guard's own
 mutants. It adds no equivalent record; the ingest campaign row keeps its count.
+
+Template token scan progress guard (2026-09-30, ADR-095 amendment): a mutant of the token scan that
+stopped the position advancing spun a test for its whole timeout. `tokens_with` now ends a step that
+does not strictly advance, and `crates/insights/tests/token_progress.rs` (a reader that stays, one
+that steps back, one that advances by one, the real scan, and one step's answer) kills the guard's
+mutants and the two swaps previously recorded equivalent; `scripts/mutation-equivalent.d/deck-streak-insights.json`
+is removed.

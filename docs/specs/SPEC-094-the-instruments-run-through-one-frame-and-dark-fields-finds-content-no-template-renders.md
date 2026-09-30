@@ -344,7 +344,7 @@ The delivery touched these files beyond the rows above:
 - `crates/daemon/tests/roles.rs`
 - `crates/ingest/tests/lock.rs`
 - `crates/ingest/tests/wire_progress.rs`
-- `scripts/mutation-equivalent.d/deck-streak-insights.json`
+- `crates/insights/tests/token_progress.rs`
 
 Rows the delivery leaves unchanged:
 - `crates/kernel/src/settings.rs` is unchanged; the conventions file is read by the existing loader.
