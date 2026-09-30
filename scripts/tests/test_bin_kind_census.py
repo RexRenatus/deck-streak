@@ -256,6 +256,90 @@ def module_layouts(home):
             set(),
             False,
         ),
+        "a cfg(any(test, unix)) file module": (
+            "#[cfg(any(test, unix))]\nmod x;\n",
+            {at(home, "x.rs"): LEAF},
+            set(),
+            False,
+        ),
+        "a cfg(all(test, not(test))) file module the compiler never builds": (
+            "#[cfg(all(test, not(test)))]\nmod x;\n",
+            {at(home, "x.rs"): LEAF},
+            set(),
+            False,
+        ),
+        "a cfg(not(any(test, unix))) file module the compiler never builds": (
+            "#[cfg(not(any(test, unix)))]\nmod x;\n",
+            {at(home, "x.rs"): LEAF},
+            set(),
+            False,
+        ),
+        "a cfg(all(test, unix)) file module the runner cannot decide": (
+            "#[cfg(all(test, unix))]\nmod x;\n",
+            {at(home, "x.rs"): LEAF},
+            set(),
+            True,
+        ),
+        "a cfg(not(feature)) file module the runner cannot decide": (
+            '#[cfg(not(feature = "f"))]\nmod x;\n',
+            {at(home, "x.rs"): LEAF},
+            set(),
+            True,
+        ),
+        "a cfg_attr path the runner cannot decide": (
+            '#[cfg_attr(test, path = "impl/x.rs")]\nmod x;\n',
+            {at(home, "impl/x.rs"): LEAF, at(home, "x.rs"): LEAF},
+            set(),
+            True,
+        ),
+        "an inner cfg attribute the runner cannot decide": (
+            "#![cfg(test)]\nmod x;\n",
+            {at(home, "x.rs"): LEAF},
+            set(),
+            True,
+        ),
+        "an include! the runner cannot follow": (
+            'include!("inc.rs");\nmod x;\n',
+            {at(home, "inc.rs"): LEAF, at(home, "x.rs"): LEAF},
+            set(),
+            True,
+        ),
+        "a raw identifier module the runner cannot decide": (
+            "mod r#match;\n",
+            {at(home, "match.rs"): LEAF},
+            set(),
+            True,
+        ),
+        "a #[path] module inside a function body": (
+            'fn f() {\n    #[path = "impl/x.rs"]\n    mod x;\n}\n',
+            {at(home, "impl/x.rs"): LEAF},
+            {at(home, "impl/x.rs")},
+            False,
+        ),
+        "a #[path] module inside an inline module": (
+            'mod outer {\n    #[path = "impl/x.rs"]\n    mod x;\n}\n',
+            {at(home, "outer/impl/x.rs"): LEAF, at(home, "outer/x.rs"): LEAF},
+            {at(home, "outer/impl/x.rs")},
+            False,
+        ),
+        "lexemes that look like declarations": (
+            "const C: char = '{';\nconst Q: char = '\\'';\nfn f<'a>(x: &'a str) -> &'a str { x }\nconst B: &[u8] = b\"mod ghost;\";\nconst R: &[u8] = br#\"\nmod ghost;\n\"#;\n/* outer /* nested */ mod ghost; */\nmod x;\n",
+            {at(home, "x.rs"): LEAF, at(home, "ghost.rs"): LEAF},
+            set(),
+            False,
+        ),
+        "a skipped inline module holding blocks and a declaration": (
+            "#[cfg(not(test))]\nmod gone {\n    fn f() { if true { } }\n    mod inner;\n}\nmod x;\n",
+            {at(home, "x.rs"): LEAF, at(home, "gone/inner.rs"): LEAF, at(home, "inner.rs"): LEAF},
+            set(),
+            False,
+        ),
+        "attributes of other items before a module": (
+            '#[cfg(not(test))]\nfn unrelated() {}\n#[cfg(not(test))]\nconst K: u8 = 1;\n#[allow(dead_code)]\n#[doc = "x"]\npub(in crate) mod x;\n',
+            {at(home, "x.rs"): LEAF},
+            set(),
+            False,
+        ),
     }
 
 
@@ -480,6 +564,38 @@ class ThePlantedShapesOfTheIssue(unittest.TestCase):
         third = self.member(("", "", dict(bins, **{"src/bin/c/main.rs": MAIN})))
         with self.assertRaisesRegex(runner.KillerUnresolved, "holds 3 binaries,"):
             runner.locate_killer(third.root, killer_row(runner))
+
+    def test_what_the_reader_cannot_decide_is_refused_by_name(self):
+        runner = runner_module()
+        refusals = {
+            'autobins = "yes"\n': (
+                ("", "", {"src/main.rs": MAIN}),
+                "sets autobins to something other than a boolean",
+            ),
+            "": (
+                ("", '[[bin]]\npath = "src/main.rs"\n', {"src/main.rs": MAIN}),
+                "declares a bin with no name or path",
+            ),
+        }
+        for keys, (layout, pattern) in refusals.items():
+            with self.subTest(pattern=pattern):
+                member = self.member((keys, layout[1], layout[2]))
+                with self.assertRaisesRegex(runner.KillerUnresolved, pattern):
+                    runner.locate_killer(member.root, killer_row(runner))
+        nothing = self.member(("autobins = false\n", "", {"src/main.rs": MAIN}))
+        with self.assertRaisesRegex(runner.KillerUnresolved, "holds 0 binaries,"):
+            runner.locate_killer(nothing.root, killer_row(runner))
+        missing = self.member(("", '[[bin]]\nname = "t"\npath = "app/t.rs"\n', {}))
+        with self.assertRaisesRegex(
+            runner.KillerUnresolved, "declares the binary t at app/t.rs, which does not exist"
+        ):
+            runner.locate_killer(missing.root, killer_row(runner))
+        block = self.member(("", "", {"src/main.rs": "fn main() {\n    mod x;\n}\n"}))
+        with self.assertRaisesRegex(runner.KillerUnresolved, "declares mod x inside a block"):
+            runner.module_sources(block.crate / "src/main.rs")
+        weird = self.member(("", "", {"src/main.rs": "mod ;\n"}))
+        with self.assertRaisesRegex(runner.KillerUnresolved, "a mod declaration the reader"):
+            runner.module_sources(weird.crate / "src/main.rs")
 
 
 if __name__ == "__main__":

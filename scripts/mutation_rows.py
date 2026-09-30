@@ -631,9 +631,9 @@ def module_files(file: pathlib.Path, root_file: pathlib.Path) -> list[pathlib.Pa
                 frames.append(name if built and followed else "skip")
                 index += 3
                 continue
-            if "block" in frames:
-                raise KillerUnresolved(f"{where} declares mod {name} inside a block")
             if built and followed:
+                if "block" in frames:
+                    raise KillerUnresolved(f"{where} declares mod {name} inside a block")
                 base = home.joinpath(*[f for f in frames if f not in ("block", "skip")])
                 for child in (base / f"{name}.rs", base / name / "mod.rs"):
                     if child.is_file():
