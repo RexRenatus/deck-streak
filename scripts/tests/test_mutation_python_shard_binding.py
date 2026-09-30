@@ -236,6 +236,41 @@ class TheReportIsBoundToItsSlotAndItsListing(unittest.TestCase):
 
         self.population("listing binding", listing_members, expected)
 
+    def test_a_plan_that_lists_no_mutants_for_a_shard_refuses_its_report(self):
+        plan = Plan(self, 2)
+        path = plan.fixture.out / "plan.json"
+        original = path.read_text(encoding="utf-8")
+        variants = {
+            "no entry for the shard": lambda entries: [e for e in entries if e["shard"] != 1],
+            "an entry with no listing": lambda entries: [
+                {k: v for k, v in e.items() if k != "mutants"} if e["shard"] == 1 else e
+                for e in entries
+            ],
+            "an entry whose listing is not a list": lambda entries: [
+                dict(e, mutants="all") if e["shard"] == 1 else e for e in entries
+            ],
+        }
+        try:
+            for label, change in variants.items():
+                document = json.loads(original)
+                document["python"]["shards"] = change(document["python"]["shards"])
+                path.write_text(json.dumps(document), encoding="utf-8")
+                code, named, output = plan.lay(plan.correct())
+                self.assertEqual((code, named), (3, {1}), f"{label}: {output}")
+                self.assertIn(
+                    "mutation-python-shard-1: the plan lists no mutants for this shard", output
+                )
+        finally:
+            path.write_text(original, encoding="utf-8")
+
+    def test_a_mutant_record_that_is_not_an_object_is_an_extra_mutant(self):
+        plan = Plan(self, 2)
+        slots = plan.correct()
+        plan.mutants(slots[0]).append("not an object")
+        code, named, output = plan.lay(slots)
+        self.assertEqual((code, named), (3, {0}), output)
+        self.assertIn("0 missing () and 1 extra (?)", output)
+
 
 if __name__ == "__main__":
     unittest.main()

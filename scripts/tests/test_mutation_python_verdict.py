@@ -310,7 +310,8 @@ class TheVerdictReadsThePythonReports(unittest.TestCase):
 
     def test_a_python_class_that_examined_nothing_is_void(self):
         fixture = changed_fixture(self, both=True)
-        shard_the_plan(fixture, listed(SCRIPT, SCRIPT_HEAD) + listed(GENERATOR, GENERATOR_HEAD))
+        # The plan lists no mutant, so the one report that examined none is what it lists.
+        shard_the_plan(fixture, [])
         empty = fixture.out / "empty"
         write_shard(empty, 0, report_of([]))
         for klass in ("scripts", "oracle"):
