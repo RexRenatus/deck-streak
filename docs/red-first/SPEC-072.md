@@ -273,7 +273,7 @@ is that file's own code, and adds `sha2` to progression's dev-dependencies for t
 tests came with the green commit and were never red: the edge kinds, a build script reached through
 a build dependency, through a dev dependency, and in a package that depends on progression by name.
 Their red is that of the tests above (a build script beside a dependency on progression is accepted
-by the earlier census), and each is pinned by a row (S07276 to S07286).
+by the earlier census), and each is pinned by a row (S07276 to S07285).
 
 The killer's counts do not change with the speed-ups: `killer examined 2218 tree(s)` with `members
 escaping: 0; controls judged wrongly: 0`, each of its 17 axes printing the same examined members and

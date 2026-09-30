@@ -630,15 +630,6 @@
         "let mut refused = { build_scripts(root, &metadata)?; Vec::new() };",
         "xp_census::the_census_refuses_every_build_script_that_can_name_settle",
         "the refusals of the graph are the census's own (SPEC-072 A35)"
-      ],
-      [
-        "S07286-CENSUS-REFUSES-A-GRAPH-IT-CANNOT-READ",
-        "progression",
-        "tests/xp_census.rs",
-        "\"cargo metadata cannot give the graph ({}), so the census cannot see its callers\"",
-        "\"cargo metadata gives the graph ({}), so the census cannot see its callers\"",
-        "xp_census::the_census_refuses_every_caller_the_compiler_finds",
-        "a graph cargo cannot give is refused by name, never read as empty (SPEC-072 A35)"
       ]
     ],
     "CARGO_KILLED_SCRIPT_MUTATIONS": [
