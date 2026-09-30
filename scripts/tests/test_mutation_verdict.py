@@ -214,7 +214,7 @@ class ThePlanReadsTheDiff(unittest.TestCase):
             "tools/parity-oracle/test_generate.py": "other",
             "tools/parity-oracle/registry/spec_001.py": "other",
             "tools/parity-oracle/golden.rs": "other",
-            "scripts/check.py": "other",
+            "scripts/check.py": "scripts",
             "docs/notes.md": "other",
         }
         fixture = Fixture(self)
@@ -565,12 +565,14 @@ class TheBatteryCountsEveryReport(unittest.TestCase):
                 "battery: PARTIAL mutants-shard-3: cargo-mutants exit 137",
                 "battery: PARTIAL mutants-shard-4: no cargo-mutants exit recorded",
                 "battery: MISSING rows: no rows.json",
+                # The whole battery owes the Python population's 16 shards (SPEC-087 R14).
+                *[f"battery: MISSING mutation-python-shard-{k}: no report.json" for k in range(16)],
             ],
         ):
             self.assertIn(finding, done.stdout)
         self.assertNotIn("mutants-shard-0:", done.stdout)
-        self.assertIn("battery: counted 2 of 7 reports whole", done.stdout)
-        self.assertRegex(done.stdout, r"(?m)^examined 7 report")
+        self.assertIn("battery: counted 2 of 23 reports whole", done.stdout)
+        self.assertRegex(done.stdout, r"(?m)^examined 23 report")
         # The control: every shard, the rows and the sweep reported whole.
         whole = Path(scratch.name) / "whole"
         battery_reports(
@@ -582,9 +584,16 @@ class TheBatteryCountsEveryReport(unittest.TestCase):
         )
         (whole / "stryker").mkdir()
         (whole / "stryker" / "mutation.json").write_text(json.dumps(stryker(["Killed"])), "utf-8")
+        for shard in range(16):
+            directory = whole / f"mutation-python-shard-{shard}"
+            directory.mkdir()
+            (directory / "report.json").write_text(
+                json.dumps({"schema": "deckstreak.mutation-python.v1", "files": [], "exit": 0}),
+                "utf-8",
+            )
         green = self.battery(whole, 2)
         self.assertEqual(green.returncode, 0, green.stdout + green.stderr)
-        self.assertIn("battery: counted 4 of 4 reports whole", green.stdout)
+        self.assertIn("battery: counted 20 of 20 reports whole", green.stdout)
 
 
 class TheWeeklySurvivorsBecomeIssues(unittest.TestCase):

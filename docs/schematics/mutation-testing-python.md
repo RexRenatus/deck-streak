@@ -21,7 +21,7 @@ flowchart TD
   scripts --> pylist["mutation_python.py list --plan: mutants whose span holds a changed code line, nothing run"]
   oracle --> pylist
   plan --> pywhole["mutation_python.py list --all: the whole population, for the record's binding"]
-  pylist --> pyshards["mutation-verdict.py shards --python-listed: ceiling of listed over 40, clamped 1 to 8"]
+  pylist --> pyshards["mutation-verdict.py shards --python-listed: ceiling of listed over 40, clamped 1 to 32"]
   pyshards --> pymatrix["python_shards and python_matrix, and each shard's mutants in the plan"]
 
   subgraph mutation-python: one job per shard k of n

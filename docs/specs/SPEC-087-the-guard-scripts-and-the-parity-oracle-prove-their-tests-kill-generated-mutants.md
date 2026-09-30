@@ -11,8 +11,7 @@
 - **Prerequisites:** SPEC-039 (the mutation jobs, the verdict, the rows and their census) and the
   machinery SPEC-057's first delivery built (the equivalence record, its census, `table`, and the
   weekly battery's `package` input).
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-087.md` (ADR-016).
+- **Status:** built (moved from `docs/specs/planned/` with its tests and `docs/red-first/SPEC-087.md`, ADR-016).
 
 ## 1. The problem, measured
 
@@ -225,9 +224,11 @@ R8. The selection:
 
 R9. `mutation-plan` lists the diff's Python mutants (`list --plan`) and the whole population's
     (`list --all`), and `mutation-verdict.py shards` sizes the Python matrix from the diff's listing
-    (`--python-listed FILE`): the ceiling of listed over 40, clamped to 1 to 8, written into the
+    (`--python-listed FILE`): the ceiling of listed over 40, clamped to 1 to 32, written into the
     plan beside each shard's mutants and as the outputs `python_shards` and `python_matrix`. A
-    listing of no mutant is one shard.
+    listing of no mutant is one shard. The ceiling is 32 because a diff that adds a whole guard
+    script lists hundreds of mutants: this delivery's own diff listed 840, and eight shards of 105
+    ran past their 60-minute bound.
 R10. A `ci.yml` job `mutation-python` needs `mutation-plan`, runs one job per shard of the plan's
     matrix (`run --plan ... --shard k/n --failfast`), prints its event's case by name, is never
     skipped, bounds itself with `timeout-minutes`, uploads its report under `if: always()`, restores
@@ -280,6 +281,9 @@ R14. `mutation-weekly.yml` gains a `python` job of 16 shards, each `run --all --
       file makes the table VOID by name;
     - the dispatch input `package` (SPEC-057 R14) also takes `python`, which sweeps only the
       population; a crate's or `miniapp`'s scope runs no Python shard and promises no Python report.
+    - `battery --python-shards N` sets how many Python shard reports the battery promises, `16`
+      unless given: the weekly rehearsal runs one Python shard and passes `--python-shards 1`, and
+      `test_a_rehearsal_promises_the_python_shards_it_ran` covers it.
 
 **Rows and documents**
 
@@ -310,7 +314,7 @@ R16. The delivery sets ADR-073 `accepted`; appends to SPEC-039 a dated amendment
 | A11 | a file whose map entry names no module reads each mutant `uncovered`, counted in the report's `examined N`, runs no test, and the run exits 1 | `test_mutation_python.py` |
 | A12 | the report carries R7's schema and each field it lists (the selection, the shard, whether it ran `--failfast`, each file's modules, control ran count, failures and seconds, bound, byte readers and VOID reason, and each mutant's name, file, line, end line, column, `mutant`, operator, outcome and killers), each read by name, examined equals killed plus survived plus uncovered, and the counts of `timeout` and `void` each equal the mutants that read it, over a run whose fixtures hold at least one of each (A7's two), the recorded bound, under `--control-seconds` of 5, 12 and 20, is 60, 60 and 100, unless `--test-seconds` sets it, and the run exits 0 when every examined mutant is killed and 1 on a survivor | `test_mutation_python.py` (the runner mints the report) |
 | A13 | `classify` reads `scripts/<name>.py` as `scripts`, anything under `scripts/tests/` and deeper, and `scripts/x.sh`, as `other`, and the generator as `oracle`; `plan` over a diff that changes a script's code line names the `scripts` class as applying, and over a push naming the pull request it merges as `not-applicable` | `test_mutation_python_verdict.py` (the verdict mints the class) |
-| A14 | `shards --python-listed` sizes the Python matrix at the ceiling of listed over 40, clamped to 1 to 8: one shard for no mutant and for 40, two for 41, eight for 320 and for 321, writes each shard's mutants into the plan, and writes `python_shards` and `python_matrix` | `test_mutation_python_verdict.py` |
+| A14 | `shards --python-listed` sizes the Python matrix at the ceiling of listed over 40, clamped to 1 to 32: one shard for no mutant and for 40, two for 41, eight for 320, nine for 321, 32 for 1280 and for 1281, writes each shard's mutants into the plan, and writes `python_shards` and `python_matrix` | `test_mutation_python_verdict.py` |
 | A15 | a class whose changed code lines hold no mutant and no row reads VOID by name, one that a selected row covers reads examined 1 from the row, one whose changed lines are all blank or comments reads `not-applicable`, a report holding one killed mutant of a script and one of the generator gives each class examined 1, and the oracle's line reads `examined N: generated G, rows R` with the words "has no generated mutants" gone | `test_mutation_python_verdict.py` |
 | A16 | a survived or uncovered mutant with no record fails by name; a `timeout` (even with a record naming it), a `void` mutant, a VOID file and an exit-4 report are each VOID by name; an unviable mutant and a byte reader are named and change no count | `test_mutation_python_verdict.py` |
 | A17 | a promised shard, the last included, whose report is missing, unreadable or not of the schema is VOID, naming its index | `test_mutation_python_verdict.py` |
@@ -319,6 +323,7 @@ R16. The delivery sets ADR-073 `accepted`; appends to SPEC-039 a dated amendment
 | A20 | `ci.yml`'s `mutation-plan` runs `list --plan`, `list --all` and `shards --python-listed`; `mutation-python` needs it, runs its matrix with `--plan`, `--shard` and `--failfast`, prints the plan's case, has no job-level `if`, a `timeout-minutes`, an `if: always()` upload and no cache step, and is a need of `mutation-verdict` and `ci`, whose verdict step runs `judge --class scripts` and `--class oracle` each with `--python` and `--rows` | `test_mutation_python_workflows.py` (the workflow's text) |
 | A21 | `mutation-weekly.yml`'s `python` job runs 16 shards with `--all` and no `--failfast`, uploads under `if: always()`, `listing` lists the whole population, `survivors` needs it, `battery` counts its 16 reports, the `package` input's crate and `miniapp` scopes run no Python shard, and its `python` scope runs no Rust shard and no Stryker sweep | `test_mutation_python_workflows.py` |
 | A22 | `docs/BUILDER-BRIEF.md` teaches a survivor's two resolutions and names no comment or setting that skips a mutant; `docs/TESTING.md` names the Python run; SPEC-039 carries the dated amendment and ADR-057 the note, each naming ADR-073; and ADR-073 reads `accepted` | `test_mutation_python_workflows.py` (the documents' text) |
+| A23 | every job the verdict `needs:` that uploads an artifact has a matching `download-artifact` step in the verdict, the Python shards' artifacts included, and the pinned action's layout puts each `mutation-python-shard-<i>/report.json` where the judge reads it, for every shard count, with and without the rows' report and `mutation-web` | `test_verdict_download.py` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_mutation_python.py -k the_runner_lists_exactly_the_operator_sets_mutants
@@ -343,6 +348,7 @@ A19: python3 -m unittest discover -s scripts/tests -p test_mutation_python_verdi
 A20: python3 -m unittest discover -s scripts/tests -p test_mutation_python_workflows.py -k the_python_job_runs_the_plans_shards_and_the_verdict_reads_them
 A21: python3 -m unittest discover -s scripts/tests -p test_mutation_python_workflows.py -k the_weekly_battery_sweeps_the_whole_python_population
 A22: python3 -m unittest discover -s scripts/tests -p test_mutation_python_workflows.py -k the_builder_brief_and_the_amendments_teach_the_python_run
+A23: python3 -m unittest discover -s scripts/tests -p test_verdict_download.py -k test_every_needed_job_that_uploads_has_a_matching_download_in_the_verdict
 ```
 
 - **Where each asserted text is minted.** A1 to A12 assert text and reports that
@@ -369,7 +375,7 @@ A22: python3 -m unittest discover -s scripts/tests -p test_mutation_python_workf
 
 | file | by | change |
 |---|---|---|
-| `docs/specs/planned/SPEC-087-the-guard-scripts-and-the-parity-oracle-prove-their-tests-kill-generated-mutants.md` | this plan | added; the delivery moves it to `docs/specs/` (R16) |
+| `docs/specs/SPEC-087-the-guard-scripts-and-the-parity-oracle-prove-their-tests-kill-generated-mutants.md` | this plan | added under `docs/specs/planned/`; the delivery moved it here (R16) |
 | `docs/decisions/ADR-073-the-repositorys-python-is-mutated-by-a-runner-of-its-own-restored-by-digest.md` | this plan | added, `proposed`; the delivery sets it `accepted` (R16) |
 | `docs/schematics/mutation-testing-python.md` | this plan | added: where the Python run sits among the mutation jobs, on a pull request and in the weekly battery |
 | `changelog.d/docs-python-mutants-087.md` | this plan | added: the plan's fragment |
@@ -384,6 +390,7 @@ A22: python3 -m unittest discover -s scripts/tests -p test_mutation_python_workf
 | `scripts/tests/test_mutation_python_verdict.py` | delivery | added: A13 to A19 |
 | `scripts/tests/test_mutation_python_workflows.py` | delivery | added: A20 to A22 |
 | `scripts/tests/test_mutation_verdict.py`, `scripts/tests/test_mutation_workflows.py` | delivery | changed only where they assert text this delivery changes (the plan's count line, `ci`'s and `mutation-verdict`'s needs), each change named in the red-first record |
+| `scripts/tests/test_not_started_legs.py` | delivery | changed: the recording shim answers the `scripts` judge of the merged verdict step, and `ci` is driven over every need of its `needs:` list, so `mutation-python` reads as never skipped by design |
 | `docs/BUILDER-BRIEF.md`, `docs/TESTING.md` | delivery | changed: R13 and the Python run (R16) |
 | `docs/specs/SPEC-039-every-change-proves-its-tests-kill-its-mutants.md` | delivery | changed: a dated amendment, insert-only (R16) |
 | `docs/decisions/ADR-057-mutation-testing-runs-on-the-diff-in-ci-and-weekly-on-dev.md` | delivery | changed: a dated note pointing to ADR-073 (R16) |
@@ -406,6 +413,8 @@ A22: python3 -m unittest discover -s scripts/tests -p test_mutation_python_workf
   registry of its own and never runs them, and the one test that runs a real registry module is
   `test_goldens.py`'s round trip of the `{day:N}` token through `spec_042.py`. #325 plans them.
 - It records no equivalent Rust or Mini App mutant: those campaigns are #295 and #294.
+- It does not cross-check each Python shard report's `shard` field against the slot it was downloaded
+  from and against the listing it reports: #438.
 
 ## 6. Risks
 
@@ -452,7 +461,12 @@ A22: python3 -m unittest discover -s scripts/tests -p test_mutation_python_workf
 | `S08712-A-PYTHON-SURVIVOR-FAILS` | `scripts/mutation-verdict.py` | a survived mutant no record binds passes | `test_mutation_python_verdict.TheVerdictReadsThePythonReports.test_a_python_survivor_fails_and_a_timeout_is_void_by_name` |
 | `S08713-A-PYTHON-TIMEOUT-IS-VOID` | `scripts/mutation-verdict.py` | a `timeout` counts as killed | `test_mutation_python_verdict.TheVerdictReadsThePythonReports.test_a_python_survivor_fails_and_a_timeout_is_void_by_name` |
 | `S08714-EVERY-PROMISED-PYTHON-SHARD-REPORTS` | `scripts/mutation-verdict.py` | the promised shards are counted one short | `test_mutation_python_verdict.TheVerdictReadsThePythonReports.test_a_missing_or_partial_python_shard_is_void` |
-| `S08715-A-PYTHON-RECORD-CARRIES-ITS-ARGUMENT` | `scripts/mutation-verdict.py` | a Python record without `evidence` passes the census | `test_mutation_python_verdict.TheVerdictReadsThePythonReports.test_a_python_record_excuses_exactly_its_survivor_and_carries_its_argument` |
+| `S08715-A-PYTHON-RECORD-CARRIES-ITS-ARGUMENT` | `scripts/mutation-verdict.py` | a Python record without `evidence` passes the census | `test_mutation_python_verdict.TheVerdictReadsThePythonReports.test_the_census_holds_a_python_record_whole` |
+| `S08716-THE-SENTINEL-TEXT` | `scripts/mutation_python.py` | the sentinel's text changes | `test_mutation_python.TheRunnersConstantsAreNamedWhole` (sentinel test) |
+| `S08717-THE-CONTROL-BOUND` | `scripts/mutation_python.py` | `CONTROL_SECONDS` changes | `test_mutation_python.TheRunnersConstantsAreNamedWhole` (bound test) |
+| `S08718-THE-OUTCOMES-ORDER` | `scripts/mutation_python.py` | the outcomes' order changes | `test_mutation_python.TheRunnersConstantsAreNamedWhole` (order test) |
+| `S08719-THE-NEWLINE-SPLIT` | `scripts/mutation_python.py` | the newline pattern loses a form | `test_mutation_python.TheRunnersConstantsAreNamedWhole` (newline test) |
+| `S08720` to `S08725` | `scripts/mutation_python.py` | each of the six quiet tokenize kinds (comment, nl, newline, indent, dedent, endmarker) is dropped | `test_mutation_python.TheRunnersConstantsAreNamedWhole` (quiet-set test) |
 
 Each row's find text is written by the delivery, against the code it builds, and must occur once in
 its target. Each mutant is killable by its killer's assertion, and none makes a test wait: S08701's
@@ -464,3 +478,33 @@ SPEC-039 (section 1, R1 to R4, R8, R10, R18, section 5, section 12), SPEC-057 (R
 SPEC-038 section 8 (insert-only amendments), ADR-057 (D1, D4), ADR-070, ADR-073,
 `docs/schematics/mutation-testing.md`, `docs/schematics/mutation-equivalence-record.md`,
 `docs/schematics/mutation-testing-python.md`; #218, #219, #220, #240, #294, #295, #322, #325.
+
+## 9. Amendments at delivery
+
+- **The kill modules and the files that read them** (#340). The survivors of the first whole run
+  are killed by four test modules, one per file range of the two scripts: `scripts/tests/test_mutation_verdict_python_kills.py`,
+  `scripts/tests/test_mutation_python_lister_kills.py`, `scripts/tests/test_mutation_python_judge_kills.py` and
+  `scripts/tests/test_mutation_python_cli_kills.py`, each named in `scripts/mutation-python.json` under the
+  file it kills for. Rows S08728 to S08799 of `scripts/mutation-rows.d/S08700-S08799.json` and the
+  records of `scripts/mutation-equivalent.d/python.json` are the same work's other artifacts.
+- **Three of the verdict script's first seven survivors were rewritten, not killed** (#340). Kill
+  commit 7da3f419 killed four of the seven (the four fields of the row `python_reached` builds, by
+  a spy on the killer's resolution) and changed the three sites of the others, each
+  behaviour-preserving: `pathlib.Path(directory or "")` behind `if not directory` (the fallback is
+  unreachable, and `directory or "x"` there leaves the 52 tests of the script's four modules
+  green), `row.killer.split(".", 1)[0]` (`split(".", 2)[0]` is the same first element, and it too
+  left the 52 green), and `table_python`'s `required` argument, which nothing read (its
+  docstring's claim, that a scope asking for the Python row with no report is VOID, is the
+  caller's `scope not in tallies` check in `table`, and the argument and its three dead `False`
+  calls are removed). The four records of `python.json` first held equivalent were re-tried by
+  direct call: three are killed by `TheListerHoldsItsBoundsAndItsSkips` and dropped, and the one
+  kept (`Path("")` equals `Path(".")`) leaves its five mapped modules green.
+- **The shard ceiling changed in place.** R9 and A14 first clamped the Python matrix to 1 to 8
+  shards and now clamp it to 1 to 32 (`d8b6517`, `b9d43e2`); the SPEC's text was amended with the
+  code, and this delivery lists it as an amendment.
+- **Two guard tests changed where they read text this delivery changed.** `scripts/tests/test_ci_workflows.py`
+  and `scripts/tests/test_verdict_download.py` assert the jobs, needs and downloads of `ci.yml`, and
+  `scripts/tests/test_audit_web.py` gained cases for the two mutants of `scripts/audit-web-verdict.py`
+  that the stage's runs cannot tell apart.
+- **The plan's changelog fragment** `changelog.d/docs-python-mutants-087.md` is unchanged by the delivery:
+  it landed with the plan.

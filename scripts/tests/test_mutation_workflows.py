@@ -384,7 +384,8 @@ class TheShardsAreThePlans(unittest.TestCase):
         # The verdict runs whatever the shards returned, reads every artifact, and counts the
         # shards the plan promised rather than the ones that reported.
         self.assertRegex(
-            verdict, r"(?m)^    needs: \[mutation-plan, mutation-rust, mutation-rows\]$"
+            verdict,
+            r"(?m)^    needs: \[mutation-plan, mutation-rust, mutation-python, mutation-rows\]$",
         )
         self.assertRegex(verdict, r"(?m)^    if: \$\{\{ always\(\) \}\}$")
         self.assertRegex(verdict, r"(?m)^\s+pattern: mutation-rust-shard-\*$")
