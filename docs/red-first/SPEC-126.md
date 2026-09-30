@@ -189,6 +189,13 @@ families (a byte-readers container of another type, a mutant name of another typ
 of another type, and a listed mutant filed under an unread path), so the populations read 570 of
 570 and 27 of 27.
 
+The green commit also rewrites one assertion in `scripts/tests/test_mutation_python_shard_binding.py`,
+in the earlier test of a mutant record that is not an object:
+`self.assertIn("0 missing () and 1 extra (?)", output)` becomes `self.assertIn("a mutant record of", output)`
+and `self.assertIn("not an object", output)`. The shared reader now refuses that record by name
+before any listing is counted, so the refusal is stricter, not weaker, and the test still demands
+exit 3 naming the shard.
+
 ```red-first
 A10: red at 1c4c0d45: AssertionError: 70 != 450 : {'refused': 70, 'crashed': 90, 'accepted': 290, 'other': 0}
 A10: green at 5810a754
