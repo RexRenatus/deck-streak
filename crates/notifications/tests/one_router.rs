@@ -1397,6 +1397,30 @@ impl Census {
     }
 }
 
+/// A form the census cannot read is refused: the base URL named inside a string literal (an
+/// inline format argument) is blanked in `structure`, so the identifier search cannot see it.
+fn literal_refusals(
+    path: &str,
+    code: &str,
+    structure: &str,
+    refusals: &mut Vec<(String, usize, String)>,
+) {
+    for at in identifiers(code, API_URL) {
+        if structure[at..at + API_URL.len()].trim().is_empty() {
+            let function = enclosing(structure, at);
+            if !at_a_named_site(path, &function, API_URL) {
+                refusals.push((
+                    path.to_string(),
+                    line_of(code, at),
+                    format!(
+                        "reads {API_URL} inside a literal in {function}, not a named call site"
+                    ),
+                ));
+            }
+        }
+    }
+}
+
 /// The census of `sources`, each a path from the tree's root and its text.
 fn census(sources: &[(String, String)]) -> Census {
     let mut found = Census::default();
@@ -1469,23 +1493,7 @@ fn census(sources: &[(String, String)]) -> Census {
                     }
                 }
             }
-            // A form the census cannot read is refused: the base URL named inside a string
-            // literal (an inline format argument) is blanked in `structure`, so the identifier
-            // search above cannot see it.
-            for at in identifiers(&code, API_URL) {
-                if structure[at..at + API_URL.len()].trim().is_empty() {
-                    let function = enclosing(&structure, at);
-                    if !at_a_named_site(path, &function, API_URL) {
-                        found.refusals.push((
-                            path.clone(),
-                            line_of(&code, at),
-                            format!(
-                                "reads {API_URL} inside a literal in {function}, not a named call site"
-                            ),
-                        ));
-                    }
-                }
-            }
+            literal_refusals(path, &code, &structure, &mut found.refusals);
             for (at, send) in sends(&code, &structure) {
                 let function = enclosing(&structure, at);
                 found.sends.push((path.clone(), function, send));

@@ -446,8 +446,8 @@
         "S04151-A-BASE-URL-IN-A-LITERAL-IS-REFUSED",
         "notifications",
         "tests/one_router.rs",
-        "                if structure[at..at + API_URL.len()].trim().is_empty() {",
-        "                if false {",
+        "        if structure[at..at + API_URL.len()].trim().is_empty() {",
+        "        if false {",
         "one_router::a_hand_built_send_url_is_refused_wherever_the_transport_builds_it",
         "the base URL named inside a string literal, an inline format argument the census blanks, is refused at any place that is not a named site, so a form the census cannot read fails closed (SPEC-041 A16, #429); the census is test code, which cargo-mutants never mutates, and the mutant turns the rule off, letting every inline-argument URL through"
       ],
