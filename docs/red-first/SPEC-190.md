@@ -15,3 +15,15 @@ A4: not red: ci.yml's and mutation-weekly.yml's blocks were already the rule's; 
 A5: not red: the five workflows' names were already distinct; the criterion holds a new workflow to it
 A6: not red: no workflow cancelled a run that is not a pull request's, and no job set a block; the criterion holds a new workflow to it
 ```
+
+## Addendum: A7 (ADR-292, #377)
+
+The test of A7 (b51b933) ran against the unchanged `release.yml`: the criterion's test failed by
+assertion on the workflow's missing queue, and no other test failed. The workflow change (6696ef6)
+turned it green.
+
+```red-first
+A7: red at b51b933: ['release.yml: queue is None, so a third run of a tag replaces the waiting second'] != []
+A7: green at 6696ef6
+```
+

@@ -124,3 +124,33 @@ No schematic: the change adds no component; the rule is `ci.yml`'s, applied to t
 ## 7. References
 
 Issue #369; SPEC-038 R8; ADR-055; ADR-016; ADR-190.
+
+## 8. Amendment of 2026-09-30 (ADR-292, #377)
+
+This amendment is insert-only. It closes the one case R5 and section 5 name: a third run of one tag
+no longer replaces a waiting second. R5's other statements stand: `release.yml` has no pull-request
+trigger, never cancels a run in progress and keeps its tag's ref as its group.
+
+R10. **Every workflow whose concurrency group can hold two runs of one release queues them.** A
+workflow with a `push: tags` or a `release` trigger carries one workflow-level block whose group is the
+same for two runs of one tag, whose `cancel-in-progress` is false for every run, and which sets
+`queue: max`, so a run waits behind the one running and none is replaced (ADR-292). The test derives the
+workflows from the directory and prints how many it examined (today one, `release.yml`); a workflow it
+cannot read is refused.
+
+| id | criterion | decided by |
+|---|---|---|
+| A7 | every workflow with a `push: tags` or a `release` trigger has one group for two runs of one tag, cancels no run and sets `queue: max`; a tag group with no queue, `queue: single`, a group keyed by the run id, `cancel-in-progress` true, a job-level block, a missing block and an unreadable workflow are each refused | `test_workflow_concurrency.py` `every_workflow_that_can_hold_two_runs_of_a_release_queues_them` |
+
+```acceptance
+A7: python3 -m unittest discover -s scripts/tests -p test_workflow_concurrency.py -k every_workflow_that_can_hold_two_runs_of_a_release_queues_them
+```
+
+| file | context | change |
+|---|---|---|
+| `.github/workflows/release.yml` | repo | changed: R10, `queue: max` |
+| `scripts/tests/test_workflow_concurrency.py` | repo | changed: A7 and its planted shapes |
+| `scripts/mutation-rows.d/S19000-S19099.json` | repo | changed: S19005 and S19006 |
+| `docs/decisions/ADR-292-a-release-tags-runs-never-replace-a-waiting-run.md` | repo | added |
+| `docs/red-first/SPEC-190.md` | repo | changed: A7 |
+| `changelog.d/ci-release-queue-377.md` | repo | added |
