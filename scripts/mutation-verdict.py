@@ -1333,7 +1333,9 @@ def placed_kills(mutants_out: pathlib.Path, report: dict | None) -> set[tuple[st
             lines = log.read_text(encoding="utf-8", errors="replace").splitlines()
         except OSError:
             continue
-        opening = next((line for line in lines if line.strip()), "")
+        opening = next((line for line in lines if line.strip()), None)
+        if opening is None:
+            continue
         first = opening.removeprefix("*** ").strip()
         scenario = named.get(log.name) or first or log.stem
         for line in lines[1:]:
@@ -1343,13 +1345,12 @@ def placed_kills(mutants_out: pathlib.Path, report: dict | None) -> set[tuple[st
     return placed
 
 
-def score_memory_cap(fail, say, where: str, name: str) -> bool:
+def score_memory_cap(fail, say, where: str, name: str) -> None:
     """The one place a mutant the memory cap stopped is scored: a failure by name, and never
     caught and never a timeout, so the mutant is not examined."""
     fail(
         f"{where}MEMORY-CAP {name}: the memory cap stopped its tests; neither caught nor a timeout"
     )
-    return False
 
 
 def memory_cap(
@@ -1386,7 +1387,8 @@ def memory_cap(
                 f"{where}MEMORY-CAP the unmutated baseline: the memory cap stopped its tests, "
                 "so no mutant of this leg was judged against a passing baseline"
             )
-        elif not score_memory_cap(fail, say, where, scenario):
+        else:
+            score_memory_cap(fail, say, where, scenario)
             stopped.add(scenario)
     return stopped
 

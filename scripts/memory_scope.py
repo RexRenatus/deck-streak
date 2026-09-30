@@ -159,26 +159,43 @@ def peak_of(group: Path) -> int | None:
     return counter_of(lines[0])
 
 
-def unread_after(group: Path) -> str | None:
-    """Why a value read after the command cannot be trusted, or None when every one can.
+def counts_after(group: Path, cap: int) -> tuple[str | None, dict[str, int]]:
+    """(why, counts): why a value read after the command cannot be trusted, or None.
 
     A count that is absent, unreadable or malformed must not read as a clean run: it is the
-    absence of a measurement, so the record is not in force and says which value it lacks.
+    absence of a measurement, so the record is not in force and says which value it lacks, and
+    the counts it carries are none.
     """
     events = events_of(group)
     if events is None:
-        return "memory.events is not whole after the command"
+        return "memory.events is not whole after the command", {}
     for name in ("oom", "oom_kill", "max"):
         if name not in events:
-            return f"memory.events holds no {name} count after the command"
-    if peak_of(group) is None:
-        return "memory.peak holds no count after the command"
-    return None
+            return f"memory.events holds no {name} count after the command", {}
+    peak = peak_of(group)
+    if peak is None:
+        return "memory.peak holds no count after the command", {}
+    return None, {**events, "peak_percent": peak * 100 // cap}
+
+
+def unit_of(group: str) -> str:
+    """The last component of a control-group path: the name of the scope it is."""
+    return group.rpartition("/")[2]
 
 
 def group_of(proc_cgroup: Path) -> str:
     text = read_text(proc_cgroup) or ""
     return text.splitlines()[-1].split("::", 1)[-1] if text else ""
+
+
+def wait_for_scope(unit: str, proc_cgroup: Path, reads: int) -> str:
+    """This process's control group once it is `unit`, read at most `reads` times, 0.1 s apart."""
+    for _ in range(reads - 1):
+        group = group_of(proc_cgroup)
+        if unit_of(group) == unit:
+            return group
+        time.sleep(0.1)
+    return group_of(proc_cgroup)
 
 
 def check_in_force(
@@ -189,7 +206,7 @@ def check_in_force(
     systemctl: tuple[str, ...],
 ) -> None:
     """Raise Refused, naming the arm, unless the scope holds the process as asked."""
-    if group.rsplit("/", 1)[-1] != unit:
+    if unit_of(group) != unit:
         raise Refused(f"the control group is not the scope {unit}")
     here = cgroup_root / group.lstrip("/")
     for name, wanted in (
@@ -263,13 +280,7 @@ def run(
     )
     if called.returncode != 0:
         return refuse(report, f"the manager refused the call (exit {called.returncode})")
-    group = ""
-    for attempt in range(reads):
-        group = group_of(proc_cgroup)
-        if group.rsplit("/", 1)[-1] == unit:
-            break
-        if attempt + 1 < reads:
-            time.sleep(0.1)
+    group = wait_for_scope(unit, proc_cgroup, reads)
     try:
         check_in_force(unit, cap, group, cgroup_root, systemctl)
     except Refused as error:
@@ -288,16 +299,15 @@ def run(
         },
     )
     code = subprocess.run(command, check=False).returncode
-    why = unread_after(here)
-    events = (events_of(here) or {}) if why is None else {}
-    percent = (peak_of(here) or 0) * 100 // cap if why is None else 0
+    why, counts = counts_after(here, cap)
+    percent = counts.get("peak_percent", 0)
     record = {
         "in_force": why is None,
         "state": "done",
         "reason": why,
-        "oom": events.get("oom", 0),
-        "oom_kill": events.get("oom_kill", 0),
-        "max": events.get("max", 0),
+        "oom": counts.get("oom", 0),
+        "oom_kill": counts.get("oom_kill", 0),
+        "max": counts.get("max", 0),
         "peak_percent": percent,
     }
     write_record(report, record)
