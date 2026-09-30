@@ -150,6 +150,17 @@ fn a_capture_keeps_a_line_another_thread_reached_first() {
     );
 }
 
+/// Prints how many items a check examined and refuses zero: a walk that stopped matching must
+/// fail, never pass over the empty set (the tdd pack's examined contract).
+fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
+    println!("examined {} {what}", items.len());
+    assert!(
+        !items.is_empty(),
+        "examined 0 {what}: the population is empty, so nothing was judged"
+    );
+    items
+}
+
 /// Every `.rs` file under `dir`, skipping build output.
 fn sources(dir: &Path, into: &mut Vec<PathBuf>) {
     for entry in fs::read_dir(dir).expect("a readable directory") {
@@ -185,6 +196,7 @@ fn every_capture_in_the_workspace_goes_through_the_helper() {
         .to_path_buf();
     let mut files = Vec::new();
     sources(&crates, &mut files);
+    let mut files = examined("Rust source file(s) under crates/", files);
     files.retain(|path| {
         path.file_name()
             .is_some_and(|name| name != "log_capture_class.rs")
