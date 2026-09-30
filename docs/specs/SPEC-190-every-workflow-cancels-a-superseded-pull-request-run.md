@@ -138,6 +138,8 @@ same for two runs of one tag, whose `cancel-in-progress` is false for every run,
 workflows from the directory and prints how many it examined (today one, `release.yml`); a workflow it
 cannot read is refused.
 
+## 9. Acceptance criteria of the 2026-09-30 amendment
+
 | id | criterion | decided by |
 |---|---|---|
 | A7 | every workflow with a `push: tags` or a `release` trigger has one group for two runs of one tag, cancels no run and sets `queue: max`; a tag group with no queue, `queue: single`, a group keyed by the run id, `cancel-in-progress` true, a job-level block, a missing block and an unreadable workflow are each refused | `test_workflow_concurrency.py` `every_workflow_that_can_hold_two_runs_of_a_release_queues_them` |
@@ -145,6 +147,8 @@ cannot read is refused.
 ```acceptance
 A7: python3 -m unittest discover -s scripts/tests -p test_workflow_concurrency.py -k every_workflow_that_can_hold_two_runs_of_a_release_queues_them
 ```
+
+### File manifest of the amendment
 
 | file | context | change |
 |---|---|---|
