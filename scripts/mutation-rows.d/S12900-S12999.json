@@ -28,26 +28,74 @@
       [
         "S12904-THE-RUST-LEG-KEEPS-THE-GATES-TIMEOUT",
         ".github/workflows/mutation-weekly.yml",
-        "--shard \"$SHARD/$SHARDS\" --timeout 300 --build-timeout 600",
-        "--shard \"$SHARD/$SHARDS\" --timeout 600 --build-timeout 600",
+        "--package=\"$PACKAGE\" --sharding round-robin --shard \"$SHARD/$SHARDS\" --timeout 300 --build-timeout 600",
+        "--package=\"$PACKAGE\" --sharding round-robin --shard \"$SHARD/$SHARDS\" --timeout 600 --build-timeout 600",
         "the rust leg's per-mutant timeout is the 300 seconds the 32-leg dispatch always ran: a raised timeout is a weakened gate (SPEC-129 R5)",
         "test_dispatch_shards.EveryMutationCommandKeepsTheGatesBounds.test_every_cargo_mutants_command_carries_the_gates_own_bounds"
       ],
       [
         "S12905-THE-RUST-LEG-KEEPS-THE-GATES-BUILD-TIMEOUT",
         ".github/workflows/mutation-weekly.yml",
-        "--shard \"$SHARD/$SHARDS\" --timeout 300 --build-timeout 600",
-        "--shard \"$SHARD/$SHARDS\" --timeout 300 --build-timeout 1200",
+        "--package=\"$PACKAGE\" --sharding round-robin --shard \"$SHARD/$SHARDS\" --timeout 300 --build-timeout 600",
+        "--package=\"$PACKAGE\" --sharding round-robin --shard \"$SHARD/$SHARDS\" --timeout 300 --build-timeout 1200",
         "the rust leg's build timeout is the 600 seconds the 32-leg dispatch always ran: a raised build timeout is a weakened gate (SPEC-129 R5)",
         "test_dispatch_shards.EveryMutationCommandKeepsTheGatesBounds.test_every_cargo_mutants_command_carries_the_gates_own_bounds"
       ],
       [
         "S12906-THE-RUST-LEG-BUILD-TIMEOUT-IS-A-WHOLE-VALUE",
         ".github/workflows/mutation-weekly.yml",
-        "--shard \"$SHARD/$SHARDS\" --timeout 300 --build-timeout 600",
-        "--shard \"$SHARD/$SHARDS\" --timeout 300 --build-timeout 6000",
+        "--package=\"$PACKAGE\" --sharding round-robin --shard \"$SHARD/$SHARDS\" --timeout 300 --build-timeout 600",
+        "--package=\"$PACKAGE\" --sharding round-robin --shard \"$SHARD/$SHARDS\" --timeout 300 --build-timeout 6000",
         "a build timeout raised by an appended digit is a weakened gate, not the 600 seconds the 32-leg dispatch always ran (SPEC-129 R5)",
         "test_dispatch_shards.EveryMutationCommandKeepsTheGatesBounds.test_every_cargo_mutants_command_carries_the_gates_own_bounds"
+      ],
+      [
+        "S12907-THE-WHOLE-TREE-LEG-KEEPS-THE-GATES-TIMEOUT",
+        ".github/workflows/mutation-weekly.yml",
+        "--in-place --sharding round-robin --shard \"$SHARD/$SHARDS\" --timeout 300 --build-timeout 600",
+        "--in-place --sharding round-robin --shard \"$SHARD/$SHARDS\" --timeout 600 --build-timeout 600",
+        "the rust leg's per-mutant timeout is the 300 seconds the 32-leg dispatch always ran: a raised timeout is a weakened gate, in the branch with no package, which the scheduled sweep runs (SPEC-129 R5, section 8)",
+        "test_dispatch_shards.EveryMutationCommandKeepsTheGatesBounds.test_every_cargo_mutants_command_carries_the_gates_own_bounds"
+      ],
+      [
+        "S12908-THE-WHOLE-TREE-LEG-KEEPS-THE-GATES-BUILD-TIMEOUT",
+        ".github/workflows/mutation-weekly.yml",
+        "--in-place --sharding round-robin --shard \"$SHARD/$SHARDS\" --timeout 300 --build-timeout 600",
+        "--in-place --sharding round-robin --shard \"$SHARD/$SHARDS\" --timeout 300 --build-timeout 1200",
+        "the rust leg's build timeout is the 600 seconds the 32-leg dispatch always ran: a raised build timeout is a weakened gate, in the branch with no package, which the scheduled sweep runs (SPEC-129 R5, section 8)",
+        "test_dispatch_shards.EveryMutationCommandKeepsTheGatesBounds.test_every_cargo_mutants_command_carries_the_gates_own_bounds"
+      ],
+      [
+        "S12909-THE-WHOLE-TREE-LEG-BUILD-TIMEOUT-IS-A-WHOLE-VALUE",
+        ".github/workflows/mutation-weekly.yml",
+        "--in-place --sharding round-robin --shard \"$SHARD/$SHARDS\" --timeout 300 --build-timeout 600",
+        "--in-place --sharding round-robin --shard \"$SHARD/$SHARDS\" --timeout 300 --build-timeout 6000",
+        "a build timeout raised by an appended digit is a weakened gate, not the 600 seconds the 32-leg dispatch always ran, in the branch with no package, which the scheduled sweep runs (SPEC-129 R5, section 8)",
+        "test_dispatch_shards.EveryMutationCommandKeepsTheGatesBounds.test_every_cargo_mutants_command_carries_the_gates_own_bounds"
+      ],
+      [
+        "S12910-THE-WHOLE-TREE-LEG-IS-WRAPPED",
+        ".github/workflows/mutation-weekly.yml",
+        "python3 scripts/memory_scope.py --report \"$RUNNER_TEMP/mutation\" -- cargo mutants --no-shuffle -vV --in-place --sharding",
+        "cargo mutants --no-shuffle -vV --in-place --sharding",
+        "the weekly battery's rust leg runs inside the memory scope in the branch with no package too, which the scheduled sweep runs (SPEC-196 R6; SPEC-129 section 8)",
+        "test_memory_scope.TheWorkflows.test_every_mutants_run_that_runs_tests_is_inside_the_scope"
+      ],
+      [
+        "S12911-THE-GUARD-READS-THE-WRAPPER-THROUGH",
+        "scripts/tests/test_dispatch_shards.py",
+        "    while program < len(words) and (after := wrapped(words, program)) is not None:\n",
+        "    while False and (after := wrapped(words, program)) is not None:\n",
+        "the guard reads the memory scope's wrapper through to the command after its `--`, so the real tree's wrapped commands are found bounded and not refused as another program's (SPEC-129 A14)",
+        "test_dispatch_shards.AComputedWordBeforeTheBoundsIsRefused.test_the_real_tree_commands_are_found_bounded_and_not_refused"
+      ],
+      [
+        "S12912-A-PYTHON-TEXT-THAT-MAY-RUN-THE-WRAPPER-IS-READ",
+        "scripts/tests/test_dispatch_shards.py",
+        "        if not python or any(w.dynamic or \"memory_scope\" in w.value for w in arguments):\n",
+        "        if not python:\n",
+        "a text given to a python command whose argument names the wrapper or is computed is read as a text handed on, so a wrapped shell text that runs cargo mutants without the bounds is refused (SPEC-129 A14)",
+        "test_dispatch_shards.TheMemoryScopeRunsTheWordsAfterItsSeparator.test_every_wrapped_command_bash_runs_without_the_bounds_is_found_or_refused"
       ]
     ]
   }

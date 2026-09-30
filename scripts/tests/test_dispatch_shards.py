@@ -7,6 +7,7 @@ plants put the fixed 32 back into each place that must read the one count.
 
 import argparse
 import contextlib
+import functools
 import importlib.util
 import io
 import itertools
@@ -536,6 +537,12 @@ LEADERS = {"if", "then", "else", "elif", "do", "while", "until", "{", "!", "time
 LEADERS |= {"builtin", "exec"}
 # The programs whose text is Python, which this guard does not read (SPEC-129 section 8).
 PYTHON = ("python3", "python")
+# The memory scope's wrapper (SPEC-196) runs the words after its `--` as the command, unchanged:
+# `TheMemoryScopeRunsTheWordsAfterItsSeparator` measures that of the file, so its form is read
+# through. A value bash hands on as exactly one word: literal, or double quotes around literal text
+# and named expansions (no split, no glob, no `@`).
+WRAPPER = ("python3", "scripts/memory_scope.py")
+ONE_WORD = re.compile(r'"(?:[^"\\$`]|\$[A-Za-z_][A-Za-z0-9_]*|\$\{[A-Za-z_][A-Za-z0-9_]*\})*"')
 # The builtin that reads its arguments as shell, and the shells that read the text after `-c`.
 EVALUATORS = ("eval",)
 SHELLS = ("bash", "sh")
@@ -639,7 +646,11 @@ class Shell:
 
     def command(self, words, texts):
         program = next((w for w in words if not ASSIGNMENT.match(w.value)), None)
-        if not (program and not program.dynamic and program.value.rsplit("/", 1)[-1] in PYTHON):
+        python = program and not program.dynamic and program.value.rsplit("/", 1)[-1] in PYTHON
+        # A python command that could run the memory scope's wrapper runs a command, not Python:
+        # one with an argument that names the wrapper, or that bash computes. Its texts are read.
+        arguments = words[words.index(program) + 1 :] if python else []
+        if not python or any(w.dynamic or "memory_scope" in w.value for w in arguments):
             self.data += texts
         if not words:
             return
@@ -956,10 +967,45 @@ PLAIN_FLAGS = {
 }
 
 
+@functools.cache
+def wrapper_options():
+    """The options the wrapper's own parser declares that take one value, read from the parser."""
+    return declared_options(wrapper_module(MEMORY_SCOPE))
+
+
+def wrapped(words, program):
+    """Where the command the wrapper runs begins, when `words[program:]` is the wrapper's form:
+    `python3 scripts/memory_scope.py`, then only options its parser declares, each with one value
+    that bash hands on as one word, then a literal `--` and a command; else None. A computed word
+    where the parser reads an option or the `--` is not the form: it could be `--` (R5)."""
+    k = program + len(WRAPPER)
+    if [w.value for w in words[program:k]] != list(WRAPPER) or any(
+        w.dynamic for w in words[program:k]
+    ):
+        return None
+    options = wrapper_options()
+    while k < len(words):
+        word = words[k]
+        joined = next((o for o in options if word.value.startswith(o + "=")), None)
+        if not word.dynamic and word.value == "--":
+            return k + 1 if k + 1 < len(words) else None
+        if not word.dynamic and word.value in options and k + 1 < len(words):
+            value = words[k + 1]
+            if value.dynamic and not ONE_WORD.fullmatch(value.raw):
+                return None
+            k += 2
+        elif joined and (not word.dynamic or ONE_WORD.fullmatch(word.raw[len(joined) + 1 :])):
+            k += 1
+        else:
+            return None
+    return None
+
+
 def mutants_of(words, handed=False):
     """The `cargo mutants` commands among one simple command's words, each shown from its program
     word; the words after a `--` go to the test tool, so they are shown joined and bound nothing.
-    A command is found only where bash itself runs `cargo` as the program. Refused: a literal
+    A command is found only where bash itself runs `cargo` as the program, or where the wrapper's
+    form runs it as the first word after its `--` (`wrapped`). Refused: a literal
     `cargo` word whose subcommand bash computes or never gives; `cargo mutants` anywhere else, or
     in a text another program runs (`handed`), where that program decides its arguments; and a
     literal `mutants` word that is not a found command's subcommand. A text bash computes for a
@@ -969,6 +1015,9 @@ def mutants_of(words, handed=False):
         ASSIGNMENT.match(words[program].value) or words[program].value in LEADERS
     ):
         program += 1
+    # The wrapper runs its command without a shell: its first word is the program, as it stands.
+    while program < len(words) and (after := wrapped(words, program)) is not None:
+        program = after
     name = words[program].value.rsplit("/", 1)[-1] if program < len(words) else ""
     rest = words[program + 1 :]
     if name in EVALUATORS or (
