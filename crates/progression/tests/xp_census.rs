@@ -29,6 +29,7 @@ use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
 use serde_json::Value;
+use sha2::{Digest, Sha256};
 
 /// The table the census guards.
 const TABLE: &str = "xp_settlement";
@@ -442,28 +443,113 @@ fn pass(on: bool, abort: bool, packages: &BTreeSet<String>) -> Vec<String> {
     arguments
 }
 
+/// The SHA-256 of `crates/progression/build.rs`, the one build script of a package that can name
+/// `settle` that the census admits (ADR-197, round 7). Editing that script, or adding another that
+/// can reach `settle`, is refused by name until this constant is changed in review.
+const PROGRESSION_BUILD_SHA256: &str =
+    "a55c986660b4a75d5f8be32d91e3ae82b8140245eb7e40cba6d5306eb9c3815a";
+
+/// Refuses, by name, every package that has a build script and can name `settle`: the package that
+/// defines it, or one that depends on it by a normal, a build or a dev edge, at any depth. A build
+/// script's cfg reaches only its own package, and the census's passes never set a cfg from the
+/// build environment, so such a package could hold code the passes never compile. The defining
+/// package's own script is admitted at [`PROGRESSION_BUILD_SHA256`] alone. A graph cargo cannot
+/// give is a refusal, never a skipped check.
+fn build_scripts(root: &Path, metadata: &Value) -> Result<Vec<String>, Vec<String>> {
+    let unreadable = |what: &str| vec![format!("cargo metadata cannot give the graph ({what})")];
+    let nodes = metadata["resolve"]["nodes"]
+        .as_array()
+        .ok_or_else(|| unreadable("it holds no resolve graph"))?;
+    let mut dependents: BTreeMap<&str, Vec<&str>> = BTreeMap::new();
+    for node in nodes {
+        let id = node["id"]
+            .as_str()
+            .ok_or_else(|| unreadable("a node holds no id"))?;
+        for dependency in node["deps"].as_array().into_iter().flatten() {
+            let target = dependency["pkg"]
+                .as_str()
+                .ok_or_else(|| unreadable("a dependency holds no package"))?;
+            dependents.entry(target).or_default().push(id);
+        }
+    }
+    let packages = metadata["packages"]
+        .as_array()
+        .ok_or_else(|| unreadable("it holds no packages"))?;
+    let owner = packages
+        .iter()
+        .find(|package| package["name"] == PROGRESSION_PACKAGE)
+        .and_then(|package| package["id"].as_str());
+    let mut reaching: BTreeSet<&str> = BTreeSet::new();
+    let mut queue: Vec<&str> = owner.into_iter().collect();
+    while let Some(id) = queue.pop() {
+        if reaching.insert(id) {
+            queue.extend(dependents.get(id).into_iter().flatten());
+        }
+    }
+    let mut refused = Vec::new();
+    for package in packages {
+        let id = package["id"].as_str().unwrap_or_default();
+        let name = package["name"].as_str().unwrap_or_default();
+        let script = package["targets"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .find(|target| {
+                target["kind"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .any(|kind| kind == "custom-build")
+            });
+        let Some(script) = script else { continue };
+        if !reaching.contains(id) {
+            continue;
+        }
+        if name != PROGRESSION_PACKAGE {
+            refused.push(format!(
+                "{name} has a build script and can name settle, and a build script's cfg is one \
+                 the census's passes never set"
+            ));
+            continue;
+        }
+        let path = script["src_path"].as_str().unwrap_or_default();
+        let digest = fs::read(path).map(|bytes| {
+            Sha256::digest(&bytes)
+                .iter()
+                .fold(String::new(), |mut hex, byte| {
+                    write!(hex, "{byte:02x}").expect("a string takes every write");
+                    hex
+                })
+        });
+        if digest.ok().as_deref() != Some(PROGRESSION_BUILD_SHA256) {
+            refused.push(format!(
+                "{name}'s build script ({}) is not the one pinned by PROGRESSION_BUILD_SHA256",
+                relative(root, Path::new(path))
+            ));
+        }
+    }
+    Ok(refused)
+}
+
 /// Every use of `settle` in the code the workspace at `root` compiles, or the reasons the census
 /// cannot see them all. `target` is the census's own target directory, apart from every other
 /// build.
 #[allow(clippy::too_many_lines)]
 fn compiled_uses(root: &Path, target: &Path) -> Result<Vec<Use>, Vec<String>> {
-    let locked = root.join("Cargo.lock").exists();
-    let mut arguments: Vec<String> = ["metadata", "--format-version", "1"]
+    let arguments: Vec<String> = ["metadata", "--format-version", "1", "--locked", "--offline"]
         .map(str::to_owned)
         .to_vec();
-    if locked {
-        arguments.push("--locked".to_owned());
-    }
     let (ok, stdout, stderr) =
         cargo(root, &arguments, CARGO_LIMIT).map_err(|reason| vec![reason])?;
     if !ok {
         return Err(vec![format!(
-            "cargo cannot read the workspace ({}), so the census cannot see its callers",
+            "cargo metadata cannot give the graph ({}), so the census cannot see its callers",
             first_error(&stderr)
         )]);
     }
     let metadata: Value = serde_json::from_str(&stdout)
-        .map_err(|error| vec![format!("cargo metadata is not JSON: {error}")])?;
+        .map_err(|error| vec![format!("cargo metadata cannot give the graph ({error})")])?;
+    let mut refused = build_scripts(root, &metadata)?;
     let workspace = PathBuf::from(metadata["workspace_root"].as_str().unwrap_or_default());
     let member_ids: BTreeSet<&str> = metadata["workspace_members"]
         .as_array()
@@ -471,7 +557,6 @@ fn compiled_uses(root: &Path, target: &Path) -> Result<Vec<Use>, Vec<String>> {
         .flatten()
         .filter_map(Value::as_str)
         .collect();
-    let mut refused = Vec::new();
     let mut folders: BTreeMap<&str, String> = BTreeMap::new();
     let mut names = BTreeSet::new();
     let mut tested = false;
@@ -565,9 +650,7 @@ fn compiled_uses(root: &Path, target: &Path) -> Result<Vec<Use>, Vec<String>> {
             .to_vec();
             arguments.push(target.to_string_lossy().into_owned());
             arguments.extend(selection.iter().map(|flag| (*flag).to_owned()));
-            if locked {
-                arguments.push("--locked".to_owned());
-            }
+            arguments.push("--locked".to_owned());
             arguments.extend(pass(on, abort, &names));
             let (ok, stdout, stderr) =
                 cargo(root, &arguments, CARGO_LIMIT).map_err(|reason| vec![reason])?;
@@ -1257,9 +1340,8 @@ fn the_census_names_each_use_in_its_package_and_file() {
     // `allow(deprecated)`, inside progression's macro and inside coordination's recompute macro,
     // each expanded where it is called, in a workspace whose default members leave the callers out;
     // a member's own deprecated function, which is not `settle`; coordination's test with any
-    // cause; a correction whose cause is only a string, one that passes both causes, and one
-    // coordination's build script writes and a recompute step includes, which no file of the
-    // repository holds, so its package's root names it; a coordination file compiled by a `#[path]`
+    // cause; a correction whose cause is only a string and one that passes both causes (one a
+    // build script writes is refused with its package, as a package that can name settle); a coordination file compiled by a `#[path]`
     // through `recompute/..`, which is not a recompute step; a nested comment naming the table; and
     // a link that loops back to the root, which the walk for manifests never follows.
     let planted = tempfile::tempdir().expect("a temporary directory");
@@ -1364,18 +1446,9 @@ fn the_census_names_each_use_in_its_package_and_file() {
                  deck_streak_progression::settle()\n}\n",
             ),
             (
-                "build.rs",
-                "fn main() {\n    let out = std::env::var(\"OUT_DIR\").expect(\"OUT_DIR\");\n    \
-                 let step = \"pub fn made() -> usize {\\n    \
-                 let _ = deck_streak_progression::settle::SettleCause::OwnersCorrection;\\n    \
-                 deck_streak_progression::settle()\\n}\\n\";\n    \
-                 std::fs::write(std::path::Path::new(&out).join(\"step.rs\"), step).expect(\"step.rs\");\n}\n",
-            ),
-            (
                 "src/recompute/mod.rs",
                 "macro_rules! step {\n    () => {\n        deck_streak_progression::settle()\n    };\n}\n\
-                 pub fn fold() -> usize { step!() }\n\
-                 include!(concat!(env!(\"OUT_DIR\"), \"/step.rs\"));\n",
+                 pub fn fold() -> usize { step!() }\n",
             ),
             ("src/wrapped.rs", "pub fn quick() -> usize { step!() }\n"),
             (
@@ -1438,8 +1511,6 @@ fn the_census_names_each_use_in_its_package_and_file() {
         [
             "crates/coordination/src/both.rs calls settle outside the recompute steps, and only \
              the owner's correction may",
-            "crates/coordination/src/lib.rs calls settle outside the recompute steps, and only \
-             the owner's correction may",
             "crates/coordination/src/literal.rs calls settle outside the recompute steps, and \
              only the owner's correction may",
             "crates/coordination/src/spoofed.rs calls settle outside the recompute steps, and \
@@ -1463,7 +1534,6 @@ fn the_census_names_each_use_in_its_package_and_file() {
         BTreeSet::from(
             [
                 "crates/coordination/src/both.rs",
-                "crates/coordination/src/lib.rs",
                 "crates/coordination/src/literal.rs",
                 "crates/coordination/src/recompute/mod.rs",
                 "crates/coordination/src/spoofed.rs",
@@ -3371,7 +3441,7 @@ fn the_census_refuses_every_caller_the_compiler_finds() {
                         // nothing there, and that is wrong whatever the case expects.
                         let unjudged = refused.iter().any(|refusal| {
                             refusal.starts_with("the workspace does not compile")
-                                || refusal.starts_with("cargo cannot read the workspace")
+                                || refusal.starts_with("cargo metadata cannot give the graph")
                         });
                         if unjudged || refused.is_empty() == case.refused {
                             wrong.push(format!(
@@ -3474,6 +3544,70 @@ fn a_build_script_in_a_package_that_depends_on_settle_is_refused_by_name() {
             .any(|line| line.contains("deck-streak-api") && line.contains("build script")),
         "a build script in api, which depends on progression, is refused by name: {refused:?}"
     );
+}
+
+/// Plants `api`, which carries a build script and holds `dependencies` under `section`, beside the
+/// members `others` that depend on progression and hold none.
+fn plant_edge(root: &Path, section: &str, dependencies: &str, others: &[&str]) {
+    plant_workspace(root);
+    for other in others {
+        plant_member(root, other, &[("src/lib.rs", "pub fn quiet() {}\n")]);
+    }
+    plant(
+        root,
+        "crates/api/Cargo.toml",
+        &format!(
+            "[package]\nname = \"deck-streak-api\"\nversion = \"0.1.0\"\nedition = \"2024\"\n\n\
+             [{section}]\n{dependencies}"
+        ),
+    );
+    plant(root, "crates/api/src/lib.rs", "pub fn call() {}\n");
+    plant(root, "crates/api/build.rs", "fn main() {}\n");
+}
+
+/// Whether the census refuses `api` for its build script.
+fn refuses_api_for_its_script(root: &Path) -> bool {
+    let refused = census(root).refused;
+    println!("examined {} refusal(s)", refused.len());
+    refused
+        .iter()
+        .any(|line| line.contains("deck-streak-api") && line.contains("build script"))
+}
+
+#[test]
+fn a_build_script_reached_through_a_dev_dependency_is_refused() {
+    let planted = tempfile::tempdir().expect("a temporary directory");
+    plant_edge(
+        planted.path(),
+        "dev-dependencies",
+        "deck-streak-progression = { path = \"../progression\" }\n",
+        &[],
+    );
+    assert!(refuses_api_for_its_script(planted.path()));
+}
+
+#[test]
+fn a_build_script_reached_through_a_build_dependency_is_refused() {
+    let planted = tempfile::tempdir().expect("a temporary directory");
+    plant_edge(
+        planted.path(),
+        "build-dependencies",
+        "deck-streak-progression = { path = \"../progression\" }\n",
+        &[],
+    );
+    assert!(refuses_api_for_its_script(planted.path()));
+}
+
+#[test]
+fn a_build_script_reached_through_a_chain_of_packages_is_refused() {
+    let planted = tempfile::tempdir().expect("a temporary directory");
+    plant_edge(
+        planted.path(),
+        "dependencies",
+        "deck-streak-mid = { path = \"../mid\" }\n",
+        &["mid"],
+    );
+    assert!(refuses_api_for_its_script(planted.path()));
 }
 
 #[test]
