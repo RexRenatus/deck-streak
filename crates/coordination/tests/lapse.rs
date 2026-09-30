@@ -188,7 +188,7 @@ fn a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary() {
         }
     }
     println!("examined {examined} rollover member(s)");
-    assert!(examined >= 400, "the population is generated: {examined}");
+    assert_eq!(examined, 448, "the population is generated: {examined}");
     assert!(
         opened > 0 && opened < examined,
         "both answers occur: {opened} open of {examined}"

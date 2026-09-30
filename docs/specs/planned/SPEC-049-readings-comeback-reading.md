@@ -292,7 +292,7 @@ R15's study day, so that a program that breaks either one fails a test.
   included; each run under every subset of its days as skip days; the days before the run filled
   three ways; a row of no reviews on the window's first day; a study review after the current day;
   and other thresholds. The oracle is a function written in the test from R13's words (the latest
-  study day, then the days after it that are not skip days), and it never calls `open_lapse`. A17's
+  study day, then the days after it that are not skip days), and it never calls `open_lapse`. A16's
   neighbour, A18, names the two cases the issue gave: a window whose only silent run starts on its
   first day.
 - **Class R, the rollover boundary.** A review counts on the study day the configured rule gives its

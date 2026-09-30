@@ -340,8 +340,8 @@ fn the_walk_reads_every_day_of_its_window_and_none_outside_it() {
         }
     }
     println!("examined {examined} window member(s)");
-    assert!(
-        examined >= 1_000,
+    assert_eq!(
+        examined, 2252,
         "the population is generated, not listed: {examined}"
     );
     assert!(
