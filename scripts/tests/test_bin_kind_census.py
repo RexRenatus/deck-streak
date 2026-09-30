@@ -349,6 +349,12 @@ def module_layouts(home):
             set(),
             False,
         ),
+        "raw strings and escapes that quote a declaration": (
+            'const D: char = \'\\"\';\nconst S: &str = r#"a "mod ghost;" b"#;\nconst H: &str = r##"x "# mod ghost; "##;\nconst E: &str = "\\\\";\nconst Z: &[u8] = cr"mod ghost;";\nmod x;\n',
+            {at(home, "x.rs"): LEAF, at(home, "ghost.rs"): LEAF},
+            set(),
+            False,
+        ),
         "a skipped inline module holding blocks and a declaration": (
             "#[cfg(not(test))]\nmod gone {\n    fn f() { if true { } }\n    mod inner;\n}\nmod x;\n",
             {at(home, "x.rs"): LEAF, at(home, "gone/inner.rs"): LEAF, at(home, "inner.rs"): LEAF},
