@@ -138,15 +138,37 @@ fn open_under(rule: StudyDayRule, now: i64, reviews: Vec<Review>) -> Option<i64>
     open_lapse(&facts).map(StudyDay::epoch_day)
 }
 
-/// The distinct members of the rollover population.
+/// A rule as the judges read it: its offset in minutes and its rollover hour.
+type RuleKey = (i16, u8);
+/// A lapse member: the rule, the instant of now, and each review's instant, kind and ease.
+type LapseMember = (RuleKey, i64, Vec<(i64, i64, i64)>);
+
+/// The distinct members the lapse is judged at: every one of the 448 is its own.
 const DISTINCT_ROLLOVER_MEMBERS: usize = 448;
+/// The distinct members the rule's day is judged at: sixteen rules by seven instants.
+const DISTINCT_DAY_MEMBERS: usize = 112;
+
+const fn rule_key(rule: StudyDayRule) -> RuleKey {
+    (rule.utc_offset().minutes(), rule.rollover_hour().get())
+}
 
 #[test]
 fn a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary() {
     let mut examined: u64 = 0;
     let mut opened: u64 = 0;
-    // A member is every input the judge reads: the rule, the reviews and `now`.
-    let mut distinct: BTreeSet<(i64, i64, i64, i64, i64)> = BTreeSet::new();
+    // Each judge records its member from the arguments it is handed, so a fold of one judge's
+    // input shows in that judge's count while the other judge still reads the value.
+    let mut distinct: BTreeSet<LapseMember> = BTreeSet::new();
+    let mut days: BTreeSet<(RuleKey, i64)> = BTreeSet::new();
+    let mut day_judge = |rule: StudyDayRule, t: i64| {
+        days.insert((rule_key(rule), t));
+        rule.study_day(UtcMillis::from_epoch_millis(t)).epoch_day()
+    };
+    let mut lapse_judge = |rule: StudyDayRule, now: i64, reviews: &[Review]| {
+        let handed = reviews.iter().map(|r| (r.id, r.kind, r.ease)).collect();
+        distinct.insert((rule_key(rule), now, handed));
+        open_under(rule, now, reviews.to_vec())
+    };
     for offset in [-720_i64, -300, -210, 0, 330, 345, 540, 840] {
         for hour in [0_i64, 4] {
             let the_rule = rule(offset, hour);
@@ -163,9 +185,7 @@ fn a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary() {
             for t in instants {
                 let d = day_of(offset, hour, t);
                 assert_eq!(
-                    the_rule
-                        .study_day(UtcMillis::from_epoch_millis(t))
-                        .epoch_day(),
+                    day_judge(the_rule, begins(offset, hour, d)),
                     d,
                     "offset {offset}, rollover {hour}, instant {t}: the rule's day"
                 );
@@ -173,7 +193,7 @@ fn a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary() {
                 // decides: silent on d+1, d+2, d+3 opens a lapse with id d+1.
                 let reviews = vec![
                     review_at(begins(offset, hour, d - 10) + HOUR_MS),
-                    review_at(t),
+                    review_at(begins(offset, hour, d)),
                 ];
                 for (now, want) in [
                     (begins(offset, hour, d + 3), Some(d + 1)),
@@ -182,10 +202,9 @@ fn a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary() {
                     (begins(offset, hour, d + 2), None),
                 ] {
                     examined += 1;
-                    distinct.insert((offset, hour, t, d, now));
                     opened += u64::from(want.is_some());
                     assert_eq!(
-                        open_under(the_rule, now, reviews.clone()),
+                        lapse_judge(the_rule, now, &reviews),
                         want,
                         "offset {offset}, rollover {hour}, review at {t} (day {d}), now {now}"
                     );
@@ -194,8 +213,9 @@ fn a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary() {
         }
     }
     println!(
-        "examined {examined} rollover member(s), {} distinct",
-        distinct.len()
+        "examined {examined} rollover member(s), {} distinct, over {} distinct day member(s)",
+        distinct.len(),
+        days.len()
     );
     assert_eq!(examined, 448, "the population is generated: {examined}");
     assert_eq!(
@@ -203,6 +223,12 @@ fn a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary() {
         DISTINCT_ROLLOVER_MEMBERS,
         "the population's spread: {} distinct of {examined}",
         distinct.len()
+    );
+    assert_eq!(
+        days.len(),
+        DISTINCT_DAY_MEMBERS,
+        "the day judge's spread: {} distinct",
+        days.len()
     );
     assert!(
         opened > 0 && opened < examined,
