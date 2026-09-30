@@ -184,8 +184,9 @@ def unit_text(name, marker):
     ).encode()
 
 
-def release_files(tag, marker):
-    """The synthetic release's files by path: what the workflow's tarball holds."""
+def release_files(tag, marker, extra=None):
+    """The synthetic release's files by path: what the workflow's tarball holds; `extra` adds
+    files only this release ships."""
     files = {
         "bin/deckstreakd": f"#!/bin/sh\necho {tag}\n".encode(),
         "web/index.html": f"<title>{tag}</title>\n".encode(),
@@ -202,6 +203,7 @@ def release_files(tag, marker):
             b"[Service]\nLoadCredential=anki-sync-username:/run/deck-streak-credentials/socket\n"
         ),
     }
+    files.update(extra or {})
     lines = "".join(f"{sha(data)}  {path}\n" for path, data in sorted(files.items()))
     files["MANIFEST.sha256"] = lines.encode()
     return files
@@ -319,9 +321,9 @@ class World:
             self.git("tag", tag, cwd=self.other)
         self.git("push", "-q", "origin", tag, cwd=self.other)
 
-    def publish(self, tag, marker=None):
+    def publish(self, tag, marker=None, extra=None):
         """The release's assets, as the release workflow would attach them."""
-        files = release_files(tag, marker or tag)
+        files = release_files(tag, marker or tag, extra)
         buffer = io.BytesIO()
         with tarfile.open(fileobj=buffer, mode="w:gz") as archive:
             for path, data in sorted(files.items()):
@@ -336,9 +338,9 @@ class World:
         (directory / name).write_bytes(tarball)
         (directory / "SHA256SUMS").write_text(f"{sha(tarball)}  {name}\n", encoding="utf-8")
 
-    def ship(self, tag, marker=None):
+    def ship(self, tag, marker=None, extra=None):
         self.tag_on_main(tag)
-        self.publish(tag, marker)
+        self.publish(tag, marker, extra)
 
     def run(self, script, *args, **env):
         """Run a script in a session of its own, so a timeout ends the script and its children."""
@@ -2015,7 +2017,7 @@ exec /usr/bin/mktemp "$@"
 
 class EveryDirectoryAVerbWritesInIsMeasuredAndItsTemporaryPathsAreRefused(Case):
     """The places each verb writes in, measured from a real run, each made to fail in turn
-    (SPEC-127 A40; ADR-297, #451). The release, the release's rollback and the rollback of a kept
+    (SPEC-127 A41; ADR-297, #451). The release, the release's rollback and the rollback of a kept
     release are each run once in a fixture, and the directories whose contents changed are the
     population; then every place is made absent and unwritable, and every call the host step
     makes to a tool that makes a path is made to fail, one at a time. A member holds when the
@@ -2037,7 +2039,7 @@ exec /usr/bin/@NAME@ "$@"
         "install": {
             ("mktemp", "local"): 1,
             ("mktemp", "host"): 1,
-            ("mkdir", "host"): 2,
+            ("mkdir", "host"): 3,
             ("tar", "host"): 1,
             ("ln", "host"): 1,
             ("mv", "host"): 2,
@@ -2045,12 +2047,17 @@ exec /usr/bin/@NAME@ "$@"
         "rollback-unkept": {
             ("mktemp", "local"): 1,
             ("mktemp", "host"): 1,
-            ("mkdir", "host"): 2,
+            ("mkdir", "host"): 3,
             ("tar", "host"): 1,
             ("ln", "host"): 1,
             ("mv", "host"): 2,
         },
-        "rollback-kept": {("mktemp", "host"): 1, ("ln", "host"): 1, ("mv", "host"): 1},
+        "rollback-kept": {
+            ("mktemp", "host"): 1,
+            ("mkdir", "host"): 1,
+            ("ln", "host"): 1,
+            ("mv", "host"): 1,
+        },
     }
     # The temporary directory and the four places the host writes in, then the drop-in directories.
     BASE_PLACES = ("tmpdir", "host/etc/systemd/system", "host/usr/local/lib/deck-streak")
@@ -2244,6 +2251,288 @@ exec /usr/bin/@NAME@ "$@"
                     self.place_member(*member[1:])
                 else:
                     self.tool_member(*member[1:])
+
+
+_A41 = EveryDirectoryAVerbWritesInIsMeasuredAndItsTemporaryPathsAreRefused
+
+
+class EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused(Case):
+    """The host step's tools are read from the script and its start states are generated
+    (SPEC-127 A42; ADR-297, #451). The tool set is every command word of the host body that can
+    write a path, read by the parser below, so a new tool joins the population or turns the census
+    red; the states are a first install, a rollback with no `current` link, a release that ships a
+    unit the host lacks, and a host that already holds a release. Each verb is run from each
+    state that applies, and every host call that writes a path is made to fail in turn. A member
+    holds when the verb ends non-zero with one `deploy:` line, last, and no path of the world
+    that the snapshot covers changed."""
+
+    VERBS = _A41.VERBS
+    STATES = ("installed", "first-install", "current-absent", "new-unit")
+    NOT_A_STATE = {("rollback-kept", "first-install")}
+    # Words the host body uses that write no path. A word not listed here and not a function of the
+    # body is taken to be a tool that writes, which is how a new tool turns the census red.
+    READERS = frozenset(
+        {"[", "echo", "read", "readlink", "basename", "dirname", "sed", "tail", "grep", "sort"}
+        | {"sha256sum", "systemctl", "python3", "curl", "sleep", "cd", "test", "printf"}
+    )
+    BUILTINS = frozenset(
+        {"set", "trap", "local", "return", "exit", "break", "continue", "shift", "for", "case", ":"}
+        | {"true", "false"}
+    )
+    KEYWORDS = frozenset(
+        {"if", "then", "else", "elif", "fi", "do", "done", "while", "until", "{", "}", "!", "esac"}
+    )
+    SYSTEMCTL_READS_AND_RELOADS = frozenset({"daemon-reload", "restart", "cat"})
+    FIND_WRITES = frozenset({"-delete", "-exec", "-execdir", "-ok", "-fprint", "-fprintf", "-fls"})
+    # The tools the members run, and the writers the body holds that no verb run reaches.
+    HANDLED = ("mktemp", "mkdir", "tar", "ln", "mv", "install", "find", "cp")
+    UNREACHED = {"rm": "reached only when the service does not become ready"}
+    EXTRA = {f"{SYSTEMD}/deck-streak-extra.timer": b"[Timer]\nOnCalendar=daily\n"}
+    TOOL = r"""#!/bin/bash
+side=${STUB_SIDE:-local}
+n=$(grep -c "^@NAME@ $side$" "$STUB_LOG/tools.log" 2>/dev/null || true)
+echo "@NAME@ $side" >> "$STUB_LOG/tools.log"
+printf '%s\t%s\t%s\t%s\n' "@NAME@" "$side" "$((n + 1))" "$*" >> "$STUB_LOG/args.log"
+[ "${TOOL_FAILS-}" != "@NAME@:$side:$((n + 1))" ] || { echo "@NAME@: cannot be run" >&2; exit 126; }
+exec /usr/bin/@NAME@ "$@"
+"""
+    HOST_SIDE = _A41.HOST_SIDE
+    good = staticmethod(_A41.good)
+    restore = staticmethod(_A41.restore)
+    outcome = _A41.outcome
+    judge = _A41.judge
+
+    @staticmethod
+    def host_body(text=None):
+        """The host script that `deploy.sh` holds in `HOST_SCRIPT`."""
+        text = DEPLOY.read_text(encoding="utf-8") if text is None else text
+        found = re.search(r"HOST_SCRIPT <<'HOSTEOF'[^\n]*\n(.*?)\nHOSTEOF\n", text, re.S)
+        assert found, "deploy.sh holds no HOST_SCRIPT here-document"
+        return found.group(1)
+
+    @classmethod
+    def census(cls, body):
+        """(every command as [word, *arguments], the targets of every redirection that can write a
+        path, the functions the body defines), read from the body's text alone."""
+        functions = set(re.findall(r"^\s*(\w+)\(\) \{", body, re.M))
+        lines = [ln for ln in body.splitlines() if not ln.lstrip().startswith("#")]
+        text = re.sub(r"\$\(\([^)]*\)\)", "0", " ; ".join(lines))
+        commands, targets = [], []
+
+        def read(chunk):
+            lex = shlex.shlex(chunk, posix=True, punctuation_chars=True)
+            lex.whitespace_split, lex.commenters = True, ""
+            tokens, nested = list(lex), []
+            for token in tokens:
+                for inner in re.findall(r"\$\(([^()]*)\)", token):
+                    nested.append(inner)
+            current, start, index = [], True, 0
+            while index < len(tokens):
+                token = tokens[index]
+                index += 1
+                if set(token) <= set("();&|"):
+                    start = True
+                    continue
+                if ">" in token and set(token) <= set("<>&"):
+                    if token in (">", ">>") and index < len(tokens):
+                        if tokens[index] != "/dev/null":
+                            targets.append(tokens[index])
+                        index += 1
+                    continue
+                if start and (token in cls.KEYWORDS or re.match(r"^\w+=", token)):
+                    continue
+                if start:
+                    current = [token]
+                    commands.append(current)
+                    start = False
+                else:
+                    current.append(token)
+            for inner in nested:
+                read(inner)
+
+        read(text)
+        return commands, targets, functions
+
+    @classmethod
+    def writers(cls, commands, functions):
+        """The tools among the commands that can write a path, each with how many command sites."""
+        found = {}
+        for word, *args in commands:
+            if word in functions or word in cls.BUILTINS:
+                continue
+            if word in cls.READERS:
+                writes = (
+                    (word == "sed" and any(a.startswith("-i") or a == "--in-place" for a in args))
+                    or (word == "sort" and any(a == "-o" or a.startswith("--output") for a in args))
+                    or (word == "curl" and any(a in ("-o", "-O", "--output") for a in args))
+                    or (
+                        word == "systemctl"
+                        and (args[:1] or [""])[0] not in cls.SYSTEMCTL_READS_AND_RELOADS
+                    )
+                    or (
+                        word == "python3"
+                        and not (args[:1] or [""])[0].endswith("effective-check.py")
+                    )
+                )
+                if not writes:
+                    continue
+            if word == "find" and not cls.FIND_WRITES & set(args):
+                continue
+            found[word] = found.get(word, 0) + 1
+        return found
+
+    def test_the_tools_the_host_body_writes_with_are_read_from_the_script(self):
+        commands, targets, functions = self.census(self.host_body())
+        found = self.writers(commands, functions)
+        examined("host command site(s)", commands)
+        examined("host redirection target(s)", targets)
+        self.assertEqual(
+            sorted(found), sorted({*self.HANDLED, *self.UNREACHED}), "the host body's writing tools"
+        )
+        self.assertEqual(
+            sorted(set(targets)),
+            ["$checked"],
+            "a redirection writes a path other than the check file",
+        )
+        self.assertEqual(len(targets), 2, "the redirections into the check file")
+        self.assertEqual(
+            found,
+            {"mktemp": 1, "find": 14, "mkdir": 3, "ln": 1, "cp": 2, "install": 3, "mv": 2}
+            | {"rm": 1, "tar": 1},
+            "the command sites of the host body that can write a path, by tool",
+        )
+        self.assertEqual(sum(found.values()), 28, "the command sites that can write a path")
+
+    def test_a_tool_the_census_does_not_know_turns_it_red(self):
+        body = self.host_body()
+        planted = {
+            "a new tool": body.replace("set -eu", "set -eu\ntouch /x", 1),
+            "an in-place edit": body.replace("set -eu", "set -eu\nsed -i s/a/b/ /x", 1),
+            "a new redirection": body.replace("set -eu", "set -eu\necho a > /x", 1),
+            "a tool in a substitution": body.replace("set -eu", "set -eu\nq=$(tee /x)", 1),
+        }
+        commands, targets, functions = self.census(body)
+        base = self.writers(commands, functions)
+        for name, text in examined("planted host bodies", sorted(planted.items())):
+            with self.subTest(planted=name):
+                commands, targets, functions = self.census(text)
+                found = self.writers(commands, functions)
+                self.assertTrue(
+                    found != base or len(targets) != 2 or set(targets) != {"$checked"},
+                    f"{name}: the census did not change",
+                )
+
+    def arm(self, w):
+        w.script("host", self.HOST_SIDE)
+        for name in self.HANDLED:
+            w.script(name, self.TOOL.replace("@NAME@", name))
+        for name in ("tools.log", "args.log"):
+            (w.log / name).write_text("", encoding="utf-8")
+
+    def world(self, tmp, verb, state):
+        """A world in `state`, armed, and the argv of `verb` in it."""
+        w = World(tmp)
+        good = self.good(w)
+        self.arm(w)
+        extra = self.EXTRA if state == "new-unit" else None
+        if state == "first-install":
+            w.ship("v1.0.0")
+            argv = [DEPLOY if verb == "install" else ROLLBACK, "v1.0.0"]
+        else:
+            w.ship("v1.0.0", extra=extra if verb == "rollback-kept" else None)
+            self.ok(w.deploy("v1.0.0", **good))
+            if verb == "rollback-kept":
+                w.ship("v1.1.0")
+                self.ok(w.deploy("v1.1.0", **good))
+                argv = [ROLLBACK, "v1.0.0"]
+            else:
+                w.ship("v1.1.0", extra=extra)
+                argv = [DEPLOY if verb == "install" else ROLLBACK, "v1.1.0"]
+        if state == "current-absent":
+            (w.root / "current").unlink()
+        if state == "new-unit":
+            (w.units / "deck-streak-extra.timer").unlink(missing_ok=True)
+        for name in ("tools.log", "args.log"):
+            (w.log / name).write_text("", encoding="utf-8")
+        return w, good, argv
+
+    def writing_calls(self, w):
+        """(tool, index) of each host call that writes a path, from the run's own log."""
+        seen, calls = {}, []
+        for line in (w.log / "args.log").read_text(encoding="utf-8").splitlines():
+            tool, side, index, args = (line.split("\t") + [""])[:4]
+            if side != "host":
+                continue
+            seen[tool] = seen.get(tool, 0) + 1
+            if tool == "find" and not self.FIND_WRITES & set(args.split()):
+                continue
+            calls.append((tool, int(index)))
+        counted = sum(
+            1
+            for ln in (w.log / "tools.log").read_text(encoding="utf-8").splitlines()
+            if ln.endswith(" host")
+        )
+        self.assertEqual(sum(seen.values()), counted, "the two logs of the host calls")
+        return calls
+
+    def test_every_state_and_every_writing_call_of_the_host_step_is_refused(self):
+        members, expected, reached = [], 0, set()
+        for verb in self.VERBS:
+            for state in self.STATES:
+                if (verb, state) in self.NOT_A_STATE:
+                    continue
+                with tempfile.TemporaryDirectory() as tmp:
+                    w, good, argv = self.world(tmp, verb, state)
+                    self.ok(w.run(*argv, **good))
+                    calls = self.writing_calls(w)
+                reached |= {tool for tool, _ in calls}
+                expected += len(calls)
+                members += [(verb, state, tool, index) for tool, index in calls]
+        self.assertEqual(len(members), expected)
+        self.assertEqual(sorted(reached), sorted(self.HANDLED), "the tools the runs reached")
+        for verb, state, tool, index in examined("state-and-call member(s)", members):
+            with self.subTest(verb=verb, state=state, tool=tool, index=index):
+                with tempfile.TemporaryDirectory() as tmp:
+                    w, good, argv = self.world(tmp, verb, state)
+                    planted = {**good, "TOOL_FAILS": f"{tool}:host:{index}"}
+                    done, before, after = self.outcome(w, argv, planted, [])
+                    self.judge(
+                        f"{verb} / {state} / {tool} {index}", done, before, after, "host step"
+                    )
+
+    def test_a_first_install_into_a_parent_that_cannot_take_a_write_leaves_the_host_as_found(self):
+        for verb in examined("first-install place member(s)", ["install", "rollback-unkept"]):
+            with self.subTest(verb=verb), tempfile.TemporaryDirectory() as tmp:
+                w, good, argv = self.world(tmp, verb, "first-install")
+                parent = w.root.parent
+                parent.mkdir(parents=True, exist_ok=True)
+                modes = [(parent, stat.S_IMODE(parent.lstat().st_mode))]
+                parent.chmod(0o555)
+                self.assertFalse(w.root.exists(), "the host holds no release yet")
+                done, before, after = self.outcome(w, argv, good, modes)
+                self.judge(f"{verb} / first install / parent", done, before, after, "host step")
+
+    def test_a_stale_unpack_in_a_releases_directory_that_cannot_take_a_write_is_refused(self):
+        for verb in examined("stale-unpack member(s)", ["install", "rollback-unkept"]):
+            with self.subTest(verb=verb), tempfile.TemporaryDirectory() as tmp:
+                w, good, argv = self.world(tmp, verb, "installed")
+                releases = w.root / "releases"
+                stale = releases / f"{argv[-1]}.partial"
+                stale.mkdir()
+                (stale / "leftover").write_text("an interrupted unpack\n", encoding="utf-8")
+                modes = [(releases, stat.S_IMODE(releases.lstat().st_mode))]
+                releases.chmod(0o555)
+                done, before, after = self.outcome(w, argv, good, modes)
+                self.judge(f"{verb} / stale unpack", done, before, after, "host step")
+
+    def test_a_failed_switch_leaves_no_unit_only_the_new_release_ships(self):
+        for verb in examined("new-unit member(s)", ["install", "rollback-unkept"]):
+            with self.subTest(verb=verb), tempfile.TemporaryDirectory() as tmp:
+                w, good, argv = self.world(tmp, verb, "new-unit")
+                planted = {**good, "TOOL_FAILS": "mv:host:2"}
+                done, before, after = self.outcome(w, argv, planted, [])
+                self.judge(f"{verb} / new unit / failed switch", done, before, after, "host step")
+                self.assertFalse((w.units / "deck-streak-extra.timer").exists(), verb)
 
 
 if __name__ == "__main__":
