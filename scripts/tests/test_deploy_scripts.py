@@ -1857,5 +1857,161 @@ class NoDeployScriptNamesAPrivateValue(unittest.TestCase):
                 self.assertEqual(done.returncode, 1, f"{name}: a planted value passed")
 
 
+class ATemporaryPathThatCannotBeMadeIsANamedRefusal(Case):
+    """Every temporary path `deploy.sh` makes (SPEC-127 A40; ADR-297, #451). The sites are read
+    from the script itself, so a new `mktemp` joins the population by itself, and each is run
+    through every verb that reaches it with each way the path can fail to be made."""
+
+    # The step each site belongs to, named in its refusal; the key is the function that holds
+    # the call, or `host` for the script that runs on the host.
+    STEPS = {
+        "install_tag": "release step",
+        "caddy_install": "Caddy step",
+        "host": "host step",
+    }
+    # The verbs that reach a site, each set up by `prepare`.
+    VERBS = {
+        "install_tag": ("install", "rollback-unkept"),
+        "caddy_install": ("caddy-install",),
+        "host": ("install", "rollback-unkept", "rollback-kept"),
+    }
+    MODES = ("absent", "unwritable", "unrunnable")
+    HOST_SIDE = r"""#!/bin/bash
+echo "host" >> "$STUB_LOG/host.log"
+export STUB_SIDE=host
+[ -z "${HOST_TMPDIR-}" ] || export TMPDIR=$HOST_TMPDIR
+exec "$@"
+"""
+    MKTEMP = r"""#!/bin/bash
+[ "${STUB_SIDE:-local}" != "${MKTEMP_FAILS-}" ] || { echo "mktemp: cannot be run" >&2; exit 126; }
+exec /usr/bin/mktemp "$@"
+"""
+
+    @staticmethod
+    def sites():
+        """Each `mktemp` call of the script, as (holder, line number), holder being the function
+        that contains it or `host` for the host script."""
+        found, holder, in_host = [], None, False
+        for number, line in enumerate(DEPLOY.read_text(encoding="utf-8").splitlines(), 1):
+            if line.startswith("read -r -d '' HOST_SCRIPT"):
+                in_host = True
+            elif line == "HOSTEOF":
+                in_host = False
+            named = re.match(r"(\w+)\(\) \{", line)
+            if named and not in_host:
+                holder = named.group(1)
+            if not line.lstrip().startswith("#") and re.search(r"\bmktemp\b", line):
+                found.append(("host" if in_host else holder, number))
+        return found
+
+    @staticmethod
+    def snapshot(w):
+        """Each path of the world a step could write, with its type, mode and bytes or target:
+        the host, the release assets, the checkout's files and the temporary directories."""
+        seen = {}
+        for path in sorted(w.tmp.rglob("*")):
+            relative = path.relative_to(w.tmp)
+            top = relative.parts[0]
+            if top in {"log", "stub", "other", "origin.git"} or relative.parts[:2] == (
+                "checkout",
+                ".git",
+            ):
+                continue
+            info = path.lstat()
+            data = None
+            if stat.S_ISLNK(info.st_mode):
+                data = os.readlink(path)
+            elif stat.S_ISREG(info.st_mode):
+                data = sha(path.read_bytes())
+            seen[relative] = (stat.S_IFMT(info.st_mode), stat.S_IMODE(info.st_mode), data)
+        return seen
+
+    def prepare(self, w, verb, good):
+        """The world a verb starts from, and the argv it runs."""
+        w.script("host", self.HOST_SIDE)
+        w.script("mktemp", self.MKTEMP)
+        w.ship("v1.0.0")
+        self.ok(w.deploy("v1.0.0", **good))
+        if verb == "rollback-kept":
+            w.ship("v1.1.0")
+            self.ok(w.deploy("v1.1.0", **good))
+            return [ROLLBACK, "v1.0.0"]
+        if verb == "caddy-install":
+            (w.caddy_dir / "Caddyfile").write_text("example.org {\n\trespond 200\n}\n")
+            path = w.tmp / "caddy-config.json"
+            path.write_text(
+                json.dumps(
+                    {
+                        "host": "app.example.org",
+                        "web_root": str(w.root / "current/web"),
+                        "api_upstream": "127.0.0.1:8080",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            good["DECKSTREAK_DEPLOY_CADDY_CONFIG"] = str(path)
+            return [DEPLOY, "caddy-install", "v1.0.0"]
+        w.ship("v1.1.0")
+        return [ROLLBACK, "v1.1.0"] if verb == "rollback-unkept" else [DEPLOY, "v1.1.0"]
+
+    def member(self, site, verb, mode):
+        with tempfile.TemporaryDirectory() as tmp:
+            w = World(tmp)
+            good_dir = w.tmp / "tmp-good"
+            good_dir.mkdir()
+            good = {"TMPDIR": str(good_dir), "HOST_TMPDIR": str(good_dir)}
+            argv = self.prepare(w, verb, good)
+            planted = dict(good)
+            side = "host" if site == "host" else "local"
+            if mode == "absent":
+                planted["HOST_TMPDIR" if side == "host" else "TMPDIR"] = str(
+                    w.tmp / "tmp-absent" / "nothing"
+                )
+            elif mode == "unwritable":
+                locked = w.tmp / "tmp-locked"
+                locked.mkdir()
+                locked.chmod(0o500)
+                self.assertFalse(os.access(locked, os.W_OK), "the locked directory is writable")
+                planted["HOST_TMPDIR" if side == "host" else "TMPDIR"] = str(locked)
+            else:
+                planted["MKTEMP_FAILS"] = side
+            before = self.snapshot(w)
+            try:
+                done = w.run(*argv, **planted)
+                after = self.snapshot(w)
+            finally:
+                if mode == "unwritable":
+                    locked.chmod(0o700)
+        label = f"{site} / {verb} / {mode}"
+        lines = [ln for ln in done.stderr.splitlines() if ln.strip()]
+        refusals = [ln for ln in lines if ln.startswith("deploy:")]
+        self.assertNotEqual(done.returncode, 0, f"{label}: the verb went on: {done.stderr}")
+        self.assertEqual(len(refusals), 1, f"{label}: {done.stderr!r}")
+        self.assertEqual(lines[-1], refusals[0], f"{label}: the last line is not the refusal")
+        self.assertIn(self.STEPS[site], refusals[0], f"{label}: the step is not named")
+        self.assertNotIn("Traceback", done.stderr, label)
+        self.assertEqual(after, before, f"{label}: a path changed")
+
+    def test_every_temporary_path_that_cannot_be_made_is_a_named_refusal(self):
+        found = self.sites()
+        self.assertEqual(
+            sorted(holder for holder, _ in found),
+            sorted(self.STEPS),
+            f"the script's temporary-path sites are not the ones this test covers: {found}",
+        )
+        members = examined(
+            "temporary-path member(s)",
+            [
+                (site, verb, mode)
+                for site in self.STEPS
+                for verb in self.VERBS[site]
+                for mode in self.MODES
+            ],
+        )
+        for site, verb, mode in members:
+            with self.subTest(site=site, verb=verb, mode=mode):
+                self.member(site, verb, mode)
+
+
 if __name__ == "__main__":
     unittest.main()
