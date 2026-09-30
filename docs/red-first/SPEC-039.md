@@ -428,3 +428,21 @@ S03971's plant (`path = os.defpath`) is the one that is.
 
 Plants that are not expressible as rows: none. All ten of this round's plants are rows S03973 to
 S03982, and S03971 and S03972 were the round's first two.
+
+## Addendum, 2026-09-30: every refusal is read whole (issue #431, round 2)
+
+A53 and A54 are the criteria of section 22. Round 1 pushed with `mutation-verdict` red: 14 generated
+mutants of the refusal's own lines survived. The whole-value tests are green at 1361a265 (`Ran 9
+tests`, `OK`, 5 examined member lists: 16 reasons by route, 260 errno members, 768 exit members) and
+are `not red` at the head they test, because the code already refuses correctly; the plants are
+the measurement. Applied to a scratch copy of `scripts/mutation_rows.py`, 30 of the 31 mutants
+of `resolve_tool`, `_backstop`, `_exit_refusal` and `run_tool` fail the module by assertion, and
+the one that survives, `replace "." with "" in resolve_tool`, is equivalent and recorded. The
+census test was committed alone at edb24a2c and reads `FAILED (failures=551)` over 578 members; the
+census that refuses them is green at 23b303b9.
+
+```red-first
+A53: not red: the code at dev + round 1 already refuses correctly; 30 of the 31 mutants of resolve_tool, _backstop, _exit_refusal and run_tool fail the module by assertion (the 31st is equivalent)
+A54: red at edb24a2c: AssertionError: [] == [] : import os
+A54: green at 23b303b9
+```

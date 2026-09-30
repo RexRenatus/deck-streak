@@ -950,3 +950,51 @@ the child). The population is 180 members: every site, tool, mode and verb alone
 the searched tools again behind the entry the runner cannot look at. The cargo build site's member serves the control run from
 a shim that then makes itself unrunnable, so the refusal comes from the mutant's build and the
 member asserts the shim was reached. A49's test keeps A41's fixture and its bare `PATH`.
+
+## 21. Amendment, 2026-09-30: every refusal is read whole, and the census refuses what it cannot read
+
+Round 1 of #431 made the runner refuse a tool it cannot run, and CI's `mutation-verdict` then
+generated mutants of the refusal's own lines: 43 generated and 23 hand rows examined, 14 survived,
+none explained. The tests asserted that a refusal happened, or that its line held a word of the
+reason, so a mutant of the text or of the branch that chose it read the same. ADR-291 states the
+class; this section states it as criteria.
+
+- **The rule.** Every refusal is decided by a whole-value assertion. Its exact text, `missing tool:
+  <name as spawned>: <why>`, and the tool it names are compared whole, and each branch that chooses
+  it is selected by a test that fails if the branch changes: the empty and `.` `PATH` entries, a
+  name holding `/`, a candidate that is absent, a directory or not executable, the child's `PATH`
+  (and not this process's), an `OSError` of every errno the operating system names, at both
+  spawns, whether it names the tool, nothing or something else (the working directory), and every
+  exit from 0 to 255 at every helper, of which 126 and 127 are the refusal and no other is.
+- **The population is generated.** Reasons, errnos (`errno.errorcode`) and exits are read from
+  their own tables and crossed with the spawn routes, and the member counts are printed and
+  asserted. The tests are in `test_mutation_rows_refusal.py`, which the map in
+  `scripts/mutation-python.json` runs first against every generated mutant of the runner.
+- **One mutant is equivalent.** `pathlib.Path(part or ".")` reads `Path("")` for an empty `PATH`
+  entry, and `Path("") == Path(".")`; replacing `"."` with `""` changes no path. It is recorded in
+  `scripts/mutation-equivalent.d/python.json` under the verdict's own rule, with its span, its
+  reason and the test that reaches it (#431).
+- **The census refuses a spawner it cannot read.** A spawner reached by a name built at run time
+  is a spawn no reading of the source can see. The census refuses the way of reaching one, wherever
+  it appears and whatever it is given, and does not list spellings: the names `getattr`, `vars`,
+  `globals`, `locals`, `eval`, `exec`, `compile`, `__import__`, `import_module` and
+  `__builtins__`; the attributes `__import__`, `import_module`, `__dict__`, `__builtins__`,
+  `__globals__` and `modules` (so `sys.modules[...]` too); and any import of `importlib`,
+  `builtins`, `imp`, `runpy`, `code` or `codeop`, or of `modules` from `sys`. A test crosses 17 such
+  forms with all 34 documented spawners, 578 members, and asserts every one refused, and that the
+  runner's own source and four benign sources are not.
+- **What it does NOT do.** It does not read a spawn built from a string handed to a shell by a
+  caller outside `scripts/mutation_rows.py`; the census reads that one file, as A47 does (#431). It
+  changes no timeout, drops no test and narrows no mutation diff (#431).
+
+## 22. Acceptance criteria of the 2026-09-30 (#431) round 2
+
+| id | criterion | decided by |
+|---|---|---|
+| A53 | every refusal's whole text and tool, and each branch that chooses it, at every spawn route, for every reason, errno and exit | `test_mutation_rows_refusal.py` |
+| A54 | the census refuses every way of reaching a spawner by a name built at run time, for every documented spawner, and refuses nothing the runner's source holds | `test_mutation_rows_missing_tool.py` |
+
+```acceptance
+A53: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_refusal.py -k each_reason_is_refused_whole_at_every_route
+A54: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k the_census_refuses_every_spelling_it_cannot_read_by_every_way_of_reaching_a_spawner
+```

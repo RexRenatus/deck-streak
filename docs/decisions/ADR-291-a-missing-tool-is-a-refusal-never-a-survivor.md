@@ -51,6 +51,15 @@ which section 12 (A41) reads as VOID, belong to the same rule?
   a missing `cargo`. Two rules for the same fact would need a reader to know which spawn a message
   came from. A41's other readings stay: a parse check that outlives its bound is VOID, and a mutant
   that does not parse is VOID.
+- Enumerate the dynamic spellings the census will read (`getattr(m, "run")`, `__import__("os")`) -
+  lost: each new spelling is a new way to skip the check, and a list is one behind the language.
+  The census refuses the ways of reaching a spawner by a name built at run time instead
+  (`getattr`, `__import__`, `importlib`, `vars`/`globals`/`locals`, `__dict__` and `sys.modules`,
+  `eval`, `exec`), whatever they are given, so a spelling not yet invented is refused by default.
+- Assert only that a refusal happened, or that its line holds a word of the reason - lost: CI
+  generated 14 surviving mutants of the refusal's text and branches (round 1). Every refusal is
+  compared whole, over populations read from the operating system's own tables (every errno, every
+  exit).
 
 ## Decision Outcome
 
@@ -106,6 +115,12 @@ an empty file, a wrapper whose program is missing), position in `PATH` and verb,
 process in a temporary repository. It asserts exit 2, one line naming the tool and the reason, no
 traceback, no verdict line, and the target's digest and the tree's state unchanged. Rows S03960
 to S03982 pin the resolution, each spawn, the mapping, the exits and the census.
+
+Round 2 adds `scripts/tests/test_mutation_rows_refusal.py`, whose members are every reason, every
+errno of `errno.errorcode` and every exit from 0 to 255 at every spawn route, each asserting the
+whole `ToolMissing`; it is the first module the mutation map runs for the runner. One generated
+mutant, `replace "." with "" in resolve_tool`, is equivalent (`Path("") == Path(".")`) and is
+recorded as such. The census refuses dynamic reach (SPEC-039 A54).
 
 ## More Information
 
