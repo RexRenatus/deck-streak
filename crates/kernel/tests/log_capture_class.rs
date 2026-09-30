@@ -153,7 +153,7 @@ fn a_capture_keeps_a_line_another_thread_reached_first() {
 /// Prints how many items a check examined and refuses zero: a walk that stopped matching must
 /// fail, never pass over the empty set (the tdd pack's examined contract).
 fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
-    println!("examined {} {what}", items.len());
+    eprintln!("examined {} {what}", items.len());
     assert!(
         !items.is_empty(),
         "examined 0 {what}: the population is empty, so nothing was judged"
