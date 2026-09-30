@@ -229,9 +229,9 @@
       [
         "S19227-A-MODULE-FILE-NEEDS-A-CFG-TEST-ATTRIBUTE",
         "scripts/tests/test_setting_shapes.py",
-        "        if \"#[cfg(test)]\" not in module.group(1):\n            continue\n",
-        "",
-        "a `mod tests;` behind an attribute other than `#[cfg(test)]` is production code, so its file is not read as the implementation's test module (SPEC-192 A13)",
+        "            if test_only(attributes(skeleton, module, file, 0)):\n",
+        "            if True:\n",
+        "a `mod tests;` whose attributes do not make it a test module is production code, so its file is not read as the implementation's test module (SPEC-192 A13)",
         "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_a_file_that_is_no_declared_test_module_is_not_read_as_one"
       ],
       [
@@ -317,18 +317,10 @@
       [
         "S19238-AN-OUT-OF-LINE-MODULE-MAY-BE-PUB",
         "scripts/tests/test_setting_shapes.py",
-        "OUT_OF_LINE = re.compile(r\"((?:#\\[[^\\]]*\\]\\s*)+)(?:pub(?:\\([^)]*\\))?\\s+)?mod\\s+(\\w+)\\s*;\")",
-        "OUT_OF_LINE = re.compile(r\"((?:#\\[[^\\]]*\\]\\s*)+)mod\\s+(\\w+)\\s*;\")",
+        "r\"((?:#\\[[^\\]]*\\]\\s*)*)(?:pub(?:\\([^)]*\\))?\\s+)?mod\\s+(?:r#)?(\\w+)\\s*([;{])\"",
+        "r\"((?:#\\[[^\\]]*\\]\\s*)*)(?:pub\\s+)?mod\\s+(?:r#)?(\\w+)\\s*([;{])\"",
         "a `#[cfg(test)] pub(crate) mod tests;` is a test module too, so its file is read for a spelling (SPEC-192 A13)",
         "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_a_module_file_beside_the_own_file_is_its_test_module"
-      ],
-      [
-        "S19241-A-DECLARATION-IN-A-STRING-DECLARES-NOTHING",
-        "scripts/tests/test_setting_shapes.py",
-        "for module in OUT_OF_LINE.finditer(skeleton):",
-        "for module in OUT_OF_LINE.finditer(bare):",
-        "a `#[cfg(test)] mod tests;` spelled inside a string is no declaration, so the file it names is not read as a test module (SPEC-192 A13)",
-        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_a_file_that_is_no_declared_test_module_is_not_read_as_one"
       ],
       [
         "S19245-A-TEST-MODULE-SPAN-COUNTS-NESTED-BRACES",
@@ -341,16 +333,16 @@
       [
         "S19246-A-TEST-MODULE-MAY-CARRY-OTHER-ATTRIBUTES",
         "scripts/tests/test_setting_shapes.py",
-        "r\"#\\[cfg\\(test\\)\\]\\s*(?:#\\[[^\\]]*\\]\\s*)*(?:pub(?:\\([^)]*\\))?\\s+)?mod\\s+\\w+\\s*\\{\"",
-        "r\"#\\[cfg\\(test\\)\\]\\s*(?:pub(?:\\([^)]*\\))?\\s+)?mod\\s+\\w+\\s*\\{\"",
+        "r\"((?:#\\[[^\\]]*\\]\\s*)*)(?:pub(?:\\([^)]*\\))?\\s+)?mod\\s+(?:r#)?(\\w+)\\s*([;{])\"",
+        "r\"((?:#\\[[^\\]]*\\]\\s*)?)(?:pub(?:\\([^)]*\\))?\\s+)?mod\\s+(?:r#)?(\\w+)\\s*([;{])\"",
         "a `#[cfg(test)]` followed by another attribute still opens the test module (SPEC-192 A12)",
         "test_setting_shapes.TheGuardReadsRustSource.test_a_shape_the_own_files_test_module_spells_is_pinned"
       ],
       [
         "S19247-A-TEST-MODULE-MAY-BE-PUB",
         "scripts/tests/test_setting_shapes.py",
-        "r\"#\\[cfg\\(test\\)\\]\\s*(?:#\\[[^\\]]*\\]\\s*)*(?:pub(?:\\([^)]*\\))?\\s+)?mod\\s+\\w+\\s*\\{\"",
-        "r\"#\\[cfg\\(test\\)\\]\\s*(?:#\\[[^\\]]*\\]\\s*)*mod\\s+\\w+\\s*\\{\"",
+        "r\"((?:#\\[[^\\]]*\\]\\s*)*)(?:pub(?:\\([^)]*\\))?\\s+)?mod\\s+(?:r#)?(\\w+)\\s*([;{])\"",
+        "r\"((?:#\\[[^\\]]*\\]\\s*)*)mod\\s+(?:r#)?(\\w+)\\s*([;{])\"",
         "a `#[cfg(test)] pub mod tests {` opens the test module too (SPEC-192 A12)",
         "test_setting_shapes.TheGuardReadsRustSource.test_a_shape_the_own_files_test_module_spells_is_pinned"
       ],
@@ -424,7 +416,7 @@
         "        if skeleton.count(\"{\", 0, module.start()) != skeleton.count(\"}\", 0, module.start()):\n            continue\n",
         "",
         "a `mod tests;` inside an inline module is not resolved beside the file, so a stale top-level file spelling the shape pins nothing (SPEC-192 R8)",
-        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_a_file_that_is_no_declared_test_module_is_not_read_as_one"
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
       ],
       [
         "S19257-A-PATH-WORD-ON-THE-DECLARATION-IS-NOT-READ",
@@ -473,6 +465,126 @@
         "(folder / name / \"mod.rs\",)",
         "`name.rs` is a file rustc could read for the module, so it is read (SPEC-192 R8)",
         "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_a_module_file_beside_the_own_file_is_its_test_module"
+      ],
+      [
+        "S19263-ALL-IS-FALSE-WHEN-ONE-ARGUMENT-IS-FALSE",
+        "scripts/tests/test_setting_shapes.py",
+        "\"all\": lambda values: False if False in values else None if None in values else True,",
+        "\"all\": lambda values: True if True in values else None if None in values else False,",
+        "`all` is false when one argument is false and unknown when one is unknown, so `#[cfg(any())]` beside `#[cfg(test)]` makes no test module (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19264-ANY-WITH-AN-UNKNOWN-ARGUMENT-IS-UNKNOWN",
+        "scripts/tests/test_setting_shapes.py",
+        "\"any\": lambda values: True if True in values else None if None in values else False,",
+        "\"any\": lambda values: True if True in values else False,",
+        "`any` with an unknown argument and no true one is unknown, so `#[cfg(any(test, x))]` may compile without `test` and is no test module (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19265-NOT-NEGATES-ITS-ARGUMENT",
+        "scripts/tests/test_setting_shapes.py",
+        "else not values[0],",
+        "else values[0],",
+        "`not` negates its argument, so `#[cfg(not(test))]` beside `#[cfg(test)]` makes no test module (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19266-A-TEST-MODULE-IS-REMOVED-WITHOUT-TEST",
+        "scripts/tests/test_setting_shapes.py",
+        "    return held == [True, False]\n",
+        "    return held[0] is True\n",
+        "a test module is one the attributes remove without `test`, so a module kept in every build is production code (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19267-AN-ATTRIBUTE-RUN-IS-READ-WHOLE",
+        "scripts/tests/test_setting_shapes.py",
+        "    if skeleton[: declaration.start()].rstrip(SPACE)[-1:] not in (\"\", \";\", \"}\"):\n        return None\n",
+        "",
+        "a declaration whose attribute run is not read from an item's end decides nothing, so an attribute the reader stopped short of cannot keep a removed module (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19268-THE-MODULES-INNER-ATTRIBUTES-DECIDE-TOO",
+        "scripts/tests/test_setting_shapes.py",
+        "    return ATTRIBUTE.findall(declaration.group(1)) + inner\n",
+        "    return ATTRIBUTE.findall(declaration.group(1))\n",
+        "the inner attributes that open a module's body or file are part of its run, so `#![cfg(any())]` makes no test module (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19269-A-PARTLY-READ-INNER-RUN-DECIDES-NOTHING",
+        "scripts/tests/test_setting_shapes.py",
+        "    if body[at:].lstrip(SPACE).startswith((\"#!\", \"]\")):\n        return None\n",
+        "",
+        "an inner attribute the reader cannot read whole leaves the run undecided, so the module is not read (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19270-A-KEY-VALUE-OPTION-IS-UNKNOWN",
+        "scripts/tests/test_setting_shapes.py",
+        "        return None, at + 2\n",
+        "        return False, at + 2\n",
+        "a key-value option such as `feature = \"slow\"` is unknown, so `#[cfg(any(test, feature = \"slow\"))]` makes no test module (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19271-AN-OPTION-OTHER-THAN-TEST-IS-UNKNOWN",
+        "scripts/tests/test_setting_shapes.py",
+        "    return (test if word == \"test\" else None), at + 1\n",
+        "    return (test if word == \"test\" else False), at + 1\n",
+        "an option other than `test` is unknown, so `#[cfg(any(test, x))]` makes no test module (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19272-A-CFG-ATTR-WHOSE-PREDICATE-FAILS-KEEPS-ITS-ITEM",
+        "scripts/tests/test_setting_shapes.py",
+        "    return KLEENE[\"any\"]([KLEENE[\"not\"]([value]), KLEENE[\"all\"](kept)])\n",
+        "    return KLEENE[\"all\"](kept)\n",
+        "a `cfg_attr` keeps its item when its predicate fails, so `#[cfg_attr(test, cfg(test))]` alone is kept without `test` and makes no test module (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19273-A-CFG-ATTR-CAN-REMOVE-ITS-ITEM",
+        "scripts/tests/test_setting_shapes.py",
+        "    if words[0] not in (\"cfg\", \"cfg_attr\"):\n",
+        "    if words[0] not in (\"cfg\",):\n",
+        "a `cfg_attr` that applies a `cfg` can remove its item, so `#[cfg_attr(test, cfg(x))]` beside `#[cfg(test)]` makes no test module (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19274-AN-INLINE-MODULE-INSIDE-ANOTHER-IS-NOT-READ",
+        "scripts/tests/test_setting_shapes.py",
+        "        if skeleton[: block.start()].count(\"{\") != skeleton[: block.start()].count(\"}\"):\n            continue\n",
+        "",
+        "an inline test module declared inside another module is not read, so a removed outer module cannot pin a shape (SPEC-192 R8, #433)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19275-AN-OUT-OF-LINE-DECLARATION-OPENS-NO-SPAN",
+        "scripts/tests/test_setting_shapes.py",
+        "        if block.group(3) != \"{\":\n            continue\n",
+        "",
+        "`mod tests;` opens no inline span, so the production lines after it are not read as test code (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19276-AN-INLINE-DECLARATION-READS-NO-FILE",
+        "scripts/tests/test_setting_shapes.py",
+        "        if module.group(3) != \";\":\n            continue\n",
+        "",
+        "`mod tests { ... }` reads no module file, so a stale `tests.rs` beside it pins nothing (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19277-A-RAW-MODULE-NAME-IS-READ",
+        "scripts/tests/test_setting_shapes.py",
+        "mod\\s+(?:r#)?(\\w+)\\s*([;{])",
+        "mod\\s+(\\w+)\\s*([;{])",
+        "`mod r#tests;` names the module `tests`, so its file is read as the test module (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
       ]
     ]
   }
