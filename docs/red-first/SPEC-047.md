@@ -49,6 +49,10 @@ A11: red at 831ff6e: assertion `left == right` failed: left: 501, right: 200
 A11: green at c27e169
 A12: not red: the studied window already read the configured offset, so the test passes at the code it was written against (c265d2d3); the plant that turns it red is P06 below
 A13: not red: the settle already leaves a reading whose stamp failed open and uncounted, so the test passes at the code it was written against (c265d2d3); the plants that turn it red are P10 and P11 below
+A14: not red: the settle and the tap already read the configured rule at every point, so the test passes at the code it was written against (09e1dfc2); the plants that turn it red are P22 to P27 below
+A15: not red: generation already dates its run and readings in the configured rule, so the test passes at the code it was written against (09e1dfc2); the plants that turn it red are P28 and P29 below
+A16: not red: the resolution already reads its pause window and dates its run in the configured rule, so the test passes at the code it was written against (09e1dfc2); the plants that turn it red are P30 to P33 below
+A17: not red: the export already writes every reading column from its own column, so the test passes at the code it was written against (09e1dfc2); the plants that turn it red are the 462 swap plants below
 ```
 
 ## Round 1 additions
@@ -101,3 +105,124 @@ green: the same test at the head with the plant reverted: test result: ok. 4 pas
 Two red-to-green test edits in `c27e169b` were not disclosed above: `Duration::from_hours(1)`
 replaces `Duration::from_secs(3_600)` in `readings_read_tap.rs`, and `.copied()` replaces `.cloned()`
 in `readings_settle.rs`. Both are form changes that clippy asked for; no assertion changed.
+
+## Round 2 additions
+
+The second verification round planted the default rule at the two points where the settle reads the
+window, and both survived: every settle fixture ran under the default rule. Its finding was a
+class, so the fix is a population and not two extra fixtures. Class 1: every point where the
+readings settle, the read tap, generation or the resolution derives a study day or reads a window
+takes the configured `StudyDayRule`. Class 2: every exported reading column holds, in every seeded
+row, a value distinct from every other column of its kind and from its own default.
+
+The A13 asserts of round 1 quoted at `readings_settle.rs:383` and `:388` above are historical: the
+settle test file gained the population test and its helpers, and those two asserts now sit at other
+lines. Their tests and messages are unchanged.
+
+Read points, derived by grep over `crates/coordination/src/readings` and `crates/readings/src`
+for `StudyDayRule|self\.rule|\.rule\b|study_day\(`, excluding docs: `settle.rs` (the day handed to
+the grant and the stamp, the count, the close), `read_tap.rs` (the tap's day), `generate.rs` (the
+run's and the reading's day), `resolve.rs` (the pause window and the run's day), `studied.rs` (the
+count and the close), `gates.rs` (the window's gate) and `day_set.rs` (the studied-before gate).
+Twelve sites read a rule. Each is planted with `StudyDayRule::default()` below, and each is red by
+assertion. The rules are generated as the product of eight offsets (minus 720, minus 300, minus 210,
+0, 330, 345, 540 and 840 minutes) and two rollover hours (0 and 4), sixteen in all, and each test
+prints `examined 16 configured rule(s)` and asserts the count. Every begins-instant is written from
+the definition of a study day, never derived from the code under test.
+
+Plants P28 to P31 were not red under the settle test alone, so generation and the resolution each
+gained a test on the same generated population (A15 and A16). Plant P24 and P25 keep the head's
+choice of day (the instant the pass runs at); they change only which rule reads it.
+
+```text
+P22 (the settle counts reviews in the default rule; A14)
+-studied_count(&window, self.rule,
++studied_count(&window, StudyDayRule::default(),
+red:   thread 'the_settle_and_the_tap_read_the_configured_study_day' panicked at crates/coordination/tests/readings_settle.rs:518:9:
+       assertion `left == right` failed: offset -720, hour 0: the last instant of d + 1 counts
+       test result: FAILED. 5 passed; 1 failed
+P23 (the settle retires a reading in the default rule; A14)
+-window.is_over(self.rule, now)
++window.is_over(StudyDayRule::default(), now)
+red:   thread 'the_settle_and_the_tap_read_the_configured_study_day' panicked at crates/coordination/tests/readings_settle.rs:531:9:
+       assertion `left == right` failed: offset -720, hour 0: open before the close
+       test result: FAILED. 5 passed; 1 failed
+P24 (the settle hands the grant and the stamp lookup the default rule's day; A14)
+-let today = self.rule.study_day(now);
++let today = StudyDayRule::default().study_day(now);
+red:   thread 'the_settle_and_the_tap_read_the_configured_study_day' panicked at crates/coordination/tests/readings_settle.rs:562:13:
+       assertion `left == right` failed: offset -720, hour 0, instant 1728100800000: the settle's XP is dated by the configured day
+       test result: FAILED. 5 passed; 1 failed
+P25 (the tap hands its grant the default rule's day; A14)
+-let today = self.rule.study_day(now);
++let today = StudyDayRule::default().study_day(now);
+red:   thread 'the_settle_and_the_tap_read_the_configured_study_day' panicked at crates/coordination/tests/readings_settle.rs:574:13:
+       assertion `left == right` failed: offset -720, hour 0, instant 1728100800000: the tap's XP is dated by the configured day
+       test result: FAILED. 5 passed; 1 failed
+P26 (the studied rule counts a review in the default rule; A14)
+-(0..=1).contains(&(rule.study_day(at)
++(0..=1).contains(&(StudyDayRule::default().study_day(at)
+red:   thread 'the_settle_and_the_tap_read_the_configured_study_day' panicked at crates/coordination/tests/readings_settle.rs:518:9:
+       assertion `left == right` failed: offset -720, hour 0: the last instant of d + 1 counts
+       test result: FAILED. 5 passed; 1 failed
+P27 (the studied rule closes a window in the default rule; A14)
+-rule.study_day(now).epoch_day() >= self
++StudyDayRule::default().study_day(now).epoch_day() >= self
+red:   thread 'the_settle_and_the_tap_read_the_configured_study_day' panicked at crates/coordination/tests/readings_settle.rs:531:9:
+       assertion `left == right` failed: offset -720, hour 0: open before the close
+       test result: FAILED. 5 passed; 1 failed
+P28 (generation reads the topic's days in the default rule; A15)
+-parts.rule.study_day(parts.clock.now())
++StudyDayRule::default().study_day(parts.clock.now())
+red:   thread 'the_generation_dates_its_run_and_readings_in_the_configured_study_day' panicked at crates/coordination/tests/readings_generate.rs:742:17:
+       assertion `left == right` failed: offset -720, hour 0, instant 1728100800000: the reading is dated by the configured day
+       test result: FAILED. 12 passed; 1 failed
+P29 (generation dates its run and readings in the default rule; A15)
+-let study_day = parts.rule.study_day(now);
++let study_day = StudyDayRule::default().study_day(now);
+red:   thread 'the_generation_dates_its_run_and_readings_in_the_configured_study_day' panicked at crates/coordination/tests/readings_generate.rs:754:17:
+       assertion `left == right` failed: offset -720, hour 0, instant 1728100800000: the absent-route run is dated by the configured day
+       test result: FAILED. 12 passed; 1 failed
+P30 (the resolution dates its run in the default rule; A16)
+-parts.rule.study_day(started_at)
++StudyDayRule::default().study_day(started_at)
+red:   thread 'the_resolution_reads_the_pause_window_and_the_day_in_the_configured_rule' panicked at crates/coordination/tests/readings_resolve.rs:325:17:
+       assertion `left == right` failed: offset 0, hour 0: the run is dated by the configured day
+       test result: FAILED. 4 passed; 1 failed
+P31 (the resolution reads its pause window with the default rule; A16)
+-rule: parts.rule,
++rule: StudyDayRule::default(),
+red:   thread 'the_resolution_reads_the_pause_window_and_the_day_in_the_configured_rule' panicked at crates/coordination/tests/readings_resolve.rs:320:17:
+       assertion `left == right` failed: offset -720, hour 0, review 1728043199999: the pause window is read in the configured rule
+       test result: FAILED. 4 passed; 1 failed
+P32 (the pause window gate reads a review in the default rule; A16)
+-window.contains(&rule.study_day(
++window.contains(&StudyDayRule::default().study_day(
+red:   thread 'the_resolution_reads_the_pause_window_and_the_day_in_the_configured_rule' panicked at crates/coordination/tests/readings_resolve.rs:320:17:
+       assertion `left == right` failed: offset -720, hour 0, review 1728043199999: the pause window is read in the configured rule
+       test result: FAILED. 4 passed; 1 failed
+P33 (the day set gates studied-before with the default rule; A16)
+-gates::studied_before(&data.reviews, inputs.today, inputs.rule)
++gates::studied_before(&data.reviews, inputs.today, StudyDayRule::default())
+red:   thread 'the_resolution_reads_the_pause_window_and_the_day_in_the_configured_rule' panicked at crates/coordination/tests/readings_resolve.rs:320:17:
+       assertion `left == right` failed: offset -720, hour 0, review 1728043199999: the pause window is read in the configured rule
+       test result: FAILED. 4 passed; 1 failed
+```
+
+The seeds gave `studied_count` the value `i % 5`, the same as `carried_nights` in every row and the
+column default in a fifth of them, so an export that wrote one from the other passed the probe. The
+readings seed now gives every column a value no same-kind column shares in that row and none of its
+column defaults, and the test asserts that as an invariant before it compares anything, over every
+seeded row and every same-kind pair (`examined 10752 same-kind column pair(s) of the readings
+seed`). The export names its columns in one block of 22, and a generated script planted every
+ordered pair of them (`"a": row.b` for each a and b): `swap plants: 462, red 462`, none surviving and
+none excluded by the compiler. Each is red at the symmetry assert, for instance the pair below:
+
+```text
+P34 (the export writes created_at from studied_at; A17)
+-                                "created_at": row.created_at,
++                                "created_at": row.studied_at,
+red:   thread 'the_exported_tables_equal_the_erased_tables_over_every_port' panicked at crates/coordination/tests/data_rights_symmetry.rs:416:5:
+       assertion `left == right` failed: the export carries whole exactly the tables the erase clears or resets
+       test result: FAILED. 3 passed; 1 failed
+```

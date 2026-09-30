@@ -77,6 +77,10 @@ R9. The reading view the API serves carries its `covered` and `studied` counts a
 | A11 | the read route answers only the owner, and a stranger gets no state change | `the_read_route_answers_only_the_owner` |
 | A12 | the window is read in the configured offset and rollover hour: with the rollover at UTC+9, the last instant of study day d + 1 counts and the instant the next study day begins does not, and the window is over exactly then | `the_window_follows_the_configured_offset` |
 | A13 | a reading whose stamp of the Studied line failed is not counted studied and its verdict stays open with no studied instant; the next pass stamps it, counts it once and grants nothing again | `a_failed_stamp_leaves_the_reading_open_for_the_next_pass` |
+| A14 | the settle and the tap read the window and the study day in the configured rule: over sixteen rules generated as the product of eight offsets (west of, at, on the half hour east of and east of UTC) and two rollover hours, a reading whose cards were reviewed at the last instant of study day d + 1 is counted studied, the same reviews at the instant d + 2 begins are not, the reading stays open until that instant and retires at it, and the day handed to the XP grant, to the stamp's note lookup and to the tap's grant is the configured study day (examined count reported) | `the_settle_and_the_tap_read_the_configured_study_day` |
+| A15 | generation dates its run and its readings in the configured study day, and reads the topic's days in it, over the same sixteen generated rules (examined count reported) | `the_generation_dates_its_run_and_readings_in_the_configured_study_day` |
+| A16 | the resolution reads its pause window and dates its run in the configured study day: a review at the start of study day d is resolved and one instant before it pauses, over the same sixteen rules (examined count reported) | `the_resolution_reads_the_pause_window_and_the_day_in_the_configured_rule` |
+| A17 | every exported reading column holds, in every seeded row, a value distinct from every other column of its kind and from its own column default, so an export that writes one column from another is refused; the count of column pairs examined is reported | `the_exported_tables_equal_the_erased_tables_over_every_port` |
 
 ```acceptance
 A1: cargo test -p deck-streak-coordination --test readings_read_tap -- --exact a_second_read_tap_changes_nothing
@@ -92,6 +96,10 @@ A10: cargo test -p deck-streak-coordination --test readings_census -- --exact th
 A11: cargo test -p deck-streak-api --test readings_read -- --exact the_read_route_answers_only_the_owner
 A12: cargo test -p deck-streak-readings --test studied -- --exact the_window_follows_the_configured_offset
 A13: cargo test -p deck-streak-coordination --test readings_settle -- --exact a_failed_stamp_leaves_the_reading_open_for_the_next_pass
+A14: cargo test -p deck-streak-coordination --test readings_settle -- --exact the_settle_and_the_tap_read_the_configured_study_day
+A15: cargo test -p deck-streak-coordination --test readings_generate -- --exact the_generation_dates_its_run_and_readings_in_the_configured_study_day
+A16: cargo test -p deck-streak-coordination --test readings_resolve -- --exact the_resolution_reads_the_pause_window_and_the_day_in_the_configured_rule
+A17: cargo test -p deck-streak-coordination --test data_rights_symmetry -- --exact the_exported_tables_equal_the_erased_tables_over_every_port
 ```
 
 ## 4. File manifest
