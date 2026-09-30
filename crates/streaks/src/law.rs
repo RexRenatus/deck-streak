@@ -18,19 +18,19 @@ pub fn bridged_streak(
     let Some(oldest) = days.iter().next().copied() else {
         return 0;
     };
-    let mut cursor = today.epoch_day();
-    if !days.contains(&today) {
-        cursor -= 1;
-    }
+    let newest = if days.contains(&today) {
+        today.epoch_day()
+    } else {
+        today.epoch_day() - 1
+    };
     let mut run: u32 = 0;
-    while cursor >= oldest.epoch_day() {
+    for cursor in (oldest.epoch_day()..=newest).rev() {
         let day = StudyDay::from_epoch_day(cursor);
         if days.contains(&day) {
             run = run.saturating_add(1);
         } else if !skips.contains(&day) {
             break;
         }
-        cursor -= 1;
     }
     run
 }

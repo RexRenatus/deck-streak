@@ -28,12 +28,10 @@ pub fn fold(study_days: &BTreeSet<StudyDay>, today: StudyDay) -> Vec<(StudyDay, 
     };
     let mut out = Vec::new();
     let mut value = 0.0_f64;
-    let mut number = first.epoch_day();
-    while number <= today.epoch_day() {
+    for number in first.epoch_day()..=today.epoch_day() {
         let day = StudyDay::from_epoch_day(number);
         value = advance(value, study_days.contains(&day));
         out.push((day, value));
-        number += 1;
     }
     out
 }

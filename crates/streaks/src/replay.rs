@@ -26,8 +26,7 @@ pub fn language(
     let Some(first) = days.iter().next().copied() else {
         return (prev, events);
     };
-    let mut number = first.epoch_day();
-    while number <= through.epoch_day() {
+    for number in first.epoch_day()..=through.epoch_day() {
         let day = StudyDay::from_epoch_day(number);
         let transition = if days.contains(&day) {
             let observed = if prev.last_study_day.is_none() {
@@ -43,7 +42,6 @@ pub fn language(
             events = freeze_events_for(&prev, &transition, day);
         }
         prev = transition.state;
-        number += 1;
     }
     (prev, events)
 }
@@ -58,8 +56,7 @@ pub fn law(
     let mut best: u32 = 0;
     if let Some(first) = days.iter().next().copied() {
         let mut run: u32 = 0;
-        let mut number = first.epoch_day();
-        while number < through.epoch_day() {
+        for number in first.epoch_day()..through.epoch_day() {
             let day = StudyDay::from_epoch_day(number);
             if days.contains(&day) {
                 run = run.saturating_add(1);
@@ -67,7 +64,6 @@ pub fn law(
             } else if !skips.contains(&day) {
                 run = 0;
             }
-            number += 1;
         }
     }
     let seed = StreakState {

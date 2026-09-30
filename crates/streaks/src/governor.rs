@@ -109,10 +109,12 @@ pub fn silence_walk(
     let mut silent: u32 = 0;
     let mut first_silent = today;
     let mut number = today.epoch_day();
-    while !study_days.contains(&StudyDay::from_epoch_day(number))
-        && today.epoch_day() - number <= SILENCE_WALK_CAP_DAYS
-    {
+    // A bounded walk: the cap's days and one more, so no arithmetic on the counter can spin it.
+    for _ in 0..=SILENCE_WALK_CAP_DAYS {
         let day = StudyDay::from_epoch_day(number);
+        if study_days.contains(&day) {
+            break;
+        }
         if !skip_days.contains(&day) {
             silent = silent.saturating_add(1);
             first_silent = day;
