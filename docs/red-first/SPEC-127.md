@@ -297,8 +297,8 @@ write left behind.
 
 ```red-first
 A41: red at f215692640dff9724fe78883e722bbd91499e117: AssertionError: 0 != 1 : install / host/usr/local/lib/deck-streak/releases / absent
-A41: green at 6109795b0e719607527adc0b271c87e087fd753d
+A41: green at 09a79d98fbd66bdde8b5890543c1da99eda8b0db
 ```
 
-The fix (6109795b0e719607527adc0b271c87e087fd753d) changes `deploy.sh`, the rows S12753 to S12771, the
+The fix (09a79d98fbd66bdde8b5890543c1da99eda8b0db, after 6109795b0e719607527adc0b271c87e087fd753d kept an older row red) changes `deploy.sh`, the rows S12753 to S12771, the
 SPEC and the ADR; it edits no test file.
