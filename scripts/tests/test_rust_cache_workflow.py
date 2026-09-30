@@ -10,7 +10,9 @@ quoted in the pull request.
 """
 
 import re
+import tempfile
 import unittest
+from pathlib import Path
 
 from _support import examined
 from test_ci_workflows import (
@@ -21,6 +23,7 @@ from test_ci_workflows import (
     lines_of,
     paths,
     read_workflow,
+    workflow_files,
 )
 
 CACHE_WORKFLOW = "rust-cache.yml"
@@ -74,6 +77,19 @@ def cron_minutes(name):
     """The minute field of each cron a workflow schedules, or [] for a workflow with none."""
     on = load(name).get("on") or {}
     return [str(item["cron"]).split()[0] for item in (on.get("schedule") or [])]
+
+
+def other_cron_minutes(directory):
+    """(workflow name, minute) for each cron minute a workflow of the directory schedules, the
+    cache workflow itself left out."""
+    found = []
+    for path in workflow_files(directory):
+        if path.name != CACHE_WORKFLOW:
+            on = read_workflow(path.read_text(encoding="utf-8")).get("on") or {}
+            found += [
+                (path.name, str(item["cron"]).split()[0]) for item in on.get("schedule") or []
+            ]
+    return found
 
 
 SCHEDULED_SAVE = """\
@@ -249,13 +265,15 @@ class TheRustCacheWorkflow(unittest.TestCase):
     def test_its_cron_minute_collides_with_no_other_workflows(self):
         mine = cron_minutes(CACHE_WORKFLOW)
         self.assertEqual(len(mine), 1)
-        others = []
-        for path in examined("workflow files", sorted(WORKFLOWS.glob("*.yml"))):
-            if path.name != CACHE_WORKFLOW:
-                others += [(path.name, minute) for minute in cron_minutes(path.name)]
-        examined("other workflows' cron minutes", others)
+        others = examined("other workflows' cron minutes", other_cron_minutes(WORKFLOWS))
         for name, minute in others:
             self.assertNotEqual(mine[0], minute, f"{name} schedules minute {minute} too")
+
+    def test_the_cron_scan_reads_a_workflow_saved_with_the_yaml_suffix(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            (Path(scratch) / "planted.yaml").write_text(SCHEDULED_SAVE, encoding="utf-8")
+            others = other_cron_minutes(Path(scratch))
+        self.assertEqual(others, [("planted.yaml", "43")])
 
     def test_it_reads_only_and_queues_instead_of_cancelling(self):
         workflow = load(CACHE_WORKFLOW)
