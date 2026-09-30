@@ -32,7 +32,7 @@ use deck_streak_coordination::readings::generate::{
     StudyDayResolver, VaultWriteFailed, generate_readings,
 };
 use deck_streak_coordination::readings::resolve::{ResolveError, Resolved};
-use deck_streak_kernel::{Db, ManualClock, StudyDay, StudyDayRule, UtcMillis};
+use deck_streak_kernel::{Db, Hour, ManualClock, StudyDay, StudyDayRule, UtcMillis, UtcOffset};
 use deck_streak_readings::attempts::AttemptOutcome;
 use deck_streak_readings::day_set::{ActiveTopic, StudyDayResolution, TopicEnd, TopicResolution};
 use deck_streak_readings::seed::SeedNote;
@@ -364,6 +364,14 @@ impl Rig {
         &self,
         route: AiRoute,
     ) -> deck_streak_coordination::readings::generate::Generated {
+        self.generate_under(route, StudyDayRule::default()).await
+    }
+
+    async fn generate_under(
+        &self,
+        route: AiRoute,
+        rule: StudyDayRule,
+    ) -> deck_streak_coordination::readings::generate::Generated {
         let parts = GenerateParts {
             route,
             roster: &self.roster,
@@ -374,7 +382,7 @@ impl Rig {
             vault: &self.vault,
             store: self.store.clone(),
             clock: Arc::new(ManualClock::new(UtcMillis::from_epoch_millis(START))),
-            rule: StudyDayRule::default(),
+            rule,
             taxonomy: Some(self.taxonomy.clone()),
             prompt: PromptTexts {
                 rules: &self.texts[0],
@@ -685,6 +693,38 @@ async fn an_absent_route_ends_every_topic_ai_route_absent_with_no_attempt() {
         runs.last().expect("a run").1.outcome,
         RunOutcome::AiRouteAbsent
     );
+}
+
+#[tokio::test]
+async fn an_absent_route_ends_every_topic_on_the_configured_study_day() {
+    let rig = Rig::new(one_topic(), good()).await;
+    let at = UtcMillis::from_epoch_millis(START);
+    let rule = StudyDayRule::new(Hour::new(6).expect("an hour"), UtcOffset::UTC);
+    let configured = rule.study_day(at);
+    let other = StudyDayRule::default().study_day(at);
+    assert_ne!(
+        configured, other,
+        "the configured rule moves the day at START"
+    );
+    let generated = rig.generate_under(AiRoute::Absent, rule).await;
+    let days = rig.store.topic_days(configured).await.expect("topic days");
+    for (topic, _) in &generated.topics {
+        let day = days
+            .iter()
+            .find(|stored| stored.day.topic == *topic)
+            .unwrap_or_else(|| panic!("{} did not end the configured study day", topic.as_str()));
+        assert_eq!(day.day.state, TopicState::AiRouteAbsent);
+    }
+    assert_eq!(days.len(), generated.topics.len());
+    assert!(
+        rig.store
+            .topic_days(other)
+            .await
+            .expect("topic days")
+            .is_empty()
+    );
+    let runs = rig.store.runs().await.expect("runs");
+    assert_eq!(runs.last().expect("a run").1.study_day, configured);
 }
 
 #[tokio::test]
