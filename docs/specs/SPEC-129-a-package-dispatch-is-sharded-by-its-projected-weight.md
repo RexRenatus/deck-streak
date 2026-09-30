@@ -291,6 +291,42 @@ and the next are this PR's own text, and round 8 rewrites their earlier rounds' 
   `set -H`, `set -o keyword`, `set -o posix`, `set -o histexpand`, `shopt`, `enable` and `alias`,
   alone and after `builtin` or `command`), a continued line in an expanded here-document, and an
   expression whose value the workflow does not state are each refused for that (#395, #447).
+- **The memory scope's wrapper (round 8, after the merge of `dev`).** `dev` runs each `cargo
+  mutants` that runs tests in `ci.yml` and `mutation-weekly.yml` as `python3 scripts/memory_scope.py
+  --report <dir> -- cargo mutants ...` (SPEC-196). The wrapper's parser declares one option that
+  takes a value, `--report`. The wrapper takes one leading `--` off the words after its options and
+  runs the rest in a subprocess, without a shell, each word unchanged. So a command whose program
+  word is the literal `python3`, whose next word is the literal `scripts/memory_scope.py`, and whose
+  next words are only options that the wrapper's parser declares (read from the parser, not from a
+  list), each with one value as its next word or after `=`, then a literal `--` and at least one
+  word, is read as the command that begins after that `--`, with its first word as the program;
+  every rule above applies to that command, and a wrapper inside a wrapper is read the same way. A
+  value is read only where bash hands it on as exactly one word: a literal word, or double quotes
+  around literal text and named expansions (`"$out"`, `"${out}/x"`). Every other spelling is not the
+  form, so a `cargo mutants` in it is refused as before: the value unquoted or from `"$@"`, no `--`
+  or one that bash computes, a computed option or path, another path or program (`./scripts/...`, an
+  absolute path, `python`, `python3.12`, `env python3`, `python3 -u`), an undeclared, abbreviated or
+  help option, and a declared option after the `--`. A text given to `python3` or `python` is read
+  as a text handed on when an argument of that command names `memory_scope` or is computed; a text
+  given to any other `python3` or `python` command is still not read. The guard reads the wrapper as
+  the file the tree holds: a step that rewrites `scripts/memory_scope.py`, or that runs the command
+  from a directory holding another copy of it, is left out, as a script file that a step runs is
+  (R2, #465). One test runs the wrapper with its scope's seams planted and a spy as its command,
+  over 374 argvs (the declared option in both spellings and twice, with dash-led values, before
+  commands of dash-led words, `--` again, empty words, blanks, a newline and non-ASCII), and asserts
+  that the spy receives exactly the words after the `--`, or that a dash-led value ends at the
+  parser's usage error and nothing runs; a wrapper planted to drop the last word, to drop
+  `--timeout`, or to add `--in-place` turns it red. One test generates 1160 members (29 spellings of
+  the wrapper, around 10 commands, in 4 contexts), has bash run each with the real wrapper and a
+  stub cargo, and asserts that each member that bash runs without the bounds is found or refused;
+  another asserts that each of the 8 spellings it reads through, around a bounded command, is found
+  bounded. On the real tree the guard finds 3 commands in `ci.yml` and 6 in `mutation-weekly.yml`,
+  the wrapped ones read through the wrapper, and refuses none. `scripts/tests/test_memory_scope.py`
+  pins the weekly sweep's test run and its size listing in each literal branch, and makes every
+  assertion it made before. The rows S12904 to S12906 of this SPEC's band and SPEC-196's S19616 name
+  the branch with a package, since their anchors occur once per branch; S12907 to S12910 are their
+  twins in the branch with no package, and S12911 and S12912 hold the guard's wrapper arms (#395,
+  #447).
 - **Out of scope, named.** The guard reads the workflow files in `.github/workflows`, so it does not
   read a script file that a step runs, a composite action, a cargo alias, an `env:` value (a step's,
   a job's or the workflow's), or a file that bash or the runner reads at start (`BASH_ENV`,
@@ -319,6 +355,7 @@ and the next are this PR's own text, and round 8 rewrites their earlier rounds' 
 | A11 | the reading is declared: a bounded command after each word after which bash runs the next word as the program is found, bounded, as bash runs it; and a change to how bash reads what follows, a continued line in an expanded here-document, and an expression the workflow does not state are refused for that | `test_dispatch_shards.py` `EveryMutationCommandKeepsTheGatesBounds` |
 | A12 | a computed word before the bounds that bash could expand to exactly `--` is refused: every generated member that loses the bounds is refused, and the refusals equal the rule | `test_dispatch_shards.py` `AComputedWordBeforeTheBoundsIsRefused` |
 | A13 | the weekly sweep's two package-bearing commands, in literal words, hand cargo the words the head's spelling did, and the guard finds all 6 commands of `mutation-weekly.yml` bounded and refuses none | `test_dispatch_shards.py` `TheWeeklySweepNamesItsPackageInLiteralWords` |
+| A14 | the memory scope's wrapper runs exactly the words after its `--`, and a wrapper that drops or adds a word turns the pin red; the guard reads the wrapper's declared form through to the command after its `--`, so it finds or refuses each generated wrapper member that bash runs without the bounds, finds each spelling it reads through around a bounded command bounded, and finds the real tree's wrapped commands bounded and refuses none | `test_dispatch_shards.py` `TheMemoryScopeRunsTheWordsAfterItsSeparator` |
 
 ```acceptance
 A7: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_a_command_spelled_with_a_toolchain_is_found
@@ -338,4 +375,9 @@ A12: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k
 A13: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_the_rewrite_hands_cargo_exactly_the_words_the_head_did
 A13: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_a_dash_led_value_selects_nothing_in_the_step_after_the_listing
 A13: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_the_rewritten_blocks_are_the_only_package_words_in_the_two_cargo_commands
+A14: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_the_wrapper_runs_exactly_the_words_after_its_separator
+A14: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_a_wrapper_that_drops_or_adds_a_word_goes_red
+A14: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_every_wrapped_command_bash_runs_without_the_bounds_is_found_or_refused
+A14: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_the_declared_form_around_a_bounded_command_is_found_bounded
+A14: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_the_real_tree_commands_are_found_bounded_and_not_refused
 ```

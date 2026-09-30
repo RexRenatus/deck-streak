@@ -11,3 +11,7 @@
   `--` (a word with an unquoted expansion, or an expansion and no literal besides `-`), and the
   weekly mutation sweep names its package in literal words, pinned by a test to select what it
   did before (#395, #447).
+- The same guard reads the memory scope's wrapper (`python3 scripts/memory_scope.py --report <dir>
+  -- ...`) through to the command after its `--`, a test pins that the wrapper runs exactly those
+  words, and the weekly sweep's mutation rows name each literal branch, so the census holds again
+  (#395, #447).

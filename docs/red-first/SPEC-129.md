@@ -193,3 +193,24 @@ A12: green at 154d51e8
 A12 replay: red at 903b9cd2: FAILED (failures=3), AssertionError: Lists differ: [False, False, False] != [True, True, True]
 A12 replay: green at 154d51e8: Ran 29 tests, OK, examined 980 R5 members, examined 20 R5 members bash runs without the bounds, examined 3 named R5 members, examined 6 weekly commands, examined 9 real-tree commands, examined 6485 grammar members, examined 4291 class members, examined 6 mutation-weekly.yml commands, examined 3 ci.yml commands
 ```
+
+## Addendum, 2026-09-30 (issues #395 and #447, round 8, after the merge of `dev`): the memory scope's wrapper
+
+The lines above stand. A14 is new. `dev` runs each `cargo mutants` that runs tests inside the memory
+scope's wrapper, which the guard refused as another program's command, so the merge at 04fb802e
+left the two real-tree tests red. Commit 387dee53 pins `test_memory_scope.py`'s weekly commands in
+their literal branches. Commit 644aabcf adds the wrapper tests, and plants the wrapper where the pin
+test's bash runs the weekly block; at the guard of 04fb802e the two new class tests fail by
+assertion, beside the two real-tree tests. Commit 0f8eacad changes only the guard and the mutation
+rows. The whole test file at 644aabcf fails only those four tests. The green line is the whole module
+at 0f8eacad.
+
+```red-first
+A14: red at 644aabcf: AssertionError: Lists differ: [('exact', 'shell text', '@', "python3 scr[69 chars]\n")] != [] : 108 of 616 members that lose the bounds pass
+A14: green at 0f8eacad
+```
+
+```text
+A14 replay: red at 644aabcf: FAILED (failures=4), AssertionError: Lists differ: [(('exact', 'bounded', '@'), ['refused: `c[56 chars]s'])] != [] : 32 of 32 members
+A14 replay: green at 0f8eacad: Ran 33 tests, OK, examined 1 options the wrapper declares, examined 374 wrapper argvs, examined 3 wrapper plants, examined 1160 wrapper-axis members, examined 616 wrapper-axis members bash runs without the bounds, examined 32 declared-form members, examined 6 weekly commands, examined 9 real-tree commands
+```
