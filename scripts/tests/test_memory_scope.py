@@ -165,6 +165,133 @@ class Plant:
         return self.sudo_log.read_text("utf-8").splitlines() if self.sudo_log.exists() else []
 
 
+KEYS = ("oom", "oom_kill", "max")
+AFTER = {"low": 0, "high": 0, "max": 3, "oom": 1, "oom_kill": 1, "oom_group_kill": 0}
+BEFORE = dict.fromkeys(AFTER, 0)
+EVENTS_NOT_WHOLE_AFTER = "memory.events is not whole after the command"
+PEAK_REASON = "memory.peak holds no count after the command"
+REASONS_AFTER = {
+    "bad": EVENTS_NOT_WHOLE_AFTER,
+    "empty": "memory.events holds no oom count after the command",
+    "no oom": "memory.events holds no oom count after the command",
+    "no oom_kill": "memory.events holds no oom_kill count after the command",
+    "no max": "memory.events holds no max count after the command",
+}
+REASONS_BEFORE = {
+    "bad": "memory.events is not whole",
+    "empty": "memory.events holds no oom count",
+    "no oom": "memory.events holds no oom count",
+    "no oom_kill": "memory.events holds no oom_kill count",
+}
+UNREADABLE_BEFORE = {
+    "memory.max": "memory.max is not what the scope was asked for",
+    "memory.swap.max": "memory.swap.max is not what the scope was asked for",
+    "memory.oom.group": "memory.oom.group is not what the scope was asked for",
+    "meminfo": None,
+}
+
+
+def event_bytes(counts, replace=None, drop=None):
+    """memory.events as the kernel writes it for `counts`, one line replaced or one left out."""
+    replace = replace or {}
+    return b"".join(
+        replace.get(name, f"{name} {value}\n".encode())
+        for name, value in counts.items()
+        if name != drop
+    )
+
+
+# The shapes one key's line can take (the verifier's generated axes for SPEC-196 R13): whole, and
+# duplicated with the same value, duplicated 1 then 0, duplicated 0 then 1, a non-ASCII digit
+# twice over, and a line holding a byte that is not UTF-8.
+SHAPES = {
+    "whole": lambda k, v: f"{k} {v}\n".encode(),
+    "duplicated, same value": lambda k, v: f"{k} {v}\n{k} {v}\n".encode(),
+    "duplicated, 1 then 0": lambda k, v: f"{k} 1\n{k} 0\n".encode(),
+    "duplicated, 0 then 1": lambda k, v: f"{k} 0\n{k} 1\n".encode(),
+    "superscript two": lambda k, v: f"{k} ²\n".encode(),
+    "Arabic-Indic one": lambda k, v: f"{k} ١\n".encode(),
+    "a byte that is not UTF-8": lambda k, v: f"{k} {v}\n".encode() + b"\xff\n",
+}
+EVENT_STATES = {
+    f"{key}: {label}": (
+        "whole" if label == "whole" else "bad",
+        lambda counts, key=key, shape=shape: event_bytes(counts, {key: shape(key, counts[key])}),
+    )
+    for key in KEYS
+    for label, shape in SHAPES.items()
+}
+EVENT_STATES.update(
+    {
+        "absent": ("bad", lambda counts: None),
+        "unreadable": ("bad", lambda counts: DIRECTORY),
+        "garbage": ("bad", lambda counts: b"no counts here\n"),
+        "empty": ("empty", lambda counts: b""),
+        "no oom": ("no oom", lambda counts: event_bytes(counts, drop="oom")),
+        "no oom_kill": ("no oom_kill", lambda counts: event_bytes(counts, drop="oom_kill")),
+        "no max": ("no max", lambda counts: event_bytes(counts, drop="max")),
+        "trailing blanks": (
+            "bad",
+            lambda counts: event_bytes(counts, {"oom": f"oom {counts['oom']} \n".encode()}),
+        ),
+        "CRLF": ("bad", lambda counts: event_bytes(counts).replace(b"\n", b"\r\n")),
+        "not a number": (
+            "bad",
+            lambda counts: event_bytes(counts, {"oom_kill": b"oom_kill many\n"}),
+        ),
+        "negative": ("bad", lambda counts: event_bytes(counts, {"oom": b"oom -1\n"})),
+        "twenty-one digits": (
+            "bad",
+            lambda counts: event_bytes(counts, {"oom": b"oom %d\n" % 10**20}),
+        ),
+        "low duplicated": ("bad", lambda counts: event_bytes(counts) + b"low 0\n"),
+    }
+)
+AFTER_EVENTS = EVENT_STATES
+# A `no max` file is whole enough before the command, which reads only oom and oom_kill.
+BEFORE_EVENTS = {k: v for k, v in EVENT_STATES.items() if v[0] != "no max"}
+AFTER_PEAKS = {
+    "whole": (True, lambda cap: b"%d\n" % (cap // 2)),
+    "whole, no final newline": (True, lambda cap: b"%d" % (cap // 2)),
+    "superscript two": (False, lambda cap: "²\n".encode()),
+    "Arabic-Indic one": (False, lambda cap: "١\n".encode()),
+    "not UTF-8": (False, lambda cap: b"4096\xff\n"),
+    "absent": (False, lambda cap: None),
+    "unreadable": (False, lambda cap: DIRECTORY),
+    "garbage": (False, lambda cap: b"lots\n"),
+    "empty": (False, lambda cap: b""),
+    "negative": (False, lambda cap: b"-5\n"),
+    "plus sign": (False, lambda cap: b"+5\n"),
+    "trailing blank": (False, lambda cap: b"4096 \n"),
+    "CRLF": (False, lambda cap: b"4096\r\n"),
+    "two lines": (False, lambda cap: b"4096\n4096\n"),
+    "leading blank": (False, lambda cap: b" 4096\n"),
+}
+
+
+def place(target, data):
+    """Replace `target` with bytes, a directory (DIRECTORY) or nothing (None)."""
+    target.unlink()
+    if data is DIRECTORY:
+        target.mkdir()
+    elif data is not None:
+        target.write_bytes(data)
+
+
+def rewriting(plant, files):
+    """A command that replaces the named control-group files (bytes, DIRECTORY or None) and exits 3."""
+    steps = ["import os"]
+    for name, data in files.items():
+        target = str(plant.group / name)
+        steps.append(f"os.unlink({target!r})")
+        if data is DIRECTORY:
+            steps.append(f"os.mkdir({target!r})")
+        elif data is not None:
+            steps.append(f"open({target!r}, 'wb').write({data!r})")
+    steps.append("raise SystemExit(3)")
+    return [sys.executable, "-c", "\n".join(steps)]
+
+
 class ScriptCase(unittest.TestCase):
     def setUp(self):
         self._tmp = tempfile.TemporaryDirectory()
@@ -385,6 +512,113 @@ class TheScope(ScriptCase):
                     else:
                         self.assertTrue(record["reason"], record)
                         self.assertIn("NOT IN FORCE", out)
+
+    def test_the_counts_read_after_the_command_are_whole_or_the_record_is_not_in_force(self):
+        members = [(e, p) for e in AFTER_EVENTS for p in AFTER_PEAKS]
+        self.assertEqual(len(members), len(AFTER_EVENTS) * len(AFTER_PEAKS))
+        self.assertEqual(len(members), 34 * 15)
+        examined("counts read after the command, whole or not", members)
+        for event_label, peak_label in members:
+            with self.subTest(events=event_label, peak=peak_label):
+                with tempfile.TemporaryDirectory() as directory:
+                    plant = Plant(directory).build()
+                    kind, events_of = AFTER_EVENTS[event_label]
+                    whole_peak, peak_of = AFTER_PEAKS[peak_label]
+                    files = {"memory.events": events_of(AFTER), "memory.peak": peak_of(plant.cap)}
+                    code, out, record = self.run_or_fail(plant, rewriting(plant, files))
+                    self.assertEqual(code, 3, out)
+                    if kind == "whole" and whole_peak:
+                        wanted = {
+                            "in_force": True, "state": "done", "reason": None, "oom": 1,
+                            "oom_kill": 1, "max": 3, "peak_percent": 50,
+                        }  # fmt: skip
+                        line = (
+                            "memory-scope: peak 50% of the cap; "
+                            "the kernel stopped 1 process(es) at the cap"
+                        )
+                    else:
+                        reason = PEAK_REASON if kind == "whole" else REASONS_AFTER[kind]
+                        wanted = {
+                            "in_force": False, "state": "done", "reason": reason, "oom": 0,
+                            "oom_kill": 0, "max": 0, "peak_percent": 0,
+                        }  # fmt: skip
+                        line = f"memory-scope: NOT IN FORCE after the command: {reason}"
+                    self.assertEqual(record, wanted, out)
+                    self.assertIn(line, out.splitlines())
+
+    def test_the_counts_read_before_the_command_are_whole_or_nothing_runs(self):
+        members = [(label, kind, events_of) for label, (kind, events_of) in BEFORE_EVENTS.items()]
+        members += [(label, "file", None) for label in UNREADABLE_BEFORE]
+        examined("control-group files read before the command", members)
+        self.assertEqual(len(members), 33 + 4)
+        for label, kind, events_of in members:
+            with self.subTest(read=label):
+                with tempfile.TemporaryDirectory() as directory:
+                    plant = Plant(directory).build()
+                    reason = UNREADABLE_BEFORE.get(label)
+                    if events_of is not None:
+                        reason = REASONS_BEFORE.get(kind)
+                        place(plant.group / "memory.events", events_of(BEFORE))
+                    elif label == "meminfo":
+                        plant.meminfo.write_bytes(b"MemTotal: \xff kB\n")
+                    else:
+                        (plant.group / label).write_bytes(b"\xff\n")
+                    code, out, record = self.run_or_fail(plant, None)
+                    if kind == "whole":
+                        wanted = {
+                            "in_force": True, "state": "done", "reason": None, "oom": 0,
+                            "oom_kill": 0, "max": 0, "peak_percent": 0,
+                        }  # fmt: skip
+                        self.assertEqual((code, record), (0, wanted), out)
+                        self.assertEqual(plant.marker.read_text("utf-8"), "ran")
+                        continue
+                    self.assertEqual(code, 78, out)
+                    self.assertFalse(plant.marker.exists(), "the command ran under a bad read")
+                    if label == "meminfo":
+                        head = "no cap can be measured: MemTotal is unreadable ("
+                        self.assertTrue(str(record["reason"]).startswith(head), record)
+                        reason = record["reason"]
+                    wanted = {
+                        "in_force": False, "state": "done", "reason": reason, "oom": 0,
+                        "oom_kill": 0, "max": 0, "peak_percent": 0,
+                    }  # fmt: skip
+                    self.assertEqual(record, wanted, out)
+                    self.assertIn(f"memory-scope: REFUSED: {reason}", out.splitlines())
+
+    def test_a_counter_is_at_most_twenty_ascii_digits(self):
+        top = 2**64 - 1
+        members = [
+            ("twenty digits in memory.events", {"oom": b"oom %d\n" % top}, b"4096\n"),
+            ("twenty digits in memory.peak", {}, b"%d\n" % top),
+            ("twenty-one digits in memory.peak", {}, b"%d\n" % 10**20),
+        ]
+        examined("counters at the width of a kernel counter", members)
+        for label, replace, peak in members:
+            with self.subTest(counter=label):
+                with tempfile.TemporaryDirectory() as directory:
+                    plant = Plant(directory).build()
+                    files = {"memory.events": event_bytes(AFTER, replace), "memory.peak": peak}
+                    code, out, record = self.run_or_fail(plant, rewriting(plant, files))
+                    self.assertEqual(code, 3, out)
+                    if label == "twenty-one digits in memory.peak":
+                        wanted = {
+                            "in_force": False, "state": "done", "reason": PEAK_REASON, "oom": 0,
+                            "oom_kill": 0, "max": 0, "peak_percent": 0,
+                        }  # fmt: skip
+                    else:
+                        wanted = {
+                            "in_force": True, "state": "done", "reason": None,
+                            "oom": top if replace else 1, "oom_kill": 1, "max": 3,
+                            "peak_percent": (4096 if replace else top) * 100 // plant.cap,
+                        }  # fmt: skip
+                    self.assertEqual(record, wanted, out)
+
+    def run_or_fail(self, plant, command):
+        """`plant.go`, with a crash of the script reported as a failed assertion."""
+        try:
+            return plant.go(self.module, command)
+        except Exception as error:  # noqa: BLE001
+            self.fail(f"the script crashed: {type(error).__name__}: {error}")
 
 
 def workflow_commands():
