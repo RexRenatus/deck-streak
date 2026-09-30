@@ -62,7 +62,7 @@ prefix consumes part of a tab, the block keeps the tab's remaining columns on ea
 does. The block's text is the text GitHub renders as the diagram.
 
 The check's own test generates its members at test time from the container and fence grammar table
-in `web/app/scripts/docs-mermaid-fences.js`. For every sequence of block quotes and list items up to
+in `web/app/src/lib/docs-mermaid-fences.js`. For every sequence of block quotes and list items up to
 depth 4, with every list item's fence on the line after its marker and again on its marker line, it
 generates the base member and every member that differs from it in one token (a level's blanks,
 marker or gap, the fence's characters, info string or indentation, or the body), and for one level,
@@ -104,7 +104,7 @@ part of the gate.
 |---|---|---|
 | `web/app/src/lib/docs-mermaid.test.ts` | repo | added: A1 to A5 |
 | `web/app/src/lib/docs-mermaid.fences.json` | repo | added: A5, GitHub's recorded rendering of the generated members |
-| `web/app/scripts/docs-mermaid-fences.js` | repo | added: A5, the grammar table and the member generator |
+| `web/app/src/lib/docs-mermaid-fences.js` | repo | added: A5, the grammar table and the member generator |
 | `web/app/scripts/record-docs-mermaid-fences.js` | repo | added: A5, the script that refreshes the recorded rendering |
 | `web/app/package.json` | repo | changed: R3, the `mermaid`, `commonmark` and `@types/commonmark` devDependencies |
 | `pnpm-lock.yaml` | repo | changed: the lock of those dependencies |

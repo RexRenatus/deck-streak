@@ -83,17 +83,19 @@ function textOf(/** @type {Grammar} */ g, /** @type {Level[]} */ levels, /** @ty
     const start = pending ?? continued;
     let marker;
     let continuation;
+    let onNextLine = false;
     if (level.kind === 'quote') {
       marker = `${g.quote.lead[level.lead]}>${g.quote.after[level.after]}`;
       continuation = marker;
     } else {
       marker = g.item.lead[level.lead] + g.item.marker[level.marker] + g.item.gap[level.gap];
+      onNextLine = g.item.layout[level.layout] === 'next';
       continuation =
         g.item.continuation[level.continuation] === 'spaces'
           ? ' '.repeat(columns(start + marker) - columns(start))
           : marker.replace(/[-*+]|[0-9]+[.)]/g, (token) => ' '.repeat(token.length));
     }
-    if (level.kind === 'item' && g.item.layout[level.layout] === 'next') {
+    if (onNextLine) {
       lines.push(`${start}${marker}item`, (continued + continuation).trimEnd());
       pending = null;
     } else {
@@ -147,7 +149,7 @@ export function fenceMembers(/** @type {Grammar} */ g = GRAMMAR) {
   const members = new Map();
   const add = (/** @type {Level[]} */ levels, /** @type {Fence} */ fence, /** @type {number} */ body) => {
     const id = idOf(levels, fence, body);
-    if (!members.has(id)) members.set(id, { id, body: g.body[body], text: textOf(g, levels, fence, body) });
+    members.set(id, { id, body: g.body[body], text: textOf(g, levels, fence, body) });
   };
   const base = /** @type {Fence} */ ({ open: 0, info: 0, indent: 0 });
   /** @type {Record<'quote' | 'item', string[]>} */
@@ -162,7 +164,6 @@ export function fenceMembers(/** @type {Grammar} */ g = GRAMMAR) {
           ? { kind, lead: 0, after: 0 }
           : { kind, lead: 0, marker: 0, gap: 0, layout, continuation: 0 }
       );
-      add(levels, base, 0);
       levels.forEach((level, at) => {
         for (const axis of axes[level.kind]) {
           for (let value = 0; value < count(level.kind, axis); value++) {

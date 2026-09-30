@@ -95,12 +95,17 @@ parser's `blockStarts`, `tip`, `offset` and `nextNonspace`. That dependence on i
 because the pin is exact, and because the generated test fails on the 22 members whose fence follows
 a partly consumed tab if the wrapper stops matching GitHub.
 
-The test's members are generated at test time from a grammar table (`web/app/scripts/
+The test's members are generated at test time from a grammar table (`web/app/src/lib/
 docs-mermaid-fences.js`), and their GitHub rendering is recorded in
 `web/app/src/lib/docs-mermaid.fences.json` by a named refresh script. Tests have no network, so
 GitHub cannot be the oracle at test time. The parse could not be its own oracle, because the chosen
 reader is the parse. The test asserts that the recorded table, members and count equal the
 generated ones.
+
+The generator lives under `src/lib` so that the web mutation population covers it. That was chosen
+against a Python killer, because the mutation-rows job sets up no node, and against leaving the
+generator unexamined, which would make the mutation run examine nothing for it. The A5 test is its
+killer.
 
 **The dependency.** `commonmark` was not in `pnpm-lock.yaml` at the head; the amendment adds it:
 

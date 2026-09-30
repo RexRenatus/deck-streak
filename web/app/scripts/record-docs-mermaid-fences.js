@@ -16,7 +16,7 @@
 import { execFileSync } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { GRAMMAR, digestOf, fenceMembers } from './docs-mermaid-fences.js';
+import { GRAMMAR, digestOf, fenceMembers } from '../src/lib/docs-mermaid-fences.js';
 
 const REPOSITORY = 'RexRenatus/deck-streak';
 const TRUTH = resolve(import.meta.dirname, '../src/lib/docs-mermaid.fences.json');
@@ -105,7 +105,7 @@ const lines = [
 ];
 writeFileSync(TRUTH, lines.join('\n'));
 const diagrams = renders.filter(([, list]) => list.length > 0).length;
-console.log(
+process.stdout.write(
   `recorded ${members.length} members (${distinct.length} distinct texts): ${diagrams} rendered as a diagram, ` +
-    `${members.length - diagrams} as code; ${Math.ceil(members.length / step)} rendered alone agree`
+    `${members.length - diagrams} as code; ${Math.ceil(members.length / step)} rendered alone agree\n`
 );

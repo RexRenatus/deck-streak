@@ -5,14 +5,25 @@
  *
  * @vitest-environment jsdom
  */
-import { readdirSync, readFileSync } from 'node:fs';
-import { join, relative, resolve } from 'node:path';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { dirname, join, relative, resolve } from 'node:path';
 import { type Node, Parser } from 'commonmark';
 import mermaid from 'mermaid';
 import { describe, expect, it } from 'vitest';
-import { GRAMMAR, digestOf, fenceMembers } from '../../scripts/docs-mermaid-fences.js';
+import { GRAMMAR, digestOf, fenceMembers } from './docs-mermaid-fences.js';
 
-const DOCS = resolve(import.meta.dirname, '../../../../docs');
+/**
+ * The repository's `docs/`, found by walking up to the workspace root. A fixed `../../../../` would
+ * miss it when StrykerJS runs this file from its sandbox, which sits below `web/app/.stryker-tmp`.
+ */
+function docsDir(from: string): string {
+  for (let dir = from; ; dir = dirname(dir)) {
+    if (existsSync(join(dir, 'pnpm-workspace.yaml'))) return join(dir, 'docs');
+    if (dirname(dir) === dir) throw new Error(`no pnpm-workspace.yaml above ${from}`);
+  }
+}
+
+const DOCS = docsDir(import.meta.dirname);
 
 /** Every Markdown file under `dir`, in path order. */
 function markdownFiles(dir: string): string[] {
@@ -216,6 +227,11 @@ describe('the Mermaid diagrams under docs', () => {
 
     expect(members.length).toBe(FENCE_MEMBERS);
     expect(escaped.slice(0, 3), `${escaped.length} of ${members.length} members read otherwise`).toEqual([]);
+  });
+
+  it('refuses a grammar whose body names no row, and says which', () => {
+    expect(() => fenceMembers({ ...GRAMMAR, body: ['no-such-row'] })).toThrow('no body named no-such-row');
+    expect(fenceMembers().length).toBe(FENCE_MEMBERS);
   });
 
   it('refuses every generated container form planted unparsable by name, and accepts it planted valid', async () => {
