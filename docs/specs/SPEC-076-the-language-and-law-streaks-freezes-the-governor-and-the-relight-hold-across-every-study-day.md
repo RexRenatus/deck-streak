@@ -612,3 +612,37 @@ Manifest additions: `crates/streaks/tests/population_rules.rs`, `store_effects.r
 `silence_walk_bound.rs`; `crates/coordination/tests/streak_views.rs`; the streak fold, bot and api
 test files gain the criteria above; `crates/streaks/src/governor.rs`, `replay.rs`, `strength.rs` and
 `law.rs` (changed: the counter loops are bounded); the row `S07611`; and the record file above.
+
+## 16. Amendment, 2026-09-30: the open lapse walks a counted range, and three rules gain a fence
+
+Insert-only: every earlier byte is kept in order, and this section is the only insertion.
+
+- `open_lapse` (SPEC-049 R12, R13) is bounded as the other walks are. It reads the window's days by
+  a counted range, newest first, and answers nothing when the walk reaches the smallest epoch day,
+  as the earlier `checked_sub` step did. This supersedes the sentence of section 15 that leaves it
+  as it was. That loop ended, but its mutant `while number < window_start` does not end for a today
+  before the window's first day, and a conversion that keeps the answer at the smallest epoch day
+  exists: A41 proves it against a test-only copy of the earlier loop.
+- The bot's `/streak` reply is judged over runs that differ from bests (A42). A36 writes each row
+  with its best equal to its run, so it cannot tell the two apart: a reply led by the law best, or
+  one that shows a track's best as its run, passes A36 and the whole bot crate.
+- The second half of A35, the outside freezes joining the language row within zero and three, is
+  fenced by its own test (A43). A35's fence runs only the step's name.
+
+## 17. Acceptance criteria of the 2026-09-30 open-lapse amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A41 | the bounded lapse walk answers what the earlier loop answered, at every origin, the smallest and largest epoch days among them | `the_bounded_lapse_walk_answers_what_the_reference_walk_answers` |
+| A42 | each line of the reply names its own run and best, and the law leads by its run | `each_line_names_its_own_run_and_best_and_the_law_leads_by_its_run` |
+| A43 | the outside freezes join the language row within zero and three | `the_outside_freezes_join_the_language_row_within_zero_and_three` |
+
+```acceptance
+A41: cargo test -p deck-streak-streaks --test open_lapse_bound -- --exact the_bounded_lapse_walk_answers_what_the_reference_walk_answers
+A42: cargo test -p deck-streak-bot --test streak_commands -- --exact each_line_names_its_own_run_and_best_and_the_law_leads_by_its_run
+A43: cargo test -p deck-streak-coordination --test streak_fold -- --exact the_outside_freezes_join_the_language_row_within_zero_and_three
+```
+
+Manifest additions: `crates/streaks/src/lapse.rs` (changed: `open_lapse` walks a counted range);
+`crates/streaks/tests/open_lapse_bound.rs` (added: A41); `crates/bot/tests/streak_commands.rs`
+(changed: A42).

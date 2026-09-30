@@ -141,3 +141,41 @@ A40: not red: the test pins a rule the code already held, so it is green at the 
   answers a well-formed body with the exact view, beside the refusals that assert only a null; their
   red is `parseGovernor` returning null for every body (a `return null;` at the head of the
   function), which fails both with `expected null to deeply equal { verdict: 'armed', ... }`.
+
+## Addendum, 2026-09-30: the named mutants of A27 to A35, and A41 to A43
+
+The addendum above names no mutant of its own for A27, A28, A29, A30, A32, A33 and A35. Each is
+named here, applied by hand one at a time under a 16 GiB address-space cap:
+
+- **A27.** `freeze_events_for`'s `unwrap_or(i32::MAX)` replaced by `unwrap_or(i32::MAX - 1)` fails
+  at `population_rules.rs:166` (`freezes 0 to 4294967295`).
+- **A28.** The law replay's `else if !skips.contains(&day)` replaced by `else` fails at
+  `population_rules.rs:239` (`days {20000, 20002}, skips {20001}, through 20004`).
+- **A29.** `real_misses(last, today, skips) < 2` replaced by `< 3` fails at `population_rules.rs:353`
+  (`study days {20000}, through 20003`).
+- **A30.** The heat's `days >= *threshold` replaced by `days > *threshold` fails at
+  `population_rules.rs:412` (`1 days`).
+- **A32.** The walk's `exhausted: !study_days.contains(...)` replaced by `exhausted: true` fails at
+  `population_rules.rs:475` (`study day Some(0) back, skips {}`).
+- **A33.** The store's `i64::from(event.delta)` replaced by `i64::from(event.delta).abs()` fails
+  `the_freeze_events_are_stored_once_and_read_in_order` at `store_effects.rs:232`.
+- **A35.** `STREAKS_STEP` renamed to `streaks.streaks_and_the_governor` fails at
+  `streak_fold.rs:242`. The outside freezes' `.saturating_add(outside)` replaced by
+  `.saturating_add(outside.max(0))` leaves A35's fence green and fails
+  `the_outside_freezes_join_the_language_row_within_zero_and_three` at `streak_fold.rs:269`
+  (`outside net -5`, `left: 1`, `right: 0`), which A43 now fences.
+- **A41 not red.** The test pins that the bounded lapse walk answers what the earlier loop
+  answered. Its red is the conversion without the smallest-day guard, which fails at
+  `open_lapse_bound.rs:94` with `left: Some(StudyDay(-9223372036854775808))`, `right: None`.
+- **A42 not red.** The reply was right. Its red is each of three mutants that pass A36 and the whole
+  bot crate: `view.law.current > 0` replaced by `view.law.longest > 0` (`streak_commands.rs:171`,
+  `law 0 best 1`), the language line's run and best swapped (`streak_commands.rs:176`, `language
+  best 10`), and the law line's run and best swapped (`streak_commands.rs:171`, `left: "Law: 1 (best
+  0)"`).
+- **A43 not red.** The rule held. Its red is the A35 mutant above.
+
+```red-first
+A41: not red: the test pins a rule the conversion keeps, so it is green at the head; the mutant that turns it red is named in this addendum
+A42: not red: the test pins a rule the code already held, so it is green at the head; the mutant that turns it red is named in this addendum
+A43: not red: the test pins a rule the code already held, so it is green at the head; the mutant that turns it red is named in this addendum
+```

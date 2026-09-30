@@ -118,3 +118,19 @@ of the earlier walk.
 - Rejected: a per-test timeout, because the verdict would then depend on the machine's speed.
 - Rejected: converting `open_lapse`, because it ends by `checked_sub` over a finite window and a
   conversion would change its answer at the smallest epoch day.
+
+## Amendment, 2026-09-30: the open lapse walks a counted range too
+
+The amendment above rejected converting `open_lapse`, because the loop ends by `checked_sub` over a
+finite window and a conversion would change its answer at the smallest epoch day. The first reason
+holds for the loop and not for its mutants: `while number < window_start` does not end for a today
+before the window's first day (today 0 with a window from day 1 gave no answer in 5 seconds), which
+is the spinning mutant the amendment exists to remove. The second does not hold: a conversion that
+answers nothing at the smallest epoch day, as the `checked_sub` step did, answers what the earlier
+loop answered over 1,765,680 generated cases, 209,340 of them at the smallest epoch day (SPEC-076
+A41). `open_lapse` now walks the window's days by a counted range, newest first.
+
+- Rejected: leaving `open_lapse` as a disclosed residual, because a mutant of its counter never
+  ends, and one test that reached it would cost a shard its whole budget as the silence walk did.
+- Rejected: converting it without the smallest-day guard, because that answers a lapse at the
+  smallest epoch day where the earlier loop answered none (A41 is red under it).
