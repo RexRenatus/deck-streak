@@ -189,7 +189,7 @@ families (a byte-readers container of another type, a mutant name of another typ
 of another type, and a listed mutant filed under an unread path), so the populations read 570 of
 570 and 27 of 27.
 
-The green commit also rewrites one assertion in `scripts/tests/test_mutation_python_shard_binding.py`,
+The green commit, 5810a75, also rewrites one assertion in `scripts/tests/test_mutation_python_shard_binding.py`,
 in the earlier test of a mutant record that is not an object:
 `self.assertIn("0 missing () and 1 extra (?)", output)` becomes `self.assertIn("a mutant record of", output)`
 and `self.assertIn("not an object", output)`. The shared reader now refuses that record by name
