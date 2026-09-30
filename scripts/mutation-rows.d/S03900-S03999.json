@@ -460,8 +460,8 @@
       [
         "S03966-A46-KILLER-GROUP-SPAWNS-WITHOUT-RESOLVING",
         "scripts/mutation_rows.py",
-        "    resolve_tool(command, env, cwd)\n    try:\n        process = subprocess.Popen(",
-        "    try:\n        process = subprocess.Popen(",
+        "    judged = resolve_tool(command, env, cwd)\n    try:\n        process = subprocess.Popen(",
+        "    judged = command[0]\n    try:\n        process = subprocess.Popen(",
         "the killer's process group is started without resolving its executable, so the refusal loses its reason (SPEC-039 A46)",
         "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
       ],
@@ -508,7 +508,7 @@
       [
         "S03972-A46-A-SPAWN-THAT-FAILS-AFTER-RESOLUTION-IS-A-TRACEBACK",
         "scripts/mutation_rows.py",
-        "    if error.filename == command[0] or error.filename is None:",
+        "    if error.filename in (command[0], judged) or error.filename is None:",
         "    if False:",
         "a spawn that fails for its executable after resolution passed (a bad interpreter line, a file the kernel will not execute) is a traceback, not the refusal (SPEC-039 A46)",
         "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
@@ -524,16 +524,16 @@
       [
         "S03974-A46-RUN-TOOL-CATCHES-ONLY-THREE-SPAWN-ERRORS",
         "scripts/mutation_rows.py",
-        "    except OSError as error:\n        refusal = _backstop(error, command)\n        if refusal is None:\n            raise\n        raise refusal from error\n    refusal = _exit_refusal(done.returncode, command)",
-        "    except (FileNotFoundError, PermissionError, NotADirectoryError) as error:\n        refusal = _backstop(error, command)\n        if refusal is None:\n            raise\n        raise refusal from error\n    refusal = _exit_refusal(done.returncode, command)",
+        "    except OSError as error:\n        refusal = _backstop(error, command, judged)\n        if refusal is None:\n            raise\n        raise refusal from error\n    refusal = _exit_refusal(done.returncode, command)",
+        "    except (FileNotFoundError, PermissionError, NotADirectoryError) as error:\n        refusal = _backstop(error, command, judged)\n        if refusal is None:\n            raise\n        raise refusal from error\n    refusal = _exit_refusal(done.returncode, command)",
         "a file the kernel will not execute (an empty file with the execute bit) raises a plain OSError out of run_tool, a traceback and not the refusal (SPEC-039 A46)",
         "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
       ],
       [
         "S03975-A46-THE-PROCESS-GROUP-SPAWN-CATCHES-ONLY-THREE-ERRORS",
         "scripts/mutation_rows.py",
-        "    except OSError as error:\n        refusal = _backstop(error, command)\n        if refusal is None:\n            raise\n        raise refusal from error\n    try:\n        stdout, stderr",
-        "    except (FileNotFoundError, PermissionError, NotADirectoryError) as error:\n        refusal = _backstop(error, command)\n        if refusal is None:\n            raise\n        raise refusal from error\n    try:\n        stdout, stderr",
+        "    except OSError as error:\n        refusal = _backstop(error, command, judged)\n        if refusal is None:\n            raise\n        raise refusal from error\n    try:\n        stdout, stderr",
+        "    except (FileNotFoundError, PermissionError, NotADirectoryError) as error:\n        refusal = _backstop(error, command, judged)\n        if refusal is None:\n            raise\n        raise refusal from error\n    try:\n        stdout, stderr",
         "a file the kernel will not execute raises a plain OSError out of the process-group spawn, a traceback and not the refusal (SPEC-039 A46)",
         "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
       ],

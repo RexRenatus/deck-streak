@@ -306,9 +306,46 @@ def referenced(tree, inside):
             held.append(node.annotation)
         if isinstance(node, ast.AnnAssign):
             held.append(node.annotation)
+        # An annotation is evaluated when its line runs, so one that holds code (a call, a
+        # lambda, an assignment) is read as code; only a type named by names is passed over.
+        held = [part for part in held if not any(map(runs_code, ast.walk(part)))]
         annotations.update(id(sub) for part in held for sub in ast.walk(part))
     spawners = {f"{m}.{n}" for m, names in DOCUMENTED_SPAWNERS.items() for n in names}
-    found = []
+    found, bound = [], {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name.split(".")[0] in READ_MODULES:
+                    name = alias.name if alias.asname else alias.name.split(".")[0]
+                    bound[alias.asname or name] = importlib.import_module(name)
+    for node in ast.walk(tree):
+        if id(node) in annotations:
+            continue
+        where = inside.get(id(node), "outside the helpers")
+        if isinstance(node, ast.ImportFrom) and (node.module or "").split(".")[0] in READ_MODULES:
+            try:
+                source = importlib.import_module(node.module)
+            except ImportError:
+                source = None
+            for alias in node.names:
+                value = getattr(source, alias.name, None)
+                if alias.name.startswith("_") or not_read(value):
+                    found.append(
+                        f"{where}: from {node.module} import {alias.name}: a name the census "
+                        "has not read"
+                    )
+        if isinstance(node, ast.Attribute):
+            if node.attr.startswith("_") and node.attr != "__init__":
+                found.append(
+                    f"{where}: {ast.unparse(node)}: a private name the census has not read"
+                )
+            elif node.attr in FRAME_ATTRIBUTES:
+                found.append(f"{where}: {ast.unparse(node)}: a frame's own tables")
+            elif not_read(reached_module(node, bound)):
+                found.append(
+                    f"{where}: {ast.unparse(node)}: a module the census has not read, reached "
+                    "through another module"
+                )
     for node in ast.walk(tree):
         if id(node) in annotations:
             continue

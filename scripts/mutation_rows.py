@@ -272,15 +272,18 @@ class ToolMissing(Exception):
 
 def resolve_tool(
     command: list[str], env: dict[str, str] | None, cwd: pathlib.Path | str | None = None
-) -> None:
-    """Raise ToolMissing unless `command[0]` names something the spawn can run.
+) -> str:
+    """The file `command[0]` names for the spawn, or ToolMissing when it names nothing that runs.
 
     A name with a slash is the path itself; a bare name is searched along the `PATH` the child
     will get (`env`, else this process's), as the spawn would. A candidate that cannot even be
     looked at (an entry the runner may not search, a name too long) is passed over, as the spawn's
     own search passes over it: it is neither the tool nor a reason to stop looking. A relative
     candidate (an empty, `.` or relative entry, or a relative name with a slash) is read in `cwd`,
-    the directory the child runs in, because that is where the spawn reads it.
+    the directory the child runs in, because that is where the spawn reads it. The file judged is
+    returned as a path that reads the same from any directory, and the spawn runs exactly it: the
+    spawn's own search passes over a candidate the kernel will not run and would start a LATER one,
+    so a spawn by name could run a file the runner never judged.
     """
     base = pathlib.Path(cwd) if cwd is not None else pathlib.Path()
     name = command[0]
@@ -299,16 +302,17 @@ def resolve_tool(
             failure = "is a directory"
         elif candidate.is_file():
             if os.access(candidate, os.X_OK):
-                return
+                judged = candidate if candidate.is_absolute() else pathlib.Path.cwd() / candidate
+                return os.fspath(judged)
             failure = "not executable"
     raise ToolMissing(name, failure)
 
 
-def _backstop(error: OSError, command: list[str]) -> ToolMissing | None:
+def _backstop(error: OSError, command: list[str], judged: str | None = None) -> ToolMissing | None:
     """A spawn that still fails for the executable after resolution passed (a race, a bad
     interpreter line, a file the kernel will not execute): the same refusal, unless the error
     names something else (the cwd)."""
-    if error.filename == command[0] or error.filename is None:
+    if error.filename in (command[0], judged) or error.filename is None:
         return ToolMissing(command[0], error.strerror or "cannot be run")
     return None
 
@@ -332,16 +336,16 @@ def _exit_refusal(returncode: int, command: list[str]) -> ToolMissing | None:
 def run_tool(command: list[str], **kwargs) -> subprocess.CompletedProcess:
     """`subprocess.run` with the executable resolved first; every spawn but the process-group
     one goes through here, so no call site can skip the check."""
-    resolve_tool(command, kwargs.get("env"), kwargs.get("cwd"))
+    judged = resolve_tool(command, kwargs.get("env"), kwargs.get("cwd"))
     try:
-        done = subprocess.run(command, **kwargs)
+        done = subprocess.run(command, executable=judged, **kwargs)
     except subprocess.CalledProcessError as error:
         refusal = _exit_refusal(error.returncode, command)
         if refusal is None:
             raise
         raise refusal from error
     except OSError as error:
-        refusal = _backstop(error, command)
+        refusal = _backstop(error, command, judged)
         if refusal is None:
             raise
         raise refusal from error
@@ -716,10 +720,11 @@ def run_in_own_group(
     Raises:
         subprocess.TimeoutExpired: The command outran `timeout`; its group is already dead.
     """
-    resolve_tool(command, env, cwd)
+    judged = resolve_tool(command, env, cwd)
     try:
         process = subprocess.Popen(
             command,
+            executable=judged,
             cwd=cwd,
             env=env,
             stdout=subprocess.PIPE,
@@ -728,7 +733,7 @@ def run_in_own_group(
             process_group=0,
         )
     except OSError as error:
-        refusal = _backstop(error, command)
+        refusal = _backstop(error, command, judged)
         if refusal is None:
             raise
         raise refusal from error
