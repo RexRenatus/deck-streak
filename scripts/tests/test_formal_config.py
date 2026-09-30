@@ -316,9 +316,11 @@ def reader_arms():
 
 class FormalConfig(unittest.TestCase):
     def test_every_value_type_a_kind_refuses_is_planted_and_refused_by_name(self):
-        """A4: for each kind the reader judges, each JSON value type it does not admit, an integral
-        float wherever an integer is required included, is planted at every field of the kind and,
-        inside a map kind, as each value, and the reader refuses each by the kind's own arm."""
+        """A4: for each field kind the reader judges, the object kind included at every object
+        level, each JSON value type it does not admit, an integral float wherever an integer is
+        required included, is planted at every field of the kind and, inside a container kind (a
+        map or a list), as each element, and the reader refuses each by the kind's own arm, the
+        refusal naming its field and its kind."""
         plants = examined("planted value types", type_plants())
         kinds = set(kind_fields())
         self.assertEqual(kinds, {kind for _, kind, _ in FIELDS} | {"object"})

@@ -42,7 +42,22 @@ A4: not red: the reader already refused every planted value; nine mutants of it 
 A5: not red: the reader already refused every planted value; the rows S29500 to S29508 prove the population kills each mutant
 ```
 
-The green run reads `Ran 4 tests ... OK` and prints `examined 102 planted value types`,
-`examined 54 planted values of the kind posint at 6 fields`, `examined 34 planted values of the kind
-posint-map at 1 fields`, `examined 7 planted values of the kind path at 1 fields`, `examined 7 planted
-values of the kind strings at 1 fields` and `examined 137 planted faults`.
+The green run reads `Ran 5 tests ... OK` and prints `examined 144 planted value types`,
+`examined 21 planted values of the kind object at 3 fields`, `examined 7 planted values of the kind
+path at 1 fields`, `examined 54 planted values of the kind posint at 6 fields`, `examined 34 planted
+values of the kind posint-map at 1 fields`, `examined 28 planted values of the kind strings at 1
+fields`, `examined 7 admitted documents` and `examined 158 planted faults`, under each of four hash
+seeds.
+
+A round that closed the class the first population left open (the object kind, the elements of a
+list, and the field named in a refusal) planted four faults on the reader, each in a scratch copy
+and never committed. The earlier test file reads `OK` on every one, and the test of this round reads
+`FAILED` by assertion on every one. The record is quoted as prose, since a criterion is recorded
+once above.
+
+```text
+plant: the object arm raises another arm    earlier test OK (Ran 4)   this test FAILED (A4)
+plant: the list-element test made vacuous   earlier test OK (Ran 4)   this test FAILED (A4)
+plant: a refusal naming another field       earlier test OK (Ran 4)   this test FAILED (A4)
+plant: a map judged by its keys             earlier test OK (Ran 4)   this test FAILED (the admission test)
+```

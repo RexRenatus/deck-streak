@@ -119,20 +119,28 @@ them, that admits a string, an array or an object as a map value, or that judges
 only the last value of a map, survived every test. Measured on the development branch's test:
 nine such mutants survived and eight other mutants of the same arms were already killed.
 
-**The class.** For every kind the reader judges, and for every element kind inside a map kind,
-each JSON value type the kind does not admit is planted at every field of that kind, and the
-reader refuses each by the name of the kind's own arm. An integral float is one of those types
-wherever an integer is required, because Python reads `20.0` as a float where the document spells
-an integer. A map kind's value is planted alone, after a good value and before one. The population
-is generated from the field table, the admitted types and the element kind of each map kind, so a
-field or a kind added to the table is planted with no edit to a list. The test prints and asserts
-the member count per kind and in total.
+**The class.** For every field kind the reader judges, the object kind included at every object
+level, and for every element kind inside a container kind, a map or a list, each JSON value type
+the kind does not admit is planted at every field of that kind, and the reader refuses each by the
+name of the kind's own arm: the refusal names its field and its kind, and the test asserts both.
+An integral float is one of those types wherever an integer is required, because Python reads
+`20.0` as a float where the document spells an integer. A container's element is planted alone,
+after a good value and before one. The population is generated from the field table, the admitted
+types, the element kind of each container kind and a good value of each element kind, so a field, a
+kind or a container kind added to the table is planted with no edit to a list. The test prints and
+asserts the member count per kind and in total: 144 planted value types, of which 21 are of the
+object kind at three object levels, 7 of the path kind, 54 of the positive-integer kind, 34 of the
+map-of-positive-integers kind and 28 of the list-of-strings kind. Its admission side runs the
+reader over seven documents that hold only what the kinds admit (a container holding good values,
+each optional field absent, each optional object level absent), and each is admitted, so a reader
+that refuses a valid document turns a test red. The generated faults of the third criterion hold
+158 members.
 
 ## 10. Acceptance criteria of the 2026-09-30 amendment
 
 | id | criterion | decided by |
 |---|---|---|
-| A4 | for each kind the reader judges, each JSON value type it does not admit, an integral float wherever an integer is required included, is planted at every field of the kind and, inside a map kind, as each value alone, after a good value and before one, and the reader refuses each by that kind's own arm; the test asserts the count per kind and in total and refuses zero | `test_formal_config.py` `every_value_type_a_kind_refuses_is_planted_and_refused_by_name` |
+| A4 | for each field kind the reader judges, the object kind included at every object level, each JSON value type it does not admit, an integral float wherever an integer is required included, is planted at every field of the kind and, inside a container kind (a map or a list), as each element alone, after a good value and before one, and the reader refuses each by that kind's own arm, the refusal naming its field and its kind, which the test asserts; the test asserts the count per kind and in total (144) and refuses zero | `test_formal_config.py` `every_value_type_a_kind_refuses_is_planted_and_refused_by_name` |
 | A5 | the generated faults of A3 hold the same population, and nine rows, `S29500` to `S29508`, each install a mutant of the reader that admits one member of it (an integral float, a null, a float, an integral float, a string, an array or an object as a value) or that judges only the first or only the last value of a map, and each is killed by A3's test | `test_formal_config.py` `the_reader_refuses_each_planted_fault` |
 
 ```acceptance
