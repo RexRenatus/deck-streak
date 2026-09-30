@@ -5,6 +5,10 @@ directory; the workflow is read as text with the helpers `test_mutation_workflow
 plants put the fixed 32 back into each place that must read the one count.
 """
 
+import argparse
+import contextlib
+import importlib.util
+import io
 import itertools
 import json
 import os
@@ -18,6 +22,7 @@ import textwrap
 import tomllib
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from _support import REPO, examined
 from test_mutation_workflows import VERDICT, WEEKLY, WORKFLOWS, jobs, listed, shard, workflow
@@ -1569,8 +1574,8 @@ def grammar_members():
 GRAMMAR_ORACLE = r"""
 while IFS= read -r f; do
   for ORACLE_STATUS in 0 1; do
-    export ORACLE_TAG="${f##*/}" ORACLE_STATUS
-    { "$TIMEOUT" -k 1 10 "$SHELL_UNDER_TEST" --noprofile --norc "$f" </dev/null >/dev/null 2>&1; } \
+    export ORACLE_TAG="${f##*/}" ORACLE_STATUS RUNNER_TEMP="$f.d"
+    { cd "$f.d" && "$TIMEOUT" -k 1 10 "$SHELL_UNDER_TEST" --noprofile --norc "$f" </dev/null >/dev/null 2>&1; } \
       9>&1 | { while read -r _; do :; done; }
     printf '%s\036' "$ORACLE_TAG:$ORACLE_STATUS" >> "$DONE"
   done
@@ -1582,6 +1587,90 @@ for a in "$@"; do r+=$'\037'"$a"; done
 printf '%s\036' "$r" >> {log}/$$
 exit "${{ORACLE_STATUS:-0}}"
 """
+# The oracle's pythons run as given, except that a file named `memory_scope.py` runs with the seams
+# of its run() planted, so the scope is in force here and the wrapper runs its command as it would
+# on the runner. Each script runs in its own directory, beside its own copy of the tree's wrapper.
+MEMORY_SCOPE = REPO / "scripts" / "memory_scope.py"
+ORACLE_PYTHONS = ("python3", "python", "python3.12")
+WRAPPER_PLANT = r'''
+import importlib.util
+import os
+from pathlib import Path
+
+EVENTS = "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\n"
+
+
+def plant_wrapper(script, root):
+    """The wrapper loaded from `script`, with its run() seams, and nothing else, pointed at a
+    machine under `root` whose scope holds this process with the cap in force."""
+    spec = importlib.util.spec_from_file_location("memory_scope", script)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    root = Path(root) / str(os.getpid())
+    unit = f"memory-scope-{os.getpid()}.scope"
+    total, page = 16777216, 4096
+    group = root / "cgroup" / "system.slice" / unit
+    group.mkdir(parents=True, exist_ok=True)
+    (root / "meminfo").write_text(f"MemTotal: {total} kB\n", "utf-8")
+    (root / "proc-cgroup").write_text(f"0::/system.slice/{unit}\n", "utf-8")
+    cap = total * 1024 * 15 // 16 // page * page
+    files = {"max": f"{cap}\n", "swap.max": "0\n", "oom.group": "0\n", "events": EVENTS}
+    for name, text in {**files, "peak": "0\n"}.items():
+        (group / f"memory.{name}").write_text(text, "utf-8")
+    for name, line in (("sudo", "exit 0"), ("systemctl", "echo continue")):
+        (root / name).write_text(f"#!/bin/sh\n{line}\n", "utf-8")
+        (root / name).chmod(0o700)
+    module.run.__kwdefaults__.update(
+        meminfo=root / "meminfo",
+        page=page,
+        sudo=(str(root / "sudo"),),
+        systemctl=(str(root / "systemctl"),),
+        proc_cgroup=root / "proc-cgroup",
+        cgroup_root=root / "cgroup",
+        reads=1,
+    )
+    return module
+'''
+WRAPPER_PYTHON = (
+    WRAPPER_PLANT
+    + r"""
+import re
+import sys
+
+machine, *words = sys.argv[1:]
+k = 0
+while k < len(words) and re.fullmatch(r"-[bBdEiIOPqsSuvx]+|-[WX].*", words[k]):
+    k += 2 if words[k] in ("-W", "-X") else 1
+script = Path(words[k]) if k < len(words) else None
+if script and script.name == "memory_scope.py" and script.is_file():
+    try:
+        wrapper = plant_wrapper(script, machine)
+    except Exception:
+        wrapper = None
+    if wrapper is not None:
+        sys.argv = [str(script), *words[k + 1 :]]
+        sys.exit(wrapper.main())
+os.execv(sys.executable, [sys.executable, *words])
+"""
+)
+
+
+def wrapper_module(script):
+    """The wrapper's module, loaded from its file by path."""
+    spec = importlib.util.spec_from_file_location("memory_scope", script)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def declared_options(module):
+    """The options the module's own parser declares that take exactly one value."""
+    return frozenset(
+        option
+        for action in module.build_parser()._actions
+        if type(action) is argparse._StoreAction and action.nargs is None
+        for option in action.option_strings
+    )
 
 
 def cargo_mutants_arguments(program, args):
@@ -1616,11 +1705,22 @@ def bash_runs(scripts):
             real = shutil.which("dash" if name == "sh" else name)
             if real:
                 (stubs / name).write_text(f'#!{shell}\nexec {real} "$@"\n', encoding="utf-8")
+        (root / "python.py").write_text(WRAPPER_PYTHON, encoding="utf-8")
+        for name in ORACLE_PYTHONS:
+            (stubs / name).write_text(
+                f'#!{shell}\nexec {sys.executable} -I {root / "python.py"} {root / "machine"} "$@"\n',
+                encoding="utf-8",
+            )
         for stub in stubs.iterdir():
             stub.chmod(0o700)
         (root / "oracle.sh").write_text(GRAMMAR_ORACLE, encoding="utf-8")
+        wrapper = MEMORY_SCOPE.read_bytes()
         for n, text in enumerate(scripts):
             (root / f"m{n}").write_text(text, encoding="utf-8")
+            (root / f"m{n}.d").mkdir()
+            if "python" in text:
+                (root / f"m{n}.d" / "scripts").mkdir()
+                (root / f"m{n}.d" / "scripts" / "memory_scope.py").write_bytes(wrapper)
         runs = []
         for w in range(workers):
             names = "".join(f"{root / f'm{n}'}\n" for n in range(w, len(scripts), workers))
@@ -1922,11 +2022,22 @@ def rewritten_blocks(text):
 
 
 def argv_of(script, package):
-    """The argv the stub cargo received when bash ran the script; PACKAGE unset when None."""
+    """The argv the stub cargo received when bash ran the script; PACKAGE unset when None. A wrapped
+    command runs through the wrapper beside it, with its seams planted: never the machine's scope."""
     with tempfile.TemporaryDirectory() as scratch:
         root = Path(scratch)
         (root / "bin").mkdir()
         (root / "size").mkdir()
+        (root / "scripts").mkdir()
+        (root / "scripts" / "memory_scope.py").write_bytes(MEMORY_SCOPE.read_bytes())
+        (root / "python.py").write_text(WRAPPER_PYTHON, encoding="utf-8")
+        for name in ORACLE_PYTHONS:
+            python = root / "bin" / name
+            python.write_text(
+                f'#!/bin/bash\nexec {sys.executable} -I {root / "python.py"} {root / "machine"} "$@"\n',
+                encoding="utf-8",
+            )
+            python.chmod(0o700)
         log = root / "argv.log"
         stub = root / "bin" / "cargo"
         stub.write_text('#!/bin/bash\nprintf \'%s\\0\' "$@" >> "$STUB_LOG"\n', encoding="utf-8")
@@ -1942,7 +2053,9 @@ def argv_of(script, package):
         }
         if package is not None:
             env["PACKAGE"] = package
-        done = subprocess.run(["bash", str(file)], env=env, capture_output=True, timeout=30)
+        done = subprocess.run(
+            ["bash", str(file)], env=env, capture_output=True, timeout=30, cwd=root
+        )
         assert done.returncode == 0, (done.returncode, done.stderr)
         argv = log.read_bytes().replace(str(root).encode(), b"<tmp>").split(b"\0")[:-1]
         return argv
@@ -2143,6 +2256,216 @@ class AComputedWordBeforeTheBoundsIsRefused(unittest.TestCase):
             for line in commands:
                 self.assertFalse(line.startswith("refused"), f"{name}: {line}")
                 self.assertRegex(line, BOUNDED, f"{name}: {line}")
+
+
+SPY = """#!{shell}
+{{ printf '%s\\0' "${{0##*/}}"; for a in "$@"; do printf '%s\\0' "$a"; done; }} > "$SPY_LOG"
+"""
+SPY_WORDS = ("--", "-", "-x", "--report", "--report=x", "-h", "", " ", "a b", "\n", "é", "cargo")
+SPY_WORDS += ("--timeout", "300")
+SPY_VALUES = ("r", "", " ", "a b", "é", "-1", "--", "-x", "--report", "--report=r")
+SPY_SIZE = 374
+
+
+def spy_cases(options):
+    """[(the wrapper's argv, the words its command must be, whether it must run)]: the declared form,
+    for each option the parser declares, each value in both spellings and twice, before commands of
+    dash-led words, `--` again, empty words, blanks, a newline and non-ASCII. A dash-led value may
+    instead end at the parser's usage error; the value `r` must run."""
+    commands = [["spy", *rest] for n in range(3) for rest in itertools.product(SPY_WORDS, repeat=n)]
+    commands += [[program, "a"] for program in ("--", "-x", "--report")]
+    cases = [([min(options), "r", "--", *command], command, True) for command in commands]
+    for option in sorted(options):
+        for value in SPY_VALUES:
+            for spelled in ([option, value], [f"{option}={value}"]):
+                runs = value == "r"
+                cases += [([*spelled, "--", *c], c, runs) for c in commands[:4] + commands[-3:]]
+                cases.append(([*spelled, option, "r", "--", "spy", "a"], ["spy", "a"], runs))
+    return cases
+
+
+def spy_runs(script, cases):
+    """[(the words the spy received, or None when nothing ran; the exit status)] for each case, the
+    wrapper's own main() run from `script` in this process, with its run() seams planted."""
+    namespace = {}
+    exec(WRAPPER_PLANT, namespace)
+    results = []
+    with tempfile.TemporaryDirectory() as scratch:
+        root = Path(scratch)
+        module = namespace["plant_wrapper"](script, root / "machine")
+        (root / "spies").mkdir()
+        (root / "cwd").mkdir()
+        for name in ("spy", "--", "-x", "--report"):
+            (root / "spies" / name).write_text(SPY.format(shell=shutil.which("bash")), "utf-8")
+            (root / "spies" / name).chmod(0o700)
+        with (
+            mock.patch.dict(os.environ, {"PATH": str(root / "spies")}),
+            contextlib.chdir(root / "cwd"),
+        ):
+            for n, (argv, *_) in enumerate(cases):
+                log = root / f"log{n}"
+                os.environ["SPY_LOG"] = str(log)
+                with (
+                    contextlib.redirect_stdout(io.StringIO()),
+                    contextlib.redirect_stderr(io.StringIO()),
+                ):
+                    try:
+                        status = module.main(list(argv))
+                    except SystemExit as stop:
+                        status = stop.code
+                ran = log.read_bytes().split(b"\0")[:-1] if log.exists() else None
+                results.append(([os.fsdecode(w) for w in ran] if ran is not None else None, status))
+    return results
+
+
+def spy_wrong(script, cases):
+    """The cases whose command the wrapper did not run as exactly the words after its `--`, where
+    a case that need not run may end at the parser's usage error (status 2) instead."""
+    return [
+        (argv, ran, status)
+        for (argv, words, runs), (ran, status) in zip(cases, spy_runs(script, cases))
+        if ran != words and (runs or ran is not None or status != 2)
+    ]
+
+
+WRAPPER_FORMS = {
+    "exact": ("", "python3 scripts/memory_scope.py --report r -- "),
+    "joined": ("", "python3 scripts/memory_scope.py --report=r -- "),
+    "quoted value": ("out=r; ", 'python3 scripts/memory_scope.py --report "$out" -- '),
+    "braced value": ("out=r; ", 'python3 scripts/memory_scope.py --report="${out}/x" -- '),
+    "unquoted value": ("out=r; ", "python3 scripts/memory_scope.py --report $out -- "),
+    "positional value": ("set -- r; ", 'python3 scripts/memory_scope.py --report "$@" -- '),
+    "value --": ("", "python3 scripts/memory_scope.py --report -- -- "),
+    "no separator": ("", "python3 scripts/memory_scope.py --report r "),
+    "computed separator": ("S=--; ", "python3 scripts/memory_scope.py --report r $S "),
+    "quoted computed separator": ("S=--; ", 'python3 scripts/memory_scope.py --report r "$S" '),
+    "computed option": ("O=--report; ", "python3 scripts/memory_scope.py $O r -- "),
+    "dot path": ("", "python3 ./scripts/memory_scope.py --report r -- "),
+    "computed path": ("W=scripts/memory_scope.py; ", "python3 $W --report r -- "),
+    "quoted computed path": ("W=scripts/memory_scope.py; ", 'python3 "$W" --report r -- '),
+    "absolute path": ("", 'python3 "$PWD/scripts/memory_scope.py" --report r -- '),
+    "python": ("", "python scripts/memory_scope.py --report r -- "),
+    "python3.12": ("", "python3.12 scripts/memory_scope.py --report r -- "),
+    "env python3": ("", "env python3 scripts/memory_scope.py --report r -- "),
+    "python option": ("", "python3 -u scripts/memory_scope.py --report r -- "),
+    "undeclared option": ("", "python3 scripts/memory_scope.py --report r -x -- "),
+    "undeclared long option": ("", "python3 scripts/memory_scope.py --report r --cap 1 -- "),
+    "abbreviation": ("", "python3 scripts/memory_scope.py --rep r -- "),
+    "help": ("", "python3 scripts/memory_scope.py -h --report r -- "),
+    "declared option after --": ("", "python3 scripts/memory_scope.py -- --report r "),
+    "twice": ("", "python3 scripts/memory_scope.py --report r --report s -- "),
+    "separator twice": ("", "python3 scripts/memory_scope.py --report r -- -- "),
+    "nested": (
+        "",
+        "python3 scripts/memory_scope.py --report r -- "
+        "python3 scripts/memory_scope.py --report s -- ",
+    ),
+    "exec": ("", "exec python3 scripts/memory_scope.py --report r -- "),
+    "command": ("", "command python3 scripts/memory_scope.py --report r -- "),
+}
+# The forms the class reads through, around a bounded command: each is found, bounded.
+WRAPPER_DECLARED = ("exact", "joined", "quoted value", "braced value", "twice", "nested")
+WRAPPER_DECLARED += ("exec", "command")
+WRAPPER_COMMANDS = {
+    "bounded": ("", LEAD),
+    "unbounded": ("", UNBOUNDED),
+    "bounds after --": ("", f"cargo mutants -- {BOUNDS}"),
+    "R5": ("X=--; ", f"cargo mutants $X {BOUNDS}"),
+    "toolchain": ("", "cargo +stable mutants --in-place"),
+    "shell text": ("", f"bash -c '{UNBOUNDED}'"),
+    "bounded shell text": ("", f"bash -c '{LEAD}'"),
+    "another program": ("", f"env {UNBOUNDED}"),
+    "python text": ("", f"""python3 -c 'import os; os.system("{UNBOUNDED}")'"""),
+    "no cargo": ("", "bash -c :"),
+}
+WRAPPER_CONTEXTS = ("@", "if true; then @; fi", "( @ )", "@ || rc=$?")
+WRAPPER_SIZE = 1160
+
+
+def wrapper_members():
+    """[(form, command, context, script)]: each form of the wrapper's command line, around each
+    command, in each context."""
+    return [
+        (form, command, context, pre + setup + context.replace("@", prefix + text) + "\n")
+        for (form, (pre, prefix)), (command, (setup, text)), context in itertools.product(
+            WRAPPER_FORMS.items(), WRAPPER_COMMANDS.items(), WRAPPER_CONTEXTS
+        )
+    ]
+
+
+class TheMemoryScopeRunsTheWordsAfterItsSeparator(unittest.TestCase):
+    def outcomes(self, scripts):
+        """{index: the lines the guard finds in that script, as its workflow}."""
+        with tempfile.TemporaryDirectory() as scratch:
+            for n, script in enumerate(scripts):
+                (Path(scratch) / f"m{n}.yml").write_text(r5_workflow(script), encoding="utf-8")
+            found = mutants_commands(Path(scratch))
+        return {n: found.get(f"m{n}.yml", []) for n in range(len(scripts))}
+
+    def test_the_wrapper_runs_exactly_the_words_after_its_separator(self):
+        options = examined(
+            "options the wrapper declares", declared_options(wrapper_module(MEMORY_SCOPE))
+        )
+        cases = examined("wrapper argvs", spy_cases(options))
+        self.assertEqual(len(cases), SPY_SIZE)
+        wrong = spy_wrong(MEMORY_SCOPE, cases)
+        self.assertEqual(wrong[:1], [], f"{len(wrong)} of {len(cases)} argvs")
+
+    def test_a_wrapper_that_drops_or_adds_a_word_goes_red(self):
+        source = MEMORY_SCOPE.read_text("utf-8")
+        line = 'command = args.command[1:] if args.command[:1] == ["--"] else args.command'
+        self.assertEqual(source.count(line), 1)
+        whole = line.split(" = ", 1)[1]
+        plants = {
+            "drops the last word": f"command = ({whole})[:-1]",
+            "drops a bound": f'command = [w for w in ({whole}) if w != "--timeout"]',
+            "adds a word": f'command = [*({whole}), "--in-place"]',
+        }
+        cases = spy_cases(declared_options(wrapper_module(MEMORY_SCOPE)))
+        cases = cases[:20] + [case for case in cases if "--timeout" in case[1]][:20]
+        with tempfile.TemporaryDirectory() as scratch:
+            for label, planted in examined("wrapper plants", plants.items()):
+                path = Path(scratch) / label.replace(" ", "-") / "memory_scope.py"
+                path.parent.mkdir()
+                path.write_text(source.replace(line, planted), "utf-8")
+                with self.subTest(plant=label):
+                    self.assertNotEqual(spy_wrong(path, cases), [], label)
+
+    def test_every_wrapped_command_bash_runs_without_the_bounds_is_found_or_refused(self):
+        members = examined("wrapper-axis members", wrapper_members())
+        self.assertEqual(len(members), WRAPPER_SIZE)
+        scripts = [UNBOUNDED + "\n", f"{LEAD}\n"] + [script for *_, script in members]
+        unbounded, _ = bash_runs(scripts)
+        runs = examined(
+            "wrapper-axis members bash runs without the bounds",
+            sorted(n - 2 for n in unbounded if n >= 2),
+        )
+        verdicts = self.outcomes([script for *_, script in members])
+        escaped = [members[n] for n in runs if all(BOUNDED.search(line) for line in verdicts[n])]
+        self.assertEqual(
+            escaped[:1], [], f"{len(escaped)} of {len(runs)} members that lose the bounds pass"
+        )
+
+    def test_the_declared_form_around_a_bounded_command_is_found_bounded(self):
+        members = [
+            (n, member)
+            for n, member in enumerate(wrapper_members())
+            if member[0] in WRAPPER_DECLARED and member[1] == "bounded"
+        ]
+        examined("declared-form members", members)
+        scripts = [UNBOUNDED + "\n", f"{LEAD}\n"] + [member[3] for _, member in members]
+        unbounded, bounded = bash_runs(scripts)
+        verdicts = self.outcomes([member[3] for _, member in members])
+        wrong = [
+            (member[:3], verdicts[k])
+            for k, (_, member) in enumerate(members)
+            if k + 2 in unbounded
+            or k + 2 not in bounded
+            or not verdicts[k]
+            or any(line.startswith("refused") for line in verdicts[k])
+            or not all(BOUNDED.search(line) for line in verdicts[k])
+        ]
+        self.assertEqual(wrong[:1], [], f"{len(wrong)} of {len(members)} members")
 
 
 if __name__ == "__main__":
