@@ -290,7 +290,7 @@ fn the_walk_reads_every_day_of_its_window_and_none_outside_it() {
                 let mut skipped: BTreeSet<i64> = run
                     .iter()
                     .enumerate()
-                    .filter(|(place, _)| *place != 0 && (mask >> place) & 1 == 1)
+                    .filter(|(place, _)| (mask >> place) & 1 == 1)
                     .map(|(_, &n)| n)
                     .collect();
                 for skip_the_closing_day in [false, true] {

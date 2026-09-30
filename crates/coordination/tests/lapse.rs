@@ -147,7 +147,7 @@ fn a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary() {
     let mut opened: u64 = 0;
     // A member is every input the judge reads: the rule, the reviews and `now`.
     let mut distinct: BTreeSet<(i64, i64, i64, i64, i64)> = BTreeSet::new();
-    for offset in [-720_i64, -300, -210, 0, 330, 330, 540, 840] {
+    for offset in [-720_i64, -300, -210, 0, 330, 345, 540, 840] {
         for hour in [0_i64, 4] {
             let the_rule = rule(offset, hour);
             // Local midnight of local calendar date `T` in this offset.
