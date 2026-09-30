@@ -95,7 +95,7 @@ const READ_MEMBERS = 2934;
  * Which members those are, by `digestOf`, so a reader that reads one member more and another one fewer,
  * leaving the count as it was, fails too.
  */
-const READ_DIGEST = '5b39c990669cfb05f3d65041b4d3f900e8dcaa73083ba825a6d2f57227b7c736';
+const READ_DIGEST = '14cd449a4ec4d03cfafbe1e1ca12d6937c9721b98bd901fe32589f95023313da';
 
 /** Every generated member GitHub renders as a diagram, with the diagram sources GitHub renders. */
 function renderedMembers() {

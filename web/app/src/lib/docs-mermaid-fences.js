@@ -549,9 +549,9 @@ function* boundMembers() {
   yield ['trust.reference.split', hidden(['[t]\\([x `<select>` y] z'])];
   yield ['trust.bracket', hidden(['[a `<select>` b] z'])];
   yield ['trust.heading', hidden(['# a `<select>` b'])];
-  for (const [at, gap] of ['&#32;', '\u00a0', '&lt;', ' ', '\t', '<'].entries()) yield [`trust.autolink.${at}`, hidden([`http://a.b/${gap}\`<select>\` z`])];
+  for (const [at, gap] of ['&#32;', '\u00a0', '&lt;', ' ', '\t', '<'].entries()) yield [`trust.autolink.${at}`, hidden([`https://a.b/${gap}\`<select>\` z`])];
   yield ['trust.autolink.www', hidden(['www.a.b&#32;`<select>` z'])];
-  yield ['trust.autolink.line', hidden(['http://a.b/', '`<select>` z'])];
+  yield ['trust.autolink.line', hidden(['https://a.b/', '`<select>` z'])];
   const tables = [
     ['x `a', 'e <select>` | b', '-|-'],
     ['a | b', '-|-', 'c `x', 'e <select>` d'],
