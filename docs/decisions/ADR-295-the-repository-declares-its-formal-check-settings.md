@@ -17,8 +17,8 @@ checked (#468). Where do the settings live, and against which commit is a delive
 - A setting that guards against weakening must be reviewable in the pull request that sets it.
 - A delivery is judged on what it changes, so its base is the branch it lands on.
 - The file carries only what the checker reads, so no field is dead text.
-- A value fixed at first commit (`k`, the axioms, the signers path) is a ratchet, so it is settled
-  before the file merges.
+- `k` and the signers path are fixed at first commit and the axioms can only shrink, so they are
+  settled before the file merges.
 
 ## Considered Options (the alternatives it was chosen against)
 
@@ -44,7 +44,8 @@ The trust file itself is not part of this decision: it lands in a separate, owne
 
 - Good, because the checker reads the repository's settings, so a check runs over the tree and no
   longer refuses on a missing file.
-- Good, because every change to `k`, the axioms or the signers path is a weakening the review sees.
+- Good, because a change to `k`, an added axiom or a changed signers path is a weakening the checker
+  reports, so the review sees it.
 - Bad, because a mutation row removed while its target file stays now needs the owner's signed
   ruling (SPEC-295 R4). Measured cost: over the development branch's whole history no merged pull
   request removed a mutation row whose target stayed, so no delivery so far would have been held.
@@ -57,8 +58,8 @@ SPEC-295's A1 to A3 (`scripts/tests/test_formal_config.py`).
 
 ## What would make this wrong
 
-- A field the checker starts to read that the file lacks: it would refuse the file as incomplete.
-  A1 pins the file to the fields R1 lists, so the change is an amendment and not silent drift.
+- A field the checker starts to read that the file lacks: if it starts to require that field, it
+  would refuse the file as incomplete. A1 pins the file to the fields R1 lists, so the change is an amendment and not silent drift.
 - A value of `k` that is too small or too large for the development branch's pace of merges: it is
   a ratchet, so changing it is a signed ruling.
 
