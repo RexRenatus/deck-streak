@@ -277,13 +277,164 @@ fn tally(sides: &mut BTreeMap<&'static str, usize>, member: [bool; 7]) {
     }
 }
 
-/// The tally equals [`WALK_BOUNDARY_MEMBERS`].
-fn assert_walk_sides(sides: &BTreeMap<&str, usize>) {
+/// The tally equals [`WALK_BOUNDARY_MEMBERS`], and the members each edit of [`WALK_EDITS`]
+/// decides equal its count there.
+fn assert_walk_sides(sides: &BTreeMap<&str, usize>, members: &BTreeSet<Member>) {
     assert_eq!(
         *sides,
         BTreeMap::from(WALK_BOUNDARY_MEMBERS),
         "the boundaries' members: {sides:?}"
     );
+    let decided = decided_by_each_edit(members);
+    println!("members each edit decides: {decided:?}");
+    let pinned: BTreeMap<&str, usize> = WALK_EDITS.iter().map(|&(k, _, n)| (k, n)).collect();
+    assert!(
+        pinned.values().all(|&n| n > 0),
+        "every edit decides a member: {pinned:?}"
+    );
+    assert_eq!(
+        decided, pinned,
+        "the members each edit decides: {decided:?}"
+    );
+}
+
+/// One edit of one line of the walk: a boundary it compares moved one way, or a line it runs
+/// replaced. Each is the walk with that line changed and no other, so on every member the walk
+/// with the edit made answers what [`walk_edited`] answers with it.
+#[derive(Clone, Copy, Debug)]
+enum WalkEdit {
+    /// No edit: the walk as it stands.
+    Held,
+    /// The window's first day read `n` days later.
+    Reach(i64),
+    /// The window's first day taken from its latest key.
+    LatestKey,
+    /// The walk begun `n` days after today.
+    Start(i64),
+    /// A day closing the run only when its count is more than `n`.
+    ClosesAbove(i64),
+    /// Every day read as silent (`true`) or as a skip day (`false`), whatever the skip days are.
+    Skips(bool),
+    /// The threshold `n` days more.
+    Threshold(i64),
+    /// The walk passing `n` days a step.
+    Stride(i64),
+    /// The id the first silent day the walk meets, not the last.
+    FirstMet,
+}
+
+/// Each edit of the walk and how many distinct members of the window population it decides: the
+/// members whose answer the walk with that edit made differs from the walk's. A boundary the walk
+/// compares is moved one step each way; the other lines are replaced as their rows replace them.
+/// A count of members at a boundary cannot tell a member whose side decides its answer from one
+/// parked there; a member counted here is one on which the edited walk and the walk disagree.
+const WALK_EDITS: [(&str, WalkEdit, usize); 14] = [
+    ("the window begun a day later", WalkEdit::Reach(1), 23),
+    ("the window begun a day earlier", WalkEdit::Reach(-1), 67),
+    (
+        "the window begun at its latest day",
+        WalkEdit::LatestKey,
+        210,
+    ),
+    (
+        "the walk begun a day before today",
+        WalkEdit::Start(-1),
+        275,
+    ),
+    ("the walk begun a day after today", WalkEdit::Start(1), 544),
+    (
+        "a day closing the run at two reviews",
+        WalkEdit::ClosesAbove(1),
+        1001,
+    ),
+    ("every day closing the run", WalkEdit::ClosesAbove(-1), 414),
+    (
+        "a day closing the run at 101 reviews",
+        WalkEdit::ClosesAbove(100),
+        1557,
+    ),
+    ("every skip day read as silent", WalkEdit::Skips(true), 1292),
+    (
+        "every silent day read as a skip day",
+        WalkEdit::Skips(false),
+        414,
+    ),
+    ("one more silent day to open", WalkEdit::Threshold(1), 343),
+    ("one fewer silent day to open", WalkEdit::Threshold(-1), 680),
+    ("the walk passing two days a step", WalkEdit::Stride(2), 559),
+    ("the id the first silent day met", WalkEdit::FirstMet, 411),
+];
+
+/// `open_lapse` line for line over day numbers, with the one edit `edit` makes.
+fn walk_edited(
+    today: i64,
+    rows: &BTreeMap<i64, u32>,
+    skipped: &BTreeSet<i64>,
+    threshold: u32,
+    edit: WalkEdit,
+) -> Option<i64> {
+    let mut window_start = match edit {
+        WalkEdit::LatestKey => *rows.keys().next_back()?,
+        _ => *rows.keys().next()?,
+    };
+    let (mut silent, mut first_silent) = (0_i64, None);
+    let mut number = today;
+    match edit {
+        WalkEdit::Reach(n) => window_start += n,
+        WalkEdit::Start(n) => number += n,
+        _ => {}
+    }
+    let (closes_above, stride, more) = match edit {
+        WalkEdit::ClosesAbove(n) => (n, 1, 0),
+        WalkEdit::Stride(n) => (0, n, 0),
+        WalkEdit::Threshold(n) => (0, 1, n),
+        _ => (0, 1, 0),
+    };
+    while number >= window_start {
+        if i64::from(rows.get(&number).copied().unwrap_or(0)) > closes_above {
+            break;
+        }
+        let counted = match edit {
+            WalkEdit::Skips(read_as_silent) => read_as_silent,
+            _ => !skipped.contains(&number),
+        };
+        if counted {
+            silent += 1;
+            first_silent = match edit {
+                WalkEdit::FirstMet => first_silent.or(Some(number)),
+                _ => Some(number),
+            };
+        }
+        number -= stride;
+    }
+    if silent >= i64::from(threshold) + more {
+        first_silent
+    } else {
+        None
+    }
+}
+
+/// The distinct members each edit of [`WALK_EDITS`] decides. On every member the copy with no edit
+/// is first asserted to answer what the walk answers, so a member the copy counts for an edit is
+/// one the walk with that edit made answers differently.
+fn decided_by_each_edit(members: &BTreeSet<Member>) -> BTreeMap<&'static str, usize> {
+    let mut decided: BTreeMap<&'static str, usize> =
+        WALK_EDITS.iter().map(|&(k, _, _)| (k, 0)).collect();
+    for (today, rows, skipped, threshold) in members {
+        let counts: BTreeMap<StudyDay, u32> = rows.iter().map(|(&n, &c)| (day(n), c)).collect();
+        let skips: BTreeSet<StudyDay> = skipped.iter().map(|&n| day(n)).collect();
+        let walked = open_lapse(day(*today), &counts, &skips, *threshold).map(StudyDay::epoch_day);
+        let held = walk_edited(*today, rows, skipped, *threshold, WalkEdit::Held);
+        assert_eq!(
+            walked, held,
+            "today {today}, rows {rows:?}, skipped {skipped:?}: the walk's copy differs from the walk"
+        );
+        for &(name, edit, _) in &WALK_EDITS {
+            let turned = walk_edited(*today, rows, skipped, *threshold, edit) != held;
+            *decided.entry(name).or_default() += usize::from(turned);
+        }
+    }
+    decided
 }
 
 /// Where one window member sits against each boundary of [`WALK_BOUNDARY_MEMBERS`], by R13.
@@ -430,5 +581,5 @@ fn the_walk_reads_every_day_of_its_window_and_none_outside_it() {
         opened > 0 && closed > 0,
         "both answers occur: {opened} open, {closed} none"
     );
-    assert_walk_sides(&sides);
+    assert_walk_sides(&sides, &distinct);
 }
