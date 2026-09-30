@@ -286,3 +286,37 @@ A35, round 7: the record in the form the probes read.
 A35: red at 8c883728: assertion `left == right` failed: every build-script member is refused, naming its package; left: 0, right: 104
 A35: green at dfd9ca1e
 ```
+
+A36, round 8: the census's verdict depends only on the tree it judges, and its owner is found by the
+path of its manifest. 09c160bb commits the round-8 tests alone, over the census of the round before;
+14 of them are red by assertion there (`test result: FAILED. 21 passed; 14 failed`), and 8632611d
+makes them green (`35 passed; 0 failed; 1 ignored`). Each red line, by test:
+
+- the owner's lookup over nine synthetic graphs (no member at the owner's manifest, two, a renamed
+  owner, a path, git or registry package carrying its name, no build script, two): every graph is
+  accepted, `left: [... "the owner renamed: Ok([])", ...]`, `right: []`;
+- the owner without a build script, the owner's manifest under another package name, and each of
+  three graphs with a git package carrying the owner's name (beside an edited pin, a member's script,
+  a disarmed owner): each `[]` where a refusal by name is asserted;
+- a cargo configuration above the tree, and one in cargo's home: `[]` where a refusal is asserted;
+- a member's code reading a variable the host sets: `[]` where a refusal is asserted;
+- a variable the tree does not set, on a tree that reads it: `left: []`, `right: ["crates/m/src/lib.rs
+  calls settle, and only coordination's code may"]`;
+- a target copied from another tree's census: the same `left: []` against the same `right`;
+- the order pair on one target: `left: [[caller], []]`, `right: [[], [caller]]`, so the verdict of
+  the second tree follows the first;
+- the ten trees of main's round-7 generation: several are accepted (`[]`) where a refusal by name is asserted;
+- the population of 46 cases: `cases judged wrongly: 7; disagreements: 2`, each disagreement a
+  verdict on a warmed target that differs from the verdict on a fresh one.
+
+Two tests are green by design at the red commit: the one that names each use in its package and file
+(the restore of a test the census's earlier change had weakened, red under the plant of S07284), and
+the one that judges a reused git URL as a fresh URL, which the lock file already pins.
+
+```red-first
+A36: red at 09c160bb: the_owner_is_the_member_at_its_manifest_and_every_other_lookup_is_unique_or_refused: assertion `left == right` failed; right: []
+A36: red at 09c160bb: a_target_copied_from_another_trees_census_does_not_move_the_verdict: assertion `left == right` failed: tree two on a copy of tree one's target, and alone
+A36: red at 09c160bb: the_order_pair_p3_is_judged_alike_in_both_orders_on_one_target: assertion `left == right` failed: the second tree of each order on a target the first tree used
+A36: red at 09c160bb: verify_round_seven_population_is_judged_as_each_case_expects_on_any_target: cases judged wrongly: 7; disagreements: 2
+A36: green at 8632611d: examined 46 case(s) of verify round 7's population, digest b0fbee86a359b5cc5b3a963a38cd1e1afb629c2d7b18ab00c5242d103c4d28f0 / differential: seed 0x4250008, 10 chain(s), 40 warmed verdict(s) compared with the fresh one; disagreements: 0 / killer examined 2218 tree(s); members escaping: 0; controls judged wrongly: 0
+```

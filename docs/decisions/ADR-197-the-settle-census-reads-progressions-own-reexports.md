@@ -276,6 +276,58 @@ S07230 to S07240. Round 6's rows, S07241 to S07275, pin the census's refusals by
 its attribution, its bounds, its environment and the probe itself, each killed by a planted-tree
 test; round 7's rows pin the graph refusal, its edges and its pin.
 
+### Decision, round 8: the verdict depends only on the tree it judges
+
+Round 8 states the rule the census keeps: its verdict depends only on the tree it judges. The design
+lists every input a verdict can read (the tree, the lock file, the toolchain, the environment, the
+target directory's build-script output and fingerprints, cargo's home, cargo's configuration from
+the tree's root up to `/`, a compiler wrapper, and a CI cache) and places each one: part of the
+tree, pinned by the lock file or the toolchain pin, made empty before each census compile, or
+refused by name. SPEC-072 section 14 carries the rule and each refusal.
+
+The census finds its owner by path: the workspace member whose manifest is
+`crates/progression/Cargo.toml`. A graph where no member has that manifest, where more than one has
+it, where that member's package is not named `deck-streak-progression`, where another package of the
+graph carries the owner's name at any version or source, or where the owner has no build script or
+more than one, is refused by name, so no graph without its owner is accepted. Every other lookup
+the census makes is keyed by the package's id in the resolve graph, or is unique, or refuses.
+
+Round 7 said the census's cached target is safe because "a stale entry is never served". That does
+not hold for everything a kept target carries, so round 8 keeps no census target at all: each census
+compiles in an empty target directory made for it and removed when it ends, the killer's workers
+included, and the CI cache of the census's target is removed. The census's cargo starts from an
+empty environment and inherits only the variables that locate the programs, the homes and the
+pinned toolchain. A cargo configuration above the tree or in cargo's home, and a member's code that
+reads a file outside the tree or a variable the host sets, are refused by name.
+
+Round 7 also called kernel's build script admitted. The pin is the only admission, and it admits
+progression's script alone; kernel's script is not refused, because kernel cannot name `settle`,
+and it is not admitted by anything.
+
+The options were chosen against:
+
+- (a) drop the census's cache, and compile each census in an empty target. Chosen: nothing is
+  carried from one census to the next, so the verdict can read nothing but the tree and what the
+  lock file and the toolchain pin. Every census compile is cold, and the `rust` job pays for it; a
+  slower census is not a weakening.
+- (b) keep the cache and strip build-script output and fingerprints before saving it. Rejected: a
+  strip is complete only against every input a build script in the graph can read, and the build
+  scripts of packages that cannot name `settle` read what the census does not name, so no strip
+  can be shown complete.
+- (c) keep the cache and purge after restoring it. Rejected for the same reason as (b), and the
+  restored entry is on the runner until the purge runs.
+- (d) keep the name lookup of round 7 and refuse a second package of the owner's name. Rejected: a
+  member at the owner's path under another package name would still be missed.
+- (e) extend round 6's list of scrubbed variables. Rejected: a list of names to drop cannot name
+  every variable a build script reads; a list of names to keep can.
+
+What stays disclosed by kind, as main's round-6 ruling decided, is named in SPEC-072 section 14 and
+tracked by issue 445: progression's own code reading the census's cfg, which the pin does not cover
+(the proc-macro bullet of round 6 is one instance of it); and the build-time code of a package that
+cannot name `settle`, which cargo runs during the census's compile. Rows S07290 to S07299 pin the
+owner's lookup, the empty target, the environment and the refusals of configuration and of reads
+beyond the tree.
+
 ## More Information
 
 Issue 397; SPEC-072 (its amendment of 2026-09-29); ADR-072; issue 350, which delivered the census.

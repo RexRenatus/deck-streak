@@ -18,4 +18,12 @@
   one pinned SHA-256, and a graph cargo cannot give is a refusal. A build script's cfg in a package
   that cannot name `settle`, read by a macro that package exports, and an `include!` of a
   recompute file from outside the folder remain disclosed by kind (SPEC-072 section 12, ADR-197).
-  The census's target is kept between CI runs, and the killer builds its stub once for each worker.
+
+- The census's verdict depends only on the tree it judges. It finds progression by the path of its
+  manifest, never by a package's name, and refuses by name a graph where that member is absent or
+  ambiguous, where its package is renamed, where another package carries its name, or where it has
+  no build script or more than one. Each census compiles in an empty target of its own, which no CI
+  cache serves, with an environment it names; a cargo configuration above the tree or in cargo's
+  home, and a member's code reading beyond the tree, are refused by name. Progression's own code
+  reading the census's cfg, which the pin does not cover, stays disclosed by kind (SPEC-072 section
+  14, ADR-197).

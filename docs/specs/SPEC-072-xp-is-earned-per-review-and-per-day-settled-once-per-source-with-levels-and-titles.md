@@ -737,3 +737,96 @@ A33: cargo test -p deck-streak-progression --test xp_census -- --exact the_censu
 A34: cargo test -p deck-streak-progression --test xp_census -- --exact the_census_refuses_every_caller_the_compiler_finds
 A35: cargo test -p deck-streak-progression --test xp_census -- --exact the_census_refuses_every_build_script_that_can_name_settle
 ```
+
+## 14. Amendment, 2026-09-30, round 8: the census judges the tree alone
+
+Issue 397, decided by ADR-197 (its decision of round 8). This amendment is appended: section 12
+stands as the record of rounds 6 and 7, and where a sentence of it no longer holds, this section
+says so and says what holds instead.
+
+- **The rule.** The census's verdict depends only on the tree it judges. Every input the verdict
+  can read is part of the tree, pinned by the lock file or by the toolchain pin, made empty before
+  each census compile, or refused by name. An input the census cannot place in one of those four
+  is refused by name, never trusted.
+- **The owner, by path.** The owner is the workspace member whose manifest is
+  `crates/progression/Cargo.toml`, found by that path and never by a package's name. The census
+  refuses by name a graph where no member has that manifest, where more than one has it, where the
+  owner's package is not named `deck-streak-progression`, where any other package of the graph
+  carries the owner's name (whatever its version or its source), and where the owner has no build
+  script or more than one. A graph without its owner is never accepted. Every other lookup the
+  census makes (a package's targets, the packages that reach the owner, the pinned script, the
+  package a compiler message names) is keyed by the package's id in cargo's resolve graph, or is
+  unique, or is refused.
+- **One admission.** Section 12 calls progression's pinned script admitted and says no other
+  admission exists, and it also calls kernel's script admitted. The pin is the only admission: it
+  admits progression's script at `PROGRESSION_BUILD_SHA256`, and nothing else is admitted. A build
+  script of a package that cannot name `settle`, kernel's among them, is not refused, because its
+  cfg governs only code that cannot reach `settle`; it is not admitted by anything.
+- **An empty target for each census.** Each census compiles in an empty target directory made for
+  it alone and removed when it ends, so nothing an earlier compile built, fingerprints and
+  build-script output included, reaches a later verdict. The killer's workers keep one workspace
+  path, and each tree they judge still compiles in a target of its own. Section 12's Cost bullet,
+  which keeps the census's target between CI runs under a cache key of its own and has each worker
+  recompile only a case's own files, no longer holds: no cache serves the census, and every census
+  compile is cold.
+- **The environment, by name.** The census's cargo starts from an empty environment and inherits
+  only `PATH`, `HOME`, `CARGO_HOME`, `RUSTUP_HOME` and `RUSTUP_TOOLCHAIN` (where the programs, the
+  homes and the pinned toolchain are), then sets `CARGO_INCREMENTAL`, its own flags and
+  `SETTLE_CENSUS`. No other variable of the machine reaches a build script, a macro or rustc in the
+  census's build.
+- **Cargo's configuration, wherever cargo reads it.** A `.cargo/config` or `.cargo/config.toml` in
+  the tree's root or in any folder above it, and one in cargo's home, are refused by name. Section
+  12 refused the root's alone and disclosed the others under "the machine that runs the census";
+  that bullet now names the toolchain alone, which `rust-toolchain.toml` pins.
+- **Reads beyond the tree.** Code of a workspace member that reads a file outside the tree, or a
+  variable the host sets, as the compiler records it in its dependency information, is refused by
+  name. Registry and git sources are read from cargo's home, and the lock file pins them: a
+  registry package by its checksum, a git package by its revision.
+- **Still disclosed by kind** (main's round-6 ruling; issue 445 tracks each, with pull request 425
+  named):
+  - progression's own code reading the census's cfg, which the pin does not cover (section 12's
+    bullet on a proc-macro is one instance of this kind, not the whole of it);
+  - build-time code of a package that cannot name `settle`, its build script or a proc-macro it
+    provides, which cargo runs during the census's compile: what it reads beyond the tree is not
+    part of the verdict's rule, and a cfg it sets is section 12's disclosed kind;
+  - every other kind section 12 discloses, unchanged.
+- **The window between the read and the passes.** Section 12's disclosed window stands: the census
+  reads the graph once and then compiles, so an actor that changes a manifest or the lock file
+  between the two can change what the census compiled but not what it read, and the `--locked` of
+  every pass makes a changed lock file a refusal.
+- **The property issue 481 proves.** It is stated over what the census refuses, not over uses
+  alone: a graph where the owner cannot be told by path, where its script is not the pinned one, or
+  where a package other than the owner that has a build script, or that comes from a registry or
+  git, reaches the owner by a normal, build or dev edge at any depth, is refused whether or not any
+  code uses `settle`; on any other graph that section 12 does not refuse by design, the census
+  refuses exactly the uses of `settle` in code outside progression that the cause rule does not
+  allow coordination.
+- **The killers.** Round 7's review population (46 trees) is judged in the census's own tests, each
+  tree on an empty target, the owner found by path; the same trees are judged again, in a seeded
+  order, each on a target another tree of the population used, and each verdict must equal the
+  fresh one. Two trees that differ only in which crate a member calls are judged in both orders on
+  one target, a target copied from another tree's census is judged against a fresh one, and a
+  variable set and unset around the census must not move its verdict. The killer's population and
+  round 7's are each pinned by their count and a digest of their trees, together.
+- **Cost.** Every census compile is cold, so the `rust` job pays each compile in full. The pull
+  request's body carries the `rust` job's wall time on `dev` without this change, at this change,
+  and the increment, each read from CI.
+- **Rows.** S07290 to S07299: the owner found by path, the decoy refusal, the renamed owner, the
+  owner without a script, the ambiguous owner, the empty target, the cleared environment, the
+  configuration above the tree, the configuration in cargo's home, and a member reading a variable
+  the host sets. Each is killed by a test of `xp_census.rs` and proved KILLED by its full id on a
+  committed tree.
+- **Files.** `crates/progression/tests/xp_census.rs`, `.github/workflows/ci.yml` (the census's
+  cache removed), `docs/schematics/ci-jobs-and-caches.md`,
+  `scripts/mutation-rows.d/S07200-S07299.json`, `docs/decisions/ADR-197-*.md`,
+  `docs/red-first/SPEC-072.md` and `changelog.d/settle-census-397.md`.
+
+## 15. Acceptance criteria of section 14's amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A36 | the census's verdict depends only on the tree it judges: the owner is the member at progression's manifest path, and a graph where it cannot be told is refused by name; every lookup is keyed by id, unique or refused; each census compiles in an empty target, with an environment it names; a cargo configuration above the tree or in cargo's home, and a member's read beyond the tree, are refused by name; and a tree's verdict on a target another tree used equals its verdict on a fresh one | progression `xp_census` tests: `verify_round_seven_population_is_judged_as_each_case_expects_on_any_target`, `the_order_pair_p3_is_judged_alike_in_both_orders_on_one_target`, `a_target_copied_from_another_trees_census_does_not_move_the_verdict`, `a_git_package_carrying_the_owners_name_beside_a_members_script_is_refused_by_name`, `a_git_package_carrying_the_owners_name_beside_an_edited_pin_is_refused_by_name`, `a_git_package_carrying_the_owners_name_beside_a_disarmed_owner_is_refused_by_name`, `the_owners_manifest_under_another_package_name_is_refused_by_name`, `an_owner_without_a_build_script_is_refused_by_name`, `the_owner_is_the_member_at_its_manifest_and_every_other_lookup_is_unique_or_refused`, `a_variable_the_tree_does_not_set_does_not_move_the_verdict`, `a_cargo_configuration_above_the_tree_is_refused_by_name`, `a_cargo_configuration_in_cargos_home_is_refused_by_name`, `a_members_code_reading_a_variable_the_host_sets_is_refused_by_name`, `a_git_url_reused_with_other_content_is_judged_as_a_fresh_url` and `main_round_seven_generation_is_refused_by_name` |
+
+```acceptance
+A36: cargo test -p deck-streak-progression --test xp_census -- --exact verify_round_seven_population_is_judged_as_each_case_expects_on_any_target
+```
