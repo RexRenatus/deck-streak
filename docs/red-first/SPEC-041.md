@@ -471,3 +471,20 @@ reads every named request site once); it changes no member and no verdict.
 A17: red at fb75909d3e93: 1048 of 1048 requests the census cannot read are not refused, e.g. generic in Piece::units of crates/bot/src/chunk.rs at line 36 is not refused
 A17: green at 0f2ed408694a
 ```
+
+A18 is a new criterion (#429, round 2). The killer is `request_allow_list.rs`, whose tests audit the
+allow-list of the compiler's request rule. At the red commit `clippy.toml` names none of the four
+paths and the bot transport carries none of its two `#[expect]` annotations, so two of the five tests
+are red: the one that reads `clippy.toml` and the one that finds the named sites. Not red: the
+generated suppression population (1,920 planted suppressions), the manifest and flag test and the
+test of the audit's own reading, because the audit that refuses them is in the test itself and a
+tree that has no annotation has no suppression to refuse; their red is the mutant of the rows S04157
+and S04158, each of which leaves one spelling or one level unread and turns its test red, and the
+row S04156 turns the first test red with a path removed from `clippy.toml`. The green commit changes
+the test file once more, for the workspace's lints (a range, a `let` chain, a file-extension helper
+and an `expect` allowance for a test crate), and no assertion.
+
+```red-first
+A18: red at 031e72526af5: clippy.toml does not name reqwest::Client under disallowed-types, and the bot transport carries none of its 2 named #[expect] sites
+A18: green at 41932f6d3623
+```

@@ -117,6 +117,7 @@ R14. The typed policy reads every key of the file, and names the key `defer_fanf
 | A15 | the census reads every shipped source of these kinds: the Rust, Python and web source files, the Mini App's HTML among them, the shell scripts by extension or by a `#!` first line, and the systemd units of every type and their drop-ins; it leaves out symlinks, test files, test directories outside a `src/`, and in a Rust file its comments and `#[cfg(test)]` modules. In what it reads, no name it holds appears outside its place: outside the bot's sources nothing names the Bot API's host, a send or delivery method of the pinned client's table, or the bot's `DEFAULT_API_URL`, SPEC-031's alert path aside; inside them such a method is named only by its own named send; the bot's `send_html`, `edit_html` and command handler are used only at named sites, and the handler's own replies and dispatch are called only by their named callers; only the router's modules name the in-app feed or the held queue, and in the notifications crate only they name its ledger, the root's declaration of it aside; no source of that crate carries `#[path]`, `#[macro_export]` or `#[macro_use]`, or re-exports the ledger, its feed's and queue's tables or its writes to the feed and the queue by a `pub use`; every method of the pinned client's table is a send, a delivery or not a delivery, in one class only; and each of the eight named sends is found once | `no_delivery_goes_around_the_port` |
 | A16 | the census refuses a hand-built Bot API send URL that names the bot's `api_url`, wherever the bot crate's transport builds it: `api_url` is read only by `Transport::send_document` and `Transport::send_photo`, the two multipart sends the pinned client cannot make, and by the constructor `Transport::with_waits`, which composes it once with the token; every other read of it, in a `format!`, a `concat!`, a `String` push, a helper function, a `const`'s path, or a string literal's inline argument, is refused, over every Bot API method the transport names, every form, and every function of the transport outside the named sites | `a_hand_built_send_url_is_refused_wherever_the_transport_builds_it` |
 | A17 | in the bot's sources, a request whose Bot API method the census cannot read is refused outside its named request site: every name through which one is made, the pinned client's generic requests `request`, `request_with_form_data` and `request_with_possible_form_data`, its HTTP client `client`, and the HTTP crate `reqwest`, is found only at its named site, as often as the shipped site names it; any other mention is refused at its line, and a second one at a site by the count, over eight request forms in every function of the bot's sources and at every place outside a function | `a_request_the_census_cannot_read_is_refused_wherever_the_bot_makes_it` |
+| A18 | request capability through reqwest is named by the compiler's resolved path, not by a text token: `clippy.toml` names the four paths through which reqwest's client is made, the type `reqwest::Client` and the calls `reqwest::get`, `reqwest::Client::new` and `reqwest::Client::builder`, so a use of one under any name a source binds it to, by a `use`, a re-export or a `type` alias, is flagged by the workspace's clippy stage under `-D warnings`; the only suppression of either lint in the workspace is an `#[expect]` with a reason at the bot transport's client construction, and any other suppression of them or of a lint group that holds them (`clippy::style`, `clippy::all`, `warnings`), whether an item's or a crate's, through `cfg_attr`, in a manifest's `[lints]` table or as a compiler flag, and a `clippy.toml` that no longer names the four paths, is refused, over every spelling, form and place of a generated population | `clippy_names_the_four_paths_that_make_reqwests_client`, `the_only_suppression_of_the_rule_is_an_expect_at_a_named_transport_site`, `a_suppression_of_the_rule_or_of_its_group_is_refused_wherever_it_is_planted` |
 
 ```acceptance
 A1: cargo test -p deck-streak-notifications --test policy -- --exact the_typed_policy_reads_every_key_of_the_file
@@ -136,6 +137,7 @@ A14: cargo test -p deck-streak-notifications --test rights -- --exact the_notifi
 A15: cargo test -p deck-streak-notifications --test one_router -- --exact no_delivery_goes_around_the_port
 A16: cargo test -p deck-streak-notifications --test one_router -- --exact a_hand_built_send_url_is_refused_wherever_the_transport_builds_it
 A17: cargo test -p deck-streak-notifications --test one_router -- --exact a_request_the_census_cannot_read_is_refused_wherever_the_bot_makes_it
+A18: cargo test -p deck-streak-notifications --test request_allow_list
 ```
 
 ## 3a. What the box run judges
@@ -174,6 +176,8 @@ the verdict of a run with that wiring is posted as the `box/packs` status at the
 | `crates/notifications/tests/rights.rs` | `deck-streak-notifications` | added |
 | `crates/notifications/tests/policy.rs` | `deck-streak-notifications` | added: A1, A3, and the policy's refusals |
 | `crates/notifications/tests/one_router.rs` | `deck-streak-notifications` | added: A2, and A15's census, which reads the shipped sources of the kinds A15 names and refuses in them a delivery around the port by a name it holds; code written to evade it goes unread (§5, #297) |
+| `crates/notifications/tests/request_allow_list.rs` | `deck-streak-notifications` | added: A18, which audits the allow-list of the compiler's request rule: `clippy.toml`'s four paths, the one `#[expect]` at the transport, and every other suppression of the two lints or of a group that holds them |
+| `clippy.toml` | repo | changed: names reqwest's client type and its three constructors as disallowed, each with its reason (A18) |
 | `crates/notifications/tests/ui/push_outside_the_router.rs`, `.stderr` | `deck-streak-notifications` | added: A2's compile-fail fixture and the refusal it records |
 | `crates/notifications/tests/ui/pass_by_default.rs`, `.stderr`, `crates/notifications/tests/ui/pass_kept_by_a_clone.rs`, `.stderr` | `deck-streak-notifications` | added: A2's fixtures for a pass made by `Default` and one kept by cloning a borrowed pass, each with the refusal it records |
 | `crates/notifications/tests/support/mod.rs` | `deck-streak-notifications` | added: the tests' database, clock and recording transport |
@@ -245,6 +249,18 @@ the verdict of a run with that wiring is posted as the `box/packs` status at the
     no function, which the count reads as unchanged (#429);
   - a new HTTP dependency in another crate: `Cargo.lock` gives an HTTP client to the bot crate
     alone, so it needs a change of the lock, which review sees (#429).
+- Request capability through reqwest is named by the compiler's resolved path (A18, #429), so the
+  forms above that bind reqwest's client to a name of the source's own are closed, and what the rule
+  still cannot read is each of these:
+  - a request over a raw socket (tokio's `TcpStream`) or through an HTTP crate other than reqwest:
+    the four paths in `clippy.toml` are reqwest's, and such a request names none of them (#429);
+  - a request through the pinned client's generic requests, which name no reqwest path at the call:
+    the text census's request names read them, as A17 states, and the compiler's rule does not (#429);
+  - two compensating edits that move a `reqwest` mention between places the census names alike, in
+    no function: the count still reads them as unchanged, but a client made at the new place names
+    one of the four paths, which the compiler's rule flags (#429);
+  - a new HTTP dependency in another crate: it needs a change of the lock, which review sees, and
+    it names no reqwest path (#429).
 
 ## 6. Risks
 
@@ -443,3 +459,23 @@ the verdict of a run with that wiring is posted as the `box/packs` status at the
   The three planted requests of A15 (`celebrate.rs`, `copy.rs` and `rich.rs`) gain one refusal each; no
   line was removed. Each named site's read of `api_url` is counted once by A15's test. The population is
   eight request forms in every function of the eight bot sources and at three places outside a function.
+- **A18: request capability by the compiler's resolved path (#429).** The text census reads a name, so
+  reqwest's client bound to a name of the source's own, by an alias, by its own type name or by a
+  `type` or `pub use` binding, added no mention it counts and passed. Clippy resolves the path of every
+  use through such a binding, so `clippy.toml` now names `reqwest::Client` as a disallowed type and
+  `reqwest::get`, `reqwest::Client::new` and `reqwest::Client::builder` as disallowed methods, each with
+  its reason, and the workspace's clippy stage, which runs every target under `-D warnings`, refuses a
+  use of one. The bot transport's construction of its client is the one legitimate site, and it carries
+  an `#[expect]` for each lint with a reason, so a site that stops needing it is itself a warning. Those
+  annotations are the audited allow-list: `request_allow_list.rs` refuses any other suppression of the
+  two lints, any suppression of a lint group that holds them in every spelling a crate accepts, and a
+  `clippy.toml` that no longer names the four paths. It reads files as text, which is right for an
+  audit of the allow-list, and clippy does the resolving. The text census of A15 to A17 stays: it reads
+  the Bot API's method names, and its claim narrows to the forms that name a token. The population is
+  1,920 planted suppressions: eight spellings of a lint or of a group that holds it, twelve attribute forms
+  (an `allow` and an `expect`, with and without a reason, beside another lint, over lines, in a
+  `cfg_attr`, and as a crate's inner attribute) at up to three places (before an item, before a
+  statement, and at the top of a file), in each of the bot's eight sources. The test file
+  changed once between the red and the green commit, in the style of the workspace's lints (a range,
+  a `let` chain, a file-extension helper and an `expect` allowance for a test crate), with no
+  assertion touched.
