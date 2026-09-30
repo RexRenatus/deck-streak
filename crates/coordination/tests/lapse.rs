@@ -147,6 +147,10 @@ type LapseMember = (RuleKey, i64, Vec<(i64, i64, i64)>);
 const DISTINCT_ROLLOVER_MEMBERS: usize = 448;
 /// The distinct members the rule's day is judged at: sixteen rules by seven instants.
 const DISTINCT_DAY_MEMBERS: usize = 112;
+/// How many study days of the members handed to the lapse judge hold exactly one review. The walk
+/// asks whether a day holds more than none, so one review is the day at that boundary; a fold that
+/// keeps every member distinct can still stack the reviews on one day, and this count shows it.
+const ONE_REVIEW_DAYS: usize = 896;
 
 const fn rule_key(rule: StudyDayRule) -> RuleKey {
     (rule.utc_offset().minutes(), rule.rollover_hour().get())
@@ -160,11 +164,20 @@ fn a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary() {
     // input shows in that judge's count while the other judge still reads the value.
     let mut distinct: BTreeSet<LapseMember> = BTreeSet::new();
     let mut days: BTreeSet<(RuleKey, i64)> = BTreeSet::new();
+    let mut one_review_days: usize = 0;
     let mut day_judge = |rule: StudyDayRule, t: i64| {
         days.insert((rule_key(rule), t));
         rule.study_day(UtcMillis::from_epoch_millis(t)).epoch_day()
     };
     let mut lapse_judge = |rule: StudyDayRule, now: i64, reviews: &[Review]| {
+        let (offset, hour) = rule_key(rule);
+        let mut per_day: BTreeMap<i64, usize> = BTreeMap::new();
+        for r in reviews {
+            *per_day
+                .entry(day_of(i64::from(offset), i64::from(hour), r.id))
+                .or_default() += 1;
+        }
+        one_review_days += per_day.values().filter(|&&n| n == 1).count();
         let handed = reviews.iter().map(|r| (r.id, r.kind, r.ease)).collect();
         distinct.insert((rule_key(rule), now, handed));
         open_under(rule, now, reviews.to_vec())
@@ -192,7 +205,7 @@ fn a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary() {
                 // One study review long ago and one at `t`; the run after `t` is what the day
                 // decides: silent on d+1, d+2, d+3 opens a lapse with id d+1.
                 let reviews = vec![
-                    review_at(begins(offset, hour, d - 10) + HOUR_MS),
+                    review_at(t),
                     review_at(t),
                 ];
                 for (now, want) in [
@@ -213,7 +226,8 @@ fn a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary() {
         }
     }
     println!(
-        "examined {examined} rollover member(s), {} distinct, over {} distinct day member(s)",
+        "examined {examined} rollover member(s), {} distinct, over {} distinct day member(s), \
+         {one_review_days} study day(s) holding one review",
         distinct.len(),
         days.len()
     );
@@ -229,6 +243,10 @@ fn a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary() {
         DISTINCT_DAY_MEMBERS,
         "the day judge's spread: {} distinct",
         days.len()
+    );
+    assert_eq!(
+        one_review_days, ONE_REVIEW_DAYS,
+        "the walk's boundary: {one_review_days} study day(s) holding one review"
     );
     assert!(
         opened > 0 && opened < examined,
