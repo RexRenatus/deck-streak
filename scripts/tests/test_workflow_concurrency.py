@@ -22,6 +22,7 @@ from test_ci_workflows import (
     read_workflow,
     rendered,
     Unread,
+    kind,
     workflow_files,
 )
 
@@ -36,6 +37,11 @@ def read_all():
         text = path.read_text(encoding="utf-8")
         found.append((path.name, read_workflow(text), text))
     return found
+
+
+def workflow_texts():
+    """Every workflow file of the directory as {file name: its text}."""
+    return {path.name: path.read_text(encoding="utf-8") for path in workflow_files(WORKFLOWS)}
 
 
 def with_pull_request(found):
@@ -205,12 +211,22 @@ def tag_run(event, run_id, workflow="ci"):
     return dict(run, **{"github.event_name": event, "github.workflow": workflow})
 
 
+def canonical(group):
+    """A group with each `github['name']` inside an expression read as `github.name`: the contexts
+    page's index syntax, which the expression reader does not model."""
+    return re.sub(
+        r"\$\{\{.*?\}\}",
+        lambda found: re.sub(r"github\['([\w-]+)'\]", r"github.\1", found.group(0)),
+        str(group),
+    )
+
+
 def rendered_groups(name, content):
     """Every group another workflow's block renders, read without case, as GitHub reads a group's
     name across the repository: with the workflow's own name as `github.workflow`, in the scenarios
     the tests model and in a run for a tag of each event it declares whose ref can be a tag."""
     block = content.get("concurrency")
-    group = block.get("group", "") if isinstance(block, dict) else block or ""
+    group = canonical(block.get("group", "") if isinstance(block, dict) else block or "")
     own = {"github.workflow": workflow_name(name, content)}
     scenarios = [*other_events("201").values(), pull_request("dev")]
     events = {"push", "release"} | (set(declared(content)) & set(TAG_REF_EVENTS))
@@ -241,7 +257,9 @@ def release_problems(content, text, others=(), name="release.yml"):
     unknown = sorted(str(key) for key in block if key not in BLOCK_KEYS)
     if unknown:
         found.append(f"its block holds {unknown}, which GitHub's parser does not define")
-    group, cancel = block.get("group", ""), block.get("cancel-in-progress", "false")
+    group, cancel = canonical(block.get("group", "")), block.get("cancel-in-progress", "false")
+    if kind(cancel) == "boolean":
+        cancel = str(cancel).casefold()
     workflow = workflow_name(name, content)
     if not str(group).strip():
         found.append("has no group, which GitHub's workflow parser requires")
@@ -406,8 +424,7 @@ GITHUB_PROPERTIES = (
     "workflow_sha",
     "workspace",
 )
-EXPRESSION = re.compile(r"\$\{\{(.*?)\}\}")
-WORKFLOW_FIRST = re.compile(r"\$\{\{\s*github\.workflow\s*\}\}")
+WORKFLOW_FIRST = re.compile(r"\$\{\{\s*github(?:\.workflow|\['workflow'\])\s*\}\}")
 
 
 def blocks(name, content):
@@ -443,7 +460,7 @@ def literal_prefix(name, content, group):
         if "workflow_call" in declared(content):
             return None
         lead, rest = workflow_name(name, content), group[first.end() :]
-    return (lead + rest.split("${{", 1)[0]).casefold() or None
+    return (lead + rest.split("${{", 1)[0]).casefold().lstrip() or None
 
 
 def undefined_keys(content):
@@ -481,14 +498,16 @@ def closed_by_construction(name, content, others):
     if not isinstance(block, dict):
         return found
     group = group_of(block)
-    reads = [part.strip() for part in EXPRESSION.findall(group)]
-    allowed = {"github.ref"} | (
-        {"github.workflow"} if "workflow_call" not in declared(content) else set()
+    reads = [part.strip() for _start, _end, part in expressions(group)]
+    allowed = set(REF_READS) | (
+        set(WORKFLOW_READS) if "workflow_call" not in declared(content) else set()
     )
     if any(part not in allowed for part in reads):
         found.append(f"its group reads {reads}, not github.ref alone, so one tag's runs can split")
-    cancel = str(block.get("cancel-in-progress", "false")).strip()
-    if cancel != "false":
+    cancel = block.get("cancel-in-progress", False)
+    if "cancel-in-progress" in block and (
+        kind(cancel) != "boolean" or str(cancel).casefold() != "false"
+    ):
         found.append(f"cancel-in-progress is {cancel!r}, not false as written, so a run can cancel")
     mine = literal_prefix(name, content, group)
     if mine is None:
@@ -499,6 +518,601 @@ def closed_by_construction(name, content, others):
             theirs = literal_prefix(other, other_content, group_of(other_block))
             if theirs is None or theirs.startswith(mine) or mine.startswith(theirs):
                 found.append(f"{where}'s group can render as its group, so it can replace its runs")
+    return found
+
+
+# ------------------------------------------------ the release class, read as GitHub parses it (R12)
+
+# GitHub's workflow parser (actions/languageservices, workflow-parser/src/workflow-v1.0.json, read
+# 2026-09-30T09:29Z) types every value below a workflow's root. These constants are that schema's
+# facts, and the types below are built from them; population.py proves each built type equals the
+# schema's definition at its position. A value the parser refuses makes GitHub refuse the whole
+# workflow, so a release workflow that holds one never runs for its tag.
+NULL_EVENTS = (
+    "create",
+    "delete",
+    "deployment",
+    "deployment_status",
+    "fork",
+    "gollum",
+    "page_build",
+    "public",
+    "status",
+)
+CHANGED = ("created", "edited", "deleted")
+PULL_REQUEST_TYPES = (
+    "assigned",
+    "unassigned",
+    "labeled",
+    "unlabeled",
+    "opened",
+    "edited",
+    "closed",
+    "reopened",
+    "synchronize",
+    "converted_to_draft",
+    "locked",
+    "unlocked",
+    "enqueued",
+    "dequeued",
+    "milestoned",
+    "demilestoned",
+    "ready_for_review",
+    "review_requested",
+    "review_request_removed",
+    "auto_merge_enabled",
+    "auto_merge_disabled",
+    "stacked",
+)
+# The activity types each event's `types` admits, as a name or a list of names.
+EVENT_TYPES = {
+    "branch_protection_rule": CHANGED,
+    "check_run": ("completed", "created", "rerequested", "requested_action"),
+    "check_suite": ("completed",),
+    "discussion": (
+        *CHANGED,
+        "transferred",
+        "pinned",
+        "unpinned",
+        "labeled",
+        "unlabeled",
+        "locked",
+        "unlocked",
+        "category_changed",
+        "answered",
+        "unanswered",
+    ),
+    "discussion_comment": CHANGED,
+    "image_version": ("created", "ready", "deleted"),
+    "issue_comment": CHANGED,
+    "issues": (
+        "opened",
+        "edited",
+        "deleted",
+        "transferred",
+        "pinned",
+        "unpinned",
+        "closed",
+        "reopened",
+        "assigned",
+        "unassigned",
+        "labeled",
+        "unlabeled",
+        "locked",
+        "unlocked",
+        "milestoned",
+        "demilestoned",
+        "field_added",
+        "field_removed",
+        "typed",
+        "untyped",
+    ),
+    "label": CHANGED,
+    "merge_group": ("checks_requested",),
+    "milestone": ("created", "closed", "opened", "edited", "deleted"),
+    "project": ("created", "closed", "reopened", "edited", "deleted"),
+    "project_card": ("created", "moved", "converted", "edited", "deleted"),
+    "project_column": ("created", "updated", "moved", "deleted"),
+    "pull_request": PULL_REQUEST_TYPES,
+    "pull_request_comment": CHANGED,
+    "pull_request_review": ("submitted", "edited", "dismissed"),
+    "pull_request_review_comment": CHANGED,
+    "pull_request_target": PULL_REQUEST_TYPES,
+    "registry_package": ("published", "updated"),
+    "release": (
+        "published",
+        "unpublished",
+        "created",
+        "edited",
+        "deleted",
+        "prereleased",
+        "released",
+    ),
+    "watch": ("started",),
+    "workflow_run": ("requested", "completed", "in_progress"),
+}
+# The keys of an event's mapping besides `types`: each takes a name or a list of names.
+EVENT_FILTERS = {
+    "push": FILTER_KEYS["push"],
+    "pull_request": ("branches", "branches-ignore", "paths", "paths-ignore"),
+    "pull_request_target": ("branches", "branches-ignore", "paths", "paths-ignore"),
+    "merge_group": ("branches", "branches-ignore"),
+    "image_version": ("names", "versions"),
+    "workflow_run": ("workflows", "branches", "branches-ignore"),
+}
+ANY_LEVEL, WRITE_OR_NONE, READ_OR_NONE = (
+    ("read", "write", "none"),
+    ("write", "none"),
+    ("read", "none"),
+)
+PERMISSION_SCOPES = {
+    "actions": ANY_LEVEL,
+    "artifact-metadata": ANY_LEVEL,
+    "attestations": ANY_LEVEL,
+    "checks": ANY_LEVEL,
+    "code-quality": ANY_LEVEL,
+    "contents": ANY_LEVEL,
+    "copilot-requests": WRITE_OR_NONE,
+    "deployments": ANY_LEVEL,
+    "discussions": ANY_LEVEL,
+    "drives": ANY_LEVEL,
+    "id-token": WRITE_OR_NONE,
+    "issues": ANY_LEVEL,
+    "models": READ_OR_NONE,
+    "packages": ANY_LEVEL,
+    "pages": ANY_LEVEL,
+    "pull-requests": ANY_LEVEL,
+    "repository-projects": ANY_LEVEL,
+    "security-events": ANY_LEVEL,
+    "statuses": ANY_LEVEL,
+    "vulnerability-alerts": READ_OR_NONE,
+}
+DISPATCH_INPUT_TYPES = ("string", "boolean", "number", "environment", "choice")
+CALL_INPUT_TYPES = ("string", "boolean", "number")
+# The contexts an expression may read, by where it is.
+WORKFLOW_CONTEXTS = ("github", "inputs", "vars")
+JOB_CONTEXTS = (*WORKFLOW_CONTEXTS, "needs", "strategy", "matrix")
+
+# A type: ("null",), ("boolean",), ("number",), ("string",) for any scalar GitHub converts to a
+# string, ("text",) for a non-empty one, ("is", value) for one constant, ("one-of", *types),
+# ("sequence", item or None), ("mapping", {key: type} or None, required keys) for a strict mapping,
+# ("loose", value type) for a mapping of any keys, and ("expr", contexts, type), where an expression
+# reading those contexts may stand for the value. A None item or key map is a subtree read by its
+# kind alone: a job's steps, strategy, container, services, and the mappings of runs-on, environment
+# and snapshot (#464).
+NULL, BOOLEAN, NUMBER, STRING, TEXT = (
+    ("null",),
+    ("boolean",),
+    ("number",),
+    ("string",),
+    ("text",),
+)
+ANY_MAPPING, ANY_SEQUENCE = ("mapping", None, ()), ("sequence", None)
+
+
+def one_of(*types):
+    return ("one-of", *types)
+
+
+def names(*values):
+    return one_of(*(("is", value) for value in values))
+
+
+def mapping(keys, required=()):
+    return ("mapping", keys, tuple(required))
+
+
+def expr(contexts, of):
+    return ("expr", tuple(contexts), of)
+
+
+TEXTS = one_of(TEXT, ("sequence", TEXT))
+SCALAR = one_of(STRING, BOOLEAN, NUMBER)
+
+
+def event_type(event):
+    """The type of `on.<event>`'s value, built from the constants above."""
+    if event in NULL_EVENTS:
+        return NULL
+    if event == "schedule":
+        return ("sequence", mapping({"cron": TEXT, "timezone": TEXT}, ["cron"]))
+    if event == "workflow_dispatch":
+        field = {
+            "description": STRING,
+            "type": names(*DISPATCH_INPUT_TYPES),
+            "required": BOOLEAN,
+        }
+        field |= {"default": SCALAR, "options": ("sequence", STRING)}
+        return one_of(NULL, mapping({"inputs": ("loose", mapping(field))}))
+    if event == "workflow_call":
+        field = {
+            "description": STRING,
+            "type": names(*CALL_INPUT_TYPES),
+            "required": BOOLEAN,
+        }
+        field["default"] = expr(WORKFLOW_CONTEXTS, SCALAR)
+        secret = one_of(NULL, mapping({"description": STRING, "required": BOOLEAN}))
+        output = mapping(
+            {
+                "description": STRING,
+                "value": expr((*WORKFLOW_CONTEXTS, "jobs"), STRING),
+            },
+            ["value"],
+        )
+        keys = {
+            "inputs": ("loose", mapping(field, ["type"])),
+            "secrets": ("loose", secret),
+        }
+        return one_of(NULL, mapping(keys | {"outputs": ("loose", output)}))
+    keys = dict.fromkeys(EVENT_FILTERS.get(event, ()), TEXTS)
+    if event == "repository_dispatch":
+        keys["types"] = ("sequence", TEXT)
+    elif event in EVENT_TYPES:
+        keys["types"] = one_of(names(*EVENT_TYPES[event]), ("sequence", names(*EVENT_TYPES[event])))
+    return one_of(NULL, mapping(keys))
+
+
+PERMISSIONS = one_of(
+    mapping({scope: names(*levels) for scope, levels in PERMISSION_SCOPES.items()}),
+    ("is", "read-all"),
+    ("is", "write-all"),
+)
+CONCURRENCY = mapping(
+    {"group": TEXT, "cancel-in-progress": BOOLEAN, "queue": names("single", "max")},
+    ["group"],
+)
+RUN_DEFAULTS = mapping({"shell": TEXT, "working-directory": TEXT})
+NEEDS = one_of(("sequence", TEXT), TEXT)
+JOB_IF = expr(("github", "inputs", "vars", "needs"), STRING)
+STEPS_JOB = mapping(
+    {
+        "needs": NEEDS,
+        "if": JOB_IF,
+        "strategy": expr(("github", "inputs", "vars", "needs"), ANY_MAPPING),
+        "name": expr(JOB_CONTEXTS, STRING),
+        "runs-on": expr(JOB_CONTEXTS, one_of(TEXT, ("sequence", TEXT), ANY_MAPPING)),
+        "timeout-minutes": expr(JOB_CONTEXTS, NUMBER),
+        "cancel-timeout-minutes": expr(JOB_CONTEXTS, NUMBER),
+        "continue-on-error": expr(JOB_CONTEXTS, BOOLEAN),
+        "container": expr(JOB_CONTEXTS, one_of(STRING, ANY_MAPPING)),
+        "services": expr(JOB_CONTEXTS, ANY_MAPPING),
+        "env": expr((*JOB_CONTEXTS, "secrets"), ("loose", STRING)),
+        "environment": expr(JOB_CONTEXTS, one_of(STRING, ANY_MAPPING)),
+        "permissions": PERMISSIONS,
+        "concurrency": expr(JOB_CONTEXTS, one_of(TEXT, CONCURRENCY)),
+        "outputs": (
+            "loose",
+            expr((*JOB_CONTEXTS, "secrets", "steps", "job", "runner", "env"), STRING),
+        ),
+        "defaults": mapping({"run": expr((*JOB_CONTEXTS, "env"), RUN_DEFAULTS)}),
+        "steps": ANY_SEQUENCE,
+        "snapshot": one_of(TEXT, ANY_MAPPING),
+    },
+    ["runs-on"],
+)
+CALL_JOB = mapping(
+    {
+        "name": expr(JOB_CONTEXTS, STRING),
+        "uses": TEXT,
+        "with": ("loose", expr(JOB_CONTEXTS, SCALAR)),
+        "secrets": one_of(("loose", expr((*JOB_CONTEXTS, "secrets"), SCALAR)), ("is", "inherit")),
+        "needs": NEEDS,
+        "if": JOB_IF,
+        "permissions": PERMISSIONS,
+        "concurrency": expr(JOB_CONTEXTS, one_of(TEXT, CONCURRENCY)),
+        "strategy": expr(("github", "inputs", "vars", "needs"), ANY_MAPPING),
+    },
+    ["uses"],
+)
+WORKFLOW = mapping(
+    {
+        "on": one_of(
+            names(*ON_EVENTS),
+            ("sequence", names(*ON_EVENTS)),
+            mapping({event: event_type(event) for event in ON_EVENTS}),
+        ),
+        "name": STRING,
+        "description": STRING,
+        "run-name": expr(WORKFLOW_CONTEXTS, STRING),
+        "defaults": mapping({"run": RUN_DEFAULTS}),
+        "env": expr((*WORKFLOW_CONTEXTS, "secrets"), ("loose", STRING)),
+        "permissions": PERMISSIONS,
+        "concurrency": expr(WORKFLOW_CONTEXTS, one_of(STRING, CONCURRENCY)),
+        "jobs": ("loose", "job"),
+    },
+    ["on", "jobs"],
+)
+
+
+def expressions(value):
+    """Each `${{ }}` in a string as (start, end, its text), found as GitHub's parser finds them: from
+    each `${{`, a `'` opens or closes a string and `}}` outside one closes the expression
+    (template-reader.ts, parseScalar). An expression with no closing `}}` ends the list with end
+    None: GitHub refuses the workflow ("The expression is not closed")."""
+    found, start = [], value.find("${{")
+    while start >= 0:
+        at, quoted, end = start + 3, False, None
+        while at < len(value):
+            if value[at] == "'":
+                quoted = not quoted
+            elif not quoted and value[at] == "}" and value[at - 1] == "}":
+                end = at + 1
+                break
+            at += 1
+        found.append((start, end, value[start + 3 : end - 2] if end else value[start + 3 :]))
+        if end is None:
+            return found
+        start = value.find("${{", end)
+    return found
+
+
+def contexts_read(text):
+    """The contexts an expression names: each name that is not a property, a function or a literal."""
+    bare = re.sub(r"'(?:[^']|'')*'", "''", text)
+    found = re.findall(r"(?<![\w.\-])([A-Za-z_][\w-]*)(?![\w-])(?!\s*\()", bare)
+    return set(found) - {"true", "false", "null", "NaN", "Infinity"}
+
+
+def typed_problems(value, of, where, contexts=()):
+    """Where `value` is not of type `of`, as GitHub's parser types it at `where`."""
+    head = of[0]
+    if head == "expr":
+        return typed_problems(value, of[2], where, (*contexts, *of[1]))
+    if isinstance(value, str) and "${{" in value:
+        found = expressions(value)
+        if found[-1][1] is None:
+            return [f"{where} holds a `${{{{` with no closing `}}}}`"]
+        if not contexts:
+            return [f"{where} holds an expression where GitHub's parser admits none"]
+        read = set().union(*(contexts_read(text) for _s, _e, text in found)) - set(contexts)
+        return [f"{where} reads {sorted(read)}, which it cannot read there"] if read else []
+    if head == "one-of":
+        tried = [typed_problems(value, option, where, contexts) for option in of[1:]]
+        if any(not problems for problems in tried):
+            return []
+        fits = [
+            problems for option, problems in zip(of[1:], tried) if shape(option) == shape(value)
+        ]
+        return fits[0] if len(fits) == 1 else [f"{where} is a {kind(value)} it cannot be"]
+    if head in ("mapping", "loose"):
+        if kind(value) != "mapping":
+            return [f"{where} is a {kind(value)}, not a mapping"]
+        if head == "loose":
+            return [
+                problem
+                for key, item in value.items()
+                for problem in typed_problems(item, _named(of[1], item), f"{where}.{key}", contexts)
+            ]
+        keys, required = of[1], of[2]
+        if keys is None:
+            return []
+        found = [
+            f"{where}.{key} is a key GitHub's parser does not define"
+            for key in value
+            if key not in keys
+        ]
+        found += [f"{where} holds no {key}" for key in required if key not in value]
+        for key, item in value.items():
+            if key in keys:
+                found += typed_problems(item, keys[key], f"{where}.{key}", contexts)
+        return found
+    if head == "sequence":
+        if kind(value) != "sequence":
+            return [f"{where} is a {kind(value)}, not a sequence"]
+        if of[1] is None:
+            return []
+        return [
+            problem
+            for at, item in enumerate(value)
+            for problem in typed_problems(item, of[1], f"{where}[{at}]", contexts)
+        ]
+    scalar = kind(value)
+    if scalar in ("mapping", "sequence"):
+        return [f"{where} is a {scalar}, not a scalar"]
+    text = "" if value is None else str(value)
+    accepted = {
+        "null": scalar == "null",
+        "boolean": scalar == "boolean",
+        "number": scalar == "number",
+        "string": True,
+        "text": bool(text),
+        "is": scalar != "null" and text == of[-1],
+    }[head]
+    return [] if accepted else [f"{where} is the {scalar} {text!r}, which it cannot be"]
+
+
+def shape(value_or_type):
+    """A value's or a type's shape: a mapping, a sequence or a scalar, so a one-of names the one
+    option a value was written for."""
+    of = value_or_type
+    if isinstance(of, tuple):
+        while of[0] == "expr":
+            of = of[2]
+        return {"mapping": "mapping", "loose": "mapping", "sequence": "sequence"}.get(
+            of[0], "scalar"
+        )
+    return {"mapping": "mapping", "sequence": "sequence"}.get(kind(of), "scalar")
+
+
+def _named(of, value):
+    """A job's type is chosen by its keys, as the parser's one-of reads it: `uses` makes it a call."""
+    if of != "job":
+        return of
+    return CALL_JOB if isinstance(value, dict) and "uses" in value else STEPS_JOB
+
+
+def unclosed(value, where="it"):
+    """Every string a workflow holds, key or value, at any depth, that holds a `${{` with no closing
+    `}}`: GitHub's parser refuses the file for one anywhere, steps included."""
+    if isinstance(value, dict):
+        found = [f"{where}.{key} is a key" for key in value if unclosed(str(key))]
+        for key, item in value.items():
+            found += unclosed(item, f"{where}.{key}")
+        return found
+    if isinstance(value, list):
+        return [p for at, item in enumerate(value) for p in unclosed(item, f"{where}[{at}]")]
+    if isinstance(value, str) and "${{" in value and expressions(value)[-1][1] is None:
+        return [f"{where} holds a `${{{{` with no closing `}}}}`"]
+    return []
+
+
+def schema_problems(content):
+    """Every value in a workflow GitHub's parser refuses, from its root down to a job's keys, and
+    every unclosed expression at any depth (SPEC-190 R12)."""
+    found = typed_problems(content, WORKFLOW, "it")
+    return found + [p for p in unclosed(content) if p not in found]
+
+
+# A reusable workflow in this repository, called as GitHub reads it from the caller's own commit.
+LOCAL_CALL = re.compile(r"\./\.github/workflows/([^/@\s]+)")
+REF_READS = ("github.ref", "github['ref']")
+WORKFLOW_READS = ("github.workflow", "github['workflow']")
+
+
+def calls(content):
+    """A workflow's call jobs as (job id, `uses`)."""
+    jobs = content.get("jobs") if isinstance(content, dict) else None
+    return [
+        (job_id, str(job["uses"]))
+        for job_id, job in (jobs if isinstance(jobs, dict) else {}).items()
+        if isinstance(job, dict) and "uses" in job
+    ]
+
+
+def group_prefix(block, runner):
+    """A block's group as ((text every rendering starts with, read without case and leading
+    space), its expressions) in a run of `runner`: a leading github.workflow renders the runner's
+    name, since a called workflow reads its caller's github context (the reuse page)."""
+    group = str(block.get("group", "") if isinstance(block, dict) else block or "")
+    found = expressions(group)
+    lead = ""
+    if found and found[0][0] == 0 and found[0][2].strip() in WORKFLOW_READS:
+        lead, group, found = runner, group[found[0][1] :], found[1:]
+        found = expressions(group)
+    text = group[: found[0][0]] if found else group
+    return (lead + text).casefold().lstrip(), [part.strip() for _s, _e, part in found]
+
+
+def membership(files):
+    """Each workflow file's place in the release class (SPEC-190 R12): "release" for a workflow a
+    tag can start (a push that admits a tag, a create or a release) and for every workflow such a
+    workflow calls, at any depth, and "reacher" for every other one. Every run of a release
+    workflow is a release run, whatever its event; a reacher's runs are not, and its blocks are
+    judged only by whether they can reach a release run's group."""
+    read = {name: _read_quietly(text) for name, text in files.items()}
+    found = {name: "reacher" for name in files}
+    todo = [name for name, content in read.items() if _events(content) and releases_a_tag(content)]
+    while todo:
+        name = todo.pop()
+        if found.get(name) == "release":
+            continue
+        found[name] = "release"
+        for _job, uses in calls(read.get(name) or {}):
+            local = LOCAL_CALL.fullmatch(uses)
+            if local and local.group(1) in read:
+                todo.append(local.group(1))
+    return found
+
+
+def _events(content):
+    """A workflow's events, or none when its `on:` is not one the reader models."""
+    try:
+        return declared(content) if isinstance(content, dict) else {}
+    except AssertionError:
+        return {}
+
+
+def _read_quietly(text):
+    try:
+        return read_workflow(text)
+    except Unread as why:
+        return why.workflow
+    except AssertionError:
+        return None
+
+
+def release_class_problems(files):
+    """The release class closed by construction over every workflow file (`files`, {name: text}),
+    never by a sample (SPEC-190 R12):
+    - a release workflow is read as GitHub's parser reads it: typed, tab-free, and every value it
+      holds down to a job's keys is one the parser defines there;
+    - every call, in any workflow, is `./.github/workflows/<file>` with the file here and taking
+      `workflow_call`, walked to its end with no cycle, so no block is unread;
+    - every block a release run holds, its own or a callee's, renders in the runner's context with
+      text of its own, then github.ref and nothing else; never cancels (cancel-in-progress absent
+      or the boolean false); and queues (`queue: max`), a callee's as its caller's, since the docs
+      say nothing of how many calls can wait in a callee's group; a release workflow holds no
+      job-level block;
+    - no other block, a reacher's or another workflow's, starts with text a release block's start
+      can be, so none renders as its group for any run of any tag."""
+    found, read = [], {}
+    for name, text in files.items():
+        try:
+            read[name] = read_workflow(text)
+        except AssertionError as why:
+            found.append(f"{name}: the reader refuses it ({why})")
+            read[name] = _read_quietly(text)
+    classes = membership(files)
+    names = {
+        name: workflow_name(name, content) for name, content in read.items() if content is not None
+    }
+    instances = []
+    for runner, content in read.items():
+        if not isinstance(content, dict) or set(_events(content)) <= {"workflow_call"}:
+            continue
+        todo = [(runner, (runner,))]
+        while todo:
+            name, path = todo.pop()
+            for where, block in blocks(name, read[name]):
+                instances.append((runner, path, name, where, block))
+            for job_id, uses in calls(read[name]):
+                local = LOCAL_CALL.fullmatch(uses)
+                callee = local.group(1) if local else None
+                problem = None
+                if callee is None or callee not in read or read[callee] is None:
+                    problem = f"calls {uses!r}, which is not a workflow file here, so it is unread"
+                elif callee in path:
+                    problem = f"calls {callee}, which is already on the path {list(path)}: a cycle"
+                elif "workflow_call" not in _events(read[callee]):
+                    problem = f"calls {callee}, which does not take workflow_call"
+                if problem:
+                    message = f"{name}: job {job_id} {problem}"
+                    if message not in found:
+                        found.append(message)
+                    continue
+                todo.append((callee, (*path, callee)))
+    for name, content in read.items():
+        if classes[name] != "release" or content is None:
+            continue
+        found += [f"{name}: {problem}" for problem in schema_problems(content)]
+        for where, _block in blocks(name, content):
+            if where != name:
+                found.append(f"{where} sets a concurrency block of its own")
+    release = [item for item in instances if classes[item[0]] == "release"]
+    for runner, _path, name, where, block in release:
+        if where != name:
+            continue
+        label = f"{where} in a run of {runner}"
+        prefix, reads = group_prefix(block, names[runner])
+        if not prefix:
+            found.append(f"{label}: its group starts with no text of its own")
+        if any(part not in REF_READS for part in reads):
+            found.append(f"{label}: its group reads {reads}, not github.ref alone")
+        cancel = block.get("cancel-in-progress") if isinstance(block, dict) else None
+        if isinstance(block, dict) and "cancel-in-progress" in block:
+            if kind(cancel) != "boolean" or str(cancel).casefold() != "false":
+                found.append(f"{label}: cancel-in-progress is {cancel!r}, not the boolean false")
+        queue = block.get("queue") if isinstance(block, dict) else None
+        if queue != "max":
+            found.append(f"{label}: queue is {queue!r}, so a waiting run can be replaced")
+        for other in instances:
+            if other[3] == where:
+                continue
+            theirs, _reads = group_prefix(other[4], names[other[0]])
+            if theirs.startswith(prefix) or prefix.startswith(theirs):
+                message = f"{other[3]} in a run of {other[0]} can render as {label}'s group"
+                if message not in found:
+                    found.append(message)
     return found
 
 
@@ -519,29 +1133,6 @@ def planted(old, new):
     text = (WORKFLOWS / "release.yml").read_text(encoding="utf-8")
     assert old in text, old
     return text.replace(old, new, 1)
-
-
-LOCAL_CALL = re.compile(r"\./\.github/workflows/([^/@\s]+)")
-
-
-def workflow_texts():
-    """Every workflow file of the directory as {file name: its text}."""
-    return {path.name: path.read_text(encoding="utf-8") for path in workflow_files(WORKFLOWS)}
-
-
-def calls(content):
-    """Not built yet: the red commit's stub."""
-    return []
-
-
-def membership(files):
-    """Not built yet: the red commit's stub."""
-    return {}
-
-
-def release_class_problems(files):
-    """Not built yet: the red commit's stub."""
-    return []
 
 
 class EveryReleaseWorkflowQueuesEveryRun(unittest.TestCase):

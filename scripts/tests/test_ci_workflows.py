@@ -643,6 +643,38 @@ class OnlyThisRepositorysDevReachesMain(unittest.TestCase):
 KEY = re.compile(r"(['\"]?)([\w.-]+)\1")
 
 
+class Quoted(str):
+    """A scalar YAML reads as a string whatever its text: a quoted one or a block. A plain scalar is
+    typed by YAML 1.2's core schema instead (`kind`), so `'false'` is a string and `false` is not."""
+
+
+# YAML 1.2's core schema, as the `yaml` package resolves a plain scalar for GitHub's workflow parser
+# (eemeli/yaml src/schema/core, read 2026-09-30T09:29Z): each kind and the plain text it takes.
+CORE_SCHEMA = (
+    ("null", r"~|null|Null|NULL"),
+    ("boolean", r"true|True|TRUE|false|False|FALSE"),
+    ("number", r"[-+]?[0-9]+|0o[0-7]+|0x[0-9a-fA-F]+"),
+    ("number", r"[-+]?(?:\.inf|\.Inf|\.INF)|\.nan|\.NaN|\.NAN"),
+    ("number", r"[-+]?(?:\.[0-9]+|[0-9]+(?:\.[0-9]*)?)[eE][-+]?[0-9]+"),
+    ("number", r"[-+]?(?:\.[0-9]+|[0-9]+\.[0-9]*)"),
+)
+
+
+def kind(value):
+    """What GitHub's parser reads a value as: a mapping, a sequence, null, a boolean, a number or a
+    string. A quoted or block scalar is a string; a plain one takes the first core-schema kind whose
+    text it matches, and is a string when it matches none."""
+    if value is None:
+        return "null"
+    if isinstance(value, dict):
+        return "mapping"
+    if isinstance(value, list):
+        return "sequence"
+    if isinstance(value, Quoted):
+        return "string"
+    return next((k for k, text in CORE_SCHEMA if re.fullmatch(text, value)), "string")
+
+
 class Unread(AssertionError):
     """A workflow that holds forms the reader does not read, each refusal as `line N: why`. It
     carries the rest of the workflow as read, each refused key or value read as '', so a checker
@@ -659,14 +691,15 @@ def read_workflow(text):
     lists of plain items, and plain or quoted one-line scalars, a quote doubled inside single
     quotes read as one. Blank lines, comment lines and a ` #` comment after a value are dropped.
     It ends a line only at a line feed or a carriage return, and reads a space or a tab as white
-    space and nothing else, as YAML does.
+    space and nothing else, as YAML does. A quoted or block scalar is read as `Quoted`, a string
+    that keeps its style, so `kind` types a value as GitHub's parser does (SPEC-190 R12).
     It fails closed (SPEC-034 R7). A line that holds a character other than a tab or printable
     ASCII, a double-quoted value that holds an escape, a quoted value that does not end at its
     closing quote, an anchor, alias or tag, a flow mapping, a flow list whose items are not plain,
-    and a key that is not a plain name are each refused by their line, never guessed at, and the
-    file raises Unread once it is read. A key a mapping already holds, read without case, is refused
-    by its line too: GitHub's workflow parser refuses a workflow that holds one (SPEC-190 R10). A
-    line it cannot place refuses the whole file at once."""
+    a key that is not a plain name, and a tab in a line's indentation are each refused by their
+    line, never guessed at, and the file raises Unread once it is read. A key a mapping already
+    holds, read without case, is refused by its line too: GitHub's workflow parser refuses a
+    workflow that holds one (SPEC-190 R10). A line it cannot place refuses the whole file at once."""
     lines = re.split(r"\r\n|\r|\n", text)
     refused = [
         f"line {at + 1}: a character the reader does not read"
@@ -684,6 +717,15 @@ def read_workflow(text):
 
 def _indent(line):
     return len(line) - len(line.lstrip(" "))
+
+
+def _tabbed(lines, at, refused):
+    """Refuse a line whose indentation holds a tab: YAML indents with spaces alone, and the `yaml`
+    package GitHub's parser reads with refuses the file ("Tabs are not allowed as indentation"). A
+    tab inside a value, or in a block scalar's text, is text and is read."""
+    line = lines[at]
+    if "\t" in line[: len(line) - len(line.lstrip(" \t"))]:
+        refused.append(f"line {at + 1}: a tab in the indentation, which YAML refuses")
 
 
 def _skip(lines, at):
@@ -744,7 +786,7 @@ def _quoted(text):
         raise ValueError("a quoted value that does not end at its closing quote is not read")
     if not single and "\\" in quoted.group(1):
         raise ValueError("a double-quoted value that holds an escape is not read")
-    return quoted.group(1).replace("''", "'") if single else quoted.group(1)
+    return Quoted(quoted.group(1).replace("''", "'") if single else quoted.group(1))
 
 
 def _item(line, indent):
@@ -765,6 +807,7 @@ def _mapping(lines, at, indent, refused):
         at = _skip(lines, at)
         if at >= len(lines) or _indent(lines[at]) != indent or _item(lines[at], indent):
             return found, at
+        _tabbed(lines, at, refused)
         text = lines[at][indent:]
         if ": " in text:
             key, rest = text.split(": ", 1)
@@ -777,14 +820,32 @@ def _mapping(lines, at, indent, refused):
             refused.append(f"line {at + 1}: a key the mapping already holds, read without case")
         if rest in ("|", "|-"):
             at += 1
-            body = []
+            body, width = [], None
             while at < len(lines) and (not lines[at].strip(" \t") or _indent(lines[at]) > indent):
-                body.append(lines[at])
+                if lines[at].strip(" \t") and width is None:
+                    width = _indent(lines[at])
+                body.append((at, lines[at], width is None))
                 at += 1
-            while body and not body[-1].strip(" \t"):
+            while body and not body[-1][1].strip(" \t"):
                 body.pop()
-            width = min((_indent(line) for line in body if line.strip(" \t")), default=0)
-            found[key] = "".join(line[width:] + "\n" for line in body)
+            width = width or 0
+            for row, line, leading in body:
+                # YAML takes a block's indentation from its first line of text: a line of text
+                # indented less ends the block, and a blank line above it indented more, or a tab
+                # inside the indentation, is an error. A line the character scan refuses already
+                # is refused once, by that scan.
+                if re.search(r"[^\t\x20-\x7e]", line):
+                    continue
+                if "\t" in line[:width]:
+                    refused.append(f"line {row + 1}: a tab in the indentation, which YAML refuses")
+                elif line.strip(" \t") and _indent(line) < width:
+                    refused.append(f"line {row + 1}: a line indented less than its block's text")
+                elif leading and _indent(line) > width:
+                    refused.append(
+                        f"line {row + 1}: a blank line indented more than its block's text"
+                    )
+            width = min((_indent(line) for _r, line, _l in body if line.strip(" \t")), default=0)
+            found[key] = Quoted("".join(line[width:] + "\n" for _row, line, _leading in body))
         elif not rest or rest.startswith("#"):
             child = _skip(lines, at + 1)
             if child < len(lines) and _indent(lines[child]) > indent:
@@ -801,6 +862,7 @@ def _sequence(lines, at, indent, refused):
         at = _skip(lines, at)
         if at >= len(lines) or _indent(lines[at]) != indent or not _item(lines[at], indent):
             return found, at
+        _tabbed(lines, at, refused)
         body = lines[at][indent + 1 :].lstrip(" ")
         inner = len(lines[at]) - len(body)
         if re.match(r"^['\"]?[\w.-]+['\"]?:(?: |$)", body):
