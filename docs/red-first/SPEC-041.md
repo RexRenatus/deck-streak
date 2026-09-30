@@ -455,3 +455,17 @@ expected list at the green commit (1ac918e43fe5), disclosed here and in SPEC-041
 A16: red at 3010dd186f95: 2904 of 2904 hand-built send URLs are not refused, e.g. format form of sendMessage in ApiUrl::new at line 101 is not refused
 A16: green at 1ac918e43fe5
 ```
+
+A17 is a new criterion (#429, round 1). The population is 1,048 planted requests: 8 request forms
+(the pinned client's `request`, `request_with_form_data` and `request_with_possible_form_data`, the
+client's `post` and `get`, `reqwest::Client::new`, `reqwest::get` and a built `reqwest` client, each
+naming its method in lower case) by every function of the 8 bot sources and 3 places outside a
+function (a static, a nested module and a new type's method). At the red commit the census's
+request check was not called, so every member was accepted. The two edits to `no_delivery_goes_around_the_port`
+(the three planted requests of A15 gained one refusal each, and the tree's mentions are asserted
+against `REQUEST_SITES`) are in the green commit (0f2ed4086940), so A15 is not red at the red commit.
+
+```red-first
+A17: red at fb75909d3e93: 1048 of 1048 requests the census cannot read are not refused, e.g. generic in Piece::units of crates/bot/src/chunk.rs at line 36 is not refused
+A17: green at 0f2ed4086940
+```
