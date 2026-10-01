@@ -20,6 +20,7 @@ pub mod data_rights;
 pub mod data_rights_registry;
 pub mod delivery;
 pub mod drills;
+pub mod held_flush;
 pub mod instruments;
 pub mod jobs;
 pub mod ladder_facts;

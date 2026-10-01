@@ -213,6 +213,8 @@ pub enum Flushed {
     QuietHours,
     /// The outage breaker is open: the queue is left.
     BreakerOpen,
+    /// Another flush holds the queue's lease: this one delivers nothing, so no item is sent twice.
+    Busy,
     /// It ran, and delivered this many messages: full renders and the recap line.
     Ran {
         /// Messages delivered.

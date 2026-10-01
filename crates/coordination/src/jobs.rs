@@ -92,6 +92,18 @@ pub const DRILL_POSTBACK: Job = Job {
     catch_up: false,
 };
 
+/// The scheduled flush of the held notifications (SPEC-041 R7, amended for #291): once a day, at a
+/// local hour and minute outside the quiet window, so the first flush after the window ends
+/// delivers what the window held.
+pub const HELD_FLUSH: Job = Job {
+    id: "held_flush",
+    schedule: Schedule::DailyAt {
+        hour: 7,
+        minute: 36,
+    },
+    catch_up: true,
+};
+
 /// The one schedule: every job a timer may start.
 pub const TABLE: [Job; 4] = [SYNC, MAINTENANCE, LIVENESS, DRILL_POSTBACK];
 
