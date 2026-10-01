@@ -34,7 +34,7 @@ use deck_streak_kernel::{Clock, Db, KernelError, StudyDay, StudyDayRule, UtcMill
 use sqlx::{Sqlite, SqliteConnection, Transaction};
 
 use crate::ladder::{self, DICE_EMOJI, REACTION_EMOJI, REVEAL_PAUSE, REVEAL_PLACEHOLDER};
-use crate::ledger::{self, ClaimRow, DecisionRow, HeldRow};
+use crate::ledger::{self, Abandoned, ClaimRow, DecisionRow, HeldRow};
 use crate::occasion::{Class, DedupeScope, LapseContext, Occasion, StreakFacts, Surface, Tier};
 use crate::owner_message;
 use crate::photo::{FileId, Photo, check_caption};
@@ -243,7 +243,7 @@ async fn take_lease(
     {
         return Ok(None);
     }
-    let token = (now.epoch_millis() + FLUSH_LEASE_MS).to_string();
+    let token = lease_token(now);
     sqlx::query(
         "INSERT INTO notification_settings (key, value, created_at) VALUES (?, ?, ?) \
          ON CONFLICT (key) DO UPDATE SET value = excluded.value",
@@ -254,6 +254,13 @@ async fn take_lease(
     .execute(write)
     .await?;
     Ok(Some(token))
+}
+
+/// The token of the flush that starts at `now`: the instant its lease lapses. It is the lease's
+/// value and the claim written on every row the flush takes, so a row's claim lapses with the
+/// lease that took it.
+fn lease_token(now: UtcMillis) -> String {
+    (now.epoch_millis() + FLUSH_LEASE_MS).to_string()
 }
 
 /// What the rules decided before any delivery call.
@@ -711,11 +718,13 @@ impl Router {
         for row in reactions {
             if let Outcome::Delivered(tier) = self.react(bot).await? {
                 let mut write = self.db.write().await?;
-                ledger::settle(&mut write, row.id).await?;
-                let sent = Subject::held(row).sent(tier, self.clock.now());
-                ledger::record(&mut write, &sent).await?;
+                let claim = row.claim.as_deref().unwrap_or_default();
+                if ledger::settle_claimed(&mut write, row.id, claim).await? {
+                    let sent = Subject::held(row).sent(tier, self.clock.now());
+                    ledger::record(&mut write, &sent).await?;
+                    sends += 1;
+                }
                 write.commit().await?;
-                sends += 1;
             }
         }
         Ok(sends)
@@ -858,9 +867,10 @@ impl Router {
         let mut release = self.db.write().await?;
         sqlx::query("DELETE FROM notification_settings WHERE key = ? AND value = ?")
             .bind(FLUSH_LEASE_SETTING)
-            .bind(lease)
+            .bind(&lease)
             .execute(&mut *release)
             .await?;
+        ledger::release_claims(&mut release, &lease).await?;
         release.commit().await?;
         flushed
     }
@@ -877,11 +887,18 @@ impl Router {
         let broke = ladder::streak_broke_on(facts.as_ref(), self.rule.study_day(now));
         let cap = ladder::outcome_cap(&self.policy, broke);
         let max_age = i64::from(self.policy.deferral.max_age_minutes) * MINUTE_MS;
+        let token = lease_token(now);
+        for (id, key, claim) in ledger::lapsed_claims(&mut write, now.epoch_millis()).await? {
+            if ledger::abandon_lapsed(&mut write, id).await? {
+                lapsed_notice(&key, &claim);
+            }
+        }
         let (mut reactions, mut rest) = (Vec::new(), Vec::new());
-        for row in ledger::held(&mut write).await? {
+        for row in ledger::claim_held(&mut write, &token).await? {
             if now.epoch_millis() - row.deferred_at > max_age || row.tier_pending == Tier::T0 {
                 let reason = Hold::parse(&row.hold).abandoned();
-                self.abandon(&mut write, &row, reason, now).await?;
+                self.abandon(&mut write, &row, (reason, "expired"), now)
+                    .await?;
             } else if row.tier_pending == Tier::T1 && row.surface == Surface::Bot {
                 reactions.push(row);
             } else {
@@ -892,7 +909,8 @@ impl Router {
         let mut full = ranked(rest);
         for row in full.split_off(full.len().min(bound)) {
             let reason = Hold::parse(&row.hold).abandoned();
-            self.abandon(&mut write, &row, reason, now).await?;
+            self.abandon(&mut write, &row, (reason, "over the queue bound"), now)
+                .await?;
         }
         write.commit().await?;
         let mut sends = self.flush_reactions(bot, &reactions).await?;
@@ -909,13 +927,15 @@ impl Router {
             let mut write = self.db.write().await?;
             match outcome {
                 Outcome::Delivered(rendered) => {
-                    let subject = Subject::held(row);
-                    if row.surface == Surface::MiniApp {
-                        push_in_app(&mut write, &subject, rendered, &row.text, now).await?;
+                    let claim = row.claim.as_deref().unwrap_or_default();
+                    if ledger::settle_claimed(&mut write, row.id, claim).await? {
+                        let subject = Subject::held(row);
+                        if row.surface == Surface::MiniApp {
+                            push_in_app(&mut write, &subject, rendered, &row.text, now).await?;
+                        }
+                        ledger::record(&mut write, &subject.sent(rendered, now)).await?;
+                        sends += 1;
                     }
-                    ledger::settle(&mut write, row.id).await?;
-                    ledger::record(&mut write, &subject.sent(rendered, now)).await?;
-                    sends += 1;
                 }
                 Outcome::Held(_) => {}
                 Outcome::Failed => {
@@ -940,10 +960,12 @@ impl Router {
         if pushed == Pushed::Delivered {
             for row in &rolled {
                 let tier = row.tier_pending.min(cap).min(Tier::T2);
-                ledger::settle(&mut write, row.id).await?;
-                ledger::record(&mut write, &Subject::held(row).sent(tier, now)).await?;
+                let claim = row.claim.as_deref().unwrap_or_default();
+                if ledger::settle_claimed(&mut write, row.id, claim).await? {
+                    ledger::record(&mut write, &Subject::held(row).sent(tier, now)).await?;
+                }
             }
-            for (id, _, _) in &abandoned {
+            for (id, _, _, _) in &abandoned {
                 ledger::settle(&mut write, *id).await?;
             }
             sends += 1;
@@ -1003,25 +1025,39 @@ impl Router {
         let bound = usize::try_from(self.policy.deferral.queue_max).unwrap_or(usize::MAX);
         for row in ranked(ledger::held(write).await?).iter().skip(bound) {
             let reason = Hold::parse(&row.hold).abandoned();
-            self.abandon(write, row, reason, now).await?;
+            self.abandon(write, row, (reason, "over the queue bound"), now)
+                .await?;
         }
         Ok(())
     }
 
     /// Abandons the held `row`: it waits on the queue for a recap to name it, and its decision is
-    /// a withhold for `reason`, what held it.
+    /// a withhold for `reason`, what held it. A row this flush claimed is abandoned under its
+    /// claim; the log line names the item, its claimant and `why` (SPEC-041 R14).
     async fn abandon(
         &self,
         write: &mut SqliteConnection,
         row: &HeldRow,
-        reason: Reason,
+        (reason, why): (Reason, &str),
         now: UtcMillis,
     ) -> Result<(), KernelError> {
-        ledger::abandon(write, row.id).await?;
+        let ours = match &row.claim {
+            Some(claim) => ledger::abandon_claimed(write, row.id, claim, row.tries).await?,
+            None => {
+                ledger::abandon(write, row.id, row.tries).await?;
+                true
+            }
+        };
+        if !ours {
+            return Ok(());
+        }
         ledger::record(write, &Subject::held(row).withheld(reason, now)).await?;
         tracing::warn!(
+            item = %row.dedupe_key,
+            claimant = row.claim.as_deref().unwrap_or("none"),
             kind = %row.kind,
             reason = reason.as_str(),
+            why,
             "a held celebration was abandoned"
         );
         Ok(())
@@ -1029,7 +1065,8 @@ impl Router {
 
     /// Holds `row` again for `hold` after a failed send, its first deferral time kept, or abandons
     /// it once its retries are spent (R8). A row whose own message failed is held for the send; a
-    /// row a failed recap only named keeps what held it (SPEC-084 R11).
+    /// row a failed recap only named keeps what held it (SPEC-084 R11). A row that is no longer
+    /// this flush's claim is left alone.
     async fn retry_or_abandon(
         &self,
         write: &mut SqliteConnection,
@@ -1038,12 +1075,20 @@ impl Router {
         now: UtcMillis,
     ) -> Result<(), KernelError> {
         let tries = row.tries + 1;
-        ledger::relatch(write, row.id, tries, hold.as_str()).await?;
         if tries > i64::from(self.policy.send_failure.retry_max) {
-            self.abandon(write, row, Hold::Send.abandoned(), now).await
-        } else {
-            ledger::record(write, &Subject::held(row).deferred(hold, now)).await
+            let spent = HeldRow {
+                tries,
+                ..row.clone()
+            };
+            return self
+                .abandon(write, &spent, (Hold::Send.abandoned(), "send failed"), now)
+                .await;
         }
+        let claim = row.claim.as_deref().unwrap_or_default();
+        if ledger::relatch(write, row.id, claim, tries, hold.as_str()).await? {
+            ledger::record(write, &Subject::held(row).deferred(hold, now)).await?;
+        }
+        Ok(())
     }
 
     /// Sends `text` to the bot at `rendered` as a line: nothing at T0, which delivers by sending
@@ -1221,12 +1266,25 @@ fn held_row(
         tries,
         deferred_at: now.epoch_millis(),
         study_day: subject.study_day,
+        claim: None,
     }
+}
+
+/// Logs, in a line a person reads, that the claimed item `key` was abandoned because its claim
+/// `claim` lapsed with its claimant gone or past its lease: the push may have reached the owner,
+/// and it is never sent again (SPEC-041 R14).
+fn lapsed_notice(key: &str, claim: &str) {
+    tracing::warn!(
+        item = key,
+        claimant = claim,
+        reason = "may have been sent",
+        "a held celebration was abandoned"
+    );
 }
 
 /// The recap line (the predecessor's `CelebrationsLayer._rollup_text`): a head that says what held
 /// them, then each rolled-up celebration by its key, and each abandoned one with why it went unseen.
-fn recap(rolled: &[HeldRow], abandoned: &[(i64, String, String)]) -> String {
+fn recap(rolled: &[HeldRow], abandoned: &[Abandoned]) -> String {
     let mut names = Vec::new();
     let (mut quiet, mut send) = (false, false);
     for row in rolled {
@@ -1236,11 +1294,12 @@ fn recap(rolled: &[HeldRow], abandoned: &[(i64, String, String)]) -> String {
             Hold::Send => send = true,
         }
     }
-    for (_, key, hold) in abandoned {
+    for (_, key, hold, claim) in abandoned {
         let hold = Hold::parse(hold);
-        names.push(match hold {
-            Hold::Quiet => format!("{key} (expired, unseen)"),
-            Hold::Send => format!("{key} (gave up retrying, unseen)"),
+        names.push(match (claim, hold) {
+            (Some(_), _) => format!("{key} (may have been sent, unseen)"),
+            (None, Hold::Quiet) => format!("{key} (expired, unseen)"),
+            (None, Hold::Send) => format!("{key} (gave up retrying, unseen)"),
         });
         match hold {
             Hold::Quiet => quiet = true,

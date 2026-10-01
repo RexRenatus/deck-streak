@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM notification_queue WHERE id = ? AND state = 'sending' AND claim = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "5bbdf9bc00d730dc6a0ac70d96f0ca0c30c2a4c214e0a1b5be07f0e488456081"
+}

@@ -397,3 +397,164 @@ async fn a_flush_that_ends_after_its_lease_lapsed_leaves_the_next_holders_lease(
     taking.await.expect("the second flush ended");
     assert_eq!(lease(&db).await, None, "the second flush released its own");
 }
+
+/// The state of the item on the queue, or `None` when it is no longer there.
+async fn state_of(db: &Db) -> Option<String> {
+    sqlx::query_scalar::<_, String>(
+        "SELECT state FROM notification_queue WHERE dedupe_key = 'level-up:1'",
+    )
+    .fetch_optional(db.reader())
+    .await
+    .expect("the state is read")
+}
+
+#[tokio::test]
+async fn a_row_another_flush_claimed_inside_its_claim_is_never_sent() {
+    let t0 = noon();
+    let (_scratch, db) = held_queue(t0, 0).await;
+    let mut write = db.write().await.expect("a write");
+    sqlx::query("UPDATE notification_queue SET state = 'sending', claim = ?")
+        .bind((t0 + 5 * LEASE_MS).to_string())
+        .execute(&mut *write)
+        .await
+        .expect("the row is claimed by a flush that is still inside its claim");
+    write.commit().await.expect("committed");
+    let clock = Arc::new(ManualClock::new(UtcMillis::from_epoch_millis(t0)));
+    let reached = Arc::new(Mutex::new(Vec::new()));
+    let only = router(&db, &clock, Arc::new(Quick(Arc::clone(&reached))));
+    let _answer = only.flush().await.expect("the flush");
+    assert_eq!(
+        times(&reached),
+        0,
+        "a claimed row is never read for sending"
+    );
+    assert_eq!(
+        state_of(&db).await.as_deref(),
+        Some("sending"),
+        "its claimant still owns it"
+    );
+}
+
+#[tokio::test]
+async fn a_late_settle_by_a_flush_that_lost_its_claim_removes_nothing() {
+    let t0 = noon();
+    let (_scratch, db) = held_queue(t0, 0).await;
+    let clock = Arc::new(ManualClock::new(UtcMillis::from_epoch_millis(t0)));
+    let reached = Arc::new(Mutex::new(Vec::new()));
+    let slow = Slow::new(&reached, false, Pushed::Delivered);
+    let running = stalled_flush(&db, &clock, &slow).await;
+    clock.set(UtcMillis::from_epoch_millis(t0 + LEASE_MS + 1));
+    // The second flush abandons the lapsed claim, and its recap fails, so the row stays to be named.
+    let second = router(&db, &clock, Arc::new(Down));
+    let _answer = second.flush().await.expect("the second flush");
+    slow.release();
+    running.await.expect("the first flush ended");
+    // The first flush's own settle matches no claim and removes nothing; the row leaves the queue
+    // only when a recap names it, and that recap reached the owner.
+    assert_eq!(times(&reached), 1, "the item itself reached the owner once");
+    assert_eq!(
+        named(&reached).len(),
+        1,
+        "a recap named the row the late settle left behind: {:?}",
+        named(&reached)
+    );
+    assert_eq!(
+        state_of(&db).await,
+        None,
+        "the recap that named it settled it"
+    );
+}
+
+#[tokio::test]
+async fn a_flush_leaves_what_it_did_not_reach_held() {
+    let t0 = noon();
+    let (_scratch, db) = held_queue(t0, 0).await;
+    let clock = Arc::new(ManualClock::new(UtcMillis::from_epoch_millis(t0)));
+    let only = router(&db, &clock, Arc::new(Down));
+    let _answer = only.flush().await.expect("the flush");
+    assert_eq!(
+        state_of(&db).await.as_deref(),
+        Some("held"),
+        "a failed send holds the item again, its claim cleared"
+    );
+    let claim: Option<String> =
+        sqlx::query_scalar("SELECT claim FROM notification_queue WHERE dedupe_key = 'level-up:1'")
+            .fetch_one(db.reader())
+            .await
+            .expect("the claim is read");
+    assert_eq!(claim, None);
+}
+
+/// The names of the indexes and triggers a table has, from the schema.
+async fn guards(db: &Db, table: &str) -> Vec<String> {
+    sqlx::query_scalar::<_, String>(
+        "SELECT name FROM sqlite_master WHERE tbl_name = ? AND type IN ('index', 'trigger') \
+         AND name NOT LIKE 'sqlite_autoindex%' ORDER BY name",
+    )
+    .bind(table)
+    .fetch_all(db.reader())
+    .await
+    .expect("the schema is read")
+}
+
+/// The names `CREATE INDEX` and `CREATE TRIGGER` statements of `sql` give to objects on `table`.
+fn declared(sql: &str, table: &str) -> Vec<String> {
+    let mut names = Vec::new();
+    let statements: Vec<&str> = sql.split(';').collect();
+    for statement in statements {
+        let flat = statement.split_whitespace().collect::<Vec<_>>().join(" ");
+        let marker = format!(" ON {table}");
+        let Some(at) = flat.find("CREATE ") else {
+            continue;
+        };
+        let head = &flat[at..];
+        if !head.contains(&marker) {
+            continue;
+        }
+        let words: Vec<&str> = head.split(' ').collect();
+        if let Some(kind) = words.iter().position(|w| *w == "INDEX" || *w == "TRIGGER")
+            && let Some(name) = words.get(kind + 1)
+        {
+            names.push((*name).to_owned());
+        }
+    }
+    names.sort();
+    names
+}
+
+#[tokio::test]
+async fn the_claim_migration_keeps_every_index_and_trigger_the_queue_had() {
+    let migration = |name: &str| {
+        std::fs::read_to_string(
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("../../migrations")
+                .join(name),
+        )
+        .expect("the migration is read")
+    };
+    let first = migration("004101_notifications_router.sql");
+    let rebuild = migration("004102_notification_queue_claim.sql");
+    let scratch = tempfile::tempdir().expect("a scratch");
+    let db = Db::open(&scratch.path().join("deckstreak.db"))
+        .await
+        .expect("the database opens");
+    // The reader finds the one index the first migration gave the deliveries, so an empty answer for
+    // the queue is a measurement and not a reader that finds nothing.
+    assert_eq!(
+        declared(&first, "notification_deliveries"),
+        vec!["notification_deliveries_scoped_key".to_owned()]
+    );
+    assert_eq!(
+        guards(&db, "notification_deliveries").await,
+        declared(&first, "notification_deliveries")
+    );
+    // What the queue had before the rebuild is what it has after it, and the rebuild declares each
+    // one again after its rename.
+    let before = declared(&first, "notification_queue");
+    assert_eq!(guards(&db, "notification_queue").await, before);
+    let recreated = declared(&rebuild, "notification_queue");
+    assert!(
+        before.iter().all(|name| recreated.contains(name)),
+        "the rebuild re-creates {before:?}; it declares {recreated:?}"
+    );
+}
