@@ -1,4 +1,5 @@
 import Formal.NextMilestoneVectors
+import Formal.OpenLapseVectors
 
 /-!
 # Formal.Vectors
@@ -17,6 +18,7 @@ lists it as support.
 def main (args : List String) : IO UInt32 := do
   match args with
   | ["NextMilestone"] => Formal.NextMilestoneVectors.run
+  | ["OpenLapse"] => Formal.OpenLapseVectors.run
   | _ =>
     IO.eprintln s!"usage: lean --run Formal/Vectors.lean <Entry>; no vectors for {args}"
     return 2

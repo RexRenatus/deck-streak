@@ -1,6 +1,8 @@
 name = "formal"
 defaultTargets = ["Formal"]
 
+# #472 (ADR-305). One Lean library, every module under Formal/ by glob, so an entry joins the build
+# by existing and no list is typed.
 [[lean_lib]]
 name = "Formal"
 globs = ["Formal.*"]
