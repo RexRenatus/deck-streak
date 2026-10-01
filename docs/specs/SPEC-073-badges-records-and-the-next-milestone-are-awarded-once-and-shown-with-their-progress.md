@@ -218,22 +218,10 @@ A5: cargo test -p deck-streak-progression --test badges_award -- --exact an_unkn
 A6: cargo test -p deck-streak-progression --test badges_conditions -- --exact the_study_badge_conditions_match_the_parity_golden
 A7: cargo test -p deck-streak-progression --test badges_conditions -- --exact the_badge_constants_equal_the_predecessors
 A8: cargo test -p deck-streak-progression --test badges_conditions -- --exact the_hour_counts_match_the_parity_golden
-A9: cargo test -p deck-streak-coordination --test badges_context -- --exact the_badge_context_matches_the_parity_golden
-A10: cargo test -p deck-streak-coordination --test badges_steps -- --exact a_new_badge_is_celebrated_once_and_a_replay_raises_nothing
-A11: cargo test -p deck-streak-coordination --test badges_steps -- --exact a_closing_day_is_judged_with_its_end_of_day_state
 A12: cargo test -p deck-streak-progression --test records_detect -- --exact detect_records_matches_the_parity_golden
 A13: cargo test -p deck-streak-progression --test records_detect -- --exact the_chase_record_matches_the_parity_golden
-A14: cargo test -p deck-streak-coordination --test records_steps -- --exact the_records_step_matches_the_parity_golden
-A15: cargo test -p deck-streak-coordination --test records_steps -- --exact the_first_detection_seeds_records_silently
-A16: cargo test -p deck-streak-coordination --test records_steps -- --exact a_record_is_celebrated_once_per_kind_and_day
 A17: cargo test -p deck-streak-progression --test milestone_ladder -- --exact next_milestone_matches_the_parity_golden
 A18: cargo test -p deck-streak-progression --test milestone_ladder -- --exact a_complete_ladder_contributes_nothing_and_all_complete_reports_the_top_review_rung
-A19: cargo test -p deck-streak-coordination --test milestone_view -- --exact the_milestone_is_pending_until_road_to_c2_supplies_the_mature_cards
-A20: cargo test -p deck-streak-api --test badges_routes -- --exact the_badge_record_and_milestone_routes_answer_only_the_owner
-A21: cargo test -p deck-streak-bot --test badges_commands -- --exact badges_lists_the_twenty_most_recent
-A22: cargo test -p deck-streak-bot --test badges_commands -- --exact records_names_the_record_to_chase
-A23: pnpm exec vitest run web/app/src/lib/badges/BadgeGallery.test.ts -t "shows a locked badge with its criteria and progress"
-A24: pnpm exec vitest run web/app/src/lib/records/RecordsScreen.test.ts -t "shows each record's distance from today"
 ```
 
 ## 3a. What the box run judges
@@ -247,6 +235,28 @@ no row is deferred for this delivery.
 |---|---|---|
 | B1 | the privacy checks pass over `privacy.json`, `PRIVACY.md` and `crates/progression/src/data_rights.rs`, examining the categories of `badges_earned` and `records` with their export and erase | the privacy-gdpr pack |
 | B2 | the accessibility checks pass over `web/app/src/routes/badges/+page.svelte`, `web/app/src/routes/records/+page.svelte`, `web/app/src/lib/badges/*.svelte` and `web/app/src/lib/records/*.svelte`, examining every element of the two screens | the accessibility pack |
+
+## 3c. Delivered by the next pull requests
+
+This SPEC lands in three pull requests, in order. This one (073a) delivers the progression crate's
+pure core and the criteria in the fence above; 073b delivers the coordination steps, their
+celebrations and the daemon wiring; 073c delivers the API routes, the bot commands and the web
+screens. Each line below is the fence line of a criterion a later pull request delivers, prefixed
+with that pull request, and that pull request moves its lines back into the acceptance fence
+verbatim, without the prefix.
+
+073b: A9: cargo test -p deck-streak-coordination --test badges_context -- --exact the_badge_context_matches_the_parity_golden
+073b: A10: cargo test -p deck-streak-coordination --test badges_steps -- --exact a_new_badge_is_celebrated_once_and_a_replay_raises_nothing
+073b: A11: cargo test -p deck-streak-coordination --test badges_steps -- --exact a_closing_day_is_judged_with_its_end_of_day_state
+073b: A14: cargo test -p deck-streak-coordination --test records_steps -- --exact the_records_step_matches_the_parity_golden
+073b: A15: cargo test -p deck-streak-coordination --test records_steps -- --exact the_first_detection_seeds_records_silently
+073b: A16: cargo test -p deck-streak-coordination --test records_steps -- --exact a_record_is_celebrated_once_per_kind_and_day
+073b: A19: cargo test -p deck-streak-coordination --test milestone_view -- --exact the_milestone_is_pending_until_road_to_c2_supplies_the_mature_cards
+073c: A20: cargo test -p deck-streak-api --test badges_routes -- --exact the_badge_record_and_milestone_routes_answer_only_the_owner
+073c: A21: cargo test -p deck-streak-bot --test badges_commands -- --exact badges_lists_the_twenty_most_recent
+073c: A22: cargo test -p deck-streak-bot --test badges_commands -- --exact records_names_the_record_to_chase
+073c: A23: pnpm exec vitest run web/app/src/lib/badges/BadgeGallery.test.ts -t "shows a locked badge with its criteria and progress"
+073c: A24: pnpm exec vitest run web/app/src/lib/records/RecordsScreen.test.ts -t "shows each record's distance from today"
 
 ## 4. File manifest
 
@@ -398,3 +408,55 @@ A target outside a crate (a migration) is a cargo-killed script mutation (SPEC-0
 | `S07313-THE-MARK-FOLLOWS-THE-ROUTER` | `crates/coordination/src/recompute/badges.rs` | `celebrated_at` is set only after the router answers | `badges_steps::a_router_that_did_not_answer_leaves_the_award_due` |
 | `S07314-A-PENDING-AWARD-IS-OFFERED-AGAIN` | `crates/coordination/src/recompute/badges.rs` | an award whose mark is unset is offered at the next evaluation | `badges_steps::an_evaluation_stopped_after_the_write_sends_once_at_the_next` |
 | `S07315-A-PENDING-RECORD-IS-OFFERED-BEFORE-ITS-ROW-IS-REPLACED` | `crates/coordination/src/recompute/records.rs` | a later day's beat offers the earlier record whose mark is unset before the row is replaced | `records_steps::a_later_beat_offers_the_unmarked_record_first` |
+
+## 10. Amendments
+
+The split of section 3c changes what this pull request (073a) touches. It adds these files, which
+the manifest above does not name:
+
+- `formal/lean/lakefile.toml`, `formal/lean/lean-toolchain`, `formal/lean/lake-manifest.json`,
+  `formal/lean/Formal.lean` and `formal/lean/.gitignore`: the Lean package the proof is built in,
+  with no dependency (ADR-303).
+- `formal/lean/Formal/Vectors.lean` and `formal/lean/Formal/NextMilestoneVectors.lean`: the vector
+  writer and its next-milestone half, which print the port's answer for every input.
+- `formal/vectors/next-milestone.jsonl`: the vectors, written by the writer and never by hand.
+- `crates/progression/tests/formal_vectors_next_milestone.rs`: `next_milestone` answers every
+  vector, with the proof's three recorded counterexamples as literal cases.
+- `crates/progression/tests/rights.rs`: the progression rights test exports and erases the two new
+  tables.
+- `crates/progression/Cargo.toml`: the dev-dependency `serde_json` gains `float_roundtrip`, so the
+  goldens' percentages are read bit for bit, as the analytics, insights and streaks crates read
+  theirs.
+
+These files the manifest names are left unchanged by 073a; the later pull request named on each
+line adds or changes them, and removes its lines from this list:
+
+- `crates/coordination/src/progression/badge_context.rs`: unchanged by 073a; 073b delivers it.
+- `crates/coordination/src/recompute/badges.rs`: unchanged by 073a; 073b delivers it.
+- `crates/coordination/src/recompute/records.rs`: unchanged by 073a; 073b delivers it.
+- `crates/coordination/src/recompute/mod.rs`: unchanged by 073a; 073b delivers it.
+- `crates/coordination/src/progression/records_view.rs`: unchanged by 073a; 073b delivers it.
+- `crates/coordination/src/progression/milestone_view.rs`: unchanged by 073a; 073b delivers it.
+- `crates/coordination/src/lib.rs`: unchanged by 073a; 073b delivers it.
+- `crates/coordination/src/sync_cycle.rs`: unchanged by 073a; 073b delivers it.
+- `crates/coordination/tests/{relight_order,relight_settle,settle_fold,streak_fold,xp_steps}.rs`: unchanged by 073a; 073b delivers it.
+- `crates/coordination/tests/badges_context.rs`: unchanged by 073a; 073b delivers it.
+- `crates/coordination/tests/badges_steps.rs`: unchanged by 073a; 073b delivers it.
+- `crates/coordination/tests/records_steps.rs`: unchanged by 073a; 073b delivers it.
+- `crates/coordination/tests/milestone_view.rs`: unchanged by 073a; 073b delivers it.
+- `crates/daemon/src/wiring.rs`: unchanged by 073a; 073b delivers it.
+- `crates/api/src/badges_routes.rs`: unchanged by 073a; 073c delivers it.
+- `crates/api/src/router.rs`: unchanged by 073a; 073c delivers it.
+- `crates/api/tests/badges_routes.rs`: unchanged by 073a; 073c delivers it.
+- `crates/bot/src/badges_commands.rs`: unchanged by 073a; 073c delivers it.
+- `crates/bot/src/commands.rs`: unchanged by 073a; 073c delivers it.
+- `crates/bot/tests/badges_commands.rs`: unchanged by 073a; 073c delivers it.
+- `web/app/src/routes/badges/+page.svelte`: unchanged by 073a; 073c delivers it.
+- `web/app/src/routes/records/+page.svelte`: unchanged by 073a; 073c delivers it.
+- `web/app/src/lib/badges/BadgeGallery.svelte`: unchanged by 073a; 073c delivers it.
+- `web/app/src/lib/badges/badges.ts`: unchanged by 073a; 073c delivers it.
+- `web/app/src/lib/badges/BadgeGallery.test.ts`: unchanged by 073a; 073c delivers it.
+- `web/app/src/lib/records/RecordsScreen.svelte`: unchanged by 073a; 073c delivers it.
+- `web/app/src/lib/records/records.ts`: unchanged by 073a; 073c delivers it.
+- `web/app/src/lib/records/RecordsScreen.test.ts`: unchanged by 073a; 073c delivers it.
+- `web/app/src/lib/routes.ts`: unchanged by 073a; 073c delivers it.
