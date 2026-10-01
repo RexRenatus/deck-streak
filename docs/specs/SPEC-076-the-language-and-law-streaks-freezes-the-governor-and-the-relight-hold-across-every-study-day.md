@@ -1034,7 +1034,7 @@ Insert-only: every earlier byte is kept in order, and this amendment inserts sec
   are judged by the formal check, not by a test.
 - The port is held to the code by vectors. The entry's writer,
   `formal/lean/Formal/OpenLapseVectors.lean`, writes `formal/vectors/open-lapse.jsonl` from five
-  axes: the window's first day (the smallest day, the day after it, day zero and the fourth day
+  axes: the window's first day (the smallest day, the day after it, day zero and the third day
   before the largest), the threshold (one and three), the window's width (one to three days), each
   day's state (a study review, a count of zero, a skip day, a count of zero on a skip day, or none
   of these; the window's first day always holds an entry, and the last day of a wider window is
@@ -1067,11 +1067,13 @@ A67: cargo test -p deck-streak-streaks --test formal_vectors_open_lapse -- --exa
 ## 32. Amendments: the files the open-lapse proof amendment adds
 
 The open-lapse proof amendment (sections 30 and 31) adds files that no row of section 4 names. It
-adds the Lean package under `formal/lean/`: `formal/lean/lakefile.toml`,
-`formal/lean/lean-toolchain`, `formal/lean/lake-manifest.json`, `formal/lean/.gitignore`,
-`formal/lean/Formal.lean`, `formal/lean/Formal/Vectors.lean`, the entry
-`formal/lean/Formal/OpenLapse.lean` and its writer `formal/lean/Formal/OpenLapseVectors.lean`. It
-adds the vectors `formal/vectors/open-lapse.jsonl`, the test
+adds the entry `formal/lean/Formal/OpenLapse.lean` and its writer
+`formal/lean/Formal/OpenLapseVectors.lean` to the Lean package under `formal/lean/`, which the
+next-milestone entry (#526) introduced, and it amends that package's shared files:
+`formal/lean/lakefile.toml` gains a comment, `formal/lean/.gitignore` holds the anchored
+`/.lake/` line, `formal/lean/Formal/Vectors.lean` gains the writer's import and the `OpenLapse`
+arm of `main`, and `formal/lean/Formal.lean` gains a docstring. `formal/lean/lean-toolchain` and
+`formal/lean/lake-manifest.json` are unchanged. It adds the vectors `formal/vectors/open-lapse.jsonl`, the test
 `crates/streaks/tests/formal_vectors_open_lapse.rs` (A65 to A67), the decision
 `docs/decisions/ADR-305-the-open-lapse-walk-is-proved-in-lean-over-the-day-type-it-walks.md`, the
 schematic `docs/schematics/open-lapse-proof-and-its-vectors.md` and the changelog fragment

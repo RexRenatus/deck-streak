@@ -4,7 +4,8 @@ Kind: data flow and component. Read at DeckStreak `dev` 530a3d6 (`crates/streaks
 `open_lapse`, `crates/kernel/src/study_day.rs` `StudyDay`, `config/formal.json`). Decided by
 ADR-305; the property is #472's.
 
-The first Lean entry adds one component, the Lake package under `formal/lean`, and one data flow:
+This Lean entry joins the Lake package under `formal/lean`, which the next-milestone entry (#526)
+introduced. It adds its entry module, its vectors writer, its arm of `main` and one data flow:
 the port's answers reach the Rust test through a committed vectors file, never through a shared
 library. The checker reads every input at the head commit.
 

@@ -10,7 +10,7 @@ answer. The formal check byte-compares the output with `formal/vectors/open-laps
 `--write-vectors` writes it; the file is never edited by hand.
 
 The inputs are derived from five axes, in this order: the window's first day (the smallest day,
-the day after it, day zero and the fourth day before the largest), the threshold (one and three),
+the day after it, day zero and the third day before the largest), the threshold (one and three),
 the window's width (one to three days), each day's state, and today (from the day before the
 window's first day to the day after its last). The window's first day holds an entry, so it is a
 study review, a zero count, or a zero count on a skip day. A day between the first and the last
