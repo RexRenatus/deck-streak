@@ -168,6 +168,30 @@
         "                return [], f\"it files {len(mutants)} mutant(s) under {path}, which no class reads\"\n            break\n",
         "an entry under a path no class reads, with no mutants, is skipped and the reader goes on: a later entry that holds a refusal is still read and refused by name (SPEC-126 A10)",
         "test_mutation_python_shard_binding.ASkippedEntryDoesNotHideALaterOne.test_a_skipped_entry_before_a_bad_one_is_refused"
+      ],
+      [
+        "S12621-V-A-DRIFT-TAIL-NAMES-THE-EXTRA-MUTANTS",
+        "scripts/mutation-verdict.py",
+        "        f\"({', '.join(missing[:3])}) and {len(extra)} extra ({', '.join(extra[:3])})\"\n",
+        "        f\"({', '.join(missing[:3])}) and {len(extra)} extra ()\"\n",
+        "the drift refusal names the first three extra mutants as well as the first three missing ones; a tail that drops the extra names is refused by the pin on the whole line (SPEC-126 A10)",
+        "test_mutation_python_shard_binding.EveryVariablePartOfAMessageIsPinned.test_a_dropped_field_of_an_asserted_message_fails_a_pin"
+      ],
+      [
+        "S12622-V-A-RECORD-REFUSAL-NAMES-ITS-PATH",
+        "scripts/mutation-verdict.py",
+        "f\"a mutant record of {path} is a {type(mutant).__name__}, not an object\"",
+        "f\"a mutant record of  is a {type(mutant).__name__}, not an object\"",
+        "the refusal of a mutant record that is not an object names the path of the entry that holds it (SPEC-126 A10)",
+        "test_mutation_python_shard_binding.TheReportIsBoundToItsSlotAndItsListing.test_a_mutant_record_that_is_not_an_object_is_an_extra_mutant"
+      ],
+      [
+        "S12623-V-A-RECORD-REFUSAL-NAMES-ITS-TYPE",
+        "scripts/mutation-verdict.py",
+        "f\"a mutant record of {path} is a {type(mutant).__name__}, not an object\"",
+        "f\"a mutant record of {path} is a , not an object\"",
+        "the refusal of a mutant record that is not an object names the type of the record it found (SPEC-126 A10)",
+        "test_mutation_python_shard_binding.TheReportIsBoundToItsSlotAndItsListing.test_a_mutant_record_that_is_not_an_object_is_an_extra_mutant"
       ]
     ]
   }
