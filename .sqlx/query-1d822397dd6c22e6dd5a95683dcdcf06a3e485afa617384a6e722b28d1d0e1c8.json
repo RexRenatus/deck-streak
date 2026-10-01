@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE badges_earned SET celebrated_at = ?1 WHERE badge_key = ?2 AND tier = ?3 AND celebrated_at IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "1d822397dd6c22e6dd5a95683dcdcf06a3e485afa617384a6e722b28d1d0e1c8"
+}

@@ -70,6 +70,7 @@ fn reviews_of(input: &Value) -> Vec<Review> {
 }
 
 #[test]
+#[allow(clippy::too_many_lines)]
 fn the_badge_context_matches_the_parity_golden() {
     let examined = golden::each_case("badge_context", |case| {
         let input = &case.input;

@@ -77,10 +77,20 @@ async fn celebrated_once_and_replayed() {
     let offers = AwardOffers::new(router(&scratch.db, D0, &bot));
     let data = first_answer();
     recompute(&scratch.db, &data, Some(&offers), at(D0, 13)).await;
-    assert_eq!(bot.sent().len(), 1, "the new badge is sent: {:?}", bot.sent());
+    assert_eq!(
+        bot.sent().len(),
+        1,
+        "the new badge is sent: {:?}",
+        bot.sent()
+    );
     assert_eq!(badges(&scratch.db).await, first_steps(true), "and marked");
     recompute(&scratch.db, &data, Some(&offers), at(D0, 14)).await;
-    assert_eq!(bot.sent().len(), 1, "a replay sends nothing new: {:?}", bot.sent());
+    assert_eq!(
+        bot.sent().len(),
+        1,
+        "a replay sends nothing new: {:?}",
+        bot.sent()
+    );
 }
 
 /// An evaluation stopped after its write (no offers ran) sends exactly once at the next.
@@ -88,11 +98,20 @@ async fn stopped_after_the_write() {
     let scratch = first_day().await;
     let data = first_answer();
     recompute(&scratch.db, &data, None, at(D0, 13)).await;
-    assert_eq!(badges(&scratch.db).await, first_steps(false), "written, owed");
+    assert_eq!(
+        badges(&scratch.db).await,
+        first_steps(false),
+        "written, owed"
+    );
     let bot = Arc::new(RecordingBot::default());
     let offers = AwardOffers::new(router(&scratch.db, D0, &bot));
     recompute(&scratch.db, &data, Some(&offers), at(D0, 14)).await;
-    assert_eq!(bot.sent().len(), 1, "the owed badge is sent at the next: {:?}", bot.sent());
+    assert_eq!(
+        bot.sent().len(),
+        1,
+        "the owed badge is sent at the next: {:?}",
+        bot.sent()
+    );
     assert_eq!(badges(&scratch.db).await, first_steps(true), "and marked");
     recompute(&scratch.db, &data, Some(&offers), at(D0, 15)).await;
     assert_eq!(bot.sent().len(), 1, "once: {:?}", bot.sent());
@@ -107,11 +126,24 @@ async fn stopped_after_the_router_answered() {
     let stopped = AwardOffers::new(Arc::new(RouteThenFail(router.clone())));
     recompute(&scratch.db, &data, Some(&stopped), at(D0, 13)).await;
     assert_eq!(bot.sent().len(), 1, "the router sent it: {:?}", bot.sent());
-    assert_eq!(badges(&scratch.db).await, first_steps(false), "no answer, no mark");
+    assert_eq!(
+        badges(&scratch.db).await,
+        first_steps(false),
+        "no answer, no mark"
+    );
     let offers = AwardOffers::new(router);
     recompute(&scratch.db, &data, Some(&offers), at(D0, 14)).await;
-    assert_eq!(bot.sent().len(), 1, "the once-ever key keeps it to one: {:?}", bot.sent());
-    assert_eq!(badges(&scratch.db).await, first_steps(true), "marked once answered");
+    assert_eq!(
+        bot.sent().len(),
+        1,
+        "the once-ever key keeps it to one: {:?}",
+        bot.sent()
+    );
+    assert_eq!(
+        badges(&scratch.db).await,
+        first_steps(true),
+        "marked once answered"
+    );
 }
 
 #[tokio::test]
@@ -136,19 +168,49 @@ async fn a_router_that_did_not_answer_leaves_the_award_due() {
     let scratch = first_day().await;
     let step = BadgesStep::new(Courses::default());
     let now = at(D0, 13);
-    run_step(&scratch.db, &step, &first_answer(), 0, (D0, Evaluation::Current), now).await;
+    run_step(
+        &scratch.db,
+        &step,
+        &first_answer(),
+        0,
+        (D0, Evaluation::Current),
+        now,
+    )
+    .await;
     let silent = Recorder::silent();
-    offer_badges(&silent, &scratch.db, UtcMillis::from_epoch_millis(now), day(D0))
-        .await
-        .expect("the offers run");
-    assert_eq!(silent.keys(), ["badge:first_steps:0"], "the owed badge is offered");
-    assert_eq!(badges(&scratch.db).await, first_steps(false), "no answer leaves it due");
+    offer_badges(
+        &silent,
+        &scratch.db,
+        UtcMillis::from_epoch_millis(now),
+        day(D0),
+    )
+    .await
+    .expect("the offers run");
+    assert_eq!(
+        silent.keys(),
+        ["badge:first_steps:0"],
+        "the owed badge is offered"
+    );
+    assert_eq!(
+        badges(&scratch.db).await,
+        first_steps(false),
+        "no answer leaves it due"
+    );
     let answered = Recorder::default();
-    offer_badges(&answered, &scratch.db, UtcMillis::from_epoch_millis(now), day(D0))
-        .await
-        .expect("the offers run");
+    offer_badges(
+        &answered,
+        &scratch.db,
+        UtcMillis::from_epoch_millis(now),
+        day(D0),
+    )
+    .await
+    .expect("the offers run");
     assert_eq!(answered.keys(), ["badge:first_steps:0"], "offered again");
-    assert_eq!(badges(&scratch.db).await, first_steps(true), "marked once answered");
+    assert_eq!(
+        badges(&scratch.db).await,
+        first_steps(true),
+        "marked once answered"
+    );
 }
 
 #[tokio::test]
@@ -171,10 +233,11 @@ async fn a_closing_day_is_judged_with_its_end_of_day_state() {
     let step = BadgesStep::new(Courses::default());
     let settle = Evaluation::Settle { end_of_day: true };
     run_step(&scratch.db, &step, &data, 0, (D0, settle), at(D0 + 1, 12)).await;
-    let expected: Vec<(String, i64, i64, bool)> = ["first_steps", "legendary_day", "maturity_milestone"]
-        .into_iter()
-        .map(|key| (key.to_owned(), 0, D0, false))
-        .collect();
+    let expected: Vec<(String, i64, i64, bool)> =
+        ["first_steps", "legendary_day", "maturity_milestone"]
+            .into_iter()
+            .map(|key| (key.to_owned(), 0, D0, false))
+            .collect();
     assert_eq!(
         badges(&scratch.db).await,
         expected,
@@ -284,7 +347,12 @@ fn count(value: i64) -> u64 {
 }
 
 /// Members varying one input of `condition` around `threshold`.
-fn vary(condition: &str, threshold: i64, floor: i64, set: impl Fn(&mut Profile, i64)) -> Vec<Profile> {
+fn vary(
+    condition: &str,
+    threshold: i64,
+    floor: i64,
+    set: impl Fn(&mut Profile, i64),
+) -> Vec<Profile> {
     around(threshold, floor)
         .into_iter()
         .map(|value| {
@@ -310,13 +378,19 @@ fn volume_members() -> Vec<Profile> {
     for threshold in [1_000, 10_000] {
         members.extend(vary("lifetime", threshold, 1, |p, v| p.base = count(v - 1)));
     }
-    members.extend(vary("centurion_day reviews", 100, 0, |p, v| p.young = count(v)));
-    members.extend(vary("sharpshooter week reviews", 50, 0, |p, v| p.young = count(v)));
+    members.extend(vary("centurion_day reviews", 100, 0, |p, v| {
+        p.young = count(v);
+    }));
+    members.extend(vary("sharpshooter week reviews", 50, 0, |p, v| {
+        p.young = count(v);
+    }));
     members.extend(vary("sharpshooter retention", 90, 0, |p, v| {
         p.young = 100;
         p.young_failed = count(100 - v);
     }));
-    members.extend(vary("sniper_elite mature answers", 50, 0, |p, v| p.mature = count(v)));
+    members.extend(vary("sniper_elite mature answers", 50, 0, |p, v| {
+        p.mature = count(v);
+    }));
     members.extend(vary("sniper_elite retention", 95, 0, |p, v| {
         p.mature = 100;
         p.mature_failed = count(100 - v);
@@ -331,14 +405,20 @@ fn volume_members() -> Vec<Profile> {
         p.young = 100;
         p.taken_ms = v * 1_000;
     }));
-    members.extend(vary("iron_will study days", 30, 1, |p, v| p.prior = count(v - 1)));
+    members.extend(vary("iron_will study days", 30, 1, |p, v| {
+        p.prior = count(v - 1);
+    }));
     members
 }
 
 /// The snapshot, comeback, deck and score members.
 fn state_members() -> Vec<Profile> {
-    let mut members = vary("inbox_zero backlog", 0, 0, |p, v| p.snapshot = Some((0, 1, v, 0)));
-    members.extend(vary("inbox_zero due", 0, 0, |p, v| p.snapshot = Some((0, 1, 0, v))));
+    let mut members = vary("inbox_zero backlog", 0, 0, |p, v| {
+        p.snapshot = Some((0, 1, v, 0));
+    });
+    members.extend(vary("inbox_zero due", 0, 0, |p, v| {
+        p.snapshot = Some((0, 1, 0, v));
+    }));
     members.extend(vary("inbox_zero lifetime", 1, 0, |p, v| {
         p.snapshot = Some((0, 1, 0, 0));
         p.young = count(v.min(1));
@@ -357,7 +437,9 @@ fn state_members() -> Vec<Profile> {
     disarmed.streak = 1;
     members.push(disarmed);
     for threshold in [100, 1_000] {
-        members.extend(vary("mature cards", threshold, 0, |p, v| p.snapshot = Some((v, 1, 5, 3))));
+        members.extend(vary("mature cards", threshold, 0, |p, v| {
+            p.snapshot = Some((v, 1, 5, 3));
+        }));
     }
     members.extend(vary("leech_tamer leeches", 0, 0, |p, v| {
         p.snapshot = Some((0, v, 5, 3));
@@ -381,7 +463,9 @@ fn state_members() -> Vec<Profile> {
         p.score = 80;
         p.week = vec![80, 80, 80, 80, 80, v];
     }));
-    members.extend(vary("legendary_day score", 100, 0, |p, v| p.score = v.min(100)));
+    members.extend(vary("legendary_day score", 100, 0, |p, v| {
+        p.score = v.min(100);
+    }));
     members.dedup_by(|a, b| a.label == b.label);
     let mut masked = baseline("no card state masks the snapshot badges".to_owned());
     masked.snapshot = None;
@@ -397,7 +481,11 @@ fn earns(p: &Profile) -> BTreeSet<&'static str> {
     let week_reviews = day_reviews + p.prior.min(6);
     let passed = week_reviews - p.young_failed - p.mature_failed;
     let others = p.mature + p.night + p.early;
-    let day_decks = if p.young > 0 { p.decks } else { u64::from(others > 0) };
+    let day_decks = if p.young > 0 {
+        p.decks
+    } else {
+        u64::from(others > 0)
+    };
     let week_decks = day_decks.max(u64::from(p.prior > 0));
     let mut scores = vec![p.score];
     scores.extend(p.week.iter().copied());
@@ -412,7 +500,10 @@ fn earns(p: &Profile) -> BTreeSet<&'static str> {
         ("grinder", lifetime >= 1_000),
         ("marathoner", lifetime >= 10_000),
         ("centurion_day", day_reviews >= 100),
-        ("sharpshooter", week_reviews >= 50 && passed * 100 >= 90 * week_reviews),
+        (
+            "sharpshooter",
+            week_reviews >= 50 && passed * 100 >= 90 * week_reviews,
+        ),
         (
             "sniper_elite",
             p.mature >= 50 && (p.mature - p.mature_failed) * 100 >= 95 * p.mature,
@@ -427,9 +518,15 @@ fn earns(p: &Profile) -> BTreeSet<&'static str> {
         ("leech_tamer", leeches == 0 && lifetime >= 500),
         ("polyglot", day_decks >= 3),
         ("globetrotter", week_decks >= 5),
-        ("perfect_week", week.len() >= 7 && week.iter().all(|score| *score >= 75)),
+        (
+            "perfect_week",
+            week.len() >= 7 && week.iter().all(|score| *score >= 75),
+        ),
         ("legendary_day", p.score >= 100),
-        ("speed_demon", day_reviews >= 100 && 0 < p.taken_ms && p.taken_ms < 6_000),
+        (
+            "speed_demon",
+            day_reviews >= 100 && 0 < p.taken_ms && p.taken_ms < 6_000,
+        ),
         ("iron_will", p.prior >= 29),
     ];
     met.into_iter()
@@ -450,7 +547,11 @@ fn data_of(p: &Profile) -> CollectionData {
     let decks = i64::try_from(p.decks.max(1)).expect("decks");
     for i in 0..p.young {
         let i = i64::try_from(i).expect("an index");
-        let ease = if i < i64::try_from(p.young_failed).expect("a count") { 1 } else { 3 };
+        let ease = if i < i64::try_from(p.young_failed).expect("a count") {
+            1
+        } else {
+            3
+        };
         add(at(D0, 10), 1 + i % decks, ease, 5, p.taken_ms);
     }
     for i in 0..p.mature {
@@ -511,15 +612,24 @@ async fn judge(profile: &Profile, evaluation: Evaluation) -> usize {
         let rows = badges(db).await;
         let awarded: BTreeSet<String> = rows.iter().map(|row| row.0.clone()).collect();
         assert_eq!(awarded, expected, "{label}, pass {pass}: the awarded set");
-        assert!(rows.iter().all(|row| row.1 == 0 && row.2 == D0 && row.3), "{label}: {rows:?}");
+        assert!(
+            rows.iter().all(|row| row.1 == 0 && row.2 == D0 && row.3),
+            "{label}: {rows:?}"
+        );
         let raised: Vec<String> = if pass == 1 {
-            expected.iter().map(|key| format!("badge:{key}:0")).collect()
+            expected
+                .iter()
+                .map(|key| format!("badge:{key}:0"))
+                .collect()
         } else {
             Vec::new()
         };
         let mut keys = recorder.keys();
         keys.sort();
-        assert_eq!(keys, raised, "{label}, pass {pass}: the celebrations raised");
+        assert_eq!(
+            keys, raised,
+            "{label}, pass {pass}: the celebrations raised"
+        );
         judged += 1;
     }
     judged
@@ -533,7 +643,10 @@ async fn every_evaluated_day_awards_exactly_the_badges_its_context_earns_once() 
     // another.
     for key in STUDY_KEYS {
         let earned = members.iter().filter(|p| earns(p).contains(key)).count();
-        assert!(earned > 0 && earned < members.len(), "{key} is earned by {earned} member(s)");
+        assert!(
+            earned > 0 && earned < members.len(),
+            "{key} is earned by {earned} member(s)"
+        );
     }
     let derived = members.len() * EVALUATIONS.len() * PASSES;
     let mut examined = 0;

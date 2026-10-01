@@ -67,7 +67,13 @@ pub async fn scratch() -> Scratch {
 
 /// A study answer of review type at `instant` on `card`, with `ease`, the interval it had going in
 /// (`last_interval`, 21 days or more is mature) and the milliseconds it took.
-pub const fn answer(instant: i64, card: i64, ease: i64, last_interval: i64, taken_ms: i64) -> Review {
+pub const fn answer(
+    instant: i64,
+    card: i64,
+    ease: i64,
+    last_interval: i64,
+    taken_ms: i64,
+) -> Review {
     Review {
         id: instant,
         card_id: card,
@@ -149,7 +155,12 @@ impl RollupSeed {
 pub async fn seed_rollups(db: &Db, seeds: &[RollupSeed]) {
     let mut write = db.write().await.expect("a write");
     for seed in seeds {
-        let mut metrics = daily_metrics(&[], StudyDayRule::default(), day(seed.day), &BTreeMap::new());
+        let mut metrics = daily_metrics(
+            &[],
+            StudyDayRule::default(),
+            day(seed.day),
+            &BTreeMap::new(),
+        );
         metrics.reviews = seed.reviews;
         metrics.seconds = seed.seconds;
         let score = Score {
@@ -208,9 +219,14 @@ pub async fn seed_streak(db: &Db, current: u32, armed: bool, last: i64) {
         last_study_day: Some(day(last)),
         comeback_armed: armed,
     };
-    upsert_state(&mut write, "language", &state, UtcMillis::from_epoch_millis(at(last, 12)))
-        .await
-        .expect("the streak writes");
+    upsert_state(
+        &mut write,
+        "language",
+        &state,
+        UtcMillis::from_epoch_millis(at(last, 12)),
+    )
+    .await
+    .expect("the streak writes");
     write.commit().await.expect("the streak commits");
 }
 
@@ -328,7 +344,9 @@ impl Celebrate for Recorder {
 
 /// The error of a router that did not answer.
 pub fn no_answer() -> KernelError {
-    KernelError::Database(sqlx::Error::Protocol("the router did not answer".to_owned()))
+    KernelError::Database(sqlx::Error::Protocol(
+        "the router did not answer".to_owned(),
+    ))
 }
 
 /// A bot transport that records every message it delivers.
@@ -338,7 +356,10 @@ pub struct RecordingBot(Mutex<Vec<String>>);
 impl RecordingBot {
     /// Every text delivered, in order.
     pub fn sent(&self) -> Vec<String> {
-        self.0.lock().unwrap_or_else(PoisonError::into_inner).clone()
+        self.0
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone()
     }
 
     fn push(&self, text: &str) -> Pushed {

@@ -3,7 +3,7 @@
 //! (`bot.py:CommandBot._render_records`, through progression's chase).
 
 use deck_streak_kernel::StudyDay;
-use deck_streak_progression::records::RecordKind;
+use deck_streak_progression::records::{BoardLine, RecordKind, chase};
 
 use crate::recompute::records::StoredRecord;
 
@@ -47,6 +47,43 @@ pub struct RecordsView {
 /// The view of `stored` against today's `live` totals (R13).
 #[must_use]
 pub fn records_view(stored: &[StoredRecord], live: LiveDay) -> RecordsView {
-    let _ = (stored, live);
-    RecordsView::default()
+    let lines: Vec<RecordLine> = stored
+        .iter()
+        .map(|record| RecordLine {
+            kind: record.kind,
+            label: record.kind.label(),
+            value: record.value,
+            study_day: record.study_day,
+            previous: record.previous,
+            today: today(record.kind, live),
+        })
+        .collect();
+    let board: Vec<BoardLine> = lines
+        .iter()
+        .map(|line| BoardLine {
+            value: line.value,
+            today: line.today,
+        })
+        .collect();
+    let chase = chase(&board).and_then(|(at, gap)| lines.get(at).map(|line| (line.kind, gap)));
+    RecordsView { lines, chase }
+}
+
+/// Today's live value for `kind`: the score, the study reviews, or the whole minutes of their
+/// seconds.
+fn today(kind: RecordKind, live: LiveDay) -> i64 {
+    match kind {
+        RecordKind::BestScore => live.score,
+        RecordKind::MostReviews => live.reviews,
+        RecordKind::MostMinutes => whole_minutes(live.seconds),
+    }
+}
+
+/// The whole minutes of `seconds`, truncated toward zero as the records' detection takes them.
+#[allow(
+    clippy::cast_possible_truncation,
+    reason = "a day's study seconds are far below i64::MAX minutes, and the predecessor truncates"
+)]
+fn whole_minutes(seconds: f64) -> i64 {
+    (seconds / 60.0) as i64
 }

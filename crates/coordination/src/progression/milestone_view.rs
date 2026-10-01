@@ -2,7 +2,7 @@
 //! reviews, the language streak and Road to C2's mature cards, or `pending` while Road to C2 does
 //! not supply that sum (#85). Nothing is computed from a stand-in for it.
 
-use deck_streak_progression::milestone::Milestone;
+use deck_streak_progression::milestone::{Milestone, next_milestone};
 
 /// What the milestone view answers.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -17,6 +17,7 @@ pub enum MilestoneView {
 /// supplied (R15).
 #[must_use]
 pub fn milestone_view(reviews: u64, streak: u64, mature: Option<u64>) -> MilestoneView {
-    let _ = (reviews, streak, mature);
-    MilestoneView::Pending
+    mature.map_or(MilestoneView::Pending, |mature| {
+        MilestoneView::Next(next_milestone(reviews, streak, mature))
+    })
 }

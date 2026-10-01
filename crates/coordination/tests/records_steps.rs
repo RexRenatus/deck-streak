@@ -25,7 +25,9 @@ use deck_streak_coordination::recompute::records::{
     PlannedRecord, RECORD_EVENT, RECORDS_WINDOW, RecordPlan, RecordsStep, offer_records, plan,
     record_key,
 };
-use deck_streak_coordination::recompute::{AwardOffers, Evaluation, Fold, FoldInput, Offers, Phase};
+use deck_streak_coordination::recompute::{
+    AwardOffers, Evaluation, Fold, FoldInput, Offers, Phase,
+};
 use deck_streak_ingest::reader::CollectionData;
 use deck_streak_kernel::{Db, StudyDay, StudyDayRule, UtcMillis};
 use deck_streak_notifications::DedupeKey;
@@ -39,7 +41,9 @@ use support::{
 
 /// A golden kind.
 fn kind(value: &Value) -> RecordKind {
-    let text = value.as_str().unwrap_or_else(|| panic!("a kind, not {value}"));
+    let text = value
+        .as_str()
+        .unwrap_or_else(|| panic!("a kind, not {value}"));
     RecordKind::parse(text).unwrap_or_else(|| panic!("a record kind, not {text}"))
 }
 
@@ -72,7 +76,11 @@ fn expected_plan(output: &Value) -> RecordPlan {
         celebrated: items(&output["celebrated"])
             .iter()
             .map(|pair| {
-                assert_eq!(pair[0].as_str(), Some(RECORD_EVENT), "a record celebration: {pair}");
+                assert_eq!(
+                    pair[0].as_str(),
+                    Some(RECORD_EVENT),
+                    "a record celebration: {pair}"
+                );
                 pair[1]
                     .as_str()
                     .unwrap_or_else(|| panic!("a key, not {pair}"))
@@ -113,7 +121,15 @@ async fn seed_low_records(db: &Db) {
 /// The window's records step evaluated on `day_number` as the current day, at `now`.
 async fn current(db: &Db, day_number: i64, now: i64) {
     let empty = collection(Vec::new(), Vec::new());
-    run_step(db, &RecordsStep, &empty, 0, (day_number, Evaluation::Current), now).await;
+    run_step(
+        db,
+        &RecordsStep,
+        &empty,
+        0,
+        (day_number, Evaluation::Current),
+        now,
+    )
+    .await;
 }
 
 /// Offers the owed records to `recorder` on `day_number`.
@@ -155,12 +171,21 @@ async fn the_records_step_matches_the_parity_golden() {
                 value: number(&pair[1]),
             })
             .collect();
-        let empty = input["empty"].as_bool().unwrap_or_else(|| panic!("{label}: empty"));
+        let empty = input["empty"]
+            .as_bool()
+            .unwrap_or_else(|| panic!("{label}: empty"));
         let planned = plan(&stored, empty, &new, day(D0));
         assert_eq!(planned, expected_plan(output), "{label}: the plan");
-        assert_eq!(RECORDS_WINDOW, number(&output["limit"]), "{label}: the window");
+        assert_eq!(
+            RECORDS_WINDOW,
+            number(&output["limit"]),
+            "{label}: the window"
+        );
         for key in &planned.celebrated {
-            assert!(DedupeKey::new(key).is_ok(), "{label}: {key} is a router key");
+            assert!(
+                DedupeKey::new(key).is_ok(),
+                "{label}: {key} is a router key"
+            );
         }
         for record in &planned.written {
             if !planned.seeded {
@@ -208,10 +233,18 @@ async fn the_first_detection_seeds_records_silently() {
     ];
     for pass in 1..=2 {
         current(&scratch.db, D0, at(D0, 13)).await;
-        assert_eq!(records(&scratch.db).await, seeded, "pass {pass}: seeded at their own values");
+        assert_eq!(
+            records(&scratch.db).await,
+            seeded,
+            "pass {pass}: seeded at their own values"
+        );
         let recorder = Recorder::default();
         offer(&scratch.db, &recorder, D0).await;
-        assert!(recorder.keys().is_empty(), "pass {pass}: a seed raises nothing: {:?}", recorder.keys());
+        assert!(
+            recorder.keys().is_empty(),
+            "pass {pass}: a seed raises nothing: {:?}",
+            recorder.keys()
+        );
     }
 }
 
@@ -253,9 +286,16 @@ async fn recompute(
 async fn a_later_beat_offers_the_owed_record_first() {
     let scratch = scratch().await;
     seed_low_records(&scratch.db).await;
-    seed_rollups(&scratch.db, &[totals(D0, 50, 0, 0.0), totals(D0 + 1, 60, 0, 0.0)]).await;
+    seed_rollups(
+        &scratch.db,
+        &[totals(D0, 50, 0, 0.0), totals(D0 + 1, 60, 0, 0.0)],
+    )
+    .await;
     let data = collection(
-        vec![answer(at(D0, 10), 1, 3, 5, 9_000), answer(at(D0 + 1, 10), 2, 3, 5, 9_000)],
+        vec![
+            answer(at(D0, 10), 1, 3, 5, 9_000),
+            answer(at(D0 + 1, 10), 2, 3, 5, 9_000),
+        ],
         vec![card(1, 1), card(2, 1)],
     );
     recompute(&scratch.db, &data, None, None, at(D0, 13)).await;
@@ -266,15 +306,39 @@ async fn a_later_beat_offers_the_owed_record_first() {
     );
     let bot = Arc::new(RecordingBot::default());
     let offers = AwardOffers::new(router(&scratch.db, D0 + 1, &bot));
-    recompute(&scratch.db, &data, Some(D0 + 1), Some(&offers), at(D0 + 1, 13)).await;
-    assert_eq!(bot.sent().len(), 2, "the owed record, then the new one: {:?}", bot.sent());
+    recompute(
+        &scratch.db,
+        &data,
+        Some(D0 + 1),
+        Some(&offers),
+        at(D0 + 1, 13),
+    )
+    .await;
+    assert_eq!(
+        bot.sent().len(),
+        2,
+        "the owed record, then the new one: {:?}",
+        bot.sent()
+    );
     assert_eq!(
         records(&scratch.db).await[0],
         ("best_score".to_owned(), 60, D0 + 1, 50, true),
         "the new record is marked once answered"
     );
-    recompute(&scratch.db, &data, Some(D0 + 1), Some(&offers), at(D0 + 1, 14)).await;
-    assert_eq!(bot.sent().len(), 2, "a replay sends nothing: {:?}", bot.sent());
+    recompute(
+        &scratch.db,
+        &data,
+        Some(D0 + 1),
+        Some(&offers),
+        at(D0 + 1, 14),
+    )
+    .await;
+    assert_eq!(
+        bot.sent().len(),
+        2,
+        "a replay sends nothing: {:?}",
+        bot.sent()
+    );
 }
 
 #[tokio::test]
@@ -285,12 +349,20 @@ async fn a_record_is_celebrated_once_per_kind_and_day() {
     let recorder = Recorder::default();
     current(&scratch.db, D0, at(D0, 13)).await;
     offer(&scratch.db, &recorder, D0).await;
-    assert_eq!(recorder.keys(), ["pr:best_score:20000"], "the new best is offered");
+    assert_eq!(
+        recorder.keys(),
+        ["pr:best_score:20000"],
+        "the new best is offered"
+    );
     // The same day beats its own record: the day's key was celebrated, so nothing is owed.
     rescore(&scratch.db, D0, 60).await;
     current(&scratch.db, D0, at(D0, 14)).await;
     offer(&scratch.db, &recorder, D0).await;
-    assert_eq!(recorder.keys(), ["pr:best_score:20000"], "once per kind and day");
+    assert_eq!(
+        recorder.keys(),
+        ["pr:best_score:20000"],
+        "once per kind and day"
+    );
     assert_eq!(
         records(&scratch.db).await[0],
         ("best_score".to_owned(), 60, D0, 50, true),
@@ -369,15 +441,31 @@ async fn a_record_replaced_before_it_was_offered_is_named() {
     let _logging = log_capture::hold_capture(warnings.clone());
     let scratch = scratch().await;
     seed_low_records(&scratch.db).await;
-    seed_rollups(&scratch.db, &[totals(D0, 50, 0, 0.0), totals(D0 + 1, 60, 0, 0.0)]).await;
+    seed_rollups(
+        &scratch.db,
+        &[totals(D0, 50, 0, 0.0), totals(D0 + 1, 60, 0, 0.0)],
+    )
+    .await;
     current(&scratch.db, D0, at(D0, 13)).await;
-    assert!(warnings.logged().is_empty(), "nothing replaced yet: {:?}", warnings.logged());
+    assert!(
+        warnings.logged().is_empty(),
+        "nothing replaced yet: {:?}",
+        warnings.logged()
+    );
     current(&scratch.db, D0 + 1, at(D0 + 1, 13)).await;
     let logged = warnings.logged();
-    assert_eq!(logged.len(), 1, "one record was replaced unsent: {logged:?}");
+    assert_eq!(
+        logged.len(),
+        1,
+        "one record was replaced unsent: {logged:?}"
+    );
     let line = &logged[0];
     let named_day = format!("day={}", day(D0));
-    for part in ["celebration not sent", "kind=best_score", named_day.as_str()] {
+    for part in [
+        "celebration not sent",
+        "kind=best_score",
+        named_day.as_str(),
+    ] {
         assert!(line.contains(part), "{line} names {part}");
     }
     assert_eq!(

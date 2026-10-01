@@ -39,7 +39,9 @@ use deck_streak_coordination::instruments::{
 };
 use deck_streak_coordination::obligations::Obligations;
 use deck_streak_coordination::recompute::analytics_step::AnalyticsStep;
+use deck_streak_coordination::recompute::badges::BadgesStep;
 use deck_streak_coordination::recompute::day_bonuses::DayBonusesStep;
+use deck_streak_coordination::recompute::records::RecordsStep;
 use deck_streak_coordination::recompute::streaks::{RelightDue, StreaksStep};
 use deck_streak_coordination::recompute::xp::XpStep;
 use deck_streak_coordination::recompute::{Fold, FoldError, Phase};
@@ -168,23 +170,25 @@ fn take_open_lock(path: &Path) -> io::Result<File> {
 
 /// The recompute's fold, with every step registered in its phase (SPEC-071 R19): phase 1's
 /// analytics step, counting leeches by `analytics`. A later SPEC registers its step here, in its
-/// own phase, without touching the fold.
+/// own phase, without touching the fold. The badge step awards against no configured course.
 ///
 /// # Errors
 ///
 /// [`FoldError::OutsidePhase`] when a step is registered outside its phase.
 pub fn recompute_fold(analytics: AnalyticsSettings) -> Result<Fold, FoldError> {
-    recompute_fold_with_relights(analytics).map(|(fold, _due)| fold)
+    recompute_fold_with_relights(analytics, Courses::default()).map(|(fold, _due)| fold)
 }
 
-/// [`recompute_fold`], and the handle the streaks step answers its due relights on, for the cycle
-/// that routes them after the fold's commit (SPEC-076 R27).
+/// [`recompute_fold`] over the owner's `courses`, which the badge step awards against (SPEC-073
+/// R4), and the handle the streaks step answers its due relights on, for the cycle that routes
+/// them after the fold's commit (SPEC-076 R27).
 ///
 /// # Errors
 ///
 /// [`FoldError::OutsidePhase`] when a step is registered outside its phase.
 pub fn recompute_fold_with_relights(
     analytics: AnalyticsSettings,
+    courses: Courses,
 ) -> Result<(Fold, RelightDue), FoldError> {
     let mut fold = Fold::default();
     fold.register(
@@ -195,6 +199,8 @@ pub fn recompute_fold_with_relights(
     let (streaks, due) = StreaksStep::new();
     fold.register(Phase::StreaksAndGovernor, Box::new(streaks))?;
     fold.register(Phase::DerivedBonuses, Box::new(DayBonusesStep))?;
+    fold.register(Phase::Awards, Box::new(BadgesStep::new(courses)))?;
+    fold.register(Phase::Awards, Box::new(RecordsStep))?;
     Ok((fold, due))
 }
 
@@ -249,7 +255,8 @@ impl RecomputeSetup {
         db.record_courses_digest(courses.digest())
             .await
             .map_err(RecomputeError::Digest)?;
-        let (fold, relights) = recompute_fold_with_relights(AnalyticsSettings::from_env(env)?)?;
+        let (fold, relights) =
+            recompute_fold_with_relights(AnalyticsSettings::from_env(env)?, courses.clone())?;
         Ok(Self {
             courses,
             fold: Arc::new(fold),

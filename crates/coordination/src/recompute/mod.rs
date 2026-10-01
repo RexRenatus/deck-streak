@@ -35,11 +35,11 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
 use deck_streak_analytics::rollup::{self, fingerprint};
-use deck_streak_ingest::reader::{CollectionData, Review};
+use deck_streak_ingest::reader::{CollectionData, Review, is_study_event};
 use deck_streak_kernel::{
     CourseCode, Db, KernelError, PortFuture, StudyDay, StudyDayRule, UtcMillis,
 };
-use deck_streak_notifications::Router;
+use deck_streak_notifications::{DedupeKey, LapseContext, Occasion, Policy, Router, Surface, Tier};
 use sqlx::SqliteConnection;
 
 /// The phases a day's steps run in.
@@ -199,8 +199,14 @@ impl<'a> RecomputeFacts<'a> {
     /// study review of the window on or before `day`.
     #[must_use]
     pub fn lifetime_through(&self, day: StudyDay) -> u64 {
-        let _ = day;
-        0
+        let window = self
+            .reviews_by_day
+            .range(..=day)
+            .flat_map(|(_, reviews)| reviews)
+            .filter(|review| is_study_event(review.kind, review.ease))
+            .count();
+        self.base_reviews
+            .saturating_add(u64::try_from(window).unwrap_or(u64::MAX))
     }
 
     /// The study reviews answered on `day`, in the window's order.
@@ -308,7 +314,13 @@ impl fmt::Debug for AwardOffers {
 impl Offers for AwardOffers {
     fn offer<'a>(&'a self, db: &'a Db, now: UtcMillis, today: StudyDay) -> PortFuture<'a, ()> {
         Box::pin(async move {
-            let _ = (&self.celebrate, db, now, today);
+            // An offer that fails is retried by the next offers; it never stops the fold.
+            if let Err(error) = badges::offer_badges(&*self.celebrate, db, now, today).await {
+                tracing::error!(%error, "the owed badges could not be offered");
+            }
+            if let Err(error) = records::offer_records(&*self.celebrate, db, now, today).await {
+                tracing::error!(%error, "the owed records could not be offered");
+            }
             Ok(())
         })
     }
@@ -319,10 +331,33 @@ impl Offers for AwardOffers {
 impl Celebrate for Router {
     fn celebrate<'a>(&'a self, celebration: &'a Celebration) -> PortFuture<'a, ()> {
         Box::pin(async move {
-            let _ = celebration;
-            Ok(())
+            let policy = Policy::compiled().map_err(refused)?;
+            let kind = policy
+                .kind(CELEBRATION_KIND)
+                .ok_or_else(|| refused("the policy has no celebration kind"))?;
+            let key = DedupeKey::new(&celebration.key).map_err(refused)?;
+            let occasion = Occasion::new(
+                kind,
+                key,
+                Surface::Bot,
+                Tier::T2,
+                celebration.text.clone(),
+                celebration.study_day,
+                LapseContext::NoLapse,
+            )
+            .map_err(refused)?
+            .with_event(celebration.event, None);
+            self.route(&occasion).await.map(|_| ())
         })
     }
+}
+
+/// The policy's kind an award's celebration is raised as.
+const CELEBRATION_KIND: &str = "celebration";
+
+/// A refusal the offer cannot recover from, as the database error kind the cycle already reports.
+fn refused(reason: impl fmt::Display) -> KernelError {
+    KernelError::Database(sqlx::Error::Protocol(format!("{reason}")))
 }
 
 /// Why a step cannot be registered.
@@ -429,7 +464,8 @@ impl Fold {
     /// [`KernelError`] when a read or a write of a step or of the cursor fails; the days settled
     /// before it stay settled.
     pub async fn run(&self, db: &Db, input: &FoldInput<'_>) -> Result<FoldReport, KernelError> {
-        let facts = RecomputeFacts::new(input.data, input.rule, input.now, input.courses_digest);
+        let facts = RecomputeFacts::new(input.data, input.rule, input.now, input.courses_digest)
+            .with_base_reviews(input.base_reviews);
         let today = facts.today;
         let closed = previous(today);
         let study_days: Vec<StudyDay> = facts
@@ -462,6 +498,8 @@ impl Fold {
         // (2) Each owed day, oldest first, once a successful sync started after its close (R15).
         let mut day = first_owed;
         while day <= closed && input.synced_in.is_some_and(|synced| day < synced) {
+            // Every owed celebration is offered before the day's write can replace it (ADR-303).
+            offer_owed(input, db, today).await;
             let mut write = db.write().await?;
             let end_of_day = day == closed;
             self.evaluate(&facts, day, Evaluation::Settle { end_of_day }, &mut write)
@@ -477,6 +515,7 @@ impl Fold {
         }
 
         // (3) The current study day, as far as it has gone.
+        offer_owed(input, db, today).await;
         let mut write = db.write().await?;
         self.evaluate(&facts, today, Evaluation::Current, &mut write)
             .await?;
@@ -506,6 +545,8 @@ impl Fold {
             }
         }
         write.commit().await?;
+        // The awards the last writes made are offered once they are committed.
+        offer_owed(input, db, today).await;
         report.rerolled.push(today);
         report.rerolled.sort_unstable();
         report.rerolled.dedup();
@@ -536,6 +577,16 @@ impl Fold {
             step.evaluate(&evaluated, write).await?;
         }
         Ok(())
+    }
+}
+
+/// Runs the fold's offers, if it was given any, between two of its writes: a failed offer is logged
+/// and leaves its award owed, and never fails the fold (ADR-303).
+async fn offer_owed(input: &FoldInput<'_>, db: &Db, today: StudyDay) {
+    if let Some(offers) = input.offers
+        && let Err(error) = offers.offer(db, input.now, today).await
+    {
+        tracing::error!(%error, "the owed celebrations could not be offered");
     }
 }
 
