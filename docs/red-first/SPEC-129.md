@@ -236,7 +236,7 @@ Five commits sit between the red at 719a1a7a and the green at 29993617 (`git rev
 e2d0076e moves the finder into `_mutants_finder.py`, repoints `test_dispatch_shards.py` at it and
 makes the stand-in's failure arm exit, which is the change A17 and A18 ask for. Commit 6af5e3dc
 points the two scans of `test_mutation_workflows.py` at the finder, which is the change A15 and A16
-ask for. Commit 7f83b956 adds one assertion to the census test of A19, that it read more than one file, and removes none. Commit 63a4cedf adds the changelog fragment and no code. No commit among them edits a red test's assertion.
+ask for. Commit 7f83b956 adds one assertion to the census test of A19, that it read more than one file, and removes none. Commit 63a4cedf adds the changelog fragment and no code. A18's green is CI only: at the pushed head 20446f7c the `hygiene` job of run 36919081430 reads it green, and no CI ran at 29993617. No commit among them edits a red test's assertion.
 
 ```red-first
 A15: red at 719a1a7a: AssertionError: Lists differ: [] != ['planted.yml'] : five spellings, five subtests red
@@ -247,7 +247,7 @@ A19: red at 4fc769c9: AssertionError: Lists differ: [('test_dispatch_shards.py',
 A15: green at 29993617
 A16: green at 29993617
 A17: green at 29993617
-A18: green at 20446f7c: CI only, run 36919081430, the hygiene job
+A18: green at 20446f7c
 A19: green at 29993617
 ```
 
