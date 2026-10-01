@@ -6,6 +6,7 @@ import {
   type Listing
 } from './insights/insights';
 import { parseLevel, type LevelView } from './level/level';
+import { parseGovernor, parseStreak, type StreakView } from './streak/streak';
 import { parseScore, type ScoreToday } from './score/score';
 import { telegram } from './telegram.svelte';
 
@@ -52,6 +53,8 @@ export interface Api {
   score(): Promise<Answer<ScoreToday>>;
   /** The owner's level, today's XP and the consistency run (SPEC-072 R23). */
   level(): Promise<Answer<LevelView>>;
+  /** Both streak tracks and the governor's verdict (SPEC-076 R20, R21). */
+  streak(): Promise<Answer<StreakView>>;
   /** The owner's unseen in-app celebrations, each with its tier (SPEC-084 R10). */
   feed(): Promise<Answer<FeedItem[]>>;
   /** The instruments the owner can read (SPEC-094 R18). */
@@ -148,6 +151,13 @@ export function createApi(options: ApiOptions): Api {
     me: () => read('/api/me', parseMe),
     score: () => read('/api/score', parseScore),
     level: () => read('/api/level', parseLevel),
+    streak: async () => {
+      const streak = await read('/api/streak', parseStreak);
+      if (streak.kind !== 'ok') return streak;
+      const governor = await read('/api/governor', parseGovernor);
+      if (governor.kind !== 'ok') return governor;
+      return { kind: 'ok', value: { ...streak.value, governor: governor.value } };
+    },
     feed: () => read(FEED_PATH, parseFeed),
     insights: () => read('/api/insights', parseListings),
     insight: (id) =>

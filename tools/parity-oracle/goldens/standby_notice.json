@@ -1,0 +1,789 @@
+{
+  "adapter": "noticing",
+  "cases": [
+    {
+      "class": "a-new-standby",
+      "input": {
+        "notified_day": null,
+        "notifier": true,
+        "quiet": false,
+        "skip_days": [],
+        "standby": false,
+        "study_days": [
+          20000,
+          19999,
+          19998
+        ],
+        "today": 20000
+      },
+      "output": {
+        "lapse": false,
+        "notified_day": 20000,
+        "sent": true,
+        "standby": true
+      }
+    },
+    {
+      "class": "standby-since-yesterday",
+      "input": {
+        "notified_day": null,
+        "notifier": true,
+        "quiet": false,
+        "skip_days": [],
+        "standby": true,
+        "study_days": [
+          20000,
+          19999,
+          19998
+        ],
+        "today": 20000
+      },
+      "output": {
+        "lapse": false,
+        "notified_day": null,
+        "sent": false,
+        "standby": true
+      }
+    },
+    {
+      "class": "quiet-hours",
+      "input": {
+        "notified_day": null,
+        "notifier": true,
+        "quiet": true,
+        "skip_days": [],
+        "standby": false,
+        "study_days": [
+          20000,
+          19999,
+          19998
+        ],
+        "today": 20000
+      },
+      "output": {
+        "lapse": false,
+        "notified_day": null,
+        "sent": false,
+        "standby": true
+      }
+    },
+    {
+      "class": "no-notifier",
+      "input": {
+        "notified_day": null,
+        "notifier": false,
+        "quiet": false,
+        "skip_days": [],
+        "standby": false,
+        "study_days": [
+          20000,
+          19999,
+          19998
+        ],
+        "today": 20000
+      },
+      "output": {
+        "lapse": false,
+        "notified_day": null,
+        "sent": false,
+        "standby": true
+      }
+    },
+    {
+      "class": "notified-six-days-ago",
+      "input": {
+        "notified_day": 19994,
+        "notifier": true,
+        "quiet": false,
+        "skip_days": [],
+        "standby": false,
+        "study_days": [
+          20000,
+          19999,
+          19998
+        ],
+        "today": 20000
+      },
+      "output": {
+        "lapse": false,
+        "notified_day": 19994,
+        "sent": false,
+        "standby": true
+      }
+    },
+    {
+      "class": "notified-seven-days-ago",
+      "input": {
+        "notified_day": 19993,
+        "notifier": true,
+        "quiet": false,
+        "skip_days": [],
+        "standby": false,
+        "study_days": [
+          20000,
+          19999,
+          19998
+        ],
+        "today": 20000
+      },
+      "output": {
+        "lapse": false,
+        "notified_day": 20000,
+        "sent": true,
+        "standby": true
+      }
+    },
+    {
+      "class": "notified-long-ago",
+      "input": {
+        "notified_day": 19940,
+        "notifier": true,
+        "quiet": false,
+        "skip_days": [],
+        "standby": false,
+        "study_days": [
+          20000,
+          19999,
+          19998
+        ],
+        "today": 20000
+      },
+      "output": {
+        "lapse": false,
+        "notified_day": 20000,
+        "sent": true,
+        "standby": true
+      }
+    },
+    {
+      "class": "lapse-suppresses-the-notice",
+      "input": {
+        "notified_day": null,
+        "notifier": true,
+        "quiet": false,
+        "skip_days": [],
+        "standby": false,
+        "study_days": [
+          19996,
+          19995,
+          19994
+        ],
+        "today": 20000
+      },
+      "output": {
+        "lapse": true,
+        "notified_day": null,
+        "sent": false,
+        "standby": true
+      }
+    },
+    {
+      "class": "silent-two-days-is-no-lapse",
+      "input": {
+        "notified_day": null,
+        "notifier": true,
+        "quiet": false,
+        "skip_days": [],
+        "standby": false,
+        "study_days": [
+          19998,
+          19997,
+          19996
+        ],
+        "today": 20000
+      },
+      "output": {
+        "lapse": false,
+        "notified_day": 20000,
+        "sent": true,
+        "standby": true
+      }
+    },
+    {
+      "class": "silent-three-days-is-a-lapse",
+      "input": {
+        "notified_day": null,
+        "notifier": true,
+        "quiet": false,
+        "skip_days": [],
+        "standby": false,
+        "study_days": [
+          19997,
+          19996,
+          19995
+        ],
+        "today": 20000
+      },
+      "output": {
+        "lapse": true,
+        "notified_day": null,
+        "sent": false,
+        "standby": true
+      }
+    },
+    {
+      "class": "a-strong-run-is-not-standby",
+      "input": {
+        "notified_day": null,
+        "notifier": true,
+        "quiet": false,
+        "skip_days": [],
+        "standby": false,
+        "study_days": [
+          20000,
+          19999,
+          19998,
+          19997,
+          19996,
+          19995,
+          19994,
+          19993,
+          19992,
+          19991,
+          19990,
+          19989,
+          19988,
+          19987,
+          19986,
+          19985,
+          19984,
+          19983,
+          19982,
+          19981,
+          19980,
+          19979,
+          19978,
+          19977,
+          19976,
+          19975,
+          19974,
+          19973,
+          19972,
+          19971,
+          19970,
+          19969,
+          19968,
+          19967,
+          19966,
+          19965,
+          19964,
+          19963,
+          19962,
+          19961
+        ],
+        "today": 20000
+      },
+      "output": {
+        "lapse": false,
+        "notified_day": null,
+        "sent": false,
+        "standby": false
+      }
+    },
+    {
+      "class": "a-skip-bridges-the-silence",
+      "input": {
+        "notified_day": null,
+        "notifier": true,
+        "quiet": false,
+        "skip_days": [
+          19998,
+          19999
+        ],
+        "standby": false,
+        "study_days": [
+          19997,
+          19996,
+          19995
+        ],
+        "today": 20000
+      },
+      "output": {
+        "lapse": false,
+        "notified_day": 20000,
+        "sent": true,
+        "standby": true
+      }
+    },
+    {
+      "class": "standby-holds-the-notice-day",
+      "input": {
+        "notified_day": 19998,
+        "notifier": true,
+        "quiet": false,
+        "skip_days": [],
+        "standby": true,
+        "study_days": [
+          20000,
+          19999,
+          19998
+        ],
+        "today": 20000
+      },
+      "output": {
+        "lapse": false,
+        "notified_day": 19998,
+        "sent": false,
+        "standby": true
+      }
+    },
+    {
+      "input": {
+        "notified_day": null,
+        "notifier": true,
+        "quiet": false,
+        "skip_days": [],
+        "standby": true,
+        "study_days": [
+          19999,
+          19998,
+          19997,
+          19996,
+          19995,
+          19994,
+          19993,
+          19992,
+          19991,
+          19990,
+          19989,
+          19988,
+          19987,
+          19986,
+          19985,
+          19984,
+          19983,
+          19982,
+          19981,
+          19980,
+          19979,
+          19978,
+          19977,
+          19976,
+          19975,
+          19974,
+          19973,
+          19972,
+          19971
+        ],
+        "today": 20000
+      },
+      "output": {
+        "lapse": false,
+        "notified_day": null,
+        "sent": false,
+        "standby": false
+      }
+    },
+    {
+      "input": {
+        "notified_day": 19994,
+        "notifier": true,
+        "quiet": true,
+        "skip_days": [],
+        "standby": false,
+        "study_days": [
+          19999,
+          19998,
+          19997,
+          19996,
+          19995,
+          19994,
+          19993,
+          19992,
+          19991,
+          19990,
+          19989,
+          19988,
+          19987,
+          19986,
+          19985,
+          19984,
+          19983,
+          19982,
+          19981
+        ],
+        "today": 20000
+      },
+      "output": {
+        "lapse": false,
+        "notified_day": 19994,
+        "sent": false,
+        "standby": false
+      }
+    },
+    {
+      "input": {
+        "notified_day": 19993,
+        "notifier": true,
+        "quiet": false,
+        "skip_days": [],
+        "standby": true,
+        "study_days": [
+          19999,
+          19998,
+          19997,
+          19996
+        ],
+        "today": 20000
+      },
+      "output": {
+        "lapse": false,
+        "notified_day": 19993,
+        "sent": false,
+        "standby": true
+      }
+    },
+    {
+      "input": {
+        "notified_day": 19990,
+        "notifier": true,
+        "quiet": false,
+        "skip_days": [],
+        "standby": true,
+        "study_days": [
+          19999,
+          19998,
+          19997,
+          19996,
+          19995,
+          19994,
+          19993
+        ],
+        "today": 20000
+      },
+      "output": {
+        "lapse": false,
+        "notified_day": 19990,
+        "sent": false,
+        "standby": true
+      }
+    },
+    {
+      "input": {
+        "notified_day": null,
+        "notifier": true,
+        "quiet": false,
+        "skip_days": [],
+        "standby": true,
+        "study_days": [
+          20000,
+          19999,
+          19998,
+          19997,
+          19996,
+          19995,
+          19994,
+          19993,
+          19992,
+          19991,
+          19990,
+          19989,
+          19988,
+          19987
+        ],
+        "today": 20000
+      },
+      "output": {
+        "lapse": false,
+        "notified_day": null,
+        "sent": false,
+        "standby": true
+      }
+    },
+    {
+      "input": {
+        "notified_day": null,
+        "notifier": true,
+        "quiet": true,
+        "skip_days": [],
+        "standby": false,
+        "study_days": [
+          19999,
+          19998,
+          19997,
+          19996,
+          19995,
+          19994,
+          19993,
+          19992,
+          19991,
+          19990,
+          19989,
+          19988,
+          19987,
+          19986,
+          19985,
+          19984,
+          19983,
+          19982,
+          19981
+        ],
+        "today": 20000
+      },
+      "output": {
+        "lapse": false,
+        "notified_day": null,
+        "sent": false,
+        "standby": false
+      }
+    },
+    {
+      "input": {
+        "notified_day": 19996,
+        "notifier": true,
+        "quiet": false,
+        "skip_days": [],
+        "standby": true,
+        "study_days": [
+          19998,
+          19997,
+          19996,
+          19995,
+          19994,
+          19993,
+          19992
+        ],
+        "today": 20000
+      },
+      "output": {
+        "lapse": false,
+        "notified_day": 19996,
+        "sent": false,
+        "standby": true
+      }
+    },
+    {
+      "input": {
+        "notified_day": null,
+        "notifier": true,
+        "quiet": false,
+        "skip_days": [],
+        "standby": false,
+        "study_days": [
+          20000,
+          19999,
+          19998,
+          19997,
+          19996,
+          19995,
+          19994,
+          19993,
+          19992,
+          19991,
+          19990,
+          19989,
+          19988,
+          19987,
+          19986,
+          19985,
+          19984,
+          19983,
+          19982,
+          19981
+        ],
+        "today": 20000
+      },
+      "output": {
+        "lapse": false,
+        "notified_day": null,
+        "sent": false,
+        "standby": false
+      }
+    },
+    {
+      "input": {
+        "notified_day": 20000,
+        "notifier": true,
+        "quiet": false,
+        "skip_days": [],
+        "standby": false,
+        "study_days": [
+          19999,
+          19998,
+          19997,
+          19996,
+          19995,
+          19994,
+          19993,
+          19992,
+          19991,
+          19990,
+          19989,
+          19988,
+          19987,
+          19986,
+          19985,
+          19984,
+          19983,
+          19982,
+          19981
+        ],
+        "today": 20000
+      },
+      "output": {
+        "lapse": false,
+        "notified_day": 20000,
+        "sent": false,
+        "standby": false
+      }
+    },
+    {
+      "input": {
+        "notified_day": 19998,
+        "notifier": true,
+        "quiet": false,
+        "skip_days": [],
+        "standby": true,
+        "study_days": [
+          19998,
+          19997,
+          19996,
+          19995,
+          19994
+        ],
+        "today": 20000
+      },
+      "output": {
+        "lapse": false,
+        "notified_day": 19998,
+        "sent": false,
+        "standby": true
+      }
+    },
+    {
+      "input": {
+        "notified_day": null,
+        "notifier": true,
+        "quiet": false,
+        "skip_days": [],
+        "standby": true,
+        "study_days": [
+          19999,
+          19998,
+          19997,
+          19996,
+          19995,
+          19994
+        ],
+        "today": 20000
+      },
+      "output": {
+        "lapse": false,
+        "notified_day": null,
+        "sent": false,
+        "standby": true
+      }
+    },
+    {
+      "input": {
+        "notified_day": null,
+        "notifier": true,
+        "quiet": true,
+        "skip_days": [],
+        "standby": true,
+        "study_days": [
+          19997,
+          19996,
+          19995,
+          19994,
+          19993,
+          19992,
+          19991,
+          19990,
+          19989,
+          19988,
+          19987,
+          19986,
+          19985,
+          19984,
+          19983,
+          19982,
+          19981,
+          19980,
+          19979,
+          19978,
+          19977,
+          19976,
+          19975,
+          19974,
+          19973
+        ],
+        "today": 20000
+      },
+      "output": {
+        "lapse": true,
+        "notified_day": null,
+        "sent": false,
+        "standby": false
+      }
+    },
+    {
+      "input": {
+        "notified_day": null,
+        "notifier": true,
+        "quiet": true,
+        "skip_days": [],
+        "standby": true,
+        "study_days": [
+          19999,
+          19998,
+          19997,
+          19996,
+          19995,
+          19994,
+          19993,
+          19992,
+          19991,
+          19990,
+          19989,
+          19988,
+          19987,
+          19986,
+          19985,
+          19984,
+          19983
+        ],
+        "today": 20000
+      },
+      "output": {
+        "lapse": false,
+        "notified_day": null,
+        "sent": false,
+        "standby": true
+      }
+    },
+    {
+      "input": {
+        "notified_day": 19990,
+        "notifier": true,
+        "quiet": false,
+        "skip_days": [],
+        "standby": false,
+        "study_days": [
+          19998,
+          19997,
+          19996,
+          19995
+        ],
+        "today": 20000
+      },
+      "output": {
+        "lapse": false,
+        "notified_day": 20000,
+        "sent": true,
+        "standby": true
+      }
+    }
+  ],
+  "function": "pipeline_layers.governor.GovernorLayer._update_governor",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Runs the same stand-in with a recording notifier and the quiet-hours check set to the case's flag; returns whether a notice was sent and the notice day stored; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_076.py",
+  "registry_sha256": "e451e77bd68e8dfbd5e1fb48845aab7b7f6667f318bc4b956168da0819a89709",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

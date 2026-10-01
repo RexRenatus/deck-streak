@@ -1,0 +1,184 @@
+{
+  "adapter": "viewing",
+  "cases": [
+    {
+      "input": {
+        "state": {
+          "comeback_armed": false,
+          "current": 0,
+          "freezes": 1,
+          "last_study_day": 19999,
+          "longest": 9
+        }
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "state": {
+          "comeback_armed": true,
+          "current": 0,
+          "freezes": 1,
+          "last_study_day": 19999,
+          "longest": 9
+        }
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "state": {
+          "comeback_armed": false,
+          "current": 1,
+          "freezes": 1,
+          "last_study_day": 19999,
+          "longest": 9
+        }
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "state": {
+          "comeback_armed": true,
+          "current": 1,
+          "freezes": 1,
+          "last_study_day": 19999,
+          "longest": 9
+        }
+      },
+      "output": true
+    },
+    {
+      "input": {
+        "state": {
+          "comeback_armed": false,
+          "current": 7,
+          "freezes": 1,
+          "last_study_day": 19999,
+          "longest": 9
+        }
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "state": {
+          "comeback_armed": true,
+          "current": 7,
+          "freezes": 1,
+          "last_study_day": 19999,
+          "longest": 9
+        }
+      },
+      "output": true
+    },
+    {
+      "input": {
+        "state": {
+          "comeback_armed": true,
+          "current": 4,
+          "freezes": 1,
+          "last_study_day": 20000,
+          "longest": 4
+        }
+      },
+      "output": true
+    },
+    {
+      "input": {
+        "state": {
+          "comeback_armed": true,
+          "current": 3,
+          "freezes": 1,
+          "last_study_day": 20000,
+          "longest": 3
+        }
+      },
+      "output": true
+    },
+    {
+      "input": {
+        "state": {
+          "comeback_armed": false,
+          "current": 18,
+          "freezes": 1,
+          "last_study_day": 20000,
+          "longest": 18
+        }
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "state": {
+          "comeback_armed": true,
+          "current": 0,
+          "freezes": 1,
+          "last_study_day": 20000,
+          "longest": 0
+        }
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "state": {
+          "comeback_armed": false,
+          "current": 13,
+          "freezes": 1,
+          "last_study_day": 20000,
+          "longest": 13
+        }
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "state": {
+          "comeback_armed": false,
+          "current": 3,
+          "freezes": 1,
+          "last_study_day": 20000,
+          "longest": 3
+        }
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "state": {
+          "comeback_armed": true,
+          "current": 10,
+          "freezes": 1,
+          "last_study_day": 20000,
+          "longest": 10
+        }
+      },
+      "output": true
+    },
+    {
+      "input": {
+        "state": {
+          "comeback_armed": true,
+          "current": 18,
+          "freezes": 1,
+          "last_study_day": 20000,
+          "longest": 18
+        }
+      },
+      "output": true
+    }
+  ],
+  "function": "gamification.streak.badge_view",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Builds a StreakState and returns the comeback flag the view shows; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_076.py",
+  "registry_sha256": "e451e77bd68e8dfbd5e1fb48845aab7b7f6667f318bc4b956168da0819a89709",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

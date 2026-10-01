@@ -292,7 +292,6 @@ accessibility packs stay enforced, and no row is deferred for this delivery.
 | `crates/coordination/src/recompute/streaks.rs` | `deck-streak-coordination` | added: the streak step of the fold (both tracks, strength, the governor, the relight) |
 | `crates/coordination/src/recompute/mod.rs` | `deck-streak-coordination` | changed: registers the streak step in phase 3 of SPEC-071's fold |
 | `crates/coordination/src/freeze.rs` | `deck-streak-coordination` | added: the one freeze use case other contexts' use cases call |
-| `crates/coordination/src/lapse.rs` | `deck-streak-coordination` | changed: it passes the stored anchor to the slice |
 | `crates/coordination/src/streak_views.rs` | `deck-streak-coordination` | added: the streak and governor views |
 | `crates/coordination/src/lib.rs` | `deck-streak-coordination` | changed: the modules above |
 | `crates/coordination/src/data_rights_registry.rs` | `deck-streak-coordination` | changed: the streaks port joins the registry |
@@ -304,12 +303,25 @@ accessibility packs stay enforced, and no row is deferred for this delivery.
 | `crates/api/tests/streak_routes.rs` | `deck-streak-api` | added: A20 |
 | `crates/bot/src/streak_commands.rs` | `deck-streak-bot` | added: the streak command |
 | `crates/bot/src/commands.rs` | `deck-streak-bot` | changed: the streak command joins the command table and the owner's menu |
+| `crates/notifications/tests/one_router.rs` | `deck-streak-notifications` | changed: the streak command joins the census of command replies and callers |
 | `crates/bot/tests/streak_commands.rs` | `deck-streak-bot` | added: A21 |
 | `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | changed: the streaks store and the freeze port joined to coordination |
 | `web/app/src/routes/streak/+page.svelte` | miniapp | added: the streak screen |
 | `web/app/src/lib/streak/StreakScreen.svelte` | miniapp | added: both tracks, the calendar and the at-stake line |
-| `web/app/src/lib/streak/GovernorChip.svelte` | miniapp | added: the verdict and why |
 | `web/app/src/lib/streak/streak.ts` | miniapp | added: the two routes' client |
+| `crates/api/src/lib.rs` | `deck-streak-api` | changed: the streak routes module joins the crate |
+| `crates/bot/src/lib.rs` | `deck-streak-bot` | changed: the streak commands module joins the crate |
+| `crates/bot/tests/commands.rs` | `deck-streak-bot` | changed: the command table names the streak command |
+| `crates/bot/tests/messages/help.msg.json` | `deck-streak-bot` | changed: the help message lists the streak command |
+| `crates/bot/tests/messages/start.msg.json` | `deck-streak-bot` | changed: the start message lists the streak command |
+| `crates/coordination/src/relight.rs` | `deck-streak-coordination` | added: the relight's grant and its celebration key |
+| `crates/coordination/src/sync_cycle.rs` | `deck-streak-coordination` | changed: the celebration is routed after the fold's commit |
+| `crates/progression/src/ledger.rs` | `deck-streak-progression` | changed: `grant_on` writes a grant on the caller's connection |
+| `crates/streaks/src/replay.rs` | `deck-streak-streaks` | added: the replay of the streaks and the governor over the study days |
+| `web/app/messages/en.json` | miniapp | changed: the streak screen's messages |
+| `web/app/src/lib/api.ts` | miniapp | changed: the client for the two routes |
+| `web/app/src/lib/startapp.ts` | miniapp | changed: the streak screen joins the start-parameter routes |
+| `web/app/src/lib/startapp.test.ts` | miniapp | changed: the start-parameter test names the streak screen |
 | `web/app/src/lib/streak/streak-screen.test.ts` | miniapp | added: A22 |
 | `web/app/src/lib/routes.ts` | miniapp | changed: the streak screen's route joins `ROUTES` |
 | `tools/parity-oracle/registry/spec_076.py` | repo | added: this SPEC's registrations (SPEC-029's registry) |
@@ -329,6 +341,8 @@ accessibility packs stay enforced, and no row is deferred for this delivery.
 | `tools/parity-oracle/goldens/relight.json` | repo | added: the golden of `pipeline_layers/showcase.py:ShowcaseLayer._relight` (adapter over a stub store) |
 | `tools/parity-oracle/goldens/streaks.constants.json` | repo | added: the constants golden (constants) |
 | `scripts/mutation-rows.d/S07600-S07699.json` | repo | added: the hand-proved rows (section 9) |
+| `crates/streaks/tests/open_lapse_bound.rs` | `deck-streak-streaks` | added: A41, the generated population that pins the open lapse walk against the earlier loop (section 16) |
+| `scripts/mutation-rows.d/S04900-S04999.json` | repo | changed: three lapse rows re-anchored on the counted range, ids and killers unchanged (section 16) |
 | `docs/CONTEXT-MAP.md` | docs | changed: the register of DeckStreak's own tables gains the four tables |
 | `privacy.json` | repo | changed: the categories `streaks` and `governor` |
 | `PRIVACY.md` | repo | changed: one line for each of the two categories |
@@ -338,6 +352,15 @@ accessibility packs stay enforced, and no row is deferred for this delivery.
 | `docs/decisions/ADR-076-the-law-streak-is-evaluated-every-study-day-so-it-decays.md` | docs | changed: accepted |
 | `docs/red-first/SPEC-076.md` | docs | added |
 | `changelog.d/feat-streaks-076.md` | repo | added: the changelog fragment |
+| `crates/streaks/tests/population_rules.rs` | `deck-streak-streaks` | added: the generated populations of A26 to A32 |
+| `crates/streaks/tests/store_effects.rs` | `deck-streak-streaks` | added: the store's read-back populations (A33) |
+| `crates/streaks/tests/silence_walk_bound.rs` | `deck-streak-streaks` | added: the bounded walk against a test-only copy of the earlier loop, and its cap edge (A38, A39) |
+| `crates/coordination/tests/streak_views.rs` | `deck-streak-coordination` | added: the views' populations (A34) |
+| `scripts/mutation-equivalent.d/deck-streak-streaks.json` | repo | added: the eight equivalent mutants of `civil_month` |
+| `web/app/src/lib/streak/streak.test.ts` | repo | added: the date rule and the readers' populations (A40) |
+| `web/app/src/lib/streak/streak-screen-population.test.ts` | repo | added: the screen's populations (A40) |
+| `web/app/src/lib/api-streak.test.ts` | repo | added: the client's call record (A40) |
+| `web/app/src/routes/streak.test.ts` | repo | added: the page's call record (A40) |
 
 ## 5. What this does NOT do
 
@@ -433,6 +456,7 @@ selects exactly one test, and each is proved with its file restored byte for byt
 | `S07608-STRENGTH-HALVES-IN-THIRTEEN-DAYS` | `crates/streaks/src/constants.rs` | the strength half-life | `governor_goldens::strength_and_the_verdict_match_the_parity_goldens` |
 | `S07609-ONE-STANDBY-NOTICE-A-WEEK` | `crates/streaks/src/governor.rs` | no notice within 7 days of the last | `governor_goldens::the_standby_notice_rule_matches_the_parity_golden` |
 | `S07610-THE-RELIGHT-NEEDS-THREE-REVIEWS` | `crates/streaks/src/constants.rs` | a return day relights at 3 reviews | `relight_rule::the_relight_rule_matches_the_parity_golden` |
+| `S07611-THE-SILENCE-WALK-READS-ONE-PAST-THE-CAP` | `crates/streaks/src/governor.rs` | the walk counts up to one day past the cap | `silence_walk_bound::the_walk_stops_at_the_cap_from_the_specs_words` |
 
 ## 10. Amendment, 2026-09-29: the prerequisite is SPEC-049's lapse slice, not the whole of SPEC-049
 
@@ -450,3 +474,428 @@ insertion.
   SPEC-049 is in.
 - The slice's function takes no stored anchor. R15 adds it, so the manifest's rows marked `changed`
   for the two `lapse.rs` files change the slice's files.
+
+## 11. Amendment, 2026-09-29: an empty history is answered as the predecessor answers it
+
+Made on the orchestrator's ruling at re-dispatch, insert-only, after section 10. SPEC-049's own
+answer and its criterion stay as they are: the slice's function answers no lapse for a window with
+no anchor, and this layer, which holds the stored anchor, answers an empty history through it.
+
+R25. When the study set is empty, the layer answers as the predecessor's governor does: the silence
+    walk reaches its 120-day cap, so the lapse is anchored on the stored anchor when one exists and
+    is not later than the horizon (today minus 120 days), and otherwise on the horizon. The rule
+    lives in `crates/streaks/src/lapse.rs` beside the slice's function and leaves the slice's
+    answers unchanged.
+
+The criterion of this amendment, A23, is stated in section 14.
+
+```acceptance
+A23: cargo test -p deck-streak-streaks --test governor_goldens -- --exact an_empty_history_is_anchored_as_the_predecessor_anchors_it
+```
+
+## 12. Amendment, 2026-09-29: the relight is granted on the fold's connection and celebrated after its commit
+
+Made on the orchestrator's ruling at the third dispatch, insert-only, after section 11. It corrects
+R18's wording only where the code proved it incomplete: the fold holds one write transaction while
+its steps run, so a step that opens a second writer for the grant, or asks the router to record a
+send, waits on a lock its own caller holds.
+
+R26. The relight's XP is written on the fold's own connection. `crates/progression/src/ledger.rs`
+    gains `grant_on(connection, request, at)`, which carries the grant port's two queries verbatim, so
+    the offline query cache is unchanged, and `SqliteXpLedger::grant` opens its write, calls
+    `grant_on` and commits. The streak step calls `grant_on` in phase 3, on the fold's write, so the
+    relight's XP is in the day's base before phase 5's derived bonuses and phase 6's mint read it in
+    the same recompute (R18). The source, scope and track stay R18's (`relight:<epoch day>`, `once`,
+    `language`).
+R27. The relight's celebration is routed after the fold commits. The streak step answers the relight
+    as due, and the caller routes it after the fold runs, as the level-up is announced. The policy has
+    no `record` kind, so the celebration is routed under the policy's `celebration` kind (once-ever
+    dedupe) with the key `relight:<epoch day>`; `record` stays the predecessor's event name inside the
+    relight rule's answer, which the golden asserts. The caller routes on every settle that
+    qualifies, whether the grant answered `Granted` or `AlreadyGranted`: the router's dedupe gives one
+    send per episode, and a crash between the commit and the route is recovered at the next
+    recompute. `notifications-policy.json` gains no kind.
+
+Manifest additions: `crates/progression/src/ledger.rs` (changed: `grant_on`), and the test file
+`crates/coordination/tests/relight_settle.rs` gains the two criteria of section 13.
+
+## 13. Acceptance criteria of the 2026-09-29 relight amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A24 | a recompute that relights completes with the grant written on the fold's connection, on a pool that holds one connection, so a second writer would hang | `a_relight_is_granted_on_the_folds_connection` |
+| A25 | a second recompute of the return day routes the celebration again and the router answers it as already sent, so exactly one send is recorded | `a_second_recompute_routes_the_relight_and_one_send_is_recorded` |
+
+```acceptance
+A24: cargo test -p deck-streak-coordination --test relight_settle -- --exact a_relight_is_granted_on_the_folds_connection
+A25: cargo test -p deck-streak-coordination --test relight_settle -- --exact a_second_recompute_routes_the_relight_and_one_send_is_recorded
+```
+
+## 14. Acceptance criteria of the 2026-09-29 empty-history amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A23 | an empty history is answered with the stored anchor or the horizon, equal to the golden `lapse_anchor_beyond_the_walk`'s empty-history cases | `an_empty_history_is_anchored_as_the_predecessor_anchors_it` |
+
+## 15. Acceptance criteria of the 2026-09-30 mutation-hardening amendment
+
+Insert-only. Every rule of the streaks crate, its views, routes and reply is pinned by ONE
+population per function, generated at test time, counted and asserted, with an oracle written from
+this SPEC's words and never by calling the function it judges. The class rules:
+
+- Date arithmetic (`civil_month`): every day from 135000 days before the epoch to 48300 after, with
+  probes at month, year and era distances, must share a calendar month exactly when the SPEC's
+  calendar says so.
+- Comparisons at a boundary (`freeze_events_for`, the law row, `anchor_beyond_the_walk`, the
+  standby notice, `persists`): the boundary less one, the boundary and the boundary plus one, for
+  every input axis.
+- Boolean rules: the full truth table of the inputs, every subset of the days the run reads.
+- Deleted arms, fields and lists: a stored-then-read population whose oracle is a raw read-back of
+  the row, so an arm, a field or a list that is dropped changes what is read.
+- Views, routes and commands: status, body shape and stored effect per handler, and every refusal
+  names its reason (`database_not_open`, `streak_unreadable`).
+- The silence walk (R11): the walk is bounded. It reads at most `SILENCE_WALK_CAP_DAYS + 1` days
+  by a counted `for`, and the other counter loops (`language`, `law`, `fold`, `bridged_streak`) run
+  over the range of epoch days they read, so no mutant of a counter can spin. `open_lapse` ends by
+  `checked_sub` over a finite window and is left as it was: converting it would change what it
+  answers at the smallest epoch day. The bounded walk answers what the earlier open loop answered,
+  measured against a test-only copy of that loop.
+- The streak screen, its readers and its page (web): the date rule over a population of valid and
+  invalid dates and non-string lookalikes; the readers over every bad body, count and verdict; the
+  screen over the law runs, freeze combinations, stakes and governor cases; the client and page over
+  the calls they make.
+
+| id | criterion | decided by |
+|---|---|---|
+| A26 | every day falls in the calendar month the drop cap reads | `every_day_falls_in_the_calendar_month_the_cap_reads` |
+| A27 | the freeze events follow the flags and the freezes gained | `the_freeze_events_follow_the_flags_and_the_freezes_gained` |
+| A28 | the law row follows the run over every assignment of eight days | `the_law_row_follows_the_run_over_every_assignment_of_eight_days` |
+| A29 | the language row and its events follow the rules over every subset of twelve days | `the_language_row_and_events_follow_the_rules_over_every_subset_of_twelve_days` |
+| A30 | the heat tier counts the thresholds reached for every length | `the_heat_tier_counts_the_thresholds_reached_for_every_length` |
+| A31 | the fold stores today, yesterday and the first run's window | `the_fold_stores_today_yesterday_and_the_first_run_window` |
+| A32 | the silence walk and the stored anchor follow the run at every distance | `the_silence_walk_and_the_stored_anchor_follow_the_run_at_every_distance` |
+| A33 | what the store writes is what it reads back, for the state, the strength, the governor row, the events, the outside freezes and a freeze added | `store_effects` |
+| A34 | the views name what is at stake and the heat for every stored pair, read a missing row as the start state and give the governor's verdict for every stored row | `streak_views` |
+| A35 | the streak step carries its name, and the outside freezes join the language row within zero and three | `the_step_is_named_for_the_fold_report`, `the_outside_freezes_join_the_language_row_within_zero_and_three` |
+| A36 | the law leads only above zero and the noun follows the freezes | `the_law_leads_only_above_zero_and_the_noun_follows_the_freezes` |
+| A37 | the streak routes name why they cannot answer | `the_streak_routes_name_why_they_cannot_answer` |
+| A38 | the bounded silence walk answers what the earlier loop answered | `the_bounded_walk_answers_what_the_reference_walk_answers` |
+| A39 | the walk stops at the cap, from the SPEC's words | `the_walk_stops_at_the_cap_from_the_specs_words` |
+| A40 | the web mutation check of the five streak files reports survived 0 and no coverage 0 apart from the recorded equivalents | `web/app/src/lib/streak/streak.test.ts`, `streak-screen-population.test.ts`, `api-streak.test.ts`, `routes/streak.test.ts` |
+
+```acceptance
+A26: cargo test -p deck-streak-streaks --test population_rules -- --exact every_day_falls_in_the_calendar_month_the_cap_reads
+A27: cargo test -p deck-streak-streaks --test population_rules -- --exact the_freeze_events_follow_the_flags_and_the_freezes_gained
+A28: cargo test -p deck-streak-streaks --test population_rules -- --exact the_law_row_follows_the_run_over_every_assignment_of_eight_days
+A29: cargo test -p deck-streak-streaks --test population_rules -- --exact the_language_row_and_events_follow_the_rules_over_every_subset_of_twelve_days
+A30: cargo test -p deck-streak-streaks --test population_rules -- --exact the_heat_tier_counts_the_thresholds_reached_for_every_length
+A31: cargo test -p deck-streak-streaks --test population_rules -- --exact the_fold_stores_today_yesterday_and_the_first_run_window
+A32: cargo test -p deck-streak-streaks --test population_rules -- --exact the_silence_walk_and_the_stored_anchor_follow_the_run_at_every_distance
+A33: cargo test -p deck-streak-streaks --test store_effects
+A34: cargo test -p deck-streak-coordination --test streak_views
+A35: cargo test -p deck-streak-coordination --test streak_fold -- --exact the_step_is_named_for_the_fold_report
+A36: cargo test -p deck-streak-bot --test streak_commands -- --exact the_law_leads_only_above_zero_and_the_noun_follows_the_freezes
+A37: cargo test -p deck-streak-api --test streak_routes -- --exact the_streak_routes_name_why_they_cannot_answer
+A38: cargo test -p deck-streak-streaks --test silence_walk_bound -- --exact the_bounded_walk_answers_what_the_reference_walk_answers
+A39: cargo test -p deck-streak-streaks --test silence_walk_bound -- --exact the_walk_stops_at_the_cap_from_the_specs_words
+A40: pnpm exec vitest run web/app/src/lib/streak/streak.test.ts -t "refuses a body that is not an object, or that lacks any key"
+```
+
+The silence walk's bound is not a timeout. Two alternatives were rejected: leaving the open loop
+and raising the job's timeout, because a mutant that never advances its counter then costs the
+whole budget of the shard and hides the mutants behind it; and a per-test timeout, because it makes
+the answer depend on the machine's speed and kills a spinning test without pinning the rule.
+
+Eight mutants of `civil_month` in `freeze.rs` are equivalent and are recorded in
+`scripts/mutation-equivalent.d/deck-streak-streaks.json`: each relabels the month or the year
+without moving two days across a month boundary, which was measured over the whole range above.
+
+Manifest additions: `crates/streaks/tests/population_rules.rs`, `store_effects.rs` and
+`silence_walk_bound.rs`; `crates/coordination/tests/streak_views.rs`; the streak fold, bot and api
+test files gain the criteria above; `crates/streaks/src/governor.rs`, `replay.rs`, `strength.rs` and
+`law.rs` (changed: the counter loops are bounded); the row `S07611`; and the record file above.
+
+## 16. Amendment, 2026-09-30: the open lapse walks a counted range, and three rules gain a fence
+
+Insert-only: every earlier byte is kept in order, and this section is the only insertion.
+
+- `open_lapse` (SPEC-049 R12, R13) is bounded as the other walks are. It reads the window's days by
+  a counted range, newest first, and answers nothing when the walk reaches the smallest epoch day,
+  as the earlier `checked_sub` step did. This supersedes the sentence of section 15 that leaves it
+  as it was. That loop ended, but its mutant `while number < window_start` does not end for a today
+  before the window's first day, and a conversion that keeps the answer at the smallest epoch day
+  exists: A41 proves it against a test-only copy of the earlier loop.
+- The bot's `/streak` reply is judged over runs that differ from bests (A42). A36 writes each row
+  with its best equal to its run, so it cannot tell the two apart: a reply led by the law best, or
+  one that shows a track's best as its run, passes A36 and the whole bot crate.
+- The second half of A35, the outside freezes joining the language row within zero and three, is
+  fenced by its own test (A43). A35's fence runs only the step's name.
+
+## 17. Acceptance criteria of the 2026-09-30 open-lapse amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A41 | the bounded lapse walk answers what the earlier loop answered, at every origin, the smallest and largest epoch days among them | `the_bounded_lapse_walk_answers_what_the_reference_walk_answers` |
+| A42 | each line of the reply names its own run and best, and the law leads by its run | `each_line_names_its_own_run_and_best_and_the_law_leads_by_its_run` |
+| A43 | the outside freezes join the language row within zero and three | `the_outside_freezes_join_the_language_row_within_zero_and_three` |
+
+```acceptance
+A41: cargo test -p deck-streak-streaks --test open_lapse_bound -- --exact the_bounded_lapse_walk_answers_what_the_reference_walk_answers
+A42: cargo test -p deck-streak-bot --test streak_commands -- --exact each_line_names_its_own_run_and_best_and_the_law_leads_by_its_run
+A43: cargo test -p deck-streak-coordination --test streak_fold -- --exact the_outside_freezes_join_the_language_row_within_zero_and_three
+```
+
+Manifest additions: `crates/streaks/src/lapse.rs` (changed: `open_lapse` walks a counted range);
+`crates/streaks/tests/open_lapse_bound.rs` (added: A41); `crates/bot/tests/streak_commands.rs`
+(changed: A42).
+
+## 18. Amendment, 2026-09-30: R20, R21 and R23 as this delivery serves them
+
+Insert-only: every earlier byte is kept in order, and this section is the only insertion.
+
+- The calendar is not in this delivery. `GET /api/streak` serves no study days and no freeze, skip
+  or break markers, and the streak screen draws no calendar. This supersedes R20's "the window's
+  study days with their freeze, skip and break markers", R23's "the calendar with its markers", and
+  the words "the calendar" in section 4's row for `web/app/src/lib/streak/StreakScreen.svelte`. The
+  calendar is #486.
+- The relight count is served by `GET /api/governor` as `relight_cards`, during a lapse only, and
+  not by `GET /api/streak`. This supersedes R20's last sentence.
+- No route serves a reason string for a disarmed governor. `GET /api/governor` serves the verdict,
+  `standby`, `lapse` and `lapse_since`, and the streak screen states the reason from them. That is
+  how R21's "why the governor is disarmed when it is" is met.
+
+## 19. Amendment, 2026-09-30: the relight's celebration is due in the grant's own write, and five sentences are corrected
+
+Insert-only: every earlier byte is kept in order, and this section is the only insertion.
+
+R27 (restated). The relight's celebration is due in the grant's own write. The streak step records
+    the relight's study day in `relight_due` in the fold's per-day write that grants the relight
+    (R26), so the day is due exactly when that write commits, and a write that rolls back leaves no
+    day due. After the fold's commit, the cycle reads every day still due, oldest first, and
+    routes each under R27's kind and key (`celebration`, `relight:<epoch day>`). Once the router has
+    decided a day, as sent or as already sent, the day leaves the list. A day whose route fails
+    stays due, and so does a day whose route a restart interrupts, so the next cycle routes it. This
+    supersedes R27's answer held in memory and its sentence on crash recovery: a day answered before
+    its write committed could be celebrated after that write rolled back, and a day held in memory
+    was lost at a restart.
+R28. Over a fold that fails at any step after the streak step, a later sync in which the day still
+    qualifies or no longer qualifies, and a restart between any two steps: at most one celebration
+    is sent for each relight day (S1); no celebration is sent for a day whose grant did not commit
+    (S2); and every committed grant is celebrated while recomputes keep running (L1). The proof of
+    the three is #477.
+R29. The migration `migrations/007602_streaks_relight_due.sql` creates `relight_due`, `STRICT` with
+    `created_at` (SPEC-020 R15, R18). It is exported and erased, registered in the context map's
+    ownership register, declared in `privacy.json` and listed in the streaks data-rights port. This
+    adds to R24.
+R30. R20's `none` for a day that already has a study review is served: the streak view, and so
+    `GET /api/streak`, answers `none` for a track whose last study day is the open study day,
+    whatever its run and freezes (A49).
+R31. Every value `GET /api/streak` and `GET /api/governor` serve is judged, by the api's route test
+    and by the web reader's test, over one generated population in which each pair of served values
+    differs in some member, so a route or a reader that puts one served value in another's place is
+    red (A47, A48). The bot's reply is judged the same way by A42.
+R32. The silence walk, the law bridge and the law replay are defined on the study days an instant
+    maps to, whose epoch day numbers lie within 2^37 of the epoch. The silence walk steps at most
+    `SILENCE_WALK_CAP_DAYS + 1` days below today, and the bridge and the replay one day, so none of
+    them leaves the day type there. A today closer than that to the smallest epoch day is outside
+    their domain, and each function's doc says so; `open_lapse` alone answers there (section 16).
+    The proof of the walks' arithmetic is #478.
+
+- Section 10's last bullet names "the two `lapse.rs` files". This delivery changes only
+  `crates/streaks/src/lapse.rs`; `crates/coordination/src/lapse.rs` is read and unchanged.
+- `open_lapse`'s doc now states its one exception: a walk that reaches the smallest epoch day
+  without meeting a study review answers no lapse (section 16, A41).
+- A30's named mutant, the heat's `days >= *threshold` replaced by `days > *threshold`, matches two
+  sites. The failure the red-first record quotes is `heat_tier`'s; `heat_for`'s mutant passes A30
+  and fails A3. The record's addendum of this date names both.
+- A33's store population gains the due list. `put_relight_due`, `relight_due` and
+  `clear_relight_due` are called only from coordination, and a mutant is judged by its own
+  package's tests, so `store_effects` reads each back with a raw query: a day is kept at its first
+  write, the list is read oldest first, a cleared day leaves it, and a write that rolls back leaves
+  no day due.
+
+Manifest additions: `migrations/007602_streaks_relight_due.sql` (added: R29);
+`crates/streaks/src/store.rs` (changed: the due list is written, read and cleared);
+`crates/streaks/src/data_rights.rs` (changed: the due list is exported and erased);
+`crates/coordination/src/recompute/streaks.rs` (changed: the step records the due day in the
+grant's write); `crates/coordination/src/relight.rs` and `crates/coordination/src/sync_cycle.rs`
+(changed: the cycle routes the stored due days and clears each decided one);
+`crates/coordination/src/streak_views.rs` (changed: R30); `crates/streaks/src/governor.rs`,
+`law.rs`, `replay.rs` and `lapse.rs` (changed: their docs state the domain of R32 and section 16);
+`crates/coordination/tests/relight_order.rs` (added: A44 to A46);
+`crates/coordination/tests/relight_settle.rs`, `crates/coordination/tests/data_rights_symmetry.rs`
+and `crates/streaks/tests/streak_rights.rs` (changed: the stored due list);
+`crates/streaks/tests/store_effects.rs` (changed: A33 reads the due list back);
+`crates/coordination/tests/streak_views.rs` (changed: A49); `crates/api/tests/streak_routes.rs`
+(changed: A47);
+`web/app/src/lib/streak/streak-served-population.test.ts` (added: A48); `privacy.json`,
+`PRIVACY.md` and `docs/CONTEXT-MAP.md` (changed: R29); the offline query cache (five queries
+added); the rows `S07617` to `S07621`; and `docs/red-first/SPEC-076.md` (changed: the addendum of
+this date).
+
+## 20. Acceptance criteria of the 2026-09-30 relight-order amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A44 | a fold that fails after the relight's grant, followed by a sync in which the day no longer qualifies, sends no celebration | `a_celebration_is_sent_only_for_a_grant_that_committed` |
+| A45 | a restart between the fold's commit and the route leaves the day due, and the next cycle sends its one celebration | `a_crash_between_the_commit_and_the_route_is_recovered_at_the_next_cycle` |
+| A46 | over every failure point, later-sync outcome and restart, each committed grant is celebrated once and no other day is | `every_failure_point_later_sync_and_crash_keeps_one_celebration_per_committed_grant` |
+| A47 | the streak and governor routes serve each value in its own place, over a generated population in which each pair of served values differs | `every_served_value_is_read_where_each_pair_of_served_values_differs` |
+| A48 | the web reader reads each served value into its own place, over the same population | `web/app/src/lib/streak/streak-served-population.test.ts` |
+| A49 | the view puts nothing at stake on a track whose open study day has a study review, over every run, freeze count and studied flag of both tracks | `a_studied_day_puts_nothing_at_stake_on_either_track` |
+
+```acceptance
+A44: cargo test -p deck-streak-coordination --test relight_order -- --exact a_celebration_is_sent_only_for_a_grant_that_committed
+A45: cargo test -p deck-streak-coordination --test relight_order -- --exact a_crash_between_the_commit_and_the_route_is_recovered_at_the_next_cycle
+A46: cargo test -p deck-streak-coordination --test relight_order -- --exact every_failure_point_later_sync_and_crash_keeps_one_celebration_per_committed_grant
+A47: cargo test -p deck-streak-api --test streak_routes -- --exact every_served_value_is_read_where_each_pair_of_served_values_differs
+A48: pnpm exec vitest run web/app/src/lib/streak/streak-served-population.test.ts
+A49: cargo test -p deck-streak-coordination --test streak_views -- --exact a_studied_day_puts_nothing_at_stake_on_either_track
+```
+
+## 21. Amendments: the files the relight-order amendment adds
+
+The relight-order amendment (sections 18 to 20) adds three files that no row of section 4 names:
+`crates/coordination/tests/relight_order.rs` (added: A44 to A46),
+`migrations/007602_streaks_relight_due.sql` (added: R29, the relight's due day stored in the
+grant's own write) and `web/app/src/lib/streak/streak-served-population.test.ts` (added: A48).
+
+## 22. Amendment, 2026-09-30: a failed route leaves the day due, and the reply's heat is read in its own place
+
+Insert-only: every earlier byte is kept in order, and this section and the next are the only
+insertions.
+
+R31 (restated). Every value `GET /api/streak` and `GET /api/governor` serve is judged, by the api's
+    route test and by the web reader's test, over one generated population in which each pair of
+    served values differs in some member, so a route or a reader that puts one served value in
+    another's place is red (A47, A48). The bot's reply is judged by A42 for each line's run and
+    best and the lines' order, and by A50 for the language line's heat. A50's language runs cross
+    run 0, whose heat is empty, and three heat bands, and every other value on the line differs
+    from the run's heat. A50 reads the whole language line, so a served value put in the heat's
+    place, or the heat dropped, is red. This supersedes R31's last sentence, "The bot's reply is
+    judged the same way by A42": A42's language runs lie in one heat band, so its heat is the same
+    in every reply, and no test read the heat's place.
+
+- A failed route leaves the day due. R27 (restated in section 19) is unchanged, and A51 and A52
+  now decide its sentence "A day whose route fails stays due". A route fails when the router
+  answers an error for a due day: its claim of the day's key is not written, so nothing is claimed
+  or sent, or its decision record is not written after the claim committed and the line was sent.
+  The cycle leaves the day on the list and goes on to the next due day, and the next cycle routes
+  it again. A day the router already claimed is then answered as already sent, so it is sent once.
+  A failed route is not a decision, so it clears nothing.
+- A52's population is generated: the cycle whose route fails (the one whose fold committed the
+  grants, or the first after a restart), which of two due days fails, which of the router's two
+  ledger writes fails, one or two consecutive failed routes, and a restart, or none, before the
+  retry. R28's S1, S2 and L1 hold in every member, and the proof that they hold with a failing
+  route is #477.
+
+Manifest additions: `crates/bot/tests/streak_commands.rs` (changed: A50);
+`crates/coordination/tests/relight_order.rs` (changed: A51, A52); the rows `S07622` to `S07629`;
+and `docs/red-first/SPEC-076.md` (changed: the addendum of this date).
+
+## 23. Acceptance criteria of the 2026-09-30 failed-route and heat amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A50 | the language line carries its run's heat in the heat's own place, over language runs that cross run 0 and three heat bands, at one freeze and at two | `the_language_line_carries_its_runs_heat_in_the_heats_own_place` |
+| A51 | a route whose claim fails leaves the day due, and a later cycle celebrates it once | `a_route_that_fails_leaves_the_day_due_and_a_later_cycle_celebrates_it_once` |
+| A52 | over every failing cycle, failing due day, failing ledger write, run of consecutive failed routes and restart before the retry, each committed grant is celebrated once, no other day is, and the due list empties | `every_failed_route_leaves_its_day_due_until_one_celebration` |
+
+```acceptance
+A50: cargo test -p deck-streak-bot --test streak_commands -- --exact the_language_line_carries_its_runs_heat_in_the_heats_own_place
+A51: cargo test -p deck-streak-coordination --test relight_order -- --exact a_route_that_fails_leaves_the_day_due_and_a_later_cycle_celebrates_it_once
+A52: cargo test -p deck-streak-coordination --test relight_order -- --exact every_failed_route_leaves_its_day_due_until_one_celebration
+```
+
+## 24. Amendment, 2026-10-01: A50 and A52 derived, the failed route's own model, and no give-up
+
+Insert-only: every earlier byte is kept in order, and this section and the next are the only
+insertions.
+
+- A50's population is derived from the streak's heat table, the one the reply reads (`STREAK_HEAT`
+  in `crates/streaks/src/constants.rs`, compiled into the bot's test as data; the bot crate gains no
+  dependency). For each band of the table the test reads the band's first and last run, and for the
+  open top band its first run and the run after it, so run 0, whose heat is empty, is read too. Each
+  run is read at either lead (a law run of zero, so the language line leads, and of two, so the law
+  line leads) and at no freeze, one and two. Round 4's eight replies (language runs 0, 3, 9 and 45,
+  each with a best in the band above, at one freeze and at two, beside a law run of 2) are kept in
+  the population beside these. Each band's heat is written out in the test as its oracle and is
+  never read from the streak crate. A band of the table with no oracle entry, or an oracle entry
+  with no band, is red before any reply is read, so a band added to the table grows the population
+  and is never judged by a heat the test does not hold. A56 reads every band at the same leads and
+  freeze counts, its eleven runs written out by hand. This supersedes section 22's sentence "A50's
+  language runs cross run 0, whose heat is empty, and three heat bands, and every other value on the
+  line differs from the run's heat": the runs now cross every band of the table, and every other
+  value on the line still differs from the run's heat.
+- A52's population is derived from its axes: the cycle whose route fails (the one whose fold
+  committed the grants, or the first after a restart), every non-empty set of the due days whose
+  route fails, which of the router's two ledger writes fails, one to three consecutive failed
+  routes, and a restart, or none, before the retry. A due day, a write or a failed route added to
+  an axis grows it. This supersedes section 22's "which of two due days fails" and "one or two
+  consecutive failed routes".
+- R27's sentence "A day whose route fails stays due", and section 22's "The cycle leaves the day on
+  the list and goes on to the next due day", are decided by five tests. A51 and A52 decide that a
+  failed route leaves its day due and that a later cycle celebrates it once. A53 decides that the
+  cycle goes on to the next due day: while one due day's claim fails on every cycle, the other is
+  celebrated in the first cycle, once, and the failing day alone stays due. A54 fails a day's
+  route on one to eight consecutive cycles, at either ledger write, and the day stays due after
+  each. A55 decides, for every count, that no number of failed routes gives a day up. This
+  supersedes section 22's "A51 and A52 now decide its sentence "A day whose route fails stays
+  due"".
+- A55 holds by construction, not by a count: the test reads every place a count of a day's failed
+  routes could outlive one route, and finds none. `RelightDue` holds no field. Every line that
+  names a type holding state (a lock, a cell, a lazy value, a channel, a thread-local or an
+  atomic) in the router's crate, the kernel and the route's own two files is one of a written-out
+  list: the router's two failure instants, the clock, the worker pool and the log's redaction
+  list, none of them a count per day. Every static of every crate coordination links is one of a
+  written-out list. Three failed routes leave every row of the database as they found it. So a
+  counter added to any of those places is red at its first failure. A55 does not read a count kept
+  inside the transport or the clock a caller hands the router, and a give-up by a day's age rather
+  than by its count of failed routes is outside it.
+- The proof that S1, S2 and L1 hold with a failing route is this delivery's own model,
+  `formal/tla/RelightOrder/`. Its route of a due day can fail before the claim is written or after
+  the claim committed and the line was sent, and the failed day stays due while the cycle goes on.
+  It checks S1 and S2 in every state, L1, and NoOtherDayHeldBack: under fairness on every step of
+  the cycle but the failing day's route, and on that route returning its error, never on it
+  succeeding, every other due day is celebrated while one day's route keeps failing. Its
+  witnesses, each a violation: a failed route that clears the day (L1), that ends the cycle's route
+  (NoOtherDayHeldBack), that returns its error out of the cycle (NoOtherDayHeldBack), and a day
+  given up after one, two or three failed routes, every count the model's bound reaches (L1). R28's
+  proof without a failing route stays #477. This supersedes section 22's "and the proof that they
+  hold with a failing route is #477".
+
+Manifest additions: `crates/bot/tests/streak_commands.rs` (changed: A50 derived, A56);
+`crates/coordination/tests/relight_order.rs` (changed: A52 derived, A53 to A55);
+`formal/tla/RelightOrder/` (added: the model, its configurations and its witnesses);
+`config/formal.json` and `scripts/tests/test_formal_config.py` (changed: the model's time budget);
+the rows `S07630` to `S07635`; and `docs/red-first/SPEC-076.md` (changed: the addendum of this
+date).
+
+## 25. Acceptance criteria of the 2026-10-01 derived-population amendment
+
+A50 and A52 keep their tests and their commands (section 23); their criteria now read as below.
+
+| id | criterion | decided by |
+|---|---|---|
+| A50 | the language line carries its run's heat in the heat's own place, over every band of the streak's heat table (each band's first and last run, the top band's first and the run after it, and run 0), at either lead and at no freeze, one and two, and round 4's eight replies; a band with no written-out heat is red | `the_language_line_carries_its_runs_heat_in_the_heats_own_place` |
+| A52 | over every failing cycle, non-empty set of failing due days, failing ledger write, run of one to three consecutive failed routes and restart before the retry, each committed grant is celebrated once, no other day is, and the due list empties | `every_failed_route_leaves_its_day_due_until_one_celebration` |
+| A53 | while one due day's claim fails on every cycle, the other due day is celebrated in the first cycle, once, the failing day alone stays due, and it is celebrated once when its claim can be written | `a_day_whose_route_keeps_failing_holds_back_no_other_due_day` |
+| A54 | a day whose route fails on each of one to eight consecutive cycles, at either ledger write, stays due after each failed route, and the first cycle that can route it celebrates it once | `a_day_whose_route_fails_many_times_stays_due_until_its_one_celebration` |
+| A55 | the route keeps no per-day failure state a give-up could read: no field in `RelightDue`, no state-holding line beyond the written-out list, no static beyond the written-out list, and the database unchanged by three failed routes | `the_route_keeps_no_per_day_failure_state_a_give_up_could_read` |
+| A56 | the language line carries its run's heat in the heat's own place over eleven runs written out by hand, two in each band and run 0, at either lead and at no freeze, one and two | `every_heat_band_is_carried_in_the_heats_own_place_whichever_line_leads` |
+
+```acceptance
+A53: cargo test -p deck-streak-coordination --test relight_order -- --exact a_day_whose_route_keeps_failing_holds_back_no_other_due_day
+A54: cargo test -p deck-streak-coordination --test relight_order -- --exact a_day_whose_route_fails_many_times_stays_due_until_its_one_celebration
+A55: cargo test -p deck-streak-coordination --test relight_order -- --exact the_route_keeps_no_per_day_failure_state_a_give_up_could_read
+A56: cargo test -p deck-streak-bot --test streak_commands -- --exact every_heat_band_is_carried_in_the_heats_own_place_whichever_line_leads
+```
+
+## 26. Amendments: the files the derived-population amendment adds
+
+The derived-population amendment (sections 24 and 25) adds the model's files and changes two files
+that no row of section 4 names. It adds `formal/tla/RelightOrder/RelightOrder.tla`, its three
+configurations `formal/tla/RelightOrder/MCRelightOrder.cfg`, `formal/tla/RelightOrder/MCLiveness.cfg`
+and `formal/tla/RelightOrder/MCNoOtherDayHeldBack.cfg`, and its twelve witnesses, one file each under
+`formal/tla/RelightOrder/witness/`. It changes `config/formal.json` and
+`scripts/tests/test_formal_config.py` (the model's time budget).

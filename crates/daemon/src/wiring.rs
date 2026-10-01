@@ -40,6 +40,7 @@ use deck_streak_coordination::instruments::{
 use deck_streak_coordination::obligations::Obligations;
 use deck_streak_coordination::recompute::analytics_step::AnalyticsStep;
 use deck_streak_coordination::recompute::day_bonuses::DayBonusesStep;
+use deck_streak_coordination::recompute::streaks::{RelightDue, StreaksStep};
 use deck_streak_coordination::recompute::xp::XpStep;
 use deck_streak_coordination::recompute::{Fold, FoldError, Phase};
 use deck_streak_coordination::sync_cycle::{
@@ -173,14 +174,28 @@ fn take_open_lock(path: &Path) -> io::Result<File> {
 ///
 /// [`FoldError::OutsidePhase`] when a step is registered outside its phase.
 pub fn recompute_fold(analytics: AnalyticsSettings) -> Result<Fold, FoldError> {
+    recompute_fold_with_relights(analytics).map(|(fold, _due)| fold)
+}
+
+/// [`recompute_fold`], and the handle the streaks step answers its due relights on, for the cycle
+/// that routes them after the fold's commit (SPEC-076 R27).
+///
+/// # Errors
+///
+/// [`FoldError::OutsidePhase`] when a step is registered outside its phase.
+pub fn recompute_fold_with_relights(
+    analytics: AnalyticsSettings,
+) -> Result<(Fold, RelightDue), FoldError> {
     let mut fold = Fold::default();
     fold.register(
         Phase::RollupAndScore,
         Box::new(AnalyticsStep::new(analytics)),
     )?;
     fold.register(Phase::BaseXp, Box::new(XpStep))?;
+    let (streaks, due) = StreaksStep::new();
+    fold.register(Phase::StreaksAndGovernor, Box::new(streaks))?;
     fold.register(Phase::DerivedBonuses, Box::new(DayBonusesStep))?;
-    Ok(fold)
+    Ok((fold, due))
 }
 
 /// Why a role's recompute cannot start. Each names a setting or a step, never a value.
@@ -212,6 +227,7 @@ pub enum RecomputeError {
 pub struct RecomputeSetup {
     courses: Courses,
     fold: Arc<Fold>,
+    relights: RelightDue,
     instruments: Option<Arc<Instruments>>,
 }
 
@@ -233,10 +249,11 @@ impl RecomputeSetup {
         db.record_courses_digest(courses.digest())
             .await
             .map_err(RecomputeError::Digest)?;
-        let fold = recompute_fold(AnalyticsSettings::from_env(env)?)?;
+        let (fold, relights) = recompute_fold_with_relights(AnalyticsSettings::from_env(env)?)?;
         Ok(Self {
             courses,
             fold: Arc::new(fold),
+            relights,
             instruments: None,
         })
     }
@@ -269,7 +286,9 @@ impl RecomputeSetup {
         rule: StudyDayRule,
     ) -> CycleParts<E> {
         let digest = self.courses.digest().map(str::to_owned);
-        let parts = parts.with_fold(Arc::clone(&self.fold), db, rule, digest);
+        let parts = parts
+            .with_fold(Arc::clone(&self.fold), db, rule, digest)
+            .with_relights(self.relights.clone());
         match &self.instruments {
             Some(instruments) => parts.with_instruments(Arc::clone(instruments)),
             None => parts,
@@ -583,6 +602,7 @@ mod tests {
     use deck_streak_coordination::recompute::Phase;
     use deck_streak_coordination::recompute::analytics_step::ANALYTICS_STEP;
     use deck_streak_coordination::recompute::day_bonuses::DAY_BONUSES_STEP;
+    use deck_streak_coordination::recompute::streaks::STREAKS_STEP;
     use deck_streak_coordination::recompute::xp::XP_STEP;
 
     use super::{OwnerSyncCycle, RecomputeSetup, TransportMarker, answer_of, recompute_fold};
@@ -653,13 +673,14 @@ mod tests {
     }
 
     #[test]
-    fn the_recompute_fold_registers_the_analytics_and_xp_steps_in_their_phases() {
+    fn the_recompute_fold_registers_the_analytics_xp_and_streak_steps_in_their_phases() {
         let fold = recompute_fold(AnalyticsSettings::default()).expect("every step in its phase");
         assert_eq!(
             fold.steps(),
             [
                 (Phase::RollupAndScore, ANALYTICS_STEP),
                 (Phase::BaseXp, XP_STEP),
+                (Phase::StreaksAndGovernor, STREAKS_STEP),
                 (Phase::DerivedBonuses, DAY_BONUSES_STEP),
             ]
         );
