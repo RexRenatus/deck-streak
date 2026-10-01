@@ -246,3 +246,51 @@ EQUIVALENT, with the reason: M7 and M11 change only what `python_shards` (the ve
 ```text
 round 3: red at e8d9f538 (test_mutation_python_shard_binding: MISS 7 of 47 fields, 24 messages); green at a7990e5d (MISS 0)
 ```
+
+## Addendum, 2026-10-01 (issue #438, fix round 4): three sentences corrected, the class widened, the shard order
+
+Appended under ruling (i) of SPEC-038 section 8; every earlier byte is kept, and each correction is
+an old/new pair.
+
+- **Old:** "Two earlier mutants are EQUIVALENT, with the reason: M7 and M11 change only what
+  `python_shards` (the verdict program, lines 872 to 880) writes, which is dict entries and `str`
+  names, so no reader observes the swap."
+  **New:** M7 and M11 sit in `shard_listing_drift`, drop a guard in the reader of the plan, and
+  neither is a swap. They are EQUIVALENT because `python_shards` writes only dict entries and `str`
+  names, so the dropped guards cannot change a judgement over any plan it writes.
+- **Old:** "the rewritten assertion pinned less than the one it replaced, because it dropped the
+  record's path and its type from the reading while still demanding exit 3 naming the shard."
+  **New:** the replaced round-1 assertion read the drift tail `0 missing () and 1 extra (?)`, and
+  never the record's path or type; the rewrite pinned the refusal's two fixed phrases instead.
+- **Old:** "Round 3 pins every variable part of both messages again", and any sentence of round 3
+  that says every variable part is pinned, or says "in full".
+  **New:** false at round 3's head. Its only drift input had 4 missing and 4 extra, so a tail that
+  swaps the two counts (SW1) or prints the constant 4 for the missing count (K3) survived every
+  mapped module. Round 4 states the class as: a test that reads a message pins every variable part
+  of it on an input where every same-type field holds a distinct value, and the generated
+  population plants DROP, CONST and SWAP per field.
+
+The red commit, 02a19efc, widens the population test to plant all three kinds; it reads 142 field
+mutants of 24 asserted messages (DROP 47, CONST 72, SWAP 23) and `MISS 9`, in
+`test_mutation_python_shard_binding.py` and nowhere else. The green commit, f0d329f2, adds a pin
+on a report that drops one listed mutant and adds two (1 missing, 2 extra, distinct names) beside
+the unchanged 4/4 pin, and a pin whose carried row, excused survivor and two unexplained survivors
+give the judge's summary lines distinct counts: the population reads 161 field mutants of 24
+messages (DROP 47, CONST 91, SWAP 23) and `MISS 0`. The pinned 105-member table reads the same
+before and after.
+
+Per module, this round:
+
+```text
+test_mutation_python_shard_binding: red at 02a19efc (MISS 9 of 142); green at f0d329f2 (MISS 0 of 161)
+test_mutation_verdict: untouched, green at both commits
+test_mutation_equivalent: untouched, green at both commits
+test_mutation_python_verdict: untouched, green at both commits
+test_mutation_verdict_python_kills: untouched, green at both commits
+test_memory_cap_verdict: untouched, green at both commits
+scripts/mutation-python.json: the six modules of mutation-verdict.py reordered at 6463d014, the same six
+```
+
+The rows S12624 (counts swapped) and S12625 (missing count the constant 4) are each KILLED by
+`test_a_mutated_field_of_an_asserted_message_fails_a_pin`, and S12621 names that test now that the
+dropped-field test it named is replaced.
