@@ -2918,6 +2918,7 @@ exec /usr/bin/@NAME@ "$@"
                 self.assertFalse(w.root.exists(), "the host holds no release yet")
                 done, before, after = self.outcome(w, argv, good, modes)
                 self.judge(f"{verb} / first install / parent", done, before, after, "host step")
+                self.assertNotEqual(done.returncode, 0, f"{verb}: the run ended zero")
 
     def test_a_stale_unpack_in_a_releases_directory_that_cannot_take_a_write_is_refused(self):
         for verb in examined("stale-unpack member(s)", ["install", "rollback-unkept"]):
