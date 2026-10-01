@@ -114,11 +114,15 @@ a failure` for 159 of its 182 planted refusals of the committed file. The rows S
 The tests were committed alone (577bca19) and each module was run alone. The reader change and the
 loader's refusals (418728f7) turned them green; the tests that hold each plant to its kind and the
 identity to its presence were added after (ccae4f21), each killing mutants named in the rows.
-Round 2's pair is quoted here as text; the record's parsed pair is round 3's, below.
+Round 2's pair for A7 is the record's parsed pair for it, here; its pair for A8 is quoted as text,
+the parsed pair for A8 being round 3's, below.
 
-```text
+```red-first
 A7: red at 577bca19: AssertionError: the sources each combination names, as the checker reads them (R6)
 A7: green at 418728f7
+```
+
+```text
 A8: red at 577bca19: AssertionError: a refusal escaped a test as an error, not a failure
 A8: green at 418728f7
 ```

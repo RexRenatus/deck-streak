@@ -108,9 +108,9 @@
       [
         "S29514-A-LINK-AT-THE-SETTINGS-PATH-IS-FOLLOWED",
         "scripts/tests/test_formal_config.py",
-        "if CONFIG.is_symlink():",
-        "if False:",
-        "the loader never refuses a link at the settings path, so a link is read through to its target (SPEC-295 A8)",
+        "refuse_link_components(CONFIG, ROOT)",
+        "refuse_link_components(CONFIG.parent, ROOT)",
+        "the loader refuses a link at the settings file's directory and never one at the file, so a link is read through to its target (SPEC-295 A8)",
         "test_formal_config_presence.PresenceControls.test_a_refused_committed_file_fails_every_reader_by_assertion_and_errors_none"
       ],
       [

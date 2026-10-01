@@ -397,6 +397,11 @@ class PresenceControls(unittest.TestCase):
         self.assertEqual(
             wrong, [], "a link at a component of a path the module reads was followed or misread"
         )
+        self.assertEqual(
+            len(cases), len(spots) * len(LINK_KINDS), "a case of the product was not planted"
+        )
+        self.assertIn(("pin", pin, len(pin.parts)), spots, "the pin file itself is not planted")
+        self.assertIn(("settings", settings, 1), spots, "the first component is not planted")
 
     def test_the_walk_admits_a_tree_with_no_link_and_refuses_a_path_outside_its_root(self):
         """The walk's own bounds, held by a control on each side: a real tree is admitted at every
