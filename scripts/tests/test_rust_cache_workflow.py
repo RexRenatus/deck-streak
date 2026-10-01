@@ -23,6 +23,7 @@ from test_ci_workflows import (
     lines_of,
     paths,
     read_workflow,
+    workflow_file_text,
     workflow_files,
 )
 
@@ -42,7 +43,7 @@ def workflow_text(name):
     path = WORKFLOWS / name
     if not path.is_file():
         raise AssertionError(f".github/workflows/{name} does not exist")
-    return path.read_text(encoding="utf-8")
+    return workflow_file_text(path)
 
 
 def load(name):
@@ -85,7 +86,7 @@ def other_cron_minutes(directory):
     found = []
     for path in workflow_files(directory):
         if path.name != CACHE_WORKFLOW:
-            on = read_workflow(path.read_text(encoding="utf-8")).get("on") or {}
+            on = read_workflow(workflow_file_text(path)).get("on") or {}
             found += [
                 (path.name, str(item["cron"]).split()[0]) for item in on.get("schedule") or []
             ]

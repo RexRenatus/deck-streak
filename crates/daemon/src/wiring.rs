@@ -40,6 +40,7 @@ use deck_streak_coordination::instruments::{
 use deck_streak_coordination::obligations::Obligations;
 use deck_streak_coordination::recompute::analytics_step::AnalyticsStep;
 use deck_streak_coordination::recompute::day_bonuses::DayBonusesStep;
+use deck_streak_coordination::recompute::streaks::{RelightDue, StreaksStep};
 use deck_streak_coordination::recompute::xp::XpStep;
 use deck_streak_coordination::recompute::{Fold, FoldError, Phase};
 use deck_streak_coordination::sync_cycle::{
@@ -173,14 +174,28 @@ fn take_open_lock(path: &Path) -> io::Result<File> {
 ///
 /// [`FoldError::OutsidePhase`] when a step is registered outside its phase.
 pub fn recompute_fold(analytics: AnalyticsSettings) -> Result<Fold, FoldError> {
+    recompute_fold_with_relights(analytics).map(|(fold, _due)| fold)
+}
+
+/// [`recompute_fold`], and the handle the streaks step answers its due relights on, for the cycle
+/// that routes them after the fold's commit (SPEC-076 R27).
+///
+/// # Errors
+///
+/// [`FoldError::OutsidePhase`] when a step is registered outside its phase.
+pub fn recompute_fold_with_relights(
+    analytics: AnalyticsSettings,
+) -> Result<(Fold, RelightDue), FoldError> {
     let mut fold = Fold::default();
     fold.register(
         Phase::RollupAndScore,
         Box::new(AnalyticsStep::new(analytics)),
     )?;
     fold.register(Phase::BaseXp, Box::new(XpStep))?;
+    let (streaks, due) = StreaksStep::new();
+    fold.register(Phase::StreaksAndGovernor, Box::new(streaks))?;
     fold.register(Phase::DerivedBonuses, Box::new(DayBonusesStep))?;
-    Ok(fold)
+    Ok((fold, due))
 }
 
 /// Why a role's recompute cannot start. Each names a setting or a step, never a value.
@@ -212,6 +227,7 @@ pub enum RecomputeError {
 pub struct RecomputeSetup {
     courses: Courses,
     fold: Arc<Fold>,
+    relights: RelightDue,
     instruments: Option<Arc<Instruments>>,
 }
 
@@ -233,10 +249,11 @@ impl RecomputeSetup {
         db.record_courses_digest(courses.digest())
             .await
             .map_err(RecomputeError::Digest)?;
-        let fold = recompute_fold(AnalyticsSettings::from_env(env)?)?;
+        let (fold, relights) = recompute_fold_with_relights(AnalyticsSettings::from_env(env)?)?;
         Ok(Self {
             courses,
             fold: Arc::new(fold),
+            relights,
             instruments: None,
         })
     }
@@ -269,7 +286,9 @@ impl RecomputeSetup {
         rule: StudyDayRule,
     ) -> CycleParts<E> {
         let digest = self.courses.digest().map(str::to_owned);
-        let parts = parts.with_fold(Arc::clone(&self.fold), db, rule, digest);
+        let parts = parts
+            .with_fold(Arc::clone(&self.fold), db, rule, digest)
+            .with_relights(self.relights.clone());
         match &self.instruments {
             Some(instruments) => parts.with_instruments(Arc::clone(instruments)),
             None => parts,
@@ -555,6 +574,11 @@ impl deck_streak_agent::MemoryPort for DrillGradesMemory {
     }
 }
 
+/// The one way a test captures log lines (SPEC-024, the 2026-09-30 amendment).
+#[cfg(test)]
+#[path = "../../../tools/log-capture/capture.rs"]
+mod log_capture;
+
 #[cfg(test)]
 mod tests {
     use std::ffi::OsString;
@@ -578,9 +602,12 @@ mod tests {
     use deck_streak_coordination::recompute::Phase;
     use deck_streak_coordination::recompute::analytics_step::ANALYTICS_STEP;
     use deck_streak_coordination::recompute::day_bonuses::DAY_BONUSES_STEP;
+    use deck_streak_coordination::recompute::streaks::STREAKS_STEP;
     use deck_streak_coordination::recompute::xp::XP_STEP;
 
     use super::{OwnerSyncCycle, RecomputeSetup, TransportMarker, answer_of, recompute_fold};
+
+    use super::log_capture;
 
     /// A run of the given outcome, with synthetic instants.
     fn run(outcome: Result<(), ReasonCode>) -> SyncRun {
@@ -646,13 +673,14 @@ mod tests {
     }
 
     #[test]
-    fn the_recompute_fold_registers_the_analytics_and_xp_steps_in_their_phases() {
+    fn the_recompute_fold_registers_the_analytics_xp_and_streak_steps_in_their_phases() {
         let fold = recompute_fold(AnalyticsSettings::default()).expect("every step in its phase");
         assert_eq!(
             fold.steps(),
             [
                 (Phase::RollupAndScore, ANALYTICS_STEP),
                 (Phase::BaseXp, XP_STEP),
+                (Phase::StreaksAndGovernor, STREAKS_STEP),
                 (Phase::DerivedBonuses, DAY_BONUSES_STEP),
             ]
         );
@@ -986,14 +1014,13 @@ mod tests {
     struct Refusals(Arc<Mutex<Vec<Logged>>>);
 
     impl Refusals {
-        /// Captures the refusals logged on the test's thread while the guard and the second
-        /// dispatcher live. `tracing` asks only the reaching thread's dispatcher about a callsite
-        /// while one dispatcher is registered, so a refusal another test's thread reached first
-        /// would be cached as never enabled; a second dispatcher makes it ask every live one.
-        fn capture() -> (Self, tracing::subscriber::DefaultGuard, tracing::Dispatch) {
+        /// Captures the refusals logged on the test's thread while the guard lives. The capture
+        /// goes through `log_capture`, so a refusal another test's thread reached first is not
+        /// cached as never enabled.
+        fn capture() -> (Self, tracing::subscriber::DefaultGuard) {
             let refusals = Self::default();
-            let guard = tracing::subscriber::set_default(refusals.clone());
-            (refusals, guard, tracing::Dispatch::new(Self::default()))
+            let guard = log_capture::hold_capture(refusals.clone());
+            (refusals, guard)
         }
 
         /// The refusals logged since the last call.
@@ -1090,7 +1117,7 @@ mod tests {
     /// each time on a fresh ledger, and refuses by its step's code, logged under the step's name.
     #[tokio::test(flavor = "multi_thread")]
     async fn every_failing_step_refuses_the_owners_sync_by_its_own_code_and_name() {
-        let (refusals, _logging, _every) = Refusals::capture();
+        let (refusals, _logging) = Refusals::capture();
         for (step, code) in RUN_STEPS.iter().chain(CYCLE_STEPS) {
             let mut drives = 0;
             for _ in 0..2 {

@@ -1,0 +1,321 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S07601-A-TRACK-STARTS-WITH-ONE-FREEZE",
+        "streaks",
+        "src/constants.rs",
+        "pub const STREAK_START_FREEZES: u32 = 1;\n",
+        "pub const STREAK_START_FREEZES: u32 = 2;\n",
+        "streak_goldens::the_streak_constants_and_economy_json_match_the_predecessors",
+        "a new track starts with one freeze (SPEC-076 R1)"
+      ],
+      [
+        "S07602-A-FREEZE-EVERY-SEVEN-STREAK-DAYS",
+        "streaks",
+        "src/constants.rs",
+        "pub const STREAK_DAYS_PER_FREEZE: u32 = 7;\n",
+        "pub const STREAK_DAYS_PER_FREEZE: u32 = 8;\n",
+        "streak_goldens::the_language_streak_transitions_match_the_parity_goldens",
+        "a freeze is earned every seven streak days (SPEC-076 R2)"
+      ],
+      [
+        "S07603-THE-HOLD-CAP-IS-THREE",
+        "streaks",
+        "src/constants.rs",
+        "pub const STREAK_FREEZE_CAP: u32 = 3;\n",
+        "pub const STREAK_FREEZE_CAP: u32 = 4;\n",
+        "freeze_port::the_freeze_port_holds_the_hold_cap_and_the_monthly_drop_cap",
+        "no more than three freezes are held (SPEC-076 R3)"
+      ],
+      [
+        "S07604-TWO-REAL-MISSES-BREAK-A-STREAK",
+        "streaks",
+        "src/streak.rs",
+        "        1 if prev.freezes > 0 => GapOutcome::Freeze,\n",
+        "        1 | 2 if prev.freezes > 0 => GapOutcome::Freeze,\n",
+        "streak_goldens::a_day_without_study_breaks_only_an_unsavable_streak",
+        "a freeze saves one real miss and two real misses break the streak (SPEC-076 R4)"
+      ],
+      [
+        "S07605-ONE-DROP-A-MONTH",
+        "streaks",
+        "src/constants.rs",
+        "pub const FREEZE_DROP_MONTHLY_CAP: u32 = 1;\n",
+        "pub const FREEZE_DROP_MONTHLY_CAP: u32 = 2;\n",
+        "freeze_port::the_freeze_port_holds_the_hold_cap_and_the_monthly_drop_cap",
+        "one drop-style freeze is admitted a calendar month (SPEC-076 R5)"
+      ],
+      [
+        "S07606-THE-SHOP-IS-NOT-A-DROP",
+        "streaks",
+        "src/freeze.rs",
+        "        matches!(self, Self::Chest | Self::WeeklyQuest | Self::Season)\n",
+        "        matches!(self, Self::Chest | Self::WeeklyQuest | Self::Season | Self::Shop)\n",
+        "freeze_port::the_drop_gate_matches_the_parity_golden",
+        "the drop reasons are chest, weekly quest and season, never the shop (SPEC-076 R5)"
+      ],
+      [
+        "S07607-THE-LAW-STREAK-IS-ASKED-EVERY-DAY",
+        "coordination",
+        "src/recompute/streaks.rs",
+        "            store::upsert_state(write, \"law\", &law, facts.now).await?;\n",
+        "            if days.law.contains(&day) {\n                store::upsert_state(write, \"law\", &law, facts.now).await?;\n            }\n",
+        "streak_fold::the_law_streak_decays_without_law_study",
+        "the law streak is evaluated on a day with no law review, so it decays (ADR-076)"
+      ],
+      [
+        "S07608-STRENGTH-HALVES-IN-THIRTEEN-DAYS",
+        "streaks",
+        "src/constants.rs",
+        "pub const STRENGTH_HALF_LIFE_DAYS: u32 = 13;\n",
+        "pub const STRENGTH_HALF_LIFE_DAYS: u32 = 14;\n",
+        "governor_goldens::strength_and_the_verdict_match_the_parity_goldens",
+        "habit strength halves in thirteen days (SPEC-076 R8)"
+      ],
+      [
+        "S07609-ONE-STANDBY-NOTICE-A-WEEK",
+        "streaks",
+        "src/governor.rs",
+        "        .is_some_and(|d| input.today.epoch_day() - d.epoch_day() < STANDBY_NOTICE_GAP_DAYS);\n",
+        "        .is_some_and(|d| input.today.epoch_day() - d.epoch_day() <= STANDBY_NOTICE_GAP_DAYS);\n",
+        "governor_goldens::the_standby_notice_rule_matches_the_parity_golden",
+        "no standby notice is sent within seven days of the last (SPEC-076 R10)"
+      ],
+      [
+        "S07610-THE-RELIGHT-NEEDS-THREE-REVIEWS",
+        "streaks",
+        "src/relight.rs",
+        "    let qualifies = reviews.is_some_and(|n| n >= RELIGHT_CARDS) && granted == 0;\n",
+        "    let qualifies = reviews.is_some_and(|n| n > RELIGHT_CARDS) && granted == 0;\n",
+        "relight_rule::the_relight_rule_matches_the_parity_golden",
+        "a return day relights at three reviews (SPEC-076 R12)"
+      ],
+      [
+        "S07611-THE-SILENCE-WALK-READS-ONE-PAST-THE-CAP",
+        "streaks",
+        "src/governor.rs",
+        "    for _ in 0..=SILENCE_WALK_CAP_DAYS {\n",
+        "    for _ in 0..SILENCE_WALK_CAP_DAYS {\n",
+        "silence_walk_bound::the_walk_stops_at_the_cap_from_the_specs_words",
+        "the silence walk counts up to one day past the cap, then reports exhausted (SPEC-076 R11)"
+      ],
+      [
+        "S07612-THE-OPEN-LAPSE-WALK-INCLUDES-TODAY",
+        "streaks",
+        "src/lapse.rs",
+        "    for number in (window_start..=today.epoch_day()).rev() {\n",
+        "    for number in (window_start..today.epoch_day()).rev() {\n",
+        "open_lapse_bound::the_bounded_lapse_walk_answers_what_the_reference_walk_answers",
+        "the open lapse walk reads today and every day back to the window's first (SPEC-076 A41)"
+      ],
+      [
+        "S07613-THE-OPEN-LAPSE-ANSWERS-NOTHING-AT-THE-SMALLEST-DAY",
+        "streaks",
+        "src/lapse.rs",
+        "        if number == i64::MIN {\n",
+        "        if false {\n",
+        "open_lapse_bound::the_bounded_lapse_walk_answers_what_the_reference_walk_answers",
+        "the open lapse answers nothing at the smallest epoch day, as the earlier walk did (SPEC-076 A41)"
+      ],
+      [
+        "S07614-THE-LAW-LINE-LEADS-BY-ITS-RUN",
+        "bot",
+        "src/streak_commands.rs",
+        "    let lines = if view.law.current > 0 {\n",
+        "    let lines = if view.law.longest > 0 {\n",
+        "streak_commands::each_line_names_its_own_run_and_best_and_the_law_leads_by_its_run",
+        "the streak reply leads with the law line when the law run is above zero (SPEC-076 A42)"
+      ],
+      [
+        "S07615-THE-LANGUAGE-LINE-NAMES-ITS-RUN-AND-BEST",
+        "bot",
+        "src/streak_commands.rs",
+        "        view.language.current, view.language.longest\n",
+        "        view.language.longest, view.language.current\n",
+        "streak_commands::each_line_names_its_own_run_and_best_and_the_law_leads_by_its_run",
+        "the language line shows its run first and its best after it (SPEC-076 A42)"
+      ],
+      [
+        "S07616-THE-LAW-LINE-NAMES-ITS-RUN-AND-BEST",
+        "bot",
+        "src/streak_commands.rs",
+        "    let law = format!(\"Law: {} (best {})\", view.law.current, view.law.longest);\n",
+        "    let law = format!(\"Law: {} (best {})\", view.law.longest, view.law.current);\n",
+        "streak_commands::each_line_names_its_own_run_and_best_and_the_law_leads_by_its_run",
+        "the law line shows its run first and its best after it (SPEC-076 A42)"
+      ],
+      [
+        "S07617-THE-DUE-DAY-IS-WRITTEN-IN-THE-GRANTS-OWN-WRITE",
+        "coordination",
+        "src/recompute/streaks.rs",
+        "        store::put_relight_due(write, day, facts.now).await\n",
+        "        Ok(())\n",
+        "relight_order::a_crash_between_the_commit_and_the_route_is_recovered_at_the_next_cycle",
+        "a relit day is due in the same write as its grant, so a restart before the route still celebrates it (SPEC-076 R27, A45)"
+      ],
+      [
+        "S07618-A-ROUTED-DAY-LEAVES-THE-DUE-LIST",
+        "coordination",
+        "src/recompute/streaks.rs",
+        "        store::clear_relight_due(&mut write, day).await?;\n",
+        "        let _ = day;\n",
+        "relight_settle::a_second_recompute_routes_the_relight_and_one_send_is_recorded",
+        "a day the router has decided leaves the due list (SPEC-076 R27, A25)"
+      ],
+      [
+        "S07619-THE-CYCLE-READS-THE-STORED-DUE-DAYS",
+        "coordination",
+        "src/recompute/streaks.rs",
+        "        store::relight_due(&mut read).await\n",
+        "        store::relight_due(&mut read).await.map(|_| Vec::new())\n",
+        "relight_order::every_failure_point_later_sync_and_crash_keeps_one_celebration_per_committed_grant",
+        "the cycle routes every day the stored due list holds (SPEC-076 R27, A46)"
+      ],
+      [
+        "S07620-A-DECIDED-ROUTE-MARKS-THE-DAY-ROUTED",
+        "coordination",
+        "src/relight.rs",
+        "            Ok(_) => due.routed(db, day).await?,\n",
+        "            Ok(_) => {}\n",
+        "relight_settle::a_second_recompute_routes_the_relight_and_one_send_is_recorded",
+        "the cycle marks a day routed once the router has decided its celebration (SPEC-076 R27, A25)"
+      ],
+      [
+        "S07621-A-STUDIED-DAY-PUTS-NOTHING-AT-STAKE",
+        "coordination",
+        "src/streak_views.rs",
+        "    if track.last_study_day == Some(today) {\n",
+        "    if false {\n",
+        "streak_views::a_studied_day_puts_nothing_at_stake_on_either_track",
+        "nothing is at stake on a track whose open study day has a study review (SPEC-076 R30, A49)"
+      ],
+      [
+        "S07622-A-FAILED-ROUTE-LEAVES-THE-DAY-DUE",
+        "coordination",
+        "src/relight.rs",
+        "            Err(error) => tracing::error!(%error, \"the relight line could not be raised\"),\n",
+        "            Err(error) => {\n                tracing::error!(%error, \"the relight line could not be raised\");\n                due.routed(db, day).await?;\n            }\n",
+        "relight_order::a_route_that_fails_leaves_the_day_due_and_a_later_cycle_celebrates_it_once",
+        "a day whose route fails stays due, so a later cycle celebrates it once (SPEC-076 R27, A51)"
+      ],
+      [
+        "S07623-A-DAY-LEAVES-THE-LIST-ONLY-AFTER-ITS-ROUTE",
+        "coordination",
+        "src/relight.rs",
+        "        match announce_relight(router, day, today).await {\n            Ok(_) => due.routed(db, day).await?,\n            Err(error) => tracing::error!(%error, \"the relight line could not be raised\"),\n        }\n",
+        "        due.routed(db, day).await?;\n        if let Err(error) = announce_relight(router, day, today).await {\n            tracing::error!(%error, \"the relight line could not be raised\");\n        }\n",
+        "relight_order::every_failed_route_leaves_its_day_due_until_one_celebration",
+        "the day is marked routed only once the router has decided it, never before its route (SPEC-076 R27, A52)"
+      ],
+      [
+        "S07624-A-FAILED-ROUTE-IS-NOT-READ-AS-DECIDED",
+        "coordination",
+        "src/relight.rs",
+        "    router.route(&occasion).await.map(Some)\n",
+        "    Ok(router.route(&occasion).await.ok())\n",
+        "relight_order::every_failed_route_leaves_its_day_due_until_one_celebration",
+        "the route's error reaches the cycle, which keeps the day due (SPEC-076 R27, A52)"
+      ],
+      [
+        "S07625-THE-HEAT-PLACE-HOLDS-NO-AT-STAKE-WORD",
+        "bot",
+        "src/streak_commands.rs",
+        "        format!(\" {}\", escape_html(view.language_heat))\n",
+        "        format!(\" {}\", escape_html(view.language_at_stake.as_str()))\n",
+        "streak_commands::the_language_line_carries_its_runs_heat_in_the_heats_own_place",
+        "the language line's heat is its run's, not the at-stake word (SPEC-076 R31 restated, A50)"
+      ],
+      [
+        "S07626-THE-HEAT-PLACE-HOLDS-NO-NOUN",
+        "bot",
+        "src/streak_commands.rs",
+        "        format!(\" {}\", escape_html(view.language_heat))\n",
+        "        format!(\" {}\", if view.language.freezes == 1 { \"freeze\" } else { \"freezes\" })\n",
+        "streak_commands::the_language_line_carries_its_runs_heat_in_the_heats_own_place",
+        "the language line's heat is its run's, not the freezes' noun (SPEC-076 R31 restated, A50)"
+      ],
+      [
+        "S07627-THE-HEAT-PLACE-HOLDS-NO-BEST",
+        "bot",
+        "src/streak_commands.rs",
+        "        format!(\" {}\", escape_html(view.language_heat))\n",
+        "        format!(\" {}\", view.language.longest)\n",
+        "streak_commands::the_language_line_carries_its_runs_heat_in_the_heats_own_place",
+        "the language line's heat is its run's, not its best (SPEC-076 R31 restated, A50)"
+      ],
+      [
+        "S07628-THE-HEAT-PLACE-HOLDS-NO-LAW-RUN",
+        "bot",
+        "src/streak_commands.rs",
+        "        format!(\" {}\", escape_html(view.language_heat))\n",
+        "        format!(\" {}\", view.law.current)\n",
+        "streak_commands::the_language_line_carries_its_runs_heat_in_the_heats_own_place",
+        "the language line's heat is its run's, not the law run (SPEC-076 R31 restated, A50)"
+      ],
+      [
+        "S07629-A-RUN-ABOVE-ZERO-SHOWS-ITS-HEAT",
+        "bot",
+        "src/streak_commands.rs",
+        "    let heat = if view.language_heat.is_empty() {\n",
+        "    let heat = if true {\n",
+        "streak_commands::the_language_line_carries_its_runs_heat_in_the_heats_own_place",
+        "a language run above zero shows its heat on the line (SPEC-076 R31 restated, A50)"
+      ],
+      [
+        "S07630-A-FAILED-ROUTE-IS-NOT-THE-CYCLES-ERROR",
+        "coordination",
+        "src/relight.rs",
+        "            Err(error) => tracing::error!(%error, \"the relight line could not be raised\"),\n",
+        "            Err(error) => return Err(error),\n",
+        "relight_order::a_day_whose_route_keeps_failing_holds_back_no_other_due_day",
+        "a day whose route fails holds back no other due day: its error is logged, not returned from the cycle (SPEC-076 R27, A53)"
+      ],
+      [
+        "S07631-A-FAILED-ROUTE-DOES-NOT-END-THE-ROUTE",
+        "coordination",
+        "src/relight.rs",
+        "            Err(error) => tracing::error!(%error, \"the relight line could not be raised\"),\n",
+        "            Err(error) => {\n                tracing::error!(%error, \"the relight line could not be raised\");\n                break;\n            }\n",
+        "relight_order::a_day_whose_route_keeps_failing_holds_back_no_other_due_day",
+        "the cycle goes on to the next due day after a failed route, rather than ending its route there (SPEC-076 R27, A53)"
+      ],
+      [
+        "S07632-NO-COUNT-OF-FAILED-ROUTES-IN-MEMORY",
+        "coordination",
+        "src/relight.rs",
+        "            Err(error) => tracing::error!(%error, \"the relight line could not be raised\"),\n",
+        "            Err(error) => {\n                static FAILED: std::sync::Mutex<Vec<StudyDay>> =\n                    std::sync::Mutex::new(Vec::new());\n                let failures = {\n                    let mut failed =\n                        FAILED.lock().unwrap_or_else(std::sync::PoisonError::into_inner);\n                    failed.push(day);\n                    failed.iter().filter(|failed| **failed == day).count()\n                };\n                if failures >= 1000 {\n                    due.routed(db, day).await?;\n                }\n                tracing::error!(%error, \"the relight line could not be raised\");\n            }\n",
+        "relight_order::the_route_keeps_no_per_day_failure_state_a_give_up_could_read",
+        "no count of a day's failed routes is kept in memory, so no number of them gives the day up (SPEC-076 R27, A55)"
+      ],
+      [
+        "S07633-NO-COUNT-OF-FAILED-ROUTES-IN-THE-DATABASE",
+        "coordination",
+        "src/relight.rs",
+        "            Err(error) => tracing::error!(%error, \"the relight line could not be raised\"),\n",
+        "            Err(error) => {\n                let mut write = db.write().await?;\n                let failures: i64 = sqlx::query_scalar(\n                    \"UPDATE relight_due SET created_at = created_at + 1 \\\n                     WHERE study_day = ?1 RETURNING created_at % 1000\",\n                )\n                .bind(day.epoch_day())\n                .fetch_one(&mut *write)\n                .await?;\n                write.commit().await?;\n                if failures == 0 {\n                    due.routed(db, day).await?;\n                }\n                tracing::error!(%error, \"the relight line could not be raised\");\n            }\n",
+        "relight_order::the_route_keeps_no_per_day_failure_state_a_give_up_could_read",
+        "a failed route writes nothing, so no count of a day's failed routes is kept in the database (SPEC-076 R27, A55)"
+      ],
+      [
+        "S07634-THE-HEAT-SHOWS-WHICHEVER-LINE-LEADS",
+        "bot",
+        "src/streak_commands.rs",
+        "    let heat = if view.language_heat.is_empty() {\n",
+        "    let heat = if view.language_heat.is_empty() || view.law.current == 0 {\n",
+        "streak_commands::the_language_line_carries_its_runs_heat_in_the_heats_own_place",
+        "the language line shows its heat when it leads as when the law line leads (SPEC-076 R31 restated, A50)"
+      ],
+      [
+        "S07635-THE-HEAT-SHOWS-IN-EVERY-BAND",
+        "bot",
+        "src/streak_commands.rs",
+        "    let heat = if view.language_heat.is_empty() {\n",
+        "    let heat = if view.language_heat.is_empty() || view.language.current >= 100 {\n",
+        "streak_commands::the_language_line_carries_its_runs_heat_in_the_heats_own_place",
+        "the language line shows its heat in every band of the heat table, the top two included (SPEC-076 R31 restated, A50)"
+      ]
+    ]
+  }
+}

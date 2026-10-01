@@ -1,0 +1,377 @@
+{
+  "adapter": "anchoring",
+  "cases": [
+    {
+      "class": "no-stored-anchor",
+      "input": {
+        "skip_days": [],
+        "stored_anchor": null,
+        "study_days": [
+          19700
+        ],
+        "today": 20000
+      },
+      "output": 19880
+    },
+    {
+      "class": "stored-at-the-horizon",
+      "input": {
+        "skip_days": [],
+        "stored_anchor": 19880,
+        "study_days": [
+          19700
+        ],
+        "today": 20000
+      },
+      "output": 19880
+    },
+    {
+      "class": "stored-older-than-the-horizon",
+      "input": {
+        "skip_days": [],
+        "stored_anchor": 19840,
+        "study_days": [
+          19700
+        ],
+        "today": 20000
+      },
+      "output": 19840
+    },
+    {
+      "class": "stored-a-day-newer-than-the-horizon",
+      "input": {
+        "skip_days": [],
+        "stored_anchor": 19881,
+        "study_days": [
+          19700
+        ],
+        "today": 20000
+      },
+      "output": 19880
+    },
+    {
+      "class": "stored-far-newer-than-the-horizon",
+      "input": {
+        "skip_days": [],
+        "stored_anchor": 19997,
+        "study_days": [
+          19700
+        ],
+        "today": 20000
+      },
+      "output": 19880
+    },
+    {
+      "class": "skips-at-the-horizon-no-anchor",
+      "input": {
+        "skip_days": [
+          19880,
+          19881
+        ],
+        "stored_anchor": null,
+        "study_days": [
+          19700
+        ],
+        "today": 20000
+      },
+      "output": 19882
+    },
+    {
+      "class": "skips-at-the-horizon-stored-between",
+      "input": {
+        "skip_days": [
+          19880,
+          19881
+        ],
+        "stored_anchor": 19881,
+        "study_days": [
+          19700
+        ],
+        "today": 20000
+      },
+      "output": 19881
+    },
+    {
+      "class": "skips-at-the-horizon-stored-older",
+      "input": {
+        "skip_days": [
+          19880,
+          19881
+        ],
+        "stored_anchor": 19877,
+        "study_days": [
+          19700
+        ],
+        "today": 20000
+      },
+      "output": 19877
+    },
+    {
+      "class": "empty-history-no-stored-anchor",
+      "input": {
+        "skip_days": [],
+        "stored_anchor": null,
+        "study_days": [],
+        "today": 20000
+      },
+      "output": 19880
+    },
+    {
+      "class": "empty-history-stored-at-the-horizon",
+      "input": {
+        "skip_days": [],
+        "stored_anchor": 19880,
+        "study_days": [],
+        "today": 20000
+      },
+      "output": 19880
+    },
+    {
+      "class": "empty-history-stored-older-than-the-horizon",
+      "input": {
+        "skip_days": [],
+        "stored_anchor": 19850,
+        "study_days": [],
+        "today": 20000
+      },
+      "output": 19850
+    },
+    {
+      "class": "empty-history-stored-newer-than-the-horizon",
+      "input": {
+        "skip_days": [],
+        "stored_anchor": 19890,
+        "study_days": [],
+        "today": 20000
+      },
+      "output": 19880
+    },
+    {
+      "class": "empty-history-skips-at-the-horizon",
+      "input": {
+        "skip_days": [
+          19880
+        ],
+        "stored_anchor": null,
+        "study_days": [],
+        "today": 20000
+      },
+      "output": 19881
+    },
+    {
+      "class": "empty-history-stored-and-skips",
+      "input": {
+        "skip_days": [
+          19880,
+          19881
+        ],
+        "stored_anchor": 19881,
+        "study_days": [],
+        "today": 20000
+      },
+      "output": 19881
+    },
+    {
+      "class": "study-day-just-outside-the-walk",
+      "input": {
+        "skip_days": [],
+        "stored_anchor": null,
+        "study_days": [
+          19879
+        ],
+        "today": 20000
+      },
+      "output": 19880
+    },
+    {
+      "class": "study-day-just-outside-the-walk-stored",
+      "input": {
+        "skip_days": [],
+        "stored_anchor": 19879,
+        "study_days": [
+          19879
+        ],
+        "today": 20000
+      },
+      "output": 19880
+    },
+    {
+      "input": {
+        "skip_days": [],
+        "stored_anchor": null,
+        "study_days": [
+          19684
+        ],
+        "today": 20000
+      },
+      "output": 19880
+    },
+    {
+      "input": {
+        "skip_days": [
+          19948,
+          19987,
+          19991
+        ],
+        "stored_anchor": 19872,
+        "study_days": [],
+        "today": 20000
+      },
+      "output": 19872
+    },
+    {
+      "input": {
+        "skip_days": [
+          19884,
+          19920
+        ],
+        "stored_anchor": 19859,
+        "study_days": [
+          19674,
+          19687,
+          19688
+        ],
+        "today": 20000
+      },
+      "output": 19859
+    },
+    {
+      "input": {
+        "skip_days": [
+          19893,
+          19897,
+          19938,
+          19949
+        ],
+        "stored_anchor": 19893,
+        "study_days": [],
+        "today": 20000
+      },
+      "output": 19880
+    },
+    {
+      "input": {
+        "skip_days": [
+          19988
+        ],
+        "stored_anchor": 19875,
+        "study_days": [
+          19698
+        ],
+        "today": 20000
+      },
+      "output": 19875
+    },
+    {
+      "input": {
+        "skip_days": [
+          19921,
+          19980
+        ],
+        "stored_anchor": 19873,
+        "study_days": [
+          19656,
+          19681
+        ],
+        "today": 20000
+      },
+      "output": 19873
+    },
+    {
+      "input": {
+        "skip_days": [
+          19927
+        ],
+        "stored_anchor": null,
+        "study_days": [
+          19646
+        ],
+        "today": 20000
+      },
+      "output": 19880
+    },
+    {
+      "input": {
+        "skip_days": [
+          19908,
+          19924
+        ],
+        "stored_anchor": 19889,
+        "study_days": [
+          19683,
+          19692
+        ],
+        "today": 20000
+      },
+      "output": 19880
+    },
+    {
+      "input": {
+        "skip_days": [
+          19949,
+          19979,
+          19980
+        ],
+        "stored_anchor": 19888,
+        "study_days": [
+          19647,
+          19665
+        ],
+        "today": 20000
+      },
+      "output": 19880
+    },
+    {
+      "input": {
+        "skip_days": [
+          19934,
+          19945,
+          19976,
+          19994
+        ],
+        "stored_anchor": null,
+        "study_days": [
+          19678,
+          19686,
+          19693
+        ],
+        "today": 20000
+      },
+      "output": 19880
+    },
+    {
+      "input": {
+        "skip_days": [
+          19897,
+          20000
+        ],
+        "stored_anchor": 19860,
+        "study_days": [],
+        "today": 20000
+      },
+      "output": 19860
+    },
+    {
+      "input": {
+        "skip_days": [
+          19985
+        ],
+        "stored_anchor": 19851,
+        "study_days": [],
+        "today": 20000
+      },
+      "output": 19851
+    }
+  ],
+  "function": "pipeline_layers.governor.GovernorLayer._update_governor",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Runs the governor update on a stand-in layer over a stub store holding the study days, the skip days and the stored anchor, with the relight and the notifier stubbed; every case's silence is longer than the walk, an empty history included; returns the anchor written as an epoch day; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_076.py",
+  "registry_sha256": "e451e77bd68e8dfbd5e1fb48845aab7b7f6667f318bc4b956168da0819a89709",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}
