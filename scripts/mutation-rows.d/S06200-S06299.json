@@ -223,7 +223,7 @@
         "            if instance in allowed.get(name, ()):\n",
         "            if True:\n",
         "an instance drop-in directory of a shipped template is admitted only for an instance the one allowlist names, since the unit guards read it into the template (SPEC-062 R14, amended; #291)",
-        "test_deploy_templates.CredentialsComeFromTheSocket.test_a_shipped_templates_instance_dropin_directory_is_admitted_by_name_alone"
+        "test_deploy_templates.CredentialsComeFromTheSocket.test_a_shipped_templates_instance_dropin_directory_is_its_own_and_no_other_is"
       ],
       [
         "S06230-AN-UNSHIPPED-TEMPLATES-INSTANCE-DROPIN-IS-REFUSED-EVEN-WHEN-NAMED",
@@ -231,7 +231,7 @@
         "        found = at and dot and instance and template in templates\n",
         "        found = at and dot and instance\n",
         "an instance drop-in directory of a template the tree does not ship stays refused, whatever the allowlist names (SPEC-062 R14, A21; SPEC-066)",
-        "test_deploy_templates.CredentialsComeFromTheSocket.test_a_shipped_templates_instance_dropin_directory_is_admitted_by_name_alone"
+        "test_deploy_templates.CredentialsComeFromTheSocket.test_a_shipped_templates_instance_dropin_directory_is_its_own_and_no_other_is"
       ],
       [
         "S06231-THE-SYNC-INSTANCE-NEVER-LOADS-THE-BOT-PAIR",
