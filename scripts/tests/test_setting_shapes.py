@@ -1885,6 +1885,18 @@ class TheGuardRefusesAModuleFileThatAnotherDeclarationCompilesWithoutTest(unitte
         rival = (("depth.rs", '#[path = "tests.rs"]\nmod prod;\n'),)
         self.assertEqual(self.judged(self.TEST + "mod depth;\n", "lib.rs", rival), 1)
 
+    def test_a_rival_whose_attributes_the_guard_cannot_read_whole_is_refused(self):
+        """`unsafe mod` parses, and rustc rejects it wherever it compiles it, so the guard cannot
+        read its attributes back to the previous item's end: they count as compiling the file
+        without `test`, and a `#[path]` among them may name any file, so every one is refused."""
+        for own, path in (("lib.rs", "tests.rs"), ("depth.rs", "depth/tests.rs")):
+            for rival in (
+                "#[cfg(not(test))]\nunsafe mod tests;\n",
+                f'#[cfg(not(test))]\n#[path = "{path}"]\nunsafe mod prod;\n',
+            ):
+                self.assertEqual(self.judged(self.TEST + rival, own), 1, (own, rival))
+            self.assertEqual(self.judged(self.TEST, own), 0, own)
+
 
 if __name__ == "__main__":
     unittest.main()
