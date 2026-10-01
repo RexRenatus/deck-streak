@@ -320,7 +320,18 @@ class Box:
         path.write_text(json.dumps(data, indent=2), encoding="utf-8")
         self.repin()
 
-    def run(self, *args, red=(), void=(), error=(), closed=(), gh="fake", unset=(), cards=True, keep=False):
+    def run(
+        self,
+        *args,
+        red=(),
+        void=(),
+        error=(),
+        closed=(),
+        gh="fake",
+        unset=(),
+        cards=True,
+        keep=False,
+    ):
         """Run the real driver with the fake runner; (the finished process, the runner's calls).
 
         The fake gh answers CLOSED for each issue `closed` names and OPEN for any other. `gh` set
