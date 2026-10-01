@@ -791,7 +791,7 @@
         "        if deletable \"$root/releases/$old\"; then\n",
         "        if :; then\n",
         "an older release that cannot be deleted whole is left whole, never half gone (SPEC-127 A42)",
-        "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_every_state_and_every_writing_call_of_the_host_step_is_refused"
+        "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_an_older_release_that_cannot_be_deleted_whole_is_left_whole"
       ]
     ]
   }

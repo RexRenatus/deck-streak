@@ -3113,6 +3113,24 @@ exec /usr/bin/@NAME@ "$@"
                 "set aside",
             )
 
+    def test_an_older_release_that_cannot_be_deleted_whole_is_left_whole(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            w, good, argv = self.situation(tmp, "install", "over-keep-partly-deletable")
+            old = w.root / "releases" / "v1.0.0"
+            files = sorted(p.relative_to(old) for p in old.rglob("*") if p.is_file())
+            before = ATemporaryPathThatCannotBeMadeIsANamedRefusal.snapshot(w)
+            try:
+                done = w.run(*argv, **good)
+            finally:
+                self.restore(w.locked)
+            after = ATemporaryPathThatCannotBeMadeIsANamedRefusal.snapshot(w)
+            self.judge_finished(
+                "install / over-keep-partly-deletable", w, good, done, before, after
+            )
+            kept = sorted(p.relative_to(old) for p in old.rglob("*") if p.is_file())
+            self.assertEqual(kept, files, "the older release was partly deleted")
+            self.assertIn("left the older release v1.0.0", done.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()
