@@ -96,7 +96,7 @@ The tests of A7 and A8 were committed alone (bfa66c37) and the module read `FAIL
 each by assertion and none by error. The reader change and the assertions in the loader and in the
 presence controls (00937178) turned them green.
 
-```red-first
+```text
 A7: red at bfa66c37: AssertionError: the sources each combination names, as the checker reads them (R6): the combination of the field named and a pin file committed lists one source, not two
 A7: green at 00937178
 A8: red at bfa66c37: AssertionError: ['test_the_toolchain_identity_is_named_and_a_malformed_one_is_refused line 493'] != [] : a call of the reader whose refusal would escape as an error
@@ -114,6 +114,7 @@ a failure` for 159 of its 182 planted refusals of the committed file. The rows S
 The tests were committed alone (577bca19) and each module was run alone. The reader change and the
 loader's refusals (418728f7) turned them green; the tests that hold each plant to its kind and the
 identity to its presence were added after (ccae4f21), each killing mutants named in the rows.
+Round 2's pair is quoted here as text; the record's parsed pair is round 3's, below.
 
 ```text
 A7: red at 577bca19: AssertionError: the sources each combination names, as the checker reads them (R6)
@@ -138,3 +139,28 @@ Module `test_formal_config_presence.py` alone at the green head: `Ran 3 tests ..
 file`, `examined 186 planted refusals held to the kind they name`, `examined 6 calls of the reader`
 and `examined 2 presence controls of the committed file`. The rows S29510 to S29521 are each killed
 on a clean committed detached head.
+
+## Amendment addendum, 2026-10-01 (issue #504, round 3)
+
+The class is every component of a path the checker reads, not only the last. The tests were committed
+alone (d936083e) and each module was run alone: `test_formal_config.py` read `Ran 10 tests ... OK`,
+because its reader at that head was unchanged, and `test_formal_config_presence.py` read `Ran 4
+tests ... FAILED (failures=2)`, each by assertion and none by error. The walk that refuses a link at
+every component, the loader's use of it and the reader's use of it (4005baca) turned them green; a
+control that holds the walk's bounds on each side was added after (819ff602).
+
+```red-first
+A8: red at d936083e: AssertionError: Lists differ: ['a relative link at config of the settings file ...'] != []
+A8: green at 4005baca
+```
+
+Module `test_formal_config_presence.py` alone at d936083e: the failing tests are
+`test_a_link_at_any_component_of_a_path_the_module_reads_is_refused_by_assertion` and
+`test_a_refused_committed_file_fails_every_reader_by_assertion_and_errors_none`, by assertion, no error.
+It printed `examined 24 link(s) at 4 component(s)` and `examined 187 planted refusals of the committed
+file`.
+
+Module `test_formal_config_presence.py` alone at the green head: `Ran 5 tests ... OK`, and it prints
+`examined 24 link(s) at 4 component(s)` (six link kinds at each of four components, derived),
+`examined 187 planted refusals of the committed file`, `examined 5 tests that load the committed file`
+and `examined 187 planted refusals held to the kind they name`.

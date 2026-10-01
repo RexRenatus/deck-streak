@@ -163,7 +163,10 @@ check stops at its tool stage, so no model is ever checked (#504).
   source: the settings field alone. The test's reader counts a committed pin file beside the field
   as a second source, and so as a refused tree. The reader reads the path as the checker does, the
   blob the tree commits there, so a link at the pin path is a pin file whatever it points at, and
-  a link is never followed. No pin file is committed.
+  is never followed. A link at any other component of a path the test reads, the settings file or
+  a directory above it, holds no file for the checker, and the test's reader refuses it by assertion
+  naming that component, whatever the link names: a link at `config`, the directory both paths sit
+  in, is such a link. No pin file is committed.
 
 **What changes.** R1's table gains one field, `toolchain`, an object with exactly one key,
 `identity`, whose value is 64 lowercase hex digits, and the file is R1's text plus that field, one
@@ -182,14 +185,15 @@ generated faults grows from 158 to 180 and the fourth criterion's planted value 
 
 **Not done here.** It commits no pin file and no `formal/` directory, and it changes no CI job
 (#504). The nine rows of the earlier amendment keep their anchors, each occurring once, and twelve
-rows, `S29510` to `S29521`, join them; the anchor of `S29510` moves to the reader's link-safe pin read (#504).
+rows, `S29510` to `S29529`, join them; the anchors of `S29510` and `S29521` move to where the reader's code now sits (#504).
 
 | file | context | change |
 |---|---|---|
 | `config/formal.json` | repo | changed: gains the `toolchain` field |
 | `scripts/tests/test_formal_config.py` | repo | changed: the table gains the field and a kind, A6 and A7 are added, and every refusal of the reader fails by assertion |
 | `scripts/tests/test_formal_config_presence.py` | repo | added: A8 |
-| `scripts/mutation-rows.d/S29500-S29599.json` | repo | changed: the rows `S29510` to `S29521` |
+| `scripts/tests/_support.py` | repo | changed: the one walk that refuses a link at any component of a path |
+| `scripts/mutation-rows.d/S29500-S29599.json` | repo | changed: the rows `S29510` to `S29529` |
 | `docs/specs/SPEC-295-the-repository-declares-its-formal-check-settings.md` | repo | amended: R6, this section and A6 to A8 |
 | `docs/decisions/ADR-295-the-repository-declares-its-formal-check-settings.md` | repo | amended: a dated addendum |
 | `docs/red-first/SPEC-295.md` | repo | amended: this round's record |
@@ -207,10 +211,10 @@ A6: python3 -m unittest discover -s scripts/tests -p test_formal_config.py -k th
 
 | id | criterion | decided by |
 |---|---|---|
-| A7 | a tree names one toolchain source: for each of the 12 combinations of two identity states, the settings field named or not, and six pin shapes at the pin path, absent, a file, an empty file, a link to a file, a dangling link and a link to itself, each read as the tree stores it and never followed, the test's reader lists exactly the sources the tree names, every shape but an absent one being a source and the two sources together the refused case, and the test asserts the count of combinations (12); the field is named by its presence whatever its value, over six states of it, and each shape is planted as the kind it names | `test_formal_config.py` `the_tree_names_one_toolchain_source_the_identity` |
-| A8 | every call of the test's reader in `test_formal_config.py`, found by its syntax tree, is inside a handler of its refusal, and every call that reads the committed file fails the test by an assertion there; and each way the committed file can be refused, six that fail to load (absent, a link, not JSON, not UTF-8, a nesting past the parser's depth and an integer past its digit limit) and the 180 faults the module generates, 186 in all, is installed as the file and the module then runs with no error, every test that reads the committed file failing by assertion, and for each of the six that fail to load exactly the tests that load it, each plant held to the kind of refusal its label names; the loader refuses a link, an absent file and every parse failure by assertion, and bytes that are not UTF-8 wherever they sit | `test_formal_config_presence.py` all three tests |
+| A7 | a tree names one toolchain source: for each of the 12 combinations of two identity states, the settings field named or not, and six pin shapes at the pin path, absent, a file, an empty file, a link to a file, a dangling link and a link to itself, each read as the tree stores it and never followed, the test's reader lists exactly the sources the tree names, every shape but an absent one being a source and the two sources together the refused case, and the test asserts the count of combinations (12); the field is named by its presence whatever its value, over six states of it, and each shape is planted as the kind it names | `test_formal_config.py` `the_tree_names_one_toolchain_source_the_identity`, `the_identity_is_named_by_the_field_present_whatever_its_value` and `each_pin_shape_is_planted_as_the_kind_it_names` |
+| A8 | every call of the test's reader in `test_formal_config.py`, found by its syntax tree, is inside a handler of its refusal, and every call that reads the committed file fails the test by an assertion there; and each way the committed file can be refused, seven that fail to load (absent, a link, a link at its directory, not JSON, not UTF-8, a nesting past the parser's depth and an integer past its digit limit) and the 180 faults the module generates, 187 in all, is installed as the file and the module then runs with no error, every test that reads the committed file failing by assertion, and for each of the seven that fail to load exactly the tests that load it, each plant held to the kind of refusal its label names; the loader refuses a link at the file or at its directory, an absent file and every parse failure by assertion, and bytes that are not UTF-8 wherever they sit; and a link of each of six kinds (relative, absolute, a chain of two, to a directory, dangling, to itself) at each component of the settings path and of the pin path, 24 in all, is refused by assertion naming that component, except that a link at the pin file itself is the pin file and is listed as a second source, and the walk that refuses them admits a tree with no link, one whose root is a link included, and refuses a path outside its root | `test_formal_config_presence.py` all five tests, and `test_formal_config.py` `the_loader_refuses_bytes_that_are_not_utf8_wherever_they_sit` |
 
 ```acceptance
-A7: python3 -m unittest discover -s scripts/tests -p test_formal_config.py -k the_tree_names_one_toolchain_source_the_identity
-A8: python3 -m unittest discover -s scripts/tests -p test_formal_config_presence.py
+A7: python3 -m unittest discover -s scripts/tests -p test_formal_config.py -k the_tree_names_one_toolchain_source_the_identity -k the_identity_is_named_by_the_field_present_whatever_its_value -k each_pin_shape_is_planted_as_the_kind_it_names
+A8: python3 -m unittest discover -s scripts/tests -p 'test_formal_config*.py' -k PresenceControls -k the_loader_refuses_bytes_that_are_not_utf8_wherever_they_sit
 ```

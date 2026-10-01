@@ -91,10 +91,20 @@ Cost: a checker rebuilt with another pin refuses every check as drift until this
 and that change is reviewed here. Confirmation: SPEC-295's A1, A3 and A6 to A8; the test reads the working tree, so an untracked pin file turns it red, which is fail-closed by design.
 
 
-Addendum, round 2 (#504). Confirmation: SPEC-295's A7 and A8 read every path as the tree stores it,
-so a link at the pin path is a pin file and is never followed, and every refusal of the settings file
-(a link, an absent file, bytes that are not JSON, bytes that are not UTF-8, a nesting past the
+Addendum, round 2 (#504). Confirmation: SPEC-295's A7 reads the pin path as the tree stores it,
+so a link at the pin path is a pin file and is never followed, and under A8 every refusal of the
+settings file (a link at the file or at its directory, through which the tree holds no file, an
+absent file, bytes that are not JSON, bytes that are not UTF-8, a nesting past the
 parser's depth and an integer past its digit limit) fails by assertion and never as an error. The
 test reads the working tree, so an untracked file, directory or link on disk turns it red, which is
 fail-closed by design. A committed file missing from the work tree is only dirty locally and is
 never judged here, because a CI checkout is the committed tree.
+
+Addendum, round 3 (#504). Confirmation: SPEC-295's A8 judges every path the checker reads as the tree
+stores it, at every component from the repository root to the file: a link at any of them, of any
+kind (relative, absolute, a chain, to a directory, dangling, to itself), holds no file for the
+checker and is refused by assertion naming the component, by one walk both test modules use. The
+population is derived from the components and the kinds, so a new or deeper path joins it by itself.
+The one exception is the pin path's own last component, which is the pin file, a second source, and
+is listed and never followed. Chosen against refusing only the settings file's directory, which
+closes the one shape measured and leaves every other component open.
