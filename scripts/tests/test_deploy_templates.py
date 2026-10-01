@@ -1133,7 +1133,7 @@ class CredentialsComeFromTheSocket(unittest.TestCase):
                 what,
             )
 
-    def test_a_shipped_templates_instance_dropin_directory_is_admitted_by_name_alone(self):
+    def test_a_shipped_templates_instance_dropin_directory_is_its_own_and_no_other_is(self):
         # systemd reads an instance's drop-ins from `<name>@<instance>.<type>.d/`. The unit guards
         # read every such directory into the template, so a directory is admitted only for an
         # instance NAMED on INSTANCE_DROPIN_ALLOWLIST, the one place that names them: an unnamed
