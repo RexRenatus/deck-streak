@@ -15,7 +15,7 @@
   ],
   "owner_signers": "config/owner-allowed-signers",
   "tlc_slot": {
-    "capacity": 1,
+    "capacity": 4,
     "wait_seconds": 1800
   },
   "toolchain": {

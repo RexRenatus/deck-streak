@@ -168,3 +168,25 @@ Module `test_formal_config_presence.py` alone at the green head: `Ran 5 tests ..
 `examined 24 link(s) at 4 component(s)` (six link kinds at each of four components, derived),
 `examined 187 planted refusals of the committed file`, `examined 5 tests that load the committed file`
 and `examined 187 planted refusals held to the kind they name`.
+
+## Amendment addendum, 2026-10-01 (issue #516)
+
+The test's expected document was committed alone (e484a83f8cd34a32790e0ed44a1ab69b983bc230) with
+the file at 1, so A9 failed by assertion on the capacity; the file at 4
+(dde35d44561379c90b1c9d8ccc39c936e6a95d38) turned it green. A10 is not red: its row is added after
+the value is set, and what makes it evidence is the row's proof on the committed tree, where the
+killer passes without the mutant and fails with it.
+
+```red-first
+A9: red at e484a83f: AssertionError: False is not true : tlc_slot.capacity: 1 != 4
+A9: green at dde35d44
+A10: not red: the row is added after the value is set, and its proof on the committed tree shows the killer passing without the mutant and failing with it
+```
+
+Module `test_formal_config.py` alone at e484a83f: `Ran 10 tests ... FAILED (failures=1)`, the failing
+test `test_the_committed_file_holds_exactly_the_declared_fields`, by assertion, no error. Module
+`test_formal_config.py` alone at dde35d44: `Ran 10 tests ... OK`, printing `examined 10 declared
+fields`, `examined 180 planted faults` and `examined 158 planted value types`; module
+`test_formal_config_presence.py` alone at dde35d44: `Ran 5 tests ... OK`, printing `examined 187
+planted refusals of the committed file`. The row S29530 is killed on the clean committed tree, the
+control and the mutant each selecting one test.
