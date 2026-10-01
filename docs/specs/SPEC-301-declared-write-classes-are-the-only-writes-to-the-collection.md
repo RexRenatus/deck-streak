@@ -64,8 +64,13 @@ R7. ADR-301 says that each future write class needs its own ADR in ADR-089's for
     write path.
 R8. The charter change is recorded by the owner's ruling,
     `docs/rulings/OWNER-RULING-2026-10-01-deck-writes.md`. Its first line names ADR-301 and quotes
-    the owner's answer, its commit is the delivery's last and holds that one file, and the owner
-    signs it with a key `config/owner-allowed-signers` holds.
+    the owner's answer, its commit holds that one file, and the owner signs that commit with a key
+    `config/owner-allowed-signers` holds. A later fix is a new commit on top; the signed commit is
+    never amended or re-made.
+R9. Part (a) defines mass-reschedule, the never-list's entry 5, apart from a declared class's
+    reschedule. A batch whose preview names every card it moves, which records each card's prior
+    state for its undo, and which stays within its class's change budget is not a
+    mass-reschedule, and the skip day's reschedule is such a batch.
 
 ## 3. Acceptance criteria
 
@@ -78,6 +83,7 @@ R8. The charter change is recorded by the owner's ruling,
 | A5 | CHARTER.md keeps constraint 4's two lines byte for byte and carries one dated note, after them and in its last section, naming ADR-301, constraint 4 and the rule; the same note over a charter that lost those lines is refused | `python3 -m unittest discover -s scripts/tests -p test_declared_write_classes.py -k the_charter_keeps_constraint_4_and_its_note_names_adr_301` |
 | A6 | ADR-089 keeps guardrails (i) to (iv) byte for byte and carries one dated note, after them and in its last section, naming ADR-301, (i) to (iv) and the rule; the same note over a copy that lost them is refused | `python3 -m unittest discover -s scripts/tests -p test_declared_write_classes.py -k adr_089_keeps_guardrails_i_to_iv_and_its_note_names_adr_301` |
 | A7 | ADR-037 keeps conditions (a) and (b) byte for byte and carries one dated note, after them and in its last section, naming ADR-301, condition (a), condition (b) and the rule; the same note over a copy that lost them is refused | `python3 -m unittest discover -s scripts/tests -p test_declared_write_classes.py -k adr_037_keeps_conditions_a_and_b_and_its_note_names_adr_301` |
+| A8 | part (a) defines mass-reschedule once, apart from a declared class's batch: its preview names every card, it records each card's prior state for the undo, it stays within its change budget, and the skip day's reschedule is such a batch; a part without the definition is refused, and a definition without its change budget is caught | `python3 -m unittest discover -s scripts/tests -p test_declared_write_classes.py -k mass_reschedule_is_defined_apart_from_a_declared_batch` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_declared_write_classes.py -k the_adr_states_the_rule_and_names_what_it_amends
@@ -87,6 +93,7 @@ A4: python3 -m unittest discover -s scripts/tests -p test_declared_write_classes
 A5: python3 -m unittest discover -s scripts/tests -p test_declared_write_classes.py -k the_charter_keeps_constraint_4_and_its_note_names_adr_301
 A6: python3 -m unittest discover -s scripts/tests -p test_declared_write_classes.py -k adr_089_keeps_guardrails_i_to_iv_and_its_note_names_adr_301
 A7: python3 -m unittest discover -s scripts/tests -p test_declared_write_classes.py -k adr_037_keeps_conditions_a_and_b_and_its_note_names_adr_301
+A8: python3 -m unittest discover -s scripts/tests -p test_declared_write_classes.py -k mass_reschedule_is_defined_apart_from_a_declared_batch
 ```
 
 R8 is decided by the owner's signature, not by a test (§5).
@@ -103,7 +110,7 @@ R8 is decided by the owner's signature, not by a test (§5).
 | `docs/decisions/ADR-037-sync-once-a-study-day-plus-owner-triggers-and-never-upload.md` | `repo` | changed: one note appended |
 | `docs/red-first/SPEC-301.md` | `repo` | added |
 | `changelog.d/docs-charter-deck-writes-514.md` | `repo` | added |
-| `docs/rulings/OWNER-RULING-2026-10-01-deck-writes.md` | `repo` | added: the delivery's last commit, alone, signed by the owner |
+| `docs/rulings/OWNER-RULING-2026-10-01-deck-writes.md` | `repo` | added: alone in its own commit, signed by the owner |
 
 ## 5. What this does NOT do
 
@@ -114,9 +121,8 @@ R8 is decided by the owner's signature, not by a test (§5).
   built (#108).
 - It edits no other document that restates the old limit. ADR-083, ADR-151, SPEC-001's gate-6
   amendment and the planned SPEC-083 and SPEC-151 are read under ADR-301, which names them (#514).
-- It writes no test of the ruling's signature. The owner signs the delivery's last commit, after
-  every commit a test could name, and the signature is checked against
-  `config/owner-allowed-signers` when the delivery lands (#514).
+- It writes no test of the ruling's signature. The owner signs the ruling's own commit, and the
+  signature is checked against `config/owner-allowed-signers` when the delivery lands (#514).
 - It sets no kill switch, rung, trial or guard metric in configuration: each belongs to the first
   write class that needs it (#514).
 - It decides no model and no proof: it touches no interleaving and no invariant surface, and each
@@ -131,8 +137,8 @@ R8 is decided by the owner's signature, not by a test (§5).
   `cmp -n <base size> <base file> <head file>` exits 0 for each, and the pull request records it.
 - A write class could read ADR-301 as permission and skip its own ADR. R7 and part (c) put every
   class at the advisory rung until its own ADR and SPEC are accepted.
-- The ruling is valid only under the owner's signature. A commit made after it would leave the
-  head unsigned, so the ruling's commit is the delivery's last.
+- The ruling is valid only under the owner's signature on the commit that adds it, so that commit
+  is never re-made: a later fix is a new commit on top.
 
 ## 7. The mutation rows
 

@@ -2,7 +2,8 @@
 only through declared write classes, each with its own ADR in ADR-089's form (SPEC-301, #514).
 
 These tests read documents only. They pin that the ADR states the rule and its parts (a) to (g),
-that each never-list entry names what it protects, that each rejected alternative says why it lost,
+that each never-list entry names what it protects, that mass-reschedule is defined apart from a
+declared class's batch, that each rejected alternative says why it lost,
 and that the three amended documents keep their earlier text byte for byte and carry one dated note
 naming ADR-301. Each reader is also run over a planted document it must refuse, so a reader that
 sees nothing cannot pass.
@@ -31,6 +32,19 @@ NEVER = (
     "set a per-card due-date policy",
     "change a reviewed note's type",
     "delete a reviewed card or note",
+)
+
+# What part (a)'s definition of entry 5 states, so a declared class's batch is told apart from it.
+MASS_RESCHEDULE = "- **Mass-reschedule** means"
+MASS_RESCHEDULE_TERMS = (
+    "names every card",
+    "preview",
+    "prior state",
+    "undo",
+    "change budget",
+    "skip day",
+    "ADR-089 (iv)",
+    "ADR-089 (i)",
 )
 
 # What each lettered part of the decision states, as issue #514 binds it.
@@ -192,6 +206,12 @@ def never_list_problems(rows):
     return problems
 
 
+def mass_reschedule_definitions(part):
+    """Each bullet of `part` that defines mass-reschedule, normalized."""
+    bullets = (normal(block) for block in re.split(r"(?m)^(?=- )", part))
+    return [bullet for bullet in bullets if bullet.startswith(MASS_RESCHEDULE)]
+
+
 def paragraphs(text):
     """Each blank-line-separated block of `text`, with its offset."""
     offset = 0
@@ -278,6 +298,21 @@ class TheAdrStatesTheRule(unittest.TestCase):
             "'rename a deck' is not an entry of the never-list #514 states",
             never_list_problems(foreign),
         )
+
+    def test_mass_reschedule_is_defined_apart_from_a_declared_batch(self):
+        part = parts(section(the_adr(), "Decision Outcome"))["a"]
+        found = mass_reschedule_definitions(part)
+        self.assertEqual(len(found), 1, "part (a) defines mass-reschedule once")
+        terms = examined("terms the definition states", MASS_RESCHEDULE_TERMS)
+        self.assertEqual([term for term in terms if not says(found[0], term)], [])
+        # Planted: part (a) without the definition, and a definition without its change budget.
+        kept = [
+            block
+            for block in re.split(r"(?m)^(?=- )", part)
+            if not normal(block).startswith(MASS_RESCHEDULE)
+        ]
+        self.assertEqual(mass_reschedule_definitions("".join(kept)), [])
+        self.assertFalse(says(found[0].replace("change budget", "budget"), "change budget"))
 
 
 class TheOptionsSayWhyTheyLost(unittest.TestCase):
