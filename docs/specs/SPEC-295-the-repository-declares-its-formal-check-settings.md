@@ -184,8 +184,8 @@ generated faults grows from 158 to 180 and the fourth criterion's planted value 
 158, so no plant is dropped.
 
 **Not done here.** It commits no pin file and no `formal/` directory, and it changes no CI job
-(#504). The nine rows of the earlier amendment keep their anchors, each occurring once, and twelve
-rows, `S29510` to `S29529`, join them; the anchors of `S29510` and `S29521` move to where the reader's code now sits (#504).
+(#504). The nine rows of the earlier amendment keep their anchors, each occurring once, and twenty
+rows, `S29510` to `S29529`, join them; the anchors of `S29510`, `S29514` and `S29521` move to where the reader's code now sits (#504).
 
 | file | context | change |
 |---|---|---|
