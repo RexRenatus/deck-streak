@@ -522,6 +522,18 @@ notification reaches the owner at most once, and ends delivered or abandoned by 
   over the queue bound, send failed, or may have been sent), and the recap line names it. Every held
   item therefore ends delivered once, or abandoned by name; one whose fate is unknown is named, not
   resent.
+- **R16b: a row the flush pushed is never given back.** A row joins the flush's pushed set when its
+  push answers delivered, before the write that settles it: a full render's row when its render
+  answers delivered, a held reaction's row when its reaction answers delivered, and every row the
+  recap line rolls up when the recap's push answers delivered. When the flush ends, on success or on
+  error, its release first abandons each row of the pushed set that it still claims, with its claim
+  kept, and only then gives back to `held` every other row it still claims. So when the write after
+  a delivered push fails (the settle, the decision record or its commit), the flush ends with that
+  error, and the row it pushed is never given back to `held` and never pushed again: a log line
+  names the item, its claimant and "may have been sent", and the next recap names it "may have been
+  sent". A row the failed flush never pushed is given back untouched and reaches the owner at a
+  later flush. The release is one write with the lease's release; when that write fails too, the
+  rows stay claimed, and R16a abandons them by name once their claim lapses.
 - **R17: the job process has a router.** Only the bot's process held a router, so the scheduled job's
   process built none. The `held_flush` job builds its own from the policy, the owner's chat and the
   bot's credentials, through a service drop-in that loads the same two credentials the bot loads. The
@@ -557,6 +569,7 @@ File manifest of the amendment:
 | `deploy/README.md`, `deploy/rail-contract.json` | the schedule and credential rows, and the rail's calendar |
 | `crates/coordination/tests/held_flush.rs`, `held_flush_calendar.rs`, `held_flush_answers.rs` | A19, A20 and A21 |
 | `crates/notifications/tests/flush_lease.rs`, `flush_outlives_lease.rs` | A20's lease cases, and the cases of a flush that outlives its lease or dies after its push |
+| `crates/notifications/tests/flush_fails_after_push.rs` | A23: a flush whose write after a delivered push fails |
 | `formal/tla/HeldFlush/` | the model of two flushers over one queue |
 
 ## 9. Acceptance criteria of the held-flush amendment
@@ -567,6 +580,7 @@ File manifest of the amendment:
 | A20 | a flush that finds an unlapsed lease answers `Busy` and sends nothing, a lease that lapsed this instant is taken over, the lease holds ten minutes and is released when the flush ends | `two_flushers_over_one_queue_never_send_one_item_twice`, `a_flush_finds_an_unlapsed_lease_and_sends_nothing`, `a_lease_that_lapsed_this_instant_is_taken_over`, `the_lease_holds_for_ten_minutes_and_is_released_when_the_flush_ends` |
 | A22 | a held item reaches the owner at most once: a flush that outlives its lease is never doubled by a second flush, a flush that dies after its push reached is never resent and is named "may have been sent", a row another flush claimed is never sent, a late settle by a flush that lost its claim removes nothing, every abandonment reaches a log line naming the item and its claimant, and the claim migration keeps every index and trigger | `a_flush_that_outlives_its_lease_is_never_doubled_by_a_second_flush`, `a_flush_that_dies_after_its_send_reached_is_never_resent`, `a_row_another_flush_claimed_inside_its_claim_is_never_sent`, `a_late_settle_by_a_flush_that_lost_its_claim_removes_nothing`, `a_lapsed_claim_is_abandoned_by_name_in_the_log`, `a_failed_send_that_spent_its_retries_is_abandoned_by_name_in_the_log`, `the_claim_migration_keeps_every_index_and_trigger_the_queue_had` |
 | A21 | every flush step of the job table and of the deploy templates fires outside the quiet window read from the policy, a slot inside it is told from one outside it, and the job answers done, not delivered or a named refusal for each answer of the flush | `every_flush_step_of_the_job_table_fires_outside_the_quiet_window`, `every_flush_step_of_the_deploy_templates_fires_outside_the_quiet_window`, `the_check_tells_a_slot_inside_the_window_from_one_outside_it`, `a_flush_that_ran_and_one_inside_the_window_are_done`, `a_flush_whose_lease_is_held_elsewhere_is_done`, `an_open_breaker_is_a_send_attempted_and_nothing_delivered`, `a_router_with_no_bot_is_a_named_refusal` |
+| A23 | a flush whose write after a delivered push fails never pushes that row again and names it "may have been sent", for a full render, a row the recap line rolls up and a held reaction alike, and a row the failed flush never pushed is given back and reaches the owner at a later flush | `a_settle_that_fails_after_a_full_render_is_not_followed_by_a_second_push`, `a_settle_that_fails_after_a_recap_is_not_followed_by_a_second_delivery`, `a_settle_that_fails_after_a_reaction_is_not_followed_by_a_second_reaction`, `a_row_the_failed_flush_never_pushed_reaches_the_owner_at_a_later_flush` |
 
 ```acceptance
 A19: cargo test -p deck-streak-coordination --test held_flush -- --exact every_flusher_delivers_once_or_abandons_by_name_and_only_while_the_window_is_open
@@ -575,4 +589,5 @@ A20: cargo test -p deck-streak-notifications --test flush_lease
 A22: cargo test -p deck-streak-notifications --test flush_outlives_lease
 A21: cargo test -p deck-streak-coordination --test held_flush_calendar
 A21: cargo test -p deck-streak-coordination --test held_flush_answers
+A23: cargo test -p deck-streak-notifications --test flush_fails_after_push
 ```
