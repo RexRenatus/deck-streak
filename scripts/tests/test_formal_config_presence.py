@@ -12,6 +12,7 @@ import contextlib
 import importlib.util
 import io
 import json
+import os
 import sys
 import tempfile
 import unittest
@@ -144,6 +145,16 @@ def install(directory, payload, module):
     return path
 
 
+def refusal_of(payload):
+    """The exception name with which the parser refuses the bytes as the loader reads them, UTF-8
+    text then JSON, or None when it reads them."""
+    try:
+        json.loads(payload.decode("utf-8"))
+    except (ValueError, RecursionError) as error:
+        return type(error).__name__
+    return None
+
+
 def run_with(module, path):
     """Run every test of the module with the committed file at `path`: (failed, errored) names."""
     names = unittest.TestLoader().getTestCaseNames(module.FormalConfig)
@@ -206,6 +217,36 @@ class PresenceControls(unittest.TestCase):
         self.assertEqual(escaped, [], "a refusal escaped a test as an error, not a failure")
         self.assertEqual(unread, [], "a presence control passed on a refused file")
         self.assertEqual(unloaded, [], "a file that fails to load did not fail exactly the loaders")
+
+    def test_each_planted_refusal_is_the_kind_its_label_names(self):
+        """A8's population is what it says: a plant that fails to load is a file the parser
+        refuses, a link or no file, each installed as that kind with the bytes it names, and a
+        generated fault is a file the parser reads. A plant of another kind would leave the loader's
+        arm it stands for unexercised while the run still read green."""
+        module = fresh_module()
+        population = examined("planted refusals held to the kind they name", plants(module))
+        refusals = set()
+        with tempfile.TemporaryDirectory() as scratch:
+            for index, (label, payload, unloads) in enumerate(population):
+                path = install(Path(scratch) / str(index), payload, module)
+                if payload is None:
+                    self.assertFalse(os.path.lexists(path), f"{label}: a file is there")
+                elif payload is LINK:
+                    self.assertTrue(path.is_symlink(), f"{label}: no link is there")
+                else:
+                    self.assertTrue(os.path.lexists(path), f"{label}: no file is there")
+                    self.assertFalse(path.is_symlink(), f"{label}: a link is there")
+                    self.assertEqual(path.read_bytes(), payload, f"{label}: other bytes")
+                    refusal = refusal_of(payload)
+                    self.assertEqual(refusal is not None, unloads, f"{label}: the parser's verdict")
+                    if refusal is not None:
+                        refusals.add(refusal)
+                self.assertTrue(unloads or payload not in (None, LINK), f"{label}: marked loadable")
+        self.assertEqual(
+            refusals,
+            {"JSONDecodeError", "UnicodeDecodeError", "RecursionError", "ValueError"},
+            "the parser's four ways to refuse the bytes, each planted: syntax, encoding, depth, digits",
+        )
 
 
 if __name__ == "__main__":

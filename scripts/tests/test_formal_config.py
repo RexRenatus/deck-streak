@@ -9,6 +9,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from _support import REPO, examined
 
@@ -603,6 +604,75 @@ class FormalConfig(unittest.TestCase):
         self.assertIn(
             ["toolchain.identity", "config/formal-toolchain.json"], list(sources.values())
         )
+
+    def test_each_pin_shape_is_planted_as_the_kind_it_names(self):
+        """R6: every shape the source population plants is the kind its label names, so the
+        population holds a link where it says a link, a dangling one where it says dangling, and a
+        file where it says a file; a shape planted as another kind would leave the checker's
+        reading of the real one unjudged."""
+        kinds = {
+            "absent": lambda p: not os.path.lexists(p),
+            "a file": lambda p: not p.is_symlink() and p.is_file() and p.stat().st_size > 0,
+            "an empty file": lambda p: not p.is_symlink() and p.is_file() and p.stat().st_size == 0,
+            "a link to a file": lambda p: (
+                p.is_symlink() and p.parent.joinpath(os.readlink(p)).is_file()
+            ),
+            "a dangling link": lambda p: (
+                p.is_symlink() and not os.path.lexists(p.parent / os.readlink(p))
+            ),
+            "a link to itself": lambda p: p.is_symlink() and os.readlink(p) == p.name,
+        }
+        self.assertEqual(set(kinds), set(PIN_SHAPES), "a pin shape with no kind to hold it to")
+        for shape in examined("pin shapes planted as their kind", list(PIN_SHAPES)):
+            with tempfile.TemporaryDirectory() as scratch:
+                pin = Path(scratch) / "formal-toolchain.json"
+                plant_pin(pin, shape)
+                self.assertTrue(kinds[shape](pin), f"{shape} is not planted as that kind")
+
+    def test_the_identity_is_named_by_the_field_present_whatever_its_value(self):
+        """R6: the identity is a source when the field is present, a value the checker then refuses
+        included, and is none when the field is absent, whether the toolchain object is there or not.
+        The checker reads the field, not its value and not the object that holds it."""
+        identity = ("toolchain", "identity")
+        states = examined(
+            "identity states",
+            [
+                ("a value", EXPECTED, ["toolchain.identity"]),
+                ("empty text", with_value(identity, ""), ["toolchain.identity"]),
+                ("null", with_value(identity, None), ["toolchain.identity"]),
+                ("zero", with_value(identity, 0), ["toolchain.identity"]),
+                ("an empty toolchain object", with_value(("toolchain",), {}), []),
+                ("no toolchain", without(("toolchain",)), []),
+            ],
+        )
+        with tempfile.TemporaryDirectory() as scratch:
+            for label, doc, want in states:
+                self.assertEqual(toolchain_sources(doc, Path(scratch)), want, label)
+
+    def test_the_loader_refuses_bytes_that_are_not_utf8_wherever_they_sit(self):
+        """R6: the checker reads the file as UTF-8 and refuses invalid bytes anywhere, inside a
+        string as well as outside one, and the loader refuses them by assertion each time."""
+        placements = examined(
+            "places an invalid byte sits",
+            [
+                ("inside a string value", b'{"owner_signers": "\xff"}'),
+                ("inside a key", b'{"\xff": 1}'),
+                (
+                    "after the document",
+                    (json.dumps(EXPECTED, indent=2) + "\n").encode("utf-8") + b"\xff",
+                ),
+                ("alone", b"\xff"),
+            ],
+        )
+        with tempfile.TemporaryDirectory() as scratch:
+            for index, (label, payload) in enumerate(placements):
+                path = Path(scratch) / f"{index}.json"
+                path.write_bytes(payload)
+                # the loader is called through the module's namespace, not by name, so it is not
+                # one of the tests that read the committed file
+                with mock.patch.dict(globals(), {"CONFIG": path}):
+                    with self.assertRaises(AssertionError, msg=label):
+                        globals()["load"]()
 
 
 if __name__ == "__main__":
