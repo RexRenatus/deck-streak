@@ -138,6 +138,11 @@ A15: cargo test -p deck-streak-notifications --test one_router -- --exact no_del
 A16: cargo test -p deck-streak-notifications --test one_router -- --exact a_hand_built_send_url_is_refused_wherever_the_transport_builds_it
 A17: cargo test -p deck-streak-notifications --test one_router -- --exact a_request_the_census_cannot_read_is_refused_wherever_the_bot_makes_it
 A18: cargo test -p deck-streak-notifications --test request_allow_list
+A19: cargo test -p deck-streak-coordination --test held_flush -- --exact every_flusher_delivers_once_or_abandons_by_name_and_only_while_the_window_is_open
+A20: cargo test -p deck-streak-coordination --test held_flush -- --exact two_flushers_over_one_queue_never_send_one_item_twice
+A20: cargo test -p deck-streak-notifications --test flush_lease
+A21: cargo test -p deck-streak-coordination --test held_flush_calendar
+A21: cargo test -p deck-streak-coordination --test held_flush_answers
 ```
 
 ## 3a. What the box run judges
@@ -542,13 +547,3 @@ File manifest of the amendment:
 | A19 | over every flusher (the flush after a scheduled sync, the scheduled step, the flush after an owner-triggered sync), every clock position of the window read from the policy (before it, at its start, inside, at its end, after it, across midnight) and every hold state (fresh, at the age limit, past it, already delivered), the delivered set and the abandoned set are exactly the expected ones, and a flush inside the window delivers nothing | `every_flusher_delivers_once_or_abandons_by_name_and_only_while_the_window_is_open` |
 | A20 | two flushers over one held queue never send one item twice: a flush that finds an unlapsed lease answers `Busy` and sends nothing, a lease that lapsed this instant is taken over, the lease holds ten minutes and is released when the flush ends | `two_flushers_over_one_queue_never_send_one_item_twice`, `a_flush_finds_an_unlapsed_lease_and_sends_nothing`, `a_lease_that_lapsed_this_instant_is_taken_over`, `the_lease_holds_for_ten_minutes_and_is_released_when_the_flush_ends` |
 | A21 | every flush step of the job table and of the deploy templates fires outside the quiet window read from the policy, a slot inside it is told from one outside it, and the job answers done, not delivered or a named refusal for each answer of the flush | `every_flush_step_of_the_job_table_fires_outside_the_quiet_window`, `every_flush_step_of_the_deploy_templates_fires_outside_the_quiet_window`, `the_check_tells_a_slot_inside_the_window_from_one_outside_it`, `a_flush_that_ran_and_one_inside_the_window_are_done`, `a_flush_whose_lease_is_held_elsewhere_is_done`, `an_open_breaker_is_a_send_attempted_and_nothing_delivered`, `a_router_with_no_bot_is_a_named_refusal` |
-
-Commands:
-
-```
-A19: cargo test -p deck-streak-coordination --test held_flush -- --exact every_flusher_delivers_once_or_abandons_by_name_and_only_while_the_window_is_open
-A20: cargo test -p deck-streak-coordination --test held_flush -- --exact two_flushers_over_one_queue_never_send_one_item_twice
-A20: cargo test -p deck-streak-notifications --test flush_lease
-A21: cargo test -p deck-streak-coordination --test held_flush_calendar
-A21: cargo test -p deck-streak-coordination --test held_flush_answers
-```
