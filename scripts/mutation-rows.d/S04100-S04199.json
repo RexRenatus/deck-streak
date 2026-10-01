@@ -666,6 +666,15 @@
         "let token: Option<&str> = None;\n    let done = sqlx::query!(\n        \"UPDATE notification_queue SET state = 'held', claim = NULL, tries",
         "lib::ledger::tests::a_relatch_under_another_flushs_token_changes_nothing",
         "the relatch after a failed send holds a row again only under the token that claimed it (SPEC-041 R16a)"
+      ],
+      [
+        "S04177-A-FLUSH-GIVES-BACK-THE-ROWS-IT-NEVER-REACHED",
+        "notifications",
+        "src/ledger.rs",
+        ") -> Result<(), KernelError> {\n    sqlx::query!(\n        \"UPDATE notification_queue SET state = 'held', claim = NULL \\\n         WHERE state = 'sending' AND claim = ?\",\n        claim\n    )\n    .execute(connection)\n    .await?;\n    Ok(())\n}",
+        ") -> Result<(), KernelError> {\n    let _ = (connection, claim);\n    Ok(())\n}",
+        "flush_outlives_lease::a_flush_ended_by_a_failed_send_gives_back_the_row_it_never_reached",
+        "a flush that ends gives back the rows it claimed and never reached, so the next flush sends them instead of leaving them claimed (SPEC-041 R16a)"
       ]
     ],
     "CARGO_KILLED_SCRIPT_MUTATIONS": [
