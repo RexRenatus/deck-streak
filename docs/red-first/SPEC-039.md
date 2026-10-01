@@ -280,7 +280,36 @@ A50: not red: its first cases passed against the unchanged runner, and the cases
 A51: not red: it tests `cfg_value`, which the fix introduced and `dev` does not have, so there is no runner to fail; mutants of the function prove it instead
 ```
 
-The examined lines: at the fix (9595183f) the population read `examined 207 generated crate
-layouts` and `agreed with the oracle 186, refused by name 21`; at da82cca3 it reads `examined 289
-generated crate layouts` and `agreed with the oracle 268, refused by name 21`, and A51 reads
-`examined 2406 predicates` with `329 decided, every one equal to rustc's value`.
+The examined lines: at the fix (9595183f) the population read `examined 165 generated crate
+layouts` and `agreed with the oracle 162, refused by name 3`; at da82cca3 it reads `examined 268
+generated crate layouts` and `agreed with the oracle 247, refused by name 21`, and A51 reads
+`examined 2406 predicates` with `329 decided, every one equal to rustc's value`. At 630c25db and at
+bc6ee994 it reads `examined 316 generated crate layouts` and `agreed with the oracle 292, refused
+by name 24`. Those two commits pin the token reader's nested block comments and then bound that
+scan by the input's length; the test added at 630c25db reads `nested block comment shapes examined
+5` and passes at both, so the bound changed no reading the test sees.
+
+## Addendum: the five classes the population did not hold (section 21, issue #405, 2026-10-01)
+
+The families of section 21 were committed first, alone, at 24ec6c76, against the reader as it
+stood at 6d3a9638. They fail by assertion, and the failing members are those of the five classes:
+a `mod` inside a macro invocation, a path through `..`, a dotfile, an absolute path, and a manifest
+with no `edition` key. The reader's fix went green at 87d385df. A53 pins a bound the reader already
+had, so it is not red.
+
+```red-first
+A52: red at 24ec6c76: AssertionError: 1186 != 1610 : a member was neither agreed nor refused
+A52: green at 87d385df
+A53: not red: it pins the block-comment bound the reader already had; under the mutant that shortens the bound by three it fails with AssertionError: '/*x' reads ['x'], where [] is due
+```
+
+The planted refusals of A50 for an edition the reader cannot decide were red at 24ec6c76 for their
+own reason:
+
+```text
+AssertionError: KillerUnresolved not raised
+```
+
+The examined lines at 87d385df read `examined 1610 generated crate layouts` and `agreed with the
+oracle 1523, refused by name 87`, and the block-comment test reads `examined 13344 block comments
+left open`.
