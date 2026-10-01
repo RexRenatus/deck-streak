@@ -366,4 +366,25 @@ fn a_walk_that_reaches_the_smallest_day_without_a_review_answers_none_in_the_vec
         None,
         "the port answers none there too"
     );
+    let silent_day_after = Input {
+        today: i64::MIN + 1,
+        counts: vec![(i64::MIN + 1, 0)],
+        skips: Vec::new(),
+        threshold: 1,
+    };
+    assert_eq!(
+        rust_answer(&silent_day_after),
+        Some(i64::MIN + 1),
+        "one day above the smallest day, the same silent window answers its first day"
+    );
+    let answer = rows
+        .iter()
+        .find(|(input, _)| *input == silent_day_after)
+        .map(|(_, answer)| answer.clone())
+        .expect("the vectors hold the day after the smallest with no review");
+    assert_eq!(
+        port_answer(&answer),
+        Some(i64::MIN + 1),
+        "the port answers the same day there"
+    );
 }
