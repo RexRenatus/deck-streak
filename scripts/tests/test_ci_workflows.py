@@ -5480,6 +5480,7 @@ class WorkflowFilesAreReadAsBytes(unittest.TestCase):
         examined("test modules the census read", range(modules))
         examined("test modules in the loader's population", range(population))
         examined("listed sites the census counted", range(sites))
+        self.assertGreater(population, 1, "the loader's module alone is no population")
         self.assertEqual(problems, [])
 
     def census_sites(self, source):
