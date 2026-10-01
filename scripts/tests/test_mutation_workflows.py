@@ -488,17 +488,17 @@ class EveryMutantsSpellingIsFound(unittest.TestCase):
             with self.subTest(what), tempfile.TemporaryDirectory() as scratch:
                 (Path(scratch) / "planted.yml").write_text(planted(command), encoding="utf-8")
                 commands = mutants_commands(Path(scratch))
-            self.assertEqual([name for name, _ in commands], ["planted.yml"], what)
-            self.assertEqual([c.split() for _, c in commands], [found.split()], what)
+                self.assertEqual([name for name, _ in commands], ["planted.yml"], what)
+                self.assertEqual([c.split() for _, c in commands], [found.split()], what)
 
     def test_each_spelling_of_the_command_is_found_by_the_job_scan(self):
         for what, command, _ in SPELLINGS:
             with self.subTest(what), tempfile.TemporaryDirectory() as scratch:
                 (Path(scratch) / "planted.yml").write_text(planted(command), encoding="utf-8")
                 running = mutants_jobs(Path(scratch))
-            self.assertEqual(
-                [(name, job) for name, job, _ in running], [("planted.yml", "shard")], what
-            )
+                self.assertEqual(
+                    [(name, job) for name, job, _ in running], [("planted.yml", "shard")], what
+                )
 
     def test_a_job_without_the_command_is_found_by_neither_scan(self):
         with tempfile.TemporaryDirectory() as scratch:
