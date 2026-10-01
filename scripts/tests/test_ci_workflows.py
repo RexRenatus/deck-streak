@@ -8,6 +8,7 @@ a `.yaml` workflow is held to the hardening rules as a `.yml` one is, the harden
 keys the way the checker does (A13)."""
 
 import ast
+import builtins
 import collections
 import contextlib
 import functools
@@ -5587,6 +5588,100 @@ class WorkflowFilesAreReadAsBytes(unittest.TestCase):
                 else:
                     self.assertTrue(result.failures, f"{label}: the census was green")
                     self.assertRegex(said, rf"[\"'\[]{re.escape(module)}[:'\"]")
+
+    def builtin_values(self):
+        """The interpreter's builtins namespace as a dict, read here and nowhere else in the
+        tests that plant its names."""
+        return dict(vars(builtins))
+
+    def plant_problems(self, body):
+        """The problems the census finds under a scratch copy of this directory that holds one new
+        module, `test_zz_plant`, which imports the loader's module and then runs `body`; as the
+        lines that name that module."""
+        tests = Path(__file__).parent
+        with tempfile.TemporaryDirectory() as scratch:
+            copy = Path(scratch) / "scripts" / "tests"
+            for path in tests.rglob("*.py"):
+                (copy / path.relative_to(tests)).parent.mkdir(parents=True, exist_ok=True)
+                (copy / path.relative_to(tests)).symlink_to(path)
+            header = '"""A plant."""\nfrom test_ci_workflows import workflow_file_text\n'
+            (copy / PLANT_ZZ).write_bytes((header + body).encode("utf-8"))
+            problems, _modules, _population, _sites = census_problems(copy)
+        return [line for line in problems if line.startswith("test_zz_plant: ")]
+
+    def test_every_builtin_exception_class_is_placed_by_its_value(self):
+        names = sorted(
+            name
+            for name, value in self.builtin_values().items()
+            if isinstance(value, type) and issubclass(value, BaseException)
+        )
+        examined("builtin exception classes planted", names)
+        self.assertGreaterEqual(len(names), 60)
+        for member in ("RecursionError", "GeneratorExit", "BaseExceptionGroup", "StopIteration"):
+            self.assertIn(member, names)
+        # An alias is a member by its value: `IOError` is `OSError`.
+        self.assertIn("IOError", names)
+        self.assertIs(self.builtin_values()["IOError"], OSError)
+        body = "".join(
+            f"\n\ndef plant_except_{name}():\n    try:\n        pass\n    except {name}:\n"
+            f"        pass\n"
+            f"\n\ndef plant_raise_{name}():\n    raise {name}\n"
+            f"\n\ndef plant_isinstance_{name}(value):\n    return isinstance(value, {name})\n"
+            for name in names
+        )
+        # A control in the same module: a name the census does not place stays red, so the module
+        # was read and the check is live.
+        control = "test_zz_plant: plant_control: memoryview: a name the census cannot place"
+        said = self.plant_problems(body + "\n\ndef plant_control():\n    return memoryview\n")
+        self.assertIn(control, said)
+        refused = sorted({line.split(": ")[1].split("_", 2)[2] for line in said if line != control})
+        self.assertEqual(
+            refused,
+            [],
+            f"{len(refused)} builtin exception classes the census cannot place, among them "
+            f"{refused[:3]}",
+        )
+
+    def test_every_other_builtin_name_stays_red_and_every_read_or_dynamic_builtin_is_a_site(self):
+        values = self.builtin_values()
+        placed = (
+            BENIGN_BUILTINS
+            | ATTRIBUTE_BUILTINS
+            | READ_BUILTINS
+            | BARE_DYNAMIC
+            | {
+                name
+                for name, value in values.items()
+                if isinstance(value, type) and issubclass(value, BaseException)
+            }
+        )
+        others = sorted(
+            name
+            for name in values
+            if name not in placed
+            and not (name.startswith("__") and name.endswith("__"))
+            and name.isidentifier()
+            and isinstance(ast.parse(name, mode="eval").body, ast.Name)
+        )
+        sites = sorted(READ_BUILTINS | BARE_DYNAMIC)
+        examined("other builtin names planted", others)
+        examined("read or dynamic builtin names planted", sites)
+        self.assertGreater(len(others), 0)
+        self.assertIn("memoryview", others)
+        self.assertIn("callable", others)
+        body = "".join(f"\n\ndef plant_{name}():\n    return {name}\n" for name in others + sites)
+        said = set(self.plant_problems(body))
+        for name in others:
+            with self.subTest(name=name):
+                self.assertIn(
+                    f"test_zz_plant: plant_{name}: {name}: a name the census cannot place", said
+                )
+        for name in sites:
+            with self.subTest(site=name):
+                kind = "read" if name in READ_BUILTINS else "dynamic"
+                self.assertIn(
+                    f"test_zz_plant: plant_{name}: {name}: 1 {kind} site(s), 0 listed", said
+                )
 
 
 if __name__ == "__main__":
