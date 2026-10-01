@@ -73,6 +73,13 @@
     },
     {
       "unit": "deck-streak-job@.timer",
+      "instance": "held_flush",
+      "section": "Timer",
+      "key": "OnCalendar",
+      "neutral": ["*-*-* 07:36:00 UTC"]
+    },
+    {
+      "unit": "deck-streak-job@.timer",
       "instance": "liveness",
       "section": "Timer",
       "key": "OnCalendar",

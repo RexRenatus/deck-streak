@@ -265,6 +265,7 @@ ONE_YEAR = 31_536_000
 # (SPEC-056 R15).
 WAIVED = {
     (f"{JOB_TEMPLATE}@sync.timer", "randomized-delay-missing"),
+    (f"{JOB_TEMPLATE}@held_flush.timer", "randomized-delay-missing"),
     (f"{JOB_TEMPLATE}@maintenance.timer", "randomized-delay-missing"),
     (f"{JOB_TEMPLATE}@maintenance.timer", "calendar-not-persistent"),
     (f"{JOB_TEMPLATE}@drill_postback.timer", "randomized-delay-missing"),
@@ -2153,11 +2154,19 @@ class TheSyncLoginIsTheSyncJobsAlone(unittest.TestCase):
         self.assertTrue(dropin.is_file(), f"{dropin.relative_to(REPO)} is missing")
         loaded = re.findall(r"^LoadCredential=(.*)$", dropin.read_text(encoding="utf-8"), re.M)
         self.assertEqual(sorted(loaded), sorted(f"{i}:{SOCKET}" for i in self.SYNC_LOGIN))
-        # No other instance has a drop-in that loads one.
+        # No other instance has a drop-in that loads one: the held flush's drop-in loads the
+        # bot's two credentials, never the sync login (#291).
         others = [
-            d for d in SYSTEMD.glob(f"{JOB_TEMPLATE}@*.service.d") if d.name != dropin.parent.name
+            d
+            for d in SYSTEMD.glob(f"{JOB_TEMPLATE}@*.service.d")
+            if d.name != dropin.parent.name
+            and any(
+                login in conf.read_text(encoding="utf-8")
+                for conf in d.glob("*.conf")
+                for login in self.SYNC_LOGIN
+            )
         ]
-        self.assertEqual(others, [], "an instance other than sync ships a drop-in")
+        self.assertEqual(others, [], "an instance other than sync loads the sync login")
         # The pair list holds them under the sync instance, and under no other unit.
         code = subprocess.run(
             [sys.executable, str(DEPLOY / "scripts" / "credential-pairs.py"), "--root", str(REPO)],

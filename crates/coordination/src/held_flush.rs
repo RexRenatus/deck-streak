@@ -1,11 +1,13 @@
 //! The scheduled flush of the held notifications (SPEC-041 R7, amended for #291): the router's
 //! flush, run by its own job at a time outside the quiet window.
 
-use deck_streak_notifications::Router;
+use deck_streak_notifications::{Flushed, Router};
 
+use crate::ladder_facts::streak_facts;
 use crate::runner::{Done, Fire, Reason, Work};
 
-/// The job's work: one flush of the router's held queue.
+/// The job's work: one flush of the router's held queue. A flush that finds the window closed or
+/// another flush running delivers nothing and is done: the next fire flushes again.
 pub struct HeldFlushWork<'a> {
     router: &'a Router,
 }
@@ -20,7 +22,11 @@ impl<'a> HeldFlushWork<'a> {
 
 impl Work for HeldFlushWork<'_> {
     async fn perform(&self, _fire: &Fire) -> Result<Done, Reason> {
-        let Self { router: _ } = self;
-        Ok(Done::Done)
+        match self.router.flush_with(streak_facts()).await {
+            Ok(Flushed::Ran { .. } | Flushed::QuietHours | Flushed::Busy) => Ok(Done::Done),
+            Ok(Flushed::BreakerOpen) => Ok(Done::NotDelivered),
+            Ok(Flushed::NoNotifier) => Err(Reason::new("no_notifier")),
+            Err(_) => Err(Reason::new("flush_failed")),
+        }
     }
 }

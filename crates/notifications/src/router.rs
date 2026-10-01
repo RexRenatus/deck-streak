@@ -31,7 +31,7 @@ use std::fmt;
 use std::sync::{Arc, Mutex, PoisonError};
 
 use deck_streak_kernel::{Clock, Db, KernelError, StudyDay, StudyDayRule, UtcMillis};
-use sqlx::SqliteConnection;
+use sqlx::{Sqlite, SqliteConnection, Transaction};
 
 use crate::ladder::{self, DICE_EMOJI, REACTION_EMOJI, REVEAL_PAUSE, REVEAL_PLACEHOLDER};
 use crate::ledger::{self, ClaimRow, DecisionRow, HeldRow};
@@ -53,6 +53,14 @@ pub const INTENSITY_SETTING: &str = "celebration_intensity";
 
 /// One minute, in milliseconds.
 const MINUTE_MS: i64 = 60_000;
+
+/// The setting key a flush holds while it delivers, so two flushers over one queue never send one
+/// item twice (#291). Its value is the instant the lease lapses, in epoch milliseconds.
+pub const FLUSH_LEASE_SETTING: &str = "flush_lease";
+
+/// How long a flush's lease lasts when the flush never releases it, so a crashed flush does not
+/// block the queue for good.
+const FLUSH_LEASE_MS: i64 = 10 * MINUTE_MS;
 
 /// The router's pass. Every bot transport call takes one, and only this module can make one: its
 /// field is private, and it derives neither `Default` nor `Clone`. So a call of the port outside
@@ -220,6 +228,32 @@ pub enum Flushed {
         /// Messages delivered.
         sends: u32,
     },
+}
+
+/// Takes the flush lease on `write`'s transaction: its token, or `None` when another flush holds
+/// an unlapsed one. The token is the instant the lease lapses.
+async fn take_lease(
+    write: &mut SqliteConnection,
+    now: UtcMillis,
+) -> Result<Option<String>, KernelError> {
+    if let Some(held) = ledger::setting(write, FLUSH_LEASE_SETTING).await?
+        && held
+            .parse::<i64>()
+            .is_ok_and(|lapses| lapses > now.epoch_millis())
+    {
+        return Ok(None);
+    }
+    let token = (now.epoch_millis() + FLUSH_LEASE_MS).to_string();
+    sqlx::query(
+        "INSERT INTO notification_settings (key, value, created_at) VALUES (?, ?, ?) \
+         ON CONFLICT (key) DO UPDATE SET value = excluded.value",
+    )
+    .bind(FLUSH_LEASE_SETTING)
+    .bind(&token)
+    .bind(now.epoch_millis())
+    .execute(write)
+    .await?;
+    Ok(Some(token))
 }
 
 /// What the rules decided before any delivery call.
@@ -817,6 +851,29 @@ impl Router {
         if self.breaker_open(now) {
             return Ok(Flushed::BreakerOpen);
         }
+        let Some(lease) = take_lease(&mut write, now).await? else {
+            return Ok(Flushed::Busy);
+        };
+        let flushed = self.deliver(bot.as_ref(), facts, now, write).await;
+        let mut release = self.db.write().await?;
+        sqlx::query("DELETE FROM notification_settings WHERE key = ? AND value = ?")
+            .bind(FLUSH_LEASE_SETTING)
+            .bind(lease)
+            .execute(&mut *release)
+            .await?;
+        release.commit().await?;
+        flushed
+    }
+
+    /// The flush's work after its window, breaker and lease checks passed: `write` is the open
+    /// transaction that holds the lease.
+    async fn deliver(
+        &self,
+        bot: &dyn BotTransport,
+        facts: Option<StreakFacts>,
+        now: UtcMillis,
+        mut write: Transaction<'static, Sqlite>,
+    ) -> Result<Flushed, KernelError> {
         let broke = ladder::streak_broke_on(facts.as_ref(), self.rule.study_day(now));
         let cap = ladder::outcome_cap(&self.policy, broke);
         let max_age = i64::from(self.policy.deferral.max_age_minutes) * MINUTE_MS;
@@ -838,7 +895,7 @@ impl Router {
             self.abandon(&mut write, &row, reason, now).await?;
         }
         write.commit().await?;
-        let mut sends = self.flush_reactions(bot.as_ref(), &reactions).await?;
+        let mut sends = self.flush_reactions(bot, &reactions).await?;
         let flush_max = usize::try_from(self.policy.deferral.flush_max).unwrap_or(usize::MAX);
         let rolled = full.split_off(full.len().min(flush_max));
         full.sort_by_key(|row| row.id);
@@ -846,7 +903,7 @@ impl Router {
             let tier = row.tier_pending.min(cap);
             let outcome = match row.surface {
                 Surface::MiniApp => Outcome::Delivered(tier),
-                Surface::Bot => self.render(bot.as_ref(), &row.text, tier, false).await?,
+                Surface::Bot => self.render(bot, &row.text, tier, false).await?,
             };
             let now = self.clock.now();
             let mut write = self.db.write().await?;

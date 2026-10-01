@@ -105,7 +105,7 @@ pub const HELD_FLUSH: Job = Job {
 };
 
 /// The one schedule: every job a timer may start.
-pub const TABLE: [Job; 4] = [SYNC, MAINTENANCE, LIVENESS, DRILL_POSTBACK];
+pub const TABLE: [Job; 5] = [SYNC, MAINTENANCE, LIVENESS, DRILL_POSTBACK, HELD_FLUSH];
 
 /// The table's job with `id`, or `None` when the table holds none.
 #[must_use]
