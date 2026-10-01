@@ -27,6 +27,9 @@
 \* @phx covers crates/coordination/src/sync_cycle.rs anchor=flush digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
 \* @phx covers crates/notifications/src/ledger.rs anchor=held digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
 \* @phx covers crates/notifications/src/ledger.rs anchor=settle digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers crates/notifications/src/router.rs anchor=take_lease digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers crates/notifications/src/router.rs anchor=deliver digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers crates/coordination/src/held_flush.rs anchor=perform digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
 \* @phx cites #291
 \* @phx property NoDoubleDelivery ramp=report
 \* @phx property HeldReachesOrAbandons ramp=report
