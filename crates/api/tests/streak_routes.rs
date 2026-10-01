@@ -477,6 +477,11 @@ fn oracle(fixture: &Fixture) -> [Vec<(String, Value)>; 2] {
 fn leaves(prefix: &str, value: &Value, out: &mut Vec<(String, Value)>) {
     if let Value::Object(fields) = value {
         for (key, field) in fields {
+            // The calendar's days are read where their markers are decided, by the daemon's
+            // calendar test (SPEC-076 A58); this population separates the scalar values.
+            if prefix.is_empty() && key == "calendar" {
+                continue;
+            }
             let path = if prefix.is_empty() {
                 key.clone()
             } else {

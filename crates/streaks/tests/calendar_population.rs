@@ -85,23 +85,60 @@ fn build(
     // The covered miss: the freeze sits on it once the return day (the next day) is served; the
     // law run resets on it once it is past.
     if let Some(at) = covered_at {
-        lang.push(Expect { fire: day_of(at) + 1, day: day_of(at), marker: Marker::Freeze });
-        lawx.push(Expect { fire: day_of(at) + 1, day: day_of(at), marker: Marker::Break });
+        lang.push(Expect {
+            fire: day_of(at) + 1,
+            day: day_of(at),
+            marker: Marker::Freeze,
+        });
+        lawx.push(Expect {
+            fire: day_of(at) + 1,
+            day: day_of(at),
+            marker: Marker::Break,
+        });
     }
     let misses: Vec<usize> = (gap_from..gap_to).filter(|i| tokens[*i] == Miss).collect();
     let return_day = day_of(gap_to);
     if real == 1 {
         if covered.is_none() {
-            lang.push(Expect { fire: return_day, day: day_of(misses[0]), marker: Marker::Freeze });
+            lang.push(Expect {
+                fire: return_day,
+                day: day_of(misses[0]),
+                marker: Marker::Freeze,
+            });
         } else {
-            lang.push(Expect { fire: return_day, day: return_day, marker: Marker::Break });
+            lang.push(Expect {
+                fire: return_day,
+                day: return_day,
+                marker: Marker::Break,
+            });
         }
     } else {
         // The break sits on the day after the second real miss.
         let after = day_of(misses[1]) + 1;
-        lang.push(Expect { fire: after, day: after, marker: Marker::Break });
+        lang.push(Expect {
+            fire: after,
+            day: after,
+            marker: Marker::Break,
+        });
     }
-    lawx.push(Expect { fire: day_of(misses[0]) + 1, day: day_of(misses[0]), marker: Marker::Break });
+    lawx.push(Expect {
+        fire: day_of(misses[0]) + 1,
+        day: day_of(misses[0]),
+        marker: Marker::Break,
+    });
+    // After the last run no study day follows: the run lapses. The language run breaks on the day
+    // after the second real miss, the law run resets on the first.
+    let last = day_of(tokens.len() - 1);
+    lang.push(Expect {
+        fire: last + 3,
+        day: last + 3,
+        marker: Marker::Break,
+    });
+    lawx.push(Expect {
+        fire: last + 2,
+        day: last + 1,
+        marker: Marker::Break,
+    });
     History {
         tokens: tokens.len(),
         days,
@@ -153,7 +190,11 @@ fn expected(
                 }
             }
             markers.sort();
-            (day, history.days.contains(&StudyDay::from_epoch_day(day)), markers)
+            (
+                day,
+                history.days.contains(&StudyDay::from_epoch_day(day)),
+                markers,
+            )
         })
         .collect()
 }
@@ -187,7 +228,13 @@ fn every_served_calendar_day_carries_exactly_its_own_markers() {
             assert_eq!(read(&got), want, "language, served {served}");
             let got_law = law(&history.days, &history.skips, day);
             let want_law = expected(history, served, &history.law, true);
-            assert_eq!(read(&got_law), want_law, "law, served {served}");
+            assert_eq!(
+                read(&got_law),
+                want_law,
+                "law, served {served}, days {:?}, skips {:?}",
+                history.days,
+                history.skips
+            );
             examined += got.len() + got_law.len();
             for (_, _, markers) in &want {
                 let mut mask = 0_u8;
@@ -203,7 +250,10 @@ fn every_served_calendar_day_carries_exactly_its_own_markers() {
     assert_eq!(examined, derived);
     // Non-vacuity: each marker is served on some day, and every pair of markers differs on some day.
     for marker in [Marker::Skip, Marker::Freeze, Marker::Break] {
-        assert!(seen.get(&marker).copied().unwrap_or(0) > 0, "{marker:?} is never served");
+        assert!(
+            seen.get(&marker).copied().unwrap_or(0) > 0,
+            "{marker:?} is never served"
+        );
     }
     for (a, b) in [(0, 1), (0, 2), (1, 2)] {
         assert!(
@@ -212,9 +262,16 @@ fn every_served_calendar_day_carries_exactly_its_own_markers() {
         );
     }
     // A history with no study day serves its window with no study day and no marker.
-    let none = language(&BTreeSet::new(), &BTreeSet::new(), StudyDay::from_epoch_day(START));
+    let none = language(
+        &BTreeSet::new(),
+        &BTreeSet::new(),
+        StudyDay::from_epoch_day(START),
+    );
     assert_eq!(none.len(), CALENDAR_DAYS);
-    assert!(none.iter().all(|day| !day.studied && day.markers.is_empty()));
+    assert!(
+        none.iter()
+            .all(|day| !day.studied && day.markers.is_empty())
+    );
 }
 
 #[test]
@@ -230,7 +287,10 @@ fn the_open_day_is_the_windows_last_day_studied_or_not_yet() {
     assert!(open.last().is_some_and(|d| !d.studied));
     // Served on the return day, studied: the covered day carries the freeze and the return day none.
     let returned = language(&days, &skips, StudyDay::from_epoch_day(START + 2));
-    assert_eq!(returned.last().map(|d| (d.day.epoch_day(), d.studied)), Some((START + 2, true)));
+    assert_eq!(
+        returned.last().map(|d| (d.day.epoch_day(), d.studied)),
+        Some((START + 2, true))
+    );
     let marked: Vec<(i64, Vec<Marker>)> = returned
         .iter()
         .filter(|d| !d.markers.is_empty())
