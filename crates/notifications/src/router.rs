@@ -1041,12 +1041,11 @@ impl Router {
         (reason, why): (Reason, &str),
         now: UtcMillis,
     ) -> Result<(), KernelError> {
-        let ours = match &row.claim {
-            Some(claim) => ledger::abandon_claimed(write, row.id, claim, row.tries).await?,
-            None => {
-                ledger::abandon(write, row.id, row.tries).await?;
-                true
-            }
+        let ours = if let Some(claim) = &row.claim {
+            ledger::abandon_claimed(write, row.id, claim, row.tries).await?
+        } else {
+            ledger::abandon(write, row.id, row.tries).await?;
+            true
         };
         if !ours {
             return Ok(());

@@ -576,7 +576,10 @@ mod tests {
         let stranger = relatch(&mut write, id, "999", 1, "quiet")
             .await
             .expect("relatch");
-        assert!(!stranger, "a token that is not the claim's relatches nothing");
+        assert!(
+            !stranger,
+            "a token that is not the claim's relatches nothing"
+        );
         let owner = relatch(&mut write, id, "100", 1, "quiet")
             .await
             .expect("relatch");
