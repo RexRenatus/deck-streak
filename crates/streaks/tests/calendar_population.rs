@@ -1,7 +1,8 @@
-//! The streak calendar's class rule (SPEC-076 A57, A60): every served day carries exactly the
-//! markers that sit on it and no other day's. Each history is built BY CONSTRUCTION from tokens
-//! (a study day, a declared skip day, a real miss), so the day each marker sits on is known from
-//! the layout alone and never from the replay the code under test is built on.
+//! The streak calendar's class rule (SPEC-076 A57, A60, A62): every served day carries exactly the
+//! markers that sit on it and no other day's, over the predecessor's window. Each history is built
+//! BY CONSTRUCTION from tokens (a study day, a declared skip day, a real miss), so the day each
+//! marker sits on is known from the layout alone and never from the replay the code under test is
+//! built on, and the window is written from the ruling, never read from the code under test.
 
 #![allow(clippy::expect_used, clippy::print_stdout)]
 
@@ -9,7 +10,6 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use deck_streak_kernel::StudyDay;
 use deck_streak_streaks::calendar::{CalendarDay, Marker, language, law};
-use deck_streak_streaks::constants::CALENDAR_DAYS;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Token {
@@ -27,7 +27,6 @@ struct Expect {
 }
 
 struct History {
-    tokens: usize,
     days: BTreeSet<StudyDay>,
     skips: BTreeSet<StudyDay>,
     first: i64,
@@ -37,6 +36,19 @@ struct History {
 }
 
 const START: i64 = 20_000;
+
+/// The weekday of epoch day `day`, Monday 0 to Sunday 6: epoch day 0, 1970-01-01, was a Thursday.
+const fn weekday(day: i64) -> i64 {
+    (day + 3).rem_euclid(7)
+}
+
+/// The served window's first day: the Monday on or before the served day less 181 days, the
+/// predecessor's 26 weeks less the served day itself (`charts.streak_calendar`; SPEC-076 section
+/// 27; ADR-302 D2).
+const fn window_first(served: i64) -> i64 {
+    let reach = served - 181;
+    reach - weekday(reach)
+}
 
 fn run(study: usize, hole: bool) -> Vec<Token> {
     if hole {
@@ -83,7 +95,7 @@ fn build(
     let mut lang = Vec::new();
     let mut lawx = Vec::new();
     // The covered miss: the freeze sits on it once the return day (the next day) is served; the
-    // law run resets on it once it is past.
+    // law run resets on the day after it, the return day.
     if let Some(at) = covered_at {
         lang.push(Expect {
             fire: day_of(at) + 1,
@@ -92,7 +104,7 @@ fn build(
         });
         lawx.push(Expect {
             fire: day_of(at) + 1,
-            day: day_of(at),
+            day: day_of(at) + 1,
             marker: Marker::Break,
         });
     }
@@ -123,11 +135,11 @@ fn build(
     }
     lawx.push(Expect {
         fire: day_of(misses[0]) + 1,
-        day: day_of(misses[0]),
+        day: day_of(misses[0]) + 1,
         marker: Marker::Break,
     });
     // After the last run no study day follows: the run lapses. The language run breaks on the day
-    // after the second real miss, the law run resets on the first.
+    // after the second real miss, the law run resets on the day after the first.
     let last = day_of(tokens.len() - 1);
     lang.push(Expect {
         fire: last + 3,
@@ -136,11 +148,10 @@ fn build(
     });
     lawx.push(Expect {
         fire: last + 2,
-        day: last + 1,
+        day: last + 2,
         marker: Marker::Break,
     });
     History {
-        tokens: tokens.len(),
         days,
         skips,
         first: START,
@@ -177,8 +188,7 @@ fn expected(
     marks: &[Expect],
     with_skips: bool,
 ) -> Vec<(i64, bool, Vec<Marker>)> {
-    let span = i64::try_from(CALENDAR_DAYS).expect("small");
-    (served - span + 1..=served)
+    (window_first(served)..=served)
         .map(|day| {
             let mut markers = Vec::new();
             if with_skips && history.skips.contains(&StudyDay::from_epoch_day(day)) {
@@ -215,13 +225,26 @@ fn every_served_calendar_day_carries_exactly_its_own_markers() {
     let mut examined = 0_usize;
     let mut derived = 0_usize;
     let mut seen: BTreeMap<Marker, usize> = BTreeMap::new();
-    let mut masks: Vec<u8> = Vec::new();
+    let mut differs = [false; 3];
+    let (mut on_first, mut before_first) = (0_usize, 0_usize);
     for history in &histories {
-        // Every served day from the first study day to 36 days past the history's last day: the
-        // window's first day sits on each marker (served = marker + 34) and one day past it (the
-        // marker is one day before the window, and not served).
-        derived += (history.tokens + 36) * CALENDAR_DAYS * 2;
-        for served in history.first..=history.end + 36 {
+        // Every served day from the first study day to 192 days past the history's last day: the
+        // last marker (three days past it) has left the longest window by then, so each marker is
+        // served on every day of the window it sits in, on the window's first day when it is a
+        // Monday, and not at all once it is one day before the window.
+        for served in history.first..=history.end + 192 {
+            // 182 days when the day 181 days back is a Monday, up to 188 when it is a Sunday.
+            let length = 182 + weekday(served - 181);
+            derived += 2 * usize::try_from(length).expect("a small length");
+            let first = window_first(served);
+            for mark in history.language.iter().chain(&history.law) {
+                if mark.fire <= served && mark.day == first {
+                    on_first += 1;
+                }
+                if mark.fire <= served && mark.day == first - 1 {
+                    before_first += 1;
+                }
+            }
             let day = StudyDay::from_epoch_day(served);
             let got = language(&history.days, &history.skips, day);
             let want = expected(history, served, &history.language, true);
@@ -237,17 +260,23 @@ fn every_served_calendar_day_carries_exactly_its_own_markers() {
             );
             examined += got.len() + got_law.len();
             for (_, _, markers) in &want {
-                let mut mask = 0_u8;
                 for marker in markers {
                     *seen.entry(*marker).or_default() += 1;
-                    mask |= 1 << (*marker as u8);
                 }
-                masks.push(mask);
+                for (pair, (a, b)) in [(0, 1), (0, 2), (1, 2)].into_iter().enumerate() {
+                    let has = |n: u8| markers.iter().any(|marker| *marker as u8 == n);
+                    differs[pair] |= has(a) != has(b);
+                }
             }
         }
     }
-    println!("examined {examined} calendar day(s)");
+    println!(
+        "examined {examined} calendar day(s); a marker on the window's first day {on_first} time(s), \
+         one day before it {before_first} time(s)"
+    );
     assert_eq!(examined, derived);
+    assert!(on_first > 0, "no marker sat on a window's first day");
+    assert!(before_first > 0, "no marker sat one day before a window");
     // Non-vacuity: each marker is served on some day, and every pair of markers differs on some day.
     for marker in [Marker::Skip, Marker::Freeze, Marker::Break] {
         assert!(
@@ -255,19 +284,18 @@ fn every_served_calendar_day_carries_exactly_its_own_markers() {
             "{marker:?} is never served"
         );
     }
-    for (a, b) in [(0, 1), (0, 2), (1, 2)] {
-        assert!(
-            masks.iter().any(|mask| (mask >> a) & 1 != (mask >> b) & 1),
-            "markers {a} and {b} never differ on a day"
-        );
+    for (pair, differ) in differs.iter().enumerate() {
+        assert!(*differ, "the markers of pair {pair} never differ on a day");
     }
-    // A history with no study day serves its window with no study day and no marker.
+    // A history with no study day serves its window with no study day and no marker. START is a
+    // Friday: the predecessor serves Monday 19814 through it, 187 days (the measured golden).
     let none = language(
         &BTreeSet::new(),
         &BTreeSet::new(),
         StudyDay::from_epoch_day(START),
     );
-    assert_eq!(none.len(), CALENDAR_DAYS);
+    assert_eq!(none.len(), 187);
+    assert_eq!(none.first().map(|day| day.day.epoch_day()), Some(19_814));
     assert!(
         none.iter()
             .all(|day| !day.studied && day.markers.is_empty())
@@ -302,6 +330,35 @@ fn the_open_day_is_the_windows_last_day_studied_or_not_yet() {
     let waiting = language(&before, &skips, StudyDay::from_epoch_day(START + 2));
     assert!(waiting.iter().all(|d| d.markers.is_empty()));
     assert!(waiting.last().is_some_and(|d| !d.studied));
+}
+
+/// Reading (A) on the law track (SPEC-076 A62): its `break` sits on the day its own replay resets
+/// the run, the day after the first real miss of a live run, and only once that day is served; a
+/// declared skip day is bridged, so the first real miss after it is the one that counts.
+#[test]
+fn the_law_break_sits_on_the_day_after_the_first_real_miss() {
+    // Study days 0 and 1, real misses on 2 and 3, study days again on 4 and 5.
+    let days: BTreeSet<StudyDay> = [START, START + 1, START + 4, START + 5]
+        .map(StudyDay::from_epoch_day)
+        .into();
+    let breaks = |skips: &BTreeSet<StudyDay>, served: i64| -> Vec<i64> {
+        law(&days, skips, StudyDay::from_epoch_day(served))
+            .iter()
+            .filter(|day| day.markers.contains(&Marker::Break))
+            .map(|day| day.day.epoch_day())
+            .collect()
+    };
+    let none = BTreeSet::new();
+    // Served on the first real miss: the run has not reset, so no day carries a break yet.
+    assert_eq!(breaks(&none, START + 2), Vec::<i64>::new());
+    // Served on the day after it and later: that day carries the break, the miss itself none.
+    for served in START + 3..=START + 5 {
+        assert_eq!(breaks(&none, served), vec![START + 3], "served {served}");
+    }
+    // Day 2 declared a skip: the first real miss is day 3, and the run resets on day 4.
+    let skip: BTreeSet<StudyDay> = [START + 2].map(StudyDay::from_epoch_day).into();
+    assert_eq!(breaks(&skip, START + 3), Vec::<i64>::new());
+    assert_eq!(breaks(&skip, START + 4), vec![START + 4]);
 }
 
 /// The words the route serves are the SPEC's: a marker is spelled as its name.
