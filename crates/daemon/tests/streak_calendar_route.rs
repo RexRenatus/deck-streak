@@ -594,13 +594,12 @@ fn served_flags(body: &Value, track: &str) -> Vec<(String, bool)> {
         .collect()
 }
 
-#[tokio::test]
-async fn the_route_serves_the_predecessors_window_and_its_studied_days() {
-    let golden = golden::read(&golden::committed("streak_calendar"))
-        .unwrap_or_else(|refusal| panic!("{refusal}"));
+/// Settles each golden case's study days into a fresh store, serves `GET /api/streak` on the case's
+/// day, and pairs what the route served with what the predecessor served.
+async fn serve_the_golden(cases: &[golden::Case]) -> (Vec<PredecessorCase>, Vec<ServedCase>) {
     let mut predecessor = Vec::new();
     let mut served_cases = Vec::new();
-    for case in &golden.cases {
+    for case in cases {
         let today = case.input["today"].as_i64().expect("a served day");
         // A rollup with study reviews is a study day; the store at the served day holds none dated
         // after it. The days are split over the tracks by a fixed rule, so each track holds days
@@ -645,6 +644,14 @@ async fn the_route_serves_the_predecessors_window_and_its_studied_days() {
             studied: epoch_days(&case.output["studied"]).into_iter().collect(),
         });
     }
+    (predecessor, served_cases)
+}
+
+#[tokio::test]
+async fn the_route_serves_the_predecessors_window_and_its_studied_days() {
+    let golden = golden::read(&golden::committed("streak_calendar"))
+        .unwrap_or_else(|refusal| panic!("{refusal}"));
+    let (predecessor, served_cases) = serve_the_golden(&golden.cases).await;
     let judged = judge(&predecessor, &served_cases, NAMED);
     println!(
         "examined {} case(s), {} served day(s); window mismatches {}; unnamed studied differences \
@@ -660,9 +667,14 @@ async fn the_route_serves_the_predecessors_window_and_its_studied_days() {
         !judged.refuses(),
         "the route differs from the predecessor: {judged:?}"
     );
+    the_judge_refuses_its_controls(&predecessor, &served_cases);
+}
 
+/// The judge's two controls over the route's own served cases: a dropped studied day is an unnamed
+/// difference (and a named one once a reason is planted), and a 35-day cut misses every window.
+fn the_judge_refuses_its_controls(predecessor: &[PredecessorCase], served_cases: &[ServedCase]) {
     // Control 1: one studied day dropped from both tracks, the first case's first studied day.
-    let mut dropped = served_cases.clone();
+    let mut dropped = served_cases.to_vec();
     let day = predecessor[0]
         .studied
         .first()
@@ -675,7 +687,7 @@ async fn the_route_serves_the_predecessors_window_and_its_studied_days() {
             served_day.1 = false;
         }
     }
-    let control = judge(&predecessor, &dropped, NAMED);
+    let control = judge(predecessor, &dropped, NAMED);
     println!(
         "control, a dropped studied day: unnamed studied differences {} (refused: {})",
         control.unnamed,
@@ -688,7 +700,7 @@ async fn the_route_serves_the_predecessors_window_and_its_studied_days() {
     assert!(control.refuses(), "the judge refuses a dropped studied day");
     // The same difference under a planted reason is counted named, and not refused.
     let planted = [(predecessor[0].today, day, "a planted reason")];
-    let named = judge(&predecessor, &dropped, &planted);
+    let named = judge(predecessor, &dropped, &planted);
     println!(
         "control, the dropped day named: named {}, unnamed {}",
         named.named, named.unnamed
@@ -711,7 +723,7 @@ async fn the_route_serves_the_predecessors_window_and_its_studied_days() {
             }
         })
         .collect();
-    let control = judge(&predecessor, &cut, NAMED);
+    let control = judge(predecessor, &cut, NAMED);
     println!(
         "control, a 35-day cut: window mismatches {} (refused: {})",
         control.window_mismatches,
@@ -719,7 +731,7 @@ async fn the_route_serves_the_predecessors_window_and_its_studied_days() {
     );
     assert_eq!(
         control.window_mismatches,
-        2 * golden.cases.len(),
+        2 * predecessor.len(),
         "a 35-day cut differs from every window"
     );
     assert!(control.refuses(), "the judge refuses a 35-day window");
