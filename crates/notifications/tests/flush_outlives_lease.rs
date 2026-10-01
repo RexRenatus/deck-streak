@@ -57,8 +57,15 @@ impl Slow {
         })
     }
 
-    async fn stalled(&self) {
+    /// Waits until `flush` has entered its first push. The wait is bounded by the flush itself: a
+    /// flush that has ended without entering that push never will, so the test fails by assertion
+    /// instead of waiting for a push that cannot come.
+    async fn stalled(&self, flush: &tokio::task::JoinHandle<()>) {
         while !self.entered.load(Ordering::SeqCst) {
+            assert!(
+                !flush.is_finished(),
+                "the flush ended before it entered its first push"
+            );
             tokio::task::yield_now().await;
         }
     }
@@ -184,7 +191,7 @@ async fn stalled_flush(
     let running = tokio::spawn(async move {
         let _flushed = first.flush().await.expect("the first flush");
     });
-    slow.stalled().await;
+    slow.stalled(&running).await;
     running
 }
 
