@@ -261,6 +261,60 @@
         "    let heat = if true {\n",
         "streak_commands::the_language_line_carries_its_runs_heat_in_the_heats_own_place",
         "a language run above zero shows its heat on the line (SPEC-076 R31 restated, A50)"
+      ],
+      [
+        "S07630-A-FAILED-ROUTE-IS-NOT-THE-CYCLES-ERROR",
+        "coordination",
+        "src/relight.rs",
+        "            Err(error) => tracing::error!(%error, \"the relight line could not be raised\"),\n",
+        "            Err(error) => return Err(error),\n",
+        "relight_order::a_day_whose_route_keeps_failing_holds_back_no_other_due_day",
+        "a day whose route fails holds back no other due day: its error is logged, not returned from the cycle (SPEC-076 R27, A53)"
+      ],
+      [
+        "S07631-A-FAILED-ROUTE-DOES-NOT-END-THE-ROUTE",
+        "coordination",
+        "src/relight.rs",
+        "            Err(error) => tracing::error!(%error, \"the relight line could not be raised\"),\n",
+        "            Err(error) => {\n                tracing::error!(%error, \"the relight line could not be raised\");\n                break;\n            }\n",
+        "relight_order::a_day_whose_route_keeps_failing_holds_back_no_other_due_day",
+        "the cycle goes on to the next due day after a failed route, rather than ending its route there (SPEC-076 R27, A53)"
+      ],
+      [
+        "S07632-NO-COUNT-OF-FAILED-ROUTES-IN-MEMORY",
+        "coordination",
+        "src/relight.rs",
+        "            Err(error) => tracing::error!(%error, \"the relight line could not be raised\"),\n",
+        "            Err(error) => {\n                static FAILED: std::sync::Mutex<Vec<StudyDay>> =\n                    std::sync::Mutex::new(Vec::new());\n                let failures = {\n                    let mut failed =\n                        FAILED.lock().unwrap_or_else(std::sync::PoisonError::into_inner);\n                    failed.push(day);\n                    failed.iter().filter(|failed| **failed == day).count()\n                };\n                if failures >= 1000 {\n                    due.routed(db, day).await?;\n                }\n                tracing::error!(%error, \"the relight line could not be raised\");\n            }\n",
+        "relight_order::the_route_keeps_no_per_day_failure_state_a_give_up_could_read",
+        "no count of a day's failed routes is kept in memory, so no number of them gives the day up (SPEC-076 R27, A55)"
+      ],
+      [
+        "S07633-NO-COUNT-OF-FAILED-ROUTES-IN-THE-DATABASE",
+        "coordination",
+        "src/relight.rs",
+        "            Err(error) => tracing::error!(%error, \"the relight line could not be raised\"),\n",
+        "            Err(error) => {\n                let mut write = db.write().await?;\n                let failures: i64 = sqlx::query_scalar(\n                    \"UPDATE relight_due SET created_at = created_at + 1 \\\n                     WHERE study_day = ?1 RETURNING created_at % 1000\",\n                )\n                .bind(day.epoch_day())\n                .fetch_one(&mut *write)\n                .await?;\n                write.commit().await?;\n                if failures == 0 {\n                    due.routed(db, day).await?;\n                }\n                tracing::error!(%error, \"the relight line could not be raised\");\n            }\n",
+        "relight_order::the_route_keeps_no_per_day_failure_state_a_give_up_could_read",
+        "a failed route writes nothing, so no count of a day's failed routes is kept in the database (SPEC-076 R27, A55)"
+      ],
+      [
+        "S07634-THE-HEAT-SHOWS-WHICHEVER-LINE-LEADS",
+        "bot",
+        "src/streak_commands.rs",
+        "    let heat = if view.language_heat.is_empty() {\n",
+        "    let heat = if view.language_heat.is_empty() || view.law.current == 0 {\n",
+        "streak_commands::the_language_line_carries_its_runs_heat_in_the_heats_own_place",
+        "the language line shows its heat when it leads as when the law line leads (SPEC-076 R31 restated, A50)"
+      ],
+      [
+        "S07635-THE-HEAT-SHOWS-IN-EVERY-BAND",
+        "bot",
+        "src/streak_commands.rs",
+        "    let heat = if view.language_heat.is_empty() {\n",
+        "    let heat = if view.language_heat.is_empty() || view.language.current >= 100 {\n",
+        "streak_commands::the_language_line_carries_its_runs_heat_in_the_heats_own_place",
+        "the language line shows its heat in every band of the heat table, the top two included (SPEC-076 R31 restated, A50)"
       ]
     ]
   }
