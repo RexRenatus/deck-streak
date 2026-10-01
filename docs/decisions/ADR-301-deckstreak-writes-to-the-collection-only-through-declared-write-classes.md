@@ -133,9 +133,10 @@ entry names what it protects.
 
 ### (b) The backup and the batch
 
-- Every write batch takes a whole-collection backup first. A restore drill proves the backup
-  before the class's first batch, and again whenever the way the backup is taken changes: it
-  restores the backup into a throwaway collection and compares its counts with the source's.
+- Every write batch takes a whole-collection backup first, and a restore drill proves that backup
+  before the batch writes anything: it restores the backup into a throwaway collection and
+  compares its counts with the source's. A batch whose backup fails its drill writes nothing and
+  tells the owner.
 - A batch is all-or-nothing. It makes every change it previewed, or none.
 - A batch records counts before and after it runs: the cards, the notes, the review rows, and the
   cards in each state the batch touches. Its class's ADR names the counts the batch may move. Any
@@ -227,8 +228,9 @@ Every write class climbs three rungs, one at a time, and starts on the first.
 - Bad, because an undo still cannot see a change that another client made between the undo's sync
   and its push (ADR-089's consequences). Every class inherits that limit, and its ADR states its own
   form of it.
-- Bad, because five documents still state the old limit in their own words: ADR-083, ADR-151,
-  SPEC-001's gate-6 amendment, and the planned SPEC-083 and SPEC-151. They are read under this ADR.
+- Bad, because six documents still state the old limit in their own words: ADR-083, ADR-151,
+  SPEC-001's gate-6 amendment, SPEC-022's ADR-089 amendment, and the planned SPEC-083 and
+  SPEC-151. They are read under this ADR.
 - Open questions for the first write class's ADR:
   - a spend ceiling across every class's runs per study day, read from each run's recorded cost
     (`agent_runs`), with a fall-back to writing nothing when the AI route is absent;
@@ -238,7 +240,7 @@ Every write class climbs three rungs, one at a time, and starts on the first.
 
 ### Confirmation
 
-- SPEC-301's criteria A1 to A7, each recorded red then green in `docs/red-first/SPEC-301.md`, pin
+- SPEC-301's criteria A1 to A8, each recorded red then green in `docs/red-first/SPEC-301.md`, pin
   the rule, the parts (a) to (g), the never-list, the options and the three amendment notes.
 - Each write class's own SPEC proves that class against the recording fake sync server, red first.
   It proves the class's exact changes and their inverse, zero uploads on every other path, the
