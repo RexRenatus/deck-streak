@@ -11,8 +11,10 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from _support import REPO, examined
+from _support import REPO, examined, refuse_link_components
 
+# The tree the settings and pin paths are read in; a test that reads another tree moves it.
+ROOT = REPO
 CONFIG = REPO / "config" / "formal.json"
 # R6: the formal checker takes its toolchain from ONE source, either `toolchain.identity` in the
 # settings file or a committed pin file at this path, and this repository names the identity.
@@ -178,7 +180,10 @@ def read(doc):
 
 def toolchain_sources(doc, root):
     """The toolchain sources the tree at `root` names, as the checker reads them: the settings
-    field when the document names it, and the pin file when the tree holds one."""
+    field when the document names it, and the pin file when the tree holds one. A link at the
+    directory the pin file sits in is refused by assertion: the checker finds no pin file through
+    it, and the tree's own reading is never followed through a link."""
+    refuse_link_components((root / PIN_FILE).parent, root)
     named = []
     if get(doc, ("toolchain", "identity"))[1]:
         named.append("toolchain.identity")
@@ -216,17 +221,22 @@ def plant_pin(pin, shape):
         assert shape == "absent", shape
 
 
-def load():
-    """The committed file as the checker reads it: HEAD's blob at the path. A link is read as its
-    own text, never followed, so a link at the path is refused; and every way the parser refuses
-    the bytes, syntax, encoding, a depth past its recursion limit or an integer past its digit
-    limit, is a failure by assertion, never an error."""
-    if CONFIG.is_symlink():
-        raise AssertionError("config/formal.json is a link: the formal checker reads the link")
+def committed_text():
+    """The committed file's text as the checker reads it, HEAD's blob at the path: a link at the
+    file or at any directory above it is refused by assertion and never followed, and so is an
+    absent file."""
+    refuse_link_components(CONFIG, ROOT)
     if not CONFIG.is_file():
         raise AssertionError("config/formal.json is absent: the formal checker reads none")
+    return CONFIG.read_text(encoding="utf-8")
+
+
+def load():
+    """The committed file as the checker reads it, through `committed_text`; and every way the
+    parser refuses the bytes, syntax, encoding, a depth past its recursion limit or an integer
+    past its digit limit, is a failure by assertion, never an error."""
     try:
-        return json.loads(CONFIG.read_text(encoding="utf-8"))
+        return json.loads(committed_text())
     except (ValueError, RecursionError) as error:
         raise AssertionError(f"config/formal.json is not JSON: {error!r}"[:300]) from error
 
@@ -455,7 +465,7 @@ class FormalConfig(unittest.TestCase):
             self.assertTrue(present or path[-1] in ("entry_seconds", "entries"), path)
             self.assertTrue(same(value, want), f"{'.'.join(path)}: {value!r} != {want!r}")
         self.assertTrue(same(doc, EXPECTED), f"{doc!r} != {EXPECTED!r}")
-        self.assertEqual(CONFIG.read_text(encoding="utf-8"), json.dumps(EXPECTED, indent=2) + "\n")
+        self.assertEqual(committed_text(), json.dumps(EXPECTED, indent=2) + "\n")
 
     def test_the_signers_path_is_repo_relative(self):
         """A2: `owner_signers` is repo-relative, with no `..` segment and no leading `/`."""
@@ -655,8 +665,9 @@ class FormalConfig(unittest.TestCase):
                 self.assertEqual(toolchain_sources(doc, Path(scratch)), want, label)
 
     def test_the_loader_refuses_bytes_that_are_not_utf8_wherever_they_sit(self):
-        """R6: the checker reads the file as UTF-8 and refuses invalid bytes anywhere, inside a
-        string as well as outside one, and the loader refuses them by assertion each time."""
+        """The test's own loader decodes the file as UTF-8 and refuses a byte that is not, wherever
+        it sits, inside a string value, inside a key, after the document or alone, by assertion
+        each time. The refusal is this loader's own; the test does not rely on the checker for it."""
         placements = examined(
             "places an invalid byte sits",
             [
@@ -675,7 +686,7 @@ class FormalConfig(unittest.TestCase):
                 path.write_bytes(payload)
                 # the loader is called through the module's namespace, not by name, so it is not
                 # one of the tests that read the committed file
-                with mock.patch.dict(globals(), {"CONFIG": path}):
+                with mock.patch.dict(globals(), {"CONFIG": path, "ROOT": Path(scratch)}):
                     with self.assertRaises(AssertionError, msg=label):
                         globals()["load"]()
 

@@ -164,10 +164,74 @@
       [
         "S29521-NON-UTF8-BYTES-ARE-REPAIRED-AND-READ",
         "scripts/tests/test_formal_config.py",
-        "return json.loads(CONFIG.read_text(encoding=\"utf-8\"))",
-        "return json.loads(CONFIG.read_bytes().decode('utf-8', 'replace'))",
+        "return CONFIG.read_text(encoding=\"utf-8\")",
+        "return CONFIG.read_bytes().decode('utf-8', 'replace')",
         "bytes that are not UTF-8 are repaired and read instead of refused (SPEC-295 A8)",
         "test_formal_config.FormalConfig.test_the_loader_refuses_bytes_that_are_not_utf8_wherever_they_sit"
+      ],
+      [
+        "S29522-A-LOADER-THAT-NO-PRESENCE-CONTROL-HOLDS-PASSES-ON-AN-ABSENT-FILE",
+        "scripts/tests/test_formal_config.py",
+        "toolchain_sources(load(), REPO)",
+        "toolchain_sources(load() if CONFIG.is_file() else EXPECTED, REPO)",
+        "a test that loads the committed file but is no presence control passes when the file is absent, which only the check that every loader fails on a file that fails to load sees (SPEC-295 A8)",
+        "test_formal_config_presence.PresenceControls.test_a_refused_committed_file_fails_every_reader_by_assertion_and_errors_none"
+      ],
+      [
+        "S29523-A-PRESENCE-CONTROL-LOADS-THE-FILE-AND-NEVER-READS-IT",
+        "scripts/tests/test_formal_config.py",
+        "admitted_doc = read(load())",
+        "admitted_doc = read(load()) if False else load()",
+        "a presence control keeps the reader's syntax but never reads the committed file, which only the check that every presence control fails on every refusal sees (SPEC-295 A8)",
+        "test_formal_config_presence.PresenceControls.test_a_refused_committed_file_fails_every_reader_by_assertion_and_errors_none"
+      ],
+      [
+        "S29524-A-LOADER-RAISES-AN-ERROR-ON-A-GENERATED-FAULT",
+        "scripts/tests/test_formal_config.py",
+        "self.assertTrue(is_repo_relative(value), value)",
+        "self.assertTrue(is_repo_relative(value), value + \"\")",
+        "a test that loads the committed file raises an error, not a failure, on a generated fault whose signers path is no string, which only the no-error check sees (SPEC-295 A8)",
+        "test_formal_config_presence.PresenceControls.test_a_refused_committed_file_fails_every_reader_by_assertion_and_errors_none"
+      ],
+      [
+        "S29525-THE-LOADER-JUDGES-ONLY-THE-FILE-FOR-A-LINK",
+        "scripts/tests/test_formal_config.py",
+        "refuse_link_components(CONFIG, ROOT)",
+        "CONFIG.is_symlink() and refuse_link_components(CONFIG, ROOT)",
+        "the loader refuses a link at the settings file and follows a link at its directory, so the file behind it is read where the checker finds none (SPEC-295 A8)",
+        "test_formal_config_presence.PresenceControls.test_a_refused_committed_file_fails_every_reader_by_assertion_and_errors_none"
+      ],
+      [
+        "S29526-THE-SOURCE-POPULATION-DROPS-THE-FIELD-ABSENT-HALF",
+        "scripts/tests/test_formal_config.py",
+        "list(itertools.product((True, False), PIN_SHAPES))",
+        "list(itertools.product((True, True), PIN_SHAPES))",
+        "the source population holds twelve members with the settings field always named, so no tree without the field is judged (SPEC-295 A7)",
+        "test_formal_config.FormalConfig.test_the_tree_names_one_toolchain_source_the_identity"
+      ],
+      [
+        "S29527-THE-PIN-DIRECTORY-IS-NEVER-JUDGED-FOR-A-LINK",
+        "scripts/tests/test_formal_config.py",
+        "refuse_link_components((root / PIN_FILE).parent, root)",
+        "None",
+        "the reader of the pin path follows a link at the directory the pin file sits in, so a pin file the checker finds none of is listed or missed through it (SPEC-295 A7 and A8)",
+        "test_formal_config_presence.PresenceControls.test_a_link_at_any_component_of_a_path_the_module_reads_is_refused_by_assertion"
+      ],
+      [
+        "S29528-THE-LINK-WALK-REFUSES-ONLY-A-LINK-WHOSE-TARGET-EXISTS",
+        "scripts/tests/_support.py",
+        "if os.path.islink(walked):",
+        "if os.path.islink(walked) and os.path.exists(walked):",
+        "the component walk lets a dangling link and a link to itself through unrefused (SPEC-295 A8)",
+        "test_formal_config_presence.PresenceControls.test_a_link_at_any_component_of_a_path_the_module_reads_is_refused_by_assertion"
+      ],
+      [
+        "S29529-THE-LINK-WALK-SKIPS-THE-FIRST-COMPONENT",
+        "scripts/tests/_support.py",
+        "for part in relative.parts:",
+        "for part in relative.parts[1:]:",
+        "the component walk never judges the directory directly below the root, the component both paths sit in (SPEC-295 A8)",
+        "test_formal_config_presence.PresenceControls.test_a_link_at_any_component_of_a_path_the_module_reads_is_refused_by_assertion"
       ]
     ]
   }
