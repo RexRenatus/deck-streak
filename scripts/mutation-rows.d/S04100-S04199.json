@@ -603,6 +603,69 @@
         "Ok(Flushed::NoNotifier) => Ok(Done::Done),",
         "held_flush_answers::a_router_with_no_bot_is_a_named_refusal",
         "a held-flush job with no bot to send through fails by name instead of reporting done (SPEC-041 amendment, #291)"
+      ],
+      [
+        "S04170-A-HELD-ITEM-IS-NOT-SETTLED-BEFORE-ITS-SEND",
+        "notifications",
+        "src/router.rs",
+        "            let outcome = match row.surface {\n                Surface::MiniApp => Outcome::Delivered(tier),\n",
+        "            { let mut early = self.db.write().await?; ledger::settle(&mut early, row.id).await?; early.commit().await?; }\n            let outcome = match row.surface {\n                Surface::MiniApp => Outcome::Delivered(tier),\n",
+        "flush_lease::a_failed_send_leaves_the_celebration_held_with_the_failure_counted",
+        "a row leaves the queue only after its send reached the owner, so a failed send leaves it held and counted, never lost unnamed (SPEC-041 R16a)"
+      ],
+      [
+        "S04171-A-LEASE-IS-RELEASED-ONLY-BY-ITS-OWN-TOKEN",
+        "notifications",
+        "src/router.rs",
+        "DELETE FROM notification_settings WHERE key = ? AND value = ?",
+        "DELETE FROM notification_settings WHERE key = ? OR value = ?",
+        "flush_outlives_lease::a_flush_that_ends_after_its_lease_lapsed_leaves_the_next_holders_lease",
+        "a flush releases the lease only when its value is its own token, so one that outlived its lease never frees the next holder's (SPEC-041 R16)"
+      ],
+      [
+        "S04172-A-CLAIM-TAKES-HELD-ROWS-ONLY",
+        "notifications",
+        "src/ledger.rs",
+        "           WHERE state = 'held'\n           RETURNING id",
+        "           WHERE state IN ('held', 'sending')\n           RETURNING id",
+        "flush_outlives_lease::a_row_another_flush_claimed_inside_its_claim_is_never_sent",
+        "the claim moves only held rows to sending, so a row another flush claimed is never read for sending (SPEC-041 R16a)"
+      ],
+      [
+        "S04173-A-SETTLE-MATCHES-THE-CLAIMS-TOKEN",
+        "notifications",
+        "src/ledger.rs",
+        "\"DELETE FROM notification_queue WHERE id = ? AND state = 'sending' AND claim = ?\"",
+        "\"DELETE FROM notification_queue WHERE id = ? AND state = 'sending' AND ? IS NOT NULL\"",
+        "lib::ledger::tests::a_settle_under_another_flushs_token_removes_nothing",
+        "the settle removes a row only under the token that claimed it (SPEC-041 R16a)"
+      ],
+      [
+        "S04174-A-LAPSED-CLAIM-IS-ABANDONED-NOT-HELD-AGAIN",
+        "notifications",
+        "src/ledger.rs",
+        "\"UPDATE notification_queue SET state = 'abandoned' WHERE id = ? AND state = 'sending'\"",
+        "\"UPDATE notification_queue SET state = 'held', claim = NULL WHERE id = ? AND state = 'sending'\"",
+        "flush_outlives_lease::a_flush_that_outlives_its_lease_is_never_doubled_by_a_second_flush",
+        "a sending row whose claim lapsed is abandoned by name and never made held again, so it is never resent (SPEC-041 R16a)"
+      ],
+      [
+        "S04175-A-LAPSED-CLAIM-IS-NAMED-MAY-HAVE-BEEN-SENT",
+        "notifications",
+        "src/router.rs",
+        "(Some(_), _) => format!(\"{key} (may have been sent, unseen)\"),",
+        "(Some(_), _) => format!(\"{key} (expired, unseen)\"),",
+        "flush_outlives_lease::a_flush_that_dies_after_its_send_reached_is_never_resent",
+        "the recap names a claimed-and-abandoned row as one that may have been sent (SPEC-041 R16a)"
+      ],
+      [
+        "S04176-A-RELATCH-MATCHES-THE-CLAIMS-TOKEN",
+        "notifications",
+        "src/ledger.rs",
+        "hold = ? \\\n         WHERE id = ? AND state = 'sending' AND claim = ?\"",
+        "hold = ? \\\n         WHERE id = ? AND state = 'sending' AND ? IS NOT NULL\"",
+        "lib::ledger::tests::a_relatch_under_another_flushs_token_changes_nothing",
+        "the relatch after a failed send holds a row again only under the token that claimed it (SPEC-041 R16a)"
       ]
     ],
     "CARGO_KILLED_SCRIPT_MUTATIONS": [
