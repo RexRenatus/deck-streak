@@ -10,8 +10,8 @@ decision-makers: "@RexRenatus (owner), the DeckStreak architect"
 
 SPEC-076 R20 and R23 name a streak calendar: the window's study days with their freeze, skip and
 break markers, drawn on the Mini App's streak screen. The first delivery left it out (section 18)
-and it is #486. Which window does it serve, which day does each marker sit on, and where do the
-study days it marks come from?
+and it is #486. The predecessor serves a streak calendar of its own, with no markers. Which window
+does it serve, which day does each marker sit on, and where do the study days it marks come from?
 
 ## Decision Drivers
 
@@ -27,15 +27,39 @@ study days it marks come from?
 D1, parity first:
 
 - Search the predecessor for a calendar, and bind to it if it serves one: chosen, because the
-  predecessor's behaviour is the product's source of truth (#486). The search of
-  `tools/parity-oracle/` (its README, `registry/spec_042.py`, `registry/spec_110.py`) and a grep for
-  "calendar" found only ISO dates and month folders, so the predecessor serves no streak calendar and
-  D2 and D3 bind.
+  predecessor's behaviour is the product's source of truth (#486). The predecessor serves one:
+  `charts.streak_calendar`, the last 26 weeks of study days, binary (a day is studied when its
+  rollup has reviews above zero, and its reviews count study events only), from the Monday on or
+  before the served day minus 181 days through the served day, with no track split and no markers.
+  Its window and its studied layer bind with a golden, which the parity oracle's own generator
+  writes by calling it through an adapter in `registry/spec_076.py`
+  (`tools/parity-oracle/goldens/streak_calendar.json`), and D2 yields to it. The markers have no
+  predecessor and stay under D3.
+- The studied layer is judged as a union: each track serves exactly the predecessor's window, in
+  order, and the union of the two tracks' study days equals the predecessor's studied set, because
+  the predecessor keeps one day set and DeckStreak keeps one per track. A difference is allowed
+  only where it is named here, by day class and reason; an unnamed one fails A63. The named
+  classes, none of which A63's golden cases hold:
+  - A closed day whose study reviews were deleted after it closed: DeckStreak keeps it studied,
+    because a closed day's settled amount is only ever raised (`settle.rs`), while the predecessor's
+    rollup takes the recount whenever that day is recomputed. Read from the code, not run.
+  - The open day before its writer has run: neither serves from the review log. DeckStreak's route
+    reads the settled rows, which the fold writes when a sync is folded; the predecessor's chart
+    reads its stored rollups (`recent_days`), which its pipeline writes when it recomputes. Until
+    its own writer has run, each serves the open day as not yet studied.
+  - A card moved between tracks after a day closed: it changes one track's day set and not the
+    union, so it is a difference between the tracks and never between the union and the
+    predecessor.
 
 D2, the window:
 
-- The `CALENDAR_DAYS` (35) study days ending at the served day, a constant: chosen, because five
-  weeks fill a screen in whole week rows and bound the body for any history length (#486).
+- The predecessor's window: from the Monday on or before the served day minus
+  `CALENDAR_LOOKBACK_DAYS` (181, `CALENDAR_WEEKS` (26) weeks less the served day) through the served
+  day, 182 to 188 days by weekday: chosen, because D1 binds the predecessor's behaviour and the
+  predecessor serves this window. It starts on a Monday, so the screen lays it out in whole weeks,
+  and it bounds the body for any history length (#486).
+- The 35 days ending at the served day, a constant: rejected, because ruling 1 binds the
+  predecessor's window (D1), and the predecessor serves 26 weeks.
 - The whole history: rejected, because the body then grows without bound with every day studied.
 - The current calendar month: rejected, because the window would be one day long on the first of the
   month and would change its length through the year.
@@ -47,8 +71,13 @@ D3, the day a marker sits on:
   each skip day) (#486).
 - The freeze on the return day, where the replay spends it: rejected, because the return day is a
   study day and the miss it hides would show as nothing.
+- The language track's `break` on the day after the second real miss of a live run (the day whose
+  lapse records it), or on a return day after a break the lapse path did not record: chosen, because
+  that is the day its own replay records the break.
 - The law track's freeze: not served, because the law track holds no freezes (R10). Its `break` sits
-  on the first real miss after a live run, where its replay resets the run.
+  on the day after the first real miss of a live run, the day its replay resets the run.
+- A `break` on the miss itself: rejected, because on both tracks the replay records the break on a
+  later day, and a marker sits on the day its own replay records it.
 
 D4, where the study days come from:
 
@@ -57,8 +86,9 @@ D4, where the study days come from:
   and written by the same fold that writes the freeze events, and it is the set of study days of the
   track. `review_xp` is zero only for an event that is not a study event, and the smallest XP of a
   study event is the economy's base of 10 times the lowest ease (again, 0.5), maturity (new, 1.0),
-  type (learn, 0.8), filtered (0.7) and tier (untagged or T1, 1.0) multipliers, 2.8, which rounds to
-  3. So a day's settlement is above nothing if and only if the day has a study event of that track.
+  type (filtered, 0.7, the lowest) and tier (untagged or T1, 1.0) multipliers, 3.5, which rounds
+  half to even to 4. So a day's settlement is above nothing if and only if the day has a study event
+  of that track.
   The fold settles a day for every evaluation, an open day's row replaced as it grows (SPEC-072 R6).
 - `daily_rollup` and `daily_lang_stats`: rejected, because the first holds no track and the second
   is not the study-day set the streak fold reads.
@@ -75,8 +105,9 @@ D5, markers derived on read:
 
 ## Decision Outcome
 
-Chosen: the bounded window, the three markers on the days D3 names, and the study days read from the
-settled XP of each track, all in one read transaction beside `streak_state`.
+Chosen: the predecessor's window, its studied layer held by a golden, the three markers on the days
+D3 names, and the study days read from the settled XP of each track, all in one read transaction
+beside `streak_state`.
 
 ### Consequences
 
@@ -90,9 +121,10 @@ settled XP of each track, all in one read transaction beside `streak_state`.
 
 ### Confirmation
 
-A57 to A61 (SPEC-076 section 28): the pure function over a population built by construction, the
+A57 to A64 (SPEC-076 section 28): the pure function over a population built by construction, the
 route over the real store after the fold, the settlement's equality with the study days, the open
-day, and the screen's reading of each marker from its own cell.
+day, the screen's reading of each marker from its own cell, the law track's break day, the route's
+window and union against the predecessor's golden, and the screen's whole weeks.
 
 ## More Information
 
