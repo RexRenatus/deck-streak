@@ -530,3 +530,56 @@ fn decoded<T>(value: Option<T>) -> Result<T, KernelError> {
         ))
     })
 }
+
+#[cfg(test)]
+#[allow(clippy::expect_used, clippy::unwrap_used, missing_docs)]
+mod tests {
+    use deck_streak_kernel::Db;
+
+    use super::{claim_held, relatch, settle_claimed};
+
+    async fn queue_with_one_claimed_row(claim: &str) -> (tempfile::TempDir, Db, i64) {
+        let scratch = tempfile::tempdir().expect("a scratch");
+        let db = Db::open(&scratch.path().join("deckstreak.db"))
+            .await
+            .expect("the database opens");
+        let mut write = db.write().await.expect("a write");
+        sqlx::query(
+            "INSERT INTO notification_queue (kind, dedupe_key, surface, tier_requested, \
+             tier_pending, text, hold, tries, state, deferred_at, study_day, created_at) \
+             VALUES ('celebration', 'level-up:1', 'bot', 'T2', 'T2', 'x', 'quiet', 0, 'held', \
+             1, 1, 1)",
+        )
+        .execute(&mut *write)
+        .await
+        .expect("the item is held");
+        let rows = claim_held(&mut write, claim).await.expect("the claim");
+        assert_eq!(rows.len(), 1, "examined 1 held row, claimed it");
+        write.commit().await.expect("committed");
+        (scratch, db, rows[0].id)
+    }
+
+    #[tokio::test]
+    async fn a_settle_under_another_flushs_token_removes_nothing() {
+        let (_scratch, db, id) = queue_with_one_claimed_row("100").await;
+        let mut write = db.write().await.expect("a write");
+        let stranger = settle_claimed(&mut write, id, "999").await.expect("settle");
+        assert!(!stranger, "a token that is not the claim's settles nothing");
+        let owner = settle_claimed(&mut write, id, "100").await.expect("settle");
+        assert!(owner, "the claim's own token settles the row");
+    }
+
+    #[tokio::test]
+    async fn a_relatch_under_another_flushs_token_changes_nothing() {
+        let (_scratch, db, id) = queue_with_one_claimed_row("100").await;
+        let mut write = db.write().await.expect("a write");
+        let stranger = relatch(&mut write, id, "999", 1, "quiet")
+            .await
+            .expect("relatch");
+        assert!(!stranger, "a token that is not the claim's relatches nothing");
+        let owner = relatch(&mut write, id, "100", 1, "quiet")
+            .await
+            .expect("relatch");
+        assert!(owner, "the claim's own token relatches the row");
+    }
+}
