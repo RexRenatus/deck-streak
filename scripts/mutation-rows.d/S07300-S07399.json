@@ -1,0 +1,80 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S07304-LEGENDARY-DAY-AT-ONE-HUNDRED",
+        "progression",
+        "src/badges/conditions.rs",
+        "pub const LEGENDARY_DAY_SCORE: i64 = 100;",
+        "pub const LEGENDARY_DAY_SCORE: i64 = 101;",
+        "badges_conditions::the_study_badge_conditions_match_the_parity_golden",
+        "a legendary day needs a score of 100, the predecessor's threshold, and a day of exactly 100 earns it (SPEC-073 A6); cargo-mutants never mutates a constant"
+      ],
+      [
+        "S07305-A-PERFECT-WEEK-NEEDS-SEVEN-SCORES",
+        "progression",
+        "src/badges/conditions.rs",
+        "pub const PERFECT_WEEK_DAYS: usize = 7;",
+        "pub const PERFECT_WEEK_DAYS: usize = 6;",
+        "badges_conditions::the_study_badge_conditions_match_the_parity_golden",
+        "a perfect week needs 7 scores at the threshold, so six good days earn nothing (SPEC-073 A6); cargo-mutants never mutates a constant"
+      ],
+      [
+        "S07306-THE-BAND-KEY-RULE",
+        "progression",
+        "src/badges/award.rs",
+        "(configured && BANDS.contains(&band)).then_some(KeyKind::Band)",
+        "configured.then_some(KeyKind::Band)",
+        "badges_award::a_band_badge_key_names_a_configured_course_and_a_band",
+        "a band key names a configured course and a band from A1 to C2, so a configured course with an unknown band is refused before a write (SPEC-073 A4); cargo-mutants deletes no operand of a conjunction"
+      ],
+      [
+        "S07307-A-RECORD-IS-STRICTLY-GREATER",
+        "progression",
+        "src/records.rs",
+        "*value > previous.get(kind)",
+        "*value >= previous.get(kind)",
+        "records_detect::detect_records_matches_the_parity_golden",
+        "only a value above the stored best is a record, so equalling it detects nothing (SPEC-073 A12)"
+      ],
+      [
+        "S07308-MINUTES-ARE-WHOLE",
+        "progression",
+        "src/records.rs",
+        "(seconds / 60.0) as i64",
+        "(seconds / 60.0).round() as i64",
+        "records_detect::detect_records_matches_the_parity_golden",
+        "the most minutes are the whole minutes of the most seconds, truncated as the predecessor's int() does (SPEC-073 A12); cargo-mutants never inserts a rounding call"
+      ],
+      [
+        "S07311-MILESTONE-TIES-TO-REVIEWS",
+        "progression",
+        "src/milestone.rs",
+        "pick(pick(reviews, streak), mature)",
+        "pick(pick(streak, reviews), mature)",
+        "milestone_ladder::next_milestone_matches_the_parity_golden",
+        "a tie keeps the earlier ladder, so a fresh learner's next milestone is 100 reviews, not a 7-day streak (SPEC-073 A18); cargo-mutants never swaps arguments"
+      ],
+      [
+        "S07312-THE-TOP-REVIEW-RUNG",
+        "progression",
+        "src/milestone.rs",
+        "pct: 100.0,",
+        "pct: 99.0,",
+        "milestone_ladder::a_complete_ladder_contributes_nothing_and_all_complete_reports_the_top_review_rung",
+        "three complete ladders report the top review rung at 100% (SPEC-073 A18); cargo-mutants never mutates a float literal"
+      ]
+    ],
+    "CARGO_KILLED_SCRIPT_MUTATIONS": [
+      [
+        "S07303-ONE-ROW-PER-BADGE",
+        "migrations/007301_progression_badges_earned.sql",
+        "    PRIMARY KEY (badge_key, tier)",
+        "    CHECK (tier < 1000000)",
+        "progression",
+        "badges_award::awarding_a_badge_twice_writes_one_row",
+        "the primary key on the badge key and tier makes a second award of a tier write nothing, so a badge is awarded once (SPEC-073 A3)"
+      ]
+    ]
+  }
+}

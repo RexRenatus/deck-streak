@@ -1,0 +1,832 @@
+{
+  "adapter": "with_the_totals",
+  "cases": [
+    {
+      "class": "reviews",
+      "input": {
+        "lifetime_reviews": 0,
+        "mature_total": 0,
+        "streak_days": 0
+      },
+      "output": {
+        "current": 0,
+        "emoji": "\ud83d\udcda",
+        "label": "Lifetime reviews",
+        "pct": 0.0,
+        "remaining": 100,
+        "target": 100
+      }
+    },
+    {
+      "class": "reviews",
+      "input": {
+        "lifetime_reviews": 99,
+        "mature_total": 0,
+        "streak_days": 0
+      },
+      "output": {
+        "current": 99,
+        "emoji": "\ud83d\udcda",
+        "label": "Lifetime reviews",
+        "pct": 99.0,
+        "remaining": 1,
+        "target": 100
+      }
+    },
+    {
+      "class": "reviews",
+      "input": {
+        "lifetime_reviews": 100,
+        "mature_total": 0,
+        "streak_days": 0
+      },
+      "output": {
+        "current": 100,
+        "emoji": "\ud83d\udcda",
+        "label": "Lifetime reviews",
+        "pct": 20.0,
+        "remaining": 400,
+        "target": 500
+      }
+    },
+    {
+      "class": "reviews",
+      "input": {
+        "lifetime_reviews": 101,
+        "mature_total": 0,
+        "streak_days": 0
+      },
+      "output": {
+        "current": 101,
+        "emoji": "\ud83d\udcda",
+        "label": "Lifetime reviews",
+        "pct": 20.200000000000003,
+        "remaining": 399,
+        "target": 500
+      }
+    },
+    {
+      "class": "reviews",
+      "input": {
+        "lifetime_reviews": 499,
+        "mature_total": 0,
+        "streak_days": 0
+      },
+      "output": {
+        "current": 499,
+        "emoji": "\ud83d\udcda",
+        "label": "Lifetime reviews",
+        "pct": 99.8,
+        "remaining": 1,
+        "target": 500
+      }
+    },
+    {
+      "class": "reviews",
+      "input": {
+        "lifetime_reviews": 500,
+        "mature_total": 0,
+        "streak_days": 0
+      },
+      "output": {
+        "current": 500,
+        "emoji": "\ud83d\udcda",
+        "label": "Lifetime reviews",
+        "pct": 50.0,
+        "remaining": 500,
+        "target": 1000
+      }
+    },
+    {
+      "class": "reviews",
+      "input": {
+        "lifetime_reviews": 999,
+        "mature_total": 0,
+        "streak_days": 0
+      },
+      "output": {
+        "current": 999,
+        "emoji": "\ud83d\udcda",
+        "label": "Lifetime reviews",
+        "pct": 99.9,
+        "remaining": 1,
+        "target": 1000
+      }
+    },
+    {
+      "class": "reviews",
+      "input": {
+        "lifetime_reviews": 1000,
+        "mature_total": 0,
+        "streak_days": 0
+      },
+      "output": {
+        "current": 1000,
+        "emoji": "\ud83d\udcda",
+        "label": "Lifetime reviews",
+        "pct": 20.0,
+        "remaining": 4000,
+        "target": 5000
+      }
+    },
+    {
+      "class": "reviews",
+      "input": {
+        "lifetime_reviews": 4999,
+        "mature_total": 0,
+        "streak_days": 0
+      },
+      "output": {
+        "current": 4999,
+        "emoji": "\ud83d\udcda",
+        "label": "Lifetime reviews",
+        "pct": 99.98,
+        "remaining": 1,
+        "target": 5000
+      }
+    },
+    {
+      "class": "reviews",
+      "input": {
+        "lifetime_reviews": 5000,
+        "mature_total": 0,
+        "streak_days": 0
+      },
+      "output": {
+        "current": 5000,
+        "emoji": "\ud83d\udcda",
+        "label": "Lifetime reviews",
+        "pct": 50.0,
+        "remaining": 5000,
+        "target": 10000
+      }
+    },
+    {
+      "class": "reviews",
+      "input": {
+        "lifetime_reviews": 9999,
+        "mature_total": 0,
+        "streak_days": 0
+      },
+      "output": {
+        "current": 9999,
+        "emoji": "\ud83d\udcda",
+        "label": "Lifetime reviews",
+        "pct": 99.99,
+        "remaining": 1,
+        "target": 10000
+      }
+    },
+    {
+      "class": "reviews",
+      "input": {
+        "lifetime_reviews": 10000,
+        "mature_total": 0,
+        "streak_days": 0
+      },
+      "output": {
+        "current": 10000,
+        "emoji": "\ud83d\udcda",
+        "label": "Lifetime reviews",
+        "pct": 20.0,
+        "remaining": 40000,
+        "target": 50000
+      }
+    },
+    {
+      "class": "reviews",
+      "input": {
+        "lifetime_reviews": 49999,
+        "mature_total": 0,
+        "streak_days": 0
+      },
+      "output": {
+        "current": 49999,
+        "emoji": "\ud83d\udcda",
+        "label": "Lifetime reviews",
+        "pct": 99.998,
+        "remaining": 1,
+        "target": 50000
+      }
+    },
+    {
+      "class": "reviews",
+      "input": {
+        "lifetime_reviews": 50000,
+        "mature_total": 0,
+        "streak_days": 0
+      },
+      "output": {
+        "current": 0,
+        "emoji": "\ud83d\udd25",
+        "label": "Day streak",
+        "pct": 0.0,
+        "remaining": 7,
+        "target": 7
+      }
+    },
+    {
+      "class": "reviews",
+      "input": {
+        "lifetime_reviews": 60000,
+        "mature_total": 0,
+        "streak_days": 0
+      },
+      "output": {
+        "current": 0,
+        "emoji": "\ud83d\udd25",
+        "label": "Day streak",
+        "pct": 0.0,
+        "remaining": 7,
+        "target": 7
+      }
+    },
+    {
+      "class": "streak",
+      "input": {
+        "lifetime_reviews": 50000,
+        "mature_total": 5000,
+        "streak_days": 0
+      },
+      "output": {
+        "current": 0,
+        "emoji": "\ud83d\udd25",
+        "label": "Day streak",
+        "pct": 0.0,
+        "remaining": 7,
+        "target": 7
+      }
+    },
+    {
+      "class": "streak",
+      "input": {
+        "lifetime_reviews": 50000,
+        "mature_total": 5000,
+        "streak_days": 6
+      },
+      "output": {
+        "current": 6,
+        "emoji": "\ud83d\udd25",
+        "label": "Day streak",
+        "pct": 85.71428571428571,
+        "remaining": 1,
+        "target": 7
+      }
+    },
+    {
+      "class": "streak",
+      "input": {
+        "lifetime_reviews": 50000,
+        "mature_total": 5000,
+        "streak_days": 7
+      },
+      "output": {
+        "current": 7,
+        "emoji": "\ud83d\udd25",
+        "label": "Day streak",
+        "pct": 23.333333333333332,
+        "remaining": 23,
+        "target": 30
+      }
+    },
+    {
+      "class": "streak",
+      "input": {
+        "lifetime_reviews": 50000,
+        "mature_total": 5000,
+        "streak_days": 29
+      },
+      "output": {
+        "current": 29,
+        "emoji": "\ud83d\udd25",
+        "label": "Day streak",
+        "pct": 96.66666666666667,
+        "remaining": 1,
+        "target": 30
+      }
+    },
+    {
+      "class": "streak",
+      "input": {
+        "lifetime_reviews": 50000,
+        "mature_total": 5000,
+        "streak_days": 30
+      },
+      "output": {
+        "current": 30,
+        "emoji": "\ud83d\udd25",
+        "label": "Day streak",
+        "pct": 30.0,
+        "remaining": 70,
+        "target": 100
+      }
+    },
+    {
+      "class": "streak",
+      "input": {
+        "lifetime_reviews": 50000,
+        "mature_total": 5000,
+        "streak_days": 99
+      },
+      "output": {
+        "current": 99,
+        "emoji": "\ud83d\udd25",
+        "label": "Day streak",
+        "pct": 99.0,
+        "remaining": 1,
+        "target": 100
+      }
+    },
+    {
+      "class": "streak",
+      "input": {
+        "lifetime_reviews": 50000,
+        "mature_total": 5000,
+        "streak_days": 100
+      },
+      "output": {
+        "current": 100,
+        "emoji": "\ud83d\udd25",
+        "label": "Day streak",
+        "pct": 27.397260273972602,
+        "remaining": 265,
+        "target": 365
+      }
+    },
+    {
+      "class": "streak",
+      "input": {
+        "lifetime_reviews": 50000,
+        "mature_total": 5000,
+        "streak_days": 364
+      },
+      "output": {
+        "current": 364,
+        "emoji": "\ud83d\udd25",
+        "label": "Day streak",
+        "pct": 99.72602739726028,
+        "remaining": 1,
+        "target": 365
+      }
+    },
+    {
+      "class": "streak",
+      "input": {
+        "lifetime_reviews": 50000,
+        "mature_total": 5000,
+        "streak_days": 365
+      },
+      "output": {
+        "current": 365,
+        "emoji": "\ud83d\udd25",
+        "label": "Day streak",
+        "pct": 36.5,
+        "remaining": 635,
+        "target": 1000
+      }
+    },
+    {
+      "class": "streak",
+      "input": {
+        "lifetime_reviews": 50000,
+        "mature_total": 5000,
+        "streak_days": 999
+      },
+      "output": {
+        "current": 999,
+        "emoji": "\ud83d\udd25",
+        "label": "Day streak",
+        "pct": 99.9,
+        "remaining": 1,
+        "target": 1000
+      }
+    },
+    {
+      "class": "streak",
+      "input": {
+        "lifetime_reviews": 50000,
+        "mature_total": 5000,
+        "streak_days": 1000
+      },
+      "output": {
+        "current": 50000,
+        "emoji": "\ud83d\udcda",
+        "label": "Lifetime reviews",
+        "pct": 100.0,
+        "remaining": 0,
+        "target": 50000
+      }
+    },
+    {
+      "class": "streak",
+      "input": {
+        "lifetime_reviews": 50000,
+        "mature_total": 5000,
+        "streak_days": 2000
+      },
+      "output": {
+        "current": 50000,
+        "emoji": "\ud83d\udcda",
+        "label": "Lifetime reviews",
+        "pct": 100.0,
+        "remaining": 0,
+        "target": 50000
+      }
+    },
+    {
+      "class": "mature",
+      "input": {
+        "lifetime_reviews": 50000,
+        "mature_total": 0,
+        "streak_days": 1000
+      },
+      "output": {
+        "current": 0,
+        "emoji": "\ud83c\udf33",
+        "label": "Mature cards",
+        "pct": 0.0,
+        "remaining": 100,
+        "target": 100
+      }
+    },
+    {
+      "class": "mature",
+      "input": {
+        "lifetime_reviews": 50000,
+        "mature_total": 99,
+        "streak_days": 1000
+      },
+      "output": {
+        "current": 99,
+        "emoji": "\ud83c\udf33",
+        "label": "Mature cards",
+        "pct": 99.0,
+        "remaining": 1,
+        "target": 100
+      }
+    },
+    {
+      "class": "mature",
+      "input": {
+        "lifetime_reviews": 50000,
+        "mature_total": 100,
+        "streak_days": 1000
+      },
+      "output": {
+        "current": 100,
+        "emoji": "\ud83c\udf33",
+        "label": "Mature cards",
+        "pct": 20.0,
+        "remaining": 400,
+        "target": 500
+      }
+    },
+    {
+      "class": "mature",
+      "input": {
+        "lifetime_reviews": 50000,
+        "mature_total": 499,
+        "streak_days": 1000
+      },
+      "output": {
+        "current": 499,
+        "emoji": "\ud83c\udf33",
+        "label": "Mature cards",
+        "pct": 99.8,
+        "remaining": 1,
+        "target": 500
+      }
+    },
+    {
+      "class": "mature",
+      "input": {
+        "lifetime_reviews": 50000,
+        "mature_total": 500,
+        "streak_days": 1000
+      },
+      "output": {
+        "current": 500,
+        "emoji": "\ud83c\udf33",
+        "label": "Mature cards",
+        "pct": 50.0,
+        "remaining": 500,
+        "target": 1000
+      }
+    },
+    {
+      "class": "mature",
+      "input": {
+        "lifetime_reviews": 50000,
+        "mature_total": 999,
+        "streak_days": 1000
+      },
+      "output": {
+        "current": 999,
+        "emoji": "\ud83c\udf33",
+        "label": "Mature cards",
+        "pct": 99.9,
+        "remaining": 1,
+        "target": 1000
+      }
+    },
+    {
+      "class": "mature",
+      "input": {
+        "lifetime_reviews": 50000,
+        "mature_total": 1000,
+        "streak_days": 1000
+      },
+      "output": {
+        "current": 1000,
+        "emoji": "\ud83c\udf33",
+        "label": "Mature cards",
+        "pct": 20.0,
+        "remaining": 4000,
+        "target": 5000
+      }
+    },
+    {
+      "class": "mature",
+      "input": {
+        "lifetime_reviews": 50000,
+        "mature_total": 4999,
+        "streak_days": 1000
+      },
+      "output": {
+        "current": 4999,
+        "emoji": "\ud83c\udf33",
+        "label": "Mature cards",
+        "pct": 99.98,
+        "remaining": 1,
+        "target": 5000
+      }
+    },
+    {
+      "class": "mature",
+      "input": {
+        "lifetime_reviews": 50000,
+        "mature_total": 5000,
+        "streak_days": 1000
+      },
+      "output": {
+        "current": 50000,
+        "emoji": "\ud83d\udcda",
+        "label": "Lifetime reviews",
+        "pct": 100.0,
+        "remaining": 0,
+        "target": 50000
+      }
+    },
+    {
+      "class": "mature",
+      "input": {
+        "lifetime_reviews": 50000,
+        "mature_total": 6000,
+        "streak_days": 1000
+      },
+      "output": {
+        "current": 50000,
+        "emoji": "\ud83d\udcda",
+        "label": "Lifetime reviews",
+        "pct": 100.0,
+        "remaining": 0,
+        "target": 50000
+      }
+    },
+    {
+      "class": "all-complete",
+      "input": {
+        "lifetime_reviews": 50000,
+        "mature_total": 5000,
+        "streak_days": 1000
+      },
+      "output": {
+        "current": 50000,
+        "emoji": "\ud83d\udcda",
+        "label": "Lifetime reviews",
+        "pct": 100.0,
+        "remaining": 0,
+        "target": 50000
+      }
+    },
+    {
+      "class": "tie-reviews-mature",
+      "input": {
+        "lifetime_reviews": 50,
+        "mature_total": 50,
+        "streak_days": 0
+      },
+      "output": {
+        "current": 50,
+        "emoji": "\ud83d\udcda",
+        "label": "Lifetime reviews",
+        "pct": 50.0,
+        "remaining": 50,
+        "target": 100
+      }
+    },
+    {
+      "class": "tie-reviews-streak",
+      "input": {
+        "lifetime_reviews": 500,
+        "mature_total": 0,
+        "streak_days": 0
+      },
+      "output": {
+        "current": 500,
+        "emoji": "\ud83d\udcda",
+        "label": "Lifetime reviews",
+        "pct": 50.0,
+        "remaining": 500,
+        "target": 1000
+      }
+    },
+    {
+      "class": "tie-streak-mature",
+      "input": {
+        "lifetime_reviews": 50000,
+        "mature_total": 50,
+        "streak_days": 50
+      },
+      "output": {
+        "current": 50,
+        "emoji": "\ud83d\udd25",
+        "label": "Day streak",
+        "pct": 50.0,
+        "remaining": 50,
+        "target": 100
+      }
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "lifetime_reviews": 59352,
+        "mature_total": 2128,
+        "streak_days": 309
+      },
+      "output": {
+        "current": 309,
+        "emoji": "\ud83d\udd25",
+        "label": "Day streak",
+        "pct": 84.65753424657534,
+        "remaining": 56,
+        "target": 365
+      }
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "lifetime_reviews": 44171,
+        "mature_total": 2682,
+        "streak_days": 207
+      },
+      "output": {
+        "current": 44171,
+        "emoji": "\ud83d\udcda",
+        "label": "Lifetime reviews",
+        "pct": 88.342,
+        "remaining": 5829,
+        "target": 50000
+      }
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "lifetime_reviews": 37548,
+        "mature_total": 221,
+        "streak_days": 346
+      },
+      "output": {
+        "current": 346,
+        "emoji": "\ud83d\udd25",
+        "label": "Day streak",
+        "pct": 94.79452054794521,
+        "remaining": 19,
+        "target": 365
+      }
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "lifetime_reviews": 26969,
+        "mature_total": 614,
+        "streak_days": 833
+      },
+      "output": {
+        "current": 833,
+        "emoji": "\ud83d\udd25",
+        "label": "Day streak",
+        "pct": 83.3,
+        "remaining": 167,
+        "target": 1000
+      }
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "lifetime_reviews": 6766,
+        "mature_total": 2614,
+        "streak_days": 256
+      },
+      "output": {
+        "current": 256,
+        "emoji": "\ud83d\udd25",
+        "label": "Day streak",
+        "pct": 70.13698630136986,
+        "remaining": 109,
+        "target": 365
+      }
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "lifetime_reviews": 31090,
+        "mature_total": 3681,
+        "streak_days": 1189
+      },
+      "output": {
+        "current": 3681,
+        "emoji": "\ud83c\udf33",
+        "label": "Mature cards",
+        "pct": 73.61999999999999,
+        "remaining": 1319,
+        "target": 5000
+      }
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "lifetime_reviews": 26999,
+        "mature_total": 1636,
+        "streak_days": 427
+      },
+      "output": {
+        "current": 26999,
+        "emoji": "\ud83d\udcda",
+        "label": "Lifetime reviews",
+        "pct": 53.998000000000005,
+        "remaining": 23001,
+        "target": 50000
+      }
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "lifetime_reviews": 20768,
+        "mature_total": 2693,
+        "streak_days": 687
+      },
+      "output": {
+        "current": 687,
+        "emoji": "\ud83d\udd25",
+        "label": "Day streak",
+        "pct": 68.7,
+        "remaining": 313,
+        "target": 1000
+      }
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "lifetime_reviews": 28008,
+        "mature_total": 5141,
+        "streak_days": 189
+      },
+      "output": {
+        "current": 28008,
+        "emoji": "\ud83d\udcda",
+        "label": "Lifetime reviews",
+        "pct": 56.016,
+        "remaining": 21992,
+        "target": 50000
+      }
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "lifetime_reviews": 33937,
+        "mature_total": 3317,
+        "streak_days": 1007
+      },
+      "output": {
+        "current": 33937,
+        "emoji": "\ud83d\udcda",
+        "label": "Lifetime reviews",
+        "pct": 67.874,
+        "remaining": 16063,
+        "target": 50000
+      }
+    }
+  ],
+  "function": "gamification.rewards.next_milestone",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Calls it with the case's three totals and returns the milestone's label, emoji, current value, target, percentage and remainder; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_073.py",
+  "registry_sha256": "798450938bfbda152c320bc1a6255e977bd75fa65a0a9d1120f7c1331954793f",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}
