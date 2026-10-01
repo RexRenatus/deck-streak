@@ -1116,19 +1116,34 @@ class CredentialsComeFromTheSocket(unittest.TestCase):
                 what,
             )
 
-    def test_a_shipped_templates_instance_dropin_directory_is_its_own_and_no_other_is(self):
-        # systemd reads an instance's drop-ins from `<name>@<instance>.<type>.d/`, so a shipped
-        # template's is admitted and read with the template: a key planted in it is judged as the
-        # template's own. An instance of a template the tree does not ship is refused; two instances
-        # of a shipped one are both admitted and read into it, since the reader merges them and
-        # the instance tests below say which instance loads which (SPEC-062 R14; #291).
-        refused = "is not the drop-in directory of a unit shipped beside it, and is refused"
+    def test_a_shipped_templates_instance_dropin_directory_is_admitted_by_name_alone(self):
+        # systemd reads an instance's drop-ins from `<name>@<instance>.<type>.d/`. The unit guards
+        # read every such directory into the template, so a directory is admitted only for an
+        # instance NAMED on INSTANCE_DROPIN_ALLOWLIST, the one place that names them: an unnamed
+        # instance of a shipped template is refused, and so is any instance of a template the tree
+        # does not ship, named or not (SPEC-062 R14, amended; #291).
+        shipped = "is not on INSTANCE_DROPIN_ALLOWLIST, and is refused"
+        unshipped = "is not the drop-in directory of a unit shipped beside it, and is refused"
         with tempfile.TemporaryDirectory() as scratch:
             systemd = Path(scratch) / "deploy" / "systemd"
             systemd.mkdir(parents=True)
             (systemd / "planted@.service").write_text("[Service]\n", encoding="utf-8")
             (systemd / "planted@tty1.service.d").mkdir()
-            self.assertEqual(dropin_directory_refusals(scratch), [], "the shipped template's own")
+            self.assertEqual(
+                dropin_directory_refusals(scratch),
+                [
+                    f"deploy/systemd/planted@tty1.service.d: the instance 'tty1' of planted@.service {shipped}"
+                ],
+                "an instance the allowlist does not name",
+            )
+            named = {"planted@.service": ("tty1", "test"), "other-app@.service": ("tty1",)}
+            self.assertEqual(
+                dropin_directory_refusals(scratch, named), [], "the instance the list names"
+            )
+            (systemd / "planted@test.service.d").mkdir()
+            self.assertEqual(
+                dropin_directory_refusals(scratch, named), [], "a second instance, also named"
+            )
             (systemd / "planted@tty1.service.d" / "10-planted.conf").write_text(
                 "[Unit]\nRequires=missing.service\n", encoding="utf-8"
             )
@@ -1139,23 +1154,25 @@ class CredentialsComeFromTheSocket(unittest.TestCase):
                     "deploy/systemd/planted@tty1.service.d/10-planted.conf:2: [Unit] Requires="
                     "missing.service is not on this unit's list of keys, and is refused"
                 ],
-                "a key planted in the template's instance drop-in",
+                "a key planted in the named instance's drop-in",
             )
             (systemd / "other-app@tty1.service.d").mkdir()
-            (systemd / "other-app@tty1.service.d" / "override.conf").write_text(
-                "[Service]\nNice=5\n", encoding="utf-8"
-            )
             self.assertEqual(
-                dropin_directory_refusals(scratch),
-                [f"deploy/systemd/other-app@tty1.service.d: {refused}"],
-                "an instance of a template the tree does not ship",
+                dropin_directory_refusals(scratch, named),
+                [f"deploy/systemd/other-app@tty1.service.d: {unshipped}"],
+                "an instance of a template the tree does not ship, though the list names it",
             )
-            (systemd / "planted@test.service.d").mkdir()
-            self.assertEqual(
-                dropin_directory_refusals(scratch),
-                [f"deploy/systemd/other-app@tty1.service.d: {refused}"],
-                "a second instance of the shipped template is admitted",
-            )
+
+    def test_every_shipped_instance_dropin_directory_is_named_or_refused(self):
+        # The census the tree answers to: each instance directory under a shipped template is on
+        # the allowlist, and the list holds nothing the tree does not ship.
+        folders = examined(
+            "job instance drop-in directories", sorted(SYSTEMD.glob(f"{JOB_TEMPLATE}@*.service.d"))
+        )
+        named = INSTANCE_DROPIN_ALLOWLIST[f"{JOB_TEMPLATE}@.service"]
+        shipped = {f.name.removesuffix(".service.d").partition("@")[2] for f in folders}
+        self.assertEqual(shipped, set(named))
+        self.assertEqual(dropin_directory_refusals(REPO), [])
 
     def test_a_templates_own_dropin_directory_is_read_once(self):
         # `<name>@.<type>.d/` is the template's own directory; the instance glob must not match it
