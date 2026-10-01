@@ -104,6 +104,70 @@
         "pass",
         "the presence control of the planted-fault test swallows the refusal instead of failing by assertion (SPEC-295 A8)",
         "test_formal_config_presence.PresenceControls.test_every_call_of_the_reader_fails_by_assertion_when_it_refuses"
+      ],
+      [
+        "S29514-A-LINK-AT-THE-SETTINGS-PATH-IS-FOLLOWED",
+        "scripts/tests/test_formal_config.py",
+        "if CONFIG.is_symlink():",
+        "if False:",
+        "the loader never refuses a link at the settings path, so a link is read through to its target (SPEC-295 A8)",
+        "test_formal_config_presence.PresenceControls.test_a_refused_committed_file_fails_every_reader_by_assertion_and_errors_none"
+      ],
+      [
+        "S29515-AN-ABSENT-SETTINGS-FILE-IS-NOT-REFUSED",
+        "scripts/tests/test_formal_config.py",
+        "if not CONFIG.is_file():",
+        "if False:",
+        "the loader never refuses an absent settings file by assertion (SPEC-295 A8)",
+        "test_formal_config_presence.PresenceControls.test_a_refused_committed_file_fails_every_reader_by_assertion_and_errors_none"
+      ],
+      [
+        "S29516-A-RECURSION-ERROR-ESCAPES-THE-LOADER",
+        "scripts/tests/test_formal_config.py",
+        "except (ValueError, RecursionError) as error:",
+        "except ValueError as error:",
+        "a nesting past the recursion limit escapes the loader as an error, not a failure (SPEC-295 A8)",
+        "test_formal_config_presence.PresenceControls.test_a_refused_committed_file_fails_every_reader_by_assertion_and_errors_none"
+      ],
+      [
+        "S29517-A-DIGIT-LIMIT-ESCAPES-THE-LOADER",
+        "scripts/tests/test_formal_config.py",
+        "except (ValueError, RecursionError) as error:",
+        "except (json.JSONDecodeError, RecursionError) as error:",
+        "an integer past the digit limit and bytes that are not UTF-8 escape the loader as errors (SPEC-295 A8)",
+        "test_formal_config_presence.PresenceControls.test_a_refused_committed_file_fails_every_reader_by_assertion_and_errors_none"
+      ],
+      [
+        "S29518-THE-IDENTITY-IS-READ-AS-ITS-VALUE",
+        "scripts/tests/test_formal_config.py",
+        "if get(doc, (\"toolchain\", \"identity\"))[1]:",
+        "if get(doc, (\"toolchain\", \"identity\"))[0]:",
+        "the identity is named by its value, not by the field being present (SPEC-295 A7)",
+        "test_formal_config.FormalConfig.test_the_tree_names_one_toolchain_source_the_identity"
+      ],
+      [
+        "S29519-THE-IDENTITY-IS-READ-AS-THE-TOOLCHAIN-OBJECT",
+        "scripts/tests/test_formal_config.py",
+        "if get(doc, (\"toolchain\", \"identity\"))[1]:",
+        "if get(doc, (\"toolchain\",))[1]:",
+        "the identity is named by the toolchain object being present (SPEC-295 A7)",
+        "test_formal_config.FormalConfig.test_the_tree_names_one_toolchain_source_the_identity"
+      ],
+      [
+        "S29520-EVERY-PIN-SHAPE-NAMES-THE-PIN",
+        "scripts/tests/test_formal_config.py",
+        "] * (shape != \"absent\")",
+        "] * True",
+        "the expectation names the pin file for every shape, an absent one too (SPEC-295 A7)",
+        "test_formal_config.FormalConfig.test_the_tree_names_one_toolchain_source_the_identity"
+      ],
+      [
+        "S29521-NON-UTF8-BYTES-ARE-REPAIRED-AND-READ",
+        "scripts/tests/test_formal_config.py",
+        "return json.loads(CONFIG.read_text(encoding=\"utf-8\"))",
+        "return json.loads(CONFIG.read_bytes().decode('utf-8', 'replace'))",
+        "bytes that are not UTF-8 are repaired and read instead of refused (SPEC-295 A8)",
+        "test_formal_config.FormalConfig.test_the_loader_refuses_bytes_that_are_not_utf8_wherever_they_sit"
       ]
     ]
   }
