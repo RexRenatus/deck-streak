@@ -93,7 +93,7 @@ fn register_floor() {
 /// its default, so any other default means a capture is held. A capture held on another thread is
 /// no obstacle: this thread's default is still the floor.
 fn refuse_nested_capture() {
-    let on_floor = tracing::dispatcher::get_default(|current| current.is::<Floor>());
+    let on_floor = tracing::dispatcher::get_default(tracing::Dispatch::is::<Floor>);
     assert!(
         on_floor,
         "a capture nested inside another capture on one thread is refused"
