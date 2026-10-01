@@ -368,3 +368,45 @@ A12: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k th
 | `docs/decisions/ADR-292-a-release-tags-runs-never-replace-a-waiting-run.md` | repo | changed: Decision Outcome, Consequences and considered options hold for R12 |
 | `docs/red-first/SPEC-190.md` | repo | changed: A10, A11 and A12 |
 | `changelog.d/ci-release-queue-377.md` | repo | changed: the rule of R12 |
+
+## 14. Amendment of 2026-10-01 (round 9): the census's population named (ADR-292, #377)
+
+This amendment is insert-only. It corrects the sentences below so they claim only the population the
+census reads; the rest is #510.
+
+W1. R12 part 1, the paragraph that starts "The tests read a workflow file through one loader alone".
+
+Before: "The tests read a workflow file through one loader alone, `workflow_file_text` in
+`test_ci_workflows.py`: its bytes, decoded as strict UTF-8 and never as `utf-8-sig`, so a byte-order
+mark reaches the reader and is refused by its name. A census computed when the tests run proves it,
+default-deny: in every module that imports the loader's module at any depth, a re-export and a module
+the tests add included, and in `_support.py`, every call that can read a file, ..."
+
+After: "In every module that imports the loader's module at any depth, a re-export and a module the
+tests add included, and in `_support.py`, the tests read a workflow file through one loader alone,
+`workflow_file_text` in `test_ci_workflows.py`: its bytes, decoded as strict UTF-8 and never as
+`utf-8-sig`, so a byte-order mark reaches the reader and is refused by its name. A census computed when
+the tests run proves it, default-deny: in each of those modules, every call that can read a file, ..."
+The rest of the paragraph is unchanged, through "and any other is refused (A12)."
+
+W1b. Appended after "(A12).":
+
+After: "The census reads no other module's reads, and it does not follow a value that a module stores in
+another module or in the environment; A12 holds the population named here and nothing beyond it."
+
+W2. A12, the criterion's first clause.
+
+Before: "the tests read a workflow file only through the loader (R12 part 1), by a census computed when
+the tests run over the modules that import the loader's module at any depth and `_support.py`, never a
+list of modules: ..."
+
+After: "in the modules that import the loader's module at any depth and in `_support.py`, the tests read
+a workflow file only through the loader (R12 part 1), by a census computed when the tests run over
+those modules, never a list of modules: ..." The rest of the criterion is unchanged.
+
+W3. The manifest row `scripts/tests/test_ci_workflows.py`, its last clause.
+
+Before: "; a workflow file is read only through the loader, proved by the census and its killer (A12)"
+
+After: "; in the loader's population a workflow file is read only through the loader, proved by the
+census and its killer (A12)"
