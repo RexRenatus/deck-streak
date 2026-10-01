@@ -41,7 +41,8 @@
     "modules": [
       "test_mutation_rows",
       "test_mutation_verdict",
-      "test_mutation_equivalent"
+      "test_mutation_equivalent",
+      "test_bin_kind_census"
     ]
   },
   "scripts/public-scrub.py": {
