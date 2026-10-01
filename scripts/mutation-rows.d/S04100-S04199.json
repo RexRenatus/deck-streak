@@ -513,6 +513,96 @@
         "            && true",
         "request_allow_list::the_audit_reads_code_and_only_code",
         "a named transport site is accepted only as an expect with a reason, so a site that stops needing its suppression is itself a warning (SPEC-041 A18); the audit is test code, which cargo-mutants never mutates, and the mutant accepts an allow at a named site"
+      ],
+      [
+        "S04160-THE-HELD-FLUSH-FIRES-AFTER-THE-WINDOW-HOUR",
+        "coordination",
+        "src/jobs.rs",
+        "        hour: 7,",
+        "        hour: 6,",
+        "held_flush_calendar::every_flush_step_of_the_job_table_fires_outside_the_quiet_window",
+        "the held flush's fire hour is read against the window the router reads, so a slot before the window's end delivers nothing (SPEC-041 amendment, #291); a field of a const is not a function cargo-mutants mutates"
+      ],
+      [
+        "S04161-THE-HELD-FLUSH-FIRES-AFTER-THE-WINDOW-MINUTE",
+        "coordination",
+        "src/jobs.rs",
+        "        minute: 36,",
+        "        minute: 6,",
+        "held_flush_calendar::every_flush_step_of_the_job_table_fires_outside_the_quiet_window",
+        "the held flush's fire minute is read against the window's end, so a slot inside the window is refused by the calendar test (SPEC-041 amendment, #291); a field of a const is not a function cargo-mutants mutates"
+      ],
+      [
+        "S04162-AN-UNLAPSED-LEASE-MAKES-THE-FLUSH-BUSY",
+        "notifications",
+        "src/router.rs",
+        "lapses > now.epoch_millis()",
+        "lapses < now.epoch_millis()",
+        "flush_lease::a_flush_finds_an_unlapsed_lease_and_sends_nothing",
+        "a flush that finds a lease not yet lapsed answers Busy and sends nothing, so two flushers never send one item twice (SPEC-041 amendment, #291); the mutant takes the lease from under a live flush"
+      ],
+      [
+        "S04163-A-LEASE-LAPSING-THIS-INSTANT-IS-TAKEN-OVER",
+        "notifications",
+        "src/router.rs",
+        "lapses > now.epoch_millis()",
+        "lapses >= now.epoch_millis()",
+        "flush_lease::a_lease_that_lapsed_this_instant_is_taken_over",
+        "a lease whose lapse instant is now has lapsed, so a crashed flush never blocks the queue past its lease (SPEC-041 amendment, #291); the mutant holds it one instant longer"
+      ],
+      [
+        "S04164-THE-FLUSH-LEASE-HOLDS-TEN-MINUTES",
+        "notifications",
+        "src/router.rs",
+        "const FLUSH_LEASE_MS: i64 = 10 * MINUTE_MS;",
+        "const FLUSH_LEASE_MS: i64 = 0 * MINUTE_MS;",
+        "flush_lease::the_lease_holds_for_ten_minutes_and_is_released_when_the_flush_ends",
+        "the lease lapses ten minutes after it was taken, which covers a flush's sends; cargo-mutants never mutates a constant"
+      ],
+      [
+        "S04165-A-FLUSH-RELEASES-ITS-LEASE-WHEN-IT-ENDS",
+        "notifications",
+        "src/router.rs",
+        "        release.commit().await?;",
+        "        drop(release);",
+        "flush_lease::the_lease_holds_for_ten_minutes_and_is_released_when_the_flush_ends",
+        "the release is committed, so the next flush is not Busy for the rest of the lease (SPEC-041 amendment, #291); the mutant rolls the delete back"
+      ],
+      [
+        "S04166-A-BUSY-FLUSH-ANSWERS-BUSY",
+        "notifications",
+        "src/router.rs",
+        "            return Ok(Flushed::Busy);",
+        "            return Ok(Flushed::QuietHours);",
+        "flush_lease::a_flush_finds_an_unlapsed_lease_and_sends_nothing",
+        "a flush that finds the lease taken says so, never that the window is closed (SPEC-041 amendment, #291)"
+      ],
+      [
+        "S04167-A-TAKEOVER-REPLACES-THE-LAPSED-LEASE",
+        "notifications",
+        "src/router.rs",
+        "DO UPDATE SET value = excluded.value\",",
+        "DO NOTHING\",",
+        "flush_lease::a_lease_that_lapsed_this_instant_is_taken_over",
+        "a lapsed lease row is overwritten by the taker, so its release finds its own token (SPEC-041 amendment, #291); the mutant leaves the old row, and the release deletes nothing"
+      ],
+      [
+        "S04168-AN-OPEN-BREAKER-IS-NOT-DELIVERED",
+        "coordination",
+        "src/held_flush.rs",
+        "Ok(Flushed::BreakerOpen) => Ok(Done::NotDelivered),",
+        "Ok(Flushed::BreakerOpen) => Ok(Done::Done),",
+        "held_flush_answers::an_open_breaker_is_a_send_attempted_and_nothing_delivered",
+        "a flush the breaker refused is a send attempted with nothing delivered, so the job's ledger shows it (SPEC-041 amendment, #291)"
+      ],
+      [
+        "S04169-A-ROUTER-WITH-NO-BOT-IS-A-NAMED-REFUSAL",
+        "coordination",
+        "src/held_flush.rs",
+        "Ok(Flushed::NoNotifier) => Err(Reason::new(\"no_notifier\")),",
+        "Ok(Flushed::NoNotifier) => Ok(Done::Done),",
+        "held_flush_answers::a_router_with_no_bot_is_a_named_refusal",
+        "a held-flush job with no bot to send through fails by name instead of reporting done (SPEC-041 amendment, #291)"
       ]
     ],
     "CARGO_KILLED_SCRIPT_MUTATIONS": [
