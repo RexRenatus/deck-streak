@@ -35,3 +35,6 @@ pub const SILENCE_WALK_CAP_DAYS: i64 = 120;
 pub const STRENGTH_PERSIST_DAYS: i64 = 400;
 /// Days a standby notice waits after the last.
 pub const STANDBY_NOTICE_GAP_DAYS: i64 = 7;
+/// Study days the streak calendar serves, ending at the study day served: five weeks (SPEC-076
+/// section 27; ADR-302 D2).
+pub const CALENDAR_DAYS: usize = 35;
