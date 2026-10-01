@@ -95,3 +95,12 @@ The killer then gained a precondition check and a census of every spelling. Over
 ```text
 A17, A18: over the earlier killer the escapes are green and the floor-after variants survive; over the new killer the escapes are red and the variants fail with "registered before the floor was the global default"
 ```
+
+A fourth round widened the census and added two refusals. Over the earlier killer, planted escapes of each kind stayed green: a plain `mod` or a path attribute that rustc resolves elsewhere, a path named by a Cargo manifest, a doctest in a tilde, four-backtick, indented, blockquote or attribute form, a callsite registered by hand, a rebuild of the interest cache from a reload handle, and an install through `with_current_subscriber`. Over the widened killer at 4a78fad every one is red, and the controls stay green. The helper now refuses a capture nested inside another on one thread, and a capture made after the production global default. Over the helper without the nested refusal, the new test fails with the refusal's name expected and nothing found; at 1d3809c it passes, and a capture held on another thread is still admitted.
+
+The record's fence form holds one red and one green line per criterion, and these criteria already carry theirs above, so this round's red is stated in a text fence.
+
+```text
+A18: red over the earlier killer: every planted escape green; green at 4a78fad: every planted escape red, controls green, capture population 363 file(s) read; 0 raw capture(s), 13 routed, 1 global default(s)
+A17: red over the helper without the refusal: the nested capture was not refused (left "", right the refusal's name); green at 1d3809c: 4 tests run, 0 failed
+```

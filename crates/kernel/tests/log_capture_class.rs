@@ -11,16 +11,16 @@
 //! reaches a line first, or whose first registration of it straddles a capture's registration,
 //! caches it as never enabled, and a capture made on another thread then never sees it.
 //!
-//! Two tests, each derived rather than listed. One runs each scenario in a child process of this
-//! binary, whose dispatcher registry is empty at its start, so the loss does not depend on the
-//! other tests' timing: another thread reaches the line before the capture, and another thread's
+//! Two tests carry the class, and two more pin the helper's refusals. One runs each scenario in a
+//! child process of this binary, whose dispatcher registry is empty at its start, so the loss does
+//! not depend on the other tests' timing: another thread reaches the line before the capture, and another thread's
 //! first registration of the line is in flight while the capture is made. Each child also checks
 //! that the floor was the global default before its capture registered: a capture that registers
 //! first leaves a window in which another thread's registration asks no default, answers `never`
 //! and stores it after the capture's answer, an order no scenario here needs to reach. The other
 //! walks `crates/`, `tools/` and every file they bring in as code, doctests included, and counts
-//! every name that installs a subscriber or registers a dispatcher or a callsite, in every
-//! spelling.
+//! every name in its fixed lists, taken from the pinned crates' public items, that installs a
+//! subscriber or registers a dispatcher or a callsite.
 
 // An integration test is test code: its helpers panic on a failed read.
 #![allow(clippy::expect_used)]

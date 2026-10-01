@@ -264,13 +264,13 @@ Made under issue #461, insert-only under ruling (i) of SPEC-038 section 8: every
 kept in order, so the amendment is these two new last sections and nothing above them is edited.
 Its criteria, A17 and A18, are defined in the section below.
 
-- **The class.** A test that captures log lines receives every line its thread emits while it holds the capture, whichever thread first reached that line's callsite, provided two preconditions hold.
+- **The class.** In a test binary, a line a test's thread emits while it holds a capture, outside a dispatcher's own call, reaches that capture, whichever thread first reached the callsite, provided two preconditions hold.
   The floor is the global default before any dispatcher is created in the test binary, and no interest answer computed before the floor is stored after a capture registers.
-  Every install of a subscriber or dispatcher, and every creation or registration of a dispatcher or callsite, by a test goes through the helper, in any spelling.
-  The one exception is the production global default, and the census reads every file the test binaries compile.
+  The census refuses outside the helper every name in its fixed lists that installs a subscriber or registers a dispatcher or callsite, and the helper refuses a capture nested inside another on one thread.
+  The lists are fixed, taken from the pinned crates' public items; the production global default is the one name the census counts and does not refuse.
 - **Carved out, by kind.** A line emitted inside a dispatcher's own call reaches no subscriber, because `tracing` drops it by design.
-  A doctest written as a `#[doc = "..."]` string, and an install hidden by a proc-macro from an external crate beyond the named ones, are outside the census.
-  A second global default is refused by the census in every test file, so the helper's assertion never has to meet one.
+  An install hidden by a proc-macro from an external crate beyond the named ones, a fence rustdoc does not run, and a name inside a string are outside the census.
+  The census counts the production global default and cannot refuse it, so the helper refuses a capture made after it, and a child-process test pins that refusal.
 - **The defect.** Tests, `init_data_never_reaches_the_log` among them, capture through a thread-local default and register no global one.
   The pinned `tracing-core` computes a new callsite's interest from every registered dispatcher only while two or more are registered.
   With at most one, `Dispatchers::rebuilder` returns `JustOne` and `rebuild_callsite_interest` asks `dispatcher::get_default`, the reaching thread's own default.
@@ -281,14 +281,17 @@ Its criteria, A17 and A18, are defined in the section below.
   The floor answers every callsite "sometimes", enables nothing and hints `OFF`, so it costs nothing while it is alone.
   The floor is the default of every thread that holds no capture, so an answer such a thread computes after the floor is installed is "sometimes", never "never".
   An answer computed before the floor is installed can be "never", and can be stored after a capture registers.
-  So nothing registers a dispatcher or a callsite before the floor: the level filter stays `OFF`, so no macro registers one, until a dispatcher registers.
+  So the census refuses, outside the helper, each listed name that creates or registers a dispatcher or callsite or rebuilds the interest cache: a rebuild before the floor raises the level filter above `OFF`.
   The census refuses any test that creates a dispatcher or registers a callsite outside the helper.
   What the helper closes is the path where `Dispatchers::rebuilder` returns `JustOne` and `rebuild_callsite_interest` asks the reaching thread's default: with the floor installed, that default answers "sometimes".
   A per-test retry, a single-thread pin and a sleep were rejected: each hides the loss, none removes it.
-- **The population, derived.** The census reads every `.rs` file under `crates/` and `tools/`, skipping no directory, and every file they bring in by a path attribute, `include!` or `include_str!`.
-  It reads doctests in the same way and counts tokens, with comments, strings and character literals blanked.
-  The install tokens are `set_default`, `with_default`, `set_global_default`, `init`, `try_init` and `with_subscriber`.
-  The registration tokens are `Dispatch`, `callsite`, `DefaultCallsite` and `rebuild_interest_cache`, and the hidden tokens are `paste`, `pastey`, `concat_idents`, `traced_test` and `test_log`.
+- **The population, walked.** The census reads every `.rs` file under `crates/` and `tools/`, skipping no directory, and every file they bring in by `mod`, a path attribute, `include!` or `include_str!`, resolved as rustc resolves it.
+  It also follows the paths the Cargo manifests and configurations name, and refuses one that lies outside `crates/` and `tools/`.
+  It reads each doctest as rustdoc finds it, in doc comments, `#[doc]` strings and files a doc attribute includes, and counts tokens with comments, strings and character literals blanked.
+  Both token lists are fixed, taken from the pinned crates' public items.
+  The install tokens are `set_default`, `with_default`, `set_global_default`, `init`, `try_init`, `with_subscriber`, `with_current_subscriber`, `WithSubscriber` and `WithDispatch`.
+  The registration tokens are `Dispatch`, `WeakDispatch`, `callsite`, `callsite2`, `DefaultCallsite`, `MacroCallsite`, `__macro_support`, `rebuild_interest_cache`, `rebuild_interest`, `set_interest`, `register_callsite`, `identify_callsite`, `Registrar`, `reload`, `with_filter_reloading`, `reload_handle` and `LogTracer`.
+  The hidden tokens, which build an identifier or install for a test, are `paste`, `pastey`, `concat_idents`, `traced_test` and `test_log`.
   Result: 13 capturing calls routed through the helper, none raw, and 1 production global default (`crates/kernel/src/logging.rs`), which this amendment measures and does not change.
   The daemon's `wiring` tests had already held a second dispatcher for their own capture; they now use the helper like the rest.
 - **Files this amendment touches.** `tools/log-capture/capture.rs`,
@@ -305,7 +308,7 @@ Its criteria, A17 and A18, are defined in the section below.
 | id | criterion | decided by |
 |---|---|---|
 | A17 | a capture made with either entry of the helper keeps a line another thread reached first, even when that thread's callsite registration straddled the capture's, and registers only after the floor is the global default, in a child whose dispatcher registry starts empty | `log_capture_class` test |
-| A18 | every install, creation or registration token the census names, in any file the test binaries compile, goes through the helper: 13 routed, none raw, and the one production global default is the only other | `log_capture_class` test |
+| A18 | every install, creation or registration token the census names, in any file the census reads, goes through the helper: 13 routed, none raw, and the one production global default is the only other | `log_capture_class` test |
 
 ```acceptance
 A17: cargo test -p deck-streak-kernel --test log_capture_class -- --exact a_capture_keeps_a_line_another_thread_reached_first
@@ -315,3 +318,5 @@ A18: cargo test -p deck-streak-kernel --test log_capture_class -- --exact every_
 A17 runs each entry of the helper in a child process of the test binary, one test thread, so the
 loss does not depend on what the binary's other tests registered. A18 prints the population it
 counted and asserts it.
+Two further tests of that file pin the helper's refusals: a capture nested inside another on one thread, and a capture
+made after the production global default.
