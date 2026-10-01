@@ -485,6 +485,64 @@ async fn a_flush_leaves_what_it_did_not_reach_held() {
     assert_eq!(claim, None);
 }
 
+/// The text of a second held item, held after the first.
+const SECOND: &str = "synthetic second item";
+
+/// Holds a second item on `db`'s queue, like the first and after it.
+async fn hold_second(db: &Db, t0: i64) {
+    let mut write = db.write().await.expect("a write");
+    sqlx::query(
+        "INSERT INTO notification_queue (kind, dedupe_key, surface, tier_requested, tier_pending, \
+         text, hold, tries, state, deferred_at, study_day, created_at) \
+         VALUES ('celebration', 'level-up:2', 'bot', 'T2', 'T2', ?, 'quiet', 0, 'held', ?, ?, ?)",
+    )
+    .bind(SECOND)
+    .bind(t0 - 60 * MINUTE_MS)
+    .bind(DAY)
+    .bind(t0 - 60 * MINUTE_MS)
+    .execute(&mut *write)
+    .await
+    .expect("the second item is held");
+    write.commit().await.expect("committed");
+}
+
+#[tokio::test]
+async fn a_flush_ended_by_a_failed_send_gives_back_the_row_it_never_reached() {
+    let t0 = noon();
+    let (_scratch, db) = held_queue(t0, 0).await;
+    hold_second(&db, t0).await;
+    let clock = Arc::new(ManualClock::new(UtcMillis::from_epoch_millis(t0)));
+    // The first send fails, which ends the flush before it reaches the second row it claimed.
+    let failing = router(&db, &clock, Arc::new(Down));
+    let _answer = failing.flush().await.expect("the failing flush");
+    let second: (String, Option<String>) = sqlx::query_as(
+        "SELECT state, claim FROM notification_queue WHERE dedupe_key = 'level-up:2'",
+    )
+    .fetch_one(db.reader())
+    .await
+    .expect("the second row is read");
+    assert_eq!(
+        second,
+        ("held".to_owned(), None),
+        "the row the flush never reached is held again, its claim cleared"
+    );
+    // A next flush inside the first one's claim takes the row back and sends it.
+    clock.set(UtcMillis::from_epoch_millis(t0 + MINUTE_MS));
+    let reached = Arc::new(Mutex::new(Vec::new()));
+    let next = router(&db, &clock, Arc::new(Quick(Arc::clone(&reached))));
+    let _answer = next.flush().await.expect("the next flush");
+    let sent = reached
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner)
+        .iter()
+        .filter(|text| text.as_str() == SECOND)
+        .count();
+    assert_eq!(
+        sent, 1,
+        "the next flush sent the row the failed flush gave back"
+    );
+}
+
 /// The names of the indexes and triggers a table has, from the schema.
 async fn guards(db: &Db, table: &str) -> Vec<String> {
     sqlx::query_scalar::<_, String>(
