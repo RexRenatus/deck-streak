@@ -999,14 +999,15 @@ The block-comment arm of the token reader is bounded by the text's length. A com
 drops every character to the end of the text, which a new test pins at every short tail, so a
 bound that stops early is seen.
 
-The rows `S03996` to `S03999` pin the lines this amendment changes.
+The rows `S03997` to `S03999` pin lines this amendment changes, and `S03996` pins the
+block-comment bound that A53 tests.
 
 ## 22. Acceptance criteria of the 2026-10-01 amendment
 
 | id | criterion | decided by |
 |---|---|---|
 | A52 | every member of the five families of section 21 (declared paths in six spellings, dotfiles, editions stated, absent and inherited, macro invocations under every delimiter) is read as cargo and the compiler read it, or is refused by name, and the figure examined equals the one the axis tables derive | `test_bin_kind_census.py` |
-| A53 | a block comment left open drops every character to the end of the text, at every tail length | `test_bin_kind_census.py` |
+| A53 | a block comment left open drops every character to the end of the text, at every tail of up to five characters, and at every length by the scan's bound | `test_bin_kind_census.py` |
 
 ```acceptance
 A52: python3 -m unittest discover -s scripts/tests -p test_bin_kind_census.py -k test_every_layout_agrees_with_cargo_and_the_compiler_or_is_refused_by_name
