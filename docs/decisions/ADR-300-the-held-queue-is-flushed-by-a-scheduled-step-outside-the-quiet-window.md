@@ -149,7 +149,7 @@ table and the deploy templates.
 
 When a flush ended it gave every row still claimed under its token back to `held`, on success and on
 error alike. So when its work answered an error after a push had reached the owner (the settle,
-the in-app record, the decision row or the commit failed), the row went back to `held` and the
+the decision row or the commit failed), the row went back to `held` and the
 next flush pushed it again. The full render, the recap line and the held reactions each had that
 shape. The model shows it: with a step for a flush whose work fails, a push pending or not, the main
 configuration violates `NoDoubleDelivery` along `Take`, `Push`, `Fail`, `Take`, `Push`.
@@ -159,9 +159,9 @@ reaction made, a full render on the bot, and every row a delivered recap line ro
 flush ends, its release transaction first names each of those rows still `sending` under the flush's
 token, `abandoned` with its claim kept, which the next recap reads as "may have been sent"
 (`ledger.rs::abandon_pushed`), and only then gives every other row it still claims back to `held`
-(`ledger.rs::release_claims`). So a row whose push was attempted is never given back by any path: it
-reached the owner once, and if its settle failed it is named. A row the flush never pushed goes back
-to `held` and a later flush delivers it.
+(`ledger.rs::release_claims`). So a row whose push answered delivered is never given back by any
+path: it reached the owner once, and if its settle failed it is named. A row the flush never pushed
+goes back to `held` and a later flush delivers it.
 
 - A push the transport answered as failed is not in the set: it reached nobody, and it keeps the
   retry rule it had (SPEC-041 R8).
