@@ -537,3 +537,18 @@ A21: green at 930ef15
 A22: red at bf37062b: the held item reached the owner 2 times
 A22: green at 7e4aae48
 ```
+
+Round 3 of the review found that a flush whose work after a delivered push fails (the settle, the
+decision record or its commit) gave the row it pushed back to `held`, and the next flush pushed it
+again, for a full render, a recap line and a held reaction alike. The model was amended first
+(a3e68ddc, ffd3bf55). The tests came next, alone (f1704727), each against the round-2 code: three
+controls with no failure passed, and the four cases failed by assertion (`test result: FAILED. 3
+passed; 4 failed`) at `flush_fails_after_push.rs:220`, `:232`, `:244` and `:256`, the held item,
+the rolled item, the held reaction and the pushed item each reaching the owner 2 times. The fix,
+the flush's pushed set, named "may have been sent" and never given back (3cd85d4a), followed, after
+which the seven tests pass (`test result: ok. 7 passed; 0 failed`).
+
+```red-first
+A23: red at f1704727: the held item reached the owner 2 times
+A23: green at 3cd85d4a
+```
