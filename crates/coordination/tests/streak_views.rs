@@ -264,8 +264,9 @@ async fn a_studied_day_puts_nothing_at_stake_on_either_track() {
     assert_eq!(cases, 3 * 2 * 2 * 4);
 }
 
-/// A59 over the coordination read: the view carries each track's 35-day calendar, built from the
-/// settled study days, with a marker on the day the run broke.
+/// A59 over the coordination read: the view carries each track's calendar over the predecessor's
+/// window (Monday 2024-04-01 through Friday 2024-10-04, 187 days), built from the settled study
+/// days, with a marker on the day the run broke.
 #[tokio::test]
 async fn the_view_carries_each_tracks_calendar_from_its_settled_days() {
     let scratch = TempDir::new().expect("a scratch directory");
@@ -301,7 +302,8 @@ async fn the_view_carries_each_tracks_calendar_from_its_settled_days() {
         .await
         .expect("the view");
     for calendar in [&view.language_calendar, &view.law_calendar] {
-        assert_eq!(calendar.len(), 35);
+        assert_eq!(calendar.len(), 187);
+        assert_eq!(calendar[0].day.epoch_day(), TODAY - 186);
         let studied: Vec<i64> = calendar
             .iter()
             .filter(|day| day.studied)

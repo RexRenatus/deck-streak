@@ -1,12 +1,13 @@
-//! The streak calendar (SPEC-076 section 27; ADR-302): the window of days ending at the study day
-//! served, each with whether it was a study day and the freeze, skip and break markers that sit on
-//! it. Derived on read from the study days and the declared skip days; nothing is stored.
+//! The streak calendar (SPEC-076 section 27; ADR-302): the predecessor's window of whole weeks
+//! ending at the study day served, each day with whether it was a study day and the freeze, skip
+//! and break markers that sit on it. Derived on read from the study days and the declared skip
+//! days; nothing is stored.
 
 use std::collections::BTreeSet;
 
 use deck_streak_kernel::StudyDay;
 
-use crate::constants::CALENDAR_DAYS;
+use crate::constants::CALENDAR_LOOKBACK_DAYS;
 use crate::replay;
 
 /// A marker that sits on a day.
@@ -43,9 +44,16 @@ pub struct CalendarDay {
     pub markers: Vec<Marker>,
 }
 
+/// The window's first day: the Monday on or before the day [`CALENDAR_LOOKBACK_DAYS`] before
+/// `served`, as the predecessor's `charts._heatmap` starts its grid (ADR-302 D2). Epoch day 0 was a
+/// Thursday, so `(day + 3) mod 7` counts days since Monday.
+fn first_day(served: StudyDay) -> i64 {
+    let reach = served.epoch_day() - CALENDAR_LOOKBACK_DAYS;
+    reach - (reach + 3).rem_euclid(7)
+}
+
 fn window(days: &BTreeSet<StudyDay>, served: StudyDay) -> Vec<CalendarDay> {
-    let span = i64::try_from(CALENDAR_DAYS).unwrap_or(i64::MAX);
-    (served.epoch_day() - span + 1..=served.epoch_day())
+    (first_day(served)..=served.epoch_day())
         .map(|number| {
             let day = StudyDay::from_epoch_day(number);
             CalendarDay {

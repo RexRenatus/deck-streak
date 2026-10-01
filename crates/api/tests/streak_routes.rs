@@ -596,8 +596,9 @@ async fn every_served_value_is_read_where_each_pair_of_served_values_differs() {
     db.close().await;
 }
 
-/// The route serves each track's 35-day calendar, drawn from the settled study days, ending at the
-/// served day (SPEC-076 section 27).
+/// The route serves each track's calendar, drawn from the settled study days, over the predecessor's
+/// window of whole weeks ending at the served day: from Monday 2024-07-15 through Tuesday 2025-01-14,
+/// 184 days (SPEC-076 section 27; ADR-302 D2).
 #[tokio::test]
 async fn the_streak_route_serves_each_tracks_calendar_from_its_settled_days() {
     let scratch = tempfile::tempdir().expect("a temporary directory");
@@ -628,9 +629,10 @@ async fn the_streak_route_serves_each_tracks_calendar_from_its_settled_days() {
         ("law", vec!["2025-01-13"]),
     ] {
         let days = body["calendar"][track].as_array().expect("a calendar");
-        assert_eq!(days.len(), 35, "{track}");
+        assert_eq!(days.len(), 184, "{track}");
+        assert_eq!(days[0]["day"], "2024-07-15", "{track} starts on a Monday");
         assert_eq!(
-            days[34]["day"], "2025-01-14",
+            days[183]["day"], "2025-01-14",
             "{track} ends at the served day"
         );
         let got: Vec<&str> = days
