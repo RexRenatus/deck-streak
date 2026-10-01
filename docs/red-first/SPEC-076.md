@@ -278,3 +278,31 @@ A54: not red: the test pins a rule the cycle already held, so it is green at the
 A55: not red: the test pins a rule the route already held, so it is green at the head; the mutant that turns it red is named in this addendum
 A56: not red: the test pins a rule the reply already held, so it is green at the head; the mutant that turns it red is named in this addendum
 ```
+
+## Addendum, 2026-10-01: the streak calendar and its markers (A57 to A61)
+
+- **A57 and A60, red then green.** Both ran at `83cd74b` over a calendar that returned the window with
+  no markers. A60 failed at `calendar_population.rs:239` (`left: []`, `right: [(20001, [Freeze])]`)
+  and A57 at `calendar_population.rs:187` (`language, served 20002`, the freeze missing on 20001).
+  Both were green at `51b4241`. After the red, the population gained the expectations for the real
+  misses that trail a history's last study day (the language run breaks at the third day after it,
+  the law run resets on the first); the first oracle had left them out, and the production code was
+  right. The amended test is the one the rows prove.
+- **A58 not red.** The daemon's route test was written after the calendar existed, so it is green at
+  the head. Its red is the route's field changed, which S07643 does: the law track served the
+  language track's days.
+- **A59 not red.** The settlement already held its iff when the test was written. Its red is the
+  threshold flipped to `>= 0` (S07644) or the track filter dropped (S07645), each killed by A59
+  alone; the fold writes neither a zero row nor another track's row, so A59 plants them.
+- **A61 not red.** The screen and its parser were written beside the test. Its red is a marker drawn
+  on a neighbour's cell, which the test's per-cell word and `data-markers` comparison refuses.
+
+```red-first
+A57: red at 83cd74b: assertion failed: language, served 20002, the freeze missing on 20001
+A57: green at 51b4241
+A58: not red: the route test was written after the calendar existed, so it is green at the head; the mutant that turns it red is named in this addendum
+A59: not red: the settlement already held its iff, so it is green at the head; the mutants that turn it red are named in this addendum
+A60: red at 83cd74b: assertion failed: left: [], right: [(20001, [Freeze])] on the open day's window
+A60: green at 51b4241
+A61: not red: the screen and its parser were written beside the test, so it is green at the head; the mutant that turns it red is named in this addendum
+```

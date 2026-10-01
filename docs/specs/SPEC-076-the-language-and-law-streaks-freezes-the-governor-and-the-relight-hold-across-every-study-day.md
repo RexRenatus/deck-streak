@@ -973,9 +973,11 @@ The calendar amendment (sections 27 and 28) adds `crates/streaks/src/calendar.rs
 `crates/streaks/tests/calendar_population.rs`, `crates/daemon/tests/streak_calendar_route.rs`,
 `web/app/src/lib/streak/streak-calendar.test.ts`, `docs/schematics/streak-calendar-markers.md`,
 `docs/decisions/ADR-302-the-streak-calendar-is-derived-on-read-from-the-settled-days.md` and
-`changelog.d/feat-streak-calendar-486.md`. It changes `crates/streaks/src/lib.rs`,
-`crates/streaks/src/constants.rs`, `crates/streaks/src/replay.rs`,
-`crates/progression/src/settle.rs`, `crates/coordination/src/streak_views.rs`,
-`crates/api/src/streak_routes.rs`, `web/app/src/lib/streak/streak.ts`,
-`web/app/src/lib/streak/StreakScreen.svelte`, `web/app/src/lib/api.ts`, the messages files, and
-`scripts/mutation-rows.d/S07600-S07699.json`.
+`changelog.d/feat-streak-calendar-486.md` and the query cache file
+`.sqlx/query-f9e35f89a1fcf798466cef113cb2d1554dfa49d0a8063d631a972de68d345056.json`. It changes
+`crates/streaks/src/lib.rs`, `crates/streaks/src/constants.rs`, `crates/streaks/src/replay.rs`,
+`crates/progression/src/lib.rs`, `crates/progression/src/settle.rs`,
+`crates/coordination/src/streak_views.rs`, `crates/api/src/streak_routes.rs`,
+`crates/api/tests/streak_routes.rs`, `web/app/src/lib/streak/streak.ts`,
+`web/app/src/lib/streak/StreakScreen.svelte`, `web/app/messages/en.json`,
+`docs/red-first/SPEC-076.md` and `scripts/mutation-rows.d/S07600-S07699.json`.
