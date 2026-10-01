@@ -5165,6 +5165,85 @@ DYNAMIC_IMPORTS = {
         "executes `test_formal_config.py`, a module of this directory the census already reads, again by its constant path under another name; that module never imports the loader's module at any depth",
         ("test_formal_config_presence", "fresh_module", "spec.loader.exec_module(module)", 1),
     ),
+    **allowed(
+        "a pool of the test's own callables, each running the real program itself; the in-process judge runs before the pool, one at a time; never a workflow file",
+        (
+            "test_mutation_python_shard_binding",
+            "TheInProcessJudgeIsTheProgram.test_the_program_and_its_in_process_judgement_agree",
+            "ThreadPoolExecutor(max_workers=8)",
+            1,
+        ),
+    ),
+    **allowed(
+        "formats the exception the test is handling, to write to the standard error the judge replaces",
+        ("test_mutation_python_shard_binding", "judge_in_process", "traceback.format_exc()", 1),
+    ),
+    **allowed(
+        "compiles and executes the production verdict script's own source with edits to the interpolated fields of its messages, in the namespace of the program the test loaded and owns",
+        (
+            "test_mutation_python_shard_binding",
+            "mutating",
+            "exec(planted(function, node, kind, positions, value), program.__dict__)",
+            1,
+        ),
+        (
+            "test_mutation_python_shard_binding",
+            "observed_fields",
+            "compile(ast.Module([wrapped], []), str(VERDICT), 'exec')",
+            1,
+        ),
+        (
+            "test_mutation_python_shard_binding",
+            "observed_fields",
+            "exec(compile(ast.Module([wrapped], []), str(VERDICT), 'exec'), program.__dict__)",
+            1,
+        ),
+        (
+            "test_mutation_python_shard_binding",
+            "planted",
+            "compile(ast.Module([mutated], []), str(VERDICT), 'exec')",
+            1,
+        ),
+    ),
+    **allowed(
+        "reaches the loaded program's own namespace by a constant name, which the test owns",
+        ("test_mutation_python_shard_binding", "mutating", "program.__dict__", 3),
+        ("test_mutation_python_shard_binding", "observed_fields", "program.__dict__", 3),
+        (
+            "test_mutation_python_shard_binding",
+            "observed_fields",
+            "program.__dict__.update(originals)",
+            1,
+        ),
+    ),
+    **allowed(
+        "loads the production verdict script by its constant path under a name of its own and registers it, so its dataclasses resolve; never a module of the test directory",
+        (
+            "test_mutation_python_shard_binding",
+            "verdict_program",
+            "importlib.util.module_from_spec(spec)",
+            1,
+        ),
+        (
+            "test_mutation_python_shard_binding",
+            "verdict_program",
+            "importlib.util.spec_from_file_location('mutation_verdict_in_process', VERDICT)",
+            1,
+        ),
+        (
+            "test_mutation_python_shard_binding",
+            "verdict_program",
+            "spec.loader.exec_module(loaded)",
+            1,
+        ),
+        ("test_mutation_python_shard_binding", "verdict_program", "sys.modules", 1),
+        (
+            "test_mutation_python_shard_binding",
+            "verdict_program",
+            "sys.modules.get('mutation_verdict_in_process')",
+            1,
+        ),
+    ),
 }
 
 
