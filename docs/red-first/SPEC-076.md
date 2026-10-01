@@ -278,3 +278,28 @@ A54: not red: the test pins a rule the cycle already held, so it is green at the
 A55: not red: the test pins a rule the route already held, so it is green at the head; the mutant that turns it red is named in this addendum
 A56: not red: the test pins a rule the reply already held, so it is green at the head; the mutant that turns it red is named in this addendum
 ```
+
+## Addendum, 2026-10-01: the open lapse walk against its Lean port (A65 to A67)
+
+- **The red commit.** 4e688bc3 committed the vectors test with the Lean package: a port of
+  `open_lapse` without its guard at the smallest day, its three theorems not yet proved, their three
+  witnesses, and the vectors that port wrote. The Rust function answers none where that port
+  answers its smallest day, so the test is red by assertion, not by a compile error. The green
+  commit bd283264 gives the port the guard, proves the theorems and writes the vectors again. The
+  test's text is the same at both commits, and no Rust source changes.
+- **A65 and A67, red.** At 4e688bc3 the test examined 1704 vectors, and 73 of them differ: the
+  first is today at the smallest day with a count of zero on it, where the port answers
+  `Some(-9223372036854775808)` and the Rust function `None`. A67 fails on the same case:
+  `left: Some(-9223372036854775808)`, `right: None`.
+- **A66 not red.** The axes already held every case the property names at the red commit. Its red
+  is a population without the smallest day: with the window's first days moved one day up, it
+  examines 1800 vectors and fails at `formal_vectors_open_lapse.rs:342` with "no vector holds the
+  window starts at the smallest day".
+
+```red-first
+A65: red at 4e688bc3: thread 'the_open_lapse_walk_answers_every_vector_its_lean_port_wrote' (3020364) panicked at crates/streaks/tests/formal_vectors_open_lapse.rs:267:5:
+A65: green at bd283264
+A66: not red: the test pins a population the axes already held, so it is green at the head; the change that turns it red is named in this addendum
+A67: red at 4e688bc3: thread 'a_walk_that_reaches_the_smallest_day_without_a_review_answers_none_in_the_vectors' (3020363) panicked at crates/streaks/tests/formal_vectors_open_lapse.rs:364:5:
+A67: green at bd283264
+```
