@@ -191,7 +191,14 @@ a JSON object with `host`, `web_root` and `api_upstream`), adds it and one `impo
 of the Caddyfile, runs `caddy validate` and `caddy adapt --validate` on the copy, moves it into
 place and reloads; a refusal leaves the live file as it was, and a reload that fails puts the
 previous block and Caddyfile back, reloads them and exits non-zero (SPEC-127).
-`rollback.sh caddy-remove` reverses it under the same rule.
+`rollback.sh caddy-remove` reverses it under the same rule. Either Caddy step refuses, before it
+reads or writes anything, any entry of its environment whose name starts with `DECKSTREAK_DEPLOY_` and
+is not one of the settings above, whatever follows the prefix, and a setting it receives twice or
+without a value, and names it. It reads its environment from `/proc/self/environ`, so it runs only
+where that file is readable (Linux). It leaves every name outside the prefix alone, and one that the
+shell reads as code when it starts can run before the refusal and stop it: such an entry can already
+run any code in the step, more than an unlisted setting can do, and the refusal guards against a
+misconfigured setting, not against code already placed in the step's environment (ADR-198).
 
 ## The host budget
 

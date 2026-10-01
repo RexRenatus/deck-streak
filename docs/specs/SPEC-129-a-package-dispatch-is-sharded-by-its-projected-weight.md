@@ -142,3 +142,242 @@ a battery), with a listing and a sizing step in front of the legs.
 
 Issue #368; SPEC-057 R14, R18, R22; SPEC-039 R12; ADR-057 D7; ADR-129; cargo-mutants 27.1.0
 (`--shard`, `--sharding round-robin`, `--list --json`).
+
+## 8. Amendment, 2026-09-29: A6 finds every spelling of the command (#395)
+
+Insert-only against dev under ruling (i) of SPEC-038 section 8: every byte of dev's file is kept in
+order, and this amendment inserts this section and the next after it, and nothing else. Section 8
+and the next are this PR's own text, and round 8 rewrites their earlier rounds' words. Issues #395 and #447.
+
+- **The rule.** A6 found each `cargo mutants` command with a pattern that missed three spellings of
+  the same command: `cargo +<toolchain> mutants`, the `cargo-mutants mutants` binary form, and a
+  second command on the same line, which the greedy line pattern merged into the first. The guard
+  now reads each workflow as YAML and bash read it, over a declared part of each grammar, and
+  refuses what it does not read. It finds a command only where bash itself runs it, with the words
+  bash passes it, and it refuses every other place in the text it reads where a `mutants` word could
+  reach cargo. A refusal is reported as `refused: <why>`, which carries no bounds, so A6 fails on it
+  (#395).
+- **The YAML.** The guard reads a workflow's block mappings and sequences; literal and folded block
+  scalars, with their chomping and indentation indicators; and single-quoted, double-quoted and
+  plain scalars, with YAML's escapes (`\\` and `\x23` among them), its escaped line breaks, its
+  folding and its comments. So a `#` that YAML keeps (in a block scalar, in quotes, or as `\x23`)
+  reaches the shell's reading, and a comment that YAML cuts (a blank and a `#` in a plain scalar,
+  inside shell quotes too) reaches it as nothing. It refuses a flow mapping, an anchor, an alias, a
+  tag, a quoted or complex key, a directive or document marker, a tab indent, a carriage return, a
+  scalar on the line after its key, a more-indented line in a folded block, a `shell:` other than
+  `bash`, and any other form it does not read. A `${{ matrix.<key> }}` in a `run:` value takes each
+  value of the one-line list that its job's matrix gives that key; a matrix with `include` or
+  `exclude` gives none. Any other `${{ }}` expression in a `run:` value is refused: GitHub puts its
+  value into the text before bash reads it, the value is not in the workflow, and it can end one
+  command and start another. An expression outside every `run:` value is not in the text bash reads
+  (#395, #447).
+- **The shell.** Each `run:` value that still holds `cargo` or `mutants` once every quote mark,
+  backslash, `$` and line break is taken out, or that holds a `$` and a `'` with only those marks
+  between them, is read as bash's token recognition reads it: a comment from a `#` that starts a
+  word; `\`-newline inside and outside words; a backslash by the parity of its run; single, double,
+  `$'...'` and `$"..."` quotes; parameter expansions, command and process substitutions, backquotes,
+  arithmetic and arrays; here-documents (expanded or not, as the delimiter's quoting says) and
+  here-strings; redirections and their targets; and each operator that ends a command. Of the units
+  that bash's token recognition reads as one word (bash 5.2, `read_token_word` in `parse.y`), it
+  reads each of those above and refuses the rest: `$[ ]`; a pattern character glued to `(`, which
+  bash reads as one extended pattern where extended globbing is on, as it always is after `==`,
+  `!=` and `=` in `[[ ]]`; and a subscript, after a name or at the start of an array's element,
+  that holds more than letters, digits, `_`, `$` and `+*/%-`. It refuses
+  an unclosed quote or substitution, a continued line in an expanded here-document, a here-document
+  opened inside a substitution's line, `=~`, a `case` inside a substitution, an expansion or a form
+  it does not read, `shopt`, `enable` and `alias`, and a `set` whose option bash computes or that
+  changes `-k`, `-H`, `posix`, `keyword` or `histexpand` (#395, #447).
+- **The command and its bounds.** A command is found only where bash itself runs `cargo` or
+  `cargo-mutants` (or a path to either) as the program of one simple command, in the script or in
+  any substitution: after the command's assignments and the words that run what follows them in the
+  same shell (`if`, `then`, `else`, `elif`, `do`, `while`, `until`, `{`, `!`, `time`, `command`,
+  `builtin` and `exec`), past `+<toolchain>` words, flag words and a valued flag's separate word, to
+  `mutants`. Its bounds are the four words `--timeout 300 --build-timeout 600`, whole and in order,
+  before any `--`. So a bound's value that bash reads as longer (`600"0"`, `600$'0'`, `600{,0}`, or
+  `600` continued by `\`-newline) bounds nothing, and neither do bounds in a comment, in a
+  here-string or another redirection's target, or after an operator that ends the command, inside
+  an expansion or outside one. A word that bash computes is never a bound. The guard refuses a
+  computed word where cargo reads its subcommand; a `cargo` with no subcommand word (`xargs cargo`,
+  `cargo --version`); `cargo mutants` that another program runs (`env`, `nice`, `timeout`, `xargs`
+  or any other), since that program decides the arguments cargo gets; every literal `mutants` word
+  that is not a found command's subcommand; and a text that bash computes and hands to `eval`, or
+  to `bash` or `sh` after `-c`, to read as shell (#395, #447).
+- **Texts handed on.** A text that bash hands to a program that may read it as shell is read again
+  by the same grammar, and a `cargo mutants` command or any other `mutants` word found in it is
+  refused, since the program that reads it decides the arguments. Such a text is the value of each
+  word that bash reads as more than one plain word (one holding a blank, a quote, a backslash, an
+  operator, an expansion, a brace, a glob or history character, `#`, `~` or `=`), which covers
+  `bash -c '...'`, `eval '...'` and `echo '...' | bash`; the value of every assignment; the operand
+  of every parameter expansion (`${X:-...}`); a here-string; and a here-document's body as its
+  reader receives it (for an unquoted delimiter, with `\$`, `` \` `` and `\\` unescaped and each
+  expansion taken as computed). A text given to `python3` or `python` is not read (#395, #447).
+- **A computed word before the bounds (R5).** A word that bash computes before the bounds and that
+  bash could expand to exactly `--` would hand the bounds to the test tool, so the guard refuses it.
+  It refuses a word that holds an unquoted expansion, which bash splits, and a word that holds an
+  expansion and no literal character besides `-` (`"$X"`, `"${X}"`, `"$@"`, `"$*"`, `-"$X"`). A word
+  with any other literal character (`"$A/$B"`, `--package="$P"`, `x$X`) can never be `--` and is
+  read as before. One test generates each expansion form the reading reads, crossed with quoting and
+  with the word's literal content, has bash run each member with a stub, and asserts that every
+  member that loses the bounds is refused and that the refusals equal the rule exactly. It prints
+  and asserts each count (#395, #447).
+- **The weekly sweep in literal words.** `mutation-weekly.yml` gave its two package-bearing `cargo
+  mutants` commands the package as `${PACKAGE:+--package "$PACKAGE"}`, an expansion the rule above
+  refuses. Each command is now an `if [ -n "$PACKAGE" ]; then` branch with `--package="$PACKAGE"`,
+  an `else` branch with no package word, and `fi`; every other word is kept in its order. One test
+  holds the head's two commands as literals, has bash run both spellings with a stub cargo over
+  each package the workspace declares and over hostile values, and asserts that the two argvs are
+  equal with `--package V` as the one word `--package=V`. A value that begins with `-` selects
+  nothing under both spellings. The guard now finds 6 commands in `mutation-weekly.yml` where it
+  found 4, because each branch is a command; each is found and bounded and none is refused (#395).
+- **What it hides.** Each member of the generated classes below that bash runs without the bounds is
+  found or refused, in both states: with no `${{ }}` expression in its `run:` value, and past one.
+  The guard can refuse a value that bash runs bounded. On the real tree it finds the same commands
+  as before (3 in `ci.yml`, 6 in `mutation-weekly.yml`) and refuses none (#395, #447).
+- **A plant per shape.** Three tests write one workflow each into a temporary directory: one with
+  a toolchain spelling, one with the binary form, and one with two commands on a line (the first
+  bounded, the second not). Each asserts that every command is found and, for the last, that the
+  bounded one and the unbounded one are told apart. On the real tree the guard finds the same
+  commands as before (3 in `ci.yml`, 6 in `mutation-weekly.yml`).
+- **Four plants more.** One workflow each with `cargo --config <value> mutants`; with the bounds
+  written in a comment after an unbounded command (and a comment that holds a whole command, and a
+  `#` inside shell quotes in a `run: |` block); with a bounded command followed on its line by
+  `cargo -C <dir> mutants`; and with the bounds written in a comment that starts right after `;`
+  (#395).
+- **The class, generated.** One test generates the members of the class, where a `#` starts a
+  comment as bash reads it: each fragment that carries a would-be comment or a would-be closer
+  (`#`, `;#`, `)#`, `}#`, `"}"`, `')'`, `"#"`, `\#`, `a#`, `\'`, `;;`) in each context (bare, the
+  substitutions, backquotes, `$(( ))`, `${ }`, the three quotes, a here-string, `(( ))`, `a=( )`,
+  `[[ =~ ]]`, and a case, a brace group and a subshell, alone and inside each substitution),
+  followed by a `#` and an unbounded command, by the bounds, or by a continued line; and each
+  context left open at its line's end or continued inside it, with its closer and a `#` on the
+  next line or the one after, then an unbounded command or the bounds. Bash reads
+  every member, run without `-e`, with `cargo` a function that logs its words and no other
+  command on the path, and the guard must find each unbounded command bash runs. The test asserts
+  and prints the member count (#395).
+- **The grammar class, generated.** One test generates the members of the class at the grammars:
+  each shell text of an axis, crossed with each YAML spelling that reads back as that text. The axes
+  are a run of 1 to 4 backslashes, bare and in each quote, followed by a line break, a blank, a `#`,
+  a quote or the end of the value (on its first line or a later one); each spelling of each word of
+  the command and its bounds, among them a value that bash reads as longer; here-documents,
+  here-strings and a text that another program runs, among them an expansion glued to a `#` in an
+  expanded here-document; the operators that end a command, inside and outside an expansion;
+  redirections among the bounds; the programs and compound commands that run another command, and
+  `xargs` running cargo with words from its input (the subcommand decoded by `printf`, an argument
+  put before the bounds, the subcommand held in a variable); `set`, `shopt` and aliases; a comment
+  after each operator; a `${{ }}` value before, inside and after the command; each unit that bash's
+  token recognition reads as one word (the four quotes, `$( )`, `$(( ))`, `$[ ]`, `${ }`, `<( )`,
+  `>( )`, backquotes, a subscript and the five extended patterns) holding `;#`, `)#` or ` #`, alone
+  and glued to a word, among a command's words, after `==`, `!=` and `=` in `[[ ]]` and as an
+  array's element, with and without a `#` glued after it;
+  and a text that bash hands on (to a shell after `-c`, through a pipe, a here-string or a
+  here-document, in a variable, or inside an expansion), with the command's words spelled by
+  quoting, by an expansion or by another program; among them a variable that the text assigns a
+  literal, handed to `eval` or to `bash` or `sh` after `-c` (with and without operands after it),
+  quoted and not, spelled plainly and in braces. The spellings are a literal block, a folded block
+  (each line kept, and each line's words split onto lines that YAML joins), a double-quoted scalar
+  (plain, with `\x23` for `#`, and with escaped line breaks), a single-quoted scalar, and a plain
+  scalar, alone and before a YAML comment that holds the bounds; a text handed on is spelled in a
+  literal block. YAML's node forms around a `run:` value are members too. Bash runs each text as
+  a script twice, with the stub's status 0 and 1, under a timeout, without `-e` and without a parse
+  gate, with only stubs on the path: `cargo` and `cargo-mutants` log their words, and `env`, `nice`,
+  `timeout`, `xargs`, `sh` and `bash` pass the command on. The test fails unless every text ran
+  twice and a bounded and an unbounded control read as they must. The guard must find or refuse each
+  member that bash runs without the bounds, and each member whose `run:` value holds an expression
+  that the workflow does not state. The test asserts and prints the member count (#395, #447).
+- **The reading, declared.** One test states the reading the guard declares. A bounded command after
+  each word after which bash runs the next word as the program (`if`, `then`, `else`, `elif`, `do`,
+  `while`, `until`, `{`, `!`, `time`, `command`, `exec`, and `builtin command`) is found, bounded,
+  and bash runs each one bounded. A command that changes how bash reads what follows (`set -k`,
+  `set -H`, `set -o keyword`, `set -o posix`, `set -o histexpand`, `shopt`, `enable` and `alias`,
+  alone and after `builtin` or `command`), a continued line in an expanded here-document, and an
+  expression whose value the workflow does not state are each refused for that (#395, #447).
+- **The memory scope's wrapper (round 8, after the merge of `dev`).** `dev` runs each `cargo
+  mutants` that runs tests in `ci.yml` and `mutation-weekly.yml` as `python3 scripts/memory_scope.py
+  --report <dir> -- cargo mutants ...` (SPEC-196). The wrapper's parser declares one option that
+  takes a value, `--report`. The wrapper takes one leading `--` off the words after its options and
+  runs the rest in a subprocess, without a shell, each word unchanged. So a command whose program
+  word is the literal `python3`, whose next word is the literal `scripts/memory_scope.py`, and whose
+  next words are only options that the wrapper's parser declares (read from the parser, not from a
+  list), each with one value as its next word or after `=`, then a literal `--` and at least one
+  word, is read as the command that begins after that `--`, with its first word as the program;
+  every rule above applies to that command, and a wrapper inside a wrapper is read the same way. A
+  value is read only where bash hands it on as exactly one word: a literal word, or double quotes
+  around literal text and named expansions (`"$out"`, `"${out}/x"`). Every other spelling is not the
+  form, so a `cargo mutants` in it is refused as before: the value unquoted or from `"$@"`, no `--`
+  or one that bash computes, a computed option or path, another path or program (`./scripts/...`, an
+  absolute path, `python`, `python3.12`, `env python3`, `python3 -u`), an undeclared, abbreviated or
+  help option, and a declared option after the `--`. A text given to `python3` or `python` is read
+  as a text handed on when an argument of that command names `memory_scope` or is computed; a text
+  given to any other `python3` or `python` command is still not read. The guard reads the wrapper as
+  the file the tree holds: a step that rewrites `scripts/memory_scope.py`, or that runs the command
+  from a directory holding another copy of it, is left out, as a script file that a step runs is
+  (R2, #465). One test runs the wrapper with its scope's seams planted and a spy as its command,
+  over 374 argvs (the declared option in both spellings and twice, with dash-led values, before
+  commands of dash-led words, `--` again, empty words, blanks, a newline and non-ASCII), and asserts
+  that the spy receives exactly the words after the `--`, or that a dash-led value ends at the
+  parser's usage error and nothing runs; a wrapper planted to drop the last word, to drop
+  `--timeout`, or to add `--in-place` turns it red. One test generates 1160 members (29 spellings of
+  the wrapper, around 10 commands, in 4 contexts), has bash run each with the real wrapper and a
+  stub cargo, and asserts that each member that bash runs without the bounds is found or refused;
+  another asserts that each of the 8 spellings it reads through, around a bounded command, is found
+  bounded. On the real tree the guard finds 3 commands in `ci.yml` and 6 in `mutation-weekly.yml`,
+  the wrapped ones read through the wrapper, and refuses none. `scripts/tests/test_memory_scope.py`
+  pins the weekly sweep's test run and its size listing in each literal branch, and makes every
+  assertion it made before. The rows S12904 to S12906 of this SPEC's band and SPEC-196's S19616 name
+  the branch with a package, since their anchors occur once per branch; S12907 to S12910 are their
+  twins in the branch with no package, and S12911 and S12912 hold the guard's wrapper arms (#395,
+  #447).
+- **Out of scope, named.** The guard reads the workflow files in `.github/workflows`, so it does not
+  read a script file that a step runs, a composite action, a cargo alias, an `env:` value (a step's,
+  a job's or the workflow's), or a file that bash or the runner reads at start (`BASH_ENV`,
+  `GITHUB_ENV`). It neither finds nor refuses a command whose program word bash computes (by a
+  variable, a substitution, a brace expansion or word splitting) where no word the guard reads is
+  `mutants`, or a text that another program decodes (`printf`, `base64`) and hands to a shell; a
+  literal `cargo` whose subcommand bash computes, or that has no subcommand word, is refused. It
+  does not read a text given to `python3` or `python`. Three properties are left out, and issue
+  #465 holds them: a program word that bash computes where no word the guard reads is `mutants`
+  (R1), text outside a `run:` value that a step runs (R2), and text given to `python3` or `python`
+  (R3). The bounds are also checked before the run, and not while it runs: the run-time bound is
+  issue #466.
+- Files: `scripts/tests/test_dispatch_shards.py`, this SPEC, `docs/red-first/SPEC-129.md` and a
+  changelog fragment (#395).
+- It changes no Rust and no Python outside the test, and one workflow, `mutation-weekly.yml`, in the spelling of its package word only (#395).
+- It adds no mutation-row band: the change is to a test file only (#395).
+
+## 9. Acceptance criteria added by the section 8 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A7 | the guard finds `cargo +<toolchain> mutants`, `cargo-mutants mutants`, and each of two commands on one line, the second spelled with a valued flag too | `test_dispatch_shards.py` `EveryMutationCommandKeepsTheGatesBounds` |
+| A8 | a cargo flag's separate value word is part of the command, a comment the guard cuts is no command and bounds nothing, and the guard finds every unbounded command bash runs in the generated members of the comment class | `test_dispatch_shards.py` `EveryMutationCommandKeepsTheGatesBounds` |
+| A9 | the guard reads each `run:` value as YAML and bash read it, or refuses it: in the generated members of the grammar class it finds or refuses every command that bash runs without the bounds, and every value that holds an expression the workflow does not state | `test_dispatch_shards.py` `EveryMutationCommandKeepsTheGatesBounds` |
+| A10 | a text that bash computes (by a substitution, or from a variable) and hands to `eval`, or to a shell after `-c`, is refused for that alone, and a literal text handed to a shell or to a builtin that reads it as shell is read, and refused for the command it holds | `test_dispatch_shards.py` `EveryMutationCommandKeepsTheGatesBounds` |
+| A11 | the reading is declared: a bounded command after each word after which bash runs the next word as the program is found, bounded, as bash runs it; and a change to how bash reads what follows, a continued line in an expanded here-document, and an expression the workflow does not state are refused for that | `test_dispatch_shards.py` `EveryMutationCommandKeepsTheGatesBounds` |
+| A12 | a computed word before the bounds that bash could expand to exactly `--` is refused: every generated member that loses the bounds is refused, and the refusals equal the rule | `test_dispatch_shards.py` `AComputedWordBeforeTheBoundsIsRefused` |
+| A13 | the weekly sweep's two package-bearing commands, in literal words, hand cargo the words the head's spelling did, and the guard finds all 6 commands of `mutation-weekly.yml` bounded and refuses none | `test_dispatch_shards.py` `TheWeeklySweepNamesItsPackageInLiteralWords` |
+| A14 | the memory scope's wrapper runs exactly the words after its `--`, and a wrapper that drops or adds a word turns the pin red; the guard reads the wrapper's declared form through to the command after its `--`, so it finds or refuses each generated wrapper member that bash runs without the bounds, finds each spelling it reads through around a bounded command bounded, and finds the real tree's wrapped commands bounded and refuses none | `test_dispatch_shards.py` `TheMemoryScopeRunsTheWordsAfterItsSeparator` |
+
+```acceptance
+A7: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_a_command_spelled_with_a_toolchain_is_found
+A7: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_the_cargo_mutants_binary_form_is_found
+A7: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_a_second_command_on_one_line_is_its_own_command
+A7: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_a_valued_flag_spelling_after_a_bounded_command_is_its_own_command
+A8: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_a_cargo_flag_with_a_separate_value_is_part_of_the_command
+A8: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_a_comment_is_no_command_and_bounds_nothing
+A8: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_every_unbounded_command_bash_runs_past_a_hash_is_found
+A9: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_every_command_bash_runs_from_a_run_value_is_found_or_refused
+A10: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_a_text_bash_computes_for_a_shell_to_read_is_refused_as_computed
+A11: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_the_reading_is_declared_what_it_reads_is_found_and_what_it_does_not_is_refused
+A12: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_every_word_bash_can_expand_to_dashes_before_the_bounds_is_refused
+A12: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_the_rule_refuses_exactly_an_unquoted_expansion_or_one_with_no_literal_but_dash
+A12: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_the_designs_three_members_are_refused
+A12: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_the_real_tree_commands_are_found_bounded_and_not_refused
+A13: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_the_rewrite_hands_cargo_exactly_the_words_the_head_did
+A13: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_a_dash_led_value_selects_nothing_in_the_step_after_the_listing
+A13: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_the_rewritten_blocks_are_the_only_package_words_in_the_two_cargo_commands
+A14: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_the_wrapper_runs_exactly_the_words_after_its_separator
+A14: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_a_wrapper_that_drops_or_adds_a_word_goes_red
+A14: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_every_wrapped_command_bash_runs_without_the_bounds_is_found_or_refused
+A14: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_the_declared_form_around_a_bounded_command_is_found_bounded
+A14: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_the_real_tree_commands_are_found_bounded_and_not_refused
+```
