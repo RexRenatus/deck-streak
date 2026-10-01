@@ -341,3 +341,66 @@ that lists two attributes. The five rows share one killer by design, because the
 kill them were added to one test,
 `test_every_module_file_choice_is_read_from_rustcs_file_or_refused`: each row's proof still runs
 that one test green without the mutant and red with it.
+
+## 12. Amendment, 2026-10-01: a nested module is resolved, a macro module is refused and a rival declaration is refused
+
+Section 10 recorded three residuals of the guard as open, and section 11 recorded a fourth. This
+amendment closes them, and each is closed by an arm that a test plants and a row kills. Nothing above
+is rewritten: the old bullets stay as the record of what the guard did when they were written.
+
+- **#433, a module declared inside an inline module.** Section 10's third bullet said the guard does
+  not follow a `mod tests;` declared inside an inline module, so a shape only that file spells stayed
+  refused. The guard now resolves it to the file rustc reads. The file is below the inline module
+  names, in the module directory of the declaring file (`src/` for a crate root, a `mod.rs` and a
+  file an attribute loaded, and `src/<stem>/` for any other file, so `src/depth/a/tests.rs` for a
+  declaration in `depth.rs` inside `mod a`). A `#[path = "..."]` on the declaration is read relative
+  to that directory, and a `#[path]` on an enclosing inline module moves the directory in a way the
+  guard does not read, so a declaration below one stays refused. Tests plant the declaration in
+  `lib.rs` and in a non-root module, at one to three inline levels, with the shape and without it,
+  and with the `#[path]` form. The lexer's reading of C string literals stays out of scope.
+- **#441, a module written by a macro.** Section 10's first bullet and section 11's correction said
+  a `#[cfg(test)]` module written by a `macro_rules!` body is not counted. The guard now FAILS
+  CLOSED: a crate file whose `macro_rules!` body declares a module under a `cfg(test)` or
+  `cfg_attr(test, ...)` attribute is refused, and the refusal names the file. Macro expansion was
+  rejected, because the guard would then have to be a macro expander. Over the repository at the
+  base the arm examined 194 crate files and found 0 hits, so it refuses no file that is read today.
+- **#458, a file that a second declaration compiles without `test`.** Section 10's fourth bullet and
+  section 11 said the guard judges a declaration and not a file. It now judges the file: a module
+  file that any visible declaration compiles without `test` is refused, and is not read through its
+  test declaration. The shapes are `#[cfg(test)] mod tests;` beside `#[cfg(not(test))] mod tests;`,
+  and `#[path = "tests.rs"] mod prod;` beside `#[cfg(test)] mod tests;`, in either attribute order,
+  with an inner `cfg_attr`, and with a `#[path]` that names the same file. A rival whose attributes
+  the guard cannot decide counts as compiled, so it errs toward refusing. A file compiled only under
+  test is still read.
+
+Five rows pin the new arms, S19305 to S19309, in `scripts/mutation-rows.d/S19300-S19399.json`: the
+inline names that join the module path, the nested `#[path]` that is read below the module
+directory, the refusal of a macro module, the refusal of a rival declaration, and the rival whose
+attributes are undecided. Each killer is the pinning test, and each row is proved KILLED by full id.
+What stays open is not this SPEC's: the trait read by token and the aliases (#436), and an item a
+`cfg` removes inside a compiled test module (#449).
+
+## 13. Acceptance criteria of the 2026-10-01 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A16 | a `mod tests;` declared inside inline modules is resolved to the file rustc reads, or to the `#[path]` it names, from `lib.rs` and from a non-root module | `python3 -m unittest discover -s scripts/tests -p test_setting_shapes.py -k TheGuardResolvesAModuleDeclaredInsideAnInlineModule` |
+| A17 | a crate file whose `macro_rules!` body declares a `cfg(test)` module is refused by name, and no file of the repository is | `python3 -m unittest discover -s scripts/tests -p test_setting_shapes.py -k TheGuardRefusesAMacroThatDeclaresATestModule` |
+| A18 | a module file that any visible declaration compiles without `test` is refused, and a file compiled only under test is still read | `python3 -m unittest discover -s scripts/tests -p test_setting_shapes.py -k TheGuardRefusesAModuleFileThatAnotherDeclarationCompilesWithoutTest` |
+
+```acceptance
+A16: python3 -m unittest discover -s scripts/tests -p test_setting_shapes.py -k TheGuardResolvesAModuleDeclaredInsideAnInlineModule
+A17: python3 -m unittest discover -s scripts/tests -p test_setting_shapes.py -k TheGuardRefusesAMacroThatDeclaresATestModule
+A18: python3 -m unittest discover -s scripts/tests -p test_setting_shapes.py -k TheGuardRefusesAModuleFileThatAnotherDeclarationCompilesWithoutTest
+```
+
+## 14. Amendments to the file manifest, 2026-10-01
+
+| file | context | change |
+|---|---|---|
+| `docs/specs/SPEC-192-every-settings-shape-is-pinned-by-its-literal.md` | repo | changed (sections 12 to 14 appended) |
+| `docs/decisions/ADR-304-the-guard-resolves-refuses-and-judges-the-file.md` | repo | added |
+| `docs/red-first/SPEC-192.md` | repo | changed (an addendum) |
+| `scripts/tests/test_setting_shapes.py` | repo | changed (A16 to A18 and the arms) |
+| `scripts/mutation-rows.d/S19300-S19399.json` | repo | changed (rows S19305 to S19309) |
+| `changelog.d/guard-setting-shapes-433-441-458.md` | repo | added |

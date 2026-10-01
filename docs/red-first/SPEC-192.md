@@ -282,3 +282,21 @@ A13: replay of the raw path rewrite: FAILED (failures=1): AssertionError: Lists 
 A13: replay of the triple star comment rewrite: FAILED (failures=1): AssertionError: Lists differ: [...] != [] (test_every_module_file_choice_is_read_from_rustcs_file_or_refused)
 A13: replay of the two attribute cfg_attr rewrite: FAILED (failures=1): AssertionError: Lists differ: [...] != [] (test_every_module_file_choice_is_read_from_rustcs_file_or_refused)
 ```
+
+## Addendum, 2026-10-01: A16 to A18, the nested module, the macro module and the rival declaration
+
+Three criteria join SPEC-192 (section 13). Their tests were committed first at 87ed53af, with the
+guard as the base left it: 38 tests ran and 10 failed, each by assertion and none by an import or a
+syntax error (A16 three tests, A17 three, A18 four). The arms are committed at 3ce8e297 and
+repaired at 8a44e700, where the module is green. The base module ran 24 tests.
+
+```text
+A16: red at 87ed53af: FAILED (failures=10), AssertionError: 0 != 1 : ('lib.rs', '#[cfg(test)]\nmod tests;\n#[cfg(not(test))]\nmod tests;\n') is the A18 form; A16 members fail as Lists differ: ['demo::Depth (src/lib.rs) "a whole depth"'] != [] (test_a_declaration_inside_inline_modules_is_read_from_the_inline_path)
+A16: green at 8a44e700: Ran 38 tests, OK, examined 25 Setting impl(s), examined 6309 R8 member(s) judged against rustc
+A17: red at 87ed53af: FAILED (failures=10), AssertionError: 0 != 1 (test_a_macro_body_with_a_cfg_test_module_is_refused_by_its_file)
+A17: green at 8a44e700: Ran 38 tests, OK, examined 194 crate file(s) read for a macro_rules! body, 0 hits
+A18: red at 87ed53af: FAILED (failures=10), AssertionError: 0 != 1 : ('lib.rs', '#[cfg(test)]\nmod tests;\n#[cfg(not(test))]\nmod tests;\n') (test_a_module_declared_beside_one_with_not_test_is_refused)
+A18: green at 8a44e700: Ran 38 tests, OK, examined 25 Setting impl(s), examined 6309 R8 member(s) judged against rustc
+```
+
+Rows S19305 to S19309 pin the arms, and each is KILLED by its pinning test under one invocation.
