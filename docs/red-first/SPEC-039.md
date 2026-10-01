@@ -256,3 +256,44 @@ A45 has two tests, and the fence holds one line for the criterion; the other tes
 ```text
 test_a_bin_killer_beside_a_tests_bin_rs_is_refused: AssertionError: 'census: S00060-BIN-SHADOW: its killer bin::tests::three_triples_to_nine crates/fix has a test target bin, which the bin kind shadows' not found in 'examined 1 row(s)\n'
 ```
+
+## Addendum, 2026-10-01: a docstring-only script change is named (issue #485)
+
+A61 to A64 are the acceptance criteria of section 29, made by issue #485's delivery, and A64 also
+closes issue #455. Each was written red at 095f02e, where the plan reads a docstring as a code line
+and the PLAN paragraph of `scripts/mutation-verdict.py` names neither leg `ci` admits a skip from
+nor the `scripts` output, and each red fails by assertion. A61 to A63 are green at fca5457, which
+adds the `docstring-only` case to the plan; A64 is green at e56feb2, which corrects the paragraph.
+The original lines above stand.
+
+```red-first
+A61: red at 095f02e: AssertionError: "mutation: plan: scripts does not apply: not-applicable: docstring-only: every changed script's syntax tree equals its base's once docstrings are set aside: scripts/guard.py\n" not found in 'mutation: plan: diff: the local run is judged on its diff\nmutation: plan: 1 changed path(s): rust 0, web 0, oracle 0, scripts 1, other 0 (base 1ed1a24, head 4bba867)\nmutation: plan: rust does not apply: not-applicable: the diff changes no rust production file\nmutation: plan: web does not apply: not-applicable: the diff changes no web production file\nmutation: plan: oracle does not apply: not-applicable: the diff changes no oracle production file\nmutation: plan: scripts applies: 2 production code line(s) in 1 file(s)\nmutation: plan: 0 row(s) selected: none\n'
+A61: green at fca5457
+A62: red at 095f02e: AssertionError: Lists differ: ["a module docstring: read ('applies', Non[505 chars]'])"] != []
+A62: green at fca5457
+A63: red at 095f02e: AssertionError: Lists differ: ["two docstring-only files: read ('applies[392 chars]'])"] != []
+A63: green at fca5457
+A64: red at 095f02e: AssertionError: Lists differ: [] != ['mutation-rows', 'mutation-rust']
+A64: green at e56feb2
+```
+
+A64's test holds two subtests, and the fence holds one line for the criterion; the other
+subtest's red at 095f02e, verbatim:
+
+```text
+test_the_plan_paragraph_names_the_legs_ci_admits_and_the_outputs_it_writes [the step outputs the plan writes]: AssertionError: Lists differ: ['case', 'mutate', 'oracle', 'rows', 'rust', 'scope', 'web'] != ['case', 'mutate', 'oracle', 'rows', 'rust', 'scope', 'scripts', 'web']
+```
+
+The house Python mutant runner, run over this delivery's diff at e56feb2, listed 50 mutants of
+`scripts/mutation-verdict.py`, killed 49 and left one surviving: `replace continue with break in
+docstring_only`, at the `continue` that passes over a file outside the `scripts` class. 2082197 adds
+two members to A62, a docstring change beside a change to a file outside the class, which is named,
+and a code change in a later script with a file outside the class between, which applies. It also
+limits A62's check of the runner's listing to the files whose lines the plan set aside, since a file
+outside the class is no source the runner lists. Under that mutant A62 then reads 2 mismatches, one
+for each new member, and the runner at 2082197, over that one mutant, reads `killed 1, survived 0`,
+its killer A62. The 20-member A62 is red at 095f02e's plan, by assertion:
+
+```text
+A62 at 2082197's test, over 095f02e's plan: AssertionError: Lists differ: ["a module docstring: read ('applies', Non[637 chars]'])"] != []
+```
