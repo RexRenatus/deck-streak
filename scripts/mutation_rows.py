@@ -534,14 +534,17 @@ def rust_tokens(text: str) -> list[str]:
                 position += 2 if text[position] == "\\" else 1
             position += 1
         elif kind == "block":
-            depth = 1
-            while depth and position < len(text):
-                if text.startswith("/*", position):
+            depth, opened = 1, position
+            for _ in range(len(text)):  # each pass consumes a character, so this ends the scan
+                if depth == 0:
+                    pass
+                elif text.startswith("/*", position):
                     depth, position = depth + 1, position + 2
                 elif text.startswith("*/", position):
                     depth, position = depth - 1, position + 2
                 else:
                     position += 1
+            position = max(position, opened)
         if kind not in ("space", "line", "block"):
             tokens.append(match.group(0))
     return tokens
