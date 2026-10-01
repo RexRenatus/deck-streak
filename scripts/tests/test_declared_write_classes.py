@@ -374,5 +374,131 @@ class TheAmendedDocumentsKeepTheirText(unittest.TestCase):
         self.assert_kept_and_noted(one_file("ADR-037-*.md"), ADR_037_KEPT, ADR_037_NOTE)
 
 
+# Issue #518: the wording follow-ups of ADR-301, each an insert-only note that opens with its topic.
+FOLLOW_UP = "Note (2026-10-01, #518, "
+CEILING = (
+    "Its ceiling is the approval rung, because the owner's skip declaration approves each batch."
+)
+ADR_301_RUNG_KEPT = "It sits at the\n  approval rung for good, because the owner's skip declaration approves each batch."
+NO_EXEMPTION = "ADR-301 grants the skip day no exemption"
+BUDGET_TERMS = (
+    "Change budget.",
+    "the study day's due review cards",
+    "planned SPEC-083 R21",
+    "`SKIP_MAX_CARDS`, the planned golden constant (5,000)",
+    "`too_many_cards`",
+)
+DWELL_TERMS = (
+    "Dwell.",
+    "No dwell time between changes is decided",
+    "planned SPEC-083 R2",
+    "`already_skipped`",
+    "it is not a dwell between changes",
+)
+BAND_TERMS = (
+    "Band.",
+    "No band a result must clear is decided",
+    "pre-registered n-of-1 trial",
+    "autonomous rung",
+    "#108",
+)
+BACKUP_TERMS = (
+    "ADR-064",
+    "the collection copy never is",
+    "Backing up the collection copy as well",
+    "a copy of the owner's collection that the next sync downloads again (ADR-037)",
+    "would be the largest file DeckStreak keeps",
+    "takes a whole-collection backup first",
+    "before the batch writes anything",
+    "states no place and no retention for its backup",
+    "planned SPEC-083 takes (b)'s backup, restore drill and counts",
+)
+DUE_DATE_TERMS = (
+    "ADR-089",
+    "type 4 with ease 0",
+    "planned SPEC-083 R18",
+    "stay after an undo",
+    "an incremental sync removes no review-log row",
+    "SPEC-023 R2",
+    "type 0 to 3 with ease 1 or more",
+    "How (e) and a trial count them is not decided there",
+)
+
+
+def follow_up(text, topic):
+    """The one note of `text` that opens `Note (2026-10-01, #518, <topic>):`, up to the next blank
+    line that no list item follows, or heading. Another count than one is a problem of the document."""
+    opening = f"{FOLLOW_UP}{topic}):"
+    starts = [m.start() for m in re.finditer(re.escape(opening), text)]
+    if len(starts) != 1:
+        raise AssertionError(f"{len(starts)} notes open {opening!r}, not one")
+    rest = text[starts[0] :]
+    end = re.search(r"\n\n(?!- )|\n#{2,3} ", rest)
+    return normal(rest[: end.start() if end else len(rest)])
+
+
+def note_problems(note, terms):
+    """Why `note` fails to name each of `terms`; empty when it names them all."""
+    return [f"the note does not name {term!r}" for term in terms if normal(term) not in note]
+
+
+class TheFollowUpNotesAreInsertOnly(unittest.TestCase):
+    def test_the_skip_days_rung_reads_as_a_ceiling_in_adr_301_and_adr_089(self):
+        adr_301, adr_089 = the_adr(), one_file("ADR-089-*.md")
+        # The earlier sentence stays, byte for byte, and the note sits beside it.
+        self.assertIn(ADR_301_RUNG_KEPT, adr_301)
+        self.assertIn("The skip day is the\nfirst such class, at the approval rung.", adr_089)
+        for text in (adr_301, adr_089):
+            note = follow_up(text, "the skip day's rung")
+            self.assertEqual(note_problems(note, (CEILING,)), [])
+        self.assertLess(
+            adr_301.index(ADR_301_RUNG_KEPT), adr_301.index(FOLLOW_UP + "the skip day's rung")
+        )
+        # Planted: a document with no note is refused, so a reader that sees nothing cannot pass.
+        with self.assertRaises(AssertionError):
+            follow_up(adr_301.replace(FOLLOW_UP, "Aside ("), "the skip day's rung")
+
+    def test_adr_089_states_the_skip_days_budget_dwell_and_band_with_no_exemption(self):
+        text = one_file("ADR-089-*.md")
+        note = follow_up(text, "the skip day's budget")
+        terms = (NO_EXEMPTION, "ADR-301 (c)") + BUDGET_TERMS + DWELL_TERMS + BAND_TERMS
+        examined("terms the budget note names", terms)
+        self.assertEqual(note_problems(note, terms), [])
+        # Each of the three is its own bounded sentence, so one cannot stand in for another.
+        for opening in ("Change budget.", "Dwell.", "Band."):
+            self.assertEqual(note.count(opening), 1, opening)
+        # The note decides no value the documents do not: it names no dwell in hours or days.
+        self.assertIsNone(re.search(r"\b\d+\s*(hours?|days?|minutes?)\b", note))
+        # Planted: a note that grants an exemption is not the ruling.
+        self.assertEqual(
+            note_problems(note.replace(NO_EXEMPTION, "The skip day is exempt"), (NO_EXEMPTION,)),
+            [f"the note does not name {NO_EXEMPTION!r}"],
+        )
+
+    def test_adr_301_says_how_adr_064_and_the_batch_backup_read_together(self):
+        note = follow_up(the_adr(), "ADR-064")
+        examined("terms the backup note names", BACKUP_TERMS)
+        self.assertEqual(note_problems(note, BACKUP_TERMS), [])
+        # The note sits in part (b), beside the backup it reads with ADR-064.
+        text = the_adr()
+        part_b = parts(section(text, "Decision Outcome"))["b"]
+        self.assertIn(FOLLOW_UP + "ADR-064", part_b)
+
+    def test_adr_301_names_where_the_due_date_writes_rows_are_already_treated(self):
+        text = the_adr()
+        note = follow_up(text, "the due-date write")
+        examined("terms the due-date note names", DUE_DATE_TERMS)
+        self.assertEqual(note_problems(note, DUE_DATE_TERMS), [])
+        # The open question stays as it was, and the note follows the list it answers.
+        question = (
+            "whether the engine's due-date write adds a review-log row, and how (e) and a trial"
+        )
+        self.assertIn(question, normal(text))
+        self.assertLess(
+            normal(text).index(question),
+            normal(text).index(FOLLOW_UP + "the due-date write"),
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
