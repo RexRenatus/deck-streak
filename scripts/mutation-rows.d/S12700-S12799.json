@@ -575,7 +575,7 @@
         "[ ! -f \"$checked\" ] || find \"$checked\" -delete",
         "true",
         "the exit trap deletes the check file the step made first (SPEC-127 A42)",
-        "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_every_state_and_every_writing_call_of_the_host_step_is_refused"
+        "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_an_install_over_an_installed_host_refuses_each_of_its_writing_calls"
       ],
       [
         "S12773-A-THE-HOST-CLEANUP-IS-TRAPPED-ON-EXIT",
@@ -583,7 +583,7 @@
         "trap host_cleanup EXIT",
         "true",
         "the cleanup runs on every exit of the host step (SPEC-127 A42)",
-        "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_every_state_and_every_writing_call_of_the_host_step_is_refused"
+        "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_an_install_over_an_installed_host_refuses_each_of_its_writing_calls"
       ],
       [
         "S12774-A-A-DIRECTORY-MUST-BE-WRITABLE-TO-PASS-THE-CHECK",
@@ -599,7 +599,7 @@
         "made_partial=1",
         "made_partial=",
         "the exit removes an unpack this run made (SPEC-127 A42)",
-        "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_every_state_and_every_writing_call_of_the_host_step_is_refused"
+        "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_an_install_over_an_installed_host_refuses_each_of_its_writing_calls"
       ],
       [
         "S12776-A-THE-SAVE-OF-THE-UNITS-IS-CHECKED",
@@ -607,7 +607,7 @@
         "[ \"$#\" -eq 0 ] || tar -C \"$unitdir\" -cf \"$saved\" -- \"$@\"",
         "[ \"$#\" -eq 0 ] || tar -C \"$unitdir\" -cf \"$saved\" -- \"$@\" || true",
         "an archive of the unit files that cannot be made fails the save (SPEC-127 A42)",
-        "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_every_state_and_every_writing_call_of_the_host_step_is_refused"
+        "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_an_install_over_an_installed_host_refuses_each_of_its_writing_calls"
       ],
       [
         "S12777-A-SAVING-THE-UNITS-IS-GUARDED",
@@ -615,7 +615,7 @@
         "save_units || refuse \"could not save its unit files\"",
         "save_units || true",
         "a failed save of the unit files is a named refusal before any write (SPEC-127 A42)",
-        "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_every_state_and_every_writing_call_of_the_host_step_is_refused"
+        "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_an_install_over_an_installed_host_refuses_each_of_its_writing_calls"
       ],
       [
         "S12778-A-EACH-UNIT-FILE-IS-SAVED-OR-THE-SAVE-FAILS",
@@ -623,7 +623,7 @@
         "set -- \"$@\" \"${f##*/}\"",
         "true",
         "each unit file the host had is named in the saved archive (SPEC-127 A42)",
-        "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_every_state_and_every_writing_call_of_the_host_step_is_refused"
+        "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_an_install_over_an_installed_host_refuses_each_of_its_writing_calls"
       ],
       [
         "S12779-A-THE-UNDO-REMOVES-EVERY-UNIT-THE-RUN-MAY-HAVE-WRITTEN",
@@ -639,7 +639,7 @@
         "[ ! -f \"$saved\" ] || tar -C \"$unitdir\" -xpf \"$saved\" || return 1",
         "true",
         "the undo extracts the saved archive back over the unit directory (SPEC-127 A42)",
-        "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_every_state_and_every_writing_call_of_the_host_step_is_refused"
+        "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_an_install_over_an_installed_host_refuses_each_of_its_writing_calls"
       ],
       [
         "S12781-A-A-LATE-FAILURE-RUNS-THE-UNDO",
@@ -655,7 +655,7 @@
         "made_top=$top",
         "made_top=",
         "the topmost directory the run had to make is recorded (SPEC-127 A42)",
-        "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_every_state_and_every_writing_call_of_the_host_step_is_refused"
+        "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_a_first_install_refuses_each_of_its_writing_calls"
       ],
       [
         "S12783-A-A-REFUSED-RUN-REMOVES-THE-ROOT-IT-MADE",
@@ -663,7 +663,7 @@
         "[ -z \"$made_top\" ] || [ -n \"$finished\" ] || [ ! -e \"$made_top\" ] || find \"$made_top\" -delete",
         "true",
         "a refused first install removes the root and releases directories it made (SPEC-127 A42)",
-        "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_every_state_and_every_writing_call_of_the_host_step_is_refused"
+        "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_a_first_install_refuses_each_of_its_writing_calls"
       ],
       [
         "S12784-A-A-FINISHED-RUN-KEEPS-THE-ROOT",
@@ -671,7 +671,7 @@
         "finished=1",
         "finished=",
         "a run that finished keeps the root it made (SPEC-127 A42)",
-        "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_every_state_and_every_writing_call_of_the_host_step_is_refused"
+        "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_a_first_install_refuses_each_of_its_writing_calls"
       ],
       [
         "S12785-A-THE-RELEASES-DIRECTORY-IS-CHECKED-BEFORE-A-DELETE",
@@ -687,7 +687,7 @@
         "install -m 0644 \"$f\" \"$unitdir/$(basename \"$f\")\" || return 1",
         "install -m 0644 \"$f\" \"$unitdir/$(basename \"$f\")\" || true",
         "an install of a unit file that fails fails the install of the units (SPEC-127 A42)",
-        "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_every_state_and_every_writing_call_of_the_host_step_is_refused"
+        "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_an_install_over_an_installed_host_refuses_each_of_its_writing_calls"
       ],
       [
         "S12787-A-EACH-DROP-IN-DIRECTORY-INSTALL-IS-GUARDED",
@@ -695,7 +695,7 @@
         "install -d -m 0755 \"$unitdir/$n\" || return 1",
         "install -d -m 0755 \"$unitdir/$n\" || true",
         "an install of a drop-in directory that fails fails the install of the units (SPEC-127 A42)",
-        "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_every_state_and_every_writing_call_of_the_host_step_is_refused"
+        "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_an_install_over_an_installed_host_refuses_each_of_its_writing_calls"
       ],
       [
         "S12788-A-EACH-DROP-IN-FILE-INSTALL-IS-GUARDED",
@@ -703,7 +703,7 @@
         "install -m 0644 \"$c\" \"$unitdir/$n/$(basename \"$c\")\" || return 1",
         "install -m 0644 \"$c\" \"$unitdir/$n/$(basename \"$c\")\" || true",
         "an install of a drop-in file that fails fails the install of the units (SPEC-127 A42)",
-        "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_every_state_and_every_writing_call_of_the_host_step_is_refused"
+        "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_an_install_over_an_installed_host_refuses_each_of_its_writing_calls"
       ],
       [
         "S12789-A-A-FAILED-UNIT-INSTALL-IS-A-NAMED-REFUSAL",
@@ -711,7 +711,7 @@
         "install_units \"$rel\" || undo_and_refuse \"could not install its unit files\"",
         "install_units \"$rel\" || true",
         "a failed install of the units undoes the run and names the step (SPEC-127 A42)",
-        "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_every_state_and_every_writing_call_of_the_host_step_is_refused"
+        "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_an_install_over_an_installed_host_refuses_each_of_its_writing_calls"
       ],
       [
         "S12790-A-THE-CHECK-FILE-DELETE-IS-GUARDED",
@@ -719,7 +719,7 @@
         "find \"$checked\" -delete || undo_and_refuse \"could not delete its check file\"",
         "find \"$checked\" -delete || true",
         "a check file that cannot be deleted undoes the run and names the step (SPEC-127 A42)",
-        "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_every_state_and_every_writing_call_of_the_host_step_is_refused"
+        "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_an_install_over_an_installed_host_refuses_each_of_its_writing_calls"
       ],
       [
         "S12791-A-A-STALE-UNPACK-DELETE-IS-GUARDED",
@@ -735,7 +735,7 @@
         "[ -f \"$src/$n/$base\" ] || find \"$c\" -delete || return 1",
         "[ -f \"$src/$n/$base\" ] || find \"$c\" -delete || true",
         "a stale drop-in file that cannot be removed fails the unit installation (SPEC-127 A42)",
-        "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_every_state_and_every_writing_call_of_the_host_step_is_refused"
+        "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_an_install_over_an_installed_host_refuses_each_of_its_writing_calls"
       ]
     ]
   }

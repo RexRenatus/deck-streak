@@ -2489,22 +2489,16 @@ exec /usr/bin/@NAME@ "$@"
         self.assertEqual(sum(seen.values()), counted, "the two logs of the host calls")
         return calls
 
-    def test_every_state_and_every_writing_call_of_the_host_step_is_refused(self):
-        members, expected, reached = [], 0, set()
-        for verb in self.VERBS:
-            for state in self.STATES:
-                if (verb, state) in self.NOT_A_STATE:
-                    continue
-                with tempfile.TemporaryDirectory() as tmp:
-                    w, good, argv = self.situation(tmp, verb, state)
-                    self.ok(w.run(*argv, **good))
-                    calls = self.writing_calls(w, argv[-1])
-                reached |= {tool for tool, _ in calls}
-                expected += len(calls)
-                members += [(verb, state, tool, index) for tool, index in calls]
-        self.assertEqual(len(members), expected)
-        self.assertEqual(sorted(reached), sorted(self.HANDLED), "the tools the runs reached")
-        for verb, state, tool, index in examined("state-and-call member(s)", members):
+    def calls_of(self, verb, state):
+        """The writing host calls one clean run of `verb` from `state` makes."""
+        with tempfile.TemporaryDirectory() as tmp:
+            w, good, argv = self.situation(tmp, verb, state)
+            self.ok(w.run(*argv, **good))
+            return self.writing_calls(w, argv[-1])
+
+    def refuse_each(self, verb, state, calls):
+        """Fail each of `calls` in turn, in a fresh world, and judge the run it ends (#451)."""
+        for tool, index in examined("state-and-call member(s)", calls):
             with self.subTest(verb=verb, state=state, tool=tool, index=index):
                 with tempfile.TemporaryDirectory() as tmp:
                     w, good, argv = self.situation(tmp, verb, state)
@@ -2513,6 +2507,28 @@ exec /usr/bin/@NAME@ "$@"
                     self.judge(
                         f"{verb} / {state} / {tool} {index}", done, before, after, "host step"
                     )
+
+    def test_every_state_and_every_writing_call_of_the_host_step_is_refused(self):
+        members, expected, reached = [], 0, set()
+        for verb in self.VERBS:
+            for state in self.STATES:
+                if (verb, state) in self.NOT_A_STATE:
+                    continue
+                calls = self.calls_of(verb, state)
+                reached |= {tool for tool, _ in calls}
+                expected += len(calls)
+                members += [(verb, state, tool, index) for tool, index in calls]
+        self.assertEqual(len(members), expected)
+        self.assertEqual(sorted(reached), sorted(self.HANDLED), "the tools the runs reached")
+        for verb, state, tool, index in examined("state-and-call member(s)", members):
+            with self.subTest(verb=verb, state=state, tool=tool, index=index):
+                self.refuse_each(verb, state, [(tool, index)])
+
+    def test_an_install_over_an_installed_host_refuses_each_of_its_writing_calls(self):
+        self.refuse_each("install", "installed", self.calls_of("install", "installed"))
+
+    def test_a_first_install_refuses_each_of_its_writing_calls(self):
+        self.refuse_each("install", "first-install", self.calls_of("install", "first-install"))
 
     def test_a_stale_unpack_in_a_releases_directory_that_cannot_take_a_write_is_refused(self):
         for verb in examined("stale-unpack member(s)", ["install", "rollback-unkept"]):
