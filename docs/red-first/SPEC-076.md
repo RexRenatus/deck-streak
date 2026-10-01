@@ -305,6 +305,12 @@ A56: not red: the test pins a rule the reply already held, so it is green at the
   law break on the miss itself and draws a marker as a whole word. Each fails by assertion there.
   The fixes follow one rule each: `2eb8959` moves the law break, `a038df4` serves the
   predecessor's window and `3511bf3` lays the screen out as whole weeks.
+- **A63's body was split after its red commit.** `14ab257` moves A63's serving loop and its two
+  controls into helper functions, under clippy's bound on a function's length; no assertion
+  changed. The new body, run over `1024ecc`'s tree, fails the same way: it panicked at
+  `streak_calendar_route.rs:666:5`, `the route differs from the predecessor: Judged { cases: 11,
+  days: 770, window_mismatches: 22, unnamed: 802, named: 0 }`. The fence line below quotes the
+  earlier body, which failed at line 659 with the same message.
 - **A59 not red.** The settlement already held its iff when the test was written. Its red is the
   threshold flipped to `>= 0` (S07644) or the track filter dropped (S07645), each killed by A59
   alone; the fold writes neither a zero row nor another track's row, so A59 plants them.
