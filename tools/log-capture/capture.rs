@@ -39,8 +39,9 @@ use tracing::{Dispatch, Event, Id, Metadata, Subscriber};
 ///
 /// An answer computed before the floor is installed can be `never`, and can still be stored after
 /// a capture registers. So nothing may register a dispatcher or a callsite before the floor.
-/// No `tracing` macro does: the level filter starts `OFF` and rises only when a dispatcher
-/// registers. A `Dispatch` made outside this helper would raise it, and the census refuses one.
+/// A `Dispatch` made outside this helper registers one, and so does an interest rebuild with no
+/// dispatcher registered, which raises the level filter above `OFF`. The census refuses the
+/// names that do either, from a fixed list of the pinned crates' public items.
 struct Floor;
 
 impl Subscriber for Floor {
@@ -85,12 +86,27 @@ fn register_floor() {
     });
 }
 
+/// Refuses a capture made while this thread already holds one.
+///
+/// A nested capture would take every line from the outer one, so a test asserting on the outer
+/// capture could pass while its lines went elsewhere. A thread holding no capture has the floor as
+/// its default, so any other default means a capture is held. A capture held on another thread is
+/// no obstacle: this thread's default is still the floor.
+fn refuse_nested_capture() {
+    let on_floor = tracing::dispatcher::get_default(|current| current.is::<Floor>());
+    assert!(
+        on_floor,
+        "a capture nested inside another capture on one thread is refused"
+    );
+}
+
 /// Runs `body` with `subscriber` as this thread's default, and returns what it returns.
 pub fn with_capture<S, T>(subscriber: S, body: impl FnOnce() -> T) -> T
 where
     S: Subscriber + Send + Sync + 'static,
 {
     register_floor();
+    refuse_nested_capture();
     tracing::subscriber::with_default(subscriber, body)
 }
 
@@ -100,5 +116,6 @@ where
     S: Subscriber + Send + Sync + 'static,
 {
     register_floor();
+    refuse_nested_capture();
     tracing::subscriber::set_default(subscriber)
 }

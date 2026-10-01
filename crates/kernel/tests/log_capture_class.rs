@@ -361,6 +361,54 @@ fn a_capture_after_the_production_global_default_is_refused() {
     );
 }
 
+/// What an attempt panicked with, empty when it did not panic.
+fn refusal(attempt: impl FnOnce()) -> String {
+    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(attempt)) {
+        Ok(()) => String::new(),
+        Err(payload) => payload
+            .downcast_ref::<&str>()
+            .map(|text| (*text).to_owned())
+            .or_else(|| payload.downcast_ref::<String>().cloned())
+            .unwrap_or_default(),
+    }
+}
+
+/// A capture nested inside a capture on one thread is refused by name, through either entry, for
+/// a nested capture would take every line from the outer one. The outer capture keeps its lines,
+/// and a capture another thread makes while this one is held is admitted.
+#[test]
+fn a_capture_nested_inside_a_capture_on_one_thread_is_refused() {
+    const NAME: &str = "a capture nested inside another capture on one thread is refused";
+    let outer = Captured::default();
+    let elsewhere = Captured::default();
+    let (nested_scoped, nested_held) = log_capture::with_capture(outer.clone(), || {
+        reach();
+        let nested_scoped = refusal(|| log_capture::with_capture(Captured::default(), || ()));
+        let nested_held = refusal(|| drop(log_capture::hold_capture(Captured::default())));
+        let other = elsewhere.clone();
+        std::thread::scope(|scope| {
+            scope
+                .spawn(move || log_capture::with_capture(other, reach))
+                .join()
+                .expect("the other thread's capture is admitted");
+        });
+        reach();
+        (nested_scoped, nested_held)
+    });
+    assert_eq!(nested_scoped, NAME, "the scoped entry nested in a capture");
+    assert_eq!(nested_held, NAME, "the holding entry nested in a capture");
+    assert_eq!(
+        outer.lines().len(),
+        2,
+        "the outer capture keeps both its lines"
+    );
+    assert_eq!(
+        elsewhere.lines().len(),
+        1,
+        "a capture on another thread is admitted and receives its line"
+    );
+}
+
 /// Prints how many items a check examined and refuses zero: a walk that stopped matching must
 /// fail, never pass over the empty set (the tdd pack's examined contract).
 fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
