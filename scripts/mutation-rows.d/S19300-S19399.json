@@ -52,8 +52,8 @@
       [
         "S19306-A-NESTED-PATH-IS-BELOW-THE-MODULE-DIRECTORY",
         "scripts/tests/test_setting_shapes.py",
-        "paths += [folder.joinpath(*names) / lit for folder in folders for lit in literals if names]",
-        "paths += [folder / lit for folder in folders for lit in literals if names]",
+        "paths = [folder.joinpath(*names) / lit for folder in folders for lit in literals]",
+        "paths = [folder / lit for folder in folders for lit in literals]",
         "a `#[path]` below an inline module is read relative to the module directory the inline names make (SPEC-192 A16, #433)",
         "test_setting_shapes.TheGuardResolvesAModuleDeclaredInsideAnInlineModule.test_a_declaration_with_a_path_attribute_is_read_from_the_path_below_the_inline_path"
       ],

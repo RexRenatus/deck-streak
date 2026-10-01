@@ -61,6 +61,11 @@ SHAPE = re.compile(r'const\s+SHAPE\s*:\s*&\'static\s+str\s*=\s*("(?:[^"\\]|\\.)*
 BANDS = REPO / "scripts" / "mutation-rows.d"
 
 
+def crate_files(root):
+    """Every crate source file the guard reads: `crates/*/src/**/*.rs`."""
+    return sorted((root / "crates").glob("*/src/**/*.rs"))
+
+
 def implementations(root):
     """Every `impl Setting for X` under `crates/*/src`: (crate, file, name, quoted literal, span).
 
@@ -68,7 +73,7 @@ def implementations(root):
     and `span` is where that constant sits in the file, so the impl's own line can be excluded.
     """
     found = []
-    for path in sorted((root / "crates").glob("*/src/**/*.rs")):
+    for path in crate_files(root):
         text = lexed(path.read_text(encoding="utf-8"))
         crate, *inside = path.relative_to(root / "crates").parts
         starts = [(m.start(), m.group(1)) for m in IMPL.finditer(text)]
@@ -416,14 +421,19 @@ def cfg_test_spans(text):
 PLAIN = re.compile(r'"([^"\\]*)"')
 
 
+def unraw(word):
+    """A module's name or a path word without its `r#` prefix."""
+    return word.removeprefix("r#")
+
+
 def sites(text):
-    """The file's own inner attributes, and each out-of-line module (`mod name;`) it declares at any
-    depth of inline modules (a declaration inside a function body, a macro or another block is not
-    followed): (name, inline module names or None, the declaration's outer attributes, its full run
-    of attributes from the file's inner ones through each enclosing inline module's, or None when
-    any run could not be read whole, index of the `mod` keyword). The names are None below an
-    inline module whose attributes name `path`, which moves its directory in a way the guard does
-    not read (#433)."""
+    """The file's own inner attributes, and each module declaration (`mod name;` or `mod name { }`)
+    it makes at any depth of inline modules (one inside a function body, a macro or another block is
+    not followed): (name, inline module names or None, the declaration's outer attributes, the
+    attributes that enclose it, or None when any run could not be read whole, index of the `mod`
+    keyword). The names are None below an inline module whose attributes name `path`, which moves
+    its directory in a way the guard does not read (#433). The enclosing attributes are the file's
+    inner ones, then each enclosing inline module's outer and inner ones."""
     found, pairs, _ = scanned(text)
     own, first = leading(found, pairs, 0, len(found))
     out = []
@@ -435,9 +445,9 @@ def sites(text):
                 ["word", "punct"],
                 ["word", "open"],
             ):
-                name = found[at + 1][1].removeprefix("r#")
+                name = unraw(found[at + 1][1])
                 run = outer(found, pairs, begin, at)
-                mine = None if chain is None or run is None else chain + run
+                out.append((name, names, run, chain, at))
                 if found[at + 2][1] == "{":
                     inner, body = leading(found, pairs, at + 3, pairs[at + 2])
                     moved = run is None or named_paths(run) != ([], False)
@@ -445,11 +455,11 @@ def sites(text):
                         body,
                         pairs[at + 2],
                         None if names is None or moved else names + (name,),
-                        None if mine is None else mine + inner,
+                        None if chain is None or run is None else chain + run + inner,
                     )
-                elif found[at + 2][1] == ";":
-                    out.append((name, names, run, mine, at))
-            at = pairs[at] + 1 if found[at][0] == "open" else at + 1
+            if found[at][0] == "open":
+                at = pairs[at]
+            at += 1
 
     walk(first, len(found), (), own)
     return own, out
@@ -462,7 +472,7 @@ def named_paths(run):
     literals, other = [], False
     for each in run:
         for index, word in enumerate(each):
-            if word.removeprefix("r#") != "path":
+            if unraw(word) != "path":
                 continue
             literal = (
                 PLAIN.fullmatch(each[index + 2]) if each[index + 1 : index + 2] == ["="] else None
@@ -474,90 +484,114 @@ def named_paths(run):
     return literals, other
 
 
-def files_for(own, names, name, run):
+def below(own, names, name, run):
     """The files rustc could read for `mod name;` declared in `own` below the inline modules
-    `names`: `name.rs` or `name/mod.rs` in the module directory (`own`'s own folder, or beside
-    `own`, since a crate root, a `mod.rs` and a file an attribute loaded all read beside
-    themselves), unless a plain `#[path]` replaces that, and every file a `path` literal names
-    (a `cfg_attr` one included), relative to `own`'s directory at the top level and to the module
-    directory below an inline module."""
+    `names`: the file a plain `#[path]` names, relative to the module directory the inline names
+    make, or else `name.rs` or `name/mod.rs` in that directory, which is below `own`'s own folder or
+    below the folder beside `own` (a crate root, a `mod.rs` and a file an attribute loaded all read
+    beside themselves). Every file a `cfg_attr` path could name counts too, so a rival is never
+    missed. Only files that exist are returned, each once."""
     literals, _ = named_paths(run)
-    plain = any(each[0].removeprefix("r#") == "path" for each in run)
+    plain = any(unraw(each[0]) == "path" for each in run)
     folders = [own.with_suffix(""), own.parent]
-    paths = [own.parent / lit for lit in literals] if not names else []
-    paths += [folder.joinpath(*names) / lit for folder in folders for lit in literals if names]
+    paths = [folder.joinpath(*names) / lit for folder in folders for lit in literals]
     if not plain:
-        for folder in folders:
-            folder = folder.joinpath(*names)
-            paths += [folder / f"{name}.rs", folder / name / "mod.rs"]
+        paths += [folder.joinpath(*names) / f"{name}.rs" for folder in folders]
+        paths += [folder.joinpath(*names) / name / "mod.rs" for folder in folders]
     unique = {path.resolve() for path in paths}
     return sorted(path for path in unique if path.is_file())
 
 
-def read_declared(own):
-    """(file, attributes, index of the `mod` keyword) for each out-of-line module at any depth of
-    inline modules whose file rustc's choice leaves in no doubt (R8): of every file rustc could
-    read for it (`files_for`), exactly one exists and rustc's lexer reads it. At the top level any
-    attribute that carries `path` in any spelling (`#[path]`, a raw identifier, `cfg_attr` under
-    any predicate) leaves it unread; below an inline module one plain `#[path = "..."]` is read
-    from the module directory (#433). The attributes are `own`'s inner ones, each enclosing inline
-    module's, the declaration's, and that file's inner ones."""
+def beside(own, name, run):
+    """The files a top-level `mod name;` of `own` could name, hedged like `below`: a `#[path]` is
+    relative to `own`'s directory."""
+    literals, _ = named_paths(run)
+    plain = any(unraw(each[0]) == "path" for each in run)
+    paths = [own.parent / lit for lit in literals]
+    if not plain:
+        for place in (own.parent, own.with_suffix("")):
+            paths += [place / f"{name}.rs", place / name / "mod.rs"]
+    unique = {path.resolve() for path in paths}
+    return sorted(path for path in unique if path.is_file())
+
+
+def declared(own):
+    """(file, attributes) for each out-of-line module (`mod name;`) at any depth of inline modules
+    in `own` whose file rustc's choice leaves in no doubt (R8): of every file rustc could read for
+    it (`name.rs` or `name/mod.rs`, in `own`'s module directory or beside `own`, since a crate
+    root, a `src/bin` file, a `mod.rs` and a file an attribute loaded all read their modules beside
+    themselves, and below an inline module's name), exactly one exists and rustc's lexer reads it.
+    At the top level no attribute of the declaration may carry `path` in any spelling (`#[path]`, a
+    raw identifier, `cfg_attr` under any predicate); below an inline module one plain
+    `#[path = "..."]` names the file from the module directory (#433). The attributes are `own`'s
+    inner ones, each enclosing inline module's, the declaration's, and that file's inner ones. A
+    declaration inside a function body or a macro is not followed."""
     text = own.read_text(encoding="utf-8")
+    tokens = scanned(text)[0]
     files = []
-    for name, names, run, mine, at in sites(text)[1]:
-        if names is None or mine is None:
+    for name, names, run, inner, at in sites(text)[1]:
+        if tokens[at + 2][1] != ";":
             continue
-        literals, other = named_paths(run)
-        if other or (not names and literals) or len(literals) > 1:
+        if names is None or inner is None:
             continue
-        if any(each[0].removeprefix("r#") != "path" and "path" in each for each in run):
-            continue
-        found = files_for(own, names, name, run)
+        if names:
+            literals, other = named_paths(run or [])
+            if run is None or other or len(literals) > 1:
+                continue
+            if any(unraw(each[0]) != "path" and named_paths([each]) != ([], False) for each in run):
+                continue
+            found = below(own, names, name, run)
+        else:
+            if run is None or any(w.removeprefix("r#") == "path" for each in run for w in each):
+                continue
+            found = [
+                path
+                for folder in (own.with_suffix(""), own.parent)
+                for path in (folder / f"{name}.rs", folder / name / "mod.rs")
+                if path.is_file()
+            ]
         if len(found) == 1:
             try:
                 body, pairs, _ = scanned(found[0].read_text(encoding="utf-8"))
             except ValueError:
                 continue
-            files.append((found[0], mine + leading(body, pairs, 0, len(body))[0], at))
+            files.append((found[0], inner + run + leading(body, pairs, 0, len(body))[0]))
     return files
 
 
-def declared(own):
-    """(file, attributes) for each out-of-line module `own` declares that `read_declared` reads."""
-    return [(file, attributes) for file, attributes, _ in read_declared(own)]
-
-
 def visible(src):
-    """(declaring file, index of its `mod` keyword, target file, attributes or None) for every
-    out-of-line module that any file reachable from the crate's roots declares, whatever its
-    attributes and however deep, and for every file each could name (`files_for`). The
-    attributes are the whole run from the root that keeps the declaration, None when unreadable."""
+    """(target file, attributes or None) for every out-of-line module that any file reachable from
+    the crate's roots declares, whatever its attributes and however deep, and for every file each
+    could name (`beside`, `below`). The attributes are the whole run from the root that keeps the
+    declaration, None when unreadable."""
     roots = [src / "lib.rs", src / "main.rs", *src.glob("bin/*.rs"), *src.glob("bin/*/main.rs")]
     todo = [(root, []) for root in roots if root.is_file()]
     seen, out = set(), []
     while todo:
         file, chain = todo.pop()
-        key = (file, repr(chain))
-        if key in seen:
+        if (file, repr(chain)) in seen:
             continue
-        seen.add(key)
+        seen.add((file, repr(chain)))
         try:
             text = file.read_text(encoding="utf-8")
-            inner, found = sites(text)
+            tokens = scanned(text)[0]
+            found = sites(text)[1]
         except ValueError:
             continue
-        for name, names, run, mine, at in found:
-            if names is None:
+        for name, names, run, inner, at in found:
+            if names is None or tokens[at + 2][1] == "{":
                 continue
-            attributes = None if chain is None or mine is None else chain + mine
-            for target in files_for(file, names, name, run):
-                out.append((file, at, target, attributes))
+            held = None if chain is None or inner is None or run is None else chain + inner + run
+            for target in (
+                below(file, names, name, run or []) if names else beside(file, name, run or [])
+            ):
+                out.append((target, held))
                 try:
                     body, pairs, _ = scanned(target.read_text(encoding="utf-8"))
                 except ValueError:
                     continue
                 tail = leading(body, pairs, 0, len(body))[0]
-                todo.append((target, None if attributes is None else attributes + tail))
+                todo.append((target, None if held is None else held + tail))
     return out
 
 
@@ -572,24 +606,29 @@ def compiled_without_test(attributes):
         return True
 
 
+def test_files(own):
+    """The file of each out-of-line test module that `own` declares (`declared`), read only when
+    its attributes make it a test module. Any other declaration is not read, so a shape only it
+    spells is refused."""
+    return [file for file, attributes in declared(own) if test_only(attributes)]
+
+
 def out_of_line(own):
-    """The file of each out-of-line test module that `own` declares (`read_declared`), read only
-    when its attributes make it a test module and no other declaration the guard can see compiles
-    that file without `test` (a `#[cfg(not(test))] mod tests;`, a `#[path]` naming it): a shape only
-    it spells is production code, so it is refused (#458). Any other declaration is not read."""
-    wanted = [(f, at) for f, attributes, at in read_declared(own) if test_only(attributes)]
+    """`test_files(own)` less each file that another declaration the guard can see compiles
+    without `test` (a `#[cfg(not(test))] mod tests;`, a `#[path]` naming it): a shape only it
+    spells is production code, so it is refused (#458). A test-only second declaration is no
+    rival, and a rival on another file refuses nothing."""
+    files = test_files(own)
     src = next((parent for parent in own.parents if parent.name == "src"), None)
-    if not wanted or src is None:
-        return [file for file, _ in wanted]
+    if not files or src is None:
+        return files
     others = visible(src)
     return [
         file
-        for file, at in wanted
+        for file in files
         if not any(
-            target.resolve() == file.resolve()
-            and (site, index) != (own, at)
-            and compiled_without_test(attributes)
-            for site, index, target, attributes in others
+            target == file.resolve() and compiled_without_test(attributes)
+            for target, attributes in others
         )
     ]
 
@@ -657,11 +696,6 @@ def rows_pinning(root, crate, file, literal):
             if row[1] == crate and row[2] == file.as_posix() and literal in row[3]:
                 ids.append(row[0])
     return ids
-
-
-def crate_files(root):
-    """Every crate source file the guard reads: `crates/*/src/**/*.rs`."""
-    return sorted((root / "crates").glob("*/src/**/*.rs"))
 
 
 def macro_test_modules(root):
