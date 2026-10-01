@@ -135,11 +135,15 @@ read `read_text`, `read_bytes` and `open` by name in the modules whose source na
 `test_ci_workflows`, 56 of the 90 plants stayed green, each failing the
 killer by assertion; the three controls and the plants the head's census already refused passed.
 A11 failed by assertion on 97 members. The census over the loader's population and
-the reader's refusal of a tab after a dash (610a658) turned both green. Quoted as text:
+the reader's refusal of a tab after a dash (610a658) turned both green. A12 is recorded in the
+fence below and A11, recorded above, is quoted as text:
+
+```red-first
+A12: red at 5bbe692: 56 plants: the census was green
+A12: green at 610a658
+```
 
 ```text
-A12: red at 5bbe692: 56 plants: the census was green
 A11: red at 5bbe692: First list contains 97 additional elements.
-A12: green at 610a658
 A11: green at 610a658
 ```
