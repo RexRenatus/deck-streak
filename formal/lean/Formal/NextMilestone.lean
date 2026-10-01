@@ -1,3 +1,8 @@
+-- @phx covers crates/progression/src/milestone.rs anchor=next_milestone digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+-- @phx covers crates/progression/src/milestone.rs anchor=candidate digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+-- @phx covers crates/progression/src/milestone.rs anchor=smaller digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+-- @phx covers crates/progression/src/milestone.rs anchor=pick digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+-- @phx vectors formal/vectors/next-milestone.jsonl
 -- @phx cites #76
 -- @phx theorem pick_is_least ramp=report
 -- @phx witness pick_last_violates kills=pick_is_least
@@ -40,6 +45,25 @@ def nextMilestone (c1 c2 c3 : Option Cand) : Option Cand := pick (pick c1 c2) c3
 /-- With all three ladders complete the answer is the top review rung (100%). -/
 def milestone (c1 c2 c3 : Option Cand) (top : Cand) : Option Cand :=
   some ((nextMilestone c1 c2 c3).getD top)
+
+/-- The lifetime-review ladder, `REVIEW_LADDER`. -/
+def reviewLadder : List Nat := [100, 500, 1000, 5000, 10000, 50000]
+
+/-- The streak ladder, `STREAK_LADDER`. -/
+def streakLadder : List Nat := [7, 30, 100, 365, 1000]
+
+/-- The mature-card ladder, `MATURE_LADDER`. -/
+def matureLadder : List Nat := [100, 500, 1000, 5000]
+
+/-- `candidate`: the smallest rung strictly above the value, or none when the ladder is complete. -/
+def candidate (idx : Nat) (ladder : List Nat) (value : Nat) : Option Cand :=
+  (ladder.find? fun rung => value < rung).map fun rung => ⟨idx, rung, value⟩
+
+/-- `next_milestone`: the pick over the review, streak and mature-card candidates in that order,
+or the top review rung, fully reached, when all three ladders are complete. -/
+def nextMilestoneOf (reviews streak mature : Nat) : Option Cand :=
+  milestone (candidate 0 reviewLadder reviews) (candidate 1 streakLadder streak)
+    (candidate 2 matureLadder mature) ⟨0, 50000, 50000⟩
 
 /-- The wrong variant: a tie goes to the later ladder. -/
 def pickLater (a b : Option Cand) : Option Cand :=
