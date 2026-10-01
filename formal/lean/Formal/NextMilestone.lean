@@ -1,7 +1,7 @@
--- @phx covers crates/progression/src/milestone.rs anchor=next_milestone digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/progression/src/milestone.rs anchor=candidate digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/progression/src/milestone.rs anchor=smaller digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/progression/src/milestone.rs anchor=pick digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+-- @phx covers crates/progression/src/milestone.rs anchor=next_milestone digest=sha256:efcd0a95b206afe076dd10f9a121b28ec99818425e5363b1b113cfb6d1cc97fc
+-- @phx covers crates/progression/src/milestone.rs anchor=candidate digest=sha256:3056a310f47a87607922c7149eddca3e6cc09f8f65b6e74c3f560994dc92c57d
+-- @phx covers crates/progression/src/milestone.rs anchor=smaller digest=sha256:ec345e3be55e37dddf73572388f78d3c1162f0158ad604b8c17e34e7ae8af2d5
+-- @phx covers crates/progression/src/milestone.rs anchor=pick digest=sha256:eb4fa6f6594e05e77d56173003d1edbe0fbc76b99698f3eb23a5b3239a0fc063
 -- @phx vectors formal/vectors/next-milestone.jsonl
 -- @phx cites #76
 -- @phx theorem pick_is_least ramp=report
