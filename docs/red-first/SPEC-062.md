@@ -91,4 +91,7 @@ A21: red at 6938671: AssertionError: Lists differ: [] != ["deploy/systemd/plante
 A21: green at 59d8186
 A22: red at 4777c36: AssertionError: Lists differ: [] != ["deploy/systemd/planted@tty1.service.d/10[131 chars]sed"]
 A22: green at f369943
+A23: red at 5b0931c: NameError: name 'INSTANCE_DROPIN_ALLOWLIST' is not defined
+A23: green at ed840ef
+A24: not red: the held flush's drop-in loads the bot's pair from its first commit; the rows S06231 and S06232 prove the test fails when the sync instance or the template loads it
 ```
