@@ -1,5 +1,5 @@
 //! A held item whose push reached the owner is never pushed again when the flush's work after the
-//! push fails (SPEC-041 R16, ADR-300's amendment; #291).
+//! push fails (SPEC-041 R16b, ADR-300's amendment; #291).
 //!
 //! A flush settles each row it delivered in a write of its own: the row leaves the queue, and its
 //! decision is recorded. When that write fails after the push answered delivered, the flush ends
@@ -9,8 +9,8 @@
 //! aborts the settle's delete, standing in for any database error after a delivered push; it is
 //! dropped before the second flush.
 
-// An integration test is test code: its fixtures panic on a failed setup.
-#![allow(clippy::expect_used)]
+// An integration test is test code: its fixtures panic on a failed setup, and it prints answers.
+#![allow(clippy::expect_used, clippy::print_stdout)]
 
 use std::sync::{Arc, Mutex, PoisonError};
 

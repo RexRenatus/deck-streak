@@ -365,6 +365,25 @@ pub(crate) async fn abandon_lapsed(
     Ok(done.rows_affected() == 1)
 }
 
+/// Marks the celebration `id`, still claimed under `claim` by the flush that pushed it, abandoned
+/// with its claim kept, which a recap reads as "may have been sent": its push answered delivered
+/// and the settle after it never committed, so it is never pushed again (SPEC-041 R16b). Its key,
+/// or `None` when the row is no longer this claim's: settled, or named by another flush.
+pub(crate) async fn abandon_pushed(
+    connection: &mut SqliteConnection,
+    id: i64,
+    claim: &str,
+) -> Result<Option<String>, KernelError> {
+    Ok(sqlx::query_scalar!(
+        "UPDATE notification_queue SET state = 'abandoned' \
+         WHERE id = ? AND state = 'sending' AND claim = ? RETURNING dedupe_key",
+        id,
+        claim
+    )
+    .fetch_optional(connection)
+    .await?)
+}
+
 /// Holds the celebration `id`, claimed under `claim`, again after a failed send, with `tries`
 /// failed sends behind it and held for `hold`; its first deferral time is kept. `false` when the
 /// row is no longer this claim's.
@@ -391,7 +410,8 @@ pub(crate) async fn relatch(
 }
 
 /// Gives every celebration still claimed under `claim` back to the queue, untouched: a flush that
-/// ended before it reached them did not send them.
+/// ended before it reached them did not send them. A row the flush pushed is named by
+/// [`abandon_pushed`] first, so it is never given back here.
 pub(crate) async fn release_claims(
     connection: &mut SqliteConnection,
     claim: &str,
