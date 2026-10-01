@@ -83,3 +83,9 @@ table and the deploy templates.
   `flush_lease` while a flush holds it.
 - Bad, because a delete-by-token release is not mutation-tested: dropping its `AND value = ?` is
   equivalent except in a flush that outlives its own lease, which the test clock cannot reach.
+- Bad, because the deploy tests' rule that a job template ships exactly one instance drop-in
+  directory is relaxed: the held flush needs its own, beside the sync job's, to load the bot's two
+  credentials. The reader merges every instance's drop-in into the template, so the template's
+  expected credentials are now four, and a new test pins which instance loads which (the bot's two
+  by the held flush alone, the sync login by the sync job alone). The alternative of loading the
+  bot's credentials in the template would have given every job the bot's token.
