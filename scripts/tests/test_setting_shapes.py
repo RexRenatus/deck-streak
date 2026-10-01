@@ -1193,5 +1193,228 @@ class TheGuardIgnoresAnImplementationInAComment(unittest.TestCase):
         self.assertEqual(unpinned(after), ['demo::Ghost (src/more.rs) "a ghost shape"'])
 
 
+class TheGuardResolvesAModuleDeclaredInsideAnInlineModule(unittest.TestCase):
+    """A `mod tests;` inside `mod a { ... }` is read from the file rustc reads for it: the module
+    directory of the declaring file, then the inline modules' names, then `tests.rs` or
+    `tests/mod.rs`, or the `#[path]` it names (A16, #433)."""
+
+    tree = TheGuardJudgesAPlantedTree.tree
+    declared = TheGuardReadsOutOfLineTestModules.declared
+    SPELLING = TheGuardReadsOutOfLineTestModules.SPELLING
+    NO_SHAPE = "let shape = 1;\n"
+
+    def nested(self, names, leaf="tests", attributes="#[cfg(test)]\n"):
+        """`mod a { mod b { ... #[cfg(test)] mod <leaf>; } }` for the inline `names`."""
+        opened = "".join(f"mod {name} {{\n" for name in names)
+        return f"{opened}{attributes}mod {leaf};\n" + "}\n" * len(names)
+
+    def folders(self, own):
+        """Where rustc looks for a module of `own`'s inline modules: the crate's `src` for a crate
+        root, the file's own directory for any other module file."""
+        return "" if own == "lib.rs" else "depth/"
+
+    def test_a_declaration_inside_inline_modules_is_read_from_the_inline_path(self):
+        for own in ("lib.rs", "depth.rs"):
+            for names in (("a",), ("a", "b"), ("a", "b", "c")):
+                folder = self.folders(own) + "".join(f"{name}/" for name in names)
+                for leaf in ("tests.rs", "tests/mod.rs"):
+                    declaration = self.nested(names)
+                    pinned = self.declared(declaration, (folder + leaf, self.SPELLING), own=own)
+                    self.assertEqual(unpinned(pinned), [], (own, names, leaf))
+                    bare = self.declared(declaration, (folder + leaf, self.NO_SHAPE), own=own)
+                    self.assertEqual(len(unpinned(bare)), 1, (own, names, leaf))
+
+    def test_a_file_that_is_not_the_inline_path_is_not_read(self):
+        for own in ("lib.rs", "depth.rs"):
+            folder = self.folders(own)
+            declaration = self.nested(("a", "b"))
+            for wrong in ("tests.rs", "a/tests.rs", "b/tests.rs", "a/b/c/tests.rs"):
+                root = self.declared(declaration, (folder + wrong, self.SPELLING), own=own)
+                self.assertEqual(len(unpinned(root)), 1, (own, wrong))
+
+    def test_a_declaration_with_a_path_attribute_is_read_from_the_path_below_the_inline_path(self):
+        for own in ("lib.rs", "depth.rs"):
+            folder = self.folders(own)
+            for attributes in (
+                '#[cfg(test)]\n#[path = "t.rs"]\n',
+                '#[path = "t.rs"]\n#[cfg(test)]\n',
+                '#[cfg(test)]\n#[path="t.rs"]\n',
+            ):
+                declaration = self.nested(("a", "b"), "tests", attributes)
+                pinned = self.declared(declaration, (folder + "a/b/t.rs", self.SPELLING), own=own)
+                self.assertEqual(unpinned(pinned), [], (own, attributes))
+                bare = self.declared(declaration, (folder + "a/b/t.rs", self.NO_SHAPE), own=own)
+                self.assertEqual(len(unpinned(bare)), 1, (own, attributes))
+                for wrong in ("t.rs", "a/t.rs", "a/b/tests.rs"):
+                    root = self.declared(declaration, (folder + wrong, self.SPELLING), own=own)
+                    self.assertEqual(len(unpinned(root)), 1, (own, attributes, wrong))
+
+    def test_the_attributes_of_the_inline_modules_decide_whether_the_file_is_a_test_module(self):
+        file = ("a/tests.rs", self.SPELLING)
+        inline = "mod a {\n#![cfg(test)]\n#[cfg(test)]\nmod tests;\n}\n"
+        for declaration, read in (
+            ("#[cfg(test)]\nmod a {\nmod tests;\n}\n", True),
+            ("#[cfg(test)]\nmod a {\n#[cfg(test)]\nmod tests;\n}\n", True),
+            ("mod a {\n#![cfg(test)]\nmod tests;\n}\n", True),
+            (inline, True),
+            ("mod a {\nmod tests;\n}\n", False),
+            ("#[cfg(any())]\nmod a {\n#[cfg(test)]\nmod tests;\n}\n", False),
+            ("#[cfg(not(test))]\nmod a {\n#[cfg(test)]\nmod tests;\n}\n", False),
+            ("mod a {\n#![cfg(not(test))]\n#[cfg(test)]\nmod tests;\n}\n", False),
+            ('#[cfg(feature = "slow")]\nmod a {\n#[cfg(test)]\nmod tests;\n}\n', False),
+            ("mod a {\nconst X: u8 = 1;\n#[cfg(test)]\nfn tests() {}\n}\n", False),
+        ):
+            root = self.declared(declaration, file, own="lib.rs")
+            self.assertEqual(unpinned(root) == [], read, declaration)
+
+    def test_a_declaration_inside_a_function_body_is_not_read(self):
+        declaration = "fn f() {\n#[cfg(test)]\nmod tests;\n}\n"
+        root = self.declared(declaration, ("tests.rs", self.SPELLING), own="lib.rs")
+        self.assertEqual(len(unpinned(root)), 1)
+
+
+class TheGuardRefusesAMacroThatDeclaresATestModule(unittest.TestCase):
+    """A `macro_rules!` body that declares a `cfg(test)` module is a source the text reader cannot
+    expand, so the crate file holding it is refused by name instead of read as if the macro were
+    not there (A17, #441)."""
+
+    tree = TheGuardJudgesAPlantedTree.tree
+    src = TheGuardJudgesAPlantedTree.src
+    PINNED = 'const X: &str = "a whole depth";'
+
+    def refused(self, text):
+        """The refusals that name `src/more.rs`, in a tree whose one implementation is pinned."""
+        root = self.src(self.tree(self.PINNED), text)
+        return [line for line in unpinned(root) if "src/more.rs" in line]
+
+    def macro(self, body):
+        return "macro_rules! m {\n    ($($n:ident),*) => {\n" + body + "    };\n}\n"
+
+    def test_a_macro_body_with_a_cfg_test_module_is_refused_by_its_file(self):
+        for body in (
+            "        #[cfg(test)]\n        mod tests;\n",
+            "        #[cfg(test)]\n        mod tests {\n            const X: u8 = 1;\n        }\n",
+            "        #[cfg(all(test, unix))]\n        mod tests;\n",
+            '        #[cfg(any(test, feature = "slow"))]\n        pub mod tests;\n',
+            "        #[cfg_attr(test, allow(dead_code))]\n        mod tests;\n",
+            "        #[allow(dead_code)]\n        #[cfg(test)]\n        mod tests;\n",
+            "        $(#[cfg(test)] mod $n;)*\n",
+            "        const A: u8 = 1;\n        #[cfg(test)]\n        mod tests;\n",
+        ):
+            found = self.refused(self.macro(body))
+            self.assertEqual(len(found), 1, body)
+            self.assertIn("macro", found[0])
+
+    def test_every_delimiter_and_depth_of_a_macro_body_is_read(self):
+        inner = "#[cfg(test)]\nmod tests;\n"
+        for text in (
+            "macro_rules! m {\n    () => { " + inner + " };\n}\n",
+            "macro_rules! m (\n    () => ( " + inner + " );\n);\n",
+            "macro_rules! m [\n    () => [ " + inner + " ];\n];\n",
+            "mod a {\n    macro_rules! m {\n        () => { " + inner + " };\n    }\n}\n",
+            "macro_rules! m {\n    () => { mod a { " + inner + " } };\n}\n",
+            "macro_rules! m {\n    () => {};\n    ($x:ident) => { " + inner + " };\n}\n",
+        ):
+            self.assertEqual(len(self.refused(text)), 1, text)
+
+    def test_a_macro_body_without_a_cfg_test_module_is_not_refused(self):
+        for text in (
+            self.macro("        mod tests;\n"),
+            self.macro("        #[cfg(not(unix))]\n        mod tests;\n"),
+            self.macro("        #[cfg(test)]\n        fn check() {}\n"),
+            self.macro("        #[cfg(test)]\n        const T: u8 = 1;\n"),
+            self.macro("        $(#[$m:meta])*\n        mod tests;\n"),
+            "#[cfg(test)]\nmod tests {\n    const X: u8 = 1;\n}\n",
+            "// macro_rules! m { () => { #[cfg(test)] mod tests; }; }\n",
+            'const D: &str = "macro_rules! m { () => { #[cfg(test)] mod tests; }; }";\n',
+            "macro_rules! m {\n    () => {};\n}\n#[cfg(test)]\nmod tests {}\n",
+            "macro_rules! m {\n    () => {};\n}\nm!{ #[cfg(test)] mod tests; }\n",
+        ):
+            self.assertEqual(self.refused(text), [], text)
+
+    def test_the_refusal_names_the_crate_and_the_file(self):
+        root = self.src(
+            self.tree(self.PINNED), self.macro("        #[cfg(test)]\n        mod t;\n")
+        )
+        found = [line for line in unpinned(root) if "more.rs" in line]
+        self.assertEqual(len(found), 1)
+        self.assertTrue(found[0].startswith("demo (src/more.rs)"), found[0])
+        self.assertEqual(len(unpinned(root)), 1)
+
+
+class TheGuardRefusesAModuleFileThatAnotherDeclarationCompilesWithoutTest(unittest.TestCase):
+    """A file a `#[cfg(test)] mod tests;` declares is not read when any declaration the guard can
+    see also compiles it without `test`: a spelling there is production code (A18, #458)."""
+
+    tree = TheGuardJudgesAPlantedTree.tree
+    declared = TheGuardReadsOutOfLineTestModules.declared
+    SPELLING = TheGuardReadsOutOfLineTestModules.SPELLING
+    TEST = "#[cfg(test)]\nmod tests;\n"
+
+    def judged(self, declaration, own="lib.rs", extra=()):
+        folder = "" if own == "lib.rs" else "depth/"
+        root = self.declared(declaration, (folder + "tests.rs", self.SPELLING), *extra, own=own)
+        return len(unpinned(root))
+
+    def test_a_module_declared_beside_one_with_not_test_is_refused(self):
+        for own in ("lib.rs", "depth.rs"):
+            for declaration in (
+                self.TEST + "#[cfg(not(test))]\nmod tests;\n",
+                "#[cfg(not(test))]\nmod tests;\n" + self.TEST,
+                self.TEST + "#[cfg(not(test))]\n#[allow(dead_code)]\nmod tests;\n",
+                self.TEST + "#[allow(dead_code)]\n#[cfg(not(test))]\nmod tests;\n",
+                self.TEST + "#[cfg(not(test))]\npub mod tests;\n",
+            ):
+                self.assertEqual(self.judged(declaration, own), 1, (own, declaration))
+            self.assertEqual(self.judged(self.TEST, own), 0, own)
+
+    def test_a_module_a_path_declaration_names_beside_a_test_module_is_refused(self):
+        for own, path in (("lib.rs", "tests.rs"), ("depth.rs", "depth/tests.rs")):
+            for declaration in (
+                f'#[path = "{path}"]\nmod prod;\n' + self.TEST,
+                self.TEST + f'#[path = "{path}"]\nmod prod;\n',
+                f'#[path="{path}"]\nmod prod;\n' + self.TEST,
+                f'#[cfg(not(test))]\n#[path = "{path}"]\nmod prod;\n' + self.TEST,
+                f'#[cfg_attr(not(test), path = "{path}")]\nmod prod;\n' + self.TEST,
+                f'#[path = "{path}"]\n#[cfg(not(test))]\nmod prod;\n' + self.TEST,
+            ):
+                self.assertEqual(self.judged(declaration, own), 1, (own, declaration))
+
+    def test_a_variant_that_compiles_the_file_without_test_is_refused(self):
+        for rival in (
+            "#[cfg_attr(not(test), allow(dead_code))]\nmod tests;\n",
+            "#[cfg(any(not(test), unix))]\nmod tests;\n",
+            '#[cfg(feature = "slow")]\nmod tests;\n',
+            "#[cfg(all())]\nmod tests;\n",
+            "mod tests;\n",
+            "#[cfg_attr(test, cfg(any()))]\nmod tests;\n",
+        ):
+            self.assertEqual(self.judged(self.TEST + rival), 1, rival)
+
+    def test_a_declaration_in_another_file_or_an_inline_module_counts(self):
+        root = self.declared(self.TEST, ("depth/tests.rs", self.SPELLING), own="depth.rs")
+        src = root / "crates" / "demo" / "src"
+        (src / "lib.rs").write_text(
+            'mod depth;\n#[cfg(not(test))]\n#[path = "depth/tests.rs"]\nmod prod;\n',
+            encoding="utf-8",
+        )
+        self.assertEqual(len(unpinned(root)), 1)
+        (src / "lib.rs").write_text(
+            'mod depth;\nmod a {\n#[cfg(not(test))]\n#[path = "../depth/tests.rs"]\nmod prod;\n}\n',
+            encoding="utf-8",
+        )
+        self.assertEqual(len(unpinned(root)), 1)
+
+    def test_a_file_compiled_only_under_test_is_still_read(self):
+        for own, path in (("lib.rs", "tests.rs"), ("depth.rs", "depth/tests.rs")):
+            for declaration in (
+                self.TEST + f'#[cfg(test)]\n#[path = "{path}"]\nmod again;\n',
+                self.TEST + "#[cfg(not(test))]\nmod other;\n",
+                self.TEST + '#[cfg(not(test))]\n#[path = "other.rs"]\nmod prod;\n',
+            ):
+                extra = (("other.rs", "let shape = 1;\n"), ("depth/other.rs", "let shape = 1;\n"))
+                self.assertEqual(self.judged(declaration, own, extra), 0, (own, declaration))
+
+
 if __name__ == "__main__":
     unittest.main()
