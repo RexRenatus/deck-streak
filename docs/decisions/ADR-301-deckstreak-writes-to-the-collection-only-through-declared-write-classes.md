@@ -99,6 +99,8 @@ its own ADR in ADR-089's form.
   (f) bind it like any other class. Its planned SPEC-083 takes (b)'s backup, restore drill and
   counts through its own amendment before its write is built (#108). This ADR changes neither
   ADR-089's design of the skip day nor SPEC-083.
+- **Note (2026-10-01, #518, the skip day's rung):** In other words, the skip day's rung is a
+  ceiling. Its ceiling is the approval rung, because the owner's skip declaration approves each batch.
 
 ### (a) The never-list
 
@@ -146,6 +148,16 @@ entry names what it protects.
 - Every edit to a reviewed note writes a change point to DeckStreak's ledger: the note, the
   fields before and after, and the class that made the edit. A trial can then separate an edit's
   effect from everything else.
+- **Note (2026-10-01, #518, ADR-064):** ADR-064 decides what DeckStreak's own units back up, and
+  leaves the collection copy out: its title says "the collection copy never is" backed up, and it
+  rejects "Backing up the collection copy as well" because the copy is "a copy of the owner's
+  collection that the next sync downloads again (ADR-037)", and a daily copy of it "would be the
+  largest file DeckStreak keeps". The two read together. ADR-064's "never" is about those units'
+  standing copies, the daily copy and the replica. This part's backup is a write batch's own act: a
+  batch "takes a whole-collection backup first", and its restore drill proves that backup "before the
+  batch writes anything". This part states no place and no retention for its backup, and it does not
+  name ADR-064's units as holding it. The planned SPEC-083 takes (b)'s backup, restore drill and counts
+  through its own amendment before its write is built (#108), as the skip day's paragraph above says.
 
 ### (c) The promotion ladder
 
@@ -237,6 +249,14 @@ Every write class climbs three rungs, one at a time, and starts on the first.
   - whether the engine's due-date write adds a review-log row, and how (e) and a trial then count
     it;
   - what computing embeddings costs, measured before any class adopts them.
+
+Note (2026-10-01, #518, the due-date write): the second question above is answered in part where
+ADR-089's consequences state it. The engine's Set Due Date writes one review-log row of type 4 with
+ease 0 for each card it moves (planned SPEC-083 R18; ADR-097 says the same). Those rows "stay after an
+undo" because "an incremental sync removes no review-log row" (ADR-089, Consequences), and "The read
+never counts them as study events (SPEC-023 R2)", which reads a review as a study event only when it
+is of type 0 to 3 with ease 1 or more. How (e) and a trial count them is not decided there, and stays
+an open question for the first write class's ADR.
 
 ### Confirmation
 

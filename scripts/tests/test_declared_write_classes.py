@@ -384,14 +384,14 @@ NO_EXEMPTION = "ADR-301 grants the skip day no exemption"
 BUDGET_TERMS = (
     "Change budget.",
     "the study day's due review cards",
-    "the planned SPEC-083 R21",
+    "planned SPEC-083 R21",
     "`SKIP_MAX_CARDS`, the planned golden constant (5,000)",
     "`too_many_cards`",
 )
 DWELL_TERMS = (
     "Dwell.",
     "No dwell time between changes is decided",
-    "the planned SPEC-083 R2",
+    "planned SPEC-083 R2",
     "`already_skipped`",
     "it is not a dwell between changes",
 )
@@ -410,8 +410,8 @@ BACKUP_TERMS = (
     "would be the largest file DeckStreak keeps",
     "takes a whole-collection backup first",
     "before the batch writes anything",
-    "places and keeps no copy of its own",
-    "the planned SPEC-083 takes (b)'s backup, restore drill and counts",
+    "states no place and no retention for its backup",
+    "planned SPEC-083 takes (b)'s backup, restore drill and counts",
 )
 DUE_DATE_TERMS = (
     "ADR-089",
@@ -427,13 +427,13 @@ DUE_DATE_TERMS = (
 
 def follow_up(text, topic):
     """The one note of `text` that opens `Note (2026-10-01, #518, <topic>):`, up to the next blank
-    line, list item or heading. Another count than one is a problem of the document."""
+    line that no list item follows, or heading. Another count than one is a problem of the document."""
     opening = f"{FOLLOW_UP}{topic}):"
     starts = [m.start() for m in re.finditer(re.escape(opening), text)]
     if len(starts) != 1:
         raise AssertionError(f"{len(starts)} notes open {opening!r}, not one")
     rest = text[starts[0] :]
-    end = re.search(r"\n\n|\n#{2,3} ", rest)
+    end = re.search(r"\n\n(?!- )|\n#{2,3} ", rest)
     return normal(rest[: end.start() if end else len(rest)])
 
 
@@ -494,7 +494,10 @@ class TheFollowUpNotesAreInsertOnly(unittest.TestCase):
             "whether the engine's due-date write adds a review-log row, and how (e) and a trial"
         )
         self.assertIn(question, normal(text))
-        self.assertLess(normal(text).index(question), normal(text).index(FOLLOW_UP))
+        self.assertLess(
+            normal(text).index(question),
+            normal(text).index(FOLLOW_UP + "the due-date write"),
+        )
 
 
 if __name__ == "__main__":
