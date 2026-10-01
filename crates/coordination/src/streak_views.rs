@@ -2,7 +2,11 @@
 //! show it. The API's `GET /api/streak` and `GET /api/governor` and the bot's `/streak` all read
 //! these, so the numbers cannot drift between them.
 
-use deck_streak_kernel::{Db, KernelError, StudyDay};
+use std::collections::BTreeSet;
+
+use deck_streak_kernel::{Db, KernelError, StudyDay, Track};
+use deck_streak_progression as progression;
+use deck_streak_streaks::calendar;
 use deck_streak_streaks::constants::{RELIGHT_CARDS, STREAK_FREEZE_CAP};
 use deck_streak_streaks::store;
 use deck_streak_streaks::streak::{StreakState, heat_for, heat_tier};
@@ -30,6 +34,31 @@ impl AtStake {
     }
 }
 
+/// One served day of a track's calendar, as the surfaces read it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct CalendarView {
+    /// The day.
+    pub day: StudyDay,
+    /// Whether the track had a study day on it.
+    pub studied: bool,
+    /// The markers that sit on it (`skip`, `freeze`, `break`), in that order.
+    pub markers: Vec<&'static str>,
+}
+
+fn calendar_view(days: Vec<calendar::CalendarDay>) -> Vec<CalendarView> {
+    days.into_iter()
+        .map(|day| CalendarView {
+            day: day.day,
+            studied: day.studied,
+            markers: day
+                .markers
+                .into_iter()
+                .map(calendar::Marker::as_str)
+                .collect(),
+        })
+        .collect()
+}
+
 /// Both tracks and what is at stake for the open day.
 #[derive(Clone, Debug, PartialEq)]
 pub struct StreakView {
@@ -51,6 +80,10 @@ pub struct StreakView {
     pub language_at_stake: AtStake,
     /// What a missed day costs the law track.
     pub law_at_stake: AtStake,
+    /// The language track's calendar, ending at `study_day` (SPEC-076 section 27).
+    pub language_calendar: Vec<CalendarView>,
+    /// The law track's calendar, ending at `study_day`.
+    pub law_calendar: Vec<CalendarView>,
 }
 
 /// What a missed day costs `track`, given what its run alone puts at stake: nothing once `today`
@@ -69,13 +102,26 @@ fn once_studied(stake: AtStake, track: &StreakState, today: StudyDay) -> AtStake
 ///
 /// [`KernelError::Database`] when a read fails.
 pub async fn streak_view(db: &Db, today: StudyDay) -> Result<StreakView, KernelError> {
-    let mut connection = db.reader().acquire().await?;
-    let language = store::state(&mut connection, "language")
+    let mut transaction = db.reader().begin().await?;
+    let connection = &mut *transaction;
+    let language = store::state(connection, "language")
         .await?
         .unwrap_or_else(StreakState::start);
-    let law = store::state(&mut connection, "law")
+    let law = store::state(connection, "law")
         .await?
         .unwrap_or_else(StreakState::start);
+    let language_days: BTreeSet<StudyDay> =
+        progression::settled_days(connection, "reviews", Track::Language)
+            .await?
+            .into_iter()
+            .collect();
+    let law_days: BTreeSet<StudyDay> =
+        progression::settled_days(connection, "reviews_law", Track::Law)
+            .await?
+            .into_iter()
+            .collect();
+    // The skip day is #108's: until it exists no day is declared.
+    let skips = BTreeSet::new();
     let language_at_stake = match (language.current, language.freezes) {
         (0, _) => AtStake::Nothing,
         (_, 0) => AtStake::Break,
@@ -98,6 +144,8 @@ pub async fn streak_view(db: &Db, today: StudyDay) -> Result<StreakView, KernelE
         freeze_cap: STREAK_FREEZE_CAP,
         language_at_stake,
         law_at_stake,
+        language_calendar: calendar_view(calendar::language(&language_days, &skips, today)),
+        law_calendar: calendar_view(calendar::law(&law_days, &skips, today)),
     })
 }
 
