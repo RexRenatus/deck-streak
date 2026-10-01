@@ -806,3 +806,87 @@ A50: cargo test -p deck-streak-bot --test streak_commands -- --exact the_languag
 A51: cargo test -p deck-streak-coordination --test relight_order -- --exact a_route_that_fails_leaves_the_day_due_and_a_later_cycle_celebrates_it_once
 A52: cargo test -p deck-streak-coordination --test relight_order -- --exact every_failed_route_leaves_its_day_due_until_one_celebration
 ```
+
+## 24. Amendment, 2026-10-01: A50 and A52 derived, the failed route's own model, and no give-up
+
+Insert-only: every earlier byte is kept in order, and this section and the next are the only
+insertions.
+
+- A50's population is derived from the streak's heat table, the one the reply reads (`STREAK_HEAT`
+  in `crates/streaks/src/constants.rs`, compiled into the bot's test as data; the bot crate gains no
+  dependency). For each band of the table the test reads the band's first and last run, and for the
+  open top band its first run and the run after it, so run 0, whose heat is empty, is read too. Each
+  run is read at either lead (a law run of zero, so the language line leads, and of two, so the law
+  line leads) and at no freeze, one and two. Round 4's eight replies (language runs 0, 3, 9 and 45,
+  each with a best in the band above, at one freeze and at two, beside a law run of 2) are kept in
+  the population beside these. Each band's heat is written out in the test as its oracle and is
+  never read from the streak crate. A band of the table with no oracle entry, or an oracle entry
+  with no band, is red before any reply is read, so a band added to the table grows the population
+  and is never judged by a heat the test does not hold. A56 reads every band at the same leads and
+  freeze counts, its eleven runs written out by hand. This supersedes section 22's sentence "A50's
+  language runs cross run 0, whose heat is empty, and three heat bands, and every other value on the
+  line differs from the run's heat": the runs now cross every band of the table, and every other
+  value on the line still differs from the run's heat.
+- A52's population is derived from its axes: the cycle whose route fails (the one whose fold
+  committed the grants, or the first after a restart), every non-empty set of the due days whose
+  route fails, which of the router's two ledger writes fails, one to three consecutive failed
+  routes, and a restart, or none, before the retry. A due day, a write or a failed route added to
+  an axis grows it. This supersedes section 22's "which of two due days fails" and "one or two
+  consecutive failed routes".
+- R27's sentence "A day whose route fails stays due", and section 22's "The cycle leaves the day on
+  the list and goes on to the next due day", are decided by five tests. A51 and A52 decide that a
+  failed route leaves its day due and that a later cycle celebrates it once. A53 decides that the
+  cycle goes on to the next due day: while one due day's claim fails on every cycle, the other is
+  celebrated in the first cycle, once, and the failing day alone stays due. A54 fails a day's
+  route on one to eight consecutive cycles, at either ledger write, and the day stays due after
+  each. A55 decides, for every count, that no number of failed routes gives a day up. This
+  supersedes section 22's "A51 and A52 now decide its sentence "A day whose route fails stays
+  due"".
+- A55 holds by construction, not by a count: the test reads every place a count of a day's failed
+  routes could outlive one route, and finds none. `RelightDue` holds no field. Every line that
+  names a type holding state (a lock, a cell, a lazy value, a channel, a thread-local or an
+  atomic) in the router's crate, the kernel and the route's own two files is one of a written-out
+  list: the router's two failure instants, the clock, the worker pool and the log's redaction
+  list, none of them a count per day. Every static of every crate coordination links is one of a
+  written-out list. Three failed routes leave every row of the database as they found it. So a
+  counter added to any of those places is red at its first failure. A55 does not read a count kept
+  inside the transport or the clock a caller hands the router, and a give-up by a day's age rather
+  than by its count of failed routes is outside it.
+- The proof that S1, S2 and L1 hold with a failing route is this delivery's own model,
+  `formal/tla/RelightOrder/`. Its route of a due day can fail before the claim is written or after
+  the claim committed and the line was sent, and the failed day stays due while the cycle goes on.
+  It checks S1 and S2 in every state, L1, and NoOtherDayHeldBack: under fairness on every step of
+  the cycle but the failing day's route, and on that route returning its error, never on it
+  succeeding, every other due day is celebrated while one day's route keeps failing. Its
+  witnesses, each a violation: a failed route that clears the day (L1), that ends the cycle's route
+  (NoOtherDayHeldBack), that returns its error out of the cycle (NoOtherDayHeldBack), and a day
+  given up after one, two or three failed routes, every count the model's bound reaches (L1). R28's
+  proof without a failing route stays #477. This supersedes section 22's "and the proof that they
+  hold with a failing route is #477".
+
+Manifest additions: `crates/bot/tests/streak_commands.rs` (changed: A50 derived, A56);
+`crates/coordination/tests/relight_order.rs` (changed: A52 derived, A53 to A55);
+`formal/tla/RelightOrder/` (added: the model, its configurations and its witnesses);
+`config/formal.json` and `scripts/tests/test_formal_config.py` (changed: the model's time budget);
+the rows `S07630` to `S07635`; and `docs/red-first/SPEC-076.md` (changed: the addendum of this
+date).
+
+## 25. Acceptance criteria of the 2026-10-01 derived-population amendment
+
+A50 and A52 keep their tests and their commands (section 23); their criteria now read as below.
+
+| id | criterion | decided by |
+|---|---|---|
+| A50 | the language line carries its run's heat in the heat's own place, over every band of the streak's heat table (each band's first and last run, the top band's first and the run after it, and run 0), at either lead and at no freeze, one and two, and round 4's eight replies; a band with no written-out heat is red | `the_language_line_carries_its_runs_heat_in_the_heats_own_place` |
+| A52 | over every failing cycle, non-empty set of failing due days, failing ledger write, run of one to three consecutive failed routes and restart before the retry, each committed grant is celebrated once, no other day is, and the due list empties | `every_failed_route_leaves_its_day_due_until_one_celebration` |
+| A53 | while one due day's claim fails on every cycle, the other due day is celebrated in the first cycle, once, the failing day alone stays due, and it is celebrated once when its claim can be written | `a_day_whose_route_keeps_failing_holds_back_no_other_due_day` |
+| A54 | a day whose route fails on each of one to eight consecutive cycles, at either ledger write, stays due after each failed route, and the first cycle that can route it celebrates it once | `a_day_whose_route_fails_many_times_stays_due_until_its_one_celebration` |
+| A55 | the route keeps no per-day failure state a give-up could read: no field in `RelightDue`, no state-holding line beyond the written-out list, no static beyond the written-out list, and the database unchanged by three failed routes | `the_route_keeps_no_per_day_failure_state_a_give_up_could_read` |
+| A56 | the language line carries its run's heat in the heat's own place over eleven runs written out by hand, two in each band and run 0, at either lead and at no freeze, one and two | `every_heat_band_is_carried_in_the_heats_own_place_whichever_line_leads` |
+
+```acceptance
+A53: cargo test -p deck-streak-coordination --test relight_order -- --exact a_day_whose_route_keeps_failing_holds_back_no_other_due_day
+A54: cargo test -p deck-streak-coordination --test relight_order -- --exact a_day_whose_route_fails_many_times_stays_due_until_its_one_celebration
+A55: cargo test -p deck-streak-coordination --test relight_order -- --exact the_route_keeps_no_per_day_failure_state_a_give_up_could_read
+A56: cargo test -p deck-streak-bot --test streak_commands -- --exact every_heat_band_is_carried_in_the_heats_own_place_whichever_line_leads
+```

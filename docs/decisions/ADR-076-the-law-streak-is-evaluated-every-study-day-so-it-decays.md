@@ -209,3 +209,35 @@ and violates L1 (SPEC-076 section 22, A51, A52; the proof is #477).
 - Rejected: retrying the failed route within the same cycle, because the next cycle's route is
   already that retry, and a loop in the cycle would add a bound and a wait that the stored list
   makes unneeded.
+
+## Amendment, 2026-10-01: the failed route's own model, and no count of failed routes gives a day up
+
+This corrects two attributions in the amendment above. The proof that S1, S2 and L1 hold with a
+failing route is this delivery's own model, `formal/tla/RelightOrder/`, and not #477, whose model
+has no failing route; #477 stays the proof of R28 without one. And the cycle's order, that it goes
+on to the next due day, is decided by A53, and that no count of failed routes gives a day up by
+A55, beside A51, A52 and A54 (SPEC-076 sections 24 and 25). This supersedes the amendment's
+"(SPEC-076 section 22, A51, A52; the proof is #477)" and its "This is the cycle's order at this
+amendment; A51 and A52 now decide it".
+
+- Chosen: a property of its own for the failed route, NoOtherDayHeldBack: while one day's route
+  keeps failing, every other due day is celebrated. Its fairness is on every step of the cycle but
+  the failing day's route, and on that route returning its error, never on it succeeding. A route
+  that ends the cycle at its first failure violates it, and so does one that returns its error out
+  of the cycle; each is a witness of the model.
+- Rejected: L1 alone, with a bounded number of failed routes, because once the failures run out
+  every order celebrates every day at last, so L1 cannot tell going on from stopping at the first
+  failure.
+- Rejected: fairness on the failing day's route, because it assumes what the property must not,
+  that the route succeeds at last; the property asks what the other days see while it never does.
+- Rejected: citing #477 for the failed route, because its model has no failing route.
+- Chosen: no count of a day's failed routes can outlive one route, held by construction (A55): the
+  route keeps no per-day failure state in `RelightDue`, in the router, the kernel or the route's
+  own files, in any static of a crate coordination links, or in the database, each read whole
+  against a written-out list. The model checks a give-up after one, two and three failed routes,
+  every count its bound reaches, and each violates L1. The cost: a static or a state-holding type
+  added to any of those crates must be added to the written-out list, so a reader sees it.
+- Rejected: tying the tests' count of failed routes to the model's bound, because a give-up after
+  one more failure than that bound passes both.
+- Rejected: a larger fixed count of failed routes in the tests, because it only moves the number a
+  give-up must exceed.
