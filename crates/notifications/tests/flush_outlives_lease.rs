@@ -533,7 +533,7 @@ async fn the_claim_migration_keeps_every_index_and_trigger_the_queue_had() {
         .expect("the migration is read")
     };
     let first = migration("004101_notifications_router.sql");
-    let rebuild = migration("004102_notification_queue_claim.sql");
+    let rebuild = migration("004102_notifications_queue_claim.sql");
     let scratch = tempfile::tempdir().expect("a scratch");
     let db = Db::open(&scratch.path().join("deckstreak.db"))
         .await

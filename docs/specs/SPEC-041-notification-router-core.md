@@ -547,7 +547,7 @@ File manifest of the amendment:
 |---|---|
 | `crates/notifications/src/router.rs` | the lease, the `Busy` answer, the flush's split into the lease and the delivery, and the claim, token-matched settle and named abandonment |
 | `crates/notifications/src/ledger.rs` | the claim of held rows, the token-matched settle, relatch and abandon, and the lapsed-claim abandonment |
-| `crates/notifications/migrations/004102_notification_queue_claim.sql` | the `sending` state and the `claim` column (a STRICT rebuild) |
+| `migrations/004102_notifications_queue_claim.sql` | the `sending` state and the `claim` column (a STRICT rebuild) |
 | `crates/notifications/src/data_rights.rs` | the export and erasure of the `claim` column |
 | `crates/coordination/src/held_flush.rs` | the job's work and its answers |
 | `crates/coordination/src/jobs.rs` | the `held_flush` entry of the job table |

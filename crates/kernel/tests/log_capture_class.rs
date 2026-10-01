@@ -1493,5 +1493,5 @@ fn every_capture_in_the_workspace_goes_through_the_helper() {
         [GLOBAL_DEFAULT],
         "the one production global default is the only one: {report}"
     );
-    assert_eq!(routed, 13, "{report}");
+    assert_eq!(routed, 15, "{report}");
 }
