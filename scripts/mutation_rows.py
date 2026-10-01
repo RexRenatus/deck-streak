@@ -565,7 +565,7 @@ def module_files(file: pathlib.Path, root_file: pathlib.Path) -> list[pathlib.Pa
         if token == "#":
             inner = tokens[index + 1 : index + 2] == ["!"]
             start = index + (2 if inner else 1)
-            if start >= len(tokens) or tokens[start] != "[":
+            if tokens[start : start + 1] != ["["]:
                 index += 1
                 continue
             depth, end = 0, start
