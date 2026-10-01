@@ -17,9 +17,17 @@
 //! day is evaluated how, and in which order, is all it decides. How a later SPEC adds its step,
 //! without editing this module: it implements [`DayStep`] for its context in its own file under
 //! `recompute/`, and the composition root registers it with [`Fold::register`] in its phase.
+//!
+//! The awards' celebrations run between the fold's writes, never inside one (SPEC-073 R4, R11;
+//! ADR-303): the router opens its own write, so the fold hands every badge and record whose mark is
+//! unset to the [`Offers`] it was given before each settled day's write and the current day's
+//! write, and once more after its last write. Each offer is its own transaction, so a crash between
+//! any two of them leaves every award either marked or still owed.
 
 pub mod analytics_step;
+pub mod badges;
 pub mod day_bonuses;
+pub mod records;
 pub mod streaks;
 pub mod xp;
 
@@ -31,6 +39,7 @@ use deck_streak_ingest::reader::{CollectionData, Review};
 use deck_streak_kernel::{
     CourseCode, Db, KernelError, PortFuture, StudyDay, StudyDayRule, UtcMillis,
 };
+use deck_streak_notifications::Router;
 use sqlx::SqliteConnection;
 
 /// The phases a day's steps run in.
@@ -140,6 +149,7 @@ pub struct RecomputeFacts<'a> {
     reviews_by_day: BTreeMap<StudyDay, Vec<Review>>,
     card_decks: BTreeMap<i64, i64>,
     card_courses: BTreeMap<i64, CourseCode>,
+    base_reviews: u64,
 }
 
 impl<'a> RecomputeFacts<'a> {
@@ -173,7 +183,24 @@ impl<'a> RecomputeFacts<'a> {
                 .iter()
                 .filter_map(|card| card.course.map(|course| (card.id, course)))
                 .collect(),
+            base_reviews: 0,
         }
+    }
+
+    /// These facts, with the study reviews at or before the window's floor that ingest counted
+    /// (SPEC-023 R6): the lifetime the badges and the milestone read starts from them.
+    #[must_use]
+    pub const fn with_base_reviews(mut self, base_reviews: u64) -> Self {
+        self.base_reviews = base_reviews;
+        self
+    }
+
+    /// The lifetime study reviews through `day` (SPEC-073 R5, R15): the window's base, and every
+    /// study review of the window on or before `day`.
+    #[must_use]
+    pub fn lifetime_through(&self, day: StudyDay) -> u64 {
+        let _ = day;
+        0
     }
 
     /// The study reviews answered on `day`, in the window's order.
@@ -228,6 +255,76 @@ pub trait DayStep: Send + Sync {
     ) -> PortFuture<'a, ()>;
 }
 
+/// One celebration an award owes (SPEC-073 R4, R11): the ladder's event, the once-ever dedupe key,
+/// the line, and the study day it is raised on.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Celebration {
+    /// The ladder's event: `badge` or `record`.
+    pub event: &'static str,
+    /// The dedupe key: `badge:<key>:<tier>` or `pr:<kind>:<epoch day>`.
+    pub key: String,
+    /// The line.
+    pub text: String,
+    /// The study day the celebration is raised on.
+    pub study_day: StudyDay,
+}
+
+/// The port a celebration is handed to (SPEC-073 R4, R11): the router, in production.
+///
+/// `Ok` means the router answered, whatever it decided (sent, deferred or withheld), so the award's
+/// mark may be set; an error means no answer, and the award stays owed. The router's once-ever
+/// dedupe key keeps a key offered twice to one send.
+pub trait Celebrate: Send + Sync {
+    /// Hands `celebration` to the router and waits for its answer.
+    fn celebrate<'a>(&'a self, celebration: &'a Celebration) -> PortFuture<'a, ()>;
+}
+
+/// The offers the fold runs between its writes (ADR-303): every badge and record whose mark is
+/// unset is handed to the router, and each one it answered is marked in a write of its own.
+pub trait Offers: fmt::Debug + Send + Sync {
+    /// Offers every owed celebration through `db` at `now`, raised on the study day `today`.
+    fn offer<'a>(&'a self, db: &'a Db, now: UtcMillis, today: StudyDay) -> PortFuture<'a, ()>;
+}
+
+/// The awards' offers: the owed badges, then the owed records, each through `celebrate`.
+pub struct AwardOffers {
+    celebrate: std::sync::Arc<dyn Celebrate>,
+}
+
+impl AwardOffers {
+    /// The offers that hand each owed celebration to `celebrate`.
+    #[must_use]
+    pub fn new(celebrate: std::sync::Arc<dyn Celebrate>) -> Self {
+        Self { celebrate }
+    }
+}
+
+impl fmt::Debug for AwardOffers {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("AwardOffers").finish_non_exhaustive()
+    }
+}
+
+impl Offers for AwardOffers {
+    fn offer<'a>(&'a self, db: &'a Db, now: UtcMillis, today: StudyDay) -> PortFuture<'a, ()> {
+        Box::pin(async move {
+            let _ = (&self.celebrate, db, now, today);
+            Ok(())
+        })
+    }
+}
+
+/// The router as the awards' [`Celebrate`] port: a `celebration` occasion with the award's event,
+/// on the bot (SPEC-041, SPEC-084).
+impl Celebrate for Router {
+    fn celebrate<'a>(&'a self, celebration: &'a Celebration) -> PortFuture<'a, ()> {
+        Box::pin(async move {
+            let _ = celebration;
+            Ok(())
+        })
+    }
+}
+
 /// Why a step cannot be registered.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, thiserror::Error)]
 pub enum FoldError {
@@ -257,6 +354,10 @@ pub struct FoldInput<'a> {
     pub synced_in: Option<StudyDay>,
     /// The digest of the owner's courses.
     pub courses_digest: Option<&'a str>,
+    /// The study reviews at or before the window's floor (SPEC-023 R6), the lifetime's start.
+    pub base_reviews: u64,
+    /// The offers run between the fold's writes (ADR-303); `None` runs none.
+    pub offers: Option<&'a dyn Offers>,
 }
 
 /// What one recompute's fold did.

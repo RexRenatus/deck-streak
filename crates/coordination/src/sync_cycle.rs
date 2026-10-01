@@ -300,6 +300,8 @@ where
                     now: checked.now,
                     synced_in,
                     courses_digest: fold.courses_digest.as_deref(),
+                    base_reviews: 0,
+                    offers: None,
                 };
                 // The level before the recompute's first write, against the level after its last
                 // (SPEC-072 R14): no level is stored, so the ledger says both.
