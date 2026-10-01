@@ -107,9 +107,9 @@ pub fn language(
 
 /// The law track's calendar ending at `served`.
 ///
-/// The law track holds no freezes, so it serves none. Its `break` sits on the first real miss after
-/// a live run, the day its replay resets the run, once the day has passed; a `skip` sits on each
-/// skip day.
+/// The law track holds no freezes, so it serves none. Its `break` sits on the day after the first
+/// real miss of a live run, the day its replay resets the run, once that day is served; a `skip`
+/// sits on each skip day.
 #[must_use]
 pub fn law(
     days: &BTreeSet<StudyDay>,
@@ -125,7 +125,8 @@ pub fn law(
                 live = true;
             } else if !skips.contains(&day) && live {
                 live = false;
-                mark(&mut calendar, day, Marker::Break);
+                let reset = StudyDay::from_epoch_day(number + 1);
+                mark(&mut calendar, reset, Marker::Break);
             }
         }
     }
