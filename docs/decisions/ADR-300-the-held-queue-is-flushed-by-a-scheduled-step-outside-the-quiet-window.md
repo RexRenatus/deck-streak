@@ -84,8 +84,20 @@ table and the deploy templates.
 - Bad, because a delete-by-token release is not mutation-tested: dropping its `AND value = ?` is
   equivalent except in a flush that outlives its own lease, which the test clock cannot reach.
 - Bad, because the deploy tests' rule that a job template ships exactly one instance drop-in
-  directory is relaxed: the held flush needs its own, beside the sync job's, to load the bot's two
-  credentials. The reader merges every instance's drop-in into the template, so the template's
-  expected credentials are now four, and a new test pins which instance loads which (the bot's two
-  by the held flush alone, the sync login by the sync job alone). The alternative of loading the
-  bot's credentials in the template would have given every job the bot's token.
+  directory is relaxed (ruling on PR #512): the held flush needs its own, beside the sync job's, to
+  load the bot's two credentials. It is relaxed to default-deny, never removed: an instance
+  directory of a shipped template is admitted only for an instance named on one allowlist
+  (`sync`, `held_flush`), so any other instance directory is refused. The reader merges every
+  instance's drop-in into the template, so the template's expected credentials are now four, and a
+  test pins which instance loads which (the bot's two by the held flush alone, the sync login by
+  the sync job alone), each with a mutation row whose mutant crosses the pairs.
+  - A separate job template for the flush is rejected: it duplicates the template's hardening and
+    its unit guards, doubles the deploy surface, and loses the per-instance exactness the shared
+    template gives (one credential set judged per instance).
+  - Refusing the flush and routing it through the bot service is rejected: the bot is a long-running
+    process, so the flush would lose the job ledger, the timer's catch-up and its own failure
+    record, which is the shape ADR-300 was chosen against.
+  - Loading the bot's credentials in the template is rejected: it would give every job the bot's
+    token.
+  - Why the allowlist wins over a separate template: a smaller deploy surface, and the exactness
+    of each instance's credentials is judged where the instance is named.
