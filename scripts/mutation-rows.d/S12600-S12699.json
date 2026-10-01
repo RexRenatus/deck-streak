@@ -175,7 +175,7 @@
         "        f\"({', '.join(missing[:3])}) and {len(extra)} extra ({', '.join(extra[:3])})\"\n",
         "        f\"({', '.join(missing[:3])}) and {len(extra)} extra ()\"\n",
         "the drift refusal names the first three extra mutants as well as the first three missing ones; a tail that drops the extra names is refused by the pin on the whole line (SPEC-126 A10)",
-        "test_mutation_python_shard_binding.EveryVariablePartOfAMessageIsPinned.test_a_dropped_field_of_an_asserted_message_fails_a_pin"
+        "test_mutation_python_shard_binding.EveryVariablePartOfAMessageIsPinned.test_a_mutated_field_of_an_asserted_message_fails_a_pin"
       ],
       [
         "S12622-V-A-RECORD-REFUSAL-NAMES-ITS-PATH",
@@ -192,6 +192,22 @@
         "f\"a mutant record of {path} is a , not an object\"",
         "the refusal of a mutant record that is not an object names the type of the record it found (SPEC-126 A10)",
         "test_mutation_python_shard_binding.TheReportIsBoundToItsSlotAndItsListing.test_a_mutant_record_that_is_not_an_object_is_an_extra_mutant"
+      ],
+      [
+        "S12624-V-A-DRIFT-TAIL-COUNTS-ARE-NOT-SWAPPED",
+        "scripts/mutation-verdict.py",
+        "f\"it did not examine the mutants the plan lists for it: {len(missing)} missing \"\n        f\"({', '.join(missing[:3])}) and {len(extra)} extra ({', '.join(extra[:3])})\"",
+        "f\"it did not examine the mutants the plan lists for it: {len(extra)} missing \"\n        f\"({', '.join(missing[:3])}) and {len(missing)} extra ({', '.join(extra[:3])})\"",
+        "the drift refusal reads its missing count first and its extra count second; a tail that swaps them is refused by the pin on a report that drops one listed mutant and adds two (SPEC-126 A10)",
+        "test_mutation_python_shard_binding.EveryVariablePartOfAMessageIsPinned.test_a_mutated_field_of_an_asserted_message_fails_a_pin"
+      ],
+      [
+        "S12625-V-A-DRIFT-TAIL-MISSING-COUNT-IS-COUNTED",
+        "scripts/mutation-verdict.py",
+        "f\"it did not examine the mutants the plan lists for it: {len(missing)} missing \"\n        f\"({', '.join(missing[:3])}) and {len(extra)} extra ({', '.join(extra[:3])})\"",
+        "f\"it did not examine the mutants the plan lists for it: {4} missing \"\n        f\"({', '.join(missing[:3])}) and {len(extra)} extra ({', '.join(extra[:3])})\"",
+        "the drift refusal counts the missing mutants rather than printing a constant; a tail that prints the constant 4 is refused by the pin on a report that drops one listed mutant and adds two (SPEC-126 A10)",
+        "test_mutation_python_shard_binding.EveryVariablePartOfAMessageIsPinned.test_a_mutated_field_of_an_asserted_message_fails_a_pin"
       ]
     ]
   }
