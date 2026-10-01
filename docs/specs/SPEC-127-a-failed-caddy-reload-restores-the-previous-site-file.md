@@ -577,7 +577,7 @@ This amendment is appended. The text above is not edited; each sentence it corre
   pins an anchor that the member does not kill.
 - old: "which run with errexit off". new: with errexit on (above).
 
-### Acceptance criteria of the third fix round
+## Acceptance criteria of the third fix round
 
 | id | criterion | test |
 |---|---|---|
