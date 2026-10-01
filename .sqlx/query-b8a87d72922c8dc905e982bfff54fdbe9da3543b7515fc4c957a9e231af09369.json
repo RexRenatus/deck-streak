@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO badges_earned (badge_key, tier, name, emoji, study_day, celebrated_at, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7) ON CONFLICT DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 7
+    },
+    "nullable": []
+  },
+  "hash": "b8a87d72922c8dc905e982bfff54fdbe9da3543b7515fc4c957a9e231af09369"
+}

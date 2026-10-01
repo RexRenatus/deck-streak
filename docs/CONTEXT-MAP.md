@@ -190,6 +190,8 @@ context each migration names equal to the owner this register gives each table i
 | `xp_ledger` | `progression` | `migrations/004001_progression_xp_ledger.sql` (SPEC-040) | exported and erased |
 | `xp_settlement` | `progression` | `migrations/007201_progression_xp_settlement.sql` (SPEC-072) | exported and erased |
 | `buffs` | `progression` | `migrations/007202_progression_buffs.sql` (SPEC-072) | exported and erased |
+| `badges_earned` | `progression` | `migrations/007301_progression_badges_earned.sql` (SPEC-073) | exported and erased |
+| `records` | `progression` | `migrations/007302_progression_records.sql` (SPEC-073) | exported and erased |
 | `streak_state` | `streaks` | `migrations/007601_streaks_state_and_governor.sql` (SPEC-076) | exported and erased: each track reads its start state again |
 | `freeze_events` | `streaks` | `migrations/007601_streaks_state_and_governor.sql` (SPEC-076) | exported and erased |
 | `habit_strength` | `streaks` | `migrations/007601_streaks_state_and_governor.sql` (SPEC-076) | exported and erased |
