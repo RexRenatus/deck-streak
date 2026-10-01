@@ -47,6 +47,7 @@ class RegisterCountsWhatItsProseCounts(unittest.TestCase):
 
     def test_no_name_is_registered_twice(self):
         names = examined("register rows", register_names())
+        self.assertIn("schema_versions", names)
         repeated = sorted({n for n in names if names.count(n) > 1})
         self.assertEqual(repeated, [])
 
