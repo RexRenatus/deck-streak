@@ -2840,17 +2840,25 @@ exec /usr/bin/@NAME@ "$@"
             len(self.VERBS) * len(self.STATES) - len(self.NOT_A_STATE),
             "the pairs the table leaves",
         )
-        members, reached = [], set()
+        members, reached, broke = [], set(), set()
         for verb, state in pairs:
-            calls = self.calls_of(verb, state)
+            calls = None
+            with self.subTest(verb=verb, state=state, baseline=True):
+                calls = self.calls_of(verb, state)
+            if calls is None:
+                broke.add((verb, state))
+                continue
             reached |= {tool for tool, _ in calls}
             if self.STATE_TABLE[state][2]:
                 calls = [(None, 0), *calls]
             members += [(verb, state, tool, index) for tool, index in calls]
         self.assertEqual(
-            sorted({(v, s) for v, s, _, _ in members}), sorted(pairs), "a pair with no member"
+            sorted({(v, s) for v, s, _, _ in members}),
+            sorted(set(pairs) - broke),
+            "a pair with no member",
         )
-        self.assertEqual(sorted(reached), sorted(self.HANDLED), "the tools the runs reached")
+        if not broke:
+            self.assertEqual(sorted(reached), sorted(self.HANDLED), "the tools the runs reached")
         for verb, state, tool, index in examined("state-and-call member(s)", members):
             with self.subTest(verb=verb, state=state, tool=tool, index=index):
                 self.refuse_each(verb, state, [(tool, index)])
