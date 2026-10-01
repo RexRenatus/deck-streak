@@ -14,6 +14,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from _mutants_finder import CARGO, Refused, mutants_in, run_texts
 from _support import REPO, examined
 from test_ci_workflows import workflow_file_text, workflow_files
 
@@ -393,23 +394,50 @@ class TheShardsAreThePlans(unittest.TestCase):
         self.assertRegex(verdict, r"judge [^\n]*--class rust [^\n]*--shard-reports ")
 
 
+def after_separator(words, program):
+    """Where the command a wrapper runs begins: the word after the first standalone `--` that
+    follows a program which is not cargo. It names no wrapper and reads no file, so this module
+    stays runnable where the wrapper's own tests are not (ADR-306)."""
+    if words[program].value.rsplit("/", 1)[-1] in CARGO:
+        return None
+    for k in range(program + 1, len(words)):
+        if not words[k].dynamic and words[k].value == "--":
+            return k + 1 if k + 1 < len(words) else None
+    return None
+
+
 def mutants_commands(directory):
-    """(workflow name, command line) for every `cargo mutants` line of the directory's workflows."""
-    return [
-        (path.name, command)
-        for path in workflow_files(directory)
-        for command in re.findall(r"cargo mutants [^\n]*", workflow_file_text(path))
-    ]
+    """(workflow name, command line) for every `cargo mutants` command of the directory's
+    workflows, found by the one finder the dispatch-shard guard uses; a workflow the finder
+    refuses is answered with the refusal, which carries no bounds."""
+    found = []
+    for path in workflow_files(directory):
+        try:
+            texts = run_texts(workflow_file_text(path))
+            found += [
+                (path.name, command)
+                for text in texts
+                for command in mutants_in(text, wrapped=after_separator)
+            ]
+        except Refused as refusal:
+            found.append((path.name, f"refused: {refusal}"))
+    return found
 
 
 def mutants_jobs(directory):
-    """(workflow name, job name, job block) for every job that runs `cargo mutants`."""
-    return [
-        (path.name, name, job)
-        for path in workflow_files(directory)
-        for name, job in jobs(workflow_file_text(path)).items()
-        if "cargo mutants" in job
-    ]
+    """(workflow name, job name, job block) for every job that runs `cargo mutants`, found by the
+    same finder; a job it refuses to read counts as running one."""
+    found = []
+    for path in workflow_files(directory):
+        for name, job in jobs(workflow_file_text(path)).items():
+            try:
+                texts = run_texts(f"jobs:\n  {name}:\n{job}")
+                runs = any(mutants_in(text, wrapped=after_separator) for text in texts)
+            except Refused:
+                runs = True
+            if runs:
+                found.append((path.name, name, job))
+    return found
 
 
 PLANTED_MUTANTS = (
