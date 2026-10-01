@@ -484,8 +484,8 @@
       [
         "S03995-A-A-RAW-STRING-ENDS-AT-ITS-OWN-HASHES",
         "scripts/mutation_rows.py",
-        "            close = text.find('\"' + match.group(\"hashes\"), position)\n",
-        "            close = text.find('\"', position)\n",
+        "            closing = re.compile('\"' + match.group(\"hashes\")).search(text, position)\n",
+        "            closing = re.compile('\"').search(text, position)\n",
         "a raw string ends at the quote followed by its own number of hashes, so a quoted declaration inside it is not read (SPEC-039 section 19, A46)",
         "test_bin_kind_census.TheBinKindReadsWhatTheCompilerBuilds.test_every_layout_agrees_with_cargo_and_the_compiler_or_is_refused_by_name"
       ]

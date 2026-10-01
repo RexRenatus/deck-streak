@@ -516,24 +516,23 @@ RUST_TOKEN = re.compile(
 
 
 def rust_tokens(text: str) -> list[str]:
-    """The tokens of Rust source `text` with comments dropped and every string, character and
-    lifetime reduced to the placeholder `"lit"`, so that a `mod` inside one is never read."""
+    """The tokens of Rust source `text` with comments dropped, and a string, raw string, character
+    or lifetime reduced to its opening lexeme (`"`, `r#"`, `'a'`), which names no identifier and
+    no brace, so that a `mod` or a brace inside one is never read."""
     tokens: list[str] = []
     position = 0
     while position < len(text):
         match = RUST_TOKEN.match(text, position)
         assert match is not None
-        kind = match.lastgroup if match.lastgroup != "hashes" else "raw"
+        kind = match.lastgroup
         position = match.end()
         if kind == "raw":
-            close = text.find('"' + match.group("hashes"), position)
-            position = len(text) if close < 0 else close + 1 + len(match.group("hashes"))
-            tokens.append("lit")
+            closing = re.compile('"' + match.group("hashes")).search(text, position)
+            position = closing.end() if closing else len(text)
         elif kind == "string":
             while position < len(text) and text[position] != '"':
                 position += 2 if text[position] == "\\" else 1
             position += 1
-            tokens.append("lit")
         elif kind == "block":
             depth = 1
             while depth and position < len(text):
@@ -543,9 +542,7 @@ def rust_tokens(text: str) -> list[str]:
                     depth, position = depth - 1, position + 2
                 else:
                     position += 1
-        elif kind in ("char", "lifetime"):
-            tokens.append("lit")
-        elif kind not in ("space", "line"):
+        if kind not in ("space", "line", "block"):
             tokens.append(match.group(0))
     return tokens
 
@@ -566,7 +563,7 @@ def module_files(file: pathlib.Path, root_file: pathlib.Path) -> list[pathlib.Pa
     while index < len(tokens):
         token = tokens[index]
         if token == "#":
-            inner = tokens[index + 1] == "!" if index + 1 < len(tokens) else False
+            inner = tokens[index + 1 : index + 2] == ["!"]
             start = index + (2 if inner else 1)
             if start >= len(tokens) or tokens[start] != "[":
                 index += 1
@@ -596,10 +593,14 @@ def module_files(file: pathlib.Path, root_file: pathlib.Path) -> list[pathlib.Pa
             if frames:
                 frames.pop()
         if token == "mod" and "skip" not in frames:
-            name = tokens[index + 1] if index + 1 < len(tokens) else ""
-            after = tokens[index + 2] if index + 2 < len(tokens) else ""
-            if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name) or after not in (";", "{"):
+            declaration = tokens[index + 1 : index + 3]
+            if (
+                len(declaration) != 2
+                or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", declaration[0])
+                or declaration[1] not in (";", "{")
+            ):
                 raise KillerUnresolved(f"{where} holds a mod declaration the reader cannot decide")
+            name, after = declaration
             built, followed = True, True
             for attribute in attributes:
                 if attribute[:1] == ["cfg_attr"]:
@@ -622,10 +623,11 @@ def module_files(file: pathlib.Path, root_file: pathlib.Path) -> list[pathlib.Pa
                 if "block" in frames:
                     raise KillerUnresolved(f"{where} declares mod {name} inside a block")
                 base = home.joinpath(*frames)
-                for child in (base / f"{name}.rs", base / name / "mod.rs"):
-                    if child.is_file():
-                        children.append(child)
-                        break
+                child = next(
+                    (c for c in (base / f"{name}.rs", base / name / "mod.rs") if c.is_file()), None
+                )
+                if child:
+                    children.append(child)
             index += 3
             continue
         if token in (";", "{", "}"):

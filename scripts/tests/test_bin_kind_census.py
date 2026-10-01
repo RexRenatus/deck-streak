@@ -264,6 +264,64 @@ def module_layouts(home):
             set(),
             False,
         ),
+        "a nested empty block comment before a declaration": (
+            "/* a /**/ b */\nmod x;\n",
+            {at(home, "x.rs"): LEAF},
+            set(),
+            False,
+        ),
+        "a block comment glued to a declaration": (
+            "/* c */mod x;\n",
+            {at(home, "x.rs"): LEAF},
+            set(),
+            False,
+        ),
+        "comments inside a declaration": (
+            "mod // a\n/* b */ x;\n",
+            {at(home, "x.rs"): LEAF},
+            set(),
+            False,
+        ),
+        "a cfg(not(test)) inline module holding a file module, beside stray files": (
+            "#[cfg(not(test))]\nmod outer {\n    mod inner;\n}\n",
+            {
+                at(home, "outer/inner.rs"): LEAF,
+                at(home, "inner.rs"): LEAF,
+                at(home, "skip/inner.rs"): LEAF,
+            },
+            set(),
+            False,
+        ),
+        "a cfg(not(test)) function holding a file module the runner cannot decide": (
+            "#[cfg(not(test))]\nfn f() {\n    mod x;\n}\n",
+            {at(home, "x.rs"): LEAF},
+            set(),
+            True,
+        ),
+        "a cfg(not(test)) field before a declaration": (
+            "struct S {\n    #[cfg(not(test))]\n    a: u8,\n}\nmod x;\n",
+            {at(home, "x.rs"): LEAF},
+            set(),
+            False,
+        ),
+        "a cfg(not(test)) pub file module the compiler never builds": (
+            "#[cfg(not(test))]\npub mod x;\n",
+            {at(home, "x.rs"): LEAF},
+            set(),
+            False,
+        ),
+        "a #[path] pub file module beside a stray default file": (
+            '#[path = "impl/x.rs"]\npub mod x;\n',
+            {at(home, "impl/x.rs"): LEAF, at(home, "x.rs"): LEAF},
+            {at(home, "impl/x.rs")},
+            False,
+        ),
+        "a raw string closing right before a semicolon": (
+            '#[cfg(not(test))]\nconst S: &str = r"a";\nmod x;\n',
+            {at(home, "x.rs"): LEAF},
+            set(),
+            False,
+        ),
         "file modules that declare file modules": (
             "mod p;\nmod q;\n",
             {
