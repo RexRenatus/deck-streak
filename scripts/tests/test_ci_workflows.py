@@ -2919,7 +2919,9 @@ BARE_DYNAMIC = frozenset(
     }
 )
 # Every other builtin a module may name: a value, a type or a function of what it is given, which
-# imports, runs and reads nothing. A name bound nowhere in its module and not here is red.
+# imports, runs and reads nothing. The exception classes are not named here: `census_problems` derives
+# them from the interpreter's builtins and places each by its value, whatever this list names of them.
+# A name bound nowhere in its module and in neither is red.
 BENIGN_BUILTINS = frozenset(
     {
         "AssertionError",
@@ -3365,6 +3367,19 @@ def enclosing(census, qual):
     return found
 
 
+def builtin_exception_names():
+    """Every exception class the interpreter's builtins define, placed by its value: a name whose
+    value there is a class deriving from `BaseException` (an alias is a member by its value). A
+    class imports, runs and reads nothing by being named in an `except`, a `raise` or an
+    `isinstance`."""
+    return frozenset(
+        name
+        for name in dir(builtins)
+        if isinstance(getattr(builtins, name), type)
+        and BaseException in type.mro(getattr(builtins, name))
+    )
+
+
 def census_problems(directory):
     """Every problem the census finds under `directory`, each naming its module, its qualified name
     and its text; with how many modules it read, how many are in the population and how many sites
@@ -3461,7 +3476,11 @@ def census_problems(directory):
                 bare is not None
                 and not (reads or dynamic)
                 and bare not in bound
-                and bare not in BENIGN_BUILTINS | ATTRIBUTE_BUILTINS | BARE_DYNAMIC
+                and bare
+                not in BENIGN_BUILTINS
+                | ATTRIBUTE_BUILTINS
+                | BARE_DYNAMIC
+                | builtin_exception_names()
                 and not is_dunder(bare)
             ):
                 problems.append(f"{name}: {qual}: {text}: a name the census cannot place")
@@ -4700,6 +4719,126 @@ NOT_WORKFLOW_READS = {
             1,
         ),
     ),
+    **allowed(
+        "a builtin name taken from the interpreter's builtins namespace or a value derived from one; it names no file and no workflow's text reaches a reader through it",
+        ("test_ci_workflows", "WorkflowFilesAreReadAsBytes.builtin_exceptions", "name", 3),
+    ),
+    **allowed(
+        "runs the census over a scratch copy of this directory that holds one planted module; the copy's modules reach the census as source text and no workflow's text reaches a reader",
+        (
+            "test_ci_workflows",
+            "WorkflowFilesAreReadAsBytes.plant_problems",
+            "census_problems(copy)",
+            1,
+        ),
+    ),
+    **allowed(
+        "a builtin name taken from the interpreter's builtins namespace or a value derived from one; it names no file and no workflow's text reaches a reader through it",
+        (
+            "test_ci_workflows",
+            "WorkflowFilesAreReadAsBytes.test_every_builtin_exception_class_is_placed_by_its_value",
+            "names",
+            5,
+        ),
+    ),
+    **allowed(
+        "a builtin name taken from the interpreter's builtins namespace or a value derived from one; it names no file and no workflow's text reaches a reader through it",
+        (
+            "test_ci_workflows",
+            "WorkflowFilesAreReadAsBytes.test_every_builtin_exception_class_is_placed_by_its_value",
+            "self.builtin_exceptions()",
+            1,
+        ),
+    ),
+    **allowed(
+        "hands a planted module's source to the census's scratch copy; no workflow's text is read",
+        (
+            "test_ci_workflows",
+            "WorkflowFilesAreReadAsBytes.test_every_builtin_exception_class_is_placed_by_its_value",
+            "self.plant_problems(body + '\\n\\ndef plant_control():\\n    return memoryview\\n')",
+            1,
+        ),
+    ),
+    **allowed(
+        "a builtin name taken from the interpreter's builtins namespace or a value derived from one; it names no file and no workflow's text reaches a reader through it",
+        (
+            "test_ci_workflows",
+            "WorkflowFilesAreReadAsBytes.test_every_other_builtin_name_stays_red_and_every_read_or_dynamic_builtin_is_a_site",
+            "name",
+            12,
+        ),
+    ),
+    **allowed(
+        "a builtin name taken from the interpreter's builtins namespace or a value derived from one; it names no file and no workflow's text reaches a reader through it",
+        (
+            "test_ci_workflows",
+            "WorkflowFilesAreReadAsBytes.test_every_other_builtin_name_stays_red_and_every_read_or_dynamic_builtin_is_a_site",
+            "name.endswith('__')",
+            1,
+        ),
+    ),
+    **allowed(
+        "a builtin name taken from the interpreter's builtins namespace or a value derived from one; it names no file and no workflow's text reaches a reader through it",
+        (
+            "test_ci_workflows",
+            "WorkflowFilesAreReadAsBytes.test_every_other_builtin_name_stays_red_and_every_read_or_dynamic_builtin_is_a_site",
+            "name.isidentifier()",
+            1,
+        ),
+    ),
+    **allowed(
+        "a builtin name taken from the interpreter's builtins namespace or a value derived from one; it names no file and no workflow's text reaches a reader through it",
+        (
+            "test_ci_workflows",
+            "WorkflowFilesAreReadAsBytes.test_every_other_builtin_name_stays_red_and_every_read_or_dynamic_builtin_is_a_site",
+            "name.startswith('__')",
+            1,
+        ),
+    ),
+    **allowed(
+        "a builtin name taken from the interpreter's builtins namespace or a value derived from one; it names no file and no workflow's text reaches a reader through it",
+        (
+            "test_ci_workflows",
+            "WorkflowFilesAreReadAsBytes.test_every_other_builtin_name_stays_red_and_every_read_or_dynamic_builtin_is_a_site",
+            "others",
+            6,
+        ),
+    ),
+    **allowed(
+        "a builtin name taken from the interpreter's builtins namespace or a value derived from one; it names no file and no workflow's text reaches a reader through it",
+        (
+            "test_ci_workflows",
+            "WorkflowFilesAreReadAsBytes.test_every_other_builtin_name_stays_red_and_every_read_or_dynamic_builtin_is_a_site",
+            "placed",
+            1,
+        ),
+    ),
+    **allowed(
+        "a builtin name taken from the interpreter's builtins namespace or a value derived from one; it names no file and no workflow's text reaches a reader through it",
+        (
+            "test_ci_workflows",
+            "WorkflowFilesAreReadAsBytes.test_every_other_builtin_name_stays_red_and_every_read_or_dynamic_builtin_is_a_site",
+            "self.builtin_exceptions()",
+            1,
+        ),
+    ),
+    **allowed(
+        "hands a planted module's source to the census's scratch copy; no workflow's text is read",
+        (
+            "test_ci_workflows",
+            "WorkflowFilesAreReadAsBytes.test_every_other_builtin_name_stays_red_and_every_read_or_dynamic_builtin_is_a_site",
+            "self.plant_problems(body)",
+            1,
+        ),
+    ),
+    **allowed(
+        "a builtin name taken from the interpreter's builtins namespace or a value derived from one; it names no file and no workflow's text reaches a reader through it",
+        ("test_ci_workflows", "builtin_exception_names", "name", 3),
+    ),
+    **allowed(
+        "calls the derivation of the exception classes, which reads no file; its value is a set of builtin names",
+        ("test_ci_workflows", "census_problems", "builtin_exception_names()", 1),
+    ),
 }
 
 # Every site in the test directory that imports, runs code or reaches a namespace by a name held
@@ -4969,6 +5108,62 @@ DYNAMIC_IMPORTS = {
     **allowed(
         "a member of the lister module, by a name the test lists",
         ("test_mutation_python_lister_kills", "pick", "getattr(m, name)", 1),
+    ),
+    **allowed(
+        "reads the builtins namespace to derive the exception classes; it imports, runs and reads nothing",
+        ("test_ci_workflows", "WorkflowFilesAreReadAsBytes.builtin_exceptions", "builtins", 3),
+    ),
+    **allowed(
+        "reads the builtins namespace to derive the exception classes; it imports, runs and reads nothing",
+        (
+            "test_ci_workflows",
+            "WorkflowFilesAreReadAsBytes.builtin_exceptions",
+            "getattr(builtins, name)",
+            2,
+        ),
+    ),
+    **allowed(
+        "reads the builtins namespace to derive the exception classes; it imports, runs and reads nothing",
+        (
+            "test_ci_workflows",
+            "WorkflowFilesAreReadAsBytes.test_every_other_builtin_name_stays_red_and_every_read_or_dynamic_builtin_is_a_site",
+            "builtins",
+            1,
+        ),
+    ),
+    **allowed(
+        "reads the builtins namespace to derive the exception classes; it imports, runs and reads nothing",
+        ("test_ci_workflows", "builtin_exception_names", "builtins", 3),
+    ),
+    **allowed(
+        "reads the builtins namespace to derive the exception classes; it imports, runs and reads nothing",
+        ("test_ci_workflows", "builtin_exception_names", "getattr(builtins, name)", 2),
+    ),
+    **allowed(
+        "patches and calls the module's own loader through its own namespace, by constant names; it imports nothing and runs nothing by a name held in data",
+        (
+            "test_formal_config",
+            "FormalConfig.test_the_loader_refuses_bytes_that_are_not_utf8_wherever_they_sit",
+            "globals()",
+            2,
+        ),
+    ),
+    **allowed(
+        "executes `test_formal_config.py`, a module of this directory the census already reads, again by its constant path under another name; that module never imports the loader's module at any depth",
+        ("test_formal_config_presence", "fresh_module", "importlib.util.module_from_spec(spec)", 1),
+    ),
+    **allowed(
+        "executes `test_formal_config.py`, a module of this directory the census already reads, again by its constant path under another name; that module never imports the loader's module at any depth",
+        (
+            "test_formal_config_presence",
+            "fresh_module",
+            "importlib.util.spec_from_file_location('formal_config_under_plant', MODULE)",
+            1,
+        ),
+    ),
+    **allowed(
+        "executes `test_formal_config.py`, a module of this directory the census already reads, again by its constant path under another name; that module never imports the loader's module at any depth",
+        ("test_formal_config_presence", "fresh_module", "spec.loader.exec_module(module)", 1),
     ),
 }
 
@@ -5589,10 +5784,15 @@ class WorkflowFilesAreReadAsBytes(unittest.TestCase):
                     self.assertTrue(result.failures, f"{label}: the census was green")
                     self.assertRegex(said, rf"[\"'\[]{re.escape(module)}[:'\"]")
 
-    def builtin_values(self):
-        """The interpreter's builtins namespace as a dict, read here and nowhere else in the
-        tests that plant its names."""
-        return dict(vars(builtins))
+    def builtin_exceptions(self):
+        """The builtin names whose value is an exception class, derived here by its own expression
+        and not from the census's."""
+        return sorted(
+            name
+            for name in dir(builtins)
+            if isinstance(getattr(builtins, name), type)
+            and BaseException in type.mro(getattr(builtins, name))
+        )
 
     def plant_problems(self, body):
         """The problems the census finds under a scratch copy of this directory that holds one new
@@ -5610,18 +5810,14 @@ class WorkflowFilesAreReadAsBytes(unittest.TestCase):
         return [line for line in problems if line.startswith("test_zz_plant: ")]
 
     def test_every_builtin_exception_class_is_placed_by_its_value(self):
-        names = sorted(
-            name
-            for name, value in self.builtin_values().items()
-            if isinstance(value, type) and issubclass(value, BaseException)
-        )
+        names = self.builtin_exceptions()
         examined("builtin exception classes planted", names)
         self.assertGreaterEqual(len(names), 60)
         for member in ("RecursionError", "GeneratorExit", "BaseExceptionGroup", "StopIteration"):
             self.assertIn(member, names)
-        # An alias is a member by its value: `IOError` is `OSError`.
-        self.assertIn("IOError", names)
-        self.assertIs(self.builtin_values()["IOError"], OSError)
+        # An alias is a member by its value: `IOError` and `EnvironmentError` are `OSError`.
+        for alias in ("IOError", "EnvironmentError"):
+            self.assertIn(alias, names)
         body = "".join(
             f"\n\ndef plant_except_{name}():\n    try:\n        pass\n    except {name}:\n"
             f"        pass\n"
@@ -5643,21 +5839,16 @@ class WorkflowFilesAreReadAsBytes(unittest.TestCase):
         )
 
     def test_every_other_builtin_name_stays_red_and_every_read_or_dynamic_builtin_is_a_site(self):
-        values = self.builtin_values()
         placed = (
             BENIGN_BUILTINS
             | ATTRIBUTE_BUILTINS
             | READ_BUILTINS
             | BARE_DYNAMIC
-            | {
-                name
-                for name, value in values.items()
-                if isinstance(value, type) and issubclass(value, BaseException)
-            }
+            | set(self.builtin_exceptions())
         )
         others = sorted(
             name
-            for name in values
+            for name in dir(builtins)
             if name not in placed
             and not (name.startswith("__") and name.endswith("__"))
             and name.isidentifier()
