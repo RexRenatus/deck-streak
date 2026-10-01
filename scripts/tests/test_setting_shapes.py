@@ -1047,6 +1047,12 @@ class TheGuardReadsOutOfLineTestModules(unittest.TestCase):
             root = self.declared(declaration, elsewhere)
             self.assertEqual(len(implementations(root)), 1)
             self.assertEqual(len(unpinned(root)), 1, declaration)
+        root = self.declared("#[allow(dead_code)]\nmod tests;\n", ("depth/tests.rs", self.SPELLING))
+        own = root / "crates" / "demo" / "src" / "depth.rs"
+        self.assertEqual(test_files(own), [])
+        root = self.declared("#[cfg(test)]\nmod tests;\n", ("depth/tests.rs", self.SPELLING))
+        own = root / "crates" / "demo" / "src" / "depth.rs"
+        self.assertEqual(test_files(own), [own.with_suffix("") / "tests.rs"])
         root = self.declared("#[cfg(test)]\nmod tests;\n", ("depth/tests.rs", "let shape = 1;\n"))
         self.assertEqual(len(unpinned(root)), 1)
         other = '#[path = "words.rs"]\nmod words;\n#[cfg(test)]\nmod tests;\n'
