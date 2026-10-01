@@ -741,6 +741,32 @@ class ThePlantedShapesOfTheIssue(unittest.TestCase):
         with self.assertRaisesRegex(runner.KillerUnresolved, "a mod declaration the reader"):
             runner.module_sources(weird.crate / "src/main.rs")
 
+    def test_a_hash_not_opening_an_attribute_changes_nothing_the_reader_returns(self):
+        runner = runner_module()
+        shapes = {
+            "a hash as the last token": ("mod x;\n#", ["src/main.rs", "src/x.rs"]),
+            "an inner hash bang as the last token": ("mod x;\n#!", ["src/main.rs", "src/x.rs"]),
+            "a hash before a declaration": ("# mod x;\n", ["src/main.rs", "src/x.rs"]),
+            "a hash bang before a declaration": ("#!mod x;\n", ["src/main.rs", "src/x.rs"]),
+            "an inner attribute before a path module": (
+                '#![allow(dead_code)]\n#[path = "impl/x.rs"]\nmod x;\n',
+                ["src/main.rs"],
+            ),
+            "a hash before a bracket on the next line": (
+                '#\n[path = "impl/x.rs"]\nmod x;\n',
+                ["src/main.rs"],
+            ),
+        }
+        for name, (text, expected) in shapes.items():
+            with self.subTest(shape=name):
+                member = self.member(("", "", {"src/main.rs": text, "src/x.rs": LEAF}))
+                try:
+                    read = runner.module_sources(member.crate / "src/main.rs")
+                except IndexError as raised:
+                    self.fail(f"the reader ran off the end of the tokens: {raised!r}")
+                sources = [p.relative_to(member.crate).as_posix() for p in read]
+                self.assertEqual(sources, expected)
+
 
 class TheCfgPredicatesAgreeWithTheCompiler(unittest.TestCase):
     """SPEC-039 section 19: a predicate the reader decides is the value rustc gives it."""
