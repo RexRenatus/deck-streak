@@ -801,3 +801,91 @@ async fn every_failed_route_leaves_its_day_due_until_one_celebration() {
         "S1, S2 and L1 hold, and the due list empties, in every case"
     );
 }
+
+/// Verifier round 4's killer (item 9): a due day whose claim fails on every cycle holds back no
+/// other due day. Over each of the two due days failing, the other is celebrated in the first
+/// cycle, once, the failing day alone stays due, and once its claim can be written it is
+/// celebrated once.
+#[tokio::test]
+async fn a_day_whose_route_keeps_failing_holds_back_no_other_due_day() {
+    for (failing, other) in [(D0, SECOND), (SECOND, D0)] {
+        let world = world().await;
+        let mut process = start();
+        cycle(&world, &mut process, &history(0), at(D0 - 1, 12), false).await;
+        seam(&world.db).await;
+        arm(&world.db, &[failing], LedgerWrite::Claim).await;
+        let data = two_returns();
+        for hour in 12..16 {
+            let ended = logged_cycle(&world, &mut process, &data, at(SYNC, hour), false).await;
+            assert_eq!(ended, Ended::Routed, "relight:{failing} failing, hour {hour}: routes");
+            assert_eq!(
+                decided(&world.db, other).await,
+                (1, 1),
+                "relight:{failing} failing, hour {hour}: relight:{other} sent in the first cycle"
+            );
+            assert_eq!(
+                world.bot.sends(),
+                1,
+                "relight:{failing} failing, hour {hour}: one line pushed"
+            );
+            assert_eq!(
+                process.due.pending(&world.db).await.expect("the due read"),
+                vec![StudyDay::from_epoch_day(failing)],
+                "relight:{failing} failing, hour {hour}: only the failing day stays due"
+            );
+        }
+        disarm(&world.db).await;
+        logged_cycle(&world, &mut process, &data, at(SYNC, 16), false).await;
+        assert_eq!(
+            decided(&world.db, failing).await,
+            (1, 1),
+            "relight:{failing}: sent once it can be"
+        );
+        assert_eq!(world.bot.sends(), 2, "relight:{failing}: two lines for two grants");
+        assert_eq!(
+            process.due.pending(&world.db).await.expect("the due read"),
+            Vec::<StudyDay>::new(),
+            "relight:{failing}: the list empties"
+        );
+    }
+}
+
+/// Verifier round 4's killer (item 9): a day whose route fails on each of one to eight consecutive
+/// cycles, at either ledger write, stays due after every failed route, and the first cycle that
+/// can route it celebrates it once.
+#[tokio::test]
+async fn a_day_whose_route_fails_many_times_stays_due_until_its_one_celebration() {
+    let mut cases = 0_u32;
+    for write in [LedgerWrite::Claim, LedgerWrite::Record] {
+        for failures in 1..=8_i64 {
+            let world = world().await;
+            let mut process = start();
+            cycle(&world, &mut process, &history(0), at(D0 - 1, 12), false).await;
+            seam(&world.db).await;
+            arm(&world.db, &[D0], write).await;
+            for n in 0..failures {
+                let ended =
+                    logged_cycle(&world, &mut process, &history(3), at(D0 + 1, 8 + n), false).await;
+                assert_eq!(ended, Ended::Routed, "{write:?} x{failures}: cycle {n} routes");
+                assert_eq!(
+                    process.due.pending(&world.db).await.expect("the due read"),
+                    vec![StudyDay::from_epoch_day(D0)],
+                    "{write:?} x{failures}: after failed route {} the day stays due",
+                    n + 1
+                );
+            }
+            disarm(&world.db).await;
+            logged_cycle(&world, &mut process, &history(3), at(D0 + 1, 20), false).await;
+            assert_eq!(decided(&world.db, D0).await.0, 1, "{write:?} x{failures}: one claim");
+            assert_eq!(world.bot.sends(), 1, "{write:?} x{failures}: celebrated once");
+            assert_eq!(
+                process.due.pending(&world.db).await.expect("the due read"),
+                Vec::<StudyDay>::new(),
+                "{write:?} x{failures}: the list empties"
+            );
+            cases += 1;
+        }
+    }
+    println!("examined {cases} runs of consecutive failed routes");
+    assert_eq!(cases, 16);
+}

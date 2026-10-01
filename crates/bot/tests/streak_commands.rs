@@ -264,3 +264,88 @@ async fn the_language_line_carries_its_runs_heat_in_the_heats_own_place() {
     assert_eq!(cases, 8);
     assert_eq!(heats.len(), 4, "the empty heat and three bands");
 }
+
+/// Verifier round 4's killer (item 2): the language line carries its run's heat in the heat's own
+/// place over every heat band of the streak crate's table, at each band's first and last run (the
+/// top band's first and one beyond), whichever line leads (a law run of zero and of two), at no
+/// freeze, one and two. The heats are written out here, one per band, not read from the streak
+/// crate.
+#[tokio::test]
+async fn every_heat_band_is_carried_in_the_heats_own_place_whichever_line_leads() {
+    let fire = "\u{1f525}";
+    let comet = " \u{2604}\u{fe0f}".to_owned();
+    let star = " \u{1f31f}\u{2604}\u{fe0f}\u{1f31f}".to_owned();
+    let runs: [(i64, String); 11] = [
+        (0, String::new()),
+        (1, format!(" {fire}")),
+        (6, format!(" {fire}")),
+        (7, format!(" {fire}{fire}")),
+        (29, format!(" {fire}{fire}")),
+        (30, format!(" {fire}{fire}{fire}")),
+        (99, format!(" {fire}{fire}{fire}")),
+        (100, comet.clone()),
+        (364, comet),
+        (365, star.clone()),
+        (400, star),
+    ];
+    let mut cases = 0_u32;
+    let mut heats = std::collections::BTreeSet::new();
+    for (run, heat) in &runs {
+        let best = run + 1_000;
+        for (law, law_best) in [(0_i64, 4_i64), (2, 3)] {
+            for freezes in [0_i64, 1, 2] {
+                let bench = Bench::start().await;
+                {
+                    let mut write = bench.db.write().await.expect("a write");
+                    for (track, current, longest, held) in [
+                        ("language", *run, best, freezes),
+                        ("law", law, law_best, 0_i64),
+                    ] {
+                        sqlx::query(
+                            "INSERT INTO streak_state \
+                             (track, current_days, longest_days, freezes, last_study_day, comeback_armed, created_at) \
+                             VALUES (?1, ?2, ?3, ?4, ?5, 0, 1000)",
+                        )
+                        .bind(track)
+                        .bind(current)
+                        .bind(longest)
+                        .bind(held)
+                        .bind(TODAY - 1)
+                        .execute(&mut *write)
+                        .await
+                        .expect("the synthetic streak row is written");
+                    }
+                    write.commit().await.expect("the commit");
+                }
+                bench
+                    .clock
+                    .set(UtcMillis::from_epoch_millis(TODAY * DAY_MS + 5 * 3_600_000));
+                let mut commands = bench.commands(ScriptedSync::default());
+                commands.handle(incoming(owner_says(1, "/streak"))).await;
+                let text = last_text(&bench);
+                let lines: Vec<&str> = text.split('\n').collect();
+                assert_eq!(lines.len(), 3, "{text}");
+                let (law_line, language_line) = if law > 0 {
+                    (lines[1], lines[2])
+                } else {
+                    (lines[2], lines[1])
+                };
+                assert_eq!(law_line, format!("Law: {law} (best {law_best})"), "{text}");
+                let noun = if freezes == 1 { "freeze" } else { "freezes" };
+                assert_eq!(
+                    language_line,
+                    format!("Language: {run}{heat} (best {best}, {freezes} {noun})"),
+                    "language run {run}, law run {law}, {freezes} freeze(s) in {text}"
+                );
+                heats.insert(heat.clone());
+                cases += 1;
+            }
+        }
+    }
+    println!(
+        "streak-reply heat population (verifier): {cases} replies over {} heats",
+        heats.len()
+    );
+    assert_eq!(cases, 66);
+    assert_eq!(heats.len(), 6, "the empty heat and the five bands");
+}
