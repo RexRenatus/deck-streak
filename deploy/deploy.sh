@@ -121,18 +121,32 @@ saved=$checked.saved
 made_partial=
 made_top=
 finished=
-refuse() { echo "deploy: the host step $*" >&2; exit 1; }
+fail_with() { echo "deploy: $*" >&2; exit 1; }
+refuse() { fail_with "the host step $*"; }
+
+# Every removal this step makes goes through here: a path that is not there is already gone, and a
+# removal that fails once is tried once more, so one transient fault leaves nothing behind.
+remove() {
+    [ -e "$1" ] || [ -L "$1" ] || return 0
+    find "$1" -delete 2>/dev/null || find "$1" -delete
+}
+# A directory tree can be deleted whole when every directory in it takes a write; asked before the
+# first deletion, so a tree that cannot be deleted is left whole, never half gone.
+deletable() {
+    [ -z "$(find "$1" -type d ! -writable -printf x 2>/dev/null)" ]
+}
+
 # Every exit removes what this step made under a temporary name: the check file, the saved unit
 # files, the pid-named link and an unfinished unpack; a run that did not finish also removes the
 # release root it had to make (the topmost directory that was missing), so a refused first install
-# leaves the host as it found it. Each test is an `if`-shaped list, so the trap cannot end the
-# shell early.
+# leaves the host as it found it. Each removal ends in `|| :`, so a removal that fails neither ends
+# the shell early nor skips the ones after it.
 host_cleanup() {
-    [ ! -f "$checked" ] || find "$checked" -delete
-    [ ! -f "$saved" ] || find "$saved" -delete
-    [ ! -L "$root/.current.$$" ] || find "$root/.current.$$" -delete
-    [ -z "$made_partial" ] || [ ! -e "$rel.partial" ] || find "$rel.partial" -delete
-    [ -z "$made_top" ] || [ -n "$finished" ] || [ ! -e "$made_top" ] || find "$made_top" -delete
+    remove "$checked" || :
+    remove "$saved" || :
+    remove "$root/.current.$$" || :
+    [ -z "$made_partial" ] || remove "$rel.partial" || :
+    [ -z "$made_top" ] || [ -n "$finished" ] || remove "$made_top" || :
     return 0
 }
 trap host_cleanup EXIT
@@ -157,7 +171,7 @@ stage_link() {
 }
 
 drop_release() {
-    [ "$mode" != install ] || find "$rel" -delete || return 1
+    [ "$mode" != install ] || remove "$rel"
 }
 
 # The unit files as the host had them, kept as one archive before the first write to the unit
@@ -177,9 +191,9 @@ unwind() {
     local f
     for f in "$unitdir"/deck-streak-*; do
         [ -e "$f" ] || [ -L "$f" ] || continue
-        find "$f" -delete || return 1
+        remove "$f" || return 1
     done
-    [ ! -f "$saved" ] || tar -C "$unitdir" -xpf "$saved" || return 1
+    [ ! -f "$saved" ] || tar -C "$unitdir" -xpf "$saved" || tar -C "$unitdir" -xpf "$saved" || return 1
     systemctl daemon-reload
     drop_release
 }
@@ -188,6 +202,12 @@ unwind() {
 undo_and_refuse() {
     unwind || refuse "$* and could not put its unit files back"
     refuse "$*"
+}
+
+# The same, with the whole message given (it names a unit, not the step).
+undo_and_say() {
+    unwind || unwind || refuse "could not put its unit files back after: $*"
+    fail_with "$*"
 }
 
 # The rename over `current` failed after the units were installed.
@@ -217,7 +237,7 @@ install_units() {
             [ -f "$c" ] || continue
             base=$(basename "$c")
             [ "$base" = 10-rail.conf ] && continue
-            [ -f "$src/$n/$base" ] || find "$c" -delete || return 1
+            [ -f "$src/$n/$base" ] || remove "$c" || return 1
         done
     done
 }
@@ -232,7 +252,7 @@ switch_to() {
 }
 
 restart() {
-    systemctl restart "$1" || { echo "deploy: $1 did not restart" >&2; return 1; }
+    systemctl restart "$1"
 }
 
 ready() {
@@ -244,19 +264,23 @@ ready() {
     done
 }
 
+# The new release did not come up: the link goes back, the unit files go back as saved and the new
+# release is dropped; one `deploy:` line ends the run, naming the unit and whether the way back held.
+# Each leg is tried twice, so one transient fault does not leave the new release current.
 back() {
-    echo "deploy: $1 did not become ready; switching back" >&2
+    local problem=
     if [ -n "$prev" ]; then
-        switch_to "$prev"
-        install_units "$prev"
-        systemctl daemon-reload
-        restart deck-streak-api.service || true
-        restart deck-streak-bot.service || true
+        switch_to "$prev" || switch_to "$prev" || problem="$problem the link was not put back;"
     else
-        rm -f "$root/current"
+        rm -f "$root/current" || rm -f "$root/current" || problem="$problem the link was not removed;"
     fi
-    [ "$mode" = install ] && find "$rel" -delete
-    exit 1
+    unwind || unwind || problem="$problem the unit files were not put back;"
+    if [ -n "$prev" ]; then
+        restart deck-streak-api.service || problem="$problem the api was not restarted;"
+        restart deck-streak-bot.service || problem="$problem the bot was not restarted;"
+    fi
+    [ -z "$problem" ] || fail_with "the host step: $1 $2, and the way back failed:$problem"
+    fail_with "$1 $2; switched back"
 }
 
 save_units || refuse "could not save its unit files"
@@ -271,19 +295,22 @@ if [ "$mode" = install ]; then
     mkdir -p "$root/releases" || refuse "could not make its releases directory"
     writable "$root/releases" || refuse "cannot write in its releases directory"
     if [ -e "$rel.partial" ]; then
-        find "$rel.partial" -delete || refuse "could not remove an unfinished unpack"
+        deletable "$rel.partial" || refuse "could not remove an unfinished unpack"
+        remove "$rel.partial" || refuse "could not remove an unfinished unpack"
     fi
     mkdir "$rel.partial" || refuse "could not make its partial release directory"
     made_partial=1
     tar -xzf - --no-same-owner -C "$rel.partial" || refuse "could not unpack the release"
     (cd "$rel.partial" && sha256sum -c --quiet MANIFEST.sha256) ||
-        { echo "deploy: the unpacked release does not match its MANIFEST.sha256" >&2; find "$rel.partial" -delete; exit 1; }
+        refuse "found the unpacked release does not match its MANIFEST.sha256"
     check_dirs "$rel.partial"
     stage_link "$rel" || refuse "could not make the link for the new release"
     mv -T "$rel.partial" "$rel" || refuse "could not move the release into place"
     made_partial=
 else
     [ -d "$rel" ] || { echo "deploy: $tag is not kept on the host" >&2; exit 1; }
+    (cd "$rel" && sha256sum -c --quiet MANIFEST.sha256) ||
+        refuse "found $tag is kept but is not a whole release (it does not match its MANIFEST.sha256)"
     check_dirs "$rel"
     stage_link "$rel" || refuse "could not make the link for the kept release"
 fi
@@ -293,18 +320,16 @@ systemctl daemon-reload
 for f in "$rel"/deploy/systemd/*.service "$rel"/deploy/systemd/*@*.d; do
     [ -e "$f" ] || continue
     u=$(basename "$f")
-    systemctl cat "${u%.d}" >>"$checked" ||
-        { echo "deploy: ${u%.d} could not be shown" >&2; : >"$checked"; break; }
+    systemctl cat "${u%.d}" >>"$checked" || undo_and_say "${u%.d} could not be shown"
 done
 python3 "$rel/deploy/scripts/effective-check.py" --root "$rel" "$checked" ||
-    { echo "deploy: the effective configuration is refused" >&2; find "$checked" -delete
-      unwind; exit 1; }
-find "$checked" -delete || undo_and_refuse "could not delete its check file"
+    undo_and_say "the effective configuration is refused"
+remove "$checked" || undo_and_refuse "could not delete its check file"
 
 switch_current || switch_failed
-restart deck-streak-api.service || back deck-streak-api.service
-ready || back deck-streak-api.service
-restart deck-streak-bot.service || back deck-streak-bot.service
+restart deck-streak-api.service || back deck-streak-api.service "did not restart"
+ready || back deck-streak-api.service "did not become ready"
+restart deck-streak-bot.service || back deck-streak-bot.service "did not restart"
 
 finished=1
 if [ "$mode" = install ]; then
@@ -315,7 +340,12 @@ if [ "$mode" = install ]; then
     doomed=$(find "$root/releases" -mindepth 1 -maxdepth 1 -printf '%f\n' | grep -v '^\.' | grep -v '\.partial$' |
         grep -vxF -e "$tag" -e "${prevname:-$tag}" | sort -V -r | tail -n +"$((spare + 1))")
     for old in $doomed; do
-        find "$root/releases/$old" -delete
+        if deletable "$root/releases/$old"; then
+            remove "$root/releases/$old" ||
+                echo "deploy: the host step could not delete the older release $old" >&2
+        else
+            echo "deploy: the host step left the older release $old, which cannot be deleted whole" >&2
+        fi
     done
 fi
 echo "deploy: $tag is current"
