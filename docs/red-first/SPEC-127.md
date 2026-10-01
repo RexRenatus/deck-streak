@@ -318,8 +318,8 @@ count of `mkdir` calls its table now expects.
 
 ```red-first
 A42: red at 24bc441f3bfcc51da992ac7131345ff321eccf80: AssertionError: Lists differ: ['find', 'install', 'ln', 'mkdir', 'mktemp', 'mv', 'tar'] != ['cp', 'find', 'install', 'ln', 'mkdir', 'mktemp', 'mv', 'tar'] : the tools the runs reached
-A42: green at ec80b1e84c21a06ebbc3af006f1a127eb7e99ecb
+A42: green at 9a1b8ac5b6760b2bedc3c9647301aae5b86d7872
 ```
 
-The fix (acdbb5b5c7a50e7284e471758e1a0224b2e2cdda, then ec80b1e84c21a06ebbc3af006f1a127eb7e99ecb, which adds a presence assertion beside the absence one) changes
-`deploy.sh`, one test file, the rows S12772 to S12792, the SPEC and the ADR.
+The fix (acdbb5b5c7a50e7284e471758e1a0224b2e2cdda, then 90ddac0418148f24181f18ec8100eee44b7b2c60, which saves the unit files as one archive, then 65cb2c8b9f935649df7b5ff9429d44175d41d836 and 9a1b8ac5b6760b2bedc3c9647301aae5b86d7872, which give each row a killer of its own state) changes
+`deploy.sh`, one test file, the rows S12772 to S12792, the SPEC and the ADR. The first commit whose CI run was green end to end, `hygiene` and `mutation-rows` included, is 9a1b8ac5b6760b2bedc3c9647301aae5b86d7872; the run of 90ddac04 ended with its `mutation-rows` job cancelled at the job's time limit, and the run of 65cb2c8b with two rows alive.
