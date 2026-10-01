@@ -144,3 +144,63 @@ table and the deploy templates.
     token.
   - Why the allowlist wins over a separate template: a smaller deploy surface, and the exactness
     of each instance's credentials is judged where the instance is named.
+
+## Amendment 2026-10-01: a flush whose work fails after a push
+
+When a flush ended it gave every row still claimed under its token back to `held`, on success and on
+error alike. So when its work answered an error after a push had reached the owner (the settle,
+the in-app record, the decision row or the commit failed), the row went back to `held` and the
+next flush pushed it again. The full render, the recap line and the held reactions each had that
+shape. The model shows it: with a step for a flush whose work fails, a push pending or not, the main
+configuration violates `NoDoubleDelivery` along `Take`, `Push`, `Fail`, `Take`, `Push`.
+
+Decision: a flush keeps, in memory, the id of each row whose push answered delivered: a held
+reaction made, a full render on the bot, and every row a delivered recap line rolled up. When the
+flush ends, its release transaction first names each of those rows still `sending` under the flush's
+token, `abandoned` with its claim kept, which the next recap reads as "may have been sent"
+(`ledger.rs::abandon_pushed`), and only then gives every other row it still claims back to `held`
+(`ledger.rs::release_claims`). So a row whose push was attempted is never given back by any path: it
+reached the owner once, and if its settle failed it is named. A row the flush never pushed goes back
+to `held` and a later flush delivers it.
+
+- A push the transport answered as failed is not in the set: it reached nobody, and it keeps the
+  retry rule it had (SPEC-041 R8).
+- A Mini App row is not in the set either: its delivery is the in-app write inside the settle's own
+  transaction, so an error leaves it undelivered and it goes back to `held`.
+- If the release transaction fails too, every row stays `sending` under the token, and the lapse
+  path names each one when the claim lapses, as it does for a flush that died.
+- The release runs the naming on success as well. A settled row has left the queue and matches
+  nothing, so the step needs no branch on how the flush ended.
+
+What the amendment was chosen against:
+
+- Name the pushed rows in the release and give back only the rest: chosen because it holds at most
+  once for every attempted push and still delivers each row the flush never pushed. The model is
+  clean with it, and its witness `witness/ReleaseOnFail.cfg` keeps the earlier design caught.
+- Release nothing on an error and let the lapse path name every row of the lease: rejected because a
+  row the flush never pushed is then named "may have been sent" and never delivered, though nothing
+  reached the owner, so an error before the first push costs the whole flush.
+- A durable mark on each row before its push: rejected because it costs a write and a commit before
+  every push and a schema change, while the flush's own set already holds every row it pushed. The
+  one case the set cannot cover, a release that fails as well, is the lapse path's.
+- Leave the pushed rows `sending` for the lapse path and give back the rest: rejected because the
+  name then waits for the claim to lapse, ten minutes, and the give-back needs a query that skips a
+  list of ids. Naming them in the release puts them in the next recap.
+- Re-run the settle in the release and record the row as sent: rejected because it repeats in a
+  second place the writes that just failed (the settle, the in-app record, the decision row at its
+  rendered tier), two copies that can drift, and it still needs the name for when that write fails.
+- Keep giving back every claimed row on success and error alike: rejected because a row whose push
+  reached is then pushed again, which `crates/notifications/tests/flush_fails_after_push.rs` shows
+  for the full render, the recap line and a reaction.
+
+Consequences of the amendment:
+
+- Good, because no row is pushed twice when the work after its push fails, and a row the failed
+  flush never reached still reaches the owner at a later flush.
+- Bad, because a row whose push reached and whose settle failed is named "may have been sent" in a
+  later recap, so the owner may see it once and also read it named. That is the price of never
+  sending twice, the same as for a flush that died.
+- Bad, because a recap whose own settle fails leaves the abandoned rows it named in the queue, so
+  the next recap names them again: a repeated name, never a repeated celebration.
+- Bad, because the release writes one more conditional update for each row the flush pushed, even
+  when every settle succeeded and the update matches nothing.
