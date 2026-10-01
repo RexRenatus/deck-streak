@@ -28,8 +28,11 @@ from concurrent.futures import ThreadPoolExecutor
 
 from _support import examined
 from test_mutation_python_verdict import (
+    FILES,
+    REACHED,
     SCRIPT,
     VERDICT,
+    a_record,
     changed_fixture,
     file_entry,
     judged,
@@ -38,6 +41,7 @@ from test_mutation_python_verdict import (
     shard_the_plan,
     write_shard,
 )
+from test_mutation_verdict import Fixture
 
 #: The plans' shard counts, each reached by listing that many forty-mutant shards' worth.
 COUNTS = (2, 3, 4)
@@ -68,7 +72,7 @@ def verdict_program():
     return loaded
 
 
-def judge_in_process(fixture, klass, reports, program=None):
+def judge_in_process(fixture, klass, reports, program=None, extra=()):
     """`fixture.judge(klass, "--python", reports)` without a process: the program's own `main`
     over the same argv, its stdout and stderr captured, its exit code returned. A crash reads as
     the program reads it: exit 1 and the traceback on stderr."""
@@ -82,6 +86,7 @@ def judge_in_process(fixture, klass, reports, program=None):
         str(fixture.root),
         "--python",
         str(reports),
+        *extra,
     ]
     out, err = io.StringIO(), io.StringIO()
     with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
@@ -125,15 +130,31 @@ def ghost(number):
     }
 
 
+#: A row of the fixture's own table that the diff selects: the verdict carries it as one examined
+#: member beside the mutants the reports hold, so `examined`, `generated` and `rows` differ.
+CARRIED = ["S00077-GUARD", SCRIPT, "return x + 0", "return x + 3", REACHED, "the guard adds zero"]
+
+
 class Plan:
     """One fixture repository, its plan sized to `count` shards, and each shard's own report."""
 
-    def __init__(self, test, count):
+    #: Extra argv every judgement of this plan carries: the rows report a carried plan proves.
+    extra = ()
+
+    def __init__(self, test, count, carried=False):
         self.test = test
         self.text = population_text(count)
-        self.fixture = changed_fixture(test, head_text=self.text)
+        if carried:
+            self.fixture = Fixture(test, files=dict(FILES), rows=[("SCRIPT_MUTATIONS", CARRIED)])
+            self.fixture.head({SCRIPT: self.text})
+            self.fixture.plan()
+        else:
+            self.fixture = changed_fixture(test, head_text=self.text)
         self.listing = listed(SCRIPT, self.text)
         shard_the_plan(self.fixture, self.listing)
+        if carried:
+            rows = [{"id": CARRIED[0], "verdict": "KILLED", "target": SCRIPT}]
+            self.extra = ("--rows", str(self.fixture.report("rows.json", rows)))
         plan = json.loads((self.fixture.out / "plan.json").read_text(encoding="utf-8"))
         self.count = plan["python"]["count"]
         test.assertEqual(self.count, count, f"{len(self.listing)} listed")
@@ -174,8 +195,8 @@ class Plan:
         through that same `main`."""
         directory = self.write(slots)
         if cli:
-            return self.read(judged(self.fixture, "scripts", directory))
-        return self.read(judge_in_process(self.fixture, "scripts", directory))
+            return self.read(judged(self.fixture, "scripts", directory, *self.extra))
+        return self.read(judge_in_process(self.fixture, "scripts", directory, extra=self.extra))
 
     def control(self, family, label, slots, wrong):
         """The end-to-end control of a family: the program itself, argv in and exit code and
@@ -1107,9 +1128,9 @@ def run_pin(test, plan, pin, cli=False, program=None):
     """Judge a pin's layout and assert what it reads. Returns the output, so a caller that planted a
     mutant can tell an assertion that failed from a program that crashed."""
     if cli:
-        done = judged(plan.fixture, "scripts", pin.directory)
+        done = judged(plan.fixture, "scripts", pin.directory, *plan.extra)
     else:
-        done = judge_in_process(plan.fixture, "scripts", pin.directory, program)
+        done = judge_in_process(plan.fixture, "scripts", pin.directory, program, plan.extra)
     code, named, output = plan.read(done)
     test.assertEqual((code, named), (pin.code, pin.named), output)
     for line in pin.lines:
@@ -1283,10 +1304,37 @@ def message_pins(test, plan):
         ],
     )
 
+    def drifted_unequal(slots):
+        report = plan.mutants(slots[0])
+        gone = report.pop(0)
+        extra = [ghost(9200 + i) for i in range(2)]
+        report += extra
+        names = sorted(m["name"] for m in extra)
+        return [
+            f"{where}0: it did not examine the mutants the plan lists for it: "
+            f"1 missing ({gone['name']}) and 2 extra ({', '.join(names)})"
+        ]
+
+    laid(
+        "a report that drops one listed mutant and adds two",
+        drifted_unequal,
+        3,
+        {0},
+        [
+            (reports, "{}: {}", 1),
+            (
+                "shard_listing_drift",
+                "it did not examine the mutants the plan lists for it: {} missing ({}) and {} extra ({})",
+                0,
+            ),
+        ],
+    )
+
     def judged_over(slots):
         entry = slots[0]["files"][0]
         first, second, third = entry["mutants"][:3]
         first["outcome"], second["outcome"], third["outcome"] = "timeout", "survived", "uncovered"
+        generated = sum(len(plan.mutants(slots[k])) for k in slots) - 1
         slots[0]["files"].insert(
             0,
             {"path": SCRIPT, "modules": [], "byte_readers": [], "mutants": [], "void": "no tests"},
@@ -1296,6 +1344,8 @@ def message_pins(test, plan):
             f"mutation: scripts: VOID timeout: {first['name']}",
             f"mutation: scripts: SURVIVED {second['name']}",
             f"mutation: scripts: UNCOVERED {third['name']}: no test of the file's modules reaches it",
+            "mutation: scripts: survived 1: equivalent 0, unexplained 1",
+            f"mutation: scripts: examined {generated}: generated {generated}, rows 0",
         ]
 
     laid(
@@ -1308,7 +1358,40 @@ def message_pins(test, plan):
             (judge, "{}: {}", 1),
             (judge, "SURVIVED {}{}", 0),
             (judge, "UNCOVERED {}: no test of the file's modules reaches it", 0),
+            (judge, "survived {}: equivalent {}, unexplained {}", 0),
+            (judge, "examined {}: generated {}, rows {}", 0),
         ],
+    )
+    carried = Plan(test, 2, carried=True)
+
+    def summarised(slots):
+        first, second, third = carried.mutants(slots[0])[:3]
+        for mutant in (first, second, third):
+            mutant["outcome"] = "survived"
+        line = carried.text.splitlines()[first["line"] - 1].strip()
+        record = a_record(first["mutant"], line)
+        carried.fixture.write(
+            "scripts/mutation-equivalent.d/python.json", json.dumps({"records": [record]})
+        )
+        generated = sum(len(carried.mutants(slots[k])) for k in slots)
+        return [
+            f"mutation: scripts: SURVIVED {second['name']}",
+            f"mutation: scripts: SURVIVED {third['name']}",
+            "mutation: scripts: survived 3: equivalent 1, unexplained 2",
+            f"mutation: scripts: examined {generated + 1}: generated {generated}, rows 1",
+        ]
+
+    laid(
+        "an excused survivor, two unexplained ones and a carried row",
+        summarised,
+        1,
+        set(),
+        [
+            (judge, "survived {}: equivalent {}, unexplained {}", 0),
+            (judge, "examined {}: generated {}, rows {}", 0),
+            (judge, "SURVIVED {}{}", 0),
+        ],
+        on=carried,
     )
     empty = EmptyReaderPlan(test)
     laid(
