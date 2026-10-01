@@ -147,3 +147,19 @@ A12: green at 610a658
 A11: red at 5bbe692: First list contains 97 additional elements.
 A11: green at 610a658
 ```
+
+## Addendum: A12, the census places the interpreter's exception classes by their value (#456, round 10)
+
+With dev merged, the census read two new test modules and refused six sites: a builtin exception
+class its hand list lacked, and the dynamic sites of the formal settings tests. The killer was
+committed first, alone, at 70ccd8c: over the 69 exception classes the interpreter's builtins
+define, each planted in an `except`, a `raise` and an `isinstance`, 56 were refused as a name the
+census cannot place (`ArithmeticError`, `AttributeError`, `BaseExceptionGroup` among them); the
+second population, 25 other builtin names and 10 read or dynamic ones, stayed red as before and
+passed as a pin. The census's derivation of the classes by their value, and the five listings
+(5d471ab), turned the first green; A12 is recorded above, so it is quoted as text:
+
+```text
+A12: red at 70ccd8c: 56 builtin exception classes the census cannot place
+A12: green at 5d471ab
+```
