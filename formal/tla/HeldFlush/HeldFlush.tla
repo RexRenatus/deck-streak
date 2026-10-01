@@ -18,6 +18,11 @@
 (*                             abandoned (strictly older: equal is sent);  *)
 (*                             after an error it names what it pushed and  *)
 (*                             gives back only what it never pushed.       *)
+(*   router.rs::deliver      - a push that answered delivered puts its row *)
+(*                             in the flush's pending set before the write *)
+(*                             that settles it, every row of a recap too.  *)
+(*   router.rs::render_pushed, router.rs::flush_reactions - the same, for  *)
+(*                             a full render and for a held reaction.      *)
 (*   sync_cycle.rs::flush    - the after-sync flush fires only after a     *)
 (*                             sync that ran and succeeded.                *)
 (*   ledger.rs::held         - the queue is read in one snapshot.          *)
@@ -49,7 +54,7 @@
 (* it lapses.                                                              *)
 (***************************************************************************)
 
-\* @phx covers crates/notifications/src/router.rs anchor=flush_with digest=sha256:42246a8eb06d7c3243f7d751c5a1d7fd9444e627dfac074ecfda6fcd0f1e7fda
+\* @phx covers crates/notifications/src/router.rs anchor=flush_with digest=sha256:5f33914fd28d7a51534214bce2d92b9376944c8de0e7f0713d4e7970645ee40c
 \* @phx covers crates/coordination/src/sync_cycle.rs anchor=flush digest=sha256:1605c377223f24c33169b84f764e5f19827a3cc438966d0dac77678485a6caf9
 \* @phx covers crates/notifications/src/ledger.rs anchor=held digest=sha256:97376a0d613769622abb5be37b7ed6ac5fb86000532d7113cdcd664fdeca0898
 \* @phx covers crates/notifications/src/ledger.rs anchor=settle digest=sha256:95f76e72966a185f5e72a64fbfd4e573a25ad4d079dd0e131507645743c5c2d4
@@ -60,7 +65,11 @@
 \* @phx covers crates/notifications/src/ledger.rs anchor=abandon_lapsed digest=sha256:cc59e6b150e7166ee6babbe89c2f4024848c7682b317f67aa49e8209cb8a4500
 \* @phx covers crates/notifications/src/ledger.rs anchor=abandon_claimed digest=sha256:e02f7fd65f3b6a5e08311ad6859f1535d3924f5affd7a72c05d2def7b8223b85
 \* @phx covers crates/notifications/src/router.rs anchor=take_lease digest=sha256:3db2271e2474f29ffb47e4a5847b4e077a96c382e780b61014edc77da8977c03
-\* @phx covers crates/notifications/src/router.rs anchor=deliver digest=sha256:7f7adc47ad31d9a8d7c65bc279268d9e692c5a50a3dc01724e9fc521a8ff06b8
+\* @phx covers crates/notifications/src/router.rs anchor=deliver digest=sha256:0238633101b62fdcd80e0b4e38d9c2a16d4e0e2cb79bcb004a7dc29b266460c1
+\* @phx covers crates/notifications/src/router.rs anchor=render_pushed digest=sha256:64d484a7511ef1cdfeb8749febe66a8c25c033b5f32357ea7e67befac33b88d4
+\* @phx covers crates/notifications/src/router.rs anchor=flush_reactions digest=sha256:13137019ed5ae0b93cbbf7a3d4a06908b73df641bf54139acee344515d637845
+\* @phx covers crates/notifications/src/ledger.rs anchor=abandon_pushed digest=sha256:27b148a1223b16cc2a4c97d882c56cdfec475427c64746a739ddce072f129d99
+\* @phx covers crates/notifications/src/ledger.rs anchor=release_claims digest=sha256:6b4130909dc46b10d1ad4ed744290bb4b260c8a45190966f4d2fe224ed9ba05c
 \* @phx covers crates/coordination/src/held_flush.rs anchor=perform digest=sha256:ce5564d067389de1f76446b44708cc4aa7e1fb1a73e6776eece05603afba8fe3
 \* @phx cites #291
 \* @phx property NoDoubleDelivery ramp=report
