@@ -488,6 +488,38 @@
         "            closing = re.compile('\"').search(text, position)\n",
         "a raw string ends at the quote followed by its own number of hashes, so a quoted declaration inside it is not read (SPEC-039 section 19, A46)",
         "test_bin_kind_census.TheBinKindReadsWhatTheCompilerBuilds.test_every_layout_agrees_with_cargo_and_the_compiler_or_is_refused_by_name"
+      ],
+      [
+        "S03996-A-A-BLOCK-COMMENT-LEFT-OPEN-RUNS-TO-THE-END-OF-THE-TEXT",
+        "scripts/mutation_rows.py",
+        "            for _ in range(len(text)):  # each pass consumes a character, so this ends the scan\n",
+        "            for _ in range(len(text) - 3):  # each pass consumes a character, so this ends the scan\n",
+        "a block comment left open drops every character to the end of the text, so a scan bound that stops early is seen (SPEC-039 section 21, A53)",
+        "test_bin_kind_census.ThePlantedShapesOfTheIssue.test_a_block_comment_left_open_drops_every_character_to_the_end_of_the_text"
+      ],
+      [
+        "S03997-A-A-MOD-IN-A-MACRO-INVOCATION-IS-REFUSED",
+        "scripts/mutation_rows.py",
+        "            if \"mod\" in tokens[start:end]:\n",
+        "            if False:\n",
+        "a `mod` among a macro invocation's tokens, under any delimiter, is refused by name, since only the expansion decides what it declares (SPEC-039 section 21, A52)",
+        "test_bin_kind_census.TheBinKindReadsWhatTheCompilerBuilds.test_every_layout_agrees_with_cargo_and_the_compiler_or_is_refused_by_name"
+      ],
+      [
+        "S03998-A-A-DECLARED-PATH-IS-COMPARED-BY-CARGOS-KEY",
+        "scripts/mutation_rows.py",
+        "    return (joined.relative_to(base) if joined.is_relative_to(base) else joined).as_posix()\n",
+        "    return posixpath.normpath(path)\n",
+        "a declared path is compared as cargo compares it, so a `..` is kept and an absolute path stands alone (SPEC-039 section 21, A52)",
+        "test_bin_kind_census.TheBinKindReadsWhatTheCompilerBuilds.test_every_layout_agrees_with_cargo_and_the_compiler_or_is_refused_by_name"
+      ],
+      [
+        "S03999-A-EDITION-2015-TABLES-SWITCH-INFERENCE-OFF",
+        "scripts/mutation_rows.py",
+        "            auto = edition_of(root, crate, package) != \"2015\"\n",
+        "            auto = True\n",
+        "under edition 2015 a declared `[[bin]]` or `[[test]]` table switches its kind's inference off unless `autobins` or `autotests` is set (SPEC-039 section 21, A52)",
+        "test_bin_kind_census.TheBinKindReadsWhatTheCompilerBuilds.test_every_layout_agrees_with_cargo_and_the_compiler_or_is_refused_by_name"
       ]
     ]
   }
