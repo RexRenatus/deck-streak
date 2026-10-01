@@ -19,10 +19,12 @@ import importlib.util
 import io
 import itertools
 import json
+import re
 import sys
 import traceback
 import types
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 
 from _support import examined
 from test_mutation_python_verdict import (
@@ -66,7 +68,7 @@ def verdict_program():
     return loaded
 
 
-def judge_in_process(fixture, klass, reports):
+def judge_in_process(fixture, klass, reports, program=None):
     """`fixture.judge(klass, "--python", reports)` without a process: the program's own `main`
     over the same argv, its stdout and stderr captured, its exit code returned. A crash reads as
     the program reads it: exit 1 and the traceback on stderr."""
@@ -84,7 +86,7 @@ def judge_in_process(fixture, klass, reports):
     out, err = io.StringIO(), io.StringIO()
     with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
         try:
-            code = verdict_program().main(argv)
+            code = (program or verdict_program()).main(argv)
         except SystemExit as stop:
             code = stop.code if isinstance(stop.code, int) else 1
         except Exception:
@@ -349,12 +351,8 @@ class TheReportIsBoundToItsSlotAndItsListing(unittest.TestCase):
 
     def test_a_mutant_record_that_is_not_an_object_is_an_extra_mutant(self):
         plan = Plan(self, 2)
-        slots = plan.correct()
-        plan.mutants(slots[0]).append("not an object")
-        code, named, output = plan.lay(slots, cli=True)
-        self.assertEqual((code, named), (3, {0}), output)
-        self.assertIn("a mutant record of", output)
-        self.assertIn("not an object", output)
+        pin = message_pins(self, plan)["a mutant record that is not an object"]
+        run_pin(self, plan, pin, cli=True)
 
 
 #: The plans the one-reader population is generated over: this many shards each.
@@ -598,7 +596,14 @@ class TheInProcessJudgeIsTheProgram(unittest.TestCase):
     def test_the_program_and_its_in_process_judgement_agree(self):
         subset = []
         for plan in (Plan(self, 2), Plan(self, 3)):
-            for member in self.pinned(plan, (slot_members, listing_members, reader_members)):
+            sources = (
+                slot_members,
+                listing_members,
+                reader_members,
+                skipped_members,
+                judge_members,
+            )
+            for member in self.pinned(plan, sources):
                 subset.append((plan, member))
         empty = EmptyReaderPlan(self)
         subset += [(empty, member) for member in self.pinned(empty, (reader_members,))]
@@ -620,31 +625,64 @@ class TheInProcessJudgeIsTheProgram(unittest.TestCase):
                     "name",
                     "outcome",
                     "record",
+                    "skipped alone",
+                    "skipped then bad",
+                    "slot skipped",
+                    "survivor",
                     "swap",
                     "swapped",
+                    "timeout",
                     "trim",
                     "unread entry",
                     "unread extra",
+                    "void entry",
                 ]
             ),
         )
-        codes = set()
-        different = 0
-        for plan, (family, label, slots) in examined("pinned members", subset):
-            directory = plan.write(slots)
-            inside = judge_in_process(plan.fixture, "scripts", directory)
-            outside = judged(plan.fixture, "scripts", directory)
-            codes.add(outside.returncode)
+        laid = [
+            (plan, family, label, plan.write(slots))
+            for plan, (family, label, slots) in examined("pinned members", subset)
+        ]
+
+        # The in-process judge redirects this process's stdout, so it runs here, one at a time;
+        # the program's own processes are independent of it, and they run side by side.
+        inside = [
+            judge_in_process(plan.fixture, "scripts", directory) for plan, _, _, directory in laid
+        ]
+
+        def outside_of(member):
+            plan, _, _, directory = member
+            return judged(plan.fixture, "scripts", directory)
+
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            outsides = list(pool.map(outside_of, laid))
+        results = [
+            (family, label, one, other)
+            for (_, family, label, _), one, other in zip(laid, inside, outsides, strict=True)
+        ]
+        table = {}
+        different = []
+        for family, label, inside, outside in results:
+            row = table.setdefault(family, {})
+            row[outside.returncode] = row.get(outside.returncode, 0) + 1
             if (inside.returncode, inside.stdout, inside.stderr) != (
                 outside.returncode,
                 outside.stdout,
                 outside.stderr,
             ):
-                different += 1
-                self.fail(f"{family}: {label}: the program and the in-process judge differ")
-        print(f"pinned {len(subset)} member(s), {different} differ, exit codes {sorted(codes)}")
-        self.assertEqual(different, 0)
-        self.assertEqual(codes, {0, 3})
+                different.append(f"{family}: {label}")
+        for family, row in sorted(table.items()):
+            shown = ", ".join(f"exit {code}: {n}" for code, n in sorted(row.items()))
+            print(f"  pinned {family}: {shown}")
+        codes = {code for row in table.values() for code in row}
+        print(
+            f"pinned {len(results)} member(s), {len(different)} differ, exit codes {sorted(codes)}"
+        )
+        self.assertEqual(different, [])
+        self.assertEqual(codes, {0, 1, 3})
+        self.assertEqual(table["survivor"].keys(), {1})
+        self.assertEqual(table["skipped alone"].keys(), {0})
+        self.assertEqual(table["skipped then bad"].keys(), {3})
 
 
 class EmptyReaderPlan(Plan):
@@ -881,3 +919,369 @@ class ASkippedEntryDoesNotHideALaterOne(unittest.TestCase):
                     self.assertIn(line, output, f"{family}: {label}")
                 seen += 1
         self.assertGreater(seen, 0)
+
+
+#: The functions of the verdict program that print a message about a shard's report.
+MESSAGE_FUNCTIONS = ("python_reports", "read_python_shard", "shard_listing_drift", "judge_python")
+#: Interpolating f-strings of those functions that no assertion of this PR's tests reads, each
+#: with why. A site in neither this table nor a pin is a message nothing asserts, and is refused.
+UNASSERTED_SITES = {
+    ("judge_python", "byte reader: {}: {}", 0): "no assertion of the shard-report tests reads it",
+    (
+        "judge_python",
+        "EQUIVALENT {}: {}",
+        0,
+    ): "read by test_mutation_python_verdict, a pre-existing line",
+    ("judge_python", "unviable: {}", 0): "no assertion of the shard-report tests reads it",
+}
+#: Fields of an asserted message that no member can reach, each with why.
+UNASSERTED_FIELDS = {
+    ("judge_python", "SURVIVED {}{}", 0, 1): "held_twice() is empty unless two records excuse it",
+}
+
+
+def message_sites():
+    """Every interpolating f-string of MESSAGE_FUNCTIONS, from the verdict program's own syntax
+    tree: {(function, template, nth): (node, function node)}, a template being its text with each
+    field as `{}` and nth its place among the same templates in source order."""
+    tree = ast.parse(VERDICT.read_text(encoding="utf-8"))
+    found = {}
+    for function in tree.body:
+        if not isinstance(function, ast.FunctionDef) or function.name not in MESSAGE_FUNCTIONS:
+            continue
+        strings = [
+            node
+            for node in ast.walk(function)
+            if isinstance(node, ast.JoinedStr)
+            and any(isinstance(part, ast.FormattedValue) for part in node.values)
+        ]
+        strings.sort(key=lambda node: (node.lineno, node.col_offset))
+        seen = {}
+        for node in strings:
+            template = "".join(
+                part.value if isinstance(part, ast.Constant) else "{}" for part in node.values
+            )
+            nth = seen.get(template, 0)
+            seen[template] = nth + 1
+            found[(function.name, template, nth)] = (node, function)
+    return found
+
+
+def field_positions(node):
+    """The index in `node.values` of each of its interpolated fields."""
+    return [i for i, part in enumerate(node.values) if isinstance(part, ast.FormattedValue)]
+
+
+def program_without_field(function, node, position):
+    """Run `body` with the verdict program's `function` rewritten so `node`'s field at `position`
+    prints nothing. The rewritten function replaces the program's own for the call and the program
+    is restored after, so the same `main` and every other function run as they are."""
+    mutated = copy.deepcopy(function)
+    for candidate in ast.walk(mutated):
+        if (
+            isinstance(candidate, ast.JoinedStr)
+            and candidate.lineno == node.lineno
+            and candidate.col_offset == node.col_offset
+        ):
+            candidate.values[position] = ast.Constant("")
+    ast.fix_missing_locations(mutated)
+    return compile(ast.Module([mutated], []), str(VERDICT), "exec")
+
+
+@contextlib.contextmanager
+def dropping(function, node, position):
+    """The program with one field of one message dropped, for the length of the block."""
+    program = verdict_program()
+    original = program.__dict__[function.name]
+    exec(program_without_field(function, node, position), program.__dict__)
+    try:
+        yield program
+    finally:
+        program.__dict__[function.name] = original
+
+
+class Pin:
+    """What a test reads of one message: the layout it judges, the exit code and slots it expects,
+    the whole lines it must find (every variable part of them) and the fragments it must find."""
+
+    def __init__(self, plan, slots, code, named, sites, lines=(), contains=()):
+        self.plan = plan
+        self.directory = plan.write(slots)
+        self.code = code
+        self.named = named
+        self.sites = sites
+        self.lines = tuple(lines)
+        self.contains = tuple(contains)
+
+
+def run_pin(test, plan, pin, cli=False, program=None):
+    """Judge a pin's layout and assert what it reads. Returns the output, so a caller that planted a
+    mutant can tell an assertion that failed from a program that crashed."""
+    if cli:
+        done = judged(plan.fixture, "scripts", pin.directory)
+    else:
+        done = judge_in_process(plan.fixture, "scripts", pin.directory, program)
+    code, named, output = plan.read(done)
+    test.assertEqual((code, named), (pin.code, pin.named), output)
+    for line in pin.lines:
+        test.assertRegex(output, rf"(?m)^{re.escape(line)}$")
+    for text in pin.contains:
+        test.assertIn(text, output)
+    return output
+
+
+def message_pins(test, plan):
+    """The pins of the Python lane's messages over a two-shard plan, by name. Each reads the
+    message its member provokes and pins every variable part of it on that same input."""
+    program = verdict_program()
+    count = len(plan.listing)
+    where = "mutation: scripts: VOID mutation-python-shard-"
+    reports = "python_reports"
+    shard = "read_python_shard"
+    judge = "judge_python"
+    pins = {}
+
+    def laid(name, change, code, named, sites, lines=(), contains=(), on=plan):
+        slots = on.correct()
+        said = change(slots) or ()
+        pins[name] = Pin(on, slots, code, named, sites, tuple(lines) + tuple(said), contains)
+
+    def refused(name, change, text, site):
+        laid(name, change, 3, {0}, [site], [f"{where}0: {text}"] if text else (), ())
+
+    def deleted(slots):
+        slots[1] = None
+
+    laid(
+        "the correct layout",
+        lambda slots: None,
+        0,
+        set(),
+        [
+            (reports, "mutation-python-shard-{}", 0),
+            (reports, "{}/{}", 0),
+            (judge, "survived {}: equivalent {}, unexplained {}", 0),
+            (judge, "examined {}: generated {}, rows {}", 0),
+        ],
+        [
+            f"examined {count}",
+            f"mutation: scripts: examined {count}: generated {count}, rows 0",
+            "mutation: scripts: survived 0: equivalent 0, unexplained 0",
+        ],
+    )
+    laid(
+        "a missing report",
+        deleted,
+        3,
+        {1},
+        [(reports, "{}: no report", 0)],
+        [f"{where}1: no report"],
+    )
+    laid(
+        "an unreadable report",
+        lambda slots: slots.update({1: "{not json"}),
+        3,
+        {1},
+        [(reports, "{}: unreadable", 0)],
+        [f"{where}1: unreadable"],
+    )
+    laid(
+        "a report of another schema",
+        lambda slots: slots[1].update(schema="other"),
+        3,
+        {1},
+        [(reports, "{}: not of the schema {}", 0)],
+        [f"{where}1: not of the schema {program.PYTHON_SCHEMA}"],
+    )
+    laid(
+        "a report that records a failed restore",
+        lambda slots: slots[1].update(restore_failed="a lock"),
+        3,
+        {1},
+        [(reports, "{}: a restore failed: {}", 0)],
+        [f"{where}1: a restore failed: a lock"],
+    )
+    laid(
+        "a report whose shard field is another slot's",
+        lambda slots: slots[1].update(shard="0/2"),
+        3,
+        {1},
+        [
+            (
+                reports,
+                "{}: the report's shard field {} is not this slot's {}/{}, so it is not this shard's work",
+                0,
+            )
+        ],
+        [
+            f"{where}1: the report's shard field '0/2' is not this slot's 1/2, so it is not this shard's work"
+        ],
+    )
+    refused(
+        "a files that is not a list",
+        lambda slots: slots[0].update(files="x"),
+        "its files is a str, not a list",
+        (shard, "its files is a {}, not a list", 0),
+    )
+    pins["a files that is not a list"].sites.append((reports, "{}: {}", 0))
+    refused(
+        "an entry that is not an object",
+        lambda slots: slots[0]["files"].append(5),
+        "an entry of its files is a int, not an object",
+        (shard, "an entry of its files is a {}, not an object", 0),
+    )
+    refused(
+        "a mutants that is not a list",
+        lambda slots: slots[0]["files"].append({"path": SCRIPT, "mutants": "abc"}),
+        f"the mutants of {SCRIPT} is a str, not a list",
+        (shard, "the mutants of {} is a {}, not a list", 0),
+    )
+    refused(
+        "a mutant filed under a path no class reads",
+        lambda slots: slots[0]["files"].append({"path": "README.md", "mutants": [ghost(9900)]}),
+        "it files 1 mutant(s) under README.md, which no class reads",
+        (shard, "it files {} mutant(s) under {}, which no class reads", 0),
+    )
+    refused(
+        "a byte readers that is not a list",
+        lambda slots: slots[0]["files"].append(
+            {"path": SCRIPT, "mutants": [], "byte_readers": "x"}
+        ),
+        f"the byte readers of {SCRIPT} is a str, not a list",
+        (shard, "the byte readers of {} is a {}, not a list", 0),
+    )
+    refused(
+        "an outcome off the runner's vocabulary",
+        lambda slots: plan.mutants(slots[0])[0].update(outcome="pending"),
+        "a mutant of {} has the outcome 'pending', which is none of the runner's {}".format(
+            SCRIPT, ", ".join(runner_outcomes())
+        ),
+        (shard, "a mutant of {} has the outcome {}, which is none of the runner's {}", 0),
+    )
+    laid(
+        "a mutant record that is not an object",
+        lambda slots: plan.mutants(slots[0]).append("not an object"),
+        3,
+        {0},
+        [(shard, "a mutant record of {} is a {}, not an object", 0)],
+        (),
+        ("a mutant record of", "not an object"),
+    )
+
+    def drifted(slots):
+        report = plan.mutants(slots[0])
+        del report[:4]
+        report += [ghost(9100 + i) for i in range(4)]
+
+    laid(
+        "a report that drifts from its listing",
+        drifted,
+        3,
+        {0},
+        [
+            (reports, "{}: {}", 1),
+            (
+                "shard_listing_drift",
+                "it did not examine the mutants the plan lists for it: {} missing ({}) and {} extra ({})",
+                0,
+            ),
+        ],
+    )
+
+    def judged_over(slots):
+        entry = slots[0]["files"][0]
+        first, second, third = entry["mutants"][:3]
+        first["outcome"], second["outcome"], third["outcome"] = "timeout", "survived", "uncovered"
+        slots[0]["files"].insert(
+            0,
+            {"path": SCRIPT, "modules": [], "byte_readers": [], "mutants": [], "void": "no tests"},
+        )
+        return [
+            f"mutation: scripts: VOID {SCRIPT}: no tests",
+            f"mutation: scripts: VOID timeout: {first['name']}",
+            f"mutation: scripts: SURVIVED {second['name']}",
+            f"mutation: scripts: UNCOVERED {third['name']}: no test of the file's modules reaches it",
+        ]
+
+    laid(
+        "a void entry, a timeout, a survivor and an uncovered mutant",
+        judged_over,
+        1,
+        set(),
+        [
+            (judge, "{}: {}", 0),
+            (judge, "{}: {}", 1),
+            (judge, "SURVIVED {}{}", 0),
+            (judge, "UNCOVERED {}: no test of the file's modules reaches it", 0),
+        ],
+    )
+    empty = EmptyReaderPlan(test)
+    laid(
+        "a class that applies and examined nothing",
+        lambda slots: None,
+        3,
+        set(),
+        [(judge, "the {} class applies and nothing was examined", 0)],
+        ["mutation: scripts: VOID the scripts class applies and nothing was examined"],
+        on=empty,
+    )
+    return pins
+
+
+class EveryVariablePartOfAMessageIsPinned(unittest.TestCase):
+    """The class rule (SPEC-126 A11): a test that reads a message pins every variable part of it on
+    the same input. The population is generated: every interpolating f-string of the functions
+    that print a shard report's messages, from the verdict program's own syntax tree, each field
+    of it dropped in turn; a pin must then fail by assertion. A field no pin catches is a MISS."""
+
+    def test_every_interpolating_message_has_a_pin_or_says_why_not(self):
+        plan = Plan(self, 2)
+        claimed = {site for pin in message_pins(self, plan).values() for site in pin.sites}
+        found = set(message_sites())
+        self.assertEqual(sorted(found - claimed - set(UNASSERTED_SITES)), [], "no pin reads these")
+        self.assertEqual(sorted(claimed - found), [], "pins that name no message")
+        self.assertEqual(sorted(set(UNASSERTED_SITES) - found), [], "excuses that name no message")
+        for site in claimed & set(UNASSERTED_SITES):
+            self.fail(f"{site} is both pinned and excused")
+
+    def test_a_dropped_field_of_an_asserted_message_fails_a_pin(self):
+        plan = Plan(self, 2)
+        pins = message_pins(self, plan)
+        for name, pin in pins.items():
+            run_pin(self, pin.plan, pin)
+            print(f"  pin green: {name}")
+        sites = message_sites()
+        by_site = {}
+        for name, pin in pins.items():
+            for site in pin.sites:
+                by_site.setdefault(site, []).append(pin)
+        members = []
+        for site, (node, function) in sorted(sites.items(), key=lambda kv: kv[1][0].lineno):
+            if site not in by_site:
+                continue
+            for index, position in enumerate(field_positions(node)):
+                if (*site, index) in UNASSERTED_FIELDS:
+                    continue
+                members.append((site, index, position, node, function))
+        examined_fields = examined(
+            f"interpolated field(s) of {len({m[0] for m in members})} asserted message(s)", members
+        )
+        missed = []
+        for site, index, position, node, function in examined_fields:
+            caught = False
+            for pin in by_site[site[:3]]:
+                with dropping(function, node, position) as program:
+                    try:
+                        run_pin(self, pin.plan, pin, program=program)
+                    except AssertionError as refusal:
+                        caught = "Traceback" not in str(refusal)
+                    else:
+                        caught = False
+                    if caught:
+                        break
+            if not caught:
+                missed.append(f"{site[0]}:{node.lineno} {site[1]!r} field {index}")
+        for line in missed:
+            print(f"  MISS {line}")
+        print(f"MISS {len(missed)}")
+        self.assertEqual(missed, [])
