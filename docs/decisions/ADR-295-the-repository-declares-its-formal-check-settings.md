@@ -108,3 +108,22 @@ population is derived from the components and the kinds, so a new or deeper path
 The one exception is the pin path's own last component, which is the pin file, a second source, and
 is listed and never followed. Chosen against refusing only the settings file's directory, which
 closes the one shape measured and leaves every other component open.
+
+## Addendum, 2026-10-01: the slot capacity equals the checker's own setting (#516)
+
+The model checker's slot directory is shared by every check that runs, and the checker now refuses
+a settings file whose `tlc_slot.capacity` differs from its own compiled setting. The decision:
+`config/formal.json` sets `capacity` to 4, equal to the checker's own setting, and keeps
+`wait_seconds` at 1800. The considered options:
+
+- Set the capacity to the checker's own setting, 4: chosen, because the slot directory is shared,
+  so one value must mean the same set of slots to every checker that reads it, and the checker
+  states that value itself (#516).
+- Keep the capacity at 1: rejected, because the new checker refuses a file whose capacity differs
+  from its own as a configuration failure, so no check would run (#516).
+- Omit the key: rejected, because an absent key is read as the absent default of 1, which the new
+  checker refuses the same way (#516).
+
+Cost: a checker rebuilt with another compiled capacity refuses this file until the value is changed
+here, and that change is reviewed here. Confirmation: SPEC-295's A9 pins the value and A10's row
+`S29530` is killed by the same test.

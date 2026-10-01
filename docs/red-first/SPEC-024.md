@@ -104,3 +104,9 @@ The record's fence form holds one red and one green line per criterion, and thes
 A18: red over the earlier killer: every planted escape green; green at 4a78fad: every planted escape red, controls green, capture population 363 file(s) read; 0 raw capture(s), 13 routed, 1 global default(s)
 A17: red over the helper without the refusal: the nested capture was not refused (left "", right the refusal's name); green at 1d3809c: 4 tests run, 0 failed
 ```
+
+## Correction, 2026-10-01 (#511)
+
+The text fence above labels one line `A17: red over the helper without the refusal`. It records the red of the companion test `a_capture_nested_inside_a_capture_on_one_thread_is_refused`, which pins the helper's refusal of a nested capture. A17's own acceptance command runs a different test, `a_capture_keeps_a_line_another_thread_reached_first`, and that test's red and green are the A17 lines of the `red-first` fence above. The nested-capture test is defined in `crates/kernel/tests/log_capture_class.rs`.
+
+The passed-test count of the pull request that delivered the amendment was taken with a name filter that left the drill-named targets out and, as issue #511 records, one further test that is not a drill target. A count without that filter needs cargo, which this correction did not run. The unfiltered count is read from CI's stage log of the `rust` job on the branch `dev`: at the merge of that pull request, `816 tests run: 816 passed`, and at the current head of `dev`, `878 tests run: 878 passed`. Both runs include the drill-named targets, so neither equals the filtered local count, and the figure that is one higher than the filtered count is unmeasured here.
