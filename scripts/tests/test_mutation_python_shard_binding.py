@@ -972,10 +972,10 @@ def field_positions(node):
     return [i for i, part in enumerate(node.values) if isinstance(part, ast.FormattedValue)]
 
 
-def program_without_field(function, node, position):
-    """Run `body` with the verdict program's `function` rewritten so `node`'s field at `position`
-    prints nothing. The rewritten function replaces the program's own for the call and the program
-    is restored after, so the same `main` and every other function run as they are."""
+def planted(function, node, kind, positions, value=None):
+    """The verdict program's `function` rewritten so `node`, one of its messages, carries one field
+    mutant. DROP makes the field at `positions[0]` print nothing; CONST makes it print `value`;
+    SWAP exchanges the fields at the two `positions`. Compiled for the call, never run in place."""
     mutated = copy.deepcopy(function)
     for candidate in ast.walk(mutated):
         if (
@@ -983,21 +983,110 @@ def program_without_field(function, node, position):
             and candidate.lineno == node.lineno
             and candidate.col_offset == node.col_offset
         ):
-            candidate.values[position] = ast.Constant("")
+            parts = candidate.values
+            first = positions[0]
+            if kind == "DROP":
+                parts[first] = ast.Constant("")
+            elif kind == "CONST":
+                parts[first].value = ast.Constant(value)
+            else:
+                second = positions[1]
+                parts[first].value, parts[second].value = parts[second].value, parts[first].value
     ast.fix_missing_locations(mutated)
     return compile(ast.Module([mutated], []), str(VERDICT), "exec")
 
 
 @contextlib.contextmanager
-def dropping(function, node, position):
-    """The program with one field of one message dropped, for the length of the block."""
+def mutating(function, node, kind, positions, value=None):
+    """The program with one field mutant of one message, for the length of the block."""
     program = verdict_program()
     original = program.__dict__[function.name]
-    exec(program_without_field(function, node, position), program.__dict__)
+    exec(planted(function, node, kind, positions, value), program.__dict__)
     try:
         yield program
     finally:
         program.__dict__[function.name] = original
+
+
+def observed_fields(test, pins, sites):
+    """What every field of every message site printed in every pin, from the program run with each
+    field wrapped: {(site, index): {pin name: [value per call]}}. A mutant of a field can only be
+    caught on an input where it differs, so the population is planted from these values."""
+    seen = {}
+    current = [None]
+
+    def watch(key, value):
+        seen.setdefault(key, {}).setdefault(current[0], []).append(value)
+        return value
+
+    program = verdict_program()
+    originals = {}
+    by_function = {}
+    for site, (node, function) in sites.items():
+        by_function.setdefault(function.name, (function, []))[1].append((site, node))
+    program.__dict__["__watch__"] = watch
+    try:
+        for name, (function, nodes) in by_function.items():
+            wrapped = copy.deepcopy(function)
+            for site, node in nodes:
+                for candidate in ast.walk(wrapped):
+                    if (
+                        isinstance(candidate, ast.JoinedStr)
+                        and candidate.lineno == node.lineno
+                        and candidate.col_offset == node.col_offset
+                    ):
+                        for index, part in enumerate(
+                            p for p in candidate.values if isinstance(p, ast.FormattedValue)
+                        ):
+                            part.value = ast.Call(
+                                ast.Name("__watch__", ast.Load()),
+                                [ast.Constant((site, index)), part.value],
+                                [],
+                            )
+            ast.fix_missing_locations(wrapped)
+            originals[name] = program.__dict__[name]
+            exec(compile(ast.Module([wrapped], []), str(VERDICT), "exec"), program.__dict__)
+        for name, pin in pins.items():
+            current[0] = name
+            run_pin(test, pin.plan, pin, program=program)
+    finally:
+        program.__dict__.update(originals)
+    return seen
+
+
+def field_mutants(sites, by_site, seen):
+    """The generated population (SPEC-126 A11): for every field of every asserted message, DROP;
+    CONST of a constant of the field's type that no pin prints, and CONST of each other value the
+    field printed in some pin (a field that printed one value everywhere has no such mutant, since
+    it is the same program there); and SWAP of each pair of same-typed fields of one message.
+    Returns [(kind, site, indexes, positions, value)]."""
+    members = []
+    for site, (node, function) in sorted(sites.items(), key=lambda kv: kv[1][0].lineno):
+        if site not in by_site:
+            continue
+        positions = field_positions(node)
+        fields = [i for i in range(len(positions)) if (*site, i) not in UNASSERTED_FIELDS]
+        kinds = {}
+        for i in fields:
+            values = [v for calls in seen[(site, i)].values() for v in calls]
+            kinds[i] = int if all(type(v) is int for v in values) else str
+            members.append(("DROP", site, (i,), (positions[i],), None))
+            fresh = 7 if kinds[i] is int else "k"
+            while fresh in values:
+                fresh = fresh * 10 + 7 if kinds[i] is int else fresh + "k"
+            members.append(("CONST", site, (i,), (positions[i],), fresh))
+            distinct = []
+            for v in values:
+                if v not in distinct:
+                    distinct.append(v)
+            if len(distinct) > 1:
+                for v in distinct:
+                    members.append(("CONST", site, (i,), (positions[i],), v))
+        for x, i in enumerate(fields):
+            for j in fields[x + 1 :]:
+                if kinds[i] is kinds[j]:
+                    members.append(("SWAP", site, (i, j), (positions[i], positions[j]), None))
+    return members
 
 
 class Pin:
@@ -1250,7 +1339,7 @@ class EveryVariablePartOfAMessageIsPinned(unittest.TestCase):
         for site in claimed & set(UNASSERTED_SITES):
             self.fail(f"{site} is both pinned and excused")
 
-    def test_a_dropped_field_of_an_asserted_message_fails_a_pin(self):
+    def test_a_mutated_field_of_an_asserted_message_fails_a_pin(self):
         plan = Plan(self, 2)
         pins = message_pins(self, plan)
         for name, pin in pins.items():
@@ -1258,39 +1347,37 @@ class EveryVariablePartOfAMessageIsPinned(unittest.TestCase):
             print(f"  pin green: {name}")
         sites = message_sites()
         by_site = {}
-        for name, pin in pins.items():
+        for pin in pins.values():
             for site in pin.sites:
                 by_site.setdefault(site, []).append(pin)
-        members = []
-        for site, (node, function) in sorted(sites.items(), key=lambda kv: kv[1][0].lineno):
-            if site not in by_site:
-                continue
-            for index, position in enumerate(field_positions(node)):
-                if (*site, index) in UNASSERTED_FIELDS:
-                    continue
-                members.append((site, index, position, node, function))
-        examined_fields = examined(
-            f"interpolated field(s) of {len({m[0] for m in members})} asserted message(s)", members
+        seen = observed_fields(self, pins, sites)
+        members = field_mutants(sites, by_site, seen)
+        kinds = {
+            kind: sum(1 for m in members if m[0] == kind) for kind in ("DROP", "CONST", "SWAP")
+        }
+        messages = len({m[1] for m in members})
+        examined_members = examined(
+            f"field mutant(s) of {messages} asserted message(s): "
+            f"DROP {kinds['DROP']}, CONST {kinds['CONST']}, SWAP {kinds['SWAP']}",
+            members,
         )
         missed = []
-        failed_a_pin = 0
-        for site, index, position, node, function in examined_fields:
+        for kind, site, indexes, positions, value in examined_members:
+            node, function = sites[site]
             caught = False
-            for pin in by_site[site[:3]]:
-                with dropping(function, node, position) as program:
+            for pin in by_site[site] + [p for p in pins.values() if p not in by_site[site]]:
+                with mutating(function, node, kind, positions, value) as program:
                     try:
                         run_pin(self, pin.plan, pin, program=program)
                     except AssertionError as refusal:
                         caught = "Traceback" not in str(refusal)
-                    else:
-                        caught = False
                     if caught:
                         break
-            if caught:
-                failed_a_pin += 1
-            else:
-                missed.append(f"{site[0]}:{node.lineno} {site[1]!r} field {index}")
+            if not caught:
+                missed.append(
+                    f"{kind} {site[0]}:{node.lineno} {site[1]!r} fields {indexes} {value!r}"
+                )
         for line in missed:
             print(f"  MISS {line}")
         print(f"MISS {len(missed)}")
-        self.assertEqual(failed_a_pin, len(examined_fields), f"{missed}")
+        self.assertEqual(missed, [])
