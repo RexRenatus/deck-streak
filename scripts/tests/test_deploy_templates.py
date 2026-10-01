@@ -17,7 +17,6 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from collections import Counter
 from pathlib import Path
 
 import _units
@@ -143,13 +142,20 @@ CREDENTIAL_SOURCES = {
 # transport, owner gate and `/sync` (SPEC-026 R1, R11), and the `sync` job's syncer (SPEC-022,
 # SPEC-027). The job template's `sync` instance carries the sync's pair in its drop-in, which the
 # reader reads with the template (SPEC-062 R14), and the private rail's map answers them for the
-# `sync` instance alone, the one job that reads them (ADR-038; SPEC-061 §8, A14). SPEC-031's alert
+# `sync` instance alone, the one job that reads them (ADR-038; SPEC-061 §8, A14). The `held_flush`
+# instance's drop-in carries the bot token and the owner's id, which its router sends with (#291),
+# so the template's reading is the four. SPEC-031's alert
 # reads the bot token and the owner's id, whose private chat it pages (R3);
 # the evaluator and the watch read none.
 ROLE_CREDENTIALS = {
     "deck-streak-api.service": ("OWNER_USER_ID", "TELEGRAM_BOT_TOKEN"),
     "deck-streak-bot.service": ("OWNER_USER_ID", "TELEGRAM_BOT_TOKEN"),
-    f"{JOB_TEMPLATE}@.service": ("SYNC_USERNAME", "SYNC_PASSWORD"),
+    f"{JOB_TEMPLATE}@.service": (
+        "SYNC_USERNAME",
+        "SYNC_PASSWORD",
+        "OWNER_USER_ID",
+        "TELEGRAM_BOT_TOKEN",
+    ),
     f"{ALERT_TEMPLATE}@.service": ("OWNER_USER_ID", "TELEGRAM_BOT_TOKEN"),
     SLO_SERVICE: (),
     WATCH_SERVICE: (),
@@ -421,20 +427,15 @@ def dropin_directory_refusals(root):
         return template if at and dot and instance and template in templates else None
 
     folders = [path for path in entries if path.is_dir() and path.name.endswith(".d")]
-    instances = Counter(the_shipped_template_of(path) for path in folders if path not in own)
     for path in folders:
         rel = path.relative_to(root).as_posix()
         if path in own:
             continue
         template = the_shipped_template_of(path)
-        # The guards read a template's instance drop-ins into the template (SPEC-062 R14): exact
-        # for one instance, but two are merged where systemd keeps them apart, so both are refused.
-        if template is not None and instances[template] == 1:
-            continue
+        # The guards read every instance drop-in of a shipped template into the template
+        # (SPEC-062 R14), so the instances' credentials add up there; which instance loads which is
+        # judged by the instance tests below (#291 gave the template a second instance drop-in).
         if template is not None:
-            refused.append(
-                f"{rel}: is not the only instance drop-in directory of its template, and is refused"
-            )
             continue
         if rel in NON_UNIT_DIRECTORIES:
             continue
@@ -1118,9 +1119,9 @@ class CredentialsComeFromTheSocket(unittest.TestCase):
     def test_a_shipped_templates_instance_dropin_directory_is_its_own_and_no_other_is(self):
         # systemd reads an instance's drop-ins from `<name>@<instance>.<type>.d/`, so a shipped
         # template's is admitted and read with the template: a key planted in it is judged as the
-        # template's own. An instance of a template the tree does not ship is refused, and so are
-        # two instances of a shipped one, which the reader would merge (SPEC-062 R14; SPEC-066
-        # amendment).
+        # template's own. An instance of a template the tree does not ship is refused; two instances
+        # of a shipped one are both admitted and read into it, since the reader merges them and
+        # the instance tests below say which instance loads which (SPEC-062 R14; #291).
         refused = "is not the drop-in directory of a unit shipped beside it, and is refused"
         with tempfile.TemporaryDirectory() as scratch:
             systemd = Path(scratch) / "deploy" / "systemd"
@@ -1150,15 +1151,10 @@ class CredentialsComeFromTheSocket(unittest.TestCase):
                 "an instance of a template the tree does not ship",
             )
             (systemd / "planted@test.service.d").mkdir()
-            shared = "is not the only instance drop-in directory of its template, and is refused"
             self.assertEqual(
                 dropin_directory_refusals(scratch),
-                [
-                    f"deploy/systemd/other-app@tty1.service.d: {refused}",
-                    f"deploy/systemd/planted@test.service.d: {shared}",
-                    f"deploy/systemd/planted@tty1.service.d: {shared}",
-                ],
-                "a second instance of the shipped template",
+                [f"deploy/systemd/other-app@tty1.service.d: {refused}"],
+                "a second instance of the shipped template is admitted",
             )
 
     def test_a_templates_own_dropin_directory_is_read_once(self):
@@ -2186,6 +2182,32 @@ class TheSyncLoginIsTheSyncJobsAlone(unittest.TestCase):
             unit = f"{JOB_TEMPLATE}@{ident}.service"
             self.assertFalse([p for p in pairs if p["unit"] == unit], f"{ident} asks")
         examined("pair(s) listed", pairs)
+
+    def test_the_bots_credentials_are_loaded_by_the_held_flush_alone(self):
+        # Only the held flush sends to the owner's chat (#291): its instance's drop-in loads the
+        # bot's token and the owner's id, and no other job instance, nor the template, asks.
+        bot = ("owner-user-id", "telegram-bot-token")
+        text = (SYSTEMD / f"{JOB_TEMPLATE}@.service").read_text(encoding="utf-8")
+        for ident in bot:
+            self.assertNotIn(ident, text, "the template requests a bot credential")
+        own = self.dropin_dir(REPO, "held_flush") / "20-bot-credentials.conf"
+        self.assertTrue(own.is_file(), f"{own.relative_to(REPO)} is missing")
+        loaded = re.findall(r"^LoadCredential=(.*)$", own.read_text(encoding="utf-8"), re.M)
+        self.assertEqual(sorted(loaded), sorted(f"{i}:{SOCKET}" for i in bot))
+        folders = examined(
+            "job instance drop-in directories", sorted(SYSTEMD.glob(f"{JOB_TEMPLATE}@*.service.d"))
+        )
+        others = [
+            folder.name
+            for folder in folders
+            if folder != own.parent
+            and any(
+                ident in conf.read_text(encoding="utf-8")
+                for conf in folder.glob("*.conf")
+                for ident in bot
+            )
+        ]
+        self.assertEqual(others, [], "an instance other than the held flush loads a bot credential")
 
     def test_the_effective_check_accepts_the_shipped_drop_in_and_no_other(self):
         checker = DEPLOY / "scripts" / "effective-check.py"
