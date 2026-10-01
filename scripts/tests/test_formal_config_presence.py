@@ -18,7 +18,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from _support import examined
+from _support import examined, refuse_link_components
 
 MODULE = Path(__file__).with_name("test_formal_config.py")
 READER = "read"
@@ -397,6 +397,27 @@ class PresenceControls(unittest.TestCase):
         self.assertEqual(
             wrong, [], "a link at a component of a path the module reads was followed or misread"
         )
+
+    def test_the_walk_admits_a_tree_with_no_link_and_refuses_a_path_outside_its_root(self):
+        """The walk's own bounds, held by a control on each side: a real tree is admitted at every
+        component, a tree whose root is itself a link is admitted too, the root being where the
+        checkout sits and no component of a path in it, and a path outside the root is refused by
+        assertion, never admitted unread."""
+        module = fresh_module()
+        settings = module.CONFIG.relative_to(module.REPO)
+        with tempfile.TemporaryDirectory() as scratch:
+            real = Path(scratch) / "real"
+            real.mkdir()
+            lay(real, module, settings)
+            alias = Path(scratch) / "alias"
+            alias.symlink_to(real.name)
+            outside = Path(scratch) / "outside.json"
+            outside.write_text("{}\n", encoding="utf-8")
+            for root in examined("roots a real tree is admitted in", [real, alias]):
+                for relative in (settings, module.PIN_FILE):
+                    refuse_link_components(root / relative, root)
+            with self.assertRaises(AssertionError, msg="a path outside the root"):
+                refuse_link_components(outside, real)
 
 
 if __name__ == "__main__":
