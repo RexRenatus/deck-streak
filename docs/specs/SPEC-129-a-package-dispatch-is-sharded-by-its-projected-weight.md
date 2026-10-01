@@ -421,10 +421,13 @@ program). Issues #418 and #497.
   run.
 - **Files:** `scripts/tests/_mutants_finder.py`, `scripts/tests/test_mutation_workflows.py`,
   `scripts/tests/test_dispatch_shards.py`, `scripts/tests/_stand_in_census.py`,
-  `scripts/tests/test_stand_in_census.py`, `docs/decisions/ADR-306-one-finder-for-the-mutants-scans-and-a-stand-in-that-fails-closed.md`,
+  `scripts/tests/test_stand_in_census.py`, `scripts/tests/test_ci_workflows.py` (its census names the
+  new tests' read sites), `scripts/mutation-rows.d/S12900-S12999.json` (rows S12911 and S12912 name the
+  moved finder as their target), `docs/decisions/ADR-306-one-finder-for-the-mutants-scans-and-a-stand-in-that-fails-closed.md`,
   `docs/red-first/SPEC-129.md` and a changelog fragment (#418, #497).
-- It changes no Rust, no workflow and no production Python, and adds no mutation-row band: every
-  changed file is a test or its support (#418, #497).
+- It changes no Rust, no workflow and no production Python, and adds no mutation row: it repoints the
+  target of two rows to the file their anchors moved to, and every other changed file is a test or
+  its support (#418, #497).
 - It leaves the survivors step, the step runner's shell and the VOID and held-twice lines of the
   workflow tests to their own issues (#482, #487, #509).
 
@@ -435,7 +438,7 @@ program). Issues #418 and #497.
 | A15 | the command scan of `test_mutation_workflows.py` finds a planted workflow in each of five spellings, and one run by a wrapper after its `--`, as the guard's finder does | `test_mutation_workflows.py` `EveryMutantsSpellingIsFound` |
 | A16 | the job scan finds the job of each planted spelling, and neither scan finds a job that holds no such command | `test_mutation_workflows.py` `EveryMutantsSpellingIsFound` |
 | A17 | the finder is defined once, in the support module, and a planted copy of it is caught by the census of definitions | `test_mutation_workflows.py` `EveryMutantsSpellingIsFound` |
-| A18 | when planting the wrapper raises, the stand-in exits non-zero, names the failure and runs none of the words (CI only) | `test_dispatch_shards.py` `TheMemoryScopeRunsTheWordsAfterItsSeparator` |
+| A18 | when planting the wrapper raises, the stand-in exits non-zero, names the failure and runs none of the words (CI only) | `test_dispatch_shards.py` `AStandInThatCannotPlantTheWrapperFailsClosed` |
 | A19 | the census lists no stand-in under `scripts/tests/` that falls back to a real program on a failed plant, and lists a planted one | `test_stand_in_census.py` `TheCensusOfStandIns` |
 
 ```acceptance
