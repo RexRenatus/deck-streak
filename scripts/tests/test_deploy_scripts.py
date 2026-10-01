@@ -2783,10 +2783,33 @@ exec /usr/bin/@NAME@ "$@"
                     call = "no call failed" if tool is None else f"{tool} {index}"
                     step = "" if tool is None else "host step"
                     label = f"{verb} / {state} / {call}"
-                    if done.returncode == 0:
+                    if done.returncode == 0 and self.switch_already_made(w, tool, index):
                         self.judge_finished(label, w, good, done, before, after)
                     else:
                         self.judge(label, done, before, after, step)
+                        if tool == "install":
+                            self.assertIn(
+                                "could not install its unit files",
+                                done.stderr.splitlines()[-1],
+                                f"{label}: the refusal does not name the install",
+                            )
+
+    @staticmethod
+    def switch_already_made(w, tool, index):
+        """True when the run's own log holds the rename over `current` BEFORE the failed call, so
+        the call belongs to the part of a run after its switch, the only part that may end 0. A run
+        that ends 0 from a call before the switch went on past a failure and is judged strictly."""
+        if tool is None:
+            return False
+        for line in (w.log / "args.log").read_text(encoding="utf-8").splitlines():
+            name, side, number, args = (line.split("\t") + [""])[:4]
+            if side != "host":
+                continue
+            if name == tool and int(number) == index:
+                return False
+            if name == "mv" and args.split()[-1:] and args.split()[-1].endswith("/current"):
+                return True
+        return False
 
     @staticmethod
     def half_deleted(release):
@@ -2906,6 +2929,11 @@ exec /usr/bin/@NAME@ "$@"
                 releases.chmod(0o555)
                 done, before, after = self.outcome(w, argv, good, modes)
                 self.judge(f"{verb} / stale unpack", done, before, after, "host step")
+                self.assertIn(
+                    "releases directory",
+                    done.stderr.splitlines()[-1],
+                    f"{verb}: the refusal does not name the releases directory",
+                )
 
     def test_a_stale_unpack_that_cannot_be_deleted_is_refused_by_that_name(self):
         for verb in examined("undeletable-unpack member(s)", ["install"]):
@@ -2942,6 +2970,11 @@ exec /usr/bin/@NAME@ "$@"
                 planted = {**good, "TOOL_FAILS": f"find:host:{index}"}
                 done, before, after = self.outcome(w, argv, planted, [])
                 self.judge("install / stale drop-in", done, before, after, "host step")
+                self.assertIn(
+                    "could not install its unit files",
+                    done.stderr.splitlines()[-1],
+                    "the refusal does not name the unit install",
+                )
                 self.assertTrue((w.units / stale).is_file(), "the stale drop-in is gone")
 
     def test_a_failed_switch_leaves_no_unit_only_the_new_release_ships(self):

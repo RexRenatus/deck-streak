@@ -404,8 +404,8 @@
       [
         "S12751-A-THE-HOST-REFUSAL-EXITS-NON-ZERO",
         "deploy/deploy.sh",
-        "stop() { fail_with \"$* [host step]\"; }",
-        "stop() { echo \"deploy: $* [host step]\" >&2; exit 0; }",
+        "|| refuse \"could not make its check file\"",
+        "|| { echo \"deploy: the host step could not make its check file\" >&2; exit 0; }",
         "the host script exits non-zero when its check file cannot be made (SPEC-127 A40)",
         "test_deploy_scripts.ATemporaryPathThatCannotBeMadeIsANamedRefusal.test_every_temporary_path_that_cannot_be_made_is_a_named_refusal"
       ],
