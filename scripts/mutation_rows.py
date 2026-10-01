@@ -581,7 +581,7 @@ def module_files(file: pathlib.Path, root_file: pathlib.Path) -> list[pathlib.Pa
                 )
             if not inner and "skip" not in frames:
                 attributes.append(body)
-            index = end + 1
+            index = end
             continue
         if token == "include" and tokens[index + 1 : index + 2] == ["!"]:
             raise KillerUnresolved(
@@ -630,7 +630,7 @@ def module_files(file: pathlib.Path, root_file: pathlib.Path) -> list[pathlib.Pa
                     children.append(child)
             index += 3
             continue
-        if token in (";", "{", "}"):
+        if token in (";", "}"):
             attributes = []
         index += 1
     return children
