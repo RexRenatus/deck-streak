@@ -7,8 +7,10 @@ secret but the default token, or checks out or fetches another repository (SPEC-
 a `.yaml` workflow is held to the hardening rules as a `.yml` one is, the hardening tests reading
 keys the way the checker does (A13)."""
 
+import ast
 import collections
 import contextlib
+import functools
 import json
 import math
 import os
@@ -1186,11 +1188,12 @@ def _indent(line):
 
 
 def _tabbed(lines, at, refused):
-    """Refuse a line whose indentation holds a tab: YAML indents with spaces alone, and the `yaml`
-    package GitHub's parser reads with refuses the file ("Tabs are not allowed as indentation"). A
+    """Refuse a line whose indentation holds a tab: YAML indents with spaces alone, and GitHub's
+    parser refuses a mapping or a sequence indented with one ("Tabs are not allowed as indentation").
+    A comment or blank line indented with one is refused too, as a form the reader does not read. A
     tab inside a value, or in a block scalar's text, is text and is read."""
     line = lines[at]
-    why = f"line {at + 1}: a tab in the indentation, which YAML refuses"
+    why = f"line {at + 1}: a tab in the indentation, which the reader does not read"
     if "\t" in line[: len(line) - len(line.lstrip(" \t"))] and why not in refused:
         refused.append(why)
 
@@ -1315,6 +1318,10 @@ def _mapping(lines, at, indent, refused):
             return found, at
         _tabbed(lines, at, refused)
         text = lines[at][indent:]
+        if text.startswith("-\t"):
+            # A dash and a tab open a sequence item to YAML, whatever follows them; read as a key
+            # `-`, the line would be a mapping entry YAML never reads (SPEC-190 R12, condition 2).
+            refused.append(f"line {at + 1}: a tab after a sequence indicator is not read")
         if ": " in text:
             key, rest = text.split(": ", 1)
         elif text.endswith(":"):
@@ -1348,7 +1355,9 @@ def _mapping(lines, at, indent, refused):
                 if re.search(r"[^\t\x20-\x7e]", line):
                     continue
                 if "\t" in line[:width]:
-                    refused.append(f"line {row + 1}: a tab in the indentation, which YAML refuses")
+                    refused.append(
+                        f"line {row + 1}: a tab in the indentation, which the reader does not read"
+                    )
                 elif not line.strip(" \t") and "\t" in line:
                     refused.append(
                         f"line {row + 1}: "
@@ -2747,67 +2756,2219 @@ def planted_problems(text):
         return secret_and_checkout_problems(Path(scratch))[0]
 
 
-def read_primitives(source):
-    """Every call that reads a file in a module's source, as (enclosing function, receiver text)
-    pairs: `read_text`, `read_bytes` and `open`, the loader's own body left out. A call outside any
-    function is named `<module>`, so no read is one the census cannot place."""
-    import ast
+# The census that keeps every read of a workflow file on the one loader (SPEC-190 R12, A12). It is
+# default-deny over a population it derives when it runs, never over a list of modules. The
+# population is every module under the test directory that imports the loader's module, directly or
+# through any chain of imports and re-exports, every module those import, and `_support.py`. In it,
+# every site that can read a file, a stream or a process's output, by any spelling, and every call
+# whose callee is not a name, is red unless listed. In the whole directory, every site that can
+# import a module, run code or reach a namespace by a name held in data is red unless listed, and so
+# is every name, module and attribute the census has not classified. A listed site is bound to its
+# module, its qualified name and its own text, and to how many times that text occurs there.
+LOADER = (Path(__file__).stem, workflow_file_text.__qualname__)
+# Members that read a file, a stream or a socket, matched in any position of a dotted name.
+READ_NAMES = frozenset(
+    {
+        "BufferedRWPair",
+        "BufferedRandom",
+        "BufferedReader",
+        "FileIO",
+        "FileInput",
+        "FileType",
+        "IncrementalNewlineDecoder",
+        "StreamReader",
+        "StreamReaderWriter",
+        "StringIO",
+        "TextIOWrapper",
+        "copy_file_range",
+        "extractfile",
+        "fdopen",
+        "fileinput",
+        "fromfile_prefix_chars",
+        "get_data",
+        "getline",
+        "getlines",
+        "getreader",
+        "input",
+        "linecache",
+        "makefile",
+        "mmap",
+        "open",
+        "open_code",
+        "pread",
+        "preadv",
+        "read",
+        "read1",
+        "read_bytes",
+        "read_text",
+        "readall",
+        "readinto",
+        "readline",
+        "readlines",
+        "readv",
+        "recv",
+        "recv_into",
+        "recvfrom",
+        "recvfrom_into",
+        "recvmsg",
+        "sendfile",
+        "sourcehook",
+        "splice",
+        "stdin",
+        "urlopen",
+    }
+)
+# Members that start a process, whose output a module could read; `os`'s own only after `os`.
+PROCESS_NAMES = frozenset(
+    {"create_subprocess_exec", "create_subprocess_shell", "pty", "subprocess"}
+)
+OS_PROCESS_NAMES = frozenset(
+    {
+        "execl",
+        "execle",
+        "execlp",
+        "execlpe",
+        "execv",
+        "execve",
+        "execvp",
+        "execvpe",
+        "fork",
+        "forkpty",
+        "popen",
+        "posix_spawn",
+        "posix_spawnp",
+        "spawnl",
+        "spawnle",
+        "spawnlp",
+        "spawnlpe",
+        "spawnv",
+        "spawnve",
+        "spawnvp",
+        "spawnvpe",
+        "system",
+    }
+)
+# Members that import a module, run code or reach a namespace, matched in any position: the import
+# system's own, a frame's and a code object's, and the loaders that take a module by its name.
+DYNAMIC_NAMES = frozenset(
+    {
+        "SourceFileLoader",
+        "SourcelessFileLoader",
+        "TestProgram",
+        "_dot_lookup",
+        "_get_target",
+        "_importer",
+        "ag_code",
+        "ag_frame",
+        "attrgetter",
+        "cr_code",
+        "cr_frame",
+        "discover",
+        "enable_load_extension",
+        "exec_module",
+        "f_back",
+        "f_builtins",
+        "f_code",
+        "f_globals",
+        "f_locals",
+        "find_module",
+        "find_spec",
+        "findTestCases",
+        "get_code",
+        "get_field",
+        "gi_code",
+        "gi_frame",
+        "import_module",
+        "load_extension",
+        "load_module",
+        "loadTestsFromModule",
+        "loadTestsFromName",
+        "loadTestsFromNames",
+        "methodcaller",
+        "module_from_spec",
+        "resolve_name",
+        "run_module",
+        "run_path",
+        "source_to_code",
+        "spec_from_file_location",
+        "spec_from_loader",
+        "tb_frame",
+    }
+)
+# Pairs that read or change where an import reads: `sys.path` and the `shlex` lexer.
+READ_PAIRS = frozenset({("shlex", "shlex"), ("sys", "path")})
+SYS_DYNAMIC = frozenset({"_getframe", "meta_path", "modules", "path_hooks", "path_importer_cache"})
+# Builtins that reach an attribute by a name: a constant name is read as that attribute; a name
+# held in data is dynamic, and a rebinding of a read or an import member is dynamic too.
+ATTRIBUTE_BUILTINS = frozenset({"delattr", "getattr", "setattr"})
+REBINDING = frozenset({"delattr", "setattr"})
+# Builtins that read, counted wherever they are named, bound or not.
+READ_BUILTINS = frozenset({"input", "open"})
+# Builtins that import, run code, or reach a namespace by a name held in data.
+BARE_DYNAMIC = frozenset(
+    {
+        "breakpoint",
+        "compile",
+        "eval",
+        "exec",
+        "globals",
+        "help",
+        "locals",
+        "vars",
+    }
+)
+# Every other builtin a module may name: a value, a type or a function of what it is given, which
+# imports, runs and reads nothing. A name bound nowhere in its module and not here is red.
+BENIGN_BUILTINS = frozenset(
+    {
+        "AssertionError",
+        "BaseException",
+        "Exception",
+        "FileNotFoundError",
+        "IndexError",
+        "KeyboardInterrupt",
+        "OSError",
+        "PermissionError",
+        "ProcessLookupError",
+        "SystemExit",
+        "TypeError",
+        "UnicodeDecodeError",
+        "ValueError",
+        "abs",
+        "all",
+        "any",
+        "bool",
+        "bytearray",
+        "bytes",
+        "chr",
+        "dict",
+        "dir",
+        "enumerate",
+        "float",
+        "format",
+        "frozenset",
+        "hasattr",
+        "int",
+        "isinstance",
+        "iter",
+        "len",
+        "list",
+        "map",
+        "max",
+        "min",
+        "next",
+        "object",
+        "ord",
+        "print",
+        "property",
+        "range",
+        "repr",
+        "reversed",
+        "set",
+        "sorted",
+        "staticmethod",
+        "str",
+        "sum",
+        "super",
+        "tuple",
+        "type",
+        "zip",
+    }
+)
+# The dunder names a module may use: each names a value, never a namespace or the import system.
+BENIGN_DUNDERS = frozenset(
+    {"__doc__", "__enter__", "__file__", "__init__", "__name__", "__qualname__"}
+)
+# The standard modules the census reads through: each imports and runs nothing by a name held in
+# data, and reads only through the members named above. Any other module's every use is a site.
+VETTED_MODULES = {
+    "argparse": "parses the arguments it is given; it reads a file only through `FileType` or `fromfile_prefix_chars`, both named",
+    "ast": "parses and walks source it is given as text; it runs nothing",
+    "collections": "containers of values",
+    "contextlib": "context managers over what it is given; a read under `chdir` is still a named read",
+    "copy": "copies a value it is given",
+    "dataclasses": "declares classes from names checked as identifiers",
+    "datetime": "dates and times",
+    "fnmatch": "matches names against patterns",
+    "fractions": "exact rational numbers",
+    "functools": "wraps a callable it is given; a read it wraps is a named read where it is named",
+    "hashlib": "digests bytes it is given, or a file object only an `open` can make",
+    "http.server": "serves a directory over a socket; what reaches a module comes through a named read",
+    "io": "streams; each that reads or translates a file or text is named",
+    "ipaddress": "addresses",
+    "itertools": "iterators over what it is given",
+    "json": "parses text it is given, or a file object only an `open` can make",
+    "math": "numbers",
+    "os": "the system's calls; each that reads or starts a process is named",
+    "pathlib": "paths; each member that reads is named",
+    "posixpath": "path strings",
+    "re": "patterns over text it is given",
+    "shlex": "splits and quotes text it is given; the `shlex` lexer, which can open a file it names, is named",
+    "shutil": "copies and removes files, reading none into the module",
+    "signal": "signals",
+    "sqlite3": "a database file; a workflow is no database, and loading an extension is named",
+    "stat": "file modes",
+    "string": "constants and formats; the formatter's `get_field`, which reaches an attribute by name, is named",
+    "subprocess": "processes; every member is a named read",
+    "sys": "the interpreter; its module table, import hooks, frames, path and stdin are named",
+    "tarfile": "archives; `open` and `extractfile` are named",
+    "tempfile": "scratch files and directories; a read of one is a named read",
+    "textwrap": "text it is given",
+    "threading": "threads that run a callable the module names",
+    "time": "clocks",
+    "tokenize": "tokens of text a named `open` or `readline` gives it",
+    "tomllib": "parses text it is given, or a file object only an `open` can make",
+    "types": "type objects; a code object to build a function from comes only through a named site",
+    "unicodedata": "character properties",
+    "unittest": "tests; a loader or patch that takes a module or target by name is named",
+    "uuid": "identifiers",
+}
 
-    tree = ast.parse(source)
-    parent = {child: node for node in ast.walk(tree) for child in ast.iter_child_nodes(node)}
-    found = []
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.Call):
-            continue
-        func = node.func
-        name = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", "")
-        if name not in ("read_text", "read_bytes", "open"):
-            continue
-        scope = node
-        while scope in parent and not isinstance(scope, ast.FunctionDef):
-            scope = parent[scope]
-        inside = scope.name if isinstance(scope, ast.FunctionDef) else "<module>"
-        if inside != LOADER:
-            found.append(
-                (inside, ast.unparse(func.value) if isinstance(func, ast.Attribute) else name)
+Census = collections.namedtuple(
+    "Census", "imports aliases bound sites loader scopes assignments declared"
+)
+
+
+def scoped(tree):
+    """Every node of `tree` with the qualified name of the function, class or lambda whose body
+    holds it, as Python's `__qualname__` spells it, or `<module>`: a decorator, a default and a
+    base class belong to the scope that evaluates them. Also each function's, class's and lambda's
+    own qualified name."""
+    found, own, todo = [], {}, [(tree, "<module>", "")]
+    while todo:
+        node, qual, prefix = todo.pop()
+        found.append((node, qual))
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)):
+            name = prefix + ("<lambda>" if isinstance(node, ast.Lambda) else node.name)
+            own[node] = name
+            inner = name + ("." if isinstance(node, ast.ClassDef) else ".<locals>.")
+            body = node.body if isinstance(node.body, list) else [node.body]
+            for child in ast.iter_child_nodes(node):
+                held = any(child is statement for statement in body)
+                todo.append((child, name, inner) if held else (child, qual, prefix))
+        else:
+            todo.extend((child, qual, prefix) for child in ast.iter_child_nodes(node))
+    return found, own
+
+
+def is_dunder(name):
+    """Whether a name is a dunder, `__x__`."""
+    return len(name) > 4 and name.startswith("__") and name.endswith("__")
+
+
+def bindings(node):
+    """The names a node binds in its scope, each with how it binds it."""
+    if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+        return [(node.name, "a definition")]
+    if isinstance(node, ast.Name) and not isinstance(node.ctx, ast.Load):
+        return [(node.id, "an assignment")]
+    if isinstance(node, ast.arg):
+        return [(node.arg, "an argument")]
+    if isinstance(node, (ast.MatchAs, ast.MatchStar, ast.ExceptHandler)) and node.name:
+        return [(node.name, "a capture")]
+    if isinstance(node, ast.MatchMapping) and node.rest:
+        return [(node.rest, "a capture")]
+    if isinstance(node, (ast.TypeVar, ast.ParamSpec, ast.TypeVarTuple)):
+        return [(node.name, "a type parameter")]
+    if isinstance(node, (ast.Global, ast.Nonlocal)):
+        return [(name, "a global or nonlocal") for name in node.names]
+    if isinstance(node, (ast.Import, ast.ImportFrom)):
+        return [
+            (alias.asname or alias.name.split(".")[0], "an import")
+            for alias in node.names
+            if alias.name != "*"
+        ]
+    return []
+
+
+def classified(names):
+    """(reads, dynamic) for names in attribute position: whether one reads a file, a stream or a
+    process's output, and whether one imports, runs code or reaches a namespace."""
+    return (
+        any(name in READ_NAMES or name in PROCESS_NAMES for name in names),
+        any(
+            name in DYNAMIC_NAMES or is_dunder(name) and name not in BENIGN_DUNDERS
+            for name in names
+        ),
+    )
+
+
+def reference(parts, counted, site, called, builtin):
+    """(reads, dynamic) for one dotted reference `parts`. Its names are `counted` from its first
+    when that is an import or a builtin, and from its attributes when it is a local the module
+    binds: a local holds what its binding read, and the binding is where the census counts it.
+    `builtin` is its first name when no import binds it."""
+    pairs = set(zip(parts, parts[1:]))
+    args = site.args if called else []
+    text = [each.value for each in args[1:2] if isinstance(each, ast.Constant)]
+    named = bool(text) and isinstance(text[0], str)
+    if builtin not in ATTRIBUTE_BUILTINS:
+        reads, dynamic = classified(counted)
+    elif named:
+        reads, dynamic = classified(text)
+        reads, dynamic = (False, reads or dynamic) if builtin in REBINDING else (reads, dynamic)
+    else:
+        reads, dynamic = False, True
+    reads = (
+        reads
+        or builtin in READ_BUILTINS
+        or any(("os", name) in pairs for name in OS_PROCESS_NAMES)
+        or bool(READ_PAIRS & pairs)
+    )
+    dynamic = (
+        dynamic
+        or any(("sys", name) in pairs for name in SYS_DYNAMIC)
+        or builtin in BARE_DYNAMIC
+        or any(is_dunder(part) and part not in BENIGN_DUNDERS for part in parts)
+        or ("patch" in parts and any(isinstance(each, ast.Constant) for each in args[:1]))
+        or (
+            called
+            and parts[-2:] == ["patch", "object"]
+            and not (named and not any(classified(text)))
+        )
+        or (called and parts[:2] == ["unittest", "main"] and bool(site.args or site.keywords))
+    )
+    return reads, dynamic
+
+
+def parameters(node):
+    """The names a function or a lambda takes."""
+    given = node.args
+    return {
+        each.arg
+        for each in [
+            *given.posonlyargs,
+            *given.args,
+            *given.kwonlyargs,
+            given.vararg,
+            given.kwarg,
+        ]
+        if each is not None
+    }
+
+
+def assigned(node):
+    """(target, value) for each binding a node makes from a value: an assignment, a loop's or a
+    comprehension's target, and a `with` item's name."""
+    if isinstance(node, ast.Assign):
+        return [(target, node.value) for target in node.targets]
+    if isinstance(node, (ast.AnnAssign, ast.AugAssign, ast.NamedExpr)) and node.value:
+        return [(node.target, node.value)]
+    if isinstance(node, (ast.For, ast.AsyncFor, ast.comprehension)):
+        return [(node.target, node.iter)]
+    if isinstance(node, ast.withitem) and node.optional_vars is not None:
+        return [(node.optional_vars, node.context_expr)]
+    return []
+
+
+@functools.lru_cache(maxsize=None)
+def module_census(source):
+    """One module's source as the census reads it: its import statements as (qualified name, text,
+    level, module, names, is a from-import), its aliases as {name: (statement, member)}, the names
+    it binds, its sites as (qualified name, text, reads, is dynamic, alias, bare name, the names
+    the site's text names, the attributes of its reference), its bindings of the loader's name as
+    (how, qualified name, text, statement), its scopes as {qualified name: (is a function, the
+    names it binds)} and its bindings from a value as (qualified name, names, attributes, the
+    sites in the value, the lambdas the value is)."""
+    nodes, own = scoped(ast.parse(source))
+    parent = {child: node for node, _qual in nodes for child in ast.iter_child_nodes(node)}
+    imports, aliases, bound, sites, loader, references = [], {}, set(), [], [], []
+    scopes = collections.defaultdict(set)
+    at = collections.defaultdict(list)
+    # A method's first argument, and a local bound only from a call of a class the module defines
+    # once, name an instance; a member its class defines once and nothing in the module stores is
+    # that method, read by what the method's body reads, never by its name.
+    classes = {name for node, name in own.items() if isinstance(node, ast.ClassDef)}
+    members, selves, taken = collections.defaultdict(set), {}, {}
+    stores, made = collections.Counter(), collections.defaultdict(list)
+    stored = {
+        each.attr
+        for each, _qual in nodes
+        if isinstance(each, ast.Attribute) and not isinstance(each.ctx, ast.Load)
+    }
+    declared = set()
+
+    def site(qual, node, reads, dynamic, alias=None, bare=None, chain=()):
+        at[node].append(len(sites))
+        names = frozenset(each.id for each in ast.walk(node) if isinstance(each, ast.Name))
+        sites.append((qual, ast.unparse(node), reads, dynamic, alias, bare, names, tuple(chain)))
+
+    for node, qual in nodes:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
+            scopes[own[node]] |= parameters(node)
+            taken[own[node]] = parameters(node)
+        if (
+            isinstance(node, ast.Assign)
+            and len(node.targets) == 1
+            and isinstance(node.targets[0], ast.Name)
+            and isinstance(node.value, ast.Call)
+            and isinstance(node.value.func, ast.Name)
+        ):
+            made[qual, node.targets[0].id].append(node.value.func.id)
+        for name, how in bindings(node):
+            stores[qual if how != "an argument" else "", name] += 1
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and qual in classes:
+            members[qual].add(node.name)
+            given = [*node.args.posonlyargs, *node.args.args]
+            plain = all(
+                isinstance(each, ast.Name) and each.id in ("classmethod", "property")
+                for each in node.decorator_list
             )
+            if given and plain:
+                selves[own[node]] = (qual, given[0].arg)
+        if isinstance(node, (ast.Global, ast.Nonlocal)):
+            declared.update(node.names)
+        if isinstance(node, (ast.Import, ast.ImportFrom)):
+            is_from = isinstance(node, ast.ImportFrom)
+            level, module = (
+                getattr(node, "level", 0),
+                getattr(node, "module", None) or "",
+            )
+            names = tuple(alias.name for alias in node.names)
+            imports.append((qual, ast.unparse(node), level, module, names, is_from))
+            for alias in node.names:
+                member = alias.name if is_from or alias.asname else alias.name.split(".")[0]
+                if alias.name != "*":
+                    aliases[alias.asname or member] = (len(imports) - 1, member)
+                if alias.name == LOADER[1] and alias.asname not in (None, LOADER[1]):
+                    loader.append(("an import under another name", qual, imports[-1][1], None))
+                elif LOADER[1] in (alias.name, alias.asname):
+                    loader.append(("an import", qual, imports[-1][1], len(imports) - 1))
+        for name, how in bindings(node):
+            bound.add(name)
+            if how != "an argument":
+                scopes[qual].add(name)
+            if name == LOADER[1] and how != "an import":
+                loader.append((how, qual, ast.unparse(node).split("\n")[0], None))
+        if isinstance(node, ast.Constant) and node.value == LOADER[1]:
+            loader.append(("the loader's name as a string", qual, ast.unparse(parent[node]), None))
+        if isinstance(node, ast.keyword) and node.arg in READ_NAMES:
+            site(qual, parent[node], True, False)
+        if isinstance(node, ast.Call) and not isinstance(node.func, (ast.Name, ast.Attribute)):
+            site(qual, node, True, False)
+        if isinstance(node, (ast.Name, ast.Attribute)) and not (
+            isinstance(parent.get(node), ast.Attribute) and parent[node].value is node
+        ):
+            references.append((node, qual))
+    for node, qual in references:
+        attributes, first = [], node
+        while isinstance(first, ast.Attribute):
+            attributes.insert(0, first.attr)
+            first = first.value
+        if not isinstance(node.ctx, ast.Load):
+            if attributes[-1:] == [LOADER[1]]:
+                loader.append(("an attribute rebinding", qual, ast.unparse(parent[node]), None))
+            if attributes and any(classified(attributes[-1:])):
+                site(qual, parent[node], False, True)
+            continue
+        head = first.id if isinstance(first, ast.Name) else ""
+        parts = [head, *attributes]
+        if head in aliases:
+            index, member = aliases[head]
+            _qual, _text, _level, module, _names, is_from = imports[index]
+            dotted = f"{module}.{member}" if is_from else member
+            parts = [*dotted.split("."), *attributes]
+        call = parent.get(node)
+        called = isinstance(call, ast.Call) and call.func is node
+        builtin = head if head and head not in aliases else None
+        owner = selves[qual][0] if qual in selves and head == selves[qual][1] else None
+        kinds = made.get((qual, head), [])
+        scopes_around = [".".join(qual.split(".")[:end]) for end in range(1, qual.count(".") + 2)]
+        if (
+            head
+            and head not in taken.get(qual, ())
+            and head not in declared
+            and kinds
+            and len(kinds) == stores[qual, head]
+            and len(set(kinds)) == 1
+            and kinds[0] in classes
+            and stores["<module>", kinds[0]] == 1
+            and kinds[0] not in declared
+            and not any(stores[scope, kinds[0]] for scope in scopes_around)
+        ):
+            owner = kinds[0]
+        own_member = bool(
+            owner
+            and attributes[:1]
+            and attributes[0] in members[owner]
+            and attributes[0] not in stored
+            and stores[owner, attributes[0]] == 1
+        )
+        counted = attributes[own_member:] if builtin in bound else parts
+        reads, dynamic = reference(
+            [part for part in parts if part],
+            counted,
+            call if called else node,
+            called,
+            builtin,
+        )
+        alias = head if head in aliases else None
+        site(qual, call if called else node, reads, dynamic, alias, builtin, attributes)
+        if called:
+            at[node].append(len(sites) - 1)
+    assignments = []
+    for node, qual in nodes:
+        for target, value in assigned(node):
+            held = {index for each in ast.walk(value) for index in at.get(each, ())}
+            assignments.append(
+                (
+                    qual,
+                    frozenset(each.id for each in ast.walk(target) if isinstance(each, ast.Name)),
+                    frozenset(
+                        each.attr
+                        for each in ast.walk(target)
+                        if isinstance(each, ast.Attribute) and not isinstance(each.ctx, ast.Load)
+                    ),
+                    tuple(sorted(held)),
+                    (own[value],) if isinstance(value, ast.Lambda) else (),
+                )
+            )
+    functions = {
+        name
+        for node, name in own.items()
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda))
+    }
+    return Census(
+        tuple(imports),
+        aliases,
+        frozenset(bound),
+        tuple(sites),
+        tuple(loader),
+        {qual: (qual in functions, frozenset(names)) for qual, names in scopes.items()}
+        | {qual: (True, frozenset()) for qual in functions - set(scopes)},
+        tuple(assignments),
+        frozenset(declared),
+    )
+
+
+def module_sources(directory):
+    """Every module under `directory` with its source, by its dotted name there."""
+    found = {}
+    for path in sorted(directory.rglob("*.py")):
+        parts = path.relative_to(directory).with_suffix("").parts
+        found[".".join(parts[:-1] if parts[-1] == "__init__" else parts)] = path.read_text(
+            encoding="utf-8"
+        )
     return found
 
 
-LOADER = "workflow_file_text"
-# The reads of a file that is no workflow: a script, a lock file, a configuration, a brief, a
-# ruleset, a log, a plan. Each is (module, function): how many reads that function makes.
+def enclosing(census, qual):
+    """The names bound in the function a qualified name is in and in every function around it:
+    its arguments and its locals, never a class body's or the module's."""
+    parts = qual.split(".<locals>.")
+    found = set()
+    for end in range(1, len(parts) + 1):
+        is_function, names = census.scopes.get(".<locals>.".join(parts[:end]), (False, ()))
+        if is_function:
+            found |= names
+    return found
+
+
+def census_problems(directory):
+    """Every problem the census finds under `directory`, each naming its module, its qualified name
+    and its text; with how many modules it read, how many are in the population and how many sites
+    it counted."""
+    modules = {name: module_census(source) for name, source in module_sources(directory).items()}
+    leads = [list(directory.parts[start:]) for start in range(len(directory.parts))]
+
+    def spelled(dotted):
+        """The module under `directory` a dotted name spells, itself or with a leading run of the
+        directory's own path taken off (`scripts.tests.x` is `x`), or None."""
+        parts = [part for part in dotted.split(".") if part]
+        for lead in [[], *leads]:
+            if parts[: len(lead)] == lead and ".".join(parts[len(lead) :]) in modules:
+                return ".".join(parts[len(lead) :])
+        return None
+
+    def named(importer, statement):
+        """The dotted names one import statement names, each package on the way included."""
+        _qual, _text, level, module, names, is_from = statement
+        if not is_from:
+            return [
+                ".".join(name.split(".")[:end])
+                for name in names
+                for end in range(1, len(name.split(".")) + 1)
+            ]
+        package = importer.split(".")[:-1]
+        base = package[: len(package) - level + 1] if level else []
+        whole = base + [part for part in module.split(".") if part]
+        found = [".".join(whole[:end]) for end in range(1, len(whole) + 1)]
+        return found + [".".join([*whole, name]) for name in names if name != "*"]
+
+    def importing(importer, statement):
+        """The modules under `directory` one import statement may import."""
+        found = set()
+        for dotted in named(importer, statement):
+            want = dotted.split(".")
+            found |= {
+                other
+                for other in modules
+                if other.split(".")[-len(want) :] == want
+                or want[-len(other.split(".")) :] == other.split(".")
+            }
+        return found
+
+    edges = {
+        name: set().union(*(importing(name, s) for s in census.imports))
+        for name, census in modules.items()
+    }
+    population = {LOADER[0]}
+    while grown := {name for name in modules if edges[name] & population} - population:
+        population |= grown
+    population |= {name for name in modules if name.split(".")[-1] == "_support"}
+    scanned = set(population)
+    while grown := set().union(*(edges[name] for name in scanned)) - scanned:
+        scanned |= grown
+    found, problems, loaders, flags, followed, stars = (
+        collections.Counter(),
+        [],
+        0,
+        {},
+        {},
+        {},
+    )
+    for name, census in modules.items():
+        bound = set(census.bound)
+        followed[name] = [any(spelled(each) for each in named(name, s)) for s in census.imports]
+        stars[name] = set()
+        for statement, here in zip(census.imports, followed[name]):
+            qual, text, level, module, names, is_from = statement
+            tops = [module.split(".")[0]] if is_from else [each.split(".")[0] for each in names]
+            if "*" in names and here:
+                stars[name] |= importing(name, statement)
+                bound |= set().union(
+                    *(modules[other].bound for other in importing(name, statement))
+                )
+            if not here and (
+                level or "*" in names or any(top not in sys.stdlib_module_names for top in tops)
+            ):
+                found["dynamic", name, qual, text] += 1
+        flags[name] = []
+        for qual, text, reads, dynamic, alias, bare, _names, _chain in census.sites:
+            if alias is not None:
+                index, member = census.aliases[alias]
+                _q, _t, level, module, _names, is_from = census.imports[index]
+                dotted = f"{module}.{member}" if is_from else member
+                parts = dotted.split(".")
+                prefixes = {".".join(parts[:end]) for end in range(1, len(parts) + 1)}
+                if not (followed[name][index] or prefixes & set(VETTED_MODULES)):
+                    if level == 0 and parts[0] in sys.stdlib_module_names:
+                        dynamic = True
+                    else:
+                        reads = True
+            if (
+                bare is not None
+                and not (reads or dynamic)
+                and bare not in bound
+                and bare not in BENIGN_BUILTINS | ATTRIBUTE_BUILTINS | BARE_DYNAMIC
+                and not is_dunder(bare)
+            ):
+                problems.append(f"{name}: {qual}: {text}: a name the census cannot place")
+            flags[name].append([reads, dynamic, dynamic])
+        for how, qual, text, index in census.loader:
+            if (name, qual, how) == (LOADER[0], "<module>", "a definition"):
+                loaders += 1
+            elif not (how == "an import" and index is not None and followed[name][index]):
+                problems.append(f"{name}: {qual}: {text}: {how} of the loader's name")
+    if loaders != 1:
+        problems.append(f"{LOADER[0]}: {LOADER[1]}: {loaders} definitions of the loader, not one")
+    # A function in the population whose read depends on what it is given (an argument, a local,
+    # `self`), or that imports or runs code, is a reader: every reference to it in the population
+    # is a read, so a call that hands it a workflow is a site. So is every function and every
+    # module-level value that reads, in a module the population imports whose reads the census
+    # does not count. A value a load returns is held: every use of an attribute of it is a read.
+    # All to a fixed point, through aliases, re-exports and stars.
+    readers, loads, held, held_attributes = set(), set(), collections.defaultdict(set), set()
+
+    def is_held(name, qual, bare):
+        """Whether a name used in a scope is one a load's value is bound to there: bound in that
+        scope, a function around it or the module, or anywhere when it is declared global."""
+        return any(
+            each == bare and (scope in ("<module>", qual) or qual.startswith(scope + "."))
+            for scope, each in held[name]
+        )
+
+    def state():
+        """What the fixed point grows, measured."""
+        return (
+            len(readers),
+            len(loads),
+            sum(map(len, held.values())),
+            len(held_attributes),
+            sum(flag[0] + flag[2] for name in scanned for flag in flags[name]),
+        )
+
+    while True:
+        before = state()
+        methods = [
+            (qual.rsplit(".", 1)[-1], group is loads)
+            for group in (readers, loads)
+            for _name, qual in group
+            if "." in qual.split(".<locals>.")[-1]
+        ]
+        simple = {method for method, _load in methods}
+        loading = {method for method, load in methods if load}
+        for name in sorted(scanned):
+            census = modules[name]
+            inside = name in population
+            for asname, (index, member) in census.aliases.items():
+                _q, _t, _level, module, _names, is_from = census.imports[index]
+                target = spelled(module) if is_from else None
+                if target and followed[name][index]:
+                    for group in (readers, loads):
+                        if (target, member) in group:
+                            group.add((name, asname))
+                    if ("<module>", member) in held[target]:
+                        held[name].add(("<module>", asname))
+            for star in stars[name]:
+                for group in (readers, loads):
+                    group |= {(name, qual) for module, qual in list(group) if module == star}
+                held[name] |= {each for each in held[star] if each[0] == "<module>"}
+            for index, site in enumerate(census.sites):
+                qual, _text, _reads, _dynamic, alias, bare, names, chain = site
+                flag = flags[name][index]
+                local = enclosing(census, qual)
+                targets = set()
+                if bare is not None:
+                    scopes = qual.split(".<locals>.")
+                    targets |= {
+                        (name, ".<locals>.".join(scopes[:end]) + ".<locals>." + bare)
+                        for end in range(1, len(scopes) + 1)
+                    }
+                    if bare not in local:
+                        targets |= {(name, bare)} | {(star, bare) for star in stars[name]}
+                    if is_held(name, qual, bare):
+                        flag[0] = True
+                if alias is not None:
+                    at, member = census.aliases[alias]
+                    _q, _t, _level, module, _names, is_from = census.imports[at]
+                    parts = [*(f"{module}.{member}" if is_from else member).split("."), *chain]
+                    for end in range(1, len(parts)):
+                        target = spelled(".".join(parts[:end]))
+                        if target:
+                            targets.add((target, parts[end]))
+                            if ("<module>", parts[end]) in held[target]:
+                                flag[0] = True
+                if targets & readers or any(part in simple for part in chain):
+                    flag[0] = True
+                if targets & loads or any(part in loading for part in chain):
+                    flag[2] = True
+                if any(part in held_attributes for part in chain):
+                    flag[0] = True
+                if census.scopes.get(qual, (False, ()))[0] and (name, qual) != LOADER:
+                    if flag[0] and (names & local or not inside):
+                        readers.add((name, qual))
+                    if flag[1]:
+                        readers.add((name, qual))
+                        loads.add((name, qual))
+            for qual, names, attributes, sites, lambdas in census.assignments:
+                if any(flags[name][index][2] for index in sites):
+                    held[name] |= {
+                        ("<module>" if each in census.declared else qual, each) for each in names
+                    }
+                    held_attributes.update(attributes)
+                if not inside and qual == "<module>" and any(flags[name][i][0] for i in sites):
+                    readers.update((name, target) for target in names)
+                for each in lambdas:
+                    if (name, each) in readers:
+                        readers.update((name, target) for target in names)
+        if state() == before:
+            break
+    for name, census in modules.items():
+        for (qual, text, *_rest), (reads, dynamic, _load) in zip(census.sites, flags[name]):
+            if dynamic or (reads and name in population):
+                found["dynamic" if dynamic else "read", name, qual, text] += 1
+    listed, counted = collections.Counter(), collections.Counter()
+    for table in (NOT_WORKFLOW_READS, DYNAMIC_IMPORTS):
+        for key, (count, _why) in table.items():
+            listed[key] += count
+    for (_kind, name, qual, text), count in found.items():
+        counted[name, qual, text] += count
+    for key in sorted(set(counted) | set(listed)):
+        if counted[key] != listed[key]:
+            kinds = "/".join(sorted({kind for kind, *rest in found if tuple(rest) == key}))
+            problems.append(
+                f"{': '.join(key)}: {counted[key]} {kinds} site(s), {listed[key]} listed"
+            )
+    return problems, len(modules), len(population), sum(found.values())
+
+
+def allowed(reason, *sites):
+    """{(module, qualified name, text): (count, reason)} for the sites one reason covers, each given
+    as (module, qualified name, text, count)."""
+    return {(module, qual, text): (count, reason) for module, qual, text, count in sites}
+
+
+# Every read the census counts in the loader's population, each by its module, its qualified
+# name and its text, which holds its receiver, with how many times it occurs and why no
+# workflow's text reaches the reader through it, the loader's own read among them.
 NOT_WORKFLOW_READS = {
-    (
-        "test_ci_workflows",
-        "test_every_file_read_in_the_test_modules_is_the_loader_or_a_named_non_workflow_read",
-    ): 2,
-    ("test_ci_workflows", "gate_stages"): 1,
-    ("test_ci_workflows", "required_contexts"): 1,
-    ("test_ci_workflows", "run_step"): 1,
-    ("test_ci_workflows", "test_a_yaml_workflow_is_held_to_the_same_hardening_rules"): 1,
-    ("test_ci_workflows", "test_ci_runs_every_stage_of_the_local_gate"): 1,
-    ("test_ci_workflows", "test_the_browser_cache_is_keyed_on_the_locked_playwright_version"): 1,
-    (
-        "test_mutation_workflows",
-        "test_every_job_that_runs_cargo_mutants_installs_the_test_tool_it_names",
-    ): 1,
-    ("test_mutation_workflows", "test_the_builder_brief_teaches_the_equivalence_record"): 4,
-    ("test_mutation_workflows", "test_the_builder_brief_teaches_the_mutation_rules"): 1,
-    (
-        "test_mutation_workflows",
-        "test_the_configuration_check_refuses_what_stryker_would_read_otherwise",
-    ): 1,
-    ("test_mutation_workflows", "test_the_tool_configurations_load_under_their_own_rules"): 2,
-    ("test_mutation_workflows", "test_the_verdict_binds_every_record_against_the_whole_listing"): 3,
-    ("test_not_started_legs", "planned"): 1,
-    ("test_not_started_legs", "rewrite"): 1,
-    (
-        "test_not_started_legs",
-        "test_a_listed_leg_that_is_missing_or_not_started_is_refused_by_name",
-    ): 1,
-    ("test_not_started_legs", "test_an_examined_sum_that_differs_from_the_listing_is_refused"): 1,
-    ("test_not_started_legs", "test_the_verdict_step_fails_on_the_legs_check"): 1,
+    **allowed(
+        "the pnpm lockfile, which a pattern reads for the locked playwright version; never handed to the reader",
+        (
+            "test_ci_workflows",
+            "OnlyAPushSavesACache.test_the_browser_cache_is_keyed_on_the_locked_playwright_version",
+            "(REPO / 'pnpm-lock.yaml').read_text(encoding='utf-8')",
+            1,
+        ),
+    ),
+    **allowed(
+        "calls run_step, which runs a cache step's shell over a planted lockfile's text and reads its outputs",
+        (
+            "test_ci_workflows",
+            "OnlyAPushSavesACache.test_the_browser_cache_is_keyed_on_the_locked_playwright_version",
+            "run_step(step, \"lockfileVersion: '9.0'\\n\")",
+            1,
+        ),
+        (
+            "test_ci_workflows",
+            "OnlyAPushSavesACache.test_the_browser_cache_is_keyed_on_the_locked_playwright_version",
+            "run_step(step, lockfile)",
+            1,
+        ),
+        (
+            "test_ci_workflows",
+            "OnlyAPushSavesACache.test_the_browser_cache_is_keyed_on_the_locked_playwright_version",
+            "run_step(step, moved)",
+            1,
+        ),
+        (
+            "test_ci_workflows",
+            "OnlyAPushSavesACache.test_the_browser_cache_is_keyed_on_the_locked_playwright_version",
+            "run_step(step, two)",
+            1,
+        ),
+    ),
+    **allowed(
+        "calls run_base_is_dev, which runs base-is-dev's shell and reads its output",
+        (
+            "test_ci_workflows",
+            "OnlyThisRepositorysDevReachesMain.test_base_is_dev_admits_this_repositorys_dev_into_main",
+            "run_base_is_dev(INTO_MAIN)",
+            1,
+        ),
+        (
+            "test_ci_workflows",
+            "OnlyThisRepositorysDevReachesMain.test_base_is_dev_refuses_a_fork_whose_branch_is_named_dev",
+            "run_base_is_dev(fork)",
+            1,
+        ),
+        (
+            "test_ci_workflows",
+            "OnlyThisRepositorysDevReachesMain.test_base_is_dev_refuses_this_repositorys_other_branches_into_main",
+            "run_base_is_dev(dict(INTO_MAIN, **{'github.head_ref': 'feature/probe'}))",
+            1,
+        ),
+    ),
+    **allowed(
+        "calls required_contexts, whose one read is a ruleset's JSON",
+        (
+            "test_ci_workflows",
+            "TheRequiredCiCheckIsThePullRequestsOwn.test_no_push_run_reports_under_a_required_name",
+            "required_contexts()",
+            1,
+        ),
+        (
+            "test_ci_workflows",
+            "TheRequiredCiCheckIsThePullRequestsOwn.test_the_required_ci_check_is_always_the_pull_requests_own_run",
+            "required_contexts()",
+            1,
+        ),
+    ),
+    **allowed(
+        "the refusal's own initialiser, named like a reader's method by `__init__`; it reads nothing",
+        (
+            "test_ci_workflows",
+            "Unread.__init__",
+            "super().__init__('the reader does not read ' + '; '.join(refused))",
+            1,
+        ),
+    ),
+    **allowed(
+        "the loaders of the modules under test, each pointed at a scratch directory through a patch of its module; each reads through the loader",
+        ("test_ci_workflows", "WorkflowFilesAreReadAsBytes.readers", "through_load", 1),
+        (
+            "test_ci_workflows",
+            "WorkflowFilesAreReadAsBytes.readers.<locals>.through_load",
+            "here",
+            1,
+        ),
+    ),
+    **allowed(
+        "reads a planted file through each loader `readers` returns; each reads through the loader",
+        (
+            "test_ci_workflows",
+            "WorkflowFilesAreReadAsBytes.test_a_file_that_ends_its_lines_in_crlf_reads_as_the_same_file_ending_in_lf",
+            "read('release.yml')",
+            1,
+        ),
+        (
+            "test_ci_workflows",
+            "WorkflowFilesAreReadAsBytes.test_a_file_that_ends_its_lines_in_crlf_reads_as_the_same_file_ending_in_lf",
+            "reader",
+            1,
+        ),
+        (
+            "test_ci_workflows",
+            "WorkflowFilesAreReadAsBytes.test_a_file_that_ends_its_lines_in_crlf_reads_as_the_same_file_ending_in_lf",
+            "self.readers(directory)",
+            1,
+        ),
+        (
+            "test_ci_workflows",
+            "WorkflowFilesAreReadAsBytes.test_a_lone_carriage_return_or_a_byte_order_mark_in_a_file_is_refused_by_name",
+            "read('release.yml')",
+            1,
+        ),
+        (
+            "test_ci_workflows",
+            "WorkflowFilesAreReadAsBytes.test_a_lone_carriage_return_or_a_byte_order_mark_in_a_file_is_refused_by_name",
+            "reader",
+            1,
+        ),
+        (
+            "test_ci_workflows",
+            "WorkflowFilesAreReadAsBytes.test_a_lone_carriage_return_or_a_byte_order_mark_in_a_file_is_refused_by_name",
+            "self.readers(directory)",
+            1,
+        ),
+    ),
+    **allowed(
+        "calls the census, which reads the test modules' sources through module_sources",
+        (
+            "test_ci_workflows",
+            "WorkflowFilesAreReadAsBytes.test_every_file_read_in_the_test_modules_is_the_loader_or_a_named_non_workflow_read",
+            "census_problems(Path(__file__).parent)",
+            1,
+        ),
+    ),
+    **allowed(
+        "runs one of the three hardening tests the loop names over a planted directory; each reads through the loader",
+        (
+            "test_ci_workflows",
+            "WorkflowsAreHardened.test_a_yaml_workflow_is_held_to_the_same_hardening_rules",
+            "getattr(case, test)()",
+            2,
+        ),
+    ),
+    **allowed(
+        "copies the live workflows' bytes into a scratch directory unread; the hardening tests read the copies through the loader",
+        (
+            "test_ci_workflows",
+            "WorkflowsAreHardened.test_a_yaml_workflow_is_held_to_the_same_hardening_rules",
+            "path.read_bytes()",
+            1,
+        ),
+    ),
+    **allowed(
+        "a patch of this module's WORKFLOWS, taken from sys.modules; entering it points the hardening tests at a planted directory, reading nothing",
+        (
+            "test_ci_workflows",
+            "WorkflowsAreHardened.test_a_yaml_workflow_is_held_to_the_same_hardening_rules",
+            "workflows",
+            1,
+        ),
+    ),
+    **allowed(
+        "scripts/check.sh, whose STAGES_ALL line a pattern reads; it is a shell script, never handed to the reader",
+        (
+            "test_ci_workflows",
+            "WorkflowsAreHardened.test_ci_runs_every_stage_of_the_local_gate",
+            "(REPO / 'scripts' / 'check.sh').read_text()",
+            1,
+        ),
+        ("test_ci_workflows", "gate_stages", "(REPO / 'scripts' / 'check.sh').read_text()", 1),
+    ),
+    **allowed(
+        "calls module_sources, which reads the test modules' sources for the census",
+        ("test_ci_workflows", "census_problems", "module_sources(directory)", 1),
+    ),
+    **allowed(
+        "a test module's source, which ast parses for the census; never handed to the reader",
+        ("test_ci_workflows", "module_sources", "path.read_text(encoding='utf-8')", 1),
+    ),
+    **allowed(
+        "a ruleset's JSON, which json parses for its required contexts; never handed to the reader",
+        (
+            "test_ci_workflows",
+            "required_contexts",
+            "(RULESETS / f'{name}.json').read_text(encoding='utf-8')",
+            1,
+        ),
+    ),
+    **allowed(
+        "runs base-is-dev's own shell, cut from ci.yml's loader-read text, under bash; its output is the step's verdict, never a workflow",
+        (
+            "test_ci_workflows",
+            "run_base_is_dev",
+            "subprocess.run(['bash', '-e', '-c', script], env=env, capture_output=True, text=True, check=False)",
+            1,
+        ),
+    ),
+    **allowed(
+        "runs a cache step's own shell under bash in a scratch directory holding a planted lockfile, and reads the GITHUB_OUTPUT it writes; outputs, never a workflow",
+        ("test_ci_workflows", "run_step", "output.read_text()", 1),
+        (
+            "test_ci_workflows",
+            "run_step",
+            "subprocess.run(['bash', '--noprofile', '--norc', '-e', '-o', 'pipefail', '-c', step['run']], cwd=where, env=env, capture_output=True, text=True, check=False)",
+            1,
+        ),
+    ),
+    **allowed(
+        "the loader's one read: a workflow file's bytes, decoded as strict utf-8 with no byte order mark",
+        ("test_ci_workflows", LOADER[1], "Path(path).read_bytes()", 1),
+    ),
+    **allowed(
+        "calls the bash oracle, which runs planted scripts with cargo stubbed and reads the stubs' logs",
+        (
+            "test_dispatch_shards",
+            "AComputedWordBeforeTheBoundsIsRefused.test_every_word_bash_can_expand_to_dashes_before_the_bounds_is_refused",
+            "bash_runs(scripts)",
+            1,
+        ),
+        (
+            "test_dispatch_shards",
+            "EveryMutationCommandKeepsTheGatesBounds.test_every_command_bash_runs_from_a_run_value_is_found_or_refused",
+            "bash_runs(scripts)",
+            1,
+        ),
+        (
+            "test_dispatch_shards",
+            "EveryMutationCommandKeepsTheGatesBounds.test_every_unbounded_command_bash_runs_past_a_hash_is_found",
+            "unbounded_by_bash(members)",
+            1,
+        ),
+        (
+            "test_dispatch_shards",
+            "EveryMutationCommandKeepsTheGatesBounds.test_the_reading_is_declared_what_it_reads_is_found_and_what_it_does_not_is_refused",
+            "bash_runs([f'{UNBOUNDED}\\n', f'{LEAD}\\n', *found_texts])",
+            1,
+        ),
+        (
+            "test_dispatch_shards",
+            "TheMemoryScopeRunsTheWordsAfterItsSeparator.test_every_wrapped_command_bash_runs_without_the_bounds_is_found_or_refused",
+            "bash_runs(scripts)",
+            1,
+        ),
+        (
+            "test_dispatch_shards",
+            "TheMemoryScopeRunsTheWordsAfterItsSeparator.test_the_declared_form_around_a_bounded_command_is_found_bounded",
+            "bash_runs(scripts)",
+            1,
+        ),
+    ),
+    **allowed(
+        "runs the verdict's battery over planted reports; its output is the battery's verdict",
+        (
+            "test_dispatch_shards",
+            "TheBatteryRefusesAForeignShardCount.run_battery",
+            "subprocess.run([sys.executable, str(VERDICT), 'battery', '--reports', str(reports), '--shards', str(shards), '--package', 'deck-streak-fix', '--listed', str(reports / 'listing' / 'whole.json')], capture_output=True, text=True, check=False, timeout=120, env=dict(os.environ, PYTHONDONTWRITEBYTECODE='1'))",
+            1,
+        ),
+    ),
+    **allowed(
+        "calls run_battery, which runs the verdict's battery over planted reports",
+        (
+            "test_dispatch_shards",
+            "TheBatteryRefusesAForeignShardCount.test_a_report_beyond_the_count_fails_the_battery",
+            "self.run_battery(3, 2)",
+            1,
+        ),
+        (
+            "test_dispatch_shards",
+            "TheBatteryRefusesAForeignShardCount.test_a_report_set_of_exactly_the_count_passes",
+            "self.run_battery(2, 2)",
+            1,
+        ),
+    ),
+    **allowed(
+        "calls size, which runs the verdict's size command over a planted listing and reads its outputs",
+        (
+            "test_dispatch_shards",
+            "TheDispatchIsSizedFromItsListing.test_a_package_that_lists_nothing_or_a_non_listing_is_not_sized",
+            "size(None, 'deck-streak-ingest', raw='not json')",
+            1,
+        ),
+        (
+            "test_dispatch_shards",
+            "TheDispatchIsSizedFromItsListing.test_a_package_that_lists_nothing_or_a_non_listing_is_not_sized",
+            "size([], 'deck-streak-ingest')",
+            1,
+        ),
+        (
+            "test_dispatch_shards",
+            "TheDispatchIsSizedFromItsListing.test_a_projection_past_the_limit_is_refused_with_its_projection_never_capped",
+            "size(entries('deck-streak-ingest', 7000), 'deck-streak-ingest')",
+            1,
+        ),
+        (
+            "test_dispatch_shards",
+            "TheDispatchIsSizedFromItsListing.test_a_small_package_takes_one_shard_and_a_large_one_the_fewest_within_the_bound",
+            "size(entries(package, count), package)",
+            1,
+        ),
+        (
+            "test_dispatch_shards",
+            "TheDispatchIsSizedFromItsListing.test_the_sizing_is_the_per_pull_request_plans_own_function",
+            "size(listing, package)",
+            1,
+        ),
+        (
+            "test_dispatch_shards",
+            "TheExaminedTotalIsTheListing.test_the_union_of_the_sized_shards_equals_the_union_of_the_thirty_two",
+            "size(listing, 'deck-streak-daemon')",
+            1,
+        ),
+        (
+            "test_dispatch_shards",
+            "TheWholeTreeKeepsThirtyTwo.test_no_package_is_thirty_two_shards_whatever_the_listing",
+            "size(None, None, raw=raw or '')",
+            1,
+        ),
+    ),
+    **allowed(
+        "the plan the verdict wrote to a scratch file; JSON, never handed to the reader",
+        (
+            "test_dispatch_shards",
+            "TheDispatchIsSizedFromItsListing.test_the_sizing_is_the_per_pull_request_plans_own_function",
+            "plan.read_text('utf-8')",
+            1,
+        ),
+        (
+            "test_not_started_legs",
+            "planned",
+            "(reports / 'mutation-plan' / 'plan.json').read_text(encoding='utf-8')",
+            1,
+        ),
+    ),
+    **allowed(
+        "runs the verdict's shards command over a planted plan; its output is the verdict's",
+        (
+            "test_dispatch_shards",
+            "TheDispatchIsSizedFromItsListing.test_the_sizing_is_the_per_pull_request_plans_own_function",
+            "subprocess.run([sys.executable, str(VERDICT), 'shards', '--plan', str(plan), '--listed', str(whole)], capture_output=True, text=True, check=False, timeout=120, env=dict(os.environ, PYTHONDONTWRITEBYTECODE='1'))",
+            1,
+        ),
+    ),
+    **allowed(
+        "the memory-scope wrapper's source, planted with a dropped or added word; never handed to the reader",
+        (
+            "test_dispatch_shards",
+            "TheMemoryScopeRunsTheWordsAfterItsSeparator.test_a_wrapper_that_drops_or_adds_a_word_goes_red",
+            "MEMORY_SCOPE.read_text('utf-8')",
+            1,
+        ),
+    ),
+    **allowed(
+        "a value computed from the wrapper module loaded by path: its options, or the words and status its spies saw; never a workflow",
+        (
+            "test_dispatch_shards",
+            "TheMemoryScopeRunsTheWordsAfterItsSeparator.test_a_wrapper_that_drops_or_adds_a_word_goes_red",
+            "cases",
+            3,
+        ),
+        (
+            "test_dispatch_shards",
+            "TheMemoryScopeRunsTheWordsAfterItsSeparator.test_the_wrapper_runs_exactly_the_words_after_its_separator",
+            "options",
+            1,
+        ),
+        ("test_dispatch_shards", "spy_wrong", "argv", 1),
+        ("test_dispatch_shards", "spy_wrong", "ran", 3),
+        ("test_dispatch_shards", "spy_wrong", "runs", 1),
+        ("test_dispatch_shards", "spy_wrong", "status", 2),
+        ("test_dispatch_shards", "spy_wrong", "words", 1),
+    ),
+    **allowed(
+        "calls spy_wrong, which runs the wrapper's main() over planted cases and reads its spies' logs",
+        (
+            "test_dispatch_shards",
+            "TheMemoryScopeRunsTheWordsAfterItsSeparator.test_a_wrapper_that_drops_or_adds_a_word_goes_red",
+            "spy_wrong(path, cases)",
+            1,
+        ),
+        (
+            "test_dispatch_shards",
+            "TheMemoryScopeRunsTheWordsAfterItsSeparator.test_the_wrapper_runs_exactly_the_words_after_its_separator",
+            "spy_wrong(MEMORY_SCOPE, cases)",
+            1,
+        ),
+    ),
+    **allowed(
+        "calls wrapper_module, which loads scripts/memory_scope.py by its path; a production module, never the reader",
+        (
+            "test_dispatch_shards",
+            "TheMemoryScopeRunsTheWordsAfterItsSeparator.test_a_wrapper_that_drops_or_adds_a_word_goes_red",
+            "wrapper_module(MEMORY_SCOPE)",
+            1,
+        ),
+        (
+            "test_dispatch_shards",
+            "TheMemoryScopeRunsTheWordsAfterItsSeparator.test_the_wrapper_runs_exactly_the_words_after_its_separator",
+            "wrapper_module(MEMORY_SCOPE)",
+            1,
+        ),
+        ("test_dispatch_shards", "wrapper_options", "wrapper_module(MEMORY_SCOPE)", 1),
+    ),
+    **allowed(
+        "runs the verdict's size command over a planted listing; its output is the verdict's",
+        (
+            "test_dispatch_shards",
+            "TheWeeklySweepNamesItsPackageInLiteralWords.test_a_dash_led_value_selects_nothing_in_the_step_after_the_listing",
+            "subprocess.run([sys.executable, str(VERDICT), 'size', '--package', value, '--listed', str(listing)], capture_output=True, text=True, timeout=30)",
+            1,
+        ),
+    ),
+    **allowed(
+        "calls argv_of, which runs a planted script under bash and reads the stub's log",
+        (
+            "test_dispatch_shards",
+            "TheWeeklySweepNamesItsPackageInLiteralWords.test_the_rewrite_hands_cargo_exactly_the_words_the_head_did",
+            "argv_of(new, value)",
+            1,
+        ),
+        (
+            "test_dispatch_shards",
+            "TheWeeklySweepNamesItsPackageInLiteralWords.test_the_rewrite_hands_cargo_exactly_the_words_the_head_did",
+            "argv_of(old, value)",
+            1,
+        ),
+    ),
+    **allowed(
+        "calls workspace_packages, which reads the crates' Cargo.toml files",
+        (
+            "test_dispatch_shards",
+            "TheWeeklySweepNamesItsPackageInLiteralWords.test_the_rewrite_hands_cargo_exactly_the_words_the_head_did",
+            "workspace_packages()",
+            1,
+        ),
+    ),
+    **allowed(
+        "the memory-scope wrapper's bytes, copied into a scratch directory for bash to run; never handed to the reader",
+        ("test_dispatch_shards", "argv_of", "MEMORY_SCOPE.read_bytes()", 1),
+        ("test_dispatch_shards", "bash_runs", "MEMORY_SCOPE.read_bytes()", 1),
+    ),
+    **allowed(
+        "a stub's log of the words it was run with, in a scratch directory; never a workflow",
+        ("test_dispatch_shards", "argv_of", "log.read_bytes()", 1),
+        ("test_dispatch_shards", "bash_runs", "(root / f'done{w}').read_text(encoding='utf-8')", 1),
+        ("test_dispatch_shards", "bash_runs", "path.read_text(encoding='utf-8')", 1),
+        ("test_dispatch_shards", "spy_runs", "log.read_bytes()", 1),
+        ("test_dispatch_shards", "unbounded_by_bash", "log.read_text(encoding='utf-8')", 1),
+    ),
+    **allowed(
+        "runs a planted script under bash with cargo stubbed; its output is the stub's log",
+        (
+            "test_dispatch_shards",
+            "argv_of",
+            "subprocess.run(['bash', str(file)], env=env, capture_output=True, timeout=30, cwd=root)",
+            1,
+        ),
+    ),
+    **allowed(
+        "runs the bash oracle over planted scripts with cargo stubbed; its output is the stubs' log",
+        (
+            "test_dispatch_shards",
+            "bash_runs",
+            "subprocess.Popen([shell, '--noprofile', '--norc', 'oracle.sh'], cwd=root, env=env)",
+            1,
+        ),
+        (
+            "test_dispatch_shards",
+            "unbounded_by_bash",
+            "subprocess.Popen([shell, '--noprofile', '--norc', 'oracle.sh'], cwd=root, env=env)",
+            1,
+        ),
+    ),
+    **allowed(
+        "runs the verdict's size command and reads the GITHUB_OUTPUT it writes; outputs, never a workflow",
+        ("test_dispatch_shards", "size", "sink.read_text(encoding='utf-8')", 1),
+        (
+            "test_dispatch_shards",
+            "size",
+            "subprocess.run(args, capture_output=True, text=True, env=dict(os.environ, PYTHONDONTWRITEBYTECODE='1', GITHUB_OUTPUT=str(sink)), timeout=120, check=False)",
+            1,
+        ),
+    ),
+    **allowed(
+        "an empty buffer the wrapper's stdout and stderr are redirected into; it reads nothing",
+        ("test_dispatch_shards", "spy_runs", "io.StringIO()", 2),
+    ),
+    **allowed(
+        "calls the planting function WRAPPER_PLANT defines, which loads the wrapper by path with its seams planted",
+        (
+            "test_dispatch_shards",
+            "spy_runs",
+            "namespace['plant_wrapper'](script, root / 'machine')",
+            1,
+        ),
+    ),
+    **allowed(
+        "calls spy_runs, which runs the wrapper's main() over planted cases and reads its spies' logs",
+        ("test_dispatch_shards", "spy_wrong", "spy_runs(script, cases)", 1),
+    ),
+    **allowed(
+        "a crate's Cargo.toml, which tomllib parses for its package name; never handed to the reader",
+        ("test_dispatch_shards", "workspace_packages", "manifest.read_text(encoding='utf-8')", 1),
+    ),
+    **allowed(
+        "the memory-scope wrapper's module and spec, loaded by path; a production module, never the reader",
+        ("test_dispatch_shards", "wrapper_module", "module", 2),
+        ("test_dispatch_shards", "wrapper_module", "spec", 1),
+    ),
+    **allowed(
+        "calls text, which reads a document for its words",
+        (
+            "test_mutation_python_workflows",
+            "TheDocumentsTeachThePythonRun.test_the_builder_brief_and_the_amendments_teach_the_python_run",
+            "text(ADR_057)",
+            1,
+        ),
+        (
+            "test_mutation_python_workflows",
+            "TheDocumentsTeachThePythonRun.test_the_builder_brief_and_the_amendments_teach_the_python_run",
+            "text(ADR_073)",
+            1,
+        ),
+        (
+            "test_mutation_python_workflows",
+            "TheDocumentsTeachThePythonRun.test_the_builder_brief_and_the_amendments_teach_the_python_run",
+            "text(BRIEF)",
+            1,
+        ),
+        (
+            "test_mutation_python_workflows",
+            "TheDocumentsTeachThePythonRun.test_the_builder_brief_and_the_amendments_teach_the_python_run",
+            "text(SPEC_039)",
+            1,
+        ),
+        (
+            "test_mutation_python_workflows",
+            "TheDocumentsTeachThePythonRun.test_the_builder_brief_and_the_amendments_teach_the_python_run",
+            "text(TESTING)",
+            1,
+        ),
+    ),
+    **allowed(
+        "a document's text (a brief, an ADR, a SPEC, TESTING.md) a test reads for its words; never handed to the reader",
+        ("test_mutation_python_workflows", "text", "path.read_text(encoding='utf-8')", 1),
+    ),
+    **allowed(
+        "a tool's configuration file, which the test parses as TOML or JSON; never handed to the reader",
+        (
+            "test_mutation_workflows",
+            "CargoMutantsRunsTheGatesTestTool.test_every_job_that_runs_cargo_mutants_installs_the_test_tool_it_names",
+            "(REPO / '.cargo' / 'mutants.toml').read_text(encoding='utf-8')",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "TheBriefTeachesTheRecord.test_the_builder_brief_teaches_the_equivalence_record",
+            "(REPO / '.cargo' / 'mutants.toml').read_text(encoding='utf-8')",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "TheBriefTeachesTheRecord.test_the_builder_brief_teaches_the_equivalence_record",
+            "(REPO / 'web' / 'app' / 'stryker.config.json').read_text('utf-8')",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "TheConfigurationCheckSeesWhatStrykerReads.test_the_configuration_check_refuses_what_stryker_would_read_otherwise",
+            "(REPO / 'web/app/stryker.config.json').read_text(encoding='utf-8')",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "TheToolsConfigurationsAreValid.test_the_tool_configurations_load_under_their_own_rules",
+            "(REPO / 'web/app/package.json').read_text(encoding='utf-8')",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "TheToolsConfigurationsAreValid.test_the_tool_configurations_load_under_their_own_rules",
+            "(REPO / 'web/app/stryker.config.json').read_text(encoding='utf-8')",
+            1,
+        ),
+    ),
+    **allowed(
+        "calls run, which runs the verdict script and reads its output",
+        (
+            "test_mutation_workflows",
+            "NoExclusionHidesAMutant.test_no_exclusion_hides_a_mutant_from_the_listing",
+            "run(str(VERDICT), 'exclusions', '--root', str(REPO))",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "NoExclusionHidesAMutant.test_no_exclusion_hides_a_mutant_from_the_listing",
+            "run(str(VERDICT), 'exclusions', '--root', str(root))",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "TheBatteryTakesAScope.test_a_dispatch_scoped_to_one_package_sweeps_only_its_mutants",
+            "run(str(VERDICT), 'battery', '--shards', '5', '--reports', str(reports))",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "TheBatteryTakesAScope.test_a_dispatch_scoped_to_one_package_sweeps_only_its_mutants",
+            "run(str(VERDICT), 'battery', '--shards', '5', *args)",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "TheBatteryTakesAScope.test_a_dispatch_scoped_to_one_package_sweeps_only_its_mutants",
+            "run(str(VERDICT), 'table', '--root', scratch, *args)",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "TheBriefTeachesTheRecord.test_the_builder_brief_teaches_the_equivalence_record",
+            "run(str(VERDICT), 'survivors', '--reports', str(reports), '--out', f'{scratch}/d')",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "TheConfigurationCheckSeesWhatStrykerReads.test_the_configuration_check_refuses_what_stryker_would_read_otherwise",
+            "run(str(VERDICT), 'configs', '--root', str(root))",
+            2,
+        ),
+        (
+            "test_mutation_workflows",
+            "TheToolsConfigurationsAreValid.test_the_tool_configurations_load_under_their_own_rules",
+            "run(str(VERDICT), 'configs', '--root', str(REPO))",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "TheToolsConfigurationsAreValid.test_the_tool_configurations_load_under_their_own_rules",
+            "run(str(VERDICT), 'configs', '--root', str(root))",
+            2,
+        ),
+        (
+            "test_mutation_workflows",
+            "TheVerdictBindsEveryRecord.test_the_verdict_binds_every_record_against_the_whole_listing",
+            "run(str(VERDICT), 'survivors', '--reports', str(only), '--out', str(quiet), '--root', str(root))",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "TheVerdictBindsEveryRecord.test_the_verdict_binds_every_record_against_the_whole_listing",
+            "run(str(VERDICT), 'survivors', '--reports', str(reports), '--out', str(drafts), '--root', str(root))",
+            1,
+        ),
+    ),
+    **allowed(
+        "a draft record the verdict wrote to a scratch directory; JSON or markdown, never handed to the reader",
+        (
+            "test_mutation_workflows",
+            "TheBriefTeachesTheRecord.test_the_builder_brief_teaches_the_equivalence_record",
+            "(Path(scratch) / 'd' / 'draft-001.md').read_text(encoding='utf-8')",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "TheVerdictBindsEveryRecord.test_the_verdict_binds_every_record_against_the_whole_listing",
+            "(drafts / 'drafts.json').read_text(encoding='utf-8')",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "TheVerdictBindsEveryRecord.test_the_verdict_binds_every_record_against_the_whole_listing",
+            "(drafts / manifest[0]['body']).read_text(encoding='utf-8')",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "TheVerdictBindsEveryRecord.test_the_verdict_binds_every_record_against_the_whole_listing",
+            "(quiet / 'drafts.json').read_text(encoding='utf-8')",
+            1,
+        ),
+    ),
+    **allowed(
+        "the builder brief, which the test reads for its words; never handed to the reader",
+        (
+            "test_mutation_workflows",
+            "TheBriefTeachesTheRecord.test_the_builder_brief_teaches_the_equivalence_record",
+            "BRIEF.read_text(encoding='utf-8')",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "TheBuilderBriefTeachesTheRules.test_the_builder_brief_teaches_the_mutation_rules",
+            "BRIEF.read_text(encoding='utf-8')",
+            1,
+        ),
+    ),
+    **allowed(
+        "runs the verdict script with the arguments it is given; its output is the verdict's",
+        (
+            "test_mutation_workflows",
+            "run",
+            "subprocess.run([sys.executable, *args], capture_output=True, text=True, env=dict(os.environ, PYTHONDONTWRITEBYTECODE='1', **env or {}), timeout=300, check=False)",
+            1,
+        ),
+        (
+            "test_not_started_legs",
+            "verdict",
+            "subprocess.run([sys.executable, str(VERDICT), *map(str, args)], capture_output=True, text=True, env=env, timeout=300, check=False)",
+            1,
+        ),
+    ),
+    **allowed(
+        "calls a helper that runs the verdict script, a step's shell or the verdict module over planted reports; outputs, never a workflow",
+        (
+            "test_not_started_legs",
+            "ALegWithNothingToExamineIsNotStarted.test_a_leg_the_listing_gives_nothing_reads_not_started",
+            "judge(reports)",
+            1,
+        ),
+        (
+            "test_not_started_legs",
+            "ALegWithNothingToExamineIsNotStarted.test_a_leg_the_listing_gives_nothing_reads_not_started",
+            "judge(reports, rows=False)",
+            1,
+        ),
+        (
+            "test_not_started_legs",
+            "ALegWithNothingToExamineIsNotStarted.test_a_leg_the_listing_gives_nothing_reads_not_started",
+            "legs(merged.out / 'plan.json', 'skipped', 'skipped')",
+            1,
+        ),
+        (
+            "test_not_started_legs",
+            "ALegWithNothingToExamineIsNotStarted.test_a_leg_the_listing_gives_nothing_reads_not_started",
+            "legs(plan, 'skipped', 'success')",
+            1,
+        ),
+        (
+            "test_not_started_legs",
+            "ALegWithNothingToExamineIsNotStarted.test_a_leg_the_listing_gives_nothing_reads_not_started",
+            "planned(reports)",
+            1,
+        ),
+        (
+            "test_not_started_legs",
+            "ALegWithNothingToExamineIsNotStarted.test_a_leg_the_listing_gives_nothing_reads_not_started",
+            "run_shards(merged, None)",
+            1,
+        ),
+        (
+            "test_not_started_legs",
+            "ALegWithNothingToExamineIsNotStarted.test_a_listed_leg_that_is_missing_or_not_started_is_refused_by_name",
+            "judge(reports)",
+            1,
+        ),
+        (
+            "test_not_started_legs",
+            "ALegWithNothingToExamineIsNotStarted.test_a_listed_leg_that_is_missing_or_not_started_is_refused_by_name",
+            "legs(diff.out / 'plan.json', 'skipped', 'skipped')",
+            1,
+        ),
+        (
+            "test_not_started_legs",
+            "ALegWithNothingToExamineIsNotStarted.test_a_listed_leg_that_is_missing_or_not_started_is_refused_by_name",
+            "legs(diff.out / 'plan.json', 'skipped', 'success')",
+            1,
+        ),
+        (
+            "test_not_started_legs",
+            "ALegWithNothingToExamineIsNotStarted.test_a_listed_leg_that_is_missing_or_not_started_is_refused_by_name",
+            "legs(plan, 'skipped', 'success')",
+            1,
+        ),
+        (
+            "test_not_started_legs",
+            "ALegWithNothingToExamineIsNotStarted.test_a_listed_leg_that_is_missing_or_not_started_is_refused_by_name",
+            "legs(plan, 'success', 'skipped')",
+            1,
+        ),
+        (
+            "test_not_started_legs",
+            "ALegWithNothingToExamineIsNotStarted.test_a_listed_leg_that_is_missing_or_not_started_is_refused_by_name",
+            "legs(plan, 'success', 'success')",
+            1,
+        ),
+        (
+            "test_not_started_legs",
+            "ALegWithNothingToExamineIsNotStarted.test_a_listed_leg_that_is_missing_or_not_started_is_refused_by_name",
+            "legs(plan, result, 'success')",
+            1,
+        ),
+        (
+            "test_not_started_legs",
+            "ALegWithNothingToExamineIsNotStarted.test_a_listed_leg_that_is_missing_or_not_started_is_refused_by_name",
+            "planned(reports)",
+            1,
+        ),
+        (
+            "test_not_started_legs",
+            "ALegWithNothingToExamineIsNotStarted.test_a_listed_leg_that_is_missing_or_not_started_is_refused_by_name",
+            "run_shards(diff, None)",
+            1,
+        ),
+        (
+            "test_not_started_legs",
+            "ALegWithNothingToExamineIsNotStarted.test_an_examined_sum_that_differs_from_the_listing_is_refused",
+            "judge(empty)",
+            2,
+        ),
+        (
+            "test_not_started_legs",
+            "ALegWithNothingToExamineIsNotStarted.test_an_examined_sum_that_differs_from_the_listing_is_refused",
+            "judge(planted)",
+            1,
+        ),
+        (
+            "test_not_started_legs",
+            "ALegWithNothingToExamineIsNotStarted.test_an_examined_sum_that_differs_from_the_listing_is_refused",
+            "judge(whole)",
+            1,
+        ),
+        (
+            "test_not_started_legs",
+            "ALegWithNothingToExamineIsNotStarted.test_an_examined_sum_that_differs_from_the_listing_is_refused",
+            "planned(whole)",
+            1,
+        ),
+        (
+            "test_not_started_legs",
+            "ALegWithNothingToExamineIsNotStarted.test_an_examined_sum_that_differs_from_the_listing_is_refused",
+            "rewrite(outcomes_of(planted), moved)",
+            1,
+        ),
+        (
+            "test_not_started_legs",
+            "ALegWithNothingToExamineIsNotStarted.test_ci_admits_a_not_started_leg_and_no_other_skip",
+            "bash(script, env)",
+            1,
+        ),
+        (
+            "test_not_started_legs",
+            "ALegWithNothingToExamineIsNotStarted.test_ci_admits_a_skip_from_the_two_legs_and_from_no_other_need",
+            "bash(script, env)",
+            1,
+        ),
+        (
+            "test_not_started_legs",
+            "ALegWithNothingToExamineIsNotStarted.test_the_plan_writes_how_many_rust_mutants_its_listing_holds",
+            "run_shards(fixture, listed)",
+            1,
+        ),
+        (
+            "test_not_started_legs",
+            "ALegWithNothingToExamineIsNotStarted.test_the_plan_writes_how_many_rust_mutants_its_listing_holds",
+            "verdict_module()",
+            1,
+        ),
+        (
+            "test_not_started_legs",
+            "ALegWithNothingToExamineIsNotStarted.test_the_verdict_step_fails_on_the_legs_check",
+            "bash(script, env)",
+            1,
+        ),
+    ),
+    **allowed(
+        "a Fixture's method, which commits a planted tree or runs the verdict's plan over it; outputs, never a workflow",
+        (
+            "test_not_started_legs",
+            "ALegWithNothingToExamineIsNotStarted.test_a_leg_the_listing_gives_nothing_reads_not_started",
+            "merged.head({LIB: LIB_TEXT.replace('x * 2', 'x + x')})",
+            1,
+        ),
+        (
+            "test_not_started_legs",
+            "ALegWithNothingToExamineIsNotStarted.test_a_leg_the_listing_gives_nothing_reads_not_started",
+            "merged.plan('--event', 'push', '--subject', MERGED)",
+            1,
+        ),
+        (
+            "test_not_started_legs",
+            "ALegWithNothingToExamineIsNotStarted.test_a_listed_leg_that_is_missing_or_not_started_is_refused_by_name",
+            "diff.head({'README.md': 'a fixture, changed\\n'})",
+            1,
+        ),
+        (
+            "test_not_started_legs",
+            "ALegWithNothingToExamineIsNotStarted.test_a_listed_leg_that_is_missing_or_not_started_is_refused_by_name",
+            "diff.plan()",
+            1,
+        ),
+        (
+            "test_not_started_legs",
+            "ALegWithNothingToExamineIsNotStarted.test_the_plan_writes_how_many_rust_mutants_its_listing_holds",
+            "code.head({LIB: LIB_TEXT.replace('x * 2', 'x + x')})",
+            1,
+        ),
+        (
+            "test_not_started_legs",
+            "ALegWithNothingToExamineIsNotStarted.test_the_plan_writes_how_many_rust_mutants_its_listing_holds",
+            "code.plan()",
+            1,
+        ),
+        (
+            "test_not_started_legs",
+            "ALegWithNothingToExamineIsNotStarted.test_the_plan_writes_how_many_rust_mutants_its_listing_holds",
+            "constant.head({LIB: LIB_TEXT.replace('pub const LAST_HOUR: u8 = 23;', \"pub const LAST_HOUR: u8 = 23; // the day's last hour\")})",
+            1,
+        ),
+        (
+            "test_not_started_legs",
+            "ALegWithNothingToExamineIsNotStarted.test_the_plan_writes_how_many_rust_mutants_its_listing_holds",
+            "constant.plan()",
+            1,
+        ),
+        (
+            "test_not_started_legs",
+            "ALegWithNothingToExamineIsNotStarted.test_the_plan_writes_how_many_rust_mutants_its_listing_holds",
+            "other.head({'README.md': 'a fixture, changed\\n'})",
+            1,
+        ),
+        (
+            "test_not_started_legs",
+            "ALegWithNothingToExamineIsNotStarted.test_the_plan_writes_how_many_rust_mutants_its_listing_holds",
+            "other.plan()",
+            1,
+        ),
+    ),
+    **allowed(
+        "a plan or a log the verdict wrote to a scratch file; never handed to the reader",
+        (
+            "test_not_started_legs",
+            "ALegWithNothingToExamineIsNotStarted.test_a_listed_leg_that_is_missing_or_not_started_is_refused_by_name",
+            "plan.read_text(encoding='utf-8')",
+            1,
+        ),
+        (
+            "test_not_started_legs",
+            "ALegWithNothingToExamineIsNotStarted.test_the_verdict_step_fails_on_the_legs_check",
+            "log.read_text(encoding='utf-8')",
+            1,
+        ),
+    ),
+    **allowed(
+        "an outcomes file the verdict wrote to a scratch directory; never handed to the reader",
+        (
+            "test_not_started_legs",
+            "ALegWithNothingToExamineIsNotStarted.test_an_examined_sum_that_differs_from_the_listing_is_refused",
+            "outcomes_of(whole).read_text(encoding='utf-8')",
+            1,
+        ),
+    ),
+    **allowed(
+        "a function of the verdict module, loaded by path by verdict_module; a production module, never the reader",
+        (
+            "test_not_started_legs",
+            "ALegWithNothingToExamineIsNotStarted.test_the_plan_writes_how_many_rust_mutants_its_listing_holds",
+            "module.fewest_shards(module.mutant_costs(packages))",
+            1,
+        ),
+        (
+            "test_not_started_legs",
+            "ALegWithNothingToExamineIsNotStarted.test_the_plan_writes_how_many_rust_mutants_its_listing_holds",
+            "module.mutant_costs(packages)",
+            1,
+        ),
+    ),
+    **allowed(
+        "runs a step's shell cut from a workflow's loader-read text under bash; its output is the step's verdict, never a workflow",
+        (
+            "test_not_started_legs",
+            "bash",
+            "subprocess.run(['bash', '--noprofile', '--norc', '-eo', 'pipefail', '-c', script], env=env, capture_output=True, text=True, timeout=60, check=False)",
+            1,
+        ),
+    ),
+    **allowed(
+        "calls verdict, which runs the verdict script and reads its output",
+        ("test_not_started_legs", "judge", "verdict(*args)", 1),
+        (
+            "test_not_started_legs",
+            "legs",
+            "verdict('legs', '--plan', plan, '--rust-leg', rust, '--rows-leg', rows)",
+            1,
+        ),
+    ),
+    **allowed(
+        "an outcomes file the verdict wrote to a scratch directory, rewritten for a plant; never handed to the reader",
+        ("test_not_started_legs", "rewrite", "path.read_text(encoding='utf-8')", 1),
+    ),
+    **allowed(
+        "calls git, which runs git in a scratch repository",
+        (
+            "test_release_workflow",
+            "TheTagGuardRuns.test_the_release_refuses_a_tag_off_main_or_lightweight_by_running_its_guard",
+            "git('checkout', '-q', '-b', 'main', cwd=work, env=env)",
+            1,
+        ),
+        (
+            "test_release_workflow",
+            "TheTagGuardRuns.test_the_release_refuses_a_tag_off_main_or_lightweight_by_running_its_guard",
+            "git('checkout', '-q', '-b', 'topic', cwd=work, env=env)",
+            1,
+        ),
+        (
+            "test_release_workflow",
+            "TheTagGuardRuns.test_the_release_refuses_a_tag_off_main_or_lightweight_by_running_its_guard",
+            "git('clone', '-q', str(origin), str(work), cwd=tmp, env=env)",
+            1,
+        ),
+        (
+            "test_release_workflow",
+            "TheTagGuardRuns.test_the_release_refuses_a_tag_off_main_or_lightweight_by_running_its_guard",
+            "git('commit', '-q', '--allow-empty', '-m', 'off main', cwd=work, env=env)",
+            1,
+        ),
+        (
+            "test_release_workflow",
+            "TheTagGuardRuns.test_the_release_refuses_a_tag_off_main_or_lightweight_by_running_its_guard",
+            "git('commit', '-q', '--allow-empty', '-m', 'on main', cwd=work, env=env)",
+            1,
+        ),
+        (
+            "test_release_workflow",
+            "TheTagGuardRuns.test_the_release_refuses_a_tag_off_main_or_lightweight_by_running_its_guard",
+            "git('init', '-q', '--bare', '-b', 'main', str(origin), cwd=tmp, env=env)",
+            1,
+        ),
+        (
+            "test_release_workflow",
+            "TheTagGuardRuns.test_the_release_refuses_a_tag_off_main_or_lightweight_by_running_its_guard",
+            "git('push', '-q', 'origin', 'main', 'v1.0.0', 'v1.1.0', cwd=work, env=env)",
+            1,
+        ),
+        (
+            "test_release_workflow",
+            "TheTagGuardRuns.test_the_release_refuses_a_tag_off_main_or_lightweight_by_running_its_guard",
+            "git('push', '-q', 'origin', 'topic', 'v2.0.0', cwd=work, env=env)",
+            1,
+        ),
+        (
+            "test_release_workflow",
+            "TheTagGuardRuns.test_the_release_refuses_a_tag_off_main_or_lightweight_by_running_its_guard",
+            "git('rev-parse', f'{tag}^{{commit}}', cwd=work, env=env)",
+            1,
+        ),
+        (
+            "test_release_workflow",
+            "TheTagGuardRuns.test_the_release_refuses_a_tag_off_main_or_lightweight_by_running_its_guard",
+            "git('tag', '-a', '-m', 'v1.0.0', 'v1.0.0', cwd=work, env=env)",
+            1,
+        ),
+        (
+            "test_release_workflow",
+            "TheTagGuardRuns.test_the_release_refuses_a_tag_off_main_or_lightweight_by_running_its_guard",
+            "git('tag', '-a', '-m', 'v2.0.0', 'v2.0.0', cwd=work, env=env)",
+            1,
+        ),
+        (
+            "test_release_workflow",
+            "TheTagGuardRuns.test_the_release_refuses_a_tag_off_main_or_lightweight_by_running_its_guard",
+            "git('tag', 'v1.1.0', cwd=work, env=env)",
+            1,
+        ),
+    ),
+    **allowed(
+        "runs the release's tag guard, cut from release.yml's loader-read text, under bash in a scratch repository; its output is the guard's verdict",
+        (
+            "test_release_workflow",
+            "TheTagGuardRuns.test_the_release_refuses_a_tag_off_main_or_lightweight_by_running_its_guard",
+            "subprocess.run(['bash', '-e', str(script)], cwd=work, env={**env, 'GITHUB_REF_NAME': tag, 'GITHUB_SHA': sha}, capture_output=True, text=True)",
+            1,
+        ),
+    ),
+    **allowed(
+        "runs git in a scratch repository with the arguments it is given; its output is a sha or nothing",
+        (
+            "test_release_workflow",
+            "git",
+            "subprocess.run(['git', *args], cwd=cwd, env=env, capture_output=True, text=True)",
+            1,
+        ),
+    ),
+    **allowed(
+        "calls one of the variants the dict names, each a planted edit of release.yml's loader-read text; it reads no file",
+        (
+            "test_workflow_concurrency",
+            "EveryReleaseWorkflowQueuesEveryRun.test_the_release_class_is_closed_by_construction",
+            "{'root': lambda: release.replace('\\njobs:\\n', f'\\n{variant}: x\\njobs:\\n', 1), 'on': lambda: release.replace('  push:\\n', f'  {variant}:\\n  push:\\n', 1), 'job': lambda: release.replace('  publish:\\n', f'  publish:\\n    {variant}: x\\n', 1), 'push': lambda: release.replace('  push:\\n', f'  push:\\n    {variant}: [v1]\\n', 1), 'release': lambda: release.replace('tags: [v1]\\n', f'tags: [v1]\\n  release:\\n    {variant}: [published]\\n', 1)}[where]()",
+            1,
+        ),
+    ),
+}
+
+# Every site in the test directory that imports, runs code or reaches a namespace by a name held
+# in data, each bound the same way, with why it can bring no module of the directory in.
+DYNAMIC_IMPORTS = {
+    **allowed(
+        "runs the audit verdict script by its path; a production script",
+        (
+            "test_audit_web",
+            "TheVerdictScriptStatesItself.test_the_verdict_script_writes_no_bytecode",
+            "runpy.run_path(str(self.SCRIPT), run_name='audit_web_verdict_probe')",
+            1,
+        ),
+    ),
+    **allowed(
+        "loads a production script by the path the call names; never a module of the test directory",
+        ("test_backup_units", "load_backup", "importlib.util.module_from_spec(spec)", 1),
+        (
+            "test_backup_units",
+            "load_backup",
+            "importlib.util.spec_from_file_location('deck_streak_backup', BACKUP_SCRIPT)",
+            1,
+        ),
+        ("test_backup_units", "load_backup", "spec.loader.exec_module(module)", 1),
+        ("test_dispatch_shards", "wrapper_module", "importlib.util.module_from_spec(spec)", 1),
+        (
+            "test_dispatch_shards",
+            "wrapper_module",
+            "importlib.util.spec_from_file_location('memory_scope', script)",
+            1,
+        ),
+        ("test_dispatch_shards", "wrapper_module", "spec.loader.exec_module(module)", 1),
+        ("test_memory_scope", "load", "importlib.util.module_from_spec(spec)", 1),
+        (
+            "test_memory_scope",
+            "load",
+            "importlib.util.spec_from_file_location('memory_scope', SCRIPT)",
+            1,
+        ),
+        ("test_memory_scope", "load", "spec.loader.exec_module(module)", 1),
+        ("test_mutation_python", "runner_module", "importlib.util.module_from_spec(spec)", 1),
+        (
+            "test_mutation_python",
+            "runner_module",
+            "importlib.util.spec_from_file_location('mutation_python_constants', RUNNER)",
+            1,
+        ),
+        ("test_mutation_python", "runner_module", "spec.loader.exec_module(module)", 1),
+        ("test_mutation_python_cli_kills", "runner", "importlib.util.module_from_spec(spec)", 1),
+        (
+            "test_mutation_python_cli_kills",
+            "runner",
+            "importlib.util.spec_from_file_location('mutation_python_cli_kills', RUNNER)",
+            1,
+        ),
+        ("test_mutation_python_cli_kills", "runner", "spec.loader.exec_module(module)", 1),
+        ("test_mutation_python_judge_kills", "load", "importlib.util.module_from_spec(spec)", 1),
+        (
+            "test_mutation_python_judge_kills",
+            "load",
+            "importlib.util.spec_from_file_location(name, path)",
+            1,
+        ),
+        ("test_mutation_python_judge_kills", "load", "spec.loader.exec_module(module)", 1),
+        ("test_mutation_python_lister_kills", "load", "importlib.util.module_from_spec(spec)", 1),
+        (
+            "test_mutation_python_lister_kills",
+            "load",
+            "importlib.util.spec_from_file_location('mutation_python_under_kill', SCRIPT)",
+            1,
+        ),
+        ("test_mutation_python_lister_kills", "load", "spec.loader.exec_module(module)", 1),
+        ("test_mutation_python_verdict", "runner", "importlib.util.module_from_spec(spec)", 1),
+        (
+            "test_mutation_python_verdict",
+            "runner",
+            "importlib.util.spec_from_file_location('mutation_python_listing', REPO / 'scripts' / 'mutation_python.py')",
+            1,
+        ),
+        ("test_mutation_python_verdict", "runner", "spec.loader.exec_module(module)", 1),
+        ("test_mutation_rows_group", "<module>", "SPEC.loader.exec_module(runner)", 1),
+        ("test_mutation_rows_group", "<module>", "importlib.util.module_from_spec(SPEC)", 1),
+        (
+            "test_mutation_rows_group",
+            "<module>",
+            "importlib.util.spec_from_file_location('mutation_rows', REPO / 'scripts' / 'mutation_rows.py')",
+            1,
+        ),
+        ("test_mutation_verdict", "verdict_module", "importlib.util.module_from_spec(spec)", 1),
+        (
+            "test_mutation_verdict",
+            "verdict_module",
+            "importlib.util.spec_from_file_location('mutation_verdict_constants', VERDICT)",
+            1,
+        ),
+        ("test_mutation_verdict", "verdict_module", "spec.loader.exec_module(module)", 1),
+        ("test_public_scrub", "scrub_module", "importlib.util.module_from_spec(spec)", 1),
+        (
+            "test_public_scrub",
+            "scrub_module",
+            "importlib.util.spec_from_file_location('public_scrub', SCRUB)",
+            1,
+        ),
+        ("test_public_scrub", "scrub_module", "spec.loader.exec_module(module)", 1),
+        ("test_rail_contract", "load_guards_check", "importlib.util.module_from_spec(spec)", 1),
+        (
+            "test_rail_contract",
+            "load_guards_check",
+            "importlib.util.spec_from_file_location('guards_check', GUARDS)",
+            1,
+        ),
+        ("test_rail_contract", "load_guards_check", "spec.loader.exec_module(module)", 1),
+        ("test_slo_evaluator", "load_evaluator", "importlib.util.module_from_spec(spec)", 1),
+        (
+            "test_slo_evaluator",
+            "load_evaluator",
+            "importlib.util.spec_from_file_location('slo_evaluate', EVALUATOR)",
+            1,
+        ),
+        ("test_slo_evaluator", "load_evaluator", "spec.loader.exec_module(module)", 1),
+    ),
+    **allowed(
+        "imports a production module from scripts/, which the test puts on sys.path; never a module of the test directory",
+        ("test_band_repeated_key", "<module>", "import mutation_rows", 1),
+        (
+            "test_host_scrub",
+            "Axes.test_an_item_holding_another_device_is_never_digested_or_removed",
+            "import apply as apply_tool",
+            1,
+        ),
+        (
+            "test_host_scrub",
+            "Axes.test_an_item_holding_another_device_is_never_digested_or_removed",
+            "import plan as plan_tool",
+            1,
+        ),
+        (
+            "test_host_scrub",
+            "Axes.test_an_item_that_is_or_holds_a_mount_point_is_refused",
+            "import apply as apply_tool",
+            1,
+        ),
+        (
+            "test_host_scrub",
+            "Axes.test_an_item_that_is_or_holds_a_mount_point_is_refused",
+            "import plan as plan_tool",
+            1,
+        ),
+        (
+            "test_mutation_python",
+            "TheRunnerJudgesEachMutant.test_a_failed_restore_is_the_runs_exit_and_no_outcome_derives_it",
+            "import mutation_python",
+            1,
+        ),
+        (
+            "test_mutation_python",
+            "TheRunnerJudgesEachMutant.test_a_mutant_that_does_not_parse_is_unviable_and_runs_no_test",
+            "import mutation_python",
+            1,
+        ),
+        (
+            "test_mutation_python",
+            "TheRunnerListsItsMutants.test_every_listed_mutant_parses_and_a_comment_changes_no_listing",
+            "import mutation_python",
+            1,
+        ),
+        ("test_mutation_rows", "runner_module", "import mutation_rows", 1),
+    ),
+    **allowed(
+        "this module, whose WORKFLOWS a patch points at a scratch directory",
+        ("test_ci_workflows", "WorkflowFilesAreReadAsBytes.readers", "sys.modules", 1),
+        (
+            "test_ci_workflows",
+            "WorkflowsAreHardened.test_a_yaml_workflow_is_held_to_the_same_hardening_rules",
+            "sys.modules",
+            3,
+        ),
+    ),
+    **allowed(
+        "this module, whose __file__ a patch points at the plant's copy of the test directory",
+        (
+            "test_ci_workflows",
+            "WorkflowFilesAreReadAsBytes.test_the_census_is_red_on_every_planted_site",
+            "sys.modules",
+            1,
+        ),
+    ),
+    **allowed(
+        "one of the three hardening tests the loop names, by its name",
+        (
+            "test_ci_workflows",
+            "WorkflowsAreHardened.test_a_yaml_workflow_is_held_to_the_same_hardening_rules",
+            "getattr(case, test)",
+            2,
+        ),
+    ),
+    **allowed(
+        "runs the constant WRAPPER_PLANT, which defines the function that loads the wrapper by path with its seams planted",
+        ("test_dispatch_shards", "spy_runs", "exec(WRAPPER_PLANT, namespace)", 1),
+    ),
+    **allowed(
+        "runs this module's own tests",
+        ("test_github_setup", "<module>", "unittest.main(argv=[sys.argv[0]])", 1),
+    ),
+    **allowed(
+        "a stat result's field, by a key the test lists",
+        (
+            "test_host_scrub",
+            "Axes.test_an_item_holding_another_device_is_never_digested_or_removed.<locals>.across",
+            "getattr(st, key)",
+            1,
+        ),
+    ),
+    **allowed(
+        "the wrapper's run() signature and its empty default, read for the seams' defaults",
+        (
+            "test_memory_scope",
+            "TheWholeValues.test_the_seams_default_to_this_machine",
+            "inspect.Parameter.empty",
+            2,
+        ),
+        (
+            "test_memory_scope",
+            "TheWholeValues.test_the_seams_default_to_this_machine",
+            "inspect.signature(self.module.run)",
+            1,
+        ),
+    ),
+    **allowed(
+        "compiles a mutant of a planted source to prove it parses; it runs nothing",
+        (
+            "test_mutation_python",
+            "TheRunnerListsItsMutants.test_every_listed_mutant_parses_and_a_comment_changes_no_listing",
+            "compile(mutant.apply(SITES), 'sites.py', 'exec')",
+            1,
+        ),
+    ),
+    **allowed(
+        "registers the production module loaded by path under its own name, so its dataclasses resolve",
+        ("test_mutation_python", "runner_module", "sys.modules", 1),
+        ("test_mutation_python_cli_kills", "runner", "sys.modules", 1),
+        ("test_mutation_python_judge_kills", "load", "sys.modules", 1),
+        ("test_mutation_python_lister_kills", "load", "sys.modules", 1),
+        ("test_mutation_python_verdict", "runner", "sys.modules", 1),
+        ("test_mutation_rows_group", "<module>", "sys.modules", 1),
+        ("test_mutation_verdict", "verdict_module", "sys.modules", 1),
+    ),
+    **allowed(
+        "drops a production module the judge re-imports from a copy, so each test imports it afresh",
+        ("test_mutation_python_judge_kills", "Base.setUp", "sys.modules.pop", 1),
+        (
+            "test_mutation_python_judge_kills",
+            "TheJudgeSetsUp.test_the_runner_copy_follows_absolute_imports_and_never_relative_ones",
+            "sys.modules.pop",
+            1,
+        ),
+    ),
+    **allowed(
+        "sets a field of a frozen mutant to prove it refuses",
+        (
+            "test_mutation_python_lister_kills",
+            "TheModuleHoldsItsConstants.test_a_mutant_is_frozen_and_has_slots",
+            "setattr",
+            1,
+        ),
+    ),
+    **allowed(
+        "a member of the lister module, by a name the test lists",
+        ("test_mutation_python_lister_kills", "pick", "getattr(m, name)", 1),
+    ),
 }
 
 
@@ -3315,25 +5476,79 @@ class WorkflowFilesAreReadAsBytes(unittest.TestCase):
                         self.assertEqual(read("release.yml"), read_workflow(text))
 
     def test_every_file_read_in_the_test_modules_is_the_loader_or_a_named_non_workflow_read(self):
-        sites = collections.Counter()
-        modules = 0
-        for path in sorted(Path(__file__).parent.glob("test_*.py")):
-            source = path.read_text(encoding="utf-8")
-            if path.stem != Path(__file__).stem and "test_ci_workflows" not in source:
-                continue
-            modules += 1
-            for function, _receiver in read_primitives(source):
-                sites[(path.stem, function)] += 1
-        examined("test modules that read workflows", range(modules))
-        self.assertIn(f"def {LOADER}(", Path(__file__).read_text(encoding="utf-8"))
-        self.assertEqual(dict(sites), NOT_WORKFLOW_READS)
+        problems, modules, population, sites = census_problems(Path(__file__).parent)
+        examined("test modules the census read", range(modules))
+        examined("test modules in the loader's population", range(population))
+        examined("listed sites the census counted", range(sites))
+        self.assertEqual(problems, [])
+
+    def census_sites(self, source):
+        """The sites one module's source holds that read or are dynamic, as (qualified name,
+        text), in order."""
+        return sorted(
+            (qual, text)
+            for qual, text, reads, dynamic, *_rest in module_census(source).sites
+            if reads or dynamic
+        )
 
     def test_the_census_is_red_on_a_read_it_does_not_name(self):
         planted = "def extra(path):\n    return read_workflow(path.read_text(encoding='utf-8'))\n"
-        self.assertEqual(read_primitives(planted), [("extra", "path")])
-        self.assertEqual(read_primitives("TEXT = open('x').read()\n"), [("<module>", "open")])
-        loader = f"def {LOADER}(path):\n    return path.read_bytes().decode('utf-8')\n"
-        self.assertEqual(read_primitives(loader), [])
+        self.assertEqual(
+            self.census_sites(planted), [("extra", "path.read_text(encoding='utf-8')")]
+        )
+        self.assertEqual(
+            self.census_sites("TEXT = open('x').read()\n"),
+            [("<module>", "open('x')"), ("<module>", "open('x').read()")],
+        )
+        # The loader's body outside the loader's module is a read, and a definition of its name.
+        loader = f"def {LOADER[1]}(path):\n    return path.read_bytes().decode('utf-8')\n"
+        self.assertEqual(self.census_sites(loader), [(LOADER[1], "path.read_bytes()")])
+        self.assertEqual(
+            module_census(loader).loader,
+            (("a definition", "<module>", f"def {LOADER[1]}(path):", None),),
+        )
+        for source, sites in (
+            ("TEXT = (lambda: 'x')()\n", [("<module>", "(lambda: 'x')()")]),
+            (
+                "def f(p, name):\n    return getattr(p, name)()\n",
+                [("f", "getattr(p, name)"), ("f", "getattr(p, name)()")],
+            ),
+            (
+                "def f(p):\n    return getattr(p, 'read_text')()\n",
+                [("f", "getattr(p, 'read_text')"), ("f", "getattr(p, 'read_text')()")],
+            ),
+            (
+                "import importlib\nM = importlib.import_module('x')\n",
+                [("<module>", "importlib.import_module('x')")],
+            ),
+            ("import sys\nM = sys.modules['x']\n", [("<module>", "sys.modules")]),
+            ("exec('x = 1')\n", [("<module>", "exec('x = 1')")]),
+            (
+                "import subprocess\nT = subprocess.run(['git'], text=True).stdout\n",
+                [("<module>", "subprocess.run(['git'], text=True)")],
+            ),
+            ("class C:\n    T = open('x')\n", [("C", "open('x')")]),
+            ("F = lambda p: p.read_text()\n", [("<lambda>", "p.read_text()")]),
+            # A method its class defines, called on its instance, is read by its body, not its name;
+            # stored over, it is a read again.
+            (
+                "class S:\n    def read(self):\n        return 1\n\n    def f(self):\n"
+                "        s = S()\n        return self.read() + s.read()\n",
+                [],
+            ),
+            (
+                "class S:\n    def read(self):\n        return 1\n\n    def f(self):\n"
+                "        self.read = print\n        return self.read()\n",
+                [("S.f", "self.read = print"), ("S.f", "self.read()")],
+            ),
+        ):
+            with self.subTest(source=source):
+                self.assertEqual(self.census_sites(source), sites)
+        method = f"class C:\n    def {LOADER[1]}(self, path):\n        return path\n"
+        self.assertEqual(
+            module_census(method).loader,
+            (("a definition", "C", f"def {LOADER[1]}(self, path):", None),),
+        )
 
     def test_the_census_is_red_on_every_planted_site(self):
         tests = Path(__file__).parent
