@@ -402,11 +402,14 @@ def manifest_of(root: pathlib.Path, crate: str) -> dict:
 
 def inferred_targets(crate_dir: pathlib.Path, folder: str) -> dict[str, str]:
     """Cargo's auto-discovery under `folder`: each `<name>.rs` and each `<name>/main.rs`, as
-    `name -> path` relative to the crate."""
+    `name -> path` relative to the crate. An entry whose name starts with a dot is skipped, as
+    cargo skips it."""
     found: dict[str, str] = {}
     directory = crate_dir / folder
     if directory.is_dir():
         for entry in sorted(directory.iterdir()):
+            if entry.name.startswith("."):
+                continue
             if entry.is_file() and entry.suffix == ".rs":
                 found[entry.stem] = f"{folder}/{entry.name}"
             elif entry.is_dir() and (entry / "main.rs").is_file():
@@ -414,11 +417,45 @@ def inferred_targets(crate_dir: pathlib.Path, folder: str) -> dict[str, str]:
     return found
 
 
+def path_key(crate_dir: pathlib.Path, path: str) -> str:
+    """The key cargo compares a declared `path` by: the crate's directory joined with it, compared
+    by component, so `.` and a doubled separator drop out, a `..` stays and an absolute path
+    stands alone. A key inside the crate is spelled relative to it, as inferred paths are."""
+    base = crate_dir.absolute()
+    joined = base / path
+    return (joined.relative_to(base) if joined.is_relative_to(base) else joined).as_posix()
+
+
+def edition_of(root: pathlib.Path, crate: str, package: dict) -> str:
+    """The edition cargo builds `crates/<crate>` in: its `edition` key, the nearest workspace's
+    `[workspace.package]` edition under `edition.workspace = true`, and 2015 when there is no key.
+    An edition the reader cannot read is refused by name."""
+    where = f"crates/{crate}"
+    edition = package.get("edition", "2015")
+    if edition == {"workspace": True}:
+        manifests = [
+            root / folder / "Cargo.toml" for folder in pathlib.PurePosixPath(where).parents
+        ]
+        try:
+            tables = [
+                tomllib.loads(m.read_text(encoding="utf-8")) for m in manifests if m.is_file()
+            ]
+        except tomllib.TOMLDecodeError:
+            tables = []
+        workspace = next((t["workspace"] for t in tables if "workspace" in t), {})
+        edition = workspace.get("package", {}).get("edition")
+    if not isinstance(edition, str):
+        raise KillerUnresolved(f"{where} sets an edition the reader cannot decide")
+    return edition
+
+
 def cargo_targets(root: pathlib.Path, crate: str) -> tuple[list[tuple[str, str]], list[str]]:
     """The binaries (name, path) and the test target names of `crates/<crate>`, as cargo builds
     them: the manifest's `[[bin]]` and `[[test]]` tables, then the auto-discovered targets unless
     `autobins` or `autotests` is false, an inferred target dropped when an explicit one has its
-    name or its path. A table with no path takes the auto-discovered path of its name."""
+    name or its declared path (`path_key`). A table with no path takes the auto-discovered path of
+    its name. With no `autobins` or `autotests` key, a declared table switches its kind's
+    inference off in the 2015 edition (`edition_of`) and leaves it on in every later one."""
     where = f"crates/{crate}"
     manifest = manifest_of(root, crate)
     package = manifest["package"]
@@ -436,15 +473,19 @@ def cargo_targets(root: pathlib.Path, crate: str) -> tuple[list[tuple[str, str]]
         if not isinstance(auto, bool):
             raise KillerUnresolved(f"{where} sets {switch} to something other than a boolean")
         explicit: list[tuple[str, str]] = []
+        paths: set[str] = set()
         for entry in manifest.get(table, []):
             name, path = entry.get("name"), entry.get("path")
+            if isinstance(path, str):
+                paths.add(path_key(crate_dir, path))
             if path is None and isinstance(name, str):
                 path = inferred.get(name, fallback or f"tests/{name}.rs")
             if not isinstance(name, str) or not isinstance(path, str):
                 raise KillerUnresolved(f"{where} declares a {kind} with no name or path")
-            explicit.append((name, posixpath.normpath(path)))
+            explicit.append((name, path))
+        if table in manifest and switch not in package:
+            auto = edition_of(root, crate, package) != "2015"
         names = {name for name, _path in explicit}
-        paths = {path for _name, path in explicit}
         found = [
             (name, path)
             for name, path in (inferred.items() if auto else [])
@@ -472,7 +513,8 @@ def binary_of(root: pathlib.Path, crate: str) -> tuple[str, str]:
         raise KillerUnresolved(
             f"{where} declares the binary {name} at {path}, which does not exist"
         )
-    return name, f"{where}/{path}"
+    file, inside = (root / where / path).resolve(), root.resolve()
+    return name, (file.relative_to(inside) if file.is_relative_to(inside) else file).as_posix()
 
 
 def cfg_value(tokens: list[str]) -> bool | None:
@@ -590,6 +632,21 @@ def module_files(file: pathlib.Path, root_file: pathlib.Path) -> list[pathlib.Pa
             raise KillerUnresolved(
                 f"{where} includes source with include!, which the reader does not follow"
             )
+        if token == "!" and "skip" not in frames:
+            # A macro invocation's tokens follow its `!`, after the name a `macro_rules!` defines,
+            # in parentheses, brackets or braces. They declare nothing until the macro expands.
+            start = index + 1
+            if start < len(tokens) and re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", tokens[start]):
+                start += 1
+            depth, end = 0, start
+            for end in range(start, len(tokens)):  # never past the text's end
+                depth += {"(": 1, "[": 1, "{": 1, ")": -1, "]": -1, "}": -1}.get(tokens[end], 0)
+                if depth <= 0:
+                    break
+            if "mod" in tokens[start:end]:
+                raise KillerUnresolved(
+                    f"{where} holds a mod in a macro invocation, which only its expansion decides"
+                )
         if token == "{":
             frames.append("block")
         elif token == "}":
