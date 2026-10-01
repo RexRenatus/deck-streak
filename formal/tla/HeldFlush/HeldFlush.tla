@@ -9,33 +9,44 @@
 (* scheduled flush, which fires at the scheduled times. The model checks   *)
 (* each held item reaches the owner at most once and is never lost without *)
 (* a name, across two overlapping flushers, a lease that lapses while its  *)
-(* holder still sends, and a flusher that dies between its push and its    *)
-(* settle.                                                                 *)
+(* holder still sends, a flusher that dies between its push and its       *)
+(* settle, and a flush whose work answers an error, a push pending or not. *)
 (*                                                                         *)
 (* Modelled claims (item names, never line numbers):                       *)
 (*   router.rs::flush_with   - a flush returns at once while the window is *)
 (*                             quiet; an item older than the age limit is  *)
-(*                             abandoned (strictly older: equal is sent).  *)
+(*                             abandoned (strictly older: equal is sent);  *)
+(*                             after an error it names what it pushed and  *)
+(*                             gives back only what it never pushed.       *)
 (*   sync_cycle.rs::flush    - the after-sync flush fires only after a     *)
 (*                             sync that ran and succeeded.                *)
 (*   ledger.rs::held         - the queue is read in one snapshot.          *)
-(*   ledger.rs::settle       - a sent item leaves the queue, by the token  *)
-(*                             of the flush that claimed it.               *)
+(*   ledger.rs::settle_claimed - a sent item leaves the queue, by the      *)
+(*                             token of the flush that claimed it.         *)
 (*   ledger.rs::claim_held   - the take moves held -> sending with the     *)
 (*                             flush's token, matching only held rows.     *)
 (*   ledger.rs::lapsed_claims - a sending row whose claim lapsed is        *)
 (*                             abandoned by name, never pushed.            *)
+(*   ledger.rs::abandon_pushed - a row the failed flush pushed is          *)
+(*                             abandoned by its token, its claim kept.     *)
+(*   ledger.rs::release_claims - every other row the failed flush still    *)
+(*                             claims goes back to held.                   *)
 (*                                                                         *)
 (* Claimed = TRUE is the design at head: the take claims each row it will  *)
 (* send, and a lapsed foreign claim is abandoned as "may have been sent".   *)
 (* Claimed = FALSE is the round-1 design (the lease alone), kept as the    *)
-(* witness the same checker must find double-sending.                      *)
+(* witness the same checker must find double-sending. NamedOnFail = TRUE   *)
+(* is the design at head for a flush that fails; FALSE is the round-2      *)
+(* design (every claimed row given back), kept as a witness too.           *)
 (*                                                                         *)
 (* Abstractions: time is a small integer clock; the window is quiet below  *)
 (* QuietEnd; the owner's own window settings, the breaker, tiers, the      *)
-(* recap line, the per-send failure path and the queue bound are not       *)
-(* modelled. A crash is a flusher that stops at any step and keeps its     *)
-(* lease until it lapses.                                                  *)
+(* queue bound and a push the transport answers as failed (held again for  *)
+(* a retry) are not modelled. The recap line is one push that reaches      *)
+(* several items; the model pushes one item at a time, and a failed flush  *)
+(* names each item of a recap it pushed as it names its one pending item.  *)
+(* A crash is a flusher that stops at any step and keeps its lease until   *)
+(* it lapses.                                                              *)
 (***************************************************************************)
 
 \* @phx covers crates/notifications/src/router.rs anchor=flush_with digest=sha256:42246a8eb06d7c3243f7d751c5a1d7fd9444e627dfac074ecfda6fcd0f1e7fda
@@ -57,6 +68,7 @@
 \* @phx witness witness/OnlyTheSyncFlusher.cfg kills=HeldReachesOrAbandons
 \* @phx witness witness/NoSerialisation.cfg kills=NoDoubleDelivery
 \* @phx witness witness/LeaseLapses.cfg kills=NoDoubleDelivery
+\* @phx witness witness/ReleaseOnFail.cfg kills=NoDoubleDelivery
 EXTENDS Naturals, FiniteSets
 
 CONSTANTS Items,        \* the celebrations that may be raised
@@ -67,7 +79,8 @@ CONSTANTS Items,        \* the celebrations that may be raised
           SyncAt,       \* the positions at which a sync-triggered flush may start
           SchedAt,      \* the positions at which a scheduled flush may start
           Serialised,   \* TRUE when a running flush's unlapsed lease excludes a second one
-          Claimed       \* TRUE when the take claims each row it sends (held -> sending)
+          Claimed,      \* TRUE when the take claims each row it sends (held -> sending)
+          NamedOnFail   \* TRUE when a failed flush names its pushed row rather than give it back
 
 Flushers == {"sync", "sched"}
 Quiet(t) == t < QuietEnd
@@ -213,19 +226,28 @@ Crash(f) == /\ pc[f] = "running"
 
 \* The flush's work answers an error after its take committed (router.rs::deliver returns through
 \* `?`): before any push, between two items, or after a push reached and before its settle
-\* committed, so a push may be pending. flush_with then deletes the lease by its token and runs
-\* ledger.rs::release_claims, which gives every row still sending under the flush's token back to
-\* held, its claim cleared.
-Fail(f) == /\ pc[f] = "running"
-           /\ pc' = [pc EXCEPT ![f] = "idle"]
-           /\ snap' = [snap EXCEPT ![f] = {}]
-           /\ pend' = [pend EXCEPT ![f] = {}]
-           /\ st' = [i \in Items |->
-                       IF Claimed /\ st[i] = "sending" /\ claim[i] = f THEN "held" ELSE st[i]]
-           /\ claim' = [i \in Items |->
-                          IF Claimed /\ st[i] = "sending" /\ claim[i] = f THEN "none" ELSE claim[i]]
-           /\ lock' = IF lock = f THEN "none" ELSE lock
-           /\ UNCHANGED <<t, claimUntil, heldAt, sends, leaseUntil, fired>>
+\* committed, so a push may be pending. flush_with then deletes the lease by its token. With
+\* NamedOnFail, the design at head, it first names each row the flush pushed and did not settle,
+\* matched by the flush's token (ledger.rs::abandon_pushed: abandoned with its claim kept, which a
+\* recap reads as "may have been sent"), and only then gives every other row still sending under
+\* the token back to held (ledger.rs::release_claims): a row whose push was attempted never returns
+\* to held, and a row the flush never pushed is sent by a later flush. Without NamedOnFail, the
+\* round-2 design, release_claims gives back every row, the pushed one included. The flush's set of
+\* pushed rows is `pend`: a row it pushed and settled has left the queue, so the set's other rows
+\* no longer match the token.
+Fail(f) == LET mine == {i \in Items : Claimed /\ st[i] = "sending" /\ claim[i] = f}
+               named == IF NamedOnFail THEN mine \cap pend[f] ELSE {}
+           IN /\ pc[f] = "running"
+              /\ pc' = [pc EXCEPT ![f] = "idle"]
+              /\ snap' = [snap EXCEPT ![f] = {}]
+              /\ pend' = [pend EXCEPT ![f] = {}]
+              /\ st' = [i \in Items |->
+                          IF i \in named THEN "abandoned"
+                          ELSE IF i \in mine THEN "held"
+                          ELSE st[i]]
+              /\ claim' = [i \in Items |-> IF i \in mine \ named THEN "none" ELSE claim[i]]
+              /\ lock' = IF lock = f THEN "none" ELSE lock
+              /\ UNCHANGED <<t, claimUntil, heldAt, sends, leaseUntil, fired>>
 
 \* The run ends at the last clock position, with no flush mid-way.
 Finished == /\ t = Horizon
