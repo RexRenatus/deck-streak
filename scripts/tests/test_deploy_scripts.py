@@ -2359,7 +2359,9 @@ side=${STUB_SIDE:-local}
 n=$(grep -c "^@NAME@ $side$" "$STUB_LOG/tools.log" 2>/dev/null || true)
 echo "@NAME@ $side" >> "$STUB_LOG/tools.log"
 printf '%s\t%s\t%s\t%s\n' "@NAME@" "$side" "$((n + 1))" "$*" >> "$STUB_LOG/args.log"
-[ "${TOOL_FAILS-}" != "@NAME@:$side:$((n + 1))" ] || { echo "@NAME@: cannot be run" >&2; exit 126; }
+case ",${TOOL_FAILS-}," in
+*",@NAME@:$side:$((n + 1)),"*) echo "@NAME@: cannot be run" >&2; exit 126;;
+esac
 if [ "@NAME@" = mktemp ] && [ "$side" = host ] && [ -n "${CHECK_FILE_RO-}" ]; then
     made=$(/usr/bin/mktemp "$@") && chmod 0444 "$made" && echo "$made"
     exit
@@ -2986,6 +2988,130 @@ exec /usr/bin/@NAME@ "$@"
                 self.judge(f"{verb} / new unit / failed switch", done, before, after, "host step")
                 self.assertFalse((w.units / "deck-streak-extra.timer").exists(), verb)
                 self.assertTrue((w.units / API).is_file(), f"{verb}: the unit the host had is gone")
+
+    def host_log(self, verb, state, faults):
+        """The host calls of one run of `verb` from `state` with `faults` planted, as
+        (tool, index, args) in the order the run made them."""
+        with tempfile.TemporaryDirectory() as tmp:
+            w, good, argv = self.situation(tmp, verb, state)
+            try:
+                w.run(*argv, **{**good, "TOOL_FAILS": faults})
+            finally:
+                self.restore(w.locked)
+            rows = []
+            for line in (w.log / "args.log").read_text(encoding="utf-8").splitlines():
+                tool, side, index, args = (line.split("\t") + [""])[:4]
+                if side == "host":
+                    rows.append((tool, int(index), args))
+            return rows
+
+    @staticmethod
+    def first_delete_after(rows, tool, suffix=""):
+        """The index of the first host `find -delete` after the last call of `tool` (whose last
+        argument ends in `suffix`): the first removal an undo makes."""
+        last = max(
+            i
+            for i, (name, _, args) in enumerate(rows)
+            if name == tool and args.split()[-1:] and args.split()[-1].endswith(suffix)
+        )
+        for name, index, args in rows[last + 1 :]:
+            if name == "find" and "-delete" in args.split():
+                return index
+        raise AssertionError("no removal follows the call")
+
+    def refused_twice(self, label, verb, state, faults, text):
+        """Run `verb` from `state` with `faults` planted: it must end non-zero with one `deploy:`
+        line, last, that holds `text`, and leave no temporary path."""
+        with tempfile.TemporaryDirectory() as tmp:
+            w, good, argv = self.situation(tmp, verb, state)
+            before = ATemporaryPathThatCannotBeMadeIsANamedRefusal.snapshot(w)
+            try:
+                done = w.run(*argv, **{**good, "TOOL_FAILS": faults})
+            finally:
+                self.restore(w.locked)
+            after = ATemporaryPathThatCannotBeMadeIsANamedRefusal.snapshot(w)
+        lines = [ln for ln in done.stderr.splitlines() if ln.strip()]
+        refusals = [ln for ln in lines if ln.startswith("deploy:")]
+        self.assertNotEqual(done.returncode, 0, f"{label}: the verb went on: {done.stderr}")
+        self.assertEqual(len(refusals), 1, f"{label}: {done.stderr!r}")
+        self.assertEqual(lines[-1], refusals[0], f"{label}: the last line is not the refusal")
+        self.assertIn(text, refusals[0], f"{label}: the refusal does not say so")
+        self.assertNotIn("Traceback", done.stderr, label)
+        for path in set(after) - set(before):
+            temporary = path.name.startswith((".current.", ".stale.")) or path.name.endswith(
+                (".partial", ".saved")
+            )
+            self.assertFalse(
+                temporary or path.parts[0] == "tmpdir", f"{label}: a temporary path is left: {path}"
+            )
+
+    def test_an_undo_that_cannot_put_the_unit_files_back_says_so_and_leaves_no_temporary_path(self):
+        """A second failure, in the undo itself: each removal is tried twice, so both tries fail."""
+        rows = self.host_log("install", "installed", "install:host:1")
+        k = self.first_delete_after(rows, "install")
+        faults = f"install:host:1,find:host:{k},find:host:{k + 1}"
+        self.refused_twice(
+            "install / installed / undo", "install", "installed", faults, "put its unit files back"
+        )
+        for verb in examined("undo-and-say member(s)", ["install", "rollback-unkept"]):
+            rows = self.host_log(verb, "effective-refused", "")
+            k = self.first_delete_after(rows, "install")
+            faults = f"find:host:{k},find:host:{k + 1}"
+            self.refused_twice(
+                f"{verb} / effective-refused / undo",
+                verb,
+                "effective-refused",
+                faults,
+                "put its unit files back after",
+            )
+
+    def test_a_way_back_that_fails_in_two_tries_is_named_by_the_leg_that_failed(self):
+        for verb in examined("way-back member(s)", ["install", "rollback-unkept"]):
+            rows = self.host_log(verb, "not-ready", "")
+            n = sum(1 for tool, _, _ in rows if tool == "ln")
+            self.refused_twice(
+                f"{verb} / not-ready / link",
+                verb,
+                "not-ready",
+                f"ln:host:{n},ln:host:{n + 1}",
+                "the link was not put back",
+            )
+            k = self.first_delete_after(rows, "mv", "/current")
+            self.refused_twice(
+                f"{verb} / not-ready / units",
+                verb,
+                "not-ready",
+                f"find:host:{k},find:host:{k + 1}",
+                "the unit files were not put back",
+            )
+        rows = self.host_log("install", "not-ready-first", "")
+        n = sum(1 for tool, _, _ in rows if tool == "rm")
+        self.refused_twice(
+            "install / not-ready-first / link",
+            "install",
+            "not-ready-first",
+            f"rm:host:{n},rm:host:{n + 1}",
+            "the link was not removed",
+        )
+
+    def test_a_stale_unpack_refuses_each_of_its_writing_calls(self):
+        for verb in ["install", "rollback-unkept"]:
+            self.refuse_each(verb, "stale-partial", self.calls_of(verb, "stale-partial"))
+            with tempfile.TemporaryDirectory() as tmp:
+                w, good, argv = self.situation(tmp, verb, "stale-partial")
+                before = ATemporaryPathThatCannotBeMadeIsANamedRefusal.snapshot(w)
+                done = w.run(*argv, **good)
+                after = ATemporaryPathThatCannotBeMadeIsANamedRefusal.snapshot(w)
+                self.judge_finished(
+                    f"{verb} / stale-partial / finished", w, good, done, before, after
+                )
+            self.refused_twice(
+                f"{verb} / stale-partial / set aside",
+                verb,
+                "stale-partial",
+                "mv:host:1",
+                "set aside",
+            )
 
 
 if __name__ == "__main__":

@@ -736,6 +736,62 @@
         "[ -f \"$src/$n/$base\" ] || remove \"$c\" || true",
         "a stale drop-in file that cannot be removed fails the unit installation (SPEC-127 A42)",
         "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_a_stale_drop_in_that_cannot_be_deleted_is_refused"
+      ],
+      [
+        "S12793-A-A-TRAP-REMOVES-THE-SAVED-UNIT-ARCHIVE",
+        "deploy/deploy.sh",
+        "    remove \"$saved\" || remove \"$saved\" || :\n",
+        "    :\n",
+        "every exit removes the saved unit archive, so a refused run leaves no temporary path (SPEC-127 A42)",
+        "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_an_install_over_an_installed_host_refuses_each_of_its_writing_calls"
+      ],
+      [
+        "S12794-A-A-A-FAILED-UNDO-IS-NAMED",
+        "deploy/deploy.sh",
+        "    unwind || refuse \"$* and could not put its unit files back\"\n",
+        "    unwind || :\n",
+        "an undo that fails says so in its one refusal line instead of a plain one (SPEC-127 A42)",
+        "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_an_undo_that_cannot_put_the_unit_files_back_says_so_and_leaves_no_temporary_path"
+      ],
+      [
+        "S12795-A-A-AN-UNDO-THAT-HELD-STILL-REFUSES",
+        "deploy/deploy.sh",
+        "    refuse \"$*\"\n}\n",
+        "    :\n}\n",
+        "a write that failed after the first change ends the run even when the undo held (SPEC-127 A42)",
+        "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_an_install_over_an_installed_host_refuses_each_of_its_writing_calls"
+      ],
+      [
+        "S12796-A-A-THE-ASIDE-MOVE-IS-GUARDED",
+        "deploy/deploy.sh",
+        "        mv -T \"$rel.partial\" \"$aside\" || refuse \"could not set aside an unfinished unpack\"\n",
+        "        mv -T \"$rel.partial\" \"$aside\" || :\n",
+        "a stale unpack that cannot be set aside is refused by that name (SPEC-127 A42)",
+        "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_a_stale_unpack_refuses_each_of_its_writing_calls"
+      ],
+      [
+        "S12797-A-A-THE-TRAP-PUTS-THE-ASIDE-UNPACK-BACK",
+        "deploy/deploy.sh",
+        "    [ -z \"$aside\" ] || [ ! -e \"$aside\" ] || [ -n \"$finished\" ] || put_aside_back || put_aside_back || :\n",
+        "    :\n",
+        "a refused run puts a stale unpack it set aside back under its own name (SPEC-127 A42)",
+        "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_a_stale_unpack_refuses_each_of_its_writing_calls"
+      ],
+      [
+        "S12798-A-A-A-FINISHED-RUN-DELETES-THE-ASIDE-UNPACK",
+        "deploy/deploy.sh",
+        "[ -z \"$aside\" ] || [ ! -e \"$aside\" ] || remove \"$aside\" || remove \"$aside\" ||\n    echo \"deploy: the host step could not delete the unfinished unpack it set aside\" >&2\n",
+        ":\n",
+        "a run that finished leaves no set-aside unpack behind (SPEC-127 A42)",
+        "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_a_stale_unpack_refuses_each_of_its_writing_calls"
+      ],
+      [
+        "S12799-A-A-THE-PRUNE-ASKS-BEFORE-DELETING",
+        "deploy/deploy.sh",
+        "        if deletable \"$root/releases/$old\"; then\n",
+        "        if :; then\n",
+        "an older release that cannot be deleted whole is left whole, never half gone (SPEC-127 A42)",
+        "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_every_state_and_every_writing_call_of_the_host_step_is_refused"
       ]
     ]
   }
