@@ -890,3 +890,12 @@ A54: cargo test -p deck-streak-coordination --test relight_order -- --exact a_da
 A55: cargo test -p deck-streak-coordination --test relight_order -- --exact the_route_keeps_no_per_day_failure_state_a_give_up_could_read
 A56: cargo test -p deck-streak-bot --test streak_commands -- --exact every_heat_band_is_carried_in_the_heats_own_place_whichever_line_leads
 ```
+
+## 26. Amendments: the files the derived-population amendment adds
+
+The derived-population amendment (sections 24 and 25) adds the model's files and changes two files
+that no row of section 4 names. It adds `formal/tla/RelightOrder/RelightOrder.tla`, its three
+configurations `formal/tla/RelightOrder/MCRelightOrder.cfg`, `formal/tla/RelightOrder/MCLiveness.cfg`
+and `formal/tla/RelightOrder/MCNoOtherDayHeldBack.cfg`, and its twelve witnesses, one file each under
+`formal/tla/RelightOrder/witness/`. It changes `config/formal.json` and
+`scripts/tests/test_formal_config.py` (the model's time budget).
