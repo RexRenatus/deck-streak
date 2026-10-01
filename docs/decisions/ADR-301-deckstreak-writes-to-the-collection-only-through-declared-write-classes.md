@@ -99,7 +99,7 @@ its own ADR in ADR-089's form.
   (f) bind it like any other class. Its planned SPEC-083 takes (b)'s backup, restore drill and
   counts through its own amendment before its write is built (#108). This ADR changes neither
   ADR-089's design of the skip day nor SPEC-083.
-- **Note (2026-10-01, #518, the skip day's rung):** In other words, the skip day's rung is a
+- **Note (2026-10-01, #518, the skip day's rung):** Read with (c), the skip day's rung is a
   ceiling. Its ceiling is the approval rung, because the owner's skip declaration approves each batch.
 
 ### (a) The never-list
