@@ -477,6 +477,11 @@ fn oracle(fixture: &Fixture) -> [Vec<(String, Value)>; 2] {
 fn leaves(prefix: &str, value: &Value, out: &mut Vec<(String, Value)>) {
     if let Value::Object(fields) = value {
         for (key, field) in fields {
+            // The calendar's days are read where their markers are decided, by the daemon's
+            // calendar test (SPEC-076 A58); this population separates the scalar values.
+            if prefix.is_empty() && key == "calendar" {
+                continue;
+            }
             let path = if prefix.is_empty() {
                 key.clone()
             } else {
@@ -589,4 +594,55 @@ async fn every_served_value_is_read_where_each_pair_of_served_values_differs() {
     );
     assert_eq!(separated, 55 + 15);
     db.close().await;
+}
+
+/// The route serves each track's calendar, drawn from the settled study days, over the predecessor's
+/// window of whole weeks ending at the served day: from Monday 2024-07-15 through Tuesday 2025-01-14,
+/// 184 days (SPEC-076 section 27; ADR-302 D2).
+#[tokio::test]
+async fn the_streak_route_serves_each_tracks_calendar_from_its_settled_days() {
+    let scratch = tempfile::tempdir().expect("a temporary directory");
+    let (db, app) = app(&scratch).await;
+    let mut write = db.write().await.expect("a write");
+    for (source, track, day) in [
+        ("reviews", "language", TODAY - 1),
+        ("reviews", "language", TODAY - 3),
+        ("reviews_law", "law", TODAY - 1),
+    ] {
+        sqlx::query(
+            "INSERT INTO xp_settlement (study_day, source, track, amount, closed, created_at) \
+             VALUES (?1, ?2, ?3, 10, 1, 1000)",
+        )
+        .bind(day)
+        .bind(source)
+        .bind(track)
+        .execute(&mut *write)
+        .await
+        .expect("a settlement row");
+    }
+    write.commit().await.expect("the commit");
+    let owner = cookie_of(&handshake(&app, OWNER_PAYLOAD).await);
+    let body = get(&app, STREAK_PATH, Some(&owner)).await.json();
+    let mut served = 0_usize;
+    for (track, studied) in [
+        ("language", vec!["2025-01-11", "2025-01-13"]),
+        ("law", vec!["2025-01-13"]),
+    ] {
+        let days = body["calendar"][track].as_array().expect("a calendar");
+        assert_eq!(days.len(), 184, "{track}");
+        assert_eq!(days[0]["day"], "2024-07-15", "{track} starts on a Monday");
+        assert_eq!(
+            days[183]["day"], "2025-01-14",
+            "{track} ends at the served day"
+        );
+        let got: Vec<&str> = days
+            .iter()
+            .filter(|day| day["studied"] == true)
+            .map(|day| day["day"].as_str().expect("a day"))
+            .collect();
+        assert_eq!(got, studied, "{track}");
+        assert!(days.iter().all(|day| day["markers"].is_array()), "{track}");
+        served += days.len();
+    }
+    println!("examined {served} served calendar day(s)");
 }

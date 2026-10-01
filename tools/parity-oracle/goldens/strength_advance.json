@@ -245,7 +245,7 @@
   "inputs": "synthetic",
   "kind": "function",
   "registry": "tools/parity-oracle/registry/spec_076.py",
-  "registry_sha256": "e451e77bd68e8dfbd5e1fb48845aab7b7f6667f318bc4b956168da0819a89709",
+  "registry_sha256": "e854e46aac5a5887cc38b12c7cfafd31275845828f9c77a4d12fb1e38248b20c",
   "schema": "phx.parity-golden.v1",
   "seed": 20,
   "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
