@@ -108,3 +108,33 @@ The green run reads `Ran 9 tests ... OK` and prints `examined 4 toolchain source
 file`, `examined 6 calls of the reader` and `examined 2 presence controls of the committed file`.
 At the same commit the second test of A8 reads `AssertionError: a refusal escaped a test as an error, not
 a failure` for 159 of its 182 planted refusals of the committed file. The rows S29510 to S29513 are each killed on a clean committed detached head.
+
+## Amendment addendum, 2026-10-01 (issue #504, round 2)
+
+The tests were committed alone (577bca19) and each module was run alone. The reader change and the
+loader's refusals (418728f7) turned them green; the tests that hold each plant to its kind and the
+identity to its presence were added after (ccae4f21), each killing mutants named in the rows.
+
+```red-first
+A7: red at 577bca19: AssertionError: the sources each combination names, as the checker reads them (R6)
+A7: green at 418728f7
+A8: red at 577bca19: AssertionError: a refusal escaped a test as an error, not a failure
+A8: green at 418728f7
+```
+
+Module `test_formal_config.py` alone at 577bca19: `Ran 7 tests ... FAILED (failures=1)`, the failing
+test `test_the_tree_names_one_toolchain_source_the_identity`, by assertion, no error.
+
+Module `test_formal_config_presence.py` alone at 577bca19: `Ran 2 tests ... FAILED (failures=1)`, the
+failing test `test_a_refused_committed_file_fails_every_reader_by_assertion_and_errors_none`, by
+assertion, no error.
+
+Module `test_formal_config.py` alone at the green head: `Ran 10 tests ... OK`, and it prints `examined 12
+toolchain source combinations`, `examined 6 pin shapes planted as their kind`, `examined 6 identity
+states` and `examined 4 places an invalid byte sits`.
+
+Module `test_formal_config_presence.py` alone at the green head: `Ran 3 tests ... OK`, and it prints
+`examined 186 planted refusals of the committed file`, `examined 5 tests that load the committed
+file`, `examined 186 planted refusals held to the kind they name`, `examined 6 calls of the reader`
+and `examined 2 presence controls of the committed file`. The rows S29510 to S29521 are each killed
+on a clean committed detached head.

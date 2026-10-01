@@ -90,3 +90,11 @@ identity and also commits a pin file. The considered options:
 Cost: a checker rebuilt with another pin refuses every check as drift until this field is changed,
 and that change is reviewed here. Confirmation: SPEC-295's A1, A3 and A6 to A8; the test reads the working tree, so an untracked pin file turns it red, which is fail-closed by design.
 
+
+Addendum, round 2 (#504). Confirmation: SPEC-295's A7 and A8 read every path as the tree stores it,
+so a link at the pin path is a pin file and is never followed, and every refusal of the settings file
+(a link, an absent file, bytes that are not JSON, bytes that are not UTF-8, a nesting past the
+parser's depth and an integer past its digit limit) fails by assertion and never as an error. The
+test reads the working tree, so an untracked file, directory or link on disk turns it red, which is
+fail-closed by design. A committed file missing from the work tree is only dirty locally and is
+never judged here, because a CI checkout is the committed tree.
