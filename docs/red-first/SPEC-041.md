@@ -520,6 +520,13 @@ its timer and its credentials. The lease and answer tests (`flush_lease.rs`, `he
 were added after it, with the rows S04160 to S04169, each proved killed; their red is those rows'
 mutants, and A20's and A21's red lines are the tests of the red commit.
 
+Round 2 of the review found that the lease lapses while its holder is still sending, and that a
+flush that dies after its push reached has its item resent. The tests came first (bf37062b): a flush
+that outlives its lease, and one that dies after its send reached, each against the round-1 code, and
+each failed by assertion, the held item reached the owner 2 times. The model was amended next
+(bb792f98), and the fix, a row claim with a token-matched settle and a named abandonment, followed
+(7e4aae48), after which those tests pass.
+
 ```red-first
 A19: red at 9669cea: 12 of 96 flush cases differ from the expected delivered and abandoned sets, all of them the scheduled step inside an open window
 A19: green at 930ef15
@@ -527,4 +534,6 @@ A20: red at 9669cea: assertion failed: the second flush finds the lease taken
 A20: green at 930ef15
 A21: red at 9669cea: assertion failed: the job table has a scheduled flush step
 A21: green at 930ef15
+A22: red at bf37062b: the held item reached the owner 2 times
+A22: green at 7e4aae48
 ```

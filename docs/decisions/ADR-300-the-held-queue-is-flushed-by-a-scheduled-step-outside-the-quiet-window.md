@@ -14,16 +14,20 @@ nothing: a celebration held overnight waits for some sync that lands after 07:30
 the held queue to be flushed when the window ends. Two further facts shaped the answer. Only the
 bot's process held a router, so the scheduled job's process had none to flush with. And the
 flush's first transaction was committed before its sends, so two flushers over one queue could each
-read the same held row and send it twice. What triggers a flush outside the window, and how do two
-flushers share one queue?
+read the same held row and send it twice, and a lease that lapses while its holder is still sending
+does not stop that. What triggers a flush outside the window, and how does one held item reach the
+owner at most once when flushers overlap, lapse or die?
 
 ## Decision Drivers
 
-- Every held notification reaches the owner exactly once or is abandoned by name, on every path that
-  can flush; a flush delivers only while the window is open when it sends.
+- A held notification reaches the owner at most once and is never lost unnamed: it ends delivered, or
+  abandoned by name with its reason (expired, send failed, or may have been sent), on every path that
+  can flush; a flush delivers only while the window is open when it starts.
 - The step's calendar is derived from the window the router reads, never a second copy of it.
-- A missed fire does not strand a hold past its age limit (720 minutes).
-- No schema change: a `state` change to the queue is a table rebuild.
+- A missed fire is replayed late, and a hold that the replay finds past its age limit (720 minutes) is
+  abandoned by name, never dropped silently.
+- A claim on the row needs a state and a token on the queue, so the schema changes: a `state` change
+  to the queue is a table rebuild, and the rebuild keeps every index and trigger the old table had.
 - The two flushers are an interleaving, so a model states the properties before the code (the
   entry `formal/tla/HeldFlush/`).
 
@@ -56,33 +60,72 @@ table and the deploy templates.
 
 - **The calendar.** 07:36 is six minutes after the default window ends. With `Persistent=true` a
   missed fire is replayed up to 360 minutes late (13:36), still outside the window, and the oldest
-  hold then aged at most 510 minutes against the 720 limit, so a missed fire never costs a hold its
-  delivery.
+  hold raised at the window's start (23:00) is 516 minutes old at the first fire and 876 at the latest
+  replay, against the 720 limit. A fire replayed after 11:00 therefore abandons that hold by name in
+  the recap instead of delivering it: a missed fire can cost a hold its delivery and never its name.
+  The catch-up bound is not shortened: a replay inside it still delivers every hold younger than the
+  limit, and one past it is named rather than sent late.
 - **The catch-up decision.** `catch_up: true`, because a flush is idempotent: a replayed fire finds
   an empty queue or delivers what the first fire would have, and the lease keeps two fires from
   overlapping.
-- **The lease, chosen against a schema change.** A flush takes a lease before its first send, held
-  as the setting `flush_lease` whose value is the instant it lapses (ten minutes on), and releases it
-  when it ends. A flush that finds an unlapsed lease answers `Busy` and sends nothing. The
-  alternative, a `flushing` state on the queue's rows, was rejected: the queue's `state` column is
-  constrained, and a change to it is a table rebuild of a ledger the deployed database already holds.
-  The lease uses the non-macro query path, so the offline query cache does not change.
+- **The claim: a row is claimed, sent and settled at most once.** In its first transaction a flush
+  moves each held row it will send from `held` to `sending`, writing its lease token (the instant its
+  lease lapses) in the row's new `claim` column, by one update that matches only `held` rows, so a row
+  another flush claimed is never read for sending. A push is made only for a row the flush claimed.
+  The settle that removes the row, the relatch after a failed send and the abandonment each match that
+  token, so a flush that lost its claim changes nothing. A flush that finds a `sending` row whose claim
+  has lapsed abandons it by name, "may have been sent", and never pushes it: its claimant either died
+  after the push reached the owner or is still sending past its lease, and in neither case is a resend
+  safe. An abandonment is logged with the item, its claimant and the reason, and the recap names it.
+  The schema change is migration 004102, a STRICT rebuild of `notification_queue` that adds the state
+  `sending` and the `claim` column and re-creates every index and trigger the old table had (it had
+  none; a test compares the sets before and after), and the data-rights export and erasure carry the
+  column.
+- **The lease stays as the queue's coarse exclusion.** A flush takes a lease before its first send,
+  held as the setting `flush_lease` whose value is the instant it lapses (ten minutes on), and
+  releases it, by its token, when it ends. A flush that finds an unlapsed lease answers `Busy` and
+  sends nothing. The lease is not what makes a double send impossible, because it lapses while its
+  holder may still be sending; the row claim is. The lease uses the non-macro query path.
 - **The job's router.** The job process builds its own router from the policy, the owner's chat and
   the bot's credentials, loaded by a service drop-in with the same two credentials the bot loads.
+
+- **What the at-most-once rule was chosen against.**
+  - At-least-once, resending a row that is still unsettled: rejected because a push that reached the
+    owner and was never settled is then doubled, which the round-1 design did in 24 of the review's
+    population members for a lapsed lease and 16 for a flusher that died after its push.
+  - Renewing the lease before each send as the only guard: rejected because a paused or dead holder
+    still resends after its last renewal lapses, so the death class stays.
+  - Marking the row before the send with no `sending` state (delete or flag it, then push): rejected
+    because a failed send, or a death before the push, loses the item with no name.
+- **How this relates to ADR-124.** ADR-124 chose a separate job template, `deck-streak-job-send@`,
+  that loads the bot's two credentials for the jobs that send, and rejected a drop-in in each sending
+  instance's `.service.d` directory because the unit guards admit one instance directory per template.
+  This decision's `held_flush` job runs as an instance of the shared job template with its own
+  drop-in, the shape ADR-124 rejected, under a ruling on PR #512 that relaxes the guard to an
+  allowlist (below); it does not use the separate template. The row claim and its at-most-once rule
+  do not depend on which template loads the credentials, so ADR-124's decision on the template stands
+  for the jobs it names, and the held flush's different choice is the ruling's.
 
 ### Consequences
 
 - Good, because a hold raised in the window reaches the owner at the first scheduled flush after it
   ends, on a day when no sync has landed.
-- Good, because two flushers never send one item twice: the model's witness with no lease violates
-  `NoDoubleDelivery`, and the concurrency test shows the second flush answering `Busy`.
+- Good, because a held item reaches the owner at most once: the model's witness of the first design
+  (a lease and no row claim, `witness/LeaseLapses.cfg`) violates `NoDoubleDelivery` once the lease can
+  lapse and a flusher can crash, the same configuration with the claim holds it, and the repo's tests
+  show a flush that outlives its lease and one that dies after its push reached each leaving the item
+  sent once.
+- Bad, because an item whose flusher died after its push reached is named "may have been sent" and not
+  resent, so the owner may see it once and also read it named; and one whose flusher died before its
+  push is named too, and never delivered. That is the price of never sending twice.
 - Bad, because a flush that starts just before the window opens checks the window once, at its start,
   and does not re-check it at each send; a long flush started at 22:59 can send after 23:00. Held
   items are few (the queue is bounded at 20), so the exposure is seconds.
 - Bad, because the lease is a row in the settings table, so the data-rights export lists
   `flush_lease` while a flush holds it.
-- Bad, because a delete-by-token release is not mutation-tested: dropping its `AND value = ?` is
-  equivalent except in a flush that outlives its own lease, which the test clock cannot reach.
+- Bad, because the table rebuild touches a ledger the deployed database already holds; it is one
+  migration, checked by a test that compares the index and trigger sets before and after, and the
+  token match of the lease's own release is killed by a mutation row.
 - Bad, because the deploy tests' rule that a job template ships exactly one instance drop-in
   directory is relaxed (ruling on PR #512): the held flush needs its own, beside the sync job's, to
   load the bot's two credentials. It is relaxed to default-deny, never removed: an instance
