@@ -16,6 +16,9 @@ import io
 import json
 import os
 import re
+import shlex
+import signal
+import stat
 import subprocess
 import sys
 import tarfile
@@ -99,8 +102,12 @@ if [ "$first" = validate ] && [ "$adapter" != caddyfile ]; then
     name=$(basename "$conf")
     case "$name" in Caddyfile* | *.caddyfile) ;; *) echo "invalid character: not JSON" >&2; exit 1 ;; esac
 fi
-# a refusal can also find the candidate already gone (the flag makes the stub delete it first)
-eat() { [ -f "$STUB_LOG/caddy-eats-candidate" ] && rm -f "$conf"; return 0; }
+# a refusal can also find the candidate or the block already gone (a flag makes the stub delete it)
+eat() {
+    [ -f "$STUB_LOG/caddy-eats-candidate" ] && rm -f "$conf"
+    [ -f "$STUB_LOG/caddy-eats-block" ] && rm -f "$(dirname "$conf")/deck-streak.caddy"
+    return 0
+}
 [ "$first" = validate ] && [ -f "$STUB_LOG/caddy-refuses" ] && { eat; exit 1; }
 [ "$first" = adapt ] && [ -f "$STUB_LOG/caddy-adapt-refuses" ] && { eat; exit 1; }
 if [ "$first" = reload ]; then
@@ -334,15 +341,24 @@ class World:
         self.publish(tag, marker)
 
     def run(self, script, *args, **env):
-        return subprocess.run(
+        """Run a script in a session of its own, so a timeout ends the script and its children."""
+        child = subprocess.Popen(
             ["bash", str(script), *args],
             cwd=self.tmp,
             env={**self.env, **env},
-            capture_output=True,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             text=True,
-            check=False,
-            timeout=60,
+            start_new_session=True,
         )
+        try:
+            out, err = child.communicate(timeout=60)
+        except subprocess.TimeoutExpired:
+            os.killpg(child.pid, signal.SIGKILL)
+            child.communicate()
+            raise
+        return subprocess.CompletedProcess(child.args, child.returncode, out, err)
 
     def deploy(self, tag, **env):
         assert DEPLOY.is_file(), f"{DEPLOY.relative_to(REPO)} does not exist"
@@ -850,9 +866,11 @@ class TheCaddyInstall(Case):
         w = self.world
         _original, _after, block_text = self.installed()
         caddyfile = w.caddy_dir / "Caddyfile"
-        caddyfile.unlink()
-        caddyfile.mkdir()
-        done = w.run(ROLLBACK, "caddy-remove", **self.config())
+        caddyfile.chmod(0)
+        try:
+            done = w.run(ROLLBACK, "caddy-remove", **self.config())
+        finally:
+            caddyfile.chmod(0o644)
         self.assertNotEqual(done.returncode, 0, "an unreadable Caddyfile refuses the removal")
         self.assertIn(
             "the candidate Caddyfile could not be written",
@@ -893,6 +911,281 @@ class TheCaddyInstall(Case):
     def test_a_removal_refused_at_the_adapt_check_with_no_candidate_still_says_so(self):
         self.refused_with_no_candidate("caddy-adapt-refuses")
 
+    REFUSED = "the Caddy configuration was refused"
+
+    def install_again(self, **extra):
+        return self.world.run(
+            DEPLOY, "caddy-install", "v1.0.0", **self.config(host="new.example.org", **extra)
+        )
+
+    def assert_install_undone(self, done, after, block_text):
+        """The refusal is printed and the previous block, Caddyfile and no copies are on disk."""
+        w = self.world
+        self.assertNotEqual(done.returncode, 0, "the install refuses")
+        self.assertIn(self.REFUSED, done.stderr, "the refusal is printed")
+        block = w.caddy_dir / "deck-streak.caddy"
+        self.assertTrue(block.is_file(), "the previous block is on disk")
+        self.assertEqual(block.read_text(), block_text, "the previous block is back")
+        self.assertEqual((w.caddy_dir / "Caddyfile").read_text(), after)
+        self.assertEqual(self.leftovers(), [], "no previous copy is left behind")
+
+    def install_refused_with_no_candidate(self, flag):
+        w = self.world
+        _original, after, block_text = self.installed()
+        (w.log / flag).write_text("x")
+        (w.log / "caddy-eats-candidate").write_text("x")
+        done = self.install_again()
+        self.assert_install_undone(done, after, block_text)
+        self.assertTrue(w.text("caddy.log"), "caddy ran, so the refusal came from a check")
+
+    def test_an_install_refused_at_validation_with_no_candidate_still_undoes(self):
+        self.install_refused_with_no_candidate("caddy-refuses")
+
+    def test_an_install_refused_at_the_adapt_check_with_no_candidate_still_undoes(self):
+        self.install_refused_with_no_candidate("caddy-adapt-refuses")
+
+    def test_an_install_whose_candidate_path_cannot_be_written_undoes_and_says_so(self):
+        w = self.world
+        _original, after, block_text = self.installed()
+        (w.caddy_dir / "deck-streak.candidate").mkdir()
+        done = self.install_again()
+        self.assert_install_undone(done, after, block_text)
+        self.assertTrue((w.caddy_dir / "deck-streak.candidate").is_dir(), "a directory is kept")
+
+    def test_an_install_whose_candidate_is_a_link_to_the_caddyfile_refuses_and_undoes(self):
+        w = self.world
+        _original, after, block_text = self.installed()
+        caddyfile = w.caddy_dir / "Caddyfile"
+        before = caddyfile.read_bytes()
+        (w.caddy_dir / "deck-streak.candidate").symlink_to(caddyfile)
+        done = self.install_again()
+        self.assertNotEqual(done.returncode, 0, "a linked candidate refuses the install")
+        self.assertIn(self.REFUSED, done.stderr, "the refusal is printed")
+        self.assertFalse(caddyfile.is_symlink(), "the live Caddyfile is still a file")
+        self.assertEqual(caddyfile.read_bytes(), before, "the live Caddyfile is byte for byte")
+        self.assertTrue(before, "the live Caddyfile is not empty")
+        self.assertEqual((w.caddy_dir / "deck-streak.caddy").read_text(), block_text)
+        self.assertEqual(caddyfile.read_text(), after)
+
+    def test_an_install_whose_block_cannot_be_written_undoes_and_says_so(self):
+        w = self.world
+        _original, after, block_text = self.installed()
+        (w.caddy_dir / "deck-streak.caddy").chmod(0o444)
+        done = self.install_again()
+        self.assert_install_undone(done, after, block_text)
+
+    def test_an_install_whose_import_line_cannot_be_added_undoes_and_says_so(self):
+        w = self.world
+        caddyfile = w.caddy_dir / "Caddyfile"
+        original = "example.org {\n\trespond 200\n}\n"
+        caddyfile.write_text(original, encoding="utf-8")
+        caddyfile.chmod(0o444)
+        w.ship("v1.0.0")
+        done = w.run(DEPLOY, "caddy-install", "v1.0.0", **self.config())
+        self.assertNotEqual(done.returncode, 0, "the install refuses")
+        self.assertIn(self.REFUSED, done.stderr, "the refusal is printed")
+        self.assertEqual(caddyfile.read_text(), original, "the Caddyfile is as it was")
+        self.assertFalse((w.caddy_dir / "deck-streak.caddy").exists(), "the new block is removed")
+        self.assertEqual(
+            sorted(p.name for p in w.caddy_dir.iterdir()), ["Caddyfile"], "nothing else is left"
+        )
+
+    def test_a_removal_whose_candidate_is_a_link_to_the_caddyfile_refuses_before_writing(self):
+        w = self.world
+        _original, after, block_text = self.installed()
+        caddyfile = w.caddy_dir / "Caddyfile"
+        before = caddyfile.read_bytes()
+        candidate = w.caddy_dir / "deck-streak.candidate"
+        candidate.symlink_to(caddyfile)
+        done = w.run(ROLLBACK, "caddy-remove", **self.config())
+        self.assertNotEqual(done.returncode, 0, "a linked candidate refuses the removal")
+        self.assertIn(
+            "the candidate Caddyfile could not be written", done.stderr, "the write's message"
+        )
+        self.assertEqual(caddyfile.read_bytes(), before, "the live Caddyfile is byte for byte")
+        self.assertTrue(before, "the live Caddyfile is not empty")
+        self.assertFalse(caddyfile.is_symlink(), "the live Caddyfile is still a file")
+        self.assertEqual((w.caddy_dir / "deck-streak.caddy").read_text(), block_text)
+        self.assertEqual(caddyfile.read_text(), after)
+        reloads = [ln for ln in w.text("caddy.log").splitlines() if ln.startswith("caddy reload")]
+        self.assertEqual(len(reloads), 1, "only the install reloaded")
+
+    def test_a_removal_whose_candidate_is_a_dangling_link_refuses_before_writing(self):
+        w = self.world
+        _original, after, block_text = self.installed()
+        caddyfile = w.caddy_dir / "Caddyfile"
+        before = caddyfile.read_bytes()
+        target = w.caddy_dir / "nowhere"
+        (w.caddy_dir / "deck-streak.candidate").symlink_to(target)
+        done = w.run(ROLLBACK, "caddy-remove", **self.config())
+        self.assertNotEqual(done.returncode, 0, "a dangling link refuses the removal")
+        self.assertIn(
+            "the candidate Caddyfile could not be written", done.stderr, "the write's message"
+        )
+        self.assertEqual(caddyfile.read_bytes(), before, "the live Caddyfile is byte for byte")
+        self.assertFalse(caddyfile.is_symlink(), "the live Caddyfile is still a file")
+        self.assertFalse(target.exists(), "nothing was written through the link")
+        self.assertEqual((w.caddy_dir / "deck-streak.caddy").read_text(), block_text)
+        self.assertEqual(caddyfile.read_text(), after)
+
+    def other_file(self):
+        """A regular file beside the Caddyfile that no run owns; returns (path, its bytes)."""
+        other = self.world.caddy_dir / "other.caddy"
+        other.write_text("other.example.org {\n\trespond 204\n}\n", encoding="utf-8")
+        return other, other.read_bytes()
+
+    def assert_live_caddyfile_kept(self, before):
+        caddyfile = self.world.caddy_dir / "Caddyfile"
+        self.assertFalse(caddyfile.is_symlink(), "the live Caddyfile is still a file")
+        self.assertEqual(caddyfile.read_bytes(), before, "the live Caddyfile is byte for byte")
+        self.assertTrue(before, "the live Caddyfile is not empty")
+
+    def test_an_install_whose_candidate_links_to_another_file_refuses_before_writing(self):
+        w = self.world
+        _original, _after, block_text = self.installed()
+        before = (w.caddy_dir / "Caddyfile").read_bytes()
+        other, other_bytes = self.other_file()
+        (w.caddy_dir / "deck-streak.candidate").symlink_to(other)
+        done = self.install_again()
+        self.assertNotEqual(done.returncode, 0, "a linked candidate refuses the install")
+        self.assertIn(self.REFUSED, done.stderr, "the refusal is printed")
+        self.assert_live_caddyfile_kept(before)
+        self.assertEqual(other.read_bytes(), other_bytes, "nothing is written through the link")
+        self.assertEqual((w.caddy_dir / "deck-streak.caddy").read_text(), block_text)
+        self.assertEqual(self.leftovers(), [], "no previous copy is left behind")
+
+    def test_an_install_whose_block_is_a_hard_link_to_the_caddyfile_refuses_before_writing(self):
+        w = self.world
+        self.installed()
+        caddyfile = w.caddy_dir / "Caddyfile"
+        before = caddyfile.read_bytes()
+        block = w.caddy_dir / "deck-streak.caddy"
+        block.unlink()
+        os.link(caddyfile, block)
+        done = self.install_again()
+        self.assertNotEqual(done.returncode, 0, "a hard-linked block refuses the install")
+        self.assertIn(self.REFUSED, done.stderr, "the refusal is printed")
+        self.assert_live_caddyfile_kept(before)
+        self.assertEqual(self.leftovers(), [], "no previous copy is left behind")
+
+    def test_a_removal_whose_candidate_is_a_hard_link_to_the_caddyfile_refuses_before_writing(self):
+        w = self.world
+        _original, _after, block_text = self.installed()
+        caddyfile = w.caddy_dir / "Caddyfile"
+        before = caddyfile.read_bytes()
+        os.link(caddyfile, w.caddy_dir / "deck-streak.candidate")
+        done = w.run(ROLLBACK, "caddy-remove", **self.config())
+        self.assertNotEqual(done.returncode, 0, "a hard-linked candidate refuses the removal")
+        self.assertIn(
+            "the candidate Caddyfile could not be written", done.stderr, "the write's message"
+        )
+        self.assert_live_caddyfile_kept(before)
+        self.assertEqual((w.caddy_dir / "deck-streak.caddy").read_text(), block_text)
+
+    def test_a_removal_whose_candidate_is_a_fifo_refuses_before_writing(self):
+        w = self.world
+        _original, _after, block_text = self.installed()
+        before = (w.caddy_dir / "Caddyfile").read_bytes()
+        os.mkfifo(w.caddy_dir / "deck-streak.candidate")
+        try:
+            done = w.run(ROLLBACK, "caddy-remove", **self.config())
+        except subprocess.TimeoutExpired:
+            self.fail("the removal waited for a reader of a FIFO at its candidate path")
+        self.assertNotEqual(done.returncode, 0, "a FIFO candidate refuses the removal")
+        self.assertIn(
+            "the candidate Caddyfile could not be written", done.stderr, "the write's message"
+        )
+        self.assert_live_caddyfile_kept(before)
+        self.assertEqual((w.caddy_dir / "deck-streak.caddy").read_text(), block_text)
+
+    def test_a_first_install_into_a_read_only_caddy_directory_says_so(self):
+        w = self.world
+        caddyfile = w.caddy_dir / "Caddyfile"
+        original = "example.org {\n\trespond 200\n}\n"
+        caddyfile.write_text(original, encoding="utf-8")
+        w.ship("v1.0.0")
+        w.caddy_dir.chmod(0o555)
+        try:
+            done = w.run(DEPLOY, "caddy-install", "v1.0.0", **self.config())
+        finally:
+            w.caddy_dir.chmod(0o755)
+        self.assertNotEqual(done.returncode, 0, "the install refuses")
+        self.assertIn(self.REFUSED, done.stderr, "the refusal is printed")
+        self.assertEqual(caddyfile.read_text(), original, "the Caddyfile is as it was")
+        self.assertEqual(sorted(p.name for p in w.caddy_dir.iterdir()), ["Caddyfile"])
+
+    def test_a_first_install_never_deletes_a_directory_at_the_block_path(self):
+        w = self.world
+        caddyfile = w.caddy_dir / "Caddyfile"
+        original = "example.org {\n\trespond 200\n}\n"
+        caddyfile.write_text(original, encoding="utf-8")
+        w.ship("v1.0.0")
+        kept = w.caddy_dir / "deck-streak.caddy" / "keep.txt"
+        kept.parent.mkdir()
+        kept.write_text("not the install's\n", encoding="utf-8")
+        done = w.run(DEPLOY, "caddy-install", "v1.0.0", **self.config())
+        self.assertNotEqual(done.returncode, 0, "the install refuses")
+        self.assertIn(self.REFUSED, done.stderr, "the refusal is printed")
+        self.assertTrue(kept.is_file(), "the directory and its file are kept")
+        self.assertEqual(kept.read_text(), "not the install's\n")
+        self.assertEqual(caddyfile.read_text(), original, "the Caddyfile is as it was")
+
+    def test_an_install_whose_previous_caddyfile_copy_cannot_be_written_undoes_and_says_so(self):
+        w = self.world
+        _original, after, block_text = self.installed()
+        stale = w.caddy_dir / "Caddyfile.previous"
+        stale.write_text("stale\n", encoding="utf-8")
+        stale.chmod(0o444)
+        done = self.install_again()
+        self.assertNotEqual(done.returncode, 0, "the install refuses")
+        self.assertIn(self.REFUSED, done.stderr, "the refusal is printed")
+        self.assertEqual((w.caddy_dir / "deck-streak.caddy").read_text(), block_text)
+        self.assertEqual((w.caddy_dir / "Caddyfile").read_text(), after)
+        self.assertEqual(self.leftovers(), ["Caddyfile.previous"], "only the stale copy is left")
+        self.assertFalse((w.caddy_dir / "deck-streak.candidate").exists(), "no candidate is left")
+
+    def test_an_install_whose_candidate_rename_fails_undoes_and_says_so(self):
+        w = self.world
+        _original, after, block_text = self.installed()
+        self.failing_rename(".candidate")
+        done = self.install_again()
+        self.assert_install_undone(done, after, block_text)
+        self.assertTrue(
+            (w.caddy_dir / "Caddyfile").is_file(), "the Caddyfile is still a plain file"
+        )
+        self.assertFalse((w.caddy_dir / "deck-streak.candidate").exists(), "no candidate is left")
+
+    def test_an_install_whose_caddyfile_cannot_be_read_undoes_and_says_so(self):
+        w = self.world
+        _original, after, block_text = self.installed()
+        caddyfile = w.caddy_dir / "Caddyfile"
+        caddyfile.chmod(0)
+        try:
+            done = self.install_again()
+        finally:
+            caddyfile.chmod(0o644)
+        self.assert_install_undone(done, after, block_text)
+        self.assertTrue(
+            (w.caddy_dir / "Caddyfile").is_file(), "the Caddyfile is still a plain file"
+        )
+        self.assertFalse((w.caddy_dir / "deck-streak.candidate").exists(), "no candidate is left")
+
+    def test_an_install_that_cannot_copy_the_block_in_a_read_only_directory_says_so(self):
+        w = self.world
+        _original, after, block_text = self.installed()
+        stale = w.caddy_dir / "deck-streak.candidate"
+        stale.write_text("stale\n", encoding="utf-8")
+        w.caddy_dir.chmod(0o555)
+        try:
+            done = self.install_again()
+        finally:
+            w.caddy_dir.chmod(0o755)
+        self.assertNotEqual(done.returncode, 0, "the install refuses")
+        self.assertIn(self.REFUSED, done.stderr, "the refusal is printed")
+        self.assertEqual((w.caddy_dir / "deck-streak.caddy").read_text(), block_text)
+        self.assertEqual((w.caddy_dir / "Caddyfile").read_text(), after)
+        self.assertEqual(self.leftovers(), [], "no previous copy is left behind")
+
     def test_the_caddy_calls_name_the_caddyfile_adapter_for_the_candidate_copy(self):
         w = self.world
         caddyfile = w.caddy_dir / "Caddyfile"
@@ -906,6 +1199,572 @@ class TheCaddyInstall(Case):
         calls = [ln for ln in w.text("caddy.log").splitlines() if ln.startswith("caddy ")]
         named = [ln for ln in calls if "--adapter caddyfile" in ln]
         self.assertTrue(any(ln.startswith("caddy validate") for ln in named), calls)
+
+    UNWRITTEN = "the candidate Caddyfile could not be written"
+    NOT_PLAIN = ("symlink-to-file", "hard-link-to-file", "symlink-to-dir", "dir-with-file", "fifo")
+
+    def fresh_world(self):
+        """A new World for one member of a population, cleaned up with the test."""
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.world = World(tmp.name)
+        return self.world
+
+    def plant(self, path, kind):
+        """Put a shape that is not a plain file at `path`; returns a file outside the run's names."""
+        other = path.parent / "other.caddy"
+        other.write_text("other.example.org {\n\trespond 204\n}\n", encoding="utf-8")
+        if kind == "symlink-to-file":
+            path.symlink_to(other)
+        elif kind == "hard-link-to-file":
+            os.link(other, path)
+        elif kind == "symlink-to-dir":
+            (path.parent / "adir").mkdir()
+            path.symlink_to(path.parent / "adir")
+        elif kind == "dir-with-file":
+            path.mkdir()
+            (path / "keep.txt").write_text("not the run's\n", encoding="utf-8")
+        else:
+            os.mkfifo(path)
+        return other
+
+    def test_a_removal_refuses_every_previous_copy_that_is_not_a_plain_file(self):
+        for name in ("Caddyfile.previous", "deck-streak.caddy.previous"):
+            for kind in self.NOT_PLAIN:
+                with self.subTest(name=name, kind=kind):
+                    w = self.fresh_world()
+                    _original, _after, block_text = self.installed()
+                    before = (w.caddy_dir / "Caddyfile").read_bytes()
+                    other = self.plant(w.caddy_dir / name, kind)
+                    was = other.read_bytes()
+                    try:
+                        done = w.run(ROLLBACK, "caddy-remove", **self.config())
+                    except subprocess.TimeoutExpired:
+                        self.fail(f"the removal waited on a {kind} at {name}")
+                    self.assertNotEqual(done.returncode, 0, "the removal refuses")
+                    self.assertIn(self.UNWRITTEN, done.stderr, "the refusal is printed")
+                    self.assert_live_caddyfile_kept(before)
+                    self.assertEqual(other.read_bytes(), was, "nothing is written through a link")
+                    self.assertEqual((w.caddy_dir / "deck-streak.caddy").read_text(), block_text)
+                    if kind == "dir-with-file":
+                        self.assertTrue((w.caddy_dir / name / "keep.txt").is_file(), "kept")
+                    if kind == "symlink-to-dir":
+                        self.assertEqual(list((w.caddy_dir / "adir").iterdir()), [], "untouched")
+                    self.assertFalse((w.caddy_dir / "deck-streak.candidate").exists(), "no copy")
+
+    def test_neither_script_waits_on_a_fifo_at_the_live_caddyfile(self):
+        for script, args, message in (
+            (DEPLOY, ("caddy-install", "v1.0.0"), self.REFUSED),
+            (ROLLBACK, ("caddy-remove",), self.UNWRITTEN),
+        ):
+            with self.subTest(script=script.name):
+                w = self.fresh_world()
+                self.installed()
+                caddyfile = w.caddy_dir / "Caddyfile"
+                caddyfile.unlink()
+                os.mkfifo(caddyfile)
+                try:
+                    done = w.run(script, *args, **self.config(host="new.example.org"))
+                except subprocess.TimeoutExpired:
+                    self.fail(f"{script.name} waited on a FIFO at the live Caddyfile")
+                self.assertNotEqual(done.returncode, 0, "the script refuses")
+                self.assertIn(message, done.stderr, "the refusal is printed")
+                self.assertTrue(caddyfile.is_fifo(), "the pipe is left alone")
+                names = sorted(p.name for p in w.caddy_dir.iterdir())
+                self.assertEqual(names, ["Caddyfile", "deck-streak.caddy"], "no copy is left")
+
+    def test_a_read_only_caddy_directory_is_refused_before_any_write(self):
+        for label, script, args, stale, message in (
+            ("first install", DEPLOY, ("caddy-install", "v1.0.0"), "deck-streak.candidate", None),
+            ("install", DEPLOY, ("caddy-install", "v1.0.0"), "deck-streak.caddy.previous", None),
+            ("removal", ROLLBACK, ("caddy-remove",), "deck-streak.candidate", self.UNWRITTEN),
+        ):
+            with self.subTest(label, stale=stale):
+                w = self.fresh_world()
+                if label == "first install":
+                    text = "example.org {\n\trespond 200\n}\n"
+                    (w.caddy_dir / "Caddyfile").write_text(text, encoding="utf-8")
+                    w.ship("v1.0.0")
+                else:
+                    self.installed()
+                (w.caddy_dir / stale).write_text("stale\n", encoding="utf-8")
+                before = {p.name: p.read_bytes() for p in w.caddy_dir.iterdir()}
+                w.caddy_dir.chmod(0o555)
+                try:
+                    done = w.run(script, *args, **self.config(host="new.example.org"))
+                finally:
+                    w.caddy_dir.chmod(0o755)
+                self.assertNotEqual(done.returncode, 0, "the script refuses")
+                self.assertIn(message or self.REFUSED, done.stderr, "the refusal is printed")
+                after = {p.name: p.read_bytes() for p in w.caddy_dir.iterdir()}
+                self.assertEqual(after, before, "no file in the directory changed")
+
+    def test_an_install_whose_block_cannot_be_read_refuses_before_writing(self):
+        w = self.world
+        _original, after, block_text = self.installed()
+        block = w.caddy_dir / "deck-streak.caddy"
+        block.chmod(0)
+        try:
+            done = self.install_again()
+        finally:
+            block.chmod(0o644)
+        self.assertNotEqual(done.returncode, 0, "the install refuses")
+        self.assertIn(self.REFUSED, done.stderr, "the refusal is printed")
+        self.assertEqual(block.read_text(), block_text, "the block is as it was")
+        self.assertEqual((w.caddy_dir / "Caddyfile").read_text(), after)
+        names = sorted(p.name for p in w.caddy_dir.iterdir())
+        self.assertEqual(names, ["Caddyfile", "deck-streak.caddy"], "no copy is left")
+
+    def test_a_first_install_refused_with_its_block_already_gone_still_says_so(self):
+        w = self.world
+        caddyfile = w.caddy_dir / "Caddyfile"
+        original = "example.org {\n\trespond 200\n}\n"
+        caddyfile.write_text(original, encoding="utf-8")
+        w.ship("v1.0.0")
+        (w.log / "caddy-refuses").write_text("x")
+        (w.log / "caddy-eats-block").write_text("x")
+        done = w.run(DEPLOY, "caddy-install", "v1.0.0", **self.config())
+        self.assertNotEqual(done.returncode, 0, "the install refuses")
+        self.assertIn(self.REFUSED, done.stderr, "the undo tolerates an absent block")
+        self.assertEqual(caddyfile.read_text(), original, "the Caddyfile is as it was")
+        self.assertEqual(sorted(p.name for p in w.caddy_dir.iterdir()), ["Caddyfile"])
+
+    # Where a Caddy step writes is MEASURED, not listed: each step runs in each layout the tests
+    # install, on each of its exits, the whole synthetic tree is compared around it, and every
+    # directory holding a path it added, removed or changed is a place. A second pass makes the
+    # rest of the tree read-only, so a path a step adds and removes again within one run fails it.
+    # The population below then makes each place unwritable in turn, so a step that writes
+    # anywhere it did not check first fails the test.
+    STEPS = (
+        ("install, rename fails", DEPLOY, ("caddy-install", "v1.0.0"), "app.example.org", 1),
+        ("install first", DEPLOY, ("caddy-install", "v1.0.0"), "app.example.org", 0),
+        ("install again", DEPLOY, ("caddy-install", "v1.0.0"), "new.example.org", 0),
+        ("removal, rename fails", ROLLBACK, ("caddy-remove",), "new.example.org", 1),
+        ("removal", ROLLBACK, ("caddy-remove",), "new.example.org", 0),
+        ("install refused", DEPLOY, ("caddy-install", "v1.0.0"), "app.example.org", 1),
+        ("reload fails", DEPLOY, ("caddy-install", "v1.0.0"), "app.example.org", 1),
+        ("no configuration", DEPLOY, ("caddy-install", "v1.0.0"), "app.example.org", 1),
+    )
+    TRIGGERS = {"install refused": "caddy-refuses", "reload fails": "caddy-reload-fails"}
+    # Paths a step may write that are the operator's own, not the host's: its temporary
+    # directory, the checkout's git directory, and the stand-ins' log.
+    OPERATOR = (Path("tmpdir"), Path("checkout") / ".git", Path("log"))
+    # Every command bash runs, as bash reports it before running it, with the file it comes from
+    # and the run of bash it belongs to.
+    BASH_RECORD = r"""set -T
+record_run="$$ $SRANDOM"
+trap 'printf "%s\0%s\0%s\0" "$record_run" "${BASH_SOURCE[0]:-}" "$BASH_COMMAND" >>"$RECORD_LOG"' DEBUG
+"""
+    # Every path bash names in a command it runs, expanded, and every path python opens, looks
+    # at or changes, for the named-path check.
+    BASH_TRACE = r"""exec {TRACE_FD}>>"$TRACE_LOG"
+BASH_XTRACEFD=$TRACE_FD
+PS4='+ '
+set -x
+"""
+    PYTHON_TRACE = r"""#!/bin/bash
+PATH=${PATH#*:}
+exec python3 -c '
+import os, runpy, sys
+log = open(os.environ["TRACE_LOG"], "a", encoding="utf-8")
+def note(path):
+    if isinstance(path, (str, bytes, os.PathLike)):
+        log.write("+py " + os.fsdecode(path) + "\n")
+        log.flush()
+def hook(event, args):
+    if event == "open" or event.startswith(("os.", "shutil.")):
+        for arg in args[:2]:
+            note(arg)
+sys.addaudithook(hook)
+for name in ("stat", "lstat"):
+    def looked(path, *rest, _real=getattr(os, name), **options):
+        note(path)
+        return _real(path, *rest, **options)
+    setattr(os, name, looked)
+sys.argv = sys.argv[1:]
+runpy.run_path(sys.argv[0], run_name="__main__")
+' "$@"
+"""
+    PREFIX = "DECKSTREAK_DEPLOY_"
+    # All a Caddy step runs before its refusal, as bash reports each command: rollback.sh only
+    # finds and execs deploy.sh, and deploy.sh sets its options and its settings. The refusal
+    # stops a setting only if nothing before it could read one.
+    ROLLBACK_RUN = (
+        "set -euo pipefail",
+        'here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)',
+        'cd "$(dirname "${BASH_SOURCE[0]}")"',
+        'dirname "${BASH_SOURCE[0]}"',
+        "pwd",
+        'case "${1:-}" in ',
+        'exec "$here/deploy.sh" caddy-remove',
+    )
+    REFUSAL = "for name in ${!DECKSTREAK_DEPLOY_@}"
+    # Exec argv with exactly the entries given, in order, through libc's execve: a mapping, as
+    # subprocess and os.execve take, cannot hold a name twice or an entry without "=".
+    EXEC_ENTRIES = r"""import ctypes, shutil, sys
+entries = [bytes.fromhex(entry) for entry in sys.argv[1].split()]
+argv = [shutil.which("bash").encode(), *(arg.encode() for arg in sys.argv[2:])]
+libc = ctypes.CDLL(None, use_errno=True)
+libc.execve(
+    argv[0],
+    (ctypes.c_char_p * (len(argv) + 1))(*argv, None),
+    (ctypes.c_char_p * (len(entries) + 1))(*entries, None),
+)
+sys.exit(f"execve failed: errno {ctypes.get_errno()}")
+"""
+
+    @staticmethod
+    def tree(root):
+        """Each path under root but the stubs' own log: its type, mode, and bytes or link target."""
+        seen = {}
+        for path in sorted(root.rglob("*")):
+            relative = path.relative_to(root)
+            if relative.parts[0] == "log":
+                continue
+            info = path.lstat()
+            data = None
+            if stat.S_ISLNK(info.st_mode):
+                data = os.readlink(path)
+            elif stat.S_ISREG(info.st_mode):
+                data = path.read_bytes()
+            seen[relative] = (stat.S_IFMT(info.st_mode), stat.S_IMODE(info.st_mode), data)
+        return seen
+
+    @staticmethod
+    def settings():
+        """The settings deploy.sh names."""
+        text = DEPLOY.read_text(encoding="utf-8")
+        found = re.search(r"^SETTINGS='([^']*)'", text, re.MULTILINE)
+        return found.group(1).split() if found else []
+
+    @staticmethod
+    def locked(root, places, operator):
+        """Make every directory and file under root read-only but the places, the files directly
+        in them, and the operator's paths; return each changed path's mode, to restore."""
+        modes = {}
+        for path in [root, *root.rglob("*")]:
+            relative = path.relative_to(root)
+            if path.is_symlink() or relative in places or relative.parent in places:
+                continue
+            if any(o == relative or o in relative.parents for o in operator):
+                continue
+            mode = stat.S_IMODE(path.lstat().st_mode)
+            if mode & 0o222:
+                modes[path] = mode
+                path.chmod(mode & ~0o222)
+        return modes
+
+    def measured(self, layout, record=False, places=None, trace=False):
+        """A new world laid out as `layout`, the paths each of STEPS changed in it, and the world
+        paths each step named.
+
+        The operator's temporary directory and home, and each named setting the world does not
+        give, are directories of the world, so a write through any of them is measured too. With
+        `places`, every other path of the world is read-only while each step runs. The site's web
+        root lies outside the world: it is text the block holds, not a path a step touches."""
+        w = self.fresh_world()
+        cfdir = w.tmp / "host" / "etc" / "cfdir" if layout == "apart" else w.caddy_dir
+        cfdir.mkdir(exist_ok=True)
+        caddyfile = cfdir / "Caddyfile"
+        caddyfile.write_text("example.org {\n\trespond 200\n}\n", encoding="utf-8")
+        w.ship("v1.0.0")
+        env = {"DECKSTREAK_DEPLOY_CADDYFILE": str(caddyfile)}
+        given = {"TMPDIR": w.tmp / "tmpdir", "HOME": w.tmp / "home"}
+        provided = {**w.env, **self.config(), **env}
+        for name in self.settings():
+            if name not in provided:
+                given[name] = w.tmp / "setting" / name
+        for name, directory in given.items():
+            directory.mkdir(parents=True)
+            env[name] = str(directory)
+        if record:
+            (w.stub / "record.bash").write_text(self.BASH_RECORD, encoding="utf-8")
+            env |= {"BASH_ENV": str(w.stub / "record.bash"), "RECORD_LOG": str(w.log / "record")}
+        if trace:
+            w.script("python3", self.PYTHON_TRACE)
+            (w.stub / "trace.bash").write_text(self.BASH_TRACE, encoding="utf-8")
+            env |= {"BASH_ENV": str(w.stub / "trace.bash"), "TRACE_LOG": str(w.log / "trace")}
+        self.ok(w.run(DEPLOY, "caddy-install", "v1.0.0", **self.config(), **env))
+        self.ok(w.run(ROLLBACK, "caddy-remove", **self.config(), **env))
+        changed, named = {}, {}
+        world = re.compile(re.escape(str(w.tmp)) + r"(?:/[^\s'\"]*)?")
+        for op, script, args, host, code in self.STEPS:
+            step = {**self.config(host=host, web_root="/srv/deck-streak/current/web"), **env}
+            start = (w.log / "trace").stat().st_size if (w.log / "trace").exists() else 0
+            if op == "no configuration":
+                step["DECKSTREAK_DEPLOY_CADDY_CONFIG"] = str(w.tmp / "tmpdir" / "absent.json")
+            if op.endswith("rename fails"):
+                self.failing_rename(".candidate")
+            if op in self.TRIGGERS:
+                (w.log / self.TRIGGERS[op]).write_text("1", encoding="utf-8")
+            before = self.tree(w.tmp)
+            modes = self.locked(w.tmp, places, self.OPERATOR) if places is not None else {}
+            if places is not None:
+                self.assertTrue(modes, f"{op}: nothing was made read-only: nothing was confined")
+            try:
+                done = w.run(script, *args, **step)
+            finally:
+                for path, mode in modes.items():
+                    path.chmod(mode)
+            after = self.tree(w.tmp)
+            w.script("mv", LOGGED.replace("@NAME@", "mv"))
+            if op in self.TRIGGERS:
+                (w.log / self.TRIGGERS[op]).unlink(missing_ok=True)
+            self.assertEqual(done.returncode, code, f"{op}: {done.stderr}")
+            changed[op] = {p for p in before.keys() | after.keys() if before.get(p) != after.get(p)}
+            if trace:
+                with (w.log / "trace").open(encoding="utf-8", errors="replace") as log:
+                    log.seek(start)
+                    found = {Path(p).relative_to(w.tmp) for p in world.findall(log.read())}
+                # A setting's own value, the working directory and the operator's paths are named
+                # by every step; what is left must lie in a place.
+                values = {v for v in {**w.env, **step}.values() if v.startswith(f"{w.tmp}/")}
+                values = {Path(v).relative_to(w.tmp) for v in values} | {Path(".")}
+                named[op] = {
+                    p
+                    for p in found - values
+                    if not any(o == p or o in p.parents for o in (*self.OPERATOR, Path("stub")))
+                }
+        block = (w.caddy_dir / "deck-streak.caddy").relative_to(w.tmp)
+        for op in ("install first", "install again", "removal"):
+            self.assertIn(block, changed[op], f"{op} changed no block: nothing was measured")
+            if trace:
+                self.assertIn(block, named[op], f"{op} named no block: nothing was traced")
+        return w, cfdir, changed, named
+
+    def test_a_caddy_step_reads_only_the_settings_it_names_and_refuses_any_other(self):
+        w, cfdir, _, _ = self.measured("apart", record=True)
+        record = w.log / "record"
+        self.assertTrue(record.is_file(), "bash recorded no command: nothing was recorded")
+        fields = [field.decode() for field in record.read_bytes().split(b"\0")[:-1]]
+        records = list(
+            zip(
+                fields[0 : len(fields) : 3],
+                fields[1 : len(fields) : 3],
+                fields[2 : len(fields) : 3],
+                strict=True,
+            )
+        )
+        # The names the refusal must refuse, drawn from the environment's own grammar: the bare
+        # prefix, each listed setting with a suffix, and the prefix with each byte a name may hold
+        # (any but NUL and "=") first, in the middle and last. Bash makes no variable of most of
+        # them, and hands every one to each program it runs.
+        listed = {os.fsencode(name) for name in self.settings()}
+        prefix = os.fsencode(self.PREFIX)
+        unnamed = {prefix} | {name + extra for name in listed for extra in (b"2", b"_BACKUP")}
+        for byte in (bytes([b]) for b in range(1, 256) if b != ord("=")):
+            unnamed |= {
+                prefix + byte,
+                prefix + b"CADDY" + byte + b"DIR",
+                prefix + b"CADDY_DIR" + byte,
+            }
+        # Without an unnamed setting both steps succeed, so a refusal below is the setting's.
+        steps = {step[0]: step for step in self.STEPS}
+        plain = {**self.config(), "DECKSTREAK_DEPLOY_CADDYFILE": str(cfdir / "Caddyfile")}
+        for op in ("install first", "removal"):
+            script, args = steps[op][1:3]
+            self.ok(w.run(script, *args, **plain))
+        (w.tmp / "unnamed").mkdir()
+        made = w.stub / "made.bash"
+        made.write_text(self.PREFIX + "=made\n", encoding="utf-8")
+        held = w.stub / "held.bash"
+        held.write_text(
+            "".join(
+                f"{key}={shlex.quote(value)}\n"
+                for key, value in {**w.env, **plain}.items()
+                if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", key)
+            ),
+            encoding="utf-8",
+        )
+        before = self.tree(w.tmp)
+        environ = {os.fsencode(k): os.fsencode(v) for k, v in {**w.env, **plain}.items()}
+        for i, name in enumerate(examined("unnamed setting(s)", sorted(unnamed - listed))):
+            script, args = steps[("install first", "removal")[i % 2]][1:3]
+            done = subprocess.run(
+                ["bash", str(script), *args],
+                cwd=w.tmp,
+                env={**environ, name: os.fsencode(w.tmp / "unnamed")},
+                stdin=subprocess.DEVNULL,
+                capture_output=True,
+                timeout=60,
+                check=False,
+            )
+            self.assertEqual(
+                done.returncode, 1, f"{name!r} : a step ran with a setting it does not name"
+            )
+            self.assertIn(b"deploy: " + name + b" is not a setting", done.stderr)
+        # A refused step writes nothing, so what any refusal wrote would still be there.
+        self.assertEqual(self.tree(w.tmp), before, "a refusal changed the tree")
+        # A listed setting given twice or without a value, a prefixed entry without "=", an
+        # environment the step cannot read, and a deploy variable made before the step starts
+        # (by the file BASH_ENV names) are refused too. The first three reach deploy.sh as given
+        # only when it is run directly: rollback.sh's bash passes one entry per name, with "=".
+        # The step that cannot read its environment received none: its settings are variables of
+        # the shell that sources it, so were the refusal to let it run, it would run in the world.
+        given = [k + b"=" + v for k, v in environ.items()]
+        absent = next(name for name in sorted(listed) if name not in environ)
+        sourced = ["-c", 'set -a; . "$1"; set +a; shift; . "$@"', "bash", str(held)]
+        odd = {
+            "given twice": (
+                [*given, b"DECKSTREAK_DEPLOY_CADDY_DIR=" + os.fsencode(w.tmp)],
+                [],
+                b" is given twice",
+            ),
+            "without a value": ([*given, absent], [], b" is given without a value"),
+            "no =": ([*given, prefix + b"CADDY-DIR"], [], b" is not a setting"),
+            "nothing received": ([], sourced, b"could not be read"),
+            "made before": (
+                [*given, b"BASH_ENV=" + os.fsencode(made)],
+                [],
+                b" is not a setting",
+            ),
+        }
+        for case, (entries, lead, said) in examined("odd environment(s)", sorted(odd.items())):
+            for args in (("caddy-install", "v1.0.0"), ("caddy-remove",)):
+                done = subprocess.run(
+                    [
+                        sys.executable,
+                        "-c",
+                        self.EXEC_ENTRIES,
+                        " ".join(entry.hex() for entry in entries),
+                        *lead,
+                        str(DEPLOY),
+                        *args,
+                    ],
+                    cwd=w.tmp,
+                    stdin=subprocess.DEVNULL,
+                    capture_output=True,
+                    timeout=60,
+                    check=False,
+                )
+                self.assertEqual(done.returncode, 1, f"{case}, {args[0]}: {done.stderr!r}")
+                self.assertIn(said, done.stderr, f"{case}, {args[0]}")
+                self.assertEqual(self.tree(w.tmp), before, f"{case}, {args[0]}: the tree changed")
+        # Nothing a step runs before its refusal is anything but what ROLLBACK_RUN and deploy.sh
+        # declare, so no read, in any form, comes before the refusal can stop it.
+        runs = {}
+        for run, source, command in records:
+            if source in (str(DEPLOY), str(ROLLBACK)):
+                runs.setdefault((run, source), []).append(command)
+        settings = re.search(r"^SETTINGS='[^']*'", DEPLOY.read_text(encoding="utf-8"), re.M)
+        opening = ("set -euo pipefail", settings.group(0) if settings else "", 'case "${1:-}" in ')
+        declared = {str(ROLLBACK): self.ROLLBACK_RUN, str(DEPLOY): (*opening, self.REFUSAL)}
+        self.assertEqual({source for _, source in runs}, set(declared), "a script never ran")
+        for (_, source), commands in examined("script run(s)", sorted(runs.items())):
+            first = declared[source]
+            self.assertEqual(
+                tuple(commands[: len(first)]),
+                first,
+                f"{Path(source).name} runs something before the refusal",
+            )
+
+    @staticmethod
+    def listing(*directories):
+        """Each directory's mode and each entry's type, mode, link count and bytes."""
+        seen = {}
+        for directory in directories:
+            if not directory.is_dir():
+                seen[str(directory)] = None
+                continue
+            entries = {}
+            for path in sorted(directory.iterdir()):
+                info = path.lstat()
+                data = path.read_bytes() if stat.S_ISREG(info.st_mode) else None
+                entries[path.name] = (
+                    stat.S_IFMT(info.st_mode),
+                    stat.S_IMODE(info.st_mode),
+                    info.st_nlink,
+                    data,
+                )
+            seen[str(directory)] = (stat.S_IMODE(directory.stat().st_mode), entries)
+        return seen
+
+    def test_every_directory_a_caddy_script_writes_or_undoes_is_checked_before_the_first_write(
+        self,
+    ):
+        stales = {"caddy-dir": ("deck-streak.candidate",), "caddyfile-dir": ("Caddyfile.previous",)}
+        stales["shared"] = stales["caddy-dir"] + stales["caddyfile-dir"]
+        places = []
+        for layout in ("beside", "apart"):
+            w, cfdir, changed, named = self.measured(layout, trace=True)
+            measured = {p.parent for paths in changed.values() for p in paths}
+            _, _, again, _ = self.measured(layout, places=measured)
+            self.assertEqual(again, changed, f"{layout}: a step writes outside its places")
+            for op, paths in examined(f"{layout} step(s) named paths", sorted(named.items())):
+                elsewhere = sorted(str(p) for p in paths if not {p, p.parent} & measured)
+                self.assertEqual(
+                    elsewhere, [], f"{layout}, {op}: a step names a path outside its places"
+                )
+            named = {w.caddy_dir: "shared"}
+            if layout == "apart":
+                named = {w.caddy_dir: "caddy-dir", cfdir: "caddyfile-dir"}
+            for directory in sorted(w.tmp / p for p in measured):
+                places.append((layout, named.get(directory, str(directory.relative_to(w.tmp)))))
+        states = ("writable", "read-only", "read-only with a stale writable copy")
+        ops = ("install first", "install again", "removal")
+        triggers = ("none", "the rename fails", "the reload fails")
+        members = [
+            (place, state, op, trigger)
+            for place in places
+            for state in states
+            for op in ops
+            for trigger in triggers
+        ]
+        # A removal whose rename fails in a writable directory exits after its writes and, as
+        # SPEC-127 says, promises no message on every exit of the removal.
+        members = [
+            m
+            for m in members
+            if not (m[1] == "writable" and m[2:] == ("removal", "the rename fails"))
+        ]
+        for (layout, target), state, op, trigger in examined("directory member(s)", members):
+            with self.subTest(layout=layout, target=target, state=state, op=op, trigger=trigger):
+                w = self.fresh_world()
+                cfdir = w.tmp / "host" / "etc" / "cfdir" if layout == "apart" else w.caddy_dir
+                cfdir.mkdir(exist_ok=True)
+                caddyfile = cfdir / "Caddyfile"
+                caddyfile.write_text("example.org {\n\trespond 200\n}\n", encoding="utf-8")
+                w.ship("v1.0.0")
+                setting = {"DECKSTREAK_DEPLOY_CADDYFILE": str(caddyfile)}
+                if op != "install first":
+                    self.ok(w.run(DEPLOY, "caddy-install", "v1.0.0", **self.config(), **setting))
+                if trigger == "the rename fails":
+                    self.failing_rename(".candidate")
+                if trigger == "the reload fails":
+                    (w.log / "caddy-reload-fails").write_text("1")
+                where = {"shared": cfdir, "caddy-dir": w.caddy_dir, "caddyfile-dir": cfdir}
+                directory = where.get(target, w.tmp / target)
+                looked = [where.get(t, w.tmp / t) for place, t in places if place == layout]
+                directory.mkdir(parents=True, exist_ok=True)
+                if state.endswith("stale writable copy"):
+                    for name in stales.get(target, ()):
+                        (directory / name).write_text("stale\n", encoding="utf-8")
+                if state != "writable":
+                    directory.chmod(0o555)
+                script, args, refusal = (
+                    (ROLLBACK, ("caddy-remove",), self.UNWRITTEN)
+                    if op == "removal"
+                    else (DEPLOY, ("caddy-install", "v1.0.0"), self.REFUSED)
+                )
+                before = self.listing(*looked)
+                bytes_before = caddyfile.read_bytes()
+                try:
+                    done = w.run(script, *args, **self.config(host="new.example.org"), **setting)
+                except subprocess.TimeoutExpired:
+                    directory.chmod(0o755)
+                    self.fail(f"{script.name} waited")
+                after = self.listing(*looked)
+                directory.chmod(0o755)
+                if done.returncode == 0 and state == "writable":
+                    continue
+                self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+                said = refusal in done.stderr or (
+                    state == "writable" and "the Caddy reload failed" in done.stderr
+                )
+                self.assertTrue(said, f"no refusal line: {done.stderr!r}")
+                self.assertEqual(after, before, "a directory changed: something was written")
+                self.assertTrue(caddyfile.is_file() and not caddyfile.is_symlink())
+                self.assertEqual(caddyfile.read_bytes(), bytes_before, "the live Caddyfile changed")
 
     def test_the_caddy_block_is_rendered_from_the_tags_own_file(self):
         w = self.world

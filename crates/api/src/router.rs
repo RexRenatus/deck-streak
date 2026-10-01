@@ -54,6 +54,7 @@ use crate::health::{self, Readiness};
 use crate::insights_routes;
 use crate::notifications_routes;
 use crate::session_routes::{self, OwnerAccess};
+use crate::streak_routes;
 use crate::xp_routes;
 
 /// Requests served at once, the rust-service pack's reference value. Each holds its buffers until
@@ -160,6 +161,7 @@ pub fn router(state: ApiState) -> Router {
                     readiness.clone(),
                     law_tiers,
                 ))
+                .merge(streak_routes::routes(access.clone(), readiness.clone()))
                 .merge(session_routes::routes(access.clone()))
                 .merge(drill_routes::routes(
                     access.clone(),

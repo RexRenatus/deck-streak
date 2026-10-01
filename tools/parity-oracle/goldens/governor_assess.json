@@ -1,0 +1,484 @@
+{
+  "adapter": "assessing",
+  "cases": [
+    {
+      "input": {
+        "silent_days": 0,
+        "strength": 0.0
+      },
+      "output": {
+        "armed": false,
+        "lapse": false,
+        "silent_days": 0,
+        "standby": true,
+        "strength": 0.0
+      }
+    },
+    {
+      "input": {
+        "silent_days": 2,
+        "strength": 0.0
+      },
+      "output": {
+        "armed": false,
+        "lapse": false,
+        "silent_days": 2,
+        "standby": true,
+        "strength": 0.0
+      }
+    },
+    {
+      "input": {
+        "silent_days": 3,
+        "strength": 0.0
+      },
+      "output": {
+        "armed": false,
+        "lapse": true,
+        "silent_days": 3,
+        "standby": true,
+        "strength": 0.0
+      }
+    },
+    {
+      "input": {
+        "silent_days": 4,
+        "strength": 0.0
+      },
+      "output": {
+        "armed": false,
+        "lapse": true,
+        "silent_days": 4,
+        "standby": true,
+        "strength": 0.0
+      }
+    },
+    {
+      "input": {
+        "silent_days": 0,
+        "strength": 0.59
+      },
+      "output": {
+        "armed": false,
+        "lapse": false,
+        "silent_days": 0,
+        "standby": true,
+        "strength": 0.59
+      }
+    },
+    {
+      "input": {
+        "silent_days": 2,
+        "strength": 0.59
+      },
+      "output": {
+        "armed": false,
+        "lapse": false,
+        "silent_days": 2,
+        "standby": true,
+        "strength": 0.59
+      }
+    },
+    {
+      "input": {
+        "silent_days": 3,
+        "strength": 0.59
+      },
+      "output": {
+        "armed": false,
+        "lapse": true,
+        "silent_days": 3,
+        "standby": true,
+        "strength": 0.59
+      }
+    },
+    {
+      "input": {
+        "silent_days": 4,
+        "strength": 0.59
+      },
+      "output": {
+        "armed": false,
+        "lapse": true,
+        "silent_days": 4,
+        "standby": true,
+        "strength": 0.59
+      }
+    },
+    {
+      "input": {
+        "silent_days": 0,
+        "strength": 0.6
+      },
+      "output": {
+        "armed": true,
+        "lapse": false,
+        "silent_days": 0,
+        "standby": false,
+        "strength": 0.6
+      }
+    },
+    {
+      "input": {
+        "silent_days": 2,
+        "strength": 0.6
+      },
+      "output": {
+        "armed": true,
+        "lapse": false,
+        "silent_days": 2,
+        "standby": false,
+        "strength": 0.6
+      }
+    },
+    {
+      "input": {
+        "silent_days": 3,
+        "strength": 0.6
+      },
+      "output": {
+        "armed": false,
+        "lapse": true,
+        "silent_days": 3,
+        "standby": false,
+        "strength": 0.6
+      }
+    },
+    {
+      "input": {
+        "silent_days": 4,
+        "strength": 0.6
+      },
+      "output": {
+        "armed": false,
+        "lapse": true,
+        "silent_days": 4,
+        "standby": false,
+        "strength": 0.6
+      }
+    },
+    {
+      "input": {
+        "silent_days": 0,
+        "strength": 0.61
+      },
+      "output": {
+        "armed": true,
+        "lapse": false,
+        "silent_days": 0,
+        "standby": false,
+        "strength": 0.61
+      }
+    },
+    {
+      "input": {
+        "silent_days": 2,
+        "strength": 0.61
+      },
+      "output": {
+        "armed": true,
+        "lapse": false,
+        "silent_days": 2,
+        "standby": false,
+        "strength": 0.61
+      }
+    },
+    {
+      "input": {
+        "silent_days": 3,
+        "strength": 0.61
+      },
+      "output": {
+        "armed": false,
+        "lapse": true,
+        "silent_days": 3,
+        "standby": false,
+        "strength": 0.61
+      }
+    },
+    {
+      "input": {
+        "silent_days": 4,
+        "strength": 0.61
+      },
+      "output": {
+        "armed": false,
+        "lapse": true,
+        "silent_days": 4,
+        "standby": false,
+        "strength": 0.61
+      }
+    },
+    {
+      "input": {
+        "silent_days": 0,
+        "strength": 1.0
+      },
+      "output": {
+        "armed": true,
+        "lapse": false,
+        "silent_days": 0,
+        "standby": false,
+        "strength": 1.0
+      }
+    },
+    {
+      "input": {
+        "silent_days": 2,
+        "strength": 1.0
+      },
+      "output": {
+        "armed": true,
+        "lapse": false,
+        "silent_days": 2,
+        "standby": false,
+        "strength": 1.0
+      }
+    },
+    {
+      "input": {
+        "silent_days": 3,
+        "strength": 1.0
+      },
+      "output": {
+        "armed": false,
+        "lapse": true,
+        "silent_days": 3,
+        "standby": false,
+        "strength": 1.0
+      }
+    },
+    {
+      "input": {
+        "silent_days": 4,
+        "strength": 1.0
+      },
+      "output": {
+        "armed": false,
+        "lapse": true,
+        "silent_days": 4,
+        "standby": false,
+        "strength": 1.0
+      }
+    },
+    {
+      "input": {
+        "silent_days": 2,
+        "strength": 0.9056396761745207
+      },
+      "output": {
+        "armed": true,
+        "lapse": false,
+        "silent_days": 2,
+        "standby": false,
+        "strength": 0.9056396761745207
+      }
+    },
+    {
+      "input": {
+        "silent_days": 1,
+        "strength": 0.2598274474889769
+      },
+      "output": {
+        "armed": false,
+        "lapse": false,
+        "silent_days": 1,
+        "standby": true,
+        "strength": 0.2598274474889769
+      }
+    },
+    {
+      "input": {
+        "silent_days": 2,
+        "strength": 0.8721303740697106
+      },
+      "output": {
+        "armed": true,
+        "lapse": false,
+        "silent_days": 2,
+        "standby": false,
+        "strength": 0.8721303740697106
+      }
+    },
+    {
+      "input": {
+        "silent_days": 6,
+        "strength": 0.026980045523666285
+      },
+      "output": {
+        "armed": false,
+        "lapse": true,
+        "silent_days": 6,
+        "standby": true,
+        "strength": 0.026980045523666285
+      }
+    },
+    {
+      "input": {
+        "silent_days": 1,
+        "strength": 0.9938380127773296
+      },
+      "output": {
+        "armed": true,
+        "lapse": false,
+        "silent_days": 1,
+        "standby": false,
+        "strength": 0.9938380127773296
+      }
+    },
+    {
+      "input": {
+        "silent_days": 7,
+        "strength": 0.1250771754915948
+      },
+      "output": {
+        "armed": false,
+        "lapse": true,
+        "silent_days": 7,
+        "standby": true,
+        "strength": 0.1250771754915948
+      }
+    },
+    {
+      "input": {
+        "silent_days": 7,
+        "strength": 0.9500391079535002
+      },
+      "output": {
+        "armed": false,
+        "lapse": true,
+        "silent_days": 7,
+        "standby": false,
+        "strength": 0.9500391079535002
+      }
+    },
+    {
+      "input": {
+        "silent_days": 3,
+        "strength": 0.41198182261476346
+      },
+      "output": {
+        "armed": false,
+        "lapse": true,
+        "silent_days": 3,
+        "standby": true,
+        "strength": 0.41198182261476346
+      }
+    },
+    {
+      "input": {
+        "silent_days": 5,
+        "strength": 0.316903983245593
+      },
+      "output": {
+        "armed": false,
+        "lapse": true,
+        "silent_days": 5,
+        "standby": true,
+        "strength": 0.316903983245593
+      }
+    },
+    {
+      "input": {
+        "silent_days": 1,
+        "strength": 0.3287411811006947
+      },
+      "output": {
+        "armed": false,
+        "lapse": false,
+        "silent_days": 1,
+        "standby": true,
+        "strength": 0.3287411811006947
+      }
+    },
+    {
+      "input": {
+        "silent_days": 7,
+        "strength": 0.6276838370997428
+      },
+      "output": {
+        "armed": false,
+        "lapse": true,
+        "silent_days": 7,
+        "standby": false,
+        "strength": 0.6276838370997428
+      }
+    },
+    {
+      "input": {
+        "silent_days": 3,
+        "strength": 0.40493299127717297
+      },
+      "output": {
+        "armed": false,
+        "lapse": true,
+        "silent_days": 3,
+        "standby": true,
+        "strength": 0.40493299127717297
+      }
+    },
+    {
+      "input": {
+        "silent_days": 0,
+        "strength": 0.5732099431950031
+      },
+      "output": {
+        "armed": false,
+        "lapse": false,
+        "silent_days": 0,
+        "standby": true,
+        "strength": 0.5732099431950031
+      }
+    },
+    {
+      "input": {
+        "silent_days": 1,
+        "strength": 0.20181614230964307
+      },
+      "output": {
+        "armed": false,
+        "lapse": false,
+        "silent_days": 1,
+        "standby": true,
+        "strength": 0.20181614230964307
+      }
+    },
+    {
+      "input": {
+        "silent_days": 4,
+        "strength": 0.19033754060732488
+      },
+      "output": {
+        "armed": false,
+        "lapse": true,
+        "silent_days": 4,
+        "standby": true,
+        "strength": 0.19033754060732488
+      }
+    },
+    {
+      "input": {
+        "silent_days": 4,
+        "strength": 0.30506345398910195
+      },
+      "output": {
+        "armed": false,
+        "lapse": true,
+        "silent_days": 4,
+        "standby": true,
+        "strength": 0.30506345398910195
+      }
+    }
+  ],
+  "function": "gamification.governor.assess",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Returns the verdict's fields and armed; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_076.py",
+  "registry_sha256": "e451e77bd68e8dfbd5e1fb48845aab7b7f6667f318bc4b956168da0819a89709",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

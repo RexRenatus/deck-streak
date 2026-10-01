@@ -58,3 +58,49 @@ A15: green at fd245da
 A16: red at bab6593: a missing credential refuses start: OwnerGate { key: WebAppKey(..), owner: Owner(..), freshness: Freshness { max_age: 3600s } } (the gate loaded with owner-user-id missing)
 A16: green at fd245da
 ```
+
+
+## Addendum, 2026-09-30: a log capture cannot lose a line to another thread (#461)
+
+The killer (`crates/kernel/tests/log_capture_class.rs`) was committed at 4e81676 beside
+the helper in its plain form, whose two entries make the capture exactly as the workspace's tests
+did: a thread-local default and nothing else. Both tests are red there by assertion, and
+deterministically: A17 runs each scenario in a child of the test binary with one test thread, so
+the dispatcher registry starts empty and no other test can register a second dispatcher, and A18
+counts the tree. The helper gains its floor dispatcher and the thirteen capturing calls are routed
+through it at 29a8b0f, where both are green. The tests were not changed between the two commits
+but for a formatter's layout of one line.
+
+```red-first
+A17: red at 4e81676: 2 of 2 scenarios lost a line another thread reached first: ["scoped", "held"] (the capture, the only dispatcher registered, was never asked about a line a thread with no subscriber reached first)
+A17: green at 29a8b0f
+A18: red at 4e81676: capture population: 341 file(s) read; 13 raw capture(s), 0 routed, 1 global default(s) (assertion `left == right` failed, left: 0, right: 13)
+A18: green at 29a8b0f
+```
+
+At 29a8b0f the killer prints `log capture scenarios: 2 run, 0 lost the line` and `capture
+population: 341 file(s) read; 0 raw capture(s), 13 routed, 1 global default(s)`. The RED count at
+4e81676 is 2 of 2 tests and 13 of 13 capturing calls unrouted.
+
+The floor was then made the global default and the killer gained two scenarios in which another
+thread's registration of the callsite straddles the capture's. Over the earlier helper, the
+straddled scenarios lose the line and the plain ones do not; over the new floor all four keep it.
+
+```text
+A17: red over the earlier floor: 2 of 4 scenarios lost a line another thread reached first: ["scoped-straddled", "held-straddled"]; green: 4 run, 0 lost
+```
+
+The killer then gained a precondition check and a census of every spelling. Over the earlier killer, the census escapes and two helper variants that install the floor after a capture registers stay green. Over the new killer every escape is red and both variants fail.
+
+```text
+A17, A18: over the earlier killer the escapes are green and the floor-after variants survive; over the new killer the escapes are red and the variants fail with "registered before the floor was the global default"
+```
+
+A fourth round widened the census and added two refusals. Over the earlier killer, planted escapes of each kind stayed green: a plain `mod` or a path attribute that rustc resolves elsewhere, a path named by a Cargo manifest, a doctest in a tilde, four-backtick, indented, blockquote or attribute form, a callsite registered by hand, a rebuild of the interest cache from a reload handle, and an install through `with_current_subscriber`. Over the widened killer at 4a78fad every one is red, and the controls stay green. The helper now refuses a capture nested inside another on one thread, and a capture made after the production global default. Over the helper without the nested refusal, the new test fails with the refusal's name expected and nothing found; at 1d3809c it passes, and a capture held on another thread is still admitted.
+
+The record's fence form holds one red and one green line per criterion, and these criteria already carry theirs above, so this round's red is stated in a text fence.
+
+```text
+A18: red over the earlier killer: every planted escape green; green at 4a78fad: every planted escape red, controls green, capture population 363 file(s) read; 0 raw capture(s), 13 routed, 1 global default(s)
+A17: red over the helper without the refusal: the nested capture was not refused (left "", right the refusal's name); green at 1d3809c: 4 tests run, 0 failed
+```

@@ -10,6 +10,7 @@ import importlib.util
 import json
 import math
 import os
+import re
 import subprocess
 import sys
 import unittest
@@ -681,13 +682,11 @@ class TheVerdictReadsThePythonReports(unittest.TestCase):
         )
         numbers = [
             int(n)
-            for n in __import__("re")
-            .search(
+            for n in re.search(
                 r"table: python: listed (\d+), killed (\d+), equivalent (\d+), unexplained (\d+), "
                 r"unviable (\d+)",
                 table.stdout,
-            )
-            .groups()
+            ).groups()
         ]
         self.assertEqual(numbers[0], sum(numbers[1:]))
         self.assertIn("table: python: UNEXPLAINED", table.stdout)

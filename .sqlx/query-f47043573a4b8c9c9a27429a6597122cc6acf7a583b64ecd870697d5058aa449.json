@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO governor_state (id, lapse_since, standby, notified_day, created_at)\n         VALUES (1, ?1, ?2, NULL, ?3)\n         ON CONFLICT (id) DO UPDATE SET\n             lapse_since = excluded.lapse_since,\n             standby = excluded.standby",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "f47043573a4b8c9c9a27429a6597122cc6acf7a583b64ecd870697d5058aa449"
+}

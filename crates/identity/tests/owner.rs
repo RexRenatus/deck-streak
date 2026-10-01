@@ -24,6 +24,9 @@ use tracing::field::{Field, Visit};
 use tracing::span::{Attributes, Id, Record};
 use tracing::{Event, Metadata, Subscriber};
 
+#[path = "../../../tools/log-capture/capture.rs"]
+mod log_capture;
+
 /// The synthetic bot token the payloads are signed for.
 const BOT_TOKEN: &str = "synthetic-webapp-signing-token";
 /// Another synthetic bot's token, for a forged payload.
@@ -233,7 +236,7 @@ fn init_data_never_reaches_the_log() {
     let forged = payload(&ours, &forged_hash);
 
     let captured = Captured::default();
-    let outcomes = tracing::subscriber::with_default(captured.clone(), || {
+    let outcomes = log_capture::with_capture(captured.clone(), || {
         [
             gate.admit(&admitted, now),
             gate.admit(&stranger, now),

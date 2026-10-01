@@ -39,6 +39,9 @@ use tracing::field::{Field, Visit};
 use tracing::span::{Attributes, Id, Record};
 use tracing::{Event, Level, Metadata, Subscriber};
 
+#[path = "../../../tools/log-capture/capture.rs"]
+mod log_capture;
+
 /// The bound on the whole run: generous, because a loaded machine is slow.
 const DEADLINE: Duration = Duration::from_mins(2);
 /// How long one read of the socket waits before the test looks at the child again.
@@ -585,7 +588,7 @@ fn read_datagram(socket: &UnixDatagram) -> String {
 #[test]
 fn a_notifier_is_enabled_only_for_a_socket_of_a_form_it_speaks() {
     let recorder = Recorder::default();
-    let disabled = tracing::subscriber::with_default(recorder.clone(), || {
+    let disabled = log_capture::with_capture(recorder.clone(), || {
         [
             notifier_for(None),
             notifier_for(Some("relative/notify.sock")),
@@ -644,7 +647,7 @@ fn a_failed_send_is_logged_once_per_episode_of_failures() {
     let path = directory.path().join("notify.sock");
     let notifier = notifier_for(path.to_str());
     let recorder = Recorder::default();
-    tracing::subscriber::with_default(recorder.clone(), || {
+    log_capture::with_capture(recorder.clone(), || {
         let warned = || {
             recorder
                 .seen()
@@ -678,7 +681,7 @@ fn a_failed_send_is_logged_once_per_episode_of_failures() {
 fn a_watchdog_below_the_minimum_arms_no_heartbeat_and_says_both_times_in_milliseconds() {
     let recorder = Recorder::default();
     let env = Environment::from_vars([(WATCHDOG_USEC, "1234000")]);
-    let heartbeat = tracing::subscriber::with_default(recorder.clone(), || {
+    let heartbeat = log_capture::with_capture(recorder.clone(), || {
         spawn_heartbeat(notifier_for(None), &env)
     });
     assert!(heartbeat.is_none());
