@@ -12,8 +12,10 @@
   modules these sit beside, and the XP phases the awards follow), SPEC-076 (the language streak and its
   badge view), SPEC-041 (the router), SPEC-026 (the bot's command table). **Mutation band:**
   `S07300-S07399`.
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-073.md` (ADR-016).
+- **Status:** delivered by build-073 (moved from `docs/specs/planned/` with its tests and
+  `docs/red-first/SPEC-073.md`, ADR-016). Decided by ADR-303 (the celebration mark on the award row) and
+  proved by `formal/tla/AwardOnce/` and `formal/lean/Formal/NextMilestone.lean`.
+  The mutation rows of section 9 run from S07303: S07300 and S07301 belong to another delivery.
 
 ## 1. The problem, measured
 
@@ -75,7 +77,8 @@ The catalog and the award port (#74)
 
 R1. Progression owns `badges_earned`, created by `migrations/007301_progression_badges_earned.sql`
     (`STRICT`, `created_at`, SPEC-020 R15 and R18): `badge_key`, `tier`, `name`, `emoji`,
-    `study_day`, primary key (`badge_key`, `tier`).
+    `study_day`, `celebrated_at` (nullable: set from the services clock after the router answers, and
+    at insert for a band badge, which the band-up celebrates), primary key (`badge_key`, `tier`).
 R2. The catalog holds the predecessor's 40 badges with their key, name, emoji and description, equal
     to `goldens/badge_catalog.json` (`constants.py:BADGES`), each at tier 0. The descriptions of
     `ink_week`, `ink_month`, `ink_century`, `bookworm_week` and `polyglot_reader` are rendered from
@@ -84,9 +87,12 @@ R3. The award port writes one row per key and tier in one `BEGIN IMMEDIATE` writ
     `Awarded` or `AlreadyAwarded`; it never updates or deletes a badge. It accepts a catalog key, or
     a band key `band_<code>_<band>` whose code is a configured course and whose band is one of A1 to
     C2; any other key is refused before a write, by an error that names the rule and never the value.
-R4. A newly awarded catalog badge, study, habit or focus, raises one celebration through the router
-    (SPEC-041) with the event `badge` and the dedupe key `badge:<key>:<tier>`; `AlreadyAwarded` raises
-    none. A band badge raises none of its own: the band-up celebrates it (SPEC-077).
+R4. A newly awarded catalog badge, study, habit or focus, is written with its `celebrated_at` unset, in
+    the award's own write, and after that write commits it raises one celebration through the router
+    (SPEC-041) with the event `badge` and the dedupe key `badge:<key>:<tier>`. `AlreadyAwarded` raises no
+    new celebration: an award whose celebration is not yet marked is offered again at each evaluation
+    until the router answers, and the router's once-ever dedupe key keeps each key to at most one send.
+    A band badge raises none of its own: the band-up celebrates it (SPEC-077), so it is written marked.
 
 The study badges (#74)
 
@@ -122,7 +128,7 @@ Records (#75)
 
 R9. Progression owns `records`, created by `migrations/007302_progression_records.sql` (`STRICT`,
     `created_at`): `kind` (primary key: `best_score`, `most_reviews` or `most_minutes`), `value`,
-    `study_day`, `previous`.
+    `study_day`, `previous`, `celebrated_at` (nullable, as R1's).
 R10. Coordination registers the records step in phase 7 of SPEC-071's fold. For each evaluated day it
     equals `goldens/records_window.json` (`pipeline.py:GamifyPipeline._compute_and_store_coaching`):
     it runs `goldens/detect_records.json` (`gamification/rewards.py:detect_records`) over the 370 most
@@ -130,9 +136,14 @@ R10. Coordination registers the records step in phase 7 of SPEC-071's fold. For 
     score as R5 reads it, and every earlier day with its stored score. `best_score` is the highest score,
     `most_reviews` the most reviews and `most_minutes` the whole minutes of the most seconds, and only a
     value strictly above the stored best is a record.
-R11. A new record is stored with the value it beat and celebrated once through the router, with the
-    event `record` and the dedupe key `pr:<kind>:<epoch day>` of the day that set it. A replay of the
-    same day writes the same row and raises nothing new.
+R11. A new record is stored with the value it beat and its `celebrated_at` unset, and after the write
+    commits it is celebrated through the router, with the event `record` and the dedupe key
+    `pr:<kind>:<epoch day>` of the day that set it. A replay of the same day writes the same row and
+    raises no new celebration: a record whose celebration is not yet marked is offered again at each
+    evaluation until the router answers, and the router's once-ever dedupe key keeps each key to at most
+    one send. A record row holds one kind, so a write that would replace the row of an earlier day whose
+    mark is unset first offers that mark, and a record that is superseded before it could be offered is
+    named in a log line with its kind and day.
 R12. The first detection, with no record stored, stores each kind's best with `previous` equal to its
     value and celebrates none. The v9 import brings the predecessor's records first when it runs (#61).
 R13. The records view carries each record's label, value, the day it was set, the value it beat and
@@ -182,13 +193,13 @@ R19. The Mini App's `/badges` is a gallery of earned and locked badges, each loc
 | A7 | every badge threshold equals the predecessor's constant | `the_badge_constants_equal_the_predecessors` |
 | A8 | the hour windows equal the golden | `the_hour_counts_match_the_parity_golden` |
 | A9 | the badge context built from synthetic reviews, rollups and a snapshot equals the golden | `the_badge_context_matches_the_parity_golden` |
-| A10 | a newly awarded badge is celebrated once, and a replay raises nothing | `a_new_badge_is_celebrated_once_and_a_replay_raises_nothing` |
+| A10 | a newly awarded badge is sent once (an evaluation stopped after the write sends exactly once at the next, and a stop after the router answered but before the mark leaves the sends at one), and a replay sends nothing new | `a_new_badge_is_celebrated_once_and_a_replay_raises_nothing` |
 | A11 | a closing day is judged with its end-of-day snapshot and its `score_at_close` | `a_closing_day_is_judged_with_its_end_of_day_state` |
 | A12 | the record detection equals the golden | `detect_records_matches_the_parity_golden` |
 | A13 | the record to chase equals the golden | `the_chase_record_matches_the_parity_golden` |
 | A14 | the records step (its window, its seed and its celebration keys) equals the golden | `the_records_step_matches_the_parity_golden` |
-| A15 | the first detection stores the bests with `previous` equal to their values and celebrates none | `the_first_detection_seeds_records_silently` |
-| A16 | a record is celebrated once per kind and day | `a_record_is_celebrated_once_per_kind_and_day` |
+| A15 | the first detection stores the bests with `previous` equal to their values and sends none | `the_first_detection_seeds_records_silently` |
+| A16 | a record is sent once per kind and day, including when a later day's beat meets an earlier record whose mark is unset | `a_record_is_celebrated_once_per_kind_and_day` |
 | A17 | the milestone equals the golden | `next_milestone_matches_the_parity_golden` |
 | A18 | a complete ladder contributes nothing, and three complete ladders report the top review rung at 100% | `a_complete_ladder_contributes_nothing_and_all_complete_reports_the_top_review_rung` |
 | A19 | the milestone view answers `pending` until Road to C2 supplies the mature cards | `the_milestone_is_pending_until_road_to_c2_supplies_the_mature_cards` |
@@ -303,6 +314,9 @@ no row is deferred for this delivery.
 | `tools/parity-oracle/goldens/rewards.constants.json` | repo | added: the golden of the three ladders and the record and ladder labels (constants) |
 | `scripts/mutation-rows.d/S07300-S07399.json` | repo | added: the rows of section 9 |
 | `docs/specs/SPEC-073-badges-records-and-the-next-milestone-are-awarded-once-and-shown-with-their-progress.md` | docs | moved from `docs/specs/planned/` |
+| `formal/tla/AwardOnce/` | formal | added: the award-once model, its clean configuration and four witnesses |
+| `formal/lean/Formal/NextMilestone.lean` | formal | added: the pick of the next milestone is least, with its tie order and its complete case |
+| `docs/decisions/ADR-303-the-celebration-mark-lives-on-the-award-row.md` | docs | added |
 | `docs/red-first/SPEC-073.md` | docs | added |
 | `changelog.d/` fragment | repo | added |
 
@@ -327,13 +341,13 @@ no row is deferred for this delivery.
   would then be missed on every day the owner never synced before its close. Detected by A11 and by
   the badge context's golden (A9).
 - **A first run celebrates old records.** Every best is new against an empty table. Detected by A15
-  and row S07308.
+  and row S07310.
 - **A first run with no import awards many badges at once.** The predecessor celebrates each newly
   awarded badge, and so does DeckStreak; the router's dedupe keeps each to one, and the v9 import
   brings the owner's earned badges before the first recompute (#61).
 - **The milestone waits on Road to C2.** `GET /api/milestone` answers `pending` until SPEC-077 wires
   the mature-card sum, so the home screen's card (SPEC-086) shows it pending; held by A19.
-- **A band key names an unconfigured course.** Refused before a write (A4, row S07304).
+- **A band key names an unconfigured course.** Refused before a write (A4, row S07306).
 - **A course-named description drifts from the configuration.** Rendered from the configured courses
   (A2).
 
@@ -368,13 +382,16 @@ A target outside a crate (a migration) is a cargo-killed script mutation (SPEC-0
 
 | row | target | what it guards | killer |
 |---|---|---|---|
-| `S07301-ONE-ROW-PER-BADGE` | `migrations/007301_progression_badges_earned.sql` | the primary key on the badge key and tier | `badges_award::awarding_a_badge_twice_writes_one_row` |
-| `S07302-LEGENDARY-DAY-AT-ONE-HUNDRED` | `crates/progression/src/badges/conditions.rs` | a legendary day needs a score of 100 | `badges_conditions::the_study_badge_conditions_match_the_parity_golden` |
-| `S07303-A-PERFECT-WEEK-NEEDS-SEVEN-SCORES` | `crates/progression/src/badges/conditions.rs` | a perfect week needs 7 scores | `badges_conditions::the_study_badge_conditions_match_the_parity_golden` |
-| `S07304-THE-BAND-KEY-RULE` | `crates/progression/src/badges/award.rs` | a band key names a configured course and a band from A1 to C2 | `badges_award::a_band_badge_key_names_a_configured_course_and_a_band` |
-| `S07305-A-RECORD-IS-STRICTLY-GREATER` | `crates/progression/src/records.rs` | only a value above the stored best is a record | `records_detect::detect_records_matches_the_parity_golden` |
-| `S07306-MINUTES-ARE-WHOLE` | `crates/progression/src/records.rs` | the most minutes are the whole minutes of the most seconds | `records_detect::detect_records_matches_the_parity_golden` |
-| `S07307-THE-RECORDS-WINDOW` | `crates/coordination/src/recompute/records.rs` | the detection reads the 370 most recent rollups | `records_steps::the_records_step_matches_the_parity_golden` |
-| `S07308-THE-SILENT-SEED` | `crates/coordination/src/recompute/records.rs` | the first detection stores `previous` equal to the value and celebrates none | `records_steps::the_first_detection_seeds_records_silently` |
-| `S07309-MILESTONE-TIES-TO-REVIEWS` | `crates/progression/src/milestone.rs` | a tie keeps the earlier ladder | `milestone_ladder::next_milestone_matches_the_parity_golden` |
-| `S07310-THE-TOP-REVIEW-RUNG` | `crates/progression/src/milestone.rs` | three complete ladders report the top review rung at 100% | `milestone_ladder::a_complete_ladder_contributes_nothing_and_all_complete_reports_the_top_review_rung` |
+| `S07303-ONE-ROW-PER-BADGE` | `migrations/007301_progression_badges_earned.sql` | the primary key on the badge key and tier | `badges_award::awarding_a_badge_twice_writes_one_row` |
+| `S07304-LEGENDARY-DAY-AT-ONE-HUNDRED` | `crates/progression/src/badges/conditions.rs` | a legendary day needs a score of 100 | `badges_conditions::the_study_badge_conditions_match_the_parity_golden` |
+| `S07305-A-PERFECT-WEEK-NEEDS-SEVEN-SCORES` | `crates/progression/src/badges/conditions.rs` | a perfect week needs 7 scores | `badges_conditions::the_study_badge_conditions_match_the_parity_golden` |
+| `S07306-THE-BAND-KEY-RULE` | `crates/progression/src/badges/award.rs` | a band key names a configured course and a band from A1 to C2 | `badges_award::a_band_badge_key_names_a_configured_course_and_a_band` |
+| `S07307-A-RECORD-IS-STRICTLY-GREATER` | `crates/progression/src/records.rs` | only a value above the stored best is a record | `records_detect::detect_records_matches_the_parity_golden` |
+| `S07308-MINUTES-ARE-WHOLE` | `crates/progression/src/records.rs` | the most minutes are the whole minutes of the most seconds | `records_detect::detect_records_matches_the_parity_golden` |
+| `S07309-THE-RECORDS-WINDOW` | `crates/coordination/src/recompute/records.rs` | the detection reads the 370 most recent rollups | `records_steps::the_records_step_matches_the_parity_golden` |
+| `S07310-THE-SILENT-SEED` | `crates/coordination/src/recompute/records.rs` | the first detection stores `previous` equal to the value and celebrates none | `records_steps::the_first_detection_seeds_records_silently` |
+| `S07311-MILESTONE-TIES-TO-REVIEWS` | `crates/progression/src/milestone.rs` | a tie keeps the earlier ladder | `milestone_ladder::next_milestone_matches_the_parity_golden` |
+| `S07312-THE-TOP-REVIEW-RUNG` | `crates/progression/src/milestone.rs` | three complete ladders report the top review rung at 100% | `milestone_ladder::a_complete_ladder_contributes_nothing_and_all_complete_reports_the_top_review_rung` |
+| `S07313-THE-MARK-FOLLOWS-THE-ROUTER` | `crates/coordination/src/recompute/badges.rs` | `celebrated_at` is set only after the router answers | `badges_steps::a_router_that_did_not_answer_leaves_the_award_due` |
+| `S07314-A-PENDING-AWARD-IS-OFFERED-AGAIN` | `crates/coordination/src/recompute/badges.rs` | an award whose mark is unset is offered at the next evaluation | `badges_steps::an_evaluation_stopped_after_the_write_sends_once_at_the_next` |
+| `S07315-A-PENDING-RECORD-IS-OFFERED-BEFORE-ITS-ROW-IS-REPLACED` | `crates/coordination/src/recompute/records.rs` | a later day's beat offers the earlier record whose mark is unset before the row is replaced | `records_steps::a_later_beat_offers_the_unmarked_record_first` |
