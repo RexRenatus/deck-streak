@@ -71,9 +71,9 @@ D3, the day a marker sits on:
   each skip day) (#486).
 - The freeze on the return day, where the replay spends it: rejected, because the return day is a
   study day and the miss it hides would show as nothing.
-- The language track's `break` on the day after the second real miss of a live run (the day whose
-  lapse records it), or on a return day after a break the lapse path did not record: chosen, because
-  that is the day its own replay records the break.
+- The language track's `break` where its replay records it: chosen, because that is its own day:
+  the day after the second real miss of a live run (the day whose lapse records it), or a return
+  day after a break the lapse path did not record.
 - The law track's freeze: not served, because the law track holds no freezes (R10). Its `break` sits
   on the day after the first real miss of a live run, the day its replay resets the run.
 - A `break` on the miss itself: rejected, because on both tracks the replay records the break on a
