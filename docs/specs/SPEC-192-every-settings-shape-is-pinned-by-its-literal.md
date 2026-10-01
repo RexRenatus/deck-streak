@@ -363,7 +363,7 @@ written.
   non-root module, at one to three inline levels, with the shape and without it, with the `#[path]`
   form, and in a file that opens with `#![cfg(test)]`. The lexer's reading of C string literals
   stays out of scope.
-- **#441, a module written by a macro.** Section 10's first bullet and section 11's correction said
+- **#441, a module written by a macro.** Section 10's second bullet and section 11's correction said
   a `#[cfg(test)]` module written by a `macro_rules!` body is not counted. The guard now FAILS
   CLOSED: a crate file whose `macro_rules!` body declares a module under a `cfg(test)` or
   `cfg_attr(test, ...)` attribute is refused, and the refusal names the file. The attribute is read
@@ -372,7 +372,7 @@ written.
   attribute that opens the module's braces. Macro expansion was rejected, because the guard would
   then have to be a macro expander. Over the repository at this delivery's head the arm examined 194
   crate files and refused none, so it refuses no file that is read today.
-- **#458, a file that a second declaration compiles without `test`.** Section 10's fourth bullet and
+- **#458, a file that a second declaration compiles without `test`.** Section 10's fifth bullet and
   section 11 said the guard judges a declaration and not a file. It now judges the file: a module
   file that any visible declaration compiles without `test` is refused, and is not read through its
   test declaration. The shapes are `#[cfg(test)] mod tests;` beside `#[cfg(not(test))] mod tests;`,
