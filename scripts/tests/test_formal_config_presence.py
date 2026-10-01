@@ -101,17 +101,22 @@ def fresh_module():
 
 # A link at the path: the checker reads a link's own text, so the file behind it is never read.
 LINK = "a link"
+# A link at the path's directory: the checker reads the path in HEAD's tree, where the directory is a
+# link's own text, so no file is at the path and the one behind the link is never read.
+LINK_DIR = "a link at the directory"
 
 
 def unloadable():
     """Every way the committed file fails to load, one per arm of the loader, as (label, bytes,
-    None for no file, or LINK): absent; a link, here to a readable copy of the declared file; and
-    each way the parser refuses bytes: syntax, encoding, a depth past every recursion limit it
-    keeps, and an integer past the interpreter's digit limit."""
+    None for no file, LINK or LINK_DIR): absent; a link, here to a readable copy of the declared
+    file; the file's directory a link, here to a directory holding the declared file; and each way
+    the parser refuses bytes: syntax, encoding, a depth past every recursion limit it keeps, and an
+    integer past the interpreter's digit limit."""
     deep = sys.getrecursionlimit() * 100
     return [
         ("the file is absent", None),
         ("the file is a link", LINK),
+        ("the file's directory is a link", LINK_DIR),
         ("the file is not JSON", b"{"),
         ("the file is not UTF-8", b"\xff"),
         ("the file nests past the parser's depth", b"[" * deep + b"]" * deep),
@@ -133,15 +138,27 @@ def plants(module):
 
 
 def install(directory, payload, module):
-    """The plant as a file in a fresh `directory`, and its path."""
+    """The plant as a file in a fresh `directory`, laid out as the repository lays the settings
+    file, `directory/config/formal.json`, and its path. Every plant is a kind the harness knows: a
+    payload of none of them is refused here, by assertion."""
     directory.mkdir()
-    path = directory / "formal.json"
+    if payload is LINK_DIR:
+        (directory / "declared").mkdir()
+        (directory / "declared" / "formal.json").write_text(
+            json.dumps(module.EXPECTED, indent=2) + "\n", encoding="utf-8"
+        )
+        (directory / "config").symlink_to("declared")
+        return directory / "config" / "formal.json"
+    (directory / "config").mkdir()
+    path = directory / "config" / "formal.json"
     if payload is LINK:
-        target = directory / "declared.json"
+        target = path.with_name("declared.json")
         target.write_text(json.dumps(module.EXPECTED, indent=2) + "\n", encoding="utf-8")
         path.symlink_to(target.name)
-    elif payload is not None:
+    elif isinstance(payload, bytes):
         path.write_bytes(payload)
+    elif payload is not None:
+        raise AssertionError(f"a plant of a kind the harness does not know: {payload!r}")
     return path
 
 
@@ -159,6 +176,7 @@ def run_with(module, path):
     """Run every test of the module with the committed file at `path`: (failed, errored) names."""
     names = unittest.TestLoader().getTestCaseNames(module.FormalConfig)
     module.CONFIG = path
+    module.ROOT = path.parents[1]
     suite = unittest.TestSuite(module.FormalConfig(name) for name in names)
     with contextlib.redirect_stdout(io.StringIO()):
         result = unittest.TextTestRunner(stream=io.StringIO(), verbosity=0).run(suite)
@@ -167,6 +185,70 @@ def run_with(module, path):
         test._testMethodName: trace.strip().splitlines()[-1] for test, trace in result.errors
     }
     return failed, errored
+
+
+# A link can stand at any component of a path, in any of these kinds. The checker reads the path in
+# HEAD's tree, so a link at any component holds no file there, whatever it names.
+RELATIVE = "a relative link"
+ABSOLUTE = "an absolute link"
+CHAIN = "a chain of two links"
+TO_DIRECTORY = "a link to a directory"
+DANGLING = "a dangling link"
+LOOP = "a link to itself"
+LINK_KINDS = (RELATIVE, ABSOLUTE, CHAIN, TO_DIRECTORY, DANGLING, LOOP)
+
+
+def lay(root, module, settings):
+    """A tree under `root` holding every path the module reads, each as a real file: the settings
+    file and a pin file beside it."""
+    (root / "config").mkdir()
+    (root / settings).write_text(json.dumps(module.EXPECTED, indent=2) + "\n", encoding="utf-8")
+    (root / module.PIN_FILE).write_text("{}\n", encoding="utf-8")
+
+
+def link_at(root, relative, kind):
+    """Replace the real entry at `relative` under `root` by a link of `kind`; the real entry moves
+    beside it, so a link that is followed finds the file the tree would hold."""
+    entry = root / relative
+    real = entry.with_name(entry.name + ".real")
+    entry.rename(real)
+    if kind == RELATIVE:
+        entry.symlink_to(real.name)
+    elif kind == ABSOLUTE:
+        entry.symlink_to(real)
+    elif kind == CHAIN:
+        hop = entry.with_name(entry.name + ".hop")
+        hop.symlink_to(real.name)
+        entry.symlink_to(hop.name)
+    elif kind == TO_DIRECTORY:
+        elsewhere = root / "elsewhere"
+        elsewhere.mkdir(exist_ok=True)
+        entry.symlink_to(os.path.relpath(elsewhere, entry.parent))
+    elif kind == DANGLING:
+        entry.symlink_to("nowhere")
+    elif kind == LOOP:
+        entry.symlink_to(entry.name)
+    else:
+        raise AssertionError(f"a link of a kind the harness does not know: {kind!r}")
+    return entry
+
+
+def is_kind(entry, kind):
+    """Whether the link at `entry` is the kind it is labelled."""
+    if not entry.is_symlink():
+        return False
+    target = os.readlink(entry)
+    if kind == RELATIVE:
+        return not os.path.isabs(target) and entry.parent.joinpath(target).exists()
+    if kind == ABSOLUTE:
+        return os.path.isabs(target) and Path(target).exists()
+    if kind == CHAIN:
+        return entry.parent.joinpath(target).is_symlink() and entry.exists()
+    if kind == TO_DIRECTORY:
+        return entry.parent.joinpath(target).is_dir() and entry.is_dir()
+    if kind == DANGLING:
+        return not os.path.lexists(entry.parent / target)
+    return kind == LOOP and target == entry.name
 
 
 class PresenceControls(unittest.TestCase):
@@ -233,7 +315,13 @@ class PresenceControls(unittest.TestCase):
                     self.assertFalse(os.path.lexists(path), f"{label}: a file is there")
                 elif payload is LINK:
                     self.assertTrue(path.is_symlink(), f"{label}: no link is there")
+                    self.assertFalse(path.parent.is_symlink(), f"{label}: a link at the directory")
+                elif payload is LINK_DIR:
+                    self.assertTrue(path.parent.is_symlink(), f"{label}: no link at the directory")
+                    self.assertFalse(path.is_symlink(), f"{label}: a link at the path")
+                    self.assertTrue(path.is_file(), f"{label}: no file behind the link")
                 else:
+                    self.assertFalse(path.parent.is_symlink(), f"{label}: a link at the directory")
                     self.assertTrue(os.path.lexists(path), f"{label}: no file is there")
                     self.assertFalse(path.is_symlink(), f"{label}: a link is there")
                     self.assertEqual(path.read_bytes(), payload, f"{label}: other bytes")
@@ -241,11 +329,73 @@ class PresenceControls(unittest.TestCase):
                     self.assertEqual(refusal is not None, unloads, f"{label}: the parser's verdict")
                     if refusal is not None:
                         refusals.add(refusal)
-                self.assertTrue(unloads or payload not in (None, LINK), f"{label}: marked loadable")
+                self.assertTrue(
+                    unloads or payload not in (None, LINK, LINK_DIR), f"{label}: marked loadable"
+                )
         self.assertEqual(
             refusals,
             {"JSONDecodeError", "UnicodeDecodeError", "RecursionError", "ValueError"},
             "the parser's four ways to refuse the bytes, each planted: syntax, encoding, depth, digits",
+        )
+
+    def test_a_link_at_any_component_of_a_path_the_module_reads_is_refused_by_assertion(self):
+        """A8: the module reads the settings file and the pin path as the tree stores them, and a
+        link at any component of either, from the directory the file sits in to the file itself, is
+        a path the checker finds no file at. Every component of every path the module reads is
+        replaced by a link of every kind in a fresh tree, and the reader of the path then refuses
+        it by assertion naming that component; a link at the pin file itself is the pin file, a
+        second source, and so is listed."""
+        module = fresh_module()
+        settings = module.CONFIG.relative_to(module.REPO)
+        pin = module.PIN_FILE
+        paths = [("settings", settings), ("pin", pin)]
+        spots = examined(
+            "components of the paths the module reads",
+            [
+                (name, path, depth)
+                for name, path in paths
+                for depth in range(1, len(path.parts) + 1)
+            ],
+        )
+        cases = [(spot, kind) for spot in spots for kind in LINK_KINDS]
+        wrong = []
+        with tempfile.TemporaryDirectory() as scratch:
+            for index, ((name, path, depth), kind) in enumerate(
+                examined(f"link(s) at {len(spots)} component(s)", cases)
+            ):
+                label = f"{kind} at {Path(*path.parts[:depth]).as_posix()} of the {name} path"
+                root = Path(scratch) / str(index)
+                root.mkdir()
+                lay(root, module, settings)
+                component = Path(*path.parts[:depth])
+                entry = link_at(root, component, kind)
+                if not is_kind(entry, kind):
+                    wrong.append(f"{label}: not planted as that kind")
+                    continue
+                module.CONFIG = root / settings
+                module.ROOT = root
+                last = depth == len(path.parts)
+                try:
+                    if name == "settings":
+                        module.load()
+                    else:
+                        found = module.toolchain_sources(module.EXPECTED, root)
+                except AssertionError as refusal:
+                    if last and name == "pin":
+                        wrong.append(f"{label}: refused, not listed as the pin file")
+                    elif not str(refusal).startswith(f"{component.as_posix()} is a link"):
+                        wrong.append(f"{label}: refused without naming the component: {refusal}")
+                except Exception as error:
+                    wrong.append(f"{label}: an error, not a refusal: {error!r}")
+                else:
+                    if last and name == "pin":
+                        want = ["toolchain.identity", pin.as_posix()]
+                        if found != want:
+                            wrong.append(f"{label}: listed {found}, not {want}")
+                    else:
+                        wrong.append(f"{label}: not refused")
+        self.assertEqual(
+            wrong, [], "a link at a component of a path the module reads was followed or misread"
         )
 
 

@@ -586,6 +586,11 @@ class FormalConfig(unittest.TestCase):
         combinations = examined(
             "toolchain source combinations", list(itertools.product((True, False), PIN_SHAPES))
         )
+        self.assertEqual(
+            set(combinations),
+            set(itertools.product((True, False), PIN_SHAPES)),
+            "the population is every combination, the field named or not times every pin shape",
+        )
         self.assertEqual(len(combinations), 2 * len(PIN_SHAPES))
         sources, want = {}, {}
         for named, shape in combinations:
