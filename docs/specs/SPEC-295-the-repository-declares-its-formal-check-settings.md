@@ -218,3 +218,53 @@ A6: python3 -m unittest discover -s scripts/tests -p test_formal_config.py -k th
 A7: python3 -m unittest discover -s scripts/tests -p test_formal_config.py -k the_tree_names_one_toolchain_source_the_identity -k the_identity_is_named_by_the_field_present_whatever_its_value -k each_pin_shape_is_planted_as_the_kind_it_names
 A8: python3 -m unittest discover -s scripts/tests -p 'test_formal_config*.py' -k PresenceControls -k the_loader_refuses_bytes_that_are_not_utf8_wherever_they_sit
 ```
+
+## 13. Amendment, 2026-10-01: the slot capacity equals the checker's own setting
+
+Issue #516, which follows #504. Sections 1 to 12 stand as written and this section only adds to
+them. R1 names `tlc_slot` with `capacity` 1, and that value is superseded here by R7.
+
+**The requirement it adds.**
+
+- **R7.** `config/formal.json` sets `tlc_slot.capacity` to 4, equal to the formal checker's own
+  compiled setting, and keeps `wait_seconds` at 1800. R1's table is otherwise unchanged, and the
+  file is still R1's pretty-printed text with one field per line (#516).
+
+**Why.** The model checker's slot directory is shared by every check that runs. The checker now
+refuses a settings file whose slot capacity differs from its own compiled setting, because two
+checkers that disagree on the capacity would disagree on which slots exist. A file left at 1 is
+refused by the new checker as a configuration failure, and a file at 4 is refused by the old one,
+so the value and the checker that reads it change together. The value is never chosen
+independently of the checker: it is the checker's own setting (#516).
+
+**What changes.** The settings file's `capacity` goes from 1 to 4. The test's expected document
+carries the same value, so the first criterion, which compares the committed file with R1's table,
+is red with the file at 1 and green with it at 4. The test's own reader is unchanged: it admits any
+positive integer, and the equality with the checker's setting is the checker's judgement, which the
+formal check of the model on the development branch reads as `FORMAL OK` at the new value (#516).
+
+**The rows.** The band gains one row, `S29530`: it replaces `"capacity": 4` in `config/formal.json`
+with `"capacity": 1`, and the first criterion's test kills it. The nine rows of the earlier
+amendment, `S29500` to `S29508`, and `S29510` to `S29529` keep their anchors (#516).
+
+| file | context | change |
+|---|---|---|
+| `config/formal.json` | repo | changed: `tlc_slot.capacity` is 4 |
+| `scripts/tests/test_formal_config.py` | repo | changed: the expected document's capacity is 4 |
+| `scripts/mutation-rows.d/S29500-S29599.json` | repo | changed: the row `S29530` |
+| `docs/specs/SPEC-295-the-repository-declares-its-formal-check-settings.md` | repo | amended: R7, this section and A9 and A10 |
+| `docs/decisions/ADR-295-the-repository-declares-its-formal-check-settings.md` | repo | amended: a dated addendum |
+| `docs/red-first/SPEC-295.md` | repo | amended: this round's record |
+| `changelog.d/chore-formal-slot-capacity-516.md` | repo | added |
+
+## 14. Acceptance criteria of the 2026-10-01 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A9 | the committed file's `tlc_slot.capacity` is 4 and `wait_seconds` is 1800, the file equal to R1's table as amended by R7 and still R1's pretty-printed text; the test prints how many fields it examined and refuses zero | `test_formal_config.py` `the_committed_file_holds_exactly_the_declared_fields` |
+| A10 | the row `S29530` is killed: its killer passes on the committed file and fails on the mutant that sets the capacity back to 1, and the anchor `"capacity": 4` occurs exactly once in the target | `scripts/mutation_rows.py` `prove` of the row, killed by `test_formal_config.py` `the_committed_file_holds_exactly_the_declared_fields` |
+
+```acceptance
+A9: python3 -m unittest discover -s scripts/tests -p test_formal_config.py -k the_committed_file_holds_exactly_the_declared_fields
+A10: python3 scripts/mutation_rows.py prove --root . --row S29530-THE-SLOT-CAPACITY-EQUALS-THE-CHECKERS-OWN-SETTING
+```
