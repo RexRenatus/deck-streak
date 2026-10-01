@@ -3,7 +3,7 @@
 \* @phx covers crates/coordination/src/sync_cycle.rs anchor=sync_cycle digest=sha256:1b41728ec7e07a7581f9cf9ce88f74f02ad3e59e9a0d402c4ac81a71d128d060
 \* @phx covers crates/coordination/src/level_up.rs anchor=announce_level_up digest=sha256:acbb8923e76fbd4ab77949a119c1ad3a87de6f41737e65b89df689875e851dd0
 \* @phx covers crates/notifications/src/router.rs anchor=route digest=sha256:7bcf52fe22d886b3d71dfa0fa8e6dfb1d266a9a6b1662bada5482a2cd0c54dcb
-\* @phx covers crates/notifications/src/ledger.rs anchor=claim digest=sha256:0116ef4925de04614d09ac18952c0a0b0f7248fd65f5d4f6ca555448836a6ab7116ef4925de04614d09ac18952c0a0b0f7248fd65f5d4f6ca555448836a6ab7116ef4925de04614d09ac18952c0a0b0f7248fd65f5d4f6ca555448836a6ab7
+\* @phx covers crates/notifications/src/ledger.rs anchor=claim digest=sha256:0116ef4925de04614d09ac18952c0a0b0f7248fd65f5d4f6ca555448836a6ab7
 \* @phx cites #74, #75, #76
 \* @phx property AwardOnce ramp=report
 \* @phx property CelebrateAtMostOnce ramp=report
