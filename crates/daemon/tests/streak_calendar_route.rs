@@ -21,6 +21,7 @@ use deck_streak_ingest::reader::{Card, CollectionData, Review};
 use deck_streak_kernel::{
     Db, ManualClock, StudyDay, StudyDayRule, TelegramUserId, Track, UtcMillis,
 };
+use deck_streak_progression::settled_days;
 use deck_streak_streaks::calendar;
 use deck_streak_streaks::constants::CALENDAR_DAYS;
 use serde_json::Value;
@@ -367,6 +368,43 @@ async fn a_track_is_settled_on_exactly_its_study_days() {
                 "{track}: settled days equal the study days"
             );
             examined_days += days.len();
+        }
+        // The reader's two conjuncts, judged by planted rows the fold never writes: a settled row
+        // of amount 0 is no study day, and another track's row under the same source is not this
+        // track's. The fold writes neither, so only a plant can separate the conjuncts.
+        for (day, source, track, amount) in [
+            (TODAY - 100, "reviews", "language", 0),
+            (TODAY - 101, "reviews", "law", 7),
+            (TODAY - 102, "reviews_law", "language", 7),
+            (TODAY - 103, "reviews_law", "law", 0),
+        ] {
+            sqlx::query(
+                "INSERT INTO xp_settlement (study_day, source, track, amount, closed, created_at) \
+                 VALUES (?1, ?2, ?3, ?4, 1, 1000)",
+            )
+            .bind(day)
+            .bind(source)
+            .bind(track)
+            .bind(amount)
+            .execute(&mut *write)
+            .await
+            .expect("the planted row is written");
+            examined_days += 1;
+        }
+        for (source, track, kind, days) in [
+            ("reviews", "language", Track::Language, &language),
+            ("reviews_law", "law", Track::Law, &law),
+        ] {
+            let read: BTreeSet<i64> = settled_days(&mut write, source, kind)
+                .await
+                .expect("the settled days read")
+                .into_iter()
+                .map(StudyDay::epoch_day)
+                .collect();
+            assert_eq!(
+                &read, days,
+                "{track}: the reader keeps only this track's days above zero"
+            );
         }
         // The two tracks differ, so a dropped track filter would be seen.
         assert_ne!(language, law, "the population separates the tracks");
