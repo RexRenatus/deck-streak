@@ -552,3 +552,12 @@ which the seven tests pass (`test result: ok. 7 passed; 0 failed`).
 A23: red at f1704727: the held item reached the owner 2 times
 A23: green at 3cd85d4a
 ```
+
+The pull request's mutation pass over round 3 then found the log line of R16b unobserved: with the
+body of `unsettled_notice` removed, every test still passed. An eighth test,
+`a_settle_that_fails_after_a_push_names_the_item_and_its_claimant_in_the_log`, captures the
+router's warnings while a settle fails after a push. It was written after the code, so its red is
+that mutant, as for the lease tests of round 1: against it the test fails by assertion at
+`flush_fails_after_push.rs:356` (`one line names the pushed item: []`, `7 passed; 1 failed`), and
+against the code the eight tests pass (`test result: ok. 8 passed; 0 failed`). The workspace's
+capture census counts its capture, 16 routed where it counted 15.
