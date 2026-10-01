@@ -22,6 +22,9 @@ use deck_streak_kernel::{Db, KernelError, PortFuture, StudyDay, StudyDayRule, Tr
 use sqlx::SqliteConnection;
 use tempfile::TempDir;
 
+#[path = "../../../tools/log-capture/capture.rs"]
+mod log_capture;
+
 const DAY_MS: i64 = 86_400_000;
 const HOUR_MS: i64 = 3_600_000;
 /// A study day near the present.
@@ -674,7 +677,7 @@ impl tracing::Subscriber for Errors {
 #[tokio::test]
 async fn settling_a_day_no_step_rolled_up_logs_one_error() {
     let errors = Errors::default();
-    let _logging = tracing::subscriber::set_default(errors.clone());
+    let _logging = log_capture::hold_capture(errors.clone());
     let data = collection(reviews_on(&[D0 - 1]), Vec::new());
     let log = Log::default();
 
