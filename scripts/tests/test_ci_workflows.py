@@ -5166,7 +5166,7 @@ DYNAMIC_IMPORTS = {
         ("test_formal_config_presence", "fresh_module", "spec.loader.exec_module(module)", 1),
     ),
     **allowed(
-        "a pool of the test's own callables: the in-process judge is run under a lock, never a workflow file",
+        "a pool of the test's own callables, each running the real program itself; the in-process judge runs before the pool, one at a time; never a workflow file",
         (
             "test_mutation_python_shard_binding",
             "TheInProcessJudgeIsTheProgram.test_the_program_and_its_in_process_judgement_agree",
@@ -5179,7 +5179,7 @@ DYNAMIC_IMPORTS = {
         ("test_mutation_python_shard_binding", "judge_in_process", "traceback.format_exc()", 1),
     ),
     **allowed(
-        "compiles and executes the production verdict script's own source with constant edits, in the namespace of the program the test loaded and owns",
+        "compiles and executes the production verdict script's own source with edits to the interpolated fields of its messages, in the namespace of the program the test loaded and owns",
         (
             "test_mutation_python_shard_binding",
             "mutating",
