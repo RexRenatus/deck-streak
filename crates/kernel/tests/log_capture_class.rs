@@ -356,8 +356,13 @@ fn a_capture_after_the_production_global_default_is_refused() {
         .expect("the child run");
     let text = String::from_utf8_lossy(&output.stdout);
     assert!(
-        !output.status.success() && text.contains("installs no other global default"),
+        text.contains("installs no other global default"),
         "the helper let a capture register after another global default: {text}"
+    );
+    assert_eq!(
+        output.status.code(),
+        Some(101),
+        "the refused capture ends the child with a panic"
     );
 }
 
