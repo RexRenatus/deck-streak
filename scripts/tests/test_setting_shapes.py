@@ -1510,6 +1510,60 @@ class TheGuardResolvesAModuleDeclaredInsideAnInlineModule(unittest.TestCase):
         root = self.declared(declaration, ("tests.rs", self.SPELLING), own="lib.rs")
         self.assertEqual(len(unpinned(root)), 1)
 
+    def test_a_file_whose_own_inner_attribute_keeps_it_under_test_is_read(self):
+        """The inner attributes that open a module's file are attributes of the module, so a
+        `#![cfg(test)]` there makes it a test module, and the one declaration that reaches it is
+        no rival of itself (#433)."""
+        inner = "#![cfg(test)]\n"
+        for own in ("lib.rs", "depth.rs"):
+            for names in (("a",), ("a", "b")):
+                folder = self.folders(own) + "".join(f"{name}/" for name in names)
+                for attributes, leaf in (
+                    ("", "tests.rs"),
+                    ("", "tests/mod.rs"),
+                    ('#[path = "t.rs"]\n', "t.rs"),
+                    ("#[cfg(test)]\n", "tests.rs"),
+                ):
+                    declaration = self.nested(names, attributes=attributes)
+                    case = (own, names, attributes, leaf)
+                    spelled = (folder + leaf, inner + self.SPELLING)
+                    self.assertEqual(
+                        unpinned(self.declared(declaration, spelled, own=own)), [], case
+                    )
+                    bare = (folder + leaf, inner + self.NO_SHAPE)
+                    self.assertEqual(
+                        len(unpinned(self.declared(declaration, bare, own=own))), 1, case
+                    )
+
+    def test_a_declaration_whose_file_the_guard_cannot_choose_is_not_read(self):
+        """A file is read only where rustc's choice is plain. Below an inline module that carries a
+        `#[path]` the directory moves (the Reference's `thread_files` example); of two `#[path]`s
+        rustc reads the first; a `cfg_attr` path under an option the guard does not know, or with
+        a raw literal, is a choice it does not make. Each shape is refused."""
+        for declaration, files in (
+            (
+                '#[path = "thread_files"]\nmod a {\n'
+                '#[cfg(test)]\n#[path = "tests.rs"]\nmod tests;\n}\n',
+                (("a/tests.rs", self.SPELLING), ("thread_files/tests.rs", self.NO_SHAPE)),
+            ),
+            (
+                'mod a {\n#[cfg(test)]\n#[path = "one.rs"]\n#[path = "two.rs"]\nmod tests;\n}\n',
+                (("a/two.rs", self.SPELLING),),
+            ),
+            (
+                'mod a {\n#[cfg(test)]\n#[cfg_attr(unix, path = "real.rs")]\nmod tests;\n}\n',
+                (("a/real.rs", self.SPELLING),),
+            ),
+            (
+                'mod a {\n#[cfg(test)]\n#[cfg_attr(test, path = r"real.rs")]\nmod tests;\n}\n',
+                (("a/tests.rs", self.SPELLING), ("a/real.rs", self.NO_SHAPE)),
+            ),
+        ):
+            root = self.declared(declaration, *files, own="lib.rs")
+            self.assertEqual(len(unpinned(root)), 1, declaration)
+        plain = self.declared(self.nested(("a",)), ("a/tests.rs", self.SPELLING), own="lib.rs")
+        self.assertEqual(unpinned(plain), [])
+
 
 class TheGuardRefusesAMacroThatDeclaresATestModule(unittest.TestCase):
     """A `macro_rules!` body that declares a `cfg(test)` module is a source the text reader cannot
@@ -1580,6 +1634,42 @@ class TheGuardRefusesAMacroThatDeclaresATestModule(unittest.TestCase):
         self.assertEqual(len(found), 1)
         self.assertTrue(found[0].startswith("demo (src/more.rs)"), found[0])
         self.assertEqual(len(unpinned(root)), 1)
+
+    def test_an_inner_attribute_or_an_attribute_before_a_repetition_is_read(self):
+        """`mod x { #![cfg(test)] }` carries its condition inside its braces, and an attribute
+        before `$( ... )*` or `$( ... )?` reaches the module the repetition writes (#441)."""
+        for body in (
+            "        mod x {\n            #![cfg(test)]\n        }\n",
+            "        mod x {\n            #![cfg(all(test))]\n        }\n",
+            "        mod x {\n            #![cfg_attr(all(), cfg(test))]\n        }\n",
+            "        $(mod $n {\n            #![cfg(test)]\n        })*\n",
+            "        #[cfg(test)]\n        $(mod $n {})*\n",
+            "        #[cfg(test)]\n        $(mod $n {})?\n",
+            "        #[cfg_attr(all(), cfg(test))]\n        $(mod $n {})*\n",
+            "        #[cfg(test)]\n        $(mod $n;)*\n",
+        ):
+            found = self.refused(self.macro(body))
+            self.assertEqual(len(found), 1, body)
+            self.assertIn("macro", found[0])
+
+    def test_an_attribute_of_another_item_or_of_the_matcher_is_not_read(self):
+        """An attribute is read back only to the previous item's end (`;` or `}`) or the delimiter
+        that opens the body, past a `$(` that opens the module's own repetition: one on a `use`,
+        on a function or in the matcher does not make the module a test module."""
+        for text in (
+            self.macro("        #[cfg(test)]\n        use std::fmt;\n        mod real {}\n"),
+            self.macro("        #[cfg(test)]\n        fn helper() {}\n        mod real {}\n"),
+            self.macro("        #[cfg(test)]\n        use std::fmt;\n        $(mod $n {})*\n"),
+            self.macro("        #[cfg(test)]\n        fn helper() {}\n        $(mod $n {})*\n"),
+            "macro_rules! m {\n    (#[cfg(test)] $x:ident) => {\n        mod real {}\n    };\n}\n",
+            "macro_rules! m {\n    (#[cfg(test)] $x:ident) => {\n"
+            "        $(mod $n {})*\n    };\n}\n",
+        ):
+            self.assertEqual(self.refused(text), [], text)
+        planted = self.macro(
+            "        #[cfg(test)]\n        fn f() {}\n        #[cfg(test)]\n        mod real {}\n"
+        )
+        self.assertEqual(len(self.refused(planted)), 1, planted)
 
 
 class TheGuardRefusesAModuleFileThatAnotherDeclarationCompilesWithoutTest(unittest.TestCase):
@@ -1656,6 +1746,77 @@ class TheGuardRefusesAModuleFileThatAnotherDeclarationCompilesWithoutTest(unitte
                 self.assertEqual(self.judged(declaration, own, extra), 0, (own, declaration))
             rival = self.TEST + "#[cfg(not(test))]\nmod tests;\n"
             self.assertEqual(self.judged(rival, own), 1, (own, rival))
+
+    def test_a_rival_whose_path_the_guard_cannot_read_is_refused(self):
+        """A declaration whose file the guard cannot name (an escaped or raw path literal, or one
+        below an inline module whose `#[path]` moves the directory) may name any file, so unless
+        its own attributes keep it under test it counts against every test module (#458)."""
+        for own, path in (("lib.rs", "tests"), ("depth.rs", "depth/tests")):
+            for literal in (f'"{path}\\x2ers"', f'r"{path}.rs"', f'r#"{path}.rs"#'):
+                rival = f"#[path = {literal}]\nmod prod;\n"
+                for declaration in (rival + self.TEST, self.TEST + rival):
+                    self.assertEqual(self.judged(declaration, own), 1, (own, declaration))
+                kept = self.TEST + f"#[cfg(test)]\n#[path = {literal}]\nmod again;\n"
+                self.assertEqual(self.judged(kept, own), 0, (own, kept))
+        moved = '#[path = "."]\nmod a {\n#[path = "tests.rs"]\nmod prod;\n}\n'
+        self.assertEqual(self.judged(self.TEST + moved), 1, moved)
+
+    def test_a_file_only_test_reaches_by_its_own_attribute_or_a_cfg_attr_path_is_read(self):
+        """A file's own `#![cfg(test)]` is an attribute of every module that reaches it, and a
+        declaration's one `cfg_attr(P, path = "...")` reaches the file it names only under P and
+        the default file only without P, so neither makes a production rival (#458)."""
+        inner = "#![cfg(test)]\n"
+        for own, folder in (("lib.rs", ""), ("depth.rs", "depth/")):
+            path = folder + "tests.rs"
+            for declaration, spelling in (
+                ("mod tests;\n", inner + self.SPELLING),
+                (f'mod tests;\n#[path = "{path}"]\nmod prod;\n', inner + self.SPELLING),
+                (self.TEST + f'#[cfg_attr(test, path = "{path}")]\nmod prod;\n', self.SPELLING),
+            ):
+                files = ((path, spelling), (folder + "prod.rs", "let shape = 1;\n"))
+                root = self.declared(declaration, *files, own=own)
+                self.assertEqual(unpinned(root), [], (own, declaration))
+            plain = self.TEST + f'#[path = "{path}"]\nmod prod;\n'
+            self.assertEqual(self.judged(plain, own), 1, (own, plain))
+        binary = '#[cfg_attr(not(test), path = "prod.rs")]\nmod tests;\nfn main() {}\n'
+        files = (("main.rs", binary), ("prod.rs", "let shape = 1;\n"))
+        self.assertEqual(self.judged(self.TEST, "lib.rs", files), 0, binary)
+
+    def test_a_cfg_attr_path_that_does_not_decide_the_file_alone_is_a_rival(self):
+        """A `cfg_attr` gates its file only when it is the declaration's one attribute that names
+        a path and names it directly: two of them (rustc reads the first that applies) or one
+        nested in another `cfg_attr` may reach the file without `test`, so each is refused."""
+        for rival in (
+            '#[cfg_attr(test, path = "tests.rs")]\n#[cfg_attr(not(test), path = "tests.rs")]\n',
+            '#[cfg_attr(test, path = "other.rs")]\n#[path = "tests.rs"]\n',
+            '#[path = "tests.rs"]\n#[cfg_attr(test, path = "other.rs")]\n',
+        ):
+            declaration = self.TEST + rival + "mod prod;\n"
+            extra = (("other.rs", "let shape = 1;\n"), ("prod.rs", "let shape = 1;\n"))
+            self.assertEqual(self.judged(declaration, "lib.rs", extra), 1, rival)
+        nested = (
+            '#[cfg_attr(not(test), cfg_attr(feature = "slow", path = "prod.rs"))]\nmod tests;\n'
+        )
+        files = (("main.rs", nested + "fn main() {}\n"), ("prod.rs", "let shape = 1;\n"))
+        self.assertEqual(self.judged(self.TEST, "lib.rs", files), 1, nested)
+
+    def test_a_rival_in_a_binary_or_under_an_attribute_the_guard_cannot_read_is_refused(self):
+        """A `src/bin` file is a crate root too, and a tool attribute (`#[rustfmt::cfg]`) that
+        names `cfg` is no `cfg`: rustc does not interpret it, so the declaration is compiled in
+        every configuration and the file it names is production code."""
+        tool = self.TEST + '#[rustfmt::cfg]\n#[path = "tests.rs"]\nmod prod;\n'
+        self.assertEqual(self.judged(tool), 1, tool)
+        binary = (("bin/tool.rs", '#[path = "../tests.rs"]\nmod prod;\nfn main() {}\n'),)
+        self.assertEqual(self.judged(self.TEST, "lib.rs", binary), 1, binary)
+        self.assertEqual(self.judged(self.TEST), 0)
+
+    def test_a_plain_path_in_another_file_names_only_the_file_it_spells(self):
+        """`#[path = "prod.rs"] mod tests;` in `depth.rs` reads `prod.rs`, not the `tests.rs` the
+        crate root's test module reads, so it is no rival of it."""
+        other = (("depth.rs", '#[path = "prod.rs"]\nmod tests;\n'), ("prod.rs", "let shape = 1;\n"))
+        self.assertEqual(self.judged(self.TEST + "mod depth;\n", "lib.rs", other), 0)
+        rival = (("depth.rs", '#[path = "tests.rs"]\nmod prod;\n'),)
+        self.assertEqual(self.judged(self.TEST + "mod depth;\n", "lib.rs", rival), 1)
 
 
 if __name__ == "__main__":
