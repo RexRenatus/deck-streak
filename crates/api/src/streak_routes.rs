@@ -10,7 +10,7 @@ use axum::http::StatusCode;
 use axum::http::header::CONTENT_TYPE;
 use axum::response::{IntoResponse, Response};
 use axum::routing::get;
-use deck_streak_coordination::streak_views::{governor_view, streak_view};
+use deck_streak_coordination::streak_views::{CalendarView, governor_view, streak_view};
 use deck_streak_identity::{OwnerSession, Sessions};
 use serde_json::{Value, json};
 
@@ -52,6 +52,21 @@ fn track_json(current: u32, longest: u32, heat: u32) -> serde_json::Map<String, 
     track
 }
 
+/// A calendar's days: each its day, whether it was studied, and the markers that sit on it.
+fn calendar_json(days: &[CalendarView]) -> Value {
+    Value::Array(
+        days.iter()
+            .map(|day| {
+                json!({
+                    "day": day.day.to_string(),
+                    "studied": day.studied,
+                    "markers": day.markers,
+                })
+            })
+            .collect(),
+    )
+}
+
 /// `GET /api/streak`.
 async fn streak(_owner: OwnerSession, State(streaks): State<Streaks>) -> Response {
     let Some(db) = streaks.readiness.database() else {
@@ -73,6 +88,10 @@ async fn streak(_owner: OwnerSession, State(streaks): State<Streaks>) -> Respons
                 "at_stake": {
                     "language": view.language_at_stake.as_str(),
                     "law": view.law_at_stake.as_str(),
+                },
+                "calendar": {
+                    "language": calendar_json(&view.language_calendar),
+                    "law": calendar_json(&view.law_calendar),
                 },
             }))
         }
