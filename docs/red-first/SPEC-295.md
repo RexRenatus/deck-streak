@@ -115,7 +115,7 @@ The tests were committed alone (577bca19) and each module was run alone. The rea
 loader's refusals (418728f7) turned them green; the tests that hold each plant to its kind and the
 identity to its presence were added after (ccae4f21), each killing mutants named in the rows.
 
-```red-first
+```text
 A7: red at 577bca19: AssertionError: the sources each combination names, as the checker reads them (R6)
 A7: green at 418728f7
 A8: red at 577bca19: AssertionError: a refusal escaped a test as an error, not a failure
