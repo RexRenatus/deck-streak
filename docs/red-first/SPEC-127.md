@@ -367,3 +367,10 @@ that kills it. The run of 7d282828: `Ran 681 tests`, `OK`, `examined 552 state-a
 
 Population: 192 members at ac118ffc (with the trap-removal reds), 143 at a090126e (filtered),
 499 at the red of this round and 552 at the green.
+
+## Round three, a second disclosure
+
+- omitted before, disclosed now: commit ec80b1e8 sits between the red 24bc441f and the green
+  9a1b8ac5 of A42 and edits the test in `scripts/tests/test_deploy_scripts.py`: one added
+  assertion, that the unit the host already had still exists after a failed switch. It tightens the
+  failed-switch member and removes nothing from the population.
