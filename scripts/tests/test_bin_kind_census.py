@@ -727,6 +727,8 @@ class ThePlantedShapesOfTheIssue(unittest.TestCase):
             "#![cfg(test)]\n": "carries an inner cfg attribute",
             "mod x fn;\n": "a mod declaration the reader",
             "#[cfg = all(test)]\nmod x;\n": "holds a cfg on mod x the reader cannot decide",
+            '#[path = "q.rs"]\nfn f() {\n    mod a;\n}\n': "declares mod a inside a block",
+            "#[cfg(not(test))]\nfn f() {\n    mod a;\n}\n": "declares mod a inside a block",
         }.items():
             with self.subTest(text=text):
                 planted = self.member(("", "", {"src/main.rs": text, "src/x.rs": LEAF}))

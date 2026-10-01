@@ -630,7 +630,7 @@ def module_files(file: pathlib.Path, root_file: pathlib.Path) -> list[pathlib.Pa
                     children.append(child)
             index += 3
             continue
-        if token in (";", "}"):
+        if token in (";", "{", "}"):
             attributes = []
         index += 1
     return children
