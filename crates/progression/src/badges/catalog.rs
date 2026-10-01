@@ -4,8 +4,8 @@
 //! Five descriptions name courses of the predecessor's own owner; here they are rendered from the
 //! configured courses (ADR-087), so a catalog never carries a course the owner does not study.
 
-use deck_streak_kernel::courses::Course;
 use deck_streak_kernel::Courses;
+use deck_streak_kernel::courses::Course;
 
 /// The family a badge belongs to: which context decides it is earned.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
