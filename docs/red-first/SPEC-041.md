@@ -504,3 +504,27 @@ widens its `allow` to `clippy::print_stdout`). No assertion of a verdict and no 
 test file's numstat for it is 12 inserted and 2 deleted. The commit 029fc3e7 is a formatter-only
 edit of the same test file: it splits one chained call over three lines, changes no assertion and no
 member, and its numstat is 3 inserted and 1 deleted.
+
+## The held-flush amendment (#291)
+
+The model came first, then a seam: a `Flushed::Busy` answer and the `held_flush` job's constant and
+work stubbed, so the new tests compile and fail by assertion rather than by a missing symbol. The
+tests came next, alone, in 9669cea, and each of them failed by an assertion at dev's behaviour:
+the generated population read `12 of 96 cases differ`, all of them cases of the scheduled step
+inside an open window (the flush after a sync and the flush after an owner's sync matched in all
+64 of theirs, because those two flushers already exist); the concurrency test failed with `the
+second flush finds the lease taken`; and of the calendar tests, the control that tells a slot inside
+the window from one outside it passed, as it should, while the job-table and template tests failed
+with `the job table has a scheduled flush step`. The green commit, 930ef15, adds the lease, the job,
+its timer and its credentials. The lease and answer tests (`flush_lease.rs`, `held_flush_answers.rs`)
+were added after it, with the rows S04160 to S04169, each proved killed; their red is those rows'
+mutants, and A20's and A21's red lines are the tests of the red commit.
+
+```red-first
+A19: red at 9669cea: 12 of 96 flush cases differ from the expected delivered and abandoned sets, all of them the scheduled step inside an open window
+A19: green at 930ef15
+A20: red at 9669cea: assertion failed: the second flush finds the lease taken
+A20: green at 930ef15
+A21: red at 9669cea: assertion failed: the job table has a scheduled flush step
+A21: green at 930ef15
+```

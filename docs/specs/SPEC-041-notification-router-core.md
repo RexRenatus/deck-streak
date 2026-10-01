@@ -482,3 +482,73 @@ the verdict of a run with that wiring is posted as the `box/packs` status at the
   changed once between the red and the green commit, in the style of the workspace's lints (a range,
   a `let` chain, a file-extension helper and an `expect` allowance for a test crate), with no
   assertion touched.
+
+## 8. Amendment: the held queue is flushed once the quiet window ends (#291)
+
+R7 flushes the held queue after every successful sync. The scheduled sync runs inside the default
+quiet window, so on that path the flush finds the window closed and delivers nothing, and a
+celebration held overnight waits for a sync that happens to land after the window. This amendment
+adds a flush of its own, outside the window, and states the class it closes: **every held
+notification reaches the owner exactly once or is abandoned by name, on every path that can flush.**
+
+- **R14: a scheduled flush step, outside the window.** The job table gains `held_flush`, a daily job
+  at 07:36 UTC with catch-up, its own timer and its own job run, never a step of a readings job
+  (#39). The window the router reads ends at 07:30, and the step fires after it. A missed fire is
+  replayed by the timer up to 360 minutes late, which is still outside the window, and the oldest
+  hold has then aged at most 510 minutes against the 720-minute limit. ADR-300 records the choice.
+- **R15: the window is read when the flush sends.** A flush inside the window delivers nothing and
+  answers `QuietHours`; a flush after it delivers each hold it finds and abandons by name a hold
+  past its age limit, in the recap line R7 already prints. The three flushers are the flush after a
+  scheduled sync, the scheduled step, and the flush after an owner-triggered sync.
+- **R16: one flush at a time.** A flush takes a lease before its first send, held as the setting
+  `flush_lease` whose value is the instant it lapses, ten minutes after it was taken. A flush that
+  finds an unlapsed lease answers `Busy` and sends nothing; a flush releases its own lease when it
+  ends, and a lease whose flush died lapses on its own. The lease is a settings row, so no schema
+  changes. Two flushers over one queue therefore never send one item twice.
+- **R17: the job process has a router.** Only the bot's process held a router, so the scheduled job's
+  process built none. The `held_flush` job builds its own from the policy, the owner's chat and the
+  bot's credentials, through a service drop-in that loads the same two credentials the bot loads. The
+  job answers done for a flush that ran, one inside the window and one that found the lease taken;
+  it answers not delivered while the outage breaker is open, and fails by name with `no_notifier`
+  when no bot is joined or `flush_failed` when the flush errs.
+- **The surface.** The flush sends through the bot's transport and records its decisions in the
+  decision ledger the Mini App feed reads, so both surfaces see the same decisions.
+- **What this does NOT do.**
+  - It is not a readings step: the readings jobs are #39's, and the flush is its own job.
+  - It does not re-check the window at each send of one flush: a flush that starts just before the
+    window opens delivers its held items under the check made at its start (#291).
+  - It adds no table or column, so the lease row is a settings row that the data-rights export lists
+    while it is held (#291).
+
+File manifest of the amendment:
+
+| path | change |
+|---|---|
+| `crates/notifications/src/router.rs` | the lease, the `Busy` answer and the flush's split into the lease and the delivery |
+| `crates/coordination/src/held_flush.rs` | the job's work and its answers |
+| `crates/coordination/src/jobs.rs` | the `held_flush` entry of the job table |
+| `crates/daemon/src/role_job.rs` | the job process builds its router and runs `held_flush` |
+| `deploy/systemd/deck-streak-job@held_flush.timer` | the timer, at 07:36 UTC with catch-up |
+| `deploy/systemd/deck-streak-job@held_flush.service.d/20-bot-credentials.conf` | the bot's two credentials for the job |
+| `deploy/README.md`, `deploy/rail-contract.json` | the schedule and credential rows, and the rail's calendar |
+| `crates/coordination/tests/held_flush.rs`, `held_flush_calendar.rs`, `held_flush_answers.rs` | A19, A20 and A21 |
+| `crates/notifications/tests/flush_lease.rs` | A20's lease cases |
+| `formal/tla/HeldFlush/` | the model of two flushers over one queue |
+
+## 9. Acceptance criteria of the held-flush amendment
+
+| # | criterion | test |
+|---|---|---|
+| A19 | over every flusher (the flush after a scheduled sync, the scheduled step, the flush after an owner-triggered sync), every clock position of the window read from the policy (before it, at its start, inside, at its end, after it, across midnight) and every hold state (fresh, at the age limit, past it, already delivered), the delivered set and the abandoned set are exactly the expected ones, and a flush inside the window delivers nothing | `every_flusher_delivers_once_or_abandons_by_name_and_only_while_the_window_is_open` |
+| A20 | two flushers over one held queue never send one item twice: a flush that finds an unlapsed lease answers `Busy` and sends nothing, a lease that lapsed this instant is taken over, the lease holds ten minutes and is released when the flush ends | `two_flushers_over_one_queue_never_send_one_item_twice`, `a_flush_finds_an_unlapsed_lease_and_sends_nothing`, `a_lease_that_lapsed_this_instant_is_taken_over`, `the_lease_holds_for_ten_minutes_and_is_released_when_the_flush_ends` |
+| A21 | every flush step of the job table and of the deploy templates fires outside the quiet window read from the policy, a slot inside it is told from one outside it, and the job answers done, not delivered or a named refusal for each answer of the flush | `every_flush_step_of_the_job_table_fires_outside_the_quiet_window`, `every_flush_step_of_the_deploy_templates_fires_outside_the_quiet_window`, `the_check_tells_a_slot_inside_the_window_from_one_outside_it`, `a_flush_that_ran_and_one_inside_the_window_are_done`, `a_flush_whose_lease_is_held_elsewhere_is_done`, `an_open_breaker_is_a_send_attempted_and_nothing_delivered`, `a_router_with_no_bot_is_a_named_refusal` |
+
+Commands:
+
+```
+A19: cargo test -p deck-streak-coordination --test held_flush -- --exact every_flusher_delivers_once_or_abandons_by_name_and_only_while_the_window_is_open
+A20: cargo test -p deck-streak-coordination --test held_flush -- --exact two_flushers_over_one_queue_never_send_one_item_twice
+A20: cargo test -p deck-streak-notifications --test flush_lease
+A21: cargo test -p deck-streak-coordination --test held_flush_calendar
+A21: cargo test -p deck-streak-coordination --test held_flush_answers
+```
