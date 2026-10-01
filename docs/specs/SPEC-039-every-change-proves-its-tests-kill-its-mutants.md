@@ -892,9 +892,10 @@ wrong for a crate whose layout the compiler reads differently from the runner:
 
 The rule that replaces them is one rule, and not three patches: the `bin` kind's census,
 selection and refusal read the crate's source files, test targets and binaries exactly as the
-compiler and cargo define them. No file the compiler does not build is read as a module, no target
-cargo builds is missed, and every count a message states equals cargo's own. Anything the reader
-cannot decide is refused by name and never read open.
+compiler and cargo define them. Each layout is read so, or the reader refuses it by name: no file
+the compiler does not build is read as a module, no target cargo builds is missed, and every count
+a message states equals cargo's own. Anything the reader cannot decide is refused by name and never
+read open.
 
 What the reader now does, each clause decided by the tests of section 20:
 
@@ -953,3 +954,67 @@ rows), `docs/decisions/ADR-299-the-bin-kind-reads-what-the-compiler-builds.md`,
 `docs/red-first/SPEC-039.md`, and a changelog fragment.
 
 Issue #405 is closed by this delivery.
+
+
+## 21. Amendment, 2026-10-01: the five classes the population did not hold
+
+Made by ADR-299's amendment, insert-only under ruling (i) of SPEC-038 section 8. The rule of
+section 19 stands. Five classes of layout were read differently from cargo and rustc because the
+population of section 20 held none of their members, and each is now a generated family of that
+population:
+
+1. **A `mod` among a macro invocation's tokens.** The token walk read every `mod` token, so one
+   inside `stringify!(..)`, an invoked `m![..]` or a `macro_rules!` body was read as a declaration.
+   Only the macro's expansion decides what such tokens declare, so the reader refuses the file by
+   name, under every delimiter, `()`, `[]` and `{}`: "holds a mod in a macro invocation, which only
+   its expansion decides". An invocation holding no `mod`, and one inside a module the test build
+   drops, are read as before.
+2. **A declared path through `..`.** Cargo compares a declared path by component, after joining it
+   to the package's directory: a `.` and a doubled separator collapse, a `..` does not. The reader
+   compares the same key, so `src/../src/main.rs` does not drop the target inferred at
+   `src/main.rs`, as cargo does not.
+3. **Dotfiles.** Cargo's inference skips an entry whose name starts with a dot, under `src/bin/`
+   and `tests/`, file or directory. The reader skips it too.
+4. **An absolute declared path.** It is not joined to the package's directory and is spelled
+   relative to the crate when it names a file inside it, so one naming a file inside the crate
+   drops the target inferred at that file, as cargo drops it, and the binary is named at its path
+   inside the workspace.
+5. **Edition 2015.** A manifest with no `edition` key is edition 2015, and under it a `[[bin]]` or
+   `[[test]]` table switches that kind's inference off unless `autobins` or `autotests` says
+   otherwise. An edition inherited with `edition.workspace = true` is read from the nearest
+   workspace manifest above the crate. An edition the reader cannot decide (a value that is not a
+   string, or an inherited one with no workspace edition to inherit) is refused by name where the
+   reader needs it.
+
+Section 19's clause that an inferred target is dropped when an explicit one has "its path" reads,
+under this amendment, "its declared path, compared as cargo compares it": an unpathed table names
+no path. The population crosses each declared shape (a `[[bin]]` at `src/main.rs`, a `[[bin]]` at a
+`src/bin/` file, a `[[test]]` at `tests/bin.rs`) with six spellings of its path, each dotfile shape
+with each companion, every binary layout with every test layout under edition 2021 and with no
+edition key, every binary layout under an edition 2015 and 2021 inherited from the workspace, and
+each macro shape with each delimiter and root position. A new row in any of those tables joins
+the population by itself, and the test prints and asserts its `examined` figure.
+
+The block-comment arm of the token reader is bounded by the text's length. A comment left open
+drops every character to the end of the text, which a new test pins at every short tail, so a
+bound that stops early is seen.
+
+The rows `S03996` to `S03999` pin the lines this amendment changes.
+
+## 22. Acceptance criteria of the 2026-10-01 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A52 | every member of the five families of section 21 (declared paths in six spellings, dotfiles, editions stated, absent and inherited, macro invocations under every delimiter) is read as cargo and the compiler read it, or is refused by name, and the figure examined equals the one the axis tables derive | `test_bin_kind_census.py` |
+| A53 | a block comment left open drops every character to the end of the text, at every tail length | `test_bin_kind_census.py` |
+
+```acceptance
+A52: python3 -m unittest discover -s scripts/tests -p test_bin_kind_census.py -k test_every_layout_agrees_with_cargo_and_the_compiler_or_is_refused_by_name
+A53: python3 -m unittest discover -s scripts/tests -p test_bin_kind_census.py -k test_a_block_comment_left_open_drops_every_character_to_the_end_of_the_text
+```
+
+File manifest of the amendment: `scripts/mutation_rows.py` (the reader),
+`scripts/tests/test_bin_kind_census.py` (the families and the new test),
+`scripts/mutation-rows.d/S03900-S03999.json` (the rows),
+`docs/decisions/ADR-299-the-bin-kind-reads-what-the-compiler-builds.md`,
+`docs/red-first/SPEC-039.md`, and the changelog fragment.
