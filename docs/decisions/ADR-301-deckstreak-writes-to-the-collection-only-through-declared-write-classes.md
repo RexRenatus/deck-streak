@@ -119,6 +119,14 @@ entry names what it protects.
 - **Reviewed** means that one of the note's cards has a review (the LEXICON's review: a revlog row
   of type 0 to 3 with ease 1 or more). A note is unreviewed only when none of its cards has one.
   Editing a note edits every card of it.
+- **Mass-reschedule** means a write that changes cards' due dates or intervals without naming
+  each card it moves: one operation over a search, a deck, a preset or the whole collection, with
+  no preview that lists its cards and no record of their prior state. A batch that moves more
+  cards than its class's change budget allows is a mass-reschedule too. A declared class's
+  reschedule is not one when its preview names every card it moves, it records each card's prior
+  state so its undo restores exactly those cards, and it stays within its class's change budget.
+  The skip day's reschedule is such a batch: it previews and records each of the study day's due
+  review cards (ADR-089 (iv)), and ADR-089 (i) bounds it to those cards.
 - A note that reached the collection in a package (ADR-151) is changed at its package's source and
   reaches Anki in a newer package, never through a write in the collection. A write there would be
   overwritten by the next newer package, or would leave the note forked from its source.
