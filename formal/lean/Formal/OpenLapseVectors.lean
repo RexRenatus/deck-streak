@@ -6,7 +6,7 @@ import Formal.OpenLapse
 The open lapse walk's half of the vector writer (#472). `Formal/Vectors.lean` dispatches
 `lean --run Formal/Vectors.lean OpenLapse` to `run`, which prints one header line naming the
 covered item and the digest the entry recorded for it, then one line per input with the port's
-answer. `phxd formal check` byte-compares the output with `formal/vectors/open-lapse.jsonl`, and
+answer. The formal check byte-compares the output with `formal/vectors/open-lapse.jsonl`, and
 `--write-vectors` writes it; the file is never edited by hand.
 
 The inputs are derived from five axes, in this order: the window's first day (the smallest day,

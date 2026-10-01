@@ -21,7 +21,7 @@ flowchart LR
   end
   vectors[("formal/vectors/open-lapse.jsonl")]
   config[("config/formal.json: axioms, budgets")]
-  checker{{"phxd formal check"}}
+  checker{{"the formal check"}}
   entry -- "covers anchor=open_lapse digest" --> lapse
   writer -- "imports the port" --> entry
   main -- "dispatches OpenLapse" --> writer
