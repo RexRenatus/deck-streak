@@ -142,8 +142,8 @@ document on dev decides for each of the three, and what it leaves open.
   the planned golden constant (5,000), with `too_many_cards` before any change.
 - Dwell. No dwell time between changes is decided. The nearest planned rule is the planned SPEC-083 R2:
   a study day that already holds a pending or applied skip, not undone, refuses a second take with
-  `already_skipped`. It bounds a day to one skip that is not undone; it is not a dwell between changes.
-  The same rule ends: "After an undo the day can be skipped again."
+  `already_skipped`. It bounds a day to one pending or applied skip that is not undone; it is not a dwell between changes.
+  The same rule adds: "After an undo the day can be skipped again."
 - Band. No band a result must clear is decided. ADR-301 (c) has a class reach the autonomous rung only
   after a pre-registered n-of-1 trial passes, and the skip day's ceiling is the approval rung, so no
   trial of the skip day is decided, and with it no band. The dwell and the band are left to #108,
