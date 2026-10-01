@@ -232,6 +232,14 @@
         "for part in relative.parts[1:]:",
         "the component walk never judges the directory directly below the root, the component both paths sit in (SPEC-295 A8)",
         "test_formal_config_presence.PresenceControls.test_a_link_at_any_component_of_a_path_the_module_reads_is_refused_by_assertion"
+      ],
+      [
+        "S29530-THE-SLOT-CAPACITY-EQUALS-THE-CHECKERS-OWN-SETTING",
+        "config/formal.json",
+        "\"capacity\": 4",
+        "\"capacity\": 1",
+        "the settings file names a slot capacity that differs from the checker's own setting, which the checker refuses because its slot directory is shared (SPEC-295 section 13, #516)",
+        "test_formal_config.FormalConfig.test_the_committed_file_holds_exactly_the_declared_fields"
       ]
     ]
   }
