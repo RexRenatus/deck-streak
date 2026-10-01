@@ -223,18 +223,20 @@ the census test A19, and it fails by assertion on the one arm the base carries. 
 adds the stand-in test A18. It is CI only, because `test_dispatch_shards.py` never runs on the box:
 at the pushed red head 7f83b956 the `hygiene` job of run 36915329420 (job 110547785509) reads it red
 at line 2587 of that module, with `AssertionError: 0 == 0`. Commit 719a1a7a adds A15, A16 and A17,
-and they fail by assertion locally. A16's third test, the job without the command, and the
-end-of-line spelling of the job scan are controls and are not red at 719a1a7a. The green line is the
-whole of `test_mutation_workflows.py` at 29993617, whose commit changes only the finder, the
-scans, the stand-in's failure arm and the rows' paths.
+and they fail by assertion locally. A16's third test, the job without the command, the
+end-of-line spelling of the job scan and the separator spelling ("a wrapper's words after its
+separator", in both scans) are controls and are not red at 719a1a7a. The green line is the
+whole of `test_mutation_workflows.py` at 29993617. That commit changes only the SPEC-129 specification
+file: the finder, the stand-in's failure arm and the rows' paths change in e2d0076e, and the two
+scans in 6af5e3dc.
 
-Three commits sit between the red at 719a1a7a and the green at 29993617, and each edits a file a
-red test reads or runs. Commit 6bcdac64 only adds the read sites of the new tests to the census in
+Five commits sit between the red at 719a1a7a and the green at 29993617 (`git rev-list --count
+719a1a7a..6af5e3dc` prints 5), and each edits a file a red test reads or runs, or a changelog. Commit 6bcdac64 only adds the read sites of the new tests to the census in
 `test_ci_workflows.py`, which the new tests owe and which changes no assertion of theirs. Commit
 e2d0076e moves the finder into `_mutants_finder.py`, repoints `test_dispatch_shards.py` at it and
 makes the stand-in's failure arm exit, which is the change A17 and A18 ask for. Commit 6af5e3dc
 points the two scans of `test_mutation_workflows.py` at the finder, which is the change A15 and A16
-ask for. Commit 7f83b956 adds one assertion to the census test of A19, that it read more than one file, and removes none. No commit among them edits a red test's assertion.
+ask for. Commit 7f83b956 adds one assertion to the census test of A19, that it read more than one file, and removes none. Commit 63a4cedf adds the changelog fragment and no code. No commit among them edits a red test's assertion.
 
 ```red-first
 A15: red at 719a1a7a: AssertionError: Lists differ: [] != ['planted.yml'] : five spellings, five subtests red
@@ -245,7 +247,7 @@ A19: red at 4fc769c9: AssertionError: Lists differ: [('test_dispatch_shards.py',
 A15: green at 29993617
 A16: green at 29993617
 A17: green at 29993617
-A18: green at 29993617
+A18: green at 20446f7c: CI only, run 36919081430, the hygiene job
 A19: green at 29993617
 ```
 
