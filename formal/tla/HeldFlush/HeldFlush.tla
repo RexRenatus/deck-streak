@@ -23,13 +23,13 @@
 (* QuietEnd; the owner's own window settings, the breaker, tiers, the      *)
 (* recap line and the per-send failure path are not modelled.              *)
 (***************************************************************************)
-\* @phx covers crates/notifications/src/router.rs anchor=flush_with digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/coordination/src/sync_cycle.rs anchor=flush digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/notifications/src/ledger.rs anchor=held digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/notifications/src/ledger.rs anchor=settle digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/notifications/src/router.rs anchor=take_lease digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/notifications/src/router.rs anchor=deliver digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/coordination/src/held_flush.rs anchor=perform digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers crates/notifications/src/router.rs anchor=flush_with digest=sha256:b69fcee3ea8aae945713a66651cb12d6fa94ad2b04be7079dc66013aecf81a76
+\* @phx covers crates/coordination/src/sync_cycle.rs anchor=flush digest=sha256:1605c377223f24c33169b84f764e5f19827a3cc438966d0dac77678485a6caf9
+\* @phx covers crates/notifications/src/ledger.rs anchor=held digest=sha256:b9b5e751c9664dc610325dce86c9e5f6adcaf60a009dbac7a705e201377559ae
+\* @phx covers crates/notifications/src/ledger.rs anchor=settle digest=sha256:95f76e72966a185f5e72a64fbfd4e573a25ad4d079dd0e131507645743c5c2d4
+\* @phx covers crates/notifications/src/router.rs anchor=take_lease digest=sha256:1ef34d6cd3f2f23db86a019bef7db16bb88ee22632d14c98037b4aae475c1121
+\* @phx covers crates/notifications/src/router.rs anchor=deliver digest=sha256:0c33494c8ba6ded864660206d655abfa1c033156639826eff2f01562959cd332
+\* @phx covers crates/coordination/src/held_flush.rs anchor=perform digest=sha256:ce5564d067389de1f76446b44708cc4aa7e1fb1a73e6776eece05603afba8fe3
 \* @phx cites #291
 \* @phx property NoDoubleDelivery ramp=report
 \* @phx property HeldReachesOrAbandons ramp=report
