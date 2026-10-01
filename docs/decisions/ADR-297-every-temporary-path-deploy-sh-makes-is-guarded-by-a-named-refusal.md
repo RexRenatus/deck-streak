@@ -75,3 +75,34 @@ S12747 to S12792 pin the guards; the `mutation-rows` job of CI measures each row
 ## More Information
 
 Issue #451; SPEC-127 (amendment of 2026-09-30); ADR-198.
+
+## Amendment, 2026-10-01: round three of the fix; corrections as old/new pairs
+
+The text above is not edited. Each sentence it corrects is quoted as `old`; `new` governs.
+
+- old (Consequences): "every guard has its own row". new: the guards that had none now have
+  one (S12793 to S12799 and S12793-B); the second `check_dirs` call is a pre-check whose directories
+  the first call already reads, so it has no row of its own.
+- old (Decision Outcome): "before it writes any path of the host (the check file's `mktemp` comes
+  first)". new: the check file's `mktemp` comes first, then the saved archive of the unit files,
+  and only then the directory check; the archive is the one write that precedes it.
+- old (Consequences): "every failed write the tests reach ends with one `deploy:` line, a non-zero
+  exit and every fixture path as it was". new: every failed write of every state of the registry
+  ends so, the trap's and the prune's removals included, and a run that already finished its switch
+  ends 0 with no temporary path and no release a later verb accepts while half deleted. Nothing
+  is filtered out: a filter that drops a member is a weakening, not a bound.
+- old (Consequences): "The test of A42 reads the host body for every command that can write a
+  path". new: it reads every operator, substitution, backtick, trap string and reader option, and
+  names an unknown word; 26 escaping spellings are planted bodies, each red by assertion.
+- old (Confirmation): "...reads the host body for its writing tools and fails each call, in each
+  verb, from each of four states". new: it fails every writing call, `rm` and the trap's and
+  prune's `find` included, in each verb, from each state of one registry held at a floor.
+- Decision added: each removal the trap and the unwind make is written twice, joined by `||`, with a
+  final `|| :` in the trap. Chosen against a generic `retry "$@"` helper, which would hide the
+  command from the census that reads the body, and against `set +e` in the trap, which hides the
+  failure it is there to survive. A stale unpack is set aside and put back by the trap on a refused
+  run, chosen against deleting it first, which a refusal could not undo. The prune asks whether a
+  release can be deleted whole before it deletes, chosen against deleting and warning, which leaves
+  a half-deleted release a later rollback could accept.
+- Confirmation: `every_state_and_every_writing_call_of_the_host_step_is_refused` and the
+  double-fault tests of the undo and the way back; rows S12793 to S12799 and S12793-B.

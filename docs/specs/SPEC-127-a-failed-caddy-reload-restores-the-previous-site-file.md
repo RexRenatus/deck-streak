@@ -495,3 +495,105 @@ pre-checks whose refusals the place members of A41 already reach. Files changed:
 - It does not close a directory that changes between the pre-check and the write: `check_dirs`
   checks a directory and the script then writes into it, so that stays a check-then-act surface
   whose proof is follow-up #505.
+
+## Amendment, 2026-10-01: round three of the fix (issue #451); corrections as old/new pairs
+
+This amendment is appended. The text above is not edited; each sentence it corrects is quoted as
+`old` and replaced by `new`, and `new` governs.
+
+### The filter is not a bound
+
+- old: "It does not undo the exit trap's removal of the saved archive, which runs after the switch,
+  and the test leaves a failure of that removal out of its members, because the host is already in
+  its new state and the removal cannot put it back (#451)."
+- new: the trap's removal of the saved archive runs on every exit, refused runs included, and it
+  is a member. A failed removal is tried twice and ends in `|| :`, so it neither ends the shell
+  early nor leaves a `deploy:` line that is not last. The test no longer carries a carve-out for it;
+  a filter that drops a member is a weakening, not a bound, and this record does not call one a
+  bound.
+- old: "It does not undo the prune of old releases after a finished run, nor the removals `back()`
+  makes when the service does not become ready, which run with errexit off and are reached only
+  after the same link was staged and renamed a moment before (#451)."
+- new: `back()` runs with errexit on (it is the last command of an `||` list, where errexit is not
+  suspended for its own body), and the prune is guarded: an older release is asked
+  (`deletable`) before its first deletion and is left whole, with one warning line, when a
+  directory in it cannot take a write. A run that finished ends 0, leaves no temporary path and
+  leaves no release that a later verb accepts while half deleted. A not-ready run ends non-zero
+  with one `deploy:` line, last, that names the unit and whether the way back held.
+- old (deploy.sh comment and test docstring): "Each test is an `if`-shaped list, so the trap cannot
+  end the shell early." and "A run that got this far has finished its switch, so a failure there has
+  nothing left to undo (#451)."
+- new: each removal in the trap is written twice, joined by `||`, and ends in `|| :`; the
+  carve-out helper `after_the_switch()` is removed and nothing in the test filters a call by where
+  it falls in the run.
+
+### The amendment of 2026-09-30, sentence by sentence
+
+- old: "three made by `mktemp` ... and paths the host script makes under a temporary name without
+  `mktemp` (the `releases/<tag>.partial` directory ... and the pid-named `.current.<pid>` link)".
+  new: six temporary paths: the three made by `mktemp`, the `releases/<tag>.partial` directory, the
+  pid-named `.current.<pid>` link and the saved archive `<check file>.saved`; a stale unpack that is
+  set aside takes a seventh name, `releases/.stale.<pid>`.
+- old: "The script then checks that the unit directory and every existing unit drop-in directory take
+  a write, saves the unit files it may replace into one archive". new: the host script saves the
+  unit files into the archive first (the one write before the directory check) and then checks the
+  directories; the order is archive, check, link.
+- old: "so its guards end with `refuse "..."`". new: the guards end with `refuse "..."`, or with
+  `stop "..."` where the whole message is given; the host script's own first guard is `refuse`.
+- old: "A step that cannot make its path prints one `deploy:` line naming the step ... and exits
+  non-zero." new: it holds for the host step's removals too: a removal that fails is tried again and
+  then refused with one line, last; the cases not covered are the ones named in the exclusions
+  below.
+- old: "The host step's refusal leaves every path as found for each call the tests below fail, in each
+  verb and each state they run; the cases this leaves out are named in the exclusions below." new:
+  it holds for every call of every state in the registry below, with no filter, and for the pairs
+  the registry cannot build, each with its reason.
+- old: "takes every command word that can write a path (a tool, a `find` with a write flag, a
+  redirection or a function that does any of these)". new: the parser reads every operator, nested
+  substitution, backtick, trap string and reader option, and names an unknown word instead of passing
+  it; 26 spellings that escaped it are planted bodies, each red by assertion.
+- old: "asserts the set and the count of the call sites (28)". new: 252 command sites, 1 redirection
+  target and 17 writing calls, each printed `examined <n>` figure asserted equal to a figure
+  derived independently.
+- old: "runs each verb from each state as an axis of the population". new: the states are rows of one
+  registry (`STATE_TABLE`) that `situation()` reads, held at a floor (`FLOOR`) by the test; a state
+  added to the registry joins every verb by itself.
+- old: "Two extra members run a stale unpack ... and a failed switch ...". new: the extra tests are
+  named by what they measure: a stale unpack in an unwritable releases directory (2 members), an
+  unpack that cannot be deleted (1), a stale drop-in that cannot be deleted (1), a failed switch onto
+  a release that adds a unit (2), the double-fault tests of the undo (3) and of the way back (3), a
+  stale unpack that is set aside and restored (2 verbs), and an older release that cannot be deleted
+  whole (1).
+- old: "every command of the host step that can write a path ... and every verb started from each of
+  four states ...". new: see A43.
+- old: "S12772 to S12792 pin ... the saved archive of the unit files and each step that makes and
+  uses it". new: S12793 to S12799 pin the guards that had no row: the trap's removal of the saved
+  archive, the refusal of a failed undo, the refusal that follows a held undo, the move that sets a
+  stale unpack aside, the trap's restoring of it, the finished run's deletion of it and the prune's
+  question before it deletes.
+- old: "The `check_dirs` calls at the tag's own paths are pre-checks whose refusals the place members
+  of A41 already reach." new: the second `check_dirs` call (at the unpacked release) and the
+  guard of the unit-installation's stale drop-in are reached by members of A43 named in A43; no row
+  pins an anchor that the member does not kill.
+- old: "which run with errexit off". new: with errexit on (above).
+
+### Acceptance criterion of the third fix round
+
+| id | criterion | test |
+|---|---|---|
+| A43 | every host call of the host step that writes or removes a path, from every state of the registry (a host with a release, a first install, a rollback with `current` absent, a release shipping a unit the previous one lacks, a not-ready service with and without a previous release, the same tag, a stale unpack that deletes, one that cannot and one that half can, an unwritable drop-in, an absent unit directory, a third release past the keep, a first install under an unwritable parent, a corrupt manifest, a refused effective check, an unwritable check file, and a half-deletable older release), when it fails, ends the verb with one `deploy:` line that is last, names the step and a non-zero exit with every fixture path as it was; a run that finished its switch ends 0 with no temporary path and no half-deleted release (#451) | `test_deploy_scripts.py` `every_state_and_every_writing_call_of_the_host_step_is_refused` |
+
+```acceptance
+A43: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k every_state_and_every_writing_call_of_the_host_step_is_refused
+```
+
+A refusal that ends 0 is judged as a finished run only when the run's own log holds the rename over
+`current` before the failed call; any other run that ends 0 is judged by the strict arm and fails.
+The rows S12793 to S12799 are each killed by the test named in the row.
+
+### What this amendment does NOT do (2026-10-01)
+
+- It does not prove the host step as one outcome per run under interleaving or a concurrent verb;
+  that proof is follow-up #505 and its model follows the code as it is: the trap, the prune and
+  the refusal branches.
+- It does not close a directory that changes between the pre-check and the write (#505).

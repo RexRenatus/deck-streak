@@ -323,3 +323,47 @@ A42: green at 9a1b8ac5b6760b2bedc3c9647301aae5b86d7872
 
 The fix (acdbb5b5c7a50e7284e471758e1a0224b2e2cdda, then 90ddac0418148f24181f18ec8100eee44b7b2c60, which saves the unit files as one archive, then 65cb2c8b9f935649df7b5ff9429d44175d41d836 and 9a1b8ac5b6760b2bedc3c9647301aae5b86d7872, which give each row a killer of its own state) changes
 `deploy.sh`, one test file, the rows S12772 to S12792, the SPEC and the ADR. The first commit whose CI run was green end to end, `hygiene` and `mutation-rows` included, is 9a1b8ac5b6760b2bedc3c9647301aae5b86d7872; the run of 90ddac04 ended with its `mutation-rows` job cancelled at the job's time limit, and the run of 65cb2c8b with two rows alive.
+
+## Amendment 2026-10-01, round three of the fix (issue #451); corrections as old/new pairs
+
+The text above is not edited; each correction is an old/new pair and `new` governs.
+
+- old: "the run of that commit ended `FAILED (failures=8)`, every member red by assertion and none by
+  error". new: at 24bc441f no state-and-call member ran (the run printed no `examined ...
+  state-and-call` line); the A42 test failed at its `reached == HANDLED` assertion. The eight
+  failures were the census dict, `HANDLED`, the test of A41's calls table (twice, through its
+  alias), the stale unpack (twice) and the failed switch (twice).
+- old: "each state-and-call member, the stale-unpack member and the failed-switch member ran a verb
+  whose refusal left a path changed". new: none of the state-and-call members ran; the stale-unpack
+  and failed-switch members did.
+- omitted before, disclosed now: the first commit of the test (62410760) ended with three failures
+  as well as the seven errors recorded above, so it was not a valid red. The red of round two was
+  produced against expectation literals that the fix later changed: `HANDLED` with `cp`, the census
+  dict with `cp`, the call-site count 28 changed to 27, and the A41 table's `mkdir` count 3 changed to
+  2. The fix commit acdbb5b5 also deleted the first-install place test (a weakening, restored in
+  round three and byte-equal to its form at 24bc441f). A carve-out helper, `after_the_switch()`, filtered
+  eleven members out of the population that was measured red at ac118ffc (192 state-and-call members
+  with the trap-removal reds, 143 once it filtered them); it is removed.
+
+```red-first
+A43: red at fef29b615b50ae55f1e3a524a9ef253a4d8a8998: FAILED (failures=136): examined 499 state-and-call member(s); AssertionError: 1 != 0 : install / over-keep-partly-deletable: a finished run ended non-zero
+A43: green at 7d2828287093b53fe7f2646d6b63651d1b537688
+```
+
+The test of this round was committed alone (d5e96b13, then 88c08f0d and fef29b61, which turned an
+abort on a failed baseline into a member). Its first commits ended `FAILED (failures=3, errors=1)`
+and `FAILED (failures=4)`: a fixture that gave a state two extra arguments, then a baseline failure
+that aborted the main test; neither is a valid red, and the red above is the first whose failures are
+all assertions about the host script (133 in the generated test, 3 elsewhere). The fix is ce8bde5e,
+8991e7f4 (113 failures left), 328e8d9f and 137dd930; the run of 137dd930 passed `hygiene` and failed
+`mutation-verdict` with ten surviving rows, because a run that ended 0 from a failed call was judged as
+finished whatever call failed (an exit-0 hole). 698c8f6d fixed it: a run that ends 0 is a finished
+run only when its own log holds the rename over `current` before the failed call. Its CI run ended
+`Ran 677 tests`, `OK`, `examined 552 state-and-call member(s)`, `examined 252 host command site(s)`,
+`examined 1 host redirection target(s)`, and `mutation-rows` examined 113, killed 113. The run of
+8e3d0c79 left S12799 surviving (its killer passed with the prune unguarded); 7d282828 added the test
+that kills it. The run of 7d282828: `Ran 681 tests`, `OK`, `examined 552 state-and-call member(s)`,
+`mutation-rows` 120 rows, 120 KILLED.
+
+Population: 192 members at ac118ffc (with the trap-removal reds), 143 at a090126e (filtered),
+499 at the red of this round and 552 at the green.

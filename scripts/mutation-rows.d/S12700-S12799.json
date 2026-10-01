@@ -792,6 +792,14 @@
         "        if :; then\n",
         "an older release that cannot be deleted whole is left whole, never half gone (SPEC-127 A42)",
         "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_an_older_release_that_cannot_be_deleted_whole_is_left_whole"
+      ],
+      [
+        "S12793-B-UNDO-AND-SAY-NAMES-A-FAILED-UNDO",
+        "deploy/deploy.sh",
+        "    unwind || refuse \"could not put its unit files back after: $*\"\n",
+        "    unwind || :\n",
+        "a refused effective check whose undo failed says so in its one refusal line (SPEC-127 A43)",
+        "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_an_undo_that_cannot_put_the_unit_files_back_says_so_and_leaves_no_temporary_path"
       ]
     ]
   }
