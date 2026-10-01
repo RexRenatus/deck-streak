@@ -78,3 +78,46 @@ SPEC-039's A46 to A51 (`scripts/tests/test_bin_kind_census.py`), and the rows `S
 ## More Information
 
 SPEC-039 sections 19 and 20, issue #405.
+
+## Amendment, 2026-10-01: five classes the population did not hold
+
+Insert-only; everything above stands. The population of SPEC-039 section 20 held no member of five
+classes, and the reader read each of them differently from cargo and rustc (#405). Each class is
+now a generated family of the population (SPEC-039 sections 21 and 22). Each decision names what
+it was chosen against.
+
+- **A `mod` among a macro invocation's tokens is refused by name, under every delimiter.** Chosen
+  because it names the shape, against two others. Reading through the invocation, which the token walk did, takes tokens that
+  declare nothing until the macro expands for a declaration. Expanding the known macros
+  (`stringify!` discards its tokens) would decide one macro and leave every declared macro open,
+  because only its definition decides what it expands to. A refusal names the shape, and an
+  invocation holding no `mod` is read as before.
+- **A declared path is compared by cargo's key**: joined to the package's directory, compared by
+  component, so a `.` and a doubled separator collapse, a `..` stays, and an absolute path stands
+  alone. Chosen against the normalisation the reader used, which collapsed a `..` that cargo keeps
+  and so dropped a target cargo builds, and against resolving the file on disk, which equates two
+  paths cargo keeps apart. An unpathed table contributes no path to the comparison, as in cargo.
+- **The edition decides inference beside a declared table.** No `edition` key is edition 2015,
+  where a `[[bin]]` or `[[test]]` table switches its kind's inference off unless `autobins` or
+  `autotests` is set; an inherited edition is read from the nearest workspace manifest. Chosen
+  against assuming a recent edition, which counted a target cargo does not build, and against
+  refusing every crate with no edition key, which would refuse layouts cargo decides. An edition
+  the reader needs and cannot decide is refused by name.
+- **Entries whose names start with a dot are skipped by inference**, as cargo skips them. Chosen
+  against counting them, which counted a binary cargo does not build.
+- **The census calls the toolchain's own `cargo` and `rustc`**, resolved once with `rustup which`
+  where rustup is installed, and the bare names elsewhere. Chosen against the rustup proxy per
+  member, whose start costs more than the metadata it serves, because a
+  larger population multiplies that cost; the toolchain is the one the proxy would pick in a scratch crate,
+  so the oracle's answers do not change.
+
+### Consequences of the amendment
+
+- Good, because each class is a generated family, so a later shape of the same class joins the
+  population by adding a row to its table.
+- Bad, because a binary whose source invokes a macro holding a `mod` cannot carry a `bin::` killer
+  until the reader can decide that expansion. The census reports the refusal, so it is seen.
+
+### Confirmation of the amendment
+
+SPEC-039's A52 and A53, and the rows `S03996` to `S03999`.
