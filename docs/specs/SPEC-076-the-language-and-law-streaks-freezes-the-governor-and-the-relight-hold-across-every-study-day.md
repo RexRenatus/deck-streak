@@ -899,3 +899,83 @@ configurations `formal/tla/RelightOrder/MCRelightOrder.cfg`, `formal/tla/Relight
 and `formal/tla/RelightOrder/MCNoOtherDayHeldBack.cfg`, and its twelve witnesses, one file each under
 `formal/tla/RelightOrder/witness/`. It changes `config/formal.json` and
 `scripts/tests/test_formal_config.py` (the model's time budget).
+
+## 27. Amendment, 2026-10-01: the calendar and its markers (#486)
+
+Insert-only: every earlier byte is kept in order, and this section and the next two are the only
+insertions. It lifts the first bullet of section 18, and with it that section's supersession of
+R20's "the window's study days with their freeze, skip and break markers" and of R23's "the
+calendar with its markers", for the calendar alone: the rest of section 18 stands.
+
+- **The predecessor serves no streak calendar.** The parity oracle (`tools/parity-oracle/`) drives
+  the predecessor's gamification modules, and none of them computes a window of days with markers,
+  so no golden binds the window or a marker's day (ADR-302 records the search).
+- **The window** is the `CALENDAR_DAYS` study days ending at the study day served, inclusive
+  (`crates/streaks/src/constants.rs`, 35: five weeks), oldest first, and never the whole history.
+  A marker that sits before the window's first day is not served.
+- **The days served.** Each served day carries its day in the encoding `study_day` has (the
+  `StudyDay` display, `YYYY-MM-DD`), whether it was a study day of the track, and the markers that
+  sit on it, in the order `skip`, `freeze`, `break`.
+- **The study days** of a track are the days on which its review XP is settled above nothing: the
+  rows of `xp_settlement` whose source is `reviews` and track `language` for the language track, and
+  whose source is `reviews_law` and track `law` for the law track. The settlement's own rule makes
+  that the set of days with a study review of the track (ADR-302 D4), so no table is added and no
+  day set is stored twice.
+- **Where a marker sits, on the language track.** A `skip` sits on each declared skip day (the set
+  is empty until the skip day exists, #108). A `freeze` sits on the ONE real miss a freeze covered:
+  the day strictly between the last study day and the return day on which the replay spends the
+  freeze, skip days not counted, and never on the return day. A `break` sits on the day the replay
+  marks the run broken (`broke_today`): the day of the second real miss's lapse, or a return day
+  after a break the lapse path did not record.
+- **Where a marker sits, on the law track.** The law track serves its own days, and `skip` and
+  `break` markers; it holds no freezes, so it serves no `freeze`. A `break` sits on the first real
+  miss after a live run, the day the law replay's run resets, once the day has passed.
+- **The open day.** The served day is the window's last day. It is a study day of the track once
+  the fold has settled a study review for it, and not before; a freeze is spent on the return day,
+  so its covered day carries `freeze` from the moment that return day is settled, and not before.
+- **One read.** The days of both tracks and `streak_state` are read in ONE read transaction, so the
+  calendar and the counts beside it are one moment of the store. The markers are derived on read;
+  no table is added.
+- **The shape.** `GET /api/streak` gains `calendar`: `{ "language": [day, ...], "law": [day, ...] }`,
+  each day `{ "day": "YYYY-MM-DD", "studied": bool, "markers": ["skip" | "freeze" | "break", ...] }`.
+  Every other field is as before.
+- **The screen** draws each track's days as a calendar of cells, one per served day, each cell
+  carrying its markers and no other day's. The at-stake line and every R20 to R23 behaviour stand.
+
+What this does NOT do (section 5's list stands, and adds):
+
+- It declares no skip day: the fold and the route pass an empty skip set until the skip day exists
+  (#108).
+- It stores no calendar and no marker: a marker is derived on read (#486).
+- It lets the owner pick no other window: the window is the constant (#486).
+
+## 28. Acceptance criteria of the 2026-10-01 calendar amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A57 | over every history built by construction (runs of study days, gaps of one, two and three real misses, none and one freeze held, skip days before, inside and after a gap, the served day at the window's first day, inside it and on a gap day, and a marker one day before the window), each served day of each track carries exactly the markers that sit on it, the window is `CALENDAR_DAYS` days ending at the served day, and every pair of markers differs on some day | `every_served_calendar_day_carries_exactly_its_own_markers` |
+| A58 | `GET /api/streak` over the real store after the fold has settled a generated population serves each day with the markers the pure function gives it, serves as `freeze` the covered day of every freeze the fold wrote for a return day in the window and no other day, and refuses a request without the owner's session | `the_route_serves_each_days_markers_after_the_fold` |
+| A59 | after the fold settles a constructed population, the days with a positive review settlement of a track are the days the population gave a study review on that track, both ways, and the other track's days are not among them | `a_track_is_settled_on_exactly_its_study_days` |
+| A60 | the served window ends at the served day, studied or not yet studied, and a freeze's covered day carries no marker until its return day is settled | `the_open_day_is_the_windows_last_day_studied_or_not_yet` |
+| A61 | the screen reads each marker from its own day's cell and from no other cell, over a generated population in which every marker sits on a different day | `the_screen_reads_each_marker_from_its_own_days_cell` |
+
+```acceptance
+A57: cargo test -p deck-streak-streaks --test calendar_population -- --exact every_served_calendar_day_carries_exactly_its_own_markers
+A58: cargo test -p deck-streak-daemon --test streak_calendar_route -- --exact the_route_serves_each_days_markers_after_the_fold
+A59: cargo test -p deck-streak-daemon --test streak_calendar_route -- --exact a_track_is_settled_on_exactly_its_study_days
+A60: cargo test -p deck-streak-streaks --test calendar_population -- --exact the_open_day_is_the_windows_last_day_studied_or_not_yet
+A61: pnpm exec vitest run web/app/src/lib/streak/streak-calendar.test.ts -t "the screen reads each marker from its own day's cell"
+```
+
+## 29. Amendments: the files the calendar amendment adds
+
+The calendar amendment (sections 27 and 28) adds `crates/streaks/src/calendar.rs`,
+`crates/streaks/tests/calendar_population.rs`, `crates/daemon/tests/streak_calendar_route.rs`,
+`web/app/src/lib/streak/streak-calendar.test.ts`, `docs/schematics/streak-calendar-markers.md`,
+`docs/decisions/ADR-302-the-streak-calendar-is-derived-on-read-from-the-settled-days.md` and
+`changelog.d/feat-streak-calendar-486.md`. It changes `crates/streaks/src/lib.rs`,
+`crates/streaks/src/constants.rs`, `crates/streaks/src/replay.rs`,
+`crates/progression/src/settle.rs`, `crates/coordination/src/streak_views.rs`,
+`crates/api/src/streak_routes.rs`, `web/app/src/lib/streak/streak.ts`,
+`web/app/src/lib/streak/StreakScreen.svelte`, `web/app/src/lib/api.ts`, the messages files, and
+`scripts/mutation-rows.d/S07600-S07699.json`.
