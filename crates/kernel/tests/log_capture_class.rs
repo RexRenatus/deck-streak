@@ -329,6 +329,38 @@ fn a_capture_keeps_a_line_another_thread_reached_first() {
     );
 }
 
+/// The variable that makes this binary install the production global default, then capture.
+const ANOTHER_GLOBAL: &str = "DECK_STREAK_LOG_CAPTURE_ANOTHER_GLOBAL";
+
+/// A capture in a binary whose global default is not the floor is refused by the helper. The
+/// production global default is the one install the census admits outside the helper, so a test
+/// can reach it, and nothing but the helper's refusal keeps a capture from registering where the
+/// floor is not the global default, outside the order the class is stated for.
+#[test]
+fn a_capture_after_the_production_global_default_is_refused() {
+    if std::env::var_os(ANOTHER_GLOBAL).is_some() {
+        deck_streak_kernel::logging::install(&deck_streak_kernel::Redactor::new())
+            .expect("the production global default, first in this child");
+        scoped(&Captured::default());
+        return;
+    }
+    let exe = std::env::current_exe().expect("this test binary's path");
+    let output = Command::new(&exe)
+        .args([
+            "--exact",
+            "a_capture_after_the_production_global_default_is_refused",
+            "--test-threads=1",
+        ])
+        .env(ANOTHER_GLOBAL, "1")
+        .output()
+        .expect("the child run");
+    let text = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        !output.status.success() && text.contains("installs no other global default"),
+        "the helper let a capture register after another global default: {text}"
+    );
+}
+
 /// Prints how many items a check examined and refuses zero: a walk that stopped matching must
 /// fail, never pass over the empty set (the tdd pack's examined contract).
 fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
@@ -356,29 +388,50 @@ fn sources(dir: &Path, into: &mut Vec<PathBuf>) {
 
 /// The names that make a subscriber or a dispatcher a default, scoped or global, in `tracing`
 /// (`subscriber::` and `dispatcher::` alike) and `tracing-subscriber` (`SubscriberInitExt` and
-/// `fmt::init`), and the future adapter that installs one while it is polled. A path, a `use`, a
-/// rename, a method call, a turbofish, a function value and a macro argument all spell one of
-/// these as a token, so the census counts tokens rather than one path's text.
-const INSTALLS: [&str; 6] = [
+/// `fmt::init`), and the future adapters that install one while they are polled
+/// (`WithSubscriber::with_subscriber`, `with_current_subscriber` and the `WithDispatch` they
+/// return). A path, a `use`, a rename, a method call, a turbofish, a function value and a macro
+/// argument all spell one of these as a token, so the census counts tokens rather than one path's
+/// text.
+const INSTALLS: [&str; 9] = [
     "set_default",
     "with_default",
     "set_global_default",
     "init",
     "try_init",
     "with_subscriber",
+    "with_current_subscriber",
+    "WithSubscriber",
+    "WithDispatch",
 ];
 
-/// The names that register a dispatcher or a callsite, or rebuild the registry's cached answers,
-/// outside an install. The floor holds only for an answer computed after it is the global default:
-/// an answer another thread computed before it, with no default of its own, is `never`, and it can
-/// be stored after a capture registered. Nothing registers before the floor while nothing but the
-/// helper names these, because the global level filter stays `OFF` until the first capture
-/// registers, and no macro registers a callsite while it is `OFF`.
-const REGISTERS: [&str; 4] = [
+/// The names that create or register a dispatcher or a callsite, store a callsite's interest, or
+/// rebuild the registry's cached answers, outside an install: every public item of the pinned
+/// `tracing-core`, `tracing`, `tracing-subscriber` and `tracing-log` whose body reaches
+/// `Dispatch::new`, `callsite::register`, `register_dispatch`, `rebuild_interest_cache` or a
+/// callsite's `set_interest`, and the macro-support names the `tracing` macros expand to. A
+/// `reload` handle's `modify` and `reload` rebuild the cache (`reload.rs`), and so does
+/// `LogTracer`. An answer computed before the floor is the global default can be stored after a
+/// capture registered, and a rebuild before the floor raises the global level filter from `OFF`
+/// with no dispatcher registered, after which a macro registers its callsite and answers `never`.
+const REGISTERS: [&str; 17] = [
     "Dispatch",
+    "WeakDispatch",
     "callsite",
+    "callsite2",
     "DefaultCallsite",
+    "MacroCallsite",
+    "__macro_support",
     "rebuild_interest_cache",
+    "rebuild_interest",
+    "set_interest",
+    "register_callsite",
+    "identify_callsite",
+    "Registrar",
+    "reload",
+    "with_filter_reloading",
+    "reload_handle",
+    "LogTracer",
 ];
 
 /// Names that install out of the census's sight: macros that build an identifier from pieces, so a
@@ -403,16 +456,40 @@ const KILLER: &str = "crates/kernel/tests/log_capture_class.rs";
 
 /// A file's code with every comment, string literal and character literal blanked and every
 /// character's position kept, so a name inside a comment or a string never counts, and a `//`
-/// inside a string hides nothing after it.
-fn code(text: &[char]) -> Vec<char> {
+/// inside a string hides nothing after it; and every doc comment the lexer met, so a comment is a
+/// doc comment by the same lexing that blanks it, never by how its line begins.
+fn lex(text: &[char]) -> (Vec<char>, Vec<Doc>) {
     let mut code = Vec::with_capacity(text.len());
+    let mut docs = Vec::new();
     let mut at = 0;
     while at < text.len() {
         let rest = &text[at..];
         let len = if rest.starts_with(&['/', '/']) {
-            rest.iter().position(|&c| c == '\n').unwrap_or(rest.len())
+            let len = rest.iter().position(|&c| c == '\n').unwrap_or(rest.len());
+            let body: String = rest[..len].iter().collect();
+            if let Some(doc) = body.strip_prefix("///").filter(|doc| !doc.starts_with('/')) {
+                docs.push(Doc::new(at, false, doc));
+            } else if let Some(doc) = body.strip_prefix("//!") {
+                docs.push(Doc::new(at, true, doc));
+            }
+            len
         } else if rest.starts_with(&['/', '*']) {
-            block_comment(rest)
+            let len = block_comment(rest);
+            let body: String = rest[..len].iter().collect();
+            let inner = body.starts_with("/*!");
+            let outer = body.starts_with("/**") && !body.starts_with("/***") && body != "/**/";
+            if inner || outer {
+                let doc = body[3..].strip_suffix("*/").unwrap_or(&body[3..]);
+                let lines = doc
+                    .split('\n')
+                    .map(|line| {
+                        let line = line.trim_start();
+                        line.strip_prefix('*').unwrap_or(line).to_owned()
+                    })
+                    .collect();
+                docs.push(Doc { at, inner, lines });
+            }
+            len
         } else if let Some(len) = raw_string(text, at) {
             len
         } else if rest[0] == '"' {
@@ -431,7 +508,30 @@ fn code(text: &[char]) -> Vec<char> {
         );
         at += len;
     }
-    code
+    (code, docs)
+}
+
+/// A file's code with every comment, string literal and character literal blanked.
+fn code(text: &[char]) -> Vec<char> {
+    lex(text).0
+}
+
+/// One piece of an item's documentation: a doc comment or a doc attribute's string, where it
+/// starts, whether it documents the item it sits in (`//!`, `/*!`, `#![doc]`), and its lines.
+struct Doc {
+    at: usize,
+    inner: bool,
+    lines: Vec<String>,
+}
+
+impl Doc {
+    fn new(at: usize, inner: bool, line: &str) -> Self {
+        Self {
+            at,
+            inner,
+            lines: vec![line.to_owned()],
+        }
+    }
 }
 
 /// The length of a block comment, nested ones included.
@@ -510,63 +610,283 @@ fn character(rest: &[char]) -> Option<usize> {
     (rest[2] == '\'').then_some(3)
 }
 
-/// The code rustdoc runs as doctests: every line inside a fenced block of a doc comment (`///`,
-/// `//!`, `/** */`, `/*! */`) whose info string names no other language, placed at its own line
-/// so a token's line is the file's line.
-fn doctests(text: &str) -> String {
-    let mut out = String::new();
-    // `None` outside a fence; `Some(true)` inside a Rust fence, `Some(false)` inside another one.
-    let mut fence: Option<bool> = None;
-    let mut in_block_doc = false;
-    for line in text.lines() {
-        let trimmed = line.trim_start();
-        let doc = if let Some(rest) = trimmed
-            .strip_prefix("///")
-            .or_else(|| trimmed.strip_prefix("//!"))
-        {
-            Some(rest)
-        } else if in_block_doc || trimmed.starts_with("/**") || trimmed.starts_with("/*!") {
-            in_block_doc = !trimmed.contains("*/");
-            Some(trimmed.trim_start_matches("/**").trim_start_matches("/*!"))
-        } else {
-            None
-        };
-        let mut kept = "";
-        if let Some(doc) = doc {
-            let doc = doc.trim_start().trim_start_matches('*').trim_start();
-            if let Some(info) = doc.strip_prefix("```") {
-                fence = match fence {
-                    Some(_) => None,
-                    None => Some(
-                        info.split(',')
-                            .map(str::trim)
-                            .all(|word| RUST_FENCE.contains(&word)),
-                    ),
-                };
-            } else if fence == Some(true) {
-                kept = doc;
-            }
-        } else {
-            fence = None;
-        }
-        out.push_str(kept);
-        out.push('\n');
+/// The value of a string literal (`"…"` with its escapes decoded, or a raw string's body) that
+/// starts at `at`, or `None` when none starts there or an escape does not decode.
+fn string_value(text: &[char], at: usize) -> Option<String> {
+    if let Some(len) = raw_string(text, at) {
+        let quote = text[at..].iter().position(|&c| c == '"')?;
+        let hashes = text[at..at + quote].iter().filter(|&&c| c == '#').count();
+        let body = text.get(at + quote + 1..(at + len).checked_sub(1 + hashes)?)?;
+        return Some(body.iter().collect());
     }
-    out
+    if text.get(at) != Some(&'"') {
+        return None;
+    }
+    let len = string(&text[at..]);
+    let body = &text[at + 1..at + len - 1];
+    let mut value = String::new();
+    let mut index = 0;
+    while index < body.len() {
+        let c = body[index];
+        index += 1;
+        if c != '\\' {
+            value.push(c);
+            continue;
+        }
+        let escape = *body.get(index)?;
+        index += 1;
+        match escape {
+            'n' => value.push('\n'),
+            't' => value.push('\t'),
+            'r' => value.push('\r'),
+            '0' => value.push('\0'),
+            '\\' | '"' | '\'' => value.push(escape),
+            '\n' => {
+                while body.get(index).is_some_and(|c| c.is_whitespace()) {
+                    index += 1;
+                }
+            }
+            'x' => {
+                let hex: String = body.get(index..index + 2)?.iter().collect();
+                value.push(char::from(u8::from_str_radix(&hex, 16).ok()?));
+                index += 2;
+            }
+            'u' => {
+                let close = body[index..].iter().position(|&c| c == '}')?;
+                let hex: String = body[index + 1..index + close]
+                    .iter()
+                    .filter(|&&c| c != '_')
+                    .collect();
+                value.push(char::from_u32(u32::from_str_radix(&hex, 16).ok()?)?);
+                index += close + 1;
+            }
+            _ => return None,
+        }
+    }
+    Some(value)
 }
 
-/// The info-string words of a fence rustdoc compiles as Rust; any other word names a language.
-const RUST_FENCE: [&str; 11] = [
-    "",
+/// The span of every attribute (`#[…]`, `#![…]`) in `code`, so a line that holds only attributes
+/// and doc comments keeps an item's documentation together, as rustdoc joins it.
+fn attribute_spans(code: &[char]) -> Vec<bool> {
+    let mut inside = vec![false; code.len()];
+    for start in 0..code.len() {
+        if code[start] != '#' {
+            continue;
+        }
+        let Some((mut open, mut c)) = next_char(code, start + 1) else {
+            continue;
+        };
+        if c == '!' {
+            let Some(next) = next_char(code, open + 1) else {
+                continue;
+            };
+            (open, c) = next;
+        }
+        if c != '[' {
+            continue;
+        }
+        let mut depth = 0_usize;
+        let mut end = open;
+        while end < code.len() {
+            match code[end] {
+                '[' => depth += 1,
+                ']' => {
+                    depth -= 1;
+                    if depth == 0 {
+                        break;
+                    }
+                }
+                _ => {}
+            }
+            end += 1;
+        }
+        for flag in &mut inside[start..=end.min(code.len() - 1)] {
+            *flag = true;
+        }
+    }
+    inside
+}
+
+/// Every doc attribute's string in `code` (`#[doc = "…"]`, `#![doc = r"…"]`, and inside a
+/// `cfg_attr`), and the line of each doc attribute whose value the census cannot read. A value
+/// that `include_str!`s a file is followed by `brought_in` instead.
+fn doc_attributes(text: &[char], code: &[char]) -> (Vec<Doc>, Vec<usize>) {
+    let (mut docs, mut unread) = (Vec::new(), Vec::new());
+    for (line, start, token) in tokens(code) {
+        let Some((_, inner)) = attribute_open(code, start).filter(|_| token == "doc") else {
+            continue;
+        };
+        let Some((equals, '=')) = next_char(code, start + 3) else {
+            continue;
+        };
+        let Some((value, _)) = next_char(text, equals + 1) else {
+            unread.push(line);
+            continue;
+        };
+        if let Some(string) = string_value(text, value) {
+            docs.push(Doc {
+                at: start,
+                inner,
+                lines: string.split('\n').map(str::to_owned).collect(),
+            });
+            continue;
+        }
+        let head: String = code[value..]
+            .iter()
+            .take_while(|&&c| !matches!(c, '!' | '(' | ']' | ','))
+            .filter(|c| !c.is_whitespace())
+            .collect();
+        let includes = head == "include_str" || head.ends_with("::include_str");
+        if !includes {
+            unread.push(line);
+        }
+    }
+    (docs, unread)
+}
+
+/// One doctest: its lines, each with the file line it came from.
+type Unit = Vec<(usize, String)>;
+
+/// The code rustdoc runs as doctests, one unit per doctest: every Rust fenced block and every
+/// indented block of every item's documentation. An item's documentation is every doc comment and
+/// doc attribute string with nothing but attributes, comments and blank lines between them, the
+/// module's own (`//!`, `#![doc]`) apart from its items', as rustdoc joins them.
+fn doctests(text: &[char], code: &[char], mut docs: Vec<Doc>) -> Vec<Unit> {
+    let line_of = |at: usize| 1 + text[..at].iter().filter(|&&c| c == '\n').count();
+    let attributes = attribute_spans(code);
+    docs.sort_by_key(|doc| doc.at);
+    let mut units = Vec::new();
+    let mut block: Unit = Vec::new();
+    let mut previous: Option<(usize, bool)> = None;
+    for doc in docs {
+        let joined = previous.is_some_and(|(end, inner)| {
+            inner == doc.inner && (end..doc.at).all(|at| code[at].is_whitespace() || attributes[at])
+        });
+        if !joined {
+            units.extend(markdown(&block));
+            block.clear();
+        }
+        let line = line_of(doc.at);
+        block.extend(doc.lines.iter().map(|content| (line, content.clone())));
+        previous = Some((doc.at, doc.inner));
+    }
+    units.extend(markdown(&block));
+    units
+}
+
+/// The Rust code one item's documentation holds, one unit per doctest, by `CommonMark`'s blocks as
+/// rustdoc reads them: a fence of three or more backticks or tildes, at any container depth (a
+/// blockquote, a list item), is Rust unless its info string names another language by rustdoc's
+/// rule, and a line indented four or more columns outside a fence is an indented code block, which
+/// rustdoc runs as Rust.
+fn markdown(block: &[(usize, String)]) -> Vec<Unit> {
+    let mut units = Vec::new();
+    let mut fence: Option<(char, usize, bool)> = None;
+    let (mut fenced, mut indented): (Unit, Unit) = (Vec::new(), Vec::new());
+    for (line, content) in block {
+        let (indents, rest) = container(content);
+        if let Some((mark, len, rust)) = fence {
+            let run = rest.chars().take_while(|&c| c == mark).count();
+            if run >= len && rest[run..].trim().is_empty() {
+                fence = None;
+                units.push(std::mem::take(&mut fenced));
+            } else if rust {
+                fenced.push((*line, content.clone()));
+            }
+            continue;
+        }
+        let mark = rest.chars().next().filter(|&c| c == '`' || c == '~');
+        if let Some(mark) = mark {
+            let run = rest.chars().take_while(|&c| c == mark).count();
+            let info = &rest[run..];
+            if run >= 3 && !(mark == '`' && info.contains('`')) {
+                fence = Some((mark, run, rust_fence(info)));
+                units.push(std::mem::take(&mut indented));
+                continue;
+            }
+        }
+        if rest.trim().is_empty() {
+            if !indented.is_empty() {
+                indented.push((*line, String::new()));
+            }
+        } else if indents.iter().any(|&columns| columns >= 4) {
+            indented.push((*line, content.clone()));
+        } else {
+            units.push(std::mem::take(&mut indented));
+        }
+    }
+    units.push(fenced);
+    units.push(indented);
+    units.retain(|unit| !unit.is_empty());
+    units
+}
+
+/// A doc line's container prefixes stripped (blockquote markers and list-item markers), with the
+/// width of the whitespace before each, tabs as four columns.
+fn container(line: &str) -> (Vec<usize>, &str) {
+    let width = |text: &str| {
+        text.chars()
+            .take_while(|c| c.is_whitespace())
+            .map(|c| if c == '\t' { 4 } else { 1 })
+            .sum::<usize>()
+    };
+    let mut indents = vec![width(line)];
+    let mut rest = line.trim_start();
+    loop {
+        let marker = if rest.starts_with('>') {
+            1
+        } else if rest.starts_with(['-', '*', '+']) {
+            usize::from(rest[1..].starts_with([' ', '\t']))
+        } else {
+            let digits = rest.bytes().take_while(u8::is_ascii_digit).count();
+            let closes = rest[digits..].starts_with(['.', ')']);
+            let spaced = rest[digits..]
+                .get(1..)
+                .is_some_and(|after| after.starts_with([' ', '\t']));
+            if (1..=9).contains(&digits) && closes && spaced {
+                digits + 1
+            } else {
+                0
+            }
+        };
+        if marker == 0 {
+            break;
+        }
+        indents.push(width(&rest[marker..]));
+        rest = rest[marker..].trim_start();
+    }
+    (indents, rest)
+}
+
+/// Whether rustdoc compiles a fence with this info string as Rust, read as a superset of rustdoc's
+/// `LangString` rule: the words split on commas, spaces and tabs; a `{…}` or `key=value` word is an
+/// attribute and names no language; the block is Rust when no other word is present, or when any
+/// word is one rustdoc reads as Rust's.
+fn rust_fence(info: &str) -> bool {
+    let words: Vec<&str> = info
+        .split(|c: char| c == ',' || c.is_whitespace())
+        .filter(|word| !word.is_empty() && !word.contains(['{', '}', '=']))
+        .collect();
+    let rust = |word: &&str| {
+        RUST_FENCE.contains(word)
+            || word.starts_with("ignore")
+            || word.starts_with("edition")
+            || (word.len() == 5
+                && word.starts_with('E')
+                && word[1..].bytes().all(|b| b.is_ascii_digit()))
+    };
+    words.is_empty() || words.iter().any(rust)
+}
+
+/// The info-string words rustdoc reads as Rust's; `ignore-…` and `edition…` words are Rust's too.
+const RUST_FENCE: [&str; 7] = [
     "rust",
     "ignore",
     "should_panic",
     "no_run",
     "compile_fail",
-    "edition2015",
-    "edition2018",
-    "edition2021",
-    "edition2024",
+    "test_harness",
     "standalone_crate",
 ];
 
@@ -622,9 +942,9 @@ fn literal(text: &[char], at: usize) -> Option<String> {
     (!body.contains('\\')).then_some(body)
 }
 
-/// Whether the token at `at` sits inside an attribute (`#[…]` or `#![…]`), however deep in its
-/// parentheses (`#[cfg_attr(test, path = "…")]`).
-fn in_attribute(code: &[char], at: usize) -> bool {
+/// The `[` that opens the attribute (`#[…]` or `#![…]`) the token at `at` sits inside, however
+/// deep in its parentheses (`#[cfg_attr(test, path = "…")]`), and whether it is an inner one.
+fn attribute_open(code: &[char], at: usize) -> Option<(usize, bool)> {
     let mut depth = 0_usize;
     let mut index = at;
     while index > 0 {
@@ -633,33 +953,58 @@ fn in_attribute(code: &[char], at: usize) -> bool {
             ']' | ')' => depth += 1,
             '(' | '[' if depth > 0 => depth -= 1,
             '[' => {
-                return previous_char(code, index).is_some_and(|(before, c)| {
-                    c == '#'
-                        || (c == '!' && previous_char(code, before).is_some_and(|(_, c)| c == '#'))
-                });
+                let (before, c) = previous_char(code, index)?;
+                if c == '#' {
+                    return Some((index, false));
+                }
+                let inner = c == '!' && previous_char(code, before).is_some_and(|(_, c)| c == '#');
+                return inner.then_some((index, true));
             }
-            ';' | '{' | '}' => return false,
+            ';' | '{' | '}' => return None,
             _ => {}
         }
     }
-    false
+    None
 }
 
-/// The files a source brings into its crate as code: each `#[path = "…"]` module, each
-/// `include!("…")`, and each `#[doc = include_str!("…")]` (whose fenced blocks rustdoc runs), each
-/// resolved against the including file's directory. One the census cannot follow is returned as a
-/// finding instead.
-fn brought_in(path: &Path, text: &[char], code: &[char]) -> (Vec<(PathBuf, bool)>, Vec<usize>) {
+/// Whether the token at `at` sits inside an attribute.
+fn in_attribute(code: &[char], at: usize) -> bool {
+    attribute_open(code, at).is_some()
+}
+
+/// A file brought in as code (`false`) or as documentation (`true`), and the line that brings it.
+type BroughtIn = (PathBuf, bool, usize);
+
+/// The files a source brings into its crate: each `#[path = "…"]` module, each `include!("…")`,
+/// and each `include_str!("…")` inside an attribute (a doc attribute's file, whose fenced blocks
+/// rustdoc runs), each resolved against the including file's directory. One the census cannot
+/// follow is returned as a finding instead, and so is a `#[path]` inside a block (an inline module
+/// or a function body), which rustc resolves under the module's own directories.
+fn brought_in(
+    path: &Path,
+    text: &[char],
+    code: &[char],
+) -> (Vec<BroughtIn>, Vec<(usize, &'static str)>) {
     let dir = path.parent().expect("a file's directory");
     let (mut files, mut lost) = (Vec::new(), Vec::new());
-    let found = tokens(code);
-    for (index, (line, start, token)) in found.iter().enumerate() {
+    for (line, start, token) in tokens(code) {
         let end = start + token.len();
         let target = match token.as_str() {
             "path" => match next_char(code, end) {
-                Some((equals, '=')) if in_attribute(code, *start) => next_char(text, equals + 1)
-                    .and_then(|(at, _)| literal(text, at))
-                    .map(|name| (name, false)),
+                Some((equals, '=')) if in_attribute(code, start) => {
+                    let depth = code[..start].iter().fold(0_i64, |depth, &c| match c {
+                        '{' => depth + 1,
+                        '}' => depth - 1,
+                        _ => depth,
+                    });
+                    if depth != 0 {
+                        lost.push((line, "a #[path] inside a block"));
+                        continue;
+                    }
+                    next_char(text, equals + 1)
+                        .and_then(|(at, _)| literal(text, at))
+                        .map(|name| (name, false))
+                }
                 _ => continue,
             },
             "include" | "include_str" => {
@@ -669,11 +1014,8 @@ fn brought_in(path: &Path, text: &[char], code: &[char]) -> (Vec<(PathBuf, bool)
                 let Some((open, '(')) = next_char(code, bang + 1) else {
                     continue;
                 };
-                let doc = token == "include_str"
-                    && previous_char(code, *start).is_some_and(|(_, c)| c == '=')
-                    && index > 0
-                    && found[index - 1].2 == "doc";
-                if token == "include_str" && !doc {
+                let doc = token == "include_str";
+                if doc && !in_attribute(code, start) {
                     continue;
                 }
                 next_char(text, open + 1)
@@ -691,11 +1033,11 @@ fn brought_in(path: &Path, text: &[char], code: &[char]) -> (Vec<(PathBuf, bool)
             [dir.join(&name), dir.join(stem).join(&name)]
                 .into_iter()
                 .find(|candidate| candidate.is_file())
-                .map(|found| (found, doc))
+                .map(|found| (found, doc, line))
         });
         match resolved {
             Some(file) => files.push(file),
-            None => lost.push(*line),
+            None => lost.push((line, "an include the census cannot follow")),
         }
     }
     (files, lost)
@@ -708,6 +1050,179 @@ fn name_of(root: &Path, path: &Path) -> String {
         |_| path.display().to_string(),
         |name| name.display().to_string(),
     )
+}
+
+/// Whether `path` lies under `crates/` or `tools/`, the two trees the census walks.
+fn walked(root: &Path, path: &Path) -> bool {
+    path.starts_with(root.join("crates")) || path.starts_with(root.join("tools"))
+}
+
+/// `path` with every `.` and `..` resolved by its text, and cut before its first glob.
+fn normal(path: &Path) -> PathBuf {
+    let mut out = PathBuf::new();
+    for part in path.components() {
+        match part {
+            std::path::Component::CurDir => {}
+            std::path::Component::ParentDir => {
+                out.pop();
+            }
+            other => {
+                let text = other.as_os_str().to_string_lossy();
+                if text.contains(['*', '?', '[']) {
+                    break;
+                }
+                out.push(other);
+            }
+        }
+    }
+    out
+}
+
+/// Every Cargo manifest and Cargo configuration file that decides what the workspace compiles.
+fn manifests(dir: &Path, into: &mut Vec<PathBuf>) {
+    for entry in fs::read_dir(dir).expect("a readable directory") {
+        let path = entry.expect("a directory entry").path();
+        let name = path
+            .file_name()
+            .map(|name| name.to_string_lossy().into_owned());
+        let config = path
+            .parent()
+            .is_some_and(|parent| parent.ends_with(".cargo"));
+        if path.is_dir() {
+            manifests(&path, into);
+        } else if name.as_deref() == Some("Cargo.toml")
+            || (config && matches!(name.as_deref(), Some("config" | "config.toml")))
+        {
+            into.push(path);
+        }
+    }
+}
+
+/// A TOML token: a bare word, a string (`None` when it is multi-line or holds an escape), or a
+/// punctuation character; each with its line.
+enum Toml {
+    Word(String),
+    Text(Option<String>),
+    Mark(char),
+}
+
+/// A manifest's tokens, comments dropped.
+fn toml(text: &str) -> Vec<(usize, Toml)> {
+    let chars: Vec<char> = text.chars().collect();
+    let (mut found, mut line, mut at) = (Vec::new(), 1, 0);
+    while at < chars.len() {
+        let c = chars[at];
+        if c == '\n' {
+            line += 1;
+            at += 1;
+        } else if c == '#' {
+            while at < chars.len() && chars[at] != '\n' {
+                at += 1;
+            }
+        } else if c == '"' || c == '\'' {
+            let triple = chars[at..].iter().take(3).all(|&q| q == c);
+            let open = if triple { 3 } else { 1 };
+            let mut end = at + open;
+            let mut escaped = false;
+            while end < chars.len() {
+                if c == '"' && chars[end] == '\\' {
+                    escaped = true;
+                    end += 2;
+                    continue;
+                }
+                if chars[end..].iter().take(open).filter(|&&q| q == c).count() == open {
+                    break;
+                }
+                end += 1;
+            }
+            let end = end.min(chars.len());
+            let body: String = chars[(at + open).min(end)..end].iter().collect();
+            line += body.matches('\n').count();
+            found.push((line, Toml::Text((!triple && !escaped).then_some(body))));
+            at = end + open;
+        } else if c.is_alphanumeric() || c == '_' || c == '-' {
+            let start = at;
+            while at < chars.len()
+                && (chars[at].is_alphanumeric() || chars[at] == '_' || chars[at] == '-')
+            {
+                at += 1;
+            }
+            found.push((line, Toml::Word(chars[start..at].iter().collect())));
+        } else {
+            if !c.is_whitespace() {
+                found.push((line, Toml::Mark(c)));
+            }
+            at += 1;
+        }
+    }
+    found
+}
+
+/// The keys whose values name a file or a directory Cargo compiles from.
+const PATH_KEYS: [&str; 6] = [
+    "path",
+    "build",
+    "workspace",
+    "members",
+    "default-members",
+    "paths",
+];
+
+/// Every path a manifest or a Cargo configuration names under a `PATH_KEYS` key (bare, quoted or
+/// dotted): the files among them, to be read as code, and a finding for each one that lies outside
+/// `crates/` and `tools/` or that the census cannot read.
+fn manifest_paths(root: &Path, manifest: &Path) -> (Vec<BroughtIn>, Vec<String>) {
+    let text = fs::read_to_string(manifest).expect("a readable manifest");
+    let name = name_of(root, manifest);
+    let base = manifest.parent().expect("a manifest's directory");
+    let base = if base.ends_with(".cargo") {
+        base.parent().expect("the directory holding .cargo")
+    } else {
+        base
+    };
+    let found = toml(&text);
+    let (mut files, mut findings) = (Vec::new(), Vec::new());
+    for (index, (line, token)) in found.iter().enumerate() {
+        let key = match token {
+            Toml::Word(word) | Toml::Text(Some(word)) => Some(word.as_str()),
+            _ => None,
+        };
+        let Some(key) = key.filter(|key| PATH_KEYS.contains(key)) else {
+            continue;
+        };
+        if !matches!(found.get(index + 1), Some((_, Toml::Mark('=')))) {
+            continue;
+        }
+        let mut values = Vec::new();
+        match found.get(index + 2) {
+            Some((_, Toml::Text(value))) => values.push(value.clone()),
+            Some((_, Toml::Mark('['))) => {
+                for (_, item) in &found[index + 3..] {
+                    match item {
+                        Toml::Mark(']') => break,
+                        Toml::Text(value) => values.push(value.clone()),
+                        _ => {}
+                    }
+                }
+            }
+            _ => {}
+        }
+        for value in values {
+            let Some(value) = value else {
+                findings.push(format!("{name}:{line}: a {key} the census cannot read"));
+                continue;
+            };
+            let resolved = normal(&base.join(&value));
+            if !walked(root, &resolved) {
+                findings.push(format!(
+                    "{name}:{line}: {key} = {value:?} lies outside crates/ and tools/"
+                ));
+            } else if resolved.is_file() {
+                files.push((resolved, false, *line));
+            }
+        }
+    }
+    (files, findings)
 }
 
 /// Every workspace crate that declares itself a proc-macro crate: one can build an install from
@@ -741,6 +1256,134 @@ fn proc_macro_crates(root: &Path) -> Vec<String> {
     found
 }
 
+/// Every file the manifests name as a target, to be read as code; each manifest path outside
+/// `crates/` and `tools/`, or unreadable, is a finding in `raw`.
+fn manifest_targets(root: &Path, raw: &mut Vec<String>) -> Vec<(PathBuf, bool)> {
+    let mut found = vec![root.join("Cargo.toml")];
+    manifests(&root.join("crates"), &mut found);
+    manifests(&root.join("tools"), &mut found);
+    for config in ["config", "config.toml"] {
+        let path = root.join(".cargo").join(config);
+        if path.is_file() {
+            found.push(path);
+        }
+    }
+    let mut targets = Vec::new();
+    for manifest in examined("Cargo manifest(s) and configuration(s)", found) {
+        let (files, findings) = manifest_paths(root, &manifest);
+        targets.extend(files.into_iter().map(|(path, doc, _)| (path, doc)));
+        raw.extend(findings);
+    }
+    targets
+}
+
+/// What the census found so far: the files still to read, the raw captures, the production global
+/// defaults, the routed captures and the doctests read.
+#[derive(Default)]
+struct Census {
+    queue: Vec<(PathBuf, bool)>,
+    raw: Vec<String>,
+    globals: Vec<String>,
+    routed: usize,
+    doctest_units: usize,
+}
+
+/// Reads one file, as code or as documentation: its tokens and its doctests' tokens, the files it
+/// brings in, and the captures it routes through the helper.
+fn read_file(root: &Path, census: &mut Census, path: &Path, name: &str, doc_only: bool) {
+    let Census {
+        queue,
+        raw,
+        globals,
+        routed,
+        doctest_units,
+    } = census;
+    let text = fs::read_to_string(path).expect("a readable source");
+    let chars: Vec<char> = text.chars().collect();
+    let (blanked, units) = if doc_only {
+        let blank: Vec<char> = chars
+            .iter()
+            .map(|&c| if c == '\n' { '\n' } else { ' ' })
+            .collect();
+        let block: Unit = text
+            .split('\n')
+            .enumerate()
+            .map(|(index, line)| (index + 1, line.to_owned()))
+            .collect();
+        (blank, markdown(&block))
+    } else {
+        let (blanked, mut docs) = lex(&chars);
+        let (attributes, unread) = doc_attributes(&chars, &blanked);
+        for line in unread {
+            raw.push(format!(
+                "{name}:{line}: a doc attribute the census cannot read"
+            ));
+        }
+        docs.extend(attributes);
+        let units = doctests(&chars, &blanked, docs);
+        (blanked, units)
+    };
+    *doctest_units += units.len();
+    let mut found = tokens(&blanked);
+    let mut sources = vec![(chars.clone(), blanked.clone(), Vec::new())];
+    for unit in units {
+        let text: Vec<char> = unit
+            .iter()
+            .map(|(_, line)| line.as_str())
+            .collect::<Vec<_>>()
+            .join("\n")
+            .chars()
+            .collect();
+        let unit_code = code(&text);
+        let lines: Vec<usize> = unit.iter().map(|(line, _)| *line).collect();
+        found.extend(
+            tokens(&unit_code)
+                .into_iter()
+                .map(|(line, at, token)| (lines[line - 1], at, token)),
+        );
+        sources.push((text, unit_code, lines));
+    }
+    for (source, source_code, lines) in &sources {
+        let (more, lost) = brought_in(path, source, source_code);
+        let line_in_file = |line: usize| lines.get(line - 1).copied().unwrap_or(line);
+        for (file, doc, line) in more {
+            let inside = file.canonicalize().is_ok_and(|file| walked(root, &file));
+            if inside {
+                queue.push((file, doc));
+            } else {
+                raw.push(format!(
+                    "{name}:{}: brings in {} from outside crates/ and tools/",
+                    line_in_file(line),
+                    file.display()
+                ));
+            }
+        }
+        for (line, why) in lost {
+            raw.push(format!("{name}:{}: {why}", line_in_file(line)));
+        }
+    }
+    for (line, _, token) in found {
+        let token = token.as_str();
+        let allowed = name == HELPER
+            || (token == "set_global_default" && name == GLOBAL_DEFAULT)
+            || (matches!(token, "callsite" | "set_interest") && name == KILLER);
+        if allowed
+            || !(INSTALLS.contains(&token) || REGISTERS.contains(&token) || HIDDEN.contains(&token))
+        {
+            if token == "set_global_default" && name == GLOBAL_DEFAULT {
+                globals.push(name.to_owned());
+            }
+            continue;
+        }
+        raw.push(format!("{name}:{line}: {token}"));
+    }
+    if name != KILLER {
+        let squashed: String = blanked.iter().filter(|c| !c.is_whitespace()).collect();
+        *routed += squashed.matches("log_capture::with_capture(").count()
+            + squashed.matches("log_capture::hold_capture(").count();
+    }
+}
+
 #[test]
 fn every_capture_in_the_workspace_goes_through_the_helper() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -750,61 +1393,32 @@ fn every_capture_in_the_workspace_goes_through_the_helper() {
     let mut files = Vec::new();
     sources(&root.join("crates"), &mut files);
     sources(&root.join("tools"), &mut files);
-    let mut queue: Vec<(PathBuf, bool)> =
-        examined("Rust source file(s) under crates/ and tools/", files)
+    let mut census = Census {
+        queue: examined("Rust source file(s) under crates/ and tools/", files)
             .into_iter()
             .map(|path| (path, false))
-            .collect();
+            .collect(),
+        ..Census::default()
+    };
+    let targets = manifest_targets(&root, &mut census.raw);
+    census.queue.extend(targets);
 
     let mut seen = std::collections::BTreeSet::new();
-    let mut raw = Vec::new();
-    let mut globals = Vec::new();
-    let mut routed = 0;
-    while let Some((path, doc_only)) = queue.pop() {
+    while let Some((path, doc_only)) = census.queue.pop() {
         let name = name_of(&root, &path);
-        if !seen.insert((name.clone(), doc_only)) {
-            continue;
-        }
-        let text = fs::read_to_string(&path).expect("a readable source");
-        let chars: Vec<char> = text.chars().collect();
-        let blanked = if doc_only { Vec::new() } else { code(&chars) };
-        let doc: Vec<char> = if doc_only {
-            let fenced = format!("///{}", text.replace('\n', "\n///"));
-            doctests(&fenced).chars().collect()
-        } else {
-            doctests(&text).chars().collect()
-        };
-        let (more, lost) = brought_in(&path, &chars, &blanked);
-        queue.extend(more);
-        for line in lost {
-            raw.push(format!(
-                "{name}:{line}: an include the census cannot follow"
-            ));
-        }
-        for (line, _, token) in tokens(&blanked).into_iter().chain(tokens(&code(&doc))) {
-            let token = token.as_str();
-            let allowed = name == HELPER
-                || (token == "set_global_default" && name == GLOBAL_DEFAULT)
-                || (token == "callsite" && name == KILLER);
-            if allowed
-                || !(INSTALLS.contains(&token)
-                    || REGISTERS.contains(&token)
-                    || HIDDEN.contains(&token))
-            {
-                if token == "set_global_default" && name == GLOBAL_DEFAULT {
-                    globals.push(name.clone());
-                }
-                continue;
-            }
-            raw.push(format!("{name}:{line}: {token}"));
-        }
-        if name != KILLER {
-            let squashed: String = blanked.iter().filter(|c| !c.is_whitespace()).collect();
-            routed += squashed.matches("log_capture::with_capture(").count()
-                + squashed.matches("log_capture::hold_capture(").count();
+        if seen.insert((name.clone(), doc_only)) {
+            read_file(&root, &mut census, &path, &name, doc_only);
         }
     }
+    let Census {
+        mut raw,
+        globals,
+        routed,
+        doctest_units,
+        ..
+    } = census;
     raw.extend(proc_macro_crates(&root));
+    eprintln!("examined {doctest_units} doctest(s)");
     let read = seen.len();
     let mut report = String::new();
     let _ = write!(
@@ -816,15 +1430,15 @@ fn every_capture_in_the_workspace_goes_through_the_helper() {
     eprintln!("{report}");
 
     assert!(read > 100, "the walk read too few files: {report}");
+    assert!(
+        raw.is_empty(),
+        "{} capture(s) bypass the helper: {raw:#?}\n{report}",
+        raw.len()
+    );
     assert_eq!(
         globals,
         [GLOBAL_DEFAULT],
         "the one production global default is the only one: {report}"
     );
     assert_eq!(routed, 13, "{report}");
-    assert!(
-        raw.is_empty(),
-        "{} capture(s) bypass the helper: {raw:#?}\n{report}",
-        raw.len()
-    );
 }
