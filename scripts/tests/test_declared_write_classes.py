@@ -283,6 +283,24 @@ class TheAdrStatesTheRule(unittest.TestCase):
             says(normal(found["b"]).replace("restore drill", "drill"), "restore drill")
         )
 
+    def test_every_batch_backup_is_proven_by_a_drill_before_the_batch_writes(self):
+        part_b = parts(section(the_adr(), "Decision Outcome"))["b"]
+        proof = (
+            "restore drill proves that backup before the batch writes anything",
+            "a batch whose backup fails its drill writes nothing",
+        )
+        terms = examined("per-batch drill terms", proof)
+        self.assertEqual([term for term in terms if not says(part_b, term)], [])
+        # The drill is not scoped to a class's first batch or to a change of backup method.
+        for scoped in ("first batch", "the way the backup is taken changes"):
+            self.assertFalse(says(part_b, scoped), scoped)
+        # Planted: the narrowed wording is caught.
+        narrowed = normal(part_b).replace(
+            "proves that backup before the batch writes anything",
+            "proves the backup before the class's first batch",
+        )
+        self.assertFalse(says(narrowed, proof[0]))
+
     def test_each_never_list_entry_names_what_it_protects(self):
         outcome = section(the_adr(), "Decision Outcome")
         rows = examined("never-list entries", never_list(parts(outcome)["a"]))
