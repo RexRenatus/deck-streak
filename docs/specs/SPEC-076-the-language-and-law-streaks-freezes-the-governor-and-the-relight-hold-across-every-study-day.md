@@ -931,13 +931,16 @@ Insert-only: every earlier byte is kept in order, and this amendment inserts sec
   day's state (a study review, a count of zero, a skip day, a count of zero on a skip day, or none
   of these; the window's first day always holds an entry, and the last day of a wider window is
   never a day with none of these), and today (from the day before the window to the day after it,
-  never below the smallest day). The formal check refuses a committed file that differs from the
-  writer's output. A65 derives the same population from the same axes, refuses a file that differs
-  from it, and decides that the Rust function answers every vector as the port does. A66 decides
-  that the population holds every case the property names: today at the smallest day, a window
-  that starts at it, a study review on the window's first day, a skip day at either end of a run
-  and inside one, and runs below, at and above the threshold. A67 decides the exception's own case.
-  A41 stays beside them as a second, independent check.
+  never below the smallest day). The formal check reports a committed file that differs from the
+  writer's output: its `DERIVED_DRIFT` finding names the first line that differs, and each of the
+  entry's theorems reads unclean. While the theorems are in report mode the check's verdict stays
+  OK beside that finding, and a check narrowed to one theorem with `--property` fails on it. A65
+  derives the same population from the same axes, refuses a file that differs from it, and decides
+  that the Rust function answers every vector as the port does. A66 decides that the population
+  holds every case the property names: today at the smallest day, a window that starts at it, a
+  study review on the window's first day, a skip day at either end of a run and inside one, and
+  runs below, at and above the threshold. A67 decides the exception's own case. A41 stays beside
+  them as a second, independent check.
 
 ## 31. Acceptance criteria of the 2026-10-01 open-lapse proof amendment
 

@@ -37,11 +37,11 @@ flowchart LR
 
 ## What crosses each boundary
 
-| from | to | what | refused when |
+| from | to | what | caught when |
 |---|---|---|---|
 | `lapse.rs` | the entry | the span of `open_lapse`, by sha256 | the span moves: every theorem reads `STALE` until the port is re-read and the digest moves |
 | the entry | the checker | three theorems, three witnesses, `#print axioms` of each | a hole (`sorry`, a new axiom, an axiom outside the allow-list), or a witness that does not build |
-| the writer | the vectors file | a header naming the covered item and its digest, then one line per input | the committed file differs from the writer's output by one byte (`DERIVED_DRIFT`) |
+| the writer | the vectors file | a header naming the covered item and its digest, then one line per input | the committed file differs from the writer's output by one byte: a `DERIVED_DRIFT` finding names the first line that differs, and each theorem reads unclean |
 | the vectors file | the test | each input and the port's answer | an input the test's own axes do not derive, a count that differs, or an answer the Rust function does not give |
 
 ## The port's states (`RangeInclusive::next_back`)
