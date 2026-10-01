@@ -1,4 +1,4 @@
-{"schema":"phx.formal.vectors.v1","entry":"NextMilestone","covers":"crates/progression/src/milestone.rs","anchor":"next_milestone","digest":"sha256:0000000000000000000000000000000000000000000000000000000000000000","vectors":1287}
+{"schema":"phx.formal.vectors.v1","entry":"NextMilestone","covers":"crates/progression/src/milestone.rs","anchor":"next_milestone","digest":"sha256:efcd0a95b206afe076dd10f9a121b28ec99818425e5363b1b113cfb6d1cc97fc","vectors":1287}
 {"reviews":0,"streak":0,"mature":0,"milestone":{"ladder":0,"target":100,"current":0,"remaining":100}}
 {"reviews":0,"streak":0,"mature":99,"milestone":{"ladder":2,"target":100,"current":99,"remaining":1}}
 {"reviews":0,"streak":0,"mature":100,"milestone":{"ladder":2,"target":500,"current":100,"remaining":400}}
