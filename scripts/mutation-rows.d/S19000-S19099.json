@@ -464,6 +464,22 @@
         "    read_workflow((WORKFLOWS / 'release.yml').read_text())\n    return STAGES.search(workflow_file_text(REPO / 'scripts' / 'check.sh')).group(1).split()\n",
         "a workflow file is read only through the loader, so the census refuses a listed read swapped for a feed read, the count kept (SPEC-190 A12)",
         "test_ci_workflows.WorkflowFilesAreReadAsBytes.test_every_file_read_in_the_test_modules_is_the_loader_or_a_named_non_workflow_read"
+      ],
+      [
+        "S19059-THE-CENSUS-DERIVES-EXCEPTION-CLASSES-BY-BASEEXCEPTION",
+        "scripts/tests/test_ci_workflows.py",
+        "        if isinstance(getattr(builtins, name), type)\n        and BaseException in type.mro(getattr(builtins, name))\n    )\n\n\ndef census_problems",
+        "        if isinstance(getattr(builtins, name), type)\n        and Exception in type.mro(getattr(builtins, name))\n    )\n\n\ndef census_problems",
+        "a builtin exception class is placed by its value, so narrowing the derivation to Exception leaves the classes that derive only from BaseException unplaced (SPEC-190 A12)",
+        "test_ci_workflows.WorkflowFilesAreReadAsBytes.test_every_builtin_exception_class_is_placed_by_its_value"
+      ],
+      [
+        "S19060-THE-CENSUS-PLACES-THE-DERIVED-EXCEPTION-CLASSES",
+        "scripts/tests/test_ci_workflows.py",
+        "                | BARE_DYNAMIC\n                | builtin_exception_names()\n",
+        "                | BARE_DYNAMIC\n",
+        "a builtin exception class is placed by its value, so dropping the derived set from the placement check leaves every class the hand list lacks unplaced (SPEC-190 A12)",
+        "test_ci_workflows.WorkflowFilesAreReadAsBytes.test_every_builtin_exception_class_is_placed_by_its_value"
       ]
     ]
   }
