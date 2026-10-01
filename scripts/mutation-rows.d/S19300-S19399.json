@@ -40,6 +40,46 @@
         "    kept = [condition(attribute, test) for attribute in applied(words[at + 1 : -1])[:1]]\n",
         "a `cfg_attr` applies every attribute it lists once its predicate holds, not only the first (SPEC-192 R8)",
         "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19305-A-INLINE-MODULE-NAMES-JOIN-THE-MODULE-PATH",
+        "scripts/tests/test_setting_shapes.py",
+        "None if names is None or moved else names + (name,)",
+        "None if names is None or moved else names",
+        "a module declared inside an inline module is read from the directory of the inline module's name, not beside the file (SPEC-192 A16, #433)",
+        "test_setting_shapes.TheGuardResolvesAModuleDeclaredInsideAnInlineModule.test_a_declaration_inside_inline_modules_is_read_from_the_inline_path"
+      ],
+      [
+        "S19306-A-NESTED-PATH-IS-BELOW-THE-MODULE-DIRECTORY",
+        "scripts/tests/test_setting_shapes.py",
+        "paths += [folder.joinpath(*names) / lit for folder in folders for lit in literals if names]",
+        "paths += [folder / lit for folder in folders for lit in literals if names]",
+        "a `#[path]` below an inline module is read relative to the module directory the inline names make (SPEC-192 A16, #433)",
+        "test_setting_shapes.TheGuardResolvesAModuleDeclaredInsideAnInlineModule.test_a_declaration_with_a_path_attribute_is_read_from_the_path_below_the_inline_path"
+      ],
+      [
+        "S19307-A-MACRO-THAT-DECLARES-A-TEST-MODULE-REFUSES-ITS-FILE",
+        "scripts/tests/test_setting_shapes.py",
+        "        if hit:\n            crate",
+        "        if False:\n            crate",
+        "a crate file whose `macro_rules!` body declares a `cfg(test)` module is refused by name, since the guard does not expand it (SPEC-192 A17, #441)",
+        "test_setting_shapes.TheGuardRefusesAMacroThatDeclaresATestModule.test_a_macro_body_with_a_cfg_test_module_is_refused_by_its_file"
+      ],
+      [
+        "S19308-A-RIVAL-DECLARATION-WITHOUT-TEST-REFUSES-THE-FILE",
+        "scripts/tests/test_setting_shapes.py",
+        "and compiled_without_test(attributes)",
+        "and not compiled_without_test(attributes)",
+        "a test module file that another visible declaration compiles without `test` is not read (SPEC-192 A18, #458)",
+        "test_setting_shapes.TheGuardRefusesAModuleFileThatAnotherDeclarationCompilesWithoutTest.test_a_module_declared_beside_one_with_not_test_is_refused"
+      ],
+      [
+        "S19309-AN-UNDECIDED-RIVAL-COUNTS-AS-COMPILED",
+        "scripts/tests/test_setting_shapes.py",
+        "KLEENE[\"all\"]([condition(each, False) for each in attributes]) is not False",
+        "KLEENE[\"all\"]([condition(each, False) for each in attributes]) is True",
+        "a rival declaration whose attributes leave `test` undecided (a feature, `all()`) still counts as compiling the file without `test` (SPEC-192 A18, #458)",
+        "test_setting_shapes.TheGuardRefusesAModuleFileThatAnotherDeclarationCompilesWithoutTest.test_a_variant_that_compiles_the_file_without_test_is_refused"
       ]
     ]
   }
