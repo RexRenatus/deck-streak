@@ -192,6 +192,11 @@ context each migration names equal to the owner this register gives each table i
 | `xp_ledger` | `progression` | `migrations/004001_progression_xp_ledger.sql` (SPEC-040) | exported and erased |
 | `xp_settlement` | `progression` | `migrations/007201_progression_xp_settlement.sql` (SPEC-072) | exported and erased |
 | `buffs` | `progression` | `migrations/007202_progression_buffs.sql` (SPEC-072) | exported and erased |
+| `streak_state` | `streaks` | `migrations/007601_streaks_state_and_governor.sql` (SPEC-076) | exported and erased: each track reads its start state again |
+| `freeze_events` | `streaks` | `migrations/007601_streaks_state_and_governor.sql` (SPEC-076) | exported and erased |
+| `habit_strength` | `streaks` | `migrations/007601_streaks_state_and_governor.sql` (SPEC-076) | exported and erased |
+| `relight_due` | `streaks` | `migrations/007602_streaks_relight_due.sql` (SPEC-076) | exported and erased |
+| `governor_state` | `streaks` | `migrations/007601_streaks_state_and_governor.sql` (SPEC-076) | reset in place: no anchor, not standby, no notice day |
 | `notification_decisions` | `notifications` | `migrations/004101_notifications_router.sql` (SPEC-041) | exported and erased |
 | `notification_deliveries` | `notifications` | `migrations/004101_notifications_router.sql` (SPEC-041) | exported and erased |
 | `notification_queue` | `notifications` | `migrations/004101_notifications_router.sql` (SPEC-041) | exported and erased |

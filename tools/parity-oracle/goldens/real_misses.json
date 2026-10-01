@@ -1,0 +1,298 @@
+{
+  "adapter": "missing",
+  "cases": [
+    {
+      "class": "same-day",
+      "input": {
+        "last_study": 20000,
+        "skip_days": [],
+        "today": 20000
+      },
+      "output": 0
+    },
+    {
+      "class": "next-day",
+      "input": {
+        "last_study": 19999,
+        "skip_days": [],
+        "today": 20000
+      },
+      "output": 0
+    },
+    {
+      "class": "one-miss",
+      "input": {
+        "last_study": 19998,
+        "skip_days": [],
+        "today": 20000
+      },
+      "output": 1
+    },
+    {
+      "class": "one-miss-skipped",
+      "input": {
+        "last_study": 19998,
+        "skip_days": [
+          19999
+        ],
+        "today": 20000
+      },
+      "output": 0
+    },
+    {
+      "class": "more-skips-than-misses",
+      "input": {
+        "last_study": 19998,
+        "skip_days": [
+          19999,
+          19995
+        ],
+        "today": 20000
+      },
+      "output": 0
+    },
+    {
+      "class": "skips-on-both-ends",
+      "input": {
+        "last_study": 19996,
+        "skip_days": [
+          19996,
+          20000
+        ],
+        "today": 20000
+      },
+      "output": 3
+    },
+    {
+      "class": "a-day-in-the-future",
+      "input": {
+        "last_study": 20001,
+        "skip_days": [],
+        "today": 20000
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "last_study": 19989,
+        "skip_days": [
+          19988,
+          19990,
+          19996,
+          19998
+        ],
+        "today": 20000
+      },
+      "output": 7
+    },
+    {
+      "input": {
+        "last_study": 19990,
+        "skip_days": [],
+        "today": 20000
+      },
+      "output": 9
+    },
+    {
+      "input": {
+        "last_study": 19995,
+        "skip_days": [
+          19994,
+          19998,
+          20000
+        ],
+        "today": 20000
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "last_study": 19999,
+        "skip_days": [],
+        "today": 20000
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "last_study": 19998,
+        "skip_days": [
+          19991,
+          19993
+        ],
+        "today": 20000
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "last_study": 19993,
+        "skip_days": [
+          19995,
+          19997
+        ],
+        "today": 20000
+      },
+      "output": 4
+    },
+    {
+      "input": {
+        "last_study": 19990,
+        "skip_days": [
+          19990,
+          19994,
+          19995,
+          19999
+        ],
+        "today": 20000
+      },
+      "output": 6
+    },
+    {
+      "input": {
+        "last_study": 19992,
+        "skip_days": [
+          19994,
+          19997,
+          19999
+        ],
+        "today": 20000
+      },
+      "output": 4
+    },
+    {
+      "input": {
+        "last_study": 19991,
+        "skip_days": [
+          20000
+        ],
+        "today": 20000
+      },
+      "output": 8
+    },
+    {
+      "input": {
+        "last_study": 19997,
+        "skip_days": [],
+        "today": 20000
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "last_study": 19999,
+        "skip_days": [
+          19996
+        ],
+        "today": 20000
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "last_study": 19989,
+        "skip_days": [
+          19989,
+          19996
+        ],
+        "today": 20000
+      },
+      "output": 9
+    },
+    {
+      "input": {
+        "last_study": 19996,
+        "skip_days": [
+          19991
+        ],
+        "today": 20000
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "last_study": 19999,
+        "skip_days": [],
+        "today": 20000
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "last_study": 19996,
+        "skip_days": [
+          19987,
+          19991,
+          19997
+        ],
+        "today": 20000
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "last_study": 19997,
+        "skip_days": [],
+        "today": 20000
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "last_study": 20000,
+        "skip_days": [
+          19989,
+          19991,
+          19996,
+          19998
+        ],
+        "today": 20000
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "last_study": 19990,
+        "skip_days": [
+          19989,
+          19991
+        ],
+        "today": 20000
+      },
+      "output": 8
+    },
+    {
+      "input": {
+        "last_study": 19993,
+        "skip_days": [
+          19990
+        ],
+        "today": 20000
+      },
+      "output": 6
+    },
+    {
+      "input": {
+        "last_study": 19996,
+        "skip_days": [
+          19987,
+          19994,
+          19998
+        ],
+        "today": 20000
+      },
+      "output": 2
+    }
+  ],
+  "function": "skip.real_misses",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Builds the last study day, the day and the skip days from epoch day numbers; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_076.py",
+  "registry_sha256": "e451e77bd68e8dfbd5e1fb48845aab7b7f6667f318bc4b956168da0819a89709",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

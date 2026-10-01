@@ -20,6 +20,7 @@
 
 pub mod analytics_step;
 pub mod day_bonuses;
+pub mod streaks;
 pub mod xp;
 
 use std::collections::{BTreeMap, BTreeSet};

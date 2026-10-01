@@ -1,0 +1,687 @@
+{
+  "adapter": "over_a_temporary_store",
+  "cases": [
+    {
+      "class": "free-and-under-the-cap",
+      "input": {
+        "choice": "freeze",
+        "events": [],
+        "held": 1,
+        "today": 20000
+      },
+      "output": {
+        "choice": "freeze",
+        "events_added": 1,
+        "freezes": 2,
+        "ok": true,
+        "reasons": [
+          [
+            "chest",
+            "weekly_quest",
+            "season"
+          ]
+        ],
+        "tokens": 0
+      }
+    },
+    {
+      "class": "held-at-the-cap",
+      "input": {
+        "choice": "freeze",
+        "events": [],
+        "held": 3,
+        "today": 20000
+      },
+      "output": {
+        "choice": "token",
+        "events_added": 0,
+        "freezes": 3,
+        "ok": true,
+        "reasons": [
+          [
+            "chest",
+            "weekly_quest",
+            "season"
+          ]
+        ],
+        "tokens": 1
+      }
+    },
+    {
+      "class": "chest-drop-this-month",
+      "input": {
+        "choice": "freeze",
+        "events": [
+          {
+            "day": 19997,
+            "delta": 1,
+            "reason": "chest"
+          }
+        ],
+        "held": 1,
+        "today": 20000
+      },
+      "output": {
+        "choice": "token",
+        "events_added": 0,
+        "freezes": 1,
+        "ok": true,
+        "reasons": [
+          [
+            "chest",
+            "weekly_quest",
+            "season"
+          ]
+        ],
+        "tokens": 1
+      }
+    },
+    {
+      "class": "weekly-quest-drop-this-month",
+      "input": {
+        "choice": "freeze",
+        "events": [
+          {
+            "day": 19997,
+            "delta": 1,
+            "reason": "weekly_quest"
+          }
+        ],
+        "held": 1,
+        "today": 20000
+      },
+      "output": {
+        "choice": "token",
+        "events_added": 0,
+        "freezes": 1,
+        "ok": true,
+        "reasons": [
+          [
+            "chest",
+            "weekly_quest",
+            "season"
+          ]
+        ],
+        "tokens": 1
+      }
+    },
+    {
+      "class": "season-drop-this-month",
+      "input": {
+        "choice": "freeze",
+        "events": [
+          {
+            "day": 19997,
+            "delta": 1,
+            "reason": "season"
+          }
+        ],
+        "held": 1,
+        "today": 20000
+      },
+      "output": {
+        "choice": "token",
+        "events_added": 0,
+        "freezes": 1,
+        "ok": true,
+        "reasons": [
+          [
+            "chest",
+            "weekly_quest",
+            "season"
+          ]
+        ],
+        "tokens": 1
+      }
+    },
+    {
+      "class": "shop-does-not-count",
+      "input": {
+        "choice": "freeze",
+        "events": [
+          {
+            "day": 19997,
+            "delta": 1,
+            "reason": "shop"
+          }
+        ],
+        "held": 1,
+        "today": 20000
+      },
+      "output": {
+        "choice": "freeze",
+        "events_added": 1,
+        "freezes": 2,
+        "ok": true,
+        "reasons": [
+          [
+            "chest",
+            "weekly_quest",
+            "season"
+          ]
+        ],
+        "tokens": 0
+      }
+    },
+    {
+      "class": "streak-earn-does-not-count",
+      "input": {
+        "choice": "freeze",
+        "events": [
+          {
+            "day": 19997,
+            "delta": 1,
+            "reason": "streak_earn"
+          }
+        ],
+        "held": 1,
+        "today": 20000
+      },
+      "output": {
+        "choice": "freeze",
+        "events_added": 1,
+        "freezes": 2,
+        "ok": true,
+        "reasons": [
+          [
+            "chest",
+            "weekly_quest",
+            "season"
+          ]
+        ],
+        "tokens": 0
+      }
+    },
+    {
+      "class": "a-drop-last-month",
+      "input": {
+        "choice": "freeze",
+        "events": [
+          {
+            "day": 19994,
+            "delta": 1,
+            "reason": "chest"
+          }
+        ],
+        "held": 1,
+        "today": 20000
+      },
+      "output": {
+        "choice": "freeze",
+        "events_added": 1,
+        "freezes": 2,
+        "ok": true,
+        "reasons": [
+          [
+            "chest",
+            "weekly_quest",
+            "season"
+          ]
+        ],
+        "tokens": 0
+      }
+    },
+    {
+      "class": "a-negative-delta-does-not-count",
+      "input": {
+        "choice": "freeze",
+        "events": [
+          {
+            "day": 19997,
+            "delta": -1,
+            "reason": "chest"
+          }
+        ],
+        "held": 1,
+        "today": 20000
+      },
+      "output": {
+        "choice": "freeze",
+        "events_added": 1,
+        "freezes": 2,
+        "ok": true,
+        "reasons": [
+          [
+            "chest",
+            "weekly_quest",
+            "season"
+          ]
+        ],
+        "tokens": 0
+      }
+    },
+    {
+      "class": "a-negative-delta-beside-a-drop",
+      "input": {
+        "choice": "freeze",
+        "events": [
+          {
+            "day": 19997,
+            "delta": 1,
+            "reason": "chest"
+          },
+          {
+            "day": 19997,
+            "delta": -1,
+            "reason": "chest"
+          }
+        ],
+        "held": 1,
+        "today": 20000
+      },
+      "output": {
+        "choice": "token",
+        "events_added": 0,
+        "freezes": 1,
+        "ok": true,
+        "reasons": [
+          [
+            "chest",
+            "weekly_quest",
+            "season"
+          ]
+        ],
+        "tokens": 1
+      }
+    },
+    {
+      "class": "the-token-choice",
+      "input": {
+        "choice": "token",
+        "events": [],
+        "held": 1,
+        "today": 20000
+      },
+      "output": {
+        "choice": "token",
+        "events_added": 0,
+        "freezes": 1,
+        "ok": true,
+        "reasons": [],
+        "tokens": 1
+      }
+    },
+    {
+      "class": "no-freeze-held",
+      "input": {
+        "choice": "freeze",
+        "events": [],
+        "held": 0,
+        "today": 20000
+      },
+      "output": {
+        "choice": "freeze",
+        "events_added": 1,
+        "freezes": 1,
+        "ok": true,
+        "reasons": [
+          [
+            "chest",
+            "weekly_quest",
+            "season"
+          ]
+        ],
+        "tokens": 0
+      }
+    },
+    {
+      "input": {
+        "choice": "freeze",
+        "events": [
+          {
+            "day": 19996,
+            "delta": -1,
+            "reason": "season"
+          }
+        ],
+        "held": 1,
+        "today": 20000
+      },
+      "output": {
+        "choice": "freeze",
+        "events_added": 1,
+        "freezes": 2,
+        "ok": true,
+        "reasons": [
+          [
+            "chest",
+            "weekly_quest",
+            "season"
+          ]
+        ],
+        "tokens": 0
+      }
+    },
+    {
+      "input": {
+        "choice": "freeze",
+        "events": [],
+        "held": 3,
+        "today": 20000
+      },
+      "output": {
+        "choice": "token",
+        "events_added": 0,
+        "freezes": 3,
+        "ok": true,
+        "reasons": [
+          [
+            "chest",
+            "weekly_quest",
+            "season"
+          ]
+        ],
+        "tokens": 1
+      }
+    },
+    {
+      "input": {
+        "choice": "freeze",
+        "events": [
+          {
+            "day": 19999,
+            "delta": -1,
+            "reason": "weekly_quest"
+          },
+          {
+            "day": 19995,
+            "delta": 2,
+            "reason": "streak_earn"
+          },
+          {
+            "day": 19993,
+            "delta": 2,
+            "reason": "weekly_quest"
+          }
+        ],
+        "held": 1,
+        "today": 20000
+      },
+      "output": {
+        "choice": "freeze",
+        "events_added": 1,
+        "freezes": 2,
+        "ok": true,
+        "reasons": [
+          [
+            "chest",
+            "weekly_quest",
+            "season"
+          ]
+        ],
+        "tokens": 0
+      }
+    },
+    {
+      "input": {
+        "choice": "freeze",
+        "events": [
+          {
+            "day": 19995,
+            "delta": 1,
+            "reason": "shop"
+          },
+          {
+            "day": 19999,
+            "delta": 2,
+            "reason": "shop"
+          }
+        ],
+        "held": 0,
+        "today": 20000
+      },
+      "output": {
+        "choice": "freeze",
+        "events_added": 1,
+        "freezes": 1,
+        "ok": true,
+        "reasons": [
+          [
+            "chest",
+            "weekly_quest",
+            "season"
+          ]
+        ],
+        "tokens": 0
+      }
+    },
+    {
+      "input": {
+        "choice": "freeze",
+        "events": [
+          {
+            "day": 19991,
+            "delta": 0,
+            "reason": "chest"
+          }
+        ],
+        "held": 1,
+        "today": 20000
+      },
+      "output": {
+        "choice": "freeze",
+        "events_added": 1,
+        "freezes": 2,
+        "ok": true,
+        "reasons": [
+          [
+            "chest",
+            "weekly_quest",
+            "season"
+          ]
+        ],
+        "tokens": 0
+      }
+    },
+    {
+      "input": {
+        "choice": "freeze",
+        "events": [],
+        "held": 0,
+        "today": 20000
+      },
+      "output": {
+        "choice": "freeze",
+        "events_added": 1,
+        "freezes": 1,
+        "ok": true,
+        "reasons": [
+          [
+            "chest",
+            "weekly_quest",
+            "season"
+          ]
+        ],
+        "tokens": 0
+      }
+    },
+    {
+      "input": {
+        "choice": "freeze",
+        "events": [
+          {
+            "day": 19996,
+            "delta": 1,
+            "reason": "season"
+          }
+        ],
+        "held": 2,
+        "today": 20000
+      },
+      "output": {
+        "choice": "freeze",
+        "events_added": 1,
+        "freezes": 3,
+        "ok": true,
+        "reasons": [
+          [
+            "chest",
+            "weekly_quest",
+            "season"
+          ]
+        ],
+        "tokens": 0
+      }
+    },
+    {
+      "input": {
+        "choice": "freeze",
+        "events": [
+          {
+            "day": 19991,
+            "delta": -1,
+            "reason": "chest"
+          }
+        ],
+        "held": 2,
+        "today": 20000
+      },
+      "output": {
+        "choice": "freeze",
+        "events_added": 1,
+        "freezes": 3,
+        "ok": true,
+        "reasons": [
+          [
+            "chest",
+            "weekly_quest",
+            "season"
+          ]
+        ],
+        "tokens": 0
+      }
+    },
+    {
+      "input": {
+        "choice": "freeze",
+        "events": [
+          {
+            "day": 19997,
+            "delta": 0,
+            "reason": "chest"
+          }
+        ],
+        "held": 0,
+        "today": 20000
+      },
+      "output": {
+        "choice": "freeze",
+        "events_added": 1,
+        "freezes": 1,
+        "ok": true,
+        "reasons": [
+          [
+            "chest",
+            "weekly_quest",
+            "season"
+          ]
+        ],
+        "tokens": 0
+      }
+    },
+    {
+      "input": {
+        "choice": "freeze",
+        "events": [
+          {
+            "day": 19996,
+            "delta": 0,
+            "reason": "consumed"
+          },
+          {
+            "day": 19995,
+            "delta": 2,
+            "reason": "weekly_quest"
+          }
+        ],
+        "held": 2,
+        "today": 20000
+      },
+      "output": {
+        "choice": "freeze",
+        "events_added": 1,
+        "freezes": 3,
+        "ok": true,
+        "reasons": [
+          [
+            "chest",
+            "weekly_quest",
+            "season"
+          ]
+        ],
+        "tokens": 0
+      }
+    },
+    {
+      "input": {
+        "choice": "freeze",
+        "events": [
+          {
+            "day": 19998,
+            "delta": 0,
+            "reason": "shop"
+          },
+          {
+            "day": 19999,
+            "delta": 0,
+            "reason": "streak_earn"
+          },
+          {
+            "day": 19994,
+            "delta": 1,
+            "reason": "weekly_quest"
+          }
+        ],
+        "held": 0,
+        "today": 20000
+      },
+      "output": {
+        "choice": "freeze",
+        "events_added": 1,
+        "freezes": 1,
+        "ok": true,
+        "reasons": [
+          [
+            "chest",
+            "weekly_quest",
+            "season"
+          ]
+        ],
+        "tokens": 0
+      }
+    },
+    {
+      "input": {
+        "choice": "freeze",
+        "events": [],
+        "held": 1,
+        "today": 20000
+      },
+      "output": {
+        "choice": "freeze",
+        "events_added": 1,
+        "freezes": 2,
+        "ok": true,
+        "reasons": [
+          [
+            "chest",
+            "weekly_quest",
+            "season"
+          ]
+        ],
+        "tokens": 0
+      }
+    }
+  ],
+  "function": "pipeline_layers.loot.LootLayer.pick_epic_prize",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Opens the predecessor's own store on a temporary database seeded with an opened Epic chest on the case's day, the case's freeze events and held freezes; its freeze_drops_in_month is the predecessor's own and records the reasons it is asked for; returns whether the freeze or the token was paid, and those reasons; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_076.py",
+  "registry_sha256": "e451e77bd68e8dfbd5e1fb48845aab7b7f6667f318bc4b956168da0819a89709",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

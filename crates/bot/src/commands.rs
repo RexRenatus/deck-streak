@@ -28,6 +28,7 @@ use deck_streak_coordination::drills::{self, DrillMeta, DrillNotes, RealFs, Surf
 use deck_streak_coordination::instruments::InstrumentService;
 use deck_streak_coordination::progression::level_view::level_view;
 use deck_streak_coordination::score::day_score;
+use deck_streak_coordination::streak_views::streak_view;
 use deck_streak_identity::Owner;
 use deck_streak_kernel::{Clock, Db, Environment, Setting, SettingsError, StudyDayRule};
 use deck_streak_notifications::owner_message;
@@ -36,6 +37,7 @@ use frankenstein::types::{BotCommand, InlineKeyboardButton, InlineKeyboardMarkup
 use crate::drill_commands::{self, ANSWER_PREFIX, VIEW_PREFIX};
 use crate::gate::{self, Admission, OwnerCallback, OwnerMessage};
 use crate::score_commands::{score_failed_reply, score_reply};
+use crate::streak_commands::{streak_failed_reply, streak_reply};
 use crate::transport::{Incoming, Sent, Transport, escape_attribute, escape_html};
 use crate::xp_commands::{level_failed_reply, level_reply};
 
@@ -61,7 +63,7 @@ pub struct MenuEntry {
 }
 
 /// The owner's menu, in the order the menu shows it.
-pub const MENU: [MenuEntry; 8] = [
+pub const MENU: [MenuEntry; 9] = [
     MenuEntry {
         command: "score",
         description: "Show today's score",
@@ -69,6 +71,10 @@ pub const MENU: [MenuEntry; 8] = [
     MenuEntry {
         command: "level",
         description: "Show your level and XP",
+    },
+    MenuEntry {
+        command: "streak",
+        description: "Show your streaks",
     },
     MenuEntry {
         command: "drills",
@@ -225,6 +231,7 @@ fn command_lines() -> String {
     [
         "/score shows today's score",
         "/level shows your level and XP",
+        "/streak shows your streaks",
         "/drills lists the law drills to answer",
         "/drill picks a law drill by type",
         "/sync syncs your collection now",
@@ -538,6 +545,7 @@ impl<S: OwnerSync> Commands<S> {
             Some("sync") => self.sync().await,
             Some("score") => self.score().await,
             Some("level") => self.level().await,
+            Some("streak") => self.streak().await,
             Some("drills") => self.drills().await,
             Some("drill") => self.drill(&message.text).await,
             None if self.pending_drill.is_some() => self.drill_answer(&message.text).await,
@@ -654,6 +662,19 @@ impl<S: OwnerSync> Commands<S> {
             Err(error) => {
                 tracing::error!(%error, "the owner's level could not be read");
                 level_failed_reply()
+            }
+        };
+        self.send(reply).await;
+    }
+
+    /// `/streak`: both tracks, the law track first when it has activity (SPEC-076 R22).
+    async fn streak(&self) {
+        let today = self.rule.study_day(self.clock.now());
+        let reply = match streak_view(&self.db, today).await {
+            Ok(view) => streak_reply(&view),
+            Err(error) => {
+                tracing::error!(%error, "the owner's streaks could not be read");
+                streak_failed_reply()
             }
         };
         self.send(reply).await;

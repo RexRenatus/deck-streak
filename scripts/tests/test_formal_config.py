@@ -27,7 +27,7 @@ EXPECTED = {
         "tla_seconds": 300,
         "lean_seconds": 600,
         "entry_seconds": 300,
-        "entries": {},
+        "entries": {"tla/RelightOrder": 360},
     },
     "axioms": ["propext", "Classical.choice", "Quot.sound"],
     "owner_signers": "config/owner-allowed-signers",

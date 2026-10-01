@@ -1,0 +1,218 @@
+{
+  "adapter": "relighting",
+  "cases": [
+    {
+      "class": "no-rollup",
+      "input": {
+        "granted": 0,
+        "reviews": null,
+        "today": 20000
+      },
+      "output": {
+        "amount": null,
+        "event_key": null,
+        "event_type": null,
+        "source": null
+      }
+    },
+    {
+      "class": "no-reviews",
+      "input": {
+        "granted": 0,
+        "reviews": 0,
+        "today": 20000
+      },
+      "output": {
+        "amount": null,
+        "event_key": null,
+        "event_type": null,
+        "source": null
+      }
+    },
+    {
+      "class": "one-short",
+      "input": {
+        "granted": 0,
+        "reviews": 2,
+        "today": 20000
+      },
+      "output": {
+        "amount": null,
+        "event_key": null,
+        "event_type": null,
+        "source": null
+      }
+    },
+    {
+      "class": "exactly-three",
+      "input": {
+        "granted": 0,
+        "reviews": 3,
+        "today": 20000
+      },
+      "output": {
+        "amount": 100,
+        "event_key": "relight:20000",
+        "event_type": "record",
+        "source": "relight:20000"
+      }
+    },
+    {
+      "class": "many-reviews",
+      "input": {
+        "granted": 0,
+        "reviews": 40,
+        "today": 20000
+      },
+      "output": {
+        "amount": 100,
+        "event_key": "relight:20000",
+        "event_type": "record",
+        "source": "relight:20000"
+      }
+    },
+    {
+      "class": "already-granted",
+      "input": {
+        "granted": 100,
+        "reviews": 5,
+        "today": 20000
+      },
+      "output": {
+        "amount": null,
+        "event_key": null,
+        "event_type": null,
+        "source": null
+      }
+    },
+    {
+      "class": "a-smaller-grant-already-written",
+      "input": {
+        "granted": 1,
+        "reviews": 5,
+        "today": 20000
+      },
+      "output": {
+        "amount": null,
+        "event_key": null,
+        "event_type": null,
+        "source": null
+      }
+    },
+    {
+      "input": {
+        "granted": 0,
+        "reviews": 2,
+        "today": 19972
+      },
+      "output": {
+        "amount": null,
+        "event_key": null,
+        "event_type": null,
+        "source": null
+      }
+    },
+    {
+      "input": {
+        "granted": 0,
+        "reviews": 1,
+        "today": 19979
+      },
+      "output": {
+        "amount": null,
+        "event_key": null,
+        "event_type": null,
+        "source": null
+      }
+    },
+    {
+      "input": {
+        "granted": 0,
+        "reviews": 2,
+        "today": 19982
+      },
+      "output": {
+        "amount": null,
+        "event_key": null,
+        "event_type": null,
+        "source": null
+      }
+    },
+    {
+      "input": {
+        "granted": 0,
+        "reviews": 6,
+        "today": 19987
+      },
+      "output": {
+        "amount": 100,
+        "event_key": "relight:19987",
+        "event_type": "record",
+        "source": "relight:19987"
+      }
+    },
+    {
+      "input": {
+        "granted": 0,
+        "reviews": 2,
+        "today": 19997
+      },
+      "output": {
+        "amount": null,
+        "event_key": null,
+        "event_type": null,
+        "source": null
+      }
+    },
+    {
+      "input": {
+        "granted": 0,
+        "reviews": 7,
+        "today": 19985
+      },
+      "output": {
+        "amount": 100,
+        "event_key": "relight:19985",
+        "event_type": "record",
+        "source": "relight:19985"
+      }
+    },
+    {
+      "input": {
+        "granted": 0,
+        "reviews": 3,
+        "today": 19994
+      },
+      "output": {
+        "amount": 100,
+        "event_key": "relight:19994",
+        "event_type": "record",
+        "source": "relight:19994"
+      }
+    },
+    {
+      "input": {
+        "granted": 0,
+        "reviews": 5,
+        "today": 19980
+      },
+      "output": {
+        "amount": 100,
+        "event_key": "relight:19980",
+        "event_type": "record",
+        "source": "relight:19980"
+      }
+    }
+  ],
+  "function": "pipeline_layers.showcase.ShowcaseLayer._relight",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Runs the relight on a stub store holding the day's review count and any grant already written, with a recording celebrate; returns the grant's amount and the celebration's event type and key, the key's day an epoch day number; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_076.py",
+  "registry_sha256": "e451e77bd68e8dfbd5e1fb48845aab7b7f6667f318bc4b956168da0819a89709",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}
