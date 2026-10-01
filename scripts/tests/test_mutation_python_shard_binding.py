@@ -1273,6 +1273,7 @@ class EveryVariablePartOfAMessageIsPinned(unittest.TestCase):
             f"interpolated field(s) of {len({m[0] for m in members})} asserted message(s)", members
         )
         missed = []
+        failed_a_pin = 0
         for site, index, position, node, function in examined_fields:
             caught = False
             for pin in by_site[site[:3]]:
@@ -1285,9 +1286,11 @@ class EveryVariablePartOfAMessageIsPinned(unittest.TestCase):
                         caught = False
                     if caught:
                         break
-            if not caught:
+            if caught:
+                failed_a_pin += 1
+            else:
                 missed.append(f"{site[0]}:{node.lineno} {site[1]!r} field {index}")
         for line in missed:
             print(f"  MISS {line}")
         print(f"MISS {len(missed)}")
-        self.assertEqual(missed, [])
+        self.assertEqual(failed_a_pin, len(examined_fields), f"{missed}")
