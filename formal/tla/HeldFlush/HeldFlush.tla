@@ -51,9 +51,13 @@ VARIABLES t,        \* the clock
           sends,    \* how many times each item was sent
           pc,       \* each flusher: "idle" or "running"
           snap,     \* the items a running flusher still has to send
-          lock      \* the flusher holding the serialisation, or "none"
+          lock,     \* the flusher holding the serialisation, or "none"
+          fired     \* the flushers whose trigger at this position has been answered
 
-vars == <<t, st, heldAt, sends, pc, snap, lock>>
+vars == <<t, st, heldAt, sends, pc, snap, lock, fired>>
+
+\* Whether flusher f has a trigger at the current clock position.
+Fires(f) == IF f = "sync" THEN t \in SyncAt ELSE t \in SchedAt
 
 TypeOK == /\ t \in 0..Horizon
           /\ st \in [Items -> {"none", "held", "sent", "abandoned"}]
@@ -62,6 +66,7 @@ TypeOK == /\ t \in 0..Horizon
           /\ pc \in [Flushers -> {"idle", "running"}]
           /\ snap \in [Flushers -> SUBSET Items]
           /\ lock \in Flushers \cup {"none"}
+          /\ fired \subseteq Flushers
 
 Init == /\ t = 0
         /\ st = [i \in Items |-> "none"]
@@ -70,9 +75,14 @@ Init == /\ t = 0
         /\ pc = [f \in Flushers |-> "idle"]
         /\ snap = [f \in Flushers |-> {}]
         /\ lock = "none"
+        /\ fired = {}
 
+\* The clock moves on only once every trigger at this position has been answered: a
+\* scheduled or after-sync flush that is due runs or returns, and is never skipped.
 Tick == /\ t < Horizon
+        /\ \A f \in Flushers : Fires(f) => f \in fired
         /\ t' = t + 1
+        /\ fired' = {}
         /\ UNCHANGED <<st, heldAt, sends, pc, snap, lock>>
 
 \* A celebration raised while the window is quiet is held.
@@ -80,15 +90,14 @@ Hold(i) == /\ Quiet(t)
            /\ st[i] = "none"
            /\ st' = [st EXCEPT ![i] = "held"]
            /\ heldAt' = [heldAt EXCEPT ![i] = t]
-           /\ UNCHANGED <<t, sends, pc, snap, lock>>
-
-Fires(f) == IF f = "sync" THEN t \in SyncAt ELSE t \in SchedAt
+           /\ UNCHANGED <<t, sends, pc, snap, lock, fired>>
 
 \* A flush starts: it needs the window open, reads the held queue in one snapshot,
 \* abandons what is past the age limit and keeps the rest to send.
 Take(f) == LET held == {i \in Items : st[i] = "held"}
                old == {i \in held : t - heldAt[i] > AgeLimit}
            IN /\ Fires(f)
+              /\ f \notin fired
               /\ pc[f] = "idle"
               /\ ~Quiet(t)
               /\ (Serialised => lock = "none")
@@ -96,7 +105,17 @@ Take(f) == LET held == {i \in Items : st[i] = "held"}
               /\ snap' = [snap EXCEPT ![f] = held \ old]
               /\ st' = [i \in Items |-> IF i \in old THEN "abandoned" ELSE st[i]]
               /\ lock' = IF Serialised THEN f ELSE lock
+              /\ fired' = fired \cup {f}
               /\ UNCHANGED <<t, heldAt, sends>>
+
+\* A due flush that returns at once: the window is quiet, or another flush holds the exclusion.
+Skip(f) == /\ Fires(f)
+           /\ f \notin fired
+           /\ pc[f] = "idle"
+           /\ \/ Quiet(t)
+              \/ Serialised /\ lock # "none"
+           /\ fired' = fired \cup {f}
+           /\ UNCHANGED <<t, st, heldAt, sends, pc, snap, lock>>
 
 \* A running flush sends one item of its snapshot; a sent item leaves the queue.
 Send(f, i) == /\ pc[f] = "running"
@@ -104,13 +123,13 @@ Send(f, i) == /\ pc[f] = "running"
               /\ snap' = [snap EXCEPT ![f] = @ \ {i}]
               /\ sends' = [sends EXCEPT ![i] = @ + 1]
               /\ st' = [st EXCEPT ![i] = "sent"]
-              /\ UNCHANGED <<t, heldAt, pc, lock>>
+              /\ UNCHANGED <<t, heldAt, pc, lock, fired>>
 
 Finish(f) == /\ pc[f] = "running"
              /\ snap[f] = {}
              /\ pc' = [pc EXCEPT ![f] = "idle"]
              /\ lock' = IF lock = f THEN "none" ELSE lock
-             /\ UNCHANGED <<t, st, heldAt, sends, snap>>
+             /\ UNCHANGED <<t, st, heldAt, sends, snap, fired>>
 
 \* The run ends at the last clock position, with no flush mid-way.
 Finished == /\ t = Horizon
@@ -119,7 +138,7 @@ Finished == /\ t = Horizon
 
 Next == \/ Tick
         \/ \E i \in Items : Hold(i)
-        \/ \E f \in Flushers : Take(f) \/ Finish(f)
+        \/ \E f \in Flushers : Take(f) \/ Skip(f) \/ Finish(f)
         \/ \E f \in Flushers, i \in Items : Send(f, i)
         \/ Finished
 
