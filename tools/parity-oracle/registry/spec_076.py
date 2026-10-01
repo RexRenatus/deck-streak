@@ -614,6 +614,86 @@ def relight_cases(rng):
     return out
 
 
+# --- the streak calendar ------------------------------------------------------------------------
+
+
+class HeatmapReads(dict):
+    """The calendar's day mapping as the predecessor builds it, recording each day key its heatmap
+    reads and the value it reads for that key, in order."""
+
+    def __init__(self, inner):
+        super().__init__(inner)
+        self.reads = []
+
+    def get(self, key, default=None):
+        value = super().get(key, default)
+        self.reads.append((key, value))
+        return value
+
+
+def with_a_spy_on_the_heatmap(streak_calendar, predecessor, *, today, rollups):
+    """Call the predecessor's calendar with a spy on `charts._heatmap`; return every day its heatmap
+    reads (the window) and the days it reads as studied, in order, as epoch day numbers. The
+    predecessor builds its day mapping and draws its chart unchanged; the spy only records."""
+    charts = predecessor("charts")
+    heatmap = charts._heatmap
+    spied = []
+
+    def spy(by_day, **kwargs):
+        recording = HeatmapReads(by_day)
+        spied.append(recording)
+        return heatmap(recording, **kwargs)
+
+    charts._heatmap = spy
+    try:
+        streak_calendar(
+            [
+                {"day": as_date(row["day"]).isoformat(), "reviews": row["reviews"]}
+                for row in rollups
+            ],
+            today=as_date(today),
+            fmt="png",
+        )
+    finally:
+        charts._heatmap = heatmap
+    (recording,) = spied
+    return {
+        "window": [as_day(dt.date.fromisoformat(key)) for key, _ in recording.reads],
+        "studied": [as_day(dt.date.fromisoformat(key)) for key, value in recording.reads if value],
+    }
+
+
+def calendar_cases(rng):
+    """One served day on each weekday over a seeded mix of studied, unstudied and absent rollups
+    reaching past the longest window, then the edges: no rollup, every rollup unstudied, every day
+    studied, and rollups past the served day."""
+    out = []
+    for today in range(PRESENT_DAY, PRESENT_DAY + 7):
+        rollups = []
+        for day in range(today - 200, today + 1):
+            draw = rng.random()
+            if draw < 0.15:
+                continue
+            rollups.append({"day": day, "reviews": 0 if draw < 0.35 else rng.randint(1, 40)})
+        weekday = as_date(today).strftime("%A").lower()
+        out.append((f"served-on-a-{weekday}", {"today": today, "rollups": rollups}))
+    t = PRESENT_DAY
+    span = range(t - 200, t + 1)
+    out += [
+        ("no-rollup", {"today": t, "rollups": []}),
+        (
+            "every-rollup-unstudied",
+            {"today": t, "rollups": [{"day": d, "reviews": 0} for d in span]},
+        ),
+        ("every-day-studied", {"today": t, "rollups": [{"day": d, "reviews": 1} for d in span]}),
+        (
+            "rollups-past-the-served-day",
+            {"today": t, "rollups": [{"day": d, "reviews": 5} for d in range(t - 3, t + 4)]},
+        ),
+    ]
+    return out
+
+
 FUNCTIONS = {
     "classify_gap": {
         "kind": "adapter",
@@ -740,6 +820,18 @@ FUNCTIONS = {
             "celebration's event type and key, the key's day an epoch day number."
         ),
         "cases": relight_cases,
+    },
+    "streak_calendar": {
+        "kind": "adapter",
+        "function": "charts.streak_calendar",
+        "adapter": with_a_spy_on_the_heatmap,
+        "note": (
+            "Calls the calendar on rollups whose days are ISO dates from epoch day numbers, with a "
+            "spy on charts._heatmap that records each day key the heatmap reads (the window) and "
+            "the value it reads for it (studied when above zero); returns both as epoch day "
+            "numbers."
+        ),
+        "cases": calendar_cases,
     },
     "streaks.constants": {
         "kind": "constants",

@@ -35,3 +35,10 @@ pub const SILENCE_WALK_CAP_DAYS: i64 = 120;
 pub const STRENGTH_PERSIST_DAYS: i64 = 400;
 /// Days a standby notice waits after the last.
 pub const STANDBY_NOTICE_GAP_DAYS: i64 = 7;
+/// Weeks the streak calendar reaches back over: the predecessor's `charts.streak_calendar` serves
+/// a heat map of the last 26 weeks, and ruling 1 binds its window (SPEC-076 section 27; ADR-302
+/// D2).
+pub const CALENDAR_WEEKS: i64 = 26;
+/// Days before the study day served that the calendar reaches, before it widens to the Monday on
+/// or before that day: 26 weeks less the served day itself (ADR-302 D2).
+pub const CALENDAR_LOOKBACK_DAYS: i64 = CALENDAR_WEEKS * 7 - 1;
