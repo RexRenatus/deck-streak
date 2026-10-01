@@ -1,0 +1,742 @@
+{
+  "adapter": "eventing",
+  "cases": [
+    {
+      "class": "no-event",
+      "input": {
+        "previous": {
+          "comeback_armed": false,
+          "current": 6,
+          "freezes": 1,
+          "last_study_day": 19999,
+          "longest": 6
+        },
+        "state": {
+          "broke_today": false,
+          "comeback_armed": false,
+          "current": 1,
+          "freezes": 1,
+          "froze_today": false,
+          "last_study_day": 20000,
+          "longest": 1
+        },
+        "today": 20000
+      },
+      "output": []
+    },
+    {
+      "class": "consumed",
+      "input": {
+        "previous": {
+          "comeback_armed": false,
+          "current": 6,
+          "freezes": 1,
+          "last_study_day": 19999,
+          "longest": 6
+        },
+        "state": {
+          "broke_today": false,
+          "comeback_armed": false,
+          "current": 1,
+          "freezes": 0,
+          "froze_today": true,
+          "last_study_day": 20000,
+          "longest": 1
+        },
+        "today": 20000
+      },
+      "output": [
+        [
+          20000,
+          -1,
+          "consumed"
+        ]
+      ]
+    },
+    {
+      "class": "break",
+      "input": {
+        "previous": {
+          "comeback_armed": false,
+          "current": 6,
+          "freezes": 1,
+          "last_study_day": 19999,
+          "longest": 6
+        },
+        "state": {
+          "broke_today": true,
+          "comeback_armed": false,
+          "current": 1,
+          "freezes": 1,
+          "froze_today": false,
+          "last_study_day": 20000,
+          "longest": 1
+        },
+        "today": 20000
+      },
+      "output": [
+        [
+          20000,
+          0,
+          "streak_break"
+        ]
+      ]
+    },
+    {
+      "class": "earn",
+      "input": {
+        "previous": {
+          "comeback_armed": false,
+          "current": 6,
+          "freezes": 1,
+          "last_study_day": 19999,
+          "longest": 6
+        },
+        "state": {
+          "broke_today": false,
+          "comeback_armed": false,
+          "current": 1,
+          "freezes": 2,
+          "froze_today": false,
+          "last_study_day": 20000,
+          "longest": 1
+        },
+        "today": 20000
+      },
+      "output": [
+        [
+          20000,
+          1,
+          "streak_earn"
+        ]
+      ]
+    },
+    {
+      "class": "consume-and-earn",
+      "input": {
+        "previous": {
+          "comeback_armed": false,
+          "current": 6,
+          "freezes": 1,
+          "last_study_day": 19999,
+          "longest": 6
+        },
+        "state": {
+          "broke_today": false,
+          "comeback_armed": false,
+          "current": 1,
+          "freezes": 1,
+          "froze_today": true,
+          "last_study_day": 20000,
+          "longest": 1
+        },
+        "today": 20000
+      },
+      "output": [
+        [
+          20000,
+          -1,
+          "consumed"
+        ],
+        [
+          20000,
+          1,
+          "streak_earn"
+        ]
+      ]
+    },
+    {
+      "class": "earn-of-two",
+      "input": {
+        "previous": {
+          "comeback_armed": false,
+          "current": 6,
+          "freezes": 1,
+          "last_study_day": 19999,
+          "longest": 6
+        },
+        "state": {
+          "broke_today": false,
+          "comeback_armed": false,
+          "current": 1,
+          "freezes": 3,
+          "froze_today": false,
+          "last_study_day": 20000,
+          "longest": 1
+        },
+        "today": 20000
+      },
+      "output": [
+        [
+          20000,
+          2,
+          "streak_earn"
+        ]
+      ]
+    },
+    {
+      "class": "capped-earn-is-no-event",
+      "input": {
+        "previous": {
+          "comeback_armed": false,
+          "current": 6,
+          "freezes": 3,
+          "last_study_day": 19999,
+          "longest": 6
+        },
+        "state": {
+          "broke_today": false,
+          "comeback_armed": false,
+          "current": 1,
+          "freezes": 3,
+          "froze_today": false,
+          "last_study_day": 20000,
+          "longest": 1
+        },
+        "today": 20000
+      },
+      "output": []
+    },
+    {
+      "class": "break-and-earn",
+      "input": {
+        "previous": {
+          "comeback_armed": false,
+          "current": 6,
+          "freezes": 1,
+          "last_study_day": 19999,
+          "longest": 6
+        },
+        "state": {
+          "broke_today": true,
+          "comeback_armed": false,
+          "current": 1,
+          "freezes": 2,
+          "froze_today": false,
+          "last_study_day": 20000,
+          "longest": 1
+        },
+        "today": 20000
+      },
+      "output": [
+        [
+          20000,
+          0,
+          "streak_break"
+        ],
+        [
+          20000,
+          1,
+          "streak_earn"
+        ]
+      ]
+    },
+    {
+      "input": {
+        "previous": {
+          "comeback_armed": false,
+          "current": 8,
+          "freezes": 1,
+          "last_study_day": 19999,
+          "longest": 30
+        },
+        "state": {
+          "broke_today": false,
+          "comeback_armed": false,
+          "current": 1,
+          "freezes": 0,
+          "froze_today": true,
+          "last_study_day": 20000,
+          "longest": 1
+        },
+        "today": 20000
+      },
+      "output": [
+        [
+          20000,
+          -1,
+          "consumed"
+        ]
+      ]
+    },
+    {
+      "input": {
+        "previous": {
+          "comeback_armed": false,
+          "current": 13,
+          "freezes": 0,
+          "last_study_day": 19999,
+          "longest": 30
+        },
+        "state": {
+          "broke_today": false,
+          "comeback_armed": false,
+          "current": 1,
+          "freezes": 3,
+          "froze_today": false,
+          "last_study_day": 20000,
+          "longest": 1
+        },
+        "today": 20000
+      },
+      "output": [
+        [
+          20000,
+          3,
+          "streak_earn"
+        ]
+      ]
+    },
+    {
+      "input": {
+        "previous": {
+          "comeback_armed": false,
+          "current": 10,
+          "freezes": 1,
+          "last_study_day": 19999,
+          "longest": 30
+        },
+        "state": {
+          "broke_today": true,
+          "comeback_armed": false,
+          "current": 1,
+          "freezes": 3,
+          "froze_today": true,
+          "last_study_day": 20000,
+          "longest": 1
+        },
+        "today": 20000
+      },
+      "output": [
+        [
+          20000,
+          -1,
+          "consumed"
+        ],
+        [
+          20000,
+          0,
+          "streak_break"
+        ],
+        [
+          20000,
+          3,
+          "streak_earn"
+        ]
+      ]
+    },
+    {
+      "input": {
+        "previous": {
+          "comeback_armed": false,
+          "current": 6,
+          "freezes": 1,
+          "last_study_day": 19999,
+          "longest": 30
+        },
+        "state": {
+          "broke_today": true,
+          "comeback_armed": false,
+          "current": 1,
+          "freezes": 2,
+          "froze_today": true,
+          "last_study_day": 20000,
+          "longest": 1
+        },
+        "today": 20000
+      },
+      "output": [
+        [
+          20000,
+          -1,
+          "consumed"
+        ],
+        [
+          20000,
+          0,
+          "streak_break"
+        ],
+        [
+          20000,
+          2,
+          "streak_earn"
+        ]
+      ]
+    },
+    {
+      "input": {
+        "previous": {
+          "comeback_armed": false,
+          "current": 2,
+          "freezes": 3,
+          "last_study_day": 19999,
+          "longest": 30
+        },
+        "state": {
+          "broke_today": false,
+          "comeback_armed": false,
+          "current": 1,
+          "freezes": 3,
+          "froze_today": true,
+          "last_study_day": 20000,
+          "longest": 1
+        },
+        "today": 20000
+      },
+      "output": [
+        [
+          20000,
+          -1,
+          "consumed"
+        ],
+        [
+          20000,
+          1,
+          "streak_earn"
+        ]
+      ]
+    },
+    {
+      "input": {
+        "previous": {
+          "comeback_armed": false,
+          "current": 18,
+          "freezes": 1,
+          "last_study_day": 19999,
+          "longest": 30
+        },
+        "state": {
+          "broke_today": false,
+          "comeback_armed": false,
+          "current": 1,
+          "freezes": 1,
+          "froze_today": false,
+          "last_study_day": 20000,
+          "longest": 1
+        },
+        "today": 20000
+      },
+      "output": []
+    },
+    {
+      "input": {
+        "previous": {
+          "comeback_armed": false,
+          "current": 2,
+          "freezes": 0,
+          "last_study_day": 19999,
+          "longest": 30
+        },
+        "state": {
+          "broke_today": true,
+          "comeback_armed": false,
+          "current": 1,
+          "freezes": 1,
+          "froze_today": true,
+          "last_study_day": 20000,
+          "longest": 1
+        },
+        "today": 20000
+      },
+      "output": [
+        [
+          20000,
+          -1,
+          "consumed"
+        ],
+        [
+          20000,
+          0,
+          "streak_break"
+        ],
+        [
+          20000,
+          2,
+          "streak_earn"
+        ]
+      ]
+    },
+    {
+      "input": {
+        "previous": {
+          "comeback_armed": false,
+          "current": 22,
+          "freezes": 2,
+          "last_study_day": 19999,
+          "longest": 30
+        },
+        "state": {
+          "broke_today": false,
+          "comeback_armed": false,
+          "current": 1,
+          "freezes": 2,
+          "froze_today": false,
+          "last_study_day": 20000,
+          "longest": 1
+        },
+        "today": 20000
+      },
+      "output": []
+    },
+    {
+      "input": {
+        "previous": {
+          "comeback_armed": false,
+          "current": 8,
+          "freezes": 0,
+          "last_study_day": 19999,
+          "longest": 30
+        },
+        "state": {
+          "broke_today": false,
+          "comeback_armed": false,
+          "current": 1,
+          "freezes": 1,
+          "froze_today": false,
+          "last_study_day": 20000,
+          "longest": 1
+        },
+        "today": 20000
+      },
+      "output": [
+        [
+          20000,
+          1,
+          "streak_earn"
+        ]
+      ]
+    },
+    {
+      "input": {
+        "previous": {
+          "comeback_armed": false,
+          "current": 0,
+          "freezes": 0,
+          "last_study_day": 19999,
+          "longest": 30
+        },
+        "state": {
+          "broke_today": false,
+          "comeback_armed": false,
+          "current": 1,
+          "freezes": 2,
+          "froze_today": true,
+          "last_study_day": 20000,
+          "longest": 1
+        },
+        "today": 20000
+      },
+      "output": [
+        [
+          20000,
+          -1,
+          "consumed"
+        ],
+        [
+          20000,
+          3,
+          "streak_earn"
+        ]
+      ]
+    },
+    {
+      "input": {
+        "previous": {
+          "comeback_armed": false,
+          "current": 19,
+          "freezes": 2,
+          "last_study_day": 19999,
+          "longest": 30
+        },
+        "state": {
+          "broke_today": true,
+          "comeback_armed": false,
+          "current": 1,
+          "freezes": 3,
+          "froze_today": false,
+          "last_study_day": 20000,
+          "longest": 1
+        },
+        "today": 20000
+      },
+      "output": [
+        [
+          20000,
+          0,
+          "streak_break"
+        ],
+        [
+          20000,
+          1,
+          "streak_earn"
+        ]
+      ]
+    },
+    {
+      "input": {
+        "previous": {
+          "comeback_armed": false,
+          "current": 5,
+          "freezes": 3,
+          "last_study_day": 19999,
+          "longest": 30
+        },
+        "state": {
+          "broke_today": false,
+          "comeback_armed": false,
+          "current": 1,
+          "freezes": 1,
+          "froze_today": true,
+          "last_study_day": 20000,
+          "longest": 1
+        },
+        "today": 20000
+      },
+      "output": [
+        [
+          20000,
+          -1,
+          "consumed"
+        ]
+      ]
+    },
+    {
+      "input": {
+        "previous": {
+          "comeback_armed": false,
+          "current": 24,
+          "freezes": 1,
+          "last_study_day": 19999,
+          "longest": 30
+        },
+        "state": {
+          "broke_today": false,
+          "comeback_armed": false,
+          "current": 1,
+          "freezes": 3,
+          "froze_today": true,
+          "last_study_day": 20000,
+          "longest": 1
+        },
+        "today": 20000
+      },
+      "output": [
+        [
+          20000,
+          -1,
+          "consumed"
+        ],
+        [
+          20000,
+          3,
+          "streak_earn"
+        ]
+      ]
+    },
+    {
+      "input": {
+        "previous": {
+          "comeback_armed": false,
+          "current": 29,
+          "freezes": 0,
+          "last_study_day": 19999,
+          "longest": 30
+        },
+        "state": {
+          "broke_today": true,
+          "comeback_armed": false,
+          "current": 1,
+          "freezes": 0,
+          "froze_today": false,
+          "last_study_day": 20000,
+          "longest": 1
+        },
+        "today": 20000
+      },
+      "output": [
+        [
+          20000,
+          0,
+          "streak_break"
+        ]
+      ]
+    },
+    {
+      "input": {
+        "previous": {
+          "comeback_armed": false,
+          "current": 5,
+          "freezes": 1,
+          "last_study_day": 19999,
+          "longest": 30
+        },
+        "state": {
+          "broke_today": true,
+          "comeback_armed": false,
+          "current": 1,
+          "freezes": 0,
+          "froze_today": false,
+          "last_study_day": 20000,
+          "longest": 1
+        },
+        "today": 20000
+      },
+      "output": [
+        [
+          20000,
+          0,
+          "streak_break"
+        ]
+      ]
+    },
+    {
+      "input": {
+        "previous": {
+          "comeback_armed": false,
+          "current": 25,
+          "freezes": 0,
+          "last_study_day": 19999,
+          "longest": 30
+        },
+        "state": {
+          "broke_today": true,
+          "comeback_armed": false,
+          "current": 1,
+          "freezes": 2,
+          "froze_today": true,
+          "last_study_day": 20000,
+          "longest": 1
+        },
+        "today": 20000
+      },
+      "output": [
+        [
+          20000,
+          -1,
+          "consumed"
+        ],
+        [
+          20000,
+          0,
+          "streak_break"
+        ],
+        [
+          20000,
+          3,
+          "streak_earn"
+        ]
+      ]
+    }
+  ],
+  "function": "pipeline.GamifyPipeline._freeze_events_for",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Builds the previous state, the new state's freezes and transient flags, and the day; returns the event rows, each day an epoch day; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_076.py",
+  "registry_sha256": "e451e77bd68e8dfbd5e1fb48845aab7b7f6667f318bc4b956168da0819a89709",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

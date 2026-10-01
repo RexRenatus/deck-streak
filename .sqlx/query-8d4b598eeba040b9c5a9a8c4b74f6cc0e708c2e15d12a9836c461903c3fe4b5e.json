@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT strength FROM habit_strength ORDER BY study_day DESC LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "name": "strength",
+        "ordinal": 0,
+        "type_info": "Float",
+        "origin": {
+          "Table": {
+            "table": "habit_strength",
+            "name": "strength"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "8d4b598eeba040b9c5a9a8c4b74f6cc0e708c2e15d12a9836c461903c3fe4b5e"
+}
