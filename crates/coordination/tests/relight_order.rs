@@ -576,13 +576,15 @@ async fn claimed(db: &Db) -> Vec<String> {
     .collect()
 }
 
-/// Which of the two due days fails its route.
-#[derive(Clone, Copy, Debug)]
-enum FailingDay {
-    First,
-    Second,
-    Both,
-}
+/// The days [`two_returns`] makes due, oldest first. A case fails the route of a non-empty set of
+/// them, so a due day added here adds every set it is in.
+const DUE: [i64; 2] = [D0, SECOND];
+
+/// The most consecutive failed routes a case runs: a case fails one, two or three routes in a row.
+/// This count is the population's reach, not the proof that no number of failures gives a day up:
+/// that is the guard [`the_route_keeps_no_per_day_failure_state_a_give_up_could_read`], for every
+/// count, and #446's model checks a give-up after each count up to three.
+const FAILED_ROUTES: u32 = 3;
 
 /// Which cycle's route fails first: the one whose fold commits both grants, or the next one, after
 /// a restart between that fold's commit and its route.
@@ -592,27 +594,48 @@ enum FailingCycle {
     AfterRestart,
 }
 
+/// Every failing cycle.
+const CYCLES: [FailingCycle; 2] = [FailingCycle::Grant, FailingCycle::AfterRestart];
+/// Every ledger write a failing day's route can fail at.
+const WRITES: [LedgerWrite; 2] = [LedgerWrite::Claim, LedgerWrite::Record];
+/// A restart between the last failed route and the retry, or none.
+const RESTARTS: [bool; 2] = [false, true];
+
 #[derive(Clone, Copy, Debug)]
 struct RouteCase {
     cycle: FailingCycle,
-    day: FailingDay,
+    /// For each day of [`DUE`], whether its route fails.
+    failing: [bool; DUE.len()],
     write: LedgerWrite,
     consecutive: u32,
     crash_before_retry: bool,
 }
 
-/// Every failing cycle × failing day × failing ledger write × one or two consecutive failed routes
-/// × a restart, or none, between the last failed route and the retry.
+impl RouteCase {
+    /// The due days whose route fails.
+    fn failing_days(self) -> Vec<i64> {
+        DUE.iter()
+            .zip(self.failing)
+            .filter(|(_, fails)| *fails)
+            .map(|(day, _)| *day)
+            .collect()
+    }
+}
+
+/// Every failing cycle × every non-empty set of the due days failing × failing ledger write × one
+/// to [`FAILED_ROUTES`] consecutive failed routes × a restart, or none, between the last failed
+/// route and the retry. Each axis is read from its constant, so the population grows with any.
 fn route_population() -> Vec<RouteCase> {
     let mut cases = Vec::new();
-    for cycle in [FailingCycle::Grant, FailingCycle::AfterRestart] {
-        for day in [FailingDay::First, FailingDay::Second, FailingDay::Both] {
-            for write in [LedgerWrite::Claim, LedgerWrite::Record] {
-                for consecutive in [1, 2] {
-                    for crash_before_retry in [false, true] {
+    for cycle in CYCLES {
+        for set in 1..(1_u32 << DUE.len()) {
+            let failing = std::array::from_fn(|index| (set >> index) & 1 == 1);
+            for write in WRITES {
+                for consecutive in 1..=FAILED_ROUTES {
+                    for crash_before_retry in RESTARTS {
                         cases.push(RouteCase {
                             cycle,
-                            day,
+                            failing,
                             write,
                             consecutive,
                             crash_before_retry,
@@ -634,11 +657,7 @@ async fn run_route(case: RouteCase) -> Vec<String> {
     let ended = cycle(&world, &mut process, &history(0), at(D0 - 1, 12), false).await;
     assert_eq!(ended, Ended::Routed, "the eve's cycle routes");
     seam(&world.db).await;
-    let failing = match case.day {
-        FailingDay::First => vec![D0],
-        FailingDay::Second => vec![SECOND],
-        FailingDay::Both => vec![D0, SECOND],
-    };
+    let failing = case.failing_days();
     arm(&world.db, &failing, case.write).await;
     let data = two_returns();
     let mut hour = 12;
@@ -771,9 +790,10 @@ async fn a_route_that_fails_leaves_the_day_due_and_a_later_cycle_celebrates_it_o
     );
 }
 
-/// A52: over every failing cycle, failing day, failing ledger write, run of consecutive failed
-/// routes and restart before the retry, each committed grant is celebrated once, no other day is,
-/// and the due list empties.
+/// A52: over every failing cycle, set of failing due days, failing ledger write, run of one to
+/// [`FAILED_ROUTES`] consecutive failed routes and restart before the retry, each committed grant
+/// is celebrated once, no other day is, and the due list empties. The population is derived from
+/// those axes, so a failure count, a due day or a write added to them grows it.
 #[tokio::test]
 async fn every_failed_route_leaves_its_day_due_until_one_celebration() {
     let cases = route_population();
@@ -781,16 +801,31 @@ async fn every_failed_route_leaves_its_day_due_until_one_celebration() {
         .iter()
         .filter(|case| case.write == LedgerWrite::Claim)
         .count();
+    let sets = (1_usize << DUE.len()) - 1;
+    let runs = usize::try_from(FAILED_ROUTES).expect("a small count");
     println!(
-        "examined {} failed-route case(s), {claims} failing the claim and {} the record",
+        "examined {} failed-route case(s) ({} cycles x {sets} sets of failing days x {} writes x \
+         {runs} runs of failed routes x {} restarts), {claims} failing the claim and {} the record",
         cases.len(),
+        CYCLES.len(),
+        WRITES.len(),
+        RESTARTS.len(),
         cases.len() - claims
     );
     assert_eq!(
         cases.len(),
-        48,
-        "2 cycles x 3 days x 2 writes x 2 runs x 2 restarts"
+        CYCLES.len() * sets * WRITES.len() * runs * RESTARTS.len(),
+        "every member of the derived population is run"
     );
+    for consecutive in 1..=FAILED_ROUTES {
+        assert!(
+            cases
+                .iter()
+                .any(|case| case.consecutive == consecutive
+                    && case.failing.iter().all(|fails| *fails)),
+            "{consecutive} consecutive failed route(s) of every due day is a member"
+        );
+    }
     let mut broken = Vec::new();
     for case in cases {
         broken.extend(run_route(case).await);
@@ -817,7 +852,11 @@ async fn a_day_whose_route_keeps_failing_holds_back_no_other_due_day() {
         let data = two_returns();
         for hour in 12..16 {
             let ended = logged_cycle(&world, &mut process, &data, at(SYNC, hour), false).await;
-            assert_eq!(ended, Ended::Routed, "relight:{failing} failing, hour {hour}: routes");
+            assert_eq!(
+                ended,
+                Ended::Routed,
+                "relight:{failing} failing, hour {hour}: routes"
+            );
             assert_eq!(
                 decided(&world.db, other).await,
                 (1, 1),
@@ -841,7 +880,11 @@ async fn a_day_whose_route_keeps_failing_holds_back_no_other_due_day() {
             (1, 1),
             "relight:{failing}: sent once it can be"
         );
-        assert_eq!(world.bot.sends(), 2, "relight:{failing}: two lines for two grants");
+        assert_eq!(
+            world.bot.sends(),
+            2,
+            "relight:{failing}: two lines for two grants"
+        );
         assert_eq!(
             process.due.pending(&world.db).await.expect("the due read"),
             Vec::<StudyDay>::new(),
@@ -866,7 +909,11 @@ async fn a_day_whose_route_fails_many_times_stays_due_until_its_one_celebration(
             for n in 0..failures {
                 let ended =
                     logged_cycle(&world, &mut process, &history(3), at(D0 + 1, 8 + n), false).await;
-                assert_eq!(ended, Ended::Routed, "{write:?} x{failures}: cycle {n} routes");
+                assert_eq!(
+                    ended,
+                    Ended::Routed,
+                    "{write:?} x{failures}: cycle {n} routes"
+                );
                 assert_eq!(
                     process.due.pending(&world.db).await.expect("the due read"),
                     vec![StudyDay::from_epoch_day(D0)],
@@ -876,8 +923,16 @@ async fn a_day_whose_route_fails_many_times_stays_due_until_its_one_celebration(
             }
             disarm(&world.db).await;
             logged_cycle(&world, &mut process, &history(3), at(D0 + 1, 20), false).await;
-            assert_eq!(decided(&world.db, D0).await.0, 1, "{write:?} x{failures}: one claim");
-            assert_eq!(world.bot.sends(), 1, "{write:?} x{failures}: celebrated once");
+            assert_eq!(
+                decided(&world.db, D0).await.0,
+                1,
+                "{write:?} x{failures}: one claim"
+            );
+            assert_eq!(
+                world.bot.sends(),
+                1,
+                "{write:?} x{failures}: celebrated once"
+            );
             assert_eq!(
                 process.due.pending(&world.db).await.expect("the due read"),
                 Vec::<StudyDay>::new(),
@@ -888,4 +943,432 @@ async fn a_day_whose_route_fails_many_times_stays_due_until_its_one_celebration(
     }
     println!("examined {cases} runs of consecutive failed routes");
     assert_eq!(cases, 16);
+}
+
+/// The sources whose types the relight route holds from one route to the next: the router and all
+/// it holds (the notifications crate, and the kernel, the one crate it depends on), and the route's
+/// own two files. `route_due_relights` takes nothing else that outlives it but the database.
+const ROUTE_STATE_SOURCES: [&str; 4] = [
+    "crates/notifications/src",
+    "crates/kernel/src",
+    "crates/coordination/src/relight.rs",
+    "crates/coordination/src/recompute/streaks.rs",
+];
+
+/// The names that hold state inside a value or a static (interior mutability, a lazy value, a
+/// channel or a thread-local), and every `Atomic` type besides.
+const HOLDS_STATE: [&str; 17] = [
+    "Mutex",
+    "RwLock",
+    "RefCell",
+    "Cell",
+    "UnsafeCell",
+    "OnceCell",
+    "OnceLock",
+    "LazyLock",
+    "LazyCell",
+    "thread_local",
+    "Semaphore",
+    "mpsc",
+    "watch",
+    "broadcast",
+    "Notify",
+    "lazy_static",
+    "once_cell",
+];
+
+/// Every line of [`ROUTE_STATE_SOURCES`] that names state, written out. Each holds a router-wide
+/// instant, a clock, a worker pool or the log's redaction list, never a count per day: the router's
+/// two breakers stamp when a send or a reaction last failed, `ManualClock` is the tests' clock,
+/// `offload` bounds blocking work and `redact` holds the values the log hides.
+const ROUTE_STATE: [(&str, &str); 15] = [
+    (
+        "crates/notifications/src/router.rs",
+        "use std::sync::{Arc, Mutex, PoisonError};",
+    ),
+    (
+        "crates/notifications/src/router.rs",
+        "failed_at: Mutex<Option<UtcMillis>>,",
+    ),
+    (
+        "crates/notifications/src/router.rs",
+        "reaction_failed_at: Mutex<Option<UtcMillis>>,",
+    ),
+    (
+        "crates/notifications/src/router.rs",
+        "failed_at: Mutex::new(None),",
+    ),
+    (
+        "crates/notifications/src/router.rs",
+        "reaction_failed_at: Mutex::new(None),",
+    ),
+    (
+        "crates/notifications/src/router.rs",
+        "fn cooling(&self, failed_at: &Mutex<Option<UtcMillis>>, now: UtcMillis) -> bool {",
+    ),
+    (
+        "crates/notifications/src/router.rs",
+        "fn stamp(failed_at: &Mutex<Option<UtcMillis>>, now: UtcMillis) {",
+    ),
+    (
+        "crates/kernel/src/clock.rs",
+        "use std::sync::atomic::{AtomicI64, Ordering};",
+    ),
+    ("crates/kernel/src/clock.rs", "now: AtomicI64,"),
+    (
+        "crates/kernel/src/clock.rs",
+        "now: AtomicI64::new(start.0),",
+    ),
+    (
+        "crates/kernel/src/offload.rs",
+        "use tokio::sync::Semaphore;",
+    ),
+    ("crates/kernel/src/offload.rs", "permits: Arc<Semaphore>,"),
+    (
+        "crates/kernel/src/offload.rs",
+        "permits: Arc::new(Semaphore::new(workers.get())),",
+    ),
+    (
+        "crates/kernel/src/redact.rs",
+        "use std::sync::{Arc, PoisonError, RwLock};",
+    ),
+    (
+        "crates/kernel/src/redact.rs",
+        "registry: Arc<RwLock<Registry>>,",
+    ),
+];
+
+/// Every `static` item and thread-local in the source of every crate coordination links, written
+/// out: two run sequences, the data-rights registry's entries, the migrator and the parsed XP
+/// economy. None is a count per day.
+const STATICS: [(&str, &str); 14] = [
+    (
+        "crates/agent/src/gate.rs",
+        "static STAGE_SEQUENCE: AtomicU64 = AtomicU64::new(0);",
+    ),
+    (
+        "crates/agent/src/runner.rs",
+        "static RUN_SEQUENCE: AtomicU64 = AtomicU64::new(0);",
+    ),
+    (
+        "crates/coordination/src/data_rights_registry.rs",
+        "static KERNEL: KernelDataRights = KernelDataRights;",
+    ),
+    (
+        "crates/coordination/src/data_rights_registry.rs",
+        "static INGEST: IngestDataRights = IngestDataRights;",
+    ),
+    (
+        "crates/coordination/src/data_rights_registry.rs",
+        "static ANALYTICS: AnalyticsDataRights = AnalyticsDataRights;",
+    ),
+    (
+        "crates/coordination/src/data_rights_registry.rs",
+        "static PROGRESSION: ProgressionDataRights = ProgressionDataRights;",
+    ),
+    (
+        "crates/coordination/src/data_rights_registry.rs",
+        "static NOTIFICATIONS: NotificationsDataRights = NotificationsDataRights;",
+    ),
+    (
+        "crates/coordination/src/data_rights_registry.rs",
+        "static READINGS: ReadingsDataRights = ReadingsDataRights;",
+    ),
+    (
+        "crates/coordination/src/data_rights_registry.rs",
+        "static AGENT: AgentDataRights = AgentDataRights;",
+    ),
+    (
+        "crates/coordination/src/data_rights_registry.rs",
+        "static VAULT: VaultDataRights = VaultDataRights;",
+    ),
+    (
+        "crates/coordination/src/data_rights_registry.rs",
+        "static STREAKS: StreaksDataRights = StreaksDataRights;",
+    ),
+    (
+        "crates/coordination/src/data_rights_registry.rs",
+        "static COORDINATION: CoordinationDataRights = CoordinationDataRights;",
+    ),
+    (
+        "crates/kernel/src/db.rs",
+        "pub static MIGRATOR: Migrator = sqlx::migrate!(\"../../migrations\");",
+    ),
+    (
+        "crates/progression/src/economy_config.rs",
+        "static XP: LazyLock<XpEconomy> = LazyLock::new(parse);",
+    ),
+];
+
+/// The names on the code part of `line`, before any `//`, with lifetimes (`'static`) left out.
+fn names(line: &str) -> Vec<&str> {
+    let code = line.find("//").map_or(line, |at| &line[..at]);
+    let mut names = Vec::new();
+    let mut start = None;
+    for (index, ch) in code
+        .char_indices()
+        .chain(std::iter::once((code.len(), ' ')))
+    {
+        let part = ch.is_ascii_alphanumeric() || ch == '_';
+        match (start, part) {
+            (None, true) => start = Some(index),
+            (Some(from), false) => {
+                if !code[..from].ends_with('\'') {
+                    names.push(&code[from..index]);
+                }
+                start = None;
+            }
+            _ => {}
+        }
+    }
+    names
+}
+
+fn holds_state(line: &str) -> bool {
+    names(line)
+        .iter()
+        .any(|name| HOLDS_STATE.contains(name) || name.starts_with("Atomic"))
+}
+
+fn is_static(line: &str) -> bool {
+    names(line)
+        .iter()
+        .any(|name| *name == "static" || *name == "thread_local")
+}
+
+/// The workspace's root, from this crate's manifest directory.
+fn workspace() -> std::path::PathBuf {
+    std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
+}
+
+/// Every `.rs` file at or under `relative`, sorted, as a path from the workspace's root.
+fn rust_sources(relative: &str) -> Vec<String> {
+    let path = workspace().join(relative);
+    if path.is_file() {
+        return vec![relative.to_owned()];
+    }
+    let mut found = Vec::new();
+    let mut entries: Vec<_> = std::fs::read_dir(&path)
+        .unwrap_or_else(|error| panic!("{relative} reads: {error}"))
+        .map(|entry| entry.expect("a directory entry").file_name())
+        .collect();
+    entries.sort();
+    for name in entries {
+        let name = name.to_str().expect("a UTF-8 name");
+        let child = format!("{relative}/{name}");
+        let rust = std::path::Path::new(name)
+            .extension()
+            .is_some_and(|extension| extension == "rs");
+        if workspace().join(&child).is_dir() || rust {
+            found.extend(rust_sources(&child));
+        }
+    }
+    found
+}
+
+/// Every line of the sources under `roots` that `matches`, as its path and its trimmed text.
+fn census(roots: &[String], matches: fn(&str) -> bool) -> Vec<(String, String)> {
+    let mut found = Vec::new();
+    for root in roots {
+        for source in rust_sources(root) {
+            let text = std::fs::read_to_string(workspace().join(&source)).expect("a source reads");
+            for line in text.lines().filter(|line| matches(line)) {
+                found.push((source.clone(), line.trim().to_owned()));
+            }
+        }
+    }
+    found
+}
+
+/// The crate `name` and every workspace crate it links, read from each `[dependencies]` table.
+fn linked_crates(name: &str) -> Vec<String> {
+    let mut linked = std::collections::BTreeSet::new();
+    let mut next = vec![name.to_owned()];
+    while let Some(crate_name) = next.pop() {
+        if !linked.insert(crate_name.clone()) {
+            continue;
+        }
+        let manifest =
+            std::fs::read_to_string(workspace().join(format!("crates/{crate_name}/Cargo.toml")))
+                .expect("a manifest reads");
+        let mut section = "";
+        for line in manifest.lines() {
+            if line.starts_with('[') {
+                section = line;
+            } else if section == "[dependencies]"
+                && let Some(rest) = line.strip_prefix("deck-streak-")
+            {
+                let end = rest.find(['.', ' ', '=']).unwrap_or(rest.len());
+                next.push(rest[..end].to_owned());
+            }
+        }
+    }
+    linked.into_iter().collect()
+}
+
+/// Each line `found` holds that `written` does not, and each `written` line no longer found.
+fn against(what: &str, found: &[(String, String)], written: &[(&str, &str)]) -> Vec<String> {
+    let written: Vec<(String, String)> = written
+        .iter()
+        .map(|(path, line)| ((*path).to_owned(), (*line).to_owned()))
+        .collect();
+    let mut broken = Vec::new();
+    for line in found.iter().filter(|line| !written.contains(line)) {
+        broken.push(format!(
+            "{what}: {} holds `{}`, which is not written out",
+            line.0, line.1
+        ));
+    }
+    for line in written.iter().filter(|line| !found.contains(line)) {
+        broken.push(format!("{what}: {} no longer holds `{}`", line.0, line.1));
+    }
+    broken
+}
+
+/// Every row of every table of `db`, as its table and its quoted columns, sorted.
+async fn snapshot(db: &Db) -> Vec<String> {
+    let mut write = db.write().await.expect("a write");
+    let tables: Vec<String> =
+        sqlx::query_scalar("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name")
+            .fetch_all(&mut *write)
+            .await
+            .expect("the tables read");
+    let mut rows = Vec::new();
+    for table in tables {
+        let columns: Vec<String> =
+            sqlx::query_scalar("SELECT name FROM pragma_table_info(?1) ORDER BY cid")
+                .bind(table.as_str())
+                .fetch_all(&mut *write)
+                .await
+                .expect("the columns read");
+        let quoted: Vec<String> = columns
+            .iter()
+            .map(|column| format!("quote(\"{column}\")"))
+            .collect();
+        let read: Vec<String> = sqlx::query_scalar(sqlx::AssertSqlSafe(format!(
+            "SELECT {} FROM \"{table}\"",
+            quoted.join(" || ',' || ")
+        )))
+        .fetch_all(&mut *write)
+        .await
+        .expect("the rows read");
+        rows.extend(read.into_iter().map(|row| format!("{table}: {row}")));
+    }
+    rows.sort();
+    rows
+}
+
+/// The durable leg: a committed grant whose claim fails, routed again and again with nothing else
+/// running, leaves every row of the database as it was and stays due; once the claim can be written
+/// it is celebrated once. So the database before each failed route equals the database before the
+/// first, and nothing durable can count the failures.
+async fn failed_routes_leave_the_database_as_they_found_it() -> (usize, Vec<String>) {
+    let world = world().await;
+    let mut process = start();
+    cycle(&world, &mut process, &history(0), at(D0 - 1, 12), false).await;
+    seam(&world.db).await;
+    arm(&world.db, &[D0], LedgerWrite::Claim).await;
+    logged_cycle(&world, &mut process, &history(3), at(D0 + 1, 12), false).await;
+    assert_eq!(grants(&world.db).await, vec![D0], "the grant committed");
+    assert_eq!(
+        decided(&world.db, D0).await,
+        (0, 0),
+        "its route failed at the claim"
+    );
+    let today = StudyDayRule::default().study_day(UtcMillis::from_epoch_millis(at(D0 + 1, 12)));
+    let before = snapshot(&world.db).await;
+    let mut broken = Vec::new();
+    let routes = 3;
+    for route in 1..=routes {
+        if let Err(error) = route_due_relights(&world.router, &process.due, &world.db, today).await
+        {
+            println!("failed route {route} answered: {error}");
+        }
+        let after = snapshot(&world.db).await;
+        if after != before {
+            let changed: Vec<&String> = after.iter().filter(|row| !before.contains(row)).collect();
+            let gone: Vec<&String> = before.iter().filter(|row| !after.contains(row)).collect();
+            broken.push(format!(
+                "durable: failed route {route} changed the database: {changed:?} written, {gone:?} gone"
+            ));
+        }
+        let due = process.due.pending(&world.db).await.expect("the due read");
+        if due != vec![StudyDay::from_epoch_day(D0)] {
+            broken.push(format!(
+                "durable: after failed route {route} the due list is {due:?}"
+            ));
+        }
+    }
+    disarm(&world.db).await;
+    if let Err(error) = route_due_relights(&world.router, &process.due, &world.db, today).await {
+        broken.push(format!(
+            "durable: the route after the failures answered {error}"
+        ));
+    }
+    if decided(&world.db, D0).await != (1, 1) || world.bot.sends() != 1 {
+        broken.push("durable: the day was not celebrated once when it could be".to_owned());
+    }
+    (before.len(), broken)
+}
+
+/// R27, for every count of failures: a day is never given up after some number of failed routes,
+/// because no count of a day's failed routes can outlive one route. By construction, not by a
+/// count: the route holds nothing from one route to the next but `RelightDue`, the router and the
+/// database, and the test finds no new place a count could live in any of them, nor in a static.
+/// - `RelightDue` holds no field: its size is zero.
+/// - [`ROUTE_STATE_SOURCES`] name no state beyond [`ROUTE_STATE`], written out.
+/// - The crates coordination links hold no `static` or thread-local beyond [`STATICS`].
+/// - A failed route leaves every row of the database as it found it, and the day due.
+///
+/// So the process and the database before failure k + 1 are those before failure 1, for every k,
+/// and no "give up after N" can fire for any N. A counter planted in any of those places turns this
+/// test red at the first failure. Not covered: a count kept inside a transport or a clock the caller
+/// chooses, and a give-up by age rather than by count.
+#[tokio::test]
+async fn the_route_keeps_no_per_day_failure_state_a_give_up_could_read() {
+    let mut broken = Vec::new();
+    let size = std::mem::size_of::<RelightDue>();
+    if size != 0 {
+        broken.push(format!(
+            "RelightDue holds {size} byte(s) from one route to the next"
+        ));
+    }
+    let roots: Vec<String> = ROUTE_STATE_SOURCES
+        .iter()
+        .map(|root| (*root).to_owned())
+        .collect();
+    let state = examined("line(s) naming state", census(&roots, holds_state));
+    broken.extend(against("route state", &state, &ROUTE_STATE));
+    let linked = examined("linked crate(s)", linked_crates("coordination"));
+    let sources: Vec<String> = linked
+        .iter()
+        .map(|name| format!("crates/{name}/src"))
+        .collect();
+    let statics = examined("static(s)", census(&sources, is_static));
+    broken.extend(against("static", &statics, &STATICS));
+    let (rows, durable) = failed_routes_leave_the_database_as_they_found_it().await;
+    broken.extend(durable);
+    println!(
+        "examined RelightDue's size, {} line(s) naming state over {} source root(s), {} static(s) \
+         over {} linked crate(s), and 3 failed routes against {rows} database row(s)",
+        state.len(),
+        roots.len(),
+        statics.len(),
+        linked.len()
+    );
+    assert_eq!(
+        broken,
+        Vec::<String>::new(),
+        "no count of a day's failed routes outlives one route"
+    );
+}
+
+/// Prints how many items a check examined and refuses zero (the tdd pack's examined contract).
+fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
+    println!("examined {} {what}", items.len());
+    assert!(
+        !items.is_empty(),
+        "examined 0 {what}: the population is empty, so nothing was judged"
+    );
+    items
 }
