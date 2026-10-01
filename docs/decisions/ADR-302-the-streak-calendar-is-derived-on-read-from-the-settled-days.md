@@ -42,9 +42,9 @@ D2, the window:
 
 D3, the day a marker sits on:
 
-- A `freeze` on the real miss the freeze covered, a `break` on `broke_today`'s day, a `skip` on each
-  skip day: chosen, because each marker then sits on the day the owner would point at, and the replay
-  already decides all three (#486).
+- Each marker on its own day: chosen, because each then sits on the day the owner would point at, and
+  the replay already decides all three (freeze on the covered miss, break on `broke_today`, skip on
+  each skip day) (#486).
 - The freeze on the return day, where the replay spends it: rejected, because the return day is a
   study day and the miss it hides would show as nothing.
 - The law track's freeze: not served, because the law track holds no freezes (R10). Its `break` sits
@@ -52,8 +52,8 @@ D3, the day a marker sits on:
 
 D4, where the study days come from:
 
-- The settled review XP of each track, `xp_settlement` rows of source `reviews` on track `language`
-  and `reviews_law` on `law`, with an amount above nothing: chosen, because it is stored per track
+- Settled review XP per track: chosen, because it is stored per track (`xp_settlement` rows, `reviews`
+  on `language` and `reviews_law` on `law`, amount above nothing)
   and written by the same fold that writes the freeze events, and it is the set of study days of the
   track. `review_xp` is zero only for an event that is not a study event, and the smallest XP of a
   study event is the economy's base of 10 times the lowest ease (again, 0.5), maturity (new, 1.0),

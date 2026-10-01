@@ -96,6 +96,8 @@ describe('the streak calendar on the screen', () => {
     const { container } = render(StreakScreen, { view: member(3) });
     const language = cells(container, 'language').map((cell) => cell.dataset.markers);
     const law = cells(container, 'law').map((cell) => cell.dataset.markers);
+    expect(language).toHaveLength(35);
+    expect(law).toHaveLength(35);
     expect(language).not.toEqual(law);
   });
 
@@ -104,6 +106,8 @@ describe('the streak calendar on the screen', () => {
     delete view.calendar;
     const { container } = render(StreakScreen, { view });
     expect(container.querySelectorAll('li[data-day]')).toHaveLength(0);
+    const drawn = render(StreakScreen, { view: member(0) });
+    expect(drawn.container.querySelectorAll('li[data-day]')).toHaveLength(70);
   });
 
   it('reads the served calendar into its own place and refuses a malformed one', () => {
