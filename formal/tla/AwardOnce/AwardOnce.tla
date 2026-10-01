@@ -1,6 +1,12 @@
 ---------------------------- MODULE AwardOnce ----------------------------
-\* @phx covers crates/coordination/src/recompute/mod.rs anchor=run digest=sha256:9cd6a034ba6acaaa0686f1aa8def456b21e9128164b1afc52623548b1a62dea1
-\* @phx covers crates/coordination/src/sync_cycle.rs anchor=sync_cycle digest=sha256:1b41728ec7e07a7581f9cf9ce88f74f02ad3e59e9a0d402c4ac81a71d128d060
+\* @phx covers crates/coordination/src/recompute/mod.rs anchor=run digest=sha256:c51dc67a3988bbeb8c46a953acdaba06669275e0ba405edb1146de880ae815fd
+\* @phx covers crates/coordination/src/recompute/mod.rs anchor=offer_owed digest=sha256:0d418cb9fe6912d5780f32d0e837891e9927590bd6cc55b3aaf883ebfdf5bc00
+\* @phx covers crates/coordination/src/recompute/badges.rs anchor=evaluate digest=sha256:20660e5d08a54f50f60824125958cba6cf65c5750af0a7468ecbad0e26ffd548
+\* @phx covers crates/coordination/src/recompute/badges.rs anchor=offer_badges digest=sha256:cbf19ec6758776f6a64ffd60c45d775f30003963a3a1d2c273571016df1d3b48
+\* @phx covers crates/coordination/src/recompute/records.rs anchor=evaluate digest=sha256:5aa0de349398bcf888dfaadd1437dbe027b2e4d82ba3ec530c3ad5f7bab08218
+\* @phx covers crates/coordination/src/recompute/records.rs anchor=upsert digest=sha256:4ce16ad80999bae754f87e4934a1f7bc5255ff0f311e1644a147c9d8a12405b9
+\* @phx covers crates/coordination/src/recompute/records.rs anchor=offer_records digest=sha256:94d4c086e62de5ee1bc65547fa613409b603a137fb3e5e24a0e70c82bac9243c
+\* @phx covers crates/coordination/src/sync_cycle.rs anchor=sync_cycle digest=sha256:b8158a6a2359166e7b55a5dbbb15189d50cdbeebd84c20a0805067046c31dc6c
 \* @phx covers crates/coordination/src/level_up.rs anchor=announce_level_up digest=sha256:acbb8923e76fbd4ab77949a119c1ad3a87de6f41737e65b89df689875e851dd0
 \* @phx covers crates/notifications/src/router.rs anchor=route digest=sha256:7bcf52fe22d886b3d71dfa0fa8e6dfb1d266a9a6b1662bada5482a2cd0c54dcb
 \* @phx covers crates/notifications/src/ledger.rs anchor=claim digest=sha256:0116ef4925de04614d09ac18952c0a0b0f7248fd65f5d4f6ca555448836a6ab7
@@ -36,6 +42,35 @@
 \* day's write re-reads the row inside its own BEGIN IMMEDIATE, and when it replaces another day's
 \* row whose mark is still unset it names that record in a log line (kind, day, celebration not
 \* sent) before it writes.
+\*
+\* Re-read against the code that implements design "mark" with Recheck (SPEC-073 part B):
+\* - Pre and DrainSkip: recompute/mod.rs::run calls mod.rs::offer_owed before each settled day's
+\*   write, before the current day's write, and after the revisit write commits; offer_owed logs a
+\*   failed offer and never fails the fold.
+\* - DrainOffer and Offer: badges.rs::offer_badges and records.rs::offer_records hand each row
+\*   whose mark is unset to the router (AwardOffers::offer, then Router's Celebrate port, which
+\*   calls router.rs::route).
+\* - DrainMiss and OfferMiss: the router's Err arm in offer_badges and offer_records logs and
+\*   continues, and nothing is marked.
+\* - DrainMark and Clear: the mark is a write of its own, UPDATE ... AND celebrated_at IS NULL,
+\*   keyed by badge and tier, or by record kind AND study day, so it marks only the offered item
+\*   and only while the row still holds it.
+\* - Commit (award): badges.rs::evaluate awards inside the fold's BEGIN IMMEDIATE write, its mark
+\*   unset; the progression award port's unique key answers AlreadyAwarded (UniqueKey).
+\* - Commit (record, Recheck): records.rs::upsert re-reads the kind's row inside the day's write,
+\*   names a row of another day whose mark is unset ("celebration not sent"), then upserts; a row
+\*   of the same day keeps its mark, so a best that climbs all day is one award.
+\* - Router(d) and OnceKey: ledger.rs::claim. Crash: between any two of those transactions.
+\* Abstractions, each a stuttering of the model's variables:
+\* - the offers read the unmarked rows on a reader, then route; DrainOffer reads and routes in one
+\*   step. A row replaced between the read and the route is offered under its own day's key, its
+\*   mark write then matches nothing, and the replacing write has named it: no property moves;
+\* - records.rs::evaluate's first detection seeds the window's bests with the mark already set
+\*   (R12): a seed is what the owner has already seen, never an award the model owes;
+\* - the backfill and revisit writes run no badge or record step (mod.rs's
+\*   Evaluation::runs_today_only_rules is Settle and Current only), so the backfill's write with
+\*   no offers before it awards nothing, and the offers after the revisit write are the Offer that
+\*   follows the current day's Commit.
 (***************************************************************************)
 EXTENDS Naturals
 
