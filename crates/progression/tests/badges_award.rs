@@ -86,6 +86,8 @@ async fn awarding_a_badge_twice_writes_one_row() {
             .collect::<Vec<_>>(),
         ["first_steps"]
     );
+    // The pool's close waits for every connection, so the one held here goes back first.
+    drop(connection);
     db.close().await;
 }
 
@@ -139,6 +141,8 @@ async fn a_band_badge_key_names_a_configured_course_and_a_band() {
             .expect("the unmarked badges")
             .is_empty()
     );
+    // The pool's close waits for every connection, so the one held here goes back first.
+    drop(connection);
     db.close().await;
 }
 

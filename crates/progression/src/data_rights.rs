@@ -80,18 +80,8 @@ impl DataRights for ProgressionDataRights {
             )
             .fetch_all(&mut *connection)
             .await?;
-            let badges = sqlx::query!(
-                "SELECT badge_key, tier, name, emoji, study_day, celebrated_at, created_at \
-                 FROM badges_earned ORDER BY badge_key, tier"
-            )
-            .fetch_all(&mut *connection)
-            .await?;
-            let records = sqlx::query!(
-                "SELECT kind, value, study_day, previous, celebrated_at, created_at \
-                 FROM records ORDER BY kind"
-            )
-            .fetch_all(connection)
-            .await?;
+            let badges = export_badges_earned(&mut *connection).await?;
+            let records = export_records(connection).await?;
             Ok(vec![
                 ExportedTable {
                     table: XP_LEDGER_TABLE,
@@ -140,39 +130,8 @@ impl DataRights for ProgressionDataRights {
                         })
                         .collect(),
                 },
-                ExportedTable {
-                    table: BADGES_EARNED_TABLE,
-                    rows: badges
-                        .into_iter()
-                        .map(|row| {
-                            json!({
-                                "badge_key": row.badge_key,
-                                "tier": row.tier,
-                                "name": row.name,
-                                "emoji": row.emoji,
-                                "study_day": row.study_day,
-                                "celebrated_at": row.celebrated_at,
-                                "created_at": row.created_at,
-                            })
-                        })
-                        .collect(),
-                },
-                ExportedTable {
-                    table: RECORDS_TABLE,
-                    rows: records
-                        .into_iter()
-                        .map(|row| {
-                            json!({
-                                "kind": row.kind,
-                                "value": row.value,
-                                "study_day": row.study_day,
-                                "previous": row.previous,
-                                "celebrated_at": row.celebrated_at,
-                                "created_at": row.created_at,
-                            })
-                        })
-                        .collect(),
-                },
+                badges,
+                records,
             ])
         })
     }
@@ -198,4 +157,59 @@ impl DataRights for ProgressionDataRights {
             Ok(())
         })
     }
+}
+
+/// `badges_earned` exported whole, in key and tier order.
+async fn export_badges_earned(
+    connection: &mut SqliteConnection,
+) -> Result<ExportedTable, sqlx::Error> {
+    let badges = sqlx::query!(
+        "SELECT badge_key, tier, name, emoji, study_day, celebrated_at, created_at \
+         FROM badges_earned ORDER BY badge_key, tier"
+    )
+    .fetch_all(connection)
+    .await?;
+    Ok(ExportedTable {
+        table: BADGES_EARNED_TABLE,
+        rows: badges
+            .into_iter()
+            .map(|row| {
+                json!({
+                    "badge_key": row.badge_key,
+                    "tier": row.tier,
+                    "name": row.name,
+                    "emoji": row.emoji,
+                    "study_day": row.study_day,
+                    "celebrated_at": row.celebrated_at,
+                    "created_at": row.created_at,
+                })
+            })
+            .collect(),
+    })
+}
+
+/// `records` exported whole, in kind order.
+async fn export_records(connection: &mut SqliteConnection) -> Result<ExportedTable, sqlx::Error> {
+    let records = sqlx::query!(
+        "SELECT kind, value, study_day, previous, celebrated_at, created_at \
+         FROM records ORDER BY kind"
+    )
+    .fetch_all(connection)
+    .await?;
+    Ok(ExportedTable {
+        table: RECORDS_TABLE,
+        rows: records
+            .into_iter()
+            .map(|row| {
+                json!({
+                    "kind": row.kind,
+                    "value": row.value,
+                    "study_day": row.study_day,
+                    "previous": row.previous,
+                    "celebrated_at": row.celebrated_at,
+                    "created_at": row.created_at,
+                })
+            })
+            .collect(),
+    })
 }

@@ -3,8 +3,9 @@
 //! to the predecessor's constant; and the hour windows over reviews around their edges.
 
 // An integration test is test code: its helpers panic on a malformed golden, and the reader prints
-// the examined count on purpose.
-#![allow(clippy::expect_used, clippy::print_stdout)]
+// the examined count on purpose. The golden holds every threshold as a JSON number, and each one is
+// far below 2^52, so it converts to a float exactly.
+#![allow(clippy::expect_used, clippy::print_stdout, clippy::cast_precision_loss)]
 
 #[path = "../../../tools/parity-oracle/golden.rs"]
 mod golden;
@@ -235,7 +236,7 @@ fn the_hour_counts_match_the_parity_golden() {
             u8::try_from(count(&input["end_hour"])).expect("an hour"),
         );
         let theirs = count(&case.output);
-        assert_eq!(ours, theirs, "the count of {}", input);
+        assert_eq!(ours, theirs, "the count of {input}");
         counted += theirs;
     });
     println!("examined reviews counted in windows: {counted}");

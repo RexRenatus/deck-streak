@@ -41,7 +41,11 @@ impl RecordKind {
     /// The label a screen shows.
     #[must_use]
     pub const fn label(self) -> &'static str {
-        ""
+        match self {
+            Self::BestScore => "Best daily score",
+            Self::MostReviews => "Most reviews in a day",
+            Self::MostMinutes => "Most minutes in a day",
+        }
     }
 }
 
@@ -72,8 +76,32 @@ pub fn detect_records(
     rollups: &[DayTotals],
     previous: &BTreeMap<RecordKind, i64>,
 ) -> Vec<Detected> {
-    let _ = (rollups, previous);
-    Vec::new()
+    // An empty window sets no record, whatever is stored: the predecessor returns before its bests.
+    let Some(best_score) = rollups.iter().map(|day| day.score).max() else {
+        return Vec::new();
+    };
+    let most_reviews = rollups.iter().map(|day| day.reviews).max().unwrap_or(0);
+    let most_minutes = rollups
+        .iter()
+        .map(|day| whole_minutes(day.seconds))
+        .max()
+        .unwrap_or(0);
+    let bests = [best_score, most_reviews, most_minutes];
+    RecordKind::ALL
+        .into_iter()
+        .zip(bests)
+        .filter(|(kind, value)| *value > previous.get(kind).copied().unwrap_or(0))
+        .map(|(kind, value)| Detected { kind, value })
+        .collect()
+}
+
+/// The whole minutes of `seconds`, truncated toward zero as the predecessor's `int()` takes them.
+#[allow(
+    clippy::cast_possible_truncation,
+    reason = "a day's study seconds are far below i64::MAX minutes, and the predecessor truncates"
+)]
+fn whole_minutes(seconds: f64) -> i64 {
+    (seconds / 60.0) as i64
 }
 
 /// One line of the records board as the record to chase reads it.
@@ -89,6 +117,12 @@ pub struct BoardLine {
 /// tie, as `(the line's index, the gap)`; `None` when no gap is positive (R13).
 #[must_use]
 pub fn chase(board: &[BoardLine]) -> Option<(usize, i64)> {
-    let _ = board;
-    None
+    let mut found: Option<(usize, i64)> = None;
+    for (at, line) in board.iter().enumerate() {
+        let gap = line.value - line.today;
+        if gap > 0 && found.is_none_or(|(_, best)| gap < best) {
+            found = Some((at, gap));
+        }
+    }
+    found
 }

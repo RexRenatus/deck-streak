@@ -3,49 +3,49 @@
 //! equal to the predecessor's constant (`goldens/badges.constants.json`).
 
 /// The lifetime study reviews that earn Grinder.
-pub const LIFETIME_REVIEWS_GRINDER: u64 = 0;
+pub const LIFETIME_REVIEWS_GRINDER: u64 = 1000;
 /// The lifetime study reviews that earn Marathoner.
-pub const LIFETIME_REVIEWS_MARATHONER: u64 = 0;
+pub const LIFETIME_REVIEWS_MARATHONER: u64 = 10_000;
 /// The day's study reviews that earn Centurion Day.
-pub const CENTURION_DAY_REVIEWS: u64 = 0;
+pub const CENTURION_DAY_REVIEWS: u64 = 100;
 /// The 7-day first-answer retention, in percent, that earns Sharpshooter.
-pub const SHARPSHOOTER_RETENTION: f64 = 0.0;
+pub const SHARPSHOOTER_RETENTION: f64 = 90.0;
 /// The 7-day study reviews Sharpshooter needs beside its retention.
-pub const SHARPSHOOTER_MIN_REVIEWS: u64 = 0;
+pub const SHARPSHOOTER_MIN_REVIEWS: u64 = 50;
 /// The 30-day mature first-answer retention, in percent, that earns Sniper Elite.
-pub const SNIPER_ELITE_RETENTION: f64 = 0.0;
+pub const SNIPER_ELITE_RETENTION: f64 = 95.0;
 /// The 30-day mature answers Sniper Elite needs beside its retention.
-pub const SNIPER_ELITE_MIN_MATURE: u64 = 0;
+pub const SNIPER_ELITE_MIN_MATURE: u64 = 50;
 /// The reviews cleared with no backlog left that earn Backlog Slayer.
-pub const BACKLOG_SLAYER_CLEARED: u64 = 0;
+pub const BACKLOG_SLAYER_CLEARED: u64 = 200;
 /// The reviews between midnight and the rollover hour that earn Night Owl.
-pub const NIGHT_OWL_REVIEWS: u64 = 0;
+pub const NIGHT_OWL_REVIEWS: u64 = 50;
 /// The reviews between the rollover hour and the early-bird hour that earn Early Bird.
-pub const EARLY_BIRD_REVIEWS: u64 = 0;
+pub const EARLY_BIRD_REVIEWS: u64 = 50;
 /// The local hour the early-bird window ends at, not included.
-pub const EARLY_BIRD_END_HOUR: u8 = 0;
+pub const EARLY_BIRD_END_HOUR: u8 = 7;
 /// The mature cards that earn Maturity Milestone.
-pub const MATURITY_MILESTONE_COUNT: i64 = 0;
+pub const MATURITY_MILESTONE_COUNT: i64 = 100;
 /// The mature cards that earn Forest Guardian.
-pub const FOREST_GUARDIAN_COUNT: i64 = 0;
+pub const FOREST_GUARDIAN_COUNT: i64 = 1000;
 /// The decks studied in one day that earn Polyglot.
-pub const POLYGLOT_DECKS_DAY: u64 = 0;
+pub const POLYGLOT_DECKS_DAY: u64 = 3;
 /// The decks studied in 7 days that earn Globetrotter.
-pub const GLOBETROTTER_DECKS_WEEK: u64 = 0;
+pub const GLOBETROTTER_DECKS_WEEK: u64 = 5;
 /// The score each of 7 days must reach for Perfect Week.
-pub const PERFECT_WEEK_SCORE: i64 = 0;
+pub const PERFECT_WEEK_SCORE: i64 = 75;
 /// The day's study reviews Speed Demon needs.
-pub const SPEED_DEMON_REVIEWS: u64 = 0;
+pub const SPEED_DEMON_REVIEWS: u64 = 100;
 /// The average answer, in seconds, Speed Demon must stay under.
-pub const SPEED_DEMON_AVG_SECONDS: f64 = 0.0;
+pub const SPEED_DEMON_AVG_SECONDS: f64 = 6.0;
 /// The study days in a row, ending on the day, that earn Iron Will.
-pub const IRON_WILL_DAYS: u64 = 0;
+pub const IRON_WILL_DAYS: u64 = 30;
 /// The lifetime study reviews Leech Tamer needs beside no active leech.
-pub const LEECH_TAMER_MIN_LIFETIME: u64 = 0;
+pub const LEECH_TAMER_MIN_LIFETIME: u64 = 500;
 /// The score of a legendary day.
-pub const LEGENDARY_DAY_SCORE: i64 = 0;
+pub const LEGENDARY_DAY_SCORE: i64 = 100;
 /// The scores Perfect Week reads.
-pub const PERFECT_WEEK_DAYS: usize = 0;
+pub const PERFECT_WEEK_DAYS: usize = 7;
 
 /// The 24 study badges' keys, in the catalog's order.
 pub const STUDY_KEYS: [&str; 24] = [
@@ -132,6 +132,73 @@ pub struct BadgeContext {
 /// Each study badge's condition over `context`, in [`STUDY_KEYS`]' order.
 #[must_use]
 pub fn conditions(context: &BadgeContext) -> [(&'static str, bool); 24] {
-    let _ = context;
-    STUDY_KEYS.map(|key| (key, false))
+    let streak = context.streak_current;
+    let lifetime = context.lifetime;
+    let snapshot = context.snapshot;
+    // The predecessor reads the last seven scores it was given (`week_scores[-7:]`).
+    let week = &context.week_scores[context.week_scores.len().saturating_sub(PERFECT_WEEK_DAYS)..];
+    [
+        ("first_steps", lifetime >= 1),
+        ("week_warrior", streak >= 7),
+        ("monthly_monk", streak >= 30),
+        ("century_flame", streak >= 100),
+        ("year_of_iron", streak >= 365),
+        ("grinder", lifetime >= LIFETIME_REVIEWS_GRINDER),
+        ("marathoner", lifetime >= LIFETIME_REVIEWS_MARATHONER),
+        (
+            "centurion_day",
+            context.day_reviews >= CENTURION_DAY_REVIEWS,
+        ),
+        (
+            "sharpshooter",
+            context.week_retention >= SHARPSHOOTER_RETENTION
+                && context.week_reviews >= SHARPSHOOTER_MIN_REVIEWS,
+        ),
+        (
+            "sniper_elite",
+            context.mature30_retention >= SNIPER_ELITE_RETENTION
+                && context.mature30_answered >= SNIPER_ELITE_MIN_MATURE,
+        ),
+        (
+            "inbox_zero",
+            snapshot.backlog == 0 && snapshot.due_today == 0 && lifetime > 0,
+        ),
+        (
+            "backlog_slayer",
+            context.cleared_backlog >= BACKLOG_SLAYER_CLEARED,
+        ),
+        ("night_owl", context.night_owl >= NIGHT_OWL_REVIEWS),
+        ("early_bird", context.early_bird >= EARLY_BIRD_REVIEWS),
+        ("comeback_kid", context.comeback_armed),
+        (
+            "maturity_milestone",
+            snapshot.mature_count >= MATURITY_MILESTONE_COUNT,
+        ),
+        (
+            "forest_guardian",
+            snapshot.mature_count >= FOREST_GUARDIAN_COUNT,
+        ),
+        (
+            "leech_tamer",
+            snapshot.leech_active == 0 && lifetime >= LEECH_TAMER_MIN_LIFETIME,
+        ),
+        ("polyglot", context.day_decks >= POLYGLOT_DECKS_DAY),
+        (
+            "globetrotter",
+            context.week_decks >= GLOBETROTTER_DECKS_WEEK,
+        ),
+        (
+            "perfect_week",
+            week.len() >= PERFECT_WEEK_DAYS
+                && week.iter().all(|score| *score >= PERFECT_WEEK_SCORE),
+        ),
+        ("legendary_day", context.score_total >= LEGENDARY_DAY_SCORE),
+        (
+            "speed_demon",
+            context.day_reviews >= SPEED_DEMON_REVIEWS
+                && 0.0 < context.day_avg_seconds
+                && context.day_avg_seconds < SPEED_DEMON_AVG_SECONDS,
+        ),
+        ("iron_will", context.iron_will_ok),
+    ]
 }

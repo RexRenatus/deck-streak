@@ -9,6 +9,8 @@
 use deck_streak_kernel::{Courses, KernelError, StudyDay, UtcMillis};
 use sqlx::SqliteConnection;
 
+use super::catalog::is_catalog_key;
+
 /// The bands a band badge may name, in order.
 pub const BANDS: [&str; 6] = ["A1", "A2", "B1", "B2", "C1", "C2"];
 
@@ -82,8 +84,16 @@ pub struct EarnedBadge {
 /// The rule that accepts `key` under `courses`, or `None` when none does (R3).
 #[must_use]
 pub fn key_kind(courses: &Courses, key: &str) -> Option<KeyKind> {
-    let _ = (courses, key);
-    None
+    if is_catalog_key(key) {
+        return Some(KeyKind::Catalog);
+    }
+    // A band key is `band_<code>_<band>`: the band is the last segment, the code what precedes it.
+    let (code, band) = key.strip_prefix("band_")?.rsplit_once('_')?;
+    let configured = courses
+        .courses()
+        .iter()
+        .any(|course| course.code.as_str() == code);
+    (configured && BANDS.contains(&band)).then_some(KeyKind::Band)
 }
 
 /// Awards `badge` inside `write`, the caller's `BEGIN IMMEDIATE` transaction (R3, R4).
@@ -97,8 +107,38 @@ pub async fn award(
     courses: &Courses,
     badge: &NewBadge<'_>,
 ) -> Result<Award, AwardError> {
-    let _ = (write, courses, badge);
-    Ok(Award::AlreadyAwarded)
+    let kind = key_kind(courses, badge.key).ok_or(AwardError::UnknownKey)?;
+    // A band badge is celebrated by the band-up, so it is written marked; a catalog badge is
+    // written owed, and the fold's offers raise it until the router answers (ADR-303).
+    let marked = match kind {
+        KeyKind::Catalog => None,
+        KeyKind::Band => Some(badge.at.epoch_millis()),
+    };
+    let tier = i64::from(badge.tier);
+    let day = badge.study_day.epoch_day();
+    let at = badge.at.epoch_millis();
+    // The primary key on the key and tier is the existence check: a conflict writes nothing.
+    let written = sqlx::query!(
+        "INSERT INTO badges_earned \
+             (badge_key, tier, name, emoji, study_day, celebrated_at, created_at) \
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7) ON CONFLICT DO NOTHING",
+        badge.key,
+        tier,
+        badge.name,
+        badge.emoji,
+        day,
+        marked,
+        at
+    )
+    .execute(&mut *write)
+    .await
+    .map_err(KernelError::from)?
+    .rows_affected();
+    Ok(if written == 1 {
+        Award::Awarded
+    } else {
+        Award::AlreadyAwarded
+    })
 }
 
 /// Every badge whose celebration is still owed, oldest first.
@@ -107,6 +147,22 @@ pub async fn award(
 ///
 /// [`KernelError::Database`] when the read fails.
 pub async fn unmarked(connection: &mut SqliteConnection) -> Result<Vec<EarnedBadge>, KernelError> {
-    let _ = connection;
-    Ok(Vec::new())
+    let rows = sqlx::query!(
+        "SELECT badge_key, tier, name, emoji, study_day, celebrated_at FROM badges_earned \
+         WHERE celebrated_at IS NULL ORDER BY created_at, study_day, badge_key, tier"
+    )
+    .fetch_all(&mut *connection)
+    .await?;
+    Ok(rows
+        .into_iter()
+        .map(|row| EarnedBadge {
+            key: row.badge_key,
+            // The column's check keeps a tier non-negative, and every tier is written from a u32.
+            tier: u32::try_from(row.tier).unwrap_or(u32::MAX),
+            name: row.name,
+            emoji: row.emoji,
+            study_day: StudyDay::from_epoch_day(row.study_day),
+            celebrated_at: row.celebrated_at.map(UtcMillis::from_epoch_millis),
+        })
+        .collect())
 }
