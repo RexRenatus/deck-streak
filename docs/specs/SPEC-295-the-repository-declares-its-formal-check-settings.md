@@ -262,9 +262,9 @@ amendment, `S29500` to `S29508`, and `S29510` to `S29529` keep their anchors (#5
 | id | criterion | decided by |
 |---|---|---|
 | A9 | the committed file's `tlc_slot.capacity` is 4 and `wait_seconds` is 1800, the file equal to R1's table as amended by R7 and still R1's pretty-printed text; the test prints how many fields it examined and refuses zero | `test_formal_config.py` `the_committed_file_holds_exactly_the_declared_fields` |
-| A10 | the row `S29530` is killed: its killer passes on the committed file and fails on the mutant that sets the capacity back to 1, and the anchor `"capacity": 4` occurs exactly once in the target | `scripts/mutation_rows.py` `prove` of the row, killed by `test_formal_config.py` `the_committed_file_holds_exactly_the_declared_fields` |
+| A10 | the row `S29530` is killed: its killer, the test the fence runs, passes on the committed file and fails on the mutant that sets the capacity back to 1, and the anchor `"capacity": 4` occurs exactly once in the target; the row is proved by `python3 scripts/mutation_rows.py prove --root . --row S29530-THE-SLOT-CAPACITY-EQUALS-THE-CHECKERS-OWN-SETTING` | `test_formal_config.py` `the_committed_file_holds_exactly_the_declared_fields` |
 
 ```acceptance
 A9: python3 -m unittest discover -s scripts/tests -p test_formal_config.py -k the_committed_file_holds_exactly_the_declared_fields
-A10: python3 scripts/mutation_rows.py prove --root . --row S29530-THE-SLOT-CAPACITY-EQUALS-THE-CHECKERS-OWN-SETTING
+A10: python3 -m unittest discover -s scripts/tests -p test_formal_config.py -k the_committed_file_holds_exactly_the_declared_fields
 ```
