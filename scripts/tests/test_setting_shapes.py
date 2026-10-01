@@ -24,13 +24,13 @@ attribute-made choice is refused. So is a file that any other declaration the gu
 compiles without `test` (`#[cfg(not(test))] mod tests;`, a `#[path]` naming it). There the file's
 own inner attributes count too; a declaration whose one attribute naming a path is
 `cfg_attr(P, path = "...")` reaches the file it names only under P and its default file only
-without P; and a declaration whose file the guard cannot name (a path literal it cannot read, or
-a module below an inline module whose attributes name `path`) may name any file, so unless its
-attributes remove it without `test` it refuses every one. A `macro_rules!` body that declares a
-`cfg(test)` module, by an outer attribute, by one before a `$( ... )` repetition or by an inner
-attribute in its braces, is refused by its file, as the guard does not expand a macro (#433,
-#441, #458). A literal that two implementations of one crate share is pinned only by a row on
-each implementation's file.
+without P; and a declaration whose file the guard cannot name (a path literal it cannot read, a
+module below an inline module whose attributes name `path`, or attributes it cannot read whole)
+may name any file, so unless its attributes remove it without `test` it refuses every one. A
+`macro_rules!` body that declares a `cfg(test)` module, by an outer attribute, by one before a
+`$( ... )` repetition or by an inner attribute in its braces, is refused by its file, as the guard
+does not expand a macro (#433, #441, #458). A literal that two implementations of one crate share
+is pinned only by a row on each implementation's file.
 """
 
 import functools
@@ -572,8 +572,9 @@ def visible(src):
     that keeps the declaration, then the condition its `cfg_attr` path sets on that file (`gated`),
     then that file's own inner attributes (a module's file opens with the module's own
     attributes), or None when unreadable. A declaration whose file the guard cannot name, from a
-    path literal it cannot read or from below an inline module whose attributes name `path`, is
-    listed with the target None too: it may name any file (#433, #458)."""
+    path literal it cannot read, from below an inline module whose attributes name `path`, or from
+    attributes it cannot read whole, is listed with the target None too: it may name any file
+    (#433, #458)."""
     roots = [src / "lib.rs", src / "main.rs", *src.glob("bin/*.rs"), *src.glob("bin/*/main.rs")]
     todo = [(root, []) for root in roots if root.is_file()]
     seen, out = set(), []
@@ -592,7 +593,7 @@ def visible(src):
             if tokens[at + 2][1] == "{":
                 continue
             held = None if chain is None or inner is None or run is None else chain + inner + run
-            if names is None or named_paths(run or [])[1]:
+            if names is None or run is None or named_paths(run)[1]:
                 out.append((None, held))
                 if names is None:
                     continue
