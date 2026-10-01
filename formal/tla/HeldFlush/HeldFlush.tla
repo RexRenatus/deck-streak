@@ -221,11 +221,12 @@ Spec == Init /\ [][Next]_vars
 \* No held item reaches the owner twice.
 NoDoubleDelivery == \A i \in Items : sends[i] <= 1
 
-\* At the end of the run no item is still held, and a sending one is still inside its claim: every
+\* At the end of the run no item is still held, and a sending one has a claim that lapses no earlier
+\* than the end, so no trigger could have abandoned it: every
 \* other item was delivered, or abandoned by name. A claim that lapsed inside the run and was
 \* never abandoned is a silent loss.
 HeldReachesOrAbandons == (t = Horizon /\ \A f \in Flushers : pc[f] = "idle")
                          => \A i \in Items : /\ st[i] # "held"
-                                             /\ st[i] = "sending" => claimUntil[i] > Horizon
+                                             /\ st[i] = "sending" => claimUntil[i] >= Horizon
 
 =============================================================================
