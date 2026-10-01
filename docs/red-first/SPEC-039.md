@@ -297,3 +297,9 @@ its killer A62. The 20-member A62 is red at 095f02e's plan, by assertion:
 ```text
 A62 at 2082197's test, over 095f02e's plan: AssertionError: Lists differ: ["a module docstring: read ('applies', Non[637 chars]'])"] != []
 ```
+
+At bfb00d2 the tests read without a site the census in `scripts/tests/test_ci_workflows.py` counts
+as dynamic: A62's control empties each statement list in place, A62's and A63's in-process verdict
+reads the plan through `dataclasses.asdict`, and A64 reads the `legs` function from the script's
+syntax tree. Each reading is unchanged, and A61 to A64 as bfb00d2 writes them are red at 095f02e's
+code by the same assertions as above, A62 with 7 mismatches.
