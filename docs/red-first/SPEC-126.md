@@ -193,8 +193,10 @@ The green commit, 5810a75, also rewrites one assertion in `scripts/tests/test_mu
 in the earlier test of a mutant record that is not an object:
 `self.assertIn("0 missing () and 1 extra (?)", output)` becomes `self.assertIn("a mutant record of", output)`
 and `self.assertIn("not an object", output)`. The shared reader now refuses that record by name
-before any listing is counted, so the refusal is stricter, not weaker, and the test still demands
-exit 3 naming the shard.
+before any listing is counted. That sentence was wrong, and round 3 corrects it: the rewritten
+assertion pinned less than the one it replaced, because it dropped the record's path and its type
+from the reading while still demanding exit 3 naming the shard. Round 3 pins every variable part of
+both messages again (see the round 3 addendum below).
 
 ```red-first
 A10: red at 1c4c0d45: AssertionError: 70 != 450 : {'refused': 70, 'crashed': 90, 'accepted': 290, 'other': 0}
@@ -206,3 +208,41 @@ A11: green at 5810a754
 The same populations, judged in process with one end-to-end control per family, are red at 8a9295b7 by the same assertion, in prose so that A10 keeps its one red and one green line above: `AssertionError: 150 != 570 : {'refused': 150, 'crashed': 110, 'accepted': 310, 'other': 0}`; green at 473388e3.
 
 The verdict program is correct at the head, so a test of a skipped entry is not red against it; it is red against the one swap that stops a loop early. The CI report of the in-process head had one survivor, `scripts/mutation-verdict.py:1465:13` (`continue` replaced by `break` in `read_python_shard`), which no earlier test laid. Commit ee0c987a adds `ASkippedEntryDoesNotHideALaterOne`, whose census reads the AST of `python_reports`, `read_python_shard` and `judge_python` and finds 12 exits (3 loop skips in the first two, 6 early returns, 3 loop skips in the judge), and puts an entry whose reading changes the verdict behind each. Under `continue` replaced by `break` at 1465:13 it is red with `AssertionError: Tuples differ: (0, set()) != (3, {0})`; at 1411:13 and 1416:13 with `(3, {0}) != (3, {0, 1})`; at 1599:13 with `3 != 1 : void entry`; at 1609:17 with `3 != 1 : timeout`; at 1617:17 with `'UNCOVERED ... not found in 'mutation: scripts: SURVIVED ...'`. Each of the six early returns of the shard reader, swapped for `continue`, is red as well. Green at the head, 44 and 96 members of two and four shards, and row S12620 is KILLED by its full id.
+
+## Addendum, 2026-10-01 (issue #438, fix round 3): every variable part of the report messages is pinned
+
+Round 2's rewrite of the record test pinned less, as the correction above says, and nothing seen by
+the CI mutation operators could show it: they generate no mutants inside an f-string's text. The
+class rule is that a test that reads a message pins every variable part of it on the same input.
+The population is therefore generated from the program's own syntax tree: every interpolating
+f-string in `python_reports`, `read_python_shard`, `shard_listing_drift` and `judge_python`, keyed
+by function, template and occurrence, with each interpolated field dropped in turn by compiling a
+rewritten function into the loaded program; a pin must then fail by assertion.
+
+The red commit, e8d9f538, adds the population test and weakens the drift pin to the head's reading
+(exit code and slot only), so the test is red in `test_mutation_python_shard_binding.py` and nowhere
+else: it counts 47 interpolated fields of 24 asserted messages and finds 7 with no pin that fails
+(`MISS 7`: the drift field of the report message, the record's path and type name, and four fields
+of the drift tail). The green commit, a7990e5d, restores the drift pin to the whole line and pins
+the record refusal's whole line: the same population then reads 47 fields of 24 messages and
+`MISS 0`. The other five mapped modules (`test_mutation_verdict`, `test_mutation_equivalent`,
+`test_mutation_python_verdict`, `test_mutation_verdict_python_kills`, `test_memory_cap_verdict`) are
+untouched and green at both commits.
+
+Two further changes carry no red of their own: the in-process judge now takes the program it
+judges, and the pinned in-process-versus-subprocess test grew to 105 members over 24 families, each
+outcome of each family (skipped alone, skipped then bad, slot skipped, survivor, timeout and void
+entry among them), reading 0 differ with exit codes 0, 1 and 3. Those members already agree at the
+head, so they are green there; their red evidence is one planted routing divergence in the CLI
+entry (exit 1 mapped to 2), under which the same test reads 12 differ with exit codes 0, 2 and 3,
+and the plant was reverted.
+
+Of the mutants this round names, the drift tail dropping the extra names (M10) is not equivalent: the
+refusal then reads a different line, and the pin on the whole line fails. The rows S12621 to S12623
+carry it and the record's path and type name, each KILLED by its full id. Two earlier mutants are
+EQUIVALENT, with the reason: M7 and M11 change only what `python_shards` (the verdict program, lines
+872 to 880) writes, which is dict entries and `str` names, so no reader observes the swap.
+
+```text
+round 3: red at e8d9f538 (test_mutation_python_shard_binding: MISS 7 of 47 fields, 24 messages); green at a7990e5d (MISS 0)
+```
