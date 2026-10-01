@@ -1463,4 +1463,6 @@ class EveryVariablePartOfAMessageIsPinned(unittest.TestCase):
         for line in missed:
             print(f"  MISS {line}")
         print(f"MISS {len(missed)}")
+        for kind, floor in (("DROP", 47), ("CONST", 47), ("SWAP", 23)):
+            self.assertGreaterEqual(kinds[kind], floor, f"fewer {kind} field mutants than planted")
         self.assertEqual(missed, [])
