@@ -240,3 +240,41 @@ A50: not red: the test pins a rule the reply already held, so it is green at the
 A51: not red: the test pins a rule the cycle already held, so it is green at the head; the mutant that turns it red is named in this addendum
 A52: not red: the test pins a rule the cycle already held, so it is green at the head; the mutant that turns it red is named in this addendum
 ```
+
+## Addendum, 2026-10-01: a failing day holds back none, the give-up guard and every heat band (A53 to A56); A50 and A52 derived
+
+- **A50 and A52, derived.** Their `not red` lines above stand. A50's replies are now derived from
+  the streak crate's band table, run 0 and each band's first and last run (the open top band's first
+  and the run after it) at both leads and three freeze counts, beside round 4's eight replies, and
+  its expected heats are written out by hand: 74 replies over 6 heats. A52's cases are derived from
+  the count of consecutive failed routes: 72 cases. The mutants named above still turn each red, at
+  lines that moved: S07625 to S07629 fail A50 at `streak_commands.rs:390`, with A56 beside it, and a
+  failed route that clears the day, in each of the three spellings of S07622 to S07624, fails A51 at
+  `relight_order.rs:768` (`left: []`, `right: [StudyDay(20000)]`) and A52 at `relight_order.rs:833`,
+  in each of its 36 members whose claim fails, and A53 to A55 beside them.
+- **A53 not red.** The cycle already went on to the next due day after a failed route. Its red is the
+  route's error returned from the cycle (S07630), or the route ended at its first failure (S07631).
+  Each passes A51 and A52 and fails A53 at `relight_order.rs:860` (`left: (0, 0)`,
+  `right: (1, 1)`).
+- **A54 not red.** No route gave a day up. Its red is a day dropped from the due list after two
+  failed routes, or after three, which fails A54 at `relight_order.rs:917` (`left: []`,
+  `right: [StudyDay(20000)]`).
+- **A55 not red.** The route already kept no count of a day's failed routes. Its red is a count kept
+  in memory (S07632) or in the database (S07633), and a count kept in four other places: the due
+  list's own type, the router, a static in another module and a thread-local. A give-up after a
+  thousand failed routes passes A51 to A54, because no case fails a route that often, and fails A55
+  at `relight_order.rs:1359`, as each of the others does.
+- **A56 not red.** The reply already carried every band's heat in the heat's own place, whichever
+  line leads. Its red is the heat table changed: a band's first run moved, a band's heat changed,
+  two bands out of the longest-first order, or a band removed. Each fails A56 at
+  `streak_commands.rs:478` and A50 beside it. A56's runs are written out by hand, so it judges the
+  bands it names: a band added between two of its runs, with its heat written out in A50's oracle,
+  passes A50 and fails A56 alone, and a band changed on purpose is changed in A56 by hand. A band
+  added above its runs is A50's to judge: with no heat written out in A50's oracle, it fails A50.
+
+```red-first
+A53: not red: the test pins a rule the cycle already held, so it is green at the head; the mutant that turns it red is named in this addendum
+A54: not red: the test pins a rule the cycle already held, so it is green at the head; the mutant that turns it red is named in this addendum
+A55: not red: the test pins a rule the route already held, so it is green at the head; the mutant that turns it red is named in this addendum
+A56: not red: the test pins a rule the reply already held, so it is green at the head; the mutant that turns it red is named in this addendum
+```
