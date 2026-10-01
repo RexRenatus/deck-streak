@@ -123,3 +123,22 @@ async fn the_lease_holds_for_ten_minutes_and_is_released_when_the_flush_ends() {
     );
     assert_eq!(lease(&harness.db).await, None, "the flush released it");
 }
+
+#[tokio::test]
+async fn a_failed_send_leaves_the_celebration_held_with_the_failure_counted() {
+    let harness = held_at_ten().await;
+    harness.bot.fail(true);
+
+    let flushed = harness.router.flush().await.expect("a flush");
+
+    assert_eq!(flushed, Flushed::Ran { sends: 0 });
+    let queue = harness.queue().await;
+    assert_eq!(queue.len(), 1, "the failed send did not lose the hold");
+    assert_eq!(queue[0].state, "held");
+    assert_eq!(queue[0].tries, 1, "the failed send is counted");
+    assert_eq!(
+        lease(&harness.db).await,
+        None,
+        "the flush released the lease"
+    );
+}
