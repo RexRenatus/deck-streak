@@ -767,6 +767,23 @@ class ThePlantedShapesOfTheIssue(unittest.TestCase):
                 sources = [p.relative_to(member.crate).as_posix() for p in read]
                 self.assertEqual(sources, expected)
 
+    def test_a_nested_block_comment_is_dropped_whole_and_nothing_after_it_is(self):
+        runner = runner_module()
+        """Rust nests block comments, so the tokens of source with one are exactly the tokens
+        outside it: depth two and three, one never closed, a lone slash after an opener, and
+        one directly followed by an attribute."""
+        shapes = {
+            "depth two": ("a /* x /* y */ z */ b", ["a", "b"]),
+            "depth three": ("a /* /* /* */ */ */ b", ["a", "b"]),
+            "never closed": ("a /* /* x */ b", ["a"]),
+            "a slash after the opener": ("a /*/ x */ b", ["a", "b"]),
+            "followed by an attribute": ("/* /* */ */ #[a] b", ["#", "[", "a", "]", "b"]),
+        }
+        for name, (text, expected) in shapes.items():
+            with self.subTest(shape=name):
+                self.assertEqual(runner.rust_tokens(text), expected)
+        print(f"nested block comment shapes examined {len(shapes)}")
+
 
 class TheCfgPredicatesAgreeWithTheCompiler(unittest.TestCase):
     """SPEC-039 section 19: a predicate the reader decides is the value rustc gives it."""
