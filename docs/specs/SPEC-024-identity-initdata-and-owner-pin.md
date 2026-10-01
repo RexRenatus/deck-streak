@@ -320,3 +320,13 @@ loss does not depend on what the binary's other tests registered. A18 prints the
 counted and asserts it.
 Two further tests of that file pin the helper's refusals: a capture nested inside another on one thread, and a capture
 made after the production global default.
+
+## 10. Amendment, 2026-10-01: the killer's own exemption from the census
+
+Made under issue #511, insert-only like section 8: every earlier byte is kept in order, so the amendment is this one new last section and nothing above it is edited. It adds no criterion.
+
+Two sentences of section 8 state the census more widely than the code does. They are read with the exemption below.
+
+- **"The census refuses outside the helper every name in its fixed lists"** is read with one exemption. The killer, `crates/kernel/tests/log_capture_class.rs`, is scanned for the census's names like every other file, and it alone may also name `callsite` and `set_interest`: the census admits those two tokens when the file is the killer, and every other name in the lists stays refused there.
+- **"The census refuses any test that creates a dispatcher or registers a callsite outside the helper"** is read with the same exemption. The killer's straddled scenarios register a callsite by hand, `tracing::callsite::register(&STRADDLED)`, whose type the killer gives its own `Callsite::set_interest`. Each such scenario runs in a child process of the test binary with one test thread, so the registration reaches no other test.
+- **What is not exempt.** The helper itself, and the one production global default, stay as section 8 states them. No other file may name `callsite` or `set_interest`.

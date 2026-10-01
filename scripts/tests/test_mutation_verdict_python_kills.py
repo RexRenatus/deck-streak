@@ -121,7 +121,13 @@ class TheShardReportsAreReadWhole(unittest.TestCase):
     def read(self, documents, count=None, directory=True):
         home = self.reports(documents) if directory else None
         verdict = V.Verdict("scripts")
-        plan = {"python": {"count": len(documents) if count is None else count}}
+        count = len(documents) if count is None else count
+        plan = {
+            "python": {
+                "count": count,
+                "shards": [{"shard": index, "mutants": []} for index in range(count)],
+            }
+        }
         whole, _ = quiet(V.python_reports, verdict, plan, str(home) if home else None)
         return whole, verdict.voids
 
@@ -144,7 +150,7 @@ class TheShardReportsAreReadWhole(unittest.TestCase):
         )
 
     def test_a_bad_shard_is_named_and_the_shards_after_it_are_still_read(self):
-        good = report_of([])
+        good = report_of([], shard="3/4")
         wrong = {**report_of([]), "schema": "other"}
         whole, voids = self.read([None, "{", wrong, good])
         self.assertEqual(whole, [("mutation-python-shard-3", good)])
@@ -161,8 +167,8 @@ class TheShardReportsAreReadWhole(unittest.TestCase):
         exit_four = report_of([], code=4)
         named = report_of([], code=0, restore_failed="the tree was left mutated")
         both = report_of([], code=4, restore_failed="a lock")
-        other = report_of([], code=5)
-        empty = report_of([], code=0, restore_failed="")
+        other = report_of([], code=5, shard="3/5")
+        empty = report_of([], code=0, restore_failed="", shard="4/5")
         whole, voids = self.read([exit_four, named, both, other, empty])
         self.assertEqual(
             voids,
@@ -246,7 +252,15 @@ class TheJudgeExaminesWhatTheShardsCarry(unittest.TestCase):
             "rows": [],
             "classes": {"scripts": {"applies": True}},
             "files": [],
-            "python": {"count": 1},
+            "python": {
+                "count": 1,
+                "shards": [
+                    {
+                        "shard": 0,
+                        "mutants": [m["name"] for entry in files for m in entry["mutants"]],
+                    }
+                ],
+            },
         }
         args = Namespace(
             klass="scripts", rows=None, python=str(home), python_whole=None, root=str(root)
