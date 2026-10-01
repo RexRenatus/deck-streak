@@ -16,6 +16,12 @@ use crate::settle::XP_SETTLEMENT_TABLE;
 /// The table the day buffs live in (`migrations/007202_progression_buffs.sql`).
 pub const BUFFS_TABLE: &str = "buffs";
 
+/// The table the earned badges live in (`migrations/007301_progression_badges_earned.sql`).
+pub const BADGES_EARNED_TABLE: &str = "badges_earned";
+
+/// The table the personal records live in (`migrations/007302_progression_records.sql`).
+pub const RECORDS_TABLE: &str = "records";
+
 /// The context this port speaks for.
 pub const PROGRESSION_CONTEXT: &str = "progression";
 
@@ -38,6 +44,14 @@ impl DataRights for ProgressionDataRights {
                 },
                 TableRights {
                     table: BUFFS_TABLE,
+                    disposition: Disposition::ExportAndErase,
+                },
+                TableRights {
+                    table: BADGES_EARNED_TABLE,
+                    disposition: Disposition::ExportAndErase,
+                },
+                TableRights {
+                    table: RECORDS_TABLE,
                     disposition: Disposition::ExportAndErase,
                 },
             ],
@@ -63,6 +77,18 @@ impl DataRights for ProgressionDataRights {
             .await?;
             let buffs = sqlx::query!(
                 "SELECT study_day, kind, created_at FROM buffs ORDER BY study_day, kind"
+            )
+            .fetch_all(&mut *connection)
+            .await?;
+            let badges = sqlx::query!(
+                "SELECT badge_key, tier, name, emoji, study_day, celebrated_at, created_at \
+                 FROM badges_earned ORDER BY badge_key, tier"
+            )
+            .fetch_all(&mut *connection)
+            .await?;
+            let records = sqlx::query!(
+                "SELECT kind, value, study_day, previous, celebrated_at, created_at \
+                 FROM records ORDER BY kind"
             )
             .fetch_all(connection)
             .await?;
@@ -114,6 +140,39 @@ impl DataRights for ProgressionDataRights {
                         })
                         .collect(),
                 },
+                ExportedTable {
+                    table: BADGES_EARNED_TABLE,
+                    rows: badges
+                        .into_iter()
+                        .map(|row| {
+                            json!({
+                                "badge_key": row.badge_key,
+                                "tier": row.tier,
+                                "name": row.name,
+                                "emoji": row.emoji,
+                                "study_day": row.study_day,
+                                "celebrated_at": row.celebrated_at,
+                                "created_at": row.created_at,
+                            })
+                        })
+                        .collect(),
+                },
+                ExportedTable {
+                    table: RECORDS_TABLE,
+                    rows: records
+                        .into_iter()
+                        .map(|row| {
+                            json!({
+                                "kind": row.kind,
+                                "value": row.value,
+                                "study_day": row.study_day,
+                                "previous": row.previous,
+                                "celebrated_at": row.celebrated_at,
+                                "created_at": row.created_at,
+                            })
+                        })
+                        .collect(),
+                },
             ])
         })
     }
@@ -128,6 +187,12 @@ impl DataRights for ProgressionDataRights {
                 .execute(&mut *connection)
                 .await?;
             sqlx::query!("DELETE FROM buffs")
+                .execute(&mut *connection)
+                .await?;
+            sqlx::query!("DELETE FROM badges_earned")
+                .execute(&mut *connection)
+                .await?;
+            sqlx::query!("DELETE FROM records")
                 .execute(connection)
                 .await?;
             Ok(())
