@@ -320,6 +320,150 @@
         "  cancel-in-progress: false\r  queue: max\n",
         "a line of release.yml ends at a line feed alone, so a carriage return that does not end a line is refused (SPEC-190 R12)",
         "test_workflow_concurrency.EveryReleaseWorkflowQueuesEveryRun.test_every_workflow_that_can_hold_two_runs_of_a_release_queues_them"
+      ],
+      [
+        "S19041-THE-CENSUS-REFUSES-READ-TEXT-IN-A-FEEDING-MODULE",
+        "scripts/tests/test_workflow_concurrency.py",
+        "if __name__ == \"__main__\":\n    unittest.main()\n",
+        "if __name__ == \"__main__\":\n    unittest.main()\nimport codecs, functools, io, pathlib, subprocess\n\n\ndef plant_site():\n    return read_workflow((WORKFLOWS / \"release.yml\").read_text(encoding='utf-8'))\n",
+        "a workflow file is read only through the loader, so the census refuses a module that feeds the reader: read_text (SPEC-190 A12)",
+        "test_ci_workflows.WorkflowFilesAreReadAsBytes.test_every_file_read_in_the_test_modules_is_the_loader_or_a_named_non_workflow_read"
+      ],
+      [
+        "S19042-THE-CENSUS-REFUSES-OPEN-IN-A-FEEDING-MODULE",
+        "scripts/tests/test_workflow_concurrency.py",
+        "if __name__ == \"__main__\":\n    unittest.main()\n",
+        "if __name__ == \"__main__\":\n    unittest.main()\nimport codecs, functools, io, pathlib, subprocess\n\n\ndef plant_site():\n    return read_workflow(open(WORKFLOWS / \"release.yml\", encoding='utf-8').read())\n",
+        "a workflow file is read only through the loader, so the census refuses a module that feeds the reader: open() without newline (SPEC-190 A12)",
+        "test_ci_workflows.WorkflowFilesAreReadAsBytes.test_every_file_read_in_the_test_modules_is_the_loader_or_a_named_non_workflow_read"
+      ],
+      [
+        "S19043-THE-CENSUS-REFUSES-IO-OPEN-IN-A-FEEDING-MODULE",
+        "scripts/tests/test_workflow_concurrency.py",
+        "if __name__ == \"__main__\":\n    unittest.main()\n",
+        "if __name__ == \"__main__\":\n    unittest.main()\nimport codecs, functools, io, pathlib, subprocess\n\n\ndef plant_site():\n    return read_workflow(io.open(WORKFLOWS / \"release.yml\", encoding='utf-8').read())\n",
+        "a workflow file is read only through the loader, so the census refuses a module that feeds the reader: io.open (SPEC-190 A12)",
+        "test_ci_workflows.WorkflowFilesAreReadAsBytes.test_every_file_read_in_the_test_modules_is_the_loader_or_a_named_non_workflow_read"
+      ],
+      [
+        "S19044-THE-CENSUS-REFUSES-PATH-OPEN-IN-A-FEEDING-MODULE",
+        "scripts/tests/test_workflow_concurrency.py",
+        "if __name__ == \"__main__\":\n    unittest.main()\n",
+        "if __name__ == \"__main__\":\n    unittest.main()\nimport codecs, functools, io, pathlib, subprocess\n\n\ndef plant_site():\n    return read_workflow((WORKFLOWS / \"release.yml\").open(encoding='utf-8').read())\n",
+        "a workflow file is read only through the loader, so the census refuses a module that feeds the reader: pathlib open (SPEC-190 A12)",
+        "test_ci_workflows.WorkflowFilesAreReadAsBytes.test_every_file_read_in_the_test_modules_is_the_loader_or_a_named_non_workflow_read"
+      ],
+      [
+        "S19045-THE-CENSUS-REFUSES-CODECS-OPEN-IN-A-FEEDING-MODULE",
+        "scripts/tests/test_workflow_concurrency.py",
+        "if __name__ == \"__main__\":\n    unittest.main()\n",
+        "if __name__ == \"__main__\":\n    unittest.main()\nimport codecs, functools, io, pathlib, subprocess\n\n\ndef plant_site():\n    return read_workflow(codecs.open(str(WORKFLOWS / \"release.yml\"), encoding='utf-8').read())\n",
+        "a workflow file is read only through the loader, so the census refuses a module that feeds the reader: codecs.open (SPEC-190 A12)",
+        "test_ci_workflows.WorkflowFilesAreReadAsBytes.test_every_file_read_in_the_test_modules_is_the_loader_or_a_named_non_workflow_read"
+      ],
+      [
+        "S19046-THE-CENSUS-REFUSES-PROCESS-TEXT-IN-A-FEEDING-MODULE",
+        "scripts/tests/test_workflow_concurrency.py",
+        "if __name__ == \"__main__\":\n    unittest.main()\n",
+        "if __name__ == \"__main__\":\n    unittest.main()\nimport codecs, functools, io, pathlib, subprocess\n\n\ndef plant_site():\n    return read_workflow(subprocess.run(['cat', str(WORKFLOWS / \"release.yml\")], capture_output=True, text=True).stdout)\n",
+        "a workflow file is read only through the loader, so the census refuses a module that feeds the reader: subprocess text=True (SPEC-190 A12)",
+        "test_ci_workflows.WorkflowFilesAreReadAsBytes.test_every_file_read_in_the_test_modules_is_the_loader_or_a_named_non_workflow_read"
+      ],
+      [
+        "S19047-THE-CENSUS-REFUSES-GIT-SHOW-IN-A-FEEDING-MODULE",
+        "scripts/tests/test_workflow_concurrency.py",
+        "if __name__ == \"__main__\":\n    unittest.main()\n",
+        "if __name__ == \"__main__\":\n    unittest.main()\nimport codecs, functools, io, pathlib, subprocess\n\n\ndef plant_site():\n    return read_workflow(subprocess.check_output(['git', 'show', 'HEAD:.github/workflows/release.yml'], text=True))\n",
+        "a workflow file is read only through the loader, so the census refuses a module that feeds the reader: git show text=True (SPEC-190 A12)",
+        "test_ci_workflows.WorkflowFilesAreReadAsBytes.test_every_file_read_in_the_test_modules_is_the_loader_or_a_named_non_workflow_read"
+      ],
+      [
+        "S19048-THE-CENSUS-REFUSES-GETATTR-READ-IN-A-FEEDING-MODULE",
+        "scripts/tests/test_workflow_concurrency.py",
+        "if __name__ == \"__main__\":\n    unittest.main()\n",
+        "if __name__ == \"__main__\":\n    unittest.main()\nimport codecs, functools, io, pathlib, subprocess\n\n\ndef plant_site():\n    return read_workflow(getattr(WORKFLOWS / \"release.yml\", 'read_text')(encoding='utf-8'))\n",
+        "a workflow file is read only through the loader, so the census refuses a module that feeds the reader: getattr read_text (SPEC-190 A12)",
+        "test_ci_workflows.WorkflowFilesAreReadAsBytes.test_every_file_read_in_the_test_modules_is_the_loader_or_a_named_non_workflow_read"
+      ],
+      [
+        "S19049-THE-CENSUS-REFUSES-FILEIO-IN-A-FEEDING-MODULE",
+        "scripts/tests/test_workflow_concurrency.py",
+        "if __name__ == \"__main__\":\n    unittest.main()\n",
+        "if __name__ == \"__main__\":\n    unittest.main()\nimport codecs, functools, io, pathlib, subprocess\n\n\ndef plant_site():\n    return read_workflow(io.FileIO(str(WORKFLOWS / \"release.yml\")).read().decode('utf-8'))\n",
+        "a workflow file is read only through the loader, so the census refuses a module that feeds the reader: io.FileIO (SPEC-190 A12)",
+        "test_ci_workflows.WorkflowFilesAreReadAsBytes.test_every_file_read_in_the_test_modules_is_the_loader_or_a_named_non_workflow_read"
+      ],
+      [
+        "S19050-THE-CENSUS-REFUSES-TEXTIOWRAPPER-IN-A-FEEDING-MODULE",
+        "scripts/tests/test_workflow_concurrency.py",
+        "if __name__ == \"__main__\":\n    unittest.main()\n",
+        "if __name__ == \"__main__\":\n    unittest.main()\nimport codecs, functools, io, pathlib, subprocess\n\n\ndef plant_site():\n    return read_workflow(io.TextIOWrapper(io.FileIO(str(WORKFLOWS / \"release.yml\")), encoding='utf-8').read())\n",
+        "a workflow file is read only through the loader, so the census refuses a module that feeds the reader: io.TextIOWrapper over a raw file (SPEC-190 A12)",
+        "test_ci_workflows.WorkflowFilesAreReadAsBytes.test_every_file_read_in_the_test_modules_is_the_loader_or_a_named_non_workflow_read"
+      ],
+      [
+        "S19051-THE-CENSUS-REFUSES-PARTIAL-READ-IN-A-FEEDING-MODULE",
+        "scripts/tests/test_workflow_concurrency.py",
+        "if __name__ == \"__main__\":\n    unittest.main()\n",
+        "if __name__ == \"__main__\":\n    unittest.main()\nimport codecs, functools, io, pathlib, subprocess\n\n\ndef plant_site():\n    return read_workflow(functools.partial(pathlib.Path.read_text, encoding='utf-8')(WORKFLOWS / \"release.yml\"))\n",
+        "a workflow file is read only through the loader, so the census refuses a module that feeds the reader: functools.partial read_text (SPEC-190 A12)",
+        "test_ci_workflows.WorkflowFilesAreReadAsBytes.test_every_file_read_in_the_test_modules_is_the_loader_or_a_named_non_workflow_read"
+      ],
+      [
+        "S19052-THE-CENSUS-REFUSES-A-READ-IN-SUPPORT",
+        "scripts/tests/_support.py",
+        "    return items\n",
+        "    return items\n\n\ndef plant_site():\n    from test_ci_workflows import WORKFLOWS, read_workflow\n\n    return read_workflow((WORKFLOWS / \"release.yml\").read_text(encoding=\"utf-8\"))\n",
+        "a workflow file is read only through the loader, so the census refuses _support.py: a read_text feed (SPEC-190 A12)",
+        "test_ci_workflows.WorkflowFilesAreReadAsBytes.test_every_file_read_in_the_test_modules_is_the_loader_or_a_named_non_workflow_read"
+      ],
+      [
+        "S19053-THE-CENSUS-REFUSES-A-SECOND-LOADER-DEFINITION",
+        "scripts/tests/test_workflow_concurrency.py",
+        "if __name__ == \"__main__\":\n    unittest.main()\n",
+        "if __name__ == \"__main__\":\n    unittest.main()\n\n\ndef workflow_file_text(path):\n    return path.read_text(encoding='utf-8')\n\n\ndef plant_site():\n    return read_workflow(workflow_file_text(WORKFLOWS / \"release.yml\"))\n",
+        "a workflow file is read only through the loader, so the census refuses a second function named like the loader (SPEC-190 A12)",
+        "test_ci_workflows.WorkflowFilesAreReadAsBytes.test_every_file_read_in_the_test_modules_is_the_loader_or_a_named_non_workflow_read"
+      ],
+      [
+        "S19054-THE-CENSUS-REFUSES-A-READ-IN-AN-ASYNC-FUNCTION",
+        "scripts/tests/test_workflow_concurrency.py",
+        "if __name__ == \"__main__\":\n    unittest.main()\n",
+        "if __name__ == \"__main__\":\n    unittest.main()\n\n\nasync def plant_site():\n    return read_workflow((WORKFLOWS / \"release.yml\").read_text())\n",
+        "a workflow file is read only through the loader, so the census refuses a site inside an async function (SPEC-190 A12)",
+        "test_ci_workflows.WorkflowFilesAreReadAsBytes.test_every_file_read_in_the_test_modules_is_the_loader_or_a_named_non_workflow_read"
+      ],
+      [
+        "S19055-THE-CENSUS-REFUSES-A-READ-IN-A-MODULE-LAMBDA",
+        "scripts/tests/test_workflow_concurrency.py",
+        "if __name__ == \"__main__\":\n    unittest.main()\n",
+        "if __name__ == \"__main__\":\n    unittest.main()\n\n\nPLANT = lambda: read_workflow((WORKFLOWS / \"release.yml\").read_text(encoding='utf-8'))\n",
+        "a workflow file is read only through the loader, so the census refuses a site in a lambda at module level (SPEC-190 A12)",
+        "test_ci_workflows.WorkflowFilesAreReadAsBytes.test_every_file_read_in_the_test_modules_is_the_loader_or_a_named_non_workflow_read"
+      ],
+      [
+        "S19056-THE-CENSUS-REFUSES-A-READ-IN-A-CLASS-BODY",
+        "scripts/tests/test_workflow_concurrency.py",
+        "if __name__ == \"__main__\":\n    unittest.main()\n",
+        "if __name__ == \"__main__\":\n    unittest.main()\n\n\nclass Plant:\n    TEXT = read_workflow((WORKFLOWS / \"release.yml\").read_text(encoding='utf-8'))\n",
+        "a workflow file is read only through the loader, so the census refuses a site in a class body (SPEC-190 A12)",
+        "test_ci_workflows.WorkflowFilesAreReadAsBytes.test_every_file_read_in_the_test_modules_is_the_loader_or_a_named_non_workflow_read"
+      ],
+      [
+        "S19057-THE-CENSUS-REFUSES-A-NEW-READ-IN-A-LISTED-FUNCTION",
+        "scripts/tests/test_ci_workflows.py",
+        "def gate_stages():\n",
+        "def gate_stages():\n    read_workflow((WORKFLOWS / 'release.yml').read_text())\n",
+        "a workflow file is read only through the loader, so the census refuses a listed function gains a feed site (SPEC-190 A12)",
+        "test_ci_workflows.WorkflowFilesAreReadAsBytes.test_every_file_read_in_the_test_modules_is_the_loader_or_a_named_non_workflow_read"
+      ],
+      [
+        "S19058-THE-CENSUS-REFUSES-A-LISTED-READ-SWAPPED-COUNT-KEPT",
+        "scripts/tests/test_ci_workflows.py",
+        "    return STAGES.search((REPO / \"scripts\" / \"check.sh\").read_text()).group(1).split()\n",
+        "    read_workflow((WORKFLOWS / 'release.yml').read_text())\n    return STAGES.search(workflow_file_text(REPO / 'scripts' / 'check.sh')).group(1).split()\n",
+        "a workflow file is read only through the loader, so the census refuses a listed read swapped for a feed read, the count kept (SPEC-190 A12)",
+        "test_ci_workflows.WorkflowFilesAreReadAsBytes.test_every_file_read_in_the_test_modules_is_the_loader_or_a_named_non_workflow_read"
       ]
     ]
   }
