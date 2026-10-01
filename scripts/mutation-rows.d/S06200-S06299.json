@@ -202,14 +202,6 @@
         "test_deploy_scripts.APartialEffectiveConfigurationIsRefused.test_a_unit_that_cannot_be_shown_refuses_the_deploy_and_names_it"
       ],
       [
-        "S06226-TWO-INSTANCES-OF-ONE-TEMPLATE-ARE-REFUSED",
-        "scripts/tests/test_deploy_templates.py",
-        "        if template is not None:\n",
-        "        if template is None:\n",
-        "every instance drop-in directory of a shipped template is admitted and read into it, and an instance of a template the tree does not ship is refused (SPEC-062 R14, A21; the held flush's own drop-in, #291)",
-        "test_deploy_templates.CredentialsComeFromTheSocket.test_a_shipped_templates_instance_dropin_directory_is_its_own_and_no_other_is"
-      ],
-      [
         "S06227-THE-TEMPLATES-OWN-DROPIN-IS-READ-ONCE",
         "scripts/tests/_units.py",
         "glob(f\"{stem}@?*.{suffix}.d\")",
@@ -224,6 +216,54 @@
         "        and False\n",
         "an instance's drop-in sets only the credentials it loads, since systemd applies it to that instance alone while the unit guards read it with its template (SPEC-062 R14)",
         "test_deploy_templates.CredentialsComeFromTheSocket.test_an_instance_dropin_sets_only_the_credentials_it_loads"
+      ],
+      [
+        "S06229-AN-UNNAMED-INSTANCE-DROPIN-OF-A-SHIPPED-TEMPLATE-IS-REFUSED",
+        "scripts/tests/test_deploy_templates.py",
+        "            if instance in allowed.get(name, ()):\n",
+        "            if True:\n",
+        "an instance drop-in directory of a shipped template is admitted only for an instance the one allowlist names, since the unit guards read it into the template (SPEC-062 R14, amended; #291)",
+        "test_deploy_templates.CredentialsComeFromTheSocket.test_a_shipped_templates_instance_dropin_directory_is_admitted_by_name_alone"
+      ],
+      [
+        "S06230-AN-UNSHIPPED-TEMPLATES-INSTANCE-DROPIN-IS-REFUSED-EVEN-WHEN-NAMED",
+        "scripts/tests/test_deploy_templates.py",
+        "        found = at and dot and instance and template in templates\n",
+        "        found = at and dot and instance\n",
+        "an instance drop-in directory of a template the tree does not ship stays refused, whatever the allowlist names (SPEC-062 R14, A21; SPEC-066)",
+        "test_deploy_templates.CredentialsComeFromTheSocket.test_a_shipped_templates_instance_dropin_directory_is_admitted_by_name_alone"
+      ],
+      [
+        "S06231-THE-SYNC-INSTANCE-NEVER-LOADS-THE-BOT-PAIR",
+        "deploy/systemd/deck-streak-job@sync.service.d/20-sync-login.conf",
+        "LoadCredential=anki-sync-password:/run/deck-streak-credentials/socket\n",
+        "LoadCredential=anki-sync-password:/run/deck-streak-credentials/socket\nLoadCredential=telegram-bot-token:/run/deck-streak-credentials/socket\n",
+        "the sync instance's drop-in loads the sync login alone, never the bot's token (SPEC-062 R14; #291)",
+        "test_deploy_templates.TheSyncLoginIsTheSyncJobsAlone.test_the_bots_credentials_are_loaded_by_the_held_flush_alone"
+      ],
+      [
+        "S06232-THE-JOB-TEMPLATE-NEVER-LOADS-THE-BOT-PAIR",
+        "deploy/systemd/deck-streak-job@.service",
+        "[Service]\n",
+        "[Service]\nLoadCredential=telegram-bot-token:/run/deck-streak-credentials/socket\n",
+        "the job template requests no bot credential, so no job but the held flush holds the bot's token (SPEC-062 R14; #291)",
+        "test_deploy_templates.TheSyncLoginIsTheSyncJobsAlone.test_the_bots_credentials_are_loaded_by_the_held_flush_alone"
+      ],
+      [
+        "S06233-THE-HELD-FLUSH-INSTANCE-NEVER-LOADS-THE-SYNC-PAIR",
+        "deploy/systemd/deck-streak-job@held_flush.service.d/20-bot-credentials.conf",
+        "LoadCredential=owner-user-id:/run/deck-streak-credentials/socket\n",
+        "LoadCredential=owner-user-id:/run/deck-streak-credentials/socket\nLoadCredential=anki-sync-username:/run/deck-streak-credentials/socket\n",
+        "the held flush instance's drop-in loads the bot's pair alone, never the sync login (SPEC-062 R14; #291)",
+        "test_deploy_templates.TheSyncLoginIsTheSyncJobsAlone.test_the_sync_login_is_loaded_by_the_sync_job_alone"
+      ],
+      [
+        "S06234-THE-SYNC-PAIR-IS-LISTED-UNDER-THE-SYNC-UNIT-ONLY",
+        "deploy/scripts/credential-pairs.py",
+        "            lister.read(name, dropin)\n",
+        "            lister.read(name.replace(\"@sync\", \"@\"), dropin)\n",
+        "the credential lister names the sync login under the sync instance's unit and under no other (SPEC-062 R14)",
+        "test_deploy_templates.TheSyncLoginIsTheSyncJobsAlone.test_the_sync_login_is_loaded_by_the_sync_job_alone"
       ]
     ]
   }
