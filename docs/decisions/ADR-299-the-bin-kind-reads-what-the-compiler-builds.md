@@ -86,30 +86,33 @@ classes, and the reader read each of them differently from cargo and rustc (#405
 now a generated family of the population (SPEC-039 sections 21 and 22). Each decision names what
 it was chosen against.
 
-- **A `mod` among a macro invocation's tokens is refused by name, under every delimiter.** Chosen
-  because it names the shape, against two others. Reading through the invocation, which the token walk did, takes tokens that
-  declare nothing until the macro expands for a declaration. Expanding the known macros
-  (`stringify!` discards its tokens) would decide one macro and leave every declared macro open,
-  because only its definition decides what it expands to. A refusal names the shape, and an
-  invocation holding no `mod` is read as before.
-- **A declared path is compared by cargo's key**: joined to the package's directory, compared by
-  component, so a `.` and a doubled separator collapse, a `..` stays, and an absolute path stands
-  alone. Chosen against the normalisation the reader used, which collapsed a `..` that cargo keeps
-  and so dropped a target cargo builds, and against resolving the file on disk, which equates two
-  paths cargo keeps apart. An unpathed table contributes no path to the comparison, as in cargo.
-- **The edition decides inference beside a declared table.** No `edition` key is edition 2015,
-  where a `[[bin]]` or `[[test]]` table switches its kind's inference off unless `autobins` or
-  `autotests` is set; an inherited edition is read from the nearest workspace manifest. Chosen
-  against assuming a recent edition, which counted a target cargo does not build, and against
-  refusing every crate with no edition key, which would refuse layouts cargo decides. An edition
-  the reader needs and cannot decide is refused by name.
-- **Entries whose names start with a dot are skipped by inference**, as cargo skips them. Chosen
-  against counting them, which counted a binary cargo does not build.
-- **The census calls the toolchain's own `cargo` and `rustc`**, resolved once with `rustup which`
-  where rustup is installed, and the bare names elsewhere. Chosen against the rustup proxy per
-  member, whose start costs more than the metadata it serves, because a
-  larger population multiplies that cost; the toolchain is the one the proxy would pick in a scratch crate,
-  so the oracle's answers do not change.
+- Refusing a `mod` among a macro invocation's tokens by name, chosen because it names the shape,
+  under every delimiter. An invocation holding no `mod` is read as before.
+- Reading through the invocation, as the token walk did, rejected because it takes tokens that
+  declare nothing until the macro expands for a declaration.
+- Expanding the known macros, rejected because it decides one macro (`stringify!` discards its
+  tokens) and leaves every declared macro open: only a macro's definition decides its expansion.
+- Comparing a declared path by cargo's key, chosen because cargo joins the path to the package's
+  directory and compares it by component: a `.` and a doubled separator collapse, a `..` stays, and
+  an absolute path stands alone. An unpathed table contributes no path to the comparison, as in
+  cargo.
+- The normalisation the reader used, rejected because it collapsed a `..` that cargo keeps and so
+  dropped a target cargo builds.
+- Resolving the file on disk, rejected because it equates two paths cargo keeps apart.
+- Reading the edition beside a declared table, chosen because the edition decides inference: no
+  `edition` key is edition 2015, where a `[[bin]]` or `[[test]]` table switches its kind's
+  inference off unless `autobins` or `autotests` is set. An inherited edition is read from the
+  nearest workspace manifest, and an edition the reader needs and cannot decide is refused by name.
+- Assuming a recent edition, rejected because it counted a target cargo does not build.
+- Refusing every crate with no edition key, rejected because it would refuse layouts cargo decides.
+- Skipping entries whose names start with a dot, chosen because cargo's inference skips them.
+- Counting entries whose names start with a dot, rejected because it counted a binary cargo does
+  not build.
+- Calling the toolchain's own `cargo` and `rustc` in the census, chosen because the toolchain is
+  the one the rustup proxy would pick in a scratch crate, so the oracle's answers do not change. It
+  is resolved once with `rustup which` where rustup is installed, and the bare names elsewhere.
+- The rustup proxy per member, rejected because its start costs more than the metadata it serves,
+  and a larger population multiplies that cost.
 
 ### Consequences of the amendment
 
