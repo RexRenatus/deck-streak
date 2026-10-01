@@ -8,6 +8,7 @@ a `.yaml` workflow is held to the hardening rules as a `.yml` one is, the harden
 keys the way the checker does (A13)."""
 
 import collections
+import contextlib
 import json
 import math
 import os
@@ -797,7 +798,7 @@ class TheReaderReadsOnlyItsNamedForms(unittest.TestCase):
             )
             for blank in ("\t", "  \t", "    \t", "  \t  "):
                 refusal = (
-                    "line 3: a tab in the indentation, which YAML refuses"
+                    "line 3: a tab in the indentation, which the reader does not read"
                     if "\t" in blank[:2]
                     else f"line 3: a blank line of a block scalar that holds a tab {unnamed}"
                 )
@@ -952,7 +953,7 @@ class TheReaderReadsOnlyItsNamedForms(unittest.TestCase):
         # A tab in any line's indentation is refused, a comment line and a blank line outside a
         # block scalar's text included; a tab past the indentation, in a block's text or a comment's
         # text, is text and is read. A tab after a sequence's dash is refused too.
-        tab_refusal = "a tab in the indentation, which YAML refuses"
+        tab_refusal = "a tab in the indentation, which the reader does not read"
         for run in ("\t", "\t\t", " \t", "\t "):
             for body, what in (("# c", "a comment line"), ("", "a blank line")):
                 line = run + body
@@ -1011,7 +1012,28 @@ class TheReaderReadsOnlyItsNamedForms(unittest.TestCase):
             (
                 "a tab after a dash, a mapping",
                 "k:\n  -\tj: v\n",
-                ("refused", ["line 2: a key that is not a plain name is not read"]),
+                (
+                    "refused",
+                    [
+                        "line 2: a tab after a sequence indicator is not read",
+                        "line 2: a key that is not a plain name is not read",
+                    ],
+                ),
+            ),
+            *(
+                (
+                    f"a tab after a dash, then a colon: {text!r}",
+                    text,
+                    ("refused", [f"line {line}: a tab after a sequence indicator is not read"]),
+                )
+                for text, line in (
+                    ("k:\n  -\t: x\n", 2),
+                    ("k:\n  -\t :\n", 2),
+                    ("k:\n  -\t\t: 'x'\n", 2),
+                    ("-\t: x\n", 1),
+                    ("k:\n  - j: v\n    -\t: x\n", 3),
+                    ("concurrency:\n  group: g\n  -\t: x\n", 3),
+                )
             ),
         ):
             members.append((label, text, expected))
@@ -2789,6 +2811,428 @@ NOT_WORKFLOW_READS = {
 }
 
 
+# The census's killer (SPEC-190 A12). A plant is a set of edits to a copy of the test directory,
+# each (file, how, text): `create` writes a new file, `append` adds to a file's text, and `replace`
+# swaps a text that occurs once in the file for another. The census test runs on the copy: every
+# plant is red there and names the module it names, and every control is green.
+PLANT_READ = 'WORKFLOWS / "release.yml"'
+PLANT_READS = {
+    "read_text": f"({PLANT_READ}).read_text(encoding='utf-8')",
+    "open() without newline": f"open({PLANT_READ}, encoding='utf-8').read()",
+    "io.open": f"io.open({PLANT_READ}, encoding='utf-8').read()",
+    "pathlib open": f"({PLANT_READ}).open(encoding='utf-8').read()",
+    "codecs.open": f"codecs.open(str({PLANT_READ}), encoding='utf-8').read()",
+    "subprocess text=True": (
+        f"subprocess.run(['cat', str({PLANT_READ})], capture_output=True, text=True).stdout"
+    ),
+    "git show text=True": (
+        "subprocess.check_output(['git', 'show', 'HEAD:.github/workflows/release.yml'], text=True)"
+    ),
+    "getattr read_text": f"getattr({PLANT_READ}, 'read_text')(encoding='utf-8')",
+    "io.FileIO": f"io.FileIO(str({PLANT_READ})).read().decode('utf-8')",
+    "io.TextIOWrapper over a raw file": (
+        f"io.TextIOWrapper(io.FileIO(str({PLANT_READ})), encoding='utf-8').read()"
+    ),
+    "functools.partial read_text": (
+        f"functools.partial(pathlib.Path.read_text, encoding='utf-8')({PLANT_READ})"
+    ),
+}
+PLANT_IMPORTS = "import codecs, functools, io, pathlib, subprocess\n"
+PLANT_MORE = "import fileinput, linecache, mmap, operator, os, sys, tokenize\n"
+PLANT_FEED = "from test_ci_workflows import WORKFLOWS, read_workflow\n"
+PLANT_FEEDS = "from test_workflow_concurrency import WORKFLOWS, read_workflow\n"
+PLANT_ZZ = "test_zz_plant.py"
+PLANT_CONCURRENCY = "test_workflow_concurrency.py"
+PLANT_CI = Path(__file__).name
+PLANT_GATE = (
+    '    return STAGES.search((REPO / "scripts" / "check.sh").read_text()).group(1).split()\n'
+)
+PLANT_LOADER = '    return Path(path).read_bytes().decode("utf-8")\n'
+
+
+def plant_site(expression):
+    """A function that feeds the reader with `expression`."""
+    return f"\n\ndef plant_site():\n    return read_workflow({expression})\n"
+
+
+def planted(file, how, text, module):
+    """A plant of one edit: red naming `module`, or a control, green, when `module` is None."""
+    return ((file, how, text),), module
+
+
+def plant_module(body):
+    """A plant that writes a new test module holding `body`."""
+    return planted(PLANT_ZZ, "create", '"""A plant."""\n' + body, "test_zz_plant")
+
+
+def plant_kind(body):
+    """A plant appended to a module that feeds the reader, with the modules a site kind names."""
+    return planted(
+        PLANT_CONCURRENCY,
+        "append",
+        PLANT_IMPORTS + PLANT_MORE + body,
+        "test_workflow_concurrency",
+    )
+
+
+PLANTS = {
+    "a control: no plant": ((), None),
+    "a control: a site through the loader, in a module that feeds the reader": planted(
+        PLANT_CONCURRENCY,
+        "append",
+        plant_site(f"workflow_file_text({PLANT_READ})"),
+        None,
+    ),
+    "a control: a new module that feeds the reader through the loader": planted(
+        PLANT_ZZ,
+        "create",
+        '"""A plant."""\n'
+        "from test_ci_workflows import WORKFLOWS, read_workflow, workflow_file_text\n"
+        + plant_site(f"workflow_file_text({PLANT_READ})"),
+        None,
+    ),
+    **{
+        f"a module that feeds the reader: {label}": planted(
+            PLANT_CONCURRENCY,
+            "append",
+            PLANT_IMPORTS + plant_site(expression),
+            "test_workflow_concurrency",
+        )
+        for label, expression in PLANT_READS.items()
+    },
+    **{
+        f"a new module importing a re-export: {label}": plant_module(
+            PLANT_IMPORTS + PLANT_FEEDS + plant_site(expression)
+        )
+        for label, expression in PLANT_READS.items()
+    },
+    "a new module: an import by a computed name": plant_module(
+        "import importlib\n\n\ndef plant_site():\n"
+        '    ci = importlib.import_module("test_" + "ci_workflows")\n'
+        '    return ci.read_workflow((ci.WORKFLOWS / "release.yml").read_text(encoding="utf-8"))\n'
+    ),
+    "_support.py: a read_text feed": planted(
+        "_support.py",
+        "append",
+        "\n\ndef plant_site():\n    "
+        + PLANT_FEED
+        + "\n"
+        + '    return read_workflow((WORKFLOWS / "release.yml").read_text(encoding="utf-8"))\n',
+        "_support",
+    ),
+    "a second function named like the loader": planted(
+        PLANT_CONCURRENCY,
+        "append",
+        "\n\ndef workflow_file_text(path):\n    return path.read_text(encoding='utf-8')\n"
+        + plant_site(f"workflow_file_text({PLANT_READ})"),
+        "test_workflow_concurrency",
+    ),
+    "a site inside an async function": planted(
+        PLANT_CONCURRENCY,
+        "append",
+        f"\n\nasync def plant_site():\n    return read_workflow(({PLANT_READ}).read_text())\n",
+        "test_workflow_concurrency",
+    ),
+    "a site in a lambda at module level": planted(
+        PLANT_CONCURRENCY,
+        "append",
+        f"\n\nPLANT = lambda: read_workflow(({PLANT_READ}).read_text(encoding='utf-8'))\n",
+        "test_workflow_concurrency",
+    ),
+    "a site in a class body": planted(
+        PLANT_CONCURRENCY,
+        "append",
+        f"\n\nclass Plant:\n    TEXT = read_workflow(({PLANT_READ}).read_text(encoding='utf-8'))\n",
+        "test_workflow_concurrency",
+    ),
+    "a listed function gains a feed site": planted(
+        PLANT_CI,
+        "replace",
+        (
+            "def gate_stages():\n",
+            "def gate_stages():\n    read_workflow((WORKFLOWS / 'release.yml').read_text())\n",
+        ),
+        "test_ci_workflows",
+    ),
+    "a listed read swapped for a feed read, the count kept": planted(
+        PLANT_CI,
+        "replace",
+        (
+            PLANT_GATE,
+            "    read_workflow((WORKFLOWS / 'release.yml').read_text())\n"
+            "    return STAGES.search(workflow_file_text(REPO / 'scripts' / 'check.sh'))"
+            ".group(1).split()\n",
+        ),
+        "test_ci_workflows",
+    ),
+    **{
+        f"a site kind: {label}": plant_kind(body)
+        for label, body in {
+            "os.read of os.open": plant_site(
+                f"os.read(os.open(str({PLANT_READ}), os.O_RDONLY), 1 << 20).decode()"
+            ),
+            "os.fdopen": plant_site(f"os.fdopen(os.open(str({PLANT_READ}), os.O_RDONLY)).read()"),
+            "os.popen": plant_site(f"os.popen('cat ' + str({PLANT_READ})).read()"),
+            "linecache.getlines": plant_site(f"''.join(linecache.getlines(str({PLANT_READ})))"),
+            "fileinput.input": plant_site(f"''.join(fileinput.input(str({PLANT_READ})))"),
+            "open bound to another name": "\n\nOPENER = open\n"
+            + plant_site(f"''.join(OPENER({PLANT_READ}))"),
+            "io.FileIO imported under another name": "from io import FileIO as F\n"
+            + plant_site(f"F(str({PLANT_READ})).readall().decode()"),
+            "subprocess imported under another name": "import subprocess as sp\n"
+            + plant_site(f"sp.check_output(['cat', str({PLANT_READ})]).decode()"),
+            "Path.read_text passed to map": plant_site(
+                f"''.join(map(pathlib.Path.read_text, [{PLANT_READ}]))"
+            ),
+            "operator.methodcaller": plant_site(
+                f"operator.methodcaller('read_text')({PLANT_READ})"
+            ),
+            "a vars() subscript": plant_site(f"vars(pathlib.Path)['read_text']({PLANT_READ})"),
+            "io.StringIO translating the loader's text": plant_site(
+                f"io.StringIO(workflow_file_text({PLANT_READ}), newline=None).read()"
+            ),
+            "Popen.communicate": plant_site(
+                f"subprocess.Popen(['cat', str({PLANT_READ})], stdout=subprocess.PIPE, "
+                "text=True).communicate()[0]"
+            ),
+            "a read in a default argument": f"\n\ndef plant_site(text=({PLANT_READ}).read_text()):"
+            "\n    return read_workflow(text)\n",
+            "a read in an f-string": plant_site(f"f'{{({PLANT_READ}).read_text()}}'"),
+            "a read in a nested function": "\n\ndef plant_site():\n    def inner():\n"
+            f"        return ({PLANT_READ}).read_text()\n\n    return read_workflow(inner())\n",
+            "sys.stdin": plant_site("sys.stdin.read()"),
+            "a lambda as the callee": plant_site(f"(lambda p: p.read_text())({PLANT_READ})"),
+            "a subscript as the callee": plant_site(f"[pathlib.Path.read_text][0]({PLANT_READ})"),
+            "mmap": plant_site(
+                f"mmap.mmap(open({PLANT_READ}).fileno(), 0, access=mmap.ACCESS_READ)[:].decode()"
+            ),
+            "codecs.open imported under another name": "from codecs import open as copen\n"
+            + plant_site(f"copen(str({PLANT_READ})).read()"),
+            "tokenize.open": plant_site(f"tokenize.open({PLANT_READ}).read()"),
+            "a rebinding of Path.read_bytes": (
+                "\n\npathlib.Path.read_bytes = pathlib.Path.read_text\n"
+            ),
+        }.items()
+    },
+    "a path in: a helper module a feeding module imports": (
+        (
+            (
+                "_raw.py",
+                "create",
+                '"""A plant."""\n\n\ndef text(path):\n    return path.read_text()\n',
+            ),
+            (
+                PLANT_CONCURRENCY,
+                "append",
+                "\nimport _raw\n" + plant_site(f"_raw.text({PLANT_READ})"),
+            ),
+        ),
+        "test_workflow_concurrency",
+    ),
+    "a path in: a reader the population defines, handed the workflow directory": planted(
+        PLANT_CONCURRENCY,
+        "append",
+        "\nfrom test_ci_workflows import module_sources\n"
+        + plant_site("module_sources(WORKFLOWS)['release']"),
+        "test_workflow_concurrency",
+    ),
+    "a method named like a read, called on its instance, that reads": planted(
+        PLANT_CONCURRENCY,
+        "append",
+        f"\n\nclass Plant:\n    def read(self):\n        return ({PLANT_READ}).read_text()\n"
+        "\n    def text(self):\n        return read_workflow(self.read())\n",
+        "test_workflow_concurrency",
+    ),
+    "a module a listed load returned, a member of it called anew": planted(
+        "test_not_started_legs.py",
+        "replace",
+        (
+            "        module = verdict_module()\n",
+            "        module = verdict_module()\n        module.workflow_text(CI)\n",
+        ),
+        "test_not_started_legs",
+    ),
+    "a path in: import as": plant_module(
+        "import test_workflow_concurrency as c\n\n\ndef plant_site():\n"
+        f"    return c.read_workflow((c.{PLANT_READ}).read_text())\n"
+    ),
+    "a path in: a star import": plant_module(
+        "from test_workflow_concurrency import *\n" + plant_site(f"({PLANT_READ}).read_text()")
+    ),
+    "a path in: an import inside the function": plant_module(
+        "\n\ndef plant_site():\n    "
+        + PLANT_FEED
+        + f"\n    return read_workflow(({PLANT_READ}).read_text())\n"
+    ),
+    "a path in: an import under try": plant_module(
+        "try:\n    "
+        + PLANT_FEED
+        + "except ImportError:\n    read_workflow = None\n"
+        + plant_site(f"({PLANT_READ}).read_text()")
+    ),
+    "a path in: a relative import": plant_module(
+        "from .test_ci_workflows import WORKFLOWS, read_workflow\n"
+        + plant_site(f"({PLANT_READ}).read_text()")
+    ),
+    "a path in: a two-level re-export": (
+        (
+            ("_mid.py", "create", '"""A plant."""\n' + PLANT_FEED),
+            (
+                PLANT_ZZ,
+                "create",
+                '"""A plant."""\nfrom _mid import WORKFLOWS, read_workflow\n'
+                + plant_site(f"({PLANT_READ}).read_text()"),
+            ),
+        ),
+        "test_zz_plant",
+    ),
+    "a path in: a module in a package": planted(
+        "pkg/plant.py",
+        "create",
+        '"""A plant."""\n' + PLANT_FEED + plant_site(f"({PLANT_READ}).read_text()"),
+        "pkg.plant",
+    ),
+    "a path in: a module whose name does not start test_": planted(
+        "_feed.py",
+        "create",
+        '"""A plant."""\n' + PLANT_FEED + plant_site(f"({PLANT_READ}).read_text()"),
+        "_feed",
+    ),
+    "a path in: the repository's dotted spelling": plant_module(
+        "import scripts.tests.test_ci_workflows as ci\n\n\ndef plant_site():\n"
+        f"    return ci.read_workflow((ci.{PLANT_READ}).read_text())\n"
+    ),
+    "a path in: the reader imported under another name": plant_module(
+        "from test_ci_workflows import WORKFLOWS, read_workflow as rw\n\n\ndef plant_site():\n"
+        f"    return rw(({PLANT_READ}).read_text())\n"
+    ),
+    "dynamic: __import__": plant_module(
+        "def plant_site():\n    ci = __import__('test_ci_workflows')\n"
+        f"    return ci.read_workflow((ci.{PLANT_READ}).read_text())\n"
+    ),
+    "dynamic: spec_from_file_location on a test module": plant_module(
+        "import importlib.util\nfrom pathlib import Path\n\n\ndef plant_site():\n"
+        "    spec = importlib.util.spec_from_file_location(\n"
+        "        'ci', Path(__file__).parent / 'test_ci_workflows.py'\n    )\n"
+        "    ci = importlib.util.module_from_spec(spec)\n    spec.loader.exec_module(ci)\n"
+        f"    return ci.read_workflow((ci.{PLANT_READ}).read_text())\n"
+    ),
+    "dynamic: runpy.run_path": plant_module(
+        "import runpy\n\n\ndef plant_site():\n"
+        "    ci = runpy.run_path('test_ci_workflows.py')\n"
+        "    return ci['read_workflow']((ci['WORKFLOWS'] / 'release.yml').read_text())\n"
+    ),
+    "dynamic: a sys.modules lookup": plant_module(
+        "import sys\n\n\ndef plant_site():\n    ci = sys.modules['test_ci_workflows']\n"
+        f"    return ci.read_workflow((ci.{PLANT_READ}).read_text())\n"
+    ),
+    "dynamic: exec of a string": plant_module(
+        "def plant_site():\n    held = {}\n"
+        "    exec('from test_ci_workflows import WORKFLOWS, read_workflow', held)\n"
+        "    return held['read_workflow']((held['WORKFLOWS'] / 'release.yml').read_text())\n"
+    ),
+    "dynamic: mock.patch of a target named in a string": plant_module(
+        "from unittest import mock\n\n\ndef plant_site():\n"
+        "    with mock.patch('test_ci_workflows.WORKFLOWS') as held:\n        return held\n"
+    ),
+    "dynamic: getattr of the builtins from globals()": plant_module(
+        "def plant_site():\n    load = getattr(globals()['__builtins__'], '__import__')\n"
+        "    ci = load('test_ci_workflows')\n"
+        f"    return ci.read_workflow((ci.{PLANT_READ}).read_text())\n"
+    ),
+    "dynamic: a test loader taking a module by name": plant_module(
+        "import unittest\n\n\ndef plant_site():\n"
+        "    return unittest.defaultTestLoader.loadTestsFromName('test_ci_workflows')\n"
+    ),
+    "dynamic: pkgutil.resolve_name": plant_module(
+        "import pkgutil\n\n\ndef plant_site():\n"
+        "    return pkgutil.resolve_name('test_ci_workflows:read_workflow')\n"
+    ),
+    "dynamic: builtins.__import__": plant_module(
+        "import builtins\n\n\ndef plant_site():\n"
+        "    return builtins.__import__('test_ci_workflows')\n"
+    ),
+    "dynamic: gc.get_objects": plant_module(
+        "import gc\n\n\ndef plant_site():\n    return [m for m in gc.get_objects() if m]\n"
+    ),
+    "dynamic: importlib.import_module with a constant name": plant_module(
+        "import importlib\n\n\ndef plant_site():\n"
+        "    ci = importlib.import_module('test_ci_workflows')\n"
+        f"    return ci.read_workflow((ci.{PLANT_READ}).read_text())\n"
+    ),
+    "the loader: imported under another name": planted(
+        PLANT_CONCURRENCY,
+        "append",
+        "\nfrom test_ci_workflows import workflow_file_text as held\n",
+        "test_workflow_concurrency",
+    ),
+    "the loader: an attribute rebinding": planted(
+        PLANT_CONCURRENCY,
+        "append",
+        "\nimport test_ci_workflows\n\ntest_ci_workflows.workflow_file_text = str\n",
+        "test_workflow_concurrency",
+    ),
+    "the loader: its name in a string": planted(
+        PLANT_CONCURRENCY,
+        "append",
+        "\nimport test_ci_workflows\nfrom unittest import mock\n\n"
+        "HELD = mock.patch.object(test_ci_workflows, 'workflow_file_text', str)\n",
+        "test_workflow_concurrency",
+    ),
+    "the loader: its body reads text": planted(
+        PLANT_CI,
+        "replace",
+        (PLANT_LOADER, '    return Path(path).read_text(encoding="utf-8")\n'),
+        "test_ci_workflows",
+    ),
+    "the loader: a second definition as a method": planted(
+        PLANT_CONCURRENCY,
+        "append",
+        "\n\nclass Plant:\n    def workflow_file_text(self, path):\n"
+        "        return path.read_bytes().decode()\n",
+        "test_workflow_concurrency",
+    ),
+    "a listed site: a read moved to another function": planted(
+        PLANT_CI,
+        "replace",
+        (
+            PLANT_GATE,
+            "    return STAGES.search(check_text()).group(1).split()\n\n\n"
+            "def check_text():\n"
+            '    return (REPO / "scripts" / "check.sh").read_text()\n',
+        ),
+        "test_ci_workflows",
+    ),
+    "a listed site: a dynamic import's target swapped": planted(
+        "test_mutation_verdict.py",
+        "replace",
+        (
+            'spec_from_file_location("mutation_verdict_constants", VERDICT)',
+            'spec_from_file_location("mutation_verdict_constants", Path(__file__))',
+        ),
+        "test_mutation_verdict",
+    ),
+    "a listed site: a read's arguments changed": planted(
+        PLANT_CI,
+        "replace",
+        (
+            PLANT_GATE,
+            '    return STAGES.search((REPO / "scripts" / "check.sh").read_text("utf-8"))'
+            ".group(1).split()\n",
+        ),
+        "test_ci_workflows",
+    ),
+}
+
+
+class PlantResult(unittest.TestResult):
+    """A test result that keeps a failure's message without its traceback, so a plant's red is
+    judged by what the census says, never by a path a traceback names."""
+
+    def addFailure(self, test, err):
+        self.failures.append((test, str(err[1])))
+
+
 class WorkflowFilesAreReadAsBytes(unittest.TestCase):
     """A workflow file reaches the reader as GitHub's parser is given it: its bytes, decoded as
     UTF-8 and not translated (SPEC-190 R12). Every read of a workflow file in the test modules goes
@@ -2890,6 +3334,43 @@ class WorkflowFilesAreReadAsBytes(unittest.TestCase):
         self.assertEqual(read_primitives("TEXT = open('x').read()\n"), [("<module>", "open")])
         loader = f"def {LOADER}(path):\n    return path.read_bytes().decode('utf-8')\n"
         self.assertEqual(read_primitives(loader), [])
+
+    def test_the_census_is_red_on_every_planted_site(self):
+        tests = Path(__file__).parent
+        guard = (
+            "test_every_file_read_in_the_test_modules_is_the_loader_or_a_named_non_workflow_read"
+        )
+        for label, (edits, module) in examined("plants", PLANTS.items()):
+            with self.subTest(plant=label), tempfile.TemporaryDirectory() as scratch:
+                copy = Path(scratch) / "scripts" / "tests"
+                for path in tests.rglob("*.py"):
+                    (copy / path.relative_to(tests)).parent.mkdir(parents=True, exist_ok=True)
+                    (copy / path.relative_to(tests)).symlink_to(path)
+                for file, how, text in edits:
+                    target = copy / file
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    # The original is read through the loader, so the copy holds its bytes.
+                    original = "" if how == "create" else workflow_file_text(tests / file)
+                    if how == "replace":
+                        self.assertEqual(original.count(text[0]), 1, f"{label}: {file}")
+                        original, text = original.replace(*text), ""
+                    target.unlink(missing_ok=True)
+                    target.write_bytes((original + text).encode("utf-8"))
+                case = WorkflowFilesAreReadAsBytes(guard)
+                case.maxDiff = None
+                result = PlantResult()
+                with (
+                    mock.patch.object(sys.modules[__name__], "__file__", str(copy / PLANT_CI)),
+                    contextlib.redirect_stdout(None),
+                ):
+                    case.run(result)
+                said = "\n".join(message for _test, message in result.failures)
+                self.assertEqual(result.errors, [], label)
+                if module is None:
+                    self.assertEqual(result.failures, [], said)
+                else:
+                    self.assertTrue(result.failures, f"{label}: the census was green")
+                    self.assertRegex(said, rf"[\"'\[]{re.escape(module)}[:'\"]")
 
 
 if __name__ == "__main__":
