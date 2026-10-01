@@ -396,14 +396,23 @@ def credential_lines(root):
     return found
 
 
+# The ONE place that names the instance drop-in directories a shipped template may carry, by the
+# template's file name (SPEC-062 R14, amended; ruling PR #512). The unit guards read every instance
+# directory into its template, so an instance is admitted only by name and any other is refused:
+# `sync` loads the sync login, `held_flush` loads the bot's token and the owner's id (#291).
+INSTANCE_DROPIN_ALLOWLIST = {f"{JOB_TEMPLATE}@.service": ("sync", "held_flush")}
+
 NON_UNIT_DROPIN = "deploy/journald.conf.d"
 NON_UNIT_DIRECTORIES = (NON_UNIT_DROPIN, "deploy/tmpfiles.d")
 
 
-def dropin_directory_refusals(root):
+def dropin_directory_refusals(root, allowlist=None):
     """Every `*.d/` directory under `root`'s deploy/ that is not the drop-in directory of a unit
     shipped beside it, as one line each: only `<unit name>.d/` is read with a unit (SPEC-066 R2), so
-    any other is refused, and the directories of files that are no unit (journald, tmpfiles.d) are named here."""
+    any other is refused, and the directories of files that are no unit (journald, tmpfiles.d) are named here.
+    A shipped template's instance directory is admitted only for an instance `allowlist` names (by
+    default INSTANCE_DROPIN_ALLOWLIST)."""
+    allowed = INSTANCE_DROPIN_ALLOWLIST if allowlist is None else allowlist
     refused = []
     deploy = Path(root) / "deploy"
     if not deploy.is_dir():
@@ -424,18 +433,26 @@ def dropin_directory_refusals(root):
         stem, at, rest = path.name.removesuffix(".d").partition("@")
         instance, dot, kind = rest.rpartition(".")
         template = (path.parent, stem, kind)
-        return template if at and dot and instance and template in templates else None
+        found = at and dot and instance and template in templates
+        return (f"{stem}@.{kind}", instance) if found else None
 
     folders = [path for path in entries if path.is_dir() and path.name.endswith(".d")]
     for path in folders:
         rel = path.relative_to(root).as_posix()
         if path in own:
             continue
-        template = the_shipped_template_of(path)
-        # The guards read every instance drop-in of a shipped template into the template
-        # (SPEC-062 R14), so the instances' credentials add up there; which instance loads which is
-        # judged by the instance tests below (#291 gave the template a second instance drop-in).
-        if template is not None:
+        found = the_shipped_template_of(path)
+        if found is not None:
+            # The guards read every instance drop-in of a shipped template into the template
+            # (SPEC-062 R14), so an instance is admitted by name alone; which instance loads which
+            # credential is judged by the instance tests below (#291).
+            name, instance = found
+            if instance in allowed.get(name, ()):
+                continue
+            refused.append(
+                f"{rel}: the instance {instance!r} of {name} is not on INSTANCE_DROPIN_ALLOWLIST, "
+                "and is refused"
+            )
             continue
         if rel in NON_UNIT_DIRECTORIES:
             continue
