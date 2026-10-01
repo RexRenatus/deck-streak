@@ -39,7 +39,7 @@ const MIDDLE_STATES: [DayState; 4] = [
 ];
 /// The last day of a window wider than one is never a day with nothing.
 const LAST_STATES: [DayState; 3] = [DayState::Review, DayState::Zero, DayState::Skip];
-/// The window's first days: the smallest day, the day after it, day zero, and the fourth day
+/// The window's first days: the smallest day, the day after it, day zero, and the third day
 /// before the largest.
 const ORIGINS: [i64; 4] = [i64::MIN, i64::MIN + 1, 0, i64::MAX - 3];
 /// The thresholds.
