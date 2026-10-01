@@ -171,6 +171,96 @@
         "                facts\n                    .rule\n                    .study_day(deck_streak_kernel::UtcMillis::from_epoch_millis(review.id - i64::from(facts.rule.utc_offset().minutes()) * 60_000)),\n",
         "lapse::a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary",
         "the configured offset is applied once, by the rule, so a review in a zone away from UTC counts on the rule's day (SPEC-049 R15; A17)"
+      ],
+      [
+        "S04921-A-SKIP-MASK-KEEPS-ITS-FIRST-PLACE",
+        "streaks",
+        "tests/lapse.rs",
+        "                    .filter(|(place, _)| (mask >> place) & 1 == 1)\n",
+        "                    .filter(|(place, _)| *place != 0 && (mask >> place) & 1 == 1)\n",
+        "lapse::the_walk_reads_every_day_of_its_window_and_none_outside_it",
+        "the window population's skip masks reach the run's first day, so a fold of that place drops distinct members while the examined count holds (SPEC-049 A19)"
+      ],
+      [
+        "S04922-A-FILL-IS-NOT-A-COPY-OF-ANOTHER",
+        "streaks",
+        "tests/lapse.rs",
+        "                fills.push(BTreeMap::from([(first, 0), (run_start - 1, 1)]));\n",
+        "                fills.push((first..run_start).map(|n| (n, 2)).collect());\n",
+        "lapse::the_walk_reads_every_day_of_its_window_and_none_outside_it",
+        "each fill of the window population is its own member, so a fill replaced by a copy of another keeps the examined count and drops distinct (SPEC-049 A19)"
+      ],
+      [
+        "S04923-A-FUTURE-STUDY-AXIS-KEEPS-BOTH-VALUES",
+        "streaks",
+        "tests/lapse.rs",
+        "                    for future_study in [false, true] {\n",
+        "                    for future_study in [false, false] {\n",
+        "lapse::the_walk_reads_every_day_of_its_window_and_none_outside_it",
+        "the window population's future-study axis holds both values, so an axis collapsed to one keeps the examined count and drops distinct (SPEC-049 A19)"
+      ],
+      [
+        "S04924-A-OFFSETS-ARE-EACH-DISTINCT",
+        "coordination",
+        "tests/lapse.rs",
+        "    for offset in [-720_i64, -300, -210, 0, 330, 345, 540, 840] {\n",
+        "    for offset in [-720_i64, -300, -210, 0, 330, 330, 540, 840] {\n",
+        "lapse::a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary",
+        "the rollover population's eight offsets are eight, so two made equal keep the examined count and drop distinct (SPEC-049 A20)"
+      ],
+      [
+        "S04925-A-ROLLOVER-HOUR-AXIS-KEEPS-BOTH-VALUES",
+        "coordination",
+        "tests/lapse.rs",
+        "        for hour in [0_i64, 4] {\n",
+        "        for hour in [4_i64, 4] {\n",
+        "lapse::a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary",
+        "the rollover population's hour axis holds both values, so an axis collapsed to one keeps the examined count and drops distinct (SPEC-049 A20)"
+      ],
+      [
+        "S04926-A-NOW-INSTANTS-ARE-EACH-DISTINCT",
+        "coordination",
+        "tests/lapse.rs",
+        "                    (begins(offset, hour, d + 2), None),\n",
+        "                    (begins(offset, hour, d + 3), Some(d + 1)),\n",
+        "lapse::a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary",
+        "the rollover population's four instants of now are four, so one replaced by a copy of another keeps the examined count and drops distinct (SPEC-049 A20)"
+      ],
+      [
+        "S04927-THE-LAPSE-JUDGE-IS-HANDED-EACH-INSTANT",
+        "coordination",
+        "tests/lapse.rs",
+        "                    review_at(t),\n",
+        "                    review_at(begins(offset, hour, d)),\n",
+        "lapse::a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary",
+        "the lapse judge is handed the review at each of the seven instants, so the review folded to its day's first instant keeps the examined count, still feeds the day judge every instant, and drops the lapse judge's distinct members (SPEC-049 A20)"
+      ],
+      [
+        "S04928-THE-DAY-JUDGE-IS-HANDED-EACH-INSTANT",
+        "coordination",
+        "tests/lapse.rs",
+        "                    day_judge(the_rule, t),\n",
+        "                    day_judge(the_rule, begins(offset, hour, d)),\n",
+        "lapse::a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary",
+        "the day judge is handed each of the seven instants, so the instant folded to its day's first keeps the examined count, still feeds the lapse judge every review, and drops the day judge's distinct members (SPEC-049 A20)"
+      ],
+      [
+        "S04929-THE-EARLIER-REVIEW-IS-ON-ITS-OWN-STUDY-DAY",
+        "coordination",
+        "tests/lapse.rs",
+        "                    review_at(begins(offset, hour, d - 10) + HOUR_MS),\n",
+        "                    review_at(t),\n",
+        "lapse::a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary",
+        "each member hands the lapse judge two study days of one review, so the earlier review moved onto the day of the later one keeps the examined count and every distinct count and drops the study days holding one review (SPEC-049 A20)"
+      ],
+      [
+        "S04930-AN-ANSWER-OF-EASE-ONE-IS-A-STUDY-REVIEW",
+        "coordination",
+        "src/lapse.rs",
+        "            let studied = u32::from(is_study_event(review.kind, review.ease));\n",
+        "            let studied = u32::from(is_study_event(review.kind, review.ease) && review.ease > 1);\n",
+        "lapse::a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary",
+        "an answer of ease 1 is a study review, so a count that reads only an ease above 1 closes no run on a day of ease-1 answers; the population hands both reviews at ease 0, 1 and 2 with every kind from -1 to 4, and the ease boundary moved one step up decides 128 of its members (SPEC-049 A20)"
       ]
     ]
   }
