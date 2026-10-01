@@ -160,6 +160,14 @@
         "        return None\n",
         "a plan with no listing for a shard refuses the shard's report (SPEC-126 A9)",
         "test_mutation_python_shard_binding.TheReportIsBoundToItsSlotAndItsListing.test_a_plan_that_lists_no_mutants_for_a_shard_refuses_its_report"
+      ],
+      [
+        "S12620-V-A-SKIPPED-ENTRY-DOES-NOT-END-THE-READ",
+        "scripts/mutation-verdict.py",
+        "                return [], f\"it files {len(mutants)} mutant(s) under {path}, which no class reads\"\n            continue\n",
+        "                return [], f\"it files {len(mutants)} mutant(s) under {path}, which no class reads\"\n            break\n",
+        "an entry under a path no class reads, with no mutants, is skipped and the reader goes on: a later entry that holds a refusal is still read and refused by name (SPEC-126 A10)",
+        "test_mutation_python_shard_binding.ASkippedEntryDoesNotHideALaterOne.test_a_skipped_entry_before_a_bad_one_is_refused"
       ]
     ]
   }

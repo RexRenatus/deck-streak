@@ -12,6 +12,7 @@ run here: each report is written in the runner's own schema, with the real coord
 `list_source` gives.
 """
 
+import ast
 import contextlib
 import copy
 import importlib.util
@@ -665,3 +666,218 @@ class EmptyReaderPlan(Plan):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+#: The plans the skipped-entry population is generated over: two shards, and four.
+SKIP_COUNTS = (2, 4)
+#: The functions whose loops read a shard's report: the slot reader, the shard reader, the judge.
+READER_FUNCTIONS = ("python_reports", "read_python_shard", "judge_python")
+
+
+def loop_exits():
+    """The census (SPEC-126 A10): every `continue` and `break` (kind Loop) and every early `return` inside a
+    loop in the functions that read a shard's report, as (function, kind, line), in source order,
+    from the verdict program's own syntax tree. A skipped entry is an exit; the member that puts a
+    bad entry behind it is generated per exit, so an exit added later is a miscount here."""
+    tree = ast.parse(VERDICT.read_text(encoding="utf-8"))
+    found = []
+    for function in ast.walk(tree):
+        if not isinstance(function, ast.FunctionDef) or function.name not in READER_FUNCTIONS:
+            continue
+        for loop in ast.walk(function):
+            if not isinstance(loop, (ast.For, ast.While)):
+                continue
+            for node in ast.walk(loop):
+                if isinstance(node, (ast.Continue, ast.Break, ast.Return)):
+                    kind = "Return" if isinstance(node, ast.Return) else "Loop"
+                    found.append((function.name, kind, node.lineno))
+    return sorted(set(found))
+
+
+#: Per exit of the census, (function, kind), how many the program holds: the table the members are
+#: generated from. The shard reader's early returns are its refusals, in source order.
+EXITS = {
+    ("python_reports", "Loop"): 2,
+    ("read_python_shard", "Loop"): 1,
+    ("read_python_shard", "Return"): 6,
+    ("judge_python", "Loop"): 3,
+}
+#: The entries a shard reader refuses, one per early return of `read_python_shard`, in source order.
+BAD_ENTRIES = (
+    ("an entry that is not an object", lambda: 5),
+    ("a mutants that is not a list", lambda: {"path": SCRIPT, "mutants": "abc"}),
+    (
+        "a mutant filed under a path no class reads",
+        lambda: {"path": "README.md", "mutants": [ghost(9900)]},
+    ),
+    (
+        "a byte readers that is not a list",
+        lambda: {"path": SCRIPT, "mutants": [], "byte_readers": "x"},
+    ),
+    ("a mutant record that is not an object", lambda: {"path": SCRIPT, "mutants": [5]}),
+    (
+        "an outcome off the runner's vocabulary",
+        lambda: {"path": SCRIPT, "mutants": [dict(ghost(9901), outcome="pending")]},
+    ),
+)
+#: The entries a shard reader skips: a path no class reads, filed with no mutants, or with the key absent.
+SKIPPED_ENTRIES = (
+    {"path": "README.md", "mutants": []},
+    {"path": "crates/core/src/lib.rs"},
+    {"mutants": []},
+)
+
+
+def skipped_members(plan):
+    """(family, label, slots, wrong slots) for a skipped entry that comes BEFORE an entry whose
+    reading changes the verdict. In a report, a skipped entry and then each refused entry; with the
+    skipped entry alone the report is read and accepted. Across slots, a missing or an unreadable
+    report and then a later slot whose report is another shard's."""
+    n = plan.count
+    for k in range(n):
+        for index, skipped in enumerate(SKIPPED_ENTRIES):
+            slots = plan.correct()
+            slots[k]["files"].append(copy.deepcopy(skipped))
+            yield (
+                "skipped alone",
+                f"shard {k}: skipped entry {index} and nothing after",
+                slots,
+                set(),
+            )
+            for what, make in BAD_ENTRIES:
+                slots = plan.correct()
+                slots[k]["files"] += [copy.deepcopy(skipped), make()]
+                yield (
+                    "skipped then bad",
+                    f"shard {k}: skipped entry {index}, then {what}",
+                    slots,
+                    {k},
+                )
+    for k in range(n - 1):
+        for how, lost in (("missing", None), ("unreadable", "{not json")):
+            for j in range(k + 1, n):
+                slots = plan.correct()
+                slots[k] = lost
+                slots[j] = copy.deepcopy(plan.reports[(j + 1) % n])
+                yield (
+                    "slot skipped",
+                    f"slot {k} {how}, then slot {j} holds another's report",
+                    slots,
+                    {k, j},
+                )
+
+
+def judged_lines(plan, slots):
+    """The judge's whole output for `slots`, in process."""
+    return plan.lay(slots)
+
+
+def judge_members(plan):
+    """(family, label, slots, lines the judge must say) for an entry or a mutant the judge passes
+    over BEFORE one that changes the verdict: an entry that is VOID, a timeout, a survivor."""
+    n = plan.count
+    for k in range(n):
+        if len(plan.mutants(plan.reports[k])) < 2:
+            continue
+        slots = plan.correct()
+        entry = slots[k]["files"][0]
+        first, second = entry["mutants"][0], entry["mutants"][1]
+        voided = {
+            "path": SCRIPT,
+            "modules": [],
+            "byte_readers": [],
+            "mutants": [],
+            "void": "no tests",
+        }
+        slots[k]["files"].insert(0, voided)
+        second["outcome"] = "survived"
+        yield (
+            "void entry",
+            f"shard {k}: a VOID entry, then a survivor",
+            slots,
+            (
+                f"VOID {SCRIPT}: no tests",
+                f"SURVIVED {second['name']}",
+            ),
+        )
+        slots = plan.correct()
+        entry = slots[k]["files"][0]
+        first, second = entry["mutants"][0], entry["mutants"][1]
+        first["outcome"], second["outcome"] = "timeout", "survived"
+        yield (
+            "timeout",
+            f"shard {k}: a timeout, then a survivor",
+            slots,
+            (
+                f"VOID timeout: {first['name']}",
+                f"SURVIVED {second['name']}",
+            ),
+        )
+        slots = plan.correct()
+        entry = slots[k]["files"][0]
+        first, second = entry["mutants"][0], entry["mutants"][1]
+        first["outcome"], second["outcome"] = "survived", "uncovered"
+        yield (
+            "survivor",
+            f"shard {k}: a survivor, then an uncovered mutant",
+            slots,
+            (
+                f"SURVIVED {first['name']}",
+                f"UNCOVERED {second['name']}",
+            ),
+        )
+
+
+class ASkippedEntryDoesNotHideALaterOne(unittest.TestCase):
+    """SPEC-126 A10: the readers of a shard's report pass over an entry, a slot or a mutant and go
+    on. Every such exit, found by an AST census, has a member that puts an entry whose reading
+    changes the verdict BEHIND it; an exit that stopped the loop instead would leave that entry
+    unread and the verdict green."""
+
+    def test_the_census_of_loop_exits_is_the_table_the_members_come_from(self):
+        census = examined("loop exit(s) in the readers of a shard's report", loop_exits())
+        by_kind = {}
+        for function, kind, _ in census:
+            by_kind[(function, kind)] = by_kind.get((function, kind), 0) + 1
+        self.assertEqual(by_kind, EXITS)
+        self.assertEqual(len(census), sum(EXITS.values()))
+        self.assertEqual(len(census), 12)
+        self.assertEqual(len(BAD_ENTRIES), EXITS[("read_python_shard", "Return")])
+
+    def test_a_skipped_entry_before_a_bad_one_is_refused(self):
+        totals = {}
+        controlled = {}
+        for count in SKIP_COUNTS:
+            plan = Plan(self, count)
+            for family, label, slots, wrong in examined(
+                f"skipped-before-bad member(s) of {count} shards", list(skipped_members(plan))
+            ):
+                code, named, output = plan.lay(slots)
+                controlled.setdefault(family, (plan, label, slots, wrong))
+                expected = (0, set()) if not wrong else (3, wrong)
+                self.assertEqual((code, named), expected, f"{family}: {label}: {output}")
+                totals[family] = totals.get(family, 0) + 1
+        self.assertEqual(sorted(totals), ["skipped alone", "skipped then bad", "slot skipped"])
+        skipped = len(SKIPPED_ENTRIES)
+        self.assertEqual(totals["skipped then bad"], skipped * len(BAD_ENTRIES) * sum(SKIP_COUNTS))
+        self.assertEqual(totals["skipped alone"], skipped * sum(SKIP_COUNTS))
+        self.assertEqual(
+            totals["slot skipped"], 2 * sum(j for n in SKIP_COUNTS for j in range(1, n))
+        )
+        for family, (plan, label, slots, wrong) in controlled.items():
+            if wrong:
+                plan.control(family, label, slots, wrong)
+
+    def test_the_judge_reads_on_past_an_entry_a_timeout_and_a_survivor(self):
+        seen = 0
+        for count in SKIP_COUNTS[:1]:
+            plan = Plan(self, count)
+            for family, label, slots, lines in examined(
+                f"member(s) of {count} shards the judge passes over", list(judge_members(plan))
+            ):
+                code, _, output = plan.lay(slots)
+                self.assertEqual(code, 1, f"{family}: {label}: {output}")
+                for line in lines:
+                    self.assertIn(line, output, f"{family}: {label}")
+                seen += 1
+        self.assertGreater(seen, 0)
