@@ -2346,7 +2346,7 @@ class EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused(Case):
         "grep": frozenset({"-e", "-v", "-vxF"}),
         "tail": frozenset({"-n"}),
         "sha256sum": frozenset({"-c", "--quiet"}),
-        "find": frozenset({"-maxdepth", "-mindepth", "-printf"}),
+        "find": frozenset({"-maxdepth", "-mindepth", "-printf", "-type", "-writable"}),
     }
     UNKNOWN = "<unknown>"
     # The tools the members run. A writer the body holds that no state reaches is a census failure,
@@ -2493,8 +2493,8 @@ exec /usr/bin/@NAME@ "$@"
         return found
 
     # The figures the census prints, each pinned beside an independent reading of the same text.
-    COMMAND_SITES = 219
-    REDIRECTION_TARGETS = 2
+    COMMAND_SITES = 235
+    REDIRECTION_TARGETS = 1
 
     @classmethod
     def derived_writers(cls, body):
@@ -2529,14 +2529,14 @@ exec /usr/bin/@NAME@ "$@"
             ["$checked"],
             "a redirection writes a path other than the check file",
         )
-        self.assertEqual(len(targets), 2, "the redirections into the check file")
+        self.assertEqual(len(targets), 1, "the redirections into the check file")
         self.assertEqual(
             found,
-            {"mktemp": 1, "find": 14, "mkdir": 2, "ln": 1, "install": 3, "mv": 2}
-            | {"rm": 1, "tar": 3},
+            {"mktemp": 1, "find": 2, "mkdir": 2, "ln": 1, "install": 3, "mv": 2}
+            | {"rm": 2, "tar": 4},
             "the command sites of the host body that can write a path, by tool",
         )
-        self.assertEqual(sum(found.values()), 27, "the command sites that can write a path")
+        self.assertEqual(sum(found.values()), 17, "the command sites that can write a path")
 
     def test_a_tool_the_census_does_not_know_turns_it_red(self):
         body = self.host_body()
