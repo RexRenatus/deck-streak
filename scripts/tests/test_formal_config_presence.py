@@ -12,6 +12,7 @@ import contextlib
 import importlib.util
 import io
 import json
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -97,13 +98,50 @@ def fresh_module():
     return module
 
 
+# A link at the path: the checker reads a link's own text, so the file behind it is never read.
+LINK = "a link"
+
+
+def unloadable():
+    """Every way the committed file fails to load, one per arm of the loader, as (label, bytes,
+    None for no file, or LINK): absent; a link, here to a readable copy of the declared file; and
+    each way the parser refuses bytes: syntax, encoding, a depth past every recursion limit it
+    keeps, and an integer past the interpreter's digit limit."""
+    deep = sys.getrecursionlimit() * 100
+    return [
+        ("the file is absent", None),
+        ("the file is a link", LINK),
+        ("the file is not JSON", b"{"),
+        ("the file is not UTF-8", b"\xff"),
+        ("the file nests past the parser's depth", b"[" * deep + b"]" * deep),
+        (
+            "the file holds an integer past the digit limit",
+            b"1" * (sys.get_int_max_str_digits() + 1),
+        ),
+    ]
+
+
 def plants(module):
-    """Every way the committed file can be refused, as (label, text or None): absent, not JSON, and
-    each fault the module generates from its own field table, written as the file."""
-    found = [("the file is absent", None), ("the file is not JSON", "{")]
+    """Every way the committed file can be refused, as (label, payload, unloadable): each way it
+    fails to load, and each fault the module generates from its own field table, written as the
+    file."""
+    found = [(label, payload, True) for label, payload in unloadable()]
     for name, doc in module.planted_faults():
-        found.append((name, json.dumps(doc, indent=2) + "\n"))
+        found.append((name, (json.dumps(doc, indent=2) + "\n").encode("utf-8"), False))
     return found
+
+
+def install(directory, payload, module):
+    """The plant as a file in a fresh `directory`, and its path."""
+    directory.mkdir()
+    path = directory / "formal.json"
+    if payload is LINK:
+        target = directory / "declared.json"
+        target.write_text(json.dumps(module.EXPECTED, indent=2) + "\n", encoding="utf-8")
+        path.symlink_to(target.name)
+    elif payload is not None:
+        path.write_bytes(payload)
+    return path
 
 
 def run_with(module, path):
@@ -139,10 +177,10 @@ class PresenceControls(unittest.TestCase):
         self.assertGreaterEqual(len(presence), 2)
 
     def test_a_refused_committed_file_fails_every_reader_by_assertion_and_errors_none(self):
-        """A8: each way the committed file can be refused, absent, not JSON and every fault the
-        module generates, is installed as the file, and the module then runs with no error at all,
-        a failure by assertion for each test that reads the committed file, and, for the two
-        unreadable files, exactly the tests that load it."""
+        """A8: each way the committed file can be refused, each way it fails to load and every
+        fault the module generates, is installed as the file, and the module then runs with no
+        error at all, a failure by assertion for each test that reads the committed file, and, for
+        each file that fails to load, exactly the tests that load it."""
         tree = ast.parse(MODULE.read_text(encoding="utf-8"))
         calls = reader_calls(tree)
         presence = {test for test, _, _, _, committed in calls if committed}
@@ -152,16 +190,14 @@ class PresenceControls(unittest.TestCase):
         population = examined("planted refusals of the committed file", plants(module))
         escaped, unread, unloaded = [], [], []
         with tempfile.TemporaryDirectory() as scratch:
-            for label, text in population:
-                path = Path(scratch) / ("absent.json" if text is None else "formal.json")
-                if text is not None:
-                    path.write_text(text, encoding="utf-8")
+            for index, (label, payload, unloads) in enumerate(population):
+                path = install(Path(scratch) / str(index), payload, module)
                 failed, errored = run_with(module, path)
                 if errored:
                     escaped.append(f"{label}: {errored}")
                 if not presence <= failed:
                     unread.append(f"{label}: {sorted(presence - failed)} did not fail")
-                if text is None or text == "{":
+                if unloads:
                     if failed != loaders:
                         unloaded.append(
                             f"{label}: failed {sorted(failed)}, loaders {sorted(loaders)}"
@@ -169,7 +205,7 @@ class PresenceControls(unittest.TestCase):
         print(f"examined {len(loaders)} tests that load the committed file")
         self.assertEqual(escaped, [], "a refusal escaped a test as an error, not a failure")
         self.assertEqual(unread, [], "a presence control passed on a refused file")
-        self.assertEqual(unloaded, [], "an unreadable file did not fail exactly the loaders")
+        self.assertEqual(unloaded, [], "a file that fails to load did not fail exactly the loaders")
 
 
 if __name__ == "__main__":

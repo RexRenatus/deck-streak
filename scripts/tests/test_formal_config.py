@@ -185,6 +185,35 @@ def toolchain_sources(doc, root):
     return named
 
 
+# R6: every shape a tree can commit at the pin path. The checker reads the path's blob, and a link
+# is a blob holding the name it points at, so a link is a pin file whatever it names.
+PIN_SHAPES = (
+    "absent",
+    "a file",
+    "an empty file",
+    "a link to a file",
+    "a dangling link",
+    "a link to itself",
+)
+
+
+def plant_pin(pin, shape):
+    """Install one of PIN_SHAPES at `pin`."""
+    if shape == "a file":
+        pin.write_text("{}\n", encoding="utf-8")
+    elif shape == "an empty file":
+        pin.write_bytes(b"")
+    elif shape == "a link to a file":
+        pin.with_name("pin-target.json").write_text("{}\n", encoding="utf-8")
+        pin.symlink_to("pin-target.json")
+    elif shape == "a dangling link":
+        pin.symlink_to("pin-target.json")
+    elif shape == "a link to itself":
+        pin.symlink_to(pin.name)
+    else:
+        assert shape == "absent", shape
+
+
 def load():
     if not CONFIG.is_file():
         raise AssertionError("config/formal.json is absent: the formal checker reads none")
@@ -541,31 +570,31 @@ class FormalConfig(unittest.TestCase):
 
     def test_the_tree_names_one_toolchain_source_the_identity(self):
         """R6: the tree names the checker's toolchain by one source, the identity in the settings
-        file, and holds no pin file. The population is every combination of the two sources the
-        checker reads, each built in a scratch root, and only the identity alone is admitted."""
+        file, and holds no pin file. The population is the settings field named or not, times
+        every shape a tree can commit at the pin path, each built in a scratch root. The checker
+        reads the path's blob, so every shape but an absent one is a source, a link whatever it
+        names, and only the identity alone is admitted."""
         self.assertEqual(toolchain_sources(load(), REPO), ["toolchain.identity"], "the tree")
         combinations = examined(
-            "toolchain source combinations", list(itertools.product((True, False), repeat=2))
+            "toolchain source combinations", list(itertools.product((True, False), PIN_SHAPES))
         )
-        self.assertEqual(set(combinations), set(itertools.product((True, False), repeat=2)))
-        sources = {}
-        for named, pinned in combinations:
+        self.assertEqual(len(combinations), 2 * len(PIN_SHAPES))
+        sources, want = {}, {}
+        for named, shape in combinations:
             doc = EXPECTED if named else without(("toolchain",))
             with tempfile.TemporaryDirectory() as scratch:
                 root = Path(scratch)
                 (root / "config").mkdir()
-                if pinned:
-                    (root / "config" / "formal-toolchain.json").write_text("{}\n", encoding="utf-8")
-                sources[(named, pinned)] = toolchain_sources(doc, root)
+                plant_pin(root / "config" / "formal-toolchain.json", shape)
+                sources[(named, shape)] = toolchain_sources(doc, root)
+            want[(named, shape)] = ["toolchain.identity"] * named + [
+                "config/formal-toolchain.json"
+            ] * (shape != "absent")
         self.assertEqual(
-            sources,
-            {
-                (True, True): ["toolchain.identity", "config/formal-toolchain.json"],
-                (True, False): ["toolchain.identity"],
-                (False, True): ["config/formal-toolchain.json"],
-                (False, False): [],
-            },
-            "the sources each combination names, as the checker reads them (R6)",
+            sources, want, "the sources each combination names, as the checker reads them (R6)"
+        )
+        self.assertIn(
+            ["toolchain.identity", "config/formal-toolchain.json"], list(sources.values())
         )
 
 
