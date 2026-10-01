@@ -143,7 +143,7 @@
         "if get(doc, (\"toolchain\", \"identity\"))[1]:",
         "if get(doc, (\"toolchain\", \"identity\"))[0]:",
         "the identity is named by its value, not by the field being present (SPEC-295 A7)",
-        "test_formal_config.FormalConfig.test_the_tree_names_one_toolchain_source_the_identity"
+        "test_formal_config.FormalConfig.test_the_identity_is_named_by_the_field_present_whatever_its_value"
       ],
       [
         "S29519-THE-IDENTITY-IS-READ-AS-THE-TOOLCHAIN-OBJECT",
@@ -151,7 +151,7 @@
         "if get(doc, (\"toolchain\", \"identity\"))[1]:",
         "if get(doc, (\"toolchain\",))[1]:",
         "the identity is named by the toolchain object being present (SPEC-295 A7)",
-        "test_formal_config.FormalConfig.test_the_tree_names_one_toolchain_source_the_identity"
+        "test_formal_config.FormalConfig.test_the_identity_is_named_by_the_field_present_whatever_its_value"
       ],
       [
         "S29520-EVERY-PIN-SHAPE-NAMES-THE-PIN",
