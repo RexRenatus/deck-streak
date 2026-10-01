@@ -72,6 +72,166 @@
         "all(is_posint(v) for v in list(value.values())[-1:])",
         "an integer map judged by its last value alone admits a bad value that precedes a good one (SPEC-295 A3 and A4)",
         "test_formal_config.FormalConfig.test_the_reader_refuses_each_planted_fault"
+      ],
+      [
+        "S29510-THE-PIN-FILE-IS-NEVER-LOOKED-FOR",
+        "scripts/tests/test_formal_config.py",
+        "if os.path.lexists(root / PIN_FILE):",
+        "if False:",
+        "a tree that commits the pin file beside the settings field names one source: the reader that never looks for the pin file misses the second (SPEC-295 A7)",
+        "test_formal_config.FormalConfig.test_the_tree_names_one_toolchain_source_the_identity"
+      ],
+      [
+        "S29511-THE-IDENTITY-IS-ALWAYS-NAMED",
+        "scripts/tests/test_formal_config.py",
+        "if get(doc, (\"toolchain\", \"identity\"))[1]:",
+        "if True:",
+        "a document that does not name the identity is counted as naming it, so the no-source combinations read wrong (SPEC-295 A7)",
+        "test_formal_config.FormalConfig.test_the_tree_names_one_toolchain_source_the_identity"
+      ],
+      [
+        "S29512-THE-COMMITTED-PRESENCE-CONTROL-PASSES",
+        "scripts/tests/test_formal_config.py",
+        "self.fail(f\"presence control: the committed file is refused: {refusal}\")",
+        "pass",
+        "the presence control of the toolchain test swallows the refusal instead of failing by assertion (SPEC-295 A8)",
+        "test_formal_config_presence.PresenceControls.test_every_call_of_the_reader_fails_by_assertion_when_it_refuses"
+      ],
+      [
+        "S29513-THE-FILE-PRESENCE-CONTROL-PASSES",
+        "scripts/tests/test_formal_config.py",
+        "self.fail(f\"presence control: the file is refused: {refusal}\")",
+        "pass",
+        "the presence control of the planted-fault test swallows the refusal instead of failing by assertion (SPEC-295 A8)",
+        "test_formal_config_presence.PresenceControls.test_every_call_of_the_reader_fails_by_assertion_when_it_refuses"
+      ],
+      [
+        "S29514-A-LINK-AT-THE-SETTINGS-PATH-IS-FOLLOWED",
+        "scripts/tests/test_formal_config.py",
+        "refuse_link_components(CONFIG, ROOT)",
+        "refuse_link_components(CONFIG.parent, ROOT)",
+        "the loader refuses a link at the settings file's directory and never one at the file, so a link is read through to its target (SPEC-295 A8)",
+        "test_formal_config_presence.PresenceControls.test_a_refused_committed_file_fails_every_reader_by_assertion_and_errors_none"
+      ],
+      [
+        "S29515-AN-ABSENT-SETTINGS-FILE-IS-NOT-REFUSED",
+        "scripts/tests/test_formal_config.py",
+        "if not CONFIG.is_file():",
+        "if False:",
+        "the loader never refuses an absent settings file by assertion (SPEC-295 A8)",
+        "test_formal_config_presence.PresenceControls.test_a_refused_committed_file_fails_every_reader_by_assertion_and_errors_none"
+      ],
+      [
+        "S29516-A-RECURSION-ERROR-ESCAPES-THE-LOADER",
+        "scripts/tests/test_formal_config.py",
+        "except (ValueError, RecursionError) as error:",
+        "except ValueError as error:",
+        "a nesting past the recursion limit escapes the loader as an error, not a failure (SPEC-295 A8)",
+        "test_formal_config_presence.PresenceControls.test_a_refused_committed_file_fails_every_reader_by_assertion_and_errors_none"
+      ],
+      [
+        "S29517-A-DIGIT-LIMIT-ESCAPES-THE-LOADER",
+        "scripts/tests/test_formal_config.py",
+        "except (ValueError, RecursionError) as error:",
+        "except (json.JSONDecodeError, RecursionError) as error:",
+        "an integer past the digit limit and bytes that are not UTF-8 escape the loader as errors (SPEC-295 A8)",
+        "test_formal_config_presence.PresenceControls.test_a_refused_committed_file_fails_every_reader_by_assertion_and_errors_none"
+      ],
+      [
+        "S29518-THE-IDENTITY-IS-READ-AS-ITS-VALUE",
+        "scripts/tests/test_formal_config.py",
+        "if get(doc, (\"toolchain\", \"identity\"))[1]:",
+        "if get(doc, (\"toolchain\", \"identity\"))[0]:",
+        "the identity is named by its value, not by the field being present (SPEC-295 A7)",
+        "test_formal_config.FormalConfig.test_the_identity_is_named_by_the_field_present_whatever_its_value"
+      ],
+      [
+        "S29519-THE-IDENTITY-IS-READ-AS-THE-TOOLCHAIN-OBJECT",
+        "scripts/tests/test_formal_config.py",
+        "if get(doc, (\"toolchain\", \"identity\"))[1]:",
+        "if get(doc, (\"toolchain\",))[1]:",
+        "the identity is named by the toolchain object being present (SPEC-295 A7)",
+        "test_formal_config.FormalConfig.test_the_identity_is_named_by_the_field_present_whatever_its_value"
+      ],
+      [
+        "S29520-EVERY-PIN-SHAPE-NAMES-THE-PIN",
+        "scripts/tests/test_formal_config.py",
+        "] * (shape != \"absent\")",
+        "] * True",
+        "the expectation names the pin file for every shape, an absent one too (SPEC-295 A7)",
+        "test_formal_config.FormalConfig.test_the_tree_names_one_toolchain_source_the_identity"
+      ],
+      [
+        "S29521-NON-UTF8-BYTES-ARE-REPAIRED-AND-READ",
+        "scripts/tests/test_formal_config.py",
+        "return CONFIG.read_text(encoding=\"utf-8\")",
+        "return CONFIG.read_bytes().decode('utf-8', 'replace')",
+        "bytes that are not UTF-8 are repaired and read instead of refused (SPEC-295 A8)",
+        "test_formal_config.FormalConfig.test_the_loader_refuses_bytes_that_are_not_utf8_wherever_they_sit"
+      ],
+      [
+        "S29522-A-LOADER-THAT-NO-PRESENCE-CONTROL-HOLDS-PASSES-ON-AN-ABSENT-FILE",
+        "scripts/tests/test_formal_config.py",
+        "toolchain_sources(load(), REPO)",
+        "toolchain_sources(load() if CONFIG.is_file() else EXPECTED, REPO)",
+        "a test that loads the committed file but is no presence control passes when the file is absent, which only the check that every loader fails on a file that fails to load sees (SPEC-295 A8)",
+        "test_formal_config_presence.PresenceControls.test_a_refused_committed_file_fails_every_reader_by_assertion_and_errors_none"
+      ],
+      [
+        "S29523-A-PRESENCE-CONTROL-LOADS-THE-FILE-AND-NEVER-READS-IT",
+        "scripts/tests/test_formal_config.py",
+        "admitted_doc = read(load())",
+        "admitted_doc = read(load()) if False else load()",
+        "a presence control keeps the reader's syntax but never reads the committed file, which only the check that every presence control fails on every refusal sees (SPEC-295 A8)",
+        "test_formal_config_presence.PresenceControls.test_a_refused_committed_file_fails_every_reader_by_assertion_and_errors_none"
+      ],
+      [
+        "S29524-A-LOADER-RAISES-AN-ERROR-ON-A-GENERATED-FAULT",
+        "scripts/tests/test_formal_config.py",
+        "self.assertTrue(is_repo_relative(value), value)",
+        "self.assertTrue(is_repo_relative(value), value + \"\")",
+        "a test that loads the committed file raises an error, not a failure, on a generated fault whose signers path is no string, which only the no-error check sees (SPEC-295 A8)",
+        "test_formal_config_presence.PresenceControls.test_a_refused_committed_file_fails_every_reader_by_assertion_and_errors_none"
+      ],
+      [
+        "S29525-THE-LOADER-JUDGES-ONLY-THE-FILE-FOR-A-LINK",
+        "scripts/tests/test_formal_config.py",
+        "refuse_link_components(CONFIG, ROOT)",
+        "CONFIG.is_symlink() and refuse_link_components(CONFIG, ROOT)",
+        "the loader refuses a link at the settings file and follows a link at its directory, so the file behind it is read where the checker finds none (SPEC-295 A8)",
+        "test_formal_config_presence.PresenceControls.test_a_refused_committed_file_fails_every_reader_by_assertion_and_errors_none"
+      ],
+      [
+        "S29526-THE-SOURCE-POPULATION-DROPS-THE-FIELD-ABSENT-HALF",
+        "scripts/tests/test_formal_config.py",
+        "list(itertools.product((True, False), PIN_SHAPES))",
+        "list(itertools.product((True, True), PIN_SHAPES))",
+        "the source population holds twelve members with the settings field always named, so no tree without the field is judged (SPEC-295 A7)",
+        "test_formal_config.FormalConfig.test_the_tree_names_one_toolchain_source_the_identity"
+      ],
+      [
+        "S29527-THE-PIN-DIRECTORY-IS-NEVER-JUDGED-FOR-A-LINK",
+        "scripts/tests/test_formal_config.py",
+        "refuse_link_components((root / PIN_FILE).parent, root)",
+        "None",
+        "the reader of the pin path follows a link at the directory the pin file sits in, so a pin file the checker finds none of is listed or missed through it (SPEC-295 A7 and A8)",
+        "test_formal_config_presence.PresenceControls.test_a_link_at_any_component_of_a_path_the_module_reads_is_refused_by_assertion"
+      ],
+      [
+        "S29528-THE-LINK-WALK-REFUSES-ONLY-A-LINK-WHOSE-TARGET-EXISTS",
+        "scripts/tests/_support.py",
+        "if os.path.islink(walked):",
+        "if os.path.islink(walked) and os.path.exists(walked):",
+        "the component walk lets a dangling link and a link to itself through unrefused (SPEC-295 A8)",
+        "test_formal_config_presence.PresenceControls.test_a_link_at_any_component_of_a_path_the_module_reads_is_refused_by_assertion"
+      ],
+      [
+        "S29529-THE-LINK-WALK-SKIPS-THE-FIRST-COMPONENT",
+        "scripts/tests/_support.py",
+        "for part in relative.parts:",
+        "for part in relative.parts[1:]:",
+        "the component walk never judges the directory directly below the root, the component both paths sit in (SPEC-295 A8)",
+        "test_formal_config_presence.PresenceControls.test_a_link_at_any_component_of_a_path_the_module_reads_is_refused_by_assertion"
       ]
     ]
   }
