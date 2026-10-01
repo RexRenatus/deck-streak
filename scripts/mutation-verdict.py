@@ -17,7 +17,9 @@ R6, R10, R12; ADR-057).
     python3 scripts/mutation-verdict.py exclusions [--root DIR]
 
 PLAN first decides the run's scope from the event that started it (R3), each case by name, because
-`ci` fails on a skipped need but a leg LEGS reads as not started. A pull request into `dev` is
+`ci` fails on any skipped need but two: `mutation-rust`, not started when the plan's shards list no
+mutant, and `mutation-rows`, not started when the plan selects no row and no retirement check is
+due, each of which LEGS judges against the plan (SPEC-290). A pull request into `dev` is
 judged on its diff, and a release pull request into `main` on its merge diff, every change `dev`
 carries since the last release; a push that merges a pull request (`Merge pull request #N`) is
 not-applicable, naming `#N`, whose jobs judged that same tree; a push that names none is judged on
@@ -26,8 +28,12 @@ ref, BASE is `HEAD^1`) and writes `plan.json` and `git.diff` into `--out`: every
 its class (R2), each production file's changed lines split into code lines, blank or comment lines
 and, in Rust, test-only lines, those inside an item cargo-mutants never mutates for a test attribute
 (SPEC-057 R22), the rows the diff selects (R10), and the web files Stryker mutates whole. It prints
-each class's case by name: why it applies, or why it is not-applicable. Under GitHub Actions it
-writes the step outputs `scope`, `case`, `rust`, `web`, `oracle`, `rows` and `mutate`.
+each class's case by name: why it applies, or why it is not-applicable. The `scripts` class does
+not apply when every changed script's syntax tree, read at the diff's merge-base and at its head, is
+equal once docstrings are set aside: its case reads `docstring-only` and names each file (ADR-307),
+and a script added or deleted, not UTF-8 or that does not parse leaves the class applying. Under
+GitHub Actions it writes the step outputs `scope`, `case`, `rust`, `web`, `oracle`, `scripts`,
+`rows` and `mutate`.
 
 SHARDS sizes the Rust run from cargo-mutants' own listing of the diff's mutants (`--list --json
 --in-diff`), so no shard reaches its job's timeout (R18). Each round-robin shard's time is projected
