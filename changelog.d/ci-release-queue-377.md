@@ -12,3 +12,6 @@
   calls is one of this repository's, held to the same queue. Its group reads the tag's ref alone,
   its cancellation is absent or the boolean false, and no other workflow's or job's block can render
   as its group.
+- The tests read each workflow file through one loader, as its bytes, and a census taken when the
+  tests run refuses any other read of a file or a process's output, and any import by a computed
+  name, in every module that can reach the loader, unless it is listed with its reason.

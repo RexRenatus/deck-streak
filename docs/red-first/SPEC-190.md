@@ -126,3 +126,20 @@ census: red at ee89d8e: 'def workflow_file_text(' not found in the test module
 loaders: green at 81ff76b
 census: green at 81ff76b
 ```
+
+## Addendum: A12, the census default-deny over the loader's population, and A11's tab after a dash (#456, round 8)
+
+The killer was committed first, alone, at 5bbe692, with A11's members for a tab after a sequence
+item's `-` and the refusal's words for a tab in the indentation. Against the head's census, which
+read `read_text`, `read_bytes` and `open` by name in the modules whose source names
+`test_ci_workflows`, 56 of the 90 plants stayed green, each failing the
+killer by assertion; the three controls and the plants the head's census already refused passed.
+A11 failed by assertion on 97 members. The census over the loader's population and
+the reader's refusal of a tab after a dash (610a658) turned both green. Quoted as text:
+
+```text
+A12: red at 5bbe692: 56 plants: the census was green
+A11: red at 5bbe692: First list contains 97 additional elements.
+A12: green at 610a658
+A11: green at 610a658
+```

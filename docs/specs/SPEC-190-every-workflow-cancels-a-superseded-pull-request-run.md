@@ -277,7 +277,7 @@ The rule, over every workflow file:
    Every other form is refused by its line, by a message that names it (SPEC-034 R7): a character
    other than printable ASCII and the tab, a byte-order mark and a carriage return that does not
    end a line included; a tab in any line's indentation, a comment or blank line outside a block
-   scalar's text included; a key that is not such a name, and a plain value holding `: `, which YAML reads as a
+   scalar's text included; a tab after a sequence item's `-`; a key that is not such a name, and a plain value holding `: `, which YAML reads as a
    key; a key a mapping already holds, read without case; a value whose first character is any other
    YAML indicator (`,[]{}#&*!|>'"%@` or the backtick) or `-`, `?` or `:` before a space or the
    line's end, so a sequence item that is itself a sequence or an explicit key is refused; an empty
@@ -289,6 +289,16 @@ The rule, over every workflow file:
    place, a `---` among them. GitHub's parser refuses a file YAML refuses ("The file is not valid
    YAML"), and a form YAML reads otherwise than as the text the reader would return is misread, so
    each is refused rather than read.
+   The tests read a workflow file through one loader alone, `workflow_file_text` in
+   `test_ci_workflows.py`: its bytes, decoded as strict UTF-8 and never as `utf-8-sig`, so a
+   byte-order mark reaches the reader and is refused by its name. A census computed when the tests
+   run proves it, default-deny: in every module that imports the loader's module at any depth, a
+   re-export and a module the tests add included, and in `_support.py`, every call that can read a
+   file, a stream or a process's output, every call whose callee cannot be named and every call of a
+   function that reads what it is given is the loader's one definition, bound by its module and
+   qualified name, or a read listed by its module, qualified name and text, with its count and its
+   reason. Every site in the test directory that imports, runs code or reaches a namespace by a name
+   held in data is listed the same way, and any other is refused (A12).
 2. Schema. Every value a release workflow holds is of a type GitHub's workflow parser defines there,
    read with case: each key, each constant, and each mapping, sequence or scalar. This holds from its
    root through `on:` and every event's mapping, `permissions`, `defaults`, `env`, `concurrency` and
@@ -335,11 +345,13 @@ that renders empty; the rule refuses all three.
 | id | criterion | decided by |
 |---|---|---|
 | A10 | the class is read as GitHub parses it (R12), by a population generated from constants and never listed, each member a set of workflow files beside a release workflow: each `cancel-in-progress` and `queue` a YAML 1.2 reader types, quoted, in a block or as a YAML 1.1 word; a tab in each line's indentation, and a block scalar's line indented less than its text or a blank line above it indented more, against a tab inside a value; a tab in the indentation of a comment line and of a blank line after each line; each line-break character and a byte-order mark where each line ends and inside it, refused by its name, against a line ended by a line feed or a carriage return and a line feed; a workflow file read by the tests as its bytes, as GitHub reads it, so a carriage return or a byte-order mark in it reaches the reader; each character YAML reserves as a plain scalar's first (`@`, the backtick, `%`, `,`, `]` and `}`, and `-`, `?` or `:` before a space on a mapping's value) at every scalar line of a release workflow, a second tag workflow and a called workflow, and a tag filter written as a flow list with an empty entry; each unclosed expression; every event of the parser's schema with each wrong kind of value, and each root and job key with one; callees one to three calls deep, local, remote, missing and in a cycle, and a callee holding a key the parser does not define; a release group that splits one tag's runs, and a job's own block; and every block that can render as a release group, in each context and event. A member GitHub refuses, or whose tag run can be cancelled or replaced, is refused, and a member GitHub runs with its tag's runs kept is not. The membership census is derived from R12's rule, never pinned by name | `test_workflow_concurrency.py` `the_release_class_is_read_as_github_parses_it` |
-| A11 | the reader reads only R12 part 1's named forms, by a population generated from YAML 1.2.2's constants: every printable ASCII character first in a plain value, a sequence item and a flow item, each against the same text quoted; a character outside printable ASCII first; every block scalar header YAML defines, with and without text; a literal block's trailing blank lines and a blank line of it holding a tab; a flow list with an empty entry at every place, alone and before one trailing comma; each key the core schema types, against it quoted; and a comment after each one-line form, after a space or a tab, a comment line, a `#` inside a value and a blank line; each line-break character and a byte-order mark at every place a line holds text, refused by its name and its line, against lines ended by a line feed or a carriage return and a line feed; and a tab in the indentation of a comment line and of a blank line at every place, against a tab in a block's text or a comment's text. A named form reads as YAML reads it, and every other form is refused by its line with the message that names it | `test_ci_workflows.py` `the_reader_reads_only_its_named_forms` |
+| A11 | the reader reads only R12 part 1's named forms, by a population generated from YAML 1.2.2's constants: every printable ASCII character first in a plain value, a sequence item and a flow item, each against the same text quoted; a character outside printable ASCII first; every block scalar header YAML defines, with and without text; a literal block's trailing blank lines and a blank line of it holding a tab; a flow list with an empty entry at every place, alone and before one trailing comma; each key the core schema types, against it quoted; and a comment after each one-line form, after a space or a tab, a comment line, a `#` inside a value and a blank line; each line-break character and a byte-order mark at every place a line holds text, refused by its name and its line, against lines ended by a line feed or a carriage return and a line feed; and a tab in the indentation of a comment line and of a blank line at every place, against a tab in a block's text or a comment's text; and a tab after a sequence item's `-`, before a key or a colon, at the root, nested and under a mapping. A named form reads as YAML reads it, and every other form is refused by its line with the message that names it | `test_ci_workflows.py` `the_reader_reads_only_its_named_forms` |
+| A12 | the tests read a workflow file only through the loader (R12 part 1), by a census computed when the tests run over the modules that import the loader's module at any depth and `_support.py`, never a list of modules: every read site, every call whose callee cannot be named, every call of a function that reads what it is given, and every dynamic import in the test directory, is the loader's one definition, bound by its module and qualified name, or listed by its module, qualified name and text with its count and its reason, so a read swapped with its count kept is refused; and by the census's killer, planted copies of the test directory, each red naming its module: a read by each spelling the census names, in a module that imports the reader, in a new module through a re-export and at each place a site can sit; each path into the population (an alias, a star, a relative, dotted, package or two-level re-export import, an import inside a function or under `try`, a module outside `test_*`, `_support.py`, a helper module the population imports, a reader it defines); each dynamic import; each binding of the loader's name; and each listed site moved, swapped or changed; beside three controls that stay green | `test_ci_workflows.py` `the_census_is_red_on_every_planted_site` |
 
 ```acceptance
 A10: python3 -m unittest discover -s scripts/tests -p test_workflow_concurrency.py -k the_release_class_is_read_as_github_parses_it
 A11: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k the_reader_reads_only_its_named_forms
+A12: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k the_census_is_red_on_every_planted_site
 ```
 
 ### File manifest of the round 5 amendment
@@ -347,8 +359,12 @@ A11: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k th
 | file | context | change |
 |---|---|---|
 | `scripts/tests/test_workflow_concurrency.py` | repo | changed: R12 and A10; A7 applies R12 to every workflow file; the membership census is derived from R12 |
-| `scripts/tests/test_ci_workflows.py` | repo | changed: the reader keeps a scalar's quoting and types it by YAML 1.2's core schema, reads only R12 part 1's named forms and refuses every other form by its line (A11) |
-| `scripts/mutation-rows.d/S19000-S19099.json` | repo | changed: S19015 to S19038, one row per arm of R12 |
+| `scripts/tests/test_ci_workflows.py` | repo | changed: the reader keeps a scalar's quoting and types it by YAML 1.2's core schema, reads only R12 part 1's named forms and refuses every other form by its line (A11); a workflow file is read only through the loader, proved by the census and its killer (A12) |
+| `scripts/tests/test_mutation_workflows.py` | repo | changed: each workflow file is read through the loader (A10, A12) |
+| `scripts/tests/test_release_workflow.py` | repo | changed: `release.yml` is read through the loader (A10, A12) |
+| `scripts/tests/test_rust_cache_workflow.py` | repo | changed: each workflow file is read through the loader (A10, A12) |
+| `scripts/tests/test_mutation_python_verdict.py` | repo | changed: `re` is imported by its name, never through `__import__` (A12) |
+| `scripts/mutation-rows.d/S19000-S19099.json` | repo | changed: S19015 to S19038, one row per arm of R12; S19041 to S19058, the census's killer on the real test directory (A12) |
 | `docs/decisions/ADR-292-a-release-tags-runs-never-replace-a-waiting-run.md` | repo | changed: Decision Outcome, Consequences and considered options hold for R12 |
-| `docs/red-first/SPEC-190.md` | repo | changed: A10 and A11 |
+| `docs/red-first/SPEC-190.md` | repo | changed: A10, A11 and A12 |
 | `changelog.d/ci-release-queue-377.md` | repo | changed: the rule of R12 |
