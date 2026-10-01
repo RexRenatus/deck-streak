@@ -7,7 +7,7 @@ The next milestone's half of the vector writer (SPEC-073 R14). `Formal/Vectors.l
 `lean --run Formal/Vectors.lean NextMilestone` to `run`, which prints one header line naming the
 first covered item and the digest the entry recorded for it, then one line per input with the
 port's answer: the ladder's place in the tie order, the rung, the current value and what is left.
-`phxd formal check` byte-compares the output with `formal/vectors/next-milestone.jsonl`, and
+The formal checker byte-compares the output with `formal/vectors/next-milestone.jsonl`, and
 `--write-vectors` writes it; the file is never edited by hand.
 
 The inputs are every combination of each ladder's values at zero and on either side of each rung
