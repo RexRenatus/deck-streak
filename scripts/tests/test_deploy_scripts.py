@@ -2543,6 +2543,43 @@ exec /usr/bin/@NAME@ "$@"
                 done, before, after = self.outcome(w, argv, good, modes)
                 self.judge(f"{verb} / stale unpack", done, before, after, "host step")
 
+    def test_a_stale_unpack_that_cannot_be_deleted_is_refused_by_that_name(self):
+        for verb in examined("undeletable-unpack member(s)", ["install"]):
+            with tempfile.TemporaryDirectory() as tmp:
+                w, good, argv = self.situation(tmp, verb, "installed")
+                keep = w.root / "releases" / f"{argv[-1]}.partial" / "keep"
+                keep.mkdir(parents=True)
+                (keep / "leftover").write_text("an interrupted unpack\n", encoding="utf-8")
+                keep.chmod(0o555)
+                done, before, after = self.outcome(w, argv, good, [(keep, 0o755)])
+                self.judge(f"{verb} / undeletable unpack", done, before, after, "host step")
+                self.assertIn("unfinished unpack", done.stderr.splitlines()[-1])
+                self.assertTrue((keep / "leftover").is_file(), "the leftover is gone")
+
+    def test_a_stale_drop_in_that_cannot_be_deleted_is_refused(self):
+        stale = f"{JOB}@sync.service.d/30-old.conf"
+
+        def world(tmp):
+            w, good, argv = self.situation(tmp, "install", "installed")
+            (w.units / stale).write_text("[Service]\n", encoding="utf-8")
+            return w, good, argv
+
+        with tempfile.TemporaryDirectory() as tmp:
+            w, good, argv = world(tmp)
+            self.ok(w.run(*argv, **good))
+            deletes = [
+                ln.split("\t")
+                for ln in (w.log / "args.log").read_text(encoding="utf-8").splitlines()
+                if ln.startswith("find\thost\t") and stale in ln and "-delete" in ln
+            ]
+        for _, _, index, *_ in examined("stale-drop-in member(s)", deletes):
+            with tempfile.TemporaryDirectory() as tmp:
+                w, good, argv = world(tmp)
+                planted = {**good, "TOOL_FAILS": f"find:host:{index}"}
+                done, before, after = self.outcome(w, argv, planted, [])
+                self.judge("install / stale drop-in", done, before, after, "host step")
+                self.assertTrue((w.units / stale).is_file(), "the stale drop-in is gone")
+
     def test_a_failed_switch_leaves_no_unit_only_the_new_release_ships(self):
         for verb in examined("new-unit member(s)", ["install", "rollback-unkept"]):
             with self.subTest(verb=verb), tempfile.TemporaryDirectory() as tmp:

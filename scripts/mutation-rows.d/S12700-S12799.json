@@ -727,7 +727,7 @@
         "find \"$rel.partial\" -delete || refuse \"could not remove an unfinished unpack\"",
         "find \"$rel.partial\" -delete || true",
         "an unfinished unpack that cannot be removed is a named refusal (SPEC-127 A42)",
-        "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_a_stale_unpack_in_a_releases_directory_that_cannot_take_a_write_is_refused"
+        "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_a_stale_unpack_that_cannot_be_deleted_is_refused_by_that_name"
       ],
       [
         "S12792-A-A-STALE-DROP-IN-DELETE-IS-GUARDED",
@@ -735,7 +735,7 @@
         "[ -f \"$src/$n/$base\" ] || find \"$c\" -delete || return 1",
         "[ -f \"$src/$n/$base\" ] || find \"$c\" -delete || true",
         "a stale drop-in file that cannot be removed fails the unit installation (SPEC-127 A42)",
-        "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_an_install_over_an_installed_host_refuses_each_of_its_writing_calls"
+        "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_a_stale_drop_in_that_cannot_be_deleted_is_refused"
       ]
     ]
   }
