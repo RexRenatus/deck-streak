@@ -626,8 +626,8 @@
         "S04172-A-CLAIM-TAKES-HELD-ROWS-ONLY",
         "notifications",
         "src/ledger.rs",
-        "           WHERE state = 'held'\n           RETURNING id",
-        "           WHERE state IN ('held', 'sending')\n           RETURNING id",
+        "let from = \"held\";",
+        "let from = \"sending\";",
         "flush_outlives_lease::a_row_another_flush_claimed_inside_its_claim_is_never_sent",
         "the claim moves only held rows to sending, so a row another flush claimed is never read for sending (SPEC-041 R16a)"
       ],
@@ -635,8 +635,8 @@
         "S04173-A-SETTLE-MATCHES-THE-CLAIMS-TOKEN",
         "notifications",
         "src/ledger.rs",
-        "\"DELETE FROM notification_queue WHERE id = ? AND state = 'sending' AND claim = ?\"",
-        "\"DELETE FROM notification_queue WHERE id = ? AND state = 'sending' AND ? IS NOT NULL\"",
+        "let token = Some(claim);\n    let done = sqlx::query!(\n        \"DELETE FROM",
+        "let token: Option<&str> = None;\n    let done = sqlx::query!(\n        \"DELETE FROM",
         "lib::ledger::tests::a_settle_under_another_flushs_token_removes_nothing",
         "the settle removes a row only under the token that claimed it (SPEC-041 R16a)"
       ],
@@ -644,8 +644,8 @@
         "S04174-A-LAPSED-CLAIM-IS-ABANDONED-NOT-HELD-AGAIN",
         "notifications",
         "src/ledger.rs",
-        "\"UPDATE notification_queue SET state = 'abandoned' WHERE id = ? AND state = 'sending'\"",
-        "\"UPDATE notification_queue SET state = 'held', claim = NULL WHERE id = ? AND state = 'sending'\"",
+        "let to = \"abandoned\";",
+        "let to = \"held\";",
         "flush_outlives_lease::a_flush_that_outlives_its_lease_is_never_doubled_by_a_second_flush",
         "a sending row whose claim lapsed is abandoned by name and never made held again, so it is never resent (SPEC-041 R16a)"
       ],
@@ -662,8 +662,8 @@
         "S04176-A-RELATCH-MATCHES-THE-CLAIMS-TOKEN",
         "notifications",
         "src/ledger.rs",
-        "hold = ? \\\n         WHERE id = ? AND state = 'sending' AND claim = ?\"",
-        "hold = ? \\\n         WHERE id = ? AND state = 'sending' AND ? IS NOT NULL\"",
+        "let token = Some(claim);\n    let done = sqlx::query!(\n        \"UPDATE notification_queue SET state = 'held', claim = NULL, tries",
+        "let token: Option<&str> = None;\n    let done = sqlx::query!(\n        \"UPDATE notification_queue SET state = 'held', claim = NULL, tries",
         "lib::ledger::tests::a_relatch_under_another_flushs_token_changes_nothing",
         "the relatch after a failed send holds a row again only under the token that claimed it (SPEC-041 R16a)"
       ]

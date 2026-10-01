@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "UPDATE notification_queue SET state = 'sending', claim = ?\n           WHERE state = 'held'\n           RETURNING id AS \"id!\", kind, dedupe_key, surface, tier_requested, tier_pending, text,\n                     hold, tries, deferred_at, study_day",
+  "query": "UPDATE notification_queue SET state = 'sending', claim = ?\n           WHERE state = ?\n           RETURNING id AS \"id!\", kind, dedupe_key, surface, tier_requested, tier_pending, text,\n                     hold, tries, deferred_at, study_day",
   "describe": {
     "columns": [
       {
@@ -126,7 +126,7 @@
       }
     ],
     "parameters": {
-      "Right": 1
+      "Right": 2
     },
     "nullable": [
       false,
@@ -142,5 +142,5 @@
       false
     ]
   },
-  "hash": "9be6674f31d40e967906887d60c3539ca8ac1e29ae373cd85e9346b631701e15"
+  "hash": "08c386d255c4a72377cfa7e821904d358c5b32eaa49e3f30172f4cb88adc0114"
 }

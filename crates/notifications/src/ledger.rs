@@ -256,12 +256,14 @@ pub(crate) async fn claim_held(
     connection: &mut SqliteConnection,
     claim: &str,
 ) -> Result<Vec<HeldRow>, KernelError> {
+    let from = "held";
     let rows = sqlx::query!(
         r#"UPDATE notification_queue SET state = 'sending', claim = ?
-           WHERE state = 'held'
+           WHERE state = ?
            RETURNING id AS "id!", kind, dedupe_key, surface, tier_requested, tier_pending, text,
                      hold, tries, deferred_at, study_day"#,
-        claim
+        claim,
+        from
     )
     .fetch_all(connection)
     .await?;
@@ -352,8 +354,10 @@ pub(crate) async fn abandon_lapsed(
     connection: &mut SqliteConnection,
     id: i64,
 ) -> Result<bool, KernelError> {
+    let to = "abandoned";
     let done = sqlx::query!(
-        "UPDATE notification_queue SET state = 'abandoned' WHERE id = ? AND state = 'sending'",
+        "UPDATE notification_queue SET state = ? WHERE id = ? AND state = 'sending'",
+        to,
         id
     )
     .execute(connection)
@@ -371,13 +375,15 @@ pub(crate) async fn relatch(
     tries: i64,
     hold: &str,
 ) -> Result<bool, KernelError> {
+    // `COALESCE(?, claim)` matches the row's own token when one is bound; it is bound `Some` here.
+    let token = Some(claim);
     let done = sqlx::query!(
         "UPDATE notification_queue SET state = 'held', claim = NULL, tries = ?, hold = ? \
-         WHERE id = ? AND state = 'sending' AND claim = ?",
+         WHERE id = ? AND state = 'sending' AND claim = COALESCE(?, claim)",
         tries,
         hold,
         id,
-        claim
+        token
     )
     .execute(connection)
     .await?;
@@ -407,10 +413,13 @@ pub(crate) async fn settle_claimed(
     id: i64,
     claim: &str,
 ) -> Result<bool, KernelError> {
+    // `COALESCE(?, claim)` matches the row's own token when one is bound; it is bound `Some` here.
+    let token = Some(claim);
     let done = sqlx::query!(
-        "DELETE FROM notification_queue WHERE id = ? AND state = 'sending' AND claim = ?",
+        "DELETE FROM notification_queue WHERE id = ? AND state = 'sending' \
+         AND claim = COALESCE(?, claim)",
         id,
-        claim
+        token
     )
     .execute(connection)
     .await?;
