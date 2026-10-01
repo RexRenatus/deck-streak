@@ -1164,14 +1164,20 @@ def message_pins(test, plan):
         3,
         {0},
         [(shard, "a mutant record of {} is a {}, not an object", 0)],
-        (),
-        ("a mutant record of", "not an object"),
+        [f"{where}0: a mutant record of {SCRIPT} is a str, not an object"],
     )
 
     def drifted(slots):
         report = plan.mutants(slots[0])
+        missing = sorted(m["name"] for m in report[:4])
         del report[:4]
-        report += [ghost(9100 + i) for i in range(4)]
+        extra = [ghost(9100 + i) for i in range(4)]
+        report += extra
+        names = sorted(m["name"] for m in extra)
+        return [
+            f"{where}0: it did not examine the mutants the plan lists for it: "
+            f"4 missing ({', '.join(missing[:3])}) and 4 extra ({', '.join(names[:3])})"
+        ]
 
     laid(
         "a report that drifts from its listing",
