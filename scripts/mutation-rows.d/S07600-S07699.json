@@ -315,6 +315,96 @@
         "    let heat = if view.language_heat.is_empty() || view.language.current >= 100 {\n",
         "streak_commands::the_language_line_carries_its_runs_heat_in_the_heats_own_place",
         "the language line shows its heat in every band of the heat table, the top two included (SPEC-076 R31 restated, A50)"
+      ],
+      [
+        "S07636-THE-CALENDAR-WINDOW-IS-THE-CONSTANT-DAYS",
+        "streaks",
+        "src/calendar.rs",
+        "    (served.epoch_day() - span + 1..=served.epoch_day())\n",
+        "    (served.epoch_day() - span..=served.epoch_day())\n",
+        "calendar_population::every_served_calendar_day_carries_exactly_its_own_markers",
+        "the window is CALENDAR_DAYS days ending at the served day, no more (SPEC-076 section 27)"
+      ],
+      [
+        "S07637-A-FREEZE-SITS-ON-THE-COVERED-DAY",
+        "streaks",
+        "src/calendar.rs",
+        "                mark(&mut calendar, covered, Marker::Freeze);\n",
+        "                mark(&mut calendar, day, Marker::Freeze);\n",
+        "calendar_population::every_served_calendar_day_carries_exactly_its_own_markers",
+        "a freeze marker sits on the covered missed day, never on the return day that spends it (ADR-302 D3)"
+      ],
+      [
+        "S07638-A-BREAK-SITS-ON-THE-DAY-THE-REPLAY-BREAKS",
+        "streaks",
+        "src/calendar.rs",
+        "        if transition.broke_today {\n            mark(&mut calendar, day, Marker::Break);\n",
+        "        if transition.broke_today {\n            mark(&mut calendar, StudyDay::from_epoch_day(day.epoch_day() - 1), Marker::Break);\n",
+        "calendar_population::every_served_calendar_day_carries_exactly_its_own_markers",
+        "the language break marker sits on the day the replay marks the run broken (ADR-302 D3)"
+      ],
+      [
+        "S07639-A-MARKER-BEFORE-THE-WINDOW-IS-NOT-SERVED",
+        "streaks",
+        "src/calendar.rs",
+        "calendar.iter_mut().find(|served| served.day == day)",
+        "calendar.iter_mut().find(|served| served.day >= day)",
+        "calendar_population::every_served_calendar_day_carries_exactly_its_own_markers",
+        "a marker one day before the window's first day is not served on the first day (SPEC-076 section 27)"
+      ],
+      [
+        "S07640-A-SKIP-SITS-ON-ITS-OWN-DAY",
+        "streaks",
+        "src/calendar.rs",
+        "    settle_order(&mut calendar);\n    calendar\n}\n\n/// The law track's calendar",
+        "    for skip in skips {\n        mark(&mut calendar, StudyDay::from_epoch_day(skip.epoch_day() + 1), Marker::Skip);\n    }\n    settle_order(&mut calendar);\n    calendar\n}\n\n/// The law track's calendar",
+        "calendar_population::every_served_calendar_day_carries_exactly_its_own_markers",
+        "a skip marker sits on each declared skip day (ADR-302 D3)"
+      ],
+      [
+        "S07641-THE-LAW-BREAK-NEEDS-A-LIVE-RUN",
+        "streaks",
+        "src/calendar.rs",
+        "            } else if !skips.contains(&day) && live {\n",
+        "            } else if !skips.contains(&day) {\n",
+        "calendar_population::every_served_calendar_day_carries_exactly_its_own_markers",
+        "the law track breaks only a live run, on its first real miss (ADR-302 D3)"
+      ],
+      [
+        "S07642-THE-OPEN-DAY-IS-STUDIED-WHEN-IT-HAS-A-STUDY-DAY",
+        "streaks",
+        "src/calendar.rs",
+        "                studied: days.contains(&day),\n",
+        "                studied: days.contains(&day) || day.epoch_day() == served.epoch_day(),\n",
+        "calendar_population::the_open_day_is_the_windows_last_day_studied_or_not_yet",
+        "the open day is marked studied exactly when it has a study day (SPEC-076 section 27)"
+      ],
+      [
+        "S07643-THE-ROUTE-SERVES-THE-LAW-TRACKS-OWN-CALENDAR",
+        "daemon",
+        "../api/src/streak_routes.rs",
+        "\"law\": calendar_json(&view.law_calendar),",
+        "\"law\": calendar_json(&view.language_calendar),",
+        "streak_calendar_route::the_route_serves_each_days_markers_after_the_fold",
+        "GET /api/streak serves each track its own calendar (SPEC-076 section 27)"
+      ],
+      [
+        "S07644-A-SETTLED-DAY-NEEDS-ABOVE-ZERO-XP",
+        "daemon",
+        "../progression/src/settle.rs",
+        "AND amount > 0 ORDER BY study_day",
+        "AND amount >= 0 ORDER BY study_day",
+        "streak_calendar_route::a_track_is_settled_on_exactly_its_study_days",
+        "a day is a study day only when its settled amount is above zero (ADR-302 D4)"
+      ],
+      [
+        "S07645-THE-SETTLED-DAYS-ARE-THE-TRACKS-OWN",
+        "daemon",
+        "../progression/src/settle.rs",
+        "WHERE source = ?1 AND track = ?2 AND amount > 0",
+        "WHERE source = ?1 AND amount > 0",
+        "streak_calendar_route::a_track_is_settled_on_exactly_its_study_days",
+        "the settled days read are one track's, not every track's (ADR-302 D4)"
       ]
     ]
   }
