@@ -109,26 +109,39 @@ read -r -d '' HOST_SCRIPT <<'HOSTEOF' || true
 set -eu
 mode=$1 tag=$2 root=$3 unitdir=$4 envfile=$5 secs=$6 poll=$7 keep=$8
 rel=$root/releases/$tag
+# One `deploy:` line ends a refused run. `stop` names the step in brackets after the words given;
+# `refuse` opens with the step's name.
+fail_with() { echo "deploy: $*" >&2; exit 1; }
+stop() { fail_with "$* [host step]"; }
+refuse() { fail_with "the host step $*"; }
 prev=
 [ -L "$root/current" ] && prev=$(readlink "$root/current")
-[ "$prev" != "$rel" ] || { echo "deploy: $tag is already current" >&2; exit 1; }
+[ "$prev" != "$rel" ] || stop "$tag is already current"
 port=$(sed -n 's/^DECKSTREAK_API_LISTEN=.*:\([0-9][0-9]*\)$/\1/p' "$envfile" 2>/dev/null | tail -n 1)
 port=${port:-8080}
 # The check file is the first thing this step makes, before any write to the host, so a
 # temporary directory that cannot be used leaves the host as it was (ADR-297); every exit deletes it.
-checked=$(mktemp) || { echo "deploy: the host step could not make its check file" >&2; exit 1; }
+checked=$(mktemp) || refuse "could not make its check file"
 saved=$checked.saved
 made_partial=
 made_top=
+aside=
 finished=
-fail_with() { echo "deploy: $*" >&2; exit 1; }
-refuse() { fail_with "the host step $*"; }
 
-# Every removal this step makes goes through here: a path that is not there is already gone, and a
-# removal that fails once is tried once more, so one transient fault leaves nothing behind.
+# Every removal this step makes goes through here: a path that is not there is already gone. It
+# prints nothing of its own, because a removal after the refusal line must not follow it. The legs
+# that put the host back are each written twice, joined by `||`, so one failed call is tried again.
 remove() {
     [ -e "$1" ] || [ -L "$1" ] || return 0
-    find "$1" -delete 2>/dev/null || find "$1" -delete
+    find "$1" -delete 2>/dev/null
+}
+# The unpack that was set aside goes back under its own name.
+put_aside_back() {
+    mv -T "$aside" "$rel.partial" 2>/dev/null
+}
+# The unit files as saved go back.
+restore_units() {
+    tar -C "$unitdir" -xpf "$saved"
 }
 # A directory tree can be deleted whole when every directory in it takes a write; asked before the
 # first deletion, so a tree that cannot be deleted is left whole, never half gone.
@@ -139,14 +152,16 @@ deletable() {
 # Every exit removes what this step made under a temporary name: the check file, the saved unit
 # files, the pid-named link and an unfinished unpack; a run that did not finish also removes the
 # release root it had to make (the topmost directory that was missing), so a refused first install
-# leaves the host as it found it. Each removal ends in `|| :`, so a removal that fails neither ends
-# the shell early nor skips the ones after it.
+# leaves the host as it found it; an unfinished unpack that was set aside is put back. Each leg is
+# tried twice and ends in `|| :`, so a leg that fails neither ends the shell early nor skips the
+# ones after it.
 host_cleanup() {
-    remove "$checked" || :
-    remove "$saved" || :
-    remove "$root/.current.$$" || :
-    [ -z "$made_partial" ] || remove "$rel.partial" || :
-    [ -z "$made_top" ] || [ -n "$finished" ] || remove "$made_top" || :
+    remove "$checked" || remove "$checked" || :
+    remove "$saved" || remove "$saved" || :
+    remove "$root/.current.$$" || remove "$root/.current.$$" || :
+    [ -z "$made_partial" ] || remove "$rel.partial" || remove "$rel.partial" || :
+    [ -z "$aside" ] || [ ! -e "$aside" ] || [ -n "$finished" ] || put_aside_back || put_aside_back || :
+    [ -z "$made_top" ] || [ -n "$finished" ] || remove "$made_top" || remove "$made_top" || :
     return 0
 }
 trap host_cleanup EXIT
@@ -171,7 +186,7 @@ stage_link() {
 }
 
 drop_release() {
-    [ "$mode" != install ] || remove "$rel"
+    [ "$mode" != install ] || remove "$rel" || remove "$rel"
 }
 
 # The unit files as the host had them, kept as one archive before the first write to the unit
@@ -191,9 +206,9 @@ unwind() {
     local f
     for f in "$unitdir"/deck-streak-*; do
         [ -e "$f" ] || [ -L "$f" ] || continue
-        remove "$f" || return 1
+        remove "$f" || remove "$f" || return 1
     done
-    [ ! -f "$saved" ] || tar -C "$unitdir" -xpf "$saved" || tar -C "$unitdir" -xpf "$saved" || return 1
+    [ ! -f "$saved" ] || restore_units || restore_units || return 1
     systemctl daemon-reload
     drop_release
 }
@@ -206,8 +221,8 @@ undo_and_refuse() {
 
 # The same, with the whole message given (it names a unit, not the step).
 undo_and_say() {
-    unwind || unwind || refuse "could not put its unit files back after: $*"
-    fail_with "$*"
+    unwind || refuse "could not put its unit files back after: $*"
+    stop "$*"
 }
 
 # The rename over `current` failed after the units were installed.
@@ -274,18 +289,18 @@ back() {
     else
         rm -f "$root/current" || rm -f "$root/current" || problem="$problem the link was not removed;"
     fi
-    unwind || unwind || problem="$problem the unit files were not put back;"
+    unwind || problem="$problem the unit files were not put back;"
     if [ -n "$prev" ]; then
         restart deck-streak-api.service || problem="$problem the api was not restarted;"
         restart deck-streak-bot.service || problem="$problem the bot was not restarted;"
     fi
-    [ -z "$problem" ] || fail_with "the host step: $1 $2, and the way back failed:$problem"
-    fail_with "$1 $2; switched back"
+    [ -z "$problem" ] || refuse "found $1 $2, and the way back failed:$problem"
+    stop "$1 $2; switched back"
 }
 
 save_units || refuse "could not save its unit files"
 if [ "$mode" = install ]; then
-    [ ! -e "$rel" ] || { echo "deploy: $tag is already installed; use the rollback" >&2; exit 1; }
+    [ ! -e "$rel" ] || stop "$tag is already installed; use the rollback"
     check_dirs
     top=$root/releases
     while [ ! -e "$top" ]; do
@@ -296,7 +311,8 @@ if [ "$mode" = install ]; then
     writable "$root/releases" || refuse "cannot write in its releases directory"
     if [ -e "$rel.partial" ]; then
         deletable "$rel.partial" || refuse "could not remove an unfinished unpack"
-        remove "$rel.partial" || refuse "could not remove an unfinished unpack"
+        aside=$root/releases/.stale.$$
+        mv -T "$rel.partial" "$aside" || refuse "could not set aside an unfinished unpack"
     fi
     mkdir "$rel.partial" || refuse "could not make its partial release directory"
     made_partial=1
@@ -308,7 +324,7 @@ if [ "$mode" = install ]; then
     mv -T "$rel.partial" "$rel" || refuse "could not move the release into place"
     made_partial=
 else
-    [ -d "$rel" ] || { echo "deploy: $tag is not kept on the host" >&2; exit 1; }
+    [ -d "$rel" ] || stop "$tag is not kept on the host"
     (cd "$rel" && sha256sum -c --quiet MANIFEST.sha256) ||
         refuse "found $tag is kept but is not a whole release (it does not match its MANIFEST.sha256)"
     check_dirs "$rel"
@@ -332,6 +348,8 @@ ready || back deck-streak-api.service "did not become ready"
 restart deck-streak-bot.service || back deck-streak-bot.service "did not restart"
 
 finished=1
+[ -z "$aside" ] || [ ! -e "$aside" ] || remove "$aside" || remove "$aside" ||
+    echo "deploy: the host step could not delete the unfinished unpack it set aside" >&2
 if [ "$mode" = install ]; then
     prevname=
     [ -n "$prev" ] && prevname=$(basename "$prev")
