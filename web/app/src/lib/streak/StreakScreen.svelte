@@ -1,5 +1,6 @@
 <script lang="ts">
   import { m } from '$lib/paraglide/messages.js';
+  import { WEEKDAY_COLUMN, weekdayOf } from './streak';
   import type { AtStake, CalendarDay, Marker, StreakTrack, StreakView } from './streak';
 
   // The streak screen (SPEC-076 R23): both tracks side by side, the law track first when it has
@@ -15,8 +16,10 @@
     days: CalendarDay[];
   };
 
-  // The calendar (SPEC-076 section 27): one cell per served day, each marker drawn from its own
-  // day's markers. A marker is a word as well as a mark, so no colour carries it alone.
+  // The calendar (SPEC-076 section 27): the predecessor's window as whole weeks, Monday first, one
+  // cell per served day in its weekday's column, each marker drawn from its own day's markers. A
+  // marker shows as the first letter of its word, and the whole word is read to a screen reader,
+  // so no colour carries it alone.
   const markerText = (marker: Marker): string =>
     marker === 'freeze' ? m.streak_marker_freeze() : marker === 'skip' ? m.streak_marker_skip() : m.streak_marker_break();
 
@@ -63,18 +66,20 @@
           <p class="text-sm">{m.streak_at_stake_break()}</p>
         {/if}
         {#if row.days.length > 0}
-          <ol class="mt-2 grid grid-cols-7 gap-1 text-xs" aria-label={m.streak_calendar()}>
+          <ol class="mt-2 grid grid-cols-7 gap-px text-[0.625rem]" aria-label={m.streak_calendar()}>
             {#each row.days as day (day.day)}
+              {@const column = WEEKDAY_COLUMN[weekdayOf(day.day)]}
               <li
                 data-day={day.day}
                 data-studied={day.studied}
                 data-markers={day.markers.join(' ')}
-                class="rounded border p-1"
+                class="min-w-0 overflow-hidden rounded-sm border text-center leading-tight {column}"
                 class:font-semibold={day.studied}
               >
-                <span>{day.day.slice(8)}</span>
+                <span class="block">{day.day.slice(8)}</span>
                 {#each day.markers as marker (marker)}
-                  <span data-marker={marker} class="block">{markerText(marker)}</span>
+                  <span aria-hidden="true" data-glyph={marker}>{markerText(marker).slice(0, 1)}</span>
+                  <span data-marker={marker} class="sr-only">{markerText(marker)}</span>
                 {/each}
               </li>
             {/each}

@@ -30,6 +30,26 @@ export type CalendarDay = { day: string; studied: boolean; markers: Marker[] };
 /** The two calendars `GET /api/streak` serves, oldest day first, ending at the study day. */
 export type Calendar = { language: CalendarDay[]; law: CalendarDay[] };
 
+/**
+ * The grid column of each weekday, Monday first (SPEC-076 section 27): the calendar is laid out as
+ * whole weeks, so each served day sits in its own weekday's column. The names are written out whole
+ * so Tailwind finds them in the source.
+ */
+export const WEEKDAY_COLUMN = [
+  'col-start-1',
+  'col-start-2',
+  'col-start-3',
+  'col-start-4',
+  'col-start-5',
+  'col-start-6',
+  'col-start-7'
+] as const;
+
+/** Days since Monday of an ISO calendar day (`YYYY-MM-DD`): 0 on a Monday, 6 on a Sunday. */
+export function weekdayOf(day: string): number {
+  return (new Date(`${day}T00:00:00Z`).getUTCDay() + 6) % 7;
+}
+
 /** Both tracks, the governor and the at-stake reading the screen shows. */
 export type StreakView = {
   studyDay: string;
