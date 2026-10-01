@@ -197,6 +197,10 @@ fn the_daily_sync_slot_keeps_off_the_predecessors_ticks_and_every_other_slot() {
         .filter(|job| job.id != jobs::SYNC.id)
         .map(|job| if job.once_a_day() { 1 } else { 24 })
         .sum();
+    // A literal pin beside the derived count, so a job that joins or leaves the table moves the
+    // expectation only by an edit here: maintenance and the held flush once a day, the liveness
+    // probe and the drill post-back every hour.
+    assert_eq!(slots_a_day, 50, "the other jobs' slots a day");
     assert_eq!(
         compared,
         24 * slots_a_day,
