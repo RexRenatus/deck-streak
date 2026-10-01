@@ -291,6 +291,7 @@ class TheAdrStatesTheRule(unittest.TestCase):
         )
         terms = examined("per-batch drill terms", proof)
         self.assertEqual([term for term in terms if not says(part_b, term)], [])
+        self.assertTrue(says(part_b, terms[0]))
         # The drill is not scoped to a class's first batch or to a change of backup method.
         for scoped in ("first batch", "the way the backup is taken changes"):
             self.assertFalse(says(part_b, scoped), scoped)
