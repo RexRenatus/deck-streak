@@ -7,15 +7,21 @@
 //! it is named "may have been sent" in the next recap instead. A row the failed flush never pushed
 //! goes back to the queue and reaches the owner at a later flush. The failure is a trigger that
 //! aborts the settle's delete, standing in for any database error after a delivered push; it is
-//! dropped before the second flush.
+//! dropped before the second flush. A log line names the pushed item, its claimant and "may have
+//! been sent" as the failed flush ends.
 
-// An integration test is test code: its fixtures panic on a failed setup, and it prints answers.
+// An integration test is test code: its fixtures panic on a failed setup, it prints answers, and
+// the log capture is the one a test of this workspace makes.
 #![allow(clippy::expect_used, clippy::print_stdout)]
 
+use std::fmt::Write as _;
 use std::sync::{Arc, Mutex, PoisonError};
 
 use deck_streak_kernel::{Db, ManualClock, StudyDayRule, UtcMillis};
 use deck_streak_notifications::{BotTransport, Pass, Policy, PushFuture, Pushed, Router};
+
+#[path = "../../../tools/log-capture/capture.rs"]
+mod log_capture;
 
 /// One minute, in milliseconds.
 const MINUTE_MS: i64 = 60_000;
@@ -271,4 +277,97 @@ async fn a_row_the_failed_flush_never_pushed_reaches_the_owner_at_a_later_flush(
         "the unpushed item reached the owner {unpushed} times"
     );
     assert!(run.named(1), "the pushed item is named: {:?}", run.pushes);
+}
+
+/// The warnings the router logs, one line per event, its fields spelled `name=value`.
+#[derive(Clone, Default)]
+struct Warnings(Arc<Mutex<Vec<String>>>);
+
+impl Warnings {
+    fn logged(&self) -> Vec<String> {
+        self.0
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone()
+    }
+}
+
+/// Spells an event's fields into one line.
+struct Spelled(String);
+
+impl tracing::field::Visit for Spelled {
+    fn record_debug(&mut self, field: &tracing::field::Field, value: &dyn std::fmt::Debug) {
+        let _spelled = write!(self.0, "{}={value:?} ", field.name());
+    }
+}
+
+impl tracing::Subscriber for Warnings {
+    fn enabled(&self, _metadata: &tracing::Metadata<'_>) -> bool {
+        true
+    }
+
+    fn new_span(&self, _span: &tracing::span::Attributes<'_>) -> tracing::span::Id {
+        tracing::span::Id::from_u64(1)
+    }
+
+    fn record(&self, _span: &tracing::span::Id, _values: &tracing::span::Record<'_>) {}
+
+    fn record_follows_from(&self, _span: &tracing::span::Id, _follows: &tracing::span::Id) {}
+
+    fn event(&self, event: &tracing::Event<'_>) {
+        if *event.metadata().level() == tracing::Level::WARN
+            && event
+                .metadata()
+                .target()
+                .starts_with("deck_streak_notifications")
+        {
+            let mut line = Spelled(String::new());
+            event.record(&mut line);
+            self.0
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner)
+                .push(line.0);
+        }
+    }
+
+    fn enter(&self, _span: &tracing::span::Id) {}
+
+    fn exit(&self, _span: &tracing::span::Id) {}
+}
+
+#[tokio::test]
+async fn a_settle_that_fails_after_a_push_names_the_item_and_its_claimant_in_the_log() {
+    let warnings = Warnings::default();
+    let _logging = log_capture::hold_capture(warnings.clone());
+    let t0 = noon();
+    let (_scratch, db) = queue(t0, 2, "T2").await;
+    exec(&db, SETTLE_FAULT).await;
+    let reached: Arc<Mutex<Vec<String>>> = Arc::default();
+    let clock = Arc::new(ManualClock::new(UtcMillis::from_epoch_millis(t0)));
+    let first = router(&db, &clock, &reached).flush().await;
+    println!("the flush answered {first:?}");
+
+    let claimant = (t0 + 10 * MINUTE_MS).to_string();
+    let logged = warnings.logged();
+    let pushed: Vec<&String> = logged
+        .iter()
+        .filter(|line| line.contains("\"level-up:1\""))
+        .collect();
+    assert_eq!(
+        pushed.len(),
+        1,
+        "one line names the pushed item: {logged:?}"
+    );
+    assert!(
+        pushed[0].contains("after its push") && pushed[0].contains("may have been sent"),
+        "it says why: {logged:?}"
+    );
+    assert!(
+        pushed[0].contains(&claimant),
+        "it names the claimant {claimant}: {logged:?}"
+    );
+    assert!(
+        !logged.iter().any(|line| line.contains("\"level-up:2\"")),
+        "the row the flush never pushed is not named: {logged:?}"
+    );
 }
