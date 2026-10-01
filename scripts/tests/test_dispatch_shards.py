@@ -2522,5 +2522,77 @@ class TheMemoryScopeRunsTheWordsAfterItsSeparator(unittest.TestCase):
         self.assertEqual(wrong[:1], [], f"{len(wrong)} of {len(members)} members")
 
 
+RAISING_PLANT = """
+import os
+from pathlib import Path
+
+
+def plant_wrapper(script, root):
+    raise RuntimeError("the plant could not be made")
+"""
+PLANT_THAT_WORKS = """
+import os
+from pathlib import Path
+
+
+class Planted:
+    def main(self):
+        Path(os.environ["PLANT_MARKS"], "planted").write_text("ran", "utf-8")
+        return 0
+
+
+def plant_wrapper(script, root):
+    return Planted()
+"""
+STAND_IN_SCRIPT = """
+import os
+from pathlib import Path
+
+Path(os.environ["PLANT_MARKS"], "words").write_text("ran", "utf-8")
+"""
+
+
+class AStandInThatCannotPlantTheWrapperFailsClosed(unittest.TestCase):
+    def run_stand_in(self, plant):
+        """(exit status, standard error, marks left) of the stand-in with `plant` as its plant."""
+        self.assertEqual(WRAPPER_PYTHON.count(WRAPPER_PLANT), 1)
+        with tempfile.TemporaryDirectory() as scratch:
+            root = Path(scratch)
+            (root / "marks").mkdir()
+            (root / "stand_in.py").write_text(
+                WRAPPER_PYTHON.replace(WRAPPER_PLANT, plant), encoding="utf-8"
+            )
+            (root / "memory_scope.py").write_text(STAND_IN_SCRIPT, encoding="utf-8")
+            done = subprocess.run(
+                [
+                    sys.executable,
+                    "-I",
+                    str(root / "stand_in.py"),
+                    str(root / "machine"),
+                    str(root / "memory_scope.py"),
+                    "--",
+                    "echo",
+                    "x",
+                ],
+                capture_output=True,
+                text=True,
+                env={"PLANT_MARKS": str(root / "marks"), "PATH": os.environ["PATH"]},
+                timeout=60,
+            )
+            marks = sorted(path.name for path in (root / "marks").iterdir())
+        return done.returncode, done.stderr, marks
+
+    def test_a_failed_plant_exits_non_zero_names_the_failure_and_runs_no_words(self):
+        status, stderr, marks = self.run_stand_in(RAISING_PLANT)
+        self.assertNotEqual(status, 0)
+        self.assertIn("the plant could not be made", stderr)
+        self.assertEqual(marks, [], "the words ran after the plant failed")
+
+    def test_a_plant_that_works_runs_the_wrapper_and_not_the_script(self):
+        status, stderr, marks = self.run_stand_in(PLANT_THAT_WORKS)
+        self.assertEqual((status, stderr), (0, ""))
+        self.assertEqual(marks, ["planted"])
+
+
 if __name__ == "__main__":
     unittest.main()
