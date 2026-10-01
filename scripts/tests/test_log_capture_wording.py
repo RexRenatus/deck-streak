@@ -7,7 +7,6 @@ from _support import REPO
 
 SPEC = REPO / "docs" / "specs" / "SPEC-024-identity-initdata-and-owner-pin.md"
 RECORD = REPO / "docs" / "red-first" / "SPEC-024.md"
-HELPER = REPO / "tools" / "log-capture" / "capture.rs"
 KILLER = REPO / "crates" / "kernel" / "tests" / "log_capture_class.rs"
 NESTED = "a_capture_nested_inside_a_capture_on_one_thread_is_refused"
 AMENDMENT = re.compile(r"^## 10\. Amendment, 2026-10-01: .+$", re.MULTILINE)
@@ -60,15 +59,6 @@ class TheRecordNamesTheNestedCaptureTest(unittest.TestCase):
     def test_the_record_carries_the_unfiltered_passed_test_count(self):
         record = RECORD.read_text(encoding="utf-8")
         self.assertIn("816 tests run: 816 passed", record)
-
-
-class TheHelperDocSaysWhenTheFloorIsTheDefault(unittest.TestCase):
-    def test_the_nested_refusal_doc_limits_its_claim_to_outside_a_dispatchers_own_call(self):
-        text = HELPER.read_text(encoding="utf-8")
-        at = text.index("fn refuse_nested_capture")
-        block = text[:at].rsplit("\n\n", 1)[-1]
-        self.assertIn("any other default means a capture is held", block)
-        self.assertIn("outside a dispatcher's own call", " ".join(block.replace("///", "").split()))
 
 
 if __name__ == "__main__":

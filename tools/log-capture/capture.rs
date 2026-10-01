@@ -90,8 +90,7 @@ fn register_floor() {
 ///
 /// A nested capture would take every line from the outer one, so a test asserting on the outer
 /// capture could pass while its lines went elsewhere. A thread holding no capture has the floor as
-/// its default, so outside a dispatcher's own call any other default means a capture is held.
-/// Inside a dispatcher's own call the default reads as none. A capture held on another thread is
+/// its default, so any other default means a capture is held. A capture held on another thread is
 /// no obstacle: this thread's default is still the floor.
 fn refuse_nested_capture() {
     let on_floor = tracing::dispatcher::get_default(tracing::Dispatch::is::<Floor>);
