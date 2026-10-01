@@ -18,13 +18,19 @@ under `--cfg test`. A module is a test module when its attributes keep it under 
 remove it without, read in three-valued logic in which every option but `test` is unknown and
 `true` and `false` hold their values (R8). An out-of-line one (`mod tests;`) is read only from
 the one file rustc could read for it, below inline modules too (`mod a { mod tests; }` reads
-`a/tests.rs`, or the plain `#[path]` it names, from the module directory); an ambiguous or
-attribute-made choice is refused, and so is a file that any other declaration the guard can see
-compiles without `test` (`#[cfg(not(test))] mod tests;`, a `#[path]` naming it). A `macro_rules!`
-body that declares a `cfg(test)` module is refused by its file, as the guard does not expand a
-macro (#433, #441, #458). A literal
-that two implementations of one crate share is pinned only by a row on each implementation's
-file.
+`a/tests.rs`, or the plain `#[path]` it names, from the module directory), and the inner
+attributes that open that file are the module's own (`#![cfg(test)]`); an ambiguous or
+attribute-made choice is refused. So is a file that any other declaration the guard can see
+compiles without `test` (`#[cfg(not(test))] mod tests;`, a `#[path]` naming it). There the file's
+own inner attributes count too; a declaration whose one attribute naming a path is
+`cfg_attr(P, path = "...")` reaches the file it names only under P and its default file only
+without P; and a declaration whose file the guard cannot name (a path literal it cannot read, or
+a module below an inline module whose attributes name `path`) may name any file, so unless its
+attributes remove it without `test` it refuses every one. A `macro_rules!` body that declares a
+`cfg(test)` module, by an outer attribute, by one before a `$( ... )` repetition or by an inner
+attribute in its braces, is refused by its file, as the guard does not expand a macro (#433,
+#441, #458). A literal that two implementations of one crate share is pinned only by a row on
+each implementation's file.
 """
 
 import functools
@@ -560,10 +566,14 @@ def declared(own):
 
 
 def visible(src):
-    """(target file, attributes or None) for every out-of-line module that any file reachable from
-    the crate's roots declares, whatever its attributes and however deep, and for every file each
-    could name (`beside`, `below`). The attributes are the whole run from the root that keeps the
-    declaration, None when unreadable."""
+    """(target file or None, attributes or None) for every out-of-line module that any file
+    reachable from the crate's roots declares, whatever its attributes and however deep, and for
+    every file each could name (`beside`, `below`). The attributes are the whole run from the root
+    that keeps the declaration, then the condition its `cfg_attr` path sets on that file (`gated`),
+    then that file's own inner attributes (a module's file opens with the module's own
+    attributes), or None when unreadable. A declaration whose file the guard cannot name, from a
+    path literal it cannot read or from below an inline module whose attributes name `path`, is
+    listed with the target None too: it may name any file (#433, #458)."""
     roots = [src / "lib.rs", src / "main.rs", *src.glob("bin/*.rs"), *src.glob("bin/*/main.rs")]
     todo = [(root, []) for root in roots if root.is_file()]
     seen, out = set(), []
@@ -579,20 +589,66 @@ def visible(src):
         except ValueError:
             continue
         for name, names, run, inner, at in found:
-            if names is None or tokens[at + 2][1] == "{":
+            if tokens[at + 2][1] == "{":
                 continue
             held = None if chain is None or inner is None or run is None else chain + inner + run
+            if names is None or named_paths(run or [])[1]:
+                out.append((None, held))
+                if names is None:
+                    continue
+            gates = gated(file, names, name, run or [])
             for target in (
                 below(file, names, name, run or []) if names else beside(file, name, run or [])
             ):
-                out.append((target, held))
+                reach = held
+                for words, named, defaults in gates if held is not None else []:
+                    if target in named and target not in defaults:
+                        reach = reach + [["cfg", "(", *words, ")"]]
+                    elif target in defaults and target not in named:
+                        reach = reach + [["cfg", "(", "not", "(", *words, ")", ")"]]
                 try:
                     body, pairs, _ = scanned(target.read_text(encoding="utf-8"))
                 except ValueError:
+                    out.append((target, reach))
                     continue
                 tail = leading(body, pairs, 0, len(body))[0]
-                todo.append((target, None if held is None else held + tail))
+                kept = None if reach is None else reach + tail
+                out.append((target, kept))
+                todo.append((target, kept))
     return out
+
+
+def gated(file, names, name, run):
+    """The condition under which each file a declaration could name is reached, when the one
+    attribute of `run` that names `path` is a `cfg_attr(P, path = "...")` that names it directly:
+    `cfg(P)` for a file only the attribute names, `cfg(not(P))` for a default file it moves away
+    from, and nothing for a file reached either way (#458). Any other run gates nothing, so each
+    file it could name counts as reached: a plain `#[path]` beside it, two attributes that name a
+    path (rustc reads the first that applies), a path nested in another `cfg_attr`, or a predicate
+    the guard cannot read. A literal it cannot read names no file here (`visible` lists that
+    declaration with no target), though its default file is still gated."""
+    carrying = [each for each in run if any(unraw(word) == "path" for word in each)]
+    if len(carrying) != 1 or carrying[0][:2] != ["cfg_attr", "("]:
+        return []
+    each = carrying[0]
+    try:
+        end = predicate(each, 2, True)[1]
+    except (IndexError, ValueError):
+        return []
+    applies = applied(each[end + 1 : -1])
+    if any(unraw(one[0]) != "path" and named_paths([one]) != ([], False) for one in applies):
+        return []
+    literals = named_paths(applies)[0]
+    if names:
+        places = [folder.joinpath(*names) for folder in (file.with_suffix(""), file.parent)]
+        homes = places
+    else:
+        places, homes = [file.parent], [file.parent, file.with_suffix("")]
+    defaults = {
+        path.resolve() for home in homes for path in (home / f"{name}.rs", home / name / "mod.rs")
+    }
+    named = {(place / literal).resolve() for place in places for literal in literals}
+    return [(each[2:end], named, defaults)]
 
 
 def compiled_without_test(attributes):
@@ -615,9 +671,11 @@ def test_files(own):
 
 def out_of_line(own):
     """`test_files(own)` less each file that another declaration the guard can see compiles
-    without `test` (a `#[cfg(not(test))] mod tests;`, a `#[path]` naming it): a shape only it
-    spells is production code, so it is refused (#458). A test-only second declaration is no
-    rival, and a rival on another file refuses nothing."""
+    without `test` (a `#[cfg(not(test))] mod tests;`, a `#[path]` naming it, a `cfg_attr` path
+    that applies without `test`): a shape only it spells is production code, so it is refused
+    (#458). A declaration whose file the guard cannot name (`visible`'s None) and that is compiled
+    without `test` refuses every file. A test-only second declaration is no rival, and a rival on
+    another file refuses nothing."""
     files = test_files(own)
     src = next((parent for parent in own.parents if parent.name == "src"), None)
     if not files or src is None:
@@ -627,7 +685,7 @@ def out_of_line(own):
         file
         for file in files
         if not any(
-            target == file.resolve() and compiled_without_test(attributes)
+            target in (None, file.resolve()) and compiled_without_test(attributes)
             for target, attributes in others
         )
     ]
@@ -703,8 +761,10 @@ def macro_test_modules(root):
     lines naming the crate and the file (#441). The guard reads tokens and does not expand a macro,
     so a module a macro writes would be a test module it never sees: it refuses the file instead.
     A `mod` in a body is judged by the attributes just before it, back to the previous item's end
-    or the body's open delimiter, so it reads `cfg` and `cfg_attr` in any combination with `test`
-    (a `not(test)` one too: the guard cannot expand it, so it does not decide)."""
+    or the body's open delimiter (past a `$(` that opens the module's own repetition, so
+    `#[cfg(test)] $(mod $n {})*` counts), and by the inner attributes that open its braces
+    (`mod x { #![cfg(test)] }`). It reads `cfg` and `cfg_attr` in any combination with `test` (a
+    `not(test)` one too: the guard cannot expand it, so it does not decide)."""
     refused = []
     for path in crate_files(root):
         found, pairs, _ = scanned(path.read_text(encoding="utf-8"))
@@ -726,6 +786,9 @@ def macro_test_modules(root):
                         depth += 1
                     elif kind == "open":
                         if depth == 0:
+                            if word == "(" and found[back - 1][:2] == ("punct", "$"):
+                                back -= 2
+                                continue
                             break
                         depth -= 1
                     elif kind == "punct" and word == ";" and depth == 0:
@@ -733,6 +796,10 @@ def macro_test_modules(root):
                     elif kind == "word":
                         words.add(word)
                     back -= 1
+                brace = mod + 2 + (found[mod + 1][:2] == ("punct", "$"))
+                if brace < len(found) and found[brace][:2] == ("open", "{"):
+                    for each in leading(found, pairs, brace + 1, pairs[brace])[0]:
+                        words.update(each)
                 hit = hit or bool(words & {"cfg", "cfg_attr"} and "test" in words)
         if hit:
             crate, *inside = path.relative_to(root / "crates").parts
