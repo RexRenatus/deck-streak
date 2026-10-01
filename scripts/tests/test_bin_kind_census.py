@@ -19,9 +19,18 @@ A new row in any axis table joins the population by itself, and the `examined` f
 from the tables, so a member dropped or added without the tables changing fails the count. The
 oracle runs cargo and rustc in scratch crates only, never on the workspace. Three planted tests,
 one per gap the issue names, read the same reader without the oracle.
+
+Generated families close five classes (SPEC-039 section 21): every spelling cargo compares a
+declared path by, `..` and an absolute path among them; every dotfile and dot directory cargo's
+inference skips; every edition a manifest may state or inherit, since 2015 switches inference off
+beside a declared table; and every delimiter of a macro invocation that holds a `mod`.
 """
 
+import concurrent.futures
+import functools
+import itertools
 import json
+import os
 import posixpath
 import subprocess
 import sys
@@ -32,7 +41,12 @@ from pathlib import Path
 from _support import REPO, examined
 
 PACKAGE = "fix"
-BASE_MANIFEST = f'[package]\nname = "{PACKAGE}"\nversion = "0.1.0"\nedition = "2021"\n'
+PACKAGE_HEADER = f'[package]\nname = "{PACKAGE}"\nversion = "0.1.0"\n'
+#: The edition axis every binary layout and test layout is crossed with: no key is 2015.
+EDITIONS = {"edition 2021": 'edition = "2021"\n', "no edition key, so 2015": ""}
+#: The editions a member inherits from a workspace manifest at the root, crossed with the binaries.
+INHERITED_EDITIONS = ("2015", "2021")
+BASE_MANIFEST = PACKAGE_HEADER + EDITIONS["edition 2021"]
 MAIN = "fn main() {}\n"
 TEST_FILE = "#[test]\nfn passes() {}\n"
 LEAF = "pub fn leaf() {}\n"
@@ -160,6 +174,55 @@ TEST_LAYOUTS = {
     ),
 }
 
+
+def spellings(path):
+    """Each way a manifest may spell the crate-relative `path`: as written, with a leading `./`, an
+    interior `.`, a doubled separator, from the crate's absolute directory (`@CRATE@`, written when
+    the member is laid out) and through a `..`. Cargo compares paths by component, so every one but
+    the `..` names the file it was written for."""
+    first, rest = path.split("/", 1)
+    return {
+        "as written": path,
+        "with a leading ./": f"./{path}",
+        "with an interior .": f"{first}/./{rest}",
+        "with a doubled separator": f"{first}//{rest}",
+        "from the crate's absolute directory": f"@CRATE@/{path}",
+        "through a ..": f"{first}/../{path}",
+    }
+
+
+#: A declared target at a path cargo also infers a target from: (kind, name, path, files).
+DECLARED_AT_AN_INFERRED_PATH = {
+    "a [[bin]] at main": ("bin", "fixbin", "src/main.rs", {"src/main.rs": MAIN}),
+    "a [[bin]] at a bin file": ("bin", "tool", "src/bin/a.rs", {"src/bin/a.rs": MAIN}),
+    "a [[test]] at tests/bin.rs": ("test", "other", "tests/bin.rs", {"tests/bin.rs": TEST_FILE}),
+}
+for _shape, (_kind, _name, _path, _files) in DECLARED_AT_AN_INFERRED_PATH.items():
+    _layouts = BINARY_LAYOUTS if _kind == "bin" else TEST_LAYOUTS
+    for _spelling, _written in spellings(_path).items():
+        _layouts[f"{_shape}, spelled {_spelling}"] = (
+            "",
+            f'[[{_kind}]]\nname = "{_name}"\npath = "{_written}"\n',
+            _files,
+        )
+
+#: Entries cargo's inference skips because their names start with a dot, beside each companion.
+DOT_ENTRIES = {
+    "a dotfile": {"src/bin/.hidden.rs": MAIN},
+    "a dot directory with a main": {"src/bin/.d/main.rs": MAIN},
+}
+DOT_COMPANIONS = {
+    "alone": {},
+    "beside main": {"src/main.rs": MAIN},
+    "beside a bin file": {"src/bin/a.rs": MAIN},
+}
+for (_entry, _files), (_companion, _beside) in itertools.product(
+    DOT_ENTRIES.items(), DOT_COMPANIONS.items()
+):
+    BINARY_LAYOUTS[f"{_entry} under src/bin, {_companion}"] = ("", "", {**_files, **_beside})
+TEST_LAYOUTS["a dotfile tests/.bin.rs"] = ("", "", {"tests/.bin.rs": TEST_FILE})
+TEST_LAYOUTS["a dot directory tests/.bin/main.rs"] = ("", "", {"tests/.bin/main.rs": TEST_FILE})
+
 #: Where a binary's root file sits; its directory is where the compiler looks for its modules.
 ROOTS = {
     "src/main.rs": {"src/main.rs": None},
@@ -179,7 +242,8 @@ def module_layouts(home):
 
     `home` is the directory of the root file, where rustc looks for the root's own modules. The
     unread set is the files reached by a `#[path]` attribute: the runner follows none, so a killer
-    there is refused by the census rather than read from a file the compiler does not build.
+    there is refused by the census rather than read from a file the compiler does not build. An
+    undecidable layout given as text, as the macro family's are, is one whose refusal names it.
     """
     return {
         "a file module": (
@@ -461,13 +525,84 @@ def module_layouts(home):
             set(),
             False,
         ),
-    }
+    } | macro_layouts(home)
+
+
+#: The delimiters a macro invocation's tokens may sit in.
+MACRO_DELIMITERS = {"parentheses": ("(", ")"), "brackets": ("[", "]"), "braces": ("{", "}")}
+#: What the reader names when it refuses a `mod` among a macro invocation's tokens.
+MACRO_REFUSAL = "holds a mod in a macro invocation, which only its expansion decides"
+
+
+def macro_layouts(home):
+    """The macro family, as module layouts: under every delimiter, a `mod` among an invocation's
+    tokens, whether the macro discards them (`stringify!`, by name or by path, or a declared macro)
+    or a `macro_rules!` definition expands them into a declaration. Each is refused by name, since
+    only the expansion decides what it declares. Beside them, under every delimiter, a group nested
+    in an invocation before its `mod`, an invocation holding none before a real declaration, and
+    an invocation inside a module the test build drops, which the reader reads."""
+    declared = "macro_rules! m {\n    ($($t:tt)*) => {};\n}\n"
+    ghost = {at(home, "ghost.rs"): LEAF}
+    built = {at(home, "x.rs"): LEAF}
+    found = {}
+    for word, (opened, closed) in MACRO_DELIMITERS.items():
+        end = "" if opened == "{" else ";"
+        holding = {
+            "stringify!": f"const S: &str = stringify!{opened}mod ghost;{closed};\n",
+            "a path to stringify!": f"const S: &str = core::stringify!{opened}mod ghost;{closed};\n",
+            "a declared macro": f"{declared}m!{opened}mod ghost;{closed}{end}\n",
+        }
+        for spelling, text in holding.items():
+            found[f"{spelling} in {word} holding a declaration"] = (
+                text,
+                ghost,
+                set(),
+                MACRO_REFUSAL,
+            )
+        for inner, (inner_opened, inner_closed) in MACRO_DELIMITERS.items():
+            found[f"stringify! in {word} holding a group in {inner}, then a declaration"] = (
+                f"const S: &str = stringify!{opened}{inner_opened}a{inner_closed} mod ghost;"
+                f"{closed};\n",
+                ghost,
+                set(),
+                MACRO_REFUSAL,
+            )
+        found[f"stringify! in {word} holding no declaration, before one"] = (
+            f"const S: &str = stringify!{opened}a{closed};\nmod x;\n",
+            built,
+            set(),
+            False,
+        )
+        found[f"stringify! in {word} holding a declaration, in a module the test build drops"] = (
+            f"#[cfg(not(test))]\nmod gone {{\n    const S: &str = stringify!{opened}mod ghost;"
+            f"{closed};\n}}\nmod x;\n",
+            built,
+            set(),
+            False,
+        )
+        found[f"a macro_rules! definition in {word} that expands to a declaration"] = (
+            f"macro_rules! m {opened}\n    () => {{ mod x; }};\n{closed}{end}\nm!();\n",
+            built,
+            set(),
+            MACRO_REFUSAL,
+        )
+    return found
+
+
+def workspace_manifest(edition):
+    """A workspace manifest at a member's root whose package table states `edition`."""
+    return (
+        f'[workspace]\nmembers = ["crates/{PACKAGE}"]\nresolver = "2"\n\n'
+        f'[workspace.package]\nedition = "{edition}"\n'
+    )
 
 
 class Member:
-    """One generated crate laid out under `<root>/crates/fix`, removed when the test ends."""
+    """One generated crate laid out under `<root>/crates/fix`, removed when the test ends. Its
+    manifest states `edition` (a line under `[package]`), `@CRATE@` in a table is the crate's
+    absolute directory, and `workspace`, when given, is the manifest written at the root."""
 
-    def __init__(self, case, name, parts):
+    def __init__(self, case, name, parts, edition=EDITIONS["edition 2021"], workspace=None):
         scratch = tempfile.TemporaryDirectory()
         case.addCleanup(scratch.cleanup)
         self.name = name
@@ -475,7 +610,10 @@ class Member:
         self.crate = self.root / "crates" / PACKAGE
         package_keys = "".join(keys for keys, _tables, _files in parts)
         tables = "".join(f"\n{tables}" for _keys, tables, _files in parts if tables)
-        self.write("Cargo.toml", BASE_MANIFEST + package_keys + tables)
+        manifest = PACKAGE_HEADER + edition + package_keys + tables
+        self.write("Cargo.toml", manifest.replace("@CRATE@", self.crate.as_posix()))
+        if workspace is not None:
+            (self.root / "Cargo.toml").write_text(workspace, encoding="utf-8")
         self.write("src/lib.rs", LEAF)
         for _keys, _tables, files in parts:
             for relative, text in files.items():
@@ -487,10 +625,31 @@ class Member:
         path.write_text(text, encoding="utf-8")
 
 
+@functools.cache
+def toolchain(tool):
+    """The path of the toolchain's own `tool`, the one the rustup proxy runs in a scratch crate, or
+    the bare name where no rustup resolves it. The proxy's start costs more than the metadata it
+    serves, and the oracle runs once per member."""
+    with tempfile.TemporaryDirectory() as away:
+        try:
+            done = subprocess.run(
+                ["rustup", "which", tool],
+                cwd=away,
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=120,
+            )
+        except OSError:
+            return tool
+    found = done.stdout.strip()
+    return found if done.returncode == 0 and found else tool
+
+
 def cargo_targets(member):
     """(binaries, test target names) as `cargo metadata --no-deps` reports them: the oracle."""
     done = subprocess.run(
-        ["cargo", "metadata", "--no-deps", "--format-version", "1", "--offline"],
+        [toolchain("cargo"), "metadata", "--no-deps", "--format-version", "1", "--offline"],
         cwd=member.crate,
         capture_output=True,
         text=True,
@@ -514,7 +673,8 @@ def compiler_sources(member, root_file):
     out = member.root / "dep-info"
     out.mkdir(exist_ok=True)
     done = subprocess.run(
-        ["rustc", "--edition", "2021", "--test", "--crate-name", "fixbin", "--emit=dep-info"]
+        [toolchain("rustc"), "--edition", "2021", "--test", "--crate-name", "fixbin"]
+        + ["--emit=dep-info"]
         + ["--out-dir", str(out), str(member.crate / root_file)],
         cwd=member.crate,
         capture_output=True,
@@ -560,14 +720,27 @@ class TheBinKindReadsWhatTheCompilerBuilds(unittest.TestCase):
     def test_every_layout_agrees_with_cargo_and_the_compiler_or_is_refused_by_name(self):
         runner = runner_module()
         members = []
-        for binary, (b_keys, b_tables, b_files) in BINARY_LAYOUTS.items():
-            for test, (t_keys, t_tables, t_files) in TEST_LAYOUTS.items():
-                member = Member(
-                    self,
-                    f"binary layout [{binary}] with test layout [{test}]",
-                    [(b_keys, b_tables, b_files), (t_keys, t_tables, t_files)],
-                )
-                members.append(("targets", member))
+        for (binary, b_parts), (test, t_parts), (edition, line) in itertools.product(
+            BINARY_LAYOUTS.items(), TEST_LAYOUTS.items(), EDITIONS.items()
+        ):
+            member = Member(
+                self,
+                f"binary layout [{binary}] with test layout [{test}], {edition}",
+                [b_parts, t_parts],
+                edition=line,
+            )
+            members.append(("targets", member))
+        for (binary, b_parts), inherited in itertools.product(
+            BINARY_LAYOUTS.items(), INHERITED_EDITIONS
+        ):
+            member = Member(
+                self,
+                f"binary layout [{binary}], edition {inherited} inherited from the workspace",
+                [b_parts],
+                edition="edition.workspace = true\n",
+                workspace=workspace_manifest(inherited),
+            )
+            members.append(("targets", member))
         for root in ROOTS:
             home = posixpath.dirname(root)
             for name, (prelude, files, unread, undecidable) in module_layouts(home).items():
@@ -578,16 +751,31 @@ class TheBinKindReadsWhatTheCompilerBuilds(unittest.TestCase):
                 )
                 member.unread, member.undecidable, member.root_file = unread, undecidable, root
                 members.append(("modules", member))
-        derived = len(BINARY_LAYOUTS) * len(TEST_LAYOUTS) + len(ROOTS) * len(module_layouts("src"))
+        derived = (
+            len(BINARY_LAYOUTS) * len(TEST_LAYOUTS) * len(EDITIONS)
+            + len(BINARY_LAYOUTS) * len(INHERITED_EDITIONS)
+            + len(ROOTS) * len(module_layouts("src"))
+        )
         self.assertEqual(len(examined("generated crate layouts", members)), derived)
 
+        # The oracle runs in scratch crates that share nothing, so its runs overlap; each verdict
+        # is read inside its member's subtest, where a refusal by cargo or rustc fails that member.
+        with concurrent.futures.ThreadPoolExecutor(
+            max_workers=min(16, os.cpu_count() or 1)
+        ) as pool:
+            oracles = [
+                pool.submit(cargo_targets, member)
+                if kind == "targets"
+                else pool.submit(compiler_sources, member, member.root_file)
+                for kind, member in members
+            ]
         agreed = refused = 0
-        for kind, member in members:
+        for (kind, member), oracle in zip(members, oracles, strict=True):
             with self.subTest(member=member.name):
                 if kind == "targets":
-                    agreed += self.judge_targets(runner, member)
+                    agreed += self.judge_targets(runner, member, oracle.result())
                 else:
-                    outcome = self.judge_modules(runner, member)
+                    outcome = self.judge_modules(runner, member, oracle.result())
                     agreed, refused = agreed + outcome[0], refused + outcome[1]
         print(f"agreed with the oracle {agreed}, refused by name {refused}")
         self.assertEqual(agreed + refused, derived, "a member was neither agreed nor refused")
@@ -595,8 +783,8 @@ class TheBinKindReadsWhatTheCompilerBuilds(unittest.TestCase):
         self.assertGreater(refused, 0)
         self.assertGreater(agreed, refused)
 
-    def judge_targets(self, runner, member):
-        binaries, tests = cargo_targets(member)
+    def judge_targets(self, runner, member, oracle):
+        binaries, tests = oracle
         refusal = self.refusal(runner, member)
         if "bin" in tests:
             self.assertIn("has a test target bin, which the bin kind shadows", refusal or "")
@@ -609,13 +797,14 @@ class TheBinKindReadsWhatTheCompilerBuilds(unittest.TestCase):
             self.assertEqual((killer.binary, killer.file), (name, f"crates/{PACKAGE}/{path}"))
         return 1
 
-    def judge_modules(self, runner, member):
-        oracle = compiler_sources(member, member.root_file)
+    def judge_modules(self, runner, member, oracle):
         try:
             read = {p.resolve() for p in runner.module_sources(member.crate / member.root_file)}
         except runner.KillerUnresolved as refusal:
             self.assertTrue(str(refusal), "a refusal must name its reason")
             self.assertTrue(member.undecidable, f"refused a layout the compiler decides: {refusal}")
+            if isinstance(member.undecidable, str):
+                self.assertIn(member.undecidable, str(refusal))
             return 0, 1
         expected = oracle - {(member.crate / p).resolve() for p in member.unread}
         self.assertEqual(
@@ -703,9 +892,15 @@ class ThePlantedShapesOfTheIssue(unittest.TestCase):
                 member = self.member((keys, layout[1], layout[2]))
                 with self.assertRaisesRegex(runner.KillerUnresolved, pattern):
                     runner.locate_killer(member.root, killer_row(runner))
-        # A table with no path and no file to infer one from still names its target: a binary
-        # defaults to the package's own root, and a declared test named bin shadows with no file.
-        unpathed = self.member(("", '[[bin]]\nname = "tool"\n', {"src/main.rs": MAIN}))
+        # A table with no path and no file to infer one from still names its target: under edition
+        # 2015, where the table switches inference off, a binary defaults to the package's own root
+        # (cargo refuses this layout under 2021), and a declared test named bin shadows with no file.
+        unpathed = Member(
+            self,
+            "planted",
+            [("", '[[bin]]\nname = "tool"\n', {"src/main.rs": MAIN})],
+            edition=EDITIONS["no edition key, so 2015"],
+        )
         found = runner.locate_killer(unpathed.root, killer_row(runner))
         self.assertEqual((found.binary, found.file), ("tool", f"crates/{PACKAGE}/src/main.rs"))
         ghost = self.member(("", '[[test]]\nname = "bin"\n', {"src/main.rs": MAIN}))
@@ -719,6 +914,23 @@ class ThePlantedShapesOfTheIssue(unittest.TestCase):
             runner.KillerUnresolved, "declares the binary t at app/t.rs, which does not exist"
         ):
             runner.locate_killer(missing.root, killer_row(runner))
+        # An edition the reader cannot read decides whether a declared table switches inference
+        # off, so it is refused by name: one of the wrong type, one inherited from no workspace,
+        # from a workspace that states none, and from a workspace manifest that does not parse.
+        table = ("", '[[bin]]\nname = "fixbin"\npath = "src/main.rs"\n', {"src/main.rs": MAIN})
+        for edition, workspace in (
+            ("edition = 2021\n", None),
+            ("edition.workspace = true\n", None),
+            ("edition.workspace = true\n", "[workspace]\n"),
+            ("edition.workspace = true\n", "[workspace\n"),
+        ):
+            with self.subTest(edition=edition, workspace=workspace):
+                unread = Member(self, "planted", [table], edition=edition, workspace=workspace)
+                with self.assertRaisesRegex(
+                    runner.KillerUnresolved,
+                    f"^crates/{PACKAGE} sets an edition the reader cannot decide$",
+                ):
+                    runner.locate_killer(unread.root, killer_row(runner))
         block = self.member(("", "", {"src/main.rs": "fn main() {\n    mod x;\n}\n"}))
         with self.assertRaisesRegex(runner.KillerUnresolved, "declares mod x inside a block"):
             runner.module_sources(block.crate / "src/main.rs")
@@ -783,6 +995,29 @@ class ThePlantedShapesOfTheIssue(unittest.TestCase):
             with self.subTest(shape=name):
                 self.assertEqual(runner.rust_tokens(text), expected)
         print(f"nested block comment shapes examined {len(shapes)}")
+
+    def test_a_block_comment_left_open_drops_every_character_to_the_end_of_the_text(self):
+        """A block comment that never closes runs to the end of the text, so the tokens are those
+        before it, however short or long the tail after its opener. The scan's bound is decided
+        at the end of a text, so the tails are every string of slashes, stars, a letter, a space
+        and a newline up to five characters that closes no comment: a bound that stops the scan
+        short leaves a tail character behind as a token."""
+        runner = runner_module()
+        heads = {
+            "": [],
+            "a ": ["a"],
+            "x = 1;\n": ["x", "=", "1", ";"],
+            "/* c */ b ": ["b"],
+        }
+        texts = []
+        for (head, expected), length in itertools.product(heads.items(), range(6)):
+            for letters in itertools.product("x /*\n", repeat=length):
+                tail = "".join(letters)
+                if "*/" not in tail:
+                    texts.append((f"{head}/*{tail}", expected))
+        for text, expected in examined("block comments left open", texts):
+            if runner.rust_tokens(text) != expected:
+                self.fail(f"{text!r} reads {runner.rust_tokens(text)}, where {expected} is due")
 
 
 class TheCfgPredicatesAgreeWithTheCompiler(unittest.TestCase):
