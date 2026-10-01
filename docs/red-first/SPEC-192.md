@@ -325,7 +325,7 @@ green. No assertion of a red test was weakened after its red commit. The module 
 (Ran 48 tests, OK, examined 25 Setting impl(s), examined 194 crate file(s) read for a macro_rules!
 body, examined 6309 R8 member(s) judged against rustc).
 
-```red-first
+```text
 A16: red at f21071a2: AssertionError: Lists differ: ['demo::Depth (src/lib.rs) "a whole depth"'] != [] (test_a_file_whose_own_inner_attribute_keeps_it_under_test_is_read)
 A16: green at 74807ff7
 A17: red at f21071a2: AssertionError: 0 != 1 :         mod x {\n            #![cfg(test)]\n        }\n (test_an_inner_attribute_or_an_attribute_before_a_repetition_is_read)
