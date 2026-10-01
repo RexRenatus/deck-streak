@@ -303,3 +303,12 @@ fn the_open_day_is_the_windows_last_day_studied_or_not_yet() {
     assert!(waiting.iter().all(|d| d.markers.is_empty()));
     assert!(waiting.last().is_some_and(|d| !d.studied));
 }
+
+/// The words the route serves are the SPEC's: a marker is spelled as its name.
+#[test]
+fn a_marker_is_served_under_its_own_word() {
+    assert_eq!(
+        [Marker::Skip, Marker::Freeze, Marker::Break].map(Marker::as_str),
+        ["skip", "freeze", "break"]
+    );
+}

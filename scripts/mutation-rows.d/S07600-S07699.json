@@ -392,8 +392,8 @@
         "S07644-A-SETTLED-DAY-NEEDS-ABOVE-ZERO-XP",
         "daemon",
         "../progression/src/settle.rs",
-        "AND amount > 0 ORDER BY study_day",
-        "AND amount >= 0 ORDER BY study_day",
+        ".filter(|row| row.amount > 0)",
+        ".filter(|row| row.amount >= 0)",
         "streak_calendar_route::a_track_is_settled_on_exactly_its_study_days",
         "a day is a study day only when its settled amount is above zero (ADR-302 D4)"
       ],
@@ -401,8 +401,8 @@
         "S07645-THE-SETTLED-DAYS-ARE-THE-TRACKS-OWN",
         "daemon",
         "../progression/src/settle.rs",
-        "WHERE source = ?1 AND track = ?2 AND amount > 0",
-        "WHERE source = ?1 AND ?2 = ?2 AND amount > 0",
+        "let track_word = track.as_str();",
+        "let track_word = \"law\";",
         "streak_calendar_route::a_track_is_settled_on_exactly_its_study_days",
         "the settled days read are one track's, not every track's (ADR-302 D4)"
       ]

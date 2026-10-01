@@ -124,5 +124,28 @@ describe('the streak calendar on the screen', () => {
     expect(bad({ language: [{ day: '2025-01-14', studied: true, markers: ['sleep'] }], law: [] })).toBeNull();
     expect(bad({ language: [{ day: 'today', studied: true, markers: [] }], law: [] })).toBeNull();
     expect(bad({ language: [], law: 'none' })).toBeNull();
+    expect(bad({ language: [], law: 5 })).toBeNull();
+    expect(bad({ language: [], law: {} })).toBeNull();
+    expect(bad({ language: [{ day: ['2025-01-14'], studied: true, markers: [] }], law: [] })).toBeNull();
+    expect(bad({ language: [{ day: '2025-01-14', studied: 'yes', markers: [] }], law: [] })).toBeNull();
+    expect(bad({ language: [{ day: '2025-01-14', studied: true, markers: [] }], law: [] })).not.toBeNull();
+  });
+
+  it('draws a cell per day with its day number, every marker joined, and a named list', () => {
+    const view = member(0);
+    view.calendar = {
+      language: [
+        { day: '2025-01-13', studied: true, markers: ['skip', 'break'] },
+        { day: '2025-01-14', studied: false, markers: [] }
+      ],
+      law: []
+    };
+    const { container } = render(StreakScreen, { view });
+    const drawn = cells(container, 'language');
+    expect(drawn.map((cell) => cell.dataset.markers)).toStrictEqual(['skip break', '']);
+    expect(drawn.map((cell) => cell.querySelector('span')?.textContent)).toStrictEqual(['13', '14']);
+    expect(container.querySelectorAll('ol[aria-label="The last five weeks"]')).toHaveLength(1);
+    expect(cells(container, 'law')).toHaveLength(0);
+    expect(container.querySelectorAll('ol')).toHaveLength(1);
   });
 });

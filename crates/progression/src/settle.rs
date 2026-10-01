@@ -190,16 +190,20 @@ pub async fn settled_days(
     source: &str,
     track: Track,
 ) -> Result<Vec<StudyDay>, sqlx::Error> {
-    let track = track.as_str();
-    let days = sqlx::query_scalar!(
-        r#"SELECT study_day AS "study_day!: i64" FROM xp_settlement
-           WHERE source = ?1 AND track = ?2 AND amount > 0 ORDER BY study_day"#,
+    let track_word = track.as_str();
+    let rows = sqlx::query!(
+        r#"SELECT study_day AS "study_day!: i64", amount AS "amount!: i64" FROM xp_settlement
+           WHERE source = ?1 AND track = ?2 ORDER BY study_day"#,
         source,
-        track
+        track_word
     )
     .fetch_all(connection)
     .await?;
-    Ok(days.into_iter().map(StudyDay::from_epoch_day).collect())
+    Ok(rows
+        .into_iter()
+        .filter(|row| row.amount > 0)
+        .map(|row| StudyDay::from_epoch_day(row.study_day))
+        .collect())
 }
 
 /// Every source and amount `study_day` holds in both XP tables, on both tracks: the rows the day
