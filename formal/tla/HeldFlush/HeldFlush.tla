@@ -211,6 +211,22 @@ Crash(f) == /\ pc[f] = "running"
             /\ pend' = [pend EXCEPT ![f] = {}]
             /\ UNCHANGED <<t, st, claim, claimUntil, heldAt, sends, lock, leaseUntil, fired>>
 
+\* The flush's work answers an error after its take committed (router.rs::deliver returns through
+\* `?`): before any push, between two items, or after a push reached and before its settle
+\* committed, so a push may be pending. flush_with then deletes the lease by its token and runs
+\* ledger.rs::release_claims, which gives every row still sending under the flush's token back to
+\* held, its claim cleared.
+Fail(f) == /\ pc[f] = "running"
+           /\ pc' = [pc EXCEPT ![f] = "idle"]
+           /\ snap' = [snap EXCEPT ![f] = {}]
+           /\ pend' = [pend EXCEPT ![f] = {}]
+           /\ st' = [i \in Items |->
+                       IF Claimed /\ st[i] = "sending" /\ claim[i] = f THEN "held" ELSE st[i]]
+           /\ claim' = [i \in Items |->
+                          IF Claimed /\ st[i] = "sending" /\ claim[i] = f THEN "none" ELSE claim[i]]
+           /\ lock' = IF lock = f THEN "none" ELSE lock
+           /\ UNCHANGED <<t, claimUntil, heldAt, sends, leaseUntil, fired>>
+
 \* The run ends at the last clock position, with no flush mid-way.
 Finished == /\ t = Horizon
             /\ \A f \in Flushers : pc[f] = "idle"
@@ -218,7 +234,7 @@ Finished == /\ t = Horizon
 
 Next == \/ Tick
         \/ \E i \in Items : Hold(i)
-        \/ \E f \in Flushers : Take(f) \/ Skip(f) \/ Finish(f) \/ Crash(f)
+        \/ \E f \in Flushers : Take(f) \/ Skip(f) \/ Finish(f) \/ Crash(f) \/ Fail(f)
         \/ \E f \in Flushers, i \in Items : Push(f, i) \/ Mark(f, i)
         \/ Finished
 
