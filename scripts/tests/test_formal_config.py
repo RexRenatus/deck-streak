@@ -5,6 +5,7 @@ import ast
 import copy
 import itertools
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -180,7 +181,7 @@ def toolchain_sources(doc, root):
     named = []
     if get(doc, ("toolchain", "identity"))[1]:
         named.append("toolchain.identity")
-    if (root / PIN_FILE).exists():
+    if os.path.lexists(root / PIN_FILE):  # a link is a blob to the checker, whatever it names
         named.append(PIN_FILE.as_posix())
     return named
 
@@ -215,12 +216,18 @@ def plant_pin(pin, shape):
 
 
 def load():
+    """The committed file as the checker reads it: HEAD's blob at the path. A link is read as its
+    own text, never followed, so a link at the path is refused; and every way the parser refuses
+    the bytes, syntax, encoding, a depth past its recursion limit or an integer past its digit
+    limit, is a failure by assertion, never an error."""
+    if CONFIG.is_symlink():
+        raise AssertionError("config/formal.json is a link: the formal checker reads the link")
     if not CONFIG.is_file():
         raise AssertionError("config/formal.json is absent: the formal checker reads none")
     try:
         return json.loads(CONFIG.read_text(encoding="utf-8"))
-    except ValueError as error:  # a file that is no JSON is a failure, never an error
-        raise AssertionError(f"config/formal.json is not JSON: {error}") from error
+    except (ValueError, RecursionError) as error:
+        raise AssertionError(f"config/formal.json is not JSON: {error!r}"[:300]) from error
 
 
 def same(a, b):

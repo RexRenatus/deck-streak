@@ -76,7 +76,7 @@
       [
         "S29510-THE-PIN-FILE-IS-NEVER-LOOKED-FOR",
         "scripts/tests/test_formal_config.py",
-        "if (root / PIN_FILE).exists():",
+        "if os.path.lexists(root / PIN_FILE):",
         "if False:",
         "a tree that commits the pin file beside the settings field names one source: the reader that never looks for the pin file misses the second (SPEC-295 A7)",
         "test_formal_config.FormalConfig.test_the_tree_names_one_toolchain_source_the_identity"
