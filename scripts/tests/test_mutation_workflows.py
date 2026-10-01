@@ -439,6 +439,90 @@ class EveryRunIsBounded(unittest.TestCase):
             self.assertRegex(command, r"--build-timeout \d+", f"{name}: {command}")
 
 
+SPELLINGS = (
+    (
+        "a toolchain selector",
+        "cargo +nightly mutants --in-place",
+        "cargo +nightly mutants --in-place",
+    ),
+    (
+        "the hyphenated binary",
+        "cargo-mutants mutants --in-place",
+        "cargo-mutants mutants --in-place",
+    ),
+    ("two blanks", "cargo  mutants --in-place", "cargo  mutants --in-place"),
+    (
+        "an option before the subcommand",
+        "cargo --config net.retry=2 mutants --in-place",
+        "cargo --config net.retry=2 mutants --in-place",
+    ),
+    ("the end of a line", "cargo mutants", "cargo mutants"),
+    (
+        "a wrapper's words after its separator",
+        "python3 scripts/x.py --cap 1 -- cargo mutants --in-place",
+        "cargo mutants --in-place",
+    ),
+)
+
+
+def planted(command):
+    """A workflow whose one job runs `command`."""
+    return (
+        "name: planted\njobs:\n  shard:\n    runs-on: ubuntu-24.04\n    steps:\n"
+        f"      - run: {command}\n"
+    )
+
+
+def definitions_of_the_finder(directory):
+    """The files of `directory` that define the command finder, read as text and never imported."""
+    return [
+        path.name
+        for path in sorted(Path(directory).glob("*.py"))
+        if re.search(r"(?m)^def mutants_(of\(words|in\(text)", path.read_text(encoding="utf-8"))
+    ]
+
+
+class EveryMutantsSpellingIsFound(unittest.TestCase):
+    def test_each_spelling_of_the_command_is_found_by_the_command_scan(self):
+        for what, command, found in SPELLINGS:
+            with self.subTest(what), tempfile.TemporaryDirectory() as scratch:
+                (Path(scratch) / "planted.yml").write_text(planted(command), encoding="utf-8")
+                commands = mutants_commands(Path(scratch))
+            self.assertEqual([name for name, _ in commands], ["planted.yml"], what)
+            self.assertEqual([c.split() for _, c in commands], [found.split()], what)
+
+    def test_each_spelling_of_the_command_is_found_by_the_job_scan(self):
+        for what, command, _ in SPELLINGS:
+            with self.subTest(what), tempfile.TemporaryDirectory() as scratch:
+                (Path(scratch) / "planted.yml").write_text(planted(command), encoding="utf-8")
+                running = mutants_jobs(Path(scratch))
+            self.assertEqual(
+                [(name, job) for name, job, _ in running], [("planted.yml", "shard")], what
+            )
+
+    def test_a_job_without_the_command_is_found_by_neither_scan(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            (Path(scratch) / "planted.yml").write_text(
+                planted("cargo nextest run"), encoding="utf-8"
+            )
+            (Path(scratch) / "control.yml").write_text(
+                planted("cargo mutants --in-place"), encoding="utf-8"
+            )
+            commands = mutants_commands(Path(scratch))
+            running = mutants_jobs(Path(scratch))
+        self.assertEqual([name for name, _ in commands], ["control.yml"])
+        self.assertEqual([name for name, _, _ in running], ["control.yml"])
+
+    def test_the_finder_is_defined_once_and_a_planted_copy_is_caught(self):
+        defined = definitions_of_the_finder(Path(__file__).parent)
+        self.assertEqual(defined, ["_mutants_finder.py"])
+        with tempfile.TemporaryDirectory() as scratch:
+            for name in ("one.py", "two.py"):
+                (Path(scratch) / name).write_text("def mutants_in(text, handed=False):\n    pass\n")
+            copies = definitions_of_the_finder(scratch)
+        self.assertEqual(copies, ["one.py", "two.py"])
+
+
 class TheBuilderBriefTeachesTheRules(unittest.TestCase):
     def test_the_builder_brief_teaches_the_mutation_rules(self):
         text = BRIEF.read_text(encoding="utf-8")
