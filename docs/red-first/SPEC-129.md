@@ -228,9 +228,16 @@ end-of-line spelling of the job scan are controls and are not red at 719a1a7a. T
 whole of `test_mutation_workflows.py` at 29993617, whose commit changes only the finder, the
 scans, the stand-in's failure arm and the rows' paths.
 
+Three commits sit between the red at 719a1a7a and the green at 29993617, and each edits a file a
+red test reads or runs. Commit 6bcdac64 only adds the read sites of the new tests to the census in
+`test_ci_workflows.py`, which the new tests owe and which changes no assertion of theirs. Commit
+e2d0076e moves the finder into `_mutants_finder.py`, repoints `test_dispatch_shards.py` at it and
+makes the stand-in's failure arm exit, which is the change A17 and A18 ask for. Commit 6af5e3dc
+points the two scans of `test_mutation_workflows.py` at the finder, which is the change A15 and A16
+ask for. Commit 7f83b956 adds one assertion to the census test of A19, that it read more than one file, and removes none. No commit among them edits a red test's assertion.
+
 ```red-first
 A15: red at 719a1a7a: AssertionError: Lists differ: [] != ['planted.yml'] : five spellings, five subtests red
-A16: not red: the job without the command is found by neither scan at the base, and the end-of-line spelling of the job scan already matches the literal the old scan filters on
 A16: red at 719a1a7a: AssertionError: Lists differ: [] != [('planted.yml', 'shard')] : four spellings red
 A17: red at 719a1a7a: AssertionError: Lists differ: ['test_dispatch_shards.py'] != ['_mutants_finder.py']
 A18: red at 1d651259: AssertionError: 0 == 0 : CI only, run 36915329420, job hygiene 110547785509, head 7f83b956, line 2587 of test_dispatch_shards.py
