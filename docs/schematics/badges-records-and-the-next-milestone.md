@@ -13,12 +13,13 @@ flowchart LR
   ctx --> cond[progression::badges::conditions]
   cond --> award[progression::badges::award: AwardPort]
   award -->|BEGIN IMMEDIATE| tb[(badges_earned)]
-  fold --> rec[coordination::recompute::records: guarded write]
+  fold --> rec[coordination::recompute::records: re-checked write]
   rec -->|BEGIN IMMEDIATE| tr[(records)]
-  award --> offer[offer-pending loop]
-  rec --> offer
+  fold --> offer[the fold's offers, between its writes]
+  tb --> offer
+  tr --> offer
   offer -->|event + dedupe key| router[notifications router: one send per key]
-  router -->|answered| mark[set celebrated_at from the services clock]
+  router -->|answered| mark[set celebrated_at from the services clock, own write]
   api[GET /api/badges, /records, /milestone] --> views[coordination views]
   bot[/badges, /records] --> views
   milestone[progression::milestone::next_milestone] --> views
@@ -32,23 +33,35 @@ sets, after the router answers; a band badge is written already marked.
 
 ```mermaid
 sequenceDiagram
-  participant F as phase 7
+  participant F as the fold
   participant D as database
   participant R as router
-  F->>D: award (key, tier) or guarded records write, celebrated_at NULL
-  F->>R: offer the celebration under its dedupe key
+  F->>R: offer every unmarked badge and record, each under its dedupe key
   R-->>F: answered (sent, or already sent under the key)
-  F->>D: set celebrated_at from the services clock
+  F->>D: set celebrated_at of the answered item, while its row still holds it
+  F->>D: the day's write: re-read the record row, name one it replaces unmarked, write with celebrated_at NULL
+  F->>R: after the fold's last write, offer every unmarked item again
+  R-->>F: answered
+  F->>D: set celebrated_at
 ```
 
-A crash between the first and the third step leaves the row unmarked. The next evaluation of any
-day offers every unmarked award again, and the router's unique dedupe key keeps each to one send.
+Each arrow into the database is its own `BEGIN IMMEDIATE` write, and the router writes through its
+own connection (`router.rs::route` opens `self.db.write()`), so no offer runs inside a write. A crash
+between any two steps leaves the row unmarked: the next offers, of this evaluation or of any later
+one, offer it again, and the router's unique dedupe key keeps each to one send. A router call that
+does not answer marks nothing.
 
-## 3. The guard on the records write
+## 3. The re-check on the records write
 
-A record row holds one kind. A day's write that would replace an earlier day's row first offers that
-row's mark inside the write's own read, so a record is offered before it can be superseded; one
-superseded before it could be offered is named in a log line with its kind and day.
+A record row holds one kind. The offers before a day's write give an earlier day's unmarked record
+its send. The write itself re-reads the row inside its own `BEGIN IMMEDIATE`: when it is about to
+replace an earlier day's row whose mark is still unset (the router did not answer, or a crash fell
+between), it names that record in a log line with its kind, its day and "celebration not sent", and
+then writes. The write never waits for the router: deferring it until the mark is set would stall
+every later record while the router does not answer (ADR-303).
+
+This section corrects the earlier text, which had the offer run inside the write's own read: the
+router opens a write of its own, so the code cannot do that.
 
 ## 4. The milestone
 

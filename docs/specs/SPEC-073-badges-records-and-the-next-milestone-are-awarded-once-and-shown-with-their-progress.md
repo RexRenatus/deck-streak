@@ -273,6 +273,8 @@ no row is deferred for this delivery.
 | `crates/coordination/src/progression/records_view.rs` | `deck-streak-coordination` | added: the records view with today's live values |
 | `crates/coordination/src/progression/milestone_view.rs` | `deck-streak-coordination` | added: the milestone view, `pending` until the mature-card sum exists |
 | `crates/coordination/src/lib.rs` | `deck-streak-coordination` | changed: the modules above |
+| `crates/coordination/src/sync_cycle.rs` | `deck-streak-coordination` | changed: the fold is given the window's base count and the offers to the router |
+| `crates/coordination/tests/{relight_order,relight_settle,settle_fold,streak_fold,xp_steps}.rs` | `deck-streak-coordination` | changed: each fold input names the base count and no offers |
 | `crates/coordination/tests/badges_context.rs` | `deck-streak-coordination` | added: A9 |
 | `crates/coordination/tests/badges_steps.rs` | `deck-streak-coordination` | added: A10, A11 |
 | `crates/coordination/tests/records_steps.rs` | `deck-streak-coordination` | added: A14 to A16 |
@@ -316,7 +318,8 @@ no row is deferred for this delivery.
 | `docs/specs/SPEC-073-badges-records-and-the-next-milestone-are-awarded-once-and-shown-with-their-progress.md` | docs | moved from `docs/specs/planned/` |
 | `formal/tla/AwardOnce/` | formal | added: the award-once model, its clean configuration and four witnesses |
 | `formal/lean/Formal/NextMilestone.lean` | formal | added: the pick of the next milestone is least, with its tie order and its complete case |
-| `docs/decisions/ADR-303-the-celebration-mark-lives-on-the-award-row.md` | docs | added |
+| `docs/decisions/ADR-303-an-award-carries-its-celebration-mark-and-is-offered-until-the-router-answers.md` | docs | added |
+| `docs/schematics/badges-records-and-the-next-milestone.md` | docs | added: the components, the sequence of offers between writes, the re-checked records write |
 | `docs/red-first/SPEC-073.md` | docs | added |
 | `changelog.d/` fragment | repo | added |
 
