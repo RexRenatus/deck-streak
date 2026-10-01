@@ -10,8 +10,8 @@ StrykerJS writes, and the rows runner's report. No tool runs here.
 import argparse
 import ast
 import contextlib
+import dataclasses
 import importlib.util
-import inspect
 import io
 import json
 import os
@@ -2006,7 +2006,7 @@ def plan_outcome(module, fixture):
 
 def judged_in_process(module, fixture, plan):
     """`judge --class scripts` over the plan, in-process: its exit and what it printed."""
-    document = json.loads(json.dumps(plan.__dict__))
+    document = json.loads(json.dumps(dataclasses.asdict(plan)))
     verdict = module.Verdict("scripts")
     args = argparse.Namespace(
         klass="scripts",
@@ -2039,13 +2039,9 @@ def every_string_set_aside(source):
     except (SyntaxError, ValueError):
         return None
     for node in ast.walk(tree):
-        for name, block in ast.iter_fields(node):
+        for _, block in ast.iter_fields(node):
             if isinstance(block, list):
-                setattr(
-                    node,
-                    name,
-                    [item for item in block if not is_string_statement(item)],
-                )
+                block[:] = [item for item in block if not is_string_statement(item)]
         if isinstance(node, ast.Constant) and isinstance(node.value, str):
             node.value = ""
     return ast.dump(tree)
@@ -2476,7 +2472,13 @@ class ADocstringOnlyScriptChangeIsNamed(unittest.TestCase):
         admitted = examined(
             "legs ci admits a skip from", re.findall(r'"(mutation-[a-z]+):', loop[1])
         )
-        judged = re.findall(r'"(mutation-[a-z]+)",', inspect.getsource(module.legs))
+        source = VERDICT.read_text(encoding="utf-8")
+        legs = next(
+            node
+            for node in ast.walk(ast.parse(source))
+            if isinstance(node, ast.FunctionDef) and node.name == "legs"
+        )
+        judged = re.findall(r'"(mutation-[a-z]+)",', ast.get_source_segment(source, legs))
         self.assertEqual(sorted(judged), sorted(admitted))
         why = paragraph.split(". A pull request into", 1)[0]
         with self.subTest("the legs ci admits a skip from"):
