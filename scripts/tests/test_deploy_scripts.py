@@ -2604,11 +2604,11 @@ exec /usr/bin/@NAME@ "$@"
         good = self.good(w)
         self.arm(w)
         extra = self.EXTRA if change == "unship_the_new_unit" else None
-        fresh = {}
+        fresh = {"extra": extra}
         if change == "corrupt_the_manifest":
-            fresh = {"corrupt": True}
+            fresh["corrupt"] = True
         elif change == "refuse_the_effective_check":
-            fresh = {"extra": self.BAD_BOT}
+            fresh["extra"] = self.BAD_BOT
         if base == "first":
             w.ship("v1.0.0")
             argv = [DEPLOY if verb == "install" else ROLLBACK, "v1.0.0"]
@@ -2620,7 +2620,7 @@ exec /usr/bin/@NAME@ "$@"
                 self.ok(w.deploy("v1.1.0", **good))
                 argv = [ROLLBACK, "v1.0.0"]
             else:
-                w.ship("v1.1.0", extra=extra, **fresh)
+                w.ship("v1.1.0", **fresh)
                 argv = [DEPLOY if verb == "install" else ROLLBACK, "v1.1.0"]
         # The modes a change locks, which every run from this world restores when it ends.
         w.locked = getattr(self, change)(w, good, argv) if change else []
