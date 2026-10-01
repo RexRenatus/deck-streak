@@ -287,16 +287,20 @@ A13: replay of the two attribute cfg_attr rewrite: FAILED (failures=1): Assertio
 
 Three criteria join SPEC-192 (section 13). Their tests were committed first at 87ed53af, with the
 guard as the base left it: 38 tests ran and 10 failed, each by assertion and none by an import or a
-syntax error (A16 three tests, A17 three, A18 four). The arms are committed at 3ce8e297 and
-repaired at 8a44e700, where the module is green. The base module ran 24 tests.
+syntax error (A16 three tests, A17 three, A18 four). The arms were committed at 3ce8e297 and
+repaired at 8a44e700, and 54a29c9f added a planted positive beside two tests that asserted only
+absences. The three commits after the red one change the guard's own file, test_setting_shapes.py,
+and no assertion of a red test was weakened in them. The module is green at 54a29c9f (Ran 38 tests, OK,
+examined 25 Setting impl(s), examined 194 crate file(s) read for a macro_rules! body, examined 6309
+R8 member(s) judged against rustc); the base module ran 24 tests.
 
-```text
-A16: red at 87ed53af: FAILED (failures=10), AssertionError: Lists differ: ['demo::Depth (src/lib.rs) "a whole depth"'] != [] (test_a_declaration_inside_inline_modules_is_read_from_the_inline_path)
-A16: green at 8a44e700: Ran 38 tests, OK, examined 25 Setting impl(s), examined 6309 R8 member(s) judged against rustc
-A17: red at 87ed53af: FAILED (failures=10), AssertionError: 0 != 1 (test_a_macro_body_with_a_cfg_test_module_is_refused_by_its_file)
-A17: green at 8a44e700: Ran 38 tests, OK, examined 194 crate file(s) read for a macro_rules! body, 0 hits
-A18: red at 87ed53af: FAILED (failures=10), AssertionError: 0 != 1 : ('lib.rs', '#[cfg(test)]\nmod tests;\n#[cfg(not(test))]\nmod tests;\n') (test_a_module_declared_beside_one_with_not_test_is_refused)
-A18: green at 8a44e700: Ran 38 tests, OK, examined 25 Setting impl(s), examined 6309 R8 member(s) judged against rustc
+```red-first
+A16: red at 87ed53af: AssertionError: Lists differ: ['demo::Depth (src/lib.rs) "a whole depth"'] != [] (test_a_declaration_inside_inline_modules_is_read_from_the_inline_path)
+A16: green at 54a29c9f
+A17: red at 87ed53af: AssertionError: 0 != 1 (test_a_macro_body_with_a_cfg_test_module_is_refused_by_its_file)
+A17: green at 54a29c9f
+A18: red at 87ed53af: AssertionError: 0 != 1 : ('lib.rs', '#[cfg(test)]\nmod tests;\n#[cfg(not(test))]\nmod tests;\n') (test_a_module_declared_beside_one_with_not_test_is_refused)
+A18: green at 54a29c9f
 ```
 
 Rows S19305 to S19309 pin the arms, and each is KILLED by its pinning test under one invocation.
