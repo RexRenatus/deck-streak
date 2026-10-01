@@ -31,7 +31,7 @@ EXPECTED = {
     },
     "axioms": ["propext", "Classical.choice", "Quot.sound"],
     "owner_signers": "config/owner-allowed-signers",
-    "tlc_slot": {"capacity": 1, "wait_seconds": 1800},
+    "tlc_slot": {"capacity": 4, "wait_seconds": 1800},
     "toolchain": {"identity": "a2518571360483e12161e99b64695e6c3e8845230129ce0ad179b5bddf9a8dc4"},
 }
 
