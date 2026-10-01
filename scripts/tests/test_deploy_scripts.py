@@ -2493,7 +2493,7 @@ exec /usr/bin/@NAME@ "$@"
         return found
 
     # The figures the census prints, each pinned beside an independent reading of the same text.
-    COMMAND_SITES = 235
+    COMMAND_SITES = 252
     REDIRECTION_TARGETS = 1
 
     @classmethod
@@ -2532,8 +2532,8 @@ exec /usr/bin/@NAME@ "$@"
         self.assertEqual(len(targets), 1, "the redirections into the check file")
         self.assertEqual(
             found,
-            {"mktemp": 1, "find": 2, "mkdir": 2, "ln": 1, "install": 3, "mv": 2}
-            | {"rm": 2, "tar": 4},
+            {"mktemp": 1, "find": 1, "mkdir": 2, "ln": 1, "install": 3, "mv": 4}
+            | {"rm": 2, "tar": 3},
             "the command sites of the host body that can write a path, by tool",
         )
         self.assertEqual(sum(found.values()), 17, "the command sites that can write a path")
@@ -2814,7 +2814,7 @@ exec /usr/bin/@NAME@ "$@"
             "is current", done.stdout, f"{label}: exit 0 without finishing: {done.stderr}"
         )
         for path in set(after) - set(before):
-            temporary = path.name.startswith(".current.") or path.name.endswith(
+            temporary = path.name.startswith((".current.", ".stale.")) or path.name.endswith(
                 (".partial", ".saved")
             )
             self.assertFalse(

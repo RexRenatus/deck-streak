@@ -388,7 +388,7 @@
       [
         "S12749-A-THE-HOST-STEP-REFUSES-A-CHECK-FILE-IT-CANNOT-MAKE",
         "deploy/deploy.sh",
-        "checked=$(mktemp) || { echo \"deploy: the host step could not make its check file\" >&2; exit 1; }",
+        "checked=$(mktemp) || refuse \"could not make its check file\"",
         "checked=$(mktemp)",
         "the host script stops when its check file cannot be made (SPEC-127 A40)",
         "test_deploy_scripts.ATemporaryPathThatCannotBeMadeIsANamedRefusal.test_every_temporary_path_that_cannot_be_made_is_a_named_refusal"
@@ -396,16 +396,16 @@
       [
         "S12750-A-THE-HOST-REFUSAL-PRINTS-ITS-LINE",
         "deploy/deploy.sh",
-        "echo \"deploy: the host step could not make its check file\" >&2; exit 1; }",
-        "exit 1; }",
+        "|| refuse \"could not make its check file\"",
+        "|| exit 1",
         "the host script prints its refusal line before it stops (SPEC-127 A40)",
         "test_deploy_scripts.ATemporaryPathThatCannotBeMadeIsANamedRefusal.test_every_temporary_path_that_cannot_be_made_is_a_named_refusal"
       ],
       [
         "S12751-A-THE-HOST-REFUSAL-EXITS-NON-ZERO",
         "deploy/deploy.sh",
-        "could not make its check file\" >&2; exit 1; }",
-        "could not make its check file\" >&2; exit 0; }",
+        "stop() { fail_with \"$* [host step]\"; }",
+        "stop() { echo \"deploy: $* [host step]\" >&2; exit 0; }",
         "the host script exits non-zero when its check file cannot be made (SPEC-127 A40)",
         "test_deploy_scripts.ATemporaryPathThatCannotBeMadeIsANamedRefusal.test_every_temporary_path_that_cannot_be_made_is_a_named_refusal"
       ],
@@ -484,16 +484,16 @@
       [
         "S12761-A-THE-HOST-REFUSAL-EXITS-NON-ZERO-ON-EVERY-PATH",
         "deploy/deploy.sh",
-        "refuse() { echo \"deploy: the host step $*\" >&2; exit 1; }",
-        "refuse() { echo \"deploy: the host step $*\" >&2; exit 0; }",
+        "fail_with() { echo \"deploy: $*\" >&2; exit 1; }",
+        "fail_with() { echo \"deploy: $*\" >&2; exit 0; }",
         "the host step's shared refusal exits non-zero (SPEC-127 A41)",
         "test_deploy_scripts.EveryDirectoryAVerbWritesInIsMeasuredAndItsTemporaryPathsAreRefused.test_every_place_a_verb_writes_in_and_every_temporary_path_call_is_refused"
       ],
       [
         "S12762-A-THE-HOST-REFUSAL-NAMES-THE-HOST-STEP",
         "deploy/deploy.sh",
-        "refuse() { echo \"deploy: the host step $*\" >&2; exit 1; }",
-        "refuse() { echo \"deploy: $*\" >&2; exit 1; }",
+        "refuse() { fail_with \"the host step $*\"; }",
+        "refuse() { fail_with \"$*\"; }",
         "the host step's shared refusal names the host step (SPEC-127 A41)",
         "test_deploy_scripts.EveryDirectoryAVerbWritesInIsMeasuredAndItsTemporaryPathsAreRefused.test_every_place_a_verb_writes_in_and_every_temporary_path_call_is_refused"
       ],
@@ -524,16 +524,16 @@
       [
         "S12766-A-THE-EXIT-DELETES-THE-STAGED-LINK",
         "deploy/deploy.sh",
-        "[ ! -L \"$root/.current.$$\" ] || find \"$root/.current.$$\" -delete",
-        "true",
+        "    remove \"$root/.current.$$\" || remove \"$root/.current.$$\" || :\n",
+        "    :\n",
         "every exit deletes the pid-named link it made (SPEC-127 A41)",
         "test_deploy_scripts.EveryDirectoryAVerbWritesInIsMeasuredAndItsTemporaryPathsAreRefused.test_every_place_a_verb_writes_in_and_every_temporary_path_call_is_refused"
       ],
       [
         "S12767-A-THE-EXIT-DELETES-AN-UNFINISHED-UNPACK",
         "deploy/deploy.sh",
-        "[ -z \"$made_partial\" ] || [ ! -e \"$rel.partial\" ] || find \"$rel.partial\" -delete",
-        "true",
+        "    [ -z \"$made_partial\" ] || remove \"$rel.partial\" || remove \"$rel.partial\" || :\n",
+        "    :\n",
         "every exit deletes an unfinished unpack (SPEC-127 A41)",
         "test_deploy_scripts.EveryDirectoryAVerbWritesInIsMeasuredAndItsTemporaryPathsAreRefused.test_every_place_a_verb_writes_in_and_every_temporary_path_call_is_refused"
       ],
@@ -548,8 +548,8 @@
       [
         "S12769-A-A-FAILED-SWITCH-REMOVES-THE-NEW-RELEASE",
         "deploy/deploy.sh",
-        "[ \"$mode\" != install ] || find \"$rel\" -delete",
-        "true",
+        "[ \"$mode\" != install ] || remove \"$rel\" || remove \"$rel\"",
+        "[ \"$mode\" != install ] || :",
         "a failed rename over current removes an install's new release (SPEC-127 A41)",
         "test_deploy_scripts.EveryDirectoryAVerbWritesInIsMeasuredAndItsTemporaryPathsAreRefused.test_every_place_a_verb_writes_in_and_every_temporary_path_call_is_refused"
       ],
@@ -572,8 +572,8 @@
       [
         "S12772-A-THE-EXIT-DELETES-THE-CHECK-FILE",
         "deploy/deploy.sh",
-        "[ ! -f \"$checked\" ] || find \"$checked\" -delete",
-        "true",
+        "    remove \"$checked\" || remove \"$checked\" || :\n",
+        "    :\n",
         "the exit trap deletes the check file the step made first (SPEC-127 A42)",
         "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_an_install_over_an_installed_host_refuses_each_of_its_writing_calls"
       ],
@@ -628,15 +628,15 @@
       [
         "S12779-A-THE-UNDO-REMOVES-EVERY-UNIT-THE-RUN-MAY-HAVE-WRITTEN",
         "deploy/deploy.sh",
-        "find \"$f\" -delete || return 1",
-        "true",
+        "        remove \"$f\" || remove \"$f\" || return 1",
+        "        :",
         "the undo removes a unit or drop-in only the new release shipped (SPEC-127 A42)",
         "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_a_failed_switch_leaves_no_unit_only_the_new_release_ships"
       ],
       [
         "S12780-A-THE-UNDO-PUTS-THE-SAVED-UNITS-BACK",
         "deploy/deploy.sh",
-        "[ ! -f \"$saved\" ] || tar -C \"$unitdir\" -xpf \"$saved\" || return 1",
+        "[ ! -f \"$saved\" ] || restore_units || restore_units || return 1",
         "true",
         "the undo extracts the saved archive back over the unit directory (SPEC-127 A42)",
         "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_an_install_over_an_installed_host_refuses_each_of_its_writing_calls"
@@ -660,8 +660,8 @@
       [
         "S12783-A-A-REFUSED-RUN-REMOVES-THE-ROOT-IT-MADE",
         "deploy/deploy.sh",
-        "[ -z \"$made_top\" ] || [ -n \"$finished\" ] || [ ! -e \"$made_top\" ] || find \"$made_top\" -delete",
-        "true",
+        "    [ -z \"$made_top\" ] || [ -n \"$finished\" ] || remove \"$made_top\" || remove \"$made_top\" || :\n",
+        "    :\n",
         "a refused first install removes the root and releases directories it made (SPEC-127 A42)",
         "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_a_first_install_refuses_each_of_its_writing_calls"
       ],
@@ -716,24 +716,24 @@
       [
         "S12790-A-THE-CHECK-FILE-DELETE-IS-GUARDED",
         "deploy/deploy.sh",
-        "find \"$checked\" -delete || undo_and_refuse \"could not delete its check file\"",
-        "find \"$checked\" -delete || true",
+        "remove \"$checked\" || undo_and_refuse \"could not delete its check file\"",
+        "remove \"$checked\" || true",
         "a check file that cannot be deleted undoes the run and names the step (SPEC-127 A42)",
         "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_an_install_over_an_installed_host_refuses_each_of_its_writing_calls"
       ],
       [
         "S12791-A-A-STALE-UNPACK-DELETE-IS-GUARDED",
         "deploy/deploy.sh",
-        "find \"$rel.partial\" -delete || refuse \"could not remove an unfinished unpack\"",
-        "find \"$rel.partial\" -delete || true",
+        "deletable \"$rel.partial\" || refuse \"could not remove an unfinished unpack\"",
+        "deletable \"$rel.partial\" || true",
         "an unfinished unpack that cannot be removed is a named refusal (SPEC-127 A42)",
         "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_a_stale_unpack_that_cannot_be_deleted_is_refused_by_that_name"
       ],
       [
         "S12792-A-A-STALE-DROP-IN-DELETE-IS-GUARDED",
         "deploy/deploy.sh",
-        "[ -f \"$src/$n/$base\" ] || find \"$c\" -delete || return 1",
-        "[ -f \"$src/$n/$base\" ] || find \"$c\" -delete || true",
+        "[ -f \"$src/$n/$base\" ] || remove \"$c\" || return 1",
+        "[ -f \"$src/$n/$base\" ] || remove \"$c\" || true",
         "a stale drop-in file that cannot be removed fails the unit installation (SPEC-127 A42)",
         "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_a_stale_drop_in_that_cannot_be_deleted_is_refused"
       ]
