@@ -40,4 +40,4 @@ pub mod xp;
 /// The read side of the settlement, at the crate root: a day's settled rows are what the level view
 /// shows, and reading them is not the write that only the recompute and the owner's correction make
 /// through [`settle::settle`].
-pub use settle::{SettledRow, settled_of_day};
+pub use settle::{SettledRow, settled_days, settled_of_day};

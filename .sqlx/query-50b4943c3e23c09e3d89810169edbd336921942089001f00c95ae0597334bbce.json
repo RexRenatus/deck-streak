@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT study_day AS \"study_day!: i64\", amount AS \"amount!: i64\" FROM xp_settlement\n           WHERE source = ?1 AND track = ?2 ORDER BY study_day",
+  "describe": {
+    "columns": [
+      {
+        "name": "study_day!: i64",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "xp_settlement",
+            "name": "study_day"
+          }
+        }
+      },
+      {
+        "name": "amount!: i64",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "xp_settlement",
+            "name": "amount"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "50b4943c3e23c09e3d89810169edbd336921942089001f00c95ae0597334bbce"
+}

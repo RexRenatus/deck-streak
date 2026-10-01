@@ -12,6 +12,7 @@
 #![deny(unused_must_use)]
 #![warn(missing_docs, clippy::all)]
 
+pub mod calendar;
 pub mod constants;
 pub mod data_rights;
 pub mod freeze;

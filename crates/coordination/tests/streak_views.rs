@@ -263,3 +263,60 @@ async fn a_studied_day_puts_nothing_at_stake_on_either_track() {
     println!("studied-day population: {cases} stored pairs");
     assert_eq!(cases, 3 * 2 * 2 * 4);
 }
+
+/// A59 over the coordination read: the view carries each track's calendar over the predecessor's
+/// window (Monday 2024-04-01 through Friday 2024-10-04, 187 days), built from the settled study
+/// days, with a marker on the day the run broke.
+#[tokio::test]
+async fn the_view_carries_each_tracks_calendar_from_its_settled_days() {
+    let scratch = TempDir::new().expect("a scratch directory");
+    let db = database(&scratch).await;
+    let mut write = db.write().await.expect("a write");
+    for track in ["language", "law"] {
+        sqlx::query(
+            "INSERT INTO streak_state (track, current_days, longest_days, freezes, \
+             last_study_day, comeback_armed, created_at) VALUES (?1, 1, 1, 0, ?2, 0, 1)",
+        )
+        .bind(track)
+        .bind(TODAY)
+        .execute(&mut *write)
+        .await
+        .expect("a streak row");
+    }
+    for (source, track) in [("reviews", "language"), ("reviews_law", "law")] {
+        for day in [TODAY - 30, TODAY - 1, TODAY] {
+            sqlx::query(
+                "INSERT INTO xp_settlement (study_day, source, track, amount, closed, created_at) \
+                 VALUES (?1, ?2, ?3, 10, 1, 1)",
+            )
+            .bind(day)
+            .bind(source)
+            .bind(track)
+            .execute(&mut *write)
+            .await
+            .expect("a settlement row");
+        }
+    }
+    write.commit().await.expect("commit");
+    let view = streak_view(&db, StudyDay::from_epoch_day(TODAY))
+        .await
+        .expect("the view");
+    for calendar in [&view.language_calendar, &view.law_calendar] {
+        assert_eq!(calendar.len(), 187);
+        assert_eq!(calendar[0].day.epoch_day(), TODAY - 186);
+        let studied: Vec<i64> = calendar
+            .iter()
+            .filter(|day| day.studied)
+            .map(|day| day.day.epoch_day())
+            .collect();
+        assert_eq!(studied, vec![TODAY - 30, TODAY - 1, TODAY]);
+        assert!(
+            calendar.iter().any(|day| day.markers.contains(&"break")),
+            "a run left idle for weeks shows its break"
+        );
+    }
+    println!(
+        "examined {} calendar day(s) read",
+        view.language_calendar.len() + view.law_calendar.len()
+    );
+}
