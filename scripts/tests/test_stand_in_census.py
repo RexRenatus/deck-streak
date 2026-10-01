@@ -29,6 +29,7 @@ class TheCensusOfStandIns(unittest.TestCase):
     def test_no_stand_in_falls_back_to_a_real_program_on_a_failed_plant(self):
         files, found = census(HERE)
         examined("test files read for stand-ins", range(files))
+        self.assertGreater(files, 1)
         self.assertEqual(found, [])
 
     def test_a_planted_fallback_is_listed(self):
