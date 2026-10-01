@@ -317,13 +317,13 @@
         "the language line shows its heat in every band of the heat table, the top two included (SPEC-076 R31 restated, A50)"
       ],
       [
-        "S07636-THE-CALENDAR-WINDOW-IS-THE-CONSTANT-DAYS",
+        "S07636-THE-CALENDAR-WINDOW-STARTS-ON-ITS-FIRST-MONDAY",
         "streaks",
         "src/calendar.rs",
-        "    (served.epoch_day() - span + 1..=served.epoch_day())\n",
-        "    (served.epoch_day() - span..=served.epoch_day())\n",
+        "    (first_day(served)..=served.epoch_day())\n",
+        "    (first_day(served) - 1..=served.epoch_day())\n",
         "calendar_population::every_served_calendar_day_carries_exactly_its_own_markers",
-        "the window is CALENDAR_DAYS days ending at the served day, no more (SPEC-076 section 27)"
+        "the window starts on the Monday on or before the served day minus 181 days, no earlier (SPEC-076 section 27; ADR-302 D2)"
       ],
       [
         "S07637-A-FREEZE-SITS-ON-THE-COVERED-DAY",
@@ -368,7 +368,7 @@
         "            } else if !skips.contains(&day) && live {\n",
         "            } else if !skips.contains(&day) {\n",
         "calendar_population::every_served_calendar_day_carries_exactly_its_own_markers",
-        "the law track breaks only a live run, on its first real miss (ADR-302 D3)"
+        "the law track breaks only a live run, on the day after its first real miss (ADR-302 D3)"
       ],
       [
         "S07642-THE-OPEN-DAY-IS-STUDIED-WHEN-IT-HAS-A-STUDY-DAY",
@@ -405,6 +405,51 @@
         "let track_word = \"law\";",
         "streak_calendar_route::a_track_is_settled_on_exactly_its_study_days",
         "the settled days read are one track's, not every track's (ADR-302 D4)"
+      ],
+      [
+        "S07646-THE-LAW-BREAK-SITS-ON-THE-RESET-DAY",
+        "streaks",
+        "src/calendar.rs",
+        "                mark(&mut calendar, reset, Marker::Break);\n",
+        "                mark(&mut calendar, day, Marker::Break);\n",
+        "calendar_population::every_served_calendar_day_carries_exactly_its_own_markers",
+        "the law track's break sits on the day its replay resets the run, the day after the first real miss, not on the miss (ADR-302 D3)"
+      ],
+      [
+        "S07647-THE-CALENDAR-REACHES-26-WEEKS",
+        "daemon",
+        "../streaks/src/constants.rs",
+        "pub const CALENDAR_WEEKS: i64 = 26;\n",
+        "pub const CALENDAR_WEEKS: i64 = 25;\n",
+        "streak_calendar_route::the_route_serves_the_predecessors_window_and_its_studied_days",
+        "the route serves the predecessor's 26 weeks, not one week fewer (SPEC-076 section 27; ADR-302 D1, D2)"
+      ],
+      [
+        "S07648-THE-LOOKBACK-LEAVES-OUT-THE-SERVED-DAY",
+        "streaks",
+        "src/constants.rs",
+        "pub const CALENDAR_LOOKBACK_DAYS: i64 = CALENDAR_WEEKS * 7 - 1;\n",
+        "pub const CALENDAR_LOOKBACK_DAYS: i64 = CALENDAR_WEEKS * 7;\n",
+        "calendar_population::every_served_calendar_day_carries_exactly_its_own_markers",
+        "the calendar reaches back 181 days before it widens to that day's Monday, not 182 (ADR-302 D2)"
+      ],
+      [
+        "S07649-THE-WINDOW-WIDENS-TO-A-MONDAY",
+        "streaks",
+        "src/calendar.rs",
+        "    reach - (reach + 3).rem_euclid(7)\n",
+        "    reach - (reach + 4).rem_euclid(7)\n",
+        "calendar_population::every_served_calendar_day_carries_exactly_its_own_markers",
+        "the window's first day is a Monday, epoch day 0 being a Thursday, and never another weekday (ADR-302 D2)"
+      ],
+      [
+        "S07650-THE-ROUTE-WINDOW-IS-ALIGNED-TO-A-MONDAY",
+        "daemon",
+        "../streaks/src/calendar.rs",
+        "    reach - (reach + 3).rem_euclid(7)\n",
+        "    reach\n",
+        "streak_calendar_route::the_route_serves_the_predecessors_window_and_its_studied_days",
+        "the route widens the window to the Monday on or before its reach, as the predecessor does (SPEC-076 section 27; ADR-302 D2)"
       ]
     ]
   }
