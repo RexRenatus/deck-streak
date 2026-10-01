@@ -12,8 +12,8 @@ decision-makers: "the DeckStreak architect"
 after `mutants` and a job filter that needs the literal text `cargo mutants`. The dispatch-shard
 guard of SPEC-129 section 8 finds more spellings: a toolchain selector, the hyphenated binary,
 repeated blanks, a cargo option before the subcommand, and a command at the end of a line. A job
-that spelled the command one of those ways escaped the bounds, the nextest-install and the
-yaml-suffix assertions of the module (#418).
+that spelled the command one of those ways escaped the bounds and the nextest-install
+assertions of the module (#418).
 
 Separately, the stand-in the guard runs in place of the interpreter planted the wrapper and, when
 planting raised, executed the real program with the words unchanged. A failed plant then read as a
@@ -42,7 +42,7 @@ fails?
 
 ## Decision Outcome
 
-Chosen options: the finder moves, unchanged, to `scripts/tests/_mutants_finder.py` (a flat module,
+Chosen options: the finder moves, unchanged except the `wrapped` seam, to `scripts/tests/_mutants_finder.py` (a flat module,
 because a package named `_support` would shadow `_support.py`), and the stand-in exits when its plant
 fails.
 
@@ -54,11 +54,13 @@ fails.
 - The only lines of the moved text that differ from the originals are the signatures and the call
   sites that pass `wrapped` on. A diff of the extracted text shows every other line byte-equal.
 - Measured at the base over the six workflow files: the old scans found 9 commands and 6 jobs, the
-  new ones find 9 and 6, and lose none. The null recognizer alone finds 5 and refuses 3 wrapped
-  commands, which is why `test_mutation_workflows.py` passes its own.
+  new ones find 9 and 6, and lose none. The null recognizer alone finds 5 and refuses 3 run texts
+  that hold 4 wrapped commands, which is why `test_mutation_workflows.py` passes its own.
 - The stand-in prints `plant_wrapper failed: <the exception>` to standard error and exits non-zero.
-  A text-only census lists every stand-in under `scripts/tests/` that falls back to `exec`,
-  `subprocess` or `runpy` of a real program on a failed plant.
+  A text-only census lists each failed-plant fallback it reaches: in the top-level `*.py` files
+  of `scripts/tests/`, an `except` after a `try` that plants, followed within 12 lines by an
+  `os.exec*`, `subprocess.*` or `runpy.*` call. A fallback in a subdirectory, or a call further
+  away, is outside its reach.
 
 ### Consequences
 
@@ -67,7 +69,9 @@ fails.
 - Good, because the failed plant is a visible failure, with no program run after it.
 - Bad, because the support module holds one literal mention of the wrapper's file name, moved with
   the text it belongs to, so a search for that name lists it.
-- Bad, because the workflow tests' recognizer is a second, narrower reading of what a wrapper is.
+- Bad, because the workflow tests' recognizer is a second, broader reading of what a wrapper is: it
+  takes the words after the first `--` of any program that is not cargo, so it also finds commands
+  the guard refuses (`echo`, `env`, `timeout` and `git` before a `--`). That fails closed.
 
 ### Confirmation
 
@@ -76,7 +80,7 @@ fails.
 
 ## What would make this wrong
 
-A workflow command shaped so that the narrower recognizer reads it differently from the guard's own
+A workflow command shaped so that the broader recognizer reads it differently from the guard's own
 one would make the two scans disagree again. A population test that generates such commands would
 show it; the base population (9 commands) shows none.
 

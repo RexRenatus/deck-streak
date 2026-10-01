@@ -397,7 +397,7 @@ program). Issues #418 and #497.
   --in-place` with two blanks, and `cargo --config net.retry=2 mutants --in-place`; the line pattern
   also misses `cargo mutants` at the end of a line. Both scans now read each workflow through ONE
   finder, `scripts/tests/_mutants_finder.py`, which holds the guard's reader and its command finder
-  moved out of `test_dispatch_shards.py` unchanged. Both modules import it and neither keeps a copy.
+  moved out of `test_dispatch_shards.py`, unchanged except the `wrapped` seam. Both modules import it and neither keeps a copy.
 - **The seam.** What a wrapper is differs between the two importers, so the finder takes it as a
   parameter, `wrapped`, which defaults to a recognizer that sees no wrapper. It is never a module
   attribute, so what one importer passes cannot reach the other when both load in one process.
@@ -405,18 +405,21 @@ program). Issues #418 and #497.
   `test_mutation_workflows.py` passes a recognizer that names no wrapper and reads no file: for a
   command whose program is not cargo, the command is the words after its first standalone `--`.
 - **The weight of the move.** The finder's text keeps its one literal mention of the wrapper's
-  file name, in a string match and a comment, so a search for that name lists the support module.
-  It imports nothing and reaches no path, and `test_mutation_workflows.py` imports nothing that
-  does, so it stays runnable on a machine where the wrapper's own tests are not.
+  file name, in one string match and nowhere else (`grep -n memory_scope
+  scripts/tests/_mutants_finder.py` prints one line), so a search for that name lists the support
+  module. It imports only `re` and `string` and reaches no path, and `test_mutation_workflows.py`
+  imports nothing that does, so it stays runnable where the wrapper's own tests are not.
 - **The rule, #497.** The stand-in `test_dispatch_shards.py` runs in place of the interpreter
   planted the wrapper and, when planting raised, fell through to running the real program with the
   words unchanged. It now prints the failure to standard error and exits non-zero, and runs nothing
-  after it. A census that reads the text of `scripts/tests/` lists each stand-in that falls back to
-  a real program on a failed plant, with its file, line and arm; it lists none at this head.
+  after it. A census that reads the text of the top-level `*.py` files of `scripts/tests/` lists each
+  failed-plant fallback it reaches, with its file, line and arm; it lists none at this head. Its
+  reach is bounded twice: it reads no subdirectory, and it looks for the real-program call only
+  in the 12 lines after the handler. A fallback outside either bound is not listed (#497).
 - **A refusal is a find.** A workflow the reader refuses is reported by the command scan as
   `refused: <why>`, which carries no bounds, and counted by the job scan as running the command, so
   the assertions over them fail on it and never pass over it.
-- **Not measured on this machine.** `test_dispatch_shards.py` and `test_memory_scope.py` run in CI
+- **Not measured here.** `test_dispatch_shards.py` and `test_memory_scope.py` run in CI
   only. The test of #497 is therefore a CI-only red and a CI-only green, and its record cites the
   run.
 - **Files:** `scripts/tests/_mutants_finder.py`, `scripts/tests/test_mutation_workflows.py`,
@@ -435,11 +438,11 @@ program). Issues #418 and #497.
 
 | id | criterion | decided by |
 |---|---|---|
-| A15 | the command scan of `test_mutation_workflows.py` finds a planted workflow in each of five spellings, and one run by a wrapper after its `--`, as the guard's finder does | `test_mutation_workflows.py` `EveryMutantsSpellingIsFound` |
+| A15 | the command scan of `test_mutation_workflows.py` finds a planted workflow in each of five spellings, and one run by a wrapper after its `--`, which this scan finds through its own recognizer where the guard's finder refuses a wrapper it does not recognize | `test_mutation_workflows.py` `EveryMutantsSpellingIsFound` |
 | A16 | the job scan finds the job of each planted spelling, and neither scan finds a job that holds no such command | `test_mutation_workflows.py` `EveryMutantsSpellingIsFound` |
 | A17 | the finder is defined once, in the support module, and a planted copy of it is caught by the census of definitions | `test_mutation_workflows.py` `EveryMutantsSpellingIsFound` |
 | A18 | when planting the wrapper raises, the stand-in exits non-zero, names the failure and runs none of the words (CI only) | `test_dispatch_shards.py` `AStandInThatCannotPlantTheWrapperFailsClosed` |
-| A19 | the census lists no stand-in under `scripts/tests/` that falls back to a real program on a failed plant, and lists a planted one | `test_stand_in_census.py` `TheCensusOfStandIns` |
+| A19 | the census lists no failed-plant fallback among the top-level `*.py` files of `scripts/tests/`, and lists a planted one | `test_stand_in_census.py` `TheCensusOfStandIns` |
 
 ```acceptance
 A15: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k test_each_spelling_of_the_command_is_found_by_the_command_scan
