@@ -2131,6 +2131,24 @@ def script_edits():
             APPLIES,
         ),
         (
+            # README.md sorts before every script, so the plan reads it first.
+            "a docstring change beside a change to a file outside the class",
+            {GUARD: doc, "README.md": "a fixture, reworded\n"},
+            (),
+            ("named", [GUARD]),
+        ),
+        (
+            # scripts/notes.md sorts between the two scripts, and only the second changes code.
+            "a code change in a later script, a file outside the class between",
+            {
+                GUARD: doc,
+                "scripts/notes.md": "a note\n",
+                OTHER: edited(OTHER_TEXT, ("x - 1", "x - 2")),
+            },
+            (),
+            APPLIES,
+        ),
+        (
             "a file added holding only a docstring",
             {GUARD: doc, "scripts/new.py": '"""Only a docstring."""\n'},
             (),
@@ -2378,8 +2396,10 @@ class ADocstringOnlyScriptChangeIsNamed(unittest.TestCase):
             code, said = judged_in_process(module, fixtures[name], plan)
             if code != 0 or "VOID" in said or "docstring-only" not in said:
                 mismatches.append(f"{name}: the verdict read {code}: {said}")
-            for record in plan.files:
-                lines = record.get("docstring") or []
+            # The lines a member set aside are its named files' `docstring` lines; a file outside
+            # the class, such as README.md, sets none aside and is no source the runner lists.
+            for record in (entry for entry in plan.files if entry.get("docstring")):
+                lines = record["docstring"]
                 set_aside.extend(f"{name}: {record['path']}:{line}" for line in lines)
                 held = [
                     mutant.text
