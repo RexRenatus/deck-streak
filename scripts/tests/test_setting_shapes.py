@@ -1563,6 +1563,8 @@ class TheGuardRefusesAMacroThatDeclaresATestModule(unittest.TestCase):
             "macro_rules! m {\n    () => {};\n}\nm!{ #[cfg(test)] mod tests; }\n",
         ):
             self.assertEqual(self.refused(text), [], text)
+        planted = self.macro("        #[cfg(test)]\n        mod tests;\n")
+        self.assertEqual(len(self.refused(planted)), 1, planted)
 
     def test_the_refusal_names_the_crate_and_the_file(self):
         root = self.src(
@@ -1646,6 +1648,8 @@ class TheGuardRefusesAModuleFileThatAnotherDeclarationCompilesWithoutTest(unitte
             ):
                 extra = (("other.rs", "let shape = 1;\n"), ("depth/other.rs", "let shape = 1;\n"))
                 self.assertEqual(self.judged(declaration, own, extra), 0, (own, declaration))
+            rival = self.TEST + "#[cfg(not(test))]\nmod tests;\n"
+            self.assertEqual(self.judged(rival, own), 1, (own, rival))
 
 
 if __name__ == "__main__":
