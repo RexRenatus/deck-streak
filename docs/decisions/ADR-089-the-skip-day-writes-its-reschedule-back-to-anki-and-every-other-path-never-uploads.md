@@ -112,3 +112,16 @@ sync of the private copy.
 
 CHARTER constraint 4; ADR-037 (conditions (a) to (d)); ADR-083; SPEC-083; SPEC-022 R14 and A15;
 SPEC-023 R2; SPEC-001 §14; #266; #108.
+
+Amendment (2026-10-01): guardrails (i), (ii), (iii) and (iv) are amended by ADR-301, the owner's
+decision at #514, and their text above is kept as it was. DeckStreak writes to the collection only
+through declared write classes, each with its own ADR in ADR-089's form. The skip day is the
+first such class, at the approval rung. (i): the only writes ever made are each declared write
+class's exact changes and their exact inverses, and every other path records zero uploads against
+the recording fake sync server. (ii) binds every class: incremental sync only, and on any full or
+one-way sync demand the write aborts and writes nothing. (iii): the owner's explicit declaration
+becomes the approval rung; at the autonomous rung, promotion by a passed trial, the guard metric's
+own undo and the kill switch replace it, and the batch rides the study day's one scheduled sync.
+(iv): each batch records the prior state and is previewed, and its undo writes only cards whose
+current state still equals what the batch wrote. (v) stands, and each class's ADR extends it to
+that class's exact changes and their inverse.
