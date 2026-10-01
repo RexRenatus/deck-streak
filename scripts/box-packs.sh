@@ -62,8 +62,11 @@
 #
 # It prints one line per pack, probe, scan and owned file, and a summary, and exits 0 when nothing
 # failed, 1 when something did, and 2 when it cannot judge. The scratch directory (the exported tree
-# and the ledger) is removed when the run ends; each card is kept under $BOX_PACKS_OUT (a fresh
-# temporary directory by default), which it names on stderr.
+# and the ledger) is removed when the run ends. Each card is written under $BOX_PACKS_OUT when that
+# is set, and that directory is never removed. Otherwise the cards go to a fresh temporary directory
+# this run made, which is removed when the run ends, whether it passed, failed or stopped on an
+# error (issue 531). Set BOX_PACKS_KEEP=1 to keep that directory to read a card; the path is named
+# on stderr as `cards: <path>` whenever the cards are kept.
 set -euo pipefail
 BOX_PACKS_SELF="${BASH_SOURCE[0]}" exec python3 - "$@" <<'PY'
 """The box driver: this file's opening comment is its documentation (ADR-069, ADR-030)."""
@@ -177,6 +180,8 @@ def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(
         prog="box-packs.sh",
         description="judge every pack, probe and owned file against a DeckStreak commit",
+        epilog="BOX_PACKS_OUT names a directory for the cards, never removed; BOX_PACKS_KEEP=1 "
+        "keeps the temporary cards directory the run made, and the run prints its path.",
     )
     parser.add_argument("--rev", default="HEAD", help="the commit to judge (default HEAD)")
     parser.add_argument(
@@ -234,54 +239,63 @@ def run(args: argparse.Namespace, root: Path, sha: str) -> list[Verdict]:
         if lint and not (checkout / lint).is_file():
             raise Refusal(f"packs.{pack}'s advisory lint {lint} is not in the checkout")
     out = cards_directory()
-    env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
-    for name in wiring["unset_env"]:
-        env.pop(name, None)
-    box = wiring["box"]
-    issues = named_issues(box, wiring["packs"])
-    states = issue_states(root, issues)
-    listed = ", ".join(f"{issue} {states[issue]}" for issue in issues)
-    named = f"box-packs: {len(issues)} issue(s) the wiring names"
-    print(named + (f": {listed}" if listed else ""), flush=True)
-    closed = {issue for issue, state in states.items() if state == "CLOSED"}
-    verdicts: list[Verdict] = []
-    with tempfile.TemporaryDirectory(prefix="deckstreak-box-packs.") as name:
-        scratch = Path(name).resolve()
-        for repository, what in ((root, "the DeckStreak repository"), (checkout, "the checkout")):
-            if scratch.is_relative_to(repository):
-                raise Refusal(f"the scratch directory is inside {what}; set TMPDIR outside both")
-        tree = export(root, sha, scratch / "tree")
-        print(
-            f"box-packs: judging {sha[:12]} ({args.rev}) with the packs checkout at {have[:12]}",
-            flush=True,
-        )
-        driver = Runner(runner, scratch, tree, checkout / wiring["skills"], env)
-        catalog = driver.pack_list()
+    # Only a directory this run made is this run's to remove; a BOX_PACKS_OUT directory is the
+    # caller's, and BOX_PACKS_KEEP keeps the one made here. The removal names exactly this path.
+    made = not os.environ.get("BOX_PACKS_OUT")
+    keep = bool(os.environ.get("BOX_PACKS_KEEP"))
+    try:
+        env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
+        for name in wiring["unset_env"]:
+            env.pop(name, None)
+        box = wiring["box"]
+        issues = named_issues(box, wiring["packs"])
+        states = issue_states(root, issues)
+        listed = ", ".join(f"{issue} {states[issue]}" for issue in issues)
+        named = f"box-packs: {len(issues)} issue(s) the wiring names"
+        print(named + (f": {listed}" if listed else ""), flush=True)
+        closed = {issue for issue, state in states.items() if state == "CLOSED"}
+        verdicts: list[Verdict] = []
+        with tempfile.TemporaryDirectory(prefix="deckstreak-box-packs.") as name:
+            scratch = Path(name).resolve()
+            for repository, what in ((root, "the DeckStreak repository"), (checkout, "the checkout")):
+                if scratch.is_relative_to(repository):
+                    raise Refusal(f"the scratch directory is inside {what}; set TMPDIR outside both")
+            tree = export(root, sha, scratch / "tree")
+            print(
+                f"box-packs: judging {sha[:12]} ({args.rev}) with the packs checkout at {have[:12]}",
+                flush=True,
+            )
+            driver = Runner(runner, scratch, tree, checkout / wiring["skills"], env)
+            catalog = driver.pack_list()
 
-        def report(verdict: Verdict) -> None:
-            verdicts.append(verdict)
-            print(verdict.line(), flush=True)
+            def report(verdict: Verdict) -> None:
+                verdicts.append(verdict)
+                print(verdict.line(), flush=True)
 
-        for pack, entry in sorted(wiring["packs"].items()):
-            verdict = judge_rows(driver, pack, entry, catalog, out)
-            waivers = entry.get("advisory_waivers")
-            if waivers and verdict.mark != "deferred":
-                lint = checkout / waivers["lint"]
-                judge_waivers(verdict, waivers, lint, tree, scratch, out, closed, env)
-            report(verdict)
-        for pack, expectation in sorted(box["packs"].items()):
-            report(judge_pack(driver, pack, expectation, catalog, out, closed))
-        for probe in PROBES:
-            script = checkout / wiring["scripts"][probe]
-            report(judge_probe(probe, script, tree, scratch, out, env))
-        scan = checkout / wiring["scripts"][SCAN]
-        report(judge_scan(box.get(SCAN, {}), scan, tree, scratch, out, closed, env))
-        helper = checkout / wiring["scripts"][HELPER]
-        report(judge_helper(box.get(HELPER, {}), helper, tree, scratch, out, closed, env))
-        for path, entry in sorted(wiring["owned"].items()):
-            report(judge_owned(path, entry, tree, checkout))
-    print(f"cards: {out}", file=sys.stderr)
-    return verdicts
+            for pack, entry in sorted(wiring["packs"].items()):
+                verdict = judge_rows(driver, pack, entry, catalog, out)
+                waivers = entry.get("advisory_waivers")
+                if waivers and verdict.mark != "deferred":
+                    lint = checkout / waivers["lint"]
+                    judge_waivers(verdict, waivers, lint, tree, scratch, out, closed, env)
+                report(verdict)
+            for pack, expectation in sorted(box["packs"].items()):
+                report(judge_pack(driver, pack, expectation, catalog, out, closed))
+            for probe in PROBES:
+                script = checkout / wiring["scripts"][probe]
+                report(judge_probe(probe, script, tree, scratch, out, env))
+            scan = checkout / wiring["scripts"][SCAN]
+            report(judge_scan(box.get(SCAN, {}), scan, tree, scratch, out, closed, env))
+            helper = checkout / wiring["scripts"][HELPER]
+            report(judge_helper(box.get(HELPER, {}), helper, tree, scratch, out, closed, env))
+            for path, entry in sorted(wiring["owned"].items()):
+                report(judge_owned(path, entry, tree, checkout))
+        return verdicts
+    finally:
+        if made and not keep:
+            shutil.rmtree(out, ignore_errors=True)
+        else:
+            print(f"cards: {out}", file=sys.stderr)
 
 
 def required(variable: str, what: str, kind: str) -> Path:
