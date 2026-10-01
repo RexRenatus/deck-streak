@@ -1,4 +1,4 @@
--- @phx covers crates/streaks/src/lapse.rs anchor=open_lapse digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+-- @phx covers crates/streaks/src/lapse.rs anchor=open_lapse digest=sha256:e3a322de347ef0726cd2cd8812bbf2d90179b610c61452690dae47557e5be238
 -- @phx cites #472, #446
 -- @phx theorem at_most_one_step_per_day ramp=report
 -- @phx theorem never_overflows ramp=report
@@ -126,6 +126,7 @@ def walk (counts : Counts) (skips : List Int64) (threshold : UInt32) :
     | Back.overflow => ⟨Outcome.overflow, steps⟩
     | Back.next day rest =>
       if reviews counts day > 0 then ⟨Outcome.answer (answerOf threshold t), steps + 1⟩
+      else if day = Int64.minValue then ⟨Outcome.answer none, steps + 1⟩
       else walk counts skips threshold fuel rest (tally skips day t) (steps + 1)
 
 /-- More steps than any window of `Int64` days holds. -/
@@ -405,14 +406,132 @@ theorem runStart_none {counts : Counts} {start today : Int64}
 theorem minValue_lt_succ (d : Int64) : d.toInt + 1 ≠ Int64.minValue.toInt := by
   have := Int64.le_toInt d; rw [Int64.toInt_minValue]; omega
 
-theorem at_most_one_step_per_day : StepBound openLapse := by
-  sorry
+theorem walk_spec (counts : Counts) (skips : List Int64) (threshold : UInt32)
+    (today start : Int64) (hstart : windowStart counts = some start) :
+    ∀ (k : Nat) (cur : Int64) (t : Tally) (steps fuel : Nat),
+      start.toInt ≤ cur.toInt → cur.toInt ≤ today.toInt → cur.toInt = start.toInt + k →
+      k + 2 ≤ fuel →
+      (∀ d : Int64, cur.toInt < d.toInt → d.toInt ≤ today.toInt → reviews counts d = 0) →
+      Tallied skips (cur.toInt + 1) (today.toInt - cur.toInt).toNat t →
+      ∃ j, j ≤ k + 1 ∧ walk counts skips threshold fuel ⟨start, cur, false⟩ t steps =
+        ⟨Outcome.answer (rule today counts skips threshold), steps + j⟩ := by
+  have hrule : rule today counts skips threshold =
+      ruleFrom today skips threshold (runStart counts start today) := by
+    simp [rule, hstart]
+  rw [hrule]
+  intro k
+  induction k with
+  | zero =>
+    intro cur t steps fuel hs ht hk hf hq htal
+    obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 + 1 := ⟨fuel - 2, by omega⟩
+    have hcs : cur = start := Int64.toInt_inj.mp (by omega)
+    subst hcs
+    by_cases hr : 0 < reviews counts cur
+    · refine ⟨1, by omega, ?_⟩
+      simp only [walk, nextBack_last, gt_iff_lt, hr, ite_true]
+      rw [runStart_reviewed hs ht hr hq]
+      unfold ruleFrom
+      rw [ite_eq_right (minValue_lt_succ cur)]
+      have : (today.toInt + 1 - (cur.toInt + 1)).toNat = (today.toInt - cur.toInt).toNat := by
+        omega
+      rw [this, answerOf_tallied skips threshold _ _ t htal]
+    · have hr0 : reviews counts cur = 0 := by
+        have := Nat.eq_zero_of_not_pos (by simpa [UInt32.lt_iff_toNat_lt] using hr)
+        exact UInt32.toNat_inj.mp (by simpa using this)
+      have hq' : ∀ d : Int64, cur.toInt ≤ d.toInt → d.toInt ≤ today.toInt →
+          reviews counts d = 0 := by
+        intro d h1 h2
+        by_cases he : d.toInt = cur.toInt
+        · rw [Int64.toInt_inj.mp he]; exact hr0
+        · exact hq d (by omega) h2
+      rw [runStart_none hq']
+      by_cases hmin : cur = Int64.minValue
+      · refine ⟨1, by omega, ?_⟩
+        subst hmin
+        simp only [walk, nextBack_last, gt_iff_lt, hr, ite_false, ite_true]
+        simp [ruleFrom]
+      · refine ⟨1, by omega, ?_⟩
+        simp only [walk, nextBack_last, gt_iff_lt, hr, ite_false, hmin, nextBack_exhausted]
+        have hne : cur.toInt ≠ Int64.minValue.toInt := fun he => hmin (Int64.toInt_inj.mp he)
+        unfold ruleFrom
+        rw [ite_eq_right hne]
+        have htal' := tallied_step skips cur _ t htal
+        have : (today.toInt - cur.toInt).toNat + 1 = (today.toInt + 1 - cur.toInt).toNat := by
+          omega
+        rw [this] at htal'
+        rw [answerOf_tallied skips threshold _ _ _ htal']
+  | succ k ih =>
+    intro cur t steps fuel hs ht hk hf hq htal
+    obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
+    have hlt : start.toInt < cur.toInt := by omega
+    have hmin : cur ≠ Int64.minValue := ne_minValue_of_lt hlt
+    by_cases hr : 0 < reviews counts cur
+    · refine ⟨1, by omega, ?_⟩
+      simp only [walk, nextBack_iter hlt, gt_iff_lt, hr, ite_true]
+      rw [runStart_reviewed hs ht hr hq]
+      unfold ruleFrom
+      rw [ite_eq_right (minValue_lt_succ cur)]
+      have : (today.toInt + 1 - (cur.toInt + 1)).toNat = (today.toInt - cur.toInt).toNat := by
+        omega
+      rw [this, answerOf_tallied skips threshold _ _ t htal]
+    · have hr0 : reviews counts cur = 0 := by
+        have := Nat.eq_zero_of_not_pos (by simpa [UInt32.lt_iff_toNat_lt] using hr)
+        exact UInt32.toNat_inj.mp (by simpa using this)
+      have hsub := toInt_sub_one cur hmin
+      have htal' := tallied_step skips cur _ t htal
+      have hidx : (today.toInt - cur.toInt).toNat + 1 = (today.toInt - (cur - 1).toInt).toNat := by
+        omega
+      rw [hidx, show cur.toInt = (cur - 1).toInt + 1 by omega] at htal'
+      obtain ⟨j, hj, heq⟩ := ih (cur - 1) (tally skips cur t) (steps + 1) f (by omega) (by omega)
+        (by omega) (by omega)
+        (by
+          intro d h1 h2
+          by_cases he : d.toInt = cur.toInt
+          · rw [Int64.toInt_inj.mp he]; exact hr0
+          · exact hq d (by omega) h2)
+        htal'
+      refine ⟨j + 1, by omega, ?_⟩
+      simp only [walk, nextBack_iter hlt, gt_iff_lt, hr, ite_false, hmin]
+      rw [heq]
+      simp [Nat.add_assoc, Nat.add_comm 1 j]
+
+theorem openLapse_spec (today : Int64) (counts : Counts) (skips : List Int64)
+    (threshold : UInt32) :
+    (openLapse today counts skips threshold).outcome =
+        Outcome.answer (rule today counts skips threshold) ∧
+      (openLapse today counts skips threshold).steps ≤ daysInWindow today counts := by
+  unfold openLapse daysInWindow
+  cases hw : windowStart counts with
+  | none => simp [rule, hw]
+  | some start =>
+    simp only
+    by_cases hlt : today.toInt < start.toInt
+    · have hrs : runStart counts start today = start.toInt :=
+        runStart_none (fun d h1 h2 => by omega)
+      have hne : start.toInt ≠ Int64.minValue.toInt := by
+        have := Int64.le_toInt today; rw [Int64.toInt_minValue]; omega
+      have hz : (today.toInt + 1 - start.toInt).toNat = 0 := by omega
+      simp [fuel, walk, nextBack_empty hlt, rule, hw, hrs, ruleFrom, hz, silentDays,
+        earliestSilent, answerOf]
+    · have h1 := Int64.toInt_lt today
+      have h2 := Int64.le_toInt start
+      obtain ⟨j, hj, heq⟩ := walk_spec counts skips threshold today start hw
+        (today.toInt - start.toInt).toNat today ⟨0, none⟩ 0 fuel (by omega) (Int.le_refl _)
+        (by omega) (by unfold fuel; omega) (fun d h1 h2 => by omega)
+        (by simpa using tallied_zero skips (today.toInt + 1))
+      rw [heq]
+      exact ⟨rfl, by simp; omega⟩
+
+theorem at_most_one_step_per_day : StepBound openLapse :=
+  fun today counts skips threshold => (openLapse_spec today counts skips threshold).2
 
 theorem never_overflows : NoOverflow openLapse := by
-  sorry
+  intro today counts skips threshold
+  rw [(openLapse_spec today counts skips threshold).1]
+  simp
 
-theorem answers_the_rule : AnswersTheRule openLapse := by
-  sorry
+theorem answers_the_rule : AnswersTheRule openLapse :=
+  fun today counts skips threshold => (openLapse_spec today counts skips threshold).1
 
 /-! ## The witnesses -/
 
