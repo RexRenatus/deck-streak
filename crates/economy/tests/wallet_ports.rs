@@ -678,3 +678,49 @@ async fn the_movements_come_newest_first_a_page_at_a_time() {
         "every movement is shown once"
     );
 }
+
+#[tokio::test]
+async fn a_page_that_holds_the_last_movement_names_no_next_page() {
+    let (_directory, _db, wallet) = wallet().await;
+    // Exactly a page of movements, twenty spelt literally rather than read from the page size, so
+    // the page's last row is the ledger's last movement: no older movement exists to name.
+    for index in 0..20_i64 {
+        assert_eq!(
+            wallet
+                .deposit(day(10 + index), "payout", &format!("p{index:02}"), 1, AT)
+                .await
+                .expect("a deposit"),
+            DepositAnswer::Deposited(1)
+        );
+    }
+    let full = wallet.movements(None).await.expect("the only page");
+    assert_eq!(full.movements.len(), 20, "a page holds twenty movements");
+    assert_eq!(
+        full.next, None,
+        "a page that holds the last movement names no next page"
+    );
+
+    // One older movement more, and the same page now has a movement after it to name.
+    assert_eq!(
+        wallet
+            .deposit(day(9), "payout", "p20", 1, AT)
+            .await
+            .expect("a deposit"),
+        DepositAnswer::Deposited(1)
+    );
+    let page = wallet.movements(None).await.expect("the first page");
+    assert_eq!(
+        page.movements.len(),
+        20,
+        "a page still holds twenty movements"
+    );
+    assert_eq!(
+        page.next,
+        page.movements.last().map(|movement| movement.id),
+        "the twenty-first movement makes the page name its last as the cursor"
+    );
+    assert!(
+        page.next.is_some(),
+        "an older movement exists past the page"
+    );
+}
