@@ -108,6 +108,15 @@
         "        drop(owed);",
         "settle_fold::cycle::the_scheduled_sync_after_a_sync_across_the_rollover_settles_the_owed_day",
         "a cycle that runs the fold collects the settle a closed day is owed as an obligation, so the scheduled sync after a sync that ran across the rollover settles the day that closed, even when nothing in the collection changed (SPEC-071 R15)"
+      ],
+      [
+        "S07114-OWED-DAY-RE-READS-THE-CURSOR",
+        "coordination",
+        "src/recompute/mod.rs",
+        "            let owed = rollup::settle_cursor(&mut write).await?.map_or(day, next);",
+        "            let owed = day;",
+        "settle_fold::two_overlapping_folds_settle_each_closed_day_once_in_turn",
+        "each owed day's write reads the settle cursor again inside its own BEGIN IMMEDIATE and settles only the day that cursor owes, so two folds that overlap settle each closed day once, in turn (SPEC-071 R16, A27; ADR-313)"
       ]
     ],
     "CARGO_KILLED_SCRIPT_MUTATIONS": [
