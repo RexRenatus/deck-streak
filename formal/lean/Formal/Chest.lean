@@ -1,6 +1,6 @@
--- @phx covers crates/quests/src/chests.rs anchor=epic_odds_pts digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/quests/src/chests.rs anchor=roll_rarity digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/quests/src/chests.rs anchor=payout_xp digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+-- @phx covers crates/quests/src/chests.rs anchor=epic_odds_pts digest=sha256:f07f770d9593d389c2a70d250579c0afafe73f06e2a9f8617f6333affe5fd102
+-- @phx covers crates/quests/src/chests.rs anchor=roll_rarity digest=sha256:899fdf1fed9443650ac769110f0f9e4f7b47a1e589cdcb3e655777152cbacb82
+-- @phx covers crates/quests/src/chests.rs anchor=payout_xp digest=sha256:2e964c18512e9d04b9a2a2537da0d7d118d133dcddacad8d145bad1ee83c943b
 -- @phx vectors formal/vectors/chest.jsonl
 -- @phx cites #102, #103
 -- @phx theorem the_epic_odds_lie_between_the_base_and_the_ceiling ramp=report

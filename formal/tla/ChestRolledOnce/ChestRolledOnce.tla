@@ -1,8 +1,8 @@
 ---------------------------- MODULE ChestRolledOnce ----------------------------
-\* @phx covers crates/quests/src/chests.rs anchor=grant_session_chests_on digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/quests/src/chest_store.rs anchor=insert_chest digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/quests/src/chest_store.rs anchor=set_pity digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/kernel/src/db.rs anchor=write digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers crates/quests/src/chests.rs anchor=grant_session_chests_on digest=sha256:0735b3d15465f1307c12f3037afe7c31a7fa7cfcca67c1e7d0e1740f2b2a01ab
+\* @phx covers crates/quests/src/chest_store.rs anchor=insert_chest digest=sha256:57e9fcc9f8651b8a7e8717b234ba2f4b0c4c2920ab0231d3a41d48687517a5f9
+\* @phx covers crates/quests/src/chest_store.rs anchor=set_pity digest=sha256:5229f5dd55355ac3fb12b6d15e6326b0ddadea3fb28017c69274566eea866e0c
+\* @phx covers crates/kernel/src/db.rs anchor=write digest=sha256:c3d700eda268a6f46c7eea0aabcd2f62d8fc0aeffbe03d1cd1e8437a88bdb916
 \* @phx cites #102, #103
 \* @phx property OneChestPerKey ramp=report
 \* @phx property PityEqualsChests ramp=report
@@ -40,9 +40,13 @@
 \* - the day's cap (per_day_max) only stops a pass early, and is left out;
 \* - the two draws, rarity then payout, are one draw that can fail: either failing is the port's
 \*   Err;
-\* - the pity row's two counters are one count that moves once per chest (pity.rs::Pity::after
-\*   moves both counters on every chest), so the pity matches the chests when the count equals
-\*   the number of stored chests.
+\* - the pity row's two counters are one count of the chests that moved them: pity.rs::Pity::after
+\*   advances or resets each counter once per chest, so a chest without its move, or a move
+\*   without its chest, puts the counters out of step with the stored chests;
+\* - a store error is left out: the port returns it with the caller's write open, and the model's
+\*   caller commits only after a whole pass or a draw's Err. A caller that kept its write after a
+\*   store error between the insert and the pity could keep a chest without its move, so a caller
+\*   rolls back on one.
 \*
 \* Three defect switches, each FALSE in a witness: UniqueKey (the migration's unique key),
 \* PityInTheChestsWrite (set_pity runs in the caller's write, beside the insert) and DrawFirst (the
