@@ -163,7 +163,7 @@ Begin(a) ==
     /\ pc' = [pc EXCEPT ![a] = "held"]
     /\ UNCHANGED <<ledger, snap, closed>>
 
-\* wallet.rs::deposit_on (and refund_on, which is deposit_on): the insert alone decides
+\* wallet.rs::deposit_on: the insert alone decides (refund_on is RefundWrite, below)
 DepositWrite(o, k) == Insert(k, o.amount)
 
 \* wallet.rs::refund_on: keyed on its own study day, as a deposit is. The defect routes it through

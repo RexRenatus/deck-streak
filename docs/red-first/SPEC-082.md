@@ -90,5 +90,5 @@ held earlier writes its own movement. Its cases are the three seed members K-009
 refund), K-021 (a once-ever deposit, then a refund) and K-033 (a refund, then a refund). It is green at
 the round's base `2e56a41f` and at its own commit, and it was never red before the code. It is proved
 by a plant: with `refund_on` routed through `deposit_once_on`, the test reads red by assertion at
-`wallet_ports.rs:245` and the frozen key population escapes 3 of 49 members (the package judge
-`V2-FAIL-refund-any-day.sh` read HOLDS). No fence line is added: A19's red and green above stand.
+`wallet_ports.rs:245` and the frozen key population escapes 3 of 49 members. No fence line is added:
+A19's red and green above stand.

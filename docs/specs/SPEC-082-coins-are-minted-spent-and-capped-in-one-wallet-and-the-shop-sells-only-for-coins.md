@@ -361,7 +361,7 @@ selects exactly one test, and each is proved with its file restored byte for byt
 | `S08210-ONE-MOVEMENT-PER-KEY` | `migrations/008201_economy_wallet_and_shop.sql` | one movement per study day, source and reference, a key held in the migration (a script-mutation row with a cargo killer) | `wallet_ports::a_credit_of_one_key_is_written_once` |
 | `S08211-THE-WALLET-FLOOR-CONSTANT-IS-ZERO` | `crates/economy/src/constants.rs` | the floor constant itself is 0 | `wallet_goldens::the_coin_constants_and_economy_json_match_the_predecessors` |
 
-## 10. Amendment, 2026-10-02: what E1 adds beside the manifest, and the criteria it no longer lists
+## 10. Amendments, 2026-10-02: what E1 adds beside the manifest, and the criteria it no longer lists
 
 Section 3's table now holds only the criteria this pull request delivers: the rows of A7, A11 to
 A13 and A15 to A18 moved out of it, and each stays verbatim in section 3c's table with its fence
