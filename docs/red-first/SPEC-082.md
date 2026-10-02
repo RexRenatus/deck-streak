@@ -204,3 +204,28 @@ a positive control: each first asserts that the untouched body parses to its rea
 refusal below it is the refusal of its one changed field. A `parseWallet` planted to return null for
 every body fails both, and the file restored with its sha256 equal reads green. An assertion is
 added to each and none is removed; production is unchanged. No fence line is added.
+
+MUTATION COVERAGE at the fix round, not red-first. Five commits (8b0b02d2, 13c467be, 377a0d2a,
+5d03fe1c, ec638f64) add tests and rows after the code, each green at the base, and no fence line is
+added for any of them. The package at 5d03fe1c read `examined 14 plant(s): survived 3, killed 11,
+void 0`. The eleven killed plants are held by the rows S08218 to S08228 in
+`scripts/mutation-rows.d/S08200-S08299.json`, and their prove line reads `rows: examined 11:
+killed 11, survived 0, void 0`. The three survivors are recorded here, none with a test or a
+production seam:
+
+- M4 (mint.rs `savepoint.commit().await?`) and O1 (mint.rs `let mut savepoint =
+  write.begin().await?;`): EQUIVALENT-BY-CONSTRAINT-AND-ENGINE. The constraint is
+  `Db::write`'s `begin_with("BEGIN IMMEDIATE")` at crates/kernel/src/db.rs:103, which makes the
+  mint's `write.begin()` a nested SAVEPOINT and `savepoint.commit()` a RELEASE inside an open write
+  transaction. The engine's rule is that a nested RELEASE commits nothing and a deferred
+  foreign-key violation surfaces only at the outermost COMMIT, so neither `?` arm is reachable from
+  any state the code controls. The evidence is a measurement with the host's python sqlite3
+  (SAVEPOINT and RELEASE inside BEGIN IMMEDIATE succeed under query_only, foreign_keys and
+  defer_foreign_keys, and RELEASE of a nested savepoint never fails), plus the engine's
+  documentation of SAVEPOINT, RELEASE and deferred foreign keys. Disclosed limit: the measurement
+  was not taken through the engine the crate links.
+- O2 (daemon wiring.rs `fold.register(Phase::CoinMint, Box::new(MintStep))?;`):
+  EQUIVALENT-BY-CONSTRAINT. `Fold::register` errors only on `if step.phase() != phase`
+  (crates/coordination/src/recompute/mod.rs:435), and `MintStep::phase()` returns
+  `Phase::CoinMint`. The phase is held by the killed row S08212, so a mutant that reaches the arm is
+  one S08212 already kills.
