@@ -32,14 +32,17 @@ pub struct OsDraw;
 
 impl Draw for OsDraw {
     fn draw(&mut self) -> Result<f64, DrawError> {
-        Ok(0.0)
+        getrandom::u64().map(fraction).map_err(DrawError::Generator)
     }
 }
 
 /// The top 53 bits of `bits` as a fraction in [0, 1): every value a multiple of 2^-53, and every
 /// multiple below 1 reachable.
 #[must_use]
+#[allow(
+    clippy::cast_precision_loss,
+    reason = "a value below 2^53 converts to f64 exactly"
+)]
 pub fn fraction(bits: u64) -> f64 {
-    let _ = bits;
-    STEP
+    (bits >> 11) as f64 * STEP
 }

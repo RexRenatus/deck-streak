@@ -10,9 +10,9 @@
 use deck_streak_kernel::{Hour, StudyDay, UtcMillis};
 use sqlx::SqliteConnection;
 
-use crate::chest_store::StoredChest;
+use crate::chest_store::{self, ChestState, NewChest, Origin, StoredChest};
 use crate::draw::{Draw, DrawError};
-use crate::sessions::Session;
+use crate::sessions::{SESSION_GAP_MS, Session, meets_chest_floor};
 
 /// Common's base odds, in percent points.
 pub const BASE_ODDS_COMMON: f64 = 70.0;
@@ -117,14 +117,68 @@ pub async fn grant_session_chests_on(
     draw: &mut impl Draw,
     at: UtcMillis,
 ) -> Result<Vec<StoredChest>, ChestError> {
-    let _ = (connection, at);
-    for earned in request.sessions {
-        if crate::sessions::meets_chest_floor(&earned.session.effort) {
-            draw.draw()?;
-            draw.draw()?;
+    if request.skip_day {
+        return Ok(Vec::new());
+    }
+    let mut eligible: Vec<&EarnedSession> = request
+        .sessions
+        .iter()
+        .filter(|earned| meets_chest_floor(&earned.session.effort))
+        .collect();
+    if eligible.is_empty() {
+        return Ok(Vec::new());
+    }
+    eligible.sort_by_key(|earned| earned.session.start);
+    let existing = chest_store::chests_of_day(connection, request.study_day).await?;
+    let settings = chest_store::settings(connection).await?;
+    let state = if request.local_hour >= settings.vault_hour || request.quiet {
+        ChestState::Vaulted
+    } else {
+        ChestState::Sealed
+    };
+    let buff_pts = if request.ascendant {
+        ASCENDANT_BUFF_PTS
+    } else {
+        0.0
+    };
+    let mut held = i64::try_from(existing.len()).unwrap_or(i64::MAX);
+    let mut granted = Vec::new();
+    for earned in eligible {
+        if held >= settings.per_day_max {
+            break;
+        }
+        let start = earned.session.start.epoch_millis();
+        // A session chest the day held at this start, or within one session gap of it: the
+        // session was rolled already, its start moved by a review that synced late. No draw.
+        if existing.iter().any(|chest| {
+            chest.origin == Origin::Session && (chest.session_start - start).abs() < SESSION_GAP_MS
+        }) {
+            continue;
+        }
+        let pity = chest_store::pity(connection).await?;
+        // Both draws are taken before anything is written, so a failed one leaves nothing.
+        let rarity = roll_rarity(
+            draw.draw()?,
+            pity.since_epic,
+            pity.since_legendary,
+            buff_pts,
+        );
+        let payout = payout_xp(rarity, draw.draw()?, earned.base_xp);
+        let chest = NewChest {
+            study_day: request.study_day,
+            origin: Origin::Session,
+            session_start: start,
+            rarity,
+            payout_xp: payout,
+            state,
+        };
+        if let Some(id) = chest_store::insert_chest(connection, &chest, at).await? {
+            chest_store::set_pity(connection, pity.after(rarity)).await?;
+            held += 1;
+            granted.push(chest.stored(id));
         }
     }
-    Ok(Vec::new())
+    Ok(granted)
 }
 
 /// Grants the challenge quest's chest for `study_day` (R16): one a study day, rolled with
@@ -142,8 +196,31 @@ pub async fn grant_challenge_chest_on(
     draw: &mut impl Draw,
     at: UtcMillis,
 ) -> Result<Option<StoredChest>, ChestError> {
-    let _ = (connection, study_day, draw, at);
-    Ok(None)
+    let held = chest_store::chests_of_day(connection, study_day).await?;
+    if held.iter().any(|chest| chest.origin == Origin::Challenge) {
+        return Ok(None);
+    }
+    let pity = chest_store::pity(connection).await?;
+    let rarity = roll_rarity(
+        draw.draw()?,
+        pity.since_epic,
+        pity.since_legendary,
+        CHALLENGE_BUFF_PTS,
+    );
+    let payout = payout_xp(rarity, draw.draw()?, CHALLENGE_SESSION_BASE_XP);
+    let chest = NewChest {
+        study_day,
+        origin: Origin::Challenge,
+        session_start: 0,
+        rarity,
+        payout_xp: payout,
+        state: ChestState::Sealed,
+    };
+    let Some(id) = chest_store::insert_chest(connection, &chest, at).await? else {
+        return Ok(None);
+    };
+    chest_store::set_pity(connection, pity.after(rarity)).await?;
+    Ok(Some(chest.stored(id)))
 }
 
 /// Grants the weekly quest's chest for `study_day` (R17): one a study day, an Epic that pays 0,
@@ -158,8 +235,17 @@ pub async fn grant_weekly_chest_on(
     study_day: StudyDay,
     at: UtcMillis,
 ) -> Result<Option<StoredChest>, ChestError> {
-    let _ = (connection, study_day, at);
-    Ok(None)
+    let chest = NewChest {
+        study_day,
+        origin: Origin::Weekly,
+        session_start: 0,
+        rarity: Rarity::Epic,
+        payout_xp: 0,
+        state: ChestState::Sealed,
+    };
+    Ok(chest_store::insert_chest(connection, &chest, at)
+        .await?
+        .map(|id| chest.stored(id)))
 }
 
 /// A chest's rarity.

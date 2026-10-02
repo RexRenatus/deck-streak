@@ -20,7 +20,19 @@ impl Pity {
     /// any other rarity adds one to both.
     #[must_use]
     pub const fn after(self, rarity: Rarity) -> Self {
-        let _ = rarity;
-        self
+        match rarity {
+            Rarity::Epic => Self {
+                since_epic: 0,
+                since_legendary: self.since_legendary + 1,
+            },
+            Rarity::Legendary => Self {
+                since_epic: self.since_epic + 1,
+                since_legendary: 0,
+            },
+            Rarity::Common | Rarity::Rare => Self {
+                since_epic: self.since_epic + 1,
+                since_legendary: self.since_legendary + 1,
+            },
+        }
     }
 }

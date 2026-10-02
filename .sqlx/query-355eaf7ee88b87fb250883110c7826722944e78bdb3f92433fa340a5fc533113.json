@@ -1,0 +1,86 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id, origin, session_start, rarity, payout_xp, state FROM chests WHERE study_day = ?1 ORDER BY id",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "chests",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "origin",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "chests",
+            "name": "origin"
+          }
+        }
+      },
+      {
+        "name": "session_start",
+        "ordinal": 2,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "chests",
+            "name": "session_start"
+          }
+        }
+      },
+      {
+        "name": "rarity",
+        "ordinal": 3,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "chests",
+            "name": "rarity"
+          }
+        }
+      },
+      {
+        "name": "payout_xp",
+        "ordinal": 4,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "chests",
+            "name": "payout_xp"
+          }
+        }
+      },
+      {
+        "name": "state",
+        "ordinal": 5,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "chests",
+            "name": "state"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "355eaf7ee88b87fb250883110c7826722944e78bdb3f92433fa340a5fc533113"
+}

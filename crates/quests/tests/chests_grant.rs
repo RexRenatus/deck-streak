@@ -509,23 +509,40 @@ async fn the_challenge_and_weekly_chests_match_the_predecessors_goldens() {
     }
 }
 
+/// A draw's exact bits, so two draws compare exactly.
+fn bits(draw: f64) -> u64 {
+    draw.to_bits()
+}
+
 #[test]
 fn a_draw_is_the_top_53_bits_as_a_fraction_below_one() {
-    assert_eq!(fraction(u64::MAX), 1.0 - STEP, "the largest draw");
-    assert_eq!(fraction(1 << 11), STEP, "the least bit a draw keeps");
-    assert_eq!(fraction((1 << 11) - 1), 0.0, "the bits a draw drops");
-    assert_eq!(fraction(1 << 63), 0.5, "the top bit");
-    assert_eq!(fraction(0), 0.0, "the least draw");
+    assert_eq!(
+        bits(fraction(u64::MAX)),
+        bits(1.0 - STEP),
+        "the largest draw"
+    );
+    assert_eq!(
+        bits(fraction(1 << 11)),
+        bits(STEP),
+        "the least bit a draw keeps"
+    );
+    assert_eq!(
+        bits(fraction((1 << 11) - 1)),
+        bits(0.0),
+        "the bits a draw drops"
+    );
+    assert_eq!(bits(fraction(1 << 63)), bits(0.5), "the top bit");
+    assert_eq!(bits(fraction(0)), bits(0.0), "the least draw");
     let mut os = OsDraw;
     let draws: Vec<f64> = (0..64).map(|_| os.draw().expect("a draw")).collect();
     assert!(
         draws
             .iter()
-            .all(|draw| (0.0..1.0).contains(draw) && draw.rem_euclid(STEP) == 0.0),
+            .all(|draw| (0.0..1.0).contains(draw) && bits(draw.rem_euclid(STEP)) == bits(0.0)),
         "the generator's draws {draws:?}"
     );
     assert!(
-        draws.windows(2).any(|pair| pair[0] != pair[1]),
+        draws.windows(2).any(|pair| bits(pair[0]) != bits(pair[1])),
         "64 draws from the generator were all {}",
         draws[0]
     );

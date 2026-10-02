@@ -156,8 +156,30 @@ pub async fn chests_of_day(
     connection: &mut SqliteConnection,
     study_day: StudyDay,
 ) -> Result<Vec<StoredChest>, ChestError> {
-    let _ = (connection, study_day);
-    Ok(Vec::new())
+    let day = study_day.epoch_day();
+    let rows = sqlx::query!(
+        "SELECT id, origin, session_start, rarity, payout_xp, state FROM chests \
+         WHERE study_day = ?1 ORDER BY id",
+        day
+    )
+    .fetch_all(&mut *connection)
+    .await?;
+    rows.into_iter()
+        .map(|row| {
+            Ok(StoredChest {
+                id: row.id,
+                study_day,
+                origin: Origin::from_name(&row.origin)
+                    .ok_or_else(|| unreadable("chests.origin", &row.origin))?,
+                session_start: row.session_start,
+                rarity: Rarity::from_name(&row.rarity)
+                    .ok_or_else(|| unreadable("chests.rarity", &row.rarity))?,
+                payout_xp: row.payout_xp,
+                state: ChestState::from_name(&row.state)
+                    .ok_or_else(|| unreadable("chests.state", &row.state))?,
+            })
+        })
+        .collect()
 }
 
 /// Stores `chest` unless its key is already held, and answers its id, or none when the key was
@@ -171,8 +193,27 @@ pub async fn insert_chest(
     chest: &NewChest,
     at: UtcMillis,
 ) -> Result<Option<i64>, ChestError> {
-    let _ = (connection, chest, at);
-    Ok(None)
+    let day = chest.study_day.epoch_day();
+    let origin = chest.origin.name();
+    let rarity = chest.rarity.name();
+    let state = chest.state.name();
+    let at = at.epoch_millis();
+    // The insert's own conflict with `chests_one_per_key` is the existence check, so the key lives
+    // in the migration alone; a conflict writes nothing.
+    let written = sqlx::query!(
+        "INSERT INTO chests (study_day, origin, session_start, rarity, payout_xp, state, \
+         created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7) ON CONFLICT DO NOTHING",
+        day,
+        origin,
+        chest.session_start,
+        rarity,
+        chest.payout_xp,
+        state,
+        at
+    )
+    .execute(&mut *connection)
+    .await?;
+    Ok((written.rows_affected() == 1).then(|| written.last_insert_rowid()))
 }
 
 /// The pity counters.
@@ -181,8 +222,13 @@ pub async fn insert_chest(
 ///
 /// [`ChestError::Database`] when the read fails.
 pub async fn pity(connection: &mut SqliteConnection) -> Result<Pity, ChestError> {
-    let _ = connection;
-    Ok(Pity::default())
+    let row = sqlx::query!("SELECT since_epic, since_legendary FROM pity WHERE id = 1")
+        .fetch_one(&mut *connection)
+        .await?;
+    Ok(Pity {
+        since_epic: row.since_epic,
+        since_legendary: row.since_legendary,
+    })
 }
 
 /// Replaces the pity counters with `pity`, in place.
@@ -191,7 +237,13 @@ pub async fn pity(connection: &mut SqliteConnection) -> Result<Pity, ChestError>
 ///
 /// [`ChestError::Database`] when the write fails.
 pub async fn set_pity(connection: &mut SqliteConnection, pity: Pity) -> Result<(), ChestError> {
-    let _ = (connection, pity);
+    sqlx::query!(
+        "UPDATE pity SET since_epic = ?1, since_legendary = ?2 WHERE id = 1",
+        pity.since_epic,
+        pity.since_legendary
+    )
+    .execute(&mut *connection)
+    .await?;
     Ok(())
 }
 
@@ -202,16 +254,17 @@ pub async fn set_pity(connection: &mut SqliteConnection, pity: Pity) -> Result<(
 /// [`ChestError::Database`] when the read fails, and [`ChestError::Unreadable`] for a stored
 /// vault hour outside a day.
 pub async fn settings(connection: &mut SqliteConnection) -> Result<ChestSettings, ChestError> {
-    let _ = connection;
-    Hour::new(0)
-        .map(|vault_hour| ChestSettings {
-            per_day_max: 0,
-            vault_hour,
-        })
-        .ok_or_else(|| ChestError::Unreadable {
-            column: "chest_settings.vault_hour",
-            value: String::from("0"),
-        })
+    let row = sqlx::query!("SELECT per_day_max, vault_hour FROM chest_settings WHERE id = 1")
+        .fetch_one(&mut *connection)
+        .await?;
+    let vault_hour = u8::try_from(row.vault_hour)
+        .ok()
+        .and_then(Hour::new)
+        .ok_or_else(|| unreadable("chest_settings.vault_hour", &row.vault_hour.to_string()))?;
+    Ok(ChestSettings {
+        per_day_max: row.per_day_max,
+        vault_hour,
+    })
 }
 
 /// Replaces the chest settings with `settings`, in place.
@@ -223,6 +276,21 @@ pub async fn set_settings(
     connection: &mut SqliteConnection,
     settings: ChestSettings,
 ) -> Result<(), ChestError> {
-    let _ = (connection, settings);
+    let vault_hour = i64::from(settings.vault_hour.get());
+    sqlx::query!(
+        "UPDATE chest_settings SET per_day_max = ?1, vault_hour = ?2 WHERE id = 1",
+        settings.per_day_max,
+        vault_hour
+    )
+    .execute(&mut *connection)
+    .await?;
     Ok(())
+}
+
+/// The refusal of a stored value outside its column's rule.
+fn unreadable(column: &'static str, value: &str) -> ChestError {
+    ChestError::Unreadable {
+        column,
+        value: value.to_owned(),
+    }
 }
