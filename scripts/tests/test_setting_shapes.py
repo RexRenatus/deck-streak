@@ -2470,7 +2470,7 @@ class TheGuardReadsAnImplementationByToken(unittest.TestCase):
     def test_every_spelling_is_read_or_refused_as_written(self):
         """Each member's outcome is written by its kind, never by the guard: pinned and unpinned,
         a read implementation is refused only unpinned, a macro's always and by its file."""
-        wrong, judged = [], []
+        found, expected, judged = {}, {}, []
         for case, text, lib, kind, either in self.spellings():
             for pinned in (True, False):
                 root = self.tree(self.PINS if pinned else self.DEPTH)
@@ -2478,16 +2478,17 @@ class TheGuardReadsAnImplementationByToken(unittest.TestCase):
                 (src / "more.rs").write_text(text, encoding="utf-8")
                 if lib:
                     (src / "lib.rs").write_text("mod depth;\n" + lib, encoding="utf-8")
-                expected = {
-                    "read": [] if pinned else [self.WIDE],
-                    "macro": [self.MACRO],
-                    "none": [],
-                }[kind] + either
-                found = unpinned(root)
+                expected[case, pinned] = sorted(
+                    {
+                        "read": [] if pinned else [self.WIDE],
+                        "macro": [self.MACRO],
+                        "none": [],
+                    }[kind]
+                    + either
+                )
+                found[case, pinned] = sorted(unpinned(root))
                 judged.append((case, pinned))
-                if sorted(found) != sorted(expected):
-                    wrong.append(f"{case} pinned={pinned}: {found} != {expected}")
-        self.assertEqual(wrong, [], f"{len(wrong)} of {len(judged)} member(s)")
+        self.assertEqual(found, expected, "each member's refusal lines against its kind's outcome")
         examined("implementation spelling(s) judged, pinned and unpinned", judged)
 
 
