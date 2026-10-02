@@ -261,3 +261,34 @@ S07114-OWED-DAY-RE-READS-THE-CURSOR prove`, run in a clean clone at b8b9f69, rea
 killer passed without the mutant and failed with it` and `rows: examined 1: killed 1, survived 0,
 void 0`: A27 selected its one test with and without the mutant, and the target was restored byte
 for byte.
+
+## Addendum of 2026-10-02: the settle-once test counts the fold's offers (#311)
+
+Row S07108-SETTLE-ONCE turns the first owed day after the cursor, `next(cursor)`, into the cursor
+itself. Before 9118c8b that made a second recompute settle the cursor's day again, and A16 failed.
+Since 9118c8b each owed day's write reads the cursor again inside its own `BEGIN IMMEDIATE` and
+moves to the day the cursor owes, so the mutant's stale start day is corrected inside the write:
+the run passes over the cursor's day, rolls that write back, offers once more, and still settles
+every closed day once, oldest first. With the mutant installed at a266377 the package read 148
+passed, 0 failed, and the rows command CI runs, `python3 scripts/mutation_rows.py prove
+--rows-from plan.json` over the plan from dev's tip, read `rows: examined 8: killed 7, survived 1,
+void 0`.
+
+75375f2 strengthens A16's test, `the_fold_settles_each_closed_day_once_oldest_first`, with an
+offers port that counts the fold's calls: each recompute offers once before each day it settles,
+once before the current day's write and once after its last write, so its settled count plus two,
+and one more for every day at or before the cursor it passes over. The test is MUTATION COVERAGE,
+not red-first evidence: the commit changes no production file, and the test passes over the
+base's fold. S07108's row, its killer and SPEC-071's table line are unchanged.
+
+```text
+A16, MUTATION COVERAGE: not red: the_fold_settles_each_closed_day_once_oldest_first passes at 75375f2 with crates/coordination/src/recompute/mod.rs as dev's tip 1da1d05 holds it (the fold before 9118c8b starts at the day after the cursor and never passes over one), so the count has no base arm to be red for; at 75375f2 with S07108's mutant installed it fails: the second recompute offers once before each of the 3 day(s) it settles, once before the current day's write and once after its last write: it passes over no day at or before the cursor; left: 6, right: 5 (KILLED)
+A16 at 75375f2: 1 passed, after `examined 3 runs' offers` and `examined 4 settles`
+rows at 75375f2, the same command over the plan from dev's tip: rows: examined 8: killed 8, survived 0, void 0
+```
+
+cargo-mutants over the diff from dev's tip, run in a clean clone as CI runs it, listed two mutants
+of `Fold::run`. Its body replaced by `Ok(Default::default())` was caught. `owed != day` turned
+into `owed == day` is a TIMEOUT at the run's `--timeout 300`, not a miss: every write whose day is
+still owed then rolls back and reads the cursor again, so the loop never ends. `outcomes.json`
+read 2 mutants: caught 1, missed 0, timeout 1, unviable 0.
