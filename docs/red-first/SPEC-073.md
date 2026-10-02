@@ -92,9 +92,8 @@ The red was run on each red commit's tests, selecting each criterion's own test,
 is an assertion, not a compile error, a missing fixture or an empty selection.
 
 The post-GREEN commit `dc02e83f` adds four tests, green at GREEN's code, and each was seen red by
-assertion under a hand mutant of `recompute/badges.rs` or `recompute/records.rs` (cargo-mutants is
-not installed on the box, so the mutants were applied and restored by hand, and each restore was
-checked by its hash):
+assertion under a hand mutant of `recompute/badges.rs` or `recompute/records.rs` (each
+mutant was applied and restored by hand, and each restore was checked by its hash):
 
 - `badges_steps::an_owed_badge_is_raised_on_the_offers_day_and_marked_at_the_answer` kills B02, B09
   and B10;
@@ -154,4 +153,34 @@ A16: red at c864665: assertion `left == right` failed: the new best is offered; 
 A16: green at b958e78
 A19: red at 83f5d5e: assertion `left == right` failed: 0 reviews, a 0-day streak and 0 mature cards; left: Pending, right: Next(Milestone { ladder: Reviews, current: 0, target: 100, pct: 0.0, remaining: 100 })
 A19: green at b958e78
+```
+
+## 073b fix round 1: a beat of the seed's own day, and the mark's guard
+
+The RED commit `a5e4cf06` adds three tests and changes no production file; the GREEN commit
+`da37395e` changes the records upsert (ADR-303 Decision 2). The reds were run at the code of
+`a3693b34`, selecting each test, and each is an assertion:
+
+- `records_steps::a_record_beaten_on_the_seeds_own_day_is_offered` reads `panicked at
+  crates/coordination/tests/records_steps.rs:276:5: assertion left == right failed: the beat is
+  offered under its day's key, and the seed is not` with `left: []` and `right:
+  ["pr:best_score:20000"]`; `test result: FAILED. 12 passed; 1 failed`.
+- `record_offers`, in `crates/daemon/tests/`, drives the production fold and reads `panicked at
+  crates/daemon/tests/record_offers.rs:148:5` with `left: []` and `right:
+  ["pr:best_score:20000", "pr:most_reviews:20000"]`; `test result: FAILED. 0 passed; 1 failed`.
+- `badges_steps::a_badge_marked_twice_keeps_its_first_mark` and
+  `records_steps::a_record_marked_twice_keeps_its_first_mark` are green at the base, because the
+  guard is present there. Each was seen red by assertion under a hand mutant that drops
+  `AND celebrated_at IS NULL` from its statement (`panicked at
+  crates/coordination/tests/badges_steps.rs:301:5: the first mark is kept`, left
+  `Some(1728054000000)`, right `Some(1728050400000)`, and the same message at
+  `records_steps.rs:323:5`). The mutants are the rows S07316 and S07317, and S07318 is the CASE
+  before the fix.
+
+```red-first
+A16: red at a5e4cf0: assertion `left == right` failed: the beat is offered under its day's key, and the seed is not; left: [], right: ["pr:best_score:20000"]
+A16: green at da37395
+A10: red under the hand mutant of S07316: the first mark is kept; left: Some(1728054000000), right: Some(1728050400000)
+A10: green at da37395
+A16: red under the hand mutant of S07317: the first mark is kept; left: Some(1728054000000), right: Some(1728050400000)
 ```
