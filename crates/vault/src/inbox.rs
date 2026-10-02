@@ -12,12 +12,13 @@
 
 use std::path::{Path, PathBuf};
 
-use deck_streak_kernel::{Db, KernelError, UtcMillis};
+use deck_streak_kernel::{Db, KernelError, StudyDay, UtcMillis};
 
 use crate::VaultError;
-use crate::atomic::Streamed;
+use crate::atomic::{self, Streamed};
+use crate::capture_store::{self, CaptureRow, Claim};
 use crate::config::LayoutInForce;
-use crate::fs::VaultFs;
+use crate::fs::{EntryKind, VaultFs};
 
 /// The longest safe unique a stem keeps, in characters (`[:32]`).
 pub const UNIQUE_CHARS: usize = 32;
@@ -25,6 +26,10 @@ pub const UNIQUE_CHARS: usize = 32;
 pub const FALLBACK_UNIQUE: &str = "capture";
 /// The extension of an attachment given none.
 pub const FALLBACK_EXTENSION: &str = ".bin";
+/// The longest plain extension, in characters, without its dot (ADR-118).
+pub const EXTENSION_CHARS: usize = 10;
+/// One UTC day, in milliseconds: a stem's date is the capture instant's UTC day.
+const DAY_MS: i64 = 86_400_000;
 
 /// What was captured: the stub's `kind`, and the `inbox_captures` row's.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -111,15 +116,23 @@ pub enum Captured {
 /// [`UNIQUE_CHARS`] characters, or [`FALLBACK_UNIQUE`] when nothing is left.
 #[must_use]
 pub fn safe_unique(unique: &str) -> String {
-    let _ = unique;
-    String::new()
+    let safe: String = unique
+        .chars()
+        .filter(|c| c.is_ascii_alphanumeric() || *c == '_' || *c == '-')
+        .take(UNIQUE_CHARS)
+        .collect();
+    if safe.is_empty() {
+        FALLBACK_UNIQUE.to_owned()
+    } else {
+        safe
+    }
 }
 
 /// The stem `<UTC date of when>-<kind>-<safe unique>` (R1). It holds no dot.
 #[must_use]
 pub fn stem(kind: CaptureKind, unique: &str, when: UtcMillis) -> String {
-    let _ = (kind, unique, when);
-    String::new()
+    let day = StudyDay::from_epoch_day(when.epoch_millis().div_euclid(DAY_MS));
+    format!("{day}-{}-{}", kind.as_str(), safe_unique(unique))
 }
 
 /// The attachment's extension, with its leading dot: a plain one (up to ten ASCII letters or
@@ -130,8 +143,15 @@ pub fn stem(kind: CaptureKind, unique: &str, when: UtcMillis) -> String {
 ///
 /// [`VaultError::InvalidExtension`] for any other text, which could name a path.
 pub fn extension(ext: &str) -> Result<String, VaultError> {
-    let _ = ext;
-    Ok(String::new())
+    let bare = ext.strip_prefix('.').unwrap_or(ext);
+    if bare.is_empty() {
+        return Ok(FALLBACK_EXTENSION.to_owned());
+    }
+    if bare.len() <= EXTENSION_CHARS && bare.bytes().all(|byte| byte.is_ascii_alphanumeric()) {
+        Ok(format!(".{bare}"))
+    } else {
+        Err(VaultError::InvalidExtension)
+    }
 }
 
 /// The attachment's file name: `<stem><extension>`, except that an extension equal to `.md` in any
@@ -139,15 +159,38 @@ pub fn extension(ext: &str) -> Result<String, VaultError> {
 /// this name two: the attachment never takes its stub's name (ADR-118's amendment).
 #[must_use]
 pub fn attachment_name(stem: &str, extension: &str) -> String {
-    let _ = (stem, extension);
-    String::new()
+    if extension.eq_ignore_ascii_case(".md") {
+        format!("{stem}.attachment{extension}")
+    } else {
+        format!("{stem}{extension}")
+    }
 }
 
 /// The stub's file name, `<stem>.md`.
 #[must_use]
 pub fn stub_name(stem: &str) -> String {
-    let _ = stem;
-    String::new()
+    format!("{stem}.md")
+}
+
+/// The capture instant to the second, with its offset, as the predecessor's `isoformat` writes
+/// it: `YYYY-MM-DDTHH:MM:SS+00:00`. A second is floored, so an instant before the epoch keeps its
+/// second.
+fn instant(when: UtcMillis) -> String {
+    let second = when.epoch_millis().div_euclid(1_000);
+    let day = StudyDay::from_epoch_day(second.div_euclid(86_400));
+    let into = second.rem_euclid(86_400);
+    format!(
+        "{day}T{:02}:{:02}:{:02}+00:00",
+        into / 3_600,
+        into % 3_600 / 60,
+        into % 60
+    )
+}
+
+/// A character Python's `str.strip` trims: Unicode white space, plus the separators U+001C to
+/// U+001F, which Rust's `char::is_whitespace` keeps.
+fn is_python_space(c: char) -> bool {
+    c.is_whitespace() || ('\u{1c}'..='\u{1f}').contains(&c)
 }
 
 /// A Telegram capture's stub (R2).
@@ -158,16 +201,33 @@ pub fn telegram_stub(
     attachment: &str,
     caption: &str,
 ) -> String {
-    let _ = (kind, when, attachment, caption);
-    String::new()
+    let mut stub = format!(
+        "---\nstatus: captured\nsource: telegram\nkind: {}\ncaptured: {}\nattachment: \
+         {attachment}\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. \
+         Attachment: [[{attachment}]]\n",
+        kind.as_str(),
+        instant(when)
+    );
+    let caption = caption.trim_matches(is_python_space);
+    if !caption.is_empty() {
+        stub.push('\n');
+        stub.push_str(caption);
+        stub.push('\n');
+    }
+    stub
 }
 
 /// A Mini App capture's stub (R10): R2's keys without `attachment`, `source: miniapp`, and the
 /// text after the line "Captured via the Mini App.".
 #[must_use]
 pub fn miniapp_stub(kind: CaptureKind, when: UtcMillis, text: &str) -> String {
-    let _ = (kind, when, text);
-    String::new()
+    format!(
+        "---\nstatus: captured\nsource: miniapp\nkind: {}\ncaptured: {}\ntags: [inbox, \
+         miniapp-capture]\n---\n\nCaptured via the Mini App.\n\n{}\n",
+        kind.as_str(),
+        instant(when),
+        text.trim_matches(is_python_space)
+    )
 }
 
 /// The inbox folder of the layout in force, inside the vault root.
@@ -195,10 +255,24 @@ impl Inbox {
         root: &Path,
         layout: &LayoutInForce,
     ) -> Result<Self, VaultError> {
-        let _ = fs;
-        Ok(Self {
-            folder: root.join(&layout.inbox),
-        })
+        let configured = root.join(&layout.inbox);
+        if !is_folder(fs, root, "read the vault root")?
+            || !is_folder(fs, &configured, "read the inbox folder")?
+        {
+            return Err(VaultError::VaultMissing);
+        }
+        atomic::refuse_journal(&layout.journal_paths(root), &configured)?;
+        let resolved_root = fs
+            .canonicalize(root)
+            .map_err(VaultError::io("resolve the vault root"))?;
+        let folder = fs
+            .canonicalize(&configured)
+            .map_err(VaultError::io("resolve the inbox folder"))?;
+        atomic::refuse_journal(&layout.journal_paths(&resolved_root), &folder)?;
+        if folder == resolved_root || !folder.starts_with(&resolved_root) {
+            return Err(VaultError::OutsideConfinement);
+        }
+        Ok(Self { folder })
     }
 
     /// The inbox folder, resolved.
@@ -220,12 +294,31 @@ impl Inbox {
         capture: &Capture,
         ext: &str,
     ) -> Result<Attachment<'f, F>, VaultError> {
-        let _ = ext;
-        let name = attachment_name(&stem(capture.kind, &capture.unique, capture.when), "");
-        Ok(Attachment {
-            name,
-            stream: crate::atomic::stream(fs, &self.folder.join("attachment"))?,
-        })
+        let extension = extension(ext)?;
+        let name = attachment_name(
+            &stem(capture.kind, &capture.unique, capture.when),
+            &extension,
+        );
+        let stream = atomic::stream(fs, &self.folder.join(&name))?;
+        Ok(Attachment { name, stream })
+    }
+}
+
+/// Whether `path` is a folder, through a link or not; a missing path is not one.
+fn is_folder<F: VaultFs + ?Sized>(
+    fs: &F,
+    path: &Path,
+    step: &'static str,
+) -> Result<bool, VaultError> {
+    match fs.kind(path).map_err(VaultError::io(step))? {
+        Some(EntryKind::Dir) => Ok(true),
+        Some(EntryKind::Symlink) => match fs.canonicalize(path) {
+            Ok(target) => {
+                Ok(fs.kind(&target).map_err(VaultError::io(step))? == Some(EntryKind::Dir))
+            }
+            Err(_dangling) => Ok(false),
+        },
+        Some(_) | None => Ok(false),
     }
 }
 
@@ -263,12 +356,14 @@ impl<F: VaultFs + ?Sized> Attachment<'_, F> {
 
 /// Writes `capture` into `inbox` once (R3): the attachment, when there is one, is already in its
 /// temporary file; one `BEGIN IMMEDIATE` transaction claims the stem, renames the attachment into
-/// place, writes the stub last and commits. A stem already recorded answers the recorded name, the
-/// transaction rolls back, and the attachment's temporary file is removed.
+/// place, writes the stub last and commits. A stem, or a Mini App capture's key, already recorded
+/// answers the recorded name, the transaction rolls back, and the attachment's temporary file is
+/// removed (ADR-118 and its capture-key amendment).
 ///
 /// # Errors
 ///
-/// [`VaultError::Database`] when the ledger refuses, [`VaultError::JournalRefused`], and
+/// [`VaultError::CaptureUnpaired`] when a Telegram capture has no attachment or a Mini App capture
+/// has one, [`VaultError::Database`] when the ledger refuses, [`VaultError::JournalRefused`], and
 /// [`VaultError::Io`] naming the step that failed; on any error nothing is recorded.
 pub async fn capture<F: VaultFs + ?Sized>(
     db: &Db,
@@ -277,10 +372,52 @@ pub async fn capture<F: VaultFs + ?Sized>(
     capture: &Capture,
     attachment: Option<Attachment<'_, F>>,
 ) -> Result<Captured, VaultError> {
-    let transaction = db.write().await?;
-    transaction.rollback().await.map_err(KernelError::from)?;
-    let _ = (fs, inbox, capture, attachment);
+    let stem = stem(capture.kind, &capture.unique, capture.when);
+    let capture_key = safe_unique(&capture.unique);
+    let stub = match (capture.source, &attachment) {
+        (Source::Telegram, Some(file)) => {
+            telegram_stub(capture.kind, capture.when, &file.name, &capture.caption)
+        }
+        (Source::MiniApp, None) => miniapp_stub(capture.kind, capture.when, &capture.caption),
+        (Source::Telegram, None) | (Source::MiniApp, Some(_)) => {
+            return Err(VaultError::CaptureUnpaired);
+        }
+    };
+    let attachment_file = attachment.as_ref().map(|file| file.name.clone());
+    let row = CaptureRow {
+        stem: &stem,
+        capture_key: &capture_key,
+        kind: capture.kind,
+        source: capture.source,
+        attachment: attachment_file.as_deref(),
+        captured_at: capture.when,
+    };
+    let mut transaction = db.write().await?;
+    if let Claim::Recorded { name } = capture_store::claim(&mut transaction, &row).await? {
+        transaction.rollback().await.map_err(KernelError::from)?;
+        if let Some(file) = attachment {
+            file.stream.discard();
+        }
+        tracing::info!(
+            source = capture.source.as_str(),
+            kind = capture.kind.as_str(),
+            outcome = "already_captured",
+            "an inbox capture was already recorded"
+        );
+        return Ok(Captured::AlreadyCaptured { name });
+    }
+    if let Some(file) = attachment {
+        file.stream.land()?;
+    }
+    atomic::write(fs, &inbox.folder.join(stub_name(&stem)), stub.as_bytes())?;
+    transaction.commit().await.map_err(KernelError::from)?;
+    tracing::info!(
+        source = capture.source.as_str(),
+        kind = capture.kind.as_str(),
+        outcome = "saved",
+        "an inbox capture was saved"
+    );
     Ok(Captured::Saved {
-        name: String::new(),
+        name: attachment_file.unwrap_or_else(|| stub_name(&stem)),
     })
 }

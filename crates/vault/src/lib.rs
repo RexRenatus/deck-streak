@@ -117,6 +117,10 @@ pub enum VaultError {
     /// An attachment's extension is not a plain one, so it could name a path (SPEC-118 R1).
     #[error("the attachment's extension is not a plain one")]
     InvalidExtension,
+    /// A capture's source and its attachment do not pair: a Telegram capture carries its
+    /// attachment and a Mini App capture none (SPEC-118 R2, R10), so its stub would misname it.
+    #[error("the capture's source and its attachment do not pair")]
+    CaptureUnpaired,
     /// A rolled note did not read back as it was written, so its source stays (R7).
     #[error("the rolled note did not read back as written, so its source stays")]
     ReadBack,

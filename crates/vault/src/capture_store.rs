@@ -41,16 +41,60 @@ pub enum Claim {
     },
 }
 
-/// Records `row` unless its stem, or a Mini App capture's key, is already recorded.
+/// Records `row` unless its stem, or a Mini App capture's key, is already recorded (ADR-118 and its
+/// capture-key amendment). The insert names no conflict target, so the stem's primary key and the
+/// Mini App key's partial unique index each refuse it; when nothing is inserted, the recorded
+/// capture's name answers: the row of the stem, or, for a Mini App capture, the Mini App row of its
+/// key. A Telegram capture is claimed by its stem alone.
 ///
 /// # Errors
 ///
-/// [`KernelError::Database`] when the insert or the read fails.
+/// [`KernelError::Database`] when the insert or the read fails, or when nothing was inserted and no
+/// recorded row explains it.
 pub async fn claim(
     connection: &mut SqliteConnection,
     row: &CaptureRow<'_>,
 ) -> Result<Claim, KernelError> {
-    let _ = row;
-    sqlx::query("SELECT 1").execute(connection).await?;
-    Ok(Claim::Claimed)
+    let kind = row.kind.as_str();
+    let source = row.source.as_str();
+    let at = row.captured_at.epoch_millis();
+    let inserted = sqlx::query!(
+        "INSERT INTO inbox_captures
+             (stem, capture_key, kind, source, attachment, captured_at, created_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6) ON CONFLICT DO NOTHING",
+        row.stem,
+        row.capture_key,
+        kind,
+        source,
+        row.attachment,
+        at
+    )
+    .execute(&mut *connection)
+    .await?;
+    if inserted.rows_affected() == 1 {
+        return Ok(Claim::Claimed);
+    }
+    let by_stem = sqlx::query_scalar!(
+        r#"SELECT COALESCE(attachment, stem || '.md') AS "name!: String"
+           FROM inbox_captures WHERE stem = ?1"#,
+        row.stem
+    )
+    .fetch_optional(&mut *connection)
+    .await?;
+    if let Some(name) = by_stem {
+        return Ok(Claim::Recorded { name });
+    }
+    if row.source == Source::MiniApp {
+        let by_key = sqlx::query_scalar!(
+            r#"SELECT COALESCE(attachment, stem || '.md') AS "name!: String"
+               FROM inbox_captures WHERE capture_key = ?1 AND source = 'miniapp'"#,
+            row.capture_key
+        )
+        .fetch_optional(&mut *connection)
+        .await?;
+        if let Some(name) = by_key {
+            return Ok(Claim::Recorded { name });
+        }
+    }
+    Err(sqlx::Error::RowNotFound.into())
 }

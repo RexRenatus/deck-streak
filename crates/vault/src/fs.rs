@@ -149,14 +149,27 @@ impl<F: VaultFs> JournalGuard<F> {
     pub const fn new(inner: F, journal: Vec<PathBuf>) -> Self {
         Self { inner, journal }
     }
+
+    /// `PermissionDenied` when `path` lies under a journal folder, by the atomic writer's own
+    /// lexical rule.
+    fn refuse(&self, path: &Path) -> io::Result<()> {
+        crate::atomic::refuse_journal(&self.journal, path).map_err(|_refused| {
+            io::Error::new(
+                io::ErrorKind::PermissionDenied,
+                "the path lies under a journal folder",
+            )
+        })
+    }
 }
 
 impl<F: VaultFs> VaultFs for JournalGuard<F> {
     fn create_new(&self, path: &Path) -> io::Result<Box<dyn VaultFile>> {
+        self.refuse(path)?;
         self.inner.create_new(path)
     }
 
     fn rename(&self, from: &Path, to: &Path) -> io::Result<()> {
+        self.refuse(to)?;
         self.inner.rename(from, to)
     }
 
@@ -181,6 +194,7 @@ impl<F: VaultFs> VaultFs for JournalGuard<F> {
     }
 
     fn create_dir(&self, path: &Path) -> io::Result<()> {
+        self.refuse(path)?;
         self.inner.create_dir(path)
     }
 
@@ -193,8 +207,7 @@ impl<F: VaultFs> VaultFs for JournalGuard<F> {
     }
 
     fn journal(&self) -> &[PathBuf] {
-        let _ = &self.journal;
-        &[]
+        &self.journal
     }
 }
 

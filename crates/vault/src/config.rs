@@ -181,11 +181,15 @@ impl LayoutInForce {
     /// [`StartRefusal::LayoutUnreadable`] when the setting names no absolute path or a file that
     /// cannot be read, and [`StartRefusal::LayoutMalformed`] when the file is not a layout.
     pub fn from_env(env: &Environment) -> Result<Self, VaultError> {
-        let _ = env;
-        Ok(Self {
-            inbox: String::new(),
-            journal: Vec::new(),
-        })
+        let Some(file) = env
+            .optional::<LayoutFile>(VAULT_LAYOUT)
+            .map_err(|_malformed| StartRefusal::LayoutUnreadable)?
+        else {
+            return Self::vendored();
+        };
+        let text =
+            std::fs::read_to_string(&file.0).map_err(|_unread| StartRefusal::LayoutUnreadable)?;
+        Self::parse(&text)
     }
 
     /// The vendored layout, `crates/vault/data/layout.json`.
@@ -195,27 +199,69 @@ impl LayoutInForce {
     /// [`StartRefusal::LayoutMalformed`] when the vendored file is not a layout, which a test of
     /// this crate rules out.
     pub fn vendored() -> Result<Self, VaultError> {
-        Self::parse("")
+        Self::parse(crate::staged::VENDORED_LAYOUT)
     }
 
-    /// The layout a layout file's `text` holds: its `inbox` and its `journal` folders.
+    /// The layout a layout file's `text` holds: its `inbox` and its `journal` folders. Each is
+    /// trimmed of `/` and must be a plain relative path inside the vault; `journal`, when present,
+    /// is a list. Every other key is the duties' and is not read here.
     ///
     /// # Errors
     ///
     /// [`StartRefusal::LayoutMalformed`] when `text` is not a layout.
     pub fn parse(text: &str) -> Result<Self, VaultError> {
-        let _ = text;
-        Ok(Self {
-            inbox: String::new(),
-            journal: Vec::new(),
-        })
+        let malformed = || VaultError::from(StartRefusal::LayoutMalformed);
+        let layout: serde_json::Value = serde_json::from_str(text).map_err(|_json| malformed())?;
+        let inbox = layout
+            .get("inbox")
+            .and_then(serde_json::Value::as_str)
+            .and_then(layout_folder)
+            .ok_or_else(malformed)?;
+        let journal = match layout.get("journal") {
+            None => Vec::new(),
+            Some(serde_json::Value::Array(folders)) => folders
+                .iter()
+                .map(|folder| folder.as_str().and_then(layout_folder))
+                .collect::<Option<Vec<_>>>()
+                .ok_or_else(malformed)?,
+            Some(_) => return Err(malformed()),
+        };
+        Ok(Self { inbox, journal })
     }
 
     /// The journal folders inside `root`.
     #[must_use]
     pub fn journal_paths(&self, root: &Path) -> Vec<PathBuf> {
-        let _ = (&self.journal, root);
-        Vec::new()
+        self.journal
+            .iter()
+            .map(|folder| root.join(folder))
+            .collect()
+    }
+}
+
+/// A layout folder trimmed of `/`, or `None` unless it is a plain relative path inside the vault:
+/// not empty, and with no empty, `.` or `..` component, no backslash and no control character.
+fn layout_folder(text: &str) -> Option<String> {
+    let folder = text.trim_matches('/');
+    let plain = !folder.is_empty()
+        && folder.split('/').all(|part| {
+            !part.is_empty()
+                && part != "."
+                && part != ".."
+                && !part.chars().any(|c| c == '\\' || c.is_control())
+        });
+    plain.then(|| folder.to_owned())
+}
+
+/// The owner's layout file: an absolute path, private to the deployment.
+struct LayoutFile(PathBuf);
+
+impl Setting for LayoutFile {
+    const SHAPE: &'static str = "an absolute file path";
+
+    fn parse(text: &str) -> Option<Self> {
+        let path = PathBuf::from(text);
+        path.is_absolute().then_some(Self(path))
     }
 }
 
@@ -283,22 +329,8 @@ impl VaultPaths {
         if readings == root || !readings.starts_with(&root) {
             return Err(StartRefusal::ReadingsFolderOutsideRoot.into());
         }
-        let probe = readings.join(format!(".deckstreak-start.{}.tmp", std::process::id()));
-        match fs.create_new(&probe) {
-            Ok(file) => {
-                drop(file);
-                fs.remove_file(&probe)
-                    .map_err(VaultError::io("remove the start check's temporary file"))?;
-            }
-            Err(error)
-                if matches!(
-                    error.kind(),
-                    io::ErrorKind::PermissionDenied | io::ErrorKind::ReadOnlyFilesystem
-                ) =>
-            {
-                return Err(StartRefusal::ReadingsFolderNotWritable.into());
-            }
-            Err(error) => return Err(VaultError::io("write in the readings folder")(error)),
+        if !crate::atomic::probe_writable(fs, &readings)? {
+            return Err(StartRefusal::ReadingsFolderNotWritable.into());
         }
         Ok(Self {
             root,

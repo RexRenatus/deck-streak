@@ -451,8 +451,8 @@ async fn a_capture_sent_twice_is_written_once() {
     );
     assert_eq!(
         files(folder),
-        vec![name, stub.clone()],
-        "the resend's temporary file is removed"
+        vec![stub.clone(), name],
+        "the resend's temporary file is removed (the names in sorted order: `.md` before `.pdf`)"
     );
 
     let quick = miniapp(

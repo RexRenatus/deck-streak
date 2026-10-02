@@ -277,6 +277,17 @@
       "erase": "delete"
     },
     {
+      "id": "inbox-captures",
+      "data": "each capture the owner sent to the vault inbox from the bot or the Mini App: its stem, its retry key, its kind, its source, its attachment's file name, the instant it was captured, and whether and where it was filed; the captions, texts and attachments themselves stay in the owner's vault",
+      "source": "learner-input",
+      "stores": ["inbox_captures.*"],
+      "purpose": "saving each capture in the vault inbox once, answering a resend with the first capture's name, and letting the inbox curator file it; no model reads a capture unless the curator's route is configured, and a journal capture never",
+      "lawful_basis": "contract",
+      "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "delete"
+    },
+    {
       "id": "research-instruments",
       "data": "the latest report of each research instrument that reads the owner's collection: the study day it was built for, its shape version, its findings about the owner's own cards and note types, and the name of each read that failed",
       "source": "derived",
