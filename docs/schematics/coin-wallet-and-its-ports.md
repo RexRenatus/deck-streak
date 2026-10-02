@@ -15,7 +15,7 @@ flowchart LR
     fine["a fine: debit_capped"]
     tariff["the skip day's tariff: debit_floored"]
     shop["the shop: purchase (E3)"]
-    payout["a payout: credit, credit_once, refund"]
+    payout["a payout: deposit, deposit_once, refund"]
   end
   subgraph economy[crates/economy]
     port["wallet.rs: the port"]
@@ -70,8 +70,8 @@ included; `remainder` is `daily_loss_cap(start) - debited`.
 
 | port | refuses | clips | writes |
 |---|---|---|---|
-| `credit(day, source, reference, amount)` | an amount of 0 or less | nothing | `+amount` on the key, once |
-| `credit_once(day, source, reference, amount)` | an amount of 0 or less | nothing | `+amount`, unless a movement of that source and reference exists on any study day |
+| `deposit(day, source, reference, amount)` | an amount of 0 or less | nothing | `+amount` on the key, once |
+| `deposit_once(day, source, reference, amount)` | an amount of 0 or less | nothing | `+amount`, unless a movement of that source and reference exists on any study day |
 | `settle_mint(day, amount, closed)` | a negative amount | the open day's lowering, to `balance - floor` at most | the day's one `mint` movement: inserted when positive, raised to the greater on a closed day, set to the new mint on the open day |
 | `purchase(day, source, reference, price)` | a price of 0 or less, or `balance - price < floor` (writes nothing) | never: not by the loss cap (R8) | `-price` on the key, counted in the day's debits |
 | `debit_floored(day, source, reference, amount)` | never | `min(amount, max(0, balance - floor))` | `-paid` on the key when the amount is positive |

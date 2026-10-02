@@ -46,6 +46,9 @@ the once-ever guard look, and how does a day's mint change?
 - `settle_mint` as the one port that updates a movement, the day's one mint: chosen, because the key holds one mint per day and R4 needs it to move, raised on a settled day and following its base on the open day (#106).
 - A new movement for each change of a day's mint: rejected, because the key (study day, source, reference) holds one movement, and the ledger would grow at every recompute (#106).
 - An insert-once mint: rejected, because R4 raises a settled day's mint at a later recompute and makes the open day's follow its base (#106).
+- The coin-adding ports named `deposit` and `deposit_once` in code (`deposit_on`, `deposit_once_on`, `DepositAnswer`): chosen, because docs/LEXICON.md locks `credit` out of a declaration in deck-streak-economy, and `deposit` is the counterpart of the `debit_*` ports (#106).
+- Amending docs/LEXICON.md so `credit` is no longer a word `coin` replaces: rejected, because it weakens a lexicon lock to fit one delivery's names, and the lock is the ubiquitous language the probe holds (#106).
+- `grant` for the coin-adding movement: rejected, because SPEC-082 already says grant for the freeze port's grant (A12), so one word would name two concepts inside one SPEC (#106).
 
 ## Decision Outcome
 
@@ -74,6 +77,10 @@ one `BEGIN IMMEDIATE` transaction, with these rulings.
    reference). With none held it is inserted when positive; on a day the caller reports `closed`
    it becomes the greater of the held and the new mint; on the open day it follows the new mint,
    lowered at most to the floor (ruling 4). No other port updates a movement, and none deletes one.
+7. **The coin-adding movement is named `deposit` in code.** The ports R7 calls `credit` and
+   `credit_once` are `deposit` and `deposit_once`, with their `_on` forms and their answer
+   `DepositAnswer` (`Deposited`, `AlreadyDeposited`), because docs/LEXICON.md locks `credit` out of
+   a declaration in deck-streak-economy. The rulings above keep R7's words.
 
 ### Consequences
 

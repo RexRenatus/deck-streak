@@ -426,3 +426,5 @@ or changes them:
   delivers them.
 - `web/app/src/lib/economy/ShopItem.svelte`, `web/app/src/lib/economy/shop.test.ts`,
   `web/app/src/routes/shop/+page.svelte` and `web/app/src/lib/routes.ts`: E3 delivers them.
+
+The ports R7 calls `credit` and `credit_once` are named `deposit` and `deposit_once` in code, with their `_on` forms `deposit_on` and `deposit_once_on` and their answer `DepositAnswer` (`Deposited`, `AlreadyDeposited`), because docs/LEXICON.md locks `credit` out of a declaration in deck-streak-economy (ADR-308 ruling 7); R7's prose is unchanged.

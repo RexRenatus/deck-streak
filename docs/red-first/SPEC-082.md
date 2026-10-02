@@ -45,6 +45,13 @@ Two test files changed after the red commit, and neither is a criterion's:
   `clip_debit` and `mint_for_base_xp` against the proof's vectors. It is a parity check of code
   that was already green, so it has no red commit.
 
+After them, the rename of ADR-308 ruling 7 (commit 33998c7) changed two criteria's test files,
+`crates/economy/tests/wallet_ports.rs` and `crates/economy/tests/wallet_rights.rs`, in the names
+they call and compare only: `credit` and `credit_once` became `deposit` and `deposit_once`, and
+`CreditAnswer::Credited` and `CreditAnswer::AlreadyCredited` became `DepositAnswer::Deposited` and
+`DepositAnswer::AlreadyDeposited`. No value, test name or selection moved. The lines below are as
+measured, in the names of their commits.
+
 ```red-first
 A3: red at 6280965: assertion `left == right` failed: the wallet before day 20000 of [(19999, "mint", "", 40), (20000, "mint", "", 25), (20000, "shop", "pass:1", -40), (20000, "fine", "a", -15), (20000, "quest", "q", 10), (20001, "fine", "b", -9), (19998, "shop", "freeze:1", -150)]; left: Number(0), right: Number(-110)
 A3: green at f047f9d
