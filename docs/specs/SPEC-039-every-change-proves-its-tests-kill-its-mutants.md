@@ -1104,12 +1104,14 @@ change corrects.
 | A62 | over a population of script edits, each printing `examined N` (a docstring changed at each of the four positions, a method's, and one grown to three lines; a string statement that is not first; a string used as a value; a code change beside a docstring change in one file; two files of which only one is docstring-only; a file outside the class changed beside a docstring change, and between a docstring-only script and a later script's code change; a file added, deleted and renamed; a parse error at either side; a script that is not UTF-8), every member that changes a tree outside docstrings keeps the class applying, only the docstring-only members are named, and no line a named member set aside holds a runner mutant; a planted plan that sets every string expression aside as a docstring is caught | `test_mutation_verdict.py` |
 | A63 | the definition's edges: an f-string or a bytes literal first in a body, and a string first in an `if` block, stay code; two docstring-only files are both named; a docstring-only file beside a comment-only one names only the first, and the second keeps its own reading; a re-layout with an equal tree reads the named case | `test_mutation_verdict.py` |
 | A64 | the PLAN paragraph of `scripts/mutation-verdict.py`'s module docstring names exactly the legs `ci` admits a skip from and `legs` judges, and exactly the step outputs the plan writes | `test_mutation_verdict.py` |
+| A65 | the PEP 263 class: the plan parses a script's bytes, so a declared encoding decides the tree compared; over six members printing `examined N`, a latin-1 escape rewritten as raw bytes, a declaration changed from utf-8 to latin-1 beside a docstring edit, a latin-1 declaration that stops the new side parsing and an unknown encoding each apply, a declared UTF-8 script changed in its docstring alone is named, and a declared script whose bytes are not UTF-8 is refused as at the base | `test_mutation_verdict.py` |
 
 ```acceptance
 A61: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k a_docstring_only_change_is_named_and_a_code_change_beside_it_is_examined
 A62: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k the_named_case_narrows_no_member_of_a_population_of_script_edits
 A63: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k the_docstring_is_only_the_first_bare_string_of_a_body
 A64: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k the_plan_paragraph_names_the_legs_ci_admits_and_the_outputs_it_writes
+A65: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k a_declared_encoding_decides_the_tree_compared
 ```
 
 A61 runs the plan, the runner's `list` and `run`, `shards` and `judge` as subprocesses, in the

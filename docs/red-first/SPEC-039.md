@@ -363,7 +363,7 @@ code by the same assertions as above, A62 with 7 mismatches.
 
 ## Addendum, 2026-10-02: the plan reads a declared encoding from the bytes (issue #485, round 2)
 
-A62's population gains the PEP 263 class. The plan parsed the file's text after decoding it as UTF-8,
+A62's population is joined by the PEP 263 class, criterion A65 of the SPEC. The plan parsed the file's text after decoding it as UTF-8,
 and a text source ignores a coding declaration, so a declaration that changes a value, one that
 stops the head compiling and an unknown encoding were each named docstring-only. The plan now
 parses the bytes, so a declared encoding decides the tree compared, and a file whose bytes are not
@@ -377,8 +377,8 @@ It is red at 5bcbe0124973347119134cc11c91edfd529d9c92 by assertion; four of its 
 member whose bytes are not UTF-8 read as before:
 
 ```red-first
-A62: red at 5bcbe0124973347119134cc11c91edfd529d9c92: AssertionError: Lists differ: ["a latin-1 escape rewritten as raw bytes,[463 chars]ne)"] != []
-A62: green at c3845425ac8f886636cdab6326529e174302bb55
+A65: red at 5bcbe0124973347119134cc11c91edfd529d9c92: AssertionError: Lists differ: ["a latin-1 escape rewritten as raw bytes,[463 chars]ne)"] != []
+A65: green at c3845425ac8f886636cdab6326529e174302bb55
 ```
 
 ```text
