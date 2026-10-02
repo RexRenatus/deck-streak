@@ -492,16 +492,44 @@ pub async fn settle_epic_choice_on(
 }
 
 /// Resolves the stale chests of the study days before `today` (R10), in the caller's write.
-/// RED-FIRST STUB: resolves nothing.
+///
+/// Every chest still sealed, vaulted or opened from an earlier study day is resolved by a guarded
+/// update and paid its payout as rolled, on its own study day, for the caller to grant; an Epic
+/// whose choice was never made pays [`EPIC_FALLBACK_XP`]. A vaulted chest of the day before is
+/// the morning's reveal and waits for the next study day's sweep. A chest another write resolved
+/// first is skipped and paid nothing.
 ///
 /// # Errors
 ///
 /// A store error as [`chest_store`](crate::chest_store) answers it.
 pub async fn sweep_stale_chests_on(
-    _connection: &mut SqliteConnection,
-    _today: StudyDay,
+    connection: &mut SqliteConnection,
+    today: StudyDay,
 ) -> Result<Vec<Swept>, ChestError> {
-    Ok(Vec::new())
+    let mut swept = Vec::new();
+    for chest in chest_store::unresolved_chests(connection).await? {
+        if chest.study_day >= today {
+            continue;
+        }
+        if chest.state == ChestState::Vaulted
+            && chest.study_day.epoch_day() >= today.epoch_day() - 1
+        {
+            continue;
+        }
+        let xp = if chest.rarity == Rarity::Epic && chest.choice.is_none() {
+            EPIC_FALLBACK_XP
+        } else {
+            chest.payout_xp
+        };
+        if !chest_store::sweep_resolve(connection, chest.id).await? {
+            continue;
+        }
+        swept.push(Swept {
+            chest_id: chest.id,
+            payout: payout_of(chest.id, chest.study_day, xp),
+        });
+    }
+    Ok(swept)
 }
 
 /// A chest's payout of `xp` on its own study day, none when it pays 0.
