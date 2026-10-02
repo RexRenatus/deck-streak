@@ -292,3 +292,25 @@ of `Fold::run`. Its body replaced by `Ok(Default::default())` was caught. `owed 
 into `owed == day` is a TIMEOUT at the run's `--timeout 300`, not a miss: every write whose day is
 still owed then rolls back and reads the cursor again, so the loop never ends. `outcomes.json`
 read 2 mutants: caught 1, missed 0, timeout 1, unviable 0.
+
+## Addendum of 2026-10-02: A27 forces the order of every write after its barrier (#311, fix round 1)
+
+A27's barrier held each fold's first offer only; every later offer returned at once, so the order
+of the writes after the barrier was the runtime's, and a fold that skipped a day it was owed failed
+A27 on some runs and not on others. dfafa9b changes the test file alone. Each later offer of a fold
+hands the turn to the other fold and waits for its own, and the fold writes between two of its
+offers (ADR-303), so under a forced release each write after the barrier runs alone, in the order
+the test chose. A27 now releases each of its 18 members four ways: the scheduled fold's turn first,
+the owner's turn first, and both folds together in each join order, which are the 36 runs it ran
+before. Its population is 72 runs, and a forced release also asserts that the turns alternated.
+
+The strengthened A27 is a changed criterion, so its new red is recorded here in prose and is not a
+new fence line. Run at 1da1d05, this pull request's base, with the test file of dfafa9b carried in,
+A27 failed by its own assertion after `examined 72 overlapping runs`, on its first run, a forced
+one, and its target read 19 passed, 1 failed. At dfafa9b it passes after `judged 72 overlapping
+run(s), 18 distinct member(s)`.
+
+```text
+A27, strengthened at dfafa9b: red at 1da1d05 with its test file carried in: every day from the first settled one to the last closed one, once, oldest first: member (None, 20002, 20002), released Turns("scheduled"); left: [20001, 20001], right: [20001]; its target 19 passed, 1 failed
+A27 at dfafa9b: 1 passed, after `examined 72 overlapping runs`
+```

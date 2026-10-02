@@ -64,13 +64,32 @@ because there is no code arm to mutate: it is the base's behaviour, stated.
 
 ### Confirmation
 
-A27 runs two folds on two connections to one ledger file, held by a barrier so that both have read
-before either settles, over 36 runs (18 distinct members, each run in both join orders): at
-`9b0bf65f9` a closed day is settled twice, and with the re-read every day from the first settled
-one to the last closed one is settled exactly once, oldest first. A28 pins (b) and is green at the
-base, recorded as a pin. `formal check` reads `SettleOnce`, `SettleOldestFirst` and `SettleInTurn`
-clean on the built protocol, and each witness violates its property. The mutation row S07114, which
-removes the re-read, reads KILLED by A27.
+A27 runs two folds on two connections to one ledger file, held by a barrier after each fold's first
+read of the cursor, so that both have read it before either settles, over 72 runs: 18 distinct
+members, each released four ways. In two releases the test forces the order of every write after
+the barrier through the fold's own offers port: each later offer of a fold hands the turn to the
+other fold and waits for its own, so each write runs alone, the scheduled fold's turn first in one
+release and the owner's in the other, and the test asserts that the turns alternated. In the other
+two, both folds leave the barrier together and race to the write lock, joined in each order, as
+A27's 36 runs did before fix round 1. At `9b0bf65f9` a closed day is settled twice, and with the
+re-read every day from the first settled one to the last closed one is settled exactly once, oldest
+first.
+
+What each release catches was measured with the fold's owed-day block replaced. A fold that settles
+the run's day unless the cursor is at or past it (the second option above) fails A27 on every run,
+in a forced release. A fold that re-reads the cursor in a transaction of its own, before the write,
+fails A27 only on a run where the race puts both reads before either write, so it is caught at a
+rate, not on every run: the forced releases never caught it, because each fold's read and write
+then run with no write of the other between them. Its structural guard is the covers of
+`FoldSettlesOnce` on `Fold::run` and `Db::write`: moving the re-read out of the write changes
+`run`'s span, and the cover reads STALE until the model is re-read against it. With that change
+committed, `formal covers` read `run` STALE and the entry's other four covers FRESH.
+
+A28 pins (b) and is green at the base, recorded as a pin. `formal check` reads `SettleOnce`,
+`SettleOldestFirst` and `SettleInTurn` clean on the built protocol, and each witness violates its
+property. The mutation row S07114, which removes the re-read, reads KILLED by A27. S07115, which
+owes the day after the run's own when there is no cursor, reads KILLED by A16, and S07116, which
+goes on from the day after a passed write instead of the owed day, reads KILLED by A27.
 
 ## What would make this wrong
 

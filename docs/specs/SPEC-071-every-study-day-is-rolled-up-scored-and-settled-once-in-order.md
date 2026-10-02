@@ -688,9 +688,13 @@ Insert-only: every earlier byte is kept in order, and this amendment inserts sec
   re-read violates one of them. The decision is ADR-313.
 - **A closed day before the first settled day (R17).** Before the first settled day, a day has a row only as a study day of the window (in the historical form) or as some recompute's current day; any other closed day owes no row, even one a recompute left owed. Each day after the first settled day is settled in turn, gap days included (#311).
 - **What A27 and A28 hold.** A27 runs two folds on two connections to one ledger file, held by a
-  barrier so that both have read the cursor before either settles, over a generated population: with
-  a settled day and with none, the scheduled fold's closed day one to three days after D0 and the
-  owner's one to three, each run in both join orders. It pins the population's size (36 runs) and
+  barrier after each fold's first read so that both have read the cursor before either settles,
+  over a generated population: with a settled day and with none, the scheduled fold's closed day
+  one to three days after D0 and the owner's one to three, each released four ways. Two releases
+  force the order of every write after the barrier through the offers port, one fold's turn at a
+  time from each offer to its next, with the scheduled fold's turn first and then the owner's, and
+  assert that the turns alternated; two release both folds together to race, joined in each order.
+  It pins the population's size (72 runs) and
   its distinct members (18), each member recorded inside the offers' call from what the fold handed
   it, and asserts that the settled days run from the first settled one to the last closed one, each
   once, oldest first. A28 holds the rule of a closed day before the first settle over three cases:
@@ -822,7 +826,7 @@ Section 4's rows that the amendment leaves as they are:
 
 | id | criterion | decided by |
 |---|---|---|
-| A27 | two folds on two connections to one ledger, both reading the cursor before either settles, settle every day from the first settled one to the last closed one exactly once, oldest first, over a population whose size (36) and distinct members (18) are pinned | `two_overlapping_folds_settle_each_closed_day_once_in_turn` |
+| A27 | two folds on two connections to one ledger, both reading the cursor before either settles, settle every day from the first settled one to the last closed one exactly once, oldest first, with the order of every write after the barrier forced both ways and with both folds racing, over a population whose size (72) and distinct members (18) are pinned | `two_overlapping_folds_settle_each_closed_day_once_in_turn` |
 | A28 | a closed day before the first settled day has a row only as a study day of the window or as some recompute's current day, and every day after the first settle is settled once (a pin, green at the base) | `a_closed_day_before_the_first_settle_has_a_row_only_from_the_window_or_a_current_day` |
 
 ```acceptance
