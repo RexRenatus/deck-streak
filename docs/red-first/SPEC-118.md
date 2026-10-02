@@ -77,8 +77,21 @@ A21: green at 13f68a2d22ecc9510e6f4f4619ce77cd334f4455
 A22: red at 9ebf336e0bf0f72654f33980b2a847056f679155: the_layout_in_force_is_the_owners_or_the_default panicked at crates/vault/tests/layout_in_force.rs:23: unset, the vendored inbox is in force, left "" right "90-Inbox"
 A22: green at 31c1af96809f9cadad6da4c6e73d322fb7ebcfb6
 A23: red at 9ebf336e0bf0f72654f33980b2a847056f679155: an_md_attachment_never_takes_its_stubs_name panicked at crates/vault/tests/inbox_capture.rs:590: left "" right "2024-10-04-document-BQACAgQAAxkB"
-A23: red at 9ebf336e0bf0f72654f33980b2a847056f679155: every_extension_keeps_its_bytes_apart_from_the_stub panicked at crates/vault/tests/inbox_capture.rs:639: the "md" attachment's name, left Saved { name: "" } right Saved { name: "2024-10-04-document-BQACAgQAAxk0.attachment.md" }
 A23: green at 31c1af96809f9cadad6da4c6e73d322fb7ebcfb6
 A24: red at 9ebf336e0bf0f72654f33980b2a847056f679155: a_miniapp_retry_on_a_later_utc_day_answers_the_first_name panicked at crates/vault/tests/inbox_capture.rs:680: left Saved { name: "" } right Saved { name: "2024-10-04-text-6f1d2c9a-retry.md" }
 A24: green at 31c1af96809f9cadad6da4c6e73d322fb7ebcfb6
 ```
+
+A23 is decided by two tests, and the fence holds one red line for it, its first test's. The second
+test, `every_extension_keeps_its_bytes_apart_from_the_stub`, was red at the same commit,
+9ebf336e0bf0f72654f33980b2a847056f679155: it panicked at crates/vault/tests/inbox_capture.rs:639,
+the "md" attachment's name, left Saved { name: "" } right Saved { name:
+"2024-10-04-document-BQACAgQAAxk0.attachment.md" }. It is green at 31c1af96, with the first.
+
+After every criterion was green, each test that lists a folder or a source tree gained the examined
+helper: it prints how many entries the listing held and passes them through, and `examined` also
+refuses an empty listing where one cannot be empty. No recorded failure moves. A5's red assertion
+(line 260 at its red commit) comes before its journal listing (line 320); A6 lists the vault's
+sources (line 512) before its red assertion (line 539), and that listing was not empty there, since
+the red names `config.rs`; and the wiring test's red status assertion (line 155) comes before its
+inbox listing (line 157). Every other listing takes `examined_may_be_empty`, which refuses nothing.
