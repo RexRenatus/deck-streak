@@ -2471,13 +2471,13 @@ class TheGuardReadsAnImplementationByToken(unittest.TestCase):
     PINS = 'const X: &str = "a whole depth";\nconst Y: &str = "a whole width";\n'
     DEPTH = 'const X: &str = "a whole depth";\n'
     WIDE = 'demo::Wide (src/more.rs) "a whole width"'
+    TUPLE = 'demo::( Wide , Narrow ) (src/more.rs) "a whole width"'
     MACRO = f"demo (src/more.rs) {REFUSED_BY_A_MACRO['impl']}"
 
     def spellings(self):
         """(case, `src/more.rs`, what `lib.rs` adds, kind, lines refused either way). A "read"
-        member is refused only when unpinned, a "macro" member always, by its file; the lines
-        refused
-        either way are an implementation of another trait that a shadowing name binds, read as a
+        member is refused only when unpinned, a "macro" member always, by its file, and a "tuple"
+        member only when unpinned, named by its type's tokens; the lines refused either way are an implementation of another trait that a shadowing name binds, read as a
         `Setting` one with no shape (a disclosed false refusal)."""
         body = f" {{\n    {self.WIDTH}\n}}\n"
         plain = "impl Setting for Wide" + body
@@ -2684,6 +2684,122 @@ class TheGuardReadsAnImplementationByToken(unittest.TestCase):
                 "none",
                 ["demo::Wide (src/more.rs) None"],
             ),
+            (
+                "a cast is no alias",
+                "enum Kind {\n    Setting,\n}\ntype Small = u8;\n"
+                "const N: Small = Kind::Setting as Small;\n"
+                "mod m {\n    pub trait Small {}\n    impl Small for super::Narrow {}\n}\n" + plain,
+                "",
+                "read",
+                [],
+            ),
+            (
+                "a rename of another trait binds no name",
+                "use core::fmt::Debug as Shown;\nimpl Shown for Narrow {\n"
+                "    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {\n"
+                "        Ok(())\n    }\n}\n" + plain,
+                "",
+                "read",
+                [],
+            ),
+            (
+                "a return-position impl is no implementation",
+                plain + "fn make() -> impl Setting {\n    Wide {}\n}\n",
+                "",
+                "read",
+                [],
+            ),
+            (
+                "a where clause holding a group",
+                "impl<F> Setting for Wide<F>\nwhere\n    F: Fn(u8),\n{\n    "
+                + self.WIDTH
+                + "\n}\n",
+                "",
+                "read",
+                [],
+            ),
+            (
+                "a type with no word of its own",
+                "impl Setting for (Wide, Narrow)" + body,
+                "",
+                "tuple",
+                [],
+            ),
+            (
+                "a macro one file defines and another invokes",
+                "make!(impl);\n",
+                "macro_rules! make {\n    ($k:tt) => {\n"
+                f"        $k Setting for Wide {{ {self.WIDTH} }}\n    }};\n}}\n",
+                "macro",
+                [f"demo (src/lib.rs) {REFUSED_BY_A_MACRO['impl']}"],
+            ),
+            (
+                "a matcher that spells the trait before a for",
+                plain + "macro_rules! nothing {\n    (Setting for $t:ty) => {};\n}\n"
+                "nothing!(Setting for Wide);\n",
+                "",
+                "read",
+                [],
+            ),
+            (
+                "an inherent impl with a metavariable in its generics",
+                plain + "macro_rules! inherent {\n    ($t:ty) => {\n        impl Wide<$t> {}\n"
+                "    };\n}\n",
+                "",
+                "read",
+                [],
+            ),
+            (
+                "another trait's impl with its for passed in",
+                "macro_rules! make {\n    ($f:tt) => {\n        impl From<u8> $f Wide {\n"
+                "            fn from(_: u8) -> Self {\n                Wide\n            }\n"
+                "        }\n    };\n}\n",
+                "",
+                "macro",
+                [],
+            ),
+            (
+                "a bound's for on a metavariable",
+                plain + "macro_rules! bounded {\n    ($t:ty) => {\n"
+                "        fn g() where $t: for<'a> Fn(&'a u8) {}\n    };\n}\n",
+                "",
+                "read",
+                [],
+            ),
+            (
+                "a loop under a label a macro passes in",
+                plain + "macro_rules! each {\n    ($l:lifetime) => {\n        $l: for x in 0..3 {\n"
+                "            let _ = x;\n            break $l;\n        }\n    };\n}\n",
+                "",
+                "read",
+                [],
+            ),
+            (
+                "a loop over a pattern group under a label a macro passes in",
+                plain + "macro_rules! each {\n    ($l:lifetime) => {\n"
+                "        $l: for (x, y) in [(0, 1)] {\n            let _ = (x, y);\n        }\n"
+                "    };\n}\n",
+                "",
+                "read",
+                [],
+            ),
+            (
+                "an impl then a loop in one block",
+                "macro_rules! make {\n    ($k:tt) => {{\n"
+                f"        $k Setting for Wide {{ {self.WIDTH} }}\n"
+                "        for x in 0..1 {\n            let _ = x;\n        }\n    }};\n}\n",
+                "",
+                "macro",
+                [],
+            ),
+            (
+                "a repetition names the macro",
+                plain + "macro_rules! pull {\n    ($($m:ident)*) => {\n"
+                '        const _: &str = $($m)*!("x.txt");\n    };\n}\n',
+                "",
+                "read",
+                [f"demo (src/more.rs) {REFUSED_BY_A_MACRO['include']}"],
+            ),
         ]
         return found
 
@@ -2703,6 +2819,7 @@ class TheGuardReadsAnImplementationByToken(unittest.TestCase):
                         "read": [] if pinned else [self.WIDE],
                         "macro": [self.MACRO],
                         "none": [],
+                        "tuple": [] if pinned else [self.TUPLE],
                     }[kind]
                     + either
                 )
