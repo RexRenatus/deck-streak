@@ -404,3 +404,18 @@ which the tdd probe reads as asserting only an absence; it now compares every me
 lines with its kind's outcome as one value. The 48 members and their expectations are unchanged,
 the module still runs 62 tests and is green, and the four rows the test kills, S19225, S19318,
 S19327 and S19328, are KILLED again by full id.
+
+f446a522 adds data to the killers of four of the S19200 band's rows, which CI's mutation pass on
+this branch read SURVIVED at 42692ec0: S19235 and S19237, killed by
+test_a_block_comment_holding_an_impl_is_not_examined, and S19260 and S19296, killed by
+test_every_module_file_choice_is_read_from_rustcs_file_or_refused. The token reader and the walk
+from the crate roots had left each killer no tree in which its mutant changes the guard's reading.
+The comment killer now reads `/* a *//* b */` as two block comments and asserts that blanking a
+comment keeps each newline. R8 adds, for each predicate, a module no outer attribute gates whose
+inner run is `#![doc = "a"]` then `#![cfg(p)]`, and it judges each member rustc refuses with every
+source read as Width's, where it used to skip them. No row is touched and no assertion is dropped.
+These assertions are MUTATION COVERAGE, not red-first evidence: the guard's code is unchanged since
+42692ec0, so each is green at the base of the change. The module still runs 62 tests and is green,
+with 6384 R8 members judged against rustc and 1486 members rustc refuses judged for Width.
+The four rows are KILLED again by full id, and so is every row of the 99 the mutation plan selects
+for this branch, each on this module.
