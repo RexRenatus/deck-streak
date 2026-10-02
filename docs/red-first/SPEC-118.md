@@ -38,6 +38,15 @@ the token, so its record is this sentence: `the capture token opens the quick ca
 red at 2dc557fb1681c95c9d02271eab67c5a9fc1a6ff2, expected '/' to be '/capture' at
 web/app/src/lib/startapp.test.ts:79, and green at 13f68a2d22ecc9510e6f4f4619ce77cd334f4455.
 
+The `api` role's wiring has no criterion of its own; R10's route is served by the role only when
+its state carries the inbox. Its test,
+`the_api_role_serves_the_quick_capture_over_its_configured_vault_alone`, drives the router the
+role composes: it was red at de80178b7ae5f0e0d2c7c7abd1cda00d4c345ab9, where
+the role composed no inbox and the owner's capture over a configured vault answered 503
+`vault_not_open` at crates/daemon/tests/inbox_capture_composed.rs:155 (left 503, right 201), and
+green at fc3927e37dc56d94b784a1370d8218952200e1fa, where the daemon's suite ran 76 green with 1
+ignored.
+
 ```red-first
 A1: red at 9ebf336e0bf0f72654f33980b2a847056f679155: the_stub_and_stem_match_the_predecessors_golden panicked at crates/vault/tests/inbox_capture.rs:178: the attachment of the golden's first case, left "" right "2031-12-18-photo-hMpVD00JNQo8.jpg"
 A1: green at 31c1af96809f9cadad6da4c6e73d322fb7ebcfb6
