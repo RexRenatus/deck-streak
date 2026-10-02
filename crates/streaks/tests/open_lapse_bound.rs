@@ -7,7 +7,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use deck_streak_kernel::StudyDay;
-use deck_streak_streaks::lapse::open_lapse;
+use deck_streak_streaks::lapse::{next_silent_count, open_lapse, LAPSE_AFTER_SILENT_DAYS};
 
 fn day(number: i64) -> StudyDay {
     StudyDay::from_epoch_day(number)
@@ -114,4 +114,22 @@ fn the_bounded_lapse_walk_answers_what_the_reference_walk_answers() {
     );
     assert_eq!(cases, 1_765_680);
     assert!(opened > 100_000 && at_the_smallest_day > 150_000);
+}
+
+/// A68 (SPEC-076 section 33): the silent-day step answers exactly at and below its bound and stays
+/// at the maximum, and the saturated count meets every threshold the rule can hold (#534).
+#[test]
+fn the_silent_day_count_saturates_at_its_bound() {
+    assert_eq!(next_silent_count(u32::MAX), u32::MAX);
+    assert_eq!(next_silent_count(u32::MAX - 1), u32::MAX);
+    assert_eq!(next_silent_count(0), 1);
+    assert_eq!(next_silent_count(7), 8);
+    let thresholds = [0, LAPSE_AFTER_SILENT_DAYS, u32::MAX];
+    for threshold in thresholds {
+        assert!(
+            next_silent_count(u32::MAX) >= threshold,
+            "the saturated count falls below the threshold {threshold}"
+        );
+    }
+    println!("examined {} thresholds", thresholds.len());
 }
