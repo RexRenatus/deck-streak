@@ -504,3 +504,60 @@ widens its `allow` to `clippy::print_stdout`). No assertion of a verdict and no 
 test file's numstat for it is 12 inserted and 2 deleted. The commit 029fc3e7 is a formatter-only
 edit of the same test file: it splits one chained call over three lines, changes no assertion and no
 member, and its numstat is 3 inserted and 1 deleted.
+
+## The held-flush amendment (#291)
+
+The model came first, then a seam: a `Flushed::Busy` answer and the `held_flush` job's constant and
+work stubbed, so the new tests compile and fail by assertion rather than by a missing symbol. The
+tests came next, alone, in 9669cea, and each of them failed by an assertion at dev's behaviour:
+the generated population read `12 of 96 cases differ`, all of them cases of the scheduled step
+inside an open window (the flush after a sync and the flush after an owner's sync matched in all
+64 of theirs, because those two flushers already exist); the concurrency test failed with `the
+second flush finds the lease taken`; and of the calendar tests, the control that tells a slot inside
+the window from one outside it passed, as it should, while the job-table and template tests failed
+with `the job table has a scheduled flush step`. The green commit, 930ef15, adds the lease, the job,
+its timer and its credentials. The lease and answer tests (`flush_lease.rs`, `held_flush_answers.rs`)
+were added after it, with the rows S04160 to S04169, each proved killed; their red is those rows'
+mutants, and A20's and A21's red lines are the tests of the red commit.
+
+Round 2 of the review found that the lease lapses while its holder is still sending, and that a
+flush that dies after its push reached has its item resent. The tests came first (bf37062b): a flush
+that outlives its lease, and one that dies after its send reached, each against the round-1 code, and
+each failed by assertion, the held item reached the owner 2 times. The model was amended next
+(bb792f98), and the fix, a row claim with a token-matched settle and a named abandonment, followed
+(7e4aae48), after which those tests pass.
+
+```red-first
+A19: red at 9669cea: 12 of 96 flush cases differ from the expected delivered and abandoned sets, all of them the scheduled step inside an open window
+A19: green at 930ef15
+A20: red at 9669cea: assertion failed: the second flush finds the lease taken
+A20: green at 930ef15
+A21: red at 9669cea: assertion failed: the job table has a scheduled flush step
+A21: green at 930ef15
+A22: red at bf37062b: the held item reached the owner 2 times
+A22: green at 7e4aae48
+```
+
+Round 3 of the review found that a flush whose work after a delivered push fails (the settle, the
+decision record or its commit) gave the row it pushed back to `held`, and the next flush pushed it
+again, for a full render, a recap line and a held reaction alike. The model was amended first
+(a3e68ddc, ffd3bf55). The tests came next, alone (f1704727), each against the round-2 code: three
+controls with no failure passed, and the four cases failed by assertion (`test result: FAILED. 3
+passed; 4 failed`) at `flush_fails_after_push.rs:220`, `:232`, `:244` and `:256`, the held item,
+the rolled item, the held reaction and the pushed item each reaching the owner 2 times. The fix,
+the flush's pushed set, named "may have been sent" and never given back (3cd85d4a), followed, after
+which the seven tests pass (`test result: ok. 7 passed; 0 failed`).
+
+```red-first
+A23: red at f1704727: the held item reached the owner 2 times
+A23: green at 3cd85d4a
+```
+
+The pull request's mutation pass over round 3 then found the log line of R16b unobserved: with the
+body of `unsettled_notice` removed, every test still passed. An eighth test,
+`a_settle_that_fails_after_a_push_names_the_item_and_its_claimant_in_the_log`, captures the
+router's warnings while a settle fails after a push. It was written after the code, so its red is
+that mutant, as for the lease tests of round 1: against it the test fails by assertion at
+`flush_fails_after_push.rs:356` (`one line names the pushed item: []`, `7 passed; 1 failed`), and
+against the code the eight tests pass (`test result: ok. 8 passed; 0 failed`). The workspace's
+capture census counts its capture, 16 routed where it counted 15.
