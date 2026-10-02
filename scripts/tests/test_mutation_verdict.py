@@ -2249,6 +2249,67 @@ def definition_edges():
     ]
 
 
+COOKIE = "scripts/cookie.py"
+COOKIE_DOC = b'"""A declared script."""\n'
+
+
+def cookie_fixture(test, base, head):
+    """A fixture whose one declared script is `base` bytes at the base and `head` at the pull
+    request."""
+    fixture = Fixture(test)
+    (fixture.root / COOKIE).write_bytes(base)
+    fixture.base = fixture.commit("the base's declared script")
+    (fixture.root / COOKIE).write_bytes(head)
+    fixture.commit("the pull request")
+    return fixture
+
+
+def cookie_edits():
+    """The PEP 263 class (A62): (name, base bytes, head bytes, expected), each reading written
+    before any run. Only the control and the fail-closed member are read as before."""
+    latin = b"# -*- coding: latin-1 -*-\n"
+    utf8 = b"# -*- coding: utf-8 -*-\n"
+    doc, reworded = COOKIE_DOC, b'"""A declared script, reworded."""\n'
+    return [
+        (
+            "a latin-1 escape rewritten as raw bytes, a value changes",
+            latin + doc + b'X = "\\xe9"\n',
+            latin + doc + b'X = "\xc3\xa9"\n',
+            APPLIES,
+        ),
+        (
+            "a declaration changed utf-8 to latin-1 beside a docstring edit",
+            utf8 + doc + b'S = "\xc3\xa9"\n',
+            latin + reworded + b'S = "\xc3\xa9"\n',
+            APPLIES,
+        ),
+        (
+            "a latin-1 declaration added so the head no longer parses",
+            doc + b"caf\xc3\xa9 = 1\n",
+            latin + reworded + b"caf\xc3\xa9 = 1\n",
+            APPLIES,
+        ),
+        (
+            "an unknown encoding declared beside a docstring edit",
+            doc + b"X = 1\n",
+            b"# -*- coding: bogus -*-\n" + reworded + b"X = 1\n",
+            APPLIES,
+        ),
+        (
+            "a declared UTF-8 script whose change is a docstring alone",
+            utf8 + doc + b'S = "\xc3\xa9"\n',
+            utf8 + reworded + b'S = "\xc3\xa9"\n',
+            ("named", [COOKIE]),
+        ),
+        (
+            "a declared latin-1 script whose bytes are not UTF-8, a docstring edit",
+            latin + doc + b'S = "\xe9"\n',
+            latin + reworded + b'S = "\xe9"\n',
+            ("refused", None),
+        ),
+    ]
+
+
 SIMPLE_TEXT = '"""A guard."""\n\n\ndef total(x):\n    """Triples."""\n    return x * 3\n'
 SIMPLE_TESTS = (
     "import sys\n"
@@ -2431,6 +2492,20 @@ class ADocstringOnlyScriptChangeIsNamed(unittest.TestCase):
                 "a string used as a value",
             ],
         )
+
+    def test_a_declared_encoding_decides_the_tree_compared(self):
+        """A62, the PEP 263 class (#485): the tree is the one Python reads from the bytes."""
+        module = verdict_module()
+        members = examined("declared encodings", cookie_edits())
+        mismatches = []
+        for name, base, head, expected in members:
+            fixture = cookie_fixture(self, base, head)
+            found, _ = plan_outcome(module, fixture)
+            if found != expected:
+                mismatches.append(f"{name}: read {found}, expected {expected}")
+        print(f"cookie population: {len(members)} member(s); mismatches {len(mismatches)}")
+        self.assertEqual(mismatches, [])
+
 
     def test_the_docstring_is_only_the_first_bare_string_of_a_body(self):
         """A63"""
