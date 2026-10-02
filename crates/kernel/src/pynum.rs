@@ -55,7 +55,7 @@ fn units(x: f64) -> (u64, u32) {
     if exponent == 0 {
         (fraction, 0)
     } else {
-        (fraction | (1_u64 << 52), exponent - 1)
+        (fraction + (1_u64 << 52), exponent - 1)
     }
 }
 
@@ -90,24 +90,17 @@ impl Wide {
     fn sub(&mut self, other: &Self) {
         let mut borrow = 0_i64;
         for (limb, taken) in self.0.iter_mut().zip(&other.0) {
-            let mut diff = i64::from(*limb) - i64::from(*taken) - borrow;
+            let diff = i64::from(*limb) - i64::from(*taken) - borrow;
             borrow = i64::from(diff < 0);
-            if diff < 0 {
-                diff += 1 << 32;
-            }
-            *limb = u32::try_from(diff).unwrap_or(0);
+            *limb = u32::try_from(diff.rem_euclid(1 << 32)).unwrap_or(0);
         }
-    }
-
-    fn is_zero(&self) -> bool {
-        self.0.iter().all(|limb| *limb == 0)
     }
 
     /// Divides by `divisor`, returning the remainder.
     fn divide(&mut self, divisor: u64) -> u64 {
         let mut remainder = 0_u128;
         for limb in self.0.iter_mut().rev() {
-            let current = (remainder << 32) | u128::from(*limb);
+            let current = (remainder << 32) + u128::from(*limb);
             *limb = u32::try_from(current / u128::from(divisor)).unwrap_or(0);
             remainder = current % u128::from(divisor);
         }
@@ -130,7 +123,7 @@ impl Wide {
     /// The bits from `from` upward, as a `u64` of at most 54 bits.
     fn bits_from(&self, from: usize, count: usize) -> u64 {
         (0..count).fold(0_u64, |acc, offset| {
-            acc | (u64::from(self.bit(from + offset)) << offset)
+            acc + (u64::from(self.bit(from + offset)) << offset)
         })
     }
 
@@ -159,13 +152,10 @@ pub fn mean(values: &[f64]) -> Option<f64> {
         return None;
     }
     let count = u64::try_from(values.len()).unwrap_or(u64::MAX);
-    #[allow(
-        clippy::cast_precision_loss,
-        reason = "the count of a list is far below 2^53"
-    )]
-    let divisor = values.len() as f64;
     if values.iter().any(|x| !x.is_finite()) {
-        return Some(values.iter().sum::<f64>() / divisor);
+        // Any infinity or NaN makes the float sum non-finite, and a non-finite sum over a positive
+        // count is itself, so `statistics` returns the sum undivided.
+        return Some(values.iter().sum::<f64>());
     }
     let mut positive = Wide::zero();
     let mut negative = Wide::zero();
@@ -184,9 +174,6 @@ pub fn mean(values: &[f64]) -> Option<f64> {
         positive.clone()
     };
     total.sub(if negate { &positive } else { &negative });
-    if total.is_zero() {
-        return Some(0.0);
-    }
     let remainder = total.divide(count);
     let magnitude = round_to_float(&total, remainder, count);
     Some(if negate { -magnitude } else { magnitude })
@@ -194,13 +181,7 @@ pub fn mean(values: &[f64]) -> Option<f64> {
 
 /// Whether the negative parts outweigh the positive ones.
 fn negative_is_larger(positive: &Wide, negative: &Wide) -> bool {
-    positive
-        .0
-        .iter()
-        .rev()
-        .zip(negative.0.iter().rev())
-        .find(|(p, n)| p != n)
-        .is_some_and(|(p, n)| n > p)
+    negative.0.iter().rev().gt(positive.0.iter().rev())
 }
 
 /// The float nearest `(quotient + remainder / divisor) * 2^-1074`, ties to even.
@@ -240,7 +221,7 @@ pub fn round(x: f64, ndigits: i32) -> f64 {
         return x;
     }
     if ndigits < -308 {
-        return 0.0 * x;
+        return 0.0_f64.copysign(x);
     }
     let expansion = format!("{:.1074}", x.abs());
     let (whole, fraction) = expansion
@@ -251,12 +232,9 @@ pub fn round(x: f64, ndigits: i32) -> f64 {
         .chain(fraction.bytes())
         .map(|b| b - b'0')
         .collect();
-    let mut kept = i64::try_from(whole.len()).unwrap_or(0) + i64::from(ndigits);
-    if kept < 0 {
-        let pad = usize::try_from(-kept).unwrap_or(0);
-        digits.splice(0..0, std::iter::repeat_n(0, pad));
-        kept = 0;
-    }
+    let kept = i64::try_from(whole.len()).unwrap_or(0) + i64::from(ndigits);
+    let pad = usize::try_from(-kept).unwrap_or(0);
+    digits.splice(0..0, std::iter::repeat_n(0, pad));
     let kept = usize::try_from(kept).unwrap_or(0);
     let rest = digits.split_off(kept.min(digits.len()));
     let first = rest.first().copied().unwrap_or(0);
@@ -389,7 +367,7 @@ impl PyRandom {
         for k in 0..STATE_LEN {
             let upper = self.state[k] & 0x8000_0000;
             let lower = self.state[(k + 1) % STATE_LEN] & 0x7fff_ffff;
-            let y = upper | lower;
+            let y = upper + lower;
             let mut next = self.state[(k + SHIFT_LEN) % STATE_LEN] ^ (y >> 1);
             if y & 1 == 1 {
                 next ^= 0x9908_b0df;
