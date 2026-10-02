@@ -47,6 +47,24 @@
         "the most minutes are the whole minutes of the most seconds, truncated as the predecessor's int() does (SPEC-073 A12); cargo-mutants never inserts a rounding call"
       ],
       [
+        "S07309-THE-RECORDS-WINDOW",
+        "coordination",
+        "src/recompute/records.rs",
+        "pub const RECORDS_WINDOW: i64 = 370;",
+        "pub const RECORDS_WINDOW: i64 = 371;",
+        "records_steps::the_records_step_matches_the_parity_golden",
+        "the detection reads the 370 most recent rollups on or before the day, so a 371st rollup that holds the highest score is no record and the 370th, which holds the most reviews, is one (SPEC-073 A14); cargo-mutants never mutates a constant"
+      ],
+      [
+        "S07310-THE-SILENT-SEED",
+        "coordination",
+        "src/recompute/records.rs",
+        "let marked = plan.seeded.then_some(day.facts.now);",
+        "let marked: Option<UtcMillis> = None;",
+        "records_steps::the_first_detection_seeds_records_silently",
+        "the first detection writes the bests with their mark already set, so a seed is never offered: the bests the owner has already seen raise no celebration (SPEC-073 A15, R12)"
+      ],
+      [
         "S07311-MILESTONE-TIES-TO-REVIEWS",
         "progression",
         "src/milestone.rs",
@@ -63,6 +81,33 @@
         "pct: 99.0,",
         "milestone_ladder::a_complete_ladder_contributes_nothing_and_all_complete_reports_the_top_review_rung",
         "three complete ladders report the top review rung at 100% (SPEC-073 A18); cargo-mutants never mutates a float literal"
+      ],
+      [
+        "S07313-THE-MARK-FOLLOWS-THE-ROUTER",
+        "coordination",
+        "src/recompute/badges.rs",
+        "\"the router did not answer; the badge stays owed\");\n            continue;",
+        "\"the router did not answer; the badge stays owed\");",
+        "badges_steps::a_router_that_did_not_answer_leaves_the_award_due",
+        "the mark is set only once the router has answered, so an offer the router did not answer leaves the badge's celebrated_at unset and the next offers send it (SPEC-073 A10, ADR-303)"
+      ],
+      [
+        "S07314-A-PENDING-AWARD-IS-OFFERED-AGAIN",
+        "coordination",
+        "src/recompute/badges.rs",
+        "    for badge in owed {",
+        "    for badge in owed.into_iter().take(0) {",
+        "badges_steps::an_evaluation_stopped_after_the_write_sends_once_at_the_next",
+        "the offers hand every badge whose mark is unset to the router, so an award written by an evaluation that stopped before its offers is sent once at the next (SPEC-073 A10, ADR-303)"
+      ],
+      [
+        "S07315-A-PENDING-RECORD-IS-OFFERED-BEFORE-ITS-ROW-IS-REPLACED",
+        "coordination",
+        "src/recompute/records.rs",
+        "    .filter(|record| record.celebrated_at.is_none())",
+        "    .filter(|record| record.celebrated_at.is_none() && record.study_day == today)",
+        "records_steps::a_later_beat_offers_the_unmarked_record_first",
+        "the offers before a day's write hand the router every record whose mark is unset, an earlier day's included, so a later day's beat replaces a record only after it was offered (SPEC-073 A16, ADR-303)"
       ]
     ],
     "CARGO_KILLED_SCRIPT_MUTATIONS": [
