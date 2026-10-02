@@ -12,8 +12,10 @@
 - **Prerequisites:** SPEC-071 (the fold and the current day's reviews), SPEC-072 (the day's base XP),
   SPEC-076 (the freeze port), SPEC-024 (the owner's session) and SPEC-026 (the bot's command table).
   **Mutation band:** `S08200-S08299`.
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-082.md` (ADR-016).
+- **Status:** delivered by E1 in part (moved from `docs/specs/planned/` with its tests and
+  `docs/red-first/SPEC-082.md`, ADR-016): the wallet of #106 in three pull requests. E1b delivers
+  R4, A7, the wallet route and header and the daemon wiring; E3 (#107) delivers the shop
+  (section 3c).
 
 ## 1. The problem, measured
 
@@ -160,18 +162,10 @@ R18. The migration `migrations/008201_economy_wallet_and_shop.sql` creates `coin
 | A4 | a burst of concurrent capped debits and purchases never leaves the balance below zero | `the_wallet_never_goes_negative_under_a_burst` |
 | A5 | a credit of one (study day, source, reference) written twice writes one movement | `a_credit_of_one_key_is_written_once` |
 | A6 | a settled day's mint is raised by a later settle and never lowered, while the current day's follows its base | `a_settled_days_mint_is_raised_and_never_lowered` |
-| A7 | the fold mints each settled day after its derived XP, so the mint equals the golden over the day's final base | `the_mint_reads_the_settled_days_final_base` |
 | A8 | the floor-clipped debit pays what the wallet holds and never refuses | `a_floor_clipped_debit_pays_what_is_held` |
 | A9 | no crate but economy names `coin_ledger` in a query, and no migration but economy's names it; a planted fixture that does is refused (examined count reported) | `only_the_wallet_writes_the_coin_ledger` |
 | A10 | the coin and shop constants equal the golden, and `economy.json`'s coin and shop values equal them | `the_coin_constants_and_economy_json_match_the_predecessors` |
-| A11 | the shop's verdicts, prices and movements equal the golden of `buy_item`: the freeze refused at the hold cap with the wallet unchanged, the pass gated on a review, one pass at a time, and the surcharge | `the_shop_verdicts_match_the_parity_golden` |
-| A12 | a bought freeze moves its coins and adds its freeze in one transaction, and a grant the freeze port refuses leaves no movement | `a_bought_freeze_moves_coins_and_the_freeze_together` |
-| A13 | a refused purchase names its reason and leaves the wallet, the freezes and the pass unchanged | `a_refused_purchase_changes_nothing` |
 | A14 | after an erase the coin ledger is empty and the economy row holds its reset values | `an_erase_empties_the_ledger_and_resets_the_state` |
-| A15 | the wallet and shop routes answer the owner's session only, and any other caller gets 401 or 403 and no data | `the_wallet_and_shop_routes_answer_only_the_owner` |
-| A16 | `/shop` shows the board, and its buttons run the same purchase as the Mini App | `shop_shows_the_board_and_its_buttons_buy` |
-| A17 | each disabled item card on the shop screen says why | `disables each item with its reason` |
-| A18 | the wallet header shows the balance in the layout every screen renders | `shows the balance in the layout header` |
 | A19 | a once-ever credit of one source and reference, requested on two study days, writes one movement | `a_once_ever_credit_is_written_once_on_any_day` |
 
 ```acceptance
@@ -181,18 +175,10 @@ A3: cargo test -p deck-streak-economy --test wallet_goldens -- --exact the_day_s
 A4: cargo test -p deck-streak-economy --test wallet_ports -- --exact the_wallet_never_goes_negative_under_a_burst
 A5: cargo test -p deck-streak-economy --test wallet_ports -- --exact a_credit_of_one_key_is_written_once
 A6: cargo test -p deck-streak-economy --test wallet_ports -- --exact a_settled_days_mint_is_raised_and_never_lowered
-A7: cargo test -p deck-streak-coordination --test wallet_mint -- --exact the_mint_reads_the_settled_days_final_base
 A8: cargo test -p deck-streak-economy --test wallet_ports -- --exact a_floor_clipped_debit_pays_what_is_held
 A9: cargo test -p deck-streak-economy --test wallet_census -- --exact only_the_wallet_writes_the_coin_ledger
 A10: cargo test -p deck-streak-economy --test wallet_goldens -- --exact the_coin_constants_and_economy_json_match_the_predecessors
-A11: cargo test -p deck-streak-economy --test shop_goldens -- --exact the_shop_verdicts_match_the_parity_golden
-A12: cargo test -p deck-streak-coordination --test shop_purchase -- --exact a_bought_freeze_moves_coins_and_the_freeze_together
-A13: cargo test -p deck-streak-coordination --test shop_purchase -- --exact a_refused_purchase_changes_nothing
 A14: cargo test -p deck-streak-economy --test wallet_rights -- --exact an_erase_empties_the_ledger_and_resets_the_state
-A15: cargo test -p deck-streak-api --test wallet_routes -- --exact the_wallet_and_shop_routes_answer_only_the_owner
-A16: cargo test -p deck-streak-bot --test shop_commands -- --exact shop_shows_the_board_and_its_buttons_buy
-A17: pnpm exec vitest run web/app/src/lib/economy/shop.test.ts -t "disables each item with its reason"
-A18: pnpm exec vitest run web/app/src/lib/economy/wallet-header.test.ts -t "shows the balance in the layout header"
 A19: cargo test -p deck-streak-economy --test wallet_ports -- --exact a_once_ever_credit_is_written_once_on_any_day
 ```
 
@@ -209,6 +195,38 @@ accessibility packs stay enforced, and no row is deferred for this delivery.
 | B2 | the mint, the loss cap, the fines, the zero floor and the shop's prices still equal the reference economy, only coins are confiscable, and no shop item is random or sold for money, over `economy.json`'s `coins`, `shop` and `unconfiscable` sections | the game-economy pack |
 | B3 | the shop's copy carries no confirmshaming and no false urgency, over `web/app/src/routes/shop/+page.svelte`, every file under `web/app/src/lib/economy/` and `crates/bot/src/shop_commands.rs` | the ux-laws pack |
 | B4 | the shop screen and the wallet header pass the accessibility audit in both of Telegram's colour schemes, over the `/shop` route that `web/app/src/lib/routes.ts` lists and the layout that renders the header | the accessibility pack |
+
+## 3c. Delivered by the next pull requests
+
+This SPEC lands in three pull requests, in order. This one (E1) delivers the wallet's pure core, its
+ports, its tables and its data rights: the criteria of section 3's table that no row below names.
+E1b delivers the mint step of the fold, the wallet route and header and the daemon wiring; E3
+(#107) delivers the shop, its routes, its command and its screen. The table below holds the
+criteria a later pull request delivers, each row naming that pull request, and the lines under it
+are their fence lines, each prefixed with that pull request. A later pull request moves each of
+its criteria back verbatim: the row into section 3's table, without the `delivered by` column,
+and the fence line into the acceptance fence, without the prefix. A15 is split: E1b delivers its
+wallet arm and E3 its shop arm.
+
+| id | criterion | decided by | delivered by |
+|---|---|---|---|
+| A7 | the fold mints each settled day after its derived XP, so the mint equals the golden over the day's final base | `the_mint_reads_the_settled_days_final_base` | E1b |
+| A11 | the shop's verdicts, prices and movements equal the golden of `buy_item`: the freeze refused at the hold cap with the wallet unchanged, the pass gated on a review, one pass at a time, and the surcharge | `the_shop_verdicts_match_the_parity_golden` | E3 |
+| A12 | a bought freeze moves its coins and adds its freeze in one transaction, and a grant the freeze port refuses leaves no movement | `a_bought_freeze_moves_coins_and_the_freeze_together` | E3 |
+| A13 | a refused purchase names its reason and leaves the wallet, the freezes and the pass unchanged | `a_refused_purchase_changes_nothing` | E3 |
+| A15 | the wallet and shop routes answer the owner's session only, and any other caller gets 401 or 403 and no data | `the_wallet_and_shop_routes_answer_only_the_owner` | E1b |
+| A16 | `/shop` shows the board, and its buttons run the same purchase as the Mini App | `shop_shows_the_board_and_its_buttons_buy` | E3 |
+| A17 | each disabled item card on the shop screen says why | `disables each item with its reason` | E3 |
+| A18 | the wallet header shows the balance in the layout every screen renders | `shows the balance in the layout header` | E1b |
+
+E1b: A7: cargo test -p deck-streak-coordination --test wallet_mint -- --exact the_mint_reads_the_settled_days_final_base
+E3: A11: cargo test -p deck-streak-economy --test shop_goldens -- --exact the_shop_verdicts_match_the_parity_golden
+E3: A12: cargo test -p deck-streak-coordination --test shop_purchase -- --exact a_bought_freeze_moves_coins_and_the_freeze_together
+E3: A13: cargo test -p deck-streak-coordination --test shop_purchase -- --exact a_refused_purchase_changes_nothing
+E1b: A15: cargo test -p deck-streak-api --test wallet_routes -- --exact the_wallet_and_shop_routes_answer_only_the_owner
+E3: A16: cargo test -p deck-streak-bot --test shop_commands -- --exact shop_shows_the_board_and_its_buttons_buy
+E3: A17: pnpm exec vitest run web/app/src/lib/economy/shop.test.ts -t "disables each item with its reason"
+E1b: A18: pnpm exec vitest run web/app/src/lib/economy/wallet-header.test.ts -t "shows the balance in the layout header"
 
 ## 4. File manifest
 
@@ -336,8 +354,134 @@ selects exactly one test, and each is proved with its file restored byte for byt
 | `S08203-THE-LOSS-CAP-IS-100` | `crates/economy/src/constants.rs` | at most 100 coins lost a day | `wallet_goldens::the_cap_the_fine_and_the_clip_match_the_parity_goldens` |
 | `S08204-THE-CAP-TAKES-30-PERCENT` | `crates/economy/src/constants.rs` | the cap's share of the day-start wallet | `wallet_goldens::the_cap_the_fine_and_the_clip_match_the_parity_goldens` |
 | `S08205-A-FINE-TAKES-2-PERCENT` | `crates/economy/src/constants.rs` | a fine keeps its bite as the wallet grows | `wallet_goldens::the_cap_the_fine_and_the_clip_match_the_parity_goldens` |
-| `S08206-THE-WALLET-FLOOR-IS-ZERO` | `crates/economy/src/rules.rs` | a clipped debit never takes the balance below zero | `wallet_ports::the_wallet_never_goes_negative_under_a_burst` |
+| `S08206-A-DEBIT-IS-CLIPPED-TO-THE-WALLET` | `crates/economy/src/rules.rs` | a clipped debit never takes the balance below zero | `wallet_ports::the_wallet_never_goes_negative_under_a_burst` |
 | `S08207-A-SETTLED-MINT-NEVER-FALLS` | `crates/economy/src/wallet.rs` | a settled day's mint is only raised | `wallet_ports::a_settled_days_mint_is_raised_and_never_lowered` |
 | `S08208-A-FREEZE-COSTS-150` | `crates/economy/src/constants.rs` | the freeze's price | `shop_goldens::the_shop_verdicts_match_the_parity_golden` |
 | `S08209-A-PASS-COSTS-40` | `crates/economy/src/constants.rs` | the scroll pass's price | `shop_goldens::the_shop_verdicts_match_the_parity_golden` |
 | `S08210-ONE-MOVEMENT-PER-KEY` | `migrations/008201_economy_wallet_and_shop.sql` | one movement per study day, source and reference, a key held in the migration (a script-mutation row with a cargo killer) | `wallet_ports::a_credit_of_one_key_is_written_once` |
+| `S08211-THE-WALLET-FLOOR-CONSTANT-IS-ZERO` | `crates/economy/src/constants.rs` | the floor constant itself is 0 | `wallet_goldens::the_coin_constants_and_economy_json_match_the_predecessors` |
+
+## 10. Amendments, 2026-10-02: what E1 adds beside the manifest, and the criteria it no longer lists
+
+Section 3's table now holds only the criteria this pull request delivers: the rows of A7, A11 to
+A13 and A15 to A18 moved out of it, and each stays verbatim in section 3c's table with its fence
+line there, as section 3c says a later pull request moves it back. Section 4's table is unchanged.
+E1 adds these files, which it does not name:
+
+- `docs/decisions/ADR-308-the-wallet-writes-each-movement-in-one-immediate-transaction-over-a-summed-ledger.md`:
+  the wallet writes each movement in one `BEGIN IMMEDIATE` transaction over a summed ledger.
+- `docs/schematics/coin-wallet-and-its-ports.md`: the wallet's ports, the ledger and the
+  transaction each port runs in.
+- `formal/tla/WalletFloor/WalletFloor.tla`, `formal/tla/WalletFloor/MCWalletFloor.cfg` and the five
+  configurations under `formal/tla/WalletFloor/witness/`: a model of concurrent callers over one
+  coin ledger. It checks that the balance never falls below the floor, that one key holds at most
+  one movement, that a once-ever credit is written once over every day, that a refund on a later day
+  of a source already held writes its own movement, and that a settled day's
+  mint never falls. Each witness switches one defect on, and each is caught: the floor read outside
+  the write, the once-ever guard read on its own day only, a ledger with no unique key, a refund passed through the
+  once-ever guard over every day, and a closed day's mint that follows its base.
+- `formal/lean/Formal/Wallet.lean`: proofs over the integers that the debit clip pays at least 0
+  and at most the least of the request, the wallet and the remaining cap, and pays nothing for a
+  request of 0 or less, and that the mint lies between 0 and 40 and never falls as the base grows.
+  The loss cap and the scaled fine go through floats; their parity is proved by the goldens.
+- `formal/lean/Formal/WalletVectors.lean`, one import and one arm in
+  `formal/lean/Formal/Vectors.lean`, and one import in `formal/lean/Formal.lean`: the vector writer
+  for the proof's ports.
+- `formal/vectors/wallet.jsonl`: the vectors, written by the writer and never by hand.
+- `crates/economy/tests/formal_vectors_wallet.rs`: `clip_debit` and `mint_for_base_xp` answer every
+  vector, with the proof's recorded counterexamples as literal cases.
+- `config/formal.json` and `scripts/tests/test_formal_config.py`: the model's time budget, and the
+  test that pins it.
+- `crates/coordination/tests/relight_order.rs`: the register of every `static` coordination links
+  gains the economy data-rights port's, from 14 entries to 15.
+
+The band file section 4 names, `scripts/mutation-rows.d/S08200-S08299.json`, holds E1's nine rows,
+S08201 to S08207, S08210 and S08211. S08208 and S08209 guard the shop's prices and land with E3. S08210
+targets a migration and is killed by a cargo test, so it sits in the band's
+`CARGO_KILLED_SCRIPT_MUTATIONS` table, as every other migration row does.
+
+`crates/economy/Cargo.toml` takes its dependencies in a different order and shape than section 4
+says:
+
+- `sqlx` arrives with the migration and the data-rights port, and `serde_json` is a dependency
+  rather than a dev-dependency, because that port's rows are JSON values;
+- `thiserror` arrives with the red tests' stub API, which already names a purchase's refusal;
+- `tokio` is a dev-dependency only, because the library spawns nothing: the port tests run their
+  concurrent callers on it, and `tempfile`, also a dev-dependency, gives each test its database.
+
+These files section 4 names are left unchanged by E1. The later pull request named on each line adds
+or changes them:
+
+- `crates/economy/src/shop.rs`, `crates/economy/tests/shop_goldens.rs` and
+  `tools/parity-oracle/goldens/buy_item.json`: E3 delivers them.
+- `crates/coordination/src/recompute/mint.rs`, `crates/coordination/src/recompute/mod.rs` and
+  `crates/coordination/tests/wallet_mint.rs`: E1b delivers them.
+- `crates/coordination/src/shop.rs` and `crates/coordination/tests/shop_purchase.rs`: E3 delivers
+  them.
+- `crates/coordination/src/lib.rs`, `crates/api/src/wallet_routes.rs`, `crates/api/src/router.rs`
+  and `crates/api/tests/wallet_routes.rs`: E1b and E3 deliver them.
+- `crates/bot/src/shop_commands.rs`, `crates/bot/src/commands.rs` and
+  `crates/bot/tests/shop_commands.rs`: E3 delivers them.
+- `crates/daemon/src/wiring.rs`: E1b delivers it.
+- `web/app/src/lib/economy/WalletHeader.svelte`, `web/app/src/lib/economy/wallet.ts`,
+  `web/app/src/lib/economy/wallet-header.test.ts` and `web/app/src/routes/+layout.svelte`: E1b
+  delivers them.
+- `web/app/src/lib/economy/ShopItem.svelte`, `web/app/src/lib/economy/shop.test.ts`,
+  `web/app/src/routes/shop/+page.svelte` and `web/app/src/lib/routes.ts`: E3 delivers them.
+
+The ports R7 calls `credit` and `credit_once` are named `deposit` and `deposit_once` in code, with their `_on` forms `deposit_on` and `deposit_once_on` and their answer `DepositAnswer` (`Deposited`, `AlreadyDeposited`), because docs/LEXICON.md locks `credit` out of a declaration in deck-streak-economy (ADR-308 ruling 7); R7's prose is unchanged.
+
+## 11. Amendments, 2026-10-02: the manifest of E1
+
+Section 4's table names the files of every pull request of this SPEC. This section is E1's
+manifest against it: first the rows E1 leaves to a later pull request, as section 10 splits them,
+then the files E1 adds or changes that section 4 does not name.
+
+Section 4's rows that E1 leaves to a later pull request:
+
+- `crates/economy/src/shop.rs`: unchanged by E1; E3 delivers it.
+- `crates/economy/tests/shop_goldens.rs`: unchanged by E1; E3 delivers it.
+- `tools/parity-oracle/goldens/buy_item.json`: unchanged by E1; E3 delivers it.
+- `crates/coordination/src/recompute/mint.rs`: unchanged by E1; E1b delivers it.
+- `crates/coordination/src/recompute/mod.rs`: unchanged by E1; E1b delivers it.
+- `crates/coordination/tests/wallet_mint.rs`: unchanged by E1; E1b delivers it.
+- `crates/coordination/src/shop.rs`: unchanged by E1; E3 delivers it.
+- `crates/coordination/tests/shop_purchase.rs`: unchanged by E1; E3 delivers it.
+- `crates/coordination/src/lib.rs`: unchanged by E1; E1b and E3 deliver it.
+- `crates/api/src/wallet_routes.rs`: unchanged by E1; E1b and E3 deliver it.
+- `crates/api/src/router.rs`: unchanged by E1; E1b and E3 deliver it.
+- `crates/api/tests/wallet_routes.rs`: unchanged by E1; E1b and E3 deliver it.
+- `crates/bot/src/shop_commands.rs`: unchanged by E1; E3 delivers it.
+- `crates/bot/src/commands.rs`: unchanged by E1; E3 delivers it.
+- `crates/bot/tests/shop_commands.rs`: unchanged by E1; E3 delivers it.
+- `crates/daemon/src/wiring.rs`: unchanged by E1; E1b delivers it.
+- `web/app/src/lib/economy/WalletHeader.svelte`: unchanged by E1; E1b delivers it.
+- `web/app/src/lib/economy/wallet.ts`: unchanged by E1; E1b delivers it.
+- `web/app/src/lib/economy/wallet-header.test.ts`: unchanged by E1; E1b delivers it.
+- `web/app/src/routes/+layout.svelte`: unchanged by E1; E1b delivers it.
+- `web/app/src/lib/economy/ShopItem.svelte`: unchanged by E1; E3 delivers it.
+- `web/app/src/lib/economy/shop.test.ts`: unchanged by E1; E3 delivers it.
+- `web/app/src/routes/shop/+page.svelte`: unchanged by E1; E3 delivers it.
+- `web/app/src/lib/routes.ts`: unchanged by E1; E3 delivers it.
+
+The files E1 adds or changes that section 4 does not name:
+
+- `docs/decisions/ADR-308-the-wallet-writes-each-movement-in-one-immediate-transaction-over-a-summed-ledger.md`: added, the wallet's decision record.
+- `docs/schematics/coin-wallet-and-its-ports.md`: added, the wallet's ports and their transactions.
+- `formal/tla/WalletFloor/WalletFloor.tla`: added, the model of concurrent callers over one ledger.
+- `formal/tla/WalletFloor/MCWalletFloor.cfg`: added, the model's configuration.
+- `formal/tla/WalletFloor/witness/a-floor-read-outside-the-write.cfg`: added, a witness.
+- `formal/tla/WalletFloor/witness/a-once-ever-guard-read-on-its-own-day.cfg`: added, a witness.
+- `formal/tla/WalletFloor/witness/a-ledger-with-no-unique-key.cfg`: added, a witness.
+- `formal/tla/WalletFloor/witness/a-closed-day-mint-that-follows-its-base.cfg`: added, a witness.
+- `formal/tla/WalletFloor/witness/a-refund-guarded-once-ever-over-every-day.cfg`: added in round 1, a witness.
+- `formal/lean/Formal/Wallet.lean`: added, the proofs of the debit clip and the mint.
+- `formal/lean/Formal/WalletVectors.lean`: added, the proofs' vector writer.
+- `formal/lean/Formal/Vectors.lean`: changed, one import and one arm for the writer.
+- `formal/lean/Formal.lean`: changed, one import.
+- `formal/vectors/wallet.jsonl`: added, the vectors the writer wrote.
+- `crates/economy/tests/formal_vectors_wallet.rs`: added, the Rust rules against the vectors.
+- `config/formal.json`: changed, the model's time budget.
+- `scripts/tests/test_formal_config.py`: changed, the test that pins the budget.
+- `crates/coordination/tests/relight_order.rs`: changed, the economy port joins the static register.
+- `scripts/mutation-equivalent.d/deck-streak-economy.json`: added, the economy's equivalent mutants.

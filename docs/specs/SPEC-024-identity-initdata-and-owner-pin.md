@@ -294,6 +294,7 @@ Its criteria, A17 and A18, are defined in the section below.
   The hidden tokens, which build an identifier or install for a test, are `paste`, `pastey`, `concat_idents`, `traced_test` and `test_log`.
   Result: 13 capturing calls routed through the helper, none raw, and 1 production global default (`crates/kernel/src/logging.rs`), which this amendment measures and does not change.
   The daemon's `wiring` tests had already held a second dispatcher for their own capture; they now use the helper like the rest.
+  Amended by SPEC-073 part B (#541): two captures in coordination's records-step tests are routed through the helper, so the census reads 15 routed, none raw.
 - **Files this amendment touches.** `tools/log-capture/capture.rs`,
   `crates/kernel/tests/log_capture_class.rs`, the capturing tests
   `crates/coordination/tests/drill_paid_count.rs` (its capture lines only),
@@ -308,7 +309,7 @@ Its criteria, A17 and A18, are defined in the section below.
 | id | criterion | decided by |
 |---|---|---|
 | A17 | a capture made with either entry of the helper keeps a line another thread reached first, even when that thread's callsite registration straddled the capture's, and registers only after the floor is the global default, in a child whose dispatcher registry starts empty | `log_capture_class` test |
-| A18 | every install, creation or registration token the census names, in any file the census reads, goes through the helper: 13 routed, none raw, and the one production global default is the only other | `log_capture_class` test |
+| A18 | every install, creation or registration token the census names, in any file the census reads, goes through the helper: 15 routed, none raw, and the one production global default is the only other | `log_capture_class` test |
 
 ```acceptance
 A17: cargo test -p deck-streak-kernel --test log_capture_class -- --exact a_capture_keeps_a_line_another_thread_reached_first

@@ -32,7 +32,7 @@ use crate::ladder_facts;
 use crate::level_up::announce_level_up;
 use crate::obligations::{ObligationSource, Obligations};
 use crate::recompute::streaks::RelightDue;
-use crate::recompute::{Fold, FoldInput};
+use crate::recompute::{AwardOffers, Fold, FoldInput, Offers};
 use crate::relight::route_due_relights;
 
 /// The name of the settle a closed study day is owed, as an obligation (SPEC-071 R15): the source's
@@ -294,12 +294,21 @@ where
                     .await
                     .map_err(CycleError::Recompute)?
                     .map(|run| run.study_day);
+                // The awards' celebrations go to the cycle's router between the fold's writes
+                // (SPEC-073 R4, R11; ADR-303).
+                let offers = cycle
+                    .router
+                    .as_ref()
+                    .map(|router| AwardOffers::new(router.clone()));
                 let input = FoldInput {
                     data: &window.data,
                     rule: fold.rule,
                     now: checked.now,
                     synced_in,
                     courses_digest: fold.courses_digest.as_deref(),
+                    // The lifetime the badges read starts from the study events below the window.
+                    base_reviews: u64::try_from(window.base.count).unwrap_or(0),
+                    offers: offers.as_ref().map(|offers| offers as &dyn Offers),
                 };
                 // The level before the recompute's first write, against the level after its last
                 // (SPEC-072 R14): no level is stored, so the ledger says both.
