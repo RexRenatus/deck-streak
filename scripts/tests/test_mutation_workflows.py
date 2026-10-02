@@ -13,6 +13,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import textwrap
 import unittest
 from pathlib import Path
 
@@ -727,6 +728,35 @@ class EveryMutantsSpellingIsFound(unittest.TestCase):
             [(path, name, finder) for path, _, name, finder in copies],
             [("deeper/copies.py", f"copy_{n}", f.name) for n, f in enumerate(functions)],
         )
+
+    def test_a_literal_copy_of_each_finder_function_under_another_name_is_caught(self):
+        text = FINDER.read_text(encoding="utf-8")
+        functions = examined("finder functions", functions_of(text))
+        lines = text.splitlines(keepends=True)
+        forms = {
+            "literal.py": ("def literal_{}(", ""),
+            "method.py": ("def method_{}(", "    "),
+            "waited.py": ("async def waited_{}(", ""),
+        }
+        with tempfile.TemporaryDirectory() as scratch:
+            for name, (spelling, pad) in forms.items():
+                planted = ["class Holder:\n"] if pad else []
+                for n, f in enumerate(functions):
+                    source = textwrap.dedent("".join(lines[f.lineno - 1 : f.end_lineno]))
+                    copied = source.replace(f"def {f.name}(", spelling.format(n), 1)
+                    self.assertNotEqual(copied, source, f.name)
+                    planted.append("\n" + textwrap.indent(copied, pad))
+                (Path(scratch) / name).write_text("".join(planted), encoding="utf-8")
+            copies = definitions_of_the_finder(scratch)
+        for name, (spelling, _) in forms.items():
+            with self.subTest(name):
+                self.assertEqual(
+                    [(def_name, finder) for path, _, def_name, finder in copies if path == name],
+                    [
+                        (spelling.format(n)[:-1].split()[-1], f.name)
+                        for n, f in enumerate(functions)
+                    ],
+                )
 
     def test_a_copy_with_changed_logic_is_caught_only_under_the_finders_name(self):
         suspect = next(

@@ -273,6 +273,133 @@ class TheCensusOfStandIns(unittest.TestCase):
         never = guarded(["if strict:", "    wrapper = None", "wrapper = None"], EXEC)
         self.assertEqual(census_of({"planted.py": never}), (1, [("planted.py", 5, HANDLER)]))
 
+    def test_a_program_run_in_a_sibling_handler_is_not_listed(self):
+        tried = (
+            "import os",
+            "try:",
+            "    wrapper = load_wrapper(script)",
+            "except ImportError:",
+            "    wrapper = None",
+            "except Exception:",
+            "    os.system('cargo test')",
+        )
+        self.assertEqual(census_of({"planted.py": module(*tried, "    raise")}), (1, []))
+        self.assertEqual(
+            census_of({"planted.py": module(*tried)}), (1, [("planted.py", 6, "except Exception:")])
+        )
+
+    def test_a_program_run_in_a_class_nested_after_the_try_is_not_listed(self):
+        nested = guarded(["wrapper = None"], "class Later:", "    os.system('cargo test')")
+        self.assertEqual(census_of({"planted.py": nested}), (1, []))
+        reached = guarded(["wrapper = None"], "class Later:", "    pass", "os.system('cargo test')")
+        self.assertEqual(census_of({"planted.py": reached}), (1, [("planted.py", 5, HANDLER)]))
+
+    def test_a_handler_that_breaks_continues_or_exits_leaves(self):
+        leaving = {"break": "break", "continue": "continue", "exit": "exit('plant failed')"}
+        for kind, statement in examined("ways a handler leaves", leaving.items()):
+            for handler, want in ((statement, []), ("wrapper = None", [5])):
+                with self.subTest(kind=kind, handler=handler):
+                    planted = module(
+                        "import os",
+                        "for attempt in range(2):",
+                        "    try:",
+                        "        wrapper = load_wrapper(script)",
+                        "    except Exception:",
+                        f"        {handler}",
+                        "    os.system('cargo test')",
+                    )
+                    files, found = census_of({"planted.py": planted})
+                    self.assertEqual((files, [line for _, line, _ in found]), (1, want))
+
+    def test_a_file_under_pycache_is_not_read(self):
+        planted = stand_in(["wrapper = None"])
+        cached = {"__pycache__/stale.py": planted, "sub/__pycache__/stale.py": planted}
+        self.assertEqual(census_of({**cached, "kept.py": "x = 1\n"}), (1, []))
+        self.assertEqual(
+            census_of({"cache/stale.py": planted, "kept.py": "x = 1\n"}),
+            (2, [("cache/stale.py", 4, "except Exception:")]),
+        )
+
+    def test_every_kind_of_real_program_is_listed(self):
+        calls = {
+            "os.system": "os.system('cargo test')",
+            "os.popen": "os.popen('cargo test')",
+            "os.exec*": "os.execvp('cargo', ['cargo', 'test'])",
+            "os.spawn*": "os.spawnlp(os.P_WAIT, 'cargo', 'cargo', 'test')",
+            "os.posix_spawn*": "os.posix_spawnp('cargo', ['cargo'], {})",
+            "subprocess.*": "subprocess.call(['cargo', 'test'])",
+            "runpy.*": "runpy.run_module('stand_in')",
+        }
+        imports = ("import os", "import subprocess", "import runpy")
+        for kind, call in examined("real-program kinds", calls.items()):
+            with self.subTest(kind):
+                planted = guarded(["wrapper = None"], call, imports=imports)
+                self.assertEqual(
+                    census_of({"planted.py": planted}), (1, [("planted.py", 7, HANDLER)])
+                )
+        joined = guarded(["wrapper = None"], "os.path.join('cargo', 'test')", imports=imports)
+        self.assertEqual(census_of({"planted.py": joined}), (1, []))
+
+    def test_a_try_in_a_handler_or_a_case_clause_is_a_candidate(self):
+        clauses = {
+            "an except clause": (
+                ("try:", "    setup()", "except OSError:"),
+                "    ",
+                ("    raise",),
+            ),
+            "a case clause": (("match mode:", "    case 'plant':"), "        ", ()),
+        }
+        for kind, (openers, pad, tail) in examined("clauses holding a try", clauses.items()):
+            for handler, want in (("wrapper = None", [len(openers) + 4]), ("raise", [])):
+                with self.subTest(kind=kind, handler=handler):
+                    planted = module(
+                        "import os",
+                        *openers,
+                        f"{pad}try:",
+                        f"{pad}    wrapper = load_wrapper(script)",
+                        f"{pad}except Exception:",
+                        f"{pad}    {handler}",
+                        f"{pad}os.system('cargo test')",
+                        *tail,
+                    )
+                    files, found = census_of({"planted.py": planted})
+                    self.assertEqual((files, [line for _, line, _ in found]), (1, want))
+
+    def test_a_try_star_is_a_candidate(self):
+        for handler, want in (("wrapper = None", [4]), ("raise", [])):
+            with self.subTest(handler):
+                planted = module(
+                    "import os",
+                    "try:",
+                    "    wrapper = load_wrapper(script)",
+                    "except* Exception:",
+                    f"    {handler}",
+                    "os.system('cargo test')",
+                )
+                files, found = census_of({"planted.py": planted})
+                self.assertEqual((files, [line for _, line, _ in found]), (1, want))
+
+    def test_a_try_in_a_function_or_a_class_body_is_a_candidate(self):
+        scopes = {
+            "def": ("def run():",),
+            "async def": ("async def run():",),
+            "method": ("class Runner:", "    def run(self):"),
+        }
+        for kind, openers in examined("scopes holding a try", scopes.items()):
+            pad = "    " * len(openers)
+            with self.subTest(kind):
+                planted = module(
+                    "import os",
+                    *openers,
+                    f"{pad}try:",
+                    f"{pad}    wrapper = load_wrapper(script)",
+                    f"{pad}except Exception:",
+                    f"{pad}    wrapper = None",
+                    f"{pad}os.system('cargo test')",
+                )
+                files, found = census_of({"planted.py": planted})
+                self.assertEqual((files, [line for _, line, _ in found]), (1, [len(openers) + 4]))
+
 
 if __name__ == "__main__":
     unittest.main()
