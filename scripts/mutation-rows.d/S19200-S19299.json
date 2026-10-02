@@ -357,9 +357,9 @@
       [
         "S19254-THE-TESTS-DIRECTORY-IS-READ-RECURSIVELY",
         "scripts/tests/test_setting_shapes.py",
-        "sorted((base / \"tests\").rglob(\"*.rs\"))",
-        "sorted((base / \"tests\").glob(\"*.rs\"))",
-        "a test in a subdirectory of the crate's `tests/` is a test of the crate (SPEC-192 A11)",
+        "roots = [*tests.glob(\"*.rs\"), *tests.glob(\"*/main.rs\")]",
+        "roots = [*tests.glob(\"*.rs\")]",
+        "a test in a subdirectory of the crate's `tests/` is a test of the crate where cargo builds one, its `tests/<dir>/main.rs` root (SPEC-192 A11, #449)",
         "test_setting_shapes.TheGuardJudgesAPlantedTree.test_a_shape_a_test_of_the_crate_spells_is_pinned"
       ],
       [
