@@ -362,3 +362,18 @@ A66: not red: the test pins a population the axes already held, so it is green a
 A67: red at 4e688bc3: thread 'a_walk_that_reaches_the_smallest_day_without_a_review_answers_none_in_the_vectors' (3020363) panicked at crates/streaks/tests/formal_vectors_open_lapse.rs:364:5:
 A67: green at bd283264
 ```
+
+## Addendum, 2026-10-02: the silent-day count at its bound (A68)
+
+- **The red commit.** d6389452 commits the test beside a stub `next_silent_count` that compiles and
+  answers `silent.wrapping_add(1)`, and `open_lapse` calls it. The test is red by assertion, not by a
+  compile error: at the bound the stub answers 0 where the rule answers `u32::MAX`.
+- **The green commit.** 7bd0d710 gives the step `saturating_add(1)`; the test's body is the same at
+  both commits, and rustfmt reorders only the file's `use` line.
+- **A68, red.** `assert_eq!(next_silent_count(u32::MAX), u32::MAX)` fails at
+  `open_lapse_bound.rs:123:5` with `left: 0` and `right: 4294967295`.
+
+```red-first
+A68: red at d6389452: thread 'the_silent_day_count_saturates_at_its_bound' panicked at crates/streaks/tests/open_lapse_bound.rs:123:5: assertion `left == right` failed: left: 0, right: 4294967295
+A68: green at 7bd0d710
+```

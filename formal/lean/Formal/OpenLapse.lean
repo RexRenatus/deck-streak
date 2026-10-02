@@ -1,4 +1,5 @@
--- @phx covers crates/streaks/src/lapse.rs anchor=open_lapse digest=sha256:e3a322de347ef0726cd2cd8812bbf2d90179b610c61452690dae47557e5be238
+-- @phx covers crates/streaks/src/lapse.rs anchor=open_lapse digest=sha256:cec9211f1d6b078d6375cc373edfa3bb45053c787ed99835531b3387672179f5
+-- @phx covers crates/streaks/src/lapse.rs anchor=next_silent_count digest=sha256:5d8c1d7834305851e1b8993ce86a5e62c0f389dd162fbe18d2c5fd583d3aaf70
 -- @phx cites #472, #446
 -- @phx theorem at_most_one_step_per_day ramp=report
 -- @phx theorem never_overflows ramp=report
@@ -30,7 +31,7 @@ type's own. The window is the map's entries in key order, a list here; its first
 key. The range `(window_start..=today).rev()` is ported as core's `RangeInclusive::next_back`: an
 empty range answers nothing, a range whose start is below its end steps its end back by one, and a
 range whose start equals its end yields that day and is exhausted. The count saturates at
-`u32::MAX`, as `saturating_add` does. Rust's loop has no fuel; the port takes `2^64 + 1` steps of
+`u32::MAX`, as `saturating_add` does; `saturatingAdd` models `next_silent_count`, the step `open_lapse` takes. Rust's loop has no fuel; the port takes `2^64 + 1` steps of
 fuel for structural recursion, more than any window holds, and `answers_the_rule` proves the walk
 never runs out of it.
 

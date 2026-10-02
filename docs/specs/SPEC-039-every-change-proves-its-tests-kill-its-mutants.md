@@ -1019,3 +1019,104 @@ File manifest of the amendment: `scripts/mutation_rows.py` (the reader),
 `scripts/mutation-rows.d/S03900-S03999.json` (the rows),
 `docs/decisions/ADR-299-the-bin-kind-reads-what-the-compiler-builds.md`,
 `docs/red-first/SPEC-039.md`, and the changelog fragment.
+
+## 27. Amendment, 2026-10-01: a docstring-only script change reads a named case (#485)
+
+Made by issue #485's delivery, insert-only under ruling (i) of SPEC-038 section 8: every earlier
+byte is kept in order. It inserts sections 27 to 29 only. Sections 19 to 26 were held by
+deliveries still open when it was written, so it starts at 27.
+
+What it amends, and why:
+
+- **R4 read a docstring as a code line.** R4 counts every changed line that is neither blank nor a
+  comment as a code line, and the plan reads a Python file with Python's own tokenizer, where a
+  docstring is a string token. A change to a guard script's docstrings alone therefore made the
+  `scripts` class apply, while `scripts/mutation_python.py` never mutates a docstring: its lister
+  skips the first statement of a module, class, function or async function body when that
+  statement is a string constant. The class examined nothing, and its verdict was VOID (#485).
+  Measured at `56ce963` on a fixture whose one script had its module and function docstrings
+  reworded, in the order CI runs the steps: the plan read `scripts applies: 2 production code
+  line(s) in 1 file(s)`, the runner `listed 0`, and `judge --class scripts` printed `VOID the
+  scripts class applies and nothing was examined` and exited 3.
+- **The rule (ADR-307).** When R4 makes the `scripts` class apply, the plan reads each changed
+  `scripts/*.py` at the diff's merge-base and at its head, and compares their syntax trees:
+  Python's own `ast`, positions excluded, with docstrings set aside. A docstring is only the first
+  statement of a module's, a class's, a function's or an async function's body, and only when
+  that statement is a bare string constant. Every other string expression stays code. When every
+  changed script's trees are equal so read, the class does not apply. Its case reads
+  `not-applicable: docstring-only: `, then each file whose change it set aside; `judge --class
+  scripts` names each such file on a line of its own and passes, and nothing reads VOID.
+- **It fails closed.** Each of these leaves the class applying exactly as R4 makes it: a script
+  added or deleted, and so a rename, since the plan reads the diff with `--no-renames`; a script
+  that does not parse at either side; a script that is not UTF-8; a diff with other than one
+  merge-base; and any other difference between the two trees. A script that is not UTF-8 on a
+  line the plan reads as text still stops the plan before it reports any class, as it did at
+  `56ce963`, because the plan reads the diff and the head's file as UTF-8.
+- **What it sets aside is what the runner never mutates.** The runner's lister skips that same
+  statement of the same four nodes (`skipped_nodes` in `scripts/mutation_python.py`), so no mutant
+  the class listed before is lost: A62 lists each named member's mutants at its head and finds
+  none on a line the rule set aside.
+- **Two consequences, read and accepted.**
+  - 6 of the 8 guard scripts pass the start of their module docstring to `argparse` as the
+    description `--help` prints, so a change there alters that text. The runner never mutated a
+    docstring, so the class never examined it, and the named case loses nothing the class
+    examined.
+  - The rule is the tree, so a change that re-lays code without changing its tree (`x*3` to
+    `x * 3`) reads the same case. Its tree is the base's, and so is its behaviour; the weekly
+    battery's `python` job still sweeps every listed file whole (SPEC-087 R14).
+- **The docstring of `scripts/mutation-verdict.py` (#455).** Its PLAN paragraph said each case is
+  named "because `ci` fails on a skipped need but a leg LEGS reads as not started", which section
+  17 made untrue: `ci` admits a skip from `mutation-rust` and `mutation-rows` and from no other
+  need, and `legs` judges each of the two against the plan. The paragraph now names the two legs,
+  and the step outputs it lists now include `scripts`, which the plan has written since section
+  18.
+- **SPEC-087 is not amended.** Its R1 cites R4 for the class's `not-applicable` readings, and this
+  case is R4's.
+
+What it does not change:
+
+- the oracle's Python, Rust and the Mini App: the rule reads only the `scripts` class (#485);
+- the case of a diff the `scripts` class did not already apply to, such as a change of comments or
+  deletions alone (#485);
+- the runner, which emits no docstring mutant and lists what it listed before (#485);
+- the doc comment in `tools/log-capture/capture.rs` that #511 names, which another delivery
+  corrects (#511).
+
+Issue #485 is closed by this delivery, and so is #455, whose last line this section's docstring
+change corrects.
+
+## 28. Amendments, 2026-10-01: the files of section 27
+
+| file | context | change |
+|---|---|---|
+| `docs/specs/SPEC-039-every-change-proves-its-tests-kill-its-mutants.md` | `repo` | changed by section 27: sections 27 to 29 |
+| `docs/decisions/ADR-307-a-docstring-only-script-change-is-named-by-its-syntax-tree.md` | `repo` | added by section 27 |
+| `scripts/mutation-verdict.py` | `repo` | changed by section 27: the plan's `docstring-only` case, the verdict's line for each file it names, and the PLAN paragraph of the module docstring (#455) |
+| `scripts/tests/test_mutation_verdict.py` | `repo` | changed by section 27: A61 to A64 |
+| `docs/red-first/SPEC-039.md` | `repo` | changed by section 27: A61 to A64's record |
+| `changelog.d/fix-docstring-only-485.md` | `repo` | added by section 27 |
+
+## 29. Acceptance criteria of the 2026-10-01 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A61 | a change to one script's docstrings alone is named: the plan reads `not-applicable: docstring-only:` naming the file, the runner lists no mutant, and `judge --class scripts` names the file on its own line, passes and reads no VOID; the same docstring change beside a code change in the same file applies as R4 says, and the verdict counts the runner's mutants of the code line as examined | `test_mutation_verdict.py` |
+| A62 | over a population of script edits, each printing `examined N` (a docstring changed at each of the four positions, a method's, and one grown to three lines; a string statement that is not first; a string used as a value; a code change beside a docstring change in one file; two files of which only one is docstring-only; a file outside the class changed beside a docstring change, and between a docstring-only script and a later script's code change; a file added, deleted and renamed; a parse error at either side; a script that is not UTF-8), every member that changes a tree outside docstrings keeps the class applying, only the docstring-only members are named, and no line a named member set aside holds a runner mutant; a planted plan that sets every string expression aside as a docstring is caught | `test_mutation_verdict.py` |
+| A63 | the definition's edges: an f-string or a bytes literal first in a body, and a string first in an `if` block, stay code; two docstring-only files are both named; a docstring-only file beside a comment-only one names only the first, and the second keeps its own reading; a re-layout with an equal tree reads the named case | `test_mutation_verdict.py` |
+| A64 | the PLAN paragraph of `scripts/mutation-verdict.py`'s module docstring names exactly the legs `ci` admits a skip from and `legs` judges, and exactly the step outputs the plan writes | `test_mutation_verdict.py` |
+| A65 | the PEP 263 class: the plan parses a script's bytes, so a declared encoding decides the tree compared; over seven members printing `examined N`, a latin-1 escape rewritten as raw bytes, a declaration changed from utf-8 to latin-1 beside a docstring edit, a latin-1 declaration that stops the new side parsing and an unknown encoding each apply, a declared UTF-8 script changed in its docstring alone is named, and a declared script whose bytes are not UTF-8 is refused as at the base | `test_mutation_verdict.py` |
+
+```acceptance
+A61: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k a_docstring_only_change_is_named_and_a_code_change_beside_it_is_examined
+A62: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k the_named_case_narrows_no_member_of_a_population_of_script_edits
+A63: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k the_docstring_is_only_the_first_bare_string_of_a_body
+A64: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k the_plan_paragraph_names_the_legs_ci_admits_and_the_outputs_it_writes
+A65: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k a_declared_encoding_decides_the_tree_compared
+```
+
+A61 runs the plan, the runner's `list` and `run`, `shards` and `judge` as subprocesses, in the
+order CI runs them, over a fixture repository built at run time. A62 and A63 build one fixture
+repository per member and run the plan in-process; A62's control runs the same population with the
+plan's tree reader replaced by one that sets every string expression aside, wherever it stands,
+and must find a mismatch. A64 reads `ci.yml`'s admission loop, the `legs` verb's source and the step
+outputs the plan writes for a fixture's diff.

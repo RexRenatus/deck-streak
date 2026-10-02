@@ -1,4 +1,4 @@
-{"schema":"phx.formal.vectors.v1","entry":"OpenLapse","covers":"crates/streaks/src/lapse.rs","anchor":"open_lapse","digest":"sha256:e3a322de347ef0726cd2cd8812bbf2d90179b610c61452690dae47557e5be238","vectors":1704}
+{"schema":"phx.formal.vectors.v1","entry":"OpenLapse","covers":"crates/streaks/src/lapse.rs","anchor":"open_lapse","digest":"sha256:cec9211f1d6b078d6375cc373edfa3bb45053c787ed99835531b3387672179f5","vectors":1704}
 {"today":-9223372036854775808,"counts":[[-9223372036854775808,1]],"skips":[],"threshold":1,"answer":null}
 {"today":-9223372036854775807,"counts":[[-9223372036854775808,1]],"skips":[],"threshold":1,"answer":-9223372036854775807}
 {"today":-9223372036854775808,"counts":[[-9223372036854775808,0]],"skips":[],"threshold":1,"answer":null}

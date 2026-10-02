@@ -196,6 +196,8 @@ async fn recompute(
             now: UtcMillis::from_epoch_millis(now),
             synced_in: Some(day(synced_in)),
             courses_digest: Some("0123456789abcdef"),
+            base_reviews: 0,
+            offers: None,
         },
     )
     .await
@@ -721,6 +723,8 @@ async fn run_fold(
             now: UtcMillis::from_epoch_millis(now),
             synced_in: Some(day(synced_in)),
             courses_digest: Some(courses_digest),
+            base_reviews: 0,
+            offers: None,
         },
     )
     .await

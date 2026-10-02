@@ -68,3 +68,5 @@ router opens a write of its own, so the code cannot do that.
 `next_milestone` is a pure function of three numbers over three ladders. The winner has the smallest
 `remaining / rung`; a tie keeps the earlier ladder (reviews, streak, mature). The mature input is
 Road to C2's, so until it supplies one the view answers `pending` and computes nothing from a stand-in.
+
+The ports are `Offers` and `Celebrate`, not `AwardPort`: the fold calls `Offers` between its writes, and `Offers` hands each owed award to `Celebrate`, the router's send, whose answer comes before the mark is set.
