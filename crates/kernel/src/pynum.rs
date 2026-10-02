@@ -483,7 +483,8 @@ fn lanczos_sum(x: f64) -> f64 {
 /// `math.lgamma` of a finite argument above zero, as `CPython`'s Lanczos port computes it.
 ///
 /// `None` at or below zero and for a non-finite argument, where the port is not asked for a value
-/// (negative arguments are left to the slice that needs them).
+/// (negative arguments are left to the slice that needs them), and where the result overflows (from
+/// about 2.6e305), where CPython raises.
 #[must_use]
 pub fn lgamma(x: f64) -> Option<f64> {
     if !x.is_finite() || x <= 0.0 {
@@ -499,5 +500,8 @@ pub fn lgamma(x: f64) -> Option<f64> {
     }
     let mut r = lanczos_sum(x).ln() - LANCZOS_G;
     r += (x - 0.5) * ((x + LANCZOS_G - 0.5).ln() - 1.0);
+    if r.is_infinite() {
+        return None;
+    }
     Some(r)
 }
