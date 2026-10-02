@@ -268,9 +268,9 @@ pub trait DayStep: Send + Sync {
 /// the line, and the study day it is raised on.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Celebration {
-    /// The ladder's event: `badge` or `record`.
+    /// The ladder's event: `badge`, `record` or `band_up`.
     pub event: &'static str,
-    /// The dedupe key: `badge:<key>:<tier>` or `pr:<kind>:<epoch day>`.
+    /// The dedupe key: `badge:<key>:<tier>`, `pr:<kind>:<epoch day>` or `bandup:<code>:<band>`.
     pub key: String,
     /// The line.
     pub text: String,
@@ -288,14 +288,15 @@ pub trait Celebrate: Send + Sync {
     fn celebrate<'a>(&'a self, celebration: &'a Celebration) -> PortFuture<'a, ()>;
 }
 
-/// The offers the fold runs between its writes (ADR-303): every badge and record whose mark is
-/// unset is handed to the router, and each one it answered is marked in a write of its own.
+/// The offers the fold runs between its writes (ADR-303): every badge, record and band-up whose mark
+/// is unset is handed to the router, and each one it answered is marked in a write of its own.
 pub trait Offers: fmt::Debug + Send + Sync {
     /// Offers every owed celebration through `db` at `now`, raised on the study day `today`.
     fn offer<'a>(&'a self, db: &'a Db, now: UtcMillis, today: StudyDay) -> PortFuture<'a, ()>;
 }
 
-/// The awards' offers: the owed badges, then the owed records, each through `celebrate`.
+/// The awards' offers: the owed badges, then the owed records, then the owed band-ups (ADR-077),
+/// each through `celebrate`.
 pub struct AwardOffers {
     celebrate: std::sync::Arc<dyn Celebrate>,
 }
@@ -323,6 +324,9 @@ impl Offers for AwardOffers {
             }
             if let Err(error) = records::offer_records(&*self.celebrate, db, now, today).await {
                 tracing::error!(%error, "the owed records could not be offered");
+            }
+            if let Err(error) = progress::offer_band_ups(&*self.celebrate, db, now, today).await {
+                tracing::error!(%error, "the owed band-ups could not be offered");
             }
             Ok(())
         })

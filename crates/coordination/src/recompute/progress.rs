@@ -22,13 +22,13 @@ use deck_streak_curriculum::progress::{BandStep, XP_BONUS_BAND_UP, band_step, co
 use deck_streak_curriculum::store::{self, NewMilestone, Recorded};
 use deck_streak_ingest::calendar::collection_day_number;
 use deck_streak_ingest::reader::Card;
-use deck_streak_kernel::{Courses, KernelError, PortFuture, StudyDay, Track, UtcMillis};
+use deck_streak_kernel::{Courses, Db, KernelError, PortFuture, StudyDay, Track, UtcMillis};
 use deck_streak_progression::grant::{GrantRequest, GrantScope, GrantSource};
 use deck_streak_progression::ledger::grant_on;
 use deck_streak_progression::xp::XpAmount;
 use sqlx::SqliteConnection;
 
-use super::{DayEvaluation, DayStep, Evaluation, Phase};
+use super::{Celebrate, Celebration, DayEvaluation, DayStep, Evaluation, Phase};
 
 /// The name the fold's report gives this step.
 pub const PROGRESS_STEP: &str = "curriculum.progress";
@@ -166,4 +166,68 @@ impl DayStep for ProgressStep {
     ) -> PortFuture<'a, ()> {
         Box::pin(self.record_progress(day, write))
     }
+}
+
+/// The ladder's event a band-up's celebration is raised as: the notifications policy renders it at
+/// T5 and exempts it from the weekly budget (SPEC-084).
+pub const BAND_UP_EVENT: &str = "band_up";
+
+/// The router's once-ever dedupe key of the band-up of `course` to `band`: the band lowercased, as
+/// the key's grammar requires and as the band-up's grant source spells it (ADR-077).
+#[must_use]
+pub fn band_up_key(course: &str, band: &str) -> String {
+    format!("bandup:{course}:{}", band.to_ascii_lowercase())
+}
+
+/// The line a band-up's celebration carries: the course's flag and name, and the band reached.
+#[must_use]
+pub fn band_up_line(flag: &str, name: &str, band: &str) -> String {
+    format!("{flag} {name} reached {band}")
+}
+
+/// Offers every band-up whose celebration is still owed to `celebrate`, between the fold's writes
+/// (ADR-303, ADR-077). Each is handed to the router, and only once the router has answered is its
+/// mark set, in a write of its own that marks it only while it is still unset; a band-up the router
+/// did not answer stays owed, and the next offers hand it over again.
+///
+/// # Errors
+///
+/// [`KernelError::Database`] when the owed band-ups cannot be read or a mark cannot be written.
+pub async fn offer_band_ups(
+    celebrate: &dyn Celebrate,
+    db: &Db,
+    now: UtcMillis,
+    today: StudyDay,
+) -> Result<(), KernelError> {
+    let (owed, courses) = {
+        let mut read = db.reader().acquire().await?;
+        let owed = store::owed_band_ups(&mut read).await?;
+        let courses = store::progress(&mut read).await?;
+        (owed, courses)
+    };
+    for band_up in owed {
+        // A course's stored progress names it; one erased since its band-up is named by its code.
+        let text = courses
+            .iter()
+            .find(|course| course.course == band_up.course)
+            .map_or_else(
+                || format!("{} reached {}", band_up.course, band_up.band),
+                |course| band_up_line(&course.flag, &course.name, &band_up.band),
+            );
+        let celebration = Celebration {
+            event: BAND_UP_EVENT,
+            key: band_up_key(&band_up.course, &band_up.band),
+            text,
+            study_day: today,
+        };
+        // The mark is set only once the router has answered (ADR-303).
+        if let Err(error) = celebrate.celebrate(&celebration).await {
+            tracing::warn!(key = %celebration.key, %error, "the router did not answer; the band-up stays owed");
+            continue;
+        }
+        let mut write = db.write().await?;
+        let _ = store::mark_band_up(&mut write, &band_up.course, &band_up.band, now).await?;
+        write.commit().await?;
+    }
+    Ok(())
 }
