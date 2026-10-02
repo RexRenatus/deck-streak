@@ -513,6 +513,19 @@ What these amendments leave out of reach, each by design and each failing closed
 The rows that pin the new arms are in `scripts/mutation-rows.d/S19300-S19399.json`, from S19315,
 each killed by the test that pins its arm and proved KILLED by full id.
 
+Fourteen rows, S19315 to S19328, pin the arms, and the band file now holds 29 rows. S19324's
+killer is `test_a_pin_counts_only_in_a_compiled_item_of_every_file_kind`, a MUTATION COVERAGE test
+in A20's class: its 12 members put a pin in each kind of file that holds one (the implementation's
+own test module, a `tests/` file and an out-of-line test module's file) under four attributes,
+judged against rustc, so the module runs 62 tests. In `scripts/mutation-rows.d/S19200-S19299.json`,
+S19252 and S19225's killer point at the token reader (#436). The arms left dev's rows S19300,
+S19301 and S19303 surviving: the R8 members that killed them at the base read the same with and
+without each mutant. R8 gains 11 members that carry a pin through each declaration chain and behind
+each opening the lexer skips (examined 6320 R8 members), and the three are KILLED again. One
+over-refusal is kept on purpose and disclosed by count (#536): A22 asserts 1 macro module shape,
+`cfg(any(test, feature = "..."))`, refused, and the #441 arm refuses 0 of the repository's 202
+crate files.
+
 Files of these amendments:
 
 - `docs/specs/SPEC-192-every-settings-shape-is-pinned-by-its-literal.md`: changed (this section
@@ -522,6 +535,8 @@ Files of these amendments:
 - `docs/red-first/SPEC-192.md`: changed (one addendum).
 - `scripts/tests/test_setting_shapes.py`: changed (A19 to A22 and the arms).
 - `scripts/mutation-rows.d/S19300-S19399.json`: changed (rows from S19315).
+- `scripts/mutation-rows.d/S19200-S19299.json`: changed (S19252 and S19225's killer point at the
+  token reader).
 - `changelog.d/guard-setting-shapes-436-449-535-536.md`: added.
 - `docs/decisions/ADR-192-a-settings-shape-is-pinned-by-its-literal-and-the-rows-live-in-one-band.md`:
   unchanged.
