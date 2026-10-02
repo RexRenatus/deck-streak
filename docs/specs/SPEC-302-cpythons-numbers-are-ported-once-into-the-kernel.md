@@ -87,6 +87,7 @@ Analytics' existing tests stay green after its sum delegates to the kernel's (R1
 | `scripts/mutation-rows.d/S30200-S30299.json` | repo | added: the two rows of §7 |
 | `docs/specs/planned/SPEC-090-*.md` | repo | changed: R1, A1, A2, their manifest, parity and mutation lines each become one line naming this SPEC |
 | `docs/specs/planned/SPEC-095-*.md` | repo | changed: the same, for R1, A1, A2 and their lines |
+| `docs/specs/planned/SPEC-057-*.md` | repo | changed: §7 row 3 only, the kernel campaign row, filled from the scoped battery (R16) |
 | `docs/schematics/pynum.md` | repo | added: the module's components and the golden flow |
 | `docs/red-first/SPEC-302.md` | repo | added |
 
