@@ -397,3 +397,10 @@ S19303 among them.
 
 A22's two red lines that quote a planted file write its newlines as `\n`: unittest prints the
 message as it is.
+
+2d085b68 restates A19's one assertion after its green.
+test_every_spelling_is_read_or_refused_as_written compared a list of mismatches with an empty list,
+which the tdd probe reads as asserting only an absence; it now compares every member's refusal
+lines with its kind's outcome as one value. The 48 members and their expectations are unchanged,
+the module still runs 62 tests and is green, and the four rows the test kills, S19225, S19318,
+S19327 and S19328, are KILLED again by full id.
