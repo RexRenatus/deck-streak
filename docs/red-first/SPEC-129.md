@@ -260,3 +260,56 @@ A19 replay: red at 4fc769c9: Ran 4 tests, FAILED (failures=1), the planted contr
 A15 replay: green at 29993617: Ran 20 tests, OK
 A19 replay: green at 29993617: examined 68 files, 0 arms
 ```
+
+## Addendum, 2026-10-02 (issues #532 and #533): the wrapper's form, the census by syntax tree and the copy check by body
+
+The lines above stand. A20 to A28 are new. Commit e6abf9de adds their tests with three disclosed
+stubs: `wrapper_assignments` returns an empty list, `reading()` wraps the text census with zero
+counts, and `definitions_of_the_finder` keeps only its name match in the new shape. Every new test
+that is red at e6abf9de fails by assertion. Commit b6eb66aa replaces the stubs, gives
+`after_separator` the wrapper's form, rewrites the census to read the syntax tree, and registers
+its new read sites in `test_ci_workflows.py`; it is the only commit between the two, and it edits
+no assertion of a red test.
+
+Some reds come only through a positive control, and the record says so per criterion. A21's second
+test, the old reading's control, is red at e6abf9de only because the stub leaves the wrapper's
+words empty, so the wrapper's members read as another program's; it is a control, not the
+criterion's red. A24's `else` and nested-def tests and all four tests of A26 are red only through
+their positive control, a stand-in the base census cannot list; the absence each one pins already
+held at the base. A28 is not red: the name match already held both of its halves at the base.
+
+Three earlier criteria change, and are disclosed here instead of in the fence. A15's wrapper member
+is now the guard's own wrapper with `--report` before its `--`. Both readings find it, so it is
+green at e6abf9de and at b6eb66aa. A17's test now holds the copies to `FLOOR` and is A27's first
+test; at e6abf9de it reads `AssertionError: Tuples differ: () != (('test_ci_workflows.py',
+'_indent', 'indent_of'),)`, by assertion. A19's test now reads every `*.py` file at any depth
+and prints the constants parsed and skipped; the tree reads 0 arms at both commits, so it is not
+red.
+
+```red-first
+A20: red at e6abf9de: AssertionError: 0 != 1 : module-level assignments to WRAPPER: []
+A21: red at e6abf9de: AssertionError: Lists differ: ['echo -- cargo mutants --in-place (one li[4999 chars]ace'] != []
+A22: red at e6abf9de: AssertionError: Lists differ: [('ov[264 chars]-', 'cargo mutants --in-place'), ('twin', 'pyt[130 chars]ce')] != [('ov[264 chars]-', 'refused'), ('twin', 'python3 scripts/x.py[79 chars]ed')]
+A23: red at e6abf9de: AssertionError: Tuples differ: (1, []) != (1, [('planted.py', 5, 'except Exception as failure:')])
+A24: red at e6abf9de: AssertionError: Tuples differ: (1, []) != (1, [('planted.py', 5, 'except Exception as failure:')]) : the handler's own body and the finally block
+A25: red at e6abf9de: AssertionError: Tuples differ: (1, []) != (1, [('held.py', 3, 'str constant, its line 4: except Exception:')])
+A26: red at e6abf9de: AssertionError: 0 != 1 : only through each limit test's positive control
+A27: red at e6abf9de: AssertionError: Lists differ: [] != [('deeper/copies.py', 'copy_0', 'no_wrappe[1266 chars]ts')]
+A28: not red: the name match held both halves at the base: a changed copy under the finder's own name is caught, under a name of its own it is not
+A20: green at b6eb66aa
+A21: green at b6eb66aa
+A22: green at b6eb66aa
+A23: green at b6eb66aa
+A24: green at b6eb66aa
+A25: green at b6eb66aa
+A26: green at b6eb66aa
+A27: green at b6eb66aa
+```
+
+```text
+A20 to A22, A27 replay: red at e6abf9de: test_mutation_workflows.py Ran 26 tests, FAILED (failures=6)
+A23 to A26 replay: red at e6abf9de: test_stand_in_census.py Ran 21 tests, FAILED (failures=30), subtests counted
+A20 to A22, A27, A28 replay: green at b6eb66aa: test_mutation_workflows.py Ran 26 tests, OK; examined 56, mismatches 0; named limits 2: over-find, value-dash-dash
+A23 to A26 replay: green at b6eb66aa: test_stand_in_census.py Ran 21 tests, OK
+A19 replay: green at b6eb66aa: examined 69 files, 16836 str constants parsed, 8222 skipped, 0 arms
+```

@@ -616,7 +616,8 @@ A28: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py
 - `scripts/tests/test_stand_in_census.py`: changed: the shapes, the reach, the constants and the
   limits (A23 to A26).
 - `scripts/tests/test_ci_workflows.py`: changed: its census of read sites names the new reads of
-  `test_mutation_workflows.py`.
+  `test_mutation_workflows.py`, and the census's two `warnings` calls, which silence the
+  `SyntaxWarning` a string constant's parse raises and import, run and read nothing.
 - `scripts/mutation-rows.d/S12900-S12999.json`: changed: rows from S12913 for the new arms.
 - `docs/specs/SPEC-129-a-package-dispatch-is-sharded-by-its-projected-weight.md`: changed: this
   section, appended.
