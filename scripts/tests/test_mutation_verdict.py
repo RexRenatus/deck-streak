@@ -7,7 +7,12 @@ format: cargo-mutants 27.1.0's `outcomes.json`, the mutation-testing-elements `m
 StrykerJS writes, and the rows runner's report. No tool runs here.
 """
 
+import argparse
+import ast
+import contextlib
+import dataclasses
 import importlib.util
+import io
 import json
 import os
 import re
@@ -17,6 +22,7 @@ import tempfile
 import unittest
 from collections import Counter
 from pathlib import Path
+from unittest import mock
 
 from _support import REPO, examined
 
@@ -1885,6 +1891,698 @@ class ASquashMergeNamesItsPullRequest(unittest.TestCase):
                 else:
                     # The diff is judged: a changed code line with no report is VOID.
                     self.assertEqual(judged.returncode, 3, judged.stdout)
+
+
+# --------------------------------------------------------------------------- SPEC-039 section 27
+#
+# A docstring-only change to a guard script is named, never VOID (#485, ADR-307). Each member of a
+# population below is one pull request's edit of a fixture holding several scripts; the plan reads
+# it, and the expectation is ruling 1's: `named` with each file whose change it set aside,
+# `applies` when any tree differs outside docstrings or a fail-closed arm holds, and `refused` when
+# the plan stops on a script that is not UTF-8, as it did before section 27.
+
+GUARD = "scripts/guard.py"
+GUARD_TEXT = (
+    '"""The guard, a module docstring."""\n'
+    "\n"
+    "LIMIT = 3\n"
+    'NAME = "a string used as a value, which is code"\n'
+    '"a string statement after the docstring, which is code"\n'
+    "\n"
+    "if LIMIT:\n"
+    '    "a string first in a block, which is code"\n'
+    "\n"
+    "\n"
+    "class Gate:\n"
+    '    """A class docstring."""\n'
+    "\n"
+    "    def check(self, x):\n"
+    '        """A method docstring."""\n'
+    "        return x + 1\n"
+    "\n"
+    "\n"
+    "def total(x):\n"
+    '    """A function docstring."""\n'
+    "    return x * LIMIT\n"
+    "\n"
+    "\n"
+    "async def wait(x):\n"
+    '    """An async function docstring."""\n'
+    "    return x - 1\n"
+    "\n"
+    "\n"
+    "def note():\n"
+    '    f"{LIMIT} notes, an f-string first, which is code"\n'
+    "    return LIMIT\n"
+    "\n"
+    "\n"
+    "def raw():\n"
+    '    b"bytes first, which is code"\n'
+    "    return LIMIT\n"
+)
+OTHER = "scripts/other.py"
+OTHER_TEXT = '"""Another script."""\n\n\ndef other(x):\n    return x - 1\n'
+OLD = "scripts/old.py"
+OLD_TEXT = '"""A script a change deletes or renames."""\n\n\ndef old():\n    return 1\n'
+BROKEN = "scripts/broken.py"
+BROKEN_TEXT = '"""A script that does not parse."""\nx = (\n'
+LATIN = "scripts/latin.py"
+# A Latin-1 byte four lines below the docstring, so a hunk on the docstring's lines never shows it.
+LATIN_HEAD = b'"""A Latin-1 script.\n\nIts docstring has a second paragraph.\n"""\n'
+LATIN_TAIL = b"".join(b"VALUE_%d = %d\n" % (n, n) for n in range(4)) + b"# caf\xe9 au lait\n"
+NAMED = "not-applicable: docstring-only: "
+APPLIES = ("applies", None)
+MODULE_DOC = (
+    '"""The guard, a module docstring."""',
+    '"""The guard, its docstring reworded."""',
+)
+FUNCTION_DOC = ('"""A function docstring."""', '"""A function docstring, reworded."""')
+
+
+def edited(text, *pairs):
+    """`text` with each (old, new) replaced, each old occurring exactly once."""
+    for old, new in pairs:
+        if text.count(old) != 1:
+            raise AssertionError(f"{old!r} occurs {text.count(old)} time(s) in the fixture")
+        text = text.replace(old, new)
+    return text
+
+
+def edit_fixture(test, changes, deleted=()):
+    """A fixture holding every script a member can edit, at its base, with `changes` committed as
+    the pull request: a text is written as UTF-8 and bytes as they are."""
+    files = {GUARD: GUARD_TEXT, OTHER: OTHER_TEXT, OLD: OLD_TEXT, BROKEN: BROKEN_TEXT}
+    fixture = Fixture(test, files=files)
+    (fixture.root / LATIN).write_bytes(LATIN_HEAD + LATIN_TAIL)
+    fixture.base = fixture.commit("the base's Latin-1 script")
+    for relative, content in changes.items():
+        if isinstance(content, bytes):
+            (fixture.root / relative).write_bytes(content)
+        else:
+            fixture.write(relative, content)
+    for relative in deleted:
+        (fixture.root / relative).unlink()
+    fixture.commit("the pull request")
+    return fixture
+
+
+def plan_outcome(module, fixture):
+    """What the plan reads of the `scripts` class, and the plan: ("named", [files]),
+    ("applies", None), ("refused", None) when it stops on a script that is not UTF-8, or
+    ("not-applicable", the case) for any other case."""
+    try:
+        plan = module.plan_diff(
+            fixture.root, fixture.base, "HEAD", fixture.out, ("diff", "a member's diff")
+        )
+    except UnicodeDecodeError:
+        return ("refused", None), None
+    scripts = plan.classes["scripts"]
+    if scripts["applies"]:
+        return APPLIES, plan
+    if scripts["case"].startswith(NAMED):
+        return ("named", scripts["case"].rsplit(": ", 1)[1].split(", ")), plan
+    return ("not-applicable", scripts["case"]), plan
+
+
+def judged_in_process(module, fixture, plan):
+    """`judge --class scripts` over the plan, in-process: its exit and what it printed."""
+    document = json.loads(json.dumps(dataclasses.asdict(plan)))
+    verdict = module.Verdict("scripts")
+    args = argparse.Namespace(
+        klass="scripts",
+        rows=None,
+        python=None,
+        python_whole=None,
+        root=str(fixture.root),
+    )
+    with contextlib.redirect_stdout(io.StringIO()) as said:
+        module.judge_python(verdict, document, args)
+        code = verdict.close()
+    return code, said.getvalue()
+
+
+def is_string_statement(statement):
+    return (
+        isinstance(statement, ast.Expr)
+        and isinstance(statement.value, ast.Constant)
+        and isinstance(statement.value.value, str)
+    )
+
+
+def every_string_set_aside(source):
+    """Ruling 2's control, a planted narrowing: every string expression read as a docstring, so a
+    bare string statement is dropped wherever it stands and every other string constant blanked."""
+    if source is None:
+        return None
+    try:
+        tree = ast.parse(source.decode("utf-8"))
+    except (SyntaxError, ValueError):
+        return None
+    for node in ast.walk(tree):
+        for _, block in ast.iter_fields(node):
+            if isinstance(block, list):
+                block[:] = [item for item in block if not is_string_statement(item)]
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            node.value = ""
+    return ast.dump(tree)
+
+
+def script_edits():
+    """Ruling 2's population: (name, changes, deleted, expected)."""
+    doc = edited(GUARD_TEXT, FUNCTION_DOC)
+    grown = (
+        '"""The guard, a module docstring."""',
+        '"""The guard.\n\nIt grew to three lines.\n"""',
+    )
+    return [
+        (
+            "a module docstring",
+            {GUARD: edited(GUARD_TEXT, MODULE_DOC)},
+            (),
+            ("named", [GUARD]),
+        ),
+        (
+            "a class docstring",
+            {GUARD: edited(GUARD_TEXT, ('"""A class docstring."""', '"""A class, reworded."""'))},
+            (),
+            ("named", [GUARD]),
+        ),
+        ("a function docstring", {GUARD: doc}, (), ("named", [GUARD])),
+        (
+            "an async function docstring",
+            {
+                GUARD: edited(
+                    GUARD_TEXT,
+                    ("An async function docstring.", "An async one, reworded."),
+                )
+            },
+            (),
+            ("named", [GUARD]),
+        ),
+        (
+            "a method docstring",
+            {GUARD: edited(GUARD_TEXT, ("A method docstring.", "A method docstring, reworded."))},
+            (),
+            ("named", [GUARD]),
+        ),
+        (
+            "a docstring grown to three lines",
+            {GUARD: edited(GUARD_TEXT, grown)},
+            (),
+            ("named", [GUARD]),
+        ),
+        (
+            "a string statement that is not first",
+            {GUARD: edited(GUARD_TEXT, ("after the docstring, which is code", "reworded"))},
+            (),
+            APPLIES,
+        ),
+        (
+            "a string statement added after a docstring",
+            {
+                GUARD: edited(
+                    GUARD_TEXT,
+                    (FUNCTION_DOC[0] + "\n", FUNCTION_DOC[0] + '\n    "more"\n'),
+                )
+            },
+            (),
+            APPLIES,
+        ),
+        (
+            "a string used as a value",
+            {GUARD: edited(GUARD_TEXT, ("used as a value, which is code", "used as a value"))},
+            (),
+            APPLIES,
+        ),
+        (
+            "a code change beside a docstring change in one file",
+            {GUARD: edited(GUARD_TEXT, FUNCTION_DOC, ("x * LIMIT", "x * LIMIT * 2"))},
+            (),
+            APPLIES,
+        ),
+        (
+            "two files, only one docstring-only",
+            {GUARD: doc, OTHER: edited(OTHER_TEXT, ("x - 1", "x - 2"))},
+            (),
+            APPLIES,
+        ),
+        (
+            # README.md sorts before every script, so the plan reads it first.
+            "a docstring change beside a change to a file outside the class",
+            {GUARD: doc, "README.md": "a fixture, reworded\n"},
+            (),
+            ("named", [GUARD]),
+        ),
+        (
+            # scripts/notes.md sorts between the two scripts, and only the second changes code.
+            "a code change in a later script, a file outside the class between",
+            {
+                GUARD: doc,
+                "scripts/notes.md": "a note\n",
+                OTHER: edited(OTHER_TEXT, ("x - 1", "x - 2")),
+            },
+            (),
+            APPLIES,
+        ),
+        (
+            "a file added holding only a docstring",
+            {GUARD: doc, "scripts/new.py": '"""Only a docstring."""\n'},
+            (),
+            APPLIES,
+        ),
+        ("a file deleted beside a docstring change", {GUARD: doc}, (OLD,), APPLIES),
+        (
+            "a file renamed with only its docstring changed",
+            {"scripts/renamed.py": edited(OLD_TEXT, ("deletes or renames", "renamed"))},
+            (OLD,),
+            APPLIES,
+        ),
+        (
+            "a parse error at both sides, its docstring changed",
+            {BROKEN: edited(BROKEN_TEXT, ("does not parse", "still does not parse"))},
+            (),
+            APPLIES,
+        ),
+        (
+            "a parse error at the head beside a docstring change",
+            {GUARD: doc, OTHER: OTHER_TEXT + "x = (\n"},
+            (),
+            APPLIES,
+        ),
+        (
+            "a script not UTF-8 whose docstring loses a paragraph, beside a docstring change",
+            {GUARD: doc, LATIN: b'"""A Latin-1 script.\n"""\n' + LATIN_TAIL},
+            (),
+            APPLIES,
+        ),
+        (
+            "a docstring change in a script not UTF-8",
+            {LATIN: LATIN_HEAD.replace(b"A Latin-1", b"The Latin-1") + LATIN_TAIL},
+            (),
+            ("refused", None),
+        ),
+    ]
+
+
+def definition_edges():
+    """The definition's edges (A63): (name, changes, deleted, expected)."""
+    doc = edited(GUARD_TEXT, FUNCTION_DOC)
+    return [
+        (
+            "an f-string first in a body",
+            {GUARD: edited(GUARD_TEXT, ("notes, an f-string first, which is code", "notes"))},
+            (),
+            APPLIES,
+        ),
+        (
+            "a bytes literal first in a body",
+            {GUARD: edited(GUARD_TEXT, ("bytes first, which is code", "bytes first"))},
+            (),
+            APPLIES,
+        ),
+        (
+            "a string first in an if block",
+            {GUARD: edited(GUARD_TEXT, ("first in a block, which is code", "first in a block"))},
+            (),
+            APPLIES,
+        ),
+        (
+            "two docstring-only files",
+            {
+                GUARD: doc,
+                OTHER: edited(OTHER_TEXT, ("Another script.", "Another, reworded.")),
+            },
+            (),
+            ("named", [GUARD, OTHER]),
+        ),
+        (
+            "a docstring-only file beside a comment-only one",
+            {
+                GUARD: doc,
+                OTHER: edited(OTHER_TEXT, ("    return", "    # a comment\n    return")),
+            },
+            (),
+            ("named", [GUARD]),
+        ),
+        (
+            "a docstring added where there was none",
+            {OTHER: edited(OTHER_TEXT, ("(x):\n", '(x):\n    """Added."""\n'))},
+            (),
+            ("named", [OTHER]),
+        ),
+        (
+            "a re-layout with an equal tree",
+            {GUARD: edited(GUARD_TEXT, ("x * LIMIT", "x*LIMIT"))},
+            (),
+            ("named", [GUARD]),
+        ),
+        (
+            "a module docstring deleted, a change of deletions alone",
+            {OTHER: edited(OTHER_TEXT, ('"""Another script."""\n', ""))},
+            (),
+            (
+                "not-applicable",
+                "not-applicable: no production code line changed; every changed line is blank "
+                "or a comment, or deleted",
+            ),
+        ),
+    ]
+
+
+COOKIE = "scripts/cookie.py"
+COOKIE_DOC = b'"""A declared script."""\n'
+
+
+def cookie_fixture(test, base, head):
+    """A fixture whose one declared script is `base` bytes at the base and `head` at the pull
+    request."""
+    fixture = Fixture(test)
+    (fixture.root / COOKIE).write_bytes(base)
+    fixture.base = fixture.commit("the base's declared script")
+    (fixture.root / COOKIE).write_bytes(head)
+    fixture.commit("the pull request")
+    return fixture
+
+
+def cookie_edits():
+    """The PEP 263 class (A65): (name, base bytes, head bytes, expected), each reading written
+    before any run. Only the control and the fail-closed member are read as before."""
+    latin = b"# -*- coding: latin-1 -*-\n"
+    utf8 = b"# -*- coding: utf-8 -*-\n"
+    doc, reworded = COOKIE_DOC, b'"""A declared script, reworded."""\n'
+    return [
+        (
+            "a latin-1 escape rewritten as raw bytes, a value changes",
+            latin + doc + b'X = "\\xe9"\n',
+            latin + doc + b'X = "\xc3\xa9"\n',
+            APPLIES,
+        ),
+        (
+            "a declaration changed utf-8 to latin-1 beside a docstring edit",
+            utf8 + doc + b'S = "\xc3\xa9"\n',
+            latin + reworded + b'S = "\xc3\xa9"\n',
+            APPLIES,
+        ),
+        (
+            "a latin-1 declaration added so the head no longer parses",
+            doc + b"caf\xc3\xa9 = 1\n",
+            latin + reworded + b"caf\xc3\xa9 = 1\n",
+            APPLIES,
+        ),
+        (
+            "an unknown encoding declared beside a docstring edit",
+            doc + b"X = 1\n",
+            b"# -*- coding: bogus -*-\n" + reworded + b"X = 1\n",
+            APPLIES,
+        ),
+        (
+            "a latin-1 declaration removed beside a docstring edit, a value changes",
+            latin + doc + b'S = "\xc3\xa9"\n',
+            reworded + b'S = "\xc3\xa9"\n',
+            APPLIES,
+        ),
+        (
+            "a declared UTF-8 script whose change is a docstring alone",
+            utf8 + doc + b'S = "\xc3\xa9"\n',
+            utf8 + reworded + b'S = "\xc3\xa9"\n',
+            ("named", [COOKIE]),
+        ),
+        (
+            "a declared latin-1 script whose bytes are not UTF-8, a docstring edit",
+            latin + doc + b'S = "\xe9"\n',
+            latin + reworded + b'S = "\xe9"\n',
+            ("refused", None),
+        ),
+    ]
+
+
+SIMPLE_TEXT = '"""A guard."""\n\n\ndef total(x):\n    """Triples."""\n    return x * 3\n'
+SIMPLE_TESTS = (
+    "import sys\n"
+    "import unittest\n"
+    "from pathlib import Path\n\n"
+    "sys.path.insert(0, str(Path(__file__).resolve().parents[1]))\n"
+    "import guard  # noqa: E402\n\n\n"
+    "class TheGuard(unittest.TestCase):\n"
+    "    def test_five_totals(self):\n"
+    "        self.assertEqual(guard.total(5), {total})\n"
+)
+SIMPLE_MAP = {GUARD: {"dir": "scripts/tests", "modules": ["test_guard"]}}
+
+
+def in_ci_order(test, head_text, total):
+    """A fixture whose one script is `head_text` at the head, and what each step CI runs printed:
+    the plan, the runner's listing, shards, the runner's one shard and the verdict."""
+    fixture = Fixture(
+        test,
+        files={
+            GUARD: SIMPLE_TEXT,
+            "scripts/tests/test_guard.py": SIMPLE_TESTS.format(total=15),
+            "scripts/mutation-python.json": json.dumps(SIMPLE_MAP),
+        },
+    )
+    fixture.head(
+        {
+            GUARD: head_text,
+            "scripts/tests/test_guard.py": SIMPLE_TESTS.format(total=total),
+        }
+    )
+    out, plan_file = fixture.out, str(fixture.out / "plan.json")
+    planned = fixture.verdict(
+        "plan",
+        "--base",
+        fixture.base,
+        "--head",
+        "HEAD",
+        "--root",
+        str(fixture.root),
+        "--out",
+        str(out),
+    )
+    test.assertEqual(planned.returncode, 0, planned.stdout + planned.stderr)
+
+    def runner(*args):
+        return subprocess.run(
+            [sys.executable, str(REPO / "scripts" / "mutation_python.py"), *args],
+            capture_output=True,
+            text=True,
+            env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1"),
+            timeout=300,
+            check=False,
+        )
+
+    listing = out / "python-listed.json"
+    listed = runner("list", "--root", str(fixture.root), "--plan", plan_file, "--out", str(listing))
+    test.assertEqual(listed.returncode, 0, listed.stdout + listed.stderr)
+    sharded = fixture.verdict("shards", "--plan", plan_file, "--python-listed", str(listing))
+    test.assertEqual(sharded.returncode, 0, sharded.stdout + sharded.stderr)
+    report = out / "reports" / "mutation-python-shard-0" / "report.json"
+    report.parent.mkdir(parents=True)
+    ran = runner(
+        "run",
+        "--root",
+        str(fixture.root),
+        "--plan",
+        plan_file,
+        "--shard",
+        "0/1",
+        "--report",
+        str(report),
+    )
+    test.assertEqual(ran.returncode, 0, ran.stdout + ran.stderr)
+    judged = fixture.judge("scripts", "--python", str(out / "reports"))
+    document = json.loads(listing.read_text(encoding="utf-8"))
+    return planned, document, judged
+
+
+class ADocstringOnlyScriptChangeIsNamed(unittest.TestCase):
+    """SPEC-039 section 27 (ADR-307, #485): a change that leaves every changed script's syntax tree
+    equal once docstrings are set aside is named `docstring-only`, never VOID, and nothing that
+    alters a tree outside docstrings stops the class applying."""
+
+    def test_a_docstring_only_change_is_named_and_a_code_change_beside_it_is_examined(
+        self,
+    ):
+        """A61"""
+        docstrings = (
+            ('"""A guard."""', '"""A guard, reworded."""'),
+            ("Triples.", "Triples x."),
+        )
+        planned, document, judged = in_ci_order(self, edited(SIMPLE_TEXT, *docstrings), 15)
+        self.assertIn(
+            "mutation: plan: scripts does not apply: not-applicable: docstring-only: every changed "
+            f"script's syntax tree equals its base's once docstrings are set aside: {GUARD}\n",
+            planned.stdout,
+        )
+        self.assertEqual(document["listed"], 0, document)
+        self.assertEqual(judged.returncode, 0, judged.stdout + judged.stderr)
+        self.assertIn(
+            f"mutation: scripts: not-applicable: {GUARD}: 2 changed line(s): docstring-only, its "
+            "syntax tree equals its base's once docstrings are set aside\n",
+            judged.stdout,
+        )
+        self.assertIn("mutation: scripts: verdict: ok\n", judged.stdout)
+        self.assertNotIn("VOID", judged.stdout)
+        # The same docstring change beside a code change in the same file: the class applies as
+        # R4 says, the runner lists the code line's mutants, and the verdict counts them examined.
+        beside = edited(SIMPLE_TEXT, *docstrings, ("x * 3", "x * 3 * 2"))
+        planned, document, judged = in_ci_order(self, beside, 30)
+        self.assertIn(
+            "mutation: plan: scripts applies: 3 production code line(s) in 1 file(s)\n",
+            planned.stdout,
+        )
+        lines = {entry["line"] for entry in examined("listed mutants", document["mutants"])}
+        self.assertEqual(lines, {6}, document)
+        self.assertEqual(judged.returncode, 0, judged.stdout + judged.stderr)
+        listed = document["listed"]
+        self.assertIn(
+            f"mutation: scripts: examined {listed}: generated {listed}, rows 0\n",
+            judged.stdout,
+        )
+        self.assertIn("mutation: scripts: verdict: ok\n", judged.stdout)
+
+    def test_the_named_case_narrows_no_member_of_a_population_of_script_edits(self):
+        """A62"""
+        module = verdict_module()
+        members = examined("script edits", script_edits())
+        fixtures = {
+            name: edit_fixture(self, changes, deleted) for name, changes, deleted, _ in members
+        }
+        mismatches, set_aside = [], []
+        for name, changes, _, expected in members:
+            found, plan = plan_outcome(module, fixtures[name])
+            if found != expected:
+                mismatches.append(f"{name}: read {found}, expected {expected}")
+                continue
+            if found[0] != "named":
+                continue
+            code, said = judged_in_process(module, fixtures[name], plan)
+            if code != 0 or "VOID" in said or "docstring-only" not in said:
+                mismatches.append(f"{name}: the verdict read {code}: {said}")
+            # The lines a member set aside are its named files' `docstring` lines; a file outside
+            # the class, such as README.md, sets none aside and is no source the runner lists.
+            for record in (entry for entry in plan.files if entry.get("docstring")):
+                lines = record["docstring"]
+                set_aside.extend(f"{name}: {record['path']}:{line}" for line in lines)
+                held = [
+                    mutant.text
+                    for mutant in module.mutation_python.list_source(changes[record["path"]])
+                    if any(mutant.start_line <= line <= mutant.end_line for line in lines)
+                ]
+                if held:
+                    mismatches.append(f"{name}: set aside the runner's mutants {held}")
+        tally = Counter(expected[0] for *_, expected in members)
+        print(
+            f"population: {len(members)} member(s): {tally['named']} named docstring-only, "
+            f"{tally['applies']} applying, {tally['refused']} refused as at the base; "
+            f"mismatches {len(mismatches)}"
+        )
+        self.assertEqual(mismatches, [])
+        examined("set-aside lines checked against the runner's listing", set_aside)
+        # The control: a plan that reads every string expression as a docstring must be caught.
+        with mock.patch.object(module, "tree_without_docstrings", every_string_set_aside):
+            caught = [
+                name
+                for name, *_, expected in members
+                if plan_outcome(module, fixtures[name])[0] != expected
+            ]
+        print(
+            f"control: a plan that sets every string expression aside: {len(caught)} "
+            f"mismatch(es) of {len(members)}, caught"
+        )
+        self.assertEqual(
+            caught,
+            [
+                "a string statement that is not first",
+                "a string statement added after a docstring",
+                "a string used as a value",
+            ],
+        )
+
+    def test_a_declared_encoding_decides_the_tree_compared(self):
+        """A65 (#485): the tree compared is the one Python reads from the bytes."""
+        module = verdict_module()
+        members = examined("declared encodings", cookie_edits())
+        mismatches, readings = [], Counter()
+        for name, base, head, expected in members:
+            fixture = cookie_fixture(self, base, head)
+            found, _ = plan_outcome(module, fixture)
+            readings[found[0]] += 1
+            if found != expected:
+                mismatches.append(f"{name}: read {found}, expected {expected}")
+        print(f"cookie population: {len(members)} member(s); mismatches {len(mismatches)}")
+        self.assertEqual(mismatches, [])
+        self.assertEqual(readings, {"applies": 5, "named": 1, "refused": 1})
+
+    def test_the_docstring_is_only_the_first_bare_string_of_a_body(self):
+        """A63"""
+        module = verdict_module()
+        members = examined("definition edges", definition_edges())
+        mismatches = []
+        for name, changes, deleted, expected in members:
+            fixture = edit_fixture(self, changes, deleted)
+            found, plan = plan_outcome(module, fixture)
+            if found != expected:
+                mismatches.append(f"{name}: read {found}, expected {expected}")
+            elif name == "a docstring-only file beside a comment-only one":
+                code, said = judged_in_process(module, fixture, plan)
+                self.assertEqual(code, 0, said)
+                self.assertIn(
+                    f"mutation: scripts: not-applicable: {GUARD}: 1 changed line(s): "
+                    "docstring-only, its syntax tree equals its base's once docstrings are set "
+                    "aside\n",
+                    said,
+                )
+                self.assertIn(
+                    f"mutation: scripts: not-applicable: {OTHER}: 1 changed line(s), all blank "
+                    "or comments\n",
+                    said,
+                )
+        print(f"edges: {len(members)} member(s); mismatches {len(mismatches)}")
+        self.assertEqual(mismatches, [])
+
+    def test_the_plan_paragraph_names_the_legs_ci_admits_and_the_outputs_it_writes(
+        self,
+    ):
+        """A64 (#455)"""
+        module = verdict_module()
+        paragraph = next(
+            part for part in module.__doc__.split("\n\n") if part.startswith("PLAN first")
+        )
+        workflow = (REPO / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+        loop = re.search(r"^\s*for leg in (.+); do$", workflow, re.MULTILINE)
+        admitted = examined(
+            "legs ci admits a skip from", re.findall(r'"(mutation-[a-z]+):', loop[1])
+        )
+        source = VERDICT.read_text(encoding="utf-8")
+        legs = next(
+            node
+            for node in ast.walk(ast.parse(source))
+            if isinstance(node, ast.FunctionDef) and node.name == "legs"
+        )
+        judged = re.findall(r'"(mutation-[a-z]+)",', ast.get_source_segment(source, legs))
+        self.assertEqual(sorted(judged), sorted(admitted))
+        why = paragraph.split(". A pull request into", 1)[0]
+        with self.subTest("the legs ci admits a skip from"):
+            self.assertEqual(sorted(re.findall(r"`(mutation-[a-z]+)`", why)), sorted(admitted), why)
+        fixture = Fixture(self)
+        fixture.head({LIB: LIB_TEXT.replace("x * 2", "x + x")})
+        plan = module.plan_diff(fixture.root, fixture.base, "HEAD", fixture.out, ("diff", "a diff"))
+        sink = fixture.out / "github-output"
+        with (
+            mock.patch.dict(os.environ, {"GITHUB_OUTPUT": str(sink)}),
+            contextlib.redirect_stdout(io.StringIO()),
+        ):
+            module.say_plan(plan)
+        written = examined(
+            "step outputs the plan writes",
+            sorted(
+                {line.split("=", 1)[0] for line in sink.read_text(encoding="utf-8").splitlines()}
+            ),
+        )
+        outputs = paragraph.split("writes the step outputs", 1)[1]
+        with self.subTest("the step outputs the plan writes"):
+            self.assertEqual(sorted(re.findall(r"`([a-z]+)`", outputs)), written, outputs)
 
 
 if __name__ == "__main__":
