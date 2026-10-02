@@ -1,4 +1,4 @@
-{"schema":"phx.formal.vectors.v1","entry":"Chest","covers":"crates/quests/src/chests.rs","anchor":"epic_odds_pts","digest":"sha256:0000000000000000000000000000000000000000000000000000000000000000","vectors":1224}
+{"schema":"phx.formal.vectors.v1","entry":"Chest","covers":"crates/quests/src/chests.rs","anchor":"epic_odds_pts","digest":"sha256:f07f770d9593d389c2a70d250579c0afafe73f06e2a9f8617f6333affe5fd102","vectors":1224}
 {"rule":"epic_odds_pts","since_epic":-1,"buff_pts":-10,"odds":7}
 {"rule":"epic_odds_pts","since_epic":-1,"buff_pts":0,"odds":7}
 {"rule":"epic_odds_pts","since_epic":-1,"buff_pts":5,"odds":12}
