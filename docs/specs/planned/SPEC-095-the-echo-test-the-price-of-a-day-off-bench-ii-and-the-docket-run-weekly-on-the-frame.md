@@ -162,8 +162,8 @@ R13. The insights screen shows each report as a section. The Echo gives its pool
 | A25 | each instrument is passed its reads: the Echo the review-type answers with the note type and template names of SPEC-094's structure read and the kernel's study-day rule, the rest day the study events and the same study-day rule, and Bench II the presets, the deck kinds, each home deck's card count, the lateness bands and the in-band answers | `each_instrument_is_passed_its_reads` |
 
 ```acceptance
-A1: delivered by SPEC-302 (its A3)
-A2: delivered by SPEC-302 (its A4)
+A1: cargo test -p deck-streak-kernel --test pynum_random -- --exact the_generator_matches_cpythons_golden
+A2: cargo test -p deck-streak-kernel --test pynum_random -- --exact lgamma_matches_cpythons_golden
 A3: cargo test -p deck-streak-ingest --test review_reads -- --exact the_lateness_banding_matches_the_predecessors_golden
 A4: cargo test -p deck-streak-ingest --test review_reads -- --exact the_first_answer_in_the_window_keeps_its_prior
 A5: cargo test -p deck-streak-ingest --test review_reads -- --exact review_reads_keep_the_scope_and_the_window

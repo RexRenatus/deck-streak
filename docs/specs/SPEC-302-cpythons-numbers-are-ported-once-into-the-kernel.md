@@ -76,6 +76,8 @@ Analytics' existing tests stay green after its sum delegates to the kernel's (R1
 | `crates/kernel/Cargo.toml` | `deck-streak-kernel` | changed: the test reader reads floats exactly (`float_roundtrip` on the dev-dependency) |
 | `crates/kernel/tests/pynum_goldens.rs` | `deck-streak-kernel` | added: A1, A2 |
 | `crates/kernel/tests/pynum_random.rs` | `deck-streak-kernel` | added: A3, A4 |
+| `crates/kernel/tests/pynum_edges.rs` | `deck-streak-kernel` | added: the round, lgamma, mean and sum edge rows against CPython (mutation coverage) |
+| `changelog.d/pynum-540.md` | repo | added: the changelog fragment |
 | `crates/analytics/src/metrics.rs` | `deck-streak-analytics` | changed: its compensated sum delegates to the kernel's |
 | `tools/parity-oracle/registry/spec_302.py` | repo | added: the four registrations |
 | `tools/parity-oracle/goldens/pynum_basics.json` | repo | added: CPython's `sum`, `statistics.median`, `statistics.mean` and `round` (adapter) |

@@ -148,8 +148,8 @@ R13. Every constant this SPEC uses (the velocity floor, the goal's floor, horizo
 | A22 | the pace step passes the balance the study reviews of the read window, each with its card's course, the run's instant and the kernel's study-day rule at the 04:00 rollover, from which the balance counts the last 28 study days including today and each course's days idle | `the_pace_step_is_passed_its_balance_window` |
 
 ```acceptance
-A1: delivered by SPEC-302 (its A1)
-A2: delivered by SPEC-302 (its A2)
+A1: cargo test -p deck-streak-kernel --test pynum_goldens -- --exact the_numeric_basics_match_cpythons_golden
+A2: cargo test -p deck-streak-kernel --test pynum_goldens -- --exact the_percentile_matches_the_predecessors_golden
 A3: cargo test -p deck-streak-curriculum --test pace_goldens -- --exact mature_velocity_matches_the_predecessors_golden
 A4: cargo test -p deck-streak-curriculum --test pace_goldens -- --exact the_forecast_matches_the_predecessors_golden
 A5: cargo test -p deck-streak-curriculum --test pace_goldens -- --exact the_adaptive_goal_matches_the_predecessors_golden
