@@ -33,19 +33,19 @@ the guard close all four without growing into a Rust front end?
 - Evaluate item attributes and the macro narrowing with two functions (#449, #536) — rejected
   because two readings of one attribute drift apart, and the narrowing could then read as proven
   what the item walk treats as unknown.
-- Expand macros, or narrow every macro module that is not plainly `cfg(test)` (#436, #535, #536) —
-  rejected because a macro expander is the compiler's job, and a narrowing that only looks for
-  `test` reopens #441: `cfg(any(test, feature = "slow"))` is a test-only module whenever the feature
-  is off.
+- Expand macros, or narrow each macro module not plainly `cfg(test)` — rejected because a macro
+  expander is the compiler's job (#436, #535, #536), and a narrowing that only looks for `test`
+  reopens #441: `cfg(any(test, feature = "slow"))` is a test-only module whenever the feature is
+  off.
 - Model rustc's block-scope module paths and follow `include!` (#535) — rejected because a text
   reader would approximate both, and an approximation that names the wrong file reads a production
   file as a test.
 - Resolve a trait alias per scope (#436) — rejected because it needs name resolution across modules,
   globs and re-exports; a crate-wide closure over `use ... as` can only add names, so its one error
   is a disclosed false refusal.
-- One evaluator, macros refused by name, block scope and `include!` refused by name (chosen) —
-  chosen because each disagreement then ends in an arm that reads what rustc reads or refuses by
-  name, and every doubt resolves to a refusal.
+- One evaluator, macros refused by name, block scope and `include!` refused by name — chosen because
+  each disagreement then ends in an arm that reads what rustc reads or refuses by name, and every
+  doubt resolves to a refusal.
 
 ## Decision Outcome
 
@@ -79,7 +79,9 @@ because it closes #436, #449, #535 and #536 with arms that each read what rustc 
 - Bad, because a shadowing alias makes the guard read an implementation of another trait as a
   `Setting` one, and refuse it when it has no pinned shape.
 - Bad, because a `cfg(any(test, P))` module a macro declares stays refused when `rustc_keeps`
-  cannot decide P.
+  cannot decide P. It is kept on purpose and disclosed by count: A22 asserts 1 such shape,
+  `cfg(any(test, feature = "..."))`, refused, and the #441 arm refuses 0 of the repository's 202
+  crate files.
 
 ### Confirmation
 
