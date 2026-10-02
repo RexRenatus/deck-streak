@@ -1,5 +1,5 @@
--- @phx covers crates/economy/src/rules.rs anchor=clip_debit digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/economy/src/rules.rs anchor=mint_for_base_xp digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+-- @phx covers crates/economy/src/rules.rs anchor=clip_debit digest=sha256:445fb9f9b87efed0a5bb85317173ac2da096244522e2f68106692e09ab3eb89f
+-- @phx covers crates/economy/src/rules.rs anchor=mint_for_base_xp digest=sha256:499486a1493177486c91c1b87c17dba656d3cf67952b612c1f57f3ec36ce677b
 -- @phx vectors formal/vectors/wallet.jsonl
 -- @phx cites #106
 -- @phx theorem clip_debit_pays_within_its_bounds ramp=report
