@@ -139,17 +139,28 @@ fn capturing(bench: &Bench, root: &Path) -> Commands<ScriptedSync> {
         .with_capture(captures(root))
 }
 
+/// Prints how many items a check examined and hands them back (the tdd pack's examined contract).
+/// An empty inbox is a legitimate answer for a capture that leaves nothing, so zero is printed and
+/// not refused; each such test asserts the present case of the same input beside it.
+fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
+    println!("examined {} {what}", items.len());
+    items
+}
+
 /// Every entry of the inbox at `root`, temporary files included, each with its size, sorted.
 fn inbox(root: &Path) -> Vec<(String, u64)> {
-    let mut entries: Vec<(String, u64)> = fs::read_dir(root.join(INBOX))
-        .expect("the inbox folder")
-        .map(|entry| {
-            let entry = entry.expect("an entry");
-            let size = entry.metadata().expect("its metadata").len();
-            let name = entry.file_name().into_string().expect("a UTF-8 name");
-            (name, size)
-        })
-        .collect();
+    let mut entries: Vec<(String, u64)> = examined(
+        "inbox entr(ies)",
+        fs::read_dir(root.join(INBOX))
+            .expect("the inbox folder")
+            .map(|entry| {
+                let entry = entry.expect("an entry");
+                let size = entry.metadata().expect("its metadata").len();
+                let name = entry.file_name().into_string().expect("a UTF-8 name");
+                (name, size)
+            })
+            .collect(),
+    );
     entries.sort();
     entries
 }
