@@ -140,5 +140,6 @@ and row S02407 shows it now reads the count rather than the default.
 
 ```text
 A19, MUTATION COVERAGE: a_capture_after_a_held_capture_dropped_is_admitted passed at daee3562 (the round's base helper); at 5135dbbf with S02409's mutant installed it fails: left "a capture nested inside another capture on one thread is refused", right "" (KILLED)
+A19, MUTATION COVERAGE: a_capture_after_a_panicking_body_is_admitted passed at 115049a0; with S02410's mutant installed it fails: left "a capture nested inside another capture on one thread is refused", right "" (KILLED)
 A19, A20 at daee3562: log_capture_class 5 passed, 2 failed (the two red tests above); at 5316872f: 7 passed, 0 failed
 ```

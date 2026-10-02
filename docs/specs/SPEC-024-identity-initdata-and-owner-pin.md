@@ -341,7 +341,7 @@ Made under issue #522, with issue #511's wording 3, insert-only like sections 8 
 - **The mechanism.** The helper counts the captures it holds on each thread. `with_capture` raises the count for its body and lowers it through a drop guard, so a body that panics leaves it right. `hold_capture` returns a `CaptureGuard`, which owns the scoped default's guard and lowers the count when it drops. The refusal reads the count first: above 0, it refuses with the nesting message, byte for byte as before; at 0, a default that is not the floor is refused with "a capture is refused: the floor is not this thread's default", which does not say "nested". A capture held on another thread is still no obstacle.
 - **Wording 3 (#511).** The doc of `refuse_nested_capture` replaces "its default, so any other default means a capture is held." with "its default, so outside a dispatcher's own call any other default means a capture is held." The sentence #511 gave for the inner reading, "Inside a dispatcher's own call the default reads as none.", is stated as measured above: it reads as none while any thread holds a scoped default, and as the global default while none does.
 - **The census.** A18's population is unchanged: 15 routed, none raw, and the one production global default. The new tests are in the killer, whose calls the census does not count as routed. The one caller that named the type `hold_capture` returns, the test module of `crates/daemon/src/wiring.rs`, now names `log_capture::CaptureGuard`; its capture call is unchanged.
-- **Rows.** cargo-mutants lists no mutant in `tools/`, which is in no crate's `src/`, so three hand rows in `scripts/mutation-rows.d/S02400-S02499.json`, S02407 to S02409, pin the refusal: the count check removed from the nesting arm (killed by `a_capture_nested_inside_a_capture_on_one_thread_is_refused`, which then reads the floor message), the floor message replaced by the nesting message (killed by A19's first test), and the `CaptureGuard` drop that does not lower the count (killed by A19's second test).
+- **Rows.** cargo-mutants lists no mutant in `tools/`, which is in no crate's `src/`, so four hand rows in `scripts/mutation-rows.d/S02400-S02499.json`, S02407 to S02410, pin the refusal: the count check removed from the nesting arm (killed by `a_capture_nested_inside_a_capture_on_one_thread_is_refused`, which then reads the floor message), the floor message replaced by the nesting message (killed by A19's first test), the `CaptureGuard` drop that does not lower the count (killed by A19's second test), and the `with_capture` drop guard replaced by a lowering after the body, which a panicking body skips (killed by A19's third test).
 - **Files this amendment touches.** `tools/log-capture/capture.rs`,
   `crates/kernel/tests/log_capture_class.rs`, `crates/daemon/src/wiring.rs` (its test module only),
   `scripts/mutation-rows.d/S02400-S02499.json`,
@@ -352,12 +352,13 @@ Made under issue #522, with issue #511's wording 3, insert-only like sections 8 
 
 | id | criterion | decided by |
 |---|---|---|
-| A19 | a capture made while this thread holds none and its default is not the floor, attempted inside a dispatcher's own call while another thread holds a capture, is refused through either entry with the message naming the missing floor, not the nesting message; and a capture made after a held capture dropped is admitted, its count back at 0 | `log_capture_class` tests |
+| A19 | a capture made while this thread holds none and its default is not the floor, attempted inside a dispatcher's own call while another thread holds a capture, is refused through either entry with the message naming the missing floor, not the nesting message; and a capture made after a held capture dropped is admitted, its count back at 0; and a capture made after a capture whose body panicked is admitted, its count back at 0 | `log_capture_class` tests |
 | A20 | the doc of the helper's `refuse_nested_capture` states the clause "outside a dispatcher's own call" | `log_capture_class` test |
 
 ```acceptance
 A19: cargo test -p deck-streak-kernel --test log_capture_class -- --exact a_capture_where_the_floor_is_not_the_default_names_the_missing_floor
 A19: cargo test -p deck-streak-kernel --test log_capture_class -- --exact a_capture_after_a_held_capture_dropped_is_admitted
+A19: cargo test -p deck-streak-kernel --test log_capture_class -- --exact a_capture_after_a_panicking_body_is_admitted
 A20: cargo test -p deck-streak-kernel --test log_capture_class -- --exact the_nesting_refusal_doc_names_a_dispatchers_own_call
 ```
 

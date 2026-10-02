@@ -41,7 +41,8 @@ held on the calling thread. How does the helper tell a nested capture from a mis
   wrapping every subscriber in a marker changes the type each capture installs.
 - (c) Checking the floor's `OnceLock`: rejected, because it says only that the global floor was
   installed once in this binary; a missing floor is this thread's default, which the lock cannot
-  see. Inside a dispatcher's own call the lock is set and the default still reads as none.
+  see. Inside a dispatcher's own call, while any thread holds a scoped default, the lock is set
+  and the default still reads as none.
 
 ## Decision Outcome
 
@@ -69,9 +70,10 @@ The one caller that named the returned type, the daemon's `wiring` test module, 
 
 SPEC-024 A19 and A20, in `crates/kernel/tests/log_capture_class.rs`: a capture attempted inside a
 dispatcher's own call, while another thread holds a capture, is refused through both entries with
-the floor message; a capture made after a held capture dropped is admitted; the nesting test reads
+the floor message; a capture made after a held capture dropped is admitted; a capture made after a
+capture whose body panicked is admitted; the nesting test reads
 the nesting message unchanged; and the doc of the refusal states the clause "outside a dispatcher's
-own call". Three hand rows in the SPEC's band, S02407 to S02409, are each killed by one of those
+own call". Four hand rows in the SPEC's band, S02407 to S02410, are each killed by one of those
 tests.
 
 ## What would make this wrong
