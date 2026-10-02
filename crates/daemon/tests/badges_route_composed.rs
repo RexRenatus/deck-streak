@@ -163,3 +163,25 @@ async fn the_composed_badges_route_renders_the_configured_courses() {
     );
     db.close().await;
 }
+
+#[tokio::test]
+async fn a_malformed_courses_setting_leaves_the_composed_route_on_the_default_descriptions() {
+    let dir = tempfile::tempdir().expect("a temporary directory");
+    let db = Db::open(&dir.path().join("deck_streak.db"))
+        .await
+        .expect("the database opens");
+    let file = dir.path().join("courses.json");
+    fs::write(&file, "{ not courses").expect("the courses file");
+
+    let refused =
+        locked_criteria(&composed(vec![(COURSES_FILE, file.into_os_string())], &db)).await;
+    println!(
+        "examined {} locked badge(s) of a refused setting",
+        refused.len()
+    );
+    assert_eq!(
+        criteria_of(&refused, "polyglot_reader"),
+        Some("Read in every course in one week")
+    );
+    db.close().await;
+}
