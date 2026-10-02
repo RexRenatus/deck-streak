@@ -167,7 +167,11 @@ async fn the_api_role_serves_the_quick_capture_over_its_configured_vault_alone()
     for (index, vars) in unusable.iter().enumerate() {
         let app = composed(&scratch.path().join(format!("unusable-{index}")), vars).await;
         let (status, body) = owner_capture(&app, "a second thought").await;
-        assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE, "case {index}: {body}");
+        assert_eq!(
+            status,
+            StatusCode::SERVICE_UNAVAILABLE,
+            "case {index}: {body}"
+        );
         assert_eq!(body["reason"], "vault_not_open", "case {index}");
     }
     println!(
