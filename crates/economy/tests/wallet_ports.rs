@@ -1,8 +1,9 @@
 //! The wallet's ports (SPEC-082 A4 to A6, A8, A19; R2, R4, R5, R7, R8; ADR-308): a burst of
 //! concurrent capped debits and purchases never takes the balance below the floor, a credit of one
 //! key is written once, a settled day's mint is only raised, a floor-clipped debit pays what is held
-//! and never refuses, and a once-ever credit is written once on any day. Every source, reference
-//! and amount here is synthetic.
+//! and never refuses, a once-ever credit is written once on any day, and the history pages the
+//! movements newest first (R15; ADR-315 ruling 3). Every source, reference and amount here is
+//! synthetic.
 
 // An integration test is test code: its helpers panic on a failed fixture.
 #![allow(clippy::expect_used)]
@@ -12,8 +13,8 @@ use std::sync::Arc;
 use deck_streak_economy::constants::WALLET_FLOOR;
 use deck_streak_economy::rules::daily_loss_cap;
 use deck_streak_economy::wallet::{
-    DebitAnswer, DepositAnswer, MINT_REFERENCE, MINT_SOURCE, MintAnswer, PurchaseAnswer,
-    PurchaseRefused, SqliteWallet,
+    DebitAnswer, DepositAnswer, MINT_REFERENCE, MINT_SOURCE, MOVEMENTS_PAGE, MintAnswer,
+    MovementsPage, PurchaseAnswer, PurchaseRefused, SqliteWallet,
 };
 use deck_streak_kernel::{Db, StudyDay, UtcMillis};
 use tempfile::TempDir;
@@ -609,4 +610,166 @@ async fn a_capped_debit_pays_no_more_than_the_days_cap_left() {
     // Day 101 starts with 100, so its cap is 30.
     assert_eq!(daily_loss_cap(100), 30, "day 101's cap");
     assert_eq!(wallet.balance().await.expect("the balance"), 70);
+}
+
+#[tokio::test]
+async fn the_movements_come_newest_first_a_page_at_a_time() {
+    let (_directory, _db, wallet) = wallet().await;
+    // Twenty-five movements over four study days, written out of day order, so the page boundary
+    // falls inside one day: the order is the study day, newest first, then the reverse of the
+    // order the movements were written.
+    let mut written = Vec::new();
+    for index in 0..25_i64 {
+        let on = 10 + index * 3 % 4;
+        assert_eq!(
+            wallet
+                .deposit(day(on), "payout", &format!("r{index:02}"), index + 1, AT)
+                .await
+                .expect("a deposit"),
+            DepositAnswer::Deposited(index + 1)
+        );
+        written.push((on, index + 1));
+    }
+    let mut expected: Vec<(i64, i64)> = written.iter().rev().copied().collect();
+    expected.sort_by_key(|(on, _)| std::cmp::Reverse(*on));
+
+    let first = wallet.movements(None).await.expect("the first page");
+    let seen = |page: &MovementsPage| -> Vec<(i64, i64)> {
+        page.movements
+            .iter()
+            .map(|movement| (movement.day.epoch_day(), movement.delta))
+            .collect()
+    };
+    assert_eq!(
+        seen(&first),
+        expected[..MOVEMENTS_PAGE],
+        "the first page, newest first"
+    );
+    let last = first
+        .movements
+        .last()
+        .expect("a movement on the first page");
+    assert_eq!(
+        first.next,
+        Some(last.id),
+        "the cursor is the last movement shown"
+    );
+    assert!(
+        first
+            .movements
+            .iter()
+            .all(|movement| movement.source == "payout"),
+        "each movement carries its source"
+    );
+
+    let second = wallet.movements(first.next).await.expect("the second page");
+    assert_eq!(
+        seen(&second),
+        expected[MOVEMENTS_PAGE..],
+        "the second page starts after the cursor"
+    );
+    assert_eq!(
+        second.next, None,
+        "no movement is older than the second page"
+    );
+    assert_eq!(
+        first.movements.len() + second.movements.len(),
+        written.len(),
+        "every movement is shown once"
+    );
+}
+
+#[tokio::test]
+async fn a_page_that_holds_the_last_movement_names_no_next_page() {
+    let (_directory, _db, wallet) = wallet().await;
+    // Exactly a page of movements, twenty spelt literally rather than read from the page size, so
+    // the page's last row is the ledger's last movement: no older movement exists to name.
+    for index in 0..20_i64 {
+        assert_eq!(
+            wallet
+                .deposit(day(10 + index), "payout", &format!("p{index:02}"), 1, AT)
+                .await
+                .expect("a deposit"),
+            DepositAnswer::Deposited(1)
+        );
+    }
+    let full = wallet.movements(None).await.expect("the only page");
+    assert_eq!(full.movements.len(), 20, "a page holds twenty movements");
+    assert_eq!(
+        full.next, None,
+        "a page that holds the last movement names no next page"
+    );
+
+    // One older movement more, and the same page now has a movement after it to name.
+    assert_eq!(
+        wallet
+            .deposit(day(9), "payout", "p20", 1, AT)
+            .await
+            .expect("a deposit"),
+        DepositAnswer::Deposited(1)
+    );
+    let page = wallet.movements(None).await.expect("the first page");
+    assert_eq!(
+        page.movements.len(),
+        20,
+        "a page still holds twenty movements"
+    );
+    assert_eq!(
+        page.next,
+        page.movements.last().map(|movement| movement.id),
+        "the twenty-first movement makes the page name its last as the cursor"
+    );
+    assert!(
+        page.next.is_some(),
+        "an older movement exists past the page"
+    );
+}
+
+/// Writes one synthetic movement past the ports.
+async fn insert_movement(db: &Db, day: i64, source: &str, delta: i64) {
+    sqlx::query(
+        "INSERT INTO coin_ledger (study_day, source, reference, delta, created_at) \
+         VALUES (?1, ?2, '', ?3, 1000)",
+    )
+    .bind(day)
+    .bind(source)
+    .bind(delta)
+    .execute(db.reader())
+    .await
+    .expect("the synthetic movement is written");
+}
+
+#[tokio::test]
+async fn a_movements_page_over_a_store_that_cannot_be_read_is_an_error_never_an_empty_page() {
+    let (_directory, db, wallet) = wallet().await;
+    insert_movement(&db, 100, "payout", 7).await;
+    let before = wallet.movements(None).await.expect("the page reads");
+    assert_eq!(before.movements.len(), 1, "the store holds the movement");
+    db.close().await;
+    let failed = wallet.movements(None).await;
+    assert!(
+        failed.is_err(),
+        "an unreadable store is no empty page: {failed:?}"
+    );
+}
+
+#[tokio::test]
+async fn a_cursor_naming_no_movement_answers_an_empty_page_with_no_next_page() {
+    let (_directory, db, wallet) = wallet().await;
+    for (on, source) in [(100, "payout"), (101, "mint"), (102, "fine")] {
+        insert_movement(&db, on, source, 5).await;
+    }
+    let held = wallet.movements(None).await.expect("the first page");
+    assert_eq!(held.movements.len(), 3, "the ledger holds three movements");
+    let none = wallet
+        .movements(Some(9_999))
+        .await
+        .expect("a cursor no movement holds is still a read");
+    assert_eq!(
+        none,
+        MovementsPage {
+            movements: Vec::new(),
+            next: None,
+        }
+    );
 }

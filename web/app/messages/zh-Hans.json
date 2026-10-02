@@ -4,5 +4,12 @@
   "ladder_region": "庆祝",
   "ladder_opening": "正在打开…",
   "ladder_dice": "掷骰子",
-  "ladder_dismiss": "关闭"
+  "ladder_dismiss": "关闭",
+  "wallet_balance": "金币：{balance}",
+  "wallet_title": "钱包",
+  "wallet_loss_cap": "今日损失上限：剩余 {left} / {cap}",
+  "wallet_movements": "金币记录",
+  "wallet_none": "暂无金币记录。",
+  "wallet_older": "显示更早的记录",
+  "wallet_source_mint": "学习获得的金币"
 }

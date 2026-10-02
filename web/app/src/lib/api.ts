@@ -15,6 +15,7 @@ import {
 import { parseLevel, type LevelView } from './level/level';
 import { parseGovernor, parseStreak, type StreakView } from './streak/streak';
 import { parseScore, type ScoreToday } from './score/score';
+import { parseWallet, walletPath, type WalletView } from './economy/wallet';
 import { telegram } from './telegram.svelte';
 
 /**
@@ -68,6 +69,11 @@ export interface Api {
   insights(): Promise<Answer<Listing[]>>;
   /** One instrument's latest report; null when it has not run yet. */
   insight(id: string): Promise<Answer<Envelope | null>>;
+  /**
+   * The wallet and one page of its movements, newest first: the first page, or the page after the
+   * movement `before` (SPEC-082 R15).
+   */
+  wallet(before?: number): Promise<Answer<WalletView>>;
   /** Saves a quick capture into the vault's inbox, once per capture id (SPEC-118 R10). */
   capture(request: CaptureRequest): Promise<Answer<Saved>>;
 }
@@ -169,6 +175,7 @@ export function createApi(options: ApiOptions): Api {
       return { kind: 'ok', value: { ...streak.value, governor: governor.value } };
     },
     feed: () => read(FEED_PATH, parseFeed),
+    wallet: (before) => read(walletPath(before), parseWallet),
     insights: () => read('/api/insights', parseListings),
     insight: (id) =>
       read(`/api/insights/${encodeURIComponent(id)}`, (body) => {
