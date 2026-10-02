@@ -2906,6 +2906,27 @@ exec /usr/bin/@NAME@ "$@"
     def test_an_install_over_an_installed_host_refuses_each_of_its_writing_calls(self):
         self.refuse_each("install", "installed", self.calls_of("install", "installed"))
 
+    def test_a_rollback_to_a_kept_release_that_is_not_whole_is_refused_as_found(self):
+        """The kept path's whole-release check: a file `MANIFEST.sha256` lists is gone, or the
+        manifest itself is gone, and either way the rollback ends non-zero with one `deploy:` line,
+        last, naming the release, and every path as found."""
+        gone = {
+            "a file the manifest lists": "web/index.html",
+            "the manifest itself": "MANIFEST.sha256",
+        }
+        for what, name in examined("not-whole kept release member(s)", sorted(gone.items())):
+            with self.subTest(gone=what), tempfile.TemporaryDirectory() as tmp:
+                w, good, argv = self.situation(tmp, "rollback-kept", "installed")
+                kept = w.root / "releases" / argv[-1]
+                (kept / name).unlink()
+                done, before, after = self.outcome(w, argv, good, w.locked)
+                self.judge(f"rollback-kept / {what} is gone", done, before, after, "")
+                self.assertIn(
+                    f"found {argv[-1]} is kept but is not a whole release",
+                    done.stderr.splitlines()[-1],
+                    f"{what}: the refusal does not name the whole-release check",
+                )
+
     def test_a_first_install_refuses_each_of_its_writing_calls(self):
         self.refuse_each("install", "first-install", self.calls_of("install", "first-install"))
 
