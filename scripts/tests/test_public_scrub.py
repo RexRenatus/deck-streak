@@ -436,6 +436,99 @@ def scrub_module():
     return module
 
 
+# Every unit type SPEC-056 section 9 lists, and every suffix a unit's directory may carry. Each
+# expectation below is written from that rule, not from the scrub's own answer.
+UNIT_PATH_TYPES = (
+    "service",
+    "socket",
+    "device",
+    "mount",
+    "automount",
+    "swap",
+    "path",
+    "timer",
+    "slice",
+    "scope",
+)
+UNIT_PATH_SUFFIXES = ("", ".d", ".wants", ".requires", ".upholds")
+# The places a unit instance path may begin: a line start, after whitespace, after a slash, after a
+# quote, after `=`, each of them as a credential directive or a prose line would write it.
+UNIT_PATH_CONTEXTS = (
+    "{n}",
+    "see {n} for details",
+    "path /run/credentials/{n}token",
+    'name="{n}"',
+    "LoadCredential=cred:/run/credentials/{n}cred",
+    "Watch={n}",
+)
+# Where a real address must still be found, and the local parts to try, assembled at run time.
+ADDRESS_CONTEXTS = (
+    "{a}",
+    "write to {a} today",
+    'mail "{a}"',
+    "reply={a}",
+    "mail:{a}",
+    "from <{a}>",
+    "if {a} asks, say so",
+    "/srv/{a}",
+)
+ADDRESS_LOCALS = ("ops", "jane.doe", "a_b-c")
+RESERVED_DOMAINS = (
+    "example.com",
+    "example.org",
+    "example.net",
+    "mail.example.com",
+    "svc.test",
+    "a.b.test",
+    "host.invalid",
+    "db.localhost",
+    "x.example",
+)
+
+
+class UnitInstancePathsAreNotAddresses(unittest.TestCase):
+    def test_a_systemd_unit_instance_path_passes_the_email_rule(self):
+        lines = [
+            context.format(n=f"getty@tty1.{kind}{suffix}/")
+            for kind in UNIT_PATH_TYPES
+            for suffix in UNIT_PATH_SUFFIXES
+            for context in UNIT_PATH_CONTEXTS
+        ]
+        examined("unit instance path lines", lines)
+        self.assertEqual(len(lines), 300, "the population is 10 types x 5 suffixes x 6 contexts")
+        done = scrub_public_text("".join(f"{line}\n" for line in lines))
+        flagged = findings(done)
+        print(f"examined {len(lines)} lines, mismatches {len(flagged)}")
+        self.assertEqual(flagged, [], "each line is a unit path, so none is an address")
+        self.assertEqual(done.returncode, 0, done.stdout)
+
+    def test_a_real_address_is_still_found_in_every_context(self):
+        lines = [
+            context.format(a="@".join([local, "corp-mail.com"]))
+            for local in ADDRESS_LOCALS
+            for context in ADDRESS_CONTEXTS
+        ]
+        examined("address lines", lines)
+        self.assertEqual(len(lines), 24, "the population is 3 local parts x 8 contexts")
+        done = scrub_public_text("".join(f"{line}\n" for line in lines))
+        expected = [f"note.md:{number}: email" for number in range(1, len(lines) + 1)]
+        print(f"examined {len(lines)} lines, mismatches {len(set(expected) ^ set(findings(done)))}")
+        self.assertEqual(findings(done), expected)
+        self.assertEqual(done.returncode, 1, done.stdout)
+
+    def test_an_address_at_a_reserved_domain_still_passes(self):
+        lines = [
+            context.format(a="@".join(["ops", domain]))
+            for domain in RESERVED_DOMAINS
+            for context in ("{a}", "write to {a} today")
+        ]
+        examined("reserved domain lines", lines)
+        self.assertEqual(len(lines), 18, "the population is 9 domains x 2 contexts")
+        done = scrub_public_text("".join(f"{line}\n" for line in lines))
+        self.assertEqual(findings(done), [])
+        self.assertEqual(done.returncode, 0, done.stdout)
+
+
 class TheScrubOwnsItsShapes(unittest.TestCase):
     def test_each_public_shape_family_is_found_from_the_scrubs_own_rules(self):
         files = sorted(path.name for path in RULES.glob("*.json")) if RULES.is_dir() else []

@@ -69,9 +69,7 @@
 
 The numbers (ADR-090)
 
-R1. `pynum` gains CPython's Mersenne Twister, seeded from an integer as `random.Random(n)` seeds it,
-    its 53-bit `random()` and its unweighted `choices`, equal to `goldens/pynum_random.json`; and
-    `lgamma`, equal to `goldens/pynum_lgamma.json` (CPython's `math.lgamma`).
+R1. Delivered by SPEC-302 (its R2): the kernel's CPython numbers.
 
 The reads (ADR-095)
 
@@ -137,8 +135,8 @@ R13. The insights screen shows each report as a section. The Echo gives its pool
 
 | id | criterion | decided by |
 |---|---|---|
-| A1 | the generator and `choices` equal CPython's for every golden seed | `the_generator_matches_cpythons_golden` |
-| A2 | `lgamma` equals CPython's for every golden argument | `lgamma_matches_cpythons_golden` |
+| A1 | delivered by SPEC-302 (its A3) | SPEC-302 |
+| A2 | delivered by SPEC-302 (its A4) | SPEC-302 |
 | A3 | the lateness banding over a synthetic collection equals the predecessor's reader | `the_lateness_banding_matches_the_predecessors_golden` |
 | A4 | the first answer in the window keeps its previous review from before the floor | `the_first_answer_in_the_window_keeps_its_prior` |
 | A5 | every review read keeps the scope and the window | `review_reads_keep_the_scope_and_the_window` |
@@ -207,8 +205,8 @@ delivery, so the private wiring does not change when it merges.
 
 | file | context | change |
 |---|---|---|
-| `crates/kernel/src/pynum.rs` | `deck-streak-kernel` | changed: CPython's Mersenne Twister, `choices` and `lgamma` (ADR-090) |
-| `crates/kernel/tests/pynum_random.rs` | `deck-streak-kernel` | added: A1, A2 |
+| `crates/kernel/src/pynum.rs` | `deck-streak-kernel` | delivered by SPEC-302 |
+| `crates/kernel/tests/pynum_random.rs` | `deck-streak-kernel` | delivered by SPEC-302 |
 | `crates/ingest/src/review_reads.rs` | `deck-streak-ingest` | added: the instruments' review and preset reads |
 | `crates/ingest/src/lib.rs` | `deck-streak-ingest` | changed: the module |
 | `crates/ingest/tests/review_reads.rs` | `deck-streak-ingest` | added: A3 to A5 |
@@ -235,8 +233,8 @@ delivery, so the private wiring does not change when it merges.
 | `web/app/src/lib/insights/insights.ts` | miniapp | changed: the four reports' types |
 | `.sqlx/` | workspace | changed: the offline cache for the new queries |
 | `tools/parity-oracle/registry/spec_095.py` | repo | added: this SPEC's registrations (SPEC-029) |
-| `tools/parity-oracle/goldens/pynum_random.json` | repo | added: CPython's `random.Random`, `random` and `choices` (adapter; seeds 0, 1, `20260803` and one past 32 bits) |
-| `tools/parity-oracle/goldens/pynum_lgamma.json` | repo | added: CPython's `math.lgamma` (adapter; small, integral and large arguments) |
+| `tools/parity-oracle/goldens/pynum_random.json` | repo | delivered by SPEC-302 |
+| `tools/parity-oracle/goldens/pynum_lgamma.json` | repo | delivered by SPEC-302 |
 | `tools/parity-oracle/goldens/lateness_rows.json` | repo | added: the golden of `bench2.py:read_lateness_rows` (adapter; a temporary synthetic collection) |
 | `tools/parity-oracle/goldens/echo_report.json` | repo | added: the golden of `echo.py:build_echo_report` (adapter; synthetic answers, names and calendars) |
 | `tools/parity-oracle/goldens/echo.constants.json` | repo | added: the Echo's constants (constants) |
@@ -282,8 +280,8 @@ predecessor at `27ee2bc` (SPEC-029). Every case is synthetic.
 
 | golden | the predecessor's function | kind | the adapter builds |
 |---|---|---|---|
-| `pynum_random` | CPython's `random.Random`, `random` and `choices` | adapter | sequences of draws and `choices` over short lists from four seeds |
-| `pynum_lgamma` | CPython's `math.lgamma` | adapter | arguments from 1 to `10**6`, integral and not |
+| `pynum_random` | delivered by SPEC-302 | n/a | n/a |
+| `pynum_lgamma` | delivered by SPEC-302 | n/a | n/a |
 | `lateness_rows` | `bench2.py:read_lateness_rows` | adapter | a temporary collection file with synthetic review logs at each ratio's edge, sub-day and first reviews |
 | `echo_report` | `echo.py:build_echo_report` | adapter | synthetic answers, a template-name map and a `CollectionConfig` from the case, and an arm with 19, 20 and 21 answers in a cell |
 | `restday_report` | `restday.py:build_restday_report` | adapter | synthetic study events and a `CollectionConfig`, resolved, unresolved, suppressed and cold |
@@ -304,7 +302,7 @@ This SPEC adds no table. Every report is stored in SPEC-094's `instrument_report
 
 | row | target | what it guards | killer |
 |---|---|---|---|
-| `S09501-CHOICES-FLOOR` | `crates/kernel/src/pynum.rs` | `choices` takes the floor of `random() * n` | `pynum_random::the_generator_matches_cpythons_golden` |
+| delivered by SPEC-302 (its S30202) | n/a | n/a | n/a |
 | `S09502-FIRST-IN-WINDOW` | `crates/ingest/src/review_reads.rs` | the previous review is read before the window's floor is applied | `review_reads::the_first_answer_in_the_window_keeps_its_prior` |
 | `S09503-MH-FLOOR` | `crates/insights/src/echo.rs` | a cell under 20 in either arm is dropped | `echo::the_echo_report_matches_the_predecessors_golden` |
 | `S09504-OFFENDER-CAP` | `crates/insights/src/echo.rs` | the offender list's 5 | `echo::the_offender_list_holds_at_most_five` |
