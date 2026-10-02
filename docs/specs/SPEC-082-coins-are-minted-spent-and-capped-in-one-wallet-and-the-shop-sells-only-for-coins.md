@@ -521,7 +521,7 @@ screen lists the movements newest first (by study day, then by the order they we
 at a time, from GET /api/wallet, whose answer carries the balance, the day's loss cap and what is
 left of it, one page of movements and the cursor of the next page. Each line shows its study day,
 its source in plain words and its signed amount, and no line urges, counts down or shames. The page
-size is named once, in the wallet's page read, and the cursor is the last movement shown, passed
+size is named once, in the wallet's page query, and the cursor is the last movement shown, passed
 back as `before`.
 
 | id | criterion | decided by |
@@ -541,10 +541,10 @@ A20: pnpm exec vitest run web/app/src/lib/economy/wallet-history.test.ts -t "lis
 - `S08213-A-BACKFILLED-DAY-IS-MINTED`: target `crates/coordination/src/recompute/mint.rs`, the
   backfill evaluation returning before it mints; killer
   `wallet_mint::the_mint_reads_the_settled_days_final_base`.
-- `S08214-ONLY-THE-OWNER-READS-THE-WALLET`: target `crates/api/src/wallet_routes.rs`, the owner's
+- `S08214-ONLY-THE-OWNER-SEES-THE-WALLET`: target `crates/api/src/wallet_routes.rs`, the owner's
   session guard removed from the wallet route; killer
   `wallet_routes::the_wallet_and_shop_routes_answer_only_the_owner`.
-- `S08215-THE-MOVEMENTS-COME-NEWEST-FIRST`: target `crates/economy/src/wallet.rs`, the page read's
+- `S08215-THE-MOVEMENTS-COME-NEWEST-FIRST`: target `crates/economy/src/wallet.rs`, the page query's
   order reversed; killer `wallet_ports::the_movements_come_newest_first_a_page_at_a_time`. The page
   read is one constant statement run by `sqlx::query_as`, because a mutant of a `sqlx::query!`
   statement does not compile against the offline query cache, so no row could prove its order.
@@ -574,8 +574,8 @@ Section 4's rows E1b delivers, or changes after E1:
 - `crates/api/src/router.rs`: changed, the wallet route behind the owner's session.
 - `crates/api/tests/wallet_routes.rs`: added, A15's wallet arm.
 - `crates/daemon/src/wiring.rs`: changed, the mint step registered in the fold, and its unit test.
-- `crates/economy/src/wallet.rs`: changed, the movements' page read.
-- `crates/economy/tests/wallet_ports.rs`: changed, the page read's order and cursor.
+- `crates/economy/src/wallet.rs`: changed, the movements' page query.
+- `crates/economy/tests/wallet_ports.rs`: changed, the page query's order and cursor.
 - `web/app/src/lib/economy/WalletHeader.svelte`: added, the balance header.
 - `web/app/src/lib/economy/wallet.ts`: added, the wallet answer's types and parser.
 - `web/app/src/lib/economy/wallet-header.test.ts`: added, A18.
@@ -596,8 +596,8 @@ The files E1b adds or changes that section 4 does not name:
 - `formal/tla/MintReadsTheFinalBase/witness/a-current-mint-read-before-its-base-is-written.cfg`: added, a witness.
 - `config/formal.json`: changed, the model's time budget.
 - `scripts/tests/test_formal_config.py`: changed, the test that pins the budget.
-- `crates/coordination/src/wallet_view.rs`: added, the wallet's view the route serves, because the API crate reads the coordination context alone.
-- `web/app/src/lib/api.ts`: changed, the client's wallet read.
+- `crates/coordination/src/wallet_view.rs`: added, the wallet's view the route serves, because the API crate depends on the coordination context alone.
+- `web/app/src/lib/api.ts`: changed, the client's wallet call.
 - `web/app/src/routes/layout.test.ts`: changed, the layout's children gain the header.
 - `web/app/src/routes/wallet/+page.svelte`: added, the history view.
 - `web/app/src/lib/economy/wallet-history.test.ts`: added, A20.

@@ -47,8 +47,8 @@ does the owner read the movements?
 - The mint for the current day only: rejected, because R4 mints every day the first recompute backfills, as the predecessor minted every day of its window (the witness `a-backfill-that-writes-no-mint`) (#106).
 - A /wallet screen of its own, linked from the header, listing the movements newest first a page at a time: chosen, because the header stays one line on every screen and the history costs a read only when the owner opens it (#106).
 - The movements listed inside the header itself: rejected, because the header renders on every screen, so every screen would read and lay out the ledger (#106).
-- The movements' page read as one constant statement run by `sqlx::query_as` in the wallet: chosen, because a mutant of its `ORDER BY` compiles, so a mutation row proves the order the owner reads, and the read's own test proves its columns in place of the offline query cache (#106).
-- The page read as a `sqlx::query!` statement: rejected, because a mutant of a `query!` statement does not compile against the offline query cache, so no mutation row could prove the order it serves (#106).
+- The movements' page query as one constant statement run by `sqlx::query_as` in the wallet: chosen, because a mutant of its `ORDER BY` compiles, so a mutation row proves the order the owner reads, and the read's own test proves its columns in place of the offline query cache (#106).
+- The page query as a `sqlx::query!` statement: rejected, because a mutant of a `query!` statement does not compile against the offline query cache, so no mutation row could prove the order it serves (#106).
 - Pages by offset (`?page=N`): rejected, because a movement written while the owner reads would shift every later page by one, showing a movement twice or skipping one; a cursor on the last movement shown does not move (#106).
 
 ## Decision Outcome
@@ -70,7 +70,7 @@ GET /api/wallet, with these rulings.
    `settle_mint_on` raises a settled day's mint and lets the current day's follow its base.
 3. **The history view.** The header shows the balance and links to the /wallet screen. That
    screen lists the movements newest first (by study day, then by the order they were written), one
-   page at a time, from GET /api/wallet. The page size is named once, in the wallet's page read,
+   page at a time, from GET /api/wallet. The page size is named once, in the wallet's page query,
    which is one constant statement run by `sqlx::query_as`, and the cursor is the last movement
    shown, passed back as `before`. Each line shows its study day, its source in plain words and its
    signed amount. No line urges, counts down or shames.
