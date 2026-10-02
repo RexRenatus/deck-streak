@@ -19,3 +19,7 @@ The red run reads `test result: FAILED. 1 passed; 3 failed` for each of the two 
 passing test of each is the one that holds the empty and the undefined cases, which the stubs
 happen to return. The green run reads `test result: ok. 4 passed` for each. The two rows of §7
 were proved by the mutation-row verb after the green commit, each killed by its test.
+
+Mutation coverage: the tests of `crates/kernel/tests/pynum_edges.rs` (CPython rows in
+`crates/kernel/tests/fixtures/pynum_edges.txt`) were added after the GREEN commit to kill the
+mutants the goldens missed; they pass at the implementation and are not a red-first claim.
