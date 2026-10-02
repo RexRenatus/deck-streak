@@ -14,10 +14,12 @@
 \* @phx property OneMovementPerKey ramp=report
 \* @phx property DepositOnceEver ramp=report
 \* @phx property SettledMintNeverFalls ramp=report
+\* @phx property RefundWritesItsOwnMovement ramp=report
 \* @phx witness witness/a-floor-read-outside-the-write.cfg kills=FloorHolds
 \* @phx witness witness/a-once-ever-guard-read-on-its-own-day.cfg kills=DepositOnceEver
 \* @phx witness witness/a-ledger-with-no-unique-key.cfg kills=OneMovementPerKey
 \* @phx witness witness/a-closed-day-mint-that-follows-its-base.cfg kills=SettledMintNeverFalls
+\* @phx witness witness/a-refund-guarded-once-ever-over-every-day.cfg kills=RefundWritesItsOwnMovement
 (***************************************************************************)
 \* The coin wallet (#106): N tasks, each running one of the wallet's seven ports once, over one
 \* coin_ledger, while the fold closes study days. The balance is never stored; it is the ledger's
@@ -44,7 +46,7 @@
 (***************************************************************************)
 EXTENDS Integers, Sequences, FiniteSets
 
-CONSTANTS ReadInsideWrite, UniqueKey, OnceGuardAllDays, ClosedKeepsHeld, NActors, NDays, MaxAmount
+CONSTANTS ReadInsideWrite, UniqueKey, OnceGuardAllDays, RefundKeyedPerDay, ClosedKeepsHeld, NActors, NDays, MaxAmount
 
 Actors == 1..NActors
 Days == 1..NDays
@@ -162,6 +164,13 @@ Begin(a) ==
 \* wallet.rs::deposit_on (and refund_on, which is deposit_on): the insert alone decides
 DepositWrite(o, k) == Insert(k, o.amount)
 
+\* wallet.rs::refund_on: keyed on its own study day, as a deposit is. The defect routes it through
+\* the once-ever guard, so a refund is refused when its source holds a movement on ANY study day.
+RefundWrite(o, k) ==
+    IF RefundKeyedPerDay \/ ~(\E d \in Days : ledger[<<d, "refund">>] # <<>>)
+    THEN Insert(k, o.amount)
+    ELSE UNCHANGED ledger
+
 \* wallet.rs::deposit_once_on: any movement of the source and reference, on ANY study day, answers
 \* AlreadyDeposited; the defect reads only the request's own day
 DepositOnceWrite(o, k) ==
@@ -210,7 +219,8 @@ ReadWrite(a) ==
     /\ lock = a
     /\ LET o == op[a]
            k == <<o.day, SourceOf(o)>>
-       IN CASE o.port \in {"Deposit", "Refund"} -> DepositWrite(o, k)
+       IN CASE o.port = "Deposit" -> DepositWrite(o, k)
+            [] o.port = "Refund" -> RefundWrite(o, k)
             [] o.port = "DepositOnce" -> DepositOnceWrite(o, k)
             [] o.port = "SettleMint" -> SettleMintWrite(o, k)
             [] o.port = "Purchase" -> PurchaseWrite(a, o, k)
@@ -265,4 +275,11 @@ DepositOnceEver ==
 
 \* wallet.rs::settle_mint_on: once a day is closed, its mint movement's delta never decreases
 SettledMintNeverFalls == ~fell
+
+\* wallet.rs::refund_on and SPEC-082 R7: a refund is keyed on its study day, source and reference,
+\* so a refund on a later study day of a source already held writes its own movement. Every request
+\* is positive, so a refund that has run holds its key, whatever the other days hold.
+RefundWritesItsOwnMovement ==
+    \A a \in Actors :
+        (pc[a] = "wrote" /\ op[a].port = "Refund") => ledger[<<op[a].day, "refund">>] # <<>>
 =============================================================================

@@ -97,9 +97,9 @@ one `BEGIN IMMEDIATE` transaction, with these rulings.
 ### Confirmation
 
 The TLA+ entry `tla/WalletFloor` models the ports as concurrent actors over the ledger and checks
-four properties: the balance never falls below the floor, one movement per (study day, source,
-reference), at most one `credit_once` movement per (source, reference) on any day, and a settled
-day's mint never lowered. Its witnesses (the floor read outside the write transaction, and the
+five properties: the balance never falls below the floor, one movement per (study day, source,
+reference), at most one `credit_once` movement per (source, reference) on any day, a refund on a
+later day of a source already held writes its own movement, and a settled day's mint never lowered. Its witnesses (the floor read outside the write transaction, and the
 once-ever guard checked on its own day only, among others) are caught by TLC, and the fixed model
 is clean at its state floor. The Lean entry for the wallet's rules proves the clip and mint bounds
 over `Int`. `wallet_ports::the_wallet_never_goes_negative_under_a_burst` runs concurrent capped

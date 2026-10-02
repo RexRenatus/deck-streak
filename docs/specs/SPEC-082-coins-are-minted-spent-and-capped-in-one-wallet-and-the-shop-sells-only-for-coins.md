@@ -371,13 +371,14 @@ E1 adds these files, which it does not name:
   the wallet writes each movement in one `BEGIN IMMEDIATE` transaction over a summed ledger.
 - `docs/schematics/coin-wallet-and-its-ports.md`: the wallet's ports, the ledger and the
   transaction each port runs in.
-- `formal/tla/WalletFloor/WalletFloor.tla`, `formal/tla/WalletFloor/MCWalletFloor.cfg` and the four
+- `formal/tla/WalletFloor/WalletFloor.tla`, `formal/tla/WalletFloor/MCWalletFloor.cfg` and the five
   configurations under `formal/tla/WalletFloor/witness/`: a model of concurrent callers over one
   coin ledger. It checks that the balance never falls below the floor, that one key holds at most
-  one movement, that a once-ever credit is written once over every day, and that a settled day's
+  one movement, that a once-ever credit is written once over every day, that a refund on a later day
+  of a source already held writes its own movement, and that a settled day's
   mint never falls. Each witness switches one defect on, and each is caught: the floor read outside
-  the write, the once-ever guard read on its own day only, a ledger with no unique key, and a closed
-  day's mint that follows its base.
+  the write, the once-ever guard read on its own day only, a ledger with no unique key, a refund passed through the
+  once-ever guard over every day, and a closed day's mint that follows its base.
 - `formal/lean/Formal/Wallet.lean`: proofs over the integers that the debit clip pays at least 0
   and at most the least of the request, the wallet and the remaining cap, and pays nothing for a
   request of 0 or less, and that the mint lies between 0 and 40 and never falls as the base grows.
@@ -472,6 +473,7 @@ The files E1 adds or changes that section 4 does not name:
 - `formal/tla/WalletFloor/witness/a-once-ever-guard-read-on-its-own-day.cfg`: added, a witness.
 - `formal/tla/WalletFloor/witness/a-ledger-with-no-unique-key.cfg`: added, a witness.
 - `formal/tla/WalletFloor/witness/a-closed-day-mint-that-follows-its-base.cfg`: added, a witness.
+- `formal/tla/WalletFloor/witness/a-refund-guarded-once-ever-over-every-day.cfg`: added in round 1, a witness.
 - `formal/lean/Formal/Wallet.lean`: added, the proofs of the debit clip and the mint.
 - `formal/lean/Formal/WalletVectors.lean`: added, the proofs' vector writer.
 - `formal/lean/Formal/Vectors.lean`: changed, one import and one arm for the writer.
