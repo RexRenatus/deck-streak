@@ -301,10 +301,10 @@ pub async fn seed_records(db: &Db, rows: &[(&str, i64, i64, i64)]) {
     write.commit().await.expect("the records commit");
 }
 
-/// A [`Celebrate`] port that records each key it is handed and answers `Ok`, or no answer.
+/// A [`Celebrate`] port that records each celebration it is handed and answers `Ok`, or no answer.
 #[derive(Default)]
 pub struct Recorder {
-    keys: Mutex<Vec<String>>,
+    handed: Mutex<Vec<Celebration>>,
     silent: bool,
 }
 
@@ -312,27 +312,35 @@ impl Recorder {
     /// A recorder whose router never answers.
     pub fn silent() -> Self {
         Self {
-            keys: Mutex::new(Vec::new()),
+            handed: Mutex::new(Vec::new()),
             silent: true,
         }
     }
 
-    /// Every key handed to it, in order.
-    pub fn keys(&self) -> Vec<String> {
-        self.keys
+    /// Every celebration handed to it, in order.
+    pub fn handed(&self) -> Vec<Celebration> {
+        self.handed
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
             .clone()
+    }
+
+    /// Every key handed to it, in order.
+    pub fn keys(&self) -> Vec<String> {
+        self.handed()
+            .into_iter()
+            .map(|celebration| celebration.key)
+            .collect()
     }
 }
 
 impl Celebrate for Recorder {
     fn celebrate<'a>(&'a self, celebration: &'a Celebration) -> PortFuture<'a, ()> {
         Box::pin(async move {
-            self.keys
+            self.handed
                 .lock()
                 .unwrap_or_else(PoisonError::into_inner)
-                .push(celebration.key.clone());
+                .push(celebration.clone());
             if self.silent {
                 Err(no_answer())
             } else {

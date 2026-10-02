@@ -1,7 +1,8 @@
 //! The badge step (SPEC-073 A10, A11; R4, R5, R8; ADR-303): a new badge is celebrated once, also
 //! when an evaluation stops after its write or after the router answered, a closing day is judged
 //! with its end-of-day state, and THE CLASS RULE: every evaluated day awards exactly the study
-//! badges its context earns, once. Every review, rollup, card state and streak is synthetic.
+//! badges its context earns, once. An owed badge is raised with its line on the offers' day and
+//! marked from the clock at the answer. Every review, rollup, card state and streak is synthetic.
 
 // An integration test is test code: its helpers panic on a failed fixture, and it prints the
 // examined count on purpose.
@@ -211,6 +212,54 @@ async fn a_router_that_did_not_answer_leaves_the_award_due() {
         first_steps(true),
         "marked once answered"
     );
+}
+
+#[tokio::test]
+async fn an_owed_badge_is_raised_on_the_offers_day_and_marked_at_the_answer() {
+    let scratch = first_day().await;
+    let step = BadgesStep::new(Courses::default());
+    run_step(
+        &scratch.db,
+        &step,
+        &first_answer(),
+        0,
+        (D0, Evaluation::Current),
+        at(D0, 13),
+    )
+    .await;
+    // The badge of `D0` is still owed when the next day's offers run.
+    let recorder = Recorder::default();
+    let now = at(D0 + 1, 9);
+    offer_badges(
+        &recorder,
+        &scratch.db,
+        UtcMillis::from_epoch_millis(now),
+        day(D0 + 1),
+    )
+    .await
+    .expect("the offers run");
+    let handed = recorder.handed();
+    assert_eq!(
+        recorder.keys(),
+        ["badge:first_steps:0"],
+        "the owed badge is offered"
+    );
+    assert_eq!(
+        handed[0].text, "\u{1f45f} Badge earned: First Steps",
+        "the line names the badge"
+    );
+    assert_eq!(
+        handed[0].study_day,
+        day(D0 + 1),
+        "raised on the offers' day"
+    );
+    let mark: Option<i64> = sqlx::query_scalar(
+        "SELECT celebrated_at FROM badges_earned WHERE badge_key = 'first_steps' AND tier = 0",
+    )
+    .fetch_one(scratch.db.reader())
+    .await
+    .expect("the mark reads");
+    assert_eq!(mark, Some(now), "marked from the clock at the answer");
 }
 
 #[tokio::test]

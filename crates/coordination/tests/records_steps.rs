@@ -1,8 +1,10 @@
 //! The records step (SPEC-073 A14 to A16; R9 to R12; ADR-303): its plan equals the predecessor's
 //! golden over a 370-day window, the first detection seeds the records silently, a record is
 //! celebrated once per kind and day, a record still owed when a later day beats it is offered
-//! before that day's write, and one replaced before it was offered is named in a log line. Every
-//! rollup, record and review is synthetic.
+//! before that day's write, and one replaced before it was offered is named in a log line, while a
+//! best that climbs within its own day is not. An offer the router did not answer leaves the record
+//! owed; an answered one is raised on the offers' day, marked from the clock, in the kinds' order.
+//! Every rollup, record and review is synthetic.
 
 // An integration test is test code: its helpers panic on a malformed golden or a failed fixture.
 #![allow(clippy::expect_used)]
@@ -472,5 +474,87 @@ async fn a_record_replaced_before_it_was_offered_is_named() {
         records(&scratch.db).await[0],
         ("best_score".to_owned(), 60, D0 + 1, 50, false),
         "the new record is written with its mark unset"
+    );
+}
+
+#[tokio::test]
+async fn a_best_that_climbs_all_day_before_its_offer_is_not_named() {
+    let warnings = Warnings::default();
+    let _logging = log_capture::hold_capture(warnings.clone());
+    let scratch = scratch().await;
+    seed_low_records(&scratch.db).await;
+    seed_rollups(&scratch.db, &[totals(D0, 50, 0, 0.0)]).await;
+    current(&scratch.db, D0, at(D0, 13)).await;
+    // The day beats its own unoffered record: its row is the same day's, so nothing is lost.
+    rescore(&scratch.db, D0, 60).await;
+    current(&scratch.db, D0, at(D0, 14)).await;
+    assert!(
+        warnings.logged().is_empty(),
+        "a row of the same day is not named: {:?}",
+        warnings.logged()
+    );
+    let recorder = Recorder::default();
+    offer(&scratch.db, &recorder, D0).await;
+    assert_eq!(
+        recorder.keys(),
+        [record_key(RecordKind::BestScore, day(D0))],
+        "the day's best is celebrated once"
+    );
+    assert_eq!(
+        records(&scratch.db).await[0],
+        ("best_score".to_owned(), 60, D0, 50, true),
+        "the day's record holds its last value, marked"
+    );
+}
+
+#[tokio::test]
+async fn a_router_that_did_not_answer_leaves_the_record_owed() {
+    let scratch = scratch().await;
+    seed_low_records(&scratch.db).await;
+    seed_rollups(&scratch.db, &[totals(D0, 50, 0, 0.0)]).await;
+    current(&scratch.db, D0, at(D0, 13)).await;
+    let owed = record_key(RecordKind::BestScore, day(D0));
+    let silent = Recorder::silent();
+    offer(&scratch.db, &silent, D0).await;
+    assert_eq!(silent.keys(), [owed.as_str()], "the owed record is offered");
+    assert!(!records(&scratch.db).await[0].4, "no answer leaves it owed");
+    // The next day's offers raise it on that day, and mark it from the clock at the answer.
+    let answered = Recorder::default();
+    offer(&scratch.db, &answered, D0 + 1).await;
+    let handed = answered.handed();
+    assert_eq!(answered.keys(), [owed], "offered again");
+    assert_eq!(
+        handed[0].study_day,
+        day(D0 + 1),
+        "raised on the offers' day"
+    );
+    let mark: Option<i64> =
+        sqlx::query_scalar("SELECT celebrated_at FROM records WHERE kind = 'best_score'")
+            .fetch_one(scratch.db.reader())
+            .await
+            .expect("the mark reads");
+    assert_eq!(
+        mark,
+        Some(at(D0 + 1, 13)),
+        "marked from the clock at the answer"
+    );
+}
+
+#[tokio::test]
+async fn the_owed_records_are_offered_in_the_kinds_order() {
+    let scratch = scratch().await;
+    seed_low_records(&scratch.db).await;
+    seed_rollups(&scratch.db, &[totals(D0, 50, 30, 600.0)]).await;
+    current(&scratch.db, D0, at(D0, 13)).await;
+    let recorder = Recorder::default();
+    offer(&scratch.db, &recorder, D0).await;
+    let expected: Vec<String> = RecordKind::ALL
+        .into_iter()
+        .map(|kind| record_key(kind, day(D0)))
+        .collect();
+    assert_eq!(
+        recorder.keys(),
+        expected,
+        "best score, most reviews, most minutes"
     );
 }
