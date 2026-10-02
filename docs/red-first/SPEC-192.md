@@ -481,3 +481,6 @@ the line it found, and S19254 is KILLED again. S19402 rows the alternate mutant 
 (`if True:`), because the automatic one (`if False:`) never ends. Five arms take no row: each is
 equivalent, read the same over the generated population with and without its mutant, and a probe
 rustc compiles shows no accepted input that reads differently.
+The pass then merges dev at b9212b51 in 1aea6c53, with no conflict, and the module is green on
+the merged tree (Ran 76 tests, OK, examined 26 Setting impl(s), examined 217 crate file(s), with
+the same item, `tests/` and R8 counts), refusing none of the repository's files.

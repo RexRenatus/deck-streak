@@ -104,7 +104,7 @@ read what rustc reads or refuse.
   root and a module. Each is a disclosed false refusal, never a false pass.
 - Bad, because a `cfg(any(test, P))` module a macro declares stays refused when `rustc_keeps`
   cannot decide P. It is kept on purpose and disclosed by count: A22 asserts 1 such shape,
-  `cfg(any(test, feature = "..."))`, refused, and the #441 arm refuses 0 of the repository's 202
+  `cfg(any(test, feature = "..."))`, refused, and the #441 arm refuses 0 of the repository's 217
   crate files.
 
 ### Confirmation

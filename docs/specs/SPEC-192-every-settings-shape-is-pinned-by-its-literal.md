@@ -568,7 +568,7 @@ the lexer skips, and 64 whose inner run is `#![doc = "a"]` then `#![cfg(p)]` (ex
 members judged against rustc, and 1486 members rustc refuses judged for Width), and the three are
 KILLED again. The module runs 76 tests. One over-refusal is kept on purpose and disclosed by count
 (#536): A22 asserts 1 macro module shape, `cfg(any(test, feature = "..."))`, refused, and the
-#441 arm refuses 0 of the repository's 202 crate files.
+#441 arm refuses 0 of the repository's 217 crate files.
 
 Files of these amendments:
 
