@@ -10,8 +10,10 @@
   plain extension, and an erase never deletes a vault file).
 - **Prerequisites:** SPEC-020, SPEC-021, SPEC-024, SPEC-026, SPEC-029, SPEC-042 and SPEC-110. **Mutation
   band:** `S11800-S11899`.
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-118.md` (ADR-016).
+- **Status:** delivered in part by V1a (moved from `docs/specs/planned/` with its tests and
+  `docs/red-first/SPEC-118.md`, ADR-016): R1 to R5 and R10 to R14, the criteria of section 3
+  and B1, proved by `formal/tla/CaptureOnce/`. The remainder, #154's media from the bot (R6 to
+  R9, A7 to A14 and B2), is delivered by V1b, section 3c.
 
 ## 1. The problem, measured
 
@@ -123,14 +125,6 @@ R14. CHARTER 10's eleven anti-goals bind this SPEC as one block; the one it touc
 | A4 | a capture with a stem already recorded is written once and answers `already_captured` | `a_capture_sent_twice_is_written_once` |
 | A5 | a write to a path under a journal folder is refused with `journal_refused` | `no_vault_write_reaches_a_journal_folder` |
 | A6 | every file-writing call in `crates/vault/src` is inside the atomic writer | `every_vault_file_write_is_the_atomic_writer` |
-| A7 | the media choice equals the predecessor's golden for every case | `media_choice_matches_the_predecessors_golden` |
-| A8 | a 10-character extension is kept, and an 11-character one or one with a separator reads `.bin` | `a_document_extension_off_the_rule_reads_bin` |
-| A9 | a declared size of 20971520 bytes is fetched and 20971521 is not | `a_file_over_twenty_megabytes_is_never_fetched` |
-| A10 | a stream that passes the cap is stopped and leaves no file | `a_stream_past_the_cap_is_stopped_and_discarded` |
-| A11 | the three replies equal the predecessor's golden | `capture_replies_match_the_predecessors_golden` |
-| A12 | with the vault missing, the owner gets the failed-save line and nothing is raised | `a_missing_vault_is_reported_not_raised` |
-| A13 | the file URL never reaches a log line | `the_file_url_never_reaches_a_log_line` |
-| A14 | an owner's media message is admitted, and a non-owner's is dropped | `media_is_admitted_from_the_owner_only` |
 | A15 | a quick capture writes the stub of R10 | `a_quick_capture_writes_the_miniapp_stub` |
 | A16 | a journal quick capture lands in the inbox with `kind: journal` | `a_journal_quick_capture_lands_in_the_inbox` |
 | A17 | a retried quick capture answers the same name and writes nothing | `a_retried_quick_capture_answers_the_same_name` |
@@ -147,14 +141,6 @@ A3: cargo test -p deck-streak-vault --test inbox_capture -- --exact a_missing_in
 A4: cargo test -p deck-streak-vault --test inbox_capture -- --exact a_capture_sent_twice_is_written_once
 A5: cargo test -p deck-streak-vault --test atomic -- --exact no_vault_write_reaches_a_journal_folder
 A6: cargo test -p deck-streak-vault --test atomic -- --exact every_vault_file_write_is_the_atomic_writer
-A7: cargo test -p deck-streak-bot --test media_capture -- --exact media_choice_matches_the_predecessors_golden
-A8: cargo test -p deck-streak-bot --test media_capture -- --exact a_document_extension_off_the_rule_reads_bin
-A9: cargo test -p deck-streak-bot --test media_capture -- --exact a_file_over_twenty_megabytes_is_never_fetched
-A10: cargo test -p deck-streak-bot --test media_capture -- --exact a_stream_past_the_cap_is_stopped_and_discarded
-A11: cargo test -p deck-streak-bot --test media_capture -- --exact capture_replies_match_the_predecessors_golden
-A12: cargo test -p deck-streak-bot --test media_capture -- --exact a_missing_vault_is_reported_not_raised
-A13: cargo test -p deck-streak-bot --test media_capture -- --exact the_file_url_never_reaches_a_log_line
-A14: cargo test -p deck-streak-bot --test media_capture -- --exact media_is_admitted_from_the_owner_only
 A15: cargo test -p deck-streak-api --test inbox_capture_route -- --exact a_quick_capture_writes_the_miniapp_stub
 A16: cargo test -p deck-streak-api --test inbox_capture_route -- --exact a_journal_quick_capture_lands_in_the_inbox
 A17: cargo test -p deck-streak-api --test inbox_capture_route -- --exact a_retried_quick_capture_answers_the_same_name
@@ -176,6 +162,36 @@ the files it adds under packs that are already enforced.
 |---|---|---|
 | B1 | over `privacy.json`, `PRIVACY.md` and `crates/vault/src/data_rights.rs`: the `inbox-captures` category names `inbox_captures` with purpose, basis and retention, and export and erase cover it | the privacy-gdpr pack |
 | B2 | over `crates/bot/src/capture.rs`: every reply is escaped for the parse mode and stays within the message length | the telegram-platform pack |
+
+## 3c. Delivered by the next pull requests
+
+This SPEC lands in two pull requests, in order. This one (V1a) delivers the capture in the vault,
+the quick capture and their table: R1 to R5 and R10 to R14, the criteria of section 3's table and
+its fence, and B1. V1b delivers #154's media from the bot: R6 to R9, the criteria below and B2.
+The table below holds the criteria V1b delivers, each row naming it, and the lines under it are
+their fence lines, each prefixed `V1b:`. V1b moves each of its criteria back verbatim: the row into
+section 3's table, without the `delivered by` column, and the fence line into the acceptance
+fence, without the prefix.
+
+| id | criterion | decided by | delivered by |
+|---|---|---|---|
+| A7 | the media choice equals the predecessor's golden for every case | `media_choice_matches_the_predecessors_golden` | V1b |
+| A8 | a 10-character extension is kept, and an 11-character one or one with a separator reads `.bin` | `a_document_extension_off_the_rule_reads_bin` | V1b |
+| A9 | a declared size of 20971520 bytes is fetched and 20971521 is not | `a_file_over_twenty_megabytes_is_never_fetched` | V1b |
+| A10 | a stream that passes the cap is stopped and leaves no file | `a_stream_past_the_cap_is_stopped_and_discarded` | V1b |
+| A11 | the three replies equal the predecessor's golden | `capture_replies_match_the_predecessors_golden` | V1b |
+| A12 | with the vault missing, the owner gets the failed-save line and nothing is raised | `a_missing_vault_is_reported_not_raised` | V1b |
+| A13 | the file URL never reaches a log line | `the_file_url_never_reaches_a_log_line` | V1b |
+| A14 | an owner's media message is admitted, and a non-owner's is dropped | `media_is_admitted_from_the_owner_only` | V1b |
+
+V1b: A7: cargo test -p deck-streak-bot --test media_capture -- --exact media_choice_matches_the_predecessors_golden
+V1b: A8: cargo test -p deck-streak-bot --test media_capture -- --exact a_document_extension_off_the_rule_reads_bin
+V1b: A9: cargo test -p deck-streak-bot --test media_capture -- --exact a_file_over_twenty_megabytes_is_never_fetched
+V1b: A10: cargo test -p deck-streak-bot --test media_capture -- --exact a_stream_past_the_cap_is_stopped_and_discarded
+V1b: A11: cargo test -p deck-streak-bot --test media_capture -- --exact capture_replies_match_the_predecessors_golden
+V1b: A12: cargo test -p deck-streak-bot --test media_capture -- --exact a_missing_vault_is_reported_not_raised
+V1b: A13: cargo test -p deck-streak-bot --test media_capture -- --exact the_file_url_never_reaches_a_log_line
+V1b: A14: cargo test -p deck-streak-bot --test media_capture -- --exact media_is_admitted_from_the_owner_only
 
 ## 4. File manifest
 
