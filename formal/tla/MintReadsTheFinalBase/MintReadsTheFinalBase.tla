@@ -1,10 +1,10 @@
 ------------------------- MODULE MintReadsTheFinalBase -------------------------
-\* @phx covers crates/coordination/src/recompute/mod.rs anchor=Phase digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/coordination/src/recompute/mod.rs anchor=PHASES digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/coordination/src/recompute/mod.rs anchor=register digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/coordination/src/recompute/mod.rs anchor=run digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/economy/src/wallet.rs anchor=settle_mint_on digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/progression/src/settle.rs anchor=settle digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers crates/coordination/src/recompute/mod.rs anchor=Phase digest=sha256:f899318ac1f66e431ae82839be6e5165a0bede2d76122b5175e892af576cbfcb
+\* @phx covers crates/coordination/src/recompute/mod.rs anchor=PHASES digest=sha256:7f21e3de566b544029e0c3ff78dd7940425c51120333fed2127384f698290be8
+\* @phx covers crates/coordination/src/recompute/mod.rs anchor=register digest=sha256:c4ea8f4bef00e1f3b17ad8d80af338db958189a32fcd6f623cf8b18b71fb03a2
+\* @phx covers crates/coordination/src/recompute/mod.rs anchor=run digest=sha256:c51dc67a3988bbeb8c46a953acdaba06669275e0ba405edb1146de880ae815fd
+\* @phx covers crates/economy/src/wallet.rs anchor=settle_mint_on digest=sha256:f527db16a0f325855b0278d2ffa535cd1ba5b2428a5b876138ce606fc4ee0633
+\* @phx covers crates/progression/src/settle.rs anchor=settle digest=sha256:9872f0859a95fb7f19be47343abdc7227cdde7e7d0ea913a7372c7a402b47dbe
 \* @phx cites #106
 \* @phx property SettledMintEqualsItsFinalBase ramp=report
 \* @phx property SettledDayMintNeverFalls ramp=report
