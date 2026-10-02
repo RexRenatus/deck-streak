@@ -1,0 +1,1110 @@
+{
+  "adapter": "with_a_temporary_vault",
+  "cases": [
+    {
+      "class": "kind",
+      "input": {
+        "caption": "Voice hearsay hearsay outline reading",
+        "ext": ".jpg",
+        "instant_ms": 1955401515975,
+        "kind": "photo",
+        "unique": "hMpVD00JNQo8"
+      },
+      "output": {
+        "attachment": "{day:22631}-photo-hMpVD00JNQo8.jpg",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: photo\ncaptured: {second:1955401515}\nattachment: {day:22631}-photo-hMpVD00JNQo8.jpg\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:22631}-photo-hMpVD00JNQo8.jpg]]\n\nVoice hearsay hearsay outline reading\n",
+        "written": [
+          "{day:22631}-photo-hMpVD00JNQo8.jpg",
+          "{day:22631}-photo-hMpVD00JNQo8.md"
+        ]
+      }
+    },
+    {
+      "class": "kind",
+      "input": {
+        "caption": "Draft hearsay hearsay primer",
+        "ext": ".jpg",
+        "instant_ms": 1608921923759,
+        "kind": "photo",
+        "unique": "2L_zKafEZMKYgkngUP"
+      },
+      "output": {
+        "attachment": "{day:18621}-photo-2L_zKafEZMKYgkngUP.jpg",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: photo\ncaptured: {second:1608921923}\nattachment: {day:18621}-photo-2L_zKafEZMKYgkngUP.jpg\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:18621}-photo-2L_zKafEZMKYgkngUP.jpg]]\n\nDraft hearsay hearsay primer\n",
+        "written": [
+          "{day:18621}-photo-2L_zKafEZMKYgkngUP.jpg",
+          "{day:18621}-photo-2L_zKafEZMKYgkngUP.md"
+        ]
+      }
+    },
+    {
+      "class": "kind",
+      "input": {
+        "caption": "Voice lecture lecture",
+        "ext": ".jpg",
+        "instant_ms": 1624392023066,
+        "kind": "photo",
+        "unique": "jRq5Tj3UVzPQ2scOG"
+      },
+      "output": {
+        "attachment": "{day:18800}-photo-jRq5Tj3UVzPQ2scOG.jpg",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: photo\ncaptured: {second:1624392023}\nattachment: {day:18800}-photo-jRq5Tj3UVzPQ2scOG.jpg\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:18800}-photo-jRq5Tj3UVzPQ2scOG.jpg]]\n\nVoice lecture lecture\n",
+        "written": [
+          "{day:18800}-photo-jRq5Tj3UVzPQ2scOG.jpg",
+          "{day:18800}-photo-jRq5Tj3UVzPQ2scOG.md"
+        ]
+      }
+    },
+    {
+      "class": "kind",
+      "input": {
+        "caption": "Hearsay hearsay",
+        "ext": ".ogg",
+        "instant_ms": 1854918584421,
+        "kind": "voice",
+        "unique": "Aoz6GVP6qBJNLqgKm"
+      },
+      "output": {
+        "attachment": "{day:21468}-voice-Aoz6GVP6qBJNLqgKm.ogg",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: voice\ncaptured: {second:1854918584}\nattachment: {day:21468}-voice-Aoz6GVP6qBJNLqgKm.ogg\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:21468}-voice-Aoz6GVP6qBJNLqgKm.ogg]]\n\nHearsay hearsay\n",
+        "written": [
+          "{day:21468}-voice-Aoz6GVP6qBJNLqgKm.ogg",
+          "{day:21468}-voice-Aoz6GVP6qBJNLqgKm.md"
+        ]
+      }
+    },
+    {
+      "class": "kind",
+      "input": {
+        "caption": "Hearsay hearsay",
+        "ext": ".ogg",
+        "instant_ms": 2046836642361,
+        "kind": "voice",
+        "unique": "UDRnQ1jN"
+      },
+      "output": {
+        "attachment": "{day:23690}-voice-UDRnQ1jN.ogg",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: voice\ncaptured: {second:2046836642}\nattachment: {day:23690}-voice-UDRnQ1jN.ogg\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:23690}-voice-UDRnQ1jN.ogg]]\n\nHearsay hearsay\n",
+        "written": [
+          "{day:23690}-voice-UDRnQ1jN.ogg",
+          "{day:23690}-voice-UDRnQ1jN.md"
+        ]
+      }
+    },
+    {
+      "class": "kind",
+      "input": {
+        "caption": "Kanji hearsay",
+        "ext": ".ogg",
+        "instant_ms": 1918704695748,
+        "kind": "voice",
+        "unique": "mQxRK5_AWYn"
+      },
+      "output": {
+        "attachment": "{day:22207}-voice-mQxRK5_AWYn.ogg",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: voice\ncaptured: {second:1918704695}\nattachment: {day:22207}-voice-mQxRK5_AWYn.ogg\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:22207}-voice-mQxRK5_AWYn.ogg]]\n\nKanji hearsay\n",
+        "written": [
+          "{day:22207}-voice-mQxRK5_AWYn.ogg",
+          "{day:22207}-voice-mQxRK5_AWYn.md"
+        ]
+      }
+    },
+    {
+      "class": "kind",
+      "input": {
+        "caption": "Draft draft",
+        "ext": ".pdf",
+        "instant_ms": 1614469723046,
+        "kind": "document",
+        "unique": "MAjHxvky7MI8"
+      },
+      "output": {
+        "attachment": "{day:18685}-document-MAjHxvky7MI8.pdf",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: document\ncaptured: {second:1614469723}\nattachment: {day:18685}-document-MAjHxvky7MI8.pdf\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:18685}-document-MAjHxvky7MI8.pdf]]\n\nDraft draft\n",
+        "written": [
+          "{day:18685}-document-MAjHxvky7MI8.pdf",
+          "{day:18685}-document-MAjHxvky7MI8.md"
+        ]
+      }
+    },
+    {
+      "class": "kind",
+      "input": {
+        "caption": "Receipt memo whiteboard primer",
+        "ext": ".pdf",
+        "instant_ms": 1847867018960,
+        "kind": "document",
+        "unique": "BWjlMAFbazKuk4GRwy"
+      },
+      "output": {
+        "attachment": "{day:21387}-document-BWjlMAFbazKuk4GRwy.pdf",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: document\ncaptured: {second:1847867018}\nattachment: {day:21387}-document-BWjlMAFbazKuk4GRwy.pdf\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:21387}-document-BWjlMAFbazKuk4GRwy.pdf]]\n\nReceipt memo whiteboard primer\n",
+        "written": [
+          "{day:21387}-document-BWjlMAFbazKuk4GRwy.pdf",
+          "{day:21387}-document-BWjlMAFbazKuk4GRwy.md"
+        ]
+      }
+    },
+    {
+      "class": "kind",
+      "input": {
+        "caption": "Kanji draft receipt",
+        "ext": ".pdf",
+        "instant_ms": 1952099076550,
+        "kind": "document",
+        "unique": "Zl5rwaGsRLvCP9e"
+      },
+      "output": {
+        "attachment": "{day:22593}-document-Zl5rwaGsRLvCP9e.pdf",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: document\ncaptured: {second:1952099076}\nattachment: {day:22593}-document-Zl5rwaGsRLvCP9e.pdf\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:22593}-document-Zl5rwaGsRLvCP9e.pdf]]\n\nKanji draft receipt\n",
+        "written": [
+          "{day:22593}-document-Zl5rwaGsRLvCP9e.pdf",
+          "{day:22593}-document-Zl5rwaGsRLvCP9e.md"
+        ]
+      }
+    },
+    {
+      "class": "empty-caption",
+      "input": {
+        "caption": "",
+        "ext": ".pdf",
+        "instant_ms": 1963292065170,
+        "kind": "voice",
+        "unique": "SCd35fyxllK-itQ7e_Q"
+      },
+      "output": {
+        "attachment": "{day:22723}-voice-SCd35fyxllK-itQ7e_Q.pdf",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: voice\ncaptured: {second:1963292065}\nattachment: {day:22723}-voice-SCd35fyxllK-itQ7e_Q.pdf\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:22723}-voice-SCd35fyxllK-itQ7e_Q.pdf]]\n",
+        "written": [
+          "{day:22723}-voice-SCd35fyxllK-itQ7e_Q.pdf",
+          "{day:22723}-voice-SCd35fyxllK-itQ7e_Q.md"
+        ]
+      }
+    },
+    {
+      "class": "blank-caption",
+      "input": {
+        "caption": " ",
+        "ext": ".pdf",
+        "instant_ms": 1620400938848,
+        "kind": "document",
+        "unique": "iEYvybn8WRQ"
+      },
+      "output": {
+        "attachment": "{day:18754}-document-iEYvybn8WRQ.pdf",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: document\ncaptured: {second:1620400938}\nattachment: {day:18754}-document-iEYvybn8WRQ.pdf\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:18754}-document-iEYvybn8WRQ.pdf]]\n",
+        "written": [
+          "{day:18754}-document-iEYvybn8WRQ.pdf",
+          "{day:18754}-document-iEYvybn8WRQ.md"
+        ]
+      }
+    },
+    {
+      "class": "blank-caption",
+      "input": {
+        "caption": "\n\n",
+        "ext": ".ogg",
+        "instant_ms": 1820311725584,
+        "kind": "photo",
+        "unique": "jfoKShhMQmJ-FF88yM"
+      },
+      "output": {
+        "attachment": "{day:21068}-photo-jfoKShhMQmJ-FF88yM.ogg",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: photo\ncaptured: {second:1820311725}\nattachment: {day:21068}-photo-jfoKShhMQmJ-FF88yM.ogg\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:21068}-photo-jfoKShhMQmJ-FF88yM.ogg]]\n",
+        "written": [
+          "{day:21068}-photo-jfoKShhMQmJ-FF88yM.ogg",
+          "{day:21068}-photo-jfoKShhMQmJ-FF88yM.md"
+        ]
+      }
+    },
+    {
+      "class": "blank-caption",
+      "input": {
+        "caption": " \t\r\n ",
+        "ext": ".ogg",
+        "instant_ms": 1787442678273,
+        "kind": "document",
+        "unique": "9TWYZlPY5z7InObanak38Muf"
+      },
+      "output": {
+        "attachment": "{day:20687}-document-9TWYZlPY5z7InObanak38Muf.ogg",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: document\ncaptured: {second:1787442678}\nattachment: {day:20687}-document-9TWYZlPY5z7InObanak38Muf.ogg\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:20687}-document-9TWYZlPY5z7InObanak38Muf.ogg]]\n",
+        "written": [
+          "{day:20687}-document-9TWYZlPY5z7InObanak38Muf.ogg",
+          "{day:20687}-document-9TWYZlPY5z7InObanak38Muf.md"
+        ]
+      }
+    },
+    {
+      "class": "blank-caption",
+      "input": {
+        "caption": "\u001c\u001d\u001e\u001f",
+        "ext": "txt",
+        "instant_ms": 1706549212766,
+        "kind": "photo",
+        "unique": "QIWEOj1LY440FWWM-"
+      },
+      "output": {
+        "attachment": "{day:19751}-photo-QIWEOj1LY440FWWM-.txt",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: photo\ncaptured: {second:1706549212}\nattachment: {day:19751}-photo-QIWEOj1LY440FWWM-.txt\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:19751}-photo-QIWEOj1LY440FWWM-.txt]]\n",
+        "written": [
+          "{day:19751}-photo-QIWEOj1LY440FWWM-.txt",
+          "{day:19751}-photo-QIWEOj1LY440FWWM-.md"
+        ]
+      }
+    },
+    {
+      "class": "blank-caption",
+      "input": {
+        "caption": "\u00a0\u3000\u2028\u0085",
+        "ext": ".pdf",
+        "instant_ms": 1951191411724,
+        "kind": "photo",
+        "unique": "53qeVH5LDkD"
+      },
+      "output": {
+        "attachment": "{day:22583}-photo-53qeVH5LDkD.pdf",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: photo\ncaptured: {second:1951191411}\nattachment: {day:22583}-photo-53qeVH5LDkD.pdf\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:22583}-photo-53qeVH5LDkD.pdf]]\n",
+        "written": [
+          "{day:22583}-photo-53qeVH5LDkD.pdf",
+          "{day:22583}-photo-53qeVH5LDkD.md"
+        ]
+      }
+    },
+    {
+      "class": "python-strip",
+      "input": {
+        "caption": "\u0085Draft lecture lecture hearsay reading whiteboard  ",
+        "ext": ".pdf",
+        "instant_ms": 1702304266691,
+        "kind": "document",
+        "unique": "1FAbx7Lk7lqN5YTPEtXZXc"
+      },
+      "output": {
+        "attachment": "{day:19702}-document-1FAbx7Lk7lqN5YTPEtXZXc.pdf",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: document\ncaptured: {second:1702304266}\nattachment: {day:19702}-document-1FAbx7Lk7lqN5YTPEtXZXc.pdf\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:19702}-document-1FAbx7Lk7lqN5YTPEtXZXc.pdf]]\n\nDraft lecture lecture hearsay reading whiteboard\n",
+        "written": [
+          "{day:19702}-document-1FAbx7Lk7lqN5YTPEtXZXc.pdf",
+          "{day:19702}-document-1FAbx7Lk7lqN5YTPEtXZXc.md"
+        ]
+      }
+    },
+    {
+      "class": "python-strip",
+      "input": {
+        "caption": "\u001e\u0085Outline reading primer torts lecture outline\u001c\u0085\u000b",
+        "ext": ".pdf",
+        "instant_ms": 2025818833821,
+        "kind": "photo",
+        "unique": "L8WSasQS"
+      },
+      "output": {
+        "attachment": "{day:23446}-photo-L8WSasQS.pdf",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: photo\ncaptured: {second:2025818833}\nattachment: {day:23446}-photo-L8WSasQS.pdf\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:23446}-photo-L8WSasQS.pdf]]\n\nOutline reading primer torts lecture outline\n",
+        "written": [
+          "{day:23446}-photo-L8WSasQS.pdf",
+          "{day:23446}-photo-L8WSasQS.md"
+        ]
+      }
+    },
+    {
+      "class": "python-strip",
+      "input": {
+        "caption": "\r\u3000Receipt primer lecture\t",
+        "ext": ".pdf",
+        "instant_ms": 1968100711182,
+        "kind": "document",
+        "unique": "nuChD5Aok86nGDEKCn1"
+      },
+      "output": {
+        "attachment": "{day:22778}-document-nuChD5Aok86nGDEKCn1.pdf",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: document\ncaptured: {second:1968100711}\nattachment: {day:22778}-document-nuChD5Aok86nGDEKCn1.pdf\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:22778}-document-nuChD5Aok86nGDEKCn1.pdf]]\n\nReceipt primer lecture\n",
+        "written": [
+          "{day:22778}-document-nuChD5Aok86nGDEKCn1.pdf",
+          "{day:22778}-document-nuChD5Aok86nGDEKCn1.md"
+        ]
+      }
+    },
+    {
+      "class": "python-strip",
+      "input": {
+        "caption": " Draft receipt reading torts\u2028 ",
+        "ext": "txt",
+        "instant_ms": 1712921285576,
+        "kind": "document",
+        "unique": "AoN-3NqDBP"
+      },
+      "output": {
+        "attachment": "{day:19825}-document-AoN-3NqDBP.txt",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: document\ncaptured: {second:1712921285}\nattachment: {day:19825}-document-AoN-3NqDBP.txt\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:19825}-document-AoN-3NqDBP.txt]]\n\nDraft receipt reading torts\n",
+        "written": [
+          "{day:19825}-document-AoN-3NqDBP.txt",
+          "{day:19825}-document-AoN-3NqDBP.md"
+        ]
+      }
+    },
+    {
+      "class": "python-strip",
+      "input": {
+        "caption": "\f\u001eWhiteboard draft whiteboard hearsay kanji primer\u00a0",
+        "ext": ".pdf",
+        "instant_ms": 1971182704109,
+        "kind": "voice",
+        "unique": "-FF7KXUbfZekFQs6o4-AmP"
+      },
+      "output": {
+        "attachment": "{day:22814}-voice--FF7KXUbfZekFQs6o4-AmP.pdf",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: voice\ncaptured: {second:1971182704}\nattachment: {day:22814}-voice--FF7KXUbfZekFQs6o4-AmP.pdf\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:22814}-voice--FF7KXUbfZekFQs6o4-AmP.pdf]]\n\nWhiteboard draft whiteboard hearsay kanji primer\n",
+        "written": [
+          "{day:22814}-voice--FF7KXUbfZekFQs6o4-AmP.pdf",
+          "{day:22814}-voice--FF7KXUbfZekFQs6o4-AmP.md"
+        ]
+      }
+    },
+    {
+      "class": "python-strip",
+      "input": {
+        "caption": "\u00a0\u001e\nKanji lecture torts\u3000",
+        "ext": ".pdf",
+        "instant_ms": 1801005083672,
+        "kind": "photo",
+        "unique": "BNYN86idH3fkqnfs_2Iaab-7"
+      },
+      "output": {
+        "attachment": "{day:20844}-photo-BNYN86idH3fkqnfs_2Iaab-7.pdf",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: photo\ncaptured: {second:1801005083}\nattachment: {day:20844}-photo-BNYN86idH3fkqnfs_2Iaab-7.pdf\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:20844}-photo-BNYN86idH3fkqnfs_2Iaab-7.pdf]]\n\nKanji lecture torts\n",
+        "written": [
+          "{day:20844}-photo-BNYN86idH3fkqnfs_2Iaab-7.pdf",
+          "{day:20844}-photo-BNYN86idH3fkqnfs_2Iaab-7.md"
+        ]
+      }
+    },
+    {
+      "class": "python-strip",
+      "input": {
+        "caption": "\u001fReceipt lecture\u001c",
+        "ext": "txt",
+        "instant_ms": 1716148814923,
+        "kind": "voice",
+        "unique": "G9gAN7FcPCRJcx"
+      },
+      "output": {
+        "attachment": "{day:19862}-voice-G9gAN7FcPCRJcx.txt",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: voice\ncaptured: {second:1716148814}\nattachment: {day:19862}-voice-G9gAN7FcPCRJcx.txt\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:19862}-voice-G9gAN7FcPCRJcx.txt]]\n\nReceipt lecture\n",
+        "written": [
+          "{day:19862}-voice-G9gAN7FcPCRJcx.txt",
+          "{day:19862}-voice-G9gAN7FcPCRJcx.md"
+        ]
+      }
+    },
+    {
+      "class": "lines",
+      "input": {
+        "caption": "Kanji outline hearsay draft hearsay voice\n\nKanji reading\n",
+        "ext": "txt",
+        "instant_ms": 1662394305458,
+        "kind": "document",
+        "unique": "e4r1pvKL"
+      },
+      "output": {
+        "attachment": "{day:19240}-document-e4r1pvKL.txt",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: document\ncaptured: {second:1662394305}\nattachment: {day:19240}-document-e4r1pvKL.txt\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:19240}-document-e4r1pvKL.txt]]\n\nKanji outline hearsay draft hearsay voice\n\nKanji reading\n",
+        "written": [
+          "{day:19240}-document-e4r1pvKL.txt",
+          "{day:19240}-document-e4r1pvKL.md"
+        ]
+      }
+    },
+    {
+      "class": "lines",
+      "input": {
+        "caption": "Lecture draft\r\nWhiteboard primer receipt",
+        "ext": "txt",
+        "instant_ms": 1810068753291,
+        "kind": "photo",
+        "unique": "qeF_dRyN6g"
+      },
+      "output": {
+        "attachment": "{day:20949}-photo-qeF_dRyN6g.txt",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: photo\ncaptured: {second:1810068753}\nattachment: {day:20949}-photo-qeF_dRyN6g.txt\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:20949}-photo-qeF_dRyN6g.txt]]\n\nLecture draft\r\nWhiteboard primer receipt\n",
+        "written": [
+          "{day:20949}-photo-qeF_dRyN6g.txt",
+          "{day:20949}-photo-qeF_dRyN6g.md"
+        ]
+      }
+    },
+    {
+      "class": "lines",
+      "input": {
+        "caption": "  Voice voice torts whiteboard reading \u00e9t\u00e9 \u65e5\u672c  ",
+        "ext": ".pdf",
+        "instant_ms": 1702709557821,
+        "kind": "document",
+        "unique": "foMCYAFrV1rGdTh"
+      },
+      "output": {
+        "attachment": "{day:19707}-document-foMCYAFrV1rGdTh.pdf",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: document\ncaptured: {second:1702709557}\nattachment: {day:19707}-document-foMCYAFrV1rGdTh.pdf\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:19707}-document-foMCYAFrV1rGdTh.pdf]]\n\nVoice voice torts whiteboard reading \u00e9t\u00e9 \u65e5\u672c\n",
+        "written": [
+          "{day:19707}-document-foMCYAFrV1rGdTh.pdf",
+          "{day:19707}-document-foMCYAFrV1rGdTh.md"
+        ]
+      }
+    },
+    {
+      "class": "unique-symbols",
+      "input": {
+        "caption": "Lecture whiteboard reading torts memo",
+        "ext": ".jpg",
+        "instant_ms": 1648969245260,
+        "kind": "document",
+        "unique": "6c'kBbwPa~L+4;z^9$1%a!RL="
+      },
+      "output": {
+        "attachment": "{day:19085}-document-6ckBbwPaL4z91aRL.jpg",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: document\ncaptured: {second:1648969245}\nattachment: {day:19085}-document-6ckBbwPaL4z91aRL.jpg\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:19085}-document-6ckBbwPaL4z91aRL.jpg]]\n\nLecture whiteboard reading torts memo\n",
+        "written": [
+          "{day:19085}-document-6ckBbwPaL4z91aRL.jpg",
+          "{day:19085}-document-6ckBbwPaL4z91aRL.md"
+        ]
+      }
+    },
+    {
+      "class": "unique-symbols",
+      "input": {
+        "caption": "Reading kanji hearsay hearsay",
+        "ext": ".pdf",
+        "instant_ms": 1639393991507,
+        "kind": "document",
+        "unique": "o3Y,UsF'S[m{s"
+      },
+      "output": {
+        "attachment": "{day:18974}-document-o3YUsFSms.pdf",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: document\ncaptured: {second:1639393991}\nattachment: {day:18974}-document-o3YUsFSms.pdf\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:18974}-document-o3YUsFSms.pdf]]\n\nReading kanji hearsay hearsay\n",
+        "written": [
+          "{day:18974}-document-o3YUsFSms.pdf",
+          "{day:18974}-document-o3YUsFSms.md"
+        ]
+      }
+    },
+    {
+      "class": "unique-symbols",
+      "input": {
+        "caption": "Receipt receipt",
+        "ext": "png",
+        "instant_ms": 1920607817991,
+        "kind": "voice",
+        "unique": "k_R>r>8*b"
+      },
+      "output": {
+        "attachment": "{day:22229}-voice-k_Rr8b.png",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: voice\ncaptured: {second:1920607817}\nattachment: {day:22229}-voice-k_Rr8b.png\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:22229}-voice-k_Rr8b.png]]\n\nReceipt receipt\n",
+        "written": [
+          "{day:22229}-voice-k_Rr8b.png",
+          "{day:22229}-voice-k_Rr8b.md"
+        ]
+      }
+    },
+    {
+      "class": "unique-symbols",
+      "input": {
+        "caption": "Draft receipt",
+        "ext": "png",
+        "instant_ms": 1772811926301,
+        "kind": "photo",
+        "unique": "jT|E]V<qE{gDg2"
+      },
+      "output": {
+        "attachment": "{day:20518}-photo-jTEVqEgDg2.png",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: photo\ncaptured: {second:1772811926}\nattachment: {day:20518}-photo-jTEVqEgDg2.png\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:20518}-photo-jTEVqEgDg2.png]]\n\nDraft receipt\n",
+        "written": [
+          "{day:20518}-photo-jTEVqEgDg2.png",
+          "{day:20518}-photo-jTEVqEgDg2.md"
+        ]
+      }
+    },
+    {
+      "class": "unique-symbols",
+      "input": {
+        "caption": "Whiteboard hearsay kanji draft",
+        "ext": ".ogg",
+        "instant_ms": 1830935498356,
+        "kind": "voice",
+        "unique": "ab:cd/ef"
+      },
+      "output": {
+        "attachment": "{day:21191}-voice-abcdef.ogg",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: voice\ncaptured: {second:1830935498}\nattachment: {day:21191}-voice-abcdef.ogg\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:21191}-voice-abcdef.ogg]]\n\nWhiteboard hearsay kanji draft\n",
+        "written": [
+          "{day:21191}-voice-abcdef.ogg",
+          "{day:21191}-voice-abcdef.md"
+        ]
+      }
+    },
+    {
+      "class": "unique-32",
+      "input": {
+        "caption": "Lecture torts memo lecture",
+        "ext": "txt",
+        "instant_ms": 1896225786057,
+        "kind": "photo",
+        "unique": "mnfKiEkKmU7j2IKv8dJQ9ktIhzb52omw"
+      },
+      "output": {
+        "attachment": "{day:21947}-photo-mnfKiEkKmU7j2IKv8dJQ9ktIhzb52omw.txt",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: photo\ncaptured: {second:1896225786}\nattachment: {day:21947}-photo-mnfKiEkKmU7j2IKv8dJQ9ktIhzb52omw.txt\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:21947}-photo-mnfKiEkKmU7j2IKv8dJQ9ktIhzb52omw.txt]]\n\nLecture torts memo lecture\n",
+        "written": [
+          "{day:21947}-photo-mnfKiEkKmU7j2IKv8dJQ9ktIhzb52omw.txt",
+          "{day:21947}-photo-mnfKiEkKmU7j2IKv8dJQ9ktIhzb52omw.md"
+        ]
+      }
+    },
+    {
+      "class": "unique-33",
+      "input": {
+        "caption": "Reading memo memo",
+        "ext": "txt",
+        "instant_ms": 1592516709565,
+        "kind": "photo",
+        "unique": "OC_glglTRb-oUK-20e2BFiwtGK5WM4gnp"
+      },
+      "output": {
+        "attachment": "{day:18431}-photo-OC_glglTRb-oUK-20e2BFiwtGK5WM4gn.txt",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: photo\ncaptured: {second:1592516709}\nattachment: {day:18431}-photo-OC_glglTRb-oUK-20e2BFiwtGK5WM4gn.txt\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:18431}-photo-OC_glglTRb-oUK-20e2BFiwtGK5WM4gn.txt]]\n\nReading memo memo\n",
+        "written": [
+          "{day:18431}-photo-OC_glglTRb-oUK-20e2BFiwtGK5WM4gn.txt",
+          "{day:18431}-photo-OC_glglTRb-oUK-20e2BFiwtGK5WM4gn.md"
+        ]
+      }
+    },
+    {
+      "class": "unique-40",
+      "input": {
+        "caption": "Lecture primer hearsay receipt torts kanji",
+        "ext": ".pdf",
+        "instant_ms": 1822338182097,
+        "kind": "document",
+        "unique": "Km6yKnbrd6Mnskxh16uHqIL-yoWv2mi37yZHE0Hj"
+      },
+      "output": {
+        "attachment": "{day:21091}-document-Km6yKnbrd6Mnskxh16uHqIL-yoWv2mi3.pdf",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: document\ncaptured: {second:1822338182}\nattachment: {day:21091}-document-Km6yKnbrd6Mnskxh16uHqIL-yoWv2mi3.pdf\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:21091}-document-Km6yKnbrd6Mnskxh16uHqIL-yoWv2mi3.pdf]]\n\nLecture primer hearsay receipt torts kanji\n",
+        "written": [
+          "{day:21091}-document-Km6yKnbrd6Mnskxh16uHqIL-yoWv2mi3.pdf",
+          "{day:21091}-document-Km6yKnbrd6Mnskxh16uHqIL-yoWv2mi3.md"
+        ]
+      }
+    },
+    {
+      "class": "unique-cut-after-removal",
+      "input": {
+        "caption": "Whiteboard reading hearsay reading",
+        "ext": ".pdf",
+        "instant_ms": 1944212681225,
+        "kind": "voice",
+        "unique": "h.B.z.N.7.Q.3.v.X.N.u.v.m.u.7.l._.d.2.-."
+      },
+      "output": {
+        "attachment": "{day:22502}-voice-hBzN7Q3vXNuvmu7l_d2-.pdf",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: voice\ncaptured: {second:1944212681}\nattachment: {day:22502}-voice-hBzN7Q3vXNuvmu7l_d2-.pdf\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:22502}-voice-hBzN7Q3vXNuvmu7l_d2-.pdf]]\n\nWhiteboard reading hearsay reading\n",
+        "written": [
+          "{day:22502}-voice-hBzN7Q3vXNuvmu7l_d2-.pdf",
+          "{day:22502}-voice-hBzN7Q3vXNuvmu7l_d2-.md"
+        ]
+      }
+    },
+    {
+      "class": "unique-empty",
+      "input": {
+        "caption": "Reading reading hearsay draft lecture",
+        "ext": "txt",
+        "instant_ms": 1951285444289,
+        "kind": "document",
+        "unique": ""
+      },
+      "output": {
+        "attachment": "{day:22584}-document-capture.txt",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: document\ncaptured: {second:1951285444}\nattachment: {day:22584}-document-capture.txt\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:22584}-document-capture.txt]]\n\nReading reading hearsay draft lecture\n",
+        "written": [
+          "{day:22584}-document-capture.txt",
+          "{day:22584}-document-capture.md"
+        ]
+      }
+    },
+    {
+      "class": "unique-symbols-only",
+      "input": {
+        "caption": "Receipt whiteboard reading draft",
+        "ext": "png",
+        "instant_ms": 1614733822025,
+        "kind": "document",
+        "unique": "!@#$%^&*()."
+      },
+      "output": {
+        "attachment": "{day:18689}-document-capture.png",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: document\ncaptured: {second:1614733822}\nattachment: {day:18689}-document-capture.png\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:18689}-document-capture.png]]\n\nReceipt whiteboard reading draft\n",
+        "written": [
+          "{day:18689}-document-capture.png",
+          "{day:18689}-document-capture.md"
+        ]
+      }
+    },
+    {
+      "class": "unique-non-ascii",
+      "input": {
+        "caption": "Voice kanji whiteboard receipt torts",
+        "ext": ".jpg",
+        "instant_ms": 1837824003171,
+        "kind": "voice",
+        "unique": "\u00dcn\u00efc\u00f8d\u00e9_\u65e5-ok"
+      },
+      "output": {
+        "attachment": "{day:21271}-voice-ncd_-ok.jpg",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: voice\ncaptured: {second:1837824003}\nattachment: {day:21271}-voice-ncd_-ok.jpg\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:21271}-voice-ncd_-ok.jpg]]\n\nVoice kanji whiteboard receipt torts\n",
+        "written": [
+          "{day:21271}-voice-ncd_-ok.jpg",
+          "{day:21271}-voice-ncd_-ok.md"
+        ]
+      }
+    },
+    {
+      "class": "ext",
+      "input": {
+        "caption": "Torts draft draft receipt draft hearsay",
+        "ext": ".jpg",
+        "instant_ms": 1710221938934,
+        "kind": "document",
+        "unique": "wTUVSc77kxwE8MyK"
+      },
+      "output": {
+        "attachment": "{day:19794}-document-wTUVSc77kxwE8MyK.jpg",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: document\ncaptured: {second:1710221938}\nattachment: {day:19794}-document-wTUVSc77kxwE8MyK.jpg\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:19794}-document-wTUVSc77kxwE8MyK.jpg]]\n\nTorts draft draft receipt draft hearsay\n",
+        "written": [
+          "{day:19794}-document-wTUVSc77kxwE8MyK.jpg",
+          "{day:19794}-document-wTUVSc77kxwE8MyK.md"
+        ]
+      }
+    },
+    {
+      "class": "ext",
+      "input": {
+        "caption": "Hearsay primer voice kanji",
+        "ext": "jpg",
+        "instant_ms": 1906982812984,
+        "kind": "photo",
+        "unique": "pGyAd8qamBsfWkdF4s_3"
+      },
+      "output": {
+        "attachment": "{day:22071}-photo-pGyAd8qamBsfWkdF4s_3.jpg",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: photo\ncaptured: {second:1906982812}\nattachment: {day:22071}-photo-pGyAd8qamBsfWkdF4s_3.jpg\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:22071}-photo-pGyAd8qamBsfWkdF4s_3.jpg]]\n\nHearsay primer voice kanji\n",
+        "written": [
+          "{day:22071}-photo-pGyAd8qamBsfWkdF4s_3.jpg",
+          "{day:22071}-photo-pGyAd8qamBsfWkdF4s_3.md"
+        ]
+      }
+    },
+    {
+      "class": "ext",
+      "input": {
+        "caption": "Lecture reading kanji voice draft torts",
+        "ext": "ogg",
+        "instant_ms": 1755627084381,
+        "kind": "voice",
+        "unique": "MkViX2SIfQisuuDVy5R"
+      },
+      "output": {
+        "attachment": "{day:20319}-voice-MkViX2SIfQisuuDVy5R.ogg",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: voice\ncaptured: {second:1755627084}\nattachment: {day:20319}-voice-MkViX2SIfQisuuDVy5R.ogg\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:20319}-voice-MkViX2SIfQisuuDVy5R.ogg]]\n\nLecture reading kanji voice draft torts\n",
+        "written": [
+          "{day:20319}-voice-MkViX2SIfQisuuDVy5R.ogg",
+          "{day:20319}-voice-MkViX2SIfQisuuDVy5R.md"
+        ]
+      }
+    },
+    {
+      "class": "ext",
+      "input": {
+        "caption": "Memo draft",
+        "ext": ".tar",
+        "instant_ms": 1666778028646,
+        "kind": "document",
+        "unique": "pNGUtuodb1YYmDfxMLFywhQn"
+      },
+      "output": {
+        "attachment": "{day:19291}-document-pNGUtuodb1YYmDfxMLFywhQn.tar",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: document\ncaptured: {second:1666778028}\nattachment: {day:19291}-document-pNGUtuodb1YYmDfxMLFywhQn.tar\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:19291}-document-pNGUtuodb1YYmDfxMLFywhQn.tar]]\n\nMemo draft\n",
+        "written": [
+          "{day:19291}-document-pNGUtuodb1YYmDfxMLFywhQn.tar",
+          "{day:19291}-document-pNGUtuodb1YYmDfxMLFywhQn.md"
+        ]
+      }
+    },
+    {
+      "class": "ext",
+      "input": {
+        "caption": "Lecture outline receipt hearsay receipt",
+        "ext": "",
+        "instant_ms": 1910742647089,
+        "kind": "voice",
+        "unique": "6dhPhWj6AZkSNERBulD8bgV"
+      },
+      "output": {
+        "attachment": "{day:22115}-voice-6dhPhWj6AZkSNERBulD8bgV.bin",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: voice\ncaptured: {second:1910742647}\nattachment: {day:22115}-voice-6dhPhWj6AZkSNERBulD8bgV.bin\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:22115}-voice-6dhPhWj6AZkSNERBulD8bgV.bin]]\n\nLecture outline receipt hearsay receipt\n",
+        "written": [
+          "{day:22115}-voice-6dhPhWj6AZkSNERBulD8bgV.bin",
+          "{day:22115}-voice-6dhPhWj6AZkSNERBulD8bgV.md"
+        ]
+      }
+    },
+    {
+      "class": "sub-second",
+      "input": {
+        "caption": "Primer lecture",
+        "ext": ".ogg",
+        "instant_ms": 1790931907000,
+        "kind": "document",
+        "unique": "hHeDjEnO"
+      },
+      "output": {
+        "attachment": "{day:20728}-document-hHeDjEnO.ogg",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: document\ncaptured: {second:1790931907}\nattachment: {day:20728}-document-hHeDjEnO.ogg\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:20728}-document-hHeDjEnO.ogg]]\n\nPrimer lecture\n",
+        "written": [
+          "{day:20728}-document-hHeDjEnO.ogg",
+          "{day:20728}-document-hHeDjEnO.md"
+        ]
+      }
+    },
+    {
+      "class": "sub-second",
+      "input": {
+        "caption": "Torts reading",
+        "ext": ".ogg",
+        "instant_ms": 1790931907001,
+        "kind": "photo",
+        "unique": "9O8JHcbbaEwN_hYw93Ntx"
+      },
+      "output": {
+        "attachment": "{day:20728}-photo-9O8JHcbbaEwN_hYw93Ntx.ogg",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: photo\ncaptured: {second:1790931907}\nattachment: {day:20728}-photo-9O8JHcbbaEwN_hYw93Ntx.ogg\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:20728}-photo-9O8JHcbbaEwN_hYw93Ntx.ogg]]\n\nTorts reading\n",
+        "written": [
+          "{day:20728}-photo-9O8JHcbbaEwN_hYw93Ntx.ogg",
+          "{day:20728}-photo-9O8JHcbbaEwN_hYw93Ntx.md"
+        ]
+      }
+    },
+    {
+      "class": "sub-second",
+      "input": {
+        "caption": "Outline primer torts draft outline",
+        "ext": ".pdf",
+        "instant_ms": 1790931907999,
+        "kind": "voice",
+        "unique": "jfwp1dGsVHoMCqP6Co-"
+      },
+      "output": {
+        "attachment": "{day:20728}-voice-jfwp1dGsVHoMCqP6Co-.pdf",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: voice\ncaptured: {second:1790931907}\nattachment: {day:20728}-voice-jfwp1dGsVHoMCqP6Co-.pdf\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:20728}-voice-jfwp1dGsVHoMCqP6Co-.pdf]]\n\nOutline primer torts draft outline\n",
+        "written": [
+          "{day:20728}-voice-jfwp1dGsVHoMCqP6Co-.pdf",
+          "{day:20728}-voice-jfwp1dGsVHoMCqP6Co-.md"
+        ]
+      }
+    },
+    {
+      "class": "midnight",
+      "input": {
+        "caption": "Outline voice outline kanji",
+        "ext": "txt",
+        "instant_ms": 1767225599999,
+        "kind": "document",
+        "unique": "6bkPOX947gRCoAOI"
+      },
+      "output": {
+        "attachment": "{day:20453}-document-6bkPOX947gRCoAOI.txt",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: document\ncaptured: {second:1767225599}\nattachment: {day:20453}-document-6bkPOX947gRCoAOI.txt\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:20453}-document-6bkPOX947gRCoAOI.txt]]\n\nOutline voice outline kanji\n",
+        "written": [
+          "{day:20453}-document-6bkPOX947gRCoAOI.txt",
+          "{day:20453}-document-6bkPOX947gRCoAOI.md"
+        ]
+      }
+    },
+    {
+      "class": "midnight",
+      "input": {
+        "caption": "Primer hearsay primer",
+        "ext": ".ogg",
+        "instant_ms": 1767225600000,
+        "kind": "photo",
+        "unique": "TeX160lJmYCdUV-Km-KKoAL"
+      },
+      "output": {
+        "attachment": "{day:20454}-photo-TeX160lJmYCdUV-Km-KKoAL.ogg",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: photo\ncaptured: {second:1767225600}\nattachment: {day:20454}-photo-TeX160lJmYCdUV-Km-KKoAL.ogg\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:20454}-photo-TeX160lJmYCdUV-Km-KKoAL.ogg]]\n\nPrimer hearsay primer\n",
+        "written": [
+          "{day:20454}-photo-TeX160lJmYCdUV-Km-KKoAL.ogg",
+          "{day:20454}-photo-TeX160lJmYCdUV-Km-KKoAL.md"
+        ]
+      }
+    },
+    {
+      "class": "leap",
+      "input": {
+        "caption": "Reading whiteboard outline",
+        "ext": ".ogg",
+        "instant_ms": 1835440245500,
+        "kind": "voice",
+        "unique": "e-_5XPA61f7__OXTS_a4Gi-"
+      },
+      "output": {
+        "attachment": "{day:21243}-voice-e-_5XPA61f7__OXTS_a4Gi-.ogg",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: voice\ncaptured: {second:1835440245}\nattachment: {day:21243}-voice-e-_5XPA61f7__OXTS_a4Gi-.ogg\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:21243}-voice-e-_5XPA61f7__OXTS_a4Gi-.ogg]]\n\nReading whiteboard outline\n",
+        "written": [
+          "{day:21243}-voice-e-_5XPA61f7__OXTS_a4Gi-.ogg",
+          "{day:21243}-voice-e-_5XPA61f7__OXTS_a4Gi-.md"
+        ]
+      }
+    },
+    {
+      "class": "before-epoch",
+      "input": {
+        "caption": "Reading voice",
+        "ext": "png",
+        "instant_ms": -1,
+        "kind": "document",
+        "unique": "pMDUQB3STnDCXImTjCNJjeV"
+      },
+      "output": {
+        "attachment": "{day:-1}-document-pMDUQB3STnDCXImTjCNJjeV.png",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: document\ncaptured: {second:-1}\nattachment: {day:-1}-document-pMDUQB3STnDCXImTjCNJjeV.png\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:-1}-document-pMDUQB3STnDCXImTjCNJjeV.png]]\n\nReading voice\n",
+        "written": [
+          "{day:-1}-document-pMDUQB3STnDCXImTjCNJjeV.png",
+          "{day:-1}-document-pMDUQB3STnDCXImTjCNJjeV.md"
+        ]
+      }
+    },
+    {
+      "class": "before-epoch",
+      "input": {
+        "caption": "Lecture outline primer kanji kanji lecture",
+        "ext": ".pdf",
+        "instant_ms": -86400001,
+        "kind": "photo",
+        "unique": "AX3RbjsOGK"
+      },
+      "output": {
+        "attachment": "{day:-2}-photo-AX3RbjsOGK.pdf",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: photo\ncaptured: {second:-86401}\nattachment: {day:-2}-photo-AX3RbjsOGK.pdf\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:-2}-photo-AX3RbjsOGK.pdf]]\n\nLecture outline primer kanji kanji lecture\n",
+        "written": [
+          "{day:-2}-photo-AX3RbjsOGK.pdf",
+          "{day:-2}-photo-AX3RbjsOGK.md"
+        ]
+      }
+    },
+    {
+      "input": {
+        "caption": "Lecture kanji",
+        "ext": "txt",
+        "instant_ms": 1736610221984,
+        "kind": "photo",
+        "unique": "T_T2pFJytjqVYR"
+      },
+      "output": {
+        "attachment": "{day:20099}-photo-T_T2pFJytjqVYR.txt",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: photo\ncaptured: {second:1736610221}\nattachment: {day:20099}-photo-T_T2pFJytjqVYR.txt\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:20099}-photo-T_T2pFJytjqVYR.txt]]\n\nLecture kanji\n",
+        "written": [
+          "{day:20099}-photo-T_T2pFJytjqVYR.txt",
+          "{day:20099}-photo-T_T2pFJytjqVYR.md"
+        ]
+      }
+    },
+    {
+      "input": {
+        "caption": "Torts draft memo",
+        "ext": "txt",
+        "instant_ms": 1754800027622,
+        "kind": "photo",
+        "unique": "8kl0YKtyAGQSk"
+      },
+      "output": {
+        "attachment": "{day:20310}-photo-8kl0YKtyAGQSk.txt",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: photo\ncaptured: {second:1754800027}\nattachment: {day:20310}-photo-8kl0YKtyAGQSk.txt\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:20310}-photo-8kl0YKtyAGQSk.txt]]\n\nTorts draft memo\n",
+        "written": [
+          "{day:20310}-photo-8kl0YKtyAGQSk.txt",
+          "{day:20310}-photo-8kl0YKtyAGQSk.md"
+        ]
+      }
+    },
+    {
+      "input": {
+        "caption": "Receipt hearsay draft voice lecture",
+        "ext": "txt",
+        "instant_ms": 1897370263672,
+        "kind": "photo",
+        "unique": "1Ow46J2Z7pP"
+      },
+      "output": {
+        "attachment": "{day:21960}-photo-1Ow46J2Z7pP.txt",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: photo\ncaptured: {second:1897370263}\nattachment: {day:21960}-photo-1Ow46J2Z7pP.txt\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:21960}-photo-1Ow46J2Z7pP.txt]]\n\nReceipt hearsay draft voice lecture\n",
+        "written": [
+          "{day:21960}-photo-1Ow46J2Z7pP.txt",
+          "{day:21960}-photo-1Ow46J2Z7pP.md"
+        ]
+      }
+    },
+    {
+      "input": {
+        "caption": "Receipt torts whiteboard receipt receipt",
+        "ext": "png",
+        "instant_ms": 2031171275402,
+        "kind": "document",
+        "unique": "yFlhJt-gP0kV18FW"
+      },
+      "output": {
+        "attachment": "{day:23508}-document-yFlhJt-gP0kV18FW.png",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: document\ncaptured: {second:2031171275}\nattachment: {day:23508}-document-yFlhJt-gP0kV18FW.png\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:23508}-document-yFlhJt-gP0kV18FW.png]]\n\nReceipt torts whiteboard receipt receipt\n",
+        "written": [
+          "{day:23508}-document-yFlhJt-gP0kV18FW.png",
+          "{day:23508}-document-yFlhJt-gP0kV18FW.md"
+        ]
+      }
+    },
+    {
+      "input": {
+        "caption": "Hearsay reading kanji voice",
+        "ext": "png",
+        "instant_ms": 1724926557682,
+        "kind": "voice",
+        "unique": "oScxBvN752"
+      },
+      "output": {
+        "attachment": "{day:19964}-voice-oScxBvN752.png",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: voice\ncaptured: {second:1724926557}\nattachment: {day:19964}-voice-oScxBvN752.png\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:19964}-voice-oScxBvN752.png]]\n\nHearsay reading kanji voice\n",
+        "written": [
+          "{day:19964}-voice-oScxBvN752.png",
+          "{day:19964}-voice-oScxBvN752.md"
+        ]
+      }
+    },
+    {
+      "input": {
+        "caption": "Memo draft",
+        "ext": ".ogg",
+        "instant_ms": 1958931512167,
+        "kind": "photo",
+        "unique": "vp2W7I_BeOqAnAKUoVwDYXMX"
+      },
+      "output": {
+        "attachment": "{day:22672}-photo-vp2W7I_BeOqAnAKUoVwDYXMX.ogg",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: photo\ncaptured: {second:1958931512}\nattachment: {day:22672}-photo-vp2W7I_BeOqAnAKUoVwDYXMX.ogg\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:22672}-photo-vp2W7I_BeOqAnAKUoVwDYXMX.ogg]]\n\nMemo draft\n",
+        "written": [
+          "{day:22672}-photo-vp2W7I_BeOqAnAKUoVwDYXMX.ogg",
+          "{day:22672}-photo-vp2W7I_BeOqAnAKUoVwDYXMX.md"
+        ]
+      }
+    },
+    {
+      "input": {
+        "caption": "Memo reading",
+        "ext": ".pdf",
+        "instant_ms": 1730185140037,
+        "kind": "photo",
+        "unique": "SpEzB0esgRWr7JFNARp1-"
+      },
+      "output": {
+        "attachment": "{day:20025}-photo-SpEzB0esgRWr7JFNARp1-.pdf",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: photo\ncaptured: {second:1730185140}\nattachment: {day:20025}-photo-SpEzB0esgRWr7JFNARp1-.pdf\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:20025}-photo-SpEzB0esgRWr7JFNARp1-.pdf]]\n\nMemo reading\n",
+        "written": [
+          "{day:20025}-photo-SpEzB0esgRWr7JFNARp1-.pdf",
+          "{day:20025}-photo-SpEzB0esgRWr7JFNARp1-.md"
+        ]
+      }
+    },
+    {
+      "input": {
+        "caption": "Kanji hearsay",
+        "ext": ".ogg",
+        "instant_ms": 1954389058891,
+        "kind": "document",
+        "unique": "o-JcjDnU7AjLrglA-YUnOoHs"
+      },
+      "output": {
+        "attachment": "{day:22620}-document-o-JcjDnU7AjLrglA-YUnOoHs.ogg",
+        "folder": "90-Inbox",
+        "stub": "---\nstatus: captured\nsource: telegram\nkind: document\ncaptured: {second:1954389058}\nattachment: {day:22620}-document-o-JcjDnU7AjLrglA-YUnOoHs.ogg\ntags: [inbox, telegram-capture]\n---\n\nCaptured via Telegram. Attachment: [[{day:22620}-document-o-JcjDnU7AjLrglA-YUnOoHs.ogg]]\n\nKanji hearsay\n",
+        "written": [
+          "{day:22620}-document-o-JcjDnU7AjLrglA-YUnOoHs.ogg",
+          "{day:22620}-document-o-JcjDnU7AjLrglA-YUnOoHs.md"
+        ]
+      }
+    }
+  ],
+  "function": "vault_bridge.save_inbox_capture",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Calls the function over a temporary vault root that holds its inbox folder, with a settings stand-in carrying only that root, when as the aware UTC instant instant_ms after the epoch, and synthetic bytes; records each write as it is made and returns the attachment's folder, its name, the names in the order written and the stub's text, each instant to the second as a {second:N} token and each day as a {day:N} token; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_118.py",
+  "registry_sha256": "331c779b8fbe6f7a3a3b47489da245eb508b710bd2b3ee519ed4cd6476956d3a",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}
