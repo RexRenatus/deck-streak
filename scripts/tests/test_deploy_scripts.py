@@ -2305,12 +2305,14 @@ class EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused(Case):
         ("rollback-kept", "first-install"): "a first install holds no kept release",
         ("rollback-kept", "not-ready-first"): "a first install holds no kept release",
         ("rollback-kept", "first-install-parent-unwritable"): "a first install keeps nothing",
-        ("rollback-unkept", "same-tag"): "a rollback to a kept tag is the kept verb",
         ("rollback-kept", "same-tag"): "the kept verb's tag is always present",
         ("rollback-kept", "stale-partial"): "the kept verb unpacks nothing",
         ("rollback-kept", "undeletable-partial"): "the kept verb unpacks nothing",
         ("rollback-kept", "partly-deletable-partial"): "the kept verb unpacks nothing",
-        ("rollback-kept", "corrupt-manifest"): "the kept verb unpacks nothing",
+        (
+            "rollback-kept",
+            "corrupt-manifest",
+        ): "the fresh-manifest options apply only to the v1.1.0 ship, which the pair does not build",
         (
             "rollback-kept",
             "effective-refused",
