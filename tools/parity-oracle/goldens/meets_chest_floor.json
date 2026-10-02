@@ -195,7 +195,7 @@
   "kind": "adapter",
   "note": "Builds the predecessor's RealEffort from the case's counts; cases drawn under CPython 3.12.12.",
   "registry": "tools/parity-oracle/registry/spec_081.py",
-  "registry_sha256": "877f300d7eb8188ffee744f6051e9856c0a549fb96e5ac6df58af940f5dd35ff",
+  "registry_sha256": "dc4256589f935f00d269808825b7243da43e672bcce5272d55a0ddcc2ef26a7a",
   "schema": "phx.parity-golden.v1",
   "seed": 20,
   "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
