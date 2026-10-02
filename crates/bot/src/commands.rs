@@ -25,6 +25,7 @@ use std::sync::Arc;
 
 use deck_streak_coordination::data_rights_registry::{erase_all, export_all};
 use deck_streak_coordination::drills::{self, DrillMeta, DrillNotes, RealFs, Surface};
+use deck_streak_coordination::inbox_capture::InboxCaptures;
 use deck_streak_coordination::instruments::InstrumentService;
 use deck_streak_coordination::progression::level_view::level_view;
 use deck_streak_coordination::score::day_score;
@@ -468,6 +469,13 @@ impl<S: OwnerSync> Commands<S> {
         self
     }
 
+    /// These handlers, saving the owner's media into the vault inbox through `captures` (SPEC-118
+    /// R6 to R9).
+    #[must_use]
+    pub fn with_capture(self, _captures: Arc<InboxCaptures<RealFs>>) -> Self {
+        self
+    }
+
     /// The owner's chat: in a private chat, the chat's id is the user's.
     const fn chat(&self) -> i64 {
         self.owner.user().get()
@@ -501,6 +509,7 @@ impl<S: OwnerSync> Commands<S> {
         };
         match gate::admit(&update.content, self.owner) {
             Admission::Message(message) => self.on_message(message).await,
+            Admission::Media(_choice) => {}
             Admission::Callback(callback) => {
                 self.transport.answer_callback(&callback.id).await;
                 self.on_callback(callback).await;

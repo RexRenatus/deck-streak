@@ -626,6 +626,15 @@ pub enum RunOutcome {
     },
     /// The run was discarded, and the vault is untouched.
     Discarded(Discard),
+    /// An operation would have reached a journal folder when it was applied, through a link the
+    /// vault gained after the run was checked: the run stopped there, before that operation wrote
+    /// anything (SPEC-118 R5, #56). The operations before it stay applied (ADR-316).
+    Stopped {
+        /// How many operations were applied before the refusal.
+        applied: usize,
+        /// The refusal: [`VaultError::JournalRefused`].
+        refusal: VaultError,
+    },
 }
 
 /// Where an operation's path lands, after the links of the folders that already exist.

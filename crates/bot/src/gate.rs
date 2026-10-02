@@ -17,6 +17,8 @@ use deck_streak_kernel::TelegramUserId;
 use frankenstein::types::{CallbackQuery, ChatType, MaybeInaccessibleMessage, Message, User};
 use frankenstein::updates::UpdateContent;
 
+use crate::capture::Choice;
+
 /// The longest text the owner's message may carry, in characters: longer is dropped.
 pub const MAX_INBOUND_TEXT: usize = 4096;
 /// The most bytes a callback's data may carry: more is answered and not dispatched.
@@ -56,6 +58,9 @@ pub struct Dropped {
 pub enum Admission {
     /// The owner's message: dispatch it.
     Message(OwnerMessage),
+    /// The owner's photo, voice note or document, from the owner's private chat: capture it
+    /// (SPEC-118 R6).
+    Media(Choice),
     /// The owner's callback: answer it, then dispatch it.
     Callback(OwnerCallback),
     /// The owner's callback whose data is over its cap: answer it, and dispatch nothing.
