@@ -282,3 +282,60 @@ A13: replay of the raw path rewrite: FAILED (failures=1): AssertionError: Lists 
 A13: replay of the triple star comment rewrite: FAILED (failures=1): AssertionError: Lists differ: [...] != [] (test_every_module_file_choice_is_read_from_rustcs_file_or_refused)
 A13: replay of the two attribute cfg_attr rewrite: FAILED (failures=1): AssertionError: Lists differ: [...] != [] (test_every_module_file_choice_is_read_from_rustcs_file_or_refused)
 ```
+
+## Addendum, 2026-10-01: A16 to A18, the nested module, the macro module and the rival declaration
+
+Three criteria join SPEC-192 (section 13). Their tests were committed first at 87ed53af, with the
+guard as the base left it: 38 tests ran and 10 failed, each by assertion and none by an import or a
+syntax error (A16 three tests, A17 three, A18 four). The arms were committed at 3ce8e297 and
+repaired at 8a44e700, 54a29c9f added a planted positive beside two tests that asserted only
+absences, and 33b8fe8b added two assertions on `test_files`. The four commits after the red one
+change the guard's own file, test_setting_shapes.py, and no assertion of a red test was weakened in
+them. The module is green at 54a29c9f (Ran 38 tests, OK,
+examined 25 Setting impl(s), examined 194 crate file(s) read for a macro_rules! body, examined 6309
+R8 member(s) judged against rustc); the base module ran 24 tests.
+
+```red-first
+A16: red at 87ed53af: AssertionError: Lists differ: ['demo::Depth (src/lib.rs) "a whole depth"'] != [] (test_a_declaration_inside_inline_modules_is_read_from_the_inline_path)
+A16: green at 54a29c9f
+A17: red at 87ed53af: AssertionError: 0 != 1 :         #[cfg(test)]\n        mod tests;\n (test_a_macro_body_with_a_cfg_test_module_is_refused_by_its_file)
+A17: green at 54a29c9f
+A18: red at 87ed53af: AssertionError: 0 != 1 : ('lib.rs', '#[cfg(test)]\nmod tests;\n#[cfg(not(test))]\nmod tests;\n') (test_a_module_declared_beside_one_with_not_test_is_refused)
+A18: green at 54a29c9f
+```
+
+Rows S19305 to S19309 pin the arms, and each is KILLED by its pinning test under one invocation.
+
+A17's red line writes its message's two newlines as `\n`: the message is the planted macro body,
+which unittest prints as it is.
+
+## Addendum, 2026-10-01, round 2: a file's own inner attributes, two more macro forms and a rival the guard cannot name
+
+This round adds no criterion: SPEC-192 section 13 widens A16 to A18. Nine new tests were committed
+first at f21071a2, with the guard as 33b8fe8b left it: 47 tests ran and 4 failed, each by assertion
+and none by an import or a syntax error (A16 one test, A17 one, A18 two). The other five new tests
+were green there, and are disclosed as such: each plants a negative that the guard already refused
+or a case it already read (a declaration whose file the guard cannot choose, an attribute of another
+item or of a macro's matcher, a `cfg_attr` path that does not decide its file alone, a rival in a
+`src/bin` root or under a tool attribute, and a plain `#[path]` in another file), and each kills a
+mutant of the new arms. The arms were committed at 74807ff7, where the module is green (Ran 47
+tests, OK). A second red, 3767d92c, planted a rival whose attributes the guard cannot read back to
+the previous item's end (`unsafe mod`): 48 tests ran and 1 failed by assertion, and d336c648 made it
+green. No assertion of a red test was weakened after its red commit. The module is green at d336c648
+(Ran 48 tests, OK, examined 25 Setting impl(s), examined 194 crate file(s) read for a macro_rules!
+body, examined 6309 R8 member(s) judged against rustc).
+
+```text
+A16: red at f21071a2: AssertionError: Lists differ: ['demo::Depth (src/lib.rs) "a whole depth"'] != [] (test_a_file_whose_own_inner_attribute_keeps_it_under_test_is_read)
+A16: green at 74807ff7
+A17: red at f21071a2: AssertionError: 0 != 1 :         mod x {\n            #![cfg(test)]\n        }\n (test_an_inner_attribute_or_an_attribute_before_a_repetition_is_read)
+A17: green at 74807ff7
+A18: red at f21071a2: AssertionError: Lists differ: ['demo::Depth (src/lib.rs) "a whole depth"'] != [] (test_a_file_only_test_reaches_by_its_own_attribute_or_a_cfg_attr_path_is_read)
+A18: red at f21071a2: AssertionError: 0 != 1 : ('lib.rs', '#[path = "tests\\x2ers"]\nmod prod;\n#[cfg(test)]\nmod tests;\n') (test_a_rival_whose_path_the_guard_cannot_read_is_refused)
+A18: green at 74807ff7
+A18: red at 3767d92c: AssertionError: 0 != 1 : ('lib.rs', '#[cfg(not(test))]\n#[path = "tests.rs"]\nunsafe mod prod;\n') (test_a_rival_whose_attributes_the_guard_cannot_read_whole_is_refused)
+A18: green at d336c648
+```
+
+Rows S19310 to S19314 pin the round's arms, and each is KILLED by its pinning test under one
+invocation, as S19305 to S19309, S19227 and S19277 still are.
