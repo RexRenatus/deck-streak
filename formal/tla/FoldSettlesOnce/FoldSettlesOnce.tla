@@ -1,5 +1,5 @@
 ---------------------------- MODULE FoldSettlesOnce ----------------------------
-\* @phx covers crates/coordination/src/recompute/mod.rs anchor=run digest=sha256:c51dc67a3988bbeb8c46a953acdaba06669275e0ba405edb1146de880ae815fd
+\* @phx covers crates/coordination/src/recompute/mod.rs anchor=run digest=sha256:7a383ba01872f4dde46ccb5220fa492de1f89498adf71774cae868e3e0b7acbb
 \* @phx covers crates/analytics/src/rollup.rs anchor=settle_cursor digest=sha256:2571fa2f5d4ae18a4571c59f3f6911ba61a864f2bb2cee248288ec9a189976c1
 \* @phx covers crates/analytics/src/rollup.rs anchor=record_settled digest=sha256:41ddfd54e6f21de292b44e7c58a0157155b5b3a40ff3d50a4c7cb68805695b2c
 \* @phx covers crates/coordination/src/sync_cycle.rs anchor=sync_cycle digest=sha256:b8158a6a2359166e7b55a5dbbb15189d50cdbeebd84c20a0805067046c31dc6c
