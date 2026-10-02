@@ -1656,6 +1656,18 @@ class TheGuardReadsOutOfLineTestModules(unittest.TestCase):
             files = {"lib.rs": lib, "a.rs": f"{opening[1]}{gate}mod tests;\n"}
             files["a/tests.rs"] = opening[0] + probe("a/tests.rs")
             add(f"a.rs {opening!r} {lib!r}", files, "a.rs", True, "lib.rs")
+        # A pin, not only a refusal, rides on each chain and each opening: a file each chain reaches
+        # holds its test module inline, and a module file is test-only by its inner attribute alone.
+        for lib in self.CHAINS:
+            files = {"lib.rs": lib, "a.rs": f"{gate}mod tests {{\n{probe('inline')}}}\n"}
+            add(f"a.rs {gate!r} mod tests {{ }} {lib!r}", files, "a.rs", True, "lib.rs")
+        for opening, _ in self.OPENINGS:
+            if "cfg(any())" not in opening:
+                continue
+            inner = opening.replace("cfg(any())", "cfg(test)")
+            files = {"lib.rs": "mod a;\n", "a.rs": "mod tests;\n"}
+            files["a/tests.rs"] = inner + probe("a/tests.rs")
+            add(f"a.rs mod tests; {inner!r}", files, "a.rs", True, "lib.rs")
         for body in (";\n", f" {{\n{probe('inline')}}}\n"):
             opened = "#![cfg(test)]\n#[cfg(any(test, x))]\nmod tests"
             files = {"lib.rs": "mod a;\n", "a.rs": opened + body, "a/tests.rs": probe("a/tests.rs")}
