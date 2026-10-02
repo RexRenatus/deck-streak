@@ -2494,7 +2494,7 @@ class ADocstringOnlyScriptChangeIsNamed(unittest.TestCase):
         )
 
     def test_a_declared_encoding_decides_the_tree_compared(self):
-        """A62, the PEP 263 class (#485): the tree is the one Python reads from the bytes."""
+        """A65 (#485): the tree compared is the one Python reads from the bytes."""
         module = verdict_module()
         members = examined("declared encodings", cookie_edits())
         mismatches, readings = [], Counter()
