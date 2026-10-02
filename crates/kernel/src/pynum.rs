@@ -30,11 +30,15 @@ pub fn sum(values: impl IntoIterator<Item = f64>) -> f64 {
 /// `statistics.median` of a list, or `None` for an empty one (where `statistics` raises).
 ///
 /// The middle value of an odd list, or the mean of the two middle values of an even one, taken as
-/// `(a + b) / 2` in floats.
+/// `(a + b) / 2` in floats. A list that holds a NaN has no median, and reads NaN (SPEC-302
+/// section 5).
 #[must_use]
 pub fn median(values: &[f64]) -> Option<f64> {
     if values.is_empty() {
         return None;
+    }
+    if values.iter().any(|x| x.is_nan()) {
+        return Some(f64::NAN);
     }
     let mut ordered = values.to_vec();
     ordered.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
