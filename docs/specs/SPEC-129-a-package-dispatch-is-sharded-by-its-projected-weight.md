@@ -532,8 +532,10 @@ comparing source text). Issues #532 and #533.
   - a call through a name computed at run time, such as `getattr(os, name)(...)`;
   - a real program run inside another function that the handler or a later statement calls: the
     census does not follow a call;
-  - a stand-in's source assembled at run time, by concatenation, `%`, `format` or an f-string: only
-    a constant is parsed;
+  - a stand-in's source split across pieces that do not parse alone and joined at run time, by
+    concatenation, `%` or `format`, or held in an f-string: each constant is parsed alone, so a
+    `%` or `format` template whose own text parses is read and its arm listed, while a split
+    source's pieces are not, and an f-string's text is never parsed;
   - a handler that leaves on only some of its paths, such as a `raise` under an `if`: any leaving
     statement in the handler counts as leaving.
 - **The rule, #532: the copy check compares bodies.** Section 10's census of definitions matched a
