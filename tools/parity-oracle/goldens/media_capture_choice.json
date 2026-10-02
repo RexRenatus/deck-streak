@@ -1,0 +1,977 @@
+{
+  "adapter": "with_a_recorded_capture",
+  "cases": [
+    {
+      "class": "photo-sizes",
+      "input": {
+        "message": {
+          "caption": "Whiteboard after torts",
+          "chat": {
+            "id": 4242,
+            "type": "private"
+          },
+          "date": 0,
+          "from": {
+            "first_name": "Owner",
+            "id": 4242,
+            "is_bot": false
+          },
+          "message_id": 1,
+          "photo": [
+            {
+              "file_id": "photo-file-1",
+              "file_size": 675,
+              "file_unique_id": "photo-unique-1",
+              "height": 60,
+              "width": 90
+            },
+            {
+              "file_id": "photo-file-2",
+              "file_size": 9600,
+              "file_unique_id": "photo-unique-2",
+              "height": 240,
+              "width": 320
+            },
+            {
+              "file_id": "photo-file-3",
+              "file_size": 153600,
+              "file_unique_id": "photo-unique-3",
+              "height": 960,
+              "width": 1280
+            }
+          ]
+        }
+      },
+      "output": {
+        "calls": [
+          {
+            "caption": "Whiteboard after torts",
+            "ext": ".jpg",
+            "file_id": "photo-file-3",
+            "kind": "photo",
+            "unique": "photo-unique-3"
+          }
+        ],
+        "captured": true
+      }
+    },
+    {
+      "class": "photo-one-size",
+      "input": {
+        "message": {
+          "chat": {
+            "id": 4242,
+            "type": "private"
+          },
+          "date": 0,
+          "from": {
+            "first_name": "Owner",
+            "id": 4242,
+            "is_bot": false
+          },
+          "message_id": 2,
+          "photo": [
+            {
+              "file_id": "photo-file-4",
+              "file_size": 38400,
+              "file_unique_id": "photo-unique-4",
+              "height": 480,
+              "width": 640
+            }
+          ]
+        }
+      },
+      "output": {
+        "calls": [
+          {
+            "caption": "",
+            "ext": ".jpg",
+            "file_id": "photo-file-4",
+            "kind": "photo",
+            "unique": "photo-unique-4"
+          }
+        ],
+        "captured": true
+      }
+    },
+    {
+      "class": "voice",
+      "input": {
+        "message": {
+          "caption": "Hearsay memo",
+          "chat": {
+            "id": 4242,
+            "type": "private"
+          },
+          "date": 0,
+          "from": {
+            "first_name": "Owner",
+            "id": 4242,
+            "is_bot": false
+          },
+          "message_id": 3,
+          "voice": {
+            "duration": 7,
+            "file_id": "voice-file-1",
+            "file_unique_id": "voice-unique-1"
+          }
+        }
+      },
+      "output": {
+        "calls": [
+          {
+            "caption": "Hearsay memo",
+            "ext": ".ogg",
+            "file_id": "voice-file-1",
+            "kind": "voice",
+            "unique": "voice-unique-1"
+          }
+        ],
+        "captured": true
+      }
+    },
+    {
+      "class": "document-one-dot",
+      "input": {
+        "message": {
+          "chat": {
+            "id": 4242,
+            "type": "private"
+          },
+          "date": 0,
+          "document": {
+            "file_id": "document-file-1",
+            "file_name": "lecture-notes.pdf",
+            "file_unique_id": "document-unique-1"
+          },
+          "from": {
+            "first_name": "Owner",
+            "id": 4242,
+            "is_bot": false
+          },
+          "message_id": 4
+        }
+      },
+      "output": {
+        "calls": [
+          {
+            "caption": "lecture-notes.pdf",
+            "ext": ".pdf",
+            "file_id": "document-file-1",
+            "kind": "document",
+            "unique": "document-unique-1"
+          }
+        ],
+        "captured": true
+      }
+    },
+    {
+      "class": "document-two-dots",
+      "input": {
+        "message": {
+          "caption": "Outline",
+          "chat": {
+            "id": 4242,
+            "type": "private"
+          },
+          "date": 0,
+          "document": {
+            "file_id": "document-file-2",
+            "file_name": "outline.tar.gz",
+            "file_unique_id": "document-unique-2"
+          },
+          "from": {
+            "first_name": "Owner",
+            "id": 4242,
+            "is_bot": false
+          },
+          "message_id": 5
+        }
+      },
+      "output": {
+        "calls": [
+          {
+            "caption": "Outline",
+            "ext": ".gz",
+            "file_id": "document-file-2",
+            "kind": "document",
+            "unique": "document-unique-2"
+          }
+        ],
+        "captured": true
+      }
+    },
+    {
+      "class": "document-no-dot",
+      "input": {
+        "message": {
+          "chat": {
+            "id": 4242,
+            "type": "private"
+          },
+          "date": 0,
+          "document": {
+            "file_id": "document-file-3",
+            "file_name": "README",
+            "file_unique_id": "document-unique-3"
+          },
+          "from": {
+            "first_name": "Owner",
+            "id": 4242,
+            "is_bot": false
+          },
+          "message_id": 6
+        }
+      },
+      "output": {
+        "calls": [
+          {
+            "caption": "README",
+            "ext": ".bin",
+            "file_id": "document-file-3",
+            "kind": "document",
+            "unique": "document-unique-3"
+          }
+        ],
+        "captured": true
+      }
+    },
+    {
+      "class": "document-no-name",
+      "input": {
+        "message": {
+          "chat": {
+            "id": 4242,
+            "type": "private"
+          },
+          "date": 0,
+          "document": {
+            "file_id": "document-file-4",
+            "file_unique_id": "document-unique-4"
+          },
+          "from": {
+            "first_name": "Owner",
+            "id": 4242,
+            "is_bot": false
+          },
+          "message_id": 7
+        }
+      },
+      "output": {
+        "calls": [
+          {
+            "caption": "",
+            "ext": ".bin",
+            "file_id": "document-file-4",
+            "kind": "document",
+            "unique": "document-unique-4"
+          }
+        ],
+        "captured": true
+      }
+    },
+    {
+      "class": "document-leading-dot",
+      "input": {
+        "message": {
+          "chat": {
+            "id": 4242,
+            "type": "private"
+          },
+          "date": 0,
+          "document": {
+            "file_id": "document-file-5",
+            "file_name": ".hidden",
+            "file_unique_id": "document-unique-5"
+          },
+          "from": {
+            "first_name": "Owner",
+            "id": 4242,
+            "is_bot": false
+          },
+          "message_id": 8
+        }
+      },
+      "output": {
+        "calls": [
+          {
+            "caption": ".hidden",
+            "ext": ".hidden",
+            "file_id": "document-file-5",
+            "kind": "document",
+            "unique": "document-unique-5"
+          }
+        ],
+        "captured": true
+      }
+    },
+    {
+      "class": "document-ten-characters",
+      "input": {
+        "message": {
+          "chat": {
+            "id": 4242,
+            "type": "private"
+          },
+          "date": 0,
+          "document": {
+            "file_id": "document-file-6",
+            "file_name": "a.abcdefghij",
+            "file_unique_id": "document-unique-6"
+          },
+          "from": {
+            "first_name": "Owner",
+            "id": 4242,
+            "is_bot": false
+          },
+          "message_id": 9
+        }
+      },
+      "output": {
+        "calls": [
+          {
+            "caption": "a.abcdefghij",
+            "ext": ".abcdefghij",
+            "file_id": "document-file-6",
+            "kind": "document",
+            "unique": "document-unique-6"
+          }
+        ],
+        "captured": true
+      }
+    },
+    {
+      "class": "document-upper-case",
+      "input": {
+        "message": {
+          "chat": {
+            "id": 4242,
+            "type": "private"
+          },
+          "date": 0,
+          "document": {
+            "file_id": "document-file-7",
+            "file_name": "SCAN.PDF",
+            "file_unique_id": "document-unique-7"
+          },
+          "from": {
+            "first_name": "Owner",
+            "id": 4242,
+            "is_bot": false
+          },
+          "message_id": 10
+        }
+      },
+      "output": {
+        "calls": [
+          {
+            "caption": "SCAN.PDF",
+            "ext": ".PDF",
+            "file_id": "document-file-7",
+            "kind": "document",
+            "unique": "document-unique-7"
+          }
+        ],
+        "captured": true
+      }
+    },
+    {
+      "class": "document-caption-kept",
+      "input": {
+        "message": {
+          "caption": "Read first",
+          "chat": {
+            "id": 4242,
+            "type": "private"
+          },
+          "date": 0,
+          "document": {
+            "file_id": "document-file-8",
+            "file_name": "primer.txt",
+            "file_unique_id": "document-unique-8"
+          },
+          "from": {
+            "first_name": "Owner",
+            "id": 4242,
+            "is_bot": false
+          },
+          "message_id": 11
+        }
+      },
+      "output": {
+        "calls": [
+          {
+            "caption": "Read first",
+            "ext": ".txt",
+            "file_id": "document-file-8",
+            "kind": "document",
+            "unique": "document-unique-8"
+          }
+        ],
+        "captured": true
+      }
+    },
+    {
+      "class": "document-empty-caption",
+      "input": {
+        "message": {
+          "caption": "",
+          "chat": {
+            "id": 4242,
+            "type": "private"
+          },
+          "date": 0,
+          "document": {
+            "file_id": "document-file-9",
+            "file_name": "kanji.png",
+            "file_unique_id": "document-unique-9"
+          },
+          "from": {
+            "first_name": "Owner",
+            "id": 4242,
+            "is_bot": false
+          },
+          "message_id": 12
+        }
+      },
+      "output": {
+        "calls": [
+          {
+            "caption": "kanji.png",
+            "ext": ".png",
+            "file_id": "document-file-9",
+            "kind": "document",
+            "unique": "document-unique-9"
+          }
+        ],
+        "captured": true
+      }
+    },
+    {
+      "class": "document-non-ascii-name",
+      "input": {
+        "message": {
+          "chat": {
+            "id": 4242,
+            "type": "private"
+          },
+          "date": 0,
+          "document": {
+            "file_id": "document-file-10",
+            "file_name": "\u00c9t\u00e9 \u65e5\u672c.md",
+            "file_unique_id": "document-unique-10"
+          },
+          "from": {
+            "first_name": "Owner",
+            "id": 4242,
+            "is_bot": false
+          },
+          "message_id": 13
+        }
+      },
+      "output": {
+        "calls": [
+          {
+            "caption": "\u00c9t\u00e9 \u65e5\u672c.md",
+            "ext": ".md",
+            "file_id": "document-file-10",
+            "kind": "document",
+            "unique": "document-unique-10"
+          }
+        ],
+        "captured": true
+      }
+    },
+    {
+      "class": "order",
+      "input": {
+        "message": {
+          "chat": {
+            "id": 4242,
+            "type": "private"
+          },
+          "date": 0,
+          "document": {
+            "file_id": "document-file-11",
+            "file_name": "draft.pdf",
+            "file_unique_id": "document-unique-11"
+          },
+          "from": {
+            "first_name": "Owner",
+            "id": 4242,
+            "is_bot": false
+          },
+          "message_id": 14,
+          "photo": [
+            {
+              "file_id": "photo-file-1",
+              "file_size": 675,
+              "file_unique_id": "photo-unique-1",
+              "height": 60,
+              "width": 90
+            },
+            {
+              "file_id": "photo-file-2",
+              "file_size": 9600,
+              "file_unique_id": "photo-unique-2",
+              "height": 240,
+              "width": 320
+            },
+            {
+              "file_id": "photo-file-3",
+              "file_size": 153600,
+              "file_unique_id": "photo-unique-3",
+              "height": 960,
+              "width": 1280
+            }
+          ]
+        }
+      },
+      "output": {
+        "calls": [
+          {
+            "caption": "",
+            "ext": ".jpg",
+            "file_id": "photo-file-3",
+            "kind": "photo",
+            "unique": "photo-unique-3"
+          }
+        ],
+        "captured": true
+      }
+    },
+    {
+      "class": "order",
+      "input": {
+        "message": {
+          "chat": {
+            "id": 4242,
+            "type": "private"
+          },
+          "date": 0,
+          "document": {
+            "file_id": "document-file-12",
+            "file_name": "memo.txt",
+            "file_unique_id": "document-unique-12"
+          },
+          "from": {
+            "first_name": "Owner",
+            "id": 4242,
+            "is_bot": false
+          },
+          "message_id": 15,
+          "voice": {
+            "duration": 7,
+            "file_id": "voice-file-2",
+            "file_unique_id": "voice-unique-2"
+          }
+        }
+      },
+      "output": {
+        "calls": [
+          {
+            "caption": "",
+            "ext": ".ogg",
+            "file_id": "voice-file-2",
+            "kind": "voice",
+            "unique": "voice-unique-2"
+          }
+        ],
+        "captured": true
+      }
+    },
+    {
+      "class": "order",
+      "input": {
+        "message": {
+          "chat": {
+            "id": 4242,
+            "type": "private"
+          },
+          "date": 0,
+          "from": {
+            "first_name": "Owner",
+            "id": 4242,
+            "is_bot": false
+          },
+          "message_id": 16,
+          "photo": [
+            {
+              "file_id": "photo-file-5",
+              "file_size": 38400,
+              "file_unique_id": "photo-unique-5",
+              "height": 480,
+              "width": 640
+            }
+          ],
+          "voice": {
+            "duration": 7,
+            "file_id": "voice-file-3",
+            "file_unique_id": "voice-unique-3"
+          }
+        }
+      },
+      "output": {
+        "calls": [
+          {
+            "caption": "",
+            "ext": ".jpg",
+            "file_id": "photo-file-5",
+            "kind": "photo",
+            "unique": "photo-unique-5"
+          }
+        ],
+        "captured": true
+      }
+    },
+    {
+      "class": "order",
+      "input": {
+        "message": {
+          "chat": {
+            "id": 4242,
+            "type": "private"
+          },
+          "date": 0,
+          "document": {
+            "file_id": "document-file-13",
+            "file_name": "reading.pdf",
+            "file_unique_id": "document-unique-13"
+          },
+          "from": {
+            "first_name": "Owner",
+            "id": 4242,
+            "is_bot": false
+          },
+          "message_id": 17,
+          "photo": [
+            {
+              "file_id": "photo-file-6",
+              "file_size": 38400,
+              "file_unique_id": "photo-unique-6",
+              "height": 480,
+              "width": 640
+            }
+          ],
+          "voice": {
+            "duration": 7,
+            "file_id": "voice-file-4",
+            "file_unique_id": "voice-unique-4"
+          }
+        }
+      },
+      "output": {
+        "calls": [
+          {
+            "caption": "",
+            "ext": ".jpg",
+            "file_id": "photo-file-6",
+            "kind": "photo",
+            "unique": "photo-unique-6"
+          }
+        ],
+        "captured": true
+      }
+    },
+    {
+      "class": "empty-photo-list",
+      "input": {
+        "message": {
+          "chat": {
+            "id": 4242,
+            "type": "private"
+          },
+          "date": 0,
+          "from": {
+            "first_name": "Owner",
+            "id": 4242,
+            "is_bot": false
+          },
+          "message_id": 18,
+          "photo": []
+        }
+      },
+      "output": {
+        "calls": [],
+        "captured": false
+      }
+    },
+    {
+      "class": "empty-photo-list",
+      "input": {
+        "message": {
+          "chat": {
+            "id": 4242,
+            "type": "private"
+          },
+          "date": 0,
+          "document": {
+            "file_id": "document-file-14",
+            "file_name": "a.txt",
+            "file_unique_id": "document-unique-14"
+          },
+          "from": {
+            "first_name": "Owner",
+            "id": 4242,
+            "is_bot": false
+          },
+          "message_id": 19,
+          "photo": []
+        }
+      },
+      "output": {
+        "calls": [
+          {
+            "caption": "a.txt",
+            "ext": ".txt",
+            "file_id": "document-file-14",
+            "kind": "document",
+            "unique": "document-unique-14"
+          }
+        ],
+        "captured": true
+      }
+    },
+    {
+      "class": "no-media",
+      "input": {
+        "message": {
+          "chat": {
+            "id": 4242,
+            "type": "private"
+          },
+          "date": 0,
+          "from": {
+            "first_name": "Owner",
+            "id": 4242,
+            "is_bot": false
+          },
+          "message_id": 20,
+          "text": "Not media"
+        }
+      },
+      "output": {
+        "calls": [],
+        "captured": false
+      }
+    },
+    {
+      "class": "no-media",
+      "input": {
+        "message": {
+          "chat": {
+            "id": 4242,
+            "type": "private"
+          },
+          "date": 0,
+          "from": {
+            "first_name": "Owner",
+            "id": 4242,
+            "is_bot": false
+          },
+          "message_id": 21
+        }
+      },
+      "output": {
+        "calls": [],
+        "captured": false
+      }
+    },
+    {
+      "class": "empty-unique",
+      "input": {
+        "message": {
+          "chat": {
+            "id": 4242,
+            "type": "private"
+          },
+          "date": 0,
+          "from": {
+            "first_name": "Owner",
+            "id": 4242,
+            "is_bot": false
+          },
+          "message_id": 22,
+          "photo": [
+            {
+              "file_id": "photo-file-7",
+              "file_size": 38400,
+              "file_unique_id": "",
+              "height": 480,
+              "width": 640
+            }
+          ]
+        }
+      },
+      "output": {
+        "calls": [
+          {
+            "caption": "",
+            "ext": ".jpg",
+            "file_id": "photo-file-7",
+            "kind": "photo",
+            "unique": ""
+          }
+        ],
+        "captured": true
+      }
+    },
+    {
+      "class": "empty-file-id",
+      "input": {
+        "message": {
+          "chat": {
+            "id": 4242,
+            "type": "private"
+          },
+          "date": 0,
+          "from": {
+            "first_name": "Owner",
+            "id": 4242,
+            "is_bot": false
+          },
+          "message_id": 23,
+          "voice": {
+            "duration": 7,
+            "file_id": "",
+            "file_unique_id": "voice-unique-5"
+          }
+        }
+      },
+      "output": {
+        "calls": [
+          {
+            "caption": "",
+            "ext": ".ogg",
+            "file_id": "",
+            "kind": "voice",
+            "unique": "voice-unique-5"
+          }
+        ],
+        "captured": true
+      }
+    },
+    {
+      "class": "caption-empty",
+      "input": {
+        "message": {
+          "caption": "",
+          "chat": {
+            "id": 4242,
+            "type": "private"
+          },
+          "date": 0,
+          "from": {
+            "first_name": "Owner",
+            "id": 4242,
+            "is_bot": false
+          },
+          "message_id": 24,
+          "photo": [
+            {
+              "file_id": "photo-file-8",
+              "file_size": 38400,
+              "file_unique_id": "photo-unique-8",
+              "height": 480,
+              "width": 640
+            }
+          ]
+        }
+      },
+      "output": {
+        "calls": [
+          {
+            "caption": "",
+            "ext": ".jpg",
+            "file_id": "photo-file-8",
+            "kind": "photo",
+            "unique": "photo-unique-8"
+          }
+        ],
+        "captured": true
+      }
+    },
+    {
+      "class": "caption-absent",
+      "input": {
+        "message": {
+          "chat": {
+            "id": 4242,
+            "type": "private"
+          },
+          "date": 0,
+          "from": {
+            "first_name": "Owner",
+            "id": 4242,
+            "is_bot": false
+          },
+          "message_id": 25,
+          "voice": {
+            "duration": 7,
+            "file_id": "voice-file-6",
+            "file_unique_id": "voice-unique-6"
+          }
+        }
+      },
+      "output": {
+        "calls": [
+          {
+            "caption": "",
+            "ext": ".ogg",
+            "file_id": "voice-file-6",
+            "kind": "voice",
+            "unique": "voice-unique-6"
+          }
+        ],
+        "captured": true
+      }
+    },
+    {
+      "class": "caption-non-ascii",
+      "input": {
+        "message": {
+          "caption": "\u00c9t\u00e9 \u65e5\u672c \ud83d\udcf7 notes",
+          "chat": {
+            "id": 4242,
+            "type": "private"
+          },
+          "date": 0,
+          "from": {
+            "first_name": "Owner",
+            "id": 4242,
+            "is_bot": false
+          },
+          "message_id": 26,
+          "voice": {
+            "duration": 7,
+            "file_id": "voice-file-7",
+            "file_unique_id": "voice-unique-7"
+          }
+        }
+      },
+      "output": {
+        "calls": [
+          {
+            "caption": "\u00c9t\u00e9 \u65e5\u672c \ud83d\udcf7 notes",
+            "ext": ".ogg",
+            "file_id": "voice-file-7",
+            "kind": "voice",
+            "unique": "voice-unique-7"
+          }
+        ],
+        "captured": true
+      }
+    }
+  ],
+  "function": "bot.CommandBot._maybe_capture_media",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Calls the function on the predecessor's bot, built with a synthetic token and chat id, whose file capture is replaced by a recorder that answers success; message is a whole synthetic Telegram message; returns what the function returned and each capture it asked for, with its file id, kind, extension, caption and unique; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_118.py",
+  "registry_sha256": "5be8803a5d853ddae4f34f3782ac68c247165c2852b84f213f147b91beab0d90",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

@@ -1,6 +1,7 @@
-"""SPEC-118's registrations: the inbox capture's stem and stub.
+"""SPEC-118's registrations: the inbox capture's stem and stub, and the bot's media choice and
+replies.
 
-The adapter builds what JSON cannot carry and CALLS the predecessor; it computes no rule.
+Each adapter builds what JSON cannot carry and CALLS the predecessor; it computes no rule.
 
 * `save_inbox_capture` drives `vault_bridge.py:save_inbox_capture` over a temporary vault root that
   already holds its inbox folder, with a settings stand-in that carries only that root, the case's
@@ -11,16 +12,29 @@ The adapter builds what JSON cannot carry and CALLS the predecessor; it computes
   and each remaining day as the token `{day:N}`, N its epoch day number; a token that does not
   expand back into exactly the text the predecessor wrote is refused, and so is a case whose own
   text holds a date.
+* `media_capture_choice` drives `bot.py:CommandBot._maybe_capture_media` on the predecessor's bot,
+  built with a synthetic token and chat id, whose file capture is replaced by a recorder that
+  answers success. It returns what the function returned and each capture it asked for: the file
+  id, the kind, the extension, the caption and the unique. Each input is a whole synthetic Telegram
+  message, so the Rust side reads the same text the Bot API sends.
+* `media_capture_replies` drives `bot.py:CommandBot._capture_file` on the same bot, with the
+  download and the pipeline's inbox writer replaced by fakes that succeed or fail as the case says,
+  and every line it sends recorded. It returns what the function returned, the downloads and the
+  saves it asked for (the bytes as text) and the lines it sent.
 
-The case builder draws only from the `random.Random` the generator seeds. It covers each kind the
-bot captures, an empty and a blank caption, captions whose ends Python's `str.strip` trims (the
-separators U+001C to U+001F among them, which Rust's `str::trim` keeps), a caption of several lines,
-a unique with symbols, one of 32 safe characters, one of 40, an empty one, one of symbols only, one
-with letters outside ASCII, one that is longer than 32 only before its symbols are removed, an
-extension with a dot, without one and empty, and instants with a part of a second, at either side
-of midnight, on a leap day and before the Unix epoch.
+The two media case builders draw nothing: each case is fixed. Every document name in them keeps an
+extension on which SPEC-118 R7 and the predecessor agree; R7's departures are unit tests (A8).
+
+The stub's case builder draws only from the `random.Random` the generator seeds. It covers each
+kind the bot captures, an empty and a blank caption, captions whose ends Python's `str.strip` trims
+(the separators U+001C to U+001F among them, which Rust's `str::trim` keeps), a caption of several
+lines, a unique with symbols, one of 32 safe characters, one of 40, an empty one, one of symbols
+only, one with letters outside ASCII, one that is longer than 32 only before its symbols are
+removed, an extension with a dot, without one and empty, and instants with a part of a second, at
+either side of midnight, on a leap day and before the Unix epoch.
 """
 
+import asyncio
 import re
 import tempfile
 import types
@@ -228,6 +242,211 @@ def capture_cases(rng):
     return drawn
 
 
+#: The bot every media case is built on: a synthetic token, and the owner's private chat as a
+#: synthetic id that is nobody's.
+SYNTHETIC_TOKEN = "100000-synthetic-token"
+SYNTHETIC_CHAT = 4242
+
+
+def a_bot(predecessor, pipeline):
+    """The predecessor's own bot, built with the synthetic token and chat id over `pipeline`."""
+    return predecessor("bot.CommandBot")(SYNTHETIC_TOKEN, SYNTHETIC_CHAT, pipeline)
+
+
+def on_the_bot(bot, call):
+    """Run `call` on the bot's loop, then close the bot's HTTP client, which sent no request."""
+
+    async def run():
+        try:
+            return await call
+        finally:
+            await bot._client.aclose()
+
+    return asyncio.run(run())
+
+
+def with_a_recorded_capture(maybe_capture_media, predecessor, *, message):
+    """Call the function on a bot whose file capture is recorded and answers success, and return
+    what it returned and each capture it asked for."""
+    calls = []
+
+    async def capture_file(file_id, *, kind, ext, caption, unique):
+        calls.append(
+            {"file_id": file_id, "kind": kind, "ext": ext, "caption": caption, "unique": unique}
+        )
+        return True
+
+    bot = a_bot(predecessor, types.SimpleNamespace())
+    bot._capture_file = capture_file
+    captured = on_the_bot(bot, maybe_capture_media(bot, message))
+    return {"captured": captured, "calls": calls}
+
+
+def with_a_faked_fetch_and_save(
+    capture_file, predecessor, *, file_id, kind, ext, caption, unique, download, save
+):
+    """Call the function on a bot whose download answers `download` (text as bytes, or nothing)
+    and whose inbox writer answers `save`, and return what it returned, each download and save it
+    asked for, and each line it sent."""
+    downloads, saves, sent = [], [], []
+
+    async def download_telegram_file(asked):
+        downloads.append(asked)
+        return None if download is None else download.encode()
+
+    async def save_inbox_capture(**asked):
+        saves.append({**asked, "data": asked["data"].decode()})
+        return dict(save)
+
+    async def send(text, *, reply_markup=None):
+        sent.append(text)
+        return len(sent)
+
+    bot = a_bot(predecessor, types.SimpleNamespace(save_inbox_capture=save_inbox_capture))
+    bot._download_telegram_file = download_telegram_file
+    bot._send = send
+    returned = on_the_bot(
+        bot,
+        capture_file(bot, file_id, kind=kind, ext=ext, caption=caption, unique=unique),
+    )
+    return {"returned": returned, "downloads": downloads, "saves": saves, "sent": sent}
+
+
+def a_message(message_id, **media):
+    """A synthetic message from the owner in the owner's private chat, carrying `media`."""
+    message = {
+        "message_id": message_id,
+        "date": 0,
+        "chat": {"id": SYNTHETIC_CHAT, "type": "private"},
+        "from": {"id": SYNTHETIC_CHAT, "is_bot": False, "first_name": "Owner"},
+    }
+    message.update(media)
+    return message
+
+
+def a_size(n, width, height):
+    return {
+        "file_id": f"photo-file-{n}",
+        "file_unique_id": f"photo-unique-{n}",
+        "width": width,
+        "height": height,
+        "file_size": width * height // 8,
+    }
+
+
+def a_voice(n, **fields):
+    voice = {"file_id": f"voice-file-{n}", "file_unique_id": f"voice-unique-{n}", "duration": 7}
+    return voice | fields
+
+
+def a_document(n, **fields):
+    return {"file_id": f"document-file-{n}", "file_unique_id": f"document-unique-{n}"} | fields
+
+
+def choice_cases(rng):
+    """Each kind, the predecessor's order between kinds, a document's name and caption, a message
+    with no media, and media with no unique or no file id."""
+    three = [a_size(1, 90, 60), a_size(2, 320, 240), a_size(3, 1280, 960)]
+    cases = [
+        ("photo-sizes", a_message(1, photo=three, caption="Whiteboard after torts")),
+        ("photo-one-size", a_message(2, photo=[a_size(4, 640, 480)])),
+        ("voice", a_message(3, voice=a_voice(1), caption="Hearsay memo")),
+        ("document-one-dot", a_message(4, document=a_document(1, file_name="lecture-notes.pdf"))),
+        (
+            "document-two-dots",
+            a_message(5, document=a_document(2, file_name="outline.tar.gz"), caption="Outline"),
+        ),
+        ("document-no-dot", a_message(6, document=a_document(3, file_name="README"))),
+        ("document-no-name", a_message(7, document=a_document(4))),
+        ("document-leading-dot", a_message(8, document=a_document(5, file_name=".hidden"))),
+        ("document-ten-characters", a_message(9, document=a_document(6, file_name="a.abcdefghij"))),
+        ("document-upper-case", a_message(10, document=a_document(7, file_name="SCAN.PDF"))),
+        (
+            "document-caption-kept",
+            a_message(11, document=a_document(8, file_name="primer.txt"), caption="Read first"),
+        ),
+        (
+            "document-empty-caption",
+            a_message(12, document=a_document(9, file_name="kanji.png"), caption=""),
+        ),
+        (
+            "document-non-ascii-name",
+            a_message(13, document=a_document(10, file_name="Été 日本.md")),
+        ),
+        ("order", a_message(14, photo=three, document=a_document(11, file_name="draft.pdf"))),
+        ("order", a_message(15, voice=a_voice(2), document=a_document(12, file_name="memo.txt"))),
+        ("order", a_message(16, photo=[a_size(5, 640, 480)], voice=a_voice(3))),
+        (
+            "order",
+            a_message(
+                17,
+                photo=[a_size(6, 640, 480)],
+                voice=a_voice(4),
+                document=a_document(13, file_name="reading.pdf"),
+            ),
+        ),
+        ("empty-photo-list", a_message(18, photo=[])),
+        ("empty-photo-list", a_message(19, photo=[], document=a_document(14, file_name="a.txt"))),
+        ("no-media", a_message(20, text="Not media")),
+        ("no-media", a_message(21)),
+        ("empty-unique", a_message(22, photo=[a_size(7, 640, 480) | {"file_unique_id": ""}])),
+        ("empty-file-id", a_message(23, voice=a_voice(5, file_id=""))),
+        ("caption-empty", a_message(24, photo=[a_size(8, 640, 480)], caption="")),
+        ("caption-absent", a_message(25, voice=a_voice(6))),
+        ("caption-non-ascii", a_message(26, voice=a_voice(7), caption="Été 日本 📷 notes")),
+    ]
+    return [(edge, {"message": message}) for edge, message in cases]
+
+
+def reply_case(n, *, kind="photo", ext=".jpg", download="synthetic bytes", save, **fields):
+    case = {
+        "file_id": f"{kind}-file-{n}",
+        "kind": kind,
+        "ext": ext,
+        "caption": "Synthetic caption",
+        "unique": f"{kind}-unique-{n}",
+        "download": download,
+        "save": save,
+    }
+    case.update(fields)
+    return case
+
+
+def replies_cases(rng):
+    """Silence with no file id, a failed fetch, a save of each kind, a name that needs escaping,
+    a refused save, and an empty unique that falls back to the file id."""
+    saved = {"ok": True, "filename": "inbox-photo-unique-1.jpg"}
+    return [
+        ("no-file-id", reply_case(1, save=saved, file_id="")),
+        ("fetch-failed", reply_case(2, save=saved, download=None)),
+        ("saved", reply_case(3, save=saved)),
+        (
+            "saved",
+            reply_case(4, kind="voice", ext=".ogg", save={"ok": True, "filename": "a-voice.ogg"}),
+        ),
+        (
+            "saved",
+            reply_case(5, kind="document", ext=".pdf", save={"ok": True, "filename": "notes.pdf"}),
+        ),
+        (
+            "escaped-name",
+            reply_case(
+                6,
+                kind="document",
+                ext=".pdf",
+                save={"ok": True, "filename": 'Tom & Jerry <draft> "v2" it\'s.pdf'},
+            ),
+        ),
+        (
+            "saved-non-ascii-name",
+            reply_case(7, kind="document", ext=".md", save={"ok": True, "filename": "Été 日本.md"}),
+        ),
+        ("save-refused", reply_case(8, save={"ok": False, "error": "vault_missing"})),
+        ("save-refused", reply_case(9, save={"ok": False})),
+        ("unique-fallback", reply_case(10, save=saved, unique="")),
+    ]
+
+
 FUNCTIONS = {
     "inbox_capture_stub": {
         "kind": "adapter",
@@ -242,5 +461,28 @@ FUNCTIONS = {
             "token."
         ),
         "cases": capture_cases,
+    },
+    "media_capture_choice": {
+        "kind": "adapter",
+        "function": "bot.CommandBot._maybe_capture_media",
+        "adapter": with_a_recorded_capture,
+        "note": (
+            "Calls the function on the predecessor's bot, built with a synthetic token and chat "
+            "id, whose file capture is replaced by a recorder that answers success; message is a "
+            "whole synthetic Telegram message; returns what the function returned and each "
+            "capture it asked for, with its file id, kind, extension, caption and unique."
+        ),
+        "cases": choice_cases,
+    },
+    "media_capture_replies": {
+        "kind": "adapter",
+        "function": "bot.CommandBot._capture_file",
+        "adapter": with_a_faked_fetch_and_save,
+        "note": (
+            "Calls the function on the same bot, whose download answers download as bytes or "
+            "nothing and whose inbox writer answers save; returns what the function returned, "
+            "each download and save it asked for, the bytes as text, and each line it sent."
+        ),
+        "cases": replies_cases,
     },
 }

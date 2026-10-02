@@ -1103,7 +1103,7 @@
   "kind": "adapter",
   "note": "Calls the function over a temporary vault root that holds its inbox folder, with a settings stand-in carrying only that root, when as the aware UTC instant instant_ms after the epoch, and synthetic bytes; records each write as it is made and returns the attachment's folder, its name, the names in the order written and the stub's text, each instant to the second as a {second:N} token and each day as a {day:N} token; cases drawn under CPython 3.12.12.",
   "registry": "tools/parity-oracle/registry/spec_118.py",
-  "registry_sha256": "331c779b8fbe6f7a3a3b47489da245eb508b710bd2b3ee519ed4cd6476956d3a",
+  "registry_sha256": "5be8803a5d853ddae4f34f3782ac68c247165c2852b84f213f147b91beab0d90",
   "schema": "phx.parity-golden.v1",
   "seed": 20,
   "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
