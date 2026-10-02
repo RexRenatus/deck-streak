@@ -1,8 +1,8 @@
 ---------------------------- MODULE CaptureOnce ----------------------------
-\* @phx covers crates/vault/src/inbox.rs anchor=capture digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/vault/src/inbox.rs anchor=attachment_name digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/vault/src/capture_store.rs anchor=claim digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/vault/src/atomic.rs anchor=refuse_journal digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers crates/vault/src/inbox.rs anchor=capture digest=sha256:70b88eacbae9b72793a8bf9c00063f814c364a20816b3bd772789e1ecef36ab6
+\* @phx covers crates/vault/src/inbox.rs anchor=attachment_name digest=sha256:c294956d83218d98cb45d6696b6efaba8b6a9047d609256e310998210e3a7d03
+\* @phx covers crates/vault/src/capture_store.rs anchor=claim digest=sha256:8fdefc66709482e026039a94da6aa39ec425b5fc8d57f94812716b383c4fd7f8
+\* @phx covers crates/vault/src/atomic.rs anchor=refuse_journal digest=sha256:e1c58aa78212bd07fc762d50f219012d2cde41d0103ec82e259ed888ed398f06
 \* @phx cites #154, #56
 \* @phx property AtMostOneStub ramp=report
 \* @phx property StubImpliesAttachment ramp=report
