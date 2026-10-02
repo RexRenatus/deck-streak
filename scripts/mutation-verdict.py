@@ -680,7 +680,8 @@ def tree_without_docstrings(source: bytes | None) -> str | None:
     if source is None:
         return None
     try:
-        tree = ast.parse(source.decode("utf-8"))
+        source.decode("utf-8")
+        tree = ast.parse(source)
     except (SyntaxError, ValueError):
         return None
     for node in ast.walk(tree):
