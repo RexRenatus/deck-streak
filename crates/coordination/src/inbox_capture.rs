@@ -11,8 +11,9 @@
 use std::path::PathBuf;
 
 use deck_streak_kernel::{Db, UtcMillis};
+use deck_streak_vault::inbox;
 pub use deck_streak_vault::inbox::{
-    Attachment, Capture, CaptureKind, Captured, QUICK_TEXT_CHARS, Source,
+    Attachment, Capture, CaptureKind, Captured, Inbox, QUICK_TEXT_CHARS, Source,
 };
 pub use deck_streak_vault::{JournalGuard, LayoutInForce, RealFs, VaultError, VaultFs};
 
@@ -29,8 +30,21 @@ pub enum QuickKind {
 impl QuickKind {
     /// The kind the Mini App names, `text` or `journal`, or `None` for any other name.
     #[must_use]
-    pub fn from_name(_name: &str) -> Option<Self> {
-        None
+    pub fn from_name(name: &str) -> Option<Self> {
+        match name {
+            "text" => Some(Self::Text),
+            "journal" => Some(Self::Journal),
+            _ => None,
+        }
+    }
+
+    /// The capture kind the vault writes for it.
+    #[must_use]
+    pub const fn kind(self) -> CaptureKind {
+        match self {
+            Self::Text => CaptureKind::Text,
+            Self::Journal => CaptureKind::Journal,
+        }
     }
 }
 
@@ -68,15 +82,25 @@ impl<F: VaultFs> std::fmt::Debug for InboxCaptures<F> {
 }
 
 impl<F: VaultFs> InboxCaptures<F> {
-    /// The captures of the inbox `layout` names inside `root`, written through `fs`. It reads and
-    /// creates nothing: each capture locates the inbox when it runs.
+    /// The captures of the inbox `layout` names inside `root`, written through `fs`. It creates
+    /// nothing. It resolves the root once, so the guard names each journal folder by the resolved
+    /// path the inbox's files are written at; a root that does not resolve yet is kept as given.
     #[must_use]
     pub fn new(fs: F, root: PathBuf, layout: LayoutInForce) -> Self {
+        let resolved = fs
+            .canonicalize(&root)
+            .unwrap_or_else(|_missing| root.clone());
+        let journal = layout.journal_paths(&resolved);
         Self {
-            fs: JournalGuard::new(fs, Vec::new()),
+            fs: JournalGuard::new(fs, journal),
             root,
             layout,
         }
+    }
+
+    /// The inbox, located for this capture (R4).
+    fn inbox(&self) -> Result<Inbox, VaultError> {
+        Inbox::locate(&self.fs, &self.root, &self.layout)
     }
 
     /// The streamed entry the bot calls (V1b): locates the inbox and starts `capture`'s attachment,
@@ -89,10 +113,17 @@ impl<F: VaultFs> InboxCaptures<F> {
     /// errors for the extension and the temporary file.
     pub fn stream(
         &self,
-        _capture: Capture,
-        _ext: &str,
+        capture: Capture,
+        ext: &str,
     ) -> Result<StreamingCapture<'_, F>, VaultError> {
-        Err(VaultError::CaptureUnpaired)
+        let located = self.inbox()?;
+        let attachment = located.attachment(&self.fs, &capture, ext)?;
+        Ok(StreamingCapture {
+            captures: self,
+            inbox: located,
+            capture,
+            attachment,
+        })
     }
 
     /// The Mini App's quick capture (R10): `text` of `kind` under the retry key `capture_id`, at
@@ -105,13 +136,34 @@ impl<F: VaultFs> InboxCaptures<F> {
     /// [`VaultError::JournalRefused`], and the vault's errors for the ledger and the write.
     pub async fn quick(
         &self,
-        _db: &Db,
-        _capture_id: &str,
-        _kind: QuickKind,
-        _text: &str,
-        _at: UtcMillis,
+        db: &Db,
+        capture_id: &str,
+        kind: QuickKind,
+        text: &str,
+        at: UtcMillis,
     ) -> Result<QuickAnswer, VaultError> {
-        Ok(QuickAnswer::TextOutOfBounds)
+        if !inbox::quick_text_fits(text) {
+            // The text is the owner's: the event names the outcome, never the text.
+            tracing::info!(
+                outcome = "text_out_of_bounds",
+                "a quick capture wrote nothing"
+            );
+            return Ok(QuickAnswer::TextOutOfBounds);
+        }
+        let located = self.inbox()?;
+        let capture = Capture {
+            kind: kind.kind(),
+            source: Source::MiniApp,
+            unique: capture_id.to_owned(),
+            when: at,
+            caption: text.to_owned(),
+        };
+        Ok(
+            match inbox::capture(db, &self.fs, &located, &capture, None).await? {
+                Captured::Saved { name } => QuickAnswer::Saved { name },
+                Captured::AlreadyCaptured { name } => QuickAnswer::AlreadyCaptured { name },
+            },
+        )
     }
 }
 
@@ -119,6 +171,7 @@ impl<F: VaultFs> InboxCaptures<F> {
 /// [`StreamingCapture::capture`], it removes the temporary file and records nothing.
 pub struct StreamingCapture<'c, F: VaultFs> {
     captures: &'c InboxCaptures<F>,
+    inbox: Inbox,
     capture: Capture,
     attachment: Attachment<'c, JournalGuard<F>>,
 }
@@ -144,20 +197,23 @@ impl<F: VaultFs> StreamingCapture<'_, F> {
     /// # Errors
     ///
     /// [`VaultError::Io`] when the write fails; drop the capture then, which removes the file.
-    pub fn write(&mut self, _chunk: &[u8]) -> Result<(), VaultError> {
-        Ok(())
+    pub fn write(&mut self, chunk: &[u8]) -> Result<(), VaultError> {
+        self.attachment.write(chunk)
     }
 
     /// Writes the capture once (R3): the claim, the attachment's rename, the stub last, the commit.
     ///
     /// # Errors
     ///
-    /// [`VaultError::VaultMissing`] when the inbox has gone, and the vault's errors for the ledger
-    /// and the write; on any error nothing is recorded.
-    pub async fn capture(self, _db: &Db) -> Result<Captured, VaultError> {
-        let _ = (self.captures, &self.capture);
-        Ok(Captured::Saved {
-            name: String::new(),
-        })
+    /// The vault's errors for the ledger and the write; on any error nothing is recorded.
+    pub async fn capture(self, db: &Db) -> Result<Captured, VaultError> {
+        inbox::capture(
+            db,
+            &self.captures.fs,
+            &self.inbox,
+            &self.capture,
+            Some(self.attachment),
+        )
+        .await
     }
 }

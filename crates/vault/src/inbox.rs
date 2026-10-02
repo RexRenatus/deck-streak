@@ -237,7 +237,8 @@ pub fn miniapp_stub(kind: CaptureKind, when: UtcMillis, text: &str) -> String {
 /// trim [`miniapp_stub`] applies, so the bound counts exactly what the stub holds.
 #[must_use]
 pub fn quick_text_fits(text: &str) -> bool {
-    text.is_empty()
+    let chars = text.trim_matches(is_python_space).chars().count();
+    (1..=QUICK_TEXT_CHARS).contains(&chars)
 }
 
 /// The inbox folder of the layout in force, inside the vault root.
