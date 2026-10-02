@@ -42,6 +42,7 @@ use deck_streak_coordination::obligations::Obligations;
 use deck_streak_coordination::recompute::analytics_step::AnalyticsStep;
 use deck_streak_coordination::recompute::badges::BadgesStep;
 use deck_streak_coordination::recompute::day_bonuses::DayBonusesStep;
+use deck_streak_coordination::recompute::mint::MintStep;
 use deck_streak_coordination::recompute::records::RecordsStep;
 use deck_streak_coordination::recompute::streaks::{RelightDue, StreaksStep};
 use deck_streak_coordination::recompute::xp::XpStep;
@@ -170,29 +171,30 @@ fn take_open_lock(path: &Path) -> io::Result<File> {
     Ok(file)
 }
 
-/// The vault inbox's quick captures for the `api` role (SPEC-118 R4, R10): the configured vault
-/// root and the layout in force, or `None` when the role serves no capture. The vault is an owner
-/// choice (ADR-011), so an unset root is not a start refusal: the route then answers 503
-/// `vault_not_open`. A root of the wrong shape, or a layout file that cannot be read or is not a
-/// layout, is logged by its rule, never by its value, and serves no capture either. Nothing is
-/// created here: each capture locates the inbox anew (R4).
+/// The vault inbox's captures for the `api` role's quick capture and the `bot` role's media
+/// (SPEC-118 R4, R6, R10): the configured vault root and the layout in force, or `None` when the
+/// role saves no capture. The vault is an owner choice (ADR-011), so an unset root is not a start
+/// refusal: the api role's route then answers 503 `vault_not_open`, and the bot role answers the
+/// owner's media with its failed-save line. A root of the wrong shape, or a layout file that cannot
+/// be read or is not a layout, is logged by its rule, never by its value, and saves no capture
+/// either. Nothing is created here: each capture locates the inbox anew (R4).
 #[must_use]
 pub fn inbox_captures(env: &Environment) -> Option<Arc<InboxCaptures<RealFs>>> {
     let root = match env.optional::<VaultRoot>(VAULT_ROOT) {
         Ok(Some(root)) => root,
         Ok(None) => {
-            tracing::info!("no vault is configured, so the quick capture is not served");
+            tracing::info!("no vault is configured, so no capture is saved");
             return None;
         }
         Err(error) => {
-            tracing::warn!(%error, "the vault root is refused, so the quick capture is not served");
+            tracing::warn!(%error, "the vault root is refused, so no capture is saved");
             return None;
         }
     };
     let layout = match LayoutInForce::from_env(env) {
         Ok(layout) => layout,
         Err(error) => {
-            tracing::warn!(%error, "the vault layout is refused, so the quick capture is not served");
+            tracing::warn!(%error, "the vault layout is refused, so no capture is saved");
             return None;
         }
     };
@@ -234,6 +236,7 @@ pub fn recompute_fold_with_relights(
     let (streaks, due) = StreaksStep::new();
     fold.register(Phase::StreaksAndGovernor, Box::new(streaks))?;
     fold.register(Phase::DerivedBonuses, Box::new(DayBonusesStep))?;
+    fold.register(Phase::CoinMint, Box::new(MintStep))?;
     fold.register(Phase::Awards, Box::new(BadgesStep::new(courses)))?;
     fold.register(Phase::Awards, Box::new(RecordsStep))?;
     Ok((fold, due))
@@ -645,6 +648,7 @@ mod tests {
     use deck_streak_coordination::recompute::analytics_step::ANALYTICS_STEP;
     use deck_streak_coordination::recompute::badges::BADGES_STEP;
     use deck_streak_coordination::recompute::day_bonuses::DAY_BONUSES_STEP;
+    use deck_streak_coordination::recompute::mint::MINT_STEP;
     use deck_streak_coordination::recompute::records::RECORDS_STEP;
     use deck_streak_coordination::recompute::streaks::STREAKS_STEP;
     use deck_streak_coordination::recompute::xp::XP_STEP;
@@ -726,6 +730,7 @@ mod tests {
                 (Phase::BaseXp, XP_STEP),
                 (Phase::StreaksAndGovernor, STREAKS_STEP),
                 (Phase::DerivedBonuses, DAY_BONUSES_STEP),
+                (Phase::CoinMint, MINT_STEP),
                 (Phase::Awards, BADGES_STEP),
                 (Phase::Awards, RECORDS_STEP),
             ]

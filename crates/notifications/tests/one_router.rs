@@ -578,8 +578,9 @@ const COMMANDS: (&str, &str) = ("crates/bot/src/commands.rs", "crates/bot/src/co
 /// The command handler's replies, `send` and the thirteen that send one (`export`, `ask_erase`,
 /// `sync`, `score`, `level`, `streak`, the progression replies `badges` and `records`, SPEC-073 R18,
 /// and the drill replies `drills`, `drill`, `drill_view`, `drill_ask` and `drill_answer`, SPEC-110
-/// R16), and its dispatch, `on_message` and `on_callback`.
-const COMMAND_REPLIES: [&str; 16] = [
+/// R16), and its dispatch, `on_message`, `on_callback` and `on_media`, which answers the owner's
+/// media with what became of its capture (SPEC-118 R9).
+const COMMAND_REPLIES: [&str; 17] = [
     "send",
     "export",
     "ask_erase",
@@ -596,15 +597,17 @@ const COMMAND_REPLIES: [&str; 16] = [
     "drill_answer",
     "on_message",
     "on_callback",
+    "on_media",
 ];
 
 /// Each named caller of the command handler's replies and dispatch, as (the caller, what it calls):
 /// the handler, which dispatches an update the long poll hands it, and the dispatch, which answers
 /// it. A call anywhere else in the handler's module sends a reply the router never decides, though
 /// no update asked for it.
-const COMMAND_CALLERS: [(&str, &str); 29] = [
+const COMMAND_CALLERS: [(&str, &str); 31] = [
     ("Commands::handle", "on_message"),
     ("Commands::handle", "on_callback"),
+    ("Commands::handle", "on_media"),
     ("Commands::on_message", "send"),
     ("Commands::on_message", "export"),
     ("Commands::on_message", "ask_erase"),
@@ -620,6 +623,7 @@ const COMMAND_CALLERS: [(&str, &str); 29] = [
     ("Commands::on_callback", "send"),
     ("Commands::on_callback", "drill_view"),
     ("Commands::on_callback", "drill_ask"),
+    ("Commands::on_media", "send"),
     ("Commands::export", "send"),
     ("Commands::sync", "send"),
     ("Commands::score", "send"),
@@ -2588,9 +2592,10 @@ const REQUEST_NAMES: [&str; 5] = [
 
 /// Every mention of a `REQUEST_NAMES` name in the bot's shipped sources, as (path, function,
 /// name), once per mention: the update poll's generic request, the constructor that builds the
-/// client, the two multipart sends and their forms, and the transport's use of the crate and its
-/// error types (in no function). A second mention at a site is a second request, and is refused.
-const REQUEST_SITES: [(&str, &str, &str); 21] = [
+/// client, the two multipart sends and their forms, the file download (SPEC-118 R8), and the
+/// transport's use of the crate and its error types (in no function). A second mention at a site
+/// is a second request, and is refused.
+const REQUEST_SITES: [(&str, &str, &str); 22] = [
     (TRANSPORT, "no function", "reqwest"),
     (TRANSPORT, "no function", "reqwest"),
     (TRANSPORT, "no function", "reqwest"),
@@ -2607,6 +2612,7 @@ const REQUEST_SITES: [(&str, &str, &str); 21] = [
     (TRANSPORT, "Transport::send_document", "client"),
     (TRANSPORT, "Transport::send_document", "client"),
     (TRANSPORT, "Transport::send_photo", "client"),
+    (TRANSPORT, "Transport::download", "client"),
     (TRANSPORT, "Transport::get_updates", "request"),
     (TRANSPORT, "document_form", "reqwest"),
     (TRANSPORT, "document_form", "reqwest"),

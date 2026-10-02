@@ -110,6 +110,24 @@ for (const [scheme, themeParams] of Object.entries(THEMES)) {
           }
         })
       );
+      // The wallet, for the header on every screen and the /wallet screen: a balance, today's loss
+      // limit, a mint and a fine, and an older page, so the button that asks for it is audited too
+      // (SPEC-082 R15, R17).
+      await page.route('**/api/wallet', (intercepted) =>
+        intercepted.fulfill({
+          json: {
+            study_day: '2001-02-03',
+            balance: 103,
+            loss_cap: 30,
+            loss_cap_left: 25,
+            movements: [
+              { id: 4, study_day: '2001-02-03', source: 'fine', amount: -5 },
+              { id: 3, study_day: '2001-02-03', source: 'mint', amount: 8 }
+            ],
+            next: 3
+          }
+        })
+      );
       // The badge gallery: one earned, one locked with progress, one without (SPEC-073 R16).
       await page.route('**/api/badges', (intercepted) =>
         intercepted.fulfill({

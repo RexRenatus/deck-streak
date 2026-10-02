@@ -59,6 +59,7 @@ use crate::insights_routes;
 use crate::notifications_routes;
 use crate::session_routes::{self, OwnerAccess};
 use crate::streak_routes;
+use crate::wallet_routes;
 use crate::xp_routes;
 
 /// Requests served at once, the rust-service pack's reference value. Each holds its buffers until
@@ -190,6 +191,7 @@ pub fn router(state: ApiState) -> Router {
                     law_tiers,
                 ))
                 .merge(streak_routes::routes(access.clone(), readiness.clone()))
+                .merge(wallet_routes::routes(access.clone(), readiness.clone()))
                 .merge(badges_routes::routes(
                     access.clone(),
                     readiness.clone(),

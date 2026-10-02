@@ -199,8 +199,8 @@
         "scripts/tests/test_setting_shapes.py",
         "        text = lexed(path.read_text(encoding=\"utf-8\"))\n",
         "        text = path.read_text(encoding=\"utf-8\")\n",
-        "an `impl Setting for` inside a block comment is not an implementation, so it is not examined (SPEC-192 A14)",
-        "test_setting_shapes.TheGuardIgnoresAnImplementationInAComment.test_a_block_comment_holding_an_impl_is_not_examined"
+        "the `SHAPE` literal is read from comment-free text, so a constant only a comment inside the implementation spells is not its shape (SPEC-192 A14, A19)",
+        "test_setting_shapes.TheGuardReadsAnImplementationByToken.test_every_spelling_is_read_or_refused_as_written"
       ],
       [
         "S19227-A-MODULE-FILE-NEEDS-A-CFG-TEST-ATTRIBUTE",
@@ -341,9 +341,9 @@
       [
         "S19252-AN-IMPL-READS-TO-THE-NEXT-IMPL",
         "scripts/tests/test_setting_shapes.py",
-        "end = starts[index + 1][0] if index + 1 < len(starts) else len(text)",
-        "end = len(text)",
-        "the `SHAPE` literal of an implementation is the first one before the next implementation, so a later impl's literal is not read as its own (SPEC-192 A11)",
+        "found[brace][2], found[pairs[brace]][3]",
+        "found[brace][2], found[-1][3]",
+        "the `SHAPE` literal of an implementation is read inside its own braces, so a later impl's literal is not read as its own (SPEC-192 A11, A19)",
         "test_setting_shapes.TheGuardJudgesAPlantedTree.test_a_shape_two_implementations_of_one_crate_share_needs_a_row_of_each_file"
       ],
       [
@@ -357,9 +357,9 @@
       [
         "S19254-THE-TESTS-DIRECTORY-IS-READ-RECURSIVELY",
         "scripts/tests/test_setting_shapes.py",
-        "sorted((base / \"tests\").rglob(\"*.rs\"))",
-        "sorted((base / \"tests\").glob(\"*.rs\"))",
-        "a test in a subdirectory of the crate's `tests/` is a test of the crate (SPEC-192 A11)",
+        "roots = [*tests.glob(\"*.rs\"), *tests.glob(\"*/main.rs\")]",
+        "roots = [*tests.glob(\"*.rs\")]",
+        "a test in a subdirectory of the crate's `tests/` is a test of the crate where cargo builds one, its `tests/<dir>/main.rs` root (SPEC-192 A11, #449)",
         "test_setting_shapes.TheGuardJudgesAPlantedTree.test_a_shape_a_test_of_the_crate_spells_is_pinned"
       ],
       [

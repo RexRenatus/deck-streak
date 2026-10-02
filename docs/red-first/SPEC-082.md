@@ -92,3 +92,140 @@ the round's base `2e56a41f` and at its own commit, and it was never red before t
 by a plant: with `refund_on` routed through `deposit_once_on`, the test reads red by assertion at
 `wallet_ports.rs:245` and the frozen key population escapes 3 of 49 members. No fence line is added:
 A19's red and green above stand.
+
+## E1b, 2026-10-02: the fold's mint and the wallet's history
+
+E1b delivers A7, A15's wallet arm, A18 and A20, which SPEC-082's amendment moves back into the
+acceptance fence. The red commit is 872102b, the tests beside stubs of the same public API: a mint
+step registered in its phase whose evaluation writes nothing, a wallet route that answers an empty
+object, a page of movements that is always empty, and a header and a history screen that render no
+wallet. Each criterion was run there, selecting its own test, and failed by assertion, not by a
+compile error, a missing fixture or an empty selection. The green commit is 46fc2a7.
+
+The same red commit also held three tests that are not a criterion's, each red by assertion there
+and green at 46fc2a7:
+
+- `wallet_mint::the_mint_commits_or_rolls_back_with_the_days_write`, at `wallet_mint.rs:423:9`:
+  `fail true: the ledger on the fold's own write`, left: 0, right: 13.
+- `wallet_ports::the_movements_come_newest_first_a_page_at_a_time`, the economy page test, at
+  `wallet_ports.rs:643:5`: left: [], right: the twenty movements of the first page, newest first,
+  from (13, 22) to (10, 21). It is the killer of row S08215, and it runs the page's constant
+  statement against a migrated SQLite file.
+- The daemon's `the_recompute_fold_registers_the_analytics_xp_and_streak_steps_in_their_phases`, at
+  `wiring.rs:688:9`: the registered steps lacked `(CoinMint, "economy.coin_mint")`; 11 passed and 1
+  failed.
+
+The whole web run at 872102b read 3 test files failed and 29 passed (32), and 9 tests failed and 149
+passed (158). At 46fc2a7 it read 32 files and 158 tests passed.
+
+```red-first
+A7: red at 872102b: assertion `left == right` failed: backfilled day 20000: the coins the day holds against the golden mint of its base 100; left: 0, right: 4
+A7: green at 46fc2a7
+A15: red at 872102b: assertion `left == right` failed; left: Object {}, right: Object {"balance": Number(103), "loss_cap": Number(30), "loss_cap_left": Number(25), "movements": Array [Object {"amount": Number(-5), "id": Number(4), "source": String("fine"), "study_day": String("2025-01-14")}, Object {"amount": Number(8), "id": Number(3), "source": String("mint"), "study_day": String("2025-01-14")}, Object {"amount": Number(40), "id": Number(2), "source": String("mint"), "study_day": String("2025-01-13")}, Object {"amount": Number(60), "id": Number(1), "source": String("payout"), "study_day": String("2025-01-12")}], "next": Null, "study_day": String("2025-01-14")}
+A15: green at 46fc2a7
+A18: red at 872102b: TestingLibraryElementError: Unable to find role="link" and name "Coins: 103"
+A18: green at 46fc2a7
+A20: red at 872102b: AssertionError: expected [] to deeply equal [ '4', '3', '2' ]
+A20: green at 46fc2a7
+```
+
+The green commit 46fc2a7 changed four test files. None of them removes an assertion, and only the
+first changes a measured quantity:
+
+- `crates/coordination/tests/wallet_mint.rs`: the savepoint test,
+  `the_mint_commits_or_rolls_back_with_the_days_write`, now measures the current day's own
+  movement, and production is unchanged. Its first green run read left: 17, right: 13, seen
+  [(349, 17, 4)]: the fold's settle of the day before D0, a day with no reviews, holds the XP row
+  `backlog_zero` of 100 and mints 4 for it, and that mint commits in the settle's own write, before
+  the current day's write. Inside the current write the ledger read [(19999, mint, 4), (20000, mint,
+  13)]. The predecessor's `_recompute_day` writes the mint for every day it recomputes, so the
+  settle's mint is right and the test's premise, that only D0 mints, was not. Inside the write,
+  `SELECT COALESCE(SUM(delta), 0) FROM coin_ledger` became the same sum `WHERE study_day = ?1` bound
+  to D0; outside it, and after the fold, `SqliteWallet::new(..).balance()` became `minted(db, D0)`,
+  the day's movements read through the wallet. The assertions keep their operands and their
+  outcome: `assert_eq!(inside, mint, "fail {fail}: the ledger on the fold's own write")` became
+  `assert_eq!(inside, mint, "fail {fail}: the day's mint on the fold's own write")`;
+  `assert_eq!(outside, 0, "fail {fail}: the balance a second connection reads")` became
+  `assert_eq!(outside, 0, "fail {fail}: the day's mint a second connection reads")`; and
+  `assert_eq!(balance, 0, ...)` and `assert_eq!(balance, mint, ...)` became `assert_eq!(held, 0,
+  ...)` and `assert_eq!(held, mint, ...)` with `held = minted(&db, D0)`. It is not a criterion's
+  test: A7's is `the_mint_reads_the_settled_days_final_base`.
+- `crates/api/tests/wallet_routes.rs`, `crates/coordination/tests/wallet_mint.rs` and
+  `crates/economy/tests/wallet_ports.rs`: 872102b committed them unformatted, and `cargo fmt --all`
+  at green changed them in 1, 5 and 2 hunks, format only (46fc2a7's diff of `wallet_mint.rs` reads 6 hunks, plain and with -w: those 5 and the `Probe` step's body, which is the savepoint test's edit alone). rustfmt run over each file as 872102b holds
+  it gives 46fc2a7's file byte for byte for `wallet_routes.rs` and `wallet_ports.rs`; for
+  `wallet_mint.rs` the only lines that differ are the savepoint test's edits named above.
+- `web/app/tests/a11y.spec.ts`: the accessibility run's page now answers `/api/wallet` with a
+  fixed wallet, so the header on every screen and the `/wallet` screen are audited with a balance,
+  two movements and an older page. It adds a route stub and no assertion.
+
+MUTATION COVERAGE, not red-first. cargo-mutants, over the diff from the merge-base 340d896 to
+276bc76, missed `crates/economy/src/wallet.rs:191:31: replace > with >= in SqliteWallet::movements`,
+the page's look-ahead. `wallet_ports::a_page_that_holds_the_last_movement_names_no_next_page` was
+added at df6f05c, after the code, to observe it: twenty movements, spelt literally, fill one page
+that names no next page, and a twenty-first makes the page name its last movement. It is green at
+its own commit and was never red before the code. It is proved by a plant: with `>` turned to `>=`
+at `wallet.rs:191`, it reads red by assertion at `wallet_ports.rs:698:5`, `a page that holds the
+last movement names no next page`, left: Some(1), right: None, and the file restored with its
+sha256 equal reads green. Rows S08216 and S08217 pin the look-ahead and the page size's literal
+with it as their killer. No fence line is added for it.
+
+MUTATION COVERAGE, not red-first. cargo-mutants over the diff from 340d896 to de272f4, one package
+at a time, missed five mutants that no test of their own package observed. Three tests were added
+at 48db384, after the code; each is green at its own commit and was never red before the code, and
+each is proved by a plant that reads red by assertion and green again with the source restored to
+its sha256:
+- `wallet_routes::a_wallet_that_cannot_be_read_answers_500_with_a_reason_code_alone`, for
+  `wallet_routes.rs:123:5: replace unreadable -> Response with Default::default()`: red at
+  `wallet_routes.rs:297:5`, left: 200, right: 500.
+- `wallet_mint::the_fold_reports_the_mint_step_by_its_name_in_the_coin_mint_phase`, for
+  `mint.rs:26:9: replace <impl DayStep for MintStep>::name -> &'static str` with `""` and with
+  `"xyzzy"`: red at `wallet_mint.rs:477:5`, left: [(CoinMint, "")] and [(CoinMint, "xyzzy")],
+  right: [(CoinMint, "economy.coin_mint")].
+- `wallet_mint::the_wallet_view_leaves_what_the_days_debits_spare_of_its_loss_cap`, for
+  `wallet_view.rs:41:35: replace - with +` and `replace - with /`: red at `wallet_mint.rs:512:5`,
+  `a fine of 5 leaves 25 of the day's cap of 30`, left: (95, 30, 35) and (95, 30, 6), right:
+  (95, 30, 25).
+
+MUTATION COVERAGE, not red-first. Stryker's run over the seven web files at df6f05c left 20
+survivors and 6 uncovered mutants of the wallet's body parser and its screen. bfd0f03 adds six
+tests after the code: the screen's headings and back link, its loading, refusal and unavailable
+states, an older page's alert clearing, and the parser's refusal of a malformed date, list or
+movement. Four mutants no input can tell apart are recorded as equivalent in
+`scripts/mutation-equivalent.d/miniapp.json`, each with its reason. One survivor needed a change
+to production order, at 64a312f: the screen's effect set the answer before the lines it shows, so a
+mutant that took every answer for ok (`if (answer.kind === 'ok')` planted as `if (true)`) left the
+alert on screen and failed only by an unhandled rejection, and all 14 tests passed. With the lines
+set first, the same plant fails 2 tests by `Unable to find role="alert"`, and the file restored
+with its sha256 equal reads green. No fence line is added for any of them.
+
+A post-GREEN test edit, not red-first. edadd79, after the code, gives the parser's two refusal tests
+a positive control: each first asserts that the untouched body parses to its real values, so every
+refusal below it is the refusal of its one changed field. A `parseWallet` planted to return null for
+every body fails both, and the file restored with its sha256 equal reads green. An assertion is
+added to each and none is removed; production is unchanged. No fence line is added.
+
+MUTATION COVERAGE at the fix round, not red-first. Five commits (8b0b02d2, 13c467be, 377a0d2a,
+5d03fe1c, ec638f64) add tests and rows after the code, each green at the base 266ff9d8, whose source they leave unchanged, and no fence line is
+added for any of them. The package at 5d03fe1c read `examined 14 plant(s): survived 3, killed 11,
+void 0`. The eleven killed plants are held by the rows S08218 to S08228 in
+`scripts/mutation-rows.d/S08200-S08299.json`, and their prove line reads `rows: examined 11:
+killed 11, survived 0, void 0`. The three survivors are recorded here, none with a test or a
+production seam:
+
+- M4 (mint.rs `savepoint.commit().await?`) and O1 (mint.rs `let mut savepoint =
+  write.begin().await?;`): EQUIVALENT-BY-CONSTRAINT-AND-ENGINE. The constraint is
+  `Db::write`'s `begin_with("BEGIN IMMEDIATE")` at crates/kernel/src/db.rs:103, which makes the
+  mint's `write.begin()` a nested SAVEPOINT and `savepoint.commit()` a RELEASE inside an open write
+  transaction. The engine's rule is that a nested RELEASE commits nothing and a deferred
+  foreign-key violation surfaces only at the outermost COMMIT, so neither `?` arm is reachable from
+  any state the code controls. The evidence is a measurement with the host's python sqlite3
+  (SAVEPOINT and RELEASE inside BEGIN IMMEDIATE succeed under query_only, foreign_keys and
+  defer_foreign_keys, and RELEASE of a nested savepoint never fails), plus the engine's
+  documentation of SAVEPOINT, RELEASE and deferred foreign keys. Disclosed limit: the measurement
+  was not taken through the engine the crate links.
+- O2 (daemon wiring.rs `fold.register(Phase::CoinMint, Box::new(MintStep))?;`):
+  EQUIVALENT-BY-CONSTRAINT. `Fold::register` errors only on `if step.phase() != phase`
+  (crates/coordination/src/recompute/mod.rs:435), and `MintStep::phase()` returns
+  `Phase::CoinMint`. The phase is held by the killed row S08212, so a mutant that reaches the arm is
+  one S08212 already kills.

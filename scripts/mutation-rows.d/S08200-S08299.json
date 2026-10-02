@@ -72,6 +72,159 @@
         "pub const WALLET_FLOOR: i64 = 1;",
         "wallet_goldens::the_coin_constants_and_economy_json_match_the_predecessors",
         "the wallet's floor constant is 0, as the constants golden and economy.json say (SPEC-082 R2, A10)"
+      ],
+      [
+        "S08212-THE-MINT-RUNS-AFTER-THE-BASE",
+        "coordination",
+        "src/recompute/mint.rs",
+        "        Phase::CoinMint",
+        "        Phase::RollupAndScore",
+        "wallet_mint::the_mint_reads_the_settled_days_final_base",
+        "the mint step declares phase 6, after the day's base is written, so it mints the day's final base (SPEC-082 R4, A7)"
+      ],
+      [
+        "S08213-A-BACKFILLED-DAY-IS-MINTED",
+        "coordination",
+        "src/recompute/mint.rs",
+        "            let closed = !matches!(day.evaluation, Evaluation::Current);",
+        "            if matches!(day.evaluation, Evaluation::Backfill { .. }) { return Ok(()); } let closed = !matches!(day.evaluation, Evaluation::Current);",
+        "wallet_mint::the_mint_reads_the_settled_days_final_base",
+        "the mint step mints every day the fold evaluates, a backfilled day included (SPEC-082 R4, A7)"
+      ],
+      [
+        "S08214-ONLY-THE-OWNER-SEES-THE-WALLET",
+        "api",
+        "src/wallet_routes.rs",
+        "    _owner: OwnerSession,",
+        "    _owner: axum::http::HeaderMap,",
+        "wallet_routes::the_wallet_and_shop_routes_answer_only_the_owner",
+        "the wallet route asks for the owner's session, so any other caller gets 401 and no data (SPEC-082 R15, A15)"
+      ],
+      [
+        "S08215-THE-MOVEMENTS-COME-NEWEST-FIRST",
+        "economy",
+        "src/wallet.rs",
+        "     ORDER BY study_day DESC, id DESC LIMIT ?2\";",
+        "     ORDER BY study_day ASC, id ASC LIMIT ?2\";",
+        "wallet_ports::the_movements_come_newest_first_a_page_at_a_time",
+        "the wallet's page reads the movements newest first, by study day and then the reverse of the order written (SPEC-082 R15, A20)"
+      ],
+      [
+        "S08216-A-FULL-PAGE-NAMES-NO-NEXT-PAGE",
+        "economy",
+        "src/wallet.rs",
+        "        let more = rows.len() > MOVEMENTS_PAGE;",
+        "        let more = rows.len() >= MOVEMENTS_PAGE;",
+        "wallet_ports::a_page_that_holds_the_last_movement_names_no_next_page",
+        "the wallet's page reads one row more than it holds and names a next page only when that row exists, so a page that holds the last movement names none (SPEC-082 R15; ADR-315 ruling 3)"
+      ],
+      [
+        "S08217-A-PAGE-HOLDS-TWENTY-MOVEMENTS",
+        "economy",
+        "src/wallet.rs",
+        "pub const MOVEMENTS_PAGE: usize = 20;",
+        "pub const MOVEMENTS_PAGE: usize = 21;",
+        "wallet_ports::a_page_that_holds_the_last_movement_names_no_next_page",
+        "one page of the wallet's history holds twenty movements, a literal cargo-mutants never mutates (SPEC-082 R15; ADR-315 ruling 3)"
+      ],
+      [
+        "S08218-A1-THE-WALLET-REFUSES-503-WITHOUT-A-DATABASE",
+        "api",
+        "src/wallet_routes.rs",
+        "refused(StatusCode::SERVICE_UNAVAILABLE, \"database_not_open\")",
+        "refused(StatusCode::INTERNAL_SERVER_ERROR, \"database_not_open\")",
+        "wallet_routes::a_wallet_read_before_the_database_opens_answers_503_database_not_open",
+        "a wallet read while the database is not open is answered 503 with reason database_not_open (SPEC-082 R15)"
+      ],
+      [
+        "S08219-A2-A-BARE-BEFORE-KEY-IS-REFUSED",
+        "api",
+        "src/wallet_routes.rs",
+        ".unwrap_or((pair, \"\"))",
+        ".unwrap_or((\"\", \"\"))",
+        "wallet_routes::a_before_key_with_no_equals_sign_is_refused_400_invalid_cursor",
+        "a before key with no equals sign is a malformed cursor and is answered 400 invalid_cursor (SPEC-082 R15)"
+      ],
+      [
+        "S08220-A3-ONLY-THE-BEFORE-KEY-IS-A-CURSOR",
+        "api",
+        "src/wallet_routes.rs",
+        "(key == BEFORE).then_some(value)",
+        "(key == BEFORE || true).then_some(value)",
+        "wallet_routes::a_query_key_other_than_before_leaves_the_first_page",
+        "a query key other than before is no cursor, so the first page is answered (SPEC-082 R15)"
+      ],
+      [
+        "S08221-V2-THE-VIEW-FAILS-ON-A-DEBITS-FAULT",
+        "coordination",
+        "src/wallet_view.rs",
+        "wallet.debits_for_day(today).await?",
+        "wallet.debits_for_day(today).await.unwrap_or(0)",
+        "wallet_view_reads::a_debits_read_that_fails_fails_the_view",
+        "a fault on the debits read alone fails the wallet view and never reads as zero debits (SPEC-082 R15)"
+      ],
+      [
+        "S08222-V3-THE-VIEW-FAILS-ON-A-MOVEMENTS-FAULT",
+        "coordination",
+        "src/wallet_view.rs",
+        "wallet.movements(before).await?",
+        "wallet.movements(before).await.unwrap_or(MovementsPage { movements: Vec::new(), next: None })",
+        "wallet_view_reads::a_movements_read_that_fails_fails_the_view",
+        "a fault on the movements read alone fails the wallet view and never reads as an empty page (SPEC-082 R15)"
+      ],
+      [
+        "S08223-V4-THE-VIEW-FAILS-ON-A-BALANCE-BEFORE-FAULT",
+        "coordination",
+        "src/wallet_view.rs",
+        "wallet.balance_before(today).await?",
+        "wallet.balance_before(today).await.unwrap_or(0)",
+        "wallet_view_reads::a_balance_before_today_read_that_fails_fails_the_view",
+        "a fault on the opening balance read alone fails the wallet view and never reads as zero (SPEC-082 R15)"
+      ],
+      [
+        "S08224-V5-THE-VIEW-FAILS-ON-A-BALANCE-FAULT",
+        "coordination",
+        "src/wallet_view.rs",
+        "wallet.balance().await?",
+        "wallet.balance().await.unwrap_or(0)",
+        "wallet_view_reads::a_balance_read_that_fails_fails_the_view",
+        "a fault on the balance read alone fails the wallet view and never reads as zero (SPEC-082 R15)"
+      ],
+      [
+        "S08225-M1-THE-FOLD-FAILS-ON-A-MINT-WRITE-FAULT",
+        "coordination",
+        "src/recompute/mint.rs",
+        "settle_mint_on(&mut savepoint, day.day, amount, closed, day.facts.now).await?",
+        "settle_mint_on(&mut savepoint, day.day, amount, closed, day.facts.now).await.ok()",
+        "wallet_mint::a_fold_whose_mint_write_fails_fails_and_holds_no_mint",
+        "a fold whose mint write fails fails and holds no mint (SPEC-082 R3)"
+      ],
+      [
+        "S08226-M2-THE-FOLD-FAILS-ON-A-DAY-ROWS-FAULT",
+        "coordination",
+        "src/recompute/mint.rs",
+        "day_rows(write, day.day).await?",
+        "day_rows(write, day.day).await.unwrap_or_default()",
+        "wallet_mint::a_fold_whose_day_rows_read_fails_fails_and_never_mints_zero",
+        "a fold whose day-rows read fails fails and never mints zero (SPEC-082 R3)"
+      ],
+      [
+        "S08227-E3-AN-UNREADABLE-PAGE-IS-AN-ERROR",
+        "economy",
+        "src/wallet.rs",
+        ".fetch_all(self.db.reader())\n            .await?;",
+        ".fetch_all(self.db.reader())\n            .await\n            .unwrap_or_default();",
+        "wallet_ports::a_movements_page_over_a_store_that_cannot_be_read_is_an_error_never_an_empty_page",
+        "a movements page over a store that cannot be read is an error and never an empty page (SPEC-082 R15)"
+      ],
+      [
+        "S08228-E4-A-CURSOR-NAMING-NO-MOVEMENT-ENDS-THE-HISTORY",
+        "economy",
+        "src/wallet.rs",
+        "(SELECT study_day, id FROM coin_ledger WHERE id = ?1)",
+        "(SELECT study_day, id FROM coin_ledger WHERE id <= ?1 ORDER BY id DESC LIMIT 1)",
+        "wallet_ports::a_cursor_naming_no_movement_answers_an_empty_page_with_no_next_page",
+        "a cursor naming no movement answers an empty page with no next page (SPEC-082 R15)"
       ]
     ],
     "CARGO_KILLED_SCRIPT_MUTATIONS": [

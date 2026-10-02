@@ -13,6 +13,7 @@ const TOKENS: ReadonlyMap<string, RoutePath> = new Map<string, RoutePath>([
   ['score', '/score'],
   ['level', '/level'],
   ['streak', '/streak'],
+  ['wallet', '/wallet'],
   ['badges', '/badges'],
   ['records', '/records'],
   ['capture', '/capture']

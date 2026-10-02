@@ -122,3 +122,77 @@ mutation coverage, and that hygiene test is its red: it runs 48 tests green ther
 `test_the_vault_row_reads_no_unexplained_mutant` failed with "13 != 15 : deck-streak-vault:
 equivalent against its fragment", and is green at 28a73c9a6c36edd2e4a7fdd0f58e6fa6f35b9591, where
 the campaign table's vault row counts the 15 equivalents its fragment records.
+
+## V1b: the media from the bot and the journal guard over the staged duty runs
+
+This part is V1b's, the second of SPEC-118's two pull requests. It records A7 to A14, which V1b moved
+back into section 3's acceptance fence, and the journal guard over the staged duty runs, which has no
+criterion of its own (SPEC-118 section 12; ADR-316). Each run below selects the delivery's own test
+targets with `--no-fail-fast`, so a failing test binary does not hide the next one.
+
+The red commit is 4c040d136f76e832ec27e8056a8855a3c6e1d574: the bot's media tests and the staged
+guard's tests, beside skeletons that compile and answer nothing. There `media_capture` ran 0 passed
+and 8 failed, each by an assertion, as the fence below records. A9, A10, A12 and A13 were each red on
+their present case: a file declared at the cap is asked for, a stream of exactly the cap lands in the
+inbox, a photo is saved into a vault that is there, and the file is downloaded from its URL. Their
+absence half (no fetch over the cap, no file left by a stream past it, nothing raised with the vault
+missing, and no URL in a log line) holds for a skeleton that does nothing, so it was never seen red,
+and no run with a planted defect was made to show it red.
+
+The census's own red commit is db62224399ea7814e957fbe84ff50b8eff923028, before the red commit.
+There `journal_guard_census` ran 0 passed and 2 failed:
+`every_folder_and_rename_call_of_the_vault_is_guarded_or_named` panicked at
+crates/vault/tests/journal_guard_census.rs:419, "folder, rename and removal calls neither on the
+journal guard nor named", listing `staged.rs:961: self.fs.rename in fn apply_op` and
+`staged.rs:984: self.fs.create_dir in fn create_folders`; and `an_unguarded_staged_call_is_flagged`
+panicked at crates/vault/tests/journal_guard_census.rs:464, "the staged executor makes no call on its
+journal guard". At the red commit both failed again at the same lines, listing the same two calls at
+`staged.rs:970` and `staged.rs:993`, where the skeletons had moved them.
+
+At the red commit `staged_guard` ran 0 passed and 4 failed.
+`a_note_written_through_a_new_link_into_the_journal_is_refused`,
+`a_folder_created_through_a_new_link_into_the_journal_is_refused`,
+`a_capture_filed_through_a_new_link_into_the_journal_is_refused` and
+`a_capture_taken_through_a_new_link_out_of_the_journal_is_refused` each panicked at
+crates/vault/tests/staged_guard.rs:296, "the run reached the journal through the link", after its
+control without the link had applied both operations.
+
+At the green commit, 94dc96fa609ae34e947132c15bf99a34f83ff351, `media_capture` ran 8 passed,
+`staged_guard` 4 passed and `journal_guard_census` 2 passed, with none failed.
+
+```red-first
+A7: red at 4c040d136f76e832ec27e8056a8855a3c6e1d574: media_choice_matches_the_predecessors_golden panicked at crates/bot/tests/media_capture.rs:204: the case Some("photo-sizes"), left {"calls": [], "captured": false} right one call for "photo-file-3" and "captured": true
+A7: green at 94dc96fa609ae34e947132c15bf99a34f83ff351
+A8: red at 4c040d136f76e832ec27e8056a8855a3c6e1d574: a_document_extension_off_the_rule_reads_bin panicked at crates/bot/tests/media_capture.rs:221: left None right Some(".abcdefghij")
+A8: green at 94dc96fa609ae34e947132c15bf99a34f83ff351
+A9: red at 4c040d136f76e832ec27e8056a8855a3c6e1d574: a_file_over_twenty_megabytes_is_never_fetched panicked at crates/bot/tests/media_capture.rs:252: a file declared at the cap is asked for, left 0 right 1
+A9: green at 94dc96fa609ae34e947132c15bf99a34f83ff351
+A10: red at 4c040d136f76e832ec27e8056a8855a3c6e1d574: a_stream_past_the_cap_is_stopped_and_discarded panicked at crates/bot/tests/media_capture.rs:297: a stream of exactly the cap lands in the inbox: []
+A10: green at 94dc96fa609ae34e947132c15bf99a34f83ff351
+A11: red at 4c040d136f76e832ec27e8056a8855a3c6e1d574: capture_replies_match_the_predecessors_golden panicked at crates/bot/tests/media_capture.rs:365: the case Some("no-file-id"), left "returned": true with one download, one save and one line sent, right "returned": false with none of them
+A11: green at 94dc96fa609ae34e947132c15bf99a34f83ff351
+A12: red at 4c040d136f76e832ec27e8056a8855a3c6e1d574: a_missing_vault_is_reported_not_raised panicked at crates/bot/tests/media_capture.rs:386: a photo is saved into a vault that is there: []
+A12: green at 94dc96fa609ae34e947132c15bf99a34f83ff351
+A13: red at 4c040d136f76e832ec27e8056a8855a3c6e1d574: the_file_url_never_reaches_a_log_line panicked at crates/bot/tests/media_capture.rs:503: the file was downloaded from the URL that holds the token: []
+A13: green at 94dc96fa609ae34e947132c15bf99a34f83ff351
+A14: red at 4c040d136f76e832ec27e8056a8855a3c6e1d574: media_is_admitted_from_the_owner_only panicked at crates/bot/tests/media_capture.rs:533: left Dropped(Dropped { kind: "message", reason: "no_text" }) right Media(Choice { file_id: "photo-file-1", kind: Photo, ext: ".jpg", .. })
+A14: green at 94dc96fa609ae34e947132c15bf99a34f83ff351
+```
+
+The green commit also amends three counting tests outside these criteria, because the delivery adds
+what they count. `crates/notifications/tests/one_router.rs` counts `COMMAND_REPLIES` 14 to 15,
+`COMMAND_CALLERS` 25 to 27 and `REQUEST_SITES` 21 to 22; `crates/kernel/tests/log_capture_class.rs`
+counts the routed log calls 18 to 19; and `crates/vault/tests/atomic.rs` admits `PORT_DELEGATION`,
+`("staged.rs", "create_new(", 2)`, a named delegation class with an exact count (ADR-316). They are
+green there and carry no criterion, so the fence gains no line for them.
+
+Two tests were added after the green commit, each green when written, so each is mutation coverage
+and not red-first evidence. `a_download_held_past_the_clients_timeout_still_lands`, in
+`crates/bot/tests/media_capture.rs`, was added at 06daed69431a0f1283fc27c787f37845aef33651 with the
+fake's held download; it is the killer of row S11830.
+`the_borrowed_file_system_passes_every_call_through`, a `cfg(test)` module at the end of
+`crates/vault/src/staged.rs`, was added at
+bd0d609f82ca704049a2ebb297feec18b8f8af0d; it holds the borrowed file system to passing every call
+through. Between them, 0cb911c829d402062daa726591acb4e88fb01145 changes only the doc comment and
+three log lines of `crates/daemon/src/wiring.rs`'s `inbox_captures`, which no test, row or formal
+cover reads.
