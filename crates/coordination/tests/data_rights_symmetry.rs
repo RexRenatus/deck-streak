@@ -32,7 +32,7 @@ use tempfile::TempDir;
 /// Statements that leave every table of the schema holding rows no erase leaves: 101 rows in each
 /// table that takes rows, so an export that pages or limits its read comes up short (the
 /// predecessor's lesson), and every column a reset writes moved off its reset value.
-const SEEDS: [&str; 26] = [
+const SEEDS: [&str; 28] = [
     "UPDATE settings_generation SET generation = 7, courses_digest = '0123456789abcdef' \
      WHERE id = 1",
     "UPDATE ingest_state SET anchor_newest_review_id = 1700000000123, anchor_card_count = 57, \
@@ -134,6 +134,12 @@ const SEEDS: [&str; 26] = [
      i, i % 2, 1000 * i FROM n",
     "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 101) \
      INSERT INTO buffs (study_day, kind, created_at) SELECT 20000 + i, 'ascendant', 1000 * i FROM n",
+    "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 101) \
+     INSERT INTO badges_earned (badge_key, tier, name, emoji, study_day, celebrated_at, created_at) \
+     SELECT 'badge_' || i, 0, 'Badge ' || i, 'x', 20000 + i, NULL, 1000 * i FROM n",
+    "INSERT INTO records (kind, value, study_day, previous, celebrated_at, created_at) VALUES \
+     ('best_score', 80, 20100, 70, NULL, 1000), ('most_reviews', 300, 20100, 200, 5000, 2000), \
+     ('most_minutes', 90, 20100, 60, NULL, 3000)",
     "INSERT INTO streak_state (track, current_days, longest_days, freezes, last_study_day, \
      comeback_armed, created_at) VALUES ('language', 9, 12, 2, 20100, 1, 1000), \
      ('law', 4, 6, 0, 20100, 0, 2000)",

@@ -381,3 +381,75 @@ A14: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k
 A14: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_the_declared_form_around_a_bounded_command_is_found_bounded
 A14: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_the_real_tree_commands_are_found_bounded_and_not_refused
 ```
+
+## 10. Amendments, 2026-10-01: both workflow scans find every spelling through one finder, and a stand-in that cannot plant its wrapper fails closed (#418, #497)
+
+Insert-only against dev under ruling (i) of SPEC-038 section 8: every byte of dev's file is kept in
+order, and this amendment inserts this section and the next after it, and nothing else. It is
+decided by ADR-306 (one shared finder, chosen against a second copy and against importing the
+guard's own module; and a stand-in that fails closed, chosen against falling back to the real
+program). Issues #418 and #497.
+
+- **The rule, #418.** `test_mutation_workflows.py` found `cargo mutants` commands with two patterns
+  of its own: a line pattern that needs a blank after `mutants`, and a job filter that needs the
+  literal text `cargo mutants`. Both miss spellings the guard of section 8 finds:
+  `cargo +nightly mutants --in-place`, `cargo-mutants mutants --in-place`, `cargo  mutants
+  --in-place` with two blanks, and `cargo --config net.retry=2 mutants --in-place`; the line pattern
+  also misses `cargo mutants` at the end of a line. Both scans now read each workflow through ONE
+  finder, `scripts/tests/_mutants_finder.py`, which holds the guard's reader and its command finder
+  moved out of `test_dispatch_shards.py`, unchanged except the `wrapped` seam. Both modules import it and neither keeps a copy.
+- **The seam.** What a wrapper is differs between the two importers, so the finder takes it as a
+  parameter, `wrapped`, which defaults to a recognizer that sees no wrapper. It is never a module
+  attribute, so what one importer passes cannot reach the other when both load in one process.
+  `test_dispatch_shards.py` passes its own `wrapped`, which reads the wrapper's file;
+  `test_mutation_workflows.py` passes a recognizer that names no wrapper and reads no file: for a
+  command whose program is not cargo, the command is the words after its first standalone `--`.
+- **The weight of the move.** The finder's text keeps its one literal mention of the wrapper's
+  file name, in one string match and nowhere else (`grep -n memory_scope
+  scripts/tests/_mutants_finder.py` prints one line), so a search for that name lists the support
+  module. It imports only `re` and `string` and reaches no path, and `test_mutation_workflows.py`
+  imports nothing that does, so it stays runnable where the wrapper's own tests are not.
+- **The rule, #497.** The stand-in `test_dispatch_shards.py` runs in place of the interpreter
+  planted the wrapper and, when planting raised, fell through to running the real program with the
+  words unchanged. It now prints the failure to standard error and exits non-zero, and runs nothing
+  after it. A census that reads the text of the top-level `*.py` files of `scripts/tests/` lists each
+  failed-plant fallback it reaches, with its file, line and arm; it lists none at this head. Its
+  reach is bounded twice: it reads no subdirectory, and it looks for the real-program call only
+  in the 12 lines after the handler. A fallback outside either bound is not listed (#497).
+- **A refusal is a find.** A workflow the reader refuses is reported by the command scan as
+  `refused: <why>`, which carries no bounds, and counted by the job scan as running the command, so
+  the assertions over them fail on it and never pass over it.
+- **Not measured here.** `test_dispatch_shards.py` and `test_memory_scope.py` run in CI
+  only. The test of #497 is therefore a CI-only red and a CI-only green, and its record cites the
+  run.
+- **Files:** `scripts/tests/_mutants_finder.py`, `scripts/tests/test_mutation_workflows.py`,
+  `scripts/tests/test_dispatch_shards.py`, `scripts/tests/_stand_in_census.py`,
+  `scripts/tests/test_stand_in_census.py`, `scripts/tests/test_ci_workflows.py` (its census names the
+  new tests' read sites), `scripts/mutation-rows.d/S12900-S12999.json` (rows S12911 and S12912 name the
+  moved finder as their target), `docs/decisions/ADR-306-one-finder-for-the-mutants-scans-and-a-stand-in-that-fails-closed.md`,
+  `docs/red-first/SPEC-129.md` and a changelog fragment (#418, #497).
+- It changes no Rust, no workflow and no production Python, and adds no mutation row: it repoints the
+  target of two rows to the file their anchors moved to, and every other changed file is a test or
+  its support (#418, #497).
+- It leaves the survivors step, the step runner's shell and the VOID and held-twice lines of the
+  workflow tests to their own issues (#482, #487, #509).
+
+## 11. Acceptance criteria of the section 10 amendments
+
+| id | criterion | decided by |
+|---|---|---|
+| A15 | the command scan of `test_mutation_workflows.py` finds a planted workflow in each of five spellings, and one run by a wrapper after its `--`, which this scan finds through its own recognizer where the guard's finder refuses a wrapper it does not recognize | `test_mutation_workflows.py` `EveryMutantsSpellingIsFound` |
+| A16 | the job scan finds the job of each planted spelling, and neither scan finds a job that holds no such command | `test_mutation_workflows.py` `EveryMutantsSpellingIsFound` |
+| A17 | the finder is defined once, in the support module, and a planted copy of it is caught by the census of definitions | `test_mutation_workflows.py` `EveryMutantsSpellingIsFound` |
+| A18 | when planting the wrapper raises, the stand-in exits non-zero, names the failure and runs none of the words (CI only) | `test_dispatch_shards.py` `AStandInThatCannotPlantTheWrapperFailsClosed` |
+| A19 | the census lists no failed-plant fallback among the top-level `*.py` files of `scripts/tests/`, and lists a planted one | `test_stand_in_census.py` `TheCensusOfStandIns` |
+
+```acceptance
+A15: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k test_each_spelling_of_the_command_is_found_by_the_command_scan
+A16: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k test_each_spelling_of_the_command_is_found_by_the_job_scan
+A16: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k test_a_job_without_the_command_is_found_by_neither_scan
+A17: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k test_the_finder_is_defined_once_and_a_planted_copy_is_caught
+A18: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_a_failed_plant_exits_non_zero_names_the_failure_and_runs_no_words
+A19: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k test_no_stand_in_falls_back_to_a_real_program_on_a_failed_plant
+A19: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k test_a_planted_fallback_is_listed
+```

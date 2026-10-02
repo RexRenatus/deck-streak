@@ -57,6 +57,28 @@
       "erase": "delete"
     },
     {
+      "id": "badges-earned",
+      "data": "each badge you earned: its key, tier, name, emoji, the study day, and when its celebration was sent",
+      "source": "derived",
+      "stores": ["badges_earned.*"],
+      "purpose": "showing the badges you hold and sending each celebration once",
+      "lawful_basis": "contract",
+      "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "delete"
+    },
+    {
+      "id": "personal-records",
+      "data": "your best daily score, most reviews and most minutes: the value, the study day, the value it beat, and when its celebration was sent",
+      "source": "derived",
+      "stores": ["records.*"],
+      "purpose": "showing your personal records and sending each celebration once",
+      "lawful_basis": "contract",
+      "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "delete"
+    },
+    {
       "id": "day-buffs",
       "data": "the buffs a study day holds: the study day, the kind of buff, and when it was armed",
       "source": "derived",

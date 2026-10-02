@@ -899,3 +899,183 @@ configurations `formal/tla/RelightOrder/MCRelightOrder.cfg`, `formal/tla/Relight
 and `formal/tla/RelightOrder/MCNoOtherDayHeldBack.cfg`, and its twelve witnesses, one file each under
 `formal/tla/RelightOrder/witness/`. It changes `config/formal.json` and
 `scripts/tests/test_formal_config.py` (the model's time budget).
+
+## 27. Amendment, 2026-10-01: the calendar and its markers (#486)
+
+Insert-only: every earlier byte is kept in order, and this section and the next two are the only
+insertions. It lifts the first bullet of section 18, and with it that section's supersession of
+R20's "the window's study days with their freeze, skip and break markers" and of R23's "the
+calendar with its markers", for the calendar alone: the rest of section 18 stands.
+
+- **The predecessor serves a streak calendar, and its window binds.** `charts.streak_calendar`
+  draws the last 26 weeks of study days, binary (a day is studied when its rollup has reviews above
+  zero), with no track split and no markers. Its window and its studied layer bind with a golden
+  (`tools/parity-oracle/goldens/streak_calendar.json`, which the oracle's own generator writes by
+  calling it); the markers have no predecessor and stay under the rules below (ADR-302 D1).
+- **The window** is the predecessor's: from the Monday on or before the study day served minus
+  `CALENDAR_LOOKBACK_DAYS` (181, which is `CALENDAR_WEEKS` (26) weeks less the served day) through
+  the study day served, inclusive (`crates/streaks/src/constants.rs`), oldest first, and never the
+  whole history. It is 182 to 188 days long, by the served day's weekday, and always starts on a
+  Monday. A marker that sits before the window's first day is not served.
+- **The days served.** Each served day carries its day in the encoding `study_day` has (the
+  `StudyDay` display, `YYYY-MM-DD`), whether it was a study day of the track, and the markers that
+  sit on it, in the order `skip`, `freeze`, `break`.
+- **The study days** of a track are the days on which its review XP is settled above nothing: the
+  rows of `xp_settlement` whose source is `reviews` and track `language` for the language track, and
+  whose source is `reviews_law` and track `law` for the law track. The settlement's own rule makes
+  that the set of days with a study review of the track (ADR-302 D4), so no table is added and no
+  day set is stored twice.
+- **The studied layer against the predecessor.** Each track serves exactly the predecessor's window,
+  in order, and the UNION of the two tracks' study days equals the predecessor's studied set over
+  it. A difference is allowed only where ADR-302 D1 names its day class and reason, and an unnamed
+  one fails the route's parity test.
+- **Where a marker sits, on the language track.** A `skip` sits on each declared skip day (the set
+  is empty until the skip day exists, #108). A `freeze` sits on the ONE real miss a freeze covered:
+  the day strictly between the last study day and the return day on which the replay spends the
+  freeze, skip days not counted, and never on the return day. A `break` sits on the day the replay
+  marks the run broken (`broke_today`): the day after the second real miss of a live run (the day
+  whose lapse records it), or a return day after a break the lapse path did not record.
+- **Where a marker sits, on the law track.** The law track serves its own days, and `skip` and
+  `break` markers; it holds no freezes, so it serves no `freeze`. A `break` sits on the day after
+  the first real miss of a live run, the day the law replay's run resets, once that day is served.
+- **The open day.** The served day is the window's last day. It is a study day of the track once
+  the fold has settled a study review for it, and not before; a freeze is spent on the return day,
+  so its covered day carries `freeze` from the moment that return day is settled, and not before.
+- **One read.** The days of both tracks and `streak_state` are read in ONE read transaction, so the
+  calendar and the counts beside it are one moment of the store. The markers are derived on read;
+  no table is added.
+- **The shape.** `GET /api/streak` gains `calendar`: `{ "language": [day, ...], "law": [day, ...] }`,
+  each day `{ "day": "YYYY-MM-DD", "studied": bool, "markers": ["skip" | "freeze" | "break", ...] }`.
+  Every other field is as before.
+- **The screen** draws each track's served window as a grid of whole weeks, Monday first: one cell
+  per served day, in its weekday's column, every day in exactly one cell, each cell carrying its
+  markers and no other day's. A marker shows as the first letter of its word and is read to a
+  screen reader as the whole word. At a phone's width (360 px) the page does not scroll sideways.
+  The at-stake line and every R20 to R23 behaviour stand.
+
+What this does NOT do (section 5's list stands, and adds):
+
+- It declares no skip day: the fold and the route pass an empty skip set until the skip day exists
+  (#108).
+- It stores no calendar and no marker: a marker is derived on read (#486).
+- It lets the owner pick no other window: the window is the predecessor's (#486).
+
+## 28. Acceptance criteria of the 2026-10-01 calendar amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A57 | over every history built by construction (runs of study days, gaps of one, two and three real misses, none and one freeze held, skip days before, inside and after a gap, the served day at the window's first day, inside it and on a gap day, and a marker one day before the window), each served day of each track carries exactly the markers that sit on it, the window runs from the Monday on or before the served day minus `CALENDAR_LOOKBACK_DAYS` through the served day, a marker sits on the window's first day and one day before it, and every pair of markers differs on some day | `every_served_calendar_day_carries_exactly_its_own_markers` |
+| A58 | `GET /api/streak` over the real store after the fold has settled a generated population serves each day with the markers the pure function gives it, serves as `freeze` the covered day of every freeze the fold wrote for a return day in the window and no other day, and refuses a request without the owner's session | `the_route_serves_each_days_markers_after_the_fold` |
+| A59 | after the fold settles a constructed population, the days with a positive review settlement of a track are the days the population gave a study review on that track, both ways, and the other track's days are not among them | `a_track_is_settled_on_exactly_its_study_days` |
+| A60 | the served window ends at the served day, studied or not yet studied, and a freeze's covered day carries no marker until its return day is settled | `the_open_day_is_the_windows_last_day_studied_or_not_yet` |
+| A61 | the screen reads each marker from its own day's cell and from no other cell, over a generated population in which every marker sits on a different day, at the predecessor's window | "the screen reads each marker from its own day's cell" |
+| A62 | the law track's `break` sits on the day after the first real miss of a live run, once that day is served, and not on the miss itself; a skip day between moves it to the day after the next real miss | `the_law_break_sits_on_the_day_after_the_first_real_miss` |
+| A63 | over every case of the predecessor's calendar golden, after the fold has settled the case's studied days split over the two tracks, `GET /api/streak` serves each track exactly the predecessor's window in order, and the union of the two tracks' study days equals the predecessor's studied set, every difference named in ADR-302 D1; a dropped studied day and a 35-day cut are refused | `the_route_serves_the_predecessors_window_and_its_studied_days` |
+| A64 | the screen lays every served window out as whole weeks, Monday first: each day's cell sits in its own weekday's column, and the window's first cell in the first | "lays the served window out as whole weeks, Monday first" |
+
+```acceptance
+A57: cargo test -p deck-streak-streaks --test calendar_population -- --exact every_served_calendar_day_carries_exactly_its_own_markers
+A58: cargo test -p deck-streak-daemon --test streak_calendar_route -- --exact the_route_serves_each_days_markers_after_the_fold
+A59: cargo test -p deck-streak-daemon --test streak_calendar_route -- --exact a_track_is_settled_on_exactly_its_study_days
+A60: cargo test -p deck-streak-streaks --test calendar_population -- --exact the_open_day_is_the_windows_last_day_studied_or_not_yet
+A61: pnpm exec vitest run web/app/src/lib/streak/streak-calendar.test.ts -t "the screen reads each marker from its own day's cell"
+A62: cargo test -p deck-streak-streaks --test calendar_population -- --exact the_law_break_sits_on_the_day_after_the_first_real_miss
+A63: cargo test -p deck-streak-daemon --test streak_calendar_route -- --exact the_route_serves_the_predecessors_window_and_its_studied_days
+A64: pnpm exec vitest run web/app/src/lib/streak/streak-calendar.test.ts -t "lays the served window out as whole weeks, Monday first"
+```
+
+The phone width is held beside these: `web/app/tests/streak-calendar.spec.ts` lays the screen out in
+a browser at 360 px and refuses a cell outside its weekday's column or week's row, or any sideways
+scroll. The web stage's end-to-end run executes it; it is not an acceptance line because no
+acceptance runner drives a browser.
+
+## 29. Amendments: the files the calendar amendment adds
+
+The calendar amendment (sections 27 and 28) adds `crates/streaks/src/calendar.rs`,
+`crates/streaks/tests/calendar_population.rs`, `crates/daemon/tests/streak_calendar_route.rs`,
+`crates/progression/tests/settled_days.rs`, `web/app/src/lib/streak/streak-calendar.test.ts`,
+`web/app/tests/streak-calendar.spec.ts`, `tools/parity-oracle/goldens/streak_calendar.json`,
+`docs/schematics/streak-calendar-markers.md`,
+`docs/decisions/ADR-302-the-streak-calendar-is-derived-on-read-from-the-settled-days.md` and
+`changelog.d/feat-streak-calendar-486.md` and the query cache file
+`.sqlx/query-50b4943c3e23c09e3d89810169edbd336921942089001f00c95ae0597334bbce.json`. It changes
+`crates/streaks/src/lib.rs`, `crates/streaks/src/constants.rs`, `crates/streaks/src/replay.rs`,
+`crates/progression/src/lib.rs`, `crates/progression/src/settle.rs`,
+`crates/coordination/src/streak_views.rs`, `crates/coordination/tests/streak_views.rs`,
+`crates/api/src/streak_routes.rs`, `crates/api/tests/streak_routes.rs`,
+`web/app/src/lib/streak/streak.ts`, `web/app/src/lib/streak/StreakScreen.svelte`,
+`web/app/messages/en.json`, `tools/parity-oracle/registry/spec_076.py` (the calendar's adapter,
+which re-stamps every SPEC-076 golden's `registry_sha256` and changes no output),
+`docs/red-first/SPEC-076.md` and `scripts/mutation-rows.d/S07600-S07699.json`.
+
+## 30. Amendment, 2026-10-01: the open lapse walk's property is proved, and section 24's count of its insertions
+
+Insert-only: every earlier byte is kept in order, and this amendment inserts sections 30, 31 and
+32.
+
+- Section 24's sentence "this section and the next are the only insertions" predates section 26:
+  the 2026-10-01 derived-population amendment's insertions are sections 24, 25 and 26. Section 24
+  stays as written.
+- The open lapse walk's property (#472). For every today and every window the day type admits,
+  `open_lapse` (SPEC-049 R12, R13; section 16) answers after at most one step per day from the
+  window's first day to today, and never overflows at the smallest day. Its answer equals the
+  rule's: walk back from today to the window's first day while a day holds no study review, where a
+  skip day neither counts nor ends the run; when the run holds at least the given number of silent
+  days, the answer is its earliest silent day, and otherwise it is none. The one exception: a walk
+  that reaches the smallest day the type admits without meeting a study review answers none, as
+  section 16 states.
+- The property's proof home is the Lean entry `lean/OpenLapse`, in
+  `formal/lean/Formal/OpenLapse.lean`, decided by ADR-305. Its port walks `Int64`, the type
+  `StudyDay` wraps, so its smallest day is the type's own. Three theorems state the property with
+  no hypothesis: `at_most_one_step_per_day`, `never_overflows` and `answers_the_rule`. Each rests on
+  no axiom beyond the three `config/formal.json` allows, and each has a witness, a port that breaks
+  its one claim, which the formal check must catch. The entry covers `open_lapse` by the digest of
+  its span, so a change to the function reads `STALE` until the port is read again. The theorems
+  are judged by the formal check, not by a test.
+- The port is held to the code by vectors. The entry's writer,
+  `formal/lean/Formal/OpenLapseVectors.lean`, writes `formal/vectors/open-lapse.jsonl` from five
+  axes: the window's first day (the smallest day, the day after it, day zero and the third day
+  before the largest), the threshold (one and three), the window's width (one to three days), each
+  day's state (a study review, a count of zero, a skip day, a count of zero on a skip day, or none
+  of these; the window's first day always holds an entry, and the last day of a wider window is
+  never a day with none of these), and today (from the day before the window to the day after it,
+  never below the smallest day). The formal check reports a committed file that differs from the
+  writer's output: its `DERIVED_DRIFT` finding names the first line that differs, and each of the
+  entry's theorems reads unclean. While the theorems are in report mode the check's verdict stays
+  OK beside that finding, and a check narrowed to one theorem with `--property` fails on it. A65
+  derives the same population from the same axes, refuses a file that differs from it, and decides
+  that the Rust function answers every vector as the port does. A66 decides that the population
+  holds every case the property names: today at the smallest day, a window that starts at it, a
+  study review on the window's first day, a skip day at either end of a run and inside one, and
+  runs below, at and above the threshold. A67 decides the exception's own case. A41 stays beside
+  them as a second, independent check.
+
+## 31. Acceptance criteria of the 2026-10-01 open-lapse proof amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A65 | the open lapse walk answers every vector its Lean port wrote, and the file's inputs equal, in order, the population the test derives from the five axes | `the_open_lapse_walk_answers_every_vector_its_lean_port_wrote` |
+| A66 | the vectors hold every case the property names: today at the smallest day, a window that starts at it, a study review on the window's first day, a skip day at a run's earliest end, at its latest end and inside it, and a run below, at and above the threshold | `the_vectors_hold_every_case_the_property_names` |
+| A67 | a walk that reaches the smallest day without a study review answers none, in the Rust function and in the vectors | `a_walk_that_reaches_the_smallest_day_without_a_review_answers_none_in_the_vectors` |
+
+```acceptance
+A65: cargo test -p deck-streak-streaks --test formal_vectors_open_lapse -- --exact the_open_lapse_walk_answers_every_vector_its_lean_port_wrote
+A66: cargo test -p deck-streak-streaks --test formal_vectors_open_lapse -- --exact the_vectors_hold_every_case_the_property_names
+A67: cargo test -p deck-streak-streaks --test formal_vectors_open_lapse -- --exact a_walk_that_reaches_the_smallest_day_without_a_review_answers_none_in_the_vectors
+```
+
+## 32. Amendments: the files the open-lapse proof amendment adds
+
+The open-lapse proof amendment (sections 30 and 31) adds files that no row of section 4 names. It
+adds the entry `formal/lean/Formal/OpenLapse.lean` and its writer
+`formal/lean/Formal/OpenLapseVectors.lean` to the Lean package under `formal/lean/`, which the
+next-milestone entry (#526) introduced, and it amends that package's shared files:
+`formal/lean/lakefile.toml` gains a comment, `formal/lean/.gitignore` holds the anchored
+`/.lake/` line, `formal/lean/Formal/Vectors.lean` gains the writer's import and the `OpenLapse`
+arm of `main`, and `formal/lean/Formal.lean` gains a docstring. `formal/lean/lean-toolchain` and
+`formal/lean/lake-manifest.json` are unchanged. It adds the vectors `formal/vectors/open-lapse.jsonl`, the test
+`crates/streaks/tests/formal_vectors_open_lapse.rs` (A65 to A67), the decision
+`docs/decisions/ADR-305-the-open-lapse-walk-is-proved-in-lean-over-the-day-type-it-walks.md`, the
+schematic `docs/schematics/open-lapse-proof-and-its-vectors.md` and the changelog fragment
+`changelog.d/feat-formal-lapse-472.md`. It changes `docs/red-first/SPEC-076.md` (the addendum of
+this date). No production code changes, and `config/formal.json` is unchanged.
