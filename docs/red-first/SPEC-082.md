@@ -198,3 +198,9 @@ mutant that took every answer for ok (`if (answer.kind === 'ok')` planted as `if
 alert on screen and failed only by an unhandled rejection, and all 14 tests passed. With the lines
 set first, the same plant fails 2 tests by `Unable to find role="alert"`, and the file restored
 with its sha256 equal reads green. No fence line is added for any of them.
+
+A post-GREEN test edit, not red-first. edadd79, after the code, gives the parser's two refusal tests
+a positive control: each first asserts that the untouched body parses to its real values, so every
+refusal below it is the refusal of its one changed field. A `parseWallet` planted to return null for
+every body fails both, and the file restored with its sha256 equal reads green. An assertion is
+added to each and none is removed; production is unchanged. No fence line is added.
