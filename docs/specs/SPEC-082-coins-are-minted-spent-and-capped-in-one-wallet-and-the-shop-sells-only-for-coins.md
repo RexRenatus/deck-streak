@@ -522,7 +522,10 @@ at a time, from GET /api/wallet, whose answer carries the balance, the day's los
 left of it, one page of movements and the cursor of the next page. Each line shows its study day,
 its source in plain words and its signed amount, and no line urges, counts down or shames. The page
 size is named once, in the wallet's page query, and the cursor is the last movement shown, passed
-back as `before`.
+back as `before`. A request with no `before` reads the first page, a `before` that parses as a
+64-bit integer reads the page after that movement (an id no movement holds reads an empty page),
+and any other `before` is answered 400 with a body that holds only the reason
+(`{"reason":"invalid_cursor"}`).
 
 | id | criterion | decided by |
 |---|---|---|
