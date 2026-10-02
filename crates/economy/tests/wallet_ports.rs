@@ -724,3 +724,52 @@ async fn a_page_that_holds_the_last_movement_names_no_next_page() {
         "an older movement exists past the page"
     );
 }
+
+/// Writes one synthetic movement past the ports.
+async fn insert_movement(db: &Db, day: i64, source: &str, delta: i64) {
+    sqlx::query(
+        "INSERT INTO coin_ledger (study_day, source, reference, delta, created_at) \
+         VALUES (?1, ?2, '', ?3, 1000)",
+    )
+    .bind(day)
+    .bind(source)
+    .bind(delta)
+    .execute(db.reader())
+    .await
+    .expect("the synthetic movement is written");
+}
+
+#[tokio::test]
+async fn a_movements_page_over_a_store_that_cannot_be_read_is_an_error_never_an_empty_page() {
+    let (_directory, db, wallet) = wallet().await;
+    insert_movement(&db, 100, "payout", 7).await;
+    let before = wallet.movements(None).await.expect("the page reads");
+    assert_eq!(before.movements.len(), 1, "the store holds the movement");
+    db.close().await;
+    let failed = wallet.movements(None).await;
+    assert!(
+        failed.is_err(),
+        "an unreadable store is no empty page: {failed:?}"
+    );
+}
+
+#[tokio::test]
+async fn a_cursor_naming_no_movement_answers_an_empty_page_with_no_next_page() {
+    let (_directory, db, wallet) = wallet().await;
+    for (on, source) in [(100, "payout"), (101, "mint"), (102, "fine")] {
+        insert_movement(&db, on, source, 5).await;
+    }
+    let held = wallet.movements(None).await.expect("the first page");
+    assert_eq!(held.movements.len(), 3, "the ledger holds three movements");
+    let none = wallet
+        .movements(Some(9_999))
+        .await
+        .expect("a cursor no movement holds is still a read");
+    assert_eq!(
+        none,
+        MovementsPage {
+            movements: Vec::new(),
+            next: None,
+        }
+    );
+}
