@@ -334,11 +334,14 @@ async fn the_session_chest_grant_matches_the_predecessors_golden() {
 
 #[tokio::test]
 async fn a_second_recompute_never_rolls_a_session_again() {
+    // Two chests or more, on a day still under its cap: the second recompute reaches each
+    // session's key rather than stopping at the cap.
     let case = a_case(|input, output| {
         input["existing"].as_array().is_some_and(Vec::is_empty)
-            && output["chests"]
-                .as_array()
-                .is_some_and(|chests| chests.len() >= 2)
+            && output["chests"].as_array().is_some_and(|chests| {
+                i64::try_from(chests.len())
+                    .is_ok_and(|rolled| rolled >= 2 && rolled < whole(input, "per_day_max"))
+            })
     });
     let (_directory, db) = fresh().await;
     seed(&db, &case.input).await;
@@ -507,6 +510,67 @@ async fn the_challenge_and_weekly_chests_match_the_predecessors_goldens() {
             case.input
         );
     }
+}
+
+#[tokio::test]
+async fn a_held_quest_chest_key_takes_no_draw_and_writes_nothing() {
+    let case = cases_of("challenge_chest")
+        .into_iter()
+        .find(|case| {
+            case.input["existing"].as_array().is_some_and(Vec::is_empty)
+                && case.output["chests"]
+                    .as_array()
+                    .is_some_and(|chests| chests.len() == 1)
+        })
+        .expect("a challenge case that grants one chest");
+    let (_directory, db) = fresh().await;
+    seed(&db, &case.input).await;
+    let day = day_of(&case.input);
+    let mut first = Listed::of(&case.input);
+    let mut write = db.write().await.expect("a write");
+    let challenge = grant_challenge_chest_on(&mut write, day, &mut first, AT)
+        .await
+        .expect("the first challenge chest");
+    let weekly = grant_weekly_chest_on(&mut write, day, AT)
+        .await
+        .expect("the first weekly chest");
+    write.commit().await.expect("the write committed");
+    let held = chests_held(&db, day).await;
+    let pity = pity_held(&db).await;
+    // Both chests were stored, so the second grants below meet held keys.
+    assert_eq!(
+        (
+            challenge.map(|chest| chest.origin),
+            weekly.map(|chest| chest.origin)
+        ),
+        (Some(Origin::Challenge), Some(Origin::Weekly))
+    );
+
+    let mut second = Listed::new(std::iter::repeat_n(0.5, 8));
+    let mut write = db.write().await.expect("a write");
+    let challenge = grant_challenge_chest_on(&mut write, day, &mut second, AT)
+        .await
+        .expect("the second challenge chest");
+    let weekly = grant_weekly_chest_on(&mut write, day, AT)
+        .await
+        .expect("the second weekly chest");
+    write.commit().await.expect("the write committed");
+    assert_eq!(
+        second.used, 0,
+        "a held challenge key drew {} time(s)",
+        second.used
+    );
+    assert_eq!(
+        (challenge, weekly),
+        (None, None),
+        "a held key granted again"
+    );
+    assert_eq!(
+        chests_held(&db, day).await,
+        held,
+        "the stored chests changed"
+    );
+    assert_eq!(pity_held(&db).await, pity, "the pity counters changed");
 }
 
 /// A draw's exact bits, so two draws compare exactly.
