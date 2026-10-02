@@ -360,3 +360,34 @@ as dynamic: A62's control empties each statement list in place, A62's and A63's 
 reads the plan through `dataclasses.asdict`, and A64 reads the `legs` function from the script's
 syntax tree. Each reading is unchanged, and A61 to A64 as bfb00d2 writes them are red at 095f02e's
 code by the same assertions as above, A62 with 7 mismatches.
+
+## Addendum, 2026-10-02: the plan reads a declared encoding from the bytes (issue #485, round 2)
+
+A62's population gains the PEP 263 class. The plan parsed the file's text after decoding it as UTF-8,
+and a text source ignores a coding declaration, so a declaration that changes a value, one that
+stops the head compiling and an unknown encoding were each named docstring-only. The plan now
+parses the bytes, so a declared encoding decides the tree compared, and a file whose bytes are not
+UTF-8 still fails closed. The new test is selected by
+
+```text
+python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k a_declared_encoding_decides_the_tree_compared
+```
+
+It is red at 5bcbe0124973347119134cc11c91edfd529d9c92 by assertion; four of its six members fail, the declared UTF-8 control and the
+member whose bytes are not UTF-8 read as before:
+
+```red-first
+A62 (the PEP 263 members): red at 5bcbe0124973347119134cc11c91edfd529d9c92: AssertionError: Lists differ: ["a latin-1 escape rewritten as raw bytes,[463 chars]ne)"] != []
+A62 (the PEP 263 members): green at c3845425ac8f886636cdab6326529e174302bb55
+```
+
+```text
+Ran 1 test in 0.429s
+
+FAILED (failures=1)
+cookie population: 6 member(s); mismatches 4
+```
+
+The first red line names, verbatim, `a latin-1 escape rewritten as raw bytes, a value changes: read
+('named', ['scripts/cookie.py']), expected ('applies', None)`. At c3845425ac8f886636cdab6326529e174302bb55 the whole module reads
+`Ran 30 tests` and OK, and the population reads `cookie population: 6 member(s); mismatches 0`.
