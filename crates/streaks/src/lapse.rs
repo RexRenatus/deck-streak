@@ -24,6 +24,14 @@ use deck_streak_kernel::StudyDay;
 /// test `the_threshold_is_the_economy_files`.
 pub const LAPSE_AFTER_SILENT_DAYS: u32 = 3;
 
+/// The next count of silent days. It saturates at `u32::MAX`, so a walk longer than the counter
+/// can hold still answers by the rule (#534); `formal/lean/Formal/OpenLapse.lean`'s
+/// `saturatingAdd` models it.
+#[must_use]
+pub const fn next_silent_count(silent: u32) -> u32 {
+    silent.saturating_add(1)
+}
+
 /// The lapse open on `today`, by its id (the run's first silent day), if any.
 ///
 /// `review_counts` holds the window the caller read: each study day's count of qualifying
@@ -49,7 +57,7 @@ pub fn open_lapse(
             break;
         }
         if !skip_days.contains(&day) {
-            silent = silent.saturating_add(1);
+            silent = next_silent_count(silent);
             first_silent = Some(day);
         }
         // The walk has no day before the smallest epoch day, so it answers nothing there, as the

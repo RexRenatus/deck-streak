@@ -266,6 +266,28 @@
       "erase": "anonymise"
     },
     {
+      "id": "coins",
+      "data": "every coin movement of the wallet: the study day it belongs to, what moved the coins and which one, the signed amount and when it was written",
+      "source": "derived",
+      "stores": ["coin_ledger.*"],
+      "purpose": "keeping the owner's coin balance, its daily loss cap and its floor, and paying each movement at most once",
+      "lawful_basis": "contract",
+      "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "delete"
+    },
+    {
+      "id": "economy-state",
+      "data": "the shop's one row: when the active scroll pass ends and when the pass surcharge ends",
+      "source": "derived",
+      "stores": ["economy_state.*"],
+      "purpose": "knowing whether a scroll pass is active and what the next one costs",
+      "lawful_basis": "contract",
+      "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "anonymise"
+    },
+    {
       "id": "law-drills",
       "data": "which law drills the owner answered, from which surface and on which study day, and each graded drill's type, subject, accepted XP and the study day it was graded; never a drill's text or an answer, which stay in the owner's notes",
       "source": "learner-input",

@@ -1079,3 +1079,42 @@ arm of `main`, and `formal/lean/Formal.lean` gains a docstring. `formal/lean/lea
 schematic `docs/schematics/open-lapse-proof-and-its-vectors.md` and the changelog fragment
 `changelog.d/feat-formal-lapse-472.md`. It changes `docs/red-first/SPEC-076.md` (the addendum of
 this date). No production code changes, and `config/formal.json` is unchanged.
+
+## 33. Amendments, 2026-10-02: the open lapse's silent-day count is pinned at its bound (#534)
+
+Insert-only: every earlier byte is kept in order, and this amendment inserts sections 33, 34 and 35.
+
+- The count of silent days saturates. `open_lapse` (section 16) counts a silent day with a pure
+  step, `next_silent_count`, which answers `silent + 1` and answers `u32::MAX` for `u32::MAX`, so a
+  walk longer than the counter can hold still answers by the rule. The step is a `const fn` in
+  `crates/streaks/src/lapse.rs`; `open_lapse` calls it in place of the inline `saturating_add(1)`
+  and nothing else in `open_lapse` changes.
+- The pin is a test on the step with exact values: 0 to 1, 7 to 8, `u32::MAX - 1` to `u32::MAX` and
+  `u32::MAX` to `u32::MAX`. A second assert ties the count to the rule at the bound: for each
+  threshold in 0, `LAPSE_AFTER_SILENT_DAYS` and `u32::MAX`, the saturated count is at least the
+  threshold. There is no long loop.
+- The Lean entry `lean/OpenLapse` gains a second covers line for `next_silent_count`, and its
+  `saturatingAdd` models that step. The decision is ADR-309.
+- Mutation row S07651 replaces `saturating_add(1)` with `wrapping_add(1)` in the step, killed by
+  the `u32::MAX` test.
+
+## 34. Acceptance criteria of the 2026-10-02 silent-day count amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A68 | the silent-day step answers the exact values at and below the bound and stays at `u32::MAX`, and the saturated count meets each threshold including `u32::MAX` | `the_silent_day_count_saturates_at_its_bound` |
+
+```acceptance
+A68: cargo test -p deck-streak-streaks --test open_lapse_bound -- --exact the_silent_day_count_saturates_at_its_bound
+```
+
+## 35. Amendments, 2026-10-02: the files the silent-day count amendment adds
+
+The amendment (sections 33 and 34) changes `crates/streaks/src/lapse.rs` (the step and its one
+call), `crates/streaks/tests/open_lapse_bound.rs` (A68) and `formal/lean/Formal/OpenLapse.lean` (the
+second covers line, the re-pinned digest and one sentence in the module doc), and it rewrites the
+digest in the header line of `formal/vectors/open-lapse.jsonl`. It adds the row S07651 to
+`scripts/mutation-rows.d/S07600-S07699.json`, the decision
+`docs/decisions/ADR-309-the-open-lapse-silent-day-count-is-a-named-saturating-step-pinned-by-an-exact-assert.md`
+and the changelog fragment `changelog.d/lapse-count-534.md`. It changes `docs/red-first/SPEC-076.md`
+(the addendum of this date).

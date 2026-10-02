@@ -47,6 +47,24 @@
         "the most minutes are the whole minutes of the most seconds, truncated as the predecessor's int() does (SPEC-073 A12); cargo-mutants never inserts a rounding call"
       ],
       [
+        "S07309-THE-RECORDS-WINDOW",
+        "coordination",
+        "src/recompute/records.rs",
+        "pub const RECORDS_WINDOW: i64 = 370;",
+        "pub const RECORDS_WINDOW: i64 = 371;",
+        "records_steps::the_records_step_matches_the_parity_golden",
+        "the detection reads the 370 most recent rollups on or before the day, so a 371st rollup that holds the highest score is no record and the 370th, which holds the most reviews, is one (SPEC-073 A14); cargo-mutants never mutates a constant"
+      ],
+      [
+        "S07310-THE-SILENT-SEED",
+        "coordination",
+        "src/recompute/records.rs",
+        "let marked = plan.seeded.then_some(day.facts.now);",
+        "let marked: Option<UtcMillis> = None;",
+        "records_steps::the_first_detection_seeds_records_silently",
+        "the first detection writes the bests with their mark already set, so a seed is never offered: the bests the owner has already seen raise no celebration (SPEC-073 A15, R12)"
+      ],
+      [
         "S07311-MILESTONE-TIES-TO-REVIEWS",
         "progression",
         "src/milestone.rs",
@@ -63,6 +81,60 @@
         "pct: 99.0,",
         "milestone_ladder::a_complete_ladder_contributes_nothing_and_all_complete_reports_the_top_review_rung",
         "three complete ladders report the top review rung at 100% (SPEC-073 A18); cargo-mutants never mutates a float literal"
+      ],
+      [
+        "S07313-THE-MARK-FOLLOWS-THE-ROUTER",
+        "coordination",
+        "src/recompute/badges.rs",
+        "\"the router did not answer; the badge stays owed\");\n            continue;",
+        "\"the router did not answer; the badge stays owed\");",
+        "badges_steps::a_router_that_did_not_answer_leaves_the_award_due",
+        "the mark is set only once the router has answered, so an offer the router did not answer leaves the badge's celebrated_at unset and the next offers send it (SPEC-073 A10, ADR-303)"
+      ],
+      [
+        "S07314-A-PENDING-AWARD-IS-OFFERED-AGAIN",
+        "coordination",
+        "src/recompute/badges.rs",
+        "    for badge in owed {",
+        "    for badge in owed.into_iter().take(0) {",
+        "badges_steps::an_evaluation_stopped_after_the_write_sends_once_at_the_next",
+        "the offers hand every badge whose mark is unset to the router, so an award written by an evaluation that stopped before its offers is sent once at the next (SPEC-073 A10, ADR-303)"
+      ],
+      [
+        "S07315-A-PENDING-RECORD-IS-OFFERED-BEFORE-ITS-ROW-IS-REPLACED",
+        "coordination",
+        "src/recompute/records.rs",
+        "    .filter(|record| record.celebrated_at.is_none())",
+        "    .filter(|record| record.celebrated_at.is_none() && record.study_day == today)",
+        "records_steps::a_later_beat_offers_the_unmarked_record_first",
+        "the offers before a day's write hand the router every record whose mark is unset, an earlier day's included, so a later day's beat replaces a record only after it was offered (SPEC-073 A16, ADR-303)"
+      ],
+      [
+        "S07316-A-BADGE-MARK-KEEPS-ITS-FIRST-ANSWER",
+        "coordination",
+        "src/recompute/badges.rs",
+        "        sqlx::query!(\n            \"UPDATE badges_earned SET celebrated_at = ?1 \\\n             WHERE badge_key = ?2 AND tier = ?3 AND celebrated_at IS NULL\",\n            at,\n            badge.key,\n            tier\n        )\n",
+        "        sqlx::query(\n            \"UPDATE badges_earned SET celebrated_at = ?1 \\\n             WHERE badge_key = ?2 AND tier = ?3\",\n        )\n        .bind(at)\n        .bind(badge.key.clone())\n        .bind(tier)\n",
+        "badges_steps::a_badge_marked_twice_keeps_its_first_mark",
+        "the badge mark writes celebrated_at only while it is unset, so a mark another offer already set keeps its first answer; the mutant drops the guard through the same statement as sqlx::query, which cargo-mutants does not list inside sqlx::query! (SPEC-073 A10, ADR-303)"
+      ],
+      [
+        "S07317-A-RECORD-MARK-KEEPS-ITS-FIRST-ANSWER",
+        "coordination",
+        "src/recompute/records.rs",
+        "        sqlx::query!(\n            \"UPDATE records SET celebrated_at = ?1 \\\n             WHERE kind = ?2 AND study_day = ?3 AND celebrated_at IS NULL\",\n            at,\n            kind,\n            day\n        )\n",
+        "        sqlx::query(\n            \"UPDATE records SET celebrated_at = ?1 \\\n             WHERE kind = ?2 AND study_day = ?3\",\n        )\n        .bind(at)\n        .bind(kind)\n        .bind(day)\n",
+        "records_steps::a_record_marked_twice_keeps_its_first_mark",
+        "the record mark writes celebrated_at only while it is unset, so a mark another offer already set keeps its first answer; the mutant drops the guard through the same statement as sqlx::query, which cargo-mutants does not list inside sqlx::query! (SPEC-073 A16, ADR-303)"
+      ],
+      [
+        "S07318-A-BEAT-OF-THE-SEEDS-DAY-IS-OFFERED",
+        "coordination",
+        "src/recompute/records.rs",
+        "    sqlx::query!(\n        \"INSERT INTO records (kind, value, study_day, previous, celebrated_at, created_at) \\\n         VALUES (?1, ?2, ?3, ?4, ?5, ?6) \\\n         ON CONFLICT (kind) DO UPDATE SET value = excluded.value, previous = excluded.previous, \\\n         celebrated_at = CASE WHEN records.study_day = excluded.study_day \\\n         AND records.previous < records.value \\\n         THEN records.celebrated_at ELSE excluded.celebrated_at END, \\\n         study_day = excluded.study_day\",\n        kind,\n        record.value,\n        day,\n        record.previous,\n        marked,\n        at\n    )\n",
+        "    sqlx::query(\n        \"INSERT INTO records (kind, value, study_day, previous, celebrated_at, created_at) \\\n         VALUES (?1, ?2, ?3, ?4, ?5, ?6) \\\n         ON CONFLICT (kind) DO UPDATE SET value = excluded.value, previous = excluded.previous, \\\n         celebrated_at = CASE WHEN records.study_day = excluded.study_day \\\n         THEN records.celebrated_at ELSE excluded.celebrated_at END, \\\n         study_day = excluded.study_day\",\n    )\n    .bind(kind)\n    .bind(record.value)\n    .bind(day)\n    .bind(record.previous)\n    .bind(marked)\n    .bind(at)\n",
+        "records_steps::a_record_beaten_on_the_seeds_own_day_is_offered",
+        "the records write keeps a same-day row's mark only when the row is not the seed (previous below value), so a beat of the seed's own study day is written unmarked and offered; the mutant is the CASE before fix round 1, spelt as sqlx::query with its six binds (SPEC-073 R11, R12, ADR-303 Decision 2)"
       ]
     ],
     "CARGO_KILLED_SCRIPT_MUTATIONS": [
