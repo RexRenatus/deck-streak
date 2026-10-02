@@ -12,7 +12,7 @@
   modules these sit beside, and the XP phases the awards follow), SPEC-076 (the language streak and its
   badge view), SPEC-041 (the router), SPEC-026 (the bot's command table). **Mutation band:**
   `S07300-S07399`.
-- **Status:** delivered by build-073 (moved from `docs/specs/planned/` with its tests and
+- **Status:** parts A, B and C delivered by build-073 (moved from `docs/specs/planned/` with its tests and
   `docs/red-first/SPEC-073.md`, ADR-016). Decided by ADR-303 (the celebration mark on the award row) and
   proved by `formal/tla/AwardOnce/` and `formal/lean/Formal/NextMilestone.lean`.
   The mutation rows of section 9 run from S07303: S07300 and S07301 belong to another delivery.
@@ -206,6 +206,11 @@ R19. The Mini App's `/badges` is a gallery of earned and locked badges, each loc
 | A17 | the milestone equals the golden | `next_milestone_matches_the_parity_golden` |
 | A18 | a complete ladder contributes nothing, and three complete ladders report the top review rung at 100% | `a_complete_ladder_contributes_nothing_and_all_complete_reports_the_top_review_rung` |
 | A19 | the milestone view answers `pending` until Road to C2 supplies the mature cards | `the_milestone_is_pending_until_road_to_c2_supplies_the_mature_cards` |
+| A20 | the badge, record and milestone routes answer only the owner (401 or 403, no data) | `the_badge_record_and_milestone_routes_answer_only_the_owner` |
+| A21 | `/badges` lists the 20 most recently awarded badges | `badges_lists_the_twenty_most_recent` |
+| A22 | `/records` names the record to chase | `records_names_the_record_to_chase` |
+| A23 | the gallery shows a locked badge with its criteria and progress | `shows a locked badge with its criteria and progress` |
+| A24 | the records screen shows each record's distance from today | `shows each record's distance from today` |
 
 ```acceptance
 A1: cargo test -p deck-streak-progression --test badges_catalog -- --exact the_catalog_matches_the_parity_golden
@@ -227,6 +232,11 @@ A16: cargo test -p deck-streak-coordination --test records_steps -- --exact a_re
 A17: cargo test -p deck-streak-progression --test milestone_ladder -- --exact next_milestone_matches_the_parity_golden
 A18: cargo test -p deck-streak-progression --test milestone_ladder -- --exact a_complete_ladder_contributes_nothing_and_all_complete_reports_the_top_review_rung
 A19: cargo test -p deck-streak-coordination --test milestone_view -- --exact the_milestone_is_pending_until_road_to_c2_supplies_the_mature_cards
+A20: cargo test -p deck-streak-api --test badges_routes -- --exact the_badge_record_and_milestone_routes_answer_only_the_owner
+A21: cargo test -p deck-streak-bot --test badges_commands -- --exact badges_lists_the_twenty_most_recent
+A22: cargo test -p deck-streak-bot --test badges_commands -- --exact records_names_the_record_to_chase
+A23: pnpm exec vitest run web/app/src/lib/badges/BadgeGallery.test.ts -t "shows a locked badge with its criteria and progress"
+A24: pnpm exec vitest run web/app/src/lib/records/RecordsScreen.test.ts -t "shows each record's distance from today"
 ```
 
 ## 3a. What the box run judges
@@ -254,17 +264,7 @@ the prefix.
 
 | id | criterion | decided by | delivered by |
 |---|---|---|---|
-| A20 | the badge, record and milestone routes answer only the owner (401 or 403, no data) | `the_badge_record_and_milestone_routes_answer_only_the_owner` | 073c |
-| A21 | `/badges` lists the 20 most recently awarded badges | `badges_lists_the_twenty_most_recent` | 073c |
-| A22 | `/records` names the record to chase | `records_names_the_record_to_chase` | 073c |
-| A23 | the gallery shows a locked badge with its criteria and progress | `shows a locked badge with its criteria and progress` | 073c |
-| A24 | the records screen shows each record's distance from today | `shows each record's distance from today` | 073c |
 
-073c: A20: cargo test -p deck-streak-api --test badges_routes -- --exact the_badge_record_and_milestone_routes_answer_only_the_owner
-073c: A21: cargo test -p deck-streak-bot --test badges_commands -- --exact badges_lists_the_twenty_most_recent
-073c: A22: cargo test -p deck-streak-bot --test badges_commands -- --exact records_names_the_record_to_chase
-073c: A23: pnpm exec vitest run web/app/src/lib/badges/BadgeGallery.test.ts -t "shows a locked badge with its criteria and progress"
-073c: A24: pnpm exec vitest run web/app/src/lib/records/RecordsScreen.test.ts -t "shows each record's distance from today"
 
 ## 4. File manifest
 
@@ -444,21 +444,6 @@ the manifest above does not name:
 These files the manifest names are left unchanged by 073a; the later pull request named on each
 line adds or changes them, and removes its lines from this list:
 
-- `crates/api/src/badges_routes.rs`: unchanged by 073a; 073c delivers it.
-- `crates/api/src/router.rs`: unchanged by 073a; 073c delivers it.
-- `crates/api/tests/badges_routes.rs`: unchanged by 073a; 073c delivers it.
-- `crates/bot/src/badges_commands.rs`: unchanged by 073a; 073c delivers it.
-- `crates/bot/src/commands.rs`: unchanged by 073a; 073c delivers it.
-- `crates/bot/tests/badges_commands.rs`: unchanged by 073a; 073c delivers it.
-- `web/app/src/routes/badges/+page.svelte`: unchanged by 073a; 073c delivers it.
-- `web/app/src/routes/records/+page.svelte`: unchanged by 073a; 073c delivers it.
-- `web/app/src/lib/badges/BadgeGallery.svelte`: unchanged by 073a; 073c delivers it.
-- `web/app/src/lib/badges/badges.ts`: unchanged by 073a; 073c delivers it.
-- `web/app/src/lib/badges/BadgeGallery.test.ts`: unchanged by 073a; 073c delivers it.
-- `web/app/src/lib/records/RecordsScreen.svelte`: unchanged by 073a; 073c delivers it.
-- `web/app/src/lib/records/records.ts`: unchanged by 073a; 073c delivers it.
-- `web/app/src/lib/records/RecordsScreen.test.ts`: unchanged by 073a; 073c delivers it.
-- `web/app/src/lib/routes.ts`: unchanged by 073a; 073c delivers it.
 
 ### 073b: the coordination steps, their celebrations and the daemon wiring
 
@@ -505,3 +490,90 @@ Fix round 1 (the beat of the seed's own study day, ADR-303 Decision 2) touches t
 - `scripts/mutation-rows.d/S07300-S07399.json`: the rows S07316, S07317 and S07318.
 
 This part also edits SPEC-024: its A18 row reads 15 routed, and one sentence after its census paragraph says why (#541).
+
+### 073c: the API routes, the bot commands and the web screens
+
+073c delivers A20 to A24 and the rows S07319 to S07329. Parts A, B and C are delivered, so the
+Status line reads all three. Section 4's band row ("added: the rows of section 9") counts 8 rows by
+073a, 8 by 073b and 11 by 073c. Section 3c now holds no rows: the five `073c:` fence lines moved
+back, verbatim and without the prefix, into the acceptance fence, and the five rows moved back,
+verbatim and without the `delivered by` column, into section 3's table. The fifteen lines that
+named a file 073c delivers left the list of files 073a left unchanged, which is now empty.
+
+| row | target | what it guards | killer |
+|---|---|---|---|
+| `S07319-THE-BADGES-ROUTE-ASKS-FOR-THE-OWNER` | `crates/api/src/badges_routes.rs` | the badges route takes the owner's session before it reads anything | `badges_routes::the_badge_record_and_milestone_routes_answer_only_the_owner` |
+| `S07320-THE-RECORDS-ROUTE-ASKS-FOR-THE-OWNER` | `crates/api/src/badges_routes.rs` | the records route takes the owner's session before it reads anything | `badges_routes::the_badge_record_and_milestone_routes_answer_only_the_owner` |
+| `S07321-THE-MILESTONE-ROUTE-ASKS-FOR-THE-OWNER` | `crates/api/src/badges_routes.rs` | the milestone route takes the owner's session, so even its `pending` answer is the owner's alone | `badges_routes::the_badge_record_and_milestone_routes_answer_only_the_owner` |
+| `S07322-THE-MILESTONE-ANSWERS-PENDING` | `crates/api/src/badges_routes.rs` | the milestone route answers exactly `{"status": "pending"}`, read from nothing | `badges_routes::the_milestone_route_answers_pending` |
+| `S07323-A-REACHED-RECORD-IS-NO-DISTANCE` | `crates/api/src/badges_routes.rs` | a record today already reaches is at distance 0, never a negative one | `badges_routes::the_records_route_answers_each_distance_from_today` |
+| `S07324-A-LOCKED-BADGE-SHOWS-ITS-THRESHOLD` | `crates/api/src/badges_routes.rs` | a locked badge's progress answers its input's value against its own threshold | `badges_routes::the_badges_route_answers_the_earned_newest_first_and_the_locked_with_progress` |
+| `S07325-BADGES-LISTS-TWENTY` | `crates/bot/src/badges_commands.rs` | the bot's badge list holds at most the 20 most recently awarded badges | `badges_commands::badges_lists_the_twenty_most_recent` |
+| `S07326-THE-CHASE-LINE-NAMES-THE-CHASED-RECORD` | `crates/bot/src/badges_commands.rs` | the records reply closes with the line naming the record to chase, by its own label | `badges_commands::records_names_the_record_to_chase` |
+| `S07327-THE-NEWEST-BADGE-COMES-FIRST` | `crates/coordination/src/progression/badges_view.rs` | the earned badges come newest award first, then by key and tier | `badges_view::the_earned_badges_are_ordered_most_recent_first` |
+| `S07328-A-STREAK-BADGE-READS-THE-STREAK` | `crates/coordination/src/progression/badges_view.rs` | a locked streak badge's progress reads the stored streak | `badges_view::a_locked_badge_carries_its_input_against_its_threshold` |
+| `S07329-THE-MONTHLY-STREAK-IS-THIRTY` | `crates/coordination/src/progression/badges_view.rs` | the monthly streak badge's threshold is 30, where its condition holds and not one below | `badges_view::each_streak_threshold_is_progressions_own_boundary` |
+
+The badge view names every catalog badge once. `PROGRESS_INPUTS` holds the 9 study badges whose
+input is stored, each with the input its progress reads: the four streak badges, `centurion_day`,
+`maturity_milestone`, `forest_guardian`, `polyglot` and `legendary_day`. `WITHOUT_PROGRESS` holds
+the 31 that carry none: the 15 study badges whose input is never stored (lifetime reviews, the hour,
+the week, the backlog and the two-input conditions), the 8 habit badges and the 8 focus badges.
+`every_catalog_badge_carries_progress_or_is_listed_without_it` examines the full catalog of 40, so
+a badge in neither list, or in both, fails it. Progression writes the four streak thresholds inline in
+`crates/progression/src/badges/conditions.rs` (lines 142 to 145), with no named constant, so the
+view writes them as the literals 7, 30, 100 and 365, and
+`each_streak_threshold_is_progressions_own_boundary` pins each to its condition's boundary (it holds
+at the threshold and not one below, examined 4). The other five thresholds read progression's named
+constants.
+
+The bot lists the earned badges newest first. The predecessor's `bot.py` (line 377) took
+`earned[-20:]` of a list ordered oldest first, so it printed the 20 most recent badges oldest first;
+DeckStreak diverges deliberately, as R18's "most recently awarded" reads, and S07327 pins the order.
+
+`ApiState` gains `courses: Option<Courses>`, so the badge catalog's descriptions are rendered from
+the configured courses. `ApiState::new` stays `const` and sets it to `None`; `with_courses` sets it;
+the router falls back with `unwrap_or_default()`. Its `Debug` line prints `courses` as a bool,
+beside SPEC-118's `inbox`. The construction sites touched are `crates/api/src/router.rs`
+(`ApiState::new`) and `crates/daemon/src/role_api.rs` (`api_state`, which loads the courses and
+logs a warning and uses the defaults when the setting refuses). No check is removed.
+
+What this part does not do:
+
+- It shows no progress for a study badge whose input is never stored (lifetime reviews, the hour,
+  the week, the backlog and the two-input conditions) (#560).
+- It computes no milestone: the milestone route answers `pending`, read from nothing, until Road to
+  C2 supplies the mature-card sum (#85).
+
+Files outside the manifest above are changed by this part:
+
+- `.sqlx/query-5ac8f3d48c09b478ef30eb563f86096ecd199aacf8d9e314238987bfc3b56ac7.json`: the offline
+  cache entry for the earned-badges read, the one entry this part adds under the manifest's `.sqlx/`
+  row.
+- `crates/api/src/lib.rs` and `crates/bot/src/lib.rs`: the module lines for the new badge routes and
+  badge commands.
+- `crates/api/tests/insights_routes.rs`: the state's `Debug` line gains `courses: false` before
+  SPEC-118's `inbox: false`, in both tails; no assertion is removed.
+- `crates/bot/tests/commands.rs`, `crates/bot/tests/messages/help.msg.json` and
+  `crates/bot/tests/messages/start.msg.json`: adding the two commands grows the menu from nine to
+  eleven and changes each golden by the two commands' lines only.
+- `crates/coordination/src/progression/badges_view.rs` and `crates/coordination/tests/badges_view.rs`:
+  the read-only badge view the routes and the commands share, and its tests.
+- `crates/daemon/src/role_api.rs`: the API role's state loads the configured courses.
+- `crates/daemon/tests/badges_route_composed.rs`: the badges route through the daemon's composed
+  state renders the configured courses, examining all 40 badges.
+- `crates/notifications/tests/one_router.rs`: the census of the command handler's replies and their
+  callers grows by the two commands.
+- `web/app/messages/en.json`, `es.json`, `fr.json`, `ja.json`, `ko.json`, `zh-Hans.json` and
+  `zh-Hant.json`: the two screens' 13 message keys, in every locale.
+- `web/app/src/lib/api.ts`: the client's badges and records reads.
+- `web/app/src/lib/badges/badges.test.ts` and `web/app/src/lib/records/records.test.ts`: each
+  malformed field of the two views is refused.
+- `web/app/src/lib/startapp.ts`: the `badges` and `records` start tokens.
+- `web/app/src/lib/startapp.test.ts`: its destinations list equals `ROUTES`, so it gains `badges` and
+  `records`.
+- `web/app/src/routes/badges.test.ts` and `web/app/src/routes/records.test.ts`: each page waits with
+  a status, then shows its screen, and says why when the view cannot be read or the session renewed.
+- `web/app/tests/a11y.spec.ts`: the accessibility run mocks the two new routes.
+
+SPEC-024 is unchanged by this part: 073c adds no logging capture site.
