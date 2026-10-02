@@ -1,4 +1,4 @@
--- @phx covers crates/quests/src/tokens.rs anchor=token_bonus_xp digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+-- @phx covers crates/quests/src/tokens.rs anchor=token_bonus_xp digest=sha256:1b2fff0d82a72e38be1e90ba00f500b04da5f4c2ebc142b8111e93f3f2e97a34
 -- @phx vectors formal/vectors/token-bonus.jsonl
 -- @phx cites #102, #103
 -- @phx theorem the_bonus_never_passes_its_cap ramp=report

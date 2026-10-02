@@ -1,12 +1,12 @@
 ---------------------------- MODULE ChestOpenedOnce ----------------------------
-\* @phx covers crates/quests/src/chests.rs anchor=open_chest_on digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/quests/src/chests.rs anchor=settle_epic_choice_on digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/quests/src/chests.rs anchor=sweep_stale_chests_on digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/quests/src/chest_store.rs anchor=mark_opened digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/quests/src/chest_store.rs anchor=mark_resolved digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/quests/src/chest_store.rs anchor=settle_choice digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/quests/src/chest_store.rs anchor=sweep_resolve digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/kernel/src/db.rs anchor=write digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers crates/quests/src/chests.rs anchor=open_chest_on digest=sha256:51964a2b302b8403f080ddc106f17c68291be670525ffa7587cb60e39830ee5b
+\* @phx covers crates/quests/src/chests.rs anchor=settle_epic_choice_on digest=sha256:e0fb07bcfda62de5cc781ff1c68b35bee31a0a304320aad5ffa27c03c9a0505e
+\* @phx covers crates/quests/src/chests.rs anchor=sweep_stale_chests_on digest=sha256:de422463380ac0c2f768d7b64bbc8637f50d5af973f0d4e38b6edbc749e6daa8
+\* @phx covers crates/quests/src/chest_store.rs anchor=mark_opened digest=sha256:a2f7a7c2355c0dcf3d8a7560487a63e327972f8377f7b7cce0dee9c67b42342b
+\* @phx covers crates/quests/src/chest_store.rs anchor=mark_resolved digest=sha256:f4bf267c700cc65b8dfe9746ec656116156c2b261c3f5f70e5496237d95a145d
+\* @phx covers crates/quests/src/chest_store.rs anchor=settle_choice digest=sha256:c42c52f076764878b3b139e17cd9a61025d6c4670af8ec62cf078d2f17ea8e8b
+\* @phx covers crates/quests/src/chest_store.rs anchor=sweep_resolve digest=sha256:074596e8b7e9cff568c22f0267cb48bdf4823f40aac362fb7eeb00d737b4eeac
+\* @phx covers crates/kernel/src/db.rs anchor=write digest=sha256:c3d700eda268a6f46c7eea0aabcd2f62d8fc0aeffbe03d1cd1e8437a88bdb916
 \* @phx cites #102, #103
 \* @phx property OneRewardPerChest ramp=report
 \* @phx property AResolvedChestStaysResolved ramp=report

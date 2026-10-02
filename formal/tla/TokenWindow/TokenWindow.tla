@@ -1,7 +1,7 @@
 ------------------------------ MODULE TokenWindow ------------------------------
-\* @phx covers crates/quests/src/tokens.rs anchor=activate_token_on digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/quests/src/tokens.rs anchor=grant_token digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/kernel/src/db.rs anchor=write digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers crates/quests/src/tokens.rs anchor=activate_token_on digest=sha256:0218568f0e771a6a4f21bc2eb81abc648477d842ea3a01b8e608d1269ac4a0a4
+\* @phx covers crates/quests/src/tokens.rs anchor=grant_token digest=sha256:bc0428e21e65fbe87078f0c51c3d6fdc58d12c1d2427ff96ff8d86b49844d11f
+\* @phx covers crates/kernel/src/db.rs anchor=write digest=sha256:c3d700eda268a6f46c7eea0aabcd2f62d8fc0aeffbe03d1cd1e8437a88bdb916
 \* @phx cites #102, #103
 \* @phx property AtMostOneOpenWindow ramp=report
 \* @phx property OldestHeldFirst ramp=report
