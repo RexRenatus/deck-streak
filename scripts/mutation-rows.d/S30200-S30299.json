@@ -1,0 +1,24 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S30201-NEAREST-RANK",
+        "kernel",
+        "src/pynum.rs",
+        "let rank = (product.ceil().clamp(1.0, n as f64)) as usize;",
+        "let rank = (product.floor().clamp(1.0, n as f64)) as usize;",
+        "pynum_goldens::the_percentile_matches_the_predecessors_golden",
+        "the nearest rank is the CEILING of the float product, so 0.9 of 70 values reads rank 64 where a floor reads 63 (SPEC-302 R1, A2); cargo-mutants makes no mutant of a method name"
+      ],
+      [
+        "S30202-CHOICES-FLOOR",
+        "kernel",
+        "src/pynum.rs",
+        "let index = (self.random() * n).floor() as usize;",
+        "let index = (self.random() * n).ceil() as usize;",
+        "pynum_random::the_generator_matches_cpythons_golden",
+        "a pick is the FLOOR of random() * n, so a ceiling reads the next element (SPEC-302 R3, A3); cargo-mutants makes no mutant of a method name"
+      ]
+    ]
+  }
+}
