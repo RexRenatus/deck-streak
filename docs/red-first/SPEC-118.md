@@ -112,3 +112,13 @@ refused: Ok(Inbox(..))". Both are green at a84561e747236ff789aca5687c643d778768a
 resolves both sides before the journal refusal compares: the first reads "examined 111 members,
 mismatches 0", and the vault's suite ran 120 of 120 green. They are a fix round's tests, so the
 fence above gains no line.
+
+The same round found the repository's hygiene tests red at 4b62990ec8a966f2119407be01c64456bdd23260.
+`test_every_setting_impl_has_a_shape_literal_that_a_test_or_a_row_pins` failed with "Lists differ:
+['vault::LayoutFile (src/config.rs) "an absolute file path"'] != []", because no test or row pinned
+the layout setting's shape literal. `the_layout_setting_refuses_a_relative_path_naming_its_shape`,
+added at cb15bcb47b87d3411de89dfffe3f53ec3fc4b7f9, pins it. It passed when written, so it is
+mutation coverage, and that hygiene test is its red: it runs 48 tests green there.
+`test_the_vault_row_reads_no_unexplained_mutant` failed with "13 != 15 : deck-streak-vault:
+equivalent against its fragment", and is green at 28a73c9a6c36edd2e4a7fdd0f58e6fa6f35b9591, where
+the campaign table's vault row counts the 15 equivalents its fragment records.
