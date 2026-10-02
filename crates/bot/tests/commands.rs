@@ -15,6 +15,7 @@ mod fake_bot_api;
 
 use std::collections::BTreeSet;
 
+use deck_streak_bot::badges_commands::{badges_failed_reply, records_failed_reply};
 use deck_streak_bot::commands::{
     CONFIRM_ERASE, EXPORT_FILE_NAME, MENU, MINI_APP_URL, Reply, erase_done_reply,
     erase_failed_reply, export_caption, export_failed_reply, help_reply, sync_reply,
@@ -342,6 +343,8 @@ fn rendered() -> Vec<(&'static str, Reply)> {
         ),
         ("score-none", score_reply(None)),
         ("score-failed", score_failed_reply()),
+        ("badges-failed", badges_failed_reply()),
+        ("records-failed", records_failed_reply()),
         ("help", help_reply()),
         ("export-failed", export_failed_reply()),
         ("erase-done-log-held", erase_done_reply(true)),

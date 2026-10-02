@@ -14,7 +14,7 @@
 mod fake_bot_api;
 
 use deck_streak_kernel::{Db, UtcMillis};
-use fake_bot_api::{Bench, ScriptedSync, incoming, owner_says, payload};
+use fake_bot_api::{Bench, ScriptedSync, golden_send, incoming, owner_says, payload};
 use serde_json::Value;
 
 /// The bench's study day once the clock is set: 2025-01-14, as an epoch day.
@@ -162,5 +162,61 @@ async fn records_names_the_record_to_chase() {
          \u{2022} Most reviews in a day: <b>300</b> (2025-01-10, was 250)\n\
          \u{2022} Most minutes in a day: <b>12</b> (2025-01-11, was 9)\n\
          \u{1f3c3} Chase it: 2 from \u{201c}Most minutes in a day\u{201d} today."
+    );
+}
+
+/// Sends `command` as the owner after `break_read` ran, and returns the last send's payload.
+async fn answer_after(break_read: &'static str, command: &str) -> Value {
+    let bench = Bench::start().await;
+    bench
+        .clock
+        .set(UtcMillis::from_epoch_millis(TODAY * DAY_MS + 5 * 3_600_000));
+    let mut commands = bench.commands(ScriptedSync::default());
+    let mut write = bench.db.write().await.expect("a write");
+    sqlx::query(break_read)
+        .execute(&mut *write)
+        .await
+        .expect("the table is renamed away");
+    write.commit().await.expect("the commit");
+    commands.handle(incoming(owner_says(1, command))).await;
+    payload(&bench.fake.calls_of("sendMessage").pop().expect("a send"))
+}
+
+#[tokio::test]
+async fn badges_that_cannot_be_read_answer_the_failed_golden() {
+    let sent = answer_after(
+        "ALTER TABLE badges_earned RENAME TO gone_badges_earned",
+        "/badges",
+    )
+    .await;
+    assert_eq!(sent, golden_send("badges-failed"));
+}
+
+#[tokio::test]
+async fn records_that_cannot_be_read_answer_the_failed_golden() {
+    let sent = answer_after("ALTER TABLE records RENAME TO gone_records", "/records").await;
+    assert_eq!(sent, golden_send("records-failed"));
+}
+
+#[tokio::test]
+async fn records_all_reached_today_end_without_a_chase_line() {
+    let bench = Bench::start().await;
+    bench
+        .clock
+        .set(UtcMillis::from_epoch_millis(TODAY * DAY_MS + 5 * 3_600_000));
+    let mut commands = bench.commands(ScriptedSync::default());
+
+    // Today holds 77 points, 42 reviews and ten minutes: each stored record is already reached.
+    seed_today(&bench.db).await;
+    record(&bench.db, "best_score", 70, TODAY - 5, 60).await;
+    record(&bench.db, "most_reviews", 40, TODAY - 4, 30).await;
+    record(&bench.db, "most_minutes", 9, TODAY - 3, 5).await;
+    commands.handle(incoming(owner_says(1, "/records"))).await;
+    assert_eq!(
+        last_text(&bench),
+        "\u{1f3c5} <b>Personal records</b>\n\
+         \u{2022} Best daily score: <b>70</b> (2025-01-09, was 60)\n\
+         \u{2022} Most reviews in a day: <b>40</b> (2025-01-10, was 30)\n\
+         \u{2022} Most minutes in a day: <b>9</b> (2025-01-11, was 5)"
     );
 }
