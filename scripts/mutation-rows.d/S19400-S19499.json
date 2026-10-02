@@ -152,6 +152,150 @@
         "        while False:\n",
         "the repetition's operator (`*`) is skipped before the `!`, so `$($m)*!(...)` is refused as a possible `include!` (SPEC-192 A21, #535)",
         "test_setting_shapes.TheGuardReadsAnImplementationByToken.test_every_spelling_is_read_or_refused_as_written"
+      ],
+      [
+        "S19419-AN-IMPL-HEAD-ENDS-AT-A-CLOSE-OR-A-SEMICOLON",
+        "scripts/tests/test_setting_shapes.py",
+        "        if found[brace][0] == \"close\" or found[brace][:2] == (\"punct\", \";\"):\n",
+        "        if False:\n",
+        "an `impl` head ends at a close or a `;` before any body, so `impl Setting for Wide` inside an attribute's arguments makes no implementation (SPEC-192 A19, #436)",
+        "test_setting_shapes.TheGuardReadsAnImplementationByToken.test_every_spelling_is_read_or_refused_as_written"
+      ],
+      [
+        "S19420-THE-GENERIC-SKIPPER-STOPS-AT-ITS-GROUPS-CLOSE",
+        "scripts/tests/test_setting_shapes.py",
+        "        elif kind == \"close\":\n            return at\n",
+        "        elif False:\n            return at\n",
+        "the generic skipper stops at the close of the group it is in, so an `impl<T` a macro body passes to another macro is refused by its file, never read past (SPEC-192 A19, #436)",
+        "test_setting_shapes.TheGuardReadsAnImplementationByToken.test_every_spelling_is_read_or_refused_as_written"
+      ],
+      [
+        "S19421-A-REPETITION-IN-THE-TRAIT-PATH-IS-PASSED-IN",
+        "scripts/tests/test_setting_shapes.py",
+        "            if found[at + 1][0] == \"open\":\n",
+        "            if False:\n",
+        "a `$( .. )` repetition after the trait path's first word is a token passed in, so `impl nested $(::$p)* for Wide` a macro writes is refused by its file (SPEC-192 A19, #436)",
+        "test_setting_shapes.TheGuardReadsAnImplementationByToken.test_every_spelling_is_read_or_refused_as_written"
+      ],
+      [
+        "S19422-A-GROUP-IS-STEPPED-OVER-WHOLE-IN-AN-IMPL-HEAD",
+        "scripts/tests/test_setting_shapes.py",
+        "        at = pairs[at] + 1 if kind == \"open\" else at + 1\n    return head\n",
+        "        at = pairs[at] + 1 if False else at + 1\n    return head\n",
+        "the reader of a token passed into an `impl` head steps over a group whole, so `impl Fn($t)` passed to another macro refuses no file (SPEC-192 A19, #436)",
+        "test_setting_shapes.TheGuardReadsAnImplementationByToken.test_every_spelling_is_read_or_refused_as_written"
+      ],
+      [
+        "S19423-A-PREDICATE-THE-EVALUATOR-CANNOT-PARSE-IS-UNKNOWN",
+        "scripts/tests/test_setting_shapes.py",
+        "    except (IndexError, ValueError):\n        return None\n",
+        "    except ():\n        return None\n",
+        "the cfg evaluator reads a predicate it cannot parse (`cfg(not(test),)`) as unknown rather than crashing, so its item is not read (SPEC-192 A20, #449)",
+        "test_setting_shapes.TheGuardReadsOnlyTheItemsRustcCompilesUnderTest.test_a_predicate_with_a_trailing_comma_is_judged_without_a_crash"
+      ],
+      [
+        "S19424-THE-ITEM-WALK-READS-EACH-ITEMS-OUTER-ATTRIBUTES",
+        "scripts/tests/test_setting_shapes.py",
+        "        while at < end and (\n            found[at][0] == \"outer\"\n            or is_pound(found[at])\n            and at + 1 < end\n            and found[at + 1][:2] == (\"open\", \"[\")\n        ):\n",
+        "        while False:\n",
+        "the item walk gathers each item's outer attributes before the item, so a pin between items rustc strips is read where rustc keeps it and refused where it strips it (SPEC-192 A20, #449)",
+        "test_setting_shapes.TheGuardReadsOnlyTheItemsRustcCompilesUnderTest.test_a_pin_between_stripped_siblings_is_read_as_rustc_reads_it"
+      ],
+      [
+        "S19425-THE-ITEM-WALK-STEPS-OVER-A-RESTRICTED-VISIBILITY",
+        "scripts/tests/test_setting_shapes.py",
+        "        if head < stop and found[head][:2] == (\"open\", \"(\"):\n",
+        "        if False:\n",
+        "the item walk steps over a `pub(crate)` visibility to find `mod`, so a kept `pub(crate) mod t { .. }` is walked into and its pin read (SPEC-192 A20, #449)",
+        "test_setting_shapes.TheGuardReadsOnlyTheItemsRustcCompilesUnderTest.test_a_pin_between_stripped_siblings_is_read_as_rustc_reads_it"
+      ],
+      [
+        "S19426-A-KEPT-INLINE-MODULE-IS-WALKED-ITEM-BY-ITEM",
+        "scripts/tests/test_setting_shapes.py",
+        "        elif inline:\n",
+        "        elif False:\n",
+        "a kept inline module is walked again item by item with its own attributes, so an item it holds that rustc strips is not read beside the pin (SPEC-192 A20, #449)",
+        "test_setting_shapes.TheGuardReadsOnlyTheItemsRustcCompilesUnderTest.test_a_pin_between_stripped_siblings_is_read_as_rustc_reads_it"
+      ],
+      [
+        "S19427-THE-ITEM-END-FINDER-WALKS-TO-THE-ITEMS-END",
+        "scripts/tests/test_setting_shapes.py",
+        "    while at < end:\n        kind, word = found[at][:2]\n",
+        "    while False:\n        kind, word = found[at][:2]\n",
+        "the item-end finder walks to the end of each item, so each item is judged by its own attributes (SPEC-192 A20, #449)",
+        "test_setting_shapes.TheGuardReadsOnlyTheItemsRustcCompilesUnderTest.test_a_pin_between_stripped_siblings_is_read_as_rustc_reads_it"
+      ],
+      [
+        "S19428-AN-ITEM-ENDS-AT-ITS-FIRST-SEMICOLON",
+        "scripts/tests/test_setting_shapes.py",
+        "        if (kind, word) == (\"punct\", \";\"):\n",
+        "        if False:\n",
+        "an item ends at its first `;` at depth 0, so a `const` pin is one item and the stripped `fn` after it another (SPEC-192 A20, #449)",
+        "test_setting_shapes.TheGuardReadsOnlyTheItemsRustcCompilesUnderTest.test_a_pin_between_stripped_siblings_is_read_as_rustc_reads_it"
+      ],
+      [
+        "S19429-A-FILE-IN-NO-SRC-FOLDER-READS-EITHER-FOLDER",
+        "scripts/tests/test_setting_shapes.py",
+        "        homes = None if src is None else reached(src).get(own)\n",
+        "        homes = None if False else reached(src).get(own)\n",
+        "a file in no `src` folder has no module directory from a walk, so its test module is read from either folder rustc could use (SPEC-192 A22, #536)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_a_file_in_no_src_folder_reads_its_test_module_beside_itself"
+      ],
+      [
+        "S19430-A-CFG-ATTR-PATH-WITH-NO-GATE-NAMES-NO-FILE",
+        "scripts/tests/test_setting_shapes.py",
+        "    if not gates:\n",
+        "    if False:\n",
+        "a `cfg_attr` path the chooser finds no single gate for names no file, so a path two `cfg_attr`s deep is never read (SPEC-192 A22, #536)",
+        "test_setting_shapes.TheGuardReadsATreeItOverRefused.test_a_path_two_cfg_attrs_deep_names_no_file"
+      ],
+      [
+        "S19431-A-CFG-ATTR-PATH-IS-READ-BELOW-THE-WALKS-FOLDER",
+        "scripts/tests/test_setting_shapes.py",
+        "        if homes is None or folder in homes\n",
+        "        if True\n",
+        "a `cfg_attr` path is read only below the module directory the walk gives its file, so a decoy in the other folder is no candidate (SPEC-192 A22, #536)",
+        "test_setting_shapes.TheGuardReadsATreeItOverRefused.test_a_cfg_attr_path_is_read_only_below_the_folder_the_walk_gives"
+      ],
+      [
+        "S19432-AN-UNDECIDED-CFG-ATTR-PATH-READS-NEITHER-FILE",
+        "scripts/tests/test_setting_shapes.py",
+        "    elif value is False:\n",
+        "    elif True:\n",
+        "a `cfg_attr` path on an option the evaluator does not decide reads neither file, so a pin only in the default file is refused (SPEC-192 A22, #536)",
+        "test_setting_shapes.TheGuardReadsATreeItOverRefused.test_a_cfg_attr_path_on_an_undecided_option_reads_neither_file"
+      ],
+      [
+        "S19433-THE-CRATE-ROOT-WALK-ENDS-ON-A-MODULE-CYCLE",
+        "scripts/tests/test_setting_shapes.py",
+        "        if seen.get(file) == homes[file]:\n            continue\n        seen[file] = set(homes[file])\n        try:\n            files = declared(file, homes[file])\n        except ValueError:\n            continue\n        for path, attributes in files:\n            try:\n",
+        "        if False:\n            continue\n        seen[file] = set(homes[file])\n        try:\n            files = declared(file, homes[file])\n        except ValueError:\n            continue\n        for path, attributes in files:\n            try:\n",
+        "the walk from the crate roots reads a file again only when it gains a module directory, so a module cycle ends the walk (SPEC-192 A22, #536)",
+        "test_setting_shapes.TheGuardReadsATreeItOverRefused.test_a_module_cycle_ends_the_walk"
+      ],
+      [
+        "S19434-A-FOLDER-IS-NO-TESTS-CRATE-ROOT",
+        "scripts/tests/test_setting_shapes.py",
+        "    homes = {root: {root.parent} for root in roots if root.is_file()}\n    todo, seen = sorted(homes), {}\n",
+        "    homes = {root: {root.parent} for root in roots if True}\n    todo, seen = sorted(homes), {}\n",
+        "only a file is a `tests/` crate root, so a folder named `notes.rs` is none and the walk lists only what it compiles (SPEC-192 A20, #449)",
+        "test_setting_shapes.TheGuardReadsATreeItOverRefused.test_a_folder_named_like_a_tests_file_is_no_crate_root"
+      ],
+      [
+        "S19435-THE-TESTS-WALK-ENDS-ON-A-MODULE-CYCLE",
+        "scripts/tests/test_setting_shapes.py",
+        "        if seen.get(file) == homes[file]:\n            continue\n        seen[file] = set(homes[file])\n        try:\n            files = declared(file, homes[file])\n        except ValueError:\n            continue\n        for path, attributes in files:\n            if rustc_keeps(attributes, True) is True:\n",
+        "        if False:\n            continue\n        seen[file] = set(homes[file])\n        try:\n            files = declared(file, homes[file])\n        except ValueError:\n            continue\n        for path, attributes in files:\n            if rustc_keeps(attributes, True) is True:\n",
+        "the walk of `tests/` reads a file again only when it gains a module directory, so a module cycle ends it (SPEC-192 A20, #449)",
+        "test_setting_shapes.TheGuardReadsATreeItOverRefused.test_a_module_cycle_ends_the_walk"
+      ],
+      [
+        "S19436-AN-UNLEXABLE-TESTS-ROOT-IS-LISTED-AND-THE-WALK-GOES-ON",
+        "scripts/tests/test_setting_shapes.py",
+        "        except ValueError:\n            continue\n        for path, attributes in files:\n            if rustc_keeps(attributes, True) is True:\n",
+        "        except ():\n            continue\n        for path, attributes in files:\n            if rustc_keeps(attributes, True) is True:\n",
+        "a `tests/` root rustc cannot lex is listed and its declarations are not read, so the walk goes on to the next root (SPEC-192 A20, #449)",
+        "test_setting_shapes.TheGuardReadsATreeItOverRefused.test_a_tests_root_rustc_cannot_lex_is_listed_and_the_walk_goes_on"
       ]
     ]
   }

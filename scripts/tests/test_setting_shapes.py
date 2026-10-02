@@ -51,6 +51,7 @@ import json
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -1664,6 +1665,20 @@ class TheGuardReadsOutOfLineTestModules(unittest.TestCase):
         root = self.declared(path, ("words/shape.rs", "let shape = 1;\n"), elsewhere)
         self.assertEqual(len(unpinned(root)), 1)
 
+    def test_a_file_in_no_src_folder_reads_its_test_module_beside_itself(self):
+        """No crate root reaches a file outside every `src` folder, so no module directory is
+        known for it, and its test module is read from either folder rustc could use (the file
+        beside it here), while a module it declares without `test` is not read."""
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        folder = Path(directory.name) / "x"
+        folder.mkdir()
+        own = folder / "lib.rs"
+        own.write_text("#[cfg(test)]\nmod tests;\nmod other;\n", encoding="utf-8")
+        (folder / "tests.rs").write_text(self.SPELLING, encoding="utf-8")
+        (folder / "other.rs").write_text(self.SPELLING, encoding="utf-8")
+        self.assertEqual(test_files(own), [folder / "tests.rs"])
+
     KINDS = (
         ("lib.rs", (), "tests.rs"),
         ("main.rs", (), "tests.rs"),
@@ -2800,6 +2815,40 @@ class TheGuardReadsAnImplementationByToken(unittest.TestCase):
                 "read",
                 [f"demo (src/more.rs) {REFUSED_BY_A_MACRO['include']}"],
             ),
+            (
+                "an attribute's arguments hold an impl head",
+                "#[cfg_attr(any(), mark(impl Setting for Wide))]\npub fn f() {}\n" + plain,
+                "",
+                "read",
+                [],
+            ),
+            (
+                "an open generic in an impl another macro takes",
+                "macro_rules! other {\n    ($($t:tt)*) => {};\n}\nmacro_rules! make {\n"
+                "    () => {\n        other!(impl<T);\n    };\n}\nmake!();\npub struct Bound;\n"
+                "impl Bound {\n    pub const LOW: i32 = 0;\n}\npub const ABOVE: bool = 1 > Bound::LOW;\n",
+                "",
+                "macro",
+                [],
+            ),
+            (
+                "a repetition after the trait path's first word",
+                "pub mod nested {\n    pub use crate::Setting;\n}\nmacro_rules! make {\n"
+                "    ($($p:ident)*) => {\n"
+                f"        impl nested $(::$p)* for Wide {{ {self.WIDTH} }}\n"
+                "    };\n}\nmake!(Setting);\n",
+                "",
+                "macro",
+                [],
+            ),
+            (
+                "a metavariable in a group another macro takes",
+                "macro_rules! other {\n    ($($t:tt)*) => {};\n}\nmacro_rules! make {\n"
+                "    ($t:ty) => {\n        other!(impl Fn($t));\n    };\n}\nmake!(u8);\n" + plain,
+                "",
+                "read",
+                [],
+            ),
         ]
         return found
 
@@ -2996,6 +3045,62 @@ class TheGuardReadsOnlyTheItemsRustcCompilesUnderTest(unittest.TestCase):
             f"disclosed {len(disclosed)} false refusal(s): "
             "rustc compiles an item rustc_keeps does not decide"
         )
+
+    def judged_items(self, wrap, places):
+        """Each place's member and its oracle twin through `oracle`, then the guard: the readings
+        rustc gives, and whether the guard refuses each member, in the order of `places`."""
+        members = [
+            (
+                case,
+                self.PRELUDE + wrap.format(a=attribute, t="&str"),
+                self.PRELUDE + wrap.format(a=attribute, t="u8"),
+                True,
+            )
+            for case, attribute in places
+        ]
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        scratch = Path(directory.name)
+        readings = json.loads(self.oracle(scratch, members).read_text(encoding="utf-8"))
+        found = []
+        for index, (_, member, _, _) in enumerate(members):
+            root = scratch / f"m{index}"
+            (root / "crates" / "demo" / "src").mkdir(parents=True)
+            (root / "scripts" / "mutation-rows.d").mkdir(parents=True)
+            (root / "crates" / "demo" / "src" / "lib.rs").write_text(member, encoding="utf-8")
+            self.assertEqual(len(implementations(root)), 1, places[index][0])
+            found.append(unpinned(root))
+        return readings, found
+
+    REFUSAL = 'demo::Depth (src/lib.rs) "a whole depth"'
+
+    def test_a_pin_between_stripped_siblings_is_read_as_rustc_reads_it(self):
+        """Items rustc strips under `test` stand before and after the pin in a `pub(crate)` inline
+        module, so the walk reads each item's attributes, finds where each ends and steps into the
+        kept module: the pin is refused where rustc strips it and read where rustc compiles it."""
+        wrap = (
+            "#[cfg(test)]\nmod tests {{\n    #[cfg(test)]\n    pub(crate) mod t {{\n"
+            "        #[cfg(not(test))]\n        fn before() {{}}\n"
+            '        {a}const X: {t} = "a whole depth";\n'
+            "        #[cfg(not(test))]\n        fn after() {{}}\n    }}\n}}\n"
+        )
+        places = (("stripped", "#[cfg(any())]\n        "), ("kept", ""))
+        readings, found = self.judged_items(wrap, places)
+        self.assertEqual(readings, ["stripped", "compiled"], "rustc's reading of each twin")
+        self.assertEqual(found, [[self.REFUSAL], []], "the stripped pin refused, the kept one read")
+
+    def test_a_predicate_with_a_trailing_comma_is_judged_without_a_crash(self):
+        """`cfg(not(test),)` is a predicate rustc accepts and strips under `test`, and one the
+        evaluator does not read: the item is not read, so its pin is refused, while the same item
+        under `cfg(test)` is read."""
+        wrap = '#[cfg(test)]\nmod tests {{\n    {a}const X: {t} = "a whole depth";\n}}\n'
+        places = (
+            ("cfg(test)", "#[cfg(test)]\n    "),
+            ("trailing comma", "#[cfg(not(test),)]\n    "),
+        )
+        readings, found = self.judged_items(wrap, places)
+        self.assertEqual(readings, ["compiled", "stripped"], "rustc's reading of each twin")
+        self.assertEqual(found, [[], [self.REFUSAL]], "the kept pin read, the stripped one refused")
 
     FILE_KINDS = ("own", "tests", "module")
 
@@ -3525,6 +3630,141 @@ class TheGuardReadsATreeItOverRefused(unittest.TestCase):
         root = self.crate({"src/lib.rs": lib, "src/tests.rs": self.SPELLING})
         self.assertEqual(len(implementations(root)), 1)
         self.assertEqual(unpinned(root), [])
+
+    REFUSED = 'demo::Depth (src/lib.rs) "a whole depth"'
+
+    def test_a_path_two_cfg_attrs_deep_names_no_file(self):
+        """`cfg_attr(test, cfg_attr(test, path = "x.rs"))` holds its path a level below the one
+        `cfg_attr` the guard reads, and `cfg(any())` removes the declaration: rustc never reads
+        `src/m/x.rs`, so a pin only there is refused, and the crate's test still pins it."""
+        lib = self.PRELUDE + (
+            "mod m {\n    #[cfg(any())]\n"
+            '    #[cfg_attr(test, cfg_attr(test, path = "x.rs"))]\n    mod tests;\n}\n'
+        )
+        twin = self.crate({"src/lib.rs": lib, "src/m/x.rs": self.SPELLING + self.MARKER})
+        self.assertEqual(self.rustc(twin, "src/lib.rs", True), "clean")
+        root = self.crate({"src/lib.rs": lib, "src/m/x.rs": self.SPELLING})
+        self.assertEqual(len(implementations(root)), 1)
+        self.assertEqual(unpinned(root), [self.REFUSED])
+        files = {"src/lib.rs": lib, "src/m/x.rs": self.NO_SHAPE, "tests/depth.rs": self.SPELLING}
+        self.assertEqual(unpinned(self.crate(files)), [])
+
+    def test_a_cfg_attr_path_is_read_only_below_the_folder_the_walk_gives(self):
+        """`src/a.rs` reads `mod m { #[cfg_attr(test, path = "t.rs")] mod tests; }` from
+        `src/a/m/t.rs`, so `src/m/t.rs` is no candidate: rustc reads a marker in the first and
+        never in the second, and the guard reads the pin only where rustc does."""
+        lib = self.PRELUDE.split("pub struct")[0] + "mod a;\n"
+        own = "use crate::Setting;\n" + self.PRELUDE.split("}\n", 1)[1]
+        own += (
+            'mod m {\n    #[cfg(test)]\n    #[cfg_attr(test, path = "t.rs")]\n    mod tests;\n}\n'
+        )
+        judged = []
+        for pinned, decoy, found in (
+            ("src/m/t.rs", "src/a/m/t.rs", ['demo::Depth (src/a.rs) "a whole depth"']),
+            ("src/a/m/t.rs", "src/m/t.rs", []),
+        ):
+            files = {"src/lib.rs": lib, "src/a.rs": own, decoy: "pub fn none() {}\n"}
+            twin = self.crate({**files, pinned: self.SPELLING + self.MARKER})
+            reading = "compiled" if found == [] else "clean"
+            self.assertEqual(self.rustc(twin, "src/lib.rs", True), reading, pinned)
+            root = self.crate({**files, pinned: self.SPELLING})
+            self.assertEqual(len(implementations(root)), 1)
+            self.assertEqual(unpinned(root), found, pinned)
+            judged.append(pinned)
+        examined("cfg_attr path file(s) judged against rustc", judged)
+
+    def test_a_cfg_attr_path_on_an_undecided_option_reads_neither_file(self):
+        """`cfg_attr(not(feature = "slow"), path = "real.rs")` reads `src/a/real.rs` in a build
+        with no features and `src/a/tests.rs` with one, and the evaluator reads `feature` as
+        unknown, so the guard reads neither: a pin only in `src/a/tests.rs` is refused, while
+        under `cfg_attr(any(), ...)`, where rustc reads that file, it is read."""
+        judged = []
+        for option, found in (('not(feature = "slow")', [self.REFUSED]), ("any()", [])):
+            lib = self.PRELUDE + (
+                f'mod a {{\n    #[cfg(test)]\n    #[cfg_attr({option}, path = "real.rs")]\n'
+                "    mod tests;\n}\n"
+            )
+            files = {"src/lib.rs": lib, "src/a/real.rs": "pub fn none() {}\n"}
+            twin = self.crate({**files, "src/a/tests.rs": self.SPELLING + self.MARKER})
+            reading = "compiled" if found == [] else "clean"
+            self.assertEqual(self.rustc(twin, "src/lib.rs", True), reading, option)
+            root = self.crate({**files, "src/a/tests.rs": self.SPELLING})
+            self.assertEqual(len(implementations(root)), 1)
+            self.assertEqual(unpinned(root), found, option)
+            judged.append(option)
+        examined("cfg_attr predicate(s) judged against rustc", judged)
+
+    WALK = (
+        "import json, sys\nfrom pathlib import Path\nsys.path.insert(0, sys.argv[1])\n"
+        "import test_setting_shapes as guard\nbase = Path(sys.argv[2])\n"
+        "walks = guard.reached(base / 'src'), guard.test_crate_files(base / 'tests')\n"
+        "print(json.dumps([sorted(p.relative_to(base).as_posix() for p in w) for w in walks]))\n"
+    )
+
+    def walked(self, root):
+        """The crate's module walks, `src` then `tests`, run in a child that must end within 60
+        seconds, so a walk that never ends fails the test instead of stalling it."""
+        here = str(Path(__file__).resolve().parent)
+        base = str(root / "crates" / "demo")
+        try:
+            run = subprocess.run(
+                [sys.executable, "-c", self.WALK, here, base],
+                capture_output=True,
+                text=True,
+                timeout=60,
+                check=False,
+            )
+        except subprocess.TimeoutExpired:
+            self.fail("the module walk did not end within 60 seconds")
+        self.assertEqual(run.returncode, 0, run.stderr[-400:])
+        return json.loads(run.stdout)
+
+    def test_a_module_cycle_ends_the_walk(self):
+        """`mod m { #[path = "../lib.rs"] mod again; }` names the file that declares it, in `src`
+        and in `tests`. rustc refuses it (the path grows until its name is too long), and the walk
+        must still end with the file read once; its twin naming another file is walked to that
+        file, which rustc reads."""
+        cycle = 'mod m {{\n    #[path = "../{}"]\n    mod again;\n}}\n'
+        none = "pub fn none() {}\n"
+        twin = {
+            "src/lib.rs": self.PRELUDE + cycle.format("other.rs"),
+            "src/other.rs": none + self.MARKER,
+            "src/m/none.rs": none,
+        }
+        self.assertEqual(self.rustc(self.crate(twin), "src/lib.rs", True), "compiled")
+        twin.update(
+            {"src/other.rs": none, "tests/depth.rs": self.SPELLING + cycle.format("other.rs")}
+        )
+        twin.update({"tests/other.rs": none, "tests/m/none.rs": none})
+        walks = [["src/lib.rs", "src/other.rs"], ["tests/depth.rs", "tests/other.rs"]]
+        self.assertEqual(self.walked(self.crate(twin)), walks)
+        files = {
+            "src/lib.rs": self.PRELUDE + cycle.format("lib.rs"),
+            "src/m/none.rs": none,
+            "tests/depth.rs": self.SPELLING + cycle.format("depth.rs"),
+            "tests/m/none.rs": none,
+        }
+        self.assertEqual(self.walked(self.crate(files)), [["src/lib.rs"], ["tests/depth.rs"]])
+
+    def test_a_folder_named_like_a_tests_file_is_no_crate_root(self):
+        """cargo builds `tests/<name>.rs` files and `tests/<dir>/main.rs`, so a folder named
+        `notes.rs` is neither, and the walk lists only the file it compiles."""
+        root = self.crate({"tests/depth.rs": self.SPELLING, "tests/notes.rs/readme.txt": "x\n"})
+        tests = root / "crates" / "demo" / "tests"
+        self.assertEqual(test_crate_files(tests), [tests / "depth.rs"])
+
+    def test_a_tests_root_rustc_cannot_lex_is_listed_and_the_walk_goes_on(self):
+        """A root holding an unterminated string (rustc refuses it, E0765) is still a target cargo
+        builds, so it is listed; the walk reads no declaration from it and goes on to the next
+        root, whose module rustc reads."""
+        main = self.SPELLING + "mod b;\n"
+        files = {"tests/a/main.rs": main, "tests/a/b.rs": "pub fn none() {}\n" + self.MARKER}
+        self.assertEqual(self.rustc(self.crate(files), "tests/a/main.rs", True), "compiled")
+        files["tests/a/b.rs"] = "pub fn none() {}\n"
+        files["tests/z.rs"] = 'const Z: &str = "never closed;\n'
+        tests = self.crate(files) / "crates" / "demo" / "tests"
+        expected = [tests / "a" / "b.rs", tests / "a" / "main.rs", tests / "z.rs"]
+        self.assertEqual(test_crate_files(tests), expected)
 
 
 if __name__ == "__main__":
