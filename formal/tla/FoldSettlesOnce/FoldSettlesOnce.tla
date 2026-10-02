@@ -1,9 +1,9 @@
 ---------------------------- MODULE FoldSettlesOnce ----------------------------
-\* @phx covers crates/coordination/src/recompute/mod.rs anchor=run digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/analytics/src/rollup.rs anchor=settle_cursor digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/analytics/src/rollup.rs anchor=record_settled digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/coordination/src/sync_cycle.rs anchor=sync_cycle digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/kernel/src/db.rs anchor=write digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers crates/coordination/src/recompute/mod.rs anchor=run digest=sha256:c51dc67a3988bbeb8c46a953acdaba06669275e0ba405edb1146de880ae815fd
+\* @phx covers crates/analytics/src/rollup.rs anchor=settle_cursor digest=sha256:2571fa2f5d4ae18a4571c59f3f6911ba61a864f2bb2cee248288ec9a189976c1
+\* @phx covers crates/analytics/src/rollup.rs anchor=record_settled digest=sha256:41ddfd54e6f21de292b44e7c58a0157155b5b3a40ff3d50a4c7cb68805695b2c
+\* @phx covers crates/coordination/src/sync_cycle.rs anchor=sync_cycle digest=sha256:b8158a6a2359166e7b55a5dbbb15189d50cdbeebd84c20a0805067046c31dc6c
+\* @phx covers crates/kernel/src/db.rs anchor=write digest=sha256:c3d700eda268a6f46c7eea0aabcd2f62d8fc0aeffbe03d1cd1e8437a88bdb916
 \* @phx cites #311
 \* @phx property SettleOnce ramp=report
 \* @phx property SettleOldestFirst ramp=report
