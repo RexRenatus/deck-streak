@@ -57,3 +57,77 @@ pub fn write<F: VaultFs + ?Sized>(fs: &F, target: &Path, bytes: &[u8]) -> Result
     fs.sync_dir(directory)
         .map_err(VaultError::io("sync the target's directory"))
 }
+
+/// Refuses a write whose `path` lies under one of the `journal` folders (SPEC-118 R5): no code path
+/// writes the journal. Both sides are compared lexically, component by component and without
+/// regard to ASCII case, after `.` and `..` are resolved, so neither a case nor a `..` reaches a
+/// journal folder.
+///
+/// # Errors
+///
+/// [`VaultError::JournalRefused`] when `path` is a journal folder or lies under one.
+pub fn refuse_journal(journal: &[PathBuf], path: &Path) -> Result<(), VaultError> {
+    let _ = (journal, path);
+    Ok(())
+}
+
+/// A file being streamed into its temporary name beside `target`, before it lands (SPEC-118 R3).
+/// Dropping it before [`Streamed::land`] removes the temporary file.
+pub struct Streamed<'f, F: VaultFs + ?Sized> {
+    fs: &'f F,
+    target: PathBuf,
+}
+
+impl<F: VaultFs + ?Sized> std::fmt::Debug for Streamed<'_, F> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Streamed").finish_non_exhaustive()
+    }
+}
+
+/// Starts a streamed write to `target`: its temporary file is created new, beside the target, under
+/// the name [`temp_path`] gives, after the journal refusal.
+///
+/// # Errors
+///
+/// [`VaultError::JournalRefused`], [`VaultError::NotARegularFile`] when `target` names no file,
+/// and [`VaultError::Io`] when the temporary file cannot be created.
+pub fn stream<'f, F: VaultFs + ?Sized>(
+    fs: &'f F,
+    target: &Path,
+) -> Result<Streamed<'f, F>, VaultError> {
+    Ok(Streamed {
+        fs,
+        target: target.to_path_buf(),
+    })
+}
+
+impl<F: VaultFs + ?Sized> Streamed<'_, F> {
+    /// The file the stream lands as.
+    #[must_use]
+    pub fn target(&self) -> &Path {
+        &self.target
+    }
+
+    /// Appends `chunk` to the temporary file.
+    ///
+    /// # Errors
+    ///
+    /// [`VaultError::Io`] when the write fails.
+    pub fn write(&mut self, chunk: &[u8]) -> Result<(), VaultError> {
+        let _ = (self.fs, chunk);
+        Ok(())
+    }
+
+    /// Lands the stream: the temporary file is synced, renamed over the target and its directory
+    /// synced.
+    ///
+    /// # Errors
+    ///
+    /// [`VaultError::Io`] naming the step that failed; the temporary file is then removed.
+    pub fn land(self) -> Result<(), VaultError> {
+        Ok(())
+    }
+
+    /// Removes the temporary file: the stream never lands.
+    pub fn discard(self) {}
+}

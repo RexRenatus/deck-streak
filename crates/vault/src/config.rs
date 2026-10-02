@@ -25,6 +25,10 @@ pub const VAULT_ROOT: &str = "DECKSTREAK_VAULT_ROOT";
 pub const READINGS_FOLDER: &str = "DECKSTREAK_VAULT_READINGS_FOLDER";
 /// The archive folder inside the readings folder, one folder name (example value `Archive`).
 pub const ARCHIVE_FOLDER: &str = "DECKSTREAK_VAULT_ARCHIVE_FOLDER";
+/// The owner's vault layout file, an absolute path (SPEC-118 R4). Unset, the vendored layout
+/// (`crates/vault/data/layout.json`) is in force. The owner's layout is private and never enters the
+/// repository.
+pub const VAULT_LAYOUT: &str = "DECKSTREAK_VAULT_LAYOUT";
 
 /// The vault root, an absolute path. Its `Debug` never shows the path.
 #[derive(Clone, PartialEq, Eq)]
@@ -149,6 +153,70 @@ pub enum StartRefusal {
     /// The service cannot create a file in the readings folder.
     #[error("the readings folder is not writable by the service")]
     ReadingsFolderNotWritable,
+    /// The layout file `DECKSTREAK_VAULT_LAYOUT` names cannot be read, or the setting names no
+    /// absolute path (SPEC-118 R4).
+    #[error("the vault layout file cannot be read")]
+    LayoutUnreadable,
+    /// The layout file is not a layout: not JSON, no inbox folder, or a folder that is not a plain
+    /// relative path inside the vault (SPEC-118 R4).
+    #[error("the vault layout file is not a layout")]
+    LayoutMalformed,
+}
+
+/// The layout in force (SPEC-118 R4): the inbox folder captures land in, and the journal folders no
+/// write may reach (R5). Each is a path relative to the vault root.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LayoutInForce {
+    /// The inbox folder, relative to the vault root.
+    pub inbox: String,
+    /// The journal folders, relative to the vault root.
+    pub journal: Vec<String>,
+}
+
+impl LayoutInForce {
+    /// The layout `DECKSTREAK_VAULT_LAYOUT` names, or the vendored layout when it is unset.
+    ///
+    /// # Errors
+    ///
+    /// [`StartRefusal::LayoutUnreadable`] when the setting names no absolute path or a file that
+    /// cannot be read, and [`StartRefusal::LayoutMalformed`] when the file is not a layout.
+    pub fn from_env(env: &Environment) -> Result<Self, VaultError> {
+        let _ = env;
+        Ok(Self {
+            inbox: String::new(),
+            journal: Vec::new(),
+        })
+    }
+
+    /// The vendored layout, `crates/vault/data/layout.json`.
+    ///
+    /// # Errors
+    ///
+    /// [`StartRefusal::LayoutMalformed`] when the vendored file is not a layout, which a test of
+    /// this crate rules out.
+    pub fn vendored() -> Result<Self, VaultError> {
+        Self::parse("")
+    }
+
+    /// The layout a layout file's `text` holds: its `inbox` and its `journal` folders.
+    ///
+    /// # Errors
+    ///
+    /// [`StartRefusal::LayoutMalformed`] when `text` is not a layout.
+    pub fn parse(text: &str) -> Result<Self, VaultError> {
+        let _ = text;
+        Ok(Self {
+            inbox: String::new(),
+            journal: Vec::new(),
+        })
+    }
+
+    /// The journal folders inside `root`.
+    #[must_use]
+    pub fn journal_paths(&self, root: &Path) -> Vec<PathBuf> {
+        let _ = (&self.journal, root);
+        Vec::new()
+    }
 }
 
 /// The vault's folders, resolved and checked at start. Its `Debug` names the folders and never

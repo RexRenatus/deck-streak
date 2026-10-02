@@ -24,12 +24,14 @@
 use std::io;
 
 pub mod atomic;
+pub mod capture_store;
 pub mod config;
 pub mod data_rights;
 pub mod drill_notes;
 pub mod drill_store;
 pub mod drills;
 pub mod fs;
+pub mod inbox;
 pub mod note;
 pub mod rails;
 pub mod readings_tree;
@@ -37,8 +39,9 @@ pub mod sha256;
 pub mod staged;
 pub(crate) mod unicode_other;
 
-pub use config::{FolderName, StartRefusal, VaultPaths, VaultRoot, VaultSettings};
-pub use fs::{DirEntry, EntryKind, RealFs, VaultFile, VaultFs};
+pub use config::{FolderName, LayoutInForce, StartRefusal, VaultPaths, VaultRoot, VaultSettings};
+pub use fs::{DirEntry, EntryKind, JournalGuard, RealFs, VaultFile, VaultFs};
+pub use inbox::{Capture, CaptureKind, Captured, Inbox, Source};
 pub use note::{BodyHash, BoxLine, Malformed, TopicKey};
 pub use rails::{RailRefusal, RailRow, Rails, RailsError};
 pub use readings_tree::{
@@ -103,6 +106,17 @@ pub enum VaultError {
     /// The note's body is not the body the adapter last wrote: `vault_note_edited` (R10).
     #[error("vault_note_edited")]
     NoteEdited,
+    /// The vault root or the inbox folder is not a directory: `vault_missing` (SPEC-118 R4). The
+    /// adapter never creates either.
+    #[error("vault_missing")]
+    VaultMissing,
+    /// A write's target lies under a folder the layout names in `journal`: `journal_refused`
+    /// (SPEC-118 R5).
+    #[error("journal_refused")]
+    JournalRefused,
+    /// An attachment's extension is not a plain one, so it could name a path (SPEC-118 R1).
+    #[error("the attachment's extension is not a plain one")]
+    InvalidExtension,
     /// A rolled note did not read back as it was written, so its source stays (R7).
     #[error("the rolled note did not read back as written, so its source stays")]
     ReadBack,

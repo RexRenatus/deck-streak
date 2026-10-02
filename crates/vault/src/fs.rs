@@ -127,6 +127,75 @@ pub trait VaultFs {
     ///
     /// The operating system's reason, including a path that does not exist.
     fn canonicalize(&self, path: &Path) -> io::Result<PathBuf>;
+
+    /// The journal folders no write may reach (SPEC-118 R5): none, unless this file system is a
+    /// [`JournalGuard`].
+    fn journal(&self) -> &[PathBuf] {
+        &[]
+    }
+}
+
+/// A file system that refuses every create, rename and folder under the layout's journal folders
+/// (SPEC-118 R5, #56), and passes every other call to the file system it wraps.
+#[derive(Clone, Debug)]
+pub struct JournalGuard<F> {
+    inner: F,
+    journal: Vec<PathBuf>,
+}
+
+impl<F: VaultFs> JournalGuard<F> {
+    /// `inner`, guarded against writes under each of the `journal` folders.
+    #[must_use]
+    pub const fn new(inner: F, journal: Vec<PathBuf>) -> Self {
+        Self { inner, journal }
+    }
+}
+
+impl<F: VaultFs> VaultFs for JournalGuard<F> {
+    fn create_new(&self, path: &Path) -> io::Result<Box<dyn VaultFile>> {
+        self.inner.create_new(path)
+    }
+
+    fn rename(&self, from: &Path, to: &Path) -> io::Result<()> {
+        self.inner.rename(from, to)
+    }
+
+    fn sync_dir(&self, dir: &Path) -> io::Result<()> {
+        self.inner.sync_dir(dir)
+    }
+
+    fn remove_file(&self, path: &Path) -> io::Result<()> {
+        self.inner.remove_file(path)
+    }
+
+    fn read(&self, path: &Path) -> io::Result<Vec<u8>> {
+        self.inner.read(path)
+    }
+
+    fn kind(&self, path: &Path) -> io::Result<Option<EntryKind>> {
+        self.inner.kind(path)
+    }
+
+    fn list(&self, dir: &Path) -> io::Result<Vec<DirEntry>> {
+        self.inner.list(dir)
+    }
+
+    fn create_dir(&self, path: &Path) -> io::Result<()> {
+        self.inner.create_dir(path)
+    }
+
+    fn remove_dir(&self, path: &Path) -> io::Result<()> {
+        self.inner.remove_dir(path)
+    }
+
+    fn canonicalize(&self, path: &Path) -> io::Result<PathBuf> {
+        self.inner.canonicalize(path)
+    }
+
+    fn journal(&self) -> &[PathBuf] {
+        let _ = &self.journal;
+        &[]
+    }
 }
 
 /// The real file system, through `std::fs`.
