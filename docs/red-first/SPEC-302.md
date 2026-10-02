@@ -44,3 +44,18 @@ median: green at 16e4cf75b776aa1d1d1ee89cb637850ec5ac1ade
 round: not red: a_round_beyond_the_largest_float_is_a_signed_infinity
   (e5073d0976354a7101251b2fcf9224dd735be740) pins a section 5 limit the code already had
 ```
+
+Disclosure: two of these tests changed after the commits named above. The lgamma test gained a
+positive assertion at 220308b25301b98aade66860183f422de76ad69a, after its loop: the argument
+2.5e305 (`7f56c8e5ca239029`) reads CPython 3.12.12's `7fef3fc83052cbf5`. Its new body, run at its
+red commit 1560f7b7e4cb2ffa801fc07c16b98e7cfa1283a5, fails at the same assertion:
+
+```text
+panicked at crates/kernel/tests/pynum_edges.rs:98:9:
+assertion `left == right` failed: lgamma of 7f57b236a943b4a5
+  left: Some(inf)
+ right: None
+```
+
+The round pin test compares bit patterns since eb783283fdd68ba0854084977ddb971b7f6b70e3, where it
+compared the floats; its six cases and their values are unchanged.
