@@ -157,7 +157,7 @@ A19: green at b958e78
 
 ## 073b fix round 1: a beat of the seed's own day, and the mark's guard
 
-The RED commit `a5e4cf06` adds three tests and changes no production file; the GREEN commit
+The RED commit `a5e4cf06` adds four tests and changes no production file; the GREEN commit
 `da37395e` changes the records upsert (ADR-303 Decision 2). The reds were run at the code of
 `a3693b34`, selecting each test, and each is an assertion:
 

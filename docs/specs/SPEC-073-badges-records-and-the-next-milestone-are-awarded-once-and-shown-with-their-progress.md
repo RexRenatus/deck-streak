@@ -122,7 +122,8 @@ R7. The hour windows equal `goldens/count_reviews_in_local_hours.json`
     (`analytics.py:count_reviews_in_local_hours`): the study reviews of the day whose local clock hour,
     at the configured offset, lies from the window's start hour up to, not including, its end hour.
 R8. Coordination registers the badge step in phase 7 of SPEC-071's fold (the awards): each met study
-    condition is awarded through R3's port and celebrated by R4's rule, on the day evaluated. A day with no recorded card state awards none of the five badges the card
+    condition is awarded through R3's port and celebrated by R4's rule, on the day evaluated. A day
+    with no recorded card state awards none of the five badges the card
     snapshot decides (`inbox_zero`, `backlog_slayer`, `maturity_milestone`, `forest_guardian`,
     `leech_tamer`).
 
