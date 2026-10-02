@@ -21,15 +21,15 @@ pub const MINT_SOURCE: &str = "mint";
 /// The reference of a study day's mint movement.
 pub const MINT_REFERENCE: &str = "";
 
-/// A credit's answer (R7).
-#[must_use = "a credit's answer says whether coins moved"]
+/// A deposit's answer (R7).
+#[must_use = "a deposit's answer says whether coins moved"]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum CreditAnswer {
-    /// The movement was written: these coins were credited.
-    Credited(i64),
-    /// A movement already holds the key, or for `credit_once` the source and reference on any study
-    /// day: nothing was written.
-    AlreadyCredited,
+pub enum DepositAnswer {
+    /// The movement was written: these coins were deposited.
+    Deposited(i64),
+    /// A movement already holds the key, or for `deposit_once` the source and reference on any
+    /// study day: nothing was written.
+    AlreadyDeposited,
     /// The amount was 0 or less: nothing was written.
     NotPositive,
 }
@@ -139,41 +139,41 @@ impl SqliteWallet {
         Ok(debited_on_day(self.db.reader(), day).await?)
     }
 
-    /// Credits `amount` once on its key, in one write ([`credit_on`]).
+    /// Deposits `amount` once on its key, in one write ([`deposit_on`]).
     ///
     /// # Errors
     ///
     /// [`KernelError::Database`] when a statement fails.
-    pub async fn credit(
+    pub async fn deposit(
         &self,
         day: StudyDay,
         source: &str,
         reference: &str,
         amount: i64,
         at: UtcMillis,
-    ) -> Result<CreditAnswer, KernelError> {
+    ) -> Result<DepositAnswer, KernelError> {
         let mut write = self.db.write().await?;
-        let answer = credit_on(&mut write, day, source, reference, amount, at).await?;
+        let answer = deposit_on(&mut write, day, source, reference, amount, at).await?;
         write.commit().await?;
         Ok(answer)
     }
 
-    /// Credits `amount` unless a movement of `source` and `reference` exists on any study day, in
-    /// one write ([`credit_once_on`]).
+    /// Deposits `amount` unless a movement of `source` and `reference` exists on any study day, in
+    /// one write ([`deposit_once_on`]).
     ///
     /// # Errors
     ///
     /// [`KernelError::Database`] when a statement fails.
-    pub async fn credit_once(
+    pub async fn deposit_once(
         &self,
         day: StudyDay,
         source: &str,
         reference: &str,
         amount: i64,
         at: UtcMillis,
-    ) -> Result<CreditAnswer, KernelError> {
+    ) -> Result<DepositAnswer, KernelError> {
         let mut write = self.db.write().await?;
-        let answer = credit_once_on(&mut write, day, source, reference, amount, at).await?;
+        let answer = deposit_once_on(&mut write, day, source, reference, amount, at).await?;
         write.commit().await?;
         Ok(answer)
     }
@@ -246,7 +246,7 @@ impl SqliteWallet {
         reference: &str,
         amount: i64,
         at: UtcMillis,
-    ) -> Result<CreditAnswer, KernelError> {
+    ) -> Result<DepositAnswer, KernelError> {
         let mut write = self.db.write().await?;
         let answer = refund_on(&mut write, day, source, reference, amount, at).await?;
         write.commit().await?;
@@ -274,34 +274,34 @@ impl SqliteWallet {
     }
 }
 
-/// Credits `amount` on (`day`, `source`, `reference`) inside the caller's write: written once, and a
-/// second credit of the key writes nothing (R7). The insert's own conflict with the ledger's unique
-/// index is the existence check, so the key lives in the migration alone (ADR-308 ruling 3).
+/// Deposits `amount` on (`day`, `source`, `reference`) inside the caller's write: written once, and
+/// a second deposit of the key writes nothing (R7). The insert's own conflict with the ledger's
+/// unique index is the existence check, so the key lives in the migration alone (ADR-308 ruling 3).
 ///
 /// # Errors
 ///
 /// [`KernelError::Database`] when a statement fails.
-pub async fn credit_on(
+pub async fn deposit_on(
     write: &mut Transaction<'_, Sqlite>,
     day: StudyDay,
     source: &str,
     reference: &str,
     amount: i64,
     at: UtcMillis,
-) -> Result<CreditAnswer, KernelError> {
+) -> Result<DepositAnswer, KernelError> {
     if amount <= 0 {
-        return Ok(CreditAnswer::NotPositive);
+        return Ok(DepositAnswer::NotPositive);
     }
     Ok(
         if insert(write, day, source, reference, amount, at).await? {
-            CreditAnswer::Credited(amount)
+            DepositAnswer::Deposited(amount)
         } else {
-            CreditAnswer::AlreadyCredited
+            DepositAnswer::AlreadyDeposited
         },
     )
 }
 
-/// Credits `amount` inside the caller's write unless a movement of `source` and `reference` exists
+/// Deposits `amount` inside the caller's write unless a movement of `source` and `reference` exists
 /// on any study day: the predecessor's cross-day guard (`database.py:GamifyStore.coin_ref_exists`)
 /// for a payout settled on a later day, read in the same transaction as the insert (ADR-308 ruling
 /// 5).
@@ -309,16 +309,16 @@ pub async fn credit_on(
 /// # Errors
 ///
 /// [`KernelError::Database`] when a statement fails.
-pub async fn credit_once_on(
+pub async fn deposit_once_on(
     write: &mut Transaction<'_, Sqlite>,
     day: StudyDay,
     source: &str,
     reference: &str,
     amount: i64,
     at: UtcMillis,
-) -> Result<CreditAnswer, KernelError> {
+) -> Result<DepositAnswer, KernelError> {
     if amount <= 0 {
-        return Ok(CreditAnswer::NotPositive);
+        return Ok(DepositAnswer::NotPositive);
     }
     let ever = sqlx::query_scalar!(
         r#"SELECT EXISTS (SELECT 1 FROM coin_ledger WHERE source = ?1 AND reference = ?2)
@@ -329,9 +329,9 @@ pub async fn credit_once_on(
     .fetch_one(&mut **write)
     .await?;
     if ever {
-        return Ok(CreditAnswer::AlreadyCredited);
+        return Ok(DepositAnswer::AlreadyDeposited);
     }
-    credit_on(write, day, source, reference, amount, at).await
+    deposit_on(write, day, source, reference, amount, at).await
 }
 
 /// Settles `day`'s one mint movement (`mint`, an empty reference) at `amount` inside the caller's
@@ -447,7 +447,7 @@ pub async fn debit_floored_on(
 }
 
 /// Refunds `amount` on (`day`, `source`, `reference`) inside the caller's write: a positive
-/// movement, written once on its key as a credit is (R7).
+/// movement, written once on its key as a deposit is (R7).
 ///
 /// # Errors
 ///
@@ -459,8 +459,8 @@ pub async fn refund_on(
     reference: &str,
     amount: i64,
     at: UtcMillis,
-) -> Result<CreditAnswer, KernelError> {
-    credit_on(write, day, source, reference, amount, at).await
+) -> Result<DepositAnswer, KernelError> {
+    deposit_on(write, day, source, reference, amount, at).await
 }
 
 /// Debits `requested` on (`day`, `source`, `reference`) inside the caller's write, clipped by

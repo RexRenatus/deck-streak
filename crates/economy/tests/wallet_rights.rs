@@ -6,7 +6,7 @@
 #![allow(clippy::expect_used)]
 
 use deck_streak_economy::data_rights::{COIN_LEDGER_TABLE, ECONOMY_STATE_TABLE, EconomyDataRights};
-use deck_streak_economy::wallet::{CreditAnswer, MintAnswer, PurchaseAnswer, SqliteWallet};
+use deck_streak_economy::wallet::{DepositAnswer, MintAnswer, PurchaseAnswer, SqliteWallet};
 use deck_streak_kernel::{DataRights, Db, StudyDay, UtcMillis};
 
 /// The instant the movements are written at.
@@ -46,10 +46,10 @@ async fn an_erase_empties_the_ledger_and_resets_the_state() {
     // The owner's coins, through the wallet's ports: a payout, a mint and a purchase.
     assert_eq!(
         wallet
-            .credit(day, "payout", "quest:q1", 50, AT)
+            .deposit(day, "payout", "quest:q1", 50, AT)
             .await
             .expect("a credit"),
-        CreditAnswer::Credited(50)
+        DepositAnswer::Deposited(50)
     );
     assert_eq!(
         wallet

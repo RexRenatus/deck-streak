@@ -12,7 +12,7 @@ use std::sync::Arc;
 use deck_streak_economy::constants::WALLET_FLOOR;
 use deck_streak_economy::rules::daily_loss_cap;
 use deck_streak_economy::wallet::{
-    CreditAnswer, DebitAnswer, MINT_REFERENCE, MINT_SOURCE, MintAnswer, PurchaseAnswer,
+    DebitAnswer, DepositAnswer, MINT_REFERENCE, MINT_SOURCE, MintAnswer, PurchaseAnswer,
     PurchaseRefused, SqliteWallet,
 };
 use deck_streak_kernel::{Db, StudyDay, UtcMillis};
@@ -68,10 +68,10 @@ async fn the_wallet_never_goes_negative_under_a_burst() {
     // of 120 (its cap is 36) while the balance holds 20, so the wallet, not the cap, is the bound.
     assert_eq!(
         wallet
-            .credit(day(9), "payout", "seed", 120, AT)
+            .deposit(day(9), "payout", "seed", 120, AT)
             .await
             .expect("the seed credit"),
-        CreditAnswer::Credited(120)
+        DepositAnswer::Deposited(120)
     );
     assert_eq!(
         wallet
@@ -156,29 +156,29 @@ async fn the_wallet_never_goes_negative_under_a_burst() {
 async fn a_credit_of_one_key_is_written_once() {
     let (_directory, db, wallet) = wallet().await;
     let first = wallet
-        .credit(day(20), "payout", "quest:q1", 15, AT)
+        .deposit(day(20), "payout", "quest:q1", 15, AT)
         .await
         .expect("a credit");
     let again = wallet
-        .credit(day(20), "payout", "quest:q1", 15, AT)
+        .deposit(day(20), "payout", "quest:q1", 15, AT)
         .await
         .expect("the same credit again");
     // The key is the study day, the source and the reference: another day is another key.
     let next_day = wallet
-        .credit(day(21), "payout", "quest:q1", 15, AT)
+        .deposit(day(21), "payout", "quest:q1", 15, AT)
         .await
         .expect("the credit on the next day");
     let nothing = wallet
-        .credit(day(20), "payout", "quest:q2", 0, AT)
+        .deposit(day(20), "payout", "quest:q2", 0, AT)
         .await
         .expect("a credit of nothing");
     assert_eq!(
         [first, again, next_day, nothing],
         [
-            CreditAnswer::Credited(15),
-            CreditAnswer::AlreadyCredited,
-            CreditAnswer::Credited(15),
-            CreditAnswer::NotPositive,
+            DepositAnswer::Deposited(15),
+            DepositAnswer::AlreadyDeposited,
+            DepositAnswer::Deposited(15),
+            DepositAnswer::NotPositive,
         ]
     );
     // A refund is a positive movement written once on its key, as a credit is.
@@ -194,7 +194,7 @@ async fn a_credit_of_one_key_is_written_once() {
     ];
     assert_eq!(
         refunds,
-        [CreditAnswer::Credited(9), CreditAnswer::AlreadyCredited]
+        [DepositAnswer::Deposited(9), DepositAnswer::AlreadyDeposited]
     );
     assert_eq!(
         rows(&db).await,
@@ -297,10 +297,10 @@ async fn a_floor_clipped_debit_pays_what_is_held() {
     let (_directory, db, wallet) = wallet().await;
     assert_eq!(
         wallet
-            .credit(day(50), "payout", "seed", 30, AT)
+            .deposit(day(50), "payout", "seed", 30, AT)
             .await
             .expect("the seed"),
-        CreditAnswer::Credited(30)
+        DepositAnswer::Deposited(30)
     );
     // Day 51 starts with 30 (a cap of 9), and the floored debit is not the capped one: it pays
     // all 30 the wallet holds.
@@ -327,10 +327,10 @@ async fn a_floor_clipped_debit_pays_what_is_held() {
     );
     assert_eq!(
         wallet
-            .credit(day(54), "payout", "seed:2", 12, AT)
+            .deposit(day(54), "payout", "seed:2", 12, AT)
             .await
             .expect("a second seed"),
-        CreditAnswer::Credited(12)
+        DepositAnswer::Deposited(12)
     );
     answers.push(
         wallet
@@ -386,7 +386,7 @@ async fn a_once_ever_credit_is_written_once_on_any_day() {
     for (on, source, reference, amount) in requests {
         answers.push(
             wallet
-                .credit_once(day(on), source, reference, amount, AT)
+                .deposit_once(day(on), source, reference, amount, AT)
                 .await
                 .expect("a once-ever credit"),
         );
@@ -394,11 +394,11 @@ async fn a_once_ever_credit_is_written_once_on_any_day() {
     assert_eq!(
         answers,
         [
-            CreditAnswer::Credited(25),
-            CreditAnswer::AlreadyCredited,
-            CreditAnswer::AlreadyCredited,
-            CreditAnswer::Credited(25),
-            CreditAnswer::Credited(10),
+            DepositAnswer::Deposited(25),
+            DepositAnswer::AlreadyDeposited,
+            DepositAnswer::AlreadyDeposited,
+            DepositAnswer::Deposited(25),
+            DepositAnswer::Deposited(10),
         ]
     );
     assert_eq!(
