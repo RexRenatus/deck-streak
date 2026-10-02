@@ -143,3 +143,5 @@ A19, MUTATION COVERAGE: a_capture_after_a_held_capture_dropped_is_admitted passe
 A19, MUTATION COVERAGE: a_capture_after_a_panicking_body_is_admitted passed at 115049a0; at 115049a0 with S02410's mutant installed it fails: left "a capture nested inside another capture on one thread is refused", right "" (KILLED)
 A19, A20 at daee3562: log_capture_class 5 passed, 2 failed (the two red tests above); at 5316872f: 7 passed, 0 failed
 ```
+
+The wording case `test_the_a18_row_states_no_routed_count` in `scripts/tests/test_log_capture_wording.py` pins wording, not a criterion: A18's row states no routed count, because the census test's own assertion holds it. At 8a4b3c1d it failed on the live row: `AssertionError: Lists differ: ['15 routed'] != [] : the census test's assertion holds the routed count, so the A18 row states none` (`Ran 8 tests`, `FAILED (failures=1)`); at a2678538 the module reads `Ran 8 tests`, `OK`.
