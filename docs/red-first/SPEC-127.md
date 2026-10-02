@@ -374,3 +374,23 @@ Population: 192 members at ac118ffc (with the trap-removal reds), 143 at a090126
   9a1b8ac5 of A42 and edits the test in `scripts/tests/test_deploy_scripts.py`: one added
   assertion, that the unit the host already had still exists after a failed switch. It tightens the
   failed-switch member and removes nothing from the population.
+
+## Amendment, 2026-10-02: round four of the fix (issue #451); corrections as old/new pairs
+
+The text above is not edited. Each sentence it corrects is quoted as `old`; `new` governs.
+
+- old: "restored in round three and byte-equal to its form at 24bc441f". new: restored in round three
+  to its form at 24bc441f, with one added assertion on the deploy line (f52e410c, then 9b1ad830).
+- Test edits the record did not name as test edits, disclosed from `git show` of each commit:
+  - 8991e7f4 changed seven lines of the test file: the census pins `COMMAND_SITES` 219 to 235 and
+    `REDIRECTION_TARGETS` 2 to 1, the redirection-target assertion 2 to 1, the writers dictionary
+    (`find` 14 to 2, `rm` 1 to 2, `tar` 3 to 4), the writing-call total 27 to 17, and the `find` option
+    whitelist, which gained `-type` and `-writable`.
+  - 137dd930 changed four lines of the test file: `COMMAND_SITES` 235 to 252, the writers dictionary
+    (`find` 2 to 1, `mv` 2 to 4, `tar` 4 to 3) and the temporary-name rule, which gained the
+    `.stale.` prefix.
+  - 8e3d0c79 added 121 lines to the test file and removed one: the double-fault tests of the undo
+    and the way back, and the stub tool's fault test, which read one exact string and now reads a
+    comma-separated list so that two calls can fail in one run.
+  - f52e410c added one assertion to the first-install parent member (the run ends non-zero), and
+    9b1ad830 replaced it with an assertion that the last line begins with `deploy:`.
