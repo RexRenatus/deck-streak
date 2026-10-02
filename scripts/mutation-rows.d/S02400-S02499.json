@@ -56,6 +56,33 @@
         "api",
         "session_routes::the_session_cookie_is_host_prefixed_secure_httponly_and_strict",
         "the session cookie a handshake sets is HttpOnly, so no script can read it; cargo-mutants never mutates a string"
+      ],
+      [
+        "S02407-THE-NESTING-ARM-READS-THE-COUNT",
+        "tools/log-capture/capture.rs",
+        "        held == 0,\n",
+        "        true,\n",
+        "kernel",
+        "log_capture_class::a_capture_nested_inside_a_capture_on_one_thread_is_refused",
+        "a capture nested inside another on one thread is refused by the helper's own count, so it is named as nested and not as a missing floor; cargo-mutants lists no mutant in tools/"
+      ],
+      [
+        "S02408-A-MISSING-FLOOR-HAS-ITS-OWN-MESSAGE",
+        "tools/log-capture/capture.rs",
+        "        \"a capture is refused: the floor is not this thread's default\"\n",
+        "        \"a capture nested inside another capture on one thread is refused\"\n",
+        "kernel",
+        "log_capture_class::a_capture_where_the_floor_is_not_the_default_names_the_missing_floor",
+        "a capture where the floor is not this thread's default, while the thread holds none, is refused by a message naming the missing floor, never the nesting message; cargo-mutants never mutates a string"
+      ],
+      [
+        "S02409-A-DROPPED-HELD-CAPTURE-LOWERS-THE-COUNT",
+        "tools/log-capture/capture.rs",
+        "impl Drop for CaptureGuard {\n    fn drop(&mut self) {\n        HELD.with(lower);\n    }\n}\n",
+        "impl Drop for CaptureGuard {\n    fn drop(&mut self) {}\n}\n",
+        "kernel",
+        "log_capture_class::a_capture_after_a_held_capture_dropped_is_admitted",
+        "a held capture's guard lowers the helper's count when it drops, so a later capture on the thread is admitted and not refused as nested; cargo-mutants lists no mutant in tools/"
       ]
     ]
   }
