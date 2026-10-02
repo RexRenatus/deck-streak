@@ -54,6 +54,33 @@
 \* `DistinctNames` that an attachment whose extension is `md` is named apart from its stub
 \* (`inbox.rs::attachment_name`, ADR-118's amendment), and `KeyClaim` the partial unique index on a
 \* Mini App capture's key (`capture_store.rs::claim`, ADR-118's capture-key amendment).
+\*
+\* The action-to-code map, by `file::item` (re-read against each covered item at its stamp):
+\* - Stream -> `inbox.rs::Inbox::attachment`, which opens `atomic.rs::stream`; the stream calls
+\*   `refuse_journal(fs.journal(), target)?` before it creates its temporary file.
+\* - Begin -> `inbox.rs::capture`, `let mut transaction = db.write().await?;` (BEGIN IMMEDIATE).
+\* - Insert, the claim -> `capture_store.rs::claim`: `INSERT INTO inbox_captures ... ON CONFLICT
+\*   DO NOTHING` with no conflict target; `rows_affected() == 1` answers `Claim::Claimed`;
+\*   otherwise the stem arm `FROM inbox_captures WHERE stem = ?1` (`ByStem`), and, only when
+\*   `row.source == Source::MiniApp`, the key arm
+\*   `FROM inbox_captures WHERE capture_key = ?1 AND source = 'miniapp'` (`ByKey`, ruling (d)),
+\*   each answering `Claim::Recorded { name }`.
+\* - Insert's refusal, the rollback on Recorded -> `inbox.rs::capture`:
+\*   `if let Claim::Recorded { name } = capture_store::claim(...)` then
+\*   `transaction.rollback()`, `file.stream.discard()` and `Captured::AlreadyCaptured { name }`.
+\* - Rename -> `inbox.rs::capture`, `file.stream.land()?`, after the claim (`ClaimFirst`) and
+\*   before the stub (`Order`).
+\* - AttachFile -> `inbox.rs::attachment_name`: `if extension.eq_ignore_ascii_case(".md")` names
+\*   it `format!("{stem}.attachment{extension}")` (`DistinctNames`, ruling (c)(4)).
+\* - WriteStub -> `inbox.rs::capture`,
+\*   `atomic::write(fs, &inbox.folder.join(stub_name(&stem)), stub.as_bytes())?`, last.
+\* - Commit -> `inbox.rs::capture`, `transaction.commit()`, then `Captured::Saved { name }`.
+\* - Refused -> `atomic.rs::refuse_journal`, called by `atomic.rs::write` and `atomic.rs::stream`
+\*   before any file is created (`Refused`). A Mini App capture streams nothing, so in the code its
+\*   refusal comes at the stub's write inside the transaction, whose drop rolls the claim back:
+\*   the model's Begin, Insert and Crash from "claimed", with no file written.
+\* - Crash -> any `?` in `inbox.rs::capture` after `db.write()`: the dropped transaction rolls back
+\*   and the dropped stream removes its temporary file.
 
 EXTENDS Naturals, FiniteSets
 
