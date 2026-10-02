@@ -484,3 +484,5 @@ Two files outside the manifest above are changed by this part:
   variable. The manifest names `formal/tla/AwardOnce/` only.
 - `crates/coordination/tests/awards_support/mod.rs`: a test-support file; the test Recorder keeps each
   Celebration it is handed.
+
+This part also edits SPEC-024: its A18 row reads 15 routed, and one sentence after its census paragraph says why (#541).
