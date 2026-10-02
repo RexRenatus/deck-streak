@@ -1,0 +1,86 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id, study_day, source, reference, delta, created_at FROM coin_ledger ORDER BY id",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "coin_ledger",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "study_day",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "coin_ledger",
+            "name": "study_day"
+          }
+        }
+      },
+      {
+        "name": "source",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "coin_ledger",
+            "name": "source"
+          }
+        }
+      },
+      {
+        "name": "reference",
+        "ordinal": 3,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "coin_ledger",
+            "name": "reference"
+          }
+        }
+      },
+      {
+        "name": "delta",
+        "ordinal": 4,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "coin_ledger",
+            "name": "delta"
+          }
+        }
+      },
+      {
+        "name": "created_at",
+        "ordinal": 5,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "coin_ledger",
+            "name": "created_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "2da2fe039501342e9a2dfe423c8fef90f87cb6f400b0eb66604c42d5bf9eab5b"
+}

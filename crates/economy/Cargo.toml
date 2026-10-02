@@ -13,6 +13,10 @@ workspace = true
 
 [dependencies]
 deck-streak-kernel.workspace = true
+# SPEC-082 R18: the data-rights port's rows are JSON values (ADR-029), and its queries run through
+# the kernel's Db, checked into .sqlx/.
+serde_json.workspace = true
+sqlx.workspace = true
 
 [dev-dependencies]
 # ADR-029: the parity oracle's golden reader, compiled into the goldens test by path.

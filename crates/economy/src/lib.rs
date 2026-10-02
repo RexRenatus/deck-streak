@@ -13,4 +13,5 @@
 #![warn(missing_docs, clippy::all)]
 
 pub mod constants;
+pub mod data_rights;
 pub mod rules;
