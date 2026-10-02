@@ -81,3 +81,20 @@ fn a_non_finite_list_has_the_mean_cpython_gives_it() {
     assert!(pynum::mean(&[f64::INFINITY, f64::NEG_INFINITY]).is_some_and(f64::is_nan));
     assert!(pynum::mean(&[f64::NAN, 1.0]).is_some_and(f64::is_nan));
 }
+
+#[test]
+fn lgamma_of_a_finite_argument_whose_result_overflows_is_none() {
+    // The six arguments CPython's `math.lgamma` raises `OverflowError` ("math range error") for,
+    // as bit patterns: from about 2.6e305 up to the largest float.
+    let arguments = [
+        "7f57b236a943b4a5",
+        "7f76c8e5ca239029",
+        "7fac7b1f3cac7433",
+        "7fe1ccf385ebc8a0",
+        "7fefffffffffffff",
+        "7f737a7dfad029c5",
+    ];
+    for hex in arguments {
+        assert_eq!(pynum::lgamma(bits(hex)), None, "lgamma of {hex}");
+    }
+}
