@@ -149,6 +149,8 @@ impl NewChest {
             rarity: self.rarity,
             payout_xp: self.payout_xp,
             state: self.state,
+            choice: None,
+            announced: false,
         }
     }
 }
@@ -170,6 +172,10 @@ pub struct StoredChest {
     pub payout_xp: i64,
     /// Where it is in its life.
     pub state: ChestState,
+    /// An Epic's choice once it is made; none until then, and for every other rarity.
+    pub choice: Option<Choice>,
+    /// Whether its announcement was handed to the router (T3): the caller's to set.
+    pub announced: bool,
 }
 
 /// The chest settings (R2, R7): the most chests a study day holds and the local hour from which
@@ -194,28 +200,200 @@ pub async fn chests_of_day(
 ) -> Result<Vec<StoredChest>, ChestError> {
     let day = study_day.epoch_day();
     let rows = sqlx::query!(
-        "SELECT id, origin, session_start, rarity, payout_xp, state FROM chests \
-         WHERE study_day = ?1 ORDER BY id",
+        "SELECT id, study_day, origin, session_start, rarity, payout_xp, state, choice, \
+         announced FROM chests WHERE study_day = ?1 ORDER BY id",
         day
     )
     .fetch_all(&mut *connection)
     .await?;
     rows.into_iter()
         .map(|row| {
-            Ok(StoredChest {
+            stored(ChestRow {
                 id: row.id,
-                study_day,
-                origin: Origin::from_name(&row.origin)
-                    .ok_or_else(|| unreadable("chests.origin", &row.origin))?,
+                study_day: row.study_day,
+                origin: &row.origin,
                 session_start: row.session_start,
-                rarity: Rarity::from_name(&row.rarity)
-                    .ok_or_else(|| unreadable("chests.rarity", &row.rarity))?,
+                rarity: &row.rarity,
                 payout_xp: row.payout_xp,
-                state: ChestState::from_name(&row.state)
-                    .ok_or_else(|| unreadable("chests.state", &row.state))?,
+                state: &row.state,
+                choice: &row.choice,
+                announced: row.announced,
             })
         })
         .collect()
+}
+
+/// The chest `id`, or none when no chest holds it.
+///
+/// # Errors
+///
+/// [`ChestError::Database`] when the read fails, and [`ChestError::Unreadable`] for a row whose
+/// value is outside its column's rule.
+pub async fn chest(
+    connection: &mut SqliteConnection,
+    id: i64,
+) -> Result<Option<StoredChest>, ChestError> {
+    let row = sqlx::query!(
+        "SELECT id, study_day, origin, session_start, rarity, payout_xp, state, choice, \
+         announced FROM chests WHERE id = ?1",
+        id
+    )
+    .fetch_optional(&mut *connection)
+    .await?;
+    row.map(|row| {
+        stored(ChestRow {
+            id: row.id,
+            study_day: row.study_day,
+            origin: &row.origin,
+            session_start: row.session_start,
+            rarity: &row.rarity,
+            payout_xp: row.payout_xp,
+            state: &row.state,
+            choice: &row.choice,
+            announced: row.announced,
+        })
+    })
+    .transpose()
+}
+
+/// Every chest still sealed, vaulted or opened, of every study day, in the order they were
+/// stored: the sweep's population (R10).
+///
+/// # Errors
+///
+/// [`ChestError::Database`] when the read fails, and [`ChestError::Unreadable`] for a row whose
+/// value is outside its column's rule.
+pub async fn unresolved_chests(
+    connection: &mut SqliteConnection,
+) -> Result<Vec<StoredChest>, ChestError> {
+    let rows = sqlx::query!(
+        "SELECT id, study_day, origin, session_start, rarity, payout_xp, state, choice, \
+         announced FROM chests WHERE state IN ('sealed', 'vaulted', 'opened') ORDER BY id"
+    )
+    .fetch_all(&mut *connection)
+    .await?;
+    rows.into_iter()
+        .map(|row| {
+            stored(ChestRow {
+                id: row.id,
+                study_day: row.study_day,
+                origin: &row.origin,
+                session_start: row.session_start,
+                rarity: &row.rarity,
+                payout_xp: row.payout_xp,
+                state: &row.state,
+                choice: &row.choice,
+                announced: row.announced,
+            })
+        })
+        .collect()
+}
+
+/// Opens chest `id`: sealed or vaulted becomes opened, and any other state is kept. Answers
+/// whether this call opened it, so a second open is told apart from the first (R8).
+///
+/// # Errors
+///
+/// [`ChestError::Database`] when the write fails.
+pub async fn mark_opened(connection: &mut SqliteConnection, id: i64) -> Result<bool, ChestError> {
+    let written = sqlx::query!(
+        "UPDATE chests SET state = 'opened' WHERE id = ?1 AND state IN ('sealed', 'vaulted')",
+        id
+    )
+    .execute(&mut *connection)
+    .await?;
+    Ok(written.rows_affected() == 1)
+}
+
+/// Resolves opened chest `id` with no choice: the open's second step for a chest that pays XP
+/// (R8). A chest in any other state is kept.
+///
+/// # Errors
+///
+/// [`ChestError::Database`] when the write fails.
+pub async fn mark_resolved(connection: &mut SqliteConnection, id: i64) -> Result<(), ChestError> {
+    sqlx::query!(
+        "UPDATE chests SET state = 'resolved' WHERE id = ?1 AND state = 'opened'",
+        id
+    )
+    .execute(&mut *connection)
+    .await?;
+    Ok(())
+}
+
+/// Settles opened Epic `id`'s choice and resolves it, unless its choice is made or it is not an
+/// opened Epic. Answers whether this call settled it (R9).
+///
+/// # Errors
+///
+/// [`ChestError::Database`] when the write fails.
+pub async fn settle_choice(
+    connection: &mut SqliteConnection,
+    id: i64,
+    choice: Choice,
+) -> Result<bool, ChestError> {
+    let name = choice.name();
+    let written = sqlx::query!(
+        "UPDATE chests SET state = 'resolved', choice = ?2 \
+         WHERE id = ?1 AND state = 'opened' AND rarity = 'epic' AND choice = ''",
+        id,
+        name
+    )
+    .execute(&mut *connection)
+    .await?;
+    Ok(written.rows_affected() == 1)
+}
+
+/// Resolves stale chest `id` from sealed, vaulted or opened. Answers whether this call resolved
+/// it, so a chest another write resolved first is not paid again (R10).
+///
+/// # Errors
+///
+/// [`ChestError::Database`] when the write fails.
+pub async fn sweep_resolve(connection: &mut SqliteConnection, id: i64) -> Result<bool, ChestError> {
+    let written = sqlx::query!(
+        "UPDATE chests SET state = 'resolved' \
+         WHERE id = ?1 AND state IN ('sealed', 'vaulted', 'opened')",
+        id
+    )
+    .execute(&mut *connection)
+    .await?;
+    Ok(written.rows_affected() == 1)
+}
+
+/// A stored row of `chests` as read, before its names are checked.
+struct ChestRow<'a> {
+    id: i64,
+    study_day: i64,
+    origin: &'a str,
+    session_start: i64,
+    rarity: &'a str,
+    payout_xp: i64,
+    state: &'a str,
+    choice: &'a str,
+    announced: i64,
+}
+
+/// The chest a stored row holds, refused when a value is outside its column's rule.
+fn stored(row: ChestRow<'_>) -> Result<StoredChest, ChestError> {
+    Ok(StoredChest {
+        id: row.id,
+        study_day: StudyDay::from_epoch_day(row.study_day),
+        origin: Origin::from_name(row.origin)
+            .ok_or_else(|| unreadable("chests.origin", row.origin))?,
+        session_start: row.session_start,
+        rarity: Rarity::from_name(row.rarity)
+            .ok_or_else(|| unreadable("chests.rarity", row.rarity))?,
+        payout_xp: row.payout_xp,
+        state: ChestState::from_name(row.state)
+            .ok_or_else(|| unreadable("chests.state", row.state))?,
+        choice: Choice::from_stored(row.choice)?,
+        announced: match row.announced {
+            0 => false,
+            1 => true,
+            other => return Err(unreadable("chests.announced", &other.to_string())),
+        },
+    })
 }
 
 /// Stores `chest` unless its key is already held, and answers its id, or none when the key was

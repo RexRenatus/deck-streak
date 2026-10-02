@@ -1,4 +1,4 @@
-//! The double-XP token's constants (SPEC-081 R12, R13). Part 3 adds its rules.
+//! The double-XP token's constants and its store (SPEC-081 R9, R12, R13). Part 3 adds its rules.
 
 use deck_streak_ingest::reader::Review;
 use deck_streak_kernel::{StudyDay, StudyDayRule, Track, UtcMillis};
@@ -75,6 +75,30 @@ pub struct TokenSettlement {
     pub bonuses: Vec<TokenBonus>,
     /// The tokens whose window ended, marked consumed by this settlement.
     pub consumed: Vec<i64>,
+}
+
+/// Stores a token for Epic `chest_id`, granted at `at`, unless the chest already holds one, and
+/// answers its id, or none when nothing was written (R9). The unique index over the chests that
+/// name a token is the existence check.
+///
+/// # Errors
+///
+/// [`ChestError::Database`] when the write fails.
+pub(crate) async fn grant_token(
+    connection: &mut SqliteConnection,
+    chest_id: i64,
+    at: UtcMillis,
+) -> Result<Option<i64>, ChestError> {
+    let at = at.epoch_millis();
+    let written = sqlx::query!(
+        "INSERT INTO xp_tokens (chest_id, granted_at, created_at) VALUES (?1, ?2, ?2) \
+         ON CONFLICT DO NOTHING",
+        chest_id,
+        at
+    )
+    .execute(&mut *connection)
+    .await?;
+    Ok((written.rows_affected() == 1).then(|| written.last_insert_rowid()))
 }
 
 /// Activates the oldest held token at `now` (R12), in the caller's write. RED-FIRST STUB: answers

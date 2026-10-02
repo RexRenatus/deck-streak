@@ -13,6 +13,7 @@ use sqlx::SqliteConnection;
 use crate::chest_store::{self, ChestState, Choice, NewChest, Origin, StoredChest};
 use crate::draw::{Draw, DrawError};
 use crate::sessions::{SESSION_GAP_MS, Session, meets_chest_floor};
+use crate::tokens;
 
 /// Common's base odds, in percent points.
 pub const BASE_ODDS_COMMON: f64 = 70.0;
@@ -412,33 +413,82 @@ pub struct Swept {
     pub payout: Option<Payout>,
 }
 
-/// Opens chest `chest_id` (R8), in the caller's write. RED-FIRST STUB: answers that no chest
-/// holds the id.
+/// Opens chest `chest_id` (R8), in the caller's write.
+///
+/// The first open moves a sealed or vaulted chest to opened, a guarded update, so a second open
+/// changes nothing and pays nothing. An Epic stays opened for its choice. Any other rarity is
+/// resolved in the same write and revealed with its stored rarity and its payout, which the
+/// caller grants through the grant port in that write: the payout as rolled, on the chest's own
+/// study day.
 ///
 /// # Errors
 ///
 /// A store error as [`chest_store`](crate::chest_store) answers it.
 pub async fn open_chest_on(
-    _connection: &mut SqliteConnection,
-    _chest_id: i64,
+    connection: &mut SqliteConnection,
+    chest_id: i64,
 ) -> Result<Opened, ChestError> {
-    Ok(Opened::NoSuchChest)
+    let Some(chest) = chest_store::chest(connection, chest_id).await? else {
+        return Ok(Opened::NoSuchChest);
+    };
+    if !chest_store::mark_opened(connection, chest_id).await? {
+        return Ok(Opened::AlreadyOpened);
+    }
+    if chest.rarity == Rarity::Epic {
+        return Ok(Opened::ChoicePending(StoredChest {
+            state: ChestState::Opened,
+            ..chest
+        }));
+    }
+    // The open's own write holds the chest opened, so its resolve takes the row.
+    chest_store::mark_resolved(connection, chest_id).await?;
+    Ok(Opened::Revealed {
+        chest: StoredChest {
+            state: ChestState::Resolved,
+            ..chest
+        },
+        payout: payout_of(chest.id, chest.study_day, chest.payout_xp),
+    })
 }
 
-/// Settles an opened Epic's choice (R9), in the caller's write. RED-FIRST STUB: answers that the
-/// chest is not an Epic.
+/// Settles opened Epic `chest_id`'s choice (R9), in the caller's write.
+///
+/// A freeze asked for while `freeze_capped` (the streaks' hold cap or this month's cap on dropped
+/// freezes would refuse it; this context holds neither cap) becomes a token, and the answer says
+/// it was capped. The settle is a guarded update, taken before anything is granted, so a choice
+/// settled before grants nothing. A token is stored for the chest in the same write; a freeze is
+/// the caller's to grant through the streaks' freeze port with the reason `chest`.
 ///
 /// # Errors
 ///
 /// A store error as [`chest_store`](crate::chest_store) answers it.
 pub async fn settle_epic_choice_on(
-    _connection: &mut SqliteConnection,
-    _chest_id: i64,
-    _wanted: Choice,
-    _freeze_capped: bool,
-    _at: UtcMillis,
+    connection: &mut SqliteConnection,
+    chest_id: i64,
+    wanted: Choice,
+    freeze_capped: bool,
+    at: UtcMillis,
 ) -> Result<Settled, ChestError> {
-    Ok(Settled::NotAnEpic)
+    let Some(chest) = chest_store::chest(connection, chest_id).await? else {
+        return Ok(Settled::NotAnEpic);
+    };
+    if chest.rarity != Rarity::Epic {
+        return Ok(Settled::NotAnEpic);
+    }
+    let capped = wanted == Choice::Freeze && freeze_capped;
+    let choice = if capped { Choice::Token } else { wanted };
+    if !chest_store::settle_choice(connection, chest_id, choice).await? {
+        return Ok(Settled::AlreadySettled);
+    }
+    let token_id = match choice {
+        Choice::Token => tokens::grant_token(connection, chest_id, at).await?,
+        Choice::Freeze => None,
+    };
+    Ok(Settled::Chosen {
+        choice,
+        capped,
+        token_id,
+    })
 }
 
 /// Resolves the stale chests of the study days before `today` (R10), in the caller's write.
@@ -452,4 +502,14 @@ pub async fn sweep_stale_chests_on(
     _today: StudyDay,
 ) -> Result<Vec<Swept>, ChestError> {
     Ok(Vec::new())
+}
+
+/// A chest's payout of `xp` on its own study day, none when it pays 0.
+fn payout_of(chest_id: i64, study_day: StudyDay, xp: i64) -> Option<Payout> {
+    (xp > 0).then_some(Payout {
+        chest_id,
+        study_day,
+        xp,
+        track: Track::Language,
+    })
 }

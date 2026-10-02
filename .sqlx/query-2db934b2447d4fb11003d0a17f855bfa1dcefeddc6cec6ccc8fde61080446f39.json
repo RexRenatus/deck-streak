@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id, origin, session_start, rarity, payout_xp, state FROM chests WHERE study_day = ?1 ORDER BY id",
+  "query": "SELECT id, study_day, origin, session_start, rarity, payout_xp, state, choice, announced FROM chests WHERE state IN ('sealed', 'vaulted', 'opened') ORDER BY id",
   "describe": {
     "columns": [
       {
@@ -15,8 +15,19 @@
         }
       },
       {
-        "name": "origin",
+        "name": "study_day",
         "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "chests",
+            "name": "study_day"
+          }
+        }
+      },
+      {
+        "name": "origin",
+        "ordinal": 2,
         "type_info": "Text",
         "origin": {
           "Table": {
@@ -27,7 +38,7 @@
       },
       {
         "name": "session_start",
-        "ordinal": 2,
+        "ordinal": 3,
         "type_info": "Integer",
         "origin": {
           "Table": {
@@ -38,7 +49,7 @@
       },
       {
         "name": "rarity",
-        "ordinal": 3,
+        "ordinal": 4,
         "type_info": "Text",
         "origin": {
           "Table": {
@@ -49,7 +60,7 @@
       },
       {
         "name": "payout_xp",
-        "ordinal": 4,
+        "ordinal": 5,
         "type_info": "Integer",
         "origin": {
           "Table": {
@@ -60,7 +71,7 @@
       },
       {
         "name": "state",
-        "ordinal": 5,
+        "ordinal": 6,
         "type_info": "Text",
         "origin": {
           "Table": {
@@ -68,12 +79,37 @@
             "name": "state"
           }
         }
+      },
+      {
+        "name": "choice",
+        "ordinal": 7,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "chests",
+            "name": "choice"
+          }
+        }
+      },
+      {
+        "name": "announced",
+        "ordinal": 8,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "chests",
+            "name": "announced"
+          }
+        }
       }
     ],
     "parameters": {
-      "Right": 1
+      "Right": 0
     },
     "nullable": [
+      false,
+      false,
+      false,
       false,
       false,
       false,
@@ -82,5 +118,5 @@
       false
     ]
   },
-  "hash": "355eaf7ee88b87fb250883110c7826722944e78bdb3f92433fa340a5fc533113"
+  "hash": "2db934b2447d4fb11003d0a17f855bfa1dcefeddc6cec6ccc8fde61080446f39"
 }
