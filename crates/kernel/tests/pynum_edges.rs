@@ -116,3 +116,23 @@ fn the_median_of_a_list_holding_a_nan_is_nan() {
         assert!(got.is_nan(), "median of {list:?} is {got}");
     }
 }
+
+#[test]
+fn a_round_beyond_the_largest_float_is_a_signed_infinity() {
+    // CPython raises `OverflowError` ("rounded value too large to represent") for each; the port
+    // returns an infinity of the sign of `x` (SPEC-302 section 5).
+    let largest = f64::MAX;
+    for (x, ndigits) in [(largest, -307), (largest, -308), (1.7e308, -308)] {
+        assert_eq!(
+            pynum::round(x, ndigits),
+            f64::INFINITY,
+            "round({x:e}, {ndigits})"
+        );
+        assert_eq!(
+            pynum::round(-x, ndigits),
+            f64::NEG_INFINITY,
+            "round({:e}, {ndigits})",
+            -x
+        );
+    }
+}

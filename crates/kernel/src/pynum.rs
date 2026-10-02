@@ -219,6 +219,8 @@ fn round_to_float(quotient: &Wide, remainder: u64, divisor: u64) -> f64 {
 ///
 /// `round(2.675, 2)` is 2.67 because the float is 2.67499...; the decimal expansion of the float
 /// is taken exactly, rounded as text, and read back to the nearest float.
+/// A rounded value beyond the largest float is an infinity, where CPython raises (SPEC-302
+/// section 5).
 #[must_use]
 pub fn round(x: f64, ndigits: i32) -> f64 {
     if !x.is_finite() || x == 0.0 || ndigits > 323 {
