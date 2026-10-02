@@ -552,6 +552,17 @@ A20: pnpm exec vitest run web/app/src/lib/economy/wallet-history.test.ts -t "lis
   read is one constant statement run by `sqlx::query_as`, because a mutant of a `sqlx::query!`
   statement does not compile against the offline query cache, so no row could prove its order.
 
+Two rows pin the page's boundary, which cargo-mutants' run on this diff found unobserved (its `>` to
+`>=` mutant at the page's look-ahead was missed), and both are killed by
+`wallet_ports::a_page_that_holds_the_last_movement_names_no_next_page`, which seeds twenty movements
+spelt literally:
+
+- `S08216-A-FULL-PAGE-NAMES-NO-NEXT-PAGE`: target `crates/economy/src/wallet.rs`, the look-ahead's
+  `>` turned to `>=`, so a page that holds the last movement would name a next page.
+- `S08217-A-PAGE-HOLDS-TWENTY-MOVEMENTS`: target `crates/economy/src/wallet.rs`, the page size's
+  literal turned from 20 to 21; cargo-mutants never mutates a constant's literal, so a hand row pins
+  it.
+
 **The manifest of E1b.** Section 4's rows that E1b leaves to E3:
 
 - `crates/economy/src/shop.rs`: unchanged by E1b; E3 delivers it.
@@ -584,7 +595,7 @@ Section 4's rows E1b delivers, or changes after E1:
 - `web/app/src/lib/economy/wallet-header.test.ts`: added, A18.
 - `web/app/src/routes/+layout.svelte`: changed, the wallet header on every screen.
 - `web/app/src/lib/routes.ts`: changed, the /wallet screen joins `ROUTES`; E3 adds the shop's.
-- `scripts/mutation-rows.d/S08200-S08299.json`: changed, the rows S08212 to S08215.
+- `scripts/mutation-rows.d/S08200-S08299.json`: changed, the rows S08212 to S08215, and S08216 and S08217.
 - `docs/red-first/SPEC-082.md`: changed, E1b's red-first record appended.
 
 The files E1b adds or changes that section 4 does not name:
