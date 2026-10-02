@@ -594,7 +594,7 @@ A31: cargo test -p deck-streak-streaks --test population_rules -- --exact the_fo
 A32: cargo test -p deck-streak-streaks --test population_rules -- --exact the_silence_walk_and_the_stored_anchor_follow_the_run_at_every_distance
 A33: cargo test -p deck-streak-streaks --test store_effects
 A34: cargo test -p deck-streak-coordination --test streak_views
-A35: cargo test -p deck-streak-coordination --test streak_fold -- --exact the_step_is_named_for_the_fold_report
+A35: cargo test -p deck-streak-coordination --test streak_fold -- --exact the_step_is_named_for_the_fold_report the_outside_freezes_join_the_language_row_within_zero_and_three
 A36: cargo test -p deck-streak-bot --test streak_commands -- --exact the_law_leads_only_above_zero_and_the_noun_follows_the_freezes
 A37: cargo test -p deck-streak-api --test streak_routes -- --exact the_streak_routes_name_why_they_cannot_answer
 A38: cargo test -p deck-streak-streaks --test silence_walk_bound -- --exact the_bounded_walk_answers_what_the_reference_walk_answers
@@ -1122,4 +1122,4 @@ and the changelog fragment `changelog.d/lapse-count-534.md`. It changes `docs/re
 
 ## 36. Amendment, 2026-10-02: the Status names the delivery
 
-Insert-only under ruling (i) of SPEC-038 section 8: every earlier byte is kept in order. The one insertion is in the Status line of the header: the delivery that moved this SPEC out of `docs/specs/planned/` (#446, ADR-016) and the closing marks that strike the old "planned" wording, which a SPEC in `docs/specs/` no longer states. This section is the other insertion.
+Insert-only under ruling (i) of SPEC-038 section 8: every earlier byte is kept in order. The first insertion is in the Status line of the header: the delivery that moved this SPEC out of `docs/specs/planned/` (#446, ADR-016) and the closing marks that strike the old "planned" wording, which a SPEC in `docs/specs/` no longer states. The second insertion, in section 3's fence: A35's line gains its row's second test as a second `--exact` filter (`the_outside_freezes_join_the_language_row_within_zero_and_three`), which the row already named and the line did not select; A43's own line already ran it, so no criterion changes. This section is the last insertion.
