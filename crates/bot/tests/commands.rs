@@ -15,6 +15,7 @@ mod fake_bot_api;
 
 use std::collections::BTreeSet;
 
+use deck_streak_bot::badges_commands::{badges_failed_reply, records_failed_reply};
 use deck_streak_bot::commands::{
     CONFIRM_ERASE, EXPORT_FILE_NAME, MENU, MINI_APP_URL, Reply, erase_done_reply,
     erase_failed_reply, export_caption, export_failed_reply, help_reply, sync_reply,
@@ -115,9 +116,10 @@ async fn the_menu_is_registered_for_the_owners_chat_only() {
     assert_eq!(
         registered,
         BTreeSet::from([
-            "privacy", "export", "delete", "sync", "score", "level", "streak", "drills", "drill"
+            "privacy", "export", "delete", "sync", "score", "level", "streak", "badges", "records",
+            "drills", "drill"
         ]),
-        "the nine commands of the menu"
+        "the eleven commands of the menu"
     );
     for (entry, command) in MENU
         .iter()
@@ -341,6 +343,8 @@ fn rendered() -> Vec<(&'static str, Reply)> {
         ),
         ("score-none", score_reply(None)),
         ("score-failed", score_failed_reply()),
+        ("badges-failed", badges_failed_reply()),
+        ("records-failed", records_failed_reply()),
         ("help", help_reply()),
         ("export-failed", export_failed_reply()),
         ("erase-done-log-held", erase_done_reply(true)),

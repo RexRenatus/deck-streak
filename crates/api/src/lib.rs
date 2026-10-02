@@ -25,6 +25,7 @@
 #![warn(missing_docs, clippy::all)]
 
 pub mod analytics_routes;
+pub mod badges_routes;
 pub mod drill_routes;
 pub mod health;
 pub mod inbox_capture_route;

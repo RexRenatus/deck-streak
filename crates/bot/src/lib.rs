@@ -20,6 +20,7 @@
 #![deny(unused_must_use)]
 #![warn(missing_docs, clippy::all)]
 
+pub mod badges_commands;
 pub mod capture;
 pub mod chunk;
 pub mod commands;

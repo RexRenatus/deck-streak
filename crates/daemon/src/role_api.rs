@@ -22,8 +22,8 @@ use deck_streak_identity::{Freshness, IdentityError, OwnerGate};
 use deck_streak_ingest::reader::CollectionReader;
 use deck_streak_ingest::settings::{ScopeSettings, SyncSettings};
 use deck_streak_kernel::{
-    Clock, Conventions, ConventionsError, CredentialLoader, CredentialsDirectory, Environment,
-    KernelSettings, Offload, Redactor, SettingsError, SystemClock,
+    Clock, Conventions, ConventionsError, Courses, CredentialLoader, CredentialsDirectory,
+    Environment, KernelSettings, Offload, Redactor, SettingsError, SystemClock,
 };
 use tokio::sync::oneshot;
 
@@ -73,7 +73,9 @@ pub fn api_state(
     readiness: Readiness,
     access: OwnerAccess,
 ) -> ApiState {
-    let state = ApiState::new(readiness).with_owner(access);
+    let state = ApiState::new(readiness)
+        .with_owner(access)
+        .with_courses(courses(env));
     let state = match law_tier_source(env, offload) {
         Some(source) => state.with_law_tiers(source),
         None => state,
@@ -85,6 +87,18 @@ pub fn api_state(
     match wiring::inbox_captures(env) {
         Some(captures) => state.with_inbox(captures),
         None => state,
+    }
+}
+
+/// The courses the badge catalog's descriptions are rendered from (SPEC-073 R16): the configured
+/// ones, or the defaults when the setting refuses, which the log says.
+fn courses(env: &Environment) -> Courses {
+    match Courses::load(env) {
+        Ok(courses) => courses,
+        Err(error) => {
+            tracing::warn!(%error, "the badge catalog uses the default courses: the setting refused");
+            Courses::default()
+        }
     }
 }
 

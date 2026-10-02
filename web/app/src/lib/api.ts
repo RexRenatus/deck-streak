@@ -1,3 +1,4 @@
+import { parseBadges, type BadgesView } from './badges/badges';
 import {
   CAPTURE_PATH,
   captureBody,
@@ -13,6 +14,7 @@ import {
   type Listing
 } from './insights/insights';
 import { parseLevel, type LevelView } from './level/level';
+import { parseRecords, type RecordsView } from './records/records';
 import { parseGovernor, parseStreak, type StreakView } from './streak/streak';
 import { parseScore, type ScoreToday } from './score/score';
 import { parseWallet, walletPath, type WalletView } from './economy/wallet';
@@ -63,6 +65,10 @@ export interface Api {
   level(): Promise<Answer<LevelView>>;
   /** Both streak tracks and the governor's verdict (SPEC-076 R20, R21). */
   streak(): Promise<Answer<StreakView>>;
+  /** The owner's earned badges, newest first, and the locked ones with progress (SPEC-073 R16). */
+  badges(): Promise<Answer<BadgesView>>;
+  /** The owner's personal records, today's distance to each, and the chase (SPEC-073 R17). */
+  records(): Promise<Answer<RecordsView>>;
   /** The owner's unseen in-app celebrations, each with its tier (SPEC-084 R10). */
   feed(): Promise<Answer<FeedItem[]>>;
   /** The instruments the owner can read (SPEC-094 R18). */
@@ -174,6 +180,8 @@ export function createApi(options: ApiOptions): Api {
       if (governor.kind !== 'ok') return governor;
       return { kind: 'ok', value: { ...streak.value, governor: governor.value } };
     },
+    badges: () => read('/api/badges', parseBadges),
+    records: () => read('/api/records', parseRecords),
     feed: () => read(FEED_PATH, parseFeed),
     wallet: (before) => read(walletPath(before), parseWallet),
     insights: () => read('/api/insights', parseListings),

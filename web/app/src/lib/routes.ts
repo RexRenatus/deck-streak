@@ -15,6 +15,8 @@ export const ROUTES = [
   '/level',
   '/streak',
   '/wallet',
+  '/badges',
+  '/records',
   '/capture'
 ] as const;
 

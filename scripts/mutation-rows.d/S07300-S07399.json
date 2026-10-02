@@ -135,6 +135,213 @@
         "    sqlx::query(\n        \"INSERT INTO records (kind, value, study_day, previous, celebrated_at, created_at) \\\n         VALUES (?1, ?2, ?3, ?4, ?5, ?6) \\\n         ON CONFLICT (kind) DO UPDATE SET value = excluded.value, previous = excluded.previous, \\\n         celebrated_at = CASE WHEN records.study_day = excluded.study_day \\\n         THEN records.celebrated_at ELSE excluded.celebrated_at END, \\\n         study_day = excluded.study_day\",\n    )\n    .bind(kind)\n    .bind(record.value)\n    .bind(day)\n    .bind(record.previous)\n    .bind(marked)\n    .bind(at)\n",
         "records_steps::a_record_beaten_on_the_seeds_own_day_is_offered",
         "the records write keeps a same-day row's mark only when the row is not the seed (previous below value), so a beat of the seed's own study day is written unmarked and offered; the mutant is the CASE before fix round 1, spelt as sqlx::query with its six binds (SPEC-073 R11, R12, ADR-303 Decision 2)"
+      ],
+      [
+        "S07319-THE-BADGES-ROUTE-ASKS-FOR-THE-OWNER",
+        "api",
+        "src/badges_routes.rs",
+        "async fn badges(_owner: OwnerSession, ",
+        "async fn badges(",
+        "badges_routes::the_badge_record_and_milestone_routes_answer_only_the_owner",
+        "GET /api/badges takes the owner's session before it reads anything, so no session, an unknown one or an ended one answers 401 with the reason alone and no badge data (SPEC-073 A20, R16)"
+      ],
+      [
+        "S07320-THE-RECORDS-ROUTE-ASKS-FOR-THE-OWNER",
+        "api",
+        "src/badges_routes.rs",
+        "async fn records(_owner: OwnerSession, ",
+        "async fn records(",
+        "badges_routes::the_badge_record_and_milestone_routes_answer_only_the_owner",
+        "GET /api/records takes the owner's session before it reads anything, so a request without the owner's live session answers 401 and no record data (SPEC-073 A20, R17)"
+      ],
+      [
+        "S07321-THE-MILESTONE-ROUTE-ASKS-FOR-THE-OWNER",
+        "api",
+        "src/badges_routes.rs",
+        "async fn milestone(_owner: OwnerSession)",
+        "async fn milestone()",
+        "badges_routes::the_badge_record_and_milestone_routes_answer_only_the_owner",
+        "GET /api/milestone takes the owner's session too, so even its pending answer is the owner's alone (SPEC-073 A20, R17)"
+      ],
+      [
+        "S07322-THE-MILESTONE-ANSWERS-PENDING",
+        "api",
+        "src/badges_routes.rs",
+        "\"status\": \"pending\"",
+        "\"status\": \"next\"",
+        "badges_routes::the_milestone_route_answers_pending",
+        "the milestone route answers exactly {\"status\": \"pending\"}, read from nothing, while Road to C2 supplies no mature-card sum (SPEC-073 R15, R17; #85)"
+      ],
+      [
+        "S07323-A-REACHED-RECORD-IS-NO-DISTANCE",
+        "api",
+        "src/badges_routes.rs",
+        "value.saturating_sub(today).max(0)",
+        "value.saturating_sub(today)",
+        "badges_routes::the_records_route_answers_each_distance_from_today",
+        "a record today already reaches is at no distance, never a negative one: the fixture's minutes record is 8 against today's 10 and answers 0 (SPEC-073 A24, R19)"
+      ],
+      [
+        "S07324-A-LOCKED-BADGE-SHOWS-ITS-THRESHOLD",
+        "api",
+        "src/badges_routes.rs",
+        "\"threshold\": progress.threshold,",
+        "\"threshold\": progress.value,",
+        "badges_routes::the_badges_route_answers_the_earned_newest_first_and_the_locked_with_progress",
+        "a locked badge's progress answers its input's value against its own threshold, so a three-day streak reads 3 of 30 for the monthly badge; a json! argument, which cargo-mutants never mutates (SPEC-073 A23, R16)"
+      ],
+      [
+        "S07325-BADGES-LISTS-TWENTY",
+        "bot",
+        "src/badges_commands.rs",
+        "pub const BADGES_LISTED: usize = 20;",
+        "pub const BADGES_LISTED: usize = 21;",
+        "badges_commands::badges_lists_the_twenty_most_recent",
+        "/badges lists at most the 20 most recently awarded badges: at 21 earned the oldest drops out; cargo-mutants never mutates a constant (SPEC-073 A21, R18)"
+      ],
+      [
+        "S07326-THE-CHASE-LINE-NAMES-THE-CHASED-RECORD",
+        "bot",
+        "src/badges_commands.rs",
+        "line.kind == kind",
+        "line.kind != kind",
+        "badges_commands::records_names_the_record_to_chase",
+        "/records closes with the line naming the record today is closest to, by that record's own label (SPEC-073 A22, R18)"
+      ],
+      [
+        "S07327-THE-NEWEST-BADGE-COMES-FIRST",
+        "coordination",
+        "src/progression/badges_view.rs",
+        "        (Reverse(left.awarded_at), &left.key, left.tier).cmp(&(\n            Reverse(right.awarded_at),\n",
+        "        (Reverse(right.awarded_at), &left.key, left.tier).cmp(&(\n            Reverse(left.awarded_at),\n",
+        "badges_view::the_earned_badges_are_ordered_most_recent_first",
+        "the earned badges are ordered newest award first, then by key and tier; the mutant is the predecessor's oldest-first order (SPEC-073 A21, R18)"
+      ],
+      [
+        "S07328-A-STREAK-BADGE-READS-THE-STREAK",
+        "coordination",
+        "src/progression/badges_view.rs",
+        "Input::Streak => (inputs.streak, streak_threshold(key)?)",
+        "Input::Streak => (inputs.day_decks, streak_threshold(key)?)",
+        "badges_view::a_locked_badge_carries_its_input_against_its_threshold",
+        "a locked streak badge's progress reads the stored streak, never another input (SPEC-073 A23, R16)"
+      ],
+      [
+        "S07329-THE-MONTHLY-STREAK-IS-THIRTY",
+        "coordination",
+        "src/progression/badges_view.rs",
+        "\"monthly_monk\" => Some(30),",
+        "\"monthly_monk\" => Some(31),",
+        "badges_view::each_streak_threshold_is_progressions_own_boundary",
+        "the monthly streak badge's threshold is 30, the streak its condition holds at and not one below; a literal in a match arm, which cargo-mutants never mutates (SPEC-073 A23, R16)"
+      ],
+      [
+        "S07330-A-FAILED-BADGES-READ-ANSWERS-THE-FAILED-TEXT",
+        "bot",
+        "src/commands.rs",
+        "                badges_failed_reply()",
+        "                badges_reply(&[])",
+        "badges_commands::badges_that_cannot_be_read_answer_the_failed_golden",
+        "a /badges whose read fails answers the failed text, never an empty collection that reads as no badges (SPEC-073 A23, R16)"
+      ],
+      [
+        "S07331-A-FAILED-RECORDS-READ-ANSWERS-THE-FAILED-TEXT",
+        "bot",
+        "src/commands.rs",
+        "                records_failed_reply()",
+        "                records_reply(&deck_streak_coordination::progression::records_view::RecordsView::default())",
+        "badges_commands::records_that_cannot_be_read_answer_the_failed_golden",
+        "a /records whose read fails answers the failed text, never a default view that reads as no records (SPEC-073 A23, R16)"
+      ],
+      [
+        "S07332-AN-UNSTUDIED-STREAK-IS-ZERO",
+        "coordination",
+        "src/progression/badges_view.rs",
+        "        streak: streak.map_or(0, |state| i64::from(state.current)),",
+        "        streak: streak.map_or(1, |state| i64::from(state.current)),",
+        "badges_view::an_unstudied_database_shows_every_locked_badge_at_zero_progress",
+        "with no stored streak a locked badge's streak progress is zero, not one (SPEC-073 A23, R16)"
+      ],
+      [
+        "S07333-AN-UNSTUDIED-DAY-HAS-NO-REVIEWS",
+        "coordination",
+        "src/progression/badges_view.rs",
+        "        day_reviews: day.as_ref().map_or(0, |day| day.metrics.reviews),",
+        "        day_reviews: day.as_ref().map_or(1, |day| day.metrics.reviews),",
+        "badges_view::an_unstudied_database_shows_every_locked_badge_at_zero_progress",
+        "with no rollup for today a locked badge's review progress is zero, not one (SPEC-073 A23, R16)"
+      ],
+      [
+        "S07334-AN-UNSTUDIED-DAY-HAS-NO-DECKS",
+        "coordination",
+        "src/progression/badges_view.rs",
+        "        day_decks: day.as_ref().map_or(0, |day| day.metrics.decks_studied),",
+        "        day_decks: day.as_ref().map_or(1, |day| day.metrics.decks_studied),",
+        "badges_view::an_unstudied_database_shows_every_locked_badge_at_zero_progress",
+        "with no rollup for today a locked badge's decks progress is zero, not one (SPEC-073 A23, R16)"
+      ],
+      [
+        "S07335-AN-UNSTUDIED-DAY-HAS-NO-SCORE",
+        "coordination",
+        "src/progression/badges_view.rs",
+        "        day_score: day.as_ref().map_or(0, |day| day.score.total),",
+        "        day_score: day.as_ref().map_or(1, |day| day.score.total),",
+        "badges_view::an_unstudied_database_shows_every_locked_badge_at_zero_progress",
+        "with no rollup for today a locked badge's score progress is zero, not one (SPEC-073 A23, R16)"
+      ],
+      [
+        "S07336-AN-UNSTUDIED-TODAY-IS-ZERO-IN-RECORDS",
+        "coordination",
+        "src/progression/records_view.rs",
+        "        .map_or_else(LiveDay::default, |day| LiveDay {",
+        "        .map_or_else(|| LiveDay { score: 1, reviews: 1, seconds: 60.0 }, |day| LiveDay {",
+        "badges_view::records_with_no_rollup_for_today_read_today_as_zero",
+        "with stored records and no rollup for today, today reads zero and each distance equals its record (SPEC-073 A23, R16)"
+      ],
+      [
+        "S07337-A-MALFORMED-COURSES-SETTING-READS-THE-DEFAULTS",
+        "daemon",
+        "src/role_api.rs",
+        "            Courses::default()",
+        "            Courses::parse(r#\"{\"schema\": \"deckstreak.courses.v1\", \"courses\": [{\"code\": \"qaa\", \"name\": \"Course Qaa\", \"flag\": \"F\", \"deck_root\": \"Qaa\", \"alias\": \"a\", \"writing\": false, \"unit_bands\": {\"A1\": [1, 5]}}, {\"code\": \"qab\", \"name\": \"Course Qab\", \"flag\": \"F\", \"deck_root\": \"Qab Deck\", \"alias\": \"b\", \"writing\": true, \"unit_bands\": {}}], \"focus_subjects\": []}\"#).expect(\"the planted courses parse\")",
+        "badges_route_composed::a_malformed_courses_setting_leaves_the_composed_route_on_the_default_descriptions",
+        "a malformed courses setting leaves the composed route on the default descriptions, never on a course list (SPEC-073 A23, R16)"
+      ],
+      [
+        "S07338-A-FULLY-REACHED-RECORD-LIST-HAS-NO-CHASE",
+        "bot",
+        "src/badges_commands.rs",
+        "    if let Some((kind, gap)) = view.chase",
+        "    if let Some((kind, gap)) = view.chase.or(Some((view.lines[0].kind, 0)))",
+        "badges_commands::records_all_reached_today_end_without_a_chase_line",
+        "when every record is reached the reply ends without a chase line, never an invented one (SPEC-073 A23, R16)"
+      ],
+      [
+        "S07339-A-BADGES-ROLLUP-READ-ALONE-REFUSES",
+        "coordination",
+        "src/progression/badges_view.rs",
+        "rollup::stored(&mut connection, today).await?;",
+        "rollup::stored(&mut connection, today).await.ok().flatten();",
+        "badges_view::a_badges_view_whose_rollup_read_alone_refuses_is_an_error",
+        "a badges view whose rollup read alone fails is an error, never a view built as if nothing was studied (SPEC-073 A23, R16)"
+      ],
+      [
+        "S07340-A-BADGES-STREAK-READ-ALONE-REFUSES",
+        "coordination",
+        "src/progression/badges_view.rs",
+        "store::state(&mut connection, \"language\").await?;",
+        "store::state(&mut connection, \"language\").await.ok().flatten();",
+        "badges_view::a_badges_view_whose_streak_read_alone_refuses_is_an_error",
+        "a badges view whose streak read alone fails is an error, never a view built as if there were no streak (SPEC-073 A23, R16)"
+      ],
+      [
+        "S07341-A-RECORDS-ROLLUP-READ-ALONE-REFUSES",
+        "coordination",
+        "src/progression/records_view.rs",
+        "        .await?\n        .map_or_else(LiveDay::default",
+        "        .await\n        .ok()\n        .flatten()\n        .map_or_else(LiveDay::default",
+        "badges_view::a_records_view_whose_rollup_read_alone_refuses_is_an_error",
+        "a records view whose rollup read alone fails is an error, never a view with today read as zero (SPEC-073 A23, R16)"
       ]
     ],
     "CARGO_KILLED_SCRIPT_MUTATIONS": [
