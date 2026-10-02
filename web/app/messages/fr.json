@@ -4,5 +4,18 @@
   "ladder_region": "Célébrations",
   "ladder_opening": "Ouverture…",
   "ladder_dice": "Un lancer de dé",
-  "ladder_dismiss": "Fermer"
+  "ladder_dismiss": "Fermer",
+  "badges_earned_title": "Badges obtenus",
+  "badges_locked_title": "Badges verrouillés",
+  "badges_none": "Pas encore de badge — étudiez pour obtenir le premier !",
+  "badges_earned_on": "Obtenu le {day}",
+  "badges_progress": "Progression de {name}",
+  "badges_progress_text": "{value} sur {threshold}",
+  "records_title": "Records personnels",
+  "records_none": "Pas encore de record — ils se créent à mesure que vous étudiez.",
+  "records_set": "Établi le {day}, battant {previous}",
+  "records_to_go": "Encore {gap} aujourd’hui",
+  "records_reached": "Atteint aujourd’hui",
+  "records_toward": "Aujourd’hui vers {label}",
+  "records_chase": "À battre : encore {gap} pour « {label} » aujourd’hui."
 }

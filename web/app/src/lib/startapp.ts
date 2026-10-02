@@ -12,7 +12,9 @@ const TOKENS: ReadonlyMap<string, RoutePath> = new Map<string, RoutePath>([
   ['insights', '/insights'],
   ['score', '/score'],
   ['level', '/level'],
-  ['streak', '/streak']
+  ['streak', '/streak'],
+  ['badges', '/badges'],
+  ['records', '/records']
 ]);
 
 // Telegram admits up to 512 characters of A-Z, a-z, 0-9, underscore and hyphen. DeckStreak's

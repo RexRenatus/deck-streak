@@ -5,7 +5,7 @@
 use deck_streak_kernel::{Db, KernelError, StudyDay};
 use deck_streak_progression::records::{BoardLine, RecordKind, chase};
 
-use crate::recompute::records::StoredRecord;
+use crate::recompute::records::{StoredRecord, stored_records};
 
 /// The current day's live totals the view compares each record with.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -76,8 +76,16 @@ pub fn records_view(stored: &[StoredRecord], live: LiveDay) -> RecordsView {
 ///
 /// [`KernelError::Database`] when a read fails.
 pub async fn records_now(db: &Db, today: StudyDay) -> Result<RecordsView, KernelError> {
-    let _ = (db, today);
-    Ok(RecordsView::default())
+    let mut connection = db.reader().acquire().await?;
+    let stored = stored_records(&mut connection).await?;
+    let live = deck_streak_analytics::rollup::stored(&mut connection, today)
+        .await?
+        .map_or_else(LiveDay::default, |day| LiveDay {
+            score: day.score.total,
+            reviews: day.metrics.reviews,
+            seconds: day.metrics.seconds,
+        });
+    Ok(records_view(&stored, live))
 }
 
 /// Today's live value for `kind`: the score, the study reviews, or the whole minutes of their

@@ -4,5 +4,18 @@
   "ladder_region": "Celebraciones",
   "ladder_opening": "Abriendo…",
   "ladder_dice": "Una tirada de dado",
-  "ladder_dismiss": "Cerrar"
+  "ladder_dismiss": "Cerrar",
+  "badges_earned_title": "Insignias obtenidas",
+  "badges_locked_title": "Insignias bloqueadas",
+  "badges_none": "Aún no tienes insignias — ¡estudia para ganar la primera!",
+  "badges_earned_on": "Obtenida el {day}",
+  "badges_progress": "Progreso de {name}",
+  "badges_progress_text": "{value} de {threshold}",
+  "records_title": "Récords personales",
+  "records_none": "Aún no hay récords — se crean solos mientras estudias.",
+  "records_set": "Logrado el {day}, superando {previous}",
+  "records_to_go": "Faltan {gap} hoy",
+  "records_reached": "Alcanzado hoy",
+  "records_toward": "Hoy hacia {label}",
+  "records_chase": "A por él: faltan {gap} para «{label}» hoy."
 }

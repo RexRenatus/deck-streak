@@ -9,7 +9,15 @@
 //! conditions are never stored, so those badges carry no progress (#560), and a habit or focus
 //! badge carries none until its context supplies it (#93, #94).
 
+use std::cmp::Reverse;
+use std::collections::BTreeSet;
+
 use deck_streak_kernel::{Courses, Db, KernelError, StudyDay, UtcMillis};
+use deck_streak_progression::badges::catalog::{Family, catalog};
+use deck_streak_progression::badges::conditions::{
+    CENTURION_DAY_REVIEWS, FOREST_GUARDIAN_COUNT, LEGENDARY_DAY_SCORE, MATURITY_MILESTONE_COUNT,
+    POLYGLOT_DECKS_DAY,
+};
 
 /// One earned badge as the surfaces show it.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -79,11 +87,57 @@ pub enum Input {
 }
 
 /// The study badges whose input is stored, each with the input its progress reads.
-pub const PROGRESS_INPUTS: &[(&str, Input)] = &[];
+pub const PROGRESS_INPUTS: &[(&str, Input)] = &[
+    ("week_warrior", Input::Streak),
+    ("monthly_monk", Input::Streak),
+    ("century_flame", Input::Streak),
+    ("year_of_iron", Input::Streak),
+    ("centurion_day", Input::DayReviews),
+    ("maturity_milestone", Input::MatureCards),
+    ("forest_guardian", Input::MatureCards),
+    ("polyglot", Input::DayDecks),
+    ("legendary_day", Input::DayScore),
+];
 
 /// The catalog badges that carry no progress: the study badges whose input is not stored, and the
 /// habit and focus badges, whose contexts supply none yet.
-pub const WITHOUT_PROGRESS: &[&str] = &[];
+pub const WITHOUT_PROGRESS: &[&str] = &[
+    // The study badges whose input is never stored: lifetime reviews, the hour, the week, the
+    // backlog and the two-input conditions (#560).
+    "first_steps",
+    "grinder",
+    "marathoner",
+    "sharpshooter",
+    "sniper_elite",
+    "inbox_zero",
+    "backlog_slayer",
+    "night_owl",
+    "early_bird",
+    "comeback_kid",
+    "leech_tamer",
+    "globetrotter",
+    "perfect_week",
+    "speed_demon",
+    "iron_will",
+    // The habit badges, decided by the habit context (#93).
+    "first_page",
+    "quill_initiate",
+    "ink_week",
+    "ink_month",
+    "ink_century",
+    "bookworm_week",
+    "polyglot_reader",
+    "marathon_reader",
+    // The focus badges, decided by the focus context (#94).
+    "focus_initiate",
+    "deep_work_day",
+    "deep_diver",
+    "focus_week",
+    "focus_month",
+    "monk_mode",
+    "deep_work_centurion",
+    "subject_devotee",
+];
 
 /// What a locked badge's progress is read from, as stored for the day.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -102,16 +156,65 @@ pub struct ProgressInputs {
 
 /// `earned`, most recently awarded first: newest award first, then by key and tier.
 #[must_use]
-pub fn most_recent_first(earned: Vec<EarnedLine>) -> Vec<EarnedLine> {
-    let _ = earned;
-    Vec::new()
+pub fn most_recent_first(mut earned: Vec<EarnedLine>) -> Vec<EarnedLine> {
+    earned.sort_by(|left, right| {
+        (Reverse(left.awarded_at), &left.key, left.tier).cmp(&(
+            Reverse(right.awarded_at),
+            &right.key,
+            right.tier,
+        ))
+    });
+    earned
 }
 
 /// The progress of the locked badge `key` over `inputs`, or `None` when its input is not stored.
 #[must_use]
 pub fn progress(key: &str, inputs: &ProgressInputs) -> Option<Progress> {
-    let _ = (key, inputs);
-    None
+    let (_, input) = PROGRESS_INPUTS.iter().find(|(listed, _)| *listed == key)?;
+    let (value, threshold) = match input {
+        // Progression writes the four streak thresholds inline in its conditions, so they are
+        // written here as literals and a test pins each to the boundary its condition holds at.
+        Input::Streak => (inputs.streak, streak_threshold(key)?),
+        Input::DayReviews => (inputs.day_reviews, wide(CENTURION_DAY_REVIEWS)?),
+        Input::DayDecks => (inputs.day_decks, wide(POLYGLOT_DECKS_DAY)?),
+        Input::DayScore => (inputs.day_score, LEGENDARY_DAY_SCORE),
+        Input::MatureCards => (inputs.mature_cards?, mature_threshold(key)?),
+    };
+    Some(Progress { value, threshold })
+}
+
+/// The streak a streak badge's condition holds at.
+fn streak_threshold(key: &str) -> Option<i64> {
+    match key {
+        "week_warrior" => Some(7),
+        "monthly_monk" => Some(30),
+        "century_flame" => Some(100),
+        "year_of_iron" => Some(365),
+        _ => None,
+    }
+}
+
+/// The mature cards a mature-card badge's condition holds at.
+fn mature_threshold(key: &str) -> Option<i64> {
+    match key {
+        "maturity_milestone" => Some(MATURITY_MILESTONE_COUNT),
+        "forest_guardian" => Some(FOREST_GUARDIAN_COUNT),
+        _ => None,
+    }
+}
+
+/// `threshold` as the view's integer; every progression threshold fits.
+fn wide(threshold: u64) -> Option<i64> {
+    i64::try_from(threshold).ok()
+}
+
+/// The family's name as the surfaces show it.
+const fn family_name(family: Family) -> &'static str {
+    match family {
+        Family::Study => "study",
+        Family::Habit => "habit",
+        Family::Focus => "focus",
+    }
 }
 
 /// The catalog badges under `courses` that `earned` holds no tier of, in the catalog's order, each
@@ -122,8 +225,19 @@ pub fn locked(
     earned: &[EarnedLine],
     inputs: &ProgressInputs,
 ) -> Vec<LockedLine> {
-    let _ = (courses, earned, inputs);
-    Vec::new()
+    let held: BTreeSet<&str> = earned.iter().map(|line| line.key.as_str()).collect();
+    catalog(courses)
+        .into_iter()
+        .filter(|badge| !held.contains(badge.key.as_str()))
+        .map(|badge| LockedLine {
+            progress: progress(&badge.key, inputs),
+            family: family_name(badge.family),
+            key: badge.key,
+            name: badge.name,
+            emoji: badge.emoji,
+            criteria: badge.description,
+        })
+        .collect()
 }
 
 /// Every earned badge, most recently awarded first.
@@ -132,8 +246,26 @@ pub fn locked(
 ///
 /// [`KernelError::Database`] when the read fails.
 pub async fn earned_badges(db: &Db) -> Result<Vec<EarnedLine>, KernelError> {
-    let _ = db;
-    Ok(Vec::new())
+    let mut connection = db.reader().acquire().await?;
+    // The order is the pure `most_recent_first`'s, not the query's, so a test holds it (Q1).
+    let rows = sqlx::query!(
+        "SELECT badge_key, tier, name, emoji, study_day, created_at FROM badges_earned"
+    )
+    .fetch_all(&mut *connection)
+    .await?;
+    let earned = rows
+        .into_iter()
+        .map(|row| EarnedLine {
+            key: row.badge_key,
+            // The column's check admits no negative tier.
+            tier: u32::try_from(row.tier).unwrap_or(0),
+            name: row.name,
+            emoji: row.emoji,
+            study_day: StudyDay::from_epoch_day(row.study_day),
+            awarded_at: UtcMillis::from_epoch_millis(row.created_at),
+        })
+        .collect();
+    Ok(most_recent_first(earned))
 }
 
 /// The badges view for `today` under `courses` (R16).
@@ -146,6 +278,20 @@ pub async fn badges_view(
     today: StudyDay,
     courses: &Courses,
 ) -> Result<BadgesView, KernelError> {
-    let _ = (db, today, courses);
-    Ok(BadgesView::default())
+    let earned = earned_badges(db).await?;
+    let mut connection = db.reader().acquire().await?;
+    let day = deck_streak_analytics::rollup::stored(&mut connection, today).await?;
+    let streak = deck_streak_streaks::store::state(&mut connection, "language").await?;
+    let inputs = ProgressInputs {
+        streak: streak.map_or(0, |state| i64::from(state.current)),
+        day_reviews: day.as_ref().map_or(0, |day| day.metrics.reviews),
+        day_decks: day.as_ref().map_or(0, |day| day.metrics.decks_studied),
+        day_score: day.as_ref().map_or(0, |day| day.score.total),
+        mature_cards: day
+            .as_ref()
+            .and_then(|day| day.card_state.as_ref())
+            .map(|state| state.mature_count),
+    };
+    let locked = locked(courses, &earned, &inputs);
+    Ok(BadgesView { earned, locked })
 }

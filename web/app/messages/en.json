@@ -70,5 +70,18 @@
   "dark_fields_cold": "There was nothing to check yet.",
   "dark_fields_item": "{noteType}: {field} ({notes} reviewed notes)",
   "dark_fields_more": "{count} more not shown.",
-  "dark_fields_unparseable": "Templates that could not be verified: {names}."
+  "dark_fields_unparseable": "Templates that could not be verified: {names}.",
+  "badges_earned_title": "Earned badges",
+  "badges_locked_title": "Locked badges",
+  "badges_none": "No badges yet — study to earn your first!",
+  "badges_earned_on": "Earned {day}",
+  "badges_progress": "{name} progress",
+  "badges_progress_text": "{value} of {threshold}",
+  "records_title": "Personal records",
+  "records_none": "No records yet — they mint themselves as you study.",
+  "records_set": "Set {day}, beating {previous}",
+  "records_to_go": "{gap} to go today",
+  "records_reached": "Reached today",
+  "records_toward": "Today toward {label}",
+  "records_chase": "Chase it: {gap} from “{label}” today."
 }

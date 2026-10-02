@@ -91,7 +91,7 @@ impl std::fmt::Debug for ApiState {
             .field("instruments", &self.instruments.is_some())
             .field("law_tiers", &self.law_tiers.is_some())
             .field("drills", &self.drills.is_some())
-            .field("courses", &self.courses)
+            .field("courses", &self.courses.is_some())
             .finish()
     }
 }

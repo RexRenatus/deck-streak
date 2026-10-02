@@ -37,8 +37,44 @@ export interface RecordsView {
   readonly chase: Chase | null;
 }
 
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** A record line, or undefined when `value` is not one. */
+function recordLine(value: unknown): RecordLine | undefined {
+  const given = (value ?? {}) as Record<string, unknown>;
+  const { kind, label, value: record, study_day: studyDay, previous, today, distance } = given;
+  if (typeof kind !== 'string' || typeof label !== 'string') return undefined;
+  if (typeof studyDay !== 'string' || !ISO_DATE.test(studyDay)) return undefined;
+  const numbers = [record, previous, today, distance];
+  if (!numbers.every((n) => typeof n === 'number')) return undefined;
+  return {
+    kind,
+    label,
+    value: record as number,
+    studyDay,
+    previous: previous as number,
+    today: today as number,
+    distance: distance as number
+  };
+}
+
+/** The record to chase, null for none, or undefined when `value` is neither. */
+function chase(value: unknown): Chase | null | undefined {
+  if (value === null) return null;
+  const { kind, label, gap } = (value ?? {}) as Record<string, unknown>;
+  if (typeof kind !== 'string' || typeof label !== 'string' || typeof gap !== 'number') {
+    return undefined;
+  }
+  return { kind, label, gap };
+}
+
 /** The body of `GET /api/records`, or null when it is not one. */
 export function parseRecords(body: unknown): RecordsView | null {
-  void body;
-  return null;
+  const given = (body ?? {}) as Record<string, unknown>;
+  if (!Array.isArray(given.records)) return null;
+  const records = given.records.map(recordLine);
+  if (records.includes(undefined)) return null;
+  const chased = chase(given.chase);
+  if (chased === undefined) return null;
+  return { records: records as RecordLine[], chase: chased };
 }

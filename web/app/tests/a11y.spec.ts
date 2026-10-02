@@ -110,6 +110,68 @@ for (const [scheme, themeParams] of Object.entries(THEMES)) {
           }
         })
       );
+      // The badge gallery: one earned, one locked with progress, one without (SPEC-073 R16).
+      await page.route('**/api/badges', (intercepted) =>
+        intercepted.fulfill({
+          json: {
+            earned: [
+              {
+                key: 'centurion_day',
+                tier: 0,
+                name: 'Centurion Day',
+                emoji: '\u{1F4AF}',
+                study_day: '2001-02-02'
+              }
+            ],
+            locked: [
+              {
+                key: 'monthly_monk',
+                name: 'Monthly Monk',
+                emoji: '\u{1F9D8}',
+                criteria: '30-day streak',
+                family: 'study',
+                progress: { value: 3, threshold: 30 }
+              },
+              {
+                key: 'first_page',
+                name: 'First Page',
+                emoji: '\u{1F4D6}',
+                criteria: 'Logged your first reading session',
+                family: 'habit',
+                progress: null
+              }
+            ]
+          }
+        })
+      );
+      // The records screen: one record still ahead today, one reached, and a chase (SPEC-073 R17).
+      await page.route('**/api/records', (intercepted) =>
+        intercepted.fulfill({
+          json: {
+            records: [
+              {
+                kind: 'best_score',
+                label: 'Best daily score',
+                value: 120,
+                study_day: '2001-02-01',
+                previous: 100,
+                today: 77,
+                distance: 43
+              },
+              {
+                kind: 'most_minutes',
+                label: 'Most minutes in a day',
+                value: 8,
+                study_day: '2001-01-30',
+                previous: 5,
+                today: 10,
+                distance: 0
+              }
+            ],
+            chase: { kind: 'best_score', label: 'Best daily score', gap: 43 }
+          }
+        })
+      );
       await page.emulateMedia({ colorScheme: scheme as 'light' | 'dark' });
     });
 

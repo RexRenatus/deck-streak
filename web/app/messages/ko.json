@@ -4,5 +4,18 @@
   "ladder_region": "축하",
   "ladder_opening": "여는 중…",
   "ladder_dice": "주사위 굴리기",
-  "ladder_dismiss": "닫기"
+  "ladder_dismiss": "닫기",
+  "badges_earned_title": "획득한 배지",
+  "badges_locked_title": "잠긴 배지",
+  "badges_none": "아직 배지가 없어요 — 공부해서 첫 배지를 받아 보세요!",
+  "badges_earned_on": "{day} 획득",
+  "badges_progress": "{name} 진행도",
+  "badges_progress_text": "{value} / {threshold}",
+  "records_title": "개인 기록",
+  "records_none": "아직 기록이 없어요 — 공부하다 보면 저절로 생겨요.",
+  "records_set": "{day} 달성, 이전 기록 {previous}",
+  "records_to_go": "오늘 {gap} 남음",
+  "records_reached": "오늘 달성",
+  "records_toward": "오늘의 {label} 진행",
+  "records_chase": "도전해 보세요: 오늘 “{label}”까지 {gap} 남았어요."
 }

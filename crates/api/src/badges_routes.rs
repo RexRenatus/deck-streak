@@ -18,8 +18,10 @@ use axum::http::StatusCode;
 use axum::http::header::CONTENT_TYPE;
 use axum::response::{IntoResponse, Response};
 use axum::routing::get;
-use deck_streak_identity::Sessions;
-use deck_streak_kernel::Courses;
+use deck_streak_coordination::progression::badges_view::badges_view;
+use deck_streak_coordination::progression::records_view::records_now;
+use deck_streak_identity::{OwnerSession, Sessions};
+use deck_streak_kernel::{Courses, KernelError};
 use serde_json::{Value, json};
 
 use crate::health::Readiness;
@@ -60,35 +62,110 @@ pub(crate) fn routes(access: OwnerAccess, readiness: Readiness, courses: Courses
 }
 
 /// `GET /api/badges`.
-async fn badges(State(badges): State<Badges>) -> Response {
-    let _ = (&badges.access, &badges.readiness, &badges.courses);
-    answer(&json!({}))
+async fn badges(_owner: OwnerSession, State(badges): State<Badges>) -> Response {
+    let Some(db) = badges.readiness.database() else {
+        return refused(StatusCode::SERVICE_UNAVAILABLE, "database_not_open");
+    };
+    match badges_view(db, badges.access.study_day(), &badges.courses).await {
+        Ok(view) => {
+            let earned: Vec<Value> = view
+                .earned
+                .iter()
+                .map(|line| {
+                    json!({
+                        "key": line.key,
+                        "tier": line.tier,
+                        "name": line.name,
+                        "emoji": line.emoji,
+                        "study_day": line.study_day.to_string(),
+                    })
+                })
+                .collect();
+            let locked: Vec<Value> = view
+                .locked
+                .iter()
+                .map(|line| {
+                    json!({
+                        "key": line.key,
+                        "name": line.name,
+                        "emoji": line.emoji,
+                        "criteria": line.criteria,
+                        "family": line.family,
+                        "progress": line.progress.map(|progress| json!({
+                            "value": progress.value,
+                            "threshold": progress.threshold,
+                        })),
+                    })
+                })
+                .collect();
+            answer(&json!({ "earned": earned, "locked": locked }))
+        }
+        Err(error) => unreadable(&error, "badges_unreadable"),
+    }
 }
 
 /// `GET /api/records`.
-async fn records(State(badges): State<Badges>) -> Response {
-    let _ = badges;
-    answer(&json!({}))
+async fn records(_owner: OwnerSession, State(badges): State<Badges>) -> Response {
+    let Some(db) = badges.readiness.database() else {
+        return refused(StatusCode::SERVICE_UNAVAILABLE, "database_not_open");
+    };
+    match records_now(db, badges.access.study_day()).await {
+        Ok(view) => {
+            let records: Vec<Value> = view
+                .lines
+                .iter()
+                .map(|line| {
+                    json!({
+                        "kind": line.kind.as_str(),
+                        "label": line.label,
+                        "value": line.value,
+                        "study_day": line.study_day.to_string(),
+                        "previous": line.previous,
+                        "today": line.today,
+                        "distance": distance(line.value, line.today),
+                    })
+                })
+                .collect();
+            let chase = view.chase.map(
+                |(kind, gap)| json!({ "kind": kind.as_str(), "label": kind.label(), "gap": gap }),
+            );
+            answer(&json!({ "records": records, "chase": chase }))
+        }
+        Err(error) => unreadable(&error, "records_unreadable"),
+    }
 }
 
-/// `GET /api/milestone`.
-async fn milestone() -> Response {
-    answer(&json!({}))
+/// `GET /api/milestone`: `pending`, read from nothing, until Road to C2 supplies the mature-card
+/// sum the next milestone is computed from (R15, #85).
+async fn milestone(_owner: OwnerSession) -> Response {
+    answer(&json!({ "status": "pending" }))
 }
 
 /// How far `today` is from a record of `value`: none once today reaches it.
 const fn distance(value: i64, today: i64) -> i64 {
-    let _ = (value, today);
-    0
+    let gap = value.saturating_sub(today);
+    if gap > 0 { gap } else { 0 }
 }
 
 /// 200 with `body` as JSON.
 fn answer(body: &Value) -> Response {
-    let _ = distance(0, 0);
     (
         StatusCode::OK,
         [(CONTENT_TYPE, "application/json")],
         body.to_string(),
     )
         .into_response()
+}
+
+/// A refusal: its status, and a JSON body naming its reason code alone.
+fn refused(status: StatusCode, reason: &'static str) -> Response {
+    tracing::warn!(reason, "a badge or record read was refused");
+    let body = json!({ "reason": reason }).to_string();
+    (status, [(CONTENT_TYPE, "application/json")], body).into_response()
+}
+
+/// A read that failed: 500 with its reason code, and the error only in the log.
+fn unreadable(error: &KernelError, reason: &'static str) -> Response {
+    tracing::error!(%error, reason, "a badge or record read failed");
+    refused(StatusCode::INTERNAL_SERVER_ERROR, reason)
 }

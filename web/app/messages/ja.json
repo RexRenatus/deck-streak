@@ -4,5 +4,18 @@
   "ladder_region": "お祝い",
   "ladder_opening": "開封中…",
   "ladder_dice": "サイコロ",
-  "ladder_dismiss": "閉じる"
+  "ladder_dismiss": "閉じる",
+  "badges_earned_title": "獲得したバッジ",
+  "badges_locked_title": "未獲得のバッジ",
+  "badges_none": "バッジはまだありません — 学習して最初のバッジを獲得しましょう！",
+  "badges_earned_on": "{day} に獲得",
+  "badges_progress": "{name} の進捗",
+  "badges_progress_text": "{value} / {threshold}",
+  "records_title": "自己ベスト",
+  "records_none": "記録はまだありません — 学習するうちに自然に生まれます。",
+  "records_set": "{day} に達成、前回は {previous}",
+  "records_to_go": "今日はあと {gap}",
+  "records_reached": "今日達成",
+  "records_toward": "今日の {label} への進み具合",
+  "records_chase": "狙い目：今日「{label}」まであと {gap}。"
 }

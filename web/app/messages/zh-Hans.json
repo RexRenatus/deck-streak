@@ -4,5 +4,18 @@
   "ladder_region": "庆祝",
   "ladder_opening": "正在打开…",
   "ladder_dice": "掷骰子",
-  "ladder_dismiss": "关闭"
+  "ladder_dismiss": "关闭",
+  "badges_earned_title": "已获得的徽章",
+  "badges_locked_title": "未解锁的徽章",
+  "badges_none": "还没有徽章 — 学习来赢得第一枚吧！",
+  "badges_earned_on": "{day} 获得",
+  "badges_progress": "{name} 进度",
+  "badges_progress_text": "{value} / {threshold}",
+  "records_title": "个人纪录",
+  "records_none": "还没有纪录 — 学习中会自动产生。",
+  "records_set": "{day} 创下，超过 {previous}",
+  "records_to_go": "今天还差 {gap}",
+  "records_reached": "今天已达成",
+  "records_toward": "今天距 {label}",
+  "records_chase": "冲刺：今天距「{label}」还差 {gap}。"
 }
