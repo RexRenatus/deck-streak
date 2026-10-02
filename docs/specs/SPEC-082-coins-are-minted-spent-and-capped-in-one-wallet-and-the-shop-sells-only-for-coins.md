@@ -12,8 +12,10 @@
 - **Prerequisites:** SPEC-071 (the fold and the current day's reviews), SPEC-072 (the day's base XP),
   SPEC-076 (the freeze port), SPEC-024 (the owner's session) and SPEC-026 (the bot's command table).
   **Mutation band:** `S08200-S08299`.
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-082.md` (ADR-016).
+- **Status:** delivered by E1 in part (moved from `docs/specs/planned/` with its tests and
+  `docs/red-first/SPEC-082.md`, ADR-016): the wallet of #106 in three pull requests. E1b delivers
+  R4, A7, the wallet route and header and the daemon wiring; E3 (#107) delivers the shop
+  (section 3c).
 
 ## 1. The problem, measured
 
@@ -181,18 +183,10 @@ A3: cargo test -p deck-streak-economy --test wallet_goldens -- --exact the_day_s
 A4: cargo test -p deck-streak-economy --test wallet_ports -- --exact the_wallet_never_goes_negative_under_a_burst
 A5: cargo test -p deck-streak-economy --test wallet_ports -- --exact a_credit_of_one_key_is_written_once
 A6: cargo test -p deck-streak-economy --test wallet_ports -- --exact a_settled_days_mint_is_raised_and_never_lowered
-A7: cargo test -p deck-streak-coordination --test wallet_mint -- --exact the_mint_reads_the_settled_days_final_base
 A8: cargo test -p deck-streak-economy --test wallet_ports -- --exact a_floor_clipped_debit_pays_what_is_held
 A9: cargo test -p deck-streak-economy --test wallet_census -- --exact only_the_wallet_writes_the_coin_ledger
 A10: cargo test -p deck-streak-economy --test wallet_goldens -- --exact the_coin_constants_and_economy_json_match_the_predecessors
-A11: cargo test -p deck-streak-economy --test shop_goldens -- --exact the_shop_verdicts_match_the_parity_golden
-A12: cargo test -p deck-streak-coordination --test shop_purchase -- --exact a_bought_freeze_moves_coins_and_the_freeze_together
-A13: cargo test -p deck-streak-coordination --test shop_purchase -- --exact a_refused_purchase_changes_nothing
 A14: cargo test -p deck-streak-economy --test wallet_rights -- --exact an_erase_empties_the_ledger_and_resets_the_state
-A15: cargo test -p deck-streak-api --test wallet_routes -- --exact the_wallet_and_shop_routes_answer_only_the_owner
-A16: cargo test -p deck-streak-bot --test shop_commands -- --exact shop_shows_the_board_and_its_buttons_buy
-A17: pnpm exec vitest run web/app/src/lib/economy/shop.test.ts -t "disables each item with its reason"
-A18: pnpm exec vitest run web/app/src/lib/economy/wallet-header.test.ts -t "shows the balance in the layout header"
 A19: cargo test -p deck-streak-economy --test wallet_ports -- --exact a_once_ever_credit_is_written_once_on_any_day
 ```
 
@@ -209,6 +203,38 @@ accessibility packs stay enforced, and no row is deferred for this delivery.
 | B2 | the mint, the loss cap, the fines, the zero floor and the shop's prices still equal the reference economy, only coins are confiscable, and no shop item is random or sold for money, over `economy.json`'s `coins`, `shop` and `unconfiscable` sections | the game-economy pack |
 | B3 | the shop's copy carries no confirmshaming and no false urgency, over `web/app/src/routes/shop/+page.svelte`, every file under `web/app/src/lib/economy/` and `crates/bot/src/shop_commands.rs` | the ux-laws pack |
 | B4 | the shop screen and the wallet header pass the accessibility audit in both of Telegram's colour schemes, over the `/shop` route that `web/app/src/lib/routes.ts` lists and the layout that renders the header | the accessibility pack |
+
+## 3c. Delivered by the next pull requests
+
+This SPEC lands in three pull requests, in order. This one (E1) delivers the wallet's pure core, its
+ports, its tables and its data rights: the criteria of section 3's table that no row below names.
+E1b delivers the mint step of the fold, the wallet route and header and the daemon wiring; E3
+(#107) delivers the shop, its routes, its command and its screen. The table below holds the
+criteria a later pull request delivers, each row naming that pull request, and the lines under it
+are their fence lines, each prefixed with that pull request. A later pull request moves each of
+its criteria back verbatim: the row into section 3's table, without the `delivered by` column,
+and the fence line into the acceptance fence, without the prefix. A15 is split: E1b delivers its
+wallet arm and E3 its shop arm.
+
+| id | criterion | decided by | delivered by |
+|---|---|---|---|
+| A7 | the fold mints each settled day after its derived XP, so the mint equals the golden over the day's final base | `the_mint_reads_the_settled_days_final_base` | E1b |
+| A11 | the shop's verdicts, prices and movements equal the golden of `buy_item`: the freeze refused at the hold cap with the wallet unchanged, the pass gated on a review, one pass at a time, and the surcharge | `the_shop_verdicts_match_the_parity_golden` | E3 |
+| A12 | a bought freeze moves its coins and adds its freeze in one transaction, and a grant the freeze port refuses leaves no movement | `a_bought_freeze_moves_coins_and_the_freeze_together` | E3 |
+| A13 | a refused purchase names its reason and leaves the wallet, the freezes and the pass unchanged | `a_refused_purchase_changes_nothing` | E3 |
+| A15 | the wallet and shop routes answer the owner's session only, and any other caller gets 401 or 403 and no data | `the_wallet_and_shop_routes_answer_only_the_owner` | E1b |
+| A16 | `/shop` shows the board, and its buttons run the same purchase as the Mini App | `shop_shows_the_board_and_its_buttons_buy` | E3 |
+| A17 | each disabled item card on the shop screen says why | `disables each item with its reason` | E3 |
+| A18 | the wallet header shows the balance in the layout every screen renders | `shows the balance in the layout header` | E1b |
+
+E1b: A7: cargo test -p deck-streak-coordination --test wallet_mint -- --exact the_mint_reads_the_settled_days_final_base
+E3: A11: cargo test -p deck-streak-economy --test shop_goldens -- --exact the_shop_verdicts_match_the_parity_golden
+E3: A12: cargo test -p deck-streak-coordination --test shop_purchase -- --exact a_bought_freeze_moves_coins_and_the_freeze_together
+E3: A13: cargo test -p deck-streak-coordination --test shop_purchase -- --exact a_refused_purchase_changes_nothing
+E1b: A15: cargo test -p deck-streak-api --test wallet_routes -- --exact the_wallet_and_shop_routes_answer_only_the_owner
+E3: A16: cargo test -p deck-streak-bot --test shop_commands -- --exact shop_shows_the_board_and_its_buttons_buy
+E3: A17: pnpm exec vitest run web/app/src/lib/economy/shop.test.ts -t "disables each item with its reason"
+E1b: A18: pnpm exec vitest run web/app/src/lib/economy/wallet-header.test.ts -t "shows the balance in the layout header"
 
 ## 4. File manifest
 
