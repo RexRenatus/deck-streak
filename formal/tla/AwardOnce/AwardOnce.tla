@@ -1,5 +1,5 @@
 ---------------------------- MODULE AwardOnce ----------------------------
-\* @phx covers crates/coordination/src/recompute/mod.rs anchor=run digest=sha256:c51dc67a3988bbeb8c46a953acdaba06669275e0ba405edb1146de880ae815fd
+\* @phx covers crates/coordination/src/recompute/mod.rs anchor=run digest=sha256:7a383ba01872f4dde46ccb5220fa492de1f89498adf71774cae868e3e0b7acbb
 \* @phx covers crates/coordination/src/recompute/mod.rs anchor=offer_owed digest=sha256:0d418cb9fe6912d5780f32d0e837891e9927590bd6cc55b3aaf883ebfdf5bc00
 \* @phx covers crates/coordination/src/recompute/badges.rs anchor=evaluate digest=sha256:20660e5d08a54f50f60824125958cba6cf65c5750af0a7468ecbad0e26ffd548
 \* @phx covers crates/coordination/src/recompute/badges.rs anchor=offer_badges digest=sha256:cbf19ec6758776f6a64ffd60c45d775f30003963a3a1d2c273571016df1d3b48
@@ -67,6 +67,11 @@
 \*   detection writes the window's best for the evaluation's own day with the mark already set; it
 \*   is no award, so it owes nothing, and Seeded reads it as the row no award wrote.
 \* - Router(d) and OnceKey: ledger.rs::claim. Crash: between any two of those transactions.
+\* - #311's re-read (ADR-313), re-read 2026-10-02: each owed day's write in mod.rs::run now reads
+\*   the settle cursor first; a write whose day is not the one owed is rolled back before any step
+\*   runs, and the loop goes on from the owed day. offer_owed still runs before every owed day's
+\*   write, the rolled-back one included, so Pre and DrainSkip stand as they were, and the
+\*   rolled-back write awards nothing and commits nothing: a stuttering step of these variables.
 \* Abstractions, each a stuttering of the model's variables:
 \* - the offers read the unmarked rows on a reader, then route; DrainOffer reads and routes in one
 \*   step. A row replaced between the read and the route is offered under its own day's key, its

@@ -233,3 +233,84 @@ function-level mutant does, and the new test kills it. `python3 scripts/mutation
 --band S07100-S07199` at 54da2ba reads `rows: examined 13: killed 13, survived 0, void 0`: each
 killer selected its one test with and without the mutant, and each target was restored byte for
 byte.
+
+## Amendment of 2026-10-02: two folds that overlap, and a day before the first settle (#311)
+
+The order of work: the FoldSettlesOnce model and its covers (417a407, a29203c); ADR-313 and
+SPEC-071's §11 and §12 (c5e943b); A27 and A28 alone, beside the fold as it was (beb465a); the fix,
+each owed day's write reading the settle cursor again inside its own `BEGIN IMMEDIATE` (9118c8b);
+the model's re-read arm, its property SettleInTurn with its witness, and the run covers re-stamped
+(15f680f, 4d52eab); row S07114 (b8b9f69); and this record.
+
+A27 was run at beb465a with its fenced command and with its whole target, and was that target's
+only failure: `cargo test -p deck-streak-coordination --test settle_fold` read 19 passed, 1 failed,
+after `examined 36 overlapping runs`. It failed by its own assertion, not by a compile error, a
+missing fixture or an empty selection. At 9118c8b the package read 148 passed, 0 failed, A27 among
+them. A28 pins what the base already did, so it cannot be red first; ADR-313 states that rule as
+its (b).
+
+```red-first
+A27: red at beb465a: assertion `left == right` failed: every day from the first settled one to the last closed one, once, oldest first: member (None, 20002, 20002), the owner's fold joined first: false; left: [20001, 20001], right: [20001]
+A27: green at 9118c8b
+A28: not red: pins the base's behaviour, which ADR-313 states as its (b): before the first settled day a day has a row only as a study day of the window or as some recompute's current day; green at beb465a, and no code arm exists to mutate
+```
+
+S07114-OWED-DAY-RE-READS-THE-CURSOR replaces the in-write re-read with the day the run already
+holds, which is the fold before the fix. `python3 scripts/mutation_rows.py --row
+S07114-OWED-DAY-RE-READS-THE-CURSOR prove`, run in a clean clone at b8b9f69, reads `KILLED: its
+killer passed without the mutant and failed with it` and `rows: examined 1: killed 1, survived 0,
+void 0`: A27 selected its one test with and without the mutant, and the target was restored byte
+for byte.
+
+## Addendum of 2026-10-02: the settle-once test counts the fold's offers (#311)
+
+Row S07108-SETTLE-ONCE turns the first owed day after the cursor, `next(cursor)`, into the cursor
+itself. Before 9118c8b that made a second recompute settle the cursor's day again, and A16 failed.
+Since 9118c8b each owed day's write reads the cursor again inside its own `BEGIN IMMEDIATE` and
+moves to the day the cursor owes, so the mutant's stale start day is corrected inside the write:
+the run passes over the cursor's day, rolls that write back, offers once more, and still settles
+every closed day once, oldest first. With the mutant installed at a266377 the package read 148
+passed, 0 failed, and the rows command CI runs, `python3 scripts/mutation_rows.py prove
+--rows-from plan.json` over the plan from dev's tip, read `rows: examined 8: killed 7, survived 1,
+void 0`.
+
+75375f2 strengthens A16's test, `the_fold_settles_each_closed_day_once_oldest_first`, with an
+offers port that counts the fold's calls: each recompute offers once before each day it settles,
+once before the current day's write and once after its last write, so its settled count plus two,
+and one more for every day at or before the cursor it passes over. The test is MUTATION COVERAGE,
+not red-first evidence: the commit changes no production file, and the test passes over the
+base's fold. S07108's row, its killer and SPEC-071's table line are unchanged.
+
+```text
+A16, MUTATION COVERAGE: not red: the_fold_settles_each_closed_day_once_oldest_first passes at 75375f2 with crates/coordination/src/recompute/mod.rs as dev's tip 1da1d05 holds it (the fold before 9118c8b starts at the day after the cursor and never passes over one), so the count has no base arm to be red for; at 75375f2 with S07108's mutant installed it fails: the second recompute offers once before each of the 3 day(s) it settles, once before the current day's write and once after its last write: it passes over no day at or before the cursor; left: 6, right: 5 (KILLED)
+A16 at 75375f2: 1 passed, after `examined 3 runs' offers` and `examined 4 settles`
+rows at 75375f2, the same command over the plan from dev's tip: rows: examined 8: killed 8, survived 0, void 0
+```
+
+cargo-mutants over the diff from dev's tip, run in a clean clone as CI runs it, listed two mutants
+of `Fold::run`. Its body replaced by `Ok(Default::default())` was caught. `owed != day` turned
+into `owed == day` is a TIMEOUT at the run's `--timeout 300`, not a miss: every write whose day is
+still owed then rolls back and reads the cursor again, so the loop never ends. `outcomes.json`
+read 2 mutants: caught 1, missed 0, timeout 1, unviable 0.
+
+## Addendum of 2026-10-02: A27 forces the order of every write after its barrier (#311, fix round 1)
+
+A27's barrier held each fold's first offer only; every later offer returned at once, so the order
+of the writes after the barrier was the runtime's, and a fold that skipped a day it was owed failed
+A27 on some runs and not on others. dfafa9b changes the test file alone. Each later offer of a fold
+hands the turn to the other fold and waits for its own, and the fold writes between two of its
+offers (ADR-303), so under a forced release each write after the barrier runs alone, in the order
+the test chose. A27 now releases each of its 18 members four ways: the scheduled fold's turn first,
+the owner's turn first, and both folds together in each join order, which are the 36 runs it ran
+before. Its population is 72 runs, and a forced release also asserts that the turns alternated.
+
+The strengthened A27 is a changed criterion, so its new red is recorded here in prose and is not a
+new fence line. Run at 1da1d05, this pull request's base, with the test file of dfafa9b carried in,
+A27 failed by its own assertion after `examined 72 overlapping runs`, on its first run, a forced
+one, and its target read 19 passed, 1 failed. At dfafa9b it passes after `judged 72 overlapping
+run(s), 18 distinct member(s)`.
+
+```text
+A27, strengthened at dfafa9b: red at 1da1d05 with its test file carried in: every day from the first settled one to the last closed one, once, oldest first: member (None, 20002, 20002), released Turns("scheduled"); left: [20001, 20001], right: [20001]; its target 19 passed, 1 failed
+A27 at dfafa9b: 1 passed, after `examined 72 overlapping runs`
+```
