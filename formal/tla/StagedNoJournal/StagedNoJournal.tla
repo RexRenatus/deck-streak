@@ -1,7 +1,9 @@
 --------------------------- MODULE StagedNoJournal ---------------------------
-\* @phx covers crates/vault/src/staged.rs anchor=apply digest=sha256:20c4e6e0312424f077075812bbcc9342fc7e5ea37473650e6eca3b03f061b10b
-\* @phx covers crates/vault/src/staged.rs anchor=apply_op digest=sha256:6e443a7efa33dd6ea092207d4f0cf36d6391588687ae07c2e6da4051c5e16716
-\* @phx covers crates/vault/src/staged.rs anchor=create_folders digest=sha256:f2d0f7eb93e88aa692393e2f05d125a6678d2c113b2ba900d64ecb1d2a3b0bef
+\* @phx covers crates/vault/src/staged.rs anchor=apply digest=sha256:b3842c4ea0084013081ce8a0c516cb038b3992e6d3d344ae3e2ca9b2612230aa
+\* @phx covers crates/vault/src/staged.rs anchor=apply_op digest=sha256:a8b36d9ebe260c076b5ead1dd022e808c8492d5d9fd48589f4ebfc156ba261f7
+\* @phx covers crates/vault/src/staged.rs anchor=create_folders digest=sha256:a5934d7728116f708ac51e11f524de1919eda13ed9d9b8d6cc881f2301b51dff
+\* @phx covers crates/vault/src/staged.rs anchor=guard digest=sha256:706c581ec8ca51db8dd819d83b506b1c98d43a55b6f3d8e69b8b73030230c75d
+\* @phx covers crates/vault/src/staged.rs anchor=Borrowed digest=sha256:10fe6730fc7ac63f873078a090ce38c002d952cb5c1bfa0ed6504c73f0603366
 \* @phx covers crates/vault/src/atomic.rs anchor=refuse_journal_resolved digest=sha256:1d1214fc9260d159643a718d039d2eba2ceb21d832eb393aaf2ab7dd59b82abc
 \* @phx covers crates/vault/src/atomic.rs anchor=resolve digest=sha256:cbb47bd45964e2822b1ea2ed69a8e78ab57174e08fca9a3ea3d89f9921c99675
 \* @phx covers crates/vault/src/fs.rs anchor=refuse digest=sha256:8f907ad56dd617cec00d34617784515cf47740dd8371d5453bc443c763175d15
@@ -50,10 +52,18 @@
 \*   move's `rename` and the note's `atomic::write`, each through the journal guard built at that
 \*   operation over the run's own journal folders (`fs.rs::JournalGuard`, whose `refuse` calls
 \*   `atomic.rs::refuse_journal_resolved`, which compares the path as written and as
-\*   `atomic.rs::resolve` resolves it).
-\* - Stop -> `staged.rs::apply`: a refused operation stops the run, and the operations before it stay
-\*   applied (ADR-316).
+\*   `atomic.rs::resolve` resolves it). `staged.rs::guard` builds that guard for each operation,
+\*   over `staged.rs::Borrowed`, which passes every call to the executor's own file system.
+\* - Stop -> `staged.rs::apply`: a refused operation stops the run as `RunOutcome::Stopped`, which
+\*   counts the operations applied before it, and those stay applied (ADR-316).
 \* - Relink, Restore -> the owner's devices, outside the executor.
+\*
+\* Re-read against the code it covers, at SPEC-118's second pull request: `apply_op` refuses a
+\* move's source, then each folder `create_folders` would create, then the move's target or the
+\* note, each as the guard resolves it at that call. An operation refused after some of its
+\* folders were created leaves only those folders, each refused by the guard first had it been
+\* under a journal folder, so the model's `Apply`, which writes nothing on a refusal, keeps the
+\* same `touched`. No action, variable or property changed.
 
 EXTENDS Naturals, FiniteSets
 
