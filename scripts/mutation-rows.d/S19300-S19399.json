@@ -120,6 +120,118 @@
         "                        if False:\n",
         "an attribute before a `$( ... )` repetition that holds a module reaches that module, so `#[cfg(test)] $(mod $n {})*` refuses its file (SPEC-192 A17, #441)",
         "test_setting_shapes.TheGuardRefusesAMacroThatDeclaresATestModule.test_an_inner_attribute_or_an_attribute_before_a_repetition_is_read"
+      ],
+      [
+        "S19315-AN-ATTRIBUTE-A-MACRO-PASSES-IN-REFUSES-ITS-FILE",
+        "scripts/tests/test_setting_shapes.py",
+        "                    reasons.append(\"meta\")\n",
+        "                    pass\n",
+        "a module a macro declares under an attribute holding a `$` (one the macro passes in) refuses its file by name, since the guard cannot read the attribute it expands to (SPEC-192 A21, #535)",
+        "test_setting_shapes.TheGuardRefusesASpellingItDoesNotExpand.test_an_attribute_a_macro_passes_in_is_refused_by_its_file"
+      ],
+      [
+        "S19316-A-PATH-A-MACRO-NAMES-REFUSES-ITS-FILE",
+        "scripts/tests/test_setting_shapes.py",
+        "                    reasons.append(\"path\")\n",
+        "                    pass\n",
+        "a module a macro declares with any spelling of `path` refuses its file by name, so a `#[path]` rival written by a macro is never missed (SPEC-192 A21, #535)",
+        "test_setting_shapes.TheGuardRefusesASpellingItDoesNotExpand.test_a_path_rival_a_macro_declares_is_refused_by_its_file"
+      ],
+      [
+        "S19317-AN-INVOCATION-PASSING-A-TEST-MODULE-REFUSES-ITS-FILE",
+        "scripts/tests/test_setting_shapes.py",
+        "                        reasons.append(\"invocation\")\n",
+        "                        pass\n",
+        "a macro invocation whose tokens hold a `cfg(test)` module refuses its file by name, since a pass-through macro compiles it unread (SPEC-192 A21, #535)",
+        "test_setting_shapes.TheGuardRefusesASpellingItDoesNotExpand.test_a_macro_that_passes_a_module_through_is_refused_by_its_file"
+      ],
+      [
+        "S19318-AN-IMPL-A-MACRO-WRITES-REFUSES-ITS-FILE",
+        "scripts/tests/test_setting_shapes.py",
+        "                    reasons.append(\"impl\")\n",
+        "                    pass\n",
+        "an implementation of `Setting` (or of a metavariable trait) inside a macro's tokens refuses its file by name, since its shape is never read (SPEC-192 A19, #436)",
+        "test_setting_shapes.TheGuardReadsAnImplementationByToken.test_every_spelling_is_read_or_refused_as_written"
+      ],
+      [
+        "S19319-A-BLOCK-SCOPED-MODULE-REFUSES-ITS-FILE",
+        "scripts/tests/test_setting_shapes.py",
+        "                reasons.append(\"block\")\n",
+        "                pass\n",
+        "an out-of-line module declared in a block that may compile without `test` refuses its file by name, since block-scope module paths are not modelled (SPEC-192 A21, #535)",
+        "test_setting_shapes.TheGuardRefusesASpellingItDoesNotExpand.test_a_block_scoped_declaration_is_refused_by_its_file"
+      ],
+      [
+        "S19320-AN-INCLUDE-REFUSES-ITS-FILE",
+        "scripts/tests/test_setting_shapes.py",
+        "                reasons.append(\"include\")\n",
+        "                pass\n",
+        "`include!` refuses its file by name, since the guard does not follow the text it compiles in (SPEC-192 A21, #535)",
+        "test_setting_shapes.TheGuardRefusesASpellingItDoesNotExpand.test_an_include_is_refused_by_its_file"
+      ],
+      [
+        "S19321-A-MACRO-MODULE-PROVEN-NO-TEST-MODULE-IS-READ",
+        "scripts/tests/test_setting_shapes.py",
+        "and not proven(None if run is None else run + inner)",
+        "and True",
+        "a macro module the evaluator proves is no test-only module (`cfg(not(test))`) is read rather than refused, while an undecided one stays refused (SPEC-192 A22, #536)",
+        "test_setting_shapes.TheGuardReadsATreeItOverRefused.test_a_macro_module_that_is_no_test_only_module_is_read"
+      ],
+      [
+        "S19322-A-PROOF-HOLDS-WITHOUT-TEST-TOO",
+        "scripts/tests/test_setting_shapes.py",
+        "    return rustc_keeps(attributes, True) is False or rustc_keeps(attributes, False) is True\n",
+        "    return rustc_keeps(attributes, True) is False\n",
+        "a macro module the evaluator keeps without `test` (`cfg(any(test, true))`) is proven no test-only module, the second half of the proof (SPEC-192 A22, #536)",
+        "test_setting_shapes.TheGuardReadsATreeItOverRefused.test_a_macro_module_that_is_no_test_only_module_is_read"
+      ],
+      [
+        "S19323-A-MACRO-OUT-OF-LINE-MODULE-IS-A-RIVAL",
+        "scripts/tests/test_setting_shapes.py",
+        "                    out.append((None, None))\n",
+        "                    pass\n",
+        "an out-of-line module a macro declares, unless proven removed without `test`, is a rival whose file the guard cannot name, so the narrowing reopens no rival (SPEC-192 A22, #536)",
+        "test_setting_shapes.TheGuardReadsATreeItOverRefused.test_a_module_a_macro_declares_without_test_still_refuses_the_test_file"
+      ],
+      [
+        "S19324-A-PIN-COUNTS-ONLY-IN-A-COMPILED-ITEM",
+        "scripts/tests/test_setting_shapes.py",
+        "            else compiled_spans(text, base / \"tests\" in path.parents)\n",
+        "            else [(0, len(bare))]\n",
+        "a test file's pin counts only in an item rustc compiles under `--cfg test`, not anywhere in the file (SPEC-192 A20, #449)",
+        "test_setting_shapes.TheGuardReadsOnlyTheItemsRustcCompilesUnderTest.test_a_pin_counts_only_in_an_item_rustc_compiles_under_test"
+      ],
+      [
+        "S19325-A-DECOY-IN-THE-OTHER-FOLDER-IS-NO-CANDIDATE",
+        "scripts/tests/test_setting_shapes.py",
+        "if path.is_file() and (homes is None or folder in homes)",
+        "if path.is_file()",
+        "a top-level module is read only from its file's module directory the walk from the crate roots gives it, so a decoy in the other folder is no candidate (SPEC-192 A22, #536)",
+        "test_setting_shapes.TheGuardReadsATreeItOverRefused.test_a_decoy_beside_a_non_mod_rs_file_does_not_refuse_its_module"
+      ],
+      [
+        "S19326-A-CFG-ATTR-PATH-BELOW-AN-INLINE-MODULE-IS-CHOSEN",
+        "scripts/tests/test_setting_shapes.py",
+        "                found = cfg_attr_choice(own, names, name, run, homes)\n",
+        "                found = below(own, names, name, run, homes)\n",
+        "a `cfg_attr(P, path = ...)` below an inline module reads the one file `P` chooses under `test` (SPEC-192 A22, #536)",
+        "test_setting_shapes.TheGuardReadsATreeItOverRefused.test_a_cfg_attr_path_below_an_inline_module_is_read"
+      ],
+      [
+        "S19327-AN-ALIAS-OF-SETTING-IS-READ",
+        "scripts/tests/test_setting_shapes.py",
+        "if found[i][:2] == (\"word\", \"as\") and found[i - 1][0] == found[i + 1][0] == \"word\"",
+        "if False",
+        "a `use ... as` alias of `Setting`, followed through a chain, names the trait an implementation is read by (SPEC-192 A19, #436)",
+        "test_setting_shapes.TheGuardReadsAnImplementationByToken.test_every_spelling_is_read_or_refused_as_written"
+      ],
+      [
+        "S19328-AN-IMPL-IN-A-MACRO-IS-NOT-READ-AS-ONE",
+        "scripts/tests/test_setting_shapes.py",
+        "read = None if at in hidden else trait_impl(tokens, pairs, at)",
+        "read = trait_impl(tokens, pairs, at)",
+        "an implementation inside a macro's tokens is not read as one (its file is refused instead), so a metavariable type is never named as an implementation (SPEC-192 A19, #436)",
+        "test_setting_shapes.TheGuardReadsAnImplementationByToken.test_every_spelling_is_read_or_refused_as_written"
       ]
     ]
   }
