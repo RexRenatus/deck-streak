@@ -131,6 +131,8 @@ async fn recompute(fold: &Fold, db: &Db, data: &CollectionData, now: i64, synced
             now: UtcMillis::from_epoch_millis(now),
             synced_in: Some(StudyDay::from_epoch_day(synced_in)),
             courses_digest: Some("0123456789abcdef"),
+            base_reviews: 0,
+            offers: None,
         },
     )
     .await
