@@ -23,3 +23,24 @@ were proved by the mutation-row verb after the green commit, each killed by its 
 Mutation coverage: the tests of `crates/kernel/tests/pynum_edges.rs` (CPython rows in
 `crates/kernel/tests/fixtures/pynum_edges.txt`) were added after the GREEN commit to kill the
 mutants the goldens missed; they pass at the implementation and are not a red-first claim. Round-boundary rows at ndigits -308 for x of 4.9e307 to 9e307 (the `ndigits < -308` guard of `round`) were added the same way, to kill the `<` to `<=` mutant. Rows for `round` of non-finite values, zeros and digit counts past 323 were added to kill the `||` to `&&` mutants of its first guard.
+
+Round 1 fix: the verifier's round 1 found four functions that differ from CPython; each code fix
+has a test that was red first, recorded here in prose because the criteria above already hold their
+fence lines.
+
+```text
+mean: red at 97294d0be03e84ec57a4e5f970752853232aed54 in pynum_edges.rs
+  (the_mean_of_every_edge_list_is_cpythons_to_the_last_bit): assertion `left == right` failed: mean
+  of 7fe1ccf385ebc8a0,7fe1ccf385ebc8a0,fff0000000000000: left: 18444492273895866368 right:
+  18442240474082181120
+mean: green at bcda6848677c245eace8187de08cb7756100e0d6
+lgamma: red at 1560f7b7e4cb2ffa801fc07c16b98e7cfa1283a5 in pynum_edges.rs
+  (lgamma_of_a_finite_argument_whose_result_overflows_is_none): assertion `left == right` failed:
+  lgamma of 7f57b236a943b4a5: left: Some(inf) right: None
+lgamma: green at ca0c5a683ba76550d4102fa40367a395c43c6e6c
+median: red at 3e92e50f707ad7f1cd59ad86e678adc8356ded2d in pynum_edges.rs
+  (the_median_of_a_list_holding_a_nan_is_nan): median of [NaN, 1.0, 2.0] is 1
+median: green at 16e4cf75b776aa1d1d1ee89cb637850ec5ac1ade
+round: not red: a_round_beyond_the_largest_float_is_a_signed_infinity
+  (e5073d0976354a7101251b2fcf9224dd735be740) pins a section 5 limit the code already had
+```
