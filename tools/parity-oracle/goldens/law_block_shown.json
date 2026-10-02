@@ -1,0 +1,530 @@
+{
+  "adapter": "law_block_fields",
+  "cases": [
+    {
+      "class": "empty",
+      "input": {
+        "payload": {
+          "dues": null,
+          "leech_active": 0,
+          "level": 0,
+          "mastery": 100.0,
+          "streak": 0,
+          "total_xp": 0,
+          "xp_today": 0
+        }
+      },
+      "output": {
+        "fields": [],
+        "level_shown": false,
+        "rendered": false
+      }
+    },
+    {
+      "class": "empty",
+      "input": {
+        "payload": {
+          "dues": 12,
+          "leech_active": 0,
+          "level": 4,
+          "mastery": 70.0,
+          "streak": 0,
+          "total_xp": 0,
+          "xp_today": 0
+        }
+      },
+      "output": {
+        "fields": [],
+        "level_shown": false,
+        "rendered": false
+      }
+    },
+    {
+      "class": "empty",
+      "input": {
+        "payload": {}
+      },
+      "output": {
+        "fields": [],
+        "level_shown": false,
+        "rendered": false
+      }
+    },
+    {
+      "class": "empty",
+      "input": {
+        "payload": {
+          "leech_active": null,
+          "streak": null,
+          "total_xp": null,
+          "xp_today": null
+        }
+      },
+      "output": {
+        "fields": [],
+        "level_shown": false,
+        "rendered": false
+      }
+    },
+    {
+      "class": "streak_only",
+      "input": {
+        "payload": {
+          "dues": null,
+          "leech_active": 0,
+          "level": 0,
+          "mastery": 100.0,
+          "streak": 3,
+          "total_xp": 0,
+          "xp_today": 0
+        }
+      },
+      "output": {
+        "fields": [
+          "streak"
+        ],
+        "level_shown": false,
+        "rendered": true
+      }
+    },
+    {
+      "class": "xp_today_only",
+      "input": {
+        "payload": {
+          "dues": null,
+          "leech_active": 0,
+          "level": 0,
+          "mastery": 100.0,
+          "streak": 0,
+          "total_xp": 0,
+          "xp_today": 25
+        }
+      },
+      "output": {
+        "fields": [
+          "xp_today"
+        ],
+        "level_shown": false,
+        "rendered": true
+      }
+    },
+    {
+      "class": "leech_only",
+      "input": {
+        "payload": {
+          "dues": null,
+          "leech_active": 2,
+          "level": 0,
+          "mastery": 94.0,
+          "streak": 0,
+          "total_xp": 0,
+          "xp_today": 0
+        }
+      },
+      "output": {
+        "fields": [
+          "mastery",
+          "leeches"
+        ],
+        "level_shown": false,
+        "rendered": true
+      }
+    },
+    {
+      "class": "leech_only",
+      "input": {
+        "payload": {
+          "dues": null,
+          "leech_active": 2,
+          "level": 0,
+          "mastery": 0.0,
+          "streak": 0,
+          "total_xp": 0,
+          "xp_today": 0
+        }
+      },
+      "output": {
+        "fields": [
+          "leeches"
+        ],
+        "level_shown": false,
+        "rendered": true
+      }
+    },
+    {
+      "class": "total_only",
+      "input": {
+        "payload": {
+          "dues": null,
+          "leech_active": 0,
+          "level": 3,
+          "mastery": 100.0,
+          "streak": 0,
+          "total_xp": 1200,
+          "xp_today": 0
+        }
+      },
+      "output": {
+        "fields": [
+          "total_xp"
+        ],
+        "level_shown": true,
+        "rendered": true
+      }
+    },
+    {
+      "class": "total_no_level",
+      "input": {
+        "payload": {
+          "dues": null,
+          "leech_active": 0,
+          "level": 0,
+          "mastery": 100.0,
+          "streak": 0,
+          "total_xp": 1200,
+          "xp_today": 0
+        }
+      },
+      "output": {
+        "fields": [
+          "total_xp"
+        ],
+        "level_shown": false,
+        "rendered": true
+      }
+    },
+    {
+      "class": "dues_shown",
+      "input": {
+        "payload": {
+          "dues": 5,
+          "leech_active": 0,
+          "level": 0,
+          "mastery": 100.0,
+          "streak": 1,
+          "total_xp": 0,
+          "xp_today": 0
+        }
+      },
+      "output": {
+        "fields": [
+          "streak",
+          "dues"
+        ],
+        "level_shown": false,
+        "rendered": true
+      }
+    },
+    {
+      "class": "dues_zero",
+      "input": {
+        "payload": {
+          "dues": 0,
+          "leech_active": 0,
+          "level": 0,
+          "mastery": 100.0,
+          "streak": 1,
+          "total_xp": 0,
+          "xp_today": 0
+        }
+      },
+      "output": {
+        "fields": [
+          "streak"
+        ],
+        "level_shown": false,
+        "rendered": true
+      }
+    },
+    {
+      "class": "dues_pending",
+      "input": {
+        "payload": {
+          "dues": null,
+          "leech_active": 0,
+          "level": 0,
+          "mastery": 100.0,
+          "streak": 1,
+          "total_xp": 0,
+          "xp_today": 0
+        }
+      },
+      "output": {
+        "fields": [
+          "streak"
+        ],
+        "level_shown": false,
+        "rendered": true
+      }
+    },
+    {
+      "class": "dues_negative",
+      "input": {
+        "payload": {
+          "dues": -3,
+          "leech_active": 0,
+          "level": 0,
+          "mastery": 100.0,
+          "streak": 1,
+          "total_xp": 0,
+          "xp_today": 0
+        }
+      },
+      "output": {
+        "fields": [
+          "streak"
+        ],
+        "level_shown": false,
+        "rendered": true
+      }
+    },
+    {
+      "class": "mastery_hidden_without_leeches",
+      "input": {
+        "payload": {
+          "dues": null,
+          "leech_active": 0,
+          "level": 0,
+          "mastery": 70.0,
+          "streak": 1,
+          "total_xp": 0,
+          "xp_today": 0
+        }
+      },
+      "output": {
+        "fields": [
+          "streak"
+        ],
+        "level_shown": false,
+        "rendered": true
+      }
+    },
+    {
+      "class": "mastery_shown_with_leeches",
+      "input": {
+        "payload": {
+          "dues": null,
+          "leech_active": 3,
+          "level": 0,
+          "mastery": 91.0,
+          "streak": 0,
+          "total_xp": 0,
+          "xp_today": 0
+        }
+      },
+      "output": {
+        "fields": [
+          "mastery",
+          "leeches"
+        ],
+        "level_shown": false,
+        "rendered": true
+      }
+    },
+    {
+      "class": "everything",
+      "input": {
+        "payload": {
+          "dues": 18,
+          "leech_active": 4,
+          "level": 6,
+          "mastery": 88.0,
+          "streak": 9,
+          "total_xp": 12345,
+          "xp_today": 40
+        }
+      },
+      "output": {
+        "fields": [
+          "total_xp",
+          "streak",
+          "xp_today",
+          "dues",
+          "mastery",
+          "leeches"
+        ],
+        "level_shown": true,
+        "rendered": true
+      }
+    },
+    {
+      "input": {
+        "payload": {
+          "dues": 6,
+          "leech_active": 0,
+          "level": 5,
+          "mastery": 0.0,
+          "streak": 4,
+          "total_xp": 0,
+          "xp_today": 0
+        }
+      },
+      "output": {
+        "fields": [
+          "streak",
+          "dues"
+        ],
+        "level_shown": false,
+        "rendered": true
+      }
+    },
+    {
+      "input": {
+        "payload": {
+          "dues": null,
+          "leech_active": 0,
+          "level": 1,
+          "mastery": 91.0,
+          "streak": 0,
+          "total_xp": 0,
+          "xp_today": 15
+        }
+      },
+      "output": {
+        "fields": [
+          "xp_today"
+        ],
+        "level_shown": false,
+        "rendered": true
+      }
+    },
+    {
+      "input": {
+        "payload": {
+          "dues": 0,
+          "leech_active": 0,
+          "level": 3,
+          "mastery": 91.0,
+          "streak": 0,
+          "total_xp": 0,
+          "xp_today": 15
+        }
+      },
+      "output": {
+        "fields": [
+          "xp_today"
+        ],
+        "level_shown": false,
+        "rendered": true
+      }
+    },
+    {
+      "input": {
+        "payload": {
+          "dues": null,
+          "leech_active": 0,
+          "level": 6,
+          "mastery": 0.0,
+          "streak": 0,
+          "total_xp": 800,
+          "xp_today": 15
+        }
+      },
+      "output": {
+        "fields": [
+          "total_xp",
+          "xp_today"
+        ],
+        "level_shown": true,
+        "rendered": true
+      }
+    },
+    {
+      "input": {
+        "payload": {
+          "dues": null,
+          "leech_active": 0,
+          "level": 1,
+          "mastery": 0.0,
+          "streak": 4,
+          "total_xp": 0,
+          "xp_today": 0
+        }
+      },
+      "output": {
+        "fields": [
+          "streak"
+        ],
+        "level_shown": false,
+        "rendered": true
+      }
+    },
+    {
+      "input": {
+        "payload": {
+          "dues": 6,
+          "leech_active": 0,
+          "level": 2,
+          "mastery": 0.0,
+          "streak": 0,
+          "total_xp": 800,
+          "xp_today": 15
+        }
+      },
+      "output": {
+        "fields": [
+          "total_xp",
+          "xp_today",
+          "dues"
+        ],
+        "level_shown": true,
+        "rendered": true
+      }
+    },
+    {
+      "input": {
+        "payload": {
+          "dues": 6,
+          "leech_active": 2,
+          "level": 3,
+          "mastery": 0.0,
+          "streak": 0,
+          "total_xp": 0,
+          "xp_today": 15
+        }
+      },
+      "output": {
+        "fields": [
+          "xp_today",
+          "dues",
+          "leeches"
+        ],
+        "level_shown": false,
+        "rendered": true
+      }
+    },
+    {
+      "input": {
+        "payload": {
+          "dues": null,
+          "leech_active": 2,
+          "level": 4,
+          "mastery": 91.0,
+          "streak": 0,
+          "total_xp": 800,
+          "xp_today": 0
+        }
+      },
+      "output": {
+        "fields": [
+          "total_xp",
+          "mastery",
+          "leeches"
+        ],
+        "level_shown": true,
+        "rendered": true
+      }
+    }
+  ],
+  "function": "telegram.render_law_block",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Calls render_law_block with the case's payload and returns whether it rendered and which fields' lines it holds, never its text; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_077.py",
+  "registry_sha256": "91021d9dc71e71fbcce2e8677458fc10d998a56914a1843203efd29163d8f9ca",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

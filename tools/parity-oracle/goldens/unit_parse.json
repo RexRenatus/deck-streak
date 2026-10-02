@@ -1,0 +1,223 @@
+{
+  "cases": [
+    {
+      "class": "none",
+      "input": {
+        "deck_name": "Alpha"
+      },
+      "output": null
+    },
+    {
+      "class": "none",
+      "input": {
+        "deck_name": ""
+      },
+      "output": null
+    },
+    {
+      "class": "none",
+      "input": {
+        "deck_name": "Alpha\u001fLesson"
+      },
+      "output": null
+    },
+    {
+      "class": "none",
+      "input": {
+        "deck_name": "Unit"
+      },
+      "output": null
+    },
+    {
+      "class": "none",
+      "input": {
+        "deck_name": "Unit x"
+      },
+      "output": null
+    },
+    {
+      "class": "none",
+      "input": {
+        "deck_name": "unit 4"
+      },
+      "output": null
+    },
+    {
+      "class": "plain",
+      "input": {
+        "deck_name": "Alpha Unit 4"
+      },
+      "output": 4
+    },
+    {
+      "class": "plain",
+      "input": {
+        "deck_name": "Alpha\u001fUnit 42\u001fcards"
+      },
+      "output": 42
+    },
+    {
+      "class": "leading_zeros",
+      "input": {
+        "deck_name": "Unit 007"
+      },
+      "output": 7
+    },
+    {
+      "class": "leading_zeros",
+      "input": {
+        "deck_name": "Unit 0"
+      },
+      "output": 0
+    },
+    {
+      "class": "leading_zeros",
+      "input": {
+        "deck_name": "Unit 000"
+      },
+      "output": 0
+    },
+    {
+      "class": "leading_zeros",
+      "input": {
+        "deck_name": "Unit 0100"
+      },
+      "output": 100
+    },
+    {
+      "class": "spaces",
+      "input": {
+        "deck_name": "Unit    9"
+      },
+      "output": 9
+    },
+    {
+      "class": "spaces",
+      "input": {
+        "deck_name": "Unit\t12"
+      },
+      "output": 12
+    },
+    {
+      "class": "several",
+      "input": {
+        "deck_name": "Unit 3 and Unit 8"
+      },
+      "output": 3
+    },
+    {
+      "class": "several",
+      "input": {
+        "deck_name": "Alpha\u001fUnit 5\u001fUnit 6"
+      },
+      "output": 5
+    },
+    {
+      "class": "embedded",
+      "input": {
+        "deck_name": "Beta Unit 12 extra"
+      },
+      "output": 12
+    },
+    {
+      "class": "embedded",
+      "input": {
+        "deck_name": "XUnit 5"
+      },
+      "output": 5
+    },
+    {
+      "class": "digits_after",
+      "input": {
+        "deck_name": "Unit 12abc"
+      },
+      "output": 12
+    },
+    {
+      "class": "digits_after",
+      "input": {
+        "deck_name": "Unit 5.5"
+      },
+      "output": 5
+    },
+    {
+      "class": "large",
+      "input": {
+        "deck_name": "Unit 99999"
+      },
+      "output": 99999
+    },
+    {
+      "class": "large",
+      "input": {
+        "deck_name": "Unit 1000000"
+      },
+      "output": 1000000
+    },
+    {
+      "class": "a_dash_after",
+      "input": {
+        "deck_name": "Alpha Unit 15 \u2014 verbs"
+      },
+      "output": 15
+    },
+    {
+      "input": {
+        "deck_name": "Gamma\u001fUnit 370"
+      },
+      "output": 370
+    },
+    {
+      "input": {
+        "deck_name": "Gamma\u001fUnit 392"
+      },
+      "output": 392
+    },
+    {
+      "input": {
+        "deck_name": "Gamma\u001fUnit 133"
+      },
+      "output": 133
+    },
+    {
+      "input": {
+        "deck_name": "Gamma\u001fUnit 325"
+      },
+      "output": 325
+    },
+    {
+      "input": {
+        "deck_name": "Gamma\u001fUnit 167"
+      },
+      "output": 167
+    },
+    {
+      "input": {
+        "deck_name": "Gamma\u001fUnit 86"
+      },
+      "output": 86
+    },
+    {
+      "input": {
+        "deck_name": "Gamma\u001fUnit 210"
+      },
+      "output": 210
+    },
+    {
+      "input": {
+        "deck_name": "Gamma\u001fUnit 38"
+      },
+      "output": 38
+    }
+  ],
+  "function": "progress.parse_unit",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "function",
+  "registry": "tools/parity-oracle/registry/spec_077.py",
+  "registry_sha256": "91021d9dc71e71fbcce2e8677458fc10d998a56914a1843203efd29163d8f9ca",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

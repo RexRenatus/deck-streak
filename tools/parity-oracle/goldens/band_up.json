@@ -1,0 +1,1231 @@
+{
+  "adapter": "persist_progress",
+  "cases": [
+    {
+      "class": "first_sighting",
+      "input": {
+        "milestones": [],
+        "notifier": true,
+        "notify": true,
+        "progs": [
+          {
+            "band": "B1",
+            "code": "al",
+            "flag": "F",
+            "mastery_pct": 61.5,
+            "name": "Al"
+          }
+        ],
+        "stored": [],
+        "today": 20000
+      },
+      "output": {
+        "badges": [],
+        "celebrations": [],
+        "grants": [],
+        "records": [
+          {
+            "band": "B1",
+            "code": "al",
+            "new": true
+          }
+        ]
+      }
+    },
+    {
+      "class": "first_sighting",
+      "input": {
+        "milestones": [
+          [
+            "al",
+            "B1"
+          ]
+        ],
+        "notifier": true,
+        "notify": true,
+        "progs": [
+          {
+            "band": "B1",
+            "code": "al",
+            "flag": "F",
+            "mastery_pct": 61.5,
+            "name": "Al"
+          }
+        ],
+        "stored": [],
+        "today": 20000
+      },
+      "output": {
+        "badges": [],
+        "celebrations": [],
+        "grants": [],
+        "records": [
+          {
+            "band": "B1",
+            "code": "al",
+            "new": false
+          }
+        ]
+      }
+    },
+    {
+      "class": "first_sighting_a1",
+      "input": {
+        "milestones": [],
+        "notifier": true,
+        "notify": true,
+        "progs": [
+          {
+            "band": "A1",
+            "code": "al",
+            "flag": "F",
+            "mastery_pct": 61.5,
+            "name": "Al"
+          },
+          {
+            "band": "C2",
+            "code": "be",
+            "flag": "F",
+            "mastery_pct": 61.5,
+            "name": "Be"
+          }
+        ],
+        "stored": [],
+        "today": 20000
+      },
+      "output": {
+        "badges": [],
+        "celebrations": [],
+        "grants": [],
+        "records": [
+          {
+            "band": "A1",
+            "code": "al",
+            "new": true
+          },
+          {
+            "band": "C2",
+            "code": "be",
+            "new": true
+          }
+        ]
+      }
+    },
+    {
+      "class": "band_up",
+      "input": {
+        "milestones": [
+          [
+            "al",
+            "A1"
+          ]
+        ],
+        "notifier": true,
+        "notify": true,
+        "progs": [
+          {
+            "band": "A2",
+            "code": "al",
+            "flag": "F",
+            "mastery_pct": 61.5,
+            "name": "Al"
+          }
+        ],
+        "stored": [
+          [
+            "al",
+            "A1"
+          ]
+        ],
+        "today": 20000
+      },
+      "output": {
+        "badges": [
+          {
+            "emoji": "F",
+            "key": "band_al_A2",
+            "name": "Al A2"
+          }
+        ],
+        "celebrations": [
+          {
+            "budget_exempt": true,
+            "event_key": "bandup:al:A2",
+            "event_type": "band_up"
+          }
+        ],
+        "grants": [
+          {
+            "amount": 500,
+            "day": 20000,
+            "source": "bandup:al:A2"
+          }
+        ],
+        "records": [
+          {
+            "band": "A2",
+            "code": "al",
+            "new": true
+          }
+        ]
+      }
+    },
+    {
+      "class": "skipped_bands",
+      "input": {
+        "milestones": [
+          [
+            "al",
+            "A1"
+          ]
+        ],
+        "notifier": true,
+        "notify": true,
+        "progs": [
+          {
+            "band": "C1",
+            "code": "al",
+            "flag": "F",
+            "mastery_pct": 61.5,
+            "name": "Al"
+          }
+        ],
+        "stored": [
+          [
+            "al",
+            "A1"
+          ]
+        ],
+        "today": 20000
+      },
+      "output": {
+        "badges": [
+          {
+            "emoji": "F",
+            "key": "band_al_C1",
+            "name": "Al C1"
+          }
+        ],
+        "celebrations": [
+          {
+            "budget_exempt": true,
+            "event_key": "bandup:al:C1",
+            "event_type": "band_up"
+          }
+        ],
+        "grants": [
+          {
+            "amount": 500,
+            "day": 20000,
+            "source": "bandup:al:C1"
+          }
+        ],
+        "records": [
+          {
+            "band": "C1",
+            "code": "al",
+            "new": true
+          }
+        ]
+      }
+    },
+    {
+      "class": "unchanged",
+      "input": {
+        "milestones": [
+          [
+            "al",
+            "B2"
+          ]
+        ],
+        "notifier": true,
+        "notify": true,
+        "progs": [
+          {
+            "band": "B2",
+            "code": "al",
+            "flag": "F",
+            "mastery_pct": 61.5,
+            "name": "Al"
+          }
+        ],
+        "stored": [
+          [
+            "al",
+            "B2"
+          ]
+        ],
+        "today": 20000
+      },
+      "output": {
+        "badges": [],
+        "celebrations": [],
+        "grants": [],
+        "records": []
+      }
+    },
+    {
+      "class": "dropped",
+      "input": {
+        "milestones": [
+          [
+            "al",
+            "B2"
+          ]
+        ],
+        "notifier": true,
+        "notify": true,
+        "progs": [
+          {
+            "band": "A2",
+            "code": "al",
+            "flag": "F",
+            "mastery_pct": 61.5,
+            "name": "Al"
+          }
+        ],
+        "stored": [
+          [
+            "al",
+            "B2"
+          ]
+        ],
+        "today": 20000
+      },
+      "output": {
+        "badges": [],
+        "celebrations": [],
+        "grants": [],
+        "records": []
+      }
+    },
+    {
+      "class": "reached_again",
+      "input": {
+        "milestones": [
+          [
+            "al",
+            "A2"
+          ],
+          [
+            "al",
+            "B1"
+          ]
+        ],
+        "notifier": true,
+        "notify": true,
+        "progs": [
+          {
+            "band": "B1",
+            "code": "al",
+            "flag": "F",
+            "mastery_pct": 61.5,
+            "name": "Al"
+          }
+        ],
+        "stored": [
+          [
+            "al",
+            "A2"
+          ]
+        ],
+        "today": 20000
+      },
+      "output": {
+        "badges": [],
+        "celebrations": [],
+        "grants": [],
+        "records": [
+          {
+            "band": "B1",
+            "code": "al",
+            "new": false
+          }
+        ]
+      }
+    },
+    {
+      "class": "two_courses",
+      "input": {
+        "milestones": [
+          [
+            "al",
+            "A1"
+          ],
+          [
+            "be",
+            "B1"
+          ]
+        ],
+        "notifier": true,
+        "notify": true,
+        "progs": [
+          {
+            "band": "A2",
+            "code": "al",
+            "flag": "F",
+            "mastery_pct": 61.5,
+            "name": "Al"
+          },
+          {
+            "band": "B2",
+            "code": "be",
+            "flag": "F",
+            "mastery_pct": 61.5,
+            "name": "Beta Name"
+          }
+        ],
+        "stored": [
+          [
+            "al",
+            "A1"
+          ],
+          [
+            "be",
+            "B1"
+          ]
+        ],
+        "today": 20000
+      },
+      "output": {
+        "badges": [
+          {
+            "emoji": "F",
+            "key": "band_al_A2",
+            "name": "Al A2"
+          },
+          {
+            "emoji": "F",
+            "key": "band_be_B2",
+            "name": "Beta Name B2"
+          }
+        ],
+        "celebrations": [
+          {
+            "budget_exempt": true,
+            "event_key": "bandup:al:A2",
+            "event_type": "band_up"
+          },
+          {
+            "budget_exempt": true,
+            "event_key": "bandup:be:B2",
+            "event_type": "band_up"
+          }
+        ],
+        "grants": [
+          {
+            "amount": 500,
+            "day": 20000,
+            "source": "bandup:al:A2"
+          },
+          {
+            "amount": 500,
+            "day": 20000,
+            "source": "bandup:be:B2"
+          }
+        ],
+        "records": [
+          {
+            "band": "A2",
+            "code": "al",
+            "new": true
+          },
+          {
+            "band": "B2",
+            "code": "be",
+            "new": true
+          }
+        ]
+      }
+    },
+    {
+      "class": "new_and_up",
+      "input": {
+        "milestones": [
+          [
+            "al",
+            "A1"
+          ]
+        ],
+        "notifier": true,
+        "notify": true,
+        "progs": [
+          {
+            "band": "B1",
+            "code": "al",
+            "flag": "F",
+            "mastery_pct": 61.5,
+            "name": "Al"
+          },
+          {
+            "band": "A2",
+            "code": "be",
+            "flag": "F",
+            "mastery_pct": 61.5,
+            "name": "Be"
+          }
+        ],
+        "stored": [
+          [
+            "al",
+            "A1"
+          ]
+        ],
+        "today": 20000
+      },
+      "output": {
+        "badges": [
+          {
+            "emoji": "F",
+            "key": "band_al_B1",
+            "name": "Al B1"
+          }
+        ],
+        "celebrations": [
+          {
+            "budget_exempt": true,
+            "event_key": "bandup:al:B1",
+            "event_type": "band_up"
+          }
+        ],
+        "grants": [
+          {
+            "amount": 500,
+            "day": 20000,
+            "source": "bandup:al:B1"
+          }
+        ],
+        "records": [
+          {
+            "band": "B1",
+            "code": "al",
+            "new": true
+          },
+          {
+            "band": "A2",
+            "code": "be",
+            "new": true
+          }
+        ]
+      }
+    },
+    {
+      "class": "a_course_with_no_progress",
+      "input": {
+        "milestones": [
+          [
+            "al",
+            "A1"
+          ]
+        ],
+        "notifier": true,
+        "notify": true,
+        "progs": [
+          {
+            "band": "A2",
+            "code": "al",
+            "flag": "F",
+            "mastery_pct": 61.5,
+            "name": "Al"
+          }
+        ],
+        "stored": [
+          [
+            "al",
+            "A1"
+          ],
+          [
+            "be",
+            "A1"
+          ]
+        ],
+        "today": 20000
+      },
+      "output": {
+        "badges": [
+          {
+            "emoji": "F",
+            "key": "band_al_A2",
+            "name": "Al A2"
+          }
+        ],
+        "celebrations": [
+          {
+            "budget_exempt": true,
+            "event_key": "bandup:al:A2",
+            "event_type": "band_up"
+          }
+        ],
+        "grants": [
+          {
+            "amount": 500,
+            "day": 20000,
+            "source": "bandup:al:A2"
+          }
+        ],
+        "records": [
+          {
+            "band": "A2",
+            "code": "al",
+            "new": true
+          }
+        ]
+      }
+    },
+    {
+      "class": "no_notifier",
+      "input": {
+        "milestones": [
+          [
+            "al",
+            "A1"
+          ]
+        ],
+        "notifier": false,
+        "notify": true,
+        "progs": [
+          {
+            "band": "A2",
+            "code": "al",
+            "flag": "F",
+            "mastery_pct": 61.5,
+            "name": "Al"
+          }
+        ],
+        "stored": [
+          [
+            "al",
+            "A1"
+          ]
+        ],
+        "today": 20000
+      },
+      "output": {
+        "badges": [
+          {
+            "emoji": "F",
+            "key": "band_al_A2",
+            "name": "Al A2"
+          }
+        ],
+        "celebrations": [],
+        "grants": [
+          {
+            "amount": 500,
+            "day": 20000,
+            "source": "bandup:al:A2"
+          }
+        ],
+        "records": [
+          {
+            "band": "A2",
+            "code": "al",
+            "new": true
+          }
+        ]
+      }
+    },
+    {
+      "class": "milestones_muted",
+      "input": {
+        "milestones": [
+          [
+            "al",
+            "A1"
+          ]
+        ],
+        "notifier": true,
+        "notify": false,
+        "progs": [
+          {
+            "band": "A2",
+            "code": "al",
+            "flag": "F",
+            "mastery_pct": 61.5,
+            "name": "Al"
+          }
+        ],
+        "stored": [
+          [
+            "al",
+            "A1"
+          ]
+        ],
+        "today": 20000
+      },
+      "output": {
+        "badges": [
+          {
+            "emoji": "F",
+            "key": "band_al_A2",
+            "name": "Al A2"
+          }
+        ],
+        "celebrations": [],
+        "grants": [
+          {
+            "amount": 500,
+            "day": 20000,
+            "source": "bandup:al:A2"
+          }
+        ],
+        "records": [
+          {
+            "band": "A2",
+            "code": "al",
+            "new": true
+          }
+        ]
+      }
+    },
+    {
+      "class": "a_dashed_code",
+      "input": {
+        "milestones": [
+          [
+            "en-us",
+            "A1"
+          ]
+        ],
+        "notifier": true,
+        "notify": true,
+        "progs": [
+          {
+            "band": "A2",
+            "code": "en-us",
+            "flag": "F",
+            "mastery_pct": 61.5,
+            "name": "En-us"
+          }
+        ],
+        "stored": [
+          [
+            "en-us",
+            "A1"
+          ]
+        ],
+        "today": 20000
+      },
+      "output": {
+        "badges": [
+          {
+            "emoji": "F",
+            "key": "band_en-us_A2",
+            "name": "En-us A2"
+          }
+        ],
+        "celebrations": [
+          {
+            "budget_exempt": true,
+            "event_key": "bandup:en-us:A2",
+            "event_type": "band_up"
+          }
+        ],
+        "grants": [
+          {
+            "amount": 500,
+            "day": 20000,
+            "source": "bandup:en-us:A2"
+          }
+        ],
+        "records": [
+          {
+            "band": "A2",
+            "code": "en-us",
+            "new": true
+          }
+        ]
+      }
+    },
+    {
+      "class": "no_courses",
+      "input": {
+        "milestones": [
+          [
+            "al",
+            "A1"
+          ]
+        ],
+        "notifier": true,
+        "notify": true,
+        "progs": [],
+        "stored": [
+          [
+            "al",
+            "A1"
+          ]
+        ],
+        "today": 20000
+      },
+      "output": {
+        "badges": [],
+        "celebrations": [],
+        "grants": [],
+        "records": []
+      }
+    },
+    {
+      "input": {
+        "milestones": [
+          [
+            "be",
+            "A1"
+          ],
+          [
+            "de",
+            "A2"
+          ],
+          [
+            "be",
+            "B2"
+          ]
+        ],
+        "notifier": true,
+        "notify": true,
+        "progs": [
+          {
+            "band": "B2",
+            "code": "be",
+            "flag": "F",
+            "mastery_pct": 61.5,
+            "name": "Be"
+          },
+          {
+            "band": "A1",
+            "code": "ga",
+            "flag": "F",
+            "mastery_pct": 61.5,
+            "name": "Ga"
+          },
+          {
+            "band": "A1",
+            "code": "de",
+            "flag": "F",
+            "mastery_pct": 61.5,
+            "name": "De"
+          }
+        ],
+        "stored": [
+          [
+            "be",
+            "A1"
+          ],
+          [
+            "de",
+            "A2"
+          ]
+        ],
+        "today": 20000
+      },
+      "output": {
+        "badges": [],
+        "celebrations": [],
+        "grants": [],
+        "records": [
+          {
+            "band": "B2",
+            "code": "be",
+            "new": false
+          },
+          {
+            "band": "A1",
+            "code": "ga",
+            "new": true
+          }
+        ]
+      }
+    },
+    {
+      "input": {
+        "milestones": [
+          [
+            "ga",
+            "C1"
+          ],
+          [
+            "ga",
+            "B2"
+          ]
+        ],
+        "notifier": true,
+        "notify": true,
+        "progs": [
+          {
+            "band": "A2",
+            "code": "ga",
+            "flag": "F",
+            "mastery_pct": 61.5,
+            "name": "Ga"
+          }
+        ],
+        "stored": [
+          [
+            "ga",
+            "C1"
+          ]
+        ],
+        "today": 20000
+      },
+      "output": {
+        "badges": [],
+        "celebrations": [],
+        "grants": [],
+        "records": []
+      }
+    },
+    {
+      "input": {
+        "milestones": [
+          [
+            "ga",
+            "C2"
+          ],
+          [
+            "ga",
+            "B1"
+          ]
+        ],
+        "notifier": true,
+        "notify": true,
+        "progs": [
+          {
+            "band": "B2",
+            "code": "ga",
+            "flag": "F",
+            "mastery_pct": 61.5,
+            "name": "Ga"
+          }
+        ],
+        "stored": [
+          [
+            "ga",
+            "C2"
+          ]
+        ],
+        "today": 20000
+      },
+      "output": {
+        "badges": [],
+        "celebrations": [],
+        "grants": [],
+        "records": []
+      }
+    },
+    {
+      "input": {
+        "milestones": [
+          [
+            "fr",
+            "B2"
+          ]
+        ],
+        "notifier": true,
+        "notify": true,
+        "progs": [
+          {
+            "band": "A1",
+            "code": "fr",
+            "flag": "F",
+            "mastery_pct": 61.5,
+            "name": "Fr"
+          }
+        ],
+        "stored": [],
+        "today": 20000
+      },
+      "output": {
+        "badges": [],
+        "celebrations": [],
+        "grants": [],
+        "records": [
+          {
+            "band": "A1",
+            "code": "fr",
+            "new": true
+          }
+        ]
+      }
+    },
+    {
+      "input": {
+        "milestones": [
+          [
+            "fr",
+            "A2"
+          ],
+          [
+            "fr",
+            "A1"
+          ]
+        ],
+        "notifier": true,
+        "notify": true,
+        "progs": [
+          {
+            "band": "A2",
+            "code": "fr",
+            "flag": "F",
+            "mastery_pct": 61.5,
+            "name": "Fr"
+          }
+        ],
+        "stored": [
+          [
+            "fr",
+            "A2"
+          ]
+        ],
+        "today": 20000
+      },
+      "output": {
+        "badges": [],
+        "celebrations": [],
+        "grants": [],
+        "records": []
+      }
+    },
+    {
+      "input": {
+        "milestones": [
+          [
+            "ga",
+            "A2"
+          ],
+          [
+            "fr",
+            "A1"
+          ],
+          [
+            "fr",
+            "C2"
+          ]
+        ],
+        "notifier": true,
+        "notify": true,
+        "progs": [
+          {
+            "band": "A2",
+            "code": "ga",
+            "flag": "F",
+            "mastery_pct": 61.5,
+            "name": "Ga"
+          },
+          {
+            "band": "A2",
+            "code": "fr",
+            "flag": "F",
+            "mastery_pct": 61.5,
+            "name": "Fr"
+          }
+        ],
+        "stored": [
+          [
+            "ga",
+            "A2"
+          ],
+          [
+            "fr",
+            "A1"
+          ]
+        ],
+        "today": 20000
+      },
+      "output": {
+        "badges": [
+          {
+            "emoji": "F",
+            "key": "band_fr_A2",
+            "name": "Fr A2"
+          }
+        ],
+        "celebrations": [
+          {
+            "budget_exempt": true,
+            "event_key": "bandup:fr:A2",
+            "event_type": "band_up"
+          }
+        ],
+        "grants": [
+          {
+            "amount": 500,
+            "day": 20000,
+            "source": "bandup:fr:A2"
+          }
+        ],
+        "records": [
+          {
+            "band": "A2",
+            "code": "fr",
+            "new": true
+          }
+        ]
+      }
+    },
+    {
+      "input": {
+        "milestones": [
+          [
+            "al",
+            "B1"
+          ],
+          [
+            "de",
+            "C2"
+          ],
+          [
+            "al",
+            "C1"
+          ]
+        ],
+        "notifier": true,
+        "notify": true,
+        "progs": [
+          {
+            "band": "C2",
+            "code": "be",
+            "flag": "F",
+            "mastery_pct": 61.5,
+            "name": "Be"
+          },
+          {
+            "band": "B2",
+            "code": "al",
+            "flag": "F",
+            "mastery_pct": 61.5,
+            "name": "Al"
+          },
+          {
+            "band": "A2",
+            "code": "de",
+            "flag": "F",
+            "mastery_pct": 61.5,
+            "name": "De"
+          }
+        ],
+        "stored": [
+          [
+            "al",
+            "B1"
+          ],
+          [
+            "de",
+            "C2"
+          ]
+        ],
+        "today": 20000
+      },
+      "output": {
+        "badges": [
+          {
+            "emoji": "F",
+            "key": "band_al_B2",
+            "name": "Al B2"
+          }
+        ],
+        "celebrations": [
+          {
+            "budget_exempt": true,
+            "event_key": "bandup:al:B2",
+            "event_type": "band_up"
+          }
+        ],
+        "grants": [
+          {
+            "amount": 500,
+            "day": 20000,
+            "source": "bandup:al:B2"
+          }
+        ],
+        "records": [
+          {
+            "band": "C2",
+            "code": "be",
+            "new": true
+          },
+          {
+            "band": "B2",
+            "code": "al",
+            "new": true
+          }
+        ]
+      }
+    },
+    {
+      "input": {
+        "milestones": [
+          [
+            "ga",
+            "C2"
+          ],
+          [
+            "al",
+            "C1"
+          ],
+          [
+            "de",
+            "B1"
+          ]
+        ],
+        "notifier": true,
+        "notify": true,
+        "progs": [
+          {
+            "band": "A2",
+            "code": "ga",
+            "flag": "F",
+            "mastery_pct": 61.5,
+            "name": "Ga"
+          },
+          {
+            "band": "A1",
+            "code": "de",
+            "flag": "F",
+            "mastery_pct": 61.5,
+            "name": "De"
+          },
+          {
+            "band": "C1",
+            "code": "al",
+            "flag": "F",
+            "mastery_pct": 61.5,
+            "name": "Al"
+          }
+        ],
+        "stored": [
+          [
+            "ga",
+            "C2"
+          ],
+          [
+            "al",
+            "C1"
+          ]
+        ],
+        "today": 20000
+      },
+      "output": {
+        "badges": [],
+        "celebrations": [],
+        "grants": [],
+        "records": [
+          {
+            "band": "A1",
+            "code": "de",
+            "new": true
+          }
+        ]
+      }
+    }
+  ],
+  "function": "pipeline.GamifyPipeline._persist_progress",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Runs _persist_progress (and its _celebrate_band_up) on a stub store holding the stored bands and milestones, with progress.compute_progress patched to answer the case's per-course bands; returns the milestone records, the XP grants, the badges and the celebrations the stub recorded, never their text; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_077.py",
+  "registry_sha256": "91021d9dc71e71fbcce2e8677458fc10d998a56914a1843203efd29163d8f9ca",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

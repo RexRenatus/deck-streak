@@ -1,0 +1,4897 @@
+{
+  "adapter": "with_synthetic_courses",
+  "cases": [
+    {
+      "class": "empty",
+      "input": {
+        "cards": [],
+        "courses": [
+          {
+            "bands": {
+              "A1": [
+                1,
+                6
+              ],
+              "A2": [
+                7,
+                12
+              ],
+              "B1": [
+                13,
+                18
+              ],
+              "B2": [
+                19,
+                24
+              ],
+              "C1": [
+                25,
+                30
+              ],
+              "C2": [
+                31,
+                36
+              ]
+            },
+            "code": "al",
+            "deck_root": "Alpha Course",
+            "flag": "\ud83c\udff3",
+            "name": "Alpha"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                4
+              ],
+              "B1": [
+                10,
+                14
+              ],
+              "C2": [
+                20,
+                20
+              ]
+            },
+            "code": "be",
+            "deck_root": "Beta Course",
+            "flag": "\ud83c\udff4",
+            "name": "Beta"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                2
+              ],
+              "A2": [
+                3,
+                4
+              ]
+            },
+            "code": "ga",
+            "deck_root": "Gamma Course",
+            "flag": "\ud83c\udfc1",
+            "name": "Aardvark Gamma"
+          }
+        ],
+        "decks": {},
+        "now_sec": 1700000000
+      },
+      "output": []
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "cards": [
+          {
+            "ctype": 2,
+            "did": 10,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 10,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 10,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 10,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 10,
+            "ivl": 3,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 11,
+            "ivl": 3,
+            "queue": 2
+          }
+        ],
+        "courses": [
+          {
+            "bands": {
+              "A1": [
+                1,
+                6
+              ],
+              "A2": [
+                7,
+                12
+              ],
+              "B1": [
+                13,
+                18
+              ],
+              "B2": [
+                19,
+                24
+              ],
+              "C1": [
+                25,
+                30
+              ],
+              "C2": [
+                31,
+                36
+              ]
+            },
+            "code": "al",
+            "deck_root": "Alpha Course",
+            "flag": "\ud83c\udff3",
+            "name": "Alpha"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                4
+              ],
+              "B1": [
+                10,
+                14
+              ],
+              "C2": [
+                20,
+                20
+              ]
+            },
+            "code": "be",
+            "deck_root": "Beta Course",
+            "flag": "\ud83c\udff4",
+            "name": "Beta"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                2
+              ],
+              "A2": [
+                3,
+                4
+              ]
+            },
+            "code": "ga",
+            "deck_root": "Gamma Course",
+            "flag": "\ud83c\udfc1",
+            "name": "Aardvark Gamma"
+          }
+        ],
+        "decks": {
+          "10": "Alpha Course\u001fUnit 01 \u2014 Part",
+          "11": "Alpha Course\u001fUnit 07 \u2014 Part"
+        },
+        "now_sec": 1700000000
+      },
+      "output": [
+        {
+          "bands": [
+            {
+              "achieved": true,
+              "band": "A1",
+              "mature": 4,
+              "pct": 80.0,
+              "total": 5
+            },
+            {
+              "achieved": false,
+              "band": "A2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 1
+            },
+            {
+              "achieved": false,
+              "band": "B1",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "B2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "C1",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "C2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            }
+          ],
+          "code": "al",
+          "current_band": "A1",
+          "current_unit": 1,
+          "flag": "\ud83c\udff3",
+          "mastery_pct": 66.66666666666666,
+          "mature_cards": 4,
+          "name": "Alpha",
+          "total_cards": 6
+        }
+      ]
+    },
+    {
+      "class": "below_threshold",
+      "input": {
+        "cards": [
+          {
+            "ctype": 2,
+            "did": 10,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 10,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 10,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 10,
+            "ivl": 3,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 10,
+            "ivl": 3,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 11,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 11,
+            "ivl": 30,
+            "queue": 2
+          }
+        ],
+        "courses": [
+          {
+            "bands": {
+              "A1": [
+                1,
+                6
+              ],
+              "A2": [
+                7,
+                12
+              ],
+              "B1": [
+                13,
+                18
+              ],
+              "B2": [
+                19,
+                24
+              ],
+              "C1": [
+                25,
+                30
+              ],
+              "C2": [
+                31,
+                36
+              ]
+            },
+            "code": "al",
+            "deck_root": "Alpha Course",
+            "flag": "\ud83c\udff3",
+            "name": "Alpha"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                4
+              ],
+              "B1": [
+                10,
+                14
+              ],
+              "C2": [
+                20,
+                20
+              ]
+            },
+            "code": "be",
+            "deck_root": "Beta Course",
+            "flag": "\ud83c\udff4",
+            "name": "Beta"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                2
+              ],
+              "A2": [
+                3,
+                4
+              ]
+            },
+            "code": "ga",
+            "deck_root": "Gamma Course",
+            "flag": "\ud83c\udfc1",
+            "name": "Aardvark Gamma"
+          }
+        ],
+        "decks": {
+          "10": "Alpha Course\u001fUnit 01 \u2014 Part",
+          "11": "Alpha Course\u001fUnit 07 \u2014 Part"
+        },
+        "now_sec": 1700000000
+      },
+      "output": [
+        {
+          "bands": [
+            {
+              "achieved": false,
+              "band": "A1",
+              "mature": 3,
+              "pct": 60.0,
+              "total": 5
+            },
+            {
+              "achieved": true,
+              "band": "A2",
+              "mature": 2,
+              "pct": 100.0,
+              "total": 2
+            },
+            {
+              "achieved": false,
+              "band": "B1",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "B2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "C1",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "C2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            }
+          ],
+          "code": "al",
+          "current_band": "A1",
+          "current_unit": 7,
+          "flag": "\ud83c\udff3",
+          "mastery_pct": 71.42857142857143,
+          "mature_cards": 5,
+          "name": "Alpha",
+          "total_cards": 7
+        }
+      ]
+    },
+    {
+      "class": "gap",
+      "input": {
+        "cards": [
+          {
+            "ctype": 2,
+            "did": 10,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 10,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 10,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 11,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 11,
+            "ivl": 3,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 11,
+            "ivl": 3,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 11,
+            "ivl": 3,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 12,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 12,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 12,
+            "ivl": 30,
+            "queue": 2
+          }
+        ],
+        "courses": [
+          {
+            "bands": {
+              "A1": [
+                1,
+                6
+              ],
+              "A2": [
+                7,
+                12
+              ],
+              "B1": [
+                13,
+                18
+              ],
+              "B2": [
+                19,
+                24
+              ],
+              "C1": [
+                25,
+                30
+              ],
+              "C2": [
+                31,
+                36
+              ]
+            },
+            "code": "al",
+            "deck_root": "Alpha Course",
+            "flag": "\ud83c\udff3",
+            "name": "Alpha"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                4
+              ],
+              "B1": [
+                10,
+                14
+              ],
+              "C2": [
+                20,
+                20
+              ]
+            },
+            "code": "be",
+            "deck_root": "Beta Course",
+            "flag": "\ud83c\udff4",
+            "name": "Beta"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                2
+              ],
+              "A2": [
+                3,
+                4
+              ]
+            },
+            "code": "ga",
+            "deck_root": "Gamma Course",
+            "flag": "\ud83c\udfc1",
+            "name": "Aardvark Gamma"
+          }
+        ],
+        "decks": {
+          "10": "Alpha Course\u001fUnit 02 \u2014 Part",
+          "11": "Alpha Course\u001fUnit 08 \u2014 Part",
+          "12": "Alpha Course\u001fUnit 14 \u2014 Part"
+        },
+        "now_sec": 1700000000
+      },
+      "output": [
+        {
+          "bands": [
+            {
+              "achieved": true,
+              "band": "A1",
+              "mature": 3,
+              "pct": 100.0,
+              "total": 3
+            },
+            {
+              "achieved": false,
+              "band": "A2",
+              "mature": 1,
+              "pct": 25.0,
+              "total": 4
+            },
+            {
+              "achieved": true,
+              "band": "B1",
+              "mature": 3,
+              "pct": 100.0,
+              "total": 3
+            },
+            {
+              "achieved": false,
+              "band": "B2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "C1",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "C2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            }
+          ],
+          "code": "al",
+          "current_band": "A1",
+          "current_unit": 14,
+          "flag": "\ud83c\udff3",
+          "mastery_pct": 70.0,
+          "mature_cards": 7,
+          "name": "Alpha",
+          "total_cards": 10
+        }
+      ]
+    },
+    {
+      "class": "unachieved_a1",
+      "input": {
+        "cards": [
+          {
+            "ctype": 2,
+            "did": 10,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 10,
+            "ivl": 3,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 10,
+            "ivl": 3,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 10,
+            "ivl": 3,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 10,
+            "ivl": 3,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 11,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 11,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 12,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 12,
+            "ivl": 30,
+            "queue": 2
+          }
+        ],
+        "courses": [
+          {
+            "bands": {
+              "A1": [
+                1,
+                6
+              ],
+              "A2": [
+                7,
+                12
+              ],
+              "B1": [
+                13,
+                18
+              ],
+              "B2": [
+                19,
+                24
+              ],
+              "C1": [
+                25,
+                30
+              ],
+              "C2": [
+                31,
+                36
+              ]
+            },
+            "code": "al",
+            "deck_root": "Alpha Course",
+            "flag": "\ud83c\udff3",
+            "name": "Alpha"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                4
+              ],
+              "B1": [
+                10,
+                14
+              ],
+              "C2": [
+                20,
+                20
+              ]
+            },
+            "code": "be",
+            "deck_root": "Beta Course",
+            "flag": "\ud83c\udff4",
+            "name": "Beta"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                2
+              ],
+              "A2": [
+                3,
+                4
+              ]
+            },
+            "code": "ga",
+            "deck_root": "Gamma Course",
+            "flag": "\ud83c\udfc1",
+            "name": "Aardvark Gamma"
+          }
+        ],
+        "decks": {
+          "10": "Alpha Course\u001fUnit 03 \u2014 Part",
+          "11": "Alpha Course\u001fUnit 13 \u2014 Part",
+          "12": "Alpha Course\u001fUnit 31 \u2014 Part"
+        },
+        "now_sec": 1700000000
+      },
+      "output": [
+        {
+          "bands": [
+            {
+              "achieved": false,
+              "band": "A1",
+              "mature": 1,
+              "pct": 20.0,
+              "total": 5
+            },
+            {
+              "achieved": false,
+              "band": "A2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": true,
+              "band": "B1",
+              "mature": 2,
+              "pct": 100.0,
+              "total": 2
+            },
+            {
+              "achieved": false,
+              "band": "B2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "C1",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": true,
+              "band": "C2",
+              "mature": 2,
+              "pct": 100.0,
+              "total": 2
+            }
+          ],
+          "code": "al",
+          "current_band": "A1",
+          "current_unit": 31,
+          "flag": "\ud83c\udff3",
+          "mastery_pct": 55.55555555555556,
+          "mature_cards": 5,
+          "name": "Alpha",
+          "total_cards": 9
+        }
+      ]
+    },
+    {
+      "class": "every_band",
+      "input": {
+        "cards": [
+          {
+            "ctype": 2,
+            "did": 10,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 10,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 11,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 11,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 12,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 12,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 13,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 13,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 14,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 14,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 15,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 15,
+            "ivl": 30,
+            "queue": 2
+          }
+        ],
+        "courses": [
+          {
+            "bands": {
+              "A1": [
+                1,
+                6
+              ],
+              "A2": [
+                7,
+                12
+              ],
+              "B1": [
+                13,
+                18
+              ],
+              "B2": [
+                19,
+                24
+              ],
+              "C1": [
+                25,
+                30
+              ],
+              "C2": [
+                31,
+                36
+              ]
+            },
+            "code": "al",
+            "deck_root": "Alpha Course",
+            "flag": "\ud83c\udff3",
+            "name": "Alpha"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                4
+              ],
+              "B1": [
+                10,
+                14
+              ],
+              "C2": [
+                20,
+                20
+              ]
+            },
+            "code": "be",
+            "deck_root": "Beta Course",
+            "flag": "\ud83c\udff4",
+            "name": "Beta"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                2
+              ],
+              "A2": [
+                3,
+                4
+              ]
+            },
+            "code": "ga",
+            "deck_root": "Gamma Course",
+            "flag": "\ud83c\udfc1",
+            "name": "Aardvark Gamma"
+          }
+        ],
+        "decks": {
+          "10": "Alpha Course\u001fUnit 01 \u2014 Part",
+          "11": "Alpha Course\u001fUnit 08 \u2014 Part",
+          "12": "Alpha Course\u001fUnit 14 \u2014 Part",
+          "13": "Alpha Course\u001fUnit 20 \u2014 Part",
+          "14": "Alpha Course\u001fUnit 26 \u2014 Part",
+          "15": "Alpha Course\u001fUnit 32 \u2014 Part"
+        },
+        "now_sec": 1700000000
+      },
+      "output": [
+        {
+          "bands": [
+            {
+              "achieved": true,
+              "band": "A1",
+              "mature": 2,
+              "pct": 100.0,
+              "total": 2
+            },
+            {
+              "achieved": true,
+              "band": "A2",
+              "mature": 2,
+              "pct": 100.0,
+              "total": 2
+            },
+            {
+              "achieved": true,
+              "band": "B1",
+              "mature": 2,
+              "pct": 100.0,
+              "total": 2
+            },
+            {
+              "achieved": true,
+              "band": "B2",
+              "mature": 2,
+              "pct": 100.0,
+              "total": 2
+            },
+            {
+              "achieved": true,
+              "band": "C1",
+              "mature": 2,
+              "pct": 100.0,
+              "total": 2
+            },
+            {
+              "achieved": true,
+              "band": "C2",
+              "mature": 2,
+              "pct": 100.0,
+              "total": 2
+            }
+          ],
+          "code": "al",
+          "current_band": "C2",
+          "current_unit": 32,
+          "flag": "\ud83c\udff3",
+          "mastery_pct": 100.0,
+          "mature_cards": 12,
+          "name": "Alpha",
+          "total_cards": 12
+        }
+      ]
+    },
+    {
+      "class": "empty_band_stops",
+      "input": {
+        "cards": [
+          {
+            "ctype": 2,
+            "did": 10,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 10,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 11,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 11,
+            "ivl": 30,
+            "queue": 2
+          }
+        ],
+        "courses": [
+          {
+            "bands": {
+              "A1": [
+                1,
+                6
+              ],
+              "A2": [
+                7,
+                12
+              ],
+              "B1": [
+                13,
+                18
+              ],
+              "B2": [
+                19,
+                24
+              ],
+              "C1": [
+                25,
+                30
+              ],
+              "C2": [
+                31,
+                36
+              ]
+            },
+            "code": "al",
+            "deck_root": "Alpha Course",
+            "flag": "\ud83c\udff3",
+            "name": "Alpha"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                4
+              ],
+              "B1": [
+                10,
+                14
+              ],
+              "C2": [
+                20,
+                20
+              ]
+            },
+            "code": "be",
+            "deck_root": "Beta Course",
+            "flag": "\ud83c\udff4",
+            "name": "Beta"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                2
+              ],
+              "A2": [
+                3,
+                4
+              ]
+            },
+            "code": "ga",
+            "deck_root": "Gamma Course",
+            "flag": "\ud83c\udfc1",
+            "name": "Aardvark Gamma"
+          }
+        ],
+        "decks": {
+          "10": "Alpha Course\u001fUnit 02 \u2014 Part",
+          "11": "Alpha Course\u001fUnit 14 \u2014 Part"
+        },
+        "now_sec": 1700000000
+      },
+      "output": [
+        {
+          "bands": [
+            {
+              "achieved": true,
+              "band": "A1",
+              "mature": 2,
+              "pct": 100.0,
+              "total": 2
+            },
+            {
+              "achieved": false,
+              "band": "A2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": true,
+              "band": "B1",
+              "mature": 2,
+              "pct": 100.0,
+              "total": 2
+            },
+            {
+              "achieved": false,
+              "band": "B2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "C1",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "C2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            }
+          ],
+          "code": "al",
+          "current_band": "A1",
+          "current_unit": 14,
+          "flag": "\ud83c\udff3",
+          "mastery_pct": 100.0,
+          "mature_cards": 4,
+          "name": "Alpha",
+          "total_cards": 4
+        }
+      ]
+    },
+    {
+      "class": "skipped_band",
+      "input": {
+        "cards": [
+          {
+            "ctype": 2,
+            "did": 10,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 11,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 12,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 13,
+            "ivl": 3,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 13,
+            "ivl": 3,
+            "queue": 2
+          }
+        ],
+        "courses": [
+          {
+            "bands": {
+              "A1": [
+                1,
+                6
+              ],
+              "A2": [
+                7,
+                12
+              ],
+              "B1": [
+                13,
+                18
+              ],
+              "B2": [
+                19,
+                24
+              ],
+              "C1": [
+                25,
+                30
+              ],
+              "C2": [
+                31,
+                36
+              ]
+            },
+            "code": "al",
+            "deck_root": "Alpha Course",
+            "flag": "\ud83c\udff3",
+            "name": "Alpha"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                4
+              ],
+              "B1": [
+                10,
+                14
+              ],
+              "C2": [
+                20,
+                20
+              ]
+            },
+            "code": "be",
+            "deck_root": "Beta Course",
+            "flag": "\ud83c\udff4",
+            "name": "Beta"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                2
+              ],
+              "A2": [
+                3,
+                4
+              ]
+            },
+            "code": "ga",
+            "deck_root": "Gamma Course",
+            "flag": "\ud83c\udfc1",
+            "name": "Aardvark Gamma"
+          }
+        ],
+        "decks": {
+          "10": "Alpha Course\u001fUnit 01 \u2014 Part",
+          "11": "Alpha Course\u001fUnit 09 \u2014 Part",
+          "12": "Alpha Course\u001fUnit 15 \u2014 Part",
+          "13": "Alpha Course\u001fUnit 20 \u2014 Part"
+        },
+        "now_sec": 1700000000
+      },
+      "output": [
+        {
+          "bands": [
+            {
+              "achieved": true,
+              "band": "A1",
+              "mature": 1,
+              "pct": 100.0,
+              "total": 1
+            },
+            {
+              "achieved": true,
+              "band": "A2",
+              "mature": 1,
+              "pct": 100.0,
+              "total": 1
+            },
+            {
+              "achieved": true,
+              "band": "B1",
+              "mature": 1,
+              "pct": 100.0,
+              "total": 1
+            },
+            {
+              "achieved": false,
+              "band": "B2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 2
+            },
+            {
+              "achieved": false,
+              "band": "C1",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "C2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            }
+          ],
+          "code": "al",
+          "current_band": "B1",
+          "current_unit": 15,
+          "flag": "\ud83c\udff3",
+          "mastery_pct": 60.0,
+          "mature_cards": 3,
+          "name": "Alpha",
+          "total_cards": 5
+        }
+      ]
+    },
+    {
+      "class": "drop",
+      "input": {
+        "cards": [
+          {
+            "ctype": 2,
+            "did": 10,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 10,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 11,
+            "ivl": 3,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 11,
+            "ivl": 3,
+            "queue": 2
+          }
+        ],
+        "courses": [
+          {
+            "bands": {
+              "A1": [
+                1,
+                6
+              ],
+              "A2": [
+                7,
+                12
+              ],
+              "B1": [
+                13,
+                18
+              ],
+              "B2": [
+                19,
+                24
+              ],
+              "C1": [
+                25,
+                30
+              ],
+              "C2": [
+                31,
+                36
+              ]
+            },
+            "code": "al",
+            "deck_root": "Alpha Course",
+            "flag": "\ud83c\udff3",
+            "name": "Alpha"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                4
+              ],
+              "B1": [
+                10,
+                14
+              ],
+              "C2": [
+                20,
+                20
+              ]
+            },
+            "code": "be",
+            "deck_root": "Beta Course",
+            "flag": "\ud83c\udff4",
+            "name": "Beta"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                2
+              ],
+              "A2": [
+                3,
+                4
+              ]
+            },
+            "code": "ga",
+            "deck_root": "Gamma Course",
+            "flag": "\ud83c\udfc1",
+            "name": "Aardvark Gamma"
+          }
+        ],
+        "decks": {
+          "10": "Alpha Course\u001fUnit 01 \u2014 Part",
+          "11": "Alpha Course\u001fUnit 08 \u2014 Part"
+        },
+        "now_sec": 1700000000
+      },
+      "output": [
+        {
+          "bands": [
+            {
+              "achieved": true,
+              "band": "A1",
+              "mature": 2,
+              "pct": 100.0,
+              "total": 2
+            },
+            {
+              "achieved": false,
+              "band": "A2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 2
+            },
+            {
+              "achieved": false,
+              "band": "B1",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "B2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "C1",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "C2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            }
+          ],
+          "code": "al",
+          "current_band": "A1",
+          "current_unit": 1,
+          "flag": "\ud83c\udff3",
+          "mastery_pct": 50.0,
+          "mature_cards": 2,
+          "name": "Alpha",
+          "total_cards": 4
+        }
+      ]
+    },
+    {
+      "class": "band_gaps",
+      "input": {
+        "cards": [
+          {
+            "ctype": 2,
+            "did": 10,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 10,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 11,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 11,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 11,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 12,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 12,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 13,
+            "ivl": 30,
+            "queue": 2
+          }
+        ],
+        "courses": [
+          {
+            "bands": {
+              "A1": [
+                1,
+                6
+              ],
+              "A2": [
+                7,
+                12
+              ],
+              "B1": [
+                13,
+                18
+              ],
+              "B2": [
+                19,
+                24
+              ],
+              "C1": [
+                25,
+                30
+              ],
+              "C2": [
+                31,
+                36
+              ]
+            },
+            "code": "al",
+            "deck_root": "Alpha Course",
+            "flag": "\ud83c\udff3",
+            "name": "Alpha"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                4
+              ],
+              "B1": [
+                10,
+                14
+              ],
+              "C2": [
+                20,
+                20
+              ]
+            },
+            "code": "be",
+            "deck_root": "Beta Course",
+            "flag": "\ud83c\udff4",
+            "name": "Beta"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                2
+              ],
+              "A2": [
+                3,
+                4
+              ]
+            },
+            "code": "ga",
+            "deck_root": "Gamma Course",
+            "flag": "\ud83c\udfc1",
+            "name": "Aardvark Gamma"
+          }
+        ],
+        "decks": {
+          "10": "Beta Course\u001fUnit 02 \u2014 Part",
+          "11": "Beta Course\u001fUnit 07 \u2014 Part",
+          "12": "Beta Course\u001fUnit 11 \u2014 Part",
+          "13": "Beta Course\u001fUnit 20 \u2014 Part"
+        },
+        "now_sec": 1700000000
+      },
+      "output": [
+        {
+          "bands": [
+            {
+              "achieved": true,
+              "band": "A1",
+              "mature": 2,
+              "pct": 100.0,
+              "total": 2
+            },
+            {
+              "achieved": false,
+              "band": "A2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": true,
+              "band": "B1",
+              "mature": 2,
+              "pct": 100.0,
+              "total": 2
+            },
+            {
+              "achieved": false,
+              "band": "B2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "C1",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": true,
+              "band": "C2",
+              "mature": 1,
+              "pct": 100.0,
+              "total": 1
+            }
+          ],
+          "code": "be",
+          "current_band": "A1",
+          "current_unit": 20,
+          "flag": "\ud83c\udff4",
+          "mastery_pct": 100.0,
+          "mature_cards": 5,
+          "name": "Beta",
+          "total_cards": 5
+        }
+      ]
+    },
+    {
+      "class": "uncounted",
+      "input": {
+        "cards": [
+          {
+            "ctype": 2,
+            "did": 10,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 11,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 11,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 11,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 11,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 11,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 12,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 12,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 13,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 13,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 14,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 14,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 15,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 15,
+            "ivl": 30,
+            "queue": 2
+          }
+        ],
+        "courses": [
+          {
+            "bands": {
+              "A1": [
+                1,
+                6
+              ],
+              "A2": [
+                7,
+                12
+              ],
+              "B1": [
+                13,
+                18
+              ],
+              "B2": [
+                19,
+                24
+              ],
+              "C1": [
+                25,
+                30
+              ],
+              "C2": [
+                31,
+                36
+              ]
+            },
+            "code": "al",
+            "deck_root": "Alpha Course",
+            "flag": "\ud83c\udff3",
+            "name": "Alpha"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                4
+              ],
+              "B1": [
+                10,
+                14
+              ],
+              "C2": [
+                20,
+                20
+              ]
+            },
+            "code": "be",
+            "deck_root": "Beta Course",
+            "flag": "\ud83c\udff4",
+            "name": "Beta"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                2
+              ],
+              "A2": [
+                3,
+                4
+              ]
+            },
+            "code": "ga",
+            "deck_root": "Gamma Course",
+            "flag": "\ud83c\udfc1",
+            "name": "Aardvark Gamma"
+          }
+        ],
+        "decks": {
+          "10": "Alpha Course\u001fUnit 01 \u2014 Part",
+          "11": "Alpha Course\u001fUnit 40 \u2014 Part",
+          "12": "Beta Course\u001fUnit 50 \u2014 Part",
+          "13": "Alpha Course",
+          "14": "Other Course\u001fUnit 3",
+          "15": "Alpha Course\u001fLesson"
+        },
+        "now_sec": 1700000000
+      },
+      "output": [
+        {
+          "bands": [
+            {
+              "achieved": true,
+              "band": "A1",
+              "mature": 1,
+              "pct": 100.0,
+              "total": 1
+            },
+            {
+              "achieved": false,
+              "band": "A2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "B1",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "B2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "C1",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "C2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            }
+          ],
+          "code": "al",
+          "current_band": "A1",
+          "current_unit": 1,
+          "flag": "\ud83c\udff3",
+          "mastery_pct": 100.0,
+          "mature_cards": 1,
+          "name": "Alpha",
+          "total_cards": 1
+        }
+      ]
+    },
+    {
+      "class": "home_deck",
+      "input": {
+        "cards": [
+          {
+            "ctype": 2,
+            "did": 999,
+            "ivl": 30,
+            "odid": 10,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 999,
+            "ivl": 30,
+            "odid": 10,
+            "queue": 2
+          }
+        ],
+        "courses": [
+          {
+            "bands": {
+              "A1": [
+                1,
+                6
+              ],
+              "A2": [
+                7,
+                12
+              ],
+              "B1": [
+                13,
+                18
+              ],
+              "B2": [
+                19,
+                24
+              ],
+              "C1": [
+                25,
+                30
+              ],
+              "C2": [
+                31,
+                36
+              ]
+            },
+            "code": "al",
+            "deck_root": "Alpha Course",
+            "flag": "\ud83c\udff3",
+            "name": "Alpha"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                4
+              ],
+              "B1": [
+                10,
+                14
+              ],
+              "C2": [
+                20,
+                20
+              ]
+            },
+            "code": "be",
+            "deck_root": "Beta Course",
+            "flag": "\ud83c\udff4",
+            "name": "Beta"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                2
+              ],
+              "A2": [
+                3,
+                4
+              ]
+            },
+            "code": "ga",
+            "deck_root": "Gamma Course",
+            "flag": "\ud83c\udfc1",
+            "name": "Aardvark Gamma"
+          }
+        ],
+        "decks": {
+          "10": "Alpha Course\u001fUnit 03 \u2014 Part",
+          "999": "Filtered"
+        },
+        "now_sec": 1700000000
+      },
+      "output": [
+        {
+          "bands": [
+            {
+              "achieved": true,
+              "band": "A1",
+              "mature": 2,
+              "pct": 100.0,
+              "total": 2
+            },
+            {
+              "achieved": false,
+              "band": "A2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "B1",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "B2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "C1",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "C2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            }
+          ],
+          "code": "al",
+          "current_band": "A1",
+          "current_unit": 3,
+          "flag": "\ud83c\udff3",
+          "mastery_pct": 100.0,
+          "mature_cards": 2,
+          "name": "Alpha",
+          "total_cards": 2
+        }
+      ]
+    },
+    {
+      "class": "home_deck_none",
+      "input": {
+        "cards": [
+          {
+            "ctype": 2,
+            "did": 999,
+            "ivl": 30,
+            "odid": 10,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 999,
+            "ivl": 30,
+            "odid": 10,
+            "queue": 2
+          }
+        ],
+        "courses": [
+          {
+            "bands": {
+              "A1": [
+                1,
+                6
+              ],
+              "A2": [
+                7,
+                12
+              ],
+              "B1": [
+                13,
+                18
+              ],
+              "B2": [
+                19,
+                24
+              ],
+              "C1": [
+                25,
+                30
+              ],
+              "C2": [
+                31,
+                36
+              ]
+            },
+            "code": "al",
+            "deck_root": "Alpha Course",
+            "flag": "\ud83c\udff3",
+            "name": "Alpha"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                4
+              ],
+              "B1": [
+                10,
+                14
+              ],
+              "C2": [
+                20,
+                20
+              ]
+            },
+            "code": "be",
+            "deck_root": "Beta Course",
+            "flag": "\ud83c\udff4",
+            "name": "Beta"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                2
+              ],
+              "A2": [
+                3,
+                4
+              ]
+            },
+            "code": "ga",
+            "deck_root": "Gamma Course",
+            "flag": "\ud83c\udfc1",
+            "name": "Aardvark Gamma"
+          }
+        ],
+        "decks": {
+          "999": "Filtered"
+        },
+        "now_sec": 1700000000
+      },
+      "output": []
+    },
+    {
+      "class": "ordered_by_name",
+      "input": {
+        "cards": [
+          {
+            "ctype": 2,
+            "did": 10,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 10,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 11,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 11,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 12,
+            "ivl": 30,
+            "queue": 2
+          }
+        ],
+        "courses": [
+          {
+            "bands": {
+              "A1": [
+                1,
+                6
+              ],
+              "A2": [
+                7,
+                12
+              ],
+              "B1": [
+                13,
+                18
+              ],
+              "B2": [
+                19,
+                24
+              ],
+              "C1": [
+                25,
+                30
+              ],
+              "C2": [
+                31,
+                36
+              ]
+            },
+            "code": "al",
+            "deck_root": "Alpha Course",
+            "flag": "\ud83c\udff3",
+            "name": "Alpha"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                4
+              ],
+              "B1": [
+                10,
+                14
+              ],
+              "C2": [
+                20,
+                20
+              ]
+            },
+            "code": "be",
+            "deck_root": "Beta Course",
+            "flag": "\ud83c\udff4",
+            "name": "Beta"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                2
+              ],
+              "A2": [
+                3,
+                4
+              ]
+            },
+            "code": "ga",
+            "deck_root": "Gamma Course",
+            "flag": "\ud83c\udfc1",
+            "name": "Aardvark Gamma"
+          }
+        ],
+        "decks": {
+          "10": "Beta Course\u001fUnit 02 \u2014 Part",
+          "11": "Alpha Course\u001fUnit 02 \u2014 Part",
+          "12": "Gamma Course\u001fUnit 01 \u2014 Part"
+        },
+        "now_sec": 1700000000
+      },
+      "output": [
+        {
+          "bands": [
+            {
+              "achieved": true,
+              "band": "A1",
+              "mature": 1,
+              "pct": 100.0,
+              "total": 1
+            },
+            {
+              "achieved": false,
+              "band": "A2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "B1",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "B2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "C1",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "C2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            }
+          ],
+          "code": "ga",
+          "current_band": "A1",
+          "current_unit": 1,
+          "flag": "\ud83c\udfc1",
+          "mastery_pct": 100.0,
+          "mature_cards": 1,
+          "name": "Aardvark Gamma",
+          "total_cards": 1
+        },
+        {
+          "bands": [
+            {
+              "achieved": true,
+              "band": "A1",
+              "mature": 2,
+              "pct": 100.0,
+              "total": 2
+            },
+            {
+              "achieved": false,
+              "band": "A2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "B1",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "B2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "C1",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "C2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            }
+          ],
+          "code": "al",
+          "current_band": "A1",
+          "current_unit": 2,
+          "flag": "\ud83c\udff3",
+          "mastery_pct": 100.0,
+          "mature_cards": 2,
+          "name": "Alpha",
+          "total_cards": 2
+        },
+        {
+          "bands": [
+            {
+              "achieved": true,
+              "band": "A1",
+              "mature": 2,
+              "pct": 100.0,
+              "total": 2
+            },
+            {
+              "achieved": false,
+              "band": "A2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "B1",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "B2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "C1",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "C2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            }
+          ],
+          "code": "be",
+          "current_band": "A1",
+          "current_unit": 2,
+          "flag": "\ud83c\udff4",
+          "mastery_pct": 100.0,
+          "mature_cards": 2,
+          "name": "Beta",
+          "total_cards": 2
+        }
+      ]
+    },
+    {
+      "class": "current_unit",
+      "input": {
+        "cards": [
+          {
+            "ctype": 2,
+            "did": 10,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 11,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 12,
+            "ivl": 3,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 13,
+            "ivl": 3,
+            "queue": 2
+          }
+        ],
+        "courses": [
+          {
+            "bands": {
+              "A1": [
+                1,
+                6
+              ],
+              "A2": [
+                7,
+                12
+              ],
+              "B1": [
+                13,
+                18
+              ],
+              "B2": [
+                19,
+                24
+              ],
+              "C1": [
+                25,
+                30
+              ],
+              "C2": [
+                31,
+                36
+              ]
+            },
+            "code": "al",
+            "deck_root": "Alpha Course",
+            "flag": "\ud83c\udff3",
+            "name": "Alpha"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                4
+              ],
+              "B1": [
+                10,
+                14
+              ],
+              "C2": [
+                20,
+                20
+              ]
+            },
+            "code": "be",
+            "deck_root": "Beta Course",
+            "flag": "\ud83c\udff4",
+            "name": "Beta"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                2
+              ],
+              "A2": [
+                3,
+                4
+              ]
+            },
+            "code": "ga",
+            "deck_root": "Gamma Course",
+            "flag": "\ud83c\udfc1",
+            "name": "Aardvark Gamma"
+          }
+        ],
+        "decks": {
+          "10": "Alpha Course\u001fUnit 05 \u2014 Part",
+          "11": "Alpha Course\u001fUnit 03 \u2014 Part",
+          "12": "Alpha Course\u001fUnit 09 \u2014 Part",
+          "13": "Alpha Course\u001fUnit 12 \u2014 Part"
+        },
+        "now_sec": 1700000000
+      },
+      "output": [
+        {
+          "bands": [
+            {
+              "achieved": true,
+              "band": "A1",
+              "mature": 2,
+              "pct": 100.0,
+              "total": 2
+            },
+            {
+              "achieved": false,
+              "band": "A2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 2
+            },
+            {
+              "achieved": false,
+              "band": "B1",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "B2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "C1",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "C2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            }
+          ],
+          "code": "al",
+          "current_band": "A1",
+          "current_unit": 5,
+          "flag": "\ud83c\udff3",
+          "mastery_pct": 50.0,
+          "mature_cards": 2,
+          "name": "Alpha",
+          "total_cards": 4
+        }
+      ]
+    },
+    {
+      "class": "current_unit_none",
+      "input": {
+        "cards": [
+          {
+            "ctype": 2,
+            "did": 10,
+            "ivl": 3,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 10,
+            "ivl": 3,
+            "queue": 2
+          }
+        ],
+        "courses": [
+          {
+            "bands": {
+              "A1": [
+                1,
+                6
+              ],
+              "A2": [
+                7,
+                12
+              ],
+              "B1": [
+                13,
+                18
+              ],
+              "B2": [
+                19,
+                24
+              ],
+              "C1": [
+                25,
+                30
+              ],
+              "C2": [
+                31,
+                36
+              ]
+            },
+            "code": "al",
+            "deck_root": "Alpha Course",
+            "flag": "\ud83c\udff3",
+            "name": "Alpha"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                4
+              ],
+              "B1": [
+                10,
+                14
+              ],
+              "C2": [
+                20,
+                20
+              ]
+            },
+            "code": "be",
+            "deck_root": "Beta Course",
+            "flag": "\ud83c\udff4",
+            "name": "Beta"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                2
+              ],
+              "A2": [
+                3,
+                4
+              ]
+            },
+            "code": "ga",
+            "deck_root": "Gamma Course",
+            "flag": "\ud83c\udfc1",
+            "name": "Aardvark Gamma"
+          }
+        ],
+        "decks": {
+          "10": "Alpha Course\u001fUnit 05 \u2014 Part"
+        },
+        "now_sec": 1700000000
+      },
+      "output": [
+        {
+          "bands": [
+            {
+              "achieved": false,
+              "band": "A1",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 2
+            },
+            {
+              "achieved": false,
+              "band": "A2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "B1",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "B2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "C1",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "C2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            }
+          ],
+          "code": "al",
+          "current_band": "A1",
+          "current_unit": null,
+          "flag": "\ud83c\udff3",
+          "mastery_pct": 0.0,
+          "mature_cards": 0,
+          "name": "Alpha",
+          "total_cards": 2
+        }
+      ]
+    },
+    {
+      "class": "suspended",
+      "input": {
+        "cards": [
+          {
+            "ctype": 2,
+            "did": 10,
+            "ivl": 40,
+            "queue": -1
+          },
+          {
+            "ctype": 2,
+            "did": 10,
+            "ivl": 30,
+            "queue": 2
+          }
+        ],
+        "courses": [
+          {
+            "bands": {
+              "A1": [
+                1,
+                6
+              ],
+              "A2": [
+                7,
+                12
+              ],
+              "B1": [
+                13,
+                18
+              ],
+              "B2": [
+                19,
+                24
+              ],
+              "C1": [
+                25,
+                30
+              ],
+              "C2": [
+                31,
+                36
+              ]
+            },
+            "code": "al",
+            "deck_root": "Alpha Course",
+            "flag": "\ud83c\udff3",
+            "name": "Alpha"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                4
+              ],
+              "B1": [
+                10,
+                14
+              ],
+              "C2": [
+                20,
+                20
+              ]
+            },
+            "code": "be",
+            "deck_root": "Beta Course",
+            "flag": "\ud83c\udff4",
+            "name": "Beta"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                2
+              ],
+              "A2": [
+                3,
+                4
+              ]
+            },
+            "code": "ga",
+            "deck_root": "Gamma Course",
+            "flag": "\ud83c\udfc1",
+            "name": "Aardvark Gamma"
+          }
+        ],
+        "decks": {
+          "10": "Alpha Course\u001fUnit 01 \u2014 Part"
+        },
+        "now_sec": 1700000000
+      },
+      "output": [
+        {
+          "bands": [
+            {
+              "achieved": false,
+              "band": "A1",
+              "mature": 1,
+              "pct": 50.0,
+              "total": 2
+            },
+            {
+              "achieved": false,
+              "band": "A2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "B1",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "B2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "C1",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "C2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            }
+          ],
+          "code": "al",
+          "current_band": "A1",
+          "current_unit": 1,
+          "flag": "\ud83c\udff3",
+          "mastery_pct": 50.0,
+          "mature_cards": 1,
+          "name": "Alpha",
+          "total_cards": 2
+        }
+      ]
+    },
+    {
+      "class": "buried",
+      "input": {
+        "cards": [
+          {
+            "ctype": 2,
+            "did": 10,
+            "ivl": 40,
+            "queue": -2
+          },
+          {
+            "ctype": 2,
+            "did": 10,
+            "ivl": 40,
+            "queue": -3
+          },
+          {
+            "ctype": 2,
+            "did": 10,
+            "ivl": 30,
+            "queue": 2
+          }
+        ],
+        "courses": [
+          {
+            "bands": {
+              "A1": [
+                1,
+                6
+              ],
+              "A2": [
+                7,
+                12
+              ],
+              "B1": [
+                13,
+                18
+              ],
+              "B2": [
+                19,
+                24
+              ],
+              "C1": [
+                25,
+                30
+              ],
+              "C2": [
+                31,
+                36
+              ]
+            },
+            "code": "al",
+            "deck_root": "Alpha Course",
+            "flag": "\ud83c\udff3",
+            "name": "Alpha"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                4
+              ],
+              "B1": [
+                10,
+                14
+              ],
+              "C2": [
+                20,
+                20
+              ]
+            },
+            "code": "be",
+            "deck_root": "Beta Course",
+            "flag": "\ud83c\udff4",
+            "name": "Beta"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                2
+              ],
+              "A2": [
+                3,
+                4
+              ]
+            },
+            "code": "ga",
+            "deck_root": "Gamma Course",
+            "flag": "\ud83c\udfc1",
+            "name": "Aardvark Gamma"
+          }
+        ],
+        "decks": {
+          "10": "Alpha Course\u001fUnit 01 \u2014 Part"
+        },
+        "now_sec": 1700000000
+      },
+      "output": [
+        {
+          "bands": [
+            {
+              "achieved": true,
+              "band": "A1",
+              "mature": 3,
+              "pct": 100.0,
+              "total": 3
+            },
+            {
+              "achieved": false,
+              "band": "A2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "B1",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "B2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "C1",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "C2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            }
+          ],
+          "code": "al",
+          "current_band": "A1",
+          "current_unit": 1,
+          "flag": "\ud83c\udff3",
+          "mastery_pct": 100.0,
+          "mature_cards": 3,
+          "name": "Alpha",
+          "total_cards": 3
+        }
+      ]
+    },
+    {
+      "input": {
+        "cards": [
+          {
+            "ctype": 2,
+            "decay": 0.1,
+            "did": 10,
+            "ivl": 14,
+            "last_review_sec": 1695490806,
+            "queue": 2,
+            "stability": 123.575
+          },
+          {
+            "ctype": 2,
+            "decay": 1.0,
+            "did": 10,
+            "ivl": 164,
+            "last_review_sec": 1680074001,
+            "queue": 2,
+            "stability": 142.427
+          },
+          {
+            "ctype": 2,
+            "decay": 0.2,
+            "did": 11,
+            "ivl": 103,
+            "last_review_sec": 1685428784,
+            "queue": 2,
+            "stability": 95.208
+          },
+          {
+            "ctype": 2,
+            "decay": 0.5,
+            "did": 11,
+            "ivl": 48,
+            "last_review_sec": 1682104523,
+            "queue": 2,
+            "stability": 188.38
+          },
+          {
+            "ctype": 2,
+            "decay": 0.126,
+            "did": 12,
+            "ivl": 294,
+            "last_review_sec": 1695841823,
+            "queue": 2,
+            "stability": 72.944
+          },
+          {
+            "ctype": 2,
+            "decay": 0.2,
+            "did": 12,
+            "ivl": 98,
+            "last_review_sec": 1686487943,
+            "queue": 2,
+            "stability": 76.176
+          }
+        ],
+        "courses": [
+          {
+            "bands": {
+              "A1": [
+                1,
+                6
+              ],
+              "A2": [
+                7,
+                12
+              ],
+              "B1": [
+                13,
+                18
+              ],
+              "B2": [
+                19,
+                24
+              ],
+              "C1": [
+                25,
+                30
+              ],
+              "C2": [
+                31,
+                36
+              ]
+            },
+            "code": "al",
+            "deck_root": "Alpha Course",
+            "flag": "\ud83c\udff3",
+            "name": "Alpha"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                4
+              ],
+              "B1": [
+                10,
+                14
+              ],
+              "C2": [
+                20,
+                20
+              ]
+            },
+            "code": "be",
+            "deck_root": "Beta Course",
+            "flag": "\ud83c\udff4",
+            "name": "Beta"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                2
+              ],
+              "A2": [
+                3,
+                4
+              ]
+            },
+            "code": "ga",
+            "deck_root": "Gamma Course",
+            "flag": "\ud83c\udfc1",
+            "name": "Aardvark Gamma"
+          }
+        ],
+        "decks": {
+          "10": "Alpha Course\u001fUnit 17 \u2014 Part",
+          "11": "Alpha Course\u001fUnit 07 \u2014 Part",
+          "12": "Alpha Course\u001fUnit 21 \u2014 Part"
+        },
+        "now_sec": 1700000000
+      },
+      "output": [
+        {
+          "bands": [
+            {
+              "achieved": false,
+              "band": "A1",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": true,
+              "band": "A2",
+              "mature": 2,
+              "pct": 86.72797073284168,
+              "total": 2
+            },
+            {
+              "achieved": true,
+              "band": "B1",
+              "mature": 2,
+              "pct": 89.55080238891297,
+              "total": 2
+            },
+            {
+              "achieved": true,
+              "band": "B2",
+              "mature": 2,
+              "pct": 82.55188395879122,
+              "total": 2
+            },
+            {
+              "achieved": false,
+              "band": "C1",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "C2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            }
+          ],
+          "code": "al",
+          "current_band": "A1",
+          "current_unit": 21,
+          "flag": "\ud83c\udff3",
+          "mastery_pct": 86.2768856935153,
+          "mature_cards": 6,
+          "name": "Alpha",
+          "total_cards": 6
+        }
+      ]
+    },
+    {
+      "input": {
+        "cards": [
+          {
+            "ctype": 2,
+            "decay": 0.1,
+            "did": 10,
+            "ivl": 113,
+            "last_review_sec": 1699397078,
+            "queue": 2,
+            "stability": 172.265
+          },
+          {
+            "ctype": 2,
+            "decay": 0.126,
+            "did": 10,
+            "ivl": 317,
+            "last_review_sec": 1685146992,
+            "queue": 2,
+            "stability": 90.364
+          },
+          {
+            "ctype": 2,
+            "decay": 0.2,
+            "did": 11,
+            "ivl": 79,
+            "last_review_sec": 1675405659,
+            "queue": 2,
+            "stability": 276.745
+          },
+          {
+            "ctype": 2,
+            "decay": 0.1,
+            "did": 11,
+            "ivl": 81,
+            "last_review_sec": 1694394331,
+            "queue": 2,
+            "stability": 49.569
+          },
+          {
+            "ctype": 2,
+            "decay": 0.1,
+            "did": 11,
+            "ivl": 220,
+            "last_review_sec": 1697685510,
+            "queue": 2,
+            "stability": 103.564
+          },
+          {
+            "ctype": 2,
+            "decay": 0.126,
+            "did": 11,
+            "ivl": 100,
+            "last_review_sec": 1696442549,
+            "queue": 2,
+            "stability": 131.044
+          },
+          {
+            "ctype": 2,
+            "decay": 0.2,
+            "did": 12,
+            "ivl": 2,
+            "last_review_sec": 1682228048,
+            "queue": 2,
+            "stability": 243.044
+          },
+          {
+            "ctype": 2,
+            "decay": 0.1,
+            "did": 12,
+            "ivl": 272,
+            "last_review_sec": 1692726994,
+            "queue": 2,
+            "stability": 227.0
+          },
+          {
+            "ctype": 2,
+            "decay": 0.1,
+            "did": 12,
+            "ivl": 234,
+            "last_review_sec": 1696727988,
+            "queue": 2,
+            "stability": 167.271
+          }
+        ],
+        "courses": [
+          {
+            "bands": {
+              "A1": [
+                1,
+                6
+              ],
+              "A2": [
+                7,
+                12
+              ],
+              "B1": [
+                13,
+                18
+              ],
+              "B2": [
+                19,
+                24
+              ],
+              "C1": [
+                25,
+                30
+              ],
+              "C2": [
+                31,
+                36
+              ]
+            },
+            "code": "al",
+            "deck_root": "Alpha Course",
+            "flag": "\ud83c\udff3",
+            "name": "Alpha"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                4
+              ],
+              "B1": [
+                10,
+                14
+              ],
+              "C2": [
+                20,
+                20
+              ]
+            },
+            "code": "be",
+            "deck_root": "Beta Course",
+            "flag": "\ud83c\udff4",
+            "name": "Beta"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                2
+              ],
+              "A2": [
+                3,
+                4
+              ]
+            },
+            "code": "ga",
+            "deck_root": "Gamma Course",
+            "flag": "\ud83c\udfc1",
+            "name": "Aardvark Gamma"
+          }
+        ],
+        "decks": {
+          "10": "Alpha Course\u001fUnit 08 \u2014 Part",
+          "11": "Alpha Course\u001fUnit 02 \u2014 Part",
+          "12": "Alpha Course\u001fUnit 18 \u2014 Part"
+        },
+        "now_sec": 1700000000
+      },
+      "output": [
+        {
+          "bands": [
+            {
+              "achieved": true,
+              "band": "A1",
+              "mature": 4,
+              "pct": 89.20032329770535,
+              "total": 4
+            },
+            {
+              "achieved": true,
+              "band": "A2",
+              "mature": 2,
+              "pct": 91.42667459835782,
+              "total": 2
+            },
+            {
+              "achieved": true,
+              "band": "B1",
+              "mature": 3,
+              "pct": 94.19496963172716,
+              "total": 3
+            },
+            {
+              "achieved": false,
+              "band": "B2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "C1",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "C2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            }
+          ],
+          "code": "al",
+          "current_band": "B1",
+          "current_unit": 18,
+          "flag": "\ud83c\udff3",
+          "mastery_pct": 91.35995014252428,
+          "mature_cards": 9,
+          "name": "Alpha",
+          "total_cards": 9
+        }
+      ]
+    },
+    {
+      "input": {
+        "cards": [
+          {
+            "ctype": 2,
+            "decay": 0.2,
+            "did": 10,
+            "ivl": 330,
+            "last_review_sec": 1698095643,
+            "queue": 2,
+            "stability": 25.958
+          },
+          {
+            "ctype": 2,
+            "decay": 1.0,
+            "did": 10,
+            "ivl": 100,
+            "last_review_sec": 1699461079,
+            "queue": 2,
+            "stability": 66.047
+          },
+          {
+            "ctype": 2,
+            "decay": 1.0,
+            "did": 10,
+            "ivl": 13,
+            "last_review_sec": 1693997494,
+            "queue": 2,
+            "stability": 277.678
+          },
+          {
+            "ctype": 2,
+            "decay": 0.5,
+            "did": 11,
+            "ivl": 215,
+            "last_review_sec": 1695651427,
+            "queue": 2,
+            "stability": 82.657
+          },
+          {
+            "ctype": 2,
+            "decay": 0.126,
+            "did": 11,
+            "ivl": 123,
+            "last_review_sec": 1695726893,
+            "queue": 2,
+            "stability": 59.421
+          }
+        ],
+        "courses": [
+          {
+            "bands": {
+              "A1": [
+                1,
+                6
+              ],
+              "A2": [
+                7,
+                12
+              ],
+              "B1": [
+                13,
+                18
+              ],
+              "B2": [
+                19,
+                24
+              ],
+              "C1": [
+                25,
+                30
+              ],
+              "C2": [
+                31,
+                36
+              ]
+            },
+            "code": "al",
+            "deck_root": "Alpha Course",
+            "flag": "\ud83c\udff3",
+            "name": "Alpha"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                4
+              ],
+              "B1": [
+                10,
+                14
+              ],
+              "C2": [
+                20,
+                20
+              ]
+            },
+            "code": "be",
+            "deck_root": "Beta Course",
+            "flag": "\ud83c\udff4",
+            "name": "Beta"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                2
+              ],
+              "A2": [
+                3,
+                4
+              ]
+            },
+            "code": "ga",
+            "deck_root": "Gamma Course",
+            "flag": "\ud83c\udfc1",
+            "name": "Aardvark Gamma"
+          }
+        ],
+        "decks": {
+          "10": "Alpha Course\u001fUnit 06 \u2014 Part",
+          "11": "Alpha Course\u001fUnit 22 \u2014 Part"
+        },
+        "now_sec": 1700000000
+      },
+      "output": [
+        {
+          "bands": [
+            {
+              "achieved": true,
+              "band": "A1",
+              "mature": 3,
+              "pct": 84.17932774217948,
+              "total": 3
+            },
+            {
+              "achieved": false,
+              "band": "A2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "B1",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": true,
+              "band": "B2",
+              "mature": 2,
+              "pct": 85.35854574670427,
+              "total": 2
+            },
+            {
+              "achieved": false,
+              "band": "C1",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "C2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            }
+          ],
+          "code": "al",
+          "current_band": "A1",
+          "current_unit": 22,
+          "flag": "\ud83c\udff3",
+          "mastery_pct": 84.6510149439894,
+          "mature_cards": 5,
+          "name": "Alpha",
+          "total_cards": 5
+        }
+      ]
+    },
+    {
+      "input": {
+        "cards": [
+          {
+            "ctype": 2,
+            "decay": 0.126,
+            "did": 10,
+            "ivl": 230,
+            "last_review_sec": 1691622474,
+            "queue": 2,
+            "stability": 146.315
+          },
+          {
+            "ctype": 2,
+            "decay": 0.1,
+            "did": 11,
+            "ivl": 208,
+            "last_review_sec": 1686926465,
+            "queue": 2,
+            "stability": 282.695
+          },
+          {
+            "ctype": 2,
+            "decay": 0.126,
+            "did": 11,
+            "ivl": 187,
+            "last_review_sec": 1695679364,
+            "queue": 2,
+            "stability": 186.947
+          },
+          {
+            "ctype": 2,
+            "decay": 0.5,
+            "did": 11,
+            "ivl": 142,
+            "last_review_sec": 1683460569,
+            "queue": 2,
+            "stability": 18.726
+          },
+          {
+            "ctype": 2,
+            "decay": 0.1,
+            "did": 12,
+            "ivl": 237,
+            "last_review_sec": 1674450489,
+            "queue": 2,
+            "stability": 243.096
+          },
+          {
+            "ctype": 2,
+            "decay": 0.1,
+            "did": 12,
+            "ivl": 109,
+            "last_review_sec": 1676662827,
+            "queue": 2,
+            "stability": 289.249
+          },
+          {
+            "ctype": 2,
+            "decay": 0.2,
+            "did": 12,
+            "ivl": 385,
+            "last_review_sec": 1699371744,
+            "queue": 2,
+            "stability": 164.212
+          },
+          {
+            "ctype": 2,
+            "decay": 0.1,
+            "did": 12,
+            "ivl": 143,
+            "last_review_sec": 1699908195,
+            "queue": 2,
+            "stability": 88.345
+          }
+        ],
+        "courses": [
+          {
+            "bands": {
+              "A1": [
+                1,
+                6
+              ],
+              "A2": [
+                7,
+                12
+              ],
+              "B1": [
+                13,
+                18
+              ],
+              "B2": [
+                19,
+                24
+              ],
+              "C1": [
+                25,
+                30
+              ],
+              "C2": [
+                31,
+                36
+              ]
+            },
+            "code": "al",
+            "deck_root": "Alpha Course",
+            "flag": "\ud83c\udff3",
+            "name": "Alpha"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                4
+              ],
+              "B1": [
+                10,
+                14
+              ],
+              "C2": [
+                20,
+                20
+              ]
+            },
+            "code": "be",
+            "deck_root": "Beta Course",
+            "flag": "\ud83c\udff4",
+            "name": "Beta"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                2
+              ],
+              "A2": [
+                3,
+                4
+              ]
+            },
+            "code": "ga",
+            "deck_root": "Gamma Course",
+            "flag": "\ud83c\udfc1",
+            "name": "Aardvark Gamma"
+          }
+        ],
+        "decks": {
+          "10": "Alpha Course\u001fUnit 36 \u2014 Part",
+          "11": "Alpha Course\u001fUnit 25 \u2014 Part",
+          "12": "Alpha Course\u001fUnit 09 \u2014 Part"
+        },
+        "now_sec": 1700000000
+      },
+      "output": [
+        {
+          "bands": [
+            {
+              "achieved": false,
+              "band": "A1",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": true,
+              "band": "A2",
+              "mature": 4,
+              "pct": 93.93558048432126,
+              "total": 4
+            },
+            {
+              "achieved": false,
+              "band": "B1",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "B2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "C1",
+              "mature": 2,
+              "pct": 74.88240366590662,
+              "total": 3
+            },
+            {
+              "achieved": true,
+              "band": "C2",
+              "mature": 1,
+              "pct": 92.43787075312314,
+              "total": 1
+            }
+          ],
+          "code": "al",
+          "current_band": "A1",
+          "current_unit": 36,
+          "flag": "\ud83c\udff3",
+          "mastery_pct": 86.603425461016,
+          "mature_cards": 7,
+          "name": "Alpha",
+          "total_cards": 8
+        }
+      ]
+    },
+    {
+      "input": {
+        "cards": [
+          {
+            "ctype": 2,
+            "decay": 0.126,
+            "did": 10,
+            "ivl": 145,
+            "last_review_sec": 1683337475,
+            "queue": 2,
+            "stability": 132.947
+          },
+          {
+            "ctype": 2,
+            "decay": 0.1,
+            "did": 10,
+            "ivl": 204,
+            "last_review_sec": 1679770381,
+            "queue": 2,
+            "stability": 118.338
+          },
+          {
+            "ctype": 2,
+            "decay": 0.2,
+            "did": 10,
+            "ivl": 298,
+            "last_review_sec": 1689864850,
+            "queue": 2,
+            "stability": 261.419
+          },
+          {
+            "ctype": 2,
+            "decay": 0.2,
+            "did": 11,
+            "ivl": 231,
+            "last_review_sec": 1683211326,
+            "queue": 2,
+            "stability": 297.073
+          },
+          {
+            "ctype": 2,
+            "decay": 0.126,
+            "did": 11,
+            "ivl": 320,
+            "last_review_sec": 1695977450,
+            "queue": 2,
+            "stability": 15.905
+          },
+          {
+            "ctype": 2,
+            "decay": 0.5,
+            "did": 11,
+            "ivl": 11,
+            "last_review_sec": 1689388180,
+            "queue": 2,
+            "stability": 228.213
+          },
+          {
+            "ctype": 2,
+            "decay": 0.1,
+            "did": 12,
+            "ivl": 152,
+            "last_review_sec": 1693817966,
+            "queue": 2,
+            "stability": 232.725
+          },
+          {
+            "ctype": 2,
+            "decay": 0.1,
+            "did": 12,
+            "ivl": 180,
+            "last_review_sec": 1689834496,
+            "queue": 2,
+            "stability": 159.199
+          }
+        ],
+        "courses": [
+          {
+            "bands": {
+              "A1": [
+                1,
+                6
+              ],
+              "A2": [
+                7,
+                12
+              ],
+              "B1": [
+                13,
+                18
+              ],
+              "B2": [
+                19,
+                24
+              ],
+              "C1": [
+                25,
+                30
+              ],
+              "C2": [
+                31,
+                36
+              ]
+            },
+            "code": "al",
+            "deck_root": "Alpha Course",
+            "flag": "\ud83c\udff3",
+            "name": "Alpha"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                4
+              ],
+              "B1": [
+                10,
+                14
+              ],
+              "C2": [
+                20,
+                20
+              ]
+            },
+            "code": "be",
+            "deck_root": "Beta Course",
+            "flag": "\ud83c\udff4",
+            "name": "Beta"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                2
+              ],
+              "A2": [
+                3,
+                4
+              ]
+            },
+            "code": "ga",
+            "deck_root": "Gamma Course",
+            "flag": "\ud83c\udfc1",
+            "name": "Aardvark Gamma"
+          }
+        ],
+        "decks": {
+          "10": "Alpha Course\u001fUnit 14 \u2014 Part",
+          "11": "Alpha Course\u001fUnit 26 \u2014 Part",
+          "12": "Alpha Course\u001fUnit 06 \u2014 Part"
+        },
+        "now_sec": 1700000000
+      },
+      "output": [
+        {
+          "bands": [
+            {
+              "achieved": true,
+              "band": "A1",
+              "mature": 2,
+              "pct": 93.62776707149445,
+              "total": 2
+            },
+            {
+              "achieved": false,
+              "band": "A2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": true,
+              "band": "B1",
+              "mature": 3,
+              "pct": 89.28439713412708,
+              "total": 3
+            },
+            {
+              "achieved": false,
+              "band": "B2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "C1",
+              "mature": 3,
+              "pct": 79.08836072830935,
+              "total": 3
+            },
+            {
+              "achieved": false,
+              "band": "C2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            }
+          ],
+          "code": "al",
+          "current_band": "A1",
+          "current_unit": 26,
+          "flag": "\ud83c\udff3",
+          "mastery_pct": 86.54672596628727,
+          "mature_cards": 8,
+          "name": "Alpha",
+          "total_cards": 8
+        }
+      ]
+    },
+    {
+      "input": {
+        "cards": [
+          {
+            "ctype": 2,
+            "decay": 0.1,
+            "did": 10,
+            "ivl": 318,
+            "last_review_sec": 1678191987,
+            "queue": 2,
+            "stability": 229.294
+          },
+          {
+            "ctype": 2,
+            "decay": 0.5,
+            "did": 10,
+            "ivl": 181,
+            "last_review_sec": 1689568501,
+            "queue": 2,
+            "stability": 221.721
+          },
+          {
+            "ctype": 2,
+            "decay": 0.2,
+            "did": 10,
+            "ivl": 67,
+            "last_review_sec": 1675184668,
+            "queue": 2,
+            "stability": 106.187
+          },
+          {
+            "ctype": 2,
+            "decay": 0.1,
+            "did": 11,
+            "ivl": 383,
+            "last_review_sec": 1676647165,
+            "queue": 2,
+            "stability": 80.591
+          },
+          {
+            "ctype": 2,
+            "decay": 1.0,
+            "did": 12,
+            "ivl": 201,
+            "last_review_sec": 1686373478,
+            "queue": 2,
+            "stability": 64.335
+          },
+          {
+            "ctype": 2,
+            "decay": 0.126,
+            "did": 12,
+            "ivl": 323,
+            "last_review_sec": 1694347997,
+            "queue": 2,
+            "stability": 53.961
+          },
+          {
+            "ctype": 2,
+            "decay": 0.1,
+            "did": 12,
+            "ivl": 13,
+            "last_review_sec": 1692438675,
+            "queue": 2,
+            "stability": 170.124
+          },
+          {
+            "ctype": 2,
+            "decay": 0.2,
+            "did": 13,
+            "ivl": 126,
+            "last_review_sec": 1696265664,
+            "queue": 2,
+            "stability": 298.998
+          },
+          {
+            "ctype": 2,
+            "decay": 0.126,
+            "did": 13,
+            "ivl": 136,
+            "last_review_sec": 1686598071,
+            "queue": 2,
+            "stability": 77.89
+          },
+          {
+            "ctype": 2,
+            "decay": 0.1,
+            "did": 13,
+            "ivl": 254,
+            "last_review_sec": 1678942864,
+            "queue": 2,
+            "stability": 12.027
+          },
+          {
+            "ctype": 2,
+            "decay": 0.1,
+            "did": 14,
+            "ivl": 365,
+            "last_review_sec": 1694084091,
+            "queue": 2,
+            "stability": 261.134
+          },
+          {
+            "ctype": 2,
+            "decay": 0.126,
+            "did": 14,
+            "ivl": 258,
+            "last_review_sec": 1679810731,
+            "queue": 2,
+            "stability": 165.059
+          },
+          {
+            "ctype": 2,
+            "decay": 1.0,
+            "did": 14,
+            "ivl": 351,
+            "last_review_sec": 1678639110,
+            "queue": 2,
+            "stability": 269.738
+          },
+          {
+            "ctype": 2,
+            "decay": 0.2,
+            "did": 14,
+            "ivl": 92,
+            "last_review_sec": 1694791055,
+            "queue": 2,
+            "stability": 57.143
+          },
+          {
+            "ctype": 2,
+            "decay": 0.2,
+            "did": 15,
+            "ivl": 206,
+            "last_review_sec": 1676397785,
+            "queue": 2,
+            "stability": 140.445
+          },
+          {
+            "ctype": 2,
+            "decay": 0.126,
+            "did": 15,
+            "ivl": 112,
+            "last_review_sec": 1686494462,
+            "queue": 2,
+            "stability": 216.345
+          },
+          {
+            "ctype": 2,
+            "decay": 0.5,
+            "did": 15,
+            "ivl": 260,
+            "last_review_sec": 1679078770,
+            "queue": 2,
+            "stability": 86.817
+          },
+          {
+            "ctype": 2,
+            "decay": 0.126,
+            "did": 15,
+            "ivl": 187,
+            "last_review_sec": 1675214621,
+            "queue": 2,
+            "stability": 155.676
+          }
+        ],
+        "courses": [
+          {
+            "bands": {
+              "A1": [
+                1,
+                6
+              ],
+              "A2": [
+                7,
+                12
+              ],
+              "B1": [
+                13,
+                18
+              ],
+              "B2": [
+                19,
+                24
+              ],
+              "C1": [
+                25,
+                30
+              ],
+              "C2": [
+                31,
+                36
+              ]
+            },
+            "code": "al",
+            "deck_root": "Alpha Course",
+            "flag": "\ud83c\udff3",
+            "name": "Alpha"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                4
+              ],
+              "B1": [
+                10,
+                14
+              ],
+              "C2": [
+                20,
+                20
+              ]
+            },
+            "code": "be",
+            "deck_root": "Beta Course",
+            "flag": "\ud83c\udff4",
+            "name": "Beta"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                2
+              ],
+              "A2": [
+                3,
+                4
+              ]
+            },
+            "code": "ga",
+            "deck_root": "Gamma Course",
+            "flag": "\ud83c\udfc1",
+            "name": "Aardvark Gamma"
+          }
+        ],
+        "decks": {
+          "10": "Alpha Course\u001fUnit 29 \u2014 Part",
+          "11": "Alpha Course\u001fUnit 16 \u2014 Part",
+          "12": "Alpha Course\u001fUnit 26 \u2014 Part",
+          "13": "Alpha Course\u001fUnit 25 \u2014 Part",
+          "14": "Alpha Course\u001fUnit 19 \u2014 Part",
+          "15": "Alpha Course\u001fUnit 17 \u2014 Part"
+        },
+        "now_sec": 1700000000
+      },
+      "output": [
+        {
+          "bands": [
+            {
+              "achieved": false,
+              "band": "A1",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "A2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": true,
+              "band": "B1",
+              "mature": 5,
+              "pct": 83.11092044172177,
+              "total": 5
+            },
+            {
+              "achieved": true,
+              "band": "B2",
+              "mature": 4,
+              "pct": 88.34027003024411,
+              "total": 4
+            },
+            {
+              "achieved": true,
+              "band": "C1",
+              "mature": 8,
+              "pct": 80.3831813680468,
+              "total": 9
+            },
+            {
+              "achieved": false,
+              "band": "C2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            }
+          ],
+          "code": "al",
+          "current_band": "A1",
+          "current_unit": 29,
+          "flag": "\ud83c\udff3",
+          "mastery_pct": 82.9091285912226,
+          "mature_cards": 17,
+          "name": "Alpha",
+          "total_cards": 18
+        }
+      ]
+    },
+    {
+      "input": {
+        "cards": [
+          {
+            "ctype": 2,
+            "decay": 0.126,
+            "did": 10,
+            "ivl": 76,
+            "last_review_sec": 1677440904,
+            "queue": 2,
+            "stability": 85.684
+          },
+          {
+            "ctype": 2,
+            "decay": 1.0,
+            "did": 10,
+            "ivl": 92,
+            "last_review_sec": 1676926383,
+            "queue": 2,
+            "stability": 178.554
+          },
+          {
+            "ctype": 2,
+            "decay": 0.5,
+            "did": 10,
+            "ivl": 60,
+            "last_review_sec": 1675105051,
+            "queue": 2,
+            "stability": 259.438
+          },
+          {
+            "ctype": 2,
+            "decay": 0.5,
+            "did": 10,
+            "ivl": 274,
+            "last_review_sec": 1680333799,
+            "queue": 2,
+            "stability": 57.767
+          },
+          {
+            "ctype": 2,
+            "decay": 0.126,
+            "did": 11,
+            "ivl": 368,
+            "last_review_sec": 1695787733,
+            "queue": 2,
+            "stability": 205.209
+          },
+          {
+            "ctype": 2,
+            "decay": 0.2,
+            "did": 12,
+            "ivl": 82,
+            "last_review_sec": 1689703028,
+            "queue": 2,
+            "stability": 73.072
+          },
+          {
+            "ctype": 2,
+            "decay": 1.0,
+            "did": 12,
+            "ivl": 49,
+            "last_review_sec": 1680244217,
+            "queue": 2,
+            "stability": 165.303
+          },
+          {
+            "ctype": 2,
+            "decay": 1.0,
+            "did": 12,
+            "ivl": 172,
+            "last_review_sec": 1692589121,
+            "queue": 2,
+            "stability": 235.115
+          },
+          {
+            "ctype": 2,
+            "decay": 0.1,
+            "did": 13,
+            "ivl": 232,
+            "last_review_sec": 1687381562,
+            "queue": 2,
+            "stability": 26.707
+          }
+        ],
+        "courses": [
+          {
+            "bands": {
+              "A1": [
+                1,
+                6
+              ],
+              "A2": [
+                7,
+                12
+              ],
+              "B1": [
+                13,
+                18
+              ],
+              "B2": [
+                19,
+                24
+              ],
+              "C1": [
+                25,
+                30
+              ],
+              "C2": [
+                31,
+                36
+              ]
+            },
+            "code": "al",
+            "deck_root": "Alpha Course",
+            "flag": "\ud83c\udff3",
+            "name": "Alpha"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                4
+              ],
+              "B1": [
+                10,
+                14
+              ],
+              "C2": [
+                20,
+                20
+              ]
+            },
+            "code": "be",
+            "deck_root": "Beta Course",
+            "flag": "\ud83c\udff4",
+            "name": "Beta"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                2
+              ],
+              "A2": [
+                3,
+                4
+              ]
+            },
+            "code": "ga",
+            "deck_root": "Gamma Course",
+            "flag": "\ud83c\udfc1",
+            "name": "Aardvark Gamma"
+          }
+        ],
+        "decks": {
+          "10": "Alpha Course\u001fUnit 19 \u2014 Part",
+          "11": "Alpha Course\u001fUnit 10 \u2014 Part",
+          "12": "Alpha Course\u001fUnit 01 \u2014 Part",
+          "13": "Alpha Course\u001fUnit 22 \u2014 Part"
+        },
+        "now_sec": 1700000000
+      },
+      "output": [
+        {
+          "bands": [
+            {
+              "achieved": true,
+              "band": "A1",
+              "mature": 3,
+              "pct": 87.65462026429476,
+              "total": 3
+            },
+            {
+              "achieved": true,
+              "band": "A2",
+              "mature": 1,
+              "pct": 96.64885249290961,
+              "total": 1
+            },
+            {
+              "achieved": false,
+              "band": "B1",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "B2",
+              "mature": 5,
+              "pct": 74.7879070051446,
+              "total": 5
+            },
+            {
+              "achieved": false,
+              "band": "C1",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "C2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            }
+          ],
+          "code": "al",
+          "current_band": "A2",
+          "current_unit": 22,
+          "flag": "\ud83c\udff3",
+          "mastery_pct": 81.50580536794632,
+          "mature_cards": 9,
+          "name": "Alpha",
+          "total_cards": 9
+        }
+      ]
+    },
+    {
+      "input": {
+        "cards": [
+          {
+            "ctype": 2,
+            "decay": 0.1,
+            "did": 10,
+            "ivl": 325,
+            "last_review_sec": 1683927785,
+            "queue": 2,
+            "stability": 274.08
+          },
+          {
+            "ctype": 2,
+            "decay": 0.126,
+            "did": 10,
+            "ivl": 32,
+            "last_review_sec": 1693058017,
+            "queue": 2,
+            "stability": 173.447
+          },
+          {
+            "ctype": 2,
+            "decay": 0.5,
+            "did": 10,
+            "ivl": 328,
+            "last_review_sec": 1681418419,
+            "queue": 2,
+            "stability": 21.611
+          },
+          {
+            "ctype": 2,
+            "decay": 0.126,
+            "did": 10,
+            "ivl": 1,
+            "last_review_sec": 1682735585,
+            "queue": 2,
+            "stability": 180.602
+          },
+          {
+            "ctype": 2,
+            "decay": 0.5,
+            "did": 11,
+            "ivl": 48,
+            "last_review_sec": 1676719601,
+            "queue": 2,
+            "stability": 86.096
+          },
+          {
+            "ctype": 2,
+            "decay": 0.126,
+            "did": 11,
+            "ivl": 169,
+            "last_review_sec": 1693352095,
+            "queue": 2,
+            "stability": 31.608
+          },
+          {
+            "ctype": 2,
+            "decay": 0.1,
+            "did": 11,
+            "ivl": 326,
+            "last_review_sec": 1684423483,
+            "queue": 2,
+            "stability": 35.903
+          },
+          {
+            "ctype": 2,
+            "decay": 0.126,
+            "did": 11,
+            "ivl": 340,
+            "last_review_sec": 1687126341,
+            "queue": 2,
+            "stability": 61.028
+          },
+          {
+            "ctype": 2,
+            "decay": 0.5,
+            "did": 12,
+            "ivl": 27,
+            "last_review_sec": 1677539091,
+            "queue": 2,
+            "stability": 293.956
+          },
+          {
+            "ctype": 2,
+            "decay": 0.2,
+            "did": 13,
+            "ivl": 343,
+            "last_review_sec": 1675963583,
+            "queue": 2,
+            "stability": 83.045
+          },
+          {
+            "ctype": 2,
+            "decay": 0.1,
+            "did": 13,
+            "ivl": 164,
+            "last_review_sec": 1699555849,
+            "queue": 2,
+            "stability": 265.1
+          },
+          {
+            "ctype": 2,
+            "decay": 0.5,
+            "did": 13,
+            "ivl": 261,
+            "last_review_sec": 1692204568,
+            "queue": 2,
+            "stability": 151.735
+          },
+          {
+            "ctype": 2,
+            "decay": 0.2,
+            "did": 13,
+            "ivl": 108,
+            "last_review_sec": 1694451059,
+            "queue": 2,
+            "stability": 164.501
+          }
+        ],
+        "courses": [
+          {
+            "bands": {
+              "A1": [
+                1,
+                6
+              ],
+              "A2": [
+                7,
+                12
+              ],
+              "B1": [
+                13,
+                18
+              ],
+              "B2": [
+                19,
+                24
+              ],
+              "C1": [
+                25,
+                30
+              ],
+              "C2": [
+                31,
+                36
+              ]
+            },
+            "code": "al",
+            "deck_root": "Alpha Course",
+            "flag": "\ud83c\udff3",
+            "name": "Alpha"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                4
+              ],
+              "B1": [
+                10,
+                14
+              ],
+              "C2": [
+                20,
+                20
+              ]
+            },
+            "code": "be",
+            "deck_root": "Beta Course",
+            "flag": "\ud83c\udff4",
+            "name": "Beta"
+          },
+          {
+            "bands": {
+              "A1": [
+                1,
+                2
+              ],
+              "A2": [
+                3,
+                4
+              ]
+            },
+            "code": "ga",
+            "deck_root": "Gamma Course",
+            "flag": "\ud83c\udfc1",
+            "name": "Aardvark Gamma"
+          }
+        ],
+        "decks": {
+          "10": "Alpha Course\u001fUnit 23 \u2014 Part",
+          "11": "Alpha Course\u001fUnit 17 \u2014 Part",
+          "12": "Alpha Course\u001fUnit 20 \u2014 Part",
+          "13": "Alpha Course\u001fUnit 35 \u2014 Part"
+        },
+        "now_sec": 1700000000
+      },
+      "output": [
+        {
+          "bands": [
+            {
+              "achieved": false,
+              "band": "A1",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "A2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "B1",
+              "mature": 4,
+              "pct": 68.26976302543987,
+              "total": 4
+            },
+            {
+              "achieved": true,
+              "band": "B2",
+              "mature": 4,
+              "pct": 80.73870665588294,
+              "total": 5
+            },
+            {
+              "achieved": false,
+              "band": "C1",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": true,
+              "band": "C2",
+              "mature": 4,
+              "pct": 91.04047064940686,
+              "total": 4
+            }
+          ],
+          "code": "al",
+          "current_band": "A1",
+          "current_unit": 35,
+          "flag": "\ud83c\udff3",
+          "mastery_pct": 80.07188215221551,
+          "mature_cards": 12,
+          "name": "Alpha",
+          "total_cards": 13
+        }
+      ]
+    }
+  ],
+  "function": "progress.compute_progress",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Patches progress.LANGUAGE_DECKS and progress.CEFR_UNIT_BANDS with the case's synthetic courses and unit bands, builds the cards and synthetic deck names, and returns each course's fields and bands; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_077.py",
+  "registry_sha256": "91021d9dc71e71fbcce2e8677458fc10d998a56914a1843203efd29163d8f9ca",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}
