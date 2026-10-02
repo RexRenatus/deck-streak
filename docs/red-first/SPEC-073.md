@@ -241,7 +241,7 @@ commit `ecac3c8b` adds rows S07330-S07341. The mutation package at `1a4b036b` re
 plant(s): survived 0, caught 8`, against its control at `5208f1e6`, which reads `examined 8
 plant(s): survived 8`.
 
-One survivor is recorded and not killed. `crates/coordination/src/progression/badges_view.rs:282`
+One owed arm is recorded and not killed. `crates/coordination/src/progression/badges_view.rs:282`
 (`let mut connection = db.reader().acquire().await?;`) is UNVIABLE-BY-TYPE: no compiling mutant
 removes that `?`, because its Ok value is a pool connection with no default to put in its place,
 and `earned_badges`' acquire at line 249 (`let mut connection = db.reader().acquire().await?;`)
