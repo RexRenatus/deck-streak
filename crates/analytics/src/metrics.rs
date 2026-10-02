@@ -9,7 +9,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use deck_streak_ingest::reader::{Review, is_study_event};
-use deck_streak_kernel::{CourseCode, StudyDay, StudyDayRule, UtcMillis};
+use deck_streak_kernel::{CourseCode, StudyDay, StudyDayRule, UtcMillis, pynum};
 
 use crate::constants::{ANSWER_TIME_CAP_SECONDS, MATURE_IVL_DAYS};
 use crate::score::py_min;
@@ -220,28 +220,10 @@ fn seconds_of(reviews: &[&Review]) -> f64 {
 /// Python's built-in `sum` of floats from its integer start of 0, as `CPython` 3.12 and later
 /// compute it: Neumaier's compensated summation, with the compensation added once at the end when
 /// it is finite and not zero (`Python/bltinmodule.c`, `builtin_sum_impl`). A plain running sum
-/// differs from it in the last bit of a long sum, which a golden compared bit for bit refuses.
+/// differs from it in the last bit of a long sum, which a golden compared bit for bit refuses. The
+/// kernel's [`pynum::sum`] holds the port once (SPEC-302); this name stays for its callers here.
 fn python_sum(values: impl IntoIterator<Item = f64>) -> f64 {
-    let mut values = values.into_iter();
-    let Some(first) = values.next() else {
-        return 0.0;
-    };
-    // The integer start plus the first float is that float, exactly.
-    let mut total = 0.0 + first;
-    let mut compensation = 0.0;
-    for value in values {
-        let sum = total + value;
-        if total.abs() >= value.abs() {
-            compensation += (total - sum) + value;
-        } else {
-            compensation += (value - sum) + total;
-        }
-        total = sum;
-    }
-    if compensation != 0.0 && compensation.is_finite() {
-        total += compensation;
-    }
-    total
+    pynum::sum(values)
 }
 
 /// Each card's first review-type answer among `reviews`: the earliest by id, the first of equal ids
