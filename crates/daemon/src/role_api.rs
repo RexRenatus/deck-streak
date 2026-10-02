@@ -62,7 +62,8 @@ enum Stop {
 }
 
 /// The API's state as the role composes it: the readiness the database opens into, the owner's
-/// access, and (SPEC-072 R24) the law tiers' source when the settings name a collection to read.
+/// access, (SPEC-072 R24) the law tiers' source when the settings name a collection to read, and
+/// (SPEC-118 R10) the vault inbox's quick captures when the settings name a vault root.
 ///
 /// The composition lives here so the daemon's own test can drive the router the role serves.
 #[must_use]
@@ -77,8 +78,12 @@ pub fn api_state(
         Some(source) => state.with_law_tiers(source),
         None => state,
     };
-    match crate::drill_vault::open(env) {
+    let state = match crate::drill_vault::open(env) {
         Some(notes) => state.with_drills(notes),
+        None => state,
+    };
+    match wiring::inbox_captures(env) {
+        Some(captures) => state.with_inbox(captures),
         None => state,
     }
 }

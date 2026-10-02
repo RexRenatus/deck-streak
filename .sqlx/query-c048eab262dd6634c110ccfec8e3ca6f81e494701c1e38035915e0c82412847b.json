@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE notification_queue SET state = 'held', claim = NULL, tries = ?, hold = ? WHERE id = ? AND state = 'sending' AND claim = COALESCE(?, claim)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "c048eab262dd6634c110ccfec8e3ca6f81e494701c1e38035915e0c82412847b"
+}

@@ -192,9 +192,18 @@ fn the_daily_sync_slot_keeps_off_the_predecessors_ticks_and_every_other_slot() {
         }
     }
     println!("examined {compared} slot(s) of the other jobs against the sync's");
+    let slots_a_day: usize = TABLE
+        .iter()
+        .filter(|job| job.id != jobs::SYNC.id)
+        .map(|job| if job.once_a_day() { 1 } else { 24 })
+        .sum();
+    // A literal pin beside the derived count, so a job that joins or leaves the table moves the
+    // expectation only by an edit here: maintenance and the held flush once a day, the liveness
+    // probe and the drill post-back every hour.
+    assert_eq!(slots_a_day, 50, "the other jobs' slots a day");
     assert_eq!(
         compared,
-        24 * 49,
+        24 * slots_a_day,
         "every other job's slots, at every rollover hour"
     );
 }
@@ -257,7 +266,7 @@ fn the_job_table_holds_sync_to_one_daily_slot_claimed_per_study_day() {
         .collect();
     assert_eq!(
         claimed,
-        ["sync", "maintenance"],
+        ["sync", "maintenance", "held_flush"],
         "the jobs that claim a fire date"
     );
     assert_eq!(jobs::job("sync"), Some(jobs::SYNC));

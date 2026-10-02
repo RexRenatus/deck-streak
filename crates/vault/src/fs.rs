@@ -35,8 +35,9 @@ pub struct DirEntry {
 }
 
 /// An open file the adapter is writing: the handle of a temporary file, written and synced before
-/// it is renamed over its target.
-pub trait VaultFile {
+/// it is renamed over its target. It is `Send`, so a capture whose attachment is streaming can be
+/// awaited on any of the runtime's workers, as the API's handlers and the bot's tasks are.
+pub trait VaultFile: Send {
     /// Writes all of `bytes`.
     ///
     /// # Errors
@@ -127,6 +128,103 @@ pub trait VaultFs {
     ///
     /// The operating system's reason, including a path that does not exist.
     fn canonicalize(&self, path: &Path) -> io::Result<PathBuf>;
+
+    /// The journal folders no write may reach (SPEC-118 R5): none, unless this file system is a
+    /// [`JournalGuard`].
+    fn journal(&self) -> &[PathBuf] {
+        &[]
+    }
+}
+
+/// A file system that refuses every create, rename and folder under the layout's journal folders
+/// (SPEC-118 R5, #56), and passes every other call to the file system it wraps.
+#[derive(Clone, Debug)]
+pub struct JournalGuard<F> {
+    inner: F,
+    journal: Vec<PathBuf>,
+}
+
+impl<F: VaultFs> JournalGuard<F> {
+    /// `inner`, guarded against writes under each of the `journal` folders: each folder as it is
+    /// named, and the folder it resolves to when a link stands on its way, so a folder whose name is
+    /// a link guards the folder the link reaches.
+    #[must_use]
+    pub fn new(inner: F, journal: Vec<PathBuf>) -> Self {
+        let resolved: Vec<PathBuf> = journal
+            .iter()
+            .map(|folder| crate::atomic::resolve(&inner, folder))
+            .collect();
+        let mut folders = journal;
+        for folder in resolved {
+            if !folders.contains(&folder) {
+                folders.push(folder);
+            }
+        }
+        Self {
+            inner,
+            journal: folders,
+        }
+    }
+
+    /// `PermissionDenied` when `path` lies under a journal folder, as written or as the file system
+    /// resolves it, by the atomic writer's own rule.
+    fn refuse(&self, path: &Path) -> io::Result<()> {
+        crate::atomic::refuse_journal_resolved(self, path).map_err(|_refused| {
+            io::Error::new(
+                io::ErrorKind::PermissionDenied,
+                "the path lies under a journal folder",
+            )
+        })
+    }
+}
+
+impl<F: VaultFs> VaultFs for JournalGuard<F> {
+    fn create_new(&self, path: &Path) -> io::Result<Box<dyn VaultFile>> {
+        self.refuse(path)?;
+        self.inner.create_new(path)
+    }
+
+    fn rename(&self, from: &Path, to: &Path) -> io::Result<()> {
+        self.refuse(to)?;
+        self.inner.rename(from, to)
+    }
+
+    fn sync_dir(&self, dir: &Path) -> io::Result<()> {
+        self.inner.sync_dir(dir)
+    }
+
+    fn remove_file(&self, path: &Path) -> io::Result<()> {
+        self.inner.remove_file(path)
+    }
+
+    fn read(&self, path: &Path) -> io::Result<Vec<u8>> {
+        self.inner.read(path)
+    }
+
+    fn kind(&self, path: &Path) -> io::Result<Option<EntryKind>> {
+        self.inner.kind(path)
+    }
+
+    fn list(&self, dir: &Path) -> io::Result<Vec<DirEntry>> {
+        self.inner.list(dir)
+    }
+
+    fn create_dir(&self, path: &Path) -> io::Result<()> {
+        self.refuse(path)?;
+        self.inner.create_dir(path)
+    }
+
+    fn remove_dir(&self, path: &Path) -> io::Result<()> {
+        self.inner.remove_dir(path)
+    }
+
+    fn canonicalize(&self, path: &Path) -> io::Result<PathBuf> {
+        self.inner.canonicalize(path)
+    }
+
+    fn journal(&self) -> &[PathBuf] {
+        &self.journal
+    }
 }
 
 /// The real file system, through `std::fs`.
