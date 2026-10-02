@@ -110,3 +110,36 @@ A17: red over the helper without the refusal: the nested capture was not refused
 The text fence above labels one line `A17: red over the helper without the refusal`. It records the red of the companion test `a_capture_nested_inside_a_capture_on_one_thread_is_refused`, which pins the helper's refusal of a nested capture. A17's own acceptance command runs a different test, `a_capture_keeps_a_line_another_thread_reached_first`, and that test's red and green are the A17 lines of the `red-first` fence above. The nested-capture test is defined in `crates/kernel/tests/log_capture_class.rs`.
 
 The passed-test count of the pull request that delivered the amendment was taken with a name filter that left the drill-named targets out and, as issue #511 records, one further test that is not a drill target. A count without that filter needs cargo, which this correction did not run. The unfiltered count is read from CI's stage log of the `rust` job on the branch `dev`: at the merge of that pull request, `816 tests run: 816 passed`, and at the current head of `dev`, `878 tests run: 878 passed`. Both runs include the drill-named targets, so neither equals the filtered local count, and the figure that is one higher than the filtered count is unmeasured here.
+
+## Addendum, 2026-10-02: a missing floor is named apart from a nested capture (#522, #511)
+
+The three new tests in `crates/kernel/tests/log_capture_class.rs` were committed at daee3562 over
+the helper as it stood at the base, 9b0bf65f, which decided nesting from one fact: whether this
+thread's default is the floor. At 5316872f the helper gained its count of the captures it holds on
+each thread, the missing floor's own refusal and wording 3, and the daemon's `wiring` test module,
+the one caller that named `DefaultGuard`, names `log_capture::CaptureGuard`. The tests did not
+change between the two commits.
+
+A19's red test attempts both entries inside a dispatcher's own call while another thread holds a
+capture. Measured with the pinned `tracing` and `tracing-core`, that call reads the default as none
+only while some thread holds a scoped default; with none held anywhere it reads the floor, so the
+test holds a capture on another thread for its span. At the base both entries refuse with the
+nesting message.
+
+```red-first
+A19: red at daee3562: assertion `left == right` failed: the scoped entry, where the floor is not this thread's default; left: "a capture nested inside another capture on one thread is refused", right: "a capture is refused: the floor is not this thread's default"
+A19: green at 5316872f
+A20: red at daee3562: the nesting refusal's doc does not say where its reading of the default holds: Refuses a capture made while this thread already holds one.  A nested capture would take every line from the outer one, so a test asserting on the outer capture could pass while its lines went elsewhere. A thread holding no capture has the floor as its default, so any other default means a capture is held. A capture held on another thread is no obstacle: this thread's default is still the floor.
+A20: green at 5316872f
+```
+
+A19's second test, `a_capture_after_a_held_capture_dropped_is_admitted`, is MUTATION COVERAGE,
+not red-first evidence: it passed at daee3562 over the base helper, which kept no count to leave
+raised. Row S02409 shows it observes the count. The nesting test passed unchanged at both commits,
+and row S02407 shows it now reads the count rather than the default.
+
+```text
+A19, MUTATION COVERAGE: a_capture_after_a_held_capture_dropped_is_admitted passed at daee3562 (the round's base helper); at 5135dbbf with S02409's mutant installed it fails: left "a capture nested inside another capture on one thread is refused", right "" (KILLED)
+A19, MUTATION COVERAGE: a_capture_after_a_panicking_body_is_admitted passed at 115049a0; at 115049a0 with S02410's mutant installed it fails: left "a capture nested inside another capture on one thread is refused", right "" (KILLED)
+A19, A20 at daee3562: log_capture_class 5 passed, 2 failed (the two red tests above); at 5316872f: 7 passed, 0 failed
+```
