@@ -31,6 +31,18 @@ may name any file, so unless its attributes remove it without `test` it refuses 
 `$( ... )` repetition or by an inner attribute in its braces, is refused by its file, as the guard
 does not expand a macro (#433, #441, #458). A literal that two implementations of one crate share
 is pinned only by a row on each implementation's file.
+
+An implementation is read from rustc's tokens (#436): an `impl` whose trait path ends in `Setting`
+or in a name a `use ... as` binds to it, with or without `r#`, whose `SHAPE` is the first constant
+inside its own braces. A pin counts only in an item rustc compiles under test (#449), read by one
+evaluator, `rustc_keeps`, that decides `cfg` over `test`, `any`, `all`, `not`, `true` and `false`
+and leaves every other option and every `cfg_attr` unknown, so an item it cannot decide is not
+read. What the guard does not expand is refused by its file (#535): a module that a macro body or
+invocation declares under an attribute it passes in, a `path`, or a `cfg(test)` that
+`rustc_keeps` does not prove harmless, an implementation a macro writes, an out-of-line module
+declared in a block, and `include!`. A reached file's module directory is known from how a crate
+root reaches it, and a `cfg_attr` path below an inline module is read from the file its predicate
+chooses under test (#536).
 """
 
 import functools
@@ -45,10 +57,6 @@ from pathlib import Path
 
 from _support import REPO, examined
 
-IMPL = re.compile(
-    r"^\s*impl\b\s*(?:<[^{};]*>)?\s*(?:\$?[\w:]+::)?Setting\s+for\s+(\$?\w+)",
-    re.MULTILINE,
-)
 SPACE = "\t\n\x0b\x0c\r \x85\u200e\u200f\u2028\u2029"
 WHITE = re.compile(f"[{SPACE}]+")
 KLEENE = {
@@ -65,6 +73,20 @@ PUNCT = "!#$%&*+,-./:;<=>?@^|~"
 PAIRS = {")": "(", "]": "[", "}": "{"}
 SHAPE = re.compile(r'const\s+SHAPE\s*:\s*&\'static\s+str\s*=\s*("(?:[^"\\]|\\.)*")\s*;')
 BANDS = REPO / "scripts" / "mutation-rows.d"
+REFUSALS = {
+    "invocation": "macro invocation passes a cfg(test) module",
+    "meta": "macro declares a module under an attribute it passes in",
+    "path": "macro declares a module whose path it names",
+    "impl": "macro writes an implementation of Setting",
+    "block": "block declares an out-of-line module",
+    "include": "include! compiles another file's text",
+}
+KEYWORDS = frozenset(
+    "as async await break const continue crate dyn else enum extern false fn for if impl in let "
+    "loop match mod move mut pub ref return self Self static struct super trait true type unsafe "
+    "use where while abstract become box do final gen macro override priv try typeof unsized "
+    "virtual yield".split()
+)
 
 
 def crate_files(root):
@@ -73,18 +95,26 @@ def crate_files(root):
 
 
 def implementations(root):
-    """Every `impl Setting for X` under `crates/*/src`: (crate, file, name, quoted literal, span).
+    """Every implementation of `Setting` under `crates/*/src`, read from rustc's tokens (#436):
+    (crate, file, name, quoted literal, span).
 
-    The literal is the first `const SHAPE = "..."` after the impl line and before the next impl,
-    and `span` is where that constant sits in the file, so the impl's own line can be excluded.
+    An `impl` whose trait path ends in a name `bound` reads as `Setting` is one (`trait_impl`). The
+    literal is the first `const SHAPE = "..."` inside the implementation's own braces, read from
+    comment-free text, and `span` is where that constant sits in the file, so it can be excluded.
+    One inside a macro's token tree is not read here: `macro_test_modules` refuses its file.
     """
+    names = bound(root)
     found = []
     for path in crate_files(root):
         text = lexed(path.read_text(encoding="utf-8"))
         crate, *inside = path.relative_to(root / "crates").parts
-        starts = [(m.start(), m.group(1)) for m in IMPL.finditer(text)]
-        for index, (start, name) in enumerate(starts):
-            end = starts[index + 1][0] if index + 1 < len(starts) else len(text)
+        tokens, pairs, _ = scanned(text)
+        hidden = unexpanded(tokens, pairs)
+        for at in range(len(tokens)):
+            read = None if at in hidden else trait_impl(tokens, pairs, at)
+            if read is None or read[0] not in names:
+                continue
+            _, name, start, end = read
             constant = SHAPE.search(text, start, end)
             found.append(
                 (
@@ -96,6 +126,127 @@ def implementations(root):
                 )
             )
     return found
+
+
+def bound(root):
+    """`Setting` and every name a `use ... as` binds to one of them in any crate file, followed
+    through a chain (`use self::A as B;`) until no name is added, each without `r#` (#436). A name
+    bound in one module is read in every file, so an implementation of another trait it shadows is
+    read as one of `Setting` with no shape: a disclosed false refusal, never a miss."""
+    return aliases(tuple(lexed(path.read_text(encoding="utf-8")) for path in crate_files(root)))
+
+
+@functools.cache
+def aliases(texts):
+    """`bound` over the crate files' comment-free texts."""
+    renames = []
+    for text in texts:
+        found = scanned(text)[0]
+        for at, token in enumerate(found):
+            if token[:2] != ("word", "use"):
+                continue
+            end = next((i for i in range(at, len(found)) if found[i][:2] == ("punct", ";")), at)
+            renames += [
+                (unraw(found[i - 1][1]), unraw(found[i + 1][1]))
+                for i in range(at + 2, end - 1)
+                if found[i][:2] == ("word", "as") and found[i - 1][0] == found[i + 1][0] == "word"
+            ]
+    names = {"Setting"}
+    while True:
+        more = {alias for name, alias in renames if name in names and alias != "_"} - names
+        if not more:
+            return names
+        names |= more
+
+
+def trait_impl(found, pairs, at):
+    """The `impl` at `found[at]` read from its tokens (#436): (its trait path's last word, the
+    type's last word, the span of its braces), each word without `r#` and `$`-prefixed when it is a
+    metavariable; a type with no word of its own (a tuple) is named by its tokens. None when
+    `found[at]` is no `impl` of a trait (`impl X { }`, `-> impl Trait`)."""
+    if found[at][:2] != ("word", "impl"):
+        return None
+    at += 1
+    if at < len(found) and found[at][:2] == ("punct", "<"):
+        at = angled(found, pairs, at)
+    trait, at = last_word(found, pairs, at, ("for",))
+    if trait is None or at >= len(found) or found[at][:2] != ("word", "for"):
+        return None
+    name, brace = last_word(found, pairs, at + 1, ("where",))
+    if name is None:
+        name = " ".join(token[1] for token in found[at + 1 : brace])
+    while brace < len(found) and found[brace][:2] != ("open", "{"):
+        if found[brace][0] == "close" or found[brace][:2] == ("punct", ";"):
+            return None
+        brace = pairs[brace] + 1 if found[brace][0] == "open" else brace + 1
+    if brace >= len(found):
+        return None
+    return trait, name, found[brace][2], found[pairs[brace]][3]
+
+
+def angled(found, pairs, at):
+    """The index after the `< >` group that opens at `found[at]`; an arrow's `>` closes nothing."""
+    depth = 0
+    while at < len(found):
+        kind, word = found[at][:2]
+        if (kind, word) == ("punct", "<"):
+            depth += 1
+        elif (kind, word) == ("punct", ">") and found[at - 1][:2] != ("punct", "-"):
+            depth -= 1
+            if depth == 0:
+                return at + 1
+        elif kind == "close":
+            return at
+        at = pairs[at] + 1 if kind == "open" else at + 1
+    return at
+
+
+def last_word(found, pairs, at, stops):
+    """The last word of a path or a type read from `found[at]` outside its `< >`, without `r#` and
+    `$`-prefixed when a metavariable, and the index of the token that ends it: a word of `stops`,
+    a `{` or a `;` outside `< >`, or the delimiter that closes the group holding it."""
+    word, depth = None, 0
+    while at < len(found):
+        kind, text = found[at][:2]
+        if (
+            kind == "close"
+            or depth == 0
+            and (
+                kind == "word" and text in stops or (kind, text) in (("open", "{"), ("punct", ";"))
+            )
+        ):
+            break
+        if (kind, text) == ("punct", "<"):
+            depth += 1
+        elif (kind, text) == ("punct", ">") and found[at - 1][:2] != ("punct", "-"):
+            depth -= 1
+        elif kind == "word" and depth == 0:
+            word = ("$" if found[at - 1][:2] == ("punct", "$") else "") + unraw(text)
+        at = pairs[at] + 1 if kind == "open" else at + 1
+    return word, at
+
+
+def groups(found, pairs):
+    """The token trees the guard does not expand, outermost only (#535): each `macro_rules!` body
+    and each macro invocation's (`name!(...)`, `name![...]`, `name!{...}`; a keyword before `!`
+    names no macro), as ("rules" or "invocation", the index of its open delimiter)."""
+    out, at = [], 0
+    while at + 2 < len(found):
+        word = found[at][1]
+        if found[at][0] == "word" and word not in KEYWORDS and found[at + 1][:2] == ("punct", "!"):
+            rules = unraw(word) == "macro_rules" and found[at + 2][0] == "word"
+            opening = at + 2 + rules
+            if opening < len(found) and found[opening][0] == "open":
+                out.append(("rules" if rules else "invocation", opening))
+                at = pairs[opening] + 1
+                continue
+        at += 1
+    return out
+
+
+def unexpanded(found, pairs):
+    """The index of every token inside a tree `groups` names."""
+    return {at for _, opening in groups(found, pairs) for at in range(opening, pairs[opening] + 1)}
 
 
 def comment(text, start):
@@ -337,6 +488,27 @@ def test_only(attributes):
     return held == [True, False]
 
 
+def rustc_keeps(run, test):
+    """Whether rustc keeps an item whose attributes are `run`, in three-valued logic: the one cfg
+    evaluator (#449, #536). It reads `cfg` over `test`, `any`, `all`, `not`, `true` and `false`
+    exactly and any other option as unknown; every `cfg_attr` is unknown because it may make a
+    `cfg`, and so is an attribute it cannot read or a run that could not be read whole (None). Any
+    other attribute keeps the item."""
+    if run is None:
+        return None
+    try:
+        values = [None if each[0] == "cfg_attr" else condition(each, test) for each in run]
+    except (IndexError, ValueError):
+        return None
+    return KLEENE["all"](values)
+
+
+def proven(attributes):
+    """True when `rustc_keeps` proves a module no test-only module (#536): removed under `test`,
+    or compiled without it."""
+    return rustc_keeps(attributes, True) is False or rustc_keeps(attributes, False) is True
+
+
 def leading(found, pairs, at, end):
     """The inner attributes that open a body (`found[at:end]`), each as its words (a doc comment is
     `doc`), and the index after them: `#`, `!` and `[` are three tokens, so whitespace and
@@ -392,8 +564,8 @@ def is_pound(token):
 
 def modules(text):
     """The file's own inner attributes, and each module it declares at its top level (a module
-    declared inside an inline module or a block is read by `sites`, not here): (name, outer
-    attributes or None, index of the `mod` keyword)."""
+    declared inside an inline module or a block is read by `sites`, not here): (outer attributes
+    or None, index of the `mod` keyword); the name is the token after it (#536)."""
     found, pairs, _ = scanned(text)
     own, first = leading(found, pairs, 0, len(found))
     declared, at = [], first
@@ -402,26 +574,139 @@ def modules(text):
             ["word", "punct"],
             ["word", "open"],
         ):
-            name = found[at + 1][1].removeprefix("r#")
-            declared.append((name, outer(found, pairs, first, at), at))
+            declared.append((outer(found, pairs, first, at), at))
         at = pairs[at] + 1 if found[at][0] == "open" else at + 1
     return own, declared
 
 
 def cfg_test_spans(text):
-    """The spans of the file's top-level inline test modules (`mod name { ... }` that only
-    `--cfg test` compiles, with the file's own inner attributes), read from `scanned`'s tokens.
-    One declared inside another module is not read: only a module's file is followed there."""
+    """The spans of the items rustc compiles under `test` (`compiled_items`) in the file's
+    top-level inline test modules (`mod name { ... }` that only `--cfg test` compiles, with the
+    file's own inner attributes), read from `scanned`'s tokens. One declared inside another module
+    is not read: only a module's file is followed there."""
     found, pairs, _ = scanned(text)
     own, declared = modules(text)
     spans = []
-    for _, run, at in declared:
+    for run, at in declared:
         if found[at + 2][1] != "{":
             continue
-        inner, _ = leading(found, pairs, at + 3, pairs[at + 2])
+        inner, body = leading(found, pairs, at + 3, pairs[at + 2])
         if test_only(None if run is None else own + run + inner):
-            spans.append((found[at][2], found[pairs[at + 2]][3]))
+            spans += compiled_items(found, pairs, body, pairs[at + 2])
     return spans
+
+
+def compiled_spans(text, root):
+    """The spans of the items rustc compiles under `test` in a file that opens a test module or a
+    test crate (#449): an out-of-line test module's file, whose own inner attributes are judged
+    with its declaration (R8), or a file under `tests/` (`root`), a crate root, whose inner
+    attributes `rustc_keeps` must read as true."""
+    found, pairs, _ = scanned(text)
+    own, first = leading(found, pairs, 0, len(found))
+    if root and rustc_keeps(own, True) is not True:
+        return []
+    return compiled_items(found, pairs, first, len(found))
+
+
+def compiled_items(found, pairs, begin, end):
+    """The spans of the items in `found[begin:end]` that rustc compiles under `test` (#449). An
+    item is read when `rustc_keeps` reads its outer attributes as true under `test`. A kept inline
+    module is walked again with its own inner attributes; any other kept item that holds an
+    attribute `rustc_keeps` does not read as true (on a statement, a field, an associated item) is
+    not read, a false refusal at worst."""
+    spans, at = [], begin
+    while at < end:
+        first, run = at, []
+        while at < end and (
+            found[at][0] == "outer"
+            or is_pound(found[at])
+            and at + 1 < end
+            and found[at + 1][:2] == ("open", "[")
+        ):
+            if found[at][0] == "outer":
+                run.append(["doc"])
+                at += 1
+            else:
+                run.append([word for _, word, _, _ in found[at + 2 : pairs[at + 1]]])
+                at = pairs[at + 1] + 1
+        stop = item_end(found, pairs, at, end)
+        head = at + (at < stop and found[at][:2] == ("word", "pub"))
+        if head < stop and found[head][:2] == ("open", "("):
+            head = pairs[head] + 1
+        inline = head + 2 < stop and [t[:2] for t in found[head : head + 3 : 2]] == [
+            ("word", "mod"),
+            ("open", "{"),
+        ]
+        if rustc_keeps(run, True) is not True:
+            pass
+        elif inline:
+            inner, body = leading(found, pairs, head + 3, pairs[head + 2])
+            if rustc_keeps(inner, True) is True:
+                spans += compiled_items(found, pairs, body, pairs[head + 2])
+        elif rustc_keeps(attributes_inside(found, pairs, at, stop), True) is True:
+            spans.append((found[first][2], found[stop - 1][3]))
+        at = stop
+    return spans
+
+
+def item_end(found, pairs, at, end):
+    """The index after the item that starts at `found[at]` (#449): after its first `;` at depth 0,
+    or after a `{ }` group at depth 0 that the next token does not continue (an open delimiter, a
+    punctuation other than `#` and `$`, and the words `else`, `as` and `where` continue it)."""
+    while at < end:
+        kind, word = found[at][:2]
+        if (kind, word) == ("punct", ";"):
+            return at + 1
+        if kind != "open":
+            at += 1
+            continue
+        at = pairs[at] + 1
+        after = found[at][:2] if at < end else ("", "")
+        if word == "{" and not (
+            after[0] == "open"
+            or after[0] == "punct"
+            and after[1] not in ("#", "$")
+            or after in (("word", "else"), ("word", "as"), ("word", "where"))
+        ):
+            return at
+    return end
+
+
+def attributes_inside(found, pairs, begin, end):
+    """Every attribute inside `found[begin:end]`, outer or inner, each as its words (a doc comment
+    is `doc`), so an item that holds one `rustc_keeps` does not read as true is not read (#449)."""
+    run = []
+    for at in range(begin, end):
+        if found[at][0] in ("outer", "inner"):
+            run.append(["doc"])
+        elif is_pound(found[at]) and at + 1 < end:
+            bracket = at + 1 + (found[at + 1][:2] == ("punct", "!"))
+            if bracket < end and found[bracket][:2] == ("open", "["):
+                run.append([word for _, word, _, _ in found[bracket + 1 : pairs[bracket]]])
+    return run
+
+
+def start_of(found, pairs, at):
+    """The index where the item whose keyword is `found[at]` begins, its outer attributes included
+    (#535, #536): after the previous `;` or `}`, or after the delimiter that opens the group
+    holding it (a `$(` that opens a repetition is passed, so its attributes count), or 0."""
+    back = at - 1
+    while back >= 0:
+        kind, word = found[back][:2]
+        if kind == "close" and word != "}":
+            back = pairs[back] - 1
+        elif kind == "open" and word == "(" and back > 0 and is_dollar(found[back - 1]):
+            back -= 2
+        elif kind == "open" or (kind, word) in (("close", "}"), ("punct", ";")):
+            return back + 1
+        else:
+            back -= 1
+    return 0
+
+
+def is_dollar(token):
+    """True for a `$` punctuation token, which opens a metavariable or a repetition."""
+    return token[:2] == ("punct", "$")
 
 
 PLAIN = re.compile(r'"([^"\\]*)"')
@@ -490,16 +775,18 @@ def named_paths(run):
     return literals, other
 
 
-def below(own, names, name, run):
+def below(own, names, name, run, homes=None):
     """The files rustc could read for `mod name;` declared in `own` below the inline modules
     `names`: the file a plain `#[path]` names, relative to the module directory the inline names
     make, or else `name.rs` or `name/mod.rs` in that directory, which is below `own`'s own folder or
     below the folder beside `own` (a crate root, a `mod.rs` and a file an attribute loaded all read
-    beside themselves). Every file a `cfg_attr` path could name counts too, so a rival is never
-    missed. Only files that exist are returned, each once."""
+    beside themselves). When the walk from the crate roots knows `own`'s module directory (`homes`,
+    #536), only that folder counts. Every file a `cfg_attr` path could name counts too, so a rival
+    is never missed. Only files that exist are returned, each once."""
     literals, _ = named_paths(run)
     plain = any(unraw(each[0]) == "path" for each in run)
     folders = [own.with_suffix(""), own.parent]
+    folders = [folder for folder in folders if homes is None or folder in homes]
     paths = [folder.joinpath(*names) / lit for folder in folders for lit in literals]
     if not plain:
         paths += [folder.joinpath(*names) / f"{name}.rs" for folder in folders]
@@ -521,19 +808,25 @@ def beside(own, name, run):
     return sorted(path for path in unique if path.is_file())
 
 
-def declared(own):
+def declared(own, homes=None):
     """(file, attributes) for each out-of-line module (`mod name;`) at any depth of inline modules
     in `own` whose file rustc's choice leaves in no doubt (R8): of every file rustc could read for
     it (`name.rs` or `name/mod.rs`, in `own`'s module directory or beside `own`, since a crate
     root, a `src/bin` file, a `mod.rs` and a file an attribute loaded all read their modules beside
     themselves, and below an inline module's name), exactly one exists and rustc's lexer reads it.
-    At the top level no attribute of the declaration may carry `path` in any spelling (`#[path]`, a
-    raw identifier, `cfg_attr` under any predicate); below an inline module one plain
-    `#[path = "..."]` names the file from the module directory (#433). The attributes are `own`'s
-    inner ones, each enclosing inline module's, the declaration's, and that file's inner ones. A
-    declaration inside a function body or a macro is not followed."""
+    Where the walk from the crate roots reaches `own`, only its module directory there counts
+    (`homes`, from `reached`; #536), so a decoy in the other folder is no candidate. At the top
+    level no attribute of the declaration may carry `path` in any spelling (`#[path]`, a raw
+    identifier, `cfg_attr` under any predicate); below an inline module one plain
+    `#[path = "..."]` names the file from the module directory (#433), and one
+    `cfg_attr(P, path = "...")` names the file `P` chooses under test (`cfg_attr_choice`). The
+    attributes are `own`'s inner ones, each enclosing inline module's, the declaration's, and that
+    file's inner ones. A declaration inside a function body or a macro is not followed."""
     text = own.read_text(encoding="utf-8")
     tokens = scanned(text)[0]
+    if homes is None:
+        src = next((parent for parent in own.parents if parent.name == "src"), None)
+        homes = None if src is None else reached(src).get(own)
     files = []
     for name, names, run, inner, at in sites(text)[1]:
         if tokens[at + 2][1] != ";":
@@ -545,8 +838,9 @@ def declared(own):
             if run is None or other or len(literals) > 1:
                 continue
             if any(unraw(each[0]) != "path" and named_paths([each]) != ([], False) for each in run):
-                continue
-            found = below(own, names, name, run)
+                found = cfg_attr_choice(own, names, name, run, homes)
+            else:
+                found = below(own, names, name, run, homes)
         else:
             if run is None or any(w.removeprefix("r#") == "path" for each in run for w in each):
                 continue
@@ -554,7 +848,7 @@ def declared(own):
                 path
                 for folder in (own.with_suffix(""), own.parent)
                 for path in (folder / f"{name}.rs", folder / name / "mod.rs")
-                if path.is_file()
+                if path.is_file() and (homes is None or folder in homes)
             ]
         if len(found) == 1:
             try:
@@ -563,6 +857,40 @@ def declared(own):
                 continue
             files.append((found[0], inner + run + leading(body, pairs, 0, len(body))[0]))
     return files
+
+
+def cfg_attr_choice(own, names, name, run, homes):
+    """The file a `mod name;` below the inline modules `names` reads under `test` when its one
+    attribute naming a path is `cfg_attr(P, path = "...")` (#536): the named file, relative to the
+    module directory, when `rustc_keeps` reads `cfg(P)` as true under test, the default `name.rs`
+    or `name/mod.rs` when false, and none when it does not decide. Any other run names none."""
+    gates = gated(own, names, name, run)
+    if not gates:
+        return []
+    value = rustc_keeps([["cfg", "(", *gates[0][0], ")"]], True)
+    folders = [
+        folder.joinpath(*names)
+        for folder in (own.parent, own.with_suffix(""))
+        if homes is None or folder in homes
+    ]
+    if value is True:
+        literals = named_paths(run)[0]
+        paths = [folder / literal for folder in folders for literal in literals]
+    elif value is False:
+        paths = [folder / leaf for folder in folders for leaf in (f"{name}.rs", f"{name}/mod.rs")]
+    else:
+        return []
+    unique = {path.resolve() for path in paths}
+    return sorted(path for path in unique if path.is_file())
+
+
+def module_home(path, attributes):
+    """The folder where the modules of a reached file `path` live (#536): beside it for a
+    `mod.rs` or a file a `path` attribute loaded (rustc reads both like a crate root), and below
+    its own name otherwise (`a.rs` reads its modules from `a/`)."""
+    if path.name == "mod.rs" or any(unraw(word) == "path" for each in attributes for word in each):
+        return {path.parent}
+    return {path.with_suffix("")}
 
 
 def visible(src):
@@ -574,7 +902,9 @@ def visible(src):
     attributes), or None when unreadable. A declaration whose file the guard cannot name, from a
     path literal it cannot read, from below an inline module whose attributes name `path`, or from
     attributes it cannot read whole, is listed with the target None too: it may name any file
-    (#433, #458)."""
+    (#433, #458). So is an out-of-line module a macro declares, unless `rustc_keeps` proves it
+    removed without `test`: the guard cannot name its file, and it may compile one without `test`
+    (#536 reopens no rival)."""
     roots = [src / "lib.rs", src / "main.rs", *src.glob("bin/*.rs"), *src.glob("bin/*/main.rs")]
     todo = [(root, []) for root in roots if root.is_file()]
     seen, out = set(), []
@@ -585,10 +915,18 @@ def visible(src):
         seen.add((file, repr(chain)))
         try:
             text = file.read_text(encoding="utf-8")
-            tokens = scanned(text)[0]
+            tokens, pairs, _ = scanned(text)
             found = sites(text)[1]
         except ValueError:
             continue
+        for _, opening in groups(tokens, pairs):
+            for mod in range(opening + 1, pairs[opening]):
+                after = mod + 2 + is_dollar(tokens[mod + 1])
+                if tokens[mod][:2] != ("word", "mod") or after >= pairs[opening]:
+                    continue
+                run = outer(tokens, pairs, start_of(tokens, pairs, mod), mod)
+                if tokens[after][:2] == ("punct", ";") and rustc_keeps(run, False) is not False:
+                    out.append((None, None))
         for name, names, run, inner, at in found:
             if tokens[at + 2][1] == "{":
                 continue
@@ -674,9 +1012,9 @@ def out_of_line(own):
     """`test_files(own)` less each file that another declaration the guard can see compiles
     without `test` (a `#[cfg(not(test))] mod tests;`, a `#[path]` naming it, a `cfg_attr` path
     that applies without `test`): a shape only it spells is production code, so it is refused
-    (#458). A declaration whose file the guard cannot name (`visible`'s None) and that is compiled
-    without `test` refuses every file. A test-only second declaration is no rival, and a rival on
-    another file refuses nothing."""
+    (#458). A declaration whose file the guard cannot name (`visible`'s None, a macro's out-of-line
+    module among them, #536) and that is compiled without `test` refuses every file. A test-only
+    second declaration is no rival, and a rival on another file refuses nothing."""
     files = test_files(own)
     src = next((parent for parent in own.parents if parent.name == "src"), None)
     if not files or src is None:
@@ -697,16 +1035,20 @@ def reached(src):
     configured: its roots (`lib.rs`, `main.rs`, `bin/*.rs`, `bin/*/main.rs`), and each file a
     reached file declares (`declared`, below inline modules too) whose attributes keep it under
     test. A file that only an undecided attribute, a top-level `#[path]` or a source rustc refuses
-    reaches is not in it, so its test modules are not read."""
+    reaches is not in it, so its test modules are not read. Each reached file maps to its module
+    directories (`module_home`): a root's is its own folder, and a file's is the one its reaching
+    declaration gives it, so a file is read again when another declaration gives it a new one
+    (#536)."""
     roots = [src / "lib.rs", src / "main.rs", *src.glob("bin/*.rs"), *src.glob("bin/*/main.rs")]
-    todo, seen = [root for root in roots if root.is_file()], set()
+    homes = {root: {root.parent} for root in roots if root.is_file()}
+    todo, seen = list(homes), {}
     while todo:
         file = todo.pop()
-        if file in seen:
+        if seen.get(file) == homes[file]:
             continue
-        seen.add(file)
+        seen[file] = set(homes[file])
         try:
-            files = declared(file)
+            files = declared(file, homes[file])
         except ValueError:
             continue
         for path, attributes in files:
@@ -714,15 +1056,18 @@ def reached(src):
                 kept = KLEENE["all"]([condition(each, True) for each in attributes])
             except (IndexError, ValueError):
                 kept = None
+            home = module_home(path, attributes) if kept is True else set()
+            homes[path] = homes.get(path, set()) | home
             if kept is True:
                 todo.append(path)
-    return seen
+    return {file: homes[file] for file in seen}
 
 
 def spelled_elsewhere(root, crate, file, literal, own_span):
-    """True when `literal` is spelled, quoted, in the crate's tests or inside a `#[cfg(test)]`
-    module of the implementation's own source file, outside a comment, and never at any `SHAPE`
-    constant."""
+    """True when `literal` is spelled, quoted, in an item rustc compiles under `test` (#449): in
+    the crate's tests (`compiled_spans`, a file whose inner attributes remove it under test reads
+    nothing), inside a test module of the implementation's own source file (`cfg_test_spans`) or
+    in a test module's file, outside a comment, and never at any `SHAPE` constant."""
     base = root / "crates" / crate
     constants = {
         (path, span)
@@ -735,7 +1080,11 @@ def spelled_elsewhere(root, crate, file, literal, own_span):
     for path in candidates:
         text = path.read_text(encoding="utf-8")
         bare = lexed(text)
-        spans = cfg_test_spans(text) if path == base / file else [(0, len(bare))]
+        spans = (
+            cfg_test_spans(text)
+            if path == base / file
+            else compiled_spans(text, base / "tests" in path.parents)
+        )
         at = bare.find(literal)
         while at != -1:
             inside = any(start <= at and at + len(literal) <= end for start, end in spans)
@@ -758,28 +1107,37 @@ def rows_pinning(root, crate, file, literal):
 
 
 def macro_test_modules(root):
-    """The crate files whose `macro_rules!` body declares a module under `cfg(test)`, as refusal
-    lines naming the crate and the file (#441). The guard reads tokens and does not expand a macro,
-    so a module a macro writes would be a test module it never sees: it refuses the file instead.
-    A `mod` in a body is judged by the attributes just before it, back to the previous item's end
-    or the body's open delimiter (past a `$(` that opens the module's own repetition, so
-    `#[cfg(test)] $(mod $n {})*` counts), and by the inner attributes that open its braces
-    (`mod x { #![cfg(test)] }`). It reads `cfg` and `cfg_attr` in any combination with `test` (a
-    `not(test)` one too: the guard cannot expand it, so it does not decide)."""
+    """The crate files that hold a source the guard cannot expand, as refusal lines naming the
+    crate, the file and the reason (#441, #535). The guard reads tokens and does not expand a
+    macro, so a module or an implementation a macro writes would be one it never sees: it refuses
+    the file instead.
+
+    In each token tree `groups` names, a `mod` is judged by the attributes just before it, back to
+    the previous item's end or the tree's open delimiter (past a `$(` that opens the module's own
+    repetition, so `#[cfg(test)] $(mod $n {})*` counts), and by the inner attributes that open its
+    braces (`mod x { #![cfg(test)] }`). In order, the first that applies refuses the file: an
+    attribute holding a `$` (`meta`: it is passed in), any spelling of `path` (`path`), then `cfg`
+    or `cfg_attr` with `test` in any combination unless `proven` reads the module as no test-only
+    one (`cfg(not(test))`), in a `macro_rules!` body (#441) or in an invocation (`invocation`). An
+    implementation of a trait `bound` names, or of a metavariable, in a tree is refused (`impl`).
+    Outside them, `mod name;` in a block (a function body, a `const` block) that `rustc_keeps`
+    does not prove removed without `test` is refused (`block`), and so is `include!`
+    (`include`)."""
+    names = bound(root)
     refused = []
     for path in crate_files(root):
-        found, pairs, _ = scanned(path.read_text(encoding="utf-8"))
-        hit = False
-        for at in range(len(found) - 3):
-            if [t[:2] for t in found[at : at + 2]] != [("word", "macro_rules"), ("punct", "!")]:
-                continue
-            if found[at + 2][0] != "word" or found[at + 3][0] != "open":
-                continue
-            for mod in range(at + 4, pairs[at + 3]):
+        text = path.read_text(encoding="utf-8")
+        found, pairs, _ = scanned(text)
+        hit, reasons = False, []
+        for source, opening in groups(found, pairs):
+            for mod in range(opening + 1, pairs[opening]):
+                read = trait_impl(found, pairs, mod)
+                if read and (read[0] in names or read[0].startswith("$")):
+                    reasons.append("impl")
                 if found[mod][:2] != ("word", "mod"):
                     continue
                 words, depth, back = set(), 0, mod - 1
-                while back > at + 3:
+                while back > opening:
                     kind, word = found[back][:2]
                     if kind == "close":
                         if depth == 0 and word == "}":
@@ -798,22 +1156,54 @@ def macro_test_modules(root):
                         words.add(word)
                     back -= 1
                 brace = mod + 2 + (found[mod + 1][:2] == ("punct", "$"))
+                inner = []
                 if brace < len(found) and found[brace][:2] == ("open", "{"):
-                    for each in leading(found, pairs, brace + 1, pairs[brace])[0]:
+                    inner = leading(found, pairs, brace + 1, pairs[brace])[0]
+                    for each in inner:
                         words.update(each)
-                hit = hit or bool(words & {"cfg", "cfg_attr"} and "test" in words)
+                run = outer(found, pairs, back + 1, mod)
+                passed = attributes_inside(found, pairs, back + 1, mod) + inner
+                if any("$" in each for each in passed):
+                    reasons.append("meta")
+                elif "path" in {unraw(word) for word in words}:
+                    reasons.append("path")
+                elif (
+                    words & {"cfg", "cfg_attr"}
+                    and "test" in words
+                    and not proven(None if run is None else run + inner)
+                ):
+                    if source == "rules":
+                        hit = True
+                    else:
+                        reasons.append("invocation")
+        followed = unexpanded(found, pairs) | {at for *_, at in sites(text)[1]}
+        for at in range(len(found) - 2):
+            if unraw(found[at][1]) == "include" and found[at + 1][:2] == ("punct", "!"):
+                reasons.append("include")
+            if (
+                found[at][:2] == ("word", "mod")
+                and found[at + 1][0] == "word"
+                and found[at + 2][:2] == ("punct", ";")
+                and at not in followed
+                and rustc_keeps(outer(found, pairs, start_of(found, pairs, at), at), False)
+                is not False
+            ):
+                reasons.append("block")
         if hit:
             crate, *inside = path.relative_to(root / "crates").parts
             refused.append(
                 f"{crate} ({Path(*inside).as_posix()}) macro_rules! body declares a cfg(test) module"
             )
+        for reason in dict.fromkeys(reasons):
+            crate, *inside = path.relative_to(root / "crates").parts
+            refused.append(f"{crate} ({Path(*inside).as_posix()}) {REFUSALS[reason]}")
     return refused
 
 
 def unpinned(root):
     """The implementations whose literal no test spells and no row of their file finds, then each
-    crate file whose macro declares a test module (`macro_test_modules`). A literal that two
-    implementations of one crate share is pinned only by a row of each one's file."""
+    crate file that holds a source the guard cannot expand (`macro_test_modules`). A literal that
+    two implementations of one crate share is pinned only by a row of each one's file."""
     found = implementations(root)
     holders = {}
     for crate, _, _, literal, _ in found:
