@@ -108,6 +108,24 @@
         "     ORDER BY study_day ASC, id ASC LIMIT ?2\";",
         "wallet_ports::the_movements_come_newest_first_a_page_at_a_time",
         "the wallet's page reads the movements newest first, by study day and then the reverse of the order written (SPEC-082 R15, A20)"
+      ],
+      [
+        "S08216-A-FULL-PAGE-NAMES-NO-NEXT-PAGE",
+        "economy",
+        "src/wallet.rs",
+        "        let more = rows.len() > MOVEMENTS_PAGE;",
+        "        let more = rows.len() >= MOVEMENTS_PAGE;",
+        "wallet_ports::a_page_that_holds_the_last_movement_names_no_next_page",
+        "the wallet's page reads one row more than it holds and names a next page only when that row exists, so a page that holds the last movement names none (SPEC-082 R15; ADR-315 ruling 3)"
+      ],
+      [
+        "S08217-A-PAGE-HOLDS-TWENTY-MOVEMENTS",
+        "economy",
+        "src/wallet.rs",
+        "pub const MOVEMENTS_PAGE: usize = 20;",
+        "pub const MOVEMENTS_PAGE: usize = 21;",
+        "wallet_ports::a_page_that_holds_the_last_movement_names_no_next_page",
+        "one page of the wallet's history holds twenty movements, a literal cargo-mutants never mutates (SPEC-082 R15; ADR-315 ruling 3)"
       ]
     ],
     "CARGO_KILLED_SCRIPT_MUTATIONS": [
