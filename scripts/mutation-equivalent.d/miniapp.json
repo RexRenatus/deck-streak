@@ -83,6 +83,38 @@
       "reason": "Both arms of the ternary answer null when stored.report is null.",
       "evidence": "The false arm reads stored.report, which is null exactly when the true arm would answer null.",
       "issue": "#294"
+    },
+    {
+      "file": "web/app/src/lib/economy/wallet.ts",
+      "mutant": "ConditionalExpression: false",
+      "anchor": "typeof item !== 'object'",
+      "reason": "A movement that is no object and not null is refused by the field checks after this guard.",
+      "evidence": "With this term false, a string, number or boolean item passes the guard and destructures to an undefined id, which Number.isInteger refuses, so parseMovement answers null as it does now; null is still stopped by item === null, and a JSON array holds no other kind of value.",
+      "issue": "#106"
+    },
+    {
+      "file": "web/app/src/lib/economy/wallet.ts",
+      "mutant": "ConditionalExpression: false",
+      "anchor": "typeof body !== 'object'",
+      "reason": "A body that is no object and not null is refused by the date check after this guard.",
+      "evidence": "With this term false, a string, number or boolean body passes the guard and destructures to an undefined study_day, which isIsoDate refuses, so parseWallet answers null as it does now; null is still stopped by body === null, and the test that refuses the body 'wallet' reads null either way.",
+      "issue": "#106"
+    },
+    {
+      "file": "web/app/src/routes/wallet/+page.svelte",
+      "mutant": "ArrayDeclaration: [\"Stryker was here\"]",
+      "anchor": "let movements = $state<Movement[]>([]);",
+      "reason": "The first list is never shown: an ok wallet replaces it before the screen shows any list.",
+      "evidence": "The movements render only inside the branch for wallet.kind 'ok', and the effect assigns the answer's movements before it assigns wallet; a refused or unavailable answer shows its alert and no list, so the initial value never reaches the screen.",
+      "issue": "#106"
+    },
+    {
+      "file": "web/app/src/routes/wallet/+page.svelte",
+      "mutant": "ConditionalExpression: false",
+      "anchor": "if (next === null) return;",
+      "reason": "older() is called only by the button, which is shown only while next is not null.",
+      "evidence": "The one caller of older() is the button inside {#if next !== null}, and a click before an older page arrives still finds next unchanged, so next is a number on every call and the guard never returns; it is there for the type of api.wallet's argument.",
+      "issue": "#106"
     }
   ]
 }

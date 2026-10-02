@@ -96,6 +96,80 @@ describe('the wallet history', () => {
     expect(await screen.findByRole('alert')).toBeTruthy();
     expect(shown(container)).toEqual(['4', '3', '2']);
   });
+
+  it('names the screen and its list, and leads back to Today', async () => {
+    mocks.wallet.mockReset();
+    mocks.wallet.mockResolvedValue({ kind: 'ok', value: FIRST });
+    const { container } = render(Page);
+
+    await vi.waitFor(() => expect(shown(container)).toEqual(['4', '3', '2']));
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Wallet');
+    expect(screen.getByRole('heading', { level: 2 }).textContent).toBe('Coin movements');
+    expect(screen.getByRole('link', { name: 'Back to Today' }).getAttribute('href')).toBe('/');
+    // a wallet that arrived whole raises no alert
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('says it is loading until the wallet arrives', async () => {
+    mocks.wallet.mockReset();
+    let arrive: (answer: unknown) => void = () => undefined;
+    mocks.wallet.mockReturnValue(
+      new Promise((resolve) => {
+        arrive = resolve;
+      })
+    );
+    const { container } = render(Page);
+
+    expect(screen.getByRole('status').textContent).toBe('Loading…');
+    arrive({ kind: 'ok', value: FIRST });
+    await vi.waitFor(() => expect(shown(container)).toEqual(['4', '3', '2']));
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+
+  it('asks to reopen from Telegram when the session is refused', async () => {
+    mocks.wallet.mockReset();
+    mocks.wallet.mockResolvedValue({ kind: 'reopen' });
+    const { container } = render(Page);
+
+    expect((await screen.findByRole('alert')).textContent).toBe(
+      'Reopen DeckStreak from Telegram to sign in again.'
+    );
+    expect(shown(container)).toEqual([]);
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+
+  it('says the server is out of reach when the wallet does not arrive', async () => {
+    mocks.wallet.mockReset();
+    mocks.wallet.mockResolvedValue({ kind: 'unavailable' });
+    const { container } = render(Page);
+
+    expect((await screen.findByRole('alert')).textContent).toBe(
+      'DeckStreak could not reach its server. Try again in a moment.'
+    );
+    expect(shown(container)).toEqual([]);
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+
+  it('clears its alert when an older page arrives on a second ask', async () => {
+    mocks.wallet.mockReset();
+    let asks = 0;
+    mocks.wallet.mockImplementation((before?: number) => {
+      if (before === undefined) return Promise.resolve({ kind: 'ok', value: FIRST });
+      asks += 1;
+      return Promise.resolve(asks === 1 ? { kind: 'unavailable' } : { kind: 'ok', value: OLDER });
+    });
+    const { container } = render(Page);
+
+    await vi.waitFor(() => expect(shown(container)).toEqual(['4', '3', '2']));
+    const older = screen.getByRole('button', { name: 'Show older movements' });
+    await fireEvent.click(older);
+    expect((await screen.findByRole('alert')).textContent).toBe(
+      'DeckStreak could not reach its server. Try again in a moment.'
+    );
+    await fireEvent.click(older);
+    await vi.waitFor(() => expect(shown(container)).toEqual(['4', '3', '2', '1']));
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
 });
 
 describe('the wallet body', () => {
@@ -175,5 +249,18 @@ describe('the wallet body', () => {
 
   it('shows a deposit with its plus and a debit with its minus', () => {
     expect([8, -5, 0].map(signed)).toEqual(['+8', '-5', '0']);
+  });
+
+  it('refuses a date, a list or a movement no wallet holds', () => {
+    const broken: unknown[] = [
+      { ...BODY, study_day: ['2025-01-14'] },
+      { ...BODY, study_day: 'x2025-01-14' },
+      { ...BODY, study_day: '2025-01-14x' },
+      { ...BODY, movements: null },
+      { ...BODY, movements: [null] }
+    ];
+    for (const body of broken) {
+      expect(parseWallet(body), JSON.stringify(body)).toBeNull();
+    }
   });
 });
