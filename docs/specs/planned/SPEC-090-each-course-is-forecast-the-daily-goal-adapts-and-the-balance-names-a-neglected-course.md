@@ -61,12 +61,7 @@
 
 The numeric port (ADR-090)
 
-R1. `crates/kernel/src/pynum.rs` holds CPython's float semantics these ports read: the compensated
-    `sum`, `statistics.median`, `statistics.mean` (the exact mean, rounded once, which a running
-    float sum is not), `round(x, n)` and the predecessor's nearest-rank percentile
-    (`gamification/adaptive.py:percentile`). Each equals its golden (`goldens/pynum_basics.json`,
-    `goldens/percentile.json`), and analytics' compensated sum (SPEC-071) delegates to the kernel's,
-    keeping its own name.
+R1. Delivered by SPEC-302 (its R1): the kernel's CPython numbers.
 
 The forecast (#86)
 
@@ -129,8 +124,8 @@ R13. Every constant this SPEC uses (the velocity floor, the goal's floor, horizo
 
 | id | criterion | decided by |
 |---|---|---|
-| A1 | the kernel's sum, median, mean and round equal CPython's golden over float edge cases | `the_numeric_basics_match_cpythons_golden` |
-| A2 | the nearest-rank percentile equals the golden of `adaptive.py:percentile`, the float edge included | `the_percentile_matches_the_predecessors_golden` |
+| A1 | delivered by SPEC-302 (its A1) | SPEC-302 |
+| A2 | delivered by SPEC-302 (its A2) | SPEC-302 |
 | A3 | the mature velocity equals the golden of `velocity.py:mature_velocity` | `mature_velocity_matches_the_predecessors_golden` |
 | A4 | each course's forecast equals the golden of `velocity.py:compute_velocity` | `the_forecast_matches_the_predecessors_golden` |
 | A5 | the goal equals the golden of `adaptive.py:adaptive_daily_goal` over `compute_all`'s inputs | `the_adaptive_goal_matches_the_predecessors_golden` |
@@ -153,8 +148,8 @@ R13. Every constant this SPEC uses (the velocity floor, the goal's floor, horizo
 | A22 | the pace step passes the balance the study reviews of the read window, each with its card's course, the run's instant and the kernel's study-day rule at the 04:00 rollover, from which the balance counts the last 28 study days including today and each course's days idle | `the_pace_step_is_passed_its_balance_window` |
 
 ```acceptance
-A1: cargo test -p deck-streak-kernel --test pynum_goldens -- --exact the_numeric_basics_match_cpythons_golden
-A2: cargo test -p deck-streak-kernel --test pynum_goldens -- --exact the_percentile_matches_the_predecessors_golden
+A1: delivered by SPEC-302 (its A1)
+A2: delivered by SPEC-302 (its A2)
 A3: cargo test -p deck-streak-curriculum --test pace_goldens -- --exact mature_velocity_matches_the_predecessors_golden
 A4: cargo test -p deck-streak-curriculum --test pace_goldens -- --exact the_forecast_matches_the_predecessors_golden
 A5: cargo test -p deck-streak-curriculum --test pace_goldens -- --exact the_adaptive_goal_matches_the_predecessors_golden
@@ -194,10 +189,10 @@ when it merges.
 
 | file | context | change |
 |---|---|---|
-| `crates/kernel/src/pynum.rs` | `deck-streak-kernel` | added: CPython's sum, median, mean, round and the nearest-rank percentile (ADR-090) |
-| `crates/kernel/src/lib.rs` | `deck-streak-kernel` | changed: the numeric module |
-| `crates/kernel/tests/pynum_goldens.rs` | `deck-streak-kernel` | added: A1, A2 |
-| `crates/analytics/src/metrics.rs` | `deck-streak-analytics` | changed: its compensated sum delegates to the kernel's |
+| `crates/kernel/src/pynum.rs` | `deck-streak-kernel` | delivered by SPEC-302 |
+| `crates/kernel/src/lib.rs` | `deck-streak-kernel` | delivered by SPEC-302 |
+| `crates/kernel/tests/pynum_goldens.rs` | `deck-streak-kernel` | delivered by SPEC-302 |
+| `crates/analytics/src/metrics.rs` | `deck-streak-analytics` | delivered by SPEC-302 |
 | `crates/curriculum/src/pace.rs` | `deck-streak-curriculum` | added: the velocity, the forecast, the goal and the balance |
 | `crates/curriculum/src/pace_store.rs` | `deck-streak-curriculum` | added: `pace_readouts`, read and replaced |
 | `crates/curriculum/src/data_rights.rs` | `deck-streak-curriculum` | changed: the port exports and erases `pace_readouts` |
@@ -241,8 +236,8 @@ when it merges.
 | `.sqlx/` | workspace | changed: the offline cache for the new queries |
 | `Cargo.lock` | workspace | changed |
 | `tools/parity-oracle/registry/spec_090.py` | repo | added: this SPEC's registrations (SPEC-029) |
-| `tools/parity-oracle/goldens/pynum_basics.json` | repo | added: CPython's `sum`, `statistics.median`, `statistics.mean` and `round` (adapter; float edge cases) |
-| `tools/parity-oracle/goldens/percentile.json` | repo | added: the golden of `gamification/adaptive.py:percentile` (function) |
+| `tools/parity-oracle/goldens/pynum_basics.json` | repo | delivered by SPEC-302 |
+| `tools/parity-oracle/goldens/percentile.json` | repo | delivered by SPEC-302 |
 | `tools/parity-oracle/goldens/mature_velocity.json` | repo | added: the golden of `velocity.py:mature_velocity` (adapter; rollup rows) |
 | `tools/parity-oracle/goldens/forecast.json` | repo | added: the golden of `velocity.py:compute_velocity` (adapter; synthetic progress) |
 | `tools/parity-oracle/goldens/adaptive_goal.json` | repo | added: the golden of `gamification/adaptive.py:adaptive_daily_goal` (adapter; `compute_all`'s feed) |
@@ -289,8 +284,8 @@ unit band or syllabus of the owner's.
 
 | golden | the predecessor's function | kind | the adapter builds |
 |---|---|---|---|
-| `pynum_basics` | CPython's `sum`, `statistics.median`, `statistics.mean`, `round` | adapter | float lists with cancellation, even and odd counts, lists whose running sum differs from the exact mean, and halves at each digit, and `round(2.675, 2)`, whose shortest decimal is a tie but whose binary value is not (expected 2.67) |
-| `percentile` | `gamification/adaptive.py:percentile` | function | none: empty, one value, `0.9` of 70 values, `0.2` and `1.0`, `0.9` of 7 distinct values (rank 6.3, which the ceiling takes to 7) and `0.0` of 70 values (rank 0, which the floor takes to 1) |
+| `pynum_basics` | delivered by SPEC-302 | n/a | n/a |
+| `percentile` | delivered by SPEC-302 | n/a | n/a |
 | `mature_velocity` | `velocity.py:mature_velocity` | adapter | rollup rows with and without reviews, all-zero graduations, an even count |
 | `forecast` | `velocity.py:compute_velocity` | adapter | synthetic `LanguageProgress` values with gaps, empty bands, a fully achieved course and a remaining count the rate does not divide (7 over a rate of 2.0 is 3.5, which the ceiling takes to 4 and the floor to 3; 7 over a rate of 3.0 is 2.3333333333333335, which the ceiling takes to 3 and the floor, the round and the truncation each to 2) |
 | `adaptive_goal` | `gamification/adaptive.py:adaptive_daily_goal` | adapter | the remaining sum, the 365-day horizon and `max(percentile_p90(history), 30)` as `compute_all` feeds them, a per-day need under 10, at 10 and over it, and a history p90 under 30, at 30 and over it |
@@ -314,7 +309,7 @@ unit band or syllabus of the owner's.
 | `S09003-GOAL-FLOOR-TEN` | `crates/curriculum/src/pace.rs` | the goal's floor of 10 | `pace_goldens::the_adaptive_goal_matches_the_predecessors_golden` |
 | `S09004-HISTORY-FLOOR-THIRTY` | `crates/curriculum/src/pace.rs` | the history p90's floor of 30 | `pace_goldens::the_adaptive_goal_matches_the_predecessors_golden` |
 | `S09005-GOAL-HORIZON` | `crates/curriculum/src/pace.rs` | the goal's horizon of 365 days | `pace_goldens::the_pace_constants_equal_the_predecessors` |
-| `S09006-NEAREST-RANK` | `crates/kernel/src/pynum.rs` | the rank's ceiling and its floor of 1 | `pynum_goldens::the_percentile_matches_the_predecessors_golden` |
+| delivered by SPEC-302 (its S30201) | n/a | n/a | n/a |
 | `S09007-NEGLECTED-UNDER-FIVE` | `crates/curriculum/src/pace.rs` | a share under 5.0 is neglected | `pace_goldens::the_balance_matches_the_predecessors_golden` |
 | `S09008-BALANCE-WINDOW` | `crates/curriculum/src/pace.rs` | the window of 28 study days, today included | `pace_goldens::the_balance_matches_the_predecessors_golden` |
 | `S09009-ONE-ROW-PER-KIND` | `migrations/009001_curriculum_pace_readouts.sql` | the key on `pace_readouts (kind, scope)` (a script row; the cargo killer) | `pace_step::the_pace_readouts_are_replaced_once_per_recompute` |
