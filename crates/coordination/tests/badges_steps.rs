@@ -2,7 +2,9 @@
 //! when an evaluation stops after its write or after the router answered, a closing day is judged
 //! with its end-of-day state, and THE CLASS RULE: every evaluated day awards exactly the study
 //! badges its context earns, once. An owed badge is raised with its line on the offers' day and
-//! marked from the clock at the answer. Every review, rollup, card state and streak is synthetic.
+//! marked from the clock at the answer. The step is named `progression.badges`, and the awards'
+//! offers print their type with the router they hand to left out. Every review, rollup, card state
+//! and streak is synthetic.
 
 // An integration test is test code: its helpers panic on a failed fixture, and it prints the
 // examined count on purpose.
@@ -706,4 +708,21 @@ async fn every_evaluated_day_awards_exactly_the_badges_its_context_earns_once() 
     }
     println!("examined {examined} evaluated day(s)");
     assert_eq!(examined, derived, "members x evaluations x passes");
+}
+
+/// The fold reports the badge step under its name, `progression.badges`, in phase 7.
+#[test]
+fn the_badge_step_is_named_progression_badges() {
+    assert_eq!(
+        badge_fold().steps(),
+        [(Phase::Awards, "progression.badges")],
+        "the step's phase and name"
+    );
+}
+
+/// The awards' offers print their type and leave out the router they hand each celebration to.
+#[test]
+fn the_award_offers_print_their_type_without_their_router() {
+    let offers = AwardOffers::new(Arc::new(Recorder::default()));
+    assert_eq!(format!("{offers:?}"), "AwardOffers { .. }");
 }

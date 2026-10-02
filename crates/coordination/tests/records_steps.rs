@@ -3,7 +3,9 @@
 //! celebrated once per kind and day, a record still owed when a later day beats it is offered
 //! before that day's write, and one replaced before it was offered is named in a log line, while a
 //! best that climbs within its own day is not. An offer the router did not answer leaves the record
-//! owed; an answered one is raised on the offers' day, marked from the clock, in the kinds' order.
+//! owed; an answered one is raised on the offers' day, marked from the clock, in the kinds' order,
+//! with its line. The step is named `progression.records`, and the records view (R13) shows each
+//! stored record against today's live value and the record today is closest to.
 //! Every rollup, record and review is synthetic.
 
 // An integration test is test code: its helpers panic on a malformed golden or a failed fixture.
@@ -23,9 +25,12 @@ use std::collections::BTreeMap;
 use std::fmt;
 use std::sync::{Arc, Mutex, PoisonError};
 
+use deck_streak_coordination::progression::records_view::{
+    LiveDay, RecordLine, RecordsView, records_view,
+};
 use deck_streak_coordination::recompute::records::{
-    PlannedRecord, RECORD_EVENT, RECORDS_WINDOW, RecordPlan, RecordsStep, offer_records, plan,
-    record_key,
+    PlannedRecord, RECORD_EVENT, RECORDS_WINDOW, RecordPlan, RecordsStep, StoredRecord,
+    offer_records, plan, record_key, record_line,
 };
 use deck_streak_coordination::recompute::{
     AwardOffers, Evaluation, Fold, FoldInput, Offers, Phase,
@@ -556,5 +561,113 @@ async fn the_owed_records_are_offered_in_the_kinds_order() {
         recorder.keys(),
         expected,
         "best score, most reviews, most minutes"
+    );
+}
+
+/// The fold reports the records step under its name, `progression.records`, in phase 7.
+#[test]
+fn the_records_step_is_named_progression_records() {
+    assert_eq!(
+        records_fold().steps(),
+        [(Phase::Awards, "progression.records")],
+        "the step's phase and name"
+    );
+}
+
+/// An owed record is raised with its line: the kind's label, the best it beat and the new best.
+#[tokio::test]
+async fn an_owed_record_is_raised_with_its_line() {
+    assert_eq!(
+        record_line(RecordKind::MostReviews, 120, 140),
+        "\u{1f4c8} <b>NEW RECORD</b> \u{2014} Most reviews in a day: 120 \u{2192} 140"
+    );
+    let scratch = scratch().await;
+    seed_low_records(&scratch.db).await;
+    seed_rollups(&scratch.db, &[totals(D0, 50, 30, 600.0)]).await;
+    current(&scratch.db, D0, at(D0, 13)).await;
+    let recorder = Recorder::default();
+    offer(&scratch.db, &recorder, D0).await;
+    let lines: Vec<String> = recorder
+        .handed()
+        .into_iter()
+        .map(|celebration| celebration.text)
+        .collect();
+    assert_eq!(
+        lines,
+        [
+            "\u{1f4c8} <b>NEW RECORD</b> \u{2014} Best daily score: 20 \u{2192} 50",
+            "\u{1f4c8} <b>NEW RECORD</b> \u{2014} Most reviews in a day: 10 \u{2192} 30",
+            "\u{1f4c8} <b>NEW RECORD</b> \u{2014} Most minutes in a day: 1 \u{2192} 10",
+        ],
+        "each record's line, in the kinds' order"
+    );
+}
+
+/// The records view (R13): each stored record with its label, value, day and the value it beat;
+/// today's live value for its kind, the score, the study reviews or the whole minutes of their
+/// seconds; and the record today is closest to, with its gap.
+#[test]
+fn the_records_view_shows_each_record_against_today() {
+    let stored = [
+        StoredRecord {
+            kind: RecordKind::BestScore,
+            value: 90,
+            study_day: day(D0 - 5),
+            previous: 80,
+            celebrated_at: Some(UtcMillis::from_epoch_millis(at(D0 - 5, 13))),
+        },
+        StoredRecord {
+            kind: RecordKind::MostReviews,
+            value: 140,
+            study_day: day(D0 - 3),
+            previous: 120,
+            celebrated_at: None,
+        },
+        StoredRecord {
+            kind: RecordKind::MostMinutes,
+            value: 45,
+            study_day: day(D0 - 2),
+            previous: 40,
+            celebrated_at: None,
+        },
+    ];
+    // 2,430 seconds are 40.5 minutes, shown as 40 whole minutes.
+    let live = LiveDay {
+        score: 70,
+        reviews: 132,
+        seconds: 2_430.0,
+    };
+    assert_eq!(
+        records_view(&stored, live),
+        RecordsView {
+            lines: vec![
+                RecordLine {
+                    kind: RecordKind::BestScore,
+                    label: "Best daily score",
+                    value: 90,
+                    study_day: day(D0 - 5),
+                    previous: 80,
+                    today: 70,
+                },
+                RecordLine {
+                    kind: RecordKind::MostReviews,
+                    label: "Most reviews in a day",
+                    value: 140,
+                    study_day: day(D0 - 3),
+                    previous: 120,
+                    today: 132,
+                },
+                RecordLine {
+                    kind: RecordKind::MostMinutes,
+                    label: "Most minutes in a day",
+                    value: 45,
+                    study_day: day(D0 - 2),
+                    previous: 40,
+                    today: 40,
+                },
+            ],
+            // The gaps are 20, 8 and 5: today is closest to the most minutes.
+            chase: Some((RecordKind::MostMinutes, 5)),
+        }
     );
 }
