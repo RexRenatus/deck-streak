@@ -1,4 +1,4 @@
-{"schema":"phx.formal.vectors.v1","entry":"RoadToC2","covers":"crates/curriculum/src/progress.rs","anchor":"band_step","digest":"sha256:0000000000000000000000000000000000000000000000000000000000000000","vectors":166}
+{"schema":"phx.formal.vectors.v1","entry":"RoadToC2","covers":"crates/curriculum/src/progress.rs","anchor":"band_step","digest":"sha256:e36e7f81009accd4bb06b3ea20f8cdbb59d44de1654869c9b81fa68d6173ef59","vectors":166}
 {"rule":"course_progress","achieved":[false,false,false,false,false,false],"current_band":"A1"}
 {"rule":"course_progress","achieved":[true,false,false,false,false,false],"current_band":"A1"}
 {"rule":"course_progress","achieved":[false,true,false,false,false,false],"current_band":"A1"}
