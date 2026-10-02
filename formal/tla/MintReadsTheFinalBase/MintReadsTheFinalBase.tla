@@ -2,7 +2,7 @@
 \* @phx covers crates/coordination/src/recompute/mod.rs anchor=Phase digest=sha256:f899318ac1f66e431ae82839be6e5165a0bede2d76122b5175e892af576cbfcb
 \* @phx covers crates/coordination/src/recompute/mod.rs anchor=PHASES digest=sha256:7f21e3de566b544029e0c3ff78dd7940425c51120333fed2127384f698290be8
 \* @phx covers crates/coordination/src/recompute/mod.rs anchor=register digest=sha256:c4ea8f4bef00e1f3b17ad8d80af338db958189a32fcd6f623cf8b18b71fb03a2
-\* @phx covers crates/coordination/src/recompute/mod.rs anchor=run digest=sha256:c51dc67a3988bbeb8c46a953acdaba06669275e0ba405edb1146de880ae815fd
+\* @phx covers crates/coordination/src/recompute/mod.rs anchor=run digest=sha256:7a383ba01872f4dde46ccb5220fa492de1f89498adf71774cae868e3e0b7acbb
 \* @phx covers crates/economy/src/wallet.rs anchor=settle_mint_on digest=sha256:f527db16a0f325855b0278d2ffa535cd1ba5b2428a5b876138ce606fc4ee0633
 \* @phx covers crates/progression/src/settle.rs anchor=settle digest=sha256:9872f0859a95fb7f19be47343abdc7227cdde7e7d0ea913a7372c7a402b47dbe
 \* @phx covers crates/coordination/src/recompute/mint.rs anchor=phase digest=sha256:a0fb8d223f853cd70d7107472d703c985558145bb83d2203a6ff4063844156e1
@@ -28,6 +28,9 @@
 \* - Current: the current study day, open;
 \* - Revisit: every past day backfilled or at or before the last settled one, closed, in one write.
 \* db.rs::write opens each with BEGIN IMMEDIATE, so no two writes interleave inside one.
+\* Re-read of mod.rs::run on 2026-10-02, against #311's fix (ADR-313): Settle's write reads the
+\* cursor again first and, for a day it does not owe, writes nothing and goes on from the owed day
+\* (Settle's first arm); the first write, the current day's write and the revisit are unchanged.
 \*
 \* Inside one write a day runs its steps in the phases' order (mod.rs::Phase, PHASES, register).
 \* Phase 2 settles the day's base XP; phase 5 writes only consistency and Ascendant, the sources
@@ -150,14 +153,22 @@ Backfill(c) ==
     /\ UNCHANGED <<today, cursor, now, last, runs>>
 
 \* mod.rs::run (2): one owed day, closed, in a write of its own that marks it settled; the cursor
-\* is the latest settled day (rollup.rs settle_cursor reads max(study_day))
+\* is the latest settled day (rollup.rs settle_cursor reads max(study_day)). The write reads the
+\* cursor again first (#311, ADR-313): the day owed is the day after it or, with no cursor, the
+\* cycle's own day; a write for any other day is rolled back before any step runs, so it moves no
+\* base, held flag, mint or cursor, and the loop goes on from the owed day
 Settle(c) ==
     /\ pc[c] = "settle"
     /\ owed[c] <= now[c] - 1
-    /\ \E r \in [{owed[c]} -> Bases] : Evaluate({owed[c]}, TRUE, r, FoldMints)
-    /\ cursor' = Max(cursor, owed[c])
-    /\ last' = [last EXCEPT ![c] = owed[c]]
-    /\ owed' = [owed EXCEPT ![c] = @ + 1]
+    /\ LET d == owed[c]
+           due == IF cursor = 0 THEN d ELSE cursor + 1 IN
+       IF d # due
+          THEN /\ owed' = [owed EXCEPT ![c] = due]
+               /\ UNCHANGED <<base, held, mint, cursor, fell, last>>
+          ELSE /\ \E r \in [{d} -> Bases] : Evaluate({d}, TRUE, r, FoldMints)
+               /\ cursor' = Max(cursor, d)
+               /\ last' = [last EXCEPT ![c] = d]
+               /\ owed' = [owed EXCEPT ![c] = d + 1]
     /\ UNCHANGED <<today, pc, now, cur, bf, runs>>
 
 \* the settle loop ends at the closing day, or at the first owed day the cycle's sync did not start
