@@ -37,8 +37,8 @@ static AGENT: AgentDataRights = AgentDataRights;
 /// The economy's port: the coin ledger exported and erased, the shop's row reset in place
 /// (SPEC-082).
 static ECONOMY: EconomyDataRights = EconomyDataRights;
-/// The vault's port: the law drill answers and grades exported and erased, and never a note
-/// (SPEC-110, ADR-118).
+/// The vault's port: the law drill answers and grades, and the inbox captures' rows, exported and
+/// erased, and never a note or a captured file (SPEC-110, SPEC-118, ADR-118).
 static VAULT: VaultDataRights = VaultDataRights;
 /// Coordination's own port: the cron-fire ledger exempt.
 static STREAKS: StreaksDataRights = StreaksDataRights;

@@ -116,6 +116,24 @@
       "evidence": "With at == 0, stem[..0].trim_end_matches('-') is the empty string, which is what the fallback arm's String::new() returns, so the guard changes no result; a match at 0 is the only input the guard refuses.",
       "reached_by": "drill_goldens::the_drill_views_match_the_predecessors_golden",
       "issue": "#136"
+    },
+    {
+      "file": "crates/vault/src/atomic.rs",
+      "mutant": "replace Streamed<'_, F>::discard with ()",
+      "anchor": "pub fn discard(self) {\n        drop(self);",
+      "reason": "discard takes the stream by value, so with an empty body the stream still drops at the function's end and runs the same Drop, which removes its temporary file.",
+      "evidence": "The body is drop(self) alone, and a by-value self that is not moved out is dropped when the function returns; both forms run Streamed's Drop once, before the caller's next statement. Part 6's sweep installed the mutant and reached_by's resend, which discards, still found its temporary file gone (missed, every vault test green).",
+      "reached_by": "inbox_capture::a_capture_sent_twice_is_written_once",
+      "issue": "#56"
+    },
+    {
+      "file": "crates/vault/src/fs.rs",
+      "mutant": "replace VaultFs::journal -> &[PathBuf] with Vec::leak(Vec::new())",
+      "anchor": "fn journal(&self) -> &[PathBuf] {\n        &[]",
+      "reason": "The trait's default answers an empty slice either way: leaking an empty vector gives an empty slice and allocates nothing.",
+      "evidence": "Vec::new() does not allocate, and Vec::leak of it is a slice of length 0, as &[] is; refuse_journal only iterates the slice, so neither form refuses a path. Part 6's sweep installed the mutant and reached_by, whose Recording file system keeps the default, stayed green (missed).",
+      "reached_by": "atomic::a_write_lands_through_an_ignored_temp_name_then_fsync_rename_and_dir_fsync",
+      "issue": "#56"
     }
   ]
 }
