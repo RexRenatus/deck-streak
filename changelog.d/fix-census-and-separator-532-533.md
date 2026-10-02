@@ -12,4 +12,4 @@
   the enclosing blocks, with no line window and no `plant` word. The finder's copy check compares
   normalised bodies beside the name match, and the tree reads exactly its one ruled floor (#532).
   SPEC-129 takes an insert-only amendment against dev, decided by ADR-312, and mutation rows
-  S12913 to S12919 pin the new arms.
+  S12913 to S12937 pin the new arms.

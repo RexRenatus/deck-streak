@@ -39,7 +39,7 @@ How should the scan know the wrapper, and how should the two censuses read the t
 
 - Read `WRAPPER` from `test_dispatch_shards.py`'s text, by `ast.parse` and `ast.literal_eval` of its one module-level assignment, and recognize only that form: chosen, because the scan then has the guard's own words, cannot drift from them, and loads nothing.
 - Import the guard's `wrapped`: lost, because it loads the wrapper's module to read its parser, so `test_mutation_workflows.py` would no longer run where the wrapper's tests do not.
-- A second literal copy of the wrapper's form in `test_mutation_workflows.py`: lost, because a copy drifts when the guard's changes, and nothing would tie the two together.
+- A second literal copy of the wrapper's form in `test_mutation_workflows.py`: lost, because a copy drifts when the guard changes, and nothing would tie the two together.
 - Keep the every-program reading and add a test that the two readings agree on the workflows in the tree: lost, because the over-find of #533 stays, and a parity test over today's workflows says nothing about the next one.
 - Read the stand-ins with `ast.parse`, resolve real-program calls through the file's import aliases, and reach every later statement of the enclosing blocks: chosen, because a word gate and a line window are exactly what missed, and the syntax tree has neither.
 - Widen the census's patterns and its window: lost, because a wider window is still a window and a wider word list is still a word gate; each misses the next shape the same way.
@@ -65,9 +65,9 @@ match.
   decisions stand.
 - The scan cannot read the options the wrapper's parser declares. Two readings follow, both named
   in SPEC-129 section 12 and pinned: it over-finds where the guard refuses a word before the
-  separator (`--cap 1`, `--report $OUT`, `$SEP`), and it refuses a separator given as the value of
-  `--report`. Each fails closed: an over-found command is held to the bounds, and a refusal carries
-  none.
+  separator (`--cap 1`, `--report $OUT`, `$SEP`, and a lone `--` taken as `--report`'s value),
+  and it refuses a separator given as the value of `--report`. Each fails closed: an over-found
+  command is held to the bounds, and a refusal carries none.
 - Measured at the base over the tree's 69 files, the census of the syntax tree with wide reach
   lists 0 arms, and parses 16613 string constants and skips 8123. Each of the four shapes of #532
   planted alone is listed once, and the same text with a handler that leaves is not.
@@ -105,4 +105,4 @@ helper function would be outside the census; a census that follows calls would a
 
 ## More Information
 
-Issues #532 and #533; SPEC-129 sections 10 to 12; ADR-306.
+Issues #532 and #533; SPEC-129 sections 10 to 13; ADR-306.

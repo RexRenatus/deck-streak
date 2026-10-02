@@ -495,7 +495,9 @@ similarity threshold and against comparing source text). Issues #532 and #533.
   each member of each. Neither is in the agreeing population, and its printed line counts both.
   - **Over-find.** Where the wrapper is followed by a word the guard refuses before the separator,
     the scan still finds the command after the `--`: an option the parser does not declare
-    (`--cap 1`), a value bash may split (`--report $OUT`, unquoted) and a computed word (`$SEP`).
+    (`--cap 1`), a value bash may split (`--report $OUT`, unquoted) and a computed word (`$SEP`);
+    and where its only `--` is the value of `--report` (`--report -- cargo mutants --in-place`), the
+    guard refuses while the scan finds the command.
     The scan then holds that command to the bounds, so it fails closed. The test also pins a twin of
     each after a `python3` script that is not the wrapper, which the scan refuses as the guard does.
   - **A separator given as an option's value.** In `<the wrapper> --report -- -- cargo mutants
@@ -544,9 +546,11 @@ similarity threshold and against comparing source text). Issues #532 and #533.
   depth, except `_mutants_finder.py`, and compares the body of each `def` with the body of each
   function of `_mutants_finder.py`. Both are normalised the same way: the docstring dropped, the
   function's own name, its arguments and its local names renamed in order of first appearance, and
-  the result written by `ast.dump`. An equal body is a copy whatever its name. The name match stays
-  beside it, unchanged: a `def` spelled with the finder's own name and first argument is a copy
-  whatever its body.
+  the result written by `ast.dump`. A `def` that calls a finder function by that function's own
+  name, as `mutants_in` calls itself, has the call renamed as its own name is, so a copy left
+  calling `mutants_in` reads equal to it. An equal body is a copy whatever its name. The name
+  match stays beside it, unchanged: a `def` spelled with the finder's own name and first argument
+  is a copy whatever its body.
 - **The floor.** One helper is equal to a finder function by accident. `_indent` in
   `test_ci_workflows.py` and the finder's `indent_of` both return a line's count of leading blanks,
   `len(line) - len(line.lstrip(" "))`, the one-line arithmetic any reader of indented text writes;
@@ -580,7 +584,7 @@ similarity threshold and against comparing source text). Issues #532 and #533.
   section and the next, appended.
 - `docs/decisions/ADR-312-the-workflow-scan-reads-the-wrappers-form-and-the-census-reads-the-syntax-tree.md`:
   added.
-- `docs/red-first/SPEC-129.md`: changed: an addendum for A20 to A28.
+- `docs/red-first/SPEC-129.md`: changed: two addenda for A20 to A28.
 - `changelog.d/fix-census-and-separator-532-533.md`: added.
 
 The rows of section 4's manifest this amendment leaves alone, each on its own line:
@@ -592,9 +596,10 @@ The rows of section 4's manifest this amendment leaves alone, each on its own li
 - `docs/specs/planned/SPEC-057-every-surviving-mutant-is-killed-or-recorded-equivalent-before-the-first-mutation-gated-release.md`: unchanged.
 - `changelog.d/ci-dispatch-shards-129.md`: unchanged.
 
-Of section 10's files, `scripts/tests/_mutants_finder.py` and
-`docs/decisions/ADR-306-one-finder-for-the-mutants-scans-and-a-stand-in-that-fails-closed.md` are
-unchanged.
+The rows of section 10's manifest this amendment leaves alone, each on its own line:
+
+- `scripts/tests/_mutants_finder.py`: unchanged.
+- `docs/decisions/ADR-306-one-finder-for-the-mutants-scans-and-a-stand-in-that-fails-closed.md`: unchanged.
 
 ## 13. Acceptance criteria of the section 12 amendments
 
@@ -603,8 +608,8 @@ unchanged.
 | A20 | the scan reads `WRAPPER` from the guard's text: exactly one module-level assignment, a tuple of two strings, read by `ast.literal_eval`; an assignment inside a function, or none, is not read | `test_mutation_workflows.py` `TheScanReadsTheWrappersForm` |
 | A21 | the scan and the guard's rule agree on every member of the 56-member separated population, and the reading section 10 gave the scan mismatches every member that is not the wrapper's | `test_mutation_workflows.py` `TheScanReadsTheWrappersForm` |
 | A22 | the scan departs from the guard only at its two named limits: it finds each over-find member, refuses its twin after a script that is not the wrapper, and refuses the separator given as an option's value | `test_mutation_workflows.py` `TheScanReadsTheWrappersForm` |
-| A23 | the census lists each of the four shapes of #532 planted in a scratch directory, and the same text with a handler that leaves reads 0 | `test_stand_in_census.py` `TheCensusOfStandIns` |
-| A24 | the census reaches a program run in the handler and in the `finally` block, through an import alias and in a nested block; it does not reach the `else` block or a nested function, and a `return` in a function defined in the handler does not leave | `test_stand_in_census.py` `TheCensusOfStandIns` |
+| A23 | the census lists each of the four shapes of #532 planted in a scratch directory, and the same text with a handler that leaves, by any of its leaving statements, reads 0; a file under `__pycache__` is not read | `test_stand_in_census.py` `TheCensusOfStandIns` |
+| A24 | every `try` is a candidate, in a function or class body, in a handler or a `case` clause, and with `except*` handlers; the census reaches each kind of real-program call run in the handler and in the `finally` block, through an import alias and in a nested block; it does not reach the `else` block, another handler of the same `try`, a nested function or a class nested after the `try`, and a `return` in a function defined in the handler does not leave | `test_stand_in_census.py` `TheCensusOfStandIns` |
 | A25 | a stand-in held in a string constant is listed at the constant's line with its own line, and the census counts the constants it parsed and skipped | `test_stand_in_census.py` `TheCensusOfStandIns` |
 | A26 | each of the census's four limits is not listed | `test_stand_in_census.py` `TheCensusOfStandIns` |
 | A27 | the copies the check finds in the tree equal `FLOOR`; a renamed and re-wrapped copy of every finder function is caught, and so is a copy spelled with the finder's own name | `test_mutation_workflows.py` `EveryMutantsSpellingIsFound` |
@@ -623,6 +628,8 @@ A23: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k
 A23: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k test_an_exec_far_after_the_handler_is_listed
 A23: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k test_a_plant_whose_text_has_no_plant_word_is_listed
 A23: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k test_a_stand_in_in_a_subdirectory_is_listed
+A23: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k test_a_handler_that_breaks_continues_or_exits_leaves
+A23: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k test_a_file_under_pycache_is_not_read
 A24: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k test_a_program_run_in_the_handler_itself_is_listed
 A24: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k test_a_program_run_in_the_finally_block_is_listed
 A24: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k test_a_program_run_in_the_else_block_is_not_listed
@@ -630,6 +637,12 @@ A24: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k
 A24: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k test_a_return_inside_a_def_in_the_handler_does_not_leave
 A24: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k test_a_call_through_an_import_alias_is_listed
 A24: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k test_a_call_in_a_nested_block_is_listed
+A24: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k test_a_try_in_a_function_or_a_class_body_is_a_candidate
+A24: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k test_a_try_in_a_handler_or_a_case_clause_is_a_candidate
+A24: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k test_a_try_star_is_a_candidate
+A24: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k test_every_kind_of_real_program_is_listed
+A24: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k test_a_program_run_in_a_sibling_handler_is_not_listed
+A24: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k test_a_program_run_in_a_class_nested_after_the_try_is_not_listed
 A25: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k test_a_stand_in_held_in_a_str_constant_is_listed_at_its_line
 A25: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k test_the_census_counts_the_constants_it_parses_and_skips
 A26: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k test_a_stand_in_assembled_at_run_time_is_not_listed
@@ -638,5 +651,6 @@ A26: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k
 A26: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k test_a_handler_that_leaves_on_some_paths_counts_as_leaving
 A27: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k test_the_finder_is_defined_once_and_a_planted_copy_is_caught
 A27: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k test_a_renamed_and_rewrapped_copy_of_each_finder_function_is_caught
+A27: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k test_a_literal_copy_of_each_finder_function_under_another_name_is_caught
 A28: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k test_a_copy_with_changed_logic_is_caught_only_under_the_finders_name
 ```
