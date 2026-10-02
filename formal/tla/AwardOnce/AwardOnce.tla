@@ -4,7 +4,7 @@
 \* @phx covers crates/coordination/src/recompute/badges.rs anchor=evaluate digest=sha256:20660e5d08a54f50f60824125958cba6cf65c5750af0a7468ecbad0e26ffd548
 \* @phx covers crates/coordination/src/recompute/badges.rs anchor=offer_badges digest=sha256:cbf19ec6758776f6a64ffd60c45d775f30003963a3a1d2c273571016df1d3b48
 \* @phx covers crates/coordination/src/recompute/records.rs anchor=evaluate digest=sha256:5aa0de349398bcf888dfaadd1437dbe027b2e4d82ba3ec530c3ad5f7bab08218
-\* @phx covers crates/coordination/src/recompute/records.rs anchor=upsert digest=sha256:4ce16ad80999bae754f87e4934a1f7bc5255ff0f311e1644a147c9d8a12405b9
+\* @phx covers crates/coordination/src/recompute/records.rs anchor=upsert digest=sha256:0702ef24ebd40778731306415bead309ef68954c2c858320eb32ed78b2f1bc4e
 \* @phx covers crates/coordination/src/recompute/records.rs anchor=offer_records digest=sha256:94d4c086e62de5ee1bc65547fa613409b603a137fb3e5e24a0e70c82bac9243c
 \* @phx covers crates/coordination/src/sync_cycle.rs anchor=sync_cycle digest=sha256:b8158a6a2359166e7b55a5dbbb15189d50cdbeebd84c20a0805067046c31dc6c
 \* @phx covers crates/coordination/src/level_up.rs anchor=announce_level_up digest=sha256:acbb8923e76fbd4ab77949a119c1ad3a87de6f41737e65b89df689875e851dd0
@@ -18,6 +18,7 @@
 \* @phx witness witness/a-router-with-no-once-ever-key.cfg kills=CelebrateAtMostOnce
 \* @phx witness witness/a-celebration-raised-only-by-the-inserting-evaluation.cfg kills=NoSilentLoss
 \* @phx witness witness/a-later-day-overwrites-an-unoffered-record.cfg kills=NoSilentLoss
+\* @phx witness witness/a-same-day-beat-keeps-the-seeds-mark.cfg kills=NoSilentLoss
 (***************************************************************************)
 \* One award per day (a badge at a tier is the same shape with one day), and the evaluations that
 \* may reach them: day 1 at its settle (evaluation 1), the replay of day 1 (evaluation 2), and day
@@ -59,14 +60,18 @@
 \*   unset; the progression award port's unique key answers AlreadyAwarded (UniqueKey).
 \* - Commit (record, Recheck): records.rs::upsert re-reads the kind's row inside the day's write,
 \*   names a row of another day whose mark is unset ("celebration not sent"), then upserts; a row
-\*   of the same day keeps its mark, so a best that climbs all day is one award.
+\*   of the same day keeps its mark, so a best that climbs all day is one award, unless the row is
+\*   the seed (its previous equals its value, R12, and every detected record's previous is below
+\*   its value), which a beat of its day replaces with its mark unset (KeepSeedMark = FALSE).
+\* - Seed (records.rs::evaluate, SPEC-073 R12, fix round 1): with no record stored, the first
+\*   detection writes the window's best for the evaluation's own day with the mark already set; it
+\*   is no award, so it owes nothing, and Seeded reads it as the row no award wrote.
 \* - Router(d) and OnceKey: ledger.rs::claim. Crash: between any two of those transactions.
 \* Abstractions, each a stuttering of the model's variables:
 \* - the offers read the unmarked rows on a reader, then route; DrainOffer reads and routes in one
 \*   step. A row replaced between the read and the route is offered under its own day's key, its
 \*   mark write then matches nothing, and the replacing write has named it: no property moves;
-\* - records.rs::evaluate's first detection seeds the window's bests with the mark already set
-\*   (R12): a seed is what the owner has already seen, never an award the model owes;
+\* - the seed writes every kind's best at once; one row stands for the kinds, as for the records;
 \* - the backfill and revisit writes run no badge or record step (mod.rs's
 \*   Evaluation::runs_today_only_rules is Settle and Current only), so the backfill's write with
 \*   no offers before it awards nothing, and the offers after the revisit write are the Offer that
@@ -74,7 +79,7 @@
 (***************************************************************************)
 EXTENDS Naturals
 
-CONSTANTS Design, UniqueKey, OnceKey, Drain, Recheck, MaxCrash, MaxMiss
+CONSTANTS Design, UniqueKey, OnceKey, Drain, Recheck, KeepSeedMark, MaxCrash, MaxMiss
 
 Evals == {1, 2, 3}
 Days == {1, 2}
@@ -116,6 +121,9 @@ Startable(e) == e # 3 \/ pc[1] \in {"done", "dead"}
 
 \* an unmarked award is on the row
 Pending == due /\ row # 0
+
+\* the row holds the seed: a best no award wrote, whose previous equals its value (R12)
+Seeded == row # 0 /\ awards[row] = 0
 
 Pre(e) ==
     /\ pc[e] = "idle"
@@ -168,7 +176,9 @@ Commit(e) ==
                               THEN [named EXCEPT ![row] = TRUE]
                               ELSE named
                /\ row' = d
-               /\ due' = (Design = "mark")
+               \* records.rs::upsert's CASE: a row of the same day keeps its mark unless it is
+               \* the seed; KeepSeedMark is the CASE before fix round 1, which kept the seed's too
+               /\ due' = IF row = d /\ (~Seeded \/ KeepSeedMark) THEN due ELSE (Design = "mark")
                /\ fresh' = [fresh EXCEPT ![e] = TRUE]
     /\ pc' = [pc EXCEPT ![e] = "committed"]
     /\ UNCHANGED <<sent, off, crashes, misses>>
@@ -209,6 +219,17 @@ Clear(e) ==
     /\ pc' = [pc EXCEPT ![e] = "done"]
     /\ UNCHANGED <<awards, sent, row, named, fresh, off, crashes, misses>>
 
+\* the first detection, with no record stored: the window's best for the evaluation's own day,
+\* written with its mark set, in the day's own write; it is no award
+Seed(e) ==
+    /\ pc[e] = "write"
+    /\ Design = "mark"
+    /\ row = 0
+    /\ row' = DayOf[e]
+    /\ due' = FALSE
+    /\ pc' = [pc EXCEPT ![e] = "committed"]
+    /\ UNCHANGED <<awards, sent, named, fresh, off, crashes, misses>>
+
 \* the process dies between any two transactions
 Crash(e) ==
     /\ pc[e] \in {"drain", "drained", "write", "committed", "routed"}
@@ -224,7 +245,7 @@ Finished == Quiescent /\ UNCHANGED vars
 Next ==
     \/ \E e \in Evals :
           \/ Pre(e) \/ DrainOffer(e) \/ DrainMiss(e) \/ DrainSkip(e) \/ DrainMark(e)
-          \/ Commit(e) \/ Offer(e) \/ OfferMiss(e) \/ Clear(e) \/ Crash(e)
+          \/ Seed(e) \/ Commit(e) \/ Offer(e) \/ OfferMiss(e) \/ Clear(e) \/ Crash(e)
     \/ Finished
 
 Spec == Init /\ [][Next]_vars
