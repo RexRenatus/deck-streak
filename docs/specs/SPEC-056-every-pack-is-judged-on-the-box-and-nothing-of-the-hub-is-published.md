@@ -315,7 +315,7 @@ holds section 7 equal to every retirement the delivered SPECs hold. It inserts:
 Section 7's first sentence names this delivery's retirements; its table now also lists one a later
 delivery made, as A18 requires.
 
-## 9. Amendments, 2026-10-02: the owned email rule follows its source across a systemd unit instance path
+## 9. Amendments, 2026-10-02: the owned email rule follows its source across a systemd unit instance path, with acceptance criteria A21 to A23
 
 Made by a fix delivery, insert-only under ruling (i) of SPEC-038 section 8: every earlier byte is
 kept in order. It inserts this section and nothing else.
