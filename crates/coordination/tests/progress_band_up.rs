@@ -214,11 +214,11 @@ fn case_window(reaches: &[Reach]) -> CollectionData {
     let mut cards = Vec::new();
     let mut deck_names = BTreeMap::new();
     for (index, reach) in (1_i64..).zip(reaches) {
-        let reached = BANDS
+        let band_index = BANDS
             .iter()
             .position(|band| *band == reach.band)
             .expect("a CEFR band");
-        for unit in (1_i64..).take(reached + 1) {
+        for unit in (1_i64..).take(band_index + 1) {
             let id = 100 * index + unit;
             cards.push(Card {
                 course: CourseCode::new(&reach.code),
@@ -318,6 +318,7 @@ async fn recompute_case(db: &Db, courses: &Courses, data: &CollectionData, now: 
 }
 
 #[tokio::test]
+#[allow(clippy::too_many_lines)]
 async fn band_ups_match_the_predecessors_golden_and_pay_once() {
     let band_ups = golden::read(&golden::committed("band_up")).expect("the band-up golden");
     let policy = Policy::compiled().expect("the compiled policy parses");
