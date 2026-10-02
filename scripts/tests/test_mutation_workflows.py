@@ -841,6 +841,7 @@ NAMED_LIMITS = {
         (f"{WRAPPED} --cap 1 --", "refused", COMMAND),
         (f"{WRAPPED} --report $OUT --", "refused", COMMAND),
         (f"{WRAPPED} $SEP --", "refused", COMMAND),
+        (f"{WRAPPED} --report --", "refused", COMMAND),
     ),
     "value-dash-dash": ((f"{WRAPPED} --report -- --", COMMAND, "refused"),),
 }
@@ -849,6 +850,7 @@ TWINS = (
     "python3 scripts/x.py --cap 1 --",
     "python3 scripts/x.py --report $OUT --",
     "python3 scripts/x.py $SEP --",
+    "python3 scripts/x.py --report --",
 )
 
 
