@@ -180,3 +180,42 @@ The RED commit `a5e4cf06` adds four tests and changes no production file; the GR
 The criteria these tests decide, A16 and A10, are already recorded once in the block above, at their
 first red and green; a criterion takes one entry there, so the reds quoted in this section are
 prose, each with its test name, file and line.
+
+## 073c: the routes, the bot commands and the screens
+
+Two RED commits change no production file. `18db650e` adds the Rust tests: A20's route test and A21's
+and A22's bot tests, each red by assertion with the routes and commands absent. `207fc032` adds the
+web tests: A23's gallery and A24's records screen tests, red by assertion against stubs that render
+nothing. The GREEN commit is `c1ba0334`. Each red below was run selecting its test:
+
+- A20, `crates/api/tests/badges_routes.rs:276:13`: the route was not mounted, so the shell's
+  fallback answered 200 where the owner's session was refused.
+- A21 and A22, `crates/bot/tests/badges_commands.rs:115:5` and `:146:5`: the bot answered `/badges`
+  and `/records` with its help text, as it answers an unknown command.
+- A23 and A24: the stubs rendered no badge and no record line.
+
+Five tests were added after GREEN and two were extended; they change the reds above in nothing.
+Each was written for a mutant that survived GREEN:
+
+- `424d9cc9` adds refusal cases to `web/app/src/lib/badges/badges.test.ts` and
+  `web/app/src/lib/records/records.test.ts` (a field of the wrong type, a study day that is not an
+  ISO date, a focus badge read), and drops `badges.ts`'s `typeof family` term, which `includes()`
+  already decides: StrykerJS then reads 91 of 91 and 66 of 66 mutants killed in the two parsers.
+- `8760278a` adds `badges_routes::the_badge_and_record_routes_name_why_they_cannot_answer` (503
+  `database_not_open`, 500 `badges_unreadable` and `records_unreadable`), the coordination view
+  tests over a database, and `crates/daemon/tests/badges_route_composed.rs` (the composed role reads
+  the configured courses). `distance` clamps with `max(0)`, since `>` and `>=` agree at a gap of 0,
+  and row S07323 is re-anchored to it.
+
+```red-first
+A20: red at 18db650: assertion `left == right` failed: /api/badges None; left: 200, right: 401
+A20: green at c1ba033
+A21: red at 18db650: assertion `left == right` failed; left: the help text "These are the commands I answer:", right: "No badges yet — study to earn your first! 👟"
+A21: green at c1ba033
+A22: red at 18db650: assertion `left == right` failed; left: the help text "These are the commands I answer:", right: "📈 No records yet — they mint themselves as you study."
+A22: green at c1ba033
+A23: red at 207fc03: AssertionError: expected '' to be '🧘 Monthly Monk 30-day streak 3 of 30'
+A23: green at c1ba033
+A24: red at 207fc03: AssertionError: expected [] to deeply equal [ …(3) ]
+A24: green at c1ba033
+```
