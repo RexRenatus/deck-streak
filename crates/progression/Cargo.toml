@@ -24,7 +24,9 @@ thiserror.workspace = true
 [dev-dependencies]
 # ADR-029: the parity oracle's golden reader, compiled into the level test by path.
 serde.workspace = true
-serde_json.workspace = true
+# The goldens' floats are compared bit for bit, so the reader parses them exactly: serde_json's
+# default parser is best-effort and can land one unit in the last place away (SPEC-071 section 7).
+serde_json = { workspace = true, features = ["float_roundtrip"] }
 # ADR-020's temporary database, and two concurrent grants on tokio's multi-thread runtime (A3).
 tempfile.workspace = true
 tokio = { workspace = true, features = ["macros", "rt", "rt-multi-thread", "sync"] }

@@ -214,3 +214,153 @@ A14: green at 0f8eacad
 A14 replay: red at 644aabcf: FAILED (failures=4), AssertionError: Lists differ: [(('exact', 'bounded', '@'), ['refused: `c[56 chars]s'])] != [] : 32 of 32 members
 A14 replay: green at 0f8eacad: Ran 33 tests, OK, examined 1 options the wrapper declares, examined 374 wrapper argvs, examined 3 wrapper plants, examined 1160 wrapper-axis members, examined 616 wrapper-axis members bash runs without the bounds, examined 32 declared-form members, examined 6 weekly commands, examined 9 real-tree commands
 ```
+
+## Addendum, 2026-10-01 (issues #418 and #497): one finder for the mutants scans, and a stand-in that fails closed
+
+The lines above stand. A15 to A19 are new. The two scans of `test_mutation_workflows.py` now read
+through one finder, and a stand-in whose plant fails exits and runs nothing. Commit 4fc769c9 adds
+the census test A19, and it fails by assertion on the one arm the base carries. Commit 1d651259
+adds the stand-in test A18. It is CI only, because `test_dispatch_shards.py` never runs on the box:
+at the pushed red head 7f83b956 the `hygiene` job of run 36915329420 (job 110547785509) reads it red
+at line 2587 of that module, with `AssertionError: 0 == 0`. Commit 719a1a7a adds A15, A16 and A17,
+and they fail by assertion locally. A16's third test, the job without the command, the
+end-of-line spelling of the job scan and the separator spelling ("a wrapper's words after its
+separator", in both scans) are controls and are not red at 719a1a7a. The green line is the
+whole of `test_mutation_workflows.py` at 29993617. That commit changes only the SPEC-129 specification
+file: the finder, the stand-in's failure arm and the rows' paths change in e2d0076e, and the two
+scans in 6af5e3dc.
+
+Five commits sit between the red at 719a1a7a and the green at 29993617 (`git rev-list --count
+719a1a7a..6af5e3dc` prints 5), and each edits a file a red test reads or runs, or a changelog. Commit 6bcdac64 only adds the read sites of the new tests to the census in
+`test_ci_workflows.py`, which the new tests owe and which changes no assertion of theirs. Commit
+e2d0076e moves the finder into `_mutants_finder.py`, repoints `test_dispatch_shards.py` at it and
+makes the stand-in's failure arm exit, which is the change A17 and A18 ask for. Commit 6af5e3dc
+points the two scans of `test_mutation_workflows.py` at the finder, which is the change A15 and A16
+ask for. Commit 7f83b956 adds one assertion to the census test of A19, that it read more than one file, and removes none. Commit 63a4cedf adds the changelog fragment and no code. A18's green is CI only: at the pushed head 20446f7c the `hygiene` job of run 36919081430 reads it green, and no CI ran at 29993617. No commit among them edits a red test's assertion.
+
+```red-first
+A15: red at 719a1a7a: AssertionError: Lists differ: [] != ['planted.yml'] : five spellings, five subtests red
+A16: red at 719a1a7a: AssertionError: Lists differ: [] != [('planted.yml', 'shard')] : four spellings red
+A17: red at 719a1a7a: AssertionError: Lists differ: ['test_dispatch_shards.py'] != ['_mutants_finder.py']
+A18: red at 1d651259: AssertionError: 0 == 0 : CI only, run 36915329420, job hygiene 110547785509, head 7f83b956, line 2587 of test_dispatch_shards.py
+A19: red at 4fc769c9: AssertionError: Lists differ: [('test_dispatch_shards.py', 1697, 'except Exception:')] != []
+A15: green at 29993617
+A16: green at 29993617
+A17: green at 29993617
+A18: green at 20446f7c
+A19: green at 29993617
+```
+
+```text
+A15 replay: red at 719a1a7a: FAILED (failures=10), Ran 20 tests, five command-scan subtests fail
+A16 replay: red at 719a1a7a: four job-scan subtests fail, the end-of-line subtest passes
+A17 replay: red at 719a1a7a: the one copy of the finder is found in test_dispatch_shards.py, the support module is expected
+A18 replay: red at 7f83b956 in CI: FAILED (failures=12), Ran 727 tests; locally never run, NOT MEASURED LOCALLY
+A19 replay: red at 4fc769c9: Ran 4 tests, FAILED (failures=1), the planted control test passes
+A15 replay: green at 29993617: Ran 20 tests, OK
+A19 replay: green at 29993617: examined 68 files, 0 arms
+```
+
+## Addendum, 2026-10-02 (issues #532 and #533): the wrapper's form, the census by syntax tree and the copy check by body
+
+The lines above stand. A20 to A28 are new. Commit e6abf9de adds their tests with three disclosed
+stubs: `wrapper_assignments` returns an empty list, `reading()` wraps the text census with zero
+counts, and `definitions_of_the_finder` keeps only its name match in the new shape. Every new test
+that is red at e6abf9de fails by assertion. Commit b6eb66aa replaces the stubs, gives
+`after_separator` the wrapper's form, rewrites the census to read the syntax tree, and registers
+its new read sites in `test_ci_workflows.py`; it is the only commit between the two, and it edits
+no assertion of a red test.
+
+Some reds come only through a positive control, and the record says so per criterion. A21's second
+test, the old reading's control, is red at e6abf9de only because the stub leaves the wrapper's
+words empty, so the wrapper's members read as another program's; it is a control, not the
+criterion's red. A24's `else` and nested-def tests and all four tests of A26 are red only through
+their positive control, a stand-in the base census cannot list; the absence each one pins already
+held at the base. A28 is not red: the name match already held both of its halves at the base.
+
+Three earlier criteria change, and are disclosed here instead of in the fence. A15's wrapper member
+is now the guard's own wrapper with `--report` before its `--`. Both readings find it, so it is
+green at e6abf9de and at b6eb66aa. A17's test now holds the copies to `FLOOR` and is A27's first
+test; at e6abf9de it reads `AssertionError: Tuples differ: () != (('test_ci_workflows.py',
+'_indent', 'indent_of'),)`, by assertion. A19's test now reads every `*.py` file at any depth
+and prints the constants parsed and skipped; the tree reads 0 arms at both commits, so it is not
+red.
+
+```red-first
+A20: red at e6abf9de: AssertionError: 0 != 1 : module-level assignments to WRAPPER: []
+A21: red at e6abf9de: AssertionError: Lists differ: ['echo -- cargo mutants --in-place (one li[4999 chars]ace'] != []
+A22: red at e6abf9de: AssertionError: Lists differ: [('ov[264 chars]-', 'cargo mutants --in-place'), ('twin', 'pyt[130 chars]ce')] != [('ov[264 chars]-', 'refused'), ('twin', 'python3 scripts/x.py[79 chars]ed')]
+A23: red at e6abf9de: AssertionError: Tuples differ: (1, []) != (1, [('planted.py', 5, 'except Exception as failure:')])
+A24: red at e6abf9de: AssertionError: Tuples differ: (1, []) != (1, [('planted.py', 5, 'except Exception as failure:')])
+A25: red at e6abf9de: AssertionError: Tuples differ: (1, []) != (1, [('held.py', 3, 'str constant, its line 4: except Exception:')])
+A26: red at e6abf9de: AssertionError: 0 != 1
+A27: red at e6abf9de: AssertionError: Lists differ: [] != [('deeper/copies.py', 'copy_0', 'no_wrappe[1266 chars]ts')]
+A28: not red: the name match held both halves at the base: a changed copy under the finder's own name is caught, under a name of its own it is not
+A20: green at b6eb66aa
+A21: green at b6eb66aa
+A22: green at b6eb66aa
+A23: green at b6eb66aa
+A24: green at b6eb66aa
+A25: green at b6eb66aa
+A26: green at b6eb66aa
+A27: green at b6eb66aa
+```
+
+```text
+A20 to A22, A27 replay: red at e6abf9de: test_mutation_workflows.py Ran 26 tests, FAILED (failures=6)
+A23 to A26 replay: red at e6abf9de: test_stand_in_census.py Ran 21 tests, FAILED (failures=30), subtests counted
+A20 to A22, A27, A28 replay: green at b6eb66aa: test_mutation_workflows.py Ran 26 tests, OK; examined 56, mismatches 0; named limits 2: over-find, value-dash-dash
+A23 to A26 replay: green at b6eb66aa: test_stand_in_census.py Ran 21 tests, OK
+A19 replay: green at b6eb66aa: examined 69 files, 16836 str constants parsed, 8222 skipped, 0 arms
+```
+
+## Addendum, 2026-10-02 (issues #532 and #533, round 2): a literal copy of each finder function, and a test for each arm of the census
+
+The lines above stand. No criterion is new, so this round adds no fence line; what changed is
+recorded here. Commit dc4ceb15 adds nine tests and changes no other line. Commit 680f97fa, the
+next, changes the copy check and no assertion of a test. Commit d2994110 adds one over-find member
+and its twin to A22's named limits.
+
+A27 changes. Its new test plants a literal copy of each finder function under another name, as a
+function, a method and an async function, with only the `def` line renamed, so the copy of
+`mutants_in` still calls `mutants_in`. It is red at dc4ceb15 by assertion, on that copy and in all
+three forms: the copy check read the copy's call as a free name, so its body differed from the
+finder's. It is green at 680f97fa, where a call by a finder function's own name is renamed as the
+copy's own name is.
+
+The eight new census tests are not red: each pins behaviour the census already had at dc4ceb15, and
+each is mutation coverage, not red-first evidence. Each was seen red under a mutant that removes
+that behaviour, with the file restored byte for byte after each run:
+
+- under A23, a handler that leaves by `break`, `continue` or `exit` reads 0, and a file under
+  `__pycache__` is not read;
+- under A24, a `try` in a function or class body, in a handler or a `case` clause, and with
+  `except*` handlers is a candidate, and each kind of real-program call is listed;
+- under A24, a program run in another handler of the same `try`, or in a class nested after the
+  `try`, is not listed. These two pin shapes section 12 states are out of reach; a census that
+  reached into either reads them as arms.
+
+A22's new over-find member, the wrapper with a lone `--` that the guard takes as `--report`'s
+value, is not red either: the scan already found its command and refused its twin.
+
+```text
+A27 replay: red at dc4ceb15: test_mutation_workflows.py Ran 27 tests, FAILED (failures=3), one per planted form
+A27 replay: red at dc4ceb15: literal.py: AssertionError: Lists differ: [('li[290 chars]ral_11', '__init__'), ('literal_12', 'can_be_d[444 chars]ts')] != [('li[290 chars]ral_10', 'mutants_in'), ('literal_11', '__init[474 chars]ts')]
+A27 replay: red at dc4ceb15: method.py: AssertionError: Lists differ: [('me[279 chars]hod_11', '__init__'), ('method_12', 'can_be_da[427 chars]ts')] != [('me[279 chars]hod_10', 'mutants_in'), ('method_11', '__init_[456 chars]ts')]
+A27 replay: red at dc4ceb15: waited.py: AssertionError: Lists differ: [('wa[279 chars]ted_11', '__init__'), ('waited_12', 'can_be_da[427 chars]ts')] != [('wa[279 chars]ted_10', 'mutants_in'), ('waited_11', '__init_[456 chars]ts')]
+A23, A24 new tests: not red: green at dc4ceb15, test_stand_in_census.py Ran 29 tests, OK; mutation coverage
+A23 under a mutant that drops `break` from the leaving statements: red: AssertionError: Tuples differ: (1, [5]) != (1, [])
+A23 under a mutant that drops `continue`: red: AssertionError: Tuples differ: (1, [5]) != (1, [])
+A23 under a mutant that drops `exit`: red: AssertionError: Tuples differ: (1, [5]) != (1, [])
+A23 under a mutant that reads `__pycache__`: red: AssertionError: Tuples differ: (3, [('__pycache__/stale.py', 4, 'except E[62 chars]:')]) != (1, [])
+A24 under a mutant that drops `os.popen`: red: AssertionError: Tuples differ: (1, []) != (1, [('planted.py', 7, 'except Exception as failure:')])
+A24 under a mutant that drops `os.spawn*`: red: AssertionError: Tuples differ: (1, []) != (1, [('planted.py', 7, 'except Exception as failure:')])
+A24 under a mutant that walks no handler or `case` clause: red: AssertionError: Tuples differ: (1, []) != (1, [7])
+A24 under a mutant that drops `except*`: red: AssertionError: Tuples differ: (1, []) != (1, [4])
+A24 under a mutant that walks no function or class body: red: AssertionError: Tuples differ: (1, []) != (1, [5])
+A24 sibling handler: not red: pins an out-of-reach shape; under a mutant that reaches the other handlers: red: AssertionError: Tuples differ: (1, [('planted.py', 4, 'except ImportError:')]) != (1, [])
+A24 nested class: not red: pins an out-of-reach shape; under a mutant that reaches a class's body: red: AssertionError: Tuples differ: (1, [('planted.py', 5, 'except Exception as failure:')]) != (1, [])
+A22 new member: not red: pins an over-find the scan already had
+A20 to A22, A27, A28 replay: green at 680f97fa: test_mutation_workflows.py Ran 27 tests, OK
+A23 to A26 replay: green at 680f97fa: test_stand_in_census.py Ran 29 tests, OK
+```

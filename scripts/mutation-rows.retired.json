@@ -3,5 +3,11 @@
     "Each row retired while its target file stayed (SPEC-039 R11): its id, the reason, and the",
     "maintainer's approval as the orchestrator relayed it. A row whose target leaves with it needs no entry."
   ],
-  "retired": []
+  "retired": [
+    {
+      "id": "S06226-TWO-INSTANCES-OF-ONE-TEMPLATE-ARE-REFUSED",
+      "reason": "The rule it pinned, that a shipped template carries at most one instance drop-in directory (SPEC-062 R14, A21), is replaced: the held flush needs its own drop-in beside the sync's, so an instance is now admitted by name on one allowlist. Its two true successors are S06229 (an unnamed instance is refused) and S06230 (an unshipped template's instance is refused).",
+      "approval": "orchestrator, under the owner's 2026-09-27 delegation of all DeckStreak gates; ruling PR #512 2026-10-01"
+    }
+  ]
 }

@@ -25,18 +25,27 @@ use std::sync::Arc;
 
 use deck_streak_coordination::data_rights_registry::{erase_all, export_all};
 use deck_streak_coordination::drills::{self, DrillMeta, DrillNotes, RealFs, Surface};
+use deck_streak_coordination::inbox_capture::{Capture, Captured, InboxCaptures, Source};
 use deck_streak_coordination::instruments::InstrumentService;
+use deck_streak_coordination::progression::badges_view::earned_badges;
 use deck_streak_coordination::progression::level_view::level_view;
+use deck_streak_coordination::progression::records_view::records_now;
 use deck_streak_coordination::score::day_score;
+use deck_streak_coordination::streak_views::streak_view;
 use deck_streak_identity::Owner;
 use deck_streak_kernel::{Clock, Db, Environment, Setting, SettingsError, StudyDayRule};
 use deck_streak_notifications::owner_message;
 use frankenstein::types::{BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo};
 
+use crate::badges_commands::{
+    badges_failed_reply, badges_reply, records_failed_reply, records_reply,
+};
+use crate::capture::{self, Choice, MAX_DOWNLOAD_BYTES, Outcome};
 use crate::drill_commands::{self, ANSWER_PREFIX, VIEW_PREFIX};
 use crate::gate::{self, Admission, OwnerCallback, OwnerMessage};
 use crate::score_commands::{score_failed_reply, score_reply};
-use crate::transport::{Incoming, Sent, Transport, escape_attribute, escape_html};
+use crate::streak_commands::{streak_failed_reply, streak_reply};
+use crate::transport::{Download, Incoming, Sent, Transport, escape_attribute, escape_html};
 use crate::xp_commands::{level_failed_reply, level_reply};
 
 /// The Mini App's URL, which `/start`'s button opens: an `https:` URL, required by the bot role.
@@ -61,7 +70,7 @@ pub struct MenuEntry {
 }
 
 /// The owner's menu, in the order the menu shows it.
-pub const MENU: [MenuEntry; 8] = [
+pub const MENU: [MenuEntry; 11] = [
     MenuEntry {
         command: "score",
         description: "Show today's score",
@@ -69,6 +78,18 @@ pub const MENU: [MenuEntry; 8] = [
     MenuEntry {
         command: "level",
         description: "Show your level and XP",
+    },
+    MenuEntry {
+        command: "streak",
+        description: "Show your streaks",
+    },
+    MenuEntry {
+        command: "badges",
+        description: "Show your badges",
+    },
+    MenuEntry {
+        command: "records",
+        description: "Show your personal records",
     },
     MenuEntry {
         command: "drills",
@@ -225,6 +246,9 @@ fn command_lines() -> String {
     [
         "/score shows today's score",
         "/level shows your level and XP",
+        "/streak shows your streaks",
+        "/badges shows your badges",
+        "/records shows your personal records",
         "/drills lists the law drills to answer",
         "/drill picks a law drill by type",
         "/sync syncs your collection now",
@@ -410,6 +434,8 @@ pub struct Commands<S> {
     drills: Option<Arc<DrillNotes<RealFs>>>,
     /// The one drill the owner's next message answers, in memory only (R13).
     pending_drill: Option<String>,
+    /// The vault inbox the owner's media is saved into, when the daemon wired it (SPEC-118 R6).
+    captures: Option<Arc<InboxCaptures<RealFs>>>,
 }
 
 impl<S: OwnerSync> Commands<S> {
@@ -437,6 +463,7 @@ impl<S: OwnerSync> Commands<S> {
             instruments: None,
             drills: None,
             pending_drill: None,
+            captures: None,
         }
     }
 
@@ -458,6 +485,14 @@ impl<S: OwnerSync> Commands<S> {
     #[must_use]
     pub fn with_drills(mut self, notes: Arc<DrillNotes<RealFs>>) -> Self {
         self.drills = Some(notes);
+        self
+    }
+
+    /// These handlers, saving the owner's media into the vault inbox through `captures` (SPEC-118
+    /// R6 to R9).
+    #[must_use]
+    pub fn with_capture(mut self, captures: Arc<InboxCaptures<RealFs>>) -> Self {
+        self.captures = Some(captures);
         self
     }
 
@@ -494,6 +529,7 @@ impl<S: OwnerSync> Commands<S> {
         };
         match gate::admit(&update.content, self.owner) {
             Admission::Message(message) => self.on_message(message).await,
+            Admission::Media(choice) => self.on_media(&choice).await,
             Admission::Callback(callback) => {
                 self.transport.answer_callback(&callback.id).await;
                 self.on_callback(callback).await;
@@ -538,6 +574,9 @@ impl<S: OwnerSync> Commands<S> {
             Some("sync") => self.sync().await,
             Some("score") => self.score().await,
             Some("level") => self.level().await,
+            Some("streak") => self.streak().await,
+            Some("badges") => self.badges().await,
+            Some("records") => self.records().await,
             Some("drills") => self.drills().await,
             Some("drill") => self.drill(&message.text).await,
             None if self.pending_drill.is_some() => self.drill_answer(&message.text).await,
@@ -659,6 +698,44 @@ impl<S: OwnerSync> Commands<S> {
         self.send(reply).await;
     }
 
+    /// `/streak`: both tracks, the law track first when it has activity (SPEC-076 R22).
+    async fn streak(&self) {
+        let today = self.rule.study_day(self.clock.now());
+        let reply = match streak_view(&self.db, today).await {
+            Ok(view) => streak_reply(&view),
+            Err(error) => {
+                tracing::error!(%error, "the owner's streaks could not be read");
+                streak_failed_reply()
+            }
+        };
+        self.send(reply).await;
+    }
+
+    /// `/badges`: the twenty most recently awarded badges, newest first (SPEC-073 R18).
+    async fn badges(&self) {
+        let reply = match earned_badges(&self.db).await {
+            Ok(earned) => badges_reply(&earned),
+            Err(error) => {
+                tracing::error!(%error, "the owner's badges could not be read");
+                badges_failed_reply()
+            }
+        };
+        self.send(reply).await;
+    }
+
+    /// `/records`: each record, then the record to chase (SPEC-073 R18).
+    async fn records(&self) {
+        let today = self.rule.study_day(self.clock.now());
+        let reply = match records_now(&self.db, today).await {
+            Ok(view) => records_reply(&view),
+            Err(error) => {
+                tracing::error!(%error, "the owner's records could not be read");
+                records_failed_reply()
+            }
+        };
+        self.send(reply).await;
+    }
+
     /// `/drills`: the unanswered drills (SPEC-110 R13).
     async fn drills(&self) {
         let reply = match self.unanswered() {
@@ -760,6 +837,69 @@ impl<S: OwnerSync> Commands<S> {
             .map(|meta| meta.drill_id)
             .collect();
         drill_commands::resolve_token(prefix, data, &offered)
+    }
+
+    /// The owner's media (SPEC-118 R6 to R9): media with no file id is ignored without a word; any
+    /// other is saved into the vault inbox, and the owner is told what became of it.
+    async fn on_media(&self, choice: &Choice) {
+        if choice.silent() {
+            return;
+        }
+        let outcome = self.save_media(choice).await;
+        self.send(Reply::text(capture::reply(&outcome))).await;
+    }
+
+    /// Fetches `choice` from the Bot API into the vault inbox (R8): a file declared over the cap
+    /// is never asked for, and a stream past it is stopped and its temporary file removed, which
+    /// both read as a failed fetch. Any refusal of the save, a missing vault among them, reads as a
+    /// failed save (R9).
+    async fn save_media(&self, choice: &Choice) -> Outcome {
+        if !capture::may_fetch(choice.size) {
+            return Outcome::NotFetched;
+        }
+        let Some(captures) = &self.captures else {
+            return Outcome::NotSaved;
+        };
+        let Some(remote) = self.transport.file(&choice.file_id).await else {
+            return Outcome::NotFetched;
+        };
+        if !capture::may_fetch(remote.size) {
+            return Outcome::NotFetched;
+        }
+        let capture = Capture {
+            kind: choice.kind,
+            source: Source::Telegram,
+            unique: choice.unique().to_owned(),
+            when: self.clock.now(),
+            caption: choice.caption.clone(),
+        };
+        let mut stream = match captures.stream(capture, &choice.ext) {
+            Ok(stream) => stream,
+            Err(error) => {
+                tracing::warn!(%error, "a capture was not saved");
+                return Outcome::NotSaved;
+            }
+        };
+        let download = self
+            .transport
+            .download(&remote.path, MAX_DOWNLOAD_BYTES, |chunk| {
+                stream.write(chunk).is_ok()
+            })
+            .await;
+        match download {
+            Download::Complete { .. } => {}
+            Download::OverCap | Download::Failed => return Outcome::NotFetched,
+            Download::NotKept => return Outcome::NotSaved,
+        }
+        match stream.capture(&self.db).await {
+            Ok(Captured::Saved { name } | Captured::AlreadyCaptured { name }) => {
+                Outcome::Saved { name }
+            }
+            Err(error) => {
+                tracing::warn!(%error, "a capture was not saved");
+                Outcome::NotSaved
+            }
+        }
     }
 
     /// Sends `reply` to the owner. A reply that gives up is logged by the transport, with its

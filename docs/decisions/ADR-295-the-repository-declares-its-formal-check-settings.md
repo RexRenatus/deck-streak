@@ -67,3 +67,63 @@ SPEC-295's A1 to A3 (`scripts/tests/test_formal_config.py`).
 ## More Information
 
 SPEC-295, issue #468.
+
+## Addendum, 2026-09-30: the repository names the checker's toolchain by identity (#504)
+
+The formal checker carries its own tool pin, and a repository may name that pin's identity in
+`config/formal.json` as `"toolchain": {"identity": "<64 lowercase hex digits>"}`. The decision: the
+repository names the identity and commits no pin file, so the checker uses its own pin when the two
+are equal, refuses a checker built with another pin as drift, and refuses a tree that names an
+identity and also commits a pin file. The considered options:
+
+- Name the checker's toolchain by its identity in `config/formal.json`: chosen, because the pin
+  stays in one place, the checker, and the repository states which build it was written against, so
+  a change of build is a reviewed change here (#504).
+- Commit a pin file beside the settings: rejected, because it duplicates what the checker already
+  carries and drifts from it silently, and a tree that commits one while naming an identity is
+  refused as two sources (#504).
+- Name nothing: rejected, because every TLA+ and Lean check then stays at its tool stage and no
+  model is ever checked (#504).
+- Name a version string instead of a digest: rejected, because a version cannot tell two builds of
+  one version apart (#504).
+
+Cost: a checker rebuilt with another pin refuses every check as drift until this field is changed,
+and that change is reviewed here. Confirmation: SPEC-295's A1, A3 and A6 to A8; the test reads the working tree, so an untracked pin file turns it red, which is fail-closed by design.
+
+
+Addendum, round 2 (#504). Confirmation: SPEC-295's A7 reads the pin path as the tree stores it,
+so a link at the pin path is a pin file and is never followed, and under A8 every refusal of the
+settings file (a link at the file or at its directory, through which the tree holds no file, an
+absent file, bytes that are not JSON, bytes that are not UTF-8, a nesting past the
+parser's depth and an integer past its digit limit) fails by assertion and never as an error. The
+test reads the working tree, so an untracked file, directory or link on disk turns it red, which is
+fail-closed by design. A committed file missing from the work tree is only dirty locally and is
+never judged here, because a CI checkout is the committed tree.
+
+Addendum, round 3 (#504). Confirmation: SPEC-295's A8 judges every path the checker reads as the tree
+stores it, at every component from the repository root to the file: a link at any of them, of any
+kind (relative, absolute, a chain, to a directory, dangling, to itself), holds no file for the
+checker and is refused by assertion naming the component, by one walk both test modules use. The
+population is derived from the components and the kinds, so a new or deeper path joins it by itself.
+The one exception is the pin path's own last component, which is the pin file, a second source, and
+is listed and never followed. Chosen against refusing only the settings file's directory, which
+closes the one shape measured and leaves every other component open.
+
+## Addendum, 2026-10-01: the slot capacity equals the checker's own setting (#516)
+
+The model checker's slot directory is shared by every check that runs, and the checker now refuses
+a settings file whose `tlc_slot.capacity` differs from its own compiled setting. The decision:
+`config/formal.json` sets `capacity` to 4, equal to the checker's own setting, and keeps
+`wait_seconds` at 1800. The considered options:
+
+- Set the capacity to the checker's own setting, 4: chosen, because the slot directory is shared,
+  so one value must mean the same set of slots to every checker that reads it, and the checker
+  states that value itself (#516).
+- Keep the capacity at 1: rejected, because the new checker refuses a file whose capacity differs
+  from its own as a configuration failure, so no check would run (#516).
+- Omit the key: rejected, because an absent key is read as the absent default of 1, which the new
+  checker refuses the same way (#516).
+
+Cost: a checker rebuilt with another compiled capacity refuses this file until the value is changed
+here, and that change is reviewed here. Confirmation: SPEC-295's A9 pins the value and A10's row
+`S29530` is killed by the same test.

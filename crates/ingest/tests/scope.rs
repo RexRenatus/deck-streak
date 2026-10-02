@@ -15,6 +15,9 @@ use support::Fixture;
 use support::logs::Logs;
 use support::synthetic::{self, FILTERED_DECK};
 
+#[path = "../../../tools/log-capture/capture.rs"]
+mod log_capture;
+
 /// An endpoint no test contacts: the reader never syncs.
 const ENDPOINT: &str = "http://127.0.0.1:9/";
 
@@ -126,7 +129,7 @@ fn a_law_root_outside_the_include_list_is_warned_by_name() {
     let fixture = Fixture::new(ENDPOINT);
     let warned = |include: &str, law_root: Option<&str>| {
         let logs = Logs::default();
-        tracing::subscriber::with_default(logs.recorder(), || {
+        log_capture::with_capture(logs.recorder(), || {
             let _reader =
                 synthetic::reader(&fixture.settings(), include, law_root, support::clock_at(0));
         });

@@ -381,3 +381,276 @@ A14: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k
 A14: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_the_declared_form_around_a_bounded_command_is_found_bounded
 A14: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_the_real_tree_commands_are_found_bounded_and_not_refused
 ```
+
+## 10. Amendments, 2026-10-01: both workflow scans find every spelling through one finder, and a stand-in that cannot plant its wrapper fails closed (#418, #497)
+
+Insert-only against dev under ruling (i) of SPEC-038 section 8: every byte of dev's file is kept in
+order, and this amendment inserts this section and the next after it, and nothing else. It is
+decided by ADR-306 (one shared finder, chosen against a second copy and against importing the
+guard's own module; and a stand-in that fails closed, chosen against falling back to the real
+program). Issues #418 and #497.
+
+- **The rule, #418.** `test_mutation_workflows.py` found `cargo mutants` commands with two patterns
+  of its own: a line pattern that needs a blank after `mutants`, and a job filter that needs the
+  literal text `cargo mutants`. Both miss spellings the guard of section 8 finds:
+  `cargo +nightly mutants --in-place`, `cargo-mutants mutants --in-place`, `cargo  mutants
+  --in-place` with two blanks, and `cargo --config net.retry=2 mutants --in-place`; the line pattern
+  also misses `cargo mutants` at the end of a line. Both scans now read each workflow through ONE
+  finder, `scripts/tests/_mutants_finder.py`, which holds the guard's reader and its command finder
+  moved out of `test_dispatch_shards.py`, unchanged except the `wrapped` seam. Both modules import it and neither keeps a copy.
+- **The seam.** What a wrapper is differs between the two importers, so the finder takes it as a
+  parameter, `wrapped`, which defaults to a recognizer that sees no wrapper. It is never a module
+  attribute, so what one importer passes cannot reach the other when both load in one process.
+  `test_dispatch_shards.py` passes its own `wrapped`, which reads the wrapper's file;
+  `test_mutation_workflows.py` passes a recognizer that names no wrapper and reads no file: for a
+  command whose program is not cargo, the command is the words after its first standalone `--`.
+- **The weight of the move.** The finder's text keeps its one literal mention of the wrapper's
+  file name, in one string match and nowhere else (`grep -n memory_scope
+  scripts/tests/_mutants_finder.py` prints one line), so a search for that name lists the support
+  module. It imports only `re` and `string` and reaches no path, and `test_mutation_workflows.py`
+  imports nothing that does, so it stays runnable where the wrapper's own tests are not.
+- **The rule, #497.** The stand-in `test_dispatch_shards.py` runs in place of the interpreter
+  planted the wrapper and, when planting raised, fell through to running the real program with the
+  words unchanged. It now prints the failure to standard error and exits non-zero, and runs nothing
+  after it. A census that reads the text of the top-level `*.py` files of `scripts/tests/` lists each
+  failed-plant fallback it reaches, with its file, line and arm; it lists none at this head. Its
+  reach is bounded twice: it reads no subdirectory, and it looks for the real-program call only
+  in the 12 lines after the handler. A fallback outside either bound is not listed (#497).
+- **A refusal is a find.** A workflow the reader refuses is reported by the command scan as
+  `refused: <why>`, which carries no bounds, and counted by the job scan as running the command, so
+  the assertions over them fail on it and never pass over it.
+- **Not measured here.** `test_dispatch_shards.py` and `test_memory_scope.py` run in CI
+  only. The test of #497 is therefore a CI-only red and a CI-only green, and its record cites the
+  run.
+- **Files:** `scripts/tests/_mutants_finder.py`, `scripts/tests/test_mutation_workflows.py`,
+  `scripts/tests/test_dispatch_shards.py`, `scripts/tests/_stand_in_census.py`,
+  `scripts/tests/test_stand_in_census.py`, `scripts/tests/test_ci_workflows.py` (its census names the
+  new tests' read sites), `scripts/mutation-rows.d/S12900-S12999.json` (rows S12911 and S12912 name the
+  moved finder as their target), `docs/decisions/ADR-306-one-finder-for-the-mutants-scans-and-a-stand-in-that-fails-closed.md`,
+  `docs/red-first/SPEC-129.md` and a changelog fragment (#418, #497).
+- It changes no Rust, no workflow and no production Python, and adds no mutation row: it repoints the
+  target of two rows to the file their anchors moved to, and every other changed file is a test or
+  its support (#418, #497).
+- It leaves the survivors step, the step runner's shell and the VOID and held-twice lines of the
+  workflow tests to their own issues (#482, #487, #509).
+
+## 11. Acceptance criteria of the section 10 amendments
+
+| id | criterion | decided by |
+|---|---|---|
+| A15 | the command scan of `test_mutation_workflows.py` finds a planted workflow in each of five spellings, and one run by a wrapper after its `--`, which this scan finds through its own recognizer where the guard's finder refuses a wrapper it does not recognize | `test_mutation_workflows.py` `EveryMutantsSpellingIsFound` |
+| A16 | the job scan finds the job of each planted spelling, and neither scan finds a job that holds no such command | `test_mutation_workflows.py` `EveryMutantsSpellingIsFound` |
+| A17 | the finder is defined once, in the support module, and a planted copy of it is caught by the census of definitions | `test_mutation_workflows.py` `EveryMutantsSpellingIsFound` |
+| A18 | when planting the wrapper raises, the stand-in exits non-zero, names the failure and runs none of the words (CI only) | `test_dispatch_shards.py` `AStandInThatCannotPlantTheWrapperFailsClosed` |
+| A19 | the census lists no failed-plant fallback among the top-level `*.py` files of `scripts/tests/`, and lists a planted one | `test_stand_in_census.py` `TheCensusOfStandIns` |
+
+```acceptance
+A15: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k test_each_spelling_of_the_command_is_found_by_the_command_scan
+A16: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k test_each_spelling_of_the_command_is_found_by_the_job_scan
+A16: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k test_a_job_without_the_command_is_found_by_neither_scan
+A17: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k test_the_finder_is_defined_once_and_a_planted_copy_is_caught
+A18: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_a_failed_plant_exits_non_zero_names_the_failure_and_runs_no_words
+A19: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k test_no_stand_in_falls_back_to_a_real_program_on_a_failed_plant
+A19: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k test_a_planted_fallback_is_listed
+```
+
+## 12. Amendments, 2026-10-02: the workflow scan reads the wrapper's form from the guard's text, and the stand-in census and the finder's copy check read the syntax tree (#532, #533)
+
+Insert-only against dev under ruling (i) of SPEC-038 section 8: every byte of dev's file is kept in
+order, and this amendment appends this section and the next, its acceptance criteria, and nothing
+else. It is decided by ADR-312 (the wrapper's form read from the guard's text, chosen against
+importing the guard, a second literal copy and keeping the broader reading; a census of the syntax
+tree, chosen against a wider pattern and window; a copy check by normalised body, chosen against a
+similarity threshold and against comparing source text). Issues #532 and #533.
+
+- **The rule, #533.** Section 10 gave `test_mutation_workflows.py` a recognizer that took, for a
+  command whose program is not cargo, the words after its first standalone `--`. The guard of
+  `test_dispatch_shards.py` recognizes only its wrapper's own form, so the two read every other
+  program differently: `echo -- cargo mutants`, and the same after `env`, `timeout`, `git` or a
+  `python3` script, was a found command to the scan and a refusal to the guard. The scan's
+  `after_separator` now returns a command start only where the words from the program begin with
+  the guard's `WRAPPER` words, none of them computed by bash, and then at the word after the first
+  standalone literal `--` that follows them. For every other program it returns None, so
+  `cargo mutants` after another program's `--` is refused by the scan as the guard refuses it.
+- **One read, by text.** The scan takes `WRAPPER` from the text of `test_dispatch_shards.py`: it
+  parses the file with `ast.parse`, takes the one module-level assignment to `WRAPPER`, and reads
+  its value with `ast.literal_eval`. It never imports that module and never spells the wrapper's
+  words itself, so the two cannot drift. A test pins that the assignment occurs exactly once and
+  that its value is a tuple of two strings. This one read replaces section 10's words "names no
+  wrapper and reads no file" for the scan's recognizer, and ADR-312 amends the same words of
+  ADR-306; the rest of that bullet stands.
+- **The proof, #533.** A generated population: `echo`, `env`, `timeout`, `git`, a `python3` script
+  that is not the wrapper, and the wrapper itself, each bare and with options before the separator
+  (the wrapper with `--report` given three ways), the separator spelled `--` and `"--"`, each in a
+  one-line `run:` and in a `run: |` block, with `cargo mutants --in-place` after the separator in
+  every member: 56 members. Each member's expectation is written from the guard's rule, never
+  computed by the scan: the wrapper's members are found, and every other member is refused. The
+  scan reads every member as expected and prints `examined 56, mismatches 0; named limits 2:
+  over-find, value-dash-dash`. A control runs the same population through the reading section 10
+  gave the scan and reports every member that is not the wrapper's as a mismatch, at least one for
+  each program.
+- **Two named limits, #533.** The guard also reads the options the wrapper's own parser declares.
+  The scan cannot read them without loading the wrapper, and it stays runnable where the wrapper's
+  own tests are not (section 10), so it reads no option. Two readings follow, and a test pins
+  each member of each. Neither is in the agreeing population, and its printed line counts both.
+  - **Over-find.** Where the wrapper is followed by a word the guard refuses before the separator,
+    the scan still finds the command after the `--`: an option the parser does not declare
+    (`--cap 1`), a value bash may split (`--report $OUT`, unquoted) and a computed word (`$SEP`);
+    and where its only `--` is the value of `--report` (`--report -- cargo mutants --in-place`), the
+    guard refuses while the scan finds the command.
+    The scan then holds that command to the bounds, so it fails closed. The test also pins a twin of
+    each after a `python3` script that is not the wrapper, which the scan refuses as the guard does.
+  - **A separator given as an option's value.** In `<the wrapper> --report -- -- cargo mutants
+    --in-place` the guard reads the first `--` as the value of `--report` and finds the command. The
+    scan takes the first `--` as the separator, so the command starts at the second `--` and the
+    finder refuses it. A refusal carries no bounds, so the scan's bounds assertion fails on it: this
+    too fails closed.
+- **The rule, #532: the census reads the syntax tree.** Section 10's census read the top-level
+  files' text, needed the word `plant` in the `try`, matched a real-program call by one pattern
+  (`os.exec*`, `subprocess.*`, `runpy.*`), and looked for it in the 12 lines after the handler. It
+  missed four shapes: `os.system` after the handler, an exec more than 12 lines after it, a plant
+  whose text has no `plant`, and a stand-in in a subdirectory. `_stand_in_census.py` now parses
+  every `*.py` file under `scripts/tests/`, at any depth and outside `__pycache__`, with
+  `ast.parse`, and still imports and runs nothing.
+  - An arm is a `try` with a handler that does not leave, and a real-program call in the handler's
+    reach. A handler leaves when its body holds a `raise`, `return`, `continue` or `break`, or a
+    call of `exit` or `sys.exit`, outside any function, lambda or class nested in it.
+  - The reach is the handler's own body, the `try`'s `finally` block, and every statement after the
+    `try` in its block and in each block enclosing it, up to the function, class or module that
+    holds it. The `else` block, the other handlers and the body of a nested function, lambda or
+    class are not in reach.
+  - A real-program call is `os.system`, `os.popen`, `os.exec*`, `os.spawn*`, `os.posix_spawn*`,
+    `subprocess.*` or `runpy.*`, resolved through the file's `import ... as` and
+    `from ... import` aliases.
+  - Every `try` is a candidate: the `plant` word gate and the 12-line window are gone.
+- **String constants, #532.** A stand-in's source can be held in a string constant, as the
+  guard's is, so the census also parses each string constant of a file, one level deep: a constant
+  inside a parsed constant is not parsed again. A hit is listed at the constant's line, with the
+  line inside the constant where its handler is. A constant that does not parse is skipped and
+  counted. The census prints `examined N files, M str constants parsed, K skipped, A arms`; it
+  lists no arm in the tree.
+- **The census's limits, #532.** Each is out of reach by design, and a test shows each is not
+  listed:
+  - a call through a name computed at run time, such as `getattr(os, name)(...)`;
+  - a real program run inside another function that the handler or a later statement calls: the
+    census does not follow a call;
+  - a stand-in's source split across pieces that do not parse alone and joined at run time, by
+    concatenation, `%` or `format`, or held in an f-string: each constant is parsed alone, so a
+    `%` or `format` template whose own text parses is read and its arm listed, while a split
+    source's pieces are not, and an f-string's text is never parsed;
+  - a handler that leaves on only some of its paths, such as a `raise` under an `if`: any leaving
+    statement in the handler counts as leaving.
+- **The rule, #532: the copy check compares bodies.** Section 10's census of definitions matched a
+  name, `def mutants_of(words` or `def mutants_in(text`, in the top-level files, so a renamed copy
+  escaped it. `definitions_of_the_finder` now parses every `*.py` file under `scripts/tests/` at any
+  depth, except `_mutants_finder.py`, and compares the body of each `def` with the body of each
+  function of `_mutants_finder.py`. Both are normalised the same way: the docstring dropped, the
+  function's own name, its arguments and its local names renamed in order of first appearance, and
+  the result written by `ast.dump`. A `def` that calls a finder function by that function's own
+  name, as `mutants_in` calls itself, has the call renamed as its own name is, so a copy left
+  calling `mutants_in` reads equal to it. An equal body is a copy whatever its name. The name
+  match stays beside it, unchanged: a `def` spelled with the finder's own name and first argument
+  is a copy whatever its body.
+- **The floor.** One helper is equal to a finder function by accident. `_indent` in
+  `test_ci_workflows.py` and the finder's `indent_of` both return a line's count of leading blanks,
+  `len(line) - len(line.lstrip(" "))`, the one-line arithmetic any reader of indented text writes;
+  `_indent` is not a copy of the command finder. `test_mutation_workflows.py` holds that pair in one
+  tuple, `FLOOR`, and the copies found in the tree must equal it exactly.
+- **The copy check's limit, #532.** A copy whose logic was changed, by as little as one word of one
+  string, has a different body. Under a name of its own it is not a copy, so it is not caught;
+  under the finder's own name, the name match catches it. A test pins both.
+- **Not measured here.** `test_dispatch_shards.py` runs in CI only. This amendment does not edit it
+  or `_mutants_finder.py`, and the pull request's CI run is where the guard's own tests read the
+  scan's module (#533).
+- It changes no Rust, no workflow and no production Python; every changed file is a test, its
+  support, a mutation row or a document (#532, #533).
+- It does not teach the scan the wrapper's declared options, so the two named limits above stay
+  (#533).
+
+**Files of this amendment:**
+
+- `scripts/tests/test_mutation_workflows.py`: changed: the wrapper's form read by text, the scan's
+  `after_separator`, the separated population, the named limits, the body comparison and `FLOOR`
+  (A20 to A22, A27, A28).
+- `scripts/tests/_stand_in_census.py`: changed: the census reads the syntax tree and the string
+  constants (A23 to A26).
+- `scripts/tests/test_stand_in_census.py`: changed: the shapes, the reach, the constants and the
+  limits (A23 to A26).
+- `scripts/tests/test_ci_workflows.py`: changed: its census of read sites names the new reads of
+  `test_mutation_workflows.py`, and the census's two `warnings` calls, which silence the
+  `SyntaxWarning` a string constant's parse raises and import, run and read nothing.
+- `scripts/mutation-rows.d/S12900-S12999.json`: changed: rows from S12913 for the new arms.
+- `docs/specs/SPEC-129-a-package-dispatch-is-sharded-by-its-projected-weight.md`: changed: this
+  section and the next, appended.
+- `docs/decisions/ADR-312-the-workflow-scan-reads-the-wrappers-form-and-the-census-reads-the-syntax-tree.md`:
+  added.
+- `docs/red-first/SPEC-129.md`: changed: two addenda for A20 to A28.
+- `changelog.d/fix-census-and-separator-532-533.md`: added.
+
+The rows of section 4's manifest this amendment leaves alone, each on its own line:
+
+- `.github/workflows/mutation-weekly.yml`: unchanged.
+- `scripts/mutation-verdict.py`: unchanged.
+- `scripts/tests/test_dispatch_shards.py`: unchanged.
+- `docs/decisions/ADR-129-a-package-dispatch-is-sized-from-its-own-listing.md`: unchanged.
+- `docs/specs/planned/SPEC-057-every-surviving-mutant-is-killed-or-recorded-equivalent-before-the-first-mutation-gated-release.md`: unchanged.
+- `changelog.d/ci-dispatch-shards-129.md`: unchanged.
+
+The rows of section 10's manifest this amendment leaves alone, each on its own line:
+
+- `scripts/tests/_mutants_finder.py`: unchanged.
+- `docs/decisions/ADR-306-one-finder-for-the-mutants-scans-and-a-stand-in-that-fails-closed.md`: unchanged.
+
+## 13. Acceptance criteria of the section 12 amendments
+
+| id | criterion | decided by |
+|---|---|---|
+| A20 | the scan reads `WRAPPER` from the guard's text: exactly one module-level assignment, a tuple of two strings, read by `ast.literal_eval`; an assignment inside a function, or none, is not read | `test_mutation_workflows.py` `TheScanReadsTheWrappersForm` |
+| A21 | the scan and the guard's rule agree on every member of the 56-member separated population, and the reading section 10 gave the scan mismatches every member that is not the wrapper's | `test_mutation_workflows.py` `TheScanReadsTheWrappersForm` |
+| A22 | the scan departs from the guard only at its two named limits: it finds each over-find member, refuses its twin after a script that is not the wrapper, and refuses the separator given as an option's value | `test_mutation_workflows.py` `TheScanReadsTheWrappersForm` |
+| A23 | the census lists each of the four shapes of #532 planted in a scratch directory, and the same text with a handler that leaves, by any of its leaving statements, reads 0; a file under `__pycache__` is not read | `test_stand_in_census.py` `TheCensusOfStandIns` |
+| A24 | every `try` is a candidate, in a function or class body, in a handler or a `case` clause, and with `except*` handlers; the census reaches each kind of real-program call run in the handler and in the `finally` block, through an import alias and in a nested block; it does not reach the `else` block, another handler of the same `try`, a nested function or a class nested after the `try`, and a `return` in a function defined in the handler does not leave | `test_stand_in_census.py` `TheCensusOfStandIns` |
+| A25 | a stand-in held in a string constant is listed at the constant's line with its own line, and the census counts the constants it parsed and skipped | `test_stand_in_census.py` `TheCensusOfStandIns` |
+| A26 | each of the census's four limits is not listed | `test_stand_in_census.py` `TheCensusOfStandIns` |
+| A27 | the copies the check finds in the tree equal `FLOOR`; a renamed and re-wrapped copy of every finder function is caught, and so is a copy spelled with the finder's own name | `test_mutation_workflows.py` `EveryMutantsSpellingIsFound` |
+| A28 | a copy with changed logic is caught under the finder's own name and not under a name of its own | `test_mutation_workflows.py` `EveryMutantsSpellingIsFound` |
+
+A15's wrapper member is now the guard's own wrapper with `--report` before its `--`, which both
+readings find. A17 now holds the copies to `FLOOR`. A19 now reads every `*.py` file under
+`scripts/tests/` at any depth, and its test prints the constants the census parsed and skipped.
+
+```acceptance
+A20: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k test_the_wrapper_form_is_read_once_from_the_guards_text
+A21: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k test_the_scan_and_the_guard_agree_on_every_separated_member
+A21: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k test_the_old_reading_disagrees_on_every_program_but_the_wrapper
+A22: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k test_the_scan_departs_from_the_guard_only_at_its_two_named_limits
+A23: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k test_a_system_call_after_the_handler_is_listed
+A23: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k test_an_exec_far_after_the_handler_is_listed
+A23: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k test_a_plant_whose_text_has_no_plant_word_is_listed
+A23: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k test_a_stand_in_in_a_subdirectory_is_listed
+A23: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k test_a_handler_that_breaks_continues_or_exits_leaves
+A23: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k test_a_file_under_pycache_is_not_read
+A24: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k test_a_program_run_in_the_handler_itself_is_listed
+A24: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k test_a_program_run_in_the_finally_block_is_listed
+A24: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k test_a_program_run_in_the_else_block_is_not_listed
+A24: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k test_a_program_run_in_a_nested_def_is_not_listed
+A24: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k test_a_return_inside_a_def_in_the_handler_does_not_leave
+A24: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k test_a_call_through_an_import_alias_is_listed
+A24: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k test_a_call_in_a_nested_block_is_listed
+A24: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k test_a_try_in_a_function_or_a_class_body_is_a_candidate
+A24: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k test_a_try_in_a_handler_or_a_case_clause_is_a_candidate
+A24: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k test_a_try_star_is_a_candidate
+A24: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k test_every_kind_of_real_program_is_listed
+A24: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k test_a_program_run_in_a_sibling_handler_is_not_listed
+A24: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k test_a_program_run_in_a_class_nested_after_the_try_is_not_listed
+A25: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k test_a_stand_in_held_in_a_str_constant_is_listed_at_its_line
+A25: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k test_the_census_counts_the_constants_it_parses_and_skips
+A26: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k test_a_stand_in_assembled_at_run_time_is_not_listed
+A26: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k test_a_call_through_a_computed_name_is_not_listed
+A26: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k test_a_program_run_by_a_function_the_handler_calls_is_not_listed
+A26: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k test_a_handler_that_leaves_on_some_paths_counts_as_leaving
+A27: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k test_the_finder_is_defined_once_and_a_planted_copy_is_caught
+A27: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k test_a_renamed_and_rewrapped_copy_of_each_finder_function_is_caught
+A27: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k test_a_literal_copy_of_each_finder_function_under_another_name_is_caught
+A28: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k test_a_copy_with_changed_logic_is_caught_only_under_the_finders_name
+```

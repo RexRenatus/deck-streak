@@ -76,6 +76,68 @@ SPEC-118's A2 to A4, A8 to A10 and A19, and its rows S11804 to S11806 and S11809
 - A Bot API that raises its download limit: the cap moves with it, and the streamed write already
   bounds memory.
 
+## Amendment (V1a): an attachment never takes its stub's name
+
+The predecessor names a capture's attachment `<stem><extension>` and its stub `<stem>.md`
+(`vault_bridge.py:save_inbox_capture` at `27ee2bc`). A document whose extension is `md` therefore
+has its stub's own name, and the stub's write replaced the document: the owner lost the only copy of
+what they sent, and the stub's `[[...]]` named the stub itself. SPEC-118 R7 keeps `md`, which
+matches `^[A-Za-z0-9]{1,10}$`, so a Markdown document sent to the bot reaches that path. Parity does
+not excuse a data loss production can reach.
+
+The stub stays `<stem>.md` for every capture. An attachment whose extension equals `md` in any case
+(a synced vault may sit on a filesystem that ignores case) is named `<stem>.attachment.<extension>`,
+its extension kept as it came, and the stub's `attachment:` key and its `[[...]]` name it. No stem
+holds a dot, because its day, its kind and its safe unique hold only digits, ASCII letters, `-` and
+`_`. So every stub name holds exactly one dot and this attachment's name holds two, and no stub
+name equals it in any case. Every other attachment keeps the predecessor's name, and the golden
+`inbox_capture_stub` holds those at parity. SPEC-118's A23 proves the departure, and
+`formal/tla/CaptureOnce/` states it as `StubNeverNamesTheAttachment`, with the stub's write modelled
+as replacing whatever its file held.
+
+### What the attachment's name was chosen against
+
+- Read an `md` extension as `.bin`: rejected because the document loses its extension and stops
+  opening as Markdown in the owner's vault.
+- Keep the predecessor's names: rejected because the stub's write replaces the owner's document, a
+  data loss a Markdown document from the bot reaches.
+- Name it `<stem>-attachment.md`: rejected because that is itself the stub name of the stem whose
+  unique ends in `-attachment`, so a later capture's stub could replace it.
+- Rename the stub instead: rejected because the curator and the owner's vault find a capture by its
+  stub at `<stem>.md`, whatever its kind (SPEC-116).
+
+What would make this wrong: a stem that can hold a dot. The second dot would then no longer set the
+attachment apart from every stub name, and the name would need another separator.
+
+## Amendment (V1a): a Mini App retry is matched by its capture key
+
+A stem's date is the UTC day of the instant the server takes the capture, so a Mini App retry sent
+after UTC midnight forms a new stem. A claim by stem alone would record that retry as a second
+capture and write a second stub, and SPEC-118's A17 ("a retried quick capture answers the same name
+and writes nothing") would fail for a retry the Mini App can send.
+
+`inbox_captures` gains `capture_key`, R1's safe unique, which every row carries, and a partial
+unique index on `capture_key` over the rows whose `source` is `miniapp`. The stem stays the primary
+key. The claim inserts with `ON CONFLICT DO NOTHING` and names no conflict target, so the stem's key
+and the capture key's index each refuse; when no row is inserted, it answers the name already
+recorded, by stem, or, for a `miniapp` capture, by its key. The refused capture writes nothing and
+removes its temporary file. A Telegram capture keeps the claim by stem alone: the same unique resent
+on a later day is a new capture, as the predecessor writes it. SPEC-118's A24 proves both arms, and
+`formal/tla/CaptureOnce/` states the key's claim as `OneCapturePerKey`.
+
+### What the retry key was chosen against
+
+- The server's instant with a named limit: rejected because A17 then fails for every retry sent
+  across UTC midnight, a case the Mini App reaches whenever a capture is retried late in the day.
+- The client sending its own capture instant: rejected because it changes R10's body and trusts the
+  client's clock to name a file in the owner's vault.
+- One unique key over every source: rejected because it refuses a Telegram resend of the same unique
+  on a later day, which the predecessor writes as a new capture, a parity departure for V1b.
+
+What would make this wrong: a Mini App that reuses a `capture_id` for a new capture. Its second
+capture would then answer the first one's name and write nothing, so R11 sends a fresh id for
+every capture.
+
 ## More Information
 
 SPEC-118, SPEC-042 R1 and R2, SPEC-116 (the curator), SPEC-021 (export and erase), and the W6

@@ -1,0 +1,86 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT kind, value, study_day, previous, celebrated_at, created_at FROM records ORDER BY kind",
+  "describe": {
+    "columns": [
+      {
+        "name": "kind",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "records",
+            "name": "kind"
+          }
+        }
+      },
+      {
+        "name": "value",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "records",
+            "name": "value"
+          }
+        }
+      },
+      {
+        "name": "study_day",
+        "ordinal": 2,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "records",
+            "name": "study_day"
+          }
+        }
+      },
+      {
+        "name": "previous",
+        "ordinal": 3,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "records",
+            "name": "previous"
+          }
+        }
+      },
+      {
+        "name": "celebrated_at",
+        "ordinal": 4,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "records",
+            "name": "celebrated_at"
+          }
+        }
+      },
+      {
+        "name": "created_at",
+        "ordinal": 5,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "records",
+            "name": "created_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "43369cbadbcbdb476d7c8a00dba752beac569107199759d708e584d844e9ad83"
+}

@@ -39,8 +39,9 @@ use frankenstein::client_reqwest::Bot;
 use frankenstein::inline_mode::{InlineQueryResult, InlineQueryResultCachedPhoto, MaybeCached};
 use frankenstein::methods::{
     AnswerCallbackQueryParams, DeleteMyCommandsParams, DeleteWebhookParams, EditMessageTextParams,
-    GetUpdatesParams, PinChatMessageParams, SavePreparedInlineMessageParams, SendChatActionParams,
-    SendDiceParams, SendMessageParams, SetMessageReactionParams, SetMyCommandsParams,
+    GetFileParams, GetUpdatesParams, PinChatMessageParams, SavePreparedInlineMessageParams,
+    SendChatActionParams, SendDiceParams, SendMessageParams, SetMessageReactionParams,
+    SetMyCommandsParams,
 };
 use frankenstein::reqwest;
 use frankenstein::response::{ErrorResponse, MethodResponse};
@@ -78,6 +79,10 @@ pub const DEFAULT_RETRY_AFTER: Duration = Duration::from_secs(1);
 /// ([`crate::poll::LONG_POLL_SECONDS`]), so a poll that returns empty is never cut off: the
 /// predecessor's `bot.py:CommandBot` client, proved by `goldens/bot.timeouts.json`.
 pub const HTTP_TIMEOUT: Duration = Duration::from_mins(1);
+
+/// How long one file's download may take, from its request to its last byte: a file the bot
+/// fetches reaches 20 MB (SPEC-118 R8), which [`HTTP_TIMEOUT`] is not sized for.
+pub const DOWNLOAD_TIMEOUT: Duration = Duration::from_mins(5);
 
 /// What Telegram answers an edit that would change nothing: a 400 an edit counts as delivered.
 const NOT_MODIFIED: &str = "message is not modified";
@@ -326,9 +331,37 @@ impl Waits for TokioTimer {
     }
 }
 
+/// A file the Bot API holds for download (`getFile`).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RemoteFile {
+    /// Its path below the Bot API's file URL.
+    pub path: String,
+    /// Its size, when the Bot API declared one.
+    pub size: Option<u64>,
+}
+
+/// How a file's download ended (SPEC-118 R8).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Download {
+    /// Every byte arrived and was kept.
+    Complete {
+        /// How many bytes arrived.
+        bytes: u64,
+    },
+    /// The stream passed its cap and was stopped.
+    OverCap,
+    /// No answer, a refusal, or a stream broken before its end.
+    Failed,
+    /// The receiver refused a chunk.
+    NotKept,
+}
+
 /// The Bot API transport: frankenstein's async client, the counts of what it sent, and its waits.
 pub struct Transport {
     bot: Bot,
+    /// The Bot API's file URL, `{api}/file/bot{token}`: it holds the token, so it is never printed
+    /// or logged.
+    files: String,
     waits: Arc<dyn Waits>,
     attempted: AtomicU64,
     delivered: AtomicU64,
@@ -385,6 +418,7 @@ impl Transport {
             .build();
         Ok(Self {
             bot,
+            files: format!("{}/file/bot{}", api.as_str(), token.expose()),
             waits,
             attempted: AtomicU64::new(0),
             delivered: AtomicU64::new(0),
@@ -661,6 +695,74 @@ impl Transport {
             .file_id;
         self.delivered.fetch_add(1, Ordering::Relaxed);
         Some(file_id)
+    }
+
+    /// The file `file_id` names, as the Bot API holds it for download (`getFile`), or `None` when
+    /// every attempt failed or the answer names no path (SPEC-118 R8).
+    pub async fn file(&self, file_id: &str) -> Option<RemoteFile> {
+        let params = GetFileParams::builder().file_id(file_id).build();
+        let (bot, params) = (&self.bot, &params);
+        let file = self
+            .with_attempts("getFile", move || async move {
+                match bot.get_file(params).await {
+                    Ok(answer) => Attempt::Done(answer.result),
+                    Err(error) => Attempt::from_error(&error),
+                }
+            })
+            .await?;
+        Some(RemoteFile {
+            path: file.file_path?,
+            size: file.file_size,
+        })
+    }
+
+    /// Streams the file at the Bot API's `path`, handing each chunk to `keep` as it arrives, within
+    /// [`DOWNLOAD_TIMEOUT`] (SPEC-118 R8). The stream stops as soon as it passes `cap` bytes, before
+    /// that chunk is kept, and as soon as `keep` refuses a chunk. The file's URL holds the token,
+    /// so a failure is logged by its status alone, never by its URL or the client's error.
+    pub async fn download(
+        &self,
+        path: &str,
+        cap: u64,
+        mut keep: impl FnMut(&[u8]) -> bool,
+    ) -> Download {
+        let failed = |code: u64| {
+            tracing::warn!(method = "download", code, "a file download failed");
+            Download::Failed
+        };
+        let url = format!("{}/{path}", self.files);
+        let Ok(mut response) = self
+            .bot
+            .client
+            .get(url)
+            .timeout(DOWNLOAD_TIMEOUT)
+            .send()
+            .await
+        else {
+            return failed(NO_ANSWER);
+        };
+        let status = response.status();
+        if !status.is_success() {
+            return failed(u64::from(status.as_u16()));
+        }
+        let mut received: u64 = 0;
+        loop {
+            match response.chunk().await {
+                Ok(Some(chunk)) => {
+                    let length = u64::try_from(chunk.len()).unwrap_or(u64::MAX);
+                    received = received.saturating_add(length);
+                    if received > cap {
+                        tracing::warn!(method = "download", cap, "a file download passed its cap");
+                        return Download::OverCap;
+                    }
+                    if !keep(&chunk) {
+                        return Download::NotKept;
+                    }
+                }
+                Ok(None) => return Download::Complete { bytes: received },
+                Err(_) => return failed(NO_ANSWER),
+            }
+        }
     }
 
     /// Prepares the photo `file_id` with the HTML caption `caption` as an inline message the owner

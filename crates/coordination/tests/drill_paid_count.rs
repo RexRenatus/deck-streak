@@ -21,6 +21,9 @@ use deck_streak_vault::config::{ARCHIVE_FOLDER, READINGS_FOLDER, VAULT_ROOT};
 use deck_streak_vault::{Rails, VaultSettings};
 use tempfile::TempDir;
 
+#[path = "../../../tools/log-capture/capture.rs"]
+mod log_capture;
+
 const HOUR_MS: i64 = 3_600_000;
 const DAY_MS: i64 = 86_400_000;
 /// A synthetic study day, as an epoch day number.
@@ -149,7 +152,7 @@ impl tracing::Subscriber for Polled {
 #[tokio::test]
 async fn a_poll_reports_how_many_it_graded_and_how_many_it_paid() {
     let polled = Polled::default();
-    let _logging = tracing::subscriber::set_default(polled.clone());
+    let _logging = log_capture::hold_capture(polled.clone());
     let fx = fixture(true).await;
     write(&fx.graded, "irac-1", &graded("xp: 12\n"));
     write(&fx.graded, "irac-2", &graded("xp: 14\n"));
