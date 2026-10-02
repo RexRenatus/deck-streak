@@ -363,7 +363,7 @@ code by the same assertions as above, A62 with 7 mismatches.
 
 ## Addendum, 2026-10-02: the plan reads a declared encoding from the bytes (issue #485, round 2)
 
-A62's population is joined by the PEP 263 class, criterion A65 of the SPEC. The plan parsed the file's text after decoding it as UTF-8,
+The PEP 263 class is criterion A65 of the SPEC, a population of its own beside A62's. The plan parsed the file's text after decoding it as UTF-8,
 and a text source ignores a coding declaration, so a declaration that changes a value, one that
 stops the head compiling and an unknown encoding were each named docstring-only. The plan now
 parses the bytes, so a declared encoding decides the tree compared, and a file whose bytes are not
@@ -382,7 +382,7 @@ A65: green at c3845425ac8f886636cdab6326529e174302bb55
 ```
 
 ```text
-Ran 1 test in 0.429s
+Ran 1 test
 
 FAILED (failures=1)
 cookie population: 6 member(s); mismatches 4

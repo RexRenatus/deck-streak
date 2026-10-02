@@ -2265,7 +2265,7 @@ def cookie_fixture(test, base, head):
 
 
 def cookie_edits():
-    """The PEP 263 class (A62): (name, base bytes, head bytes, expected), each reading written
+    """The PEP 263 class (A65): (name, base bytes, head bytes, expected), each reading written
     before any run. Only the control and the fail-closed member are read as before."""
     latin = b"# -*- coding: latin-1 -*-\n"
     utf8 = b"# -*- coding: utf-8 -*-\n"
