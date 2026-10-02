@@ -97,6 +97,12 @@ fn lgamma_of_a_finite_argument_whose_result_overflows_is_none() {
     for hex in arguments {
         assert_eq!(pynum::lgamma(bits(hex)), None, "lgamma of {hex}");
     }
+    // The argument just below them, 2.5e305, still has a value, CPython's to the last bit.
+    assert_eq!(
+        pynum::lgamma(bits("7f56c8e5ca239029")).map(f64::to_bits),
+        Some(bits("7fef3fc83052cbf5").to_bits()),
+        "lgamma of 7f56c8e5ca239029"
+    );
 }
 
 #[test]
