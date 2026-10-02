@@ -359,6 +359,7 @@ selects exactly one test, and each is proved with its file restored byte for byt
 | `S08208-A-FREEZE-COSTS-150` | `crates/economy/src/constants.rs` | the freeze's price | `shop_goldens::the_shop_verdicts_match_the_parity_golden` |
 | `S08209-A-PASS-COSTS-40` | `crates/economy/src/constants.rs` | the scroll pass's price | `shop_goldens::the_shop_verdicts_match_the_parity_golden` |
 | `S08210-ONE-MOVEMENT-PER-KEY` | `migrations/008201_economy_wallet_and_shop.sql` | one movement per study day, source and reference, a key held in the migration (a script-mutation row with a cargo killer) | `wallet_ports::a_credit_of_one_key_is_written_once` |
+| `S08211-THE-WALLET-FLOOR-CONSTANT-IS-ZERO` | `crates/economy/src/constants.rs` | the floor constant itself is 0 | `wallet_goldens::the_coin_constants_and_economy_json_match_the_predecessors` |
 
 ## 10. Amendment, 2026-10-02: what E1 adds beside the manifest, and the criteria it no longer lists
 
@@ -394,8 +395,8 @@ E1 adds these files, which it does not name:
 - `crates/coordination/tests/relight_order.rs`: the register of every `static` coordination links
   gains the economy data-rights port's, from 14 entries to 15.
 
-The band file section 4 names, `scripts/mutation-rows.d/S08200-S08299.json`, holds E1's eight rows,
-S08201 to S08207 and S08210. S08208 and S08209 guard the shop's prices and land with E3. S08210
+The band file section 4 names, `scripts/mutation-rows.d/S08200-S08299.json`, holds E1's nine rows,
+S08201 to S08207, S08210 and S08211. S08208 and S08209 guard the shop's prices and land with E3. S08210
 targets a migration and is killed by a cargo test, so it sits in the band's
 `CARGO_KILLED_SCRIPT_MUTATIONS` table, as every other migration row does.
 

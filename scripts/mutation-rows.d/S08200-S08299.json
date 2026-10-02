@@ -63,6 +63,15 @@
         "    let settled = if amount >= held {",
         "wallet_ports::a_settled_days_mint_is_raised_and_never_lowered",
         "a closed day's mint is raised by a later settle and never lowered (SPEC-082 R4, A6)"
+      ],
+      [
+        "S08211-THE-WALLET-FLOOR-CONSTANT-IS-ZERO",
+        "economy",
+        "src/constants.rs",
+        "pub const WALLET_FLOOR: i64 = 0;",
+        "pub const WALLET_FLOOR: i64 = 1;",
+        "wallet_goldens::the_coin_constants_and_economy_json_match_the_predecessors",
+        "the wallet's floor constant is 0, as the constants golden and economy.json say (SPEC-082 R2, A10)"
       ]
     ],
     "CARGO_KILLED_SCRIPT_MUTATIONS": [
