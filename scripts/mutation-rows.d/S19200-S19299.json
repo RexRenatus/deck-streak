@@ -517,7 +517,7 @@
       [
         "S19277-A-RAW-MODULE-NAME-IS-READ",
         "scripts/tests/test_setting_shapes.py",
-        "name = found[at + 1][1].removeprefix(\"r#\")",
+        "name = unraw(found[at + 1][1])",
         "name = found[at + 1][1]",
         "`mod r#tests;` names the module `tests`, so its file is read as the test module (SPEC-192 R8)",
         "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"

@@ -96,6 +96,14 @@
         "        verdict.mark = \"ok\"\n        verdict.detail = (\n",
         "a scan that examined no settings document while expected_red names an issue is VOID and its mark is FAIL, never ok, even when no expectation is stale (SPEC-123 R5)",
         "test_box_scan_expected.TheScanAdmitsAnExpectedRed.test_an_expectation_with_no_settings_document_names_its_issues"
+      ],
+      [
+        "S12313-THE-RUN-REMOVES-THE-CARDS-DIRECTORY-IT-MADE",
+        "scripts/box-packs.sh",
+        "            shutil.rmtree(out, ignore_errors=True)\n",
+        "            pass\n",
+        "a run that made its own cards directory removes exactly that path when it ends, whether it passed, failed or stopped on an error (issue 531)",
+        "test_box_packs.TheRunnerCleansUpItsCards.test_the_created_cards_directory_is_gone_after_every_end"
       ]
     ]
   }
