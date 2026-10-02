@@ -81,6 +81,16 @@ describe('parseBadges', () => {
   });
 
   it('refuses a body that is not the badges answer', () => {
+    // The positive control: the untouched body parses, so each body below that differs from it in
+    // one field is refused for that field.
+    const read = parseBadges(BODY);
+    expect(read?.earned.map((badge) => [badge.key, badge.studyDay])).toEqual([
+      ['centurion_day', '2025-01-13']
+    ]);
+    expect(read?.locked.map((badge) => [badge.key, badge.family, badge.progress])).toEqual([
+      ['monthly_monk', 'study', { value: 3, threshold: 30 }],
+      ['first_page', 'habit', null]
+    ]);
     const refused = [
       null,
       'badges',

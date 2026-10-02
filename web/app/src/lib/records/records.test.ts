@@ -37,6 +37,13 @@ describe('parseRecords', () => {
   });
 
   it('refuses a body that is not the records answer', () => {
+    // The positive control: the untouched line and chase parse, so each body below that differs
+    // from them in one field is refused for that field.
+    const read = parseRecords({ records: [LINE], chase: null });
+    expect(read?.records.map((line) => [line.kind, line.value, line.studyDay, line.distance])).toEqual(
+      [['best_score', 120, '2025-01-09', 43]]
+    );
+    expect(parseRecords(BODY)?.chase).toEqual({ kind: 'best_score', label: 'Best daily score', gap: 43 });
     const refused = [
       null,
       'records',
