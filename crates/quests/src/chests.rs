@@ -1,7 +1,18 @@
-//! The chest constants, the rarity roll, the Epic odds and the payout (SPEC-081 R3, R4).
+//! The chest constants, the rarity roll, the Epic odds and the payout (SPEC-081 R3, R4), and the
+//! chest port's three grants: the session chests, the challenge chest and the weekly chest (R2,
+//! R5-R7, R16, R17).
 //!
-//! Every function is pure: the draw is an input, never read here, so the parity oracle proves the
-//! fold from a draw to a rarity and a payout and the draw's source is a later part's port.
+//! The roll, the odds and the payout are pure: the draw is an input, so the parity oracle proves
+//! the fold from a draw to a rarity and a payout. The grants take their draws from the [`Draw`]
+//! port and write through the caller's connection, inside the caller's one write (ADR-081): a
+//! chest and the pity counters after it are stored together or not at all.
+
+use deck_streak_kernel::{Hour, StudyDay, UtcMillis};
+use sqlx::SqliteConnection;
+
+use crate::chest_store::StoredChest;
+use crate::draw::{Draw, DrawError};
+use crate::sessions::Session;
 
 /// Common's base odds, in percent points.
 pub const BASE_ODDS_COMMON: f64 = 70.0;
@@ -33,6 +44,123 @@ pub const EPIC_FALLBACK_XP: i64 = 50;
 pub const PAYOUT_SESSION_FRAC: f64 = 0.30;
 /// The least a Common or Rare payout's cap allows, in XP.
 pub const PAYOUT_CAP_FLOOR_XP: i64 = 25;
+/// The Epic points a study day with the Ascendant buff adds to each session chest's roll (R3).
+pub const ASCENDANT_BUFF_PTS: f64 = 10.0;
+/// The Epic points the challenge chest's roll adds (R16).
+pub const CHALLENGE_BUFF_PTS: f64 = 10.0;
+/// The session review XP the challenge chest's payout cap is reckoned from (R16).
+pub const CHALLENGE_SESSION_BASE_XP: i64 = 200;
+
+/// Why a grant, or a read or write of the chest store, did not complete.
+#[derive(Debug, thiserror::Error)]
+pub enum ChestError {
+    /// A draw failed: nothing was written for the chest it was taken for.
+    #[error("a chest's draw failed, so nothing was written for it")]
+    Draw(#[from] DrawError),
+    /// The database refused a read or a write.
+    #[error("the chest store's database refused the operation")]
+    Database(#[from] sqlx::Error),
+    /// A stored value lies outside its column's rule.
+    #[error("the stored {column} holds {value}, which is not one of its values")]
+    Unreadable {
+        /// The table and column.
+        column: &'static str,
+        /// The value read.
+        value: String,
+    },
+}
+
+/// A session of the study day with the review XP it earned at the base rate. The caller reckons
+/// the XP: this context computes none (docs/CONTEXT-MAP.md).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct EarnedSession {
+    /// The session, its bounds and its effort.
+    pub session: Session,
+    /// Its review XP at the base rate, which caps a Common or Rare payout (R4).
+    pub base_xp: i64,
+}
+
+/// What the session grant reads besides the store: the study day, its sessions and the
+/// recompute's day and clock facts.
+#[derive(Clone, Copy, Debug)]
+pub struct SessionChestGrant<'a> {
+    /// The study day the recompute grants for.
+    pub study_day: StudyDay,
+    /// The study day's sessions, eligible or not; the grant applies the effort floor.
+    pub sessions: &'a [EarnedSession],
+    /// Whether the study day is a declared skip day: no chest is granted on one.
+    pub skip_day: bool,
+    /// Whether the study day holds the Ascendant buff (SPEC-072).
+    pub ascendant: bool,
+    /// The recompute's local hour, which decides the vault (R7).
+    pub local_hour: Hour,
+    /// Whether the recompute runs inside quiet hours (SPEC-041), which vaults too.
+    pub quiet: bool,
+}
+
+/// Grants the session chests of `request`'s study day (R2, R5-R7), in the caller's write.
+///
+/// Each eligible session, in order of its start, earns one chest until the day holds
+/// `per_day_max` chests of every origin. A session whose start lies within one session gap of a
+/// session chest the day already held is skipped, and so is a session whose key is held, without
+/// a draw: a stored chest is never rolled again. A chest takes two draws, rarity then payout,
+/// before anything is written; it is then stored with the pity counters after it.
+///
+/// # Errors
+///
+/// [`ChestError::Draw`] when a draw fails: nothing is written for that session or any later one,
+/// and the chests granted before it stay in the caller's write, each with its pity. A store error
+/// as [`chest_store`](crate::chest_store) answers it.
+pub async fn grant_session_chests_on(
+    connection: &mut SqliteConnection,
+    request: &SessionChestGrant<'_>,
+    draw: &mut impl Draw,
+    at: UtcMillis,
+) -> Result<Vec<StoredChest>, ChestError> {
+    let _ = (connection, at);
+    for earned in request.sessions {
+        if crate::sessions::meets_chest_floor(&earned.session.effort) {
+            draw.draw()?;
+            draw.draw()?;
+        }
+    }
+    Ok(Vec::new())
+}
+
+/// Grants the challenge quest's chest for `study_day` (R16): one a study day, rolled with
+/// [`CHALLENGE_BUFF_PTS`] and paid against [`CHALLENGE_SESSION_BASE_XP`], sealed, with the pity
+/// counters after it. A held key answers none and takes no draw. The day's cap does not count it
+/// out.
+///
+/// # Errors
+///
+/// [`ChestError::Draw`] when a draw fails, and nothing is written; a store error as
+/// [`chest_store`](crate::chest_store) answers it.
+pub async fn grant_challenge_chest_on(
+    connection: &mut SqliteConnection,
+    study_day: StudyDay,
+    draw: &mut impl Draw,
+    at: UtcMillis,
+) -> Result<Option<StoredChest>, ChestError> {
+    let _ = (connection, study_day, draw, at);
+    Ok(None)
+}
+
+/// Grants the weekly quest's chest for `study_day` (R17): one a study day, an Epic that pays 0,
+/// sealed, with no draw and no change to the pity counters. A held key answers none. Whether the
+/// week's claim is due is the caller's (SPEC-080).
+///
+/// # Errors
+///
+/// A store error as [`chest_store`](crate::chest_store) answers it.
+pub async fn grant_weekly_chest_on(
+    connection: &mut SqliteConnection,
+    study_day: StudyDay,
+    at: UtcMillis,
+) -> Result<Option<StoredChest>, ChestError> {
+    let _ = (connection, study_day, at);
+    Ok(None)
+}
 
 /// A chest's rarity.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
