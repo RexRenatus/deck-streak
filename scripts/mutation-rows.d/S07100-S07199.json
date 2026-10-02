@@ -108,6 +108,33 @@
         "        drop(owed);",
         "settle_fold::cycle::the_scheduled_sync_after_a_sync_across_the_rollover_settles_the_owed_day",
         "a cycle that runs the fold collects the settle a closed day is owed as an obligation, so the scheduled sync after a sync that ran across the rollover settles the day that closed, even when nothing in the collection changed (SPEC-071 R15)"
+      ],
+      [
+        "S07114-OWED-DAY-RE-READS-THE-CURSOR",
+        "coordination",
+        "src/recompute/mod.rs",
+        "            let owed = rollup::settle_cursor(&mut write).await?.map_or(day, next);",
+        "            let owed = day;",
+        "settle_fold::two_overlapping_folds_settle_each_closed_day_once_in_turn",
+        "each owed day's write reads the settle cursor again inside its own BEGIN IMMEDIATE and settles only the day that cursor owes, so two folds that overlap settle each closed day once, in turn (SPEC-071 R16, A27; ADR-313)"
+      ],
+      [
+        "S07115-NO-CURSOR-OWES-THE-RUNS-OWN-DAY",
+        "coordination",
+        "src/recompute/mod.rs",
+        "            let owed = rollup::settle_cursor(&mut write).await?.map_or(day, next);",
+        "            let owed = rollup::settle_cursor(&mut write).await?.map_or(next(day), next);",
+        "settle_fold::the_fold_settles_each_closed_day_once_oldest_first",
+        "with no settle cursor yet, the in-write re-read owes the run's own day, so the first recompute settles the day that closed (SPEC-071 R16, A16; ADR-313)"
+      ],
+      [
+        "S07116-A-PASSED-DAY-GOES-ON-FROM-THE-OWED-DAY",
+        "coordination",
+        "src/recompute/mod.rs",
+        "                day = owed;",
+        "                day = next(day);",
+        "settle_fold::two_overlapping_folds_settle_each_closed_day_once_in_turn",
+        "a write for a day the re-read cursor does not owe goes on from the owed day, not the next one, so a fold that starts past a day another fold left owed goes back and settles it (SPEC-071 R16, A27; ADR-313)"
       ]
     ],
     "CARGO_KILLED_SCRIPT_MUTATIONS": [

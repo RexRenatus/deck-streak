@@ -1,12 +1,13 @@
 //! The recompute settles each study day once, in order, with the state it had at its close
-//! (SPEC-071 A16 to A21; R15 to R19; ADR-071). Every review, card and deck is synthetic, and every
-//! instant is set by hand: no test waits for time to pass.
+//! (SPEC-071 A16 to A21, A27 and A28; R15 to R19; ADR-071, ADR-313). Every review, card and deck is
+//! synthetic, and every instant is set by hand: no test waits for time to pass.
 
 // An integration test is test code: its helpers panic on a failed fixture, and it prints the
 // examined count on purpose.
 #![allow(clippy::expect_used, clippy::print_stdout)]
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 
 use deck_streak_analytics::rollup::{RollupStore, StoredDay, fingerprint, recent_volumes};
@@ -15,7 +16,8 @@ use deck_streak_analytics::settings::AnalyticsSettings;
 use deck_streak_analytics::snapshot::{CardState, card_snapshot};
 use deck_streak_coordination::recompute::analytics_step::AnalyticsStep;
 use deck_streak_coordination::recompute::{
-    DayEvaluation, DayStep, Evaluation, Fold, FoldError, FoldInput, FoldReport, PHASES, Phase,
+    DayEvaluation, DayStep, Evaluation, Fold, FoldError, FoldInput, FoldReport, Offers, PHASES,
+    Phase,
 };
 use deck_streak_ingest::reader::{Card, CollectionData, Review};
 use deck_streak_kernel::{Db, KernelError, PortFuture, StudyDay, StudyDayRule, Track, UtcMillis};
@@ -204,6 +206,55 @@ async fn recompute(
     .expect("the fold runs")
 }
 
+/// Counts the fold's offers. The fold offers before each day's write that can replace a
+/// celebration, before the current day's write and once after its last write (ADR-303), so a run
+/// offers once per day it settles plus twice: a pass over a day at or before the cursor offers once
+/// more, though its write commits nothing (SPEC-071 A16, R16).
+#[derive(Debug, Default)]
+struct CountingOffers {
+    calls: AtomicUsize,
+}
+
+impl CountingOffers {
+    /// The offers made since the last call; the count starts again from zero.
+    fn take(&self) -> usize {
+        self.calls.swap(0, Ordering::SeqCst)
+    }
+}
+
+impl Offers for CountingOffers {
+    fn offer<'a>(&'a self, _db: &'a Db, _now: UtcMillis, _today: StudyDay) -> PortFuture<'a, ()> {
+        Box::pin(async move {
+            self.calls.fetch_add(1, Ordering::SeqCst);
+            Ok(())
+        })
+    }
+}
+
+/// [`recompute`], with `offers` run between the fold's writes.
+async fn recompute_offered(
+    fold: &Fold,
+    db: &Db,
+    data: &CollectionData,
+    (now, synced_in): (i64, i64),
+    offers: &CountingOffers,
+) -> FoldReport {
+    fold.run(
+        db,
+        &FoldInput {
+            data,
+            rule: StudyDayRule::default(),
+            now: UtcMillis::from_epoch_millis(now),
+            synced_in: Some(day(synced_in)),
+            courses_digest: Some("0123456789abcdef"),
+            base_reviews: 0,
+            offers: Some(offers),
+        },
+    )
+    .await
+    .expect("the fold runs")
+}
+
 async fn rollup(db: &Db, number: i64) -> StoredDay {
     RollupStore::new(db.clone())
         .days(day(number), day(number))
@@ -231,14 +282,20 @@ async fn the_fold_settles_each_closed_day_once_oldest_first() {
         reviews_on(&[D0, D0 + 1, D0 + 2, D0 + 3, D0 + 4]),
         Vec::new(),
     );
+    // Each run offers once per day it settles plus twice, so it took no pass over a day at or
+    // before the cursor (R16): such a pass offers once more and settles nothing.
+    let offers = CountingOffers::default();
+    let mut runs = Vec::new();
 
-    let first = recompute(&fold, &db, &data, at(D0 + 2, 10), D0 + 2).await;
+    let first = recompute_offered(&fold, &db, &data, (at(D0 + 2, 10), D0 + 2), &offers).await;
+    runs.push(("first", first.settled.len(), offers.take()));
     assert_eq!(
         first.settled,
         days(&[D0 + 1]),
         "the first recompute settles the closing day"
     );
-    let second = recompute(&fold, &db, &data, at(D0 + 5, 6), D0 + 5).await;
+    let second = recompute_offered(&fold, &db, &data, (at(D0 + 5, 6), D0 + 5), &offers).await;
+    runs.push(("second", second.settled.len(), offers.take()));
     assert_eq!(
         second.settled,
         days(&[D0 + 2, D0 + 3, D0 + 4]),
@@ -251,12 +308,22 @@ async fn the_fold_settles_each_closed_day_once_oldest_first() {
             "study day {number} carries the instant it was settled"
         );
     }
-    let third = recompute(&fold, &db, &data, at(D0 + 5, 8), D0 + 5).await;
+    let third = recompute_offered(&fold, &db, &data, (at(D0 + 5, 8), D0 + 5), &offers).await;
+    runs.push(("third", third.settled.len(), offers.take()));
     assert_eq!(
         third.settled,
         Vec::<StudyDay>::new(),
         "a second recompute settles no day"
     );
+    for (run, settled, offered) in examined("runs' offers", runs) {
+        assert_eq!(
+            offered,
+            settled + 2,
+            "the {run} recompute offers once before each of the {settled} day(s) it settles, \
+             once before the current day's write and once after its last write: it passes over \
+             no day at or before the cursor"
+        );
+    }
 
     // Across all three, each day was settled exactly once, and in order.
     let settles: Vec<StudyDay> = seen(&log)
@@ -1579,5 +1646,450 @@ mod cycle {
             "each run's fold settled the day that closed before it"
         );
         db.close().await;
+    }
+}
+
+/// What one fold's offers were handed on their first call in A27: the fold's role, the study day
+/// it runs on and the settle cursor of the ledger it was handed.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Handed {
+    role: &'static str,
+    today: i64,
+    cursor: Option<i64>,
+}
+
+/// How A27 releases its two folds once both have passed the barrier.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Release {
+    /// The named fold takes the first turn, and each later offer of either fold hands the turn to
+    /// the other while the other still runs: every write after the barrier lands in the order the
+    /// test chose.
+    Turns(&'static str),
+    /// Both folds leave the barrier together and race to the write lock, the named fold's run
+    /// joined first: the order is the async runtime's and the busy handler's, run by run.
+    Together(&'static str),
+}
+
+impl Release {
+    /// The fold whose run is joined first: the one that takes the first turn, or the one named.
+    fn joined_first(self) -> &'static str {
+        match self {
+            Self::Turns(first) | Self::Together(first) => first,
+        }
+    }
+}
+
+/// One event of A27's turns.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Turn {
+    /// The fold left its offer and may write until its next one.
+    Took(&'static str),
+    /// The fold's run returned.
+    Returned(&'static str),
+}
+
+/// Whose turn it is in A27, and every turn taken.
+#[derive(Debug, Default)]
+struct Turns {
+    /// The fold that may leave its offer; `None` under [`Release::Together`], which forces no order.
+    holder: Option<&'static str>,
+    /// Each turn taken and each run returned, in order.
+    log: Vec<Turn>,
+}
+
+impl Turns {
+    /// The turns A27's offers share under `release`.
+    fn shared(release: Release) -> Arc<tokio::sync::watch::Sender<Self>> {
+        let holder = match release {
+            Release::Turns(first) => Some(first),
+            Release::Together(_) => None,
+        };
+        Arc::new(tokio::sync::watch::Sender::new(Self {
+            holder,
+            log: Vec::new(),
+        }))
+    }
+
+    /// Hands the turn from `role` to `other` unless `other`'s run has returned or no order is
+    /// forced.
+    fn hand(&mut self, role: &'static str, other: &'static str) {
+        if self.holder == Some(role) && !self.log.contains(&Turn::Returned(other)) {
+            self.holder = Some(other);
+        }
+    }
+
+    /// Asserts that, until a run returned, the turns alternated from the fold named `first`: each
+    /// write after the barrier ran alone, in the order the run forced.
+    fn alternate_from(&self, first: &'static str) {
+        let second = if first == "owner" {
+            "scheduled"
+        } else {
+            "owner"
+        };
+        let took: Vec<&str> = self
+            .log
+            .iter()
+            .map_while(|turn| match turn {
+                Turn::Took(role) => Some(*role),
+                Turn::Returned(_) => None,
+            })
+            .collect();
+        let alternating: Vec<&str> = [first, second]
+            .into_iter()
+            .cycle()
+            .take(took.len())
+            .collect();
+        assert!(
+            took.len() >= 2 && took == alternating,
+            "the turns alternate from the {first} fold until a run returns: {took:?}"
+        );
+    }
+}
+
+/// One fold's offers in A27. The first call records what the fold handed it, then waits at a
+/// barrier both folds share, so neither fold settles a day before both have read the cursor
+/// (#311). Every call then waits for the fold's turn, and every later call first hands the turn to
+/// the other fold: the fold writes between two of its offers (ADR-303), so under
+/// [`Release::Turns`] each of its writes runs alone, in an order the test chose.
+#[derive(Debug)]
+struct BarrierOffers {
+    role: &'static str,
+    other: &'static str,
+    barrier: Arc<tokio::sync::Barrier>,
+    turns: Arc<tokio::sync::watch::Sender<Turns>>,
+    handed: Arc<Mutex<Vec<Handed>>>,
+    waited: AtomicBool,
+}
+
+impl Offers for BarrierOffers {
+    fn offer<'a>(&'a self, db: &'a Db, _now: UtcMillis, today: StudyDay) -> PortFuture<'a, ()> {
+        Box::pin(async move {
+            if self.waited.swap(true, Ordering::SeqCst) {
+                // The write since this fold's last offer has committed or rolled back.
+                self.turns
+                    .send_modify(|turns| turns.hand(self.role, self.other));
+            } else {
+                let mut connection = db.reader().acquire().await?;
+                let cursor = sqlx::query_scalar::<_, Option<i64>>(
+                    "SELECT max(study_day) FROM daily_rollup WHERE settled_at IS NOT NULL",
+                )
+                .fetch_one(&mut *connection)
+                .await?;
+                drop(connection);
+                self.handed
+                    .lock()
+                    .unwrap_or_else(PoisonError::into_inner)
+                    .push(Handed {
+                        role: self.role,
+                        today: today.epoch_day(),
+                        cursor,
+                    });
+                self.barrier.wait().await;
+            }
+            let mine = self
+                .turns
+                .subscribe()
+                .wait_for(|turns| turns.holder.is_none_or(|holder| holder == self.role))
+                .await
+                .is_ok();
+            assert!(mine, "the turns outlive both folds' offers");
+            self.turns
+                .send_modify(|turns| turns.log.push(Turn::Took(self.role)));
+            Ok(())
+        })
+    }
+}
+
+/// The study days whose settles committed their steps' work, in the order they committed.
+async fn settles_in_commit_order(db: &Db) -> Vec<i64> {
+    let mut connection = db.reader().acquire().await.expect("a connection");
+    sqlx::query_scalar::<_, i64>("SELECT study_day FROM probe_settles ORDER BY rowid")
+        .fetch_all(&mut *connection)
+        .await
+        .expect("the settles read")
+}
+
+/// A fold of analytics' step, a probe in phase 2 and the settle counter in phase 7.
+fn counted_fold() -> Fold {
+    let mut fold = fold(&Log::default());
+    fold.register(Phase::Awards, Box::new(SettleCounter))
+        .expect("the counter is phase 7's");
+    fold
+}
+
+/// A27's member: the cursor both folds read, and the study days the scheduled fold and the owner's
+/// fold run on, each as the offers recorded it.
+type OverlapMember = (Option<i64>, i64, i64);
+
+/// One run of A27 on a fresh ledger: D0 settled first when `seeded`; then the scheduled fold on
+/// study day `scheduled_today` and the owner's fold on `owner_today`, each after a sync that
+/// started that day and each through its own pool to the one ledger file, released from the
+/// barrier and joined as `release` says. Answers the member the offers recorded and every settle
+/// committed, the seed's included, in commit order.
+async fn overlap(
+    seeded: bool,
+    scheduled_today: i64,
+    owner_today: i64,
+    release: Release,
+) -> (OverlapMember, Vec<i64>) {
+    let scratch = TempDir::new().expect("a scratch directory");
+    let scheduled_db = database(&scratch).await;
+    let owner_db = database(&scratch).await;
+    execute(
+        &scheduled_db,
+        "CREATE TABLE probe_settles (study_day INTEGER NOT NULL) STRICT",
+    )
+    .await;
+    let data = collection(
+        reviews_on(&[D0 - 1, D0, D0 + 1, D0 + 2, D0 + 3, D0 + 4]),
+        Vec::new(),
+    );
+    if seeded {
+        let seed = recompute(&counted_fold(), &scheduled_db, &data, at(D0 + 1, 5), D0 + 1).await;
+        assert_eq!(seed.settled, days(&[D0]), "the seed settles D0");
+    }
+
+    let barrier = Arc::new(tokio::sync::Barrier::new(2));
+    let turns = Turns::shared(release);
+    let handed = Arc::new(Mutex::new(Vec::new()));
+    let offers = |role, other| BarrierOffers {
+        role,
+        other,
+        barrier: Arc::clone(&barrier),
+        turns: Arc::clone(&turns),
+        handed: Arc::clone(&handed),
+        waited: AtomicBool::new(false),
+    };
+    let (scheduled_offers, owner_offers) =
+        (offers("scheduled", "owner"), offers("owner", "scheduled"));
+    let scheduled_input = FoldInput {
+        data: &data,
+        rule: StudyDayRule::default(),
+        now: UtcMillis::from_epoch_millis(at(scheduled_today, 10)),
+        synced_in: Some(day(scheduled_today)),
+        courses_digest: Some(COURSES_DIGEST),
+        base_reviews: 0,
+        offers: Some(&scheduled_offers),
+    };
+    let owner_input = FoldInput {
+        now: UtcMillis::from_epoch_millis(at(owner_today, 10)),
+        synced_in: Some(day(owner_today)),
+        offers: Some(&owner_offers),
+        ..scheduled_input
+    };
+    // A fold whose run returned hands its turn on, so the other never waits for it.
+    let returned = |role, other| {
+        turns.send_modify(|turns| {
+            turns.hand(role, other);
+            turns.log.push(Turn::Returned(role));
+        });
+    };
+    let (scheduled_fold, owner_fold) = (counted_fold(), counted_fold());
+    let scheduled = async {
+        let report = scheduled_fold.run(&scheduled_db, &scheduled_input).await;
+        returned("scheduled", "owner");
+        report
+    };
+    let owner = async {
+        let report = owner_fold.run(&owner_db, &owner_input).await;
+        returned("owner", "scheduled");
+        report
+    };
+    let (scheduled, owner) = if release.joined_first() == "owner" {
+        let (owner, scheduled) = tokio::join!(owner, scheduled);
+        (scheduled, owner)
+    } else {
+        tokio::join!(scheduled, owner)
+    };
+    scheduled.expect("the scheduled fold runs");
+    owner.expect("the owner's fold runs");
+    let settled = settles_in_commit_order(&scheduled_db).await;
+    if let Release::Turns(first) = release {
+        turns.borrow().alternate_from(first);
+    }
+
+    let handed = handed
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner)
+        .clone();
+    assert_eq!(handed.len(), 2, "one first call per fold: {handed:?}");
+    let of = |role: &str| {
+        handed
+            .iter()
+            .find(|handed| handed.role == role)
+            .copied()
+            .unwrap_or_else(|| panic!("the {role} fold's offers were called: {handed:?}"))
+    };
+    let (by_scheduled, by_owner) = (of("scheduled"), of("owner"));
+    assert_eq!(
+        by_scheduled.cursor, by_owner.cursor,
+        "both folds read the cursor before either settled: {handed:?}"
+    );
+    scheduled_db.close().await;
+    owner_db.close().await;
+    (
+        (by_scheduled.cursor, by_scheduled.today, by_owner.today),
+        settled,
+    )
+}
+
+/// The members A27 must hand its folds' offers, computed here and not by its generator: with a
+/// settled day and with none, times the scheduled fold's three closed days, times the owner's.
+const OVERLAP_MEMBERS: usize = 2 * 3 * 3;
+
+/// How many ways A27 releases each member's folds from the barrier: the scheduled fold's turn
+/// first, the owner's first, and both together, each fold's run joined first once.
+const RELEASES: usize = 4;
+
+/// SPEC-071 A27 (#311 (1); R15, R16; ADR-313): two folds on two connections to one ledger file,
+/// held by a barrier so that both have read the cursor before either settles, settle every day
+/// from the first settled one to the last closed one exactly once, oldest first. The population:
+/// with D0 settled before and with no day settled, the scheduled fold's closed day one to three
+/// days after D0 and the owner's one to three, each pair released four ways. Two force the order
+/// of every write after the barrier, one fold's turn at a time from each offer to its next, with
+/// the scheduled fold's turn first and then the owner's; two release both folds together and let
+/// them race, each pair joined in both orders.
+#[tokio::test]
+async fn two_overlapping_folds_settle_each_closed_day_once_in_turn() {
+    let mut runs = Vec::new();
+    for seeded in [false, true] {
+        for scheduled in 1..=3 {
+            for owner in 1..=3 {
+                for release in [
+                    Release::Turns("scheduled"),
+                    Release::Turns("owner"),
+                    Release::Together("scheduled"),
+                    Release::Together("owner"),
+                ] {
+                    runs.push((seeded, scheduled, owner, release));
+                }
+            }
+        }
+    }
+    let mut members = BTreeSet::new();
+    let mut judged = 0_usize;
+    for (seeded, scheduled, owner, release) in examined("overlapping runs", runs) {
+        let (member, settled) = overlap(seeded, D0 + 1 + scheduled, D0 + 1 + owner, release).await;
+        let last = D0 + scheduled.max(owner);
+        let first = settled.first().copied().unwrap_or(last);
+        assert_eq!(
+            settled,
+            (first..=last).collect::<Vec<i64>>(),
+            "every day from the first settled one to the last closed one, once, oldest first: \
+             member {member:?}, released {release:?}"
+        );
+        let firsts = if seeded {
+            vec![D0]
+        } else {
+            vec![D0 + scheduled, D0 + owner]
+        };
+        assert!(
+            firsts.contains(&first),
+            "the first settled day is the seed's or a fold's closed day: {first}, member \
+             {member:?}"
+        );
+        members.insert(member);
+        judged += 1;
+    }
+    println!(
+        "judged {judged} overlapping run(s), {} distinct member(s)",
+        members.len()
+    );
+    assert_eq!(judged, RELEASES * OVERLAP_MEMBERS, "the population's size");
+    assert_eq!(
+        members.len(),
+        OVERLAP_MEMBERS,
+        "the distinct members the offers were handed: {members:?}"
+    );
+}
+
+/// The rollup of study day `number`, if it has one.
+async fn row(db: &Db, number: i64) -> Option<StoredDay> {
+    RollupStore::new(db.clone())
+        .days(day(number), day(number))
+        .await
+        .expect("the rollup reads")
+        .pop()
+}
+
+/// SPEC-071 A28 (#311 (2); R17; ADR-313), a pin green at the base: before the first settled day, a
+/// day has a row only as a study day of the window (in the historical form) or as some
+/// recompute's current day; any other closed day owes no row, even one a recompute left owed; and
+/// each day after the first settled day is settled once.
+#[tokio::test]
+async fn a_closed_day_before_the_first_settle_has_a_row_only_from_the_window_or_a_current_day() {
+    // (i) and (ii): reviews on D0 and D0 + 3, and in (ii) on D0 + 1 too. The first recompute runs
+    // on D0 + 2 after a sync that started on D0 + 1, so D0 + 1 has closed and stays owed; no sync
+    // succeeds on D0 + 2; the next recomputes run on D0 + 3 and D0 + 4.
+    let cases = [(vec![D0, D0 + 3], false), (vec![D0, D0 + 1, D0 + 3], true)];
+    for (reviewed, studied) in examined("cases with reviews on D0 + 1 or none", cases.to_vec()) {
+        let scratch = TempDir::new().expect("a scratch directory");
+        let db = database(&scratch).await;
+        execute(
+            &db,
+            "CREATE TABLE probe_settles (study_day INTEGER NOT NULL) STRICT",
+        )
+        .await;
+        let fold = counted_fold();
+        let data = collection(reviews_on(&reviewed), Vec::new());
+        let first = recompute(&fold, &db, &data, at(D0 + 2, 6), D0 + 1).await;
+        assert_eq!(first.settled, Vec::<StudyDay>::new(), "D0 + 1 stays owed");
+        recompute(&fold, &db, &data, at(D0 + 3, 10), D0 + 3).await;
+        recompute(&fold, &db, &data, at(D0 + 4, 10), D0 + 4).await;
+
+        let historical = row(&db, D0).await.expect("D0 has its historical row");
+        assert_eq!(historical.settled_at, None, "D0 is never settled");
+        let owed = row(&db, D0 + 1).await;
+        if studied {
+            let owed = owed.expect("a study day of the window has its historical row");
+            assert_eq!(owed.settled_at, None, "and it is never settled");
+        } else {
+            assert_eq!(owed, None, "a closed day with no reviews owes no row");
+        }
+        for number in [D0 + 2, D0 + 3] {
+            assert_eq!(
+                committed_settles(&db, number).await,
+                1,
+                "study day {number} is settled once"
+            );
+            assert!(
+                row(&db, number)
+                    .await
+                    .is_some_and(|row| row.settled_at.is_some()),
+                "study day {number} carries its settle"
+            );
+        }
+    }
+
+    // (iii) No reviews on D0 + 1 to D0 + 4. A recompute runs on D0 + 2 after a sync that started on
+    // D0 + 1, and the next on D0 + 5.
+    let scratch = TempDir::new().expect("a scratch directory");
+    let db = database(&scratch).await;
+    execute(
+        &db,
+        "CREATE TABLE probe_settles (study_day INTEGER NOT NULL) STRICT",
+    )
+    .await;
+    let fold = counted_fold();
+    let data = collection(reviews_on(&[D0]), Vec::new());
+    let first = recompute(&fold, &db, &data, at(D0 + 2, 10), D0 + 1).await;
+    assert_eq!(first.current, Some(day(D0 + 2)));
+    let later = recompute(&fold, &db, &data, at(D0 + 5, 10), D0 + 5).await;
+    assert_eq!(later.settled, days(&[D0 + 4]), "the first settled day");
+    let current = row(&db, D0 + 2)
+        .await
+        .expect("a recompute's current day has a row");
+    assert_eq!(current.settled_at, None, "and it is never settled");
+    assert_eq!(
+        committed_settles(&db, D0 + 4).await,
+        1,
+        "D0 + 4 is settled once"
+    );
+    for number in [D0 + 1, D0 + 3] {
+        assert_eq!(
+            row(&db, number).await,
+            None,
+            "study day {number} is neither a study day of the window nor a current day"
+        );
     }
 }
