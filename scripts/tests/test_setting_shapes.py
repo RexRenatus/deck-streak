@@ -2642,6 +2642,93 @@ class TheGuardReadsOnlyTheItemsRustcCompilesUnderTest(unittest.TestCase):
             "rustc compiles an item kept does not decide"
         )
 
+    FILE_KINDS = ("own", "tests", "module")
+
+    def file_kinds(self):
+        """(case, kind, member files, twin files, twin root), the paths relative to the crate: the
+        item under test in each kind of file the guard reads a pin from, the implementation's own
+        file's test module, a file under `tests/` (a crate root rustc compiles with `--test`) and
+        an out-of-line test module's file, under an attribute rustc keeps and one it strips."""
+        item, twin = self.ITEMS[0][1:]
+        found = []
+        for attribute in ("", "#[cfg(test)]\n", "#[cfg(any())]\n", "#[cfg(not(test))]\n"):
+            wrap = "#[cfg(test)]\nmod tests {\n{}\n}\n"
+            declared = self.PRELUDE + "#[cfg(test)]\nmod tests;\n"
+            shapes = {
+                "own": (
+                    {"src/lib.rs": self.PRELUDE + wrap.replace("{}", attribute + item)},
+                    {"src/lib.rs": self.PRELUDE + wrap.replace("{}", attribute + twin)},
+                    "src/lib.rs",
+                ),
+                "tests": (
+                    {"src/lib.rs": self.PRELUDE, "tests/pin.rs": f"{attribute}{item}\n"},
+                    {"tests/pin.rs": f"{attribute}{twin}\n"},
+                    "tests/pin.rs",
+                ),
+                "module": (
+                    {"src/lib.rs": declared, "src/tests.rs": f"{attribute}{item}\n"},
+                    {"src/lib.rs": declared, "src/tests.rs": f"{attribute}{twin}\n"},
+                    "src/lib.rs",
+                ),
+            }
+            for kind in self.FILE_KINDS:
+                files, twins, root = shapes[kind]
+                found.append((f"{kind} {attribute!r}", kind, files, twins, root))
+        return found
+
+    def test_a_pin_counts_only_in_a_compiled_item_of_every_file_kind(self):
+        """A pin in a test file or an out-of-line test module's file counts only in an item rustc
+        compiles under `--cfg test`, as one in the implementation's own test module does. Each
+        member's twin tree is compiled by rustc from its root, serially, before the guard reads any
+        member: a stripped item must be refused and a compiled one pinned, in every kind."""
+        members = self.file_kinds()
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        scratch = Path(directory.name)
+        rustc = shutil.which("rustc")
+        if rustc is None:
+            self.fail("rustc is not on PATH, so the item oracle cannot run: this test never skips")
+        (scratch / "o").mkdir()
+        readings = []
+        for index, (case, _, _, twins, root) in enumerate(members):
+            for name, text in twins.items():
+                (scratch / "t" / str(index) / name).parent.mkdir(parents=True, exist_ok=True)
+                (scratch / "t" / str(index) / name).write_text(text, encoding="utf-8")
+            command = [rustc, "--edition", "2021", "--test", "--crate-type", "lib"]
+            command += ["--emit=metadata", "-o", str(scratch / "o" / f"{index}.rmeta")]
+            command.append(str(scratch / "t" / str(index) / root))
+            run = subprocess.run(command, capture_output=True, text=True, check=False)
+            if run.returncode == 0:
+                readings.append("stripped")
+            elif "E0308" in run.stderr:
+                readings.append("compiled")
+            else:
+                self.fail(
+                    f"{case}: rustc answered neither: rc {run.returncode}: {run.stderr[:400]}"
+                )
+        (scratch / "readings.json").write_text(json.dumps(readings), encoding="utf-8")
+        seen = {(kind, reading) for (_, kind, _, _, _), reading in zip(members, readings)}
+        self.assertEqual(
+            seen,
+            {(kind, reading) for kind in self.FILE_KINDS for reading in ("compiled", "stripped")},
+            "the oracle reads a compiled and a stripped member of every file kind",
+        )
+        wrong, judged = [], []
+        for index, ((case, _, files, _, _), reading) in enumerate(zip(members, readings)):
+            root = scratch / f"k{index}"
+            (root / "scripts" / "mutation-rows.d").mkdir(parents=True)
+            for name, text in files.items():
+                (root / "crates" / "demo" / name).parent.mkdir(parents=True, exist_ok=True)
+                (root / "crates" / "demo" / name).write_text(text, encoding="utf-8")
+            refused = "demo::Depth " in " ".join(unpinned(root))
+            judged.append(case)
+            if reading == "stripped" and not refused:
+                wrong.append(f"{case}: a pin is read from an item rustc strips")
+            elif reading == "compiled" and refused:
+                wrong.append(f"{case}: refused, and rustc compiles the item that pins it")
+        self.assertEqual(wrong, [], f"{len(wrong)} of {len(members)} member(s)")
+        examined("file-kind member(s) judged against rustc", judged)
+
 
 class TheGuardRefusesASpellingItDoesNotExpand(unittest.TestCase):
     """Each of #535's spellings fails open unless it is read: an attribute a macro passes in, a

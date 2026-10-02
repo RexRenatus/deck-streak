@@ -199,7 +199,7 @@
         "            else compiled_spans(text, base / \"tests\" in path.parents)\n",
         "            else [(0, len(bare))]\n",
         "a test file's pin counts only in an item rustc compiles under `--cfg test`, not anywhere in the file (SPEC-192 A20, #449)",
-        "test_setting_shapes.TheGuardReadsOnlyTheItemsRustcCompilesUnderTest.test_a_pin_counts_only_in_an_item_rustc_compiles_under_test"
+        "test_setting_shapes.TheGuardReadsOnlyTheItemsRustcCompilesUnderTest.test_a_pin_counts_only_in_a_compiled_item_of_every_file_kind"
       ],
       [
         "S19325-A-DECOY-IN-THE-OTHER-FOLDER-IS-NO-CANDIDATE",
