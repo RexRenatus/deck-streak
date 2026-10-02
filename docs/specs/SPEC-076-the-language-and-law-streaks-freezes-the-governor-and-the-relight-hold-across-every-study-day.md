@@ -13,8 +13,9 @@
 - **Prerequisites:** SPEC-071 (the fold and each study day's reviews), SPEC-040 (the grant port),
   SPEC-041 (the router), SPEC-049 (the lapse slice this SPEC extends), SPEC-024 (the owner's
   session) and SPEC-026 (the bot's command table). **Mutation band:** `S07600-S07699`.
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-076.md` (ADR-016).
+- **Status:** delivered by #446, which moved it from `docs/specs/planned/` with its tests and
+  `docs/red-first/SPEC-076.md` (ADR-016). ~~planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
+  `docs/specs/` with its tests and `docs/red-first/SPEC-076.md` (ADR-016).~~
 
 ## 1. The problem, measured
 
@@ -593,7 +594,7 @@ A31: cargo test -p deck-streak-streaks --test population_rules -- --exact the_fo
 A32: cargo test -p deck-streak-streaks --test population_rules -- --exact the_silence_walk_and_the_stored_anchor_follow_the_run_at_every_distance
 A33: cargo test -p deck-streak-streaks --test store_effects
 A34: cargo test -p deck-streak-coordination --test streak_views
-A35: cargo test -p deck-streak-coordination --test streak_fold -- --exact the_step_is_named_for_the_fold_report
+A35: cargo test -p deck-streak-coordination --test streak_fold -- --exact the_step_is_named_for_the_fold_report the_outside_freezes_join_the_language_row_within_zero_and_three
 A36: cargo test -p deck-streak-bot --test streak_commands -- --exact the_law_leads_only_above_zero_and_the_noun_follows_the_freezes
 A37: cargo test -p deck-streak-api --test streak_routes -- --exact the_streak_routes_name_why_they_cannot_answer
 A38: cargo test -p deck-streak-streaks --test silence_walk_bound -- --exact the_bounded_walk_answers_what_the_reference_walk_answers
@@ -1118,3 +1119,7 @@ digest in the header line of `formal/vectors/open-lapse.jsonl`. It adds the row 
 `docs/decisions/ADR-309-the-open-lapse-silent-day-count-is-a-named-saturating-step-pinned-by-an-exact-assert.md`
 and the changelog fragment `changelog.d/lapse-count-534.md`. It changes `docs/red-first/SPEC-076.md`
 (the addendum of this date).
+
+## 36. Amendment, 2026-10-02: the Status names the delivery
+
+Insert-only under ruling (i) of SPEC-038 section 8: every earlier byte is kept in order. The first insertion is in the Status line of the header: the delivery that moved this SPEC out of `docs/specs/planned/` (#446, ADR-016) and the closing marks that strike the old "planned" wording, which a SPEC in `docs/specs/` no longer states. The second insertion, in section 3's fence: A35's line gains its row's second test as a second `--exact` filter (`the_outside_freezes_join_the_language_row_within_zero_and_three`), which the row already named and the line did not select; A43's own line already ran it, so no criterion changes. This section is the last insertion.
