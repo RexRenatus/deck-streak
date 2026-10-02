@@ -18,6 +18,7 @@
 // Each including test binary calls only the entry it needs.
 #![allow(dead_code)]
 
+use std::cell::Cell;
 use std::sync::OnceLock;
 
 use tracing::level_filters::LevelFilter;
@@ -86,18 +87,66 @@ fn register_floor() {
     });
 }
 
-/// Refuses a capture made while this thread already holds one.
+thread_local! {
+    /// How many captures this helper holds on this thread. It decides whether a capture is
+    /// nested: the default alone cannot, since it is not the floor where the floor is missing too.
+    static HELD: Cell<usize> = const { Cell::new(0) };
+}
+
+/// Counts one more capture held on this thread.
+fn raise(held: &Cell<usize>) {
+    held.set(held.get() + 1);
+}
+
+/// Counts one capture fewer held on this thread, when a capture ends.
+fn lower(held: &Cell<usize>) {
+    held.set(held.get() - 1);
+}
+
+/// Refuses a capture made while this thread already holds one, and a capture made where the floor
+/// is not this thread's default, each by a message naming its own cause.
 ///
 /// A nested capture would take every line from the outer one, so a test asserting on the outer
 /// capture could pass while its lines went elsewhere. A thread holding no capture has the floor as
-/// its default, so any other default means a capture is held. A capture held on another thread is
-/// no obstacle: this thread's default is still the floor.
+/// its default, so outside a dispatcher's own call any other default means a capture is held.
+/// Inside a dispatcher's own call the default reads as none while any thread holds a scoped
+/// default, and as the global default while none does. So the count of captures this helper holds
+/// on this thread decides nesting, and a default that is not the floor while that count is 0 is
+/// refused as a missing floor. A capture held on another thread is no obstacle: this thread's count
+/// is 0 and its default is still the floor.
 fn refuse_nested_capture() {
+    let held = HELD.with(Cell::get);
+    assert!(
+        held == 0,
+        "a capture nested inside another capture on one thread is refused"
+    );
     let on_floor = tracing::dispatcher::get_default(tracing::Dispatch::is::<Floor>);
     assert!(
         on_floor,
-        "a capture nested inside another capture on one thread is refused"
+        "a capture is refused: the floor is not this thread's default"
     );
+}
+
+/// The count `with_capture` raised for its body, lowered when the body returns or unwinds.
+struct Scoped;
+
+impl Drop for Scoped {
+    fn drop(&mut self) {
+        HELD.with(lower);
+    }
+}
+
+/// A capture `hold_capture` made: `subscriber` stays this thread's default, and the capture stays
+/// counted, until this guard drops.
+#[must_use = "dropping the guard ends the capture"]
+pub struct CaptureGuard {
+    _default: DefaultGuard,
+}
+
+impl Drop for CaptureGuard {
+    fn drop(&mut self) {
+        HELD.with(lower);
+    }
 }
 
 /// Runs `body` with `subscriber` as this thread's default, and returns what it returns.
@@ -107,15 +156,19 @@ where
 {
     register_floor();
     refuse_nested_capture();
+    HELD.with(raise);
+    let _scoped = Scoped;
     tracing::subscriber::with_default(subscriber, body)
 }
 
 /// Makes `subscriber` this thread's default until the guard drops.
-pub fn hold_capture<S>(subscriber: S) -> DefaultGuard
+pub fn hold_capture<S>(subscriber: S) -> CaptureGuard
 where
     S: Subscriber + Send + Sync + 'static,
 {
     register_floor();
     refuse_nested_capture();
-    tracing::subscriber::set_default(subscriber)
+    let default = tracing::subscriber::set_default(subscriber);
+    HELD.with(raise);
+    CaptureGuard { _default: default }
 }
