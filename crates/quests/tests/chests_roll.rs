@@ -81,6 +81,10 @@ fn same(left: &Value, right: &Value) -> bool {
 }
 
 #[test]
+#[allow(
+    clippy::too_many_lines,
+    reason = "one table of constants, read top to bottom"
+)]
 fn the_chest_constants_equal_the_golden_and_economy_json() {
     let file: Value = serde_json::from_str(ECONOMY_FILE).expect("economy.json parses");
     let mut compared = 0_usize;
@@ -184,9 +188,11 @@ fn the_chest_constants_equal_the_golden_and_economy_json() {
             declared(&file["chests"], path)
         );
     }
-    assert_eq!(
-        real(declared(&file, &["chests"]), "session_gap_minutes") * 60_000.0,
-        json!(sessions::SESSION_GAP_MS).as_f64().expect("a number"),
+    assert!(
+        same(
+            &json!(real(&file["chests"], "session_gap_minutes") * 60_000.0),
+            &json!(sessions::SESSION_GAP_MS)
+        ),
         "economy.json's session gap in minutes is the engine's gap in milliseconds"
     );
 

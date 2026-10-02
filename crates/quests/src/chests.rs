@@ -3,8 +3,6 @@
 //! Every function is pure: the draw is an input, never read here, so the parity oracle proves the
 //! fold from a draw to a rarity and a payout and the draw's source is a later part's port.
 
-#![allow(unused_variables)]
-
 /// Common's base odds, in percent points.
 pub const BASE_ODDS_COMMON: f64 = 70.0;
 /// Rare's base odds, in percent points.
@@ -64,25 +62,70 @@ impl Rarity {
     /// The rarity named `name`, or none when it is not one.
     #[must_use]
     pub fn from_name(name: &str) -> Option<Self> {
-        None
+        match name {
+            "common" => Some(Self::Common),
+            "rare" => Some(Self::Rare),
+            "epic" => Some(Self::Epic),
+            "legendary" => Some(Self::Legendary),
+            _ => None,
+        }
     }
+}
+
+/// An integer as the predecessor's float: the counters and bounds here are tiny, so the
+/// conversion is exact.
+#[allow(
+    clippy::cast_precision_loss,
+    reason = "pity counters and XP bounds stay far below 2^53"
+)]
+const fn float(value: i64) -> f64 {
+    value as f64
 }
 
 /// The Epic percent points: base plus the ramp plus the buffs, never past the ceiling.
 #[must_use]
 pub fn epic_odds_pts(since_epic: i64, buff_pts: f64) -> f64 {
-    0.0
+    let ramp = float((since_epic - PITY_EPIC_RAMP_AFTER).max(0)) * PITY_EPIC_RAMP_PTS;
+    EPIC_ODDS_CEILING_PCT.min(BASE_ODDS_EPIC + ramp + buff_pts.max(0.0))
 }
 
 /// One draw `u` in [0, 1) folded into a rarity, with the pity counters' guarantees first.
 #[must_use]
 pub fn roll_rarity(u: f64, since_epic: i64, since_legendary: i64, buff_pts: f64) -> Rarity {
-    Rarity::Common
+    if since_legendary + 1 >= PITY_LEGENDARY_GUARANTEE {
+        return Rarity::Legendary;
+    }
+    if since_epic + 1 >= PITY_EPIC_GUARANTEE {
+        return Rarity::Epic;
+    }
+    let pct = u.clamp(0.0, 1.0) * 100.0;
+    let epic = epic_odds_pts(since_epic, buff_pts);
+    if pct < BASE_ODDS_LEGENDARY {
+        Rarity::Legendary
+    } else if pct < BASE_ODDS_LEGENDARY + epic {
+        Rarity::Epic
+    } else if pct < BASE_ODDS_LEGENDARY + epic + BASE_ODDS_RARE {
+        Rarity::Rare
+    } else {
+        Rarity::Common
+    }
 }
 
 /// A chest's XP payout: a Common or Rare draws from its band, capped by the session's review XP;
 /// a Legendary pays its fixed amount; an Epic pays 0, its choice being the prize.
 #[must_use]
+#[allow(
+    clippy::cast_possible_truncation,
+    reason = "both truncations are of small non-negative floats, as the predecessor's int()"
+)]
 pub fn payout_xp(rarity: Rarity, u: f64, session_base_xp: i64) -> i64 {
-    0
+    let cap = PAYOUT_CAP_FLOOR_XP.max((float(session_base_xp) * PAYOUT_SESSION_FRAC) as i64);
+    let (low, high) = match rarity {
+        Rarity::Legendary => return LEGENDARY_XP,
+        Rarity::Epic => return 0,
+        Rarity::Common => COMMON_XP,
+        Rarity::Rare => RARE_XP,
+    };
+    let draw = u.clamp(0.0, 1.0);
+    cap.min(low + (draw * float(high - low + 1)) as i64)
 }
