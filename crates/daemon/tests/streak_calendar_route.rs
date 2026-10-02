@@ -192,6 +192,8 @@ async fn settled_on(
             now: UtcMillis::from_epoch_millis(at(today, 12)),
             synced_in: Some(StudyDay::from_epoch_day(today)),
             courses_digest: Some("0123456789abcdef"),
+            base_reviews: 0,
+            offers: None,
         },
     )
     .await

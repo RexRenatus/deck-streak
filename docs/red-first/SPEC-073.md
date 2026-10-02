@@ -57,3 +57,126 @@ A17: green at a1dbc80
 A18: red at 2484fbe: assertion `left == right` failed: 0, 0, 0; left: (Reviews, 0), right: (Streak, 7)
 A18: green at a1dbc80
 ```
+
+## 073b: the coordination steps, their celebrations and the daemon wiring
+
+073b delivers A9, A10, A11, A14, A15, A16 and A19. The order of work: RED-1 `83f5d5e3` (a skeleton of
+stubs that compiled and answered nothing, with the tests of A9 and A19 and the daemon's
+expected-steps test red beside it), RED-2 `c8646652` (eleven more tests, each red by assertion), and
+GREEN `b958e783`. Two commits then followed: `aa38575e` and `62a23487` restamp the covers of
+`formal/tla/AwardOnce/` and `formal/tla/RelightOrder/`, and `dc02e83f` is a post-GREEN commit that
+changes tests only.
+
+The stubs at RED-1, each of which GREEN replaced:
+
+- `crates/analytics/src/rollup.rs`: `recent_totals` answered an empty list.
+- `crates/coordination/src/recompute/mod.rs`: `RecomputeFacts::lifetime_through` answered 0;
+  `AwardOffers::offer` answered `Ok` and offered nothing; `impl Celebrate for Router` answered `Ok`
+  and sent nothing.
+- `crates/coordination/src/recompute/badges.rs`: `badge_key` and `badge_line` answered the empty
+  string; `BadgesStep::evaluate` and `offer_badges` answered `Ok` and did nothing.
+- `crates/coordination/src/recompute/records.rs`: `RECORDS_WINDOW` was 0; `record_key` and
+  `record_line` answered the empty string; `plan` answered its default; `stored_records` answered
+  an empty list; `RecordsStep::evaluate` and `offer_records` answered `Ok` and did nothing.
+- `crates/coordination/src/progression/badge_context.rs`: `badge_context` answered the default
+  context.
+- `crates/coordination/src/progression/milestone_view.rs`: `milestone_view` always answered
+  `Pending`.
+- `crates/coordination/src/progression/records_view.rs`: `records_view` answered the default view.
+- `crates/coordination/src/sync_cycle.rs`: the `FoldInput` literal carried `base_reviews: 0` and
+  `offers: None`.
+- `crates/daemon/src/wiring.rs`: the expected-steps test already expected `progression.badges` and
+  `progression.records` in `Phase::Awards`; the registration was not yet made.
+
+The red was run on each red commit's tests, selecting each criterion's own test, and every red below
+is an assertion, not a compile error, a missing fixture or an empty selection.
+
+The post-GREEN commit `dc02e83f` adds four tests, green at GREEN's code, and each was seen red by
+assertion under a hand mutant of `recompute/badges.rs` or `recompute/records.rs` (each
+mutant was applied and restored by hand, and each restore was checked by its hash):
+
+- `badges_steps::an_owed_badge_is_raised_on_the_offers_day_and_marked_at_the_answer` kills B02, B09
+  and B10;
+- `records_steps::a_best_that_climbs_all_day_before_its_offer_is_not_named` kills R08;
+- `records_steps::a_router_that_did_not_answer_leaves_the_record_owed` kills R10, R12 and R13;
+- `records_steps::the_owed_records_are_offered_in_the_kinds_order` kills R11, which is not
+  equivalent: the SQL `ORDER BY kind` is text order, and the sort gives the kinds' own order.
+
+`dc02e83f` also changes the test-support file `crates/coordination/tests/awards_support/mod.rs`,
+which the SPEC's manifest does not name: the Recorder keeps each Celebration it is handed.
+
+The later commit `e935c55c` adds six tests that are mutation coverage, not red-first evidence: it
+changes no production file, each test passes there, and each was seen red by assertion under hand
+mutants of the seventeen lines the pull request's mutation job read as missed at `4441bd6b`,
+applied to an archive of `e935c55c` and restored by hash:
+
+- `rollup_store::the_recent_totals_read_the_latest_rows_on_or_before_the_day`, in analytics, kills
+  `recent_totals` replaced by `Ok(vec![])`;
+- `records_steps::the_records_view_shows_each_record_against_today` kills `records_view` replaced
+  by its default, `today` and `whole_minutes` each replaced by 0, 1 and -1, and the division in
+  `whole_minutes` replaced by `%` and by `*`: 2,430 seconds read 40 whole minutes, where those
+  two read 30 and 145,800;
+- `records_steps::an_owed_record_is_raised_with_its_line` kills `record_line` replaced by
+  `"xyzzy"` and by an empty string;
+- `records_steps::the_records_step_is_named_progression_records` and
+  `badges_steps::the_badge_step_is_named_progression_badges` kill each step's name replaced by
+  `""` and by `"xyzzy"`;
+- `badges_steps::the_award_offers_print_their_type_without_their_router` kills the award offers'
+  `Debug` replaced by `Ok(Default::default())`.
+
+`e935c55c` also changes `crates/analytics/tests/rollup_store.rs`, which the SPEC's manifest does not
+name.
+
+Four disclosures:
+
+- GREEN reformats the three RED-2 test files (whitespace only) and adds
+  `#[allow(clippy::too_many_lines)]` to A9's test.
+- A day with no recorded card state skips the badges that read the card snapshot.
+- With an empty records table, the records step passes the window's bests as `stored`, so `plan`
+  seeds silently and the golden's "first" case holds.
+- `formal/tla/RelightOrder/RelightOrder.tla` also covered `sync_cycle` and `run`. GREEN's hunks there
+  move no RelightOrder variable (a stutter); `62a23487` restamped the covers after a re-read, with
+  the stutter written into the model.
+
+```red-first
+A9: red at 83f5d5e: assertion `left == right` failed: one-day: lifetime; left: 0, right: 6
+A9: green at b958e78
+A10: red at c864665: assertion `left == right` failed: the new badge is sent: []; left: 0, right: 1
+A10: green at b958e78
+A11: red at c864665: assertion `left == right` failed; left: [], right: [first_steps, legendary_day, maturity_milestone] at 20000, unmarked
+A11: green at b958e78
+A14: red at c864665: assertion `left == right` failed: new: the plan; left: an empty plan, right: best_score 85 over 80 and most_minutes 61 over 60, with pr:best_score:20000 and pr:most_minutes:20000
+A14: green at b958e78
+A15: red at c864665: assertion `left == right` failed: pass 1: seeded at their own values; left: [], right: the three kinds stored at their own values
+A15: green at b958e78
+A16: red at c864665: assertion `left == right` failed: the new best is offered; left: [], right: ["pr:best_score:20000"]
+A16: green at b958e78
+A19: red at 83f5d5e: assertion `left == right` failed: 0 reviews, a 0-day streak and 0 mature cards; left: Pending, right: Next(Milestone { ladder: Reviews, current: 0, target: 100, pct: 0.0, remaining: 100 })
+A19: green at b958e78
+```
+
+## 073b fix round 1: a beat of the seed's own day, and the mark's guard
+
+The RED commit `a5e4cf06` adds four tests and changes no production file; the GREEN commit
+`da37395e` changes the records upsert (ADR-303 Decision 2). The reds were run at the code of
+`a3693b34`, selecting each test, and each is an assertion:
+
+- `records_steps::a_record_beaten_on_the_seeds_own_day_is_offered` reads `panicked at
+  crates/coordination/tests/records_steps.rs:276:5: assertion left == right failed: the beat is
+  offered under its day's key, and the seed is not` with `left: []` and `right:
+  ["pr:best_score:20000"]`; `test result: FAILED. 12 passed; 1 failed`.
+- `record_offers`, in `crates/daemon/tests/`, drives the production fold and reads `panicked at
+  crates/daemon/tests/record_offers.rs:148:5` with `left: []` and `right:
+  ["pr:best_score:20000", "pr:most_reviews:20000"]`; `test result: FAILED. 0 passed; 1 failed`.
+- `badges_steps::a_badge_marked_twice_keeps_its_first_mark` and
+  `records_steps::a_record_marked_twice_keeps_its_first_mark` are green at the base, because the
+  guard is present there. Each was seen red by assertion under a hand mutant that drops
+  `AND celebrated_at IS NULL` from its statement (`panicked at
+  crates/coordination/tests/badges_steps.rs:301:5: the first mark is kept`, left
+  `Some(1728054000000)`, right `Some(1728050400000)`, and the same message at
+  `records_steps.rs:323:5`). The mutants are the rows S07316 and S07317, and S07318 is the CASE
+  before the fix.
+
+The criteria these tests decide, A16 and A10, are already recorded once in the block above, at their
+first red and green; a criterion takes one entry there, so the reds quoted in this section are
+prose, each with its test name, file and line.

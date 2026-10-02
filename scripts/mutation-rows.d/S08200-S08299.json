@@ -1,0 +1,89 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S08201-THE-MINT-DIVIDES-BY-25",
+        "economy",
+        "src/constants.rs",
+        "pub const COIN_MINT_XP_DIVISOR: i64 = 25;",
+        "pub const COIN_MINT_XP_DIVISOR: i64 = 26;",
+        "wallet_goldens::the_coin_constants_and_economy_json_match_the_predecessors",
+        "one coin is minted for each 25 base XP, as the constants golden and economy.json say (SPEC-082 R3, R9, A10)"
+      ],
+      [
+        "S08202-THE-MINT-CAPS-AT-40",
+        "economy",
+        "src/constants.rs",
+        "pub const COIN_MINT_DAILY_CAP: i64 = 40;",
+        "pub const COIN_MINT_DAILY_CAP: i64 = 41;",
+        "wallet_goldens::the_mint_matches_the_parity_golden",
+        "at most 40 coins are minted a day, as the golden of mint_for_base_xp says (SPEC-082 R3, A1)"
+      ],
+      [
+        "S08203-THE-LOSS-CAP-IS-100",
+        "economy",
+        "src/constants.rs",
+        "pub const DAILY_LOSS_CAP_COINS: i64 = 100;",
+        "pub const DAILY_LOSS_CAP_COINS: i64 = 101;",
+        "wallet_goldens::the_cap_the_fine_and_the_clip_match_the_parity_goldens",
+        "at most 100 coins are lost a day, as the golden of the daily loss cap says (SPEC-082 R5, A2)"
+      ],
+      [
+        "S08204-THE-CAP-TAKES-30-PERCENT",
+        "economy",
+        "src/constants.rs",
+        "pub const DAILY_LOSS_CAP_WALLET_FRAC: f64 = 0.30;",
+        "pub const DAILY_LOSS_CAP_WALLET_FRAC: f64 = 0.31;",
+        "wallet_goldens::the_cap_the_fine_and_the_clip_match_the_parity_goldens",
+        "the loss cap takes 30 percent of the wallet at the day's start, as the golden of the daily loss cap says (SPEC-082 R5, A2)"
+      ],
+      [
+        "S08205-A-FINE-TAKES-2-PERCENT",
+        "economy",
+        "src/constants.rs",
+        "pub const FINE_WALLET_FRAC: f64 = 0.02;",
+        "pub const FINE_WALLET_FRAC: f64 = 0.03;",
+        "wallet_goldens::the_cap_the_fine_and_the_clip_match_the_parity_goldens",
+        "a fine takes 2 percent of the wallet when that exceeds its configured amount, as the golden of the scaled fine says (SPEC-082 R6, A2)"
+      ],
+      [
+        "S08206-A-DEBIT-IS-CLIPPED-TO-THE-WALLET",
+        "economy",
+        "src/rules.rs",
+        "    let allowed = requested.min(wallet).min(cap_remaining).max(0);",
+        "    let allowed = requested.min(cap_remaining).max(0);",
+        "wallet_ports::the_wallet_never_goes_negative_under_a_burst",
+        "a capped debit pays no more than the wallet holds above the floor, so a burst never takes the balance below zero (SPEC-082 R2, R5, A4)"
+      ],
+      [
+        "S08207-A-SETTLED-MINT-NEVER-FALLS",
+        "economy",
+        "src/wallet.rs",
+        "    let settled = if closed || amount >= held {",
+        "    let settled = if amount >= held {",
+        "wallet_ports::a_settled_days_mint_is_raised_and_never_lowered",
+        "a closed day's mint is raised by a later settle and never lowered (SPEC-082 R4, A6)"
+      ],
+      [
+        "S08211-THE-WALLET-FLOOR-CONSTANT-IS-ZERO",
+        "economy",
+        "src/constants.rs",
+        "pub const WALLET_FLOOR: i64 = 0;",
+        "pub const WALLET_FLOOR: i64 = 1;",
+        "wallet_goldens::the_coin_constants_and_economy_json_match_the_predecessors",
+        "the wallet's floor constant is 0, as the constants golden and economy.json say (SPEC-082 R2, A10)"
+      ]
+    ],
+    "CARGO_KILLED_SCRIPT_MUTATIONS": [
+      [
+        "S08210-ONE-MOVEMENT-PER-KEY",
+        "migrations/008201_economy_wallet_and_shop.sql",
+        "CREATE UNIQUE INDEX coin_ledger_one_movement ON coin_ledger (study_day, source, reference);",
+        "CREATE INDEX coin_ledger_one_movement ON coin_ledger (study_day, source, reference);",
+        "economy",
+        "wallet_ports::a_credit_of_one_key_is_written_once",
+        "the movement key (study day, source, reference) is a unique index held in the migration, so a credit written twice writes one movement (SPEC-082 R1, R7, A5)"
+      ]
+    ]
+  }
+}
