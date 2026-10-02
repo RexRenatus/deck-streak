@@ -437,3 +437,178 @@ A18: python3 -m unittest discover -s scripts/tests -p test_setting_shapes.py -k 
 - `modules()` still returns a name that its only caller drops (#536).
 - It does not read a trait implementation by token or through an alias, and it does not read the
   items of a compiled test module one by one (#436, #449).
+
+## 16. Amendments, 2026-10-02: an implementation read by token, a test module read by its compiled items, four spellings refused and three over-refusals read, with their acceptance criteria
+
+Sections 12 and 15 left #436 and #449 open, and #535 and #536 recorded what the 2026-10-01 arms
+still miss and still over-refuse. This amendment closes the four. Nothing above is rewritten: the
+old bullets stay as the record of what the guard did when they were written. ADR-310 records the
+four decisions it rests on.
+
+- **#436, an implementation is read by token.** The guard finds an implementation from rustc's
+  tokens, not from a pattern anchored at a line start. An `impl` whose trait path, read up to the
+  `for` after its generic parameters, ends in a name bound to `Setting` is a `Setting`
+  implementation. Names compare after an `r#` prefix is removed. The names are `Setting` and every
+  name a `use ... as` binds to one of them, in any file under `crates/*/src`, followed through a
+  chain (`use self::A as B;`) until no name is added. So an attribute or a second item on the
+  implementation's line, a raw identifier and an alias are read as rustc reads them, and a string
+  literal that holds the words is not an implementation. The `SHAPE` literal is the first
+  `const SHAPE` inside the implementation's own braces, read from comment-free text. An `impl`
+  inside a `macro_rules!` body or inside a macro invocation's token tree, whose trait path ends in
+  such a name or in a metavariable (`$tr`), or holds a repetition (`impl $($p)::+ for $t`,
+  `impl $($p)* for Wide`), is refused by its file whether or not its shape is pinned, because the
+  guard does not expand a macro. So is an `impl` whose head the tree leaves open with no trait, a
+  metavariable or such a name in it (`make!(impl)`), one with no `for` whose head holds a
+  repetition or a metavariable beside another word (`impl Setting $f Wide`), and a `for` whose
+  head holds a metavariable and no `impl`, since the `impl` is passed in (`$k Setting for Wide`).
+  A loop's `for` and a bound's `for<'a>` make none.
+- **#449, a pin counts only in an item rustc compiles under test.** In each test module the guard
+  reads (an inline test module of the implementation's own file, an out-of-line test module's file,
+  and a file of the crate's `tests/` that cargo and rustc compile), it walks the items. An item ends at its first `;` at depth
+  0, or at a `{ }` group at depth 0 that the next token does not continue: an open delimiter, a
+  punctuation other than `#` and `$`, and the words `else`, `as` and `where` continue it. An item is
+  read when one evaluator, `rustc_keeps`, reads its outer attributes as true under `test`.
+  `rustc_keeps` evaluates `cfg` over `test`, `any`, `all`, `not`, `true` and `false` exactly. Any
+  other option (a `feature = ...`, a target key) is unknown, every `cfg_attr` is unknown because it
+  may make a `cfg`, and so is an attribute it cannot read. An item it does not read as true counts
+  as not compiled, so the guard never reads a pin from an item rustc strips, and at worst refuses a
+  pin rustc compiles: such a false refusal is disclosed. A kept inline module is walked again with
+  its own inner attributes. Any other kept item that holds an attribute `rustc_keeps` does not read
+  as true (on a statement, a field or an associated item) is not read at all. A file under `tests/`
+  is read as cargo builds it. A crate root is `tests/<name>.rs` or `tests/<dir>/main.rs`, the
+  targets cargo discovers, and its inner attributes are read by `rustc_keeps` too. Any other file
+  under `tests/` is a module: it is read only when a file the walk reads declares it with `mod`
+  (below inline modules too) under attributes `rustc_keeps` reads as true under `test`, from the
+  module directory that declaration gives it, so a file no such declaration reaches is never read.
+  The walk reads a file once for each module directory it is given, so a module cycle ends it, and a
+  root rustc cannot lex is listed but declares nothing the walk follows. A test module's own
+  attributes are still judged as R8 judges them.
+- **#535, four spellings are refused by name.** A module in a `macro_rules!` body or in a macro
+  invocation's token tree is refused by its file when an attribute that reaches it holds a
+  metavariable (`#[$a]`, `$(#[$m])*`), or names `path`, or (#441) names `cfg` or `cfg_attr` with
+  `test` unless `rustc_keeps` proves it is no test-only module. A macro invocation is read as a body
+  is, so a macro that passes its tokens through is refused for what it passes. An out-of-line module
+  that a macro declares, and that `rustc_keeps` does not prove removed without `test`, may compile a
+  test module's file without `test`; the guard cannot name that file, so, by #458's rule, it may
+  name every file and refuses every out-of-line test module file of its crate. An out-of-line module
+  declared inside a block (a function body, a `const` block, an `impl`) that `rustc_keeps` does not
+  prove removed without `test` is refused by its file. An `include!` in a crate file is refused by
+  its file, because it compiles another file's text where it stands. So is a crate file with a
+  `use` declaration that may import `include` under any name or in any group
+  (`use core::include as pull;`, `use std::{include as x};`) or whose path a macro passes in
+  (`use core::$m as pull;`), and one where a macro name is passed in by a macro (`$m!(...)`,
+  `$($m)*!(...)`), because each may name `include`.
+- **#536, three over-refusals are read.** A module a macro declares is no longer refused under #441
+  when `rustc_keeps` proves it is no test-only module: one removed under `test` (`cfg(not(test))`)
+  or one compiled without it (`cfg(any(test, true))`). A reached file's module directory is known
+  from how a crate root reaches it: a crate root, a `mod.rs` and a file a `#[path]` loaded read
+  beside themselves, and any other file reads below its stem, so a decoy file in the other directory
+  no longer refuses the module; a file reached both ways keeps the hedge of section 12. A
+  declaration below an inline module whose one attribute naming a path is
+  `cfg_attr(P, path = "...")` is read from the file P chooses under `test`: the named file when P
+  holds, the default file when it fails. `modules()` returns each declaration's attributes and
+  index, without the name its only caller dropped.
+
+What these amendments leave out of reach, each by design and each failing closed except where a
+limit says otherwise:
+
+- A block-scoped out-of-line module is refused, not resolved: the guard does not model rustc's
+  block-scope path rules, which a text reader could only approximate and could get wrong toward
+  reading. `test_a_block_scoped_declaration_is_refused_by_its_file` pins it (#535).
+- `mod prod { include!("tests.rs"); }` is refused, not followed: the guard does not read the file an
+  `include!` names. `test_an_include_is_refused_by_its_file` pins it (#535).
+- A `use` that imports `include` refuses its file even when the name is never invoked, and so does
+  a `use` that binds another item to the name `include` (`use std::fmt::Write as include;`): the
+  guard reads the word, not what it names. Each is a false refusal, never a false pass (#535).
+- An out-of-line module that a `macro_rules!` body declares, unless `rustc_keeps` proves it removed
+  without `test`, leaves every out-of-line test module file of its crate unread by #458's rule,
+  even when no invocation expands the macro, so a shape pinned only in such a file is refused: a
+  false refusal, never a false pass (#535).
+- A `cfg(any(test, P))` module a macro declares, whose P `rustc_keeps` cannot decide, stays refused,
+  because it is a test-only module when P fails (#536).
+- A name bound to `Setting` in one module and to another trait in another is read as `Setting` in
+  both, so an implementation of the other trait with no pinned shape is refused (#436).
+- A macro invocation that passes a lone `impl` (`make!(impl)`) refuses its file even when the macro
+  makes an implementation of another trait, because the guard does not expand it: a false refusal,
+  never a false pass (#436).
+- An item under an unknown predicate or a `cfg_attr`, or a kept item that holds one, is not read
+  even when rustc compiles it (#449).
+- A module a `tests/` file declares through a `#[path]` attribute is not read, and a `tests/` file
+  that is both a crate root and another file's module has two module directories, so a module it
+  declares is followed from neither when its file is in both. A pin in such a file is not read:
+  each is a false refusal, never a false pass (#449).
+- A manifest's `[[test]]` tables and `autotests` key are not read: `tests/` is read by cargo's
+  default discovery, and no manifest of the repository holds either. A target a `[[test]]` table
+  adds elsewhere is not read, which can only refuse; a crate that set `autotests = false` would
+  have its `tests/` roots read although cargo builds none of them, which fails open (#449).
+- A procedural macro's output is not read; no crate of the workspace is a procedural macro crate
+  (#436).
+
+The rows that pin the new arms are in `scripts/mutation-rows.d/S19300-S19399.json`, from S19315,
+and in `scripts/mutation-rows.d/S19400-S19499.json`, each killed by the test that pins its arm and
+proved KILLED by full id.
+
+The lines this delivery adds to the guard hold 126 decision arms. 121 are pinned by rows: 14 by
+the rows S19315 to S19328, and 107 by the 108 rows S19329 to S19436 (one arm has two). The other 5
+are equivalent: the generated population reads the same with and without each mutant, and a probe
+rustc compiles shows that no input it accepts reads differently. One arm was removed instead: a
+pass in `start_of` over a `$(` refused an attribute inside a macro repetition
+(`$(#[cfg(any())] mod $n;)*`) that rustc compiles with the pin under test, and without it the
+guard reads that shape and refuses the one with the attribute before the `$(`, as it did. The band
+files now hold 100 rows (S19300 to S19399) and 37 rows (S19400 to S19436). S19324's killer is
+`test_a_pin_counts_only_in_a_compiled_item_of_every_file_kind`, a MUTATION COVERAGE test in A20's
+class: its 12 members put a pin in each kind of file that holds one (the implementation's own test
+module, a `tests/` file and an out-of-line test module's file) under four attributes, judged
+against rustc. In `scripts/mutation-rows.d/S19200-S19299.json`, S19252 and S19225's killer point
+at the token reader (#436), and S19254 finds the roots of the walk of `tests/` that replaced the
+line it found (#449). The arms left dev's rows S19300, S19301 and S19303 surviving: the R8
+members that killed them at the base read the same with and without each mutant. R8 gains 75
+members over the base: 11 that carry a pin through each declaration chain and behind each opening
+the lexer skips, and 64 whose inner run is `#![doc = "a"]` then `#![cfg(p)]` (examined 6384 R8
+members judged against rustc, and 1486 members rustc refuses judged for Width), and the three are
+KILLED again. The module runs 76 tests. One over-refusal is kept on purpose and disclosed by count
+(#536): A22 asserts 1 macro module shape, `cfg(any(test, feature = "..."))`, refused, and the
+#441 arm refuses 0 of the repository's 217 crate files.
+
+Files of these amendments:
+
+- `docs/specs/SPEC-192-every-settings-shape-is-pinned-by-its-literal.md`: changed (this section
+  appended).
+- `docs/decisions/ADR-310-one-cfg-evaluator-and-every-unexpanded-spelling-refused-by-name.md`:
+  added.
+- `docs/red-first/SPEC-192.md`: changed (two addenda).
+- `scripts/tests/test_setting_shapes.py`: changed (A19 to A22, the arms and their killers).
+- `scripts/mutation-rows.d/S19300-S19399.json`: changed (rows from S19315).
+- `scripts/mutation-rows.d/S19400-S19499.json`: added (rows S19400 to S19436).
+- `scripts/mutation-rows.d/S19200-S19299.json`: changed (S19252 and S19225's killer point at the
+  token reader, and S19254 finds the roots of the walk of `tests/`).
+- `changelog.d/guard-setting-shapes-436-449-535-536.md`: added.
+- `docs/decisions/ADR-192-a-settings-shape-is-pinned-by-its-literal-and-the-rows-live-in-one-band.md`:
+  unchanged.
+- `docs/decisions/ADR-304-the-guard-resolves-refuses-and-judges-the-file.md`: unchanged.
+- `crates/analytics/tests/rollup_metrics.rs`: unchanged.
+- `crates/bot/tests/commands.rs`: unchanged.
+- `crates/bot/tests/transport.rs`: unchanged.
+- `crates/daemon/tests/sync_request.rs`: unchanged.
+- `crates/ingest/tests/settings.rs`: unchanged.
+- `crates/kernel/tests/courses_config.rs`: unchanged.
+- `crates/kernel/tests/settings.rs`: unchanged.
+- `crates/readings/tests/topics.rs`: unchanged.
+- `crates/vault/tests/confinement.rs`: unchanged.
+- `changelog.d/test-setting-shapes-192.md`: unchanged.
+- `changelog.d/guard-setting-shapes-433-441-458.md`: unchanged.
+
+| id | criterion | decided by |
+|---|---|---|
+| A19 | every spelling of an implementation (a raw identifier, an alias, an alias chain and a shadowing alias, an attribute or a second item on its line, a string that holds the words, and a macro-made one, its trait path a repetition or its `impl` passed in among them), with its shape pinned and unpinned, is read as rustc reads it or refused by its file, against expectations written without the guard | `python3 -m unittest discover -s scripts/tests -p test_setting_shapes.py -k TheGuardReadsAnImplementationByToken` |
+| A20 | over a generated population of item-level `cfg` shapes inside compiled test modules, with rustc's own evaluation as the oracle, the guard reads no pin from an item rustc strips, and reads every pin rustc compiles where `rustc_keeps` decides; a file under `tests/` counts only where cargo and rustc compile it | `python3 -m unittest discover -s scripts/tests -p test_setting_shapes.py -k TheGuardReadsOnlyTheItemsRustcCompilesUnderTest` |
+| A21 | each of #535's spellings, an `include!` a `use` imports under another name among them, is refused by its file, each limit fails closed, the same trees without the plant read 0 refusals, and no file of the repository is refused | `python3 -m unittest discover -s scripts/tests -p test_setting_shapes.py -k TheGuardRefusesASpellingItDoesNotExpand` (the planted trees) and `python3 -m unittest discover -s scripts/tests -p test_setting_shapes.py -k EverySettingShapeIsPinnedByItsLiteral` (the repository) |
+| A22 | each of #536's over-refusals is read as rustc reads it, each #441 and #535 arm still refuses beside it, and `modules()` returns no name | `python3 -m unittest discover -s scripts/tests -p test_setting_shapes.py -k TheGuardReadsATreeItOverRefused` |
+
+```acceptance
+A19: python3 -m unittest discover -s scripts/tests -p test_setting_shapes.py -k TheGuardReadsAnImplementationByToken
+A20: python3 -m unittest discover -s scripts/tests -p test_setting_shapes.py -k TheGuardReadsOnlyTheItemsRustcCompilesUnderTest
+A21: python3 -m unittest discover -s scripts/tests -p test_setting_shapes.py -k TheGuardRefusesASpellingItDoesNotExpand
+A21: python3 -m unittest discover -s scripts/tests -p test_setting_shapes.py -k EverySettingShapeIsPinnedByItsLiteral
+A22: python3 -m unittest discover -s scripts/tests -p test_setting_shapes.py -k TheGuardReadsATreeItOverRefused
+```
