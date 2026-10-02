@@ -98,3 +98,21 @@ fn lgamma_of_a_finite_argument_whose_result_overflows_is_none() {
         assert_eq!(pynum::lgamma(bits(hex)), None, "lgamma of {hex}");
     }
 }
+
+#[test]
+fn the_median_of_a_list_holding_a_nan_is_nan() {
+    // A NaN has no order, so the median of a list that holds one has no defined value
+    // (SPEC-302 section 5): the port reads NaN, not the number its sort happens to leave in the
+    // middle (`[nan, 1.0, 2.0]` sorts in place and would read 1.0).
+    let nan = f64::NAN;
+    let lists: [&[f64]; 4] = [
+        &[nan, 1.0, 2.0],
+        &[3.0, 1.0, nan, 2.0],
+        &[1.0, 2.0, nan],
+        &[nan],
+    ];
+    for list in lists {
+        let got = pynum::median(list).expect("a non-empty list has a median");
+        assert!(got.is_nan(), "median of {list:?} is {got}");
+    }
+}
