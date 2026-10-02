@@ -1007,3 +1007,75 @@ The calendar amendment (sections 27 and 28) adds `crates/streaks/src/calendar.rs
 `web/app/messages/en.json`, `tools/parity-oracle/registry/spec_076.py` (the calendar's adapter,
 which re-stamps every SPEC-076 golden's `registry_sha256` and changes no output),
 `docs/red-first/SPEC-076.md` and `scripts/mutation-rows.d/S07600-S07699.json`.
+
+## 30. Amendment, 2026-10-01: the open lapse walk's property is proved, and section 24's count of its insertions
+
+Insert-only: every earlier byte is kept in order, and this amendment inserts sections 30, 31 and
+32.
+
+- Section 24's sentence "this section and the next are the only insertions" predates section 26:
+  the 2026-10-01 derived-population amendment's insertions are sections 24, 25 and 26. Section 24
+  stays as written.
+- The open lapse walk's property (#472). For every today and every window the day type admits,
+  `open_lapse` (SPEC-049 R12, R13; section 16) answers after at most one step per day from the
+  window's first day to today, and never overflows at the smallest day. Its answer equals the
+  rule's: walk back from today to the window's first day while a day holds no study review, where a
+  skip day neither counts nor ends the run; when the run holds at least the given number of silent
+  days, the answer is its earliest silent day, and otherwise it is none. The one exception: a walk
+  that reaches the smallest day the type admits without meeting a study review answers none, as
+  section 16 states.
+- The property's proof home is the Lean entry `lean/OpenLapse`, in
+  `formal/lean/Formal/OpenLapse.lean`, decided by ADR-305. Its port walks `Int64`, the type
+  `StudyDay` wraps, so its smallest day is the type's own. Three theorems state the property with
+  no hypothesis: `at_most_one_step_per_day`, `never_overflows` and `answers_the_rule`. Each rests on
+  no axiom beyond the three `config/formal.json` allows, and each has a witness, a port that breaks
+  its one claim, which the formal check must catch. The entry covers `open_lapse` by the digest of
+  its span, so a change to the function reads `STALE` until the port is read again. The theorems
+  are judged by the formal check, not by a test.
+- The port is held to the code by vectors. The entry's writer,
+  `formal/lean/Formal/OpenLapseVectors.lean`, writes `formal/vectors/open-lapse.jsonl` from five
+  axes: the window's first day (the smallest day, the day after it, day zero and the third day
+  before the largest), the threshold (one and three), the window's width (one to three days), each
+  day's state (a study review, a count of zero, a skip day, a count of zero on a skip day, or none
+  of these; the window's first day always holds an entry, and the last day of a wider window is
+  never a day with none of these), and today (from the day before the window to the day after it,
+  never below the smallest day). The formal check reports a committed file that differs from the
+  writer's output: its `DERIVED_DRIFT` finding names the first line that differs, and each of the
+  entry's theorems reads unclean. While the theorems are in report mode the check's verdict stays
+  OK beside that finding, and a check narrowed to one theorem with `--property` fails on it. A65
+  derives the same population from the same axes, refuses a file that differs from it, and decides
+  that the Rust function answers every vector as the port does. A66 decides that the population
+  holds every case the property names: today at the smallest day, a window that starts at it, a
+  study review on the window's first day, a skip day at either end of a run and inside one, and
+  runs below, at and above the threshold. A67 decides the exception's own case. A41 stays beside
+  them as a second, independent check.
+
+## 31. Acceptance criteria of the 2026-10-01 open-lapse proof amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A65 | the open lapse walk answers every vector its Lean port wrote, and the file's inputs equal, in order, the population the test derives from the five axes | `the_open_lapse_walk_answers_every_vector_its_lean_port_wrote` |
+| A66 | the vectors hold every case the property names: today at the smallest day, a window that starts at it, a study review on the window's first day, a skip day at a run's earliest end, at its latest end and inside it, and a run below, at and above the threshold | `the_vectors_hold_every_case_the_property_names` |
+| A67 | a walk that reaches the smallest day without a study review answers none, in the Rust function and in the vectors | `a_walk_that_reaches_the_smallest_day_without_a_review_answers_none_in_the_vectors` |
+
+```acceptance
+A65: cargo test -p deck-streak-streaks --test formal_vectors_open_lapse -- --exact the_open_lapse_walk_answers_every_vector_its_lean_port_wrote
+A66: cargo test -p deck-streak-streaks --test formal_vectors_open_lapse -- --exact the_vectors_hold_every_case_the_property_names
+A67: cargo test -p deck-streak-streaks --test formal_vectors_open_lapse -- --exact a_walk_that_reaches_the_smallest_day_without_a_review_answers_none_in_the_vectors
+```
+
+## 32. Amendments: the files the open-lapse proof amendment adds
+
+The open-lapse proof amendment (sections 30 and 31) adds files that no row of section 4 names. It
+adds the entry `formal/lean/Formal/OpenLapse.lean` and its writer
+`formal/lean/Formal/OpenLapseVectors.lean` to the Lean package under `formal/lean/`, which the
+next-milestone entry (#526) introduced, and it amends that package's shared files:
+`formal/lean/lakefile.toml` gains a comment, `formal/lean/.gitignore` holds the anchored
+`/.lake/` line, `formal/lean/Formal/Vectors.lean` gains the writer's import and the `OpenLapse`
+arm of `main`, and `formal/lean/Formal.lean` gains a docstring. `formal/lean/lean-toolchain` and
+`formal/lean/lake-manifest.json` are unchanged. It adds the vectors `formal/vectors/open-lapse.jsonl`, the test
+`crates/streaks/tests/formal_vectors_open_lapse.rs` (A65 to A67), the decision
+`docs/decisions/ADR-305-the-open-lapse-walk-is-proved-in-lean-over-the-day-type-it-walks.md`, the
+schematic `docs/schematics/open-lapse-proof-and-its-vectors.md` and the changelog fragment
+`changelog.d/feat-formal-lapse-472.md`. It changes `docs/red-first/SPEC-076.md` (the addendum of
+this date). No production code changes, and `config/formal.json` is unchanged.

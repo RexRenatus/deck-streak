@@ -5050,6 +5050,19 @@ DYNAMIC_IMPORTS = {
         ("test_mutation_rows", "runner_module", "import mutation_rows", 1),
     ),
     **allowed(
+        "an import of this repository's own script module by its constant name, `import mutation_rows`, after a sys.path insert of the constant scripts directory; it reads no workflow file",
+        ("test_bin_kind_census", "runner_module", "import mutation_rows", 1),
+    ),
+    **allowed(
+        "a thread pool that runs cargo and rustc over generated scratch crates of Rust source at once; it reads no workflow file",
+        (
+            "test_bin_kind_census",
+            "TheBinKindReadsWhatTheCompilerBuilds.test_every_layout_agrees_with_cargo_and_the_compiler_or_is_refused_by_name",
+            "concurrent.futures.ThreadPoolExecutor(max_workers=min(16, os.cpu_count() or 1))",
+            1,
+        ),
+    ),
+    **allowed(
         "this module, whose WORKFLOWS a patch points at a scratch directory",
         ("test_ci_workflows", "WorkflowFilesAreReadAsBytes.readers", "sys.modules", 1),
         (
