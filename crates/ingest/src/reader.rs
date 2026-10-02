@@ -24,6 +24,7 @@ use sqlx::AssertSqlSafe;
 use tokio::runtime::Handle;
 
 use crate::lock::CollectionLock;
+use crate::memory_state::MemoryState;
 use crate::settings::{DECK_SEPARATOR, ScopeSettings, SyncSettings};
 use crate::tier::{Tier, parse_tier};
 
@@ -124,6 +125,9 @@ pub struct Card {
     /// The Bloom tier of the card's note (SPEC-072 R3), reduced from its tags inside the read; the
     /// tags themselves never leave ingest.
     pub tier: Option<Tier>,
+    /// The card's memory state, parsed from its stored data inside the read (SPEC-077 R1); none
+    /// when the scheduler stored no readable one.
+    pub memory: Option<MemoryState>,
 }
 
 impl Card {
@@ -318,6 +322,7 @@ impl CollectionReader {
                         track: Track::Language,
                         course: None,
                         tier,
+                        memory: None,
                     };
                     card.track = track(card.home_deck_id());
                     card.course = course_of(&courses, name_of(card.home_deck_id()));

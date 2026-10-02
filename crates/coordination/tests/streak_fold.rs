@@ -53,6 +53,7 @@ const fn card(id: i64, track: Track) -> Card {
         track,
         course: None,
         tier: None,
+        memory: None,
     }
 }
 
