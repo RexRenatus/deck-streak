@@ -7,7 +7,7 @@
 //! stored: the language streak, today's study reviews, decks and score, and the day's recorded
 //! mature cards. The lifetime reviews, the hour, week and backlog counts and the two-input
 //! conditions are never stored, so those badges carry no progress (#560), and a habit or focus
-//! badge carries none until its context supplies it (#93, #94).
+//! badge carries none until its context supplies it (#93, #94, #98).
 
 use std::cmp::Reverse;
 use std::collections::BTreeSet;
@@ -119,7 +119,7 @@ pub const WITHOUT_PROGRESS: &[&str] = &[
     "perfect_week",
     "speed_demon",
     "iron_will",
-    // The habit badges, decided by the habit context (#93).
+    // The habit badges, decided by the reading and writing habit contexts (#93, #94).
     "first_page",
     "quill_initiate",
     "ink_week",
@@ -128,7 +128,7 @@ pub const WITHOUT_PROGRESS: &[&str] = &[
     "bookworm_week",
     "polyglot_reader",
     "marathon_reader",
-    // The focus badges, decided by the focus context (#94).
+    // The focus badges, decided by the focus context (#98).
     "focus_initiate",
     "deep_work_day",
     "deep_diver",
