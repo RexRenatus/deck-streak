@@ -144,8 +144,8 @@ fn power_of_two(exponent: i32) -> f64 {
 
 /// `statistics.mean`: the exact sum divided by the count, rounded to a float once.
 ///
-/// A list that holds a non-finite value is summed as floats, as `statistics` does. `None` for an
-/// empty list, where `statistics` raises.
+/// A list that holds a non-finite value returns the float sum of its non-finite values alone, as
+/// `statistics` does. `None` for an empty list, where `statistics` raises.
 #[must_use]
 pub fn mean(values: &[f64]) -> Option<f64> {
     if values.is_empty() {
@@ -153,9 +153,9 @@ pub fn mean(values: &[f64]) -> Option<f64> {
     }
     let count = u64::try_from(values.len()).unwrap_or(u64::MAX);
     if values.iter().any(|x| !x.is_finite()) {
-        // Any infinity or NaN makes the float sum non-finite, and a non-finite sum over a positive
-        // count is itself, so `statistics` returns the sum undivided.
-        return Some(values.iter().sum::<f64>());
+        // `statistics` sums only the non-finite values, and a non-finite sum over a positive count
+        // is itself, so it returns that sum undivided.
+        return Some(values.iter().filter(|x| !x.is_finite()).sum::<f64>());
     }
     let mut positive = Wide::zero();
     let mut negative = Wide::zero();
