@@ -124,13 +124,13 @@ fn a_round_beyond_the_largest_float_is_a_signed_infinity() {
     let largest = f64::MAX;
     for (x, ndigits) in [(largest, -307), (largest, -308), (1.7e308, -308)] {
         assert_eq!(
-            pynum::round(x, ndigits),
-            f64::INFINITY,
+            pynum::round(x, ndigits).to_bits(),
+            f64::INFINITY.to_bits(),
             "round({x:e}, {ndigits})"
         );
         assert_eq!(
-            pynum::round(-x, ndigits),
-            f64::NEG_INFINITY,
+            pynum::round(-x, ndigits).to_bits(),
+            f64::NEG_INFINITY.to_bits(),
             "round({:e}, {ndigits})",
             -x
         );

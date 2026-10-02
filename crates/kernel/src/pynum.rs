@@ -219,7 +219,7 @@ fn round_to_float(quotient: &Wide, remainder: u64, divisor: u64) -> f64 {
 ///
 /// `round(2.675, 2)` is 2.67 because the float is 2.67499...; the decimal expansion of the float
 /// is taken exactly, rounded as text, and read back to the nearest float.
-/// A rounded value beyond the largest float is an infinity, where CPython raises (SPEC-302
+/// A rounded value beyond the largest float is an infinity, where `CPython` raises (SPEC-302
 /// section 5).
 #[must_use]
 pub fn round(x: f64, ndigits: i32) -> f64 {
@@ -491,7 +491,7 @@ fn lanczos_sum(x: f64) -> f64 {
 ///
 /// `None` at or below zero and for a non-finite argument, where the port is not asked for a value
 /// (negative arguments are left to the slice that needs them), and where the result overflows (from
-/// about 2.6e305), where CPython raises.
+/// about 2.6e305), where `CPython` raises.
 #[must_use]
 pub fn lgamma(x: f64) -> Option<f64> {
     if !x.is_finite() || x <= 0.0 {
