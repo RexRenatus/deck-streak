@@ -52,6 +52,17 @@ they call and compare only: `credit` and `credit_once` became `deposit` and `dep
 `DepositAnswer::AlreadyDeposited`. No value, test name or selection moved. The lines below are as
 measured, in the names of their commits.
 
+Then cargo-mutants, over the diff from dev's tip to 8cc35ec, missed ten of the economy crate's
+mutants. Five tests added after 8cc35ec kill seven of them, and they are MUTATION COVERAGE, not red
+first: the code they observe was already green, and the commit that adds them changes no production
+file. They are `wallet_ports::the_balance_is_the_sum_of_every_movement`,
+`wallet_ports::a_purchase_of_the_whole_balance_is_bought_once`,
+`wallet_ports::a_retried_debit_answers_what_it_paid`,
+`wallet_ports::a_capped_debit_pays_no_more_than_the_days_cap_left` and
+`wallet_rights::the_economy_declares_the_ledger_erased_and_the_row_reset`. The other three turn
+`- WALLET_FLOOR` into `+ WALLET_FLOOR` with a floor of 0, and
+`scripts/mutation-equivalent.d/deck-streak-economy.json` records them as equivalent.
+
 ```red-first
 A3: red at 6280965: assertion `left == right` failed: the wallet before day 20000 of [(19999, "mint", "", 40), (20000, "mint", "", 25), (20000, "shop", "pass:1", -40), (20000, "fine", "a", -15), (20000, "quest", "q", 10), (20001, "fine", "b", -9), (19998, "shop", "freeze:1", -150)]; left: Number(0), right: Number(-110)
 A3: green at f047f9d

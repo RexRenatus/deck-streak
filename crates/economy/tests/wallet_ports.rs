@@ -411,3 +411,153 @@ async fn a_once_ever_credit_is_written_once_on_any_day() {
         "one movement per source and reference across every study day"
     );
 }
+
+/// Mutation coverage (R2): the balance the pool reads is the ledger's sum, not a constant.
+#[tokio::test]
+async fn the_balance_is_the_sum_of_every_movement() {
+    let (_directory, db, wallet) = wallet().await;
+    let deposited = [
+        wallet
+            .deposit(day(70), "payout", "quest:b1", 40, AT)
+            .await
+            .expect("a deposit"),
+        wallet
+            .deposit(day(71), "payout", "quest:b2", 25, AT)
+            .await
+            .expect("a second deposit"),
+    ];
+    assert_eq!(
+        deposited,
+        [DepositAnswer::Deposited(40), DepositAnswer::Deposited(25)]
+    );
+    assert_eq!(
+        wallet
+            .debit_floored(day(71), "tariff", "skip:b3", 18, AT)
+            .await
+            .expect("a debit"),
+        DebitAnswer::Debited {
+            paid: 18,
+            forgiven: false
+        }
+    );
+    assert_eq!(wallet.balance().await.expect("the balance"), 47);
+    assert_eq!(summed(&db).await, 47, "the balance is the ledger's sum");
+}
+
+/// Mutation coverage (R7, R8): a purchase that takes the balance exactly to the floor is bought, and
+/// a retry of its key answers the price it paid.
+#[tokio::test]
+async fn a_purchase_of_the_whole_balance_is_bought_once() {
+    let (_directory, _db, wallet) = wallet().await;
+    assert_eq!(
+        wallet
+            .deposit(day(80), "payout", "seed:p", 12, AT)
+            .await
+            .expect("the seed"),
+        DepositAnswer::Deposited(12)
+    );
+    let answers = [
+        wallet
+            .purchase(day(80), "shop", "freeze:p1", 12, AT)
+            .await
+            .expect("a purchase of the whole balance"),
+        wallet
+            .purchase(day(80), "shop", "freeze:p1", 12, AT)
+            .await
+            .expect("the same purchase again"),
+    ];
+    assert_eq!(
+        answers,
+        [
+            PurchaseAnswer::Bought(12),
+            PurchaseAnswer::AlreadyBought(12)
+        ]
+    );
+    assert_eq!(wallet.balance().await.expect("the balance"), WALLET_FLOOR);
+}
+
+/// Mutation coverage (R7): a retried debit, floored or capped, answers the coins its key paid.
+#[tokio::test]
+async fn a_retried_debit_answers_what_it_paid() {
+    let (_directory, _db, wallet) = wallet().await;
+    assert_eq!(
+        wallet
+            .deposit(day(90), "payout", "seed:r", 100, AT)
+            .await
+            .expect("the seed"),
+        DepositAnswer::Deposited(100)
+    );
+    let answers = [
+        wallet
+            .debit_floored(day(91), "tariff", "skip:r1", 10, AT)
+            .await
+            .expect("a tariff"),
+        wallet
+            .debit_floored(day(91), "tariff", "skip:r1", 10, AT)
+            .await
+            .expect("the same tariff again"),
+        wallet
+            .debit_capped(day(91), "fine", "fine:r2", 8, AT)
+            .await
+            .expect("a fine"),
+        wallet
+            .debit_capped(day(91), "fine", "fine:r2", 8, AT)
+            .await
+            .expect("the same fine again"),
+    ];
+    assert_eq!(
+        answers,
+        [
+            DebitAnswer::Debited {
+                paid: 10,
+                forgiven: false
+            },
+            DebitAnswer::AlreadyDebited { paid: 10 },
+            DebitAnswer::Debited {
+                paid: 8,
+                forgiven: false
+            },
+            DebitAnswer::AlreadyDebited { paid: 8 },
+        ]
+    );
+}
+
+/// Mutation coverage (R5): a capped debit pays no more than the day's cap less what the day has
+/// already debited.
+#[tokio::test]
+async fn a_capped_debit_pays_no_more_than_the_days_cap_left() {
+    let (_directory, _db, wallet) = wallet().await;
+    assert_eq!(
+        wallet
+            .deposit(day(100), "payout", "seed:c", 100, AT)
+            .await
+            .expect("the seed"),
+        DepositAnswer::Deposited(100)
+    );
+    let answers = [
+        wallet
+            .debit_capped(day(101), "fine", "fine:c1", 20, AT)
+            .await
+            .expect("a first fine"),
+        wallet
+            .debit_capped(day(101), "fine", "fine:c2", 20, AT)
+            .await
+            .expect("a second fine past the cap"),
+    ];
+    assert_eq!(
+        answers,
+        [
+            DebitAnswer::Debited {
+                paid: 20,
+                forgiven: false
+            },
+            DebitAnswer::Debited {
+                paid: 10,
+                forgiven: true
+            },
+        ]
+    );
+    // Day 101 starts with 100, so its cap is 30.
+    assert_eq!(daily_loss_cap(100), 30, "day 101's cap");
+    assert_eq!(wallet.balance().await.expect("the balance"), 70);
+}

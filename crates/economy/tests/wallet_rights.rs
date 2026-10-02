@@ -7,7 +7,8 @@
 
 use deck_streak_economy::data_rights::{COIN_LEDGER_TABLE, ECONOMY_STATE_TABLE, EconomyDataRights};
 use deck_streak_economy::wallet::{DepositAnswer, MintAnswer, PurchaseAnswer, SqliteWallet};
-use deck_streak_kernel::{DataRights, Db, StudyDay, UtcMillis};
+use deck_streak_kernel::{DataRights, Db, Disposition, StudyDay, TableRights, UtcMillis};
+use serde_json::{Map, Value};
 
 /// The instant the movements are written at.
 const AT: UtcMillis = UtcMillis::from_epoch_millis(1_700_000_000_000);
@@ -103,4 +104,30 @@ async fn an_erase_empties_the_ledger_and_resets_the_state() {
         "the row stays, with no pass and no surcharge"
     );
     assert_eq!(wallet.balance().await.expect("the balance"), 0);
+}
+
+/// Mutation coverage (R18): the economy declares its two tables, the ledger erased and the one row
+/// reset to exactly no pass and no surcharge.
+#[test]
+fn the_economy_declares_the_ledger_erased_and_the_row_reset() {
+    let declaration = EconomyDataRights
+        .declaration()
+        .expect("the economy's declaration");
+    let mut reset = Map::new();
+    reset.insert("pass_ends_at".to_owned(), Value::Null);
+    reset.insert("surcharge_ends_at".to_owned(), Value::Null);
+    assert_eq!(
+        declaration.tables(),
+        [
+            TableRights {
+                table: "coin_ledger",
+                disposition: Disposition::ExportAndErase,
+            },
+            TableRights {
+                table: "economy_state",
+                disposition: Disposition::ResetInPlace { row: reset },
+            },
+        ]
+    );
+    assert_eq!(declaration.context(), "economy");
 }
