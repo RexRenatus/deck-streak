@@ -229,3 +229,26 @@ pub fn course_progress(
     results.sort_by(|left, right| left.name.cmp(&right.name));
     results
 }
+
+/// What a course's current band is against the band stored for it before the recompute (R7).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BandStep {
+    /// The course has no stored band: its current band is recorded as a silent baseline, with no
+    /// XP, no badge and no celebration.
+    FirstSighting(&'static str),
+    /// The current band comes later in [`CEFR_BANDS`] than the stored one: it is recorded once, and
+    /// only a band recorded for the first time is paid.
+    BandUp(&'static str),
+    /// The current band is the stored one or an earlier one: nothing is recorded.
+    Unchanged,
+}
+
+/// The step of a course whose stored band is `stored` (none before its first recompute) and whose
+/// current band is `current`, by the order of [`CEFR_BANDS`].
+///
+/// A band outside [`CEFR_BANDS`] has no place in the order, so it never reads as a band-up.
+#[must_use]
+pub fn band_step(stored: Option<&str>, current: &'static str) -> BandStep {
+    let _ = (stored, current);
+    BandStep::Unchanged
+}

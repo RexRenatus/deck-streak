@@ -199,6 +199,9 @@ context each migration names equal to the owner this register gives each table i
 | `governor_state` | `streaks` | `migrations/007601_streaks_state_and_governor.sql` (SPEC-076) | reset in place: no anchor, not standby, no notice day |
 | `coin_ledger` | `economy` | `migrations/008201_economy_wallet_and_shop.sql` (SPEC-082) | exported and erased |
 | `economy_state` | `economy` | `migrations/008201_economy_wallet_and_shop.sql` (SPEC-082) | reset in place: no pass and no surcharge |
+| `language_progress` | `curriculum` | `migrations/007701_curriculum_road_to_c2_and_law.sql` (SPEC-077) | exported and erased |
+| `band_milestones` | `curriculum` | `migrations/007701_curriculum_road_to_c2_and_law.sql` (SPEC-077) | exported and erased |
+| `law_dues` | `curriculum` | `migrations/007701_curriculum_road_to_c2_and_law.sql` (SPEC-077) | exported and erased: no row reads as pending |
 | `notification_decisions` | `notifications` | `migrations/004101_notifications_router.sql` (SPEC-041) | exported and erased |
 | `notification_deliveries` | `notifications` | `migrations/004101_notifications_router.sql` (SPEC-041) | exported and erased |
 | `notification_queue` | `notifications` | `migrations/004101_notifications_router.sql` (SPEC-041) | exported and erased |

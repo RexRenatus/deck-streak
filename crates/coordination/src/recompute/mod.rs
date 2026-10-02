@@ -26,8 +26,10 @@
 
 pub mod analytics_step;
 pub mod badges;
+pub mod band_badges;
 pub mod day_bonuses;
 pub mod mint;
+pub mod progress;
 pub mod records;
 pub mod streaks;
 pub mod xp;
