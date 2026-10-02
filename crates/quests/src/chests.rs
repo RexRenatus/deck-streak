@@ -7,10 +7,10 @@
 //! port and write through the caller's connection, inside the caller's one write (ADR-081): a
 //! chest and the pity counters after it are stored together or not at all.
 
-use deck_streak_kernel::{Hour, StudyDay, UtcMillis};
+use deck_streak_kernel::{Hour, StudyDay, Track, UtcMillis};
 use sqlx::SqliteConnection;
 
-use crate::chest_store::{self, ChestState, NewChest, Origin, StoredChest};
+use crate::chest_store::{self, ChestState, Choice, NewChest, Origin, StoredChest};
 use crate::draw::{Draw, DrawError};
 use crate::sessions::{SESSION_GAP_MS, Session, meets_chest_floor};
 
@@ -342,4 +342,114 @@ pub fn payout_xp(rarity: Rarity, u: f64, session_base_xp: i64) -> i64 {
     };
     let draw = u.clamp(0.0, 1.0);
     cap.min(low + (draw * float(high - low + 1)) as i64)
+}
+
+/// A chest's payout for the caller to grant through the grant port, in the write that resolved
+/// the chest: the source `chest:<chest id>`, scope `once`, on the chest's own study day (R8, R10).
+/// This context reckons the amount and grants nothing itself (docs/CONTEXT-MAP.md).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Payout {
+    /// The chest it pays for.
+    pub chest_id: i64,
+    /// The chest's own study day, which the grant is made on.
+    pub study_day: StudyDay,
+    /// The XP it grants.
+    pub xp: i64,
+    /// The track it grants on: the predecessor's default, `language`.
+    pub track: Track,
+}
+
+impl Payout {
+    /// The grant's source: `chest:<chest id>`.
+    #[must_use]
+    pub fn source(self) -> String {
+        format!("chest:{}", self.chest_id)
+    }
+}
+
+/// What an open answered (R8).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Opened {
+    /// No chest holds the id.
+    NoSuchChest,
+    /// The chest was opened before: this open changed nothing and pays nothing.
+    AlreadyOpened,
+    /// An Epic, now opened, whose choice waits for the owner.
+    ChoicePending(StoredChest),
+    /// A Common, Rare or Legendary, now resolved, revealed with its stored rarity and its payout.
+    Revealed {
+        /// The chest as stored after the open.
+        chest: StoredChest,
+        /// Its payout, none when it pays 0.
+        payout: Option<Payout>,
+    },
+}
+
+/// What an Epic's choice answered (R9).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Settled {
+    /// No chest holds the id, or it is not an Epic.
+    NotAnEpic,
+    /// The Epic is not opened, or its choice was settled before: nothing changed.
+    AlreadySettled,
+    /// The choice is settled and the chest resolved.
+    Chosen {
+        /// The prize settled: a freeze the caps refused becomes a token.
+        choice: Choice,
+        /// Whether a freeze was asked for and refused by a cap, so the reveal says so.
+        capped: bool,
+        /// The token granted, when the prize is one.
+        token_id: Option<i64>,
+    },
+}
+
+/// A chest the sweep resolved, with its payout (R10).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Swept {
+    /// The chest resolved.
+    pub chest_id: i64,
+    /// Its payout, none when it pays 0.
+    pub payout: Option<Payout>,
+}
+
+/// Opens chest `chest_id` (R8), in the caller's write. RED-FIRST STUB: answers that no chest
+/// holds the id.
+///
+/// # Errors
+///
+/// A store error as [`chest_store`](crate::chest_store) answers it.
+pub async fn open_chest_on(
+    _connection: &mut SqliteConnection,
+    _chest_id: i64,
+) -> Result<Opened, ChestError> {
+    Ok(Opened::NoSuchChest)
+}
+
+/// Settles an opened Epic's choice (R9), in the caller's write. RED-FIRST STUB: answers that the
+/// chest is not an Epic.
+///
+/// # Errors
+///
+/// A store error as [`chest_store`](crate::chest_store) answers it.
+pub async fn settle_epic_choice_on(
+    _connection: &mut SqliteConnection,
+    _chest_id: i64,
+    _wanted: Choice,
+    _freeze_capped: bool,
+    _at: UtcMillis,
+) -> Result<Settled, ChestError> {
+    Ok(Settled::NotAnEpic)
+}
+
+/// Resolves the stale chests of the study days before `today` (R10), in the caller's write.
+/// RED-FIRST STUB: resolves nothing.
+///
+/// # Errors
+///
+/// A store error as [`chest_store`](crate::chest_store) answers it.
+pub async fn sweep_stale_chests_on(
+    _connection: &mut SqliteConnection,
+    _today: StudyDay,
+) -> Result<Vec<Swept>, ChestError> {
+    Ok(Vec::new())
 }

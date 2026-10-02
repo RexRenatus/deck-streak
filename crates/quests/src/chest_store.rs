@@ -83,6 +83,42 @@ impl ChestState {
     }
 }
 
+/// An Epic's prize, as the owner chose it (R9): a double-XP token or a streak freeze. The stored
+/// row's `choice` is '' until it is made.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Choice {
+    /// A double-XP token, held until the owner activates it (R12).
+    Token,
+    /// A streak freeze, granted through the streaks' freeze port with the reason `chest`.
+    Freeze,
+}
+
+impl Choice {
+    /// The name the stored row carries.
+    #[must_use]
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Token => "token",
+            Self::Freeze => "freeze",
+        }
+    }
+
+    /// The choice named `name`, none for the stored '' of a choice not made, and an error for any
+    /// other name.
+    ///
+    /// # Errors
+    ///
+    /// [`ChestError::Unreadable`] for a name that is neither '' nor a choice.
+    pub fn from_stored(name: &str) -> Result<Option<Self>, ChestError> {
+        match name {
+            "" => Ok(None),
+            "token" => Ok(Some(Self::Token)),
+            "freeze" => Ok(Some(Self::Freeze)),
+            _ => Err(unreadable("chests.choice", name)),
+        }
+    }
+}
+
 /// A chest to store: its key (study day, origin, session start) and what it was rolled as.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct NewChest {
