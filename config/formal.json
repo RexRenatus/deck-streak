@@ -6,6 +6,7 @@
     "entry_seconds": 300,
     "entries": {
       "tla/RelightOrder": 360,
+      "tla/StagedNoJournal": 120,
       "tla/WalletFloor": 240
     }
   },
