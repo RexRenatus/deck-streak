@@ -106,6 +106,28 @@ checked by its hash):
 `dc02e83f` also changes the test-support file `crates/coordination/tests/awards_support/mod.rs`,
 which the SPEC's manifest does not name: the Recorder keeps each Celebration it is handed.
 
+The later commit `e935c55c` adds six tests that are mutation coverage, not red-first evidence: it
+changes no production file, each test passes there, and each was seen red by assertion under hand
+mutants of the seventeen lines the pull request's mutation job read as missed at `4441bd6b`,
+applied to an archive of `e935c55c` and restored by hash:
+
+- `rollup_store::the_recent_totals_read_the_latest_rows_on_or_before_the_day`, in analytics, kills
+  `recent_totals` replaced by `Ok(vec![])`;
+- `records_steps::the_records_view_shows_each_record_against_today` kills `records_view` replaced
+  by its default, `today` and `whole_minutes` each replaced by 0, 1 and -1, and the division in
+  `whole_minutes` replaced by `%` and by `*`: 2,430 seconds read 40 whole minutes, where those
+  two read 30 and 145,800;
+- `records_steps::an_owed_record_is_raised_with_its_line` kills `record_line` replaced by
+  `"xyzzy"` and by an empty string;
+- `records_steps::the_records_step_is_named_progression_records` and
+  `badges_steps::the_badge_step_is_named_progression_badges` kill each step's name replaced by
+  `""` and by `"xyzzy"`;
+- `badges_steps::the_award_offers_print_their_type_without_their_router` kills the award offers'
+  `Debug` replaced by `Ok(Default::default())`.
+
+`e935c55c` also changes `crates/analytics/tests/rollup_store.rs`, which the SPEC's manifest does not
+name.
+
 Four disclosures:
 
 - GREEN reformats the three RED-2 test files (whitespace only) and adds
