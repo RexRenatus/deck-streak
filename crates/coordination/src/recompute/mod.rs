@@ -501,6 +501,15 @@ impl Fold {
             // Every owed celebration is offered before the day's write can replace it (ADR-303).
             offer_owed(input, db, today).await;
             let mut write = db.write().await?;
+            // Another fold may have settled since this one read the cursor: the cursor read again
+            // inside this write decides the day owed, the day after it or, with none, this day
+            // (R16, ADR-313). A write for any other day commits nothing.
+            let owed = rollup::settle_cursor(&mut write).await?.map_or(day, next);
+            if owed != day {
+                write.rollback().await?;
+                day = owed;
+                continue;
+            }
             let end_of_day = day == closed;
             self.evaluate(&facts, day, Evaluation::Settle { end_of_day }, &mut write)
                 .await?;
