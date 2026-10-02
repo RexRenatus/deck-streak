@@ -306,3 +306,63 @@ async fn a_wallet_that_cannot_be_read_answers_500_with_a_reason_code_alone() {
     );
     assert_eq!(failed.json(), json!({"reason": "wallet_unreadable"}));
 }
+
+/// The API as [`app`] builds it, but whose database was never opened: its readiness holds none.
+fn app_without_a_database() -> Router {
+    let clock = Arc::new(ManualClock::new(UtcMillis::from_epoch_millis(STARTED_AT)));
+    let gate = OwnerGate::new(
+        WebAppKey::from_bot_token(BOT_TOKEN),
+        Owner::new(TelegramUserId::new(OWNER)),
+        Freshness::default(),
+    );
+    let access = OwnerAccess::new(gate, clock, StudyDayRule::default());
+    router(ApiState::new(Readiness::new()).with_owner(access))
+}
+
+#[tokio::test]
+async fn a_wallet_read_before_the_database_opens_answers_503_database_not_open() {
+    let app = app_without_a_database();
+    let owner = cookie_of(&handshake(&app, OWNER_PAYLOAD).await);
+    let answer = get(&app, WALLET_PATH, Some(&owner)).await;
+    assert_eq!(
+        answer.status,
+        StatusCode::SERVICE_UNAVAILABLE,
+        "{}",
+        answer.body
+    );
+    assert_eq!(answer.json(), json!({"reason": "database_not_open"}));
+}
+
+#[tokio::test]
+async fn a_before_key_with_no_equals_sign_is_refused_400_invalid_cursor() {
+    let scratch = tempfile::tempdir().expect("a temporary directory");
+    let (db, app) = app(&scratch).await;
+    let owner = cookie_of(&handshake(&app, OWNER_PAYLOAD).await);
+    let answer = get(&app, &format!("{WALLET_PATH}?before"), Some(&owner)).await;
+    assert_eq!(answer.status, StatusCode::BAD_REQUEST, "{}", answer.body);
+    assert_eq!(answer.json(), json!({"reason": "invalid_cursor"}));
+    db.close().await;
+}
+
+#[tokio::test]
+async fn a_query_key_other_than_before_leaves_the_first_page() {
+    let scratch = tempfile::tempdir().expect("a temporary directory");
+    let (db, app) = app(&scratch).await;
+    let owner = cookie_of(&handshake(&app, OWNER_PAYLOAD).await);
+    let first = get(&app, WALLET_PATH, Some(&owner)).await.json();
+    assert_eq!(first["movements"].as_array().map(Vec::len), Some(4));
+    let paths = examined(
+        "foreign query key(s)",
+        vec![
+            format!("{WALLET_PATH}?x=1"),
+            format!("{WALLET_PATH}?beforex=3"),
+            format!("{WALLET_PATH}?xbefore=3&y"),
+        ],
+    );
+    for path in &paths {
+        let answer = get(&app, path, Some(&owner)).await;
+        assert_eq!(answer.status, StatusCode::OK, "{path}: {}", answer.body);
+        assert_eq!(answer.json(), first, "{path}");
+    }
+    db.close().await;
+}
