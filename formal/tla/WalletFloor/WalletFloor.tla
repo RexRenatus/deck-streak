@@ -1,14 +1,14 @@
 ---------------------------- MODULE WalletFloor ----------------------------
-\* @phx covers crates/economy/src/wallet.rs anchor=credit_on digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/economy/src/wallet.rs anchor=credit_once_on digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/economy/src/wallet.rs anchor=settle_mint_on digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/economy/src/wallet.rs anchor=purchase_on digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/economy/src/wallet.rs anchor=debit_floored_on digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/economy/src/wallet.rs anchor=refund_on digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/economy/src/wallet.rs anchor=debit_capped_on digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/economy/src/wallet.rs anchor=insert digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/economy/src/wallet.rs anchor=summed digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/kernel/src/db.rs anchor=write digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers crates/economy/src/wallet.rs anchor=credit_on digest=sha256:63330b4cd009ccab790f5d16e0bbc1633df0c50173652410d219b1fefa8e1ead
+\* @phx covers crates/economy/src/wallet.rs anchor=credit_once_on digest=sha256:85ea967ae4d3589b1d00a9fd9f70bed1fe2b944189f3a161031748e96a5328ef
+\* @phx covers crates/economy/src/wallet.rs anchor=settle_mint_on digest=sha256:f527db16a0f325855b0278d2ffa535cd1ba5b2428a5b876138ce606fc4ee0633
+\* @phx covers crates/economy/src/wallet.rs anchor=purchase_on digest=sha256:04309de191dc17240e5683254c0156712120f88fca7b34bc4daa436df21ef58a
+\* @phx covers crates/economy/src/wallet.rs anchor=debit_floored_on digest=sha256:b453615922d0bf5aa4f940affbbdd8273c361ac82165aff2c2094299c87f9bbd
+\* @phx covers crates/economy/src/wallet.rs anchor=refund_on digest=sha256:2b94e11602549e38a788319e5971bee1644ff8241e08be77334f1fbdbc7d03e2
+\* @phx covers crates/economy/src/wallet.rs anchor=debit_capped_on digest=sha256:acc045ca7285d5e78783e46a7b34ddba0fc839ba59d7cba13189446df7831ec6
+\* @phx covers crates/economy/src/wallet.rs anchor=insert digest=sha256:215ea7e2ca47ed4766e8df4b417e089c6b766edac63c9989555148648622d32a
+\* @phx covers crates/economy/src/wallet.rs anchor=summed digest=sha256:3286ff15c725d5cd74bc61d60af8b3648063ce2e9af2aa15465ff8435958585a
+\* @phx covers crates/kernel/src/db.rs anchor=write digest=sha256:c3d700eda268a6f46c7eea0aabcd2f62d8fc0aeffbe03d1cd1e8437a88bdb916
 \* @phx cites #106
 \* @phx property FloorHolds ramp=report
 \* @phx property OneMovementPerKey ramp=report
