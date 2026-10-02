@@ -206,10 +206,17 @@ A5: cargo test -p deck-streak-progression --test badges_award -- --exact an_unkn
 A6: cargo test -p deck-streak-progression --test badges_conditions -- --exact the_study_badge_conditions_match_the_parity_golden
 A7: cargo test -p deck-streak-progression --test badges_conditions -- --exact the_badge_constants_equal_the_predecessors
 A8: cargo test -p deck-streak-progression --test badges_conditions -- --exact the_hour_counts_match_the_parity_golden
+A9: cargo test -p deck-streak-coordination --test badges_context -- --exact the_badge_context_matches_the_parity_golden
+A10: cargo test -p deck-streak-coordination --test badges_steps -- --exact a_new_badge_is_celebrated_once_and_a_replay_raises_nothing
+A11: cargo test -p deck-streak-coordination --test badges_steps -- --exact a_closing_day_is_judged_with_its_end_of_day_state
 A12: cargo test -p deck-streak-progression --test records_detect -- --exact detect_records_matches_the_parity_golden
 A13: cargo test -p deck-streak-progression --test records_detect -- --exact the_chase_record_matches_the_parity_golden
+A14: cargo test -p deck-streak-coordination --test records_steps -- --exact the_records_step_matches_the_parity_golden
+A15: cargo test -p deck-streak-coordination --test records_steps -- --exact the_first_detection_seeds_records_silently
+A16: cargo test -p deck-streak-coordination --test records_steps -- --exact a_record_is_celebrated_once_per_kind_and_day
 A17: cargo test -p deck-streak-progression --test milestone_ladder -- --exact next_milestone_matches_the_parity_golden
 A18: cargo test -p deck-streak-progression --test milestone_ladder -- --exact a_complete_ladder_contributes_nothing_and_all_complete_reports_the_top_review_rung
+A19: cargo test -p deck-streak-coordination --test milestone_view -- --exact the_milestone_is_pending_until_road_to_c2_supplies_the_mature_cards
 ```
 
 ## 3a. What the box run judges
@@ -250,13 +257,6 @@ the prefix.
 | A23 | the gallery shows a locked badge with its criteria and progress | `shows a locked badge with its criteria and progress` | 073c |
 | A24 | the records screen shows each record's distance from today | `shows each record's distance from today` | 073c |
 
-073b: A9: cargo test -p deck-streak-coordination --test badges_context -- --exact the_badge_context_matches_the_parity_golden
-073b: A10: cargo test -p deck-streak-coordination --test badges_steps -- --exact a_new_badge_is_celebrated_once_and_a_replay_raises_nothing
-073b: A11: cargo test -p deck-streak-coordination --test badges_steps -- --exact a_closing_day_is_judged_with_its_end_of_day_state
-073b: A14: cargo test -p deck-streak-coordination --test records_steps -- --exact the_records_step_matches_the_parity_golden
-073b: A15: cargo test -p deck-streak-coordination --test records_steps -- --exact the_first_detection_seeds_records_silently
-073b: A16: cargo test -p deck-streak-coordination --test records_steps -- --exact a_record_is_celebrated_once_per_kind_and_day
-073b: A19: cargo test -p deck-streak-coordination --test milestone_view -- --exact the_milestone_is_pending_until_road_to_c2_supplies_the_mature_cards
 073c: A20: cargo test -p deck-streak-api --test badges_routes -- --exact the_badge_record_and_milestone_routes_answer_only_the_owner
 073c: A21: cargo test -p deck-streak-bot --test badges_commands -- --exact badges_lists_the_twenty_most_recent
 073c: A22: cargo test -p deck-streak-bot --test badges_commands -- --exact records_names_the_record_to_chase
@@ -467,3 +467,19 @@ line adds or changes them, and removes its lines from this list:
 - `web/app/src/lib/records/records.ts`: unchanged by 073a; 073c delivers it.
 - `web/app/src/lib/records/RecordsScreen.test.ts`: unchanged by 073a; 073c delivers it.
 - `web/app/src/lib/routes.ts`: unchanged by 073a; 073c delivers it.
+
+### 073b: the coordination steps, their celebrations and the daemon wiring
+
+073b delivers A9, A10, A11, A14, A15, A16 and A19 and the rows S07309, S07310, S07313, S07314 and
+S07315. Part A and part B are delivered; part C (A20 to A24) is pending, so the Status line's
+"delivered by build-073" reads part A and part B delivered. Section 4's band row ("added: the rows of
+section 9") counts 8 rows by 073a and 5 by 073b. Section 3c keeps only the `073c:` fence lines; the
+seven `073b:` lines moved back, verbatim and without the prefix, into the acceptance fence.
+
+Two files outside the manifest above are changed by this part:
+
+- `formal/tla/RelightOrder/RelightOrder.tla`: its `sync_cycle` and `run` covers are restamped over the
+  award offers, and a stutter is written into the model, since the award offers move no RelightOrder
+  variable. The manifest names `formal/tla/AwardOnce/` only.
+- `crates/coordination/tests/awards_support/mod.rs`: a test-support file; the test Recorder keeps each
+  Celebration it is handed.
