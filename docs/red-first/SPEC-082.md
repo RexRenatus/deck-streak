@@ -206,7 +206,7 @@ every body fails both, and the file restored with its sha256 equal reads green. 
 added to each and none is removed; production is unchanged. No fence line is added.
 
 MUTATION COVERAGE at the fix round, not red-first. Five commits (8b0b02d2, 13c467be, 377a0d2a,
-5d03fe1c, ec638f64) add tests and rows after the code, each green at the base, and no fence line is
+5d03fe1c, ec638f64) add tests and rows after the code, each green at the base 266ff9d8, whose source they leave unchanged, and no fence line is
 added for any of them. The package at 5d03fe1c read `examined 14 plant(s): survived 3, killed 11,
 void 0`. The eleven killed plants are held by the rows S08218 to S08228 in
 `scripts/mutation-rows.d/S08200-S08299.json`, and their prove line reads `rows: examined 11:
