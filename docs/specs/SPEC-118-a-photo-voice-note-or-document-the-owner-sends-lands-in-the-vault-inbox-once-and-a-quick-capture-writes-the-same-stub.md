@@ -328,6 +328,17 @@ adds no criterion. Every path below is a manifest row this delivery adds, extend
   coordination use case applies before any write; the route holds no bound of its own. The row's
   target is therefore `crates/vault/src/inbox.rs`, and its killer is section 9's route test, which
   sends 0, 4000 and 4001 characters through the whole stack.
+- **A6, as amended, reads:** every call in `crates/vault/src` that writes a file's bytes is inside the atomic writer.
+  Its test, `every_vault_file_write_is_the_atomic_writer`, lists exactly those calls. A call that
+  renames, creates or removes a path writes no file's bytes, and section 11 names each such call
+  outside the writer (#56).
+- **R5, as amended, is stated for the inbox capture's writes.** Every file the inbox capture
+  writes, its attachment and its stub, goes through the atomic writer, which refuses with
+  `journal_refused` a path under a folder the layout names in `journal`, whether the path names
+  that folder or reaches it through a link: the guard resolves each journal folder when it is
+  built, and resolves a target's deepest existing folder before it compares. An inbox that is a
+  journal folder, by its name or through a link, is refused when it is located. The vault's other
+  writers are section 11's (#56).
 
 The files, against section 4's manifest:
 
@@ -365,3 +376,15 @@ The rows V1b delivers, each left as it is here:
 - `crates/daemon/src/role_bot.rs`: unchanged in this part; delivered by V1b (#154).
 - `tools/parity-oracle/goldens/media_capture_choice.json`: unchanged in this part; delivered by V1b (#154).
 - `tools/parity-oracle/goldens/media_capture_replies.json`: unchanged in this part; delivered by V1b (#154).
+
+## 11. What this does NOT do, as amended 2026-10-02 (#56)
+
+- It moves no rename and no directory call into the atomic writer. Each one writes no file's
+  bytes, so A6 as amended does not name it: `crates/vault/src/staged.rs` line 961 (`rename`) and
+  line 984 (`create_dir`), and `crates/vault/src/readings_tree.rs` lines 396 and 426
+  (`create_dir`), 450 (`rename`), 496 and 501 (`remove_file`) and 596 (`remove_dir`). The journal
+  guard over every vault writer is SPEC-118's second pull request, which closes #56.
+- It composes the journal guard into no other vault writer. The drill notes that the api, the bot
+  and the daemon write go through `RealFs`, whose `journal()` is empty, so none of them refuses a
+  journal path, and R5 as amended holds for the inbox capture's writes alone. The journal guard
+  over every vault writer is SPEC-118's second pull request, which closes #56.

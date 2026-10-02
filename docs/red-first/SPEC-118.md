@@ -97,3 +97,18 @@ refuses an empty listing where one cannot be empty. No recorded failure moves. A
 sources (line 512) before its red assertion (line 539), and that listing was not empty there, since
 the red names `config.rs`; and the wiring test's red status assertion (line 155) comes before its
 inbox listing (line 157). Every other listing takes `examined_may_be_empty`, which refuses nothing.
+
+B1 has no red commit: it was folded into GREEN at 31c1af96, where the data-rights symmetry test reads privacy.json.
+
+The verifier's first round found that a write into a journal folder reached through a link was not
+refused. Its two tests were added red first, with no change to the vault's code, at
+d3fa90d16e15c46620ae5123ea4c503f034f2bb9.
+`a_write_stream_or_rename_into_a_journal_folder_through_a_link_is_refused` read "examined 111
+members, mismatches 6" and panicked at crates/vault/tests/atomic.rs:568: a write, a stream and a
+rename into `90-Inbox/to-journal/x.md` and into `Diary/x.md` each read "refused false, expected
+true". `an_inbox_that_is_a_journal_folder_through_a_link_takes_no_capture` panicked at
+crates/vault/tests/inbox_capture.rs:872 with "an inbox that is a journal folder through a link is
+refused: Ok(Inbox(..))". Both are green at a84561e747236ff789aca5687c643d778768a2ee, which
+resolves both sides before the journal refusal compares: the first reads "examined 111 members,
+mismatches 0", and the vault's suite ran 120 of 120 green. They are a fix round's tests, so the
+fence above gains no line.
