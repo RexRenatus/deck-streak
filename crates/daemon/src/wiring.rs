@@ -170,29 +170,30 @@ fn take_open_lock(path: &Path) -> io::Result<File> {
     Ok(file)
 }
 
-/// The vault inbox's quick captures for the `api` role (SPEC-118 R4, R10): the configured vault
-/// root and the layout in force, or `None` when the role serves no capture. The vault is an owner
-/// choice (ADR-011), so an unset root is not a start refusal: the route then answers 503
-/// `vault_not_open`. A root of the wrong shape, or a layout file that cannot be read or is not a
-/// layout, is logged by its rule, never by its value, and serves no capture either. Nothing is
-/// created here: each capture locates the inbox anew (R4).
+/// The vault inbox's captures for the `api` role's quick capture and the `bot` role's media
+/// (SPEC-118 R4, R6, R10): the configured vault root and the layout in force, or `None` when the
+/// role saves no capture. The vault is an owner choice (ADR-011), so an unset root is not a start
+/// refusal: the api role's route then answers 503 `vault_not_open`, and the bot role answers the
+/// owner's media with its failed-save line. A root of the wrong shape, or a layout file that cannot
+/// be read or is not a layout, is logged by its rule, never by its value, and saves no capture
+/// either. Nothing is created here: each capture locates the inbox anew (R4).
 #[must_use]
 pub fn inbox_captures(env: &Environment) -> Option<Arc<InboxCaptures<RealFs>>> {
     let root = match env.optional::<VaultRoot>(VAULT_ROOT) {
         Ok(Some(root)) => root,
         Ok(None) => {
-            tracing::info!("no vault is configured, so the quick capture is not served");
+            tracing::info!("no vault is configured, so no capture is saved");
             return None;
         }
         Err(error) => {
-            tracing::warn!(%error, "the vault root is refused, so the quick capture is not served");
+            tracing::warn!(%error, "the vault root is refused, so no capture is saved");
             return None;
         }
     };
     let layout = match LayoutInForce::from_env(env) {
         Ok(layout) => layout,
         Err(error) => {
-            tracing::warn!(%error, "the vault layout is refused, so the quick capture is not served");
+            tracing::warn!(%error, "the vault layout is refused, so no capture is saved");
             return None;
         }
     };
