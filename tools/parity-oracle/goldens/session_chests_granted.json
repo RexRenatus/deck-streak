@@ -21660,7 +21660,7 @@
   "kind": "adapter",
   "note": "Drives the grant step once on a stand-in layer over a stub store holding the case's chests of the day, settings, skip day, Ascendant buff and pity counters, at the case's local hour (offset 0) and quiet-hours flag, with the chest lock inactive, random.SystemRandom patched to the case's draws and xp.reviews_xp patched to the case's review XP for each session's start; returns the chests inserted, the counters after the step and the draws it took; cases drawn under CPython 3.12.12.",
   "registry": "tools/parity-oracle/registry/spec_081.py",
-  "registry_sha256": "dc4256589f935f00d269808825b7243da43e672bcce5272d55a0ddcc2ef26a7a",
+  "registry_sha256": "67257e9dfbf5070946f9cabbe897df72d7f71fa60cd8414cf384b5c83d530274",
   "schema": "phx.parity-golden.v1",
   "seed": 20,
   "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"

@@ -19,6 +19,17 @@ Each adapter builds what JSON cannot carry and CALLS the predecessor; none compu
   `with_a_stub_week` drives `LootLayer._update_weekly_quest` with the week's quest complete and
   its reward unclaimed, each over the same stub store and draws. The week's freeze is held at its
   month's cap, so the streaks' freeze stays out of the chest's golden.
+* `with_a_stub_sweep` drives `LootLayer._sweep_stale_chests` on a stand-in layer over a stub
+  store holding the case's chests of several study days and states, each with its id in the
+  case's order; it returns the chests the sweep resolved and the XP grants it wrote.
+* `with_a_stub_wallet_of_tokens` drives `LootLayer.activate_double_xp` over a stub store holding
+  the case's tokens, with the clock patched to the case's instant; it returns the answer, the
+  window's end and the activations it wrote, every instant in epoch milliseconds.
+* `with_a_stub_token_day` drives `LootLayer._recompute_token_xp` over the same token store, the
+  case's reviews, its rollover and offset and the patched clock. A review's XP at the base rate is
+  the caller's input in the port, so `xp.review_xp` is patched to answer the case's XP for each
+  review and the predecessor's own `reviews_xp` sums them. It returns the `2x` grants and the
+  tokens it consumed.
 
 The draws a case aims at are multiples of 2^-53, as the predecessor's `random.SystemRandom().random()`
 returns them. The case builders draw only from the `random.Random` the generator seeds. Every number
@@ -868,6 +879,550 @@ def with_a_stub_week(
     return store.answer(stream)
 
 
+# --- the sweep ----------------------------------------------------------------------------------
+
+#: The study day the sweep runs on: three days after the grant's.
+SWEEP_DAY = GRANT_DAY + 3
+#: The chest states the predecessor stores, in their order of life.
+STATES = ("sealed", "vaulted", "opened", "resolved")
+#: A payout as rolled for each rarity the fixed cases hold: a band's value, the fixed Legendary
+#: and the Epic's 0. The random cases draw a band's value instead.
+PAYOUTS = {"common": 17, "rare": 44, "legendary": 150, "epic": 0}
+
+
+def an_epoch_day(day):
+    """The epoch day number of a `date`."""
+    return day.toordinal() - EPOCH_ORDINAL
+
+
+def a_chest(offset, state, rarity="common", choice=""):
+    """A stored chest `offset` study days from the sweep's, in `state`, paying its rarity's
+    payout; an Epic's choice is '' until it is made."""
+    return {
+        "study_day": SWEEP_DAY + offset,
+        "state": state,
+        "rarity": rarity,
+        "payout_xp": PAYOUTS[rarity],
+        "choice": choice,
+    }
+
+
+def sweep_case(chests):
+    return {"today": SWEEP_DAY, "chests": list(chests)}
+
+
+def sweep_cases(rng):
+    found = [("state", sweep_case([]))]
+    # Each state on each side of the sweep's study day: an earlier day's chest resolves, and the
+    # day's own and a later day's wait.
+    for state in STATES:
+        for offset in (-3, -2, -1, 0, 1):
+            pair = [a_chest(offset, state, "common"), a_chest(offset, state, "rare")]
+            found.append(("state", sweep_case(pair)))
+    # A vaulted chest of the day before is the morning's reveal and waits; two days back it
+    # resolves, and a sealed or opened chest of the day before resolves.
+    found.append(
+        (
+            "spare",
+            sweep_case(
+                [
+                    a_chest(-1, "vaulted"),
+                    a_chest(-2, "vaulted"),
+                    a_chest(-1, "sealed"),
+                    a_chest(-1, "opened", "epic"),
+                ]
+            ),
+        )
+    )
+    found.append(
+        ("spare", sweep_case([a_chest(-1, "vaulted", "legendary"), a_chest(-1, "vaulted", "epic")]))
+    )
+    found.append(
+        ("spare", sweep_case([a_chest(-2, "vaulted", "epic"), a_chest(-30, "vaulted", "rare")]))
+    )
+    # An untapped Epic pays the fallback whatever it was rolled to pay; an Epic whose choice is
+    # made is resolved and stays out of the sweep.
+    for state in ("sealed", "vaulted", "opened"):
+        settled = [a_chest(-2, "resolved", "epic", choice) for choice in ("token", "freeze")]
+        found.append(("fallback", sweep_case([a_chest(-2, state, "epic"), *settled])))
+    found.append(
+        (
+            "fallback",
+            sweep_case(
+                [
+                    a_chest(-5, "sealed", "legendary"),
+                    a_chest(-5, "opened", "epic"),
+                    a_chest(-4, "sealed", "epic"),
+                    a_chest(-4, "opened", "legendary"),
+                ]
+            ),
+        )
+    )
+    for _ in range(10):
+        chests = []
+        for _ in range(rng.randrange(1, 7)):
+            rarity = rng.choice(("common", "rare", "epic", "legendary"))
+            state = rng.choice(STATES)
+            payout = {
+                "common": rng.randrange(10, 26),
+                "rare": rng.randrange(30, 61),
+                "legendary": 150,
+                "epic": 0,
+            }[rarity]
+            choice = ""
+            if rarity == "epic" and state == "resolved":
+                choice = rng.choice(("token", "freeze"))
+            chests.append(
+                {
+                    "study_day": SWEEP_DAY + rng.randrange(-4, 2),
+                    "state": state,
+                    "rarity": rarity,
+                    "payout_xp": payout,
+                    "choice": choice,
+                }
+            )
+        found.append((None, sweep_case(chests)))
+    return found
+
+
+class StubSweepStore:
+    """Holds the case's chests, each with its id in the case's order (as the port's store assigns
+    them), and records the states it sets and the XP grants written. The guard on a state change
+    is the store's own: a chest moves only from one of the states it is given."""
+
+    def __init__(self, chests):
+        self.rows = [
+            {
+                "id": index + 1,
+                "day": as_date(chest["study_day"]).isoformat(),
+                "state": chest["state"],
+                "rarity": chest["rarity"],
+                "payout_xp": chest["payout_xp"],
+                "choice": chest["choice"] or None,
+            }
+            for index, chest in enumerate(chests)
+        ]
+        self.resolved = []
+        self.grants = []
+
+    async def chests_in_state(self, states):
+        return [dict(row) for row in self.rows if row["state"] in states]
+
+    async def set_chest_state(self, chest_id, *, state, choice=None, expected=()):
+        for row in self.rows:
+            if row["id"] == chest_id and row["state"] in expected:
+                row["state"] = state
+                if choice is not None:
+                    row["choice"] = choice
+                self.resolved.append(chest_id)
+                return True
+        return False
+
+    async def upsert_xp_grant(self, day, source, amount, *, track="language"):
+        self.grants.append(
+            {"study_day": an_epoch_day(day), "source": source, "amount": amount, "track": track}
+        )
+
+
+def with_a_stub_sweep(sweep, predecessor, *, today, chests):
+    """Sweep once on a stand-in layer over the stub store, on the case's study day."""
+    store = StubSweepStore(chests)
+    stand_in = types.SimpleNamespace(_store=store)
+    asyncio.run(sweep(stand_in, as_date(today)))
+    return {"resolved": store.resolved, "grants": store.grants}
+
+
+# --- the double-XP token ------------------------------------------------------------------------
+
+#: The token cases' present: an instant of whole milliseconds, as the port stores one.
+NOW_MS = BASE_MS + 123
+#: A window's length as the cases aim at it; the goldens' windows come from the predecessor.
+WINDOW_MS = 2 * HOUR_MS
+#: The epoch as an aware instant, so the stub turns milliseconds into the predecessor's ISO text
+#: and back without a float.
+EPOCH = dt.datetime(1970, 1, 1, tzinfo=dt.UTC)
+
+
+def iso_of(ms):
+    """The predecessor's stored text of the instant `ms`."""
+    return (EPOCH + dt.timedelta(milliseconds=ms)).isoformat()
+
+
+def ms_of(text):
+    """The epoch milliseconds of the predecessor's stored text."""
+    return (dt.datetime.fromisoformat(text) - EPOCH) // dt.timedelta(milliseconds=1)
+
+
+def a_token(granted, activated=0, ends=0, consumed=0):
+    """A token as the port stores it: 0 and 0 for a window not yet opened."""
+    return {
+        "granted_at_ms": granted,
+        "activated_at_ms": activated,
+        "window_ends_at_ms": ends,
+        "consumed": consumed,
+    }
+
+
+def a_window(start, length=WINDOW_MS, consumed=0):
+    """A token activated at `start` whose window lasts `length`."""
+    return a_token(start - HOUR_MS, start, start + length, consumed)
+
+
+def a_clock(now_ms):
+    """The predecessor's `datetime` with `now` fixed at the case's instant."""
+
+    class Clock(dt.datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return EPOCH + dt.timedelta(milliseconds=now_ms)
+
+    return Clock
+
+
+class StubTokenStore:
+    """Holds the case's tokens, each with its id in the case's order, as the predecessor's rows,
+    and records the activations, consumptions and XP grants written. Each read keeps the
+    predecessor's own query's rule over its stored text."""
+
+    def __init__(self, tokens):
+        self.rows = [
+            {
+                "id": index + 1,
+                "kind": "double_xp",
+                "granted_at": iso_of(token["granted_at_ms"]),
+                "activated_at": iso_of(token["activated_at_ms"])
+                if token["activated_at_ms"]
+                else None,
+                "expires_at": iso_of(token["window_ends_at_ms"])
+                if token["activated_at_ms"]
+                else None,
+                "consumed": token["consumed"],
+            }
+            for index, token in enumerate(tokens)
+        ]
+        self.activated = []
+        self.consumed = []
+        self.grants = []
+        self.conn = types.SimpleNamespace(execute=self.execute)
+
+    async def active_xp_token(self, kind, now_iso):
+        live = [
+            row
+            for row in self.rows
+            if row["kind"] == kind
+            and row["consumed"] == 0
+            and row["activated_at"] is not None
+            and row["expires_at"] > now_iso
+        ]
+        return dict(live[-1]) if live else None
+
+    async def unactivated_xp_tokens(self, kind):
+        return [
+            dict(row)
+            for row in self.rows
+            if row["kind"] == kind and row["consumed"] == 0 and row["activated_at"] is None
+        ]
+
+    async def activate_xp_token(self, token_id, activated_at, expires_at):
+        for row in self.rows:
+            if row["id"] == token_id and row["consumed"] == 0 and row["activated_at"] is None:
+                row["activated_at"], row["expires_at"] = activated_at, expires_at
+                self.activated.append(
+                    {
+                        "id": token_id,
+                        "activated_at_ms": ms_of(activated_at),
+                        "window_ends_at_ms": ms_of(expires_at),
+                    }
+                )
+                return True
+        return False
+
+    async def execute(self, sql, *parameters):
+        """The bonus's one raw read: the activated tokens of its kind."""
+        if "activated_at IS NOT NULL" not in sql or parameters:
+            raise ValueError(f"the stub answers only the activated tokens' read, not {sql}")
+        rows = [
+            dict(row)
+            for row in self.rows
+            if row["kind"] == "double_xp" and row["activated_at"] is not None
+        ]
+
+        async def fetchall():
+            return rows
+
+        return types.SimpleNamespace(fetchall=fetchall)
+
+    async def consume_xp_token(self, token_id):
+        for row in self.rows:
+            if row["id"] == token_id:
+                row["consumed"] = 1
+        self.consumed.append(token_id)
+
+    async def upsert_xp_grant(self, day, source, amount, *, track="language"):
+        self.grants.append(
+            {"study_day": an_epoch_day(day), "source": source, "amount": amount, "track": track}
+        )
+
+
+def activation_case(tokens, now_ms=NOW_MS):
+    return {"now_ms": now_ms, "tokens": list(tokens)}
+
+
+def activation_cases(rng):
+    found = []
+    # Nothing to activate: no token, only consumed ones, or only a window that has ended.
+    found.append(("none", activation_case([])))
+    found.append(("none", activation_case([a_token(NOW_MS - HOUR_MS, consumed=1)])))
+    found.append(("none", activation_case([a_window(NOW_MS - 3 * HOUR_MS)])))
+    found.append(
+        ("none", activation_case([a_window(NOW_MS - 3 * HOUR_MS, consumed=1), a_token(1, 0, 0, 1)]))
+    )
+    # One window at a time: a window still open refuses, one that has ended or is consumed does
+    # not. Its end is exclusive, so a window ending at the present is over.
+    for ends in (-HOUR_MS, -1, 0, 1, HOUR_MS, WINDOW_MS - 1):
+        for consumed in (0, 1):
+            window = a_token(NOW_MS - WINDOW_MS, NOW_MS - WINDOW_MS, NOW_MS + ends, consumed)
+            found.append(
+                ("active", activation_case([window, a_token(NOW_MS - HOUR_MS), a_token(NOW_MS)]))
+            )
+    found.append(
+        ("active", activation_case([a_token(NOW_MS - DAY_MS), a_window(NOW_MS - HOUR_MS)]))
+    )
+    # The oldest held token is the first stored, whatever its grant instant says.
+    found.append(
+        (
+            "oldest",
+            activation_case(
+                [a_token(NOW_MS - HOUR_MS), a_token(NOW_MS - DAY_MS), a_token(NOW_MS - MINUTE_MS)]
+            ),
+        )
+    )
+    found.append(
+        (
+            "oldest",
+            activation_case(
+                [a_token(NOW_MS - DAY_MS, consumed=1), a_token(NOW_MS - HOUR_MS), a_token(NOW_MS)]
+            ),
+        )
+    )
+    found.append(
+        (
+            "oldest",
+            activation_case(
+                [a_window(NOW_MS - 5 * HOUR_MS), a_token(NOW_MS - 2 * DAY_MS), a_token(NOW_MS)]
+            ),
+        )
+    )
+    for _ in range(10):
+        tokens = []
+        for _ in range(rng.randrange(0, 5)):
+            granted = NOW_MS - rng.randrange(0, 3 * DAY_MS)
+            if rng.random() < 0.5:
+                tokens.append(a_token(granted, consumed=int(rng.random() < 0.2)))
+            else:
+                start = NOW_MS - rng.randrange(0, 4 * HOUR_MS)
+                tokens.append(a_window(start, consumed=int(rng.random() < 0.3)))
+        found.append((None, activation_case(tokens)))
+    return found
+
+
+def with_a_stub_wallet_of_tokens(activate, predecessor, *, now_ms, tokens):
+    """Activate once on a stand-in layer over the token store, at the case's instant."""
+    loot = predecessor("pipeline_layers.loot")
+    store = StubTokenStore(tokens)
+    stand_in = types.SimpleNamespace(_store=store)
+    with mock.patch.object(loot, "datetime", a_clock(now_ms)):
+        answer = asyncio.run(activate(stand_in))
+    return {
+        "ok": answer["ok"],
+        "error": answer.get("error"),
+        "until_ms": ms_of(answer["until"]) if "until" in answer else None,
+        "activated": store.activated,
+    }
+
+
+#: The bonus cases' study day and the instant its window opens, two hours after the day's first
+#: instant under the predecessor's default rollover.
+BONUS_DAY = GRANT_DAY + 5
+BONUS_OPEN_MS = BONUS_DAY * DAY_MS + 4 * HOUR_MS
+
+
+def an_xp_review(at, card, xp, ease=3, kind=1):
+    """One synthetic review with the XP the case gives it at the base rate."""
+    return {**a_review(at, card, ease=ease, kind=kind), "xp": xp}
+
+
+def bonus_case(tokens, reviews, *, now_ms, study_day=BONUS_DAY, rollover_hour=4, offset=0):
+    return {
+        "study_day": study_day,
+        "rollover_hour": rollover_hour,
+        "tz_offset_minutes": offset,
+        "now_ms": now_ms,
+        "tokens": list(tokens),
+        "reviews": list(reviews),
+    }
+
+
+def bonus_cases(rng):
+    found = []
+    start = BONUS_OPEN_MS + 2 * HOUR_MS
+    window = a_window(start)
+    after = start + 3 * WINDOW_MS
+    # The window holds its start and not its end.
+    edges = [start - 1, start, start + 1, start + WINDOW_MS - 1, start + WINDOW_MS]
+    for index, at_ms in enumerate(edges):
+        found.append(
+            ("window", bonus_case([window], [an_xp_review(at_ms, index + 1, 7)], now_ms=after))
+        )
+    found.append(
+        (
+            "window",
+            bonus_case(
+                [window],
+                [an_xp_review(at_ms, i + 1, 5) for i, at_ms in enumerate(edges)],
+                now_ms=after,
+            ),
+        )
+    )
+    # The cap: the windowed review XP around 300, and a windowed day that earned nothing.
+    for total in (0, 1, 150, 299, 300, 301, 450, 10_000):
+        reviews = [
+            an_xp_review(start + 1_000, 1, total // 2),
+            an_xp_review(start + 2_000, 2, total - total // 2),
+        ]
+        found.append(("cap", bonus_case([window], reviews, now_ms=after)))
+    # Only study answers count: bookkeeping rows and unanswered rows add nothing and alone settle
+    # nothing.
+    for kind in (0, 1, 2, 3, 4, 5):
+        for ease in (0, 1, 4):
+            review = an_xp_review(start + 60_000, 1, 40, ease=ease, kind=kind)
+            found.append(("study", bonus_case([window], [review], now_ms=after)))
+    # The rollover: a window across the day's turn counts on each study day only the reviews that
+    # study day holds, under the case's rollover hour and offset.
+    for rollover_hour, offset in ((4, 0), (0, 0), (23, 0), (4, 330), (4, -300), (0, 840)):
+        turn = (BONUS_DAY + 1) * DAY_MS + rollover_hour * HOUR_MS - offset * MINUTE_MS
+        straddle = a_window(turn - HOUR_MS)
+        reviews = [
+            an_xp_review(turn - HOUR_MS, 1, 11),
+            an_xp_review(turn - 1, 2, 13),
+            an_xp_review(turn, 3, 17),
+            an_xp_review(turn + HOUR_MS - 1, 4, 19),
+        ]
+        for study_day in (BONUS_DAY, BONUS_DAY + 1, BONUS_DAY + 2):
+            found.append(
+                (
+                    "rollover",
+                    bonus_case(
+                        [straddle],
+                        reviews,
+                        now_ms=turn + DAY_MS,
+                        study_day=study_day,
+                        rollover_hour=rollover_hour,
+                        offset=offset,
+                    ),
+                )
+            )
+    # A window that has ended is consumed once; one still open, or ending at the present, is
+    # not; a consumed token still settles its windowed day, and a held token settles nothing.
+    review = [an_xp_review(start + 60_000, 1, 25)]
+    for now_ms in (
+        start + HOUR_MS,
+        start + WINDOW_MS - 1,
+        start + WINDOW_MS,
+        start + WINDOW_MS + 1,
+    ):
+        found.append(("consume", bonus_case([window], review, now_ms=now_ms)))
+    found.append(("consume", bonus_case([a_window(start, consumed=1)], review, now_ms=after)))
+    found.append(("consume", bonus_case([a_token(start - HOUR_MS)], review, now_ms=after)))
+    found.append(
+        (
+            "consume",
+            bonus_case(
+                [a_window(start - DAY_MS), a_token(start), window, a_window(start + WINDOW_MS)],
+                [*review, an_xp_review(start + WINDOW_MS + 5, 2, 30)],
+                now_ms=start + WINDOW_MS + HOUR_MS,
+            ),
+        )
+    )
+    for _ in range(12):
+        tokens = []
+        for _ in range(rng.randrange(1, 4)):
+            opened = BONUS_OPEN_MS + rng.randrange(-6 * HOUR_MS, 26 * HOUR_MS)
+            if rng.random() < 0.2:
+                tokens.append(a_token(opened))
+            else:
+                tokens.append(a_window(opened, consumed=int(rng.random() < 0.2)))
+        reviews = []
+        at_ms = BONUS_OPEN_MS - 3 * HOUR_MS
+        for card in range(rng.randrange(0, 40)):
+            at_ms += rng.randrange(1, 90 * MINUTE_MS)
+            reviews.append(
+                an_xp_review(
+                    at_ms,
+                    card + 1,
+                    rng.randrange(0, 40),
+                    ease=rng.choice((0, 1, 2, 3, 4)),
+                    kind=rng.choice((0, 1, 1, 2, 3, 4, 5)),
+                )
+            )
+        found.append(
+            (
+                None,
+                bonus_case(
+                    tokens,
+                    reviews,
+                    now_ms=BONUS_OPEN_MS + rng.randrange(0, 30 * HOUR_MS),
+                    study_day=BONUS_DAY + rng.randrange(-1, 2),
+                    rollover_hour=rng.randrange(0, 24),
+                    offset=rng.choice((0, 0, 60, -240, 330)),
+                ),
+            )
+        )
+    return found
+
+
+def with_a_stub_token_day(
+    recompute, predecessor, *, study_day, rollover_hour, tz_offset_minutes, now_ms, tokens, reviews
+):
+    """Settle the token bonus of the case's study day once on a stand-in layer over the token
+    store, under the case's rollover and offset, at the case's instant, with each review's XP the
+    case's."""
+    loot = predecessor("pipeline_layers.loot")
+    xp_module = predecessor("gamification.xp")
+    store = StubTokenStore(tokens)
+    stand_in = types.SimpleNamespace(_store=store)
+    review_type = predecessor("types.Review")
+    rows = [
+        review_type(
+            id_ms=r["id"],
+            cid=r["card_id"],
+            ease=r["ease"],
+            ivl=0,
+            last_ivl=0,
+            factor=2500,
+            time_ms=r["taken_ms"],
+            rtype=r["kind"],
+        )
+        for r in reviews
+    ]
+    by_id = {r["id"]: r["xp"] for r in reviews}
+    if len(by_id) != len(reviews):
+        raise ValueError("the case's reviews must have distinct ids")
+
+    def review_xp(row, cid_tier=None):
+        return by_id[row.id_ms]
+
+    config = predecessor("types.CollectionConfig")(
+        rollover_hour=rollover_hour, tz_offset_minutes=tz_offset_minutes
+    )
+    with (
+        mock.patch.object(loot, "datetime", a_clock(now_ms)),
+        mock.patch.object(xp_module, "review_xp", review_xp),
+    ):
+        asyncio.run(recompute(stand_in, rows, config, as_date(study_day)))
+    return {"grants": store.grants, "consumed": store.consumed}
+
+
 FUNCTIONS = {
     "sessions_from_reviews": {
         "kind": "adapter",
@@ -960,5 +1515,33 @@ FUNCTIONS = {
         "cap, with random.SystemRandom patched to the case's draws; returns the chest inserted, "
         "the counters after it and the draws it took.",
         "cases": weekly_cases,
+    },
+    "sweep_stale_chests": {
+        "kind": "adapter",
+        "function": "pipeline_layers.loot.LootLayer._sweep_stale_chests",
+        "adapter": with_a_stub_sweep,
+        "note": "Sweeps once on a stand-in layer over a stub store holding the case's chests of "
+        "several study days and states, each with its id in the case's order; returns the chests "
+        "resolved, in order, and the XP grants written.",
+        "cases": sweep_cases,
+    },
+    "activate_double_xp": {
+        "kind": "adapter",
+        "function": "pipeline_layers.loot.LootLayer.activate_double_xp",
+        "adapter": with_a_stub_wallet_of_tokens,
+        "note": "Activates once on a stand-in layer over a stub store holding the case's tokens, "
+        "each with its id in the case's order, with the clock patched to the case's instant; "
+        "returns the answer, the window's end and the activations written, in epoch milliseconds.",
+        "cases": activation_cases,
+    },
+    "recompute_token_xp": {
+        "kind": "adapter",
+        "function": "pipeline_layers.loot.LootLayer._recompute_token_xp",
+        "adapter": with_a_stub_token_day,
+        "note": "Settles the token bonus of the case's study day once on a stand-in layer over the "
+        "token store, under the case's rollover hour and offset, with the clock patched to the "
+        "case's instant and xp.review_xp patched to the case's XP for each review; returns the 2x "
+        "grants and the tokens consumed.",
+        "cases": bonus_cases,
     },
 }

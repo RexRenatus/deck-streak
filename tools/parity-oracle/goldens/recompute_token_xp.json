@@ -1,0 +1,5291 @@
+{
+  "adapter": "with_a_stub_token_day",
+  "cases": [
+    {
+      "class": "window",
+      "input": {
+        "now_ms": 1700481600000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700459999999,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 7
+          }
+        ],
+        "rollover_hour": 4,
+        "study_day": 19681,
+        "tokens": [
+          {
+            "activated_at_ms": 1700460000000,
+            "consumed": 0,
+            "granted_at_ms": 1700456400000,
+            "window_ends_at_ms": 1700467200000
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": []
+      }
+    },
+    {
+      "class": "window",
+      "input": {
+        "now_ms": 1700481600000,
+        "reviews": [
+          {
+            "card_id": 2,
+            "ease": 3,
+            "id": 1700460000000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 7
+          }
+        ],
+        "rollover_hour": 4,
+        "study_day": 19681,
+        "tokens": [
+          {
+            "activated_at_ms": 1700460000000,
+            "consumed": 0,
+            "granted_at_ms": 1700456400000,
+            "window_ends_at_ms": 1700467200000
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": [
+          {
+            "amount": 7,
+            "source": "2x:1",
+            "study_day": 19681,
+            "track": "language"
+          }
+        ]
+      }
+    },
+    {
+      "class": "window",
+      "input": {
+        "now_ms": 1700481600000,
+        "reviews": [
+          {
+            "card_id": 3,
+            "ease": 3,
+            "id": 1700460000001,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 7
+          }
+        ],
+        "rollover_hour": 4,
+        "study_day": 19681,
+        "tokens": [
+          {
+            "activated_at_ms": 1700460000000,
+            "consumed": 0,
+            "granted_at_ms": 1700456400000,
+            "window_ends_at_ms": 1700467200000
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": [
+          {
+            "amount": 7,
+            "source": "2x:1",
+            "study_day": 19681,
+            "track": "language"
+          }
+        ]
+      }
+    },
+    {
+      "class": "window",
+      "input": {
+        "now_ms": 1700481600000,
+        "reviews": [
+          {
+            "card_id": 4,
+            "ease": 3,
+            "id": 1700467199999,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 7
+          }
+        ],
+        "rollover_hour": 4,
+        "study_day": 19681,
+        "tokens": [
+          {
+            "activated_at_ms": 1700460000000,
+            "consumed": 0,
+            "granted_at_ms": 1700456400000,
+            "window_ends_at_ms": 1700467200000
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": [
+          {
+            "amount": 7,
+            "source": "2x:1",
+            "study_day": 19681,
+            "track": "language"
+          }
+        ]
+      }
+    },
+    {
+      "class": "window",
+      "input": {
+        "now_ms": 1700481600000,
+        "reviews": [
+          {
+            "card_id": 5,
+            "ease": 3,
+            "id": 1700467200000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 7
+          }
+        ],
+        "rollover_hour": 4,
+        "study_day": 19681,
+        "tokens": [
+          {
+            "activated_at_ms": 1700460000000,
+            "consumed": 0,
+            "granted_at_ms": 1700456400000,
+            "window_ends_at_ms": 1700467200000
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": []
+      }
+    },
+    {
+      "class": "window",
+      "input": {
+        "now_ms": 1700481600000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700459999999,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 5
+          },
+          {
+            "card_id": 2,
+            "ease": 3,
+            "id": 1700460000000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 5
+          },
+          {
+            "card_id": 3,
+            "ease": 3,
+            "id": 1700460000001,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 5
+          },
+          {
+            "card_id": 4,
+            "ease": 3,
+            "id": 1700467199999,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 5
+          },
+          {
+            "card_id": 5,
+            "ease": 3,
+            "id": 1700467200000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 5
+          }
+        ],
+        "rollover_hour": 4,
+        "study_day": 19681,
+        "tokens": [
+          {
+            "activated_at_ms": 1700460000000,
+            "consumed": 0,
+            "granted_at_ms": 1700456400000,
+            "window_ends_at_ms": 1700467200000
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": [
+          {
+            "amount": 15,
+            "source": "2x:1",
+            "study_day": 19681,
+            "track": "language"
+          }
+        ]
+      }
+    },
+    {
+      "class": "cap",
+      "input": {
+        "now_ms": 1700481600000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700460001000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 0
+          },
+          {
+            "card_id": 2,
+            "ease": 3,
+            "id": 1700460002000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 0
+          }
+        ],
+        "rollover_hour": 4,
+        "study_day": 19681,
+        "tokens": [
+          {
+            "activated_at_ms": 1700460000000,
+            "consumed": 0,
+            "granted_at_ms": 1700456400000,
+            "window_ends_at_ms": 1700467200000
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": [
+          {
+            "amount": 0,
+            "source": "2x:1",
+            "study_day": 19681,
+            "track": "language"
+          }
+        ]
+      }
+    },
+    {
+      "class": "cap",
+      "input": {
+        "now_ms": 1700481600000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700460001000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 0
+          },
+          {
+            "card_id": 2,
+            "ease": 3,
+            "id": 1700460002000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 1
+          }
+        ],
+        "rollover_hour": 4,
+        "study_day": 19681,
+        "tokens": [
+          {
+            "activated_at_ms": 1700460000000,
+            "consumed": 0,
+            "granted_at_ms": 1700456400000,
+            "window_ends_at_ms": 1700467200000
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": [
+          {
+            "amount": 1,
+            "source": "2x:1",
+            "study_day": 19681,
+            "track": "language"
+          }
+        ]
+      }
+    },
+    {
+      "class": "cap",
+      "input": {
+        "now_ms": 1700481600000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700460001000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 75
+          },
+          {
+            "card_id": 2,
+            "ease": 3,
+            "id": 1700460002000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 75
+          }
+        ],
+        "rollover_hour": 4,
+        "study_day": 19681,
+        "tokens": [
+          {
+            "activated_at_ms": 1700460000000,
+            "consumed": 0,
+            "granted_at_ms": 1700456400000,
+            "window_ends_at_ms": 1700467200000
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": [
+          {
+            "amount": 150,
+            "source": "2x:1",
+            "study_day": 19681,
+            "track": "language"
+          }
+        ]
+      }
+    },
+    {
+      "class": "cap",
+      "input": {
+        "now_ms": 1700481600000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700460001000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 149
+          },
+          {
+            "card_id": 2,
+            "ease": 3,
+            "id": 1700460002000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 150
+          }
+        ],
+        "rollover_hour": 4,
+        "study_day": 19681,
+        "tokens": [
+          {
+            "activated_at_ms": 1700460000000,
+            "consumed": 0,
+            "granted_at_ms": 1700456400000,
+            "window_ends_at_ms": 1700467200000
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": [
+          {
+            "amount": 299,
+            "source": "2x:1",
+            "study_day": 19681,
+            "track": "language"
+          }
+        ]
+      }
+    },
+    {
+      "class": "cap",
+      "input": {
+        "now_ms": 1700481600000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700460001000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 150
+          },
+          {
+            "card_id": 2,
+            "ease": 3,
+            "id": 1700460002000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 150
+          }
+        ],
+        "rollover_hour": 4,
+        "study_day": 19681,
+        "tokens": [
+          {
+            "activated_at_ms": 1700460000000,
+            "consumed": 0,
+            "granted_at_ms": 1700456400000,
+            "window_ends_at_ms": 1700467200000
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": [
+          {
+            "amount": 300,
+            "source": "2x:1",
+            "study_day": 19681,
+            "track": "language"
+          }
+        ]
+      }
+    },
+    {
+      "class": "cap",
+      "input": {
+        "now_ms": 1700481600000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700460001000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 150
+          },
+          {
+            "card_id": 2,
+            "ease": 3,
+            "id": 1700460002000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 151
+          }
+        ],
+        "rollover_hour": 4,
+        "study_day": 19681,
+        "tokens": [
+          {
+            "activated_at_ms": 1700460000000,
+            "consumed": 0,
+            "granted_at_ms": 1700456400000,
+            "window_ends_at_ms": 1700467200000
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": [
+          {
+            "amount": 300,
+            "source": "2x:1",
+            "study_day": 19681,
+            "track": "language"
+          }
+        ]
+      }
+    },
+    {
+      "class": "cap",
+      "input": {
+        "now_ms": 1700481600000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700460001000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 225
+          },
+          {
+            "card_id": 2,
+            "ease": 3,
+            "id": 1700460002000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 225
+          }
+        ],
+        "rollover_hour": 4,
+        "study_day": 19681,
+        "tokens": [
+          {
+            "activated_at_ms": 1700460000000,
+            "consumed": 0,
+            "granted_at_ms": 1700456400000,
+            "window_ends_at_ms": 1700467200000
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": [
+          {
+            "amount": 300,
+            "source": "2x:1",
+            "study_day": 19681,
+            "track": "language"
+          }
+        ]
+      }
+    },
+    {
+      "class": "cap",
+      "input": {
+        "now_ms": 1700481600000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700460001000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 5000
+          },
+          {
+            "card_id": 2,
+            "ease": 3,
+            "id": 1700460002000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 5000
+          }
+        ],
+        "rollover_hour": 4,
+        "study_day": 19681,
+        "tokens": [
+          {
+            "activated_at_ms": 1700460000000,
+            "consumed": 0,
+            "granted_at_ms": 1700456400000,
+            "window_ends_at_ms": 1700467200000
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": [
+          {
+            "amount": 300,
+            "source": "2x:1",
+            "study_day": 19681,
+            "track": "language"
+          }
+        ]
+      }
+    },
+    {
+      "class": "study",
+      "input": {
+        "now_ms": 1700481600000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 0,
+            "id": 1700460060000,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 40
+          }
+        ],
+        "rollover_hour": 4,
+        "study_day": 19681,
+        "tokens": [
+          {
+            "activated_at_ms": 1700460000000,
+            "consumed": 0,
+            "granted_at_ms": 1700456400000,
+            "window_ends_at_ms": 1700467200000
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": []
+      }
+    },
+    {
+      "class": "study",
+      "input": {
+        "now_ms": 1700481600000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 1,
+            "id": 1700460060000,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 40
+          }
+        ],
+        "rollover_hour": 4,
+        "study_day": 19681,
+        "tokens": [
+          {
+            "activated_at_ms": 1700460000000,
+            "consumed": 0,
+            "granted_at_ms": 1700456400000,
+            "window_ends_at_ms": 1700467200000
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": [
+          {
+            "amount": 40,
+            "source": "2x:1",
+            "study_day": 19681,
+            "track": "language"
+          }
+        ]
+      }
+    },
+    {
+      "class": "study",
+      "input": {
+        "now_ms": 1700481600000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 4,
+            "id": 1700460060000,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 40
+          }
+        ],
+        "rollover_hour": 4,
+        "study_day": 19681,
+        "tokens": [
+          {
+            "activated_at_ms": 1700460000000,
+            "consumed": 0,
+            "granted_at_ms": 1700456400000,
+            "window_ends_at_ms": 1700467200000
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": [
+          {
+            "amount": 40,
+            "source": "2x:1",
+            "study_day": 19681,
+            "track": "language"
+          }
+        ]
+      }
+    },
+    {
+      "class": "study",
+      "input": {
+        "now_ms": 1700481600000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 0,
+            "id": 1700460060000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 40
+          }
+        ],
+        "rollover_hour": 4,
+        "study_day": 19681,
+        "tokens": [
+          {
+            "activated_at_ms": 1700460000000,
+            "consumed": 0,
+            "granted_at_ms": 1700456400000,
+            "window_ends_at_ms": 1700467200000
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": []
+      }
+    },
+    {
+      "class": "study",
+      "input": {
+        "now_ms": 1700481600000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 1,
+            "id": 1700460060000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 40
+          }
+        ],
+        "rollover_hour": 4,
+        "study_day": 19681,
+        "tokens": [
+          {
+            "activated_at_ms": 1700460000000,
+            "consumed": 0,
+            "granted_at_ms": 1700456400000,
+            "window_ends_at_ms": 1700467200000
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": [
+          {
+            "amount": 40,
+            "source": "2x:1",
+            "study_day": 19681,
+            "track": "language"
+          }
+        ]
+      }
+    },
+    {
+      "class": "study",
+      "input": {
+        "now_ms": 1700481600000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 4,
+            "id": 1700460060000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 40
+          }
+        ],
+        "rollover_hour": 4,
+        "study_day": 19681,
+        "tokens": [
+          {
+            "activated_at_ms": 1700460000000,
+            "consumed": 0,
+            "granted_at_ms": 1700456400000,
+            "window_ends_at_ms": 1700467200000
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": [
+          {
+            "amount": 40,
+            "source": "2x:1",
+            "study_day": 19681,
+            "track": "language"
+          }
+        ]
+      }
+    },
+    {
+      "class": "study",
+      "input": {
+        "now_ms": 1700481600000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 0,
+            "id": 1700460060000,
+            "kind": 2,
+            "taken_ms": 5000,
+            "xp": 40
+          }
+        ],
+        "rollover_hour": 4,
+        "study_day": 19681,
+        "tokens": [
+          {
+            "activated_at_ms": 1700460000000,
+            "consumed": 0,
+            "granted_at_ms": 1700456400000,
+            "window_ends_at_ms": 1700467200000
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": []
+      }
+    },
+    {
+      "class": "study",
+      "input": {
+        "now_ms": 1700481600000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 1,
+            "id": 1700460060000,
+            "kind": 2,
+            "taken_ms": 5000,
+            "xp": 40
+          }
+        ],
+        "rollover_hour": 4,
+        "study_day": 19681,
+        "tokens": [
+          {
+            "activated_at_ms": 1700460000000,
+            "consumed": 0,
+            "granted_at_ms": 1700456400000,
+            "window_ends_at_ms": 1700467200000
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": [
+          {
+            "amount": 40,
+            "source": "2x:1",
+            "study_day": 19681,
+            "track": "language"
+          }
+        ]
+      }
+    },
+    {
+      "class": "study",
+      "input": {
+        "now_ms": 1700481600000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 4,
+            "id": 1700460060000,
+            "kind": 2,
+            "taken_ms": 5000,
+            "xp": 40
+          }
+        ],
+        "rollover_hour": 4,
+        "study_day": 19681,
+        "tokens": [
+          {
+            "activated_at_ms": 1700460000000,
+            "consumed": 0,
+            "granted_at_ms": 1700456400000,
+            "window_ends_at_ms": 1700467200000
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": [
+          {
+            "amount": 40,
+            "source": "2x:1",
+            "study_day": 19681,
+            "track": "language"
+          }
+        ]
+      }
+    },
+    {
+      "class": "study",
+      "input": {
+        "now_ms": 1700481600000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 0,
+            "id": 1700460060000,
+            "kind": 3,
+            "taken_ms": 5000,
+            "xp": 40
+          }
+        ],
+        "rollover_hour": 4,
+        "study_day": 19681,
+        "tokens": [
+          {
+            "activated_at_ms": 1700460000000,
+            "consumed": 0,
+            "granted_at_ms": 1700456400000,
+            "window_ends_at_ms": 1700467200000
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": []
+      }
+    },
+    {
+      "class": "study",
+      "input": {
+        "now_ms": 1700481600000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 1,
+            "id": 1700460060000,
+            "kind": 3,
+            "taken_ms": 5000,
+            "xp": 40
+          }
+        ],
+        "rollover_hour": 4,
+        "study_day": 19681,
+        "tokens": [
+          {
+            "activated_at_ms": 1700460000000,
+            "consumed": 0,
+            "granted_at_ms": 1700456400000,
+            "window_ends_at_ms": 1700467200000
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": [
+          {
+            "amount": 40,
+            "source": "2x:1",
+            "study_day": 19681,
+            "track": "language"
+          }
+        ]
+      }
+    },
+    {
+      "class": "study",
+      "input": {
+        "now_ms": 1700481600000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 4,
+            "id": 1700460060000,
+            "kind": 3,
+            "taken_ms": 5000,
+            "xp": 40
+          }
+        ],
+        "rollover_hour": 4,
+        "study_day": 19681,
+        "tokens": [
+          {
+            "activated_at_ms": 1700460000000,
+            "consumed": 0,
+            "granted_at_ms": 1700456400000,
+            "window_ends_at_ms": 1700467200000
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": [
+          {
+            "amount": 40,
+            "source": "2x:1",
+            "study_day": 19681,
+            "track": "language"
+          }
+        ]
+      }
+    },
+    {
+      "class": "study",
+      "input": {
+        "now_ms": 1700481600000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 0,
+            "id": 1700460060000,
+            "kind": 4,
+            "taken_ms": 5000,
+            "xp": 40
+          }
+        ],
+        "rollover_hour": 4,
+        "study_day": 19681,
+        "tokens": [
+          {
+            "activated_at_ms": 1700460000000,
+            "consumed": 0,
+            "granted_at_ms": 1700456400000,
+            "window_ends_at_ms": 1700467200000
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": []
+      }
+    },
+    {
+      "class": "study",
+      "input": {
+        "now_ms": 1700481600000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 1,
+            "id": 1700460060000,
+            "kind": 4,
+            "taken_ms": 5000,
+            "xp": 40
+          }
+        ],
+        "rollover_hour": 4,
+        "study_day": 19681,
+        "tokens": [
+          {
+            "activated_at_ms": 1700460000000,
+            "consumed": 0,
+            "granted_at_ms": 1700456400000,
+            "window_ends_at_ms": 1700467200000
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": []
+      }
+    },
+    {
+      "class": "study",
+      "input": {
+        "now_ms": 1700481600000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 4,
+            "id": 1700460060000,
+            "kind": 4,
+            "taken_ms": 5000,
+            "xp": 40
+          }
+        ],
+        "rollover_hour": 4,
+        "study_day": 19681,
+        "tokens": [
+          {
+            "activated_at_ms": 1700460000000,
+            "consumed": 0,
+            "granted_at_ms": 1700456400000,
+            "window_ends_at_ms": 1700467200000
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": []
+      }
+    },
+    {
+      "class": "study",
+      "input": {
+        "now_ms": 1700481600000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 0,
+            "id": 1700460060000,
+            "kind": 5,
+            "taken_ms": 5000,
+            "xp": 40
+          }
+        ],
+        "rollover_hour": 4,
+        "study_day": 19681,
+        "tokens": [
+          {
+            "activated_at_ms": 1700460000000,
+            "consumed": 0,
+            "granted_at_ms": 1700456400000,
+            "window_ends_at_ms": 1700467200000
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": []
+      }
+    },
+    {
+      "class": "study",
+      "input": {
+        "now_ms": 1700481600000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 1,
+            "id": 1700460060000,
+            "kind": 5,
+            "taken_ms": 5000,
+            "xp": 40
+          }
+        ],
+        "rollover_hour": 4,
+        "study_day": 19681,
+        "tokens": [
+          {
+            "activated_at_ms": 1700460000000,
+            "consumed": 0,
+            "granted_at_ms": 1700456400000,
+            "window_ends_at_ms": 1700467200000
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": []
+      }
+    },
+    {
+      "class": "study",
+      "input": {
+        "now_ms": 1700481600000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 4,
+            "id": 1700460060000,
+            "kind": 5,
+            "taken_ms": 5000,
+            "xp": 40
+          }
+        ],
+        "rollover_hour": 4,
+        "study_day": 19681,
+        "tokens": [
+          {
+            "activated_at_ms": 1700460000000,
+            "consumed": 0,
+            "granted_at_ms": 1700456400000,
+            "window_ends_at_ms": 1700467200000
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": []
+      }
+    },
+    {
+      "class": "rollover",
+      "input": {
+        "now_ms": 1700625600000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700535600000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 11
+          },
+          {
+            "card_id": 2,
+            "ease": 3,
+            "id": 1700539199999,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 13
+          },
+          {
+            "card_id": 3,
+            "ease": 3,
+            "id": 1700539200000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 17
+          },
+          {
+            "card_id": 4,
+            "ease": 3,
+            "id": 1700542799999,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 19
+          }
+        ],
+        "rollover_hour": 4,
+        "study_day": 19681,
+        "tokens": [
+          {
+            "activated_at_ms": 1700535600000,
+            "consumed": 0,
+            "granted_at_ms": 1700532000000,
+            "window_ends_at_ms": 1700542800000
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": [
+          {
+            "amount": 24,
+            "source": "2x:1",
+            "study_day": 19681,
+            "track": "language"
+          }
+        ]
+      }
+    },
+    {
+      "class": "rollover",
+      "input": {
+        "now_ms": 1700625600000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700535600000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 11
+          },
+          {
+            "card_id": 2,
+            "ease": 3,
+            "id": 1700539199999,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 13
+          },
+          {
+            "card_id": 3,
+            "ease": 3,
+            "id": 1700539200000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 17
+          },
+          {
+            "card_id": 4,
+            "ease": 3,
+            "id": 1700542799999,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 19
+          }
+        ],
+        "rollover_hour": 4,
+        "study_day": 19682,
+        "tokens": [
+          {
+            "activated_at_ms": 1700535600000,
+            "consumed": 0,
+            "granted_at_ms": 1700532000000,
+            "window_ends_at_ms": 1700542800000
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": [
+          {
+            "amount": 36,
+            "source": "2x:1",
+            "study_day": 19682,
+            "track": "language"
+          }
+        ]
+      }
+    },
+    {
+      "class": "rollover",
+      "input": {
+        "now_ms": 1700625600000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700535600000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 11
+          },
+          {
+            "card_id": 2,
+            "ease": 3,
+            "id": 1700539199999,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 13
+          },
+          {
+            "card_id": 3,
+            "ease": 3,
+            "id": 1700539200000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 17
+          },
+          {
+            "card_id": 4,
+            "ease": 3,
+            "id": 1700542799999,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 19
+          }
+        ],
+        "rollover_hour": 4,
+        "study_day": 19683,
+        "tokens": [
+          {
+            "activated_at_ms": 1700535600000,
+            "consumed": 0,
+            "granted_at_ms": 1700532000000,
+            "window_ends_at_ms": 1700542800000
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": []
+      }
+    },
+    {
+      "class": "rollover",
+      "input": {
+        "now_ms": 1700611200000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700521200000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 11
+          },
+          {
+            "card_id": 2,
+            "ease": 3,
+            "id": 1700524799999,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 13
+          },
+          {
+            "card_id": 3,
+            "ease": 3,
+            "id": 1700524800000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 17
+          },
+          {
+            "card_id": 4,
+            "ease": 3,
+            "id": 1700528399999,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 19
+          }
+        ],
+        "rollover_hour": 0,
+        "study_day": 19681,
+        "tokens": [
+          {
+            "activated_at_ms": 1700521200000,
+            "consumed": 0,
+            "granted_at_ms": 1700517600000,
+            "window_ends_at_ms": 1700528400000
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": [
+          {
+            "amount": 24,
+            "source": "2x:1",
+            "study_day": 19681,
+            "track": "language"
+          }
+        ]
+      }
+    },
+    {
+      "class": "rollover",
+      "input": {
+        "now_ms": 1700611200000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700521200000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 11
+          },
+          {
+            "card_id": 2,
+            "ease": 3,
+            "id": 1700524799999,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 13
+          },
+          {
+            "card_id": 3,
+            "ease": 3,
+            "id": 1700524800000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 17
+          },
+          {
+            "card_id": 4,
+            "ease": 3,
+            "id": 1700528399999,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 19
+          }
+        ],
+        "rollover_hour": 0,
+        "study_day": 19682,
+        "tokens": [
+          {
+            "activated_at_ms": 1700521200000,
+            "consumed": 0,
+            "granted_at_ms": 1700517600000,
+            "window_ends_at_ms": 1700528400000
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": [
+          {
+            "amount": 36,
+            "source": "2x:1",
+            "study_day": 19682,
+            "track": "language"
+          }
+        ]
+      }
+    },
+    {
+      "class": "rollover",
+      "input": {
+        "now_ms": 1700611200000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700521200000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 11
+          },
+          {
+            "card_id": 2,
+            "ease": 3,
+            "id": 1700524799999,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 13
+          },
+          {
+            "card_id": 3,
+            "ease": 3,
+            "id": 1700524800000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 17
+          },
+          {
+            "card_id": 4,
+            "ease": 3,
+            "id": 1700528399999,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 19
+          }
+        ],
+        "rollover_hour": 0,
+        "study_day": 19683,
+        "tokens": [
+          {
+            "activated_at_ms": 1700521200000,
+            "consumed": 0,
+            "granted_at_ms": 1700517600000,
+            "window_ends_at_ms": 1700528400000
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": []
+      }
+    },
+    {
+      "class": "rollover",
+      "input": {
+        "now_ms": 1700694000000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700604000000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 11
+          },
+          {
+            "card_id": 2,
+            "ease": 3,
+            "id": 1700607599999,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 13
+          },
+          {
+            "card_id": 3,
+            "ease": 3,
+            "id": 1700607600000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 17
+          },
+          {
+            "card_id": 4,
+            "ease": 3,
+            "id": 1700611199999,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 19
+          }
+        ],
+        "rollover_hour": 23,
+        "study_day": 19681,
+        "tokens": [
+          {
+            "activated_at_ms": 1700604000000,
+            "consumed": 0,
+            "granted_at_ms": 1700600400000,
+            "window_ends_at_ms": 1700611200000
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": [
+          {
+            "amount": 24,
+            "source": "2x:1",
+            "study_day": 19681,
+            "track": "language"
+          }
+        ]
+      }
+    },
+    {
+      "class": "rollover",
+      "input": {
+        "now_ms": 1700694000000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700604000000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 11
+          },
+          {
+            "card_id": 2,
+            "ease": 3,
+            "id": 1700607599999,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 13
+          },
+          {
+            "card_id": 3,
+            "ease": 3,
+            "id": 1700607600000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 17
+          },
+          {
+            "card_id": 4,
+            "ease": 3,
+            "id": 1700611199999,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 19
+          }
+        ],
+        "rollover_hour": 23,
+        "study_day": 19682,
+        "tokens": [
+          {
+            "activated_at_ms": 1700604000000,
+            "consumed": 0,
+            "granted_at_ms": 1700600400000,
+            "window_ends_at_ms": 1700611200000
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": [
+          {
+            "amount": 36,
+            "source": "2x:1",
+            "study_day": 19682,
+            "track": "language"
+          }
+        ]
+      }
+    },
+    {
+      "class": "rollover",
+      "input": {
+        "now_ms": 1700694000000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700604000000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 11
+          },
+          {
+            "card_id": 2,
+            "ease": 3,
+            "id": 1700607599999,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 13
+          },
+          {
+            "card_id": 3,
+            "ease": 3,
+            "id": 1700607600000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 17
+          },
+          {
+            "card_id": 4,
+            "ease": 3,
+            "id": 1700611199999,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 19
+          }
+        ],
+        "rollover_hour": 23,
+        "study_day": 19683,
+        "tokens": [
+          {
+            "activated_at_ms": 1700604000000,
+            "consumed": 0,
+            "granted_at_ms": 1700600400000,
+            "window_ends_at_ms": 1700611200000
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": []
+      }
+    },
+    {
+      "class": "rollover",
+      "input": {
+        "now_ms": 1700605800000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700515800000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 11
+          },
+          {
+            "card_id": 2,
+            "ease": 3,
+            "id": 1700519399999,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 13
+          },
+          {
+            "card_id": 3,
+            "ease": 3,
+            "id": 1700519400000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 17
+          },
+          {
+            "card_id": 4,
+            "ease": 3,
+            "id": 1700522999999,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 19
+          }
+        ],
+        "rollover_hour": 4,
+        "study_day": 19681,
+        "tokens": [
+          {
+            "activated_at_ms": 1700515800000,
+            "consumed": 0,
+            "granted_at_ms": 1700512200000,
+            "window_ends_at_ms": 1700523000000
+          }
+        ],
+        "tz_offset_minutes": 330
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": [
+          {
+            "amount": 24,
+            "source": "2x:1",
+            "study_day": 19681,
+            "track": "language"
+          }
+        ]
+      }
+    },
+    {
+      "class": "rollover",
+      "input": {
+        "now_ms": 1700605800000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700515800000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 11
+          },
+          {
+            "card_id": 2,
+            "ease": 3,
+            "id": 1700519399999,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 13
+          },
+          {
+            "card_id": 3,
+            "ease": 3,
+            "id": 1700519400000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 17
+          },
+          {
+            "card_id": 4,
+            "ease": 3,
+            "id": 1700522999999,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 19
+          }
+        ],
+        "rollover_hour": 4,
+        "study_day": 19682,
+        "tokens": [
+          {
+            "activated_at_ms": 1700515800000,
+            "consumed": 0,
+            "granted_at_ms": 1700512200000,
+            "window_ends_at_ms": 1700523000000
+          }
+        ],
+        "tz_offset_minutes": 330
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": [
+          {
+            "amount": 36,
+            "source": "2x:1",
+            "study_day": 19682,
+            "track": "language"
+          }
+        ]
+      }
+    },
+    {
+      "class": "rollover",
+      "input": {
+        "now_ms": 1700605800000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700515800000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 11
+          },
+          {
+            "card_id": 2,
+            "ease": 3,
+            "id": 1700519399999,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 13
+          },
+          {
+            "card_id": 3,
+            "ease": 3,
+            "id": 1700519400000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 17
+          },
+          {
+            "card_id": 4,
+            "ease": 3,
+            "id": 1700522999999,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 19
+          }
+        ],
+        "rollover_hour": 4,
+        "study_day": 19683,
+        "tokens": [
+          {
+            "activated_at_ms": 1700515800000,
+            "consumed": 0,
+            "granted_at_ms": 1700512200000,
+            "window_ends_at_ms": 1700523000000
+          }
+        ],
+        "tz_offset_minutes": 330
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": []
+      }
+    },
+    {
+      "class": "rollover",
+      "input": {
+        "now_ms": 1700643600000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700553600000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 11
+          },
+          {
+            "card_id": 2,
+            "ease": 3,
+            "id": 1700557199999,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 13
+          },
+          {
+            "card_id": 3,
+            "ease": 3,
+            "id": 1700557200000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 17
+          },
+          {
+            "card_id": 4,
+            "ease": 3,
+            "id": 1700560799999,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 19
+          }
+        ],
+        "rollover_hour": 4,
+        "study_day": 19681,
+        "tokens": [
+          {
+            "activated_at_ms": 1700553600000,
+            "consumed": 0,
+            "granted_at_ms": 1700550000000,
+            "window_ends_at_ms": 1700560800000
+          }
+        ],
+        "tz_offset_minutes": -300
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": [
+          {
+            "amount": 24,
+            "source": "2x:1",
+            "study_day": 19681,
+            "track": "language"
+          }
+        ]
+      }
+    },
+    {
+      "class": "rollover",
+      "input": {
+        "now_ms": 1700643600000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700553600000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 11
+          },
+          {
+            "card_id": 2,
+            "ease": 3,
+            "id": 1700557199999,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 13
+          },
+          {
+            "card_id": 3,
+            "ease": 3,
+            "id": 1700557200000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 17
+          },
+          {
+            "card_id": 4,
+            "ease": 3,
+            "id": 1700560799999,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 19
+          }
+        ],
+        "rollover_hour": 4,
+        "study_day": 19682,
+        "tokens": [
+          {
+            "activated_at_ms": 1700553600000,
+            "consumed": 0,
+            "granted_at_ms": 1700550000000,
+            "window_ends_at_ms": 1700560800000
+          }
+        ],
+        "tz_offset_minutes": -300
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": [
+          {
+            "amount": 36,
+            "source": "2x:1",
+            "study_day": 19682,
+            "track": "language"
+          }
+        ]
+      }
+    },
+    {
+      "class": "rollover",
+      "input": {
+        "now_ms": 1700643600000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700553600000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 11
+          },
+          {
+            "card_id": 2,
+            "ease": 3,
+            "id": 1700557199999,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 13
+          },
+          {
+            "card_id": 3,
+            "ease": 3,
+            "id": 1700557200000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 17
+          },
+          {
+            "card_id": 4,
+            "ease": 3,
+            "id": 1700560799999,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 19
+          }
+        ],
+        "rollover_hour": 4,
+        "study_day": 19683,
+        "tokens": [
+          {
+            "activated_at_ms": 1700553600000,
+            "consumed": 0,
+            "granted_at_ms": 1700550000000,
+            "window_ends_at_ms": 1700560800000
+          }
+        ],
+        "tz_offset_minutes": -300
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": []
+      }
+    },
+    {
+      "class": "rollover",
+      "input": {
+        "now_ms": 1700560800000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700470800000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 11
+          },
+          {
+            "card_id": 2,
+            "ease": 3,
+            "id": 1700474399999,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 13
+          },
+          {
+            "card_id": 3,
+            "ease": 3,
+            "id": 1700474400000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 17
+          },
+          {
+            "card_id": 4,
+            "ease": 3,
+            "id": 1700477999999,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 19
+          }
+        ],
+        "rollover_hour": 0,
+        "study_day": 19681,
+        "tokens": [
+          {
+            "activated_at_ms": 1700470800000,
+            "consumed": 0,
+            "granted_at_ms": 1700467200000,
+            "window_ends_at_ms": 1700478000000
+          }
+        ],
+        "tz_offset_minutes": 840
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": [
+          {
+            "amount": 24,
+            "source": "2x:1",
+            "study_day": 19681,
+            "track": "language"
+          }
+        ]
+      }
+    },
+    {
+      "class": "rollover",
+      "input": {
+        "now_ms": 1700560800000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700470800000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 11
+          },
+          {
+            "card_id": 2,
+            "ease": 3,
+            "id": 1700474399999,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 13
+          },
+          {
+            "card_id": 3,
+            "ease": 3,
+            "id": 1700474400000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 17
+          },
+          {
+            "card_id": 4,
+            "ease": 3,
+            "id": 1700477999999,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 19
+          }
+        ],
+        "rollover_hour": 0,
+        "study_day": 19682,
+        "tokens": [
+          {
+            "activated_at_ms": 1700470800000,
+            "consumed": 0,
+            "granted_at_ms": 1700467200000,
+            "window_ends_at_ms": 1700478000000
+          }
+        ],
+        "tz_offset_minutes": 840
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": [
+          {
+            "amount": 36,
+            "source": "2x:1",
+            "study_day": 19682,
+            "track": "language"
+          }
+        ]
+      }
+    },
+    {
+      "class": "rollover",
+      "input": {
+        "now_ms": 1700560800000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700470800000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 11
+          },
+          {
+            "card_id": 2,
+            "ease": 3,
+            "id": 1700474399999,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 13
+          },
+          {
+            "card_id": 3,
+            "ease": 3,
+            "id": 1700474400000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 17
+          },
+          {
+            "card_id": 4,
+            "ease": 3,
+            "id": 1700477999999,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 19
+          }
+        ],
+        "rollover_hour": 0,
+        "study_day": 19683,
+        "tokens": [
+          {
+            "activated_at_ms": 1700470800000,
+            "consumed": 0,
+            "granted_at_ms": 1700467200000,
+            "window_ends_at_ms": 1700478000000
+          }
+        ],
+        "tz_offset_minutes": 840
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": []
+      }
+    },
+    {
+      "class": "consume",
+      "input": {
+        "now_ms": 1700463600000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700460060000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 25
+          }
+        ],
+        "rollover_hour": 4,
+        "study_day": 19681,
+        "tokens": [
+          {
+            "activated_at_ms": 1700460000000,
+            "consumed": 0,
+            "granted_at_ms": 1700456400000,
+            "window_ends_at_ms": 1700467200000
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [],
+        "grants": [
+          {
+            "amount": 25,
+            "source": "2x:1",
+            "study_day": 19681,
+            "track": "language"
+          }
+        ]
+      }
+    },
+    {
+      "class": "consume",
+      "input": {
+        "now_ms": 1700467199999,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700460060000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 25
+          }
+        ],
+        "rollover_hour": 4,
+        "study_day": 19681,
+        "tokens": [
+          {
+            "activated_at_ms": 1700460000000,
+            "consumed": 0,
+            "granted_at_ms": 1700456400000,
+            "window_ends_at_ms": 1700467200000
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [],
+        "grants": [
+          {
+            "amount": 25,
+            "source": "2x:1",
+            "study_day": 19681,
+            "track": "language"
+          }
+        ]
+      }
+    },
+    {
+      "class": "consume",
+      "input": {
+        "now_ms": 1700467200000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700460060000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 25
+          }
+        ],
+        "rollover_hour": 4,
+        "study_day": 19681,
+        "tokens": [
+          {
+            "activated_at_ms": 1700460000000,
+            "consumed": 0,
+            "granted_at_ms": 1700456400000,
+            "window_ends_at_ms": 1700467200000
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [],
+        "grants": [
+          {
+            "amount": 25,
+            "source": "2x:1",
+            "study_day": 19681,
+            "track": "language"
+          }
+        ]
+      }
+    },
+    {
+      "class": "consume",
+      "input": {
+        "now_ms": 1700467200001,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700460060000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 25
+          }
+        ],
+        "rollover_hour": 4,
+        "study_day": 19681,
+        "tokens": [
+          {
+            "activated_at_ms": 1700460000000,
+            "consumed": 0,
+            "granted_at_ms": 1700456400000,
+            "window_ends_at_ms": 1700467200000
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": [
+          {
+            "amount": 25,
+            "source": "2x:1",
+            "study_day": 19681,
+            "track": "language"
+          }
+        ]
+      }
+    },
+    {
+      "class": "consume",
+      "input": {
+        "now_ms": 1700481600000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700460060000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 25
+          }
+        ],
+        "rollover_hour": 4,
+        "study_day": 19681,
+        "tokens": [
+          {
+            "activated_at_ms": 1700460000000,
+            "consumed": 1,
+            "granted_at_ms": 1700456400000,
+            "window_ends_at_ms": 1700467200000
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [],
+        "grants": [
+          {
+            "amount": 25,
+            "source": "2x:1",
+            "study_day": 19681,
+            "track": "language"
+          }
+        ]
+      }
+    },
+    {
+      "class": "consume",
+      "input": {
+        "now_ms": 1700481600000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700460060000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 25
+          }
+        ],
+        "rollover_hour": 4,
+        "study_day": 19681,
+        "tokens": [
+          {
+            "activated_at_ms": 0,
+            "consumed": 0,
+            "granted_at_ms": 1700456400000,
+            "window_ends_at_ms": 0
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [],
+        "grants": []
+      }
+    },
+    {
+      "class": "consume",
+      "input": {
+        "now_ms": 1700470800000,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700460060000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 25
+          },
+          {
+            "card_id": 2,
+            "ease": 3,
+            "id": 1700467200005,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 30
+          }
+        ],
+        "rollover_hour": 4,
+        "study_day": 19681,
+        "tokens": [
+          {
+            "activated_at_ms": 1700373600000,
+            "consumed": 0,
+            "granted_at_ms": 1700370000000,
+            "window_ends_at_ms": 1700380800000
+          },
+          {
+            "activated_at_ms": 0,
+            "consumed": 0,
+            "granted_at_ms": 1700460000000,
+            "window_ends_at_ms": 0
+          },
+          {
+            "activated_at_ms": 1700460000000,
+            "consumed": 0,
+            "granted_at_ms": 1700456400000,
+            "window_ends_at_ms": 1700467200000
+          },
+          {
+            "activated_at_ms": 1700467200000,
+            "consumed": 0,
+            "granted_at_ms": 1700463600000,
+            "window_ends_at_ms": 1700474400000
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [
+          1,
+          3
+        ],
+        "grants": [
+          {
+            "amount": 25,
+            "source": "2x:3",
+            "study_day": 19681,
+            "track": "language"
+          },
+          {
+            "amount": 30,
+            "source": "2x:4",
+            "study_day": 19681,
+            "track": "language"
+          }
+        ]
+      }
+    },
+    {
+      "input": {
+        "now_ms": 1700547528686,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700442226326,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 26
+          },
+          {
+            "card_id": 2,
+            "ease": 2,
+            "id": 1700443092432,
+            "kind": 2,
+            "taken_ms": 5000,
+            "xp": 8
+          },
+          {
+            "card_id": 3,
+            "ease": 3,
+            "id": 1700447963408,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 28
+          },
+          {
+            "card_id": 4,
+            "ease": 2,
+            "id": 1700449639588,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 20
+          },
+          {
+            "card_id": 5,
+            "ease": 4,
+            "id": 1700453224643,
+            "kind": 5,
+            "taken_ms": 5000,
+            "xp": 5
+          },
+          {
+            "card_id": 6,
+            "ease": 0,
+            "id": 1700457352791,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 25
+          },
+          {
+            "card_id": 7,
+            "ease": 0,
+            "id": 1700462161225,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 15
+          },
+          {
+            "card_id": 8,
+            "ease": 1,
+            "id": 1700462954158,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 5
+          },
+          {
+            "card_id": 9,
+            "ease": 2,
+            "id": 1700465332098,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 19
+          },
+          {
+            "card_id": 10,
+            "ease": 0,
+            "id": 1700470566230,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 7
+          }
+        ],
+        "rollover_hour": 7,
+        "study_day": 19680,
+        "tokens": [
+          {
+            "activated_at_ms": 1700523307473,
+            "consumed": 0,
+            "granted_at_ms": 1700519707473,
+            "window_ends_at_ms": 1700530507473
+          },
+          {
+            "activated_at_ms": 1700451494429,
+            "consumed": 0,
+            "granted_at_ms": 1700447894429,
+            "window_ends_at_ms": 1700458694429
+          },
+          {
+            "activated_at_ms": 1700444825315,
+            "consumed": 0,
+            "granted_at_ms": 1700441225315,
+            "window_ends_at_ms": 1700452025315
+          }
+        ],
+        "tz_offset_minutes": 330
+      },
+      "output": {
+        "consumed": [
+          1,
+          2,
+          3
+        ],
+        "grants": []
+      }
+    },
+    {
+      "input": {
+        "now_ms": 1700479782965,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 1,
+            "id": 1700444522841,
+            "kind": 4,
+            "taken_ms": 5000,
+            "xp": 17
+          },
+          {
+            "card_id": 2,
+            "ease": 3,
+            "id": 1700447340221,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 38
+          },
+          {
+            "card_id": 3,
+            "ease": 4,
+            "id": 1700452697779,
+            "kind": 5,
+            "taken_ms": 5000,
+            "xp": 17
+          },
+          {
+            "card_id": 4,
+            "ease": 1,
+            "id": 1700456329216,
+            "kind": 2,
+            "taken_ms": 5000,
+            "xp": 10
+          },
+          {
+            "card_id": 5,
+            "ease": 4,
+            "id": 1700457344529,
+            "kind": 2,
+            "taken_ms": 5000,
+            "xp": 8
+          },
+          {
+            "card_id": 6,
+            "ease": 0,
+            "id": 1700460236732,
+            "kind": 3,
+            "taken_ms": 5000,
+            "xp": 14
+          },
+          {
+            "card_id": 7,
+            "ease": 1,
+            "id": 1700460671539,
+            "kind": 2,
+            "taken_ms": 5000,
+            "xp": 33
+          },
+          {
+            "card_id": 8,
+            "ease": 0,
+            "id": 1700462117111,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 11
+          },
+          {
+            "card_id": 9,
+            "ease": 2,
+            "id": 1700464578991,
+            "kind": 4,
+            "taken_ms": 5000,
+            "xp": 0
+          },
+          {
+            "card_id": 10,
+            "ease": 4,
+            "id": 1700467952015,
+            "kind": 5,
+            "taken_ms": 5000,
+            "xp": 29
+          },
+          {
+            "card_id": 11,
+            "ease": 0,
+            "id": 1700468408016,
+            "kind": 2,
+            "taken_ms": 5000,
+            "xp": 10
+          },
+          {
+            "card_id": 12,
+            "ease": 0,
+            "id": 1700473082779,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 21
+          },
+          {
+            "card_id": 13,
+            "ease": 0,
+            "id": 1700477896371,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 6
+          },
+          {
+            "card_id": 14,
+            "ease": 2,
+            "id": 1700480054857,
+            "kind": 4,
+            "taken_ms": 5000,
+            "xp": 5
+          },
+          {
+            "card_id": 15,
+            "ease": 1,
+            "id": 1700480426649,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 1
+          },
+          {
+            "card_id": 16,
+            "ease": 0,
+            "id": 1700484731098,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 32
+          },
+          {
+            "card_id": 17,
+            "ease": 1,
+            "id": 1700484930622,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 33
+          },
+          {
+            "card_id": 18,
+            "ease": 2,
+            "id": 1700485987882,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 26
+          },
+          {
+            "card_id": 19,
+            "ease": 1,
+            "id": 1700489242993,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 6
+          },
+          {
+            "card_id": 20,
+            "ease": 0,
+            "id": 1700490900039,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 14
+          },
+          {
+            "card_id": 21,
+            "ease": 3,
+            "id": 1700491951759,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 35
+          },
+          {
+            "card_id": 22,
+            "ease": 3,
+            "id": 1700492645855,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 28
+          },
+          {
+            "card_id": 23,
+            "ease": 2,
+            "id": 1700494145470,
+            "kind": 2,
+            "taken_ms": 5000,
+            "xp": 12
+          },
+          {
+            "card_id": 24,
+            "ease": 1,
+            "id": 1700494942367,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 18
+          },
+          {
+            "card_id": 25,
+            "ease": 1,
+            "id": 1700500167688,
+            "kind": 4,
+            "taken_ms": 5000,
+            "xp": 19
+          },
+          {
+            "card_id": 26,
+            "ease": 2,
+            "id": 1700500995456,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 0
+          },
+          {
+            "card_id": 27,
+            "ease": 2,
+            "id": 1700504245713,
+            "kind": 2,
+            "taken_ms": 5000,
+            "xp": 23
+          },
+          {
+            "card_id": 28,
+            "ease": 0,
+            "id": 1700508125609,
+            "kind": 3,
+            "taken_ms": 5000,
+            "xp": 6
+          },
+          {
+            "card_id": 29,
+            "ease": 0,
+            "id": 1700512062374,
+            "kind": 4,
+            "taken_ms": 5000,
+            "xp": 13
+          },
+          {
+            "card_id": 30,
+            "ease": 4,
+            "id": 1700516502188,
+            "kind": 3,
+            "taken_ms": 5000,
+            "xp": 4
+          },
+          {
+            "card_id": 31,
+            "ease": 1,
+            "id": 1700519361160,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 0
+          },
+          {
+            "card_id": 32,
+            "ease": 0,
+            "id": 1700521827512,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 38
+          },
+          {
+            "card_id": 33,
+            "ease": 1,
+            "id": 1700522173434,
+            "kind": 3,
+            "taken_ms": 5000,
+            "xp": 13
+          },
+          {
+            "card_id": 34,
+            "ease": 0,
+            "id": 1700525579962,
+            "kind": 3,
+            "taken_ms": 5000,
+            "xp": 38
+          },
+          {
+            "card_id": 35,
+            "ease": 3,
+            "id": 1700528597450,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 18
+          },
+          {
+            "card_id": 36,
+            "ease": 3,
+            "id": 1700529752538,
+            "kind": 5,
+            "taken_ms": 5000,
+            "xp": 39
+          },
+          {
+            "card_id": 37,
+            "ease": 3,
+            "id": 1700534471002,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 25
+          },
+          {
+            "card_id": 38,
+            "ease": 0,
+            "id": 1700534501590,
+            "kind": 3,
+            "taken_ms": 5000,
+            "xp": 29
+          },
+          {
+            "card_id": 39,
+            "ease": 1,
+            "id": 1700538628826,
+            "kind": 5,
+            "taken_ms": 5000,
+            "xp": 20
+          }
+        ],
+        "rollover_hour": 14,
+        "study_day": 19681,
+        "tokens": [
+          {
+            "activated_at_ms": 0,
+            "consumed": 0,
+            "granted_at_ms": 1700438717868,
+            "window_ends_at_ms": 0
+          }
+        ],
+        "tz_offset_minutes": 60
+      },
+      "output": {
+        "consumed": [],
+        "grants": []
+      }
+    },
+    {
+      "input": {
+        "now_ms": 1700519017224,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 4,
+            "id": 1700446001637,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 15
+          },
+          {
+            "card_id": 2,
+            "ease": 1,
+            "id": 1700448483975,
+            "kind": 4,
+            "taken_ms": 5000,
+            "xp": 0
+          },
+          {
+            "card_id": 3,
+            "ease": 4,
+            "id": 1700451532587,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 22
+          },
+          {
+            "card_id": 4,
+            "ease": 3,
+            "id": 1700451691285,
+            "kind": 3,
+            "taken_ms": 5000,
+            "xp": 14
+          },
+          {
+            "card_id": 5,
+            "ease": 3,
+            "id": 1700455457508,
+            "kind": 2,
+            "taken_ms": 5000,
+            "xp": 15
+          },
+          {
+            "card_id": 6,
+            "ease": 4,
+            "id": 1700459954312,
+            "kind": 3,
+            "taken_ms": 5000,
+            "xp": 18
+          },
+          {
+            "card_id": 7,
+            "ease": 0,
+            "id": 1700462441549,
+            "kind": 4,
+            "taken_ms": 5000,
+            "xp": 39
+          }
+        ],
+        "rollover_hour": 11,
+        "study_day": 19681,
+        "tokens": [
+          {
+            "activated_at_ms": 1700458924745,
+            "consumed": 0,
+            "granted_at_ms": 1700455324745,
+            "window_ends_at_ms": 1700466124745
+          },
+          {
+            "activated_at_ms": 1700443446529,
+            "consumed": 0,
+            "granted_at_ms": 1700439846529,
+            "window_ends_at_ms": 1700450646529
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [
+          1,
+          2
+        ],
+        "grants": []
+      }
+    },
+    {
+      "input": {
+        "now_ms": 1700550830249,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 0,
+            "id": 1700443186069,
+            "kind": 4,
+            "taken_ms": 5000,
+            "xp": 34
+          },
+          {
+            "card_id": 2,
+            "ease": 4,
+            "id": 1700445435465,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 2
+          },
+          {
+            "card_id": 3,
+            "ease": 1,
+            "id": 1700448543138,
+            "kind": 3,
+            "taken_ms": 5000,
+            "xp": 25
+          },
+          {
+            "card_id": 4,
+            "ease": 3,
+            "id": 1700452801699,
+            "kind": 4,
+            "taken_ms": 5000,
+            "xp": 19
+          },
+          {
+            "card_id": 5,
+            "ease": 1,
+            "id": 1700454305956,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 8
+          },
+          {
+            "card_id": 6,
+            "ease": 0,
+            "id": 1700454517576,
+            "kind": 5,
+            "taken_ms": 5000,
+            "xp": 36
+          },
+          {
+            "card_id": 7,
+            "ease": 2,
+            "id": 1700455950618,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 21
+          },
+          {
+            "card_id": 8,
+            "ease": 1,
+            "id": 1700458617002,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 5
+          },
+          {
+            "card_id": 9,
+            "ease": 1,
+            "id": 1700460790810,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 6
+          },
+          {
+            "card_id": 10,
+            "ease": 0,
+            "id": 1700461426313,
+            "kind": 3,
+            "taken_ms": 5000,
+            "xp": 31
+          },
+          {
+            "card_id": 11,
+            "ease": 3,
+            "id": 1700461798168,
+            "kind": 2,
+            "taken_ms": 5000,
+            "xp": 30
+          },
+          {
+            "card_id": 12,
+            "ease": 1,
+            "id": 1700466063320,
+            "kind": 5,
+            "taken_ms": 5000,
+            "xp": 6
+          },
+          {
+            "card_id": 13,
+            "ease": 4,
+            "id": 1700468668748,
+            "kind": 2,
+            "taken_ms": 5000,
+            "xp": 32
+          },
+          {
+            "card_id": 14,
+            "ease": 3,
+            "id": 1700470103716,
+            "kind": 4,
+            "taken_ms": 5000,
+            "xp": 29
+          },
+          {
+            "card_id": 15,
+            "ease": 1,
+            "id": 1700474452938,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 30
+          },
+          {
+            "card_id": 16,
+            "ease": 2,
+            "id": 1700476046236,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 12
+          },
+          {
+            "card_id": 17,
+            "ease": 3,
+            "id": 1700477642756,
+            "kind": 2,
+            "taken_ms": 5000,
+            "xp": 28
+          },
+          {
+            "card_id": 18,
+            "ease": 4,
+            "id": 1700478213444,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 19
+          },
+          {
+            "card_id": 19,
+            "ease": 2,
+            "id": 1700480037251,
+            "kind": 5,
+            "taken_ms": 5000,
+            "xp": 13
+          },
+          {
+            "card_id": 20,
+            "ease": 2,
+            "id": 1700481774143,
+            "kind": 2,
+            "taken_ms": 5000,
+            "xp": 32
+          },
+          {
+            "card_id": 21,
+            "ease": 2,
+            "id": 1700485744786,
+            "kind": 3,
+            "taken_ms": 5000,
+            "xp": 6
+          },
+          {
+            "card_id": 22,
+            "ease": 4,
+            "id": 1700487798401,
+            "kind": 3,
+            "taken_ms": 5000,
+            "xp": 11
+          },
+          {
+            "card_id": 23,
+            "ease": 1,
+            "id": 1700490919763,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 18
+          },
+          {
+            "card_id": 24,
+            "ease": 1,
+            "id": 1700493731916,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 24
+          },
+          {
+            "card_id": 25,
+            "ease": 4,
+            "id": 1700498025771,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 8
+          },
+          {
+            "card_id": 26,
+            "ease": 4,
+            "id": 1700499523523,
+            "kind": 3,
+            "taken_ms": 5000,
+            "xp": 38
+          },
+          {
+            "card_id": 27,
+            "ease": 2,
+            "id": 1700499831857,
+            "kind": 2,
+            "taken_ms": 5000,
+            "xp": 7
+          },
+          {
+            "card_id": 28,
+            "ease": 4,
+            "id": 1700504551004,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 5
+          },
+          {
+            "card_id": 29,
+            "ease": 3,
+            "id": 1700509608962,
+            "kind": 2,
+            "taken_ms": 5000,
+            "xp": 28
+          },
+          {
+            "card_id": 30,
+            "ease": 1,
+            "id": 1700509973254,
+            "kind": 5,
+            "taken_ms": 5000,
+            "xp": 11
+          },
+          {
+            "card_id": 31,
+            "ease": 4,
+            "id": 1700510775108,
+            "kind": 3,
+            "taken_ms": 5000,
+            "xp": 31
+          },
+          {
+            "card_id": 32,
+            "ease": 1,
+            "id": 1700516044938,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 19
+          },
+          {
+            "card_id": 33,
+            "ease": 0,
+            "id": 1700518353974,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 14
+          },
+          {
+            "card_id": 34,
+            "ease": 4,
+            "id": 1700522973678,
+            "kind": 2,
+            "taken_ms": 5000,
+            "xp": 34
+          },
+          {
+            "card_id": 35,
+            "ease": 1,
+            "id": 1700526595018,
+            "kind": 3,
+            "taken_ms": 5000,
+            "xp": 21
+          }
+        ],
+        "rollover_hour": 16,
+        "study_day": 19680,
+        "tokens": [
+          {
+            "activated_at_ms": 1700519675471,
+            "consumed": 0,
+            "granted_at_ms": 1700516075471,
+            "window_ends_at_ms": 1700526875471
+          },
+          {
+            "activated_at_ms": 1700448592985,
+            "consumed": 0,
+            "granted_at_ms": 1700444992985,
+            "window_ends_at_ms": 1700455792985
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [
+          1,
+          2
+        ],
+        "grants": [
+          {
+            "amount": 8,
+            "source": "2x:2",
+            "study_day": 19680,
+            "track": "language"
+          }
+        ]
+      }
+    },
+    {
+      "input": {
+        "now_ms": 1700499602904,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 0,
+            "id": 1700446473591,
+            "kind": 4,
+            "taken_ms": 5000,
+            "xp": 25
+          },
+          {
+            "card_id": 2,
+            "ease": 0,
+            "id": 1700449523090,
+            "kind": 3,
+            "taken_ms": 5000,
+            "xp": 0
+          },
+          {
+            "card_id": 3,
+            "ease": 1,
+            "id": 1700451017835,
+            "kind": 4,
+            "taken_ms": 5000,
+            "xp": 10
+          },
+          {
+            "card_id": 4,
+            "ease": 3,
+            "id": 1700451616918,
+            "kind": 5,
+            "taken_ms": 5000,
+            "xp": 28
+          },
+          {
+            "card_id": 5,
+            "ease": 4,
+            "id": 1700451974140,
+            "kind": 5,
+            "taken_ms": 5000,
+            "xp": 0
+          },
+          {
+            "card_id": 6,
+            "ease": 4,
+            "id": 1700453801146,
+            "kind": 3,
+            "taken_ms": 5000,
+            "xp": 24
+          },
+          {
+            "card_id": 7,
+            "ease": 2,
+            "id": 1700457678342,
+            "kind": 5,
+            "taken_ms": 5000,
+            "xp": 5
+          },
+          {
+            "card_id": 8,
+            "ease": 2,
+            "id": 1700461573469,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 33
+          },
+          {
+            "card_id": 9,
+            "ease": 1,
+            "id": 1700462452284,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 28
+          },
+          {
+            "card_id": 10,
+            "ease": 0,
+            "id": 1700467668655,
+            "kind": 5,
+            "taken_ms": 5000,
+            "xp": 7
+          },
+          {
+            "card_id": 11,
+            "ease": 1,
+            "id": 1700470621455,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 11
+          },
+          {
+            "card_id": 12,
+            "ease": 0,
+            "id": 1700472513747,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 18
+          },
+          {
+            "card_id": 13,
+            "ease": 3,
+            "id": 1700472951137,
+            "kind": 3,
+            "taken_ms": 5000,
+            "xp": 14
+          },
+          {
+            "card_id": 14,
+            "ease": 3,
+            "id": 1700478282927,
+            "kind": 4,
+            "taken_ms": 5000,
+            "xp": 38
+          },
+          {
+            "card_id": 15,
+            "ease": 2,
+            "id": 1700480600986,
+            "kind": 4,
+            "taken_ms": 5000,
+            "xp": 39
+          },
+          {
+            "card_id": 16,
+            "ease": 1,
+            "id": 1700485630716,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 34
+          },
+          {
+            "card_id": 17,
+            "ease": 0,
+            "id": 1700486079662,
+            "kind": 3,
+            "taken_ms": 5000,
+            "xp": 0
+          },
+          {
+            "card_id": 18,
+            "ease": 3,
+            "id": 1700490319706,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 33
+          },
+          {
+            "card_id": 19,
+            "ease": 4,
+            "id": 1700491563395,
+            "kind": 5,
+            "taken_ms": 5000,
+            "xp": 13
+          }
+        ],
+        "rollover_hour": 4,
+        "study_day": 19680,
+        "tokens": [
+          {
+            "activated_at_ms": 1700443066981,
+            "consumed": 0,
+            "granted_at_ms": 1700439466981,
+            "window_ends_at_ms": 1700450266981
+          },
+          {
+            "activated_at_ms": 1700465431303,
+            "consumed": 0,
+            "granted_at_ms": 1700461831303,
+            "window_ends_at_ms": 1700472631303
+          }
+        ],
+        "tz_offset_minutes": 60
+      },
+      "output": {
+        "consumed": [
+          1,
+          2
+        ],
+        "grants": []
+      }
+    },
+    {
+      "input": {
+        "now_ms": 1700468565572,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 0,
+            "id": 1700443704696,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 5
+          },
+          {
+            "card_id": 2,
+            "ease": 1,
+            "id": 1700443933107,
+            "kind": 3,
+            "taken_ms": 5000,
+            "xp": 39
+          },
+          {
+            "card_id": 3,
+            "ease": 2,
+            "id": 1700446896818,
+            "kind": 4,
+            "taken_ms": 5000,
+            "xp": 19
+          },
+          {
+            "card_id": 4,
+            "ease": 0,
+            "id": 1700447092267,
+            "kind": 2,
+            "taken_ms": 5000,
+            "xp": 16
+          },
+          {
+            "card_id": 5,
+            "ease": 2,
+            "id": 1700447104932,
+            "kind": 4,
+            "taken_ms": 5000,
+            "xp": 20
+          },
+          {
+            "card_id": 6,
+            "ease": 2,
+            "id": 1700451048217,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 29
+          },
+          {
+            "card_id": 7,
+            "ease": 0,
+            "id": 1700451259522,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 2
+          },
+          {
+            "card_id": 8,
+            "ease": 3,
+            "id": 1700455532725,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 19
+          },
+          {
+            "card_id": 9,
+            "ease": 2,
+            "id": 1700459388854,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 39
+          },
+          {
+            "card_id": 10,
+            "ease": 0,
+            "id": 1700464781704,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 27
+          },
+          {
+            "card_id": 11,
+            "ease": 2,
+            "id": 1700468085649,
+            "kind": 4,
+            "taken_ms": 5000,
+            "xp": 1
+          },
+          {
+            "card_id": 12,
+            "ease": 4,
+            "id": 1700468216592,
+            "kind": 5,
+            "taken_ms": 5000,
+            "xp": 33
+          },
+          {
+            "card_id": 13,
+            "ease": 2,
+            "id": 1700468782730,
+            "kind": 4,
+            "taken_ms": 5000,
+            "xp": 0
+          },
+          {
+            "card_id": 14,
+            "ease": 3,
+            "id": 1700469637251,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 31
+          },
+          {
+            "card_id": 15,
+            "ease": 0,
+            "id": 1700472437210,
+            "kind": 4,
+            "taken_ms": 5000,
+            "xp": 33
+          },
+          {
+            "card_id": 16,
+            "ease": 4,
+            "id": 1700472538731,
+            "kind": 5,
+            "taken_ms": 5000,
+            "xp": 7
+          },
+          {
+            "card_id": 17,
+            "ease": 4,
+            "id": 1700477897109,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 2
+          },
+          {
+            "card_id": 18,
+            "ease": 2,
+            "id": 1700481687147,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 15
+          },
+          {
+            "card_id": 19,
+            "ease": 4,
+            "id": 1700486389460,
+            "kind": 5,
+            "taken_ms": 5000,
+            "xp": 4
+          },
+          {
+            "card_id": 20,
+            "ease": 1,
+            "id": 1700487373050,
+            "kind": 5,
+            "taken_ms": 5000,
+            "xp": 4
+          },
+          {
+            "card_id": 21,
+            "ease": 3,
+            "id": 1700489478290,
+            "kind": 5,
+            "taken_ms": 5000,
+            "xp": 37
+          },
+          {
+            "card_id": 22,
+            "ease": 0,
+            "id": 1700493356249,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 31
+          },
+          {
+            "card_id": 23,
+            "ease": 1,
+            "id": 1700497230212,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 5
+          },
+          {
+            "card_id": 24,
+            "ease": 4,
+            "id": 1700502099181,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 33
+          },
+          {
+            "card_id": 25,
+            "ease": 4,
+            "id": 1700506792890,
+            "kind": 3,
+            "taken_ms": 5000,
+            "xp": 39
+          },
+          {
+            "card_id": 26,
+            "ease": 1,
+            "id": 1700508848265,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 12
+          },
+          {
+            "card_id": 27,
+            "ease": 2,
+            "id": 1700509189930,
+            "kind": 3,
+            "taken_ms": 5000,
+            "xp": 8
+          },
+          {
+            "card_id": 28,
+            "ease": 2,
+            "id": 1700514187501,
+            "kind": 2,
+            "taken_ms": 5000,
+            "xp": 29
+          },
+          {
+            "card_id": 29,
+            "ease": 2,
+            "id": 1700518319349,
+            "kind": 3,
+            "taken_ms": 5000,
+            "xp": 0
+          }
+        ],
+        "rollover_hour": 23,
+        "study_day": 19681,
+        "tokens": [
+          {
+            "activated_at_ms": 1700454157304,
+            "consumed": 0,
+            "granted_at_ms": 1700450557304,
+            "window_ends_at_ms": 1700461357304
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": []
+      }
+    },
+    {
+      "input": {
+        "now_ms": 1700545428388,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 1,
+            "id": 1700443493725,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 3
+          },
+          {
+            "card_id": 2,
+            "ease": 0,
+            "id": 1700445000711,
+            "kind": 5,
+            "taken_ms": 5000,
+            "xp": 33
+          },
+          {
+            "card_id": 3,
+            "ease": 0,
+            "id": 1700449226429,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 0
+          },
+          {
+            "card_id": 4,
+            "ease": 3,
+            "id": 1700450118713,
+            "kind": 3,
+            "taken_ms": 5000,
+            "xp": 30
+          },
+          {
+            "card_id": 5,
+            "ease": 0,
+            "id": 1700452408765,
+            "kind": 2,
+            "taken_ms": 5000,
+            "xp": 14
+          },
+          {
+            "card_id": 6,
+            "ease": 2,
+            "id": 1700454501591,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 18
+          },
+          {
+            "card_id": 7,
+            "ease": 3,
+            "id": 1700456560975,
+            "kind": 2,
+            "taken_ms": 5000,
+            "xp": 22
+          },
+          {
+            "card_id": 8,
+            "ease": 1,
+            "id": 1700457106131,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 13
+          },
+          {
+            "card_id": 9,
+            "ease": 2,
+            "id": 1700461283312,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 29
+          },
+          {
+            "card_id": 10,
+            "ease": 3,
+            "id": 1700465110593,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 34
+          },
+          {
+            "card_id": 11,
+            "ease": 3,
+            "id": 1700465321903,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 9
+          },
+          {
+            "card_id": 12,
+            "ease": 4,
+            "id": 1700470073291,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 37
+          },
+          {
+            "card_id": 13,
+            "ease": 0,
+            "id": 1700474124400,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 16
+          },
+          {
+            "card_id": 14,
+            "ease": 0,
+            "id": 1700478424532,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 29
+          },
+          {
+            "card_id": 15,
+            "ease": 1,
+            "id": 1700479418897,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 1
+          },
+          {
+            "card_id": 16,
+            "ease": 4,
+            "id": 1700481297969,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 24
+          },
+          {
+            "card_id": 17,
+            "ease": 1,
+            "id": 1700485902113,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 21
+          },
+          {
+            "card_id": 18,
+            "ease": 2,
+            "id": 1700491281415,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 35
+          },
+          {
+            "card_id": 19,
+            "ease": 3,
+            "id": 1700493106482,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 14
+          },
+          {
+            "card_id": 20,
+            "ease": 4,
+            "id": 1700495230356,
+            "kind": 4,
+            "taken_ms": 5000,
+            "xp": 34
+          },
+          {
+            "card_id": 21,
+            "ease": 1,
+            "id": 1700495323168,
+            "kind": 4,
+            "taken_ms": 5000,
+            "xp": 33
+          },
+          {
+            "card_id": 22,
+            "ease": 3,
+            "id": 1700499021786,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 21
+          },
+          {
+            "card_id": 23,
+            "ease": 0,
+            "id": 1700502129551,
+            "kind": 3,
+            "taken_ms": 5000,
+            "xp": 5
+          },
+          {
+            "card_id": 24,
+            "ease": 1,
+            "id": 1700505451113,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 30
+          },
+          {
+            "card_id": 25,
+            "ease": 1,
+            "id": 1700506500961,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 4
+          },
+          {
+            "card_id": 26,
+            "ease": 0,
+            "id": 1700507647451,
+            "kind": 3,
+            "taken_ms": 5000,
+            "xp": 14
+          },
+          {
+            "card_id": 27,
+            "ease": 0,
+            "id": 1700507845258,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 13
+          },
+          {
+            "card_id": 28,
+            "ease": 3,
+            "id": 1700509855052,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 2
+          },
+          {
+            "card_id": 29,
+            "ease": 0,
+            "id": 1700511007535,
+            "kind": 2,
+            "taken_ms": 5000,
+            "xp": 25
+          },
+          {
+            "card_id": 30,
+            "ease": 1,
+            "id": 1700513121444,
+            "kind": 5,
+            "taken_ms": 5000,
+            "xp": 35
+          },
+          {
+            "card_id": 31,
+            "ease": 3,
+            "id": 1700513544677,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 20
+          },
+          {
+            "card_id": 32,
+            "ease": 3,
+            "id": 1700517136167,
+            "kind": 2,
+            "taken_ms": 5000,
+            "xp": 28
+          },
+          {
+            "card_id": 33,
+            "ease": 1,
+            "id": 1700521742782,
+            "kind": 3,
+            "taken_ms": 5000,
+            "xp": 7
+          }
+        ],
+        "rollover_hour": 23,
+        "study_day": 19682,
+        "tokens": [
+          {
+            "activated_at_ms": 1700534375881,
+            "consumed": 0,
+            "granted_at_ms": 1700530775881,
+            "window_ends_at_ms": 1700541575881
+          },
+          {
+            "activated_at_ms": 1700526847794,
+            "consumed": 0,
+            "granted_at_ms": 1700523247794,
+            "window_ends_at_ms": 1700534047794
+          }
+        ],
+        "tz_offset_minutes": 330
+      },
+      "output": {
+        "consumed": [
+          1,
+          2
+        ],
+        "grants": []
+      }
+    },
+    {
+      "input": {
+        "now_ms": 1700493254971,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700444830589,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 10
+          },
+          {
+            "card_id": 2,
+            "ease": 1,
+            "id": 1700445252035,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 14
+          }
+        ],
+        "rollover_hour": 21,
+        "study_day": 19681,
+        "tokens": [
+          {
+            "activated_at_ms": 1700526059980,
+            "consumed": 1,
+            "granted_at_ms": 1700522459980,
+            "window_ends_at_ms": 1700533259980
+          },
+          {
+            "activated_at_ms": 1700503676057,
+            "consumed": 0,
+            "granted_at_ms": 1700500076057,
+            "window_ends_at_ms": 1700510876057
+          },
+          {
+            "activated_at_ms": 1700431895454,
+            "consumed": 0,
+            "granted_at_ms": 1700428295454,
+            "window_ends_at_ms": 1700439095454
+          }
+        ],
+        "tz_offset_minutes": 330
+      },
+      "output": {
+        "consumed": [
+          3
+        ],
+        "grants": []
+      }
+    },
+    {
+      "input": {
+        "now_ms": 1700554325416,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700442116286,
+            "kind": 5,
+            "taken_ms": 5000,
+            "xp": 13
+          },
+          {
+            "card_id": 2,
+            "ease": 1,
+            "id": 1700446775525,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 7
+          },
+          {
+            "card_id": 3,
+            "ease": 3,
+            "id": 1700450455800,
+            "kind": 5,
+            "taken_ms": 5000,
+            "xp": 25
+          },
+          {
+            "card_id": 4,
+            "ease": 3,
+            "id": 1700455674390,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 32
+          },
+          {
+            "card_id": 5,
+            "ease": 4,
+            "id": 1700456808019,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 5
+          },
+          {
+            "card_id": 6,
+            "ease": 4,
+            "id": 1700460116354,
+            "kind": 5,
+            "taken_ms": 5000,
+            "xp": 30
+          },
+          {
+            "card_id": 7,
+            "ease": 4,
+            "id": 1700464444376,
+            "kind": 4,
+            "taken_ms": 5000,
+            "xp": 32
+          },
+          {
+            "card_id": 8,
+            "ease": 4,
+            "id": 1700469010575,
+            "kind": 2,
+            "taken_ms": 5000,
+            "xp": 3
+          },
+          {
+            "card_id": 9,
+            "ease": 3,
+            "id": 1700471104004,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 5
+          },
+          {
+            "card_id": 10,
+            "ease": 4,
+            "id": 1700471680400,
+            "kind": 5,
+            "taken_ms": 5000,
+            "xp": 5
+          },
+          {
+            "card_id": 11,
+            "ease": 1,
+            "id": 1700474804722,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 8
+          },
+          {
+            "card_id": 12,
+            "ease": 1,
+            "id": 1700475132850,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 15
+          },
+          {
+            "card_id": 13,
+            "ease": 2,
+            "id": 1700476041198,
+            "kind": 2,
+            "taken_ms": 5000,
+            "xp": 8
+          },
+          {
+            "card_id": 14,
+            "ease": 4,
+            "id": 1700479659216,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 35
+          },
+          {
+            "card_id": 15,
+            "ease": 1,
+            "id": 1700481071515,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 29
+          },
+          {
+            "card_id": 16,
+            "ease": 0,
+            "id": 1700481444938,
+            "kind": 3,
+            "taken_ms": 5000,
+            "xp": 12
+          },
+          {
+            "card_id": 17,
+            "ease": 3,
+            "id": 1700484416786,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 29
+          },
+          {
+            "card_id": 18,
+            "ease": 2,
+            "id": 1700484835156,
+            "kind": 5,
+            "taken_ms": 5000,
+            "xp": 20
+          }
+        ],
+        "rollover_hour": 3,
+        "study_day": 19681,
+        "tokens": [
+          {
+            "activated_at_ms": 1700444933602,
+            "consumed": 0,
+            "granted_at_ms": 1700441333602,
+            "window_ends_at_ms": 1700452133602
+          },
+          {
+            "activated_at_ms": 1700509396177,
+            "consumed": 0,
+            "granted_at_ms": 1700505796177,
+            "window_ends_at_ms": 1700516596177
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [
+          1,
+          2
+        ],
+        "grants": []
+      }
+    },
+    {
+      "input": {
+        "now_ms": 1700461474701,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 4,
+            "id": 1700447315305,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 27
+          },
+          {
+            "card_id": 2,
+            "ease": 0,
+            "id": 1700448684791,
+            "kind": 4,
+            "taken_ms": 5000,
+            "xp": 22
+          },
+          {
+            "card_id": 3,
+            "ease": 1,
+            "id": 1700453391724,
+            "kind": 4,
+            "taken_ms": 5000,
+            "xp": 36
+          },
+          {
+            "card_id": 4,
+            "ease": 4,
+            "id": 1700455928889,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 22
+          },
+          {
+            "card_id": 5,
+            "ease": 1,
+            "id": 1700456496639,
+            "kind": 2,
+            "taken_ms": 5000,
+            "xp": 35
+          },
+          {
+            "card_id": 6,
+            "ease": 4,
+            "id": 1700460680773,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 3
+          },
+          {
+            "card_id": 7,
+            "ease": 4,
+            "id": 1700460871061,
+            "kind": 4,
+            "taken_ms": 5000,
+            "xp": 30
+          },
+          {
+            "card_id": 8,
+            "ease": 2,
+            "id": 1700465087629,
+            "kind": 3,
+            "taken_ms": 5000,
+            "xp": 34
+          },
+          {
+            "card_id": 9,
+            "ease": 0,
+            "id": 1700467034201,
+            "kind": 4,
+            "taken_ms": 5000,
+            "xp": 25
+          },
+          {
+            "card_id": 10,
+            "ease": 2,
+            "id": 1700471231447,
+            "kind": 3,
+            "taken_ms": 5000,
+            "xp": 30
+          },
+          {
+            "card_id": 11,
+            "ease": 3,
+            "id": 1700472953882,
+            "kind": 4,
+            "taken_ms": 5000,
+            "xp": 32
+          },
+          {
+            "card_id": 12,
+            "ease": 0,
+            "id": 1700473773827,
+            "kind": 3,
+            "taken_ms": 5000,
+            "xp": 25
+          },
+          {
+            "card_id": 13,
+            "ease": 4,
+            "id": 1700474672670,
+            "kind": 5,
+            "taken_ms": 5000,
+            "xp": 37
+          },
+          {
+            "card_id": 14,
+            "ease": 3,
+            "id": 1700476228093,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 27
+          },
+          {
+            "card_id": 15,
+            "ease": 4,
+            "id": 1700478745178,
+            "kind": 3,
+            "taken_ms": 5000,
+            "xp": 8
+          },
+          {
+            "card_id": 16,
+            "ease": 2,
+            "id": 1700481152490,
+            "kind": 3,
+            "taken_ms": 5000,
+            "xp": 18
+          },
+          {
+            "card_id": 17,
+            "ease": 3,
+            "id": 1700486534242,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 11
+          },
+          {
+            "card_id": 18,
+            "ease": 1,
+            "id": 1700489389000,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 17
+          },
+          {
+            "card_id": 19,
+            "ease": 0,
+            "id": 1700492177378,
+            "kind": 5,
+            "taken_ms": 5000,
+            "xp": 7
+          },
+          {
+            "card_id": 20,
+            "ease": 1,
+            "id": 1700494551231,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 31
+          },
+          {
+            "card_id": 21,
+            "ease": 4,
+            "id": 1700498506496,
+            "kind": 5,
+            "taken_ms": 5000,
+            "xp": 13
+          },
+          {
+            "card_id": 22,
+            "ease": 4,
+            "id": 1700503136488,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 23
+          },
+          {
+            "card_id": 23,
+            "ease": 2,
+            "id": 1700504980839,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 36
+          },
+          {
+            "card_id": 24,
+            "ease": 0,
+            "id": 1700508714863,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 37
+          },
+          {
+            "card_id": 25,
+            "ease": 2,
+            "id": 1700510898902,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 6
+          },
+          {
+            "card_id": 26,
+            "ease": 2,
+            "id": 1700514997657,
+            "kind": 2,
+            "taken_ms": 5000,
+            "xp": 5
+          },
+          {
+            "card_id": 27,
+            "ease": 0,
+            "id": 1700516148153,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 24
+          },
+          {
+            "card_id": 28,
+            "ease": 2,
+            "id": 1700516441634,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 39
+          },
+          {
+            "card_id": 29,
+            "ease": 4,
+            "id": 1700517740896,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 2
+          },
+          {
+            "card_id": 30,
+            "ease": 2,
+            "id": 1700520527307,
+            "kind": 4,
+            "taken_ms": 5000,
+            "xp": 2
+          },
+          {
+            "card_id": 31,
+            "ease": 3,
+            "id": 1700520730726,
+            "kind": 4,
+            "taken_ms": 5000,
+            "xp": 16
+          },
+          {
+            "card_id": 32,
+            "ease": 0,
+            "id": 1700524869753,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 2
+          },
+          {
+            "card_id": 33,
+            "ease": 1,
+            "id": 1700525195134,
+            "kind": 4,
+            "taken_ms": 5000,
+            "xp": 35
+          },
+          {
+            "card_id": 34,
+            "ease": 3,
+            "id": 1700526587641,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 1
+          },
+          {
+            "card_id": 35,
+            "ease": 1,
+            "id": 1700531850584,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 7
+          },
+          {
+            "card_id": 36,
+            "ease": 0,
+            "id": 1700533267174,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 3
+          },
+          {
+            "card_id": 37,
+            "ease": 4,
+            "id": 1700535658017,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 9
+          },
+          {
+            "card_id": 38,
+            "ease": 4,
+            "id": 1700538262413,
+            "kind": 3,
+            "taken_ms": 5000,
+            "xp": 38
+          },
+          {
+            "card_id": 39,
+            "ease": 1,
+            "id": 1700541692086,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 7
+          }
+        ],
+        "rollover_hour": 23,
+        "study_day": 19680,
+        "tokens": [
+          {
+            "activated_at_ms": 1700532240639,
+            "consumed": 1,
+            "granted_at_ms": 1700528640639,
+            "window_ends_at_ms": 1700539440639
+          },
+          {
+            "activated_at_ms": 1700516465461,
+            "consumed": 0,
+            "granted_at_ms": 1700512865461,
+            "window_ends_at_ms": 1700523665461
+          },
+          {
+            "activated_at_ms": 0,
+            "consumed": 0,
+            "granted_at_ms": 1700448226171,
+            "window_ends_at_ms": 0
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [],
+        "grants": [
+          {
+            "amount": 2,
+            "source": "2x:2",
+            "study_day": 19680,
+            "track": "language"
+          }
+        ]
+      }
+    },
+    {
+      "input": {
+        "now_ms": 1700540451485,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 4,
+            "id": 1700445347638,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 11
+          },
+          {
+            "card_id": 2,
+            "ease": 2,
+            "id": 1700445609013,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 16
+          },
+          {
+            "card_id": 3,
+            "ease": 3,
+            "id": 1700448170558,
+            "kind": 5,
+            "taken_ms": 5000,
+            "xp": 31
+          },
+          {
+            "card_id": 4,
+            "ease": 4,
+            "id": 1700450275249,
+            "kind": 5,
+            "taken_ms": 5000,
+            "xp": 35
+          },
+          {
+            "card_id": 5,
+            "ease": 1,
+            "id": 1700452896646,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 39
+          },
+          {
+            "card_id": 6,
+            "ease": 2,
+            "id": 1700453879388,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 10
+          },
+          {
+            "card_id": 7,
+            "ease": 3,
+            "id": 1700455842984,
+            "kind": 4,
+            "taken_ms": 5000,
+            "xp": 17
+          },
+          {
+            "card_id": 8,
+            "ease": 1,
+            "id": 1700458340814,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 19
+          },
+          {
+            "card_id": 9,
+            "ease": 2,
+            "id": 1700460633096,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 2
+          },
+          {
+            "card_id": 10,
+            "ease": 1,
+            "id": 1700463178286,
+            "kind": 3,
+            "taken_ms": 5000,
+            "xp": 36
+          },
+          {
+            "card_id": 11,
+            "ease": 3,
+            "id": 1700467110122,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 17
+          },
+          {
+            "card_id": 12,
+            "ease": 3,
+            "id": 1700467783444,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 23
+          },
+          {
+            "card_id": 13,
+            "ease": 3,
+            "id": 1700468407538,
+            "kind": 4,
+            "taken_ms": 5000,
+            "xp": 8
+          },
+          {
+            "card_id": 14,
+            "ease": 0,
+            "id": 1700470771747,
+            "kind": 4,
+            "taken_ms": 5000,
+            "xp": 22
+          },
+          {
+            "card_id": 15,
+            "ease": 1,
+            "id": 1700472951664,
+            "kind": 2,
+            "taken_ms": 5000,
+            "xp": 25
+          },
+          {
+            "card_id": 16,
+            "ease": 2,
+            "id": 1700476503357,
+            "kind": 2,
+            "taken_ms": 5000,
+            "xp": 20
+          },
+          {
+            "card_id": 17,
+            "ease": 4,
+            "id": 1700476568931,
+            "kind": 2,
+            "taken_ms": 5000,
+            "xp": 22
+          },
+          {
+            "card_id": 18,
+            "ease": 4,
+            "id": 1700477908353,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 23
+          },
+          {
+            "card_id": 19,
+            "ease": 4,
+            "id": 1700481715228,
+            "kind": 2,
+            "taken_ms": 5000,
+            "xp": 28
+          },
+          {
+            "card_id": 20,
+            "ease": 3,
+            "id": 1700486878465,
+            "kind": 2,
+            "taken_ms": 5000,
+            "xp": 37
+          },
+          {
+            "card_id": 21,
+            "ease": 2,
+            "id": 1700491058001,
+            "kind": 4,
+            "taken_ms": 5000,
+            "xp": 20
+          },
+          {
+            "card_id": 22,
+            "ease": 0,
+            "id": 1700493622029,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 36
+          }
+        ],
+        "rollover_hour": 10,
+        "study_day": 19682,
+        "tokens": [
+          {
+            "activated_at_ms": 1700526269250,
+            "consumed": 0,
+            "granted_at_ms": 1700522669250,
+            "window_ends_at_ms": 1700533469250
+          },
+          {
+            "activated_at_ms": 0,
+            "consumed": 0,
+            "granted_at_ms": 1700525156207,
+            "window_ends_at_ms": 0
+          }
+        ],
+        "tz_offset_minutes": 0
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": []
+      }
+    },
+    {
+      "input": {
+        "now_ms": 1700508827056,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700443112359,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 34
+          },
+          {
+            "card_id": 2,
+            "ease": 4,
+            "id": 1700444300905,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 8
+          },
+          {
+            "card_id": 3,
+            "ease": 2,
+            "id": 1700444483325,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 31
+          },
+          {
+            "card_id": 4,
+            "ease": 1,
+            "id": 1700446611611,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 18
+          },
+          {
+            "card_id": 5,
+            "ease": 3,
+            "id": 1700448420984,
+            "kind": 4,
+            "taken_ms": 5000,
+            "xp": 38
+          },
+          {
+            "card_id": 6,
+            "ease": 1,
+            "id": 1700451106076,
+            "kind": 3,
+            "taken_ms": 5000,
+            "xp": 35
+          },
+          {
+            "card_id": 7,
+            "ease": 3,
+            "id": 1700451810338,
+            "kind": 2,
+            "taken_ms": 5000,
+            "xp": 31
+          },
+          {
+            "card_id": 8,
+            "ease": 0,
+            "id": 1700453836050,
+            "kind": 3,
+            "taken_ms": 5000,
+            "xp": 27
+          },
+          {
+            "card_id": 9,
+            "ease": 3,
+            "id": 1700454206760,
+            "kind": 3,
+            "taken_ms": 5000,
+            "xp": 17
+          },
+          {
+            "card_id": 10,
+            "ease": 0,
+            "id": 1700458922725,
+            "kind": 5,
+            "taken_ms": 5000,
+            "xp": 22
+          },
+          {
+            "card_id": 11,
+            "ease": 1,
+            "id": 1700459579611,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 28
+          },
+          {
+            "card_id": 12,
+            "ease": 2,
+            "id": 1700463311457,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 16
+          },
+          {
+            "card_id": 13,
+            "ease": 4,
+            "id": 1700465008823,
+            "kind": 3,
+            "taken_ms": 5000,
+            "xp": 2
+          },
+          {
+            "card_id": 14,
+            "ease": 2,
+            "id": 1700465069691,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 13
+          },
+          {
+            "card_id": 15,
+            "ease": 2,
+            "id": 1700465405093,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 31
+          },
+          {
+            "card_id": 16,
+            "ease": 1,
+            "id": 1700465628927,
+            "kind": 4,
+            "taken_ms": 5000,
+            "xp": 35
+          },
+          {
+            "card_id": 17,
+            "ease": 3,
+            "id": 1700469463097,
+            "kind": 0,
+            "taken_ms": 5000,
+            "xp": 30
+          },
+          {
+            "card_id": 18,
+            "ease": 3,
+            "id": 1700470164829,
+            "kind": 2,
+            "taken_ms": 5000,
+            "xp": 19
+          },
+          {
+            "card_id": 19,
+            "ease": 4,
+            "id": 1700474558786,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 5
+          },
+          {
+            "card_id": 20,
+            "ease": 1,
+            "id": 1700476379147,
+            "kind": 5,
+            "taken_ms": 5000,
+            "xp": 21
+          },
+          {
+            "card_id": 21,
+            "ease": 2,
+            "id": 1700480210277,
+            "kind": 4,
+            "taken_ms": 5000,
+            "xp": 6
+          },
+          {
+            "card_id": 22,
+            "ease": 3,
+            "id": 1700483106655,
+            "kind": 1,
+            "taken_ms": 5000,
+            "xp": 18
+          }
+        ],
+        "rollover_hour": 14,
+        "study_day": 19682,
+        "tokens": [
+          {
+            "activated_at_ms": 1700495295498,
+            "consumed": 0,
+            "granted_at_ms": 1700491695498,
+            "window_ends_at_ms": 1700502495498
+          }
+        ],
+        "tz_offset_minutes": 330
+      },
+      "output": {
+        "consumed": [
+          1
+        ],
+        "grants": []
+      }
+    }
+  ],
+  "function": "pipeline_layers.loot.LootLayer._recompute_token_xp",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Settles the token bonus of the case's study day once on a stand-in layer over the token store, under the case's rollover hour and offset, with the clock patched to the case's instant and xp.review_xp patched to the case's XP for each review; returns the 2x grants and the tokens consumed; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_081.py",
+  "registry_sha256": "67257e9dfbf5070946f9cabbe897df72d7f71fa60cd8414cf384b5c83d530274",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}
