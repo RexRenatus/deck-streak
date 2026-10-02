@@ -1683,12 +1683,10 @@ class TheGuardRefusesAMacroThatDeclaresATestModule(unittest.TestCase):
             self.macro("        #[cfg(not(unix))]\n        mod tests;\n"),
             self.macro("        #[cfg(test)]\n        fn check() {}\n"),
             self.macro("        #[cfg(test)]\n        const T: u8 = 1;\n"),
-            self.macro("        $(#[$m:meta])*\n        mod tests;\n"),
             "#[cfg(test)]\nmod tests {\n    const X: u8 = 1;\n}\n",
             "// macro_rules! m { () => { #[cfg(test)] mod tests; }; }\n",
             'const D: &str = "macro_rules! m { () => { #[cfg(test)] mod tests; }; }";\n',
             "macro_rules! m {\n    () => {};\n}\n#[cfg(test)]\nmod tests {}\n",
-            "macro_rules! m {\n    () => {};\n}\nm!{ #[cfg(test)] mod tests; }\n",
         ):
             self.assertEqual(self.refused(text), [], text)
         planted = self.macro("        #[cfg(test)]\n        mod tests;\n")
@@ -1897,6 +1895,540 @@ class TheGuardRefusesAModuleFileThatAnotherDeclarationCompilesWithoutTest(unitte
             ):
                 self.assertEqual(self.judged(self.TEST + rival, own), 1, (own, rival))
             self.assertEqual(self.judged(self.TEST, own), 0, own)
+
+
+REFUSED_BY_A_MACRO = {
+    "441": "macro_rules! body declares a cfg(test) module",
+    "pass": "macro invocation passes a cfg(test) module",
+    "meta": "macro declares a module under an attribute it passes in",
+    "path": "macro declares a module whose path it names",
+    "impl": "macro writes an implementation of Setting",
+    "block": "block declares an out-of-line module",
+    "include": "include! compiles another file's text",
+}
+
+
+class TheGuardReadsAnImplementationByToken(unittest.TestCase):
+    """An implementation is found from rustc's tokens: a raw identifier, an alias, an attribute or
+    a second item on its line are read, a string that holds the words is not, and one a macro
+    writes is refused by its file (A19, #436)."""
+
+    tree = TheGuardJudgesAPlantedTree.tree
+    WIDTH = 'const SHAPE: &\'static str = "a whole width";'
+    PINS = 'const X: &str = "a whole depth";\nconst Y: &str = "a whole width";\n'
+    DEPTH = 'const X: &str = "a whole depth";\n'
+    WIDE = 'demo::Wide (src/more.rs) "a whole width"'
+    MACRO = f"demo (src/more.rs) {REFUSED_BY_A_MACRO['impl']}"
+
+    def spellings(self):
+        """(case, `src/more.rs`, what `lib.rs` adds, kind, lines refused either way). A "read"
+        member is refused only when unpinned, a "macro" member always, by its file; the lines
+        refused
+        either way are an implementation of another trait that a shadowing name binds, read as a
+        `Setting` one with no shape (a disclosed false refusal)."""
+        body = f" {{\n    {self.WIDTH}\n}}\n"
+        plain = "impl Setting for Wide" + body
+        found = [
+            ("plain", plain, "", "read", []),
+            ("raw trait", "impl r#Setting for Wide" + body, "", "read", []),
+            ("raw type", "impl Setting for r#Wide" + body, "", "read", []),
+            ("path", "impl crate::settings::Setting for Wide" + body, "", "read", []),
+            (
+                "alias",
+                "use crate::settings::Setting as Shaped;\nimpl Shaped for Wide" + body,
+                "",
+                "read",
+                [],
+            ),
+            (
+                "alias in a group",
+                "use crate::settings::{Other, Setting as Shaped};\nimpl Shaped for Wide" + body,
+                "",
+                "read",
+                [],
+            ),
+            (
+                "alias chain",
+                "use crate::settings::Setting as First;\nuse self::First as Second;\n"
+                "impl Second for Wide" + body,
+                "",
+                "read",
+                [],
+            ),
+            (
+                "alias another file binds",
+                "use crate::Shaped;\nimpl Shaped for Wide" + body,
+                "pub use settings::Setting as Shaped;\n",
+                "read",
+                [],
+            ),
+            (
+                "raw alias",
+                "use crate::settings::Setting as r#Shaped;\nimpl r#Shaped for Wide" + body,
+                "",
+                "read",
+                [],
+            ),
+            ("attribute on the line", "#[allow(dead_code)] " + plain, "", "read", []),
+            ("second item on the line", "pub struct Wide {} " + plain, "", "read", []),
+            (
+                "generic with an arrow",
+                "impl<F: Fn() -> u8> Setting for Wide<F>" + body,
+                "",
+                "read",
+                [],
+            ),
+            ("where clause", "impl Setting for Wide where u8: Copy" + body, "", "read", []),
+            (
+                "a string holds the words",
+                'pub const D: &str = "\nimpl Setting for Ghost {\n";\n' + plain,
+                "",
+                "read",
+                [],
+            ),
+            (
+                "an inherent and another trait in a macro",
+                "macro_rules! make {\n    ($t:ident) => {\n        impl $t {}\n"
+                "        impl Display for $t {}\n    };\n}\n" + plain,
+                "",
+                "read",
+                [],
+            ),
+            (
+                "one-line macro",
+                "macro_rules! make { ($t:ident) => { impl Setting for $t { "
+                f"{self.WIDTH} }} }}; }}\n"
+                "make!(Wide);\n",
+                "",
+                "macro",
+                [],
+            ),
+            (
+                "macro at a line start",
+                "macro_rules! make {\n    ($t:ident) => {\n        impl Setting for $t {\n"
+                f"            {self.WIDTH}\n        }}\n    }};\n}}\nmake!(Wide);\n",
+                "",
+                "macro",
+                [],
+            ),
+            (
+                "macro through $crate",
+                "macro_rules! make {\n    ($t:ident) => {\n"
+                f"        impl $crate::settings::Setting for $t {{ {self.WIDTH} }}\n    }};\n}}\n",
+                "",
+                "macro",
+                [],
+            ),
+            (
+                "macro trait metavariable",
+                "macro_rules! make {\n    ($tr:path, $t:ident) => {\n"
+                f"        impl $tr for $t {{ {self.WIDTH} }}\n    }};\n}}\nmake!(Setting, Wide);\n",
+                "",
+                "macro",
+                [],
+            ),
+            (
+                "macro through an alias",
+                "use crate::settings::Setting as Shaped;\nmacro_rules! make {\n"
+                f"    ($t:ident) => {{ impl Shaped for $t {{ {self.WIDTH} }} }};\n}}\n",
+                "",
+                "macro",
+                [],
+            ),
+            ("invocation passes it", "wrap! {\n" + plain + "}\n", "", "macro", []),
+            (
+                "shadowing alias in a module",
+                "use crate::settings::Setting as Shaped;\nimpl Shaped for Wide"
+                + body
+                + "mod other {\n    pub trait Shaped {}\n    impl Shaped for super::Narrow {}\n}\n",
+                "",
+                "read",
+                ["demo::Narrow (src/more.rs) None"],
+            ),
+            (
+                "shadowing the trait's own name",
+                plain + "mod other {\n    use other::Thing as Setting;\n"
+                "    impl Setting for Narrow {}\n}\n",
+                "",
+                "read",
+                ["demo::Narrow (src/more.rs) None"],
+            ),
+            (
+                "shape only in a comment",
+                "impl Setting for Wide {\n    // "
+                + self.WIDTH
+                + "\n    const SHAPE: &'static str = W;\n}\n",
+                "",
+                "none",
+                ["demo::Wide (src/more.rs) None"],
+            ),
+        ]
+        return found
+
+    def test_every_spelling_is_read_or_refused_as_written(self):
+        """Each member's outcome is written by its kind, never by the guard: pinned and unpinned,
+        a read implementation is refused only unpinned, a macro's always and by its file."""
+        wrong, judged = [], []
+        for case, text, lib, kind, either in self.spellings():
+            for pinned in (True, False):
+                root = self.tree(self.PINS if pinned else self.DEPTH)
+                src = root / "crates" / "demo" / "src"
+                (src / "more.rs").write_text(text, encoding="utf-8")
+                if lib:
+                    (src / "lib.rs").write_text("mod depth;\n" + lib, encoding="utf-8")
+                expected = {
+                    "read": [] if pinned else [self.WIDE],
+                    "macro": [self.MACRO],
+                    "none": [],
+                }[kind] + either
+                found = unpinned(root)
+                judged.append((case, pinned))
+                if sorted(found) != sorted(expected):
+                    wrong.append(f"{case} pinned={pinned}: {found} != {expected}")
+        self.assertEqual(wrong, [], f"{len(wrong)} of {len(judged)} member(s)")
+        examined("implementation spelling(s) judged, pinned and unpinned", judged)
+
+
+class TheGuardReadsOnlyTheItemsRustcCompilesUnderTest(unittest.TestCase):
+    """A pin counts only in an item rustc compiles under `--cfg test`. A generated population of
+    item-level `cfg` shapes inside a compiled test module is judged by rustc itself: each member's
+    ORACLE TWIN gives the item under test a body that does not type-check, so rustc exits 0 only
+    when it strips the item (A20, #449)."""
+
+    PRELUDE = (
+        "pub trait Setting {\n    const SHAPE: &'static str;\n}\npub struct Depth;\n"
+        'impl Setting for Depth {\n    const SHAPE: &\'static str = "a whole depth";\n}\n'
+    )
+    ATTRIBUTES = (
+        "",
+        "#[cfg(any())]\n",
+        "#[cfg(all())]\n",
+        "#[cfg(test)]\n",
+        "#[cfg(not(test))]\n",
+        "#[cfg(true)]\n",
+        "#[cfg(false)]\n",
+        "#[cfg(any(test, false))]\n",
+        "#[cfg(all(test, not(test)))]\n",
+        "#[cfg(not(any()))]\n",
+        "#[allow(dead_code)]\n#[cfg(any())]\n",
+        "#[cfg(any())]\n#[allow(dead_code)]\n",
+        "/// d\n#[cfg(not(test))]\n",
+        "#[cfg(test)]\n#[cfg(not(test))]\n",
+        '#[cfg(feature = "slow")]\n',
+        '#[cfg(not(feature = "slow"))]\n',
+        "#[cfg(unix)]\n",
+        "#[cfg_attr(test, cfg(any()))]\n",
+        "#[cfg_attr(any(), cfg(any()))]\n",
+        "#[cfg_attr(test, allow(dead_code))]\n",
+    )
+    UNDECIDED = re.compile(r"feature|unix|cfg_attr")
+    ITEMS = (
+        ("const", 'const X: &str = "a whole depth";', 'const X: u8 = "a whole depth";'),
+        ("static", 'static X: &str = "a whole depth";', 'static X: u8 = "a whole depth";'),
+        (
+            "fn",
+            'fn x() -> &\'static str {\n    "a whole depth"\n}',
+            'fn x() -> u8 {\n    "a whole depth"\n}',
+        ),
+        (
+            "test",
+            '#[test]\nfn x() {\n    assert_eq!("a whole depth".len(), 13);\n}',
+            '#[test]\nfn x() {\n    let _: u8 = "a whole depth";\n}',
+        ),
+    )
+
+    def members(self):
+        """(case, member source, oracle twin source, decided): the item under test at module
+        level of the test module, in an inline module under an outer or an inner attribute, in a
+        second `cfg(test)` module, as a statement and as an associated constant."""
+        found = []
+        for attribute in self.ATTRIBUTES:
+            inner = attribute.replace("#[", "#![").replace("/// ", "//! ")
+            decided = not self.UNDECIDED.search(attribute)
+            places = [
+                (kind, f"{attribute}{item}", f"{attribute}{twin}")
+                for kind, item, twin in self.ITEMS
+            ]
+            item, twin = self.ITEMS[0][1:]
+            places += [
+                (
+                    "nested",
+                    f"{attribute}mod inner {{\n{item}\n}}",
+                    f"{attribute}mod inner {{\n{twin}\n}}",
+                ),
+                ("inner", f"mod inner {{\n{inner}{item}\n}}", f"mod inner {{\n{inner}{twin}\n}}"),
+                (
+                    "deeper",
+                    f"#[cfg(test)]\nmod deeper {{\n{attribute}{item}\n}}",
+                    f"#[cfg(test)]\nmod deeper {{\n{attribute}{twin}\n}}",
+                ),
+                (
+                    "statement",
+                    f'fn holder() {{\n{attribute}let _x: &str = "a whole depth";\n}}',
+                    f'fn holder() {{\n{attribute}let _x: u8 = "a whole depth";\n}}',
+                ),
+                (
+                    "associated",
+                    "struct Holder;\nimpl Holder {\n"
+                    f'{attribute}const X: &\'static str = "a whole depth";\n}}',
+                    "struct Holder;\nimpl Holder {\n"
+                    f'{attribute}const X: u8 = "a whole depth";\n}}',
+                ),
+            ]
+            for place, member, twin_text in places:
+                wrap = "#[cfg(test)]\nmod tests {\n{}\n}\n"
+                found.append(
+                    (
+                        f"{place} {attribute!r}",
+                        self.PRELUDE + wrap.replace("{}", member),
+                        self.PRELUDE + wrap.replace("{}", twin_text),
+                        decided,
+                    )
+                )
+        return found
+
+    def oracle(self, scratch, members):
+        """Each twin through rustc, serially, one at a time: "stripped" when it exits 0, "compiled"
+        when it fails with E0308 (the twin's type error), and the oracle refuses any other answer.
+        The readings are written to a file before the guard reads any member."""
+        rustc = shutil.which("rustc")
+        if rustc is None:
+            self.fail("rustc is not on PATH, so the item oracle cannot run: this test never skips")
+        (scratch / "o").mkdir()
+        (scratch / "t").mkdir()
+        readings = []
+        for index, (case, _, twin, _) in enumerate(members):
+            source = scratch / "t" / f"{index}.rs"
+            source.write_text(twin, encoding="utf-8")
+            command = [rustc, "--edition", "2021", "--test", "--crate-type", "lib"]
+            command += ["--emit=metadata", "-o", str(scratch / "o" / f"{index}.rmeta"), str(source)]
+            run = subprocess.run(command, capture_output=True, text=True, check=False)
+            if run.returncode == 0:
+                readings.append("stripped")
+            elif "E0308" in run.stderr:
+                readings.append("compiled")
+            else:
+                self.fail(
+                    f"{case}: rustc answered neither: rc {run.returncode}: {run.stderr[:400]}"
+                )
+        path = scratch / "readings.json"
+        path.write_text(json.dumps(readings), encoding="utf-8")
+        return path
+
+    def test_a_pin_counts_only_in_an_item_rustc_compiles_under_test(self):
+        """A member rustc strips must be refused; a member rustc compiles whose attributes `kept`
+        decides must be pinned; one it does not decide is refused, and where rustc compiles it that
+        refusal is a false refusal, disclosed by count."""
+        members = self.members()
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        scratch = Path(directory.name)
+        readings = json.loads(self.oracle(scratch, members).read_text(encoding="utf-8"))
+        control = {case: reading for (case, _, _, _), reading in zip(members, readings)}
+        self.assertEqual(control["const ''"], "compiled", "the oracle's compiled control")
+        self.assertEqual(
+            control["const '#[cfg(any())]\\n'"], "stripped", "the oracle's stripped control"
+        )
+        wrong, judged, disclosed = [], [], []
+        for index, ((case, member, _, decided), reading) in enumerate(zip(members, readings)):
+            root = scratch / f"m{index}"
+            (root / "crates" / "demo" / "src").mkdir(parents=True)
+            (root / "scripts" / "mutation-rows.d").mkdir(parents=True)
+            (root / "crates" / "demo" / "src" / "lib.rs").write_text(member, encoding="utf-8")
+            refused = "demo::Depth " in " ".join(unpinned(root))
+            judged.append(case)
+            if reading == "stripped" and not refused:
+                wrong.append(f"{case}: a pin is read from an item rustc strips")
+            elif reading == "compiled" and decided and refused:
+                wrong.append(f"{case}: refused, and rustc compiles it where kept decides")
+            elif not decided and not refused:
+                wrong.append(f"{case}: an item kept does not decide is read")
+            elif reading == "compiled" and refused:
+                disclosed.append(case)
+        self.assertEqual(wrong, [], f"{len(wrong)} of {len(members)} member(s)")
+        examined("item member(s) judged against rustc", judged)
+        print(
+            f"disclosed {len(disclosed)} false refusal(s): "
+            "rustc compiles an item kept does not decide"
+        )
+
+
+class TheGuardRefusesASpellingItDoesNotExpand(unittest.TestCase):
+    """Each of #535's spellings fails open unless it is read: an attribute a macro passes in, a
+    macro that passes a module through, a `#[path]` rival a macro or a block declares, and
+    `include!`. Each is refused by its file, and the same trees without the plant read no refusal
+    (A21, #535)."""
+
+    tree = TheGuardJudgesAPlantedTree.tree
+    src = TheGuardJudgesAPlantedTree.src
+    PINNED = TheGuardRefusesAMacroThatDeclaresATestModule.PINNED
+    refused = TheGuardRefusesAMacroThatDeclaresATestModule.refused
+    macro = TheGuardRefusesAMacroThatDeclaresATestModule.macro
+
+    def line(self, reason):
+        return [f"demo (src/more.rs) {REFUSED_BY_A_MACRO[reason]}"]
+
+    def test_an_attribute_a_macro_passes_in_is_refused_by_its_file(self):
+        for text in (
+            "macro_rules! m {\n    ($a:meta) => {\n        #[$a]\n        mod prod;\n    };\n}\n",
+            "macro_rules! m {\n    ($(#[$m:meta])*) => {\n        $(#[$m])*\n        mod tests;\n"
+            "    };\n}\n",
+            "macro_rules! m {\n    ($a:meta) => {\n        mod x {\n            #![$a]\n        }\n"
+            "    };\n}\n",
+            "macro_rules! m {\n    ($p:meta) => {\n        #[cfg($p)]\n"
+            "        mod x {}\n    };\n}\n",
+            self.macro("        $(#[$m:meta])*\n        mod tests;\n"),
+        ):
+            self.assertEqual(self.refused(text), self.line("meta"), text)
+
+    def test_a_macro_that_passes_a_module_through_is_refused_by_its_file(self):
+        keep = "macro_rules! keep {\n    ($($t:tt)*) => { $($t)* };\n}\n"
+        for text, reason in (
+            (keep + "keep! {\n    #[cfg(test)]\n    mod tests;\n}\n", "pass"),
+            (keep + "keep!(#[cfg(test)] mod tests {});\n", "pass"),
+            ("macro_rules! m {\n    () => {};\n}\nm!{ #[cfg(test)] mod tests; }\n", "pass"),
+            (
+                keep
+                + 'keep! {\n    #[cfg(not(test))]\n    #[path = "tests.rs"]\n    mod prod;\n}\n',
+                "path",
+            ),
+        ):
+            self.assertEqual(self.refused(text), self.line(reason), text)
+
+    def test_a_path_rival_a_macro_declares_is_refused_by_its_file(self):
+        for attributes in (
+            '#[cfg(not(test))]\n        #[path = "tests.rs"]\n',
+            '#[path = "tests.rs"]\n',
+            '#[r#path = "tests.rs"]\n',
+        ):
+            text = "macro_rules! rival {\n    () => {\n        "
+            text += f"{attributes}        mod prod;\n    }};\n}}\n"
+            self.assertEqual(self.refused(text), self.line("path"), text)
+
+    def test_a_block_scoped_declaration_is_refused_by_its_file(self):
+        """A limit by design (SPEC-192 section 16): rustc's block-scope module paths are not
+        modelled, so an out-of-line module in a block that may compile without `test` refuses its
+        file, and one `kept` proves removed without `test` does not."""
+        for text in (
+            'fn f() {\n    #[path = "tests.rs"]\n    mod prod;\n}\n',
+            "fn f() {\n    #[cfg(not(test))]\n    mod tests;\n}\n",
+            "const _: () = {\n    mod prod;\n};\n",
+        ):
+            self.assertEqual(self.refused(text), self.line("block"), text)
+        for text in (
+            "fn f() {\n    #[cfg(test)]\n    mod tests;\n}\n",
+            "fn f() {\n    mod inline {}\n}\n",
+        ):
+            self.assertEqual(self.refused(text), [], text)
+
+    def test_an_include_is_refused_by_its_file(self):
+        """A limit by design (SPEC-192 section 16): the guard does not follow `include!`, so a
+        crate file that holds one is refused."""
+        for text in (
+            'mod prod {\n    include!("tests.rs");\n}\n',
+            'include!("tests.rs");\n',
+            'mod prod {\n    std::include!("tests.rs");\n}\n',
+        ):
+            self.assertEqual(self.refused(text), self.line("include"), text)
+        self.assertEqual(self.refused('const S: &str = include_str!("tests.rs");\n'), [])
+
+    def test_the_trees_without_a_plant_read_no_refusal(self):
+        """The control: the planted tree with nothing planted, and with each plant's harmless
+        neighbour, reads 0 refusals, while its one implementation is examined."""
+        root = self.src(self.tree(self.PINNED), "pub fn f() {}\n")
+        self.assertEqual(len(implementations(root)), 1)
+        self.assertEqual(unpinned(root), [])
+        for text in (
+            "macro_rules! m {\n    () => {\n        mod real {}\n    };\n}\n",
+            "macro_rules! keep {\n    ($($t:tt)*) => { $($t)* };\n}\nkeep!(fn g() {});\n",
+            "fn f() {\n    mod inline {}\n}\n",
+            'const S: &str = include_str!("tests.rs");\n',
+        ):
+            self.assertEqual(unpinned(self.src(self.tree(self.PINNED), text)), [], text)
+
+
+class TheGuardReadsATreeItOverRefused(unittest.TestCase):
+    """#536: a module a macro declares that `kept` proves is no test-only module, a module beside a
+    decoy in the other directory, and a `cfg_attr` path below an inline module are read as rustc
+    reads them, while every #441 and #535 arm still refuses beside them (A22)."""
+
+    tree = TheGuardJudgesAPlantedTree.tree
+    src = TheGuardJudgesAPlantedTree.src
+    declared = TheGuardReadsOutOfLineTestModules.declared
+    PINNED = TheGuardRefusesAMacroThatDeclaresATestModule.PINNED
+    SPELLING = TheGuardReadsOutOfLineTestModules.SPELLING
+    NO_SHAPE = "let shape = 1;\n"
+    refused = TheGuardRefusesAMacroThatDeclaresATestModule.refused
+    macro = TheGuardRefusesAMacroThatDeclaresATestModule.macro
+
+    def test_a_macro_module_that_is_no_test_only_module_is_read(self):
+        for body in (
+            "        #[cfg(not(test))]\n        mod tests {}\n",
+            "        #[cfg(not(test))]\n        mod tests;\n",
+            "        #[cfg(any(test, true))]\n        mod tests {}\n",
+            "        #[cfg(all(not(test), unix))]\n        mod x {}\n",
+            "        mod x {\n            #![cfg(not(test))]\n        }\n",
+        ):
+            self.assertEqual(self.refused(self.macro(body)), [], body)
+        for body, reason in (
+            ('        #[cfg(any(test, feature = "slow"))]\n        mod tests;\n', "441"),
+            ("        #[cfg(test)]\n        mod tests;\n", "441"),
+            ("        #[cfg_attr(not(test), cfg(any()))]\n        mod x {}\n", "441"),
+            ('        #[cfg(not(test))]\n        #[path = "x.rs"]\n        mod prod;\n', "path"),
+        ):
+            expected = [f"demo (src/more.rs) {REFUSED_BY_A_MACRO[reason]}"]
+            self.assertEqual(self.refused(self.macro(body)), expected, body)
+
+    def test_a_module_a_macro_declares_without_test_still_refuses_the_test_file(self):
+        """The narrowing reopens no rival: a `cfg(not(test)) mod tests;` a macro writes compiles
+        the file the test module reads, so the guard, which cannot name it, refuses the pin."""
+        test = "#[cfg(test)]\nmod tests;\n"
+        twin = "macro_rules! twin {\n    () => {\n        #[cfg(not(test))]\n        mod tests;\n"
+        twin += "    };\n}\ntwin!();\n"
+        root = self.declared(test + twin, ("tests.rs", self.SPELLING), own="lib.rs")
+        self.assertEqual(unpinned(root), ['demo::Depth (src/lib.rs) "a whole depth"'])
+        removed = twin.replace("not(test)", "any()")
+        root = self.declared(test + removed, ("tests.rs", self.SPELLING), own="lib.rs")
+        self.assertEqual(unpinned(root), [])
+        self.assertEqual(len(implementations(root)), 1)
+
+    def test_a_decoy_beside_a_non_mod_rs_file_does_not_refuse_its_module(self):
+        """`a.rs` reads its modules below `src/a/`, so a file the crate root's own declaration
+        names in `src/` is no candidate for it."""
+        nested = "mod n {\n#[cfg(test)]\nmod tests;\n}\n"
+        top = "#[cfg(test)]\nmod tests;\n"
+        for declaration, ours, decoy in (
+            (nested, "a/n/tests.rs", "n/tests.rs"),
+            (top, "a/tests.rs", "tests.rs"),
+        ):
+            for spelled, read in ((ours, True), (decoy, False)):
+                files = [
+                    (path, self.SPELLING if path == spelled else self.NO_SHAPE)
+                    for path in (ours, decoy)
+                ]
+                root = self.declared(declaration, *files, own="a.rs")
+                lib = root / "crates" / "demo" / "src" / "lib.rs"
+                lib.write_text("mod a;\n" + declaration, encoding="utf-8")
+                self.assertEqual(unpinned(root) == [], read, (declaration, spelled))
+
+    def test_a_cfg_attr_path_below_an_inline_module_is_read(self):
+        """Under `test` the predicate chooses the file: the named one when it holds, the default
+        one when it fails; an undecided predicate stays refused."""
+        for attribute, shaped, plain, read in (
+            ('#[cfg_attr(test, path = "real.rs")]\n', "a/real.rs", "a/tests.rs", True),
+            ('#[cfg_attr(not(test), path = "prod.rs")]\n', "a/tests.rs", "a/prod.rs", True),
+            ('#[cfg_attr(test, path = "real.rs")]\n', "a/tests.rs", "a/real.rs", False),
+            ('#[cfg_attr(unix, path = "real.rs")]\n', "a/real.rs", "a/tests.rs", False),
+        ):
+            declaration = f"mod a {{\n#[cfg(test)]\n{attribute}mod tests;\n}}\n"
+            files = ((shaped, self.SPELLING), (plain, self.NO_SHAPE))
+            root = self.declared(declaration, *files, own="lib.rs")
+            self.assertEqual(unpinned(root) == [], read, (attribute, shaped))
+
+    def test_modules_returns_each_declarations_attributes_and_index_without_its_name(self):
+        found = modules("mod a;\n#[cfg(test)]\nmod tests {}\n")[1]
+        self.assertEqual([len(each) for each in found], [2, 2])
+        self.assertEqual([run for run, _ in found], [[], [["cfg", "(", "test", ")"]]])
 
 
 if __name__ == "__main__":
