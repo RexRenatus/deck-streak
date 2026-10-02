@@ -2497,14 +2497,16 @@ class ADocstringOnlyScriptChangeIsNamed(unittest.TestCase):
         """A62, the PEP 263 class (#485): the tree is the one Python reads from the bytes."""
         module = verdict_module()
         members = examined("declared encodings", cookie_edits())
-        mismatches = []
+        mismatches, readings = [], Counter()
         for name, base, head, expected in members:
             fixture = cookie_fixture(self, base, head)
             found, _ = plan_outcome(module, fixture)
+            readings[found[0]] += 1
             if found != expected:
                 mismatches.append(f"{name}: read {found}, expected {expected}")
         print(f"cookie population: {len(members)} member(s); mismatches {len(mismatches)}")
         self.assertEqual(mismatches, [])
+        self.assertEqual(readings, {"applies": 4, "named": 1, "refused": 1})
 
     def test_the_docstring_is_only_the_first_bare_string_of_a_body(self):
         """A63"""
