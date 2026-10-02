@@ -304,3 +304,64 @@ captures as files only, so W8's import maps nothing into it and it starts empty.
 | `S11812-TEXT-BOUND` | `crates/api/src/inbox_capture_route.rs` | 1 to 4000 characters; the test names 0, 4000 and 4001 | `inbox_capture_route::the_quick_capture_is_owner_only_and_bounds_its_text` |
 | `S11813-OWNER-MEDIA` | `crates/bot/src/gate.rs` | media is admitted from the owner only | `media_capture::media_is_admitted_from_the_owner_only` |
 | `S11814-RETRY-KEY` | `migrations/011801_vault_inbox_captures.sql` | a Mini App capture key is unique (a script-mutation row) | `inbox_capture::a_miniapp_retry_on_a_later_utc_day_answers_the_first_name` |
+
+## 10. Amendments, 2026-10-02: R10 refuses a malformed request by name, the api role serves the capture, and the files V1a adds beside the manifest (#56, #154)
+
+Insert-only: sections 1 to 9 are kept as they were, and this section is appended after them. It
+adds no criterion. Every path below is a manifest row this delivery adds, extends or leaves to V1b.
+
+- **R10's answers gain two refusals.** A `capture_id` that is not its own safe form (R1's unique),
+  such as an empty id, one holding a blank or a `.`, or one longer than the unique keeps, answers
+  422 `invalid_capture_id`, so two captures never share a retry key; a `kind` other than `text` or
+  `journal` answers 422 `unknown_kind`. Both are pinned by
+  `inbox_capture_route::the_quick_capture_refuses_a_bad_request_and_a_missing_vault`, beside R10's
+  `vault_missing`. The route also answers 503 `vault_not_open` when the role serves no inbox, 503
+  `database_not_open` before the database is open, and 500 `vault_unwritable` when the vault
+  refuses the write.
+- **The api role serves the capture over its configured vault.** The role composes the inbox from
+  `DECKSTREAK_VAULT_ROOT` and the layout in force (R4) at start. An unset root, a root that is not
+  absolute, or a layout file that cannot be read or is not a layout serves no capture: the route
+  answers 503 `vault_not_open`, the refusal is logged by its rule and never by its value, and
+  nothing is created. The vault is an owner choice (ADR-011), so none of these refuses the role's
+  start.
+- **Mutation row S11812.** R10's bound is `quick_text_fits` in `crates/vault/src/inbox.rs`, which the
+  coordination use case applies before any write; the route holds no bound of its own. The row's
+  target is therefore `crates/vault/src/inbox.rs`, and its killer is section 9's route test, which
+  sends 0, 4000 and 4001 characters through the whole stack.
+
+The files, against section 4's manifest:
+
+| file | context | change |
+|---|---|---|
+| `crates/coordination/tests/inbox_capture.rs` | `deck-streak-coordination` | added: the use case's six tests (R3, R4, R5, R10) |
+| `crates/api/tests/insights_routes.rs` | `deck-streak-api` | changed: the state's `Debug` line names the inbox port (`inbox: false`) |
+| `crates/vault/src/fs.rs` | `deck-streak-vault` | extended: `VaultFile` is `Send`, so a capture whose attachment is streaming can be held across an await |
+| `crates/vault/src/inbox.rs` | `deck-streak-vault` | extended: `QUICK_TEXT_CHARS` and `quick_text_fits`, R10's bound |
+| `crates/vault/tests/inbox_capture.rs` | `deck-streak-vault` | extended: R10's bound, `a_quick_text_fits_one_to_four_thousand_characters_after_the_trim` |
+| `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | changed: the api role's half, `inbox_captures`; the bot role's half is V1b's |
+| `crates/daemon/src/role_api.rs` | `deck-streak-daemon` | changed: as its row says, `api_state` composes the inbox |
+| `crates/daemon/tests/inbox_capture_composed.rs` | `deck-streak-daemon` | added: the role's composed router serves the capture over its configured vault alone |
+| `web/app/src/lib/api.ts` | Mini App | changed: `createApi` gains `capture`, the POST through its one session handshake and its single 401 renewal |
+| `web/app/src/lib/api.test.ts` | Mini App | changed: the capture's request shape, its renewal and its refusals |
+| `web/app/src/lib/startapp.ts` | Mini App | changed: the token `capture` opens the /capture screen; ruling (m): the closed token map covers every route (ADR-028) |
+| `web/app/src/lib/startapp.test.ts` | Mini App | changed: the capture token's case, and the destinations list gains `capture`; ruling (m): the closed token map covers every route (ADR-028) |
+| `web/app/messages/en.json` | Mini App | changed: the capture screen's messages |
+| `docs/red-first/SPEC-118.md` | docs | extended: the screen's and the wiring's records |
+| `tools/parity-oracle/registry/spec_118.py` | repo | added with the `inbox_capture_stub` golden; V1b adds the two media goldens |
+| `scripts/mutation-rows.d/S11800-S11899.json` | repo | added with V1a's rows, S11801 to S11807, S11812 and S11814; V1b adds S11808 to S11811 and S11813 |
+
+The Mini App's screen is delivered as its rows say: `web/app/src/routes/capture/+page.svelte`,
+`web/app/src/lib/capture/QuickCapture.svelte`, `web/app/src/lib/capture/capture.ts`,
+`web/app/src/lib/capture/QuickCapture.test.ts` and `web/app/src/lib/routes.ts`.
+
+The rows V1b delivers, each left as it is here:
+
+- `crates/bot/src/gate.rs`: unchanged in this part; delivered by V1b (#154).
+- `crates/bot/src/capture.rs`: unchanged in this part; delivered by V1b (#154).
+- `crates/bot/src/lib.rs`: unchanged in this part; delivered by V1b (#154).
+- `crates/bot/src/transport.rs`: unchanged in this part; delivered by V1b (#154).
+- `crates/bot/src/commands.rs`: unchanged in this part; delivered by V1b (#154).
+- `crates/bot/tests/media_capture.rs`: unchanged in this part; delivered by V1b (#154).
+- `crates/daemon/src/role_bot.rs`: unchanged in this part; delivered by V1b (#154).
+- `tools/parity-oracle/goldens/media_capture_choice.json`: unchanged in this part; delivered by V1b (#154).
+- `tools/parity-oracle/goldens/media_capture_replies.json`: unchanged in this part; delivered by V1b (#154).
