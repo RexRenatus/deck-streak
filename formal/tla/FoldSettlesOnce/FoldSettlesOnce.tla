@@ -9,6 +9,8 @@
 \* @phx property SettleOldestFirst ramp=report
 \* @phx witness witness/settle-once-without-the-re-read.cfg kills=SettleOnce
 \* @phx witness witness/oldest-first-without-the-re-read.cfg kills=SettleOldestFirst
+\* @phx property SettleInTurn ramp=report
+\* @phx witness witness/in-turn-without-the-re-read.cfg kills=SettleInTurn
 (***************************************************************************)
 \* The recompute's fold (SPEC-071 R15 to R17, ADR-071) run by two cycles over one ledger: the
 \* scheduled cycle and the owner's recompute. Each reaches the fold after its own successful sync,
@@ -26,9 +28,10 @@
 \* - Settle is one owed day's write (mod.rs::run step 2): the day's steps and its settled_at
 \*   (rollup.rs::record_settled), which moves the cursor in the same write (R16). The day is owed
 \*   only while the run's sync started after its close (R15). Recheck: the write re-reads the cursor
-\*   inside its own BEGIN IMMEDIATE, and when the day is at or before it, it writes nothing and the
-\*   run goes on from the day after the cursor (the ADR-303 shape). With Recheck = FALSE the write
-\*   trusts the cursor the run read in its first write, as mod.rs::run did before #311;
+\*   inside its own BEGIN IMMEDIATE, and the day owed is the day after it or, with no cursor, the
+\*   run's own day; a write for any other day writes nothing, and the run goes on from the owed day
+\*   (ADR-313, mod.rs::run as #311 built it). With Recheck = FALSE the write trusts the cursor the
+\*   run read in its first write, as mod.rs::run did before #311;
 \* - Finish is the loop's end: the current day's write, the revisit's write and the offers touch
 \*   neither the cursor nor settled_at, so each is a stuttering step of this model.
 \*
@@ -42,6 +45,11 @@
 \*   variable here holds a row;
 \* - the offers between writes (mod.rs::offer_owed) run in transactions of their own and touch
 \*   neither the cursor nor settled_at (AwardOnce models them).
+\*
+\* Re-read of mod.rs::run on 2026-10-02, against #311's fix (ADR-313): the owed loop's write now
+\* reads rollup.rs::settle_cursor first; `owed != day` rolls the write back and sets the loop's day
+\* to the owed one, which is Settle's Recheck arm (next' = owed, no settle). The first write, the
+\* current day's write and the revisit are unchanged, so Read and Finish stand as they were.
 (***************************************************************************)
 EXTENDS Naturals
 
@@ -50,9 +58,9 @@ CONSTANTS Recheck, MaxDay, MaxRuns, MaxCrash
 Cycles == {"scheduled", "owner"}
 Days == 1..MaxDay
 
-VARIABLES today, cursor, settles, backward, pc, closed, sync, next, runs, crashes
+VARIABLES today, cursor, settles, backward, gap, pc, closed, sync, next, runs, crashes
 
-vars == <<today, cursor, settles, backward, pc, closed, sync, next, runs, crashes>>
+vars == <<today, cursor, settles, backward, gap, pc, closed, sync, next, runs, crashes>>
 
 Max(a, b) == IF a >= b THEN a ELSE b
 
@@ -67,12 +75,14 @@ TypeOK ==
     /\ next \in [Cycles -> 0..(MaxDay + 1)]
     /\ runs \in [Cycles -> 0..MaxRuns]
     /\ crashes \in 0..MaxCrash
+    /\ gap \in BOOLEAN
 
 Init ==
     /\ today = 1
     /\ cursor = 0
     /\ settles = [d \in Days |-> 0]
     /\ backward = FALSE
+    /\ gap = FALSE
     /\ pc = [c \in Cycles |-> "idle"]
     /\ closed = [c \in Cycles |-> 0]
     /\ sync = [c \in Cycles |-> 0]
@@ -84,7 +94,7 @@ Init ==
 Tick ==
     /\ today < MaxDay
     /\ today' = today + 1
-    /\ UNCHANGED <<cursor, settles, backward, pc, closed, sync, next, runs, crashes>>
+    /\ UNCHANGED <<cursor, settles, backward, gap, pc, closed, sync, next, runs, crashes>>
 
 \* a cycle's sync succeeded and its fold starts: the run's now is read here
 Start(c) ==
@@ -95,29 +105,32 @@ Start(c) ==
     /\ closed' = [closed EXCEPT ![c] = today - 1]
     /\ \E s \in {today - 1, today} : sync' = [sync EXCEPT ![c] = s]
     /\ pc' = [pc EXCEPT ![c] = "read"]
-    /\ UNCHANGED <<today, cursor, settles, backward, next, crashes>>
+    /\ UNCHANGED <<today, cursor, settles, backward, gap, next, crashes>>
 
 \* the fold's first write: the cursor read once, and the first owed day
 Read(c) ==
     /\ pc[c] = "read"
     /\ next' = [next EXCEPT ![c] = IF cursor = 0 THEN closed[c] ELSE cursor + 1]
     /\ pc' = [pc EXCEPT ![c] = "settle"]
-    /\ UNCHANGED <<today, cursor, settles, backward, closed, sync, runs, crashes>>
+    /\ UNCHANGED <<today, cursor, settles, backward, gap, closed, sync, runs, crashes>>
 
 \* the run's loop condition: the day has closed, and the run's sync started after its close
 Owed(c) == next[c] <= closed[c] /\ next[c] < sync[c]
 
 \* one owed day's write, BEGIN IMMEDIATE: the day's steps and its settled_at, or, with Recheck,
-\* nothing when the cursor re-read inside the write is already at or past the day
+\* nothing when the day is not the one the cursor re-read inside the write owes (the day after it,
+\* or with no cursor the run's own day), and the run goes on from the owed day
 Settle(c) ==
     /\ pc[c] = "settle"
     /\ Owed(c)
-    /\ LET d == next[c] IN
-       IF Recheck /\ d <= cursor
-          THEN /\ next' = [next EXCEPT ![c] = cursor + 1]
-               /\ UNCHANGED <<cursor, settles, backward>>
+    /\ LET d == next[c]
+           owed == IF cursor = 0 THEN d ELSE cursor + 1 IN
+       IF Recheck /\ d # owed
+          THEN /\ next' = [next EXCEPT ![c] = owed]
+               /\ UNCHANGED <<cursor, settles, backward, gap>>
           ELSE /\ settles' = [settles EXCEPT ![d] = settles[d] + 1]
                /\ backward' = (backward \/ d < cursor)
+               /\ gap' = (gap \/ (cursor # 0 /\ d > cursor + 1))
                /\ cursor' = Max(cursor, d)
                /\ next' = [next EXCEPT ![c] = d + 1]
     /\ UNCHANGED <<today, pc, closed, sync, runs, crashes>>
@@ -127,7 +140,7 @@ Finish(c) ==
     /\ pc[c] = "settle"
     /\ ~Owed(c)
     /\ pc' = [pc EXCEPT ![c] = "idle"]
-    /\ UNCHANGED <<today, cursor, settles, backward, closed, sync, next, runs, crashes>>
+    /\ UNCHANGED <<today, cursor, settles, backward, gap, closed, sync, next, runs, crashes>>
 
 \* the process dies between two transactions; a later run of the cycle is a new process
 Crash(c) ==
@@ -135,7 +148,7 @@ Crash(c) ==
     /\ crashes < MaxCrash
     /\ crashes' = crashes + 1
     /\ pc' = [pc EXCEPT ![c] = "idle"]
-    /\ UNCHANGED <<today, cursor, settles, backward, closed, sync, next, runs>>
+    /\ UNCHANGED <<today, cursor, settles, backward, gap, closed, sync, next, runs>>
 
 Quiescent == \A c \in Cycles : pc[c] = "idle"
 
@@ -153,4 +166,9 @@ SettleOnce == \A d \in Days : settles[d] <= 1
 
 \* R15: the closed days are settled oldest first: no day is settled after a later one
 SettleOldestFirst == ~backward
+
+\* R15, R16: after the first settled day each closed day is settled in turn: no settle lands past the
+\* day after the cursor, so no day between two settled days is skipped (#311, ADR-313); the days
+\* before the first settled day are outside it (SPEC-071's amendment of 2026-10-02)
+SettleInTurn == ~gap
 =============================================================================
