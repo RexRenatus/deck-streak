@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT delta FROM coin_ledger WHERE study_day = ?1 AND source = ?2 AND reference = ?3",
+  "describe": {
+    "columns": [
+      {
+        "name": "delta",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "coin_ledger",
+            "name": "delta"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "df1d0964939bbca880b167b6319a5b79f13992861fea5f27e566c9c7082fd9a1"
+}
