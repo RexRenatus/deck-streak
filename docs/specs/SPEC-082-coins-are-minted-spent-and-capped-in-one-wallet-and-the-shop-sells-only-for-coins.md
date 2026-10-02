@@ -602,4 +602,8 @@ The files E1b adds or changes that section 4 does not name:
 - `web/app/src/routes/wallet/+page.svelte`: added, the history view.
 - `web/app/src/lib/economy/wallet-history.test.ts`: added, A20.
 - `web/app/messages/en.json`, `web/app/messages/es.json`, `web/app/messages/fr.json`, `web/app/messages/ja.json`, `web/app/messages/ko.json`, `web/app/messages/zh-Hans.json` and `web/app/messages/zh-Hant.json`: changed, the header's and the history view's words.
+- `crates/api/src/lib.rs`: changed, the wallet route's module.
+- `web/app/src/lib/startapp.ts`: changed, the `wallet` startapp token opens the /wallet screen, since every screen of the route table has a token.
+- `web/app/src/lib/startapp.test.ts`: changed, the `wallet` token joins the check that every destination is a screen of the route table.
+- `web/app/tests/a11y.spec.ts`: changed, the rendered audit's stand-in API answers the wallet view, so the header and the /wallet screen are audited with a balance and movements.
 - `changelog.d/wallet-e1b-106.md`: added, the changelog fragment.
