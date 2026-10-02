@@ -1601,6 +1601,8 @@ class TheGuardReadsOutOfLineTestModules(unittest.TestCase):
         for p in one:
             runs += [(f"#[cfg({p})]\n#[{bracket}]\n{gate}", "", False)]
             runs += [(gate, f"#![{bracket}]\n#![cfg({p})]\n", False)]
+            # No outer attribute gates the module, so only its second inner one decides it.
+            runs += [("", f'#![doc = "a"]\n#![cfg({p})]\n', not self.UNKNOWN.search(p))]
         runs += [(gate + vis, "", True) for vis in ("pub ", "pub(crate) ")]
         for outer, inner, known in runs:
             for name in ("tests", "r#tests") if outer.endswith(" ") else ("tests",):
@@ -1837,7 +1839,8 @@ class TheGuardReadsOutOfLineTestModules(unittest.TestCase):
         whose own file implements two settings, each member spells `Depth`'s shape in every source
         rustc compiles only under `--cfg test`, whatever else is configured, and `Width`'s in every
         other source a probe stands in. The guard must refuse `Width` always, and pin `Depth` for a
-        decided member that has such a source; otherwise it may refuse."""
+        decided member that has such a source; otherwise it may refuse. A member rustc refuses
+        compiles no source, so every source it holds spells `Width`'s shape and none pins."""
         members = self.members()
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
@@ -1850,14 +1853,12 @@ class TheGuardReadsOutOfLineTestModules(unittest.TestCase):
             roots.append(f'#[path = "m{index}/{root}"]\nmod m{index};\n')
         (src / "lib.rs").write_text("".join(roots), encoding="utf-8")
         under, without, broken = self.compiled(src, len(members))
-        wrong, judged = [], []
+        wrong, judged, refusing = [], [], []
         for index, (case, files, _, _, decided) in enumerate(members):
             if decided and index in broken:
                 wrong.append(f"{case}: a decided member does not compile")
-            if index in broken:
-                continue
-            judged.append(case)
-            only = under[index] - without[index] - {"own", "root"}
+            (refusing if index in broken else judged).append(case)
+            only = set() if index in broken else under[index] - without[index] - {"own", "root"}
             spell = {"own": self.SETTINGS, "root": ""}
             width = self.SPELLING.replace("depth", "width")
             tree = Path(directory.name) / f"t{index}"
@@ -1876,6 +1877,7 @@ class TheGuardReadsOutOfLineTestModules(unittest.TestCase):
             if decided and only and "demo::Depth " in refused:
                 wrong.append(f"{case}: refused, and rustc compiles {sorted(only)} only under test")
         examined("R8 member(s) judged against rustc", judged)
+        examined("R8 member(s) rustc refuses, each source read as Width's", refusing)
         self.assertGreater(len(judged), 0)
         self.assertEqual(wrong[:1], [], f"{len(wrong)} of {len(members)} members")
 
@@ -1899,6 +1901,10 @@ class TheGuardIgnoresAnImplementationInAComment(unittest.TestCase):
         self.assertEqual(unpinned(live), ['demo::Ghost (src/more.rs) "a ghost shape"'])
         after = self.src(pinned, "const A: u8 = 1; /* a\n b */ " + ghost)
         self.assertEqual(unpinned(after), ['demo::Ghost (src/more.rs) "a ghost shape"'])
+        # `*/` closes at its slash, so `*//*` is two block comments and no line comment.
+        joined = self.src(pinned, "/* a *//* b */ " + ghost.replace("\n", " ") + "\n")
+        self.assertEqual(unpinned(joined), ['demo::Ghost (src/more.rs) "a ghost shape"'])
+        self.assertEqual(lexed("a /* b\nc */ d"), "a     \n     d", "blanking keeps each newline")
 
 
 class TheGuardResolvesAModuleDeclaredInsideAnInlineModule(unittest.TestCase):
