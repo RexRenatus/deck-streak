@@ -141,6 +141,11 @@ async fn record(db: &Db, kind: &str, value: i64, day: i64, previous: i64) {
 /// The API as the daemon builds it, over a migrated and empty database, for the synthetic owner
 /// and bot, on a manual clock.
 async fn app(scratch: &TempDir) -> (Db, Router) {
+    app_with(scratch, true).await
+}
+
+/// The same app; when `open` is false the readiness never learns of the database.
+async fn app_with(scratch: &TempDir, open: bool) -> (Db, Router) {
     let db = Db::open(&scratch.path().join("deck_streak.db"))
         .await
         .expect("the database opens");
@@ -152,7 +157,9 @@ async fn app(scratch: &TempDir) -> (Db, Router) {
     );
     let access = OwnerAccess::new(gate, clock, StudyDayRule::default());
     let readiness = Readiness::new();
-    readiness.database_opened(db.clone());
+    if open {
+        readiness.database_opened(db.clone());
+    }
     (db, router(ApiState::new(readiness).with_owner(access)))
 }
 
@@ -320,6 +327,69 @@ async fn the_milestone_route_answers_pending() {
     assert_eq!(answer.status, StatusCode::OK, "{}", answer.body);
     assert_eq!(answer.json(), json!({"status": "pending"}));
     db.close().await;
+}
+
+/// The badge and record routes answer 503 `database_not_open` while the database is not open, and
+/// 500 with their own reason when their table cannot be read, each as JSON, as the streak routes
+/// do (SPEC-073 R16, R17).
+#[tokio::test]
+async fn the_badge_and_record_routes_name_why_they_cannot_answer() {
+    let mut refusals = 0_u32;
+    let routes = examined(
+        "badge and record route(s)",
+        vec![
+            (
+                BADGES_PATH,
+                "ALTER TABLE badges_earned RENAME TO gone_badges_earned",
+                "badges_unreadable",
+            ),
+            (
+                RECORDS_PATH,
+                "ALTER TABLE records RENAME TO gone_records",
+                "records_unreadable",
+            ),
+        ],
+    );
+    for (path, rename, reason) in routes {
+        let scratch = tempfile::tempdir().expect("a temporary directory");
+        let (closed_db, closed) = app_with(&scratch, false).await;
+        let owner = cookie_of(&handshake(&closed, OWNER_PAYLOAD).await);
+        let refused = get(&closed, path, Some(&owner)).await;
+        assert_eq!(refused.status, StatusCode::SERVICE_UNAVAILABLE, "{path}");
+        assert_eq!(
+            refused.json(),
+            json!({"reason": "database_not_open"}),
+            "{path}"
+        );
+        assert_eq!(
+            refused.headers.get(CONTENT_TYPE).map(HeaderValue::as_bytes),
+            Some(&b"application/json"[..]),
+            "{path}"
+        );
+        closed_db.close().await;
+
+        let scratch = tempfile::tempdir().expect("a temporary directory");
+        let (db, open) = app(&scratch).await;
+        let owner = cookie_of(&handshake(&open, OWNER_PAYLOAD).await);
+        let mut write = db.write().await.expect("a write");
+        sqlx::query(rename)
+            .execute(&mut *write)
+            .await
+            .expect("the table is renamed away");
+        write.commit().await.expect("the commit");
+        let broken = get(&open, path, Some(&owner)).await;
+        assert_eq!(broken.status, StatusCode::INTERNAL_SERVER_ERROR, "{path}");
+        assert_eq!(broken.json(), json!({"reason": reason}), "{path}");
+        assert_eq!(
+            broken.headers.get(CONTENT_TYPE).map(HeaderValue::as_bytes),
+            Some(&b"application/json"[..]),
+            "{path}"
+        );
+        db.close().await;
+        refusals += 2;
+    }
+    println!("badge and record refusals: {refusals}");
+    assert_eq!(refusals, 4);
 }
 
 #[tokio::test]

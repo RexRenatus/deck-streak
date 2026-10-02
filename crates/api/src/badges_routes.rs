@@ -142,9 +142,8 @@ async fn milestone(_owner: OwnerSession) -> Response {
 }
 
 /// How far `today` is from a record of `value`: none once today reaches it.
-const fn distance(value: i64, today: i64) -> i64 {
-    let gap = value.saturating_sub(today);
-    if gap > 0 { gap } else { 0 }
+fn distance(value: i64, today: i64) -> i64 {
+    value.saturating_sub(today).max(0)
 }
 
 /// 200 with `body` as JSON.

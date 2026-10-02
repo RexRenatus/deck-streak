@@ -1,21 +1,24 @@
 //! The badges view's pure rules (SPEC-073 R16, R18): every catalog badge either reads a stored
 //! input or is listed without progress, each streak badge's threshold is progression's own
 //! boundary, a locked badge carries its input against its threshold, and the earned badges are
-//! ordered most recently awarded first.
+//! ordered most recently awarded first. The two reads the surfaces share, the badges view and the
+//! records view for today, are run over a migrated database holding synthetic rows.
 
 // An integration test is test code: its helpers panic on a failed check.
 #![allow(clippy::expect_used, clippy::print_stdout)]
 
 use deck_streak_coordination::progression::badges_view::{
-    EarnedLine, Input, PROGRESS_INPUTS, Progress, ProgressInputs, WITHOUT_PROGRESS, locked,
-    most_recent_first, progress,
+    EarnedLine, Input, PROGRESS_INPUTS, Progress, ProgressInputs, WITHOUT_PROGRESS, badges_view,
+    locked, most_recent_first, progress,
 };
-use deck_streak_kernel::{Courses, StudyDay, UtcMillis};
+use deck_streak_coordination::progression::records_view::{RecordLine, records_now};
+use deck_streak_kernel::{Courses, Db, StudyDay, UtcMillis};
 use deck_streak_progression::badges::catalog::catalog;
 use deck_streak_progression::badges::conditions::{
     BadgeContext, CENTURION_DAY_REVIEWS, FOREST_GUARDIAN_COUNT, LEGENDARY_DAY_SCORE,
     MATURITY_MILESTONE_COUNT, POLYGLOT_DECKS_DAY, conditions,
 };
+use deck_streak_progression::records::RecordKind;
 
 /// The four streak badges, whose thresholds the view states as numbers.
 const STREAK_KEYS: [&str; 4] = [
@@ -240,4 +243,179 @@ fn the_earned_badges_are_ordered_most_recent_first() {
             ("grinder", 0)
         ]
     );
+}
+
+/// The synthetic study day the database tests read: 2025-01-14, as an epoch day.
+const TODAY: i64 = 20_102;
+
+/// A migrated database in `scratch` holding today's rollup (42 study reviews over two decks in
+/// 600 seconds, 64 mature cards, a score of 77) and a language streak of 3 days.
+async fn seeded(scratch: &tempfile::TempDir) -> Db {
+    let db = Db::open(&scratch.path().join("deck_streak.db"))
+        .await
+        .expect("the database opens");
+    let mut write = db.write().await.expect("a write");
+    sqlx::query(
+        "INSERT INTO daily_rollup (study_day, reviews, learn_count, review_count, relearn_count, \
+         filtered_count, seconds, answered, passed, true_retention, graduations, decks_studied, \
+         avg_answer_seconds, young_answered, young_passed, mature_answered, mature_passed, \
+         mature_count, young_count, leech_active, backlog, due_today, card_state_src, score, \
+         consistency, retention, workload, volume, mastery, score_at_close, settled_at, \
+         fingerprint, created_at, updated_at) \
+         VALUES (?1, 42, 0, 42, 0, 0, 600.0, 40, 36, 90.0, 1, 2, 14.0, 0, 0, 40, 36, 64, 60, 2, \
+         5, 30, 'live:1736911800000', 77, 76.0, 85.0, 70.0, 60.5, 55.0, NULL, NULL, \
+         'synthetic', 1000, 1000)",
+    )
+    .bind(TODAY)
+    .execute(&mut *write)
+    .await
+    .expect("the synthetic rollup is written");
+    sqlx::query(
+        "INSERT INTO streak_state (track, current_days, longest_days, freezes, last_study_day, \
+         comeback_armed, created_at) VALUES ('language', 3, 9, 1, ?1, 0, 1000)",
+    )
+    .bind(TODAY)
+    .execute(&mut *write)
+    .await
+    .expect("the synthetic streak is written");
+    for (key, name, emoji, day, at) in [
+        ("grinder", "Grinder", "\u{2699}", TODAY - 3, 2_000_i64),
+        ("polyglot", "Polyglot", "\u{1f310}", TODAY - 1, 5_000),
+    ] {
+        sqlx::query(
+            "INSERT INTO badges_earned (badge_key, tier, name, emoji, study_day, celebrated_at, \
+             created_at) VALUES (?1, 0, ?2, ?3, ?4, ?5, ?5)",
+        )
+        .bind(key)
+        .bind(name)
+        .bind(emoji)
+        .bind(day)
+        .bind(at)
+        .execute(&mut *write)
+        .await
+        .expect("the synthetic badge is written");
+    }
+    for (kind, value, day, previous) in [
+        ("best_score", 120_i64, TODAY - 5, 100_i64),
+        ("most_minutes", 8, TODAY - 3, 5),
+    ] {
+        sqlx::query(
+            "INSERT INTO records (kind, value, study_day, previous, celebrated_at, created_at) \
+             VALUES (?1, ?2, ?3, ?4, 1000, 1000)",
+        )
+        .bind(kind)
+        .bind(value)
+        .bind(day)
+        .bind(previous)
+        .execute(&mut *write)
+        .await
+        .expect("the synthetic record is written");
+    }
+    write.commit().await.expect("the commit");
+    db
+}
+
+#[tokio::test]
+async fn the_badges_view_reads_the_stored_badges_and_their_inputs() {
+    let scratch = tempfile::tempdir().expect("a temporary directory");
+    let db = seeded(&scratch).await;
+    let view = badges_view(&db, StudyDay::from_epoch_day(TODAY), &Courses::default())
+        .await
+        .expect("the badges view reads");
+
+    // The earned badges are the stored rows, the later award first.
+    assert_eq!(
+        view.earned,
+        [
+            EarnedLine {
+                key: "polyglot".to_owned(),
+                tier: 0,
+                name: "Polyglot".to_owned(),
+                emoji: "\u{1f310}".to_owned(),
+                study_day: StudyDay::from_epoch_day(TODAY - 1),
+                awarded_at: UtcMillis::from_epoch_millis(5_000),
+            },
+            EarnedLine {
+                key: "grinder".to_owned(),
+                tier: 0,
+                name: "Grinder".to_owned(),
+                emoji: "\u{2699}".to_owned(),
+                study_day: StudyDay::from_epoch_day(TODAY - 3),
+                awarded_at: UtcMillis::from_epoch_millis(2_000),
+            },
+        ]
+    );
+
+    // A locked badge reads its stored input: the streak's 3 days, today's 42 reviews, 64 mature
+    // cards. An earned badge is not locked.
+    let locked_progress: Vec<(&str, Option<Progress>)> = view
+        .locked
+        .iter()
+        .map(|line| (line.key.as_str(), line.progress))
+        .collect();
+    let seen = examined("locked badge(s) read from the database", locked_progress);
+    let of = |key: &str| {
+        seen.iter()
+            .find(|(seen_key, _)| *seen_key == key)
+            .map(|(_, progress)| *progress)
+    };
+    assert_eq!(
+        of("monthly_monk"),
+        Some(Some(Progress {
+            value: 3,
+            threshold: 30
+        }))
+    );
+    assert_eq!(
+        of("centurion_day"),
+        Some(Some(Progress {
+            value: 42,
+            threshold: wide(CENTURION_DAY_REVIEWS)
+        }))
+    );
+    assert_eq!(
+        of("maturity_milestone"),
+        Some(Some(Progress {
+            value: 64,
+            threshold: MATURITY_MILESTONE_COUNT
+        }))
+    );
+    assert_eq!(of("polyglot"), None);
+    assert_eq!(of("grinder"), None);
+    db.close().await;
+}
+
+#[tokio::test]
+async fn the_records_view_reads_each_stored_record_against_todays_rollup() {
+    let scratch = tempfile::tempdir().expect("a temporary directory");
+    let db = seeded(&scratch).await;
+    let view = records_now(&db, StudyDay::from_epoch_day(TODAY))
+        .await
+        .expect("the records view reads");
+
+    // Today holds 77 points and ten whole minutes; the minutes record is reached, so the record to
+    // chase is the best score, 43 points away.
+    assert_eq!(
+        view.lines,
+        [
+            RecordLine {
+                kind: RecordKind::BestScore,
+                label: RecordKind::BestScore.label(),
+                value: 120,
+                study_day: StudyDay::from_epoch_day(TODAY - 5),
+                previous: 100,
+                today: 77,
+            },
+            RecordLine {
+                kind: RecordKind::MostMinutes,
+                label: RecordKind::MostMinutes.label(),
+                value: 8,
+                study_day: StudyDay::from_epoch_day(TODAY - 3),
+                previous: 5,
+                today: 10,
+            },
+        ]
+    );
+    assert_eq!(view.chase, Some((RecordKind::BestScore, 43)));
+    db.close().await;
 }

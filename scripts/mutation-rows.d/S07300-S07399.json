@@ -176,8 +176,8 @@
         "S07323-A-REACHED-RECORD-IS-NO-DISTANCE",
         "api",
         "src/badges_routes.rs",
-        "    if gap > 0 { gap } else { 0 }",
-        "    gap",
+        "value.saturating_sub(today).max(0)",
+        "value.saturating_sub(today)",
         "badges_routes::the_records_route_answers_each_distance_from_today",
         "a record today already reaches is at no distance, never a negative one: the fixture's minutes record is 8 against today's 10 and answers 0 (SPEC-073 A24, R19)"
       ],
