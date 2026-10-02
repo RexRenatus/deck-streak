@@ -13,8 +13,8 @@
 //!
 //! Two tests carry the class, and the rest pin the helper's refusals, its count and its doc.
 //! One runs each scenario in a child process of this binary, whose dispatcher registry is empty
-//! at its start, so the loss does
-//! not depend on the other tests' timing: another thread reaches the line before the capture, and another thread's
+//! at its start, so the loss does not depend on the other tests' timing: another thread reaches
+//! the line before the capture, and another thread's
 //! first registration of the line is in flight while the capture is made. Each child also checks
 //! that the floor was the global default before its capture registered: a capture that registers
 //! first leaves a window in which another thread's registration asks no default, answers `never`
@@ -1586,4 +1586,29 @@ fn every_capture_in_the_workspace_goes_through_the_helper() {
         "the one production global default is the only one: {report}"
     );
     assert_eq!(routed, 15, "{report}");
+}
+
+/// A capture whose body panics lowers the helper's count as it unwinds, so a later capture on the
+/// thread is admitted: `with_capture`'s drop guard, not a line after the body, restores the count.
+#[test]
+fn a_capture_after_a_panicking_body_is_admitted() {
+    let first = Captured::default();
+    let then = Captured::default();
+    let body = refusal(|| {
+        log_capture::with_capture::<_, ()>(first.clone(), || {
+            reach();
+            panic!("the capture's body panics");
+        });
+    });
+    assert_eq!(
+        body, "the capture's body panics",
+        "the body's own panic unwound the capture"
+    );
+    let admitted = refusal(|| log_capture::with_capture(then.clone(), reach));
+    assert_eq!(admitted, "", "a capture after a panicking body is admitted");
+    assert_eq!(
+        then.lines(),
+        ["log_capture_class"],
+        "the admitted capture receives its line"
+    );
 }
