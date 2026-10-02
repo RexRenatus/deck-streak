@@ -192,10 +192,17 @@ R19. The Mini App's `/badges` is a gallery of earned and locked badges, each loc
 | A6 | every study condition equals the golden | `the_study_badge_conditions_match_the_parity_golden` |
 | A7 | every badge threshold equals the predecessor's constant | `the_badge_constants_equal_the_predecessors` |
 | A8 | the hour windows equal the golden | `the_hour_counts_match_the_parity_golden` |
+| A9 | the badge context built from synthetic reviews, rollups and a snapshot equals the golden | `the_badge_context_matches_the_parity_golden` |
+| A10 | a newly awarded badge is sent once (an evaluation stopped after the write sends exactly once at the next, and a stop after the router answered but before the mark leaves the sends at one), and a replay sends nothing new | `a_new_badge_is_celebrated_once_and_a_replay_raises_nothing` |
+| A11 | a closing day is judged with its end-of-day snapshot and its `score_at_close` | `a_closing_day_is_judged_with_its_end_of_day_state` |
 | A12 | the record detection equals the golden | `detect_records_matches_the_parity_golden` |
 | A13 | the record to chase equals the golden | `the_chase_record_matches_the_parity_golden` |
+| A14 | the records step (its window, its seed and its celebration keys) equals the golden | `the_records_step_matches_the_parity_golden` |
+| A15 | the first detection stores the bests with `previous` equal to their values and sends none | `the_first_detection_seeds_records_silently` |
+| A16 | a record is sent once per kind and day, including when a later day's beat meets an earlier record whose mark is unset | `a_record_is_celebrated_once_per_kind_and_day` |
 | A17 | the milestone equals the golden | `next_milestone_matches_the_parity_golden` |
 | A18 | a complete ladder contributes nothing, and three complete ladders report the top review rung at 100% | `a_complete_ladder_contributes_nothing_and_all_complete_reports_the_top_review_rung` |
+| A19 | the milestone view answers `pending` until Road to C2 supplies the mature cards | `the_milestone_is_pending_until_road_to_c2_supplies_the_mature_cards` |
 
 ```acceptance
 A1: cargo test -p deck-streak-progression --test badges_catalog -- --exact the_catalog_matches_the_parity_golden
@@ -244,13 +251,6 @@ the prefix.
 
 | id | criterion | decided by | delivered by |
 |---|---|---|---|
-| A9 | the badge context built from synthetic reviews, rollups and a snapshot equals the golden | `the_badge_context_matches_the_parity_golden` | 073b |
-| A10 | a newly awarded badge is sent once (an evaluation stopped after the write sends exactly once at the next, and a stop after the router answered but before the mark leaves the sends at one), and a replay sends nothing new | `a_new_badge_is_celebrated_once_and_a_replay_raises_nothing` | 073b |
-| A11 | a closing day is judged with its end-of-day snapshot and its `score_at_close` | `a_closing_day_is_judged_with_its_end_of_day_state` | 073b |
-| A14 | the records step (its window, its seed and its celebration keys) equals the golden | `the_records_step_matches_the_parity_golden` | 073b |
-| A15 | the first detection stores the bests with `previous` equal to their values and sends none | `the_first_detection_seeds_records_silently` | 073b |
-| A16 | a record is sent once per kind and day, including when a later day's beat meets an earlier record whose mark is unset | `a_record_is_celebrated_once_per_kind_and_day` | 073b |
-| A19 | the milestone view answers `pending` until Road to C2 supplies the mature cards | `the_milestone_is_pending_until_road_to_c2_supplies_the_mature_cards` | 073b |
 | A20 | the badge, record and milestone routes answer only the owner (401 or 403, no data) | `the_badge_record_and_milestone_routes_answer_only_the_owner` | 073c |
 | A21 | `/badges` lists the 20 most recently awarded badges | `badges_lists_the_twenty_most_recent` | 073c |
 | A22 | `/records` names the record to chase | `records_names_the_record_to_chase` | 073c |
@@ -473,8 +473,9 @@ line adds or changes them, and removes its lines from this list:
 073b delivers A9, A10, A11, A14, A15, A16 and A19 and the rows S07309, S07310, S07313, S07314 and
 S07315. Part A and part B are delivered; part C (A20 to A24) is pending, so the Status line's
 "delivered by build-073" reads part A and part B delivered. Section 4's band row ("added: the rows of
-section 9") counts 8 rows by 073a and 5 by 073b. Section 3c keeps only the `073c:` fence lines; the
-seven `073b:` lines moved back, verbatim and without the prefix, into the acceptance fence.
+section 9") counts 8 rows by 073a and 5 by 073b. Section 3c keeps only the `073c:` rows and fence lines; the
+seven `073b:` fence lines moved back, verbatim and without the prefix, into the acceptance fence, and
+the seven rows moved back, verbatim and without the `delivered by` column, into section 3's table.
 
 Two files outside the manifest above are changed by this part:
 
