@@ -12,9 +12,10 @@
 - **Prerequisites:** SPEC-071 (the fold and the current day's reviews), SPEC-072 (the day's base XP),
   SPEC-076 (the freeze port), SPEC-024 (the owner's session) and SPEC-026 (the bot's command table).
   **Mutation band:** `S08200-S08299`.
-- **Status:** delivered by E1 in part (moved from `docs/specs/planned/` with its tests and
-  `docs/red-first/SPEC-082.md`, ADR-016): the wallet of #106 in three pull requests. E1b delivers
-  R4, A7, the wallet route and header and the daemon wiring; E3 (#107) delivers the shop
+- **Status:** delivered by E1 and E1b in part (moved from `docs/specs/planned/` with its tests and
+  `docs/red-first/SPEC-082.md`, ADR-016): the wallet of #106 in three pull requests. E1 delivered
+  the wallet's core, ports, tables and data rights; E1b delivered R4, A7, the wallet route and
+  header, the history view and the daemon wiring (section 12, ADR-315); E3 (#107) delivers the shop
   (section 3c).
 
 ## 1. The problem, measured
@@ -162,10 +163,13 @@ R18. The migration `migrations/008201_economy_wallet_and_shop.sql` creates `coin
 | A4 | a burst of concurrent capped debits and purchases never leaves the balance below zero | `the_wallet_never_goes_negative_under_a_burst` |
 | A5 | a credit of one (study day, source, reference) written twice writes one movement | `a_credit_of_one_key_is_written_once` |
 | A6 | a settled day's mint is raised by a later settle and never lowered, while the current day's follows its base | `a_settled_days_mint_is_raised_and_never_lowered` |
+| A7 | the fold mints each settled day after its derived XP, so the mint equals the golden over the day's final base | `the_mint_reads_the_settled_days_final_base` |
 | A8 | the floor-clipped debit pays what the wallet holds and never refuses | `a_floor_clipped_debit_pays_what_is_held` |
 | A9 | no crate but economy names `coin_ledger` in a query, and no migration but economy's names it; a planted fixture that does is refused (examined count reported) | `only_the_wallet_writes_the_coin_ledger` |
 | A10 | the coin and shop constants equal the golden, and `economy.json`'s coin and shop values equal them | `the_coin_constants_and_economy_json_match_the_predecessors` |
 | A14 | after an erase the coin ledger is empty and the economy row holds its reset values | `an_erase_empties_the_ledger_and_resets_the_state` |
+| A15 | the wallet and shop routes answer the owner's session only, and any other caller gets 401 or 403 and no data | `the_wallet_and_shop_routes_answer_only_the_owner` |
+| A18 | the wallet header shows the balance in the layout every screen renders | `shows the balance in the layout header` |
 | A19 | a once-ever credit of one source and reference, requested on two study days, writes one movement | `a_once_ever_credit_is_written_once_on_any_day` |
 
 ```acceptance
@@ -175,10 +179,13 @@ A3: cargo test -p deck-streak-economy --test wallet_goldens -- --exact the_day_s
 A4: cargo test -p deck-streak-economy --test wallet_ports -- --exact the_wallet_never_goes_negative_under_a_burst
 A5: cargo test -p deck-streak-economy --test wallet_ports -- --exact a_credit_of_one_key_is_written_once
 A6: cargo test -p deck-streak-economy --test wallet_ports -- --exact a_settled_days_mint_is_raised_and_never_lowered
+A7: cargo test -p deck-streak-coordination --test wallet_mint -- --exact the_mint_reads_the_settled_days_final_base
 A8: cargo test -p deck-streak-economy --test wallet_ports -- --exact a_floor_clipped_debit_pays_what_is_held
 A9: cargo test -p deck-streak-economy --test wallet_census -- --exact only_the_wallet_writes_the_coin_ledger
 A10: cargo test -p deck-streak-economy --test wallet_goldens -- --exact the_coin_constants_and_economy_json_match_the_predecessors
 A14: cargo test -p deck-streak-economy --test wallet_rights -- --exact an_erase_empties_the_ledger_and_resets_the_state
+A15: cargo test -p deck-streak-api --test wallet_routes -- --exact the_wallet_and_shop_routes_answer_only_the_owner
+A18: pnpm exec vitest run web/app/src/lib/economy/wallet-header.test.ts -t "shows the balance in the layout header"
 A19: cargo test -p deck-streak-economy --test wallet_ports -- --exact a_once_ever_credit_is_written_once_on_any_day
 ```
 
@@ -210,23 +217,19 @@ wallet arm and E3 its shop arm.
 
 | id | criterion | decided by | delivered by |
 |---|---|---|---|
-| A7 | the fold mints each settled day after its derived XP, so the mint equals the golden over the day's final base | `the_mint_reads_the_settled_days_final_base` | E1b |
 | A11 | the shop's verdicts, prices and movements equal the golden of `buy_item`: the freeze refused at the hold cap with the wallet unchanged, the pass gated on a review, one pass at a time, and the surcharge | `the_shop_verdicts_match_the_parity_golden` | E3 |
 | A12 | a bought freeze moves its coins and adds its freeze in one transaction, and a grant the freeze port refuses leaves no movement | `a_bought_freeze_moves_coins_and_the_freeze_together` | E3 |
 | A13 | a refused purchase names its reason and leaves the wallet, the freezes and the pass unchanged | `a_refused_purchase_changes_nothing` | E3 |
-| A15 | the wallet and shop routes answer the owner's session only, and any other caller gets 401 or 403 and no data | `the_wallet_and_shop_routes_answer_only_the_owner` | E1b |
 | A16 | `/shop` shows the board, and its buttons run the same purchase as the Mini App | `shop_shows_the_board_and_its_buttons_buy` | E3 |
 | A17 | each disabled item card on the shop screen says why | `disables each item with its reason` | E3 |
-| A18 | the wallet header shows the balance in the layout every screen renders | `shows the balance in the layout header` | E1b |
 
-E1b: A7: cargo test -p deck-streak-coordination --test wallet_mint -- --exact the_mint_reads_the_settled_days_final_base
 E3: A11: cargo test -p deck-streak-economy --test shop_goldens -- --exact the_shop_verdicts_match_the_parity_golden
 E3: A12: cargo test -p deck-streak-coordination --test shop_purchase -- --exact a_bought_freeze_moves_coins_and_the_freeze_together
 E3: A13: cargo test -p deck-streak-coordination --test shop_purchase -- --exact a_refused_purchase_changes_nothing
-E1b: A15: cargo test -p deck-streak-api --test wallet_routes -- --exact the_wallet_and_shop_routes_answer_only_the_owner
 E3: A16: cargo test -p deck-streak-bot --test shop_commands -- --exact shop_shows_the_board_and_its_buttons_buy
 E3: A17: pnpm exec vitest run web/app/src/lib/economy/shop.test.ts -t "disables each item with its reason"
-E1b: A18: pnpm exec vitest run web/app/src/lib/economy/wallet-header.test.ts -t "shows the balance in the layout header"
+
+A15's shop arm: E3 adds the shop routes to `the_wallet_and_shop_routes_answer_only_the_owner`.
 
 ## 4. File manifest
 
@@ -485,3 +488,118 @@ The files E1 adds or changes that section 4 does not name:
 - `scripts/tests/test_formal_config.py`: changed, the test that pins the budget.
 - `crates/coordination/tests/relight_order.rs`: changed, the economy port joins the static register.
 - `scripts/mutation-equivalent.d/deck-streak-economy.json`: added, the economy's equivalent mutants.
+
+## 12. Amendments, 2026-10-02: E1b's manifest, the mint's population pin, and the history view's acceptance criterion
+
+E1b moved A7, A15 and A18 back into section 3, verbatim, as section 3c says. Section 3c keeps one
+line for A15's shop arm, which E3 adds to the same test. ADR-315 records E1b's decisions.
+
+**The mint's phase.** A mint taken between phases 4 and 5 equals the one phase 6 takes, because
+phase 5 writes only `consistency` and `ascendant`, and `economy.json`'s `day_base_excludes` leaves
+both out of the day's base (measured at `dev` 340d8967). The model `tla/MintReadsTheFinalBase`
+therefore witnesses a mint registered before phase 2, a mint in a write of its own, a mint from the
+cycle's own reading of the reviews, a backfilled day with no mint and a current mint read before
+its base.
+
+**A15's refusal.** The routes answer through the owner's session guard every owner-only route uses,
+which refuses with 401 and a body that holds only the reason (`{"reason":"no_session"}`). A15's
+"no data" is that body: for no session, a cookie no session holds, and a session after
+DELETE /api/session, the test asserts the 401, a body whose only key is `reason`, and no wallet
+field. An earlier plan said an empty body; the guard's measured answer corrects it to a body that
+holds only the reason.
+
+**The mint's population pin.** A7 judges six members: the three days the first recompute
+backfills, read after the backfill's write commits and before a later write evaluates them again;
+one settled day raised by a later recompute's late reviews; and the current day re-minted down and
+then up. The test pins the population's size at 6 and its distinct members at 6, the count of this
+paragraph's members rather than of the test's own generator. Each expected mint is the golden of
+`mint_for_base_xp` at the day's final base, read from the XP rows the fold wrote, and a base the
+golden does not hold fails the test.
+
+**The history view.** The wallet header shows the balance and links to the /wallet screen. That
+screen lists the movements newest first (by study day, then by the order they were written), a page
+at a time, from GET /api/wallet, whose answer carries the balance, the day's loss cap and what is
+left of it, one page of movements and the cursor of the next page. Each line shows its study day,
+its source in plain words and its signed amount, and no line urges, counts down or shames. The page
+size is named once, in the wallet's page read, and the cursor is the last movement shown, passed
+back as `before`.
+
+| id | criterion | decided by |
+|---|---|---|
+| A20 | the wallet screen lists the movements newest first, by study day and then by the order they were written | `lists the movements newest first` |
+
+```acceptance
+A20: pnpm exec vitest run web/app/src/lib/economy/wallet-history.test.ts -t "lists the movements newest first"
+```
+
+**The rows.** The band file gains four rows, each killed by a test that selects exactly one test:
+
+- `S08212-THE-MINT-RUNS-AFTER-THE-BASE`: target `crates/coordination/src/recompute/mint.rs`, the
+  step's declared phase moved to phase 1, before the base is written; killer
+  `wallet_mint::the_mint_reads_the_settled_days_final_base`. A move to phase 3, 4 or 5 is
+  equivalent, as the mint's phase above says, so the row moves the step before phase 2.
+- `S08213-A-BACKFILLED-DAY-IS-MINTED`: target `crates/coordination/src/recompute/mint.rs`, the
+  backfill evaluation returning before it mints; killer
+  `wallet_mint::the_mint_reads_the_settled_days_final_base`.
+- `S08214-ONLY-THE-OWNER-READS-THE-WALLET`: target `crates/api/src/wallet_routes.rs`, the owner's
+  session guard removed from the wallet route; killer
+  `wallet_routes::the_wallet_and_shop_routes_answer_only_the_owner`.
+- `S08215-THE-MOVEMENTS-COME-NEWEST-FIRST`: target `crates/economy/src/wallet.rs`, the page read's
+  order reversed; killer `wallet_ports::the_movements_come_newest_first_a_page_at_a_time`. The page
+  read is one constant statement run by `sqlx::query_as`, because a mutant of a `sqlx::query!`
+  statement does not compile against the offline query cache, so no row could prove its order.
+
+**The manifest of E1b.** Section 4's rows that E1b leaves to E3:
+
+- `crates/economy/src/shop.rs`: unchanged by E1b; E3 delivers it.
+- `crates/economy/tests/shop_goldens.rs`: unchanged by E1b; E3 delivers it.
+- `tools/parity-oracle/goldens/buy_item.json`: unchanged by E1b; E3 delivers it.
+- `crates/coordination/src/shop.rs`: unchanged by E1b; E3 delivers it.
+- `crates/coordination/tests/shop_purchase.rs`: unchanged by E1b; E3 delivers it.
+- `crates/bot/src/shop_commands.rs`: unchanged by E1b; E3 delivers it.
+- `crates/bot/src/commands.rs`: unchanged by E1b; E3 delivers it.
+- `crates/bot/tests/shop_commands.rs`: unchanged by E1b; E3 delivers it.
+- `web/app/src/lib/economy/ShopItem.svelte`: unchanged by E1b; E3 delivers it.
+- `web/app/src/lib/economy/shop.test.ts`: unchanged by E1b; E3 delivers it.
+- `web/app/src/routes/shop/+page.svelte`: unchanged by E1b; E3 delivers it.
+
+Section 4's rows E1b delivers, or changes after E1:
+
+- `crates/coordination/src/recompute/mint.rs`: added, the mint step of the fold.
+- `crates/coordination/src/recompute/mod.rs`: changed, the mint step's module; the composition root
+  registers the step in phase 6.
+- `crates/coordination/src/lib.rs`: changed, the wallet view's module.
+- `crates/coordination/tests/wallet_mint.rs`: added, A7 and the savepoint's proof.
+- `crates/api/src/wallet_routes.rs`: added, the wallet route.
+- `crates/api/src/router.rs`: changed, the wallet route behind the owner's session.
+- `crates/api/tests/wallet_routes.rs`: added, A15's wallet arm.
+- `crates/daemon/src/wiring.rs`: changed, the mint step registered in the fold, and its unit test.
+- `crates/economy/src/wallet.rs`: changed, the movements' page read.
+- `crates/economy/tests/wallet_ports.rs`: changed, the page read's order and cursor.
+- `web/app/src/lib/economy/WalletHeader.svelte`: added, the balance header.
+- `web/app/src/lib/economy/wallet.ts`: added, the wallet answer's types and parser.
+- `web/app/src/lib/economy/wallet-header.test.ts`: added, A18.
+- `web/app/src/routes/+layout.svelte`: changed, the wallet header on every screen.
+- `web/app/src/lib/routes.ts`: changed, the /wallet screen joins `ROUTES`; E3 adds the shop's.
+- `scripts/mutation-rows.d/S08200-S08299.json`: changed, the rows S08212 to S08215.
+- `docs/red-first/SPEC-082.md`: changed, E1b's red-first record appended.
+
+The files E1b adds or changes that section 4 does not name:
+
+- `docs/decisions/ADR-315-the-fold-mints-each-day-in-a-savepoint-of-its-write-and-the-wallet-lists-its-movements.md`: added, E1b's decision record.
+- `formal/tla/MintReadsTheFinalBase/MintReadsTheFinalBase.tla`: added, the model of the two cycles over the fold's writes.
+- `formal/tla/MintReadsTheFinalBase/MCMintReadsTheFinalBase.cfg`: added, the model's configuration.
+- `formal/tla/MintReadsTheFinalBase/witness/a-mint-read-before-its-days-base-is-written.cfg`: added, a witness.
+- `formal/tla/MintReadsTheFinalBase/witness/a-mint-written-in-a-transaction-of-its-own.cfg`: added, a witness.
+- `formal/tla/MintReadsTheFinalBase/witness/a-backfill-that-writes-no-mint.cfg`: added, a witness.
+- `formal/tla/MintReadsTheFinalBase/witness/a-mint-from-the-cycles-own-reading.cfg`: added, a witness.
+- `formal/tla/MintReadsTheFinalBase/witness/a-current-mint-read-before-its-base-is-written.cfg`: added, a witness.
+- `config/formal.json`: changed, the model's time budget.
+- `scripts/tests/test_formal_config.py`: changed, the test that pins the budget.
+- `crates/coordination/src/wallet_view.rs`: added, the wallet's view the route serves, because the API crate reads the coordination context alone.
+- `web/app/src/lib/api.ts`: changed, the client's wallet read.
+- `web/app/src/routes/layout.test.ts`: changed, the layout's children gain the header.
+- `web/app/src/routes/wallet/+page.svelte`: added, the history view.
+- `web/app/src/lib/economy/wallet-history.test.ts`: added, A20.
+- `web/app/messages/en.json`, `web/app/messages/es.json`, `web/app/messages/fr.json`, `web/app/messages/ja.json`, `web/app/messages/ko.json`, `web/app/messages/zh-Hans.json` and `web/app/messages/zh-Hant.json`: changed, the header's and the history view's words.
+- `changelog.d/wallet-e1b-106.md`: added, the changelog fragment.
