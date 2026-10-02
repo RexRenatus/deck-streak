@@ -106,3 +106,19 @@ The text above is not edited. Each sentence it corrects is quoted as `old`; `new
   a half-deleted release a later rollback could accept.
 - Confirmation: `every_state_and_every_writing_call_of_the_host_step_is_refused` and the
   double-fault tests of the undo and the way back; rows S12793 to S12799 and S12793-B.
+
+## Amendment, 2026-10-02: round four of the fix (issue #451); corrections as old/new pairs
+
+The text above is not edited. Each sentence it corrects is quoted as `old`; `new` governs.
+
+- old: "26 escaping spellings are planted bodies, each red by assertion". new: the 26 spellings that
+  escaped it each change what `census()` reports (an `<unknown>` word, a counted writing site or an
+  added redirection target), and the census test's pins refuse each; the planted-body test is not
+  their proof, because at this head its predicate holds for any plant, a no-op plant included.
+- old: "Nothing is filtered out: a filter that drops a member is a weakening, not a bound." new:
+  `NOT_A_STATE` drops no member: since round four it holds only pairs the registry cannot build,
+  pairs equal to another state, and kept-verb pairs that reach no `.partial` and no prune; a filter
+  that drops a member is a weakening, not a bound.
+- old: "the guards that had none now have one (S12793 to S12799 and S12793-B)". new: the guards that
+  had none now have one (S12793 to S12799, S12793-B, and S12700 for the kept release's whole check,
+  round four).

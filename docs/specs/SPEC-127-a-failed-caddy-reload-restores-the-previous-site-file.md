@@ -597,3 +597,31 @@ The rows S12793 to S12799 are each killed by the test named in the row.
   that proof is follow-up #505 and its model follows the code as it is: the trap, the prune and
   the refusal branches.
 - It does not close a directory that changes between the pre-check and the write (#505).
+
+## Amendment, 2026-10-02: round four of the fix (issue #451); corrections as old/new pairs
+
+The text above is not edited. Each sentence it corrects is quoted as `old`; `new` governs.
+
+- old: "26 spellings that escaped it are planted bodies, each red by assertion". new: the 26
+  spellings that escaped it each change what `census()` reports (an `<unknown>` word, a counted
+  writing site or an added redirection target), and the census test's pins refuse each; the
+  planted-body test is not their proof, because at this head its predicate holds for any plant, a
+  no-op plant included.
+- old: "252 command sites, 1 redirection target and 17 writing calls, each printed `examined <n>`
+  figure asserted equal to a figure derived independently". new: 252 command sites, 1 redirection
+  target and 17 writing calls, each printed as `examined <n>`; 252 and 1 are pinned literals that a
+  change to the host script updates by hand, and the per-tool counts that make up the 17 are asserted
+  equal to an independent reading of the body, while their sum is also pinned as the literal 17.
+- old: "the host script's own first guard is `refuse`". new: the host script's own first guard is a
+  `stop` that gives its whole message, that the tag is already current.
+- old: "a removal that fails is tried again and then refused with one line, last". new: the host
+  step's removal before the switch is tried once and a failure is refused with one line, last; the
+  prune's removal is tried once and a failure ends 0 with one warning line naming the release; the
+  trap's removals are tried twice and then end silently.
+- old: "and for the pairs the registry cannot build, each with its reason". new: and for the pairs
+  `NOT_A_STATE` names, each with its reason: pairs the registry cannot build or that equal another
+  state, and kept-verb pairs it can build that drop no member, since the kept path reads no
+  `.partial` and runs no prune; the same-tag rollback with no kept release is a member since round
+  four.
+- old: "the double-fault tests of the undo (3) and of the way back (3)". new: the double-fault tests
+  of the undo (3) and of the way back (5).
