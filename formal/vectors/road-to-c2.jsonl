@@ -1,0 +1,167 @@
+{"schema":"phx.formal.vectors.v1","entry":"RoadToC2","covers":"crates/curriculum/src/progress.rs","anchor":"band_step","digest":"sha256:0000000000000000000000000000000000000000000000000000000000000000","vectors":166}
+{"rule":"course_progress","achieved":[false,false,false,false,false,false],"current_band":"A1"}
+{"rule":"course_progress","achieved":[true,false,false,false,false,false],"current_band":"A1"}
+{"rule":"course_progress","achieved":[false,true,false,false,false,false],"current_band":"A1"}
+{"rule":"course_progress","achieved":[true,true,false,false,false,false],"current_band":"A2"}
+{"rule":"course_progress","achieved":[false,false,true,false,false,false],"current_band":"A1"}
+{"rule":"course_progress","achieved":[true,false,true,false,false,false],"current_band":"A1"}
+{"rule":"course_progress","achieved":[false,true,true,false,false,false],"current_band":"A1"}
+{"rule":"course_progress","achieved":[true,true,true,false,false,false],"current_band":"B1"}
+{"rule":"course_progress","achieved":[false,false,false,true,false,false],"current_band":"A1"}
+{"rule":"course_progress","achieved":[true,false,false,true,false,false],"current_band":"A1"}
+{"rule":"course_progress","achieved":[false,true,false,true,false,false],"current_band":"A1"}
+{"rule":"course_progress","achieved":[true,true,false,true,false,false],"current_band":"A2"}
+{"rule":"course_progress","achieved":[false,false,true,true,false,false],"current_band":"A1"}
+{"rule":"course_progress","achieved":[true,false,true,true,false,false],"current_band":"A1"}
+{"rule":"course_progress","achieved":[false,true,true,true,false,false],"current_band":"A1"}
+{"rule":"course_progress","achieved":[true,true,true,true,false,false],"current_band":"B2"}
+{"rule":"course_progress","achieved":[false,false,false,false,true,false],"current_band":"A1"}
+{"rule":"course_progress","achieved":[true,false,false,false,true,false],"current_band":"A1"}
+{"rule":"course_progress","achieved":[false,true,false,false,true,false],"current_band":"A1"}
+{"rule":"course_progress","achieved":[true,true,false,false,true,false],"current_band":"A2"}
+{"rule":"course_progress","achieved":[false,false,true,false,true,false],"current_band":"A1"}
+{"rule":"course_progress","achieved":[true,false,true,false,true,false],"current_band":"A1"}
+{"rule":"course_progress","achieved":[false,true,true,false,true,false],"current_band":"A1"}
+{"rule":"course_progress","achieved":[true,true,true,false,true,false],"current_band":"B1"}
+{"rule":"course_progress","achieved":[false,false,false,true,true,false],"current_band":"A1"}
+{"rule":"course_progress","achieved":[true,false,false,true,true,false],"current_band":"A1"}
+{"rule":"course_progress","achieved":[false,true,false,true,true,false],"current_band":"A1"}
+{"rule":"course_progress","achieved":[true,true,false,true,true,false],"current_band":"A2"}
+{"rule":"course_progress","achieved":[false,false,true,true,true,false],"current_band":"A1"}
+{"rule":"course_progress","achieved":[true,false,true,true,true,false],"current_band":"A1"}
+{"rule":"course_progress","achieved":[false,true,true,true,true,false],"current_band":"A1"}
+{"rule":"course_progress","achieved":[true,true,true,true,true,false],"current_band":"C1"}
+{"rule":"course_progress","achieved":[false,false,false,false,false,true],"current_band":"A1"}
+{"rule":"course_progress","achieved":[true,false,false,false,false,true],"current_band":"A1"}
+{"rule":"course_progress","achieved":[false,true,false,false,false,true],"current_band":"A1"}
+{"rule":"course_progress","achieved":[true,true,false,false,false,true],"current_band":"A2"}
+{"rule":"course_progress","achieved":[false,false,true,false,false,true],"current_band":"A1"}
+{"rule":"course_progress","achieved":[true,false,true,false,false,true],"current_band":"A1"}
+{"rule":"course_progress","achieved":[false,true,true,false,false,true],"current_band":"A1"}
+{"rule":"course_progress","achieved":[true,true,true,false,false,true],"current_band":"B1"}
+{"rule":"course_progress","achieved":[false,false,false,true,false,true],"current_band":"A1"}
+{"rule":"course_progress","achieved":[true,false,false,true,false,true],"current_band":"A1"}
+{"rule":"course_progress","achieved":[false,true,false,true,false,true],"current_band":"A1"}
+{"rule":"course_progress","achieved":[true,true,false,true,false,true],"current_band":"A2"}
+{"rule":"course_progress","achieved":[false,false,true,true,false,true],"current_band":"A1"}
+{"rule":"course_progress","achieved":[true,false,true,true,false,true],"current_band":"A1"}
+{"rule":"course_progress","achieved":[false,true,true,true,false,true],"current_band":"A1"}
+{"rule":"course_progress","achieved":[true,true,true,true,false,true],"current_band":"B2"}
+{"rule":"course_progress","achieved":[false,false,false,false,true,true],"current_band":"A1"}
+{"rule":"course_progress","achieved":[true,false,false,false,true,true],"current_band":"A1"}
+{"rule":"course_progress","achieved":[false,true,false,false,true,true],"current_band":"A1"}
+{"rule":"course_progress","achieved":[true,true,false,false,true,true],"current_band":"A2"}
+{"rule":"course_progress","achieved":[false,false,true,false,true,true],"current_band":"A1"}
+{"rule":"course_progress","achieved":[true,false,true,false,true,true],"current_band":"A1"}
+{"rule":"course_progress","achieved":[false,true,true,false,true,true],"current_band":"A1"}
+{"rule":"course_progress","achieved":[true,true,true,false,true,true],"current_band":"B1"}
+{"rule":"course_progress","achieved":[false,false,false,true,true,true],"current_band":"A1"}
+{"rule":"course_progress","achieved":[true,false,false,true,true,true],"current_band":"A1"}
+{"rule":"course_progress","achieved":[false,true,false,true,true,true],"current_band":"A1"}
+{"rule":"course_progress","achieved":[true,true,false,true,true,true],"current_band":"A2"}
+{"rule":"course_progress","achieved":[false,false,true,true,true,true],"current_band":"A1"}
+{"rule":"course_progress","achieved":[true,false,true,true,true,true],"current_band":"A1"}
+{"rule":"course_progress","achieved":[false,true,true,true,true,true],"current_band":"A1"}
+{"rule":"course_progress","achieved":[true,true,true,true,true,true],"current_band":"C2"}
+{"rule":"band_step","stored":null,"current":"A1","step":"first_sighting","band":"A1"}
+{"rule":"band_step","stored":null,"current":"A2","step":"first_sighting","band":"A2"}
+{"rule":"band_step","stored":null,"current":"B1","step":"first_sighting","band":"B1"}
+{"rule":"band_step","stored":null,"current":"B2","step":"first_sighting","band":"B2"}
+{"rule":"band_step","stored":null,"current":"C1","step":"first_sighting","band":"C1"}
+{"rule":"band_step","stored":null,"current":"C2","step":"first_sighting","band":"C2"}
+{"rule":"band_step","stored":null,"current":"Z9","step":"first_sighting","band":"Z9"}
+{"rule":"band_step","stored":"A1","current":"A1","step":"unchanged","band":null}
+{"rule":"band_step","stored":"A1","current":"A2","step":"band_up","band":"A2"}
+{"rule":"band_step","stored":"A1","current":"B1","step":"band_up","band":"B1"}
+{"rule":"band_step","stored":"A1","current":"B2","step":"band_up","band":"B2"}
+{"rule":"band_step","stored":"A1","current":"C1","step":"band_up","band":"C1"}
+{"rule":"band_step","stored":"A1","current":"C2","step":"band_up","band":"C2"}
+{"rule":"band_step","stored":"A1","current":"Z9","step":"unchanged","band":null}
+{"rule":"band_step","stored":"A2","current":"A1","step":"unchanged","band":null}
+{"rule":"band_step","stored":"A2","current":"A2","step":"unchanged","band":null}
+{"rule":"band_step","stored":"A2","current":"B1","step":"band_up","band":"B1"}
+{"rule":"band_step","stored":"A2","current":"B2","step":"band_up","band":"B2"}
+{"rule":"band_step","stored":"A2","current":"C1","step":"band_up","band":"C1"}
+{"rule":"band_step","stored":"A2","current":"C2","step":"band_up","band":"C2"}
+{"rule":"band_step","stored":"A2","current":"Z9","step":"unchanged","band":null}
+{"rule":"band_step","stored":"B1","current":"A1","step":"unchanged","band":null}
+{"rule":"band_step","stored":"B1","current":"A2","step":"unchanged","band":null}
+{"rule":"band_step","stored":"B1","current":"B1","step":"unchanged","band":null}
+{"rule":"band_step","stored":"B1","current":"B2","step":"band_up","band":"B2"}
+{"rule":"band_step","stored":"B1","current":"C1","step":"band_up","band":"C1"}
+{"rule":"band_step","stored":"B1","current":"C2","step":"band_up","band":"C2"}
+{"rule":"band_step","stored":"B1","current":"Z9","step":"unchanged","band":null}
+{"rule":"band_step","stored":"B2","current":"A1","step":"unchanged","band":null}
+{"rule":"band_step","stored":"B2","current":"A2","step":"unchanged","band":null}
+{"rule":"band_step","stored":"B2","current":"B1","step":"unchanged","band":null}
+{"rule":"band_step","stored":"B2","current":"B2","step":"unchanged","band":null}
+{"rule":"band_step","stored":"B2","current":"C1","step":"band_up","band":"C1"}
+{"rule":"band_step","stored":"B2","current":"C2","step":"band_up","band":"C2"}
+{"rule":"band_step","stored":"B2","current":"Z9","step":"unchanged","band":null}
+{"rule":"band_step","stored":"C1","current":"A1","step":"unchanged","band":null}
+{"rule":"band_step","stored":"C1","current":"A2","step":"unchanged","band":null}
+{"rule":"band_step","stored":"C1","current":"B1","step":"unchanged","band":null}
+{"rule":"band_step","stored":"C1","current":"B2","step":"unchanged","band":null}
+{"rule":"band_step","stored":"C1","current":"C1","step":"unchanged","band":null}
+{"rule":"band_step","stored":"C1","current":"C2","step":"band_up","band":"C2"}
+{"rule":"band_step","stored":"C1","current":"Z9","step":"unchanged","band":null}
+{"rule":"band_step","stored":"C2","current":"A1","step":"unchanged","band":null}
+{"rule":"band_step","stored":"C2","current":"A2","step":"unchanged","band":null}
+{"rule":"band_step","stored":"C2","current":"B1","step":"unchanged","band":null}
+{"rule":"band_step","stored":"C2","current":"B2","step":"unchanged","band":null}
+{"rule":"band_step","stored":"C2","current":"C1","step":"unchanged","band":null}
+{"rule":"band_step","stored":"C2","current":"C2","step":"unchanged","band":null}
+{"rule":"band_step","stored":"C2","current":"Z9","step":"unchanged","band":null}
+{"rule":"band_step","stored":"Z9","current":"A1","step":"unchanged","band":null}
+{"rule":"band_step","stored":"Z9","current":"A2","step":"unchanged","band":null}
+{"rule":"band_step","stored":"Z9","current":"B1","step":"unchanged","band":null}
+{"rule":"band_step","stored":"Z9","current":"B2","step":"unchanged","band":null}
+{"rule":"band_step","stored":"Z9","current":"C1","step":"unchanged","band":null}
+{"rule":"band_step","stored":"Z9","current":"C2","step":"unchanged","band":null}
+{"rule":"band_step","stored":"Z9","current":"Z9","step":"unchanged","band":null}
+{"rule":"mastery_pillar","law_leech_active":-9223372036854775808,"pillar":100}
+{"rule":"mastery_pillar","law_leech_active":-1000,"pillar":100}
+{"rule":"mastery_pillar","law_leech_active":-11,"pillar":100}
+{"rule":"mastery_pillar","law_leech_active":-10,"pillar":100}
+{"rule":"mastery_pillar","law_leech_active":-4,"pillar":100}
+{"rule":"mastery_pillar","law_leech_active":-1,"pillar":100}
+{"rule":"mastery_pillar","law_leech_active":0,"pillar":100}
+{"rule":"mastery_pillar","law_leech_active":1,"pillar":97}
+{"rule":"mastery_pillar","law_leech_active":2,"pillar":94}
+{"rule":"mastery_pillar","law_leech_active":3,"pillar":91}
+{"rule":"mastery_pillar","law_leech_active":4,"pillar":88}
+{"rule":"mastery_pillar","law_leech_active":5,"pillar":85}
+{"rule":"mastery_pillar","law_leech_active":6,"pillar":82}
+{"rule":"mastery_pillar","law_leech_active":7,"pillar":79}
+{"rule":"mastery_pillar","law_leech_active":8,"pillar":76}
+{"rule":"mastery_pillar","law_leech_active":9,"pillar":73}
+{"rule":"mastery_pillar","law_leech_active":10,"pillar":70}
+{"rule":"mastery_pillar","law_leech_active":11,"pillar":70}
+{"rule":"mastery_pillar","law_leech_active":20,"pillar":70}
+{"rule":"mastery_pillar","law_leech_active":1000,"pillar":70}
+{"rule":"mastery_pillar","law_leech_active":9223372036854775807,"pillar":70}
+{"rule":"parse_unit","deck_name":"Unit 3","unit":3}
+{"rule":"parse_unit","deck_name":"Unit 03","unit":3}
+{"rule":"parse_unit","deck_name":"Unit 000","unit":0}
+{"rule":"parse_unit","deck_name":"Unit3","unit":null}
+{"rule":"parse_unit","deck_name":"Unit  12","unit":12}
+{"rule":"parse_unit","deck_name":"Unit\u00097","unit":7}
+{"rule":"parse_unit","deck_name":"Unit 9","unit":9}
+{"rule":"parse_unit","deck_name":"Unit　5","unit":5}
+{"rule":"parse_unit","deck_name":"Unit\u000b6","unit":6}
+{"rule":"parse_unit","deck_name":"Beta Course\u001fUnit 07","unit":7}
+{"rule":"parse_unit","deck_name":"Unit x Unit 4","unit":4}
+{"rule":"parse_unit","deck_name":"Unit 5 Unit 6","unit":5}
+{"rule":"parse_unit","deck_name":"UnitUnit 8","unit":8}
+{"rule":"parse_unit","deck_name":"Units 4","unit":null}
+{"rule":"parse_unit","deck_name":"unit 4","unit":null}
+{"rule":"parse_unit","deck_name":"Unit 12a","unit":12}
+{"rule":"parse_unit","deck_name":"Unit -3","unit":null}
+{"rule":"parse_unit","deck_name":"Unit ","unit":null}
+{"rule":"parse_unit","deck_name":"","unit":null}
+{"rule":"parse_unit","deck_name":"Lesson 4","unit":null}
+{"rule":"parse_unit","deck_name":"Unit 4294967295","unit":4294967295}
+{"rule":"parse_unit","deck_name":"Unit 4294967296","unit":null}
+{"rule":"parse_unit","deck_name":"Unit 00004294967295","unit":4294967295}
+{"rule":"parse_unit","deck_name":"Unit 99999999999999999999","unit":null}
+{"rule":"parse_unit","deck_name":"Unit 4294967296 Unit 2","unit":null}
