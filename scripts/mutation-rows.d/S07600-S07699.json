@@ -450,6 +450,15 @@
         "    reach\n",
         "streak_calendar_route::the_route_serves_the_predecessors_window_and_its_studied_days",
         "the route widens the window to the Monday on or before its reach, as the predecessor does (SPEC-076 section 27; ADR-302 D2)"
+      ],
+      [
+        "S07651-THE-SILENT-DAY-COUNT-SATURATES",
+        "streaks",
+        "src/lapse.rs",
+        "    silent.saturating_add(1)\n",
+        "    silent.wrapping_add(1)\n",
+        "open_lapse_bound::the_silent_day_count_saturates_at_its_bound",
+        "the silent-day step stays at u32::MAX instead of wrapping to zero (SPEC-076 section 33; ADR-309)"
       ]
     ]
   }
