@@ -730,3 +730,26 @@ async fn a_miniapp_retry_on_a_later_utc_day_answers_the_first_name() {
         "one quick capture and two Telegram captures"
     );
 }
+
+#[test]
+fn a_quick_text_fits_one_to_four_thousand_characters_after_the_trim() {
+    let longest = "é".repeat(inbox::QUICK_TEXT_CHARS);
+    assert!(inbox::quick_text_fits("x"), "one character");
+    assert!(
+        inbox::quick_text_fits(&longest),
+        "the longest, counted in characters"
+    );
+    assert!(
+        inbox::quick_text_fits(&format!(" \u{1c}{longest}\u{1f}\n")),
+        "the trim's characters are not counted"
+    );
+    assert!(!inbox::quick_text_fits(""), "an empty text");
+    assert!(
+        !inbox::quick_text_fits(" \u{1c}\u{1f}\n\t"),
+        "a text the trim empties"
+    );
+    assert!(
+        !inbox::quick_text_fits(&format!("{longest}x")),
+        "one character past the bound"
+    );
+}

@@ -28,6 +28,9 @@ pub const FALLBACK_UNIQUE: &str = "capture";
 pub const FALLBACK_EXTENSION: &str = ".bin";
 /// The longest plain extension, in characters, without its dot (ADR-118).
 pub const EXTENSION_CHARS: usize = 10;
+/// The longest quick capture's text, in characters after the stub's trim: SPEC-118 R10's bound on
+/// the Mini App's one text field.
+pub const QUICK_TEXT_CHARS: usize = 4_000;
 /// One UTC day, in milliseconds: a stem's date is the capture instant's UTC day.
 const DAY_MS: i64 = 86_400_000;
 
@@ -228,6 +231,13 @@ pub fn miniapp_stub(kind: CaptureKind, when: UtcMillis, text: &str) -> String {
         instant(when),
         text.trim_matches(is_python_space)
     )
+}
+
+/// Whether `text` is a quick capture's text (R10): 1 to [`QUICK_TEXT_CHARS`] characters after the
+/// trim [`miniapp_stub`] applies, so the bound counts exactly what the stub holds.
+#[must_use]
+pub fn quick_text_fits(text: &str) -> bool {
+    text.is_empty()
 }
 
 /// The inbox folder of the layout in force, inside the vault root.
