@@ -1,4 +1,4 @@
-{"schema":"phx.formal.vectors.v1","entry":"Wallet","covers":"crates/economy/src/rules.rs","anchor":"clip_debit","digest":"sha256:0000000000000000000000000000000000000000000000000000000000000000","vectors":747}
+{"schema":"phx.formal.vectors.v1","entry":"Wallet","covers":"crates/economy/src/rules.rs","anchor":"clip_debit","digest":"sha256:445fb9f9b87efed0a5bb85317173ac2da096244522e2f68106692e09ab3eb89f","vectors":747}
 {"rule":"clip_debit","requested":-2,"wallet":-2,"cap_remaining":-2,"allowed":0,"forgiven":false}
 {"rule":"clip_debit","requested":-2,"wallet":-2,"cap_remaining":-1,"allowed":0,"forgiven":false}
 {"rule":"clip_debit","requested":-2,"wallet":-2,"cap_remaining":0,"allowed":0,"forgiven":false}
