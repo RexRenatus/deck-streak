@@ -457,11 +457,11 @@ A19: python3 -m unittest discover -s scripts/tests -p test_stand_in_census.py -k
 ## 12. Amendments, 2026-10-02: the workflow scan reads the wrapper's form from the guard's text, and the stand-in census and the finder's copy check read the syntax tree (#532, #533)
 
 Insert-only against dev under ruling (i) of SPEC-038 section 8: every byte of dev's file is kept in
-order, and this amendment appends this section and nothing else. It is decided by ADR-312 (the
-wrapper's form read from the guard's text, chosen against importing the guard, a second literal
-copy and keeping the broader reading; a census of the syntax tree, chosen against a wider pattern
-and window; a copy check by normalised body, chosen against a similarity threshold and against
-comparing source text). Issues #532 and #533.
+order, and this amendment appends this section and the next, its acceptance criteria, and nothing
+else. It is decided by ADR-312 (the wrapper's form read from the guard's text, chosen against
+importing the guard, a second literal copy and keeping the broader reading; a census of the syntax
+tree, chosen against a wider pattern and window; a copy check by normalised body, chosen against a
+similarity threshold and against comparing source text). Issues #532 and #533.
 
 - **The rule, #533.** Section 10 gave `test_mutation_workflows.py` a recognizer that took, for a
   command whose program is not cargo, the words after its first standalone `--`. The guard of
@@ -563,6 +563,41 @@ comparing source text). Issues #532 and #533.
 - It does not teach the scan the wrapper's declared options, so the two named limits above stay
   (#533).
 
+**Files of this amendment:**
+
+- `scripts/tests/test_mutation_workflows.py`: changed: the wrapper's form read by text, the scan's
+  `after_separator`, the separated population, the named limits, the body comparison and `FLOOR`
+  (A20 to A22, A27, A28).
+- `scripts/tests/_stand_in_census.py`: changed: the census reads the syntax tree and the string
+  constants (A23 to A26).
+- `scripts/tests/test_stand_in_census.py`: changed: the shapes, the reach, the constants and the
+  limits (A23 to A26).
+- `scripts/tests/test_ci_workflows.py`: changed: its census of read sites names the new reads of
+  `test_mutation_workflows.py`, and the census's two `warnings` calls, which silence the
+  `SyntaxWarning` a string constant's parse raises and import, run and read nothing.
+- `scripts/mutation-rows.d/S12900-S12999.json`: changed: rows from S12913 for the new arms.
+- `docs/specs/SPEC-129-a-package-dispatch-is-sharded-by-its-projected-weight.md`: changed: this
+  section and the next, appended.
+- `docs/decisions/ADR-312-the-workflow-scan-reads-the-wrappers-form-and-the-census-reads-the-syntax-tree.md`:
+  added.
+- `docs/red-first/SPEC-129.md`: changed: an addendum for A20 to A28.
+- `changelog.d/fix-census-and-separator-532-533.md`: added.
+
+The rows of section 4's manifest this amendment leaves alone, each on its own line:
+
+- `.github/workflows/mutation-weekly.yml`: unchanged.
+- `scripts/mutation-verdict.py`: unchanged.
+- `scripts/tests/test_dispatch_shards.py`: unchanged.
+- `docs/decisions/ADR-129-a-package-dispatch-is-sized-from-its-own-listing.md`: unchanged.
+- `docs/specs/planned/SPEC-057-every-surviving-mutant-is-killed-or-recorded-equivalent-before-the-first-mutation-gated-release.md`: unchanged.
+- `changelog.d/ci-dispatch-shards-129.md`: unchanged.
+
+Of section 10's files, `scripts/tests/_mutants_finder.py` and
+`docs/decisions/ADR-306-one-finder-for-the-mutants-scans-and-a-stand-in-that-fails-closed.md` are
+unchanged.
+
+## 13. Acceptance criteria of the section 12 amendments
+
 | id | criterion | decided by |
 |---|---|---|
 | A20 | the scan reads `WRAPPER` from the guard's text: exactly one module-level assignment, a tuple of two strings, read by `ast.literal_eval`; an assignment inside a function, or none, is not read | `test_mutation_workflows.py` `TheScanReadsTheWrappersForm` |
@@ -605,36 +640,3 @@ A27: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py
 A27: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k test_a_renamed_and_rewrapped_copy_of_each_finder_function_is_caught
 A28: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k test_a_copy_with_changed_logic_is_caught_only_under_the_finders_name
 ```
-
-**Files of this amendment:**
-
-- `scripts/tests/test_mutation_workflows.py`: changed: the wrapper's form read by text, the scan's
-  `after_separator`, the separated population, the named limits, the body comparison and `FLOOR`
-  (A20 to A22, A27, A28).
-- `scripts/tests/_stand_in_census.py`: changed: the census reads the syntax tree and the string
-  constants (A23 to A26).
-- `scripts/tests/test_stand_in_census.py`: changed: the shapes, the reach, the constants and the
-  limits (A23 to A26).
-- `scripts/tests/test_ci_workflows.py`: changed: its census of read sites names the new reads of
-  `test_mutation_workflows.py`, and the census's two `warnings` calls, which silence the
-  `SyntaxWarning` a string constant's parse raises and import, run and read nothing.
-- `scripts/mutation-rows.d/S12900-S12999.json`: changed: rows from S12913 for the new arms.
-- `docs/specs/SPEC-129-a-package-dispatch-is-sharded-by-its-projected-weight.md`: changed: this
-  section, appended.
-- `docs/decisions/ADR-312-the-workflow-scan-reads-the-wrappers-form-and-the-census-reads-the-syntax-tree.md`:
-  added.
-- `docs/red-first/SPEC-129.md`: changed: an addendum for A20 to A28.
-- `changelog.d/fix-census-and-separator-532-533.md`: added.
-
-The rows of section 4's manifest this amendment leaves alone, each on its own line:
-
-- `.github/workflows/mutation-weekly.yml`: unchanged.
-- `scripts/mutation-verdict.py`: unchanged.
-- `scripts/tests/test_dispatch_shards.py`: unchanged.
-- `docs/decisions/ADR-129-a-package-dispatch-is-sized-from-its-own-listing.md`: unchanged.
-- `docs/specs/planned/SPEC-057-every-surviving-mutant-is-killed-or-recorded-equivalent-before-the-first-mutation-gated-release.md`: unchanged.
-- `changelog.d/ci-dispatch-shards-129.md`: unchanged.
-
-Of section 10's files, `scripts/tests/_mutants_finder.py` and
-`docs/decisions/ADR-306-one-finder-for-the-mutants-scans-and-a-stand-in-that-fails-closed.md` are
-unchanged.
