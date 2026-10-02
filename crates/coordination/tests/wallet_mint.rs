@@ -533,3 +533,111 @@ async fn the_wallet_view_leaves_what_the_days_debits_spare_of_its_loss_cap() {
         "debits of 40 leave none of the day's cap of 30"
     );
 }
+
+/// A step of this test's own fold that runs one statement of its own on the fold's write, in the
+/// phase it is registered in.
+struct Statement {
+    phase: Phase,
+    name: &'static str,
+    sql: &'static str,
+}
+
+impl DayStep for Statement {
+    fn phase(&self) -> Phase {
+        self.phase
+    }
+
+    fn name(&self) -> &'static str {
+        self.name
+    }
+
+    fn evaluate<'a>(
+        &'a self,
+        _day: &'a DayEvaluation<'a>,
+        write: &'a mut SqliteConnection,
+    ) -> PortFuture<'a, ()> {
+        Box::pin(async move {
+            sqlx::query(self.sql).execute(&mut *write).await?;
+            Ok(())
+        })
+    }
+}
+
+/// The fold of [`fold`]'s steps with `before_mint` registered ahead of the mint step in its phase
+/// and `after_mint` after the mint, in phase 7.
+fn fold_around_the_mint(before_mint: Statement, after_mint: Option<Statement>) -> Fold {
+    let mut fold = Fold::default();
+    fold.register(
+        Phase::RollupAndScore,
+        Box::new(AnalyticsStep::new(AnalyticsSettings::default())),
+    )
+    .expect("analytics' step is phase 1's");
+    fold.register(Phase::BaseXp, Box::new(XpStep))
+        .expect("the XP step is phase 2's");
+    fold.register(Phase::DerivedBonuses, Box::new(DayBonusesStep))
+        .expect("the bonus step is phase 5's");
+    fold.register(before_mint.phase, Box::new(before_mint))
+        .expect("the saboteur registers in the mint's phase");
+    fold.register(MintStep.phase(), Box::new(MintStep))
+        .expect("the mint step registers in the phase it declares");
+    if let Some(step) = after_mint {
+        fold.register(step.phase, Box::new(step))
+            .expect("the repair registers in phase 7");
+    }
+    fold
+}
+
+/// How many movements the ledger holds, read past the ports.
+async fn movement_count(db: &Db) -> i64 {
+    sqlx::query_scalar("SELECT COUNT(*) FROM coin_ledger")
+        .fetch_one(db.reader())
+        .await
+        .expect("the ledger's count")
+}
+
+#[tokio::test]
+async fn a_fold_whose_mint_write_fails_fails_and_holds_no_mint() {
+    let data = collection(reviews_on(D0, 9, 1, &[3, 2, 4, 1]));
+    let scratch = TempDir::new().expect("a scratch directory");
+    let db = database(&scratch).await;
+    // The write of the movement alone is refused; every read of the fold answers.
+    let mut write = db.write().await.expect("a write");
+    sqlx::query(
+        "CREATE TRIGGER refuse_the_mint BEFORE INSERT ON coin_ledger \
+         BEGIN SELECT RAISE(ABORT, 'the synthetic refusal'); END",
+    )
+    .execute(&mut *write)
+    .await
+    .expect("the trigger is created");
+    write.commit().await.expect("the commit");
+    let ran = recompute(&fold(None), &db, &data, at(D0, 14), D0).await;
+    assert!(ran.is_err(), "a mint that cannot be written fails the fold");
+    assert_eq!(movement_count(&db).await, 0, "the fold holds no mint");
+    db.close().await;
+}
+
+#[tokio::test]
+async fn a_fold_whose_day_rows_read_fails_fails_and_never_mints_zero() {
+    let data = collection(reviews_on(D0, 9, 1, &[3, 2, 4, 1]));
+    let scratch = TempDir::new().expect("a scratch directory");
+    let db = database(&scratch).await;
+    // The settlement's table is out of the way for the mint's read alone: a step ahead of the mint
+    // moves it, and a step after the mint puts it back, so only a fold that goes on past the
+    // failed read finishes.
+    let fold = fold_around_the_mint(
+        Statement {
+            phase: Phase::CoinMint,
+            name: "test.hide_the_settlement",
+            sql: "ALTER TABLE xp_settlement RENAME TO xp_settlement_hidden",
+        },
+        Some(Statement {
+            phase: Phase::Awards,
+            name: "test.restore_the_settlement",
+            sql: "ALTER TABLE xp_settlement_hidden RENAME TO xp_settlement",
+        }),
+    );
+    let ran = recompute(&fold, &db, &data, at(D0, 14), D0).await;
+    assert!(ran.is_err(), "a failed day-rows read fails the fold");
+    assert_eq!(movement_count(&db).await, 0, "the fold holds no mint");
+    db.close().await;
+}
