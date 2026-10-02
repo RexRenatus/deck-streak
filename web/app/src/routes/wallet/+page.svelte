@@ -17,11 +17,12 @@
   // Ask once the screen is on the page, as Today does: untracked, and skipped by a server render.
   $effect(() => {
     void untrack(() => api.wallet()).then((answer) => {
-      wallet = answer;
+      // The page's lines first, then the answer the screen shows them by.
       if (answer.kind === 'ok') {
         movements = [...answer.value.movements];
         next = answer.value.next;
       }
+      wallet = answer;
     });
   });
 
