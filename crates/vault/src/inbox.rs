@@ -279,7 +279,12 @@ impl Inbox {
         let folder = fs
             .canonicalize(&configured)
             .map_err(VaultError::io("resolve the inbox folder"))?;
-        atomic::refuse_journal(&layout.journal_paths(&resolved_root), &folder)?;
+        let journal: Vec<PathBuf> = layout
+            .journal_paths(&resolved_root)
+            .iter()
+            .map(|folder| atomic::resolve(fs, folder))
+            .collect();
+        atomic::refuse_journal(&journal, &folder)?;
         if folder == resolved_root || !folder.starts_with(&resolved_root) {
             return Err(VaultError::OutsideConfinement);
         }

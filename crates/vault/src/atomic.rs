@@ -35,7 +35,7 @@ pub fn temp_path(target: &Path, pid: u32) -> Option<PathBuf> {
 /// [`VaultError::NotARegularFile`] when `target` names no file, and [`VaultError::Io`] naming the
 /// step that failed.
 pub fn write<F: VaultFs + ?Sized>(fs: &F, target: &Path, bytes: &[u8]) -> Result<(), VaultError> {
-    refuse_journal(fs.journal(), target)?;
+    refuse_journal_resolved(fs, target)?;
     let temp = temp_path(target, std::process::id()).ok_or(VaultError::NotARegularFile)?;
     let directory = target.parent().ok_or(VaultError::NotARegularFile)?;
     let mut file = fs
@@ -65,7 +65,8 @@ pub fn write<F: VaultFs + ?Sized>(fs: &F, target: &Path, bytes: &[u8]) -> Result
 /// Refuses a write whose `path` lies under one of the `journal` folders (SPEC-118 R5): no code path
 /// writes the journal. Both sides are compared lexically, component by component and without
 /// regard to ASCII case, after `.` and `..` are resolved, so neither a case nor a `..` reaches a
-/// journal folder.
+/// journal folder. A link is not followed here: [`refuse_journal_resolved`] compares the resolved
+/// path as well.
 ///
 /// # Errors
 ///
@@ -84,6 +85,34 @@ pub fn refuse_journal(journal: &[PathBuf], path: &Path) -> Result<(), VaultError
         return Err(VaultError::JournalRefused);
     }
     Ok(())
+}
+
+/// Refuses a write whose `path` lies under one of `fs`'s journal folders, as written or as the file
+/// system resolves it (SPEC-118 R5): a link on the way to a journal folder, from the target's
+/// parent or from a folder above it, reaches it no more than a case or a `..` does.
+///
+/// # Errors
+///
+/// [`VaultError::JournalRefused`] when `path`, or the path it resolves to, is a journal folder or
+/// lies under one.
+pub fn refuse_journal_resolved<F: VaultFs + ?Sized>(fs: &F, path: &Path) -> Result<(), VaultError> {
+    let journal = fs.journal();
+    refuse_journal(journal, path)?;
+    refuse_journal(journal, &resolve(fs, path))
+}
+
+/// The path `path` resolves to: its deepest ancestor that exists, `path` itself included, with
+/// every link and `..` resolved by the file system, joined to the components below it, which do not
+/// exist yet. `path` as it is when no ancestor resolves.
+#[must_use]
+pub fn resolve<F: VaultFs + ?Sized>(fs: &F, path: &Path) -> PathBuf {
+    path.ancestors()
+        .find_map(|ancestor| {
+            let resolved = fs.canonicalize(ancestor).ok()?;
+            let below = path.strip_prefix(ancestor).ok()?;
+            Some(resolved.join(below))
+        })
+        .unwrap_or_else(|| path.to_path_buf())
 }
 
 /// `path`'s components with every `.` dropped and every `..` taking back the component before it;
@@ -136,7 +165,7 @@ pub fn stream<'f, F: VaultFs + ?Sized>(
     fs: &'f F,
     target: &Path,
 ) -> Result<Streamed<'f, F>, VaultError> {
-    refuse_journal(fs.journal(), target)?;
+    refuse_journal_resolved(fs, target)?;
     let temp = temp_path(target, std::process::id()).ok_or(VaultError::NotARegularFile)?;
     let file = fs
         .create_new(&temp)
@@ -222,7 +251,7 @@ impl<F: VaultFs + ?Sized> Drop for Streamed<'_, F> {
 /// naming the step that failed for any other reason.
 pub fn probe_writable<F: VaultFs + ?Sized>(fs: &F, folder: &Path) -> Result<bool, VaultError> {
     let probe = folder.join(format!(".deckstreak-start.{}.tmp", std::process::id()));
-    refuse_journal(fs.journal(), &probe)?;
+    refuse_journal_resolved(fs, &probe)?;
     match fs.create_new(&probe) {
         Ok(file) => {
             drop(file);

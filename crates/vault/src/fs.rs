@@ -145,16 +145,31 @@ pub struct JournalGuard<F> {
 }
 
 impl<F: VaultFs> JournalGuard<F> {
-    /// `inner`, guarded against writes under each of the `journal` folders.
+    /// `inner`, guarded against writes under each of the `journal` folders: each folder as it is
+    /// named, and the folder it resolves to when a link stands on its way, so a folder whose name is
+    /// a link guards the folder the link reaches.
     #[must_use]
-    pub const fn new(inner: F, journal: Vec<PathBuf>) -> Self {
-        Self { inner, journal }
+    pub fn new(inner: F, journal: Vec<PathBuf>) -> Self {
+        let resolved: Vec<PathBuf> = journal
+            .iter()
+            .map(|folder| crate::atomic::resolve(&inner, folder))
+            .collect();
+        let mut folders = journal;
+        for folder in resolved {
+            if !folders.contains(&folder) {
+                folders.push(folder);
+            }
+        }
+        Self {
+            inner,
+            journal: folders,
+        }
     }
 
-    /// `PermissionDenied` when `path` lies under a journal folder, by the atomic writer's own
-    /// lexical rule.
+    /// `PermissionDenied` when `path` lies under a journal folder, as written or as the file system
+    /// resolves it, by the atomic writer's own rule.
     fn refuse(&self, path: &Path) -> io::Result<()> {
-        crate::atomic::refuse_journal(&self.journal, path).map_err(|_refused| {
+        crate::atomic::refuse_journal_resolved(self, path).map_err(|_refused| {
             io::Error::new(
                 io::ErrorKind::PermissionDenied,
                 "the path lies under a journal folder",
