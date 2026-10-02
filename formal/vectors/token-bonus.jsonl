@@ -1,4 +1,4 @@
-{"schema":"phx.formal.vectors.v1","entry":"TokenBonus","covers":"crates/quests/src/tokens.rs","anchor":"token_bonus_xp","digest":"sha256:0000000000000000000000000000000000000000000000000000000000000000","vectors":414}
+{"schema":"phx.formal.vectors.v1","entry":"TokenBonus","covers":"crates/quests/src/tokens.rs","anchor":"token_bonus_xp","digest":"sha256:1b2fff0d82a72e38be1e90ba00f500b04da5f4c2ebc142b8111e93f3f2e97a34","vectors":414}
 {"rule":"token_bonus_xp","start":1700362800000,"end":1700370000000,"rollover_hour":4,"study_day":19680,"reviews":[[1700362799999,-1,0,7]],"bonus":null}
 {"rule":"token_bonus_xp","start":1700362800000,"end":1700370000000,"rollover_hour":4,"study_day":19680,"reviews":[[1700362799999,-1,1,7]],"bonus":null}
 {"rule":"token_bonus_xp","start":1700362800000,"end":1700370000000,"rollover_hour":4,"study_day":19680,"reviews":[[1700362799999,-1,4,7]],"bonus":null}
