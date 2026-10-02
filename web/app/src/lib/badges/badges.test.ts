@@ -68,6 +68,18 @@ describe('parseBadges', () => {
     expect(parseBadges({ earned: [], locked: [] })).toEqual({ earned: [], locked: [] });
   });
 
+  it('reads a locked focus badge', () => {
+    const focus = withLocked({ key: 'deep_focus', family: 'focus', progress: null });
+    expect(parseBadges(focus)?.locked[0]).toEqual({
+      key: 'deep_focus',
+      name: 'Monthly Monk',
+      emoji: '🧘',
+      criteria: '30-day streak',
+      family: 'focus',
+      progress: null
+    });
+  });
+
   it('refuses a body that is not the badges answer', () => {
     const refused = [
       null,
@@ -79,6 +91,14 @@ describe('parseBadges', () => {
       withEarned({ study_day: '13 January 2025' }),
       withEarned({ tier: '0' }),
       withEarned({ name: undefined }),
+      withEarned({ key: 7 }),
+      withEarned({ emoji: null }),
+      withEarned({ study_day: ['2025-01-13'] }),
+      withEarned({ study_day: 'on 2025-01-13' }),
+      withEarned({ study_day: '2025-01-13 at noon' }),
+      withLocked({ key: 7 }),
+      withLocked({ name: undefined }),
+      withLocked({ emoji: null }),
       withLocked({ family: 'band' }),
       withLocked({ criteria: 30 }),
       withLocked({ progress: { value: 3 } }),

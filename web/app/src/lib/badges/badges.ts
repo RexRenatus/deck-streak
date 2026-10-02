@@ -46,7 +46,7 @@ export interface BadgesView {
 }
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
-const FAMILIES: readonly string[] = ['study', 'habit', 'focus'];
+const FAMILIES: readonly unknown[] = ['study', 'habit', 'focus'];
 
 /** An earned badge, or undefined when `value` is not one. */
 function earnedBadge(value: unknown): EarnedBadge | undefined {
@@ -75,7 +75,7 @@ function lockedBadge(value: unknown): LockedBadge | undefined {
     return undefined;
   }
   if (typeof criteria !== 'string') return undefined;
-  if (typeof family !== 'string' || !FAMILIES.includes(family)) return undefined;
+  if (!FAMILIES.includes(family)) return undefined;
   const progress = badgeProgress(given.progress);
   if (progress === undefined) return undefined;
   return { key, name, emoji, criteria, family: family as BadgeFamily, progress };

@@ -47,6 +47,11 @@ describe('parseRecords', () => {
       { records: [{ ...LINE, distance: '43' }], chase: null },
       { records: [{ ...LINE, label: undefined }], chase: null },
       { records: [{ ...LINE, previous: null }], chase: null },
+      { records: [{ ...LINE, kind: 7 }], chase: null },
+      { records: [{ ...LINE, study_day: ['2025-01-09'] }], chase: null },
+      { records: [{ ...LINE, study_day: 'on 2025-01-09' }], chase: null },
+      { records: [{ ...LINE, study_day: '2025-01-09 at noon' }], chase: null },
+      { records: [LINE], chase: { kind: 7, label: 'Best daily score', gap: 43 } },
       { records: [LINE], chase: { kind: 'best_score', label: 'Best daily score' } },
       { records: [LINE], chase: { kind: 'best_score', gap: 43 } }
     ];
