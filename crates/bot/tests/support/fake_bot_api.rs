@@ -170,6 +170,8 @@ pub enum Served {
     Bytes(Vec<u8>),
     /// This status and no file.
     Status(u16),
+    /// These bytes, with a 200, answered only after the request has been held this long.
+    Held(Vec<u8>, Duration),
 }
 
 /// The method name a download's [`Call`] is recorded under: a file's URL names no Bot API method.
@@ -547,6 +549,10 @@ async fn serve_file(
         Some(Served::Status(status)) => StatusCode::from_u16(status)
             .expect("a status")
             .into_response(),
+        Some(Served::Held(bytes, held)) => {
+            tokio::time::sleep(held).await;
+            (StatusCode::OK, bytes).into_response()
+        }
         None => StatusCode::NOT_FOUND.into_response(),
     }
 }

@@ -234,6 +234,15 @@
         "pub const MAX_DOWNLOAD_BYTES: u64 = 21 * 1024 * 1024;",
         "media_capture::a_file_over_twenty_megabytes_is_never_fetched",
         "the download cap is 20 x 1024 x 1024 bytes, and the test spells it as a literal (SPEC-118 R8, A9)"
+      ],
+      [
+        "S11830-DOWNLOAD-TIMEOUT",
+        "bot",
+        "src/transport.rs",
+        "pub const DOWNLOAD_TIMEOUT: Duration = Duration::from_mins(5);",
+        "pub const DOWNLOAD_TIMEOUT: Duration = Duration::from_millis(5);",
+        "media_capture::a_download_held_past_the_clients_timeout_still_lands",
+        "a file's download is bounded by its own timeout, which outlasts the client's, so a file the Bot API holds for three of the client's timeouts still lands (SPEC-118 R8)"
       ]
     ],
     "CARGO_KILLED_SCRIPT_MUTATIONS": [

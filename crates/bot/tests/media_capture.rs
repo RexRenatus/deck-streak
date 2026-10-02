@@ -21,15 +21,17 @@ use std::fmt;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, PoisonError};
+use std::time::Instant;
 
 use deck_streak_bot::Commands;
 use deck_streak_bot::capture::{self, Choice, MAX_DOWNLOAD_BYTES, Outcome};
 use deck_streak_bot::gate::{self, Admission, Dropped};
+use deck_streak_bot::transport::SEND_ATTEMPTS;
 use deck_streak_coordination::inbox_capture::{CaptureKind, InboxCaptures, LayoutInForce, RealFs};
 use deck_streak_kernel::Db;
 use fake_bot_api::{
-    Answer, Bench, DOWNLOAD, GROUP, OWNER, STRANGER, ScriptedSync, Served, TOKEN, incoming, owner,
-    payload,
+    Answer, Bench, CLIENT_TIMEOUT, DOWNLOAD, GROUP, OWNER, STRANGER, ScriptedSync, Served, TOKEN,
+    incoming, owner, payload,
 };
 use frankenstein::types::Message;
 use serde_json::{Value, json};
@@ -316,6 +318,61 @@ async fn a_stream_past_the_cap_is_stopped_and_discarded() {
         landed,
         "a stream past the cap leaves no file and no temporary file"
     );
+    assert_eq!(rows(&bench.db).await, 1, "and records nothing");
+    assert_eq!(sent(&bench).last().map(String::as_str), Some(FETCH_FAILED));
+}
+
+/// A file's download is bounded by its own timeout, never by the client's: a file the Bot API
+/// holds for three of the client's timeouts still lands whole, while a `getFile` held as long
+/// fails on the client's timeout (SPEC-118 R8). The download's own bound is minutes long, so it is
+/// read here from what it lets through, not waited out.
+#[tokio::test]
+async fn a_download_held_past_the_clients_timeout_still_lands() {
+    let held = CLIENT_TIMEOUT * 3;
+    let bench = Bench::start().await;
+    let root = vault(&bench);
+    let mut commands = capturing(&bench, &root);
+    bench.fake.script(
+        "getFile",
+        [remote("document-file-1", None)]
+            .into_iter()
+            .chain((0..SEND_ATTEMPTS).map(|_| Answer::Silence)),
+    );
+    bench.fake.serve_file(Served::Held(vec![b'h'; 4096], held));
+
+    // A download the Bot API holds past the client's timeout lands, and is recorded.
+    let started = Instant::now();
+    commands
+        .handle(incoming(owner_sends(1, &document("document-file-1", None))))
+        .await;
+    assert!(
+        started.elapsed() >= held,
+        "the fake held the file for {held:?}: {:?}",
+        started.elapsed()
+    );
+    let landed = inbox(&root);
+    assert!(
+        landed.iter().any(|(_, size)| *size == 4096),
+        "a file held past the client's timeout lands in the inbox: {landed:?}"
+    );
+    assert_eq!(rows(&bench.db).await, 1, "and is recorded");
+    assert!(
+        sent(&bench)
+            .last()
+            .is_some_and(|line| line.starts_with(SAVED)),
+        "and the owner is told: {:?}",
+        sent(&bench)
+    );
+
+    // The same client fails a getFile held as long: its own timeout is the shorter one.
+    assert!(
+        held > CLIENT_TIMEOUT,
+        "the hold outlasts the client's timeout"
+    );
+    commands
+        .handle(incoming(owner_sends(2, &document("document-file-2", None))))
+        .await;
+    assert_eq!(inbox(&root), landed, "a getFile held silent saves nothing");
     assert_eq!(rows(&bench.db).await, 1, "and records nothing");
     assert_eq!(sent(&bench).last().map(String::as_str), Some(FETCH_FAILED));
 }
