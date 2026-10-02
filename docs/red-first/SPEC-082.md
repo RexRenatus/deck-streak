@@ -81,3 +81,14 @@ A14: green at f047f9d
 A19: red at 6280965: assertion `left == right` failed; left: [AlreadyCredited, AlreadyCredited, AlreadyCredited, AlreadyCredited, AlreadyCredited], right: [Credited(25), AlreadyCredited, AlreadyCredited, Credited(25), Credited(10)]
 A19: green at f047f9d
 ```
+
+## Addendum, 2026-10-02: a test added after its code (round 1 of PR #543)
+
+MUTATION COVERAGE, not red-first. `wallet_ports::a_refund_on_a_later_day_of_a_held_key_writes_its_own_movement`
+was added at `b48aabde`, after the code, to guard A19 and R7: a refund on a later study day of a key
+held earlier writes its own movement. Its cases are the three seed members K-009 (a deposit, then a
+refund), K-021 (a once-ever deposit, then a refund) and K-033 (a refund, then a refund). It is green at
+the round's base `2e56a41f` and at its own commit, and it was never red before the code. It is proved
+by a plant: with `refund_on` routed through `deposit_once_on`, the test reads red by assertion at
+`wallet_ports.rs:245` and the frozen key population escapes 3 of 49 members (the package judge
+`V2-FAIL-refund-any-day.sh` read HOLDS). No fence line is added: A19's red and green above stand.
