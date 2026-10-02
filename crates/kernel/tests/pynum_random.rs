@@ -113,4 +113,5 @@ fn lgamma_is_not_defined_at_or_below_zero_or_for_a_non_finite_argument() {
     for x in [0.0, -1.5, f64::NAN, f64::INFINITY] {
         assert_eq!(pynum::lgamma(x), None, "lgamma of {x}");
     }
+    assert_eq!(pynum::lgamma(1.0), Some(0.0), "lgamma of the first root");
 }
