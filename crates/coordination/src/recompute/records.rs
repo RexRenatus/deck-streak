@@ -7,7 +7,8 @@
 //! seeds each kind's best silently. A record row holds one kind, so the day's write re-reads the
 //! row inside its own `BEGIN IMMEDIATE`: the fold's offers ran before it and offered every unmarked
 //! record, and a row of another day whose mark is still unset is named in a log line (its kind, its
-//! day, and that its celebration was not sent) before it is replaced.
+//! day, and that its celebration was not sent) before it is replaced. A row of the same day keeps
+//! its mark unless it is the seed, so a beat of the seed's own day is stored unmarked and offered.
 
 use std::collections::BTreeMap;
 
@@ -234,7 +235,9 @@ impl DayStep for RecordsStep {
 /// Writes `record` over its kind's row inside the day's own write. The row is re-read first: one
 /// of another day whose mark is still unset was never offered, and is named before it is replaced
 /// (ADR-303). A row of the same day keeps its mark, so a best that climbs all day is celebrated
-/// once.
+/// once, unless that row is the seed: a seed's `previous` equals its value (R12), while every
+/// detected record is strictly above the best it beat, so a beat of the seed's own study day is
+/// written unmarked and offered (R11).
 async fn upsert(
     write: &mut SqliteConnection,
     record: &PlannedRecord,
@@ -266,6 +269,7 @@ async fn upsert(
          VALUES (?1, ?2, ?3, ?4, ?5, ?6) \
          ON CONFLICT (kind) DO UPDATE SET value = excluded.value, previous = excluded.previous, \
          celebrated_at = CASE WHEN records.study_day = excluded.study_day \
+         AND records.previous < records.value \
          THEN records.celebrated_at ELSE excluded.celebrated_at END, \
          study_day = excluded.study_day",
         kind,
