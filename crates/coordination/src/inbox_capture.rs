@@ -13,7 +13,7 @@ use std::path::PathBuf;
 use deck_streak_kernel::{Db, UtcMillis};
 use deck_streak_vault::inbox;
 pub use deck_streak_vault::inbox::{
-    Attachment, Capture, CaptureKind, Captured, Inbox, QUICK_TEXT_CHARS, Source,
+    Attachment, Capture, CaptureKind, Captured, Inbox, QUICK_TEXT_CHARS, Source, safe_unique,
 };
 pub use deck_streak_vault::{JournalGuard, LayoutInForce, RealFs, VaultError, VaultFs};
 
