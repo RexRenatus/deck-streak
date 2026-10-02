@@ -26,7 +26,9 @@ after its control without the link had applied both operations.
 
 - R5's rule holds for every write a staged run applies, as the path resolves at that write.
 - The checks before and after the gate stay as they are: they refuse a run that names a journal
-  folder, or whose folder resolves into one when they run.
+  folder, or whose folder resolves outside the folders its duty may write when they run. A folder
+  that resolves into a journal folder inside a duty's own folder is refused when its operation is
+  applied, as every journal path is.
 - Nothing a refused run leaves behind is under a journal folder, and the owner can see how far the
   run got.
 

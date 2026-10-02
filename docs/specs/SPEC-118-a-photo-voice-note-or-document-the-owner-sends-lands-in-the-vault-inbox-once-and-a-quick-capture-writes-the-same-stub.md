@@ -255,8 +255,9 @@ Its rows moved into §3's table and fence on delivery; §12 records the move.
 
 - It files no capture; the curator does (#50).
 - It transcribes no voice note (#154).
-- It captures no audio file, video, sticker or animation; only the three kinds the predecessor
-  captured (#154).
+- It captures no audio file, video, sticker or animation by itself; only the three kinds the
+  predecessor captured. An animation Telegram sends with a `document` is saved as that document,
+  by R6's order (#154).
 - It writes no journal section, and it adds no journal screen beyond the capture's journal choice
   (#56).
 - It deletes no vault file on an erase; the vault is the owner's folder (#154, ADR-118).

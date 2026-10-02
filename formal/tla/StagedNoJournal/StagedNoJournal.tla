@@ -34,8 +34,9 @@
 \*   `dir` for the folders it needs and its `write`; a move is its `dir` and its `rename`. Every run
 \*   of every kind over every folder is chosen at Init, so the runs a check refuses are judged too.
 \* - The check and the re-check are one step each, and each refuses a run that names a journal
-\*   folder (`staged.rs::allowed_folders`) or whose folder resolves into one at that moment
-\*   (`staged.rs::placement`). The gate passes or refuses; its classes are not modelled.
+\*   folder (`staged.rs::allowed_folders`) or whose folder resolves outside the duty's folders at
+\*   that moment (`staged.rs::placement`); the model's journal folders lie outside every duty
+\*   folder. The code refuses a journal folder inside a duty's own folder at the apply guard. The gate passes or refuses; its classes are not modelled.
 \* - The guard's path check and the operation it guards are modelled as one atomic step.
 \* - Another writer's changes are bounded by `MaxEnv` in all, a link made or a folder put back.
 \*
@@ -102,7 +103,8 @@ TypeOK ==
 Links == {l \in [Folders -> Folders] : l["J"] = "J" /\ \A f \in Duty : l[f] \in {f, "J"}}
 
 \* The executor's own check, as `staged.rs::check` runs it before and after the gate: a run that
-\* names a journal folder, or whose folder resolves into one now, is refused.
+\* names a journal folder, or whose folder resolves outside the duty's folders now, is refused; with
+\* the model's journal folders outside every duty folder, that reads as a folder resolving into one.
 CheckRefuses ==
     \E n \in 1..NumOps : \E f \in Touches(run[n]) : f \in Journal \/ link[f] \in Journal
 
