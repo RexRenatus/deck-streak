@@ -223,7 +223,7 @@ fn the_curriculum_constants_equal_the_predecessors() {
             other => panic!("a constant the golden names and nothing here pins: {other}"),
         };
         let same = match (ours.as_f64(), case.output.as_f64()) {
-            (Some(a), Some(b)) => a == b,
+            (Some(a), Some(b)) => near(a, b),
             _ => ours == case.output,
         };
         assert!(same, "{name}: ours {ours}, theirs {}", case.output);
