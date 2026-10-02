@@ -15,7 +15,8 @@ export const ROUTES = [
   '/level',
   '/streak',
   '/badges',
-  '/records'
+  '/records',
+  '/capture'
 ] as const;
 
 /** A path the route table lists. */

@@ -68,11 +68,17 @@ describe('the startapp token map', () => {
   });
 
   it('every destination is a screen of the route table', () => {
-    const destinations = ['today', 'about', 'insights', 'score', 'level', 'streak', 'badges', 'records']
+    const destinations = ['today', 'about', 'insights', 'score', 'level', 'streak', 'badges', 'records', 'capture']
       .map(routeFor)
       .sort();
 
     expect(destinations).toEqual([...ROUTES].sort());
+  });
+
+  // SPEC-118 R11; ruling (m). The quick capture is a screen of the route table, so a launch link
+  // opens it through its own token, like every other screen.
+  it('the capture token opens the quick capture screen', () => {
+    expect(routeFor('capture')).toBe('/capture');
   });
 
   // SPEC-071 §10: the table is read by exact key, so no screen shows whether the shape

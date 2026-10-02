@@ -31,10 +31,10 @@ use std::fmt;
 use std::sync::{Arc, Mutex, PoisonError};
 
 use deck_streak_kernel::{Clock, Db, KernelError, StudyDay, StudyDayRule, UtcMillis};
-use sqlx::SqliteConnection;
+use sqlx::{Sqlite, SqliteConnection, Transaction};
 
 use crate::ladder::{self, DICE_EMOJI, REACTION_EMOJI, REVEAL_PAUSE, REVEAL_PLACEHOLDER};
-use crate::ledger::{self, ClaimRow, DecisionRow, HeldRow};
+use crate::ledger::{self, Abandoned, ClaimRow, DecisionRow, HeldRow};
 use crate::occasion::{Class, DedupeScope, LapseContext, Occasion, StreakFacts, Surface, Tier};
 use crate::owner_message;
 use crate::photo::{FileId, Photo, check_caption};
@@ -53,6 +53,14 @@ pub const INTENSITY_SETTING: &str = "celebration_intensity";
 
 /// One minute, in milliseconds.
 const MINUTE_MS: i64 = 60_000;
+
+/// The setting key a flush holds while it delivers, so two flushers over one queue never send one
+/// item twice (#291). Its value is the instant the lease lapses, in epoch milliseconds.
+pub const FLUSH_LEASE_SETTING: &str = "flush_lease";
+
+/// How long a flush's lease lasts when the flush never releases it, so a crashed flush does not
+/// block the queue for good.
+const FLUSH_LEASE_MS: i64 = 10 * MINUTE_MS;
 
 /// The router's pass. Every bot transport call takes one, and only this module can make one: its
 /// field is private, and it derives neither `Default` nor `Clone`. So a call of the port outside
@@ -213,11 +221,46 @@ pub enum Flushed {
     QuietHours,
     /// The outage breaker is open: the queue is left.
     BreakerOpen,
+    /// Another flush holds the queue's lease: this one delivers nothing, so no item is sent twice.
+    Busy,
     /// It ran, and delivered this many messages: full renders and the recap line.
     Ran {
         /// Messages delivered.
         sends: u32,
     },
+}
+
+/// Takes the flush lease on `write`'s transaction: its token, or `None` when another flush holds
+/// an unlapsed one. The token is the instant the lease lapses.
+async fn take_lease(
+    write: &mut SqliteConnection,
+    now: UtcMillis,
+) -> Result<Option<String>, KernelError> {
+    if let Some(held) = ledger::setting(write, FLUSH_LEASE_SETTING).await?
+        && held
+            .parse::<i64>()
+            .is_ok_and(|lapses| lapses > now.epoch_millis())
+    {
+        return Ok(None);
+    }
+    let token = lease_token(now);
+    sqlx::query(
+        "INSERT INTO notification_settings (key, value, created_at) VALUES (?, ?, ?) \
+         ON CONFLICT (key) DO UPDATE SET value = excluded.value",
+    )
+    .bind(FLUSH_LEASE_SETTING)
+    .bind(&token)
+    .bind(now.epoch_millis())
+    .execute(write)
+    .await?;
+    Ok(Some(token))
+}
+
+/// The token of the flush that starts at `now`: the instant its lease lapses. It is the lease's
+/// value and the claim written on every row the flush takes, so a row's claim lapses with the
+/// lease that took it.
+fn lease_token(now: UtcMillis) -> String {
+    (now.epoch_millis() + FLUSH_LEASE_MS).to_string()
 }
 
 /// What the rules decided before any delivery call.
@@ -626,6 +669,23 @@ impl Router {
         })
     }
 
+    /// [`Router::render`] of the held bot `row` at `tier`, as a flush renders it (no reveal): a
+    /// push that answered delivered joins `pushed_ids` before the write that settles it, so a
+    /// failed settle names it rather than gives it back (SPEC-041 R16b).
+    async fn render_pushed(
+        &self,
+        bot: &dyn BotTransport,
+        row: &HeldRow,
+        tier: Tier,
+        pushed_ids: &mut Vec<i64>,
+    ) -> Result<Outcome, KernelError> {
+        let outcome = self.render(bot, &row.text, tier, false).await?;
+        if matches!(outcome, Outcome::Delivered(_)) {
+            pushed_ids.push(row.id);
+        }
+        Ok(outcome)
+    }
+
     /// The T1 render (SPEC-084 R9): a reaction to the owner's latest message. While the reaction
     /// breaker is open it is not attempted and the celebration is held for the send; without a
     /// message at most the ladder's age old it is held for the owner to write. A refused reaction
@@ -665,21 +725,25 @@ impl Router {
 
     /// The flush's held T1s (SPEC-084 R11): each reacts in turn, and one delivered is settled and
     /// recorded at the tier it rendered; a reaction not made leaves its celebration held as it was.
-    /// Answers how many were delivered.
+    /// Each one delivered joins `pushed_ids` before its settle. Answers how many were delivered.
     async fn flush_reactions(
         &self,
         bot: &dyn BotTransport,
         reactions: &[HeldRow],
+        pushed_ids: &mut Vec<i64>,
     ) -> Result<u32, KernelError> {
         let mut sends = 0;
         for row in reactions {
             if let Outcome::Delivered(tier) = self.react(bot).await? {
+                pushed_ids.push(row.id);
                 let mut write = self.db.write().await?;
-                ledger::settle(&mut write, row.id).await?;
-                let sent = Subject::held(row).sent(tier, self.clock.now());
-                ledger::record(&mut write, &sent).await?;
+                let claim = row.claim.as_deref().unwrap_or_default();
+                if ledger::settle_claimed(&mut write, row.id, claim).await? {
+                    let sent = Subject::held(row).sent(tier, self.clock.now());
+                    ledger::record(&mut write, &sent).await?;
+                    sends += 1;
+                }
                 write.commit().await?;
-                sends += 1;
             }
         }
         Ok(sends)
@@ -800,6 +864,11 @@ impl Router {
     /// of that tier and the cap, the older first on a tie and in the order they were held, and the
     /// recap line settles every other one at most at T2.
     ///
+    /// When the flush ends, on success or on error, a row it pushed and still claims is abandoned
+    /// with its claim kept, which the next recap names "may have been sent", and only then does
+    /// every other row it still claims go back to the queue: a row whose push answered delivered is
+    /// never pushed again when the settle after it fails (SPEC-041 R16b).
+    ///
     /// # Errors
     ///
     /// [`KernelError::Database`] when the ledger cannot be read or written.
@@ -815,14 +884,56 @@ impl Router {
         if self.breaker_open(now) {
             return Ok(Flushed::BreakerOpen);
         }
+        let Some(lease) = take_lease(&mut write, now).await? else {
+            return Ok(Flushed::Busy);
+        };
+        let mut pushed_ids = Vec::new();
+        let flushed = self
+            .deliver(bot.as_ref(), facts, now, write, &mut pushed_ids)
+            .await;
+        let mut release = self.db.write().await?;
+        sqlx::query("DELETE FROM notification_settings WHERE key = ? AND value = ?")
+            .bind(FLUSH_LEASE_SETTING)
+            .bind(&lease)
+            .execute(&mut *release)
+            .await?;
+        for id in pushed_ids {
+            if let Some(key) = ledger::abandon_pushed(&mut release, id, &lease).await? {
+                unsettled_notice(&key, &lease);
+            }
+        }
+        ledger::release_claims(&mut release, &lease).await?;
+        release.commit().await?;
+        flushed
+    }
+
+    /// The flush's work after its window, breaker and lease checks passed: `write` is the open
+    /// transaction that holds the lease. The id of each row whose push answered delivered joins
+    /// `pushed_ids` before the write that settles it, so the release can tell it from a row the
+    /// flush never pushed when that write fails.
+    async fn deliver(
+        &self,
+        bot: &dyn BotTransport,
+        facts: Option<StreakFacts>,
+        now: UtcMillis,
+        mut write: Transaction<'static, Sqlite>,
+        pushed_ids: &mut Vec<i64>,
+    ) -> Result<Flushed, KernelError> {
         let broke = ladder::streak_broke_on(facts.as_ref(), self.rule.study_day(now));
         let cap = ladder::outcome_cap(&self.policy, broke);
         let max_age = i64::from(self.policy.deferral.max_age_minutes) * MINUTE_MS;
+        let token = lease_token(now);
+        for (id, key, claim) in ledger::lapsed_claims(&mut write, now.epoch_millis()).await? {
+            if ledger::abandon_lapsed(&mut write, id).await? {
+                lapsed_notice(&key, &claim);
+            }
+        }
         let (mut reactions, mut rest) = (Vec::new(), Vec::new());
-        for row in ledger::held(&mut write).await? {
+        for row in ledger::claim_held(&mut write, &token).await? {
             if now.epoch_millis() - row.deferred_at > max_age || row.tier_pending == Tier::T0 {
                 let reason = Hold::parse(&row.hold).abandoned();
-                self.abandon(&mut write, &row, reason, now).await?;
+                self.abandon(&mut write, &row, (reason, "expired"), now)
+                    .await?;
             } else if row.tier_pending == Tier::T1 && row.surface == Surface::Bot {
                 reactions.push(row);
             } else {
@@ -833,10 +944,11 @@ impl Router {
         let mut full = ranked(rest);
         for row in full.split_off(full.len().min(bound)) {
             let reason = Hold::parse(&row.hold).abandoned();
-            self.abandon(&mut write, &row, reason, now).await?;
+            self.abandon(&mut write, &row, (reason, "over the queue bound"), now)
+                .await?;
         }
         write.commit().await?;
-        let mut sends = self.flush_reactions(bot.as_ref(), &reactions).await?;
+        let mut sends = self.flush_reactions(bot, &reactions, pushed_ids).await?;
         let flush_max = usize::try_from(self.policy.deferral.flush_max).unwrap_or(usize::MAX);
         let rolled = full.split_off(full.len().min(flush_max));
         full.sort_by_key(|row| row.id);
@@ -844,19 +956,21 @@ impl Router {
             let tier = row.tier_pending.min(cap);
             let outcome = match row.surface {
                 Surface::MiniApp => Outcome::Delivered(tier),
-                Surface::Bot => self.render(bot.as_ref(), &row.text, tier, false).await?,
+                Surface::Bot => self.render_pushed(bot, row, tier, pushed_ids).await?,
             };
             let now = self.clock.now();
             let mut write = self.db.write().await?;
             match outcome {
                 Outcome::Delivered(rendered) => {
-                    let subject = Subject::held(row);
-                    if row.surface == Surface::MiniApp {
-                        push_in_app(&mut write, &subject, rendered, &row.text, now).await?;
+                    let claim = row.claim.as_deref().unwrap_or_default();
+                    if ledger::settle_claimed(&mut write, row.id, claim).await? {
+                        let subject = Subject::held(row);
+                        if row.surface == Surface::MiniApp {
+                            push_in_app(&mut write, &subject, rendered, &row.text, now).await?;
+                        }
+                        ledger::record(&mut write, &subject.sent(rendered, now)).await?;
+                        sends += 1;
                     }
-                    ledger::settle(&mut write, row.id).await?;
-                    ledger::record(&mut write, &subject.sent(rendered, now)).await?;
-                    sends += 1;
                 }
                 Outcome::Held(_) => {}
                 Outcome::Failed => {
@@ -876,15 +990,20 @@ impl Router {
             return Ok(Flushed::Ran { sends });
         }
         let pushed = bot.push_message(&PASS, &recap(&rolled, &abandoned)).await;
+        if pushed == Pushed::Delivered {
+            pushed_ids.extend(rolled.iter().map(|row| row.id));
+        }
         let now = self.clock.now();
         let mut write = self.db.write().await?;
         if pushed == Pushed::Delivered {
             for row in &rolled {
                 let tier = row.tier_pending.min(cap).min(Tier::T2);
-                ledger::settle(&mut write, row.id).await?;
-                ledger::record(&mut write, &Subject::held(row).sent(tier, now)).await?;
+                let claim = row.claim.as_deref().unwrap_or_default();
+                if ledger::settle_claimed(&mut write, row.id, claim).await? {
+                    ledger::record(&mut write, &Subject::held(row).sent(tier, now)).await?;
+                }
             }
-            for (id, _, _) in &abandoned {
+            for (id, _, _, _) in &abandoned {
                 ledger::settle(&mut write, *id).await?;
             }
             sends += 1;
@@ -944,25 +1063,38 @@ impl Router {
         let bound = usize::try_from(self.policy.deferral.queue_max).unwrap_or(usize::MAX);
         for row in ranked(ledger::held(write).await?).iter().skip(bound) {
             let reason = Hold::parse(&row.hold).abandoned();
-            self.abandon(write, row, reason, now).await?;
+            self.abandon(write, row, (reason, "over the queue bound"), now)
+                .await?;
         }
         Ok(())
     }
 
     /// Abandons the held `row`: it waits on the queue for a recap to name it, and its decision is
-    /// a withhold for `reason`, what held it.
+    /// a withhold for `reason`, what held it. A row this flush claimed is abandoned under its
+    /// claim; the log line names the item, its claimant and `why` (SPEC-041 R14).
     async fn abandon(
         &self,
         write: &mut SqliteConnection,
         row: &HeldRow,
-        reason: Reason,
+        (reason, why): (Reason, &str),
         now: UtcMillis,
     ) -> Result<(), KernelError> {
-        ledger::abandon(write, row.id).await?;
+        let ours = if let Some(claim) = &row.claim {
+            ledger::abandon_claimed(write, row.id, claim, row.tries).await?
+        } else {
+            ledger::abandon(write, row.id, row.tries).await?;
+            true
+        };
+        if !ours {
+            return Ok(());
+        }
         ledger::record(write, &Subject::held(row).withheld(reason, now)).await?;
         tracing::warn!(
+            item = %row.dedupe_key,
+            claimant = row.claim.as_deref().unwrap_or("none"),
             kind = %row.kind,
             reason = reason.as_str(),
+            why,
             "a held celebration was abandoned"
         );
         Ok(())
@@ -970,7 +1102,8 @@ impl Router {
 
     /// Holds `row` again for `hold` after a failed send, its first deferral time kept, or abandons
     /// it once its retries are spent (R8). A row whose own message failed is held for the send; a
-    /// row a failed recap only named keeps what held it (SPEC-084 R11).
+    /// row a failed recap only named keeps what held it (SPEC-084 R11). A row that is no longer
+    /// this flush's claim is left alone.
     async fn retry_or_abandon(
         &self,
         write: &mut SqliteConnection,
@@ -979,12 +1112,20 @@ impl Router {
         now: UtcMillis,
     ) -> Result<(), KernelError> {
         let tries = row.tries + 1;
-        ledger::relatch(write, row.id, tries, hold.as_str()).await?;
         if tries > i64::from(self.policy.send_failure.retry_max) {
-            self.abandon(write, row, Hold::Send.abandoned(), now).await
-        } else {
-            ledger::record(write, &Subject::held(row).deferred(hold, now)).await
+            let spent = HeldRow {
+                tries,
+                ..row.clone()
+            };
+            return self
+                .abandon(write, &spent, (Hold::Send.abandoned(), "send failed"), now)
+                .await;
         }
+        let claim = row.claim.as_deref().unwrap_or_default();
+        if ledger::relatch(write, row.id, claim, tries, hold.as_str()).await? {
+            ledger::record(write, &Subject::held(row).deferred(hold, now)).await?;
+        }
+        Ok(())
     }
 
     /// Sends `text` to the bot at `rendered` as a line: nothing at T0, which delivers by sending
@@ -1162,12 +1303,37 @@ fn held_row(
         tries,
         deferred_at: now.epoch_millis(),
         study_day: subject.study_day,
+        claim: None,
     }
+}
+
+/// Logs, in a line a person reads, that the claimed item `key` was abandoned because its claim
+/// `claim` lapsed with its claimant gone or past its lease: the push may have reached the owner,
+/// and it is never sent again (SPEC-041 R14).
+fn lapsed_notice(key: &str, claim: &str) {
+    tracing::warn!(
+        item = key,
+        claimant = claim,
+        reason = "may have been sent",
+        "a held celebration was abandoned"
+    );
+}
+
+/// Logs, in a line a person reads, that the item `key`, pushed by the flush whose claim is
+/// `claim`, was abandoned because that flush's work after the push failed: its push answered
+/// delivered, so it is never sent again, and the next recap names it (SPEC-041 R16b).
+fn unsettled_notice(key: &str, claim: &str) {
+    tracing::warn!(
+        item = key,
+        claimant = claim,
+        reason = "may have been sent",
+        "a held celebration was abandoned after its push"
+    );
 }
 
 /// The recap line (the predecessor's `CelebrationsLayer._rollup_text`): a head that says what held
 /// them, then each rolled-up celebration by its key, and each abandoned one with why it went unseen.
-fn recap(rolled: &[HeldRow], abandoned: &[(i64, String, String)]) -> String {
+fn recap(rolled: &[HeldRow], abandoned: &[Abandoned]) -> String {
     let mut names = Vec::new();
     let (mut quiet, mut send) = (false, false);
     for row in rolled {
@@ -1177,11 +1343,12 @@ fn recap(rolled: &[HeldRow], abandoned: &[(i64, String, String)]) -> String {
             Hold::Send => send = true,
         }
     }
-    for (_, key, hold) in abandoned {
+    for (_, key, hold, claim) in abandoned {
         let hold = Hold::parse(hold);
-        names.push(match hold {
-            Hold::Quiet => format!("{key} (expired, unseen)"),
-            Hold::Send => format!("{key} (gave up retrying, unseen)"),
+        names.push(match (claim, hold) {
+            (Some(_), _) => format!("{key} (may have been sent, unseen)"),
+            (None, Hold::Quiet) => format!("{key} (expired, unseen)"),
+            (None, Hold::Send) => format!("{key} (gave up retrying, unseen)"),
         });
         match hold {
             Hold::Quiet => quiet = true,

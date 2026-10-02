@@ -83,5 +83,13 @@
   "records_to_go": "{gap} to go today",
   "records_reached": "Reached today",
   "records_toward": "Today toward {label}",
-  "records_chase": "Chase it: {gap} from “{label}” today."
+  "records_chase": "Chase it: {gap} from “{label}” today.",
+  "capture_title": "Quick capture",
+  "capture_text_label": "What to capture",
+  "capture_text_hint": "Up to {max} characters. It lands in your vault's inbox.",
+  "capture_journal": "Journal entry",
+  "capture_save": "Save to inbox",
+  "capture_saving": "Saving…",
+  "capture_saved": "Saved as {name}",
+  "capture_failed": "Not saved. Your text is still here, so try again in a moment."
 }

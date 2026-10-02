@@ -96,6 +96,206 @@
         "        if not python:\n",
         "a text given to a python command whose argument names the wrapper or is computed is read as a text handed on, so a wrapped shell text that runs cargo mutants without the bounds is refused (SPEC-129 A14)",
         "test_dispatch_shards.TheMemoryScopeRunsTheWordsAfterItsSeparator.test_every_wrapped_command_bash_runs_without_the_bounds_is_found_or_refused"
+      ],
+      [
+        "S12913-THE-SCAN-FOLLOWS-A-SEPARATOR-ONLY-AFTER-THE-WRAPPER",
+        "scripts/tests/test_mutation_workflows.py",
+        "    if not WRAPPER or [w.value for w in words[program:end]] != list(WRAPPER):\n",
+        "    if not WRAPPER:\n",
+        "the scan follows a standalone `--` only after the guard's WRAPPER words, so `cargo mutants` after another program's options and separator is refused, as the guard refuses it (SPEC-129 A21, #533)",
+        "test_mutation_workflows.TheScanReadsTheWrappersForm.test_the_scan_and_the_guard_agree_on_every_separated_member"
+      ],
+      [
+        "S12914-ONLY-THE-WRAPPER-ASSIGNMENT-IS-READ",
+        "scripts/tests/test_mutation_workflows.py",
+        "            isinstance(target, ast.Name) and target.id == \"WRAPPER\"\n",
+        "            isinstance(target, ast.Name) and target.id in (\"WRAPPER\", \"OTHER\")\n",
+        "the scan reads only the module-level assignments to the name WRAPPER from the guard's text, so an assignment to another name is never taken for the wrapper's form (SPEC-129 A20, #533)",
+        "test_mutation_workflows.TheScanReadsTheWrappersForm.test_the_wrapper_form_is_read_once_from_the_guards_text"
+      ],
+      [
+        "S12915-A-HANDLER-THAT-LEAVES-IS-NOT-AN-ARM",
+        "scripts/tests/_stand_in_census.py",
+        "    for node in inside(handler.body):\n",
+        "    for node in inside([]):\n",
+        "a handler that exits, raises, returns, continues or breaks leaves, so the census lists only a handler that falls through to a real program (SPEC-129 A23, #532)",
+        "test_stand_in_census.TheCensusOfStandIns.test_a_plant_whose_text_has_no_plant_word_is_listed"
+      ],
+      [
+        "S12916-A-CALL-IS-RESOLVED-THROUGH-IMPORT-ALIASES",
+        "scripts/tests/_stand_in_census.py",
+        "    return {base + tail for base in names.get(func.id, {func.id})}\n",
+        "    return {func.id + tail}\n",
+        "a call is resolved through the names the file's imports bind, so `import os as o`, `from os import execv as run_it`, `import subprocess as sp` and `from runpy import run_path` reach a real program (SPEC-129 A24, #532)",
+        "test_stand_in_census.TheCensusOfStandIns.test_a_call_through_an_import_alias_is_listed"
+      ],
+      [
+        "S12917-THE-REACH-HOLDS-THE-HANDLER-AND-THE-FINALLY-BLOCK",
+        "scripts/tests/_stand_in_census.py",
+        "                reach = [*handler.body, *statement.finalbody, *later(here)]\n",
+        "                reach = later(here)\n",
+        "the census's reach holds the handler's own body and the try's finally block beside every later statement of the enclosing blocks, so a program run in the finally block is listed (SPEC-129 A24, ruling 3b, #532)",
+        "test_stand_in_census.TheCensusOfStandIns.test_a_program_run_in_the_finally_block_is_listed"
+      ],
+      [
+        "S12918-A-STR-CONSTANT-IS-PARSED-AS-A-SOURCE",
+        "scripts/tests/_stand_in_census.py",
+        "    for constant in str_constants(tree):\n",
+        "    for constant in []:\n",
+        "each str constant is parsed on its own, one level deep, so a stand-in held as text is listed at the constant's line with its own line (SPEC-129 A25, #532)",
+        "test_stand_in_census.TheCensusOfStandIns.test_a_stand_in_held_in_a_str_constant_is_listed_at_its_line"
+      ],
+      [
+        "S12919-A-BODY-IS-COMPARED-WITH-ITS-NAMES-RENAMED",
+        "scripts/tests/test_mutation_workflows.py",
+        "        return order.setdefault(name, f\"_{len(order)}\") if name in local else name\n",
+        "        return name\n",
+        "the copy check renames a body's own name, arguments and locals in order of first appearance before comparing, so a renamed and re-wrapped copy of each finder function is caught (SPEC-129 A27, #532)",
+        "test_mutation_workflows.EveryMutantsSpellingIsFound.test_a_renamed_and_rewrapped_copy_of_each_finder_function_is_caught"
+      ],
+      [
+        "S12920-THE-CENSUS-READS-EVERY-DEPTH",
+        "scripts/tests/_stand_in_census.py",
+        "    files = sorted(p for p in root.rglob(\"*.py\") if \"__pycache__\" not in p.parts)\n",
+        "    files = sorted(p for p in root.glob(\"*.py\") if \"__pycache__\" not in p.parts)\n",
+        "the census reads every `*.py` file under its directory at any depth, so a stand-in in a subdirectory is listed (SPEC-129 A23, #532)",
+        "test_stand_in_census.TheCensusOfStandIns.test_a_stand_in_in_a_subdirectory_is_listed"
+      ],
+      [
+        "S12921-THE-CENSUS-DOES-NOT-READ-PYCACHE",
+        "scripts/tests/_stand_in_census.py",
+        "    files = sorted(p for p in root.rglob(\"*.py\") if \"__pycache__\" not in p.parts)\n",
+        "    files = sorted(p for p in root.rglob(\"*.py\"))\n",
+        "the census reads no file under a `__pycache__` directory, at any depth, so a stale copy there is neither counted nor listed (SPEC-129 A23, #532)",
+        "test_stand_in_census.TheCensusOfStandIns.test_a_file_under_pycache_is_not_read"
+      ],
+      [
+        "S12922-A-TRY-IN-A-FUNCTION-OR-CLASS-BODY-IS-A-CANDIDATE",
+        "scripts/tests/_stand_in_census.py",
+        "            walk_scope(statement.body, names, [], found)\n            continue\n",
+        "            continue\n",
+        "the census walks the body of every function, async function and class, so a try inside one is a candidate like a try at module level (SPEC-129 A24, #532)",
+        "test_stand_in_census.TheCensusOfStandIns.test_a_try_in_a_function_or_a_class_body_is_a_candidate"
+      ],
+      [
+        "S12923-A-TRY-IN-A-HANDLER-OR-CASE-CLAUSE-IS-A-CANDIDATE",
+        "scripts/tests/_stand_in_census.py",
+        "                    for clause in value:\n",
+        "                    for clause in []:\n",
+        "the census walks the body of every clause, an except handler and a match case, so a try inside one is a candidate (SPEC-129 A24, #532)",
+        "test_stand_in_census.TheCensusOfStandIns.test_a_try_in_a_handler_or_a_case_clause_is_a_candidate"
+      ],
+      [
+        "S12924-A-TRY-STAR-IS-A-CANDIDATE",
+        "scripts/tests/_stand_in_census.py",
+        "TRIES = (ast.Try, ast.TryStar)\n",
+        "TRIES = (ast.Try,)\n",
+        "a try with `except*` handlers is a candidate like a plain try, so its handler that does not leave is listed (SPEC-129 A24, #532)",
+        "test_stand_in_census.TheCensusOfStandIns.test_a_try_star_is_a_candidate"
+      ],
+      [
+        "S12925-A-NESTED-SCOPE-IS-NOT-ENTERED",
+        "scripts/tests/_stand_in_census.py",
+        "        if isinstance(node, SCOPES):\n            continue\n        stack.extend(ast.iter_child_nodes(node))\n",
+        "        stack.extend(ast.iter_child_nodes(node))\n",
+        "the census enters no function, lambda or class nested in a handler or in the reach, so a leaving statement or a program call inside one does not count (SPEC-129 A24, #532)",
+        "test_stand_in_census.TheCensusOfStandIns.test_a_program_run_in_a_nested_def_is_not_listed"
+      ],
+      [
+        "S12926-EVERY-KIND-OF-REAL-PROGRAM-IS-LISTED",
+        "scripts/tests/_stand_in_census.py",
+        "    r\"(os\\.(system|popen|exec\\w*|spawn\\w*|posix_spawn\\w*)|subprocess\\.\\w+|runpy\\.\\w+)\"\n",
+        "    r\"(os\\.(system|exec\\w*|spawn\\w*|posix_spawn\\w*)|subprocess\\.\\w+|runpy\\.\\w+)\"\n",
+        "a real program is `os.system`, `os.popen`, `os.exec*`, `os.spawn*`, `os.posix_spawn*`, `subprocess.*` or `runpy.*`, so a fallback through each kind is listed (SPEC-129 A24, #532)",
+        "test_stand_in_census.TheCensusOfStandIns.test_every_kind_of_real_program_is_listed"
+      ],
+      [
+        "S12927-THE-REACH-CLIMBS-THE-ENCLOSING-BLOCKS",
+        "scripts/tests/_stand_in_census.py",
+        "    for block, k in reversed(path):\n",
+        "    for block, k in reversed(path[-1:]):\n",
+        "the reach holds every statement after the try in its block and in each block enclosing it, so a call after a loop, a with or an if that holds the try is listed (SPEC-129 A24, #532)",
+        "test_stand_in_census.TheCensusOfStandIns.test_a_call_in_a_nested_block_is_listed"
+      ],
+      [
+        "S12928-THE-REACH-STOPS-AT-ITS-SCOPE",
+        "scripts/tests/_stand_in_census.py",
+        "            walk_scope(statement.body, names, [], found)\n",
+        "            walk_scope(statement.body, names, here, found)\n",
+        "the reach stops at the function, class or module that holds the try, so a call at module level after a function is not in the reach of a handler inside it (SPEC-129 A24, #532)",
+        "test_stand_in_census.TheCensusOfStandIns.test_a_call_in_a_nested_block_is_listed"
+      ],
+      [
+        "S12929-AN-F-STRING-IS-NOT-PARSED",
+        "scripts/tests/_stand_in_census.py",
+        "        if isinstance(node, ast.JoinedStr):\n            continue\n",
+        "",
+        "an f-string's pieces are not parsed as sources, so the census counts only whole string constants as parsed or skipped (SPEC-129 A25, #532)",
+        "test_stand_in_census.TheCensusOfStandIns.test_the_census_counts_the_constants_it_parses_and_skips"
+      ],
+      [
+        "S12930-A-SKIPPED-CONSTANT-IS-COUNTED",
+        "scripts/tests/_stand_in_census.py",
+        "            skipped += 1\n",
+        "            skipped += 0\n",
+        "a string constant that does not parse is skipped and counted, so the census prints how many it could not read (SPEC-129 A25, #532)",
+        "test_stand_in_census.TheCensusOfStandIns.test_the_census_counts_the_constants_it_parses_and_skips"
+      ],
+      [
+        "S12931-THE-COPY-CHECK-DROPS-THE-DOCSTRING",
+        "scripts/tests/test_mutation_workflows.py",
+        "        body = body[1:]\n    module = ast.Module(",
+        "        pass\n    module = ast.Module(",
+        "the copy check drops a body's docstring before comparing, so a copy with its docstring replaced is caught (SPEC-129 A27, #532)",
+        "test_mutation_workflows.EveryMutantsSpellingIsFound.test_a_renamed_and_rewrapped_copy_of_each_finder_function_is_caught"
+      ],
+      [
+        "S12932-THE-COPY-CHECK-RENAMES-THE-ARGUMENTS",
+        "scripts/tests/test_mutation_workflows.py",
+        "    local |= {x.arg for x in (*a.posonlyargs, *a.args, *a.kwonlyargs, a.vararg, a.kwarg) if x}\n",
+        "",
+        "the copy check renames a body's arguments in order of first appearance, so a copy with its arguments renamed is caught (SPEC-129 A27, #532)",
+        "test_mutation_workflows.EveryMutantsSpellingIsFound.test_a_renamed_and_rewrapped_copy_of_each_finder_function_is_caught"
+      ],
+      [
+        "S12933-A-FUNCTIONS-OWN-NAME-READS-AS-ITSELF",
+        "scripts/tests/test_mutation_workflows.py",
+        "    order = {function.name: \"_self\"}\n",
+        "    order = {}\n",
+        "the copy check reads a body's own name as itself, the name a copy's call to the finder function reads as too, so a literal copy of a finder function that calls itself is caught (SPEC-129 A27, #532)",
+        "test_mutation_workflows.EveryMutantsSpellingIsFound.test_a_literal_copy_of_each_finder_function_under_another_name_is_caught"
+      ],
+      [
+        "S12934-THE-COPY-CHECK-READS-EVERY-DEPTH",
+        "scripts/tests/test_mutation_workflows.py",
+        "    for path in sorted(p for p in root.rglob(\"*.py\") if \"__pycache__\" not in p.parts):\n",
+        "    for path in sorted(p for p in root.glob(\"*.py\") if \"__pycache__\" not in p.parts):\n",
+        "the copy check reads every `*.py` file under its directory at any depth, so a copy in a subdirectory is caught (SPEC-129 A27, #532)",
+        "test_mutation_workflows.EveryMutantsSpellingIsFound.test_a_renamed_and_rewrapped_copy_of_each_finder_function_is_caught"
+      ],
+      [
+        "S12935-THE-FINDERS-OWN-FILE-IS-NOT-A-COPY",
+        "scripts/tests/test_mutation_workflows.py",
+        "        if path.relative_to(root) == Path(FINDER.name):\n            continue\n",
+        "",
+        "the copy check skips the finder's own file, so the finder's functions are not read as copies of themselves and the tree's copies equal FLOOR (SPEC-129 A27, #532)",
+        "test_mutation_workflows.EveryMutantsSpellingIsFound.test_the_finder_is_defined_once_and_a_planted_copy_is_caught"
+      ],
+      [
+        "S12936-AN-EQUAL-BODY-IS-A-COPY-WHATEVER-ITS-NAME",
+        "scripts/tests/test_mutation_workflows.py",
+        "            finder = bodies.get(normal_body(function))\n",
+        "            finder = None\n",
+        "a def whose normalised body equals a finder function's is a copy whatever its name, beside the name match, so a renamed and re-wrapped copy is caught (SPEC-129 A27, #532)",
+        "test_mutation_workflows.EveryMutantsSpellingIsFound.test_a_renamed_and_rewrapped_copy_of_each_finder_function_is_caught"
+      ],
+      [
+        "S12937-A-COPYS-CALL-TO-THE-FINDER-READS-AS-ITS-OWN",
+        "scripts/tests/test_mutation_workflows.py",
+        "        if name == own:\n",
+        "        if False:\n",
+        "a copy's call to the finder function it copies, by the finder's own name, is renamed as the copy's own name is, so a byte-identical copy of `mutants_in` under another name is caught (SPEC-129 A27, #532)",
+        "test_mutation_workflows.EveryMutantsSpellingIsFound.test_a_literal_copy_of_each_finder_function_under_another_name_is_caught"
       ]
     ]
   }
