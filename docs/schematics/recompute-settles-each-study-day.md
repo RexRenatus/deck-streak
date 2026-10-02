@@ -68,3 +68,55 @@ flowchart LR
 Every step is keyed by the day it evaluates, so running it again for a settled day changes nothing
 unless that day's own reviews changed; and every XP amount a step writes for a closed day is only
 ever raised (ADR-072).
+
+## Two recomputes that overlap (added 2026-10-02, #311)
+
+Kind: sequence and state machine. Insert-only: the sections above are kept as they are. Read at
+DeckStreak `dev` 9b0bf65f9, where `Fold::run` reads the settle cursor once, in its first write
+(`crates/coordination/src/recompute/mod.rs:479`), and opens each owed day's write with no re-read
+(`mod.rs:503`). Decided by ADR-313; SPEC-071 sections 11 and 12; modelled by
+`formal/tla/FoldSettlesOnce`.
+
+The scheduled cycle and the owner's recompute can both reach the fold before either has cleared
+the rescore mark. Every write is one `BEGIN IMMEDIATE` transaction, so two writes never interleave;
+what overlapped was the decision, taken from a cursor read in an earlier transaction. Each owed
+day's write now re-reads the cursor before the day's steps run, and settles only the day after it.
+
+```mermaid
+sequenceDiagram
+  participant sched as scheduled fold
+  participant ledger as ledger file
+  participant owner as owner's fold
+  sched->>ledger: first write: read the cursor, last settled day C
+  owner->>ledger: first write: read the cursor, still C
+  Note over sched,owner: both owe C+1
+  sched->>ledger: BEGIN IMMEDIATE, re-read the cursor: C, so C+1 is owed
+  sched->>ledger: the steps of C+1 and its settled_at, COMMIT: the cursor is C+1
+  owner->>ledger: BEGIN IMMEDIATE waits for the lock, then re-reads the cursor: C+1
+  Note over owner: C+1 is not owed now: the write is dropped, nothing commits
+  owner->>ledger: BEGIN IMMEDIATE, re-read the cursor: C+1, so C+2 is owed
+  owner->>ledger: the steps of C+2 and its settled_at, COMMIT: the cursor is C+2
+```
+
+The owed day, as each owed day's write decides it:
+
+```mermaid
+flowchart TD
+  owing{"the run's day has closed, and the run's sync started after its close?"}
+  owing -- "no" --> current["evaluate the current study day"]
+  owing -- "yes" --> lock["BEGIN IMMEDIATE: the write lock"]
+  lock --> reread["re-read the cursor"]
+  reread --> owed{"the owed day: the day after the cursor, or the run's own day with no cursor"}
+  owed -- "the run's day" --> settle["the day's steps and its settled_at, then COMMIT"]
+  settle --> step["the run's day is the day after it"]
+  owed -- "another day" --> drop["drop the write: nothing commits"]
+  drop --> jump["the run's day is the owed day"]
+  step --> owing
+  jump --> owing
+```
+
+Before the first settled day there is no cursor, so each fold owes its own most recently closed day.
+A fold whose day another fold already passed skips forward; a fold that read no cursor while
+another settled an earlier day goes back to the day after it, so no day after the first settled
+one is skipped. A day before the first settled day has a row only as a study day of the window or
+as some recompute's current day (SPEC-071 section 11).
