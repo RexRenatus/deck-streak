@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id AS \"id!\", kind, dedupe_key, surface, tier_requested, tier_pending, text, hold,\n                  tries, state, deferred_at, study_day, created_at\n           FROM notification_queue ORDER BY id",
+  "query": "SELECT id AS \"id!\", kind, dedupe_key, surface, tier_requested, tier_pending, text, hold,\n                  tries, state, claim, deferred_at, study_day, created_at\n           FROM notification_queue ORDER BY id",
   "describe": {
     "columns": [
       {
@@ -114,8 +114,19 @@
         }
       },
       {
-        "name": "deferred_at",
+        "name": "claim",
         "ordinal": 10,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "notification_queue",
+            "name": "claim"
+          }
+        }
+      },
+      {
+        "name": "deferred_at",
+        "ordinal": 11,
         "type_info": "Integer",
         "origin": {
           "Table": {
@@ -126,7 +137,7 @@
       },
       {
         "name": "study_day",
-        "ordinal": 11,
+        "ordinal": 12,
         "type_info": "Integer",
         "origin": {
           "Table": {
@@ -137,7 +148,7 @@
       },
       {
         "name": "created_at",
-        "ordinal": 12,
+        "ordinal": 13,
         "type_info": "Integer",
         "origin": {
           "Table": {
@@ -161,10 +172,11 @@
       false,
       false,
       false,
+      true,
       false,
       false,
       false
     ]
   },
-  "hash": "87450138ee368a7cfa6e6d30e7ab620b254f590e7f6f79d00b9df3f19bf21767"
+  "hash": "324f5c0435fe1f3647ca807572f8f86934d0cf8df70fc8ed7589c6015ac75ecc"
 }

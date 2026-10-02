@@ -152,11 +152,11 @@ async fn deliveries(connection: &mut SqliteConnection) -> Result<ExportedTable, 
     })
 }
 
-/// Every held or abandoned celebration on the queue.
+/// Every held, sending or abandoned celebration on the queue.
 async fn queue(connection: &mut SqliteConnection) -> Result<ExportedTable, KernelError> {
     let rows = sqlx::query!(
         r#"SELECT id AS "id!", kind, dedupe_key, surface, tier_requested, tier_pending, text, hold,
-                  tries, state, deferred_at, study_day, created_at
+                  tries, state, claim, deferred_at, study_day, created_at
            FROM notification_queue ORDER BY id"#
     )
     .fetch_all(connection)
@@ -177,6 +177,7 @@ async fn queue(connection: &mut SqliteConnection) -> Result<ExportedTable, Kerne
                     "hold": row.hold,
                     "tries": row.tries,
                     "state": row.state,
+                    "claim": row.claim,
                     "deferred_at": row.deferred_at,
                     "study_day": row.study_day,
                     "created_at": row.created_at,

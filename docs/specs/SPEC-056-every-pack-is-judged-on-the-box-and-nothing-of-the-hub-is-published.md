@@ -314,3 +314,75 @@ holds section 7 equal to every retirement the delivered SPECs hold. It inserts:
 
 Section 7's first sentence names this delivery's retirements; its table now also lists one a later
 delivery made, as A18 requires.
+
+## 9. Amendments, 2026-10-02: the owned email rule follows its source across a systemd unit instance path, with acceptance criteria A21 to A23
+
+Made by a fix delivery, insert-only under ruling (i) of SPEC-038 section 8: every earlier byte is
+kept in order. It inserts this section and nothing else.
+
+### The problem, measured
+
+The box run judges each owned file against its source over the fields the owned file keeps (R10).
+At the box run's current source, one verdict fails: `scripts/scrub-rules/persona-core.json`
+`patterns[10].regex` (the `email` rule) differs from the source's; the other ten patterns, the
+literals and the schema are equal. The source's rule now passes a systemd instance unit's path (a
+local part and a domain ending in a unit type, then `/`, `.d/`, `.wants/`, `.requires/` or
+`.upholds/`) and still decides every other address as before. The scrub reads the owned copy, so
+the copy is behaviour: at the old regex, a unit path of a type the scrub's own code does not name
+(`device`, `automount`, `swap`) is flagged as an address.
+
+### Requirement
+
+R17. The owned persona-core rules equal their source over every field the owned file keeps (R5,
+    R10), and they are refreshed when the box run's source moves. The `email` rule's regex is the
+    source's, byte for byte, so a systemd instance unit's path passes it in each unit type the
+    source lists (`service`, `socket`, `device`, `mount`, `automount`, `swap`, `path`, `timer`,
+    `slice`, `scope`), with or without `.d`, `.wants`, `.requires` or `.upholds`, and a real
+    address in every context still fails it. A public test decides this through the scrub's own
+    entry point, never through a copy of the regex.
+
+### Acceptance criteria
+
+| id | criterion | decided by |
+|---|---|---|
+| A21 | a population of systemd instance unit paths and credential directive lines passes the scrub's email rule, each expectation written from the source's rule | `test_public_scrub.py` `test_a_systemd_unit_instance_path_passes_the_email_rule` |
+| A22 | a population of real addresses, one in each context the rule must still catch, is still found by the email rule | `test_public_scrub.py` `test_a_real_address_is_still_found_in_every_context` |
+| A23 | an address at each reserved domain still passes | `test_public_scrub.py` `test_an_address_at_a_reserved_domain_still_passes` |
+
+A22 and A23 are pins: they hold at the old regex and the new one, and are not claimed red-first.
+The owned copy's equality with its source is decided by the box run's drift check (R10, A14), not
+by a public test.
+
+```acceptance
+A21: python3 -m unittest discover -s scripts/tests -p test_public_scrub.py -k test_a_systemd_unit_instance_path_passes_the_email_rule
+A22: python3 -m unittest discover -s scripts/tests -p test_public_scrub.py -k test_a_real_address_is_still_found_in_every_context
+A23: python3 -m unittest discover -s scripts/tests -p test_public_scrub.py -k test_an_address_at_a_reserved_domain_still_passes
+```
+
+### File manifest
+
+- `scripts/scrub-rules/persona-core.json`: changed: `patterns[10].regex` only.
+- `scripts/tests/test_public_scrub.py`: changed: the three tests of A21 to A23.
+- `docs/specs/SPEC-056-every-pack-is-judged-on-the-box-and-nothing-of-the-hub-is-published.md`: changed: this section.
+- `docs/decisions/ADR-314-the-owned-scrub-rules-equal-their-source-and-are-refreshed-when-it-moves.md`: added.
+- `docs/red-first/SPEC-056.md`: changed: an addendum for A21 to A23.
+- `changelog.d/scrub-rules-unit-paths.md`: added.
+- `scripts/public-scrub.py`: unchanged: it reads the owned rules as data.
+- `scripts/scrub-rules/privacy-gdpr.json`: unchanged.
+
+### What this does NOT do
+
+- It changes no code arm of the scrub: the data is the change, so no mutation row is added (#60).
+- It edits no field of the owned file other than the one regex: the other patterns, the literals
+  and the schema are already equal to the source (#60).
+- It adds no waiver for the drift to the private wiring: a waiver would hide a refreshed copy's
+  absence (#60).
+- It does not change the scrub's own list of unit types, which still decides a bare instance name
+  and an address at `.target` (#556).
+
+### Risks
+
+- **The copy drifts again when the source moves.** The box run's drift check names the first field
+  that differs, so it fails by name and the copy is refreshed in its own delivery (R17).
+- **The new regex lets a real address through.** A22 pins every context the rule must still catch,
+  and A23 the reserved domains.

@@ -10,8 +10,10 @@
   plain extension, and an erase never deletes a vault file).
 - **Prerequisites:** SPEC-020, SPEC-021, SPEC-024, SPEC-026, SPEC-029, SPEC-042 and SPEC-110. **Mutation
   band:** `S11800-S11899`.
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-118.md` (ADR-016).
+- **Status:** delivered in part by V1a (moved from `docs/specs/planned/` with its tests and
+  `docs/red-first/SPEC-118.md`, ADR-016): R1 to R5 and R10 to R14, the criteria of section 3
+  and B1, proved by `formal/tla/CaptureOnce/`. The remainder, #154's media from the bot (R6 to
+  R9, A7 to A14 and B2), is delivered by V1b, section 3c.
 
 ## 1. The problem, measured
 
@@ -41,7 +43,9 @@ R1. `vault::inbox::stem(kind, unique, when)` is `<UTC date of when>-<kind>-<safe
     safe unique is `unique` with every character outside `[A-Za-z0-9_-]` removed, cut to 32
     characters, or `capture` when that leaves nothing (`vault_bridge.py:save_inbox_capture`,
     `_UNIQUE_SAFE`; golden `inbox_capture_stub`). An extension without a leading dot gains one, and
-    an empty one reads `.bin`.
+    an empty one reads `.bin`. An attachment whose extension is `md`, in any case, is named
+    `<stem>.attachment.<extension>`, so it never takes its stub's name `<stem>.md`: a departure
+    from the predecessor, whose stub replaced such a document (ADR-118's amendment; A23).
 R2. A Telegram capture's stub has exactly the predecessor's shape: the frontmatter `status:
     captured`, `source: telegram`, `kind`, `captured` (the UTC instant to the second, with its
     offset), `attachment` and `tags: [inbox, telegram-capture]`, in that order; then the line
@@ -92,7 +96,9 @@ R10. `POST /api/inbox/captures`, behind SPEC-024 R7's `OwnerSession`, takes `{ca
     attachment: the stub has R2's keys without `attachment`, with `source: miniapp` and `tags:
     [inbox, miniapp-capture]`, then the line "Captured via the Mini App.", a blank line and the text.
     It answers 201 with the file name, 200 with the existing name for `already_captured`, 422 for a
-    text out of bounds, and 503 for `vault_missing`.
+    text out of bounds, and 503 for `vault_missing`. A retry is matched by its `capture_id`, not by
+    its stem, so a retry sent after UTC midnight answers the first name (ADR-118's capture-key
+    amendment; A24).
 R11. The Mini App's capture screen (`/capture`) has one text field and a "journal" choice, sends a
     fresh `capture_id` per capture and the same one on a retry, and shows the saved name or one
     failure line.
@@ -100,7 +106,8 @@ R11. The Mini App's capture screen (`/capture`) has one text field and a "journa
 The table and the data rights
 
 R12. The vault context owns `inbox_captures` (`migrations/011801_vault_inbox_captures.sql`, `STRICT`,
-    `created_at`, per SPEC-020 R15 and R18): the stem (unique), kind (`photo`, `voice`, `document`,
+    `created_at`, per SPEC-020 R15 and R18): the stem (unique), the capture key (R1's safe unique,
+    unique among the `miniapp` captures, R10), kind (`photo`, `voice`, `document`,
     `text` or `journal`), source (`telegram` or `miniapp`), the attachment's name (null without
     one), the captured instant, the state (`captured` or `filed`), and the destination and the
     filing's study day (null until SPEC-116 files it). Its six files are in §4. An export lists the
@@ -123,14 +130,6 @@ R14. CHARTER 10's eleven anti-goals bind this SPEC as one block; the one it touc
 | A4 | a capture with a stem already recorded is written once and answers `already_captured` | `a_capture_sent_twice_is_written_once` |
 | A5 | a write to a path under a journal folder is refused with `journal_refused` | `no_vault_write_reaches_a_journal_folder` |
 | A6 | every file-writing call in `crates/vault/src` is inside the atomic writer | `every_vault_file_write_is_the_atomic_writer` |
-| A7 | the media choice equals the predecessor's golden for every case | `media_choice_matches_the_predecessors_golden` |
-| A8 | a 10-character extension is kept, and an 11-character one or one with a separator reads `.bin` | `a_document_extension_off_the_rule_reads_bin` |
-| A9 | a declared size of 20971520 bytes is fetched and 20971521 is not | `a_file_over_twenty_megabytes_is_never_fetched` |
-| A10 | a stream that passes the cap is stopped and leaves no file | `a_stream_past_the_cap_is_stopped_and_discarded` |
-| A11 | the three replies equal the predecessor's golden | `capture_replies_match_the_predecessors_golden` |
-| A12 | with the vault missing, the owner gets the failed-save line and nothing is raised | `a_missing_vault_is_reported_not_raised` |
-| A13 | the file URL never reaches a log line | `the_file_url_never_reaches_a_log_line` |
-| A14 | an owner's media message is admitted, and a non-owner's is dropped | `media_is_admitted_from_the_owner_only` |
 | A15 | a quick capture writes the stub of R10 | `a_quick_capture_writes_the_miniapp_stub` |
 | A16 | a journal quick capture lands in the inbox with `kind: journal` | `a_journal_quick_capture_lands_in_the_inbox` |
 | A17 | a retried quick capture answers the same name and writes nothing | `a_retried_quick_capture_answers_the_same_name` |
@@ -139,6 +138,8 @@ R14. CHARTER 10's eleven anti-goals bind this SPEC as one block; the one it touc
 | A20 | the screen sends the text, the chosen kind and one capture id per capture | `sends the text, the kind and one capture id` |
 | A21 | the screen shows the saved name, or its failure line on 503 | `shows the saved name or the failure line` |
 | A22 | with `DECKSTREAK_VAULT_LAYOUT` unset the vendored layout is in force, and with it set the owner's is | `the_layout_in_force_is_the_owners_or_the_default` |
+| A23 | an attachment never takes its stub's name, and its bytes survive the stub, for every extension | `an_md_attachment_never_takes_its_stubs_name`, `every_extension_keeps_its_bytes_apart_from_the_stub` |
+| A24 | a Mini App retry on a later UTC day answers the first name and writes nothing, and a Telegram capture of the same unique on a later day is a new capture | `a_miniapp_retry_on_a_later_utc_day_answers_the_first_name` |
 
 ```acceptance
 A1: cargo test -p deck-streak-vault --test inbox_capture -- --exact the_stub_and_stem_match_the_predecessors_golden
@@ -147,14 +148,6 @@ A3: cargo test -p deck-streak-vault --test inbox_capture -- --exact a_missing_in
 A4: cargo test -p deck-streak-vault --test inbox_capture -- --exact a_capture_sent_twice_is_written_once
 A5: cargo test -p deck-streak-vault --test atomic -- --exact no_vault_write_reaches_a_journal_folder
 A6: cargo test -p deck-streak-vault --test atomic -- --exact every_vault_file_write_is_the_atomic_writer
-A7: cargo test -p deck-streak-bot --test media_capture -- --exact media_choice_matches_the_predecessors_golden
-A8: cargo test -p deck-streak-bot --test media_capture -- --exact a_document_extension_off_the_rule_reads_bin
-A9: cargo test -p deck-streak-bot --test media_capture -- --exact a_file_over_twenty_megabytes_is_never_fetched
-A10: cargo test -p deck-streak-bot --test media_capture -- --exact a_stream_past_the_cap_is_stopped_and_discarded
-A11: cargo test -p deck-streak-bot --test media_capture -- --exact capture_replies_match_the_predecessors_golden
-A12: cargo test -p deck-streak-bot --test media_capture -- --exact a_missing_vault_is_reported_not_raised
-A13: cargo test -p deck-streak-bot --test media_capture -- --exact the_file_url_never_reaches_a_log_line
-A14: cargo test -p deck-streak-bot --test media_capture -- --exact media_is_admitted_from_the_owner_only
 A15: cargo test -p deck-streak-api --test inbox_capture_route -- --exact a_quick_capture_writes_the_miniapp_stub
 A16: cargo test -p deck-streak-api --test inbox_capture_route -- --exact a_journal_quick_capture_lands_in_the_inbox
 A17: cargo test -p deck-streak-api --test inbox_capture_route -- --exact a_retried_quick_capture_answers_the_same_name
@@ -163,6 +156,9 @@ A19: cargo test -p deck-streak-vault --test inbox_capture -- --exact inbox_captu
 A20: pnpm exec vitest run web/app/src/lib/capture/QuickCapture.test.ts -t "sends the text, the kind and one capture id"
 A21: pnpm exec vitest run web/app/src/lib/capture/QuickCapture.test.ts -t "shows the saved name or the failure line"
 A22: cargo test -p deck-streak-vault --test layout_in_force -- --exact the_layout_in_force_is_the_owners_or_the_default
+A23: cargo test -p deck-streak-vault --test inbox_capture -- --exact an_md_attachment_never_takes_its_stubs_name
+A23: cargo test -p deck-streak-vault --test inbox_capture -- --exact every_extension_keeps_its_bytes_apart_from_the_stub
+A24: cargo test -p deck-streak-vault --test inbox_capture -- --exact a_miniapp_retry_on_a_later_utc_day_answers_the_first_name
 ```
 
 ## 3a. What the box run judges
@@ -177,6 +173,36 @@ the files it adds under packs that are already enforced.
 | B1 | over `privacy.json`, `PRIVACY.md` and `crates/vault/src/data_rights.rs`: the `inbox-captures` category names `inbox_captures` with purpose, basis and retention, and export and erase cover it | the privacy-gdpr pack |
 | B2 | over `crates/bot/src/capture.rs`: every reply is escaped for the parse mode and stays within the message length | the telegram-platform pack |
 
+## 3c. Delivered by the next pull requests
+
+This SPEC lands in two pull requests, in order. This one (V1a) delivers the capture in the vault,
+the quick capture and their table: R1 to R5 and R10 to R14, the criteria of section 3's table and
+its fence, and B1. V1b delivers #154's media from the bot: R6 to R9, the criteria below and B2.
+The table below holds the criteria V1b delivers, each row naming it, and the lines under it are
+their fence lines, each prefixed `V1b:`. V1b moves each of its criteria back verbatim: the row into
+section 3's table, without the `delivered by` column, and the fence line into the acceptance
+fence, without the prefix.
+
+| id | criterion | decided by | delivered by |
+|---|---|---|---|
+| A7 | the media choice equals the predecessor's golden for every case | `media_choice_matches_the_predecessors_golden` | V1b |
+| A8 | a 10-character extension is kept, and an 11-character one or one with a separator reads `.bin` | `a_document_extension_off_the_rule_reads_bin` | V1b |
+| A9 | a declared size of 20971520 bytes is fetched and 20971521 is not | `a_file_over_twenty_megabytes_is_never_fetched` | V1b |
+| A10 | a stream that passes the cap is stopped and leaves no file | `a_stream_past_the_cap_is_stopped_and_discarded` | V1b |
+| A11 | the three replies equal the predecessor's golden | `capture_replies_match_the_predecessors_golden` | V1b |
+| A12 | with the vault missing, the owner gets the failed-save line and nothing is raised | `a_missing_vault_is_reported_not_raised` | V1b |
+| A13 | the file URL never reaches a log line | `the_file_url_never_reaches_a_log_line` | V1b |
+| A14 | an owner's media message is admitted, and a non-owner's is dropped | `media_is_admitted_from_the_owner_only` | V1b |
+
+V1b: A7: cargo test -p deck-streak-bot --test media_capture -- --exact media_choice_matches_the_predecessors_golden
+V1b: A8: cargo test -p deck-streak-bot --test media_capture -- --exact a_document_extension_off_the_rule_reads_bin
+V1b: A9: cargo test -p deck-streak-bot --test media_capture -- --exact a_file_over_twenty_megabytes_is_never_fetched
+V1b: A10: cargo test -p deck-streak-bot --test media_capture -- --exact a_stream_past_the_cap_is_stopped_and_discarded
+V1b: A11: cargo test -p deck-streak-bot --test media_capture -- --exact capture_replies_match_the_predecessors_golden
+V1b: A12: cargo test -p deck-streak-bot --test media_capture -- --exact a_missing_vault_is_reported_not_raised
+V1b: A13: cargo test -p deck-streak-bot --test media_capture -- --exact the_file_url_never_reaches_a_log_line
+V1b: A14: cargo test -p deck-streak-bot --test media_capture -- --exact media_is_admitted_from_the_owner_only
+
 ## 4. File manifest
 
 | file | context | change |
@@ -189,7 +215,7 @@ the files it adds under packs that are already enforced.
 | `.env.example` | repo | changed: `DECKSTREAK_VAULT_LAYOUT`, by name, unset |
 | `crates/vault/src/data_rights.rs` | `deck-streak-vault` | changed: `inbox_captures` exported and erased (the port SPEC-110 adds) |
 | `crates/vault/src/lib.rs` | `deck-streak-vault` | changed: the modules |
-| `crates/vault/tests/inbox_capture.rs` | `deck-streak-vault` | added: A1 to A4, A19 |
+| `crates/vault/tests/inbox_capture.rs` | `deck-streak-vault` | added: A1 to A4, A19, A23, A24 |
 | `crates/vault/tests/atomic.rs` | `deck-streak-vault` | changed: A5, A6 |
 | `migrations/011801_vault_inbox_captures.sql` | `deck-streak-vault` | added |
 | `crates/coordination/src/inbox_capture.rs` | `deck-streak-coordination` | added: the one use case both surfaces call |
@@ -218,6 +244,8 @@ the files it adds under packs that are already enforced.
 | `docs/specs/SPEC-118-a-photo-voice-note-or-document-the-owner-sends-lands-in-the-vault-inbox-once-and-a-quick-capture-writes-the-same-stub.md` | docs | moved from `docs/specs/planned/` |
 | `docs/schematics/inbox-capture-and-curation.md` | docs | added by the W6 architect turn; this delivery corrects it only where the code proves it wrong |
 | `docs/red-first/SPEC-118.md` | docs | added |
+| `formal/tla/CaptureOnce/` | formal | added: the model of R3 and R5, with its witnesses |
+| `docs/decisions/ADR-118-a-capture-is-claimed-by-its-stem-and-written-attachment-first-a-document-keeps-only-a-plain-extension-and-an-erase-never-deletes-a-vault-file.md` | docs | changed: the amendment naming an `md` attachment apart from its stub |
 | `crates/bot/src/commands.rs` | `deck-streak-bot` | changed: `Commands` gains the capture use case |
 | `crates/daemon/src/role_bot.rs` | `deck-streak-daemon` | changed: the bot role hands the capture use case to its commands at start |
 | `crates/daemon/src/role_api.rs` | `deck-streak-daemon` | changed: the api role hands the capture use case to `ApiState` at start (POST /api/inbox/captures) |
@@ -275,3 +303,89 @@ captures as files only, so W8's import maps nothing into it and it starts empty.
 | `S11811-STREAM-CAP` | `crates/bot/src/transport.rs` | a stream past the cap stops; the fake stream is finite, so a mutant that keeps reading ends | `media_capture::a_stream_past_the_cap_is_stopped_and_discarded` |
 | `S11812-TEXT-BOUND` | `crates/api/src/inbox_capture_route.rs` | 1 to 4000 characters; the test names 0, 4000 and 4001 | `inbox_capture_route::the_quick_capture_is_owner_only_and_bounds_its_text` |
 | `S11813-OWNER-MEDIA` | `crates/bot/src/gate.rs` | media is admitted from the owner only | `media_capture::media_is_admitted_from_the_owner_only` |
+| `S11814-RETRY-KEY` | `migrations/011801_vault_inbox_captures.sql` | a Mini App capture key is unique (a script-mutation row) | `inbox_capture::a_miniapp_retry_on_a_later_utc_day_answers_the_first_name` |
+
+## 10. Amendments, 2026-10-02: R10 refuses a malformed request by name, the api role serves the capture, and the files V1a adds beside the manifest (#56, #154)
+
+Insert-only: sections 1 to 9 are kept as they were, and this section is appended after them. It
+adds no criterion. Every path below is a manifest row this delivery adds, extends or leaves to V1b.
+
+- **R10's answers gain two refusals.** A `capture_id` that is not its own safe form (R1's unique),
+  such as an empty id, one holding a blank or a `.`, or one longer than the unique keeps, answers
+  422 `invalid_capture_id`, so two captures never share a retry key; a `kind` other than `text` or
+  `journal` answers 422 `unknown_kind`. Both are pinned by
+  `inbox_capture_route::the_quick_capture_refuses_a_bad_request_and_a_missing_vault`, beside R10's
+  `vault_missing`. The route also answers 503 `vault_not_open` when the role serves no inbox, 503
+  `database_not_open` before the database is open, and 500 `vault_unwritable` when the vault
+  refuses the write.
+- **The api role serves the capture over its configured vault.** The role composes the inbox from
+  `DECKSTREAK_VAULT_ROOT` and the layout in force (R4) at start. An unset root, a root that is not
+  absolute, or a layout file that cannot be read or is not a layout serves no capture: the route
+  answers 503 `vault_not_open`, the refusal is logged by its rule and never by its value, and
+  nothing is created. The vault is an owner choice (ADR-011), so none of these refuses the role's
+  start.
+- **Mutation row S11812.** R10's bound is `quick_text_fits` in `crates/vault/src/inbox.rs`, which the
+  coordination use case applies before any write; the route holds no bound of its own. The row's
+  target is therefore `crates/vault/src/inbox.rs`, and its killer is section 9's route test, which
+  sends 0, 4000 and 4001 characters through the whole stack.
+- **A6, as amended, reads:** every call in `crates/vault/src` that writes a file's bytes is inside the atomic writer.
+  Its test, `every_vault_file_write_is_the_atomic_writer`, lists exactly those calls. A call that
+  renames, creates or removes a path writes no file's bytes, and section 11 names each such call
+  outside the writer (#56).
+- **R5, as amended, is stated for the inbox capture's writes.** Every file the inbox capture
+  writes, its attachment and its stub, goes through the atomic writer, which refuses with
+  `journal_refused` a path under a folder the layout names in `journal`, whether the path names
+  that folder or reaches it through a link: the guard resolves each journal folder when it is
+  built, and resolves a target's deepest existing folder before it compares. An inbox that is a
+  journal folder, by its name or through a link, is refused when it is located. The vault's other
+  writers are section 11's (#56).
+
+The files, against section 4's manifest:
+
+| file | context | change |
+|---|---|---|
+| `crates/coordination/tests/inbox_capture.rs` | `deck-streak-coordination` | added: the use case's six tests (R3, R4, R5, R10) |
+| `crates/api/tests/insights_routes.rs` | `deck-streak-api` | changed: the state's `Debug` line names the inbox port (`inbox: false`) |
+| `crates/vault/src/fs.rs` | `deck-streak-vault` | extended: `VaultFile` is `Send`, so a capture whose attachment is streaming can be held across an await |
+| `crates/vault/src/inbox.rs` | `deck-streak-vault` | extended: `QUICK_TEXT_CHARS` and `quick_text_fits`, R10's bound |
+| `crates/vault/tests/inbox_capture.rs` | `deck-streak-vault` | extended: R10's bound, `a_quick_text_fits_one_to_four_thousand_characters_after_the_trim` |
+| `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | changed: the api role's half, `inbox_captures`; the bot role's half is V1b's |
+| `crates/daemon/src/role_api.rs` | `deck-streak-daemon` | changed: as its row says, `api_state` composes the inbox |
+| `crates/daemon/tests/inbox_capture_composed.rs` | `deck-streak-daemon` | added: the role's composed router serves the capture over its configured vault alone |
+| `web/app/src/lib/api.ts` | Mini App | changed: `createApi` gains `capture`, the POST through its one session handshake and its single 401 renewal |
+| `web/app/src/lib/api.test.ts` | Mini App | changed: the capture's request shape, its renewal and its refusals |
+| `web/app/src/lib/startapp.ts` | Mini App | changed: the token `capture` opens the /capture screen; ruling (m): the closed token map covers every route (ADR-028) |
+| `web/app/src/lib/startapp.test.ts` | Mini App | changed: the capture token's case, and the destinations list gains `capture`; ruling (m): the closed token map covers every route (ADR-028) |
+| `web/app/messages/en.json` | Mini App | changed: the capture screen's messages |
+| `docs/red-first/SPEC-118.md` | docs | extended: the screen's and the wiring's records |
+| `tools/parity-oracle/registry/spec_118.py` | repo | added with the `inbox_capture_stub` golden; V1b adds the two media goldens |
+| `scripts/mutation-rows.d/S11800-S11899.json` | repo | added with V1a's rows, S11801 to S11807, S11812, S11814, and S11815 to S11817, which guard the journal refusal through a link; V1b adds S11808 to S11811 and S11813 |
+| `docs/specs/planned/SPEC-057-every-surviving-mutant-is-killed-or-recorded-equivalent-before-the-first-mutation-gated-release.md` | docs | changed: section 7's vault row counts the two equivalents the vault's fragment records |
+
+The Mini App's screen is delivered as its rows say: `web/app/src/routes/capture/+page.svelte`,
+`web/app/src/lib/capture/QuickCapture.svelte`, `web/app/src/lib/capture/capture.ts`,
+`web/app/src/lib/capture/QuickCapture.test.ts` and `web/app/src/lib/routes.ts`.
+
+The rows V1b delivers, each left as it is here:
+
+- `crates/bot/src/gate.rs`: unchanged in this part; delivered by V1b (#154).
+- `crates/bot/src/capture.rs`: unchanged in this part; delivered by V1b (#154).
+- `crates/bot/src/lib.rs`: unchanged in this part; delivered by V1b (#154).
+- `crates/bot/src/transport.rs`: unchanged in this part; delivered by V1b (#154).
+- `crates/bot/src/commands.rs`: unchanged in this part; delivered by V1b (#154).
+- `crates/bot/tests/media_capture.rs`: unchanged in this part; delivered by V1b (#154).
+- `crates/daemon/src/role_bot.rs`: unchanged in this part; delivered by V1b (#154).
+- `tools/parity-oracle/goldens/media_capture_choice.json`: unchanged in this part; delivered by V1b (#154).
+- `tools/parity-oracle/goldens/media_capture_replies.json`: unchanged in this part; delivered by V1b (#154).
+
+## 11. What this does NOT do, as amended 2026-10-02 (#56)
+
+- It moves no rename and no directory call into the atomic writer. Each one writes no file's
+  bytes, so A6 as amended does not name it: `crates/vault/src/staged.rs` line 961 (`rename`) and
+  line 984 (`create_dir`), and `crates/vault/src/readings_tree.rs` lines 396 and 426
+  (`create_dir`), 450 (`rename`), 496 and 501 (`remove_file`) and 596 (`remove_dir`). The journal
+  guard over every vault writer is SPEC-118's second pull request, which closes #56.
+- It composes the journal guard into no other vault writer. The drill notes that the api, the bot
+  and the daemon write go through `RealFs`, whose `journal()` is empty, so none of them refuses a
+  journal path, and R5 as amended holds for the inbox capture's writes alone. The journal guard
+  over every vault writer is SPEC-118's second pull request, which closes #56.

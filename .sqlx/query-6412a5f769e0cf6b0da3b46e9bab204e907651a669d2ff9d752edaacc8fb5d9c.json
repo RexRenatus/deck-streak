@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT COUNT(*) AS \"count!: i64\" FROM notification_queue\n           WHERE state = 'held' AND kind = ? AND study_day >= ? AND tier_pending >= ?",
+  "query": "SELECT COUNT(*) AS \"count!: i64\" FROM notification_queue\n           WHERE state IN ('held', 'sending') AND kind = ? AND study_day >= ? AND tier_pending >= ?",
   "describe": {
     "columns": [
       {
@@ -17,5 +17,5 @@
       false
     ]
   },
-  "hash": "073e0bfc64ebce4f6c14369e92b1f2b04b8c68ab0c4b678afcd9060dc39430d4"
+  "hash": "6412a5f769e0cf6b0da3b46e9bab204e907651a669d2ff9d752edaacc8fb5d9c"
 }

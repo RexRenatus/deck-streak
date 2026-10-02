@@ -132,6 +132,13 @@ R14. The sync login is loaded by the sync job alone. `deck-streak-job@.service` 
     systemd applies an instance's drop-in to that instance alone, so a setting there would stand
     in for the template's other instances: an instance's drop-in sets only `LoadCredential=`, and
     any other key in it is refused (A22).
+    Amendment (#291, ruling on PR #512): "a template has at most one such directory" and A21's
+    refusal of two directories no longer hold. A shipped template's instance directory is admitted only
+    for an instance named on ONE allowlist, `INSTANCE_DROPIN_ALLOWLIST` in `test_deploy_templates.py`,
+    which names `sync` and `held_flush` of the job template; every other instance directory of a shipped
+    template is refused, and an instance of an unshipped template stays refused whatever the list names
+    (A23). The held flush's own drop-in loads the bot's token and the owner's id, and no other instance
+    nor the template asks for them; the sync's drop-in loads the sync login alone (A24).
 
 ## 3. Acceptance criteria
 
@@ -159,6 +166,8 @@ R14. The sync login is loaded by the sync job alone. `deck-streak-job@.service` 
 | A20 | the release token reaches the three `gh release` steps alone: not the workflow, the job or any other step | `test_release_workflow.py` |
 | A21 | a shipped template's instance drop-in directory is admitted as its own and read with the template, so a key planted in it is refused by the unit guards; two instance directories of one template are both refused; and the directory of an instance of an unshipped template is refused | `test_deploy_templates.py` |
 | A22 | an instance's drop-in sets only `LoadCredential=`: a template's setting restated there is refused, since systemd applies it to that instance alone while the unit guards read it with the template | `test_deploy_templates.py` |
+| A23 | every instance drop-in directory under a shipped template is on the one allowlist, `INSTANCE_DROPIN_ALLOWLIST` (`sync`, `held_flush`), and the list names nothing the tree does not ship; an unnamed instance of a shipped template and any instance of an unshipped template are refused (A21's refusal of two directories no longer holds) | `test_deploy_templates.py` |
+| A24 | the bot's token and the owner's id are loaded by the held flush instance's drop-in alone: not the template, not the sync instance, and the sync login is loaded by the sync instance alone | `test_deploy_templates.py` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k test_the_deploy_refuses_a_tag_off_main_and_a_lightweight_tag
@@ -183,6 +192,8 @@ A19: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k 
 A20: python3 -m unittest discover -s scripts/tests -p test_release_workflow.py -k test_the_token_reaches_the_three_gh_release_steps_alone
 A21: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k test_a_shipped_templates_instance_dropin_directory_is_its_own_and_no_other_is
 A22: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k test_an_instance_dropin_sets_only_the_credentials_it_loads
+A23: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k test_every_shipped_instance_dropin_directory_is_named_or_refused
+A24: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k test_the_bots_credentials_are_loaded_by_the_held_flush_alone
 ```
 
 A1 to A6, A12 to A15, A17 and A19 run the scripts against a synthetic repository with its own tags, a synthetic release
@@ -234,6 +245,8 @@ this SPEC names each step only.
 | `docs/specs/SPEC-066-the-credential-loader-refuses-an-empty-credential.md` | docs | one dated Amendment line (R14) |
 | the private rail's map, rendered drop-ins and tests (`rail/`) | the maintainer's | changed: R14, committed privately |
 | `scripts/mutation-rows.d/S06200-S06299.json` | repo | added: the mutation rows S06201 to S06227 |
+| `scripts/mutation-rows.retired.json` | repo | changed: S06226 retired with the approval (#291) |
+| `deploy/systemd/` drop-in `20-bot-credentials.conf` in the `held_flush` instance's `.service.d` directory | deploy | added: R14 amended, the bot's token and the owner's id for the held flush (#291) |
 | `changelog.d/` fragment | repo | added |
 
 ## 6. What this does NOT do

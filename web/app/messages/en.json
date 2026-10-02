@@ -77,5 +77,13 @@
   "wallet_movements": "Coin movements",
   "wallet_none": "No coin movements yet.",
   "wallet_older": "Show older movements",
-  "wallet_source_mint": "Coins earned by study"
+  "wallet_source_mint": "Coins earned by study",
+  "capture_title": "Quick capture",
+  "capture_text_label": "What to capture",
+  "capture_text_hint": "Up to {max} characters. It lands in your vault's inbox.",
+  "capture_journal": "Journal entry",
+  "capture_save": "Save to inbox",
+  "capture_saving": "Saving…",
+  "capture_saved": "Saved as {name}",
+  "capture_failed": "Not saved. Your text is still here, so try again in a moment."
 }

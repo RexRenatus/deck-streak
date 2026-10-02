@@ -1,0 +1,116 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S11801-SAFE-CHARS",
+        "vault",
+        "src/inbox.rs",
+        "        .filter(|c| c.is_ascii_alphanumeric() || *c == '_' || *c == '-')",
+        "        .filter(|c| c.is_alphanumeric() || *c == '_' || *c == '-')",
+        "inbox_capture::the_stub_and_stem_match_the_predecessors_golden",
+        "the safe unique keeps only ASCII letters, digits, _ and -, and the golden holds a unique of other letters (SPEC-118 R1, A1)"
+      ],
+      [
+        "S11802-CUT-32",
+        "vault",
+        "src/inbox.rs",
+        "pub const UNIQUE_CHARS: usize = 32;",
+        "pub const UNIQUE_CHARS: usize = 33;",
+        "inbox_capture::the_stub_and_stem_match_the_predecessors_golden",
+        "the safe unique is cut to 32 characters, and the golden names 32, 33 and 40 (SPEC-118 R1, A1)"
+      ],
+      [
+        "S11803-CAPTURE-FALLBACK",
+        "vault",
+        "src/inbox.rs",
+        "        FALLBACK_UNIQUE.to_owned()",
+        "        String::new()",
+        "inbox_capture::the_stub_and_stem_match_the_predecessors_golden",
+        "a unique that leaves nothing reads capture, and the golden holds an empty one and one of symbols only (SPEC-118 R1, A1)"
+      ],
+      [
+        "S11804-ATTACH-FIRST",
+        "vault",
+        "src/inbox.rs",
+        "    if let Some(file) = attachment {\n        file.stream.land()?;\n    }\n    atomic::write(fs, &inbox.folder.join(stub_name(&stem)), stub.as_bytes())?;",
+        "    atomic::write(fs, &inbox.folder.join(stub_name(&stem)), stub.as_bytes())?;\n    if let Some(file) = attachment {\n        file.stream.land()?;\n    }",
+        "inbox_capture::the_attachment_lands_before_its_stub",
+        "the attachment is renamed into place before its stub is written, so the curator never sees a stub before its attachment (SPEC-118 R3, A2)"
+      ],
+      [
+        "S11805-NO-MKDIR",
+        "vault",
+        "src/inbox.rs",
+        "            || !is_folder(fs, &configured, \"read the inbox folder\")?",
+        "            || false",
+        "inbox_capture::a_missing_inbox_is_refused_and_never_created",
+        "a missing inbox folder, or a file in its place, refuses with vault_missing and nothing is created (SPEC-118 R4, A3)"
+      ],
+      [
+        "S11807-JOURNAL-REFUSED",
+        "vault",
+        "src/atomic.rs",
+        "    if journal.iter().any(under) {",
+        "    if journal.iter().any(under) && journal.is_empty() {",
+        "atomic::no_vault_write_reaches_a_journal_folder",
+        "a path under a journal folder is refused with journal_refused (SPEC-118 R5, A5)"
+      ],
+      [
+        "S11815-RESOLVED-TARGET",
+        "vault",
+        "src/atomic.rs",
+        "    refuse_journal(journal, &resolve(fs, path))",
+        "    Ok(())",
+        "atomic::a_write_stream_or_rename_into_a_journal_folder_through_a_link_is_refused",
+        "a write, a stream or a rename whose target reaches a journal folder through a link is refused with journal_refused (SPEC-118 R5, as amended)"
+      ],
+      [
+        "S11816-RESOLVED-JOURNAL",
+        "vault",
+        "src/fs.rs",
+        "                folders.push(folder);",
+        "",
+        "inbox_capture::an_inbox_that_is_a_journal_folder_through_a_link_takes_no_capture",
+        "the journal guard adds the folder each journal folder resolves to, so a journal folder whose name is a link guards the folder it reaches (SPEC-118 R5, as amended)"
+      ],
+      [
+        "S11817-RESOLVED-INBOX",
+        "vault",
+        "src/inbox.rs",
+        "            .map(|folder| atomic::resolve(fs, folder))",
+        "            .cloned()",
+        "inbox_capture::an_inbox_that_is_a_journal_folder_through_a_link_takes_no_capture",
+        "locating the inbox compares it with each journal folder as it resolves, so an inbox that is a journal folder through a link is refused (SPEC-118 R5, as amended)"
+      ]
+    ],
+    "CARGO_KILLED_SCRIPT_MUTATIONS": [
+      [
+        "S11806-ONCE",
+        "migrations/011801_vault_inbox_captures.sql",
+        "    stem TEXT NOT NULL PRIMARY KEY CHECK (length(stem) > 0),",
+        "    stem TEXT NOT NULL CHECK (length(stem) > 0),",
+        "vault",
+        "inbox_capture::a_capture_sent_twice_is_written_once",
+        "the stem is the table's primary key, so a resend of a recorded stem meets the first row and writes nothing (SPEC-118 R3, R12, A4)"
+      ],
+      [
+        "S11812-TEXT-BOUND",
+        "crates/vault/src/inbox.rs",
+        "    (1..=QUICK_TEXT_CHARS).contains(&chars)",
+        "    (1..QUICK_TEXT_CHARS).contains(&chars)",
+        "api",
+        "inbox_capture_route::the_quick_capture_is_owner_only_and_bounds_its_text",
+        "a quick capture holds 1 to 4000 characters, and the route test sends 0, 4000 and 4001 through the whole stack (SPEC-118 R10, A18, section 10)"
+      ],
+      [
+        "S11814-RETRY-KEY",
+        "migrations/011801_vault_inbox_captures.sql",
+        "CREATE UNIQUE INDEX inbox_captures_miniapp_key ON inbox_captures (capture_key)",
+        "CREATE INDEX inbox_captures_miniapp_key ON inbox_captures (capture_key)",
+        "vault",
+        "inbox_capture::a_miniapp_retry_on_a_later_utc_day_answers_the_first_name",
+        "a Mini App capture key is unique among the Mini App's captures, so a retry after UTC midnight meets the first row (SPEC-118 R10, R12, A24)"
+      ]
+    ]
+  }
+}

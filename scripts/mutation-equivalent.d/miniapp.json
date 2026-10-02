@@ -115,6 +115,14 @@
       "reason": "older() is called only by the button, which is shown only while next is not null.",
       "evidence": "The one caller of older() is the button inside {#if next !== null}, and a click before an older page arrives still finds next unchanged, so next is a number on every call and the guard never returns; it is there for the type of api.wallet's argument.",
       "issue": "#106"
+    },
+    {
+      "file": "web/app/src/lib/api.ts",
+      "mutant": "ArrowFunction: () => undefined",
+      "anchor": "parseSaved(response.status, await response.json().catch(() => null))",
+      "reason": "parseSaved reads an undefined body as it reads null.",
+      "evidence": "parseSaved answers null for a body that is null or whose typeof is not 'object', and typeof undefined is 'undefined', so a capture answer whose body is not JSON reads as naming no capture under either value, and capture answers unavailable.",
+      "issue": "#56"
     }
   ]
 }

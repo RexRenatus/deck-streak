@@ -33,6 +33,7 @@ use deck_streak_analytics::settings::AnalyticsSettings;
 use deck_streak_bot::{OwnerChat, Scores, SyncAnswer, SyncOutcome, Transport};
 use deck_streak_coordination::courses::{CoursesDisagree, agree};
 use deck_streak_coordination::delivery::{DeliveryCounts, DeliveryMarker};
+use deck_streak_coordination::inbox_capture::{InboxCaptures, LayoutInForce, RealFs};
 use deck_streak_coordination::instruments::{
     BoxFuture, Frame, InstrumentListing, InstrumentRunner, InstrumentService, Instruments,
     OnDemandRefusal, ReadSource, StoredReport,
@@ -67,6 +68,7 @@ use deck_streak_kernel::{
 };
 use deck_streak_notifications::{Policy, Router};
 use deck_streak_readings::taxonomy::{Taxonomy, TaxonomyError, TaxonomyPath};
+use deck_streak_vault::config::{VAULT_ROOT, VaultRoot};
 
 /// The directory systemd gives a unit for its state (`StateDirectory=`), where the database lives.
 pub const STATE_DIRECTORY: &str = "STATE_DIRECTORY";
@@ -167,6 +169,39 @@ fn take_open_lock(path: &Path) -> io::Result<File> {
         .open(path)?;
     file.lock()?;
     Ok(file)
+}
+
+/// The vault inbox's quick captures for the `api` role (SPEC-118 R4, R10): the configured vault
+/// root and the layout in force, or `None` when the role serves no capture. The vault is an owner
+/// choice (ADR-011), so an unset root is not a start refusal: the route then answers 503
+/// `vault_not_open`. A root of the wrong shape, or a layout file that cannot be read or is not a
+/// layout, is logged by its rule, never by its value, and serves no capture either. Nothing is
+/// created here: each capture locates the inbox anew (R4).
+#[must_use]
+pub fn inbox_captures(env: &Environment) -> Option<Arc<InboxCaptures<RealFs>>> {
+    let root = match env.optional::<VaultRoot>(VAULT_ROOT) {
+        Ok(Some(root)) => root,
+        Ok(None) => {
+            tracing::info!("no vault is configured, so the quick capture is not served");
+            return None;
+        }
+        Err(error) => {
+            tracing::warn!(%error, "the vault root is refused, so the quick capture is not served");
+            return None;
+        }
+    };
+    let layout = match LayoutInForce::from_env(env) {
+        Ok(layout) => layout,
+        Err(error) => {
+            tracing::warn!(%error, "the vault layout is refused, so the quick capture is not served");
+            return None;
+        }
+    };
+    Some(Arc::new(InboxCaptures::new(
+        RealFs,
+        root.path().to_path_buf(),
+        layout,
+    )))
 }
 
 /// The recompute's fold, with every step registered in its phase (SPEC-071 R19): phase 1's
