@@ -1,10 +1,10 @@
 --------------------------- MODULE StagedNoJournal ---------------------------
-\* @phx covers crates/vault/src/staged.rs anchor=apply digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/vault/src/staged.rs anchor=apply_op digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/vault/src/staged.rs anchor=create_folders digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/vault/src/atomic.rs anchor=refuse_journal_resolved digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/vault/src/atomic.rs anchor=resolve digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/vault/src/fs.rs anchor=refuse digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers crates/vault/src/staged.rs anchor=apply digest=sha256:20c4e6e0312424f077075812bbcc9342fc7e5ea37473650e6eca3b03f061b10b
+\* @phx covers crates/vault/src/staged.rs anchor=apply_op digest=sha256:6e443a7efa33dd6ea092207d4f0cf36d6391588687ae07c2e6da4051c5e16716
+\* @phx covers crates/vault/src/staged.rs anchor=create_folders digest=sha256:f2d0f7eb93e88aa692393e2f05d125a6678d2c113b2ba900d64ecb1d2a3b0bef
+\* @phx covers crates/vault/src/atomic.rs anchor=refuse_journal_resolved digest=sha256:1d1214fc9260d159643a718d039d2eba2ceb21d832eb393aaf2ab7dd59b82abc
+\* @phx covers crates/vault/src/atomic.rs anchor=resolve digest=sha256:cbb47bd45964e2822b1ea2ed69a8e78ab57174e08fca9a3ea3d89f9921c99675
+\* @phx covers crates/vault/src/fs.rs anchor=refuse digest=sha256:8f907ad56dd617cec00d34617784515cf47740dd8371d5453bc443c763175d15
 \* @phx cites #56
 \* @phx property NoJournalWrite ramp=report
 \* @phx witness witness/an-apply-that-trusts-the-check-alone.cfg kills=NoJournalWrite
