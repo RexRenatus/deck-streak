@@ -1,0 +1,1050 @@
+{
+  "cases": [
+    {
+      "class": "ramp",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 0
+      },
+      "output": 7.0
+    },
+    {
+      "class": "ramp",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 1
+      },
+      "output": 7.0
+    },
+    {
+      "class": "ramp",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 2
+      },
+      "output": 7.0
+    },
+    {
+      "class": "ramp",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 3
+      },
+      "output": 7.0
+    },
+    {
+      "class": "ramp",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 4
+      },
+      "output": 7.0
+    },
+    {
+      "class": "ramp",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 5
+      },
+      "output": 7.0
+    },
+    {
+      "class": "ramp",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 6
+      },
+      "output": 7.0
+    },
+    {
+      "class": "ramp",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 7
+      },
+      "output": 7.0
+    },
+    {
+      "class": "ramp",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 8
+      },
+      "output": 7.0
+    },
+    {
+      "class": "ramp",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 9
+      },
+      "output": 12.0
+    },
+    {
+      "class": "ramp",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 10
+      },
+      "output": 17.0
+    },
+    {
+      "class": "ramp",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 11
+      },
+      "output": 22.0
+    },
+    {
+      "class": "ramp",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 12
+      },
+      "output": 27.0
+    },
+    {
+      "class": "ramp",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 13
+      },
+      "output": 32.0
+    },
+    {
+      "class": "ramp",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 14
+      },
+      "output": 37.0
+    },
+    {
+      "class": "ramp",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 15
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ramp",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 16
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ramp",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": -3
+      },
+      "output": 7.0
+    },
+    {
+      "class": "ramp",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": -1
+      },
+      "output": 7.0
+    },
+    {
+      "class": "ramp",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 7
+      },
+      "output": 7.0
+    },
+    {
+      "class": "ramp",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 8
+      },
+      "output": 7.0
+    },
+    {
+      "class": "ramp",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 9
+      },
+      "output": 12.0
+    },
+    {
+      "class": "ramp",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 100
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 20.0,
+        "since_epic": 0
+      },
+      "output": 27.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 25.0,
+        "since_epic": 0
+      },
+      "output": 32.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 33.0,
+        "since_epic": 0
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 33.5,
+        "since_epic": 0
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 34.0,
+        "since_epic": 0
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 40.0,
+        "since_epic": 0
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 1000.0,
+        "since_epic": 0
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 20.0,
+        "since_epic": 8
+      },
+      "output": 27.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 25.0,
+        "since_epic": 8
+      },
+      "output": 32.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 33.0,
+        "since_epic": 8
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 33.5,
+        "since_epic": 8
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 34.0,
+        "since_epic": 8
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 40.0,
+        "since_epic": 8
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 1000.0,
+        "since_epic": 8
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 20.0,
+        "since_epic": 9
+      },
+      "output": 32.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 25.0,
+        "since_epic": 9
+      },
+      "output": 37.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 33.0,
+        "since_epic": 9
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 33.5,
+        "since_epic": 9
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 34.0,
+        "since_epic": 9
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 40.0,
+        "since_epic": 9
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 1000.0,
+        "since_epic": 9
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 20.0,
+        "since_epic": 10
+      },
+      "output": 37.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 25.0,
+        "since_epic": 10
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 33.0,
+        "since_epic": 10
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 33.5,
+        "since_epic": 10
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 34.0,
+        "since_epic": 10
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 40.0,
+        "since_epic": 10
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 1000.0,
+        "since_epic": 10
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 20.0,
+        "since_epic": 12
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 25.0,
+        "since_epic": 12
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 33.0,
+        "since_epic": 12
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 33.5,
+        "since_epic": 12
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 34.0,
+        "since_epic": 12
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 40.0,
+        "since_epic": 12
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 1000.0,
+        "since_epic": 12
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 20.0,
+        "since_epic": 13
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 25.0,
+        "since_epic": 13
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 33.0,
+        "since_epic": 13
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 33.5,
+        "since_epic": 13
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 34.0,
+        "since_epic": 13
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 40.0,
+        "since_epic": 13
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 1000.0,
+        "since_epic": 13
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 20.0,
+        "since_epic": 14
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 25.0,
+        "since_epic": 14
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 33.0,
+        "since_epic": 14
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 33.5,
+        "since_epic": 14
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 34.0,
+        "since_epic": 14
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 40.0,
+        "since_epic": 14
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 1000.0,
+        "since_epic": 14
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 20.0,
+        "since_epic": 20
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 25.0,
+        "since_epic": 20
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 33.0,
+        "since_epic": 20
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 33.5,
+        "since_epic": 20
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 34.0,
+        "since_epic": 20
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 40.0,
+        "since_epic": 20
+      },
+      "output": 40.0
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 1000.0,
+        "since_epic": 20
+      },
+      "output": 40.0
+    },
+    {
+      "class": "buff",
+      "input": {
+        "buff_pts": -5.0,
+        "since_epic": 0
+      },
+      "output": 7.0
+    },
+    {
+      "class": "buff",
+      "input": {
+        "buff_pts": -0.5,
+        "since_epic": 0
+      },
+      "output": 7.0
+    },
+    {
+      "class": "buff",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 0
+      },
+      "output": 7.0
+    },
+    {
+      "class": "buff",
+      "input": {
+        "buff_pts": 0.25,
+        "since_epic": 0
+      },
+      "output": 7.25
+    },
+    {
+      "class": "buff",
+      "input": {
+        "buff_pts": 5.0,
+        "since_epic": 0
+      },
+      "output": 12.0
+    },
+    {
+      "class": "buff",
+      "input": {
+        "buff_pts": 5.5,
+        "since_epic": 0
+      },
+      "output": 12.5
+    },
+    {
+      "class": "buff",
+      "input": {
+        "buff_pts": 10.0,
+        "since_epic": 0
+      },
+      "output": 17.0
+    },
+    {
+      "class": "buff",
+      "input": {
+        "buff_pts": 10.5,
+        "since_epic": 0
+      },
+      "output": 17.5
+    },
+    {
+      "class": "buff",
+      "input": {
+        "buff_pts": 12.5,
+        "since_epic": 0
+      },
+      "output": 19.5
+    },
+    {
+      "class": "buff",
+      "input": {
+        "buff_pts": 26.5,
+        "since_epic": 0
+      },
+      "output": 33.5
+    },
+    {
+      "class": "buff",
+      "input": {
+        "buff_pts": -5.0,
+        "since_epic": 8
+      },
+      "output": 7.0
+    },
+    {
+      "class": "buff",
+      "input": {
+        "buff_pts": -0.5,
+        "since_epic": 8
+      },
+      "output": 7.0
+    },
+    {
+      "class": "buff",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 8
+      },
+      "output": 7.0
+    },
+    {
+      "class": "buff",
+      "input": {
+        "buff_pts": 0.25,
+        "since_epic": 8
+      },
+      "output": 7.25
+    },
+    {
+      "class": "buff",
+      "input": {
+        "buff_pts": 5.0,
+        "since_epic": 8
+      },
+      "output": 12.0
+    },
+    {
+      "class": "buff",
+      "input": {
+        "buff_pts": 5.5,
+        "since_epic": 8
+      },
+      "output": 12.5
+    },
+    {
+      "class": "buff",
+      "input": {
+        "buff_pts": 10.0,
+        "since_epic": 8
+      },
+      "output": 17.0
+    },
+    {
+      "class": "buff",
+      "input": {
+        "buff_pts": 10.5,
+        "since_epic": 8
+      },
+      "output": 17.5
+    },
+    {
+      "class": "buff",
+      "input": {
+        "buff_pts": 12.5,
+        "since_epic": 8
+      },
+      "output": 19.5
+    },
+    {
+      "class": "buff",
+      "input": {
+        "buff_pts": 26.5,
+        "since_epic": 8
+      },
+      "output": 33.5
+    },
+    {
+      "class": "buff",
+      "input": {
+        "buff_pts": -5.0,
+        "since_epic": 10
+      },
+      "output": 17.0
+    },
+    {
+      "class": "buff",
+      "input": {
+        "buff_pts": -0.5,
+        "since_epic": 10
+      },
+      "output": 17.0
+    },
+    {
+      "class": "buff",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 10
+      },
+      "output": 17.0
+    },
+    {
+      "class": "buff",
+      "input": {
+        "buff_pts": 0.25,
+        "since_epic": 10
+      },
+      "output": 17.25
+    },
+    {
+      "class": "buff",
+      "input": {
+        "buff_pts": 5.0,
+        "since_epic": 10
+      },
+      "output": 22.0
+    },
+    {
+      "class": "buff",
+      "input": {
+        "buff_pts": 5.5,
+        "since_epic": 10
+      },
+      "output": 22.5
+    },
+    {
+      "class": "buff",
+      "input": {
+        "buff_pts": 10.0,
+        "since_epic": 10
+      },
+      "output": 27.0
+    },
+    {
+      "class": "buff",
+      "input": {
+        "buff_pts": 10.5,
+        "since_epic": 10
+      },
+      "output": 27.5
+    },
+    {
+      "class": "buff",
+      "input": {
+        "buff_pts": 12.5,
+        "since_epic": 10
+      },
+      "output": 29.5
+    },
+    {
+      "class": "buff",
+      "input": {
+        "buff_pts": 26.5,
+        "since_epic": 10
+      },
+      "output": 40.0
+    },
+    {
+      "class": "buff",
+      "input": {
+        "buff_pts": -5.0,
+        "since_epic": 12
+      },
+      "output": 27.0
+    },
+    {
+      "class": "buff",
+      "input": {
+        "buff_pts": -0.5,
+        "since_epic": 12
+      },
+      "output": 27.0
+    },
+    {
+      "class": "buff",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 12
+      },
+      "output": 27.0
+    },
+    {
+      "class": "buff",
+      "input": {
+        "buff_pts": 0.25,
+        "since_epic": 12
+      },
+      "output": 27.25
+    },
+    {
+      "class": "buff",
+      "input": {
+        "buff_pts": 5.0,
+        "since_epic": 12
+      },
+      "output": 32.0
+    },
+    {
+      "class": "buff",
+      "input": {
+        "buff_pts": 5.5,
+        "since_epic": 12
+      },
+      "output": 32.5
+    },
+    {
+      "class": "buff",
+      "input": {
+        "buff_pts": 10.0,
+        "since_epic": 12
+      },
+      "output": 37.0
+    },
+    {
+      "class": "buff",
+      "input": {
+        "buff_pts": 10.5,
+        "since_epic": 12
+      },
+      "output": 37.5
+    },
+    {
+      "class": "buff",
+      "input": {
+        "buff_pts": 12.5,
+        "since_epic": 12
+      },
+      "output": 39.5
+    },
+    {
+      "class": "buff",
+      "input": {
+        "buff_pts": 26.5,
+        "since_epic": 12
+      },
+      "output": 40.0
+    },
+    {
+      "input": {
+        "buff_pts": 24.6,
+        "since_epic": 4
+      },
+      "output": 31.6
+    },
+    {
+      "input": {
+        "buff_pts": 31.5,
+        "since_epic": 3
+      },
+      "output": 38.5
+    },
+    {
+      "input": {
+        "buff_pts": 0.7,
+        "since_epic": 5
+      },
+      "output": 7.7
+    },
+    {
+      "input": {
+        "buff_pts": 39.6,
+        "since_epic": 13
+      },
+      "output": 40.0
+    },
+    {
+      "input": {
+        "buff_pts": 8.5,
+        "since_epic": 2
+      },
+      "output": 15.5
+    },
+    {
+      "input": {
+        "buff_pts": 30.6,
+        "since_epic": 4
+      },
+      "output": 37.6
+    },
+    {
+      "input": {
+        "buff_pts": 44.0,
+        "since_epic": 15
+      },
+      "output": 40.0
+    },
+    {
+      "input": {
+        "buff_pts": 19.3,
+        "since_epic": 13
+      },
+      "output": 40.0
+    },
+    {
+      "input": {
+        "buff_pts": 30.4,
+        "since_epic": 6
+      },
+      "output": 37.4
+    },
+    {
+      "input": {
+        "buff_pts": 31.6,
+        "since_epic": 10
+      },
+      "output": 40.0
+    },
+    {
+      "input": {
+        "buff_pts": 7.4,
+        "since_epic": 13
+      },
+      "output": 39.4
+    },
+    {
+      "input": {
+        "buff_pts": 39.4,
+        "since_epic": 15
+      },
+      "output": 40.0
+    }
+  ],
+  "function": "gamification.chests.epic_odds_pts",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "function",
+  "registry": "tools/parity-oracle/registry/spec_081.py",
+  "registry_sha256": "877f300d7eb8188ffee744f6051e9856c0a549fb96e5ac6df58af940f5dd35ff",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

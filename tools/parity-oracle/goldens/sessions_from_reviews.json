@@ -1,0 +1,4469 @@
+{
+  "adapter": "sessions_adapter",
+  "cases": [
+    {
+      "class": "empty",
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": []
+      },
+      "output": []
+    },
+    {
+      "class": "single",
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700000000000,
+            "kind": 1,
+            "taken_ms": 5000
+          }
+        ]
+      },
+      "output": [
+        {
+          "distinct_cards": 1,
+          "end_ms": 1700000000000,
+          "minutes": 0.08333333333333333,
+          "reviews": 1,
+          "start_ms": 1700000000000
+        }
+      ]
+    },
+    {
+      "class": "gap",
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700000000000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 2,
+            "ease": 3,
+            "id": 1700000000000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 3,
+            "ease": 3,
+            "id": 1700000000009,
+            "kind": 1,
+            "taken_ms": 5000
+          }
+        ]
+      },
+      "output": [
+        {
+          "distinct_cards": 3,
+          "end_ms": 1700000000009,
+          "minutes": 0.25,
+          "reviews": 3,
+          "start_ms": 1700000000000
+        }
+      ]
+    },
+    {
+      "class": "gap",
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700000000000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 2,
+            "ease": 3,
+            "id": 1700000000001,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 3,
+            "ease": 3,
+            "id": 1700000000010,
+            "kind": 1,
+            "taken_ms": 5000
+          }
+        ]
+      },
+      "output": [
+        {
+          "distinct_cards": 3,
+          "end_ms": 1700000000010,
+          "minutes": 0.25,
+          "reviews": 3,
+          "start_ms": 1700000000000
+        }
+      ]
+    },
+    {
+      "class": "gap",
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700000000000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 2,
+            "ease": 3,
+            "id": 1700000599999,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 3,
+            "ease": 3,
+            "id": 1700000600008,
+            "kind": 1,
+            "taken_ms": 5000
+          }
+        ]
+      },
+      "output": [
+        {
+          "distinct_cards": 3,
+          "end_ms": 1700000600008,
+          "minutes": 0.25,
+          "reviews": 3,
+          "start_ms": 1700000000000
+        }
+      ]
+    },
+    {
+      "class": "gap",
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700000000000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 2,
+            "ease": 3,
+            "id": 1700000600000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 3,
+            "ease": 3,
+            "id": 1700000600009,
+            "kind": 1,
+            "taken_ms": 5000
+          }
+        ]
+      },
+      "output": [
+        {
+          "distinct_cards": 1,
+          "end_ms": 1700000000000,
+          "minutes": 0.08333333333333333,
+          "reviews": 1,
+          "start_ms": 1700000000000
+        },
+        {
+          "distinct_cards": 2,
+          "end_ms": 1700000600009,
+          "minutes": 0.16666666666666666,
+          "reviews": 2,
+          "start_ms": 1700000600000
+        }
+      ]
+    },
+    {
+      "class": "gap",
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700000000000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 2,
+            "ease": 3,
+            "id": 1700000600001,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 3,
+            "ease": 3,
+            "id": 1700000600010,
+            "kind": 1,
+            "taken_ms": 5000
+          }
+        ]
+      },
+      "output": [
+        {
+          "distinct_cards": 1,
+          "end_ms": 1700000000000,
+          "minutes": 0.08333333333333333,
+          "reviews": 1,
+          "start_ms": 1700000000000
+        },
+        {
+          "distinct_cards": 2,
+          "end_ms": 1700000600010,
+          "minutes": 0.16666666666666666,
+          "reviews": 2,
+          "start_ms": 1700000600001
+        }
+      ]
+    },
+    {
+      "class": "gap",
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700000000000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 2,
+            "ease": 3,
+            "id": 1700001200000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 3,
+            "ease": 3,
+            "id": 1700001200009,
+            "kind": 1,
+            "taken_ms": 5000
+          }
+        ]
+      },
+      "output": [
+        {
+          "distinct_cards": 1,
+          "end_ms": 1700000000000,
+          "minutes": 0.08333333333333333,
+          "reviews": 1,
+          "start_ms": 1700000000000
+        },
+        {
+          "distinct_cards": 2,
+          "end_ms": 1700001200009,
+          "minutes": 0.16666666666666666,
+          "reviews": 2,
+          "start_ms": 1700001200000
+        }
+      ]
+    },
+    {
+      "class": "floor",
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 100,
+            "ease": 3,
+            "id": 1700000000000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 101,
+            "ease": 3,
+            "id": 1700000005000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 102,
+            "ease": 3,
+            "id": 1700000010000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 103,
+            "ease": 3,
+            "id": 1700000015000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 104,
+            "ease": 3,
+            "id": 1700000020000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 105,
+            "ease": 3,
+            "id": 1700000025000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 106,
+            "ease": 3,
+            "id": 1700000030000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 107,
+            "ease": 3,
+            "id": 1700000035000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 108,
+            "ease": 3,
+            "id": 1700000040000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 109,
+            "ease": 3,
+            "id": 1700000045000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 110,
+            "ease": 3,
+            "id": 1700000050000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 111,
+            "ease": 3,
+            "id": 1700000055000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 112,
+            "ease": 3,
+            "id": 1700000060000,
+            "kind": 1,
+            "taken_ms": 5000
+          }
+        ]
+      },
+      "output": [
+        {
+          "distinct_cards": 13,
+          "end_ms": 1700000060000,
+          "minutes": 1.0833333333333333,
+          "reviews": 13,
+          "start_ms": 1700000000000
+        }
+      ]
+    },
+    {
+      "class": "floor",
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 100,
+            "ease": 3,
+            "id": 1700000000000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 101,
+            "ease": 3,
+            "id": 1700000005000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 102,
+            "ease": 3,
+            "id": 1700000010000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 103,
+            "ease": 3,
+            "id": 1700000015000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 104,
+            "ease": 3,
+            "id": 1700000020000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 105,
+            "ease": 3,
+            "id": 1700000025000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 106,
+            "ease": 3,
+            "id": 1700000030000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 107,
+            "ease": 3,
+            "id": 1700000035000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 108,
+            "ease": 3,
+            "id": 1700000040000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 109,
+            "ease": 3,
+            "id": 1700000045000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 110,
+            "ease": 3,
+            "id": 1700000050000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 111,
+            "ease": 3,
+            "id": 1700000055000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 112,
+            "ease": 3,
+            "id": 1700000060000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 113,
+            "ease": 3,
+            "id": 1700000065000,
+            "kind": 1,
+            "taken_ms": 5000
+          }
+        ]
+      },
+      "output": [
+        {
+          "distinct_cards": 14,
+          "end_ms": 1700000065000,
+          "minutes": 1.1666666666666667,
+          "reviews": 14,
+          "start_ms": 1700000000000
+        }
+      ]
+    },
+    {
+      "class": "floor",
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 100,
+            "ease": 3,
+            "id": 1700000000000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 101,
+            "ease": 3,
+            "id": 1700000005000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 102,
+            "ease": 3,
+            "id": 1700000010000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 103,
+            "ease": 3,
+            "id": 1700000015000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 104,
+            "ease": 3,
+            "id": 1700000020000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 105,
+            "ease": 3,
+            "id": 1700000025000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 106,
+            "ease": 3,
+            "id": 1700000030000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 107,
+            "ease": 3,
+            "id": 1700000035000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 108,
+            "ease": 3,
+            "id": 1700000040000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 109,
+            "ease": 3,
+            "id": 1700000045000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 110,
+            "ease": 3,
+            "id": 1700000050000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 111,
+            "ease": 3,
+            "id": 1700000055000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 112,
+            "ease": 3,
+            "id": 1700000060000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 113,
+            "ease": 3,
+            "id": 1700000065000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 114,
+            "ease": 3,
+            "id": 1700000070000,
+            "kind": 1,
+            "taken_ms": 5000
+          }
+        ]
+      },
+      "output": [
+        {
+          "distinct_cards": 15,
+          "end_ms": 1700000070000,
+          "minutes": 1.25,
+          "reviews": 15,
+          "start_ms": 1700000000000
+        }
+      ]
+    },
+    {
+      "class": "floor",
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 100,
+            "ease": 3,
+            "id": 1700000000000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 101,
+            "ease": 3,
+            "id": 1700000005000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 102,
+            "ease": 3,
+            "id": 1700000010000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 103,
+            "ease": 3,
+            "id": 1700000015000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 104,
+            "ease": 3,
+            "id": 1700000020000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 105,
+            "ease": 3,
+            "id": 1700000025000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 106,
+            "ease": 3,
+            "id": 1700000030000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 107,
+            "ease": 3,
+            "id": 1700000035000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 108,
+            "ease": 3,
+            "id": 1700000040000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 109,
+            "ease": 3,
+            "id": 1700000045000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 110,
+            "ease": 3,
+            "id": 1700000050000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 111,
+            "ease": 3,
+            "id": 1700000055000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 112,
+            "ease": 3,
+            "id": 1700000060000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 113,
+            "ease": 3,
+            "id": 1700000065000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 114,
+            "ease": 3,
+            "id": 1700000070000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 115,
+            "ease": 3,
+            "id": 1700000075000,
+            "kind": 1,
+            "taken_ms": 5000
+          }
+        ]
+      },
+      "output": [
+        {
+          "distinct_cards": 16,
+          "end_ms": 1700000075000,
+          "minutes": 1.3333333333333333,
+          "reviews": 16,
+          "start_ms": 1700000000000
+        }
+      ]
+    },
+    {
+      "class": "floor",
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 100,
+            "ease": 3,
+            "id": 1700000000000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 101,
+            "ease": 3,
+            "id": 1700000005000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 102,
+            "ease": 3,
+            "id": 1700000010000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 103,
+            "ease": 3,
+            "id": 1700000015000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 104,
+            "ease": 3,
+            "id": 1700000020000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 105,
+            "ease": 3,
+            "id": 1700000025000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 106,
+            "ease": 3,
+            "id": 1700000030000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 107,
+            "ease": 3,
+            "id": 1700000035000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 108,
+            "ease": 3,
+            "id": 1700000040000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 109,
+            "ease": 3,
+            "id": 1700000045000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 110,
+            "ease": 3,
+            "id": 1700000050000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 111,
+            "ease": 3,
+            "id": 1700000055000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 112,
+            "ease": 3,
+            "id": 1700000060000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 113,
+            "ease": 3,
+            "id": 1700000065000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 114,
+            "ease": 3,
+            "id": 1700000070000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 115,
+            "ease": 3,
+            "id": 1700000075000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 116,
+            "ease": 3,
+            "id": 1700000080000,
+            "kind": 1,
+            "taken_ms": 5000
+          }
+        ]
+      },
+      "output": [
+        {
+          "distinct_cards": 17,
+          "end_ms": 1700000080000,
+          "minutes": 1.4166666666666667,
+          "reviews": 17,
+          "start_ms": 1700000000000
+        }
+      ]
+    },
+    {
+      "class": "floor",
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 100,
+            "ease": 3,
+            "id": 1700000000000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 101,
+            "ease": 3,
+            "id": 1700000005000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 102,
+            "ease": 3,
+            "id": 1700000010000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 103,
+            "ease": 3,
+            "id": 1700000015000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 104,
+            "ease": 3,
+            "id": 1700000020000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 105,
+            "ease": 3,
+            "id": 1700000025000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 106,
+            "ease": 3,
+            "id": 1700000030000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 107,
+            "ease": 3,
+            "id": 1700000035000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 108,
+            "ease": 3,
+            "id": 1700000040000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 109,
+            "ease": 3,
+            "id": 1700000045000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 110,
+            "ease": 3,
+            "id": 1700000050000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 111,
+            "ease": 3,
+            "id": 1700000055000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 112,
+            "ease": 3,
+            "id": 1700000060000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 113,
+            "ease": 3,
+            "id": 1700000065000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 100,
+            "ease": 3,
+            "id": 1700000090000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 100,
+            "ease": 3,
+            "id": 1700000090000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 100,
+            "ease": 3,
+            "id": 1700000090000,
+            "kind": 1,
+            "taken_ms": 5000
+          }
+        ]
+      },
+      "output": [
+        {
+          "distinct_cards": 14,
+          "end_ms": 1700000090000,
+          "minutes": 1.4166666666666667,
+          "reviews": 17,
+          "start_ms": 1700000000000
+        }
+      ]
+    },
+    {
+      "class": "floor",
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 7,
+            "ease": 3,
+            "id": 1700000000000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 7,
+            "ease": 3,
+            "id": 1700000001000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 7,
+            "ease": 3,
+            "id": 1700000002000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 7,
+            "ease": 3,
+            "id": 1700000003000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 7,
+            "ease": 3,
+            "id": 1700000004000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 7,
+            "ease": 3,
+            "id": 1700000005000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 7,
+            "ease": 3,
+            "id": 1700000006000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 7,
+            "ease": 3,
+            "id": 1700000007000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 7,
+            "ease": 3,
+            "id": 1700000008000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 7,
+            "ease": 3,
+            "id": 1700000009000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 7,
+            "ease": 3,
+            "id": 1700000010000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 7,
+            "ease": 3,
+            "id": 1700000011000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 7,
+            "ease": 3,
+            "id": 1700000012000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 7,
+            "ease": 3,
+            "id": 1700000013000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 7,
+            "ease": 3,
+            "id": 1700000014000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 7,
+            "ease": 3,
+            "id": 1700000015000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 7,
+            "ease": 3,
+            "id": 1700000016000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 7,
+            "ease": 3,
+            "id": 1700000017000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 7,
+            "ease": 3,
+            "id": 1700000018000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 7,
+            "ease": 3,
+            "id": 1700000019000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 7,
+            "ease": 3,
+            "id": 1700000020000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 7,
+            "ease": 3,
+            "id": 1700000021000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 7,
+            "ease": 3,
+            "id": 1700000022000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 7,
+            "ease": 3,
+            "id": 1700000023000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 7,
+            "ease": 3,
+            "id": 1700000024000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 7,
+            "ease": 3,
+            "id": 1700000025000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 7,
+            "ease": 3,
+            "id": 1700000026000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 7,
+            "ease": 3,
+            "id": 1700000027000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 7,
+            "ease": 3,
+            "id": 1700000028000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 7,
+            "ease": 3,
+            "id": 1700000029000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 7,
+            "ease": 3,
+            "id": 1700000030000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 7,
+            "ease": 3,
+            "id": 1700000031000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 7,
+            "ease": 3,
+            "id": 1700000032000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 7,
+            "ease": 3,
+            "id": 1700000033000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 7,
+            "ease": 3,
+            "id": 1700000034000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 7,
+            "ease": 3,
+            "id": 1700000035000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 7,
+            "ease": 3,
+            "id": 1700000036000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 7,
+            "ease": 3,
+            "id": 1700000037000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 7,
+            "ease": 3,
+            "id": 1700000038000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 7,
+            "ease": 3,
+            "id": 1700000039000,
+            "kind": 1,
+            "taken_ms": 5000
+          }
+        ]
+      },
+      "output": [
+        {
+          "distinct_cards": 1,
+          "end_ms": 1700000039000,
+          "minutes": 3.3333333333333335,
+          "reviews": 40,
+          "start_ms": 1700000000000
+        }
+      ]
+    },
+    {
+      "class": "bookkeeping",
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700000000000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 2,
+            "ease": 3,
+            "id": 1700000300000,
+            "kind": 4,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 3,
+            "ease": 3,
+            "id": 1700000400000,
+            "kind": 5,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 4,
+            "ease": 0,
+            "id": 1700000500000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 5,
+            "ease": 3,
+            "id": 1700000700000,
+            "kind": 1,
+            "taken_ms": 5000
+          }
+        ]
+      },
+      "output": [
+        {
+          "distinct_cards": 1,
+          "end_ms": 1700000000000,
+          "minutes": 0.08333333333333333,
+          "reviews": 1,
+          "start_ms": 1700000000000
+        },
+        {
+          "distinct_cards": 1,
+          "end_ms": 1700000700000,
+          "minutes": 0.08333333333333333,
+          "reviews": 1,
+          "start_ms": 1700000700000
+        }
+      ]
+    },
+    {
+      "class": "bookkeeping",
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 9,
+            "ease": 0,
+            "id": 1700000000000,
+            "kind": 0,
+            "taken_ms": 5000
+          }
+        ]
+      },
+      "output": []
+    },
+    {
+      "class": "bookkeeping",
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 9,
+            "ease": 1,
+            "id": 1700000000000,
+            "kind": 0,
+            "taken_ms": 5000
+          }
+        ]
+      },
+      "output": [
+        {
+          "distinct_cards": 1,
+          "end_ms": 1700000000000,
+          "minutes": 0.08333333333333333,
+          "reviews": 1,
+          "start_ms": 1700000000000
+        }
+      ]
+    },
+    {
+      "class": "bookkeeping",
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 9,
+            "ease": 4,
+            "id": 1700000000000,
+            "kind": 0,
+            "taken_ms": 5000
+          }
+        ]
+      },
+      "output": [
+        {
+          "distinct_cards": 1,
+          "end_ms": 1700000000000,
+          "minutes": 0.08333333333333333,
+          "reviews": 1,
+          "start_ms": 1700000000000
+        }
+      ]
+    },
+    {
+      "class": "bookkeeping",
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 9,
+            "ease": 0,
+            "id": 1700000000000,
+            "kind": 1,
+            "taken_ms": 5000
+          }
+        ]
+      },
+      "output": []
+    },
+    {
+      "class": "bookkeeping",
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 9,
+            "ease": 1,
+            "id": 1700000000000,
+            "kind": 1,
+            "taken_ms": 5000
+          }
+        ]
+      },
+      "output": [
+        {
+          "distinct_cards": 1,
+          "end_ms": 1700000000000,
+          "minutes": 0.08333333333333333,
+          "reviews": 1,
+          "start_ms": 1700000000000
+        }
+      ]
+    },
+    {
+      "class": "bookkeeping",
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 9,
+            "ease": 4,
+            "id": 1700000000000,
+            "kind": 1,
+            "taken_ms": 5000
+          }
+        ]
+      },
+      "output": [
+        {
+          "distinct_cards": 1,
+          "end_ms": 1700000000000,
+          "minutes": 0.08333333333333333,
+          "reviews": 1,
+          "start_ms": 1700000000000
+        }
+      ]
+    },
+    {
+      "class": "bookkeeping",
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 9,
+            "ease": 0,
+            "id": 1700000000000,
+            "kind": 2,
+            "taken_ms": 5000
+          }
+        ]
+      },
+      "output": []
+    },
+    {
+      "class": "bookkeeping",
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 9,
+            "ease": 1,
+            "id": 1700000000000,
+            "kind": 2,
+            "taken_ms": 5000
+          }
+        ]
+      },
+      "output": [
+        {
+          "distinct_cards": 1,
+          "end_ms": 1700000000000,
+          "minutes": 0.08333333333333333,
+          "reviews": 1,
+          "start_ms": 1700000000000
+        }
+      ]
+    },
+    {
+      "class": "bookkeeping",
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 9,
+            "ease": 4,
+            "id": 1700000000000,
+            "kind": 2,
+            "taken_ms": 5000
+          }
+        ]
+      },
+      "output": [
+        {
+          "distinct_cards": 1,
+          "end_ms": 1700000000000,
+          "minutes": 0.08333333333333333,
+          "reviews": 1,
+          "start_ms": 1700000000000
+        }
+      ]
+    },
+    {
+      "class": "bookkeeping",
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 9,
+            "ease": 0,
+            "id": 1700000000000,
+            "kind": 3,
+            "taken_ms": 5000
+          }
+        ]
+      },
+      "output": []
+    },
+    {
+      "class": "bookkeeping",
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 9,
+            "ease": 1,
+            "id": 1700000000000,
+            "kind": 3,
+            "taken_ms": 5000
+          }
+        ]
+      },
+      "output": [
+        {
+          "distinct_cards": 1,
+          "end_ms": 1700000000000,
+          "minutes": 0.08333333333333333,
+          "reviews": 1,
+          "start_ms": 1700000000000
+        }
+      ]
+    },
+    {
+      "class": "bookkeeping",
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 9,
+            "ease": 4,
+            "id": 1700000000000,
+            "kind": 3,
+            "taken_ms": 5000
+          }
+        ]
+      },
+      "output": [
+        {
+          "distinct_cards": 1,
+          "end_ms": 1700000000000,
+          "minutes": 0.08333333333333333,
+          "reviews": 1,
+          "start_ms": 1700000000000
+        }
+      ]
+    },
+    {
+      "class": "bookkeeping",
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 9,
+            "ease": 0,
+            "id": 1700000000000,
+            "kind": 4,
+            "taken_ms": 5000
+          }
+        ]
+      },
+      "output": []
+    },
+    {
+      "class": "bookkeeping",
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 9,
+            "ease": 1,
+            "id": 1700000000000,
+            "kind": 4,
+            "taken_ms": 5000
+          }
+        ]
+      },
+      "output": []
+    },
+    {
+      "class": "bookkeeping",
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 9,
+            "ease": 4,
+            "id": 1700000000000,
+            "kind": 4,
+            "taken_ms": 5000
+          }
+        ]
+      },
+      "output": []
+    },
+    {
+      "class": "bookkeeping",
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 9,
+            "ease": 0,
+            "id": 1700000000000,
+            "kind": 5,
+            "taken_ms": 5000
+          }
+        ]
+      },
+      "output": []
+    },
+    {
+      "class": "bookkeeping",
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 9,
+            "ease": 1,
+            "id": 1700000000000,
+            "kind": 5,
+            "taken_ms": 5000
+          }
+        ]
+      },
+      "output": []
+    },
+    {
+      "class": "bookkeeping",
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 9,
+            "ease": 4,
+            "id": 1700000000000,
+            "kind": 5,
+            "taken_ms": 5000
+          }
+        ]
+      },
+      "output": []
+    },
+    {
+      "class": "cap",
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700000000000,
+            "kind": 1,
+            "taken_ms": 0
+          },
+          {
+            "card_id": 2,
+            "ease": 3,
+            "id": 1700000000001,
+            "kind": 1,
+            "taken_ms": 999
+          }
+        ]
+      },
+      "output": [
+        {
+          "distinct_cards": 2,
+          "end_ms": 1700000000001,
+          "minutes": 0.01665,
+          "reviews": 2,
+          "start_ms": 1700000000000
+        }
+      ]
+    },
+    {
+      "class": "cap",
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700000000000,
+            "kind": 1,
+            "taken_ms": 1
+          },
+          {
+            "card_id": 2,
+            "ease": 3,
+            "id": 1700000000001,
+            "kind": 1,
+            "taken_ms": 999
+          }
+        ]
+      },
+      "output": [
+        {
+          "distinct_cards": 2,
+          "end_ms": 1700000000001,
+          "minutes": 0.016666666666666666,
+          "reviews": 2,
+          "start_ms": 1700000000000
+        }
+      ]
+    },
+    {
+      "class": "cap",
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700000000000,
+            "kind": 1,
+            "taken_ms": 59999
+          },
+          {
+            "card_id": 2,
+            "ease": 3,
+            "id": 1700000000001,
+            "kind": 1,
+            "taken_ms": 999
+          }
+        ]
+      },
+      "output": [
+        {
+          "distinct_cards": 2,
+          "end_ms": 1700000000001,
+          "minutes": 1.0166333333333335,
+          "reviews": 2,
+          "start_ms": 1700000000000
+        }
+      ]
+    },
+    {
+      "class": "cap",
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700000000000,
+            "kind": 1,
+            "taken_ms": 60000
+          },
+          {
+            "card_id": 2,
+            "ease": 3,
+            "id": 1700000000001,
+            "kind": 1,
+            "taken_ms": 999
+          }
+        ]
+      },
+      "output": [
+        {
+          "distinct_cards": 2,
+          "end_ms": 1700000000001,
+          "minutes": 1.01665,
+          "reviews": 2,
+          "start_ms": 1700000000000
+        }
+      ]
+    },
+    {
+      "class": "cap",
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700000000000,
+            "kind": 1,
+            "taken_ms": 60001
+          },
+          {
+            "card_id": 2,
+            "ease": 3,
+            "id": 1700000000001,
+            "kind": 1,
+            "taken_ms": 999
+          }
+        ]
+      },
+      "output": [
+        {
+          "distinct_cards": 2,
+          "end_ms": 1700000000001,
+          "minutes": 1.01665,
+          "reviews": 2,
+          "start_ms": 1700000000000
+        }
+      ]
+    },
+    {
+      "class": "cap",
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700000000000,
+            "kind": 1,
+            "taken_ms": 120000
+          },
+          {
+            "card_id": 2,
+            "ease": 3,
+            "id": 1700000000001,
+            "kind": 1,
+            "taken_ms": 999
+          }
+        ]
+      },
+      "output": [
+        {
+          "distinct_cards": 2,
+          "end_ms": 1700000000001,
+          "minutes": 1.01665,
+          "reviews": 2,
+          "start_ms": 1700000000000
+        }
+      ]
+    },
+    {
+      "class": "cap",
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700000000000,
+            "kind": 1,
+            "taken_ms": 3600000
+          },
+          {
+            "card_id": 2,
+            "ease": 3,
+            "id": 1700000000001,
+            "kind": 1,
+            "taken_ms": 999
+          }
+        ]
+      },
+      "output": [
+        {
+          "distinct_cards": 2,
+          "end_ms": 1700000000001,
+          "minutes": 1.01665,
+          "reviews": 2,
+          "start_ms": 1700000000000
+        }
+      ]
+    },
+    {
+      "class": "unsorted",
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 309,
+            "ease": 3,
+            "id": 1700000045000,
+            "kind": 1,
+            "taken_ms": 7001
+          },
+          {
+            "card_id": 312,
+            "ease": 3,
+            "id": 1700000060000,
+            "kind": 1,
+            "taken_ms": 7001
+          },
+          {
+            "card_id": 314,
+            "ease": 3,
+            "id": 1700000070000,
+            "kind": 1,
+            "taken_ms": 7001
+          },
+          {
+            "card_id": 316,
+            "ease": 3,
+            "id": 1700000080000,
+            "kind": 1,
+            "taken_ms": 7001
+          },
+          {
+            "card_id": 318,
+            "ease": 3,
+            "id": 1700000090000,
+            "kind": 1,
+            "taken_ms": 7001
+          },
+          {
+            "card_id": 317,
+            "ease": 3,
+            "id": 1700000085000,
+            "kind": 1,
+            "taken_ms": 7001
+          },
+          {
+            "card_id": 319,
+            "ease": 3,
+            "id": 1700000095000,
+            "kind": 1,
+            "taken_ms": 7001
+          },
+          {
+            "card_id": 307,
+            "ease": 3,
+            "id": 1700000035000,
+            "kind": 1,
+            "taken_ms": 7001
+          },
+          {
+            "card_id": 315,
+            "ease": 3,
+            "id": 1700000075000,
+            "kind": 1,
+            "taken_ms": 7001
+          },
+          {
+            "card_id": 302,
+            "ease": 3,
+            "id": 1700000010000,
+            "kind": 1,
+            "taken_ms": 7001
+          },
+          {
+            "card_id": 311,
+            "ease": 3,
+            "id": 1700000055000,
+            "kind": 1,
+            "taken_ms": 7001
+          },
+          {
+            "card_id": 301,
+            "ease": 3,
+            "id": 1700000005000,
+            "kind": 1,
+            "taken_ms": 7001
+          },
+          {
+            "card_id": 313,
+            "ease": 3,
+            "id": 1700000065000,
+            "kind": 1,
+            "taken_ms": 7001
+          },
+          {
+            "card_id": 306,
+            "ease": 3,
+            "id": 1700000030000,
+            "kind": 1,
+            "taken_ms": 7001
+          },
+          {
+            "card_id": 300,
+            "ease": 3,
+            "id": 1700000000000,
+            "kind": 1,
+            "taken_ms": 7001
+          },
+          {
+            "card_id": 305,
+            "ease": 3,
+            "id": 1700000025000,
+            "kind": 1,
+            "taken_ms": 7001
+          },
+          {
+            "card_id": 310,
+            "ease": 3,
+            "id": 1700000050000,
+            "kind": 1,
+            "taken_ms": 7001
+          },
+          {
+            "card_id": 303,
+            "ease": 3,
+            "id": 1700000015000,
+            "kind": 1,
+            "taken_ms": 7001
+          },
+          {
+            "card_id": 308,
+            "ease": 3,
+            "id": 1700000040000,
+            "kind": 1,
+            "taken_ms": 7001
+          },
+          {
+            "card_id": 304,
+            "ease": 3,
+            "id": 1700000020000,
+            "kind": 1,
+            "taken_ms": 7001
+          }
+        ]
+      },
+      "output": [
+        {
+          "distinct_cards": 20,
+          "end_ms": 1700000095000,
+          "minutes": 2.3336666666666672,
+          "reviews": 20,
+          "start_ms": 1700000000000
+        }
+      ]
+    },
+    {
+      "class": "duplicate",
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700000000000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700000000000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700000000000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700000000000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700000000000,
+            "kind": 1,
+            "taken_ms": 5000
+          },
+          {
+            "card_id": 1,
+            "ease": 3,
+            "id": 1700000000000,
+            "kind": 1,
+            "taken_ms": 5000
+          }
+        ]
+      },
+      "output": [
+        {
+          "distinct_cards": 1,
+          "end_ms": 1700000000000,
+          "minutes": 0.5,
+          "reviews": 6,
+          "start_ms": 1700000000000
+        }
+      ]
+    },
+    {
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 44,
+            "ease": 3,
+            "id": 1700000000000,
+            "kind": 1,
+            "taken_ms": 43088
+          },
+          {
+            "card_id": 45,
+            "ease": 3,
+            "id": 1700000021992,
+            "kind": 1,
+            "taken_ms": 43088
+          },
+          {
+            "card_id": 46,
+            "ease": 3,
+            "id": 1700000043984,
+            "kind": 1,
+            "taken_ms": 43088
+          },
+          {
+            "card_id": 47,
+            "ease": 3,
+            "id": 1700000065976,
+            "kind": 1,
+            "taken_ms": 43088
+          },
+          {
+            "card_id": 48,
+            "ease": 3,
+            "id": 1700000087968,
+            "kind": 1,
+            "taken_ms": 43088
+          },
+          {
+            "card_id": 49,
+            "ease": 3,
+            "id": 1700000109960,
+            "kind": 1,
+            "taken_ms": 43088
+          },
+          {
+            "card_id": 50,
+            "ease": 3,
+            "id": 1700000131952,
+            "kind": 1,
+            "taken_ms": 43088
+          },
+          {
+            "card_id": 51,
+            "ease": 3,
+            "id": 1700000153944,
+            "kind": 1,
+            "taken_ms": 43088
+          },
+          {
+            "card_id": 52,
+            "ease": 3,
+            "id": 1700000175936,
+            "kind": 1,
+            "taken_ms": 43088
+          },
+          {
+            "card_id": 53,
+            "ease": 3,
+            "id": 1700000197928,
+            "kind": 1,
+            "taken_ms": 43088
+          },
+          {
+            "card_id": 54,
+            "ease": 3,
+            "id": 1700000219920,
+            "kind": 1,
+            "taken_ms": 43088
+          },
+          {
+            "card_id": 55,
+            "ease": 3,
+            "id": 1700000241912,
+            "kind": 1,
+            "taken_ms": 43088
+          },
+          {
+            "card_id": 56,
+            "ease": 3,
+            "id": 1700000263904,
+            "kind": 1,
+            "taken_ms": 43088
+          },
+          {
+            "card_id": 57,
+            "ease": 3,
+            "id": 1700000285896,
+            "kind": 1,
+            "taken_ms": 43088
+          },
+          {
+            "card_id": 58,
+            "ease": 3,
+            "id": 1700000307888,
+            "kind": 1,
+            "taken_ms": 43088
+          },
+          {
+            "card_id": 59,
+            "ease": 3,
+            "id": 1700000329880,
+            "kind": 1,
+            "taken_ms": 43088
+          },
+          {
+            "card_id": 60,
+            "ease": 3,
+            "id": 1700000351872,
+            "kind": 1,
+            "taken_ms": 43088
+          },
+          {
+            "card_id": 61,
+            "ease": 3,
+            "id": 1700000373864,
+            "kind": 1,
+            "taken_ms": 43088
+          },
+          {
+            "card_id": 62,
+            "ease": 3,
+            "id": 1700000395856,
+            "kind": 1,
+            "taken_ms": 43088
+          },
+          {
+            "card_id": 63,
+            "ease": 3,
+            "id": 1700000417848,
+            "kind": 1,
+            "taken_ms": 43088
+          },
+          {
+            "card_id": 64,
+            "ease": 3,
+            "id": 1700000439840,
+            "kind": 1,
+            "taken_ms": 43088
+          },
+          {
+            "card_id": 65,
+            "ease": 3,
+            "id": 1700000461832,
+            "kind": 1,
+            "taken_ms": 43088
+          },
+          {
+            "card_id": 66,
+            "ease": 3,
+            "id": 1700000483824,
+            "kind": 1,
+            "taken_ms": 43088
+          },
+          {
+            "card_id": 67,
+            "ease": 3,
+            "id": 1700000505816,
+            "kind": 1,
+            "taken_ms": 43088
+          },
+          {
+            "card_id": 68,
+            "ease": 3,
+            "id": 1700000527808,
+            "kind": 1,
+            "taken_ms": 43088
+          },
+          {
+            "card_id": 69,
+            "ease": 3,
+            "id": 1700000549800,
+            "kind": 1,
+            "taken_ms": 43088
+          },
+          {
+            "card_id": 70,
+            "ease": 3,
+            "id": 1700000571792,
+            "kind": 1,
+            "taken_ms": 43088
+          },
+          {
+            "card_id": 71,
+            "ease": 3,
+            "id": 1700000593784,
+            "kind": 1,
+            "taken_ms": 43088
+          },
+          {
+            "card_id": 72,
+            "ease": 3,
+            "id": 1700000615776,
+            "kind": 1,
+            "taken_ms": 43088
+          },
+          {
+            "card_id": 73,
+            "ease": 3,
+            "id": 1700000637768,
+            "kind": 1,
+            "taken_ms": 43088
+          },
+          {
+            "card_id": 41,
+            "ease": 3,
+            "id": 1700003637768,
+            "kind": 1,
+            "taken_ms": 64502
+          },
+          {
+            "card_id": 42,
+            "ease": 3,
+            "id": 1700003671706,
+            "kind": 1,
+            "taken_ms": 64502
+          },
+          {
+            "card_id": 43,
+            "ease": 3,
+            "id": 1700003705644,
+            "kind": 1,
+            "taken_ms": 64502
+          },
+          {
+            "card_id": 14,
+            "ease": 3,
+            "id": 1700006705644,
+            "kind": 1,
+            "taken_ms": 31803
+          },
+          {
+            "card_id": 15,
+            "ease": 3,
+            "id": 1700006743210,
+            "kind": 1,
+            "taken_ms": 31803
+          },
+          {
+            "card_id": 16,
+            "ease": 3,
+            "id": 1700006780776,
+            "kind": 1,
+            "taken_ms": 31803
+          }
+        ]
+      },
+      "output": [
+        {
+          "distinct_cards": 30,
+          "end_ms": 1700000637768,
+          "minutes": 21.543999999999993,
+          "reviews": 30,
+          "start_ms": 1700000000000
+        },
+        {
+          "distinct_cards": 3,
+          "end_ms": 1700003705644,
+          "minutes": 3.0,
+          "reviews": 3,
+          "start_ms": 1700003637768
+        },
+        {
+          "distinct_cards": 3,
+          "end_ms": 1700006780776,
+          "minutes": 1.5901500000000002,
+          "reviews": 3,
+          "start_ms": 1700006705644
+        }
+      ]
+    },
+    {
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 6,
+            "ease": 3,
+            "id": 1700000000000,
+            "kind": 1,
+            "taken_ms": 33216
+          },
+          {
+            "card_id": 7,
+            "ease": 3,
+            "id": 1700000012474,
+            "kind": 1,
+            "taken_ms": 33216
+          },
+          {
+            "card_id": 8,
+            "ease": 3,
+            "id": 1700000024948,
+            "kind": 1,
+            "taken_ms": 33216
+          },
+          {
+            "card_id": 9,
+            "ease": 3,
+            "id": 1700000037422,
+            "kind": 1,
+            "taken_ms": 33216
+          }
+        ]
+      },
+      "output": [
+        {
+          "distinct_cards": 4,
+          "end_ms": 1700000037422,
+          "minutes": 2.2144,
+          "reviews": 4,
+          "start_ms": 1700000000000
+        }
+      ]
+    },
+    {
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 17,
+            "ease": 3,
+            "id": 1700000000000,
+            "kind": 1,
+            "taken_ms": 81783
+          },
+          {
+            "card_id": 18,
+            "ease": 3,
+            "id": 1700000010706,
+            "kind": 1,
+            "taken_ms": 81783
+          },
+          {
+            "card_id": 19,
+            "ease": 3,
+            "id": 1700000021412,
+            "kind": 1,
+            "taken_ms": 81783
+          },
+          {
+            "card_id": 20,
+            "ease": 3,
+            "id": 1700000032118,
+            "kind": 1,
+            "taken_ms": 81783
+          },
+          {
+            "card_id": 21,
+            "ease": 3,
+            "id": 1700000042824,
+            "kind": 1,
+            "taken_ms": 81783
+          },
+          {
+            "card_id": 22,
+            "ease": 3,
+            "id": 1700000053530,
+            "kind": 1,
+            "taken_ms": 81783
+          },
+          {
+            "card_id": 23,
+            "ease": 3,
+            "id": 1700000064236,
+            "kind": 1,
+            "taken_ms": 81783
+          },
+          {
+            "card_id": 24,
+            "ease": 3,
+            "id": 1700000074942,
+            "kind": 1,
+            "taken_ms": 81783
+          },
+          {
+            "card_id": 25,
+            "ease": 3,
+            "id": 1700000085648,
+            "kind": 1,
+            "taken_ms": 81783
+          },
+          {
+            "card_id": 26,
+            "ease": 3,
+            "id": 1700000096354,
+            "kind": 1,
+            "taken_ms": 81783
+          },
+          {
+            "card_id": 27,
+            "ease": 3,
+            "id": 1700000107060,
+            "kind": 1,
+            "taken_ms": 81783
+          },
+          {
+            "card_id": 28,
+            "ease": 3,
+            "id": 1700000117766,
+            "kind": 1,
+            "taken_ms": 81783
+          },
+          {
+            "card_id": 29,
+            "ease": 3,
+            "id": 1700000128472,
+            "kind": 1,
+            "taken_ms": 81783
+          },
+          {
+            "card_id": 30,
+            "ease": 3,
+            "id": 1700000139178,
+            "kind": 1,
+            "taken_ms": 81783
+          },
+          {
+            "card_id": 31,
+            "ease": 3,
+            "id": 1700000149884,
+            "kind": 1,
+            "taken_ms": 81783
+          },
+          {
+            "card_id": 32,
+            "ease": 3,
+            "id": 1700000160590,
+            "kind": 1,
+            "taken_ms": 81783
+          },
+          {
+            "card_id": 33,
+            "ease": 3,
+            "id": 1700000171296,
+            "kind": 1,
+            "taken_ms": 81783
+          },
+          {
+            "card_id": 34,
+            "ease": 3,
+            "id": 1700000182002,
+            "kind": 1,
+            "taken_ms": 81783
+          },
+          {
+            "card_id": 35,
+            "ease": 3,
+            "id": 1700000192708,
+            "kind": 1,
+            "taken_ms": 81783
+          },
+          {
+            "card_id": 36,
+            "ease": 3,
+            "id": 1700000203414,
+            "kind": 1,
+            "taken_ms": 81783
+          },
+          {
+            "card_id": 37,
+            "ease": 3,
+            "id": 1700000214120,
+            "kind": 1,
+            "taken_ms": 81783
+          },
+          {
+            "card_id": 38,
+            "ease": 3,
+            "id": 1700000224826,
+            "kind": 1,
+            "taken_ms": 81783
+          },
+          {
+            "card_id": 39,
+            "ease": 3,
+            "id": 1700000235532,
+            "kind": 1,
+            "taken_ms": 81783
+          },
+          {
+            "card_id": 2,
+            "ease": 3,
+            "id": 1700000835531,
+            "kind": 1,
+            "taken_ms": 30665
+          },
+          {
+            "card_id": 3,
+            "ease": 3,
+            "id": 1700000853066,
+            "kind": 1,
+            "taken_ms": 30665
+          },
+          {
+            "card_id": 4,
+            "ease": 3,
+            "id": 1700000870601,
+            "kind": 1,
+            "taken_ms": 30665
+          },
+          {
+            "card_id": 5,
+            "ease": 3,
+            "id": 1700000888136,
+            "kind": 1,
+            "taken_ms": 30665
+          },
+          {
+            "card_id": 6,
+            "ease": 3,
+            "id": 1700000905671,
+            "kind": 1,
+            "taken_ms": 30665
+          },
+          {
+            "card_id": 7,
+            "ease": 3,
+            "id": 1700000923206,
+            "kind": 1,
+            "taken_ms": 30665
+          },
+          {
+            "card_id": 8,
+            "ease": 3,
+            "id": 1700000940741,
+            "kind": 1,
+            "taken_ms": 30665
+          },
+          {
+            "card_id": 9,
+            "ease": 3,
+            "id": 1700000958276,
+            "kind": 1,
+            "taken_ms": 30665
+          },
+          {
+            "card_id": 10,
+            "ease": 3,
+            "id": 1700000975811,
+            "kind": 1,
+            "taken_ms": 30665
+          },
+          {
+            "card_id": 11,
+            "ease": 3,
+            "id": 1700000993346,
+            "kind": 1,
+            "taken_ms": 30665
+          },
+          {
+            "card_id": 12,
+            "ease": 3,
+            "id": 1700001010881,
+            "kind": 1,
+            "taken_ms": 30665
+          },
+          {
+            "card_id": 13,
+            "ease": 3,
+            "id": 1700001028416,
+            "kind": 1,
+            "taken_ms": 30665
+          },
+          {
+            "card_id": 14,
+            "ease": 3,
+            "id": 1700001045951,
+            "kind": 1,
+            "taken_ms": 30665
+          },
+          {
+            "card_id": 15,
+            "ease": 3,
+            "id": 1700001063486,
+            "kind": 1,
+            "taken_ms": 30665
+          },
+          {
+            "card_id": 16,
+            "ease": 3,
+            "id": 1700001081021,
+            "kind": 1,
+            "taken_ms": 30665
+          },
+          {
+            "card_id": 17,
+            "ease": 3,
+            "id": 1700001098556,
+            "kind": 1,
+            "taken_ms": 30665
+          },
+          {
+            "card_id": 18,
+            "ease": 3,
+            "id": 1700001116091,
+            "kind": 1,
+            "taken_ms": 30665
+          },
+          {
+            "card_id": 19,
+            "ease": 3,
+            "id": 1700001133626,
+            "kind": 1,
+            "taken_ms": 30665
+          },
+          {
+            "card_id": 20,
+            "ease": 3,
+            "id": 1700001151161,
+            "kind": 1,
+            "taken_ms": 30665
+          },
+          {
+            "card_id": 21,
+            "ease": 3,
+            "id": 1700001168696,
+            "kind": 1,
+            "taken_ms": 30665
+          },
+          {
+            "card_id": 22,
+            "ease": 3,
+            "id": 1700001186231,
+            "kind": 1,
+            "taken_ms": 30665
+          },
+          {
+            "card_id": 23,
+            "ease": 3,
+            "id": 1700001203766,
+            "kind": 1,
+            "taken_ms": 30665
+          },
+          {
+            "card_id": 24,
+            "ease": 3,
+            "id": 1700001221301,
+            "kind": 1,
+            "taken_ms": 30665
+          },
+          {
+            "card_id": 25,
+            "ease": 3,
+            "id": 1700001238836,
+            "kind": 1,
+            "taken_ms": 30665
+          },
+          {
+            "card_id": 26,
+            "ease": 3,
+            "id": 1700001256371,
+            "kind": 1,
+            "taken_ms": 30665
+          },
+          {
+            "card_id": 27,
+            "ease": 3,
+            "id": 1700001273906,
+            "kind": 1,
+            "taken_ms": 30665
+          },
+          {
+            "card_id": 28,
+            "ease": 3,
+            "id": 1700001291441,
+            "kind": 1,
+            "taken_ms": 30665
+          },
+          {
+            "card_id": 29,
+            "ease": 3,
+            "id": 1700001308976,
+            "kind": 1,
+            "taken_ms": 30665
+          },
+          {
+            "card_id": 30,
+            "ease": 3,
+            "id": 1700001326511,
+            "kind": 1,
+            "taken_ms": 30665
+          }
+        ]
+      },
+      "output": [
+        {
+          "distinct_cards": 38,
+          "end_ms": 1700001326511,
+          "minutes": 37.82141666666665,
+          "reviews": 52,
+          "start_ms": 1700000000000
+        }
+      ]
+    },
+    {
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 4,
+            "ease": 3,
+            "id": 1700000000000,
+            "kind": 1,
+            "taken_ms": 84522
+          },
+          {
+            "card_id": 5,
+            "ease": 3,
+            "id": 1700000000851,
+            "kind": 1,
+            "taken_ms": 84522
+          },
+          {
+            "card_id": 6,
+            "ease": 3,
+            "id": 1700000001702,
+            "kind": 1,
+            "taken_ms": 84522
+          },
+          {
+            "card_id": 7,
+            "ease": 3,
+            "id": 1700000002553,
+            "kind": 1,
+            "taken_ms": 84522
+          },
+          {
+            "card_id": 8,
+            "ease": 3,
+            "id": 1700000003404,
+            "kind": 1,
+            "taken_ms": 84522
+          },
+          {
+            "card_id": 9,
+            "ease": 3,
+            "id": 1700000004255,
+            "kind": 1,
+            "taken_ms": 84522
+          },
+          {
+            "card_id": 10,
+            "ease": 3,
+            "id": 1700000005106,
+            "kind": 1,
+            "taken_ms": 84522
+          },
+          {
+            "card_id": 11,
+            "ease": 3,
+            "id": 1700000005957,
+            "kind": 1,
+            "taken_ms": 84522
+          },
+          {
+            "card_id": 9,
+            "ease": 3,
+            "id": 1700000605958,
+            "kind": 1,
+            "taken_ms": 78608
+          },
+          {
+            "card_id": 10,
+            "ease": 3,
+            "id": 1700000627969,
+            "kind": 1,
+            "taken_ms": 78608
+          },
+          {
+            "card_id": 11,
+            "ease": 3,
+            "id": 1700000649980,
+            "kind": 1,
+            "taken_ms": 78608
+          },
+          {
+            "card_id": 12,
+            "ease": 3,
+            "id": 1700000671991,
+            "kind": 1,
+            "taken_ms": 78608
+          },
+          {
+            "card_id": 13,
+            "ease": 3,
+            "id": 1700000694002,
+            "kind": 1,
+            "taken_ms": 78608
+          },
+          {
+            "card_id": 14,
+            "ease": 3,
+            "id": 1700000716013,
+            "kind": 1,
+            "taken_ms": 78608
+          },
+          {
+            "card_id": 15,
+            "ease": 3,
+            "id": 1700000738024,
+            "kind": 1,
+            "taken_ms": 78608
+          },
+          {
+            "card_id": 16,
+            "ease": 3,
+            "id": 1700000760035,
+            "kind": 1,
+            "taken_ms": 78608
+          },
+          {
+            "card_id": 17,
+            "ease": 3,
+            "id": 1700000782046,
+            "kind": 1,
+            "taken_ms": 78608
+          },
+          {
+            "card_id": 10,
+            "ease": 3,
+            "id": 1700003782046,
+            "kind": 1,
+            "taken_ms": 72835
+          },
+          {
+            "card_id": 11,
+            "ease": 3,
+            "id": 1700003799990,
+            "kind": 1,
+            "taken_ms": 72835
+          },
+          {
+            "card_id": 12,
+            "ease": 3,
+            "id": 1700003817934,
+            "kind": 1,
+            "taken_ms": 72835
+          },
+          {
+            "card_id": 13,
+            "ease": 3,
+            "id": 1700003835878,
+            "kind": 1,
+            "taken_ms": 72835
+          },
+          {
+            "card_id": 14,
+            "ease": 3,
+            "id": 1700003853822,
+            "kind": 1,
+            "taken_ms": 72835
+          },
+          {
+            "card_id": 15,
+            "ease": 3,
+            "id": 1700003871766,
+            "kind": 1,
+            "taken_ms": 72835
+          },
+          {
+            "card_id": 16,
+            "ease": 3,
+            "id": 1700003889710,
+            "kind": 1,
+            "taken_ms": 72835
+          },
+          {
+            "card_id": 17,
+            "ease": 3,
+            "id": 1700003907654,
+            "kind": 1,
+            "taken_ms": 72835
+          },
+          {
+            "card_id": 18,
+            "ease": 3,
+            "id": 1700003925598,
+            "kind": 1,
+            "taken_ms": 72835
+          },
+          {
+            "card_id": 19,
+            "ease": 3,
+            "id": 1700003943542,
+            "kind": 1,
+            "taken_ms": 72835
+          },
+          {
+            "card_id": 20,
+            "ease": 3,
+            "id": 1700003961486,
+            "kind": 1,
+            "taken_ms": 72835
+          },
+          {
+            "card_id": 21,
+            "ease": 3,
+            "id": 1700003979430,
+            "kind": 1,
+            "taken_ms": 72835
+          },
+          {
+            "card_id": 22,
+            "ease": 3,
+            "id": 1700003997374,
+            "kind": 1,
+            "taken_ms": 72835
+          },
+          {
+            "card_id": 23,
+            "ease": 3,
+            "id": 1700004015318,
+            "kind": 1,
+            "taken_ms": 72835
+          },
+          {
+            "card_id": 24,
+            "ease": 3,
+            "id": 1700004033262,
+            "kind": 1,
+            "taken_ms": 72835
+          },
+          {
+            "card_id": 25,
+            "ease": 3,
+            "id": 1700004051206,
+            "kind": 1,
+            "taken_ms": 72835
+          },
+          {
+            "card_id": 26,
+            "ease": 3,
+            "id": 1700004069150,
+            "kind": 1,
+            "taken_ms": 72835
+          },
+          {
+            "card_id": 27,
+            "ease": 3,
+            "id": 1700004087094,
+            "kind": 1,
+            "taken_ms": 72835
+          },
+          {
+            "card_id": 28,
+            "ease": 3,
+            "id": 1700004105038,
+            "kind": 1,
+            "taken_ms": 72835
+          },
+          {
+            "card_id": 29,
+            "ease": 3,
+            "id": 1700004122982,
+            "kind": 1,
+            "taken_ms": 72835
+          },
+          {
+            "card_id": 30,
+            "ease": 3,
+            "id": 1700004140926,
+            "kind": 1,
+            "taken_ms": 72835
+          },
+          {
+            "card_id": 31,
+            "ease": 3,
+            "id": 1700004158870,
+            "kind": 1,
+            "taken_ms": 72835
+          },
+          {
+            "card_id": 32,
+            "ease": 3,
+            "id": 1700004176814,
+            "kind": 1,
+            "taken_ms": 72835
+          },
+          {
+            "card_id": 33,
+            "ease": 3,
+            "id": 1700004194758,
+            "kind": 1,
+            "taken_ms": 72835
+          },
+          {
+            "card_id": 34,
+            "ease": 3,
+            "id": 1700004212702,
+            "kind": 1,
+            "taken_ms": 72835
+          },
+          {
+            "card_id": 35,
+            "ease": 3,
+            "id": 1700004230646,
+            "kind": 1,
+            "taken_ms": 72835
+          },
+          {
+            "card_id": 36,
+            "ease": 3,
+            "id": 1700004248590,
+            "kind": 1,
+            "taken_ms": 72835
+          },
+          {
+            "card_id": 37,
+            "ease": 3,
+            "id": 1700004266534,
+            "kind": 1,
+            "taken_ms": 72835
+          },
+          {
+            "card_id": 38,
+            "ease": 3,
+            "id": 1700004284478,
+            "kind": 1,
+            "taken_ms": 72835
+          },
+          {
+            "card_id": 39,
+            "ease": 3,
+            "id": 1700004302422,
+            "kind": 1,
+            "taken_ms": 72835
+          }
+        ]
+      },
+      "output": [
+        {
+          "distinct_cards": 8,
+          "end_ms": 1700000005957,
+          "minutes": 8.0,
+          "reviews": 8,
+          "start_ms": 1700000000000
+        },
+        {
+          "distinct_cards": 9,
+          "end_ms": 1700000782046,
+          "minutes": 9.0,
+          "reviews": 9,
+          "start_ms": 1700000605958
+        },
+        {
+          "distinct_cards": 30,
+          "end_ms": 1700004302422,
+          "minutes": 30.0,
+          "reviews": 30,
+          "start_ms": 1700003782046
+        }
+      ]
+    },
+    {
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 26,
+            "ease": 3,
+            "id": 1700000000000,
+            "kind": 1,
+            "taken_ms": 16408
+          },
+          {
+            "card_id": 27,
+            "ease": 3,
+            "id": 1700000007933,
+            "kind": 1,
+            "taken_ms": 16408
+          },
+          {
+            "card_id": 28,
+            "ease": 3,
+            "id": 1700000015866,
+            "kind": 1,
+            "taken_ms": 16408
+          },
+          {
+            "card_id": 29,
+            "ease": 3,
+            "id": 1700000023799,
+            "kind": 1,
+            "taken_ms": 16408
+          },
+          {
+            "card_id": 30,
+            "ease": 3,
+            "id": 1700000031732,
+            "kind": 1,
+            "taken_ms": 16408
+          },
+          {
+            "card_id": 31,
+            "ease": 3,
+            "id": 1700000039665,
+            "kind": 1,
+            "taken_ms": 16408
+          }
+        ]
+      },
+      "output": [
+        {
+          "distinct_cards": 6,
+          "end_ms": 1700000039665,
+          "minutes": 1.6408,
+          "reviews": 6,
+          "start_ms": 1700000000000
+        }
+      ]
+    },
+    {
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 8,
+            "ease": 3,
+            "id": 1700000000000,
+            "kind": 1,
+            "taken_ms": 6793
+          },
+          {
+            "card_id": 9,
+            "ease": 3,
+            "id": 1700000039826,
+            "kind": 1,
+            "taken_ms": 6793
+          },
+          {
+            "card_id": 10,
+            "ease": 3,
+            "id": 1700000079652,
+            "kind": 1,
+            "taken_ms": 6793
+          },
+          {
+            "card_id": 11,
+            "ease": 3,
+            "id": 1700000119478,
+            "kind": 1,
+            "taken_ms": 6793
+          },
+          {
+            "card_id": 12,
+            "ease": 3,
+            "id": 1700000159304,
+            "kind": 1,
+            "taken_ms": 6793
+          },
+          {
+            "card_id": 13,
+            "ease": 3,
+            "id": 1700000199130,
+            "kind": 1,
+            "taken_ms": 6793
+          },
+          {
+            "card_id": 14,
+            "ease": 3,
+            "id": 1700000238956,
+            "kind": 1,
+            "taken_ms": 6793
+          },
+          {
+            "card_id": 15,
+            "ease": 3,
+            "id": 1700000278782,
+            "kind": 1,
+            "taken_ms": 6793
+          },
+          {
+            "card_id": 12,
+            "ease": 3,
+            "id": 1700000878782,
+            "kind": 1,
+            "taken_ms": 10616
+          },
+          {
+            "card_id": 13,
+            "ease": 3,
+            "id": 1700000890076,
+            "kind": 1,
+            "taken_ms": 10616
+          },
+          {
+            "card_id": 14,
+            "ease": 3,
+            "id": 1700000901370,
+            "kind": 1,
+            "taken_ms": 10616
+          },
+          {
+            "card_id": 15,
+            "ease": 3,
+            "id": 1700000912664,
+            "kind": 1,
+            "taken_ms": 10616
+          },
+          {
+            "card_id": 16,
+            "ease": 3,
+            "id": 1700000923958,
+            "kind": 1,
+            "taken_ms": 10616
+          },
+          {
+            "card_id": 17,
+            "ease": 3,
+            "id": 1700000935252,
+            "kind": 1,
+            "taken_ms": 10616
+          },
+          {
+            "card_id": 18,
+            "ease": 3,
+            "id": 1700000946546,
+            "kind": 1,
+            "taken_ms": 10616
+          },
+          {
+            "card_id": 19,
+            "ease": 3,
+            "id": 1700000957840,
+            "kind": 1,
+            "taken_ms": 10616
+          },
+          {
+            "card_id": 20,
+            "ease": 3,
+            "id": 1700000969134,
+            "kind": 1,
+            "taken_ms": 10616
+          },
+          {
+            "card_id": 21,
+            "ease": 3,
+            "id": 1700000980428,
+            "kind": 1,
+            "taken_ms": 10616
+          },
+          {
+            "card_id": 22,
+            "ease": 3,
+            "id": 1700000991722,
+            "kind": 1,
+            "taken_ms": 10616
+          },
+          {
+            "card_id": 23,
+            "ease": 3,
+            "id": 1700001003016,
+            "kind": 1,
+            "taken_ms": 10616
+          },
+          {
+            "card_id": 24,
+            "ease": 3,
+            "id": 1700001014310,
+            "kind": 1,
+            "taken_ms": 10616
+          },
+          {
+            "card_id": 25,
+            "ease": 3,
+            "id": 1700001025604,
+            "kind": 1,
+            "taken_ms": 10616
+          }
+        ]
+      },
+      "output": [
+        {
+          "distinct_cards": 8,
+          "end_ms": 1700000278782,
+          "minutes": 0.9057333333333334,
+          "reviews": 8,
+          "start_ms": 1700000000000
+        },
+        {
+          "distinct_cards": 14,
+          "end_ms": 1700001025604,
+          "minutes": 2.477066666666666,
+          "reviews": 14,
+          "start_ms": 1700000878782
+        }
+      ]
+    },
+    {
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 42,
+            "ease": 3,
+            "id": 1700000000000,
+            "kind": 1,
+            "taken_ms": 88115
+          },
+          {
+            "card_id": 34,
+            "ease": 3,
+            "id": 1700003000000,
+            "kind": 1,
+            "taken_ms": 87470
+          },
+          {
+            "card_id": 35,
+            "ease": 3,
+            "id": 1700003003563,
+            "kind": 1,
+            "taken_ms": 87470
+          },
+          {
+            "card_id": 36,
+            "ease": 3,
+            "id": 1700003007126,
+            "kind": 1,
+            "taken_ms": 87470
+          },
+          {
+            "card_id": 37,
+            "ease": 3,
+            "id": 1700003010689,
+            "kind": 1,
+            "taken_ms": 87470
+          },
+          {
+            "card_id": 38,
+            "ease": 3,
+            "id": 1700003014252,
+            "kind": 1,
+            "taken_ms": 87470
+          },
+          {
+            "card_id": 39,
+            "ease": 3,
+            "id": 1700003017815,
+            "kind": 1,
+            "taken_ms": 87470
+          },
+          {
+            "card_id": 40,
+            "ease": 3,
+            "id": 1700003021378,
+            "kind": 1,
+            "taken_ms": 87470
+          },
+          {
+            "card_id": 41,
+            "ease": 3,
+            "id": 1700003024941,
+            "kind": 1,
+            "taken_ms": 87470
+          },
+          {
+            "card_id": 42,
+            "ease": 3,
+            "id": 1700003028504,
+            "kind": 1,
+            "taken_ms": 87470
+          },
+          {
+            "card_id": 43,
+            "ease": 3,
+            "id": 1700003032067,
+            "kind": 1,
+            "taken_ms": 87470
+          },
+          {
+            "card_id": 44,
+            "ease": 3,
+            "id": 1700003035630,
+            "kind": 1,
+            "taken_ms": 87470
+          },
+          {
+            "card_id": 45,
+            "ease": 3,
+            "id": 1700003039193,
+            "kind": 1,
+            "taken_ms": 87470
+          },
+          {
+            "card_id": 46,
+            "ease": 3,
+            "id": 1700003042756,
+            "kind": 1,
+            "taken_ms": 87470
+          },
+          {
+            "card_id": 47,
+            "ease": 3,
+            "id": 1700003046319,
+            "kind": 1,
+            "taken_ms": 87470
+          },
+          {
+            "card_id": 48,
+            "ease": 3,
+            "id": 1700003049882,
+            "kind": 1,
+            "taken_ms": 87470
+          }
+        ]
+      },
+      "output": [
+        {
+          "distinct_cards": 1,
+          "end_ms": 1700000000000,
+          "minutes": 1.0,
+          "reviews": 1,
+          "start_ms": 1700000000000
+        },
+        {
+          "distinct_cards": 15,
+          "end_ms": 1700003049882,
+          "minutes": 15.0,
+          "reviews": 15,
+          "start_ms": 1700003000000
+        }
+      ]
+    },
+    {
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 36,
+            "ease": 3,
+            "id": 1700000000000,
+            "kind": 1,
+            "taken_ms": 1661
+          },
+          {
+            "card_id": 37,
+            "ease": 3,
+            "id": 1700000021859,
+            "kind": 1,
+            "taken_ms": 1661
+          },
+          {
+            "card_id": 38,
+            "ease": 3,
+            "id": 1700000043718,
+            "kind": 1,
+            "taken_ms": 1661
+          },
+          {
+            "card_id": 39,
+            "ease": 3,
+            "id": 1700000065577,
+            "kind": 1,
+            "taken_ms": 1661
+          },
+          {
+            "card_id": 40,
+            "ease": 3,
+            "id": 1700000087436,
+            "kind": 1,
+            "taken_ms": 1661
+          },
+          {
+            "card_id": 41,
+            "ease": 3,
+            "id": 1700000109295,
+            "kind": 1,
+            "taken_ms": 1661
+          },
+          {
+            "card_id": 42,
+            "ease": 3,
+            "id": 1700000131154,
+            "kind": 1,
+            "taken_ms": 1661
+          },
+          {
+            "card_id": 43,
+            "ease": 3,
+            "id": 1700000153013,
+            "kind": 1,
+            "taken_ms": 1661
+          },
+          {
+            "card_id": 44,
+            "ease": 3,
+            "id": 1700000174872,
+            "kind": 1,
+            "taken_ms": 1661
+          },
+          {
+            "card_id": 45,
+            "ease": 3,
+            "id": 1700000196731,
+            "kind": 1,
+            "taken_ms": 1661
+          },
+          {
+            "card_id": 46,
+            "ease": 3,
+            "id": 1700000218590,
+            "kind": 1,
+            "taken_ms": 1661
+          },
+          {
+            "card_id": 47,
+            "ease": 3,
+            "id": 1700000240449,
+            "kind": 1,
+            "taken_ms": 1661
+          },
+          {
+            "card_id": 48,
+            "ease": 3,
+            "id": 1700000262308,
+            "kind": 1,
+            "taken_ms": 1661
+          },
+          {
+            "card_id": 49,
+            "ease": 3,
+            "id": 1700000284167,
+            "kind": 1,
+            "taken_ms": 1661
+          },
+          {
+            "card_id": 50,
+            "ease": 3,
+            "id": 1700000306026,
+            "kind": 1,
+            "taken_ms": 1661
+          }
+        ]
+      },
+      "output": [
+        {
+          "distinct_cards": 15,
+          "end_ms": 1700000306026,
+          "minutes": 0.4152500000000001,
+          "reviews": 15,
+          "start_ms": 1700000000000
+        }
+      ]
+    },
+    {
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 7,
+            "ease": 3,
+            "id": 1700000000000,
+            "kind": 1,
+            "taken_ms": 43618
+          },
+          {
+            "card_id": 8,
+            "ease": 3,
+            "id": 1700000006113,
+            "kind": 1,
+            "taken_ms": 43618
+          },
+          {
+            "card_id": 9,
+            "ease": 3,
+            "id": 1700000012226,
+            "kind": 1,
+            "taken_ms": 43618
+          },
+          {
+            "card_id": 10,
+            "ease": 3,
+            "id": 1700000018339,
+            "kind": 1,
+            "taken_ms": 43618
+          },
+          {
+            "card_id": 11,
+            "ease": 3,
+            "id": 1700000024452,
+            "kind": 1,
+            "taken_ms": 43618
+          },
+          {
+            "card_id": 12,
+            "ease": 3,
+            "id": 1700000030565,
+            "kind": 1,
+            "taken_ms": 43618
+          },
+          {
+            "card_id": 13,
+            "ease": 3,
+            "id": 1700000036678,
+            "kind": 1,
+            "taken_ms": 43618
+          },
+          {
+            "card_id": 14,
+            "ease": 3,
+            "id": 1700000042791,
+            "kind": 1,
+            "taken_ms": 43618
+          },
+          {
+            "card_id": 15,
+            "ease": 3,
+            "id": 1700000048904,
+            "kind": 1,
+            "taken_ms": 43618
+          },
+          {
+            "card_id": 16,
+            "ease": 3,
+            "id": 1700000055017,
+            "kind": 1,
+            "taken_ms": 43618
+          },
+          {
+            "card_id": 17,
+            "ease": 3,
+            "id": 1700000061130,
+            "kind": 1,
+            "taken_ms": 43618
+          },
+          {
+            "card_id": 18,
+            "ease": 3,
+            "id": 1700000067243,
+            "kind": 1,
+            "taken_ms": 43618
+          },
+          {
+            "card_id": 19,
+            "ease": 3,
+            "id": 1700000073356,
+            "kind": 1,
+            "taken_ms": 43618
+          },
+          {
+            "card_id": 20,
+            "ease": 3,
+            "id": 1700000079469,
+            "kind": 1,
+            "taken_ms": 43618
+          },
+          {
+            "card_id": 21,
+            "ease": 3,
+            "id": 1700000085582,
+            "kind": 1,
+            "taken_ms": 43618
+          },
+          {
+            "card_id": 22,
+            "ease": 3,
+            "id": 1700000091695,
+            "kind": 1,
+            "taken_ms": 43618
+          },
+          {
+            "card_id": 23,
+            "ease": 3,
+            "id": 1700000097808,
+            "kind": 1,
+            "taken_ms": 43618
+          },
+          {
+            "card_id": 24,
+            "ease": 3,
+            "id": 1700000103921,
+            "kind": 1,
+            "taken_ms": 43618
+          },
+          {
+            "card_id": 25,
+            "ease": 3,
+            "id": 1700000110034,
+            "kind": 1,
+            "taken_ms": 43618
+          },
+          {
+            "card_id": 26,
+            "ease": 3,
+            "id": 1700000116147,
+            "kind": 1,
+            "taken_ms": 43618
+          },
+          {
+            "card_id": 27,
+            "ease": 3,
+            "id": 1700000122260,
+            "kind": 1,
+            "taken_ms": 43618
+          },
+          {
+            "card_id": 28,
+            "ease": 3,
+            "id": 1700000128373,
+            "kind": 1,
+            "taken_ms": 43618
+          },
+          {
+            "card_id": 29,
+            "ease": 3,
+            "id": 1700000134486,
+            "kind": 1,
+            "taken_ms": 43618
+          },
+          {
+            "card_id": 30,
+            "ease": 3,
+            "id": 1700000140599,
+            "kind": 1,
+            "taken_ms": 43618
+          },
+          {
+            "card_id": 6,
+            "ease": 3,
+            "id": 1700000740600,
+            "kind": 1,
+            "taken_ms": 86985
+          },
+          {
+            "card_id": 7,
+            "ease": 3,
+            "id": 1700000760327,
+            "kind": 1,
+            "taken_ms": 86985
+          },
+          {
+            "card_id": 8,
+            "ease": 3,
+            "id": 1700000780054,
+            "kind": 1,
+            "taken_ms": 86985
+          },
+          {
+            "card_id": 9,
+            "ease": 3,
+            "id": 1700000799781,
+            "kind": 1,
+            "taken_ms": 86985
+          },
+          {
+            "card_id": 10,
+            "ease": 3,
+            "id": 1700000819508,
+            "kind": 1,
+            "taken_ms": 86985
+          },
+          {
+            "card_id": 11,
+            "ease": 3,
+            "id": 1700000839235,
+            "kind": 1,
+            "taken_ms": 86985
+          },
+          {
+            "card_id": 12,
+            "ease": 3,
+            "id": 1700000858962,
+            "kind": 1,
+            "taken_ms": 86985
+          },
+          {
+            "card_id": 13,
+            "ease": 3,
+            "id": 1700000878689,
+            "kind": 1,
+            "taken_ms": 86985
+          },
+          {
+            "card_id": 14,
+            "ease": 3,
+            "id": 1700000898416,
+            "kind": 1,
+            "taken_ms": 86985
+          },
+          {
+            "card_id": 15,
+            "ease": 3,
+            "id": 1700000918143,
+            "kind": 1,
+            "taken_ms": 86985
+          },
+          {
+            "card_id": 16,
+            "ease": 3,
+            "id": 1700000937870,
+            "kind": 1,
+            "taken_ms": 86985
+          },
+          {
+            "card_id": 17,
+            "ease": 3,
+            "id": 1700000957597,
+            "kind": 1,
+            "taken_ms": 86985
+          },
+          {
+            "card_id": 18,
+            "ease": 3,
+            "id": 1700000977324,
+            "kind": 1,
+            "taken_ms": 86985
+          },
+          {
+            "card_id": 19,
+            "ease": 3,
+            "id": 1700000997051,
+            "kind": 1,
+            "taken_ms": 86985
+          },
+          {
+            "card_id": 20,
+            "ease": 3,
+            "id": 1700001016778,
+            "kind": 1,
+            "taken_ms": 86985
+          },
+          {
+            "card_id": 21,
+            "ease": 3,
+            "id": 1700001036505,
+            "kind": 1,
+            "taken_ms": 86985
+          },
+          {
+            "card_id": 22,
+            "ease": 3,
+            "id": 1700001056232,
+            "kind": 1,
+            "taken_ms": 86985
+          },
+          {
+            "card_id": 23,
+            "ease": 3,
+            "id": 1700001075959,
+            "kind": 1,
+            "taken_ms": 86985
+          },
+          {
+            "card_id": 24,
+            "ease": 3,
+            "id": 1700001095686,
+            "kind": 1,
+            "taken_ms": 86985
+          },
+          {
+            "card_id": 25,
+            "ease": 3,
+            "id": 1700001115413,
+            "kind": 1,
+            "taken_ms": 86985
+          },
+          {
+            "card_id": 26,
+            "ease": 3,
+            "id": 1700001135140,
+            "kind": 1,
+            "taken_ms": 86985
+          },
+          {
+            "card_id": 2,
+            "ease": 3,
+            "id": 1700001735139,
+            "kind": 1,
+            "taken_ms": 28788
+          },
+          {
+            "card_id": 3,
+            "ease": 3,
+            "id": 1700001747880,
+            "kind": 1,
+            "taken_ms": 28788
+          },
+          {
+            "card_id": 4,
+            "ease": 3,
+            "id": 1700001760621,
+            "kind": 1,
+            "taken_ms": 28788
+          },
+          {
+            "card_id": 5,
+            "ease": 3,
+            "id": 1700001773362,
+            "kind": 1,
+            "taken_ms": 28788
+          },
+          {
+            "card_id": 6,
+            "ease": 3,
+            "id": 1700001786103,
+            "kind": 1,
+            "taken_ms": 28788
+          },
+          {
+            "card_id": 7,
+            "ease": 3,
+            "id": 1700001798844,
+            "kind": 1,
+            "taken_ms": 28788
+          },
+          {
+            "card_id": 8,
+            "ease": 3,
+            "id": 1700001811585,
+            "kind": 1,
+            "taken_ms": 28788
+          },
+          {
+            "card_id": 9,
+            "ease": 3,
+            "id": 1700001824326,
+            "kind": 1,
+            "taken_ms": 28788
+          },
+          {
+            "card_id": 10,
+            "ease": 3,
+            "id": 1700001837067,
+            "kind": 1,
+            "taken_ms": 28788
+          },
+          {
+            "card_id": 11,
+            "ease": 3,
+            "id": 1700001849808,
+            "kind": 1,
+            "taken_ms": 28788
+          },
+          {
+            "card_id": 12,
+            "ease": 3,
+            "id": 1700001862549,
+            "kind": 1,
+            "taken_ms": 28788
+          },
+          {
+            "card_id": 13,
+            "ease": 3,
+            "id": 1700001875290,
+            "kind": 1,
+            "taken_ms": 28788
+          },
+          {
+            "card_id": 14,
+            "ease": 3,
+            "id": 1700001888031,
+            "kind": 1,
+            "taken_ms": 28788
+          },
+          {
+            "card_id": 15,
+            "ease": 3,
+            "id": 1700001900772,
+            "kind": 1,
+            "taken_ms": 28788
+          },
+          {
+            "card_id": 16,
+            "ease": 3,
+            "id": 1700001913513,
+            "kind": 1,
+            "taken_ms": 28788
+          },
+          {
+            "card_id": 17,
+            "ease": 3,
+            "id": 1700001926254,
+            "kind": 1,
+            "taken_ms": 28788
+          },
+          {
+            "card_id": 18,
+            "ease": 3,
+            "id": 1700001938995,
+            "kind": 1,
+            "taken_ms": 28788
+          },
+          {
+            "card_id": 19,
+            "ease": 3,
+            "id": 1700001951736,
+            "kind": 1,
+            "taken_ms": 28788
+          },
+          {
+            "card_id": 20,
+            "ease": 3,
+            "id": 1700001964477,
+            "kind": 1,
+            "taken_ms": 28788
+          },
+          {
+            "card_id": 21,
+            "ease": 3,
+            "id": 1700001977218,
+            "kind": 1,
+            "taken_ms": 28788
+          },
+          {
+            "card_id": 22,
+            "ease": 3,
+            "id": 1700001989959,
+            "kind": 1,
+            "taken_ms": 28788
+          },
+          {
+            "card_id": 23,
+            "ease": 3,
+            "id": 1700002002700,
+            "kind": 1,
+            "taken_ms": 28788
+          },
+          {
+            "card_id": 24,
+            "ease": 3,
+            "id": 1700002015441,
+            "kind": 1,
+            "taken_ms": 28788
+          },
+          {
+            "card_id": 25,
+            "ease": 3,
+            "id": 1700002028182,
+            "kind": 1,
+            "taken_ms": 28788
+          },
+          {
+            "card_id": 26,
+            "ease": 3,
+            "id": 1700002040923,
+            "kind": 1,
+            "taken_ms": 28788
+          },
+          {
+            "card_id": 27,
+            "ease": 3,
+            "id": 1700002053664,
+            "kind": 1,
+            "taken_ms": 28788
+          }
+        ]
+      },
+      "output": [
+        {
+          "distinct_cards": 24,
+          "end_ms": 1700000140599,
+          "minutes": 17.44720000000001,
+          "reviews": 24,
+          "start_ms": 1700000000000
+        },
+        {
+          "distinct_cards": 26,
+          "end_ms": 1700002053664,
+          "minutes": 33.4748,
+          "reviews": 47,
+          "start_ms": 1700000740600
+        }
+      ]
+    },
+    {
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 43,
+            "ease": 3,
+            "id": 1700000000000,
+            "kind": 1,
+            "taken_ms": 17711
+          }
+        ]
+      },
+      "output": [
+        {
+          "distinct_cards": 1,
+          "end_ms": 1700000000000,
+          "minutes": 0.2951833333333333,
+          "reviews": 1,
+          "start_ms": 1700000000000
+        }
+      ]
+    },
+    {
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 18,
+            "ease": 3,
+            "id": 1700000000000,
+            "kind": 1,
+            "taken_ms": 50861
+          },
+          {
+            "card_id": 19,
+            "ease": 3,
+            "id": 1700000007159,
+            "kind": 1,
+            "taken_ms": 50861
+          },
+          {
+            "card_id": 20,
+            "ease": 3,
+            "id": 1700000014318,
+            "kind": 1,
+            "taken_ms": 50861
+          },
+          {
+            "card_id": 21,
+            "ease": 3,
+            "id": 1700000021477,
+            "kind": 1,
+            "taken_ms": 50861
+          },
+          {
+            "card_id": 22,
+            "ease": 3,
+            "id": 1700000028636,
+            "kind": 1,
+            "taken_ms": 50861
+          },
+          {
+            "card_id": 23,
+            "ease": 3,
+            "id": 1700000035795,
+            "kind": 1,
+            "taken_ms": 50861
+          },
+          {
+            "card_id": 24,
+            "ease": 3,
+            "id": 1700000042954,
+            "kind": 1,
+            "taken_ms": 50861
+          },
+          {
+            "card_id": 25,
+            "ease": 3,
+            "id": 1700000050113,
+            "kind": 1,
+            "taken_ms": 50861
+          },
+          {
+            "card_id": 26,
+            "ease": 3,
+            "id": 1700000057272,
+            "kind": 1,
+            "taken_ms": 50861
+          },
+          {
+            "card_id": 27,
+            "ease": 3,
+            "id": 1700000064431,
+            "kind": 1,
+            "taken_ms": 50861
+          },
+          {
+            "card_id": 28,
+            "ease": 3,
+            "id": 1700000071590,
+            "kind": 1,
+            "taken_ms": 50861
+          },
+          {
+            "card_id": 29,
+            "ease": 3,
+            "id": 1700000078749,
+            "kind": 1,
+            "taken_ms": 50861
+          },
+          {
+            "card_id": 30,
+            "ease": 3,
+            "id": 1700000085908,
+            "kind": 1,
+            "taken_ms": 50861
+          },
+          {
+            "card_id": 31,
+            "ease": 3,
+            "id": 1700000093067,
+            "kind": 1,
+            "taken_ms": 50861
+          }
+        ]
+      },
+      "output": [
+        {
+          "distinct_cards": 14,
+          "end_ms": 1700000093067,
+          "minutes": 11.867566666666667,
+          "reviews": 14,
+          "start_ms": 1700000000000
+        }
+      ]
+    },
+    {
+      "input": {
+        "answer_time_cap_seconds": 60.0,
+        "reviews": [
+          {
+            "card_id": 13,
+            "ease": 3,
+            "id": 1700000000000,
+            "kind": 1,
+            "taken_ms": 12741
+          },
+          {
+            "card_id": 14,
+            "ease": 3,
+            "id": 1700000014837,
+            "kind": 1,
+            "taken_ms": 12741
+          },
+          {
+            "card_id": 15,
+            "ease": 3,
+            "id": 1700000029674,
+            "kind": 1,
+            "taken_ms": 12741
+          },
+          {
+            "card_id": 16,
+            "ease": 3,
+            "id": 1700000044511,
+            "kind": 1,
+            "taken_ms": 12741
+          },
+          {
+            "card_id": 17,
+            "ease": 3,
+            "id": 1700000059348,
+            "kind": 1,
+            "taken_ms": 12741
+          },
+          {
+            "card_id": 18,
+            "ease": 3,
+            "id": 1700000074185,
+            "kind": 1,
+            "taken_ms": 12741
+          },
+          {
+            "card_id": 19,
+            "ease": 3,
+            "id": 1700000089022,
+            "kind": 1,
+            "taken_ms": 12741
+          },
+          {
+            "card_id": 20,
+            "ease": 3,
+            "id": 1700000103859,
+            "kind": 1,
+            "taken_ms": 12741
+          }
+        ]
+      },
+      "output": [
+        {
+          "distinct_cards": 8,
+          "end_ms": 1700000103859,
+          "minutes": 1.6987999999999999,
+          "reviews": 8,
+          "start_ms": 1700000000000
+        }
+      ]
+    }
+  ],
+  "function": "gamification.chests.sessions_from_reviews",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Builds the predecessor's Review rows from the case's instants, cards, answer buttons, types and times and refuses a case whose per-answer cap is not the applied one; returns each session's bounds, study reviews, distinct cards and minutes; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_081.py",
+  "registry_sha256": "877f300d7eb8188ffee744f6051e9856c0a549fb96e5ac6df58af940f5dd35ff",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

@@ -1,0 +1,115 @@
+{
+  "cases": [
+    {
+      "input": {
+        "name": "gamification.chests.BASE_ODDS"
+      },
+      "output": {
+        "common": 70.0,
+        "epic": 7.0,
+        "legendary": 1.0,
+        "rare": 22.0
+      }
+    },
+    {
+      "input": {
+        "name": "gamification.chests.EPIC_ODDS_CEILING_PCT"
+      },
+      "output": 40.0
+    },
+    {
+      "input": {
+        "name": "gamification.chests.PITY_EPIC_RAMP_AFTER"
+      },
+      "output": 8
+    },
+    {
+      "input": {
+        "name": "gamification.chests.PITY_EPIC_RAMP_PTS"
+      },
+      "output": 5.0
+    },
+    {
+      "input": {
+        "name": "gamification.chests.PITY_EPIC_GUARANTEE"
+      },
+      "output": 14
+    },
+    {
+      "input": {
+        "name": "gamification.chests.PITY_LEGENDARY_GUARANTEE"
+      },
+      "output": 40
+    },
+    {
+      "input": {
+        "name": "gamification.chests.SESSION_GAP_MS"
+      },
+      "output": 600000
+    },
+    {
+      "input": {
+        "name": "gamification.chests.COMMON_XP"
+      },
+      "output": [
+        10,
+        25
+      ]
+    },
+    {
+      "input": {
+        "name": "gamification.chests.RARE_XP"
+      },
+      "output": [
+        30,
+        60
+      ]
+    },
+    {
+      "input": {
+        "name": "gamification.chests.LEGENDARY_XP"
+      },
+      "output": 150
+    },
+    {
+      "input": {
+        "name": "gamification.chests.EPIC_FALLBACK_XP"
+      },
+      "output": 50
+    },
+    {
+      "input": {
+        "name": "gamification.chests.PAYOUT_SESSION_FRAC"
+      },
+      "output": 0.3
+    },
+    {
+      "input": {
+        "name": "constants.REAL_EFFORT_CHEST_MIN_DISTINCT"
+      },
+      "output": 15
+    },
+    {
+      "input": {
+        "name": "constants.STREAK_FREEZE_CAP"
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "name": "constants.FREEZE_DROP_MONTHLY_CAP"
+      },
+      "output": 1
+    }
+  ],
+  "function": "chests.constants",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "constants",
+  "registry": "tools/parity-oracle/registry/spec_081.py",
+  "registry_sha256": "877f300d7eb8188ffee744f6051e9856c0a549fb96e5ac6df58af940f5dd35ff",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}
