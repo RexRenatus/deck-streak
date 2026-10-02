@@ -22,6 +22,12 @@ red. At that commit A4's last assertion lists the inbox's two files in the sorte
 returns (`.md` before `.pdf`); the set it requires is unchanged, and its red above was an earlier
 assertion.
 
+The route's criteria, A15 to A18, were red at the route stub's commit: the route is served behind
+the owner's session and answers 501, so each failed by its first status assertion. They are green
+at the route's implementation, where the API's suite ran 48 of 48 green. A17's retry is sent the
+same UTC day through the route; a retry after UTC midnight is the vault's A24, whose unique is the
+route's `capture_id` (ruling (h)).
+
 ```red-first
 A1: red at 9ebf336e0bf0f72654f33980b2a847056f679155: the_stub_and_stem_match_the_predecessors_golden panicked at crates/vault/tests/inbox_capture.rs:178: the attachment of the golden's first case, left "" right "2031-12-18-photo-hMpVD00JNQo8.jpg"
 A1: green at 31c1af96809f9cadad6da4c6e73d322fb7ebcfb6
@@ -35,6 +41,14 @@ A5: red at 9ebf336e0bf0f72654f33980b2a847056f679155: no_vault_write_reaches_a_jo
 A5: green at 31c1af96809f9cadad6da4c6e73d322fb7ebcfb6
 A6: red at 9ebf336e0bf0f72654f33980b2a847056f679155: every_vault_file_write_is_the_atomic_writer panicked at crates/vault/tests/atomic.rs:539: file-writing calls outside the atomic writer: ["config.rs:287: create_new("]
 A6: green at 31c1af96809f9cadad6da4c6e73d322fb7ebcfb6
+A15: red at 60a734354969f1b1da60957b7240dd3a9216e248: a_quick_capture_writes_the_miniapp_stub panicked at crates/api/tests/inbox_capture_route.rs:210: {"reason":"not_implemented"}, left 501 right 201
+A15: green at ed9d286ec8f41c5abdc0ae9ef0b55a8c6a81233d
+A16: red at 60a734354969f1b1da60957b7240dd3a9216e248: a_journal_quick_capture_lands_in_the_inbox panicked at crates/api/tests/inbox_capture_route.rs:233: {"reason":"not_implemented"}, left 501 right 201
+A16: green at ed9d286ec8f41c5abdc0ae9ef0b55a8c6a81233d
+A17: red at 60a734354969f1b1da60957b7240dd3a9216e248: a_retried_quick_capture_answers_the_same_name panicked at crates/api/tests/inbox_capture_route.rs:260: {"reason":"not_implemented"}, left 501 right 201
+A17: green at ed9d286ec8f41c5abdc0ae9ef0b55a8c6a81233d
+A18: red at 60a734354969f1b1da60957b7240dd3a9216e248: the_quick_capture_is_owner_only_and_bounds_its_text panicked at crates/api/tests/inbox_capture_route.rs:296: 4000 characters with the session: {"reason":"not_implemented"}, left 501 right 201
+A18: green at ed9d286ec8f41c5abdc0ae9ef0b55a8c6a81233d
 A19: red at 9ebf336e0bf0f72654f33980b2a847056f679155: inbox_captures_export_and_erase_leave_the_files panicked at crates/vault/tests/inbox_capture.rs:503: inbox_captures is exported and erased
 A19: green at 31c1af96809f9cadad6da4c6e73d322fb7ebcfb6
 A22: red at 9ebf336e0bf0f72654f33980b2a847056f679155: the_layout_in_force_is_the_owners_or_the_default panicked at crates/vault/tests/layout_in_force.rs:23: unset, the vendored inbox is in force, left "" right "90-Inbox"
