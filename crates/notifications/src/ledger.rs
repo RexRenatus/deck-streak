@@ -60,6 +60,8 @@ pub(crate) struct HeldRow {
     pub(crate) tries: i64,
     pub(crate) deferred_at: i64,
     pub(crate) study_day: i64,
+    /// The token of the flush that claimed the row; `None` for a row no flush has claimed.
+    pub(crate) claim: Option<String>,
 }
 
 /// One item of the in-app feed, as the feed route serves it.
@@ -220,50 +222,104 @@ pub(crate) async fn held(connection: &mut SqliteConnection) -> Result<Vec<HeldRo
                 tries: row.tries,
                 deferred_at: row.deferred_at,
                 study_day: row.study_day,
+                claim: None,
             })
         })
         .collect()
 }
 
-/// The abandoned celebrations no recap has named yet, oldest first: their keys and what held them.
+/// One abandoned celebration a recap has yet to name: its row id, its key, what held it, and the
+/// claim it was abandoned under, which is `Some` only when its fate is unknown ("may have been
+/// sent").
+pub(crate) type Abandoned = (i64, String, String, Option<String>);
+
+/// The abandoned celebrations no recap has named yet, oldest first.
 pub(crate) async fn abandoned(
     connection: &mut SqliteConnection,
-) -> Result<Vec<(i64, String, String)>, KernelError> {
+) -> Result<Vec<Abandoned>, KernelError> {
     let rows = sqlx::query!(
-        r#"SELECT id AS "id!", dedupe_key, hold FROM notification_queue
+        r#"SELECT id AS "id!", dedupe_key, hold, claim FROM notification_queue
            WHERE state = 'abandoned' ORDER BY id"#
     )
     .fetch_all(connection)
     .await?;
     Ok(rows
         .into_iter()
-        .map(|row| (row.id, row.dedupe_key, row.hold))
+        .map(|row| (row.id, row.dedupe_key, row.hold, row.claim))
+        .collect())
+}
+
+/// Claims every held celebration for the flush whose token is `claim`: each moves `held ->
+/// sending` in one conditional update that matches only `held` rows, so a row another flush
+/// claimed is never read for sending. The rows it claimed, in the order they were held.
+pub(crate) async fn claim_held(
+    connection: &mut SqliteConnection,
+    claim: &str,
+) -> Result<Vec<HeldRow>, KernelError> {
+    let from = "held";
+    let rows = sqlx::query!(
+        r#"UPDATE notification_queue SET state = 'sending', claim = ?
+           WHERE state = ?
+           RETURNING id AS "id!", kind, dedupe_key, surface, tier_requested, tier_pending, text,
+                     hold, tries, deferred_at, study_day"#,
+        claim,
+        from
+    )
+    .fetch_all(connection)
+    .await?;
+    let mut held = rows
+        .into_iter()
+        .map(|row| {
+            Ok(HeldRow {
+                id: row.id,
+                kind: row.kind,
+                dedupe_key: row.dedupe_key,
+                surface: decoded(Surface::parse(&row.surface))?,
+                tier_requested: decoded(Tier::parse(&row.tier_requested))?,
+                tier_pending: decoded(Tier::parse(&row.tier_pending))?,
+                text: row.text,
+                hold: row.hold,
+                tries: row.tries,
+                deferred_at: row.deferred_at,
+                study_day: row.study_day,
+                claim: Some(claim.to_owned()),
+            })
+        })
+        .collect::<Result<Vec<_>, KernelError>>()?;
+    held.sort_by_key(|row| row.id);
+    Ok(held)
+}
+
+/// The `sending` rows whose claim lapsed at or before `now`: their id, key and claim. A claim is
+/// the instant its flush's lease lapses, so a claimant that is still sending is past its lease
+/// and a claimant that died is gone; either way the push may have reached the owner.
+pub(crate) async fn lapsed_claims(
+    connection: &mut SqliteConnection,
+    now: i64,
+) -> Result<Vec<(i64, String, String)>, KernelError> {
+    let rows = sqlx::query!(
+        r#"SELECT id AS "id!", dedupe_key, claim AS "claim!" FROM notification_queue
+           WHERE state = 'sending' AND CAST(claim AS INTEGER) <= ? ORDER BY id"#,
+        now
+    )
+    .fetch_all(connection)
+    .await?;
+    Ok(rows
+        .into_iter()
+        .map(|row| (row.id, row.dedupe_key, row.claim))
         .collect())
 }
 
 /// Marks the held celebration `id` abandoned: it waits for a recap to name it.
-pub(crate) async fn abandon(connection: &mut SqliteConnection, id: i64) -> Result<(), KernelError> {
-    sqlx::query!(
-        "UPDATE notification_queue SET state = 'abandoned' WHERE id = ?",
-        id
-    )
-    .execute(connection)
-    .await?;
-    Ok(())
-}
-
-/// Holds the celebration `id` again after a failed send, with `tries` failed sends behind it and
-/// held for `hold`; its first deferral time is kept.
-pub(crate) async fn relatch(
+pub(crate) async fn abandon(
     connection: &mut SqliteConnection,
     id: i64,
     tries: i64,
-    hold: &str,
 ) -> Result<(), KernelError> {
     sqlx::query!(
-        "UPDATE notification_queue SET tries = ?, hold = ? WHERE id = ?",
+        "UPDATE notification_queue SET state = 'abandoned', tries = ? \
+         WHERE id = ? AND state = 'held'",
         tries,
-        hold,
         id
     )
     .execute(connection)
@@ -271,7 +327,126 @@ pub(crate) async fn relatch(
     Ok(())
 }
 
-/// Removes the celebration `id` from the queue: delivered, or named by a recap.
+/// Marks the celebration `id`, claimed under `claim`, abandoned, its claim cleared: its fate is
+/// known (expired, over the bound, or its send failed). `false` when the row is no longer this
+/// claim's.
+pub(crate) async fn abandon_claimed(
+    connection: &mut SqliteConnection,
+    id: i64,
+    claim: &str,
+    tries: i64,
+) -> Result<bool, KernelError> {
+    let done = sqlx::query!(
+        "UPDATE notification_queue SET state = 'abandoned', claim = NULL, tries = ? \
+         WHERE id = ? AND state = 'sending' AND claim = ?",
+        tries,
+        id,
+        claim
+    )
+    .execute(connection)
+    .await?;
+    Ok(done.rows_affected() == 1)
+}
+
+/// Marks the `sending` celebration `id` abandoned with its claim kept, which a recap reads as
+/// "may have been sent": its claimant is gone or past its lease, and the push may have reached.
+pub(crate) async fn abandon_lapsed(
+    connection: &mut SqliteConnection,
+    id: i64,
+) -> Result<bool, KernelError> {
+    let to = "abandoned";
+    let done = sqlx::query!(
+        "UPDATE notification_queue SET state = ? WHERE id = ? AND state = 'sending'",
+        to,
+        id
+    )
+    .execute(connection)
+    .await?;
+    Ok(done.rows_affected() == 1)
+}
+
+/// Marks the celebration `id`, still claimed under `claim` by the flush that pushed it, abandoned
+/// with its claim kept, which a recap reads as "may have been sent": its push answered delivered
+/// and the settle after it never committed, so it is never pushed again (SPEC-041 R16b). Its key,
+/// or `None` when the row is no longer this claim's: settled, or named by another flush.
+pub(crate) async fn abandon_pushed(
+    connection: &mut SqliteConnection,
+    id: i64,
+    claim: &str,
+) -> Result<Option<String>, KernelError> {
+    Ok(sqlx::query_scalar!(
+        "UPDATE notification_queue SET state = 'abandoned' \
+         WHERE id = ? AND state = 'sending' AND claim = ? RETURNING dedupe_key",
+        id,
+        claim
+    )
+    .fetch_optional(connection)
+    .await?)
+}
+
+/// Holds the celebration `id`, claimed under `claim`, again after a failed send, with `tries`
+/// failed sends behind it and held for `hold`; its first deferral time is kept. `false` when the
+/// row is no longer this claim's.
+pub(crate) async fn relatch(
+    connection: &mut SqliteConnection,
+    id: i64,
+    claim: &str,
+    tries: i64,
+    hold: &str,
+) -> Result<bool, KernelError> {
+    // `COALESCE(?, claim)` matches the row's own token when one is bound; it is bound `Some` here.
+    let token = Some(claim);
+    let done = sqlx::query!(
+        "UPDATE notification_queue SET state = 'held', claim = NULL, tries = ?, hold = ? \
+         WHERE id = ? AND state = 'sending' AND claim = COALESCE(?, claim)",
+        tries,
+        hold,
+        id,
+        token
+    )
+    .execute(connection)
+    .await?;
+    Ok(done.rows_affected() == 1)
+}
+
+/// Gives every celebration still claimed under `claim` back to the queue, untouched: a flush that
+/// ended before it reached them did not send them. A row the flush pushed is named by
+/// [`abandon_pushed`] first, so it is never given back here.
+pub(crate) async fn release_claims(
+    connection: &mut SqliteConnection,
+    claim: &str,
+) -> Result<(), KernelError> {
+    sqlx::query!(
+        "UPDATE notification_queue SET state = 'held', claim = NULL \
+         WHERE state = 'sending' AND claim = ?",
+        claim
+    )
+    .execute(connection)
+    .await?;
+    Ok(())
+}
+
+/// Removes the celebration `id` from the queue once delivered, when it is still claimed under
+/// `claim`: `false` when another flush abandoned it by name meanwhile.
+pub(crate) async fn settle_claimed(
+    connection: &mut SqliteConnection,
+    id: i64,
+    claim: &str,
+) -> Result<bool, KernelError> {
+    // `COALESCE(?, claim)` matches the row's own token when one is bound; it is bound `Some` here.
+    let token = Some(claim);
+    let done = sqlx::query!(
+        "DELETE FROM notification_queue WHERE id = ? AND state = 'sending' \
+         AND claim = COALESCE(?, claim)",
+        id,
+        token
+    )
+    .execute(connection)
+    .await?;
+    Ok(done.rows_affected() == 1)
+}
+
+/// Removes the celebration `id` from the queue: named by a recap.
 pub(crate) async fn settle(connection: &mut SqliteConnection, id: i64) -> Result<(), KernelError> {
     sqlx::query!("DELETE FROM notification_queue WHERE id = ?", id)
         .execute(connection)
@@ -310,7 +485,7 @@ pub(crate) async fn held_at_or_above(
     let min = min.as_str();
     Ok(sqlx::query_scalar!(
         r#"SELECT COUNT(*) AS "count!: i64" FROM notification_queue
-           WHERE state = 'held' AND kind = ? AND study_day >= ? AND tier_pending >= ?"#,
+           WHERE state IN ('held', 'sending') AND kind = ? AND study_day >= ? AND tier_pending >= ?"#,
         kind,
         since,
         min,
@@ -383,4 +558,60 @@ fn decoded<T>(value: Option<T>) -> Result<T, KernelError> {
             "a notifications row holds a value its column's check refuses".into(),
         ))
     })
+}
+
+#[cfg(test)]
+#[allow(clippy::expect_used, clippy::unwrap_used, missing_docs)]
+mod tests {
+    use deck_streak_kernel::Db;
+
+    use super::{claim_held, relatch, settle_claimed};
+
+    async fn queue_with_one_claimed_row(claim: &str) -> (tempfile::TempDir, Db, i64) {
+        let scratch = tempfile::tempdir().expect("a scratch");
+        let db = Db::open(&scratch.path().join("deckstreak.db"))
+            .await
+            .expect("the database opens");
+        let mut write = db.write().await.expect("a write");
+        sqlx::query(
+            "INSERT INTO notification_queue (kind, dedupe_key, surface, tier_requested, \
+             tier_pending, text, hold, tries, state, deferred_at, study_day, created_at) \
+             VALUES ('celebration', 'level-up:1', 'bot', 'T2', 'T2', 'x', 'quiet', 0, 'held', \
+             1, 1, 1)",
+        )
+        .execute(&mut *write)
+        .await
+        .expect("the item is held");
+        let rows = claim_held(&mut write, claim).await.expect("the claim");
+        assert_eq!(rows.len(), 1, "examined 1 held row, claimed it");
+        write.commit().await.expect("committed");
+        (scratch, db, rows[0].id)
+    }
+
+    #[tokio::test]
+    async fn a_settle_under_another_flushs_token_removes_nothing() {
+        let (_scratch, db, id) = queue_with_one_claimed_row("100").await;
+        let mut write = db.write().await.expect("a write");
+        let stranger = settle_claimed(&mut write, id, "999").await.expect("settle");
+        assert!(!stranger, "a token that is not the claim's settles nothing");
+        let owner = settle_claimed(&mut write, id, "100").await.expect("settle");
+        assert!(owner, "the claim's own token settles the row");
+    }
+
+    #[tokio::test]
+    async fn a_relatch_under_another_flushs_token_changes_nothing() {
+        let (_scratch, db, id) = queue_with_one_claimed_row("100").await;
+        let mut write = db.write().await.expect("a write");
+        let stranger = relatch(&mut write, id, "999", 1, "quiet")
+            .await
+            .expect("relatch");
+        assert!(
+            !stranger,
+            "a token that is not the claim's relatches nothing"
+        );
+        let owner = relatch(&mut write, id, "100", 1, "quiet")
+            .await
+            .expect("relatch");
+        assert!(owner, "the claim's own token relatches the row");
+    }
 }
