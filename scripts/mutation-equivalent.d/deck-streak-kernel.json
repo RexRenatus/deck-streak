@@ -17,6 +17,15 @@
       "evidence": "For ndigits < -308 the kept digit count whole.len() + ndigits is at most 0 (an f64 has at most 309 integer digits), the digits before the first kept one are padding zeros or, at exactly -309 with x >= 1e308, a leading 1, and a leading digit of at most 5 never rounds up, so the text is 0 and the sign is restored: CPython's 0.0 or -0.0. The fixture holds 37 rows at -400 and rows at -320 to -309, all of which the mutant passes. The guard only spares the padding allocation of a huge negative count.",
       "reached_by": "pynum_edges::the_round_of_every_edge_value_is_cpythons_to_the_last_bit",
       "issue": "#540"
+    },
+    {
+      "file": "crates/kernel/src/pynum.rs",
+      "mutant": "replace < with <= in lgamma",
+      "anchor": "if x < 1e-20 {",
+      "reason": "The two forms differ only at x == 1e-20, where the logarithm branch and the Lanczos branch give the same bits.",
+      "evidence": "x < 1e-20 and x <= 1e-20 disagree for exactly one input, 1e-20. At 1e-20 CPython's math.lgamma (its Lanczos branch) and -log(x) are both 0x1.7069e2aa2aa5bp+5 (measured in CPython 3.12), and the fixture row for 1e-20 in pynum_edges.txt passes under the mutant; no other input reaches the boundary differently.",
+      "reached_by": "pynum_edges::the_lgamma_at_the_switch_points_is_cpythons_to_the_last_bit",
+      "issue": "#540"
     }
   ]
 }

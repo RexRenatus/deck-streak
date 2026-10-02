@@ -22,4 +22,4 @@ were proved by the mutation-row verb after the green commit, each killed by its 
 
 Mutation coverage: the tests of `crates/kernel/tests/pynum_edges.rs` (CPython rows in
 `crates/kernel/tests/fixtures/pynum_edges.txt`) were added after the GREEN commit to kill the
-mutants the goldens missed; they pass at the implementation and are not a red-first claim. Round-boundary rows at ndigits -308 for x of 4.9e307 to 9e307 (the `ndigits < -308` guard of `round`) were added the same way, to kill the `<` to `<=` mutant.
+mutants the goldens missed; they pass at the implementation and are not a red-first claim. Round-boundary rows at ndigits -308 for x of 4.9e307 to 9e307 (the `ndigits < -308` guard of `round`) were added the same way, to kill the `<` to `<=` mutant. Rows for `round` of non-finite values, zeros and digit counts past 323 were added to kill the `||` to `&&` mutants of its first guard.
