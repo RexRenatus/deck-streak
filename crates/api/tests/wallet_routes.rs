@@ -281,3 +281,28 @@ async fn the_wallet_and_shop_routes_answer_only_the_owner() {
     assert_eq!(malformed.json(), json!({"reason": "invalid_cursor"}));
     db.close().await;
 }
+
+#[tokio::test]
+async fn a_wallet_that_cannot_be_read_answers_500_with_a_reason_code_alone() {
+    let scratch = tempfile::tempdir().expect("a temporary directory");
+    let (db, app) = app(&scratch).await;
+    let owner = cookie_of(&handshake(&app, OWNER_PAYLOAD).await);
+    let answer = get(&app, WALLET_PATH, Some(&owner)).await;
+    assert_eq!(answer.status, StatusCode::OK, "{}", answer.body);
+
+    // The database goes away under the route: the read fails, and the body names the reason alone,
+    // so neither the error nor anything of the wallet reaches the screen.
+    db.close().await;
+    let failed = get(&app, WALLET_PATH, Some(&owner)).await;
+    assert_eq!(
+        failed.status,
+        StatusCode::INTERNAL_SERVER_ERROR,
+        "{}",
+        failed.body
+    );
+    assert_eq!(
+        failed.headers.get(CONTENT_TYPE).map(HeaderValue::as_bytes),
+        Some(&b"application/json"[..])
+    );
+    assert_eq!(failed.json(), json!({"reason": "wallet_unreadable"}));
+}

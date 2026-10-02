@@ -22,7 +22,8 @@ use deck_streak_coordination::recompute::xp::XpStep;
 use deck_streak_coordination::recompute::{
     DayEvaluation, DayStep, Evaluation, Fold, FoldInput, FoldReport, Phase,
 };
-use deck_streak_economy::wallet::SqliteWallet;
+use deck_streak_coordination::wallet_view::wallet_view;
+use deck_streak_economy::wallet::{DebitAnswer, DepositAnswer, SqliteWallet};
 use deck_streak_ingest::reader::{Card, CollectionData, Review};
 use deck_streak_kernel::{Db, KernelError, PortFuture, StudyDay, StudyDayRule, Track, UtcMillis};
 use deck_streak_progression::consistency::day_base_xp;
@@ -466,4 +467,69 @@ async fn the_mint_commits_or_rolls_back_with_the_days_write() {
         judged.push(fail);
     }
     assert_eq!(examined("folds", judged), vec![true, false]);
+}
+
+#[test]
+fn the_fold_reports_the_mint_step_by_its_name_in_the_coin_mint_phase() {
+    let mut fold = Fold::default();
+    fold.register(Phase::CoinMint, Box::new(MintStep))
+        .expect("the mint step is the coin mint phase's");
+    assert_eq!(
+        fold.steps(),
+        vec![(Phase::CoinMint, "economy.coin_mint")],
+        "the fold's report names the mint step as the daemon's wiring registers it"
+    );
+}
+
+#[tokio::test]
+async fn the_wallet_view_leaves_what_the_days_debits_spare_of_its_loss_cap() {
+    let scratch = TempDir::new().expect("a scratch directory");
+    let db = database(&scratch).await;
+    let wallet = SqliteWallet::new(db.clone());
+    let now = UtcMillis::from_epoch_millis(at(D0, 9));
+    // The wallet holds 100 when the day starts, so the day may lose 30 of it.
+    for (number, reference, amount) in [(D0 - 2, "p1", 60), (D0 - 1, "p2", 40)] {
+        assert_eq!(
+            wallet
+                .deposit(day(number), "payout", reference, amount, now)
+                .await
+                .expect("a deposit"),
+            DepositAnswer::Deposited(amount)
+        );
+    }
+    assert_eq!(
+        wallet
+            .debit_floored(day(D0), "fine", "f1", 5, now)
+            .await
+            .expect("a fine"),
+        DebitAnswer::Debited {
+            paid: 5,
+            forgiven: false
+        }
+    );
+
+    let view = wallet_view(&db, day(D0), None).await.expect("the view");
+    assert_eq!(
+        (view.balance, view.loss_cap, view.loss_cap_left),
+        (95, 30, 25),
+        "a fine of 5 leaves 25 of the day's cap of 30"
+    );
+
+    // Debits past the cap leave nothing of it, never less than nothing.
+    assert_eq!(
+        wallet
+            .debit_floored(day(D0), "fine", "f2", 35, now)
+            .await
+            .expect("a second fine"),
+        DebitAnswer::Debited {
+            paid: 35,
+            forgiven: false
+        }
+    );
+    let view = wallet_view(&db, day(D0), None).await.expect("the view");
+    assert_eq!(
+        (view.balance, view.loss_cap, view.loss_cap_left),
+        (60, 30, 0),
+        "debits of 40 leave none of the day's cap of 30"
+    );
 }
