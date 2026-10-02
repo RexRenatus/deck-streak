@@ -70,5 +70,12 @@
   "dark_fields_cold": "There was nothing to check yet.",
   "dark_fields_item": "{noteType}: {field} ({notes} reviewed notes)",
   "dark_fields_more": "{count} more not shown.",
-  "dark_fields_unparseable": "Templates that could not be verified: {names}."
+  "dark_fields_unparseable": "Templates that could not be verified: {names}.",
+  "wallet_balance": "Coins: {balance}",
+  "wallet_title": "Wallet",
+  "wallet_loss_cap": "Today's loss limit: {left} of {cap} left",
+  "wallet_movements": "Coin movements",
+  "wallet_none": "No coin movements yet.",
+  "wallet_older": "Show older movements",
+  "wallet_source_mint": "Coins earned by study"
 }

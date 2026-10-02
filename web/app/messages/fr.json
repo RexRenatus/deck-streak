@@ -4,5 +4,12 @@
   "ladder_region": "Célébrations",
   "ladder_opening": "Ouverture…",
   "ladder_dice": "Un lancer de dé",
-  "ladder_dismiss": "Fermer"
+  "ladder_dismiss": "Fermer",
+  "wallet_balance": "Pièces : {balance}",
+  "wallet_title": "Porte-monnaie",
+  "wallet_loss_cap": "Limite de perte du jour : {left} sur {cap} restantes",
+  "wallet_movements": "Mouvements de pièces",
+  "wallet_none": "Aucun mouvement de pièces pour l’instant.",
+  "wallet_older": "Afficher les mouvements plus anciens",
+  "wallet_source_mint": "Pièces gagnées en étudiant"
 }

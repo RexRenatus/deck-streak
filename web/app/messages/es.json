@@ -4,5 +4,12 @@
   "ladder_region": "Celebraciones",
   "ladder_opening": "Abriendo…",
   "ladder_dice": "Una tirada de dado",
-  "ladder_dismiss": "Cerrar"
+  "ladder_dismiss": "Cerrar",
+  "wallet_balance": "Monedas: {balance}",
+  "wallet_title": "Monedero",
+  "wallet_loss_cap": "Límite de pérdida de hoy: quedan {left} de {cap}",
+  "wallet_movements": "Movimientos de monedas",
+  "wallet_none": "Aún no hay movimientos de monedas.",
+  "wallet_older": "Mostrar movimientos anteriores",
+  "wallet_source_mint": "Monedas ganadas estudiando"
 }

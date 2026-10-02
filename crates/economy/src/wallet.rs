@@ -96,6 +96,32 @@ pub enum MintAnswer {
     Negative,
 }
 
+/// How many movements one page of the wallet's history holds (R15; ADR-315 ruling 3).
+pub const MOVEMENTS_PAGE: usize = 20;
+
+/// One coin movement as the wallet's history shows it (R15).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Movement {
+    /// The movement's row: the cursor a later page starts after.
+    pub id: i64,
+    /// The study day the movement belongs to.
+    pub day: StudyDay,
+    /// What moved the coins: `mint`, a fine, the shop.
+    pub source: String,
+    /// The signed whole coins it moved.
+    pub delta: i64,
+}
+
+/// One page of the wallet's history, newest first (R15).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct MovementsPage {
+    /// The page's movements: by study day, newest first, then in the reverse of the order they
+    /// were written.
+    pub movements: Vec<Movement>,
+    /// The last movement shown, when an older one exists: the next page's `before`.
+    pub next: Option<i64>,
+}
+
 /// The coin ledger in the service's own database: the wallet's ports.
 #[derive(Clone, Debug)]
 pub struct SqliteWallet {
@@ -137,6 +163,20 @@ impl SqliteWallet {
     /// [`KernelError::Database`] when the read fails.
     pub async fn debits_for_day(&self, day: StudyDay) -> Result<i64, KernelError> {
         Ok(debited_on_day(self.db.reader(), day).await?)
+    }
+
+    /// One page of the movements, newest first, read on the pool for display (R15; ADR-315 ruling
+    /// 3): the first page when `before` is `None`, else the page after the movement `before` names.
+    ///
+    /// # Errors
+    ///
+    /// [`KernelError::Database`] when the read fails.
+    pub async fn movements(&self, before: Option<i64>) -> Result<MovementsPage, KernelError> {
+        let _ = before;
+        Ok(MovementsPage {
+            movements: Vec::new(),
+            next: None,
+        })
     }
 
     /// Deposits `amount` once on its key, in one write ([`deposit_on`]).

@@ -610,6 +610,7 @@ mod tests {
     use deck_streak_coordination::recompute::analytics_step::ANALYTICS_STEP;
     use deck_streak_coordination::recompute::badges::BADGES_STEP;
     use deck_streak_coordination::recompute::day_bonuses::DAY_BONUSES_STEP;
+    use deck_streak_coordination::recompute::mint::MINT_STEP;
     use deck_streak_coordination::recompute::records::RECORDS_STEP;
     use deck_streak_coordination::recompute::streaks::STREAKS_STEP;
     use deck_streak_coordination::recompute::xp::XP_STEP;
@@ -691,6 +692,7 @@ mod tests {
                 (Phase::BaseXp, XP_STEP),
                 (Phase::StreaksAndGovernor, STREAKS_STEP),
                 (Phase::DerivedBonuses, DAY_BONUSES_STEP),
+                (Phase::CoinMint, MINT_STEP),
                 (Phase::Awards, BADGES_STEP),
                 (Phase::Awards, RECORDS_STEP),
             ]
