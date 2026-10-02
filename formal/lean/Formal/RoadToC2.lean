@@ -1,8 +1,8 @@
--- @phx covers crates/curriculum/src/progress.rs anchor=band_step digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/curriculum/src/progress.rs anchor=course_progress digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/curriculum/src/progress.rs anchor=parse_unit digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/curriculum/src/law.rs anchor=mastery_pillar digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/coordination/src/recompute/progress.rs anchor=record_progress digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+-- @phx covers crates/curriculum/src/progress.rs anchor=band_step digest=sha256:e36e7f81009accd4bb06b3ea20f8cdbb59d44de1654869c9b81fa68d6173ef59
+-- @phx covers crates/curriculum/src/progress.rs anchor=course_progress digest=sha256:d7ed52f1d7617e92289724bef4baf6c96e69c7335fc31a650aecb20159a4e788
+-- @phx covers crates/curriculum/src/progress.rs anchor=parse_unit digest=sha256:fa38ae082b21e74544ac15bfea44a980118150795466f9e82f1e128500711f24
+-- @phx covers crates/curriculum/src/law.rs anchor=mastery_pillar digest=sha256:fc81b65561a36ee22789383953b83520a5330cd9567bf7d73a001befe08d2660
+-- @phx covers crates/coordination/src/recompute/progress.rs anchor=record_progress digest=sha256:12f49fc092311f2dc7d07dcac4f0dd424ead54bb691054e029621c8782c6028e
 -- @phx vectors formal/vectors/road-to-c2.jsonl
 -- @phx cites #85
 -- @phx theorem the_current_band_is_a1_or_the_end_of_the_run_from_a1 ramp=report
