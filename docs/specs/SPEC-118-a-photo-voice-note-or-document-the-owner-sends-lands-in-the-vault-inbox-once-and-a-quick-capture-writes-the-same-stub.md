@@ -43,7 +43,9 @@ R1. `vault::inbox::stem(kind, unique, when)` is `<UTC date of when>-<kind>-<safe
     safe unique is `unique` with every character outside `[A-Za-z0-9_-]` removed, cut to 32
     characters, or `capture` when that leaves nothing (`vault_bridge.py:save_inbox_capture`,
     `_UNIQUE_SAFE`; golden `inbox_capture_stub`). An extension without a leading dot gains one, and
-    an empty one reads `.bin`.
+    an empty one reads `.bin`. An attachment whose extension is `md`, in any case, is named
+    `<stem>.attachment.<extension>`, so it never takes its stub's name `<stem>.md`: a departure
+    from the predecessor, whose stub replaced such a document (ADR-118's amendment; A23).
 R2. A Telegram capture's stub has exactly the predecessor's shape: the frontmatter `status:
     captured`, `source: telegram`, `kind`, `captured` (the UTC instant to the second, with its
     offset), `attachment` and `tags: [inbox, telegram-capture]`, in that order; then the line
@@ -133,6 +135,7 @@ R14. CHARTER 10's eleven anti-goals bind this SPEC as one block; the one it touc
 | A20 | the screen sends the text, the chosen kind and one capture id per capture | `sends the text, the kind and one capture id` |
 | A21 | the screen shows the saved name, or its failure line on 503 | `shows the saved name or the failure line` |
 | A22 | with `DECKSTREAK_VAULT_LAYOUT` unset the vendored layout is in force, and with it set the owner's is | `the_layout_in_force_is_the_owners_or_the_default` |
+| A23 | an attachment never takes its stub's name, and its bytes survive the stub, for every extension | `an_md_attachment_never_takes_its_stubs_name`, `every_extension_keeps_its_bytes_apart_from_the_stub` |
 
 ```acceptance
 A1: cargo test -p deck-streak-vault --test inbox_capture -- --exact the_stub_and_stem_match_the_predecessors_golden
@@ -149,6 +152,8 @@ A19: cargo test -p deck-streak-vault --test inbox_capture -- --exact inbox_captu
 A20: pnpm exec vitest run web/app/src/lib/capture/QuickCapture.test.ts -t "sends the text, the kind and one capture id"
 A21: pnpm exec vitest run web/app/src/lib/capture/QuickCapture.test.ts -t "shows the saved name or the failure line"
 A22: cargo test -p deck-streak-vault --test layout_in_force -- --exact the_layout_in_force_is_the_owners_or_the_default
+A23: cargo test -p deck-streak-vault --test inbox_capture -- --exact an_md_attachment_never_takes_its_stubs_name
+A23: cargo test -p deck-streak-vault --test inbox_capture -- --exact every_extension_keeps_its_bytes_apart_from_the_stub
 ```
 
 ## 3a. What the box run judges
@@ -205,7 +210,7 @@ V1b: A14: cargo test -p deck-streak-bot --test media_capture -- --exact media_is
 | `.env.example` | repo | changed: `DECKSTREAK_VAULT_LAYOUT`, by name, unset |
 | `crates/vault/src/data_rights.rs` | `deck-streak-vault` | changed: `inbox_captures` exported and erased (the port SPEC-110 adds) |
 | `crates/vault/src/lib.rs` | `deck-streak-vault` | changed: the modules |
-| `crates/vault/tests/inbox_capture.rs` | `deck-streak-vault` | added: A1 to A4, A19 |
+| `crates/vault/tests/inbox_capture.rs` | `deck-streak-vault` | added: A1 to A4, A19, A23 |
 | `crates/vault/tests/atomic.rs` | `deck-streak-vault` | changed: A5, A6 |
 | `migrations/011801_vault_inbox_captures.sql` | `deck-streak-vault` | added |
 | `crates/coordination/src/inbox_capture.rs` | `deck-streak-coordination` | added: the one use case both surfaces call |
@@ -234,6 +239,8 @@ V1b: A14: cargo test -p deck-streak-bot --test media_capture -- --exact media_is
 | `docs/specs/SPEC-118-a-photo-voice-note-or-document-the-owner-sends-lands-in-the-vault-inbox-once-and-a-quick-capture-writes-the-same-stub.md` | docs | moved from `docs/specs/planned/` |
 | `docs/schematics/inbox-capture-and-curation.md` | docs | added by the W6 architect turn; this delivery corrects it only where the code proves it wrong |
 | `docs/red-first/SPEC-118.md` | docs | added |
+| `formal/tla/CaptureOnce/` | formal | added: the model of R3 and R5, with its witnesses |
+| `docs/decisions/ADR-118-a-capture-is-claimed-by-its-stem-and-written-attachment-first-a-document-keeps-only-a-plain-extension-and-an-erase-never-deletes-a-vault-file.md` | docs | changed: the amendment naming an `md` attachment apart from its stub |
 | `crates/bot/src/commands.rs` | `deck-streak-bot` | changed: `Commands` gains the capture use case |
 | `crates/daemon/src/role_bot.rs` | `deck-streak-daemon` | changed: the bot role hands the capture use case to its commands at start |
 | `crates/daemon/src/role_api.rs` | `deck-streak-daemon` | changed: the api role hands the capture use case to `ApiState` at start (POST /api/inbox/captures) |

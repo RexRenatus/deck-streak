@@ -76,6 +76,39 @@ SPEC-118's A2 to A4, A8 to A10 and A19, and its rows S11804 to S11806 and S11809
 - A Bot API that raises its download limit: the cap moves with it, and the streamed write already
   bounds memory.
 
+## Amendment (V1a): an attachment never takes its stub's name
+
+The predecessor names a capture's attachment `<stem><extension>` and its stub `<stem>.md`
+(`vault_bridge.py:save_inbox_capture` at `27ee2bc`). A document whose extension is `md` therefore
+has its stub's own name, and the stub's write replaced the document: the owner lost the only copy of
+what they sent, and the stub's `[[...]]` named the stub itself. SPEC-118 R7 keeps `md`, which
+matches `^[A-Za-z0-9]{1,10}$`, so a Markdown document sent to the bot reaches that path. Parity does
+not excuse a data loss production can reach.
+
+The stub stays `<stem>.md` for every capture. An attachment whose extension equals `md` in any case
+(a synced vault may sit on a filesystem that ignores case) is named `<stem>.attachment.<extension>`,
+its extension kept as it came, and the stub's `attachment:` key and its `[[...]]` name it. No stem
+holds a dot, because its day, its kind and its safe unique hold only digits, ASCII letters, `-` and
+`_`. So every stub name holds exactly one dot and this attachment's name holds two, and no stub
+name equals it in any case. Every other attachment keeps the predecessor's name, and the golden
+`inbox_capture_stub` holds those at parity. SPEC-118's A23 proves the departure, and
+`formal/tla/CaptureOnce/` states it as `StubNeverNamesTheAttachment`, with the stub's write modelled
+as replacing whatever its file held.
+
+### What the attachment's name was chosen against
+
+- Read an `md` extension as `.bin`: rejected because the document loses its extension and stops
+  opening as Markdown in the owner's vault.
+- Keep the predecessor's names: rejected because the stub's write replaces the owner's document, a
+  data loss a Markdown document from the bot reaches.
+- Name it `<stem>-attachment.md`: rejected because that is itself the stub name of the stem whose
+  unique ends in `-attachment`, so a later capture's stub could replace it.
+- Rename the stub instead: rejected because the curator and the owner's vault find a capture by its
+  stub at `<stem>.md`, whatever its kind (SPEC-116).
+
+What would make this wrong: a stem that can hold a dot. The second dot would then no longer set the
+attachment apart from every stub name, and the name would need another separator.
+
 ## More Information
 
 SPEC-118, SPEC-042 R1 and R2, SPEC-116 (the curator), SPEC-021 (export and erase), and the W6
