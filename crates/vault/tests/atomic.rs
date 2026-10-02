@@ -8,6 +8,7 @@
 // prints its examined count on purpose.
 #![allow(clippy::expect_used, clippy::print_stdout)]
 
+use std::collections::BTreeMap;
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -347,6 +348,227 @@ fn no_vault_write_reaches_a_journal_folder() {
         "an inbox under the journal is refused: {refused:?}"
     );
     assert_eq!(VaultError::JournalRefused.to_string(), "journal_refused");
+}
+
+/// The bytes every member of the linked-path population tries to land.
+const PLANTED: &[u8] = b"planted bytes";
+
+/// The layout's journal folders in the linked-path population; `Mirror` is a link to `Diary`.
+const LINKED_JOURNAL: [&str; 4] = ["Journal", "Notes/Daily", "Jöurnal", "Mirror"];
+
+/// Where a journal folder of [`LINKED_JOURNAL`] physically is, as a vault-relative prefix.
+const PHYSICAL_JOURNAL: [&str; 4] = ["Journal/", "Notes/Daily/", "Jöurnal/", "Diary/"];
+
+/// The folders each member's vault holds before it runs.
+const LINKED_FOLDERS: [&str; 17] = [
+    "90-Inbox/sub",
+    "Journal/sub/deeper",
+    "Notes/Daily/2026",
+    "Notes/DailyX",
+    "Jöurnal",
+    "JöURNAL",
+    "journal",
+    "JOURNAL",
+    "JoUrNaL/sub",
+    "notes/daily",
+    "NOTES/Daily",
+    "Journals",
+    "Journ",
+    "JournalX",
+    "11-Drills",
+    "12-Readings/Journal",
+    "Diary",
+];
+
+/// Each target of the linked-path population, relative to the vault root, and whether it reaches a
+/// journal folder: the folder itself, a file in it, another ASCII case, a `.` or `..`, a doubled
+/// slash, and a link into it; and, reaching none, the inbox, a sibling whose name starts the same,
+/// the journal's parent, the root, a link out of it and a folder of the same name elsewhere. Each
+/// member's vault holds three links: `90-Inbox/to-journal` to `Journal`, `Journal-link` to
+/// `90-Inbox`, and `Mirror` to `Diary`.
+const LINKED_TARGETS: [(&str, bool); 37] = [
+    ("Journal", true),
+    ("Journal/", true),
+    ("Journal/x.md", true),
+    ("Journal/sub/x.md", true),
+    ("Journal/sub/deeper/x.md", true),
+    ("Notes/Daily", true),
+    ("Notes/Daily/x.md", true),
+    ("Notes/Daily/2026/x.md", true),
+    ("journal/x.md", true),
+    ("JOURNAL/x.md", true),
+    ("JoUrNaL/sub/x.md", true),
+    ("notes/daily/x.md", true),
+    ("NOTES/Daily/x.md", true),
+    ("Jöurnal/x.md", true),
+    ("JöURNAL/x.md", true),
+    ("90-Inbox/../Journal/x.md", true),
+    ("90-Inbox/../../vault/Journal/x.md", true),
+    ("Notes/../Notes/Daily/x.md", true),
+    ("./Journal/x.md", true),
+    ("Journal/./x.md", true),
+    ("Journal//x.md", true),
+    ("Journal/sub/../x.md", true),
+    ("90-Inbox/to-journal/x.md", true),
+    ("Mirror/x.md", true),
+    ("Diary/x.md", true),
+    ("90-Inbox/x.md", false),
+    ("90-Inbox/sub/x.md", false),
+    ("Journal/../90-Inbox/x.md", false),
+    ("Journals/x.md", false),
+    ("Journ/x.md", false),
+    ("JournalX/x.md", false),
+    ("Notes/x.md", false),
+    ("Notes/DailyX/x.md", false),
+    ("x.md", false),
+    ("Journal-link/x.md", false),
+    ("11-Drills/x.md", false),
+    ("12-Readings/Journal/x.md", false),
+];
+
+/// How a member of the linked-path population reaches its target.
+#[derive(Clone, Copy, Debug)]
+enum Reach {
+    /// The atomic writer.
+    Write,
+    /// The streamed writer, landed.
+    Stream,
+    /// The guard's own rename, as a caller that skips the writer makes it.
+    Rename,
+}
+
+/// Every regular file under `root`, by its path relative to `root`, with its bytes. The walk never
+/// follows a link, so each file appears once, where it physically is.
+fn tree(root: &Path) -> BTreeMap<String, Vec<u8>> {
+    let mut files = BTreeMap::new();
+    let mut folders = vec![root.to_path_buf()];
+    while let Some(folder) = folders.pop() {
+        for entry in fs::read_dir(&folder).expect("a folder of the vault") {
+            let path = entry.expect("an entry").path();
+            let kind = fs::symlink_metadata(&path).expect("an entry's kind");
+            if kind.is_dir() {
+                folders.push(path);
+            } else if kind.is_file() {
+                let name = path
+                    .strip_prefix(root)
+                    .expect("a path under the vault")
+                    .to_string_lossy()
+                    .into_owned();
+                files.insert(name, fs::read(&path).expect("a file's bytes"));
+            }
+        }
+    }
+    files
+}
+
+/// Runs one member in a vault of its own, guarded as the capture's use case guards it: the layout's
+/// journal folders under the resolved root. `None` when the member answered as expected: refused
+/// with the vault unchanged, or landed once, outside every journal folder.
+fn linked_member(reach: Reach, target_text: &str, reaches_journal: bool) -> Option<String> {
+    let vault = tempfile::tempdir().expect("a temporary vault");
+    let root = vault.path().join("vault");
+    for folder in LINKED_FOLDERS {
+        fs::create_dir_all(root.join(folder)).expect("a folder of the vault");
+    }
+    std::os::unix::fs::symlink("../Journal", root.join("90-Inbox/to-journal"))
+        .expect("a link into the journal");
+    std::os::unix::fs::symlink("90-Inbox", root.join("Journal-link"))
+        .expect("a link out of the journal");
+    std::os::unix::fs::symlink("Diary", root.join("Mirror")).expect("the journal's link");
+    let resolved = fs::canonicalize(&root).expect("the vault root resolves");
+    let layout = LayoutInForce {
+        inbox: "90-Inbox".to_owned(),
+        journal: LINKED_JOURNAL.map(str::to_owned).to_vec(),
+    };
+    let guard = JournalGuard::new(RealFs, layout.journal_paths(&resolved));
+    let target = PathBuf::from(format!("{}/{target_text}", resolved.display()));
+    let source = resolved.join("90-Inbox/source.bin");
+    if matches!(reach, Reach::Rename) {
+        fs::write(&source, PLANTED).expect("the file a rename moves");
+    }
+    let before = tree(&resolved);
+    let answer = match reach {
+        Reach::Write => match atomic::write(&guard, &target, PLANTED) {
+            Err(VaultError::JournalRefused) => Ok(true),
+            Ok(()) => Ok(false),
+            Err(other) => Err(format!("{other:?}")),
+        },
+        Reach::Stream => match atomic::stream(&guard, &target) {
+            Err(VaultError::JournalRefused) => Ok(true),
+            Ok(mut stream) => stream
+                .write(PLANTED)
+                .and_then(|()| stream.land())
+                .map(|()| false)
+                .map_err(|other| format!("{other:?}")),
+            Err(other) => Err(format!("{other:?}")),
+        },
+        Reach::Rename => match guard.rename(&source, &target) {
+            Err(error)
+                if error.kind() == io::ErrorKind::PermissionDenied
+                    && error.to_string().contains("journal") =>
+            {
+                Ok(true)
+            }
+            Ok(()) => Ok(false),
+            Err(other) => Err(format!("{other:?}")),
+        },
+    };
+    let after = tree(&resolved);
+    let refused = match answer {
+        Ok(refused) => refused,
+        Err(other) => return Some(format!("{reach:?} {target_text}: answered {other}")),
+    };
+    if refused != reaches_journal {
+        return Some(format!(
+            "{reach:?} {target_text}: refused {refused}, expected {reaches_journal}"
+        ));
+    }
+    if refused {
+        return (after != before)
+            .then(|| format!("{reach:?} {target_text}: the refusal changed the vault"));
+    }
+    let added: Vec<&String> = after
+        .keys()
+        .filter(|name| !before.contains_key(*name))
+        .collect();
+    let landed_once = match added.as_slice() {
+        [name] => {
+            after[*name].as_slice() == PLANTED
+                && !PHYSICAL_JOURNAL
+                    .iter()
+                    .any(|journal| name.starts_with(journal))
+        }
+        _ => false,
+    };
+    (!landed_once).then(|| format!("{reach:?} {target_text}: added {added:?}"))
+}
+
+#[test]
+fn a_write_stream_or_rename_into_a_journal_folder_through_a_link_is_refused() {
+    let members: Vec<(Reach, &str, bool)> = [Reach::Write, Reach::Stream, Reach::Rename]
+        .into_iter()
+        .flat_map(|reach| LINKED_TARGETS.map(|(target, journal)| (reach, target, journal)))
+        .collect();
+    let members = examined("member(s) of the linked-path population", members);
+    let journal = members.iter().filter(|(_, _, journal)| *journal).count();
+    assert_eq!(
+        (members.len(), journal),
+        (111, 75),
+        "three ways into each of 37 targets, 25 of them in a journal folder"
+    );
+    let mismatches: Vec<String> = members
+        .iter()
+        .filter_map(|&(reach, target, journal)| linked_member(reach, target, journal))
+        .collect();
+    println!(
+        "examined {} members, mismatches {}",
+        members.len(),
+        mismatches.len()
+    );
+    assert!(
+        mismatches.is_empty(),
+        "a write, a stream or a rename reached past the journal guard: {mismatches:#?}"
+    );
 }
 
 #[test]

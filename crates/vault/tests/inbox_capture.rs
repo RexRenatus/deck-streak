@@ -23,7 +23,7 @@ use deck_streak_vault::capture_store::INBOX_CAPTURES_TABLE;
 use deck_streak_vault::data_rights::VaultDataRights;
 use deck_streak_vault::inbox::{self, Capture, CaptureKind, Captured, Inbox, Source};
 use deck_streak_vault::{
-    DirEntry, EntryKind, LayoutInForce, RealFs, VaultError, VaultFile, VaultFs,
+    DirEntry, EntryKind, JournalGuard, LayoutInForce, RealFs, VaultError, VaultFile, VaultFs,
 };
 
 /// One day, in milliseconds.
@@ -853,4 +853,49 @@ fn an_inbox_through_a_link_resolves_inside_the_root_or_is_refused() {
             target.display()
         );
     }
+}
+
+#[tokio::test]
+async fn an_inbox_that_is_a_journal_folder_through_a_link_takes_no_capture() {
+    let (_dir, db, root) = setup().await;
+    fs::create_dir(root.join("Diary")).expect("the folder the journal names through its link");
+    std::os::unix::fs::symlink("Diary", root.join("Mirror")).expect("the journal's link");
+    let resolved = fs::canonicalize(&root).expect("the vault root resolves");
+    let layout = LayoutInForce {
+        inbox: "Diary".to_owned(),
+        journal: vec!["Mirror".to_owned()],
+    };
+    let guard = JournalGuard::new(RealFs, layout.journal_paths(&resolved));
+
+    // The inbox is the journal's folder, reached through the journal's link: refused.
+    let located = Inbox::locate(&guard, &resolved, &layout);
+    assert!(
+        matches!(located, Err(VaultError::JournalRefused)),
+        "an inbox that is a journal folder through a link is refused: {located:?}"
+    );
+
+    // An inbox located with no journal in force still takes no capture through the guard.
+    let unguarded = LayoutInForce {
+        journal: Vec::new(),
+        ..layout.clone()
+    };
+    let inbox = Inbox::locate(&RealFs, &resolved, &unguarded).expect("the inbox, unguarded");
+    let capture = miniapp(
+        CaptureKind::Journal,
+        "reach0001",
+        at(DAY, HOUR_MS),
+        "a journal line",
+    );
+    let answer = inbox::capture(&db, &guard, &inbox, &capture, None).await;
+    assert!(
+        matches!(answer, Err(VaultError::JournalRefused)),
+        "a capture into a journal folder through a link is refused: {answer:?}"
+    );
+    assert_eq!(files(&root.join("Diary")), Vec::<String>::new());
+    let rows: i64 = sqlx::query_scalar("SELECT count(*) FROM inbox_captures")
+        .fetch_one(db.reader())
+        .await
+        .expect("the capture rows");
+    assert_eq!(rows, 0, "a refused capture records no row");
+    db.close().await;
 }
