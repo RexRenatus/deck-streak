@@ -145,6 +145,28 @@
       "erase": "delete"
     },
     {
+      "id": "course-progress",
+      "data": "each course's progress at the last recompute: its name and flag, its mastery, its current band and unit, its mature and total cards and each band's counts; and each band a course reached: the study day, whether it was the course's first sighting, and when its celebration was sent",
+      "source": "derived",
+      "stores": ["language_progress.*", "band_milestones.*"],
+      "purpose": "showing the owner's progress toward C2 in each course, and paying and celebrating each band reached once",
+      "lawful_basis": "contract",
+      "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "delete"
+    },
+    {
+      "id": "law-dues",
+      "data": "the law track's review cards overdue and due on the study day at the last recompute, and that study day",
+      "source": "derived",
+      "stores": ["law_dues.*"],
+      "purpose": "showing the owner's law dues in the law block, and showing them as pending before the first count",
+      "lawful_basis": "contract",
+      "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "delete"
+    },
+    {
       "id": "notification-decisions",
       "data": "every decision the notification router made about an occasion: its opaque key, its kind, the surface, whether it was sent, deferred or withheld and why, the tier asked for and the tier rendered, and the study day",
       "source": "derived",

@@ -356,6 +356,17 @@ def progress_cases(rng):
             ),
         )
     )
+    # A unit beyond 32 bits sits in no band, even beside a band that starts at unit 0: its two
+    # mature cards are not counted, and only the young card of unit 1 is.
+    delta = {
+        "deck_root": "Delta Course",
+        "code": "de",
+        "name": "Delta",
+        "flag": "\U0001f3f3",
+        "bands": {"A1": [0, 4], "A2": [5, 9]},
+    }
+    beyond = case_of([("Delta Course", 2**32, solid(2)), ("Delta Course", 1, solid(1, "young"))], courses=[delta])
+    found.append(("unit_beyond_u32", beyond))
     # Cards in a filtered deck: the home deck decides.
     plan = case_of([(alpha, 3, solid(2))])
     plan["decks"]["999"] = "Filtered"

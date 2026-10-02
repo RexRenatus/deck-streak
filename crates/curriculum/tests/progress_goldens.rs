@@ -91,6 +91,13 @@ fn the_unit_parse_matches_the_predecessors_golden() {
         assert_eq!(ours, case.output.as_i64(), "the unit of {name:?}");
     });
     assert!(examined.count > 0);
+    // A unit beyond u32 is no unit: the predecessor's integer falls in no configured band, so its
+    // card is not counted (the course progress golden's `unit_beyond_u32` case).
+    assert_eq!(
+        progress::parse_unit("Unit 4294967296"),
+        None,
+        "a unit beyond u32 is no unit"
+    );
 }
 
 /// The courses file text for a golden's courses.

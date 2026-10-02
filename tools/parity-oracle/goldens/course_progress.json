@@ -1949,6 +1949,110 @@
       ]
     },
     {
+      "class": "unit_beyond_u32",
+      "input": {
+        "cards": [
+          {
+            "ctype": 2,
+            "did": 10,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 10,
+            "ivl": 30,
+            "queue": 2
+          },
+          {
+            "ctype": 2,
+            "did": 11,
+            "ivl": 3,
+            "queue": 2
+          }
+        ],
+        "courses": [
+          {
+            "bands": {
+              "A1": [
+                0,
+                4
+              ],
+              "A2": [
+                5,
+                9
+              ]
+            },
+            "code": "de",
+            "deck_root": "Delta Course",
+            "flag": "\ud83c\udff3",
+            "name": "Delta"
+          }
+        ],
+        "decks": {
+          "10": "Delta Course\u001fUnit 4294967296 \u2014 Part",
+          "11": "Delta Course\u001fUnit 01 \u2014 Part"
+        },
+        "now_sec": 1700000000
+      },
+      "output": [
+        {
+          "bands": [
+            {
+              "achieved": false,
+              "band": "A1",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 1
+            },
+            {
+              "achieved": false,
+              "band": "A2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "B1",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "B2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "C1",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            },
+            {
+              "achieved": false,
+              "band": "C2",
+              "mature": 0,
+              "pct": 0.0,
+              "total": 0
+            }
+          ],
+          "code": "de",
+          "current_band": "A1",
+          "current_unit": null,
+          "flag": "\ud83c\udff3",
+          "mastery_pct": 0.0,
+          "mature_cards": 0,
+          "name": "Delta",
+          "total_cards": 1
+        }
+      ]
+    },
+    {
       "class": "home_deck",
       "input": {
         "cards": [
@@ -4890,7 +4994,7 @@
   "kind": "adapter",
   "note": "Patches progress.LANGUAGE_DECKS and progress.CEFR_UNIT_BANDS with the case's synthetic courses and unit bands, builds the cards and synthetic deck names, and returns each course's fields and bands; cases drawn under CPython 3.12.12.",
   "registry": "tools/parity-oracle/registry/spec_077.py",
-  "registry_sha256": "91021d9dc71e71fbcce2e8677458fc10d998a56914a1843203efd29163d8f9ca",
+  "registry_sha256": "a4df214341b4c7fb76da5699faf932c96faac65eef67d5945590c876aaf92946",
   "schema": "phx.parity-golden.v1",
   "seed": 20,
   "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"

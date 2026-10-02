@@ -6,13 +6,19 @@
 //! badge marked, because the band-up's own celebration announces it. The step pays no XP: the
 //! band-up's grant is phase 4's, so the day's base is final before the mint reads it.
 
+use deck_streak_curriculum::store;
 use deck_streak_kernel::{Courses, KernelError, PortFuture};
+use deck_streak_progression::badges::award::{Award, AwardError, NewBadge, award};
 use sqlx::SqliteConnection;
 
-use super::{DayEvaluation, DayStep, Phase};
+use super::{DayEvaluation, DayStep, Evaluation, Phase};
 
 /// The name the fold's report gives this step.
 pub const BAND_BADGES_STEP: &str = "curriculum.band_badges";
+
+/// The tier a band badge is awarded at: 0, as SPEC-073 R2 gives every badge, and as the predecessor
+/// awards its band badges (SPEC-077 section 10).
+pub const BAND_BADGE_TIER: u32 = 0;
 
 /// Phase 7's band badge step, over the owner's courses.
 #[derive(Debug)]
@@ -33,7 +39,40 @@ impl BandBadgesStep {
         day: &DayEvaluation<'_>,
         write: &mut SqliteConnection,
     ) -> Result<(), KernelError> {
-        let _ = (&self.courses, day, write);
+        if day.evaluation != Evaluation::Current {
+            return Ok(());
+        }
+        for reached in store::band_ups_on(write, day.day).await? {
+            let Some(course) = self
+                .courses
+                .courses()
+                .iter()
+                .find(|course| course.code.as_str() == reached.course)
+            else {
+                // A course no longer configured keeps its milestone and earns no badge: the award
+                // port accepts a band key of a configured course only.
+                continue;
+            };
+            let key = format!("band_{}_{}", reached.course, reached.band);
+            let name = format!("{} {}", course.name, reached.band);
+            let badge = NewBadge {
+                key: &key,
+                tier: BAND_BADGE_TIER,
+                name: &name,
+                emoji: &course.flag,
+                study_day: reached.study_day,
+                at: day.facts.now,
+            };
+            match award(write, &self.courses, &badge).await {
+                Ok(Award::Awarded | Award::AlreadyAwarded) => {}
+                Err(AwardError::Database(error)) => return Err(error),
+                Err(AwardError::UnknownKey) => {
+                    return Err(KernelError::Database(sqlx::Error::Protocol(format!(
+                        "the award port refused the band key {key}"
+                    ))));
+                }
+            }
+        }
         Ok(())
     }
 }

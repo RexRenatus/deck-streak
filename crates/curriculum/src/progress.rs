@@ -112,6 +112,10 @@ pub fn card_mastery(card: &Card, now_sec: i64, mature_ivl: i64) -> f64 {
 }
 
 /// The unit number a deck name carries: the first `Unit` followed by white space and digits.
+///
+/// A unit beyond `u32` is no unit: every configured band is a range of `u32` units, so no band
+/// holds it and its card is not counted, as the predecessor counts none (SPEC-077 A4's
+/// `unit_beyond_u32` case).
 #[must_use]
 pub fn parse_unit(deck_name: &str) -> Option<u32> {
     let mut rest = deck_name;
@@ -121,11 +125,12 @@ pub fn parse_unit(deck_name: &str) -> Option<u32> {
         if trimmed.len() < after.len() {
             let digits: String = trimmed.chars().take_while(char::is_ascii_digit).collect();
             if !digits.is_empty() {
-                return digits
-                    .trim_start_matches('0')
-                    .parse()
-                    .or(Ok::<u32, ()>(0))
-                    .ok();
+                let significant = digits.trim_start_matches('0');
+                return if significant.is_empty() {
+                    Some(0)
+                } else {
+                    significant.parse().ok()
+                };
             }
         }
         rest = after;
@@ -249,6 +254,12 @@ pub enum BandStep {
 /// A band outside [`CEFR_BANDS`] has no place in the order, so it never reads as a band-up.
 #[must_use]
 pub fn band_step(stored: Option<&str>, current: &'static str) -> BandStep {
-    let _ = (stored, current);
-    BandStep::Unchanged
+    let Some(stored) = stored else {
+        return BandStep::FirstSighting(current);
+    };
+    let place = |band: &str| CEFR_BANDS.iter().position(|candidate| *candidate == band);
+    match (place(stored), place(current)) {
+        (Some(held), Some(reached)) if reached > held => BandStep::BandUp(current),
+        _ => BandStep::Unchanged,
+    }
 }

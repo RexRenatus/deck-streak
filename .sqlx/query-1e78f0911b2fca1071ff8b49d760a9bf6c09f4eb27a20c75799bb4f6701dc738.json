@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM language_progress",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "1e78f0911b2fca1071ff8b49d760a9bf6c09f4eb27a20c75799bb4f6701dc738"
+}
