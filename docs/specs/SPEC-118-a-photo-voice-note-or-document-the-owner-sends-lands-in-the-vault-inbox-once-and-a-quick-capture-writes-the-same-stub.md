@@ -360,6 +360,7 @@ The files, against section 4's manifest:
 | `docs/red-first/SPEC-118.md` | docs | extended: the screen's and the wiring's records |
 | `tools/parity-oracle/registry/spec_118.py` | repo | added with the `inbox_capture_stub` golden; V1b adds the two media goldens |
 | `scripts/mutation-rows.d/S11800-S11899.json` | repo | added with V1a's rows, S11801 to S11807, S11812 and S11814; V1b adds S11808 to S11811 and S11813 |
+| `docs/specs/planned/SPEC-057-every-surviving-mutant-is-killed-or-recorded-equivalent-before-the-first-mutation-gated-release.md` | docs | changed: section 7's vault row counts the two equivalents the vault's fragment records |
 
 The Mini App's screen is delivered as its rows say: `web/app/src/routes/capture/+page.svelte`,
 `web/app/src/lib/capture/QuickCapture.svelte`, `web/app/src/lib/capture/capture.ts`,
