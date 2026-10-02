@@ -27,7 +27,11 @@ EXPECTED = {
         "tla_seconds": 300,
         "lean_seconds": 600,
         "entry_seconds": 300,
-        "entries": {"tla/RelightOrder": 360, "tla/WalletFloor": 240},
+        "entries": {
+            "tla/MintReadsTheFinalBase": 180,
+            "tla/RelightOrder": 360,
+            "tla/WalletFloor": 240,
+        },
     },
     "axioms": ["propext", "Classical.choice", "Quot.sound"],
     "owner_signers": "config/owner-allowed-signers",

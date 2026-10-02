@@ -5,6 +5,7 @@
     "lean_seconds": 600,
     "entry_seconds": 300,
     "entries": {
+      "tla/MintReadsTheFinalBase": 180,
       "tla/RelightOrder": 360,
       "tla/WalletFloor": 240
     }
