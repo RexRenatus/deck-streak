@@ -177,10 +177,6 @@ The RED commit `a5e4cf06` adds three tests and changes no production file; the G
   `records_steps.rs:323:5`). The mutants are the rows S07316 and S07317, and S07318 is the CASE
   before the fix.
 
-```red-first
-A16: red at a5e4cf0: assertion `left == right` failed: the beat is offered under its day's key, and the seed is not; left: [], right: ["pr:best_score:20000"]
-A16: green at da37395
-A10: red under the hand mutant of S07316: the first mark is kept; left: Some(1728054000000), right: Some(1728050400000)
-A10: green at da37395
-A16: red under the hand mutant of S07317: the first mark is kept; left: Some(1728054000000), right: Some(1728050400000)
-```
+The criteria these tests decide, A16 and A10, are already recorded once in the block above, at their
+first red and green; a criterion takes one entry there, so the reds quoted in this section are
+prose, each with its test name, file and line.
