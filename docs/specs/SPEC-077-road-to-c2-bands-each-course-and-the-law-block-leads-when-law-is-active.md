@@ -15,8 +15,11 @@
   snapshot), SPEC-072 (the XP settlement and the law tab's tier distribution), SPEC-073 (the badge
   award port), SPEC-076 (the law streak) and SPEC-084 (the band-up's T5). **Mutation band:**
   `S07700-S07799`.
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-077.md` (ADR-016).
+- **Status:** delivered by CU85a in part (moved from `docs/specs/planned/` with its tests and
+  `docs/red-first/SPEC-077.md`, ADR-016): the Road to C2 of #85 and the law block of #134 in two pull
+  requests. CU85a delivers the memory state, the progress rules, the store, the progress step, the
+  band-up's grant, badge and celebration, and the law block's view; CU85b delivers the composition
+  root's `LiveBand`, the routes, the bot's command and the Mini App's screens (section 3c).
 
 ## 1. The problem, measured
 
@@ -178,18 +181,12 @@ R19. Every constant this SPEC uses (the stability target, the mature interval an
 | A6 | a card whose unit falls in no configured band, and a card with no course, are not counted | `a_unit_outside_every_configured_band_is_not_counted` |
 | A7 | the band-ups of every case equal the golden of `_persist_progress`, and each grant, badge and celebration is written once over two recomputes | `band_ups_match_the_predecessors_golden_and_pay_once` |
 | A8 | a course seen for the first time records a silent baseline and pays nothing | `the_first_sighting_of_a_course_is_a_silent_baseline` |
-| A9 | the persona engine reads the live band of the course a language subject names, and the roster's band for a subject with none | `the_persona_engine_reads_the_live_band` |
 | A10 | curriculum's data-rights port lists its three tables as exported and erased, and an erase leaves them empty | `the_curriculum_tables_are_exported_and_erased` |
 | A11 | the law mastery pillar of every case equals the golden of `scoring.py:law_mastery_pillar` | `the_law_mastery_pillar_matches_the_predecessors_golden` |
 | A12 | the law block's fields for every case equal the golden of `DigestsLayer.law_track_summary` | `the_law_block_matches_the_predecessors_golden` |
 | A13 | the block is omitted with no law activity, and its lines follow the golden of `telegram.py:render_law_block`'s shown rule | `the_law_block_is_omitted_without_law_activity` |
 | A14 | before the first recompute the law dues are pending, never 0 | `law_dues_are_pending_before_the_first_recompute` |
 | A15 | the active law leeches and the law mastery pillar are pending until the leech port is wired | `law_leeches_are_pending_until_the_leech_port_is_wired` |
-| A16 | the progress route answers the owner and refuses every other caller with no data | `the_progress_route_answers_only_the_owner` |
-| A17 | the law route answers the owner and refuses every other caller with no data | `the_law_route_answers_only_the_owner` |
-| A18 | `/progress` states each course's band, mastery and current unit as the route does | `progress_shows_each_course_band_and_mastery` |
-| A19 | the progress screen draws each band cell with its mastery and marks the current unit | `draws each band cell with its mastery and the current unit` |
-| A20 | the law tab renders a pending count as pending, never as zero | `renders a pending count as pending, never zero` |
 | A21 | the next milestone reads the sum of the courses' stored mature cards, and stays pending before the first recompute stores a course | `the_milestone_reads_the_courses_mature_cards` |
 
 ```acceptance
@@ -201,18 +198,12 @@ A5: cargo test -p deck-streak-curriculum --test progress_goldens -- --exact the_
 A6: cargo test -p deck-streak-curriculum --test progress_unit_bands -- --exact a_unit_outside_every_configured_band_is_not_counted
 A7: cargo test -p deck-streak-coordination --test progress_band_up -- --exact band_ups_match_the_predecessors_golden_and_pay_once
 A8: cargo test -p deck-streak-coordination --test progress_band_up -- --exact the_first_sighting_of_a_course_is_a_silent_baseline
-A9: cargo test -p deck-streak-daemon --test progress_live_band -- --exact the_persona_engine_reads_the_live_band
 A10: cargo test -p deck-streak-curriculum --test progress_store -- --exact the_curriculum_tables_are_exported_and_erased
 A11: cargo test -p deck-streak-curriculum --test law_goldens -- --exact the_law_mastery_pillar_matches_the_predecessors_golden
 A12: cargo test -p deck-streak-coordination --test law_block -- --exact the_law_block_matches_the_predecessors_golden
 A13: cargo test -p deck-streak-coordination --test law_block -- --exact the_law_block_is_omitted_without_law_activity
 A14: cargo test -p deck-streak-coordination --test law_block -- --exact law_dues_are_pending_before_the_first_recompute
 A15: cargo test -p deck-streak-coordination --test law_block -- --exact law_leeches_are_pending_until_the_leech_port_is_wired
-A16: cargo test -p deck-streak-api --test progress_routes -- --exact the_progress_route_answers_only_the_owner
-A17: cargo test -p deck-streak-api --test law_routes -- --exact the_law_route_answers_only_the_owner
-A18: cargo test -p deck-streak-bot --test progress_commands -- --exact progress_shows_each_course_band_and_mastery
-A19: pnpm exec vitest run web/app/src/lib/progress/CourseLadder.test.ts -t "draws each band cell with its mastery and the current unit"
-A20: pnpm exec vitest run web/app/src/lib/law/LawBlock.test.ts -t "renders a pending count as pending, never zero"
 A21: cargo test -p deck-streak-coordination --test progress_milestone -- --exact the_milestone_reads_the_courses_mature_cards
 ```
 
@@ -228,7 +219,34 @@ change when it merges.
 |---|---|---|
 | B1 | over `privacy.json`, `PRIVACY.md` and `crates/curriculum/src/data_rights.rs`: the `course-progress` and `law-dues` categories name their three tables with purpose, basis and retention, and export and erase cover all three | the privacy-gdpr pack |
 | B2 | over `notifications-policy.json` and every file under `crates/coordination/src/`: `band_up` stays T5 and budget-exempt, and the band-up's celebration goes through the one router | the notifications-policy pack |
-| B3 | over `web/app/src/routes/progress/+page.svelte`, `web/app/src/routes/law/+page.svelte`, `web/app/src/lib/progress/` and `web/app/src/lib/law/`: both screens pass the accessibility audit in both Telegram colour schemes | the accessibility pack |
+
+## 3c. Delivered by the next pull request
+
+This SPEC lands in two pull requests, in order. This one (CU85a) delivers the criteria of section
+3's table that no row below names, and the box rows B1 and B2. CU85b delivers the composition root's
+`LiveBand` over the stored band, `GET /api/progress` and `GET /api/law`, the bot's `/progress` and
+the Mini App's two screens. The table below holds the criteria that pull request delivers, each row
+naming it, and the lines under it are their fence lines, each prefixed with it. CU85b moves each of
+its criteria back verbatim: the row into section 3's table (or section 3a's, for B3), without the
+`delivered by` column, and the fence line into the acceptance fence, without the prefix. R8's
+consumer, the port `LiveBand` over curriculum's stored band, is CU85b's first part.
+
+| id | criterion | decided by | delivered by |
+|---|---|---|---|
+| A9 | the persona engine reads the live band of the course a language subject names, and the roster's band for a subject with none | `the_persona_engine_reads_the_live_band` | CU85b |
+| A16 | the progress route answers the owner and refuses every other caller with no data | `the_progress_route_answers_only_the_owner` | CU85b |
+| A17 | the law route answers the owner and refuses every other caller with no data | `the_law_route_answers_only_the_owner` | CU85b |
+| A18 | `/progress` states each course's band, mastery and current unit as the route does | `progress_shows_each_course_band_and_mastery` | CU85b |
+| A19 | the progress screen draws each band cell with its mastery and marks the current unit | `draws each band cell with its mastery and the current unit` | CU85b |
+| A20 | the law tab renders a pending count as pending, never as zero | `renders a pending count as pending, never zero` | CU85b |
+| B3 | over `web/app/src/routes/progress/+page.svelte`, `web/app/src/routes/law/+page.svelte`, `web/app/src/lib/progress/` and `web/app/src/lib/law/`: both screens pass the accessibility audit in both Telegram colour schemes | the accessibility pack | CU85b |
+
+CU85b: A9: cargo test -p deck-streak-daemon --test progress_live_band -- --exact the_persona_engine_reads_the_live_band
+CU85b: A16: cargo test -p deck-streak-api --test progress_routes -- --exact the_progress_route_answers_only_the_owner
+CU85b: A17: cargo test -p deck-streak-api --test law_routes -- --exact the_law_route_answers_only_the_owner
+CU85b: A18: cargo test -p deck-streak-bot --test progress_commands -- --exact progress_shows_each_course_band_and_mastery
+CU85b: A19: pnpm exec vitest run web/app/src/lib/progress/CourseLadder.test.ts -t "draws each band cell with its mastery and the current unit"
+CU85b: A20: pnpm exec vitest run web/app/src/lib/law/LawBlock.test.ts -t "renders a pending count as pending, never zero"
 
 ## 4. File manifest
 
@@ -367,3 +385,87 @@ owner's, a unit-band value of the owner's, or a calendar string.
 | `S07708-BAND-UP-XP` | `crates/curriculum/src/progress.rs` | the band-up's 500 XP | `progress_goldens::the_curriculum_constants_equal_the_predecessors` |
 | `S07709-ONE-MILESTONE-PER-BAND` | `migrations/007701_curriculum_road_to_c2_and_law.sql` | the key on `band_milestones (course, band)` (a script row; the cargo killer) | `progress_band_up::band_ups_match_the_predecessors_golden_and_pay_once` |
 | `S07710-LAW-LEECH-PENALTY` | `crates/curriculum/src/law.rs` | three points a leech, capped at 30 | `law_goldens::the_law_mastery_pillar_matches_the_predecessors_golden` |
+
+## 10. Amendments, 2026-10-02: what the first pull request corrects, and what it adds beside the manifest
+
+Section 3's table now holds the criteria CU85a delivers: the rows of A9 and A16 to A20 moved out of
+it, and section 3a's table lost B3 the same way. Each stays verbatim in section 3c's table with its
+fence line there, as section 3c says CU85b moves it back. Section 4's table is unchanged. Each
+correction below replaces its Old text with its New text.
+
+- T1, R7. Old: "500 XP through SPEC-040's `grant` with scope once, source `bandup:<code>:<band>`" and
+  "dedupe key `bandup:<code>:<band>`, through the router." New: "500 XP through SPEC-040's grant inside
+  the day's write (`grant_on`) with scope once, source `bandup:<code>:<band in lowercase>`" and
+  "dedupe key `bandup:<code>:<band in lowercase>`, offered through the router between the fold's
+  writes from the milestone's unset mark, and marked when the router answers (ADR-303)." The bands
+  are uppercase in the kernel's `CEFR_BANDS`, while the grant's source grammar and the router's
+  dedupe-key grammar refuse uppercase; the badge key keeps the uppercase band.
+- T2, section 8, `band_milestones`. Old: "the silent baselines included". New: "the silent baselines
+  included; each row records whether it is a silent baseline and, for a band-up, its celebration
+  mark, unset until the router answers (ADR-303)".
+- T3, the header's "Decided by". It gains ADR-303 (an award carries its celebration mark and is
+  offered until the router answers) and ADR-077, written by this delivery's migration part, which
+  records the lowercase band, the 500 XP constant's home in curriculum and the milestone's columns.
+- T4, section 4, `crates/coordination/src/recompute/mod.rs`. Old: "changed: the progress step in
+  phase 4 and the band badge's award in phase 7 of SPEC-071's fold". New: "changed: the progress
+  module, and the band-up's offers beside the badges' and records' in `AwardOffers`".
+  `crates/daemon/src/wiring.rs` gains: "the progress step registered in phase 4 and the band badge's
+  step in phase 7 (`recompute_fold_with_relights`)", which CU85b delivers.
+- T5, section 4 gains these files: `crates/progression/src/ledger.rs` (today's law XP on one track);
+  `crates/api/src/badges_routes.rs` (the milestone route stops answering `pending`, R17a);
+  a coordination progress view for the API and the bot; `crates/coordination/src/recompute/band_badges.rs`;
+  `formal/lean/Formal/RoadToC2.lean`, its vectors file and the `Formal.lean` import;
+  `formal/tla/BandUpOnce/`; ADR-077; and `crates/curriculum/src/store.rs` only if the migration part
+  creates it. The eleven `Card` literal files named below each gain
+  `memory: None` and nothing else.
+- T7, R8. Old: "the course a language subject names; a subject that names no course answers no band".
+  New: "the course whose code is the area of a `language/<area>` subject; a subject whose area is no
+  configured course's code answers no band".
+- T8, section 4, `crates/curriculum/src/law.rs`. Old: "added: the law mastery pillar and the law
+  dues". New: "added: the law mastery pillar and the law dues' stored value (coordination counts them
+  with analytics' card snapshot over the law cards)", because curriculum may not depend on analytics.
+- T9, R16. Old: "`/today` uses this SPEC's law block rendering (SPEC-086)." New: "SPEC-086's `/today`
+  will use this SPEC's law block rendering; no `/today` exists at this delivery's base."
+- T10, R17a. Old: "wires it into SPEC-073's milestone view, which stops answering `pending`". New:
+  "wires it into SPEC-073's milestone view and `GET /api/milestone`, which stop answering `pending`".
+
+R1 adds a field to each card ingest publishes, so these files, which build a `Card` and are not named
+in section 4, each gain one line, `memory: None`, inside their `Card { .. }` literal:
+
+- `crates/analytics/tests/rollup_metrics.rs`
+- `crates/coordination/tests/awards_support/mod.rs`
+- `crates/coordination/tests/relight_order.rs`
+- `crates/coordination/tests/relight_settle.rs`
+- `crates/coordination/tests/settle_fold.rs`
+- `crates/coordination/tests/streak_fold.rs`
+- `crates/coordination/tests/wallet_mint.rs`
+- `crates/coordination/tests/xp_steps.rs`
+- `crates/daemon/tests/record_offers.rs`
+- `crates/daemon/tests/streak_calendar_route.rs`
+- `crates/readings/tests/support/mod.rs`
+
+`crates/curriculum/src/lib.rs` also states, in its crate doc, that curriculum owns the band-up's own
+500 XP amount and no other: R7's constant lives in `crates/curriculum/src/progress.rs`, as streaks
+keeps its relight amount, and `economy.json` gains no key.
+
+Rows this pull request does not touch, delivered by CU85b:
+
+- `crates/daemon/src/wiring.rs`: unchanged in this pull request; delivered by CU85b
+- `crates/daemon/tests/progress_live_band.rs`: unchanged in this pull request; delivered by CU85b
+- `crates/api/src/progress_routes.rs`: unchanged in this pull request; delivered by CU85b
+- `crates/api/src/law_routes.rs`: unchanged in this pull request; delivered by CU85b
+- `crates/api/src/router.rs`: unchanged in this pull request; delivered by CU85b
+- `crates/api/tests/progress_routes.rs`: unchanged in this pull request; delivered by CU85b
+- `crates/api/tests/law_routes.rs`: unchanged in this pull request; delivered by CU85b
+- `crates/bot/src/progress_commands.rs`: unchanged in this pull request; delivered by CU85b
+- `crates/bot/src/commands.rs`: unchanged in this pull request; delivered by CU85b
+- `crates/bot/tests/progress_commands.rs`: unchanged in this pull request; delivered by CU85b
+- `web/app/src/routes/progress/+page.svelte`: unchanged in this pull request; delivered by CU85b
+- `web/app/src/routes/law/+page.svelte`: unchanged in this pull request; delivered by CU85b
+- `web/app/src/lib/progress/CourseLadder.svelte`: unchanged in this pull request; delivered by CU85b
+- `web/app/src/lib/progress/progress.ts`: unchanged in this pull request; delivered by CU85b
+- `web/app/src/lib/progress/CourseLadder.test.ts`: unchanged in this pull request; delivered by CU85b
+- `web/app/src/lib/law/LawBlock.svelte`: unchanged in this pull request; delivered by CU85b
+- `web/app/src/lib/law/law.ts`: unchanged in this pull request; delivered by CU85b
+- `web/app/src/lib/law/LawBlock.test.ts`: unchanged in this pull request; delivered by CU85b
+- `web/app/src/lib/routes.ts`: unchanged in this pull request; delivered by CU85b
