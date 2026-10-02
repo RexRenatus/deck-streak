@@ -354,7 +354,7 @@ selects exactly one test, and each is proved with its file restored byte for byt
 | `S08203-THE-LOSS-CAP-IS-100` | `crates/economy/src/constants.rs` | at most 100 coins lost a day | `wallet_goldens::the_cap_the_fine_and_the_clip_match_the_parity_goldens` |
 | `S08204-THE-CAP-TAKES-30-PERCENT` | `crates/economy/src/constants.rs` | the cap's share of the day-start wallet | `wallet_goldens::the_cap_the_fine_and_the_clip_match_the_parity_goldens` |
 | `S08205-A-FINE-TAKES-2-PERCENT` | `crates/economy/src/constants.rs` | a fine keeps its bite as the wallet grows | `wallet_goldens::the_cap_the_fine_and_the_clip_match_the_parity_goldens` |
-| `S08206-THE-WALLET-FLOOR-IS-ZERO` | `crates/economy/src/rules.rs` | a clipped debit never takes the balance below zero | `wallet_ports::the_wallet_never_goes_negative_under_a_burst` |
+| `S08206-A-DEBIT-IS-CLIPPED-TO-THE-WALLET` | `crates/economy/src/rules.rs` | a clipped debit never takes the balance below zero | `wallet_ports::the_wallet_never_goes_negative_under_a_burst` |
 | `S08207-A-SETTLED-MINT-NEVER-FALLS` | `crates/economy/src/wallet.rs` | a settled day's mint is only raised | `wallet_ports::a_settled_days_mint_is_raised_and_never_lowered` |
 | `S08208-A-FREEZE-COSTS-150` | `crates/economy/src/constants.rs` | the freeze's price | `shop_goldens::the_shop_verdicts_match_the_parity_golden` |
 | `S08209-A-PASS-COSTS-40` | `crates/economy/src/constants.rs` | the scroll pass's price | `shop_goldens::the_shop_verdicts_match_the_parity_golden` |

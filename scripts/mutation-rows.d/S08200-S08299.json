@@ -47,7 +47,7 @@
         "a fine takes 2 percent of the wallet when that exceeds its configured amount, as the golden of the scaled fine says (SPEC-082 R6, A2)"
       ],
       [
-        "S08206-THE-WALLET-FLOOR-IS-ZERO",
+        "S08206-A-DEBIT-IS-CLIPPED-TO-THE-WALLET",
         "economy",
         "src/rules.rs",
         "    let allowed = requested.min(wallet).min(cap_remaining).max(0);",
