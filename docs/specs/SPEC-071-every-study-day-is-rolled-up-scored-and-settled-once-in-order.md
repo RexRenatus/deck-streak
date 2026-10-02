@@ -669,3 +669,163 @@ milliseconds (SPEC-029 R3).
   survivor is bound by exactly one record, which binds no other mutant of the run. cargo-mutants'
   listing of `snapshot.rs` names the #295 mutant again, and its record binds it alone, not the
   line's other `replace < with <= in card_snapshot` at column 25.
+
+## 11. Amendments, 2026-10-02: two folds that overlap settle each closed day once, and a day before the first settle owes no row (#311)
+
+Insert-only: every earlier byte is kept in order, and this amendment inserts sections 11 and 12.
+
+- **Two overlapping folds settle each closed day once, in turn (R15, R16).** The scheduled cycle
+  and the owner's recompute can both reach the fold before either has cleared the rescore mark.
+  Each fold read the cursor once, in its first write, so both could settle the same closed day.
+  Each owed day's write (`BEGIN IMMEDIATE`) now re-reads the cursor before the day's steps run: the
+  day owed is the day after the cursor, or the run's own day while there is no cursor. A write
+  whose day is not the owed one commits nothing, and the run goes on from the owed day for as long
+  as that day has closed and the run's sync started after its close (R15). Two overlapping folds
+  therefore settle exactly what one fold after the other would: no day twice, no day after a later
+  one, and no day skipped once a day is settled. The fold never reads the rescore mark; only the
+  cursor decides which days are owed. The model `formal/tla/FoldSettlesOnce` checks the rule
+  (`SettleOnce`, `SettleOldestFirst`, `SettleInTurn`), and each of its witnesses without the
+  re-read violates one of them. The decision is ADR-313.
+- **A closed day before the first settled day (R17).** Before the first settled day, a day has a row only as a study day of the window (in the historical form) or as some recompute's current day; any other closed day owes no row, even one a recompute left owed. Each day after the first settled day is settled in turn, gap days included (#311).
+- **What A27 and A28 hold.** A27 runs two folds on two connections to one ledger file, held by a
+  barrier so that both have read the cursor before either settles, over a generated population:
+  with a settled day and with none, the scheduled fold owing one to three days and the owner's one
+  to three, each run in both join orders. It pins the population's size (36 runs) and its distinct
+  members (18), each member recorded inside the offers' call from what the fold handed it, and
+  asserts that the settled days run from the first settled one to the last closed one, each once,
+  oldest first. A28 holds the rule of a closed day before the first settle over three cases: the
+  measured one (reviews on D0 and D0+3, recomputes on D0+2, D0+3 and D0+4, so D0+1 has no row, D0
+  keeps its historical row unsettled, and D0+2 and D0+3 are settled once each); reviews on D0+1
+  too, which then has a historical row that is never settled; and no reviews on days 1 to 4 with a
+  fold on day 2 whose sync started on day 1 and a fold on day 5, which leave day 3 with no row and
+  days 2 and 4 with one. A28 is green at the base and is recorded as a pin, not as red-first.
+
+The amendment changes `crates/coordination/src/recompute/mod.rs` (the re-read in each owed day's
+write), `crates/coordination/tests/settle_fold.rs` (A27 and A28),
+`scripts/mutation-rows.d/S07100-S07199.json` (the row S07114, which removes the re-read),
+`docs/red-first/SPEC-071.md` (the addendum of this date) and this SPEC. It adds the model
+`formal/tla/FoldSettlesOnce/FoldSettlesOnce.tla`, its config
+`formal/tla/FoldSettlesOnce/MCFoldSettlesOnce.cfg` and its witnesses
+`formal/tla/FoldSettlesOnce/witness/settle-once-without-the-re-read.cfg`,
+`formal/tla/FoldSettlesOnce/witness/oldest-first-without-the-re-read.cfg` and
+`formal/tla/FoldSettlesOnce/witness/in-turn-without-the-re-read.cfg`; it re-pins the covers of
+`run` in `formal/tla/AwardOnce/AwardOnce.tla` and `formal/tla/RelightOrder/RelightOrder.tla`, each
+with a note on the re-read; it adds the decision `docs/decisions/ADR-313-the-fold-settles-from-the-cursor-it-re-reads-in-each-days-write-and-a-day-before-the-first-settle-owes-no-row.md`,
+an insert-only section of `docs/schematics/recompute-settles-each-study-day.md` and the changelog
+fragment `changelog.d/fold-settles-once-311.md`.
+
+Section 4's rows that the amendment leaves as they are:
+
+- `crates/kernel/src/courses.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/kernel/src/lib.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/kernel/src/db.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/kernel/src/data_rights.rs`: unchanged by the amendment of 2026-10-02.
+- `migrations/007102_kernel_courses_digest.sql`: unchanged by the amendment of 2026-10-02.
+- `crates/kernel/tests/courses_config.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/ingest/src/reader.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/ingest/src/calendar.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/ingest/src/lib.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/ingest/tests/rollup_day_number.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/ingest/tests/courses_cards.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/analytics/Cargo.toml`: unchanged by the amendment of 2026-10-02.
+- `crates/analytics/src/lib.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/analytics/src/constants.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/analytics/src/metrics.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/analytics/src/snapshot.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/analytics/src/score.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/analytics/src/rollup.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/analytics/src/settings.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/analytics/src/data_rights.rs`: unchanged by the amendment of 2026-10-02.
+- `migrations/007101_analytics_daily_rollup.sql`: unchanged by the amendment of 2026-10-02.
+- `crates/analytics/tests/rollup_metrics.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/analytics/tests/rollup_store.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/analytics/tests/score_pillars.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/analytics/tests/rollup_rights.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/coordination/src/recompute/analytics_step.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/coordination/src/courses.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/coordination/src/sync_cycle.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/coordination/src/lib.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/coordination/src/data_rights_registry.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/coordination/tests/data_rights_symmetry.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/coordination/tests/courses_agree.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/api/src/analytics_routes.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/api/src/router.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/api/tests/rollup_routes.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/bot/src/score_commands.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/bot/src/commands.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/bot/tests/score_commands.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/daemon/src/wiring.rs`: unchanged by the amendment of 2026-10-02.
+- `web/app/src/routes/score/+page.svelte`: unchanged by the amendment of 2026-10-02.
+- `web/app/src/lib/score/ScoreBreakdown.svelte`: unchanged by the amendment of 2026-10-02.
+- `web/app/src/lib/score/score.ts`: unchanged by the amendment of 2026-10-02.
+- `web/app/src/lib/score/ScoreBreakdown.test.ts`: unchanged by the amendment of 2026-10-02.
+- `web/app/src/lib/routes.ts`: unchanged by the amendment of 2026-10-02.
+- `deploy/config/courses.example.json`: unchanged by the amendment of 2026-10-02.
+- `.env.example`: unchanged by the amendment of 2026-10-02.
+- `deploy/deck-streak.env.example`: unchanged by the amendment of 2026-10-02.
+- `docs/CONTEXT-MAP.md`: unchanged by the amendment of 2026-10-02.
+- `privacy.json`: unchanged by the amendment of 2026-10-02.
+- `PRIVACY.md`: unchanged by the amendment of 2026-10-02.
+- `.sqlx/`: unchanged by the amendment of 2026-10-02.
+- `Cargo.lock`: unchanged by the amendment of 2026-10-02.
+- `tools/parity-oracle/registry/spec_071.py`: unchanged by the amendment of 2026-10-02.
+- `tools/parity-oracle/goldens/daily_metrics.json`: unchanged by the amendment of 2026-10-02.
+- `tools/parity-oracle/goldens/card_snapshot.json`: unchanged by the amendment of 2026-10-02.
+- `tools/parity-oracle/goldens/today_day_number.json`: unchanged by the amendment of 2026-10-02.
+- `tools/parity-oracle/goldens/language_daily_metrics.json`: unchanged by the amendment of 2026-10-02.
+- `tools/parity-oracle/goldens/raw_streak.json`: unchanged by the amendment of 2026-10-02.
+- `tools/parity-oracle/goldens/volume_baseline.json`: unchanged by the amendment of 2026-10-02.
+- `tools/parity-oracle/goldens/baseline_window.json`: unchanged by the amendment of 2026-10-02.
+- `tools/parity-oracle/goldens/compute_score.json`: unchanged by the amendment of 2026-10-02.
+- `tools/parity-oracle/goldens/score_consistency.json`: unchanged by the amendment of 2026-10-02.
+- `tools/parity-oracle/goldens/score_retention.json`: unchanged by the amendment of 2026-10-02.
+- `tools/parity-oracle/goldens/score_workload.json`: unchanged by the amendment of 2026-10-02.
+- `tools/parity-oracle/goldens/score_volume.json`: unchanged by the amendment of 2026-10-02.
+- `tools/parity-oracle/goldens/score_mastery.json`: unchanged by the amendment of 2026-10-02.
+- `tools/parity-oracle/goldens/grade_band.json`: unchanged by the amendment of 2026-10-02.
+- `tools/parity-oracle/goldens/analytics.constants.json`: unchanged by the amendment of 2026-10-02.
+- `docs/decisions/ADR-071-the-recompute-settles-each-study-day-once-in-order-with-its-end-of-day-state.md`: unchanged by the amendment of 2026-10-02.
+- `docs/decisions/ADR-087-the-owners-courses-are-private-configuration-passed-to-the-predecessors-own-codes.md`: unchanged by the amendment of 2026-10-02.
+- `crates/coordination/src/score.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/coordination/tests/score_reads.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/api/src/session_routes.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/api/src/lib.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/api/Cargo.toml`: unchanged by the amendment of 2026-10-02.
+- `crates/bot/src/lib.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/bot/Cargo.toml`: unchanged by the amendment of 2026-10-02.
+- `crates/bot/tests/commands.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/bot/tests/support/fake_bot_api.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/bot/tests/messages/start.msg.json`: unchanged by the amendment of 2026-10-02.
+- `crates/bot/tests/messages/help.msg.json`: unchanged by the amendment of 2026-10-02.
+- `crates/bot/tests/messages/score.msg.json`: unchanged by the amendment of 2026-10-02.
+- `crates/bot/tests/messages/score-no-retention.msg.json`: unchanged by the amendment of 2026-10-02.
+- `crates/bot/tests/messages/score-none.msg.json`: unchanged by the amendment of 2026-10-02.
+- `crates/bot/tests/messages/score-failed.msg.json`: unchanged by the amendment of 2026-10-02.
+- `crates/daemon/src/role_job.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/daemon/src/role_bot.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/kernel/tests/data_rights.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/readings/tests/support/mod.rs`: unchanged by the amendment of 2026-10-02.
+- `web/app/src/lib/api.ts`: unchanged by the amendment of 2026-10-02.
+- `web/app/src/lib/api.test.ts`: unchanged by the amendment of 2026-10-02.
+- `web/app/src/lib/score/score.test.ts`: unchanged by the amendment of 2026-10-02.
+- `web/app/src/routes/score.test.ts`: unchanged by the amendment of 2026-10-02.
+- `web/app/src/lib/startapp.ts`: unchanged by the amendment of 2026-10-02.
+- `web/app/src/lib/startapp.test.ts`: unchanged by the amendment of 2026-10-02.
+- `scripts/mutation-equivalent.d/deck-streak-analytics.json`: unchanged by the amendment of 2026-10-02.
+- `scripts/mutation-equivalent.d/miniapp.json`: unchanged by the amendment of 2026-10-02.
+- `web/app/messages/en.json`: unchanged by the amendment of 2026-10-02.
+- `web/app/tests/a11y.spec.ts`: unchanged by the amendment of 2026-10-02.
+- `crates/ingest/src/sync_runs.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/ingest/tests/gate.rs`: unchanged by the amendment of 2026-10-02.
+
+## 12. Acceptance criteria of the 2026-10-02 overlapping-folds amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A27 | two folds on two connections to one ledger, both reading the cursor before either settles, settle every day from the first settled one to the last closed one exactly once, oldest first, over a population whose size (36) and distinct members (18) are pinned | `two_overlapping_folds_settle_each_closed_day_once_in_turn` |
+| A28 | a closed day before the first settled day has a row only as a study day of the window or as some recompute's current day, and every day after the first settle is settled once (a pin, green at the base) | `a_closed_day_before_the_first_settle_has_a_row_only_from_the_window_or_a_current_day` |
+
+```acceptance
+A27: cargo test -p deck-streak-coordination --test settle_fold -- --exact two_overlapping_folds_settle_each_closed_day_once_in_turn
+A28: cargo test -p deck-streak-coordination --test settle_fold -- --exact a_closed_day_before_the_first_settle_has_a_row_only_from_the_window_or_a_current_day
+```
