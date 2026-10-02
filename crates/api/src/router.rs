@@ -35,6 +35,7 @@ use axum::{BoxError, Router};
 use deck_streak_coordination::drills::{DrillNotes, RealFs};
 use deck_streak_coordination::instruments::InstrumentService;
 use deck_streak_coordination::progression::level_view::LawTierSource;
+use deck_streak_kernel::Courses;
 use tower::ServiceBuilder;
 use tower::limit::GlobalConcurrencyLimitLayer;
 use tower::load_shed::LoadShedLayer;
@@ -49,6 +50,7 @@ use tower_http::trace::{DefaultOnResponse, TraceLayer};
 use tracing::Level;
 
 use crate::analytics_routes;
+use crate::badges_routes;
 use crate::drill_routes;
 use crate::health::{self, Readiness};
 use crate::insights_routes;
@@ -77,6 +79,7 @@ pub struct ApiState {
     instruments: Option<Arc<dyn InstrumentService>>,
     law_tiers: Option<Arc<dyn LawTierSource>>,
     drills: Option<Arc<DrillNotes<RealFs>>>,
+    courses: Option<Courses>,
 }
 
 impl std::fmt::Debug for ApiState {
@@ -88,6 +91,7 @@ impl std::fmt::Debug for ApiState {
             .field("instruments", &self.instruments.is_some())
             .field("law_tiers", &self.law_tiers.is_some())
             .field("drills", &self.drills.is_some())
+            .field("courses", &self.courses)
             .finish()
     }
 }
@@ -102,6 +106,7 @@ impl ApiState {
             instruments: None,
             law_tiers: None,
             drills: None,
+            courses: None,
         }
     }
 
@@ -134,6 +139,14 @@ impl ApiState {
         self
     }
 
+    /// This state, rendering the badge catalog's descriptions from the configured `courses`
+    /// (SPEC-073 R16). Without them the descriptions take their generic wording.
+    #[must_use]
+    pub fn with_courses(mut self, courses: Courses) -> Self {
+        self.courses = Some(courses);
+        self
+    }
+
     /// Whether the API can answer from its database.
     #[must_use]
     pub const fn readiness(&self) -> &Readiness {
@@ -151,6 +164,7 @@ pub fn router(state: ApiState) -> Router {
     let instruments = state.instruments.clone();
     let law_tiers = state.law_tiers.clone();
     let drills = state.drills.clone();
+    let courses = state.courses.clone().unwrap_or_default();
     let routes = health::routes().with_state(state);
     let routes = match owner {
         Some(access) => {
@@ -162,6 +176,11 @@ pub fn router(state: ApiState) -> Router {
                     law_tiers,
                 ))
                 .merge(streak_routes::routes(access.clone(), readiness.clone()))
+                .merge(badges_routes::routes(
+                    access.clone(),
+                    readiness.clone(),
+                    courses,
+                ))
                 .merge(session_routes::routes(access.clone()))
                 .merge(drill_routes::routes(
                     access.clone(),

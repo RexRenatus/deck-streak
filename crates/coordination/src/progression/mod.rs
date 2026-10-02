@@ -3,6 +3,7 @@
 //! milestone (SPEC-073 R5, R13, R15).
 
 pub mod badge_context;
+pub mod badges_view;
 pub mod law_tiers;
 pub mod level_view;
 pub mod milestone_view;
