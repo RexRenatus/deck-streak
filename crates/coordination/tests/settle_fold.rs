@@ -1658,13 +1658,105 @@ struct Handed {
     cursor: Option<i64>,
 }
 
+/// How A27 releases its two folds once both have passed the barrier.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Release {
+    /// The named fold takes the first turn, and each later offer of either fold hands the turn to
+    /// the other while the other still runs: every write after the barrier lands in the order the
+    /// test chose.
+    Turns(&'static str),
+    /// Both folds leave the barrier together and race to the write lock, the named fold's run
+    /// joined first: the order is the async runtime's and the busy handler's, run by run.
+    Together(&'static str),
+}
+
+impl Release {
+    /// The fold whose run is joined first: the one that takes the first turn, or the one named.
+    fn joined_first(self) -> &'static str {
+        match self {
+            Self::Turns(first) | Self::Together(first) => first,
+        }
+    }
+}
+
+/// One event of A27's turns.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Turn {
+    /// The fold left its offer and may write until its next one.
+    Took(&'static str),
+    /// The fold's run returned.
+    Returned(&'static str),
+}
+
+/// Whose turn it is in A27, and every turn taken.
+#[derive(Debug, Default)]
+struct Turns {
+    /// The fold that may leave its offer; `None` under [`Release::Together`], which forces no order.
+    holder: Option<&'static str>,
+    /// Each turn taken and each run returned, in order.
+    log: Vec<Turn>,
+}
+
+impl Turns {
+    /// The turns A27's offers share under `release`.
+    fn shared(release: Release) -> Arc<tokio::sync::watch::Sender<Self>> {
+        let holder = match release {
+            Release::Turns(first) => Some(first),
+            Release::Together(_) => None,
+        };
+        Arc::new(tokio::sync::watch::Sender::new(Self {
+            holder,
+            log: Vec::new(),
+        }))
+    }
+
+    /// Hands the turn from `role` to `other` unless `other`'s run has returned or no order is
+    /// forced.
+    fn hand(&mut self, role: &'static str, other: &'static str) {
+        if self.holder == Some(role) && !self.log.contains(&Turn::Returned(other)) {
+            self.holder = Some(other);
+        }
+    }
+
+    /// Asserts that, until a run returned, the turns alternated from the fold named `first`: each
+    /// write after the barrier ran alone, in the order the run forced.
+    fn alternate_from(&self, first: &'static str) {
+        let second = if first == "owner" {
+            "scheduled"
+        } else {
+            "owner"
+        };
+        let took: Vec<&str> = self
+            .log
+            .iter()
+            .map_while(|turn| match turn {
+                Turn::Took(role) => Some(*role),
+                Turn::Returned(_) => None,
+            })
+            .collect();
+        let alternating: Vec<&str> = [first, second]
+            .into_iter()
+            .cycle()
+            .take(took.len())
+            .collect();
+        assert!(
+            took.len() >= 2 && took == alternating,
+            "the turns alternate from the {first} fold until a run returns: {took:?}"
+        );
+    }
+}
+
 /// One fold's offers in A27. The first call records what the fold handed it, then waits at a
 /// barrier both folds share, so neither fold settles a day before both have read the cursor
-/// (#311); every later call returns at once.
+/// (#311). Every call then waits for the fold's turn, and every later call first hands the turn to
+/// the other fold: the fold writes between two of its offers (ADR-303), so under
+/// [`Release::Turns`] each of its writes runs alone, in an order the test chose.
 #[derive(Debug)]
 struct BarrierOffers {
     role: &'static str,
+    other: &'static str,
     barrier: Arc<tokio::sync::Barrier>,
+    turns: Arc<tokio::sync::watch::Sender<Turns>>,
     handed: Arc<Mutex<Vec<Handed>>>,
     waited: AtomicBool,
 }
@@ -1673,24 +1765,36 @@ impl Offers for BarrierOffers {
     fn offer<'a>(&'a self, db: &'a Db, _now: UtcMillis, today: StudyDay) -> PortFuture<'a, ()> {
         Box::pin(async move {
             if self.waited.swap(true, Ordering::SeqCst) {
-                return Ok(());
+                // The write since this fold's last offer has committed or rolled back.
+                self.turns
+                    .send_modify(|turns| turns.hand(self.role, self.other));
+            } else {
+                let mut connection = db.reader().acquire().await?;
+                let cursor = sqlx::query_scalar::<_, Option<i64>>(
+                    "SELECT max(study_day) FROM daily_rollup WHERE settled_at IS NOT NULL",
+                )
+                .fetch_one(&mut *connection)
+                .await?;
+                drop(connection);
+                self.handed
+                    .lock()
+                    .unwrap_or_else(PoisonError::into_inner)
+                    .push(Handed {
+                        role: self.role,
+                        today: today.epoch_day(),
+                        cursor,
+                    });
+                self.barrier.wait().await;
             }
-            let mut connection = db.reader().acquire().await?;
-            let cursor = sqlx::query_scalar::<_, Option<i64>>(
-                "SELECT max(study_day) FROM daily_rollup WHERE settled_at IS NOT NULL",
-            )
-            .fetch_one(&mut *connection)
-            .await?;
-            drop(connection);
-            self.handed
-                .lock()
-                .unwrap_or_else(PoisonError::into_inner)
-                .push(Handed {
-                    role: self.role,
-                    today: today.epoch_day(),
-                    cursor,
-                });
-            self.barrier.wait().await;
+            let mine = self
+                .turns
+                .subscribe()
+                .wait_for(|turns| turns.holder.is_none_or(|holder| holder == self.role))
+                .await
+                .is_ok();
+            assert!(mine, "the turns outlive both folds' offers");
+            self.turns
+                .send_modify(|turns| turns.log.push(Turn::Took(self.role)));
             Ok(())
         })
     }
@@ -1719,14 +1823,14 @@ type OverlapMember = (Option<i64>, i64, i64);
 
 /// One run of A27 on a fresh ledger: D0 settled first when `seeded`; then the scheduled fold on
 /// study day `scheduled_today` and the owner's fold on `owner_today`, each after a sync that
-/// started that day and each through its own pool to the one ledger file, joined in the order
-/// `owner_first` names. Answers the member the offers recorded and every settle committed, the
-/// seed's included, in commit order.
+/// started that day and each through its own pool to the one ledger file, released from the
+/// barrier and joined as `release` says. Answers the member the offers recorded and every settle
+/// committed, the seed's included, in commit order.
 async fn overlap(
     seeded: bool,
     scheduled_today: i64,
     owner_today: i64,
-    owner_first: bool,
+    release: Release,
 ) -> (OverlapMember, Vec<i64>) {
     let scratch = TempDir::new().expect("a scratch directory");
     let scheduled_db = database(&scratch).await;
@@ -1746,14 +1850,18 @@ async fn overlap(
     }
 
     let barrier = Arc::new(tokio::sync::Barrier::new(2));
+    let turns = Turns::shared(release);
     let handed = Arc::new(Mutex::new(Vec::new()));
-    let offers = |role| BarrierOffers {
+    let offers = |role, other| BarrierOffers {
         role,
+        other,
         barrier: Arc::clone(&barrier),
+        turns: Arc::clone(&turns),
         handed: Arc::clone(&handed),
         waited: AtomicBool::new(false),
     };
-    let (scheduled_offers, owner_offers) = (offers("scheduled"), offers("owner"));
+    let (scheduled_offers, owner_offers) =
+        (offers("scheduled", "owner"), offers("owner", "scheduled"));
     let scheduled_input = FoldInput {
         data: &data,
         rule: StudyDayRule::default(),
@@ -1769,10 +1877,25 @@ async fn overlap(
         offers: Some(&owner_offers),
         ..scheduled_input
     };
+    // A fold whose run returned hands its turn on, so the other never waits for it.
+    let returned = |role, other| {
+        turns.send_modify(|turns| {
+            turns.hand(role, other);
+            turns.log.push(Turn::Returned(role));
+        });
+    };
     let (scheduled_fold, owner_fold) = (counted_fold(), counted_fold());
-    let scheduled = scheduled_fold.run(&scheduled_db, &scheduled_input);
-    let owner = owner_fold.run(&owner_db, &owner_input);
-    let (scheduled, owner) = if owner_first {
+    let scheduled = async {
+        let report = scheduled_fold.run(&scheduled_db, &scheduled_input).await;
+        returned("scheduled", "owner");
+        report
+    };
+    let owner = async {
+        let report = owner_fold.run(&owner_db, &owner_input).await;
+        returned("owner", "scheduled");
+        report
+    };
+    let (scheduled, owner) = if release.joined_first() == "owner" {
         let (owner, scheduled) = tokio::join!(owner, scheduled);
         (scheduled, owner)
     } else {
@@ -1781,6 +1904,9 @@ async fn overlap(
     scheduled.expect("the scheduled fold runs");
     owner.expect("the owner's fold runs");
     let settled = settles_in_commit_order(&scheduled_db).await;
+    if let Release::Turns(first) = release {
+        turns.borrow().alternate_from(first);
+    }
 
     let handed = handed
         .lock()
@@ -1811,35 +1937,46 @@ async fn overlap(
 /// settled day and with none, times the scheduled fold's three closed days, times the owner's.
 const OVERLAP_MEMBERS: usize = 2 * 3 * 3;
 
+/// How many ways A27 releases each member's folds from the barrier: the scheduled fold's turn
+/// first, the owner's first, and both together, each fold's run joined first once.
+const RELEASES: usize = 4;
+
 /// SPEC-071 A27 (#311 (1); R15, R16; ADR-313): two folds on two connections to one ledger file,
 /// held by a barrier so that both have read the cursor before either settles, settle every day
 /// from the first settled one to the last closed one exactly once, oldest first. The population:
 /// with D0 settled before and with no day settled, the scheduled fold's closed day one to three
-/// days after D0 and the owner's one to three, each pair joined in both orders.
+/// days after D0 and the owner's one to three, each pair released four ways. Two force the order
+/// of every write after the barrier, one fold's turn at a time from each offer to its next, with
+/// the scheduled fold's turn first and then the owner's; two release both folds together and let
+/// them race, each pair joined in both orders.
 #[tokio::test]
 async fn two_overlapping_folds_settle_each_closed_day_once_in_turn() {
     let mut runs = Vec::new();
     for seeded in [false, true] {
         for scheduled in 1..=3 {
             for owner in 1..=3 {
-                for owner_first in [false, true] {
-                    runs.push((seeded, scheduled, owner, owner_first));
+                for release in [
+                    Release::Turns("scheduled"),
+                    Release::Turns("owner"),
+                    Release::Together("scheduled"),
+                    Release::Together("owner"),
+                ] {
+                    runs.push((seeded, scheduled, owner, release));
                 }
             }
         }
     }
     let mut members = BTreeSet::new();
     let mut judged = 0_usize;
-    for (seeded, scheduled, owner, owner_first) in examined("overlapping runs", runs) {
-        let (member, settled) =
-            overlap(seeded, D0 + 1 + scheduled, D0 + 1 + owner, owner_first).await;
+    for (seeded, scheduled, owner, release) in examined("overlapping runs", runs) {
+        let (member, settled) = overlap(seeded, D0 + 1 + scheduled, D0 + 1 + owner, release).await;
         let last = D0 + scheduled.max(owner);
         let first = settled.first().copied().unwrap_or(last);
         assert_eq!(
             settled,
             (first..=last).collect::<Vec<i64>>(),
             "every day from the first settled one to the last closed one, once, oldest first: \
-             member {member:?}, the owner's fold joined first: {owner_first}"
+             member {member:?}, released {release:?}"
         );
         let firsts = if seeded {
             vec![D0]
@@ -1858,7 +1995,7 @@ async fn two_overlapping_folds_settle_each_closed_day_once_in_turn() {
         "judged {judged} overlapping run(s), {} distinct member(s)",
         members.len()
     );
-    assert_eq!(judged, 2 * OVERLAP_MEMBERS, "the population's size");
+    assert_eq!(judged, RELEASES * OVERLAP_MEMBERS, "the population's size");
     assert_eq!(
         members.len(),
         OVERLAP_MEMBERS,
