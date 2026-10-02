@@ -373,3 +373,33 @@ impl fmt::Debug for VaultPaths {
             .finish_non_exhaustive()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
+
+    use deck_streak_kernel::{Environment, Setting, SettingsError};
+
+    use super::{LayoutFile, VAULT_LAYOUT};
+
+    /// SPEC-118 R4: the layout setting names an absolute file. A relative path is refused naming
+    /// the setting and its shape, spelled here as the literal the refusal quotes, so a change to the
+    /// words fails this test instead of reading the constant back to itself.
+    #[test]
+    fn the_layout_setting_refuses_a_relative_path_naming_its_shape() {
+        let relative = Environment::from_vars([(VAULT_LAYOUT, "relative/layout.json")]);
+        assert_eq!(
+            relative.optional::<LayoutFile>(VAULT_LAYOUT).err(),
+            Some(SettingsError::Malformed {
+                setting: "DECKSTREAK_VAULT_LAYOUT",
+                expected: "an absolute file path",
+            })
+        );
+        assert!(LayoutFile::parse("relative/layout.json").is_none());
+        let absolute = Environment::from_vars([(VAULT_LAYOUT, "/vault/layout.json")]);
+        let parsed = absolute
+            .optional::<LayoutFile>(VAULT_LAYOUT)
+            .map(|file| file.map(|file| file.0));
+        assert_eq!(parsed, Ok(Some(PathBuf::from("/vault/layout.json"))));
+    }
+}
