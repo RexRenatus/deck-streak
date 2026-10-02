@@ -72,6 +72,42 @@
         "pub const WALLET_FLOOR: i64 = 1;",
         "wallet_goldens::the_coin_constants_and_economy_json_match_the_predecessors",
         "the wallet's floor constant is 0, as the constants golden and economy.json say (SPEC-082 R2, A10)"
+      ],
+      [
+        "S08212-THE-MINT-RUNS-AFTER-THE-BASE",
+        "coordination",
+        "src/recompute/mint.rs",
+        "        Phase::CoinMint",
+        "        Phase::RollupAndScore",
+        "wallet_mint::the_mint_reads_the_settled_days_final_base",
+        "the mint step declares phase 6, after the day's base is written, so it mints the day's final base (SPEC-082 R4, A7)"
+      ],
+      [
+        "S08213-A-BACKFILLED-DAY-IS-MINTED",
+        "coordination",
+        "src/recompute/mint.rs",
+        "            let closed = !matches!(day.evaluation, Evaluation::Current);",
+        "            if matches!(day.evaluation, Evaluation::Backfill { .. }) { return Ok(()); } let closed = !matches!(day.evaluation, Evaluation::Current);",
+        "wallet_mint::the_mint_reads_the_settled_days_final_base",
+        "the mint step mints every day the fold evaluates, a backfilled day included (SPEC-082 R4, A7)"
+      ],
+      [
+        "S08214-ONLY-THE-OWNER-SEES-THE-WALLET",
+        "api",
+        "src/wallet_routes.rs",
+        "    _owner: OwnerSession,",
+        "    _owner: axum::http::HeaderMap,",
+        "wallet_routes::the_wallet_and_shop_routes_answer_only_the_owner",
+        "the wallet route asks for the owner's session, so any other caller gets 401 and no data (SPEC-082 R15, A15)"
+      ],
+      [
+        "S08215-THE-MOVEMENTS-COME-NEWEST-FIRST",
+        "economy",
+        "src/wallet.rs",
+        "     ORDER BY study_day DESC, id DESC LIMIT ?2\";",
+        "     ORDER BY study_day ASC, id ASC LIMIT ?2\";",
+        "wallet_ports::the_movements_come_newest_first_a_page_at_a_time",
+        "the wallet's page reads the movements newest first, by study day and then the reverse of the order written (SPEC-082 R15, A20)"
       ]
     ],
     "CARGO_KILLED_SCRIPT_MUTATIONS": [
