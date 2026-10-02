@@ -3900,6 +3900,18 @@ NOT_WORKFLOW_READS = {
         ),
         (
             "test_mutation_workflows",
+            "EveryMutantsSpellingIsFound.test_a_literal_copy_of_each_finder_function_under_another_name_is_caught",
+            "FINDER.read_text(encoding='utf-8')",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "EveryMutantsSpellingIsFound.test_a_literal_copy_of_each_finder_function_under_another_name_is_caught",
+            "definitions_of_the_finder(scratch)",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
             "EveryMutantsSpellingIsFound.test_a_copy_with_changed_logic_is_caught_only_under_the_finders_name",
             "FINDER.read_text(encoding='utf-8')",
             1,
