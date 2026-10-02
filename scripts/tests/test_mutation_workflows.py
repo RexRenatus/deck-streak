@@ -404,7 +404,16 @@ GUARD = Path(__file__).parent / "test_dispatch_shards.py"
 def wrapper_assignments(text):
     """The value of each module-level assignment to `WRAPPER` in a module's text, read by
     `ast.literal_eval` from `ast.parse`, so the module is never imported (ADR-312)."""
-    return []
+    return [
+        ast.literal_eval(node.value)
+        for node in ast.parse(text).body
+        if isinstance(node, (ast.Assign, ast.AnnAssign))
+        and node.value is not None
+        and any(
+            isinstance(target, ast.Name) and target.id == "WRAPPER"
+            for target in (node.targets if isinstance(node, ast.Assign) else [node.target])
+        )
+    ]
 
 
 #: Every module-level assignment to `WRAPPER` in the guard's text; exactly one is the wrapper's form.
@@ -414,12 +423,17 @@ WRAPPED = " ".join(WRAPPER)
 
 
 def after_separator(words, program):
-    """Where the command a wrapper runs begins: the word after the first standalone `--` that
-    follows a program which is not cargo. It names no wrapper and reads no file, so this module
-    stays runnable where the wrapper's own tests are not (ADR-306)."""
-    if words[program].value.rsplit("/", 1)[-1] in CARGO:
+    """Where the command the wrapper runs begins: the word after the first standalone `--` that
+    follows the wrapper's form, `WRAPPER` as the guard's text spells it; after any other program
+    the words are that program's, so None (#533). The guard also checks each option word against
+    its wrapper's parser, which this module cannot load, so here an option the guard would refuse
+    reads as accepted: the scan over-finds, and fails closed (SPEC-129 section 12, ADR-312)."""
+    end = program + len(WRAPPER)
+    if not WRAPPER or [w.value for w in words[program:end]] != list(WRAPPER):
         return None
-    for k in range(program + 1, len(words)):
+    if any(w.dynamic for w in words[program:end]):
+        return None
+    for k in range(end, len(words)):
         if not words[k].dynamic and words[k].value == "--":
             return k + 1 if k + 1 < len(words) else None
     return None
@@ -549,10 +563,65 @@ def functions_of(text):
     return [node for node in ast.walk(ast.parse(text)) if isinstance(node, FUNCTIONS)]
 
 
+def walk_in_order(node):
+    """Every node under `node`, itself first, in the order of its fields: source order."""
+    yield node
+    for child in ast.iter_child_nodes(node):
+        yield from walk_in_order(child)
+
+
+def normal_body(function):
+    """The body of `function` as `ast.dump` text, its docstring dropped and every name it binds
+    renamed in order of first appearance: its own name, its arguments, the names it stores, its
+    exception names and the functions and classes it nests. Two bodies equal under this reading
+    are one body, whatever their names and their wrapping (#532)."""
+    body = function.body
+    if (
+        body
+        and isinstance(body[0], ast.Expr)
+        and isinstance(body[0].value, ast.Constant)
+        and isinstance(body[0].value.value, str)
+    ):
+        body = body[1:]
+    module = ast.Module(body=copy.deepcopy(body), type_ignores=[])
+    a = function.args
+    local = {function.name}
+    local |= {x.arg for x in (*a.posonlyargs, *a.args, *a.kwonlyargs, a.vararg, a.kwarg) if x}
+    for node in ast.walk(module):
+        if isinstance(node, ast.Name) and not isinstance(node.ctx, ast.Load):
+            local.add(node.id)
+        elif isinstance(node, ast.ExceptHandler) and node.name:
+            local.add(node.name)
+        elif isinstance(node, ast.arg):
+            local.add(node.arg)
+        elif isinstance(node, (*FUNCTIONS, ast.ClassDef)):
+            local.add(node.name)
+    order = {function.name: "_self"}
+
+    def new(name):
+        return order.setdefault(name, f"_{len(order)}") if name in local else name
+
+    for node in walk_in_order(module):
+        if isinstance(node, ast.Name):
+            node.id = new(node.id)
+        elif isinstance(node, ast.arg):
+            node.arg = new(node.arg)
+        elif isinstance(node, ast.ExceptHandler) and node.name:
+            node.name = new(node.name)
+        elif isinstance(node, (*FUNCTIONS, ast.ClassDef)):
+            node.name = new(node.name)
+    return ast.dump(module)
+
+
 def definitions_of_the_finder(directory):
-    """[(file, line, def name, the finder function it copies)] for every definition of a finder
-    function under `directory`, at any depth, outside the finder's own file: a `def` spelled with
-    the finder's own name and first argument (#532). Each file is read as text, never imported."""
+    """[(file, line, def name, the finder function it copies)] for every copy of a finder function
+    under `directory`, at any depth, outside the finder's own file: a `def` whose body equals a
+    finder function's under `normal_body`, whatever its name, or a `def` spelled with the finder's
+    own name and first argument, whatever its body (#532; SPEC-129 section 12). Each file is read
+    as text, never imported."""
+    bodies = {}
+    for function in functions_of(FINDER.read_text(encoding="utf-8")):
+        bodies.setdefault(normal_body(function), function.name)
     root = Path(directory)
     found = []
     for path in sorted(p for p in root.rglob("*.py") if "__pycache__" not in p.parts):
@@ -560,6 +629,10 @@ def definitions_of_the_finder(directory):
             continue
         text = path.read_text(encoding="utf-8")
         hits = {}
+        for function in functions_of(text):
+            finder = bodies.get(normal_body(function))
+            if finder is not None:
+                hits.setdefault(function.lineno, (function.name, finder))
         for match in FINDER_NAME.finditer(text):
             name = f"mutants_{match.group(1)[:2]}"
             hits.setdefault(text.count("\n", 0, match.start()) + 1, (name, name))

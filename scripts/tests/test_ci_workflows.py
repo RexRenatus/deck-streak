@@ -3882,6 +3882,12 @@ NOT_WORKFLOW_READS = {
         ),
         (
             "test_mutation_workflows",
+            "definitions_of_the_finder",
+            "FINDER.read_text(encoding='utf-8')",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
             "EveryMutantsSpellingIsFound.test_a_renamed_and_rewrapped_copy_of_each_finder_function_is_caught",
             "FINDER.read_text(encoding='utf-8')",
             1,
@@ -5158,6 +5164,11 @@ DYNAMIC_IMPORTS = {
             "compile(mutant.apply(SITES), 'sites.py', 'exec')",
             1,
         ),
+    ),
+    **allowed(
+        "silences the SyntaxWarning a string constant's own `ast.parse` raises while the stand-in census parses it as text; it imports, runs and reads nothing",
+        ("_stand_in_census", "arms_of", "warnings.catch_warnings()", 1),
+        ("_stand_in_census", "arms_of", "warnings.simplefilter('ignore')", 1),
     ),
     **allowed(
         "registers the production module loaded by path under its own name, so its dataclasses resolve",
