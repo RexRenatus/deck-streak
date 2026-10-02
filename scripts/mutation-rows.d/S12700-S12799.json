@@ -800,6 +800,14 @@
         "    unwind || :\n",
         "a refused effective check whose undo failed says so in its one refusal line (SPEC-127 A43)",
         "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_an_undo_that_cannot_put_the_unit_files_back_says_so_and_leaves_no_temporary_path"
+      ],
+      [
+        "S12700-A-THE-KEPT-RELEASE-MUST-BE-WHOLE",
+        "deploy/deploy.sh",
+        "    (cd \"$rel\" && sha256sum -c --quiet MANIFEST.sha256) ||\n        refuse \"found $tag is kept but is not a whole release (it does not match its MANIFEST.sha256)\"\n",
+        "    (cd \"$rel\" && sha256sum -c --quiet MANIFEST.sha256) || :\n",
+        "a rollback to a kept release that does not match its manifest refuses, naming the whole-release check, and changes nothing (SPEC-127 A42)",
+        "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_a_rollback_to_a_kept_release_that_is_not_whole_is_refused_as_found"
       ]
     ]
   }
