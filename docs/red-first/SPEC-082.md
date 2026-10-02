@@ -152,7 +152,7 @@ first changes a measured quantity:
   test: A7's is `the_mint_reads_the_settled_days_final_base`.
 - `crates/api/tests/wallet_routes.rs`, `crates/coordination/tests/wallet_mint.rs` and
   `crates/economy/tests/wallet_ports.rs`: 872102b committed them unformatted, and `cargo fmt --all`
-  at green changed them in 1, 5 and 2 hunks, format only. rustfmt run over each file as 872102b holds
+  at green changed them in 1, 6 and 2 hunks, format only. rustfmt run over each file as 872102b holds
   it gives 46fc2a7's file byte for byte for `wallet_routes.rs` and `wallet_ports.rs`; for
   `wallet_mint.rs` the only lines that differ are the savepoint test's edits named above.
 - `web/app/tests/a11y.spec.ts`: the accessibility run's page now answers `/api/wallet` with a
