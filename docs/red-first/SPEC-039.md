@@ -377,8 +377,8 @@ It is red at 5bcbe0124973347119134cc11c91edfd529d9c92 by assertion; four of its 
 member whose bytes are not UTF-8 read as before:
 
 ```red-first
-A62 (the PEP 263 members): red at 5bcbe0124973347119134cc11c91edfd529d9c92: AssertionError: Lists differ: ["a latin-1 escape rewritten as raw bytes,[463 chars]ne)"] != []
-A62 (the PEP 263 members): green at c3845425ac8f886636cdab6326529e174302bb55
+A62: red at 5bcbe0124973347119134cc11c91edfd529d9c92: AssertionError: Lists differ: ["a latin-1 escape rewritten as raw bytes,[463 chars]ne)"] != []
+A62: green at c3845425ac8f886636cdab6326529e174302bb55
 ```
 
 ```text
