@@ -83,6 +83,15 @@
         "kernel",
         "log_capture_class::a_capture_after_a_held_capture_dropped_is_admitted",
         "a held capture's guard lowers the helper's count when it drops, so a later capture on the thread is admitted and not refused as nested; cargo-mutants lists no mutant in tools/"
+      ],
+      [
+        "S02410-A-PANICKING-BODY-LOWERS-THE-COUNT",
+        "tools/log-capture/capture.rs",
+        "    HELD.with(raise);\n    let _scoped = Scoped;\n    tracing::subscriber::with_default(subscriber, body)\n",
+        "    HELD.with(raise);\n    let out = tracing::subscriber::with_default(subscriber, body);\n    HELD.with(lower);\n    out\n",
+        "kernel",
+        "log_capture_class::a_capture_after_a_panicking_body_is_admitted",
+        "a capture whose body panics lowers the helper's count as it unwinds, through with_capture's drop guard, so a later capture on the thread is admitted and not refused as nested; cargo-mutants lists no mutant in tools/"
       ]
     ]
   }
