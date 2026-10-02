@@ -207,6 +207,55 @@ async fn a_credit_of_one_key_is_written_once() {
     );
 }
 
+/// Mutation coverage (R7, A19): a refund is keyed on its study day, source and reference, so a
+/// refund on a later day of a key held earlier writes its own movement. Only `credit_once` holds
+/// the any-day guard. Added after its code; the plant routes `refund_on` through it.
+#[tokio::test]
+async fn a_refund_on_a_later_day_of_a_held_key_writes_its_own_movement() {
+    #[derive(Clone, Copy)]
+    enum Port {
+        Deposit,
+        DepositOnce,
+        Refund,
+    }
+    // The three seed members: a movement of the key on day 30 by each port that can write one,
+    // then a refund of 9 on day 31.
+    let cases = [
+        ("K-009 deposit then refund", Port::Deposit),
+        ("K-021 deposit_once then refund", Port::DepositOnce),
+        ("K-033 refund then refund", Port::Refund),
+    ];
+    for (name, first) in cases {
+        let (_directory, db, wallet) = wallet().await;
+        let held = match first {
+            Port::Deposit => wallet.deposit(day(30), "payout", "k1", 7, AT).await,
+            Port::DepositOnce => wallet.deposit_once(day(30), "payout", "k1", 7, AT).await,
+            Port::Refund => wallet.refund(day(30), "payout", "k1", 7, AT).await,
+        }
+        .expect("the earlier movement");
+        assert_eq!(
+            held,
+            DepositAnswer::Deposited(7),
+            "{name}: the day-30 movement"
+        );
+        let later = wallet
+            .refund(day(31), "payout", "k1", 9, AT)
+            .await
+            .expect("the refund on the later day");
+        assert_eq!(
+            later,
+            DepositAnswer::Deposited(9),
+            "{name}: the day-31 refund"
+        );
+        assert_eq!(
+            rows(&db).await,
+            [row(30, "payout", "k1", 7), row(31, "payout", "k1", 9)],
+            "{name}: two movements, one per study day"
+        );
+        assert_eq!(summed(&db).await, 16, "{name}: the balance");
+    }
+}
+
 #[tokio::test]
 async fn a_settled_days_mint_is_raised_and_never_lowered() {
     let (_directory, db, wallet) = wallet().await;
