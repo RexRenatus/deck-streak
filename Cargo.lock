@@ -983,6 +983,8 @@ name = "deck-streak-economy"
 version = "0.2.0"
 dependencies = [
  "deck-streak-kernel",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
