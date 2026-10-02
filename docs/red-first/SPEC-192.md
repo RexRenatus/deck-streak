@@ -419,3 +419,65 @@ These assertions are MUTATION COVERAGE, not red-first evidence: the guard's code
 with 6384 R8 members judged against rustc and 1486 members rustc refuses judged for Width.
 The four rows are KILLED again by full id, and so is every row of the 99 the mutation plan selects
 for this branch, each on this module.
+
+## Addendum, 2026-10-02, second pass: an implementation passed in, `tests/` walked as cargo builds it, and an `include!` a `use` imports
+
+The second pass starts at 482636f2, whose merge-base with dev is 36668462. Its new and extended
+tests were run first against the guard exactly as 482636f2 left it, before any of the pass's code:
+67 tests ran and 5 failed, each by assertion and none by an import or a syntax error. The tests and
+the code were then committed together at 6e335fcb, where the module is green (Ran 67 tests, OK).
+A19's spelling test gains the spellings the first pass left open (a trait path that is a
+repetition, a repetition of tokens, an `impl` keyword passed in, with or without the trait, a `for`
+passed in, and an invocation that passes an implementation's head) and two read controls; the
+controls read as written at 482636f2. A11's test of a shape a test of the crate spells gains an
+undeclared file in a `tests/` subdirectory, which must not pin. No assertion of a red test was
+weakened after its red run. One control changed before the commit: the read control of another
+trait's implementation no longer passes a lone `impl` to its macro, because the pass refuses that
+shape by its file by design, a disclosed false refusal (SPEC-192 section 16's limits).
+
+```text
+A11: red at 482636f2: AssertionError: Lists differ: [] != ['demo::Depth (src/depth.rs) "a whole depth"'] (test_a_shape_a_test_of_the_crate_spells_is_pinned)
+A19: red at 482636f2: AssertionError: {('pl[2806 chars]e): [], ('macro trait path a repetition', Fals[1288 chars]ne']} != {('pl[2806 chars]e): ['demo (src/more.rs) macro writes an imple[2032 chars]ne']} (test_every_spelling_is_read_or_refused_as_written)
+A20: red at 482636f2: AssertionError: Lists differ: ["subdirectory '#[cfg(any())]\\n': a pin i[2013 chars]ead'] != [] : 21 of 43 member(s) (test_a_tests_file_counts_only_where_cargo_and_rustc_compile_it)
+A21: red at 482636f2: AssertionError: Lists differ: [] != ["demo (src/more.rs) include! compiles another file's text"] (test_an_include_a_use_imports_is_refused_by_its_file)
+A22: red at 482636f2: AssertionError: Lists differ: ['demo::Depth (src/lib.rs) "a whole depth"'] != [] (test_an_attribute_inside_a_macro_repetition_is_read_with_its_module)
+```
+
+Each red in the text block is green at 6e335fcb.
+
+6e335fcb also removes one arm instead of keeping it: `start_of` passed over a `$(` before an item,
+so an attribute inside a macro repetition (`$(#[cfg(any())] mod $n;)*`) refused a shape rustc
+compiles with its pin under test. Three trees decide it, each compiled by rustc with its test
+module under `--test` only: the attribute inside the repetition, the attribute before the `$(`, and
+no macro. With the arm the guard refuses the first two and reads the third; without it, it reads
+the first and the third and refuses the second, as it did. Over the generated population, no member
+reads differently with and without the arm. A22's
+test_an_attribute_inside_a_macro_repetition_is_read_with_its_module pins the read.
+
+The rest is MUTATION COVERAGE, not red-first evidence; each test is green at the commit that adds
+it and fails under the mutant its row names. At 6e335fcb, A20's item population grows from 180 to
+200 members with a kind whose value is an `if ... else` expression, which ends at its last brace,
+and test_a_file_a_path_attribute_loads_reads_its_modules_beside_itself and
+test_a_keyword_before_a_bang_opens_no_macro join A22; each is green at 482636f2 as well. 409250b6
+adds 14 members to A19's spelling test, each compiled by rustc, and a kind for a tuple type named by
+its tokens (Ran 67 tests, OK; 92 spellings judged). 301dcb93 adds 4 more spelling members, each
+compiled by rustc, and nine tests: test_a_pin_between_stripped_siblings_is_read_as_rustc_reads_it
+and test_a_predicate_with_a_trailing_comma_is_judged_without_a_crash (A20),
+test_a_file_in_no_src_folder_reads_its_test_module_beside_itself,
+test_a_path_two_cfg_attrs_deep_names_no_file,
+test_a_cfg_attr_path_is_read_only_below_the_folder_the_walk_gives,
+test_a_cfg_attr_path_on_an_undecided_option_reads_neither_file, test_a_module_cycle_ends_the_walk,
+test_a_folder_named_like_a_tests_file_is_no_crate_root and
+test_a_tests_root_rustc_cannot_lex_is_listed_and_the_walk_goes_on. The module is green there (Ran
+76 tests, OK, examined 25 Setting impl(s), examined 202 crate file(s), examined 100 implementation
+spelling(s), examined 200 item member(s) judged against rustc with 40 false refusals disclosed,
+examined 43 `tests/` member(s) judged against rustc with 5 false refusals disclosed, examined 6384
+R8 member(s) judged against rustc, examined 1486 R8 member(s) rustc refuses).
+
+Rows S19329 to S19399 (9e164241), S19400 to S19418 (409250b6) and S19419 to S19436 (301dcb93) pin
+the arms the pass adds or leaves without a row, each KILLED by its one killer test under one
+invocation. 9e164241 points S19254's find at the roots of the new walk of `tests/`, which replaced
+the line it found, and S19254 is KILLED again. S19402 rows the alternate mutant of its arm
+(`if True:`), because the automatic one (`if False:`) never ends. Five arms take no row: each is
+equivalent, read the same over the generated population with and without its mutant, and a probe
+rustc compiles shows no accepted input that reads differently.
