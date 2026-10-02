@@ -111,9 +111,5 @@ async fn a_debits_read_that_fails_fails_the_view() {
 #[tokio::test]
 async fn a_movements_read_that_fails_fails_the_view() {
     // A movement whose source is not text reads in no sum and fails the page alone.
-    judge(
-        &[(TODAY - 1, 5, true)],
-        [false, false, false, true],
-    )
-    .await;
+    judge(&[(TODAY - 1, 5, true)], [false, false, false, true]).await;
 }
