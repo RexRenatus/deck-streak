@@ -1,11 +1,11 @@
 ---------------------------- MODULE BandUpOnce ----------------------------
-\* @phx covers crates/coordination/src/recompute/progress.rs anchor=record_progress digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/coordination/src/recompute/progress.rs anchor=offer_band_ups digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/coordination/src/recompute/mod.rs anchor=offer_owed digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/curriculum/src/store.rs anchor=record_milestone digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/curriculum/src/store.rs anchor=owed_band_ups digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/curriculum/src/store.rs anchor=mark_band_up digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/notifications/src/ledger.rs anchor=claim digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers crates/coordination/src/recompute/progress.rs anchor=record_progress digest=sha256:12f49fc092311f2dc7d07dcac4f0dd424ead54bb691054e029621c8782c6028e
+\* @phx covers crates/coordination/src/recompute/progress.rs anchor=offer_band_ups digest=sha256:7aba5da075cd328a987fb868ee8a25d829cbb3d8f51769a10c14a69951cb95e3
+\* @phx covers crates/coordination/src/recompute/mod.rs anchor=offer_owed digest=sha256:0d418cb9fe6912d5780f32d0e837891e9927590bd6cc55b3aaf883ebfdf5bc00
+\* @phx covers crates/curriculum/src/store.rs anchor=record_milestone digest=sha256:fc191ed6df00f2838ce98ea85dd80683bab83c687d3a083360d1c70414273107
+\* @phx covers crates/curriculum/src/store.rs anchor=owed_band_ups digest=sha256:3402c6e98c23f6013560849496e5383ae6129b6a69a8978f1c35276149ae969c
+\* @phx covers crates/curriculum/src/store.rs anchor=mark_band_up digest=sha256:ef165d6add20fa3d3bd43dd208bf4a92e1084aa3542662035d4f4c40ccd207a1
+\* @phx covers crates/notifications/src/ledger.rs anchor=claim digest=sha256:0116ef4925de04614d09ac18952c0a0b0f7248fd65f5d4f6ca555448836a6ab7
 \* @phx cites #85
 \* @phx property BandUpOnce ramp=report
 \* @phx property CelebrateAtMostOnce ramp=report
