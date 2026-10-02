@@ -10,7 +10,7 @@
 //! SPEC-026 builds the transport and the owner gate: the one client to the Bot API
 //! ([`transport`]), the split of a long text into messages that each parse ([`chunk`]), the gate
 //! every update passes ([`gate`]), the long poll with its drain, offset and backoff ([`poll`]), and
-//! the owner's commands ([`commands`]). SPEC-071 adds the owner's `/score` ([`score_commands`]). The
+//! the owner's commands ([`commands`]). SPEC-071 adds the owner's `/score` ([`score_commands`]). SPEC-110 adds the law drills ([`drill_commands`]). SPEC-118 adds the owner's media for the vault inbox ([`capture`]). The
 //! daemon's `bot` role builds them and joins the transport's
 //! counts to coordination's delivery marker (ADR-026).
 //!
@@ -20,13 +20,18 @@
 #![deny(unused_must_use)]
 #![warn(missing_docs, clippy::all)]
 
+pub mod badges_commands;
+pub mod capture;
 pub mod chunk;
 pub mod commands;
+pub mod drill_commands;
 pub mod gate;
 pub mod poll;
 pub mod score_commands;
+pub mod streak_commands;
 pub mod transport;
+pub mod xp_commands;
 
 pub use commands::{Commands, MiniAppUrl, OwnerSync, Scores, SyncAnswer, SyncOutcome, SyncRefusal};
 pub use poll::run;
-pub use transport::{ApiUrl, SendCounts, Sent, Transport, TransportError};
+pub use transport::{ApiUrl, OwnerChat, SendCounts, Sent, Transport, TransportError};

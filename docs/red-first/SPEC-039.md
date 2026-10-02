@@ -164,6 +164,8 @@ A39: red at f26c24e: AssertionError: {'S00010-DOUBLE': 'KILLED'} != {'S00010-DOU
 A39: green at 688ae71
 A40: red at 24013e7: AssertionError: 0 != 1 : examined 2 configuration(s) (a second configuration, ignoreStatic and a short mutate list all passed)
 A40: green at a029d19
+A41: red at 6811975: AssertionError: 0 != 3 : S00020-BASH-UNPARSED: KILLED: its killer passed without the mutant and failed with it (a bash, an extensionless bash and a POSIX sh mutant that did not parse all read KILLED)
+A41: green at 8bbeac4
 ```
 
 ## The gate's own red first (R17)
@@ -193,3 +195,203 @@ and the job went GREEN.
 Amendment (2026-09-28): the lines of A20 moved into a `` ```retired `` fence, by inserted fence
 lines, because SPEC-057 retired that criterion when ADR-070 replaced the exclusion it held to its
 reason with the equivalence record; SPEC-057 A8 judges that no exclusion hides a mutant.
+
+Amendment (2026-09-29): A41 (SPEC-039 section 12, issue #288). The tests were committed at 6811975
+beside the unchanged runner: of the six in `TheRunnerParseChecksAShellMutant`, the three whose mutant
+does not parse (a bash script, a bash script known by its shebang alone, a POSIX `sh` script)
+failed by assertion, each reading KILLED where VOID was owed, and the other three (the construct
+parses under `bash -n` and not under `sh -n`, and a bash and a POSIX mutant that parse and are
+caught read KILLED) passed, since they pin behaviour the runner already had and guard the fix
+against a checker that always picks `sh -n`. The fix at 270bbaa parse-checks the mutated bytes of a
+shell target before the cargo branch, and all six pass. Five rows pin its decisions, S03929 to
+S03933, each proved KILLED with `scripts/mutation_rows.py` restoring its target byte for byte.
+Fix round 1 added twelve tests to the same class at 96ae492, each pinning a branch of `shell_parser()`, `parses()` and the shell check in `builds()` that a hand-mutation sweep of the runner's new code (26 mutants) had left standing: the production code was already right, so each is red only against its mutant, measured on a scratch copy and recorded below, and green at the head. Ten rows, S03934 to S03943, pin the same decisions and each is proved KILLED. Fix round 2 found `== 0` read as `<= 1` in `parses()` is not equivalent: `bash -n` exits 1 on an array assignment left open at the end of its input, so a test and row S03944 pin it.
+The five rows the tree already held on a shell target (S05706, S05806, S05807, S05808, S05809, all on
+`scripts/check.sh`) were re-proved at that head: each reads KILLED, so none was a parse failure
+passing for a kill. A8's cargo path is proved by CI's run of the module.
+
+Fix round 1's reds, each measured on a scratch copy of 96ae492 with its mutant applied, sit here and not in the fence, which holds one red line and one green line per criterion:
+
+- A41: red at 96ae492: AssertionError: 0 != 3 : S00025-SH-SHEBANG-BASHISM: KILLED: its killer passed without the mutant and failed with it (measured on a scratch copy at 96ae492, mutant M03: a shebang naming sh always read as bash)
+- A41: red at 96ae492: AssertionError: 3 != 0 : S00026-BASH-EXT-CAUGHT: VOID: the mutant does not parse: sh: sh: 1: Syntax error: "(" unexpected (measured on a scratch copy at 96ae492, mutant M05: a .bash target read as sh)
+- A41: red at 96ae492: AssertionError: 0 != 3 : S00027-BASH-EXT-UNPARSED: KILLED: its killer passed without the mutant and failed with it (measured on a scratch copy at 96ae492, mutant M06: the .bash branch removed)
+- A41: red at 96ae492: AssertionError: 0 != 3 : S00028-SH-EXT-BASHISM: KILLED: its killer passed without the mutant and failed with it (measured on a scratch copy at 96ae492, mutants M07 and M08: a .sh target read as bash, and the .sh branch removed)
+- A41: red at 96ae492: AssertionError: 0 != 3 : S00030-DASH-UNPARSED: KILLED: its killer passed without the mutant and failed with it (measured on a scratch copy at 96ae492, mutant M11: dash dropped from the shebang pattern)
+- A41: red at 96ae492: AssertionError: Lists differ: ['MARK', '3', 'MARK', 'MARK', '2'] != ['MARK', '3', 'MARK', '2'] (measured on a scratch copy at 96ae492, mutant P01: the parse check without -n executes the mutant)
+- A41: red at 96ae492: AssertionError: None != 'the mutant is unchecked: bash is not installed' (measured on a scratch copy at 96ae492, mutant P03: a missing parser passing the mutant)
+- A41: red at 96ae492: AssertionError: None != 'the mutant is unchecked: bash -n timed out' (measured on a scratch copy at 96ae492, mutants P02 and P04: no bound on the check, and a hung parser passing the mutant)
+- A41: red at 96ae492: AssertionError: "the [22 chars] bash: bash: line 1: `if then'" != "the [22 chars] bash: bash: line 1: syntax error near unexpected token `then'" (measured on a scratch copy at 96ae492, mutant P06: the last stderr line in place of the first)
+- A41: red at 96ae492: AssertionError: Lists differ: ['cargo'] != ['bash', 'cargo'] (measured on a scratch copy at 96ae492, mutant B03: the shell check skipped for a cargo killer)
+- A41: red at 96ae492: AssertionError: Lists differ: ['cargo', 'bash'] != ['bash', 'cargo'] (measured on a scratch copy at 96ae492, mutant B04: the shell check made after the cargo branch)
+- A41: red at 96ae492: AssertionError: 'sh' is not None (measured on a scratch copy at 96ae492, mutant M10: a target that is not a shell script given sh)
+- A41: red at 8bbeac4: AssertionError: 0 != 3 : S00034-BASH-OPEN-ARRAY: KILLED: its killer passed without the mutant and failed with it (measured on a scratch copy at 8bbeac4, mutant P05: an exit of 1 from the parser read as a parse)
+
+## Addendum, 2026-09-29: the bin killer (issue #352)
+
+A42 to A44 are the acceptance criteria of section 16, made by issue #352's delivery. Each was
+written red at b47b9a3, where `bin` is no killer kind and `scripts/mutation_rows.py` refuses it
+by name, and each is green at 1adadce, which adds the kind. Each red fails by assertion: the tests
+turn the runner's refusal into a failed assertion, and the failures name no path outside the
+repository. The original lines above stand.
+
+```red-first
+A42: red at b47b9a3: AssertionError: a bin killer is refused: crates/fix has no test target bin
+A42: green at 1adadce
+A43: red at b47b9a3: AssertionError: {'S00054-BIN-KILLED': 'VOID', 'S00055-BIN-NO-TEST': 'VOID'} != {'S00054-BIN-KILLED': 'KILLED', 'S00055-BIN-NO-TEST': 'VOID'}
+A43: green at 1adadce
+A44: red at b47b9a3: AssertionError: 'census: S00058-BIN-LIB-TEST: its killer bin::tests::only_in_the_lib names no test: crates/fix/src/main.rs declares only_in_the_lib 0 times' not found in 'census: S00056-BIN-ROOT: its killer bin::tests::three_triples_to_nine crates/fix has no test target bin\ncensus: S00057-BIN-MODULE: its killer bin::helper::tests::four_halves_to_two crates/fix has no test target bin\ncensus: S00058-BIN-LIB-TEST: its killer bin::tests::only_in_the_lib crates/fix has no test target bin\nexamined 3 row(s)\n'
+A44: green at 1adadce
+A45: red at a4ce513: AssertionError: 'S00059' unexpectedly found in 'census: S00059-BIN-OTHER-ROOT-MODULE: its killer bin::helper::tests::four_halves_to_two names no test: crates/fix/src/other.rs declares four_halves_to_two 0 times\nexamined 1 row(s)\n'
+A45: green at 3a3bdd6
+```
+
+Review of this pull request found that a root file not named `main.rs`
+was walked as if its modules sat under a directory, and that a crate holding `tests/bin.rs` had a
+`bin::` killer rerouted to the binary's own test. A45, the criterion of section 16 for both, is
+the fix round's: its two tests were written red at a4ce513 against the head's runner, and are green
+at 3a3bdd6, which changes the runner alone. Each red fails by assertion. A42 to A44 are unchanged:
+the fence line for A44 above is now the full failure message, where the first version cut its end.
+A45 has two tests, and the fence holds one line for the criterion; the other test's red, verbatim:
+
+```text
+test_a_bin_killer_beside_a_tests_bin_rs_is_refused: AssertionError: 'census: S00060-BIN-SHADOW: its killer bin::tests::three_triples_to_nine crates/fix has a test target bin, which the bin kind shadows' not found in 'examined 1 row(s)\n'
+```
+
+## Addendum: the `bin` kind reads what the compiler builds (section 19, issue #405)
+
+The tests of A46 to A49 were committed first, alone, at a3d4ff9b, against the runner as it stood
+on `dev`. They fail by assertion, not by error: the generated population agreed with the oracle on
+75 of its 165 members, and each planted shape of the issue failed
+for its own reason. The runner's fix went green at 9595183f. The population was then widened (over
+`cfg`, lexemes and blocks at e43c60ef, over target dedupe, dotted paths and unpathed tables at
+349d2423) and A50's refusals and A51's predicate test were added with them (A51 at da82cca3), each green on arrival against the fixed
+reader and proved by the mutants listed in the pull request.
+
+```red-first
+A46: red at a3d4ff9b: AssertionError: 75 != 165 : a member was neither agreed nor refused
+A46: green at 9595183f
+A47: red at a3d4ff9b: AssertionError: Lists differ: ['src/main.rs', 'src/x.rs'] != ['src/main.rs']
+A47: green at 9595183f
+A48: red at a3d4ff9b: AssertionError: KillerUnresolved not raised
+A48: green at 9595183f
+A49: red at a3d4ff9b: AssertionError: "holds 2 binaries," does not match "crates/fix holds 3 binaries, and a bin killer names none of them"
+A49: green at 9595183f
+A50: not red: its first cases passed against the unchanged runner, and the cases added with the fix's widening (a file module in a block, a malformed declaration, a missing binary file) test code the fix introduced
+A51: not red: it tests `cfg_value`, which the fix introduced and `dev` does not have, so there is no runner to fail; mutants of the function prove it instead
+```
+
+The examined lines: at the fix (9595183f) the population read `examined 165 generated crate
+layouts` and `agreed with the oracle 162, refused by name 3`; at da82cca3 it reads `examined 268
+generated crate layouts` and `agreed with the oracle 247, refused by name 21`, and A51 reads
+`examined 2406 predicates` with `329 decided, every one equal to rustc's value`. At 630c25db and at
+bc6ee994 it reads `examined 316 generated crate layouts` and `agreed with the oracle 292, refused
+by name 24`. Those two commits pin the token reader's nested block comments and then bound that
+scan by the input's length; the test added at 630c25db reads `nested block comment shapes examined
+5` and passes at both, so the bound changed no reading the test sees.
+
+## Addendum: the five classes the population did not hold (section 21, issue #405, 2026-10-01)
+
+The families of section 21 were committed first, alone, at 24ec6c76, against the reader as it
+stood at 6d3a9638. They fail by assertion, and the failing members are those of the five classes:
+a `mod` inside a macro invocation, a path through `..`, a dotfile, an absolute path, and a manifest
+with no `edition` key. The reader's fix went green at 87d385df. A53 pins a bound the reader already
+had, so it is not red.
+
+```red-first
+A52: red at 24ec6c76: AssertionError: 1186 != 1610 : a member was neither agreed nor refused
+A52: green at 87d385df
+A53: not red: it pins the block-comment bound the reader already had; under the mutant that shortens the bound by three it fails with AssertionError: '/*x' reads ['x'], where [] is due
+```
+
+The planted refusals of A50 for an edition the reader cannot decide were red at 24ec6c76 for their
+own reason:
+
+```text
+AssertionError: KillerUnresolved not raised
+```
+
+The examined lines at 87d385df read `examined 1610 generated crate layouts` and `agreed with the
+oracle 1523, refused by name 87`, and the block-comment test reads `examined 13344 block comments
+left open`.
+
+## Addendum, 2026-10-01: a docstring-only script change is named (issue #485)
+
+A61 to A64 are the acceptance criteria of section 29, made by issue #485's delivery, and A64 also
+closes issue #455. Each was written red at 095f02e, where the plan reads a docstring as a code line
+and the PLAN paragraph of `scripts/mutation-verdict.py` names neither leg `ci` admits a skip from
+nor the `scripts` output, and each red fails by assertion. A61 to A63 are green at fca5457, which
+adds the `docstring-only` case to the plan; A64 is green at e56feb2, which corrects the paragraph.
+The original lines above stand.
+
+```red-first
+A61: red at 095f02e: AssertionError: "mutation: plan: scripts does not apply: not-applicable: docstring-only: every changed script's syntax tree equals its base's once docstrings are set aside: scripts/guard.py\n" not found in 'mutation: plan: diff: the local run is judged on its diff\nmutation: plan: 1 changed path(s): rust 0, web 0, oracle 0, scripts 1, other 0 (base 1ed1a24, head 4bba867)\nmutation: plan: rust does not apply: not-applicable: the diff changes no rust production file\nmutation: plan: web does not apply: not-applicable: the diff changes no web production file\nmutation: plan: oracle does not apply: not-applicable: the diff changes no oracle production file\nmutation: plan: scripts applies: 2 production code line(s) in 1 file(s)\nmutation: plan: 0 row(s) selected: none\n'
+A61: green at fca5457
+A62: red at 095f02e: AssertionError: Lists differ: ["a module docstring: read ('applies', Non[505 chars]'])"] != []
+A62: green at fca5457
+A63: red at 095f02e: AssertionError: Lists differ: ["two docstring-only files: read ('applies[392 chars]'])"] != []
+A63: green at fca5457
+A64: red at 095f02e: AssertionError: Lists differ: [] != ['mutation-rows', 'mutation-rust']
+A64: green at e56feb2
+```
+
+A64's test holds two subtests, and the fence holds one line for the criterion; the other
+subtest's red at 095f02e, verbatim:
+
+```text
+test_the_plan_paragraph_names_the_legs_ci_admits_and_the_outputs_it_writes [the step outputs the plan writes]: AssertionError: Lists differ: ['case', 'mutate', 'oracle', 'rows', 'rust', 'scope', 'web'] != ['case', 'mutate', 'oracle', 'rows', 'rust', 'scope', 'scripts', 'web']
+```
+
+The house Python mutant runner, run over this delivery's diff at e56feb2, listed 50 mutants of
+`scripts/mutation-verdict.py`, killed 49 and left one surviving: `replace continue with break in
+docstring_only`, at the `continue` that passes over a file outside the `scripts` class. 2082197 adds
+two members to A62, a docstring change beside a change to a file outside the class, which is named,
+and a code change in a later script with a file outside the class between, which applies. It also
+limits A62's check of the runner's listing to the files whose lines the plan set aside, since a file
+outside the class is no source the runner lists. Under that mutant A62 then reads 2 mismatches, one
+for each new member, and the runner at 2082197, over that one mutant, reads `killed 1, survived 0`,
+its killer A62. The 20-member A62 is red at 095f02e's plan, by assertion:
+
+```text
+A62 at 2082197's test, over 095f02e's plan: AssertionError: Lists differ: ["a module docstring: read ('applies', Non[637 chars]'])"] != []
+```
+
+At bfb00d2 the tests read without a site the census in `scripts/tests/test_ci_workflows.py` counts
+as dynamic: A62's control empties each statement list in place, A62's and A63's in-process verdict
+reads the plan through `dataclasses.asdict`, and A64 reads the `legs` function from the script's
+syntax tree. Each reading is unchanged, and A61 to A64 as bfb00d2 writes them are red at 095f02e's
+code by the same assertions as above, A62 with 7 mismatches.
+
+## Addendum, 2026-10-02: the plan reads a declared encoding from the bytes (issue #485, round 2)
+
+The PEP 263 class is criterion A65 of the SPEC, a population of its own beside A62's. The plan parsed the file's text after decoding it as UTF-8,
+and a text source ignores a coding declaration, so a declaration that changes a value, one that
+stops the head compiling and an unknown encoding were each named docstring-only. The plan now
+parses the bytes, so a declared encoding decides the tree compared, and a file whose bytes are not
+UTF-8 still fails closed. The new test is selected by
+
+```text
+python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k a_declared_encoding_decides_the_tree_compared
+```
+
+It is red at 5bcbe0124973347119134cc11c91edfd529d9c92 by assertion; four of its six members fail, the declared UTF-8 control and the
+member whose bytes are not UTF-8 read as before:
+
+```red-first
+A65: red at 5bcbe0124973347119134cc11c91edfd529d9c92: AssertionError: Lists differ: ["a latin-1 escape rewritten as raw bytes,[463 chars]ne)"] != []
+A65: green at c3845425ac8f886636cdab6326529e174302bb55
+```
+
+```text
+Ran 1 test
+
+FAILED (failures=1)
+cookie population: 6 member(s); mismatches 4
+```
+
+The first red line names, verbatim, `a latin-1 escape rewritten as raw bytes, a value changes: read
+('named', ['scripts/cookie.py']), expected ('applies', None)`. At c3845425ac8f886636cdab6326529e174302bb55 the whole module reads
+`Ran 30 tests` and OK, and the population reads `cookie population: 6 member(s); mismatches 0`.
+
+The module now holds seven members, the seventh (a latin-1 declaration removed beside a
+docstring edit) being mutation coverage added after the round-2 PASS, green at its own commit and
+not red-first evidence.

@@ -15,6 +15,7 @@ mod fake_bot_api;
 
 use std::collections::BTreeSet;
 
+use deck_streak_bot::badges_commands::{badges_failed_reply, records_failed_reply};
 use deck_streak_bot::commands::{
     CONFIRM_ERASE, EXPORT_FILE_NAME, MENU, MINI_APP_URL, Reply, erase_done_reply,
     erase_failed_reply, export_caption, export_failed_reply, help_reply, sync_reply,
@@ -23,8 +24,8 @@ use deck_streak_bot::score_commands::{score_failed_reply, score_reply};
 use deck_streak_bot::{MiniAppUrl, Scores, Sent, SyncAnswer, SyncOutcome, SyncRefusal};
 use deck_streak_coordination::data_rights_registry::export_all;
 use deck_streak_coordination::score::{DayScore, Pillars};
-use deck_streak_kernel::Environment;
 use deck_streak_kernel::{Db, StudyDay};
+use deck_streak_kernel::{Environment, SettingsError};
 use fake_bot_api::{
     APP_URL, Bench, OWNER, STRANGER, ScriptedSync, golden_send, incoming, messages_directory,
     owner_says, owner_taps, payload, tap,
@@ -114,8 +115,11 @@ async fn the_menu_is_registered_for_the_owners_chat_only() {
         .collect();
     assert_eq!(
         registered,
-        BTreeSet::from(["privacy", "export", "delete", "sync", "score"]),
-        "the five commands of the menu"
+        BTreeSet::from([
+            "privacy", "export", "delete", "sync", "score", "level", "streak", "badges", "records",
+            "drills", "drill"
+        ]),
+        "the eleven commands of the menu"
     );
     for (entry, command) in MENU
         .iter()
@@ -339,6 +343,8 @@ fn rendered() -> Vec<(&'static str, Reply)> {
         ),
         ("score-none", score_reply(None)),
         ("score-failed", score_failed_reply()),
+        ("badges-failed", badges_failed_reply()),
+        ("records-failed", records_failed_reply()),
         ("help", help_reply()),
         ("export-failed", export_failed_reply()),
         ("erase-done-log-held", erase_done_reply(true)),
@@ -370,12 +376,52 @@ fn rendered() -> Vec<(&'static str, Reply)> {
             )),
         ),
         (
+            "sync-scores-refused",
+            sync_reply(&synced(
+                SyncOutcome::Synced,
+                Scores::Refused {
+                    reason: "recompute_failed".to_owned(),
+                },
+            )),
+        ),
+        (
+            "sync-still-running",
+            sync_reply(&synced(SyncOutcome::StillRunning, Scores::Unchanged)),
+        ),
+        (
             "sync-refused",
             sync_reply(&Err(SyncRefusal {
                 reason: "nothing_scripted",
             })),
         ),
     ]
+}
+
+#[tokio::test]
+async fn a_refusal_after_a_run_is_answered_beside_the_syncs_own_line() {
+    let bench = Bench::start().await;
+    let mut commands = bench.commands(ScriptedSync::answering([Ok(SyncAnswer {
+        sync: SyncOutcome::Synced,
+        scores: Scores::Refused {
+            reason: "recompute_failed".to_owned(),
+        },
+    })]));
+    commands.handle(incoming(owner_says(1, "/sync"))).await;
+    let sent = last_send(&bench);
+    assert_eq!(
+        sent,
+        golden_send("sync-scores-refused"),
+        "the refusal's golden"
+    );
+    let text = sent["text"].as_str().expect("a text");
+    assert_eq!(
+        text.lines().next(),
+        Some("Synced with your Anki sync server.")
+    );
+    assert!(
+        text.contains("recompute_failed"),
+        "the refusal's code is named: {text}"
+    );
 }
 
 #[tokio::test]
@@ -481,8 +527,64 @@ fn the_mini_app_url_is_https() {
     let unset = Environment::from_vars(Vec::<(String, String)>::new());
     assert!(MiniAppUrl::from_env(&unset).is_err(), "the bot requires it");
     let plain = Environment::from_vars([(MINI_APP_URL, "http://deckstreak.example/app")]);
-    assert!(
-        MiniAppUrl::from_env(&plain).is_err(),
-        "a web_app button opens only https"
+    // A web_app button opens only https, and the refusal names the whole shape, as written.
+    assert_eq!(
+        MiniAppUrl::from_env(&plain).map(|app| app.as_str().to_owned()),
+        Err(SettingsError::Malformed {
+            setting: MINI_APP_URL,
+            expected: "an https: URL that names a host",
+        })
     );
+}
+
+/// A service that answers nothing: only its presence on the handlers is looked at.
+struct NoInstruments;
+
+impl deck_streak_coordination::instruments::InstrumentService for NoInstruments {
+    fn list(
+        &self,
+    ) -> deck_streak_coordination::instruments::BoxFuture<
+        '_,
+        Result<
+            Vec<deck_streak_coordination::instruments::InstrumentListing>,
+            deck_streak_kernel::KernelError,
+        >,
+    > {
+        Box::pin(async { Ok(Vec::new()) })
+    }
+    fn report<'a>(
+        &'a self,
+        _id: &'a str,
+    ) -> deck_streak_coordination::instruments::BoxFuture<
+        'a,
+        Result<
+            Option<deck_streak_coordination::instruments::StoredReport>,
+            deck_streak_kernel::KernelError,
+        >,
+    > {
+        Box::pin(async { Ok(None) })
+    }
+    fn run<'a>(
+        &'a self,
+        _id: &'a str,
+    ) -> deck_streak_coordination::instruments::BoxFuture<
+        'a,
+        Result<
+            deck_streak_coordination::instruments::StoredReport,
+            deck_streak_coordination::instruments::OnDemandRefusal,
+        >,
+    > {
+        Box::pin(async { Err(deck_streak_coordination::instruments::OnDemandRefusal::Unknown) })
+    }
+}
+
+#[tokio::test]
+async fn the_handlers_hold_the_instruments_only_once_they_are_handed_them() {
+    let bench = Bench::start().await;
+    let without = bench.commands(ScriptedSync::default());
+    assert!(without.instruments().is_none());
+    let with = bench
+        .commands(ScriptedSync::default())
+        .with_instruments(std::sync::Arc::new(NoInstruments));
+    assert!(with.instruments().is_some());
 }

@@ -231,3 +231,35 @@ decision does not change.
 Note (2026-09-28): the Confirmation's criteria are SPEC-039's A1 to A40, not A1 to A37. D11 prices
 an `ingest` mutant at 124 s; R18's refit table, held by `scripts/mutation-verdict.py`, prices it at
 126 s (SPEC-039 §8, listed in its §9).
+
+Note (2026-09-29): a shell target's mutant is parse-checked, as a Python one is, and one that does
+not parse reads VOID, never KILLED (SPEC-039 section 12, A41; issue #288). The Confirmation's
+criteria are SPEC-039's A1 to A41. `builds()` parses the mutated bytes with `bash -n` when the
+target is a bash script and `sh -n` otherwise, and does so before the cargo branch. The shebang
+decides when it names a shell; else `.bash` is bash and `.sh` is sh. It was chosen against:
+
+- **shellcheck.** A linter reports style and safety findings, and exits non-zero on any finding, such
+  as an unquoted expansion in a script that parses; a mutant is refused only when the shell cannot
+  read it, which is a parse failure and nothing weaker. It is also not a tool the gate
+  names, so the check would depend on a new install.
+- **Reading the killer's stderr for a syntax error.** The killer's failure is what the row reads,
+  and a killer that runs a script cannot tell the mutant's syntax error from the behaviour it
+  tests: both are a non-zero exit with text on stderr, and a script may print the same words for a
+  reason of its own. The mutant is checked before any killer runs, on its own bytes.
+- **The extension first.** `scripts/check.sh` is bash by its shebang, and `sh -n` refuses it at its
+  first array (exit 2), so all five rows on it would read VOID.
+- **Refusing every target that is neither Python nor cargo.** It would void the five rows on
+  `scripts/check.sh`, whose mutants parse and which the killers catch by their behaviour, to
+  avoid a check that costs one `bash -n` per row.
+
+Note (2026-09-29): a repeated key in a band file is refused at every read, naming the file and the
+key, because git merges two added tables under one key without a conflict and the last-key read
+dropped the rows silently. ADR-122 decides it and records what it was chosen against.
+
+## Note, 2026-09-29
+
+The Python of the repository is mutated too, by a runner of its own, `scripts/mutation_python.py`,
+which restores each file by digest and runs its tests once per mutant; its shards are the CI job
+`mutation-python`. This is ADR-073 (SPEC-087, SPEC-039 section 18). The decisions above are
+unchanged: a survivor still fails, an equivalent mutant is still recorded and never skipped, and
+no annotation hides a mutant.

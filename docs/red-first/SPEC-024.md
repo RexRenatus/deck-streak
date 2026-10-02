@@ -58,3 +58,90 @@ A15: green at fd245da
 A16: red at bab6593: a missing credential refuses start: OwnerGate { key: WebAppKey(..), owner: Owner(..), freshness: Freshness { max_age: 3600s } } (the gate loaded with owner-user-id missing)
 A16: green at fd245da
 ```
+
+
+## Addendum, 2026-09-30: a log capture cannot lose a line to another thread (#461)
+
+The killer (`crates/kernel/tests/log_capture_class.rs`) was committed at 4e81676 beside
+the helper in its plain form, whose two entries make the capture exactly as the workspace's tests
+did: a thread-local default and nothing else. Both tests are red there by assertion, and
+deterministically: A17 runs each scenario in a child of the test binary with one test thread, so
+the dispatcher registry starts empty and no other test can register a second dispatcher, and A18
+counts the tree. The helper gains its floor dispatcher and the thirteen capturing calls are routed
+through it at 29a8b0f, where both are green. The tests were not changed between the two commits
+but for a formatter's layout of one line.
+
+```red-first
+A17: red at 4e81676: 2 of 2 scenarios lost a line another thread reached first: ["scoped", "held"] (the capture, the only dispatcher registered, was never asked about a line a thread with no subscriber reached first)
+A17: green at 29a8b0f
+A18: red at 4e81676: capture population: 341 file(s) read; 13 raw capture(s), 0 routed, 1 global default(s) (assertion `left == right` failed, left: 0, right: 13)
+A18: green at 29a8b0f
+```
+
+At 29a8b0f the killer prints `log capture scenarios: 2 run, 0 lost the line` and `capture
+population: 341 file(s) read; 0 raw capture(s), 13 routed, 1 global default(s)`. The RED count at
+4e81676 is 2 of 2 tests and 13 of 13 capturing calls unrouted.
+
+The floor was then made the global default and the killer gained two scenarios in which another
+thread's registration of the callsite straddles the capture's. Over the earlier helper, the
+straddled scenarios lose the line and the plain ones do not; over the new floor all four keep it.
+
+```text
+A17: red over the earlier floor: 2 of 4 scenarios lost a line another thread reached first: ["scoped-straddled", "held-straddled"]; green: 4 run, 0 lost
+```
+
+The killer then gained a precondition check and a census of every spelling. Over the earlier killer, the census escapes and two helper variants that install the floor after a capture registers stay green. Over the new killer every escape is red and both variants fail.
+
+```text
+A17, A18: over the earlier killer the escapes are green and the floor-after variants survive; over the new killer the escapes are red and the variants fail with "registered before the floor was the global default"
+```
+
+A fourth round widened the census and added two refusals. Over the earlier killer, planted escapes of each kind stayed green: a plain `mod` or a path attribute that rustc resolves elsewhere, a path named by a Cargo manifest, a doctest in a tilde, four-backtick, indented, blockquote or attribute form, a callsite registered by hand, a rebuild of the interest cache from a reload handle, and an install through `with_current_subscriber`. Over the widened killer at 4a78fad every one is red, and the controls stay green. The helper now refuses a capture nested inside another on one thread, and a capture made after the production global default. Over the helper without the nested refusal, the new test fails with the refusal's name expected and nothing found; at 1d3809c it passes, and a capture held on another thread is still admitted.
+
+The record's fence form holds one red and one green line per criterion, and these criteria already carry theirs above, so this round's red is stated in a text fence.
+
+```text
+A18: red over the earlier killer: every planted escape green; green at 4a78fad: every planted escape red, controls green, capture population 363 file(s) read; 0 raw capture(s), 13 routed, 1 global default(s)
+A17: red over the helper without the refusal: the nested capture was not refused (left "", right the refusal's name); green at 1d3809c: 4 tests run, 0 failed
+```
+
+## Correction, 2026-10-01 (#511)
+
+The text fence above labels one line `A17: red over the helper without the refusal`. It records the red of the companion test `a_capture_nested_inside_a_capture_on_one_thread_is_refused`, which pins the helper's refusal of a nested capture. A17's own acceptance command runs a different test, `a_capture_keeps_a_line_another_thread_reached_first`, and that test's red and green are the A17 lines of the `red-first` fence above. The nested-capture test is defined in `crates/kernel/tests/log_capture_class.rs`.
+
+The passed-test count of the pull request that delivered the amendment was taken with a name filter that left the drill-named targets out and, as issue #511 records, one further test that is not a drill target. A count without that filter needs cargo, which this correction did not run. The unfiltered count is read from CI's stage log of the `rust` job on the branch `dev`: at the merge of that pull request, `816 tests run: 816 passed`, and at the current head of `dev`, `878 tests run: 878 passed`. Both runs include the drill-named targets, so neither equals the filtered local count, and the figure that is one higher than the filtered count is unmeasured here.
+
+## Addendum, 2026-10-02: a missing floor is named apart from a nested capture (#522, #511)
+
+The three new tests in `crates/kernel/tests/log_capture_class.rs` were committed at daee3562 over
+the helper as it stood at the base, 9b0bf65f, which decided nesting from one fact: whether this
+thread's default is the floor. At 5316872f the helper gained its count of the captures it holds on
+each thread, the missing floor's own refusal and wording 3, and the daemon's `wiring` test module,
+the one caller that named `DefaultGuard`, names `log_capture::CaptureGuard`. The tests did not
+change between the two commits.
+
+A19's red test attempts both entries inside a dispatcher's own call while another thread holds a
+capture. Measured with the pinned `tracing` and `tracing-core`, that call reads the default as none
+only while some thread holds a scoped default; with none held anywhere it reads the floor, so the
+test holds a capture on another thread for its span. At the base both entries refuse with the
+nesting message.
+
+```red-first
+A19: red at daee3562: assertion `left == right` failed: the scoped entry, where the floor is not this thread's default; left: "a capture nested inside another capture on one thread is refused", right: "a capture is refused: the floor is not this thread's default"
+A19: green at 5316872f
+A20: red at daee3562: the nesting refusal's doc does not say where its reading of the default holds: Refuses a capture made while this thread already holds one.  A nested capture would take every line from the outer one, so a test asserting on the outer capture could pass while its lines went elsewhere. A thread holding no capture has the floor as its default, so any other default means a capture is held. A capture held on another thread is no obstacle: this thread's default is still the floor.
+A20: green at 5316872f
+```
+
+A19's second test, `a_capture_after_a_held_capture_dropped_is_admitted`, is MUTATION COVERAGE,
+not red-first evidence: it passed at daee3562 over the base helper, which kept no count to leave
+raised. Row S02409 shows it observes the count. The nesting test passed unchanged at both commits,
+and row S02407 shows it now reads the count rather than the default.
+
+```text
+A19, MUTATION COVERAGE: a_capture_after_a_held_capture_dropped_is_admitted passed at daee3562 (the round's base helper); at 5135dbbf with S02409's mutant installed it fails: left "a capture nested inside another capture on one thread is refused", right "" (KILLED)
+A19, MUTATION COVERAGE: a_capture_after_a_panicking_body_is_admitted passed at 115049a0; at 115049a0 with S02410's mutant installed it fails: left "a capture nested inside another capture on one thread is refused", right "" (KILLED)
+A19, A20 at daee3562: log_capture_class 5 passed, 2 failed (the two red tests above); at 5316872f: 7 passed, 0 failed
+```
+
+The wording case `test_the_a18_row_states_no_routed_count` in `scripts/tests/test_log_capture_wording.py` pins wording, not a criterion: A18's row states no routed count, because the census test's own assertion holds it. At 8a4b3c1d it failed on the live row: `AssertionError: Lists differ: ['15 routed'] != [] : the census test's assertion holds the routed count, so the A18 row states none` (`Ran 8 tests`, `FAILED (failures=1)`); at a2678538 the module reads `Ran 8 tests`, `OK`.

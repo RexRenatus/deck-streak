@@ -1,0 +1,22 @@
+{
+  "records": [
+    {
+      "file": "crates/coordination/src/delivery.rs",
+      "mutant": "replace <impl DeliveryMarker for NoNotifier>::counts -> DeliveryCounts with Default::default()",
+      "anchor": "    fn counts(&self) -> DeliveryCounts {\n        DeliveryCounts::default()\n    }",
+      "reason": "The body already is DeliveryCounts::default(), and Default::default() at the return type DeliveryCounts is that same call, so the mutant is the original program.",
+      "evidence": "DeliveryCounts takes its Default from #[derive(Default)] alone: git grep -nE 'impl Default for DeliveryCounts' -- '*.rs' finds no line, so no hand-written impl can make the type-inferred call differ from the named one, and the compiler resolves both to the one derived function; the expression and its mutant differ only in how the callee is spelled.",
+      "reached_by": "runner::the_third_consecutive_sync_failure_pages_once",
+      "issue": "#304"
+    },
+    {
+      "file": "crates/coordination/src/runner.rs",
+      "mutant": "replace match guard job == jobs::LIVENESS with true in Runner<'a, L>::run_job",
+      "anchor": "Some(job) if job == jobs::LIVENESS => {",
+      "reason": "The guard sits in the arm after the sync and maintenance arms, and the job table holds no job but those two and the liveness job, so a job that reaches it is always the liveness job and the guard is always true.",
+      "evidence": "The value matched is jobs::job(id), which is TABLE.into_iter().find(..) over jobs::TABLE, a [Job; 3] holding SYNC, MAINTENANCE and LIVENESS (crates/coordination/src/jobs.rs line 88, the function at line 93); git grep -nE '\\bjobs::job\\(' -- '*.rs' finds two lines, the match itself and a table test, and run_job is the only place a Job from that table meets the arms, so Some(job) that failed both earlier guards is LIVENESS, and an id outside the table gives None, which the guard never sees and the last arm answers. Only a fourth entry in TABLE could tell the mutant from the original, and no test may add one to a const.",
+      "reached_by": "liveness::a_maintenance_fire_drifting_past_the_tolerance_pages",
+      "issue": "#304"
+    }
+  ]
+}

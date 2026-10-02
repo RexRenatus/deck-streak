@@ -99,7 +99,8 @@ async fn an_update_from_anyone_but_the_owner_is_dropped_without_a_reply() {
     assert_eq!(
         decide(owner_says(11, "/privacy")),
         Admission::Message(OwnerMessage {
-            text: "/privacy".to_owned()
+            text: "/privacy".to_owned(),
+            message_id: 11,
         })
     );
 }

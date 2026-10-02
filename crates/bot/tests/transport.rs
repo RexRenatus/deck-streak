@@ -22,11 +22,11 @@ use deck_streak_bot::commands::{privacy_reply, sync_reply};
 use deck_streak_bot::gate::{MAX_CALLBACK_DATA_BYTES, MAX_INBOUND_TEXT};
 use deck_streak_bot::poll::LONG_POLL_SECONDS;
 use deck_streak_bot::transport::{
-    API_URL, DEFAULT_API_URL, DEFAULT_RETRY_AFTER, HTTP_TIMEOUT, MAX_TEXT_UTF16, SEND_ATTEMPTS,
-    TokioTimer, Waits, escape_attribute, escape_html,
+    API_URL, DEFAULT_RETRY_AFTER, HTTP_TIMEOUT, MAX_TEXT_UTF16, SEND_ATTEMPTS, TokioTimer, Waits,
+    escape_attribute, escape_html,
 };
 use deck_streak_bot::{ApiUrl, Scores, SendCounts, Sent, SyncAnswer, SyncOutcome, TransportError};
-use deck_streak_kernel::Environment;
+use deck_streak_kernel::{Environment, SettingsError};
 use fake_bot_api::{Answer, FakeBotApi, OWNER, TOKEN, payload};
 use serde_json::{Value, json};
 
@@ -398,7 +398,8 @@ fn the_api_url_is_https_or_loopback_http() {
     let unset = Environment::from_vars(Vec::<(String, String)>::new());
     assert_eq!(
         ApiUrl::from_env(&unset).map(|api| api.as_str().to_owned()),
-        Ok(DEFAULT_API_URL.to_owned())
+        Ok("https://api.telegram.org".to_owned()),
+        "unset, it is Telegram's own"
     );
     let set = Environment::from_vars([(API_URL, "http://127.0.0.1:9")]);
     assert_eq!(
@@ -406,9 +407,13 @@ fn the_api_url_is_https_or_loopback_http() {
         Ok("http://127.0.0.1:9".to_owned())
     );
     let plain = Environment::from_vars([(API_URL, "http://api.telegram.org")]);
-    assert!(
-        ApiUrl::from_env(&plain).is_err(),
-        "cleartext to a remote host is refused"
+    // Cleartext to a remote host is refused, and the refusal names the whole shape, as written.
+    assert_eq!(
+        ApiUrl::from_env(&plain).map(|api| api.as_str().to_owned()),
+        Err(SettingsError::Malformed {
+            setting: API_URL,
+            expected: "an https: URL, or an http: URL of a loopback host, with no path",
+        })
     );
 }
 
@@ -558,5 +563,79 @@ async fn a_failed_request_says_how_it_failed_and_never_what_it_carried() {
     assert!(
         transport.delete_webhook().await.is_ok(),
         "then Telegram's own answer"
+    );
+}
+
+#[tokio::test]
+async fn the_routers_pushes_go_to_the_owners_chat_as_html() {
+    use std::sync::Arc;
+
+    use deck_streak_bot::OwnerChat;
+    use deck_streak_kernel::{Db, ManualClock, StudyDay, StudyDayRule, UtcMillis};
+    use deck_streak_notifications::{
+        Decision, DedupeKey, LapseContext, Occasion, Policy, Reason, Router, Surface, Tier,
+    };
+
+    let fake = FakeBotApi::start().await;
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let transport = Arc::new(fake.transport(directory.path()));
+    let db = Db::open(&directory.path().join("deck_streak.db"))
+        .await
+        .expect("the database opens");
+    let policy = Arc::new(Policy::compiled().expect("the compiled policy parses"));
+    let noon = UtcMillis::from_epoch_millis(20_000 * 86_400_000 + 12 * 3_600_000);
+    let router = Router::new(
+        Arc::clone(&policy),
+        db,
+        Arc::new(ManualClock::new(noon)),
+        StudyDayRule::default(),
+    )
+    .with_bot(Arc::new(OwnerChat::new(
+        Arc::clone(&transport),
+        fake_bot_api::owner(),
+    )));
+    let nudge = |key: &str| {
+        Occasion::new(
+            policy.kind("habit").expect("the habit kind"),
+            DedupeKey::new(key).expect("a key"),
+            Surface::Bot,
+            Tier::T2,
+            "<b>A</b> synthetic line",
+            StudyDay::from_epoch_day(20_000),
+            LapseContext::NoLapse,
+        )
+        .expect("an occasion")
+    };
+
+    let sent = router.route(&nudge("habit:one")).await.expect("a decision");
+    fake.script(
+        "sendMessage",
+        (0..SEND_ATTEMPTS).map(|_| Answer::status(502)),
+    );
+    let failed = router.route(&nudge("habit:two")).await.expect("a decision");
+
+    assert_eq!(
+        (sent, failed),
+        (
+            Decision::Sent {
+                surface: Surface::Bot,
+                tier: Tier::T2
+            },
+            Decision::Withheld {
+                surface: Surface::Bot,
+                reason: Reason::NoNotifier
+            }
+        ),
+        "a refused push is a push that did not answer"
+    );
+    let calls = fake.calls_of("sendMessage");
+    assert_eq!(calls.len(), 1 + SEND_ATTEMPTS as usize);
+    assert_eq!(calls[0].body["chat_id"], json!(OWNER), "the owner's chat");
+    assert_eq!(
+        (
+            payload(&calls[0])["text"].clone(),
+            payload(&calls[0])["parse_mode"].clone()
+        ),
+        (json!("<b>A</b> synthetic line"), json!("HTML"))
     );
 }

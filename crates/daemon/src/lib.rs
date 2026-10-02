@@ -17,7 +17,9 @@
 #![deny(unused_must_use)]
 #![warn(missing_docs, clippy::all)]
 
+pub mod drill_vault;
 pub mod lifecycle;
 pub mod role_api;
 pub mod role_bot;
+pub mod sync_request;
 pub mod wiring;

@@ -201,6 +201,23 @@ def unit_files(deploy):
             yield path
 
 
+def instance_dropins(deploy):
+    """Each shipped instance drop-in directory, `<template>@<instance>.<type>.d`, as
+    `(unit name, its *.conf files)`: the instance's own pairs, read beside its template's."""
+    for folder in sorted(deploy.rglob("*.d")):
+        stem = folder.name.removesuffix(".d")
+        head, at, tail = stem.partition("@")
+        if (
+            folder.is_dir()
+            and at
+            and head
+            and tail.count(".") == 1
+            and tail.endswith(tuple(UNIT_TYPES))
+            and not tail.startswith(".")
+        ):
+            yield stem, sorted(folder.glob("*.conf"))
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--root", default=".", help="the checkout or release to read")
@@ -228,6 +245,10 @@ def main(argv=None):
         lister.read(path.name, path)
         for dropin in sorted((path.parent / f"{path.name}.d").glob("*.conf")):
             lister.read(path.name, dropin)
+    for name, dropins in instance_dropins(deploy):
+        lister.credentials.setdefault(name, {})
+        for dropin in dropins:
+            lister.read(name, dropin)
     for _, dropins in sets:
         for dropin in dropins:
             lister.read(optional_unit(dropin.name), dropin)

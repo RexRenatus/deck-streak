@@ -19,8 +19,7 @@ use deck_streak_kernel::settings::{
 };
 use deck_streak_kernel::study_day::DEFAULT_ROLLOVER_HOUR;
 use deck_streak_kernel::{
-    CredentialsDirectory, Environment, Hour, KernelSettings, OffloadWorkers, Setting,
-    SettingsError, UtcOffset,
+    CredentialsDirectory, Environment, Hour, KernelSettings, Setting, SettingsError, UtcOffset,
 };
 
 /// An environment of `pairs`, as the daemon's `main` would hand it in.
@@ -163,12 +162,23 @@ fn a_missing_setting_is_refused_by_name() {
 
 #[test]
 fn a_malformed_setting_is_refused_by_name_without_its_value() {
+    // Each shape is the text the operator reads, compared as written and never through the
+    // setting's constant.
+    let hour = "a whole hour from 0 to 23";
     let malformed = [
-        (ROLLOVER_HOUR, "quarter-past-seven", Hour::SHAPE),
-        (ROLLOVER_HOUR, "31", Hour::SHAPE),
-        (UTC_OFFSET_MINUTES, "-99999", UtcOffset::SHAPE),
-        (DIGEST_HOUR, "nineteen-ish", Hour::SHAPE),
-        (OFFLOAD_WORKERS, "4097", OffloadWorkers::SHAPE),
+        (ROLLOVER_HOUR, "quarter-past-seven", hour),
+        (ROLLOVER_HOUR, "31", hour),
+        (
+            UTC_OFFSET_MINUTES,
+            "-99999",
+            "whole minutes east of UTC, from -720 to 840",
+        ),
+        (DIGEST_HOUR, "nineteen-ish", hour),
+        (
+            OFFLOAD_WORKERS,
+            "4097",
+            "a whole number of workers from 1 to 512",
+        ),
     ];
     for (setting, value, expected) in malformed {
         let refused = KernelSettings::from_env(&env(&[(setting, value)]));
@@ -184,6 +194,14 @@ fn a_malformed_setting_is_refused_by_name_without_its_value() {
             "{setting}'s value reached the refusal: {text} / {debug}"
         );
     }
+    // The credentials directory is refused the same way.
+    assert_eq!(
+        CredentialsDirectory::from_env(&env(&[(CREDENTIALS_DIRECTORY, "run/credentials")])),
+        Err(SettingsError::Malformed {
+            setting: CREDENTIALS_DIRECTORY,
+            expected: "an absolute directory path",
+        })
+    );
     // A value that is not UTF-8 is malformed too, and named by its setting alone.
     let bytes = Environment::from_vars([(
         OsString::from(ROLLOVER_HOUR),
@@ -219,4 +237,24 @@ fn the_default_rollover_and_digest_hours_equal_the_notifications_policy() {
         DEFAULT_ROLLOVER_HOUR
     );
     assert_eq!(defaults.digest_hour.get(), DEFAULT_DIGEST_HOUR);
+}
+
+#[test]
+fn the_environment_shows_its_names_in_debug_and_never_a_value() {
+    let shown = format!("{:?}", env(&[("ONLY_NAME", "quiet-value")]));
+    assert_eq!(shown, "Environment { names: [\"ONLY_NAME\"] }");
+}
+
+#[test]
+fn an_offset_just_outside_the_bounds_is_refused_and_each_bound_is_admitted() {
+    assert_eq!(
+        UtcOffset::from_minutes(UtcOffset::MIN_MINUTES).map(UtcOffset::minutes),
+        Some(-720)
+    );
+    assert_eq!(
+        UtcOffset::from_minutes(UtcOffset::MAX_MINUTES).map(UtcOffset::minutes),
+        Some(840)
+    );
+    assert_eq!(UtcOffset::from_minutes(UtcOffset::MIN_MINUTES - 1), None);
+    assert_eq!(UtcOffset::from_minutes(UtcOffset::MAX_MINUTES + 1), None);
 }

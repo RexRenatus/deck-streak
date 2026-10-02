@@ -1,82 +1,66 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+/**
+ * @vitest-environment jsdom
+ */
+import { render, screen } from '@testing-library/svelte';
+import { createRawSnippet } from 'svelte';
+import { describe, expect, it, vi } from 'vitest';
+import Layout from './+layout.svelte';
 
-// SPEC-057 A24; SPEC-028 R3, R4. The root layout's load routes the first navigation by the launch
-// link's startapp token and no other. The module keeps its "already routed" flag at load, so each
-// scenario imports a fresh copy over a wrapper that answers the token the scenario names.
-async function load(startParam: string | null, reads: string[] = []) {
-  vi.resetModules();
-  vi.doMock('$lib/telegram.svelte', () => ({
-    telegram: {
-      get startParam() {
-        reads.push('startParam');
-        return startParam;
-      }
-    }
-  }));
-  return import('./+layout');
+// SPEC-084 R10. The root layout mounts the ladder on every screen: once the screen is on the page
+// it tells Telegram the Mini App is ready and reads the owner's feed, and each served celebration
+// appears in a region a screen reader announces, above the screen itself. The wallet's header
+// (SPEC-082 R17) comes first, and its own tests judge it; here its read answers nothing. The feed's client and
+// Telegram's wrapper are replaced before the layout's imports run.
+const mocks = vi.hoisted(() => ({ ready: vi.fn(), feed: vi.fn(), wallet: vi.fn() }));
+vi.mock('$lib/telegram.svelte', () => ({ telegram: { ready: mocks.ready } }));
+vi.mock('$lib/api', () => ({ api: { feed: mocks.feed, wallet: mocks.wallet } }));
+
+/** The layout around a synthetic screen. */
+function mount() {
+  mocks.wallet.mockResolvedValue({ kind: 'unavailable' });
+  const children = createRawSnippet(() => ({ render: () => '<main>A synthetic screen</main>' }));
+  return render(Layout, { props: { children } });
 }
 
-function navigate(module: Awaited<ReturnType<typeof load>>, path: string) {
-  const untrack = vi.fn(<T>(read: () => T) => read());
-  try {
-    module.load({ url: new URL(`http://localhost${path}`), untrack } as never);
-  } catch (thrown) {
-    return { thrown, untrack };
-  }
-  return { thrown: undefined, untrack };
+/** The tiers the ladder's region shows. */
+function tiers(region: HTMLElement): (string | null)[] {
+  return [...region.querySelectorAll('[data-tier]')].map((item) => item.getAttribute('data-tier'));
 }
-
-afterEach(() => {
-  vi.doUnmock('$lib/telegram.svelte');
-});
 
 describe('the root layout', () => {
-  it('renders in the browser only, and never at build', async () => {
-    const module = await load(null);
-
-    expect({ ssr: module.ssr, prerender: module.prerender }).toEqual({
-      ssr: false,
-      prerender: false,
+  it('announces each served celebration above the screen once it is ready', async () => {
+    mocks.feed.mockResolvedValue({
+      kind: 'ok',
+      value: [
+        { kind: 'celebration', text: 'A synthetic T4', tier: 'T4' },
+        { kind: 'celebration', text: 'A synthetic T2', tier: 'T2' }
+      ]
     });
-    expect(typeof module.load).toBe('function');
+    const { container } = mount();
+
+    expect(mocks.ready).toHaveBeenCalledOnce();
+    expect(mocks.feed).toHaveBeenCalledOnce();
+    const region = screen.getByRole('region', { name: 'Celebrations' });
+    expect(region.getAttribute('aria-live')).toBe('polite');
+    await vi.waitFor(() => expect(tiers(region)).toEqual(['T4', 'T2']));
+    expect(screen.getByText('A synthetic T4')).toBeTruthy();
+    // the wallet's header, then the region, then the screen, which renders as it was given
+    expect([...container.children].map((child) => child.tagName)).toEqual([
+      'HEADER',
+      'SECTION',
+      'MAIN'
+    ]);
+    expect(screen.getByRole('main').textContent).toBe('A synthetic screen');
   });
 
-  it('opens the screen a listed token names, once, from another path', async () => {
-    const module = await load('about');
+  it('shows nothing in the region when the feed serves nothing', async () => {
+    mocks.feed.mockResolvedValue({ kind: 'unavailable' });
+    mount();
 
-    const first = navigate(module, '/');
-
-    expect(first.thrown).toMatchObject({ status: 307, location: '/about' });
-    expect(first.untrack).toHaveBeenCalledTimes(1);
-    // the owner's own navigation decides after the first
-    expect(navigate(module, '/').thrown).toBeUndefined();
-  });
-
-  it('does not redirect a launch that is already on the screen its token names', async () => {
-    const module = await load('about');
-
-    const outcome = navigate(module, '/about');
-
-    expect(outcome.thrown).toBeUndefined();
-    expect(outcome.untrack).toHaveBeenCalledTimes(1);
-    expect(navigate(module, '/').thrown).toBeUndefined();
-  });
-
-  it('opens Today for a token that is not listed', async () => {
-    const module = await load('unlisted');
-
-    expect(navigate(module, '/about').thrown).toMatchObject({ status: 307, location: '/' });
-  });
-
-  it('opens the path a launch with no token asked for', async () => {
-    const reads: string[] = [];
-    const module = await load(null, reads);
-
-    const outcome = navigate(module, '/about');
-
-    expect(outcome.thrown).toBeUndefined();
-    expect(outcome.untrack.mock.calls).toEqual([]);
-    // the token is read once, found absent, and nothing else is asked of the launch
-    expect(reads).toEqual(['startParam']);
+    const region = screen.getByRole('region', { name: 'Celebrations' });
+    await vi.waitFor(() => expect(mocks.feed).toHaveBeenCalled());
+    await Promise.resolve();
+    expect(region.children).toHaveLength(0);
+    expect(screen.getByRole('main').textContent).toBe('A synthetic screen');
   });
 });

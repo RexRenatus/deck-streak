@@ -114,3 +114,17 @@ the decision outcome, was redacted under the public-prose rule (ADR-059).
 
 Amendment (2026-09-28): passages describing another service's operations were replaced with
 DeckStreak's own sync requirement, or removed, under the public-text rule (ADR-059).
+
+Amendment (2026-09-28): condition (a) is superseded for the skip-day path only, by ADR-089, the
+owner's decision at #266. On that path the only writes are the skip day's reschedule of the study
+day's due review cards and its exact inverse, each proven against the recording fake sync server
+(SPEC-083). Every other path keeps condition (a) whole, and conditions (b), (c) and (d) stand.
+
+Amendment (2026-10-01): condition (a) is amended by ADR-301, the owner's decision at #514, and
+condition (b) stands; their text above is kept as it was. DeckStreak writes to the collection only
+through declared write classes, each with its own ADR in ADR-089's form. As ADR-089 did for the
+skip day, condition (a) is superseded for each declared write class's path only: every other path
+keeps the zero-upload proof against the recording fake sync server, and each class's ADR extends
+that proof to its exact changes and their inverse. Condition (b) stands: an autonomous write class
+rides the study day's one scheduled sync and no second scheduled sync is added, so the cadence is
+unchanged, and a batch at the approval rung rides an owner trigger. Conditions (c) and (d) stand.

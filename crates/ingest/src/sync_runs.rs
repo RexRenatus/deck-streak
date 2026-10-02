@@ -195,6 +195,16 @@ pub struct RunHistory {
     pub any_success: bool,
 }
 
+/// What the owner's latest sync run since an instant did (SPEC-059): its status and, when it
+/// failed, its reason code.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct OwnerRun {
+    /// Whether the run succeeded or failed.
+    pub status: RunStatus,
+    /// The reason code of a failed run.
+    pub reason: Option<String>,
+}
+
 /// A cycle whose recompute the change gate skipped, as `sync_runs` records it (SPEC-023 R11): its
 /// trigger, the study day it decided in, and when the gate began and ended. It made no attempt and
 /// no download.
@@ -295,6 +305,29 @@ impl SqliteSyncRuns {
             Some(StudyDayOutcome {
                 synced: row.status != "error",
                 trigger: Trigger::parse(&row.trigger)?,
+            })
+        }))
+    }
+
+    /// The owner's latest sync run that started at or after `since` (SPEC-059): what the bot's
+    /// wait for its request reads. A debounced request records no run, so it finds none.
+    ///
+    /// # Errors
+    ///
+    /// [`KernelError::Database`] when the read fails.
+    pub async fn owner_run_since(&self, since: UtcMillis) -> Result<Option<OwnerRun>, KernelError> {
+        let since = since.epoch_millis();
+        let row = sqlx::query!(
+            "SELECT status, reason FROM sync_runs WHERE trigger = 'owner' \
+             AND status IN ('ok', 'error') AND started_at >= ?1 ORDER BY id DESC LIMIT 1",
+            since
+        )
+        .fetch_optional(self.db.reader())
+        .await?;
+        Ok(row.and_then(|row| {
+            Some(OwnerRun {
+                status: RunStatus::parse(&row.status)?,
+                reason: row.reason,
             })
         }))
     }

@@ -171,6 +171,11 @@ R9. **The runner, `scripts/mutation_rows.py prove`,** proves each row it is give
     - it runs the killer on the unmutated tree, which must pass, selecting exactly one test;
     - it installs the mutant once, and treats a mutant that does not build (`cargo test
       --no-run`) or does not parse (Python) as VOID, never a kill;
+    - *Inserted by section 12:* a target that is a shell script, by its `.sh` or `.bash`
+      extension or by a shebang naming `sh`, `bash` or `dash`, has its mutant parse-checked on
+      the mutated bytes, with `bash -n` for a bash script and `sh -n` otherwise (the shebang
+      decides when it names a shell; else `.bash` is bash and `.sh` is sh), and a mutant that
+      fails is VOID, never a kill (A41);
     - it runs only the killer, counting the tests selected from libtest's `running N test` lines
       or unittest's `Ran N test` line, and anything but exactly one is VOID;
     - a killer that fails with the mutant installed is KILLED; one that passes is SURVIVED;
@@ -288,6 +293,7 @@ R18. **The shards, and their bound.** `scripts/mutation-verdict.py shards` sizes
 | A38 | a shard the plan gave no mutant owes no report, and a proved row on the diff's changed line carries it; a shard given mutants still owes its report | `test_mutation_verdict.py` |
 | A39 | the runner proves every row its selectors name together, a band's, a row's by id and a plan's, each once | `test_mutation_rows.py` |
 | A40 | the configuration check refuses a second Stryker configuration, `ignoreStatic` without per-test coverage, and a `mutate` list other than R2's | `test_mutation_workflows.py` |
+| A41 | a shell target's mutant is parse-checked, `bash -n` for a bash script and `sh -n` otherwise (the shebang decides when it names a shell; else `.bash` is bash and `.sh` is sh): one that does not parse is VOID, one that parses and is caught is KILLED, the check reads the mutant and never runs it, a parser that is missing or hangs leaves the mutant VOID, the refusal names the shell's first stderr line, and a cargo killer's row is parsed before it is built | `test_mutation_rows.py` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_mutation_rows.py -k a_tracked_change_is_refused_before_any_mutant_is_installed
@@ -334,6 +340,7 @@ A37: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py
 A38: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k a_diff_the_tool_lists_no_mutant_of_needs_no_shard_report
 A39: python3 -m unittest discover -s scripts/tests -p test_mutation_rows.py -k every_row_its_selectors_name_is_proved_once
 A40: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k the_configuration_check_refuses_what_stryker_would_read_otherwise
+A41: python3 -m unittest discover -s scripts/tests -p test_mutation_rows.py -k TheRunnerParseChecksAShellMutant
 ```
 
 A1 to A8 run the runner against a fixture repository built at run time in a temporary directory:
@@ -385,6 +392,12 @@ and green are the `mutation-rust` job's two runs.
 | `crates/kernel/src/clock.rs` | `deck-streak-kernel` | changed: `UtcMillis::from_system_time` (R17) |
 | `crates/kernel/tests/clock.rs` | `deck-streak-kernel` | changed: A26 (R17) |
 | `changelog.d/feat-mutation-039.md` | `repo` | added |
+| `scripts/mutation_rows.py` | `repo` | changed by section 12: `builds()` parse-checks a shell target's mutant |
+| `scripts/tests/test_mutation_rows.py` | `repo` | changed by section 12: A41 |
+| `scripts/mutation-rows.d/S03900-S03999.json` | `repo` | changed by section 12: the rows that pin A41's decisions |
+| `docs/decisions/ADR-057-mutation-testing-runs-on-the-diff-in-ci-and-weekly-on-dev.md` | `repo` | changed by section 12: a dated note |
+| `docs/red-first/SPEC-039.md` | `repo` | changed by section 12: A41's record |
+| `changelog.d/fix-shell-mutant-parse-288.md` | `repo` | added by section 12 |
 
 ## 5. What this does NOT do
 
@@ -659,3 +672,451 @@ What it amends, and why:
 
 ADR-070 carries a note of this date that records the decision and what it was chosen against;
 SPEC-057 A28 decides it.
+
+## 12. Amendment, 2026-09-29: a shell mutant that does not parse is VOID
+
+Made by issue #288's delivery, insert-only under ruling (i) of SPEC-038 section 8: every earlier
+byte is kept in order. It inserts:
+
+- R9: the bullet "*Inserted by section 12:* a target that is a shell script, ...", after the
+  bullet on a mutant that does not build or parse;
+- section 3: the row and the command of A41, after A40's;
+- section 4: six manifest rows, after the changelog fragment's;
+- this section.
+
+What it amends, and why:
+
+- **R9 parse-checked a Python mutant and nothing else that is not built.** `builds()` ran
+  `ast.parse` only for a target ending `.py` and `cargo test --no-run` only for a cargo killer,
+  and returned no refusal for any other target. A shell mutant that breaks the script's syntax
+  then made its killer fail, and the row read KILLED although the killer observed nothing about
+  the mutated behaviour, which is the read R9 exists to refuse. The tree holds five rows on a
+  shell target, all on `scripts/check.sh`, and each was proved without a parse check.
+- **A shell target is parse-checked, by the language it is written in.** A target is a shell
+  script when its extension is `.sh` or `.bash`, or its first line is a shebang naming `sh`,
+  `bash` or `dash`, directly or after `env`. The shebang decides when it names a shell; else
+  `.bash` is bash and `.sh` is sh. The mutated bytes are checked with `bash -n` when the script
+  is bash and `sh -n` otherwise, because the two disagree: an array assignment such as
+  `a=(1 2)` passes `bash -n` and fails `sh -n`, so a checker that always picked `sh` would void
+  every bash script that uses an array, and one that always picked `bash` would pass a POSIX
+  script that only bash reads. The check runs before the cargo branch, so a script mutant with a
+  cargo killer is parse-checked and then built. A parser that is not installed is VOID with its
+  reason, and a check that outlives its bound is VOID.
+- **The five existing rows are re-proved at the delivery's head.** Each reads KILLED, so none of
+  them was a parse failure passing for a kill (the red-first record names the run).
+
+ADR-057 carries a note of this date that records the decision and what it was chosen against;
+A41 decides it.
+
+## 13. Amendment, 2026-09-29: a band file that repeats a key is refused
+
+Made by issue #334's delivery, insert-only under ruling (i) of SPEC-038 section 8: every earlier
+byte is kept in order. It inserts this section only.
+
+- **R8's one reader read the last of a repeated key.** Two branches that each add a table under the
+  same key merge in git without a conflict, and `json.loads` kept the later value, so the rows under
+  the earlier table vanished with no failure. The reader now refuses a key repeated in one object,
+  at any depth, in the tree and in a revision, naming the file and the key. SPEC-122 decides it and
+  ADR-122 records it; the rows are in `S12200-S12299`.
+
+## 14. Amendment, 2026-09-29: the verdict reads each report by name
+
+Made by issue #351's delivery, insert-only under ruling (i) of SPEC-038 section 8: every earlier
+byte is kept in order. It inserts this section only.
+
+- **The verdict's report layout depended on how many artifacts matched.** Its one download was a
+  pattern over every `mutation-*` artifact, and the action extracts a single match flat, so a run
+  in which only the plan had uploaded read `VOID no plan`. The verdict now downloads the plan and
+  the rows' report each by name and the shards by a merged pattern, and reads no `mutation-web`
+  artifact. SPEC-126 decides it and ADR-126 records it.
+
+## 15. Amendment, 2026-09-29: a row's killer can run a binary's own unit tests
+
+Made by issue #352's delivery, insert-only under ruling (i) of SPEC-038 section 8: every earlier
+byte is kept in order. It inserts this section and section 16 only.
+
+- **A row's killer could name a library test and an integration-test target, and nothing else.**
+  A cargo killer was `<target>::<test path>`, where the target is a file of the crate's `tests/`
+  or `lib`. A unit test that lives in a binary's own source (`src/main.rs` and the modules it
+  declares) had no name a killer could take, so a constant in a binary carried no row. SPEC-057's
+  R20 reserves `S05754`, the daemon's `EXIT_GRACE`, for the first such row: the test that pins it
+  sits in `crates/daemon/src/main.rs`, and cargo-mutants never mutates a constant.
+- **The kind is `bin`.** A killer `bin::<test path>` names one unit test of the crate's binary.
+  `scripts/mutation_rows.py` reuses the cargo killer's machinery, with one more target kind and
+  no second copy of the resolve or the VOID rule:
+  - **The binary is read, never guessed.** Its name and root source come from the crate's
+    `Cargo.toml`: the one `[[bin]]` table's `name` and `path` (default `src/main.rs`), or the
+    package's own name when there is none and `src/main.rs` exists. A crate that holds more than
+    one binary, or any file under `src/bin/`, is refused by name, since a `bin::` killer names no
+    binary.
+  - **The census resolves the killer statically against the binary's sources.** The sources are
+    the module tree from the binary's root file: the file, then each `mod name;` it declares, as
+    `name.rs` or `name/mod.rs` beside the root file (whatever its name, as rustc reads a crate
+    root) or beside a `mod.rs`, and under a directory named for any other file, recursively
+    (`#[path]` is not followed). The last segment of the
+    test path must be declared under a test attribute exactly once in them; a test of the
+    library, or one in a file the binary does not declare, is refused with the census's
+    existing sentence, `its killer <killer> names no test: <root file> declares <name> 0 times`.
+  - **The runner builds one argv.** `cargo test --locked -p <package> --bin <binary> -- --exact
+    <test path>`, and for the mutant's build the same flags with `--no-run`. The flags come from
+    one function, `cargo_flags`, which the `lib` and `--test` kinds use too.
+  - **A killer that selects nothing is VOID, by the rule every cargo killer already has.** The
+    control run must select exactly one test, counted from libtest's `running N test` line, so a
+    `bin::` killer naming a test that does not exist reads VOID, its mutant is never installed,
+    and it is never KILLED.
+  - **`bin` joins `lib` as a reserved target name.** A crate that also holds `tests/bin.rs` or
+    `tests/bin/main.rs` is refused for a `bin::` killer by name (`crates/<crate> has a test target
+    bin, which the bin kind shadows`), so a killer written for that file is never run against the
+    binary's own test of the same path.
+  - **What was rejected, and why.**
+    - A killer that names its binary (`bin:<name>::<path>`): rejected because the workspace holds
+      one binary, and a second spelling would need its own parse, resolve and rows; a crate with
+      more than one binary is refused instead.
+    - A kind name that shadows no test target (such as `main`): rejected because `bin` is cargo's
+      own word for the target (`--bin`) and no crate holds a `tests/bin.rs`; the shadow is refused
+      by name instead.
+    - Resolving against every file under `src/`, as `lib` does: rejected because a test of the
+      library would then pass the census and read VOID only when proved (S03948 pins it).
+    - The test path before `--` (`--bin <binary> <path> -- --exact`): rejected because the `lib`
+      and `--test` kinds already pass it after `--`, and one function, `cargo_flags`, serves all
+      three kinds.
+    - A bin-only VOID rule: rejected because the generic rule (the control selects exactly one
+      test) already covers a `bin::` killer; S03946 is a synthetic mutant that exempts `bin` from
+      it.
+- **Row `S05754` is the first user.** In `scripts/mutation-rows.d/S05700-S05799.json`: the anchor
+  `const EXIT_GRACE: Duration = Duration::from_secs(1);` in `crates/daemon/src/main.rs`, the
+  mutant `from_secs(2)`, and the killer `bin::tests::the_exit_grace_is_one_second`, the binary
+  `deckstreakd`'s own unit test. It is the only id this delivery writes in SPEC-057's band (R20:
+  each delivery writes only its allotted ids); SPEC-057 stays planned and is not amended here.
+- **Seven rows pin the kind's decisions**, in `scripts/mutation-rows.d/S03900-S03999.json`, each
+  proved KILLED:
+  - `S03945`: `--bin <binary>` replaced by `--lib`, killed by A42's argv test;
+  - `S03946`: the control's exactly-one-test rule skipped for a `bin` killer, killed by A43;
+  - `S03947`: the binary named by the package instead of read from `[[bin]]`, killed by A42's
+    manifest test;
+  - `S03948`: the binary's sources widened to the whole `src/` directory, killed by A44;
+  - `S03949`: the module walk cut off at the root file, killed by A44;
+  - `S03950`: `file == root_file or ` removed from the module walk, so a root not named `main.rs`
+    looks for its modules under a directory, killed by A45's module test;
+  - `S03951`: the shadow check's condition replaced by `if False:`, killed by A45's shadow test.
+- **What it does not change.** It adds no killer kind for a binary's integration tests, which
+  stay `<target>::...` (#352). It changes no row, no band and no verdict logic other than S05754
+  and the seven rows above (#352). It runs no cargo command outside the fixture crates of its own
+  tests and the row S05754's proof (#352).
+
+Issue #352 is closed by this delivery.
+
+## 16. Acceptance criteria of the 2026-09-29 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A42 | a `bin::<path>` killer on a crate with a binary target resolves against the binary's sources and runs `cargo test --locked -p <package> --bin <binary> -- --exact <path>` (and `--no-run` with the same flags for the mutant's build), the binary read from the manifest and never guessed: the `[[bin]]` name, else the package's own, else a refusal when the crate holds more than one | `test_mutation_rows.py` |
+| A43 | a `bin::` killer that names no test is VOID, never KILLED, and its mutant is never installed, while a `bin::` killer beside it that names a real test reads KILLED | `test_mutation_rows.py` |
+| A44 | a `bin::` killer whose test is not in the binary's module tree is refused by the census with the existing sentence, while the killers in the binary's root file and in a module it declares resolve | `test_mutation_rows.py` |
+| A45 | the module tree of a binary whose root file is not named `main.rs` is walked beside that root, as rustc reads a crate root, so a `bin::` killer in a module the root declares resolves; and a `bin::` killer on a crate that also holds `tests/bin.rs` is refused by name, never run against the binary's own test of the same path | `test_mutation_rows.py` |
+
+```acceptance
+A42: python3 -m unittest discover -s scripts/tests -p test_mutation_rows.py -k a_bin_killer_runs_cargo_test_on_the_binary_by_its_exact_path
+A42: python3 -m unittest discover -s scripts/tests -p test_mutation_rows.py -k a_bin_killers_binary_is_read_from_its_manifest_and_never_guessed
+A43: python3 -m unittest discover -s scripts/tests -p test_mutation_rows.py -k a_bin_killer_that_selects_no_test_is_void_and_never_killed
+A44: python3 -m unittest discover -s scripts/tests -p test_mutation_rows.py -k a_bin_killer_outside_the_binarys_sources_is_refused_by_the_census
+A45: python3 -m unittest discover -s scripts/tests -p test_mutation_rows.py -k a_module_beside_a_root_not_named_main_resolves
+A45: python3 -m unittest discover -s scripts/tests -p test_mutation_rows.py -k a_bin_killer_beside_a_tests_bin_rs_is_refused
+```
+
+A42 to A45 run the runner in a fixture repository built at run time: a crate with a library, a
+binary named other than its package, a unit test in the binary's root file and one in a module it
+declares, and a library test the binary does not hold. A42's first test calls the runner's
+functions with `subprocess.run` replaced by a recorder, and reads the argv it built. A43 proves two
+rows with cargo in the fixture's own `target/`, and A44 runs the census over three planted rows. A45's two tests plant a binary rooted at `src/other.rs` with a module beside it, and a `tests/bin.rs` beside the binary, and read the census.
+
+## 17. Amendment, 2026-09-29: a leg with nothing to examine is not started (SPEC-290)
+
+R3 says each of the five jobs "is never skipped, because `ci` reads a skipped need as failed".
+SPEC-290 (ADR-290, #435) makes that false for two of them, and only when the plan's listing gives
+the leg nothing to examine:
+
+- `mutation-rust` runs under `if: ${{ needs.mutation-plan.outputs.listed != '0' }}`. `listed` is a
+  new plan output, written by `mutation-verdict.py shards`: the number of mutants the shards hold,
+  `0` when the Rust class does not apply. The matrix, the shards and the `cargo mutants` line are
+  unchanged.
+- `mutation-rows` runs under
+  `if: ${{ needs.mutation-plan.outputs.rows == 'true' || needs.mutation-plan.outputs.scope == 'diff' }}`,
+  so R11's retirement check still runs on every diff, and the leg is not started only on a
+  `not-applicable` push that selects no row.
+- R4's verdict gains two readings: a shard the listing gives no mutant and that left no artifact is
+  `not started`, and a sum of the reports' mutants that differs from the listing's count is VOID.
+  Its new `legs` verb refuses by name a skipped leg the listing owed work.
+- `ci` admits `skipped` from those two legs alone, once each, beside a `mutation-verdict` that must
+  succeed. `mutation-plan`, `mutation-verdict` and `mutation-web` are still never skipped, and every
+  leg that starts prints its case as R3 says.
+
+This section adds no criterion: SPEC-290's A1 to A7 decide it, and its rows are S29000-S29099.
+
+## 18. Amendment, 2026-09-29: the Python is mutated by a runner of its own
+
+Made by SPEC-087's delivery (issues #218 and #219), insert-only under ruling (i) of SPEC-038
+section 8: every earlier byte is kept in order. It adds:
+
+- a Python class beside the Rust, the Mini App and the parity oracle: `scripts/*.py` (a guard
+  script, never its tests) is the class `scripts`, and the oracle's Python is judged by the same
+  runner;
+- the job `mutation-python`, a need of `mutation-verdict` and of `ci`, which runs
+  `scripts/mutation_python.py` over the diff's mutants, one job per shard, and the weekly
+  battery's `python` job, which sweeps every listed file in 16 shards. `mutation-python` has no
+  job-level condition and is never skipped by design, and `ci` admits no skip from it: only
+  `mutation-rust` and `mutation-rows`, the two legs SPEC-290's listing can leave empty, may read
+  `skipped`;
+- `judge --class scripts` and `judge --class oracle`, each reading the shards' reports, where a
+  report that is missing, partial or of exit 4 (a failed restore) is VOID by name;
+- the equivalence record `scripts/mutation-equivalent.d/python.json`, held to the same census as
+  the Rust and Mini App records (SPEC-057, ADR-070), and the rows `S08700-S08799`.
+
+What it amends, and why: the Python that guards the repository was proved only by hand-proved
+rows, so a weak test of a guard script had no measure. The decision and what it was chosen
+against are ADR-073; the requirements and criteria are SPEC-087's. The criteria of this SPEC
+stand; SPEC-087's A1 to A22 are added beside them.
+
+## 19. Amendment, 2026-09-30: the `bin` killer kind reads what the compiler builds (issue #405)
+
+Made by ADR-299, insert-only under ruling (i) of SPEC-038 section 8: every earlier byte is kept in
+order. Section 15 gave a `bin::<path>` killer a binary of its own, and three readings in it were
+wrong for a crate whose layout the compiler reads differently from the runner:
+
+1. a `mod` declaration carrying a `#[path]` attribute contributed the file `name.rs` to the module
+   walk, so a stray default file the compiler never builds was read as the binary's module;
+2. the refusal of a crate that shadows the kind read only `tests/bin.rs` and `tests/bin/main.rs`,
+   so a `[[test]]` target named `bin` at any other path was not refused;
+3. the refusal's binary count came from the manifest's tables and the files under `src/bin/`, and
+   could count a module file as a binary.
+
+The rule that replaces them is one rule, and not three patches: the `bin` kind's census,
+selection and refusal read the crate's source files, test targets and binaries exactly as the
+compiler and cargo define them. Each layout is read so, or the reader refuses it by name: no file
+the compiler does not build is read as a module, no target cargo builds is missed, and every count
+a message states equals cargo's own. Anything the reader cannot decide is refused by name and never
+read open.
+
+What the reader now does, each clause decided by the tests of section 20:
+
+- **Targets.** Binaries and test targets are the explicit `[[bin]]` and `[[test]]` tables plus
+  what cargo infers: `src/main.rs` named for the package, `src/bin/*.rs` and `src/bin/*/main.rs`,
+  `tests/*.rs` and `tests/*/main.rs`. `autobins = false` and `autotests = false` switch inference
+  off, `src/main.rs` included. An inferred target is dropped when an explicit one has its name or
+  its path, and a table with no path takes the path inferred for its name. A switch that is not a
+  boolean, and a table with no name and no path, are refused by name.
+- **The shadow.** A test target named `bin`, declared or inferred, at any path, is refused.
+- **The count.** The binaries of a crate are the set above. A crate that does not hold exactly one
+  is refused with its count, and a binary whose file does not exist is refused by name.
+- **Modules.** The walk reads a root file as `rustc --test` does: a `mod name;` reads `name.rs` or
+  `name/mod.rs` beside its parent (under the parent's own directory when the parent is not a
+  `mod.rs` or the root), an inline `mod name { }` adds a directory level, and a `#[path]` module,
+  or one under a `cfg` that is false in a test build, contributes no file and its inline body is
+  skipped. The `cfg` predicates decided are `test` and `not`, `all` and `any` over it, and any
+  other predicate is refused by name. The lexemes of strings, raw strings, characters, lifetimes,
+  raw identifiers and comments are read as the compiler reads them. An inner `#![cfg`, an
+  `include!`, a `cfg_attr` on a module, and a file module declared inside a block the compiler
+  builds, are refused by name.
+
+The killer of the rule is a generated population with a compiler oracle, never a hand list: binary
+layouts crossed with test layouts are judged against `cargo metadata --no-deps`, module layouts
+crossed with crate-root positions against `rustc --test --emit=dep-info`, and a generated set of
+`cfg` predicates against `rustc`. Every member agrees with the oracle or is refused by name, and
+each test prints and asserts its `examined` figure. A new layout row in an axis table joins the
+population by itself. The oracle runs cargo and rustc in scratch crates only.
+
+The rows `S03986` to `S03995` pin the lines this amendment changes, and the four rows of section
+15's band that anchored on moved lines (`S03947`, `S03949`, `S03950`, `S03951`) are re-anchored.
+
+## 20. Acceptance criteria of the 2026-09-30 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A46 | every member of the generated population (binary layouts x test layouts, module layouts x root positions) is read as cargo and the compiler read it, or is refused by name, and the figure examined equals the one the axis tables derive | `test_bin_kind_census.py` |
+| A47 | a `mod` with `#[path]` contributes no source file, so a stray default `name.rs` is not read as a module of the binary | `test_bin_kind_census.py` |
+| A48 | a `[[test]]` target named `bin` at any path is refused as the kind's shadow | `test_bin_kind_census.py` |
+| A49 | the refusal's binary count is cargo's own and never counts a module file | `test_bin_kind_census.py` |
+| A50 | what the reader cannot decide (a non-boolean switch, a table with no name or path, a file module in a block, a malformed declaration, a missing binary file) is refused by name | `test_bin_kind_census.py` |
+| A51 | every `cfg` predicate over `test`, `not`, `all` and `any` that the reader decides is the value `rustc --test` gives it, and one over `test` and logic alone is always decided | `test_bin_kind_census.py` |
+
+```acceptance
+A46: python3 -m unittest discover -s scripts/tests -p test_bin_kind_census.py -k test_every_layout_agrees_with_cargo_and_the_compiler_or_is_refused_by_name
+A47: python3 -m unittest discover -s scripts/tests -p test_bin_kind_census.py -k test_a_path_module_contributes_no_source_file_so_a_stray_default_is_not_read
+A48: python3 -m unittest discover -s scripts/tests -p test_bin_kind_census.py -k test_a_declared_test_target_named_bin_is_refused_at_any_path
+A49: python3 -m unittest discover -s scripts/tests -p test_bin_kind_census.py -k test_the_refusal_counts_binaries_as_cargo_does_and_never_a_module_file
+A50: python3 -m unittest discover -s scripts/tests -p test_bin_kind_census.py -k test_what_the_reader_cannot_decide_is_refused_by_name
+A51: python3 -m unittest discover -s scripts/tests -p test_bin_kind_census.py -k test_every_decided_predicate_is_what_rustc_builds_and_the_rest_is_undecided
+```
+
+File manifest of the amendment: `scripts/mutation_rows.py` (the reader),
+`scripts/tests/test_bin_kind_census.py` (new), `scripts/mutation-rows.d/S03900-S03999.json` (the
+rows), `docs/decisions/ADR-299-the-bin-kind-reads-what-the-compiler-builds.md`,
+`docs/red-first/SPEC-039.md`, and a changelog fragment.
+
+Issue #405 is closed by this delivery.
+
+
+## 21. Amendment, 2026-10-01: the five classes the population did not hold
+
+Made by ADR-299's amendment, insert-only under ruling (i) of SPEC-038 section 8. The rule of
+section 19 stands. Five classes of layout were read differently from cargo and rustc because the
+population of section 20 held none of their members, and each is now a generated family of that
+population:
+
+1. **A `mod` among a macro invocation's tokens.** The token walk read every `mod` token, so one
+   inside `stringify!(..)`, an invoked `m![..]` or a `macro_rules!` body was read as a declaration.
+   Only the macro's expansion decides what such tokens declare, so the reader refuses the file by
+   name, under every delimiter, `()`, `[]` and `{}`: "holds a mod in a macro invocation, which only
+   its expansion decides". An invocation holding no `mod`, and one inside a module the test build
+   drops, are read as before.
+2. **A declared path through `..`.** Cargo compares a declared path by component, after joining it
+   to the package's directory: a `.` and a doubled separator collapse, a `..` does not. The reader
+   compares the same key, so `src/../src/main.rs` does not drop the target inferred at
+   `src/main.rs`, as cargo does not.
+3. **Dotfiles.** Cargo's inference skips an entry whose name starts with a dot, under `src/bin/`
+   and `tests/`, file or directory. The reader skips it too.
+4. **An absolute declared path.** It is not joined to the package's directory and is spelled
+   relative to the crate when it names a file inside it, so one naming a file inside the crate
+   drops the target inferred at that file, as cargo drops it, and the binary is named at its path
+   inside the workspace.
+5. **Edition 2015.** A manifest with no `edition` key is edition 2015, and under it a `[[bin]]` or
+   `[[test]]` table switches that kind's inference off unless `autobins` or `autotests` says
+   otherwise. An edition inherited with `edition.workspace = true` is read from the nearest
+   workspace manifest above the crate. An edition the reader cannot decide (a value that is not a
+   string, or an inherited one with no workspace edition to inherit) is refused by name where the
+   reader needs it.
+
+Section 19's clause that an inferred target is dropped when an explicit one has "its path" reads,
+under this amendment, "its declared path, compared as cargo compares it": an unpathed table names
+no path. The population crosses each declared shape (a `[[bin]]` at `src/main.rs`, a `[[bin]]` at a
+`src/bin/` file, a `[[test]]` at `tests/bin.rs`) with six spellings of its path, each dotfile shape
+with each companion, every binary layout with every test layout under edition 2021 and with no
+edition key, every binary layout under an edition 2015 and 2021 inherited from the workspace, and
+each macro shape with each delimiter and root position. A new row in any of those tables joins
+the population by itself, and the test prints and asserts its `examined` figure.
+
+The block-comment arm of the token reader is bounded by the text's length. A comment left open
+drops every character to the end of the text, which a new test pins at every short tail, so a
+bound that stops early is seen.
+
+The rows `S03997` to `S03999` pin lines this amendment changes, and `S03996` pins the
+block-comment bound that A53 tests.
+
+## 22. Acceptance criteria of the 2026-10-01 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A52 | every member of the five families of section 21 (declared paths in six spellings, dotfiles, editions stated, absent and inherited, macro invocations under every delimiter) is read as cargo and the compiler read it, or is refused by name, and the figure examined equals the one the axis tables derive | `test_bin_kind_census.py` |
+| A53 | a block comment left open drops every character to the end of the text, at every tail of up to five characters, and at every length by the scan's bound | `test_bin_kind_census.py` |
+
+```acceptance
+A52: python3 -m unittest discover -s scripts/tests -p test_bin_kind_census.py -k test_every_layout_agrees_with_cargo_and_the_compiler_or_is_refused_by_name
+A53: python3 -m unittest discover -s scripts/tests -p test_bin_kind_census.py -k test_a_block_comment_left_open_drops_every_character_to_the_end_of_the_text
+```
+
+File manifest of the amendment: `scripts/mutation_rows.py` (the reader),
+`scripts/tests/test_bin_kind_census.py` (the families and the new test),
+`scripts/mutation-rows.d/S03900-S03999.json` (the rows),
+`docs/decisions/ADR-299-the-bin-kind-reads-what-the-compiler-builds.md`,
+`docs/red-first/SPEC-039.md`, and the changelog fragment.
+
+## 27. Amendment, 2026-10-01: a docstring-only script change reads a named case (#485)
+
+Made by issue #485's delivery, insert-only under ruling (i) of SPEC-038 section 8: every earlier
+byte is kept in order. It inserts sections 27 to 29 only. Sections 19 to 26 were held by
+deliveries still open when it was written, so it starts at 27.
+
+What it amends, and why:
+
+- **R4 read a docstring as a code line.** R4 counts every changed line that is neither blank nor a
+  comment as a code line, and the plan reads a Python file with Python's own tokenizer, where a
+  docstring is a string token. A change to a guard script's docstrings alone therefore made the
+  `scripts` class apply, while `scripts/mutation_python.py` never mutates a docstring: its lister
+  skips the first statement of a module, class, function or async function body when that
+  statement is a string constant. The class examined nothing, and its verdict was VOID (#485).
+  Measured at `56ce963` on a fixture whose one script had its module and function docstrings
+  reworded, in the order CI runs the steps: the plan read `scripts applies: 2 production code
+  line(s) in 1 file(s)`, the runner `listed 0`, and `judge --class scripts` printed `VOID the
+  scripts class applies and nothing was examined` and exited 3.
+- **The rule (ADR-307).** When R4 makes the `scripts` class apply, the plan reads each changed
+  `scripts/*.py` at the diff's merge-base and at its head, and compares their syntax trees:
+  Python's own `ast`, positions excluded, with docstrings set aside. A docstring is only the first
+  statement of a module's, a class's, a function's or an async function's body, and only when
+  that statement is a bare string constant. Every other string expression stays code. When every
+  changed script's trees are equal so read, the class does not apply. Its case reads
+  `not-applicable: docstring-only: `, then each file whose change it set aside; `judge --class
+  scripts` names each such file on a line of its own and passes, and nothing reads VOID.
+- **It fails closed.** Each of these leaves the class applying exactly as R4 makes it: a script
+  added or deleted, and so a rename, since the plan reads the diff with `--no-renames`; a script
+  that does not parse at either side; a script that is not UTF-8; a diff with other than one
+  merge-base; and any other difference between the two trees. A script that is not UTF-8 on a
+  line the plan reads as text still stops the plan before it reports any class, as it did at
+  `56ce963`, because the plan reads the diff and the head's file as UTF-8.
+- **What it sets aside is what the runner never mutates.** The runner's lister skips that same
+  statement of the same four nodes (`skipped_nodes` in `scripts/mutation_python.py`), so no mutant
+  the class listed before is lost: A62 lists each named member's mutants at its head and finds
+  none on a line the rule set aside.
+- **Two consequences, read and accepted.**
+  - 6 of the 8 guard scripts pass the start of their module docstring to `argparse` as the
+    description `--help` prints, so a change there alters that text. The runner never mutated a
+    docstring, so the class never examined it, and the named case loses nothing the class
+    examined.
+  - The rule is the tree, so a change that re-lays code without changing its tree (`x*3` to
+    `x * 3`) reads the same case. Its tree is the base's, and so is its behaviour; the weekly
+    battery's `python` job still sweeps every listed file whole (SPEC-087 R14).
+- **The docstring of `scripts/mutation-verdict.py` (#455).** Its PLAN paragraph said each case is
+  named "because `ci` fails on a skipped need but a leg LEGS reads as not started", which section
+  17 made untrue: `ci` admits a skip from `mutation-rust` and `mutation-rows` and from no other
+  need, and `legs` judges each of the two against the plan. The paragraph now names the two legs,
+  and the step outputs it lists now include `scripts`, which the plan has written since section
+  18.
+- **SPEC-087 is not amended.** Its R1 cites R4 for the class's `not-applicable` readings, and this
+  case is R4's.
+
+What it does not change:
+
+- the oracle's Python, Rust and the Mini App: the rule reads only the `scripts` class (#485);
+- the case of a diff the `scripts` class did not already apply to, such as a change of comments or
+  deletions alone (#485);
+- the runner, which emits no docstring mutant and lists what it listed before (#485);
+- the doc comment in `tools/log-capture/capture.rs` that #511 names, which another delivery
+  corrects (#511).
+
+Issue #485 is closed by this delivery, and so is #455, whose last line this section's docstring
+change corrects.
+
+## 28. Amendments, 2026-10-01: the files of section 27
+
+| file | context | change |
+|---|---|---|
+| `docs/specs/SPEC-039-every-change-proves-its-tests-kill-its-mutants.md` | `repo` | changed by section 27: sections 27 to 29 |
+| `docs/decisions/ADR-307-a-docstring-only-script-change-is-named-by-its-syntax-tree.md` | `repo` | added by section 27 |
+| `scripts/mutation-verdict.py` | `repo` | changed by section 27: the plan's `docstring-only` case, the verdict's line for each file it names, and the PLAN paragraph of the module docstring (#455) |
+| `scripts/tests/test_mutation_verdict.py` | `repo` | changed by section 27: A61 to A64 |
+| `docs/red-first/SPEC-039.md` | `repo` | changed by section 27: A61 to A64's record |
+| `changelog.d/fix-docstring-only-485.md` | `repo` | added by section 27 |
+
+## 29. Acceptance criteria of the 2026-10-01 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A61 | a change to one script's docstrings alone is named: the plan reads `not-applicable: docstring-only:` naming the file, the runner lists no mutant, and `judge --class scripts` names the file on its own line, passes and reads no VOID; the same docstring change beside a code change in the same file applies as R4 says, and the verdict counts the runner's mutants of the code line as examined | `test_mutation_verdict.py` |
+| A62 | over a population of script edits, each printing `examined N` (a docstring changed at each of the four positions, a method's, and one grown to three lines; a string statement that is not first; a string used as a value; a code change beside a docstring change in one file; two files of which only one is docstring-only; a file outside the class changed beside a docstring change, and between a docstring-only script and a later script's code change; a file added, deleted and renamed; a parse error at either side; a script that is not UTF-8), every member that changes a tree outside docstrings keeps the class applying, only the docstring-only members are named, and no line a named member set aside holds a runner mutant; a planted plan that sets every string expression aside as a docstring is caught | `test_mutation_verdict.py` |
+| A63 | the definition's edges: an f-string or a bytes literal first in a body, and a string first in an `if` block, stay code; two docstring-only files are both named; a docstring-only file beside a comment-only one names only the first, and the second keeps its own reading; a re-layout with an equal tree reads the named case | `test_mutation_verdict.py` |
+| A64 | the PLAN paragraph of `scripts/mutation-verdict.py`'s module docstring names exactly the legs `ci` admits a skip from and `legs` judges, and exactly the step outputs the plan writes | `test_mutation_verdict.py` |
+| A65 | the PEP 263 class: the plan parses a script's bytes, so a declared encoding decides the tree compared; over seven members printing `examined N`, a latin-1 escape rewritten as raw bytes, a declaration changed from utf-8 to latin-1 beside a docstring edit, a latin-1 declaration that stops the new side parsing and an unknown encoding each apply, a declared UTF-8 script changed in its docstring alone is named, and a declared script whose bytes are not UTF-8 is refused as at the base | `test_mutation_verdict.py` |
+
+```acceptance
+A61: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k a_docstring_only_change_is_named_and_a_code_change_beside_it_is_examined
+A62: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k the_named_case_narrows_no_member_of_a_population_of_script_edits
+A63: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k the_docstring_is_only_the_first_bare_string_of_a_body
+A64: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k the_plan_paragraph_names_the_legs_ci_admits_and_the_outputs_it_writes
+A65: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k a_declared_encoding_decides_the_tree_compared
+```
+
+A61 runs the plan, the runner's `list` and `run`, `shards` and `judge` as subprocesses, in the
+order CI runs them, over a fixture repository built at run time. A62 and A63 build one fixture
+repository per member and run the plan in-process; A62's control runs the same population with the
+plan's tree reader replaced by one that sets every string expression aside, wherever it stands,
+and must find a mismatch. A64 reads `ci.yml`'s admission loop, the `legs` verb's source and the step
+outputs the plan writes for a fixture's diff.

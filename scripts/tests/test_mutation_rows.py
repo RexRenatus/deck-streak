@@ -19,6 +19,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from _support import REPO, examined
 
@@ -72,8 +73,8 @@ class Double(unittest.TestCase):
 DESCRIPTION = "doubling doubles, not triples"
 
 
-def script_row(identifier, find, replace, killer):
-    return [identifier, TARGET, find, replace, DESCRIPTION, killer]
+def script_row(identifier, find, replace, killer, target=TARGET):
+    return [identifier, target, find, replace, DESCRIPTION, killer]
 
 
 def git(root, *args):
@@ -89,7 +90,7 @@ def sha256(path):
 class Fixture:
     """A git repository in a temporary directory, removed when the test ends."""
 
-    def __init__(self, test, rows=(), cargo=False):
+    def __init__(self, test, rows=(), cargo=False, files=None):
         scratch = tempfile.TemporaryDirectory()
         test.addCleanup(scratch.cleanup)
         self.root = Path(scratch.name)
@@ -100,6 +101,8 @@ class Fixture:
         self.write(".gitignore", "observed.log\ntarget/\n")
         if cargo:
             self.crate()
+        for relative, text in (files or {}).items():
+            self.write(relative, text)
         self.rows(rows)
         git(self.root, "init", "-q", "-b", "dev")
         git(self.root, "config", "user.email", "fixture@example.invalid")
@@ -143,9 +146,11 @@ class Fixture:
         git(self.root, "commit", "-q", "-m", message)
         return git(self.root, "rev-parse", "HEAD").strip()
 
-    def run(self, *args):
+    def run(self, *args, path=None):
         env = {k: v for k, v in os.environ.items() if k != "CARGO_TARGET_DIR"}
         env["PYTHONDONTWRITEBYTECODE"] = "1"
+        if path is not None:
+            env["PATH"] = path
         return subprocess.run(
             [sys.executable, str(RUNNER), *args, "--root", str(self.root)],
             capture_output=True,
@@ -430,6 +435,588 @@ class TheRunnerProvesEverySelectedRow(unittest.TestCase):
             self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
             self.assertEqual(verdicts(done), both, " ".join(selectors))
             self.assertRegex(done.stdout, r"(?m)^examined 2\b", " ".join(selectors))
+
+
+#: A bash script that uses an array, which `sh -n` refuses and `bash -n` accepts, and prints 3.
+BASH_TARGET = "scripts/fixtool.sh"
+BASH_TEXT = "#!/usr/bin/env bash\na=(1 2)\necho $(( ${a[0]} + ${a[1]} ))\n"
+#: The same, kept by its shebang alone: no `.sh` or `.bash` extension.
+BASH_SHEBANG_TARGET = "scripts/fixtool"
+#: A POSIX script that prints 3.
+SH_TARGET = "scripts/fixposix.sh"
+SH_TEXT = "#!/bin/sh\necho $((1 + 2))\n"
+#: Opens an `if` no `fi` closes, so neither shell reads the file.
+UNPARSED = ("echo $((", "if echo $((")
+TOOL_KILLERS = '''"""A fixture's shell killers; each appends what it observed to observed.log."""
+
+import subprocess
+import unittest
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+
+
+def observe(value):
+    with (ROOT / "observed.log").open("a", encoding="utf-8") as log:
+        log.write(f"{value}\\n")
+
+
+def printed(shell, script):
+    done = subprocess.run(
+        [shell, str(ROOT / script)], capture_output=True, text=True, check=False
+    )
+    value = done.stdout.strip() or "nothing"
+    observe(value)
+    return value
+
+
+class Tool(unittest.TestCase):
+    def test_bash_sums_to_three(self):
+        self.assertEqual(printed("bash", "scripts/fixtool.sh"), "3")
+
+    def test_bash_shebang_sums_to_three(self):
+        self.assertEqual(printed("bash", "scripts/fixtool"), "3")
+
+    def test_sh_sums_to_three(self):
+        self.assertEqual(printed("sh", "scripts/fixposix.sh"), "3")
+
+    def test_bash_by_path_sums_to_three(self):
+        self.assertEqual(printed("/bin/bash", "scripts/fixtool.sh"), "3")
+
+    def test_marker_sums_to_three(self):
+        self.assertEqual(printed("sh", "scripts/fixmark.sh"), "3")
+
+    def test_extension_bash_sums_to_three(self):
+        self.assertEqual(printed("bash", "scripts/fixext.bash"), "3")
+
+    def test_extension_sh_sums_to_three(self):
+        self.assertEqual(printed("sh", "scripts/fixext.sh"), "3")
+
+    def test_dash_sums_to_three(self):
+        self.assertEqual(printed("sh", "scripts/fixdash"), "3")
+'''
+#: Targets with no shebang: only the extension says which shell reads them.
+EXT_BASH_TARGET = "scripts/fixext.bash"
+EXT_BASH_TEXT = "a=(1 2)\necho $(( ${a[0]} + ${a[1]} ))\n"
+EXT_SH_TARGET = "scripts/fixext.sh"
+EXT_SH_TEXT = "echo $((1 + 2))\n"
+#: A target whose shebang names dash and which has no extension.
+DASH_TARGET = "scripts/fixdash"
+DASH_TEXT = "#!/bin/dash\necho $((1 + 2))\n"
+#: A construct `bash -n` reads and `sh -n` does not, in place of a sum.
+ARRAY_MUTANT = ("echo $((1 + 2))", "a=(1 2); echo 3")
+MARK_TARGET = "scripts/fixmark.sh"
+TOOL_FILES = {
+    EXT_BASH_TARGET: EXT_BASH_TEXT,
+    EXT_SH_TARGET: EXT_SH_TEXT,
+    DASH_TARGET: DASH_TEXT,
+    BASH_TARGET: BASH_TEXT,
+    BASH_SHEBANG_TARGET: BASH_TEXT,
+    SH_TARGET: SH_TEXT,
+    "scripts/tests/test_fixtool.py": TOOL_KILLERS,
+}
+
+
+def runner_module():
+    """The runner imported as a module, for the tests that call `parses` and `builds` directly."""
+    scripts = str(REPO / "scripts")
+    if scripts not in sys.path:
+        sys.path.insert(0, scripts)
+    import mutation_rows
+
+    return mutation_rows
+
+
+class TheRunnerParseChecksAShellMutant(unittest.TestCase):
+    """SPEC-039 A41: a shell target's mutant is parse-checked, `bash -n` for a bash script and
+    `sh -n` otherwise; one that fails is VOID, never a kill."""
+
+    def prove(self, row):
+        fixture = Fixture(self, [("SCRIPT_MUTATIONS", row)], files=TOOL_FILES)
+        target = fixture.root / row[1]
+        before = target.read_bytes()
+        done = fixture.run("prove", "--all")
+        self.assertEqual(target.read_bytes(), before, "the target was not restored")
+        return fixture, done
+
+    def test_the_fixture_construct_parses_under_bash_and_not_under_sh(self):
+        script = Path(tempfile.mkdtemp()) / "array.sh"
+        self.addCleanup(shutil.rmtree, script.parent)
+        script.write_text(BASH_TEXT, encoding="utf-8")
+        bash = subprocess.run(["bash", "-n", str(script)], capture_output=True, text=True)
+        posix = subprocess.run(["sh", "-n", str(script)], capture_output=True, text=True)
+        self.assertEqual(bash.returncode, 0, bash.stderr)
+        self.assertNotEqual(
+            posix.returncode, 0, "sh reads the array, so the fixture proves nothing"
+        )
+        self.assertRegex(posix.stderr, r"(?i)syntax error")
+
+    def test_a_bash_mutant_that_does_not_parse_is_void_not_a_kill(self):
+        row = script_row(
+            "S00020-BASH-UNPARSED",
+            *UNPARSED,
+            "test_fixtool.Tool.test_bash_sums_to_three",
+            target=BASH_TARGET,
+        )
+        fixture, done = self.prove(row)
+        self.assertEqual(done.returncode, 3, done.stdout + done.stderr)
+        self.assertEqual(verdicts(done), {"S00020-BASH-UNPARSED": "VOID"})
+        self.assertIn("does not parse", done.stdout)
+        self.assertIn("bash", done.stdout)
+        # Only the control ran: the mutant never reached its killer.
+        self.assertEqual(fixture.observed(), ["3"])
+
+    def test_a_bash_mutant_refused_with_exit_one_is_void(self):
+        # `bash -n` exits 1, not 2, on an array assignment left open at the end of its input.
+        row = script_row(
+            "S00034-BASH-OPEN-ARRAY",
+            "a=(1 2)",
+            "a=(1 2",
+            "test_fixtool.Tool.test_bash_sums_to_three",
+            target=BASH_TARGET,
+        )
+        fixture, done = self.prove(row)
+        self.assertEqual(done.returncode, 3, done.stdout + done.stderr)
+        self.assertEqual(verdicts(done), {"S00034-BASH-OPEN-ARRAY": "VOID"})
+        self.assertIn("unexpected EOF while looking for matching", done.stdout)
+        self.assertEqual(fixture.observed(), ["3"])
+
+    def test_a_bash_mutant_that_parses_and_is_caught_is_killed(self):
+        row = script_row(
+            "S00021-BASH-CAUGHT",
+            "+ ${a[1]}",
+            "* ${a[1]}",
+            "test_fixtool.Tool.test_bash_sums_to_three",
+            target=BASH_TARGET,
+        )
+        fixture, done = self.prove(row)
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertEqual(verdicts(done), {"S00021-BASH-CAUGHT": "KILLED"})
+        # The control read 1 + 2, and the mutant read 1 * 2: both ran.
+        self.assertEqual(fixture.observed(), ["3", "2"])
+
+    def test_a_shebang_alone_makes_a_target_a_shell_script(self):
+        row = script_row(
+            "S00022-SHEBANG-UNPARSED",
+            *UNPARSED,
+            "test_fixtool.Tool.test_bash_shebang_sums_to_three",
+            target=BASH_SHEBANG_TARGET,
+        )
+        fixture, done = self.prove(row)
+        self.assertEqual(done.returncode, 3, done.stdout + done.stderr)
+        self.assertEqual(verdicts(done), {"S00022-SHEBANG-UNPARSED": "VOID"})
+        self.assertIn("does not parse", done.stdout)
+        self.assertEqual(fixture.observed(), ["3"])
+
+    def test_a_posix_sh_mutant_that_does_not_parse_is_void_not_a_kill(self):
+        row = script_row(
+            "S00023-SH-UNPARSED",
+            *UNPARSED,
+            "test_fixtool.Tool.test_sh_sums_to_three",
+            target=SH_TARGET,
+        )
+        fixture, done = self.prove(row)
+        self.assertEqual(done.returncode, 3, done.stdout + done.stderr)
+        self.assertEqual(verdicts(done), {"S00023-SH-UNPARSED": "VOID"})
+        self.assertIn("does not parse", done.stdout)
+        self.assertEqual(fixture.observed(), ["3"])
+
+    def test_a_posix_sh_mutant_that_parses_and_is_caught_is_killed(self):
+        row = script_row(
+            "S00024-SH-CAUGHT",
+            "1 + 2",
+            "1 * 2",
+            "test_fixtool.Tool.test_sh_sums_to_three",
+            target=SH_TARGET,
+        )
+        fixture, done = self.prove(row)
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertEqual(verdicts(done), {"S00024-SH-CAUGHT": "KILLED"})
+        self.assertEqual(fixture.observed(), ["3", "2"])
+
+    def test_a_bash_only_mutant_of_an_sh_shebang_script_is_void(self):
+        row = script_row(
+            "S00025-SH-SHEBANG-BASHISM",
+            *ARRAY_MUTANT,
+            "test_fixtool.Tool.test_sh_sums_to_three",
+            target=SH_TARGET,
+        )
+        fixture, done = self.prove(row)
+        self.assertEqual(done.returncode, 3, done.stdout + done.stderr)
+        self.assertEqual(verdicts(done), {"S00025-SH-SHEBANG-BASHISM": "VOID"})
+        self.assertIn("sh: ", done.stdout)
+        self.assertEqual(fixture.observed(), ["3"])
+
+    def test_a_bash_extension_with_no_shebang_is_read_by_bash(self):
+        caught = script_row(
+            "S00026-BASH-EXT-CAUGHT",
+            "+ ${a[1]}",
+            "* ${a[1]}",
+            "test_fixtool.Tool.test_extension_bash_sums_to_three",
+            target=EXT_BASH_TARGET,
+        )
+        fixture, done = self.prove(caught)
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertEqual(verdicts(done), {"S00026-BASH-EXT-CAUGHT": "KILLED"})
+        self.assertEqual(fixture.observed(), ["3", "2"])
+
+    def test_a_bash_extension_mutant_that_does_not_parse_is_void(self):
+        row = script_row(
+            "S00027-BASH-EXT-UNPARSED",
+            *UNPARSED,
+            "test_fixtool.Tool.test_extension_bash_sums_to_three",
+            target=EXT_BASH_TARGET,
+        )
+        fixture, done = self.prove(row)
+        self.assertEqual(done.returncode, 3, done.stdout + done.stderr)
+        self.assertEqual(verdicts(done), {"S00027-BASH-EXT-UNPARSED": "VOID"})
+        self.assertIn("does not parse", done.stdout)
+        self.assertEqual(fixture.observed(), ["3"])
+
+    def test_an_sh_extension_with_no_shebang_is_read_by_sh(self):
+        row = script_row(
+            "S00028-SH-EXT-BASHISM",
+            *ARRAY_MUTANT,
+            "test_fixtool.Tool.test_extension_sh_sums_to_three",
+            target=EXT_SH_TARGET,
+        )
+        fixture, done = self.prove(row)
+        self.assertEqual(done.returncode, 3, done.stdout + done.stderr)
+        self.assertEqual(verdicts(done), {"S00028-SH-EXT-BASHISM": "VOID"})
+        self.assertIn("sh: ", done.stdout)
+        self.assertEqual(fixture.observed(), ["3"])
+
+    def test_an_sh_extension_mutant_that_does_not_parse_is_void(self):
+        row = script_row(
+            "S00029-SH-EXT-UNPARSED",
+            *UNPARSED,
+            "test_fixtool.Tool.test_extension_sh_sums_to_three",
+            target=EXT_SH_TARGET,
+        )
+        fixture, done = self.prove(row)
+        self.assertEqual(done.returncode, 3, done.stdout + done.stderr)
+        self.assertEqual(verdicts(done), {"S00029-SH-EXT-UNPARSED": "VOID"})
+        self.assertIn("does not parse", done.stdout)
+        self.assertEqual(fixture.observed(), ["3"])
+
+    def test_a_dash_shebang_makes_a_target_a_shell_script(self):
+        row = script_row(
+            "S00030-DASH-UNPARSED",
+            *UNPARSED,
+            "test_fixtool.Tool.test_dash_sums_to_three",
+            target=DASH_TARGET,
+        )
+        fixture, done = self.prove(row)
+        self.assertEqual(done.returncode, 3, done.stdout + done.stderr)
+        self.assertEqual(verdicts(done), {"S00030-DASH-UNPARSED": "VOID"})
+        self.assertIn("does not parse", done.stdout)
+        self.assertEqual(fixture.observed(), ["3"])
+
+    def test_the_parse_check_reads_the_mutant_and_never_runs_it(self):
+        marker = "echo MARK >> {}/observed.log\n"
+        row = script_row(
+            "S00031-MARKED",
+            "1 + 2",
+            "1 * 2",
+            "test_fixtool.Tool.test_marker_sums_to_three",
+            target=MARK_TARGET,
+        )
+        fixture = Fixture(self, [("SCRIPT_MUTATIONS", row)], files=TOOL_FILES)
+        fixture.write(
+            MARK_TARGET, "#!/bin/sh\n" + marker.format(fixture.root) + "echo $((1 + 2))\n"
+        )
+        fixture.commit("a target that marks each execution")
+        done = fixture.run("prove", "--all")
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertEqual(verdicts(done), {"S00031-MARKED": "KILLED"})
+        # The control run and the killer run each executed the target once; the parse check
+        # executed nothing, so no third mark exists.
+        self.assertEqual(fixture.observed(), ["MARK", "3", "MARK", "2"])
+
+    def test_a_missing_parser_leaves_the_mutant_unchecked_and_void(self):
+        row = script_row(
+            "S00032-NO-PARSER",
+            "+ ${a[1]}",
+            "* ${a[1]}",
+            "test_fixtool.Tool.test_bash_by_path_sums_to_three",
+            target=BASH_TARGET,
+        )
+        fixture = Fixture(self, [("SCRIPT_MUTATIONS", row)], files=TOOL_FILES)
+        bare = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, bare)
+        (bare / "git").symlink_to(shutil.which("git"))
+        # The killer runs /bin/bash by path, so only the runner's own lookup meets the bare PATH.
+        control = fixture.run("prove", "--all")
+        self.assertEqual(verdicts(control), {"S00032-NO-PARSER": "KILLED"}, control.stdout)
+        done = fixture.run("prove", "--all", path=str(bare))
+        self.assertEqual(done.returncode, 3, done.stdout + done.stderr)
+        self.assertEqual(verdicts(done), {"S00032-NO-PARSER": "VOID"})
+        self.assertIn("unchecked: bash is not installed", done.stdout)
+
+    def test_a_parser_that_hangs_leaves_the_mutant_unchecked_and_void(self):
+        runner = runner_module()
+        stubs = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, stubs)
+        stub = stubs / "bash"
+        stub.write_text("#!/bin/sh\nexec sleep 30\n", encoding="utf-8")
+        stub.chmod(0o755)
+        with (
+            mock.patch.dict(os.environ, {"PATH": f"{stubs}:/usr/bin:/bin"}),
+            mock.patch.object(runner, "PARSE_SECONDS", 1),
+        ):
+            why = runner.parses("bash", b"echo 1\n")
+        self.assertEqual(why, "the mutant is unchecked: bash -n timed out")
+        with mock.patch.dict(os.environ, {"PATH": str(stubs / "none")}):
+            why = runner.parses("bash", b"echo 1\n")
+        self.assertEqual(why, "the mutant is unchecked: bash is not installed")
+
+    def test_the_reason_is_the_first_line_of_a_two_line_refusal(self):
+        runner = runner_module()
+        why = runner.parses("bash", b"if then\n")
+        self.assertEqual(
+            why,
+            "the mutant does not parse: bash: bash: line 1: syntax error near unexpected token"
+            " `then'",
+        )
+
+    def test_a_shell_target_with_a_cargo_killer_is_parsed_first_and_built_second(self):
+        runner = runner_module()
+        row = runner.Row("S00033-CARGO-SHELL", "SCRIPT", "scripts/x.sh", "a", "b", "k", None, "d")
+        killer = runner.Killer("cargo", "t", "crates/f/tests/t.rs", "fix", "t")
+        text = b"#!/usr/bin/env bash\necho 1\n"
+        calls = []
+
+        def record(command, **_):
+            calls.append(command)
+            return subprocess.CompletedProcess(command, 0, b"", b"")
+
+        with mock.patch.object(runner.subprocess, "run", side_effect=record):
+            self.assertIsNone(runner.builds(Path("."), row, killer, text))
+        self.assertEqual([call[0] for call in calls], ["bash", "cargo"])
+        self.assertEqual(calls[0], ["bash", "-n"])
+        self.assertEqual(calls[1][1:3], ["test", "--locked"])
+        self.assertIn("--no-run", calls[1])
+
+        calls.clear()
+
+        def refuse(command, **_):
+            calls.append(command)
+            return subprocess.CompletedProcess(command, 2, b"", b"bash: line 1: bad\n")
+
+        with mock.patch.object(runner.subprocess, "run", side_effect=refuse):
+            why = runner.builds(Path("."), row, killer, text)
+        self.assertEqual(why, "the mutant does not parse: bash: bash: line 1: bad")
+        self.assertEqual(calls, [["bash", "-n"]], "an unparsed mutant must never reach cargo")
+
+    def test_a_target_that_is_not_a_shell_script_is_given_no_parser(self):
+        runner = runner_module()
+        self.assertIsNone(runner.shell_parser("crates/f/src/lib.rs", b"fn main() {}\n"))
+        self.assertIsNone(runner.shell_parser("db/001.sql", b"select 1;\n"))
+        # The control: the same call names a parser once the target is a shell script.
+        self.assertEqual(runner.shell_parser("scripts/x.sh", b"select 1;\n"), "sh")
+
+
+BIN_MANIFEST = (
+    '[package]\nname = "fix"\nversion = "0.1.0"\nedition = "2021"\n\n'
+    '[[bin]]\nname = "fixbin"\npath = "src/main.rs"\n'
+)
+#: A crate with a library and one binary, the binary named other than the package, with a unit test
+#: in its root file and one in a module it declares; the library holds a test the binary does not.
+BIN_FILES = {
+    "crates/fix/Cargo.toml": BIN_MANIFEST,
+    "crates/fix/src/lib.rs": (
+        "pub fn double(x: i64) -> i64 {\n    x * 2\n}\n\n"
+        "#[cfg(test)]\nmod tests {\n    #[test]\n    fn only_in_the_lib() {\n"
+        "        assert_eq!(super::double(2), 4);\n    }\n}\n"
+    ),
+    "crates/fix/src/main.rs": (
+        "mod helper;\n\nfn triple(x: i64) -> i64 {\n    x * 3\n}\n\n"
+        'fn main() {\n    println!("{}", triple(2) + helper::halve(4));\n}\n\n'
+        "#[cfg(test)]\nmod tests {\n    #[test]\n    fn three_triples_to_nine() {\n"
+        "        assert_eq!(super::triple(3), 9);\n    }\n}\n"
+    ),
+    "crates/fix/src/helper.rs": (
+        "pub fn halve(x: i64) -> i64 {\n    x / 2\n}\n\n"
+        "#[cfg(test)]\nmod tests {\n    #[test]\n    fn four_halves_to_two() {\n"
+        "        assert_eq!(super::halve(4), 2);\n    }\n}\n"
+    ),
+}
+BIN_KILLER = "bin::tests::three_triples_to_nine"
+
+
+def bin_row(identifier, killer, find="x * 3", replace="x * 4", path="src/main.rs"):
+    return (
+        "MUTATIONS",
+        [identifier, "fix", path, find, replace, killer, DESCRIPTION],
+    )
+
+
+class TheBinKillerRunsTheBinarysOwnUnitTests(unittest.TestCase):
+    """SPEC-039 A42 to A44 (issue #352): a killer `bin::<test path>` names one unit test of the
+    crate's binary, resolved against the binary's own sources and run with `--bin`."""
+
+    def located(self, fixture, index=0):
+        runner = runner_module()
+        rows = runner.rows_of(runner.load_tree(fixture.root))
+        try:
+            return runner, rows[index], runner.locate_killer(fixture.root, rows[index])
+        except runner.KillerUnresolved as refusal:
+            self.fail(f"a bin killer is refused: {refusal}")
+
+    def test_a_bin_killer_runs_cargo_test_on_the_binary_by_its_exact_path(self):
+        fixture = Fixture(self, [bin_row("S00050-BIN", BIN_KILLER)], cargo=True, files=BIN_FILES)
+        runner, row, killer = self.located(fixture)
+        self.assertEqual((killer.package, killer.binary), ("fix", "fixbin"))
+        calls = []
+
+        def record(command, **kwargs):
+            calls.append((command, kwargs["cwd"]))
+            return subprocess.CompletedProcess(command, 0, "running 1 test\n", "")
+
+        # The killer runs in its own process group (#366) and the build through `subprocess.run`;
+        # both are recorded, so no real cargo runs and the order is the runner's own.
+        with (
+            mock.patch.object(runner.subprocess, "run", side_effect=record),
+            mock.patch.object(runner, "run_in_own_group", side_effect=record),
+        ):
+            run = runner.run_killer(fixture.root, killer, Path("."))
+            self.assertIsNone(runner.builds(fixture.root, row, killer, b"x"))
+        self.assertEqual((run.selected, run.passed), (1, True))
+        self.assertEqual(
+            calls[0][0],
+            ["cargo", "test", "--locked", "-p", "fix", "--bin", "fixbin"]
+            + ["--", "--exact", "tests::three_triples_to_nine"],
+        )
+        self.assertEqual(
+            calls[1][0],
+            ["cargo", "test", "--locked", "-p", "fix", "--bin", "fixbin", "--no-run"],
+        )
+        self.assertEqual(calls[0][1], fixture.root)
+
+    def test_a_bin_killers_binary_is_read_from_its_manifest_and_never_guessed(self):
+        fixture = Fixture(self, [bin_row("S00051-BIN", BIN_KILLER)], cargo=True, files=BIN_FILES)
+        self.assertEqual(self.located(fixture)[2].binary, "fixbin")
+        # No [[bin]] table: the binary is the package's own, named by the package.
+        plain = Fixture(
+            self,
+            [bin_row("S00052-BIN", BIN_KILLER)],
+            cargo=True,
+            files=dict(BIN_FILES, **{"crates/fix/Cargo.toml": BIN_MANIFEST.split("\n[[bin]]")[0]}),
+        )
+        self.assertEqual(self.located(plain)[2].binary, "fix")
+        # Two binaries: the killer names none of them, so it is refused, not guessed.
+        two = Fixture(
+            self,
+            [bin_row("S00053-BIN", BIN_KILLER)],
+            cargo=True,
+            files=dict(
+                BIN_FILES,
+                **{
+                    "crates/fix/Cargo.toml": BIN_MANIFEST
+                    + '\n[[bin]]\nname = "other"\npath = "src/other.rs"\n'
+                },
+            ),
+        )
+        runner = runner_module()
+        with self.assertRaisesRegex(runner.KillerUnresolved, "2 binaries"):
+            runner.locate_killer(two.root, runner.rows_of(runner.load_tree(two.root))[0])
+
+    def test_a_bin_killer_that_selects_no_test_is_void_and_never_killed(self):
+        rows = [
+            bin_row("S00054-BIN-KILLED", BIN_KILLER),
+            bin_row("S00055-BIN-NO-TEST", "bin::tests::no_such_test", replace="x * 5"),
+        ]
+        fixture = Fixture(self, rows, cargo=True, files=BIN_FILES)
+        before = (fixture.root / "crates/fix/src/main.rs").read_bytes()
+        done = fixture.run("prove", "--all", "--report", str(fixture.root / "report.json"))
+        self.assertEqual(done.returncode, 3, done.stdout + done.stderr)
+        self.assertEqual(
+            verdicts(done), {"S00054-BIN-KILLED": "KILLED", "S00055-BIN-NO-TEST": "VOID"}
+        )
+        self.assertIn("selected 0 tests, not one", done.stdout)
+        report = {entry["id"]: entry for entry in fixture.report()}
+        self.assertEqual(report["S00054-BIN-KILLED"]["mutant"], {"selected": 1, "passed": False})
+        # The plant that selects nothing never reached its mutant: only the control ran.
+        self.assertIsNone(report["S00055-BIN-NO-TEST"]["mutant"])
+        self.assertEqual((fixture.root / "crates/fix/src/main.rs").read_bytes(), before)
+
+    def test_a_bin_killer_outside_the_binarys_sources_is_refused_by_the_census(self):
+        rows = [
+            bin_row("S00056-BIN-ROOT", BIN_KILLER),
+            bin_row(
+                "S00057-BIN-MODULE",
+                "bin::helper::tests::four_halves_to_two",
+                find="x / 2",
+                replace="x / 3",
+                path="src/helper.rs",
+            ),
+            bin_row(
+                "S00058-BIN-LIB-TEST",
+                "bin::tests::only_in_the_lib",
+                find="x * 2",
+                replace="x * 5",
+                path="src/lib.rs",
+            ),
+        ]
+        fixture = Fixture(self, rows, cargo=True, files=BIN_FILES)
+        done = census(fixture.root)
+        self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+        self.assertIn(
+            "census: S00058-BIN-LIB-TEST: its killer bin::tests::only_in_the_lib names no test: "
+            "crates/fix/src/main.rs declares only_in_the_lib 0 times",
+            done.stdout,
+        )
+        # The two killers the binary holds, one in its root file and one in a module it declares,
+        # resolve: they are not named.
+        self.assertNotIn("S00056", done.stdout)
+        self.assertNotIn("S00057", done.stdout)
+        self.assertRegex(done.stdout, r"(?m)^examined 3 row")
+
+
+class TheBinKillerFollowsRustcAndRefusesAShadow(unittest.TestCase):
+    """The verifier's plants (v) and (vi) for SPEC-039 section 15: a binary's root named other than
+    `main.rs` declares its modules beside itself, as rustc reads a crate root; and a crate whose
+    `tests/bin.rs` the `bin` kind shadows is refused, never rerouted to the binary's own test."""
+
+    def test_a_module_beside_a_root_not_named_main_resolves(self):
+        manifest = BIN_MANIFEST.replace('path = "src/main.rs"', 'path = "src/other.rs"')
+        files = {
+            "crates/fix/Cargo.toml": manifest,
+            "crates/fix/src/other.rs": "mod helper;\n\nfn main() {}\n",
+            "crates/fix/src/helper.rs": BIN_FILES["crates/fix/src/helper.rs"],
+        }
+        rows = [
+            bin_row(
+                "S00059-BIN-OTHER-ROOT-MODULE",
+                "bin::helper::tests::four_halves_to_two",
+                find="x / 2",
+                replace="x / 3",
+                path="src/helper.rs",
+            )
+        ]
+        fixture = Fixture(self, rows, cargo=True, files=files)
+        done = census(fixture.root)
+        self.assertNotIn("S00059", done.stdout)
+        self.assertRegex(done.stdout, r"(?m)^examined 1 row")
+
+    def test_a_bin_killer_beside_a_tests_bin_rs_is_refused(self):
+        files = dict(
+            BIN_FILES,
+            **{
+                "crates/fix/tests/bin.rs": (
+                    "#[cfg(test)]\nmod tests {\n    #[test]\n    fn three_triples_to_nine() {\n"
+                    "        assert_eq!(9, 9);\n    }\n}\n"
+                )
+            },
+        )
+        fixture = Fixture(self, [bin_row("S00060-BIN-SHADOW", BIN_KILLER)], cargo=True, files=files)
+        done = census(fixture.root)
+        self.assertIn(
+            "census: S00060-BIN-SHADOW: its killer bin::tests::three_triples_to_nine crates/fix "
+            "has a test target bin, which the bin kind shadows",
+            done.stdout,
+        )
+        self.assertRegex(done.stdout, r"(?m)^examined 1 row")
 
 
 if __name__ == "__main__":

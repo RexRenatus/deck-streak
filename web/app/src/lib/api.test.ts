@@ -586,3 +586,206 @@ describe("the API client's score", () => {
     expect(await api.score()).toEqual({ kind: 'unavailable' });
   });
 });
+
+// SPEC-072 R23. The level screen reads the owner's level through the same session: one GET of
+// `/api/level`, whose body is read by the level module.
+describe("the API client's level", () => {
+  const LEVEL = {
+    study_day: STUDY_DAY,
+    level: 7,
+    title: 'Adept',
+    emoji: '🌿',
+    total_xp: 1234,
+    xp_into_level: 40,
+    xp_for_next: 200,
+    today: [],
+    run: 5,
+    multiplier: 1.25,
+    multiplier_after_a_miss: 1.1,
+    ascendant: false
+  };
+
+  function leveling(body: unknown) {
+    const sent: string[] = [];
+    const fetch = vi.fn(async (input: RequestInfo | URL, init: RequestInit = {}) => {
+      sent.push(`${init.method ?? 'GET'} ${String(input)}`);
+      return String(input) === '/api/level' ? Response.json(body) : new Response(null, { status: 200 });
+    });
+    const api = createApi({
+      launchData: () => LAUNCH,
+      fetch: fetch as unknown as typeof globalThis.fetch
+    });
+    return { api, sent };
+  }
+
+  it('reads the level view from /api/level', async () => {
+    const { api, sent } = leveling(LEVEL);
+    const answer = await api.level();
+    expect(answer.kind).toBe('ok');
+    expect(answer.kind === 'ok' && answer.value.title).toBe('Adept');
+    expect(sent).toEqual(['POST /api/session', 'GET /api/level']);
+  });
+
+  it('answers unavailable when /api/level answers something that is not a level view', async () => {
+    const { api } = leveling({ study_day: STUDY_DAY });
+    expect(await api.level()).toEqual({ kind: 'unavailable' });
+  });
+});
+
+describe("the API client's insights", () => {
+  function reading(bodies: Record<string, unknown>) {
+    const sent: string[] = [];
+    const fetch = vi.fn(async (input: RequestInfo | URL, init: RequestInit = {}) => {
+      sent.push(`${init.method ?? 'GET'} ${String(input)}`);
+      return String(input) in bodies
+        ? Response.json(bodies[String(input)])
+        : new Response(null, { status: 200 });
+    });
+    const api = createApi({
+      launchData: () => LAUNCH,
+      fetch: fetch as unknown as typeof globalThis.fetch
+    });
+    return { api, sent };
+  }
+
+  it('lists the instruments from /api/insights', async () => {
+    const { api, sent } = reading({
+      '/api/insights': { instruments: [{ id: 'dark_fields', cadence: 'weekly', study_day: null }] }
+    });
+    expect(await api.insights()).toEqual({
+      kind: 'ok',
+      value: [{ id: 'dark_fields', cadence: 'weekly', studyDay: null }]
+    });
+    expect(sent).toEqual(['POST /api/session', 'GET /api/insights']);
+  });
+
+  it('answers unavailable when the listing is not one', async () => {
+    const { api } = reading({ '/api/insights': { nope: 1 } });
+    expect(await api.insights()).toEqual({ kind: 'unavailable' });
+  });
+
+  it('reads one instrument by its encoded id, and a not-yet-run report as null', async () => {
+    const stored = { study_day: 3, failed_reads: [], report: { a: 1 } };
+    const { api, sent } = reading({
+      '/api/insights/a%20b': { instrument: 'a b', report: stored },
+      '/api/insights/fresh': { instrument: 'fresh', report: null }
+    });
+    expect(await api.insight('a b')).toEqual({
+      kind: 'ok',
+      value: { instrument: 'a b', studyDay: 3, failedReads: [], report: { a: 1 } }
+    });
+    expect(await api.insight('fresh')).toEqual({ kind: 'ok', value: null });
+    expect(sent).toContain('GET /api/insights/a%20b');
+  });
+
+  it('answers unavailable when an instrument body is not an envelope', async () => {
+    const { api } = reading({ '/api/insights/x': { oops: true } });
+    expect(await api.insight('x')).toEqual({ kind: 'unavailable' });
+  });
+});
+
+// SPEC-118 R10; ruling (l). The quick capture is the client's one POST beside its reads: the same
+// session, opened once and renewed at most once, carries a JSON body from the same origin, and a
+// renewal repeats the same capture with the same retry key.
+describe("the API client's capture", () => {
+  const CAPTURE = { captureId: '0123456789abcdef0123456789abcdef', kind: 'journal', text: 'x' } as const;
+
+  /** A server answering the n-th request with the n-th of `answers`, recording each request. */
+  function capturing(answers: readonly (() => Response)[]) {
+    const sent: Sent[] = [];
+    const fetch = vi.fn(async (input: RequestInfo | URL, init: RequestInit = {}) => {
+      sent.push({
+        url: String(input),
+        method: init.method ?? 'GET',
+        credentials: init.credentials,
+        headers: Object.fromEntries(new Headers(init.headers).entries()),
+        body: typeof init.body === 'string' ? init.body : undefined
+      });
+      return (answers[sent.length - 1] ?? (() => new Response(null, { status: 599 })))();
+    });
+    const api = createApi({
+      launchData: () => LAUNCH,
+      fetch: fetch as unknown as typeof globalThis.fetch
+    });
+    return { api, sent };
+  }
+
+  const open = () => new Response(null, { status: 200 });
+
+  it('posts the capture as JSON, from the same origin, in the session', async () => {
+    const { api, sent } = capturing([open, () => Response.json({ name: 'n.md' }, { status: 201 })]);
+
+    expect(await api.capture(CAPTURE)).toEqual({
+      kind: 'ok',
+      value: { name: 'n.md', alreadyCaptured: false }
+    });
+    expect(lines(sent)).toEqual(['POST /api/session', 'POST /api/inbox/captures']);
+    expect(sent[1].headers).toEqual({ 'content-type': 'application/json' });
+    expect(sent[1].credentials).toBe('same-origin');
+    expect(JSON.parse(sent[1].body ?? 'null')).toEqual({
+      capture_id: CAPTURE.captureId,
+      kind: 'journal',
+      text: 'x'
+    });
+    // the launch data travels only in the handshake
+    expect(sent.filter((request) => JSON.stringify(request).includes(LAUNCH))).toEqual([sent[0]]);
+  });
+
+  it('renews an ended session once and repeats the same capture', async () => {
+    const { api, sent } = capturing([
+      open,
+      () => new Response(null, { status: 401 }),
+      open,
+      () => Response.json({ name: 'n.md', already_captured: true }, { status: 200 })
+    ]);
+
+    expect(await api.capture(CAPTURE)).toEqual({
+      kind: 'ok',
+      value: { name: 'n.md', alreadyCaptured: true }
+    });
+    expect(lines(sent)).toEqual([
+      'POST /api/session',
+      'POST /api/inbox/captures',
+      'POST /api/session',
+      'POST /api/inbox/captures'
+    ]);
+    expect(sent[3].body).toBe(sent[1].body);
+  });
+
+  it('answers unavailable for a refusal or a body that names no capture, and reopen for a refused session', async () => {
+    for (const answer of [
+      () => Response.json({ reason: 'vault_missing' }, { status: 503 }),
+      () => Response.json({ reason: 'text_out_of_bounds' }, { status: 422 }),
+      () => Response.json({ oops: true }, { status: 201 })
+    ]) {
+      const { api } = capturing([open, answer]);
+      expect(await api.capture(CAPTURE)).toEqual({ kind: 'unavailable' });
+    }
+    const { api, sent } = capturing([
+      open,
+      () => new Response(null, { status: 401 }),
+      () => new Response(null, { status: 401 })
+    ]);
+    expect(await api.capture(CAPTURE)).toEqual({ kind: 'reopen' });
+    expect(lines(sent)).toEqual([
+      'POST /api/session',
+      'POST /api/inbox/captures',
+      'POST /api/session'
+    ]);
+  });
+
+  it('answers unavailable when no answer came: no session opened, or the connection dropped', async () => {
+    const unopened = capturing([() => new Response(null, { status: 500 })]);
+    expect(await unopened.api.capture(CAPTURE)).toEqual({ kind: 'unavailable' });
+    expect(lines(unopened.sent)).toEqual(['POST /api/session']);
+
+    const dropped = capturing([
+      open,
+      () => {
+        throw new TypeError('the connection dropped');
+      }
+    ]);
+    expect(await dropped.api.capture(CAPTURE)).toEqual({ kind: 'unavailable' });
+    expect(lines(dropped.sent)).toEqual(['POST /api/session', 'POST /api/inbox/captures']);
+  });
+});

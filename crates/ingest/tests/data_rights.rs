@@ -5,7 +5,7 @@ mod support;
 
 use deck_streak_ingest::data_rights::{INGEST_STATE_TABLE, IngestDataRights, SYNC_RUNS_TABLE};
 use deck_streak_ingest::gate::{Anchor, AnchorState, Probe};
-use deck_streak_ingest::state::{IngestState, SqliteIngestState};
+use deck_streak_ingest::state::{IngestState, RefusalReason, SqliteIngestState};
 use deck_streak_ingest::sync_runs::{ReasonCode, SqliteSyncRuns, SyncRun, SyncRunStore, Trigger};
 use deck_streak_ingest::window::WindowBase;
 use deck_streak_kernel::{DataRights, Disposition, StudyDay, UtcMillis};
@@ -170,7 +170,68 @@ async fn the_ingest_port_resets_its_state_in_place() {
         IngestState {
             anchor: AnchorState::Missing,
             rescore_pending: false,
+            refusal: None,
             window_base: None,
         }
     );
+}
+
+#[tokio::test]
+async fn the_refused_record_is_exported_and_an_erase_clears_it() {
+    let fixture = support::Fixture::new("http://127.0.0.1:9/");
+    let db = fixture.db().await;
+    let state = SqliteIngestState::new(db.clone());
+    state
+        .record_refusal(
+            RefusalReason::SyncSettingsRefused,
+            UtcMillis::from_epoch_millis(7_000),
+        )
+        .await
+        .expect("a refusal is recorded");
+    let mut write = db.write().await.expect("a write");
+    let exported = IngestDataRights
+        .export(&mut write)
+        .await
+        .expect("the port exports");
+    let row = &exported
+        .iter()
+        .find(|table| table.table == INGEST_STATE_TABLE)
+        .expect("ingest_state is exported")
+        .rows[0];
+    assert_eq!(row["refused_reason"], "sync_settings_refused");
+    assert_eq!(row["refused_at"], 7_000);
+    IngestDataRights
+        .erase(&mut write)
+        .await
+        .expect("the port erases");
+    write.commit().await.expect("the erase commits");
+    assert_eq!(state.load().await.expect("read").refusal, None);
+}
+
+#[test]
+fn the_declared_reset_row_clears_the_anchor_and_the_base_and_no_more() {
+    let declaration = IngestDataRights
+        .declaration()
+        .expect("ingest's declaration is well formed");
+    let Some(Disposition::ResetInPlace { row }) = declaration.disposition(INGEST_STATE_TABLE)
+    else {
+        panic!("ingest_state is reset in place");
+    };
+    let cleared = [
+        "anchor_newest_review_id",
+        "anchor_card_count",
+        "anchor_card_fingerprint",
+        "anchor_study_day",
+        "anchor_recomputed_at",
+        "anchor_settings_generation",
+        "window_floor",
+        "window_count",
+        "refused_at",
+        "refused_reason",
+    ];
+    assert_eq!(row.len(), cleared.len() + 1, "{row:?}");
+    for column in cleared {
+        assert_eq!(row.get(column), Some(&Value::Null), "{column}");
+    }
+    assert_eq!(row.get("rescore_pending"), Some(&json!(0)));
 }

@@ -18,6 +18,9 @@ use deck_streak_kernel::{
 };
 use tracing_subscriber::EnvFilter;
 
+#[path = "../../../tools/log-capture/capture.rs"]
+mod log_capture;
+
 /// How many blocking tasks may run at once in the bound test, and how many are offered.
 const BOUND: usize = 2;
 const TASKS: usize = 5;
@@ -114,7 +117,7 @@ async fn the_offload_runs_at_most_its_bound_of_blocking_tasks_at_once() {
 async fn a_slow_offload_logs_one_warning_with_its_operation_and_duration() {
     let captured = Captured::default();
     let writer = captured.clone();
-    let _logs = tracing::subscriber::set_default(logging::subscriber(
+    let _logs = log_capture::hold_capture(logging::subscriber(
         Redactor::new(),
         move || writer.clone(),
         EnvFilter::new("warn"),
@@ -154,4 +157,13 @@ async fn a_slow_offload_logs_one_warning_with_its_operation_and_duration() {
         "{}",
         lines[0]
     );
+}
+
+#[test]
+fn the_offload_shows_its_worker_bound_in_debug() {
+    let clock: Arc<dyn Clock> = Arc::new(ManualClock::new(UtcMillis::from_epoch_millis(0)));
+    let offload = Offload::new(OffloadWorkers::new(3).expect("a bound"), clock);
+    let shown = format!("{offload:?}");
+    assert!(shown.starts_with("Offload { workers: "), "{shown}");
+    assert!(shown.contains('3'), "{shown}");
 }

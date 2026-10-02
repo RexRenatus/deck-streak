@@ -1,0 +1,2666 @@
+{
+  "adapter": "with_a_review",
+  "cases": [
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 0,
+        "rtype": 0,
+        "tier": null
+      },
+      "output": 4
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 0,
+        "rtype": 0,
+        "tier": "T1"
+      },
+      "output": 4
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 0,
+        "rtype": 0,
+        "tier": "T2"
+      },
+      "output": 8
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 0,
+        "rtype": 0,
+        "tier": "T3"
+      },
+      "output": 12
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 0,
+        "rtype": 0,
+        "tier": "T4"
+      },
+      "output": 20
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 0,
+        "rtype": 1,
+        "tier": null
+      },
+      "output": 5
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 0,
+        "rtype": 1,
+        "tier": "T1"
+      },
+      "output": 5
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 0,
+        "rtype": 1,
+        "tier": "T2"
+      },
+      "output": 10
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 0,
+        "rtype": 1,
+        "tier": "T3"
+      },
+      "output": 15
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 0,
+        "rtype": 1,
+        "tier": "T4"
+      },
+      "output": 25
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 0,
+        "rtype": 2,
+        "tier": null
+      },
+      "output": 6
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 0,
+        "rtype": 2,
+        "tier": "T1"
+      },
+      "output": 6
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 0,
+        "rtype": 2,
+        "tier": "T2"
+      },
+      "output": 11
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 0,
+        "rtype": 2,
+        "tier": "T3"
+      },
+      "output": 16
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 0,
+        "rtype": 2,
+        "tier": "T4"
+      },
+      "output": 28
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 0,
+        "rtype": 3,
+        "tier": null
+      },
+      "output": 4
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 0,
+        "rtype": 3,
+        "tier": "T1"
+      },
+      "output": 4
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 0,
+        "rtype": 3,
+        "tier": "T2"
+      },
+      "output": 7
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 0,
+        "rtype": 3,
+        "tier": "T3"
+      },
+      "output": 10
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 0,
+        "rtype": 3,
+        "tier": "T4"
+      },
+      "output": 18
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 7,
+        "rtype": 0,
+        "tier": null
+      },
+      "output": 5
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 7,
+        "rtype": 0,
+        "tier": "T1"
+      },
+      "output": 5
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 7,
+        "rtype": 0,
+        "tier": "T2"
+      },
+      "output": 10
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 7,
+        "rtype": 0,
+        "tier": "T3"
+      },
+      "output": 16
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 7,
+        "rtype": 0,
+        "tier": "T4"
+      },
+      "output": 26
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 7,
+        "rtype": 1,
+        "tier": null
+      },
+      "output": 6
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 7,
+        "rtype": 1,
+        "tier": "T1"
+      },
+      "output": 6
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 7,
+        "rtype": 1,
+        "tier": "T2"
+      },
+      "output": 13
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 7,
+        "rtype": 1,
+        "tier": "T3"
+      },
+      "output": 20
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 7,
+        "rtype": 1,
+        "tier": "T4"
+      },
+      "output": 32
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 7,
+        "rtype": 2,
+        "tier": null
+      },
+      "output": 7
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 7,
+        "rtype": 2,
+        "tier": "T1"
+      },
+      "output": 7
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 7,
+        "rtype": 2,
+        "tier": "T2"
+      },
+      "output": 14
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 7,
+        "rtype": 2,
+        "tier": "T3"
+      },
+      "output": 21
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 7,
+        "rtype": 2,
+        "tier": "T4"
+      },
+      "output": 36
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 7,
+        "rtype": 3,
+        "tier": null
+      },
+      "output": 5
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 7,
+        "rtype": 3,
+        "tier": "T1"
+      },
+      "output": 5
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 7,
+        "rtype": 3,
+        "tier": "T2"
+      },
+      "output": 9
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 7,
+        "rtype": 3,
+        "tier": "T3"
+      },
+      "output": 14
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 7,
+        "rtype": 3,
+        "tier": "T4"
+      },
+      "output": 23
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 21,
+        "rtype": 0,
+        "tier": null
+      },
+      "output": 8
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 21,
+        "rtype": 0,
+        "tier": "T1"
+      },
+      "output": 8
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 21,
+        "rtype": 0,
+        "tier": "T2"
+      },
+      "output": 16
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 21,
+        "rtype": 0,
+        "tier": "T3"
+      },
+      "output": 24
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 21,
+        "rtype": 0,
+        "tier": "T4"
+      },
+      "output": 40
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 21,
+        "rtype": 1,
+        "tier": null
+      },
+      "output": 10
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 21,
+        "rtype": 1,
+        "tier": "T1"
+      },
+      "output": 10
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 21,
+        "rtype": 1,
+        "tier": "T2"
+      },
+      "output": 20
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 21,
+        "rtype": 1,
+        "tier": "T3"
+      },
+      "output": 30
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 21,
+        "rtype": 1,
+        "tier": "T4"
+      },
+      "output": 50
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 21,
+        "rtype": 2,
+        "tier": null
+      },
+      "output": 11
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 21,
+        "rtype": 2,
+        "tier": "T1"
+      },
+      "output": 11
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 21,
+        "rtype": 2,
+        "tier": "T2"
+      },
+      "output": 22
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 21,
+        "rtype": 2,
+        "tier": "T3"
+      },
+      "output": 33
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 21,
+        "rtype": 2,
+        "tier": "T4"
+      },
+      "output": 55
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 21,
+        "rtype": 3,
+        "tier": null
+      },
+      "output": 7
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 21,
+        "rtype": 3,
+        "tier": "T1"
+      },
+      "output": 7
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 21,
+        "rtype": 3,
+        "tier": "T2"
+      },
+      "output": 14
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 21,
+        "rtype": 3,
+        "tier": "T3"
+      },
+      "output": 21
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 1,
+        "ivl": 21,
+        "rtype": 3,
+        "tier": "T4"
+      },
+      "output": 35
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 0,
+        "rtype": 0,
+        "tier": null
+      },
+      "output": 8
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 0,
+        "rtype": 0,
+        "tier": "T1"
+      },
+      "output": 8
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 0,
+        "rtype": 0,
+        "tier": "T2"
+      },
+      "output": 16
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 0,
+        "rtype": 0,
+        "tier": "T3"
+      },
+      "output": 24
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 0,
+        "rtype": 0,
+        "tier": "T4"
+      },
+      "output": 40
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 0,
+        "rtype": 1,
+        "tier": null
+      },
+      "output": 10
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 0,
+        "rtype": 1,
+        "tier": "T1"
+      },
+      "output": 10
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 0,
+        "rtype": 1,
+        "tier": "T2"
+      },
+      "output": 20
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 0,
+        "rtype": 1,
+        "tier": "T3"
+      },
+      "output": 30
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 0,
+        "rtype": 1,
+        "tier": "T4"
+      },
+      "output": 50
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 0,
+        "rtype": 2,
+        "tier": null
+      },
+      "output": 11
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 0,
+        "rtype": 2,
+        "tier": "T1"
+      },
+      "output": 11
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 0,
+        "rtype": 2,
+        "tier": "T2"
+      },
+      "output": 22
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 0,
+        "rtype": 2,
+        "tier": "T3"
+      },
+      "output": 33
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 0,
+        "rtype": 2,
+        "tier": "T4"
+      },
+      "output": 55
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 0,
+        "rtype": 3,
+        "tier": null
+      },
+      "output": 7
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 0,
+        "rtype": 3,
+        "tier": "T1"
+      },
+      "output": 7
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 0,
+        "rtype": 3,
+        "tier": "T2"
+      },
+      "output": 14
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 0,
+        "rtype": 3,
+        "tier": "T3"
+      },
+      "output": 21
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 0,
+        "rtype": 3,
+        "tier": "T4"
+      },
+      "output": 35
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 7,
+        "rtype": 0,
+        "tier": null
+      },
+      "output": 10
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 7,
+        "rtype": 0,
+        "tier": "T1"
+      },
+      "output": 10
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 7,
+        "rtype": 0,
+        "tier": "T2"
+      },
+      "output": 21
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 7,
+        "rtype": 0,
+        "tier": "T3"
+      },
+      "output": 31
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 7,
+        "rtype": 0,
+        "tier": "T4"
+      },
+      "output": 52
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 7,
+        "rtype": 1,
+        "tier": null
+      },
+      "output": 13
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 7,
+        "rtype": 1,
+        "tier": "T1"
+      },
+      "output": 13
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 7,
+        "rtype": 1,
+        "tier": "T2"
+      },
+      "output": 26
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 7,
+        "rtype": 1,
+        "tier": "T3"
+      },
+      "output": 39
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 7,
+        "rtype": 1,
+        "tier": "T4"
+      },
+      "output": 65
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 7,
+        "rtype": 2,
+        "tier": null
+      },
+      "output": 14
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 7,
+        "rtype": 2,
+        "tier": "T1"
+      },
+      "output": 14
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 7,
+        "rtype": 2,
+        "tier": "T2"
+      },
+      "output": 29
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 7,
+        "rtype": 2,
+        "tier": "T3"
+      },
+      "output": 43
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 7,
+        "rtype": 2,
+        "tier": "T4"
+      },
+      "output": 72
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 7,
+        "rtype": 3,
+        "tier": null
+      },
+      "output": 9
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 7,
+        "rtype": 3,
+        "tier": "T1"
+      },
+      "output": 9
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 7,
+        "rtype": 3,
+        "tier": "T2"
+      },
+      "output": 18
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 7,
+        "rtype": 3,
+        "tier": "T3"
+      },
+      "output": 27
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 7,
+        "rtype": 3,
+        "tier": "T4"
+      },
+      "output": 46
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 21,
+        "rtype": 0,
+        "tier": null
+      },
+      "output": 16
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 21,
+        "rtype": 0,
+        "tier": "T1"
+      },
+      "output": 16
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 21,
+        "rtype": 0,
+        "tier": "T2"
+      },
+      "output": 32
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 21,
+        "rtype": 0,
+        "tier": "T3"
+      },
+      "output": 48
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 21,
+        "rtype": 0,
+        "tier": "T4"
+      },
+      "output": 80
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 21,
+        "rtype": 1,
+        "tier": null
+      },
+      "output": 20
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 21,
+        "rtype": 1,
+        "tier": "T1"
+      },
+      "output": 20
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 21,
+        "rtype": 1,
+        "tier": "T2"
+      },
+      "output": 40
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 21,
+        "rtype": 1,
+        "tier": "T3"
+      },
+      "output": 60
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 21,
+        "rtype": 1,
+        "tier": "T4"
+      },
+      "output": 100
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 21,
+        "rtype": 2,
+        "tier": null
+      },
+      "output": 22
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 21,
+        "rtype": 2,
+        "tier": "T1"
+      },
+      "output": 22
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 21,
+        "rtype": 2,
+        "tier": "T2"
+      },
+      "output": 44
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 21,
+        "rtype": 2,
+        "tier": "T3"
+      },
+      "output": 66
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 21,
+        "rtype": 2,
+        "tier": "T4"
+      },
+      "output": 110
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 21,
+        "rtype": 3,
+        "tier": null
+      },
+      "output": 14
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 21,
+        "rtype": 3,
+        "tier": "T1"
+      },
+      "output": 14
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 21,
+        "rtype": 3,
+        "tier": "T2"
+      },
+      "output": 28
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 21,
+        "rtype": 3,
+        "tier": "T3"
+      },
+      "output": 42
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 2,
+        "ivl": 21,
+        "rtype": 3,
+        "tier": "T4"
+      },
+      "output": 70
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 0,
+        "rtype": 0,
+        "tier": null
+      },
+      "output": 10
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 0,
+        "rtype": 0,
+        "tier": "T1"
+      },
+      "output": 10
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 0,
+        "rtype": 0,
+        "tier": "T2"
+      },
+      "output": 19
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 0,
+        "rtype": 0,
+        "tier": "T3"
+      },
+      "output": 29
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 0,
+        "rtype": 0,
+        "tier": "T4"
+      },
+      "output": 48
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 0,
+        "rtype": 1,
+        "tier": null
+      },
+      "output": 12
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 0,
+        "rtype": 1,
+        "tier": "T1"
+      },
+      "output": 12
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 0,
+        "rtype": 1,
+        "tier": "T2"
+      },
+      "output": 24
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 0,
+        "rtype": 1,
+        "tier": "T3"
+      },
+      "output": 36
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 0,
+        "rtype": 1,
+        "tier": "T4"
+      },
+      "output": 60
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 0,
+        "rtype": 2,
+        "tier": null
+      },
+      "output": 13
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 0,
+        "rtype": 2,
+        "tier": "T1"
+      },
+      "output": 13
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 0,
+        "rtype": 2,
+        "tier": "T2"
+      },
+      "output": 26
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 0,
+        "rtype": 2,
+        "tier": "T3"
+      },
+      "output": 40
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 0,
+        "rtype": 2,
+        "tier": "T4"
+      },
+      "output": 66
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 0,
+        "rtype": 3,
+        "tier": null
+      },
+      "output": 8
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 0,
+        "rtype": 3,
+        "tier": "T1"
+      },
+      "output": 8
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 0,
+        "rtype": 3,
+        "tier": "T2"
+      },
+      "output": 17
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 0,
+        "rtype": 3,
+        "tier": "T3"
+      },
+      "output": 25
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 0,
+        "rtype": 3,
+        "tier": "T4"
+      },
+      "output": 42
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 7,
+        "rtype": 0,
+        "tier": null
+      },
+      "output": 12
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 7,
+        "rtype": 0,
+        "tier": "T1"
+      },
+      "output": 12
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 7,
+        "rtype": 0,
+        "tier": "T2"
+      },
+      "output": 25
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 7,
+        "rtype": 0,
+        "tier": "T3"
+      },
+      "output": 37
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 7,
+        "rtype": 0,
+        "tier": "T4"
+      },
+      "output": 62
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 7,
+        "rtype": 1,
+        "tier": null
+      },
+      "output": 16
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 7,
+        "rtype": 1,
+        "tier": "T1"
+      },
+      "output": 16
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 7,
+        "rtype": 1,
+        "tier": "T2"
+      },
+      "output": 31
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 7,
+        "rtype": 1,
+        "tier": "T3"
+      },
+      "output": 47
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 7,
+        "rtype": 1,
+        "tier": "T4"
+      },
+      "output": 78
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 7,
+        "rtype": 2,
+        "tier": null
+      },
+      "output": 17
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 7,
+        "rtype": 2,
+        "tier": "T1"
+      },
+      "output": 17
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 7,
+        "rtype": 2,
+        "tier": "T2"
+      },
+      "output": 34
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 7,
+        "rtype": 2,
+        "tier": "T3"
+      },
+      "output": 51
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 7,
+        "rtype": 2,
+        "tier": "T4"
+      },
+      "output": 86
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 7,
+        "rtype": 3,
+        "tier": null
+      },
+      "output": 11
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 7,
+        "rtype": 3,
+        "tier": "T1"
+      },
+      "output": 11
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 7,
+        "rtype": 3,
+        "tier": "T2"
+      },
+      "output": 22
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 7,
+        "rtype": 3,
+        "tier": "T3"
+      },
+      "output": 33
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 7,
+        "rtype": 3,
+        "tier": "T4"
+      },
+      "output": 55
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 21,
+        "rtype": 0,
+        "tier": null
+      },
+      "output": 19
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 21,
+        "rtype": 0,
+        "tier": "T1"
+      },
+      "output": 19
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 21,
+        "rtype": 0,
+        "tier": "T2"
+      },
+      "output": 38
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 21,
+        "rtype": 0,
+        "tier": "T3"
+      },
+      "output": 58
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 21,
+        "rtype": 0,
+        "tier": "T4"
+      },
+      "output": 96
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 21,
+        "rtype": 1,
+        "tier": null
+      },
+      "output": 24
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 21,
+        "rtype": 1,
+        "tier": "T1"
+      },
+      "output": 24
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 21,
+        "rtype": 1,
+        "tier": "T2"
+      },
+      "output": 48
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 21,
+        "rtype": 1,
+        "tier": "T3"
+      },
+      "output": 72
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 21,
+        "rtype": 1,
+        "tier": "T4"
+      },
+      "output": 120
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 21,
+        "rtype": 2,
+        "tier": null
+      },
+      "output": 26
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 21,
+        "rtype": 2,
+        "tier": "T1"
+      },
+      "output": 26
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 21,
+        "rtype": 2,
+        "tier": "T2"
+      },
+      "output": 53
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 21,
+        "rtype": 2,
+        "tier": "T3"
+      },
+      "output": 79
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 21,
+        "rtype": 2,
+        "tier": "T4"
+      },
+      "output": 132
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 21,
+        "rtype": 3,
+        "tier": null
+      },
+      "output": 17
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 21,
+        "rtype": 3,
+        "tier": "T1"
+      },
+      "output": 17
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 21,
+        "rtype": 3,
+        "tier": "T2"
+      },
+      "output": 34
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 21,
+        "rtype": 3,
+        "tier": "T3"
+      },
+      "output": 50
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 3,
+        "ivl": 21,
+        "rtype": 3,
+        "tier": "T4"
+      },
+      "output": 84
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 0,
+        "rtype": 0,
+        "tier": null
+      },
+      "output": 8
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 0,
+        "rtype": 0,
+        "tier": "T1"
+      },
+      "output": 8
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 0,
+        "rtype": 0,
+        "tier": "T2"
+      },
+      "output": 16
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 0,
+        "rtype": 0,
+        "tier": "T3"
+      },
+      "output": 24
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 0,
+        "rtype": 0,
+        "tier": "T4"
+      },
+      "output": 40
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 0,
+        "rtype": 1,
+        "tier": null
+      },
+      "output": 10
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 0,
+        "rtype": 1,
+        "tier": "T1"
+      },
+      "output": 10
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 0,
+        "rtype": 1,
+        "tier": "T2"
+      },
+      "output": 20
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 0,
+        "rtype": 1,
+        "tier": "T3"
+      },
+      "output": 30
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 0,
+        "rtype": 1,
+        "tier": "T4"
+      },
+      "output": 50
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 0,
+        "rtype": 2,
+        "tier": null
+      },
+      "output": 11
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 0,
+        "rtype": 2,
+        "tier": "T1"
+      },
+      "output": 11
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 0,
+        "rtype": 2,
+        "tier": "T2"
+      },
+      "output": 22
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 0,
+        "rtype": 2,
+        "tier": "T3"
+      },
+      "output": 33
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 0,
+        "rtype": 2,
+        "tier": "T4"
+      },
+      "output": 55
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 0,
+        "rtype": 3,
+        "tier": null
+      },
+      "output": 7
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 0,
+        "rtype": 3,
+        "tier": "T1"
+      },
+      "output": 7
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 0,
+        "rtype": 3,
+        "tier": "T2"
+      },
+      "output": 14
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 0,
+        "rtype": 3,
+        "tier": "T3"
+      },
+      "output": 21
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 0,
+        "rtype": 3,
+        "tier": "T4"
+      },
+      "output": 35
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 7,
+        "rtype": 0,
+        "tier": null
+      },
+      "output": 10
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 7,
+        "rtype": 0,
+        "tier": "T1"
+      },
+      "output": 10
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 7,
+        "rtype": 0,
+        "tier": "T2"
+      },
+      "output": 21
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 7,
+        "rtype": 0,
+        "tier": "T3"
+      },
+      "output": 31
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 7,
+        "rtype": 0,
+        "tier": "T4"
+      },
+      "output": 52
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 7,
+        "rtype": 1,
+        "tier": null
+      },
+      "output": 13
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 7,
+        "rtype": 1,
+        "tier": "T1"
+      },
+      "output": 13
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 7,
+        "rtype": 1,
+        "tier": "T2"
+      },
+      "output": 26
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 7,
+        "rtype": 1,
+        "tier": "T3"
+      },
+      "output": 39
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 7,
+        "rtype": 1,
+        "tier": "T4"
+      },
+      "output": 65
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 7,
+        "rtype": 2,
+        "tier": null
+      },
+      "output": 14
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 7,
+        "rtype": 2,
+        "tier": "T1"
+      },
+      "output": 14
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 7,
+        "rtype": 2,
+        "tier": "T2"
+      },
+      "output": 29
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 7,
+        "rtype": 2,
+        "tier": "T3"
+      },
+      "output": 43
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 7,
+        "rtype": 2,
+        "tier": "T4"
+      },
+      "output": 72
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 7,
+        "rtype": 3,
+        "tier": null
+      },
+      "output": 9
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 7,
+        "rtype": 3,
+        "tier": "T1"
+      },
+      "output": 9
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 7,
+        "rtype": 3,
+        "tier": "T2"
+      },
+      "output": 18
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 7,
+        "rtype": 3,
+        "tier": "T3"
+      },
+      "output": 27
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 7,
+        "rtype": 3,
+        "tier": "T4"
+      },
+      "output": 46
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 21,
+        "rtype": 0,
+        "tier": null
+      },
+      "output": 16
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 21,
+        "rtype": 0,
+        "tier": "T1"
+      },
+      "output": 16
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 21,
+        "rtype": 0,
+        "tier": "T2"
+      },
+      "output": 32
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 21,
+        "rtype": 0,
+        "tier": "T3"
+      },
+      "output": 48
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 21,
+        "rtype": 0,
+        "tier": "T4"
+      },
+      "output": 80
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 21,
+        "rtype": 1,
+        "tier": null
+      },
+      "output": 20
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 21,
+        "rtype": 1,
+        "tier": "T1"
+      },
+      "output": 20
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 21,
+        "rtype": 1,
+        "tier": "T2"
+      },
+      "output": 40
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 21,
+        "rtype": 1,
+        "tier": "T3"
+      },
+      "output": 60
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 21,
+        "rtype": 1,
+        "tier": "T4"
+      },
+      "output": 100
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 21,
+        "rtype": 2,
+        "tier": null
+      },
+      "output": 22
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 21,
+        "rtype": 2,
+        "tier": "T1"
+      },
+      "output": 22
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 21,
+        "rtype": 2,
+        "tier": "T2"
+      },
+      "output": 44
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 21,
+        "rtype": 2,
+        "tier": "T3"
+      },
+      "output": 66
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 21,
+        "rtype": 2,
+        "tier": "T4"
+      },
+      "output": 110
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 21,
+        "rtype": 3,
+        "tier": null
+      },
+      "output": 14
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 21,
+        "rtype": 3,
+        "tier": "T1"
+      },
+      "output": 14
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 21,
+        "rtype": 3,
+        "tier": "T2"
+      },
+      "output": 28
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 21,
+        "rtype": 3,
+        "tier": "T3"
+      },
+      "output": 42
+    },
+    {
+      "class": "combination",
+      "input": {
+        "ease": 4,
+        "ivl": 21,
+        "rtype": 3,
+        "tier": "T4"
+      },
+      "output": 70
+    },
+    {
+      "class": "tie",
+      "input": {
+        "ease": 1,
+        "ivl": 7,
+        "rtype": 1,
+        "tier": null
+      },
+      "output": 6
+    },
+    {
+      "class": "tie",
+      "input": {
+        "ease": 1,
+        "ivl": 7,
+        "rtype": 1,
+        "tier": "T3"
+      },
+      "output": 20
+    },
+    {
+      "class": "tie",
+      "input": {
+        "ease": 1,
+        "ivl": 7,
+        "rtype": 1,
+        "tier": "T1"
+      },
+      "output": 6
+    },
+    {
+      "class": "boundary",
+      "input": {
+        "ease": 2,
+        "ivl": -1,
+        "rtype": 1,
+        "tier": null
+      },
+      "output": 10
+    },
+    {
+      "class": "boundary",
+      "input": {
+        "ease": 2,
+        "ivl": 1,
+        "rtype": 1,
+        "tier": null
+      },
+      "output": 13
+    },
+    {
+      "class": "boundary",
+      "input": {
+        "ease": 2,
+        "ivl": 20,
+        "rtype": 1,
+        "tier": null
+      },
+      "output": 13
+    },
+    {
+      "class": "boundary",
+      "input": {
+        "ease": 2,
+        "ivl": 22,
+        "rtype": 1,
+        "tier": null
+      },
+      "output": 20
+    },
+    {
+      "class": "boundary",
+      "input": {
+        "ease": 2,
+        "ivl": 365,
+        "rtype": 1,
+        "tier": null
+      },
+      "output": 20
+    },
+    {
+      "class": "non-study",
+      "input": {
+        "ease": 0,
+        "ivl": 30,
+        "rtype": 1,
+        "tier": "T4"
+      },
+      "output": 0
+    },
+    {
+      "class": "non-study",
+      "input": {
+        "ease": 2,
+        "ivl": 30,
+        "rtype": 4,
+        "tier": "T4"
+      },
+      "output": 0
+    },
+    {
+      "class": "non-study",
+      "input": {
+        "ease": 2,
+        "ivl": 30,
+        "rtype": 5,
+        "tier": "T4"
+      },
+      "output": 0
+    },
+    {
+      "class": "non-study",
+      "input": {
+        "ease": 0,
+        "ivl": 30,
+        "rtype": 4,
+        "tier": "T4"
+      },
+      "output": 0
+    },
+    {
+      "class": "non-study",
+      "input": {
+        "ease": 1,
+        "ivl": 30,
+        "rtype": 6,
+        "tier": "T4"
+      },
+      "output": 0
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "ease": 2,
+        "ivl": 133,
+        "rtype": 0,
+        "tier": "T2"
+      },
+      "output": 32
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "ease": 2,
+        "ivl": 13,
+        "rtype": 3,
+        "tier": "T3"
+      },
+      "output": 27
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "ease": 1,
+        "ivl": 52,
+        "rtype": 1,
+        "tier": "T2"
+      },
+      "output": 20
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "ease": 4,
+        "ivl": 297,
+        "rtype": 3,
+        "tier": "T3"
+      },
+      "output": 42
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "ease": 2,
+        "ivl": 102,
+        "rtype": 2,
+        "tier": "T2"
+      },
+      "output": 44
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "ease": 3,
+        "ivl": 218,
+        "rtype": 0,
+        "tier": "T4"
+      },
+      "output": 96
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "ease": 4,
+        "ivl": 207,
+        "rtype": 0,
+        "tier": "T1"
+      },
+      "output": 16
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "ease": 2,
+        "ivl": 17,
+        "rtype": 1,
+        "tier": null
+      },
+      "output": 13
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "ease": 1,
+        "ivl": 97,
+        "rtype": 2,
+        "tier": "T2"
+      },
+      "output": 22
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "ease": 3,
+        "ivl": 353,
+        "rtype": 2,
+        "tier": "T1"
+      },
+      "output": 26
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "ease": 1,
+        "ivl": 11,
+        "rtype": 2,
+        "tier": "T1"
+      },
+      "output": 7
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "ease": 2,
+        "ivl": 293,
+        "rtype": 1,
+        "tier": null
+      },
+      "output": 20
+    }
+  ],
+  "function": "gamification.xp.review_xp",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Builds a Review from the case's ease, new interval and type, and a card-to-tier map holding the case's tier for its card, or none; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_072.py",
+  "registry_sha256": "d25c88fa142d319489e7334677aebdbcf5b9e0aca3dfb751f221140bead5b54f",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

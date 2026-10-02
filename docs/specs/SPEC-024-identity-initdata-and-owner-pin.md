@@ -257,3 +257,123 @@ refused the launch 60 seconds ahead (left `Err(InitDataStale)`, right `Ok(Telegr
 and 61 and 120 admitted the one 61 seconds ahead (left `Ok(Caller { user: TelegramUserId(4242) })`,
 right `Err(InitDataStale)`). The file was restored byte for byte after each, its sha256
 `51ff9221e1d770fa958e3be7b33a6b33a2eb2f7a2d2d8d08ce836eb623006823` before and after.
+
+## 8. Amendment, 2026-09-30: a log capture cannot lose a line to another thread
+
+Made under issue #461, insert-only under ruling (i) of SPEC-038 section 8: every earlier byte is
+kept in order, so the amendment is these two new last sections and nothing above them is edited.
+Its criteria, A17 and A18, are defined in the section below.
+
+- **The class.** In a test binary, a line a test's thread emits while it holds a capture, outside a dispatcher's own call, reaches that capture, whichever thread first reached the callsite, provided two preconditions hold.
+  The floor is the global default before any dispatcher is created in the test binary, and no interest answer computed before the floor is stored after a capture registers.
+  The census refuses outside the helper every name in its fixed lists that installs a subscriber or registers a dispatcher or callsite, and the helper refuses a capture nested inside another on one thread.
+  The lists are fixed, taken from the pinned crates' public items; the production global default is the one name the census counts and does not refuse.
+- **Carved out, by kind.** A line emitted inside a dispatcher's own call reaches no subscriber, because `tracing` drops it by design.
+  An install hidden by a proc-macro from an external crate beyond the named ones, a fence rustdoc does not run, and a name inside a string are outside the census.
+  The census counts the production global default and cannot refuse it, so the helper refuses a capture made after it, and a child-process test pins that refusal.
+- **The defect.** Tests, `init_data_never_reaches_the_log` among them, capture through a thread-local default and register no global one.
+  The pinned `tracing-core` computes a new callsite's interest from every registered dispatcher only while two or more are registered.
+  With at most one, `Dispatchers::rebuilder` returns `JustOne` and `rebuild_callsite_interest` asks `dispatcher::get_default`, the reaching thread's own default.
+  A thread with no subscriber that reaches a line first, while a capture is the only registered dispatcher, caches the line as `Interest::never()`, and the capture on another thread never sees it.
+  The code under test is unchanged between a passing run and a failing one.
+- **The mechanism.** `tools/log-capture/capture.rs`, included by path into each test binary that captures, offers `with_capture` and `hold_capture`.
+  Both first install a floor subscriber as the global default, once and never dropped, then make the capture.
+  The floor answers every callsite "sometimes", enables nothing and hints `OFF`, so it costs nothing while it is alone.
+  The floor is the default of every thread that holds no capture, so an answer such a thread computes after the floor is installed is "sometimes", never "never".
+  An answer computed before the floor is installed can be "never", and can be stored after a capture registers.
+  So the census refuses, outside the helper, each listed name that creates or registers a dispatcher or callsite or rebuilds the interest cache: a rebuild before the floor raises the level filter above `OFF`.
+  The census refuses any test that creates a dispatcher or registers a callsite outside the helper.
+  What the helper closes is the path where `Dispatchers::rebuilder` returns `JustOne` and `rebuild_callsite_interest` asks the reaching thread's default: with the floor installed, that default answers "sometimes".
+  A per-test retry, a single-thread pin and a sleep were rejected: each hides the loss, none removes it.
+- **The population, walked.** The census reads every `.rs` file under `crates/` and `tools/`, skipping no directory, and every file they bring in by `mod`, a path attribute, `include!` or `include_str!`, resolved as rustc resolves it.
+  It also follows the paths the Cargo manifests and configurations name, and refuses one that lies outside `crates/` and `tools/`.
+  It reads each doctest as rustdoc finds it, in doc comments, `#[doc]` strings and files a doc attribute includes, and counts tokens with comments, strings and character literals blanked.
+  Both token lists are fixed, taken from the pinned crates' public items.
+  The install tokens are `set_default`, `with_default`, `set_global_default`, `init`, `try_init`, `with_subscriber`, `with_current_subscriber`, `WithSubscriber` and `WithDispatch`.
+  The registration tokens are `Dispatch`, `WeakDispatch`, `callsite`, `callsite2`, `DefaultCallsite`, `MacroCallsite`, `__macro_support`, `rebuild_interest_cache`, `rebuild_interest`, `set_interest`, `register_callsite`, `identify_callsite`, `Registrar`, `reload`, `with_filter_reloading`, `reload_handle` and `LogTracer`.
+  The hidden tokens, which build an identifier or install for a test, are `paste`, `pastey`, `concat_idents`, `traced_test` and `test_log`.
+  Result: 13 capturing calls routed through the helper, none raw, and 1 production global default (`crates/kernel/src/logging.rs`), which this amendment measures and does not change.
+  The daemon's `wiring` tests had already held a second dispatcher for their own capture; they now use the helper like the rest.
+  Amended by SPEC-073 part B (#541): two captures in coordination's records-step tests are routed through the helper, so the census reads 15 routed, none raw.
+- **Files this amendment touches.** `tools/log-capture/capture.rs`,
+  `crates/kernel/tests/log_capture_class.rs`, the capturing tests
+  `crates/coordination/tests/drill_paid_count.rs` (its capture lines only),
+  `crates/coordination/tests/settle_fold.rs`, `crates/daemon/src/wiring.rs` (its test module only),
+  `crates/daemon/tests/lifecycle.rs`, `crates/identity/tests/owner.rs`,
+  `crates/ingest/tests/scope.rs`, `crates/ingest/tests/settings.rs`,
+  `crates/ingest/tests/window.rs`, `crates/kernel/tests/offload.rs`, `docs/red-first/SPEC-024.md`
+  and `changelog.d/fix-log-capture-461.md`.
+
+## 9. Acceptance criteria of the 2026-09-30 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A17 | a capture made with either entry of the helper keeps a line another thread reached first, even when that thread's callsite registration straddled the capture's, and registers only after the floor is the global default, in a child whose dispatcher registry starts empty | `log_capture_class` test |
+| A18 | every install, creation or registration token the census names, in any file the census reads, goes through the helper: ~~15 routed,~~ none raw, and the one production global default is the only other; the census test's own assertion holds the routed count (section 13) | `log_capture_class` test |
+
+```acceptance
+A17: cargo test -p deck-streak-kernel --test log_capture_class -- --exact a_capture_keeps_a_line_another_thread_reached_first
+A18: cargo test -p deck-streak-kernel --test log_capture_class -- --exact every_capture_in_the_workspace_goes_through_the_helper
+```
+
+A17 runs each entry of the helper in a child process of the test binary, one test thread, so the
+loss does not depend on what the binary's other tests registered. A18 prints the population it
+counted and asserts it.
+Two further tests of that file pin the helper's refusals: a capture nested inside another on one thread, and a capture
+made after the production global default.
+
+## 10. Amendment, 2026-10-01: the killer's own exemption from the census
+
+Made under issue #511, insert-only like section 8: every earlier byte is kept in order, so the amendment is this one new last section and nothing above it is edited. It adds no criterion.
+
+Two sentences of section 8 state the census more widely than the code does. They are read with the exemption below.
+
+- **"The census refuses outside the helper every name in its fixed lists"** is read with one exemption. The killer, `crates/kernel/tests/log_capture_class.rs`, is scanned for the census's names like every other file, and it alone may also name `callsite` and `set_interest`: the census admits those two tokens when the file is the killer, and every other name in the lists stays refused there.
+- **"The census refuses any test that creates a dispatcher or registers a callsite outside the helper"** is read with the same exemption. The killer's straddled scenarios register a callsite by hand, `tracing::callsite::register(&STRADDLED)`, whose type the killer gives its own `Callsite::set_interest`. Each such scenario runs in a child process of the test binary with one test thread, so the registration reaches no other test.
+- **What is not exempt.** The helper itself, and the one production global default, stay as section 8 states them. No other file may name `callsite` or `set_interest`.
+
+## 11. Amendments, 2026-10-02: a missing floor is named apart from a nested capture
+
+Made under issue #522, with issue #511's wording 3, insert-only like sections 8 and 10: every earlier byte is kept in order, so the amendment is these two new last sections and nothing above them is edited. Its criteria, A19 and A20, are defined in the section below. ADR-311 decides it.
+
+- **The defect.** The helper refused a nested capture by reading one fact, whether this thread's default is the floor, and named one cause when it was not. A thread that holds no capture and whose default is not the floor failed with the nesting message, which names the wrong cause (#522; #511, note 1).
+- **The measurement.** Inside a dispatcher's own call, the pinned `tracing-core` reads the default as none only while some thread holds a scoped default. While no thread holds one, `dispatcher::get_default` answers the global default directly, so the inner call reads the floor. Measured with the pinned `tracing` and `tracing-core` in a scratch binary: with no scoped default held, the inner call read the floor; with one held on another thread, it read none; after that guard dropped, it read the floor again.
+- **The mechanism.** The helper counts the captures it holds on each thread. `with_capture` raises the count for its body and lowers it through a drop guard, so a body that panics leaves it right. `hold_capture` returns a `CaptureGuard`, which owns the scoped default's guard and lowers the count when it drops. The refusal reads the count first: above 0, it refuses with the nesting message, byte for byte as before; at 0, a default that is not the floor is refused with "a capture is refused: the floor is not this thread's default", which does not say "nested". A capture held on another thread is still no obstacle.
+- **Wording 3 (#511).** The doc of `refuse_nested_capture` replaces "its default, so any other default means a capture is held." with "its default, so outside a dispatcher's own call any other default means a capture is held." The sentence #511 gave for the inner reading, "Inside a dispatcher's own call the default reads as none.", is stated as measured above: it reads as none while any thread holds a scoped default, and as the global default while none does.
+- **The census.** A18's population is unchanged: 15 routed, none raw, and the one production global default. The new tests are in the killer, whose calls the census does not count as routed. The one caller that named the type `hold_capture` returns, the test module of `crates/daemon/src/wiring.rs`, now names `log_capture::CaptureGuard`; its capture call is unchanged.
+- **Rows.** cargo-mutants lists no mutant in `tools/`, which is in no crate's `src/`, so four hand rows in `scripts/mutation-rows.d/S02400-S02499.json`, S02407 to S02410, pin the refusal: the count check removed from the nesting arm (killed by `a_capture_nested_inside_a_capture_on_one_thread_is_refused`, which then reads the floor message), the floor message replaced by the nesting message (killed by A19's first test), the `CaptureGuard` drop that does not lower the count (killed by A19's second test), and the `with_capture` drop guard replaced by a lowering after the body, which a panicking body skips (killed by A19's third test).
+- **Files this amendment touches.** `tools/log-capture/capture.rs`,
+  `crates/kernel/tests/log_capture_class.rs`, `crates/daemon/src/wiring.rs` (its test module only),
+  `scripts/mutation-rows.d/S02400-S02499.json`,
+  `docs/decisions/ADR-311-the-capture-helper-counts-its-own-captures-so-a-missing-floor-has-its-own-refusal.md`,
+  `docs/red-first/SPEC-024.md`, `changelog.d/fix-capture-floor-522.md` and this SPEC.
+
+## 12. Acceptance criteria of the 2026-10-02 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A19 | a capture made while this thread holds none and its default is not the floor, attempted inside a dispatcher's own call while another thread holds a capture, is refused through either entry with the message naming the missing floor, not the nesting message; and a capture made after a held capture dropped is admitted, its count back at 0; and a capture made after a capture whose body panicked is admitted, its count back at 0 | `log_capture_class` tests |
+| A20 | the doc of the helper's `refuse_nested_capture` states the clause "outside a dispatcher's own call" | `log_capture_class` test |
+
+```acceptance
+A19: cargo test -p deck-streak-kernel --test log_capture_class -- --exact a_capture_where_the_floor_is_not_the_default_names_the_missing_floor
+A19: cargo test -p deck-streak-kernel --test log_capture_class -- --exact a_capture_after_a_held_capture_dropped_is_admitted
+A19: cargo test -p deck-streak-kernel --test log_capture_class -- --exact a_capture_after_a_panicking_body_is_admitted
+A20: cargo test -p deck-streak-kernel --test log_capture_class -- --exact the_nesting_refusal_doc_names_a_dispatchers_own_call
+```
+
+A19's first test holds a capture on another thread for its span, so the inner reading is none
+whatever the binary's other tests hold; with no scoped default anywhere, the inner call would read
+the floor. The nesting test, `a_capture_nested_inside_a_capture_on_one_thread_is_refused`, is
+unchanged and still reads the nesting message through both entries.
+
+## 13. Amendment, 2026-10-02: the routed count has one home
+
+Insert-only under ruling (i) of SPEC-038 section 8: every earlier byte is kept in order, and the amendment is the struck count and the clause in A18's row and this section.
+
+- **The measurement.** At dev `50e4797a`, A18's row (section 9, line 312) states "15 routed", and the census killer `crates/kernel/tests/log_capture_class.rs` asserts `assert_eq!(routed, 19, "{report}");` (line 1588). The assertion moved across five commits while the row moved once; `git log -L1588,1588:crates/kernel/tests/log_capture_class.rs` prints that history.
+- **The decision.** A count in prose goes stale with every delivery that routes a capture, and the killer's assertion is already the count's one home. A18's row therefore strikes its count and points at the census test's own assertion. Sections 8 and 11 keep the counts they state as written: each is that amendment's own record.
+- **Chosen against.** A parity test that holds the row's number equal to the killer's assertion was rejected: it would make every delivery that routes a capture amend SPEC-024, a SPEC outside its context, for a count the killer already holds. Rewriting the rows in place was rejected: SPEC-038 section 8 ruling (i) binds a delivered SPEC to insert-only amendment.
+- **What holds the row.** `scripts/tests/test_log_capture_wording.py`, the case `test_the_a18_row_states_no_routed_count`, refuses a routed count in A18's row once its struck spans are removed. It pins wording, not a criterion.
+- **Insertions this amendment makes:** the struck count and the clause in A18's row, and this section.
+- **Files this amendment touches:** `docs/specs/SPEC-024-identity-initdata-and-owner-pin.md`, `docs/red-first/SPEC-024.md`, `scripts/tests/test_log_capture_wording.py` and `changelog.d/docs-census-count-and-planned-status.md`.

@@ -8,6 +8,7 @@
 //! day, and both rules are unique indexes of the table itself (ADR-040).
 
 use deck_streak_kernel::{Db, KernelError, Track, UtcMillis};
+use sqlx::SqliteConnection;
 
 use crate::grant::{GrantAnswer, GrantPort, GrantRequest};
 use crate::xp::{Level, XpAmount, XpTotal, level_for};
@@ -28,21 +29,22 @@ impl SqliteXpLedger {
         Self { db }
     }
 
-    /// The sum of every grant (R7).
+    /// The sum of every grant and every settlement (R7, SPEC-072 R10).
     ///
     /// # Errors
     ///
     /// [`KernelError::Database`] when the read fails.
     pub async fn total(&self) -> Result<XpTotal, KernelError> {
         let total = sqlx::query_scalar!(
-            r#"SELECT COALESCE(SUM(amount), 0) AS "total!: u64" FROM xp_ledger"#
+            r#"SELECT (SELECT COALESCE(SUM(amount), 0) FROM xp_ledger)
+                    + (SELECT COALESCE(SUM(amount), 0) FROM xp_settlement) AS "total!: u64""#
         )
         .fetch_one(self.db.reader())
         .await?;
         Ok(XpTotal::new(total))
     }
 
-    /// The sum of `track`'s grants (R7).
+    /// The sum of `track`'s grants and settlements (R7, SPEC-072 R10).
     ///
     /// # Errors
     ///
@@ -50,7 +52,9 @@ impl SqliteXpLedger {
     pub async fn track_total(&self, track: Track) -> Result<XpTotal, KernelError> {
         let track = track.as_str();
         let total = sqlx::query_scalar!(
-            r#"SELECT COALESCE(SUM(amount), 0) AS "total!: u64" FROM xp_ledger WHERE track = ?1"#,
+            r#"SELECT (SELECT COALESCE(SUM(amount), 0) FROM xp_ledger WHERE track = ?1)
+                    + (SELECT COALESCE(SUM(amount), 0) FROM xp_settlement WHERE track = ?1)
+                    AS "total!: u64""#,
             track
         )
         .fetch_one(self.db.reader())
@@ -69,53 +73,68 @@ impl SqliteXpLedger {
     }
 }
 
+/// Write `request` on `connection`, which the caller holds inside its own write transaction, so a
+/// grant made during the fold lands in the same commit as the day it belongs to (SPEC-076 R26).
+///
+/// # Errors
+///
+/// [`KernelError::Database`] when a statement fails.
+pub async fn grant_on(
+    connection: &mut SqliteConnection,
+    request: &GrantRequest,
+    at: UtcMillis,
+) -> Result<GrantAnswer, KernelError> {
+    let day = request.study_day.epoch_day();
+    let source = request.source.as_str();
+    let track = request.track.as_str();
+    let amount = request.amount.get();
+    let scope = request.scope.as_str();
+    let at = at.epoch_millis();
+    // The insert's own conflict with the ledger's two unique indexes is the existence check, so
+    // the key lives in the migration alone (ADR-040); a conflict writes nothing.
+    let written = sqlx::query!(
+        "INSERT INTO xp_ledger (study_day, source, track, amount, scope, created_at) \
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6) ON CONFLICT DO NOTHING",
+        day,
+        source,
+        track,
+        amount,
+        scope,
+        at
+    )
+    .execute(&mut *connection)
+    .await?
+    .rows_affected();
+    let answer = if written == 1 {
+        GrantAnswer::Granted(request.amount)
+    } else {
+        // The row that holds the key, read in the same transaction: the same study day, source
+        // and track, or for a `once` request the `once` row of that source and track.
+        let held = sqlx::query_scalar!(
+            r#"SELECT amount AS "amount!: u32" FROM xp_ledger
+                   WHERE source = ?1 AND track = ?2
+                     AND (study_day = ?3 OR (?4 = 'once' AND scope = 'once'))
+                   ORDER BY id LIMIT 1"#,
+            source,
+            track,
+            day,
+            scope
+        )
+        .fetch_one(&mut *connection)
+        .await?;
+        GrantAnswer::AlreadyGranted(XpAmount::new(held))
+    };
+    Ok(answer)
+}
+
 impl GrantPort for SqliteXpLedger {
     async fn grant(
         &self,
         request: &GrantRequest,
         at: UtcMillis,
     ) -> Result<GrantAnswer, KernelError> {
-        let day = request.study_day.epoch_day();
-        let source = request.source.as_str();
-        let track = request.track.as_str();
-        let amount = request.amount.get();
-        let scope = request.scope.as_str();
-        let at = at.epoch_millis();
         let mut write = self.db.write().await?;
-        // The insert's own conflict with the ledger's two unique indexes is the existence check, so
-        // the key lives in the migration alone (ADR-040); a conflict writes nothing.
-        let written = sqlx::query!(
-            "INSERT INTO xp_ledger (study_day, source, track, amount, scope, created_at) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6) ON CONFLICT DO NOTHING",
-            day,
-            source,
-            track,
-            amount,
-            scope,
-            at
-        )
-        .execute(&mut *write)
-        .await?
-        .rows_affected();
-        let answer = if written == 1 {
-            GrantAnswer::Granted(request.amount)
-        } else {
-            // The row that holds the key, read in the same transaction: the same study day, source
-            // and track, or for a `once` request the `once` row of that source and track.
-            let held = sqlx::query_scalar!(
-                r#"SELECT amount AS "amount!: u32" FROM xp_ledger
-                   WHERE source = ?1 AND track = ?2
-                     AND (study_day = ?3 OR (?4 = 'once' AND scope = 'once'))
-                   ORDER BY id LIMIT 1"#,
-                source,
-                track,
-                day,
-                scope
-            )
-            .fetch_one(&mut *write)
-            .await?;
-            GrantAnswer::AlreadyGranted(XpAmount::new(held))
-        };
+        let answer = grant_on(&mut write, request, at).await?;
         write.commit().await?;
         Ok(answer)
     }

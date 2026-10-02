@@ -1,0 +1,22 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S03801-A-THE-ENGINE-STAGE-NAMES-A-TARGET-PER-BINARY",
+        "scripts/check.sh",
+        "        targets+=(--test \"${BASH_REMATCH[1]}\")\n",
+        "        targets+=(--tests \"${BASH_REMATCH[1]}\")\n",
+        "the engine stage hands cargo one --test flag for each whole binary ENGINE_TESTS names, so it builds those test targets and no other (SPEC-038 R13 as amended, A21)",
+        "test_check_gate.TheEngineSetSplitsTheTests.test_the_engine_stage_builds_only_the_targets_the_set_names"
+      ],
+      [
+        "S03802-A-THE-ENGINE-STAGE-KEEPS-THE-WORKSPACE-SCOPE",
+        "scripts/check.sh",
+        "        cargo nextest run --workspace --locked --no-fail-fast -E \"$ENGINE_TESTS\" \\\n",
+        "        cargo nextest run -p deck-streak-ingest --locked --no-fail-fast -E \"$ENGINE_TESTS\" \\\n",
+        "the engine stage keeps the workspace's package scope, since an ingest-only build resolves features the cache was not built under (SPEC-038 section 8, A21)",
+        "test_check_gate.TheEngineSetSplitsTheTests.test_the_engine_stage_builds_only_the_targets_the_set_names"
+      ]
+    ]
+  }
+}

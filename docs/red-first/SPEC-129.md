@@ -1,0 +1,366 @@
+# Red-first record: SPEC-129
+
+The SPEC, ADR-129 and the SPEC-057 amendment were committed with the tests of A1 to A5 (0e39853)
+against the unchanged workflow and verdict script, so every test ran and each red failed by
+assertion: the missing `size` verb answers with the usage exit, and the workflow tests find no size
+job. The workflow and script change (9d51fc8) turned them green, and the rows commit (ced6887)
+factored the shared output writer without changing a result. The replay ran each named test on
+0e39853's tree.
+
+```red-first
+A1: red at 0e39853: 2 != 0 : usage: mutation-verdict.py [-h] [--root ROOT] [--base BASE] [--head HEAD]
+A1: green at ced6887
+A2: red at 0e39853: 2 != 0 : usage: mutation-verdict.py [-h] [--root ROOT] [--base BASE] [--head HEAD]
+A2: green at ced6887
+A3: red at 0e39853: Lists differ: ['no size job'] != []
+A3: green at ced6887
+A4: red at 0e39853: 0 != 1 : battery: counted 3 of 3 reports whole
+A4: green at ced6887
+A5: red at 0e39853: 2 != 0 : usage: mutation-verdict.py [-h] [--root ROOT] [--base BASE] [--head HEAD]
+A5: green at ced6887
+A6: not red: it pins bounds the workflows already hold at dev, so it is green at every commit and each plant of a raised bound turns it red by assertion
+```
+
+Fix round 1 added A6 after the delivery was green. It pins bounds that dev already holds (every
+`cargo mutants` command line carries `--timeout 300 --build-timeout 600`), so it has no red commit.
+Each planted change turned it red by assertion, and the workflow was restored after each:
+
+```text
+rust leg --timeout 300 -> 600:        AssertionError: '--timeout 300 --build-timeout 600' not found in 'cargo mutants ... --shard "$SHARD/$SHARDS" --timeout 600 --build-timeout 600 ...'
+rust leg --build-timeout 600 -> 1200: AssertionError: '--timeout 300 --build-timeout 600' not found in 'cargo mutants ... --shard "$SHARD/$SHARDS" --timeout 300 --build-timeout 1200 ...'
+ci.yml   --timeout 300 -> 600:        AssertionError: ... ci.yml: cargo mutants ... --timeout 600 --build-timeout 600 ...
+ci.yml   --build-timeout 600 -> 1200: AssertionError: ... ci.yml: cargo mutants ... --timeout 300 --build-timeout 1200 ...
+```
+
+Fix round 2 (2026-09-29) made A6 read whole values and every spelling of the command: commands are
+found with `\bcargo\s+mutants\b[^\n]*` on text whose `\`-newline continuations are joined first,
+and the bounds are matched as `(?<![\w-])--timeout 300 --build-timeout 600(?![\w.])`. A6 stays
+`not red:` above, because it is green on every real workflow at every commit. Row S12906 (a build
+timeout of `6000` on the rust leg) is the round's red: it survived the earlier A6 at 507570d, and
+the test commit 6a1d80a kills it. Each plant below was applied to an export of 6a1d80a, and every
+workflow was restored and checked by sha256 after each one:
+
+```text
+S12906 at 507570d (earlier A6): SURVIVED: its killer passed with the mutant installed; rows: examined 1: killed 0, survived 1, void 0
+S12906 at 6a1d80a (new A6):     KILLED: its killer passed without the mutant and failed with it; rows: examined 1: killed 1, survived 0, void 0
+prove --band S12900-S12999 at 6a1d80a: rows: examined 6: killed 6, survived 0, void 0
+V8 new .yml, bare `cargo mutants`:               AssertionError: Regex didn't match: '(?<![\\w-])\\-\\-timeout\\ 300 ...' not found in 'cargo mutants' : extra.yml: cargo mutants
+V9 new .yaml, bare `cargo mutants`:              AssertionError: Regex didn't match: '(?<![\\w-])\\-\\-timeout\\ 300 ...' not found in 'cargo mutants' : extra.yaml: cargo mutants
+M1 rust leg --build-timeout 600 -> 6000:         AssertionError: Regex didn't match: ... not found in 'cargo mutants ... --shard "$SHARD/$SHARDS" --timeout 300 --build-timeout 6000 --output "$RUNNER_TEMP/mutation" || rc=$?'
+M2 ci.yml   --build-timeout 600 -> 6000:         AssertionError: Regex didn't match: ... not found in 'cargo mutants ... --shard "$SHARD/$SHARDS" --timeout 300 --build-timeout 6000 --output "$out" || rc=$?'
+M3 `cargo mutants\` continued, raised bounds:    AssertionError: Regex didn't match: ... not found in 'cargo mutants             --no-shuffle ... --timeout 900 --build-timeout 1800 --output "$RUNNER_TEMP/mutation" || r...'
+M4 new .yml, folded `run: >-`, raised bounds:    AssertionError: Regex didn't match: ... not found in 'cargo mutants' : extra.yml: cargo mutants
+V1 continued with ` \`, the same bounds on line 2: green (rc 0): the command is bounded, so the guard passes it
+```
+
+M4's folded scalar reaches the guard as `cargo mutants` alone, so the bounds on its later lines
+are not read, and the command is refused for want of them. The earlier plants B1 to B4 and V2 to
+V7 stay red with the new A6 as they were with the old one.
+
+## Addendum, 2026-09-29 (issue #395): A7 for every spelling of the command
+
+The lines above stand. The red commit moves the guard's scan into a function of a directory and adds
+three planted-workflow tests over the old pattern; the green commit 9a7b2141 changes only the pattern and its
+comment, in `scripts/tests/test_dispatch_shards.py`, because the guard's pattern lives in the test module. The whole test file at the red commit fails only the three new tests, each by assertion.
+
+```red-first
+A7: red at 1b6bc977: AssertionError: {} != {'planted.yml': ['cargo +nightly mutants --in-place']} (toolchain); AssertionError: {} != {'planted.yml': ['cargo-mutants mutants --in-place']} (binary form); AssertionError: 1 != 2 : ['cargo mutants --timeout 300 --build-timeout 600 ; cargo mutants --in-place'] (two commands on one line)
+A7: green at 9a7b2141
+A8: red at 7b9ae9cc: AssertionError: {} != {'planted.yml': ['cargo --config net.retry=2 mutants --in-place']} (a flag's separate value); AssertionError: {'pla[13 chars]cargo mutants --in-place # --timeout 300 --build-timeout 600']} != {'pla[13 chars]cargo mutants --in-place']} (a comment)
+A8: green at 1e54fe48
+```
+
+## Addendum, 2026-09-29 (issue #395, round 2): a flag's value, a comment, and A7 replayed
+
+The lines above stand. The red commit 7b9ae9cc adds three planted-workflow tests; the green commit
+1e54fe48 changes only the start pattern (a global flag with a separate value) and cuts comments
+before any command is read, in `scripts/tests/test_dispatch_shards.py`, because the guard lives in
+the test module. The whole test file at the red commit fails only the three new tests, each by
+assertion. A8 is recorded in the fence above; A7 keeps its one red and one green line, and its new
+test's replay is quoted here.
+
+```text
+A7 replay: red at 7b9ae9cc: AssertionError: 1 != 2 : ['cargo mutants --timeout 300 --build-timeout 600 && cargo -C crates mutants --in-place']
+A7 replay: green at 1e54fe48: Ran 18 tests, OK
+```
+
+## Addendum, 2026-09-29 (issue #395, round 3): a comment right after a shell operator
+
+The lines above stand, and A8 keeps its one red and one green line; this replay is quoted below
+them. The red commit cc3cfb8e adds one assertion to the comment test, a comment that starts right
+after `;`; the green commit 39426b86 changes only the guard's word-start rule and its docstring, in
+`scripts/tests/test_dispatch_shards.py`, because the guard lives in the test module. The whole test
+file at the red commit fails only that test, by assertion.
+
+```text
+A8 replay: red at cc3cfb8e: FAILED (failures=1), AssertionError: {'pla[13 chars]cargo mutants --in-place;# --timeout 300 --build-timeout 600']} != {'pla[13 chars]cargo mutants --in-place;']}
+A8 replay: green at 39426b86: Ran 18 tests, OK, examined 3 ci.yml commands, examined 4 mutation-weekly.yml commands
+```
+
+## Addendum, 2026-09-29 (issue #395, round 4): a comment mark after a substitution
+
+The lines above stand, and A8 keeps its one red and one green line; this replay is quoted below
+them. The red commit 3a2383bc adds one loop to the comment test, four in-word hashes (`$(true)#`,
+`<(true)#`, `$((1))#` and `${X//;#/}`) each followed by an unbounded command; the green commit
+f15ca871 changes only the guard's word-start rule and its docstring, in
+`scripts/tests/test_dispatch_shards.py`, because the guard lives in the test module. The whole test
+file at the red commit fails only that test, by assertion.
+
+```text
+A8 replay: red at 3a2383bc: FAILED (failures=1), AssertionError: Lists differ: [] != ['cargo mutants --in-place']
+A8 replay: green at f15ca871: Ran 18 tests, OK, examined 4 in-word hashes, examined 3 ci.yml commands, examined 4 mutation-weekly.yml commands
+```
+
+## Addendum, 2026-09-29 (issue #395, round 5): the comment class, generated
+
+The lines above stand, and A8 keeps its one red and one green line; this replay is quoted below
+them. The red commit d9cdca86 adds one test, which generates the members of the comment class (a
+fragment that carries a would-be comment or a would-be closer, in each context and in a group
+inside each substitution, then a `#` and an unbounded command, the bounds, or a continued line) and
+has bash read each member; the green commit 3ce1d37d changes only the guard's comment rule and
+its docstrings, in `scripts/tests/test_dispatch_shards.py`, because the guard lives in the test
+module. The whole test file at the red commit fails only that test, by assertion.
+
+```text
+A8 replay: red at d9cdca86: FAILED (failures=1), AssertionError: Lists differ: ['cargo mutants --timeout 300 --build-time[59 chars]e\n'] != []
+A8 replay: green at 3ce1d37d: Ran 19 tests, OK, examined 2004 class members, examined 4 in-word hashes, examined 3 ci.yml commands, examined 4 mutation-weekly.yml commands
+```
+
+## Addendum, 2026-09-30 (issue #395, round 6): a context left open at its line's end
+
+The lines above stand, and A8 keeps its one red and one green line; this replay is quoted below
+them. The red commit 2b3a7b33 adds to the generated class each context left open at its line's
+end or continued inside it, with its closer and a `#` on the next line or the one after, and the
+bounds after an unbounded command on a continued line; the green commit 0046be9d changes only
+the guard's comment rule and its docstring, in `scripts/tests/test_dispatch_shards.py`, because
+the guard lives in the test module. The whole test file at the red commit fails only that test, by
+assertion.
+
+```text
+A8 replay: red at 2b3a7b33: FAILED (failures=1), AssertionError: Lists differ: ['cargo mutants --timeout 300 --build-time[40 chars]e\n'] != []
+A8 replay: green at 0046be9d: Ran 19 tests, OK, examined 4291 class members, examined 4 in-word hashes, examined 3 ci.yml commands, examined 4 mutation-weekly.yml commands
+```
+
+## Addendum, 2026-09-30 (issues #395 and #447, round 8): the reading at the grammars
+
+The lines above stand, and A8 keeps its one red and one green line; its replay is quoted below
+them. A9, A10 and A11 are new. The red commit a2b3b953 adds three tests. The first generates the
+members of the grammar class (each shell text of an axis, crossed with each YAML spelling that
+reads back as that text) and has bash run each text. The second takes from those members the texts
+that bash computes and hands to a shell or to a builtin that reads them as shell, and three literal
+texts handed to one, and expects each refused. The third states the declared reading: a bounded
+command after each leading word, which bash runs bounded, is found as it is, and a change to how
+bash reads, a continued line in an expanded here-document and an unstated expression are refused
+for that. The red commit also changes one expectation of the comment test: a command found before
+a `;` is shown without the `;`. The green commit d76d8f2b changes only the guard and its
+docstrings, in `scripts/tests/test_dispatch_shards.py`, because the guard lives in the test module:
+it reads each `run:` value as YAML and bash read it, or refuses it. The whole test file at the red
+commit fails only those four tests, by assertion.
+
+```red-first
+A9: red at a2b3b953: AssertionError: Lists differ: ['jobs:\n  shard:\n    runs-on: ubuntu-24.[114 chars]0\n'] != [] : 1371 of 2812 unbounded members pass
+A9: green at d76d8f2b
+A10: red at a2b3b953: AssertionError: Lists differ: ['cargo mutants --timeout 300 --build-timeout 600\')"'] != ['refused: a text bash computes for `bash` to read as shell']
+A10: green at d76d8f2b
+A11: red at a2b3b953: AssertionError: Lists differ: ['cargo mutants --timeout 300 --build-timeout 600; then :; fi'] != ['cargo mutants --timeout 300 --build-timeout 600']
+A11: green at d76d8f2b
+```
+
+```text
+A8 replay: red at a2b3b953: FAILED (failures=4), AssertionError: {'planted.yml': ['cargo mutants --in-place;']} != {'planted.yml': ['cargo mutants --in-place']}
+A8 replay: green at d76d8f2b: Ran 22 tests, OK, examined 6485 grammar members, examined 22 computed texts, examined 3 literal texts, examined 13 leading words, examined 12 texts the reading does not read, examined 4291 class members, examined 4 in-word hashes, examined 3 ci.yml commands, examined 4 mutation-weekly.yml commands
+```
+
+## Addendum, 2026-09-30 (issues #395 and #447, round 8): a computed word before the bounds, and the weekly sweep in literal words
+
+The lines above stand. A12 and A13 are new. The weekly sweep's two package-bearing `cargo mutants`
+commands change spelling in `.github/workflows/mutation-weekly.yml`, and a pin test holds the
+head's two commands as literals and has bash run both spellings with a stub cargo. Commit 484c8da0
+adds the pin test with the workflow. Its plant is a copy of the rewritten block that drops the
+package word from the set branch; the pin test reads it red, by assertion. Commit 903b9cd2 adds the
+R5 tests, which fail at the guard of commit 3 by assertion, and commit 154d51e8 changes only the
+guard. The whole test file at 903b9cd2 fails only the R5 tests. The green line is the whole module
+at 154d51e8.
+
+```red-first
+A13: not red: the pin test is added with the workflow it pins, so it is green at the one commit that has it, and its plant of the set branch dropping the package word turns it red by assertion
+A12: red at 903b9cd2: AssertionError: Lists differ: ['X=--; set -- --; cargo mutants --in-plac[37 chars]0\n'] != [] : 20 of 20 members that lose the bounds pass
+A12: green at 154d51e8
+```
+
+```text
+A13 replay: red at 484c8da0 (plant: the set branch drops the package word), green at 484c8da0: Ran 25 tests, OK, examined 6 mutation-weekly.yml commands, examined 40 package values, examined 80 old-against-new argvs, examined 6 dash-led values
+A12 replay: red at 903b9cd2: FAILED (failures=3), AssertionError: Lists differ: [False, False, False] != [True, True, True]
+A12 replay: green at 154d51e8: Ran 29 tests, OK, examined 980 R5 members, examined 20 R5 members bash runs without the bounds, examined 3 named R5 members, examined 6 weekly commands, examined 9 real-tree commands, examined 6485 grammar members, examined 4291 class members, examined 6 mutation-weekly.yml commands, examined 3 ci.yml commands
+```
+
+## Addendum, 2026-09-30 (issues #395 and #447, round 8, after the merge of `dev`): the memory scope's wrapper
+
+The lines above stand. A14 is new. `dev` runs each `cargo mutants` that runs tests inside the memory
+scope's wrapper, which the guard refused as another program's command, so the merge at 04fb802e
+left the two real-tree tests red. Commit 387dee53 pins `test_memory_scope.py`'s weekly commands in
+their literal branches. Commit 644aabcf adds the wrapper tests, and plants the wrapper where the pin
+test's bash runs the weekly block; at the guard of 04fb802e the two new class tests fail by
+assertion, beside the two real-tree tests. Commit 0f8eacad changes only the guard and the mutation
+rows. The whole test file at 644aabcf fails only those four tests. The green line is the whole module
+at 0f8eacad.
+
+```red-first
+A14: red at 644aabcf: AssertionError: Lists differ: [('exact', 'shell text', '@', "python3 scr[69 chars]\n")] != [] : 108 of 616 members that lose the bounds pass
+A14: green at 0f8eacad
+```
+
+```text
+A14 replay: red at 644aabcf: FAILED (failures=4), AssertionError: Lists differ: [(('exact', 'bounded', '@'), ['refused: `c[56 chars]s'])] != [] : 32 of 32 members
+A14 replay: green at 0f8eacad: Ran 33 tests, OK, examined 1 options the wrapper declares, examined 374 wrapper argvs, examined 3 wrapper plants, examined 1160 wrapper-axis members, examined 616 wrapper-axis members bash runs without the bounds, examined 32 declared-form members, examined 6 weekly commands, examined 9 real-tree commands
+```
+
+## Addendum, 2026-10-01 (issues #418 and #497): one finder for the mutants scans, and a stand-in that fails closed
+
+The lines above stand. A15 to A19 are new. The two scans of `test_mutation_workflows.py` now read
+through one finder, and a stand-in whose plant fails exits and runs nothing. Commit 4fc769c9 adds
+the census test A19, and it fails by assertion on the one arm the base carries. Commit 1d651259
+adds the stand-in test A18. It is CI only, because `test_dispatch_shards.py` never runs on the box:
+at the pushed red head 7f83b956 the `hygiene` job of run 36915329420 (job 110547785509) reads it red
+at line 2587 of that module, with `AssertionError: 0 == 0`. Commit 719a1a7a adds A15, A16 and A17,
+and they fail by assertion locally. A16's third test, the job without the command, the
+end-of-line spelling of the job scan and the separator spelling ("a wrapper's words after its
+separator", in both scans) are controls and are not red at 719a1a7a. The green line is the
+whole of `test_mutation_workflows.py` at 29993617. That commit changes only the SPEC-129 specification
+file: the finder, the stand-in's failure arm and the rows' paths change in e2d0076e, and the two
+scans in 6af5e3dc.
+
+Five commits sit between the red at 719a1a7a and the green at 29993617 (`git rev-list --count
+719a1a7a..6af5e3dc` prints 5), and each edits a file a red test reads or runs, or a changelog. Commit 6bcdac64 only adds the read sites of the new tests to the census in
+`test_ci_workflows.py`, which the new tests owe and which changes no assertion of theirs. Commit
+e2d0076e moves the finder into `_mutants_finder.py`, repoints `test_dispatch_shards.py` at it and
+makes the stand-in's failure arm exit, which is the change A17 and A18 ask for. Commit 6af5e3dc
+points the two scans of `test_mutation_workflows.py` at the finder, which is the change A15 and A16
+ask for. Commit 7f83b956 adds one assertion to the census test of A19, that it read more than one file, and removes none. Commit 63a4cedf adds the changelog fragment and no code. A18's green is CI only: at the pushed head 20446f7c the `hygiene` job of run 36919081430 reads it green, and no CI ran at 29993617. No commit among them edits a red test's assertion.
+
+```red-first
+A15: red at 719a1a7a: AssertionError: Lists differ: [] != ['planted.yml'] : five spellings, five subtests red
+A16: red at 719a1a7a: AssertionError: Lists differ: [] != [('planted.yml', 'shard')] : four spellings red
+A17: red at 719a1a7a: AssertionError: Lists differ: ['test_dispatch_shards.py'] != ['_mutants_finder.py']
+A18: red at 1d651259: AssertionError: 0 == 0 : CI only, run 36915329420, job hygiene 110547785509, head 7f83b956, line 2587 of test_dispatch_shards.py
+A19: red at 4fc769c9: AssertionError: Lists differ: [('test_dispatch_shards.py', 1697, 'except Exception:')] != []
+A15: green at 29993617
+A16: green at 29993617
+A17: green at 29993617
+A18: green at 20446f7c
+A19: green at 29993617
+```
+
+```text
+A15 replay: red at 719a1a7a: FAILED (failures=10), Ran 20 tests, five command-scan subtests fail
+A16 replay: red at 719a1a7a: four job-scan subtests fail, the end-of-line subtest passes
+A17 replay: red at 719a1a7a: the one copy of the finder is found in test_dispatch_shards.py, the support module is expected
+A18 replay: red at 7f83b956 in CI: FAILED (failures=12), Ran 727 tests; locally never run, NOT MEASURED LOCALLY
+A19 replay: red at 4fc769c9: Ran 4 tests, FAILED (failures=1), the planted control test passes
+A15 replay: green at 29993617: Ran 20 tests, OK
+A19 replay: green at 29993617: examined 68 files, 0 arms
+```
+
+## Addendum, 2026-10-02 (issues #532 and #533): the wrapper's form, the census by syntax tree and the copy check by body
+
+The lines above stand. A20 to A28 are new. Commit e6abf9de adds their tests with three disclosed
+stubs: `wrapper_assignments` returns an empty list, `reading()` wraps the text census with zero
+counts, and `definitions_of_the_finder` keeps only its name match in the new shape. Every new test
+that is red at e6abf9de fails by assertion. Commit b6eb66aa replaces the stubs, gives
+`after_separator` the wrapper's form, rewrites the census to read the syntax tree, and registers
+its new read sites in `test_ci_workflows.py`; it is the only commit between the two, and it edits
+no assertion of a red test.
+
+Some reds come only through a positive control, and the record says so per criterion. A21's second
+test, the old reading's control, is red at e6abf9de only because the stub leaves the wrapper's
+words empty, so the wrapper's members read as another program's; it is a control, not the
+criterion's red. A24's `else` and nested-def tests and all four tests of A26 are red only through
+their positive control, a stand-in the base census cannot list; the absence each one pins already
+held at the base. A28 is not red: the name match already held both of its halves at the base.
+
+Three earlier criteria change, and are disclosed here instead of in the fence. A15's wrapper member
+is now the guard's own wrapper with `--report` before its `--`. Both readings find it, so it is
+green at e6abf9de and at b6eb66aa. A17's test now holds the copies to `FLOOR` and is A27's first
+test; at e6abf9de it reads `AssertionError: Tuples differ: () != (('test_ci_workflows.py',
+'_indent', 'indent_of'),)`, by assertion. A19's test now reads every `*.py` file at any depth
+and prints the constants parsed and skipped; the tree reads 0 arms at both commits, so it is not
+red.
+
+```red-first
+A20: red at e6abf9de: AssertionError: 0 != 1 : module-level assignments to WRAPPER: []
+A21: red at e6abf9de: AssertionError: Lists differ: ['echo -- cargo mutants --in-place (one li[4999 chars]ace'] != []
+A22: red at e6abf9de: AssertionError: Lists differ: [('ov[264 chars]-', 'cargo mutants --in-place'), ('twin', 'pyt[130 chars]ce')] != [('ov[264 chars]-', 'refused'), ('twin', 'python3 scripts/x.py[79 chars]ed')]
+A23: red at e6abf9de: AssertionError: Tuples differ: (1, []) != (1, [('planted.py', 5, 'except Exception as failure:')])
+A24: red at e6abf9de: AssertionError: Tuples differ: (1, []) != (1, [('planted.py', 5, 'except Exception as failure:')])
+A25: red at e6abf9de: AssertionError: Tuples differ: (1, []) != (1, [('held.py', 3, 'str constant, its line 4: except Exception:')])
+A26: red at e6abf9de: AssertionError: 0 != 1
+A27: red at e6abf9de: AssertionError: Lists differ: [] != [('deeper/copies.py', 'copy_0', 'no_wrappe[1266 chars]ts')]
+A28: not red: the name match held both halves at the base: a changed copy under the finder's own name is caught, under a name of its own it is not
+A20: green at b6eb66aa
+A21: green at b6eb66aa
+A22: green at b6eb66aa
+A23: green at b6eb66aa
+A24: green at b6eb66aa
+A25: green at b6eb66aa
+A26: green at b6eb66aa
+A27: green at b6eb66aa
+```
+
+```text
+A20 to A22, A27 replay: red at e6abf9de: test_mutation_workflows.py Ran 26 tests, FAILED (failures=6)
+A23 to A26 replay: red at e6abf9de: test_stand_in_census.py Ran 21 tests, FAILED (failures=30), subtests counted
+A20 to A22, A27, A28 replay: green at b6eb66aa: test_mutation_workflows.py Ran 26 tests, OK; examined 56, mismatches 0; named limits 2: over-find, value-dash-dash
+A23 to A26 replay: green at b6eb66aa: test_stand_in_census.py Ran 21 tests, OK
+A19 replay: green at b6eb66aa: examined 69 files, 16836 str constants parsed, 8222 skipped, 0 arms
+```
+
+## Addendum, 2026-10-02 (issues #532 and #533, round 2): a literal copy of each finder function, and a test for each arm of the census
+
+The lines above stand. No criterion is new, so this round adds no fence line; what changed is
+recorded here. Commit dc4ceb15 adds nine tests and changes no other line. Commit 680f97fa, the
+next, changes the copy check and no assertion of a test. Commit d2994110 adds one over-find member
+and its twin to A22's named limits.
+
+A27 changes. Its new test plants a literal copy of each finder function under another name, as a
+function, a method and an async function, with only the `def` line renamed, so the copy of
+`mutants_in` still calls `mutants_in`. It is red at dc4ceb15 by assertion, on that copy and in all
+three forms: the copy check read the copy's call as a free name, so its body differed from the
+finder's. It is green at 680f97fa, where a call by a finder function's own name is renamed as the
+copy's own name is.
+
+The eight new census tests are not red: each pins behaviour the census already had at dc4ceb15, and
+each is mutation coverage, not red-first evidence. Each was seen red under a mutant that removes
+that behaviour, with the file restored byte for byte after each run:
+
+- under A23, a handler that leaves by `break`, `continue` or `exit` reads 0, and a file under
+  `__pycache__` is not read;
+- under A24, a `try` in a function or class body, in a handler or a `case` clause, and with
+  `except*` handlers is a candidate, and each kind of real-program call is listed;
+- under A24, a program run in another handler of the same `try`, or in a class nested after the
+  `try`, is not listed. These two pin shapes section 12 states are out of reach; a census that
+  reached into either reads them as arms.
+
+A22's new over-find member, the wrapper with a lone `--` that the guard takes as `--report`'s
+value, is not red either: the scan already found its command and refused its twin.
+
+```text
+A27 replay: red at dc4ceb15: test_mutation_workflows.py Ran 27 tests, FAILED (failures=3), one per planted form
+A27 replay: red at dc4ceb15: literal.py: AssertionError: Lists differ: [('li[290 chars]ral_11', '__init__'), ('literal_12', 'can_be_d[444 chars]ts')] != [('li[290 chars]ral_10', 'mutants_in'), ('literal_11', '__init[474 chars]ts')]
+A27 replay: red at dc4ceb15: method.py: AssertionError: Lists differ: [('me[279 chars]hod_11', '__init__'), ('method_12', 'can_be_da[427 chars]ts')] != [('me[279 chars]hod_10', 'mutants_in'), ('method_11', '__init_[456 chars]ts')]
+A27 replay: red at dc4ceb15: waited.py: AssertionError: Lists differ: [('wa[279 chars]ted_11', '__init__'), ('waited_12', 'can_be_da[427 chars]ts')] != [('wa[279 chars]ted_10', 'mutants_in'), ('waited_11', '__init_[456 chars]ts')]
+A23, A24 new tests: not red: green at dc4ceb15, test_stand_in_census.py Ran 29 tests, OK; mutation coverage
+A23 under a mutant that drops `break` from the leaving statements: red: AssertionError: Tuples differ: (1, [5]) != (1, [])
+A23 under a mutant that drops `continue`: red: AssertionError: Tuples differ: (1, [5]) != (1, [])
+A23 under a mutant that drops `exit`: red: AssertionError: Tuples differ: (1, [5]) != (1, [])
+A23 under a mutant that reads `__pycache__`: red: AssertionError: Tuples differ: (3, [('__pycache__/stale.py', 4, 'except E[62 chars]:')]) != (1, [])
+A24 under a mutant that drops `os.popen`: red: AssertionError: Tuples differ: (1, []) != (1, [('planted.py', 7, 'except Exception as failure:')])
+A24 under a mutant that drops `os.spawn*`: red: AssertionError: Tuples differ: (1, []) != (1, [('planted.py', 7, 'except Exception as failure:')])
+A24 under a mutant that walks no handler or `case` clause: red: AssertionError: Tuples differ: (1, []) != (1, [7])
+A24 under a mutant that drops `except*`: red: AssertionError: Tuples differ: (1, []) != (1, [4])
+A24 under a mutant that walks no function or class body: red: AssertionError: Tuples differ: (1, []) != (1, [5])
+A24 sibling handler: not red: pins an out-of-reach shape; under a mutant that reaches the other handlers: red: AssertionError: Tuples differ: (1, [('planted.py', 4, 'except ImportError:')]) != (1, [])
+A24 nested class: not red: pins an out-of-reach shape; under a mutant that reaches a class's body: red: AssertionError: Tuples differ: (1, [('planted.py', 5, 'except Exception as failure:')]) != (1, [])
+A22 new member: not red: pins an over-find the scan already had
+A20 to A22, A27, A28 replay: green at 680f97fa: test_mutation_workflows.py Ran 27 tests, OK
+A23 to A26 replay: green at 680f97fa: test_stand_in_census.py Ran 29 tests, OK
+```

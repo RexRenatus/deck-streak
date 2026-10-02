@@ -1,0 +1,50 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT study_day, strength, created_at FROM habit_strength ORDER BY study_day",
+  "describe": {
+    "columns": [
+      {
+        "name": "study_day",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "habit_strength",
+            "name": "study_day"
+          }
+        }
+      },
+      {
+        "name": "strength",
+        "ordinal": 1,
+        "type_info": "Float",
+        "origin": {
+          "Table": {
+            "table": "habit_strength",
+            "name": "strength"
+          }
+        }
+      },
+      {
+        "name": "created_at",
+        "ordinal": 2,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "habit_strength",
+            "name": "created_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "3fd70ba70c62ac94ac25593c4faf014fb79c65d78d8998c3155c16c2770ab062"
+}

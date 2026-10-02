@@ -62,8 +62,12 @@
 #
 # It prints one line per pack, probe, scan and owned file, and a summary, and exits 0 when nothing
 # failed, 1 when something did, and 2 when it cannot judge. The scratch directory (the exported tree
-# and the ledger) is removed when the run ends; each card is kept under $BOX_PACKS_OUT (a fresh
-# temporary directory by default), which it names on stderr.
+# and the ledger) is removed when the run ends. Each card is written under $BOX_PACKS_OUT when that
+# is set and not empty, and that directory is never removed. Otherwise the cards go to a fresh
+# temporary directory this run made, which is removed when the run ends, whether it passed, failed
+# or stopped on an error (issue 531). Set BOX_PACKS_KEEP to any non-empty value (1, and 0 too) to
+# keep that directory to read a card; the path is named on stderr as `cards: <path>` whenever the
+# cards are kept.
 set -euo pipefail
 BOX_PACKS_SELF="${BASH_SOURCE[0]}" exec python3 - "$@" <<'PY'
 """The box driver: this file's opening comment is its documentation (ADR-069, ADR-030)."""
@@ -95,7 +99,8 @@ PROBES = ("sdd", "ddd", "tdd")
 WIRING_KEYS = {"schema", "pin", "skills", "scripts", "packs", "box", "owned", "unset_env", "note"}
 BOX_KEYS = {"packs", SCAN, HELPER, "note"}
 PACK_KEYS = {"expected_red", "pending", "note"}
-SCAN_KEYS = {"pending", "note"}
+SCAN_KEYS = {"expected_red", "pending", "note"}
+HELPER_KEYS = {"pending", "note"}
 ROW_PACK_KEYS = {
     "state", "enforced_by", "excluded_rows", "deferred_rows", "advisory_waivers", "note",
 }
@@ -176,6 +181,9 @@ def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(
         prog="box-packs.sh",
         description="judge every pack, probe and owned file against a DeckStreak commit",
+        epilog="A non-empty BOX_PACKS_OUT names a directory for the cards, never removed; any "
+        "non-empty BOX_PACKS_KEEP (1, and 0 too) keeps the temporary cards directory the run made, "
+        "and the run prints its path.",
     )
     parser.add_argument("--rev", default="HEAD", help="the commit to judge (default HEAD)")
     parser.add_argument(
@@ -233,54 +241,63 @@ def run(args: argparse.Namespace, root: Path, sha: str) -> list[Verdict]:
         if lint and not (checkout / lint).is_file():
             raise Refusal(f"packs.{pack}'s advisory lint {lint} is not in the checkout")
     out = cards_directory()
-    env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
-    for name in wiring["unset_env"]:
-        env.pop(name, None)
-    box = wiring["box"]
-    issues = named_issues(box, wiring["packs"])
-    states = issue_states(root, issues)
-    listed = ", ".join(f"{issue} {states[issue]}" for issue in issues)
-    named = f"box-packs: {len(issues)} issue(s) the wiring names"
-    print(named + (f": {listed}" if listed else ""), flush=True)
-    closed = {issue for issue, state in states.items() if state == "CLOSED"}
-    verdicts: list[Verdict] = []
-    with tempfile.TemporaryDirectory(prefix="deckstreak-box-packs.") as name:
-        scratch = Path(name).resolve()
-        for repository, what in ((root, "the DeckStreak repository"), (checkout, "the checkout")):
-            if scratch.is_relative_to(repository):
-                raise Refusal(f"the scratch directory is inside {what}; set TMPDIR outside both")
-        tree = export(root, sha, scratch / "tree")
-        print(
-            f"box-packs: judging {sha[:12]} ({args.rev}) with the packs checkout at {have[:12]}",
-            flush=True,
-        )
-        driver = Runner(runner, scratch, tree, checkout / wiring["skills"], env)
-        catalog = driver.pack_list()
+    # Only a directory this run made is this run's to remove; a BOX_PACKS_OUT directory is the
+    # caller's, and BOX_PACKS_KEEP keeps the one made here. The removal names exactly this path.
+    made = not os.environ.get("BOX_PACKS_OUT")
+    keep = bool(os.environ.get("BOX_PACKS_KEEP"))
+    try:
+        env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
+        for name in wiring["unset_env"]:
+            env.pop(name, None)
+        box = wiring["box"]
+        issues = named_issues(box, wiring["packs"])
+        states = issue_states(root, issues)
+        listed = ", ".join(f"{issue} {states[issue]}" for issue in issues)
+        named = f"box-packs: {len(issues)} issue(s) the wiring names"
+        print(named + (f": {listed}" if listed else ""), flush=True)
+        closed = {issue for issue, state in states.items() if state == "CLOSED"}
+        verdicts: list[Verdict] = []
+        with tempfile.TemporaryDirectory(prefix="deckstreak-box-packs.") as name:
+            scratch = Path(name).resolve()
+            for repository, what in ((root, "the DeckStreak repository"), (checkout, "the checkout")):
+                if scratch.is_relative_to(repository):
+                    raise Refusal(f"the scratch directory is inside {what}; set TMPDIR outside both")
+            tree = export(root, sha, scratch / "tree")
+            print(
+                f"box-packs: judging {sha[:12]} ({args.rev}) with the packs checkout at {have[:12]}",
+                flush=True,
+            )
+            driver = Runner(runner, scratch, tree, checkout / wiring["skills"], env)
+            catalog = driver.pack_list()
 
-        def report(verdict: Verdict) -> None:
-            verdicts.append(verdict)
-            print(verdict.line(), flush=True)
+            def report(verdict: Verdict) -> None:
+                verdicts.append(verdict)
+                print(verdict.line(), flush=True)
 
-        for pack, entry in sorted(wiring["packs"].items()):
-            verdict = judge_rows(driver, pack, entry, catalog, out)
-            waivers = entry.get("advisory_waivers")
-            if waivers and verdict.mark != "deferred":
-                lint = checkout / waivers["lint"]
-                judge_waivers(verdict, waivers, lint, tree, scratch, out, closed, env)
-            report(verdict)
-        for pack, expectation in sorted(box["packs"].items()):
-            report(judge_pack(driver, pack, expectation, catalog, out, closed))
-        for probe in PROBES:
-            script = checkout / wiring["scripts"][probe]
-            report(judge_probe(probe, script, tree, scratch, out, env))
-        scan = checkout / wiring["scripts"][SCAN]
-        report(judge_scan(box.get(SCAN, {}), scan, tree, scratch, out, closed, env))
-        helper = checkout / wiring["scripts"][HELPER]
-        report(judge_helper(box.get(HELPER, {}), helper, tree, scratch, out, closed, env))
-        for path, entry in sorted(wiring["owned"].items()):
-            report(judge_owned(path, entry, tree, checkout))
-    print(f"cards: {out}", file=sys.stderr)
-    return verdicts
+            for pack, entry in sorted(wiring["packs"].items()):
+                verdict = judge_rows(driver, pack, entry, catalog, out)
+                waivers = entry.get("advisory_waivers")
+                if waivers and verdict.mark != "deferred":
+                    lint = checkout / waivers["lint"]
+                    judge_waivers(verdict, waivers, lint, tree, scratch, out, closed, env)
+                report(verdict)
+            for pack, expectation in sorted(box["packs"].items()):
+                report(judge_pack(driver, pack, expectation, catalog, out, closed))
+            for probe in PROBES:
+                script = checkout / wiring["scripts"][probe]
+                report(judge_probe(probe, script, tree, scratch, out, env))
+            scan = checkout / wiring["scripts"][SCAN]
+            report(judge_scan(box.get(SCAN, {}), scan, tree, scratch, out, closed, env))
+            helper = checkout / wiring["scripts"][HELPER]
+            report(judge_helper(box.get(HELPER, {}), helper, tree, scratch, out, closed, env))
+            for path, entry in sorted(wiring["owned"].items()):
+                report(judge_owned(path, entry, tree, checkout))
+        return verdicts
+    finally:
+        if made and not keep:
+            shutil.rmtree(out, ignore_errors=True)
+        else:
+            print(f"cards: {out}", file=sys.stderr)
 
 
 def required(variable: str, what: str, kind: str) -> Path:
@@ -383,12 +400,24 @@ def box_of(box: object) -> dict:
         for issue in issues:
             if not ISSUE.match(str(issue)):
                 raise Refusal(f"box.packs.{pack} waits on {issue!r}, not an issue")
-    for name in (SCAN, HELPER):
+    for name, keys in ((SCAN, SCAN_KEYS), (HELPER, HELPER_KEYS)):
         scan = box.get(name, {})
-        if not isinstance(scan, dict) or set(scan) - SCAN_KEYS:
-            raise Refusal(f"box.{name} takes only {sorted(SCAN_KEYS)}")
+        if not isinstance(scan, dict) or set(scan) - keys:
+            raise Refusal(f"box.{name} takes only {sorted(keys)}")
         if "pending" in scan and not ISSUE.match(str(scan["pending"])):
             raise Refusal(f"box.{name} waits on {scan['pending']!r}, not an issue")
+    entry = box.get(SCAN, {})
+    if "expected_red" in entry:
+        if "pending" in entry:
+            raise Refusal(f"box.{SCAN} is pending, so it expects no red row")
+        expected = entry["expected_red"]
+        if (
+            not isinstance(expected, dict)
+            or not expected
+            or not all(isinstance(row, str) and row for row in expected)
+            or not all(ISSUE.match(str(issue)) for issue in expected.values())
+        ):
+            raise Refusal(f"box.{SCAN}'s expected_red maps a row to an issue, as #NNN")
     return box
 
 
@@ -417,6 +446,7 @@ def named_issues(box: dict, packs: dict) -> list[str]:
         if "pending" in entry:
             named.add(entry["pending"])
     for name in (SCAN, HELPER):
+        named.update(box.get(name, {}).get("expected_red", {}).values())
         if "pending" in box.get(name, {}):
             named.add(box[name]["pending"])
     return sorted(named, key=lambda issue: int(issue[1:]))
@@ -911,9 +941,12 @@ def judge_scan(
     env: dict,
 ) -> Verdict:
     """R13: the proxy scan, read by its row lines, because `check all` exits VOID over RED. A
-    pending issue that is closed fails it (SPEC-054 R4)."""
+    pending issue that is closed fails it (SPEC-054 R4). A red row the entry names under
+    `expected_red` is expected, as a pack's is (R12), and is stale once its issue is closed or it no
+    longer reads RED (SPEC-123)."""
     verdict = Verdict(SCAN, "scan", stale=closed_expectations(expectation, closed))
     pending = expectation.get("pending")
+    expected = expectation.get("expected_red", {})
     if not script.is_file():
         verdict.mark, verdict.detail = "FAIL", f"the checkout has no {script.name}"
         return verdict
@@ -945,11 +978,24 @@ def judge_scan(
         return verdict
     green, red, void = summary
     counts = f"{settings} settings document(s); blocking {green} green, {red} red, {void} void"
-    verdict.unexpected = sorted(ident for ident, word in rows.items() if word == "RED")
-    if verdict.unexpected or red:
+    reds = sorted(ident for ident, word in rows.items() if word == "RED")
+    verdict.unexpected = [ident for ident in reds if ident not in expected]
+    verdict.expected = [ident for ident in reds if ident in expected]
+    for ident, issue in sorted(expected.items()):
+        if issue not in closed and rows.get(ident) != "RED":
+            verdict.stale.append(f"{ident} ({issue})")
+    if verdict.expected:
+        counts += f" ({len(verdict.expected)} expected)"
+    if verdict.unexpected or red > len(verdict.expected):
         verdict.mark, verdict.detail = "FAIL", counts
     elif settings == 0 and pending:
         verdict.mark, verdict.detail = "pending", f"pending {pending}: {counts}"
+    elif settings == 0 and expected:
+        named = ", ".join(sorted(set(expected.values())))
+        verdict.mark = "FAIL"
+        verdict.detail = (
+            f"VOID: {counts}; expected_red names {named}, but no settings document was examined"
+        )
     elif settings == 0:
         verdict.mark, verdict.detail = "FAIL", f"VOID: {counts}, and the wiring names no issue"
     elif pending:

@@ -1,7 +1,17 @@
 //! Ingest's settings refuse start by name (SPEC-022 A14, R5, R13).
 
-use deck_streak_ingest::settings::{STATE_DIRECTORY, SYNC_ENDPOINT, SyncSettings};
+mod support;
+
+use std::ffi::OsString;
+use std::os::unix::ffi::OsStringExt;
+
+use deck_streak_ingest::settings::{
+    INCLUDE_DECKS, LAW_DECK_ROOT, STATE_DIRECTORY, SYNC_ENDPOINT, ScopeSettings, SyncSettings,
+};
 use deck_streak_kernel::{Environment, SettingsError};
+
+#[path = "../../../tools/log-capture/capture.rs"]
+mod log_capture;
 
 /// A state directory that names no real host path: settings are parsed, never opened, here.
 const STATE: &str = "/state";
@@ -66,5 +76,95 @@ fn a_plain_http_endpoint_is_marked_cleartext() {
     assert_eq!(
         format!("{:?}", settings("http://sync.example.invalid/").endpoint()),
         "SyncEndpoint(..)"
+    );
+}
+
+#[test]
+fn an_endpoint_that_names_no_host_is_refused() {
+    let parse = |endpoint| {
+        SyncSettings::from_env(&Environment::from_vars([
+            (STATE_DIRECTORY, STATE),
+            (SYNC_ENDPOINT, endpoint),
+        ]))
+        .is_ok()
+    };
+    assert!(parse("https://sync.example.invalid:8080/path"));
+    assert!(!parse("http://"));
+    assert!(!parse("http:///path"));
+    assert!(!parse("http://:8080/"));
+    assert!(!parse("http://sync example.invalid/"));
+}
+
+#[test]
+fn a_cleartext_endpoint_logs_one_warning_that_names_the_setting_and_not_its_value() {
+    let logs = support::logs::Logs::default();
+    let settings = |endpoint| {
+        SyncSettings::from_env(&Environment::from_vars([
+            (STATE_DIRECTORY, STATE),
+            (SYNC_ENDPOINT, endpoint),
+        ]))
+        .expect("a valid endpoint")
+    };
+    log_capture::with_capture(logs.recorder(), || {
+        settings("https://sync.example.invalid/").warn_if_cleartext();
+    });
+    assert!(logs.warnings().is_empty(), "{:?}", logs.events());
+    log_capture::with_capture(logs.recorder(), || {
+        settings("http://sync.example.invalid/").warn_if_cleartext();
+    });
+    let warnings = logs.warnings();
+    assert_eq!(warnings.len(), 1, "{warnings:?}");
+    assert_eq!(warnings[0].field("setting"), Some(SYNC_ENDPOINT));
+    assert!(
+        !format!("{:?}", warnings[0]).contains("example"),
+        "{warnings:?}"
+    );
+}
+
+/// Each ingest setting of another shape refuses start naming the whole shape it must have: the
+/// text the operator reads, compared as written and never through the setting's constant.
+#[test]
+fn each_malformed_setting_is_refused_naming_its_whole_shape() {
+    let sync = |endpoint: &str, state: &str| {
+        SyncSettings::from_env(&Environment::from_vars([
+            (SYNC_ENDPOINT, endpoint),
+            (STATE_DIRECTORY, state),
+        ]))
+        .map(|_| ())
+    };
+    assert_eq!(
+        sync("ftp://sync.example.invalid/", STATE),
+        Err(SettingsError::Malformed {
+            setting: SYNC_ENDPOINT,
+            expected: "an http: or https: URL that names a host",
+        })
+    );
+    assert_eq!(
+        sync("https://sync.example.invalid/", "relative/state"),
+        Err(SettingsError::Malformed {
+            setting: STATE_DIRECTORY,
+            expected: "an absolute path",
+        })
+    );
+    assert_eq!(
+        ScopeSettings::from_env(&Environment::from_vars([(
+            LAW_DECK_ROOT,
+            "Law\u{1f}Evidence"
+        )])),
+        Err(SettingsError::Malformed {
+            setting: LAW_DECK_ROOT,
+            expected: "a top-level deck name",
+        })
+    );
+    // Any text is a list of prefixes, so only a value that is not UTF-8 is refused.
+    assert_eq!(
+        ScopeSettings::from_env(&Environment::from_vars([(
+            OsString::from(INCLUDE_DECKS),
+            OsString::from_vec(vec![b'L', 0xff]),
+        )])),
+        Err(SettingsError::Malformed {
+            setting: INCLUDE_DECKS,
+            expected: "top-level deck-name prefixes, separated by commas",
+        })
     );
 }

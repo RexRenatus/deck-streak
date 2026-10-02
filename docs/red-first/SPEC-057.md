@@ -54,10 +54,26 @@ A15: red at e43dae8: AssertionError: 'scripts/mutation-equivalent.d/<package>.js
 A15: green at 5c4d6b6
 A16: red at bfae431: AssertionError: 225 != 0 : deck-streak-vault: 225 unexplained mutant(s) in its row (the opening sweep, run 36438243392 at 5767fbe, read listed 939, killed 647, equivalent 0, unexplained 225, unviable 67)
 A16: green at 6abff4a
+A17: red at e8f9695: AssertionError: 44 != 0 : deck-streak-ingest: 44 unexplained mutant(s) in its row (the opening sweep, run 36502008965, read listed 297, killed 190, equivalent 0, unexplained 44, unviable 63)
+A17: green at 2e0c239
+A18: red at 2311afa: AssertionError: 17 != 0 : deck-streak-kernel: 17 unexplained mutant(s) in its row (the opening sweep, run 36502933533 at a7b8025, read listed 368, killed 303, equivalent 0, unexplained 17, unviable 48)
+A18: green at 0896902
+A20: red at cd59d2a: AssertionError: 8 != 0 : deck-streak-daemon: 8 unexplained mutant(s) in its row (the opening sweep, run 36515002230 at 2fd66f4, read listed 101, killed 64, equivalent 0, unexplained 8, unviable 29)
+A20: green at b42ef34
+A22: red at 3d271a1: AssertionError: 2 != 0 : deck-streak-api: 2 unexplained mutant(s) in its row (the opening sweep, run 36528558184 at 5216bcf, read listed 70, killed 48, equivalent 0, unexplained 2, unviable 20)
+A22: green at ab99ab8
+A23: red at 611eb8e: AssertionError: 1 != 0 : deck-streak-privacy: 1 unexplained mutant(s) in its row (the opening sweep, run 36533127814 at c8d8a30, read listed 29, killed 25, equivalent 0, unexplained 1, unviable 3)
+A23: green at 63f47ca
 A24: red at 74c32fd: AssertionError: 81 != 0 : miniapp: 81 unexplained mutant(s) in its row (the opening sweep, run 36499404209 at a7b8025, read listed 274, killed 193, equivalent 0, unexplained 81, unviable 0)
 A24: green at 1efacb7
 A28: red at e260627: AssertionError in each of its four subtests, each for its own reason: 'True is not false : the rust class applies on test lines [31, 36, 43, 47, 53]' (the test-only diff); 'Lists differ: [46, 58] != [58]' (the mixed diff counted its test module's line as production code); "'mutation: plan: rust applies: 3 production code line(s) in 1 file(s)' not found" (the production-only diff's plan named no production line); and '3 != 0 : mutation: shards: VOID the rust class applies and ... holds no cargo-mutants listing' (cargo-mutants' empty --in-diff output read as no listing)
 A28: green at 8c87e5b
+A19: red at 8eba7ef: AssertionError: 16 != 0 : deck-streak-identity: 16 unexplained mutant(s) in its row (opening sweep run 36511057164 listed 143, killed 97, equivalent 0, unexplained 16, unviable 30)
+A19: green at a911483
+A21: red at 660dda8: AssertionError: 5 != 0 : deck-streak-coordination: 5 unexplained mutant(s) in its row (the opening sweep, run 36526822999 at 36b283a, read listed 409, killed 321, equivalent 0, unexplained 5, unviable 83)
+A21: green at c7391f9
+A26: not red: the opening sweep, run 36531093051 at 5216bcf, already read listed 146, killed 111, equivalent 0, unexplained 0, unviable 35, so the row had no unexplained mutant to be red for (R16)
+A27: not red: the opening sweep (run 36533129255 at dev c8d8a30) already read deck-streak-progression unexplained 0 (listed 57, killed 39, equivalent 0, unexplained 0, unviable 18), so no test was needed and the row was only filled
 ```
 
 | requirement | the behaviour a wrong implementation would get wrong | criterion |
@@ -164,3 +180,105 @@ the new line adds no red of its own.
 A24's green line names 1efacb7, the row commit, in place of 3195635: the dev merge at 5a6b1ae read
 `12 != 18` and d1ffc87 read `12 != 5` until the row was refilled from run 36508131543 at d1ffc87
 (listed 367, killed 362, equivalent 5, unexplained 0, unviable 0).
+
+A18 is the kernel's row of section 7. Its opening sweep, the weekly battery dispatched with
+`package=deck-streak-kernel` (run 36502933533 at the base, dev a7b8025), listed 368 mutants, all 33
+reports whole, and left 17 unexplained across `redact.rs` (5), `study_day.rs` (4), `db.rs`, `verdict.rs` and
+`credentials.rs` (2 each), `offload.rs` and `settings.rs` (one each); its `table` line was the row
+committed at 2311afa with A18's test, which read `17 != 0`. Every one is observed by a test and none is
+recorded equivalent: the tests, at d702900, read `66 mutants tested: 61 caught, 3 unviable, 2
+timeouts` in place on a `git archive` export of that commit, none missed. A merge of dev then added
+`courses.rs` and two `Db` methods, so the crate at the head lists 423 mutants (55 more than the 368,
+of which 49 are in `courses.rs` and 6 in `db.rs`), and the sweep of d702900 no longer measured the
+head. The closing sweep (run 36508893368 at 592bc43) read 33 of 33 reports whole, `listed 423, killed
+367, equivalent 0, unexplained 0, unviable 56` and `table: verdict: ok`; eight shards exited 3 for
+one timeout each, counted killed (six in `redact_tokens`: `redact.rs` 204:12, 205:16, 209:21 twice,
+210:19 and 215:21; two in `OffloadWorkers::get`: `settings.rs` 157:9, returning 0 and 1), and the
+other twenty-four exited 0. The same eight also timed out in the opening sweep. Its table line is the
+row committed at 0896902, where A18's test passes. Rows S05730 to S05739 are unused: every mutant was
+mutable and killed by a test.
+
+## The ingest delivery: its row (A17)
+
+A17 is the ingest crate's row of section 7. Its opening sweep, run 36502008965, counted 33 of 33
+reports whole. Forty-one of the 44 survivors are now killed by tests (retry reopens and waits, the
+jitter draws, the engine's error mapping, the run record's reads, the settings' host check and
+cleartext warning, the reset row of the data-rights declaration). Three are recorded equivalent in
+`scripts/mutation-equivalent.d/deck-streak-ingest.json`: `engine_client` (the same call spelled
+two ways), `Held::release` and `Held::drop` (closing the only open file description releases the
+flock). The closing sweep, run 36505515113, counted 33 of 33 whole and read `table: verdict: ok`,
+listed 309, killed 239, equivalent 3, unexplained 0, unviable 67. Shards 8, 9 and 28 exited 2 (one
+missed mutant each, the three recorded) and shard 23 exited 3 (one timeout, counted killed).
+
+## The daemon delivery: its row (A20)
+
+A20 is the daemon crate's row of section 7. Its opening sweep, run 36515002230 at the base (dev
+2fd66f4), counted 33 of 33 reports whole, listed 101 mutants and left 8 unexplained: both values of
+`Notifier::is_enabled`, the deleted `!` in `Notifier::notify`, both `millis` values, the Linux
+`send_abstract`, the non-Linux `send_abstract` and the `name == "data"` guard of `Role::from_arguments`; its `table` line is the
+row committed at cd59d2a with A20's test, which read `8 != 0`. Seven are now killed by tests in
+`crates/daemon/tests/` (the notifier's enabled state, delivery to a path and to an abstract socket,
+the once-per-episode warning, the watchdog warning's two millisecond figures, and the refusal of a
+non-`data` name followed by a data command). One is recorded equivalent in
+`scripts/mutation-equivalent.d/deck-streak-daemon.json`: the non-Linux `send_abstract`, which
+`#[cfg(not(target_os = "linux"))]` removes from every Linux build. The closing sweep, run
+36517001675 at the branch head with dev 8903f71 merged, counted 33 of 33 whole and read
+`table: verdict: ok`, listed 101, killed 71, equivalent 1, unexplained 0, unviable 29. Shard 1
+exited 2 (the one recorded mutant) and the other shards exited 0. Rows S05750 to S05759 are unused, but the tool did not mutate every invariant of the crate: it lists no mutant on any of its 16 constants, and a by-hand planting at dev f3c976f survived every test of the crate for 8 of them (OPEN_LOCK_FILE, StateDirectory's SHAPE, WATCHDOG_USEC, WATCHDOG_PID, EXIT_GRACE, and the SHAPEs of NotifyAddress, Micros and Text) (R20). Rows S05750 to S05753 and S05755 to S05757 now pin seven of them by their text, and EXIT_GRACE is pinned by the unit test `tests::the_exit_grace_is_one_second`, whose row S05754 waits for #352. No shard exited 3, so no mutant of this crate timed out in the closing sweep.
+
+## The api delivery: its row (A22)
+
+A22 is the api crate's row of section 7. Its opening sweep, run 36528558184 at the base (dev
+5216bcf), counted 33 of 33 reports whole, listed 70 mutants and left 2 unexplained: the `Display`
+implementation of `ListenAddress` and the `Debug` implementation of `OwnerAccess`, each replaced by
+an empty `Ok`. Its `table` line is the row committed at 3d271a1 with A22's test, which read
+`2 != 0`. Both are now killed by tests in `crates/api/tests/` (the listen address's display form,
+and the owner access's debug form, which names its parts and never the signing token). The closing
+sweep, run 36529229929 at 618a392, counted 33 of 33 whole and read `table: verdict: ok`, listed 70,
+killed 50, equivalent 0, unexplained 0, unviable 20. All 32 shards exited 0 and none logged a
+timeout. No record was needed. Rows S05770 to S05774 are unused, but the tool did not mutate every invariant of the crate: it lists a mutant on only 2 of its 21 constants (the `*` of BODY_LIMIT_BYTES and HANDSHAKE_BODY_LIMIT_BYTES), and a by-hand planting at dev f3c976f found 4 that no test of the crate pins: VERSION, LISTEN, SocketSetting's SHAPE and FEED_PATH (R20). Rows S05770 to S05773 now pin those four by their text.
+
+## The privacy delivery: its row (A23)
+
+A23 is the privacy crate's row of section 7. Its opening sweep, run 36533127814 at the base (dev
+c8d8a30), counted 30 of 30 reports whole, listed 29 mutants and left 1 unexplained: the `Display`
+implementation of `ExportProblem`, replaced by an empty `Ok`. Its `table` line is the row committed
+at 611eb8e with A23's test, which read `1 != 0`. It is now killed by a test in
+`crates/privacy/tests/export.rs` that pins the three problem texts and the mismatch message. The
+closing sweep, run 36533533659 at 049f9ba, counted 30 of 30 whole and read `table: verdict: ok`,
+listed 29, killed 26, equivalent 0, unexplained 0, unviable 3. Every shard exited 0 and none
+logged a timeout. No record was needed. Row S05780 pins the export's schema literal, a constant the tool never
+mutates (R20); rows S05781 to S05789 are unused.
+
+## The coordination delivery: its row (A21)
+
+A21 is the coordination crate's row of section 7. Its opening sweep, run 36526822999 at the base (dev
+36b283a), listed 409 mutants and left 5 unexplained, in `obligations.rs`, `liveness.rs`, `delivery.rs`
+and `runner.rs` (two). Three were killed by tests: the registry's debug line and the reason renderer
+(`crates/coordination/tests/render.rs`) and the minute-count skew at the lower bound
+(`crates/coordination/tests/liveness.rs`). Two are recorded equivalent in
+`scripts/mutation-equivalent.d/deck-streak-coordination.json`: the identical `NoNotifier::counts`
+default and the always-true job guard in `run_job`. The closing sweep, run 36528662545 at e8a8e59, reads
+listed 409, killed 324, equivalent 2, unexplained 0, unviable 83. Rows S05760 to S05764 are unused.
+
+## The agent delivery: its row (A26)
+
+A26 is the agent crate's row of section 7. Its opening sweep, run 36531093051 at the base (dev
+5216bcf), counted 33 of 33 reports whole and read `table: verdict: ok`: listed 146, killed 111,
+equivalent 0, unexplained 0, unviable 35, every shard exiting 0. The crate was never swept before,
+and no mutant of it survives, so no test was added, no record was written and no production file of the crate changed. The opening sweep already read unexplained 0, so A26 is disclosed not red, naming that
+run (R16). The closing sweep, run 36531457597 at a69e0af, counted 33 of 33 whole and read the same
+figures, with no shard exiting 2 or 3 and no `TIMEOUT` line. Rows S05765 and S05766 pin `ROSTER`, the setting name SPEC-044 R2 names, and `RosterPath`'s `SHAPE`, the shape a malformed roster setting is refused with: the tool never mutates either constant, and no test named either by its literal; S05767 to S05769 are unused. Four by-hand plantings in
+`SLOTTED`, one emptying the slot list of each of the identity (its bio slot), voice, personality
+and disclosure sections, each failed `a_template_with_a_filled_slot_is_refused`, so that
+constant's invariant is already pinned by an existing test (R20).
+
+## The progression delivery: its row (A27)
+
+A27 is the progression crate's row of section 7. Its opening sweep, run 36533129255 at the base
+(dev c8d8a30), counted 33 of 33 reports whole, listed 57 mutants and read `table: verdict: ok` with
+unexplained 0: killed 39, equivalent 0, unviable 18. The crate's existing tests already kill every
+viable mutant, so A27's test, which compares the row to its counts, has no unexplained mutant to
+be red for: it is recorded `not red`, and the delivery adds no record and no production change. The closing sweep, run 36534197772 at c3c6484, counted 33 of 33
+whole and read the same figures. All 32 shards and the listing job exited 0, and no shard log
+holds a timeout line. Row S05775 pins `SOURCE_GRAMMAR`, the grammar SPEC-040 R2 states, a constant the tool never mutates and a test read only through itself; S05776 to S05779 are unused. The crate's other five constants were each planted by hand and each failed a named test (R20). A later fix round added one assertion to a test and changed no production file, so the listing and the closing figures stand.

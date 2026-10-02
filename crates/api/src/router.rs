@@ -24,6 +24,7 @@
 //!    (ADR-025);
 //! 9. the extractors read a body of at most [`BODY_LIMIT_BYTES`], and answer 413 past it.
 
+use std::sync::Arc;
 use std::time::Duration;
 
 use axum::error_handling::HandleErrorLayer;
@@ -31,6 +32,11 @@ use axum::extract::{DefaultBodyLimit, MatchedPath, Request};
 use axum::http::header::{AUTHORIZATION, COOKIE, SET_COOKIE};
 use axum::http::{HeaderName, StatusCode};
 use axum::{BoxError, Router};
+use deck_streak_coordination::drills::{DrillNotes, RealFs};
+use deck_streak_coordination::inbox_capture::InboxCaptures;
+use deck_streak_coordination::instruments::InstrumentService;
+use deck_streak_coordination::progression::level_view::LawTierSource;
+use deck_streak_kernel::Courses;
 use tower::ServiceBuilder;
 use tower::limit::GlobalConcurrencyLimitLayer;
 use tower::load_shed::LoadShedLayer;
@@ -45,8 +51,16 @@ use tower_http::trace::{DefaultOnResponse, TraceLayer};
 use tracing::Level;
 
 use crate::analytics_routes;
+use crate::badges_routes;
+use crate::drill_routes;
 use crate::health::{self, Readiness};
+use crate::inbox_capture_route;
+use crate::insights_routes;
+use crate::notifications_routes;
 use crate::session_routes::{self, OwnerAccess};
+use crate::streak_routes;
+use crate::wallet_routes;
+use crate::xp_routes;
 
 /// Requests served at once, the rust-service pack's reference value. Each holds its buffers until
 /// it answers, so this bounds the service's memory; one owner's Mini App never reaches it.
@@ -61,10 +75,30 @@ pub const BODY_LIMIT_BYTES: usize = 2 * 1024 * 1024;
 pub const REQUEST_ID_HEADER: &str = "x-request-id";
 
 /// What the API's handlers share.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct ApiState {
     readiness: Readiness,
     owner: Option<OwnerAccess>,
+    instruments: Option<Arc<dyn InstrumentService>>,
+    law_tiers: Option<Arc<dyn LawTierSource>>,
+    drills: Option<Arc<DrillNotes<RealFs>>>,
+    courses: Option<Courses>,
+    inbox: Option<Arc<InboxCaptures<RealFs>>>,
+}
+
+impl std::fmt::Debug for ApiState {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("ApiState")
+            .field("readiness", &self.readiness)
+            .field("owner", &self.owner)
+            .field("instruments", &self.instruments.is_some())
+            .field("law_tiers", &self.law_tiers.is_some())
+            .field("drills", &self.drills.is_some())
+            .field("courses", &self.courses.is_some())
+            .field("inbox", &self.inbox.is_some())
+            .finish()
+    }
 }
 
 impl ApiState {
@@ -74,13 +108,56 @@ impl ApiState {
         Self {
             readiness,
             owner: None,
+            instruments: None,
+            law_tiers: None,
+            drills: None,
+            courses: None,
+            inbox: None,
         }
+    }
+
+    /// This state, serving the instruments' routes (SPEC-094) over `service` too.
+    #[must_use]
+    pub fn with_instruments(mut self, service: Arc<dyn InstrumentService>) -> Self {
+        self.instruments = Some(service);
+        self
     }
 
     /// This state, serving the owner's session routes over `access` too (SPEC-024).
     #[must_use]
     pub fn with_owner(mut self, access: OwnerAccess) -> Self {
         self.owner = Some(access);
+        self
+    }
+
+    /// This state, answering `GET /api/level/law-tiers` from `source` (SPEC-072 R24).
+    #[must_use]
+    pub fn with_law_tiers(mut self, source: Arc<dyn LawTierSource>) -> Self {
+        self.law_tiers = Some(source);
+        self
+    }
+
+    /// This state, serving the drill routes over the vault's drill notes (SPEC-110). Without them
+    /// the routes answer 503 `vault_not_open`.
+    #[must_use]
+    pub fn with_drills(mut self, notes: Arc<DrillNotes<RealFs>>) -> Self {
+        self.drills = Some(notes);
+        self
+    }
+
+    /// This state, rendering the badge catalog's descriptions from the configured `courses`
+    /// (SPEC-073 R16). Without them the descriptions take their generic wording.
+    #[must_use]
+    pub fn with_courses(mut self, courses: Courses) -> Self {
+        self.courses = Some(courses);
+        self
+    }
+
+    /// This state, serving the quick capture route over the vault's inbox (SPEC-118 R10). Without
+    /// it the route answers 503 `vault_not_open`.
+    #[must_use]
+    pub fn with_inbox(mut self, captures: Arc<InboxCaptures<RealFs>>) -> Self {
+        self.inbox = Some(captures);
         self
     }
 
@@ -92,17 +169,51 @@ impl ApiState {
 }
 
 /// The API: every route the Mini App's backend serves, under the layers. The health routes are
-/// always served; the owner's session routes and analytics routes are served when the state
-/// carries the owner's access, which the daemon's `api` role always gives, since it refuses to start without the
+/// always served; the owner's session routes, analytics routes and the in-app feed (SPEC-041) are
+/// served when the state carries the owner's access, which the daemon's `api` role always gives, since it refuses to start without the
 /// owner's credentials. A router built for the health routes alone needs none.
 pub fn router(state: ApiState) -> Router {
     let owner = state.owner.clone();
     let readiness = state.readiness.clone();
+    let instruments = state.instruments.clone();
+    let law_tiers = state.law_tiers.clone();
+    let drills = state.drills.clone();
+    let courses = state.courses.clone().unwrap_or_default();
+    let inbox = state.inbox.clone();
     let routes = health::routes().with_state(state);
     let routes = match owner {
-        Some(access) => routes
-            .merge(analytics_routes::routes(access.clone(), readiness))
-            .merge(session_routes::routes(access)),
+        Some(access) => {
+            let routes = routes
+                .merge(analytics_routes::routes(access.clone(), readiness.clone()))
+                .merge(xp_routes::routes(
+                    access.clone(),
+                    readiness.clone(),
+                    law_tiers,
+                ))
+                .merge(streak_routes::routes(access.clone(), readiness.clone()))
+                .merge(wallet_routes::routes(access.clone(), readiness.clone()))
+                .merge(badges_routes::routes(
+                    access.clone(),
+                    readiness.clone(),
+                    courses,
+                ))
+                .merge(session_routes::routes(access.clone()))
+                .merge(drill_routes::routes(
+                    access.clone(),
+                    readiness.clone(),
+                    drills,
+                ))
+                .merge(inbox_capture_route::routes(
+                    access.clone(),
+                    readiness.clone(),
+                    inbox,
+                ))
+                .merge(notifications_routes::routes(access.clone(), readiness));
+            match instruments {
+                Some(service) => routes.merge(insights_routes::routes(access, service)),
+                None => routes,
+            }
+        }
         None => routes,
     };
     layered(routes)

@@ -184,13 +184,35 @@ context each migration names equal to the owner this register gives each table i
 | `settings_generation` | `kernel` | `migrations/002001_kernel_settings_generation.sql` (SPEC-020); the courses digest by `migrations/007102_kernel_courses_digest.sql` (SPEC-071) | reset in place: the generation back to 0 and the courses digest cleared |
 | `_sqlx_migrations` | `kernel` | sqlx, when `Db::open` applies the migrations | exempt: the schema version table, which replaces the predecessor's `schema_versions` |
 | `sync_runs` | `ingest` | `migrations/002201_ingest_sync_runs.sql` (SPEC-022) | exported and erased |
-| `ingest_state` | `ingest` | `migrations/002301_ingest_state.sql` (SPEC-023) | reset in place: the anchor, the rescore flag and the window's base cleared |
+| `ingest_state` | `ingest` | `migrations/002301_ingest_state.sql` (SPEC-023) | reset in place: the anchor, the rescore flag, the refused request (SPEC-128) and the window's base cleared |
 | `cron_fires` | `coordination` | `migrations/002701_coordination_cron_fires.sql` (SPEC-027) | exempt: an erase must never re-arm the catch-up double-send guard |
+| `instrument_reports` | `coordination` | `migrations/009401_coordination_instrument_reports.sql` (SPEC-094) | exported and erased |
 | `xp_ledger` | `progression` | `migrations/004001_progression_xp_ledger.sql` (SPEC-040) | exported and erased |
+| `xp_settlement` | `progression` | `migrations/007201_progression_xp_settlement.sql` (SPEC-072) | exported and erased |
+| `buffs` | `progression` | `migrations/007202_progression_buffs.sql` (SPEC-072) | exported and erased |
+| `badges_earned` | `progression` | `migrations/007301_progression_badges_earned.sql` (SPEC-073) | exported and erased |
+| `records` | `progression` | `migrations/007302_progression_records.sql` (SPEC-073) | exported and erased |
+| `streak_state` | `streaks` | `migrations/007601_streaks_state_and_governor.sql` (SPEC-076) | exported and erased: each track reads its start state again |
+| `freeze_events` | `streaks` | `migrations/007601_streaks_state_and_governor.sql` (SPEC-076) | exported and erased |
+| `habit_strength` | `streaks` | `migrations/007601_streaks_state_and_governor.sql` (SPEC-076) | exported and erased |
+| `relight_due` | `streaks` | `migrations/007602_streaks_relight_due.sql` (SPEC-076) | exported and erased |
+| `governor_state` | `streaks` | `migrations/007601_streaks_state_and_governor.sql` (SPEC-076) | reset in place: no anchor, not standby, no notice day |
+| `coin_ledger` | `economy` | `migrations/008201_economy_wallet_and_shop.sql` (SPEC-082) | exported and erased |
+| `economy_state` | `economy` | `migrations/008201_economy_wallet_and_shop.sql` (SPEC-082) | reset in place: no pass and no surcharge |
+| `notification_decisions` | `notifications` | `migrations/004101_notifications_router.sql` (SPEC-041) | exported and erased |
+| `notification_deliveries` | `notifications` | `migrations/004101_notifications_router.sql` (SPEC-041) | exported and erased |
+| `notification_queue` | `notifications` | `migrations/004101_notifications_router.sql` (SPEC-041) | exported and erased |
+| `in_app_feed` | `notifications` | `migrations/004101_notifications_router.sql` (SPEC-041) | exported and erased |
+| `notification_settings` | `notifications` | `migrations/004101_notifications_router.sql` (SPEC-041) | exported and erased |
+| `owner_last_message` | `notifications` | `migrations/008401_notifications_owner_last_message.sql` (SPEC-084) | reset in place: no message |
 | `reading_runs` | `readings` | `migrations/004501_readings_topic_days_and_runs.sql` (SPEC-045) | exported and erased |
 | `reading_topic_days` | `readings` | `migrations/004501_readings_topic_days_and_runs.sql` (SPEC-045) | exported and erased |
+| `agent_runs` | `agent` | `migrations/004301_agent_runs.sql` (SPEC-043) | exported and erased |
 | `daily_rollup` | `analytics` | `migrations/007101_analytics_daily_rollup.sql` (SPEC-071) | exported and erased |
 | `daily_lang_stats` | `analytics` | `migrations/007101_analytics_daily_rollup.sql` (SPEC-071) | exported and erased |
+| `drill_answers` | `vault` | `migrations/011001_vault_drills.sql` (SPEC-110) | exported and erased; an erase never deletes a note (ADR-118) |
+| `drill_grades` | `vault` | `migrations/011001_vault_drills.sql` (SPEC-110) | exported and erased; an erase never deletes a note (ADR-118) |
+| `inbox_captures` | `vault` | `migrations/011801_vault_inbox_captures.sql` (SPEC-118) | exported and erased; an erase never deletes a capture or its stub (ADR-118) |
 
 ## Overloaded words, held apart
 

@@ -84,8 +84,28 @@ pub const LIVENESS: Job = Job {
     catch_up: false,
 };
 
+/// The hourly law drill post-back (SPEC-110 R9): it records each graded drill and pays it once, at
+/// a minute the predecessor never uses and no other job of the table takes.
+pub const DRILL_POSTBACK: Job = Job {
+    id: "drill_postback",
+    schedule: Schedule::Hourly { minute: 19 },
+    catch_up: false,
+};
+
+/// The scheduled flush of the held notifications (SPEC-041 R7, amended for #291): once a day, at a
+/// local hour and minute outside the quiet window, so the first flush after the window ends
+/// delivers what the window held.
+pub const HELD_FLUSH: Job = Job {
+    id: "held_flush",
+    schedule: Schedule::DailyAt {
+        hour: 7,
+        minute: 36,
+    },
+    catch_up: true,
+};
+
 /// The one schedule: every job a timer may start.
-pub const TABLE: [Job; 3] = [SYNC, MAINTENANCE, LIVENESS];
+pub const TABLE: [Job; 5] = [SYNC, MAINTENANCE, LIVENESS, DRILL_POSTBACK, HELD_FLUSH];
 
 /// The table's job with `id`, or `None` when the table holds none.
 #[must_use]
