@@ -54,6 +54,33 @@
         "    if journal.iter().any(under) && journal.is_empty() {",
         "atomic::no_vault_write_reaches_a_journal_folder",
         "a path under a journal folder is refused with journal_refused (SPEC-118 R5, A5)"
+      ],
+      [
+        "S11815-RESOLVED-TARGET",
+        "vault",
+        "src/atomic.rs",
+        "    refuse_journal(journal, &resolve(fs, path))",
+        "    Ok(())",
+        "atomic::a_write_stream_or_rename_into_a_journal_folder_through_a_link_is_refused",
+        "a write, a stream or a rename whose target reaches a journal folder through a link is refused with journal_refused (SPEC-118 R5, as amended)"
+      ],
+      [
+        "S11816-RESOLVED-JOURNAL",
+        "vault",
+        "src/fs.rs",
+        "                folders.push(folder);",
+        "",
+        "inbox_capture::an_inbox_that_is_a_journal_folder_through_a_link_takes_no_capture",
+        "the journal guard adds the folder each journal folder resolves to, so a journal folder whose name is a link guards the folder it reaches (SPEC-118 R5, as amended)"
+      ],
+      [
+        "S11817-RESOLVED-INBOX",
+        "vault",
+        "src/inbox.rs",
+        "            .map(|folder| atomic::resolve(fs, folder))",
+        "            .cloned()",
+        "inbox_capture::an_inbox_that_is_a_journal_folder_through_a_link_takes_no_capture",
+        "locating the inbox compares it with each journal folder as it resolves, so an inbox that is a journal folder through a link is refused (SPEC-118 R5, as amended)"
       ]
     ],
     "CARGO_KILLED_SCRIPT_MUTATIONS": [
