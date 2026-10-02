@@ -135,6 +135,105 @@
         "    sqlx::query(\n        \"INSERT INTO records (kind, value, study_day, previous, celebrated_at, created_at) \\\n         VALUES (?1, ?2, ?3, ?4, ?5, ?6) \\\n         ON CONFLICT (kind) DO UPDATE SET value = excluded.value, previous = excluded.previous, \\\n         celebrated_at = CASE WHEN records.study_day = excluded.study_day \\\n         THEN records.celebrated_at ELSE excluded.celebrated_at END, \\\n         study_day = excluded.study_day\",\n    )\n    .bind(kind)\n    .bind(record.value)\n    .bind(day)\n    .bind(record.previous)\n    .bind(marked)\n    .bind(at)\n",
         "records_steps::a_record_beaten_on_the_seeds_own_day_is_offered",
         "the records write keeps a same-day row's mark only when the row is not the seed (previous below value), so a beat of the seed's own study day is written unmarked and offered; the mutant is the CASE before fix round 1, spelt as sqlx::query with its six binds (SPEC-073 R11, R12, ADR-303 Decision 2)"
+      ],
+      [
+        "S07319-THE-BADGES-ROUTE-ASKS-FOR-THE-OWNER",
+        "api",
+        "src/badges_routes.rs",
+        "async fn badges(_owner: OwnerSession, ",
+        "async fn badges(",
+        "badges_routes::the_badge_record_and_milestone_routes_answer_only_the_owner",
+        "GET /api/badges takes the owner's session before it reads anything, so no session, an unknown one or an ended one answers 401 with the reason alone and no badge data (SPEC-073 A20, R16)"
+      ],
+      [
+        "S07320-THE-RECORDS-ROUTE-ASKS-FOR-THE-OWNER",
+        "api",
+        "src/badges_routes.rs",
+        "async fn records(_owner: OwnerSession, ",
+        "async fn records(",
+        "badges_routes::the_badge_record_and_milestone_routes_answer_only_the_owner",
+        "GET /api/records takes the owner's session before it reads anything, so a request without the owner's live session answers 401 and no record data (SPEC-073 A20, R17)"
+      ],
+      [
+        "S07321-THE-MILESTONE-ROUTE-ASKS-FOR-THE-OWNER",
+        "api",
+        "src/badges_routes.rs",
+        "async fn milestone(_owner: OwnerSession)",
+        "async fn milestone()",
+        "badges_routes::the_badge_record_and_milestone_routes_answer_only_the_owner",
+        "GET /api/milestone takes the owner's session too, so even its pending answer is the owner's alone (SPEC-073 A20, R17)"
+      ],
+      [
+        "S07322-THE-MILESTONE-ANSWERS-PENDING",
+        "api",
+        "src/badges_routes.rs",
+        "\"status\": \"pending\"",
+        "\"status\": \"next\"",
+        "badges_routes::the_milestone_route_answers_pending",
+        "the milestone route answers exactly {\"status\": \"pending\"}, read from nothing, while Road to C2 supplies no mature-card sum (SPEC-073 R15, R17; #85)"
+      ],
+      [
+        "S07323-A-REACHED-RECORD-IS-NO-DISTANCE",
+        "api",
+        "src/badges_routes.rs",
+        "    if gap > 0 { gap } else { 0 }",
+        "    gap",
+        "badges_routes::the_records_route_answers_each_distance_from_today",
+        "a record today already reaches is at no distance, never a negative one: the fixture's minutes record is 8 against today's 10 and answers 0 (SPEC-073 A24, R19)"
+      ],
+      [
+        "S07324-A-LOCKED-BADGE-SHOWS-ITS-THRESHOLD",
+        "api",
+        "src/badges_routes.rs",
+        "\"threshold\": progress.threshold,",
+        "\"threshold\": progress.value,",
+        "badges_routes::the_badges_route_answers_the_earned_newest_first_and_the_locked_with_progress",
+        "a locked badge's progress answers its input's value against its own threshold, so a three-day streak reads 3 of 30 for the monthly badge; a json! argument, which cargo-mutants never mutates (SPEC-073 A23, R16)"
+      ],
+      [
+        "S07325-BADGES-LISTS-TWENTY",
+        "bot",
+        "src/badges_commands.rs",
+        "pub const BADGES_LISTED: usize = 20;",
+        "pub const BADGES_LISTED: usize = 21;",
+        "badges_commands::badges_lists_the_twenty_most_recent",
+        "/badges lists at most the 20 most recently awarded badges: at 21 earned the oldest drops out; cargo-mutants never mutates a constant (SPEC-073 A21, R18)"
+      ],
+      [
+        "S07326-THE-CHASE-LINE-NAMES-THE-CHASED-RECORD",
+        "bot",
+        "src/badges_commands.rs",
+        "line.kind == kind",
+        "line.kind != kind",
+        "badges_commands::records_names_the_record_to_chase",
+        "/records closes with the line naming the record today is closest to, by that record's own label (SPEC-073 A22, R18)"
+      ],
+      [
+        "S07327-THE-NEWEST-BADGE-COMES-FIRST",
+        "coordination",
+        "src/progression/badges_view.rs",
+        "        (Reverse(left.awarded_at), &left.key, left.tier).cmp(&(\n            Reverse(right.awarded_at),\n",
+        "        (Reverse(right.awarded_at), &left.key, left.tier).cmp(&(\n            Reverse(left.awarded_at),\n",
+        "badges_view::the_earned_badges_are_ordered_most_recent_first",
+        "the earned badges are ordered newest award first, then by key and tier; the mutant is the predecessor's oldest-first order (SPEC-073 A21, R18)"
+      ],
+      [
+        "S07328-A-STREAK-BADGE-READS-THE-STREAK",
+        "coordination",
+        "src/progression/badges_view.rs",
+        "Input::Streak => (inputs.streak, streak_threshold(key)?)",
+        "Input::Streak => (inputs.day_decks, streak_threshold(key)?)",
+        "badges_view::a_locked_badge_carries_its_input_against_its_threshold",
+        "a locked streak badge's progress reads the stored streak, never another input (SPEC-073 A23, R16)"
+      ],
+      [
+        "S07329-THE-MONTHLY-STREAK-IS-THIRTY",
+        "coordination",
+        "src/progression/badges_view.rs",
+        "\"monthly_monk\" => Some(30),",
+        "\"monthly_monk\" => Some(31),",
+        "badges_view::each_streak_threshold_is_progressions_own_boundary",
+        "the monthly streak badge's threshold is 30, the streak its condition holds at and not one below; a literal in a match arm, which cargo-mutants never mutates (SPEC-073 A23, R16)"
       ]
     ],
     "CARGO_KILLED_SCRIPT_MUTATIONS": [
