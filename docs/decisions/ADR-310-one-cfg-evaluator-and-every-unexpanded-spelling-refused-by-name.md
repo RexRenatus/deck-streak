@@ -52,15 +52,15 @@ close all four without growing into a Rust front end?
 - Read every file under `tests/` as a crate root (#449) — rejected because cargo builds only
   `tests/<name>.rs` and `tests/<dir>/main.rs`, and rustc compiles another file there only through a
   kept `mod`, so a pin in a file nothing declares, or one a stripped `mod` names, would be read.
-- One evaluator, macros refused by name, block scope and `include!` refused by name, `tests/` read
-  as cargo builds it — chosen because each disagreement then ends in an arm that reads what rustc
-  reads or refuses by name, and every doubt resolves to a refusal.
+- One evaluator, every unexpanded spelling refused by name, `tests/` as cargo builds it — chosen
+  because macros, block scope and `include!` are each refused by name, so each disagreement ends
+  in an arm that reads what rustc reads or refuses by name, and every doubt resolves to a refusal.
 
 ## Decision Outcome
 
-Chosen option: "One evaluator, macros refused by name, block scope and `include!` refused by name,
-`tests/` read as cargo builds it", because it closes #436, #449, #535 and #536 with arms that each
-read what rustc reads or refuse.
+Chosen option: "One evaluator, every unexpanded spelling refused by name, `tests/` as cargo builds
+it", because it closes #436, #449, #535 and #536 with arms that each read what rustc reads or
+refuse.
 
 - **One cfg evaluator.** `rustc_keeps(attributes, test)` decides both #449's items and #536's
   narrowing. It evaluates `cfg` over `test`, `any`, `all`, `not`, `true` and `false` exactly;
