@@ -179,12 +179,13 @@ part of the gate.
 | `docs/schematics/owner-session.md` | repo | changed: R7, two blocks |
 | `docs/schematics/service-lifecycle.md` | repo | changed: R7, one block |
 | `docs/schematics/sync-cycle-and-change-gate.md` | repo | changed: R7, one block |
+| docs/schematics/badges-records-and-the-next-milestone.md | repo | changed: R7, one block (merged from dev after the check was written) |
 | `docs/specs/SPEC-195-every-mermaid-block-under-docs-parses-and-a-check-keeps-it-so.md` | repo | added |
 | `docs/decisions/ADR-195-a-vitest-test-parses-every-mermaid-block-under-docs.md` | repo | added |
 | `docs/red-first/SPEC-195.md` | repo | added |
 | `changelog.d/docs-mermaid-parse-195.md` | repo | added |
 
-No new schematic: the change adds no component; it corrects six existing ones.
+No new schematic: the change adds no component; it corrects seven existing ones.
 
 ## 5. What this does NOT do
 
@@ -199,7 +200,7 @@ No new schematic: the change adds no component; it corrects six existing ones.
   refuses every form R9 names, rather than pass over it, so it also refuses some forms GitHub
   renders, each named in §6 (#383). Measured on the merged tree: 193 blocks, the same 193 with the
   same text as the fence-line reader it replaced, and no form refused; the documents hold no
-  blockquote line, no four-backtick fence and no tilde fence (#383).
+  blockquote line, no four-backtick fence and no tilde fence (#383). After dev was merged in, the same test reads 205 blocks at this head.
 - It owes no mutation rows, because its two production files, `web/app/src/lib/docs-mermaid-read.js`
   and `web/app/src/lib/docs-mermaid-fences.js`, are mutated by the web tool and the tests A5, A2 and
   A1 select kill their mutants (#383). The mutation plan reads the same: on this pull request it
