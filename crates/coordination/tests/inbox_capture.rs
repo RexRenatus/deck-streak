@@ -389,3 +389,32 @@ async fn a_journal_layout_refuses_every_write() {
         .expect("the capture with no journal");
     assert_eq!(quick, QuickAnswer::Saved { name: stub });
 }
+
+#[tokio::test]
+async fn the_captures_print_the_attachments_name_and_never_the_vault_root() {
+    let (_dir, _db, root) = setup().await;
+    let captures = InboxCaptures::new(RealFs, root.clone(), layout(&[]));
+    assert_eq!(format!("{captures:?}"), "InboxCaptures(..)");
+
+    let when = at(DAY, HOUR_MS);
+    let photo = Capture {
+        kind: CaptureKind::Photo,
+        source: Source::Telegram,
+        unique: "AgADx3".to_owned(),
+        when,
+        caption: String::new(),
+    };
+    let attachment = attachment_name(&stem(CaptureKind::Photo, "AgADx3", when), ".jpg");
+    let streaming = captures
+        .stream(photo, ".jpg")
+        .expect("the attachment starts");
+    let printed = format!("{streaming:?}");
+    assert_eq!(
+        printed,
+        format!("StreamingCapture {{ name: {attachment:?}, .. }}")
+    );
+    assert!(
+        !printed.contains(&*root.to_string_lossy()),
+        "the vault root is never printed: {printed}"
+    );
+}

@@ -65,6 +65,8 @@ fn the_layout_in_force_is_the_owners_or_the_default() {
         r#"{"inbox": "../outside"}"#,
         r#"{"inbox": "90-Inbox", "journal": "Journal"}"#,
         r#"{"inbox": "90-Inbox", "journal": ["Journal/../.."]}"#,
+        r#"{"inbox": "90-Inbox\\Sub"}"#,
+        r#"{"inbox": "90-Inbox\u0007"}"#,
     ] {
         fs::write(&owners, text).expect("a malformed layout");
         let refused = LayoutInForce::from_env(&naming(&owners));

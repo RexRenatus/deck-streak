@@ -255,6 +255,10 @@ fn no_vault_write_reaches_a_journal_folder() {
         root.join("journal/2026/d.md"),
         root.join("90-Inbox/../Journal/e.md"),
         root.join("90-Inbox/./../jOuRnAl/f.md"),
+        // A `..` at the root stays at the root.
+        Path::new("/..")
+            .join(journal.strip_prefix("/").expect("an absolute vault"))
+            .join("g.md"),
     ] {
         let refused = atomic::refuse_journal(&folders, &path);
         assert!(
@@ -340,6 +344,80 @@ fn no_vault_write_reaches_a_journal_folder() {
         "an inbox under the journal is refused: {refused:?}"
     );
     assert_eq!(VaultError::JournalRefused.to_string(), "journal_refused");
+}
+
+#[test]
+fn the_guard_passes_every_other_call_to_the_file_system_it_wraps() {
+    let vault = tempfile::tempdir().expect("a temporary vault");
+    let root = vault.path();
+    let notes = root.join("notes");
+    let note = notes.join("a.md");
+    let sub = notes.join("sub");
+    fs::create_dir_all(&sub).expect("the notes folder");
+    fs::write(&note, "the note's bytes\n").expect("a note");
+    let guard = JournalGuard::new(RealFs, vec![root.join("Journal")]);
+
+    assert_eq!(
+        guard.read(&note).expect("the note reads"),
+        b"the note's bytes\n"
+    );
+    assert_eq!(
+        guard.kind(&note).expect("the note's kind"),
+        Some(EntryKind::File)
+    );
+    assert_eq!(
+        guard.kind(&sub).expect("the folder's kind"),
+        Some(EntryKind::Dir)
+    );
+    let mut listed = guard.list(&notes).expect("the folder lists");
+    listed.sort_by(|one, other| one.name.cmp(&other.name));
+    assert_eq!(
+        listed,
+        vec![
+            DirEntry {
+                name: "a.md".into(),
+                kind: EntryKind::File,
+            },
+            DirEntry {
+                name: "sub".into(),
+                kind: EntryKind::Dir,
+            },
+        ]
+    );
+    assert_eq!(
+        guard
+            .canonicalize(&sub.join("../a.md"))
+            .expect("the note resolves through the guard"),
+        fs::canonicalize(&note).expect("the note resolves")
+    );
+    guard.sync_dir(&notes).expect("the folder syncs");
+    let absent = guard.sync_dir(&root.join("absent")).err();
+    assert_eq!(
+        absent.map(|error| error.kind()),
+        Some(io::ErrorKind::NotFound),
+        "a folder that is not there cannot be synced"
+    );
+
+    guard.remove_file(&note).expect("the note is removed");
+    assert!(!note.exists(), "the guard removed the note");
+    guard.remove_dir(&sub).expect("the folder is removed");
+    assert!(!sub.exists(), "the guard removed the folder");
+}
+
+#[test]
+fn a_stream_prints_neither_its_target_nor_its_temporary_name() {
+    let vault = tempfile::tempdir().expect("a temporary vault");
+    let target = vault.path().join("law-evidence.pdf");
+    let streamed = atomic::stream(&RealFs, &target).expect("the stream starts");
+    assert_eq!(format!("{streamed:?}"), "Streamed { .. }");
+    drop(streamed);
+    assert!(
+        fs::read_dir(vault.path())
+            .expect("the vault")
+            .next()
+            .is_none(),
+        "the dropped stream left its temporary file"
+    );
 }
 
 /// The calls that write a file's bytes. Each is allowed only inside the atomic writer and the

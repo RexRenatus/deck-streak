@@ -753,3 +753,97 @@ fn a_quick_text_fits_one_to_four_thousand_characters_after_the_trim() {
         "one character past the bound"
     );
 }
+
+#[test]
+fn an_extension_is_up_to_ten_letters_or_digits_and_never_a_path() {
+    assert_eq!(
+        inbox::extension("abcdefghij").expect("ten letters"),
+        ".abcdefghij"
+    );
+    for ext in ["a/b", ".a/b", "abcdefghijk", ".abcdefghijk"] {
+        let refused = inbox::extension(ext);
+        assert!(
+            matches!(refused, Err(VaultError::InvalidExtension)),
+            "{ext:?} is not an extension: {refused:?}"
+        );
+    }
+}
+
+#[test]
+fn a_miniapp_stub_is_its_keys_then_the_line_then_the_trimmed_text() {
+    let when = at(DAY, 12 * HOUR_MS + 34 * 60_000 + 56_000);
+    assert_eq!(
+        inbox::miniapp_stub(CaptureKind::Text, when, " \u{1c}the padded  note\u{1f}\n\t"),
+        "---\nstatus: captured\nsource: miniapp\nkind: text\ncaptured: 2024-10-04T12:34:56+00:00\n\
+         tags: [inbox, miniapp-capture]\n---\n\nCaptured via the Mini App.\n\nthe padded  note\n"
+    );
+}
+
+#[test]
+fn an_inbox_and_its_attachment_print_the_name_and_never_a_path() {
+    let dir = tempfile::tempdir().expect("a temporary directory");
+    let root = dir.path().join("vault");
+    fs::create_dir_all(root.join("90-Inbox")).expect("the inbox folder");
+    let inbox = Inbox::locate(&RealFs, &root, &layout()).expect("the inbox");
+    assert_eq!(format!("{inbox:?}"), "Inbox(..)");
+
+    let when = at(DAY, 12 * HOUR_MS);
+    let capture = telegram(CaptureKind::Document, "BQACx4", when, "");
+    let attachment = inbox
+        .attachment(&RealFs, &capture, "pdf")
+        .expect("the attachment starts");
+    let name = "2024-10-04-document-BQACx4.pdf";
+    assert_eq!(attachment.name(), name);
+    assert_eq!(
+        attachment.name(),
+        inbox::attachment_name(&inbox::stem(CaptureKind::Document, "BQACx4", when), ".pdf")
+    );
+    let printed = format!("{attachment:?}");
+    assert_eq!(printed, format!("Attachment {{ name: {name:?}, .. }}"));
+    assert!(
+        !printed.contains(&*root.to_string_lossy()),
+        "the vault root is never printed: {printed}"
+    );
+}
+
+#[test]
+fn an_inbox_through_a_link_resolves_inside_the_root_or_is_refused() {
+    let dir = tempfile::tempdir().expect("a temporary directory");
+    let root = dir.path().join("vault");
+    let real = root.join("00-Capture");
+    fs::create_dir_all(&real).expect("the real inbox folder");
+    let link = root.join("90-Inbox");
+
+    // A link to a folder inside the root is the inbox, resolved.
+    std::os::unix::fs::symlink(&real, &link).expect("the inbox links to a folder");
+    let inbox = Inbox::locate(&RealFs, &root, &layout()).expect("the linked inbox");
+    assert_eq!(
+        inbox.folder(),
+        fs::canonicalize(&real).expect("the real folder")
+    );
+
+    // A link to a file is no folder.
+    fs::remove_file(&link).expect("the link is removed");
+    let file = root.join("a-note.md");
+    fs::write(&file, "a note\n").expect("a file");
+    std::os::unix::fs::symlink(&file, &link).expect("the inbox links to a file");
+    let refused = Inbox::locate(&RealFs, &root, &layout());
+    assert!(
+        matches!(refused, Err(VaultError::VaultMissing)),
+        "a link to a file is refused with vault_missing: {refused:?}"
+    );
+
+    // A link to the root itself, or to a folder outside it, leaves the confinement.
+    let outside = dir.path().join("outside");
+    fs::create_dir(&outside).expect("a folder outside the vault");
+    for target in [&root, &outside] {
+        fs::remove_file(&link).expect("the link is removed");
+        std::os::unix::fs::symlink(target, &link).expect("the inbox links to a folder");
+        let refused = Inbox::locate(&RealFs, &root, &layout());
+        assert!(
+            matches!(refused, Err(VaultError::OutsideConfinement)),
+            "a link to {} is refused: {refused:?}",
+            target.display()
+        );
+    }
+}
