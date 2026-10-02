@@ -67,9 +67,15 @@ def census(directory=HERE):
     return len(files), found
 
 
-def main():
+def reading(directory=HERE):
+    """(files examined, str constants parsed, str constants skipped, arms) over `directory`."""
+    files, found = census(directory)
+    return files, 0, 0, found
+
+
+def main(directory=HERE):
     """Print each arm as `file:line: arm`, then `examined N files, M arms`."""
-    examined, found = census()
+    examined, found = census(directory)
     for name, line, arm in found:
         print(f"{name}:{line}: {arm}")
     print(f"examined {examined} files, {len(found)} arms")

@@ -3880,6 +3880,34 @@ NOT_WORKFLOW_READS = {
             "path.read_text(encoding='utf-8')",
             1,
         ),
+        (
+            "test_mutation_workflows",
+            "EveryMutantsSpellingIsFound.test_a_renamed_and_rewrapped_copy_of_each_finder_function_is_caught",
+            "FINDER.read_text(encoding='utf-8')",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "EveryMutantsSpellingIsFound.test_a_renamed_and_rewrapped_copy_of_each_finder_function_is_caught",
+            "definitions_of_the_finder(scratch)",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "EveryMutantsSpellingIsFound.test_a_copy_with_changed_logic_is_caught_only_under_the_finders_name",
+            "FINDER.read_text(encoding='utf-8')",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "EveryMutantsSpellingIsFound.test_a_copy_with_changed_logic_is_caught_only_under_the_finders_name",
+            "definitions_of_the_finder(scratch)",
+            1,
+        ),
+    ),
+    **allowed(
+        "the guard module's own Python source, parsed for its one WRAPPER assignment and never imported; never a workflow file",
+        ("test_mutation_workflows", "<module>", "GUARD.read_text(encoding='utf-8')", 1),
     ),
     **allowed(
         "calls the bash oracle, which runs planted scripts with cargo stubbed and reads the stubs' logs",
