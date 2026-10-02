@@ -1,3 +1,4 @@
+import Formal.ChestVectors
 import Formal.NextMilestoneVectors
 import Formal.OpenLapseVectors
 import Formal.WalletVectors
@@ -18,6 +19,7 @@ lists it as support.
 
 def main (args : List String) : IO UInt32 := do
   match args with
+  | ["Chest"] => Formal.ChestVectors.run
   | ["NextMilestone"] => Formal.NextMilestoneVectors.run
   | ["OpenLapse"] => Formal.OpenLapseVectors.run
   | ["Wallet"] => Formal.WalletVectors.run
