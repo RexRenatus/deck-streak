@@ -368,8 +368,8 @@ A67: green at bd283264
 - **The red commit.** d6389452 commits the test beside a stub `next_silent_count` that compiles and
   answers `silent.wrapping_add(1)`, and `open_lapse` calls it. The test is red by assertion, not by a
   compile error: at the bound the stub answers 0 where the rule answers `u32::MAX`.
-- **The green commit.** 7bd0d710 gives the step `saturating_add(1)`; the test's text is the same at
-  both commits.
+- **The green commit.** 7bd0d710 gives the step `saturating_add(1)`; the test's body is the same at
+  both commits, and rustfmt reorders only the file's `use` line.
 - **A68, red.** `assert_eq!(next_silent_count(u32::MAX), u32::MAX)` fails at
   `open_lapse_bound.rs:123:5` with `left: 0` and `right: 4294967295`.
 

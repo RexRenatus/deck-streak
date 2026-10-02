@@ -1111,9 +1111,10 @@ A68: cargo test -p deck-streak-streaks --test open_lapse_bound -- --exact the_si
 ## 35. Amendments, 2026-10-02: the files the silent-day count amendment adds
 
 The amendment (sections 33 and 34) changes `crates/streaks/src/lapse.rs` (the step and its one
-call), `crates/streaks/tests/open_lapse_bound.rs` (A68) and `formal/lean/Formal/OpenLapse.lean`
-(the second covers line, the re-pinned digest and one sentence in the module doc). It adds the row
-S07651 to `scripts/mutation-rows.d/S07600-S07699.json`, the decision
+call), `crates/streaks/tests/open_lapse_bound.rs` (A68) and `formal/lean/Formal/OpenLapse.lean` (the
+second covers line, the re-pinned digest and one sentence in the module doc), and it rewrites the
+digest in the header line of `formal/vectors/open-lapse.jsonl`. It adds the row S07651 to
+`scripts/mutation-rows.d/S07600-S07699.json`, the decision
 `docs/decisions/ADR-309-the-open-lapse-silent-day-count-is-a-named-saturating-step-pinned-by-an-exact-assert.md`
 and the changelog fragment `changelog.d/lapse-count-534.md`. It changes `docs/red-first/SPEC-076.md`
 (the addendum of this date).
