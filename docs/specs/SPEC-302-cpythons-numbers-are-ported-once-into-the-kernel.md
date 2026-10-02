@@ -77,6 +77,7 @@ Analytics' existing tests stay green after its sum delegates to the kernel's (R1
 | `crates/kernel/tests/pynum_goldens.rs` | `deck-streak-kernel` | added: A1, A2 |
 | `crates/kernel/tests/pynum_random.rs` | `deck-streak-kernel` | added: A3, A4 |
 | `crates/kernel/tests/pynum_edges.rs` | `deck-streak-kernel` | added: the round, lgamma, mean and sum edge rows against CPython (mutation coverage) |
+| `crates/kernel/tests/fixtures/pynum_edges.txt` | `deck-streak-kernel` | added: the edge rows, each CPython's result as f64 bits |
 | `changelog.d/pynum-540.md` | repo | added: the changelog fragment |
 | `crates/analytics/src/metrics.rs` | `deck-streak-analytics` | changed: its compensated sum delegates to the kernel's |
 | `tools/parity-oracle/registry/spec_302.py` | repo | added: the four registrations |
@@ -85,7 +86,8 @@ Analytics' existing tests stay green after its sum delegates to the kernel's (R1
 | `tools/parity-oracle/goldens/pynum_random.json` | repo | added: CPython's `random.Random`, `random` and `choices` (adapter; seeds 0, 1, `20260803` and one past 32 bits) |
 | `tools/parity-oracle/goldens/pynum_lgamma.json` | repo | added: CPython's `math.lgamma` (adapter; small, integral and large arguments) |
 | `scripts/mutation-rows.d/S30200-S30299.json` | repo | added: the two rows of §7 |
-| `docs/specs/planned/SPEC-090-*.md` | repo | changed: R1, A1, A2, their manifest, parity and mutation lines each become one line naming this SPEC |
+| `scripts/mutation-equivalent.d/deck-streak-kernel.json` | repo | added: the two EQUIVALENT records (`lanczos_sum` and `lgamma`, `<` to `<=`) |
+| `docs/specs/planned/SPEC-090-*.md` | repo | changed: R1, the A1 and A2 rows, their manifest, parity and mutation lines each become one line naming this SPEC; the A1 and A2 fence lines keep their commands |
 | `docs/specs/planned/SPEC-095-*.md` | repo | changed: the same, for R1, A1, A2 and their lines |
 | `docs/specs/planned/SPEC-057-*.md` | repo | changed: §7 row 3 only, the kernel campaign row, filled from the scoped battery (R16) |
 | `docs/schematics/pynum.md` | repo | added: the module's components and the golden flow |
@@ -100,6 +102,13 @@ Analytics' existing tests stay green after its sum delegates to the kernel's (R1
   syllabus tool and the weekly reads each keep their own delivery (#540).
 - It weights no `choices`: the instruments read only the unweighted form (#540).
 - It seeds from an integer only, never from a string or bytes, which nothing reads (#540).
+- It does not refuse a `round(x, n)` whose rounded value is beyond the largest float, where CPython
+  raises `OverflowError`: the port returns an infinity of `x`'s sign, and no W4 port rounds a value
+  that large. The test `a_round_beyond_the_largest_float_is_a_signed_infinity` pins it (#540).
+- It does not order a NaN as CPython's sort does: the median of a list that holds a NaN has no
+  defined value, and the port returns NaN for it (#540).
+- It carries no exception's class: a function that returns an `Option` returns `None` wherever
+  CPython raises, whichever error CPython raises (#540).
 
 ## 6. Risks
 
