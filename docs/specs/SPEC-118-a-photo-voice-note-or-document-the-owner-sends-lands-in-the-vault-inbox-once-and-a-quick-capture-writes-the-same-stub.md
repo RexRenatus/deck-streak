@@ -96,7 +96,9 @@ R10. `POST /api/inbox/captures`, behind SPEC-024 R7's `OwnerSession`, takes `{ca
     attachment: the stub has R2's keys without `attachment`, with `source: miniapp` and `tags:
     [inbox, miniapp-capture]`, then the line "Captured via the Mini App.", a blank line and the text.
     It answers 201 with the file name, 200 with the existing name for `already_captured`, 422 for a
-    text out of bounds, and 503 for `vault_missing`.
+    text out of bounds, and 503 for `vault_missing`. A retry is matched by its `capture_id`, not by
+    its stem, so a retry sent after UTC midnight answers the first name (ADR-118's capture-key
+    amendment; A24).
 R11. The Mini App's capture screen (`/capture`) has one text field and a "journal" choice, sends a
     fresh `capture_id` per capture and the same one on a retry, and shows the saved name or one
     failure line.
@@ -104,7 +106,8 @@ R11. The Mini App's capture screen (`/capture`) has one text field and a "journa
 The table and the data rights
 
 R12. The vault context owns `inbox_captures` (`migrations/011801_vault_inbox_captures.sql`, `STRICT`,
-    `created_at`, per SPEC-020 R15 and R18): the stem (unique), kind (`photo`, `voice`, `document`,
+    `created_at`, per SPEC-020 R15 and R18): the stem (unique), the capture key (R1's safe unique,
+    unique among the `miniapp` captures, R10), kind (`photo`, `voice`, `document`,
     `text` or `journal`), source (`telegram` or `miniapp`), the attachment's name (null without
     one), the captured instant, the state (`captured` or `filed`), and the destination and the
     filing's study day (null until SPEC-116 files it). Its six files are in §4. An export lists the
@@ -136,6 +139,7 @@ R14. CHARTER 10's eleven anti-goals bind this SPEC as one block; the one it touc
 | A21 | the screen shows the saved name, or its failure line on 503 | `shows the saved name or the failure line` |
 | A22 | with `DECKSTREAK_VAULT_LAYOUT` unset the vendored layout is in force, and with it set the owner's is | `the_layout_in_force_is_the_owners_or_the_default` |
 | A23 | an attachment never takes its stub's name, and its bytes survive the stub, for every extension | `an_md_attachment_never_takes_its_stubs_name`, `every_extension_keeps_its_bytes_apart_from_the_stub` |
+| A24 | a Mini App retry on a later UTC day answers the first name and writes nothing, and a Telegram capture of the same unique on a later day is a new capture | `a_miniapp_retry_on_a_later_utc_day_answers_the_first_name` |
 
 ```acceptance
 A1: cargo test -p deck-streak-vault --test inbox_capture -- --exact the_stub_and_stem_match_the_predecessors_golden
@@ -154,6 +158,7 @@ A21: pnpm exec vitest run web/app/src/lib/capture/QuickCapture.test.ts -t "shows
 A22: cargo test -p deck-streak-vault --test layout_in_force -- --exact the_layout_in_force_is_the_owners_or_the_default
 A23: cargo test -p deck-streak-vault --test inbox_capture -- --exact an_md_attachment_never_takes_its_stubs_name
 A23: cargo test -p deck-streak-vault --test inbox_capture -- --exact every_extension_keeps_its_bytes_apart_from_the_stub
+A24: cargo test -p deck-streak-vault --test inbox_capture -- --exact a_miniapp_retry_on_a_later_utc_day_answers_the_first_name
 ```
 
 ## 3a. What the box run judges
@@ -210,7 +215,7 @@ V1b: A14: cargo test -p deck-streak-bot --test media_capture -- --exact media_is
 | `.env.example` | repo | changed: `DECKSTREAK_VAULT_LAYOUT`, by name, unset |
 | `crates/vault/src/data_rights.rs` | `deck-streak-vault` | changed: `inbox_captures` exported and erased (the port SPEC-110 adds) |
 | `crates/vault/src/lib.rs` | `deck-streak-vault` | changed: the modules |
-| `crates/vault/tests/inbox_capture.rs` | `deck-streak-vault` | added: A1 to A4, A19, A23 |
+| `crates/vault/tests/inbox_capture.rs` | `deck-streak-vault` | added: A1 to A4, A19, A23, A24 |
 | `crates/vault/tests/atomic.rs` | `deck-streak-vault` | changed: A5, A6 |
 | `migrations/011801_vault_inbox_captures.sql` | `deck-streak-vault` | added |
 | `crates/coordination/src/inbox_capture.rs` | `deck-streak-coordination` | added: the one use case both surfaces call |
@@ -298,3 +303,4 @@ captures as files only, so W8's import maps nothing into it and it starts empty.
 | `S11811-STREAM-CAP` | `crates/bot/src/transport.rs` | a stream past the cap stops; the fake stream is finite, so a mutant that keeps reading ends | `media_capture::a_stream_past_the_cap_is_stopped_and_discarded` |
 | `S11812-TEXT-BOUND` | `crates/api/src/inbox_capture_route.rs` | 1 to 4000 characters; the test names 0, 4000 and 4001 | `inbox_capture_route::the_quick_capture_is_owner_only_and_bounds_its_text` |
 | `S11813-OWNER-MEDIA` | `crates/bot/src/gate.rs` | media is admitted from the owner only | `media_capture::media_is_admitted_from_the_owner_only` |
+| `S11814-RETRY-KEY` | `migrations/011801_vault_inbox_captures.sql` | a Mini App capture key is unique (a script-mutation row) | `inbox_capture::a_miniapp_retry_on_a_later_utc_day_answers_the_first_name` |

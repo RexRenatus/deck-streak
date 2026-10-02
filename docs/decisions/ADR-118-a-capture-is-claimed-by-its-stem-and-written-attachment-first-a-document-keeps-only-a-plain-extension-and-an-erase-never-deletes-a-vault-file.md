@@ -109,6 +109,35 @@ as replacing whatever its file held.
 What would make this wrong: a stem that can hold a dot. The second dot would then no longer set the
 attachment apart from every stub name, and the name would need another separator.
 
+## Amendment (V1a): a Mini App retry is matched by its capture key
+
+A stem's date is the UTC day of the instant the server takes the capture, so a Mini App retry sent
+after UTC midnight forms a new stem. A claim by stem alone would record that retry as a second
+capture and write a second stub, and SPEC-118's A17 ("a retried quick capture answers the same name
+and writes nothing") would fail for a retry the Mini App can send.
+
+`inbox_captures` gains `capture_key`, R1's safe unique, which every row carries, and a partial
+unique index on `capture_key` over the rows whose `source` is `miniapp`. The stem stays the primary
+key. The claim inserts with `ON CONFLICT DO NOTHING` and names no conflict target, so the stem's key
+and the capture key's index each refuse; when no row is inserted, it answers the name already
+recorded, by stem, or, for a `miniapp` capture, by its key. The refused capture writes nothing and
+removes its temporary file. A Telegram capture keeps the claim by stem alone: the same unique resent
+on a later day is a new capture, as the predecessor writes it. SPEC-118's A24 proves both arms, and
+`formal/tla/CaptureOnce/` states the key's claim as `OneCapturePerKey`.
+
+### What the retry key was chosen against
+
+- The server's instant with a named limit: rejected because A17 then fails for every retry sent
+  across UTC midnight, a case the Mini App reaches whenever a capture is retried late in the day.
+- The client sending its own capture instant: rejected because it changes R10's body and trusts the
+  client's clock to name a file in the owner's vault.
+- One unique key over every source: rejected because it refuses a Telegram resend of the same unique
+  on a later day, which the predecessor writes as a new capture, a parity departure for V1b.
+
+What would make this wrong: a Mini App that reuses a `capture_id` for a new capture. Its second
+capture would then answer the first one's name and write nothing, so R11 sends a fresh id for
+every capture.
+
 ## More Information
 
 SPEC-118, SPEC-042 R1 and R2, SPEC-116 (the curator), SPEC-021 (export and erase), and the W6
