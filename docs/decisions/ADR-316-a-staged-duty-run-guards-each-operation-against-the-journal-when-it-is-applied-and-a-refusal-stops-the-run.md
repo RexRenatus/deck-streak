@@ -42,18 +42,16 @@ after its control without the link had applied both operations.
   the vault gains after the re-check carries the write into the journal; the witness
   `an-apply-that-trusts-the-check-alone.cfg` violates `NoJournalWrite`, and the four `staged_guard`
   tests were red for exactly this (#56).
-- Resolve every target once, before the first write, and apply the run against those resolutions:
-  rejected, because a folder that becomes a link after the first write is never resolved again for
-  a later operation; the witness `targets-resolved-once-before-the-first-write.cfg` violates
-  `NoJournalWrite` (#56).
+- Resolve every target once before the first write: rejected, because a folder that becomes a link
+  after the first write is never resolved again for a later operation; the witness
+  `targets-resolved-once-before-the-first-write.cfg` violates `NoJournalWrite` (#56).
 - Roll back the operations applied before a refusal: rejected, because undoing a rename or a write
   is itself a write into a vault the owner's devices are changing, so it needs the same guard and
   can itself be refused, leaving a run half undone; the operations before a refusal were each
   checked and each admitted by the guard, so the run stops and says how many were applied (#56).
-- Guard the byte writes only, through the atomic writer's existing refusal, and leave `create_dir`
-  and `rename` as they were: rejected, because a folder created or a capture renamed through a
-  link lands in the journal; the witness `a-guard-over-byte-writes-only.cfg` violates
-  `NoJournalWrite` (#56).
+- Guard the byte writes only, leaving `create_dir` and `rename` as they were: rejected, because a
+  folder created or a capture renamed through a link lands in the journal; the witness
+  `a-guard-over-byte-writes-only.cfg` violates `NoJournalWrite` (#56).
 - Compare the paths' names without resolving them: rejected, because a link's own name is not
   under a journal folder while the folder it resolves to is; the witness
   `a-guard-that-compares-names.cfg` violates `NoJournalWrite` (#56).
