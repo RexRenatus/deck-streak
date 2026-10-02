@@ -595,4 +595,19 @@ describe("the API client's capture", () => {
       'POST /api/session'
     ]);
   });
+
+  it('answers unavailable when no answer came: no session opened, or the connection dropped', async () => {
+    const unopened = capturing([() => new Response(null, { status: 500 })]);
+    expect(await unopened.api.capture(CAPTURE)).toEqual({ kind: 'unavailable' });
+    expect(lines(unopened.sent)).toEqual(['POST /api/session']);
+
+    const dropped = capturing([
+      open,
+      () => {
+        throw new TypeError('the connection dropped');
+      }
+    ]);
+    expect(await dropped.api.capture(CAPTURE)).toEqual({ kind: 'unavailable' });
+    expect(lines(dropped.sent)).toEqual(['POST /api/session', 'POST /api/inbox/captures']);
+  });
 });

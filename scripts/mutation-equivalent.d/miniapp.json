@@ -83,6 +83,14 @@
       "reason": "Both arms of the ternary answer null when stored.report is null.",
       "evidence": "The false arm reads stored.report, which is null exactly when the true arm would answer null.",
       "issue": "#294"
+    },
+    {
+      "file": "web/app/src/lib/api.ts",
+      "mutant": "ArrowFunction: () => undefined",
+      "anchor": "parseSaved(response.status, await response.json().catch(() => null))",
+      "reason": "parseSaved reads an undefined body as it reads null.",
+      "evidence": "parseSaved answers null for a body that is null or whose typeof is not 'object', and typeof undefined is 'undefined', so a capture answer whose body is not JSON reads as naming no capture under either value, and capture answers unavailable.",
+      "issue": "#56"
     }
   ]
 }

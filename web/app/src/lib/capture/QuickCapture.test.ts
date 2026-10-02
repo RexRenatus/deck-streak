@@ -3,6 +3,7 @@
  */
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import CapturePage from '../../routes/capture/+page.svelte';
 import { createApi } from '../api';
 import QuickCapture from './QuickCapture.svelte';
 import { QUICK_TEXT_CHARS, captureBody, fits, newCaptureId, parseSaved } from './capture';
@@ -34,11 +35,26 @@ function refused(status: number, reason: string): () => Response {
   return () => Response.json({ reason }, { status });
 }
 
+/** `answer`, held until the test releases it, so the screen can be read while a capture waits. */
+function held(answer: () => Response): { answer: () => Promise<Response>; release: () => void } {
+  let release = (): void => undefined;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  return {
+    answer: async () => {
+      await gate;
+      return answer();
+    },
+    release: () => release()
+  };
+}
+
 /**
  * A server whose session opens, and which answers the n-th capture with the n-th of `answers` (a
  * dropped connection once they run out). It records every capture body it was sent.
  */
-function server(answers: readonly (() => Response)[]) {
+function server(answers: readonly (() => Response | Promise<Response>)[]) {
   const posted: Posted[] = [];
   const fetch = vi.fn(async (input: RequestInfo | URL, init: RequestInit = {}) => {
     if (String(input) === '/api/session') return new Response(null, { status: 200 });
@@ -63,11 +79,18 @@ function button(): HTMLButtonElement {
   return screen.getByRole('button', { name: /Save to inbox|Saving/ }) as HTMLButtonElement;
 }
 
+function choice(): HTMLInputElement {
+  return screen.getByRole('checkbox', { name: 'Journal entry' }) as HTMLInputElement;
+}
+
+function form(): HTMLFormElement {
+  return screen.getByRole('form', { name: 'Quick capture' }) as HTMLFormElement;
+}
+
 /** Types `text` and, when asked, chooses the journal kind. */
 async function write(text: string, journal = false): Promise<void> {
   await fireEvent.input(field(), { target: { value: text } });
-  const choice = screen.getByRole('checkbox', { name: 'Journal entry' }) as HTMLInputElement;
-  if (choice.checked !== journal) await fireEvent.click(choice);
+  if (choice().checked !== journal) await fireEvent.click(choice());
 }
 
 /** Presses save, then waits until `count` captures have reached the server and the screen settled. */
@@ -170,6 +193,102 @@ describe('QuickCapture', () => {
     expect(status()).toBe('Saved as 2026-10-02-journal-dddd.md');
   });
 
+  it('a capture whose kind alone or text alone changed after a failure is a new capture', async () => {
+    const posted = server([
+      refused(503, 'vault_missing'),
+      refused(503, 'vault_missing'),
+      saved('2026-10-02-journal-ffff.md')
+    ]);
+
+    await write('Same words');
+    await save(posted, 1);
+    // the kind alone changes
+    await write('Same words', true);
+    await save(posted, 2);
+    // the text alone changes
+    await write('Other words', true);
+    await save(posted, 3);
+
+    expect(posted.map((body) => [body.kind, body.text])).toEqual([
+      ['text', 'Same words'],
+      ['journal', 'Same words'],
+      ['journal', 'Other words']
+    ]);
+    expect(new Set(posted.map((body) => body.capture_id)).size).toBe(3);
+  });
+
+  it('opens empty, as a note, with save off, named by its title and bounded in its hint', () => {
+    server([]);
+
+    expect(form().getAttribute('aria-labelledby')).toBe('capture-title');
+    expect(field().value).toBe('');
+    expect(field().readOnly).toBe(false);
+    const hint = document.getElementById(field().getAttribute('aria-describedby') ?? '');
+    expect(hint?.textContent).toBe("Up to 4000 characters. It lands in your vault's inbox.");
+    expect(choice().checked).toBe(false);
+    expect(choice().disabled).toBe(false);
+    expect(button().disabled).toBe(true);
+    expect(button().textContent?.trim()).toBe('Save to inbox');
+  });
+
+  it('a submit never leaves the page, and a blank text reaches no server', async () => {
+    const posted = server([saved('2026-10-02-text-eeee.md')]);
+
+    expect(await fireEvent.submit(form())).toBe(false);
+    await write('   ');
+    expect(await fireEvent.submit(form())).toBe(false);
+    await write('Water the plants');
+    expect(await fireEvent.submit(form())).toBe(false);
+    await vi.waitFor(() => expect(status()).toBe('Saved as 2026-10-02-text-eeee.md'));
+
+    expect(posted.map((body) => body.text)).toEqual(['Water the plants']);
+  });
+
+  it('holds the field while a capture waits, then returns to an empty note', async () => {
+    const slow = held(saved('2026-10-02-journal-gggg.md'));
+    const posted = server([slow.answer]);
+
+    await write('Slept well', true);
+    await fireEvent.click(button());
+    await vi.waitFor(() => expect(posted).toHaveLength(1));
+    // while it waits: the saving label, save off, and the field and the choice held
+    expect(button().textContent?.trim()).toBe('Saving…');
+    expect(button().disabled).toBe(true);
+    expect(field().readOnly).toBe(true);
+    expect(choice().disabled).toBe(true);
+
+    slow.release();
+    await vi.waitFor(() => expect(status()).toBe('Saved as 2026-10-02-journal-gggg.md'));
+    expect(button().textContent?.trim()).toBe('Save to inbox');
+    expect(field().value).toBe('');
+    expect(field().readOnly).toBe(false);
+    expect(choice().checked).toBe(false);
+    expect(choice().disabled).toBe(false);
+  });
+
+  it('asks to reopen from Telegram when the session is refused, and keeps the text', async () => {
+    const sent: string[] = [];
+    const fetch = vi.fn(async (input: RequestInfo | URL) => {
+      sent.push(String(input));
+      return new Response(null, { status: 401 });
+    });
+    const api = createApi({
+      launchData: () => LAUNCH,
+      fetch: fetch as unknown as typeof globalThis.fetch
+    });
+    render(QuickCapture, { props: { send: api.capture } });
+
+    await write('Call the dentist');
+    await fireEvent.click(button());
+    await vi.waitFor(() =>
+      expect(alerts()).toEqual(['Reopen DeckStreak from Telegram to sign in again.'])
+    );
+    expect(status()).toBe('');
+    expect(field().value).toBe('Call the dentist');
+    // the session was refused, so the capture itself never reached the wire
+    expect(sent).toEqual(['/api/session']);
+  });
+
   it('keeps save off for a blank or over-long text, and bounds the field', async () => {
     server([]);
 
@@ -224,5 +343,27 @@ describe('the quick capture module', () => {
       [422, { reason: 'text_out_of_bounds' }]
     ];
     expect(none.map(([code, body]) => parseSaved(code, body))).toEqual(Array(none.length).fill(null));
+  });
+
+  it('reads no capture from a body that is no object, or under a status other than 201 and 200', () => {
+    const none: [number, unknown][] = [
+      [201, undefined],
+      [201, 'a.md'],
+      [201, 7],
+      [409, { name: 'a.md', already_captured: true }],
+      [503, { name: 'a.md', already_captured: true }]
+    ];
+    expect(none.map(([code, body]) => parseSaved(code, body))).toEqual(Array(none.length).fill(null));
+  });
+});
+
+// SPEC-118 R11. The capture route holds the quick capture and the way back to Today.
+describe('the capture screen page', () => {
+  it('holds the quick capture and a way back to Today', () => {
+    render(CapturePage);
+
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('DeckStreak');
+    expect(form().contains(field())).toBe(true);
+    expect(screen.getByRole('link', { name: 'Back to Today' }).getAttribute('href')).toBe('/');
   });
 });
