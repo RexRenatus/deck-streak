@@ -1028,7 +1028,7 @@ mod tests {
         /// Captures the refusals logged on the test's thread while the guard lives. The capture
         /// goes through `log_capture`, so a refusal another test's thread reached first is not
         /// cached as never enabled.
-        fn capture() -> (Self, tracing::subscriber::DefaultGuard) {
+        fn capture() -> (Self, log_capture::CaptureGuard) {
             let refusals = Self::default();
             let guard = log_capture::hold_capture(refusals.clone());
             (refusals, guard)
