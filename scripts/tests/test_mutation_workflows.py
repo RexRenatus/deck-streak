@@ -571,11 +571,15 @@ def walk_in_order(node):
         yield from walk_in_order(child)
 
 
-def normal_body(function):
+def normal_body(function, own=None):
     """The body of `function` as `ast.dump` text, its docstring dropped and every name it binds
     renamed in order of first appearance: its own name, its arguments, the names it stores, its
     exception names and the functions and classes it nests. Two bodies equal under this reading
-    are one body, whatever their names and their wrapping (#532)."""
+    are one body, whatever their names and their wrapping (#532).
+
+    `own` is a finder function's name that `function` calls where the finder calls itself. In a
+    copy that call is a free name, so it is renamed as the copy's own name is, and a copy of a
+    finder function that calls itself by its name reads equal to it too (#532)."""
     body = function.body
     if (
         body
@@ -600,6 +604,8 @@ def normal_body(function):
     order = {function.name: "_self"}
 
     def new(name):
+        if name == own:
+            return "_self"
         return order.setdefault(name, f"_{len(order)}") if name in local else name
 
     for node in walk_in_order(module):
@@ -614,15 +620,32 @@ def normal_body(function):
     return ast.dump(module)
 
 
+def calls_itself_as(function, selves):
+    """The finder function that `function` copies by calling it where the finder calls itself, or
+    None. `selves` maps each finder function's name to its normalised bodies; only a name the
+    function loads is tried, and only an equal body under that same name is a copy (#532)."""
+    called = {
+        node.id
+        for node in ast.walk(function)
+        if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load)
+    }
+    for own in sorted(called & selves.keys()):
+        if normal_body(function, own) in selves[own]:
+            return own
+    return None
+
+
 def definitions_of_the_finder(directory):
     """[(file, line, def name, the finder function it copies)] for every copy of a finder function
     under `directory`, at any depth, outside the finder's own file: a `def` whose body equals a
-    finder function's under `normal_body`, whatever its name, or a `def` spelled with the finder's
-    own name and first argument, whatever its body (#532; SPEC-129 section 12). Each file is read
-    as text, never imported."""
-    bodies = {}
+    finder function's under `normal_body`, whatever its name and also where it calls the finder
+    function by name as the finder calls itself, or a `def` spelled with the finder's own name and
+    first argument, whatever its body (#532; SPEC-129 section 12). Each file is read as text,
+    never imported."""
+    bodies, selves = {}, {}
     for function in functions_of(FINDER.read_text(encoding="utf-8")):
         bodies.setdefault(normal_body(function), function.name)
+        selves.setdefault(function.name, set()).add(normal_body(function))
     root = Path(directory)
     found = []
     for path in sorted(p for p in root.rglob("*.py") if "__pycache__" not in p.parts):
@@ -632,6 +655,8 @@ def definitions_of_the_finder(directory):
         hits = {}
         for function in functions_of(text):
             finder = bodies.get(normal_body(function))
+            if finder is None:
+                finder = calls_itself_as(function, selves)
             if finder is not None:
                 hits.setdefault(function.lineno, (function.name, finder))
         for match in FINDER_NAME.finditer(text):
