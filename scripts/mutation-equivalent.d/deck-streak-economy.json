@@ -1,0 +1,31 @@
+{
+  "records": [
+    {
+      "file": "crates/economy/src/wallet.rs",
+      "mutant": "replace - with + in settle_mint_on",
+      "anchor": "        let room = (summed(&mut **write).await? - WALLET_FLOOR).max(0);",
+      "reason": "The wallet floor is 0, so the balance less the floor and the balance plus the floor are one number.",
+      "evidence": "crates/economy/src/constants.rs declares WALLET_FLOOR = 0, and wallet_goldens::the_coin_constants_and_economy_json_match_the_predecessors pins it to economy.json's coins.wallet_floor: x - 0 and x + 0 are one value for every i64 x, so the open day's room and every answer read from it are unchanged. cargo-mutants 27.1.0 measured the mutant missed by every test of the crate.",
+      "reached_by": "wallet_ports::a_settled_days_mint_is_raised_and_never_lowered",
+      "issue": "#106"
+    },
+    {
+      "file": "crates/economy/src/wallet.rs",
+      "mutant": "replace - with + in debit_floored_on",
+      "anchor": "await? - WALLET_FLOOR).max(0);\n    let paid = amount.min(room);",
+      "reason": "The wallet floor is 0, so the balance less the floor and the balance plus the floor are one number.",
+      "evidence": "crates/economy/src/constants.rs declares WALLET_FLOOR = 0, and wallet_goldens::the_coin_constants_and_economy_json_match_the_predecessors pins it to economy.json's coins.wallet_floor: x - 0 and x + 0 are one value for every i64 x, so the tariff's room and every answer read from it are unchanged. cargo-mutants 27.1.0 measured the mutant missed by every test of the crate.",
+      "reached_by": "wallet_ports::a_floor_clipped_debit_pays_what_is_held",
+      "issue": "#106"
+    },
+    {
+      "file": "crates/economy/src/wallet.rs",
+      "mutant": "replace - with + in debit_capped_on",
+      "anchor": "clip_debit(requested, balance - WALLET_FLOOR, remainder)",
+      "reason": "The wallet floor is 0, so the balance less the floor and the balance plus the floor are one number.",
+      "evidence": "crates/economy/src/constants.rs declares WALLET_FLOOR = 0, and wallet_goldens::the_coin_constants_and_economy_json_match_the_predecessors pins it to economy.json's coins.wallet_floor: x - 0 and x + 0 are one value for every i64 x, so the clip's wallet argument and the debit it pays are unchanged. cargo-mutants 27.1.0 measured the mutant missed by every test of the crate.",
+      "reached_by": "wallet_ports::the_wallet_never_goes_negative_under_a_burst",
+      "issue": "#106"
+    }
+  ]
+}

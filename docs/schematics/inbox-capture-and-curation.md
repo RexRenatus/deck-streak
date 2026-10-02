@@ -20,12 +20,14 @@ flowchart LR
   stream -->|past the limit, or a failed fetch| failfetch
   quick["the Mini App capture screen: text or journal, a retry key"] --> write
   stream --> write["one transaction: insert the inbox_captures row, rename the attachment, write the stub last"]
-  write -->|the stem exists| dup["already_captured, the temporary file removed"]
+  write -->|the stem exists, or a Mini App retry's capture key| dup["already_captured, the temporary file removed"]
   write -->|committed| saved["reply or 201: the stub's name"]
 ```
 
 The stub is written after its attachment, inside the same transaction as its row, so the curator
 never sees a stub without its file, and a capture is written once however often it is retried.
+A Mini App retry is matched by its capture key, so a retry after UTC midnight, whose stem would
+carry the next day, still answers the first name (ADR-118's capture-key amendment).
 
 ## A capture's states
 

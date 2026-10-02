@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE notification_queue SET state = 'abandoned', tries = ? WHERE id = ? AND state = 'held'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "0de82d59f9914b6f0a54cb5258e3b551c3e78ccd1f9703a0363b20b6607efb5c"
+}

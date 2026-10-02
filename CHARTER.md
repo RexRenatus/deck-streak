@@ -119,3 +119,9 @@ ADR before the code, never a builder's call.
 
 Amendment (2026-09-28): one passage of constraint 3, which described the host's size and its other
 services, was redacted under the public-prose rule (ADR-059).
+
+Amendment (2026-10-01): constraint 4 is amended by ADR-301, the owner's decision at #514, which
+the owner's signed ruling records. Its earlier sentence, "The skip day is the ONLY write back to
+Anki.", is kept above as it was, and no longer stands alone: DeckStreak writes to the collection
+only through declared write classes, each with its own ADR in ADR-089's form. The skip day is the
+first such class, and ADR-089 is its ADR.

@@ -1,0 +1,170 @@
+{
+  "cases": [
+    {
+      "input": {
+        "days": 0
+      },
+      "output": ""
+    },
+    {
+      "input": {
+        "days": 1
+      },
+      "output": "\ud83d\udd25"
+    },
+    {
+      "input": {
+        "days": 2
+      },
+      "output": "\ud83d\udd25"
+    },
+    {
+      "input": {
+        "days": 6
+      },
+      "output": "\ud83d\udd25"
+    },
+    {
+      "input": {
+        "days": 7
+      },
+      "output": "\ud83d\udd25\ud83d\udd25"
+    },
+    {
+      "input": {
+        "days": 8
+      },
+      "output": "\ud83d\udd25\ud83d\udd25"
+    },
+    {
+      "input": {
+        "days": 29
+      },
+      "output": "\ud83d\udd25\ud83d\udd25"
+    },
+    {
+      "input": {
+        "days": 30
+      },
+      "output": "\ud83d\udd25\ud83d\udd25\ud83d\udd25"
+    },
+    {
+      "input": {
+        "days": 31
+      },
+      "output": "\ud83d\udd25\ud83d\udd25\ud83d\udd25"
+    },
+    {
+      "input": {
+        "days": 99
+      },
+      "output": "\ud83d\udd25\ud83d\udd25\ud83d\udd25"
+    },
+    {
+      "input": {
+        "days": 100
+      },
+      "output": "\u2604\ufe0f"
+    },
+    {
+      "input": {
+        "days": 101
+      },
+      "output": "\u2604\ufe0f"
+    },
+    {
+      "input": {
+        "days": 364
+      },
+      "output": "\u2604\ufe0f"
+    },
+    {
+      "input": {
+        "days": 365
+      },
+      "output": "\ud83c\udf1f\u2604\ufe0f\ud83c\udf1f"
+    },
+    {
+      "input": {
+        "days": 366
+      },
+      "output": "\ud83c\udf1f\u2604\ufe0f\ud83c\udf1f"
+    },
+    {
+      "input": {
+        "days": 1000
+      },
+      "output": "\ud83c\udf1f\u2604\ufe0f\ud83c\udf1f"
+    },
+    {
+      "input": {
+        "days": 463
+      },
+      "output": "\ud83c\udf1f\u2604\ufe0f\ud83c\udf1f"
+    },
+    {
+      "input": {
+        "days": 370
+      },
+      "output": "\ud83c\udf1f\u2604\ufe0f\ud83c\udf1f"
+    },
+    {
+      "input": {
+        "days": 351
+      },
+      "output": "\u2604\ufe0f"
+    },
+    {
+      "input": {
+        "days": 402
+      },
+      "output": "\ud83c\udf1f\u2604\ufe0f\ud83c\udf1f"
+    },
+    {
+      "input": {
+        "days": 392
+      },
+      "output": "\ud83c\udf1f\u2604\ufe0f\ud83c\udf1f"
+    },
+    {
+      "input": {
+        "days": 450
+      },
+      "output": "\ud83c\udf1f\u2604\ufe0f\ud83c\udf1f"
+    },
+    {
+      "input": {
+        "days": 463
+      },
+      "output": "\ud83c\udf1f\u2604\ufe0f\ud83c\udf1f"
+    },
+    {
+      "input": {
+        "days": 77
+      },
+      "output": "\ud83d\udd25\ud83d\udd25\ud83d\udd25"
+    },
+    {
+      "input": {
+        "days": 133
+      },
+      "output": "\u2604\ufe0f"
+    },
+    {
+      "input": {
+        "days": 345
+      },
+      "output": "\u2604\ufe0f"
+    }
+  ],
+  "function": "gamification.streak.heat_for",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "function",
+  "registry": "tools/parity-oracle/registry/spec_076.py",
+  "registry_sha256": "e854e46aac5a5887cc38b12c7cfafd31275845828f9c77a4d12fb1e38248b20c",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

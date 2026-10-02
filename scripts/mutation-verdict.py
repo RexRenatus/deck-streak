@@ -17,7 +17,9 @@ R6, R10, R12; ADR-057).
     python3 scripts/mutation-verdict.py exclusions [--root DIR]
 
 PLAN first decides the run's scope from the event that started it (R3), each case by name, because
-`ci` fails on a skipped need but a leg LEGS reads as not started. A pull request into `dev` is
+`ci` fails on any skipped need but two: `mutation-rust`, not started when the plan's shards list no
+mutant, and `mutation-rows`, not started when the plan selects no row and no retirement check is
+due, each of which LEGS judges against the plan (SPEC-290). A pull request into `dev` is
 judged on its diff, and a release pull request into `main` on its merge diff, every change `dev`
 carries since the last release; a push that merges a pull request (`Merge pull request #N`) is
 not-applicable, naming `#N`, whose jobs judged that same tree; a push that names none is judged on
@@ -26,8 +28,12 @@ ref, BASE is `HEAD^1`) and writes `plan.json` and `git.diff` into `--out`: every
 its class (R2), each production file's changed lines split into code lines, blank or comment lines
 and, in Rust, test-only lines, those inside an item cargo-mutants never mutates for a test attribute
 (SPEC-057 R22), the rows the diff selects (R10), and the web files Stryker mutates whole. It prints
-each class's case by name: why it applies, or why it is not-applicable. Under GitHub Actions it
-writes the step outputs `scope`, `case`, `rust`, `web`, `oracle`, `rows` and `mutate`.
+each class's case by name: why it applies, or why it is not-applicable. The `scripts` class does
+not apply when every changed script's syntax tree, read at the diff's merge-base and at its head, is
+equal once docstrings are set aside: its case reads `docstring-only` and names each file (ADR-307),
+and a script added or deleted, not UTF-8 or that does not parse leaves the class applying. Under
+GitHub Actions it writes the step outputs `scope`, `case`, `rust`, `web`, `oracle`, `scripts`,
+`rows` and `mutate`.
 
 SHARDS sizes the Rust run from cargo-mutants' own listing of the diff's mutants (`--list --json
 --in-diff`), so no shard reaches its job's timeout (R18). Each round-robin shard's time is projected
@@ -82,6 +88,7 @@ line above, a `Stryker disable` comment needs `EQUIVALENT: <reason> (#N)` on its
 from __future__ import annotations
 
 import argparse
+import ast
 import bisect
 import io
 import json
@@ -98,6 +105,7 @@ from dataclasses import dataclass, field
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
+import mutation_python  # noqa: E402
 import mutation_rows  # noqa: E402
 
 EXIT_OK, EXIT_FAIL, EXIT_USAGE, EXIT_VOID = 0, 1, 2, 3
@@ -172,6 +180,13 @@ def git(root: pathlib.Path, *args: str) -> str:
     return subprocess.run(
         ["git", "-C", str(root), *args], capture_output=True, text=True, check=True
     ).stdout
+
+
+def git_bytes(root: pathlib.Path, *args: str) -> bytes | None:
+    """A git command's output as it is, or None when it exits non-zero: a blob a revision does not
+    hold is no text, so the caller fails closed rather than stopping the plan."""
+    done = subprocess.run(["git", "-C", str(root), *args], capture_output=True, check=False)
+    return done.stdout if done.returncode == 0 else None
 
 
 def classify(path: str) -> str:
@@ -651,6 +666,61 @@ def selected_rows(root, base, head, changed, plan):
     plan.rows = sorted(chosen)
 
 
+#: The case a plan names when every changed script's syntax tree equals its base's once docstrings
+#: are set aside (ADR-307): the runner never mutates a docstring, so the class examines nothing.
+DOCSTRING_ONLY = "docstring-only"
+#: The nodes whose body's first statement is a docstring when it is a bare string constant: the four
+#: `skipped_nodes` in `scripts/mutation_python.py` sets aside, so the plan and the runner agree.
+DOCSTRING_HOLDERS = (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)
+
+
+def tree_without_docstrings(source: bytes | None) -> str | None:
+    """`source`'s syntax tree, positions excluded, with each docstring set aside (ADR-307), or None
+    when there is no source, it is not UTF-8 or it does not parse: the caller then fails closed."""
+    if source is None:
+        return None
+    try:
+        source.decode("utf-8")
+        tree = ast.parse(source)
+    except (SyntaxError, ValueError):
+        return None
+    for node in ast.walk(tree):
+        first = node.body[0] if isinstance(node, DOCSTRING_HOLDERS) and node.body else None
+        if (
+            isinstance(first, ast.Expr)
+            and isinstance(first.value, ast.Constant)
+            and isinstance(first.value.value, str)
+        ):
+            node.body = node.body[1:]
+    return ast.dump(tree)
+
+
+def docstring_only(root: pathlib.Path, base: str, head: str, files: list[dict]) -> list[str] | None:
+    """The scripts whose changed lines are docstrings alone, or None unless the diff has one
+    merge-base and every changed script's syntax tree there equals its tree at the head once
+    docstrings are set aside (ADR-307). A script added or deleted has no tree at one side, and the
+    plan reads a rename as both, so each fails closed."""
+    found = git_bytes(root, "merge-base", "--all", base, head)
+    bases = (found or b"").split()
+    if len(bases) != 1:
+        return None
+    merge_base = bases[0].decode("ascii")
+    named = []
+    for entry in files:
+        if entry["class"] != "scripts":
+            continue
+        path = entry["path"]
+        before = tree_without_docstrings(
+            git_bytes(root, "cat-file", "blob", f"{merge_base}:{path}")
+        )
+        after = tree_without_docstrings(git_bytes(root, "cat-file", "blob", f"{head}:{path}"))
+        if before is None or before != after:
+            return None
+        if entry["code"]:
+            named.append(path)
+    return named
+
+
 def class_case(files: list[dict], name: str) -> str:
     """Why a class applies, or why it is not-applicable, by name, from its files' changed lines:
     its production code lines, and in Rust the test-only lines set apart (SPEC-057 R22)."""
@@ -663,6 +733,12 @@ def class_case(files: list[dict], name: str) -> str:
         return case + (f"; {test} test-only line(s) set apart, {TEST_ONLY}" if test else "")
     if not mine:
         return f"not-applicable: the diff changes no {name} production file"
+    docstrings = [entry["path"] for entry in mine if entry.get("docstring")]
+    if docstrings:
+        return (
+            f"not-applicable: {DOCSTRING_ONLY}: every changed script's syntax tree equals its "
+            f"base's once docstrings are set aside: {', '.join(docstrings)}"
+        )
     if test:
         tested = sum(1 for entry in mine if entry["test"])
         return (
@@ -719,6 +795,14 @@ def plan_diff(
                 classes[klass]["applies"] = True
                 if klass == "web":
                     plan.stryker_mutate.append(path[len(WEB_ROOT) :])
+    scripts = classes["scripts"]
+    named = docstring_only(root, base_sha, head_sha, plan.files) if scripts["applies"] else None
+    if named:
+        # ADR-307: a docstring is never a mutant, so its lines are named apart from the code lines.
+        scripts["applies"] = False
+        for record in plan.files:
+            if record["path"] in named:
+                record["docstring"], record["code"] = record["code"], []
     for name, klass in classes.items():
         klass["case"] = class_case(plan.files, name)
     plan.classes = classes
@@ -1037,6 +1121,12 @@ def not_applicable(verdict: Verdict, plan: dict, klass: str) -> None:
             verdict.say(
                 f"not-applicable: {entry['path']}: {entry['added']} changed line(s): {len(test)} "
                 f"test-only, {TEST_ONLY}" + (f"; {quiet} blank or comments" if quiet else "")
+            )
+        elif entry.get("docstring"):
+            # ADR-307: every changed script's tree equals its base's once docstrings are set aside.
+            verdict.say(
+                f"not-applicable: {entry['path']}: {entry['added']} changed line(s): "
+                f"{DOCSTRING_ONLY}, its syntax tree equals its base's once docstrings are set aside"
             )
         elif entry["added"]:
             verdict.say(
@@ -1395,8 +1485,9 @@ def memory_cap(
 
 def python_reports(verdict: Verdict, plan: dict, directory: str | None) -> list[tuple[str, dict]]:
     """(where, report) for each Python shard report the plan promised, from 0 to n-1: one missing,
-    unreadable, not of the runner's schema, or that records a failed restore is VOID by name
-    (SPEC-087 R11)."""
+    unreadable, not of the runner's schema, that records a failed restore, whose shard field is not
+    its slot's, that `read_python_shard` refuses, or that examined other mutants than the plan
+    lists for that shard is VOID by name (SPEC-087 R11; SPEC-126 A8 and A9)."""
     planned = (plan.get("python") or {}).get("count") or 0
     if not planned:
         verdict.void("the plan names no python shards, so no shard's report was promised")
@@ -1412,13 +1503,97 @@ def python_reports(verdict: Verdict, plan: dict, directory: str | None) -> list[
         except (OSError, ValueError):
             verdict.void(f"{where}: unreadable")
             continue
+        refusal = None
+        if isinstance(report, dict):
+            entries, refusal = read_python_shard(plan, report)
+            report = {**report, "files": entries}
         if not isinstance(report, dict) or report.get("schema") != PYTHON_SCHEMA:
             verdict.void(f"{where}: not of the schema {PYTHON_SCHEMA}")
         elif report.get("exit") == 4 or report.get("restore_failed"):
             verdict.void(f"{where}: a restore failed: {report.get('restore_failed') or 'exit 4'}")
+        elif report.get("shard") != f"{shard}/{planned}":
+            verdict.void(
+                f"{where}: the report's shard field {report.get('shard')!r} is not this slot's "
+                f"{shard}/{planned}, so it is not this shard's work"
+            )
+        elif refusal is not None:
+            verdict.void(f"{where}: {refusal}")
+        elif (drift := shard_listing_drift(plan, shard, report)) is not None:
+            verdict.void(f"{where}: {drift}")
         else:
             whole.append((where, report))
     return whole
+
+
+def read_python_shard(plan: dict, report: dict) -> tuple[list[dict], str | None]:
+    """The one reader of a shard's report: (the file entries the verdict will judge, None), or
+    ([], why the report is refused). Both the listing binding and the judge read this yield and
+    nothing else, so they cannot read a report differently. A container of another JSON type, a
+    mutant whose outcome is not the runner's, and a mutant filed under a path no applicable class
+    reads are all refused; a missing container reads as empty, as it always did."""
+    classes = plan.get("classes") or {}
+    served = {
+        name
+        for name in ("scripts", "oracle")
+        if isinstance(classes.get(name), dict) and classes[name].get("applies")
+    }
+    files = report.get("files", [])
+    if not isinstance(files, list):
+        return [], f"its files is a {type(files).__name__}, not a list"
+    read = []
+    for entry in files:
+        if not isinstance(entry, dict):
+            return [], f"an entry of its files is a {type(entry).__name__}, not an object"
+        path = str(entry.get("path"))
+        mutants = entry.get("mutants", [])
+        if not isinstance(mutants, list):
+            return [], f"the mutants of {path} is a {type(mutants).__name__}, not a list"
+        if classify(path) not in served:
+            if mutants:
+                return [], f"it files {len(mutants)} mutant(s) under {path}, which no class reads"
+            continue
+        readers = entry.get("byte_readers")
+        if readers and not isinstance(readers, list):
+            return [], f"the byte readers of {path} is a {type(readers).__name__}, not a list"
+        for mutant in mutants:
+            if not isinstance(mutant, dict):
+                return [], f"a mutant record of {path} is a {type(mutant).__name__}, not an object"
+            outcome = mutant.get("outcome")
+            if not isinstance(outcome, str) or outcome not in mutation_python.OUTCOMES:
+                return [], (
+                    f"a mutant of {path} has the outcome {outcome!r}, which is none of the "
+                    f"runner's {', '.join(mutation_python.OUTCOMES)}"
+                )
+        read.append(entry)
+    return read, None
+
+
+def shard_listing_drift(plan: dict, shard: int, report: dict) -> str | None:
+    """Why `report` (as `read_python_shard` yields it) did not examine exactly the mutants the plan
+    lists for `shard`, or None when it did. Each side is a multiset of names, so a duplicate, a missing mutant and an extra one all
+    differ, and a report that holds as many mutants as listed but not the same ones differs too."""
+    held = next(
+        (
+            entry
+            for entry in (plan.get("python") or {}).get("shards") or []
+            if isinstance(entry, dict) and entry.get("shard") == shard
+        ),
+        None,
+    )
+    if held is None or not isinstance(held.get("mutants"), list):
+        return "the plan lists no mutants for this shard"
+    listed = Counter(str(name) for name in held["mutants"])
+    examined = Counter(
+        str(mutant.get("name")) for entry in report["files"] for mutant in entry.get("mutants", [])
+    )
+    missing = sorted((listed - examined).elements())
+    extra = sorted((examined - listed).elements())
+    if not missing and not extra:
+        return None
+    return (
+        f"it did not examine the mutants the plan lists for it: {len(missing)} missing "
+        f"({', '.join(missing[:3])}) and {len(extra)} extra ({', '.join(extra[:3])})"
+    )
 
 
 def python_mutant(entry: object) -> Mutant | None:

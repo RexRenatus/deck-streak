@@ -14,7 +14,7 @@ maintainer's machine, only when run there (SPEC-062, below).
 | `systemd/deck-streak-api.service` | the `api` role: the HTTP service the Mini App calls, `Type=notify` with a watchdog |
 | `systemd/deck-streak-bot.service` | the `bot` role: the Telegram bot's long-polling transport, `Type=notify` with a watchdog |
 | `systemd/deck-streak-job@.service` | one run of one job of coordination's job table, `deckstreakd job <id>`, a `oneshot` |
-| `systemd/deck-streak-job@<id>.timer` | one timer per job of the table (`sync`, `maintenance`, `liveness`, `drill_postback`), each starting the job instance of its own name |
+| `systemd/deck-streak-job@<id>.timer` | one timer per job of the table (`sync`, `maintenance`, `liveness`, `drill_postback`, `held_flush`), each starting the job instance of its own name |
 | `systemd/deck-streak-job@sync (path unit)` | the owner's `/sync` doorbell: a change of the request file starts `deck-streak-job@sync` (service unit), and it loads no credential (SPEC-059) |
 | `tmpfiles.d/deck-streak-sync-request.conf` | the request directory, the service user's alone, mode `0700`; only the bot unit may write it (SPEC-059) |
 | `systemd/deck-streak-alert@.service` | the one alert path, a `oneshot` every other service names with `OnFailure=`: it pages the owner on Telegram that its instance failed (SPEC-031) |
@@ -60,6 +60,7 @@ file, and no template carries a secret's value.
 | `deck-streak-api.service` | `owner-user-id`, `telegram-bot-token` | the owner gate over Telegram's launch data (SPEC-024) |
 | `deck-streak-bot.service` | `owner-user-id`, `telegram-bot-token` | the transport and the owner gate (SPEC-026); the owner's `/sync` holds no login, it asks the sync job (SPEC-059) |
 | `deck-streak-job@.service` | none | the sync login is loaded by the sync job alone: its instance's drop-in in `systemd/` carries `anki-sync-username` and `anki-sync-password` (SPEC-022, SPEC-062 R14), and the rail's map answers them to that instance alone |
+| `deck-streak-job@.service`, `held_flush` instance | `owner-user-id`, `telegram-bot-token` | the held flush alone sends to the owner's chat (#291): its instance's drop-in in `systemd/` carries the two, and no other job requests them |
 | `deck-streak-alert@.service` | `owner-user-id`, `telegram-bot-token` | the page: the bot's token, and the owner's id, which is the owner's private chat (SPEC-031) |
 
 systemd names the unit in the address it binds for each credential, so a job's credentials reach
@@ -114,6 +115,7 @@ job's slot (ADR-027).
 | `maintenance` | daily, the rollover hour, minute 28 | `*-*-* 04:28:00 UTC` | none, waived with its why |
 | `liveness` | hourly, minute 14 | `*-*-* *:14:00 UTC` | none, waived with its why |
 | `drill_postback` | hourly, minute 19 | `*-*-* *:19:00 UTC` | none, waived with its why |
+| `held_flush` | daily, 07:36 local, outside the quiet window | `*-*-* 07:36:00 UTC` | `true`: a missed flush runs once, still outside the window |
 
 The owner's `/sync` adds no slot and no timer: the bot stores the request and touches the request
 file, `deck-streak-job@sync` (path unit) starts the sync job, and the job serves the stored request before

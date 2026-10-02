@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM badges_earned",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "e5a00a8e8105d057609ec1539a51c1622d34efd97fcaa00ef98e5eff3cdccccc"
+}

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM inbox_captures",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "692f8ab66ba712b8f5c62f991307c355b4f54faf5ae4831d5b85c445479cd415"
+}

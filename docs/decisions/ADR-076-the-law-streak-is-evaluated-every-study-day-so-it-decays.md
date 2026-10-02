@@ -1,5 +1,5 @@
 ---
-status: "proposed"
+status: "accepted"
 date: "2026-09-28"
 decision-makers: "@RexRenatus (owner), the DeckStreak architect"
 ---
@@ -86,3 +86,158 @@ SPEC-076; ADR-071; the predecessor's `analytics.py:bridged_streak` and
 `pipeline_layers/digests.py:DigestsLayer._update_law_streak` at `27ee2bc`;
 `docs/schematics/streaks-and-governor-state-machine.md` and
 `docs/schematics/streaks-governor-and-freezes-in-w3.md`; #82.
+
+## Amendment, 2026-09-29: the relight's grant and celebration meet the fold's one transaction
+
+The recompute's fold holds one write transaction while its steps run (ADR-071). The relight's XP
+grant and its celebration cannot each open a writer of their own inside it. The decision, made on
+the orchestrator's ruling at the third dispatch (SPEC-076, section 12):
+
+- The relight's XP is written on the fold's connection, through a connection-level `grant_on` that
+  carries the grant port's two queries unchanged, in phase 3, so the XP is in the day's base before
+  the derived bonuses and the mint read it in the same recompute. Chosen because it keeps the
+  grant port's once scope and the same-recompute base.
+- The celebration is routed after the fold's commit, under the policy's `celebration` kind with the
+  key `relight:<epoch day>`, on every settle that qualifies. Chosen because the router's once-ever
+  dedupe gives one send per episode and a crash between the commit and the route is recovered at
+  the next recompute.
+- Rejected: a grant after the fold has run, because R18's same-recompute base would not hold.
+- Rejected: a second write inside the fold, because the one writer would deadlock against the fold's
+  held transaction.
+
+## Amendment, 2026-09-30: the counter loops are bounded by the range they read
+
+The silence walk and the replay, fold and bridge loops move a counter that a mutant can stop
+moving, so a mutant of the counter never ended and cost a shard its whole budget. Each loop now
+runs over a counted range: the walk over `0..=SILENCE_WALK_CAP_DAYS`, the others over the epoch
+days they read. The answer is unchanged, proved by a generated population against a test-only copy
+of the earlier walk.
+
+- Rejected: leaving the loop and raising the job's timeout, because it is a workflow setting the
+  owner alone changes and it hides the spinning mutant instead of removing it.
+- Rejected: a per-test timeout, because the verdict would then depend on the machine's speed.
+- Rejected: converting `open_lapse`, because it ends by `checked_sub` over a finite window and a
+  conversion would change its answer at the smallest epoch day.
+
+## Amendment, 2026-09-30: the open lapse walks a counted range too
+
+The amendment above rejected converting `open_lapse`, because the loop ends by `checked_sub` over a
+finite window and a conversion would change its answer at the smallest epoch day. The first reason
+holds for the loop and not for its mutants: `while number < window_start` does not end for a today
+before the window's first day (today 0 with a window from day 1 gave no answer in 5 seconds), which
+is the spinning mutant the amendment exists to remove. The second does not hold: a conversion that
+answers nothing at the smallest epoch day, as the `checked_sub` step did, answers what the earlier
+loop answered over 1,765,680 generated cases, 209,340 of them at the smallest epoch day (SPEC-076
+A41). `open_lapse` now walks the window's days by a counted range, newest first.
+
+- Rejected: leaving `open_lapse` as a disclosed residual, because a mutant of its counter never
+  ends, and one test that reached it would cost a shard its whole budget as the silence walk did.
+- Rejected: converting it without the smallest-day guard, because that answers a lapse at the
+  smallest epoch day where the earlier loop answered none (A41 is red under it).
+
+## Amendment, 2026-09-30: the relight's celebration is due in the grant's own write
+
+The amendment of 2026-09-29 answered a relight day as due in memory, inside the fold's per-day
+write and before that write committed. A day could then be celebrated for a grant that rolled
+back, and a day held in memory was lost at a restart between the commit and the route. The order
+was chosen by a TLA+ model of the per-day write, the due list, the cycle's take and route, the
+router's once-ever key and a restart between any two steps, checked for three properties: at most
+one celebration per relight day (S1), none without a committed grant (S2), and every committed
+grant celebrated under fair recompute (L1) (SPEC-076 R27 restated, R28; the proof is #477).
+
+- Chosen: the day is due in the grant's own write, because only this order kept S1, S2 and L1
+  with a failure or a restart between any two steps. The cycle reads the list after the fold
+  commits and clears a day once the router has decided it, and the router's once-ever key still
+  answers a day routed twice.
+- Rejected: answering the day as due after the write commits, held in memory, because a restart
+  between the commit and the route loses the day, so L1 fails.
+- Rejected: clearing the due list when a fold fails, because it also drops a day an earlier write
+  committed, so L1 fails even with no restart.
+- Rejected: deriving the due days from the ledger's relight grants, because an imported history's
+  grants would be celebrated (SPEC-140 R5), and the router would need a read of what it decided.
+- Rejected: one stored slot for the due day, because a second relight day overwrites the first
+  before its route, so L1 fails.
+- Rejected: routing inside the fold, because a send would then leave from a write that can still
+  roll back, and the one-router census (SPEC-041) names the cycle as the router's caller.
+- Rejected: a window of due days bounded by a cursor, because it drops an older committed day the
+  cursor has already passed.
+
+## Amendment, 2026-09-30: the walks' domain is stated, and their proof is #478
+
+The silence walk steps at most `SILENCE_WALK_CAP_DAYS + 1` days below today, and the law bridge
+and the law replay one day. For a today that close to the smallest epoch day, the subtraction
+leaves the day type. No caller passes such a day: a study day is an instant's day, and its epoch
+day number lies within 2^37 of the epoch (SPEC-076 R32).
+
+- Chosen: the domain is stated, because no caller can pass a day outside it, so a guard would
+  answer at days no one reaches. Each function's doc and R32 state it, and the proof is #478.
+- Rejected: guarding each walk as `open_lapse` is guarded, because that invents an answer the
+  predecessor never gave: its date arithmetic raises at its smallest date. Each guard would also
+  be new mutation surface, pinned only by a test at days no caller reaches.
+
+## Amendment, 2026-09-30: the calendar is a follow-up
+
+SPEC-076 R20, R23 and section 4 promised a calendar with freeze, skip and break markers, which
+this delivery does not serve or draw (SPEC-076 section 18).
+
+- Chosen: the calendar is excluded and follows as #486, because none of #81 to #84 lists it in its
+  acceptance, and adding a served surface now would reopen the served-pairs rule (R31) mid-review.
+- Rejected: delivering the calendar in this delivery, because it adds a route body, markers and a
+  screen section that no acceptance of #81 to #84 asks for.
+- Rejected: moving #81 from `Closes` to `Refs`, because its acceptance list is met; the calendar
+  appears only in its prose.
+
+## Amendment, 2026-09-30: a failed route leaves the day due
+
+The relight-order amendment leaves a day due when its route fails (SPEC-076 R27 restated), but
+its model had no failing route, and no test made the router answer an error. The model now has
+one: the router's route of a taken day fails, before its claim is written or after the claim
+committed and the line was sent, and the cycle goes on. S1, S2 and L1 were checked again with that
+step, and the rejected order below, a failed route that clears the day, was checked as a witness
+and violates L1 (SPEC-076 section 22, A51, A52; the proof is #477).
+
+- Chosen: a failed route leaves the day on the list, because only a decided day may leave it.
+  The cycle goes on to the next due day, the next cycle routes the failed one again, and the
+  router's once-ever key answers a day it already claimed as already sent. This is the cycle's
+  order at this amendment; A51 and A52 now decide it.
+- Rejected: clearing the day when its route fails, because a day whose claim was never written
+  is then never celebrated, so L1 fails.
+- Rejected: ending the cycle's route at the first failed route, because one day whose route keeps
+  failing would hold back every later day's celebration, while going on routes each day alone.
+- Rejected: returning the failed day to a list held in memory for a retry, because the stored
+  list already holds the day, and a list held in memory is lost at a restart.
+- Rejected: retrying the failed route within the same cycle, because the next cycle's route is
+  already that retry, and a loop in the cycle would add a bound and a wait that the stored list
+  makes unneeded.
+
+## Amendment, 2026-10-01: the failed route's own model, and no count of failed routes gives a day up
+
+This corrects two attributions in the amendment above. The proof that S1, S2 and L1 hold with a
+failing route is this delivery's own model, `formal/tla/RelightOrder/`, and not #477, whose model
+has no failing route; #477 stays the proof of R28 without one. And the cycle's order, that it goes
+on to the next due day, is decided by A53, and that no count of failed routes gives a day up by
+A55, beside A51, A52 and A54 (SPEC-076 sections 24 and 25). This supersedes the amendment's
+"(SPEC-076 section 22, A51, A52; the proof is #477)" and its "This is the cycle's order at this
+amendment; A51 and A52 now decide it".
+
+- Chosen: a property of its own for the failed route, NoOtherDayHeldBack: while one day's route
+  keeps failing, every other due day is celebrated. Its fairness is on every step of the cycle but
+  the failing day's route, and on that route returning its error, never on it succeeding. A route
+  that ends the cycle at its first failure violates it, and so does one that returns its error out
+  of the cycle; each is a witness of the model.
+- Rejected: L1 alone, with a bounded number of failed routes, because once the failures run out
+  every order celebrates every day at last, so L1 cannot tell going on from stopping at the first
+  failure.
+- Rejected: fairness on the failing day's route, because it assumes what the property must not,
+  that the route succeeds at last; the property asks what the other days see while it never does.
+- Rejected: citing #477 for the failed route, because its model has no failing route.
+- Chosen: no count of a day's failed routes can outlive one route, held by construction (A55): the
+  route keeps no per-day failure state in `RelightDue`, in the router, the kernel or the route's
+  own files, in any static of a crate coordination links, or in the database, each read whole
+  against a written-out list. The model checks a give-up after one, two and three failed routes,
+  every count its bound reaches, and each violates L1. The cost: a static or a state-holding type
+  added to any of those crates must be added to the written-out list, so a reader sees it.
+- Rejected: tying the tests' count of failed routes to the model's bound, because a give-up after
+  one more failure than that bound passes both.
+- Rejected: a larger fixed count of failed routes in the tests, because it only moves the number a
+  give-up must exceed.

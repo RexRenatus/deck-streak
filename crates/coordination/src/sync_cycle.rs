@@ -31,7 +31,9 @@ use crate::instruments::Instruments;
 use crate::ladder_facts;
 use crate::level_up::announce_level_up;
 use crate::obligations::{ObligationSource, Obligations};
-use crate::recompute::{Fold, FoldInput};
+use crate::recompute::streaks::RelightDue;
+use crate::recompute::{AwardOffers, Fold, FoldInput, Offers};
+use crate::relight::route_due_relights;
 
 /// The name of the settle a closed study day is owed, as an obligation (SPEC-071 R15): the source's
 /// name, and the label of its deadline, which the gate's reason and the log carry.
@@ -86,6 +88,7 @@ pub struct CycleParts<E> {
     clock: Arc<dyn Clock>,
     router: Option<Arc<Router>>,
     fold: Option<CycleFold>,
+    relights: Option<RelightDue>,
     instruments: Option<Arc<Instruments>>,
 }
 
@@ -117,6 +120,7 @@ impl<E: AnkiEngine + Sync> CycleParts<E> {
             clock,
             router: None,
             fold: None,
+            relights: None,
             instruments: None,
         }
     }
@@ -152,6 +156,14 @@ impl<E: AnkiEngine + Sync> CycleParts<E> {
             rule,
             courses_digest,
         });
+        self
+    }
+
+    /// This cycle, routing the relights `due` names after each fold's commit (SPEC-076 R27), as the
+    /// level-up is announced.
+    #[must_use]
+    pub fn with_relights(mut self, due: RelightDue) -> Self {
+        self.relights = Some(due);
         self
     }
 
@@ -282,12 +294,21 @@ where
                     .await
                     .map_err(CycleError::Recompute)?
                     .map(|run| run.study_day);
+                // The awards' celebrations go to the cycle's router between the fold's writes
+                // (SPEC-073 R4, R11; ADR-303).
+                let offers = cycle
+                    .router
+                    .as_ref()
+                    .map(|router| AwardOffers::new(router.clone()));
                 let input = FoldInput {
                     data: &window.data,
                     rule: fold.rule,
                     now: checked.now,
                     synced_in,
                     courses_digest: fold.courses_digest.as_deref(),
+                    // The lifetime the badges read starts from the study events below the window.
+                    base_reviews: u64::try_from(window.base.count).unwrap_or(0),
+                    offers: offers.as_ref().map(|offers| offers as &dyn Offers),
                 };
                 // The level before the recompute's first write, against the level after its last
                 // (SPEC-072 R14): no level is stored, so the ledger says both.
@@ -302,6 +323,11 @@ where
                     let today = fold.rule.study_day(checked.now);
                     if let Err(error) = announce_level_up(router, before, after, today).await {
                         tracing::error!(%error, "the level-up line could not be raised");
+                    }
+                    if let Some(due) = &cycle.relights
+                        && let Err(error) = route_due_relights(router, due, &fold.db, today).await
+                    {
+                        tracing::error!(%error, "the due relights could not be read");
                     }
                 }
             }
