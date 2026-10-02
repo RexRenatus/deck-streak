@@ -52,18 +52,21 @@ the guard close all four without growing into a Rust front end?
 Chosen option: "One evaluator, macros refused by name, block scope and `include!` refused by name",
 because it closes #436, #449, #535 and #536 with arms that each read what rustc reads or refuse.
 
-- **One cfg evaluator.** `kept(attributes, test)` decides both #449's items and #536's narrowing.
-  It evaluates `cfg` over `test`, `any`, `all`, `not`, `true` and `false` exactly; every other
-  option, every `cfg_attr` and every attribute it cannot read is unknown. An item it does not read
-  as true under `test` counts as not compiled, so an unknown can only cause a false refusal.
+- **One cfg evaluator.** `rustc_keeps(attributes, test)` decides both #449's items and #536's
+  narrowing. It evaluates `cfg` over `test`, `any`, `all`, `not`, `true` and `false` exactly;
+  every other option, every `cfg_attr` and every attribute it cannot read is unknown. An item it
+  does not read as true under `test` counts as not compiled, so an unknown can only cause a false
+  refusal.
 - **Macros stay fail-closed.** An implementation a macro body or a macro invocation writes is
   refused by its file (#436). A module a macro body or invocation declares is refused by its file
   when an attribute that reaches it holds a metavariable or names `path` (#535), or names `cfg` or
-  `cfg_attr` with `test` (#441). #536 narrows only the last arm, and only where `kept` proves the
-  module is no test-only module; an out-of-line module a macro declares that `kept` does not prove
-  removed without `test` is a declaration that may name any file, by ADR-304's #458 rule.
+  `cfg_attr` with `test` (#441). #536 narrows only the last arm, and only where `rustc_keeps`
+  proves the module is no test-only module; an out-of-line module a macro declares that
+  `rustc_keeps` does not prove removed without `test` is a declaration that may name any file, by
+  ADR-304's #458 rule.
 - **Block scope and `include!` are refused by name.** An out-of-line module declared in a block,
-  unless `kept` proves it removed without `test`, and every `include!`, refuse their file (#535).
+  unless `rustc_keeps` proves it removed without `test`, and every `include!`, refuse their file
+  (#535).
 
 ### Consequences
 
@@ -75,8 +78,8 @@ because it closes #436, #449, #535 and #536 with arms that each read what rustc 
   false refusal.
 - Bad, because a shadowing alias makes the guard read an implementation of another trait as a
   `Setting` one, and refuse it when it has no pinned shape.
-- Bad, because a `cfg(any(test, P))` module a macro declares stays refused when `kept` cannot decide
-  P.
+- Bad, because a `cfg(any(test, P))` module a macro declares stays refused when `rustc_keeps`
+  cannot decide P.
 
 ### Confirmation
 

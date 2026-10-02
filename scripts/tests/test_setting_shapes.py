@@ -2606,9 +2606,9 @@ class TheGuardReadsOnlyTheItemsRustcCompilesUnderTest(unittest.TestCase):
         return path
 
     def test_a_pin_counts_only_in_an_item_rustc_compiles_under_test(self):
-        """A member rustc strips must be refused; a member rustc compiles whose attributes `kept`
-        decides must be pinned; one it does not decide is refused, and where rustc compiles it that
-        refusal is a false refusal, disclosed by count."""
+        """A member rustc strips must be refused; a member rustc compiles whose attributes
+        `rustc_keeps` decides must be pinned; one it does not decide is refused, and where rustc
+        compiles it that refusal is a false refusal, disclosed by count."""
         members = self.members()
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
@@ -2630,16 +2630,16 @@ class TheGuardReadsOnlyTheItemsRustcCompilesUnderTest(unittest.TestCase):
             if reading == "stripped" and not refused:
                 wrong.append(f"{case}: a pin is read from an item rustc strips")
             elif reading == "compiled" and decided and refused:
-                wrong.append(f"{case}: refused, and rustc compiles it where kept decides")
+                wrong.append(f"{case}: refused, and rustc compiles it where rustc_keeps decides")
             elif not decided and not refused:
-                wrong.append(f"{case}: an item kept does not decide is read")
+                wrong.append(f"{case}: an item rustc_keeps does not decide is read")
             elif reading == "compiled" and refused:
                 disclosed.append(case)
         self.assertEqual(wrong, [], f"{len(wrong)} of {len(members)} member(s)")
         examined("item member(s) judged against rustc", judged)
         print(
             f"disclosed {len(disclosed)} false refusal(s): "
-            "rustc compiles an item kept does not decide"
+            "rustc compiles an item rustc_keeps does not decide"
         )
 
     FILE_KINDS = ("own", "tests", "module")
@@ -2785,7 +2785,7 @@ class TheGuardRefusesASpellingItDoesNotExpand(unittest.TestCase):
     def test_a_block_scoped_declaration_is_refused_by_its_file(self):
         """A limit by design (SPEC-192 section 16): rustc's block-scope module paths are not
         modelled, so an out-of-line module in a block that may compile without `test` refuses its
-        file, and one `kept` proves removed without `test` does not."""
+        file, and one `rustc_keeps` proves removed without `test` does not."""
         for text in (
             'fn f() {\n    #[path = "tests.rs"]\n    mod prod;\n}\n',
             "fn f() {\n    #[cfg(not(test))]\n    mod tests;\n}\n",
@@ -2825,9 +2825,9 @@ class TheGuardRefusesASpellingItDoesNotExpand(unittest.TestCase):
 
 
 class TheGuardReadsATreeItOverRefused(unittest.TestCase):
-    """#536: a module a macro declares that `kept` proves is no test-only module, a module beside a
-    decoy in the other directory, and a `cfg_attr` path below an inline module are read as rustc
-    reads them, while every #441 and #535 arm still refuses beside them (A22)."""
+    """#536: a module a macro declares that `rustc_keeps` proves is no test-only module, a module
+    beside a decoy in the other directory, and a `cfg_attr` path below an inline module are read as
+    rustc reads them, while every #441 and #535 arm still refuses beside them (A22)."""
 
     tree = TheGuardJudgesAPlantedTree.tree
     src = TheGuardJudgesAPlantedTree.src
