@@ -7,7 +7,7 @@
 #![allow(clippy::expect_used, clippy::print_stdout)]
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 
 use deck_streak_analytics::rollup::{RollupStore, StoredDay, fingerprint, recent_volumes};
@@ -206,6 +206,55 @@ async fn recompute(
     .expect("the fold runs")
 }
 
+/// Counts the fold's offers. The fold offers before each day's write that can replace a
+/// celebration, before the current day's write and once after its last write (ADR-303), so a run
+/// offers once per day it settles plus twice: a pass over a day at or before the cursor offers once
+/// more, though its write commits nothing (SPEC-071 A16, R16).
+#[derive(Debug, Default)]
+struct CountingOffers {
+    calls: AtomicUsize,
+}
+
+impl CountingOffers {
+    /// The offers made since the last call; the count starts again from zero.
+    fn take(&self) -> usize {
+        self.calls.swap(0, Ordering::SeqCst)
+    }
+}
+
+impl Offers for CountingOffers {
+    fn offer<'a>(&'a self, _db: &'a Db, _now: UtcMillis, _today: StudyDay) -> PortFuture<'a, ()> {
+        Box::pin(async move {
+            self.calls.fetch_add(1, Ordering::SeqCst);
+            Ok(())
+        })
+    }
+}
+
+/// [`recompute`], with `offers` run between the fold's writes.
+async fn recompute_offered(
+    fold: &Fold,
+    db: &Db,
+    data: &CollectionData,
+    (now, synced_in): (i64, i64),
+    offers: &CountingOffers,
+) -> FoldReport {
+    fold.run(
+        db,
+        &FoldInput {
+            data,
+            rule: StudyDayRule::default(),
+            now: UtcMillis::from_epoch_millis(now),
+            synced_in: Some(day(synced_in)),
+            courses_digest: Some("0123456789abcdef"),
+            base_reviews: 0,
+            offers: Some(offers),
+        },
+    )
+    .await
+    .expect("the fold runs")
+}
+
 async fn rollup(db: &Db, number: i64) -> StoredDay {
     RollupStore::new(db.clone())
         .days(day(number), day(number))
@@ -233,14 +282,20 @@ async fn the_fold_settles_each_closed_day_once_oldest_first() {
         reviews_on(&[D0, D0 + 1, D0 + 2, D0 + 3, D0 + 4]),
         Vec::new(),
     );
+    // Each run offers once per day it settles plus twice, so it took no pass over a day at or
+    // before the cursor (R16): such a pass offers once more and settles nothing.
+    let offers = CountingOffers::default();
+    let mut runs = Vec::new();
 
-    let first = recompute(&fold, &db, &data, at(D0 + 2, 10), D0 + 2).await;
+    let first = recompute_offered(&fold, &db, &data, (at(D0 + 2, 10), D0 + 2), &offers).await;
+    runs.push(("first", first.settled.len(), offers.take()));
     assert_eq!(
         first.settled,
         days(&[D0 + 1]),
         "the first recompute settles the closing day"
     );
-    let second = recompute(&fold, &db, &data, at(D0 + 5, 6), D0 + 5).await;
+    let second = recompute_offered(&fold, &db, &data, (at(D0 + 5, 6), D0 + 5), &offers).await;
+    runs.push(("second", second.settled.len(), offers.take()));
     assert_eq!(
         second.settled,
         days(&[D0 + 2, D0 + 3, D0 + 4]),
@@ -253,12 +308,22 @@ async fn the_fold_settles_each_closed_day_once_oldest_first() {
             "study day {number} carries the instant it was settled"
         );
     }
-    let third = recompute(&fold, &db, &data, at(D0 + 5, 8), D0 + 5).await;
+    let third = recompute_offered(&fold, &db, &data, (at(D0 + 5, 8), D0 + 5), &offers).await;
+    runs.push(("third", third.settled.len(), offers.take()));
     assert_eq!(
         third.settled,
         Vec::<StudyDay>::new(),
         "a second recompute settles no day"
     );
+    for (run, settled, offered) in examined("runs' offers", runs) {
+        assert_eq!(
+            offered,
+            settled + 2,
+            "the {run} recompute offers once before each of the {settled} day(s) it settles, \
+             once before the current day's write and once after its last write: it passes over \
+             no day at or before the cursor"
+        );
+    }
 
     // Across all three, each day was settled exactly once, and in order.
     let settles: Vec<StudyDay> = seen(&log)
