@@ -266,8 +266,18 @@ async fn the_wallet_and_shop_routes_answer_only_the_owner() {
     );
 
     // A cursor that is not a movement's id is refused, and the body names the reason alone.
-    let malformed = get(&app, &format!("{WALLET_PATH}?before=yesterday"), Some(&owner)).await;
-    assert_eq!(malformed.status, StatusCode::BAD_REQUEST, "{}", malformed.body);
+    let malformed = get(
+        &app,
+        &format!("{WALLET_PATH}?before=yesterday"),
+        Some(&owner),
+    )
+    .await;
+    assert_eq!(
+        malformed.status,
+        StatusCode::BAD_REQUEST,
+        "{}",
+        malformed.body
+    );
     assert_eq!(malformed.json(), json!({"reason": "invalid_cursor"}));
     db.close().await;
 }

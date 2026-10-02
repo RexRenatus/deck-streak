@@ -24,9 +24,7 @@ use deck_streak_coordination::recompute::{
 };
 use deck_streak_economy::wallet::SqliteWallet;
 use deck_streak_ingest::reader::{Card, CollectionData, Review};
-use deck_streak_kernel::{
-    Db, KernelError, PortFuture, StudyDay, StudyDayRule, Track, UtcMillis,
-};
+use deck_streak_kernel::{Db, KernelError, PortFuture, StudyDay, StudyDayRule, Track, UtcMillis};
 use deck_streak_progression::consistency::day_base_xp;
 use deck_streak_progression::settle::day_rows;
 use sqlx::SqliteConnection;
@@ -182,7 +180,10 @@ async fn based_on(connection: &mut SqliteConnection, number: i64) -> i64 {
     let rows = day_rows(connection, day(number))
         .await
         .expect("the day's XP rows read");
-    day_base_xp(rows.iter().map(|(source, amount)| (source.as_str(), *amount)))
+    day_base_xp(
+        rows.iter()
+            .map(|(source, amount)| (source.as_str(), *amount)),
+    )
 }
 
 /// The coins the day's movements hold, read through the wallet: the day's mint, the only movement
@@ -292,14 +293,26 @@ async fn the_mint_reads_the_settled_days_final_base() {
     // The second recompute settles T-1 and evaluates T; the third brings T-1's late reviews and
     // fewer reviews on T; the fourth more on T.
     let full = fold(None);
-    recompute(&full, &db, &with(&[&past, &closing, &today(&[3, 3, 3])]), at(T, 15), T)
-        .await
-        .expect("the second recompute runs");
+    recompute(
+        &full,
+        &db,
+        &with(&[&past, &closing, &today(&[3, 3, 3])]),
+        at(T, 15),
+        T,
+    )
+    .await
+    .expect("the second recompute runs");
     let settled_base = base(&db, T - 1).await;
     let current_before = minted(&db, T).await;
-    recompute(&full, &db, &with(&[&past, &closing, &late, &today(&[2])]), at(T, 16), T)
-        .await
-        .expect("the third recompute runs");
+    recompute(
+        &full,
+        &db,
+        &with(&[&past, &closing, &late, &today(&[2])]),
+        at(T, 16),
+        T,
+    )
+    .await
+    .expect("the third recompute runs");
     let raised = base(&db, T - 1).await;
     members.push(("settled, raised", T - 1, raised, minted(&db, T - 1).await));
     let down = minted(&db, T).await;
@@ -342,15 +355,21 @@ async fn the_mint_reads_the_settled_days_final_base() {
         .collect();
     let members = examined("mint members", members);
     assert_eq!(members.len(), MEMBERS, "the population: {members:?}");
-    assert_eq!(distinct.len(), MEMBERS, "the distinct members: {distinct:?}");
+    assert_eq!(
+        distinct.len(),
+        MEMBERS,
+        "the distinct members: {distinct:?}"
+    );
 }
 
-/// What the probe saw inside the fold's write on the current day: the day's base, the ledger's sum
-/// on the write's own connection, and the balance a second connection reads.
+/// What the probe saw inside the fold's write on the current day: the day's base, the day's
+/// movements summed on the write's own connection, and the day's movements a second connection
+/// reads. Only the current day's are judged: the settle of the day before it, which this fold also
+/// makes, mints that day's own base (its `backlog_zero`) in an earlier write that has committed.
 type Seen = (i64, i64, i64);
 
-/// A step of this test's own fold, in phase 7: on the current day it reads the ledger inside the
-/// fold's write and the balance through the wallet's own reads, then fails when told to.
+/// A step of this test's own fold, in phase 7: on the current day it reads the day's movements
+/// inside the fold's write and through the wallet's own reads, then fails when told to.
 struct Probe {
     db: Db,
     fail: bool,
@@ -375,11 +394,15 @@ impl DayStep for Probe {
             if !matches!(day.evaluation, Evaluation::Current) {
                 return Ok(());
             }
-            let base = based_on(write, day.day.epoch_day()).await;
-            let inside: i64 = sqlx::query_scalar("SELECT COALESCE(SUM(delta), 0) FROM coin_ledger")
-                .fetch_one(&mut *write)
-                .await?;
-            let outside = SqliteWallet::new(self.db.clone()).balance().await?;
+            let number = day.day.epoch_day();
+            let base = based_on(write, number).await;
+            let inside: i64 = sqlx::query_scalar(
+                "SELECT COALESCE(SUM(delta), 0) FROM coin_ledger WHERE study_day = ?1",
+            )
+            .bind(number)
+            .fetch_one(&mut *write)
+            .await?;
+            let outside = minted(&self.db, number).await;
             self.seen
                 .lock()
                 .unwrap_or_else(PoisonError::into_inner)
@@ -420,19 +443,25 @@ async fn the_mint_commits_or_rolls_back_with_the_days_write() {
             .unwrap_or_else(|| panic!("the golden holds no mint for the base {base}"));
         // Inside the day's write the mint is there; a second connection reads none of it before
         // the write commits.
-        assert_eq!(inside, mint, "fail {fail}: the ledger on the fold's own write");
-        assert!(mint > 0, "the day's base {base} mints coins, so the test can tell");
-        assert_eq!(outside, 0, "fail {fail}: the balance a second connection reads");
-        let balance = SqliteWallet::new(db.clone())
-            .balance()
-            .await
-            .expect("the balance");
+        assert_eq!(
+            inside, mint,
+            "fail {fail}: the day's mint on the fold's own write"
+        );
+        assert!(
+            mint > 0,
+            "the day's base {base} mints coins, so the test can tell"
+        );
+        assert_eq!(
+            outside, 0,
+            "fail {fail}: the day's mint a second connection reads"
+        );
+        let held = minted(&db, D0).await;
         if fail {
             assert!(ran.is_err(), "the probe fails the fold");
-            assert_eq!(balance, 0, "a fold that fails after phase 6 leaves no mint");
+            assert_eq!(held, 0, "a fold that fails after phase 6 leaves no mint");
         } else {
             ran.expect("the fold runs");
-            assert_eq!(balance, mint, "the mint commits with the day's write");
+            assert_eq!(held, mint, "the mint commits with the day's write");
         }
         judged.push(fail);
     }

@@ -99,6 +99,15 @@ pub enum MintAnswer {
 /// How many movements one page of the wallet's history holds (R15; ADR-315 ruling 3).
 pub const MOVEMENTS_PAGE: usize = 20;
 
+/// The wallet's page query (R15; ADR-315 ruling 3): the movements older than the one `?1` names,
+/// or from the newest when `?1` is NULL, by study day newest first and then in the reverse of the
+/// order they were written, at most `?2` of them. One constant statement run by `sqlx::query_as`,
+/// so a mutant of its order compiles and a mutation row can prove the order the owner reads; the
+/// read's own test runs it against the migrated ledger in place of the offline query cache.
+const MOVEMENTS_QUERY: &str = "SELECT id, study_day, source, delta FROM coin_ledger \
+     WHERE ?1 IS NULL OR (study_day, id) < (SELECT study_day, id FROM coin_ledger WHERE id = ?1) \
+     ORDER BY study_day DESC, id DESC LIMIT ?2";
+
 /// One coin movement as the wallet's history shows it (R15).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Movement {
@@ -172,11 +181,30 @@ impl SqliteWallet {
     ///
     /// [`KernelError::Database`] when the read fails.
     pub async fn movements(&self, before: Option<i64>) -> Result<MovementsPage, KernelError> {
-        let _ = before;
-        Ok(MovementsPage {
-            movements: Vec::new(),
-            next: None,
-        })
+        // One more row than the page holds says whether an older movement exists.
+        let limit = i64::try_from(MOVEMENTS_PAGE + 1).unwrap_or(i64::MAX);
+        let rows = sqlx::query_as::<_, (i64, i64, String, i64)>(MOVEMENTS_QUERY)
+            .bind(before)
+            .bind(limit)
+            .fetch_all(self.db.reader())
+            .await?;
+        let more = rows.len() > MOVEMENTS_PAGE;
+        let movements: Vec<Movement> = rows
+            .into_iter()
+            .take(MOVEMENTS_PAGE)
+            .map(|(id, epoch_day, source, delta)| Movement {
+                id,
+                day: StudyDay::from_epoch_day(epoch_day),
+                source,
+                delta,
+            })
+            .collect();
+        let next = if more {
+            movements.last().map(|movement| movement.id)
+        } else {
+            None
+        };
+        Ok(MovementsPage { movements, next })
     }
 
     /// Deposits `amount` once on its key, in one write ([`deposit_on`]).

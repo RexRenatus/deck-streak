@@ -41,6 +41,7 @@ use deck_streak_coordination::obligations::Obligations;
 use deck_streak_coordination::recompute::analytics_step::AnalyticsStep;
 use deck_streak_coordination::recompute::badges::BadgesStep;
 use deck_streak_coordination::recompute::day_bonuses::DayBonusesStep;
+use deck_streak_coordination::recompute::mint::MintStep;
 use deck_streak_coordination::recompute::records::RecordsStep;
 use deck_streak_coordination::recompute::streaks::{RelightDue, StreaksStep};
 use deck_streak_coordination::recompute::xp::XpStep;
@@ -199,6 +200,7 @@ pub fn recompute_fold_with_relights(
     let (streaks, due) = StreaksStep::new();
     fold.register(Phase::StreaksAndGovernor, Box::new(streaks))?;
     fold.register(Phase::DerivedBonuses, Box::new(DayBonusesStep))?;
+    fold.register(Phase::CoinMint, Box::new(MintStep))?;
     fold.register(Phase::Awards, Box::new(BadgesStep::new(courses)))?;
     fold.register(Phase::Awards, Box::new(RecordsStep))?;
     Ok((fold, due))

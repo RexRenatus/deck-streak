@@ -38,3 +38,4 @@ pub mod runner;
 pub mod score;
 pub mod streak_views;
 pub mod sync_cycle;
+pub mod wallet_view;

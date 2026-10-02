@@ -40,13 +40,49 @@ export function walletPath(before?: number): string {
   return before === undefined ? WALLET_PATH : `${WALLET_PATH}?before=${before}`;
 }
 
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Whether `value` is an ISO calendar date, `YYYY-MM-DD`. */
+function isIsoDate(value: unknown): value is string {
+  return typeof value === 'string' && ISO_DATE.test(value);
+}
+
+/** One movement of the server's body, or null when `item` is not one. */
+function parseMovement(item: unknown): Movement | null {
+  if (item === null || typeof item !== 'object') return null;
+  const { id, study_day: studyDay, source, amount } = item as Record<string, unknown>;
+  if (!Number.isInteger(id) || !isIsoDate(studyDay) || typeof source !== 'string') return null;
+  if (!Number.isInteger(amount)) return null;
+  return { id: id as number, studyDay, source, amount: amount as number };
+}
+
 /** The body of `GET /api/wallet`, or null when it is not one. */
 export function parseWallet(body: unknown): WalletView | null {
-  void body;
-  return null;
+  if (body === null || typeof body !== 'object') return null;
+  const given = body as Record<string, unknown>;
+  const { study_day: studyDay, balance, loss_cap: lossCap, loss_cap_left: lossCapLeft } = given;
+  if (!isIsoDate(studyDay)) return null;
+  if (![balance, lossCap, lossCapLeft].every((number) => Number.isInteger(number))) return null;
+  if (!Array.isArray(given.movements)) return null;
+  const movements: Movement[] = [];
+  for (const item of given.movements) {
+    const movement = parseMovement(item);
+    if (movement === null) return null;
+    movements.push(movement);
+  }
+  const { next } = given;
+  if (next !== null && !Number.isInteger(next)) return null;
+  return {
+    studyDay,
+    balance: balance as number,
+    lossCap: lossCap as number,
+    lossCapLeft: lossCapLeft as number,
+    movements,
+    next: next as number | null
+  };
 }
 
 /** A movement's amount with its sign: a deposit shows its plus. */
 export function signed(amount: number): string {
-  return String(amount);
+  return amount > 0 ? `+${amount}` : String(amount);
 }

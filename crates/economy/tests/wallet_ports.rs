@@ -645,10 +645,20 @@ async fn the_movements_come_newest_first_a_page_at_a_time() {
         expected[..MOVEMENTS_PAGE],
         "the first page, newest first"
     );
-    let last = first.movements.last().expect("a movement on the first page");
-    assert_eq!(first.next, Some(last.id), "the cursor is the last movement shown");
+    let last = first
+        .movements
+        .last()
+        .expect("a movement on the first page");
+    assert_eq!(
+        first.next,
+        Some(last.id),
+        "the cursor is the last movement shown"
+    );
     assert!(
-        first.movements.iter().all(|movement| movement.source == "payout"),
+        first
+            .movements
+            .iter()
+            .all(|movement| movement.source == "payout"),
         "each movement carries its source"
     );
 
@@ -658,7 +668,10 @@ async fn the_movements_come_newest_first_a_page_at_a_time() {
         expected[MOVEMENTS_PAGE..],
         "the second page starts after the cursor"
     );
-    assert_eq!(second.next, None, "no movement is older than the second page");
+    assert_eq!(
+        second.next, None,
+        "no movement is older than the second page"
+    );
     assert_eq!(
         first.movements.len() + second.movements.len(),
         written.len(),
