@@ -17,9 +17,20 @@ counts, not a line after it, and only when a crate root reaches that file throug
 under `--cfg test`. A module is a test module when its attributes keep it under `--cfg test` and
 remove it without, read in three-valued logic in which every option but `test` is unknown and
 `true` and `false` hold their values (R8). An out-of-line one (`mod tests;`) is read only from
-the one file rustc could read for it; an ambiguous or attribute-made choice is refused. A literal
-that two implementations of one crate share is pinned only by a row on each implementation's
-file.
+the one file rustc could read for it, below inline modules too (`mod a { mod tests; }` reads
+`a/tests.rs`, or the plain `#[path]` it names, from the module directory), and the inner
+attributes that open that file are the module's own (`#![cfg(test)]`); an ambiguous or
+attribute-made choice is refused. So is a file that any other declaration the guard can see
+compiles without `test` (`#[cfg(not(test))] mod tests;`, a `#[path]` naming it). There the file's
+own inner attributes count too; a declaration whose one attribute naming a path is
+`cfg_attr(P, path = "...")` reaches the file it names only under P and its default file only
+without P; and a declaration whose file the guard cannot name (a path literal it cannot read, a
+module below an inline module whose attributes name `path`, or attributes it cannot read whole)
+may name any file, so unless its attributes remove it without `test` it refuses every one. A
+`macro_rules!` body that declares a `cfg(test)` module, by an outer attribute, by one before a
+`$( ... )` repetition or by an inner attribute in its braces, is refused by its file, as the guard
+does not expand a macro (#433, #441, #458). A literal that two implementations of one crate share
+is pinned only by a row on each implementation's file.
 """
 
 import functools
@@ -56,6 +67,11 @@ SHAPE = re.compile(r'const\s+SHAPE\s*:\s*&\'static\s+str\s*=\s*("(?:[^"\\]|\\.)*
 BANDS = REPO / "scripts" / "mutation-rows.d"
 
 
+def crate_files(root):
+    """Every crate source file the guard reads: `crates/*/src/**/*.rs`."""
+    return sorted((root / "crates").glob("*/src/**/*.rs"))
+
+
 def implementations(root):
     """Every `impl Setting for X` under `crates/*/src`: (crate, file, name, quoted literal, span).
 
@@ -63,7 +79,7 @@ def implementations(root):
     and `span` is where that constant sits in the file, so the impl's own line can be excluded.
     """
     found = []
-    for path in sorted((root / "crates").glob("*/src/**/*.rs")):
+    for path in crate_files(root):
         text = lexed(path.read_text(encoding="utf-8"))
         crate, *inside = path.relative_to(root / "crates").parts
         starts = [(m.start(), m.group(1)) for m in IMPL.finditer(text)]
@@ -375,9 +391,9 @@ def is_pound(token):
 
 
 def modules(text):
-    """The file's own inner attributes, and each module it declares at its top level (a declaration
-    inside an inline module or a block is not followed, #433): (name, outer attributes or None,
-    index of the `mod` keyword)."""
+    """The file's own inner attributes, and each module it declares at its top level (a module
+    declared inside an inline module or a block is read by `sites`, not here): (name, outer
+    attributes or None, index of the `mod` keyword)."""
     found, pairs, _ = scanned(text)
     own, first = leading(found, pairs, 0, len(found))
     declared, at = [], first
@@ -395,7 +411,7 @@ def modules(text):
 def cfg_test_spans(text):
     """The spans of the file's top-level inline test modules (`mod name { ... }` that only
     `--cfg test` compiles, with the file's own inner attributes), read from `scanned`'s tokens.
-    One declared inside another module is not read (#433)."""
+    One declared inside another module is not read: only a module's file is followed there."""
     found, pairs, _ = scanned(text)
     own, declared = modules(text)
     spans = []
@@ -408,30 +424,138 @@ def cfg_test_spans(text):
     return spans
 
 
+PLAIN = re.compile(r'"([^"\\]*)"')
+
+
+def unraw(word):
+    """A module's name or a path word without its `r#` prefix."""
+    return word.removeprefix("r#")
+
+
+def sites(text):
+    """The file's own inner attributes, and each module declaration (`mod name;` or `mod name { }`)
+    it makes at any depth of inline modules (one inside a function body, a macro or another block is
+    not followed): (name, inline module names or None, the declaration's outer attributes, the
+    attributes that enclose it, or None when any run could not be read whole, index of the `mod`
+    keyword). The names are None below an inline module whose attributes name `path`, which moves
+    its directory in a way the guard does not read (#433). The enclosing attributes are the file's
+    inner ones, then each enclosing inline module's outer and inner ones."""
+    found, pairs, _ = scanned(text)
+    own, first = leading(found, pairs, 0, len(found))
+    out = []
+
+    def walk(begin, end, names, chain):
+        at = begin
+        while at < end:
+            if found[at][:2] == ("word", "mod") and [t[0] for t in found[at + 1 : at + 3]] in (
+                ["word", "punct"],
+                ["word", "open"],
+            ):
+                name = unraw(found[at + 1][1])
+                run = outer(found, pairs, begin, at)
+                out.append((name, names, run, chain, at))
+                if found[at + 2][1] == "{":
+                    inner, body = leading(found, pairs, at + 3, pairs[at + 2])
+                    moved = run is None or named_paths(run) != ([], False)
+                    walk(
+                        body,
+                        pairs[at + 2],
+                        None if names is None or moved else names + (name,),
+                        None if chain is None or run is None else chain + run + inner,
+                    )
+            if found[at][0] == "open":
+                at = pairs[at]
+            at += 1
+
+    walk(first, len(found), (), own)
+    return own, out
+
+
+def named_paths(run):
+    """The `path = "..."` literals that the attributes spell (a `cfg_attr` one included), each
+    without its quotes, and whether `path` is spelled any other way (a raw identifier, an escaped
+    or raw literal, a bare word), which the guard cannot read."""
+    literals, other = [], False
+    for each in run:
+        for index, word in enumerate(each):
+            if unraw(word) != "path":
+                continue
+            literal = (
+                PLAIN.fullmatch(each[index + 2]) if each[index + 1 : index + 2] == ["="] else None
+            )
+            if literal:
+                literals.append(literal.group(1))
+            else:
+                other = True
+    return literals, other
+
+
+def below(own, names, name, run):
+    """The files rustc could read for `mod name;` declared in `own` below the inline modules
+    `names`: the file a plain `#[path]` names, relative to the module directory the inline names
+    make, or else `name.rs` or `name/mod.rs` in that directory, which is below `own`'s own folder or
+    below the folder beside `own` (a crate root, a `mod.rs` and a file an attribute loaded all read
+    beside themselves). Every file a `cfg_attr` path could name counts too, so a rival is never
+    missed. Only files that exist are returned, each once."""
+    literals, _ = named_paths(run)
+    plain = any(unraw(each[0]) == "path" for each in run)
+    folders = [own.with_suffix(""), own.parent]
+    paths = [folder.joinpath(*names) / lit for folder in folders for lit in literals]
+    if not plain:
+        paths += [folder.joinpath(*names) / f"{name}.rs" for folder in folders]
+        paths += [folder.joinpath(*names) / name / "mod.rs" for folder in folders]
+    unique = {path.resolve() for path in paths}
+    return sorted(path for path in unique if path.is_file())
+
+
+def beside(own, name, run):
+    """The files a top-level `mod name;` of `own` could name, hedged like `below`: a `#[path]` is
+    relative to `own`'s directory."""
+    literals, _ = named_paths(run)
+    plain = any(unraw(each[0]) == "path" for each in run)
+    paths = [own.parent / lit for lit in literals]
+    if not plain:
+        for place in (own.parent, own.with_suffix("")):
+            paths += [place / f"{name}.rs", place / name / "mod.rs"]
+    unique = {path.resolve() for path in paths}
+    return sorted(path for path in unique if path.is_file())
+
+
 def declared(own):
-    """(file, attributes) for each out-of-line module (`mod name;`) at `own`'s top level whose file
-    rustc's choice leaves in no doubt (R8): of every file rustc could read for it (`name.rs` or
-    `name/mod.rs`, in `own`'s module directory or beside `own`, since a crate root, a `src/bin`
-    file, a `mod.rs` and a file an attribute loaded all read their modules beside themselves),
-    exactly one exists and rustc's lexer reads it, and no attribute of the declaration carries
-    `path` in any spelling (`#[path]`, a raw identifier, `cfg_attr` under any predicate). The
-    attributes are `own`'s inner ones, the declaration's, and that file's inner ones. A
-    declaration inside an inline module or a block is not followed (#433)."""
+    """(file, attributes) for each out-of-line module (`mod name;`) at any depth of inline modules
+    in `own` whose file rustc's choice leaves in no doubt (R8): of every file rustc could read for
+    it (`name.rs` or `name/mod.rs`, in `own`'s module directory or beside `own`, since a crate
+    root, a `src/bin` file, a `mod.rs` and a file an attribute loaded all read their modules beside
+    themselves, and below an inline module's name), exactly one exists and rustc's lexer reads it.
+    At the top level no attribute of the declaration may carry `path` in any spelling (`#[path]`, a
+    raw identifier, `cfg_attr` under any predicate); below an inline module one plain
+    `#[path = "..."]` names the file from the module directory (#433). The attributes are `own`'s
+    inner ones, each enclosing inline module's, the declaration's, and that file's inner ones. A
+    declaration inside a function body or a macro is not followed."""
     text = own.read_text(encoding="utf-8")
     tokens = scanned(text)[0]
-    inner, modules_ = modules(text)
     files = []
-    for name, run, at in modules_:
+    for name, names, run, inner, at in sites(text)[1]:
         if tokens[at + 2][1] != ";":
             continue
-        if run is None or any(w.removeprefix("r#") == "path" for each in run for w in each):
+        if names is None or inner is None:
             continue
-        found = [
-            path
-            for folder in (own.with_suffix(""), own.parent)
-            for path in (folder / f"{name}.rs", folder / name / "mod.rs")
-            if path.is_file()
-        ]
+        if names:
+            literals, other = named_paths(run or [])
+            if run is None or other or len(literals) > 1:
+                continue
+            if any(unraw(each[0]) != "path" and named_paths([each]) != ([], False) for each in run):
+                continue
+            found = below(own, names, name, run)
+        else:
+            if run is None or any(w.removeprefix("r#") == "path" for each in run for w in each):
+                continue
+            found = [
+                path
+                for folder in (own.with_suffix(""), own.parent)
+                for path in (folder / f"{name}.rs", folder / name / "mod.rs")
+                if path.is_file()
+            ]
         if len(found) == 1:
             try:
                 body, pairs, _ = scanned(found[0].read_text(encoding="utf-8"))
@@ -441,19 +565,139 @@ def declared(own):
     return files
 
 
-def out_of_line(own):
+def visible(src):
+    """(target file or None, attributes or None) for every out-of-line module that any file
+    reachable from the crate's roots declares, whatever its attributes and however deep, and for
+    every file each could name (`beside`, `below`). The attributes are the whole run from the root
+    that keeps the declaration, then the condition its `cfg_attr` path sets on that file (`gated`),
+    then that file's own inner attributes (a module's file opens with the module's own
+    attributes), or None when unreadable. A declaration whose file the guard cannot name, from a
+    path literal it cannot read, from below an inline module whose attributes name `path`, or from
+    attributes it cannot read whole, is listed with the target None too: it may name any file
+    (#433, #458)."""
+    roots = [src / "lib.rs", src / "main.rs", *src.glob("bin/*.rs"), *src.glob("bin/*/main.rs")]
+    todo = [(root, []) for root in roots if root.is_file()]
+    seen, out = set(), []
+    while todo:
+        file, chain = todo.pop()
+        if (file, repr(chain)) in seen:
+            continue
+        seen.add((file, repr(chain)))
+        try:
+            text = file.read_text(encoding="utf-8")
+            tokens = scanned(text)[0]
+            found = sites(text)[1]
+        except ValueError:
+            continue
+        for name, names, run, inner, at in found:
+            if tokens[at + 2][1] == "{":
+                continue
+            held = None if chain is None or inner is None or run is None else chain + inner + run
+            if names is None or run is None or named_paths(run)[1]:
+                out.append((None, held))
+                if names is None:
+                    continue
+            gates = gated(file, names, name, run or [])
+            for target in (
+                below(file, names, name, run or []) if names else beside(file, name, run or [])
+            ):
+                reach = held
+                for words, named, defaults in gates if held is not None else []:
+                    if target in named and target not in defaults:
+                        reach = reach + [["cfg", "(", *words, ")"]]
+                    elif target in defaults and target not in named:
+                        reach = reach + [["cfg", "(", "not", "(", *words, ")", ")"]]
+                try:
+                    body, pairs, _ = scanned(target.read_text(encoding="utf-8"))
+                except ValueError:
+                    out.append((target, reach))
+                    continue
+                tail = leading(body, pairs, 0, len(body))[0]
+                kept = None if reach is None else reach + tail
+                out.append((target, kept))
+                todo.append((target, kept))
+    return out
+
+
+def gated(file, names, name, run):
+    """The condition under which each file a declaration could name is reached, when the one
+    attribute of `run` that names `path` is a `cfg_attr(P, path = "...")` that names it directly:
+    `cfg(P)` for a file only the attribute names, `cfg(not(P))` for a default file it moves away
+    from, and nothing for a file reached either way (#458). Any other run gates nothing, so each
+    file it could name counts as reached: a plain `#[path]` beside it, two attributes that name a
+    path (rustc reads the first that applies), a path nested in another `cfg_attr`, or a predicate
+    the guard cannot read. A literal it cannot read names no file here (`visible` lists that
+    declaration with no target), though its default file is still gated."""
+    carrying = [each for each in run if any(unraw(word) == "path" for word in each)]
+    if len(carrying) != 1 or carrying[0][:2] != ["cfg_attr", "("]:
+        return []
+    each = carrying[0]
+    try:
+        end = predicate(each, 2, True)[1]
+    except (IndexError, ValueError):
+        return []
+    applies = applied(each[end + 1 : -1])
+    if any(unraw(one[0]) != "path" and named_paths([one]) != ([], False) for one in applies):
+        return []
+    literals = named_paths(applies)[0]
+    if names:
+        places = [folder.joinpath(*names) for folder in (file.with_suffix(""), file.parent)]
+        homes = places
+    else:
+        places, homes = [file.parent], [file.parent, file.with_suffix("")]
+    defaults = {
+        path.resolve() for home in homes for path in (home / f"{name}.rs", home / name / "mod.rs")
+    }
+    named = {(place / literal).resolve() for place in places for literal in literals}
+    return [(each[2:end], named, defaults)]
+
+
+def compiled_without_test(attributes):
+    """False only when the attributes remove a module without `--cfg test` whatever else is
+    configured; an unreadable run, an unknown option and an error all count as compiled (#458)."""
+    if attributes is None:
+        return True
+    try:
+        return KLEENE["all"]([condition(each, False) for each in attributes]) is not False
+    except (IndexError, ValueError):
+        return True
+
+
+def test_files(own):
     """The file of each out-of-line test module that `own` declares (`declared`), read only when
     its attributes make it a test module. Any other declaration is not read, so a shape only it
     spells is refused."""
     return [file for file, attributes in declared(own) if test_only(attributes)]
 
 
+def out_of_line(own):
+    """`test_files(own)` less each file that another declaration the guard can see compiles
+    without `test` (a `#[cfg(not(test))] mod tests;`, a `#[path]` naming it, a `cfg_attr` path
+    that applies without `test`): a shape only it spells is production code, so it is refused
+    (#458). A declaration whose file the guard cannot name (`visible`'s None) and that is compiled
+    without `test` refuses every file. A test-only second declaration is no rival, and a rival on
+    another file refuses nothing."""
+    files = test_files(own)
+    src = next((parent for parent in own.parents if parent.name == "src"), None)
+    if not files or src is None:
+        return files
+    others = visible(src)
+    return [
+        file
+        for file in files
+        if not any(
+            target in (None, file.resolve()) and compiled_without_test(attributes)
+            for target, attributes in others
+        )
+    ]
+
+
 def reached(src):
     """Every file of the crate at `src` that rustc compiles under `--cfg test` whatever else is
     configured: its roots (`lib.rs`, `main.rs`, `bin/*.rs`, `bin/*/main.rs`), and each file a
-    reached file declares (`declared`) whose attributes keep it under test. A file that only an
-    inline module, a `#[path]`, an undecided attribute or a source rustc refuses reaches is not
-    in it, so its test modules are not read."""
+    reached file declares (`declared`, below inline modules too) whose attributes keep it under
+    test. A file that only an undecided attribute, a top-level `#[path]` or a source rustc refuses
+    reaches is not in it, so its test modules are not read."""
     roots = [src / "lib.rs", src / "main.rs", *src.glob("bin/*.rs"), *src.glob("bin/*/main.rs")]
     todo, seen = [root for root in roots if root.is_file()], set()
     while todo:
@@ -513,9 +757,63 @@ def rows_pinning(root, crate, file, literal):
     return ids
 
 
+def macro_test_modules(root):
+    """The crate files whose `macro_rules!` body declares a module under `cfg(test)`, as refusal
+    lines naming the crate and the file (#441). The guard reads tokens and does not expand a macro,
+    so a module a macro writes would be a test module it never sees: it refuses the file instead.
+    A `mod` in a body is judged by the attributes just before it, back to the previous item's end
+    or the body's open delimiter (past a `$(` that opens the module's own repetition, so
+    `#[cfg(test)] $(mod $n {})*` counts), and by the inner attributes that open its braces
+    (`mod x { #![cfg(test)] }`). It reads `cfg` and `cfg_attr` in any combination with `test` (a
+    `not(test)` one too: the guard cannot expand it, so it does not decide)."""
+    refused = []
+    for path in crate_files(root):
+        found, pairs, _ = scanned(path.read_text(encoding="utf-8"))
+        hit = False
+        for at in range(len(found) - 3):
+            if [t[:2] for t in found[at : at + 2]] != [("word", "macro_rules"), ("punct", "!")]:
+                continue
+            if found[at + 2][0] != "word" or found[at + 3][0] != "open":
+                continue
+            for mod in range(at + 4, pairs[at + 3]):
+                if found[mod][:2] != ("word", "mod"):
+                    continue
+                words, depth, back = set(), 0, mod - 1
+                while back > at + 3:
+                    kind, word = found[back][:2]
+                    if kind == "close":
+                        if depth == 0 and word == "}":
+                            break
+                        depth += 1
+                    elif kind == "open":
+                        if depth == 0:
+                            if word == "(" and found[back - 1][:2] == ("punct", "$"):
+                                back -= 2
+                                continue
+                            break
+                        depth -= 1
+                    elif kind == "punct" and word == ";" and depth == 0:
+                        break
+                    elif kind == "word":
+                        words.add(word)
+                    back -= 1
+                brace = mod + 2 + (found[mod + 1][:2] == ("punct", "$"))
+                if brace < len(found) and found[brace][:2] == ("open", "{"):
+                    for each in leading(found, pairs, brace + 1, pairs[brace])[0]:
+                        words.update(each)
+                hit = hit or bool(words & {"cfg", "cfg_attr"} and "test" in words)
+        if hit:
+            crate, *inside = path.relative_to(root / "crates").parts
+            refused.append(
+                f"{crate} ({Path(*inside).as_posix()}) macro_rules! body declares a cfg(test) module"
+            )
+    return refused
+
+
 def unpinned(root):
-    """The implementations whose literal no test spells and no row of their file finds. A literal
-    that two implementations of one crate share is pinned only by a row of each one's file."""
+    """The implementations whose literal no test spells and no row of their file finds, then each
+    crate file whose macro declares a test module (`macro_test_modules`). A literal that two
+    implementations of one crate share is pinned only by a row of each one's file."""
     found = implementations(root)
     holders = {}
     for crate, _, _, literal, _ in found:
@@ -528,13 +826,15 @@ def unpinned(root):
             (holders[(crate, literal)] == 1 and spelled_elsewhere(root, crate, file, literal, span))
             or rows_pinning(root, crate, file, literal)
         )
-    ]
+    ] + macro_test_modules(root)
 
 
 class EverySettingShapeIsPinnedByItsLiteral(unittest.TestCase):
     def test_every_setting_impl_has_a_shape_literal_that_a_test_or_a_row_pins(self):
         impls = examined("Setting impl(s)", implementations(REPO))
         self.assertGreater(len(impls), 0)
+        files = examined("crate file(s) read for a macro_rules! body", crate_files(REPO))
+        self.assertEqual(macro_test_modules(REPO), [], f"{len(files)} file(s) examined")
         self.assertEqual(unpinned(REPO), [], f"{len(impls)} impl(s) examined")
 
 
@@ -815,6 +1115,12 @@ class TheGuardReadsOutOfLineTestModules(unittest.TestCase):
             root = self.declared(declaration, elsewhere)
             self.assertEqual(len(implementations(root)), 1)
             self.assertEqual(len(unpinned(root)), 1, declaration)
+        root = self.declared("#[allow(dead_code)]\nmod tests;\n", ("depth/tests.rs", self.SPELLING))
+        own = root / "crates" / "demo" / "src" / "depth.rs"
+        self.assertEqual(test_files(own), [])
+        root = self.declared("#[cfg(test)]\nmod tests;\n", ("depth/tests.rs", self.SPELLING))
+        own = root / "crates" / "demo" / "src" / "depth.rs"
+        self.assertEqual(test_files(own), [own.with_suffix("") / "tests.rs"])
         root = self.declared("#[cfg(test)]\nmod tests;\n", ("depth/tests.rs", "let shape = 1;\n"))
         self.assertEqual(len(unpinned(root)), 1)
         other = '#[path = "words.rs"]\nmod words;\n#[cfg(test)]\nmod tests;\n'
@@ -1191,6 +1497,406 @@ class TheGuardIgnoresAnImplementationInAComment(unittest.TestCase):
         self.assertEqual(unpinned(live), ['demo::Ghost (src/more.rs) "a ghost shape"'])
         after = self.src(pinned, "const A: u8 = 1; /* a\n b */ " + ghost)
         self.assertEqual(unpinned(after), ['demo::Ghost (src/more.rs) "a ghost shape"'])
+
+
+class TheGuardResolvesAModuleDeclaredInsideAnInlineModule(unittest.TestCase):
+    """A `mod tests;` inside `mod a { ... }` is read from the file rustc reads for it: the module
+    directory of the declaring file, then the inline modules' names, then `tests.rs` or
+    `tests/mod.rs`, or the `#[path]` it names (A16, #433)."""
+
+    tree = TheGuardJudgesAPlantedTree.tree
+    declared = TheGuardReadsOutOfLineTestModules.declared
+    SPELLING = TheGuardReadsOutOfLineTestModules.SPELLING
+    NO_SHAPE = "let shape = 1;\n"
+
+    def nested(self, names, leaf="tests", attributes="#[cfg(test)]\n"):
+        """`mod a { mod b { ... #[cfg(test)] mod <leaf>; } }` for the inline `names`."""
+        opened = "".join(f"mod {name} {{\n" for name in names)
+        return f"{opened}{attributes}mod {leaf};\n" + "}\n" * len(names)
+
+    def folders(self, own):
+        """Where rustc looks for a module of `own`'s inline modules: the crate's `src` for a crate
+        root, the file's own directory for any other module file."""
+        return "" if own == "lib.rs" else "depth/"
+
+    def test_a_declaration_inside_inline_modules_is_read_from_the_inline_path(self):
+        for own in ("lib.rs", "depth.rs"):
+            for names in (("a",), ("a", "b"), ("a", "b", "c")):
+                folder = self.folders(own) + "".join(f"{name}/" for name in names)
+                for leaf in ("tests.rs", "tests/mod.rs"):
+                    declaration = self.nested(names)
+                    pinned = self.declared(declaration, (folder + leaf, self.SPELLING), own=own)
+                    self.assertEqual(unpinned(pinned), [], (own, names, leaf))
+                    bare = self.declared(declaration, (folder + leaf, self.NO_SHAPE), own=own)
+                    self.assertEqual(len(unpinned(bare)), 1, (own, names, leaf))
+
+    def test_a_file_that_is_not_the_inline_path_is_not_read(self):
+        for own in ("lib.rs", "depth.rs"):
+            folder = self.folders(own)
+            declaration = self.nested(("a", "b"))
+            for wrong in ("tests.rs", "a/tests.rs", "b/tests.rs", "a/b/c/tests.rs"):
+                root = self.declared(declaration, (folder + wrong, self.SPELLING), own=own)
+                self.assertEqual(len(unpinned(root)), 1, (own, wrong))
+
+    def test_a_declaration_with_a_path_attribute_is_read_from_the_path_below_the_inline_path(self):
+        for own in ("lib.rs", "depth.rs"):
+            folder = self.folders(own)
+            for attributes in (
+                '#[cfg(test)]\n#[path = "t.rs"]\n',
+                '#[path = "t.rs"]\n#[cfg(test)]\n',
+                '#[cfg(test)]\n#[path="t.rs"]\n',
+            ):
+                declaration = self.nested(("a", "b"), "tests", attributes)
+                pinned = self.declared(declaration, (folder + "a/b/t.rs", self.SPELLING), own=own)
+                self.assertEqual(unpinned(pinned), [], (own, attributes))
+                bare = self.declared(declaration, (folder + "a/b/t.rs", self.NO_SHAPE), own=own)
+                self.assertEqual(len(unpinned(bare)), 1, (own, attributes))
+                for wrong in ("t.rs", "a/t.rs", "a/b/tests.rs"):
+                    root = self.declared(declaration, (folder + wrong, self.SPELLING), own=own)
+                    self.assertEqual(len(unpinned(root)), 1, (own, attributes, wrong))
+
+    def test_the_attributes_of_the_inline_modules_decide_whether_the_file_is_a_test_module(self):
+        file = ("a/tests.rs", self.SPELLING)
+        inline = "mod a {\n#![cfg(test)]\n#[cfg(test)]\nmod tests;\n}\n"
+        for declaration, read in (
+            ("#[cfg(test)]\nmod a {\nmod tests;\n}\n", True),
+            ("#[cfg(test)]\nmod a {\n#[cfg(test)]\nmod tests;\n}\n", True),
+            ("mod a {\n#![cfg(test)]\nmod tests;\n}\n", True),
+            (inline, True),
+            ("mod a {\nmod tests;\n}\n", False),
+            ("#[cfg(any())]\nmod a {\n#[cfg(test)]\nmod tests;\n}\n", False),
+            ("#[cfg(not(test))]\nmod a {\n#[cfg(test)]\nmod tests;\n}\n", False),
+            ("mod a {\n#![cfg(not(test))]\n#[cfg(test)]\nmod tests;\n}\n", False),
+            ('#[cfg(feature = "slow")]\nmod a {\n#[cfg(test)]\nmod tests;\n}\n', False),
+            ("mod a {\nconst X: u8 = 1;\n#[cfg(test)]\nfn tests() {}\n}\n", False),
+        ):
+            root = self.declared(declaration, file, own="lib.rs")
+            self.assertEqual(unpinned(root) == [], read, declaration)
+
+    def test_a_declaration_inside_a_function_body_is_not_read(self):
+        declaration = "fn f() {\n#[cfg(test)]\nmod tests;\n}\n"
+        root = self.declared(declaration, ("tests.rs", self.SPELLING), own="lib.rs")
+        self.assertEqual(len(unpinned(root)), 1)
+
+    def test_a_file_whose_own_inner_attribute_keeps_it_under_test_is_read(self):
+        """The inner attributes that open a module's file are attributes of the module, so a
+        `#![cfg(test)]` there makes it a test module, and the one declaration that reaches it is
+        no rival of itself (#433)."""
+        inner = "#![cfg(test)]\n"
+        for own in ("lib.rs", "depth.rs"):
+            for names in (("a",), ("a", "b")):
+                folder = self.folders(own) + "".join(f"{name}/" for name in names)
+                for attributes, leaf in (
+                    ("", "tests.rs"),
+                    ("", "tests/mod.rs"),
+                    ('#[path = "t.rs"]\n', "t.rs"),
+                    ("#[cfg(test)]\n", "tests.rs"),
+                ):
+                    declaration = self.nested(names, attributes=attributes)
+                    case = (own, names, attributes, leaf)
+                    spelled = (folder + leaf, inner + self.SPELLING)
+                    self.assertEqual(
+                        unpinned(self.declared(declaration, spelled, own=own)), [], case
+                    )
+                    bare = (folder + leaf, inner + self.NO_SHAPE)
+                    self.assertEqual(
+                        len(unpinned(self.declared(declaration, bare, own=own))), 1, case
+                    )
+
+    def test_a_declaration_whose_file_the_guard_cannot_choose_is_not_read(self):
+        """A file is read only where rustc's choice is plain. Below an inline module that carries a
+        `#[path]` the directory moves (the Reference's `thread_files` example); of two `#[path]`s
+        rustc reads the first; a `cfg_attr` path under an option the guard does not know, or with
+        a raw literal, is a choice it does not make. Each shape is refused."""
+        for declaration, files in (
+            (
+                '#[path = "thread_files"]\nmod a {\n'
+                '#[cfg(test)]\n#[path = "tests.rs"]\nmod tests;\n}\n',
+                (("a/tests.rs", self.SPELLING), ("thread_files/tests.rs", self.NO_SHAPE)),
+            ),
+            (
+                'mod a {\n#[cfg(test)]\n#[path = "one.rs"]\n#[path = "two.rs"]\nmod tests;\n}\n',
+                (("a/two.rs", self.SPELLING),),
+            ),
+            (
+                'mod a {\n#[cfg(test)]\n#[cfg_attr(unix, path = "real.rs")]\nmod tests;\n}\n',
+                (("a/real.rs", self.SPELLING),),
+            ),
+            (
+                'mod a {\n#[cfg(test)]\n#[cfg_attr(test, path = r"real.rs")]\nmod tests;\n}\n',
+                (("a/tests.rs", self.SPELLING), ("a/real.rs", self.NO_SHAPE)),
+            ),
+        ):
+            root = self.declared(declaration, *files, own="lib.rs")
+            self.assertEqual(len(unpinned(root)), 1, declaration)
+        plain = self.declared(self.nested(("a",)), ("a/tests.rs", self.SPELLING), own="lib.rs")
+        self.assertEqual(unpinned(plain), [])
+
+
+class TheGuardRefusesAMacroThatDeclaresATestModule(unittest.TestCase):
+    """A `macro_rules!` body that declares a `cfg(test)` module is a source the text reader cannot
+    expand, so the crate file holding it is refused by name instead of read as if the macro were
+    not there (A17, #441)."""
+
+    tree = TheGuardJudgesAPlantedTree.tree
+    src = TheGuardJudgesAPlantedTree.src
+    PINNED = 'const X: &str = "a whole depth";'
+
+    def refused(self, text):
+        """The refusals that name `src/more.rs`, in a tree whose one implementation is pinned."""
+        root = self.src(self.tree(self.PINNED), text)
+        return [line for line in unpinned(root) if "src/more.rs" in line]
+
+    def macro(self, body):
+        return "macro_rules! m {\n    ($($n:ident),*) => {\n" + body + "    };\n}\n"
+
+    def test_a_macro_body_with_a_cfg_test_module_is_refused_by_its_file(self):
+        for body in (
+            "        #[cfg(test)]\n        mod tests;\n",
+            "        #[cfg(test)]\n        mod tests {\n            const X: u8 = 1;\n        }\n",
+            "        #[cfg(all(test, unix))]\n        mod tests;\n",
+            '        #[cfg(any(test, feature = "slow"))]\n        pub mod tests;\n',
+            "        #[cfg_attr(test, allow(dead_code))]\n        mod tests;\n",
+            "        #[allow(dead_code)]\n        #[cfg(test)]\n        mod tests;\n",
+            "        $(#[cfg(test)] mod $n;)*\n",
+            "        const A: u8 = 1;\n        #[cfg(test)]\n        mod tests;\n",
+        ):
+            found = self.refused(self.macro(body))
+            self.assertEqual(len(found), 1, body)
+            self.assertIn("macro", found[0])
+
+    def test_every_delimiter_and_depth_of_a_macro_body_is_read(self):
+        inner = "#[cfg(test)]\nmod tests;\n"
+        for text in (
+            "macro_rules! m {\n    () => { " + inner + " };\n}\n",
+            "macro_rules! m (\n    () => ( " + inner + " );\n);\n",
+            "macro_rules! m [\n    () => [ " + inner + " ];\n];\n",
+            "mod a {\n    macro_rules! m {\n        () => { " + inner + " };\n    }\n}\n",
+            "macro_rules! m {\n    () => { mod a { " + inner + " } };\n}\n",
+            "macro_rules! m {\n    () => {};\n    ($x:ident) => { " + inner + " };\n}\n",
+        ):
+            self.assertEqual(len(self.refused(text)), 1, text)
+
+    def test_a_macro_body_without_a_cfg_test_module_is_not_refused(self):
+        for text in (
+            self.macro("        mod tests;\n"),
+            self.macro("        #[cfg(not(unix))]\n        mod tests;\n"),
+            self.macro("        #[cfg(test)]\n        fn check() {}\n"),
+            self.macro("        #[cfg(test)]\n        const T: u8 = 1;\n"),
+            self.macro("        $(#[$m:meta])*\n        mod tests;\n"),
+            "#[cfg(test)]\nmod tests {\n    const X: u8 = 1;\n}\n",
+            "// macro_rules! m { () => { #[cfg(test)] mod tests; }; }\n",
+            'const D: &str = "macro_rules! m { () => { #[cfg(test)] mod tests; }; }";\n',
+            "macro_rules! m {\n    () => {};\n}\n#[cfg(test)]\nmod tests {}\n",
+            "macro_rules! m {\n    () => {};\n}\nm!{ #[cfg(test)] mod tests; }\n",
+        ):
+            self.assertEqual(self.refused(text), [], text)
+        planted = self.macro("        #[cfg(test)]\n        mod tests;\n")
+        self.assertEqual(len(self.refused(planted)), 1, planted)
+
+    def test_the_refusal_names_the_crate_and_the_file(self):
+        root = self.src(
+            self.tree(self.PINNED), self.macro("        #[cfg(test)]\n        mod t;\n")
+        )
+        found = [line for line in unpinned(root) if "more.rs" in line]
+        self.assertEqual(len(found), 1)
+        self.assertTrue(found[0].startswith("demo (src/more.rs)"), found[0])
+        self.assertEqual(len(unpinned(root)), 1)
+
+    def test_an_inner_attribute_or_an_attribute_before_a_repetition_is_read(self):
+        """`mod x { #![cfg(test)] }` carries its condition inside its braces, and an attribute
+        before `$( ... )*` or `$( ... )?` reaches the module the repetition writes (#441)."""
+        for body in (
+            "        mod x {\n            #![cfg(test)]\n        }\n",
+            "        mod x {\n            #![cfg(all(test))]\n        }\n",
+            "        mod x {\n            #![cfg_attr(all(), cfg(test))]\n        }\n",
+            "        $(mod $n {\n            #![cfg(test)]\n        })*\n",
+            "        #[cfg(test)]\n        $(mod $n {})*\n",
+            "        #[cfg(test)]\n        $(mod $n {})?\n",
+            "        #[cfg_attr(all(), cfg(test))]\n        $(mod $n {})*\n",
+            "        #[cfg(test)]\n        $(mod $n;)*\n",
+        ):
+            found = self.refused(self.macro(body))
+            self.assertEqual(len(found), 1, body)
+            self.assertIn("macro", found[0])
+
+    def test_an_attribute_of_another_item_or_of_the_matcher_is_not_read(self):
+        """An attribute is read back only to the previous item's end (`;` or `}`) or the delimiter
+        that opens the body, past a `$(` that opens the module's own repetition: one on a `use`,
+        on a function or in the matcher does not make the module a test module."""
+        for text in (
+            self.macro("        #[cfg(test)]\n        use std::fmt;\n        mod real {}\n"),
+            self.macro("        #[cfg(test)]\n        fn helper() {}\n        mod real {}\n"),
+            self.macro("        #[cfg(test)]\n        use std::fmt;\n        $(mod $n {})*\n"),
+            self.macro("        #[cfg(test)]\n        fn helper() {}\n        $(mod $n {})*\n"),
+            "macro_rules! m {\n    (#[cfg(test)] $x:ident) => {\n        mod real {}\n    };\n}\n",
+            "macro_rules! m {\n    (#[cfg(test)] $x:ident) => {\n"
+            "        $(mod $n {})*\n    };\n}\n",
+        ):
+            self.assertEqual(self.refused(text), [], text)
+        planted = self.macro(
+            "        #[cfg(test)]\n        fn f() {}\n        #[cfg(test)]\n        mod real {}\n"
+        )
+        self.assertEqual(len(self.refused(planted)), 1, planted)
+
+
+class TheGuardRefusesAModuleFileThatAnotherDeclarationCompilesWithoutTest(unittest.TestCase):
+    """A file a `#[cfg(test)] mod tests;` declares is not read when any declaration the guard can
+    see also compiles it without `test`: a spelling there is production code (A18, #458)."""
+
+    tree = TheGuardJudgesAPlantedTree.tree
+    declared = TheGuardReadsOutOfLineTestModules.declared
+    SPELLING = TheGuardReadsOutOfLineTestModules.SPELLING
+    TEST = "#[cfg(test)]\nmod tests;\n"
+
+    def judged(self, declaration, own="lib.rs", extra=()):
+        folder = "" if own == "lib.rs" else "depth/"
+        root = self.declared(declaration, (folder + "tests.rs", self.SPELLING), *extra, own=own)
+        return len(unpinned(root))
+
+    def test_a_module_declared_beside_one_with_not_test_is_refused(self):
+        for own in ("lib.rs", "depth.rs"):
+            for declaration in (
+                self.TEST + "#[cfg(not(test))]\nmod tests;\n",
+                "#[cfg(not(test))]\nmod tests;\n" + self.TEST,
+                self.TEST + "#[cfg(not(test))]\n#[allow(dead_code)]\nmod tests;\n",
+                self.TEST + "#[allow(dead_code)]\n#[cfg(not(test))]\nmod tests;\n",
+                self.TEST + "#[cfg(not(test))]\npub mod tests;\n",
+            ):
+                self.assertEqual(self.judged(declaration, own), 1, (own, declaration))
+            self.assertEqual(self.judged(self.TEST, own), 0, own)
+
+    def test_a_module_a_path_declaration_names_beside_a_test_module_is_refused(self):
+        for own, path in (("lib.rs", "tests.rs"), ("depth.rs", "depth/tests.rs")):
+            for declaration in (
+                f'#[path = "{path}"]\nmod prod;\n' + self.TEST,
+                self.TEST + f'#[path = "{path}"]\nmod prod;\n',
+                f'#[path="{path}"]\nmod prod;\n' + self.TEST,
+                f'#[cfg(not(test))]\n#[path = "{path}"]\nmod prod;\n' + self.TEST,
+                f'#[cfg_attr(not(test), path = "{path}")]\nmod prod;\n' + self.TEST,
+                f'#[path = "{path}"]\n#[cfg(not(test))]\nmod prod;\n' + self.TEST,
+            ):
+                self.assertEqual(self.judged(declaration, own), 1, (own, declaration))
+
+    def test_a_variant_that_compiles_the_file_without_test_is_refused(self):
+        for rival in (
+            "#[cfg_attr(not(test), allow(dead_code))]\nmod tests;\n",
+            "#[cfg(any(not(test), unix))]\nmod tests;\n",
+            '#[cfg(feature = "slow")]\nmod tests;\n',
+            "#[cfg(all())]\nmod tests;\n",
+            "mod tests;\n",
+            "#[cfg_attr(test, cfg(any()))]\nmod tests;\n",
+        ):
+            self.assertEqual(self.judged(self.TEST + rival), 1, rival)
+
+    def test_a_declaration_in_another_file_or_an_inline_module_counts(self):
+        root = self.declared(self.TEST, ("depth/tests.rs", self.SPELLING), own="depth.rs")
+        src = root / "crates" / "demo" / "src"
+        (src / "lib.rs").write_text(
+            'mod depth;\n#[cfg(not(test))]\n#[path = "depth/tests.rs"]\nmod prod;\n',
+            encoding="utf-8",
+        )
+        self.assertEqual(len(unpinned(root)), 1)
+        (src / "lib.rs").write_text(
+            'mod depth;\nmod a {\n#[cfg(not(test))]\n#[path = "../depth/tests.rs"]\nmod prod;\n}\n',
+            encoding="utf-8",
+        )
+        self.assertEqual(len(unpinned(root)), 1)
+
+    def test_a_file_compiled_only_under_test_is_still_read(self):
+        for own, path in (("lib.rs", "tests.rs"), ("depth.rs", "depth/tests.rs")):
+            for declaration in (
+                self.TEST + f'#[cfg(test)]\n#[path = "{path}"]\nmod again;\n',
+                self.TEST + "#[cfg(not(test))]\nmod other;\n",
+                self.TEST + '#[cfg(not(test))]\n#[path = "other.rs"]\nmod prod;\n',
+            ):
+                extra = (("other.rs", "let shape = 1;\n"), ("depth/other.rs", "let shape = 1;\n"))
+                self.assertEqual(self.judged(declaration, own, extra), 0, (own, declaration))
+            rival = self.TEST + "#[cfg(not(test))]\nmod tests;\n"
+            self.assertEqual(self.judged(rival, own), 1, (own, rival))
+
+    def test_a_rival_whose_path_the_guard_cannot_read_is_refused(self):
+        """A declaration whose file the guard cannot name (an escaped or raw path literal, or one
+        below an inline module whose `#[path]` moves the directory) may name any file, so unless
+        its own attributes keep it under test it counts against every test module (#458)."""
+        for own, path in (("lib.rs", "tests"), ("depth.rs", "depth/tests")):
+            for literal in (f'"{path}\\x2ers"', f'r"{path}.rs"', f'r#"{path}.rs"#'):
+                rival = f"#[path = {literal}]\nmod prod;\n"
+                for declaration in (rival + self.TEST, self.TEST + rival):
+                    self.assertEqual(self.judged(declaration, own), 1, (own, declaration))
+                kept = self.TEST + f"#[cfg(test)]\n#[path = {literal}]\nmod again;\n"
+                self.assertEqual(self.judged(kept, own), 0, (own, kept))
+        moved = '#[path = "."]\nmod a {\n#[path = "tests.rs"]\nmod prod;\n}\n'
+        self.assertEqual(self.judged(self.TEST + moved), 1, moved)
+
+    def test_a_file_only_test_reaches_by_its_own_attribute_or_a_cfg_attr_path_is_read(self):
+        """A file's own `#![cfg(test)]` is an attribute of every module that reaches it, and a
+        declaration's one `cfg_attr(P, path = "...")` reaches the file it names only under P and
+        the default file only without P, so neither makes a production rival (#458)."""
+        inner = "#![cfg(test)]\n"
+        for own, folder in (("lib.rs", ""), ("depth.rs", "depth/")):
+            path = folder + "tests.rs"
+            for declaration, spelling in (
+                ("mod tests;\n", inner + self.SPELLING),
+                (f'mod tests;\n#[path = "{path}"]\nmod prod;\n', inner + self.SPELLING),
+                (self.TEST + f'#[cfg_attr(test, path = "{path}")]\nmod prod;\n', self.SPELLING),
+            ):
+                files = ((path, spelling), (folder + "prod.rs", "let shape = 1;\n"))
+                root = self.declared(declaration, *files, own=own)
+                self.assertEqual(unpinned(root), [], (own, declaration))
+            plain = self.TEST + f'#[path = "{path}"]\nmod prod;\n'
+            self.assertEqual(self.judged(plain, own), 1, (own, plain))
+        binary = '#[cfg_attr(not(test), path = "prod.rs")]\nmod tests;\nfn main() {}\n'
+        files = (("main.rs", binary), ("prod.rs", "let shape = 1;\n"))
+        self.assertEqual(self.judged(self.TEST, "lib.rs", files), 0, binary)
+
+    def test_a_cfg_attr_path_that_does_not_decide_the_file_alone_is_a_rival(self):
+        """A `cfg_attr` gates its file only when it is the declaration's one attribute that names
+        a path and names it directly: two of them (rustc reads the first that applies) or one
+        nested in another `cfg_attr` may reach the file without `test`, so each is refused."""
+        for rival in (
+            '#[cfg_attr(test, path = "tests.rs")]\n#[cfg_attr(not(test), path = "tests.rs")]\n',
+            '#[cfg_attr(test, path = "other.rs")]\n#[path = "tests.rs"]\n',
+            '#[path = "tests.rs"]\n#[cfg_attr(test, path = "other.rs")]\n',
+        ):
+            declaration = self.TEST + rival + "mod prod;\n"
+            extra = (("other.rs", "let shape = 1;\n"), ("prod.rs", "let shape = 1;\n"))
+            self.assertEqual(self.judged(declaration, "lib.rs", extra), 1, rival)
+        nested = (
+            '#[cfg_attr(not(test), cfg_attr(feature = "slow", path = "prod.rs"))]\nmod tests;\n'
+        )
+        files = (("main.rs", nested + "fn main() {}\n"), ("prod.rs", "let shape = 1;\n"))
+        self.assertEqual(self.judged(self.TEST, "lib.rs", files), 1, nested)
+
+    def test_a_rival_in_a_binary_or_under_an_attribute_the_guard_cannot_read_is_refused(self):
+        """A `src/bin` file is a crate root too, and a tool attribute (`#[rustfmt::cfg]`) that
+        names `cfg` is no `cfg`: rustc does not interpret it, so the declaration is compiled in
+        every configuration and the file it names is production code."""
+        tool = self.TEST + '#[rustfmt::cfg]\n#[path = "tests.rs"]\nmod prod;\n'
+        self.assertEqual(self.judged(tool), 1, tool)
+        binary = (("bin/tool.rs", '#[path = "../tests.rs"]\nmod prod;\nfn main() {}\n'),)
+        self.assertEqual(self.judged(self.TEST, "lib.rs", binary), 1, binary)
+        self.assertEqual(self.judged(self.TEST), 0)
+
+    def test_a_plain_path_in_another_file_names_only_the_file_it_spells(self):
+        """`#[path = "prod.rs"] mod tests;` in `depth.rs` reads `prod.rs`, not the `tests.rs` the
+        crate root's test module reads, so it is no rival of it."""
+        other = (("depth.rs", '#[path = "prod.rs"]\nmod tests;\n'), ("prod.rs", "let shape = 1;\n"))
+        self.assertEqual(self.judged(self.TEST + "mod depth;\n", "lib.rs", other), 0)
+        rival = (("depth.rs", '#[path = "tests.rs"]\nmod prod;\n'),)
+        self.assertEqual(self.judged(self.TEST + "mod depth;\n", "lib.rs", rival), 1)
+
+    def test_a_rival_whose_attributes_the_guard_cannot_read_whole_is_refused(self):
+        """`unsafe mod` parses, and rustc rejects it wherever it compiles it, so the guard cannot
+        read its attributes back to the previous item's end: they count as compiling the file
+        without `test`, and a `#[path]` among them may name any file, so every one is refused."""
+        for own, path in (("lib.rs", "tests.rs"), ("depth.rs", "depth/tests.rs")):
+            for rival in (
+                "#[cfg(not(test))]\nunsafe mod tests;\n",
+                f'#[cfg(not(test))]\n#[path = "{path}"]\nunsafe mod prod;\n',
+            ):
+                self.assertEqual(self.judged(self.TEST + rival, own), 1, (own, rival))
+            self.assertEqual(self.judged(self.TEST, own), 0, own)
 
 
 if __name__ == "__main__":
