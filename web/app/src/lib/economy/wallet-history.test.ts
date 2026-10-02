@@ -201,6 +201,14 @@ describe('the wallet body', () => {
   });
 
   it('refuses a body that is not the wallet', () => {
+    // the control: the untouched body is the wallet, so each refusal below is its one field's
+    expect(parseWallet(BODY)).toMatchObject({
+      studyDay: '2025-01-14',
+      balance: 103,
+      lossCap: 30,
+      lossCapLeft: 25,
+      next: 2
+    });
     const broken: unknown[] = [
       null,
       'wallet',
@@ -252,6 +260,14 @@ describe('the wallet body', () => {
   });
 
   it('refuses a date, a list or a movement no wallet holds', () => {
+    // the control: the untouched date, list and movements are the wallet's
+    expect(parseWallet(BODY)).toMatchObject({
+      studyDay: '2025-01-14',
+      movements: [
+        { id: 4, studyDay: '2025-01-14', source: 'fine', amount: -5 },
+        { id: 2, studyDay: '2025-01-13', source: 'mint', amount: 40 }
+      ]
+    });
     const broken: unknown[] = [
       { ...BODY, study_day: ['2025-01-14'] },
       { ...BODY, study_day: 'x2025-01-14' },
