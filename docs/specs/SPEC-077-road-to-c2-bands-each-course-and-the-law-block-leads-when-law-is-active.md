@@ -483,3 +483,18 @@ Rows this pull request does not touch, delivered by CU85b:
   entry's vector writer), `formal/lean/Formal/Vectors.lean` (one arm for it),
   `formal/vectors/road-to-c2.jsonl` (the vectors the checker byte-compares) and
   `crates/curriculum/tests/formal_vectors_road_to_c2.rs` (the Rust cross-check of those vectors).
+- T14, R7's last sentence, the band-up golden (`tools/parity-oracle/goldens/band_up.json`). Its
+  cases `no_notifier` and `milestones_muted` pay the band-up's XP and badge and record no
+  celebration, because the predecessor reads its notifier and its milestone setting before it
+  celebrates. Here coordination offers each owed band-up to the router whatever the notifier and
+  the setting, and the router decides, as it does for every other celebration (SPEC-041, ADR-041):
+  with no bot it withholds the occasion with reason `no_notifier`, and with the celebration kind's
+  switch off it withholds it by that switch. A7 asserts the golden's celebrations for every other
+  case and, for these two, the offer the router receives; it reads the band-up's T5 and its budget
+  exemption from `notifications-policy.json`, whose `band_up` rows this delivery leaves unchanged.
+- T15, the list above of the files that gain `memory: None`. Old (T5): "each gain `memory: None`
+  and nothing else". New: "each gain `memory: None`; `crates/coordination/tests/relight_order.rs`
+  also lists the data-rights registry's `static CURRICULUM` in its census of the statics
+  coordination links", because the census refuses a static of
+  `crates/coordination/src/data_rights_registry.rs` that it does not write out, and this
+  delivery's store part added that static.
