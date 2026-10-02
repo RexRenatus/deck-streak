@@ -233,3 +233,31 @@ function-level mutant does, and the new test kills it. `python3 scripts/mutation
 --band S07100-S07199` at 54da2ba reads `rows: examined 13: killed 13, survived 0, void 0`: each
 killer selected its one test with and without the mutant, and each target was restored byte for
 byte.
+
+## Amendment of 2026-10-02: two folds that overlap, and a day before the first settle (#311)
+
+The order of work: the FoldSettlesOnce model and its covers (417a407, a29203c); ADR-313 and
+SPEC-071's §11 and §12 (c5e943b); A27 and A28 alone, beside the fold as it was (beb465a); the fix,
+each owed day's write reading the settle cursor again inside its own `BEGIN IMMEDIATE` (9118c8b);
+the model's re-read arm, its property SettleInTurn with its witness, and the run covers re-stamped
+(15f680f, 4d52eab); row S07114 (b8b9f69); and this record.
+
+A27 was run at beb465a with its fenced command and with its whole target, and was that target's
+only failure: `cargo test -p deck-streak-coordination --test settle_fold` read 19 passed, 1 failed,
+after `examined 36 overlapping runs`. It failed by its own assertion, not by a compile error, a
+missing fixture or an empty selection. At 9118c8b the package read 148 passed, 0 failed, A27 among
+them. A28 pins what the base already did, so it cannot be red first; ADR-313 states that rule as
+its (b).
+
+```red-first
+A27: red at beb465a: assertion `left == right` failed: every day from the first settled one to the last closed one, once, oldest first: member (None, 20002, 20002), the owner's fold joined first: false; left: [20001, 20001], right: [20001]
+A27: green at 9118c8b
+A28: not red: pins the base's behaviour, which ADR-313 states as its (b): before the first settled day a day has a row only as a study day of the window or as some recompute's current day; green at beb465a, and no code arm exists to mutate
+```
+
+S07114-OWED-DAY-RE-READS-THE-CURSOR replaces the in-write re-read with the day the run already
+holds, which is the fold before the fix. `python3 scripts/mutation_rows.py --row
+S07114-OWED-DAY-RE-READS-THE-CURSOR prove`, run in a clean clone at b8b9f69, reads `KILLED: its
+killer passed without the mutant and failed with it` and `rows: examined 1: killed 1, survived 0,
+void 0`: A27 selected its one test with and without the mutant, and the target was restored byte
+for byte.

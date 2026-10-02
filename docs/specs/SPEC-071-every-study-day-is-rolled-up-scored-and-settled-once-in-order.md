@@ -688,14 +688,14 @@ Insert-only: every earlier byte is kept in order, and this amendment inserts sec
   re-read violates one of them. The decision is ADR-313.
 - **A closed day before the first settled day (R17).** Before the first settled day, a day has a row only as a study day of the window (in the historical form) or as some recompute's current day; any other closed day owes no row, even one a recompute left owed. Each day after the first settled day is settled in turn, gap days included (#311).
 - **What A27 and A28 hold.** A27 runs two folds on two connections to one ledger file, held by a
-  barrier so that both have read the cursor before either settles, over a generated population:
-  with a settled day and with none, the scheduled fold owing one to three days and the owner's one
-  to three, each run in both join orders. It pins the population's size (36 runs) and its distinct
-  members (18), each member recorded inside the offers' call from what the fold handed it, and
-  asserts that the settled days run from the first settled one to the last closed one, each once,
-  oldest first. A28 holds the rule of a closed day before the first settle over three cases: the
-  measured one (reviews on D0 and D0+3, recomputes on D0+2, D0+3 and D0+4, so D0+1 has no row, D0
-  keeps its historical row unsettled, and D0+2 and D0+3 are settled once each); reviews on D0+1
+  barrier so that both have read the cursor before either settles, over a generated population: with
+  a settled day and with none, the scheduled fold's closed day one to three days after D0 and the
+  owner's one to three, each run in both join orders. It pins the population's size (36 runs) and
+  its distinct members (18), each member recorded inside the offers' call from what the fold handed
+  it, and asserts that the settled days run from the first settled one to the last closed one, each
+  once, oldest first. A28 holds the rule of a closed day before the first settle over three cases:
+  the measured one (reviews on D0 and D0+3, recomputes on D0+2, D0+3 and D0+4, so D0+1 has no row,
+  D0 keeps its historical row unsettled, and D0+2 and D0+3 are settled once each); reviews on D0+1
   too, which then has a historical row that is never settled; and no reviews on days 1 to 4 with a
   fold on day 2 whose sync started on day 1 and a fold on day 5, which leave day 3 with no row and
   days 2 and 4 with one. A28 is green at the base and is recorded as a pin, not as red-first.

@@ -93,3 +93,34 @@ sha256 before the next row.
 H4b is why the boundary test added after green matters: without it, the tolerance's boundary is
 unguarded. H2's output also confirms A13's disclosed change: a successful TRUNCATE checkpoint reports
 zero logged and zero checkpointed frames.
+
+## Amendment of 2026-10-02: what each count of the spread pins (#462)
+
+The order of work: SPEC-027's §8 and §9 (c5e943b); A17's spread judged by the members it records,
+and A18 (beb465a); row S02701 (b8b9f69); and this record.
+
+A17's criterion and its fenced command are unchanged, and its body changed, disclosed here: each
+judge records the rollover hour, the UTC offset and the instant it is handed, read inside its own
+call; the spread is refused unless its judges examined 3,600 fires and were handed 3,600 distinct
+members; and the check that one day's sync follows the last one's by exactly one runs only after
+that. A17 was green at beb465a, examining 3,600 fires and 3,600 distinct members.
+
+#462 changes tests only, so no production code can be red first. A18 plants three generators that
+fold the spread, into the check A17 runs, and reads each refused by its distinct member count, with
+its examined count unchanged:
+
+```text
+a repeated offset: refused: the spread's judges examined 3600 fire(s) and were handed 2880 distinct member(s); the spread must hand them 3600 of each
+a repeated hour: refused: the spread's judges examined 3600 fire(s) and were handed 3450 distinct member(s); the spread must hand them 3600 of each
+a repeated day: refused: the spread's judges examined 3600 fire(s) and were handed 3480 distinct member(s); the spread must hand them 3600 of each
+```
+
+```red-first
+A18: not red: #462 is test-only, so no production code can be red first; the test plants three folded generators (a repeated offset, hour and day) into the spread A17 judges and reads each refused by the distinct member count: 2880, 3450 and 3480 of 3,600
+```
+
+S02701-SPREAD-JUDGE-RECORDS-THE-OFFSET makes each judge record one offset whatever rule it is
+handed. `python3 scripts/mutation_rows.py --row S02701-SPREAD-JUDGE-RECORDS-THE-OFFSET prove`, run
+in a clean clone at b8b9f69, reads `KILLED: its killer passed without the mutant and failed with
+it` and `rows: examined 1: killed 1, survived 0, void 0`: A17 selected its one test with and without
+the mutant, and the target was restored byte for byte.
