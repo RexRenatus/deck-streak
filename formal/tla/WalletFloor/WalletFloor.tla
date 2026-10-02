@@ -38,7 +38,9 @@
 \* The ledger maps each key, (study day, source), to the movements that hold it, in insert order.
 \* One reference per source stands for the code's (source, reference) pairs: the properties
 \* compare keys, and two references of one source never share a key. The sources are the mint,
-\* a once-ever deposit, a deposit, a refund and a debit, so a key never mixes two ports' meanings.
+\* a once-ever deposit, a deposit, a refund and a debit. The debit source stands for the purchase,
+\* floored-debit and capped-debit ports together, so those three share one key per day; every other
+\* source holds one port's movements.
 \* A request of 0 or less writes nothing in every port (the `<= 0` arms), so the model draws
 \* requests from 1..MaxAmount; the mint's amount is drawn from 0..MaxAmount, since a settle of 0
 \* lowers a held mint. The loss cap's float share is the integer (w * 3) \div 10, which equals the
