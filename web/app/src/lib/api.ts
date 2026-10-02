@@ -1,3 +1,10 @@
+import {
+  CAPTURE_PATH,
+  captureBody,
+  parseSaved,
+  type CaptureRequest,
+  type Saved
+} from './capture/capture';
 import { FEED_PATH, parseFeed, type FeedItem } from './ladder/feed';
 import {
   parseEnvelope,
@@ -61,6 +68,8 @@ export interface Api {
   insights(): Promise<Answer<Listing[]>>;
   /** One instrument's latest report; null when it has not run yet. */
   insight(id: string): Promise<Answer<Envelope | null>>;
+  /** Saves a quick capture into the vault's inbox, once per capture id (SPEC-118 R10). */
+  capture(request: CaptureRequest): Promise<Answer<Saved>>;
 }
 
 /** How opening a session ended: a session, a refusal only reopening the app can answer, or no answer. */
@@ -99,10 +108,11 @@ export function createApi(options: ApiOptions): Api {
   }
 
   /**
-   * A same-origin GET that carries the session cookie alone: its response, `'reopen'` when only
-   * reopening the app can help, or null when no answer came.
+   * A same-origin request that carries the session cookie alone, a GET unless `init` says
+   * otherwise: its response, `'reopen'` when only reopening the app can help, or null when no
+   * answer came. A renewal repeats the request as it was, body and all.
    */
-  async function get(path: string): Promise<Response | 'reopen' | null> {
+  async function call(path: string, init: RequestInit = {}): Promise<Response | 'reopen' | null> {
     let renewed = false;
     for (;;) {
       if (stopped) return 'reopen';
@@ -120,7 +130,7 @@ export function createApi(options: ApiOptions): Api {
       }
       let response: Response;
       try {
-        response = await send(path, { credentials: 'same-origin' });
+        response = await send(path, { ...init, credentials: 'same-origin' });
       } catch {
         return null;
       }
@@ -138,7 +148,7 @@ export function createApi(options: ApiOptions): Api {
 
   /** A GET of `path` whose JSON body `parse` reads: its value, or why there is none. */
   async function read<T>(path: string, parse: (body: unknown) => T | null): Promise<Answer<T>> {
-    const response = await get(path);
+    const response = await call(path);
     if (response === 'reopen') return { kind: 'reopen' };
     if (response === null || !response.ok) {
       return { kind: 'unavailable' };
@@ -166,7 +176,18 @@ export function createApi(options: ApiOptions): Api {
         return parsed === undefined ? null : { value: parsed };
       }).then((answer) =>
         answer.kind === 'ok' ? { kind: 'ok', value: answer.value.value } : answer
-      )
+      ),
+    capture: async (request) => {
+      const response = await call(CAPTURE_PATH, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: captureBody(request)
+      });
+      if (response === 'reopen') return { kind: 'reopen' };
+      if (response === null) return { kind: 'unavailable' };
+      const saved = parseSaved(response.status, await response.json().catch(() => null));
+      return saved === null ? { kind: 'unavailable' } : { kind: 'ok', value: saved };
+    }
   };
 }
 

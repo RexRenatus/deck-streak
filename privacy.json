@@ -266,11 +266,44 @@
       "erase": "anonymise"
     },
     {
+      "id": "coins",
+      "data": "every coin movement of the wallet: the study day it belongs to, what moved the coins and which one, the signed amount and when it was written",
+      "source": "derived",
+      "stores": ["coin_ledger.*"],
+      "purpose": "keeping the owner's coin balance, its daily loss cap and its floor, and paying each movement at most once",
+      "lawful_basis": "contract",
+      "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "delete"
+    },
+    {
+      "id": "economy-state",
+      "data": "the shop's one row: when the active scroll pass ends and when the pass surcharge ends",
+      "source": "derived",
+      "stores": ["economy_state.*"],
+      "purpose": "knowing whether a scroll pass is active and what the next one costs",
+      "lawful_basis": "contract",
+      "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "anonymise"
+    },
+    {
       "id": "law-drills",
       "data": "which law drills the owner answered, from which surface and on which study day, and each graded drill's type, subject, accepted XP and the study day it was graded; never a drill's text or an answer, which stay in the owner's notes",
       "source": "learner-input",
       "stores": ["drill_answers.*", "drill_grades.*"],
       "purpose": "answering each drill once, paying each graded drill once, and telling the agent which drill types and subjects the owner practised",
+      "lawful_basis": "contract",
+      "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "delete"
+    },
+    {
+      "id": "inbox-captures",
+      "data": "each capture the owner sent to the vault inbox from the bot or the Mini App: its stem, its retry key, its kind, its source, its attachment's file name, the instant it was captured, and whether and where it was filed; the captions, texts and attachments themselves stay in the owner's vault",
+      "source": "learner-input",
+      "stores": ["inbox_captures.*"],
+      "purpose": "saving each capture in the vault inbox once, answering a resend with the first capture's name, and letting the inbox curator file it; no model reads a capture unless the curator's route is configured, and a journal capture never",
       "lawful_basis": "contract",
       "retention": {"until": "account-deletion"},
       "export": true,

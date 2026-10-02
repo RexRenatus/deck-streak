@@ -421,6 +421,51 @@ pub async fn recent_volumes(
         .collect())
 }
 
+/// One stored day's totals, as the awards read them (SPEC-073 R5, R10): its stored score, its
+/// study reviews and their seconds.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct RecentTotals {
+    /// The study day.
+    pub day: StudyDay,
+    /// Its stored score.
+    pub score: i64,
+    /// Its study reviews.
+    pub reviews: i64,
+    /// Their seconds, each answer capped.
+    pub seconds: f64,
+}
+
+/// The totals of the `limit` most recent rows on or before `through`, most recent first: the
+/// window the badges' week and the records' detection read (SPEC-073 R5, R10).
+///
+/// # Errors
+///
+/// [`KernelError::Database`] when the read fails.
+pub async fn recent_totals(
+    write: &mut SqliteConnection,
+    through: StudyDay,
+    limit: i64,
+) -> Result<Vec<RecentTotals>, KernelError> {
+    let through = through.epoch_day();
+    let rows = sqlx::query!(
+        r#"SELECT study_day AS "study_day!", score, reviews, seconds FROM daily_rollup
+           WHERE study_day <= ?1 ORDER BY study_day DESC LIMIT ?2"#,
+        through,
+        limit
+    )
+    .fetch_all(write)
+    .await?;
+    Ok(rows
+        .into_iter()
+        .map(|row| RecentTotals {
+            day: StudyDay::from_epoch_day(row.study_day),
+            score: row.score,
+            reviews: row.reviews,
+            seconds: row.seconds,
+        })
+        .collect())
+}
+
 /// The rollup repository's reads over the service's database, for the surfaces.
 #[derive(Clone, Debug)]
 pub struct RollupStore {

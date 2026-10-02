@@ -1,0 +1,134 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT stem AS \"stem!\", capture_key, kind, source, attachment, captured_at,\n                          state, destination, filed_day, created_at\n                   FROM inbox_captures ORDER BY stem",
+  "describe": {
+    "columns": [
+      {
+        "name": "stem!",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "inbox_captures",
+            "name": "stem"
+          }
+        }
+      },
+      {
+        "name": "capture_key",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "inbox_captures",
+            "name": "capture_key"
+          }
+        }
+      },
+      {
+        "name": "kind",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "inbox_captures",
+            "name": "kind"
+          }
+        }
+      },
+      {
+        "name": "source",
+        "ordinal": 3,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "inbox_captures",
+            "name": "source"
+          }
+        }
+      },
+      {
+        "name": "attachment",
+        "ordinal": 4,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "inbox_captures",
+            "name": "attachment"
+          }
+        }
+      },
+      {
+        "name": "captured_at",
+        "ordinal": 5,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "inbox_captures",
+            "name": "captured_at"
+          }
+        }
+      },
+      {
+        "name": "state",
+        "ordinal": 6,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "inbox_captures",
+            "name": "state"
+          }
+        }
+      },
+      {
+        "name": "destination",
+        "ordinal": 7,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "inbox_captures",
+            "name": "destination"
+          }
+        }
+      },
+      {
+        "name": "filed_day",
+        "ordinal": 8,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "inbox_captures",
+            "name": "filed_day"
+          }
+        }
+      },
+      {
+        "name": "created_at",
+        "ordinal": 9,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "inbox_captures",
+            "name": "created_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "e7a1e72fc87c3ae4004a87a6edb5111eb65638216b76fcdd12e3cec484bd2c71"
+}

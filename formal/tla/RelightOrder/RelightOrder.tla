@@ -1,8 +1,8 @@
 ---------------------------- MODULE RelightOrder ----------------------------
 \* @phx covers crates/coordination/src/relight.rs anchor=route_due_relights digest=sha256:c3ed617f7a2a14414ff87af6acc9acf08fb37cb1d9231b7bd75ed31702451aec
 \* @phx covers crates/coordination/src/relight.rs anchor=announce_relight digest=sha256:9f527fa62497e4a68978e0da4fd845c774a1035cb92ec875744648252e794caf
-\* @phx covers crates/coordination/src/sync_cycle.rs anchor=sync_cycle digest=sha256:1b41728ec7e07a7581f9cf9ce88f74f02ad3e59e9a0d402c4ac81a71d128d060
-\* @phx covers crates/coordination/src/recompute/mod.rs anchor=run digest=sha256:9cd6a034ba6acaaa0686f1aa8def456b21e9128164b1afc52623548b1a62dea1
+\* @phx covers crates/coordination/src/sync_cycle.rs anchor=sync_cycle digest=sha256:b8158a6a2359166e7b55a5dbbb15189d50cdbeebd84c20a0805067046c31dc6c
+\* @phx covers crates/coordination/src/recompute/mod.rs anchor=run digest=sha256:7a383ba01872f4dde46ccb5220fa492de1f89498adf71774cae868e3e0b7acbb
 \* @phx covers crates/coordination/src/recompute/mod.rs anchor=runs_today_only_rules digest=sha256:f924a917b193bcfc4a5e0a9a39b45e5b8cb67f8be0b5cc1d6e765f0bc27f5e67
 \* @phx covers crates/coordination/src/recompute/streaks.rs anchor=evaluate digest=sha256:bcafac597ac0e93e481c3c161efd5e28ed055657b74040ff7306c76066dc52f9
 \* @phx covers crates/coordination/src/recompute/streaks.rs anchor=relight digest=sha256:19cb334d99817721cecf6432554bbd9cbcb501c80c5fdf2aa9d94dd425a16ed7
@@ -116,6 +116,20 @@
 (*  - A routed day's row is cleared in a step of its own (Clear), after    *)
 (*    its route; the code clears it before the next day's route.           *)
 (*  - One cycle runs at a time (the sync job's runner), with a router.     *)
+(*  - The awards' offers (SPEC-073 part B; tla/AwardOnce models them):     *)
+(*    sync_cycle hands Fold::run an AwardOffers over the cycle's router,   *)
+(*    and Fold::run calls offer_owed before each settled day's write,      *)
+(*    before the current day's write and after the revisit write. Each     *)
+(*    offer routes a badge or record key in the router's own writes and    *)
+(*    marks it in a write of its own; offer_owed logs every error and      *)
+(*    never fails the fold. The base review count feeds the badges'        *)
+(*    lifetime only. No variable here moves: a stutter, re-stamped.        *)
+(*  - #311's re-read (ADR-313), re-read 2026-10-02: each owed day's        *)
+(*    write in Fold::run now reads the settle cursor first, and a write    *)
+(*    whose day is not the one owed is rolled back before any step runs.   *)
+(*    With one cycle at a time the cursor it reads is the day before the   *)
+(*    day in hand, or none on the first, so that arm never runs here: no   *)
+(*    variable here moves, a stutter, re-stamped.                          *)
 (***************************************************************************)
 EXTENDS Naturals, FiniteSets
 

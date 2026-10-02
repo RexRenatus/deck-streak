@@ -17,7 +17,6 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from collections import Counter
 from pathlib import Path
 
 import _units
@@ -143,13 +142,20 @@ CREDENTIAL_SOURCES = {
 # transport, owner gate and `/sync` (SPEC-026 R1, R11), and the `sync` job's syncer (SPEC-022,
 # SPEC-027). The job template's `sync` instance carries the sync's pair in its drop-in, which the
 # reader reads with the template (SPEC-062 R14), and the private rail's map answers them for the
-# `sync` instance alone, the one job that reads them (ADR-038; SPEC-061 §8, A14). SPEC-031's alert
+# `sync` instance alone, the one job that reads them (ADR-038; SPEC-061 §8, A14). The `held_flush`
+# instance's drop-in carries the bot token and the owner's id, which its router sends with (#291),
+# so the template's reading is the four. SPEC-031's alert
 # reads the bot token and the owner's id, whose private chat it pages (R3);
 # the evaluator and the watch read none.
 ROLE_CREDENTIALS = {
     "deck-streak-api.service": ("OWNER_USER_ID", "TELEGRAM_BOT_TOKEN"),
     "deck-streak-bot.service": ("OWNER_USER_ID", "TELEGRAM_BOT_TOKEN"),
-    f"{JOB_TEMPLATE}@.service": ("SYNC_USERNAME", "SYNC_PASSWORD"),
+    f"{JOB_TEMPLATE}@.service": (
+        "SYNC_USERNAME",
+        "SYNC_PASSWORD",
+        "OWNER_USER_ID",
+        "TELEGRAM_BOT_TOKEN",
+    ),
     f"{ALERT_TEMPLATE}@.service": ("OWNER_USER_ID", "TELEGRAM_BOT_TOKEN"),
     SLO_SERVICE: (),
     WATCH_SERVICE: (),
@@ -265,6 +271,7 @@ ONE_YEAR = 31_536_000
 # (SPEC-056 R15).
 WAIVED = {
     (f"{JOB_TEMPLATE}@sync.timer", "randomized-delay-missing"),
+    (f"{JOB_TEMPLATE}@held_flush.timer", "randomized-delay-missing"),
     (f"{JOB_TEMPLATE}@maintenance.timer", "randomized-delay-missing"),
     (f"{JOB_TEMPLATE}@maintenance.timer", "calendar-not-persistent"),
     (f"{JOB_TEMPLATE}@drill_postback.timer", "randomized-delay-missing"),
@@ -389,14 +396,23 @@ def credential_lines(root):
     return found
 
 
+# The ONE place that names the instance drop-in directories a shipped template may carry, by the
+# template's file name (SPEC-062 R14, amended; ruling PR #512). The unit guards read every instance
+# directory into its template, so an instance is admitted only by name and any other is refused:
+# `sync` loads the sync login, `held_flush` loads the bot's token and the owner's id (#291).
+INSTANCE_DROPIN_ALLOWLIST = {f"{JOB_TEMPLATE}@.service": ("sync", "held_flush")}
+
 NON_UNIT_DROPIN = "deploy/journald.conf.d"
 NON_UNIT_DIRECTORIES = (NON_UNIT_DROPIN, "deploy/tmpfiles.d")
 
 
-def dropin_directory_refusals(root):
+def dropin_directory_refusals(root, allowlist=None):
     """Every `*.d/` directory under `root`'s deploy/ that is not the drop-in directory of a unit
     shipped beside it, as one line each: only `<unit name>.d/` is read with a unit (SPEC-066 R2), so
-    any other is refused, and the directories of files that are no unit (journald, tmpfiles.d) are named here."""
+    any other is refused, and the directories of files that are no unit (journald, tmpfiles.d) are named here.
+    A shipped template's instance directory is admitted only for an instance `allowlist` names (by
+    default INSTANCE_DROPIN_ALLOWLIST)."""
+    allowed = INSTANCE_DROPIN_ALLOWLIST if allowlist is None else allowlist
     refused = []
     deploy = Path(root) / "deploy"
     if not deploy.is_dir():
@@ -417,22 +433,25 @@ def dropin_directory_refusals(root):
         stem, at, rest = path.name.removesuffix(".d").partition("@")
         instance, dot, kind = rest.rpartition(".")
         template = (path.parent, stem, kind)
-        return template if at and dot and instance and template in templates else None
+        found = at and dot and instance and template in templates
+        return (f"{stem}@.{kind}", instance) if found else None
 
     folders = [path for path in entries if path.is_dir() and path.name.endswith(".d")]
-    instances = Counter(the_shipped_template_of(path) for path in folders if path not in own)
     for path in folders:
         rel = path.relative_to(root).as_posix()
         if path in own:
             continue
-        template = the_shipped_template_of(path)
-        # The guards read a template's instance drop-ins into the template (SPEC-062 R14): exact
-        # for one instance, but two are merged where systemd keeps them apart, so both are refused.
-        if template is not None and instances[template] == 1:
-            continue
-        if template is not None:
+        found = the_shipped_template_of(path)
+        if found is not None:
+            # The guards read every instance drop-in of a shipped template into the template
+            # (SPEC-062 R14), so an instance is admitted by name alone; which instance loads which
+            # credential is judged by the instance tests below (#291).
+            name, instance = found
+            if instance in allowed.get(name, ()):
+                continue
             refused.append(
-                f"{rel}: is not the only instance drop-in directory of its template, and is refused"
+                f"{rel}: the instance {instance!r} of {name} is not on INSTANCE_DROPIN_ALLOWLIST, "
+                "and is refused"
             )
             continue
         if rel in NON_UNIT_DIRECTORIES:
@@ -1115,18 +1134,33 @@ class CredentialsComeFromTheSocket(unittest.TestCase):
             )
 
     def test_a_shipped_templates_instance_dropin_directory_is_its_own_and_no_other_is(self):
-        # systemd reads an instance's drop-ins from `<name>@<instance>.<type>.d/`, so a shipped
-        # template's is admitted and read with the template: a key planted in it is judged as the
-        # template's own. An instance of a template the tree does not ship is refused, and so are
-        # two instances of a shipped one, which the reader would merge (SPEC-062 R14; SPEC-066
-        # amendment).
-        refused = "is not the drop-in directory of a unit shipped beside it, and is refused"
+        # systemd reads an instance's drop-ins from `<name>@<instance>.<type>.d/`. The unit guards
+        # read every such directory into the template, so a directory is admitted only for an
+        # instance NAMED on INSTANCE_DROPIN_ALLOWLIST, the one place that names them: an unnamed
+        # instance of a shipped template is refused, and so is any instance of a template the tree
+        # does not ship, named or not (SPEC-062 R14, amended; #291).
+        shipped = "is not on INSTANCE_DROPIN_ALLOWLIST, and is refused"
+        unshipped = "is not the drop-in directory of a unit shipped beside it, and is refused"
         with tempfile.TemporaryDirectory() as scratch:
             systemd = Path(scratch) / "deploy" / "systemd"
             systemd.mkdir(parents=True)
             (systemd / "planted@.service").write_text("[Service]\n", encoding="utf-8")
             (systemd / "planted@tty1.service.d").mkdir()
-            self.assertEqual(dropin_directory_refusals(scratch), [], "the shipped template's own")
+            self.assertEqual(
+                dropin_directory_refusals(scratch),
+                [
+                    f"deploy/systemd/planted@tty1.service.d: the instance 'tty1' of planted@.service {shipped}"
+                ],
+                "an instance the allowlist does not name",
+            )
+            named = {"planted@.service": ("tty1", "test"), "other-app@.service": ("tty1",)}
+            self.assertEqual(
+                dropin_directory_refusals(scratch, named), [], "the instance the list names"
+            )
+            (systemd / "planted@test.service.d").mkdir()
+            self.assertEqual(
+                dropin_directory_refusals(scratch, named), [], "a second instance, also named"
+            )
             (systemd / "planted@tty1.service.d" / "10-planted.conf").write_text(
                 "[Unit]\nRequires=missing.service\n", encoding="utf-8"
             )
@@ -1137,28 +1171,25 @@ class CredentialsComeFromTheSocket(unittest.TestCase):
                     "deploy/systemd/planted@tty1.service.d/10-planted.conf:2: [Unit] Requires="
                     "missing.service is not on this unit's list of keys, and is refused"
                 ],
-                "a key planted in the template's instance drop-in",
+                "a key planted in the named instance's drop-in",
             )
             (systemd / "other-app@tty1.service.d").mkdir()
-            (systemd / "other-app@tty1.service.d" / "override.conf").write_text(
-                "[Service]\nNice=5\n", encoding="utf-8"
-            )
             self.assertEqual(
-                dropin_directory_refusals(scratch),
-                [f"deploy/systemd/other-app@tty1.service.d: {refused}"],
-                "an instance of a template the tree does not ship",
+                dropin_directory_refusals(scratch, named),
+                [f"deploy/systemd/other-app@tty1.service.d: {unshipped}"],
+                "an instance of a template the tree does not ship, though the list names it",
             )
-            (systemd / "planted@test.service.d").mkdir()
-            shared = "is not the only instance drop-in directory of its template, and is refused"
-            self.assertEqual(
-                dropin_directory_refusals(scratch),
-                [
-                    f"deploy/systemd/other-app@tty1.service.d: {refused}",
-                    f"deploy/systemd/planted@test.service.d: {shared}",
-                    f"deploy/systemd/planted@tty1.service.d: {shared}",
-                ],
-                "a second instance of the shipped template",
-            )
+
+    def test_every_shipped_instance_dropin_directory_is_named_or_refused(self):
+        # The census the tree answers to: each instance directory under a shipped template is on
+        # the allowlist, and the list holds nothing the tree does not ship.
+        folders = examined(
+            "job instance drop-in directories", sorted(SYSTEMD.glob(f"{JOB_TEMPLATE}@*.service.d"))
+        )
+        named = INSTANCE_DROPIN_ALLOWLIST[f"{JOB_TEMPLATE}@.service"]
+        shipped = {f.name.removesuffix(".service.d").partition("@")[2] for f in folders}
+        self.assertEqual(shipped, set(named))
+        self.assertEqual(dropin_directory_refusals(REPO), [])
 
     def test_a_templates_own_dropin_directory_is_read_once(self):
         # `<name>@.<type>.d/` is the template's own directory; the instance glob must not match it
@@ -2153,11 +2184,19 @@ class TheSyncLoginIsTheSyncJobsAlone(unittest.TestCase):
         self.assertTrue(dropin.is_file(), f"{dropin.relative_to(REPO)} is missing")
         loaded = re.findall(r"^LoadCredential=(.*)$", dropin.read_text(encoding="utf-8"), re.M)
         self.assertEqual(sorted(loaded), sorted(f"{i}:{SOCKET}" for i in self.SYNC_LOGIN))
-        # No other instance has a drop-in that loads one.
+        # No other instance has a drop-in that loads one: the held flush's drop-in loads the
+        # bot's two credentials, never the sync login (#291).
         others = [
-            d for d in SYSTEMD.glob(f"{JOB_TEMPLATE}@*.service.d") if d.name != dropin.parent.name
+            d
+            for d in SYSTEMD.glob(f"{JOB_TEMPLATE}@*.service.d")
+            if d.name != dropin.parent.name
+            and any(
+                login in conf.read_text(encoding="utf-8")
+                for conf in d.glob("*.conf")
+                for login in self.SYNC_LOGIN
+            )
         ]
-        self.assertEqual(others, [], "an instance other than sync ships a drop-in")
+        self.assertEqual(others, [], "an instance other than sync loads the sync login")
         # The pair list holds them under the sync instance, and under no other unit.
         code = subprocess.run(
             [sys.executable, str(DEPLOY / "scripts" / "credential-pairs.py"), "--root", str(REPO)],
@@ -2177,6 +2216,32 @@ class TheSyncLoginIsTheSyncJobsAlone(unittest.TestCase):
             unit = f"{JOB_TEMPLATE}@{ident}.service"
             self.assertFalse([p for p in pairs if p["unit"] == unit], f"{ident} asks")
         examined("pair(s) listed", pairs)
+
+    def test_the_bots_credentials_are_loaded_by_the_held_flush_alone(self):
+        # Only the held flush sends to the owner's chat (#291): its instance's drop-in loads the
+        # bot's token and the owner's id, and no other job instance, nor the template, asks.
+        bot = ("owner-user-id", "telegram-bot-token")
+        text = (SYSTEMD / f"{JOB_TEMPLATE}@.service").read_text(encoding="utf-8")
+        for ident in bot:
+            self.assertNotIn(ident, text, "the template requests a bot credential")
+        own = self.dropin_dir(REPO, "held_flush") / "20-bot-credentials.conf"
+        self.assertTrue(own.is_file(), f"{own.relative_to(REPO)} is missing")
+        loaded = re.findall(r"^LoadCredential=(.*)$", own.read_text(encoding="utf-8"), re.M)
+        self.assertEqual(sorted(loaded), sorted(f"{i}:{SOCKET}" for i in bot))
+        folders = examined(
+            "job instance drop-in directories", sorted(SYSTEMD.glob(f"{JOB_TEMPLATE}@*.service.d"))
+        )
+        others = [
+            folder.name
+            for folder in folders
+            if folder != own.parent
+            and any(
+                ident in conf.read_text(encoding="utf-8")
+                for conf in folder.glob("*.conf")
+                for ident in bot
+            )
+        ]
+        self.assertEqual(others, [], "an instance other than the held flush loads a bot credential")
 
     def test_the_effective_check_accepts_the_shipped_drop_in_and_no_other(self):
         checker = DEPLOY / "scripts" / "effective-check.py"

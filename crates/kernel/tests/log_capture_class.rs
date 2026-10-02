@@ -11,9 +11,10 @@
 //! reaches a line first, or whose first registration of it straddles a capture's registration,
 //! caches it as never enabled, and a capture made on another thread then never sees it.
 //!
-//! Two tests carry the class, and two more pin the helper's refusals. One runs each scenario in a
-//! child process of this binary, whose dispatcher registry is empty at its start, so the loss does
-//! not depend on the other tests' timing: another thread reaches the line before the capture, and another thread's
+//! Two tests carry the class, and the rest pin the helper's refusals, its count and its doc.
+//! One runs each scenario in a child process of this binary, whose dispatcher registry is empty
+//! at its start, so the loss does not depend on the other tests' timing: another thread reaches
+//! the line before the capture, and another thread's
 //! first registration of the line is in flight while the capture is made. Each child also checks
 //! that the floor was the global default before its capture registered: a capture that registers
 //! first leaves a window in which another thread's registration asks no default, answers `never`
@@ -411,6 +412,97 @@ fn a_capture_nested_inside_a_capture_on_one_thread_is_refused() {
         elsewhere.lines().len(),
         1,
         "a capture on another thread is admitted and receives its line"
+    );
+}
+
+/// A capture made while this thread holds none and its default is not the floor is refused, through
+/// either entry, by a message that names the missing floor and not a nested capture (SPEC-024 A19,
+/// issue #522). A capture attempted inside a dispatcher's own call reads the default as none while
+/// some thread holds a scoped default; while none does, the pinned `tracing-core` answers the global
+/// default there, which is the floor. So another thread holds a capture for the attempt's span,
+/// whatever the binary's other tests hold.
+#[test]
+fn a_capture_where_the_floor_is_not_the_default_names_the_missing_floor() {
+    const NAME: &str = "a capture is refused: the floor is not this thread's default";
+    let (held, on_held) = sync_channel(0);
+    let (release, on_release) = sync_channel::<()>(0);
+    let elsewhere = std::thread::spawn(move || {
+        let _guard = log_capture::hold_capture(Captured::default());
+        held.send(())
+            .expect("the test hears the other capture is held");
+        on_release
+            .recv()
+            .expect("the test releases the other capture");
+    });
+    on_held.recv().expect("another thread holds a capture");
+    let (scoped, holding) = tracing::dispatcher::get_default(|_| {
+        (
+            refusal(|| log_capture::with_capture(Captured::default(), || ())),
+            refusal(|| drop(log_capture::hold_capture(Captured::default()))),
+        )
+    });
+    release.send(()).expect("the other capture is released");
+    elsewhere.join().expect("the other thread's capture ends");
+    assert_eq!(
+        scoped, NAME,
+        "the scoped entry, where the floor is not this thread's default"
+    );
+    assert_eq!(
+        holding, NAME,
+        "the holding entry, where the floor is not this thread's default"
+    );
+}
+
+/// A capture made after a held capture dropped is admitted and receives its line: the count of
+/// captures the helper holds on this thread is back at 0 once the held capture's guard drops
+/// (SPEC-024 A19).
+#[test]
+fn a_capture_after_a_held_capture_dropped_is_admitted() {
+    let first = Captured::default();
+    let then = Captured::default();
+    let guard = log_capture::hold_capture(first.clone());
+    reach();
+    drop(guard);
+    let admitted = refusal(|| log_capture::with_capture(then.clone(), reach));
+    assert_eq!(
+        admitted, "",
+        "a capture after a held capture dropped is admitted"
+    );
+    assert_eq!(
+        then.lines(),
+        ["log_capture_class"],
+        "the admitted capture receives its line"
+    );
+    assert_eq!(
+        first.lines(),
+        ["log_capture_class"],
+        "the held capture kept its own line"
+    );
+}
+
+/// The doc of the helper's nesting refusal says where its reading of the default holds: outside a
+/// dispatcher's own call, since inside one the default can read as none (SPEC-024 A20, issue #511's
+/// wording 3).
+#[test]
+fn the_nesting_refusal_doc_names_a_dispatchers_own_call() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let text = fs::read_to_string(root.join(HELPER)).expect("the helper's source");
+    let lines: Vec<&str> = text.lines().collect();
+    let at = lines
+        .iter()
+        .position(|line| line.starts_with("fn refuse_nested_capture("))
+        .expect("the refusal's definition in the helper");
+    let mut doc: Vec<&str> = lines[..at]
+        .iter()
+        .rev()
+        .take_while(|line| line.starts_with("///"))
+        .map(|line| line.trim_start_matches('/').trim())
+        .collect();
+    doc.reverse();
+    let doc = examined("doc line(s) of the nesting refusal", doc).join(" ");
+    assert!(
+        doc.contains("outside a dispatcher's own call"),
+        "the nesting refusal's doc does not say where its reading of the default holds: {doc}"
     );
 }
 
@@ -1493,5 +1585,30 @@ fn every_capture_in_the_workspace_goes_through_the_helper() {
         [GLOBAL_DEFAULT],
         "the one production global default is the only one: {report}"
     );
-    assert_eq!(routed, 13, "{report}");
+    assert_eq!(routed, 18, "{report}");
+}
+
+/// A capture whose body panics lowers the helper's count as it unwinds, so a later capture on the
+/// thread is admitted: `with_capture`'s drop guard, not a line after the body, restores the count.
+#[test]
+fn a_capture_after_a_panicking_body_is_admitted() {
+    let first = Captured::default();
+    let then = Captured::default();
+    let body = refusal(|| {
+        log_capture::with_capture::<_, ()>(first.clone(), || {
+            reach();
+            panic!("the capture's body panics");
+        });
+    });
+    assert_eq!(
+        body, "the capture's body panics",
+        "the body's own panic unwound the capture"
+    );
+    let admitted = refusal(|| log_capture::with_capture(then.clone(), reach));
+    assert_eq!(admitted, "", "a capture after a panicking body is admitted");
+    assert_eq!(
+        then.lines(),
+        ["log_capture_class"],
+        "the admitted capture receives its line"
+    );
 }

@@ -25,6 +25,7 @@ pub mod error;
 pub mod ids;
 pub mod logging;
 pub mod offload;
+pub mod pynum;
 pub mod redact;
 pub mod settings;
 pub mod study_day;

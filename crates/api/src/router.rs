@@ -33,6 +33,7 @@ use axum::http::header::{AUTHORIZATION, COOKIE, SET_COOKIE};
 use axum::http::{HeaderName, StatusCode};
 use axum::{BoxError, Router};
 use deck_streak_coordination::drills::{DrillNotes, RealFs};
+use deck_streak_coordination::inbox_capture::InboxCaptures;
 use deck_streak_coordination::instruments::InstrumentService;
 use deck_streak_coordination::progression::level_view::LawTierSource;
 use tower::ServiceBuilder;
@@ -51,6 +52,7 @@ use tracing::Level;
 use crate::analytics_routes;
 use crate::drill_routes;
 use crate::health::{self, Readiness};
+use crate::inbox_capture_route;
 use crate::insights_routes;
 use crate::notifications_routes;
 use crate::session_routes::{self, OwnerAccess};
@@ -77,6 +79,7 @@ pub struct ApiState {
     instruments: Option<Arc<dyn InstrumentService>>,
     law_tiers: Option<Arc<dyn LawTierSource>>,
     drills: Option<Arc<DrillNotes<RealFs>>>,
+    inbox: Option<Arc<InboxCaptures<RealFs>>>,
 }
 
 impl std::fmt::Debug for ApiState {
@@ -88,6 +91,7 @@ impl std::fmt::Debug for ApiState {
             .field("instruments", &self.instruments.is_some())
             .field("law_tiers", &self.law_tiers.is_some())
             .field("drills", &self.drills.is_some())
+            .field("inbox", &self.inbox.is_some())
             .finish()
     }
 }
@@ -102,6 +106,7 @@ impl ApiState {
             instruments: None,
             law_tiers: None,
             drills: None,
+            inbox: None,
         }
     }
 
@@ -134,6 +139,14 @@ impl ApiState {
         self
     }
 
+    /// This state, serving the quick capture route over the vault's inbox (SPEC-118 R10). Without
+    /// it the route answers 503 `vault_not_open`.
+    #[must_use]
+    pub fn with_inbox(mut self, captures: Arc<InboxCaptures<RealFs>>) -> Self {
+        self.inbox = Some(captures);
+        self
+    }
+
     /// Whether the API can answer from its database.
     #[must_use]
     pub const fn readiness(&self) -> &Readiness {
@@ -151,6 +164,7 @@ pub fn router(state: ApiState) -> Router {
     let instruments = state.instruments.clone();
     let law_tiers = state.law_tiers.clone();
     let drills = state.drills.clone();
+    let inbox = state.inbox.clone();
     let routes = health::routes().with_state(state);
     let routes = match owner {
         Some(access) => {
@@ -167,6 +181,11 @@ pub fn router(state: ApiState) -> Router {
                     access.clone(),
                     readiness.clone(),
                     drills,
+                ))
+                .merge(inbox_capture_route::routes(
+                    access.clone(),
+                    readiness.clone(),
+                    inbox,
                 ))
                 .merge(notifications_routes::routes(access.clone(), readiness));
             match instruments {

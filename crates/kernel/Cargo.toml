@@ -23,5 +23,7 @@ tracing.workspace = true
 tracing-subscriber.workspace = true
 
 [dev-dependencies]
+# The golden reader parses floats exactly, so a parity test compares bits (SPEC-302).
+serde_json = { workspace = true, features = ["float_roundtrip"] }
 tempfile.workspace = true
 tokio = { workspace = true, features = ["macros", "rt"] }

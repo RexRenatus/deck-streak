@@ -1,0 +1,62 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id AS \"id!\", dedupe_key, hold, claim FROM notification_queue\n           WHERE state = 'abandoned' ORDER BY id",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "notification_queue",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "dedupe_key",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "notification_queue",
+            "name": "dedupe_key"
+          }
+        }
+      },
+      {
+        "name": "hold",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "notification_queue",
+            "name": "hold"
+          }
+        }
+      },
+      {
+        "name": "claim",
+        "ordinal": 3,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "notification_queue",
+            "name": "claim"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "9a9970bfaf8bc3c3827001fcb853faa2995045647bf05c9f8d2a539cf6deef4f"
+}

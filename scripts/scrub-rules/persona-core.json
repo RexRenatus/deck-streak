@@ -54,7 +54,7 @@
     {
       "id": "email",
       "flags": "i",
-      "regex": "\\b[A-Za-z0-9._%+-]+@(?!(?:[A-Za-z0-9-]+\\.)*(?:example\\.(?:com|org|net)|example|test|invalid|localhost)\\b)[A-Za-z0-9-]+(?:\\.[A-Za-z0-9-]+)*\\.[A-Za-z]{2,}\\b"
+      "regex": "\\b(?-i:(?<=[^\\s/\"'=A-Za-z0-9_])(?<![A-Za-z0-9_][.-])|(?![A-Za-z0-9._-]+@[A-Za-z0-9-]+(?:\\.[A-Za-z0-9-]+)*\\.(?-i:service|socket|device|mount|automount|swap|path|timer|slice|scope)(?-i:\\.d|\\.wants|\\.requires|\\.upholds)?/))[A-Za-z0-9._%+-]+@(?!(?:[A-Za-z0-9-]+\\.)*(?:example\\.(?:com|org|net)|example|test|invalid|localhost)\\b)[A-Za-z0-9-]+(?:\\.[A-Za-z0-9-]+)*\\.[A-Za-z]{2,}\\b"
     }
   ],
   "literals": []

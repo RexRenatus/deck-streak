@@ -50,6 +50,11 @@ that the unit guards refuse it, because systemd applies an instance's drop-in to
 alone while the guards read it with the template. It failed by assertion at 4777c36 over the whole
 module (23 tests, one failure) and is green at f369943, with the row S06228 pinning the key rule.
 
+Fix round 6 (#291): A23 is red at 5b0931c, where the allowlist the census reads does not exist, and
+green at ed840ef. The green commit edits the test module because the guard and its one allowlist
+live there; it adds the allowlist, the refusal of an unnamed instance and the `allowlist` argument,
+and rewrites no assertion. S06226 is retired and S06229 to S06234 replace its meaning.
+
 ```red-first
 A1: red at 300eca2: AssertionError: deploy/deploy.sh does not exist
 A1: green at bc0665a
@@ -91,4 +96,7 @@ A21: red at 6938671: AssertionError: Lists differ: [] != ["deploy/systemd/plante
 A21: green at 59d8186
 A22: red at 4777c36: AssertionError: Lists differ: [] != ["deploy/systemd/planted@tty1.service.d/10[131 chars]sed"]
 A22: green at f369943
+A23: red at 5b0931c: NameError: name 'INSTANCE_DROPIN_ALLOWLIST' is not defined
+A23: green at ed840ef
+A24: not red: the held flush's drop-in loads the bot's pair from its first commit; the rows S06231 and S06232 prove the test fails when the sync instance or the template loads it
 ```
