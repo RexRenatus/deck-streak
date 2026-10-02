@@ -1,3 +1,4 @@
+import { type CaptureRequest, type Saved } from './capture/capture';
 import { FEED_PATH, parseFeed, type FeedItem } from './ladder/feed';
 import {
   parseEnvelope,
@@ -61,6 +62,8 @@ export interface Api {
   insights(): Promise<Answer<Listing[]>>;
   /** One instrument's latest report; null when it has not run yet. */
   insight(id: string): Promise<Answer<Envelope | null>>;
+  /** Saves a quick capture into the vault's inbox, once per capture id (SPEC-118 R10). */
+  capture(request: CaptureRequest): Promise<Answer<Saved>>;
 }
 
 /** How opening a session ended: a session, a refusal only reopening the app can answer, or no answer. */
@@ -166,7 +169,8 @@ export function createApi(options: ApiOptions): Api {
         return parsed === undefined ? null : { value: parsed };
       }).then((answer) =>
         answer.kind === 'ok' ? { kind: 'ok', value: answer.value.value } : answer
-      )
+      ),
+    capture: async () => ({ kind: 'unavailable' })
   };
 }
 

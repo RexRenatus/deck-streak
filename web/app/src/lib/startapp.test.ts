@@ -73,6 +73,12 @@ describe('the startapp token map', () => {
     expect(destinations).toEqual([...ROUTES].sort());
   });
 
+  // SPEC-118 R11; ruling (m). The quick capture is a screen of the route table, so a launch link
+  // opens it through its own token, like every other screen.
+  it('the capture token opens the quick capture screen', () => {
+    expect(routeFor('capture')).toBe('/capture');
+  });
+
   // SPEC-071 §10: the table is read by exact key, so no screen shows whether the shape
   // holds; these pin each part of it (the anchors, the characters, the length) directly.
   it('a token is one to 64 of A-Z, a-z, 0-9, underscore and hyphen, and nothing else is', () => {
