@@ -391,3 +391,7 @@ cookie population: 6 member(s); mismatches 4
 The first red line names, verbatim, `a latin-1 escape rewritten as raw bytes, a value changes: read
 ('named', ['scripts/cookie.py']), expected ('applies', None)`. At c3845425ac8f886636cdab6326529e174302bb55 the whole module reads
 `Ran 30 tests` and OK, and the population reads `cookie population: 6 member(s); mismatches 0`.
+
+The module now holds seven members, the seventh (a latin-1 declaration removed beside a
+docstring edit) being mutation coverage added after the round-2 PASS, green at its own commit and
+not red-first evidence.

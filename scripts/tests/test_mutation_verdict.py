@@ -2296,6 +2296,12 @@ def cookie_edits():
             APPLIES,
         ),
         (
+            "a latin-1 declaration removed beside a docstring edit, a value changes",
+            latin + doc + b'S = "\xc3\xa9"\n',
+            reworded + b'S = "\xc3\xa9"\n',
+            APPLIES,
+        ),
+        (
             "a declared UTF-8 script whose change is a docstring alone",
             utf8 + doc + b'S = "\xc3\xa9"\n',
             utf8 + reworded + b'S = "\xc3\xa9"\n',
@@ -2506,7 +2512,7 @@ class ADocstringOnlyScriptChangeIsNamed(unittest.TestCase):
                 mismatches.append(f"{name}: read {found}, expected {expected}")
         print(f"cookie population: {len(members)} member(s); mismatches {len(mismatches)}")
         self.assertEqual(mismatches, [])
-        self.assertEqual(readings, {"applies": 4, "named": 1, "refused": 1})
+        self.assertEqual(readings, {"applies": 5, "named": 1, "refused": 1})
 
     def test_the_docstring_is_only_the_first_bare_string_of_a_body(self):
         """A63"""
