@@ -12,7 +12,7 @@ use deck_streak_coordination::progression::badges_view::{
     locked, most_recent_first, progress,
 };
 use deck_streak_coordination::progression::records_view::{RecordLine, records_now};
-use deck_streak_kernel::{Courses, Db, StudyDay, UtcMillis};
+use deck_streak_kernel::{Courses, Db, KernelError, StudyDay, UtcMillis};
 use deck_streak_progression::badges::catalog::catalog;
 use deck_streak_progression::badges::conditions::{
     BadgeContext, CENTURION_DAY_REVIEWS, FOREST_GUARDIAN_COUNT, LEGENDARY_DAY_SCORE,
@@ -417,5 +417,138 @@ async fn the_records_view_reads_each_stored_record_against_todays_rollup() {
         ]
     );
     assert_eq!(view.chase, Some((RecordKind::BestScore, 43)));
+    db.close().await;
+}
+
+/// A migrated database in `scratch` with nothing studied: no rollup, no streak, no award, no record.
+async fn unstudied(scratch: &tempfile::TempDir) -> Db {
+    Db::open(&scratch.path().join("deck_streak.db"))
+        .await
+        .expect("the database opens")
+}
+
+/// Renames `table` away, so a read of it alone refuses.
+async fn rename_away(db: &Db, table: &str) {
+    let rename = match table {
+        "daily_rollup" => "ALTER TABLE daily_rollup RENAME TO gone_daily_rollup",
+        "streak_state" => "ALTER TABLE streak_state RENAME TO gone_streak_state",
+        other => panic!("no rename is written for {other}"),
+    };
+    let mut write = db.write().await.expect("a write");
+    sqlx::query(rename)
+        .execute(&mut *write)
+        .await
+        .expect("the table is renamed away");
+    write.commit().await.expect("the commit");
+}
+
+#[tokio::test]
+async fn an_unstudied_database_shows_every_locked_badge_at_zero_progress() {
+    let scratch = tempfile::tempdir().expect("a temporary directory");
+    let db = unstudied(&scratch).await;
+    let view = badges_view(&db, StudyDay::from_epoch_day(TODAY), &Courses::default())
+        .await
+        .expect("the badges view reads");
+    let seen = examined(
+        "locked badge(s) of an unstudied database",
+        view.locked
+            .iter()
+            .map(|line| (line.key.as_str(), line.progress))
+            .collect::<Vec<_>>(),
+    );
+    let of = |key: &str| {
+        seen.iter()
+            .find(|(seen_key, _)| *seen_key == key)
+            .map(|(_, progress)| *progress)
+    };
+    for (key, threshold) in [
+        ("week_warrior", 7),
+        ("centurion_day", wide(CENTURION_DAY_REVIEWS)),
+        ("polyglot", wide(POLYGLOT_DECKS_DAY)),
+        ("legendary_day", LEGENDARY_DAY_SCORE),
+    ] {
+        assert_eq!(
+            of(key),
+            Some(Some(Progress {
+                value: 0,
+                threshold
+            })),
+            "{key}"
+        );
+    }
+    db.close().await;
+}
+
+#[tokio::test]
+async fn a_badges_view_whose_rollup_read_alone_refuses_is_an_error() {
+    let scratch = tempfile::tempdir().expect("a temporary directory");
+    let db = unstudied(&scratch).await;
+    rename_away(&db, "daily_rollup").await;
+    let view = badges_view(&db, StudyDay::from_epoch_day(TODAY), &Courses::default()).await;
+    assert!(matches!(view, Err(KernelError::Database(_))), "{view:?}");
+    db.close().await;
+}
+
+#[tokio::test]
+async fn a_badges_view_whose_streak_read_alone_refuses_is_an_error() {
+    let scratch = tempfile::tempdir().expect("a temporary directory");
+    let db = unstudied(&scratch).await;
+    rename_away(&db, "streak_state").await;
+    let view = badges_view(&db, StudyDay::from_epoch_day(TODAY), &Courses::default()).await;
+    assert!(matches!(view, Err(KernelError::Database(_))), "{view:?}");
+    db.close().await;
+}
+
+#[tokio::test]
+async fn records_with_no_rollup_for_today_read_today_as_zero() {
+    let scratch = tempfile::tempdir().expect("a temporary directory");
+    let db = unstudied(&scratch).await;
+    let mut write = db.write().await.expect("a write");
+    for (kind, value, day, previous) in [
+        ("best_score", 120_i64, TODAY - 5, 100_i64),
+        ("most_reviews", 300, TODAY - 4, 250),
+        ("most_minutes", 8, TODAY - 3, 5),
+    ] {
+        sqlx::query(
+            "INSERT INTO records (kind, value, study_day, previous, celebrated_at, created_at) \
+             VALUES (?1, ?2, ?3, ?4, 1000, 1000)",
+        )
+        .bind(kind)
+        .bind(value)
+        .bind(day)
+        .bind(previous)
+        .execute(&mut *write)
+        .await
+        .expect("the synthetic record is written");
+    }
+    write.commit().await.expect("the commit");
+    let view = records_now(&db, StudyDay::from_epoch_day(TODAY))
+        .await
+        .expect("the records view reads");
+    let today_and_value: Vec<(RecordKind, i64, i64)> = view
+        .lines
+        .iter()
+        .map(|line| (line.kind, line.today, line.value))
+        .collect();
+    assert_eq!(
+        examined("record line(s) with no rollup", today_and_value),
+        [
+            (RecordKind::BestScore, 0, 120),
+            (RecordKind::MostReviews, 0, 300),
+            (RecordKind::MostMinutes, 0, 8),
+        ]
+    );
+    // Nothing studied: the record to chase is the nearest, and its distance is its whole value.
+    assert_eq!(view.chase, Some((RecordKind::MostMinutes, 8)));
+    db.close().await;
+}
+
+#[tokio::test]
+async fn a_records_view_whose_rollup_read_alone_refuses_is_an_error() {
+    let scratch = tempfile::tempdir().expect("a temporary directory");
+    let db = unstudied(&scratch).await;
+    rename_away(&db, "daily_rollup").await;
+    let view = records_now(&db, StudyDay::from_epoch_day(TODAY)).await;
+    assert!(matches!(view, Err(KernelError::Database(_))), "{view:?}");
     db.close().await;
 }
