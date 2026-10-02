@@ -24,9 +24,11 @@ assertion.
 
 The route's criteria, A15 to A18, were red at the route stub's commit: the route is served behind
 the owner's session and answers 501, so each failed by its first status assertion. They are green
-at the route's implementation, where the API's suite ran 48 of 48 green. A17's retry is sent the
-same UTC day through the route; a retry after UTC midnight is the vault's A24, whose unique is the
-route's `capture_id` (ruling (h)).
+at the route's implementation, where the API's suite ran 48 of 48 green. That commit, ed9d286e,
+also edits `crates/api/tests/insights_routes.rs`, a test outside A15 to A18: its test of the API
+state's `Debug` line now expects the state's new port, `, inbox: false`. The route's own tests are
+unchanged between the two commits. A17's retry is sent the same UTC day through the route; a retry
+after UTC midnight is the vault's A24, whose unique is the route's `capture_id` (ruling (h)).
 
 The screen's criteria, A20 and A21, were red at the screen stub's commit: the stub renders the
 form, its save does nothing, and the client's capture answers unavailable without sending, so each
