@@ -32,7 +32,9 @@
 \* Inside one write a day runs its steps in the phases' order (mod.rs::Phase, PHASES, register).
 \* Phase 2 settles the day's base XP; phase 5 writes only consistency and Ascendant, the sources
 \* the base leaves out (economy.json day_base_excludes), so the base is final once phase 4 ends and
-\* the model takes phases 3 to 5 as stutters. Phase 6, the mint (mint.rs::phase, CoinMint), reads
+\* the model folds phases 2 to 5 into the write's one base update (phase 3's relight grant, relight:<day>, is counted in the base; phases 4 and 5 move
+\* no counted row). The awards' offers between the writes (mod.rs::offer_owed) mark celebrations only and write no base, held flag or mint, so they are
+\* stutters. Phase 6, the mint (mint.rs::phase, CoinMint), reads
 \* the base in the same write: mint.rs::evaluate sums the day's rows on the fold's write as phase 5
 \* sums them, for every evaluation the fold makes, opens a savepoint on that write and no connection
 \* of its own, and settles mint(base) through wallet.rs::settle_mint_on, closed unless the day is

@@ -621,3 +621,4 @@ The files E1b adds or changes that section 4 does not name:
 - `web/app/src/lib/startapp.test.ts`: changed, the `wallet` token joins the check that every destination is a screen of the route table.
 - `web/app/tests/a11y.spec.ts`: changed, the rendered audit's stand-in API answers the wallet view, so the header and the /wallet screen are audited with a balance and movements.
 - `changelog.d/wallet-e1b-106.md`: added, the changelog fragment.
+- `scripts/mutation-equivalent.d/miniapp.json`: changed, the four equivalent web mutants of the wallet's screen and parser, each with its reason.
