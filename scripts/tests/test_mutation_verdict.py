@@ -2506,7 +2506,6 @@ class ADocstringOnlyScriptChangeIsNamed(unittest.TestCase):
         print(f"cookie population: {len(members)} member(s); mismatches {len(mismatches)}")
         self.assertEqual(mismatches, [])
 
-
     def test_the_docstring_is_only_the_first_bare_string_of_a_body(self):
         """A63"""
         module = verdict_module()
