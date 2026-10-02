@@ -15,3 +15,4 @@
 pub mod constants;
 pub mod data_rights;
 pub mod rules;
+pub mod wallet;

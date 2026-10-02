@@ -9,6 +9,8 @@ mod golden;
 
 use deck_streak_economy::constants;
 use deck_streak_economy::rules;
+use deck_streak_economy::wallet::SqliteWallet;
+use deck_streak_kernel::{Db, StudyDay};
 use serde_json::{Value, json};
 
 /// `economy.json`, embedded at build time.
@@ -141,4 +143,105 @@ fn the_coin_constants_and_economy_json_match_the_predecessors() {
         Some(constants::WALLET_FLOOR),
         "economy.json's wallet floor is the engine's"
     );
+}
+
+/// One movement of a golden's synthetic ledger: its study day, source, reference and delta.
+type Movement = (i64, String, String, i64);
+
+/// A golden case of the wallet's two day reads: the ledger, the study day asked and the answer.
+struct LedgerCase {
+    movements: Vec<Movement>,
+    day: i64,
+    output: Value,
+}
+
+/// Every case of the committed golden `name`, read whole before any database work.
+fn ledger_cases(name: &str) -> Vec<LedgerCase> {
+    let mut cases = Vec::new();
+    let examined = golden::each_case(name, |case| {
+        let movements = case.input["movements"]
+            .as_array()
+            .expect("a case's movements")
+            .iter()
+            .map(|movement| {
+                (
+                    whole(movement, "day"),
+                    movement["source"].as_str().expect("a source").to_owned(),
+                    movement["ref"].as_str().expect("a reference").to_owned(),
+                    whole(movement, "delta"),
+                )
+            })
+            .collect();
+        cases.push(LedgerCase {
+            movements,
+            day: whole(&case.input, "day"),
+            output: case.output.clone(),
+        });
+    });
+    assert_eq!(examined.count, cases.len());
+    cases
+}
+
+/// Replaces the ledger's movements with `movements`, written past the ports as the predecessor's
+/// ledger held them (a synthetic ledger may go below the floor).
+async fn holds(db: &Db, movements: &[Movement]) {
+    let mut write = db.write().await.expect("a write");
+    sqlx::query("DELETE FROM coin_ledger")
+        .execute(&mut *write)
+        .await
+        .expect("the ledger cleared");
+    for (on, source, reference, delta) in movements {
+        sqlx::query(
+            "INSERT INTO coin_ledger (study_day, source, reference, delta, created_at) \
+             VALUES (?1, ?2, ?3, ?4, 1)",
+        )
+        .bind(on)
+        .bind(source)
+        .bind(reference)
+        .bind(delta)
+        .execute(&mut *write)
+        .await
+        .expect("a golden movement");
+    }
+    write.commit().await.expect("the ledger written");
+}
+
+#[tokio::test]
+async fn the_day_start_wallet_and_the_day_debits_match_the_parity_goldens() {
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let db = Db::open(&directory.path().join("deck_streak.db"))
+        .await
+        .expect("the database opens");
+    let wallet = SqliteWallet::new(db.clone());
+    let before = ledger_cases("coin_balance_before");
+    for case in &before {
+        holds(&db, &case.movements).await;
+        let ours = wallet
+            .balance_before(StudyDay::from_epoch_day(case.day))
+            .await
+            .expect("the day-start wallet");
+        assert_eq!(
+            json!(ours),
+            case.output,
+            "the wallet before day {} of {:?}",
+            case.day,
+            case.movements
+        );
+    }
+    let debits = ledger_cases("coin_debits_for_day");
+    for case in &debits {
+        holds(&db, &case.movements).await;
+        let ours = wallet
+            .debits_for_day(StudyDay::from_epoch_day(case.day))
+            .await
+            .expect("the day's debits");
+        assert_eq!(
+            json!(ours),
+            case.output,
+            "the debits of day {} in {:?}",
+            case.day,
+            case.movements
+        );
+    }
+    assert!(!before.is_empty() && !debits.is_empty());
 }

@@ -1,0 +1,413 @@
+//! The wallet's ports (SPEC-082 A4 to A6, A8, A19; R2, R4, R5, R7, R8; ADR-308): a burst of
+//! concurrent capped debits and purchases never takes the balance below the floor, a credit of one
+//! key is written once, a settled day's mint is only raised, a floor-clipped debit pays what is held
+//! and never refuses, and a once-ever credit is written once on any day. Every source, reference
+//! and amount here is synthetic.
+
+// An integration test is test code: its helpers panic on a failed fixture.
+#![allow(clippy::expect_used)]
+
+use std::sync::Arc;
+
+use deck_streak_economy::constants::WALLET_FLOOR;
+use deck_streak_economy::rules::daily_loss_cap;
+use deck_streak_economy::wallet::{
+    CreditAnswer, DebitAnswer, MINT_REFERENCE, MINT_SOURCE, MintAnswer, PurchaseAnswer,
+    PurchaseRefused, SqliteWallet,
+};
+use deck_streak_kernel::{Db, StudyDay, UtcMillis};
+use tempfile::TempDir;
+use tokio::sync::Barrier;
+
+/// A ledger row as the test reads it back: study day, source, reference and delta.
+type Row = (i64, String, String, i64);
+
+/// The instant the movements are written at.
+const AT: UtcMillis = UtcMillis::from_epoch_millis(1_700_000_000_000);
+
+/// A migrated file-backed database in a temporary directory, and the wallet over it.
+async fn wallet() -> (TempDir, Db, SqliteWallet) {
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let db = Db::open(&directory.path().join("deck_streak.db"))
+        .await
+        .expect("the database opens");
+    let wallet = SqliteWallet::new(db.clone());
+    (directory, db, wallet)
+}
+
+/// Study day `day`, as an epoch day.
+const fn day(day: i64) -> StudyDay {
+    StudyDay::from_epoch_day(day)
+}
+
+/// Every row of the ledger, in the order written, read past the ports.
+async fn rows(db: &Db) -> Vec<Row> {
+    sqlx::query_as("SELECT study_day, source, reference, delta FROM coin_ledger ORDER BY id")
+        .fetch_all(db.reader())
+        .await
+        .expect("the ledger's rows")
+}
+
+/// The ledger's sum, read past the ports: the balance as R2 defines it.
+async fn summed(db: &Db) -> i64 {
+    rows(db).await.iter().map(|row| row.3).sum()
+}
+
+/// A row as the ledger stores it.
+fn row(day: i64, source: &str, reference: &str, delta: i64) -> Row {
+    (day, source.to_owned(), reference.to_owned(), delta)
+}
+
+/// How many concurrent callers the burst releases at once.
+const BURST: usize = 16;
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn the_wallet_never_goes_negative_under_a_burst() {
+    let (_directory, db, wallet) = wallet().await;
+    // 120 credited on study day 9, then a later day's tariff takes 100: day 10 starts with a wallet
+    // of 120 (its cap is 36) while the balance holds 20, so the wallet, not the cap, is the bound.
+    assert_eq!(
+        wallet
+            .credit(day(9), "payout", "seed", 120, AT)
+            .await
+            .expect("the seed credit"),
+        CreditAnswer::Credited(120)
+    );
+    assert_eq!(
+        wallet
+            .debit_floored(day(11), "tariff", "skip", 100, AT)
+            .await
+            .expect("the later tariff"),
+        DebitAnswer::Debited {
+            paid: 100,
+            forgiven: false
+        }
+    );
+    assert_eq!(summed(&db).await, 20, "the seed leaves 20 coins");
+    assert_eq!(daily_loss_cap(120), 36, "day 10's cap exceeds the balance");
+
+    // Half the callers take a capped debit of 7 and half buy for 9, each on its own key, all on
+    // study day 10, released together.
+    let start = Arc::new(Barrier::new(BURST));
+    let tasks: Vec<_> = (0..BURST)
+        .map(|caller| {
+            let wallet = wallet.clone();
+            let start = Arc::clone(&start);
+            tokio::spawn(async move {
+                let reference = format!("burst:{caller}");
+                start.wait().await;
+                if caller % 2 == 0 {
+                    match wallet
+                        .debit_capped(day(10), "fine", &reference, 7, AT)
+                        .await
+                        .expect("a capped debit")
+                    {
+                        DebitAnswer::Debited { paid, .. } => paid,
+                        other => panic!("a fresh capped debit of 7 answered {other:?}"),
+                    }
+                } else {
+                    match wallet
+                        .purchase(day(10), "shop", &reference, 9, AT)
+                        .await
+                        .expect("a purchase")
+                    {
+                        PurchaseAnswer::Bought(price) => price,
+                        PurchaseAnswer::Refused(PurchaseRefused::BelowPrice { .. }) => 0,
+                        other => panic!("a fresh purchase of 9 answered {other:?}"),
+                    }
+                }
+            })
+        })
+        .collect();
+    let mut paid = 0;
+    for task in tasks {
+        paid += task.await.expect("the caller ran");
+    }
+
+    let balance = summed(&db).await;
+    assert!(
+        balance >= WALLET_FLOOR,
+        "the burst took the balance to {balance}, below the floor"
+    );
+    assert_eq!(
+        balance,
+        20 - paid,
+        "the balance is the seed less what the ports reported paid"
+    );
+    // Every capped debit pays min(7, balance), so in any order the burst drains the wallet to the
+    // floor and no further.
+    assert_eq!(
+        balance, WALLET_FLOOR,
+        "the burst drains the wallet to the floor"
+    );
+    let debited: i64 = rows(&db)
+        .await
+        .iter()
+        .filter(|row| row.0 == 10 && row.3 < 0)
+        .map(|row| -row.3)
+        .sum();
+    assert!(
+        debited <= 36,
+        "day 10 debited {debited}, past its cap of 36"
+    );
+}
+
+#[tokio::test]
+async fn a_credit_of_one_key_is_written_once() {
+    let (_directory, db, wallet) = wallet().await;
+    let first = wallet
+        .credit(day(20), "payout", "quest:q1", 15, AT)
+        .await
+        .expect("a credit");
+    let again = wallet
+        .credit(day(20), "payout", "quest:q1", 15, AT)
+        .await
+        .expect("the same credit again");
+    // The key is the study day, the source and the reference: another day is another key.
+    let next_day = wallet
+        .credit(day(21), "payout", "quest:q1", 15, AT)
+        .await
+        .expect("the credit on the next day");
+    let nothing = wallet
+        .credit(day(20), "payout", "quest:q2", 0, AT)
+        .await
+        .expect("a credit of nothing");
+    assert_eq!(
+        [first, again, next_day, nothing],
+        [
+            CreditAnswer::Credited(15),
+            CreditAnswer::AlreadyCredited,
+            CreditAnswer::Credited(15),
+            CreditAnswer::NotPositive,
+        ]
+    );
+    // A refund is a positive movement written once on its key, as a credit is.
+    let refunds = [
+        wallet
+            .refund(day(20), "refund", "shop:s1", 9, AT)
+            .await
+            .expect("a refund"),
+        wallet
+            .refund(day(20), "refund", "shop:s1", 9, AT)
+            .await
+            .expect("the same refund again"),
+    ];
+    assert_eq!(
+        refunds,
+        [CreditAnswer::Credited(9), CreditAnswer::AlreadyCredited]
+    );
+    assert_eq!(
+        rows(&db).await,
+        [
+            row(20, "payout", "quest:q1", 15),
+            row(21, "payout", "quest:q1", 15),
+            row(20, "refund", "shop:s1", 9),
+        ],
+        "one movement per study day, source and reference"
+    );
+}
+
+#[tokio::test]
+async fn a_settled_days_mint_is_raised_and_never_lowered() {
+    let (_directory, db, wallet) = wallet().await;
+    let mut answers = Vec::new();
+    // The current study day's mint follows its base at each recompute, down as well as up.
+    for amount in [10, 25, 15] {
+        answers.push(
+            wallet
+                .settle_mint(day(30), amount, false, AT)
+                .await
+                .expect("an open day's mint"),
+        );
+    }
+    // Once the day is settled, a later recompute raises its mint and never lowers it.
+    for amount in [12, 30, 0] {
+        answers.push(
+            wallet
+                .settle_mint(day(30), amount, true, AT)
+                .await
+                .expect("a settled day's mint"),
+        );
+    }
+    answers.push(
+        wallet
+            .settle_mint(day(30), -5, true, AT)
+            .await
+            .expect("a negative mint"),
+    );
+    // A day whose mint is 0 holds no movement.
+    answers.push(
+        wallet
+            .settle_mint(day(31), 0, false, AT)
+            .await
+            .expect("a zero mint"),
+    );
+    assert_eq!(
+        answers,
+        [
+            MintAnswer::Settled(10),
+            MintAnswer::Settled(25),
+            MintAnswer::Settled(15),
+            MintAnswer::Settled(15),
+            MintAnswer::Settled(30),
+            MintAnswer::Settled(30),
+            MintAnswer::Negative,
+            MintAnswer::Settled(0),
+        ]
+    );
+    assert_eq!(
+        rows(&db).await,
+        [row(30, MINT_SOURCE, MINT_REFERENCE, 30)],
+        "a day has one mint movement"
+    );
+
+    // The current day's mint is lowered no further than the floor: 20 minted, 18 spent, then the
+    // base falls to nothing, so only the 2 coins still held come back off the mint.
+    let (_directory, db, wallet) = self::wallet().await;
+    assert_eq!(
+        wallet
+            .settle_mint(day(40), 20, false, AT)
+            .await
+            .expect("the mint"),
+        MintAnswer::Settled(20)
+    );
+    assert_eq!(
+        wallet
+            .purchase(day(40), "shop", "pass:1", 18, AT)
+            .await
+            .expect("a purchase"),
+        PurchaseAnswer::Bought(18)
+    );
+    assert_eq!(
+        wallet
+            .settle_mint(day(40), 0, false, AT)
+            .await
+            .expect("the lowered mint"),
+        MintAnswer::Settled(18)
+    );
+    assert_eq!(
+        summed(&db).await,
+        WALLET_FLOOR,
+        "the lowering stops at the floor"
+    );
+}
+
+#[tokio::test]
+async fn a_floor_clipped_debit_pays_what_is_held() {
+    let (_directory, db, wallet) = wallet().await;
+    assert_eq!(
+        wallet
+            .credit(day(50), "payout", "seed", 30, AT)
+            .await
+            .expect("the seed"),
+        CreditAnswer::Credited(30)
+    );
+    // Day 51 starts with 30 (a cap of 9), and the floored debit is not the capped one: it pays
+    // all 30 the wallet holds.
+    let mut answers = vec![
+        wallet
+            .debit_floored(day(51), "tariff", "skip:1", 50, AT)
+            .await
+            .expect("a tariff past the balance"),
+    ];
+    // An empty wallet pays nothing and is not refused, and the key it wrote holds a retry.
+    for _ in 0..2 {
+        answers.push(
+            wallet
+                .debit_floored(day(52), "tariff", "skip:2", 50, AT)
+                .await
+                .expect("a tariff on an empty wallet"),
+        );
+    }
+    answers.push(
+        wallet
+            .debit_floored(day(53), "tariff", "skip:3", 0, AT)
+            .await
+            .expect("a tariff of nothing"),
+    );
+    assert_eq!(
+        wallet
+            .credit(day(54), "payout", "seed:2", 12, AT)
+            .await
+            .expect("a second seed"),
+        CreditAnswer::Credited(12)
+    );
+    answers.push(
+        wallet
+            .debit_floored(day(54), "tariff", "skip:4", 5, AT)
+            .await
+            .expect("a tariff the wallet covers"),
+    );
+    assert_eq!(
+        answers,
+        [
+            DebitAnswer::Debited {
+                paid: 30,
+                forgiven: true
+            },
+            DebitAnswer::Debited {
+                paid: 0,
+                forgiven: true
+            },
+            DebitAnswer::AlreadyDebited { paid: 0 },
+            DebitAnswer::NothingRequested,
+            DebitAnswer::Debited {
+                paid: 5,
+                forgiven: false
+            },
+        ]
+    );
+    assert_eq!(
+        rows(&db).await,
+        [
+            row(50, "payout", "seed", 30),
+            row(51, "tariff", "skip:1", -30),
+            row(52, "tariff", "skip:2", 0),
+            row(54, "payout", "seed:2", 12),
+            row(54, "tariff", "skip:4", -5),
+        ]
+    );
+    assert_eq!(summed(&db).await, 7);
+}
+
+#[tokio::test]
+async fn a_once_ever_credit_is_written_once_on_any_day() {
+    let (_directory, db, wallet) = wallet().await;
+    let requests = [
+        (60, "season", "node:7", 25),
+        // The same payout settled on a later study day, and again on its own day.
+        (61, "season", "node:7", 25),
+        (60, "season", "node:7", 25),
+        // Another reference, and another source, are other payouts.
+        (61, "season", "node:8", 25),
+        (62, "quest", "node:7", 10),
+    ];
+    let mut answers = Vec::new();
+    for (on, source, reference, amount) in requests {
+        answers.push(
+            wallet
+                .credit_once(day(on), source, reference, amount, AT)
+                .await
+                .expect("a once-ever credit"),
+        );
+    }
+    assert_eq!(
+        answers,
+        [
+            CreditAnswer::Credited(25),
+            CreditAnswer::AlreadyCredited,
+            CreditAnswer::AlreadyCredited,
+            CreditAnswer::Credited(25),
+            CreditAnswer::Credited(10),
+        ]
+    );
+    assert_eq!(
+        rows(&db).await,
+        [
+            row(60, "season", "node:7", 25),
+            row(61, "season", "node:8", 25),
+            row(62, "quest", "node:7", 10),
+        ],
+        "one movement per source and reference across every study day"
+    );
+}
