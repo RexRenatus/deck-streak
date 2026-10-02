@@ -232,3 +232,17 @@ A23: green at c1ba033
 A24: red at 207fc03: AssertionError: expected [] to deeply equal [ …(3) ]
 A24: green at c1ba033
 ```
+
+### Round 2: the coverage written for round 1's survivors
+
+Commits `0ec6ec93`, `263677c5` and `1a4b036b` are MUTATION COVERAGE written for round 1's
+survivors: they are green at the base, not red-first, and they change no production line. The rows
+commit `ecac3c8b` adds rows S07330-S07341. The mutation package at `1a4b036b` reads `examined 8
+plant(s): survived 0, caught 8`, against its control at `5208f1e6`, which reads `examined 8
+plant(s): survived 8`.
+
+One survivor is recorded and not killed. `crates/coordination/src/progression/badges_view.rs:282`
+(`let mut connection = db.reader().acquire().await?;`) is UNVIABLE-BY-TYPE: no compiling mutant
+removes that `?`, because its Ok value is a pool connection with no default to put in its place,
+and `earned_badges`' acquire at line 249 (`let mut connection = db.reader().acquire().await?;`)
+runs first on the same pool.
