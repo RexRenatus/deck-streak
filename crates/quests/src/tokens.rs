@@ -1,6 +1,11 @@
-//! The double-XP token's constants and its store (SPEC-081 R9, R12, R13). Part 3 adds its rules.
+//! The double-XP token: its store, its activation and its bonus (SPEC-081 R9, R12, R13).
+//!
+//! Every function runs on the caller's connection, inside the caller's write, as the chest store
+//! does (ADR-081): an activation's read of the open window and its write of the next one are one
+//! step no other write can come between, so at most one window is ever open. A bonus is never
+//! credited here: it is answered for the caller to settle through the settle port in that write.
 
-use deck_streak_ingest::reader::Review;
+use deck_streak_ingest::reader::{Review, is_study_event};
 use deck_streak_kernel::{StudyDay, StudyDayRule, Track, UtcMillis};
 use sqlx::SqliteConnection;
 
@@ -10,6 +15,9 @@ use crate::chests::ChestError;
 pub const TOKEN_WINDOW_HOURS: i64 = 2;
 /// The most a token's bonus can pay on one study day, in XP.
 pub const TOKEN_BONUS_CAP_XP: i64 = 300;
+
+/// An hour, in milliseconds.
+const HOUR_MS: i64 = 3_600_000;
 
 /// An activated token's window: from its activation instant, up to and not including its end.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -101,42 +109,135 @@ pub(crate) async fn grant_token(
     Ok((written.rows_affected() == 1).then(|| written.last_insert_rowid()))
 }
 
-/// Activates the oldest held token at `now` (R12), in the caller's write. RED-FIRST STUB: answers
-/// that no token is held.
+/// Activates the oldest held token at `now` (R12), in the caller's write.
+///
+/// A token whose window is still open refuses the activation, the newest such token first, as the
+/// predecessor reads it. Otherwise the oldest token never activated has its window opened, from
+/// `now` for [`TOKEN_WINDOW_HOURS`]. The write is guarded on the token still being held, so a
+/// token another write activated first is told apart: a window is open, and nothing changed.
 ///
 /// # Errors
 ///
-/// A store error as the chest store answers it.
+/// [`ChestError::Database`] when a read or the write fails.
 pub async fn activate_token_on(
-    _connection: &mut SqliteConnection,
-    _now: UtcMillis,
+    connection: &mut SqliteConnection,
+    now: UtcMillis,
 ) -> Result<Activation, ChestError> {
-    Ok(Activation::NoneHeld)
+    let now_ms = now.epoch_millis();
+    let active = sqlx::query_scalar!(
+        "SELECT id FROM xp_tokens WHERE consumed = 0 AND activated_at > 0 \
+         AND window_ends_at > ?1 ORDER BY id DESC LIMIT 1",
+        now_ms
+    )
+    .fetch_optional(&mut *connection)
+    .await?;
+    if active.is_some() {
+        return Ok(Activation::AlreadyActive);
+    }
+    let held = sqlx::query_scalar!(
+        "SELECT id FROM xp_tokens WHERE consumed = 0 AND activated_at = 0 ORDER BY id LIMIT 1"
+    )
+    .fetch_optional(&mut *connection)
+    .await?;
+    let Some(token_id) = held else {
+        return Ok(Activation::NoneHeld);
+    };
+    let window = TokenWindow {
+        start: now,
+        end: UtcMillis::from_epoch_millis(now_ms + TOKEN_WINDOW_HOURS * HOUR_MS),
+    };
+    let end_ms = window.end.epoch_millis();
+    let written = sqlx::query!(
+        "UPDATE xp_tokens SET activated_at = ?2, window_ends_at = ?3 \
+         WHERE id = ?1 AND consumed = 0 AND activated_at = 0",
+        token_id,
+        now_ms,
+        end_ms
+    )
+    .execute(&mut *connection)
+    .await?;
+    if written.rows_affected() == 1 {
+        Ok(Activation::Activated { token_id, window })
+    } else {
+        Ok(Activation::AlreadyActive)
+    }
 }
 
-/// A token's bonus on `study_day` (R13). RED-FIRST STUB: settles nothing.
+/// A token's bonus on `study_day` (R13): its window's study reviews of that study day, each at
+/// its XP at the base rate, summed and capped at [`TOKEN_BONUS_CAP_XP`]; none when no study
+/// review falls in the window on that day. The bonus is its own source and never part of the
+/// day's base, so it never compounds with another bonus.
 #[must_use]
 pub fn token_bonus_xp(
-    _window: TokenWindow,
-    _study_day: StudyDay,
-    _rule: StudyDayRule,
-    _reviews: &[ReviewXp],
+    window: TokenWindow,
+    study_day: StudyDay,
+    rule: StudyDayRule,
+    reviews: &[ReviewXp],
 ) -> Option<i64> {
-    None
+    let (start, end) = (window.start.epoch_millis(), window.end.epoch_millis());
+    let mut windowed = false;
+    let mut xp: i64 = 0;
+    for counted in reviews {
+        let review = counted.review;
+        if is_study_event(review.kind, review.ease)
+            && (start..end).contains(&review.id)
+            && rule.study_day(UtcMillis::from_epoch_millis(review.id)) == study_day
+        {
+            windowed = true;
+            xp = xp.saturating_add(counted.base_xp);
+        }
+    }
+    windowed.then_some(xp.min(TOKEN_BONUS_CAP_XP))
 }
 
 /// Settles every activated token's bonus on `study_day` and consumes each token whose window has
-/// ended by `now` (R13), in the caller's write. RED-FIRST STUB: settles and consumes nothing.
+/// ended by `now` (R13), in the caller's write.
+///
+/// Every activated token is read, a consumed one included, so a re-sync of the day answers the
+/// same bonus again for the caller's settle to refresh, never to stack. A token whose window ended
+/// before `now` is consumed once, by a guarded update.
 ///
 /// # Errors
 ///
-/// A store error as the chest store answers it.
+/// [`ChestError::Database`] when the read or a write fails.
 pub async fn settle_token_bonuses_on(
-    _connection: &mut SqliteConnection,
-    _study_day: StudyDay,
-    _rule: StudyDayRule,
-    _reviews: &[ReviewXp],
-    _now: UtcMillis,
+    connection: &mut SqliteConnection,
+    study_day: StudyDay,
+    rule: StudyDayRule,
+    reviews: &[ReviewXp],
+    now: UtcMillis,
 ) -> Result<TokenSettlement, ChestError> {
-    Ok(TokenSettlement::default())
+    let tokens = sqlx::query!(
+        "SELECT id, activated_at, window_ends_at, consumed FROM xp_tokens \
+         WHERE activated_at > 0 ORDER BY id"
+    )
+    .fetch_all(&mut *connection)
+    .await?;
+    let mut settlement = TokenSettlement::default();
+    for token in tokens {
+        let window = TokenWindow {
+            start: UtcMillis::from_epoch_millis(token.activated_at),
+            end: UtcMillis::from_epoch_millis(token.window_ends_at),
+        };
+        if let Some(xp) = token_bonus_xp(window, study_day, rule, reviews) {
+            settlement.bonuses.push(TokenBonus {
+                token_id: token.id,
+                study_day,
+                xp,
+                track: Track::Language,
+            });
+        }
+        if token.window_ends_at < now.epoch_millis() && token.consumed == 0 {
+            let written = sqlx::query!(
+                "UPDATE xp_tokens SET consumed = 1 WHERE id = ?1 AND consumed = 0",
+                token.id
+            )
+            .execute(&mut *connection)
+            .await?;
+            if written.rows_affected() == 1 {
+                settlement.consumed.push(token.id);
+            }
+        }
+    }
+    Ok(settlement)
 }

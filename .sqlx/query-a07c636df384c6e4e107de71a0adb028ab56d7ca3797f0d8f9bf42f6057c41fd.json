@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE xp_tokens SET activated_at = ?2, window_ends_at = ?3 WHERE id = ?1 AND consumed = 0 AND activated_at = 0",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "a07c636df384c6e4e107de71a0adb028ab56d7ca3797f0d8f9bf42f6057c41fd"
+}
