@@ -278,3 +278,87 @@ A54: not red: the test pins a rule the cycle already held, so it is green at the
 A55: not red: the test pins a rule the route already held, so it is green at the head; the mutant that turns it red is named in this addendum
 A56: not red: the test pins a rule the reply already held, so it is green at the head; the mutant that turns it red is named in this addendum
 ```
+
+## Addendum, 2026-10-01: the streak calendar and its markers (A57 to A64)
+
+- **A57 and A60, red then green (first round).** Both ran at `83cd74b` over a calendar that returned
+  the window with no markers. A60 failed at `calendar_population.rs:239` (`left: []`,
+  `right: [(20001, [Freeze])]`) and A57 at `calendar_population.rs:187` (`language, served 20002`,
+  the freeze missing on 20001). Both were green at `51b4241`. After the red, the population gained
+  the expectations for the real misses that trail a history's last study day (the language run
+  breaks at the third day after it, the law run resets on the day after the first); the first
+  oracle had left them out, and the production code was right.
+- **A58 and A61 did not exist at `83cd74b`.** That commit adds only the streaks crate's calendar
+  and its population test, so the first round's record called both "not red". Each was then shown
+  red by assertion over stubs, which this round re-ran. A58, the first round's route test over
+  `83cd74b`'s unmarked calendar (`cargo test --locked -p deck-streak-daemon --test
+  streak_calendar_route -- --test-threads 1`), exits 101:
+  `the_route_serves_each_days_markers_after_the_fold` panicked at `streak_calendar_route.rs:317:9`,
+  `the served freezes are the spent freezes' covered days`, `left: {}`, `right: {"2024-12-23"}`.
+  A61, the first round's screen test over the screen before the calendar (`pnpm exec vitest run
+  src/lib/streak/streak-calendar.test.ts -t "the screen reads each marker from its own day's
+  cell"`), exits 1: `AssertionError: member 0 language: expected [] to have a length of 35 but got
+  +0`.
+- **The second round, one red commit for every test it adds or amends.** `1024ecc` commits the
+  tests for the law track's break day (A62), the predecessor's window (A57 and A58 amended, A63)
+  and the week grid (A61 amended, A64) over the first round's code, which serves 35 days, puts the
+  law break on the miss itself and draws a marker as a whole word. Each fails by assertion there.
+  The fixes follow one rule each: `2eb8959` moves the law break, `a038df4` serves the
+  predecessor's window and `3511bf3` lays the screen out as whole weeks.
+- **A63's body was split after its red commit.** `14ab257` moves A63's serving loop and its two
+  controls into helper functions, under clippy's bound on a function's length; no assertion
+  changed. The new body, run over `1024ecc`'s tree, fails the same way: it panicked at
+  `streak_calendar_route.rs:666:5`, `the route differs from the predecessor: Judged { cases: 11,
+  days: 770, window_mismatches: 22, unnamed: 802, named: 0 }`. The fence line below quotes the
+  earlier body, which failed at line 659 with the same message.
+- **A59 not red.** The settlement already held its iff when the test was written. Its red is the
+  threshold flipped to `>= 0` (S07644) or the track filter dropped (S07645), each killed by A59
+  alone; the fold writes neither a zero row nor another track's row, so A59 plants them.
+- **The phone width is not measured red here.** `web/app/tests/streak-calendar.spec.ts` (360 px, no
+  sideways scroll, each cell in its weekday's column and week's row) runs in a browser in the web
+  stage's end-to-end run. Its local red was not measured: the browser's page crashed on launch
+  under the local run's memory limit (`browserContext.newPage: Target crashed`, from `pnpm exec
+  playwright test tests/streak-calendar.spec.ts`). It holds no acceptance line.
+
+```red-first
+A57: red at 1024ecc: assertion failed: language, served 20000, the window starts at 19966 where the predecessor's starts at 19814
+A57: green at a038df4
+A58: red at 1024ecc: assertion failed: language: the window's length, left: 35, right: 184
+A58: green at a038df4
+A59: not red: the settlement already held its iff, so it is green at the head; the mutants that turn it red are named in this addendum
+A60: red at 83cd74b: assertion failed: left: [], right: [(20001, [Freeze])] on the open day's window
+A60: green at 51b4241
+A61: red at 1024ecc: AssertionError: expected [] to deeply equal [ 'S' ], the marker's letter missing from its own day's cell
+A61: green at 3511bf3
+A62: red at 1024ecc: assertion failed: served 20003, left: [20002], right: [20003]
+A62: green at 2eb8959
+A63: red at 1024ecc: the route differs from the predecessor: Judged { cases: 11, days: 770, window_mismatches: 22, unnamed: 802, named: 0 }
+A63: green at a038df4
+A64: red at 1024ecc: AssertionError: member 0 language 2024-07-15: expected [] to deeply equal [ 'col-start-1' ]
+A64: green at 3511bf3
+```
+
+## Addendum, 2026-10-01: the open lapse walk against its Lean port (A65 to A67)
+
+- **The red commit.** 4e688bc3 committed the vectors test with the Lean package: a port of
+  `open_lapse` without its guard at the smallest day, its three theorems not yet proved, their three
+  witnesses, and the vectors that port wrote. The Rust function answers none where that port
+  answers its smallest day, so the test is red by assertion, not by a compile error. The green
+  commit bd283264 gives the port the guard, proves the theorems and writes the vectors again. The
+  test's text is the same at both commits, and no Rust source changes.
+- **A65 and A67, red.** At 4e688bc3 the test examined 1704 vectors, and 73 of them differ: the
+  first is today at the smallest day with a count of zero on it, where the port answers
+  `Some(-9223372036854775808)` and the Rust function `None`. A67 fails on the same case:
+  `left: Some(-9223372036854775808)`, `right: None`.
+- **A66 not red.** The axes already held every case the property names at the red commit. Its red
+  is a population without the smallest day: with the window's first days moved one day up, it
+  examines 1800 vectors and fails at `formal_vectors_open_lapse.rs:342` with "no vector holds the
+  window starts at the smallest day".
+
+```red-first
+A65: red at 4e688bc3: thread 'the_open_lapse_walk_answers_every_vector_its_lean_port_wrote' (3020364) panicked at crates/streaks/tests/formal_vectors_open_lapse.rs:267:5:
+A65: green at bd283264
+A66: not red: the test pins a population the axes already held, so it is green at the head; the change that turns it red is named in this addendum
+A67: red at 4e688bc3: thread 'a_walk_that_reaches_the_smallest_day_without_a_review_answers_none_in_the_vectors' (3020363) panicked at crates/streaks/tests/formal_vectors_open_lapse.rs:364:5:
+A67: green at bd283264
+```

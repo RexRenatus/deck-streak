@@ -83,7 +83,7 @@
       ],
       [
         "S12911-THE-GUARD-READS-THE-WRAPPER-THROUGH",
-        "scripts/tests/test_dispatch_shards.py",
+        "scripts/tests/_mutants_finder.py",
         "    while program < len(words) and (after := wrapped(words, program)) is not None:\n",
         "    while False and (after := wrapped(words, program)) is not None:\n",
         "the guard reads the memory scope's wrapper through to the command after its `--`, so the real tree's wrapped commands are found bounded and not refused as another program's (SPEC-129 A14)",
@@ -91,7 +91,7 @@
       ],
       [
         "S12912-A-PYTHON-TEXT-THAT-MAY-RUN-THE-WRAPPER-IS-READ",
-        "scripts/tests/test_dispatch_shards.py",
+        "scripts/tests/_mutants_finder.py",
         "        if not python or any(w.dynamic or \"memory_scope\" in w.value for w in arguments):\n",
         "        if not python:\n",
         "a text given to a python command whose argument names the wrapper or is computed is read as a text handed on, so a wrapped shell text that runs cargo mutants without the bounds is refused (SPEC-129 A14)",

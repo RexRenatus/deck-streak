@@ -18,10 +18,11 @@
   "scripts/mutation-verdict.py": {
     "dir": "scripts/tests",
     "modules": [
+      "test_mutation_verdict_python_kills",
+      "test_mutation_python_verdict",
+      "test_mutation_python_shard_binding",
       "test_mutation_verdict",
       "test_mutation_equivalent",
-      "test_mutation_python_verdict",
-      "test_mutation_verdict_python_kills",
       "test_memory_cap_verdict"
     ]
   },
@@ -40,7 +41,8 @@
     "modules": [
       "test_mutation_rows",
       "test_mutation_verdict",
-      "test_mutation_equivalent"
+      "test_mutation_equivalent",
+      "test_bin_kind_census"
     ]
   },
   "scripts/public-scrub.py": {

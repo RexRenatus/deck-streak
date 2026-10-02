@@ -3840,6 +3840,48 @@ NOT_WORKFLOW_READS = {
         ("test_ci_workflows", LOADER[1], "Path(path).read_bytes()", 1),
     ),
     **allowed(
+        "runs a planted stand-in in a child process over a scratch directory and reads its exit and output; no workflow text reaches the reader",
+        (
+            "test_dispatch_shards",
+            "AStandInThatCannotPlantTheWrapperFailsClosed.run_stand_in",
+            "subprocess.run([sys.executable, '-I', str(root / 'stand_in.py'), str(root / 'machine'), str(root / 'memory_scope.py'), '--', 'echo', 'x'], capture_output=True, text=True, env={'PLANT_MARKS': str(root / 'marks'), 'PATH': os.environ['PATH']}, timeout=60)",
+            1,
+        ),
+        (
+            "test_dispatch_shards",
+            "AStandInThatCannotPlantTheWrapperFailsClosed.test_a_failed_plant_exits_non_zero_names_the_failure_and_runs_no_words",
+            "self.run_stand_in(RAISING_PLANT)",
+            1,
+        ),
+        (
+            "test_dispatch_shards",
+            "AStandInThatCannotPlantTheWrapperFailsClosed.test_a_plant_that_works_runs_the_wrapper_and_not_the_script",
+            "self.run_stand_in(PLANT_THAT_WORKS)",
+            1,
+        ),
+    ),
+    **allowed(
+        "reads the test modules' own Python source to count where the finder is defined; never a workflow file",
+        (
+            "test_mutation_workflows",
+            "EveryMutantsSpellingIsFound.test_the_finder_is_defined_once_and_a_planted_copy_is_caught",
+            "definitions_of_the_finder(Path(__file__).parent)",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "EveryMutantsSpellingIsFound.test_the_finder_is_defined_once_and_a_planted_copy_is_caught",
+            "definitions_of_the_finder(scratch)",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "definitions_of_the_finder",
+            "path.read_text(encoding='utf-8')",
+            1,
+        ),
+    ),
+    **allowed(
         "calls the bash oracle, which runs planted scripts with cargo stubbed and reads the stubs' logs",
         (
             "test_dispatch_shards",
@@ -5008,6 +5050,19 @@ DYNAMIC_IMPORTS = {
         ("test_mutation_rows", "runner_module", "import mutation_rows", 1),
     ),
     **allowed(
+        "an import of this repository's own script module by its constant name, `import mutation_rows`, after a sys.path insert of the constant scripts directory; it reads no workflow file",
+        ("test_bin_kind_census", "runner_module", "import mutation_rows", 1),
+    ),
+    **allowed(
+        "a thread pool that runs cargo and rustc over generated scratch crates of Rust source at once; it reads no workflow file",
+        (
+            "test_bin_kind_census",
+            "TheBinKindReadsWhatTheCompilerBuilds.test_every_layout_agrees_with_cargo_and_the_compiler_or_is_refused_by_name",
+            "concurrent.futures.ThreadPoolExecutor(max_workers=min(16, os.cpu_count() or 1))",
+            1,
+        ),
+    ),
+    **allowed(
         "this module, whose WORKFLOWS a patch points at a scratch directory",
         ("test_ci_workflows", "WorkflowFilesAreReadAsBytes.readers", "sys.modules", 1),
         (
@@ -5164,6 +5219,85 @@ DYNAMIC_IMPORTS = {
     **allowed(
         "executes `test_formal_config.py`, a module of this directory the census already reads, again by its constant path under another name; that module never imports the loader's module at any depth",
         ("test_formal_config_presence", "fresh_module", "spec.loader.exec_module(module)", 1),
+    ),
+    **allowed(
+        "a pool of the test's own callables, each running the real program itself; the in-process judge runs before the pool, one at a time; never a workflow file",
+        (
+            "test_mutation_python_shard_binding",
+            "TheInProcessJudgeIsTheProgram.test_the_program_and_its_in_process_judgement_agree",
+            "ThreadPoolExecutor(max_workers=8)",
+            1,
+        ),
+    ),
+    **allowed(
+        "formats the exception the test is handling, to write to the standard error the judge replaces",
+        ("test_mutation_python_shard_binding", "judge_in_process", "traceback.format_exc()", 1),
+    ),
+    **allowed(
+        "compiles and executes the production verdict script's own source with edits to the interpolated fields of its messages, in the namespace of the program the test loaded and owns",
+        (
+            "test_mutation_python_shard_binding",
+            "mutating",
+            "exec(planted(function, node, kind, positions, value), program.__dict__)",
+            1,
+        ),
+        (
+            "test_mutation_python_shard_binding",
+            "observed_fields",
+            "compile(ast.Module([wrapped], []), str(VERDICT), 'exec')",
+            1,
+        ),
+        (
+            "test_mutation_python_shard_binding",
+            "observed_fields",
+            "exec(compile(ast.Module([wrapped], []), str(VERDICT), 'exec'), program.__dict__)",
+            1,
+        ),
+        (
+            "test_mutation_python_shard_binding",
+            "planted",
+            "compile(ast.Module([mutated], []), str(VERDICT), 'exec')",
+            1,
+        ),
+    ),
+    **allowed(
+        "reaches the loaded program's own namespace by a constant name, which the test owns",
+        ("test_mutation_python_shard_binding", "mutating", "program.__dict__", 3),
+        ("test_mutation_python_shard_binding", "observed_fields", "program.__dict__", 3),
+        (
+            "test_mutation_python_shard_binding",
+            "observed_fields",
+            "program.__dict__.update(originals)",
+            1,
+        ),
+    ),
+    **allowed(
+        "loads the production verdict script by its constant path under a name of its own and registers it, so its dataclasses resolve; never a module of the test directory",
+        (
+            "test_mutation_python_shard_binding",
+            "verdict_program",
+            "importlib.util.module_from_spec(spec)",
+            1,
+        ),
+        (
+            "test_mutation_python_shard_binding",
+            "verdict_program",
+            "importlib.util.spec_from_file_location('mutation_verdict_in_process', VERDICT)",
+            1,
+        ),
+        (
+            "test_mutation_python_shard_binding",
+            "verdict_program",
+            "spec.loader.exec_module(loaded)",
+            1,
+        ),
+        ("test_mutation_python_shard_binding", "verdict_program", "sys.modules", 1),
+        (
+            "test_mutation_python_shard_binding",
+            "verdict_program",
+            "sys.modules.get('mutation_verdict_in_process')",
+            1,
+        ),
     ),
 }
 

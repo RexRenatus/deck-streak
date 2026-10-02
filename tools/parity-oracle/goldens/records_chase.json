@@ -1,0 +1,354 @@
+{
+  "adapter": "with_a_board",
+  "cases": [
+    {
+      "class": "empty",
+      "input": {
+        "board": []
+      },
+      "output": {
+        "chase": null
+      }
+    },
+    {
+      "class": "none",
+      "input": {
+        "board": [
+          {
+            "day": 19997,
+            "label": "Best daily score",
+            "previous": 79,
+            "today": 80,
+            "value": 80
+          },
+          {
+            "day": 19997,
+            "label": "Most reviews in a day",
+            "previous": 299,
+            "today": 301,
+            "value": 300
+          }
+        ]
+      },
+      "output": {
+        "chase": null
+      }
+    },
+    {
+      "class": "one",
+      "input": {
+        "board": [
+          {
+            "day": 19997,
+            "label": "Best daily score",
+            "previous": 79,
+            "today": 70,
+            "value": 80
+          }
+        ]
+      },
+      "output": {
+        "chase": [
+          "Best daily score",
+          10
+        ]
+      }
+    },
+    {
+      "class": "smallest",
+      "input": {
+        "board": [
+          {
+            "day": 19997,
+            "label": "Best daily score",
+            "previous": 79,
+            "today": 70,
+            "value": 80
+          },
+          {
+            "day": 19997,
+            "label": "Most reviews in a day",
+            "previous": 299,
+            "today": 295,
+            "value": 300
+          },
+          {
+            "day": 19997,
+            "label": "Most minutes in a day",
+            "previous": 59,
+            "today": 10,
+            "value": 60
+          }
+        ]
+      },
+      "output": {
+        "chase": [
+          "Most reviews in a day",
+          5
+        ]
+      }
+    },
+    {
+      "class": "tie",
+      "input": {
+        "board": [
+          {
+            "day": 19997,
+            "label": "Best daily score",
+            "previous": 79,
+            "today": 75,
+            "value": 80
+          },
+          {
+            "day": 19997,
+            "label": "Most reviews in a day",
+            "previous": 299,
+            "today": 295,
+            "value": 300
+          },
+          {
+            "day": 19997,
+            "label": "Most minutes in a day",
+            "previous": 59,
+            "today": 55,
+            "value": 60
+          }
+        ]
+      },
+      "output": {
+        "chase": [
+          "Best daily score",
+          5
+        ]
+      }
+    },
+    {
+      "class": "tie-reversed",
+      "input": {
+        "board": [
+          {
+            "day": 19997,
+            "label": "Most minutes in a day",
+            "previous": 59,
+            "today": 55,
+            "value": 60
+          },
+          {
+            "day": 19997,
+            "label": "Best daily score",
+            "previous": 79,
+            "today": 75,
+            "value": 80
+          }
+        ]
+      },
+      "output": {
+        "chase": [
+          "Most minutes in a day",
+          5
+        ]
+      }
+    },
+    {
+      "class": "zero-today",
+      "input": {
+        "board": [
+          {
+            "day": 19997,
+            "label": "Best daily score",
+            "previous": 79,
+            "today": 0,
+            "value": 80
+          }
+        ]
+      },
+      "output": {
+        "chase": [
+          "Best daily score",
+          80
+        ]
+      }
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "board": [
+          {
+            "day": 19997,
+            "label": "Best daily score",
+            "previous": 370,
+            "today": 351,
+            "value": 371
+          },
+          {
+            "day": 19997,
+            "label": "Most reviews in a day",
+            "previous": 392,
+            "today": 77,
+            "value": 393
+          },
+          {
+            "day": 19997,
+            "label": "Most minutes in a day",
+            "previous": 133,
+            "today": 345,
+            "value": 134
+          }
+        ]
+      },
+      "output": {
+        "chase": [
+          "Best daily score",
+          20
+        ]
+      }
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "board": [
+          {
+            "day": 19997,
+            "label": "Best daily score",
+            "previous": 325,
+            "today": 51,
+            "value": 326
+          },
+          {
+            "day": 19997,
+            "label": "Most reviews in a day",
+            "previous": 167,
+            "today": 293,
+            "value": 168
+          },
+          {
+            "day": 19997,
+            "label": "Most minutes in a day",
+            "previous": 86,
+            "today": 13,
+            "value": 87
+          }
+        ]
+      },
+      "output": {
+        "chase": [
+          "Most minutes in a day",
+          74
+        ]
+      }
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "board": [
+          {
+            "day": 19997,
+            "label": "Best daily score",
+            "previous": 210,
+            "today": 208,
+            "value": 211
+          },
+          {
+            "day": 19997,
+            "label": "Most reviews in a day",
+            "previous": 38,
+            "today": 52,
+            "value": 39
+          },
+          {
+            "day": 19997,
+            "label": "Most minutes in a day",
+            "previous": 64,
+            "today": 163,
+            "value": 65
+          }
+        ]
+      },
+      "output": {
+        "chase": [
+          "Best daily score",
+          3
+        ]
+      }
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "board": [
+          {
+            "day": 19997,
+            "label": "Best daily score",
+            "previous": 242,
+            "today": 297,
+            "value": 243
+          },
+          {
+            "day": 19997,
+            "label": "Most reviews in a day",
+            "previous": 230,
+            "today": 210,
+            "value": 231
+          },
+          {
+            "day": 19997,
+            "label": "Most minutes in a day",
+            "previous": 106,
+            "today": 102,
+            "value": 107
+          }
+        ]
+      },
+      "output": {
+        "chase": [
+          "Most minutes in a day",
+          5
+        ]
+      }
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "board": [
+          {
+            "day": 19997,
+            "label": "Best daily score",
+            "previous": 162,
+            "today": 320,
+            "value": 163
+          },
+          {
+            "day": 19997,
+            "label": "Most reviews in a day",
+            "previous": 348,
+            "today": 171,
+            "value": 349
+          },
+          {
+            "day": 19997,
+            "label": "Most minutes in a day",
+            "previous": 168,
+            "today": 218,
+            "value": 169
+          }
+        ]
+      },
+      "output": {
+        "chase": [
+          "Most reviews in a day",
+          178
+        ]
+      }
+    }
+  ],
+  "function": "bot.CommandBot._render_records",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Renders a board whose days are day tokens and returns the record to chase and its gap, read from the rendered text, or none; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_073.py",
+  "registry_sha256": "798450938bfbda152c320bc1a6255e977bd75fa65a0a9d1120f7c1331954793f",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

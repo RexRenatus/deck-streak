@@ -24,7 +24,14 @@ async fn the_xp_ledger_is_exported_and_erased() {
     assert_eq!(declaration.context(), "progression");
     assert_eq!(
         declaration.tables(),
-        ["xp_ledger", "xp_settlement", "buffs"].map(|table| TableRights {
+        [
+            "xp_ledger",
+            "xp_settlement",
+            "buffs",
+            "badges_earned",
+            "records"
+        ]
+        .map(|table| TableRights {
             table,
             disposition: Disposition::ExportAndErase,
         }),
@@ -83,6 +90,20 @@ async fn the_xp_ledger_is_exported_and_erased() {
     .execute(db.reader())
     .await
     .expect("a buff row");
+    sqlx::query(
+        "INSERT INTO badges_earned (badge_key, tier, name, emoji, study_day, celebrated_at, created_at) \
+         VALUES ('first_steps', 0, 'First Steps', 'x', 20000, NULL, 5000)",
+    )
+    .execute(db.reader())
+    .await
+    .expect("a badge row");
+    sqlx::query(
+        "INSERT INTO records (kind, value, study_day, previous, celebrated_at, created_at) \
+         VALUES ('best_score', 80, 20001, 70, 7000, 6000)",
+    )
+    .execute(db.reader())
+    .await
+    .expect("a record row");
     let mut write = db.write().await.expect("a write");
     let exported = ProgressionDataRights
         .export(&mut write)
@@ -109,6 +130,21 @@ async fn the_xp_ledger_is_exported_and_erased() {
                 table: "buffs",
                 rows: vec![json!({"study_day": 20_001, "kind": "ascendant", "created_at": 4_000})],
             },
+            ExportedTable {
+                table: "badges_earned",
+                rows: vec![
+                    json!({"badge_key": "first_steps", "tier": 0, "name": "First Steps",
+                                  "emoji": "x", "study_day": 20_000, "celebrated_at": null,
+                                  "created_at": 5_000})
+                ],
+            },
+            ExportedTable {
+                table: "records",
+                rows: vec![
+                    json!({"kind": "best_score", "value": 80, "study_day": 20_001,
+                                  "previous": 70, "celebrated_at": 7_000, "created_at": 6_000})
+                ],
+            },
         ]
     );
 
@@ -122,6 +158,8 @@ async fn the_xp_ledger_is_exported_and_erased() {
         ("xp_ledger", "SELECT count(*) FROM xp_ledger"),
         ("xp_settlement", "SELECT count(*) FROM xp_settlement"),
         ("buffs", "SELECT count(*) FROM buffs"),
+        ("badges_earned", "SELECT count(*) FROM badges_earned"),
+        ("records", "SELECT count(*) FROM records"),
     ] {
         let remaining: i64 = sqlx::query_scalar(count)
             .fetch_one(db.reader())
@@ -138,7 +176,14 @@ async fn the_xp_ledger_is_exported_and_erased() {
         .expect("the port exports");
     assert_eq!(
         exported,
-        ["xp_ledger", "xp_settlement", "buffs"].map(|table| ExportedTable {
+        [
+            "xp_ledger",
+            "xp_settlement",
+            "buffs",
+            "badges_earned",
+            "records"
+        ]
+        .map(|table| ExportedTable {
             table,
             rows: Vec::new(),
         }),
