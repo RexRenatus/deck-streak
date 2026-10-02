@@ -33,22 +33,39 @@ export interface Saved {
   readonly alreadyCaptured: boolean;
 }
 
-/** A fresh retry key. */
+/** A fresh retry key: a random UUID's 32 hex digits, which the server keeps as they are. */
 export function newCaptureId(): string {
-  return '';
+  return crypto.randomUUID().replaceAll('-', '');
 }
 
-/** Whether `text` is within the bound, as the server counts it. */
+/**
+ * Whether `text` is within the bound as the server counts it: 1 to 4000 characters after the
+ * trim, counted as characters, so a character outside the basic plane counts once.
+ */
 export function fits(text: string): boolean {
-  return text === text;
+  const characters = [...text.trim()].length;
+  return characters >= 1 && characters <= QUICK_TEXT_CHARS;
 }
 
-/** The request's JSON body. */
+/** The request's JSON body, in the route's own names. */
 export function captureBody(request: CaptureRequest): string {
-  return JSON.stringify(request);
+  return JSON.stringify({
+    capture_id: request.captureId,
+    kind: request.kind,
+    text: request.text
+  });
 }
 
-/** The capture a response of `status` with `body` names, or null when it names none. */
+/**
+ * The capture a response of `status` with `body` names, or null when it names none: 201 with the
+ * new stub's name, or 200 with the name an earlier send of the same key was saved under.
+ */
 export function parseSaved(status: number, body: unknown): Saved | null {
-  return status === 0 && body === null ? null : null;
+  if (body === null || typeof body !== 'object' || Array.isArray(body)) return null;
+  const fields = body as Record<string, unknown>;
+  const name = fields.name;
+  if (typeof name !== 'string' || name === '') return null;
+  if (status === 201) return { name, alreadyCaptured: false };
+  if (status === 200 && fields.already_captured === true) return { name, alreadyCaptured: true };
+  return null;
 }
