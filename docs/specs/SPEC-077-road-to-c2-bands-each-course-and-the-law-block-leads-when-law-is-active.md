@@ -469,3 +469,17 @@ Rows this pull request does not touch, delivered by CU85b:
 - `web/app/src/lib/law/law.ts`: unchanged in this pull request; delivered by CU85b
 - `web/app/src/lib/law/LawBlock.test.ts`: unchanged in this pull request; delivered by CU85b
 - `web/app/src/lib/routes.ts`: unchanged in this pull request; delivered by CU85b
+
+- T11, R7, the band badge's tier. R7 names no tier for the band badge `band_<code>_<band>`. It is
+  awarded at tier 0, as SPEC-073 R2 places each catalog badge ("each at tier 0") and as progression's
+  award test awards the band keys (`crates/progression/tests/badges_award.rs`: "Awards `key` at tier
+  0 in one write of its own."); the predecessor's band badge passes no tier, so its default of 0
+  holds.
+- T12, section 7, `course_progress`. The golden gains the case `unit_beyond_u32`: a deck whose unit
+  does not fit in 32 bits counts none of its cards, as the predecessor counts them where no band of
+  the course holds that unit. `parse_unit` reads such a unit as no unit, which A3's test asserts
+  beside the golden; every other golden of this SPEC changes only its registry digest.
+- T13, section 4 gains these files beside T5's: `formal/lean/Formal/RoadToC2Vectors.lean` (the
+  entry's vector writer), `formal/lean/Formal/Vectors.lean` (one arm for it),
+  `formal/vectors/road-to-c2.jsonl` (the vectors the checker byte-compares) and
+  `crates/curriculum/tests/formal_vectors_road_to_c2.rs` (the Rust cross-check of those vectors).
