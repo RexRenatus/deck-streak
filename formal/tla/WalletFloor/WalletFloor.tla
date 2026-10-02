@@ -1,10 +1,10 @@
 ---------------------------- MODULE WalletFloor ----------------------------
-\* @phx covers crates/economy/src/wallet.rs anchor=credit_on digest=sha256:63330b4cd009ccab790f5d16e0bbc1633df0c50173652410d219b1fefa8e1ead
-\* @phx covers crates/economy/src/wallet.rs anchor=credit_once_on digest=sha256:85ea967ae4d3589b1d00a9fd9f70bed1fe2b944189f3a161031748e96a5328ef
+\* @phx covers crates/economy/src/wallet.rs anchor=deposit_on digest=sha256:960f3e3c4157c20719bc551dd804cbbc7e7a3fb4adb04b63686fdddfffcaf09d
+\* @phx covers crates/economy/src/wallet.rs anchor=deposit_once_on digest=sha256:25d20246e33de6fd684d34d7e888252e3428db8d234994bd7280162e6bab4d52
 \* @phx covers crates/economy/src/wallet.rs anchor=settle_mint_on digest=sha256:f527db16a0f325855b0278d2ffa535cd1ba5b2428a5b876138ce606fc4ee0633
 \* @phx covers crates/economy/src/wallet.rs anchor=purchase_on digest=sha256:04309de191dc17240e5683254c0156712120f88fca7b34bc4daa436df21ef58a
 \* @phx covers crates/economy/src/wallet.rs anchor=debit_floored_on digest=sha256:b453615922d0bf5aa4f940affbbdd8273c361ac82165aff2c2094299c87f9bbd
-\* @phx covers crates/economy/src/wallet.rs anchor=refund_on digest=sha256:2b94e11602549e38a788319e5971bee1644ff8241e08be77334f1fbdbc7d03e2
+\* @phx covers crates/economy/src/wallet.rs anchor=refund_on digest=sha256:030b3389546607efee1224e4030e33a9a8eaf2aaa47e6c3d2da9f738e1250f55
 \* @phx covers crates/economy/src/wallet.rs anchor=debit_capped_on digest=sha256:acc045ca7285d5e78783e46a7b34ddba0fc839ba59d7cba13189446df7831ec6
 \* @phx covers crates/economy/src/wallet.rs anchor=insert digest=sha256:215ea7e2ca47ed4766e8df4b417e089c6b766edac63c9989555148648622d32a
 \* @phx covers crates/economy/src/wallet.rs anchor=summed digest=sha256:3286ff15c725d5cd74bc61d60af8b3648063ce2e9af2aa15465ff8435958585a
@@ -12,10 +12,10 @@
 \* @phx cites #106
 \* @phx property FloorHolds ramp=report
 \* @phx property OneMovementPerKey ramp=report
-\* @phx property CreditOnceEver ramp=report
+\* @phx property DepositOnceEver ramp=report
 \* @phx property SettledMintNeverFalls ramp=report
 \* @phx witness witness/a-floor-read-outside-the-write.cfg kills=FloorHolds
-\* @phx witness witness/a-once-ever-guard-read-on-its-own-day.cfg kills=CreditOnceEver
+\* @phx witness witness/a-once-ever-guard-read-on-its-own-day.cfg kills=DepositOnceEver
 \* @phx witness witness/a-ledger-with-no-unique-key.cfg kills=OneMovementPerKey
 \* @phx witness witness/a-closed-day-mint-that-follows-its-base.cfg kills=SettledMintNeverFalls
 (***************************************************************************)
@@ -36,7 +36,7 @@
 \* The ledger maps each key, (study day, source), to the movements that hold it, in insert order.
 \* One reference per source stands for the code's (source, reference) pairs: the properties
 \* compare keys, and two references of one source never share a key. The sources are the mint,
-\* a once-ever credit, a credit, a refund and a debit, so a key never mixes two ports' meanings.
+\* a once-ever deposit, a deposit, a refund and a debit, so a key never mixes two ports' meanings.
 \* A request of 0 or less writes nothing in every port (the `<= 0` arms), so the model draws
 \* requests from 1..MaxAmount; the mint's amount is drawn from 0..MaxAmount, since a settle of 0
 \* lowers a held mint. The loss cap's float share is the integer (w * 3) \div 10, which equals the
@@ -49,7 +49,7 @@ CONSTANTS ReadInsideWrite, UniqueKey, OnceGuardAllDays, ClosedKeepsHeld, NActors
 Actors == 1..NActors
 Days == 1..NDays
 Amounts == 1..MaxAmount
-Sources == {"mint", "once", "credit", "refund", "debit"}
+Sources == {"mint", "once", "deposit", "refund", "debit"}
 Keys == Days \X Sources
 
 \* wallet.rs: WALLET_FLOOR; rules.rs: DAILY_LOSS_CAP_COINS
@@ -63,7 +63,7 @@ Max(x, y) == IF x >= y THEN x ELSE y
 LossCap(w) == IF w <= 0 THEN 0 ELSE Min(CapCoins, (w * 3) \div 10)
 ClipPaid(r, w, c) == IF r <= 0 THEN 0 ELSE Max(0, Min(Min(r, w), c))
 
-Ports == {"Credit", "Refund", "CreditOnce", "Purchase", "DebitFloored", "DebitCapped"}
+Ports == {"Deposit", "Refund", "DepositOnce", "Purchase", "DebitFloored", "DebitCapped"}
 Ops ==
     [port : Ports, day : Days, amount : Amounts]
         \cup [port : {"SettleMint"}, day : Days, amount : 0..MaxAmount]
@@ -71,8 +71,8 @@ NoOp == [port |-> "none", day |-> 0, amount |-> 0]
 
 SourceOf(o) ==
     CASE o.port = "SettleMint" -> "mint"
-      [] o.port = "CreditOnce" -> "once"
-      [] o.port = "Credit" -> "credit"
+      [] o.port = "DepositOnce" -> "once"
+      [] o.port = "Deposit" -> "deposit"
       [] o.port = "Refund" -> "refund"
       [] OTHER -> "debit"
 
@@ -159,12 +159,12 @@ Begin(a) ==
     /\ pc' = [pc EXCEPT ![a] = "held"]
     /\ UNCHANGED <<ledger, snap, closed>>
 
-\* wallet.rs::credit_on (and refund_on, which is credit_on): the insert alone decides
-CreditWrite(o, k) == Insert(k, o.amount)
+\* wallet.rs::deposit_on (and refund_on, which is deposit_on): the insert alone decides
+DepositWrite(o, k) == Insert(k, o.amount)
 
-\* wallet.rs::credit_once_on: any movement of the source and reference, on ANY study day, answers
-\* AlreadyCredited; the defect reads only the request's own day
-CreditOnceWrite(o, k) ==
+\* wallet.rs::deposit_once_on: any movement of the source and reference, on ANY study day, answers
+\* AlreadyDeposited; the defect reads only the request's own day
+DepositOnceWrite(o, k) ==
     LET ever == IF OnceGuardAllDays
                 THEN \E d \in Days : ledger[<<d, "once">>] # <<>>
                 ELSE ledger[k] # <<>>
@@ -210,8 +210,8 @@ ReadWrite(a) ==
     /\ lock = a
     /\ LET o == op[a]
            k == <<o.day, SourceOf(o)>>
-       IN CASE o.port \in {"Credit", "Refund"} -> CreditWrite(o, k)
-            [] o.port = "CreditOnce" -> CreditOnceWrite(o, k)
+       IN CASE o.port \in {"Deposit", "Refund"} -> DepositWrite(o, k)
+            [] o.port = "DepositOnce" -> DepositOnceWrite(o, k)
             [] o.port = "SettleMint" -> SettleMintWrite(o, k)
             [] o.port = "Purchase" -> PurchaseWrite(a, o, k)
             [] o.port = "DebitFloored" -> DebitFlooredWrite(a, o, k)
@@ -256,9 +256,9 @@ FloorHolds == Balance >= Floor
 \* unique index, and every insert does nothing on that conflict"
 OneMovementPerKey == \A k \in Keys : Len(ledger[k]) <= 1
 
-\* wallet.rs::credit_once_on: a once-ever credit's source and reference hold at most one movement
+\* wallet.rs::deposit_once_on: a once-ever deposit's source and reference hold at most one movement
 \* over every study day
-CreditOnceEver ==
+DepositOnceEver ==
     \A d1, d2 \in Days :
         \A i \in 1..Len(ledger[<<d1, "once">>]) :
             \A j \in 1..Len(ledger[<<d2, "once">>]) : d1 = d2 /\ i = j
