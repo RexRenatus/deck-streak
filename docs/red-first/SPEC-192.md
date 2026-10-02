@@ -339,3 +339,61 @@ A18: green at d336c648
 
 Rows S19310 to S19314 pin the round's arms, and each is KILLED by its pinning test under one
 invocation, as S19305 to S19309, S19227 and S19277 still are.
+
+## Addendum, 2026-10-02: A19 to A22, the token reader, the compiled items and four spellings refused
+
+Four criteria join SPEC-192 (section 16). Their tests were committed first at 816aa780, with the
+guard as the base 36668462 left it: 61 tests ran and 12 failed, each by assertion and none by an
+import or a syntax error (A19 one test, A20 one, A21 five, A22 five). One more new test,
+test_the_trees_without_a_plant_read_no_refusal, was green there, and is MUTATION COVERAGE, not
+red-first evidence: it plants no shape, and holds every new arm to reading the unplanted trees with
+no refusal. Two members moved under ruling 2 (#535): `$(#[$m:meta])* mod tests;` and
+`m!{ #[cfg(test)] mod tests; }` left the #441 list of trees that are not refused, and joined the
+A21 tests that refuse them by their file. The arms were committed at 5ecf9265, where the module is
+green (Ran 61 tests, OK, examined 25 Setting impl(s), examined 202 crate file(s), examined 48
+implementation spelling(s), examined 180 item member(s) judged against rustc with 36 false
+refusals disclosed, examined 6309 R8 member(s) judged against rustc). No assertion of a red test
+was weakened after its red commit.
+
+Two later commits add MUTATION COVERAGE, each green at its own commit. 66bbb960 adds
+test_a_pin_counts_only_in_a_compiled_item_of_every_file_kind: 12 members, one fixture per kind of
+file that holds a pin (the implementation's own test module, a `tests/` file and an out-of-line
+test module file) under four attributes, judged against rustc. It kills S19324, so the module runs
+62 tests, one more than the 61 the plan named. At 66bbb960 dev's rows S19300, S19301 and S19303
+survived: the R8 members that killed them at the base read the same with and without each mutant.
+5a53be05 adds 11 members to R8's population: a file whose test module is inline, reached through
+each declaration chain, and a module file that only its inner `#![cfg(test)]` makes test-only,
+behind each opening the lexer skips. The guard reads all 11 as rustc compiles them, and each of the
+three mutants misreads one. The module is green at 5a53be05 (Ran 62 tests, OK, examined 6320 R8
+member(s) judged against rustc).
+
+```red-first
+A19: red at 816aa780: AssertionError: Lists differ: ['raw trait pinned=False: [] != [\'demo::W[2675 chars]\']'] != [] (test_every_spelling_is_read_or_refused_as_written)
+A19: green at 5ecf9265
+A20: red at 816aa780: AssertionError: Lists differ: ["const '#[cfg(any())]\\n': a pin is read [10262 chars]ead"] != [] (test_a_pin_counts_only_in_an_item_rustc_compiles_under_test)
+A20: green at 5ecf9265
+A21: red at 816aa780: AssertionError: Lists differ: [] != ['demo (src/more.rs) block declares an out-of-line module'] (test_a_block_scoped_declaration_is_refused_by_its_file)
+A21: green at 5ecf9265
+A22: red at 816aa780: AssertionError: False != True : ('#[cfg_attr(test, path = "real.rs")]\n', 'a/real.rs') (test_a_cfg_attr_path_below_an_inline_module_is_read)
+A22: green at 5ecf9265
+```
+
+```text
+A21: red at 816aa780: AssertionError: Lists differ: [] != ['demo (src/more.rs) macro invocation passes a cfg(test) module'] (test_a_macro_that_passes_a_module_through_is_refused_by_its_file)
+A21: red at 816aa780: AssertionError: Lists differ: ['demo (src/more.rs) macro_rules! body declares a cfg(test) module'] != ['demo (src/more.rs) macro declares a module whose path it names'] (test_a_path_rival_a_macro_declares_is_refused_by_its_file)
+A21: red at 816aa780: AssertionError: Lists differ: [] != ['demo (src/more.rs) macro declares a module under an attribute it passes in'] (test_an_attribute_a_macro_passes_in_is_refused_by_its_file)
+A21: red at 816aa780: AssertionError: Lists differ: [] != ["demo (src/more.rs) include! compiles another file's text"] (test_an_include_is_refused_by_its_file)
+A22: red at 816aa780: AssertionError: False != True : ('mod n {\n#[cfg(test)]\nmod tests;\n}\n', 'a/n/tests.rs') (test_a_decoy_beside_a_non_mod_rs_file_does_not_refuse_its_module)
+A22: red at 816aa780: AssertionError: Lists differ: ['demo (src/more.rs) macro_rules! body declares a cfg(test) module'] != [] (test_a_macro_module_that_is_no_test_only_module_is_read)
+A22: red at 816aa780: AssertionError: Lists differ: ['demo (src/lib.rs) macro_rules! body declares a cfg(test) module'] != ['demo::Depth (src/lib.rs) "a whole depth"'] (test_a_module_a_macro_declares_without_test_still_refuses_the_test_file)
+A22: red at 816aa780: AssertionError: Lists differ: [3, 3] != [2, 2] (test_modules_returns_each_declarations_attributes_and_index_without_its_name)
+```
+
+Each red in the text block is green at 5ecf9265. Rows S19315 to S19328 pin the arms (c44f7b6c), and
+each is KILLED by its pinning test under one invocation. 0024a738 points S19252 at the token
+reader, whose arm replaced the line it found, and S19225's killer at a test of the new reader,
+since its old killer survived it. At 5a53be05 the band's 29 rows are KILLED, S19300, S19301 and
+S19303 among them.
+
+A22's two red lines that quote a planted file write its newlines as `\n`: unittest prints the
+message as it is.
