@@ -96,6 +96,62 @@
         "        if not python:\n",
         "a text given to a python command whose argument names the wrapper or is computed is read as a text handed on, so a wrapped shell text that runs cargo mutants without the bounds is refused (SPEC-129 A14)",
         "test_dispatch_shards.TheMemoryScopeRunsTheWordsAfterItsSeparator.test_every_wrapped_command_bash_runs_without_the_bounds_is_found_or_refused"
+      ],
+      [
+        "S12913-THE-SCAN-FOLLOWS-A-SEPARATOR-ONLY-AFTER-THE-WRAPPER",
+        "scripts/tests/test_mutation_workflows.py",
+        "    if not WRAPPER or [w.value for w in words[program:end]] != list(WRAPPER):\n",
+        "    if not WRAPPER:\n",
+        "the scan follows a standalone `--` only after the guard's WRAPPER words, so `cargo mutants` after another program's options and separator is refused, as the guard refuses it (SPEC-129 A21, #533)",
+        "test_mutation_workflows.TheScanReadsTheWrappersForm.test_the_scan_and_the_guard_agree_on_every_separated_member"
+      ],
+      [
+        "S12914-ONLY-THE-WRAPPER-ASSIGNMENT-IS-READ",
+        "scripts/tests/test_mutation_workflows.py",
+        "            isinstance(target, ast.Name) and target.id == \"WRAPPER\"\n",
+        "            isinstance(target, ast.Name) and target.id in (\"WRAPPER\", \"OTHER\")\n",
+        "the scan reads only the module-level assignments to the name WRAPPER from the guard's text, so an assignment to another name is never taken for the wrapper's form (SPEC-129 A20, #533)",
+        "test_mutation_workflows.TheScanReadsTheWrappersForm.test_the_wrapper_form_is_read_once_from_the_guards_text"
+      ],
+      [
+        "S12915-A-HANDLER-THAT-LEAVES-IS-NOT-AN-ARM",
+        "scripts/tests/_stand_in_census.py",
+        "    for node in inside(handler.body):\n",
+        "    for node in inside([]):\n",
+        "a handler that exits, raises, returns, continues or breaks leaves, so the census lists only a handler that falls through to a real program (SPEC-129 A23, #532)",
+        "test_stand_in_census.TheCensusOfStandIns.test_a_plant_whose_text_has_no_plant_word_is_listed"
+      ],
+      [
+        "S12916-A-CALL-IS-RESOLVED-THROUGH-IMPORT-ALIASES",
+        "scripts/tests/_stand_in_census.py",
+        "    return {base + tail for base in names.get(func.id, {func.id})}\n",
+        "    return {func.id + tail}\n",
+        "a call is resolved through the names the file's imports bind, so `import os as o`, `from os import execv as run_it`, `import subprocess as sp` and `from runpy import run_path` reach a real program (SPEC-129 A24, #532)",
+        "test_stand_in_census.TheCensusOfStandIns.test_a_call_through_an_import_alias_is_listed"
+      ],
+      [
+        "S12917-THE-REACH-HOLDS-THE-HANDLER-AND-THE-FINALLY-BLOCK",
+        "scripts/tests/_stand_in_census.py",
+        "                reach = [*handler.body, *statement.finalbody, *later(here)]\n",
+        "                reach = later(here)\n",
+        "the census's reach holds the handler's own body and the try's finally block beside every later statement of the enclosing blocks, so a program run in the finally block is listed (SPEC-129 A24, ruling 3b, #532)",
+        "test_stand_in_census.TheCensusOfStandIns.test_a_program_run_in_the_finally_block_is_listed"
+      ],
+      [
+        "S12918-A-STR-CONSTANT-IS-PARSED-AS-A-SOURCE",
+        "scripts/tests/_stand_in_census.py",
+        "    for constant in str_constants(tree):\n",
+        "    for constant in []:\n",
+        "each str constant is parsed on its own, one level deep, so a stand-in held as text is listed at the constant's line with its own line (SPEC-129 A25, #532)",
+        "test_stand_in_census.TheCensusOfStandIns.test_a_stand_in_held_in_a_str_constant_is_listed_at_its_line"
+      ],
+      [
+        "S12919-A-BODY-IS-COMPARED-WITH-ITS-NAMES-RENAMED",
+        "scripts/tests/test_mutation_workflows.py",
+        "        return order.setdefault(name, f\"_{len(order)}\") if name in local else name\n",
+        "        return name\n",
+        "the copy check renames a body's own name, arguments and locals in order of first appearance before comparing, so a renamed and re-wrapped copy of each finder function is caught (SPEC-129 A27, #532)",
+        "test_mutation_workflows.EveryMutantsSpellingIsFound.test_a_renamed_and_rewrapped_copy_of_each_finder_function_is_caught"
       ]
     ]
   }
