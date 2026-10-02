@@ -87,7 +87,9 @@ refuse.
 ### Consequences
 
 - Good, because a pin in a stripped item is never read, and a file under `tests/` is read only where
-  cargo and rustc compile it: a generated population, judged by rustc, holds the guard to it.
+  cargo's default target discovery and rustc compile it (a manifest's `autotests = false` or `[[test]]`
+  table is not read, as "What would make this wrong" discloses): a generated population, judged by
+  rustc, holds the guard to it.
 - Good, because an attribute inside a macro repetition is read with its module: a pass that refused
   it was removed, not kept as a refusal rustc does not make.
 - Good, because every new refusal is by name, so a refused tree says which file to change.
