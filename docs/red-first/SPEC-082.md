@@ -20,3 +20,46 @@ A2: green at fb331f6
 A10: red at da0b1cd: constants.COIN_MINT_XP_DIVISOR: ours 0, the predecessor's 25
 A10: green at fb331f6
 ```
+
+## Part 2, 2026-10-01: the wallet's ports
+
+Part 2 of E1 delivers A3, A4, A5, A6, A8, A9, A14 and A19: the day-start wallet and the day's debits
+against their goldens, the seven ports over the coin ledger, the census of who names the ledger, and
+the ledger's erase. A3's test was written in this part, beside the others, so the paragraph above
+that counts A3 in part 1 means its golden, registered there.
+
+The red commit is 6280965, the tests beside a stub of the same public API whose bodies never touch
+the database: a credit, a once-ever credit and a refund answered `AlreadyCredited`, both debits
+`NothingRequested`, a settle `Settled(0)`, a purchase `Refused(NotPositive)` and every sum 0. Each
+criterion was run there, selecting its own test, and failed by assertion, not by a compile error, a
+missing fixture or an empty selection: over the economy crate's tests 3 passed, 8 failed and none was
+ignored, the 3 being part 1's goldens. The green commit is f047f9d, the seven ports over
+`coin_ledger`; it changes no test in this crate.
+
+Two test files changed after the red commit, and neither is a criterion's:
+
+- `crates/coordination/tests/relight_order.rs`, at f047f9d: its register of every `static`
+  coordination links gains the economy data-rights port's, from 14 entries to 15. Without it,
+  `the_route_keeps_no_per_day_failure_state_a_give_up_could_read` refused the new static.
+- `crates/economy/tests/formal_vectors_wallet.rs`, added after green with the Lean proof: it checks
+  `clip_debit` and `mint_for_base_xp` against the proof's vectors. It is a parity check of code
+  that was already green, so it has no red commit.
+
+```red-first
+A3: red at 6280965: assertion `left == right` failed: the wallet before day 20000 of [(19999, "mint", "", 40), (20000, "mint", "", 25), (20000, "shop", "pass:1", -40), (20000, "fine", "a", -15), (20000, "quest", "q", 10), (20001, "fine", "b", -9), (19998, "shop", "freeze:1", -150)]; left: Number(0), right: Number(-110)
+A3: green at f047f9d
+A4: red at 6280965: assertion `left == right` failed; left: AlreadyCredited, right: Credited(120)
+A4: green at f047f9d
+A5: red at 6280965: assertion `left == right` failed; left: [AlreadyCredited, AlreadyCredited, AlreadyCredited, AlreadyCredited], right: [Credited(15), AlreadyCredited, Credited(15), NotPositive]
+A5: green at f047f9d
+A6: red at 6280965: assertion `left == right` failed; left: [Settled(0), Settled(0), Settled(0), Settled(0), Settled(0), Settled(0), Settled(0), Settled(0)], right: [Settled(10), Settled(25), Settled(15), Settled(15), Settled(30), Settled(30), Negative, Settled(0)]
+A6: green at f047f9d
+A8: red at 6280965: assertion `left == right` failed; left: AlreadyCredited, right: Credited(30)
+A8: green at f047f9d
+A9: red at 6280965: assertion `left == right` failed: the wallet, the data-rights port and economy's migration name the table, and nothing else; left: {"crates/economy/src/data_rights.rs", "migrations/008201_economy_wallet_and_shop.sql"}, right: {"crates/economy/src/data_rights.rs", "crates/economy/src/wallet.rs", "migrations/008201_economy_wallet_and_shop.sql"}
+A9: green at f047f9d
+A14: red at 6280965: assertion `left == right` failed; left: AlreadyCredited, right: Credited(50)
+A14: green at f047f9d
+A19: red at 6280965: assertion `left == right` failed; left: [AlreadyCredited, AlreadyCredited, AlreadyCredited, AlreadyCredited, AlreadyCredited], right: [Credited(25), AlreadyCredited, AlreadyCredited, Credited(25), Credited(10)]
+A19: green at f047f9d
+```
