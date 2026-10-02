@@ -30,6 +30,7 @@ EXPECTED = {
         "entries": {
             "tla/MintReadsTheFinalBase": 180,
             "tla/RelightOrder": 360,
+            "tla/StagedNoJournal": 120,
             "tla/WalletFloor": 240,
         },
     },

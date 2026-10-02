@@ -10,10 +10,12 @@
   plain extension, and an erase never deletes a vault file).
 - **Prerequisites:** SPEC-020, SPEC-021, SPEC-024, SPEC-026, SPEC-029, SPEC-042 and SPEC-110. **Mutation
   band:** `S11800-S11899`.
-- **Status:** delivered in part by V1a (moved from `docs/specs/planned/` with its tests and
-  `docs/red-first/SPEC-118.md`, ADR-016): R1 to R5 and R10 to R14, the criteria of section 3
-  and B1, proved by `formal/tla/CaptureOnce/`. The remainder, #154's media from the bot (R6 to
-  R9, A7 to A14 and B2), is delivered by V1b, section 3c.
+- **Status:** delivered. V1a (moved from `docs/specs/planned/` with its tests and
+  `docs/red-first/SPEC-118.md`, ADR-016) delivered R1 to R5 and R10 to R14, A1 to A6, A15 to A24
+  and B1, proved by `formal/tla/CaptureOnce/`. V1b delivered #154's media from the bot (R6 to R9,
+  A7 to A14 and B2) and the journal guard over the staged duty runs, proved by
+  `formal/tla/StagedNoJournal/` (ADR-316); section 12 records it. The drill notes' writers still
+  wait on a maintainer decision (section 11's last bullet, #56).
 
 ## 1. The problem, measured
 
@@ -130,6 +132,14 @@ R14. CHARTER 10's eleven anti-goals bind this SPEC as one block; the one it touc
 | A4 | a capture with a stem already recorded is written once and answers `already_captured` | `a_capture_sent_twice_is_written_once` |
 | A5 | a write to a path under a journal folder is refused with `journal_refused` | `no_vault_write_reaches_a_journal_folder` |
 | A6 | every file-writing call in `crates/vault/src` is inside the atomic writer | `every_vault_file_write_is_the_atomic_writer` |
+| A7 | the media choice equals the predecessor's golden for every case | `media_choice_matches_the_predecessors_golden` |
+| A8 | a 10-character extension is kept, and an 11-character one or one with a separator reads `.bin` | `a_document_extension_off_the_rule_reads_bin` |
+| A9 | a declared size of 20971520 bytes is fetched and 20971521 is not | `a_file_over_twenty_megabytes_is_never_fetched` |
+| A10 | a stream that passes the cap is stopped and leaves no file | `a_stream_past_the_cap_is_stopped_and_discarded` |
+| A11 | the three replies equal the predecessor's golden | `capture_replies_match_the_predecessors_golden` |
+| A12 | with the vault missing, the owner gets the failed-save line and nothing is raised | `a_missing_vault_is_reported_not_raised` |
+| A13 | the file URL never reaches a log line | `the_file_url_never_reaches_a_log_line` |
+| A14 | an owner's media message is admitted, and a non-owner's is dropped | `media_is_admitted_from_the_owner_only` |
 | A15 | a quick capture writes the stub of R10 | `a_quick_capture_writes_the_miniapp_stub` |
 | A16 | a journal quick capture lands in the inbox with `kind: journal` | `a_journal_quick_capture_lands_in_the_inbox` |
 | A17 | a retried quick capture answers the same name and writes nothing | `a_retried_quick_capture_answers_the_same_name` |
@@ -148,6 +158,14 @@ A3: cargo test -p deck-streak-vault --test inbox_capture -- --exact a_missing_in
 A4: cargo test -p deck-streak-vault --test inbox_capture -- --exact a_capture_sent_twice_is_written_once
 A5: cargo test -p deck-streak-vault --test atomic -- --exact no_vault_write_reaches_a_journal_folder
 A6: cargo test -p deck-streak-vault --test atomic -- --exact every_vault_file_write_is_the_atomic_writer
+A7: cargo test -p deck-streak-bot --test media_capture -- --exact media_choice_matches_the_predecessors_golden
+A8: cargo test -p deck-streak-bot --test media_capture -- --exact a_document_extension_off_the_rule_reads_bin
+A9: cargo test -p deck-streak-bot --test media_capture -- --exact a_file_over_twenty_megabytes_is_never_fetched
+A10: cargo test -p deck-streak-bot --test media_capture -- --exact a_stream_past_the_cap_is_stopped_and_discarded
+A11: cargo test -p deck-streak-bot --test media_capture -- --exact capture_replies_match_the_predecessors_golden
+A12: cargo test -p deck-streak-bot --test media_capture -- --exact a_missing_vault_is_reported_not_raised
+A13: cargo test -p deck-streak-bot --test media_capture -- --exact the_file_url_never_reaches_a_log_line
+A14: cargo test -p deck-streak-bot --test media_capture -- --exact media_is_admitted_from_the_owner_only
 A15: cargo test -p deck-streak-api --test inbox_capture_route -- --exact a_quick_capture_writes_the_miniapp_stub
 A16: cargo test -p deck-streak-api --test inbox_capture_route -- --exact a_journal_quick_capture_lands_in_the_inbox
 A17: cargo test -p deck-streak-api --test inbox_capture_route -- --exact a_retried_quick_capture_answers_the_same_name
@@ -183,25 +201,7 @@ their fence lines, each prefixed `V1b:`. V1b moves each of its criteria back ver
 section 3's table, without the `delivered by` column, and the fence line into the acceptance
 fence, without the prefix.
 
-| id | criterion | decided by | delivered by |
-|---|---|---|---|
-| A7 | the media choice equals the predecessor's golden for every case | `media_choice_matches_the_predecessors_golden` | V1b |
-| A8 | a 10-character extension is kept, and an 11-character one or one with a separator reads `.bin` | `a_document_extension_off_the_rule_reads_bin` | V1b |
-| A9 | a declared size of 20971520 bytes is fetched and 20971521 is not | `a_file_over_twenty_megabytes_is_never_fetched` | V1b |
-| A10 | a stream that passes the cap is stopped and leaves no file | `a_stream_past_the_cap_is_stopped_and_discarded` | V1b |
-| A11 | the three replies equal the predecessor's golden | `capture_replies_match_the_predecessors_golden` | V1b |
-| A12 | with the vault missing, the owner gets the failed-save line and nothing is raised | `a_missing_vault_is_reported_not_raised` | V1b |
-| A13 | the file URL never reaches a log line | `the_file_url_never_reaches_a_log_line` | V1b |
-| A14 | an owner's media message is admitted, and a non-owner's is dropped | `media_is_admitted_from_the_owner_only` | V1b |
-
-V1b: A7: cargo test -p deck-streak-bot --test media_capture -- --exact media_choice_matches_the_predecessors_golden
-V1b: A8: cargo test -p deck-streak-bot --test media_capture -- --exact a_document_extension_off_the_rule_reads_bin
-V1b: A9: cargo test -p deck-streak-bot --test media_capture -- --exact a_file_over_twenty_megabytes_is_never_fetched
-V1b: A10: cargo test -p deck-streak-bot --test media_capture -- --exact a_stream_past_the_cap_is_stopped_and_discarded
-V1b: A11: cargo test -p deck-streak-bot --test media_capture -- --exact capture_replies_match_the_predecessors_golden
-V1b: A12: cargo test -p deck-streak-bot --test media_capture -- --exact a_missing_vault_is_reported_not_raised
-V1b: A13: cargo test -p deck-streak-bot --test media_capture -- --exact the_file_url_never_reaches_a_log_line
-V1b: A14: cargo test -p deck-streak-bot --test media_capture -- --exact media_is_admitted_from_the_owner_only
+Its rows moved into §3's table and fence on delivery; §12 records the move.
 
 ## 4. File manifest
 
@@ -255,8 +255,9 @@ V1b: A14: cargo test -p deck-streak-bot --test media_capture -- --exact media_is
 
 - It files no capture; the curator does (#50).
 - It transcribes no voice note (#154).
-- It captures no audio file, video, sticker or animation; only the three kinds the predecessor
-  captured (#154).
+- It captures no audio file, video, sticker or animation by itself; only the three kinds the
+  predecessor captured. An animation Telegram sends with a `document` is saved as that document,
+  by R6's order (#154).
 - It writes no journal section, and it adds no journal screen beyond the capture's journal choice
   (#56).
 - It deletes no vault file on an erase; the vault is the owner's folder (#154, ADR-118).
@@ -389,3 +390,70 @@ The rows V1b delivers, each left as it is here:
   and the daemon write go through `RealFs`, whose `journal()` is empty, so none of them refuses a
   journal path, and R5 as amended holds for the inbox capture's writes alone. The journal guard
   over every vault writer is SPEC-118's second pull request, which closes #56.
+- The drill notes' writers (the dated readings tree and the drill notes store) are not guarded by
+  this pull request; they wait on a maintainer decision (the maintainer's decision-card rulings; #56).
+
+## 12. Amendments, 2026-10-02: the media from the bot and the journal guard over the staged duty runs (#154, #56)
+
+Insert-only, as section 10 is: this section is appended after section 11, which gains one bullet at
+its end, and the only other edits are the Status line and the move recorded below. It adds no
+criterion.
+
+- **V1b delivers R6 to R9, A7 to A14 and B2,** with 18 mutation rows in
+  `scripts/mutation-rows.d/S11800-S11899.json`: S11808 to S11811 and S11813, as section 9 names
+  them, and S11818 to S11830.
+- **The move.** A7 to A14's rows moved from section 3c's table into section 3's table, after A6's
+  row and without the `delivered by` column, and their eight `V1b:` lines moved into section 3's
+  acceptance fence, after A6's line and without the prefix. Nothing else in them changed. Section
+  3c keeps its heading and its prose, with one sentence in place of its table and its lines.
+- **Section 11's two sentences "The journal guard over every vault writer is SPEC-118's second
+  pull request, which closes #56", as amended, read:** the journal guard over the staged duty
+  runs is SPEC-118's second pull request, and the drill notes' writers wait on section 11's last
+  bullet (#56).
+- **The journal guard over the staged duty runs.** The three-verb executor in
+  `crates/vault/src/staged.rs` (SPEC-042 R4) applies each operation of a checked run through a
+  journal guard over the run's own layout, built at that operation: a move's source is checked
+  first, then each folder the target needs, before it is created, then the note's bytes or the
+  rename. An operation whose path resolves into a journal folder when it is applied, through a
+  link the vault gained after the checks, stops the run as `RunOutcome::Stopped`, which counts the
+  operations applied before it; those stay applied. R5's rule, as section 10 amends it, so holds
+  for the staged duty runs' writes as well as the inbox capture's, and the `rename` and the
+  `create_dir` that section 11's first bullet names in `staged.rs` go through that guard. The model
+  is `formal/tla/StagedNoJournal/`, property `NoJournalWrite`, bound `NumOps=2 MaxEnv=3`, with four
+  witnesses; ADR-316 records the decision and what it was chosen against.
+- **The census amendments, made at the green commit.** `crates/notifications/tests/one_router.rs`
+  counts `COMMAND_REPLIES` 14 to 15 (`on_media`), `COMMAND_CALLERS` 25 to 27 (`Commands::handle`
+  calls `on_media`, which calls `send`) and `REQUEST_SITES` 21 to 22 (the transport's download);
+  `crates/kernel/tests/log_capture_class.rs` counts the routed log calls 18 to 19; and
+  `crates/vault/tests/atomic.rs` gains `PORT_DELEGATION`, `("staged.rs", "create_new(", 2)`: the
+  staged executor's borrowed file system names the port's `create_new` once and passes it through
+  once. That is an admission, a named delegation class with an exact count, and not a loosening: a
+  third mention in that file is refused by `every_vault_file_write_is_the_atomic_writer` as any
+  other call outside the writer is.
+- **The capture's log lines when no vault is set.** `crates/daemon/src/wiring.rs`'s
+  `inbox_captures` now serves the bot role as well as the api role, so its doc comment names both
+  roles, and its three log lines for an unset or refused vault end "so no capture is saved". With
+  no vault, the bot answers the owner's media with the failed-save line (A12); it serves no quick
+  capture.
+
+The files, against section 4's manifest, in section 10's shape:
+
+| file | context | change |
+|---|---|---|
+| `config/formal.json` | formal | changed: the check budget of `tla/StagedNoJournal` |
+| `crates/bot/tests/media_capture.rs` | `deck-streak-bot` | extended: beside A7 to A14, `a_download_held_past_the_clients_timeout_still_lands`, the killer of row S11830 |
+| `crates/bot/tests/support/fake_bot_api.rs` | `deck-streak-bot` | changed: the fake serves the file route for a download, and can hold one past the client's timeout |
+| `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | extended: the bot role's half, and the log lines above |
+| `crates/kernel/tests/log_capture_class.rs` | `deck-streak-kernel` | changed: routed 18 to 19 |
+| `crates/notifications/tests/one_router.rs` | `deck-streak-notifications` | changed: the three counts above |
+| `crates/vault/src/staged.rs` | `deck-streak-vault` | changed: the journal guard over the staged duty runs, and `RunOutcome::Stopped` |
+| `crates/vault/tests/atomic.rs` | `deck-streak-vault` | extended: `PORT_DELEGATION` |
+| `crates/vault/tests/journal_guard_census.rs` | `deck-streak-vault` | added: every folder, rename and removal call of the vault is on the journal guard or named |
+| `crates/vault/tests/staged_guard.rs` | `deck-streak-vault` | added: a folder, a note, a capture filed into the journal and one taken out of it through a link the vault gains after the checks are each refused when applied |
+| `formal/tla/StagedNoJournal/` | formal | added: the model, `MCStagedNoJournal.cfg` and four witnesses |
+| `scripts/tests/test_formal_config.py` | repo | changed: the budgets it expects include `tla/StagedNoJournal` |
+| `scripts/mutation-rows.d/S11800-S11899.json` | repo | extended: V1b's 18 rows |
+| `tools/parity-oracle/goldens/inbox_capture_stub.json` | repo | extended: its `registry_sha256` follows the registry's new bytes; its cases are unchanged |
+| `docs/decisions/ADR-316-a-staged-duty-run-guards-each-operation-against-the-journal-when-it-is-applied-and-a-refusal-stops-the-run.md` | docs | added |
+| `docs/red-first/SPEC-118.md` | docs | extended: V1b's lines for A7 to A14, and the census's and the staged guard's reds and greens |
+| `changelog.d/feat-media-capture-154.md` | repo | added |

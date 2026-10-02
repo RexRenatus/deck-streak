@@ -25,6 +25,7 @@ use std::sync::Arc;
 
 use deck_streak_coordination::data_rights_registry::{erase_all, export_all};
 use deck_streak_coordination::drills::{self, DrillMeta, DrillNotes, RealFs, Surface};
+use deck_streak_coordination::inbox_capture::{Capture, Captured, InboxCaptures, Source};
 use deck_streak_coordination::instruments::InstrumentService;
 use deck_streak_coordination::progression::level_view::level_view;
 use deck_streak_coordination::score::day_score;
@@ -34,11 +35,12 @@ use deck_streak_kernel::{Clock, Db, Environment, Setting, SettingsError, StudyDa
 use deck_streak_notifications::owner_message;
 use frankenstein::types::{BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo};
 
+use crate::capture::{self, Choice, MAX_DOWNLOAD_BYTES, Outcome};
 use crate::drill_commands::{self, ANSWER_PREFIX, VIEW_PREFIX};
 use crate::gate::{self, Admission, OwnerCallback, OwnerMessage};
 use crate::score_commands::{score_failed_reply, score_reply};
 use crate::streak_commands::{streak_failed_reply, streak_reply};
-use crate::transport::{Incoming, Sent, Transport, escape_attribute, escape_html};
+use crate::transport::{Download, Incoming, Sent, Transport, escape_attribute, escape_html};
 use crate::xp_commands::{level_failed_reply, level_reply};
 
 /// The Mini App's URL, which `/start`'s button opens: an `https:` URL, required by the bot role.
@@ -417,6 +419,8 @@ pub struct Commands<S> {
     drills: Option<Arc<DrillNotes<RealFs>>>,
     /// The one drill the owner's next message answers, in memory only (R13).
     pending_drill: Option<String>,
+    /// The vault inbox the owner's media is saved into, when the daemon wired it (SPEC-118 R6).
+    captures: Option<Arc<InboxCaptures<RealFs>>>,
 }
 
 impl<S: OwnerSync> Commands<S> {
@@ -444,6 +448,7 @@ impl<S: OwnerSync> Commands<S> {
             instruments: None,
             drills: None,
             pending_drill: None,
+            captures: None,
         }
     }
 
@@ -465,6 +470,14 @@ impl<S: OwnerSync> Commands<S> {
     #[must_use]
     pub fn with_drills(mut self, notes: Arc<DrillNotes<RealFs>>) -> Self {
         self.drills = Some(notes);
+        self
+    }
+
+    /// These handlers, saving the owner's media into the vault inbox through `captures` (SPEC-118
+    /// R6 to R9).
+    #[must_use]
+    pub fn with_capture(mut self, captures: Arc<InboxCaptures<RealFs>>) -> Self {
+        self.captures = Some(captures);
         self
     }
 
@@ -501,6 +514,7 @@ impl<S: OwnerSync> Commands<S> {
         };
         match gate::admit(&update.content, self.owner) {
             Admission::Message(message) => self.on_message(message).await,
+            Admission::Media(choice) => self.on_media(&choice).await,
             Admission::Callback(callback) => {
                 self.transport.answer_callback(&callback.id).await;
                 self.on_callback(callback).await;
@@ -781,6 +795,69 @@ impl<S: OwnerSync> Commands<S> {
             .map(|meta| meta.drill_id)
             .collect();
         drill_commands::resolve_token(prefix, data, &offered)
+    }
+
+    /// The owner's media (SPEC-118 R6 to R9): media with no file id is ignored without a word; any
+    /// other is saved into the vault inbox, and the owner is told what became of it.
+    async fn on_media(&self, choice: &Choice) {
+        if choice.silent() {
+            return;
+        }
+        let outcome = self.save_media(choice).await;
+        self.send(Reply::text(capture::reply(&outcome))).await;
+    }
+
+    /// Fetches `choice` from the Bot API into the vault inbox (R8): a file declared over the cap
+    /// is never asked for, and a stream past it is stopped and its temporary file removed, which
+    /// both read as a failed fetch. Any refusal of the save, a missing vault among them, reads as a
+    /// failed save (R9).
+    async fn save_media(&self, choice: &Choice) -> Outcome {
+        if !capture::may_fetch(choice.size) {
+            return Outcome::NotFetched;
+        }
+        let Some(captures) = &self.captures else {
+            return Outcome::NotSaved;
+        };
+        let Some(remote) = self.transport.file(&choice.file_id).await else {
+            return Outcome::NotFetched;
+        };
+        if !capture::may_fetch(remote.size) {
+            return Outcome::NotFetched;
+        }
+        let capture = Capture {
+            kind: choice.kind,
+            source: Source::Telegram,
+            unique: choice.unique().to_owned(),
+            when: self.clock.now(),
+            caption: choice.caption.clone(),
+        };
+        let mut stream = match captures.stream(capture, &choice.ext) {
+            Ok(stream) => stream,
+            Err(error) => {
+                tracing::warn!(%error, "a capture was not saved");
+                return Outcome::NotSaved;
+            }
+        };
+        let download = self
+            .transport
+            .download(&remote.path, MAX_DOWNLOAD_BYTES, |chunk| {
+                stream.write(chunk).is_ok()
+            })
+            .await;
+        match download {
+            Download::Complete { .. } => {}
+            Download::OverCap | Download::Failed => return Outcome::NotFetched,
+            Download::NotKept => return Outcome::NotSaved,
+        }
+        match stream.capture(&self.db).await {
+            Ok(Captured::Saved { name } | Captured::AlreadyCaptured { name }) => {
+                Outcome::Saved { name }
+            }
+            Err(error) => {
+                tracing::warn!(%error, "a capture was not saved");
+                Outcome::NotSaved
+            }
+        }
     }
 
     /// Sends `reply` to the owner. A reply that gives up is logged by the transport, with its

@@ -1,0 +1,325 @@
+{
+  "adapter": "with_a_faked_fetch_and_save",
+  "cases": [
+    {
+      "class": "no-file-id",
+      "input": {
+        "caption": "Synthetic caption",
+        "download": "synthetic bytes",
+        "ext": ".jpg",
+        "file_id": "",
+        "kind": "photo",
+        "save": {
+          "filename": "inbox-photo-unique-1.jpg",
+          "ok": true
+        },
+        "unique": "photo-unique-1"
+      },
+      "output": {
+        "downloads": [],
+        "returned": false,
+        "saves": [],
+        "sent": []
+      }
+    },
+    {
+      "class": "fetch-failed",
+      "input": {
+        "caption": "Synthetic caption",
+        "download": null,
+        "ext": ".jpg",
+        "file_id": "photo-file-2",
+        "kind": "photo",
+        "save": {
+          "filename": "inbox-photo-unique-1.jpg",
+          "ok": true
+        },
+        "unique": "photo-unique-2"
+      },
+      "output": {
+        "downloads": [
+          "photo-file-2"
+        ],
+        "returned": false,
+        "saves": [],
+        "sent": [
+          "\u26a0\ufe0f Couldn't fetch that file from Telegram \u2014 nothing saved."
+        ]
+      }
+    },
+    {
+      "class": "saved",
+      "input": {
+        "caption": "Synthetic caption",
+        "download": "synthetic bytes",
+        "ext": ".jpg",
+        "file_id": "photo-file-3",
+        "kind": "photo",
+        "save": {
+          "filename": "inbox-photo-unique-1.jpg",
+          "ok": true
+        },
+        "unique": "photo-unique-3"
+      },
+      "output": {
+        "downloads": [
+          "photo-file-3"
+        ],
+        "returned": true,
+        "saves": [
+          {
+            "caption": "Synthetic caption",
+            "data": "synthetic bytes",
+            "ext": ".jpg",
+            "kind": "photo",
+            "unique": "photo-unique-3"
+          }
+        ],
+        "sent": [
+          "\ud83d\udce5 Saved to Inbox as <code>inbox-photo-unique-1.jpg</code> \u2014 the nightly pass will file it."
+        ]
+      }
+    },
+    {
+      "class": "saved",
+      "input": {
+        "caption": "Synthetic caption",
+        "download": "synthetic bytes",
+        "ext": ".ogg",
+        "file_id": "voice-file-4",
+        "kind": "voice",
+        "save": {
+          "filename": "a-voice.ogg",
+          "ok": true
+        },
+        "unique": "voice-unique-4"
+      },
+      "output": {
+        "downloads": [
+          "voice-file-4"
+        ],
+        "returned": true,
+        "saves": [
+          {
+            "caption": "Synthetic caption",
+            "data": "synthetic bytes",
+            "ext": ".ogg",
+            "kind": "voice",
+            "unique": "voice-unique-4"
+          }
+        ],
+        "sent": [
+          "\ud83d\udce5 Saved to Inbox as <code>a-voice.ogg</code> \u2014 the nightly pass will file it."
+        ]
+      }
+    },
+    {
+      "class": "saved",
+      "input": {
+        "caption": "Synthetic caption",
+        "download": "synthetic bytes",
+        "ext": ".pdf",
+        "file_id": "document-file-5",
+        "kind": "document",
+        "save": {
+          "filename": "notes.pdf",
+          "ok": true
+        },
+        "unique": "document-unique-5"
+      },
+      "output": {
+        "downloads": [
+          "document-file-5"
+        ],
+        "returned": true,
+        "saves": [
+          {
+            "caption": "Synthetic caption",
+            "data": "synthetic bytes",
+            "ext": ".pdf",
+            "kind": "document",
+            "unique": "document-unique-5"
+          }
+        ],
+        "sent": [
+          "\ud83d\udce5 Saved to Inbox as <code>notes.pdf</code> \u2014 the nightly pass will file it."
+        ]
+      }
+    },
+    {
+      "class": "escaped-name",
+      "input": {
+        "caption": "Synthetic caption",
+        "download": "synthetic bytes",
+        "ext": ".pdf",
+        "file_id": "document-file-6",
+        "kind": "document",
+        "save": {
+          "filename": "Tom & Jerry <draft> \"v2\" it's.pdf",
+          "ok": true
+        },
+        "unique": "document-unique-6"
+      },
+      "output": {
+        "downloads": [
+          "document-file-6"
+        ],
+        "returned": true,
+        "saves": [
+          {
+            "caption": "Synthetic caption",
+            "data": "synthetic bytes",
+            "ext": ".pdf",
+            "kind": "document",
+            "unique": "document-unique-6"
+          }
+        ],
+        "sent": [
+          "\ud83d\udce5 Saved to Inbox as <code>Tom &amp; Jerry &lt;draft&gt; &quot;v2&quot; it&#x27;s.pdf</code> \u2014 the nightly pass will file it."
+        ]
+      }
+    },
+    {
+      "class": "saved-non-ascii-name",
+      "input": {
+        "caption": "Synthetic caption",
+        "download": "synthetic bytes",
+        "ext": ".md",
+        "file_id": "document-file-7",
+        "kind": "document",
+        "save": {
+          "filename": "\u00c9t\u00e9 \u65e5\u672c.md",
+          "ok": true
+        },
+        "unique": "document-unique-7"
+      },
+      "output": {
+        "downloads": [
+          "document-file-7"
+        ],
+        "returned": true,
+        "saves": [
+          {
+            "caption": "Synthetic caption",
+            "data": "synthetic bytes",
+            "ext": ".md",
+            "kind": "document",
+            "unique": "document-unique-7"
+          }
+        ],
+        "sent": [
+          "\ud83d\udce5 Saved to Inbox as <code>\u00c9t\u00e9 \u65e5\u672c.md</code> \u2014 the nightly pass will file it."
+        ]
+      }
+    },
+    {
+      "class": "save-refused",
+      "input": {
+        "caption": "Synthetic caption",
+        "download": "synthetic bytes",
+        "ext": ".jpg",
+        "file_id": "photo-file-8",
+        "kind": "photo",
+        "save": {
+          "error": "vault_missing",
+          "ok": false
+        },
+        "unique": "photo-unique-8"
+      },
+      "output": {
+        "downloads": [
+          "photo-file-8"
+        ],
+        "returned": false,
+        "saves": [
+          {
+            "caption": "Synthetic caption",
+            "data": "synthetic bytes",
+            "ext": ".jpg",
+            "kind": "photo",
+            "unique": "photo-unique-8"
+          }
+        ],
+        "sent": [
+          "\u26a0\ufe0f Couldn't save that capture to the vault inbox."
+        ]
+      }
+    },
+    {
+      "class": "save-refused",
+      "input": {
+        "caption": "Synthetic caption",
+        "download": "synthetic bytes",
+        "ext": ".jpg",
+        "file_id": "photo-file-9",
+        "kind": "photo",
+        "save": {
+          "ok": false
+        },
+        "unique": "photo-unique-9"
+      },
+      "output": {
+        "downloads": [
+          "photo-file-9"
+        ],
+        "returned": false,
+        "saves": [
+          {
+            "caption": "Synthetic caption",
+            "data": "synthetic bytes",
+            "ext": ".jpg",
+            "kind": "photo",
+            "unique": "photo-unique-9"
+          }
+        ],
+        "sent": [
+          "\u26a0\ufe0f Couldn't save that capture to the vault inbox."
+        ]
+      }
+    },
+    {
+      "class": "unique-fallback",
+      "input": {
+        "caption": "Synthetic caption",
+        "download": "synthetic bytes",
+        "ext": ".jpg",
+        "file_id": "photo-file-10",
+        "kind": "photo",
+        "save": {
+          "filename": "inbox-photo-unique-1.jpg",
+          "ok": true
+        },
+        "unique": ""
+      },
+      "output": {
+        "downloads": [
+          "photo-file-10"
+        ],
+        "returned": true,
+        "saves": [
+          {
+            "caption": "Synthetic caption",
+            "data": "synthetic bytes",
+            "ext": ".jpg",
+            "kind": "photo",
+            "unique": "photo-file-10"
+          }
+        ],
+        "sent": [
+          "\ud83d\udce5 Saved to Inbox as <code>inbox-photo-unique-1.jpg</code> \u2014 the nightly pass will file it."
+        ]
+      }
+    }
+  ],
+  "function": "bot.CommandBot._capture_file",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Calls the function on the same bot, whose download answers download as bytes or nothing and whose inbox writer answers save; returns what the function returned, each download and save it asked for, the bytes as text, and each line it sent; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_118.py",
+  "registry_sha256": "5be8803a5d853ddae4f34f3782ac68c247165c2852b84f213f147b91beab0d90",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}
