@@ -1,6 +1,6 @@
 //! The job table is the one schedule: `sync` holds one daily slot claimed per study day, no job
 //! shares a minute with the predecessor's schedule, and the scheduler's constants are the
-//! predecessor's (SPEC-027 A9, A10, A15, A17; R1, R2).
+//! predecessor's (SPEC-027 A9, A10, A15, A17, A18; R1, R2).
 
 // An integration test is test code: its helpers panic on a malformed golden, and the examined
 // counts are printed on purpose.
@@ -263,48 +263,175 @@ fn the_job_table_holds_sync_to_one_daily_slot_claimed_per_study_day() {
     assert_eq!(jobs::job("sync"), Some(jobs::SYNC));
 
     // Whatever the rollover hour and the offset, each scheduled sync fires at the rollover hour,
-    // minute 7, local; its fire date is the study day it runs in; and one day's sync follows the
-    // last one's study day by exactly one.
-    let offsets = [-720, -300, 0, 330, 840];
-    let mut fires = 0_usize;
-    for hour in 0..24 {
-        for minutes in offsets {
+    // minute 7, local, and its fire date is the study day it runs in. The judges record what they
+    // are handed, and the spread must hand them every member (SPEC-027 section 8).
+    let judged = check_spread(sync, &spread(&hours(), &OFFSETS, &days()))
+        .unwrap_or_else(|refusal| panic!("{refusal}"));
+    // Only once the spread is judged: one day's sync follows the last one's study day by exactly
+    // one, at each rollover hour and offset.
+    let mut by_rule: BTreeMap<(u8, i16), Vec<(i64, i64)>> = BTreeMap::new();
+    for ((hour, minutes, now), study_day) in judged {
+        by_rule
+            .entry((hour, minutes))
+            .or_default()
+            .push((now, study_day));
+    }
+    for ((hour, minutes), mut fires) in by_rule {
+        fires.sort_unstable();
+        for pair in fires.windows(2) {
+            assert_eq!(
+                pair[1].1,
+                pair[0].1 + 1,
+                "one sync per study day at rollover {hour}, offset {minutes}"
+            );
+        }
+    }
+}
+
+/// A member of the sync's spread: the rollover hour and the UTC offset of the rule a judge is
+/// handed, and the instant it is handed (#462).
+type Member = (u8, i16, i64);
+
+/// The five UTC offsets of the spread, in minutes.
+const OFFSETS: [i16; 5] = [-720, -300, 0, 330, 840];
+
+/// The members the spread must hand its judges, computed here and not by its generator: every
+/// rollover hour, times the five offsets, times 30 study days (SPEC-027 section 8).
+const SPREAD_MEMBERS: usize = 24 * 5 * 30;
+
+/// Every rollover hour.
+fn hours() -> Vec<u8> {
+    (0..24).collect()
+}
+
+/// The 30 study days of the spread, counted from study day 20,000.
+fn days() -> Vec<i64> {
+    (0..30).collect()
+}
+
+/// The spread's generator: for each rollover hour of `hours`, each offset of `offsets` and each
+/// study day of `days`, the rule and the instant (13:29 UTC of the day) a judge is handed.
+fn spread(hours: &[u8], offsets: &[i16], days: &[i64]) -> Vec<(StudyDayRule, UtcMillis)> {
+    let mut generated = Vec::new();
+    for &hour in hours {
+        for &minutes in offsets {
             let offset = UtcOffset::from_minutes(minutes).expect("an offset");
             let rule = StudyDayRule::new(Hour::new(hour).expect("an hour"), offset);
-            let mut previous = None;
-            for day in 0..30 {
-                let now = UtcMillis::from_epoch_millis(
-                    (20_000 + day) * DAY_MS + 13 * HOUR_MS + 29 * MINUTE_MS,
-                );
-                let fire = sync.schedule.latest_at_or_before(now, rule);
-                let local = fire.epoch_millis() + i64::from(minutes) * MINUTE_MS;
-                assert_eq!(
-                    local.rem_euclid(DAY_MS),
-                    i64::from(hour) * HOUR_MS + 7 * MINUTE_MS,
-                    "the sync fires at the rollover hour, minute 7, at rollover {hour}, offset \
-                     {minutes}"
-                );
-                assert!(fire <= now, "the fire is at or before now");
-                let study_day = rule.study_day(fire);
-                assert_eq!(
-                    FireDate::of(fire, offset).epoch_day(),
-                    study_day.epoch_day(),
-                    "the fire date is the study day at rollover {hour}, offset {minutes}"
-                );
-                if let Some(previous) = previous {
-                    assert_eq!(
-                        study_day.epoch_day(),
-                        previous + 1,
-                        "one sync per study day"
-                    );
-                }
-                previous = Some(study_day.epoch_day());
-                fires += 1;
+            for &day in days {
+                let now = (20_000 + day) * DAY_MS + 13 * HOUR_MS + 29 * MINUTE_MS;
+                generated.push((rule, UtcMillis::from_epoch_millis(now)));
             }
         }
     }
-    println!("examined {fires} scheduled sync fire(s)");
-    assert_eq!(fires, 24 * offsets.len() * 30);
+    generated
+}
+
+/// Judges one scheduled sync fire at `now` under `rule`: it fires at the rollover hour, minute 7,
+/// local, at or before now, and its fire date is the study day it runs in. It records the member
+/// it was handed, read from `rule` and `now` inside this call, and answers the fire's study day.
+fn judge_sync_fire(sync: Job, rule: StudyDayRule, now: UtcMillis, handed: &mut Vec<Member>) -> i64 {
+    let (hour, minutes) = (rule.rollover_hour().get(), rule.utc_offset().minutes());
+    handed.push((hour, minutes, now.epoch_millis()));
+    let fire = sync.schedule.latest_at_or_before(now, rule);
+    let local = fire.epoch_millis() + i64::from(minutes) * MINUTE_MS;
+    assert_eq!(
+        local.rem_euclid(DAY_MS),
+        i64::from(hour) * HOUR_MS + 7 * MINUTE_MS,
+        "the sync fires at the rollover hour, minute 7, at rollover {hour}, offset {minutes}"
+    );
+    assert!(fire <= now, "the fire is at or before now");
+    let study_day = rule.study_day(fire);
+    assert_eq!(
+        FireDate::of(fire, rule.utc_offset()).epoch_day(),
+        study_day.epoch_day(),
+        "the fire date is the study day at rollover {hour}, offset {minutes}"
+    );
+    study_day.epoch_day()
+}
+
+/// A spread refused: how many fires its judges examined, and how many distinct members they were
+/// handed.
+#[derive(Debug, PartialEq, Eq)]
+struct SpreadRefusal {
+    examined: usize,
+    distinct: usize,
+}
+
+impl std::fmt::Display for SpreadRefusal {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "the spread's judges examined {} fire(s) and were handed {} distinct member(s); the \
+             spread must hand them {SPREAD_MEMBERS} of each",
+            self.examined, self.distinct
+        )
+    }
+}
+
+/// Judges every fire `generated` names, and refuses the spread unless its judges examined
+/// [`SPREAD_MEMBERS`] fires and were handed as many distinct members. Answers each member with
+/// its fire's study day, in the generator's order.
+fn check_spread(
+    sync: Job,
+    generated: &[(StudyDayRule, UtcMillis)],
+) -> Result<Vec<(Member, i64)>, SpreadRefusal> {
+    let mut handed = Vec::new();
+    let study_days: Vec<i64> = generated
+        .iter()
+        .map(|&(rule, now)| judge_sync_fire(sync, rule, now, &mut handed))
+        .collect();
+    let handed = examined("scheduled sync fire(s)", handed);
+    let distinct = handed.iter().collect::<BTreeSet<_>>().len();
+    println!("handed {distinct} distinct member(s)");
+    if handed.len() != SPREAD_MEMBERS || distinct != SPREAD_MEMBERS {
+        return Err(SpreadRefusal {
+            examined: handed.len(),
+            distinct,
+        });
+    }
+    Ok(handed.into_iter().zip(study_days).collect())
+}
+
+/// SPEC-027 A18 (#462): a generator that folds the spread's members still has its judges examine
+/// 3,600 fires, and is refused by the distinct member count: a repeated offset, a repeated hour and
+/// a repeated day, each of whose distinct counts is computed here.
+#[test]
+fn a_spread_that_folds_its_members_reads_red_by_the_distinct_count() {
+    let mut repeated_hour = hours();
+    repeated_hour[1] = 0;
+    let mut repeated_day = days();
+    repeated_day[1] = 0;
+    let plants = vec![
+        (
+            "a repeated offset",
+            spread(&hours(), &[-720, -720, 0, 330, 840], &days()),
+            24 * 4 * 30,
+        ),
+        (
+            "a repeated hour",
+            spread(&repeated_hour, &OFFSETS, &days()),
+            23 * 5 * 30,
+        ),
+        (
+            "a repeated day",
+            spread(&hours(), &OFFSETS, &repeated_day),
+            24 * 5 * 29,
+        ),
+    ];
+    for (plant, generated, distinct) in examined("generator plant(s)", plants) {
+        let refusal = check_spread(jobs::SYNC, &generated).err();
+        if let Some(refused) = &refusal {
+            println!("{plant}: refused: {refused}");
+        }
+        assert_eq!(
+            refusal,
+            Some(SpreadRefusal {
+                examined: SPREAD_MEMBERS,
+                distinct,
+            }),
+            "{plant} is refused by its distinct member count alone"
+        );
+    }
 }
 
 /// The latest instant at or before `now` that `schedule` fires at, found the slow and obvious way:
