@@ -377,6 +377,8 @@ A23: python3 -m unittest discover -s scripts/tests -p test_public_scrub.py -k te
   and the schema are already equal to the source (#60).
 - It adds no waiver for the drift to the private wiring: a waiver would hide a refreshed copy's
   absence (#60).
+- It does not change the scrub's own list of unit types, which still decides a bare instance name
+  and an address at `.target` (#556).
 
 ### Risks
 
