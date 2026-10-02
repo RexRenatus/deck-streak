@@ -1,5 +1,5 @@
--- @phx covers crates/streaks/src/lapse.rs anchor=open_lapse digest=sha256:e3a322de347ef0726cd2cd8812bbf2d90179b610c61452690dae47557e5be238
--- @phx covers crates/streaks/src/lapse.rs anchor=next_silent_count digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+-- @phx covers crates/streaks/src/lapse.rs anchor=open_lapse digest=sha256:cec9211f1d6b078d6375cc373edfa3bb45053c787ed99835531b3387672179f5
+-- @phx covers crates/streaks/src/lapse.rs anchor=next_silent_count digest=sha256:5d8c1d7834305851e1b8993ce86a5e62c0f389dd162fbe18d2c5fd583d3aaf70
 -- @phx cites #472, #446
 -- @phx theorem at_most_one_step_per_day ramp=report
 -- @phx theorem never_overflows ramp=report
