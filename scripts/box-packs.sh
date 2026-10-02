@@ -63,10 +63,11 @@
 # It prints one line per pack, probe, scan and owned file, and a summary, and exits 0 when nothing
 # failed, 1 when something did, and 2 when it cannot judge. The scratch directory (the exported tree
 # and the ledger) is removed when the run ends. Each card is written under $BOX_PACKS_OUT when that
-# is set, and that directory is never removed. Otherwise the cards go to a fresh temporary directory
-# this run made, which is removed when the run ends, whether it passed, failed or stopped on an
-# error (issue 531). Set BOX_PACKS_KEEP=1 to keep that directory to read a card; the path is named
-# on stderr as `cards: <path>` whenever the cards are kept.
+# is set and not empty, and that directory is never removed. Otherwise the cards go to a fresh
+# temporary directory this run made, which is removed when the run ends, whether it passed, failed
+# or stopped on an error (issue 531). Set BOX_PACKS_KEEP to any non-empty value (1, and 0 too) to
+# keep that directory to read a card; the path is named on stderr as `cards: <path>` whenever the
+# cards are kept.
 set -euo pipefail
 BOX_PACKS_SELF="${BASH_SOURCE[0]}" exec python3 - "$@" <<'PY'
 """The box driver: this file's opening comment is its documentation (ADR-069, ADR-030)."""
@@ -180,8 +181,9 @@ def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(
         prog="box-packs.sh",
         description="judge every pack, probe and owned file against a DeckStreak commit",
-        epilog="BOX_PACKS_OUT names a directory for the cards, never removed; BOX_PACKS_KEEP=1 "
-        "keeps the temporary cards directory the run made, and the run prints its path.",
+        epilog="A non-empty BOX_PACKS_OUT names a directory for the cards, never removed; any "
+        "non-empty BOX_PACKS_KEEP (1, and 0 too) keeps the temporary cards directory the run made, "
+        "and the run prints its path.",
     )
     parser.add_argument("--rev", default="HEAD", help="the commit to judge (default HEAD)")
     parser.add_argument(
