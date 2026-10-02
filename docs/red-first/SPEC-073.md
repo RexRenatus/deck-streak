@@ -207,6 +207,13 @@ Each was written for a mutant that survived GREEN:
   the configured courses). `distance` clamps with `max(0)`, since `>` and `>=` agree at a gap of 0,
   and row S07323 is re-anchored to it.
 
+One more test edit came after GREEN, by the architect's ruling, and it removes no assertion.
+`80b26802` gives the refusal tests in `web/app/src/lib/badges/badges.test.ts` and
+`web/app/src/lib/records/records.test.ts` a positive control: each test first asserts that its
+untouched fixture parses to its real values, and then runs its `toBeNull` refusals unchanged, so
+each refused body, which differs from that fixture in one field, is refused for that field. It
+changes no production file and none of the reds above.
+
 ```red-first
 A20: red at 18db650: assertion `left == right` failed: /api/badges None; left: 200, right: 401
 A20: green at c1ba033
