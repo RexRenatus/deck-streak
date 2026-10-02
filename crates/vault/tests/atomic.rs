@@ -648,6 +648,12 @@ fn a_stream_prints_neither_its_target_nor_its_temporary_name() {
     );
 }
 
+/// The staged executor's borrowed port (ADR-316): the journal guard the writer is handed wraps the
+/// executor's own file system, so the adapter implements the port's `create_new` and passes it
+/// straight through. Named by file, call and count, the method and its one delegated call, so a
+/// third mention in that file is refused as any other call outside the writer is.
+const PORT_DELEGATION: (&str, &str, usize) = ("staged.rs", "create_new(", 2);
+
 /// The calls that write a file's bytes. Each is allowed only inside the atomic writer and the
 /// file-system port it writes through.
 const FILE_WRITES: [&str; 5] = [
@@ -832,6 +838,7 @@ fn every_vault_file_write_is_the_atomic_writer() {
     let src = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
     let mut outside = Vec::new();
     let mut inside = 0;
+    let mut delegated = 0;
     let files = examined("source file(s) under src", sources(&src));
     for path in &files {
         let name = path
@@ -847,6 +854,10 @@ fn every_vault_file_write_is_the_atomic_writer() {
                 let found = line.matches(call).count();
                 if found > 0 && writer {
                     inside += found;
+                } else if found > 0
+                    && (name.as_str(), call) == (PORT_DELEGATION.0, PORT_DELEGATION.1)
+                {
+                    delegated += found;
                 } else if found > 0 {
                     outside.push(format!("{name}:{}: {call}", number + 1));
                 }
@@ -862,6 +873,10 @@ fn every_vault_file_write_is_the_atomic_writer() {
     assert!(
         outside.is_empty(),
         "file-writing calls outside the atomic writer: {outside:#?}"
+    );
+    assert_eq!(
+        delegated, PORT_DELEGATION.2,
+        "the staged executor's borrowed port names create_new once and delegates it once"
     );
     assert!(
         files.len() > 10 && inside > 0,

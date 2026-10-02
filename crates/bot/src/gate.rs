@@ -7,6 +7,8 @@
 //! `_MAX_CALLBACK_DATA`, proved by `goldens/bot.constants.json`): the owner's text over the cap is
 //! dropped, and the owner's callback whose data is over its cap is answered, so the client's
 //! progress indicator stops, and not dispatched.
+//! The owner's message that carries no text but a photo, a voice note or a document, in the owner's
+//! private chat, is admitted as media for the vault inbox (SPEC-118 R6).
 //!
 //! The owner is identity's: the Telegram user id the credential `owner-user-id` names (ADR-006).
 //! In a private chat the chat's id is the user's, so the owner's private chat is the chat whose id
@@ -17,7 +19,7 @@ use deck_streak_kernel::TelegramUserId;
 use frankenstein::types::{CallbackQuery, ChatType, MaybeInaccessibleMessage, Message, User};
 use frankenstein::updates::UpdateContent;
 
-use crate::capture::Choice;
+use crate::capture::{self, Choice};
 
 /// The longest text the owner's message may carry, in characters: longer is dropped.
 pub const MAX_INBOUND_TEXT: usize = 4096;
@@ -105,7 +107,8 @@ fn admit_message(message: &Message, owner: Owner) -> Admission {
         return dropped("message", "not_owners_private_chat");
     }
     let Some(text) = &message.text else {
-        return dropped("message", "no_text");
+        return capture::choose(message)
+            .map_or_else(|| dropped("message", "no_text"), Admission::Media);
     };
     if text.chars().count() > MAX_INBOUND_TEXT {
         return dropped("message", "text_over_cap");

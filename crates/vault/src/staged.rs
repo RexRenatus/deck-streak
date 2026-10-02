@@ -9,7 +9,10 @@
 //! update still over the bytes the agent last wrote, every move over the capture its hash names,
 //! every staged note through the rails. A refused run or a red class discards the run and leaves the
 //! vault untouched: it fails closed. The checks run again after the gate, before the first write,
-//! because the owner's devices keep writing the vault while the gate runs.
+//! because the owner's devices keep writing the vault while the gate runs. Each folder, note and
+//! capture is then guarded at the moment it is applied: one whose path resolves into a journal
+//! folder, through a link the vault gained after the checks, stops the run there (SPEC-118 R5,
+//! ADR-316).
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
@@ -22,7 +25,7 @@ use std::time::Duration;
 use deck_streak_kernel::Verdict;
 use serde_json::Value;
 
-use crate::fs::{EntryKind, VaultFs};
+use crate::fs::{DirEntry, EntryKind, JournalGuard, VaultFile, VaultFs};
 use crate::rails::{RailRefusal, Rails};
 use crate::{VaultError, atomic, sha256};
 
@@ -723,8 +726,17 @@ impl<'g, F: VaultFs> Executor<'g, F> {
         if let Err(refusal) = self.check(&run, run_dir)? {
             return Ok(RunOutcome::Discarded(Discard::Refused(refusal)));
         }
-        for op in &run.ops {
-            self.apply_op(op, run_dir)?;
+        for (applied, op) in run.ops.iter().enumerate() {
+            match self.apply_op(&run, op, run_dir) {
+                Ok(()) => {}
+                Err(VaultError::JournalRefused) => {
+                    return Ok(RunOutcome::Stopped {
+                        applied,
+                        refusal: VaultError::JournalRefused,
+                    });
+                }
+                Err(error) => return Err(error),
+            }
         }
         Ok(RunOutcome::Applied { ops: run.ops.len() })
     }
@@ -952,21 +964,42 @@ impl<'g, F: VaultFs> Executor<'g, F> {
         Ok(Some(files))
     }
 
-    /// Applies one checked operation.
-    fn apply_op(&self, op: &Op, run_dir: &Path) -> Result<(), VaultError> {
+    /// The executor's file system, guarded against the journal folders of `run`'s layout: every
+    /// folder, note and capture the run applies goes through it (SPEC-118 R5).
+    fn guard(&self, run: &DutyRun) -> JournalGuard<Borrowed<'_, F>> {
+        JournalGuard::new(
+            Borrowed(&self.fs),
+            run.layout
+                .journal
+                .iter()
+                .map(|folder| self.vault.join(folder))
+                .collect(),
+        )
+    }
+
+    /// Applies one checked operation of `run`. Each path it writes, a capture's source included, is
+    /// refused as [`VaultError::JournalRefused`] when it resolves into a journal folder at the
+    /// moment it is written: the checks ran before the gate, and a link the vault gained since
+    /// would otherwise carry the write into the journal (ADR-316).
+    fn apply_op(&self, run: &DutyRun, op: &Op, run_dir: &Path) -> Result<(), VaultError> {
+        let guard = self.guard(run);
         let target = self.vault.join(op.target());
-        self.create_folders(op.target())?;
+        if let Op::Move { from, .. } = op {
+            atomic::refuse_journal_resolved(&guard, &self.vault.join(from))?;
+        }
+        self.create_folders(&guard, op.target())?;
         match op {
             Op::Create { .. } | Op::Update { .. } => {
                 let bytes = self
                     .fs
                     .read(&run_dir.join(op.target()))
                     .map_err(VaultError::io("read a staged note"))?;
-                atomic::write(&self.fs, &target, &bytes)
+                atomic::write(&guard, &target, &bytes)
             }
             Op::Move { from, .. } => {
                 let source = self.vault.join(from);
-                self.fs
+                atomic::refuse_journal_resolved(&guard, &target)?;
+                guard
                     .rename(&source, &target)
                     .map_err(VaultError::io("file a capture"))?;
                 for folder in [target.parent(), source.parent()].into_iter().flatten() {
@@ -979,8 +1012,13 @@ impl<'g, F: VaultFs> Executor<'g, F> {
         }
     }
 
-    /// Creates the folders `relative` needs below its top-level folder, which exists.
-    fn create_folders(&self, relative: &str) -> Result<(), VaultError> {
+    /// Creates the folders `relative` needs below its top-level folder, which exists, through
+    /// `guard`: a folder that resolves into a journal folder is refused before it is created.
+    fn create_folders(
+        &self,
+        guard: &JournalGuard<Borrowed<'_, F>>,
+        relative: &str,
+    ) -> Result<(), VaultError> {
         let segments: Vec<&str> = relative.split('/').collect();
         let Some((_, folders)) = segments.split_last() else {
             return Ok(());
@@ -989,7 +1027,8 @@ impl<'g, F: VaultFs> Executor<'g, F> {
         for part in folders {
             folder.push(part);
             if self.kind(&folder)?.is_none() {
-                self.fs
+                atomic::refuse_journal_resolved(guard, &folder)?;
+                guard
                     .create_dir(&folder)
                     .map_err(VaultError::io("create a vault folder"))?;
             }
@@ -1002,6 +1041,56 @@ impl<'g, F: VaultFs> Executor<'g, F> {
         self.fs
             .kind(path)
             .map_err(VaultError::io("read a vault entry"))
+    }
+}
+
+/// The executor's file system, borrowed for one operation's journal guard: [`JournalGuard`] owns
+/// the file system it wraps, and the executor keeps its own. Every call passes straight through.
+struct Borrowed<'f, F>(&'f F);
+
+impl<F: VaultFs> VaultFs for Borrowed<'_, F> {
+    fn create_new(&self, path: &Path) -> io::Result<Box<dyn VaultFile>> {
+        self.0.create_new(path)
+    }
+
+    fn rename(&self, from: &Path, to: &Path) -> io::Result<()> {
+        self.0.rename(from, to)
+    }
+
+    fn sync_dir(&self, dir: &Path) -> io::Result<()> {
+        self.0.sync_dir(dir)
+    }
+
+    fn remove_file(&self, path: &Path) -> io::Result<()> {
+        self.0.remove_file(path)
+    }
+
+    fn read(&self, path: &Path) -> io::Result<Vec<u8>> {
+        self.0.read(path)
+    }
+
+    fn kind(&self, path: &Path) -> io::Result<Option<EntryKind>> {
+        self.0.kind(path)
+    }
+
+    fn list(&self, dir: &Path) -> io::Result<Vec<DirEntry>> {
+        self.0.list(dir)
+    }
+
+    fn create_dir(&self, path: &Path) -> io::Result<()> {
+        self.0.create_dir(path)
+    }
+
+    fn remove_dir(&self, path: &Path) -> io::Result<()> {
+        self.0.remove_dir(path)
+    }
+
+    fn canonicalize(&self, path: &Path) -> io::Result<PathBuf> {
+        self.0.canonicalize(path)
+    }
+
+    fn journal(&self) -> &[PathBuf] {
+        self.0.journal()
     }
 }
 
