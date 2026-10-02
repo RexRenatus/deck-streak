@@ -495,10 +495,11 @@ This part also edits SPEC-024: its A18 row reads 15 routed, and one sentence aft
 
 073c delivers A20 to A24 and the rows S07319 to S07329. Parts A, B and C are delivered, so the
 Status line reads all three. Section 4's band row ("added: the rows of section 9") counts 8 rows by
-073a, 8 by 073b and 11 by 073c. Section 3c now holds no rows: the five `073c:` fence lines moved
-back, verbatim and without the prefix, into the acceptance fence, and the five rows moved back,
-verbatim and without the `delivered by` column, into section 3's table. The fifteen lines that
-named a file 073c delivers left the list of files 073a left unchanged, which is now empty.
+073a, 8 by 073b and 11 by 073c; section 9's table lists the 16 of 073a and 073b, and the table below
+lists 073c's 11. Section 3c now holds no rows: the five `073c:` fence lines moved back, verbatim and
+without the prefix, into the acceptance fence, and the five rows moved back, verbatim and without
+the `delivered by` column, into section 3's table. The fifteen lines that named a file 073c delivers
+left the list of files 073a left unchanged, which is now empty.
 
 | row | target | what it guards | killer |
 |---|---|---|---|

@@ -183,13 +183,19 @@ prose, each with its test name, file and line.
 
 ## 073c: the routes, the bot commands and the screens
 
-Two RED commits change no production file. `18db650e` adds the Rust tests: A20's route test and A21's
-and A22's bot tests, each red by assertion with the routes and commands absent. `207fc032` adds the
-web tests: A23's gallery and A24's records screen tests, red by assertion against stubs that render
-nothing. The GREEN commit is `c1ba0334`. Each red below was run selecting its test:
+Two RED commits add the tests and only stubs of the production code: `18db650e` mounts the three
+routes without the owner check over stub handlers and adds stub bot replies and views, and
+`207fc032` adds stub components and readers. `18db650e` adds the Rust tests: A20's route test and
+A21's and A22's bot tests, each red by assertion against those stubs: the routes answered without
+the owner check and the bot answered the two commands with its help text. `207fc032` adds the web
+tests: A23's gallery and A24's records screen tests, red by assertion against stubs that render
+nothing. The two refusal tests in `badges.test.ts` and `records.test.ts` are not red at `207fc032`:
+the stub readers return null, which every refusal expects; `80b26802`'s positive control makes each
+fail against such a reader. The GREEN commit is `c1ba0334`. Each red below was run selecting its
+test:
 
-- A20, `crates/api/tests/badges_routes.rs:276:13`: the route was not mounted, so the shell's
-  fallback answered 200 where the owner's session was refused.
+- A20, `crates/api/tests/badges_routes.rs:276:13`: the route was mounted without the owner check, so
+  its stub answered 200 where the owner's session was refused.
 - A21 and A22, `crates/bot/tests/badges_commands.rs:115:5` and `:146:5`: the bot answered `/badges`
   and `/records` with its help text, as it answers an unknown command.
 - A23 and A24: the stubs rendered no badge and no record line.
