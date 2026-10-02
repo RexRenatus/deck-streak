@@ -35,8 +35,9 @@ pub struct DirEntry {
 }
 
 /// An open file the adapter is writing: the handle of a temporary file, written and synced before
-/// it is renamed over its target.
-pub trait VaultFile {
+/// it is renamed over its target. It is `Send`, so a capture whose attachment is streaming can be
+/// awaited on any of the runtime's workers, as the API's handlers and the bot's tasks are.
+pub trait VaultFile: Send {
     /// Writes all of `bytes`.
     ///
     /// # Errors
