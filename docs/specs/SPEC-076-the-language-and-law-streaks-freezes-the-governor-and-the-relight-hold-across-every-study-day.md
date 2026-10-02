@@ -13,8 +13,9 @@
 - **Prerequisites:** SPEC-071 (the fold and each study day's reviews), SPEC-040 (the grant port),
   SPEC-041 (the router), SPEC-049 (the lapse slice this SPEC extends), SPEC-024 (the owner's
   session) and SPEC-026 (the bot's command table). **Mutation band:** `S07600-S07699`.
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-076.md` (ADR-016).
+- **Status:** delivered by #446, which moved it from `docs/specs/planned/` with its tests and
+  `docs/red-first/SPEC-076.md` (ADR-016). ~~planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
+  `docs/specs/` with its tests and `docs/red-first/SPEC-076.md` (ADR-016).~~
 
 ## 1. The problem, measured
 
@@ -1118,3 +1119,7 @@ digest in the header line of `formal/vectors/open-lapse.jsonl`. It adds the row 
 `docs/decisions/ADR-309-the-open-lapse-silent-day-count-is-a-named-saturating-step-pinned-by-an-exact-assert.md`
 and the changelog fragment `changelog.d/lapse-count-534.md`. It changes `docs/red-first/SPEC-076.md`
 (the addendum of this date).
+
+## 36. Amendment, 2026-10-02: the Status names the delivery
+
+Insert-only under ruling (i) of SPEC-038 section 8: every earlier byte is kept in order. The one insertion is in the Status line of the header: the delivery that moved this SPEC out of `docs/specs/planned/` (#446, ADR-016) and the closing marks that strike the old "planned" wording, which a SPEC in `docs/specs/` no longer states. This section is the other insertion.
