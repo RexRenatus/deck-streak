@@ -29,7 +29,7 @@ pub const LAPSE_AFTER_SILENT_DAYS: u32 = 3;
 /// `saturatingAdd` models it.
 #[must_use]
 pub const fn next_silent_count(silent: u32) -> u32 {
-    silent.wrapping_add(1)
+    silent.saturating_add(1)
 }
 
 /// The lapse open on `today`, by its id (the run's first silent day), if any.

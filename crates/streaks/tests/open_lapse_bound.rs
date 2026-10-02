@@ -7,7 +7,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use deck_streak_kernel::StudyDay;
-use deck_streak_streaks::lapse::{next_silent_count, open_lapse, LAPSE_AFTER_SILENT_DAYS};
+use deck_streak_streaks::lapse::{LAPSE_AFTER_SILENT_DAYS, next_silent_count, open_lapse};
 
 fn day(number: i64) -> StudyDay {
     StudyDay::from_epoch_day(number)
