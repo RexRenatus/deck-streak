@@ -17,7 +17,7 @@
         "let index = (self.random() * n).floor() as usize;",
         "let index = (self.random() * n).ceil() as usize;",
         "pynum_random::the_generator_matches_cpythons_golden",
-        "a pick is the FLOOR of random() * n, so a ceiling reads the next element (SPEC-302 R3, A3); cargo-mutants makes no mutant of a method name"
+        "a pick is the FLOOR of random() * n, so a ceiling reads the next element (SPEC-302 R2, A3); cargo-mutants makes no mutant of a method name"
       ]
     ]
   }

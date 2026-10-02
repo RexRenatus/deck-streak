@@ -280,8 +280,9 @@ pub fn round(x: f64, ndigits: i32) -> f64 {
 /// ascending list, and 0 for an empty one.
 ///
 /// `pct * n` is a float product (`0.9 * 70` is 63.00000000000001, rank 64), so the rank is the
-/// ceiling of that float and no integer shortcut. A `pct` outside `[0, 1]` reads an end of the
-/// list, where the predecessor's index would raise.
+/// ceiling of that float and no integer shortcut. A finite `pct` outside `[0, 1]` reads an end
+/// of the list, where the predecessor's index would raise; a NaN `pct` is outside the port's
+/// domain.
 #[must_use]
 pub fn percentile(values: &[i64], pct: f64) -> i64 {
     let mut ordered = values.to_vec();
