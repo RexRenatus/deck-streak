@@ -428,3 +428,57 @@ or changes them:
   `web/app/src/routes/shop/+page.svelte` and `web/app/src/lib/routes.ts`: E3 delivers them.
 
 The ports R7 calls `credit` and `credit_once` are named `deposit` and `deposit_once` in code, with their `_on` forms `deposit_on` and `deposit_once_on` and their answer `DepositAnswer` (`Deposited`, `AlreadyDeposited`), because docs/LEXICON.md locks `credit` out of a declaration in deck-streak-economy (ADR-308 ruling 7); R7's prose is unchanged.
+
+## 11. Amendments, 2026-10-02: the manifest of E1
+
+Section 4's table names the files of every pull request of this SPEC. This section is E1's
+manifest against it: first the rows E1 leaves to a later pull request, as section 10 splits them,
+then the files E1 adds or changes that section 4 does not name.
+
+Section 4's rows that E1 leaves to a later pull request:
+
+- `crates/economy/src/shop.rs`: unchanged by E1; E3 delivers it.
+- `crates/economy/tests/shop_goldens.rs`: unchanged by E1; E3 delivers it.
+- `tools/parity-oracle/goldens/buy_item.json`: unchanged by E1; E3 delivers it.
+- `crates/coordination/src/recompute/mint.rs`: unchanged by E1; E1b delivers it.
+- `crates/coordination/src/recompute/mod.rs`: unchanged by E1; E1b delivers it.
+- `crates/coordination/tests/wallet_mint.rs`: unchanged by E1; E1b delivers it.
+- `crates/coordination/src/shop.rs`: unchanged by E1; E3 delivers it.
+- `crates/coordination/tests/shop_purchase.rs`: unchanged by E1; E3 delivers it.
+- `crates/coordination/src/lib.rs`: unchanged by E1; E1b and E3 deliver it.
+- `crates/api/src/wallet_routes.rs`: unchanged by E1; E1b and E3 deliver it.
+- `crates/api/src/router.rs`: unchanged by E1; E1b and E3 deliver it.
+- `crates/api/tests/wallet_routes.rs`: unchanged by E1; E1b and E3 deliver it.
+- `crates/bot/src/shop_commands.rs`: unchanged by E1; E3 delivers it.
+- `crates/bot/src/commands.rs`: unchanged by E1; E3 delivers it.
+- `crates/bot/tests/shop_commands.rs`: unchanged by E1; E3 delivers it.
+- `crates/daemon/src/wiring.rs`: unchanged by E1; E1b delivers it.
+- `web/app/src/lib/economy/WalletHeader.svelte`: unchanged by E1; E1b delivers it.
+- `web/app/src/lib/economy/wallet.ts`: unchanged by E1; E1b delivers it.
+- `web/app/src/lib/economy/wallet-header.test.ts`: unchanged by E1; E1b delivers it.
+- `web/app/src/routes/+layout.svelte`: unchanged by E1; E1b delivers it.
+- `web/app/src/lib/economy/ShopItem.svelte`: unchanged by E1; E3 delivers it.
+- `web/app/src/lib/economy/shop.test.ts`: unchanged by E1; E3 delivers it.
+- `web/app/src/routes/shop/+page.svelte`: unchanged by E1; E3 delivers it.
+- `web/app/src/lib/routes.ts`: unchanged by E1; E3 delivers it.
+
+The files E1 adds or changes that section 4 does not name:
+
+- `docs/decisions/ADR-308-the-wallet-writes-each-movement-in-one-immediate-transaction-over-a-summed-ledger.md`: added, the wallet's decision record.
+- `docs/schematics/coin-wallet-and-its-ports.md`: added, the wallet's ports and their transactions.
+- `formal/tla/WalletFloor/WalletFloor.tla`: added, the model of concurrent callers over one ledger.
+- `formal/tla/WalletFloor/MCWalletFloor.cfg`: added, the model's configuration.
+- `formal/tla/WalletFloor/witness/a-floor-read-outside-the-write.cfg`: added, a witness.
+- `formal/tla/WalletFloor/witness/a-once-ever-guard-read-on-its-own-day.cfg`: added, a witness.
+- `formal/tla/WalletFloor/witness/a-ledger-with-no-unique-key.cfg`: added, a witness.
+- `formal/tla/WalletFloor/witness/a-closed-day-mint-that-follows-its-base.cfg`: added, a witness.
+- `formal/lean/Formal/Wallet.lean`: added, the proofs of the debit clip and the mint.
+- `formal/lean/Formal/WalletVectors.lean`: added, the proofs' vector writer.
+- `formal/lean/Formal/Vectors.lean`: changed, one import and one arm for the writer.
+- `formal/lean/Formal.lean`: changed, one import.
+- `formal/vectors/wallet.jsonl`: added, the vectors the writer wrote.
+- `crates/economy/tests/formal_vectors_wallet.rs`: added, the Rust rules against the vectors.
+- `config/formal.json`: changed, the model's time budget.
+- `scripts/tests/test_formal_config.py`: changed, the test that pins the budget.
+- `crates/coordination/tests/relight_order.rs`: changed, the economy port joins the static register.
+- `scripts/mutation-equivalent.d/deck-streak-economy.json`: added, the economy's equivalent mutants.
