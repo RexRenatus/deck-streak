@@ -350,6 +350,40 @@ impl Celebrate for Recorder {
     }
 }
 
+/// A [`Celebrate`] port that, before it answers, marks the offered row at `at` with `mark` (an
+/// `UPDATE` binding `?1` to `at`), as a second offer interleaved between this offer's read of the
+/// owed rows and its own mark would (ADR-303: a mark is set only while the row is still unset).
+pub struct MarksFirst {
+    db: Db,
+    mark: &'static str,
+    at: i64,
+}
+
+impl MarksFirst {
+    /// The port that marks through `mark`, at the instant `at`, in a write of its own on `db`.
+    pub fn new(db: &Db, mark: &'static str, at: i64) -> Self {
+        Self {
+            db: db.clone(),
+            mark,
+            at,
+        }
+    }
+}
+
+impl Celebrate for MarksFirst {
+    fn celebrate<'a>(&'a self, _celebration: &'a Celebration) -> PortFuture<'a, ()> {
+        Box::pin(async move {
+            let mut write = self.db.write().await?;
+            sqlx::query(self.mark)
+                .bind(self.at)
+                .execute(&mut *write)
+                .await?;
+            write.commit().await?;
+            Ok(())
+        })
+    }
+}
+
 /// The error of a router that did not answer.
 pub fn no_answer() -> KernelError {
     KernelError::Database(sqlx::Error::Protocol(

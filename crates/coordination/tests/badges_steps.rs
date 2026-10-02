@@ -2,9 +2,9 @@
 //! when an evaluation stops after its write or after the router answered, a closing day is judged
 //! with its end-of-day state, and THE CLASS RULE: every evaluated day awards exactly the study
 //! badges its context earns, once. An owed badge is raised with its line on the offers' day and
-//! marked from the clock at the answer. The step is named `progression.badges`, and the awards'
-//! offers print their type with the router they hand to left out. Every review, rollup, card state
-//! and streak is synthetic.
+//! marked from the clock at the answer, and a mark another offer set first is kept. The step is
+//! named `progression.badges`, and the awards' offers print their type with the router they hand
+//! to left out. Every review, rollup, card state and streak is synthetic.
 
 // An integration test is test code: its helpers panic on a failed fixture, and it prints the
 // examined count on purpose.
@@ -25,8 +25,8 @@ use deck_streak_ingest::reader::CollectionData;
 use deck_streak_kernel::{Courses, Db, StudyDayRule, UtcMillis};
 
 use support::{
-    D0, DIGEST, Recorder, RecordingBot, RollupSeed, RouteThenFail, answer, at, badges, card,
-    card_state, collection, day, router, run_step, scratch, seed_rollups, seed_streak,
+    D0, DIGEST, MarksFirst, Recorder, RecordingBot, RollupSeed, RouteThenFail, answer, at, badges,
+    card, card_state, collection, day, router, run_step, scratch, seed_rollups, seed_streak,
 };
 
 /// The fold of the badge step alone.
@@ -262,6 +262,43 @@ async fn an_owed_badge_is_raised_on_the_offers_day_and_marked_at_the_answer() {
     .await
     .expect("the mark reads");
     assert_eq!(mark, Some(now), "marked from the clock at the answer");
+}
+
+#[tokio::test]
+async fn a_badge_marked_twice_keeps_its_first_mark() {
+    let scratch = first_day().await;
+    let step = BadgesStep::new(Courses::default());
+    run_step(
+        &scratch.db,
+        &step,
+        &first_answer(),
+        0,
+        (D0, Evaluation::Current),
+        at(D0, 13),
+    )
+    .await;
+    // Another offer marks the badge at 14:00 between this offer's read and its own mark at 15:00.
+    let first = at(D0, 14);
+    let port = MarksFirst::new(
+        &scratch.db,
+        "UPDATE badges_earned SET celebrated_at = ?1 WHERE badge_key = 'first_steps'",
+        first,
+    );
+    offer_badges(
+        &port,
+        &scratch.db,
+        UtcMillis::from_epoch_millis(at(D0, 15)),
+        day(D0),
+    )
+    .await
+    .expect("the offers run");
+    let mark: Option<i64> = sqlx::query_scalar(
+        "SELECT celebrated_at FROM badges_earned WHERE badge_key = 'first_steps' AND tier = 0",
+    )
+    .fetch_one(scratch.db.reader())
+    .await
+    .expect("the mark reads");
+    assert_eq!(mark, Some(first), "the first mark is kept");
 }
 
 #[tokio::test]

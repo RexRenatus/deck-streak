@@ -1,11 +1,12 @@
 //! The records step (SPEC-073 A14 to A16; R9 to R12; ADR-303): its plan equals the predecessor's
-//! golden over a 370-day window, the first detection seeds the records silently, a record is
-//! celebrated once per kind and day, a record still owed when a later day beats it is offered
-//! before that day's write, and one replaced before it was offered is named in a log line, while a
-//! best that climbs within its own day is not. An offer the router did not answer leaves the record
-//! owed; an answered one is raised on the offers' day, marked from the clock, in the kinds' order,
-//! with its line. The step is named `progression.records`, and the records view (R13) shows each
-//! stored record against today's live value and the record today is closest to.
+//! golden over a 370-day window, the first detection seeds the records silently, a record that
+//! beats the seed on the seed's own day is offered, a record is celebrated once per kind and day, a
+//! record still owed when a later day beats it is offered before that day's write, and one replaced
+//! before it was offered is named in a log line, while a best that climbs within its own day is
+//! not. An offer the router did not answer leaves the record owed; an answered one is raised on the
+//! offers' day, marked from the clock, in the kinds' order, with its line, and a mark another offer
+//! set first is kept. The step is named `progression.records`, and the records view (R13) shows
+//! each stored record against today's live value and the record today is closest to.
 //! Every rollup, record and review is synthetic.
 
 // An integration test is test code: its helpers panic on a malformed golden or a failed fixture.
@@ -42,8 +43,8 @@ use deck_streak_progression::records::{Detected, RecordKind};
 use serde_json::Value;
 
 use support::{
-    D0, DIGEST, Recorder, RecordingBot, RollupSeed, answer, at, card, collection, day, records,
-    router, run_step, scratch, seed_records, seed_rollups,
+    D0, DIGEST, MarksFirst, Recorder, RecordingBot, RollupSeed, answer, at, card, collection, day,
+    records, router, run_step, scratch, seed_records, seed_rollups,
 };
 
 /// A golden kind.
@@ -253,6 +254,73 @@ async fn the_first_detection_seeds_records_silently() {
             recorder.keys()
         );
     }
+}
+
+#[tokio::test]
+async fn a_record_beaten_on_the_seeds_own_day_is_offered() {
+    let scratch = scratch().await;
+    seed_rollups(
+        &scratch.db,
+        &[totals(D0 - 1, 70, 30, 600.0), totals(D0, 60, 10, 300.0)],
+    )
+    .await;
+    // The first detection seeds the window's bests on `D0`, silently.
+    current(&scratch.db, D0, at(D0, 13)).await;
+    let recorder = Recorder::default();
+    offer(&scratch.db, &recorder, D0).await;
+    // The seed's own day then beats the seeded best score, 70, with 80.
+    rescore(&scratch.db, D0, 80).await;
+    current(&scratch.db, D0, at(D0, 14)).await;
+    offer(&scratch.db, &recorder, D0).await;
+    let owed = record_key(RecordKind::BestScore, day(D0));
+    assert_eq!(
+        recorder.keys(),
+        [owed.as_str()],
+        "the beat is offered under its day's key, and the seed is not"
+    );
+    // A second beat of the same day, after the celebration, owes nothing new.
+    rescore(&scratch.db, D0, 90).await;
+    current(&scratch.db, D0, at(D0, 15)).await;
+    offer(&scratch.db, &recorder, D0).await;
+    assert_eq!(recorder.keys(), [owed.as_str()], "once per kind and day");
+    assert_eq!(
+        records(&scratch.db).await,
+        [
+            ("best_score".to_owned(), 90, D0, 80, true),
+            ("most_minutes".to_owned(), 10, D0, 10, true),
+            ("most_reviews".to_owned(), 30, D0, 30, true),
+        ],
+        "the day's record moves and keeps its mark; the other seeds stand"
+    );
+}
+
+#[tokio::test]
+async fn a_record_marked_twice_keeps_its_first_mark() {
+    let scratch = scratch().await;
+    seed_low_records(&scratch.db).await;
+    seed_rollups(&scratch.db, &[totals(D0, 50, 0, 0.0)]).await;
+    current(&scratch.db, D0, at(D0, 13)).await;
+    // Another offer marks the record at 14:00 between this offer's read and its own mark at 15:00.
+    let first = at(D0, 14);
+    let port = MarksFirst::new(
+        &scratch.db,
+        "UPDATE records SET celebrated_at = ?1 WHERE kind = 'best_score'",
+        first,
+    );
+    offer_records(
+        &port,
+        &scratch.db,
+        UtcMillis::from_epoch_millis(at(D0, 15)),
+        day(D0),
+    )
+    .await
+    .expect("the offers run");
+    let mark: Option<i64> =
+        sqlx::query_scalar("SELECT celebrated_at FROM records WHERE kind = 'best_score'")
+            .fetch_one(scratch.db.reader())
+            .await
+            .expect("the mark reads");
+    assert_eq!(mark, Some(first), "the first mark is kept");
 }
 
 /// The fold of the records step alone.
