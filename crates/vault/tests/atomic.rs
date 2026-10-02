@@ -321,10 +321,13 @@ fn no_vault_write_reaches_a_journal_folder() {
         Some(io::ErrorKind::PermissionDenied),
         "the guard refuses a folder made under the journal"
     );
-    let mut left: Vec<_> = fs::read_dir(&journal)
-        .expect("the journal")
-        .map(|entry| entry.expect("an entry").file_name())
-        .collect();
+    let mut left: Vec<_> = examined(
+        "entry(ies) under the journal",
+        fs::read_dir(&journal)
+            .expect("the journal")
+            .map(|entry| entry.expect("an entry").file_name())
+            .collect(),
+    );
     left.sort();
     assert_eq!(left, vec!["2026"], "nothing was written under the journal");
 
@@ -412,10 +415,13 @@ fn a_stream_prints_neither_its_target_nor_its_temporary_name() {
     assert_eq!(format!("{streamed:?}"), "Streamed { .. }");
     drop(streamed);
     assert!(
-        fs::read_dir(vault.path())
-            .expect("the vault")
-            .next()
-            .is_none(),
+        examined_may_be_empty(
+            "entry(ies) left in the vault",
+            fs::read_dir(vault.path())
+                .expect("the vault")
+                .collect::<Vec<_>>(),
+        )
+        .is_empty(),
         "the dropped stream left its temporary file"
     );
 }
@@ -443,6 +449,23 @@ fn sources(dir: &Path) -> Vec<PathBuf> {
     }
     found.sort();
     found
+}
+
+/// Prints how many items a check examined and refuses zero (the tdd pack's examined contract).
+fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
+    println!("examined {} {what}", items.len());
+    assert!(
+        !items.is_empty(),
+        "examined 0 {what}: the population is empty, so nothing was judged"
+    );
+    items
+}
+
+/// Prints how many items a listing examined (the tdd pack's examined contract) and accepts zero:
+/// a test here asserts that the vault stayed empty, so zero is an answer it expects.
+fn examined_may_be_empty<T>(what: &str, items: Vec<T>) -> Vec<T> {
+    println!("examined {} {what}", items.len());
+    items
 }
 
 fn is_ident(c: char) -> bool {
@@ -587,7 +610,7 @@ fn every_vault_file_write_is_the_atomic_writer() {
     let src = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
     let mut outside = Vec::new();
     let mut inside = 0;
-    let files = sources(&src);
+    let files = examined("source file(s) under src", sources(&src));
     for path in &files {
         let name = path
             .strip_prefix(&src)

@@ -8,7 +8,7 @@
 //! `capture_id` (ruling (h)).
 
 // An integration test is test code: its helpers panic on a failed fixture.
-#![allow(clippy::expect_used)]
+#![allow(clippy::expect_used, clippy::print_stdout)]
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -181,7 +181,14 @@ fn files(folder: &Path) -> Vec<String> {
         })
         .collect();
     names.sort();
-    names
+    examined_may_be_empty("file name(s) in the folder", names)
+}
+
+/// Prints how many items a listing examined (the tdd pack's examined contract) and accepts zero:
+/// a test here asserts that a folder stayed empty, so zero is an answer it expects.
+fn examined_may_be_empty<T>(what: &str, items: Vec<T>) -> Vec<T> {
+    println!("examined {} {what}", items.len());
+    items
 }
 
 /// The Mini App's stub for `kind` and `text`, captured at [`STARTED_AT`]: R10's keys, spelled out

@@ -95,7 +95,14 @@ fn files(folder: &Path) -> Vec<String> {
         })
         .collect();
     names.sort();
-    names
+    examined_may_be_empty("file name(s) in the folder", names)
+}
+
+/// Prints how many items a listing examined (the tdd pack's examined contract) and accepts zero:
+/// a test here asserts that a folder stayed empty, so zero is an answer it expects.
+fn examined_may_be_empty<T>(what: &str, items: Vec<T>) -> Vec<T> {
+    println!("examined {} {what}", items.len());
+    items
 }
 
 /// Sends `capture` with the attachment `bytes`, streamed in two chunks, and answers the capture.

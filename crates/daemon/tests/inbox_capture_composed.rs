@@ -137,7 +137,17 @@ fn files(folder: &Path) -> Vec<String> {
         })
         .collect();
     names.sort();
-    names
+    examined("file name(s) in the folder", names)
+}
+
+/// Prints how many items a check examined and refuses zero (the tdd pack's examined contract).
+fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
+    println!("examined {} {what}", items.len());
+    assert!(
+        !items.is_empty(),
+        "examined 0 {what}: the population is empty, so nothing was judged"
+    );
+    items
 }
 
 #[tokio::test]
