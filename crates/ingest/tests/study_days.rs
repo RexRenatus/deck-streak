@@ -46,7 +46,7 @@ const REVIEWS: [PlannedReview; 10] = [
     review(19_004, 12, 2001, 4, 0),
     review(19_002, 12, 2001, 5, 0),
     review(19_007, 12, 2001, 1, 0),
-    // A study event at 00:30, before the 04:00 rollover: the previous study day.
+    // A study event at 00:00, before the 04:00 rollover: the previous study day.
     review(19_006, 0, 2001, 2, 2),
     // The card deleted below: its review leaves the log's scope with it.
     review(19_010, 12, 2003, 1, 3),

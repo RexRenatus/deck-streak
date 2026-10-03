@@ -1,4 +1,4 @@
-//! The study days of the whole scoped log (SPEC-102 R5, ADR-318): every day on which a review of
+//! The study days of the whole scoped log (SPEC-102 R1, ADR-318): every day on which a review of
 //! a card in scope is a study event, read once each and oldest first, with no window.
 
 use std::collections::BTreeSet;

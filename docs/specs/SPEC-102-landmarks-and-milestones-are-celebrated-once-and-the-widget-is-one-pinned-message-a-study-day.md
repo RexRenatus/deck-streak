@@ -397,7 +397,6 @@ the recompute over a temporary deployment with synthetic reviews.
 | `tools/parity-oracle/registry/spec_102.py` | tools | added: the adapters |
 | `tools/parity-oracle/goldens/` | tools | added: the goldens of section 7 |
 | `scripts/mutation-rows.d/S10200-S10299.json` | scripts | added: the rows of section 9 |
-| `scripts/mutation-equivalent.d/deck-streak-notifications.json` | scripts | changed: the two equivalent `ordinal_label` mutants (ruling-53 records) |
 | `docs/CONTEXT-MAP.md` | docs | changed: the register of DeckStreak's own tables gains `widget_messages` |
 | `privacy.json` | repo | changed: the table's category |
 | `PRIVACY.md` | repo | changed: one line for the category |
@@ -568,3 +567,5 @@ Manifest rows this part does not touch (each delivered by a later part or left a
 The row `crates/notifications/src/lib.rs` is changed in this part for the module `landmarks` only; the modules `milestone` and `widget` are #128's and #121's.
 
 **10.7, the anniversary walk's cap (ruling 66)** (insert-only). The anniversary walk stops at 10,000 anniversaries, whatever its exits do. The predecessor's calendar holds the years 1 to 9999, so it holds no walk longer than 9,998 anniversaries, and the goldens span at most 22,424 days, so the cap binds no input the predecessor can hold. The test `the_anniversary_walk_stops_at_its_cap` observes it: one study day at 1970-01-01 and a today 10,005 years on yield exactly 10,000 anniversaries, the last `landmark:anniv:10000` dated `+11970-01-01`.
+
+**10.8, the manifest (section 4)** (insert-only; ruling 52). This part also changes `scripts/mutation-equivalent.d/deck-streak-notifications.json`, which section 4 does not name: the two equivalent `ordinal_label` mutants (ruling-53 records, ruling 64).
