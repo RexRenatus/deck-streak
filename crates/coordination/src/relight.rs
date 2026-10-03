@@ -1,5 +1,7 @@
-//! The relight's celebration (SPEC-076 R27): one line through the router, after the fold's commit,
-//! under the policy's celebration kind with the key `relight:<epoch day>`.
+//! The relight's celebration (SPEC-076 R27): one celebration routed through the router, after the
+//! fold's commit, under the policy's celebration kind with the key `relight:<epoch day>`. It
+//! renders at the tier the ladder decides: T1 on its return day, the day the streak broke (SPEC-084
+//! R5), so a reaction to the owner's latest message or, with none fresh, held for the flush.
 
 use deck_streak_kernel::{Db, KernelError, StudyDay};
 use deck_streak_notifications::{

@@ -64,6 +64,8 @@ R7. A failed read FAILS CLOSED. The occasion is not routed: `celebrate` answers 
     bot's flush answers the error to `answer`'s existing log arm.
 R8. R5 applies to the relight as SPEC-084 states it, to every celebration: on a relight's own day
     the stored streak is back to 1 and was once longer, so the comeback's line is capped at T1.
+    A relight first routed on a later day, at its settle or in the cycle after a restart, is raised
+    on no break day and renders its line (ruling 131's pin in `relight_order.rs` measures both).
 R9. The doc lines that said "until SPEC-076" say what is now true (ADR-327, D5):
     `ladder_facts.rs`'s module doc, `occasion.rs:317-318`, and `sync_cycle.rs:81`, `129` and
     `382-385`.
@@ -127,7 +129,7 @@ pack.
 | `crates/coordination/src/ladder_facts.rs` | `deck-streak-coordination` | changed: the one reader of the stored streak's facts, and the re-capped flush |
 | `crates/coordination/src/recompute/mod.rs` | `deck-streak-coordination` | changed: the `Celebrate` impl reads the facts before it routes |
 | `crates/coordination/src/level_up.rs` | `deck-streak-coordination` | changed: the level-up reads the facts before it routes |
-| `crates/coordination/src/relight.rs` | `deck-streak-coordination` | changed: the relight reads the facts before it routes |
+| `crates/coordination/src/relight.rs` | `deck-streak-coordination` | changed: the relight reads the facts before it routes; its module doc names the one routed celebration and its tier (ruling 131) |
 | `crates/coordination/src/held_flush.rs` | `deck-streak-coordination` | changed: the job's flush is re-capped |
 | `crates/coordination/src/sync_cycle.rs` | `deck-streak-coordination` | changed: the cycle's flush is re-capped; three doc lines |
 | `crates/notifications/src/router.rs` | `deck-streak-notifications` | changed: `Router::db` |
@@ -138,7 +140,10 @@ pack.
 | `crates/daemon/tests/break_day_flush.rs` | `deck-streak-daemon` | added: A5 |
 | `formal/tla/HeldFlush/HeldFlush.tla` | formal | changed: a dated re-read note; covers re-stamped |
 | `formal/tla/AwardOnce/AwardOnce.tla` | formal | changed: a dated re-read note; the level-up's cover re-stamped |
-| `formal/tla/RelightOrder/RelightOrder.tla` | formal | changed: a dated re-read note; the relight's cover re-stamped |
+| `formal/tla/RelightOrder/RelightOrder.tla` | formal | changed: a dated re-read note; the relight's cover re-stamped; the note's reading of L1 (ruling 131) |
+| `crates/coordination/tests/relight_order.rs` | `deck-streak-coordination` | changed: the cycle records an owner message and the transport records reactions (ruling 131); added: the pin with no owner message |
+| `crates/coordination/tests/relight_settle.rs` | `deck-streak-coordination` | changed: an owner message before the route and the transport records reactions (ruling 131) |
+| `docs/specs/SPEC-076-the-language-and-law-streaks-freezes-the-governor-and-the-relight-hold-across-every-study-day.md` | docs | changed: section 37 appended, insert-only (ruling 131) |
 
 ## 5. What this does NOT do
 
@@ -160,8 +165,10 @@ pack.
 - **A stale reader snapshot.** A flush that read the facts from an older snapshot than the one its
   take sees would re-cap with the wrong day. Detected by A4 to A6, which seed the break before the
   flush and require the twin with the break's facts.
-- **The relight is always capped** (R8): the comeback's own line is a reaction, never a line.
-  Disclosed here and in the pull request; detected by A3.
+- **The relight is capped on its return day** (R8): the comeback's celebration there is a
+  reaction, or a hold for the flush when the owner has not written, never a line. Disclosed here,
+  in SPEC-076 section 37 and in the pull request; detected by A3 and by `relight_order.rs`'s pin
+  with no owner message.
 - **A failed read loses a level-up.** The level-up has no mark, so a failed read loses it as any
   router error does today. Detected by the cycle's error log; A7 holds the fail-closed arms.
 

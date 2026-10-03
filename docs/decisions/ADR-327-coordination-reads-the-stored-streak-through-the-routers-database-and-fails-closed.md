@@ -70,7 +70,8 @@ flushers already own, and never render past the cap.
 - Bad, because a fold that commits a break between a flusher's read and its render renders one held
   celebration uncapped once; #589 records it.
 - Bad, because a failed read loses a level-up, which has no mark, as any router error does today.
-- Neutral, because the relight's own line is always capped at T1 (R8), disclosed in SPEC-326.
+- Neutral, because the relight's own line is capped at T1 on its return day (R8), disclosed in
+  SPEC-326; a relight first routed on a later day renders its line.
 
 ### Confirmation
 
