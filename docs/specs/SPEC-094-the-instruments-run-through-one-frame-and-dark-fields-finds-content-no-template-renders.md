@@ -12,8 +12,9 @@
 - **Prerequisites:** SPEC-020 (the offload), SPEC-023 (the read and its scope), SPEC-027 (the
   sync's study day), SPEC-029 and SPEC-071 (the recompute the step follows). **Mutation band:**
   `S09400-S09499`.
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-094.md` (ADR-016).
+- **Status:** delivered by #403, which moved it from `docs/specs/planned/` with its tests and
+  `docs/red-first/SPEC-094.md` (ADR-016). ~~planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
+  `docs/specs/` with its tests and `docs/red-first/SPEC-094.md` (ADR-016).~~
 
 ## 1. The problem, measured
 
@@ -364,3 +365,7 @@ The delivery touched these files beyond the rows above:
 Rows the delivery leaves unchanged:
 - `crates/kernel/src/settings.rs` is unchanged; the conventions file is read by the existing loader.
 - `docs/schematics/insights-instrument-frame.md` is unchanged; it landed on dev already.
+
+### Amendment, 2026-10-02: the Status names the delivery
+
+Insert-only under ruling (i) of SPEC-038 section 8: every earlier byte is kept in order. The one insertion is in the Status line of the header: the delivery that moved this SPEC out of `docs/specs/planned/` (#403, ADR-016) and the marks that strike the old "planned" wording. This entry is the other insertion.
