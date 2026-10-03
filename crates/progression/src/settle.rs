@@ -7,7 +7,7 @@
 //! recompute over the same data changes nothing and one over more data adds. Only the owner's
 //! correction lowers a row. The XP total is the sum of this table and `xp_ledger` (R10).
 
-use deck_streak_kernel::{StudyDay, Track, UtcMillis};
+use deck_streak_kernel::{CourseCode, StudyDay, Track, UtcMillis};
 use sqlx::SqliteConnection;
 
 /// The table the settlement lives in (`migrations/007201_progression_xp_settlement.sql`).
@@ -39,6 +39,11 @@ pub const DERIVED_PREFIXES: [&str; 2] = [
 #[must_use]
 pub fn is_derived(source: &str) -> bool {
     DERIVED_SOURCES.contains(&source)
+        || DERIVED_PREFIXES.iter().any(|prefix| {
+            source
+                .strip_prefix(prefix)
+                .is_some_and(|code| CourseCode::new(code).is_some())
+        })
 }
 
 /// Why a settlement was asked for.

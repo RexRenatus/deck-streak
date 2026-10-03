@@ -126,11 +126,17 @@ async fn read_logs_minutes_and_answers_with_the_days_xp() {
 
     // Minutes alone, before any entry: there is no most-used course, so the bot asks which.
     commands.handle(incoming(owner_says(1, "/read 15"))).await;
-    assert_eq!(last_send(&bench), golden_send("read-pick-course"), "no course yet");
+    assert_eq!(
+        last_send(&bench),
+        golden_send("read-pick-course"),
+        "no course yet"
+    );
     assert!(entries(&bench.db).await.is_empty(), "nothing logged yet");
 
     // By code, then by alias with a note.
-    commands.handle(incoming(owner_says(2, "/read qaa 20"))).await;
+    commands
+        .handle(incoming(owner_says(2, "/read qaa 20")))
+        .await;
     assert_eq!(last_send(&bench), golden_send("read-logged"), "by code");
     commands
         .handle(incoming(owner_says(3, "/read a 190 with a <note> & more")))
@@ -160,11 +166,19 @@ async fn read_logs_minutes_and_answers_with_the_days_xp() {
 
     // The picker, then a preset.
     commands.handle(incoming(owner_says(5, "/read"))).await;
-    assert_eq!(last_send(&bench), golden_send("read-pick-course"), "bare /read");
+    assert_eq!(
+        last_send(&bench),
+        golden_send("read-pick-course"),
+        "bare /read"
+    );
     commands
         .handle(incoming(owner_taps(6, &course_data(&code("qab")), 5)))
         .await;
-    assert_eq!(last_send(&bench), golden_send("read-presets"), "the presets");
+    assert_eq!(
+        last_send(&bench),
+        golden_send("read-presets"),
+        "the presets"
+    );
     commands
         .handle(incoming(owner_taps(7, &minutes_data(&code("qab"), 45), 6)))
         .await;
@@ -207,8 +221,14 @@ async fn a_refused_read_answers_and_logs_nothing() {
 
     // A refused database: the entry's write fails whole.
     refuse(&bench.db, REFUSE_INSERT).await;
-    commands.handle(incoming(owner_says(7, "/read qaa 20"))).await;
-    assert_eq!(last_send(&bench), golden_send("read-failed"), "a refused write");
+    commands
+        .handle(incoming(owner_says(7, "/read qaa 20")))
+        .await;
+    assert_eq!(
+        last_send(&bench),
+        golden_send("read-failed"),
+        "a refused write"
+    );
     assert!(entries(&bench.db).await.is_empty(), "nothing was logged");
 
     // No courses configured.
@@ -225,21 +245,37 @@ async fn undo_answers_for_the_newest_entry_and_a_stale_button_removes_nothing() 
     let bench = Bench::start().await;
     let mut commands = habit_commands(&bench, courses());
     commands.handle(incoming(owner_says(1, "/undo"))).await;
-    assert_eq!(last_send(&bench), golden_send("undo-nothing"), "an empty log");
+    assert_eq!(
+        last_send(&bench),
+        golden_send("undo-nothing"),
+        "an empty log"
+    );
 
-    commands.handle(incoming(owner_says(2, "/read qaa 20"))).await;
+    commands
+        .handle(incoming(owner_says(2, "/read qaa 20")))
+        .await;
     let first = last_buttons(&bench);
     assert_eq!(first, [undo_data(1)], "the first entry's button");
-    commands.handle(incoming(owner_says(3, "/read qaa 30"))).await;
+    commands
+        .handle(incoming(owner_says(3, "/read qaa 30")))
+        .await;
 
     // The first entry's button, once a newer entry exists.
     commands.handle(incoming(owner_taps(4, &first[0], 2))).await;
-    assert_eq!(last_send(&bench), golden_send("undo-stale"), "a stale button");
+    assert_eq!(
+        last_send(&bench),
+        golden_send("undo-stale"),
+        "a stale button"
+    );
     assert_eq!(entries(&bench.db).await.len(), 2, "nothing was removed");
 
     // `/undo` removes the newest; the first entry's button then removes the first.
     commands.handle(incoming(owner_says(5, "/undo"))).await;
-    assert_eq!(last_send(&bench), golden_send("undo-done"), "the newest entry");
+    assert_eq!(
+        last_send(&bench),
+        golden_send("undo-done"),
+        "the newest entry"
+    );
     assert_eq!(entries(&bench.db).await, [("qaa".to_owned(), 20)]);
     commands.handle(incoming(owner_taps(6, &first[0], 2))).await;
     assert!(
@@ -250,10 +286,16 @@ async fn undo_answers_for_the_newest_entry_and_a_stale_button_removes_nothing() 
     assert!(entries(&bench.db).await.is_empty(), "the log is empty");
 
     // A refused database: the undo's write fails whole.
-    commands.handle(incoming(owner_says(7, "/read qab 10"))).await;
+    commands
+        .handle(incoming(owner_says(7, "/read qab 10")))
+        .await;
     refuse(&bench.db, REFUSE_DELETE).await;
     commands.handle(incoming(owner_says(8, "/undo"))).await;
-    assert_eq!(last_send(&bench), golden_send("undo-failed"), "a refused write");
+    assert_eq!(
+        last_send(&bench),
+        golden_send("undo-failed"),
+        "a refused write"
+    );
     assert_eq!(entries(&bench.db).await, [("qab".to_owned(), 10)]);
 }
 
@@ -282,7 +324,11 @@ async fn every_habit_callback_fits_telegrams_bound_and_is_answered() {
         .flat_map(|keyboard| keyboard.inline_keyboard.iter().flatten())
         .filter_map(|button| button.callback_data.clone())
         .collect();
-    assert_eq!(rendered.len(), 2 + READING_PRESETS.len(), "every rendered button");
+    assert_eq!(
+        rendered.len(),
+        2 + READING_PRESETS.len(),
+        "every rendered button"
+    );
     println!("examined {} callback data", data.len() + rendered.len());
     for (text, callback) in &data {
         assert!(
@@ -296,7 +342,15 @@ async fn every_habit_callback_fits_telegrams_bound_and_is_answered() {
         assert!(text.len() <= MAX_CALLBACK_DATA, "{text}");
         assert!(parse_callback(text).is_some(), "{text}");
     }
-    for refused in ["hb:", "hb:c:", "hb:c:QAA", "hb:m:qaa", "hb:m:qaa:x", "hb:u:", "hb:u:x"] {
+    for refused in [
+        "hb:",
+        "hb:c:",
+        "hb:c:QAA",
+        "hb:m:qaa",
+        "hb:m:qaa:x",
+        "hb:u:",
+        "hb:u:x",
+    ] {
         assert_eq!(parse_callback(refused), None, "{refused}");
     }
 

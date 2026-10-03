@@ -25,7 +25,7 @@ use std::sync::Arc;
 
 use deck_streak_coordination::data_rights_registry::{erase_all, export_all};
 use deck_streak_coordination::drills::{self, DrillMeta, DrillNotes, RealFs, Surface};
-use deck_streak_coordination::habits::HabitWriter;
+use deck_streak_coordination::habits::{Course, HabitWriter, log_minutes, undo_entry, undo_newest};
 use deck_streak_coordination::inbox_capture::{Capture, Captured, InboxCaptures, Source};
 use deck_streak_coordination::instruments::InstrumentService;
 use deck_streak_coordination::progression::badges_view::earned_badges;
@@ -44,6 +44,11 @@ use crate::badges_commands::{
 use crate::capture::{self, Choice, MAX_DOWNLOAD_BYTES, Outcome};
 use crate::drill_commands::{self, ANSWER_PREFIX, VIEW_PREFIX};
 use crate::gate::{self, Admission, OwnerCallback, OwnerMessage};
+use crate::habits_commands::{
+    HABIT_PREFIX, HabitCallback, ReadRequest, course_name, no_courses_reply, parse_callback,
+    parse_read, pick_course_reply, presets_reply, read_outcome_reply, undo_nothing_reply,
+    undo_outcome_reply, usage_reply,
+};
 use crate::score_commands::{score_failed_reply, score_reply};
 use crate::streak_commands::{streak_failed_reply, streak_reply};
 use crate::transport::{Download, Incoming, Sent, Transport, escape_attribute, escape_html};
@@ -71,7 +76,7 @@ pub struct MenuEntry {
 }
 
 /// The owner's menu, in the order the menu shows it.
-pub const MENU: [MenuEntry; 11] = [
+pub const MENU: [MenuEntry; 13] = [
     MenuEntry {
         command: "score",
         description: "Show today's score",
@@ -115,6 +120,14 @@ pub const MENU: [MenuEntry; 11] = [
     MenuEntry {
         command: "privacy",
         description: "How my data is kept",
+    },
+    MenuEntry {
+        command: "read",
+        description: "Log reading minutes",
+    },
+    MenuEntry {
+        command: "undo",
+        description: "Undo the last reading entry",
     },
 ];
 
@@ -256,6 +269,8 @@ fn command_lines() -> String {
         "/export sends you a copy of your data",
         "/delete erases your data",
         "/privacy says how your data is kept",
+        "/read logs your reading minutes",
+        "/undo removes your last reading entry",
     ]
     .join("\n")
 }
@@ -606,6 +621,8 @@ impl<S: OwnerSync> Commands<S> {
             Some("streak") => self.streak().await,
             Some("badges") => self.badges().await,
             Some("records") => self.records().await,
+            Some("read") => self.read(&message.text).await,
+            Some("undo") => self.undo().await,
             Some("drills") => self.drills().await,
             Some("drill") => self.drill(&message.text).await,
             None if self.pending_drill.is_some() => self.drill_answer(&message.text).await,
@@ -620,6 +637,9 @@ impl<S: OwnerSync> Commands<S> {
             }
             if data.starts_with(ANSWER_PREFIX) {
                 return self.drill_ask(data).await;
+            }
+            if data.starts_with(HABIT_PREFIX) {
+                return self.habit_callback(data).await;
             }
         }
         if callback.data.as_deref() != Some(CONFIRM_ERASE) {
@@ -760,6 +780,74 @@ impl<S: OwnerSync> Commands<S> {
             Err(error) => {
                 tracing::error!(%error, "the owner's records could not be read");
                 records_failed_reply()
+            }
+        };
+        self.send(reply).await;
+    }
+
+    /// `/read`: an entry of reading minutes, the course picker, or how `/read` is used (SPEC-078
+    /// R2). With no courses configured, nothing can be logged, and the answer says so.
+    async fn read(&self, text: &str) {
+        let Some(habits) = self
+            .habits
+            .as_ref()
+            .filter(|habits| !habits.courses.courses().is_empty())
+        else {
+            return self.send(no_courses_reply()).await;
+        };
+        let reply = match parse_read(text) {
+            ReadRequest::Pick => pick_course_reply(&habits.courses),
+            ReadRequest::Usage => usage_reply(),
+            ReadRequest::Log {
+                course,
+                minutes,
+                note,
+            } => {
+                let course = course.map_or(Course::MostUsed, Course::Token);
+                // Minutes that are no whole number are outside the bounds, which the entry refuses
+                // after its course.
+                let minutes = minutes.parse::<i64>().unwrap_or(0);
+                let writer = self.habit_writer(habits);
+                let logged = log_minutes(&writer, &habits.courses, course, minutes, note).await;
+                read_outcome_reply(&habits.courses, course, logged)
+            }
+        };
+        self.send(reply).await;
+    }
+
+    /// `/undo`: removes the newest entry (SPEC-078 R4).
+    async fn undo(&self) {
+        let Some(habits) = self.habits.as_ref() else {
+            return self.send(undo_nothing_reply()).await;
+        };
+        let undone = undo_newest(&self.habit_writer(habits)).await;
+        self.send(undo_outcome_reply(&habits.courses, undone)).await;
+    }
+
+    /// A habit button: a course's presets, a preset's entry, or an entry's undo (SPEC-078 R2, R4).
+    async fn habit_callback(&self, data: &str) {
+        let (Some(habits), Some(callback)) = (self.habits.as_ref(), parse_callback(data)) else {
+            tracing::info!(
+                kind = "callback_query",
+                reason = "habit_unknown",
+                "a habit callback did nothing"
+            );
+            return;
+        };
+        let reply = match callback {
+            HabitCallback::Course(code) => {
+                presets_reply(&code, &course_name(&habits.courses, code.as_str()))
+            }
+            HabitCallback::Minutes { code, minutes } => {
+                let course = Course::Token(code.as_str());
+                let writer = self.habit_writer(habits);
+                let minutes = i64::from(minutes);
+                let logged = log_minutes(&writer, &habits.courses, course, minutes, "").await;
+                read_outcome_reply(&habits.courses, course, logged)
+            }
+            HabitCallback::Undo(entry) => {
+                let undone = undo_entry(&self.habit_writer(habits), entry).await;
+                undo_outcome_reply(&habits.courses, undone)
             }
         };
         self.send(reply).await;

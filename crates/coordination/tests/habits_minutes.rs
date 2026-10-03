@@ -73,7 +73,14 @@ fn writer<'a>(db: &'a Db, router: Option<&'a Router>, now: i64) -> HabitWriter<'
 
 /// Logs `minutes` for `course` at noon of `day`, and asserts it was logged.
 async fn log(db: &Db, day: i64, course: Course<'_>, minutes: i64) -> Logged {
-    let logged = log_minutes(&writer(db, None, noon(day)), &courses(), course, minutes, "").await;
+    let logged = log_minutes(
+        &writer(db, None, noon(day)),
+        &courses(),
+        course,
+        minutes,
+        "",
+    )
+    .await;
     assert!(logged.is_ok(), "the entry is logged: {logged:?}");
     logged.expect("checked above")
 }
@@ -251,7 +258,10 @@ async fn the_minutes_xp_settles_as_the_predecessors_golden() {
             exactly_210 += 1;
         }
     }
-    assert_eq!(exactly_210, 1, "a week of exactly 210 minutes is in the golden");
+    assert_eq!(
+        exactly_210, 1,
+        "a week of exactly 210 minutes is in the golden"
+    );
 }
 
 #[tokio::test]
@@ -306,7 +316,9 @@ async fn undo_restores_the_prior_settled_xp() {
     let crossing = log(&db, MONDAY + 2, Course::Token("a"), 30).await;
     assert_eq!((crossing.week_minutes, crossing.goal_bonus), (230, 150));
     assert_eq!(
-        amounts(&db, MONDAY, MONDAY).await.get(&(MONDAY, "readgoal:qaa".to_owned())),
+        amounts(&db, MONDAY, MONDAY)
+            .await
+            .get(&(MONDAY, "readgoal:qaa".to_owned())),
         Some(&150),
         "the entry's week earned its bonus"
     );
@@ -337,7 +349,11 @@ async fn a_stale_undo_removes_nothing() {
     let stale = undo_entry(&writer(&db, None, noon(MONDAY)), older.entry_id).await;
     assert!(matches!(stale, Ok(Undone::Stale)), "{stale:?}");
     assert_eq!(entries(&db).await, 2, "a stale button removes nothing");
-    assert_eq!(amounts(&db, MONDAY, MONDAY).await, before, "and settles nothing");
+    assert_eq!(
+        amounts(&db, MONDAY, MONDAY).await,
+        before,
+        "and settles nothing"
+    );
     let removed = undo_entry(&writer(&db, None, noon(MONDAY)), newer.entry_id).await;
     assert!(
         matches!(removed, Ok(Undone::Removed { minutes: 20, .. })),
@@ -345,7 +361,9 @@ async fn a_stale_undo_removes_nothing() {
     );
     assert_eq!(entries(&db).await, 1);
     assert_eq!(
-        amounts(&db, MONDAY, MONDAY).await.get(&(MONDAY, "read:qab".to_owned())),
+        amounts(&db, MONDAY, MONDAY)
+            .await
+            .get(&(MONDAY, "read:qab".to_owned())),
         Some(&80),
         "the day's XP is the remaining entry's"
     );
@@ -358,7 +376,10 @@ async fn the_recompute_heals_a_habit_settle_left_undone() {
     plant(&db, "qaa", MONDAY, 150).await;
     plant(&db, "qaa", MONDAY, 60).await;
     plant(&db, "qab", MONDAY, 30).await;
-    assert!(habit_rows(&db, MONDAY, SUNDAY).await.is_empty(), "nothing settled yet");
+    assert!(
+        habit_rows(&db, MONDAY, SUNDAY).await.is_empty(),
+        "nothing settled yet"
+    );
     recompute(&fold(), &db, &no_reviews(), noon(MONDAY)).await;
     assert_eq!(
         habit_rows(&db, MONDAY - 7, SUNDAY + 7).await,
@@ -448,12 +469,7 @@ async fn a_habit_write_that_raises_the_level_is_announced_once() {
         StudyDayRule::default(),
     )
     .with_bot(bot.clone());
-    let pushes = || {
-        bot.0
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .clone()
-    };
+    let pushes = || bot.0.lock().unwrap_or_else(PoisonError::into_inner).clone();
     let write = writer(&db, Some(&router), noon(MONDAY));
 
     // 50 minutes earn 100 XP: level 1 to level 2.

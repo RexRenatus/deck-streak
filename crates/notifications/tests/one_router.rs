@@ -575,12 +575,13 @@ const GUARDED: [(&str, &str); 4] = [
 /// dispatch are private to it, so only it can call them.
 const COMMANDS: (&str, &str) = ("crates/bot/src/commands.rs", "crates/bot/src/commands/");
 
-/// The command handler's replies, `send` and the thirteen that send one (`export`, `ask_erase`,
+/// The command handler's replies, `send` and the sixteen that send one (`export`, `ask_erase`,
 /// `sync`, `score`, `level`, `streak`, the progression replies `badges` and `records`, SPEC-073 R18,
-/// and the drill replies `drills`, `drill`, `drill_view`, `drill_ask` and `drill_answer`, SPEC-110
-/// R16), and its dispatch, `on_message`, `on_callback` and `on_media`, which answers the owner's
-/// media with what became of its capture (SPEC-118 R9).
-const COMMAND_REPLIES: [&str; 17] = [
+/// the drill replies `drills`, `drill`, `drill_view`, `drill_ask` and `drill_answer`, SPEC-110
+/// R16, and the minutes log's replies `read`, `undo` and `habit_callback`, SPEC-078 R2 and R4), and
+/// its dispatch, `on_message`, `on_callback` and `on_media`, which answers the owner's media with
+/// what became of its capture (SPEC-118 R9).
+const COMMAND_REPLIES: [&str; 20] = [
     "send",
     "export",
     "ask_erase",
@@ -595,6 +596,9 @@ const COMMAND_REPLIES: [&str; 17] = [
     "drill_view",
     "drill_ask",
     "drill_answer",
+    "read",
+    "undo",
+    "habit_callback",
     "on_message",
     "on_callback",
     "on_media",
@@ -604,7 +608,7 @@ const COMMAND_REPLIES: [&str; 17] = [
 /// the handler, which dispatches an update the long poll hands it, and the dispatch, which answers
 /// it. A call anywhere else in the handler's module sends a reply the router never decides, though
 /// no update asked for it.
-const COMMAND_CALLERS: [(&str, &str); 31] = [
+const COMMAND_CALLERS: [(&str, &str); 37] = [
     ("Commands::handle", "on_message"),
     ("Commands::handle", "on_callback"),
     ("Commands::handle", "on_media"),
@@ -620,9 +624,12 @@ const COMMAND_CALLERS: [(&str, &str); 31] = [
     ("Commands::on_message", "drills"),
     ("Commands::on_message", "drill"),
     ("Commands::on_message", "drill_answer"),
+    ("Commands::on_message", "read"),
+    ("Commands::on_message", "undo"),
     ("Commands::on_callback", "send"),
     ("Commands::on_callback", "drill_view"),
     ("Commands::on_callback", "drill_ask"),
+    ("Commands::on_callback", "habit_callback"),
     ("Commands::on_media", "send"),
     ("Commands::export", "send"),
     ("Commands::sync", "send"),
@@ -636,6 +643,9 @@ const COMMAND_CALLERS: [(&str, &str); 31] = [
     ("Commands::drill_view", "send"),
     ("Commands::drill_ask", "send"),
     ("Commands::drill_answer", "send"),
+    ("Commands::read", "send"),
+    ("Commands::undo", "send"),
+    ("Commands::habit_callback", "send"),
 ];
 
 /// The one use of the bot's command handler: the bot's entry, the long poll, hands it each update

@@ -19,7 +19,12 @@ async fn the_habit_tables_are_exported_and_erased() {
     let tables: Vec<_> = declaration
         .tables()
         .iter()
-        .map(|rights| (rights.table, matches!(rights.disposition, Disposition::ExportAndErase)))
+        .map(|rights| {
+            (
+                rights.table,
+                matches!(rights.disposition, Disposition::ExportAndErase),
+            )
+        })
         .collect();
     assert_eq!(tables, [(MINUTES_LOG_TABLE, true)]);
 

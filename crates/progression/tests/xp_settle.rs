@@ -171,16 +171,32 @@ async fn settle_refuses_a_source_outside_the_derived_registry() {
 #[tokio::test]
 async fn the_habit_sources_are_derived_only_with_a_course_code() {
     let (_directory, db) = database().await;
-    assert_eq!(DERIVED_PREFIXES, ["read:", "readgoal:"], "the habit prefixes");
+    assert_eq!(
+        DERIVED_PREFIXES,
+        ["read:", "readgoal:"],
+        "the habit prefixes"
+    );
     for source in ["read:qaa", "readgoal:qaa"] {
         assert!(is_derived(source), "{source} is derived");
         assert_eq!(
-            settled(&db, &request(source, 7, false), SettleCause::OwnersCorrection).await,
+            settled(
+                &db,
+                &request(source, 7, false),
+                SettleCause::OwnersCorrection
+            )
+            .await,
             7,
             "{source} settles"
         );
     }
-    for source in ["read:", "read:QAA", "readgoal:a b", "reading:read:r1", "readgoal:", "read"] {
+    for source in [
+        "read:",
+        "read:QAA",
+        "readgoal:a b",
+        "reading:read:r1",
+        "readgoal:",
+        "read",
+    ] {
         assert!(!is_derived(source), "{source:?} is not derived");
         let mut write = db.write().await.expect("a write");
         let refusal = settle(

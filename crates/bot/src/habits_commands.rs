@@ -8,8 +8,8 @@
 //! date, a time of day or a deadline.
 
 use deck_streak_coordination::habits::{
-    Course, EntryRefusal, HabitError, Logged, Undone, READING_GOAL_XP_BONUS, READING_MAX_ENTRY_MIN,
-    READING_PRESETS, READING_WEEKLY_GOAL_MIN,
+    Course, EntryRefusal, HabitError, Logged, READING_GOAL_XP_BONUS, READING_MAX_ENTRY_MIN,
+    READING_PRESETS, READING_WEEKLY_GOAL_MIN, Undone,
 };
 use deck_streak_kernel::{CourseCode, Courses};
 use frankenstein::types::{InlineKeyboardButton, InlineKeyboardMarkup};
@@ -69,8 +69,17 @@ pub fn undo_data(entry: i64) -> String {
 /// The habit button `data` names, or `None` when it names none.
 #[must_use]
 pub fn parse_callback(data: &str) -> Option<HabitCallback> {
-    let _ = data;
-    None
+    if let Some(code) = data.strip_prefix(COURSE_PREFIX) {
+        return CourseCode::new(code).map(HabitCallback::Course);
+    }
+    if let Some(rest) = data.strip_prefix(MINUTES_PREFIX) {
+        let (code, minutes) = rest.split_once(':')?;
+        let code = CourseCode::new(code)?;
+        let minutes = minutes.parse::<u32>().ok()?;
+        return Some(HabitCallback::Minutes { code, minutes });
+    }
+    let entry = data.strip_prefix(UNDO_PREFIX)?;
+    entry.parse::<i64>().ok().map(HabitCallback::Undo)
 }
 
 /// What a `/read` message asks for.
@@ -179,10 +188,12 @@ pub fn pick_course_reply(courses: &Courses) -> Reply {
         .courses()
         .iter()
         .map(|course| {
-            vec![InlineKeyboardButton::builder()
-                .text(course.name.clone())
-                .callback_data(course_data(&course.code))
-                .build()]
+            vec![
+                InlineKeyboardButton::builder()
+                    .text(course.name.clone())
+                    .callback_data(course_data(&course.code))
+                    .build(),
+            ]
         })
         .collect();
     Reply {

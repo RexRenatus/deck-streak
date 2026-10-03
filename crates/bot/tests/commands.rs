@@ -16,14 +16,14 @@ mod fake_bot_api;
 use std::collections::BTreeSet;
 
 use deck_streak_bot::badges_commands::{badges_failed_reply, records_failed_reply};
+use deck_streak_bot::commands::{
+    CONFIRM_ERASE, EXPORT_FILE_NAME, MENU, MINI_APP_URL, Reply, erase_done_reply,
+    erase_failed_reply, export_caption, export_failed_reply, help_reply, sync_reply,
+};
 use deck_streak_bot::habits_commands::{
     logged_reply, no_courses_reply, pick_course_reply, presets_reply, read_failed_reply,
     refused_minutes_reply, undo_done_reply, undo_failed_reply, undo_nothing_reply,
     undo_stale_reply, unknown_course_reply, usage_reply,
-};
-use deck_streak_bot::commands::{
-    CONFIRM_ERASE, EXPORT_FILE_NAME, MENU, MINI_APP_URL, Reply, erase_done_reply,
-    erase_failed_reply, export_caption, export_failed_reply, help_reply, sync_reply,
 };
 use deck_streak_bot::score_commands::{score_failed_reply, score_reply};
 use deck_streak_bot::{MiniAppUrl, Scores, Sent, SyncAnswer, SyncOutcome, SyncRefusal};
@@ -123,8 +123,7 @@ async fn the_menu_is_registered_for_the_owners_chat_only() {
         registered,
         BTreeSet::from([
             "privacy", "export", "delete", "sync", "score", "level", "streak", "badges", "records",
-            "drills", "drill",
-            "read", "undo"
+            "drills", "drill", "read", "undo"
         ]),
         "the thirteen commands of the menu"
     );
@@ -367,7 +366,10 @@ fn rendered() -> Vec<(&'static str, Reply)> {
     let synced = |sync, scores| Ok(SyncAnswer { sync, scores });
     let qab = CourseCode::new("qab").expect("a synthetic code");
     vec![
-        ("read-logged", logged_reply(&logged(1, 20, 20, 20), "Course Qaa")),
+        (
+            "read-logged",
+            logged_reply(&logged(1, 20, 20, 20), "Course Qaa"),
+        ),
         (
             "read-goal-reached",
             logged_reply(&logged(2, 190, 210, 210), "Course Qaa"),

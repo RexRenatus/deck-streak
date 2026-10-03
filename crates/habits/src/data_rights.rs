@@ -4,6 +4,7 @@
 use deck_streak_kernel::{
     DataRights, DataRightsError, Declaration, Disposition, ExportedTable, PortFuture, TableRights,
 };
+use serde_json::json;
 use sqlx::SqliteConnection;
 
 /// The context this port speaks for.
@@ -31,14 +32,36 @@ impl DataRights for HabitsDataRights {
         connection: &'a mut SqliteConnection,
     ) -> PortFuture<'a, Vec<ExportedTable>> {
         Box::pin(async move {
-            let _ = connection;
-            Ok(Vec::new())
+            let entries = sqlx::query!(
+                "SELECT id, code, study_day, minutes, note, created_at \
+                 FROM minutes_log ORDER BY id"
+            )
+            .fetch_all(connection)
+            .await?;
+            Ok(vec![ExportedTable {
+                table: MINUTES_LOG_TABLE,
+                rows: entries
+                    .into_iter()
+                    .map(|row| {
+                        json!({
+                            "id": row.id,
+                            "code": row.code,
+                            "study_day": row.study_day,
+                            "minutes": row.minutes,
+                            "note": row.note,
+                            "created_at": row.created_at,
+                        })
+                    })
+                    .collect(),
+            }])
         })
     }
 
     fn erase<'a>(&'a self, connection: &'a mut SqliteConnection) -> PortFuture<'a, ()> {
         Box::pin(async move {
-            let _ = connection;
+            sqlx::query!("DELETE FROM minutes_log")
+                .execute(connection)
+                .await?;
             Ok(())
         })
     }

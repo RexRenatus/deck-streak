@@ -46,7 +46,10 @@ fn the_minutes_xp_matches_the_predecessors_golden() {
         );
     });
     assert!(examined.count > 0, "the golden holds cases");
-    assert!(above_the_cap > 0, "a case above 120 minutes is in the golden");
+    assert!(
+        above_the_cap > 0,
+        "a case above 120 minutes is in the golden"
+    );
 }
 
 #[test]
@@ -78,10 +81,18 @@ fn an_entry_resolves_its_course_and_refuses_minutes_outside_the_bounds() {
     );
     let long = "n".repeat(201);
     let kept = entry(&courses, "qab", 30, &long).expect("a long note is cut, not refused");
-    assert_eq!(kept.note.chars().count(), 200, "a note of 201 is cut to 200");
+    assert_eq!(
+        kept.note.chars().count(),
+        200,
+        "a note of 201 is cut to 200"
+    );
     let wide = "\u{e9}".repeat(201);
     let kept = entry(&courses, "qab", 30, &wide).expect("cut by characters");
-    assert_eq!(kept.note, "\u{e9}".repeat(200), "cut by characters, never bytes");
+    assert_eq!(
+        kept.note,
+        "\u{e9}".repeat(200),
+        "cut by characters, never bytes"
+    );
 }
 
 #[test]

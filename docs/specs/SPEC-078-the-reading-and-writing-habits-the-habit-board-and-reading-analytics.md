@@ -384,6 +384,8 @@ This part's files:
 | `crates/coordination/src/data_rights_registry.rs` | `deck-streak-coordination` | changed: the registry gains habits' port |
 | `crates/coordination/tests/habits_minutes.rs` | `deck-streak-coordination` | added: A3 to A6b, A30 |
 | `crates/coordination/tests/data_rights_symmetry.rs` | `deck-streak-coordination` | changed: a seeded `minutes_log` row (A31) |
+| `crates/coordination/tests/relight_order.rs` | `deck-streak-coordination` | changed: its census of statics names habits' data-rights port |
+| `crates/notifications/tests/one_router.rs` | `deck-streak-notifications` | changed: the command handler's replies and their named callers gain `read`, `undo` and `habit_callback` |
 | `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | changed: the habit step in `Phase::DaySteps`, and A24 in its tests |
 | `crates/daemon/src/role_bot.rs` | `deck-streak-daemon` | changed: the bot's commands get the courses and the router |
 | `crates/bot/src/habits_commands.rs` | `deck-streak-bot` | added: `/read`, `/undo` and their callbacks |

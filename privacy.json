@@ -385,6 +385,17 @@
       "retention": {"until": "account-deletion"},
       "export": true,
       "erase": "delete"
+    },
+    {
+      "id": "minutes-log",
+      "data": "each reading entry the owner logged: the course's code, the study day, the minutes, an optional free-text note of up to 200 characters, and the instant it was written",
+      "source": "learner-input",
+      "stores": ["minutes_log.*"],
+      "purpose": "settling each course's reading XP of the day and its weekly bonus from the entries, and removing the newest entry when the owner undoes it",
+      "lawful_basis": "contract",
+      "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "delete"
     }
   ],
   "sql": ["migrations/*.sql"],

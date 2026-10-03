@@ -25,8 +25,8 @@ use deck_streak_bot::{ApiUrl, Commands, MiniAppUrl, Transport, TransportError};
 use deck_streak_identity::owner::TELEGRAM_BOT_TOKEN;
 use deck_streak_identity::{IdentityError, Owner};
 use deck_streak_kernel::{
-    Clock, ConventionsError, CredentialLoader, CredentialsDirectory, Environment, KernelSettings,
-    Offload, Redactor, SettingsError, SystemClock,
+    Clock, ConventionsError, Courses, CredentialLoader, CredentialsDirectory, Environment,
+    KernelSettings, Offload, Redactor, SettingsError, SystemClock,
 };
 use deck_streak_notifications::{Policy, PolicyError};
 
@@ -98,20 +98,22 @@ pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), BotRoleEr
     let db = wiring::open_database(&offload, &state)
         .await
         .map_err(BotRoleError::Database)?;
-    let router = wiring::router(
+    // ONE router: the sync's flush and the minutes log's level-up both speak through it (SPEC-078
+    // R18), so the once-ever key is claimed in one place.
+    let router = Arc::new(wiring::router(
         policy,
         db.clone(),
         kernel.study_day_rule,
         Arc::clone(&transport),
         owner,
-    );
+    ));
     let sync = SyncRequester::new(
         SystemClock,
         SqliteRequestLedger::new(db.clone()),
         FileDoorbell::new(request),
         TokioPause,
     )
-    .with_flush(Arc::new(router));
+    .with_flush(Arc::clone(&router));
     let instruments = wiring::instruments_for_role(
         env,
         db.clone(),
@@ -137,6 +139,7 @@ pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), BotRoleEr
     if let Some(captures) = wiring::inbox_captures(env) {
         commands = commands.with_capture(captures);
     }
+    commands = commands.with_habits(courses(env), router);
 
     let heartbeat = Cell::new(None);
     deck_streak_bot::run(&transport, &mut commands, shutdown.received(), || {
@@ -153,4 +156,16 @@ pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), BotRoleEr
     db.close().await;
     tracing::info!("the bot role stopped");
     Ok(())
+}
+
+/// The owner's courses the minutes log resolves an entry against (SPEC-078 R2), from the settings.
+/// A setting that refuses leaves the default courses, and the log says why.
+fn courses(env: &Environment) -> Courses {
+    match Courses::load(env) {
+        Ok(courses) => courses,
+        Err(error) => {
+            tracing::warn!(%error, "the minutes log uses the default courses: the setting refused");
+            Courses::default()
+        }
+    }
 }
