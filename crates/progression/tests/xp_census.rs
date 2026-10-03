@@ -290,9 +290,9 @@ fn inherited(name: &str) -> bool {
 /// Runs the cargo that runs this test with `arguments` in `root`, with the census's flags and its
 /// arming, and answers whether it succeeded, its standard output and its standard error. Cargo
 /// starts from an empty environment and inherits only the names [`inherited`] admits, so the build
-/// is cargo's own with the census's flags, and no variable the tree does not set can move the
-/// verdict. The run is bounded: past `limit` (`CARGO_LIMIT`, which the census passes) the child is
-/// stopped and the census fails by name.
+/// is cargo's own with the census's flags, and a variable the tree does not set reaches it only
+/// through a name of [`INHERITED`]. The run is bounded: past `limit` (`CARGO_LIMIT`, which the
+/// census passes) the child is stopped and the census fails by name.
 fn cargo(
     root: &Path,
     arguments: &[String],
