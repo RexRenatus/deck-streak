@@ -49,3 +49,56 @@ constant and one iterator chain, plus the file attribute `#![allow(clippy::expec
 test files carry. No expected value, no case and no comparison changed.
 
 The anniversary walk's cap (ruling 66, SPEC-102 10.7): the test `the_anniversary_walk_stops_at_its_cap` in `crates/notifications/tests/landmarks.rs` was red at f92a24b5, run as `cargo test -p deck-streak-notifications --test landmarks the_anniversary_walk_stops_at_its_cap`: assertion `left == right` failed: left 10005, right 10000. It is green at 141f1d2f, the commit that adds the constant `ANNIVERSARY_WALK_CAP`.
+
+Part b, A25 to A27 and A35 to A39 (SPEC-102 section 11), `cargo test -p deck-streak-coordination
+--test landmarks_step -- --test-threads=1`, run in a detached tree of the test commit e1b1442d (8
+failed, 0 passed). The test commit carries the tests, the `landmarks_run` adapter and its golden;
+no offer raised a landmark there and nothing stored the mark or the cursor, so every test failed by
+assertion, never by a compile error, a missing fixture or an empty selection:
+
+- A25 `each_evaluated_day_raises_its_due_landmarks_once`: `left: []`, `right: ["landmark:day:25",
+  "landmark:anniv:1"]`.
+- A26 `the_first_run_seeds_the_mark_and_raises_at_most_one`: `left: []`, `right:
+  ["landmark:anniv:1"]` for the case `{"mark":null,"study_days":[19634,20000],"today":20000}`.
+- A27 `the_anniversary_is_honest_on_a_day_without_study`: `left: []`, `right:` the honest text of
+  the 1st anniversary on 2024-10-04.
+- A35 `an_unanswered_landmark_keeps_the_cursor_and_is_offered_again`: the cursor, `left: None`,
+  `right: Some("19999")`.
+- A36 `the_first_run_never_moves_the_cursor_past_a_landmark_it_did_not_raise`: `left: []`, `right:
+  ["landmark:anniv:1"]`.
+- A37 `an_imported_mark_raises_todays_landmarks_and_no_history`: the cursor, `left: None`, `right:
+  Some("19999")`.
+- A38 `the_high_water_mark_equals_the_predecessors_bytes`: `left: None`, `right: Some("{\"anniversary\":
+  0, \"seeded\": true, \"study_day\": 0}")` for `{"mark":null,"study_days":[19634,19637],"today":19999}`.
+- A39 `the_sync_cycle_offers_the_landmarks_after_the_awards`: `left:` the badge's line alone,
+  `right:` the badge's line, then the 1st anniversary's.
+
+```red-first
+A25: red at e1b1442d: assertion `left == right` failed: the day evaluated's landmark first, then the settled day's: left [], right ["landmark:day:25", "landmark:anniv:1"]
+A25: green at 96f6fe31
+A26: red at e1b1442d: assertion `left == right` failed: the keys of {"mark":null,"study_days":[19634,20000],"today":20000}: left [], right ["landmark:anniv:1"]
+A26: green at 96f6fe31
+A27: red at e1b1442d: assertion `left == right` failed: the honest variant on a day without study: left [], right the honest text of the 1st anniversary
+A27: green at 96f6fe31
+A35: red at e1b1442d: assertion `left == right` failed: the cursor stops the day before the landmark the router did not answer: left None, right Some("19999")
+A35: green at 96f6fe31
+A36: red at e1b1442d: assertion `left == right` failed: the first run raises the first due landmark only: left [], right ["landmark:anniv:1"]
+A36: green at 96f6fe31
+A37: red at e1b1442d: assertion `left == right` failed: the cursor is stored at yesterday: left None, right Some("19999")
+A37: green at 96f6fe31
+A38: red at e1b1442d: assertion `left == right` failed: the mark of {"mark":null,"study_days":[19634,19637],"today":19999}: left None, right the predecessor's mark
+A38: green at 96f6fe31
+A39: red at e1b1442d: assertion `left == right` failed: the owed badge first, then the landmark due: left [the badge's line], right [the badge's line, the 1st anniversary's line]
+A39: green at 96f6fe31
+```
+
+The green run reads `test result: ok. 8 passed` for `tests/landmarks_step.rs`, and the notifications
+package's own killers, `tests/landmark_settings.rs` and
+`the_mark_is_the_predecessors_json_for_every_golden_run` in `tests/landmarks.rs`, pass beside it.
+
+Disclosure: the green commit 96f6fe31 also touches `crates/coordination/tests/landmarks_step.rs` in
+two places, neither an expected value, a case or a comparison. The copy's connection registers the
+`unicase` collation, as the daemon's own connection does, because A39's failed-read arm renames the
+review table, and the rename re-reads an index of the copy collated `unicase`; at e1b1442d that arm
+was never reached, since A39 failed first at the badge-then-landmark assertion. And it drops an
+`#[allow(dead_code)]` on the golden module, which the module already carries.

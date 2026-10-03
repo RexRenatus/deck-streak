@@ -617,7 +617,7 @@ This part adds these files, which section 4 does not name:
 - `crates/notifications/src/landmark_settings.rs` (`deck-streak-notifications`): added: the seed, the cursor's read and its monotone advance over `notification_settings`.
 - `crates/notifications/tests/landmark_settings.rs` (`deck-streak-notifications`): added: the seed, the cursor and the advance in notifications' own package.
 - `formal/tla/LandmarkOnce/LandmarkOnce.tla`, `formal/tla/LandmarkOnce/MCLandmarkOnce.cfg` and `formal/tla/LandmarkOnce/witness/` (formal): added: the entry `tla/LandmarkOnce` and its six witnesses (ADR-322).
-- `formal/tla/AwardOnce/AwardOnce.tla`, `formal/tla/FoldSettlesOnce/FoldSettlesOnce.tla` and `formal/tla/RelightOrder/RelightOrder.tla` (formal): changed: each cover of `sync_cycle` re-stamped.
+- `formal/tla/AwardOnce/AwardOnce.tla`, `formal/tla/FoldSettlesOnce/FoldSettlesOnce.tla` and `formal/tla/RelightOrder/RelightOrder.tla` (formal): changed: each cover of `sync_cycle` re-stamped, and each model's abstractions name the landmarks' offers as a stutter of its variables.
 - `config/formal.json` (config): changed: the budget row of `tla/LandmarkOnce` only.
 - `scripts/tests/test_formal_config.py` (scripts): changed: its declared copy of `config/formal.json` gains the same budget row, since the test holds the file to exactly that copy.
 - `docs/decisions/ADR-322-a-landmark-is-offered-between-the-folds-writes-from-a-cursor-only-the-routers-answers-move.md` (docs): added.
