@@ -568,3 +568,14 @@ Section 4's paths this pull request does not touch:
 ```acceptance
 A40: cargo test -p deck-streak-mcp --test guard -- --exact each_grant_holds_its_scopes_and_no_other
 ```
+
+## 12. Mutation round 1
+
+Each test below was red first against its own hand plant, and the file was restored byte-equal.
+
+- `grants::tests::or_if_keeps_a_scope_already_held`: `Scopes::or_if` with `|` replaced by `^` fails it.
+- `grants::tests::a_grant_debug_names_its_type_and_never_its_token`: `Grant`'s `Debug` replaced by
+  `Ok(Default::default())` fails it. Both live in a `#[cfg(test)]` module appended to
+  `crates/mcp/src/grants.rs`, because `or_if` and `Grant` are `pub(crate)`.
+- `guard_census::the_crate_root_forbids_unsafe_code`: row `S11931-FORBID-UNSAFE` replaces the crate
+  root's `#![forbid(unsafe_code)]` with `#![deny(unsafe_code)]`, and the test reads `src/lib.rs`.

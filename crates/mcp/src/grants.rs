@@ -175,3 +175,31 @@ impl fmt::Debug for Grants {
             .finish_non_exhaustive()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn or_if_keeps_a_scope_already_held() {
+        let held = Scopes::NONE.with(Scope::Core);
+        let kept = held.or_if((held, Choice::from(1)));
+        assert!(kept.holds(Scope::Core), "{kept:?}");
+        assert_eq!(kept, held);
+    }
+
+    #[test]
+    fn a_grant_debug_names_its_type_and_never_its_token() {
+        let token = "t".repeat(MIN_CREDENTIAL_CHARS) + &std::process::id().to_string();
+        let grant = Grant::of("core", &token, Scopes::NONE.with(Scope::Core)).expect("a grant");
+        let shown = format!("{grant:?}");
+        let hex = grant
+            .digest
+            .iter()
+            .fold(String::new(), |hex, byte| hex + &format!("{byte:02x}"));
+        assert!(shown.contains("Grant"), "{shown}");
+        assert!(shown.contains("scopes"), "{shown}");
+        assert!(!shown.contains(&token), "{shown}");
+        assert!(!shown.contains(&hex), "{shown}");
+    }
+}

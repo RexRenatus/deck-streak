@@ -162,6 +162,15 @@
         "pub const MIN_CREDENTIAL_CHARS: usize = 31;",
         "settings::a_short_credential_refuses_start",
         "the shortest token a grant accepts is 32 characters, so a 31-character token refuses start (SPEC-119 R7, A5)"
+      ],
+      [
+        "S11931-FORBID-UNSAFE",
+        "mcp",
+        "src/lib.rs",
+        "#![forbid(unsafe_code)]",
+        "#![deny(unsafe_code)]",
+        "guard_census::the_crate_root_forbids_unsafe_code",
+        "the crate root forbids unsafe code outright, so a deny that a later attribute could lift is refused (SPEC-119)"
       ]
     ]
   }

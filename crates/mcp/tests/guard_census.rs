@@ -293,3 +293,14 @@ fn the_guard_compares_only_digests_in_constant_time() {
         .collect();
     assert_eq!(findings, Vec::<String>::new());
 }
+
+#[test]
+fn the_crate_root_forbids_unsafe_code() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let lib = fs::read_to_string(root.join("src/lib.rs")).expect("the crate root");
+    let forbids = lib
+        .lines()
+        .filter(|line| line.trim() == "#![forbid(unsafe_code)]")
+        .count();
+    assert_eq!(forbids, 1, "the crate root must forbid unsafe code once");
+}
