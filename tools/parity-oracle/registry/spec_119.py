@@ -1,4 +1,5 @@
-"""SPEC-119's registrations: the bearer guard's constants, its bucket and its limiter (#158).
+"""SPEC-119's registrations: the bearer guard's constants, its bucket and its limiter (#158), and
+the server's tool roster (#157).
 
 Each adapter builds what JSON cannot carry and CALLS the predecessor; it computes no rule.
 
@@ -16,12 +17,21 @@ Each adapter builds what JSON cannot carry and CALLS the predecessor; it compute
   it reads the failure map: each bucket in order with its failure times, multiplied back into
   whole milliseconds.
 
+* `mcp_roster` builds the predecessor's settings from an environment holding none of its own
+  variables, so every setting is its default, and builds its server over a pipeline that is never
+  called and a guard over no grants (#157). It lists the served tools in the order the server
+  lists them and records, for each, its name, its annotations, its input schema with every
+  `description` key removed, and its output fields in the order its output schema declares them.
+  It records no description text: DeckStreak writes its own, and they are no parity surface.
+
 A token is a list of parts, each a string or a `[string, count]` pair repeated that many times, so
 no committed case holds a credential-shaped literal. The case builders draw only from the
 `random.Random` the generator seeds.
 """
 
+import asyncio
 import logging
+import os
 
 #: The scope every grant holds, and the law track's, by the predecessor's own spelling.
 CORE = "core"
@@ -196,6 +206,58 @@ def with_a_set_clock(require_fn, predecessor, *, grants, calls):
     return {"outcomes": outcomes, "buckets": buckets}
 
 
+def roster_cases(rng):
+    del rng
+    return [(None, {})]
+
+
+def without_descriptions(value):
+    """`value` with every `description` key removed, at every depth."""
+    if isinstance(value, dict):
+        return {
+            key: without_descriptions(item) for key, item in value.items() if key != "description"
+        }
+    if isinstance(value, list):
+        return [without_descriptions(item) for item in value]
+    return value
+
+
+def at_defaults(create_server, predecessor):
+    """The tools the predecessor's server lists with every setting at its default.
+
+    The predecessor's own variables are removed from the environment while its settings are
+    built, and restored after, so no variable of the machine that runs the generator can reach the
+    roster.
+    """
+    own = {
+        name: value
+        for name, value in os.environ.items()
+        if name.startswith("ANKI_") or name == "GCP_PROJECT_ID"
+    }
+    for name in own:
+        del os.environ[name]
+    try:
+        settings = predecessor("config.Settings").from_env()
+    finally:
+        os.environ.update(own)
+    guard = predecessor("mcp_auth.DrillAuth")(())
+    server = create_server(object(), settings, drill_auth=guard)
+    tools = asyncio.run(server.list_tools())
+    listed = []
+    for tool in tools:
+        annotations = tool.annotations.model_dump(exclude_none=True) if tool.annotations else {}
+        output = tool.outputSchema or {}
+        listed.append(
+            {
+                "name": tool.name,
+                "annotations": annotations,
+                "input_schema": without_descriptions(tool.inputSchema),
+                "output_fields": list(output.get("properties", {})),
+            }
+        )
+    return {"tools": listed}
+
+
 FUNCTIONS = {
     "mcp_auth.constants": {
         "kind": "constants",
@@ -233,5 +295,18 @@ FUNCTIONS = {
             "order, each failure time multiplied back into whole milliseconds."
         ),
         "cases": limiter_cases,
+    },
+    "mcp_roster": {
+        "kind": "adapter",
+        "function": "server.create_server",
+        "adapter": at_defaults,
+        "note": (
+            "Builds the settings with none of the predecessor's own variables in the "
+            "environment, so each is its default, and the server over a pipeline that is never "
+            "called and a guard over no grants; lists the tools in the server's order and "
+            "returns each one's name, its annotations without unset ones, its input schema with "
+            "every description key removed, and its output fields in its output schema's order."
+        ),
+        "cases": roster_cases,
     },
 }

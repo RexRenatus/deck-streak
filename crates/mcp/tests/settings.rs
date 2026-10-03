@@ -1,13 +1,20 @@
 //! SPEC-119 A2 to A6: the guard's credentials, read only through the credential loader, and every
-//! refusal by the credential's id (R6, R7, R8; T15).
+//! refusal by the credential's id (R6, R7, R8; T15). A1 and A39 (section 14): the listen address
+//! must be loopback, and the role reads its tokens only through the loader (R3, R6; ADR-329 D6).
 
-// An integration test is test code: its helpers panic on a failed fixture.
-#![allow(clippy::expect_used)]
+// An integration test is test code: its helpers panic on a failed fixture, and the examined count
+// is printed on purpose.
+#![allow(clippy::expect_used, clippy::print_stdout)]
 
 use std::fs;
+use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr};
+use std::path::{Path, PathBuf};
 
-use deck_streak_kernel::{CredentialError, CredentialLoader, CredentialsDirectory, Redactor};
-use deck_streak_mcp::{Grants, McpError, Scopes};
+use deck_streak_kernel::{
+    CredentialError, CredentialLoader, CredentialsDirectory, Environment, Redactor,
+};
+use deck_streak_mcp::settings::LISTEN;
+use deck_streak_mcp::{Grants, ListenAddress, ListenRefusal, McpError, Scopes};
 
 const CORE: &str = "mcp-core-token";
 const LAW_TRACK: &str = "mcp-law-track-token";
@@ -228,4 +235,193 @@ fn two_credentials_with_one_value_refuse_start() {
         scope_names(&distinct),
         vec![vec!["core"], vec!["core", "law_track"]]
     );
+}
+
+/// The listen setting read from an environment holding `value`, or none.
+fn listen(value: Option<&str>) -> Result<ListenAddress, McpError> {
+    ListenAddress::from_env(&Environment::from_vars(value.map(|value| (LISTEN, value))))
+}
+
+/// Requires `refused` to be the listen setting's refusal for `reason`, naming the setting and not
+/// carrying `value`.
+fn assert_listen_refused(
+    refused: &Result<ListenAddress, McpError>,
+    reason: ListenRefusal,
+    value: &str,
+) {
+    match refused {
+        Err(
+            error @ McpError::Listen {
+                setting,
+                reason: found,
+            },
+        ) => {
+            assert_eq!(*setting, "DECKSTREAK_MCP_LISTEN", "{error}");
+            assert_eq!(*found, reason, "{value:?}: {error}");
+            let text = error.to_string();
+            assert!(text.contains("DECKSTREAK_MCP_LISTEN"), "{text}");
+            assert!(
+                value.is_empty() || !text.contains(value),
+                "the refusal carries the value: {text}"
+            );
+        }
+        other => panic!("{value:?} was not refused as {reason:?}: {other:?}"),
+    }
+}
+
+#[test]
+fn the_listen_address_must_be_loopback() {
+    // Not a loopback address, the unspecified ones that listen on every interface among them:
+    // refused, naming the setting.
+    let foreign = [
+        SocketAddr::from((Ipv4Addr::UNSPECIFIED, 8790)),
+        SocketAddr::from((Ipv4Addr::new(10, 0, 0, 1), 8790)),
+        SocketAddr::from((Ipv6Addr::UNSPECIFIED, 8790)),
+        SocketAddr::from((Ipv6Addr::new(0xfd00, 0, 0, 0, 0, 0, 0, 1), 8790)),
+    ];
+    for address in foreign {
+        let value = address.to_string();
+        assert_listen_refused(&listen(Some(&value)), ListenRefusal::NotLoopback, &value);
+    }
+
+    // Unset, blank, or not a socket address with a port: refused, naming the setting.
+    assert_listen_refused(&listen(None), ListenRefusal::Unset, "");
+    assert_listen_refused(&listen(Some("  ")), ListenRefusal::Unset, "");
+    for value in ["localhost:8790", "8790", "no-such-address", "[::1]"] {
+        assert_listen_refused(&listen(Some(value)), ListenRefusal::NotAnAddress, value);
+    }
+
+    // A loopback address of either family is the address the server listens on.
+    for address in [
+        SocketAddr::from((Ipv4Addr::LOCALHOST, 8790)),
+        SocketAddr::from((Ipv4Addr::new(127, 0, 0, 2), 8790)),
+        SocketAddr::from((Ipv6Addr::LOCALHOST, 8790)),
+    ] {
+        let value = address.to_string();
+        let listen = listen(Some(&value)).expect("a loopback address starts");
+        assert_eq!(listen.socket_address(), address);
+    }
+}
+
+/// The repository root, two levels above this crate.
+fn repository() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
+}
+
+/// The reads of a file or a variable that would put a token beside the loader, by the call's
+/// spelling.
+const OTHER_READS: [&str; 10] = [
+    "env::var(",
+    "env::var_os(",
+    "env::vars(",
+    "env::vars_os(",
+    "env::args",
+    "fs::read(",
+    "fs::read_to_string(",
+    "File::open(",
+    "OpenOptions",
+    "read_to_string(",
+];
+
+/// The code of `text`: every line with its `//` comment cut off.
+fn code(text: &str) -> String {
+    text.lines()
+        .map(|line| line.split("//").next().unwrap_or_default())
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// Each read of [`OTHER_READS`] in `text`'s code, as `<name>: <read>`.
+fn other_reads(name: &str, text: &str) -> Vec<String> {
+    let code = code(text);
+    OTHER_READS
+        .iter()
+        .filter(|read| code.contains(*read))
+        .map(|read| format!("{name}: {read}"))
+        .collect()
+}
+
+#[test]
+fn the_role_reads_its_tokens_only_through_the_loader() {
+    // A token-shaped file beside the credentials directory, and files of other names inside it,
+    // grant nothing: the loader reads the credential's own id alone, and refuses by that id.
+    let parent = tempfile::tempdir().expect("a temporary directory");
+    let directory = parent.path().join("credentials");
+    fs::create_dir(&directory).expect("the credentials directory");
+    let value = token("core", 40);
+    fs::write(parent.path().join(CORE), format!("{value}\n")).expect("a file beside it");
+    fs::write(directory.join(format!("{CORE}.txt")), format!("{value}\n")).expect("a file");
+    fs::write(
+        directory.join("DECKSTREAK_MCP_CORE_TOKEN"),
+        format!("{value}\n"),
+    )
+    .expect("a file");
+    let path = CredentialsDirectory::new(&directory).expect("an absolute path");
+    let refused = Grants::load(&CredentialLoader::new(path, Redactor::new()));
+    assert!(
+        matches!(
+            refused,
+            Err(McpError::Credential(CredentialError::Missing { id: CORE }))
+        ),
+        "a core token found outside the loader's id: {refused:?}"
+    );
+
+    // The role's source loads the grants once, through one loader.
+    let root = repository();
+    let role_path = root.join("crates/daemon/src/role_mcp.rs");
+    assert!(
+        role_path.is_file(),
+        "the mcp role's source is missing: {}",
+        role_path.display()
+    );
+    let role = fs::read_to_string(&role_path).expect("the role's source");
+    let role_code = code(&role);
+    assert_eq!(
+        role_code.matches("Grants::load(").count(),
+        1,
+        "the role loads its grants once"
+    );
+    assert_eq!(
+        role_code.matches("CredentialLoader::new(").count(),
+        1,
+        "the role builds one loader"
+    );
+
+    // And neither the role nor the adapter reads a file or a variable any other way.
+    let mut sources = vec![("crates/daemon/src/role_mcp.rs".to_owned(), role)];
+    let adapter = root.join("crates/mcp/src");
+    let mut names: Vec<PathBuf> = fs::read_dir(&adapter)
+        .expect("the adapter's sources")
+        .map(|entry| entry.expect("an entry").path())
+        .filter(|path| path.extension().is_some_and(|extension| extension == "rs"))
+        .collect();
+    names.sort();
+    for path in names {
+        let text = fs::read_to_string(&path).expect("a source");
+        sources.push((path.display().to_string(), text));
+    }
+    let sources = examined("source file(s)", sources);
+    assert!(sources.len() > 1, "examined no adapter source");
+    let found: Vec<String> = sources
+        .iter()
+        .flat_map(|(name, text)| other_reads(name, text))
+        .collect();
+    assert_eq!(found, Vec::<String>::new(), "a read beside the loader");
+
+    // The census sees a planted read, so a census gone blind fails here.
+    let planted = "let value = std::fs::read_to_string(path);";
+    assert_eq!(
+        other_reads("planted", planted),
+        vec!["planted: fs::read_to_string(", "planted: read_to_string("]
+    );
+}
+
+/// Prints how many items a check examined and refuses zero (the tdd pack's examined contract).
+fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
+    println!("examined {} {what}", items.len());
+    assert!(
+        !items.is_empty(),
+        "examined 0 {what}: the population is empty, so nothing was judged"
+    );
+    items
 }

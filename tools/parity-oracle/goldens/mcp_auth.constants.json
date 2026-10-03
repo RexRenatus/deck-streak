@@ -43,7 +43,7 @@
   "inputs": "synthetic",
   "kind": "constants",
   "registry": "tools/parity-oracle/registry/spec_119.py",
-  "registry_sha256": "e103a6f7a592d19aa7d71e41c4d60d5f73a0cbb2e9cc553253f17699dfad8611",
+  "registry_sha256": "82b4a364c53f3f61860b98664b533a6fccb5994de4509c041f1a06d18190682f",
   "schema": "phx.parity-golden.v1",
   "seed": 20,
   "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
