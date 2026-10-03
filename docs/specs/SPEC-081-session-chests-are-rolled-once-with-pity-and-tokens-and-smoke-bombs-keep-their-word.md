@@ -616,3 +616,6 @@ Part 4 additions (2026-10-03), insert-only like the findings above:
   or a freeze, and the settlement answers token bonuses; each is for the caller's own grant, settle
   or freeze port, inside the caller's one write (BEGIN IMMEDIATE), and a payout is granted only from
   those answers. This pull request writes no caller; the chest step and the routes are E2b.
+- **T14. One more manifest row.** `crates/coordination/tests/relight_order.rs` (changed: its
+  allow-list of the statics the crates coordination links gains the registry's `QUESTS` port, as it
+  holds `ECONOMY`; the census refuses a static it does not list).
