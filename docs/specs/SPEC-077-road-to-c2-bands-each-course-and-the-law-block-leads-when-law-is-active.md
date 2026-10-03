@@ -522,3 +522,34 @@ New:
   unchanged. The block's day XP is read by `SqliteXpLedger::track_day_total` in
   `crates/progression/src/ledger.rs`, already in the manifest by T5, and its query's cache entry
   joins `.sqlx/`, also in the manifest.
+- T18, section 9 and section 4's band file. Section 9 names `S07701`-`S07710`, and section 4 says
+  `scripts/mutation-rows.d/S07700-S07799.json` holds the rows of section 9. The band file also holds
+  the twelve rows below, which guard the band-up's record, mark and offer, the unit parse, the law
+  pillar's cap and the law dues' erase; section 4's line for the band file covers them too. Two
+  killers are new tests in test files section 4 already lists, each mutation coverage and not an
+  acceptance criterion: `progress_band_up::the_progress_step_runs_for_the_current_day_only` in
+  `crates/coordination/tests/progress_band_up.rs`, and `progress_store::a_band_up_is_marked_once`
+  in `crates/curriculum/tests/progress_store.rs`. `S07712` is a script row with a cargo killer, as
+  `S07709` is: its target is the curriculum store and its killer runs in coordination. Its mutant
+  writes a baseline unmarked, which the table's CHECK refuses, so A8 fails at its expectation that
+  the step evaluates rather than at an assertion: the CHECK kills it. `S07722`'s mutant runs the
+  mark's statement unchecked and without its guard, because a changed checked statement has no
+  offline cache entry and would not build. `S07703`'s mutant flips the fallback's inclusive bound
+  on the mature interval rather than moving the constant: every card mastery golden case carries
+  its own mature interval, so a moved constant is not observed there, and the constant's value is
+  held by A5's constants golden.
+
+| row | target | what it guards | killer |
+|---|---|---|---|
+| `S07711-FIRST-SIGHTING-SILENT` | `crates/coordination/src/recompute/progress.rs` | a first sighting grants no band-up | `progress_band_up::the_first_sighting_of_a_course_is_a_silent_baseline` |
+| `S07712-BASELINE-WRITTEN-MARKED` | `crates/curriculum/src/store.rs` | a baseline is written marked (a script row; the cargo killer) | `progress_band_up::the_first_sighting_of_a_course_is_a_silent_baseline` |
+| `S07713-ERASE-LAW-DUES` | `crates/curriculum/src/data_rights.rs` | the erase deletes the law dues | `progress_store::the_curriculum_tables_are_exported_and_erased` |
+| `S07714-BAND-UP-LATER-ONLY` | `crates/curriculum/src/progress.rs` | only a band later than the stored one is a band-up | `formal_vectors_road_to_c2::the_road_to_c2_rules_answer_every_lean_vector` |
+| `S07715-PROGRESS-CURRENT-DAY-ONLY` | `crates/coordination/src/recompute/progress.rs` | the progress step runs for the current study day only | `progress_band_up::the_progress_step_runs_for_the_current_day_only` |
+| `S07716-UNIT-OVERFLOW-IS-NO-UNIT` | `crates/curriculum/src/progress.rs` | a unit beyond 32 bits is no unit | `progress_goldens::the_unit_parse_matches_the_predecessors_golden` |
+| `S07717-PILLAR-CAP` | `crates/curriculum/src/law.rs` | the leeches take at most 30 points | `formal_vectors_road_to_c2::the_road_to_c2_rules_answer_every_lean_vector` |
+| `S07718-CURRENT-BAND-CONTIGUOUS` | `crates/curriculum/src/progress.rs` | the current band ends the achieved run from A1 | `formal_vectors_road_to_c2::the_road_to_c2_rules_answer_every_lean_vector` |
+| `S07719-OFFER-MARK-AFTER-ANSWER` | `crates/coordination/src/recompute/progress.rs` | a band-up the router did not answer stays owed | `progress_band_up::band_ups_match_the_predecessors_golden_and_pay_once` |
+| `S07720-BAND-UP-KEY-LOWERCASE` | `crates/coordination/src/recompute/progress.rs` | the dedupe key spells the band lowercased | `progress_band_up::band_ups_match_the_predecessors_golden_and_pay_once` |
+| `S07721-BAND-UP-THIRD-ARM` | `crates/coordination/src/recompute/mod.rs` | the offers hand every owed band-up to the router | `progress_band_up::band_ups_match_the_predecessors_golden_and_pay_once` |
+| `S07722-BAND-UP-MARK-ONCE` | `crates/curriculum/src/store.rs` | a band-up is marked once | `progress_store::a_band_up_is_marked_once` |
