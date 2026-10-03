@@ -67,26 +67,33 @@ async fn a_chest_that_pays_nothing_answers_no_payout() {
         .await
         .expect("the database opens");
     let mut write = db.write().await.expect("a write");
-    let chest = NewChest {
-        study_day: StudyDay::from_epoch_day(19_000),
-        origin: Origin::Session,
-        session_start: 1,
-        rarity: Rarity::Common,
-        payout_xp: 0,
-        state: ChestState::Vaulted,
-    };
-    let id = chest_store::insert_chest(&mut write, &chest, AT)
-        .await
-        .expect("the chest stored")
-        .expect("a key of its own");
-    let opened = open_chest_on(&mut write, id).await.expect("the open");
-    write.commit().await.expect("the write committed");
-    match opened {
-        Opened::Revealed { payout, .. } => {
-            assert_eq!(payout, None, "a chest paying 0 answers no payout");
+    // The chest paying 5 is the control: the same open answers its payout, so the 0 chest's
+    // answer is the guard's and not the open's.
+    let mut xp_paid = Vec::new();
+    for (key, payout_xp) in [(1, 0), (2, 5)] {
+        let chest = NewChest {
+            study_day: StudyDay::from_epoch_day(19_000),
+            origin: Origin::Session,
+            session_start: key,
+            rarity: Rarity::Common,
+            payout_xp,
+            state: ChestState::Vaulted,
+        };
+        let id = chest_store::insert_chest(&mut write, &chest, AT)
+            .await
+            .expect("the chest stored")
+            .expect("a key of its own");
+        match open_chest_on(&mut write, id).await.expect("the open") {
+            Opened::Revealed { payout, .. } => xp_paid.push(payout.map(|paid| paid.xp)),
+            other => panic!("a Common chest reveals, not {other:?}"),
         }
-        other => panic!("a Common chest reveals, not {other:?}"),
     }
+    write.commit().await.expect("the write committed");
+    assert_eq!(
+        xp_paid,
+        vec![None, Some(5)],
+        "a chest paying 0 answers no payout and one paying 5 answers it"
+    );
 }
 
 #[test]
