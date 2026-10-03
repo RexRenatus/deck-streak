@@ -97,3 +97,7 @@ first attempt" (a free skip's retry was charged 50 after a later skip applied), 
 whole `skip_flow` target had passed. The file was restored byte-equal (its sha256
 `cab3b04df4e339dc25962c2c2de27f1793b3131e4ed22463a4e977c73a3bcb70` before and after), and no commit
 holds the plant.
+
+```red-first
+A52: not red: measured red by the plant above, at 0d4236da, with the earlier-day filter planted to day != day: a retry is priced as its first attempt; committed green only
+```
