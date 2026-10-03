@@ -42,3 +42,8 @@ A24: green at a8ffb874
 
 The green run reads `test result: ok. 4 passed` for `tests/landmarks.rs` and `test result: ok. 1
 passed` for `tests/study_days.rs`.
+
+Disclosure: the green commit a8ffb874 also touches the two test files `crates/ingest/tests/study_days.rs` and
+`crates/notifications/tests/landmarks.rs`. It is `cargo fmt` re-wrapping the `assert_eq!` calls, one array
+constant and one iterator chain, plus the file attribute `#![allow(clippy::expect_used)]` that the crate's other
+test files carry. No expected value, no case and no comparison changed.
