@@ -21,6 +21,11 @@ pub const ANNIVERSARY_GAP_TEMPLATE: &str = "\u{1f5d3}\u{fe0f} <b>{ordinal} anniv
 /// The earned-study-day landmark's text.
 pub const STUDY_DAY_TEMPLATE: &str = "\u{1f4da} <b>{ordinal} earned study days</b> on {day}";
 
+/// The most anniversaries the walk takes. It bounds the walk's work for any input, since a study
+/// day can carry a year of eighteen digits; the predecessor's calendar ends at year 9999, so no
+/// walk it can hold reaches this many and the cap binds none of them.
+const ANNIVERSARY_WALK_CAP: i128 = 10_000;
+
 /// One historical event; it carries no text derived from the collection.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Landmark {
@@ -45,8 +50,8 @@ pub fn compute_landmarks(study_days: &[StudyDay], today: StudyDay) -> Vec<Landma
     };
     let mut found = Vec::new();
     // The anniversaries rise year by year, so the exits below (no date, or the first one past
-    // `today`) end the walk, and no year bound is needed.
-    for ordinal in 1_i128.. {
+    // `today`) end the walk, and the cap bounds it should any exit fail to.
+    for ordinal in 1_i128..=ANNIVERSARY_WALK_CAP {
         let Some(day) = anniversary(origin, ordinal) else {
             break;
         };
