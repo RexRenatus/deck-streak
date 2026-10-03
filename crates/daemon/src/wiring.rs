@@ -242,6 +242,33 @@ pub fn recompute_fold_with_relights(
     Ok((fold, due))
 }
 
+/// Road to C2's live band for the persona engine (SPEC-077 R8, T26): the stored current band of
+/// the configured course a language subject names, so a mentor writes at the band the owner has
+/// reached rather than the roster's. Its production caller is the persona engine's output path
+/// (#566); until that runs, A9 is its only caller.
+pub struct CurriculumLiveBand {
+    db: Db,
+    courses: Courses,
+}
+
+impl CurriculumLiveBand {
+    /// The live band over `db`'s stored course progress, for the configured `courses`.
+    #[must_use]
+    pub const fn new(db: Db, courses: Courses) -> Self {
+        Self { db, courses }
+    }
+}
+
+impl deck_streak_agent::LiveBand for CurriculumLiveBand {
+    fn band<'a>(
+        &'a self,
+        _subject: &'a deck_streak_agent::Subject,
+    ) -> deck_streak_kernel::PortFuture<'a, Option<deck_streak_agent::CefrBand>> {
+        let _unread = (&self.db, &self.courses);
+        Box::pin(async { Ok(None) })
+    }
+}
+
 /// Why a role's recompute cannot start. Each names a setting or a step, never a value.
 #[derive(Debug, thiserror::Error)]
 pub enum RecomputeError {
