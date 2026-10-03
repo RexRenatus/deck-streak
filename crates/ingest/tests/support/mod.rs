@@ -38,7 +38,8 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-use anki::collection::CollectionBuilder;
+use anki::card::CardId;
+use anki::collection::{Collection, CollectionBuilder};
 use anki::scheduler::answering::{CardAnswer, Rating};
 use anki::sync::http_server::{SimpleServer, SyncServerConfig, default_ip_header};
 use anki::sync::login::sync_login;
@@ -321,6 +322,39 @@ pub fn serve() {
             .await
             .unwrap_or_else(|error| panic!("the sync server serves: {error}"));
     });
+}
+
+/// Plays the owner's other Anki client reviewing one named card: answers the card `card` as Good
+/// in the collection at `collection`, then sends the review to the server at `endpoint` with the
+/// engine's own normal sync (SPEC-083 A34). No code of this workspace runs here.
+///
+/// # Panics
+///
+/// When the collection does not hold the card, or the engine fails.
+pub fn review_card_on_another_client(
+    runtime: &Runtime,
+    collection: &Path,
+    endpoint: &str,
+    card: i64,
+) {
+    let mut col = CollectionBuilder::new(collection)
+        .build()
+        .unwrap_or_else(|error| panic!("the other client opens its collection: {error}"));
+    let states = col
+        .get_scheduling_states(CardId(card))
+        .unwrap_or_else(|error| panic!("the other client reads the card's states: {error}"));
+    col.answer_card(&mut CardAnswer {
+        card_id: CardId(card),
+        current_state: states.current,
+        new_state: states.good,
+        rating: Rating::Good,
+        answered_at: TimestampMillis::now(),
+        milliseconds_taken: 3000,
+        custom_data: None,
+        from_queue: false,
+    })
+    .unwrap_or_else(|error| panic!("the other client answers the card: {error}"));
+    sync_setting_from_another_client(runtime, col, endpoint);
 }
 
 /// Plays the owner's other Anki client: answers `reviews` cards of the first top-level deck's
@@ -685,6 +719,41 @@ pub fn change_setting_on_another_client(
         .unwrap_or_else(|error| panic!("the other client opens its collection: {error}"));
     col.set_config_json(key, &value, false)
         .unwrap_or_else(|error| panic!("the other client changes a setting: {error}"));
+    sync_setting_from_another_client(runtime, col, endpoint);
+}
+
+/// The collection's configured UTC offset, in minutes west of UTC, as the engine's config table
+/// keys it: another client changes it with [`change_setting_on_another_client`] and removes it with
+/// [`remove_setting_on_another_client`] (SPEC-083 A40).
+pub const UTC_OFFSET_KEY: &str = "localOffset";
+/// The collection's rollover hour, as the engine's config table keys it (SPEC-083 A40).
+pub const ROLLOVER_KEY: &str = "rollover";
+
+/// Plays the owner's other Anki client removing one setting: removes `key` from the collection at
+/// `collection`, then sends the change to the server at `endpoint` with the engine's own normal
+/// sync. A client whose config is newer sends its whole config table, which replaces the server's
+/// (`rslib/src/storage/config/mod.rs`, `set_all_config`), so the server is left without the
+/// setting: A40's server with no configured UTC offset. No code of this workspace runs here.
+///
+/// # Panics
+///
+/// When the engine fails.
+pub fn remove_setting_on_another_client(
+    runtime: &Runtime,
+    collection: &Path,
+    endpoint: &str,
+    key: &str,
+) {
+    let mut col = CollectionBuilder::new(collection)
+        .build()
+        .unwrap_or_else(|error| panic!("the other client opens its collection: {error}"));
+    col.remove_config(key)
+        .unwrap_or_else(|error| panic!("the other client removes a setting: {error}"));
+    sync_setting_from_another_client(runtime, col, endpoint);
+}
+
+/// The other client's login and normal sync of a changed setting, then the collection's close.
+fn sync_setting_from_another_client(runtime: &Runtime, mut col: Collection, endpoint: &str) {
     let mut auth = runtime
         .block_on(sync_login(
             USERNAME,
@@ -699,4 +768,18 @@ pub fn change_setting_on_another_client(
         .unwrap_or_else(|error| panic!("the other client syncs its setting: {error}"));
     col.close(None)
         .unwrap_or_else(|error| panic!("the other client closes its collection: {error}"));
+}
+
+/// Plays the owner's other Anki client sending what it changed in the collection at `collection`
+/// to the server at `endpoint` with the engine's own normal sync (SPEC-083 A39). No code of this
+/// workspace runs here.
+///
+/// # Panics
+///
+/// When the engine fails.
+pub fn sync_on_another_client(runtime: &Runtime, collection: &Path, endpoint: &str) {
+    let col = CollectionBuilder::new(collection)
+        .build()
+        .unwrap_or_else(|error| panic!("the other client opens its collection: {error}"));
+    sync_setting_from_another_client(runtime, col, endpoint);
 }

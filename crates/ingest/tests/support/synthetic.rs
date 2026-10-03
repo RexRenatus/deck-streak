@@ -472,58 +472,112 @@ pub fn build_planned(
         let db = col.storage.db();
         db.execute_batch("begin").expect("a transaction opens");
         for (position, card) in cards.iter().enumerate() {
-            let text = format!("planned card {}", card.id);
-            db.execute(
-                "insert into notes (id, guid, mid, mod, usn, tags, flds, sfld, csum, flags, data) \
-                 values (?, ?, ?, 0, 0, '', ?, ?, ?, 0, '')",
-                (
-                    card.id,
-                    format!("planned{}", card.id),
-                    basic,
-                    format!("{text}\u{1f}back"),
-                    text.as_str(),
-                    checksum(&text),
-                ),
-            )
-            .expect("a note is inserted");
-            db.execute(
-                "insert into cards (id, nid, did, ord, mod, usn, type, queue, due, ivl, factor, \
-                 reps, lapses, left, odue, odid, flags, data) \
-                 values (?, ?, ?, 0, 0, 0, 0, 0, ?, 0, 0, 0, 0, 0, 0, 0, 0, '{}')",
-                (
-                    card.id,
-                    card.id,
-                    ids[card.deck],
-                    i64::try_from(position).unwrap() + 1,
-                ),
-            )
-            .expect("a card is inserted");
+            let position = i64::try_from(position).unwrap() + 1;
+            insert_planned_note(
+                col,
+                basic,
+                card.id,
+                ids[card.deck],
+                CardColumns::new(position),
+            );
         }
         insert_planned_reviews(col, reviews);
         db.execute_batch("commit").expect("the transaction commits");
-        let borrowed: Vec<String> = cards
+        let borrowed: Vec<i64> = cards
             .iter()
             .filter(|card| card.filtered)
-            .map(|card| card.id.to_string())
+            .map(|card| card.id)
             .collect();
-        let filtered = (!borrowed.is_empty()).then(|| {
-            let mut deck = col
-                .get_or_create_filtered_deck(anki::decks::DeckId(0))
-                .expect("a new filtered deck");
-            FILTERED_DECK.clone_into(&mut deck.human_name);
-            deck.config.search_terms.truncate(1);
-            deck.config.search_terms[0].search = format!("cid:{}", borrowed.join(","));
-            deck.config.search_terms[0].limit = 1000;
-            col.add_or_update_filtered_deck(deck)
-                .expect("the engine builds the filtered deck")
-                .output
-                .0
-        });
+        let filtered = build_filtered(col, &borrowed);
         let mut decks = ids;
         if let Some(id) = filtered {
             decks.insert(FILTERED_DECK.to_owned(), id);
         }
         Planned { decks, filtered }
+    })
+}
+
+/// The scheduling columns of a planned card as the `cards` table stores them.
+#[derive(Clone, Copy, Debug)]
+struct CardColumns {
+    kind: i64,
+    queue: i64,
+    due: i64,
+    interval: i64,
+    factor: i64,
+    lapses: i64,
+    left: i64,
+}
+
+impl CardColumns {
+    /// A new card at queue position `position`.
+    const fn new(position: i64) -> Self {
+        Self {
+            kind: 0,
+            queue: 0,
+            due: position,
+            interval: 0,
+            factor: 0,
+            lapses: 0,
+            left: 0,
+        }
+    }
+}
+
+/// Inserts the card `id` on its own Basic note (`basic`), the note sharing its id, in the deck
+/// `deck` with the scheduling `columns`, over the engine's own connection.
+fn insert_planned_note(col: &Collection, basic: i64, id: i64, deck: i64, columns: CardColumns) {
+    let db = col.storage.db();
+    let text = format!("planned card {id}");
+    db.execute(
+        "insert into notes (id, guid, mid, mod, usn, tags, flds, sfld, csum, flags, data) \
+         values (?, ?, ?, 0, 0, '', ?, ?, ?, 0, '')",
+        (
+            id,
+            format!("planned{id}"),
+            basic,
+            format!("{text}\u{1f}back"),
+            text.as_str(),
+            checksum(&text),
+        ),
+    )
+    .expect("a note is inserted");
+    db.execute(
+        "insert into cards (id, nid, did, ord, mod, usn, type, queue, due, ivl, factor, \
+         reps, lapses, left, odue, odid, flags, data) \
+         values (?, ?, ?, 0, 0, 0, ?, ?, ?, ?, ?, 0, ?, ?, 0, 0, 0, '{}')",
+        (
+            id,
+            id,
+            deck,
+            columns.kind,
+            columns.queue,
+            columns.due,
+            columns.interval,
+            columns.factor,
+            columns.lapses,
+            columns.left,
+        ),
+    )
+    .expect("a card is inserted");
+}
+
+/// Builds the engine's filtered deck [`FILTERED_DECK`] borrowing the cards `borrowed`, and answers
+/// its id; no deck when nothing is borrowed.
+fn build_filtered(col: &mut Collection, borrowed: &[i64]) -> Option<i64> {
+    let ids: Vec<String> = borrowed.iter().map(ToString::to_string).collect();
+    (!ids.is_empty()).then(|| {
+        let mut deck = col
+            .get_or_create_filtered_deck(anki::decks::DeckId(0))
+            .expect("a new filtered deck");
+        FILTERED_DECK.clone_into(&mut deck.human_name);
+        deck.config.search_terms.truncate(1);
+        deck.config.search_terms[0].search = format!("cid:{}", ids.join(","));
+        deck.config.search_terms[0].limit = 1000;
+        col.add_or_update_filtered_deck(deck)
+            .expect("the engine builds the filtered deck")
+            .output
+            .0
     })
 }
 
@@ -816,4 +870,336 @@ pub fn notetype_id(path: &Path, name: &str) -> i64 {
             .id
             .0
     })
+}
+
+// ------------------------------------------------------------------------------------------------
+// SPEC-083: the skip's take-side collections. One top-level deck holds every kind of card the
+// skip's search must move or leave (A38), the filtered deck borrowing one of them by its home deck;
+// the collection's configured UTC offset, rollover hour and FSRS switch are each set by the test
+// (A5, A40). Its creation stamp is moved back, so every day number here is positive.
+
+/// The skip collection's one normal deck, a top-level deck holding every card of [`SKIP_CARDS`].
+pub const SKIP_DECK: &str = "Skip";
+/// The first id of a skip collection's cards: each card's id is this plus its place, from 1.
+pub const SKIP_FLOOR: i64 = 1_700_100_000_000;
+/// How many days before its build a skip collection was created.
+const SKIP_AGE_DAYS: i64 = 30;
+/// A review or relearning card's interval in a skip collection, in days.
+const SKIP_INTERVAL: i64 = 10;
+/// A review card's ease factor in a skip collection, in permille.
+const SKIP_FACTOR: i64 = 2500;
+
+/// A card of a skip collection, by what the skip's search must do with it (SPEC-083 R3, A38).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SkipCard {
+    /// A review card due on the engine's day: the one kind the default search moves.
+    DueReview,
+    /// A review card due on the engine's day that the filtered deck borrows.
+    FilteredReview,
+    /// A new card.
+    New,
+    /// A learning card due now.
+    Learning,
+    /// A relearning card due now.
+    Relearning,
+    /// A suspended review card due on the engine's day.
+    Suspended,
+    /// A review card due on the engine's day that the owner buried.
+    Buried,
+    /// A review card the skip does not move, already due within the day spec's range.
+    DueInRange,
+    /// A review card due this many days from the engine's day (negative: overdue).
+    OtherDay(i64),
+}
+
+impl SkipCard {
+    /// The card's scheduling columns on the engine's day `today`, at the instant `now` in seconds.
+    const fn columns(self, today: i64, now: i64, position: i64) -> CardColumns {
+        let review = CardColumns {
+            kind: 2,
+            queue: 2,
+            due: today,
+            interval: SKIP_INTERVAL,
+            factor: SKIP_FACTOR,
+            lapses: 0,
+            left: 0,
+        };
+        match self {
+            Self::DueReview | Self::FilteredReview => review,
+            Self::New => CardColumns::new(position),
+            Self::Learning => CardColumns {
+                kind: 1,
+                queue: 1,
+                due: now - 60,
+                interval: 0,
+                factor: 0,
+                lapses: 0,
+                left: 1,
+            },
+            Self::Relearning => CardColumns {
+                kind: 3,
+                queue: 1,
+                due: now - 60,
+                lapses: 1,
+                left: 1,
+                ..review
+            },
+            Self::Suspended => CardColumns {
+                queue: -1,
+                ..review
+            },
+            Self::Buried => CardColumns {
+                queue: -2,
+                ..review
+            },
+            Self::DueInRange => CardColumns {
+                due: today + deck_streak_ingest::skip::SKIP_SPREAD_MAX_DAYS - 1,
+                ..review
+            },
+            Self::OtherDay(days) => CardColumns {
+                due: today + days,
+                ..review
+            },
+        }
+    }
+}
+
+/// The skip's take-side collection (SPEC-083 A5, A38): three review cards due today, which the
+/// default search moves, and one card of every kind it must leave, each by its id.
+pub const SKIP_CARDS: [(i64, SkipCard); 12] = [
+    (SKIP_FLOOR + 1, SkipCard::DueReview),
+    (SKIP_FLOOR + 2, SkipCard::DueReview),
+    (SKIP_FLOOR + 3, SkipCard::DueReview),
+    (SKIP_FLOOR + 4, SkipCard::FilteredReview),
+    (SKIP_FLOOR + 5, SkipCard::New),
+    (SKIP_FLOOR + 6, SkipCard::Learning),
+    (SKIP_FLOOR + 7, SkipCard::Relearning),
+    (SKIP_FLOOR + 8, SkipCard::Suspended),
+    (SKIP_FLOOR + 9, SkipCard::Buried),
+    (SKIP_FLOOR + 10, SkipCard::DueInRange),
+    (SKIP_FLOOR + 11, SkipCard::OtherDay(-2)),
+    (SKIP_FLOOR + 12, SkipCard::OtherDay(10)),
+];
+
+/// `count` review cards due today, ids from [`SKIP_FLOOR`] plus 1: A36's set one card over the
+/// golden limit is `skip_due_reviews(SKIP_MAX_CARDS + 1)`.
+#[must_use]
+pub fn skip_due_reviews(count: usize) -> Vec<(i64, SkipCard)> {
+    (1..=count)
+        .map(|place| {
+            (
+                SKIP_FLOOR + i64::try_from(place).unwrap(),
+                SkipCard::DueReview,
+            )
+        })
+        .collect()
+}
+
+/// The ids of `cards` the default search moves: its review cards due today outside a filtered deck.
+#[must_use]
+pub fn skip_moved(cards: &[(i64, SkipCard)]) -> Vec<i64> {
+    cards
+        .iter()
+        .filter(|(_, card)| *card == SkipCard::DueReview)
+        .map(|(id, _)| *id)
+        .collect()
+}
+
+/// The settings a skip collection is built with (SPEC-083 A5, A40).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SkipSetup {
+    /// The configured UTC offset in minutes WEST of UTC, as the engine stores it (UTC+05:30 is
+    /// -330), or `None` for a collection that holds none.
+    pub utc_offset_west: Option<i32>,
+    /// The collection's rollover hour, 0 to 23.
+    pub rollover: u8,
+    /// Whether FSRS is on.
+    pub fsrs: bool,
+}
+
+impl SkipSetup {
+    /// The workspace's pinned zone (`UTC0`, `.cargo/config.toml`), the engine's default rollover
+    /// hour and FSRS off.
+    pub const UTC: Self = Self {
+        utc_offset_west: Some(0),
+        rollover: 4,
+        fsrs: false,
+    };
+}
+
+/// Builds a skip collection at `path`: [`SKIP_DECK`] holding `cards`, each note, card and column
+/// inserted in one transaction, and the filtered deck borrowing each [`SkipCard::FilteredReview`];
+/// then `setup`'s rollover hour and FSRS switch before the day is read, and its configured UTC
+/// offset last, because the engine rewrites that offset to the process's zone whenever it reads
+/// the day as a client.
+///
+/// # Panics
+///
+/// When the engine or a statement fails: a fixture that cannot be built stops the test.
+pub fn build_skip(path: &Path, cards: &[(i64, SkipCard)], setup: SkipSetup) -> Planned {
+    with_engine(path, |col| {
+        col.storage
+            .db()
+            .execute("update col set crt = crt - ?", (SKIP_AGE_DAYS * DAY_SECS,))
+            .expect("the collection's creation stamp moves back");
+    });
+    with_engine(path, |col| {
+        let deck = col
+            .get_or_create_normal_deck(SKIP_DECK)
+            .expect("the engine creates the deck")
+            .id
+            .0;
+        let basic = col
+            .get_notetype_by_name("Basic")
+            .expect("the note types are read")
+            .expect("the engine creates its stock Basic note type")
+            .id
+            .0;
+        col.set_config_json("rollover", &u32::from(setup.rollover), false)
+            .expect("the rollover hour is set");
+        col.set_config_bool(anki::config::BoolKey::Fsrs, setup.fsrs, false)
+            .expect("FSRS is switched");
+        let timing = col.timing_today().expect("the engine reads its day");
+        let today = i64::from(timing.days_elapsed);
+        // Today's unbury has run, so the buried card is one buried today: no sync unburies it.
+        col.set_config_json("lastUnburied", &today, false)
+            .expect("the last unburied day is today");
+        let db = col.storage.db();
+        db.execute_batch("begin").expect("a transaction opens");
+        for (position, (id, card)) in cards.iter().enumerate() {
+            let position = i64::try_from(position).unwrap() + 1;
+            let columns = card.columns(today, timing.now.0, position);
+            insert_planned_note(col, basic, *id, deck, columns);
+        }
+        db.execute_batch("commit").expect("the transaction commits");
+        let borrowed: Vec<i64> = cards
+            .iter()
+            .filter(|(_, card)| *card == SkipCard::FilteredReview)
+            .map(|(id, _)| *id)
+            .collect();
+        let filtered = build_filtered(col, &borrowed);
+        match setup.utc_offset_west {
+            Some(minutes) => col
+                .set_config_json("localOffset", &minutes, false)
+                .map(|_| ()),
+            None => col.remove_config("localOffset").map(|_| ()),
+        }
+        .expect("the configured UTC offset is set");
+        let mut decks: std::collections::BTreeMap<String, i64> = col
+            .get_all_deck_names(false)
+            .expect("the deck names are read")
+            .into_iter()
+            .map(|(id, human)| (human, id.0))
+            .collect();
+        if let Some(id) = filtered {
+            decks.insert(FILTERED_DECK.to_owned(), id);
+        }
+        Planned { decks, filtered }
+    })
+}
+
+/// One review-log row, as a skip's tests judge it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct LogRow {
+    /// The card the row belongs to.
+    pub card: i64,
+    /// The row's type: 4 for the engine's manual reschedule.
+    pub kind: i64,
+    /// The answer: 0 for the engine's manual reschedule.
+    pub ease: i64,
+}
+
+/// Every review-log row of the collection at `path`, oldest first, read by the engine's own
+/// connection (SPEC-083 R18).
+///
+/// # Panics
+///
+/// When the engine cannot open the collection or the read fails.
+pub fn review_log(path: &Path) -> Vec<LogRow> {
+    with_engine(path, |col| {
+        let mut statement = col
+            .storage
+            .db()
+            .prepare("select cid, type, ease from revlog order by id")
+            .expect("the review log's read is prepared");
+        statement
+            .query_map((), |row| {
+                Ok(LogRow {
+                    card: row.get(0)?,
+                    kind: row.get(1)?,
+                    ease: row.get(2)?,
+                })
+            })
+            .expect("the review log is read")
+            .map(|row| row.expect("a review-log row"))
+            .collect()
+    })
+}
+
+/// Plays another client changing cards' due dates in the collection at `path`: each `(card, due)`
+/// is written with a new modification time and as unsynced, and the collection's modified stamp
+/// moves, so that client's next sync sends it (SPEC-083 A39): a sync whose stamps are equal on
+/// both sides exchanges nothing.
+///
+/// # Panics
+///
+/// When the collection does not hold a card.
+pub fn change_cards(path: &Path, cards: &[(i64, i64)]) {
+    with_engine(path, |col| {
+        let now = i64::try_from(
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("the clock is past the epoch")
+                .as_secs(),
+        )
+        .expect("seconds fit an i64");
+        for (card, due) in cards {
+            let changed = col
+                .storage
+                .db()
+                .execute(
+                    "update cards set due = ?, mod = ?, usn = -1 where id = ?",
+                    (due, now, card),
+                )
+                .expect("the card is updated");
+            assert_eq!(changed, 1, "the collection holds the card {card}");
+        }
+        col.storage
+            .db()
+            .execute("update col set mod = ?", (now * 1000,))
+            .expect("the collection's modified stamp moves");
+    });
+}
+
+/// The tables whose rows carry an update sequence number in the engine's schema.
+const USN_TABLES: [&str; 10] = [
+    "cards",
+    "notes",
+    "revlog",
+    "graves",
+    "decks",
+    "deck_config",
+    "notetypes",
+    "templates",
+    "tags",
+    "config",
+];
+
+/// Makes the collection at `path` a server's: every row the builder wrote as unsynced (update
+/// sequence number -1, which the engine writes in client mode) is marked synced, as a server never
+/// holds an unsynced row. A full download then carries no pending change into the private copy,
+/// so the private copy's first change after it is the only one its next sync sends.
+///
+/// # Panics
+///
+/// When a statement fails.
+pub fn as_served(path: &Path) {
+    with_engine(path, |col| {
+        for table in USN_TABLES {
+            col.storage
+                .db()
+                .execute(&format!("update {table} set usn = 0 where usn = -1"), ())
+                .unwrap_or_else(|error| panic!("{table}'s rows are marked synced: {error}"));
+        }
+    });
 }

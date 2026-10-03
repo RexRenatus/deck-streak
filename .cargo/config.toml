@@ -1,0 +1,5 @@
+# SPEC-083 section 3: every process Cargo runs reads one zone, the POSIX rule `UTC0`, which names no
+# zone file and has no daylight period, so the skip's zone pin (R3) admits the tests as it admits the
+# service. `force` overrides a `TZ` the shell sets; the `skip_write` tests set their own zone.
+[env]
+TZ = { value = "UTC0", force = true }

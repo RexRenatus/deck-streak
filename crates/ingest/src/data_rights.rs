@@ -2,6 +2,8 @@
 //! every table of the owner's data, and the singleton `ingest_state` is exported and reset in place
 //! (CHARTER 13), through the kernel's port that `privacy` drives (#14). A reset `ingest_state` reads
 //! as never recomputed, so the next cycle runs the recompute and recounts the window.
+//! The declared write class's stop, `write_class_stop`, is exempt (SPEC-083 R36): only the
+//! owner's command clears it, and an erase that cleared it would be a second path.
 
 use deck_streak_kernel::{
     DataRights, DataRightsError, Declaration, Disposition, ExportedTable, PortFuture, TableRights,
@@ -20,6 +22,14 @@ pub const SKIP_CARD_SNAPSHOT_TABLE: &str = "skip_card_snapshot";
 /// The table the change gate's anchor, the rescore flag and the window's base live in
 /// (`migrations/002301_ingest_state.sql`).
 pub const INGEST_STATE_TABLE: &str = "ingest_state";
+/// The table the declared write class's stop lives in
+/// (`migrations/008303_ingest_write_class_stop.sql`).
+pub const WRITE_CLASS_STOP_TABLE: &str = "write_class_stop";
+
+/// Why the class's stop survives an erase (SPEC-083 R36, ADR-321 D16).
+const WRITE_CLASS_STOP_EXEMPTION: &str = "only the owner's command clears the class's stop, and \
+    an erase that cleared it would be a second path; the row names who set the stop, why and \
+    when, and holds none of the owner's data";
 
 /// The columns an erase clears in `ingest_state`: the anchor, the window's base and the refused
 /// owner request (SPEC-128 R6).
@@ -144,6 +154,12 @@ impl DataRights for IngestDataRights {
                     table: INGEST_STATE_TABLE,
                     disposition: Disposition::ResetInPlace {
                         row: ingest_state_reset(),
+                    },
+                },
+                TableRights {
+                    table: WRITE_CLASS_STOP_TABLE,
+                    disposition: Disposition::Exempt {
+                        reason: WRITE_CLASS_STOP_EXEMPTION,
                     },
                 },
             ],

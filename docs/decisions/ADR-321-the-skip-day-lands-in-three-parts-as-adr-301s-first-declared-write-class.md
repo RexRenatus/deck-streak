@@ -148,3 +148,56 @@ SPEC-083 sections 3c, 10 and 11; ADR-301 parts (b) and (c) and their #518 notes;
 #518 notes; ADR-083; ADR-064; ADR-037; SPEC-082 R7; `formal/tla/SkipDayOnce/`;
 `formal/lean/Formal/SkipTariff.lean`; `docs/schematics/skip-day-record-and-effects.md`; #108; #266;
 #514; #518.
+
+## Amendment (2026-10-03, E4b): the take's write
+
+Appended by E4b (#108, SPEC-083 sections 12 and 13), as the seat's ruling 82 accepted it; nothing
+above is edited. Each decision names what it was chosen against.
+
+- **D14, the port (P3), is chosen against extending `AnkiEngine`, because** its ten implementors
+  include nine test fakes, eight of them outside SPEC-083's manifest
+  (`crates/coordination/tests/change_gate.rs`, `flush_step.rs`, `held_flush.rs`,
+  `instruments_cycle.rs`, `level_up_cycle.rs`, two in `settle_fold.rs`, and
+  `crates/readings/tests/day_set.rs`) and one in ingest's `tests/support/mod.rs`. The
+  take reaches the engine through a second trait in `crates/ingest/src/engine.rs`,
+  `CollectionWrite`, which `RslibEngine` alone implements, each method opening and closing the
+  collection itself so a hook between steps can open the working copy. Inherent methods on
+  `RslibEngine` lost too, because they leave A24's census no single surface to name and ADR-022
+  keeps the engine behind a port.
+- **D15, the take's syncs (P4), is chosen against `Syncer::sync`, `run` and `attempts`, because**
+  they retry three times, resolve a full-sync demand by a full download, record a `sync_runs` row
+  and drop a running sync at their timeout, and R19, R25 and R26 forbid each. The take makes
+  exactly two single normal syncs through `CollectionWrite`, with no retry, no download, no
+  `sync_runs` row and no timeout of its own; the wait that answers `pending` is E4c's task (T10).
+- **D16, the class's stop (P5), is chosen against `ResetInPlace`, `ExportAndErase`, a file or an
+  environment flag, and one row per class, because** an erase that cleared it would be a second
+  clear path (R36), a file or a flag is not a ledger row, and R36 holds one row for every class.
+  It is one row of `write_class_stop` (migration 008303), singleton `id = 1`, seeded not stopped,
+  read fail-closed (a missing row reads as stopped), and declared `Exempt` in ingest's data-rights
+  port with its reason. E4b sets it only from a moved count (`set_by = 'counts'`, the count's name
+  as `reason`) and builds no clear path; the owner's handler and the proof that no other path clears
+  it are E4c's (A51).
+- **D17, the backup and its restore check, is chosen against counts alone and against a check that
+  opens the backup itself, because** "What would make this wrong" names an engine whose restore is
+  not byte-faithful, which counts alone cannot see, and the engine's open may write the file it
+  opens. The take copies the closed, converged working copy to a partial file beside the private
+  copy, sets its mode to 0600 by `set_permissions` whatever the umask, and checks it: the partial's
+  sha256 equals the working copy's, and a throwaway copy of it, opened by the engine, has R35's
+  counts equal to the working copy's. Only then is the partial renamed to the skip's backup and
+  every older backup removed; a failed check removes the partial and keeps the older backup.
+- **D18, the backup's erase (P7), is chosen against the data-rights port removing the file and
+  against keeping no backup past the take, because** the port's erase takes only a connection
+  inside one transaction (`crates/kernel/src/data_rights.rs`), so a file's removal could not roll
+  back with it, and R34 keeps one backup for the owner's own import. Ingest builds
+  `skip_write::erase_backups` and its test (A56); E4c calls it from both erase callers after the
+  ledger's erase commits. E4b adds no production caller of the take, so no production backup
+  exists before E4c.
+- **D19, the fourth hook, is chosen against an injectable comparator inside the production check,
+  because** a comparator a test can replace is a production path a test can weaken. The seam
+  gains a hook after the backup's write and before its restore check, beside the three after the
+  converge, after the snapshot's commit and before the push; production passes the no-op.
+- **D20, the preview's digest, is chosen against std's hasher and against the full hex, because**
+  std's hasher is not stable across builds and the full 64 hex characters make `sk:go:<digest>`
+  70 bytes, over Telegram's 64-byte callback data. It is the first 128 bits of sha256 over the
+  listed ids in ascending order, each in decimal and ended by a line feed, as 32 lowercase hex
+  characters, so `sk:go:<digest>` is 38 bytes.
