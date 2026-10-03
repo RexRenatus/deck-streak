@@ -42,3 +42,5 @@ after,  dev       : PASS (1 test run: 1 passed)
 plant (the literal five-level list restored, never committed), --release : FAIL, same left and right
 kernel crate, all tests: --release 84 passed, 5 skipped; dev 84 passed, 5 skipped
 ```
+
+Correction (ruling 154): CI run 37153665162 at the prep merge e7013b7d read mutation-verdict FAILURE, 18 rows (S19041 to S19058) VOID because their killer, test_ci_workflows.WorkflowFilesAreReadAsBytes.test_every_file_read_in_the_test_modules_is_the_loader_or_a_named_non_workflow_read, was red on the unmutated head: the census refused `test_ship_profile: <module>: import yaml: 1 dynamic site(s), 0 listed`. The fix commit e5c590df reads ci.yml, check.sh and clippy.toml in test_ship_profile.py through the loader and the checker's reader, with no yaml import; A1 and A2 stay green. CI by name decides the killer.
