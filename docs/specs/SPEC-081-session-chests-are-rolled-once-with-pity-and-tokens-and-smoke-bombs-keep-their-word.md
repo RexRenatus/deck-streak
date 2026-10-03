@@ -628,3 +628,18 @@ Part 4 additions (2026-10-03), insert-only like the findings above:
   guard turning `>` into `>=`. `the_quests_lib_publishes_the_data_rights_module` reads the lib's
   source for the public data rights declaration and is the killer of row S08137
   (`scripts/mutation-rows.d/S08100-S08199.json`), which makes that declaration private.
+- **T16. Files the diff carries that no section names by path.** Section 4 and T11, T14 and T15
+  name every other file of the diff, by path, by brace set or by directory. These eight were named
+  by neither: `formal/lean/Formal/Chest.lean`, `formal/lean/Formal/ChestVectors.lean`,
+  `formal/tla/ChestRolledOnce/ChestRolledOnce.tla`, `formal/tla/ChestRolledOnce/MCChestRolledOnce.cfg`,
+  the three `formal/tla/ChestRolledOnce/witness/*.cfg` files (`a-chest-table-with-no-unique-key.cfg`,
+  `a-chest-written-before-its-draw.cfg` and `a-pity-written-apart-from-its-chest.cfg`) and
+  `formal/vectors/chest.jsonl`. Each is added by this pull request: the chest roll's Lean model and
+  its vectors, and the roll-once TLA+ model with its three witnesses.
+- **T17. Three corrections that cannot be edits, because this section is insert-only.** (a) T15's
+  "holds four tests through the crate's public API" reads: three of its tests run through the
+  crate's public API, and one, `the_quests_lib_publishes_the_data_rights_module`, is a source-text
+  guard that reads `crates/quests/src/lib.rs` through `include_str!`. (b) The amendments have no
+  T5: the numbering runs from T4 to T6, and T5 is not used. (c) This section's opening paragraph
+  says "the text above are unchanged"; it reads: the text above is unchanged except section 3c and
+  the status lines.
