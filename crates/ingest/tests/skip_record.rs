@@ -10,8 +10,9 @@ mod golden;
 mod support;
 
 use deck_streak_ingest::skip::{
-    FailReason, SearchRefusal, SkipRefusal, SkipRow, SkipState, SkipStore, calendar_month,
-    skip_search, skip_spec, summarize_skips,
+    FailReason, SKIP_BRIDGE_MONTHLY_CAP, SKIP_DEFAULT_SEARCH, SKIP_MAX_CARDS, SKIP_SPREAD_MAX_DAYS,
+    SKIP_SPREAD_MIN_DAYS, SearchRefusal, SkipRefusal, SkipRow, SkipState, SkipStore,
+    calendar_month, skip_search, skip_spec, summarize_skips,
 };
 use deck_streak_kernel::{StudyDay, UtcMillis};
 use serde_json::Value;
@@ -272,4 +273,34 @@ fn the_summary_shows_counts_equal_to_the_parity_golden() {
     println!("A8: examined {examined} summary cases");
     assert_eq!(calendar_month(day(0)), Some((1970, 1)));
     assert_eq!(calendar_month(day(31)), Some((1970, 2)));
+}
+
+/// `economy.json`, which holds the tariff's ladder: economy's constant, read here from the file
+/// itself, so this context needs no edge to economy.
+const ECONOMY_FILE: &str = include_str!("../../../economy.json");
+
+#[test]
+fn the_skip_constants_equal_the_predecessors() {
+    let economy: Value = serde_json::from_str(ECONOMY_FILE).expect("economy.json is JSON");
+    let mut names = Vec::new();
+    golden::each_case("skip.constants", |case| {
+        let name = case.input["name"].as_str().expect("a constant's name");
+        let ours = match name {
+            "constants.SKIP_SPREAD_MIN_DAYS" => Value::from(SKIP_SPREAD_MIN_DAYS),
+            "constants.SKIP_SPREAD_MAX_DAYS" => Value::from(SKIP_SPREAD_MAX_DAYS),
+            "constants.SKIP_DEFAULT_SEARCH" => Value::from(SKIP_DEFAULT_SEARCH),
+            "constants.SKIP_MAX_CARDS" => Value::from(SKIP_MAX_CARDS),
+            "constants.SKIP_BRIDGE_MONTHLY_CAP" => Value::from(SKIP_BRIDGE_MONTHLY_CAP),
+            "constants.SKIP_TARIFF_LADDER" => economy["streak"]["skip_tariff_coins"].clone(),
+            other => panic!("a skip constant this test knows: {other}"),
+        };
+        assert_eq!(ours, case.output, "{name} equals the predecessor's");
+        names.push(name.to_owned());
+    });
+    println!("A45: examined {} skip constants", names.len());
+    assert_eq!(
+        names.len(),
+        6,
+        "every constant the golden records: {names:?}"
+    );
 }

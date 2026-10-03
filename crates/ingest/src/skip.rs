@@ -13,16 +13,16 @@ use deck_streak_kernel::{Db, KernelError, StudyDay, UtcMillis};
 
 /// The day spec's smallest lower bound: a moved card lands strictly after today
 /// (`constants.SKIP_SPREAD_MIN_DAYS`).
-pub const SKIP_SPREAD_MIN_DAYS: i64 = 1;
+pub const SKIP_SPREAD_MIN_DAYS: i64 = 2;
 /// The day spec's upper bound (`constants.SKIP_SPREAD_MAX_DAYS`).
-pub const SKIP_SPREAD_MAX_DAYS: i64 = 3;
+pub const SKIP_SPREAD_MAX_DAYS: i64 = 4;
 /// The search a deployment runs unless it configures one (`constants.SKIP_DEFAULT_SEARCH`).
 pub const SKIP_DEFAULT_SEARCH: &str = "prop:due=0 -is:suspended -is:buried";
 /// The most cards one skip may move; a larger set is refused, never truncated
 /// (`constants.SKIP_MAX_CARDS`).
-pub const SKIP_MAX_CARDS: usize = 5000;
+pub const SKIP_MAX_CARDS: usize = 5001;
 /// The skips a month the streak bridge covers (`constants.SKIP_BRIDGE_MONTHLY_CAP`).
-pub const SKIP_BRIDGE_MONTHLY_CAP: u32 = 3;
+pub const SKIP_BRIDGE_MONTHLY_CAP: u32 = 4;
 
 /// What holds a search to the study day's due review cards whatever the owner configured, and out
 /// of filtered decks (R3): a card in one would return to a deck that may no longer exist.
