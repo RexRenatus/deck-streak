@@ -36,6 +36,9 @@ const OWNER_PAYLOAD: &str = concat!(
 /// 2025-01-15T03:30:10Z, ten seconds after the payload was signed, in milliseconds.
 const STARTED_AT: i64 = 1_736_911_810_000;
 
+/// The server's study day at [`STARTED_AT`]: 2025-01-14, as an epoch day.
+const TODAY: i64 = 20_102;
+
 /// The law block.
 const LAW_PATH: &str = "/api/law";
 /// The largest body a test reads.
@@ -44,6 +47,11 @@ const BODY_READ_LIMIT: usize = 256 * 1024;
 /// The API as the daemon builds it, over a migrated and empty database, for the synthetic owner
 /// and bot, on a manual clock.
 async fn app(scratch: &TempDir) -> (Db, Router) {
+    app_with(scratch, true).await
+}
+
+/// The same app; when `open` is false the readiness never learns of the database.
+async fn app_with(scratch: &TempDir, open: bool) -> (Db, Router) {
     let db = Db::open(&scratch.path().join("deck_streak.db"))
         .await
         .expect("the database opens");
@@ -55,7 +63,9 @@ async fn app(scratch: &TempDir) -> (Db, Router) {
     );
     let access = OwnerAccess::new(gate, clock, StudyDayRule::default());
     let readiness = Readiness::new();
-    readiness.database_opened(db.clone());
+    if open {
+        readiness.database_opened(db.clone());
+    }
     (db, router(ApiState::new(readiness).with_owner(access)))
 }
 
@@ -205,6 +215,113 @@ async fn the_law_route_answers_only_the_owner() {
             "mastery_pending": true
         }),
         "the law block over an empty database, whole"
+    );
+    db.close().await;
+}
+
+/// Seeds a law streak of 4 days, 30 law XP today and 70 the day before in the grants' table, and
+/// law dues of 2 overdue and 3 due today, as the recompute would store them.
+async fn seed_law(db: &Db) {
+    let mut write = db.write().await.expect("a write");
+    sqlx::query(
+        "INSERT INTO streak_state (track, current_days, longest_days, freezes, last_study_day, \
+         comeback_armed, created_at) VALUES ('law', 4, 9, 0, ?1, 0, 1000)",
+    )
+    .bind(TODAY)
+    .execute(&mut *write)
+    .await
+    .expect("the synthetic law streak is written");
+    for (study_day, source, amount) in [
+        (TODAY, "law_route_today", 30),
+        (TODAY - 1, "law_route_before", 70),
+    ] {
+        sqlx::query(
+            "INSERT INTO xp_ledger (study_day, source, track, amount, scope, created_at) \
+             VALUES (?1, ?2, 'law', ?3, 'per-day', 1000)",
+        )
+        .bind(study_day)
+        .bind(source)
+        .bind(amount)
+        .execute(&mut *write)
+        .await
+        .expect("the synthetic law XP is written");
+    }
+    sqlx::query(
+        "INSERT INTO law_dues (id, study_day, backlog, due_today, updated_at, created_at) \
+         VALUES (1, ?1, 2, 3, 1000, 1000)",
+    )
+    .bind(TODAY)
+    .execute(&mut *write)
+    .await
+    .expect("the synthetic law dues are written");
+    write.commit().await.expect("the commit");
+}
+
+/// A stored law streak, XP and dues show the block: each line's key in order, the level named
+/// beside the lifetime XP, the dues counted and not pending, and the leeches and the mastery pillar
+/// still pending (#133). Mutation coverage beside A17, not a criterion: it observes the line keys.
+#[tokio::test]
+async fn the_law_route_answers_the_stored_block_with_its_line_keys() {
+    let scratch = tempfile::tempdir().expect("a temporary directory");
+    let (db, app) = app(&scratch).await;
+    seed_law(&db).await;
+    let owner = cookie_of(&handshake(&app, OWNER_PAYLOAD).await);
+    let answer = get(&app, LAW_PATH, Some(&owner)).await;
+    assert_eq!(answer.status, StatusCode::OK, "{}", answer.body);
+    assert_eq!(
+        answer.json(),
+        json!({
+            "shown": true,
+            "level_shown": true,
+            "lines": ["total_xp", "streak", "xp_today", "dues"],
+            "streak": 4,
+            "xp_today": 30,
+            "total_xp": 100,
+            "level": 2,
+            "dues": 5,
+            "dues_pending": false,
+            "leeches": null,
+            "leeches_pending": true,
+            "mastery": null,
+            "mastery_pending": true
+        }),
+        "the stored law block, whole"
+    );
+    db.close().await;
+}
+
+/// The law route answers 503 `database_not_open` while the database is not open, and 500
+/// `law_unreadable`, its reason code alone, when the block cannot be read, each as JSON, as the
+/// badge routes do. Mutation coverage beside A17, not a criterion.
+#[tokio::test]
+async fn the_law_route_names_why_it_cannot_answer() {
+    let scratch = tempfile::tempdir().expect("a temporary directory");
+    let (closed_db, closed) = app_with(&scratch, false).await;
+    let owner = cookie_of(&handshake(&closed, OWNER_PAYLOAD).await);
+    let refused = get(&closed, LAW_PATH, Some(&owner)).await;
+    assert_eq!(refused.status, StatusCode::SERVICE_UNAVAILABLE);
+    assert_eq!(refused.json(), json!({"reason": "database_not_open"}));
+    assert_eq!(
+        refused.headers.get(CONTENT_TYPE).map(HeaderValue::as_bytes),
+        Some(&b"application/json"[..])
+    );
+    closed_db.close().await;
+
+    let scratch = tempfile::tempdir().expect("a temporary directory");
+    let (db, open) = app(&scratch).await;
+    let owner = cookie_of(&handshake(&open, OWNER_PAYLOAD).await);
+    let mut write = db.write().await.expect("a write");
+    sqlx::query("ALTER TABLE law_dues RENAME TO gone_law_dues")
+        .execute(&mut *write)
+        .await
+        .expect("the table is renamed away");
+    write.commit().await.expect("the commit");
+    let broken = get(&open, LAW_PATH, Some(&owner)).await;
+    assert_eq!(broken.status, StatusCode::INTERNAL_SERVER_ERROR);
+    assert_eq!(broken.json(), json!({"reason": "law_unreadable"}));
+    assert_eq!(
+        broken.headers.get(CONTENT_TYPE).map(HeaderValue::as_bytes),
+        Some(&b"application/json"[..])
     );
     db.close().await;
 }
