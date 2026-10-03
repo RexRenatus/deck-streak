@@ -604,3 +604,96 @@ above are false after it, and each now reads as follows:
   loads no bot credential, and the flush after its sync does nothing.
 - R15's "the flush after a scheduled sync" is that no-op; the senders are the bot's flush after the
   owner's request is answered and the scheduled step (R14).
+
+## 11. Amendment: the census reads what the compiler pulls in and refuses what it cannot follow (#297)
+
+§5 lists, at lines 229-241, what the A15 census leaves unread. Six of its units name a file the
+compiler, the migrator or a unit pulls in by a literal the census can read, or a reply whose
+visibility the compiler already settles, and this amendment closes each of them in the census
+(`crates/notifications/tests/one_router.rs`), each by its criterion in §12. ADR-324 records the
+decisions and what each was chosen against. No production code changes.
+
+- **Closed: a source that `include!` pulls in (§5 :232-233), A24.** In every Rust source the census
+  reads, each `include!`, `include_str!` or `include_bytes!` outside comments and `#[cfg(test)]`
+  modules is followed: its argument must be one string literal, resolved against the including
+  file's directory, and the file is read under its own path with every rule of that path, as Rust
+  from `include!` and as text from the other two, transitively and each file once. An argument that
+  is not one literal, and a file not in the tree, are refused (#297).
+- **Closed: SQL among the kinds the census does not read (§5 :234), A25.** `sql` joins the shipped
+  kinds, so a migration, which runs at every start, is read with every rule; the router's two
+  migrations, `migrations/004101_notifications_router.sql` and
+  `migrations/004102_notifications_queue_claim.sql`, join the places that may name the feed and the
+  held queue (#297).
+- **Closed: a symlink (§5 :235), A26.** The walker refuses each symlink it meets in a place it walks,
+  by its path (#297).
+- **Closed: a test file a shipped crate pulls in by `#[path]` outside the notifications crate (§5
+  :236-237), A27.** A module's `#[path = "…"]` outside a `#[cfg(test)]` module is followed, resolved
+  against the declaring file's directory, and its target is read as Rust under its own path,
+  whatever its name or directory; a target not in the tree, and a `#[path]` inside an inline module,
+  are refused. Inside the notifications crate a `#[path]` stays refused, as A15 holds (#297).
+- **Closed: a test file a unit runs (§5 :236-237), A28.** In every unit and drop-in the census reads,
+  a path through a test directory with no `src` before it, or to a file named as a test file, is
+  refused (#297).
+- **Closed: a reply of the bot's command handler made `pub` (§5 :240-241), A29.** In the handler's
+  module, a reply of `COMMAND_REPLIES` defined `pub` or `pub(...)`, or inside a trait impl for the
+  handler, is refused. With every reply private, a call from outside the module does not compile,
+  and a call inside it is held by A15's named callers (#297).
+- **Kept, and named.** These stay unread, with the reason a text census cannot read them:
+  - a request's method or a statement's table named from parts: the name exists only after the
+    compiler expands a `concat!` or the program runs a `format!` or a push, so reading it needs
+    macro expansion or execution, and A16 to A18 hold the bot's ordinary request forms by their
+    names and by the compiler's resolved paths instead (#297);
+  - a source of a kind the census does not read other than SQL: such a file runs nothing, and what
+    a source loads from it at run time becomes a name only when the program runs, which is the unit
+    above; reading every kind would red on the prose under `docs/`, which names `sendMessage`
+    throughout (#297);
+  - a re-export under another name other than by a `pub use`: a `const`, a `static`, a function
+    pointer, a closure or a type alias that binds a router module's item to a new name is resolved
+    by the compiler, and a text match on its initializer is defeated by one `use … as` inside a
+    block (#297);
+  - a `pub` wrapper, a function, a macro or a constant, that hands out a write to the feed or the
+    held queue, or a table's name: telling one from the router's own public API needs a call graph;
+    the queue's writes are `pub(crate)`, so only a wrapper inside the notifications crate can hand
+    one out, and there the census holds that only the router's modules name the ledger (#297);
+  - a test file that a shipped script runs, and a path that a unit assembles from a specifier or an
+    environment variable: the script and the unit are read, and the file they reach is not (#297).
+- **The census's own account.** Its module doc says what it reads and what stays unread, and A15
+  prints, beside the shipped sources it examined, the files it brought in, the unit path tokens it
+  read and the reply definitions it found (#297).
+- **§3a's box run.** §3a's statement that the `message-metadata` row stays deferred on its own issue
+  (#257) is superseded by SPEC-323, #257's delivery, which decides that row.
+
+File manifest of the amendment:
+
+| path | change |
+|---|---|
+| `crates/notifications/tests/one_router.rs` | the walk's symlink refusal, the included and `#[path]` files brought in, SQL and the router's migrations, the unit test-path rule, the reply visibility rule, A24 to A29, A15's new examined lines and the module doc |
+| `docs/decisions/ADR-324-the-one-router-census-follows-what-the-compiler-pulls-in.md` | the decisions and what each was chosen against |
+| `docs/decisions/ADR-041-notification-router-core.md` | an amendment to its last Bad bullet |
+| `docs/schematics/notification-router.md` | the census's reach |
+| `docs/red-first/SPEC-041.md` | A24 to A29's red and green lines |
+| `scripts/mutation-rows.d/S04100-S04199.json` | rows S04182 to S04193 |
+| `changelog.d/census-reach-297.md` | the changelog fragment |
+
+## 12. Acceptance criteria of the census's reach (#297)
+
+Each planted case asserts the exact refusal line, never only that something was refused, and A15
+(`no_delivery_goes_around_the_port`) stays the committed tree's arm.
+
+| id | criterion | decided by |
+|---|---|---|
+| A24 | an included file is read under its own path with every rule of that path, as Rust from `include!` and as text from `include_str!` and `include_bytes!`, and an include the census cannot name or find is refused; planted: a send in a file `include!` brings, the Bot API host in a file `include_str!` brings, a held table's name in a file `include_bytes!` brings, `include!(concat!(env!("OUT_DIR"), "/x.rs"))`, a missing file; control: an include inside a `#[cfg(test)]` module is not followed | `an_included_file_is_read_and_one_the_census_cannot_follow_is_refused` |
+| A25 | SQL is read, and outside the router's two migrations no `.sql` names the feed or the held queue; planted: a migration inserting into `notification_queue`, one inserting into `in_app_feed`; control: the router's migrations | `a_migration_outside_the_routers_names_neither_the_feed_nor_the_queue` |
+| A26 | a symlink in a place the walker walks is refused by its path; control: a symlink in a place the walker skips is not met | `a_symlink_in_a_walked_place_is_refused` |
+| A27 | a module `#[path]` brings in is read as Rust under its own path, and a `#[path]` to a file not in the tree or inside an inline module is refused; planted: a send in a test file brought in by `#[path]`, a missing target, one inside `mod outer { … }`; control: one on a `#[cfg(test)]` module | `a_module_brought_in_by_path_is_read_and_one_the_census_cannot_follow_is_refused` |
+| A28 | a unit or drop-in naming a path through a test directory, or a test file by name, is refused; planted: `ExecStart=/usr/local/lib/deck-streak/current/agent/tests/run.sh`, `ExecStartPost=/usr/bin/python3 /usr/local/lib/deck-streak/current/deploy/scripts/test_page.py` in a drop-in; control: `deploy/scripts/backup.py` | `a_unit_that_runs_a_test_file_is_refused` |
+| A29 | a reply of the command handler defined `pub` or `pub(crate)`, or inside a trait impl for the handler, is refused; control: the handler's private inherent definitions | `a_command_reply_made_visible_outside_its_module_is_refused` |
+
+```acceptance
+A24: cargo test -p deck-streak-notifications --test one_router -- --exact an_included_file_is_read_and_one_the_census_cannot_follow_is_refused
+A25: cargo test -p deck-streak-notifications --test one_router -- --exact a_migration_outside_the_routers_names_neither_the_feed_nor_the_queue
+A26: cargo test -p deck-streak-notifications --test one_router -- --exact a_symlink_in_a_walked_place_is_refused
+A27: cargo test -p deck-streak-notifications --test one_router -- --exact a_module_brought_in_by_path_is_read_and_one_the_census_cannot_follow_is_refused
+A28: cargo test -p deck-streak-notifications --test one_router -- --exact a_unit_that_runs_a_test_file_is_refused
+A29: cargo test -p deck-streak-notifications --test one_router -- --exact a_command_reply_made_visible_outside_its_module_is_refused
+```
