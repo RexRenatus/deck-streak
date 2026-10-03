@@ -20,6 +20,7 @@ use deck_streak_streaks::{replay, store, strength};
 use sqlx::SqliteConnection;
 
 use super::{DayEvaluation, DayStep, Evaluation, Phase};
+use crate::skip::days::skip_days;
 
 /// The name the fold's report gives this step.
 pub const STREAKS_STEP: &str = "streaks.streaks_and_governor";
@@ -112,7 +113,7 @@ impl StreaksStep {
         facts: &super::RecomputeFacts<'_>,
         write: &mut SqliteConnection,
     ) -> Result<(), KernelError> {
-        let skips = BTreeSet::new();
+        let skips = skip_days(write).await?;
         let (language, events) = replay::language(&days.language, &skips, day);
         store::insert_events(write, &events, facts.now).await?;
         if day == facts.today {
@@ -180,7 +181,7 @@ impl StreaksStep {
         facts: &super::RecomputeFacts<'_>,
         write: &mut SqliteConnection,
     ) -> Result<(), KernelError> {
-        let skips = BTreeSet::new();
+        let skips = skip_days(write).await?;
         let anchor = anchor_beyond_the_walk(day, &days.any, &skips, stored.lapse_since);
         let value = strength::fold(&days.any, day)
             .last()

@@ -11,6 +11,8 @@ use deck_streak_streaks::constants::{RELIGHT_CARDS, STREAK_FREEZE_CAP};
 use deck_streak_streaks::store;
 use deck_streak_streaks::streak::{StreakState, heat_for, heat_tier};
 
+use crate::skip::days::skip_days;
+
 /// What the day still open puts at risk on a track.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AtStake {
@@ -120,8 +122,7 @@ pub async fn streak_view(db: &Db, today: StudyDay) -> Result<StreakView, KernelE
             .await?
             .into_iter()
             .collect();
-    // The skip day is #108's: until it exists no day is declared.
-    let skips = BTreeSet::new();
+    let skips = skip_days(connection).await?;
     let language_at_stake = match (language.current, language.freezes) {
         (0, _) => AtStake::Nothing,
         (_, 0) => AtStake::Break,

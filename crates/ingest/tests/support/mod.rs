@@ -665,3 +665,38 @@ pub fn upload_from_another_client(runtime: &Runtime, collection: &Path, endpoint
         .block_on(col.full_upload(auth, engine_client()))
         .unwrap_or_else(|error| panic!("the other client uploads its collection: {error}"));
 }
+
+/// Plays the owner's other Anki client changing one setting: sets `key` to `value` in the
+/// collection at `collection`, then sends the change to the server at `endpoint` with the engine's
+/// own normal sync. No code of this workspace runs here.
+///
+/// # Panics
+///
+/// When the engine fails.
+pub fn change_setting_on_another_client(
+    runtime: &Runtime,
+    collection: &Path,
+    endpoint: &str,
+    key: &str,
+    value: i64,
+) {
+    let mut col = CollectionBuilder::new(collection)
+        .build()
+        .unwrap_or_else(|error| panic!("the other client opens its collection: {error}"));
+    col.set_config_json(key, &value, false)
+        .unwrap_or_else(|error| panic!("the other client changes a setting: {error}"));
+    let mut auth = runtime
+        .block_on(sync_login(
+            USERNAME,
+            PASSWORD,
+            Some(endpoint.to_owned()),
+            engine_client(),
+        ))
+        .unwrap_or_else(|error| panic!("the other client logs in: {error}"));
+    auth.endpoint = endpoint.parse().ok();
+    runtime
+        .block_on(col.normal_sync(auth, engine_client()))
+        .unwrap_or_else(|error| panic!("the other client syncs its setting: {error}"));
+    col.close(None)
+        .unwrap_or_else(|error| panic!("the other client closes its collection: {error}"));
+}

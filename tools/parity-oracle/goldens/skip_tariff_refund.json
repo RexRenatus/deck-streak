@@ -1,0 +1,148 @@
+{
+  "adapter": "refund_of",
+  "cases": [
+    {
+      "class": "free",
+      "input": {
+        "paid": 0,
+        "skip_id": 7,
+        "undo_day": 20200
+      },
+      "output": {
+        "deltas": [],
+        "returned": 0
+      }
+    },
+    {
+      "class": "paid-fifty",
+      "input": {
+        "paid": 50,
+        "skip_id": 8,
+        "undo_day": 20201
+      },
+      "output": {
+        "deltas": [
+          {
+            "day": 20201,
+            "delta": 50,
+            "ref": "8",
+            "source": "skip_tariff_refund"
+          }
+        ],
+        "returned": 50
+      }
+    },
+    {
+      "input": {
+        "paid": 30,
+        "skip_id": 88,
+        "undo_day": 20257
+      },
+      "output": {
+        "deltas": [
+          {
+            "day": 20257,
+            "delta": 30,
+            "ref": "88",
+            "source": "skip_tariff_refund"
+          }
+        ],
+        "returned": 30
+      }
+    },
+    {
+      "input": {
+        "paid": 0,
+        "skip_id": 87,
+        "undo_day": 20216
+      },
+      "output": {
+        "deltas": [],
+        "returned": 0
+      }
+    },
+    {
+      "input": {
+        "paid": 30,
+        "skip_id": 42,
+        "undo_day": 20255
+      },
+      "output": {
+        "deltas": [
+          {
+            "day": 20255,
+            "delta": 30,
+            "ref": "42",
+            "source": "skip_tariff_refund"
+          }
+        ],
+        "returned": 30
+      }
+    },
+    {
+      "input": {
+        "paid": 100,
+        "skip_id": 53,
+        "undo_day": 20201
+      },
+      "output": {
+        "deltas": [
+          {
+            "day": 20201,
+            "delta": 100,
+            "ref": "53",
+            "source": "skip_tariff_refund"
+          }
+        ],
+        "returned": 100
+      }
+    },
+    {
+      "input": {
+        "paid": 30,
+        "skip_id": 14,
+        "undo_day": 20204
+      },
+      "output": {
+        "deltas": [
+          {
+            "day": 20204,
+            "delta": 30,
+            "ref": "14",
+            "source": "skip_tariff_refund"
+          }
+        ],
+        "returned": 30
+      }
+    },
+    {
+      "input": {
+        "paid": 100,
+        "skip_id": 61,
+        "undo_day": 20220
+      },
+      "output": {
+        "deltas": [
+          {
+            "day": 20220,
+            "delta": 100,
+            "ref": "61",
+            "source": "skip_tariff_refund"
+          }
+        ],
+        "returned": 100
+      }
+    }
+  ],
+  "function": "pipeline_layers.economy.EconomyLayer._refund_skip_tariff",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Runs the refund on a stub store answering what the skip paid and records the credit and the day it lands on; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_083.py",
+  "registry_sha256": "0c428fdeae0892916e2bf37e7140a46b8a351178a0365cb1b2b584bea75a9004",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}
