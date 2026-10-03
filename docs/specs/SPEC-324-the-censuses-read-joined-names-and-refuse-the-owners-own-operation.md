@@ -159,3 +159,21 @@ Band `S32400-S32499`, in `scripts/mutation-rows.d/S32400-S32499.json`: S32401 to
 with `python3 scripts/mutation_rows.py prove --row <id>` on a committed tree. S32427 to S32429 pin
 R2's three include arms (ruling 108): an include joined onto `env!("OUT_DIR")` is disclosed, only
 that variable is, and an include of a literal path the reader cannot read is refused.
+
+## 8. Amendment: what R7 left out (ruling 128 (a))
+
+R7 and the risk "Existing evidence moved" say every existing test is unchanged but for one line.
+At `31f45734` three existing parts of `crates/progression/tests/xp_census.rs` changed besides it:
+
+- `the_census_reads_progressions_own_reexports_as_it_reads_the_other_crates`: its comment names the
+  wrapper now refused (`80d333ac`), and its two plants of progression's files moved, text and order
+  unchanged, into the helper `plant_progressions_aliases` (`b713e00b`, for clippy).
+- `s2_population`, which `the_census_refuses_every_caller_the_compiler_finds` judges: the S2 B
+  build-script control whose label names the file is now expected refused (`ede1fcdc`, ruling 115
+  under ruling 108 (1)), because R2 refuses an include joined onto any variable but `OUT_DIR`.
+- `KILLER_POPULATION`: that one verdict re-pins the digest from
+  `eaafc8da1c7d34a8bfa4d8794360caf5b930097866d62bf0f88e1e5e5f4e44ca` to
+  `f5f615e6ce0c85098b00b2c87b6de5b8fb5bab962b744bf0c316b112d0ea75b3` (`ede1fcdc`). The count stays
+  2218.
+
+Every row of `xp_census.rs` still finds its text once.
