@@ -85,7 +85,11 @@ fn expected(code: &str, name: &str, mature: u32) -> StoredProgress {
 #[tokio::test]
 async fn the_view_is_empty_before_the_first_recompute() {
     let fresh = scratch().await;
-    let view = progress_view(&fresh.db, &courses())
+    let configured = courses();
+    // a positive control: two courses are configured, so the empty view is the store's, not the
+    // configuration's
+    assert_eq!(configured.courses().len(), 2, "two courses are configured");
+    let view = progress_view(&fresh.db, &configured)
         .await
         .expect("the empty store reads");
     assert_eq!(view, Vec::new(), "nothing is stored, so nothing is shown");
