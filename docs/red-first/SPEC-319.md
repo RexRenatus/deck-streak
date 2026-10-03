@@ -35,3 +35,10 @@ Mutation rows, proved at 82b22151 (`rows: examined 6: killed 6, survived 0, void
 - S31903: KILLED
 - S31904: KILLED (in the cargo-killed script table, killer crate `daemon`)
 - S31905: KILLED
+
+Seat ruling 68: S31904 is killed by the daemon's A4 test, but cargo-mutants judges a notifications
+mutant by that crate's own tests, so `seeding_the_celebrations_switch_stores_off_and_keeps_a_stored_value`
+(`crates/notifications/tests/router.rs`) is the notifications-crate killer of the
+`seed_celebrations_off` stub. Planted with the body replaced by `Ok(())`, it fails by assertion at
+`crates/notifications/tests/router.rs:873:5` (`a fresh store is seeded off, at the policy's disable
+value`, left `None`, right `Some("0")`); restored, it passes.

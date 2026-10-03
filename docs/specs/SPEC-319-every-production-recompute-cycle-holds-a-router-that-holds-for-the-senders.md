@@ -107,7 +107,7 @@ here and kept out of the fence above, which names tests only.
 | `docs/decisions/ADR-109-the-widget-is-one-silent-pinned-message-a-study-day-edited-in-place-through-the-router.md` | docs | changed: an appended amendment note |
 | `docs/red-first/SPEC-319.md` | docs | added |
 | `crates/notifications/src/router.rs` | `deck-streak-notifications` | changed: the `holding` flag and `Router::holding`, one arm of `after_claim`, and `seed_celebrations_off` |
-| `crates/notifications/tests/router.rs` | `deck-streak-notifications` | changed: A5 |
+| `crates/notifications/tests/router.rs` | `deck-streak-notifications` | changed: A5; `seeding_the_celebrations_switch_stores_off_and_keeps_a_stored_value` |
 | `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | changed: the policy and the seed in `RecomputeSetup::load`, the router in `RecomputeSetup::cycle`, `holding_router`, two `RecomputeError` variants, the module note |
 | `crates/daemon/tests/recompute_router.rs` | `deck-streak-daemon` | added: A1 to A4 |
 | `formal/tla/HeldFlush/HeldFlush.tla` | formal | changed: `SendHold`, `HoldSend`, `Unanswered`, two covers |
