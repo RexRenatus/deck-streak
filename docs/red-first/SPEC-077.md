@@ -134,3 +134,13 @@ After the last green, the reader tests' positive controls in `law.test.ts` and `
 assert a value the reader returns where they asserted only that it was not null, and
 `the_view_is_empty_before_the_first_recompute` asserts that two courses are configured beside its
 empty view. Each tightens a test that is not a criterion's.
+
+## Addendum, 2026-10-03: the test edits inside A19's and A20's green commits
+
+- **edc6c555 (A19's green).** The commit changed A19's own test body: the meter's `value` string
+  assertion became the numbers `[min, max, value]` plus the `aria-label` "<band> mastery". The
+  green body also fails on the red stub, at `:49:19`, so the recorded red line stands. The commit
+  added the test 'names the course as its region, and says so when no unit is current yet' and
+  `progress.test.ts` as a whole file.
+- **f25690b7 (A20's green).** A20's body is byte-equal. The commit added the `LawTiersView` import,
+  five tests beside A20, and `law.test.ts` as a whole file. No assertion narrowed.
