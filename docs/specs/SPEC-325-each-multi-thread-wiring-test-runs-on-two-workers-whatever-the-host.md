@@ -101,8 +101,8 @@ five test runtimes.
 - A new multi-thread test added to the module without the bound brings the growth back: A2 refuses
   it by its line, and row S32500 proves A2 would.
 - The attribute might stop meaning two workers (a macro change, or a host setting overriding it):
-  A1 reads the worker count from the runtime itself, and row S32501 proves A1 would fail on an
-  unbounded runtime.
+  A1 reads the worker count from the runtime itself, and row S32501 proves A1 fails on a runtime
+  of any other size, whatever the host.
 - A census can go blind: its positive control is planted beside it, and row S32502 proves a blind
   census fails that control.
 - On a host of exactly two cores, A1's red at the base could not show, since the unbounded runtime
@@ -116,5 +116,5 @@ cargo-mutants mutates no attribute and nothing under `#[cfg(test)]`, so the boun
 | row | mutant | killer |
 |---|---|---|
 | S32500 | `every_failing_step_refuses_the_owners_sync_by_its_own_code_and_name` loses its `worker_threads = 2` | A2 |
-| S32501 | A1's own attribute loses its `worker_threads = 2` | A1 |
+| S32501 | A1's own attribute names `worker_threads = 3`, a size other than two on any host | A1 |
 | S32502 | the census keeps no attribute, so it can refuse nothing | A2 (its planted control) |
