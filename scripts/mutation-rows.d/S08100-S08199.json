@@ -1,0 +1,332 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S08101-EPIC-BASE-ODDS-SEVEN",
+        "quests",
+        "src/chests.rs",
+        "pub const BASE_ODDS_EPIC: f64 = 7.0;",
+        "pub const BASE_ODDS_EPIC: f64 = 8.0;",
+        "chests_roll::the_rarity_roll_matches_the_predecessors_golden",
+        "an Epic's base odds are 7 percent (SPEC-081 R5, A1)"
+      ],
+      [
+        "S08102-LEGENDARY-GUARANTEE-AT-FORTY",
+        "quests",
+        "src/chests.rs",
+        "pub const PITY_LEGENDARY_GUARANTEE: i64 = 40;",
+        "pub const PITY_LEGENDARY_GUARANTEE: i64 = 41;",
+        "chests_roll::the_rarity_roll_matches_the_predecessors_golden",
+        "the 40th chest since the last Legendary is Legendary (SPEC-081 R6, A1)"
+      ],
+      [
+        "S08103-EPIC-GUARANTEE-AT-FOURTEEN",
+        "quests",
+        "src/chests.rs",
+        "pub const PITY_EPIC_GUARANTEE: i64 = 14;",
+        "pub const PITY_EPIC_GUARANTEE: i64 = 15;",
+        "chests_roll::the_rarity_roll_matches_the_predecessors_golden",
+        "the 14th chest since the last Epic is Epic (SPEC-081 R6, A1)"
+      ],
+      [
+        "S08104-EPIC-RAMP-AFTER-EIGHT",
+        "quests",
+        "src/chests.rs",
+        "pub const PITY_EPIC_RAMP_AFTER: i64 = 8;",
+        "pub const PITY_EPIC_RAMP_AFTER: i64 = 9;",
+        "chests_roll::the_rarity_roll_matches_the_predecessors_golden",
+        "the Epic ramp starts after 8 chests (SPEC-081 R6, A1)"
+      ],
+      [
+        "S08105-EPIC-CEILING-FORTY",
+        "quests",
+        "src/chests.rs",
+        "pub const EPIC_ODDS_CEILING_PCT: f64 = 40.0;",
+        "pub const EPIC_ODDS_CEILING_PCT: f64 = 41.0;",
+        "chests_roll::the_rarity_roll_matches_the_predecessors_golden",
+        "the Epic odds never pass 40 points (SPEC-081 R5, A1)"
+      ],
+      [
+        "S08106-SESSION-GAP-TEN-MINUTES",
+        "quests",
+        "src/sessions.rs",
+        "pub const SESSION_GAP_MS: i64 = 600_000;",
+        "pub const SESSION_GAP_MS: i64 = 660_000;",
+        "chests_sessions::sessions_and_their_effort_match_the_predecessors_goldens",
+        "a gap of 10 minutes splits a session (SPEC-081 R2, A3)"
+      ],
+      [
+        "S08107-EFFORT-FLOOR-FIFTEEN-CARDS",
+        "quests",
+        "src/sessions.rs",
+        "pub const REAL_EFFORT_CHEST_MIN_DISTINCT: i64 = 15;",
+        "pub const REAL_EFFORT_CHEST_MIN_DISTINCT: i64 = 16;",
+        "chests_sessions::sessions_and_their_effort_match_the_predecessors_goldens",
+        "a chest needs 15 distinct cards (SPEC-081 R2, A3)"
+      ],
+      [
+        "S08108-EPIC-FALLBACK-FIFTY",
+        "quests",
+        "src/chests.rs",
+        "pub const EPIC_FALLBACK_XP: i64 = 50;",
+        "pub const EPIC_FALLBACK_XP: i64 = 51;",
+        "chests_open::the_sweep_matches_the_predecessors_golden",
+        "an untapped Epic resolves to 50 XP (SPEC-081 R10, A10)"
+      ],
+      [
+        "S08109-TOKEN-CAP-THREE-HUNDRED",
+        "quests",
+        "src/tokens.rs",
+        "pub const TOKEN_BONUS_CAP_XP: i64 = 300;",
+        "pub const TOKEN_BONUS_CAP_XP: i64 = 301;",
+        "tokens_window::the_token_bonus_matches_the_predecessors_golden",
+        "a token's bonus is capped at 300 XP a study day (SPEC-081 R13, A12)"
+      ],
+      [
+        "S08111-ASCENDANT-BUFF-TEN",
+        "quests",
+        "src/chests.rs",
+        "pub const ASCENDANT_BUFF_PTS: f64 = 10.0;",
+        "pub const ASCENDANT_BUFF_PTS: f64 = 0.0;",
+        "chests_grant::the_session_chest_grant_matches_the_predecessors_golden",
+        "an ascendant day adds 10 points to the Epic odds (SPEC-081 R5, A4)"
+      ],
+      [
+        "S08112-A-SESSION-WITHIN-ONE-GAP-IS-HELD",
+        "quests",
+        "src/chests.rs",
+        "(chest.session_start - start).abs() < SESSION_GAP_MS",
+        "(chest.session_start - start).abs() <= SESSION_GAP_MS",
+        "chests_grant::the_session_chest_grant_matches_the_predecessors_golden",
+        "a session whose start is exactly one gap from a held chest is a new session (SPEC-081 R2, A4)"
+      ],
+      [
+        "S08113-THE-VAULT-OPENS-AT-ITS-HOUR",
+        "quests",
+        "src/chests.rs",
+        "request.local_hour >= settings.vault_hour",
+        "request.local_hour > settings.vault_hour",
+        "chests_grant::the_session_chest_grant_matches_the_predecessors_golden",
+        "a chest granted at the vault hour is vaulted (SPEC-081 R7, A4)"
+      ],
+      [
+        "S08114-QUIET-HOURS-VAULT",
+        "quests",
+        "src/chests.rs",
+        "|| request.quiet {",
+        "&& request.quiet {",
+        "chests_grant::the_session_chest_grant_matches_the_predecessors_golden",
+        "a recompute inside quiet hours vaults its chests (SPEC-081 R7, A4)"
+      ],
+      [
+        "S08115-THE-DAY-CAP-STOPS-AT-ITS-MAX",
+        "quests",
+        "src/chests.rs",
+        "if held >= settings.per_day_max {",
+        "if held > settings.per_day_max {",
+        "chests_grant::the_session_chest_grant_matches_the_predecessors_golden",
+        "a day holds at most its per-day maximum of chests (SPEC-081 R5, A4)"
+      ],
+      [
+        "S08116-A-SKIP-DAY-GRANTS-NOTHING",
+        "quests",
+        "src/chests.rs",
+        "if request.skip_day {",
+        "if false {",
+        "chests_grant::the_session_chest_grant_matches_the_predecessors_golden",
+        "a skip day grants no chest (SPEC-081 R7, A4)"
+      ],
+      [
+        "S08117-A-FAILED-PAYOUT-DRAW-IS-NOT-SWALLOWED",
+        "quests",
+        "src/chests.rs",
+        "let payout = payout_xp(rarity, draw.draw()?, earned.base_xp);",
+        "let payout = payout_xp(rarity, draw.draw().unwrap_or(0.5), earned.base_xp);",
+        "chests_grant::a_failed_draw_writes_no_chest_and_no_pity",
+        "a failed payout draw is an error and writes nothing, never a default draw (SPEC-081 R5, A5)"
+      ],
+      [
+        "S08118-A-SESSION-IS-NEVER-ROLLED-TWICE",
+        "quests",
+        "src/chests.rs",
+        "chest.origin == Origin::Session && (chest.session_start - start).abs() < SESSION_GAP_MS",
+        "false && (chest.session_start - start).abs() < SESSION_GAP_MS",
+        "chests_grant::a_second_recompute_never_rolls_a_session_again",
+        "a session whose start lies within one gap of a held session chest is skipped without a draw (SPEC-081 R2, A5)"
+      ],
+      [
+        "S08119-A-HELD-QUEST-KEY-TAKES-NO-DRAW",
+        "quests",
+        "src/chests.rs",
+        "if held.iter().any(|chest| chest.origin == Origin::Challenge) {",
+        "if false {",
+        "chests_grant::a_held_quest_chest_key_takes_no_draw_and_writes_nothing",
+        "a held challenge chest takes no draw and writes nothing (SPEC-081 R16, A6)"
+      ],
+      [
+        "S08120-CHALLENGE-BUFF-TEN",
+        "quests",
+        "src/chests.rs",
+        "pub const CHALLENGE_BUFF_PTS: f64 = 10.0;",
+        "pub const CHALLENGE_BUFF_PTS: f64 = 0.0;",
+        "chests_grant::the_challenge_and_weekly_chests_match_the_predecessors_goldens",
+        "the challenge chest adds 10 points to the Epic odds (SPEC-081 R16, A6)"
+      ],
+      [
+        "S08121-AN-EPIC-RESETS-ITS-PITY",
+        "quests",
+        "src/pity.rs",
+        "since_epic: 0,",
+        "since_epic: self.since_epic + 1,",
+        "chests_grant::the_session_chest_grant_matches_the_predecessors_golden",
+        "an Epic resets the since-Epic counter (SPEC-081 R6, A4)"
+      ],
+      [
+        "S08122-THE-PITY-MOVES-WITH-THE-CHEST",
+        "quests",
+        "src/chests.rs",
+        "chest_store::set_pity(connection, pity.after(rarity)).await?;\n            held += 1;",
+        "held += 1;",
+        "chests_grant::the_session_chest_grant_matches_the_predecessors_golden",
+        "a stored session chest moves the pity counters in the same write (SPEC-081 R6, A4)"
+      ],
+      [
+        "S08123-A-DRAW-IS-THE-TOP-53-BITS",
+        "quests",
+        "src/draw.rs",
+        "(bits >> 11) as f64 * STEP",
+        "(bits >> 12) as f64 * STEP",
+        "chests_grant::a_draw_is_the_top_53_bits_as_a_fraction_below_one",
+        "a draw is the top 53 bits as a fraction below one (SPEC-081 R5)"
+      ],
+      [
+        "S08124-THE-LEGENDARY-GUARANTEE-READS-THE-NEXT-CHEST",
+        "quests",
+        "src/chests.rs",
+        "if since_legendary + 1 >= PITY_LEGENDARY_GUARANTEE {",
+        "if since_legendary >= PITY_LEGENDARY_GUARANTEE {",
+        "formal_vectors_chest::the_chest_rules_answer_every_lean_vector",
+        "the legendary guarantee reads the counter plus the chest being rolled (SPEC-081 R6, A1)"
+      ],
+      [
+        "S08125-A-BAND-INCLUDES-ITS-HIGH-END",
+        "quests",
+        "src/chests.rs",
+        "(draw * float(high - low + 1)) as i64",
+        "(draw * float(high - low)) as i64",
+        "formal_vectors_chest::the_chest_rules_answer_every_lean_vector",
+        "a payout band includes both ends (SPEC-081 R5, A2)"
+      ],
+      [
+        "S08126-A-BUFF-IS-NEVER-NEGATIVE",
+        "quests",
+        "src/chests.rs",
+        "+ buff_pts.max(0.0))",
+        "+ buff_pts)",
+        "formal_vectors_chest::the_chest_rules_answer_every_lean_vector",
+        "a negative buff never lowers the Epic odds (SPEC-081 R5, A1)"
+      ],
+      [
+        "S08127-A-CAPPED-FREEZE-BECOMES-A-TOKEN",
+        "quests",
+        "src/chests.rs",
+        "let capped = wanted == Choice::Freeze && freeze_capped;",
+        "let capped = false;",
+        "chests_open::a_capped_freeze_choice_becomes_a_token",
+        "a freeze asked for while the streaks cannot hold it becomes a token (SPEC-081 R9, A9)"
+      ],
+      [
+        "S08128-AN-EPIC-OPENS-TO-A-CHOICE",
+        "quests",
+        "src/chests.rs",
+        "if chest.rarity == Rarity::Epic {",
+        "if false {",
+        "chests_open::opening_pays_once_and_reveals_the_stored_rarity",
+        "opening an Epic waits for its choice and pays nothing (SPEC-081 R8, A8)"
+      ],
+      [
+        "S08129-THE-SWEEP-SPARES-TODAY",
+        "quests",
+        "src/chests.rs",
+        "if chest.study_day >= today {",
+        "if chest.study_day > today {",
+        "chests_open::the_sweep_matches_the_predecessors_golden",
+        "the sweep never resolves a chest of the current study day (SPEC-081 R10, A10)"
+      ],
+      [
+        "S08130-THE-SWEEP-SPARES-LAST-NIGHTS-VAULT",
+        "quests",
+        "src/chests.rs",
+        ">= today.epoch_day() - 1",
+        ">= today.epoch_day()",
+        "chests_open::the_sweep_matches_the_predecessors_golden",
+        "a vaulted chest of the day before waits for the next sweep (SPEC-081 R10, A10)"
+      ],
+      [
+        "S08131-AN-UNTAPPED-EPIC-SWEEPS-TO-THE-FALLBACK",
+        "quests",
+        "src/chests.rs",
+        "            EPIC_FALLBACK_XP\n        } else {",
+        "            chest.payout_xp\n        } else {",
+        "chests_open::the_sweep_matches_the_predecessors_golden",
+        "an Epic whose choice was never made pays the fallback XP when swept (SPEC-081 R10, A10)"
+      ],
+      [
+        "S08132-A-LIVE-WINDOW-REFUSES-A-SECOND",
+        "quests",
+        "src/tokens.rs",
+        "if active.is_some() {",
+        "if false {",
+        "tokens_window::token_activation_matches_the_predecessors_golden",
+        "a token whose window is open refuses another activation (SPEC-081 R12, A11)"
+      ],
+      [
+        "S08133-A-WINDOW-LASTS-TWO-HOURS",
+        "quests",
+        "src/tokens.rs",
+        "now_ms + TOKEN_WINDOW_HOURS * HOUR_MS",
+        "now_ms + HOUR_MS",
+        "tokens_window::token_activation_matches_the_predecessors_golden",
+        "a token's window lasts its configured hours (SPEC-081 R12, A11)"
+      ],
+      [
+        "S08134-THE-WINDOW-END-IS-IN",
+        "quests",
+        "src/tokens.rs",
+        "(start..end).contains(&review.id)",
+        "(start..=end).contains(&review.id)",
+        "tokens_window::the_token_bonus_matches_the_predecessors_golden",
+        "a review at the window's end moment is outside the window (SPEC-081 R13, A12)"
+      ],
+      [
+        "S08135-THE-BONUS-IS-CAPPED",
+        "quests",
+        "src/tokens.rs",
+        "windowed.then_some(xp.min(TOKEN_BONUS_CAP_XP))",
+        "windowed.then_some(xp)",
+        "tokens_window::the_token_bonus_matches_the_predecessors_golden",
+        "the day's bonus is capped (SPEC-081 R13, A12)"
+      ],
+      [
+        "S08136-A-TOKEN-IS-CONSUMED-AFTER-ITS-WINDOW",
+        "quests",
+        "src/tokens.rs",
+        "token.window_ends_at < now.epoch_millis()",
+        "token.window_ends_at <= now.epoch_millis()",
+        "tokens_window::the_token_bonus_matches_the_predecessors_golden",
+        "a token is consumed only once its window has ended (SPEC-081 R13, A12)"
+      ]
+    ],
+    "CARGO_KILLED_SCRIPT_MUTATIONS": [
+      [
+        "S08110-ONE-CHEST-PER-SESSION-KEY",
+        "migrations/008101_quests_chests_and_tokens.sql",
+        "CREATE UNIQUE INDEX chests_one_per_key ON chests (study_day, origin, session_start);",
+        "CREATE INDEX chests_one_per_key ON chests (study_day, origin, session_start);",
+        "quests",
+        "chests_grant::a_second_recompute_never_rolls_a_session_again",
+        "a session's roll happens once because the key (study day, origin, session start) is a unique index (SPEC-081 R5, R11, A5)"
+      ]
+    ]
+  }
+}
