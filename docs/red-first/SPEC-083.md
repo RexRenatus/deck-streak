@@ -225,3 +225,12 @@ refuses every value the shape refused (an empty value or one led by `:` or `/` h
 `localtime` has no offset after its name, and a `/` sits only before a transition's time, which
 must be digits). A44's inputs that only the shape refused before (`""`, `localtime`,
 `:/etc/localtime`, `/etc/localtime`, `Etc/../UTC`) are each still refused at 3a0e1a76.
+
+Correction (ruling 143): `the_take_refuses_while_the_classs_stop_is_set` (A49) asserted only absences
+(`scene.requests() == 0`) beside a helper that observes the refusal. It now also asserts, in the test's
+own body, the value the refusal returns: `TakeAnswer::Failed { reason: WritesStopped, preview: None }`;
+the absence assertion is unchanged, and no existing record line is edited. Red reading: the assertion was
+placed first in a copy of the stub state (the parent of 5677cf5a, 0fa34058, exported by `git archive`)
+and failed there, `skip_write.rs:1290`, `the refusal is answered, not silent`, left `Failed {
+reason: EngineFailed, preview: None }`, right `Failed { reason: WritesStopped, preview: None }`. At the
+head the test passes (`1 passed`).
