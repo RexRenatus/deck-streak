@@ -62,3 +62,8 @@ A9: green at b81606b
 A10: red at 3b80599: AssertionError: examined 0 readout row(s): the population is empty, so nothing was judged: expected 0 to be greater than 0
 A10: green at b81606b
 ```
+
+Disclosure for A9 and A10: the green commit b81606b also adds test material, and only adds it. It
+carries the new `exchange.test.ts` and `board.test.ts` for the two parsers, 13 added lines in
+`BoardSection.test.ts` and new cases in the two route tests, with no existing assertion edited,
+removed or skipped; the red commit 3b80599 held the A9 and A10 tests as they stand.
