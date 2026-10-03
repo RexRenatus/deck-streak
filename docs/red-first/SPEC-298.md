@@ -75,3 +75,13 @@ LOCALLY: the green lines above, the verdicts of rows S29800 to S29813, and the l
 The route that hands a stub's arguments to the shell's own evaluator has no member in any population. It is
 closed by construction and not planted: the stub scan refuses any argument expansion outside the reviewed
 logging shapes, so no spelling of it needs listing.
+
+## Disclosure: a commit between red and green that changes a test file
+
+Commit 06987a2a (`test(deploy): the four class checks find every member or refuse it`) changes the
+test files `scripts/tests/test_deploy_scripts.py`, `scripts/tests/test_deploy_standin.py` and
+`scripts/tests/_standin_checks.py`, and the mutation rows, between the red commits and the green
+commit of the criteria above. The pre-flight's red-first check reports that it rewrites an assertion
+in the test files. The rewrite was the builder's, in an earlier round; its content is not re-read
+in this fix round, which is kept away from those test bodies by the delivery's fence. This note
+discloses the change from the commit's metadata (subject and file list) alone and quotes no assertion.
