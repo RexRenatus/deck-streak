@@ -2945,6 +2945,7 @@ BENIGN_BUILTINS = frozenset(
         "bytes",
         "callable",
         "chr",
+        "classmethod",
         "dict",
         "dir",
         "enumerate",

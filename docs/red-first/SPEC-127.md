@@ -271,3 +271,148 @@ which it can read no environment. After it, fifty-six tests pass.
 
 The rows S12741 to S12746 were added in a later commit. Each is killed by the test of A39, and every
 row of the band is proved killed by its full id on a clean committed tree.
+
+## Amendment 2026-09-30, seventh round (issue #451)
+
+The test of A40 was committed first (0929355b58816672227e2bbd645f3eb94b8df11b) against `deploy.sh`
+as it stood on dev: it was red by assertion, all eighteen members (three calls, each verb that
+reaches it, three failure modes) read the tool's bare message with no `deploy:` line, and it printed
+`examined 18 temporary-path member(s)`. No member was green at dev.
+
+```red-first
+A40: red at 0929355b58816672227e2bbd645f3eb94b8df11b: AssertionError: 0 != 1 : install_tag / install / absent
+A40: green at 89fff8d984432f8bda93d729b3106aa387c77c75
+```
+
+The `EXIT` trap that deletes the check file is outside this class, which is about a temporary path
+that cannot be made: it acts only after a check file was made, so the test of A40 does not reach it.
+The second fix round pins it with a row of its own.
+
+## Amendment 2026-09-30, round one of the fix (issue #451)
+
+The test of A41 was committed alone (f215692640dff9724fe78883e722bbd91499e117) against the `deploy.sh`
+of the first round. It measures the places each verb writes in, refuses every temporary-path call in
+each place, and printed `examined 47 measured temporary-path member(s)`. Thirty-six members were red
+by assertion; each read the tool's bare message with no `deploy:` line, or a run that ended with a
+write left behind.
+
+```red-first
+A41: red at f215692640dff9724fe78883e722bbd91499e117: AssertionError: 0 != 1 : install / host/usr/local/lib/deck-streak/releases / absent
+A41: green at 89fff8d984432f8bda93d729b3106aa387c77c75
+```
+
+The fix (6109795b0e719607527adc0b271c87e087fd753d, then 09a79d98fbd66bdde8b5890543c1da99eda8b0db, then
+89fff8d984432f8bda93d729b3106aa387c77c75, the first commit whose CI run killed the older row S06207) changes `deploy.sh`, the rows
+S12753 to S12771, the SPEC and the ADR; it edits no test file.
+
+## Amendment 2026-09-30, round two of the fix (issue #451)
+
+The test of A42 was committed alone against the `deploy.sh` of round one. Its first commit
+(62410760) ran seven members into a naming error, which is an error and not a red; the state builder
+was renamed in 24bc441f3bfcc51da992ac7131345ff321eccf80 and the run of that commit ended `FAILED (failures=8)`, every member red by
+assertion and none by error. The census member read the host body and found no `cp` call where the
+test expects one; each state-and-call member, the stale-unpack member and the failed-switch member
+ran a verb whose refusal left a path changed (a unit only the new release ships, or a stale unpack
+that could not be removed) or ended without a `deploy:` line; the test of A41 also went red on the
+count of `mkdir` calls its table now expects.
+
+```red-first
+A42: red at 24bc441f3bfcc51da992ac7131345ff321eccf80: AssertionError: Lists differ: ['find', 'install', 'ln', 'mkdir', 'mktemp', 'mv', 'tar'] != ['cp', 'find', 'install', 'ln', 'mkdir', 'mktemp', 'mv', 'tar'] : the tools the runs reached
+A42: green at 9a1b8ac5b6760b2bedc3c9647301aae5b86d7872
+```
+
+The fix (acdbb5b5c7a50e7284e471758e1a0224b2e2cdda, then 90ddac0418148f24181f18ec8100eee44b7b2c60, which saves the unit files as one archive, then 65cb2c8b9f935649df7b5ff9429d44175d41d836 and 9a1b8ac5b6760b2bedc3c9647301aae5b86d7872, which give each row a killer of its own state) changes
+`deploy.sh`, one test file, the rows S12772 to S12792, the SPEC and the ADR. The first commit whose CI run was green end to end, `hygiene` and `mutation-rows` included, is 9a1b8ac5b6760b2bedc3c9647301aae5b86d7872; the run of 90ddac04 ended with its `mutation-rows` job cancelled at the job's time limit, and the run of 65cb2c8b with two rows alive.
+
+## Amendment 2026-10-01, round three of the fix (issue #451); corrections as old/new pairs
+
+The text above is not edited; each correction is an old/new pair and `new` governs.
+
+- old: "the run of that commit ended `FAILED (failures=8)`, every member red by assertion and none by
+  error". new: at 24bc441f no state-and-call member ran (the run printed no `examined ...
+  state-and-call` line); the A42 test failed at its `reached == HANDLED` assertion. The eight
+  failures were the census dict, `HANDLED`, the test of A41's calls table (twice, through its
+  alias), the stale unpack (twice) and the failed switch (twice).
+- old: "each state-and-call member, the stale-unpack member and the failed-switch member ran a verb
+  whose refusal left a path changed". new: none of the state-and-call members ran; the stale-unpack
+  and failed-switch members did.
+- omitted before, disclosed now: the first commit of the test (62410760) ended with three failures
+  as well as the seven errors recorded above, so it was not a valid red. The red of round two was
+  produced against expectation literals that the fix later changed: `HANDLED` with `cp`, the census
+  dict with `cp`, the call-site count 28 changed to 27, and the A41 table's `mkdir` count 3 changed to
+  2. The fix commit acdbb5b5 also deleted the first-install place test (a weakening, restored in
+  round three and byte-equal to its form at 24bc441f). A carve-out helper, `after_the_switch()`, filtered
+  eleven members out of the population that was measured red at ac118ffc (192 state-and-call members
+  with the trap-removal reds, 143 once it filtered them); it is removed.
+
+```red-first
+A43: red at fef29b615b50ae55f1e3a524a9ef253a4d8a8998: FAILED (failures=136): examined 499 state-and-call member(s); AssertionError: 1 != 0 : install / over-keep-partly-deletable: a finished run ended non-zero
+A43: green at 7d2828287093b53fe7f2646d6b63651d1b537688
+```
+
+The test of this round was committed alone (d5e96b13, then 88c08f0d and fef29b61, which turned an
+abort on a failed baseline into a member). Its first commits ended `FAILED (failures=3, errors=1)`
+and `FAILED (failures=4)`: a fixture that gave a state two extra arguments, then a baseline failure
+that aborted the main test; neither is a valid red, and the red above is the first whose failures are
+all assertions about the host script (133 in the generated test, 3 elsewhere). The fix is ce8bde5e,
+8991e7f4 (113 failures left), 328e8d9f and 137dd930; the run of 137dd930 passed `hygiene` and failed
+`mutation-verdict` with ten surviving rows, because a run that ended 0 from a failed call was judged as
+finished whatever call failed (an exit-0 hole). 698c8f6d fixed it: a run that ends 0 is a finished
+run only when its own log holds the rename over `current` before the failed call. Its CI run ended
+`Ran 677 tests`, `OK`, `examined 552 state-and-call member(s)`, `examined 252 host command site(s)`,
+`examined 1 host redirection target(s)`, and `mutation-rows` examined 113, killed 113. The run of
+8e3d0c79 left S12799 surviving (its killer passed with the prune unguarded); 7d282828 added the test
+that kills it. The run of 7d282828: `Ran 681 tests`, `OK`, `examined 552 state-and-call member(s)`,
+`mutation-rows` 120 rows, 120 KILLED.
+
+Population: 192 members at ac118ffc (with the trap-removal reds), 143 at a090126e (filtered),
+499 at the red of this round and 552 at the green.
+
+## Round three, a second disclosure
+
+- omitted before, disclosed now: commit ec80b1e8 sits between the red 24bc441f and the green
+  9a1b8ac5 of A42 and edits the test in `scripts/tests/test_deploy_scripts.py`: one added
+  assertion, that the unit the host already had still exists after a failed switch. It tightens the
+  failed-switch member and removes nothing from the population.
+
+## Amendment, 2026-10-02: round four of the fix (issue #451); corrections as old/new pairs
+
+The text above is not edited. Each sentence it corrects is quoted as `old`; `new` governs.
+
+- old: "restored in round three and byte-equal to its form at 24bc441f". new: restored in round three
+  to its form at 24bc441f, with one added assertion on the deploy line (f52e410c, then 9b1ad830).
+- Test edits the record did not name as test edits, disclosed from `git show` of each commit:
+  - 8991e7f4 changed seven lines of the test file: the census pins `COMMAND_SITES` 219 to 235 and
+    `REDIRECTION_TARGETS` 2 to 1, the redirection-target assertion 2 to 1, the writers dictionary
+    (`find` 14 to 2, `rm` 1 to 2, `tar` 3 to 4), the writing-call total 27 to 17, and the `find` option
+    whitelist, which gained `-type` and `-writable`.
+  - 137dd930 changed four lines of the test file: `COMMAND_SITES` 235 to 252, the writers dictionary
+    (`find` 2 to 1, `mv` 2 to 4, `tar` 4 to 3) and the temporary-name rule, which gained the
+    `.stale.` prefix.
+  - 8e3d0c79 added 121 lines to the test file and removed one: the double-fault tests of the undo
+    and the way back, and the stub tool's fault test, which read one exact string and now reads a
+    comma-separated list so that two calls can fail in one run.
+  - f52e410c added one assertion to the first-install parent member (the run ends non-zero), and
+    9b1ad830 replaced it with an assertion that the last line begins with `deploy:`.
+
+Round four, the red-first lines (appended; the record above is not edited):
+
+- R0 (8a7d5314): the census class of `test_ci_workflows` ran `FAILED (failures=4)` before the fix,
+  three for `classmethod` (a name the census cannot place) and one for the unlisted
+  `getattr(self, change)` site; after it, `Ran 7 tests`, `OK`.
+- C3 (e73b0557): the same-tag rollback member left the not-a-state list and runs as a member.
+- C1 (d0522c9b, the last test commit d09e464e): the test of a rollback to a kept release that is
+  not whole is `not red` against the host script as it stands, because the guard already existed;
+  its red is the mutant of row `S12700-A-THE-KEPT-RELEASE-MUST-BE-WHOLE` (the guard replaced by
+  `|| :`). CI line, run 37077835014: `S12700-A-THE-KEPT-RELEASE-MUST-BE-WHOLE: KILLED: its killer
+  passed without the mutant and failed with it`.
+- Green at d09e464e (and at c185f22b, which adds only documents): `hygiene` ran 853 tests in
+  `scripts/tests`, `OK`, with `examined 557 state-and-call member(s)`; `mutation-rows` ran
+  `examined 146: killed 146, survived 0, void 0`.
+
+Correction (verify round 5; appended, the record above is not edited):
+
+- The round-two line "8e3d0c79 added 121 lines" counts the non-blank lines; `git show --numstat`
+  reads 127 added and 1 removed.
+- The round-four green was measured at c185f22b by its CI run. d09e464e carries no CI run, and
+  c185f22b differs from it by four documentation files only.

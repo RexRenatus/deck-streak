@@ -267,8 +267,9 @@ def unit_text(name, marker):
     ).encode()
 
 
-def release_files(tag, marker):
-    """The synthetic release's files by path: what the workflow's tarball holds."""
+def release_files(tag, marker, extra=None, corrupt=False):
+    """The synthetic release's files by path: what the workflow's tarball holds; `extra` adds
+    files only this release ships."""
     files = {
         "bin/deckstreakd": f"#!/bin/sh\necho {tag}\n".encode(),
         "web/index.html": f"<title>{tag}</title>\n".encode(),
@@ -285,7 +286,10 @@ def release_files(tag, marker):
             b"[Service]\nLoadCredential=anki-sync-username:/run/deck-streak-credentials/socket\n"
         ),
     }
+    files.update(extra or {})
     lines = "".join(f"{sha(data)}  {path}\n" for path, data in sorted(files.items()))
+    if corrupt:
+        lines = f"{'0' * 64}  bin/deckstreakd\n" + lines
     files["MANIFEST.sha256"] = lines.encode()
     return files
 
@@ -402,9 +406,9 @@ class World:
             self.git("tag", tag, cwd=self.other)
         self.git("push", "-q", "origin", tag, cwd=self.other)
 
-    def publish(self, tag, marker=None):
+    def publish(self, tag, marker=None, extra=None, corrupt=False):
         """The release's assets, as the release workflow would attach them."""
-        files = release_files(tag, marker or tag)
+        files = release_files(tag, marker or tag, extra, corrupt)
         buffer = io.BytesIO()
         with tarfile.open(fileobj=buffer, mode="w:gz") as archive:
             for path, data in sorted(files.items()):
@@ -419,9 +423,9 @@ class World:
         (directory / name).write_bytes(tarball)
         (directory / "SHA256SUMS").write_text(f"{sha(tarball)}  {name}\n", encoding="utf-8")
 
-    def ship(self, tag, marker=None):
+    def ship(self, tag, marker=None, extra=None, corrupt=False):
         self.tag_on_main(tag)
-        self.publish(tag, marker)
+        self.publish(tag, marker, extra, corrupt)
 
     def run(self, script, *args, **env):
         """Run a script in a session of its own, so a timeout ends the script and its children."""
@@ -1915,6 +1919,1322 @@ class NoDeployScriptNamesAPrivateValue(unittest.TestCase):
                     env=env,
                 )
                 self.assertEqual(done.returncode, 1, f"{name}: a planted value passed")
+
+
+class ATemporaryPathThatCannotBeMadeIsANamedRefusal(Case):
+    """Every temporary path `deploy.sh` makes (SPEC-127 A40; ADR-297, #451). The sites are read
+    from the script itself, so a new `mktemp` joins the population by itself, and each is run
+    through every verb that reaches it with each way the path can fail to be made."""
+
+    # The step each site belongs to, named in its refusal; the key is the function that holds
+    # the call, or `host` for the script that runs on the host.
+    STEPS = {
+        "install_tag": "release step",
+        "caddy_install": "Caddy step",
+        "host": "host step",
+    }
+    # The verbs that reach a site, each set up by `prepare`.
+    VERBS = {
+        "install_tag": ("install", "rollback-unkept"),
+        "caddy_install": ("caddy-install",),
+        "host": ("install", "rollback-unkept", "rollback-kept"),
+    }
+    MODES = ("absent", "unwritable", "unrunnable")
+    HOST_SIDE = r"""#!/bin/bash
+echo "host" >> "$STUB_LOG/host.log"
+export STUB_SIDE=host
+[ -z "${HOST_TMPDIR-}" ] || export TMPDIR=$HOST_TMPDIR
+exec "$@"
+"""
+    MKTEMP = r"""#!/bin/bash
+[ "${STUB_SIDE:-local}" != "${MKTEMP_FAILS-}" ] || { echo "mktemp: cannot be run" >&2; exit 126; }
+exec /usr/bin/mktemp "$@"
+"""
+
+    @staticmethod
+    def sites():
+        """Each `mktemp` call of the script, as (holder, line number), holder being the function
+        that contains it or `host` for the host script."""
+        found, holder, in_host = [], None, False
+        for number, line in enumerate(DEPLOY.read_text(encoding="utf-8").splitlines(), 1):
+            if line.startswith("read -r -d '' HOST_SCRIPT"):
+                in_host = True
+            elif line == "HOSTEOF":
+                in_host = False
+            named = re.match(r"(\w+)\(\) \{", line)
+            if named and not in_host:
+                holder = named.group(1)
+            if not line.lstrip().startswith("#") and re.search(r"\bmktemp\b", line):
+                found.append(("host" if in_host else holder, number))
+        return found
+
+    @staticmethod
+    def snapshot(w):
+        """Each path of the world a step could write, with its type, mode and bytes or target:
+        the host, the release assets, the checkout's files and the temporary directories."""
+        seen = {}
+        for path in sorted(w.tmp.rglob("*")):
+            relative = path.relative_to(w.tmp)
+            top = relative.parts[0]
+            if top in {"log", "stub", "other", "origin.git"} or relative.parts[:2] == (
+                "checkout",
+                ".git",
+            ):
+                continue
+            info = path.lstat()
+            data = None
+            if stat.S_ISLNK(info.st_mode):
+                data = os.readlink(path)
+            elif stat.S_ISREG(info.st_mode):
+                data = sha(path.read_bytes())
+            seen[relative] = (stat.S_IFMT(info.st_mode), stat.S_IMODE(info.st_mode), data)
+        return seen
+
+    def prepare(self, w, verb, good):
+        """The world a verb starts from, and the argv it runs."""
+        w.script("host", self.HOST_SIDE)
+        w.script("mktemp", self.MKTEMP)
+        w.ship("v1.0.0")
+        self.ok(w.deploy("v1.0.0", **good))
+        if verb == "rollback-kept":
+            w.ship("v1.1.0")
+            self.ok(w.deploy("v1.1.0", **good))
+            return [ROLLBACK, "v1.0.0"]
+        if verb == "caddy-install":
+            (w.caddy_dir / "Caddyfile").write_text("example.org {\n\trespond 200\n}\n")
+            path = w.tmp / "caddy-config.json"
+            path.write_text(
+                json.dumps(
+                    {
+                        "host": "app.example.org",
+                        "web_root": str(w.root / "current/web"),
+                        "api_upstream": "127.0.0.1:8080",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            good["DECKSTREAK_DEPLOY_CADDY_CONFIG"] = str(path)
+            return [DEPLOY, "caddy-install", "v1.0.0"]
+        w.ship("v1.1.0")
+        return [ROLLBACK, "v1.1.0"] if verb == "rollback-unkept" else [DEPLOY, "v1.1.0"]
+
+    def member(self, site, verb, mode):
+        with tempfile.TemporaryDirectory() as tmp:
+            w = World(tmp)
+            good_dir = w.tmp / "tmp-good"
+            good_dir.mkdir()
+            good = {"TMPDIR": str(good_dir), "HOST_TMPDIR": str(good_dir)}
+            argv = self.prepare(w, verb, good)
+            planted = dict(good)
+            side = "host" if site == "host" else "local"
+            if mode == "absent":
+                planted["HOST_TMPDIR" if side == "host" else "TMPDIR"] = str(
+                    w.tmp / "tmp-absent" / "nothing"
+                )
+            elif mode == "unwritable":
+                locked = w.tmp / "tmp-locked"
+                locked.mkdir()
+                locked.chmod(0o500)
+                self.assertFalse(os.access(locked, os.W_OK), "the locked directory is writable")
+                planted["HOST_TMPDIR" if side == "host" else "TMPDIR"] = str(locked)
+            else:
+                planted["MKTEMP_FAILS"] = side
+            before = self.snapshot(w)
+            try:
+                done = w.run(*argv, **planted)
+                after = self.snapshot(w)
+            finally:
+                if mode == "unwritable":
+                    locked.chmod(0o700)
+        label = f"{site} / {verb} / {mode}"
+        lines = [ln for ln in done.stderr.splitlines() if ln.strip()]
+        refusals = [ln for ln in lines if ln.startswith("deploy:")]
+        self.assertNotEqual(done.returncode, 0, f"{label}: the verb went on: {done.stderr}")
+        self.assertEqual(len(refusals), 1, f"{label}: {done.stderr!r}")
+        self.assertEqual(lines[-1], refusals[0], f"{label}: the last line is not the refusal")
+        self.assertIn(self.STEPS[site], refusals[0], f"{label}: the step is not named")
+        self.assertNotIn("Traceback", done.stderr, label)
+        self.assertEqual(after, before, f"{label}: a path changed")
+
+    def test_every_temporary_path_that_cannot_be_made_is_a_named_refusal(self):
+        found = self.sites()
+        self.assertEqual(
+            sorted(holder for holder, _ in found),
+            sorted(self.STEPS),
+            f"the script's temporary-path sites are not the ones this test covers: {found}",
+        )
+        members = examined(
+            "temporary-path member(s)",
+            [
+                (site, verb, mode)
+                for site in self.STEPS
+                for verb in self.VERBS[site]
+                for mode in self.MODES
+            ],
+        )
+        for site, verb, mode in members:
+            with self.subTest(site=site, verb=verb, mode=mode):
+                self.member(site, verb, mode)
+
+
+class EveryDirectoryAVerbWritesInIsMeasuredAndItsTemporaryPathsAreRefused(Case):
+    """The places each verb writes in, measured from a real run, each made to fail in turn
+    (SPEC-127 A41; ADR-297, #451). The release, the release's rollback and the rollback of a kept
+    release are each run once in a fixture, and the directories whose contents changed are the
+    population; then every place is made absent and unwritable, and every call the host step
+    makes to a tool that makes a path is made to fail, one at a time. A member holds when the
+    verb ends non-zero with one `deploy:` line, last, and no path of the world changed."""
+
+    VERBS = ("install", "rollback-unkept", "rollback-kept")
+    TOOLS = ("mktemp", "mkdir", "tar", "ln", "mv")
+    HOST_SIDE = ATemporaryPathThatCannotBeMadeIsANamedRefusal.HOST_SIDE
+    TOOL = r"""#!/bin/bash
+side=${STUB_SIDE:-local}
+n=$(grep -c "^@NAME@ $side$" "$STUB_LOG/tools.log" 2>/dev/null || true)
+echo "@NAME@ $side" >> "$STUB_LOG/tools.log"
+[ "${TOOL_FAILS-}" != "@NAME@:$side:$((n + 1))" ] || { echo "@NAME@: cannot be run" >&2; exit 126; }
+exec /usr/bin/@NAME@ "$@"
+"""
+    # The calls each verb makes to a tool that makes a path, by side: what a run of the verb is
+    # known to do, so that a call that appears or goes is seen here.
+    CALLS = {
+        "install": {
+            ("mktemp", "local"): 1,
+            ("mktemp", "host"): 1,
+            ("mkdir", "host"): 2,
+            ("tar", "host"): 2,
+            ("ln", "host"): 1,
+            ("mv", "host"): 2,
+        },
+        "rollback-unkept": {
+            ("mktemp", "local"): 1,
+            ("mktemp", "host"): 1,
+            ("mkdir", "host"): 2,
+            ("tar", "host"): 2,
+            ("ln", "host"): 1,
+            ("mv", "host"): 2,
+        },
+        "rollback-kept": {
+            ("mktemp", "host"): 1,
+            ("tar", "host"): 1,
+            ("ln", "host"): 1,
+            ("mv", "host"): 1,
+        },
+    }
+    # The temporary directory and the four places the host writes in, then the drop-in directories.
+    BASE_PLACES = ("tmpdir", "host/etc/systemd/system", "host/usr/local/lib/deck-streak")
+
+    @staticmethod
+    def good(w):
+        directory = w.tmp / "tmpdir"
+        directory.mkdir()
+        return {"TMPDIR": str(directory), "HOST_TMPDIR": str(directory)}
+
+    def prepare(self, w, verb, good):
+        w.script("host", self.HOST_SIDE)
+        for name in self.TOOLS:
+            w.script(name, self.TOOL.replace("@NAME@", name))
+        (w.log / "tools.log").write_text("", encoding="utf-8")
+        w.ship("v1.0.0")
+        self.ok(w.deploy("v1.0.0", **good))
+        if verb == "rollback-kept":
+            w.ship("v1.1.0")
+            self.ok(w.deploy("v1.1.0", **good))
+            argv = [ROLLBACK, "v1.0.0"]
+        else:
+            w.ship("v1.1.0")
+            argv = [DEPLOY, "v1.1.0"] if verb == "install" else [ROLLBACK, "v1.1.0"]
+        (w.log / "tools.log").write_text("", encoding="utf-8")
+        return argv
+
+    @staticmethod
+    def stamps(w):
+        """Each path of the world with its type, mode, bytes or target, and a directory's
+        modification time, which moves when a path is made or removed in it."""
+        seen = {}
+        for path in sorted(w.tmp.rglob("*")):
+            relative = path.relative_to(w.tmp)
+            if relative.parts[0] in {"log", "stub", "other", "origin.git"} or relative.parts[
+                :2
+            ] == (
+                "checkout",
+                ".git",
+            ):
+                continue
+            info = path.lstat()
+            data = None
+            if stat.S_ISLNK(info.st_mode):
+                data = os.readlink(path)
+            elif stat.S_ISREG(info.st_mode):
+                data = sha(path.read_bytes())
+            elif stat.S_ISDIR(info.st_mode):
+                data = info.st_mtime_ns
+            seen[relative] = (stat.S_IFMT(info.st_mode), stat.S_IMODE(info.st_mode), data)
+        return seen
+
+    def measure(self, verb):
+        """(the places the verb wrote in, the calls it made to each tool), from one real run."""
+        with tempfile.TemporaryDirectory() as tmp:
+            w = World(tmp)
+            good = self.good(w)
+            argv = self.prepare(w, verb, good)
+            before = self.stamps(w)
+            self.ok(w.run(*argv, **good))
+            after = self.stamps(w)
+            calls = {}
+            for line in (w.log / "tools.log").read_text(encoding="utf-8").splitlines():
+                tool, side = line.split()
+                calls[(tool, side)] = calls.get((tool, side), 0) + 1
+        changed = {path for path in before if before[path] != after.get(path)}
+        places = set()
+        for path in changed:
+            if stat.S_ISDIR(before[path][0]):
+                places.add(path)
+            elif path.parent in before:
+                places.add(path.parent)
+        expected = {Path(name) for name in self.BASE_PLACES}
+        expected |= {
+            path
+            for path, (kind, _, _) in before.items()
+            if kind == stat.S_IFDIR
+            and path.parent == Path("host/etc/systemd/system")
+            and "@" in path.name
+            and path.name.endswith(".d")
+        }
+        if verb != "rollback-kept":
+            expected.add(Path("host/usr/local/lib/deck-streak/releases"))
+        return sorted(places), sorted(expected), calls
+
+    @staticmethod
+    def restore(modes):
+        for path, mode in modes:
+            path.chmod(mode)
+
+    def outcome(self, w, argv, planted, modes):
+        before = ATemporaryPathThatCannotBeMadeIsANamedRefusal.snapshot(w)
+        try:
+            done = w.run(*argv, **planted)
+            after = ATemporaryPathThatCannotBeMadeIsANamedRefusal.snapshot(w)
+        finally:
+            self.restore(modes)
+        return done, before, after
+
+    def judge(self, label, done, before, after, step):
+        lines = [ln for ln in done.stderr.splitlines() if ln.strip()]
+        refusals = [ln for ln in lines if ln.startswith("deploy:")]
+        self.assertNotEqual(done.returncode, 0, f"{label}: the verb went on: {done.stderr}")
+        self.assertEqual(len(refusals), 1, f"{label}: {done.stderr!r}")
+        self.assertEqual(lines[-1], refusals[0], f"{label}: the last line is not the refusal")
+        if step:
+            self.assertIn(step, refusals[0], f"{label}: the step is not named")
+        self.assertNotIn("Traceback", done.stderr, label)
+        self.assertEqual(after, before, f"{label}: a path changed")
+
+    def place_member(self, verb, place, mode):
+        with tempfile.TemporaryDirectory() as tmp:
+            w = World(tmp)
+            good = self.good(w)
+            argv = self.prepare(w, verb, good)
+            path = w.tmp / place
+            modes = []
+            if mode == "unwritable":
+                modes.append((path, stat.S_IMODE(path.lstat().st_mode)))
+                path.chmod(0o555)
+                self.assertFalse(os.access(path, os.W_OK), f"{place} is writable")
+            else:
+                aside = w.tmp / "aside"
+                aside.mkdir()
+                parent = path.parent
+                modes.append((parent, stat.S_IMODE(parent.lstat().st_mode)))
+                os.rename(path, aside / "moved")
+                parent.chmod(0o555)
+            step = None
+            if str(place) == "tmpdir":
+                step = "host step" if verb == "rollback-kept" else "release step"
+            elif mode == "unwritable":
+                step = "host step"
+            done, before, after = self.outcome(w, argv, good, modes)
+            self.judge(f"{verb} / {place} / {mode}", done, before, after, step)
+
+    def tool_member(self, verb, tool, side, index):
+        with tempfile.TemporaryDirectory() as tmp:
+            w = World(tmp)
+            good = self.good(w)
+            argv = self.prepare(w, verb, good)
+            planted = {**good, "TOOL_FAILS": f"{tool}:{side}:{index}"}
+            done, before, after = self.outcome(w, argv, planted, [])
+            step = "host step" if side == "host" else ("release step" if tool == "mktemp" else None)
+            self.judge(f"{verb} / {tool} {side} call {index}", done, before, after, step)
+
+    def confined(self, verb, places):
+        """The verb run with every directory but its places read-only: it must still succeed."""
+        with tempfile.TemporaryDirectory() as tmp:
+            w = World(tmp)
+            good = self.good(w)
+            argv = self.prepare(w, verb, good)
+            keep = {Path(place) for place in places}
+            modes = []
+            for path in sorted(w.tmp.rglob("*")):
+                relative = path.relative_to(w.tmp)
+                if relative.parts[0] in {"log", "stub", "other", "origin.git"} or relative.parts[
+                    :2
+                ] == ("checkout", ".git"):
+                    continue
+                if path.is_dir() and not path.is_symlink() and relative not in keep:
+                    modes.append((path, stat.S_IMODE(path.lstat().st_mode)))
+            try:
+                for path, _ in reversed(modes):
+                    path.chmod(0o555)
+                done = w.run(*argv, **good)
+            finally:
+                self.restore(modes)
+            self.ok(done)
+
+    def test_every_place_a_verb_writes_in_and_every_temporary_path_call_is_refused(self):
+        members, measured_total, derived_total = [], 0, 0
+        for verb in self.VERBS:
+            places, expected, calls = self.measure(verb)
+            self.assertEqual(places, expected, f"{verb}: the places it wrote in")
+            self.assertEqual(calls, self.CALLS[verb], f"{verb}: its calls to path-making tools")
+            self.confined(verb, places)
+            measured_total += 2 * len(places) + sum(calls.values())
+            derived_total += 2 * len(expected) + sum(self.CALLS[verb].values())
+            for place in places:
+                for mode in ("absent", "unwritable"):
+                    members.append(("place", verb, place, mode))
+            for (tool, side), count in sorted(calls.items()):
+                for index in range(1, count + 1):
+                    members.append(("tool", verb, tool, side, index))
+        self.assertEqual(len(members), measured_total)
+        self.assertEqual(len(members), derived_total)
+        for member in examined("measured temporary-path member(s)", members):
+            with self.subTest(member=member):
+                if member[0] == "place":
+                    self.place_member(*member[1:])
+                else:
+                    self.tool_member(*member[1:])
+
+
+_A41 = EveryDirectoryAVerbWritesInIsMeasuredAndItsTemporaryPathsAreRefused
+
+
+class EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused(Case):
+    """The host step's tools are read from the script and its start states are generated
+    (SPEC-127 A42; ADR-297, #451). The tool set is every command word of the host body that can
+    write a path, read by the parser below, so a new tool joins the population or turns the census
+    red; the states are the rows of STATE_TABLE, which holds at least FLOOR, so a new state joins
+    by itself. Each verb is run from each
+    state that applies, and every host call that writes a path is made to fail in turn. A member
+    holds when the verb ends non-zero with one `deploy:` line, last, and no path of the world
+    that the snapshot covers changed."""
+
+    VERBS = _A41.VERBS
+    # The start states, one registry: name -> (the world it is built on, the change made to that
+    # world, whether a run from it refuses with no call failed). situation() reads only this table,
+    # so a state added here joins every verb by itself (verify-451-r3, the STATES AXIS rule).
+    STATE_TABLE = {
+        "installed": ("installed", None, False),
+        "first-install": ("first", None, False),
+        "current-absent": ("installed", "drop_current", False),
+        "new-unit": ("installed", "unship_the_new_unit", False),
+        "not-ready": ("installed", "make_unready", True),
+        "not-ready-first": ("first", "make_unready", True),
+        "same-tag": ("installed", "plant_the_same_tag", True),
+        "stale-partial": ("installed", "plant_a_stale_partial", False),
+        "undeletable-partial": ("installed", "plant_an_undeletable_partial", True),
+        "partly-deletable-partial": ("installed", "plant_a_partly_deletable_partial", True),
+        "dropin-unwritable": ("installed", "lock_a_drop_in", True),
+        "units-absent": ("installed", "drop_the_unit_directory", True),
+        "over-keep": ("installed", "keep_more_than_keep", False),
+        "first-install-parent-unwritable": ("first", "lock_the_root_parent", True),
+        "corrupt-manifest": ("installed", "corrupt_the_manifest", True),
+        "effective-refused": ("installed", "refuse_the_effective_check", True),
+        "check-file-unwritable": ("installed", "lock_the_check_file", True),
+        "over-keep-partly-deletable": ("installed", "keep_more_over_a_partly_deletable", False),
+    }
+    STATES = tuple(STATE_TABLE)
+    # The states the class names. Each must be a row above, so a dropped state turns the test red.
+    FLOOR = frozenset(
+        {"installed", "first-install", "current-absent", "new-unit", "not-ready", "not-ready-first"}
+        | {"same-tag", "stale-partial", "undeletable-partial", "partly-deletable-partial"}
+        | {"dropin-unwritable", "units-absent", "over-keep", "first-install-parent-unwritable"}
+        | {"corrupt-manifest", "effective-refused"}
+    )
+    # A pair left out names why it cannot exist; never a pair that is only hard to build.
+    NOT_A_STATE = {
+        ("rollback-kept", "first-install"): "a first install holds no kept release",
+        ("rollback-kept", "not-ready-first"): "a first install holds no kept release",
+        ("rollback-kept", "first-install-parent-unwritable"): "a first install keeps nothing",
+        ("rollback-kept", "same-tag"): "the kept verb's tag is always present",
+        ("rollback-kept", "stale-partial"): "the kept verb unpacks nothing",
+        ("rollback-kept", "undeletable-partial"): "the kept verb unpacks nothing",
+        ("rollback-kept", "partly-deletable-partial"): "the kept verb unpacks nothing",
+        (
+            "rollback-kept",
+            "corrupt-manifest",
+        ): "the kept pair ships v1.1.0 without the fresh-manifest options, so they never apply to it",
+        (
+            "rollback-kept",
+            "effective-refused",
+        ): "a kept release passed the check it was installed by",
+        ("rollback-kept", "over-keep-partly-deletable"): "the kept verb prunes nothing",
+    }
+    # Words the host body uses that write no path. A word not listed here and not a function of the
+    # body is taken to be a tool that writes, which is how a new tool turns the census red.
+    READERS = frozenset(
+        {"[", "echo", "read", "readlink", "basename", "dirname", "sed", "tail", "grep", "sort"}
+        | {"sha256sum", "systemctl", "python3", "curl", "sleep", "cd", "test", "printf"}
+    )
+    BUILTINS = frozenset(
+        {"set", "trap", "local", "return", "exit", "break", "continue", "shift", "for", "case", ":"}
+        | {"true", "false"}
+    )
+    KEYWORDS = frozenset(
+        {"if", "then", "else", "elif", "fi", "do", "done", "while", "until", "{", "}", "!", "esac"}
+    )
+    SYSTEMCTL_READS_AND_RELOADS = frozenset({"daemon-reload", "restart", "cat"})
+    FIND_WRITES = frozenset(
+        {"-delete", "-exec", "-execdir", "-ok", "-okdir", "-fprint", "-fprint0", "-fprintf", "-fls"}
+    )
+    # The operators the census reads; any other operator token is an unknown word.
+    WRITE_REDIRECTIONS = frozenset({">", ">>", ">|", "&>", "&>>", "<>"})
+    READ_REDIRECTIONS = frozenset({"<", "<<<"})
+    # The options each reader may carry; any other option is an unknown word, so a new spelling of
+    # a write turns the census red instead of passing as a read.
+    OPTIONS = {
+        "sed": frozenset({"-n"}),
+        "sort": frozenset({"-V", "-r"}),
+        "curl": frozenset({"-fsS", "--max-time"}),
+        "grep": frozenset({"-e", "-v", "-vxF"}),
+        "tail": frozenset({"-n"}),
+        "sha256sum": frozenset({"-c", "--quiet"}),
+        "find": frozenset({"-maxdepth", "-mindepth", "-printf", "-type", "-writable"}),
+    }
+    UNKNOWN = "<unknown>"
+    # The tools the members run. A writer the body holds that no state reaches is a census failure,
+    # never an exclusion.
+    HANDLED = ("mktemp", "mkdir", "tar", "ln", "mv", "install", "find", "rm")
+    EXTRA = {f"{SYSTEMD}/deck-streak-extra.timer": b"[Timer]\nOnCalendar=daily\n"}
+    BAD_BOT = {f"{SYSTEMD}/{BOT}": unit_text(BOT, "v1.1.0") + b"StandardInputText=x\n"}
+    TOOL = r"""#!/bin/bash
+side=${STUB_SIDE:-local}
+n=$(grep -c "^@NAME@ $side$" "$STUB_LOG/tools.log" 2>/dev/null || true)
+echo "@NAME@ $side" >> "$STUB_LOG/tools.log"
+printf '%s\t%s\t%s\t%s\n' "@NAME@" "$side" "$((n + 1))" "$*" >> "$STUB_LOG/args.log"
+case ",${TOOL_FAILS-}," in
+*",@NAME@:$side:$((n + 1)),"*) echo "@NAME@: cannot be run" >&2; exit 126;;
+esac
+if [ "@NAME@" = mktemp ] && [ "$side" = host ] && [ -n "${CHECK_FILE_RO-}" ]; then
+    made=$(/usr/bin/mktemp "$@") && chmod 0444 "$made" && echo "$made"
+    exit
+fi
+exec /usr/bin/@NAME@ "$@"
+"""
+    HOST_SIDE = _A41.HOST_SIDE
+    good = staticmethod(_A41.good)
+    restore = staticmethod(_A41.restore)
+    outcome = _A41.outcome
+    judge = _A41.judge
+
+    @staticmethod
+    def host_body(text=None):
+        """The host script that `deploy.sh` holds in `HOST_SCRIPT`."""
+        text = DEPLOY.read_text(encoding="utf-8") if text is None else text
+        found = re.search(r"HOST_SCRIPT <<'HOSTEOF'[^\n]*\n(.*?)\nHOSTEOF\n", text, re.S)
+        assert found, "deploy.sh holds no HOST_SCRIPT here-document"
+        return found.group(1)
+
+    @classmethod
+    def census(cls, body):
+        """(every command as [word, *arguments], the targets of every redirection that can write a
+        path, the functions the body defines), read from the body's text alone."""
+        functions = set(re.findall(r"^\s*(\w+)\(\) \{", body, re.M))
+        lines = [ln for ln in body.splitlines() if not ln.lstrip().startswith("#")]
+        text = re.sub(r"\$\(\([^)]*\)\)", "0", " ; ".join(lines))
+        commands, targets = [], []
+
+        def substitutions(token):
+            """The bodies of every `$(...)` in a word, innermost first; None when one cannot be
+            read (a body holding `case`, or parentheses the reader cannot balance)."""
+            bodies, rest = [], token
+            while True:
+                found = re.search(r"\$\(([^()]*)\)", rest)
+                if not found:
+                    break
+                if re.search(r"(^|\s)case(\s|$)", found.group(1)):
+                    return None
+                bodies.append(found.group(1))
+                rest = rest[: found.start()] + "0" + rest[found.end() :]
+            return None if "$(" in rest else bodies
+
+        def read(chunk):
+            lex = shlex.shlex(chunk, posix=True, punctuation_chars=True)
+            lex.whitespace_split, lex.commenters = True, ""
+            tokens, nested = list(lex), []
+            for token in tokens:
+                bodies = substitutions(token)
+                if bodies is None or "`" in token:
+                    commands.append([cls.UNKNOWN, token])
+                else:
+                    nested.extend(bodies)
+            current, start, index = [], True, 0
+            while index < len(tokens):
+                token = tokens[index]
+                index += 1
+                if set(token) <= set("();&|"):
+                    start = True
+                    continue
+                if set(token) <= set("()<>&|"):
+                    following = tokens[index] if index < len(tokens) else ""
+                    if token in ("<(", ">(") or following == "(":
+                        start = True
+                    elif token in cls.WRITE_REDIRECTIONS:
+                        if following != "/dev/null":
+                            targets.append(following)
+                        index += 1
+                    elif token == ">&":
+                        if not re.fullmatch(r"\d+|-", following):
+                            targets.append(following)
+                        index += 1
+                    elif token in cls.READ_REDIRECTIONS:
+                        index += 1
+                    else:
+                        commands.append([cls.UNKNOWN, token])
+                    continue
+                if start and (token in cls.KEYWORDS or re.match(r"^\w+=", token)):
+                    continue
+                if start:
+                    current = [token]
+                    commands.append(current)
+                    start = False
+                else:
+                    current.append(token)
+            for inner in nested:
+                read(inner)
+
+        read(text)
+        for word, *args in list(commands):
+            if word == "trap" and args and args[0] not in functions and args[0] != "-":
+                read(args[0])
+        return commands, targets, functions
+
+    @classmethod
+    def writers(cls, commands, functions):
+        """The tools among the commands that can write a path, each with how many command sites."""
+        found = {}
+        for word, *args in commands:
+            if word in functions or word in cls.BUILTINS:
+                continue
+            if word in cls.READERS or word == "find":
+                writes = (
+                    (word == "sed" and any(a.startswith("-i") or a == "--in-place" for a in args))
+                    or (
+                        word == "sed"
+                        and any(re.search(r"(^|[;}\s])w\s|/[gpIi0-9]*w\s", a) for a in args)
+                    )
+                    or (word == "sort" and any(a == "-o" or a.startswith("--output") for a in args))
+                    or (word == "curl" and any(a in ("-o", "-O", "--output") for a in args))
+                    or (
+                        word == "systemctl"
+                        and (args[:1] or [""])[0] not in cls.SYSTEMCTL_READS_AND_RELOADS
+                    )
+                    or (
+                        word == "python3"
+                        and not (args[:1] or [""])[0].endswith("effective-check.py")
+                    )
+                    or (word == "find" and bool(cls.FIND_WRITES & set(args)))
+                )
+                if not writes and any(
+                    a.startswith("-") and a not in cls.OPTIONS.get(word, frozenset()) | {"-"}
+                    for a in args
+                    if word in cls.OPTIONS
+                ):
+                    found[cls.UNKNOWN] = found.get(cls.UNKNOWN, 0) + 1
+                    continue
+                if not writes:
+                    continue
+            found[word] = found.get(word, 0) + 1
+        return found
+
+    # The figures the census prints, each pinned beside an independent reading of the same text.
+    COMMAND_SITES = 252
+    REDIRECTION_TARGETS = 1
+
+    @classmethod
+    def derived_writers(cls, body):
+        """The writing command sites by tool, counted by a pattern over the body's lines: a second
+        reading that shares no code with census(), so the two cannot drift together."""
+        text = "\n".join(ln for ln in body.splitlines() if not ln.lstrip().startswith("#"))
+        start = r"(?:^|[;&|({!]|\bthen|\bdo|\belse|\$\()\s*"
+        found = {}
+        for tool in sorted(cls.HANDLED):
+            found[tool] = len(re.findall(f"{start}{tool}[\\s)]", text, re.M))
+            if tool == "find":
+                found[tool] -= len(re.findall(f"{start}find\\s[^\n]*-printf", text, re.M))
+        return found
+
+    def test_the_tools_the_host_body_writes_with_are_read_from_the_script(self):
+        commands, targets, functions = self.census(self.host_body())
+        found = self.writers(commands, functions)
+        self.assertEqual(
+            len(examined("host command site(s)", commands)), self.COMMAND_SITES, "the sites read"
+        )
+        self.assertEqual(
+            len(examined("host redirection target(s)", targets)),
+            self.REDIRECTION_TARGETS,
+            "the redirections read",
+        )
+        self.assertEqual(
+            found, self.derived_writers(self.host_body()), "the census and an independent reading"
+        )
+        self.assertEqual(sorted(found), sorted(self.HANDLED), "the host body's writing tools")
+        self.assertEqual(
+            sorted(set(targets)),
+            ["$checked"],
+            "a redirection writes a path other than the check file",
+        )
+        self.assertEqual(len(targets), 1, "the redirections into the check file")
+        self.assertEqual(
+            found,
+            {"mktemp": 1, "find": 1, "mkdir": 2, "ln": 1, "install": 3, "mv": 4}
+            | {"rm": 2, "tar": 3},
+            "the command sites of the host body that can write a path, by tool",
+        )
+        self.assertEqual(sum(found.values()), 17, "the command sites that can write a path")
+
+    def test_a_tool_the_census_does_not_know_turns_it_red(self):
+        body = self.host_body()
+        planted = {
+            "a new tool": body.replace("set -eu", "set -eu\ntouch /x", 1),
+            "an in-place edit": body.replace("set -eu", "set -eu\nsed -i s/a/b/ /x", 1),
+            "a new redirection": body.replace("set -eu", "set -eu\necho a > /x", 1),
+            "a tool in a substitution": body.replace("set -eu", "set -eu\nq=$(tee /x)", 1),
+        }
+        # The 26 spellings the round-3 census neither counted nor refused (verify-451-r3 R3-3).
+        escaped = {
+            "redirection >|": "echo a >| /x",
+            "redirection &>": "echo a &> /x",
+            "redirection &>>": "echo a &>> /x",
+            "redirection >&": "echo a >& /x",
+            "redirection <> (creates)": "read -r q <> /x",
+            "find -fprint0": "find /a -fprint0 /x",
+            "find -okdir": "find /a -okdir rm {} ;",
+            "sed -Ei": "sed -Ei s/a/b/ /x",
+            "sed -ri": "sed -ri s/a/b/ /x",
+            "sed --in-place=.b": "sed --in-place=.b s/a/b/ /x",
+            "sed w command": "sed -n 'w /x' /a",
+            "sed s///w flag": "sed 's/a/b/w /x' /a",
+            "$( (subshell) ) quoted": 'q="$( (touch /x) )"',
+            "$(case) quoted": 'q="$(case a in a) touch /x ;; esac)"',
+            "backticks quoted": 'q="`touch /x`"',
+            "backticks as an argument": 'echo "`touch /x`"',
+            "process substitution >(..)": "echo a >(touch /x)",
+            "process substitution <(..) reader": "sort <(touch /x)",
+            "trap string": "trap 'touch /x' EXIT",
+            "curl -so": "curl -so /x http://a",
+            "curl -o/x": "curl -o/x http://a",
+            "curl --output=/x": "curl --output=/x http://a",
+            "curl -D": "curl -D /x http://a",
+            "curl -c (cookie jar)": "curl -c /x http://a",
+            "sort -o/x": "sort -o/x /a",
+            "sort -uo": "sort -uo /x /a",
+        }
+        planted |= {
+            name: body.replace("set -eu", f"set -eu\n{line}", 1) for name, line in escaped.items()
+        }
+        commands, targets, functions = self.census(body)
+        base = self.writers(commands, functions)
+        self.assertEqual(len(planted), 4 + 26, "the planted bodies: the four and the 26 spellings")
+        for name, text in examined("planted host bodies", sorted(planted.items())):
+            with self.subTest(planted=name):
+                commands, targets, functions = self.census(text)
+                found = self.writers(commands, functions)
+                self.assertTrue(
+                    found != base or len(targets) != 2 or set(targets) != {"$checked"},
+                    f"{name}: the census did not change",
+                )
+
+    def arm(self, w):
+        w.script("host", self.HOST_SIDE)
+        for name in self.HANDLED:
+            w.script(name, self.TOOL.replace("@NAME@", name))
+        for name in ("tools.log", "args.log"):
+            (w.log / name).write_text("", encoding="utf-8")
+
+    def changes(self):
+        """The change methods of STATE_TABLE, each under the name the table holds, so a state's
+        change is found by a lookup in this one mapping and never by a name read from data."""
+        return {
+            "drop_current": self.drop_current,
+            "unship_the_new_unit": self.unship_the_new_unit,
+            "make_unready": self.make_unready,
+            "plant_the_same_tag": self.plant_the_same_tag,
+            "plant_a_stale_partial": self.plant_a_stale_partial,
+            "plant_an_undeletable_partial": self.plant_an_undeletable_partial,
+            "plant_a_partly_deletable_partial": self.plant_a_partly_deletable_partial,
+            "lock_a_drop_in": self.lock_a_drop_in,
+            "drop_the_unit_directory": self.drop_the_unit_directory,
+            "keep_more_than_keep": self.keep_more_than_keep,
+            "lock_the_root_parent": self.lock_the_root_parent,
+            "corrupt_the_manifest": self.corrupt_the_manifest,
+            "refuse_the_effective_check": self.refuse_the_effective_check,
+            "lock_the_check_file": self.lock_the_check_file,
+            "keep_more_over_a_partly_deletable": self.keep_more_over_a_partly_deletable,
+        }
+
+    def situation(self, tmp, verb, state):
+        """A world in `state`, armed, and the argv of `verb` in it."""
+        base, change, _ = self.STATE_TABLE[state]
+        w = World(tmp)
+        good = self.good(w)
+        self.arm(w)
+        extra = self.EXTRA if change == "unship_the_new_unit" else None
+        fresh = {"extra": extra}
+        if change == "corrupt_the_manifest":
+            fresh["corrupt"] = True
+        elif change == "refuse_the_effective_check":
+            fresh["extra"] = self.BAD_BOT
+        if base == "first":
+            w.ship("v1.0.0")
+            argv = [DEPLOY if verb == "install" else ROLLBACK, "v1.0.0"]
+        else:
+            w.ship("v1.0.0", extra=extra if verb == "rollback-kept" else None)
+            self.ok(w.deploy("v1.0.0", **good))
+            if verb == "rollback-kept":
+                w.ship("v1.1.0")
+                self.ok(w.deploy("v1.1.0", **good))
+                argv = [ROLLBACK, "v1.0.0"]
+            else:
+                w.ship("v1.1.0", **fresh)
+                argv = [DEPLOY if verb == "install" else ROLLBACK, "v1.1.0"]
+        # The modes a change locks, which every run from this world restores when it ends.
+        w.locked = self.changes()[change](w, good, argv) if change else []
+        for name in ("tools.log", "args.log"):
+            (w.log / name).write_text("", encoding="utf-8")
+        return w, good, argv
+
+    @staticmethod
+    def drop_current(w, good, argv):
+        (w.root / "current").unlink()
+        return []
+
+    @staticmethod
+    def unship_the_new_unit(w, good, argv):
+        (w.units / "deck-streak-extra.timer").unlink(missing_ok=True)
+        return []
+
+    @staticmethod
+    def make_unready(w, good, argv):
+        """The restart succeeds and readiness never arrives, so `back()` runs: its switch leg
+        with a previous release, its `rm` leg on a first install."""
+        w.script("curl", UNREADY_CURL)
+        good["STUB_UNREADY_TAG"] = argv[-1]
+        return []
+
+    @staticmethod
+    def plant_the_same_tag(w, good, argv):
+        (w.root / "releases" / argv[-1]).mkdir(parents=True, exist_ok=True)
+        return []
+
+    @staticmethod
+    def plant_a_stale_partial(w, good, argv):
+        stale = w.root / "releases" / f"{argv[-1]}.partial"
+        stale.mkdir(parents=True)
+        (stale / "leftover").write_text("an interrupted unpack\n", encoding="utf-8")
+        return []
+
+    @staticmethod
+    def plant_an_undeletable_partial(w, good, argv):
+        keep = w.root / "releases" / f"{argv[-1]}.partial" / "keep"
+        keep.mkdir(parents=True)
+        (keep / "leftover").write_text("an interrupted unpack\n", encoding="utf-8")
+        keep.chmod(0o555)
+        return [(keep, 0o755)]
+
+    @staticmethod
+    def plant_a_partly_deletable_partial(w, good, argv):
+        """A stale unpack whose first entry deletes and whose second does not, so a delete that
+        is not refused first leaves it half gone."""
+        stale = w.root / "releases" / f"{argv[-1]}.partial"
+        for name in ("a", "keep"):
+            (stale / name).mkdir(parents=True)
+            (stale / name / "leftover").write_text("an interrupted unpack\n", encoding="utf-8")
+        (stale / "keep").chmod(0o555)
+        return [(stale / "keep", 0o755)]
+
+    @staticmethod
+    def lock_a_drop_in(w, good, argv):
+        dropin = w.units / f"{JOB}@sync.service.d"
+        mode = stat.S_IMODE(dropin.lstat().st_mode)
+        dropin.chmod(0o555)
+        return [(dropin, mode)]
+
+    @staticmethod
+    def drop_the_unit_directory(w, good, argv):
+        w.units.rename(w.units.with_name(f"{w.units.name}.moved"))
+        return []
+
+    def keep_more_than_keep(self, w, good, argv):
+        """A third release and a keep of two, so the prune of an older release runs."""
+        w.ship("v1.0.1")
+        self.ok(w.deploy("v1.0.1", **good))
+        good["DECKSTREAK_DEPLOY_KEEP"] = "2"
+        return []
+
+    @staticmethod
+    def corrupt_the_manifest(w, good, argv):
+        """The release's MANIFEST.sha256 names a file with a wrong sum (built by situation())."""
+        return []
+
+    @staticmethod
+    def refuse_the_effective_check(w, good, argv):
+        """The release's bot unit carries a line the effective check refuses (built by situation())."""
+        return []
+
+    @staticmethod
+    def lock_the_check_file(w, good, argv):
+        """The check file is made read-only, so each redirection into it fails (R3-6)."""
+        good["CHECK_FILE_RO"] = "1"
+        return []
+
+    def keep_more_over_a_partly_deletable(self, w, good, argv):
+        """The over-keep world, with an older release whose first entry deletes and whose second
+        does not, so a prune that is not guarded leaves it half gone (R3-2)."""
+        self.keep_more_than_keep(w, good, argv)
+        old = w.root / "releases" / "v1.0.0"
+        for name in ("a", "keep"):
+            (old / name).mkdir()
+            (old / name / "leftover").write_text("an older release\n", encoding="utf-8")
+        (old / "keep").chmod(0o555)
+        return [(old / "keep", 0o755)]
+
+    @staticmethod
+    def lock_the_root_parent(w, good, argv):
+        """A first install under a parent that cannot take a write (round 3's dropped W1 member)."""
+        parent = w.root.parent
+        parent.mkdir(parents=True, exist_ok=True)
+        mode = stat.S_IMODE(parent.lstat().st_mode)
+        parent.chmod(0o555)
+        return [(parent, mode)]
+
+    def writing_calls(self, w):
+        """(tool, index) of each host call that writes a path, from the run's own log. The census's
+        own classifier must count the same calls, so no filter here can drop one unseen."""
+        seen, calls, logged = {}, [], []
+        for line in (w.log / "args.log").read_text(encoding="utf-8").splitlines():
+            tool, side, index, args = (line.split("\t") + [""])[:4]
+            if side != "host":
+                continue
+            seen[tool] = seen.get(tool, 0) + 1
+            logged.append([tool, *args.split()])
+            if tool == "find" and not self.FIND_WRITES & set(args.split()):
+                continue
+            calls.append((tool, int(index)))
+        counted = sum(
+            1
+            for ln in (w.log / "tools.log").read_text(encoding="utf-8").splitlines()
+            if ln.endswith(" host")
+        )
+        self.assertEqual(sum(seen.values()), counted, "the two logs of the host calls")
+        self.assertEqual(
+            len(calls), sum(self.writers(logged, set()).values()), "the census and the log differ"
+        )
+        return calls
+
+    def calls_of(self, verb, state):
+        """The writing host calls one run of `verb` from `state` makes with no call failed; a
+        state the table marks refusing is judged as its own member, not here."""
+        with tempfile.TemporaryDirectory() as tmp:
+            w, good, argv = self.situation(tmp, verb, state)
+            try:
+                done = w.run(*argv, **good)
+            finally:
+                self.restore(w.locked)
+            if not self.STATE_TABLE[state][2]:
+                self.ok(done)
+            return self.writing_calls(w)
+
+    def refuse_each(self, verb, state, calls):
+        """Fail each of `calls` in turn, in a fresh world, and judge the run it ends (#451). A
+        call of None is the run from a refusing state with no call failed, judged the same way."""
+        for tool, index in examined("state-and-call member(s)", calls):
+            with self.subTest(verb=verb, state=state, tool=tool, index=index):
+                with tempfile.TemporaryDirectory() as tmp:
+                    w, good, argv = self.situation(tmp, verb, state)
+                    planted = dict(good)
+                    if tool is not None:
+                        planted["TOOL_FAILS"] = f"{tool}:host:{index}"
+                    done, before, after = self.outcome(w, argv, planted, w.locked)
+                    call = "no call failed" if tool is None else f"{tool} {index}"
+                    step = "" if tool is None else "host step"
+                    label = f"{verb} / {state} / {call}"
+                    if done.returncode == 0 and self.switch_already_made(w, tool, index):
+                        self.judge_finished(label, w, good, done, before, after)
+                    else:
+                        self.judge(label, done, before, after, step)
+                        if tool == "install":
+                            self.assertIn(
+                                "could not install its unit files",
+                                done.stderr.splitlines()[-1],
+                                f"{label}: the refusal does not name the install",
+                            )
+
+    @staticmethod
+    def switch_already_made(w, tool, index):
+        """True when the run's own log holds the rename over `current` BEFORE the failed call, so
+        the call belongs to the part of a run after its switch, the only part that may end 0. A run
+        that ends 0 from a call before the switch went on past a failure and is judged strictly."""
+        if tool is None:
+            return False
+        for line in (w.log / "args.log").read_text(encoding="utf-8").splitlines():
+            name, side, number, args = (line.split("\t") + [""])[:4]
+            if side != "host":
+                continue
+            if name == tool and int(number) == index:
+                return False
+            if name == "mv" and args.split()[-1:] and args.split()[-1].endswith("/current"):
+                return True
+        return False
+
+    @staticmethod
+    def half_deleted(release):
+        """True when a release directory exists and some file its MANIFEST.sha256 names is gone or
+        changed, so it is a release only in name."""
+        if not release.is_dir():
+            return False
+        manifest = release / "MANIFEST.sha256"
+        if not manifest.is_file():
+            return True
+        for line in manifest.read_text(encoding="utf-8").splitlines():
+            digest, _, name = line.partition("  ")
+            target = release / name
+            if not target.is_file() or sha(target.read_bytes()) != digest:
+                return True
+        return False
+
+    def judge_finished(self, label, w, good, done, before, after):
+        """A run that already finished its switch ends 0, leaves no temporary path, and leaves no
+        release that a later verb accepts while half deleted (the class rule, second arm)."""
+        self.assertEqual(
+            done.returncode, 0, f"{label}: a finished run ended non-zero: {done.stderr}"
+        )
+        self.assertIn(
+            "is current", done.stdout, f"{label}: exit 0 without finishing: {done.stderr}"
+        )
+        for path in set(after) - set(before):
+            temporary = path.name.startswith((".current.", ".stale.")) or path.name.endswith(
+                (".partial", ".saved")
+            )
+            self.assertFalse(
+                temporary or path.parts[0] == "tmpdir", f"{label}: a temporary path is left: {path}"
+            )
+        for release in sorted((w.root / "releases").iterdir()):
+            if release.name.startswith(".") or not self.half_deleted(release):
+                continue
+            later = w.run(ROLLBACK, release.name, **good)
+            self.assertNotEqual(
+                later.returncode, 0, f"{label}: a later rollback took {release.name}"
+            )
+            self.assertIn(release.name, later.stderr, f"{label}: the refusal does not name it")
+
+    def test_every_state_and_every_writing_call_of_the_host_step_is_refused(self):
+        self.assertLessEqual(self.FLOOR, set(self.STATES), "a state the class names is missing")
+        pairs = [(v, s) for v in self.VERBS for s in self.STATES if (v, s) not in self.NOT_A_STATE]
+        self.assertLessEqual(
+            set(self.NOT_A_STATE), {(v, s) for v in self.VERBS for s in self.STATES}, "a stray pair"
+        )
+        self.assertEqual(
+            len(pairs),
+            len(self.VERBS) * len(self.STATES) - len(self.NOT_A_STATE),
+            "the pairs the table leaves",
+        )
+        members, reached, broke = [], set(), set()
+        for verb, state in pairs:
+            calls = None
+            with self.subTest(verb=verb, state=state, baseline=True):
+                calls = self.calls_of(verb, state)
+            if calls is None:
+                broke.add((verb, state))
+                continue
+            reached |= {tool for tool, _ in calls}
+            if self.STATE_TABLE[state][2]:
+                calls = [(None, 0), *calls]
+            members += [(verb, state, tool, index) for tool, index in calls]
+        self.assertEqual(
+            sorted({(v, s) for v, s, _, _ in members}),
+            sorted(set(pairs) - broke),
+            "a pair with no member",
+        )
+        if not broke:
+            self.assertEqual(sorted(reached), sorted(self.HANDLED), "the tools the runs reached")
+        for verb, state, tool, index in examined("state-and-call member(s)", members):
+            with self.subTest(verb=verb, state=state, tool=tool, index=index):
+                self.refuse_each(verb, state, [(tool, index)])
+
+    def test_a_run_that_finishes_leaves_no_temporary_path_and_no_half_deleted_release(self):
+        pairs = [
+            (v, s)
+            for v in self.VERBS
+            for s in self.STATES
+            if (v, s) not in self.NOT_A_STATE and not self.STATE_TABLE[s][2]
+        ]
+        for verb, state in examined("finishing pair(s)", pairs):
+            with self.subTest(verb=verb, state=state), tempfile.TemporaryDirectory() as tmp:
+                w, good, argv = self.situation(tmp, verb, state)
+                done, before, after = self.outcome(w, argv, good, w.locked)
+                self.judge_finished(f"{verb} / {state}", w, good, done, before, after)
+
+    def test_an_install_over_an_installed_host_refuses_each_of_its_writing_calls(self):
+        self.refuse_each("install", "installed", self.calls_of("install", "installed"))
+
+    def test_a_rollback_to_a_kept_release_that_is_not_whole_is_refused_as_found(self):
+        """The kept path's whole-release check: a file `MANIFEST.sha256` lists is gone, or the
+        manifest itself is gone, and either way the rollback ends non-zero with one `deploy:` line,
+        last, naming the release, and every path as found."""
+        gone = {
+            "a file the manifest lists": "web/index.html",
+            "the manifest itself": "MANIFEST.sha256",
+        }
+        for what, name in examined("not-whole kept release member(s)", sorted(gone.items())):
+            with self.subTest(gone=what), tempfile.TemporaryDirectory() as tmp:
+                w, good, argv = self.situation(tmp, "rollback-kept", "installed")
+                kept = w.root / "releases" / argv[-1]
+                (kept / name).unlink()
+                done, before, after = self.outcome(w, argv, good, w.locked)
+                self.judge(f"rollback-kept / {what} is gone", done, before, after, "")
+                self.assertIn(
+                    f"found {argv[-1]} is kept but is not a whole release",
+                    done.stderr.splitlines()[-1],
+                    f"{what}: the refusal does not name the whole-release check",
+                )
+
+    def test_a_first_install_refuses_each_of_its_writing_calls(self):
+        self.refuse_each("install", "first-install", self.calls_of("install", "first-install"))
+
+    def test_a_first_install_into_a_parent_that_cannot_take_a_write_leaves_the_host_as_found(self):
+        for verb in examined("first-install place member(s)", ["install", "rollback-unkept"]):
+            with self.subTest(verb=verb), tempfile.TemporaryDirectory() as tmp:
+                w, good, argv = self.situation(tmp, verb, "first-install")
+                parent = w.root.parent
+                parent.mkdir(parents=True, exist_ok=True)
+                modes = [(parent, stat.S_IMODE(parent.lstat().st_mode))]
+                parent.chmod(0o555)
+                self.assertFalse(w.root.exists(), "the host holds no release yet")
+                done, before, after = self.outcome(w, argv, good, modes)
+                self.judge(f"{verb} / first install / parent", done, before, after, "host step")
+                self.assertEqual(done.stderr.splitlines()[-1].split()[0], "deploy:", verb)
+
+    def test_a_stale_unpack_in_a_releases_directory_that_cannot_take_a_write_is_refused(self):
+        for verb in examined("stale-unpack member(s)", ["install", "rollback-unkept"]):
+            with self.subTest(verb=verb), tempfile.TemporaryDirectory() as tmp:
+                w, good, argv = self.situation(tmp, verb, "installed")
+                releases = w.root / "releases"
+                stale = releases / f"{argv[-1]}.partial"
+                stale.mkdir()
+                (stale / "leftover").write_text("an interrupted unpack\n", encoding="utf-8")
+                modes = [(releases, stat.S_IMODE(releases.lstat().st_mode))]
+                releases.chmod(0o555)
+                done, before, after = self.outcome(w, argv, good, modes)
+                self.judge(f"{verb} / stale unpack", done, before, after, "host step")
+                self.assertIn(
+                    "releases directory",
+                    done.stderr.splitlines()[-1],
+                    f"{verb}: the refusal does not name the releases directory",
+                )
+
+    def test_a_stale_unpack_that_cannot_be_deleted_is_refused_by_that_name(self):
+        for verb in examined("undeletable-unpack member(s)", ["install"]):
+            with tempfile.TemporaryDirectory() as tmp:
+                w, good, argv = self.situation(tmp, verb, "installed")
+                keep = w.root / "releases" / f"{argv[-1]}.partial" / "keep"
+                keep.mkdir(parents=True)
+                (keep / "leftover").write_text("an interrupted unpack\n", encoding="utf-8")
+                keep.chmod(0o555)
+                done, before, after = self.outcome(w, argv, good, [(keep, 0o755)])
+                self.judge(f"{verb} / undeletable unpack", done, before, after, "host step")
+                self.assertIn("unfinished unpack", done.stderr.splitlines()[-1])
+                self.assertTrue((keep / "leftover").is_file(), "the leftover is gone")
+
+    def test_a_stale_drop_in_that_cannot_be_deleted_is_refused(self):
+        stale = f"{JOB}@sync.service.d/30-old.conf"
+
+        def world(tmp):
+            w, good, argv = self.situation(tmp, "install", "installed")
+            (w.units / stale).write_text("[Service]\n", encoding="utf-8")
+            return w, good, argv
+
+        with tempfile.TemporaryDirectory() as tmp:
+            w, good, argv = world(tmp)
+            self.ok(w.run(*argv, **good))
+            deletes = [
+                ln.split("\t")
+                for ln in (w.log / "args.log").read_text(encoding="utf-8").splitlines()
+                if ln.startswith("find\thost\t") and stale in ln and "-delete" in ln
+            ]
+        for _, _, index, *_ in examined("stale-drop-in member(s)", deletes):
+            with tempfile.TemporaryDirectory() as tmp:
+                w, good, argv = world(tmp)
+                planted = {**good, "TOOL_FAILS": f"find:host:{index}"}
+                done, before, after = self.outcome(w, argv, planted, [])
+                self.judge("install / stale drop-in", done, before, after, "host step")
+                self.assertIn(
+                    "could not install its unit files",
+                    done.stderr.splitlines()[-1],
+                    "the refusal does not name the unit install",
+                )
+                self.assertTrue((w.units / stale).is_file(), "the stale drop-in is gone")
+
+    def test_a_failed_switch_leaves_no_unit_only_the_new_release_ships(self):
+        for verb in examined("new-unit member(s)", ["install", "rollback-unkept"]):
+            with self.subTest(verb=verb), tempfile.TemporaryDirectory() as tmp:
+                w, good, argv = self.situation(tmp, verb, "new-unit")
+                planted = {**good, "TOOL_FAILS": "mv:host:2"}
+                done, before, after = self.outcome(w, argv, planted, [])
+                self.judge(f"{verb} / new unit / failed switch", done, before, after, "host step")
+                self.assertFalse((w.units / "deck-streak-extra.timer").exists(), verb)
+                self.assertTrue((w.units / API).is_file(), f"{verb}: the unit the host had is gone")
+
+    def host_log(self, verb, state, faults):
+        """The host calls of one run of `verb` from `state` with `faults` planted, as
+        (tool, index, args) in the order the run made them."""
+        with tempfile.TemporaryDirectory() as tmp:
+            w, good, argv = self.situation(tmp, verb, state)
+            try:
+                w.run(*argv, **{**good, "TOOL_FAILS": faults})
+            finally:
+                self.restore(w.locked)
+            rows = []
+            for line in (w.log / "args.log").read_text(encoding="utf-8").splitlines():
+                tool, side, index, args = (line.split("\t") + [""])[:4]
+                if side == "host":
+                    rows.append((tool, int(index), args))
+            return rows
+
+    @staticmethod
+    def first_delete_after(rows, tool, suffix=""):
+        """The index of the first host `find -delete` after the last call of `tool` (whose last
+        argument ends in `suffix`): the first removal an undo makes."""
+        last = max(
+            i
+            for i, (name, _, args) in enumerate(rows)
+            if name == tool and args.split()[-1:] and args.split()[-1].endswith(suffix)
+        )
+        for name, index, args in rows[last + 1 :]:
+            if name == "find" and "-delete" in args.split():
+                return index
+        raise AssertionError("no removal follows the call")
+
+    def refused_twice(self, label, verb, state, faults, text):
+        """Run `verb` from `state` with `faults` planted: it must end non-zero with one `deploy:`
+        line, last, that holds `text`, and leave no temporary path."""
+        with tempfile.TemporaryDirectory() as tmp:
+            w, good, argv = self.situation(tmp, verb, state)
+            before = ATemporaryPathThatCannotBeMadeIsANamedRefusal.snapshot(w)
+            try:
+                done = w.run(*argv, **{**good, "TOOL_FAILS": faults})
+            finally:
+                self.restore(w.locked)
+            after = ATemporaryPathThatCannotBeMadeIsANamedRefusal.snapshot(w)
+        lines = [ln for ln in done.stderr.splitlines() if ln.strip()]
+        refusals = [ln for ln in lines if ln.startswith("deploy:")]
+        self.assertNotEqual(done.returncode, 0, f"{label}: the verb went on: {done.stderr}")
+        self.assertEqual(len(refusals), 1, f"{label}: {done.stderr!r}")
+        self.assertEqual(lines[-1], refusals[0], f"{label}: the last line is not the refusal")
+        self.assertIn(text, refusals[0], f"{label}: the refusal does not say so")
+        self.assertNotIn("Traceback", done.stderr, label)
+        for path in set(after) - set(before):
+            temporary = path.name.startswith((".current.", ".stale.")) or path.name.endswith(
+                (".partial", ".saved")
+            )
+            self.assertFalse(
+                temporary or path.parts[0] == "tmpdir", f"{label}: a temporary path is left: {path}"
+            )
+
+    def test_an_undo_that_cannot_put_the_unit_files_back_says_so_and_leaves_no_temporary_path(self):
+        """A second failure, in the undo itself: each removal is tried twice, so both tries fail."""
+        rows = self.host_log("install", "installed", "install:host:1")
+        k = self.first_delete_after(rows, "install")
+        faults = f"install:host:1,find:host:{k},find:host:{k + 1}"
+        self.refused_twice(
+            "install / installed / undo", "install", "installed", faults, "put its unit files back"
+        )
+        for verb in examined("undo-and-say member(s)", ["install", "rollback-unkept"]):
+            rows = self.host_log(verb, "effective-refused", "")
+            k = self.first_delete_after(rows, "install")
+            faults = f"find:host:{k},find:host:{k + 1}"
+            self.refused_twice(
+                f"{verb} / effective-refused / undo",
+                verb,
+                "effective-refused",
+                faults,
+                "put its unit files back after",
+            )
+
+    def test_a_way_back_that_fails_in_two_tries_is_named_by_the_leg_that_failed(self):
+        for verb in examined("way-back member(s)", ["install", "rollback-unkept"]):
+            rows = self.host_log(verb, "not-ready", "")
+            n = sum(1 for tool, _, _ in rows if tool == "ln")
+            self.refused_twice(
+                f"{verb} / not-ready / link",
+                verb,
+                "not-ready",
+                f"ln:host:{n},ln:host:{n + 1}",
+                "the link was not put back",
+            )
+            k = self.first_delete_after(rows, "mv", "/current")
+            self.refused_twice(
+                f"{verb} / not-ready / units",
+                verb,
+                "not-ready",
+                f"find:host:{k},find:host:{k + 1}",
+                "the unit files were not put back",
+            )
+        rows = self.host_log("install", "not-ready-first", "")
+        n = sum(1 for tool, _, _ in rows if tool == "rm")
+        self.refused_twice(
+            "install / not-ready-first / link",
+            "install",
+            "not-ready-first",
+            f"rm:host:{n},rm:host:{n + 1}",
+            "the link was not removed",
+        )
+
+    def test_a_stale_unpack_refuses_each_of_its_writing_calls(self):
+        for verb in ["install", "rollback-unkept"]:
+            self.refuse_each(verb, "stale-partial", self.calls_of(verb, "stale-partial"))
+            with tempfile.TemporaryDirectory() as tmp:
+                w, good, argv = self.situation(tmp, verb, "stale-partial")
+                before = ATemporaryPathThatCannotBeMadeIsANamedRefusal.snapshot(w)
+                done = w.run(*argv, **good)
+                after = ATemporaryPathThatCannotBeMadeIsANamedRefusal.snapshot(w)
+                self.judge_finished(
+                    f"{verb} / stale-partial / finished", w, good, done, before, after
+                )
+            self.refused_twice(
+                f"{verb} / stale-partial / set aside",
+                verb,
+                "stale-partial",
+                "mv:host:1",
+                "set aside",
+            )
+
+    def test_an_older_release_that_cannot_be_deleted_whole_is_left_whole(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            w, good, argv = self.situation(tmp, "install", "over-keep-partly-deletable")
+            old = w.root / "releases" / "v1.0.0"
+            files = sorted(p.relative_to(old) for p in old.rglob("*") if p.is_file())
+            before = ATemporaryPathThatCannotBeMadeIsANamedRefusal.snapshot(w)
+            try:
+                done = w.run(*argv, **good)
+            finally:
+                self.restore(w.locked)
+            after = ATemporaryPathThatCannotBeMadeIsANamedRefusal.snapshot(w)
+            self.judge_finished(
+                "install / over-keep-partly-deletable", w, good, done, before, after
+            )
+            kept = sorted(p.relative_to(old) for p in old.rglob("*") if p.is_file())
+            self.assertEqual(kept, files, "the older release was partly deleted")
+            self.assertIn("left the older release v1.0.0", done.stderr)
 
 
 if __name__ == "__main__":
