@@ -83,7 +83,7 @@ without the deferral (the maintainer removes the real entry when this lands).
 
 At this head the notification-policy check's message-metadata row judges 0 notification envelopes:
 all 26 committed goldens are command replies and are skipped as replies, so its green measures no
-notification. A1 judges every committed golden and the planted cases.
+notification. A1 judges every committed golden and the planted cases (#257).
 
 - No notification golden is added: the first ones belong to the deliveries that send the
   notifications (#122, #129, #123).
