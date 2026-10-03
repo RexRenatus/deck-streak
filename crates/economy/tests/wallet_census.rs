@@ -16,6 +16,13 @@ use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+// The generated population of the table's spellings (SPEC-324, ADR-029's include by path).
+#[macro_use]
+#[path = "../../../tools/table-census/population.rs"]
+mod population;
+
+use population::Spelling;
+
 /// The table the census guards.
 const TABLE: &str = "coin_ledger";
 /// The context that owns it (docs/CONTEXT-MAP.md).
@@ -216,4 +223,99 @@ fn only_the_wallet_writes_the_coin_ledger() {
              migrations may",
         ]
     );
+}
+
+/// How many spellings of `coin_ledger` the population plants: its 11 splits in 9 forms each, and
+/// the 14 members of the literal family (SPEC-324 A3).
+const JOINED_SPELLINGS: usize = 113;
+
+/// The literal family of `coin_ledger`: each member spells the name in a way no line of code shows
+/// as written, and rustc, not the census, evaluates it.
+fn family() -> Vec<(&'static str, String)> {
+    vec![
+        spell!("coin\x5fledger"),
+        spell!("coin\u{5f}ledger"),
+        spell!(
+            "coin_\
+             ledger"
+        ),
+        spell!(concat!(r##"coin_"##, r#"ledger"#)),
+        spell!(['c', 'o', 'i', 'n', '_', 'l', 'e', 'd', 'g', 'e', 'r']),
+        spell!(concat!(concat!("coin", "_"), "ledger")),
+        spell!(concat!(stringify!(coin_), stringify!(ledger))),
+        spell!("COIN_LEDGER"),
+        spell!(b"coin\x5fledger"),
+        spell!(c"coin\x5fledger"),
+        spell!([
+            b'c', b'o', b'i', b'n', b'\x5f', b'l', b'e', b'd', b'g', b'e', b'r'
+        ]),
+        spell!(concat!("CoIn_", "LeDgEr")),
+        spell!(concat!('c', 'o', 'i', 'n', "_ledger")),
+        spell!("\x63\x6f\x69\x6e\x5f\x6c\x65\x64\x67\x65\x72"),
+    ]
+}
+
+/// Every spelling of the table's name the population plants: each split in every form, in quests
+/// with a piece in streaks, then each member of the family. Plain concatenation and rustc decide
+/// that each one is the name.
+fn spellings() -> Vec<Spelling> {
+    let mut found = Vec::new();
+    for (index, split) in population::splits(TABLE).iter().enumerate() {
+        assert_eq!(
+            split.concat(),
+            TABLE,
+            "the split {split:?} joins to the name"
+        );
+        let forms = population::planted(split, index, "quests", "streaks");
+        assert_eq!(forms.len(), population::FORMS);
+        found.extend(forms);
+    }
+    for (index, (text, value)) in family().into_iter().enumerate() {
+        assert_eq!(
+            value.to_ascii_lowercase(),
+            TABLE,
+            "rustc reads {text} as the name"
+        );
+        found.push(population::spelled(text, index, "quests"));
+    }
+    found
+}
+
+/// What the census refuses in a tree that holds `spelling` alone. No planted file names the table
+/// as written, so the census's line reader alone can refuse none of them.
+fn census_of(spelling: &Spelling) -> Vec<String> {
+    let planted = tempfile::tempdir().expect("a temporary directory");
+    for (path, text) in &spelling.files {
+        assert!(
+            !text.contains(TABLE),
+            "{path} of {} names {TABLE} as written",
+            spelling.label
+        );
+        plant(planted.path(), path, text);
+    }
+    census(planted.path()).refused
+}
+
+#[test]
+fn a_reserved_name_joined_from_literals_is_refused_in_every_spelling() {
+    // Every spelling, each in a tree of its own, is refused by the name of every file holding a
+    // piece of it; the same spelling inside economy is not refused.
+    let spellings = examined("joined spelling(s)", spellings());
+    assert_eq!(spellings.len(), JOINED_SPELLINGS);
+    for spelling in &spellings {
+        let mut expected: Vec<String> = spelling
+            .files
+            .iter()
+            .map(|(path, _)| {
+                format!(
+                    "{path} spells {TABLE} from literals, joined or in another case, and only \
+                     {OWNER}'s code may"
+                )
+            })
+            .collect();
+        expected.sort();
+        assert_eq!(census_of(spelling), expected, "{}", spelling.label);
+        let owned = spelling.in_crate(OWNER);
+        assert_eq!(census_of(&owned), Vec::<String>::new(), "{}", owned.label);
+    }
 }

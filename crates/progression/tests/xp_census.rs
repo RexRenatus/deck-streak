@@ -37,6 +37,13 @@ use std::time::{Duration, Instant};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 
+// The generated population of the table's spellings (SPEC-324, ADR-029's include by path).
+#[macro_use]
+#[path = "../../../tools/table-census/population.rs"]
+mod population;
+
+use population::Spelling;
+
 /// The table the census guards.
 const TABLE: &str = "xp_settlement";
 /// The context that owns it (docs/CONTEXT-MAP.md).
@@ -6095,4 +6102,220 @@ fn main_round_seven_generation_is_refused_by_name() {
         .map(|((case, _, _), refused)| format!("{case}: {refused:?}"))
         .collect();
     assert_eq!(wrong, Vec::<String>::new());
+}
+
+/// How many spellings of `xp_settlement` the population plants: its 13 splits in 9 forms each, and
+/// the 14 members of the literal family (SPEC-324 A2).
+const JOINED_SPELLINGS: usize = 131;
+
+/// The literal family of `xp_settlement`: each member spells the name in a way no line of code
+/// shows as written, and rustc, not the census, evaluates it.
+fn family() -> Vec<(&'static str, String)> {
+    vec![
+        spell!("xp\x5fsettlement"),
+        spell!("xp\u{5f}settlement"),
+        spell!(
+            "xp_\
+             settlement"
+        ),
+        spell!(concat!(r##"xp_"##, r#"settlement"#)),
+        spell!([
+            'x', 'p', '_', 's', 'e', 't', 't', 'l', 'e', 'm', 'e', 'n', 't'
+        ]),
+        spell!(concat!(concat!("xp", "_"), "settlement")),
+        spell!(concat!(stringify!(xp_), stringify!(settlement))),
+        spell!("XP_SETTLEMENT"),
+        spell!(b"xp\x5fsettlement"),
+        spell!(c"xp\x5fsettlement"),
+        spell!([
+            b'x', b'p', b'\x5f', b's', b'e', b't', b't', b'l', b'e', b'm', b'e', b'n', b't'
+        ]),
+        spell!(concat!("Xp_", "SeTtLeMeNt")),
+        spell!(concat!('x', 'p', "_settlement")),
+        spell!("\x78\x70\x5f\x73\x65\x74\x74\x6c\x65\x6d\x65\x6e\x74"),
+    ]
+}
+
+/// Every spelling of the table's name the population plants: each split in every form, in quests
+/// with a piece in streaks, then each member of the family. Plain concatenation and rustc decide
+/// that each one is the name.
+fn spellings() -> Vec<Spelling> {
+    let mut found = Vec::new();
+    for (index, split) in population::splits(TABLE).iter().enumerate() {
+        assert_eq!(
+            split.concat(),
+            TABLE,
+            "the split {split:?} joins to the name"
+        );
+        let forms = population::planted(split, index, "quests", "streaks");
+        assert_eq!(forms.len(), population::FORMS);
+        found.extend(forms);
+    }
+    for (index, (text, value)) in family().into_iter().enumerate() {
+        assert_eq!(
+            value.to_ascii_lowercase(),
+            TABLE,
+            "rustc reads {text} as the name"
+        );
+        found.push(population::spelled(text, index, "quests"));
+    }
+    found
+}
+
+#[test]
+fn a_reserved_name_joined_from_literals_is_refused_in_every_spelling() {
+    // One planted workspace holds every spelling in files no module declares, so the census reads
+    // them and compiles none, and a copy of each inside progression. Every file outside
+    // progression is refused by name, and no copy inside it is.
+    let spellings = examined("joined spelling(s)", spellings());
+    assert_eq!(spellings.len(), JOINED_SPELLINGS);
+    let planted = tempfile::tempdir().expect("a temporary directory");
+    plant_workspace(planted.path());
+    for member in ["quests", "streaks"] {
+        plant_member(
+            planted.path(),
+            member,
+            &[("src/lib.rs", "pub fn quiet() {}\n")],
+        );
+    }
+    let mut expected = Vec::new();
+    for spelling in &spellings {
+        let owned = spelling.in_crate(OWNER);
+        for (path, text) in spelling.files.iter().chain(&owned.files) {
+            assert!(
+                !text.contains(TABLE),
+                "{path} of {} names {TABLE} as written",
+                spelling.label
+            );
+            plant(planted.path(), path, text);
+        }
+        expected.extend(spelling.files.iter().map(|(path, _)| {
+            format!(
+                "{path} spells {TABLE} from literals, joined or in another case, and only \
+                 {OWNER}'s code may"
+            )
+        }));
+    }
+    expected.sort();
+    let refused = census(planted.path());
+    examined("planted crate source file(s)", refused.sources.clone());
+    assert_eq!(refused.refused, expected);
+}
+
+/// The refusal of progression's own use of `settle` in the file `file`.
+fn owners_own(file: &str) -> String {
+    format!(
+        "{file} calls settle inside {OWNER}'s own code, and only {CALLER}'s code may unless \
+         {OWNER} admits it"
+    )
+}
+
+#[test]
+fn the_owners_own_operation_is_refused_unless_it_admits_it() {
+    // A wrapper, a function pointer and a generic in progression's library are each a new
+    // operation in the owner's code, and none is admitted. Its imports (grouped, renaming the
+    // module, inside a function body, after text that is not ASCII), its tests and its examples
+    // are accepted.
+    let planted = tempfile::tempdir().expect("a temporary directory");
+    plant_workspace(planted.path());
+    plant(
+        planted.path(),
+        "crates/progression/src/lib.rs",
+        &format!(
+            "{KILLER_LIB}pub mod generic;\npub mod imports;\npub mod pointer;\npub mod unicode;\n\
+             pub mod wrapper;\n"
+        ),
+    );
+    plant(
+        planted.path(),
+        "crates/progression/src/wrapper.rs",
+        "pub fn wrapped() -> usize {\n    crate::settle::settle()\n}\n",
+    );
+    plant(
+        planted.path(),
+        "crates/progression/src/pointer.rs",
+        "pub const STEP: fn() -> usize = crate::settle::settle;\n",
+    );
+    plant(
+        planted.path(),
+        "crates/progression/src/generic.rs",
+        "pub fn run<F: Fn() -> usize>(step: F) -> usize {\n    step()\n}\n\
+         pub fn go() -> usize {\n    run(crate::settle::settle)\n}\n",
+    );
+    plant(
+        planted.path(),
+        "crates/progression/src/imports.rs",
+        "pub use crate::settle::{SettledRow, settle as grouped};\n\
+         pub use crate::settle::{self as module, settle as by_module};\n\
+         pub fn quiet() -> usize {\n    #[allow(unused_imports)]\n    \
+         use crate::settle::settle as inner;\n    0\n}\n",
+    );
+    plant(
+        planted.path(),
+        "crates/progression/src/unicode.rs",
+        &format!(
+            "pub const GREETING: &str = \"{}\";\npub use crate::settle::settle as after_unicode;\n",
+            "\u{fc}".repeat(40)
+        ),
+    );
+    plant(
+        planted.path(),
+        "crates/progression/tests/own.rs",
+        "#[test]\nfn own() {\n    let _ = deck_streak_progression::settle();\n}\n",
+    );
+    plant(
+        planted.path(),
+        "crates/progression/examples/demo.rs",
+        "fn main() {\n    let _ = deck_streak_progression::settle();\n}\n",
+    );
+    let refused = census(planted.path());
+    examined("planted crate source file(s)", refused.sources.clone());
+    assert_eq!(
+        refused.refused,
+        [
+            owners_own("crates/progression/src/generic.rs"),
+            owners_own("crates/progression/src/pointer.rs"),
+            owners_own("crates/progression/src/wrapper.rs"),
+        ]
+    );
+}
+
+#[test]
+fn a_reexport_progressions_macro_writes_is_followed_or_refused() {
+    // A macro of progression that writes the re-export in its own body is followed to the member
+    // that calls the new name; a macro that takes the re-exported path as its argument is
+    // reported at that argument, outside any import, and is refused in progression.
+    let planted = tempfile::tempdir().expect("a temporary directory");
+    plant_workspace(planted.path());
+    plant(
+        planted.path(),
+        "crates/progression/src/lib.rs",
+        &format!(
+            "{KILLER_LIB}macro_rules! reexport_step {{\n    () => {{\n        \
+             pub use $crate::settle::settle as step;\n    }};\n}}\nreexport_step!();\n\
+             macro_rules! reexport {{\n    ($($path:tt)+) => {{\n        \
+             pub use $($path)+ as again;\n    }};\n}}\nreexport!(crate::settle::settle);\n"
+        ),
+    );
+    plant_member(
+        planted.path(),
+        "streaks",
+        &[
+            ("src/lib.rs", "pub mod caller;\n"),
+            (
+                "src/caller.rs",
+                "pub fn go() -> usize {\n    deck_streak_progression::step()\n}\n",
+            ),
+        ],
+    );
+    let refused = census(planted.path());
+    examined("planted crate source file(s)", refused.sources.clone());
+    assert_eq!(
+        refused.refused,
+        [
+            owners_own("crates/progression/src/lib.rs"),
+            "crates/streaks/src/caller.rs calls settle, and only coordination's code may"
+                .to_owned(),
+        ]
+    );
 }
