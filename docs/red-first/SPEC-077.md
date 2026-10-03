@@ -39,6 +39,16 @@ A15: red at 6fd5308f: panicked at crates/coordination/tests/law_block.rs:310:5: 
 A15: green at 4b713129
 A21: red at 6fd5308f: panicked at crates/coordination/tests/progress_milestone.rs:67:5: assertion `left == right` failed: the configured courses' stored mature cards, summed; an unconfigured course is not; left: None, right: Some(115)
 A21: green at 4b713129
+A9: red at 2943b041: panicked at crates/daemon/tests/progress_live_band.rs:117:5: assertion `left == right` failed: the stored current band of the configured course the subject names
+A9: green at 4d29499f
+A16: red at 95f3c98e: panicked at crates/api/tests/progress_routes.rs:228:5: assertion `left == right` failed: the configured course's stored progress, whole; the stale row is absent
+A16: green at bcde9feb
+A17: red at 95563f6a: panicked at crates/api/tests/law_routes.rs:190:5: assertion `left == right` failed: the law block over an empty database, whole
+A17: green at 8a878792
+A18: red at 25207b0c: panicked at crates/bot/tests/progress_commands.rs:77:5: assertion `left == right` failed
+A18: green at 42666e15
+A22: red at e1fe64f7: panicked at crates/daemon/src/wiring.rs:750:9: assertion `left == right` failed: the progress step is registered in phase 4, right after the streaks step
+A22: green at 23641fae
 ```
 
 ## Disclosures
@@ -72,3 +82,65 @@ A21: green at 4b713129
   `near(a, b)`, a 1e-9 tolerance, because clippy's `float_cmp` refuses `a == b`. That loosened the
   criterion and the record did not say so. 21f7465b27acce0010850ae3854c1a1fa2117109 restores exact
   equality with `a.to_bits() == b.to_bits()`; A5's red line at a26ed3ad is unchanged.
+
+## Addendum, 2026-10-03: the Mini App part
+
+The second part of the second pull request delivers A19 and A20, each committed before the rule it
+tests, red on a compiling stub: A19's course ladder at 6ab922f1, a stub that draws no band cell, made
+green by edc6c555; A20's law block at d7bd6425, a stub that renders each count `?? 0`, made green by
+f25690b7. Each red line was replayed at fe1ff5dd with the red commit's three files put back
+(`CourseLadder.svelte`, `CourseLadder.test.ts` and `progress.ts`; `LawBlock.svelte`,
+`LawBlock.test.ts` and `law.ts`), running the criterion's own fence command: each exited 1 with
+`Tests  1 failed (1)`, at `CourseLadder.test.ts:49:19` and `LawBlock.test.ts:44:19`. Each green
+line's run printed `1 passed`, at fe1ff5dd, whose `web/app/src/lib/progress/` and
+`web/app/src/lib/law/` are byte-equal to the green commits'.
+
+```red-first
+A19: red at 6ab922f1: AssertionError: examined 0 band cells: the population is empty, so nothing was judged: expected 0 to be greater than 0
+A19: green at edc6c555
+A20: red at d7bd6425: AssertionError: examined 0 pending counts: the population is empty, so nothing was judged: expected 0 to be greater than 0
+A20: green at f25690b7
+```
+
+## Addendum, 2026-10-03: the test edits inside A16's, A17's and A18's green commits
+
+Each green commit below also changed test files beside its criterion's test. None of them changed
+that test: the bodies of `the_progress_route_answers_only_the_owner` (A16),
+`the_law_route_answers_only_the_owner` (A17) and `progress_shows_each_course_band_and_mastery`
+(A18) are byte-equal at their red and green commits. What else each changed:
+
+- **bcde9feb (A16's green).** `crates/api/tests/progress_routes.rs` moves the app's builder into
+  `app_with(scratch, open)`, which marks the database opened only when `open` is true; `app` calls
+  it with `true`, so every existing test builds the same app as before. Its one removed line,
+  `readiness.database_opened(db.clone());`, is that move. It adds
+  `the_progress_route_names_why_it_cannot_answer`, mutation coverage beside A16. It adds
+  `crates/coordination/tests/progress_view.rs` whole, the tests of the progress view (T28) added
+  with the view they test; neither is red-first evidence of a criterion.
+- **8a878792 (A17's green).** `crates/api/tests/law_routes.rs` makes the same `app_with` move, with
+  the same one removed line, and adds `seed_law`,
+  `the_law_route_answers_the_stored_block_with_its_line_keys` and
+  `the_law_route_names_why_it_cannot_answer`, mutation coverage beside A17.
+- **42666e15 (A18's green).** `crates/bot/tests/commands.rs`: the menu's test lists `progress`
+  beside the eleven commands it listed and names twelve; the rendered messages gain `progress`,
+  `progress-none` and `progress-failed`, with the new goldens `progress-none.msg.json` and
+  `progress-failed.msg.json`; the `help` and `start` goldens each gain the `/progress` line and keep
+  every line they had, in order. `crates/bot/tests/progress_commands.rs` adds three tests beside
+  A18's. `crates/daemon/tests/role_bot.rs` adds `start_role_with`, which passes further settings to
+  the role, creates its state directory with `create_dir_all` in place of `create_dir`, so a state
+  directory the progress test has already seeded is kept, and adds
+  `the_bot_role_answers_progress_from_the_courses_its_settings_name`. No assertion narrowed.
+
+After the last green, the reader tests' positive controls in `law.test.ts` and `progress.test.ts`
+assert a value the reader returns where they asserted only that it was not null, and
+`the_view_is_empty_before_the_first_recompute` asserts that two courses are configured beside its
+empty view. Each tightens a test that is not a criterion's.
+
+## Addendum, 2026-10-03: the test edits inside A19's and A20's green commits
+
+- **edc6c555 (A19's green).** The commit changed A19's own test body: the meter's `value` string
+  assertion became the numbers `[min, max, value]` plus the `aria-label` "<band> mastery". The
+  green body also fails on the red stub, at `:49:19`, so the recorded red line stands. The commit
+  added the test 'names the course as its region, and says so when no unit is current yet' and
+  `progress.test.ts` as a whole file.
+- **f25690b7 (A20's green).** A20's body is byte-equal. The commit added the `LawTiersView` import,
+  five tests beside A20, and `law.test.ts` as a whole file. No assertion narrowed.

@@ -56,7 +56,9 @@ use crate::drill_routes;
 use crate::health::{self, Readiness};
 use crate::inbox_capture_route;
 use crate::insights_routes;
+use crate::law_routes;
 use crate::notifications_routes;
+use crate::progress_routes;
 use crate::session_routes::{self, OwnerAccess};
 use crate::streak_routes;
 use crate::wallet_routes;
@@ -146,7 +148,8 @@ impl ApiState {
     }
 
     /// This state, rendering the badge catalog's descriptions from the configured `courses`
-    /// (SPEC-073 R16). Without them the descriptions take their generic wording.
+    /// (SPEC-073 R16) and keeping Road to C2's progress to them (SPEC-077 R15). Without them the
+    /// descriptions take their generic wording and the progress route answers no course.
     #[must_use]
     pub fn with_courses(mut self, courses: Courses) -> Self {
         self.courses = Some(courses);
@@ -195,8 +198,14 @@ pub fn router(state: ApiState) -> Router {
                 .merge(badges_routes::routes(
                     access.clone(),
                     readiness.clone(),
+                    courses.clone(),
+                ))
+                .merge(progress_routes::routes(
+                    access.clone(),
+                    readiness.clone(),
                     courses,
                 ))
+                .merge(law_routes::routes(access.clone(), readiness.clone()))
                 .merge(session_routes::routes(access.clone()))
                 .merge(drill_routes::routes(
                     access.clone(),
