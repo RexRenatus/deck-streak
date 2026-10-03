@@ -80,6 +80,7 @@ def edge_cases(dial):
         case("intraday-4", TODAY, [row(4, EPOCH_SECONDS, 3, ctype=2)]),
         case("day-relearn", TODAY, [row(3, TODAY + 5, 2, ctype=3), row(3, TODAY - 9, ctype=3)]),
         case("legacy-borrowed", TODAY, [row(2, -40, 3, odid=9), row(3, -1, odid=9)]),
+        case("borrowed-zero-due", -10, [row(2, 0, 2, odid=9), row(3, -1, odid=9)]),
         case("modern-borrowed", TODAY, [row(2, TODAY + 3, 2, odid=9), row(2, TODAY - 3, odid=9)]),
         case("unknown-queue", TODAY, [row(5, TODAY + 9, 2), row(-4, EPOCH_SECONDS), row(7, 3)]),
         case("negative-today", -10, [row(2, -5, 2, odid=9), row(2, -5, 3), row(2, 20)]),

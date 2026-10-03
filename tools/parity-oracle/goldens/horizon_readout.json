@@ -333,6 +333,46 @@
       }
     },
     {
+      "class": "borrowed-zero-due",
+      "input": {
+        "cards": [
+          [
+            2,
+            2,
+            0,
+            9,
+            2
+          ],
+          [
+            3,
+            2,
+            -1,
+            9,
+            1
+          ]
+        ],
+        "desired_retention_pct": 90.0,
+        "today": -10
+      },
+      "output": {
+        "beyond_horizon": 0,
+        "desired_retention_pct": 90.0,
+        "due_later": 0,
+        "excluded_count": 0,
+        "honest_text": "That curve stays flat because nothing is being started: a flat forward curve is not an achievement, it is the signature of a collection that has stopped taking on new material. Two levers create future obligation \u2014 the daily new-card dial (priced at ~8 reviews over a new card's lifetime) and your desired_retention (currently 90%).",
+        "is_flat": true,
+        "new_card_lifetime_reviews": 8,
+        "new_count": 0,
+        "other_cards": 0,
+        "peak_day": 10,
+        "peak_reviews": 2,
+        "relief_text": "Your real obligation for the next 30 days is 3 reviews. Total. Of the other 0 cards \u2014 0 never started, 0 suspended or buried, 0 due later than 30 days out \u2014 every one is something you own, not something you owe.",
+        "total_cards": 3,
+        "window_days": 30,
+        "window_reviews": 3
+      }
+    },
+    {
       "class": "modern-borrowed",
       "input": {
         "cards": [
@@ -3492,7 +3532,7 @@
   "kind": "adapter",
   "note": "Builds the same Card rows, calls build_readout at the case's day number with the case's desired retention as its input and returns the HorizonReadout's fields; cases drawn under CPython 3.12.12.",
   "registry": "tools/parity-oracle/registry/spec_091.py",
-  "registry_sha256": "a185de1ccfea0c8ea9c71b97c224fe4334a685005183174a5ed6533c306548e6",
+  "registry_sha256": "3ef02d2ab6ac5f32ca7092404182bba2084e62cde6130f860f79ae10da30bc56",
   "schema": "phx.parity-golden.v1",
   "seed": 20,
   "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
