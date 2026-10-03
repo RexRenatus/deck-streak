@@ -162,7 +162,9 @@ impl Served {
             body.len()
         );
         if let Some(token) = token {
-            head.push_str(&format!("authorization: Bearer {token}\r\n"));
+            head.push_str("authorization: Bearer ");
+            head.push_str(token);
+            head.push_str("\r\n");
         }
         head.push_str("\r\n");
         let mut request = head.into_bytes();

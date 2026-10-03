@@ -78,7 +78,7 @@ pub enum ListenRefusal {
 impl fmt::Display for ListenRefusal {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {
-            Self::Unset => "it is not set",
+            Self::Unset => "it is required and is not set",
             Self::NotAnAddress => "it is not a socket address with a port",
             Self::NotLoopback => "it is not a loopback address",
         })
@@ -93,7 +93,11 @@ impl ListenAddress {
     /// `address`, or `None` when it is not a loopback address.
     #[must_use]
     pub const fn loopback(address: SocketAddr) -> Option<Self> {
-        Some(Self(address))
+        if address.ip().is_loopback() {
+            Some(Self(address))
+        } else {
+            None
+        }
     }
 
     /// The address [`LISTEN`] names.

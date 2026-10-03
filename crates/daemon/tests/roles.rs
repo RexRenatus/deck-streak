@@ -101,7 +101,7 @@ fn the_binary_runs_a_role_by_name_and_refuses_an_unknown_one() {
         let usage = first.1["message"].as_str().unwrap_or_default().to_owned();
         assert!(usage.starts_with("usage: deckstreakd <role>"), "{usage}");
         assert!(
-            usage.contains("the roles are: api, bot, job, data;"),
+            usage.contains("the roles are: api, bot, job, data, mcp;"),
             "{usage}"
         );
     }

@@ -1,7 +1,7 @@
 //! `deckstreakd`: the one release binary of the service (SPEC-025 R1; ADR-010). Its first argument
 //! names the role it runs, and each role but `data` is one systemd unit: `api`, `bot` (SPEC-026: the
-//! Telegram bot's long poll), and `job` (SPEC-027: `deckstreakd job <id>` runs one job of the table
-//! and exits). `data` is
+//! Telegram bot's long poll), `job` (SPEC-027: `deckstreakd job <id>` runs one job of the table
+//! and exits), and `mcp` (SPEC-119: the MCP adapter's server on a loopback address). `data` is
 //! the owner's, run by hand on the host (SPEC-021 R8): `deckstreakd data export` writes the export
 //! to standard output, and `deckstreakd data erase --confirm ERASE` erases.
 //!
@@ -21,7 +21,7 @@ use std::time::Duration;
 
 use anyhow::Context;
 use deck_streak_coordination::jobs::{self, Job, TABLE};
-use deck_streak_daemon::{role_api, role_bot};
+use deck_streak_daemon::{role_api, role_bot, role_mcp};
 use deck_streak_kernel::{Environment, Redactor, logging};
 
 mod role_data;
@@ -47,18 +47,21 @@ enum Role {
     Job(Job),
     /// The owner's export or erase, run by hand (SPEC-021).
     Data(DataCommand),
+    /// The MCP adapter's server (SPEC-119).
+    Mcp,
 }
 
 impl Role {
     /// Every role's name.
-    const NAMES: [&'static str; 4] = ["api", "bot", "job", "data"];
+    const NAMES: [&'static str; 5] = ["api", "bot", "job", "data", "mcp"];
 
-    /// The role `arguments` name: `api` or `bot` alone, `job` and the id of a job of the table, or
-    /// `data` and its command.
+    /// The role `arguments` name: `api`, `bot` or `mcp` alone, `job` and the id of a job of the
+    /// table, or `data` and its command.
     fn from_arguments(arguments: &[OsString]) -> Option<Self> {
         match arguments {
             [name] if name == "api" => Some(Self::Api),
             [name] if name == "bot" => Some(Self::Bot),
+            [name] if name == "mcp" => Some(Self::Mcp),
             [name, id] if name == "job" => id.to_str().and_then(jobs::job).map(Self::Job),
             [name, command @ ..] if name == "data" => {
                 DataCommand::from_arguments(command).map(Self::Data)
@@ -137,6 +140,10 @@ async fn run(role: Role, environment: &Environment, redactor: &Redactor) -> anyh
         Role::Data(command) => role_data::run(environment, command)
             .await
             .context("the data role"),
+        Role::Mcp => role_mcp::run(environment, redactor)
+            .await
+            .context("the mcp role")
+            .map(|()| 0),
     }
 }
 
