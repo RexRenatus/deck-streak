@@ -419,7 +419,7 @@ where
             Some(Preview::Listed { cards, digest }),
         ));
     }
-    if ids.len() >= SKIP_MAX_CARDS {
+    if ids.len() > SKIP_MAX_CARDS {
         return Err((FailReason::TooManyCards, None));
     }
     Ok(ids)
@@ -845,7 +845,7 @@ pub fn moved_counts(before: &Counts, after: &Counts, moved: i64) -> Option<&'sta
     if after.cards_by_queue_and_type != before.cards_by_queue_and_type {
         return Some("cards_by_queue_and_type");
     }
-    if after.review_log_rows != before.review_log_rows * moved {
+    if after.review_log_rows != before.review_log_rows + moved {
         return Some("review_log_rows");
     }
     if after.reschedule_rows != before.reschedule_rows + moved {
@@ -1085,5 +1085,5 @@ fn in_range(text: &str, low: u32, high: u32) -> bool {
         && text.bytes().all(|byte| byte.is_ascii_digit())
         && text
             .parse::<u32>()
-            .is_ok_and(|value| (low..=high.max(99)).contains(&value))
+            .is_ok_and(|value| (low..=high).contains(&value))
 }
