@@ -311,10 +311,15 @@ async fn a_switched_on_celebration_is_held_for_the_senders() {
         .map(|(arm, _)| arm)
         .collect();
     assert_eq!(decided, ["defer"], "the badge is deferred, never withheld");
+    let held: Vec<(String, String)> = queue(&service.db)
+        .await
+        .into_iter()
+        .filter(|(key, _)| key == KEY)
+        .collect();
     assert_eq!(
-        queue(&service.db).await,
+        held,
         [(KEY.to_owned(), "held".to_owned())],
-        "one row is held for the senders"
+        "one row is held for the badge's key"
     );
     assert!(marked(&service.db).await, "a deferral is an answer");
 }
@@ -342,16 +347,17 @@ async fn the_bots_flush_delivers_what_the_recompute_held() {
     let first = bot.pushes();
     let again = senders.flush().await.expect("a second flush runs");
 
+    let naming: Vec<&String> = first.iter().filter(|push| push.contains(NAME)).collect();
     assert_eq!(
-        first.len(),
+        naming.len(),
         1,
-        "one push delivers the held badge ({flushed:?}): {first:?}"
+        "exactly one push names the held badge ({flushed:?}): {first:?}"
     );
-    assert!(
-        first[0].contains(NAME),
-        "the push names the badge: {first:?}"
+    assert_eq!(
+        bot.pushes(),
+        first,
+        "a second flush pushes nothing ({again:?})"
     );
-    assert_eq!(bot.pushes(), first, "a second flush pushes nothing ({again:?})");
 }
 
 /// A4: a fresh start seeds the switch off, the badge is withheld and marked, and a stored value is

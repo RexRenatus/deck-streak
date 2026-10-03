@@ -814,7 +814,10 @@ async fn a_holding_router_holds_a_celebration_it_cannot_send() {
         reason: Reason::NoNotifier,
     };
     assert_eq!(withheld, no_notifier, "a nudge is never held");
-    assert_eq!(plain, no_notifier, "a router that does not hold is unchanged");
+    assert_eq!(
+        plain, no_notifier,
+        "a router that does not hold is unchanged"
+    );
     let queue: Vec<(String, String, String)> = harness
         .queue()
         .await
