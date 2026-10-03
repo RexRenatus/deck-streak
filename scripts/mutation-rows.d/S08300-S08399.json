@@ -9,6 +9,15 @@
         "ingest",
         "skip_record::the_migration_refuses_a_second_skip_not_undone_for_one_study_day",
         "one skip a study day is held by the table's key, so two concurrent takes write one row whatever the callers do (SPEC-083 R2, A2)"
+      ],
+      [
+        "S08328-ONE-STOP-ROW",
+        "migrations/008303_ingest_write_class_stop.sql",
+        "id INTEGER PRIMARY KEY CHECK (id = 1),",
+        "id INTEGER PRIMARY KEY,",
+        "ingest",
+        "skip_write::the_class_stop_is_one_row_and_a_second_is_refused",
+        "the class's stop is one row, held by the table's singleton key, so a second row that every other check admits is refused (SPEC-083 R36, U13, A54)"
       ]
     ],
     "MUTATIONS": [
@@ -137,6 +146,78 @@
         "pub const SKIP_BRIDGE_MONTHLY_CAP: u32 = 4;",
         "skip_record::the_skip_constants_equal_the_predecessors",
         "the monthly bridge cap the record carries is 3, the predecessor's constants.SKIP_BRIDGE_MONTHLY_CAP (SPEC-083 T12, A45)"
+      ],
+      [
+        "S08309-A-FULL-SYNC-DEMAND-ABORTS",
+        "ingest",
+        "src/skip_write.rs",
+        "WriteSync::FullSyncRequired { .. } => Err(FailReason::FullSyncRequired),",
+        "WriteSync::FullSyncRequired { .. } => Ok(()),",
+        "skip_write::a_full_sync_demand_at_the_converge_aborts_the_take_writing_nothing",
+        "a full or one-way sync demand at the take's converge aborts it before any record, backup or reschedule, in either direction (SPEC-083 R24, A25)"
+      ],
+      [
+        "S08310-ONLY-PREVIEWED-CARDS-MOVE",
+        "ingest",
+        "src/skip_write.rs",
+        ".filter(|card| previewed.contains(&card.id))",
+        ".filter(|card| card.id != 0)",
+        "skip_write::a_take_pushes_exactly_the_previewed_cards_and_their_review_log_rows",
+        "the moved set is the previewed cards the wrapped search still selects at the converge, never a card the preview did not list (SPEC-083 R21, A5)"
+      ],
+      [
+        "S08311-THE-PRIOR-STATE-FIRST",
+        "ingest",
+        "src/skip_write.rs",
+        ".record_prior(request.skip, moving, request.now)",
+        ".record_prior(request.skip, &[], request.now)",
+        "skip_write::the_prior_state_is_recorded_before_any_card_changes",
+        "each moved card's prior state is committed before the reschedule changes any card (SPEC-083 R22, A29)"
+      ],
+      [
+        "S08312-THE-CARD-GUARD",
+        "ingest",
+        "src/skip_write.rs",
+        "if ids.len() > SKIP_MAX_CARDS {",
+        "if ids.len() > SKIP_MAX_CARDS + 1 {",
+        "skip_write::the_card_guard_refuses_a_large_set_and_an_empty_set_writes_nothing",
+        "more previewed cards than the guard's 5,000 are refused with too_many_cards before any change or request (SPEC-083 R21, A36)"
+      ],
+      [
+        "S08313-A-CHANGED-PREVIEW-WRITES-NOTHING",
+        "ingest",
+        "src/skip_write.rs",
+        "if confirmed != Some(digest.as_str()) {",
+        "if confirmed.is_none() {",
+        "skip_write::the_preview_lists_the_cards_and_a_changed_list_writes_nothing",
+        "a confirm whose digest differs from the list the take reads again writes nothing and answers preview_changed, not only a confirm with none (SPEC-083 R20, A28)"
+      ],
+      [
+        "S08318-THE-WORKING-COPY-IS-DISCARDED",
+        "ingest",
+        "src/skip_write.rs",
+        "let working = directory.join(format!(\"{WORKING_PREFIX}{}.anki2\", request.skip.get()));",
+        "let working = private.clone();",
+        "skip_zero_upload::every_path_but_the_take_and_the_undo_records_zero_uploads",
+        "the take works on its own copy beside the private copy and leaves the private copy to SPEC-022's syncer (SPEC-083 R21, R28, A6)"
+      ],
+      [
+        "S08319-THE-READ-BACK-LISTS",
+        "ingest",
+        "src/skip_write.rs",
+        ".is_none_or(|studied| studied.contains(&wrote.card_id))",
+        ".is_none()",
+        "skip_write::a_card_reviewed_during_the_take_is_listed_to_the_owner",
+        "the read-back lists a moved card studied after the converge even when the push overwrote it, as well as one whose state the push did not keep (SPEC-083 R27, A34)"
+      ],
+      [
+        "S08327-THE-BACKUP-IS-OWNER-ONLY",
+        "ingest",
+        "src/skip_write.rs",
+        "const BACKUP_MODE: u32 = 0o600;",
+        "const BACKUP_MODE: u32 = 0o644;",
+        "skip_write::the_backup_sits_beside_the_copy_owner_only_and_one_is_kept",
+        "the take's backup is the owner's only, mode 0600 set by set_permissions whatever the umask, a literal cargo-mutants never mutates (SPEC-083 R34, U13, A53)"
       ]
     ]
   }
