@@ -106,6 +106,7 @@ request's CI run prints.
 | `docs/decisions/ADR-298-the-host-stand-in-is-default-deny-not-a-deny-list.md` | `repo` | added |
 | `docs/red-first/SPEC-298.md` | `repo` | added |
 | `changelog.d/test-deploy-standin-502.md` | `repo` | added |
+| `scripts/tests/test_ci_workflows.py` | `repo` | dev's read-site census places `id` and `callable` as benign builtins (the seat's ruling 42) |
 
 ## 5. What this does NOT do
 
