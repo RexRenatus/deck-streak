@@ -710,3 +710,6 @@ the lines below add to section 4 as T29 and T31 do.
   route table opens by path alone, equal to the route table, and holds that neither screen's name
   is a token. A new screen still needs a token or a place in that list. The token table itself is
   unchanged.
+- T36, section 4 also gains `crates/notifications/tests/one_router.rs` (changed): the census learns
+  the `/progress` reply's two named edges (R16), `Commands::on_message` to `progress` and
+  `Commands::progress` to `send`, by name, with no wildcard.

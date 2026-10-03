@@ -575,12 +575,13 @@ const GUARDED: [(&str, &str); 4] = [
 /// dispatch are private to it, so only it can call them.
 const COMMANDS: (&str, &str) = ("crates/bot/src/commands.rs", "crates/bot/src/commands/");
 
-/// The command handler's replies, `send` and the thirteen that send one (`export`, `ask_erase`,
+/// The command handler's replies, `send` and the fourteen that send one (`export`, `ask_erase`,
 /// `sync`, `score`, `level`, `streak`, the progression replies `badges` and `records`, SPEC-073 R18,
+/// the progress reply `progress`, SPEC-077 R16,
 /// and the drill replies `drills`, `drill`, `drill_view`, `drill_ask` and `drill_answer`, SPEC-110
 /// R16), and its dispatch, `on_message`, `on_callback` and `on_media`, which answers the owner's
 /// media with what became of its capture (SPEC-118 R9).
-const COMMAND_REPLIES: [&str; 17] = [
+const COMMAND_REPLIES: [&str; 18] = [
     "send",
     "export",
     "ask_erase",
@@ -590,6 +591,7 @@ const COMMAND_REPLIES: [&str; 17] = [
     "streak",
     "badges",
     "records",
+    "progress",
     "drills",
     "drill",
     "drill_view",
@@ -604,7 +606,7 @@ const COMMAND_REPLIES: [&str; 17] = [
 /// the handler, which dispatches an update the long poll hands it, and the dispatch, which answers
 /// it. A call anywhere else in the handler's module sends a reply the router never decides, though
 /// no update asked for it.
-const COMMAND_CALLERS: [(&str, &str); 31] = [
+const COMMAND_CALLERS: [(&str, &str); 33] = [
     ("Commands::handle", "on_message"),
     ("Commands::handle", "on_callback"),
     ("Commands::handle", "on_media"),
@@ -617,6 +619,7 @@ const COMMAND_CALLERS: [(&str, &str); 31] = [
     ("Commands::on_message", "streak"),
     ("Commands::on_message", "badges"),
     ("Commands::on_message", "records"),
+    ("Commands::on_message", "progress"),
     ("Commands::on_message", "drills"),
     ("Commands::on_message", "drill"),
     ("Commands::on_message", "drill_answer"),
@@ -631,6 +634,7 @@ const COMMAND_CALLERS: [(&str, &str); 31] = [
     ("Commands::streak", "send"),
     ("Commands::badges", "send"),
     ("Commands::records", "send"),
+    ("Commands::progress", "send"),
     ("Commands::drills", "send"),
     ("Commands::drill", "send"),
     ("Commands::drill_view", "send"),
