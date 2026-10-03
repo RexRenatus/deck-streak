@@ -1,4 +1,4 @@
-{"schema":"phx.formal.vectors.v1","entry":"Exchange","covers":"crates/progression/src/exchange.rs","anchor":"bucket","digest":"sha256:0000000000000000000000000000000000000000000000000000000000000000","vectors":777}
+{"schema":"phx.formal.vectors.v1","entry":"Exchange","covers":"crates/progression/src/exchange.rs","anchor":"bucket","digest":"sha256:8305d8b6193cdb51675f01e57b2c57aa59946d6083bf84705050e3035a62ceec","vectors":777}
 {"rows":[],"graduations":[],"rates":[]}
 {"rows":[{"day":1,"source":"quest:1","amount":5}],"graduations":[],"rates":[{"source":"quest:","total_xp":5,"graduated_cards":0,"rate_defined":false}]}
 {"rows":[{"day":1,"source":"quest:2","amount":7}],"graduations":[],"rates":[{"source":"quest:","total_xp":7,"graduated_cards":0,"rate_defined":false}]}
