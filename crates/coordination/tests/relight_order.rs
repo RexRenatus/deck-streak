@@ -22,7 +22,9 @@ use deck_streak_ingest::reader::{Card, CollectionData, Review};
 use deck_streak_kernel::{
     Db, KernelError, ManualClock, PortFuture, StudyDay, StudyDayRule, Track, UtcMillis,
 };
-use deck_streak_notifications::{BotTransport, Pass, Policy, PushFuture, Pushed, Router};
+use deck_streak_notifications::{
+    BotTransport, Pass, Policy, PushFuture, Pushed, Router, owner_message,
+};
 use sqlx::{Row, SqliteConnection};
 use tempfile::TempDir;
 
@@ -146,6 +148,21 @@ impl BotTransport for Recording {
             Pushed::Delivered
         })
     }
+
+    fn push_reaction<'a>(
+        &'a self,
+        _pass: &'a Pass,
+        message_id: i64,
+        emoji: &'a str,
+    ) -> PushFuture<'a> {
+        Box::pin(async move {
+            self.0
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner)
+                .push(format!("reaction to {message_id}: {emoji}"));
+            Pushed::Delivered
+        })
+    }
 }
 
 /// One run of the daemon: its fold, the handle its cycle routes the relights from, and the failure
@@ -232,6 +249,9 @@ async fn cycle(
         Ok(today) => today,
         Err(ended) => return ended,
     };
+    owner_message::record(&world.db, 1, UtcMillis::from_epoch_millis(now))
+        .await
+        .expect("the owner's sync message is recorded");
     route_due_relights(&world.router, &process.due, &world.db, today)
         .await
         .expect("the due relights route");
