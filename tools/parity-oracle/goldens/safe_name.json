@@ -1,0 +1,156 @@
+{
+  "cases": [
+    {
+      "class": "plain",
+      "input": {
+        "name": "Example field"
+      },
+      "output": "Example field"
+    },
+    {
+      "class": "empty",
+      "input": {
+        "name": ""
+      },
+      "output": ""
+    },
+    {
+      "class": "html",
+      "input": {
+        "name": "<b>Example</b> & \"quoted\" 'single'"
+      },
+      "output": "&lt;b&gt;Example&lt;/b&gt; &amp; &quot;quoted&quot; &#x27;single&#x27;"
+    },
+    {
+      "class": "control_low",
+      "input": {
+        "name": "a\u0000b\u0001c\bd"
+      },
+      "output": "a\ufffdb\ufffdc\ufffdd"
+    },
+    {
+      "class": "control_kept",
+      "input": {
+        "name": "a\tb\nc\rd"
+      },
+      "output": "a\tb\nc\rd"
+    },
+    {
+      "class": "control_vt_ff",
+      "input": {
+        "name": "a\u000bb\fc"
+      },
+      "output": "a\ufffdb\ufffdc"
+    },
+    {
+      "class": "control_high",
+      "input": {
+        "name": "a\u000eb\u001fc\u007fd"
+      },
+      "output": "a\ufffdb\ufffdc\ufffdd"
+    },
+    {
+      "class": "c1_kept",
+      "input": {
+        "name": "a\u0080b\u009fc"
+      },
+      "output": "a\u0080b\u009fc"
+    },
+    {
+      "class": "unicode",
+      "input": {
+        "name": "\u00c9crit \u4f8b \u2028 \ud83c\udf11"
+      },
+      "output": "\u00c9crit \u4f8b \u2028 \ud83c\udf11"
+    },
+    {
+      "class": "replacement_then_html",
+      "input": {
+        "name": "\u0001<x>"
+      },
+      "output": "\ufffd&lt;x&gt;"
+    },
+    {
+      "input": {
+        "name": "\u000b\u007f\u007f >\u000b\u000b\u00e9Z\u00e9&"
+      },
+      "output": "\ufffd\ufffd\ufffd &gt;\ufffd\ufffd\u00e9Z\u00e9&amp;"
+    },
+    {
+      "input": {
+        "name": " a\"\"ZZ &'"
+      },
+      "output": " a&quot;&quot;ZZ &amp;&#x27;"
+    },
+    {
+      "input": {
+        "name": "'\"<<&\u000b\u000b&&"
+      },
+      "output": "&#x27;&quot;&lt;&lt;&amp;\ufffd\ufffd&amp;&amp;"
+    },
+    {
+      "input": {
+        "name": "Z\u000b\u0000\u007f\u00e9'"
+      },
+      "output": "Z\ufffd\ufffd\ufffd\u00e9&#x27;"
+    },
+    {
+      "input": {
+        "name": "Z<\u0007<a<"
+      },
+      "output": "Z&lt;\ufffd&lt;a&lt;"
+    },
+    {
+      "input": {
+        "name": "Z"
+      },
+      "output": "Z"
+    },
+    {
+      "input": {
+        "name": ">\u001f\u007f"
+      },
+      "output": "&gt;\ufffd\ufffd"
+    },
+    {
+      "input": {
+        "name": ">\u001f> "
+      },
+      "output": "&gt;\ufffd&gt; "
+    },
+    {
+      "input": {
+        "name": "Za>\u001f<\u00e9\u00e9<\u0007"
+      },
+      "output": "Za&gt;\ufffd&lt;\u00e9\u00e9&lt;\ufffd"
+    },
+    {
+      "input": {
+        "name": "aa\u007f"
+      },
+      "output": "aa\ufffd"
+    },
+    {
+      "input": {
+        "name": "\u0007>> \u001f\u000b&\u0007\u001f'"
+      },
+      "output": "\ufffd&gt;&gt; \ufffd\ufffd&amp;\ufffd\ufffd&#x27;"
+    },
+    {
+      "input": {
+        "name": "\u000b>"
+      },
+      "output": "\ufffd&gt;"
+    }
+  ],
+  "function": "darkfields._safe_name",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "function",
+  "registry": "tools/parity-oracle/registry/spec_094.py",
+  "registry_sha256": "65b653c5282152fc891e68568d1df2e994b7beb4822b1cd96a6bbac9b2bae5e6",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

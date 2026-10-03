@@ -1,0 +1,21 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT COUNT(*) AS \"count!: i64\" FROM notification_queue\n           WHERE state IN ('held', 'sending') AND kind = ? AND study_day >= ? AND tier_pending >= ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "count!: i64",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "6412a5f769e0cf6b0da3b46e9bab204e907651a669d2ff9d752edaacc8fb5d9c"
+}

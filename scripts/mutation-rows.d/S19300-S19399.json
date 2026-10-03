@@ -1,0 +1,806 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S19300-A-SHEBANG-AFTER-A-BYTE-ORDER-MARK-IS-SKIPPED",
+        "scripts/tests/test_setting_shapes.py",
+        "    if text.startswith(\"#!\", at) and not following(text, at + 2).startswith(\"[\"):\n",
+        "    if text.startswith(\"#!\") and not following(text, at + 2).startswith(\"[\"):\n",
+        "a shebang line that follows a byte order mark is skipped, so the inner attributes below it still decide whether the file is compiled under test (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19301-THE-WALK-FOLLOWS-NO-UNDECIDED-DECLARATION",
+        "scripts/tests/test_setting_shapes.py",
+        "            if kept is True:\n                todo.append(path)\n",
+        "            if kept is not False:\n                todo.append(path)\n",
+        "a declaration whose attribute leaves its file undecided is not followed by the walk, so its file is not read as reached (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19302-A-RAW-PATH-WORD-CHOOSES-A-FILE",
+        "scripts/tests/test_setting_shapes.py",
+        "        if run is None or any(w.removeprefix(\"r#\") == \"path\" for each in run for w in each):\n",
+        "        if run is None or any(w == \"path\" for each in run for w in each):\n",
+        "a `path` attribute spelled as a raw identifier chooses a file like any other, so its module is not read (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19303-A-TRIPLE-STAR-COMMENT-IS-NO-DOC-COMMENT",
+        "scripts/tests/test_setting_shapes.py",
+        "    if opening == \"///\" and after != \"/\" or opening == \"/**\" and after not in (\"*\", \"/\"):\n",
+        "    if opening == \"///\" and after != \"/\" or opening == \"/**\" and after != \"/\":\n",
+        "a block comment that opens with three stars is a plain comment, not a doc comment, so it is skipped before an inner attribute (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19304-A-CFG-ATTR-APPLIES-EVERY-ATTRIBUTE",
+        "scripts/tests/test_setting_shapes.py",
+        "    kept = [condition(attribute, test) for attribute in applied(words[at + 1 : -1])]\n",
+        "    kept = [condition(attribute, test) for attribute in applied(words[at + 1 : -1])[:1]]\n",
+        "a `cfg_attr` applies every attribute it lists once its predicate holds, not only the first (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19305-A-INLINE-MODULE-NAMES-JOIN-THE-MODULE-PATH",
+        "scripts/tests/test_setting_shapes.py",
+        "None if names is None or moved else names + (name,)",
+        "None if names is None or moved else names",
+        "a module declared inside an inline module is read from the directory of the inline module's name, not beside the file (SPEC-192 A16, #433)",
+        "test_setting_shapes.TheGuardResolvesAModuleDeclaredInsideAnInlineModule.test_a_declaration_inside_inline_modules_is_read_from_the_inline_path"
+      ],
+      [
+        "S19306-A-NESTED-PATH-IS-BELOW-THE-MODULE-DIRECTORY",
+        "scripts/tests/test_setting_shapes.py",
+        "paths = [folder.joinpath(*names) / lit for folder in folders for lit in literals]",
+        "paths = [folder / lit for folder in folders for lit in literals]",
+        "a `#[path]` below an inline module is read relative to the module directory the inline names make (SPEC-192 A16, #433)",
+        "test_setting_shapes.TheGuardResolvesAModuleDeclaredInsideAnInlineModule.test_a_declaration_with_a_path_attribute_is_read_from_the_path_below_the_inline_path"
+      ],
+      [
+        "S19307-A-MACRO-THAT-DECLARES-A-TEST-MODULE-REFUSES-ITS-FILE",
+        "scripts/tests/test_setting_shapes.py",
+        "        if hit:\n            crate",
+        "        if False:\n            crate",
+        "a crate file whose `macro_rules!` body declares a `cfg(test)` module is refused by name, since the guard does not expand it (SPEC-192 A17, #441)",
+        "test_setting_shapes.TheGuardRefusesAMacroThatDeclaresATestModule.test_a_macro_body_with_a_cfg_test_module_is_refused_by_its_file"
+      ],
+      [
+        "S19308-A-RIVAL-DECLARATION-WITHOUT-TEST-REFUSES-THE-FILE",
+        "scripts/tests/test_setting_shapes.py",
+        "and compiled_without_test(attributes)",
+        "and not compiled_without_test(attributes)",
+        "a test module file that another visible declaration compiles without `test` is not read (SPEC-192 A18, #458)",
+        "test_setting_shapes.TheGuardRefusesAModuleFileThatAnotherDeclarationCompilesWithoutTest.test_a_module_declared_beside_one_with_not_test_is_refused"
+      ],
+      [
+        "S19309-AN-UNDECIDED-RIVAL-COUNTS-AS-COMPILED",
+        "scripts/tests/test_setting_shapes.py",
+        "KLEENE[\"all\"]([condition(each, False) for each in attributes]) is not False",
+        "KLEENE[\"all\"]([condition(each, False) for each in attributes]) is True",
+        "a rival declaration whose attributes leave `test` undecided (a feature, `all()`) still counts as compiling the file without `test` (SPEC-192 A18, #458)",
+        "test_setting_shapes.TheGuardRefusesAModuleFileThatAnotherDeclarationCompilesWithoutTest.test_a_variant_that_compiles_the_file_without_test_is_refused"
+      ],
+      [
+        "S19310-A-TARGET-FILES-OWN-INNER-ATTRIBUTES-JOIN-ITS-RUN",
+        "scripts/tests/test_setting_shapes.py",
+        "                out.append((target, kept))\n",
+        "                out.append((target, reach))\n",
+        "a file a declaration reaches is judged with the inner attributes that open it, so a file that opens with `#![cfg(test)]` is compiled only under test and is no rival's (SPEC-192 A16, #433)",
+        "test_setting_shapes.TheGuardResolvesAModuleDeclaredInsideAnInlineModule.test_a_file_whose_own_inner_attribute_keeps_it_under_test_is_read"
+      ],
+      [
+        "S19311-A-DECLARATION-WHOSE-FILE-IS-UNKNOWN-NAMES-EVERY-FILE",
+        "scripts/tests/test_setting_shapes.py",
+        "                out.append((None, held))\n",
+        "                pass\n",
+        "a declaration whose file the guard cannot name (an escaped or raw path literal, a moved module directory, a run it cannot read) is taken to name every file, so it refuses each one it compiles without `test` (SPEC-192 A18, #458)",
+        "test_setting_shapes.TheGuardRefusesAModuleFileThatAnotherDeclarationCompilesWithoutTest.test_a_rival_whose_path_the_guard_cannot_read_is_refused"
+      ],
+      [
+        "S19312-A-CFG-ATTR-PATH-REACHES-ITS-FILE-ONLY-UNDER-ITS-PREDICATE",
+        "scripts/tests/test_setting_shapes.py",
+        "    return [(each[2:end], named, defaults)]\n",
+        "    return []\n",
+        "a declaration whose one path-naming attribute is `cfg_attr(P, path = ...)` reaches the file it names only under P and its default file only without P (SPEC-192 A18, #458)",
+        "test_setting_shapes.TheGuardRefusesAModuleFileThatAnotherDeclarationCompilesWithoutTest.test_a_file_only_test_reaches_by_its_own_attribute_or_a_cfg_attr_path_is_read"
+      ],
+      [
+        "S19313-AN-INNER-ATTRIBUTE-OF-A-MACRO-MODULE-IS-READ",
+        "scripts/tests/test_setting_shapes.py",
+        "                        words.update(each)\n",
+        "                        pass\n",
+        "an inner attribute that opens a macro-written module's braces is read with its outer ones, so `mod x { #![cfg(test)] }` in a `macro_rules!` body refuses its file (SPEC-192 A17, #441)",
+        "test_setting_shapes.TheGuardRefusesAMacroThatDeclaresATestModule.test_an_inner_attribute_or_an_attribute_before_a_repetition_is_read"
+      ],
+      [
+        "S19314-AN-ATTRIBUTE-BEFORE-A-MACRO-REPETITION-IS-READ",
+        "scripts/tests/test_setting_shapes.py",
+        "                        if word == \"(\" and found[back - 1][:2] == (\"punct\", \"$\"):\n",
+        "                        if False:\n",
+        "an attribute before a `$( ... )` repetition that holds a module reaches that module, so `#[cfg(test)] $(mod $n {})*` refuses its file (SPEC-192 A17, #441)",
+        "test_setting_shapes.TheGuardRefusesAMacroThatDeclaresATestModule.test_an_inner_attribute_or_an_attribute_before_a_repetition_is_read"
+      ],
+      [
+        "S19315-AN-ATTRIBUTE-A-MACRO-PASSES-IN-REFUSES-ITS-FILE",
+        "scripts/tests/test_setting_shapes.py",
+        "                    reasons.append(\"meta\")\n",
+        "                    pass\n",
+        "a module a macro declares under an attribute holding a `$` (one the macro passes in) refuses its file by name, since the guard cannot read the attribute it expands to (SPEC-192 A21, #535)",
+        "test_setting_shapes.TheGuardRefusesASpellingItDoesNotExpand.test_an_attribute_a_macro_passes_in_is_refused_by_its_file"
+      ],
+      [
+        "S19316-A-PATH-A-MACRO-NAMES-REFUSES-ITS-FILE",
+        "scripts/tests/test_setting_shapes.py",
+        "                    reasons.append(\"path\")\n",
+        "                    pass\n",
+        "a module a macro declares with any spelling of `path` refuses its file by name, so a `#[path]` rival written by a macro is never missed (SPEC-192 A21, #535)",
+        "test_setting_shapes.TheGuardRefusesASpellingItDoesNotExpand.test_a_path_rival_a_macro_declares_is_refused_by_its_file"
+      ],
+      [
+        "S19317-AN-INVOCATION-PASSING-A-TEST-MODULE-REFUSES-ITS-FILE",
+        "scripts/tests/test_setting_shapes.py",
+        "                        reasons.append(\"invocation\")\n",
+        "                        pass\n",
+        "a macro invocation whose tokens hold a `cfg(test)` module refuses its file by name, since a pass-through macro compiles it unread (SPEC-192 A21, #535)",
+        "test_setting_shapes.TheGuardRefusesASpellingItDoesNotExpand.test_a_macro_that_passes_a_module_through_is_refused_by_its_file"
+      ],
+      [
+        "S19318-AN-IMPL-A-MACRO-WRITES-REFUSES-ITS-FILE",
+        "scripts/tests/test_setting_shapes.py",
+        "                    reasons.append(\"impl\")\n",
+        "                    pass\n",
+        "an implementation of `Setting` (or of a metavariable trait) inside a macro's tokens refuses its file by name, since its shape is never read (SPEC-192 A19, #436)",
+        "test_setting_shapes.TheGuardReadsAnImplementationByToken.test_every_spelling_is_read_or_refused_as_written"
+      ],
+      [
+        "S19319-A-BLOCK-SCOPED-MODULE-REFUSES-ITS-FILE",
+        "scripts/tests/test_setting_shapes.py",
+        "                reasons.append(\"block\")\n",
+        "                pass\n",
+        "an out-of-line module declared in a block that may compile without `test` refuses its file by name, since block-scope module paths are not modelled (SPEC-192 A21, #535)",
+        "test_setting_shapes.TheGuardRefusesASpellingItDoesNotExpand.test_a_block_scoped_declaration_is_refused_by_its_file"
+      ],
+      [
+        "S19320-AN-INCLUDE-REFUSES-ITS-FILE",
+        "scripts/tests/test_setting_shapes.py",
+        "                reasons.append(\"include\")\n",
+        "                pass\n",
+        "`include!` refuses its file by name, since the guard does not follow the text it compiles in (SPEC-192 A21, #535)",
+        "test_setting_shapes.TheGuardRefusesASpellingItDoesNotExpand.test_an_include_is_refused_by_its_file"
+      ],
+      [
+        "S19321-A-MACRO-MODULE-PROVEN-NO-TEST-MODULE-IS-READ",
+        "scripts/tests/test_setting_shapes.py",
+        "and not proven(None if run is None else run + inner)",
+        "and True",
+        "a macro module the evaluator proves is no test-only module (`cfg(not(test))`) is read rather than refused, while an undecided one stays refused (SPEC-192 A22, #536)",
+        "test_setting_shapes.TheGuardReadsATreeItOverRefused.test_a_macro_module_that_is_no_test_only_module_is_read"
+      ],
+      [
+        "S19322-A-PROOF-HOLDS-WITHOUT-TEST-TOO",
+        "scripts/tests/test_setting_shapes.py",
+        "    return rustc_keeps(attributes, True) is False or rustc_keeps(attributes, False) is True\n",
+        "    return rustc_keeps(attributes, True) is False\n",
+        "a macro module the evaluator keeps without `test` (`cfg(any(test, true))`) is proven no test-only module, the second half of the proof (SPEC-192 A22, #536)",
+        "test_setting_shapes.TheGuardReadsATreeItOverRefused.test_a_macro_module_that_is_no_test_only_module_is_read"
+      ],
+      [
+        "S19323-A-MACRO-OUT-OF-LINE-MODULE-IS-A-RIVAL",
+        "scripts/tests/test_setting_shapes.py",
+        "                    out.append((None, None))\n",
+        "                    pass\n",
+        "an out-of-line module a macro declares, unless proven removed without `test`, is a rival whose file the guard cannot name, so the narrowing reopens no rival (SPEC-192 A22, #536)",
+        "test_setting_shapes.TheGuardReadsATreeItOverRefused.test_a_module_a_macro_declares_without_test_still_refuses_the_test_file"
+      ],
+      [
+        "S19324-A-PIN-COUNTS-ONLY-IN-A-COMPILED-ITEM",
+        "scripts/tests/test_setting_shapes.py",
+        "            else compiled_spans(text, base / \"tests\" in path.parents)\n",
+        "            else [(0, len(bare))]\n",
+        "a test file's pin counts only in an item rustc compiles under `--cfg test`, not anywhere in the file (SPEC-192 A20, #449)",
+        "test_setting_shapes.TheGuardReadsOnlyTheItemsRustcCompilesUnderTest.test_a_pin_counts_only_in_a_compiled_item_of_every_file_kind"
+      ],
+      [
+        "S19325-A-DECOY-IN-THE-OTHER-FOLDER-IS-NO-CANDIDATE",
+        "scripts/tests/test_setting_shapes.py",
+        "if path.is_file() and (homes is None or folder in homes)",
+        "if path.is_file()",
+        "a top-level module is read only from its file's module directory the walk from the crate roots gives it, so a decoy in the other folder is no candidate (SPEC-192 A22, #536)",
+        "test_setting_shapes.TheGuardReadsATreeItOverRefused.test_a_decoy_beside_a_non_mod_rs_file_does_not_refuse_its_module"
+      ],
+      [
+        "S19326-A-CFG-ATTR-PATH-BELOW-AN-INLINE-MODULE-IS-CHOSEN",
+        "scripts/tests/test_setting_shapes.py",
+        "                found = cfg_attr_choice(own, names, name, run, homes)\n",
+        "                found = below(own, names, name, run, homes)\n",
+        "a `cfg_attr(P, path = ...)` below an inline module reads the one file `P` chooses under `test` (SPEC-192 A22, #536)",
+        "test_setting_shapes.TheGuardReadsATreeItOverRefused.test_a_cfg_attr_path_below_an_inline_module_is_read"
+      ],
+      [
+        "S19327-AN-ALIAS-OF-SETTING-IS-READ",
+        "scripts/tests/test_setting_shapes.py",
+        "if found[i][:2] == (\"word\", \"as\") and found[i - 1][0] == found[i + 1][0] == \"word\"",
+        "if False",
+        "a `use ... as` alias of `Setting`, followed through a chain, names the trait an implementation is read by (SPEC-192 A19, #436)",
+        "test_setting_shapes.TheGuardReadsAnImplementationByToken.test_every_spelling_is_read_or_refused_as_written"
+      ],
+      [
+        "S19328-AN-IMPL-IN-A-MACRO-IS-NOT-READ-AS-ONE",
+        "scripts/tests/test_setting_shapes.py",
+        "read = None if at in hidden else trait_impl(tokens, pairs, at)",
+        "read = trait_impl(tokens, pairs, at)",
+        "an implementation inside a macro's tokens is not read as one (its file is refused instead), so a metavariable type is never named as an implementation (SPEC-192 A19, #436)",
+        "test_setting_shapes.TheGuardReadsAnImplementationByToken.test_every_spelling_is_read_or_refused_as_written"
+      ],
+      [
+        "S19329-THE-IMPLEMENTATION-READER-BRANCH-1",
+        "scripts/tests/test_setting_shapes.py",
+        "            if read is None or read[0] not in names:\n",
+        "            if False:\n",
+        "the implementation reader keeps its branch on `read is None or read[0] not in names`, which decides a verdict (SPEC-192 A19, #436)",
+        "test_setting_shapes.TheGuardJudgesAPlantedTree.test_a_shape_a_row_of_the_implementations_own_file_finds_is_pinned"
+      ],
+      [
+        "S19330-THE-ALIAS-READER-FILTER-1",
+        "scripts/tests/test_setting_shapes.py",
+        "            end = next((i for i in range(at, len(found)) if found[i][:2] == (\"punct\", \";\")), at)\n",
+        "            end = next((i for i in range(at, len(found)) if True), at)\n",
+        "the `use ... as` alias reader keeps its filter `found[i][:2] == ('punct', ';')`, which decides a verdict (SPEC-192 A19, #436)",
+        "test_setting_shapes.TheGuardReadsAnImplementationByToken.test_every_spelling_is_read_or_refused_as_written"
+      ],
+      [
+        "S19331-THE-ALIAS-READER-LOOP-2",
+        "scripts/tests/test_setting_shapes.py",
+        "    while True:\n",
+        "    while False:\n",
+        "the `use ... as` alias reader keeps its loop on `True`, which decides a verdict (SPEC-192 A19, #436)",
+        "test_setting_shapes.TheGuardJudgesAPlantedTree.test_a_shape_a_row_of_the_implementations_own_file_finds_is_pinned"
+      ],
+      [
+        "S19332-THE-IMPL-HEAD-READER-BRANCH-1",
+        "scripts/tests/test_setting_shapes.py",
+        "    if found[at][:2] != (\"word\", \"impl\"):\n",
+        "    if False:\n",
+        "the `impl ... for` head reader keeps its branch on `found[at][:2] != ('word', 'impl')`, which decides a verdict (SPEC-192 A19, #436)",
+        "test_setting_shapes.TheGuardReadsRustSource.test_a_test_attribute_on_a_use_opens_no_test_module"
+      ],
+      [
+        "S19333-THE-IMPL-HEAD-READER-LOOP-2",
+        "scripts/tests/test_setting_shapes.py",
+        "    while brace < len(found) and found[brace][:2] != (\"open\", \"{\"):\n",
+        "    while False:\n",
+        "the `impl ... for` head reader keeps its loop on `brace < len(found) and found[brace][:2] != ('open', '{')`, which decides a verdict (SPEC-192 A19, #436)",
+        "test_setting_shapes.TheGuardReadsAnImplementationByToken.test_every_spelling_is_read_or_refused_as_written"
+      ],
+      [
+        "S19334-THE-GENERIC-SKIPPER-BRANCH-1",
+        "scripts/tests/test_setting_shapes.py",
+        "        if (kind, word) == (\"punct\", \"<\"):\n",
+        "        if False:\n",
+        "the generic-argument skipper keeps its branch on `(kind, word) == ('punct', '<')`, which decides a verdict (SPEC-192 A19, #436)",
+        "test_setting_shapes.TheGuardJudgesAPlantedTree.test_a_generic_implementation_is_examined"
+      ],
+      [
+        "S19335-THE-GENERIC-SKIPPER-BRANCH-2",
+        "scripts/tests/test_setting_shapes.py",
+        "        elif (kind, word) == (\"punct\", \">\") and found[at - 1][:2] != (\"punct\", \"-\"):\n",
+        "        elif False:\n",
+        "the generic-argument skipper keeps its branch on `(kind, word) == ('punct', '>') and found[at - 1][:2] != ('pun...`, which decides a verdict (SPEC-192 A19, #436)",
+        "test_setting_shapes.TheGuardJudgesAPlantedTree.test_a_generic_implementation_is_examined"
+      ],
+      [
+        "S19336-THE-GENERIC-SKIPPER-BRANCH-3",
+        "scripts/tests/test_setting_shapes.py",
+        "            if depth == 0:\n                return at + 1\n",
+        "            if False:\n                return at + 1\n",
+        "the generic-argument skipper keeps its branch on `depth == 0`, which decides a verdict (SPEC-192 A19, #436)",
+        "test_setting_shapes.TheGuardJudgesAPlantedTree.test_a_generic_implementation_is_examined"
+      ],
+      [
+        "S19337-THE-GENERIC-SKIPPER-CHOICE-4",
+        "scripts/tests/test_setting_shapes.py",
+        "        at = pairs[at] + 1 if kind == \"open\" else at + 1\n    return at\n",
+        "        at = pairs[at] + 1 if False else at + 1\n    return at\n",
+        "the generic-argument skipper keeps its choice on `pairs[at] + 1 if kind == 'open' else at + 1`, which decides a verdict (SPEC-192 A19, #436)",
+        "test_setting_shapes.TheGuardReadsAnImplementationByToken.test_every_spelling_is_read_or_refused_as_written"
+      ],
+      [
+        "S19338-THE-TRAIT-PATH-READER-LOOP-1",
+        "scripts/tests/test_setting_shapes.py",
+        "    while at < len(found):\n        kind, text = found[at][:2]\n",
+        "    while False:\n        kind, text = found[at][:2]\n",
+        "the trait-path reader keeps its loop on `at < len(found)`, which decides a verdict (SPEC-192 A19, #436)",
+        "test_setting_shapes.TheGuardJudgesAPlantedTree.test_a_shape_a_row_of_the_implementations_own_file_finds_is_pinned"
+      ],
+      [
+        "S19339-THE-TRAIT-PATH-READER-BRANCH-2",
+        "scripts/tests/test_setting_shapes.py",
+        "        if (\n            kind == \"close\"\n            or depth == 0\n            and (\n                kind == \"word\" and text in stops or (kind, text) in ((\"open\", \"{\"), (\"punct\", \";\"))\n            )\n",
+        "        if (\n            False\n",
+        "the trait-path reader keeps its branch on `kind == 'close' or (depth == 0 and (kind == 'word' and text i...`, which decides a verdict (SPEC-192 A19, #436)",
+        "test_setting_shapes.TheGuardJudgesAPlantedTree.test_a_shape_a_row_of_the_implementations_own_file_finds_is_pinned"
+      ],
+      [
+        "S19340-THE-TRAIT-PATH-READER-BRANCH-3",
+        "scripts/tests/test_setting_shapes.py",
+        "        if (kind, text) == (\"punct\", \"<\"):\n            depth += 1\n        elif (kind, text) == (\"punct\", \">\") and found[at - 1][:2] != (\"punct\", \"-\"):\n            depth -= 1\n        elif kind == \"word\" and depth == 0:\n",
+        "        if False:\n            depth += 1\n        elif (kind, text) == (\"punct\", \">\") and found[at - 1][:2] != (\"punct\", \"-\"):\n            depth -= 1\n        elif kind == \"word\" and depth == 0:\n",
+        "the trait-path reader keeps its branch on `(kind, text) == ('punct', '<')`, which decides a verdict (SPEC-192 A19, #436)",
+        "test_setting_shapes.TheGuardJudgesAPlantedTree.test_a_generic_implementation_is_examined"
+      ],
+      [
+        "S19341-THE-TRAIT-PATH-READER-BRANCH-4",
+        "scripts/tests/test_setting_shapes.py",
+        "        elif (kind, text) == (\"punct\", \">\") and found[at - 1][:2] != (\"punct\", \"-\"):\n            depth -= 1\n        elif kind == \"word\" and depth == 0:\n",
+        "        elif False:\n            depth -= 1\n        elif kind == \"word\" and depth == 0:\n",
+        "the trait-path reader keeps its branch on `(kind, text) == ('punct', '>') and found[at - 1][:2] != ('pun...`, which decides a verdict (SPEC-192 A19, #436)",
+        "test_setting_shapes.TheGuardJudgesAPlantedTree.test_a_generic_implementation_is_examined"
+      ],
+      [
+        "S19342-THE-TRAIT-PATH-READER-BRANCH-5",
+        "scripts/tests/test_setting_shapes.py",
+        "        elif kind == \"word\" and depth == 0:\n",
+        "        elif False:\n",
+        "the trait-path reader keeps its branch on `kind == 'word' and depth == 0`, which decides a verdict (SPEC-192 A19, #436)",
+        "test_setting_shapes.TheGuardJudgesAPlantedTree.test_a_shape_a_row_of_the_implementations_own_file_finds_is_pinned"
+      ],
+      [
+        "S19343-THE-TRAIT-PATH-READER-CHOICE-6",
+        "scripts/tests/test_setting_shapes.py",
+        "            word = (\"$\" if found[at - 1][:2] == (\"punct\", \"$\") else \"\") + unraw(text)\n",
+        "            word = (\"$\" if False else \"\") + unraw(text)\n",
+        "the trait-path reader keeps its choice on `'$' if found[at - 1][:2] == ('punct', '$') else ''`, which decides a verdict (SPEC-192 A19, #436)",
+        "test_setting_shapes.TheGuardReadsRustSource.test_a_macro_implementation_is_examined"
+      ],
+      [
+        "S19344-THE-MACRO-IMPL-HEAD-BRANCH-1",
+        "scripts/tests/test_setting_shapes.py",
+        "    if found[at][:2] == (\"word\", \"impl\"):\n",
+        "    if False:\n",
+        "the reader of an `impl` head a macro writes keeps its branch on `found[at][:2] == ('word', 'impl')`, which decides a verdict (SPEC-192 A19, #436)",
+        "test_setting_shapes.TheGuardReadsAnImplementationByToken.test_every_spelling_is_read_or_refused_as_written"
+      ],
+      [
+        "S19345-THE-MACRO-IMPL-HEAD-ELSE-2",
+        "scripts/tests/test_setting_shapes.py",
+        "    elif found[at][:2] == (\"word\", \"for\") and not looping(found, pairs, at):\n",
+        "    elif True:\n",
+        "the reader of an `impl` head a macro writes keeps its `else` of `found[at][:2] == ('word', 'for') and (not looping(found, pair...`, which decides a verdict (SPEC-192 A19, #436)",
+        "test_setting_shapes.TheGuardRefusesAMacroThatDeclaresATestModule.test_the_refusal_names_the_crate_and_the_file"
+      ],
+      [
+        "S19346-THE-MACRO-IMPL-HEAD-BRANCH-3",
+        "scripts/tests/test_setting_shapes.py",
+        "    if stop < len(found) and found[stop][:2] == (\"word\", \"for\"):\n",
+        "    if False:\n",
+        "the reader of an `impl` head a macro writes keeps its branch on `stop < len(found) and found[stop][:2] == ('word', 'for')`, which decides a verdict (SPEC-192 A19, #436)",
+        "test_setting_shapes.TheGuardReadsAnImplementationByToken.test_every_spelling_is_read_or_refused_as_written"
+      ],
+      [
+        "S19347-THE-MACRO-IMPL-HEAD-TEST-4",
+        "scripts/tests/test_setting_shapes.py",
+        "        return trait is None or trait in names or trait.startswith(\"$\") or \"$(\" in head\n",
+        "        return not (trait is None or trait in names or trait.startswith(\"$\") or \"$(\" in head)\n",
+        "the reader of an `impl` head a macro writes keeps its test `return trait is None or trait in names or trait.startswith('$...`, which decides a verdict (SPEC-192 A19, #436)",
+        "test_setting_shapes.TheGuardReadsAnImplementationByToken.test_every_spelling_is_read_or_refused_as_written"
+      ],
+      [
+        "S19348-THE-MACRO-IMPL-HEAD-BRANCH-5",
+        "scripts/tests/test_setting_shapes.py",
+        "    if stop < len(found) and found[stop][:2] == (\"open\", \"{\"):\n",
+        "    if False:\n",
+        "the reader of an `impl` head a macro writes keeps its branch on `stop < len(found) and found[stop][:2] == ('open', '{')`, which decides a verdict (SPEC-192 A19, #436)",
+        "test_setting_shapes.TheGuardReadsAnImplementationByToken.test_every_spelling_is_read_or_refused_as_written"
+      ],
+      [
+        "S19349-THE-MACRO-IMPL-HEAD-TEST-6",
+        "scripts/tests/test_setting_shapes.py",
+        "        return \"$(\" in head or \"$\" in head and len(head) > 1\n",
+        "        return not (\"$(\" in head or \"$\" in head and len(head) > 1)\n",
+        "the reader of an `impl` head a macro writes keeps its test `return '$(' in head or ('$' in head and len(head) > 1)`, which decides a verdict (SPEC-192 A19, #436)",
+        "test_setting_shapes.TheGuardReadsAnImplementationByToken.test_every_spelling_is_read_or_refused_as_written"
+      ],
+      [
+        "S19350-THE-PASSED-IN-TOKEN-LOOP-1",
+        "scripts/tests/test_setting_shapes.py",
+        "    while at < stop:\n",
+        "    while False:\n",
+        "the reader of a token a macro passes into an `impl` head keeps its loop on `at < stop`, which decides a verdict (SPEC-192 A19, #436)",
+        "test_setting_shapes.TheGuardReadsAnImplementationByToken.test_every_spelling_is_read_or_refused_as_written"
+      ],
+      [
+        "S19351-THE-PASSED-IN-TOKEN-BRANCH-2",
+        "scripts/tests/test_setting_shapes.py",
+        "        elif depth == 0 and is_dollar(found[at]) and at + 1 < stop:\n",
+        "        elif False:\n",
+        "the reader of a token a macro passes into an `impl` head keeps its branch on `depth == 0 and is_dollar(found[at]) and (at + 1 < stop)`, which decides a verdict (SPEC-192 A19, #436)",
+        "test_setting_shapes.TheGuardReadsAnImplementationByToken.test_every_spelling_is_read_or_refused_as_written"
+      ],
+      [
+        "S19352-THE-PASSED-IN-TOKEN-BRANCH-3",
+        "scripts/tests/test_setting_shapes.py",
+        "            elif unraw(found[at + 1][1]) != \"crate\":\n",
+        "            elif False:\n",
+        "the reader of a token a macro passes into an `impl` head keeps its branch on `unraw(found[at + 1][1]) != 'crate'`, which decides a verdict (SPEC-192 A19, #436)",
+        "test_setting_shapes.TheGuardReadsAnImplementationByToken.test_every_spelling_is_read_or_refused_as_written"
+      ],
+      [
+        "S19353-THE-PASSED-IN-TOKEN-BRANCH-4",
+        "scripts/tests/test_setting_shapes.py",
+        "        elif depth == 0 and kind == \"word\":\n",
+        "        elif False:\n",
+        "the reader of a token a macro passes into an `impl` head keeps its branch on `depth == 0 and kind == 'word'`, which decides a verdict (SPEC-192 A19, #436)",
+        "test_setting_shapes.TheGuardReadsAnImplementationByToken.test_every_spelling_is_read_or_refused_as_written"
+      ],
+      [
+        "S19354-THE-MACRO-GROUPS-LOOP-1",
+        "scripts/tests/test_setting_shapes.py",
+        "    while at + 2 < len(found):\n",
+        "    while False:\n",
+        "the macro group finder keeps its loop on `at + 2 < len(found)`, which decides a verdict (SPEC-192 A21, #535)",
+        "test_setting_shapes.TheGuardRefusesAMacroThatDeclaresATestModule.test_the_refusal_names_the_crate_and_the_file"
+      ],
+      [
+        "S19355-A-KEYWORD-BEFORE-A-BANG-OPENS-NO-MACRO",
+        "scripts/tests/test_setting_shapes.py",
+        "if found[at][0] == \"word\" and word not in KEYWORDS and found[at + 1][:2] == (\"punct\", \"!\"):",
+        "if found[at][0] == \"word\" and found[at + 1][:2] == (\"punct\", \"!\"):",
+        "a keyword before `!` (`return !{ .. }`, `if !( .. )`) opens no macro, so a block holding a test module is read as rustc reads it (SPEC-192 A21, #535)",
+        "test_setting_shapes.TheGuardReadsATreeItOverRefused.test_a_keyword_before_a_bang_opens_no_macro"
+      ],
+      [
+        "S19356-THE-MACRO-GROUPS-TEST-2",
+        "scripts/tests/test_setting_shapes.py",
+        "            rules = unraw(word) == \"macro_rules\" and found[at + 2][0] == \"word\"\n",
+        "            rules = not (unraw(word) == \"macro_rules\" and found[at + 2][0] == \"word\")\n",
+        "the macro group finder keeps its test `rules = unraw(word) == 'macro_rules' and found[at + 2][0] == ...`, which decides a verdict (SPEC-192 A21, #535)",
+        "test_setting_shapes.TheGuardRefusesAMacroThatDeclaresATestModule.test_the_refusal_names_the_crate_and_the_file"
+      ],
+      [
+        "S19357-THE-MACRO-GROUPS-BRANCH-3",
+        "scripts/tests/test_setting_shapes.py",
+        "            if opening < len(found) and found[opening][0] == \"open\":\n",
+        "            if False:\n",
+        "the macro group finder keeps its branch on `opening < len(found) and found[opening][0] == 'open'`, which decides a verdict (SPEC-192 A21, #535)",
+        "test_setting_shapes.TheGuardRefusesAMacroThatDeclaresATestModule.test_the_refusal_names_the_crate_and_the_file"
+      ],
+      [
+        "S19358-THE-MACRO-GROUPS-CHOICE-4",
+        "scripts/tests/test_setting_shapes.py",
+        "                out.append((\"rules\" if rules else \"invocation\", opening))\n",
+        "                out.append((\"rules\" if False else \"invocation\", opening))\n",
+        "the macro group finder keeps its choice on `'rules' if rules else 'invocation'`, which decides a verdict (SPEC-192 A21, #535)",
+        "test_setting_shapes.TheGuardReadsATreeItOverRefused.test_a_macro_module_that_is_no_test_only_module_is_read"
+      ],
+      [
+        "S19359-THE-CFG-EVALUATOR-BRANCH-1",
+        "scripts/tests/test_setting_shapes.py",
+        "    if run is None:\n",
+        "    if False:\n",
+        "the one `cfg` evaluator keeps its branch on `run is None`, which decides a verdict (SPEC-192 A20, #449)",
+        "test_setting_shapes.TheGuardRefusesAMacroThatDeclaresATestModule.test_a_macro_body_with_a_cfg_test_module_is_refused_by_its_file"
+      ],
+      [
+        "S19360-THE-CFG-EVALUATOR-CHOICE-2",
+        "scripts/tests/test_setting_shapes.py",
+        "        values = [None if each[0] == \"cfg_attr\" else condition(each, test) for each in run]\n",
+        "        values = [None if False else condition(each, test) for each in run]\n",
+        "the one `cfg` evaluator keeps its choice on `None if each[0] == 'cfg_attr' else condition(each, test)`, which decides a verdict (SPEC-192 A20, #449)",
+        "test_setting_shapes.TheGuardRefusesAMacroThatDeclaresATestModule.test_a_macro_body_with_a_cfg_test_module_is_refused_by_its_file"
+      ],
+      [
+        "S19361-A-TESTS-ROOT-ITS-INNER-ATTRIBUTES-REMOVE-HOLDS-NO-PIN",
+        "scripts/tests/test_setting_shapes.py",
+        "    if root and rustc_keeps(own, True) is not True:\n",
+        "    if False:\n",
+        "a `tests/` crate root whose inner attributes remove it under test holds no pin (SPEC-192 A20, #449)",
+        "test_setting_shapes.TheGuardReadsOnlyTheItemsRustcCompilesUnderTest.test_a_tests_file_counts_only_where_cargo_and_rustc_compile_it"
+      ],
+      [
+        "S19362-THE-COMPILED-ITEMS-LOOP-1",
+        "scripts/tests/test_setting_shapes.py",
+        "    while at < end:\n        first, run = at, []\n",
+        "    while False:\n        first, run = at, []\n",
+        "the reader of the items rustc compiles under test keeps its loop on `at < end`, which decides a verdict (SPEC-192 A20, #449)",
+        "test_setting_shapes.TheGuardJudgesAPlantedTree.test_a_generic_implementation_is_examined"
+      ],
+      [
+        "S19363-THE-COMPILED-ITEMS-ELSE-2",
+        "scripts/tests/test_setting_shapes.py",
+        "            if found[at][0] == \"outer\":\n",
+        "            if True:\n",
+        "the reader of the items rustc compiles under test keeps its `else` of `found[at][0] == 'outer'`, which decides a verdict (SPEC-192 A20, #449)",
+        "test_setting_shapes.TheGuardReadsOnlyTheItemsRustcCompilesUnderTest.test_a_pin_counts_only_in_a_compiled_item_of_every_file_kind"
+      ],
+      [
+        "S19364-THE-COMPILED-ITEMS-BRANCH-3",
+        "scripts/tests/test_setting_shapes.py",
+        "            if found[at][0] == \"outer\":\n",
+        "            if False:\n",
+        "the reader of the items rustc compiles under test keeps its branch on `found[at][0] == 'outer'`, which decides a verdict (SPEC-192 A20, #449)",
+        "test_setting_shapes.EverySettingShapeIsPinnedByItsLiteral.test_every_setting_impl_has_a_shape_literal_that_a_test_or_a_row_pins"
+      ],
+      [
+        "S19365-THE-COMPILED-ITEMS-TEST-4",
+        "scripts/tests/test_setting_shapes.py",
+        "        inline = head + 2 < stop and [t[:2] for t in found[head : head + 3 : 2]] == [\n            (\"word\", \"mod\"),\n            (\"open\", \"{\"),\n        ]\n",
+        "        inline = not (head + 2 < stop and [t[:2] for t in found[head : head + 3 : 2]] == [\n            (\"word\", \"mod\"),\n            (\"open\", \"{\"),\n        ])\n",
+        "the reader of the items rustc compiles under test keeps its test `inline = head + 2 < stop and [t[:2] for t in found[head:head ...`, which decides a verdict (SPEC-192 A20, #449)",
+        "test_setting_shapes.TheGuardJudgesAPlantedTree.test_a_shape_the_test_only_reads_back_from_the_constant_is_refused"
+      ],
+      [
+        "S19366-THE-COMPILED-ITEMS-BRANCH-5",
+        "scripts/tests/test_setting_shapes.py",
+        "        if rustc_keeps(run, True) is not True:\n",
+        "        if False:\n",
+        "the reader of the items rustc compiles under test keeps its branch on `rustc_keeps(run, True) is not True`, which decides a verdict (SPEC-192 A20, #449)",
+        "test_setting_shapes.TheGuardReadsOnlyTheItemsRustcCompilesUnderTest.test_a_pin_counts_only_in_a_compiled_item_of_every_file_kind"
+      ],
+      [
+        "S19367-THE-COMPILED-ITEMS-BRANCH-6",
+        "scripts/tests/test_setting_shapes.py",
+        "            if rustc_keeps(inner, True) is True:\n",
+        "            if False:\n",
+        "the reader of the items rustc compiles under test keeps its branch on `rustc_keeps(inner, True) is True`, which decides a verdict (SPEC-192 A20, #449)",
+        "test_setting_shapes.TheGuardReadsOnlyTheItemsRustcCompilesUnderTest.test_a_pin_counts_only_in_an_item_rustc_compiles_under_test"
+      ],
+      [
+        "S19368-THE-COMPILED-ITEMS-BRANCH-7",
+        "scripts/tests/test_setting_shapes.py",
+        "        elif rustc_keeps(attributes_inside(found, pairs, at, stop), True) is True:\n",
+        "        elif False:\n",
+        "the reader of the items rustc compiles under test keeps its branch on `rustc_keeps(attributes_inside(found, pairs, at, stop), True) ...`, which decides a verdict (SPEC-192 A20, #449)",
+        "test_setting_shapes.TheGuardJudgesAPlantedTree.test_a_generic_implementation_is_examined"
+      ],
+      [
+        "S19369-THE-ITEM-END-BRANCH-1",
+        "scripts/tests/test_setting_shapes.py",
+        "        if kind != \"open\":\n",
+        "        if False:\n",
+        "the item-end finder keeps its branch on `kind != 'open'`, which decides a verdict (SPEC-192 A20, #449)",
+        "test_setting_shapes.TheGuardJudgesAPlantedTree.test_a_shape_the_test_only_reads_back_from_the_constant_is_refused"
+      ],
+      [
+        "S19370-THE-ITEM-END-CHOICE-2",
+        "scripts/tests/test_setting_shapes.py",
+        "        after = found[at][:2] if at < end else (\"\", \"\")\n",
+        "        after = found[at][:2] if False else (\"\", \"\")\n",
+        "the item-end finder keeps its choice on `found[at][:2] if at < end else ('', '')`, which decides a verdict (SPEC-192 A20, #449)",
+        "test_setting_shapes.TheGuardReadsOnlyTheItemsRustcCompilesUnderTest.test_a_pin_counts_only_in_an_item_rustc_compiles_under_test"
+      ],
+      [
+        "S19371-AN-ITEM-ENDS-AT-ITS-LAST-BRACE-NOT-ITS-FIRST",
+        "scripts/tests/test_setting_shapes.py",
+        "        if word == \"{\" and not (\n",
+        "        if word == \"{\" and True or not (\n",
+        "an item continues past a brace group that a group, punctuation, `else`, `as` or `where` follows, so a stripped `if`/`else` item holds no pin (SPEC-192 A20, #449)",
+        "test_setting_shapes.TheGuardReadsOnlyTheItemsRustcCompilesUnderTest.test_a_pin_counts_only_in_an_item_rustc_compiles_under_test"
+      ],
+      [
+        "S19372-AN-ITEM-CONTINUES-PAST-ELSE",
+        "scripts/tests/test_setting_shapes.py",
+        "or after in ((\"word\", \"else\"), (\"word\", \"as\"), (\"word\", \"where\"))",
+        "or after in ((\"word\", \"as\"), (\"word\", \"where\"))",
+        "an item continues past `} else {`, so a stripped `if`/`else` item holds no pin (SPEC-192 A20, #449)",
+        "test_setting_shapes.TheGuardReadsOnlyTheItemsRustcCompilesUnderTest.test_a_pin_counts_only_in_an_item_rustc_compiles_under_test"
+      ],
+      [
+        "S19373-THE-ITEM-ATTRIBUTES-BRANCH-1",
+        "scripts/tests/test_setting_shapes.py",
+        "        elif is_pound(found[at]) and at + 1 < end:\n",
+        "        elif False:\n",
+        "the reader of an item's own attributes keeps its branch on `is_pound(found[at]) and at + 1 < end`, which decides a verdict (SPEC-192 A20, #449)",
+        "test_setting_shapes.TheGuardRefusesASpellingItDoesNotExpand.test_an_attribute_a_macro_passes_in_is_refused_by_its_file"
+      ],
+      [
+        "S19374-THE-ITEM-ATTRIBUTES-BRANCH-2",
+        "scripts/tests/test_setting_shapes.py",
+        "            if bracket < end and found[bracket][:2] == (\"open\", \"[\"):\n",
+        "            if False:\n",
+        "the reader of an item's own attributes keeps its branch on `bracket < end and found[bracket][:2] == ('open', '[')`, which decides a verdict (SPEC-192 A20, #449)",
+        "test_setting_shapes.TheGuardRefusesASpellingItDoesNotExpand.test_an_attribute_a_macro_passes_in_is_refused_by_its_file"
+      ],
+      [
+        "S19375-THE-ATTRIBUTE-RUN-START-LOOP-1",
+        "scripts/tests/test_setting_shapes.py",
+        "    while back >= 0:\n",
+        "    while False:\n",
+        "the finder of an attribute run's start in a macro keeps its loop on `back >= 0`, which decides a verdict (SPEC-192 A21, #535)",
+        "test_setting_shapes.TheGuardResolvesAModuleDeclaredInsideAnInlineModule.test_a_declaration_inside_a_function_body_is_not_read"
+      ],
+      [
+        "S19376-THE-ATTRIBUTE-RUN-START-BRANCH-2",
+        "scripts/tests/test_setting_shapes.py",
+        "        if kind == \"close\" and word != \"}\":\n",
+        "        if False:\n",
+        "the finder of an attribute run's start in a macro keeps its branch on `kind == 'close' and word != '}'`, which decides a verdict (SPEC-192 A21, #535)",
+        "test_setting_shapes.TheGuardResolvesAModuleDeclaredInsideAnInlineModule.test_a_declaration_inside_a_function_body_is_not_read"
+      ],
+      [
+        "S19377-THE-ATTRIBUTE-RUN-START-ELSE-3",
+        "scripts/tests/test_setting_shapes.py",
+        "        elif kind == \"open\" or (kind, word) in ((\"close\", \"}\"), (\"punct\", \";\")):\n",
+        "        elif True:\n",
+        "the finder of an attribute run's start in a macro keeps its `else` of `kind == 'open' or (kind, word) in (('close', '}'), ('punct', ...`, which decides a verdict (SPEC-192 A21, #535)",
+        "test_setting_shapes.TheGuardResolvesAModuleDeclaredInsideAnInlineModule.test_a_declaration_inside_a_function_body_is_not_read"
+      ],
+      [
+        "S19378-THE-ATTRIBUTE-RUN-START-BRANCH-4",
+        "scripts/tests/test_setting_shapes.py",
+        "        elif kind == \"open\" or (kind, word) in ((\"close\", \"}\"), (\"punct\", \";\")):\n",
+        "        elif False:\n",
+        "the finder of an attribute run's start in a macro keeps its branch on `kind == 'open' or (kind, word) in (('close', '}'), ('punct', ...`, which decides a verdict (SPEC-192 A21, #535)",
+        "test_setting_shapes.TheGuardResolvesAModuleDeclaredInsideAnInlineModule.test_a_declaration_inside_a_function_body_is_not_read"
+      ],
+      [
+        "S19379-THE-METAVARIABLE-DOLLAR-TEST-1",
+        "scripts/tests/test_setting_shapes.py",
+        "    return token[:2] == (\"punct\", \"$\")\n",
+        "    return not (token[:2] == (\"punct\", \"$\"))\n",
+        "the metavariable `$` test keeps its test `return token[:2] == ('punct', '$')`, which decides a verdict (SPEC-192 A21, #535)",
+        "test_setting_shapes.TheGuardReadsRustSource.test_a_test_attribute_on_a_use_opens_no_test_module"
+      ],
+      [
+        "S19380-THE-FILE-BELOW-INLINE-FILTER-1",
+        "scripts/tests/test_setting_shapes.py",
+        "    folders = [folder for folder in folders if homes is None or folder in homes]\n",
+        "    folders = [folder for folder in folders if True]\n",
+        "the file chooser below inline modules keeps its filter `homes is None or folder in homes`, which decides a verdict (SPEC-192 A22, #536)",
+        "test_setting_shapes.TheGuardReadsATreeItOverRefused.test_a_decoy_beside_a_non_mod_rs_file_does_not_refuse_its_module"
+      ],
+      [
+        "S19381-THE-OUT-OF-LINE-MODULE-BRANCH-1",
+        "scripts/tests/test_setting_shapes.py",
+        "    if homes is None:\n",
+        "    if False:\n",
+        "the out-of-line module reader keeps its branch on `homes is None`, which decides a verdict (SPEC-192 A22, #536)",
+        "test_setting_shapes.TheGuardReadsATreeItOverRefused.test_a_decoy_beside_a_non_mod_rs_file_does_not_refuse_its_module"
+      ],
+      [
+        "S19382-THE-OUT-OF-LINE-MODULE-FILTER-2",
+        "scripts/tests/test_setting_shapes.py",
+        "        src = next((parent for parent in own.parents if parent.name == \"src\"), None)\n",
+        "        src = next((parent for parent in own.parents if True), None)\n",
+        "the out-of-line module reader keeps its filter `parent.name == 'src'`, which decides a verdict (SPEC-192 A22, #536)",
+        "test_setting_shapes.TheGuardReadsATreeItOverRefused.test_a_file_a_path_attribute_loads_reads_its_modules_beside_itself"
+      ],
+      [
+        "S19383-THE-CFG-ATTR-PATH-CHOICE-BRANCH-1",
+        "scripts/tests/test_setting_shapes.py",
+        "    if value is True:\n",
+        "    if False:\n",
+        "the `cfg_attr(P, path = ...)` file chooser keeps its branch on `value is True`, which decides a verdict (SPEC-192 A22, #536)",
+        "test_setting_shapes.TheGuardReadsATreeItOverRefused.test_a_cfg_attr_path_below_an_inline_module_is_read"
+      ],
+      [
+        "S19384-THE-CFG-ATTR-PATH-CHOICE-BRANCH-2",
+        "scripts/tests/test_setting_shapes.py",
+        "    elif value is False:\n",
+        "    elif False:\n",
+        "the `cfg_attr(P, path = ...)` file chooser keeps its branch on `value is False`, which decides a verdict (SPEC-192 A22, #536)",
+        "test_setting_shapes.TheGuardReadsATreeItOverRefused.test_a_cfg_attr_path_below_an_inline_module_is_read"
+      ],
+      [
+        "S19385-THE-CFG-ATTR-PATH-CHOICE-FILTER-3",
+        "scripts/tests/test_setting_shapes.py",
+        "    return sorted(path for path in unique if path.is_file())\n\n\ndef module_home(path, attributes):\n",
+        "    return sorted(path for path in unique if True)\n\n\ndef module_home(path, attributes):\n",
+        "the `cfg_attr(P, path = ...)` file chooser keeps its filter `path.is_file()`, which decides a verdict (SPEC-192 A22, #536)",
+        "test_setting_shapes.TheGuardReadsATreeItOverRefused.test_a_cfg_attr_path_below_an_inline_module_is_read"
+      ],
+      [
+        "S19386-A-PATH-LOADED-FILE-READS-ITS-MODULES-BESIDE-ITSELF",
+        "scripts/tests/test_setting_shapes.py",
+        "if path.name == \"mod.rs\" or any(unraw(word) == \"path\" for each in attributes for word in each):",
+        "if path.name == \"mod.rs\":",
+        "a file a `#[path]` attribute loads reads its modules beside itself, as rustc does (SPEC-192 A22, #536)",
+        "test_setting_shapes.TheGuardReadsATreeItOverRefused.test_a_file_a_path_attribute_loads_reads_its_modules_beside_itself"
+      ],
+      [
+        "S19387-THE-VISIBLE-DECLARATION-BRANCH-1",
+        "scripts/tests/test_setting_shapes.py",
+        "                if tokens[mod][:2] != (\"word\", \"mod\") or after >= pairs[opening]:\n",
+        "                if False:\n",
+        "the visible-declaration reader keeps its branch on `tokens[mod][:2] != ('word', 'mod') or after >= pairs[opening]`, which decides a verdict (SPEC-192 A22, #536)",
+        "test_setting_shapes.TheGuardReadsATreeItOverRefused.test_a_module_a_macro_declares_without_test_still_refuses_the_test_file"
+      ],
+      [
+        "S19388-THE-CRATE-ROOT-WALK-FILTER-1",
+        "scripts/tests/test_setting_shapes.py",
+        "    homes = {root: {root.parent} for root in roots if root.is_file()}\n    todo, seen = list(homes), {}\n",
+        "    homes = {root: {root.parent} for root in roots if True}\n    todo, seen = list(homes), {}\n",
+        "the walk from the crate roots keeps its filter `root.is_file()`, which decides a verdict (SPEC-192 A22, #536)",
+        "test_setting_shapes.TheGuardJudgesAPlantedTree.test_a_shape_a_row_of_the_implementations_own_file_finds_is_pinned"
+      ],
+      [
+        "S19389-THE-CRATE-ROOT-WALK-CHOICE-2",
+        "scripts/tests/test_setting_shapes.py",
+        "            home = module_home(path, attributes) if kept is True else set()\n",
+        "            home = module_home(path, attributes) if False else set()\n",
+        "the walk from the crate roots keeps its choice on `module_home(path, attributes) if kept is True else set()`, which decides a verdict (SPEC-192 A22, #536)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_a_module_directory_with_a_mod_file_is_its_test_module"
+      ],
+      [
+        "S19390-THE-CARGO-TESTS-WALK-LOOP-1",
+        "scripts/tests/test_setting_shapes.py",
+        "    while todo:\n        file = todo.pop()\n        if seen.get(file) == homes[file]:\n            continue\n        seen[file] = set(homes[file])\n        try:\n            files = declared(file, homes[file])\n        except ValueError:\n            continue\n        for path, attributes in files:\n            if rustc_keeps(attributes, True) is True:\n",
+        "    while False:\n        file = todo.pop()\n        if seen.get(file) == homes[file]:\n            continue\n        seen[file] = set(homes[file])\n        try:\n            files = declared(file, homes[file])\n        except ValueError:\n            continue\n        for path, attributes in files:\n            if rustc_keeps(attributes, True) is True:\n",
+        "the walk of `tests/` as cargo builds it keeps its loop on `todo`, which decides a verdict (SPEC-192 A20, #449)",
+        "test_setting_shapes.TheGuardJudgesAPlantedTree.test_a_generic_implementation_is_examined"
+      ],
+      [
+        "S19391-THE-CARGO-TESTS-WALK-BRANCH-2",
+        "scripts/tests/test_setting_shapes.py",
+        "            if rustc_keeps(attributes, True) is True:\n",
+        "            if False:\n",
+        "the walk of `tests/` as cargo builds it keeps its branch on `rustc_keeps(attributes, True) is True`, which decides a verdict (SPEC-192 A20, #449)",
+        "test_setting_shapes.TheGuardReadsOnlyTheItemsRustcCompilesUnderTest.test_a_tests_file_counts_only_where_cargo_and_rustc_compile_it"
+      ],
+      [
+        "S19392-THE-MACRO-REFUSAL-LOOP-1",
+        "scripts/tests/test_setting_shapes.py",
+        "                while back > opening:\n",
+        "                while False:\n",
+        "the macro refusal reader keeps its loop on `back > opening`, which decides a verdict (SPEC-192 A21, #535)",
+        "test_setting_shapes.TheGuardRefusesAMacroThatDeclaresATestModule.test_the_refusal_names_the_crate_and_the_file"
+      ],
+      [
+        "S19393-THE-MACRO-REFUSAL-BRANCH-2",
+        "scripts/tests/test_setting_shapes.py",
+        "                    if source == \"rules\":\n",
+        "                    if False:\n",
+        "the macro refusal reader keeps its branch on `source == 'rules'`, which decides a verdict (SPEC-192 A21, #535)",
+        "test_setting_shapes.TheGuardReadsATreeItOverRefused.test_a_macro_module_that_is_no_test_only_module_is_read"
+      ],
+      [
+        "S19394-THE-INCLUDE-IMPORT-BRANCH-1",
+        "scripts/tests/test_setting_shapes.py",
+        "    if found[at][:2] != (\"word\", \"use\") or found[at + 1][:2] == (\"punct\", \"<\"):\n",
+        "    if False:\n",
+        "the reader of a `use` that imports `include` keeps its branch on `found[at][:2] != ('word', 'use') or found[at + 1][:2] == ('pu...`, which decides a verdict (SPEC-192 A21, #535)",
+        "test_setting_shapes.TheGuardReadsRustSource.test_a_macro_implementation_is_examined"
+      ],
+      [
+        "S19395-THE-INCLUDE-IMPORT-BRANCH-2",
+        "scripts/tests/test_setting_shapes.py",
+        "        if kind == \"close\" and depth == 0 or (kind, word) == (\"punct\", \";\") and depth == 0:\n",
+        "        if False:\n",
+        "the reader of a `use` that imports `include` keeps its branch on `kind == 'close' and depth == 0 or ((kind, word) == ('punct', ...`, which decides a verdict (SPEC-192 A21, #535)",
+        "test_setting_shapes.TheGuardRefusesAMacroThatDeclaresATestModule.test_an_attribute_of_another_item_or_of_the_matcher_is_not_read"
+      ],
+      [
+        "S19396-THE-INCLUDE-IMPORT-BRANCH-3",
+        "scripts/tests/test_setting_shapes.py",
+        "        if kind == \"word\" and unraw(word) == \"include\":\n",
+        "        if False:\n",
+        "the reader of a `use` that imports `include` keeps its branch on `kind == 'word' and unraw(word) == 'include'`, which decides a verdict (SPEC-192 A21, #535)",
+        "test_setting_shapes.TheGuardRefusesASpellingItDoesNotExpand.test_an_include_a_use_imports_is_refused_by_its_file"
+      ],
+      [
+        "S19397-THE-INCLUDE-IMPORT-BRANCH-4",
+        "scripts/tests/test_setting_shapes.py",
+        "        if is_dollar(found[each]) and unraw(found[each + 1][1]) != \"crate\":\n",
+        "        if False:\n",
+        "the reader of a `use` that imports `include` keeps its branch on `is_dollar(found[each]) and unraw(found[each + 1][1]) != 'crate'`, which decides a verdict (SPEC-192 A21, #535)",
+        "test_setting_shapes.TheGuardRefusesASpellingItDoesNotExpand.test_an_include_a_use_imports_is_refused_by_its_file"
+      ],
+      [
+        "S19398-THE-PASSED-MACRO-NAME-BRANCH-1",
+        "scripts/tests/test_setting_shapes.py",
+        "    if not is_dollar(found[at]):\n",
+        "    if False:\n",
+        "the reader of a macro name a macro passes in keeps its branch on `not is_dollar(found[at])`, which decides a verdict (SPEC-192 A21, #535)",
+        "test_setting_shapes.TheGuardRefusesASpellingItDoesNotExpand.test_an_include_is_refused_by_its_file"
+      ],
+      [
+        "S19399-THE-PASSED-MACRO-NAME-TEST-2",
+        "scripts/tests/test_setting_shapes.py",
+        "        after + 1 < len(found)\n        and found[after][:2] == (\"punct\", \"!\")\n        and found[after + 1][0] == \"open\"\n",
+        "        not (after + 1 < len(found)\n        and found[after][:2] == (\"punct\", \"!\")\n        and found[after + 1][0] == \"open\")\n",
+        "the reader of a macro name a macro passes in keeps its test `return after + 1 < len(found) and found[after][:2] == ('punct...`, which decides a verdict (SPEC-192 A21, #535)",
+        "test_setting_shapes.TheGuardReadsRustSource.test_a_macro_implementation_is_examined"
+      ]
+    ]
+  }
+}

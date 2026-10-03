@@ -199,3 +199,122 @@ this section and nothing else. Issue #374.
 A5: python3 -m unittest discover -s scripts/tests -p test_verdict_download.py -k test_every_spelling_the_shell_reads_alike_passes
 A6: python3 -m unittest discover -s scripts/tests -p test_verdict_download.py -k test_every_path_the_shell_reads_differently_is_refused
 ```
+
+## 11. Amendment, 2026-09-29: the judge-line reader stops at redirections and substitutions (#394)
+
+Insert-only under ruling (i) of SPEC-038 section 8: every earlier byte is kept in order. It inserts
+this section and the next, and nothing else. Issue #394.
+
+- **The rule.** Section 9's reader ended a judge command at a control operator or a comment, but
+  took a word after a redirection (`>`, `<( )`) or inside a command substitution (`$( )`,
+  backquotes) for an argument of the verdict command. The shell does not: such a flag never reaches
+  the verdict. The reader's break set now holds `(`, `)`, `<`, `>` and the backquote, outside every
+  quote, and its docstring says that redirection and substitution words are not arguments.
+  Inside double quotes, `$(` and the backquote still open a command substitution, so the reading
+  ends there too, and the double quote it ends in is closed first (#394).
+- **Four refused fixtures.** The wrong paths gain one line per shape: a flag as a redirection's
+  target, a flag inside `$( )`, a flag inside backquotes, and a flag inside `<( )`. Each judge line
+  keeps its other flags, so only the hidden `--rows` is missing from the words the verdict reads
+  (seventeen wrong paths in all, with the two below; the ANSI-C fixture below makes eighteen).
+- **Two refused fixtures inside double quotes.** A flag inside `"$( ... )"` and a flag inside
+  double-quoted backquotes, each with inner quotes that split it into words of its own, reach no
+  argument of the verdict either. A flag after a double-quoted word that holds `$(` or a
+  backquote is refused too, because the reading ends inside that word: the reader errs toward
+  refusing (#394).
+- **An ANSI-C string.** The reader does not parse an ANSI-C string `$'...'`, in which `\'` does not
+  close the quote: it stops reading at one, so a flag after it is refused. That is a fail-closed
+  limit, and the wrong paths gain one line for it (#394).
+- **Out of scope, named.** A heredoc body is not read as words, and a flag after a bare `)` is not
+  read at all, because the reader stops at the first break (#394).
+- Files: `scripts/tests/test_verdict_download.py`, this SPEC, `docs/red-first/SPEC-126.md` and a
+  changelog fragment (#394).
+- It changes no Rust, no workflow and no Python outside the test, because the defect is in the
+  test's reader (#394).
+- It adds no mutation-row band, for the reason section 5 gives (#394).
+
+## 12. Acceptance criteria added by the section 11 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A7 | a judge line that hides `--rows` in a redirection target, `$( )`, backquotes or `<( )` is refused, and so is one that hides it in `$( )` or backquotes inside double quotes | `test_verdict_download.py` `every_path_the_shell_reads_differently_is_refused` |
+
+```acceptance
+A7: python3 -m unittest discover -s scripts/tests -p test_verdict_download.py -k test_every_path_the_shell_reads_differently_is_refused
+```
+
+## 13. Amendment, 2026-09-30: a report counts only in its own shard's slot
+
+Insert-only under ruling (i) of SPEC-038 section 8: every earlier byte is kept in order. It inserts
+this section and section 14 and nothing else. Issue #438.
+
+- **The class rule.** The verdict counts a shard's work only from the report bound to that shard.
+  It reads the report in `mutation-python-shard-<k>` only when the report's own `shard` field equals
+  `<k>/<count>`, the slot it sits in, and only when the mutants the report examined equal the plan's
+  listing for shard `<k>`. Any other layout is VOID, and the refusal names the shard.
+- **What was measured.** The verdict checked that each slot held a readable report of the runner's
+  schema and that no restore failed, and nothing more. A copy of one shard's report laid in another's
+  slot, two reports swapped, a report of a shard field absent or malformed, a report trimmed of a
+  mutant and a report carrying a mutant the plan never listed were all read and counted, so the
+  verdict could pass on work no shard had done. Over three plans of two, three and four shards the
+  generated population of such layouts held 440 members; the verdict accepted 431 of them.
+- **The change.** `python_reports` in `scripts/mutation-verdict.py` refuses a report whose shard
+  field is not the slot's `<k>/<count>`, and, through `shard_listing_drift`, one whose examined
+  mutant names, as a multiset, differ from the plan's list for that shard: a missing mutant, an
+  extra one, a repeat and a swapped one each differ. A plan that lists no mutants for the shard
+  refuses the report as well.
+- **Nothing else moves.** The runner, the plan, the workflow and the Rust lane are unchanged; a
+  correct layout is judged as before.
+- **Two checks join the SPEC, both in `test_mutation_python_shard_binding.py`.** Each generates its
+  population from a plan's shards, prints the member count and the refused count, and asserts that
+  the correct layout passes, that every other member is refused with exit 3 naming exactly the wrong
+  slots, and that none is accepted. Eight mutation rows, `S12600` to `S12607`, one per arm of the
+  rule, are proved by killers among them.
+
+## 14. Acceptance criteria added by the section 13 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A8 | a report counts only in the slot its own shard field names: a copy, a swap and an absent or malformed field are each refused by name | `test_mutation_python_shard_binding.py` `test_a_report_counts_only_in_its_own_slot` |
+| A9 | a report counts only the mutants the plan lists for its shard: a trimmed, extra, repeated, swapped or missing report is refused by name | `test_mutation_python_shard_binding.py` `test_a_report_counts_only_the_mutants_its_shard_lists` |
+
+```acceptance
+A8: python3 -m unittest discover -s scripts/tests -p test_mutation_python_shard_binding.py -k test_a_report_counts_only_in_its_own_slot
+A9: python3 -m unittest discover -s scripts/tests -p test_mutation_python_shard_binding.py -k test_a_report_counts_only_the_mutants_its_shard_lists
+```
+
+## 15. Amendment, 2026-09-30: one reader yields what the verdict judges
+
+Insert-only under ruling (i) of SPEC-038 section 8: every earlier byte is kept in order. It inserts
+this section and section 16 and nothing else. Issue #438, fix round 1.
+
+- **The class rule, widened to the layout.** The verdict reads the report in a shard's slot only
+  when the report's shard field equals the slot and the mutants the verdict will judge from it
+  equal the plan's listing for that shard, as a multiset. Any other layout is VOID, naming the
+  shard, and never a traceback and never exit 0.
+- **One reader.** `read_python_shard` in `scripts/mutation-verdict.py` yields exactly the records
+  the judge will judge, and the slot binding and the judge both use that yield; there is no second
+  reader. It refuses, naming the shard, any container of another JSON type (`files`, an entry, its
+  `mutants`, its `byte_readers`, a record), any listed mutant whose outcome is not one of the
+  runner's `OUTCOMES` (read from the runner module, never copied), and any listed mutant filed
+  under an entry whose path the class does not read. The classes it serves are `scripts` and
+  `oracle` whose plan entry applies, so "the class does not read" is taken as the union of those
+  two. An absent container reads as empty.
+- **A correction to section 13.** Its sentence "A plan that lists no mutants for the shard
+  refuses the report as well" holds for a plan with no entry for the shard, an entry with no
+  listing, and a listing that is not a list. It does not hold for an empty list: a shard that lists
+  no mutants and whose report is well formed and empty is read, and the class then goes VOID
+  because nothing was examined. A `files` that is not a list is refused by name.
+- **Nothing else moves.** The runner, the plan, the workflow and the Rust lane are unchanged; a
+  correct layout is judged as before.
+
+## 16. Acceptance criteria added by the section 15 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A10 | the binding and the judge read one report: a container of another type, an outcome off the runner's vocabulary and a mutant filed under an unread path are each refused by name | `test_mutation_python_shard_binding.py` `test_a_report_is_read_as_the_judge_reads_it` |
+| A11 | a shard that lists no mutant reads its well-formed empty report and the class is VOID as unexamined; a non-list `files` is refused by name | `test_mutation_python_shard_binding.py` `test_a_shard_that_lists_no_mutant_reads_its_empty_report` |
+
+```acceptance
+A10: python3 -m unittest discover -s scripts/tests -p test_mutation_python_shard_binding.py -k test_a_report_is_read_as_the_judge_reads_it
+A11: python3 -m unittest discover -s scripts/tests -p test_mutation_python_shard_binding.py -k test_a_shard_that_lists_no_mutant_reads_its_empty_report
+```

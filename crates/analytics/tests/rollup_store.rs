@@ -1,6 +1,7 @@
 //! Rolling a day up is idempotent, and a settled day keeps what it closed with (SPEC-071 A5, A6;
 //! R5, R8, R9, R11, R14, R16): the same reviews write identical rows, a changed day moves only its
 //! metrics and `updated_at`, and a card state is never invented for a day no recompute recorded.
+//! The recent totals read the stored rows on or before a day, most recent first (SPEC-073 R5, R10).
 //! Every review, card and course is synthetic.
 
 // An integration test is test code: its helpers panic on a failed fixture, and it prints the
@@ -11,8 +12,9 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use deck_streak_analytics::metrics::{daily_metrics, language_metrics};
 use deck_streak_analytics::rollup::{
-    self, RolledDay, RollupStore, StoredDay, fingerprint, fingerprints, recent_volumes,
-    record_card_state, record_close, record_score, record_settled, roll_up, settle_cursor,
+    self, RolledDay, RollupStore, StoredDay, fingerprint, fingerprints, recent_totals,
+    recent_volumes, record_card_state, record_close, record_score, record_settled, roll_up,
+    settle_cursor,
 };
 use deck_streak_analytics::score::Score;
 use deck_streak_analytics::score::{Baseline, compute_score};
@@ -293,6 +295,81 @@ async fn the_stores_reads_answer_what_its_writes_recorded() {
     assert_eq!(
         settle_cursor(&mut write).await.expect("the cursor reads"),
         Some(day)
+    );
+}
+
+/// The recent totals on or before `through`, at most `limit` of them, as `(epoch day, score,
+/// reviews, the bits of the seconds)`.
+async fn recent(db: &Db, through: i64, limit: i64) -> Vec<(i64, i64, i64, u64)> {
+    let mut write = db.write().await.expect("a write");
+    recent_totals(&mut write, StudyDay::from_epoch_day(through), limit)
+        .await
+        .expect("the recent totals read")
+        .iter()
+        .map(|row| {
+            (
+                row.day.epoch_day(),
+                row.score,
+                row.reviews,
+                row.seconds.to_bits(),
+            )
+        })
+        .collect()
+}
+
+/// SPEC-073 R5, R10: the recent totals are the `limit` stored rows on or before the day, most
+/// recent first, each with its stored score, its study reviews and their seconds.
+#[tokio::test]
+async fn the_recent_totals_read_the_latest_rows_on_or_before_the_day() {
+    let scratch = TempDir::new().expect("a scratch directory");
+    let db = database(&scratch).await;
+    // Four days with their own review counts, each scored over its computed score.
+    for (number, count, total) in [
+        (DAY - 2, 2, 41),
+        (DAY - 1, 4, 57),
+        (DAY, 5, 63),
+        (DAY + 1, 3, 72),
+    ] {
+        assert!(
+            roll(&db, number, &reviews(number, count), 1_000).await,
+            "a new row"
+        );
+        let day = StudyDay::from_epoch_day(number);
+        let mut write = db.write().await.expect("a write");
+        let score = rollup::stored(&mut write, day)
+            .await
+            .expect("the day reads")
+            .expect("the rolled day is stored")
+            .score;
+        record_score(&mut write, day, &Score { total, ..score })
+            .await
+            .expect("the score records");
+        write.commit().await.expect("the score commits");
+    }
+    // Card n answers in 7n seconds, under the cap: 2 cards 21 s, 4 cards 70 s, 5 cards 105 s,
+    // 3 cards 42 s.
+    assert_eq!(
+        recent(&db, DAY, 2).await,
+        [
+            (DAY, 63, 5, 105.0_f64.to_bits()),
+            (DAY - 1, 57, 4, 70.0_f64.to_bits()),
+        ],
+        "the two most recent on or before the day, the later day excluded"
+    );
+    assert_eq!(
+        recent(&db, DAY + 1, 10).await,
+        [
+            (DAY + 1, 72, 3, 42.0_f64.to_bits()),
+            (DAY, 63, 5, 105.0_f64.to_bits()),
+            (DAY - 1, 57, 4, 70.0_f64.to_bits()),
+            (DAY - 2, 41, 2, 21.0_f64.to_bits()),
+        ],
+        "every row, most recent first"
+    );
+    assert_eq!(
+        recent(&db, DAY - 3, 10).await,
+        [],
+        "no row on or before a day before the first"
     );
 }
 

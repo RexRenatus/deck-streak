@@ -440,3 +440,124 @@ Rows S04148 and S04149 (ea4df18, mutants corrected at bfe514d): a Passport error
 invite link's name, each held with the sends; the killer is `no_delivery_goes_around_the_port`, and
 the mutant swaps the name for a copy of `editChatInviteLink`, a name no planted case calls, so `DELIVERY_METHODS` keeps its length and
 the target builds.
+
+A16 is a new criterion (#429). The population is 2,904 hand-built send URLs, 11 methods (each Bot
+API method the transport's own code names, read from the source) by 6 forms (`format!`, `concat!`,
+a `String` push, a helper function, a `const` path and a string literal's inline argument) by 44
+functions of the transport outside its named sites. At the red commit every one was accepted, since
+`api_url` was not a guarded name. Fifteen controls, five non-helper forms planted inside each of
+the three named sites with that site's own method, and the transport as shipped, are accepted at
+the red commit and at green, so no member is red for want of a control. The planted requests of A15
+that hold `api_url` gained three literal refusals and three uses, which is an edit of A15's
+expected list at the green commit (1ac918e43fe5), disclosed here and in SPEC-041 §7.
+
+```red-first
+A16: red at 3010dd186f95: 2904 of 2904 hand-built send URLs are not refused, e.g. format form of sendMessage in ApiUrl::new at line 101 is not refused
+A16: green at 1ac918e43fe5
+```
+
+A17 is a new criterion (#429, round 1). The population is 1,048 planted requests: 8 request forms
+(the pinned client's `request`, `request_with_form_data` and `request_with_possible_form_data`, the
+client's `post` and `get`, `reqwest::Client::new`, `reqwest::get` and a built `reqwest` client, each
+naming its method in lower case) by every function of the 8 bot sources and 3 places outside a
+function (a static, a nested module and a new type's method). At the red commit the census's
+request check was not called, so every member was accepted. The two edits to `no_delivery_goes_around_the_port`
+(the three planted requests of A15 gained one refusal each, and the tree's mentions are asserted
+against `REQUEST_SITES`) are in the green commit (0f2ed408694a), so A15 is not red at the red commit.
+The killer gained one positive assertion in the commit after the green one (the population's base
+reads every named request site once); it changes no member and no verdict.
+
+```red-first
+A17: red at fb75909d3e93: 1048 of 1048 requests the census cannot read are not refused, e.g. generic in Piece::units of crates/bot/src/chunk.rs at line 36 is not refused
+A17: green at 0f2ed408694a
+```
+
+A18 is a new criterion (#429, round 2). The killer is `request_allow_list.rs`, whose tests audit the
+allow-list of the compiler's request rule. At the red commit `clippy.toml` names none of the four
+paths and the bot transport carries none of its two `#[expect]` annotations, so two of the five tests
+are red: the one that reads `clippy.toml` and the one that finds the named sites. Not red: the
+generated suppression population (1,920 planted suppressions), the manifest and flag test and the
+test of the audit's own reading, because the audit that refuses them is in the test itself and a
+tree that has no annotation has no suppression to refuse; their red is the mutant of the rows S04157
+and S04158, each of which leaves one spelling or one level unread and turns its test red, and the
+row S04156 turns the first test red with a path removed from `clippy.toml`. The green commit changes
+the test file once more, for the workspace's lints (a range, a `let` chain, a file-extension helper
+and an `expect` allowance for a test crate), and no assertion.
+The test-file change of the green commit, 41932f6, is that one; it rewrites the line that reads a
+relative path and no assertion of a verdict.
+A later commit adds the examined contract to the file walk (a printed count and a refusal of zero),
+so the tdd pack reads the walk as reporting what it examined; it changes no assertion and no member.
+The commit 0e10511 replaces the fixed count of the bot's sources with the count read from the tree, and
+asserts that count is above zero and that the transport source is among those examined; no assertion
+of a verdict changes.
+
+```red-first
+A18: red at 031e72526af5: clippy.toml does not name reqwest::Client under disallowed-types, and the bot transport carries none of its 2 named #[expect] sites
+A18: green at 41932f6d3623
+```
+
+Two post-green commits that edit a test line are named here by sha, appended and read from
+`git show`. The commit 682716c9 is the one whose sentence above says it "changes no assertion":
+it did add one. Its `examined()` helper asserts that the examined list of workspace files is
+non-empty, and it prints the count, so the walk now refuses an empty population (the file also
+widens its `allow` to `clippy::print_stdout`). No assertion of a verdict and no member changed; the
+test file's numstat for it is 12 inserted and 2 deleted. The commit 029fc3e7 is a formatter-only
+edit of the same test file: it splits one chained call over three lines, changes no assertion and no
+member, and its numstat is 3 inserted and 1 deleted.
+
+## The held-flush amendment (#291)
+
+The model came first, then a seam: a `Flushed::Busy` answer and the `held_flush` job's constant and
+work stubbed, so the new tests compile and fail by assertion rather than by a missing symbol. The
+tests came next, alone, in 9669cea, and each of them failed by an assertion at dev's behaviour:
+the generated population read `12 of 96 cases differ`, all of them cases of the scheduled step
+inside an open window (the flush after a sync and the flush after an owner's sync matched in all
+64 of theirs, because those two flushers already exist); the concurrency test failed with `the
+second flush finds the lease taken`; and of the calendar tests, the control that tells a slot inside
+the window from one outside it passed, as it should, while the job-table and template tests failed
+with `the job table has a scheduled flush step`. The green commit, 930ef15, adds the lease, the job,
+its timer and its credentials. The lease and answer tests (`flush_lease.rs`, `held_flush_answers.rs`)
+were added after it, with the rows S04160 to S04169, each proved killed; their red is those rows'
+mutants, and A20's and A21's red lines are the tests of the red commit.
+
+Round 2 of the review found that the lease lapses while its holder is still sending, and that a
+flush that dies after its push reached has its item resent. The tests came first (bf37062b): a flush
+that outlives its lease, and one that dies after its send reached, each against the round-1 code, and
+each failed by assertion, the held item reached the owner 2 times. The model was amended next
+(bb792f98), and the fix, a row claim with a token-matched settle and a named abandonment, followed
+(7e4aae48), after which those tests pass.
+
+```red-first
+A19: red at 9669cea: 12 of 96 flush cases differ from the expected delivered and abandoned sets, all of them the scheduled step inside an open window
+A19: green at 930ef15
+A20: red at 9669cea: assertion failed: the second flush finds the lease taken
+A20: green at 930ef15
+A21: red at 9669cea: assertion failed: the job table has a scheduled flush step
+A21: green at 930ef15
+A22: red at bf37062b: the held item reached the owner 2 times
+A22: green at 7e4aae48
+```
+
+Round 3 of the review found that a flush whose work after a delivered push fails (the settle, the
+decision record or its commit) gave the row it pushed back to `held`, and the next flush pushed it
+again, for a full render, a recap line and a held reaction alike. The model was amended first
+(a3e68ddc, ffd3bf55). The tests came next, alone (f1704727), each against the round-2 code: three
+controls with no failure passed, and the four cases failed by assertion (`test result: FAILED. 3
+passed; 4 failed`) at `flush_fails_after_push.rs:220`, `:232`, `:244` and `:256`, the held item,
+the rolled item, the held reaction and the pushed item each reaching the owner 2 times. The fix,
+the flush's pushed set, named "may have been sent" and never given back (3cd85d4a), followed, after
+which the seven tests pass (`test result: ok. 7 passed; 0 failed`).
+
+```red-first
+A23: red at f1704727: the held item reached the owner 2 times
+A23: green at 3cd85d4a
+```
+
+The pull request's mutation pass over round 3 then found the log line of R16b unobserved: with the
+body of `unsettled_notice` removed, every test still passed. An eighth test,
+`a_settle_that_fails_after_a_push_names_the_item_and_its_claimant_in_the_log`, captures the
+router's warnings while a settle fails after a push. It was written after the code, so its red is
+that mutant, as for the lease tests of round 1: against it the test fails by assertion at
+`flush_fails_after_push.rs:356` (`one line names the pushed item: []`, `7 passed; 1 failed`), and
+against the code the eight tests pass (`test result: ok. 8 passed; 0 failed`). The workspace's
+capture census counts its capture, 16 routed where it counted 15.

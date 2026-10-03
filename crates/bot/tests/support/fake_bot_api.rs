@@ -39,7 +39,7 @@ use axum::body::Bytes;
 use axum::extract::{Path as UrlPath, State};
 use axum::http::{HeaderMap, StatusCode, header};
 use axum::response::{IntoResponse, Response};
-use axum::routing::post;
+use axum::routing::{get, post};
 use deck_streak_bot::transport::{Incoming, Waits};
 use deck_streak_bot::{
     ApiUrl, Commands, MiniAppUrl, OwnerSync, SyncAnswer, SyncRefusal, Transport,
@@ -163,10 +163,25 @@ impl Answer {
     }
 }
 
+/// What the fake's file route serves for one download (SPEC-118 R8).
+#[derive(Clone, Debug)]
+pub enum Served {
+    /// These bytes, with a 200.
+    Bytes(Vec<u8>),
+    /// This status and no file.
+    Status(u16),
+    /// These bytes, with a 200, answered only after the request has been held this long.
+    Held(Vec<u8>, Duration),
+}
+
+/// The method name a download's [`Call`] is recorded under: a file's URL names no Bot API method.
+pub const DOWNLOAD: &str = "download";
+
 #[derive(Default)]
 struct Inner {
     calls: Vec<Call>,
     scripts: HashMap<String, VecDeque<Answer>>,
+    files: VecDeque<Served>,
     next_message_id: i64,
 }
 
@@ -197,6 +212,7 @@ impl FakeBotApi {
         };
         let app = Router::new()
             .route("/{bot}/{method}", post(answer))
+            .route("/file/{bot}/{*path}", get(serve_file))
             .with_state(fake.clone());
         tokio::spawn(async move {
             axum::serve(listener, app).await.expect("the fake serves");
@@ -234,6 +250,11 @@ impl FakeBotApi {
             .entry(method.to_owned())
             .or_default()
             .extend(answers);
+    }
+
+    /// Queues `served` for the next download from the file route, before its unscripted 404.
+    pub fn serve_file(&self, served: Served) {
+        self.inner.lock().unwrap().files.push_back(served);
     }
 
     /// Every call so far, in order.
@@ -502,6 +523,37 @@ async fn answer(
             ok(&Value::Bool(true))
         }
         None => unscripted(&method, &body, message_id).await,
+    }
+}
+
+/// The file route (`{api}/file/bot<token>/<file_path>`): records the download as a [`DOWNLOAD`]
+/// call holding its path, and serves what was queued, or a 404.
+async fn serve_file(
+    State(fake): State<FakeBotApi>,
+    UrlPath((bot, path)): UrlPath<(String, String)>,
+) -> Response {
+    let served = {
+        let mut inner = fake.inner.lock().unwrap();
+        inner.calls.push(Call {
+            method: DOWNLOAD.to_owned(),
+            body: json!({"path": path}),
+            at: Instant::now(),
+            token_ok: bot == format!("bot{TOKEN}"),
+            message_id: None,
+        });
+        inner.files.pop_front()
+    };
+    fake.changed.notify_waiters();
+    match served {
+        Some(Served::Bytes(bytes)) => (StatusCode::OK, bytes).into_response(),
+        Some(Served::Status(status)) => StatusCode::from_u16(status)
+            .expect("a status")
+            .into_response(),
+        Some(Served::Held(bytes, held)) => {
+            tokio::time::sleep(held).await;
+            (StatusCode::OK, bytes).into_response()
+        }
+        None => StatusCode::NOT_FOUND.into_response(),
     }
 }
 

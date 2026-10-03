@@ -10,6 +10,9 @@ use deck_streak_ingest::settings::{
 };
 use deck_streak_kernel::{Environment, SettingsError};
 
+#[path = "../../../tools/log-capture/capture.rs"]
+mod log_capture;
+
 /// A state directory that names no real host path: settings are parsed, never opened, here.
 const STATE: &str = "/state";
 
@@ -102,11 +105,11 @@ fn a_cleartext_endpoint_logs_one_warning_that_names_the_setting_and_not_its_valu
         ]))
         .expect("a valid endpoint")
     };
-    tracing::subscriber::with_default(logs.recorder(), || {
+    log_capture::with_capture(logs.recorder(), || {
         settings("https://sync.example.invalid/").warn_if_cleartext();
     });
     assert!(logs.warnings().is_empty(), "{:?}", logs.events());
-    tracing::subscriber::with_default(logs.recorder(), || {
+    log_capture::with_capture(logs.recorder(), || {
         settings("http://sync.example.invalid/").warn_if_cleartext();
     });
     let warnings = logs.warnings();

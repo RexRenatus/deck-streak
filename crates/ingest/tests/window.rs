@@ -16,6 +16,9 @@ use support::Fixture;
 use support::logs::Logs;
 use support::synthetic::{self, PlannedCard, PlannedReview};
 
+#[path = "../../../tools/log-capture/capture.rs"]
+mod log_capture;
+
 /// An endpoint no test contacts: the reader never syncs.
 const ENDPOINT: &str = "http://127.0.0.1:9/";
 const DAY_MS: i64 = 86_400_000;
@@ -56,7 +59,7 @@ fn the_ingest_window_and_its_rebase_match_the_predecessors_golden() {
         let recount = integer(&case.input["recount"]);
         let logs = Logs::default();
         let (after, floor, self_check) =
-            tracing::subscriber::with_default(logs.recorder(), || match rebase(base, now) {
+            log_capture::with_capture(logs.recorder(), || match rebase(base, now) {
                 Rebase::Keep(kept) => (kept, None, None),
                 Rebase::Recount { floor } => {
                     let (written, self_check) = rebased(base, floor, recount);
@@ -148,7 +151,7 @@ async fn a_shrinking_pre_window_count_is_reported_by_the_self_check() {
     let second_read = UtcMillis::from_epoch_millis(FIRST_READ + (INGEST_REBASE_DAYS + 1) * DAY_MS);
     let logs = Logs::default();
     let second = {
-        let _logs = tracing::subscriber::set_default(logs.recorder());
+        let _logs = log_capture::hold_capture(logs.recorder());
         read_window(&reader, &state, second_read)
             .await
             .expect("the second read")

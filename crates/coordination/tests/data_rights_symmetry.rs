@@ -32,7 +32,7 @@ use tempfile::TempDir;
 /// Statements that leave every table of the schema holding rows no erase leaves: 101 rows in each
 /// table that takes rows, so an export that pages or limits its read comes up short (the
 /// predecessor's lesson), and every column a reset writes moved off its reset value.
-const SEEDS: [&str; 20] = [
+const SEEDS: [&str; 31] = [
     "UPDATE settings_generation SET generation = 7, courses_digest = '0123456789abcdef' \
      WHERE id = 1",
     "UPDATE ingest_state SET anchor_newest_review_id = 1700000000123, anchor_card_count = 57, \
@@ -125,11 +125,41 @@ const SEEDS: [&str; 20] = [
      SELECT 'synthetic:' || i, 'celebration', 'T2', 'synthetic ' || i, \
      CASE i % 2 WHEN 0 THEN NULL ELSE 1000 * i + 1 END, 1000 * i FROM n",
     "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 101) \
+     INSERT INTO instrument_reports (instrument, study_day, schema_version, report_json, \
+     created_at) \
+     SELECT 'synthetic_' || i, 20000 + i, 1 + i % 3, '{\"report\":null}', 1000 * i FROM n",
+    "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 101) \
      INSERT INTO xp_settlement (study_day, source, track, amount, closed, created_at) \
      SELECT 20000 + i, 'reviews', CASE i % 2 WHEN 0 THEN 'language' ELSE 'law' END, \
      i, i % 2, 1000 * i FROM n",
     "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 101) \
      INSERT INTO buffs (study_day, kind, created_at) SELECT 20000 + i, 'ascendant', 1000 * i FROM n",
+    "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 101) \
+     INSERT INTO badges_earned (badge_key, tier, name, emoji, study_day, celebrated_at, created_at) \
+     SELECT 'badge_' || i, 0, 'Badge ' || i, 'x', 20000 + i, NULL, 1000 * i FROM n",
+    "INSERT INTO records (kind, value, study_day, previous, celebrated_at, created_at) VALUES \
+     ('best_score', 80, 20100, 70, NULL, 1000), ('most_reviews', 300, 20100, 200, 5000, 2000), \
+     ('most_minutes', 90, 20100, 60, NULL, 3000)",
+    "INSERT INTO streak_state (track, current_days, longest_days, freezes, last_study_day, \
+     comeback_armed, created_at) VALUES ('language', 9, 12, 2, 20100, 1, 1000), \
+     ('law', 4, 6, 0, 20100, 0, 2000)",
+    "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 101) \
+     INSERT INTO freeze_events (study_day, delta, reason, created_at) \
+     SELECT 20000 + i, CASE i % 2 WHEN 0 THEN -1 ELSE 1 END, \
+     CASE i % 3 WHEN 0 THEN 'consumed' WHEN 1 THEN 'streak_earn' ELSE 'shop' END, 1000 * i FROM n",
+    "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 101) \
+     INSERT INTO habit_strength (study_day, strength, created_at) \
+     SELECT 20000 + i, i / 200.0, 1000 * i FROM n",
+    "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 101) \
+     INSERT INTO relight_due (study_day, created_at) SELECT 20000 + i, 1000 * i FROM n",
+    "UPDATE governor_state SET lapse_since = 19990, standby = 1, notified_day = 19995 WHERE id = 1",
+    "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 101) \
+     INSERT INTO coin_ledger (study_day, source, reference, delta, created_at) \
+     SELECT 20000 + i, CASE i % 3 WHEN 0 THEN 'mint' WHEN 1 THEN 'shop' ELSE 'fine' END, \
+     CASE i % 3 WHEN 0 THEN '' ELSE 'synthetic:' || i END, \
+     CASE i % 3 WHEN 0 THEN i % 41 ELSE -(i % 7) END, 1000 * i FROM n",
+    "UPDATE economy_state SET pass_ends_at = 1700000001800, surcharge_ends_at = 1700000172800 \
+     WHERE id = 1",
     "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 101) \
      INSERT INTO drill_answers (drill_id, study_day, surface, created_at) \
      SELECT 'synthetic-drill-' || i, 20000 + i, CASE i % 2 WHEN 0 THEN 'bot' ELSE 'mini_app' END, \
@@ -138,6 +168,16 @@ const SEEDS: [&str; 20] = [
      INSERT INTO drill_grades (drill_id, drill_type, subject, xp, study_day, created_at) \
      SELECT 'synthetic-drill-' || i, 'irac', 'synthetic subject ' || i, 10 + i % 16, 20000 + i, \
      1000 * i FROM n",
+    "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 101) \
+     INSERT INTO inbox_captures (stem, capture_key, kind, source, attachment, captured_at, state, \
+     destination, filed_day, created_at) \
+     SELECT '2025-01-01-photo-synthetic' || i, 'synthetic' || i, \
+     CASE i % 2 WHEN 0 THEN 'photo' ELSE 'text' END, \
+     CASE i % 2 WHEN 0 THEN 'telegram' ELSE 'miniapp' END, \
+     CASE i % 2 WHEN 0 THEN '2025-01-01-photo-synthetic' || i || '.jpg' ELSE NULL END, \
+     1000 * i, CASE i % 3 WHEN 0 THEN 'filed' ELSE 'captured' END, \
+     CASE i % 3 WHEN 0 THEN 'Synthetic folder' ELSE NULL END, \
+     CASE i % 3 WHEN 0 THEN 20000 + i ELSE NULL END, 1000 * i FROM n",
 ];
 
 /// Prints how many items a check examined and refuses zero (the tdd pack's examined contract).

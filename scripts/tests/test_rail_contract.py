@@ -806,8 +806,10 @@ class TheSyncLogin(unittest.TestCase):
         pairs = iter(parts[1:])
         arms = dict(zip(pairs, pairs, strict=True))
         # The post-back needs the drill notes' reader, which run_job's arguments do not carry, so
-        # the job role hands it to the runner beside run_job (SPEC-110 R9); no other job is outside.
-        outside = {"DRILL_POSTBACK"}
+        # the job role hands it to the runner beside run_job (SPEC-110 R9). The held flush builds its
+        # own notification router in the job role, because the router needs the bot's credentials
+        # and run_job's arguments carry none (SPEC-041 A21); no other job is outside.
+        outside = {"DRILL_POSTBACK", "HELD_FLUSH"}
         role_source = (crates / "daemon" / "src" / "role_job.rs").read_text(encoding="utf-8")
         for name in outside:
             self.assertIn(name, role_source, "the job role dispatches the job outside run_job")
@@ -832,9 +834,14 @@ class TheSyncLogin(unittest.TestCase):
             "credential loader call(s) in the job role",
             re.findall(r"CredentialsDirectory::from_env|CredentialLoader::new", role),
         )
-        inside = re.findall(r"CredentialsDirectory::from_env|CredentialLoader::new", cycle)
+        # Sync's cycle loads the sync login; the held flush's router loads the bot's token, which
+        # its own drop-in supplies. No third place in the job role loads a credential.
+        router = rust_block(role, "fn held_flush_router")
+        inside = re.findall(r"CredentialsDirectory::from_env|CredentialLoader::new", cycle + router)
         self.assertEqual(
-            len(inside), len(loaders), "the job role loads credentials in sync's cycle alone"
+            len(inside),
+            len(loaders),
+            "the job role loads credentials in sync's cycle and the held flush's router alone",
         )
 
 

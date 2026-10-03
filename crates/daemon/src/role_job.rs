@@ -17,9 +17,12 @@
 
 use std::sync::Arc;
 
+use deck_streak_bot::{ApiUrl, Transport, TransportError};
 use deck_streak_coordination::delivery::NoNotifier;
 use deck_streak_coordination::drills::{DrillNotes, DrillPostbackWork, RealFs};
-use deck_streak_coordination::jobs::{DRILL_POSTBACK, Job, SYNC};
+use deck_streak_coordination::held_flush::HeldFlushWork;
+use deck_streak_coordination::instruments::Instruments;
+use deck_streak_coordination::jobs::{DRILL_POSTBACK, HELD_FLUSH, Job, SYNC};
 use deck_streak_coordination::ledger::SqliteCronLedger;
 use deck_streak_coordination::obligations::Obligations;
 use deck_streak_coordination::runner::{Reason, Runner, SyncCycle};
@@ -28,6 +31,8 @@ use deck_streak_daemon::sync_request::owner_request_pending;
 use deck_streak_daemon::wiring::{
     self, OwnerSyncCycle, RecomputeSetup, StateDirectory, WiringError,
 };
+use deck_streak_identity::owner::TELEGRAM_BOT_TOKEN;
+use deck_streak_identity::{IdentityError, Owner};
 use deck_streak_ingest::engine::RslibEngine;
 use deck_streak_ingest::gate::ChangeGate;
 use deck_streak_ingest::settings::{ScopeSettings, SyncSettings};
@@ -35,9 +40,10 @@ use deck_streak_ingest::state::{RefusalReason, SqliteIngestState};
 use deck_streak_ingest::sync::{SyncReport, Syncer};
 use deck_streak_ingest::sync_runs::{SqliteSyncRuns, Trigger};
 use deck_streak_kernel::{
-    Clock, CredentialLoader, CredentialsDirectory, Db, Environment, KernelError, KernelSettings,
-    Offload, Redactor, SettingsError, StudyDayRule, SystemClock,
+    Clock, ConventionsError, CredentialLoader, CredentialsDirectory, Db, Environment, KernelError,
+    KernelSettings, Offload, Redactor, SettingsError, StudyDayRule, SystemClock,
 };
+use deck_streak_notifications::{Policy, PolicyError};
 use deck_streak_progression::ledger::SqliteXpLedger;
 use deck_streak_vault::{Rails, RailsError, VaultSettings};
 
@@ -50,12 +56,24 @@ pub enum JobRoleError {
     /// The database could not be opened.
     #[error("the database could not be opened")]
     Database(#[source] WiringError),
+    /// The owner's note conventions refused start (SPEC-094 R2; ADR-096).
+    #[error(transparent)]
+    Conventions(#[from] ConventionsError),
     /// The ledger or the study day's outcome could not be read or written.
     #[error("the job's ledger could not be read or written")]
     Ledger(#[source] KernelError),
     /// The vault's content rails could not be read (SPEC-110).
     #[error("the vault's content rails could not be read")]
     Rails(#[source] RailsError),
+    /// One of identity's credentials the held flush sends with refused start, by its id (#291).
+    #[error(transparent)]
+    Identity(#[from] IdentityError),
+    /// The Bot API's client could not be built (#291).
+    #[error(transparent)]
+    Transport(#[from] TransportError),
+    /// The compiled notification policy refused start, by its key (#291).
+    #[error(transparent)]
+    Policy(#[from] PolicyError),
 }
 
 /// Runs `job` once, and returns the process's exit code.
@@ -74,6 +92,17 @@ pub async fn run(env: &Environment, redactor: &Redactor, job: &Job) -> Result<u8
     let ledger = SqliteCronLedger::new(db.clone());
     let sync_runs = SqliteSyncRuns::new(db.clone());
     let rule = kernel.study_day_rule;
+    let instruments = if job.id == SYNC.id {
+        match wiring::instruments_for_role(env, db.clone(), &state, offload.clone(), rule) {
+            Ok(instruments) => instruments,
+            Err(error) => {
+                db.close().await;
+                return Err(error.into());
+            }
+        }
+    } else {
+        None
+    };
     let runner = Runner::new(&ledger, &sync_runs, &NoNotifier, &SystemClock, rule);
     let cycle = ScheduledSync {
         env,
@@ -81,9 +110,10 @@ pub async fn run(env: &Environment, redactor: &Redactor, job: &Job) -> Result<u8
         db: &db,
         offload: offload.clone(),
         rule,
+        instruments: instruments.clone(),
     };
     if job.id == SYNC.id {
-        serve_owner_request(env, redactor, &db, &offload, rule).await;
+        serve_owner_request(env, redactor, &db, &offload, rule, instruments).await;
     }
     let report = if job.id == DRILL_POSTBACK.id {
         // The drill post-back joins the table without a sync cycle (SPEC-110 R9): its work is the
@@ -95,11 +125,48 @@ pub async fn run(env: &Environment, redactor: &Redactor, job: &Job) -> Result<u8
         runner
             .run(job, &DrillPostbackWork::new(notes, &db, &grants))
             .await
+    } else if job.id == HELD_FLUSH.id {
+        // The held flush joins the table without a sync cycle (#291): its work is the router's
+        // flush, which delivers what quiet hours held now that the window has ended.
+        let router = held_flush_router(env, redactor, &db, rule)?;
+        runner.run(job, &HeldFlushWork::new(&router)).await
     } else {
         runner.run_job(job.id, &cycle, &db).await
     };
     db.close().await;
     Ok(report.map_err(JobRoleError::Ledger)?.exit_code())
+}
+
+/// The router the held flush delivers through: the bot's own wiring, over the credentials the job's
+/// unit loads (#291).
+fn held_flush_router(
+    env: &Environment,
+    redactor: &Redactor,
+    db: &Db,
+    rule: StudyDayRule,
+) -> Result<deck_streak_notifications::Router, JobRoleError> {
+    let api = ApiUrl::from_env(env)?;
+    let credentials = CredentialsDirectory::from_env(env)?;
+    let loader = CredentialLoader::new(credentials, redactor.clone());
+    let owner = Owner::load(&loader)?;
+    let token = loader
+        .load(TELEGRAM_BOT_TOKEN)
+        .map_err(IdentityError::from)?;
+    if token.expose().trim().is_empty() {
+        return Err(IdentityError::Malformed {
+            id: TELEGRAM_BOT_TOKEN,
+            expected: "the bot's token, not blank",
+        }
+        .into());
+    }
+    let transport = Arc::new(Transport::new(&api, &token)?);
+    Ok(wiring::router(
+        Policy::compiled()?,
+        db.clone(),
+        rule,
+        transport,
+        owner,
+    ))
 }
 
 /// Serves the owner's stored request, when there is one (SPEC-059; ADR-066): one owner cycle, with
@@ -112,12 +179,13 @@ async fn serve_owner_request(
     db: &Db,
     offload: &Offload,
     rule: StudyDayRule,
+    instruments: Option<Arc<Instruments>>,
 ) {
     match owner_request_pending(db).await {
         Ok(false) => {}
         Ok(true) => {
             let recompute = match RecomputeSetup::load(env, db).await {
-                Ok(recompute) => recompute,
+                Ok(recompute) => recompute.with_instruments(instruments),
                 Err(error) => {
                     tracing::error!(%error, "the recompute refuses the owner's request");
                     record_refusal(db, RefusalReason::RecomputeRefused).await;
@@ -164,6 +232,7 @@ struct ScheduledSync<'a> {
     db: &'a Db,
     offload: Offload,
     rule: StudyDayRule,
+    instruments: Option<Arc<Instruments>>,
 }
 
 impl SyncCycle for ScheduledSync<'_> {
@@ -185,7 +254,8 @@ impl SyncCycle for ScheduledSync<'_> {
             .map_err(|refusal| {
                 tracing::error!(%refusal, "the recompute refuses the sync");
                 Reason::new("recompute_refused")
-            })?;
+            })?
+            .with_instruments(self.instruments.clone());
         let clock = Arc::new(SystemClock);
         let reader = recompute.reader(&settings, scope, self.offload.clone());
         let syncer = Syncer::new(

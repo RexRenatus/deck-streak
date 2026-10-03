@@ -32,16 +32,20 @@ SCOPED = re.compile(r"python3 scripts/memory_scope\.py --report (\S+) -- cargo m
 OUTPUT = re.compile(r"--output (\S+)")
 
 # The three commands that run tests, from `cargo mutants` to the end of the step's line, as the
-# tree held them before this SPEC, and the four listing lines.
+# tree held them before this SPEC, and the four listing lines. The weekly sweep's run and its size
+# listing are each two lines since SPEC-129's literal package words, one per branch; each is pinned.
 CI_LEG = (
     'cargo mutants --no-shuffle -vV --in-place --in-diff "$RUNNER_TEMP/mutation/git.diff" '
     '--sharding round-robin --shard "$SHARD/$SHARDS" --timeout 300 --build-timeout 600 '
     '--output "$out" || rc=$?'
 )
-WEEKLY_LEG = (
-    'cargo mutants --no-shuffle -vV --in-place ${PACKAGE:+--package "$PACKAGE"} '
+WEEKLY_LEGS = (
+    'cargo mutants --no-shuffle -vV --in-place --package="$PACKAGE" '
     '--sharding round-robin --shard "$SHARD/$SHARDS" --timeout 300 --build-timeout 600 '
-    '--output "$RUNNER_TEMP/mutation" || rc=$?'
+    '--output "$RUNNER_TEMP/mutation" || rc=$?',
+    "cargo mutants --no-shuffle -vV --in-place "
+    '--sharding round-robin --shard "$SHARD/$SHARDS" --timeout 300 --build-timeout 600 '
+    '--output "$RUNNER_TEMP/mutation" || rc=$?',
 )
 REHEARSAL_LEG = (
     "cargo mutants --no-shuffle -vV --in-place -f crates/kernel/src/clock.rs --timeout 300 "
@@ -55,7 +59,9 @@ LISTINGS = {
         '> "$RUNNER_TEMP/mutation/whole.json"',
     ],
     WEEKLY: [
-        'cargo mutants --no-shuffle --list --json --in-place ${PACKAGE:+--package "$PACKAGE"} '
+        'cargo mutants --no-shuffle --list --json --in-place --package="$PACKAGE" '
+        '--timeout 300 --build-timeout 600 > "$RUNNER_TEMP/size/package.json"',
+        "cargo mutants --no-shuffle --list --json --in-place "
         '--timeout 300 --build-timeout 600 > "$RUNNER_TEMP/size/package.json"',
         "cargo mutants --no-shuffle --list --json --in-place --timeout 300 --build-timeout 600 "
         '> "$RUNNER_TEMP/listing/whole.json"',
@@ -923,7 +929,7 @@ class TheWorkflows(unittest.TestCase):
                 self.assertIsNotNone(refusal(line), label)
 
     def test_the_mutants_arguments_are_the_ones_before_the_scope(self):
-        pins = [(CI, CI_LEG), (WEEKLY, WEEKLY_LEG), (WEEKLY, REHEARSAL_LEG)]
+        pins = [(CI, CI_LEG), *((WEEKLY, leg) for leg in WEEKLY_LEGS), (WEEKLY, REHEARSAL_LEG)]
         pins += [(path, line) for path, lines in LISTINGS.items() for line in lines]
         for path, literal in examined("pinned commands", pins):
             with self.subTest(file=path.name, command=literal[:60]):
