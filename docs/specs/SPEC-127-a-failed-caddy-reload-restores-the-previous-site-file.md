@@ -617,7 +617,9 @@ The text above is not edited. Each sentence it corrects is quoted as `old`; `new
 - old: "a removal that fails is tried again and then refused with one line, last". new: the host
   step's removal before the switch is tried once and a failure is refused with one line, last; the
   prune's removal is tried once and a failure ends 0 with one warning line naming the release; the
-  trap's removals are tried twice and then end silently.
+  trap's removals are tried twice and then end silently; the undo's removals are tried twice and
+  then refused with one line, and the set-aside removal is tried twice and then ends 0 with one
+  warning line.
 - old: "and for the pairs the registry cannot build, each with its reason". new: and for the pairs
   `NOT_A_STATE` names, each with its reason: pairs the registry cannot build or that equal another
   state, and kept-verb pairs it can build that drop no member, since the kept path reads no
