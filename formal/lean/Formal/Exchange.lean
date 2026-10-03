@@ -1,7 +1,7 @@
--- @phx covers crates/progression/src/exchange.rs anchor=bucket digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/progression/src/exchange.rs anchor=exchange_rates digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/progression/src/board.rs anchor=best_day digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/coordination/src/progression/exchange_view.rs anchor=exchange_window digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+-- @phx covers crates/progression/src/exchange.rs anchor=bucket digest=sha256:8305d8b6193cdb51675f01e57b2c57aa59946d6083bf84705050e3035a62ceec
+-- @phx covers crates/progression/src/exchange.rs anchor=exchange_rates digest=sha256:09ca5039c2ca964983082f8c8bad48acb5b4660e769b30487e408b280699a2f1
+-- @phx covers crates/progression/src/board.rs anchor=best_day digest=sha256:ec7443684a6230783ba8add0af536562a61e8e8f3581e9d6dcf94a00670f5e42
+-- @phx covers crates/coordination/src/progression/exchange_view.rs anchor=exchange_window digest=sha256:ca531d999ed3714f9e590af65b0e822725a2cd33031d1bf573b024bde517c69d
 -- @phx vectors formal/vectors/exchange.jsonl
 -- @phx cites #79, #80
 -- @phx theorem totals_keep_every_row ramp=report
@@ -141,6 +141,14 @@ def ratesWith (add : List (Int × Int) → Row → Bucket → Bucket) (fin : Buc
 /-- `exchange_rates`: each bucket's rate, in key order. -/
 def exchangeRates (rows : List Row) (grads : List (Int × Int)) : List Rate :=
   ratesWith addRow finish rows grads
+
+/-- The wrong variant whose rows each add their day's graduations (row S07505). -/
+def exchangeRatesPerRow (rows : List Row) (grads : List (Int × Int)) : List Rate :=
+  ratesWith addRowPerRow finish rows grads
+
+/-- The wrong variant whose rate is defined whenever its bucket has XP. -/
+def exchangeRatesOnXp (rows : List Row) (grads : List (Int × Int)) : List Rate :=
+  ratesWith addRow finishOnXp rows grads
 
 /-- The wrong variant: rows joined to the rollups, so a row on a day with no rollup is lost. -/
 def exchangeRatesJoined (rows : List Row) (grads : List (Int × Int)) : List Rate :=
@@ -565,13 +573,13 @@ theorem rows_without_a_rollup_dropped_violates : ¬ KeepsEveryRow exchangeRatesJ
   revert this
   decide
 
-theorem per_row_denominator_violates : ¬ DayOncePerBucket (ratesWith addRowPerRow finish) := by
+theorem per_row_denominator_violates : ¬ DayOncePerBucket exchangeRatesPerRow := by
   intro h
   have := h [⟨1, ['a'], 1⟩] [(1, 2)] ⟨1, ['a'], 1⟩ ⟨⟨1, ['a'], 1⟩, by simp, rfl, rfl⟩
   revert this
   decide
 
-theorem defined_on_xp_violates : ¬ DefinedIffGraduation (ratesWith addRow finishOnXp) := by
+theorem defined_on_xp_violates : ¬ DefinedIffGraduation exchangeRatesOnXp := by
   intro h
   have := h [⟨1, ['a'], 5⟩] [] ⟨['a'], 5, 0, true⟩ (by decide)
   simp at this
