@@ -430,11 +430,8 @@ R33. The recording layer is proved to see a write before any proof rests on it. 
 | A2 | a raw insert of a second skip `pending` or `applied` and not undone for one study day is refused by the migration's key, and a `failed` row leaves the day free | `the_migration_refuses_a_second_skip_not_undone_for_one_study_day` |
 | A3 | undo targets the most recent applied skip not undone, and with none answers `nothing_to_undo` | `undo_reverses_the_most_recent_skip_not_undone` |
 | A4 | the skip set holds exactly the study days with an applied skip not undone, and no `pending` or `failed` one | `the_skip_set_holds_exactly_the_days_with_an_applied_skip_not_undone` |
-| A5 | (i, v) a take's push, through the recording layer, carries exactly the previewed cards the wrapped search still selects at the converge; each pushed card equals the state the take recorded before the push (R22) and differs from its row at the converge only in its due date, which lies in the day spec's range from the study day, its modification time, its sync number, and what the engine's Set Due Date itself sets for that card (its interval when FSRS is on); one review-log row of type 4 with ease 0 for each; no other card, note, grave, deck, notetype or tag; no setting and no creation stamp whose value differs from the server's at the converge (the sync carries the whole config table once the working copy is newer), the engine's own last-unburied day aside and never the configured UTC offset; and no upload; a review card due today in a filtered deck is neither listed nor pushed, and its row is unchanged (R3); and the private copy's bytes are unchanged. It runs with FSRS off and with FSRS on, in a test process whose zone observes no daylight saving and whose offset is not a whole number of hours (for example UTC+05:30), equal to the collection's configured UTC offset | `a_take_pushes_exactly_the_previewed_cards_and_their_review_log_rows` |
-| A6 | (i, iii, v) every other path records zero uploads and zero local changes through the recording layer: a scheduled sync, an owner sync, a preview, each refused take (`already_skipped`, `preview_changed`, `too_many_cards`), an aborted take and a failed one, a refused undo (`nothing_to_undo`), an undo that finds no card to write, an aborted undo and a failed one, and the sync that follows each; the private copy's bytes stay as its own sync left them; and each refused, aborted or failed take and undo sends no request after its answer, over a wait longer than the syncer's timeout (SPEC-022 R8); and with the collection's configured UTC offset different from the test process's zone, a preview, each refused take and each refused undo leave the private copy's bytes as its own sync left them | `every_path_but_the_take_and_the_undo_records_zero_uploads` |
 | A7 | the search the preview shows and the write runs is the golden's wrap of the configured search followed by R3's holds (`prop:due=0 -is:suspended -is:buried -deck:filtered`), for the default search and for each synthetic custom search the golden records, and the day spec equals the golden of `skip.py:skip_spec` | `the_search_and_day_spec_equal_the_parity_goldens` |
 | A8 | the summary shows counts only, with the cards the writes moved, and equals the golden of `skip.py:summarize_skips` | `the_summary_shows_counts_equal_to_the_parity_golden` |
-| A9 | the engine's Set Due Date writes review-log rows the read does not count as study events | `a_reschedule_by_the_engine_is_not_a_study_event` |
 | A10 | the preview equals the golden of `SkipDaysLayer.skip_preview`, and its due count is absent when the study day has no rollup | `the_preview_matches_the_parity_golden_and_is_absent_without_a_rollup` |
 | A11 | the tariff charged equals the golden of `EconomyLayer._charge_skip_tariff` for every count of prior skips in the month, and never counts against the daily loss cap | `the_tariff_charged_matches_the_parity_golden_outside_the_loss_cap` |
 | A12 | a skip the wallet cannot fund still applies, the wallet stops at zero, and the row records the shortfall | `an_unfunded_skip_still_applies_and_records_the_shortfall` |
@@ -444,43 +441,16 @@ R33. The recording layer is proved to see a write before any proof rests on it. 
 | A16 | a skip day leaves the consistency run unchanged and arms no Ascendant | `a_skip_day_leaves_the_consistency_run_unchanged_and_arms_no_ascendant` |
 | A17 | a skip day neither counts toward nor ends the governor's silent run | `a_skip_day_neither_counts_nor_ends_the_governors_silent_run` |
 | A18 | after an undo, the next recompute treats the day as a missed day, and transitions already settled stay as they were | `after_an_undo_the_day_is_a_missed_day_at_the_next_recompute` |
-| A19 | `/skip` and `/cheat` answer the preview, the cards to move counted per deck and the tariff, with Confirm and Cancel, and only for the owner | `skip_and_cheat_answer_the_preview_with_confirm_and_cancel` |
-| A20 | `/skipundo` asks before undoing and lists every card left alone, and `/skipstats` shows counts only, both only for the owner | `skipundo_asks_before_undoing_and_skipstats_shows_counts_only` |
-| A21 | the four skip routes answer the owner's session and refuse any other caller with no data | `the_skip_routes_answer_only_the_owner` |
-| A22 | the Mini App's skip sheet shows the due count, the cards to move, the tariff and whether the balance covers it, then the outcome with every card left alone | `shows the due count, the cards to move and the tariff, then the outcome` |
 | A23 | ingest's data-rights port lists `skip_days` and `skip_card_snapshot` as exported and erased, and an erase empties both | `the_skip_tables_are_exported_and_erased` |
-| A24 | (i) only the skip's write module reaches the engine's card writes or pushes a local change, and a planted fixture that does elsewhere is refused (examined count reported, zero refused) | `only_the_skip_write_reaches_an_engine_write_or_a_push` |
-| A25 | (ii) a full or one-way sync demand at a take's converge aborts it, in either direction, one a download would resolve (another client forced a one-way sync) and one only an upload would resolve (the server holds an empty collection): no request carries a card, the private copy's bytes are unchanged, the working copy is discarded, the row is `failed` with `full_sync_required`, and the answer tells the owner | `a_full_sync_demand_at_the_converge_aborts_the_take_writing_nothing` |
-| A26 | (ii) a full or one-way sync demand at a take's push, in either direction, forced after the converge, aborts it the same way | `a_full_sync_demand_at_the_push_aborts_the_take_writing_nothing` |
-| A27 | (iii, undo) only the owner's confirm reaches the take and the undo, once per confirm: the bot's skip callbacks and the API's two skip routes are their only callers, no scheduler job, recompute step, startup path, retry or spawned task calls them or sends their push again, and a planted caller is refused (examined count reported); and, decided dynamically, one confirm under a planted failure, at the converge or at the push, reaches the take once, and the recording layer records one converge and no second push for it; one undo confirm under the same failures reaches the undo once, with one converge and no second push | `only_the_owners_confirm_reaches_the_take_and_the_undo` |
-| A28 | (iv) the preview lists the cards the write would move with their digest, and a take whose confirm carries no digest, or a digest that differs from the list the take reads again, writes nothing, sends no request and answers `preview_changed` with the new preview | `the_preview_lists_the_cards_and_a_changed_list_writes_nothing` |
-| A29 | (iv) each moved card's prior due date and prior state are committed before any card changes: a take stopped between that commit and the reschedule leaves the snapshot rows and no request carrying a card | `the_prior_state_is_recorded_before_any_card_changes` |
-| A30 | (undo, v) after a take and its undo each moved card's row equals its pre-skip row in every field but its modification time and sync number, with FSRS off and on, and the undo's push, through the recording layer, carries exactly those cards, no card the skip did not move, no note, grave, deck, notetype or tag, no setting and no creation stamp whose value differs from the server's at the undo's converge (the engine's own last-unburied day aside and never the configured UTC offset), no review-log row, and no upload | `an_undo_restores_exactly_the_prior_state_of_the_moved_cards` |
-| A31 | (undo) the undo writes a card only when its scheduling state and modification time equal what the take recorded (R22) and its review log holds no study event after the take's converge: a card whose due date still equals what the skip wrote but that was suspended on another client, one only flagged there, and one reviewed on another client between the take's converge and its reschedule (the take's newer push overwrote the review, so its due date, scheduling state and modification time all equal what the skip recorded) are each left as they are and listed to the owner, and no request of the undo carries any of them | `an_undo_never_writes_a_card_changed_before_its_converge` |
-| A32 | (ii, undo) a full or one-way sync demand at the undo's converge or its push, in either direction, aborts it: no request carries a card, the private copy's bytes are unchanged, the working copy is discarded, the skip stays `applied` with its record and tariff unchanged, nothing is refunded, and the answer tells the owner that a full sync is needed and that nothing was written | `a_full_sync_demand_aborts_the_undo_writing_nothing` |
 | A33 | (v) the recording layer records a planted upload and a planted local change: another client's full upload through it is recorded as `upload`, and that client's normal sync of one review as a chunk carrying the card and its review-log row, and the classifier marks both; and that client's normal sync after it changes one setting is recorded as a change carrying the setting's new value, and the classifier marks it | `the_recorder_sees_a_planted_upload_and_a_planted_local_change` |
-| A34 | a card reviewed on another client between the take's converge and its push is listed to the owner in the take's answer, both when the review lands before the reschedule (the push overwrites it and only its review log shows it) and after it (the merge keeps the review), that later review landing at least one whole second after the reschedule's modification time, because a tie keeps the working copy's card (the pinned engine's `rslib/src/sync/collection/chunks.rs:184`) | `a_card_reviewed_during_the_take_is_listed_to_the_owner` |
-| A35 | a take whose write outlives the answer's wait answers `pending`, and its write's own outcome settles the row; a row still `pending` at start is settled after the next successful sync by the scheduling state and modification time the take recorded after its reschedule (R26): a row whose push landed settles `applied` and is charged once, and a row whose push never landed settles `failed`, is charged no tariff and leaves its day out of the skip set, so the day is not bridged, even when one of its recorded cards, a card with a prior interval of 1 day reviewed on another client with a 1-day interval and its ease factor kept, lands on the date the skip wrote, so that, with FSRS off, only its modification time separates it from the state the take recorded after its reschedule; and a take whose push the server commits while the relay drops the answer to its `finish` answers that the outcome is not known yet, leaves its row `pending`, and after the private copy's next sync settles it `applied`, charged once and undoable | `a_write_that_outlives_the_answer_settles_its_own_row` |
-| A36 | more cards than the golden 5,000 are refused with `too_many_cards` before any change or request, and a day with no card to move records the skip with no card written | `the_card_guard_refuses_a_large_set_and_an_empty_set_writes_nothing` |
-| A37 | a take that is refused, aborts or fails charges no tariff and puts no day in the skip set, and an applied take charges once | `a_take_that_does_not_apply_charges_nothing` |
-| A38 | (i) with a custom `DECKSTREAK_SKIP_SEARCH` that also matches a review card due on another day, a suspended and a buried review card due today, a relearning card due today, a review card due today in a filtered deck, and new and learning cards, the preview lists and the push carries only the review cards due that study day outside a filtered deck; and a configured search that closes the wrap's group (`deck:X) or (deck:X`, over a deck holding every card above) is refused before any preview, request or write | `a_custom_search_moves_only_the_study_days_due_review_cards` |
-| A39 | (iv) a card the preview did not list, which another client made due before the converge, and a previewed card, which another client rescheduled before it, are each left alone and listed in the take's answer, and the push carries neither | `a_card_that_changed_between_the_preview_and_the_converge_is_left_alone` |
-| A40 | (i, v) when the engine's own day differs from the study day (the synthetic collection's rollover hour differs from the study-day rule's), when the collection's configured UTC offset differs from the test process's zone, and when the collection holds no configured UTC offset and the test process's zone's offset is not zero, each planted alone, the other conditions held equal, under a test process zone, a POSIX rule that names no zone file, that observes no daylight saving, a preview and a take either list and push only that study day's due review cards, each moved to a day in the day spec's range from the study day, with no setting whose value differs from the server's at the converge, or refuse before any request or write, and an undo either restores its cards as A30 requires or refuses before any request or write; the private copy's bytes are unchanged either way; and when another client changes the server's configured UTC offset, and in a second case its rollover hour, after the private copy's last sync, so that the private copy passes both checks, a take and an undo push nothing, and no request carries a setting whose value differs from the server's at the converge; and the same holds in a third case, where that client's change leaves the server with no configured UTC offset; and in a test process whose zone observes daylight saving, on a collection that passes every other check at the test's instant (its configured UTC offset equal to that zone's offset then, and the engine's day the study day), a preview, a take and an undo each refuse before any request or write, and the private copy's bytes are unchanged, both with `TZ` holding a POSIX rule that names no zone file whose daylight period is in effect at the test's instant and with `TZ` holding one whose daylight period has not begun at the test's instant and begins within the next calendar year, and with `TZ` changed after the service has started from a rule that names no zone file and has no daylight period to a rule that names no zone file and has a daylight period, so that a check made only at the start would pass and each of the three refuses | `a_take_holds_to_the_study_day_and_writes_no_setting_when_the_engines_day_or_zone_differs` |
-| A41 | (undo) an undo whose push the server commits while the relay drops the answer to its `finish` answers that its outcome is not known yet and never that nothing was written; the skip stays `applied`; a second undo marks it undone, refunds it once, and lists no restored card as changed since the skip | `an_undo_whose_finish_answer_is_lost_says_its_outcome_is_not_known` |
-| A42 | (undo) a card reviewed on another client between the undo's converge and its push is listed to the owner in the undo's answer, with its review-log row kept, both when the review lands before the restore (the push overwrites it and only its review log shows it) and after it (the merge keeps the review), that later review landing at least one whole second after the restore's modification time, because a tie keeps the working copy's card (the pinned engine's `rslib/src/sync/collection/chunks.rs:184`) | `a_card_reviewed_during_the_undo_is_listed_to_the_owner` |
-| A43 | (undo) while the study day's take is `pending`, an undo (the bot's `/skipundo` or `POST /api/skip/undo`) refuses before any request or write with a bounded reason that the take's outcome is not known yet; and every undo's preview and confirm name the study day it undoes | `the_undo_refuses_while_the_take_is_pending_and_names_the_study_day_it_undoes` |
-| A44 | (i, v) the service's zone is pinned: on a synthetic collection that passes every other check (its configured UTC offset equal to the offset of the zone the test process then reads, and the engine's day the study day), with `TZ` unset in the test process, and in turn with `TZ` empty, `localtime`, `:/etc/localtime`, `/etc/localtime`, a relative name holding a `..` segment, `GMT0` (a zone file whose name also parses as a rule with no daylight period), `Etc/UTC` (a zone file whose name does not parse as a rule), and a value that names no zone file and does not parse as a POSIX rule, each planted alone, a preview, a take and an undo each refuse before any request or write with the bounded reason that the zone is not pinned, and the private copy's bytes are unchanged; with `TZ` holding the POSIX rules `UTC0` and `IST-5:30`, which name no zone file, none of the three refuses for the pin; and the checks read the process's zone only through chrono's `Local`, never from `TZ` or a zone file themselves: in `crates/ingest/src/skip_write.rs` only the pin reads `TZ` or opens a zone directory, and nothing names `/etc/localtime` | `the_skip_refuses_a_zone_the_service_does_not_pin` |
 
 ```acceptance
 A1: cargo test -p deck-streak-ingest --test skip_record -- --exact a_skip_is_recorded_once_per_study_day_and_again_after_an_undo
 A2: cargo test -p deck-streak-ingest --test skip_record -- --exact the_migration_refuses_a_second_skip_not_undone_for_one_study_day
 A3: cargo test -p deck-streak-ingest --test skip_record -- --exact undo_reverses_the_most_recent_skip_not_undone
 A4: cargo test -p deck-streak-ingest --test skip_record -- --exact the_skip_set_holds_exactly_the_days_with_an_applied_skip_not_undone
-A5: cargo test -p deck-streak-ingest --test skip_write -- --exact a_take_pushes_exactly_the_previewed_cards_and_their_review_log_rows
-A6: cargo test -p deck-streak-ingest --test skip_zero_upload -- --exact every_path_but_the_take_and_the_undo_records_zero_uploads
 A7: cargo test -p deck-streak-ingest --test skip_record -- --exact the_search_and_day_spec_equal_the_parity_goldens
 A8: cargo test -p deck-streak-ingest --test skip_record -- --exact the_summary_shows_counts_equal_to_the_parity_golden
-A9: cargo test -p deck-streak-ingest --test skip_write -- --exact a_reschedule_by_the_engine_is_not_a_study_event
 A10: cargo test -p deck-streak-coordination --test skip_flow -- --exact the_preview_matches_the_parity_golden_and_is_absent_without_a_rollup
 A11: cargo test -p deck-streak-coordination --test skip_flow -- --exact the_tariff_charged_matches_the_parity_golden_outside_the_loss_cap
 A12: cargo test -p deck-streak-coordination --test skip_flow -- --exact an_unfunded_skip_still_applies_and_records_the_shortfall
@@ -490,32 +460,8 @@ A15: cargo test -p deck-streak-coordination --test skip_effects -- --exact a_ski
 A16: cargo test -p deck-streak-coordination --test skip_effects -- --exact a_skip_day_leaves_the_consistency_run_unchanged_and_arms_no_ascendant
 A17: cargo test -p deck-streak-coordination --test skip_effects -- --exact a_skip_day_neither_counts_nor_ends_the_governors_silent_run
 A18: cargo test -p deck-streak-coordination --test skip_effects -- --exact after_an_undo_the_day_is_a_missed_day_at_the_next_recompute
-A19: cargo test -p deck-streak-bot --test skip_commands -- --exact skip_and_cheat_answer_the_preview_with_confirm_and_cancel
-A20: cargo test -p deck-streak-bot --test skip_commands -- --exact skipundo_asks_before_undoing_and_skipstats_shows_counts_only
-A21: cargo test -p deck-streak-api --test skip_routes -- --exact the_skip_routes_answer_only_the_owner
-A22: pnpm exec vitest run web/app/src/lib/skip/skip-sheet.test.ts -t "shows the due count, the cards to move and the tariff, then the outcome"
 A23: cargo test -p deck-streak-ingest --test skip_rights -- --exact the_skip_tables_are_exported_and_erased
-A24: cargo test -p deck-streak-ingest --test skip_census -- --exact only_the_skip_write_reaches_an_engine_write_or_a_push
-A25: cargo test -p deck-streak-ingest --test skip_write -- --exact a_full_sync_demand_at_the_converge_aborts_the_take_writing_nothing
-A26: cargo test -p deck-streak-ingest --test skip_write -- --exact a_full_sync_demand_at_the_push_aborts_the_take_writing_nothing
-A27: cargo test -p deck-streak-coordination --test skip_callers -- --exact only_the_owners_confirm_reaches_the_take_and_the_undo
-A28: cargo test -p deck-streak-ingest --test skip_write -- --exact the_preview_lists_the_cards_and_a_changed_list_writes_nothing
-A29: cargo test -p deck-streak-ingest --test skip_write -- --exact the_prior_state_is_recorded_before_any_card_changes
-A30: cargo test -p deck-streak-ingest --test skip_undo -- --exact an_undo_restores_exactly_the_prior_state_of_the_moved_cards
-A31: cargo test -p deck-streak-ingest --test skip_undo -- --exact an_undo_never_writes_a_card_changed_before_its_converge
-A32: cargo test -p deck-streak-ingest --test skip_undo -- --exact a_full_sync_demand_aborts_the_undo_writing_nothing
 A33: cargo test -p deck-streak-ingest --test recorder_control -- --exact the_recorder_sees_a_planted_upload_and_a_planted_local_change
-A34: cargo test -p deck-streak-ingest --test skip_write -- --exact a_card_reviewed_during_the_take_is_listed_to_the_owner
-A35: cargo test -p deck-streak-coordination --test skip_flow -- --exact a_write_that_outlives_the_answer_settles_its_own_row
-A36: cargo test -p deck-streak-ingest --test skip_write -- --exact the_card_guard_refuses_a_large_set_and_an_empty_set_writes_nothing
-A37: cargo test -p deck-streak-coordination --test skip_flow -- --exact a_take_that_does_not_apply_charges_nothing
-A38: cargo test -p deck-streak-ingest --test skip_write -- --exact a_custom_search_moves_only_the_study_days_due_review_cards
-A39: cargo test -p deck-streak-ingest --test skip_write -- --exact a_card_that_changed_between_the_preview_and_the_converge_is_left_alone
-A40: cargo test -p deck-streak-ingest --test skip_write -- --exact a_take_holds_to_the_study_day_and_writes_no_setting_when_the_engines_day_or_zone_differs
-A41: cargo test -p deck-streak-ingest --test skip_undo -- --exact an_undo_whose_finish_answer_is_lost_says_its_outcome_is_not_known
-A42: cargo test -p deck-streak-ingest --test skip_undo -- --exact a_card_reviewed_during_the_undo_is_listed_to_the_owner
-A43: cargo test -p deck-streak-coordination --test skip_callers -- --exact the_undo_refuses_while_the_take_is_pending_and_names_the_study_day_it_undoes
-A44: cargo test -p deck-streak-ingest --test skip_write -- --exact the_skip_refuses_a_zone_the_service_does_not_pin
 ```
 
 The write's tests run the engine's own sync server in a child process with SPEC-022's recording
@@ -592,6 +538,88 @@ delivery changes no pack's state.
 | B3 | the skip sheet's copy shames no choice and threatens no streak loss, over `web/app/src/routes/skip/` and `web/app/src/lib/skip/` | the ux-laws pack |
 | B4 | the `/skip` route passes the audit in both Telegram colour schemes, over `web/app/src/routes/skip/+page.svelte` | the accessibility pack |
 | B5 | the skip commands keep their callback data, the preview's digest included, within the Bot API's limit and answer the owner only, over `crates/bot/src/skip_commands.rs` and `crates/bot/src/commands.rs` | the telegram-platform pack |
+
+## 3c. Delivered by the next pull requests
+
+This SPEC lands in three pull requests, in order (ADR-321). This one (#108, E4a) delivers the
+record, the preview without its card list, the tariff and its refund, the skip set's port and its
+seven readers, and what a skip changes in the game: the criteria of section 3 and of section 11.
+E4b delivers the take's write with its backup, its restore drill, its counts and the class's stop;
+E4c delivers the undo, the take and undo use cases, the bot, the API, the Mini App and the daemon's
+wiring. The table below holds the criteria those two deliver, each row naming its part, and the
+lines under it are their fence lines, each prefixed with that part. A6, A40 and A44 have undo arms:
+E4b delivers each whole only when E4c has landed first, and the part that lands second moves the
+row back. A part moves each of its criteria back verbatim: the row into section 3's table, without
+the `delivered by` column, and the line into the acceptance fence, without the prefix. B3, B4 and
+B5 (section 3a) are judged when E4c adds their files.
+
+| id | criterion | decided by | delivered by |
+|---|---|---|---|
+| A5 | (i, v) a take's push, through the recording layer, carries exactly the previewed cards the wrapped search still selects at the converge; each pushed card equals the state the take recorded before the push (R22) and differs from its row at the converge only in its due date, which lies in the day spec's range from the study day, its modification time, its sync number, and what the engine's Set Due Date itself sets for that card (its interval when FSRS is on); one review-log row of type 4 with ease 0 for each; no other card, note, grave, deck, notetype or tag; no setting and no creation stamp whose value differs from the server's at the converge (the sync carries the whole config table once the working copy is newer), the engine's own last-unburied day aside and never the configured UTC offset; and no upload; a review card due today in a filtered deck is neither listed nor pushed, and its row is unchanged (R3); and the private copy's bytes are unchanged. It runs with FSRS off and with FSRS on, in a test process whose zone observes no daylight saving and whose offset is not a whole number of hours (for example UTC+05:30), equal to the collection's configured UTC offset | `a_take_pushes_exactly_the_previewed_cards_and_their_review_log_rows` | E4b |
+| A6 | (i, iii, v) every other path records zero uploads and zero local changes through the recording layer: a scheduled sync, an owner sync, a preview, each refused take (`already_skipped`, `preview_changed`, `too_many_cards`), an aborted take and a failed one, a refused undo (`nothing_to_undo`), an undo that finds no card to write, an aborted undo and a failed one, and the sync that follows each; the private copy's bytes stay as its own sync left them; and each refused, aborted or failed take and undo sends no request after its answer, over a wait longer than the syncer's timeout (SPEC-022 R8); and with the collection's configured UTC offset different from the test process's zone, a preview, each refused take and each refused undo leave the private copy's bytes as its own sync left them | `every_path_but_the_take_and_the_undo_records_zero_uploads` | E4b (take arms), E4c (undo arms) |
+| A9 | the engine's Set Due Date writes review-log rows the read does not count as study events | `a_reschedule_by_the_engine_is_not_a_study_event` | E4b |
+| A19 | `/skip` and `/cheat` answer the preview, the cards to move counted per deck and the tariff, with Confirm and Cancel, and only for the owner | `skip_and_cheat_answer_the_preview_with_confirm_and_cancel` | E4c |
+| A20 | `/skipundo` asks before undoing and lists every card left alone, and `/skipstats` shows counts only, both only for the owner | `skipundo_asks_before_undoing_and_skipstats_shows_counts_only` | E4c |
+| A21 | the four skip routes answer the owner's session and refuse any other caller with no data | `the_skip_routes_answer_only_the_owner` | E4c |
+| A22 | the Mini App's skip sheet shows the due count, the cards to move, the tariff and whether the balance covers it, then the outcome with every card left alone | `shows the due count, the cards to move and the tariff, then the outcome` | E4c |
+| A24 | (i) only the skip's write module reaches the engine's card writes or pushes a local change, and a planted fixture that does elsewhere is refused (examined count reported, zero refused) | `only_the_skip_write_reaches_an_engine_write_or_a_push` | E4b |
+| A25 | (ii) a full or one-way sync demand at a take's converge aborts it, in either direction, one a download would resolve (another client forced a one-way sync) and one only an upload would resolve (the server holds an empty collection): no request carries a card, the private copy's bytes are unchanged, the working copy is discarded, the row is `failed` with `full_sync_required`, and the answer tells the owner | `a_full_sync_demand_at_the_converge_aborts_the_take_writing_nothing` | E4b |
+| A26 | (ii) a full or one-way sync demand at a take's push, in either direction, forced after the converge, aborts it the same way | `a_full_sync_demand_at_the_push_aborts_the_take_writing_nothing` | E4b |
+| A27 | (iii, undo) only the owner's confirm reaches the take and the undo, once per confirm: the bot's skip callbacks and the API's two skip routes are their only callers, no scheduler job, recompute step, startup path, retry or spawned task calls them or sends their push again, and a planted caller is refused (examined count reported); and, decided dynamically, one confirm under a planted failure, at the converge or at the push, reaches the take once, and the recording layer records one converge and no second push for it; one undo confirm under the same failures reaches the undo once, with one converge and no second push | `only_the_owners_confirm_reaches_the_take_and_the_undo` | E4c |
+| A28 | (iv) the preview lists the cards the write would move with their digest, and a take whose confirm carries no digest, or a digest that differs from the list the take reads again, writes nothing, sends no request and answers `preview_changed` with the new preview | `the_preview_lists_the_cards_and_a_changed_list_writes_nothing` | E4b |
+| A29 | (iv) each moved card's prior due date and prior state are committed before any card changes: a take stopped between that commit and the reschedule leaves the snapshot rows and no request carrying a card | `the_prior_state_is_recorded_before_any_card_changes` | E4b |
+| A30 | (undo, v) after a take and its undo each moved card's row equals its pre-skip row in every field but its modification time and sync number, with FSRS off and on, and the undo's push, through the recording layer, carries exactly those cards, no card the skip did not move, no note, grave, deck, notetype or tag, no setting and no creation stamp whose value differs from the server's at the undo's converge (the engine's own last-unburied day aside and never the configured UTC offset), no review-log row, and no upload | `an_undo_restores_exactly_the_prior_state_of_the_moved_cards` | E4c |
+| A31 | (undo) the undo writes a card only when its scheduling state and modification time equal what the take recorded (R22) and its review log holds no study event after the take's converge: a card whose due date still equals what the skip wrote but that was suspended on another client, one only flagged there, and one reviewed on another client between the take's converge and its reschedule (the take's newer push overwrote the review, so its due date, scheduling state and modification time all equal what the skip recorded) are each left as they are and listed to the owner, and no request of the undo carries any of them | `an_undo_never_writes_a_card_changed_before_its_converge` | E4c |
+| A32 | (ii, undo) a full or one-way sync demand at the undo's converge or its push, in either direction, aborts it: no request carries a card, the private copy's bytes are unchanged, the working copy is discarded, the skip stays `applied` with its record and tariff unchanged, nothing is refunded, and the answer tells the owner that a full sync is needed and that nothing was written | `a_full_sync_demand_aborts_the_undo_writing_nothing` | E4c |
+| A34 | a card reviewed on another client between the take's converge and its push is listed to the owner in the take's answer, both when the review lands before the reschedule (the push overwrites it and only its review log shows it) and after it (the merge keeps the review), that later review landing at least one whole second after the reschedule's modification time, because a tie keeps the working copy's card (the pinned engine's `rslib/src/sync/collection/chunks.rs:184`) | `a_card_reviewed_during_the_take_is_listed_to_the_owner` | E4b |
+| A35 | a take whose write outlives the answer's wait answers `pending`, and its write's own outcome settles the row; a row still `pending` at start is settled after the next successful sync by the scheduling state and modification time the take recorded after its reschedule (R26): a row whose push landed settles `applied` and is charged once, and a row whose push never landed settles `failed`, is charged no tariff and leaves its day out of the skip set, so the day is not bridged, even when one of its recorded cards, a card with a prior interval of 1 day reviewed on another client with a 1-day interval and its ease factor kept, lands on the date the skip wrote, so that, with FSRS off, only its modification time separates it from the state the take recorded after its reschedule; and a take whose push the server commits while the relay drops the answer to its `finish` answers that the outcome is not known yet, leaves its row `pending`, and after the private copy's next sync settles it `applied`, charged once and undoable | `a_write_that_outlives_the_answer_settles_its_own_row` | E4c |
+| A36 | more cards than the golden 5,000 are refused with `too_many_cards` before any change or request, and a day with no card to move records the skip with no card written | `the_card_guard_refuses_a_large_set_and_an_empty_set_writes_nothing` | E4b |
+| A37 | a take that is refused, aborts or fails charges no tariff and puts no day in the skip set, and an applied take charges once | `a_take_that_does_not_apply_charges_nothing` | E4c |
+| A38 | (i) with a custom `DECKSTREAK_SKIP_SEARCH` that also matches a review card due on another day, a suspended and a buried review card due today, a relearning card due today, a review card due today in a filtered deck, and new and learning cards, the preview lists and the push carries only the review cards due that study day outside a filtered deck; and a configured search that closes the wrap's group (`deck:X) or (deck:X`, over a deck holding every card above) is refused before any preview, request or write | `a_custom_search_moves_only_the_study_days_due_review_cards` | E4b |
+| A39 | (iv) a card the preview did not list, which another client made due before the converge, and a previewed card, which another client rescheduled before it, are each left alone and listed in the take's answer, and the push carries neither | `a_card_that_changed_between_the_preview_and_the_converge_is_left_alone` | E4b |
+| A40 | (i, v) when the engine's own day differs from the study day (the synthetic collection's rollover hour differs from the study-day rule's), when the collection's configured UTC offset differs from the test process's zone, and when the collection holds no configured UTC offset and the test process's zone's offset is not zero, each planted alone, the other conditions held equal, under a test process zone, a POSIX rule that names no zone file, that observes no daylight saving, a preview and a take either list and push only that study day's due review cards, each moved to a day in the day spec's range from the study day, with no setting whose value differs from the server's at the converge, or refuse before any request or write, and an undo either restores its cards as A30 requires or refuses before any request or write; the private copy's bytes are unchanged either way; and when another client changes the server's configured UTC offset, and in a second case its rollover hour, after the private copy's last sync, so that the private copy passes both checks, a take and an undo push nothing, and no request carries a setting whose value differs from the server's at the converge; and the same holds in a third case, where that client's change leaves the server with no configured UTC offset; and in a test process whose zone observes daylight saving, on a collection that passes every other check at the test's instant (its configured UTC offset equal to that zone's offset then, and the engine's day the study day), a preview, a take and an undo each refuse before any request or write, and the private copy's bytes are unchanged, both with `TZ` holding a POSIX rule that names no zone file whose daylight period is in effect at the test's instant and with `TZ` holding one whose daylight period has not begun at the test's instant and begins within the next calendar year, and with `TZ` changed after the service has started from a rule that names no zone file and has no daylight period to a rule that names no zone file and has a daylight period, so that a check made only at the start would pass and each of the three refuses | `a_take_holds_to_the_study_day_and_writes_no_setting_when_the_engines_day_or_zone_differs` | E4b (take arms), E4c (undo arms) |
+| A41 | (undo) an undo whose push the server commits while the relay drops the answer to its `finish` answers that its outcome is not known yet and never that nothing was written; the skip stays `applied`; a second undo marks it undone, refunds it once, and lists no restored card as changed since the skip | `an_undo_whose_finish_answer_is_lost_says_its_outcome_is_not_known` | E4c |
+| A42 | (undo) a card reviewed on another client between the undo's converge and its push is listed to the owner in the undo's answer, with its review-log row kept, both when the review lands before the restore (the push overwrites it and only its review log shows it) and after it (the merge keeps the review), that later review landing at least one whole second after the restore's modification time, because a tie keeps the working copy's card (the pinned engine's `rslib/src/sync/collection/chunks.rs:184`) | `a_card_reviewed_during_the_undo_is_listed_to_the_owner` | E4c |
+| A43 | (undo) while the study day's take is `pending`, an undo (the bot's `/skipundo` or `POST /api/skip/undo`) refuses before any request or write with a bounded reason that the take's outcome is not known yet; and every undo's preview and confirm name the study day it undoes | `the_undo_refuses_while_the_take_is_pending_and_names_the_study_day_it_undoes` | E4c |
+| A44 | (i, v) the service's zone is pinned: on a synthetic collection that passes every other check (its configured UTC offset equal to the offset of the zone the test process then reads, and the engine's day the study day), with `TZ` unset in the test process, and in turn with `TZ` empty, `localtime`, `:/etc/localtime`, `/etc/localtime`, a relative name holding a `..` segment, `GMT0` (a zone file whose name also parses as a rule with no daylight period), `Etc/UTC` (a zone file whose name does not parse as a rule), and a value that names no zone file and does not parse as a POSIX rule, each planted alone, a preview, a take and an undo each refuse before any request or write with the bounded reason that the zone is not pinned, and the private copy's bytes are unchanged; with `TZ` holding the POSIX rules `UTC0` and `IST-5:30`, which name no zone file, none of the three refuses for the pin; and the checks read the process's zone only through chrono's `Local`, never from `TZ` or a zone file themselves: in `crates/ingest/src/skip_write.rs` only the pin reads `TZ` or opens a zone directory, and nothing names `/etc/localtime` | `the_skip_refuses_a_zone_the_service_does_not_pin` | E4b (take arms), E4c (undo arms) |
+| A47 | the take's backup passes its restore drill before any card changes, and a backup whose drill fails ends the take with nothing written and nothing pushed | `the_takes_backup_passes_its_restore_check_before_any_card_changes` | E4b |
+| A48 | the take's counts move only the review-log rows and the wrapped search's due count, by exactly the cards moved, and a planted extra change ends the take before its push and sets the class's stop | `the_takes_counts_move_only_the_review_log_rows_and_the_due_count` | E4b |
+| A49 | while the class's stop is set the take refuses with writes_stopped before any request or write, and a stop set during a take ends it before its push | `the_take_refuses_while_the_classs_stop_is_set` | E4b |
+| A50 | the undo's counts move only the wrapped search's due count, and a planted extra change ends it writing nothing | `the_undos_counts_move_only_the_due_count` | E4c |
+| A51 | only the owner's command sets and clears the class's stop, each after a confirm | `only_the_owners_command_sets_and_clears_the_classs_stop` | E4c |
+
+E4b: A5: cargo test -p deck-streak-ingest --test skip_write -- --exact a_take_pushes_exactly_the_previewed_cards_and_their_review_log_rows
+E4b: A6: cargo test -p deck-streak-ingest --test skip_zero_upload -- --exact every_path_but_the_take_and_the_undo_records_zero_uploads
+E4b: A9: cargo test -p deck-streak-ingest --test skip_write -- --exact a_reschedule_by_the_engine_is_not_a_study_event
+E4c: A19: cargo test -p deck-streak-bot --test skip_commands -- --exact skip_and_cheat_answer_the_preview_with_confirm_and_cancel
+E4c: A20: cargo test -p deck-streak-bot --test skip_commands -- --exact skipundo_asks_before_undoing_and_skipstats_shows_counts_only
+E4c: A21: cargo test -p deck-streak-api --test skip_routes -- --exact the_skip_routes_answer_only_the_owner
+E4c: A22: pnpm exec vitest run web/app/src/lib/skip/skip-sheet.test.ts -t "shows the due count, the cards to move and the tariff, then the outcome"
+E4b: A24: cargo test -p deck-streak-ingest --test skip_census -- --exact only_the_skip_write_reaches_an_engine_write_or_a_push
+E4b: A25: cargo test -p deck-streak-ingest --test skip_write -- --exact a_full_sync_demand_at_the_converge_aborts_the_take_writing_nothing
+E4b: A26: cargo test -p deck-streak-ingest --test skip_write -- --exact a_full_sync_demand_at_the_push_aborts_the_take_writing_nothing
+E4c: A27: cargo test -p deck-streak-coordination --test skip_callers -- --exact only_the_owners_confirm_reaches_the_take_and_the_undo
+E4b: A28: cargo test -p deck-streak-ingest --test skip_write -- --exact the_preview_lists_the_cards_and_a_changed_list_writes_nothing
+E4b: A29: cargo test -p deck-streak-ingest --test skip_write -- --exact the_prior_state_is_recorded_before_any_card_changes
+E4c: A30: cargo test -p deck-streak-ingest --test skip_undo -- --exact an_undo_restores_exactly_the_prior_state_of_the_moved_cards
+E4c: A31: cargo test -p deck-streak-ingest --test skip_undo -- --exact an_undo_never_writes_a_card_changed_before_its_converge
+E4c: A32: cargo test -p deck-streak-ingest --test skip_undo -- --exact a_full_sync_demand_aborts_the_undo_writing_nothing
+E4b: A34: cargo test -p deck-streak-ingest --test skip_write -- --exact a_card_reviewed_during_the_take_is_listed_to_the_owner
+E4c: A35: cargo test -p deck-streak-coordination --test skip_flow -- --exact a_write_that_outlives_the_answer_settles_its_own_row
+E4b: A36: cargo test -p deck-streak-ingest --test skip_write -- --exact the_card_guard_refuses_a_large_set_and_an_empty_set_writes_nothing
+E4c: A37: cargo test -p deck-streak-coordination --test skip_flow -- --exact a_take_that_does_not_apply_charges_nothing
+E4b: A38: cargo test -p deck-streak-ingest --test skip_write -- --exact a_custom_search_moves_only_the_study_days_due_review_cards
+E4b: A39: cargo test -p deck-streak-ingest --test skip_write -- --exact a_card_that_changed_between_the_preview_and_the_converge_is_left_alone
+E4b: A40: cargo test -p deck-streak-ingest --test skip_write -- --exact a_take_holds_to_the_study_day_and_writes_no_setting_when_the_engines_day_or_zone_differs
+E4c: A41: cargo test -p deck-streak-ingest --test skip_undo -- --exact an_undo_whose_finish_answer_is_lost_says_its_outcome_is_not_known
+E4c: A42: cargo test -p deck-streak-ingest --test skip_undo -- --exact a_card_reviewed_during_the_undo_is_listed_to_the_owner
+E4c: A43: cargo test -p deck-streak-coordination --test skip_callers -- --exact the_undo_refuses_while_the_take_is_pending_and_names_the_study_day_it_undoes
+E4b: A44: cargo test -p deck-streak-ingest --test skip_write -- --exact the_skip_refuses_a_zone_the_service_does_not_pin
+E4b: A47: cargo test -p deck-streak-ingest --test skip_write -- --exact the_takes_backup_passes_its_restore_check_before_any_card_changes
+E4b: A48: cargo test -p deck-streak-ingest --test skip_write -- --exact the_takes_counts_move_only_the_review_log_rows_and_the_due_count
+E4b: A49: cargo test -p deck-streak-ingest --test skip_write -- --exact the_take_refuses_while_the_classs_stop_is_set
+E4c: A50: cargo test -p deck-streak-ingest --test skip_undo -- --exact the_undos_counts_move_only_the_due_count
+E4c: A51: cargo test -p deck-streak-bot --test skip_commands -- --exact only_the_owners_command_sets_and_clears_the_classs_stop
 
 ## 4. File manifest
 
@@ -810,3 +838,156 @@ instant epoch milliseconds (SPEC-029 R3).
 | `S08317-THE-TARIFF-AFTER-APPLY` | `crates/coordination/src/skip/mod.rs` | the charge made only on an applied take | `skip_flow::a_take_that_does_not_apply_charges_nothing` |
 | `S08318-THE-WORKING-COPY-IS-DISCARDED` | `crates/ingest/src/skip_write.rs` | the private copy left to SPEC-022's syncer | `skip_zero_upload::every_path_but_the_take_and_the_undo_records_zero_uploads` |
 | `S08319-THE-READ-BACK-LISTS` | `crates/ingest/src/skip_write.rs` | the read-back's listing of a card changed during the take | `skip_write::a_card_reviewed_during_the_take_is_listed_to_the_owner` |
+
+## 10. Amendments, 2026-10-03: the record and the game land first (#108), the skip day as ADR-301's first declared write class, and what E4b and E4c deliver
+
+Section 3's table now holds only this part's criteria; every other row moved, verbatim, to section
+3c with its fence line; A45 and A46 are added in section 11, and A47 to A51 in section 3c. The body
+above is otherwise as planned; the amendments below are recorded here and are not applied to it;
+each Old is the body's text and each New is what it reads from this pull request on. Where this
+SPEC, ADR-083 or ADR-089 says otherwise than ADR-301, ADR-301 governs: they are "read under this
+ADR" (ADR-301, Consequences). The file keeps its planned name, whose slug (`without-writing-to-anki`)
+the title on line 1 contradicts; the title governs, and the name is kept so that every citation of
+the path holds.
+
+- **T1** (header, Decided by). Old: `path never uploads).` New: `path never uploads), read under
+  ADR-301 (the owner's decision at #514: the collection is written only through declared write
+  classes, and the skip day is the first, its ceiling the approval rung) and ADR-321 (this SPEC's
+  three parts, the class's backup, restore drill, counts and stop, and its formal decision).`
+- **T2** (header, Prerequisites, across the wrap). Old: `SPEC-082 (the wallet's purchase and credit
+  ports).` New: `SPEC-082 (the wallet's floor-clipped debit and its refund, R7), SPEC-301 (declared
+  write classes).`
+- **T3** (R8, across the wraps). Old: `The charge is a purchase through economy's port, made only
+  when the take's write is `applied` (R24, R26), clipped to the wallet and outside the daily loss
+  cap;` New: `The charge is economy's floor-clipped debit (`debit_floored`, SPEC-082 R7) with source
+  `skip_tariff` and the skip's id as its reference, on the skip's own study day, so a settlement on
+  any later day finds the same key and charges once; it is made only when the take's write is
+  `applied` (R24, R26), clipped to the wallet and outside the daily loss cap. A price of 0 makes no
+  call. A debit the empty wallet clips to 0 writes its movement of 0, where the predecessor wrote
+  none, and the golden's comparison reads both as nothing paid;`
+- **T4** (R9). Old: `Undo refunds exactly the coins the skip paid, as a credit on the undo's study
+  day,` New: `Undo refunds exactly the coins the skip paid, through economy's refund (`refund`,
+  SPEC-082 R7) with source `skip_tariff_refund` and the skip's id as its reference, as a credit on
+  the undo's study day as the row records it, so a retry on a later day credits once,`
+- **T5** (section 4, after the row `crates/coordination/src/recompute/`). New rows:
+  `crates/coordination/src/streak_views.rs`, `crates/coordination/src/lapse.rs` and
+  `crates/coordination/src/progression/level_view.rs`, each `deck-streak-coordination`, `changed:
+  reads the skip set from skip/days.rs in place of the empty set`. R4's "every consumer" holds seven
+  sites at dev: `recompute/streaks.rs:115` and `:183`, `recompute/xp.rs:200-201`,
+  `recompute/day_bonuses.rs:52`, `streak_views.rs:123-124`, `lapse.rs:48`,
+  `progression/level_view.rs:62`.
+- **T6** (section 4, row `crates/ingest/src/settings.rs`). Old: `and the process's zone refused at
+  start when it observes daylight saving (R3)` New: `and nothing checked of the process's zone at
+  start: the zone pin and the daylight-saving refusal run at each preview, take and undo (R3)`. R3
+  says the pin "refuses only these three, never the service's start".
+- **T7** (section 4, row ADR-083). Old: `changed: accepted at this delivery, with the owner's decision
+  at #266 (ADR-089)` New: `changed: an insert-only note at E4a reading it under ADR-301; accepted at
+  E4c, the part that makes the write reachable, with the owner's decision at #266 (ADR-089)`.
+- **T8** (section 1, the owner's decision, across the wrap). Old: `superseded for this path only, and
+  CHARTER constraint 4 stands as written.` New: `superseded for this path only. CHARTER constraint 4
+  keeps its sentence and, since ADR-301 (#514), adds that DeckStreak writes to the collection only
+  through declared write classes; the skip day is the first.`
+- **T9** (section 5, across the wrap). Old: `It amends no charter constraint: CHARTER constraint 4
+  stands as written, and ADR-089 records the owner's decision (#266).` New: `It amends no charter
+  constraint: CHARTER constraint 4 reads as ADR-301 amended it (#514), and ADR-089 records the
+  owner's decision (#266).`
+- **T10** (R19, appended). New: `The take's write may run in the one task the take itself spawns, so
+  that R26's wait can end without cancelling it; that task runs the write once and never calls the
+  take again (A27's census admits it by name).`
+- **T11** (section 4, added rows). `docs/decisions/ADR-321-the-skip-day-lands-in-three-parts-as-adr-301s-first-declared-write-class.md`
+  added; `docs/decisions/ADR-089-the-skip-day-writes-its-reschedule-back-to-anki-and-every-other-path-never-uploads.md`
+  changed (an insert-only note); `docs/schematics/skip-day-record-and-effects.md` changed (the
+  backup, the drill, the counts and the stop, drawn before E4b's code); `formal/tla/SkipDayOnce/` and
+  `formal/lean/Formal/SkipTariff.lean` added; and E4b's
+  `migrations/008303_ingest_write_class_stop.sql`.
+- **T12** (section 9, added rows). `S08320-THE-CHARGE-IS-KEYED-TO-THE-SKIPS-DAY` and
+  `S08321-THE-REFUND-IS-KEYED-TO-THE-UNDOS-DAY` (`crates/coordination/src/skip/mod.rs`, killer A46's
+  test); `S08322` to `S08326`, one per skip constant typed in `crates/ingest/src/skip.rs`
+  (`SKIP_SPREAD_MIN_DAYS`, `SKIP_SPREAD_MAX_DAYS`, `SKIP_DEFAULT_SEARCH`, `SKIP_MAX_CARDS`,
+  `SKIP_BRIDGE_MONTHLY_CAP`), killer A45's test: cargo-mutants never mutates a const literal, so
+  each value owes a hand row.
+- **T13** (added after R33; ADR-301 (b) and (c)). Five new requirements, each built by the part 3c
+  names:
+  - `R34. The backup and its drill (ADR-301 (b); E4b).` After the converge and before the
+    snapshot's commit, the take closes the converged working copy and copies it whole to one backup
+    file beside the private copy, mode 0600, named for its skip. A restore drill copies the backup
+    to a throwaway collection, opens it with the engine, and compares its R35 counts with the
+    converged working copy's. A backup that cannot be written, or a drill whose counts differ, ends
+    the take `failed` with a bounded reason before any card changes or any second sync, and tells
+    the owner. The backup holds the collection file only: the class writes no media. DeckStreak
+    never restores it, because a restore reaches the server only by a full upload, which ADR-301 (a)
+    4 forbids; the owner restores it by the owner's own import. One backup is kept: a take's backup
+    replaces the last only after its own drill passes. The data-rights erase removes it; the export
+    leaves it out, since it is the owner's own collection. It is a write batch's own act, not one of
+    ADR-064's standing copies (ADR-301 (b), #518 note). The backup is host-only: it is never in a
+    bucket, never in Litestream's replica and never in ADR-064's daily copy, and the older backup is
+    removed only after the newer one passes its check. ADR-064's "never" covers standing copies, not
+    a write batch's own backup.
+  - `R35. The counts (ADR-301 (b); E4b, E4c).` On the converged working copy, and again after the
+    reschedule and before the push, the take counts the cards, the notes, the review-log rows, the
+    cards in each queue and type pair, and the review cards the wrapped search (R3) selects as due.
+    Two counts may move: the review-log rows, up by exactly the cards moved, each new row of type 4
+    with ease 0 (R18); and the wrapped search's due count, down by exactly the cards moved. Any other
+    count that moves ends the take before its push, writing nothing, sets the class's stop (R36) and
+    tells the owner which count moved. The undo counts the same way on its own working copy and may
+    move only the wrapped search's due count, up by the cards it restores. The read-back after a
+    push is not counted, because another client's changes reach it; R27 lists them.
+  - `R36. The class's stop (ADR-301 (c); E4b, E4c).` One ledger row says whether every declared
+    write class is stopped, why (the owner, or a count that moved) and since when. While it is set,
+    the preview says so, and the take and the undo refuse with `writes_stopped` before any request
+    or write; a take or an undo already running reads it again before its push and ends writing
+    nothing when it is set. A count that moved sets it; only the owner clears it, by the bot's
+    owner-only command after a confirm (E4c), and the owner may set it the same way. The row records
+    who set it and why. Only the owner's authenticated command handler clears it, and a later part's
+    test proves that no other path does. While it is set nothing writes, an undo included. The owner
+    may reshape it by a later appended amendment.
+  - `R37. Dwell, band and change points (ADR-301 (c) and (b)).` No dwell time between changes
+    applies: the class's ceiling is the approval rung (ADR-089, #518 note), so every batch is the
+    owner's own confirm, and R2 already holds a study day to one pending or applied skip not undone.
+    No band applies: a band is what a result must clear before a change is reversed, and a skip is
+    reversed only by the owner's undo (R29), never by a guard metric, since the class has no
+    autonomous rung, no trial and no guard metric. No change point applies: the class edits no note.
+    The change budget stays ADR-089's: R21's `SKIP_MAX_CARDS`.
+  - `R38. The formal decision (ADR-301, its last line).` ADR-321 records it: TLA+ `SkipDayOnce`
+    (the record, the charge and the refund; E4a), TLA+ `SkipDayWrite` (the take's write, E4b;
+    extended with the undo, E4c) and Lean `SkipTariff` (the price and the amount paid; E4a), each
+    citing #108.
+- **T14** (section 3c, the amendment's criteria for later parts). A47 (E4b): `the take's backup
+  passes its restore drill before any card changes, and a backup whose drill fails ends the take
+  with nothing written and nothing pushed`; A48 (E4b): `the take's counts move only the review-log
+  rows and the wrapped search's due count, by exactly the cards moved, and a planted extra change
+  ends the take before its push and sets the class's stop`; A49 (E4b): `while the class's stop is
+  set the take refuses with writes_stopped before any request or write, and a stop set during a take
+  ends it before its push`; A50 (E4c): `the undo's counts move only the wrapped search's due count,
+  and a planted extra change ends it writing nothing`; A51 (E4c): `only the owner's command sets and
+  clears the class's stop, each after a confirm`. Each names its test as section 3's rows do; the
+  part that delivers it writes the name.
+- **T15** (section 9, row S08306). Old: `the charge taken through the purchase port, outside the daily
+  loss cap` New: `the charge taken through the floor-clipped debit, outside the daily loss cap`.
+
+Section 4's rows this part does not build, each delivered by the part named: `crates/ingest/src/skip_write.rs`
+(E4b, the undo's arm E4c); `crates/ingest/src/engine.rs` (E4b); `crates/ingest/tests/skip_write.rs`
+(E4b); `crates/ingest/tests/skip_undo.rs` (E4c); `crates/ingest/tests/skip_zero_upload.rs` (E4b,
+the undo's arms E4c); `crates/ingest/tests/skip_census.rs` (E4b);
+`crates/ingest/tests/support/synthetic.rs` (E4b); `crates/coordination/tests/skip_callers.rs`
+(E4c); `crates/api/src/skip_routes.rs`, `crates/api/src/router.rs` and
+`crates/api/tests/skip_routes.rs` (E4c); `crates/bot/src/skip_commands.rs`,
+`crates/bot/src/commands.rs` and `crates/bot/tests/skip_commands.rs` (E4c);
+`crates/daemon/src/wiring.rs` (E4c); every `web/app/` row (E4c); `.cargo/config.toml` (E4b);
+`deploy/deck-streak.env.example`, the two units and `scripts/tests/test_deploy_templates.py` (E4b);
+`docs/OWNER-SETUP.md` (E4c); and ADR-083's acceptance (E4c, T7). `crates/economy/Cargo.toml` stays
+unchanged: SPEC-082 added `serde` and `serde_json` as dev-dependencies, so row 620's condition does
+not arise. `crates/economy/src/tariff.rs` also reads what a skip paid, by its source and reference,
+since the wallet's ports answer no such read and the refund owes exactly that amount (T4).
+
+## 11. Acceptance criteria of the 2026-10-03 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A45 | every skip constant equals `goldens/skip.constants.json` | `the_skip_constants_equal_the_predecessors` |
+| A46 | a settlement retried on a later study day charges the tariff once, and an undo's refund retried on a later day credits once | `the_tariff_and_its_refund_are_taken_once_per_skip` |
+
+```acceptance
+A45: cargo test -p deck-streak-ingest --test skip_record -- --exact the_skip_constants_equal_the_predecessors
+A46: cargo test -p deck-streak-coordination --test skip_flow -- --exact the_tariff_and_its_refund_are_taken_once_per_skip
+```
