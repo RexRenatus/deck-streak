@@ -322,7 +322,7 @@
         "src/lib.rs",
         "pub mod data_rights;",
         "mod data_rights;",
-        "chests_rights::the_quests_port_declares_its_tables_and_their_reset_rows",
+        "chests_boundaries::the_quests_lib_publishes_the_data_rights_module",
         "the data rights module is public, because the composition root reads the quests port through it (SPEC-081 R21, A21)"
       ]
     ],

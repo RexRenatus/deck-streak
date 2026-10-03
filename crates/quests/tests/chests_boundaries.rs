@@ -88,3 +88,15 @@ async fn a_chest_that_pays_nothing_answers_no_payout() {
         other => panic!("a Common chest reveals, not {other:?}"),
     }
 }
+
+#[test]
+fn the_quests_lib_publishes_the_data_rights_module() {
+    // The composition root reaches the quests port only through this module, so the declaration
+    // must stay public; a private one still builds here, which is why the source is read.
+    let lib = include_str!("../src/lib.rs");
+    assert!(
+        lib.lines()
+            .any(|line| line.trim() == "pub mod data_rights;"),
+        "the quests lib declares its data rights module public"
+    );
+}
