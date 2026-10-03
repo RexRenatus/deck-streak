@@ -56,6 +56,7 @@ use crate::drill_routes;
 use crate::health::{self, Readiness};
 use crate::inbox_capture_route;
 use crate::insights_routes;
+use crate::law_routes;
 use crate::notifications_routes;
 use crate::progress_routes;
 use crate::session_routes::{self, OwnerAccess};
@@ -203,6 +204,7 @@ pub fn router(state: ApiState) -> Router {
                     readiness.clone(),
                     courses,
                 ))
+                .merge(law_routes::routes(access.clone(), readiness.clone()))
                 .merge(session_routes::routes(access.clone()))
                 .merge(drill_routes::routes(
                     access.clone(),
