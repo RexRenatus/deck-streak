@@ -6,15 +6,25 @@
 \* @phx covers crates/habits/src/minutes.rs anchor=week_start digest=sha256:580735cd07aed4417ba20cad976d40ff325b4860fbbeacc4f2d02669e9356e4a
 \* @phx covers crates/progression/src/settle.rs anchor=settle digest=sha256:d5473de04ebe9964bea0c7755b0ac7116ea5d9a45e62a8e342a9a5ff1771eeb7
 \* @phx covers crates/coordination/src/level_up.rs anchor=announce_level_up digest=sha256:acbb8923e76fbd4ab77949a119c1ad3a87de6f41737e65b89df689875e851dd0
-\* @phx cites #93
+\* @phx covers crates/coordination/src/habits/writing.rs anchor=confirm digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers crates/coordination/src/habits/writing.rs anchor=clear digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers crates/coordination/src/habits/writing.rs anchor=toggle digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers crates/coordination/src/recompute/writing.rs anchor=evaluate digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers crates/habits/src/writing.rs anchor=all_confirmed_days digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx cites #93, #94
 \* @phx property ReadXpFollowsTheLog ramp=report
 \* @phx property GoalBonusFollowsItsWeek ramp=report
 \* @phx property ALevelUpIsCelebratedOnce ramp=report
+\* @phx property WritingXpFollowsItsConfirmations ramp=report
+\* @phx property AChipTogglesOnlyItsOwnDay ramp=report
 \* @phx witness witness/a-habit-step-that-reads-the-log-before-its-write.cfg kills=ReadXpFollowsTheLog
 \* @phx witness witness/an-undo-whose-settle-is-a-write-of-its-own.cfg kills=ReadXpFollowsTheLog
 \* @phx witness witness/an-undo-that-re-derives-the-current-week.cfg kills=GoalBonusFollowsItsWeek
 \* @phx witness witness/a-bonus-settled-on-the-entrys-own-day.cfg kills=GoalBonusFollowsItsWeek
 \* @phx witness witness/a-level-up-announced-without-its-once-ever-key.cfg kills=ALevelUpIsCelebratedOnce
+\* @phx witness witness/a-toggle-whose-settle-is-a-write-of-its-own.cfg kills=WritingXpFollowsItsConfirmations
+\* @phx witness witness/a-writing-bonus-paid-with-no-writing-course.cfg kills=WritingXpFollowsItsConfirmations
+\* @phx witness witness/a-chip-tap-that-toggles-the-day-it-is-tapped-on.cfg kills=AChipTogglesOnlyItsOwnDay
 
 (***************************************************************************)
 \* The minutes log of book reading and its XP (#93, SPEC-078 R3 to R5 and R18; ADR-078). Two actors
@@ -64,11 +74,41 @@
 \*   that lands between the read and the write, or between the commit and the read, can make the
 \*   use case see a crossing the cycle also sees; both route the one key level:N, and the router's
 \*   once-ever dedupe absorbs the second, which is what ALevelUpIsCelebratedOnce states.
+\*
+\* The writing confirmations and their XP (#94, SPEC-078 R7 and R17 as amended; ADR-078's part 078b
+\* amendment). WCourses are the configured writing courses; conf[d] is the set confirmed on study
+\* day d (writing_log's rows), wx[c][d] the settled write:<code> of course c on day d and wa[d] the
+\* settled write:all. The owner's toggle (coordination habits/writing.rs::confirm, clear, toggle)
+\* writes the confirmation and the day's two settles in ONE write, cause the owner's correction, and
+\* announces after commit through the same owner state as LogMinutes; Toggle flips a course, which
+\* is confirm on an unconfirmed course and clear on a confirmed one. The fold's writing step
+\* (recompute/writing.rs::evaluate) settles every writing course and write:all of the evaluated day
+\* from its confirmations inside that day's write, so it rides FDay's write (and FWrite's in the
+\* rejected early-read design). A chip carries the day it was drawn for (hb:w:<code>:<epoch day>):
+\* Draw is the bot drawing today's chips, Tap a press on one, and the toggle refuses a chip whose
+\* day is not today and answers with today's chips.
+\* - habits/src/writing.rs::all_confirmed_days returns no day over an empty writing set, so write:all
+\*   is WAll: the bonus only when WCourses is not empty and every course in it is confirmed.
+\* - The write: rows carry no closed flag here. A row is held closed only by a settle on a day
+\*   already over, and today never goes back, so held-closed implies d < today, and Settled's
+\*   heldClosed \/ reqClosed reads d < today; SettledW is Settled with that substituted.
+\* - The writing step also re-settles a write:<code> row of a code that is no longer a writing
+\*   course; WCourses is fixed for a run here, so that row never exists (a stutter).
+\* - A toggle reaches only today: /write, /unwrite and a chip whose day is today. A past day's
+\*   confirmations are therefore fixed once the day is over, which is what lets the recompute keep
+\*   the larger amount there.
+\* - HabitTotal adds the write: rows to the level's total, so a level the writing XP reaches is
+\*   announced through the same Route; MCHabitWriting.cfg checks ALevelUpIsCelebratedOnce over it.
+\* Writing switches: Toggle1Write = FALSE is a toggle whose settles are a write of their own after
+\* the confirmation's (ADR-078's rejected two writes); ChipCarriesDay = FALSE a chip with no day,
+\* which toggles today whenever it is pressed; SubsetRule the predecessor's habits.py writing_day_xp,
+\* whose set(codes) <= set(done) pays the bonus over an empty writing set.
 (***************************************************************************)
 EXTENDS Integers, Sequences, FiniteSets
 
 CONSTANTS Undo1Write, StepReadsEarly, UndoWeekCurrent, BonusOnEntryDay, Dedupe,
           NDays, WeekLen, MaxMinutes, Goal, Per, Cap, Bonus, LevelStep, MaxEntries, Runs
+CONSTANTS Toggle1Write, ChipCarriesDay, SubsetRule, NWriting, WPer, WBonus, MaxTaps
 
 Days == 1..NDays
 Minutes == 1..MaxMinutes
@@ -77,6 +117,7 @@ Logs == UNION {[1..n -> Entries] : n \in 0..MaxEntries}
 Levels == 0..((NDays * (Cap + Bonus)) \div LevelStep)
 MaxRoutes == 2 * MaxEntries + Runs
 MaxSeen == MaxEntries * MaxMinutes
+WCourses == 1..NWriting
 
 Max(a, b) == IF a >= b THEN a ELSE b
 
@@ -105,6 +146,15 @@ SumOver(f, S) ==
 Total(r, g) == SumOver(r, Days) + SumOver(g, Days)
 Level(x) == x \div LevelStep
 
+\* the habit XP a level reads: the reading rows and every write: row (#94)
+WSum(x, a) == SumOver([c \in WCourses |-> SumOver(x[c], Days)], WCourses) + SumOver(a, Days)
+HabitTotal(r, g, x, a) == Total(r, g) + WSum(x, a)
+
+\* habits/src/writing.rs: write:<code> pays WPer on a day the course is confirmed; write:all pays
+\* WBonus on a day all_confirmed_days returns, never over an empty writing set as built
+WPay(c, C) == IF c \in C THEN WPer ELSE 0
+WAll(C) == IF (SubsetRule \/ WCourses # {}) /\ WCourses \subseteq C THEN WBonus ELSE 0
+
 \* settle.rs::settle: the amount and the closed flag the row holds after one settle
 Settled(held, heldClosed, reqClosed, amount, cause) ==
     IF cause = "recompute" /\ (heldClosed \/ reqClosed) THEN Max(held, amount) ELSE amount
@@ -116,9 +166,14 @@ GoalDay(d) == IF BonusOnEntryDay THEN d ELSE WeekStart(d)
 
 VARIABLES today, log, read, readC, goal, goalC, opc, oDay, oBefore, oAfter, spent,
           fpc, fDone, fDay, fSeenD, fSeenW, fBefore, runs, claimed, celebrated
+VARIABLES conf, wx, wa, wpc, wDay, drawn, tapped, nTaps
 
 vars == <<today, log, read, readC, goal, goalC, opc, oDay, oBefore, oAfter, spent,
-          fpc, fDone, fDay, fSeenD, fSeenW, fBefore, runs, claimed, celebrated>>
+          fpc, fDone, fDay, fSeenD, fSeenW, fBefore, runs, claimed, celebrated,
+          conf, wx, wa, wpc, wDay, drawn, tapped, nTaps>>
+
+\* the writing variables (#94), unchanged by every reading action
+wvars == <<conf, wx, wa, wpc, wDay, drawn, tapped, nTaps>>
 
 TypeOK ==
     /\ today \in Days
@@ -141,6 +196,14 @@ TypeOK ==
     /\ runs \in 0..Runs
     /\ claimed \subseteq Levels
     /\ celebrated \in [Levels -> 0..MaxRoutes]
+    /\ conf \in [Days -> SUBSET WCourses]
+    /\ wx \in [WCourses -> [Days -> 0..WPer]]
+    /\ wa \in [Days -> 0..WBonus]
+    /\ wpc \in {"idle", "settle"}
+    /\ wDay \in Days
+    /\ drawn \subseteq Days
+    /\ tapped \subseteq [drawn : Days, acted : 0..NDays]
+    /\ nTaps \in 0..MaxTaps
 
 Init ==
     /\ today = 1
@@ -163,6 +226,14 @@ Init ==
     /\ runs = 0
     /\ claimed = {}
     /\ celebrated = [l \in Levels |-> 0]
+    /\ conf = [d \in Days |-> {}]
+    /\ wx = [c \in WCourses |-> [d \in Days |-> 0]]
+    /\ wa = [d \in Days |-> 0]
+    /\ wpc = "idle"
+    /\ wDay = 1
+    /\ drawn = {}
+    /\ tapped = {}
+    /\ nTaps = 0
 
 \* the router: one celebration for the level reached, once ever when it dedupes
 Route(before, after) ==
@@ -170,6 +241,10 @@ Route(before, after) ==
         THEN /\ claimed' = claimed \cup {after}
              /\ celebrated' = [celebrated EXCEPT ![after] = @ + 1]
         ELSE UNCHANGED <<claimed, celebrated>>
+
+\* settle.rs::settle over a write: row: Settled with heldClosed \/ reqClosed read as d < today
+SettledW(held, d, amount, cause) ==
+    IF cause = "recompute" /\ d < today THEN Max(held, amount) ELSE amount
 
 \* the settles of one habit write: read:<code> on day d, readgoal:<code> for the week of w, over lg
 OwnerSettles(d, w, lg) ==
@@ -182,26 +257,29 @@ OwnerSettles(d, w, lg) ==
        /\ readC' = [readC EXCEPT ![d] = SettledClosed(readC[d], d < today, "owner")]
        /\ goal' = g2
        /\ goalC' = [goalC EXCEPT ![gd] = SettledClosed(goalC[gd], gd < today, "owner")]
-       /\ oAfter' = Level(Total(r2, g2))
+       /\ oAfter' = Level(HabitTotal(r2, g2, wx, wa))
 
 UndoWeek(d) == IF UndoWeekCurrent THEN today ELSE d
 
 \* minutes.rs::log_minutes: the entry and its settles in one write
 LogMinutes(m) ==
     /\ opc = "idle"
+    /\ wpc = "idle"
     /\ spent < MaxEntries
     /\ LET lg == Append(log, [day |-> today, min |-> m])
        IN /\ log' = lg
           /\ OwnerSettles(today, today, lg)
-    /\ oBefore' = Level(Total(read, goal))
+    /\ oBefore' = Level(HabitTotal(read, goal, wx, wa))
     /\ spent' = spent + 1
     /\ opc' = "announce"
     /\ UNCHANGED <<today, oDay, fpc, fDone, fDay, fSeenD, fSeenW, fBefore, runs, claimed, celebrated>>
+    /\ UNCHANGED wvars
 
 \* minutes.rs::undo_newest, and undo_entry for the newest id: the newest entry removed and its day
 \* and week re-derived, in one write as built
 Undo ==
     /\ opc = "idle"
+    /\ wpc = "idle"
     /\ log # <<>>
     /\ LET e == log[Len(log)]
            lg == SubSeq(log, 1, Len(log) - 1)
@@ -213,8 +291,9 @@ Undo ==
                 ELSE /\ UNCHANGED <<read, readC, goal, goalC, oAfter>>
                      /\ oDay' = e.day
                      /\ opc' = "settle"
-    /\ oBefore' = Level(Total(read, goal))
+    /\ oBefore' = Level(HabitTotal(read, goal, wx, wa))
     /\ UNCHANGED <<today, spent, fpc, fDone, fDay, fSeenD, fSeenW, fBefore, runs, claimed, celebrated>>
+    /\ UNCHANGED wvars
 
 \* the rejected design's second write: the undo's settles after its log write committed
 UndoSettle ==
@@ -223,6 +302,7 @@ UndoSettle ==
     /\ opc' = "announce"
     /\ UNCHANGED <<today, log, oDay, oBefore, spent, fpc, fDone, fDay, fSeenD, fSeenW, fBefore,
                    runs, claimed, celebrated>>
+    /\ UNCHANGED wvars
 
 \* the owner's step-local values, which no step reads once it is idle again
 OwnerIdle ==
@@ -238,12 +318,14 @@ OwnerAnnounce ==
     /\ OwnerIdle
     /\ UNCHANGED <<today, log, read, readC, goal, goalC, spent, fpc, fDone, fDay, fSeenD, fSeenW,
                    fBefore, runs>>
+    /\ UNCHANGED wvars
 
 OwnerCrash ==
     /\ opc \in {"settle", "announce"}
     /\ OwnerIdle
     /\ UNCHANGED <<today, log, read, readC, goal, goalC, spent, fpc, fDone, fDay, fSeenD, fSeenW,
                    fBefore, runs, claimed, celebrated>>
+    /\ UNCHANGED wvars
 
 \* a sync cycle starts: it reads the level before its fold
 FStart ==
@@ -252,9 +334,10 @@ FStart ==
     /\ fpc' = "day"
     /\ runs' = runs + 1
     /\ fDone' = {}
-    /\ fBefore' = Level(Total(read, goal))
+    /\ fBefore' = Level(HabitTotal(read, goal, wx, wa))
     /\ UNCHANGED <<today, log, read, readC, goal, goalC, opc, oDay, oBefore, oAfter, spent, fDay,
                    fSeenD, fSeenW, claimed, celebrated>>
+    /\ UNCHANGED wvars
 
 \* recompute/habits.rs::evaluate's settles of day d, from minutes md on the day and mw in its week
 FoldWrite(d, md, mw) ==
@@ -266,6 +349,12 @@ FoldWrite(d, md, mw) ==
                /\ goalC' = [goalC EXCEPT ![d] = SettledClosed(goalC[d], d < today, "recompute")]
           ELSE UNCHANGED <<goal, goalC>>
 
+\* recompute/writing.rs::evaluate's settles of day d: every writing course and write:all, from the
+\* day's confirmations, inside the same day's write
+WritingFoldWrite(d) ==
+    /\ wx' = [c \in WCourses |-> [wx[c] EXCEPT ![d] = SettledW(wx[c][d], d, WPay(c, conf[d]), "recompute")]]
+    /\ wa' = [wa EXCEPT ![d] = SettledW(wa[d], d, WAll(conf[d]), "recompute")]
+
 \* the habit step on one evaluated day, inside that day's write
 FDay(d) ==
     /\ fpc = "day"
@@ -276,19 +365,24 @@ FDay(d) ==
                /\ fSeenW' = MinInWeek(log, WeekStart(d))
                /\ fpc' = "write"
                /\ UNCHANGED <<read, readC, goal, goalC, fDone>>
+               /\ UNCHANGED <<wx, wa>>
           ELSE /\ FoldWrite(d, MinOn(log, d), MinInWeek(log, WeekStart(d)))
+               /\ WritingFoldWrite(d)
                /\ fDone' = fDone \cup {d}
                /\ UNCHANGED <<fpc, fDay, fSeenD, fSeenW>>
     /\ UNCHANGED <<today, log, opc, oDay, oBefore, oAfter, spent, fBefore, runs, claimed, celebrated>>
+    /\ UNCHANGED <<conf, wpc, wDay, drawn, tapped, nTaps>>
 
 \* the rejected design's later write, from what the step read before it
 FWrite ==
     /\ fpc = "write"
     /\ FoldWrite(fDay, fSeenD, fSeenW)
+    /\ WritingFoldWrite(fDay)
     /\ fDone' = fDone \cup {fDay}
     /\ fpc' = "day"
     /\ UNCHANGED <<today, log, opc, oDay, oBefore, oAfter, spent, fDay, fSeenD, fSeenW, fBefore,
                    runs, claimed, celebrated>>
+    /\ UNCHANGED <<conf, wpc, wDay, drawn, tapped, nTaps>>
 
 \* the fold has evaluated the days it owed
 FEnd ==
@@ -296,6 +390,7 @@ FEnd ==
     /\ fpc' = "announce"
     /\ UNCHANGED <<today, log, read, readC, goal, goalC, opc, oDay, oBefore, oAfter, spent, fDone,
                    fDay, fSeenD, fSeenW, fBefore, runs, claimed, celebrated>>
+    /\ UNCHANGED wvars
 
 \* the cycle's run-local values, which no step reads once it is idle again
 FoldIdle ==
@@ -309,15 +404,17 @@ FoldIdle ==
 \* the cycle reads the level after its fold and announces it
 FAnnounce ==
     /\ fpc = "announce"
-    /\ Route(fBefore, Level(Total(read, goal)))
+    /\ Route(fBefore, Level(HabitTotal(read, goal, wx, wa)))
     /\ FoldIdle
     /\ UNCHANGED <<today, log, read, readC, goal, goalC, opc, oDay, oBefore, oAfter, spent, runs>>
+    /\ UNCHANGED wvars
 
 FCrash ==
     /\ fpc \in {"day", "write", "announce"}
     /\ FoldIdle
     /\ UNCHANGED <<today, log, read, readC, goal, goalC, opc, oDay, oBefore, oAfter, spent, runs,
                    claimed, celebrated>>
+    /\ UNCHANGED wvars
 
 \* the study day turns over
 Rollover ==
@@ -325,6 +422,86 @@ Rollover ==
     /\ today' = today + 1
     /\ UNCHANGED <<log, read, readC, goal, goalC, opc, oDay, oBefore, oAfter, spent, fpc, fDone,
                    fDay, fSeenD, fSeenW, fBefore, runs, claimed, celebrated>>
+    /\ UNCHANGED wvars
+
+\* habits/writing.rs::toggle, and confirm or clear on the course's current state: the confirmation
+\* and the day's write:<code> and write:all settles in one write, cause the owner's correction (the
+\* owner's settle replaces the amount); the level is read before the write and after its commit
+ToggleW(c) ==
+    LET c2 == IF c \in conf[today] THEN conf[today] \ {c} ELSE conf[today] \cup {c}
+    IN /\ conf' = [conf EXCEPT ![today] = c2]
+       /\ oBefore' = Level(HabitTotal(read, goal, wx, wa))
+       /\ IF Toggle1Write
+             THEN LET x2 == [wx EXCEPT ![c][today] = WPay(c, c2)]
+                      a2 == [wa EXCEPT ![today] = WAll(c2)]
+                  IN /\ wx' = x2
+                     /\ wa' = a2
+                     /\ oAfter' = Level(HabitTotal(read, goal, x2, a2))
+                     /\ opc' = "announce"
+                     /\ UNCHANGED <<wpc, wDay>>
+             ELSE /\ wpc' = "settle"
+                  /\ wDay' = today
+                  /\ UNCHANGED <<wx, wa, oAfter, opc>>
+
+\* /write and /unwrite on today's study day
+Toggle(c) ==
+    /\ opc = "idle"
+    /\ wpc = "idle"
+    /\ ToggleW(c)
+    /\ UNCHANGED <<today, log, read, readC, goal, goalC, oDay, spent, fpc, fDone, fDay, fSeenD,
+                   fSeenW, fBefore, runs, claimed, celebrated, drawn, tapped, nTaps>>
+
+\* the rejected design's second write: the toggled day's settles after its confirmation committed
+ToggleSettle ==
+    /\ wpc = "settle"
+    /\ LET x2 == [c \in WCourses |-> [wx[c] EXCEPT ![wDay] = WPay(c, conf[wDay])]]
+           a2 == [wa EXCEPT ![wDay] = WAll(conf[wDay])]
+       IN /\ wx' = x2
+          /\ wa' = a2
+          /\ oAfter' = Level(HabitTotal(read, goal, x2, a2))
+    /\ opc' = "announce"
+    /\ wpc' = "idle"
+    /\ wDay' = 1
+    /\ UNCHANGED <<today, log, read, readC, goal, goalC, oDay, oBefore, spent, fpc, fDone, fDay,
+                   fSeenD, fSeenW, fBefore, runs, claimed, celebrated, conf, drawn, tapped, nTaps>>
+
+\* the owner ends between the rejected design's two writes; the confirmation committed stays
+ToggleCrash ==
+    /\ wpc = "settle"
+    /\ wpc' = "idle"
+    /\ wDay' = 1
+    /\ oBefore' = 0
+    /\ UNCHANGED <<today, log, read, readC, goal, goalC, opc, oDay, oAfter, spent, fpc, fDone, fDay,
+                   fSeenD, fSeenW, fBefore, runs, claimed, celebrated, conf, wx, wa, drawn, tapped,
+                   nTaps>>
+
+\* the bot draws today's chips (habits_commands.rs's hb:w:<code>:<epoch day>)
+Draw ==
+    /\ WCourses # {}
+    /\ opc = "idle"
+    /\ drawn' = drawn \cup {today}
+    /\ UNCHANGED <<today, log, read, readC, goal, goalC, opc, oDay, oBefore, oAfter, spent, fpc,
+                   fDone, fDay, fSeenD, fSeenW, fBefore, runs, claimed, celebrated, conf, wx, wa,
+                   wpc, wDay, tapped, nTaps>>
+
+\* a press on a chip drawn for day dd: as built the toggle refuses a chip day that is not today
+\* (habits/writing.rs's `if chip_day != today`) and answers with today's chips; tapped records the
+\* day the chip was drawn for and the day it acted on, 0 for none
+Tap(c, dd) ==
+    /\ opc = "idle"
+    /\ wpc = "idle"
+    /\ dd \in drawn
+    /\ nTaps < MaxTaps
+    /\ nTaps' = nTaps + 1
+    /\ IF ~ChipCarriesDay \/ dd = today
+          THEN /\ ToggleW(c)
+               /\ tapped' = tapped \cup {[drawn |-> dd, acted |-> today]}
+               /\ UNCHANGED drawn
+          ELSE /\ tapped' = tapped \cup {[drawn |-> dd, acted |-> 0]}
+               /\ drawn' = drawn \cup {today}
+               /\ UNCHANGED <<conf, wx, wa, wpc, wDay, opc, oBefore, oAfter>>
+    /\ UNCHANGED <<today, log, read, readC, goal, goalC, oDay, spent, fpc, fDone, fDay, fSeenD,
+                   fSeenW, fBefore, runs, claimed, celebrated>>
 
 \* the last day: both actors idle, every run and every entry spent, and every entry undone
 Finished ==
@@ -349,6 +526,11 @@ Next ==
     \/ FAnnounce
     \/ FCrash
     \/ Rollover
+    \/ \E c \in WCourses : Toggle(c)
+    \/ ToggleSettle
+    \/ ToggleCrash
+    \/ Draw
+    \/ \E c \in WCourses, dd \in Days : Tap(c, dd)
     \/ Finished
 
 Spec == Init /\ [][Next]_vars
@@ -368,4 +550,17 @@ GoalBonusFollowsItsWeek ==
 
 \* SPEC-078 R18: a level is celebrated at most once, whichever actor crosses it
 ALevelUpIsCelebratedOnce == \A l \in Levels : celebrated[l] <= 1
+
+\* SPEC-078 R7: with no toggle in flight, each day's write:<code> pays WPer exactly when the course
+\* is confirmed, and write:all pays WBonus exactly when the writing set is not empty and every course
+\* in it is confirmed (habits/src/writing.rs::all_confirmed_days returns no day over an empty set)
+WritingXpFollowsItsConfirmations ==
+    (NoWriteInFlight /\ wpc # "settle") =>
+        \A d \in Days :
+            /\ \A c \in WCourses : wx[c][d] = IF c \in conf[d] THEN WPer ELSE 0
+            /\ wa[d] = IF WCourses # {} /\ WCourses \subseteq conf[d] THEN WBonus ELSE 0
+
+\* SPEC-078 R6 (a tap flips today's confirmation; the chip carries its day): every chip press
+\* toggled the day the chip was drawn for, or no day at all
+AChipTogglesOnlyItsOwnDay == \A t \in tapped : t.acted \in {t.drawn, 0}
 ================================================================================
