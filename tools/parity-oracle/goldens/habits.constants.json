@@ -42,6 +42,42 @@
         45,
         60
       ]
+    },
+    {
+      "input": {
+        "name": "constants.WRITING_XP_PER_DAY"
+      },
+      "output": 75
+    },
+    {
+      "input": {
+        "name": "constants.WRITING_XP_ALL_THREE_BONUS"
+      },
+      "output": 100
+    },
+    {
+      "input": {
+        "name": "constants.WRITING_STREAK_WEEK"
+      },
+      "output": 7
+    },
+    {
+      "input": {
+        "name": "constants.WRITING_STREAK_MONTH"
+      },
+      "output": 30
+    },
+    {
+      "input": {
+        "name": "constants.WRITING_STREAK_CENTURY"
+      },
+      "output": 100
+    },
+    {
+      "input": {
+        "name": "constants.MARATHON_READER_WEEK_MIN"
+      },
+      "output": 600
     }
   ],
   "function": "habits.constants",
@@ -50,7 +86,7 @@
   "inputs": "synthetic",
   "kind": "constants",
   "registry": "tools/parity-oracle/registry/spec_078.py",
-  "registry_sha256": "347514aed5b93b8dfbc646986978680620d4d0c5c3fdf4253a8231bc28e56603",
+  "registry_sha256": "c96b27ea89e52dbf1298af3f92f5e8b3f3612983b1af12fc1fa0d2b673e37d3a",
   "schema": "phx.parity-golden.v1",
   "seed": 20,
   "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"

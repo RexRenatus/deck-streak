@@ -1,0 +1,479 @@
+{
+  "adapter": "with_two_reading_courses",
+  "cases": [
+    {
+      "class": "nothing",
+      "input": {
+        "all_langs_goal_met": false,
+        "langs_read_this_week": 0,
+        "reading_entries": 0,
+        "week_total_min": 0,
+        "writing_all_streak": 0,
+        "writing_entries": 0
+      },
+      "output": []
+    },
+    {
+      "class": "one reading entry",
+      "input": {
+        "all_langs_goal_met": false,
+        "langs_read_this_week": 0,
+        "reading_entries": 1,
+        "week_total_min": 0,
+        "writing_all_streak": 0,
+        "writing_entries": 0
+      },
+      "output": [
+        "first_page"
+      ]
+    },
+    {
+      "class": "one writing entry",
+      "input": {
+        "all_langs_goal_met": false,
+        "langs_read_this_week": 0,
+        "reading_entries": 0,
+        "week_total_min": 0,
+        "writing_all_streak": 0,
+        "writing_entries": 1
+      },
+      "output": [
+        "quill_initiate"
+      ]
+    },
+    {
+      "class": "a streak of 6",
+      "input": {
+        "all_langs_goal_met": false,
+        "langs_read_this_week": 0,
+        "reading_entries": 0,
+        "week_total_min": 0,
+        "writing_all_streak": 6,
+        "writing_entries": 6
+      },
+      "output": [
+        "quill_initiate"
+      ]
+    },
+    {
+      "class": "a streak of 7",
+      "input": {
+        "all_langs_goal_met": false,
+        "langs_read_this_week": 0,
+        "reading_entries": 0,
+        "week_total_min": 0,
+        "writing_all_streak": 7,
+        "writing_entries": 7
+      },
+      "output": [
+        "quill_initiate",
+        "ink_week"
+      ]
+    },
+    {
+      "class": "a streak of 29",
+      "input": {
+        "all_langs_goal_met": false,
+        "langs_read_this_week": 0,
+        "reading_entries": 0,
+        "week_total_min": 0,
+        "writing_all_streak": 29,
+        "writing_entries": 29
+      },
+      "output": [
+        "quill_initiate",
+        "ink_week"
+      ]
+    },
+    {
+      "class": "a streak of 30",
+      "input": {
+        "all_langs_goal_met": false,
+        "langs_read_this_week": 0,
+        "reading_entries": 0,
+        "week_total_min": 0,
+        "writing_all_streak": 30,
+        "writing_entries": 30
+      },
+      "output": [
+        "quill_initiate",
+        "ink_week",
+        "ink_month"
+      ]
+    },
+    {
+      "class": "a streak of 99",
+      "input": {
+        "all_langs_goal_met": false,
+        "langs_read_this_week": 0,
+        "reading_entries": 0,
+        "week_total_min": 0,
+        "writing_all_streak": 99,
+        "writing_entries": 99
+      },
+      "output": [
+        "quill_initiate",
+        "ink_week",
+        "ink_month"
+      ]
+    },
+    {
+      "class": "a streak of 100",
+      "input": {
+        "all_langs_goal_met": false,
+        "langs_read_this_week": 0,
+        "reading_entries": 0,
+        "week_total_min": 0,
+        "writing_all_streak": 100,
+        "writing_entries": 100
+      },
+      "output": [
+        "quill_initiate",
+        "ink_week",
+        "ink_month",
+        "ink_century"
+      ]
+    },
+    {
+      "class": "one course read",
+      "input": {
+        "all_langs_goal_met": false,
+        "langs_read_this_week": 1,
+        "reading_entries": 2,
+        "week_total_min": 40,
+        "writing_all_streak": 0,
+        "writing_entries": 0
+      },
+      "output": [
+        "first_page"
+      ]
+    },
+    {
+      "class": "both courses read",
+      "input": {
+        "all_langs_goal_met": false,
+        "langs_read_this_week": 2,
+        "reading_entries": 2,
+        "week_total_min": 40,
+        "writing_all_streak": 0,
+        "writing_entries": 0
+      },
+      "output": [
+        "first_page",
+        "polyglot_reader"
+      ]
+    },
+    {
+      "class": "599 minutes",
+      "input": {
+        "all_langs_goal_met": false,
+        "langs_read_this_week": 1,
+        "reading_entries": 3,
+        "week_total_min": 599,
+        "writing_all_streak": 0,
+        "writing_entries": 0
+      },
+      "output": [
+        "first_page"
+      ]
+    },
+    {
+      "class": "600 minutes",
+      "input": {
+        "all_langs_goal_met": false,
+        "langs_read_this_week": 1,
+        "reading_entries": 3,
+        "week_total_min": 600,
+        "writing_all_streak": 0,
+        "writing_entries": 0
+      },
+      "output": [
+        "first_page",
+        "marathon_reader"
+      ]
+    },
+    {
+      "class": "every goal met",
+      "input": {
+        "all_langs_goal_met": true,
+        "langs_read_this_week": 2,
+        "reading_entries": 4,
+        "week_total_min": 420,
+        "writing_all_streak": 0,
+        "writing_entries": 0
+      },
+      "output": [
+        "first_page",
+        "bookworm_week",
+        "polyglot_reader"
+      ]
+    },
+    {
+      "input": {
+        "all_langs_goal_met": false,
+        "langs_read_this_week": 0,
+        "reading_entries": 2,
+        "week_total_min": 0,
+        "writing_all_streak": 120,
+        "writing_entries": 125
+      },
+      "output": [
+        "first_page",
+        "quill_initiate",
+        "ink_week",
+        "ink_month",
+        "ink_century"
+      ]
+    },
+    {
+      "input": {
+        "all_langs_goal_met": false,
+        "langs_read_this_week": 0,
+        "reading_entries": 2,
+        "week_total_min": 0,
+        "writing_all_streak": 120,
+        "writing_entries": 124
+      },
+      "output": [
+        "first_page",
+        "quill_initiate",
+        "ink_week",
+        "ink_month",
+        "ink_century"
+      ]
+    },
+    {
+      "input": {
+        "all_langs_goal_met": false,
+        "langs_read_this_week": 0,
+        "reading_entries": 3,
+        "week_total_min": 0,
+        "writing_all_streak": 6,
+        "writing_entries": 9
+      },
+      "output": [
+        "first_page",
+        "quill_initiate"
+      ]
+    },
+    {
+      "input": {
+        "all_langs_goal_met": false,
+        "langs_read_this_week": 0,
+        "reading_entries": 1,
+        "week_total_min": 0,
+        "writing_all_streak": 1,
+        "writing_entries": 3
+      },
+      "output": [
+        "first_page",
+        "quill_initiate"
+      ]
+    },
+    {
+      "input": {
+        "all_langs_goal_met": true,
+        "langs_read_this_week": 2,
+        "reading_entries": 15,
+        "week_total_min": 214,
+        "writing_all_streak": 31,
+        "writing_entries": 34
+      },
+      "output": [
+        "first_page",
+        "quill_initiate",
+        "ink_week",
+        "ink_month",
+        "bookworm_week",
+        "polyglot_reader"
+      ]
+    },
+    {
+      "input": {
+        "all_langs_goal_met": true,
+        "langs_read_this_week": 2,
+        "reading_entries": 11,
+        "week_total_min": 438,
+        "writing_all_streak": 120,
+        "writing_entries": 122
+      },
+      "output": [
+        "first_page",
+        "quill_initiate",
+        "ink_week",
+        "ink_month",
+        "ink_century",
+        "bookworm_week",
+        "polyglot_reader"
+      ]
+    },
+    {
+      "input": {
+        "all_langs_goal_met": false,
+        "langs_read_this_week": 1,
+        "reading_entries": 13,
+        "week_total_min": 212,
+        "writing_all_streak": 99,
+        "writing_entries": 99
+      },
+      "output": [
+        "first_page",
+        "quill_initiate",
+        "ink_week",
+        "ink_month"
+      ]
+    },
+    {
+      "input": {
+        "all_langs_goal_met": false,
+        "langs_read_this_week": 0,
+        "reading_entries": 0,
+        "week_total_min": 0,
+        "writing_all_streak": 100,
+        "writing_entries": 101
+      },
+      "output": [
+        "quill_initiate",
+        "ink_week",
+        "ink_month",
+        "ink_century"
+      ]
+    },
+    {
+      "input": {
+        "all_langs_goal_met": false,
+        "langs_read_this_week": 0,
+        "reading_entries": 1,
+        "week_total_min": 0,
+        "writing_all_streak": 1,
+        "writing_entries": 3
+      },
+      "output": [
+        "first_page",
+        "quill_initiate"
+      ]
+    },
+    {
+      "input": {
+        "all_langs_goal_met": false,
+        "langs_read_this_week": 1,
+        "reading_entries": 23,
+        "week_total_min": 168,
+        "writing_all_streak": 8,
+        "writing_entries": 10
+      },
+      "output": [
+        "first_page",
+        "quill_initiate",
+        "ink_week"
+      ]
+    },
+    {
+      "input": {
+        "all_langs_goal_met": false,
+        "langs_read_this_week": 0,
+        "reading_entries": 0,
+        "week_total_min": 0,
+        "writing_all_streak": 100,
+        "writing_entries": 102
+      },
+      "output": [
+        "quill_initiate",
+        "ink_week",
+        "ink_month",
+        "ink_century"
+      ]
+    },
+    {
+      "input": {
+        "all_langs_goal_met": false,
+        "langs_read_this_week": 0,
+        "reading_entries": 1,
+        "week_total_min": 0,
+        "writing_all_streak": 7,
+        "writing_entries": 7
+      },
+      "output": [
+        "first_page",
+        "quill_initiate",
+        "ink_week"
+      ]
+    },
+    {
+      "input": {
+        "all_langs_goal_met": true,
+        "langs_read_this_week": 2,
+        "reading_entries": 20,
+        "week_total_min": 287,
+        "writing_all_streak": 0,
+        "writing_entries": 2
+      },
+      "output": [
+        "first_page",
+        "quill_initiate",
+        "bookworm_week",
+        "polyglot_reader"
+      ]
+    },
+    {
+      "input": {
+        "all_langs_goal_met": false,
+        "langs_read_this_week": 1,
+        "reading_entries": 20,
+        "week_total_min": 459,
+        "writing_all_streak": 120,
+        "writing_entries": 125
+      },
+      "output": [
+        "first_page",
+        "quill_initiate",
+        "ink_week",
+        "ink_month",
+        "ink_century"
+      ]
+    },
+    {
+      "input": {
+        "all_langs_goal_met": true,
+        "langs_read_this_week": 2,
+        "reading_entries": 9,
+        "week_total_min": 853,
+        "writing_all_streak": 6,
+        "writing_entries": 10
+      },
+      "output": [
+        "first_page",
+        "quill_initiate",
+        "bookworm_week",
+        "polyglot_reader",
+        "marathon_reader"
+      ]
+    },
+    {
+      "input": {
+        "all_langs_goal_met": false,
+        "langs_read_this_week": 1,
+        "reading_entries": 30,
+        "week_total_min": 884,
+        "writing_all_streak": 6,
+        "writing_entries": 11
+      },
+      "output": [
+        "first_page",
+        "quill_initiate",
+        "marathon_reader"
+      ]
+    }
+  ],
+  "function": "habits.evaluate_habit_badges",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Builds the context from the case with the reading courses replaced by two synthetic courses; returns the badge keys in the order it gives them; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_078.py",
+  "registry_sha256": "c96b27ea89e52dbf1298af3f92f5e8b3f3612983b1af12fc1fa0d2b673e37d3a",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}
