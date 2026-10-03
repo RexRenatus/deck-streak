@@ -29,6 +29,22 @@ owner rule's predicate and builds the use it judges, neither of which exists at 
 cannot compile there. It lands with the predicate in the implementation commit (ruling 108 (4)),
 and A6's red above is its first test's.
 
+Three commits between the red af84237 and the green b713e00 edit a test file, and none changes an
+assertion of A1 to A7. The censuses live in their test files, so the reader's wiring is a test-file
+edit.
+
+- 80d333a, the implementation, includes the shared reader in `ledger_census.rs`,
+  `wallet_census.rs` and `xp_census.rs` and adds its refusals to each census's own. It also adds
+  the owner rule to `xp_census.rs`, with A6's second test (above) and, in the existing round-6
+  test `the_census_reads_progressions_own_reexports_as_it_reads_the_other_crates`, one expected
+  refusal of its planted wrapper `crates/progression/src/inner.rs` in its sorted place (ruling 99).
+- ede1fcd changes one expected verdict in the killer population of `xp_census.rs`. The control
+  `S2 B build scripts` with `include!(env!("CALL_FILE"))` is now refused (ruling 115, under ruling
+  108 (1)), and the pinned digest of the 2218 trees changes with it.
+- b713e00 cures clippy in code. It moves the round-6 test's planting of progression's aliases into
+  a helper it calls, with the same files and text, and writes A4's planted `health_body` control as
+  `r#"..."#` instead of `r##"..."##`, with the same value.
+
 The greens ran at b713e00b across `-p deck-streak-progression -p deck-streak-economy
 -p deck-streak-kernel` and the four targets with `--no-fail-fast`: `wallet_census` read `2 passed;
 0 failed`, `log_capture_class` `8 passed; 0 failed`, `ledger_census` `4 passed; 0 failed` and
