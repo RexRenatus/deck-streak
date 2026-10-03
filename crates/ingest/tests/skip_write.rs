@@ -1442,6 +1442,14 @@ fn the_take_refuses_while_the_classs_stop_is_set() {
     let before = scene.bytes();
     let (skip, answer) = scene.take(digest, no_hooks());
     scene.wrote_nothing(skip, &answer, FailReason::WritesStopped, &before);
+    assert_eq!(
+        answer,
+        TakeAnswer::Failed {
+            reason: FailReason::WritesStopped,
+            preview: None
+        },
+        "the refusal is answered, not silent"
+    );
     assert_eq!(scene.requests(), 0, "no request at all");
 
     // A stop set during a take ends it before its push.
