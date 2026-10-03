@@ -139,6 +139,7 @@ pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), BotRoleEr
     if let Some(captures) = wiring::inbox_captures(env) {
         commands = commands.with_capture(captures);
     }
+    commands = commands.with_courses(courses(env));
     commands = commands.with_habits(courses(env), router);
 
     let heartbeat = Cell::new(None);
@@ -158,13 +159,18 @@ pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), BotRoleEr
     Ok(())
 }
 
-/// The owner's courses the minutes log resolves an entry against (SPEC-078 R2), from the settings.
-/// A setting that refuses leaves the default courses, and the log says why.
+/// The owner's courses, from the settings, which the bot's two readers share: the progress command
+/// answers from them (SPEC-077 R16) and the minutes log resolves an entry against them (SPEC-078
+/// R2). A setting that refuses leaves the default courses, which are none, and the log says why. A
+/// refused setting never refuses start: the bot's other commands read no course.
 fn courses(env: &Environment) -> Courses {
     match Courses::load(env) {
         Ok(courses) => courses,
         Err(error) => {
-            tracing::warn!(%error, "the minutes log uses the default courses: the setting refused");
+            tracing::warn!(
+                %error,
+                "the progress command and the minutes log use no course: the setting refused"
+            );
             Courses::default()
         }
     }

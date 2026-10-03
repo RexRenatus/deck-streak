@@ -225,6 +225,492 @@
         "Some(_source) => state,",
         "law_tiers::the_composed_router_serves_the_law_tiers_to_the_owner_alone",
         "the api role gives its router the law tiers' source (SPEC-072 R24, A31)"
+      ],
+      [
+        "S07241-CENSUS-REFUSES-A-FEATURE",
+        "progression",
+        "tests/xp_census.rs",
+        ".is_some_and(|features| !features.is_empty())",
+        ".is_some_and(|features| features.is_empty())",
+        "xp_census::the_census_refuses_what_the_compiler_is_not_asked",
+        "a member that declares a feature is refused, since the census compiles none (SPEC-072 A34)"
+      ],
+      [
+        "S07242-CENSUS-REFUSES-A-PROC-MACRO",
+        "progression",
+        "tests/xp_census.rs",
+        ".any(|kind| kind == \"proc-macro\")",
+        ".any(|_kind| false)",
+        "xp_census::the_census_refuses_what_the_compiler_is_not_asked",
+        "a proc-macro member is refused, since rustc reports no deprecation inside a derive's expansion (SPEC-072 A34)"
+      ],
+      [
+        "S07243-CENSUS-REFUSES-A-PATH-PACKAGE",
+        "progression",
+        "tests/xp_census.rs",
+        "} else if package[\"source\"].is_null() {",
+        "} else if false {",
+        "xp_census::the_census_refuses_what_the_compiler_is_not_asked",
+        "a path package outside the workspace is refused, since the census does not compile it (SPEC-072 A34)"
+      ],
+      [
+        "S07244-CENSUS-REFUSES-A-GIT-DEPENDENT",
+        "progression",
+        "tests/xp_census.rs",
+        ".any(|dependency| dependency[\"name\"] == PROGRESSION_PACKAGE)",
+        ".any(|_dependency| false)",
+        "xp_census::the_census_refuses_what_the_compiler_is_not_asked",
+        "a registry or git package that depends on progression is refused, since the census cannot name its callers (SPEC-072 A34)"
+      ],
+      [
+        "S07245-CENSUS-REFUSES-A-STRAY-MANIFEST",
+        "progression",
+        "tests/xp_census.rs",
+        "if !built.contains(&name) {",
+        "if false {",
+        "xp_census::the_census_refuses_what_the_compiler_is_not_asked",
+        "a Cargo.toml in the repository that no workspace member owns is refused (SPEC-072 A34)"
+      ],
+      [
+        "S07246-CENSUS-REFUSES-A-CONFIG-TOML",
+        "progression",
+        "tests/xp_census.rs",
+        "for config in [\".cargo/config\", \".cargo/config.toml\"] {",
+        "for config in [\".cargo/config\"] {",
+        "xp_census::the_census_refuses_what_the_compiler_is_not_asked",
+        "a .cargo/config.toml at the root is refused, since the census compiles with cargo's own defaults (SPEC-072 A34)"
+      ],
+      [
+        "S07247-CENSUS-REFUSES-A-BARE-CONFIG",
+        "progression",
+        "tests/xp_census.rs",
+        "for config in [\".cargo/config\", \".cargo/config.toml\"] {",
+        "for config in [\".cargo/config.toml\"] {",
+        "xp_census::the_census_refuses_what_the_compiler_is_not_asked",
+        "a .cargo/config without an extension, which cargo also reads, is refused (SPEC-072 A34)"
+      ],
+      [
+        "S07248-CENSUS-RETURNS-ITS-REFUSALS",
+        "progression",
+        "tests/xp_census.rs",
+        "if !refused.is_empty() {",
+        "if false {",
+        "xp_census::the_census_refuses_what_the_compiler_is_not_asked",
+        "the census stops at a refusal of what cargo is not asked, before it compiles anything (SPEC-072 A34)"
+      ],
+      [
+        "S07249-CENSUS-KEEPS-THE-LOCK",
+        "progression",
+        "tests/xp_census.rs",
+        "[\"metadata\", \"--format-version\", \"1\", \"--locked\", \"--offline\"]",
+        "[\"metadata\", \"--format-version\", \"1\", \"--offline\"]",
+        "xp_census::the_census_refuses_what_the_compiler_is_not_asked",
+        "a tree with a Cargo.lock is read --locked, so a lock cargo would have to change is refused (SPEC-072 A34)"
+      ],
+      [
+        "S07250-CENSUS-REFUSES-AN-UNREAD-WORKSPACE",
+        "progression",
+        "tests/xp_census.rs",
+        "    if !ok {\n        return Err(vec![format!(\n            \"cargo metadata cannot give the graph",
+        "    if false {\n        return Err(vec![format!(\n            \"cargo metadata cannot give the graph",
+        "xp_census::the_census_refuses_what_the_compiler_is_not_asked",
+        "a workspace cargo metadata cannot read is refused with cargo's own error (SPEC-072 A34)"
+      ],
+      [
+        "S07251-CENSUS-REFUSES-A-BROKEN-BUILD",
+        "progression",
+        "tests/xp_census.rs",
+        "            if !ok {\n                return Err(vec![format!(\n                    \"the workspace does not compile",
+        "            if false {\n                return Err(vec![format!(\n                    \"the workspace does not compile",
+        "xp_census::the_census_refuses_what_the_compiler_is_not_asked",
+        "a workspace that does not compile in a pass is refused, since its callers are unseen (SPEC-072 A34)"
+      ],
+      [
+        "S07252-CENSUS-REFUSES-AN-UNPLACED-USE",
+        "progression",
+        "tests/xp_census.rs",
+        "if used.chain.is_empty() {",
+        "if false {",
+        "xp_census::the_census_refuses_what_the_compiler_is_not_asked",
+        "a coordination use written in no file of the repository is refused (SPEC-072 A34)"
+      ],
+      [
+        "S07253-CENSUS-CHECKS-WITHOUT-ASSERTIONS",
+        "progression",
+        "tests/xp_census.rs",
+        "for (on, abort) in [(true, false), (false, false), (true, true), (false, true)] {",
+        "for (on, abort) in [(true, false), (true, true)] {",
+        "xp_census::the_census_names_each_use_in_its_package_and_file",
+        "the census checks with debug assertions off, so a use under cfg(not(debug_assertions)) is found (SPEC-072 A34)"
+      ],
+      [
+        "S07254-CENSUS-CHECKS-WITH-ABORT",
+        "progression",
+        "tests/xp_census.rs",
+        "for (on, abort) in [(true, false), (false, false), (true, true), (false, true)] {",
+        "for (on, abort) in [(true, false), (false, false)] {",
+        "xp_census::the_census_names_each_use_in_its_package_and_file",
+        "the census checks with the abort panic strategy, so a use under cfg(panic = \"abort\") is found (SPEC-072 A34)"
+      ],
+      [
+        "S07255-CENSUS-SCRUBS-EACH-PREFIX",
+        "progression",
+        "tests/xp_census.rs",
+        ".any(|prefix| name.starts_with(prefix))",
+        ".any(|prefix| name == *prefix)",
+        "xp_census::the_census_compiles_with_cargos_own_defaults",
+        "a CARGO_BUILD_*, CARGO_PROFILE_*, CARGO_TARGET_* or CARGO_UNSTABLE_* variable is removed from cargo's environment, so none compiles the census apart from cargo's defaults (SPEC-072 A34)"
+      ],
+      [
+        "S07256-CENSUS-NAMES-EVERY-PACKAGE",
+        "progression",
+        "tests/xp_census.rs",
+        "        names.insert(package[\"name\"].as_str().unwrap_or_default().to_owned());\n        if member_ids.contains(id) {\n",
+        "        if member_ids.contains(id) {\n            names.insert(package[\"name\"].as_str().unwrap_or_default().to_owned());\n",
+        "xp_census::the_census_names_each_use_in_its_package_and_file",
+        "each pass names every package the workspace compiles, progression and every dependency among them, so a macro or re-export written only without debug assertions is compiled (SPEC-072 A34)"
+      ],
+      [
+        "S07257-CENSUS-CHECKS-EVERY-MEMBER",
+        "progression",
+        "tests/xp_census.rs",
+        "                \"--workspace\",",
+        "                \"--verbose\",",
+        "xp_census::the_census_names_each_use_in_its_package_and_file",
+        "the census checks the whole workspace, so default-members cannot leave a caller out (SPEC-072 A34)"
+      ],
+      [
+        "S07258-CENSUS-CHECKS-EVERY-TARGET",
+        "progression",
+        "tests/xp_census.rs",
+        "vec![&[\"--all-targets\"]]",
+        "vec![&[\"--lib\"]]",
+        "xp_census::the_census_names_each_use_in_its_package_and_file",
+        "the census checks every target, so a caller in a test, a bench or an example is found (SPEC-072 A34)"
+      ],
+      [
+        "S07259-CENSUS-ARMS-THE-PROBE",
+        "progression",
+        "tests/xp_census.rs",
+        ".env(ARMING, \"1\")",
+        ".env(\"SETTLE_CENSUS_UNARMED\", \"1\")",
+        "xp_census::the_census_names_each_use_in_its_package_and_file",
+        "the census sets SETTLE_CENSUS, which arms the probe on settle (SPEC-072 A34)"
+      ],
+      [
+        "S07260-CENSUS-FORCES-THE-WARNING",
+        "progression",
+        "tests/xp_census.rs",
+        ".env(\"CARGO_ENCODED_RUSTFLAGS\", RUSTFLAGS.join(\"\\u{1f}\"))",
+        ".env(\"CARGO_ENCODED_RUSTFLAGS\", \"\")",
+        "xp_census::the_census_names_each_use_in_its_package_and_file",
+        "the census forces the deprecation warning, so an allow(deprecated) cannot hide a use (SPEC-072 A34)"
+      ],
+      [
+        "S07261-CENSUS-READS-DEPRECATIONS",
+        "progression",
+        "tests/xp_census.rs",
+        "|| message[\"message\"][\"code\"][\"code\"] != \"deprecated\"",
+        "|| message[\"message\"][\"code\"][\"code\"] == \"deprecated\"",
+        "xp_census::the_census_names_each_use_in_its_package_and_file",
+        "the census reads rustc's deprecation messages, where the probe reports a use (SPEC-072 A34)"
+      ],
+      [
+        "S07262-CENSUS-READS-ITS-PROBE-ONLY",
+        "progression",
+        "tests/xp_census.rs",
+        ".is_some_and(|text| text.contains(PROBE_NOTE))",
+        ".is_some_and(|_text| true)",
+        "xp_census::the_census_names_each_use_in_its_package_and_file",
+        "only the probe's note is a use of settle, so a member's own deprecated function is not (SPEC-072 A34)"
+      ],
+      [
+        "S07263-CENSUS-SETS-THE-OWNER-ASIDE",
+        "progression",
+        "tests/xp_census.rs",
+        "if used.folder == format!(\"crates/{OWNER}\") {",
+        "if false {",
+        "xp_census::the_census_names_each_use_in_its_package_and_file",
+        "progression's own use of settle is accepted (SPEC-072 A34)"
+      ],
+      [
+        "S07264-CENSUS-ONLY-COORDINATION-SETTLES",
+        "progression",
+        "tests/xp_census.rs",
+        "if used.folder != format!(\"crates/{CALLER}\") {",
+        "if false {",
+        "xp_census::the_census_names_each_use_in_its_package_and_file",
+        "a use of settle in a package but progression and coordination is refused (SPEC-072 A12, A34)"
+      ],
+      [
+        "S07265-CENSUS-AIDS-MAY-SETTLE",
+        "progression",
+        "tests/xp_census.rs",
+        "if CALLER_AIDS.contains(&used.kind.as_str()) {",
+        "if false {",
+        "xp_census::the_census_names_each_use_in_its_package_and_file",
+        "coordination's tests, benches and examples may settle with any cause (SPEC-072 A34)"
+      ],
+      [
+        "S07266-CENSUS-STEPS-MAY-SETTLE",
+        "progression",
+        "tests/xp_census.rs",
+        "if file.starts_with(RECOMPUTE_DIR) {",
+        "if false {",
+        "xp_census::the_census_names_each_use_in_its_package_and_file",
+        "coordination's recompute steps may settle (SPEC-072 A12, A34)"
+      ],
+      [
+        "S07267-CENSUS-CORRECTION-ONLY",
+        "progression",
+        "tests/xp_census.rs",
+        "!code.contains(CORRECTION_CAUSE) || code.contains(RECOMPUTE_CAUSE)",
+        "!code.contains(CORRECTION_CAUSE) && code.contains(RECOMPUTE_CAUSE)",
+        "xp_census::the_census_names_each_use_in_its_package_and_file",
+        "a coordination file outside the steps settles only when it passes the owner's correction (SPEC-072 A12, A34)"
+      ],
+      [
+        "S07268-CENSUS-REFUSES-BOTH-CAUSES",
+        "progression",
+        "tests/xp_census.rs",
+        "!code.contains(CORRECTION_CAUSE) || code.contains(RECOMPUTE_CAUSE)",
+        "!code.contains(CORRECTION_CAUSE)",
+        "xp_census::the_census_names_each_use_in_its_package_and_file",
+        "a coordination file outside the steps that also passes the recompute cause is refused (SPEC-072 A12, A34)"
+      ],
+      [
+        "S07269-CENSUS-NAMES-THE-REAL-FILE",
+        "progression",
+        "tests/xp_census.rs",
+        "let real = |path: &Path| fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());",
+        "let real = |path: &Path| path.to_path_buf();",
+        "xp_census::the_census_names_each_use_in_its_package_and_file",
+        "a use is named by its file's real path, so a #[path] through recompute/.. is not a recompute step (SPEC-072 A34)"
+      ],
+      [
+        "S07270-CENSUS-NAMES-THE-OUTERMOST-FILE",
+        "progression",
+        "tests/xp_census.rs",
+        "file: chain.last().cloned().unwrap_or_else(|| {",
+        "file: chain.first().cloned().unwrap_or_else(|| {",
+        "xp_census::the_census_names_each_use_in_its_package_and_file",
+        "a use inside a macro is named by the file that calls the macro (SPEC-072 A34)"
+      ],
+      [
+        "S07271-CENSUS-FOLLOWS-EACH-EXPANSION",
+        "progression",
+        "tests/xp_census.rs",
+        ".get(\"span\")",
+        ".get(\"no-span\")",
+        "xp_census::the_census_names_each_use_in_its_package_and_file",
+        "the census follows each macro call site a use expanded from (SPEC-072 A34)"
+      ],
+      [
+        "S07272-CENSUS-BOUNDS-ITS-EXPANSION",
+        "progression",
+        "tests/xp_census.rs",
+        "for _ in 0..EXPANSION_LIMIT {",
+        "for _ in 0..=EXPANSION_LIMIT {",
+        "xp_census::the_census_fails_by_name_past_its_expansion_limit",
+        "an expansion chain one call past EXPANSION_LIMIT fails by name (SPEC-072 A34)"
+      ],
+      [
+        "S07273-CENSUS-SCRUBS-THE-ENVIRONMENT",
+        "progression",
+        "tests/xp_census.rs",
+        "SCRUBBED.contains(&name)",
+        "false",
+        "xp_census::the_census_compiles_with_cargos_own_defaults",
+        "RUSTC, its wrappers and RUSTFLAGS are removed from the census's cargo, which compiles with cargo's own defaults (SPEC-072 A34)"
+      ],
+      [
+        "S07274-PROBE-ARMED-BY-THE-CENSUS",
+        "progression",
+        "build.rs",
+        "if std::env::var_os(\"SETTLE_CENSUS\").is_some() {",
+        "if false {",
+        "xp_census::only_progression_writes_xp_settlement_and_only_coordination_settles",
+        "progression's build script gives it the settle_census cfg when the census sets SETTLE_CENSUS (SPEC-072 A12, A34)"
+      ],
+      [
+        "S07275-PROBE-ON-SETTLE",
+        "progression",
+        "src/settle.rs",
+        "    settle_census,\n    deprecated(note = \"the settle census's probe",
+        "    any(),\n    deprecated(note = \"the settle census's probe",
+        "xp_census::only_progression_writes_xp_settlement_and_only_coordination_settles",
+        "under the settle_census cfg, settle carries the probe's deprecation (SPEC-072 A12, A34)"
+      ],
+      [
+        "S07276-CENSUS-REFUSES-A-REACHED-BUILD-SCRIPT",
+        "progression",
+        "tests/xp_census.rs",
+        "if !reaching.contains(id) {",
+        "if reaching.contains(id) {",
+        "xp_census::a_build_script_in_a_package_that_cannot_name_settle_is_accepted",
+        "a build script of a package that cannot name settle is accepted, one that can is refused (SPEC-072 A35)"
+      ],
+      [
+        "S07277-CENSUS-NAMES-THE-SCRIPTED-PACKAGE",
+        "progression",
+        "tests/xp_census.rs",
+        "{name} has a build script and can name settle",
+        "a package has a build script and can name settle",
+        "xp_census::a_build_script_in_a_package_that_depends_on_settle_is_refused_by_name",
+        "a build script beside a dependency on progression is refused, naming its package (SPEC-072 A35)"
+      ],
+      [
+        "S07278-CENSUS-PINS-PROGRESSIONS-BUILD-SCRIPT",
+        "progression",
+        "tests/xp_census.rs",
+        "if digest.ok().as_deref() != Some(PROGRESSION_BUILD_SHA256) {",
+        "if digest.ok().as_deref() == Some(PROGRESSION_BUILD_SHA256) {",
+        "xp_census::a_one_byte_edit_of_progressions_build_script_is_refused_on_the_pin",
+        "progression's own build script is admitted at its pinned digest and no other (SPEC-072 A35)"
+      ],
+      [
+        "S07279-CENSUS-READS-THE-CUSTOM-BUILD-TARGET",
+        "progression",
+        "tests/xp_census.rs",
+        ".any(|kind| kind == \"custom-build\")",
+        ".any(|kind| kind == \"custom-builds\")",
+        "xp_census::a_build_script_in_a_package_that_depends_on_settle_is_refused_by_name",
+        "a package's build script is the target of kind custom-build (SPEC-072 A35)"
+      ],
+      [
+        "S07280-CENSUS-REACHES-TRANSITIVELY",
+        "progression",
+        "tests/xp_census.rs",
+        "queue.extend(dependents.get(id).into_iter().flatten());",
+        "queue.extend(dependents.get(\"\").into_iter().flatten());",
+        "xp_census::the_census_refuses_every_build_script_that_can_name_settle",
+        "the packages that reach progression are found through every dependency in between (SPEC-072 A35)"
+      ],
+      [
+        "S07281-CENSUS-STARTS-AT-PROGRESSION",
+        "progression",
+        "tests/xp_census.rs",
+        "owner.into_iter().collect()",
+        "Vec::new()",
+        "xp_census::a_build_script_in_a_package_that_depends_on_settle_is_refused_by_name",
+        "the reaching set starts at the package that defines settle (SPEC-072 A35)"
+      ],
+      [
+        "S07282-CENSUS-READS-EVERY-EDGE",
+        "progression",
+        "tests/xp_census.rs",
+        "dependents.entry(target).or_default().push(id);",
+        "dependents.entry(id).or_default().push(target);",
+        "xp_census::a_build_script_reached_through_a_build_dependency_is_refused",
+        "a dependency edge is read from the dependent to what it depends on, of any kind (SPEC-072 A35)"
+      ],
+      [
+        "S07283-CENSUS-PIN-IS-THE-BUILD-SCRIPT",
+        "progression",
+        "tests/xp_census.rs",
+        "\"a55c986660b4a75d5f8be32d91e3ae82b8140245eb7e40cba6d5306eb9c3815a\"",
+        "\"b55c986660b4a75d5f8be32d91e3ae82b8140245eb7e40cba6d5306eb9c3815a\"",
+        "xp_census::only_progression_writes_xp_settlement_and_only_coordination_settles",
+        "the pinned digest is that of the build script the tree holds (SPEC-072 A35)"
+      ],
+      [
+        "S07284-CENSUS-RETURNS-THE-BUILD-SCRIPT-REFUSALS",
+        "progression",
+        "tests/xp_census.rs",
+        "let mut refused = build_scripts(root, &metadata)?;",
+        "let mut refused = { build_scripts(root, &metadata)?; Vec::new() };",
+        "xp_census::the_census_refuses_every_build_script_that_can_name_settle",
+        "the refusals of the graph are the census's own (SPEC-072 A35)"
+      ],
+      [
+        "S07290-CENSUS-FINDS-THE-OWNER-BY-PATH",
+        "progression",
+        "tests/xp_census.rs",
+        ".is_some_and(|path| canonical(Path::new(path)) == manifest)",
+        ".is_some_and(|path| !path.is_empty())",
+        "xp_census::the_owner_is_the_member_at_its_manifest_and_every_other_lookup_is_unique_or_refused",
+        "the owner is the workspace member whose manifest is progression's, never another member (SPEC-072 A36)"
+      ],
+      [
+        "S07291-CENSUS-REFUSES-A-DECOY",
+        "progression",
+        "tests/xp_census.rs",
+        "&& (package[\"name\"] == PROGRESSION_PACKAGE || package[\"name\"] == owner_name)",
+        "&& package[\"name\"] == \"no package carries this name\"",
+        "xp_census::a_git_package_carrying_the_owners_name_beside_a_members_script_is_refused_by_name",
+        "any other package of the graph that carries the owner's name is refused by name, whatever its version or source (SPEC-072 A36)"
+      ],
+      [
+        "S07292-CENSUS-REFUSES-A-RENAMED-OWNER",
+        "progression",
+        "tests/xp_census.rs",
+        "if owner_name != PROGRESSION_PACKAGE {",
+        "if owner_name == \"no package carries this name\" {",
+        "xp_census::the_owners_manifest_under_another_package_name_is_refused_by_name",
+        "an owner whose manifest names another package is refused by name (SPEC-072 A36)"
+      ],
+      [
+        "S07293-CENSUS-REFUSES-AN-OWNER-WITHOUT-A-SCRIPT",
+        "progression",
+        "tests/xp_census.rs",
+        "[] => refused.push(format!(",
+        "[] => drop(format!(",
+        "xp_census::an_owner_without_a_build_script_is_refused_by_name",
+        "an owner with no build script sets no cfg and is refused by name (SPEC-072 A36)"
+      ],
+      [
+        "S07294-CENSUS-REFUSES-AN-AMBIGUOUS-OWNER",
+        "progression",
+        "tests/xp_census.rs",
+        "let [owner_package] = owners.as_slice() else {",
+        "let [owner_package, ..] = owners.as_slice() else {",
+        "xp_census::the_owner_is_the_member_at_its_manifest_and_every_other_lookup_is_unique_or_refused",
+        "the owner lookup is unique or refused, never a first match (SPEC-072 A36)"
+      ],
+      [
+        "S07295-CENSUS-COMPILES-IN-AN-EMPTY-TARGET",
+        "progression",
+        "tests/xp_census.rs",
+        "match fresh.and_then(|fresh| compiled_uses(root, fresh.path())) {",
+        "match fresh.and_then(|_fresh| compiled_uses(root, target)) {",
+        "xp_census::the_order_pair_p3_is_judged_alike_in_both_orders_on_one_target",
+        "each census compiles in an empty target of its own, so no other build's output serves it (SPEC-072 A36)"
+      ],
+      [
+        "S07296-CENSUS-CLEARS-THE-ENVIRONMENT",
+        "progression",
+        "tests/xp_census.rs",
+        "command.env_clear();",
+        "let _ = &mut command;",
+        "xp_census::a_variable_the_tree_does_not_set_does_not_move_the_verdict",
+        "the census's cargo inherits only the variables it names (SPEC-072 A36)"
+      ],
+      [
+        "S07297-CENSUS-REFUSES-A-CONFIG-ABOVE-THE-TREE",
+        "progression",
+        "tests/xp_census.rs",
+        "for folder in tree.ancestors() {",
+        "for folder in tree.ancestors().take(1) {",
+        "xp_census::a_cargo_configuration_above_the_tree_is_refused_by_name",
+        "a cargo configuration in any folder above the tree is refused by name (SPEC-072 A36)"
+      ],
+      [
+        "S07298-CENSUS-REFUSES-A-HOME-CONFIG",
+        "progression",
+        "tests/xp_census.rs",
+        "let home = std::env::var_os(\"CARGO_HOME\")",
+        "let home = std::env::var_os(\"CARGO_HOME_OF_NO_ONE\")",
+        "xp_census::a_cargo_configuration_in_cargos_home_is_refused_by_name",
+        "a cargo configuration in cargo's home is refused by name (SPEC-072 A36)"
+      ],
+      [
+        "S07299-CENSUS-REFUSES-A-HOST-VARIABLE-READ",
+        "progression",
+        "tests/xp_census.rs",
+        "if INHERITED.contains(&name) {",
+        "if INHERITED.contains(&\"a variable no host sets\") {",
+        "xp_census::a_members_code_reading_a_variable_the_host_sets_is_refused_by_name",
+        "code of the tree that reads a variable the host sets is refused by name (SPEC-072 A36)"
       ]
     ],
     "CARGO_KILLED_SCRIPT_MUTATIONS": [

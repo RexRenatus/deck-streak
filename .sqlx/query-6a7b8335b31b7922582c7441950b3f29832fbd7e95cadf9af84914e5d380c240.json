@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM skip_days",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "6a7b8335b31b7922582c7441950b3f29832fbd7e95cadf9af84914e5d380c240"
+}

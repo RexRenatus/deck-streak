@@ -25,12 +25,14 @@ use deck_streak_bot::habits_commands::{
     refused_minutes_reply, undo_done_reply, undo_failed_reply, undo_nothing_reply,
     undo_stale_reply, unknown_course_reply, usage_reply,
 };
+use deck_streak_bot::progress_commands::{progress_failed_reply, progress_reply};
 use deck_streak_bot::score_commands::{score_failed_reply, score_reply};
 use deck_streak_bot::{MiniAppUrl, Scores, Sent, SyncAnswer, SyncOutcome, SyncRefusal};
 use deck_streak_coordination::data_rights_registry::export_all;
 use deck_streak_coordination::habits::Logged;
+use deck_streak_coordination::progress_view::StoredProgress;
 use deck_streak_coordination::score::{DayScore, Pillars};
-use deck_streak_kernel::{CourseCode, Courses, Db, StudyDay};
+use deck_streak_kernel::{CourseCode, Courses, Db, StudyDay, UtcMillis};
 use deck_streak_kernel::{Environment, SettingsError};
 use fake_bot_api::{
     APP_URL, Bench, OWNER, STRANGER, ScriptedSync, golden_send, incoming, messages_directory,
@@ -123,9 +125,9 @@ async fn the_menu_is_registered_for_the_owners_chat_only() {
         registered,
         BTreeSet::from([
             "privacy", "export", "delete", "sync", "score", "level", "streak", "badges", "records",
-            "drills", "drill", "read", "undo"
+            "progress", "drills", "drill", "read", "undo"
         ]),
-        "the thirteen commands of the menu"
+        "the fourteen commands of the menu"
     );
     for (entry, command) in MENU
         .iter()
@@ -335,6 +337,33 @@ const fn scored(
     }
 }
 
+/// The Mini App's URL the bench's bot carries.
+fn app() -> MiniAppUrl {
+    MiniAppUrl::new(APP_URL).expect("an https URL")
+}
+
+/// Two courses' stored progress, ordered by name as the progress view orders it: the first name
+/// carries markup the reply escapes, and the second course has no unit yet.
+fn stored_progress() -> Vec<StoredProgress> {
+    let course =
+        |course: &str, (name, flag): (&str, &str), band: &str, mastery, unit| StoredProgress {
+            course: course.to_owned(),
+            name: name.to_owned(),
+            flag: flag.to_owned(),
+            mastery_pct: mastery,
+            current_band: band.to_owned(),
+            mature_cards: 14,
+            total_cards: 30,
+            current_unit: unit,
+            bands: Vec::new(),
+            updated_at: UtcMillis::from_epoch_millis(1000),
+        };
+    vec![
+        course("ga", ("Alpha & co", "\u{1f3f3}"), "B1", 61.6, Some(12)),
+        course("be", ("Beta", "\u{1f3f4}"), "A2", 42.5, None),
+    ]
+}
+
 /// Two synthetic courses, `qaa` and `qab`, for the reading replies (SPEC-078).
 fn habit_courses() -> Courses {
     Courses::parse(
@@ -397,6 +426,9 @@ fn rendered() -> Vec<(&'static str, Reply)> {
         ("score-failed", score_failed_reply()),
         ("badges-failed", badges_failed_reply()),
         ("records-failed", records_failed_reply()),
+        ("progress", progress_reply(&stored_progress(), &app())),
+        ("progress-none", progress_reply(&[], &app())),
+        ("progress-failed", progress_failed_reply()),
         ("help", help_reply()),
         ("export-failed", export_failed_reply()),
         ("erase-done-log-held", erase_done_reply(true)),

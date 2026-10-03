@@ -148,3 +148,12 @@ document on dev decides for each of the three, and what it leaves open.
   after a pre-registered n-of-1 trial passes, and the skip day's ceiling is the approval rung, so no
   trial of the skip day is decided, and with it no band. The dwell and the band are left to #108,
   "Skip / cheat day (the one Anki write path)", the issue of the planned SPEC-083.
+
+Note (2026-10-03, #108, the skip day's dwell, band, backup and formal decision): the dwell and the
+band the note above leaves to #108 are decided in SPEC-083 section 10, R37: neither applies,
+because the skip day's ceiling is the approval rung, every batch is the owner's own confirm, and a
+skip is reversed only by the owner's undo, never by a guard metric. The change budget stays as the
+note above states it. ADR-301 (b)'s backup, restore drill and counts are SPEC-083 R34 and R35, the
+class's stop under (b) and (c) is R36, and the class's formal decision is R38. ADR-321 records each
+of them and what it was chosen against. The guardrails, the amendment and the notes above are kept
+as they were.

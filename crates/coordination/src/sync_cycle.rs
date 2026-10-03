@@ -19,7 +19,7 @@ use std::sync::Arc;
 
 use deck_streak_ingest::engine::AnkiEngine;
 use deck_streak_ingest::gate::{ChangeGate, CycleFacts, Deadline, Decision, GateError, RunReason};
-use deck_streak_ingest::reader::CollectionReader;
+use deck_streak_ingest::reader::{CollectionData, CollectionReader};
 use deck_streak_ingest::sync::{SyncError, SyncReport, Syncer};
 use deck_streak_ingest::sync_runs::{SqliteSyncRuns, SyncRunStore, Trigger};
 use deck_streak_ingest::window::{WindowError, read_window};
@@ -31,8 +31,9 @@ use crate::instruments::Instruments;
 use crate::ladder_facts;
 use crate::level_up::announce_level_up;
 use crate::obligations::{ObligationSource, Obligations};
+use crate::recompute::landmarks::LandmarkOffers;
 use crate::recompute::streaks::RelightDue;
-use crate::recompute::{AwardOffers, Fold, FoldInput, Offers};
+use crate::recompute::{AwardOffers, Fold, FoldInput, Offers, OffersInTurn};
 use crate::relight::route_due_relights;
 
 /// The name of the settle a closed study day is owed, as an obligation (SPEC-071 R15): the source's
@@ -294,12 +295,14 @@ where
                     .await
                     .map_err(CycleError::Recompute)?
                     .map(|run| run.study_day);
-                // The awards' celebrations go to the cycle's router between the fold's writes
-                // (SPEC-073 R4, R11; ADR-303).
-                let offers = cycle
-                    .router
-                    .as_ref()
-                    .map(|router| AwardOffers::new(router.clone()));
+                // The awards' celebrations, then the landmarks', go to the cycle's router between
+                // the fold's writes (SPEC-073 R4, R11; ADR-303; SPEC-102 section 11, ADR-322).
+                let offers = match &cycle.router {
+                    Some(router) => {
+                        Some(cycle_offers(router, &cycle.reader, &window.data, fold.rule).await)
+                    }
+                    None => None,
+                };
                 let input = FoldInput {
                     data: &window.data,
                     rule: fold.rule,
@@ -343,6 +346,28 @@ where
         run_instruments(instruments).await;
     }
     Ok(CycleReport { sync, recompute })
+}
+
+/// The offers the fold runs between its writes (SPEC-102 section 11, ADR-322): the awards' first,
+/// then the landmarks' over the study days of the whole scoped log, read once a recompute. A read
+/// that fails offers no landmark and moves no cursor, so the next recompute owes what this one did.
+async fn cycle_offers(
+    router: &Arc<Router>,
+    reader: &CollectionReader,
+    data: &CollectionData,
+    rule: StudyDayRule,
+) -> OffersInTurn {
+    let mut offers: Vec<Box<dyn Offers>> = vec![Box::new(AwardOffers::new(router.clone()))];
+    match reader.study_days(rule).await {
+        Ok(study_days) => {
+            let landmarks = LandmarkOffers::new(router.clone(), study_days, data, rule);
+            offers.push(Box::new(landmarks));
+        }
+        Err(error) => {
+            tracing::error!(%error, "the study days could not be read; no landmark is offered");
+        }
+    }
+    OffersInTurn::new(offers)
 }
 
 /// The instruments step, after a sync's recompute (SPEC-094 R7). A step that cannot run is logged

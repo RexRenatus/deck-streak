@@ -29,6 +29,7 @@ EXPECTED = {
         "entry_seconds": 300,
         "entries": {
             "tla/HabitXpFollowsItsLog": 300,
+            "tla/LandmarkOnce": 420,
             "tla/MintReadsTheFinalBase": 180,
             "tla/RelightOrder": 360,
             "tla/StagedNoJournal": 120,

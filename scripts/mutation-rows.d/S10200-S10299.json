@@ -45,6 +45,87 @@
         ".filter(|landmark| landmark.day <= today)",
         "landmarks::only_the_landmarks_dated_the_day_are_due",
         "only the landmarks dated the day are due, never an earlier one (SPEC-102 R3)"
+      ],
+      [
+        "S10205-FIRST-RUN-AT-MOST-ONE",
+        "coordination",
+        "src/recompute/landmarks.rs",
+        "due.into_iter().take(1).collect()",
+        "due",
+        "landmarks_step::the_first_run_seeds_the_mark_and_raises_at_most_one",
+        "the first run raises the first landmark due today and no other (SPEC-102 R6)"
+      ],
+      [
+        "S10206-EVERY-EVALUATED-DAY",
+        "coordination",
+        "src/recompute/landmarks.rs",
+        "let settled_since = landmark.day > through",
+        "let settled_since = false",
+        "landmarks_step::each_evaluated_day_raises_its_due_landmarks_once",
+        "a settled day's landmarks are raised, not only the current day's (SPEC-102 R5)"
+      ],
+      [
+        "S10207-HONEST-WITHOUT-STUDY",
+        "coordination",
+        "src/recompute/landmarks.rs",
+        "!self.language.contains(&landmark.day)",
+        "false",
+        "landmarks_step::the_anniversary_is_honest_on_a_day_without_study",
+        "an anniversary on a day without language study takes the honest variant (SPEC-102 R4)"
+      ],
+      [
+        "S10223-CURSOR-AFTER-THE-ANSWER",
+        "coordination",
+        "src/recompute/landmarks.rs",
+        "Some(day) => previous(day).min(settled),",
+        "Some(_) => settled,",
+        "landmarks_step::an_unanswered_landmark_keeps_the_cursor_and_is_offered_again",
+        "the cursor stops the day before the oldest landmark the router did not answer (SPEC-102 R5, ADR-322)"
+      ],
+      [
+        "S10224-FIRST-RUN-KEEPS-THE-CURSOR",
+        "coordination",
+        "src/recompute/landmarks.rs",
+        "let (false, Some(settled)) = (first, settled) else {",
+        "let (_, Some(settled)) = (first, settled) else {",
+        "landmarks_step::the_first_run_never_moves_the_cursor_past_a_landmark_it_did_not_raise",
+        "the first run never moves the cursor, so a landmark it did not raise stays owed (SPEC-102 R6)"
+      ],
+      [
+        "S10225-SEED-AT-YESTERDAY",
+        "coordination",
+        "src/recompute/landmarks.rs",
+        "let seed_through = previous(today);",
+        "let seed_through = today;",
+        "landmarks_step::an_imported_mark_raises_todays_landmarks_and_no_history",
+        "the cursor is seeded at the day before the day evaluated (SPEC-102 R6)"
+      ],
+      [
+        "S10226-MARK-BYTES",
+        "notifications",
+        "src/landmarks.rs",
+        "let study_day = highest_ordinal(landmarks, STUDY_DAY_EVENT_TYPE);",
+        "let study_day = highest_ordinal(landmarks, ANNIVERSARY_EVENT_TYPE);",
+        "landmarks::the_mark_is_the_predecessors_json_for_every_golden_run",
+        "the mark is the predecessor's bytes, each ordinal its own event's highest (SPEC-102 R6)"
+      ],
+      [
+        "S10227-EVERY-OFFER-IN-TURN",
+        "coordination",
+        "src/recompute/mod.rs",
+        "for offers in &self.0 {",
+        "for offers in self.0.iter().take(1) {",
+        "landmarks_step::the_sync_cycle_offers_the_landmarks_after_the_awards",
+        "every offer runs on every offer call, the landmarks after the awards (SPEC-102 R5, ADR-322)"
+      ],
+      [
+        "S10228-THE-CYCLE-OFFERS-LANDMARKS",
+        "coordination",
+        "src/sync_cycle.rs",
+        "offers.push(Box::new(landmarks));",
+        "drop(landmarks);",
+        "landmarks_step::the_sync_cycle_offers_the_landmarks_after_the_awards",
+        "the sync cycle hands the fold the landmarks' offers (SPEC-102 R5, ADR-322)"
       ]
     ]
   }

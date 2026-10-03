@@ -1,0 +1,363 @@
+{
+  "adapter": "with_a_stub_landmark_store",
+  "cases": [
+    {
+      "class": "no-mark-none-due",
+      "input": {
+        "mark": null,
+        "study_days": [
+          19634,
+          19637
+        ],
+        "today": 19999
+      },
+      "output": {
+        "celebrated": [],
+        "delivered": 0,
+        "mark_written": "{\"anniversary\": 0, \"seeded\": true, \"study_day\": 0}"
+      }
+    },
+    {
+      "class": "no-mark-one-due",
+      "input": {
+        "mark": null,
+        "study_days": [
+          19634,
+          20000
+        ],
+        "today": 20000
+      },
+      "output": {
+        "celebrated": [
+          [
+            "landmark_anniversary",
+            "landmark:anniv:1",
+            "\ud83d\uddd3\ufe0f <b>1st anniversary</b> on {day:20000}"
+          ]
+        ],
+        "delivered": 1,
+        "mark_written": "{\"anniversary\": 1, \"seeded\": true, \"study_day\": 0}"
+      }
+    },
+    {
+      "class": "no-mark-two-due",
+      "input": {
+        "mark": null,
+        "study_days": [
+          19634,
+          19950,
+          19951,
+          19952,
+          19953,
+          19954,
+          19955,
+          19956,
+          19957,
+          19958,
+          19959,
+          19960,
+          19961,
+          19962,
+          19963,
+          19964,
+          19965,
+          19966,
+          19967,
+          19968,
+          19969,
+          19970,
+          19971,
+          19972,
+          20000
+        ],
+        "today": 20000
+      },
+      "output": {
+        "celebrated": [
+          [
+            "landmark_anniversary",
+            "landmark:anniv:1",
+            "\ud83d\uddd3\ufe0f <b>1st anniversary</b> on {day:20000}"
+          ]
+        ],
+        "delivered": 1,
+        "mark_written": "{\"anniversary\": 1, \"seeded\": true, \"study_day\": 25}"
+      }
+    },
+    {
+      "class": "mark-two-due",
+      "input": {
+        "mark": "{\"anniversary\": 0, \"seeded\": true, \"study_day\": 0}",
+        "study_days": [
+          19634,
+          19950,
+          19951,
+          19952,
+          19953,
+          19954,
+          19955,
+          19956,
+          19957,
+          19958,
+          19959,
+          19960,
+          19961,
+          19962,
+          19963,
+          19964,
+          19965,
+          19966,
+          19967,
+          19968,
+          19969,
+          19970,
+          19971,
+          19972,
+          20000
+        ],
+        "today": 20000
+      },
+      "output": {
+        "celebrated": [
+          [
+            "landmark_anniversary",
+            "landmark:anniv:1",
+            "\ud83d\uddd3\ufe0f <b>1st anniversary</b> on {day:20000}"
+          ],
+          [
+            "landmark_study_day",
+            "landmark:day:25",
+            "\ud83d\udcda <b>25th earned study days</b> on {day:20000}"
+          ]
+        ],
+        "delivered": 2,
+        "mark_written": null
+      }
+    },
+    {
+      "class": "studied-today",
+      "input": {
+        "mark": null,
+        "study_days": [
+          19634,
+          19674,
+          20000
+        ],
+        "today": 20000
+      },
+      "output": {
+        "celebrated": [
+          [
+            "landmark_anniversary",
+            "landmark:anniv:1",
+            "\ud83d\uddd3\ufe0f <b>1st anniversary</b> on {day:20000}"
+          ]
+        ],
+        "delivered": 1,
+        "mark_written": "{\"anniversary\": 1, \"seeded\": true, \"study_day\": 0}"
+      }
+    },
+    {
+      "class": "not-studied-today",
+      "input": {
+        "mark": null,
+        "study_days": [
+          19634,
+          19674
+        ],
+        "today": 20000
+      },
+      "output": {
+        "celebrated": [
+          [
+            "landmark_anniversary",
+            "landmark:anniv:1",
+            "\ud83d\uddd3\ufe0f <b>1st anniversary</b> on {day:20000}\nThe anniversary does not need a streak."
+          ]
+        ],
+        "delivered": 1,
+        "mark_written": "{\"anniversary\": 1, \"seeded\": true, \"study_day\": 0}"
+      }
+    },
+    {
+      "input": {
+        "mark": null,
+        "study_days": [
+          20492,
+          20516,
+          20520,
+          20528,
+          20569,
+          20576,
+          20578,
+          20587,
+          20589,
+          20596,
+          20598,
+          20613,
+          20621,
+          20647,
+          20660,
+          20666,
+          20687,
+          20697,
+          20699,
+          20704,
+          20706,
+          20717,
+          20732,
+          20741,
+          20752,
+          20755,
+          20759,
+          20766,
+          20783,
+          20805,
+          20817,
+          20819,
+          20828,
+          20829,
+          20836,
+          20907,
+          20909,
+          20914,
+          20930,
+          20953,
+          20978,
+          20996,
+          21023,
+          21079,
+          21087,
+          21131,
+          21133,
+          21135,
+          21143
+        ],
+        "today": 21143
+      },
+      "output": {
+        "celebrated": [],
+        "delivered": 0,
+        "mark_written": "{\"anniversary\": 1, \"seeded\": true, \"study_day\": 25}"
+      }
+    },
+    {
+      "input": {
+        "mark": null,
+        "study_days": [
+          17761,
+          17763,
+          17768,
+          17788,
+          17789,
+          17799,
+          17803,
+          17820,
+          17821,
+          17822,
+          17823,
+          17826,
+          17832,
+          17840,
+          17842,
+          17846,
+          17850,
+          17861,
+          17876,
+          17902,
+          17905,
+          17912,
+          17915,
+          17923,
+          17932,
+          17933,
+          17938,
+          17967,
+          17969,
+          17981,
+          17983,
+          17985,
+          17991,
+          17995,
+          17996,
+          18027,
+          18033,
+          18046,
+          18047,
+          18055,
+          18059
+        ],
+        "today": 18067
+      },
+      "output": {
+        "celebrated": [],
+        "delivered": 0,
+        "mark_written": "{\"anniversary\": 0, \"seeded\": true, \"study_day\": 25}"
+      }
+    },
+    {
+      "input": {
+        "mark": null,
+        "study_days": [
+          17914,
+          17921,
+          17927,
+          17928,
+          17937,
+          17958,
+          17995,
+          18014,
+          18027,
+          18069,
+          18174,
+          18177,
+          18244,
+          18254,
+          18273,
+          18314,
+          18318
+        ],
+        "today": 18384
+      },
+      "output": {
+        "celebrated": [],
+        "delivered": 0,
+        "mark_written": "{\"anniversary\": 1, \"seeded\": true, \"study_day\": 0}"
+      }
+    },
+    {
+      "input": {
+        "mark": "{\"anniversary\": 0, \"seeded\": true, \"study_day\": 0}",
+        "study_days": [
+          20582,
+          20684,
+          20694,
+          20712,
+          20806,
+          20828,
+          20864,
+          20902,
+          20980,
+          21012
+        ],
+        "today": 21151
+      },
+      "output": {
+        "celebrated": [],
+        "delivered": 0,
+        "mark_written": null
+      }
+    }
+  ],
+  "function": "landmarks.run_landmarks",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Runs run_landmarks on a stand-in store holding the case's mark, its offload patched to return synthetic Reviews on the case's study days with the default CollectionConfig, the streak's last study day the latest case day at or before today, and a recording celebrate that answers sent; returns the mark stored, the celebrated events, keys and contracted texts in order, and the count delivered; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_102.py",
+  "registry_sha256": "8808464e91f7efe1e3e1b6850a9fbca5a574ae84739af504a4811de2b0c4c231",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

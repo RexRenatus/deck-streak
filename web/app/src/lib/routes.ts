@@ -17,6 +17,8 @@ export const ROUTES = [
   '/wallet',
   '/badges',
   '/records',
+  '/progress',
+  '/law',
   '/capture'
 ] as const;
 

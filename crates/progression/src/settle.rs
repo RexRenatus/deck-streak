@@ -88,6 +88,10 @@ pub enum SettleError {
 ///
 /// [`SettleError::NotDerived`] before any write when the source is not derived;
 /// [`SettleError::Database`] when the database refuses.
+#[cfg_attr(
+    settle_census,
+    deprecated(note = "the settle census's probe: SPEC-072 A12 names every caller by it")
+)]
 pub async fn settle(
     connection: &mut SqliteConnection,
     request: &SettleRequest<'_>,

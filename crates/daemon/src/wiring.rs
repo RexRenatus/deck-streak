@@ -30,6 +30,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, OnceLock};
 
+use deck_streak_agent::{CefrBand, LiveBand, Subject, SubjectKind};
 use deck_streak_analytics::settings::AnalyticsSettings;
 use deck_streak_bot::{OwnerChat, Scores, SyncAnswer, SyncOutcome, Transport};
 use deck_streak_coordination::courses::{CoursesDisagree, agree};
@@ -42,9 +43,11 @@ use deck_streak_coordination::instruments::{
 use deck_streak_coordination::obligations::Obligations;
 use deck_streak_coordination::recompute::analytics_step::AnalyticsStep;
 use deck_streak_coordination::recompute::badges::BadgesStep;
+use deck_streak_coordination::recompute::band_badges::BandBadgesStep;
 use deck_streak_coordination::recompute::day_bonuses::DayBonusesStep;
 use deck_streak_coordination::recompute::habits::HabitsStep;
 use deck_streak_coordination::recompute::mint::MintStep;
+use deck_streak_coordination::recompute::progress::ProgressStep;
 use deck_streak_coordination::recompute::records::RecordsStep;
 use deck_streak_coordination::recompute::streaks::{RelightDue, StreaksStep};
 use deck_streak_coordination::recompute::xp::XpStep;
@@ -52,6 +55,7 @@ use deck_streak_coordination::recompute::{Fold, FoldError, Phase};
 use deck_streak_coordination::sync_cycle::{
     CycleError, CycleParts, CycleReport, Recompute, sync_cycle,
 };
+use deck_streak_curriculum::store::stored_bands;
 use deck_streak_identity::Owner;
 use deck_streak_ingest::engine::{AnkiEngine, RslibEngine};
 use deck_streak_ingest::gate::{ChangeGate, GateError};
@@ -65,8 +69,8 @@ use deck_streak_ingest::window::WindowError;
 use deck_streak_insights::dark_fields::DarkFields;
 use deck_streak_kernel::{
     Clock, Conventions, ConventionsError, Courses, CoursesError, CredentialLoader,
-    CredentialsDirectory, Db, Environment, KernelError, Offload, Redactor, Setting, SettingsError,
-    StudyDayRule, SystemClock,
+    CredentialsDirectory, Db, Environment, KernelError, Offload, PortFuture, Redactor, Setting,
+    SettingsError, StudyDayRule, SystemClock,
 };
 use deck_streak_notifications::{Policy, Router};
 use deck_streak_readings::taxonomy::{Taxonomy, TaxonomyError, TaxonomyPath};
@@ -209,7 +213,8 @@ pub fn inbox_captures(env: &Environment) -> Option<Arc<InboxCaptures<RealFs>>> {
 
 /// The recompute's fold, with every step registered in its phase (SPEC-071 R19): phase 1's
 /// analytics step, counting leeches by `analytics`. A later SPEC registers its step here, in its
-/// own phase, without touching the fold. The badge step awards against no configured course.
+/// own phase, without touching the fold. The badge step awards against no configured course, and
+/// Road to C2's steps read none.
 ///
 /// # Errors
 ///
@@ -219,8 +224,9 @@ pub fn recompute_fold(analytics: AnalyticsSettings) -> Result<Fold, FoldError> {
 }
 
 /// [`recompute_fold`] over the owner's `courses`, which the badge step awards against (SPEC-073
-/// R4), and the handle the streaks step answers its due relights on, for the cycle that routes
-/// them after the fold's commit (SPEC-076 R27).
+/// R4) and Road to C2's progress and band badge steps read (SPEC-077 R6), and the handle the
+/// streaks step answers its due relights on, for the cycle that routes them after the fold's
+/// commit (SPEC-076 R27).
 ///
 /// # Errors
 ///
@@ -237,12 +243,60 @@ pub fn recompute_fold_with_relights(
     fold.register(Phase::BaseXp, Box::new(XpStep))?;
     let (streaks, due) = StreaksStep::new();
     fold.register(Phase::StreaksAndGovernor, Box::new(streaks))?;
+    fold.register(
+        Phase::DaySteps,
+        Box::new(ProgressStep::new(courses.clone(), analytics)),
+    )?;
     fold.register(Phase::DaySteps, Box::new(HabitsStep))?;
     fold.register(Phase::DerivedBonuses, Box::new(DayBonusesStep))?;
     fold.register(Phase::CoinMint, Box::new(MintStep))?;
-    fold.register(Phase::Awards, Box::new(BadgesStep::new(courses)))?;
+    fold.register(Phase::Awards, Box::new(BadgesStep::new(courses.clone())))?;
     fold.register(Phase::Awards, Box::new(RecordsStep))?;
+    fold.register(Phase::Awards, Box::new(BandBadgesStep::new(courses)))?;
     Ok((fold, due))
+}
+
+/// Road to C2's live band for the persona engine (SPEC-077 R8, T26): the stored current band of
+/// the configured course a language subject names, so a mentor writes at the band the owner has
+/// reached rather than the roster's. Its production caller is the persona engine's output path
+/// (#566); until that runs, A9 is its only caller.
+pub struct CurriculumLiveBand {
+    db: Db,
+    courses: Courses,
+}
+
+impl CurriculumLiveBand {
+    /// The live band over `db`'s stored course progress, for the configured `courses`.
+    #[must_use]
+    pub const fn new(db: Db, courses: Courses) -> Self {
+        Self { db, courses }
+    }
+}
+
+impl LiveBand for CurriculumLiveBand {
+    fn band<'a>(&'a self, subject: &'a Subject) -> PortFuture<'a, Option<CefrBand>> {
+        Box::pin(async move {
+            if subject.kind() != SubjectKind::Language {
+                return Ok(None);
+            }
+            let Some((_kind, area)) = subject.as_str().split_once('/') else {
+                return Ok(None);
+            };
+            let configured = self
+                .courses
+                .courses()
+                .iter()
+                .find(|course| course.code.as_str() == area);
+            let Some(course) = configured else {
+                return Ok(None);
+            };
+            let mut connection = self.db.reader().acquire().await?;
+            let bands = stored_bands(&mut connection).await?;
+            Ok(bands
+                .get(course.code.as_str())
+                .and_then(|band| CefrBand::parse(band)))
+        })
+    }
 }
 
 /// Why a role's recompute cannot start. Each names a setting or a step, never a value.
@@ -675,9 +729,11 @@ mod tests {
     use deck_streak_coordination::recompute::Phase;
     use deck_streak_coordination::recompute::analytics_step::ANALYTICS_STEP;
     use deck_streak_coordination::recompute::badges::BADGES_STEP;
+    use deck_streak_coordination::recompute::band_badges::BAND_BADGES_STEP;
     use deck_streak_coordination::recompute::day_bonuses::DAY_BONUSES_STEP;
     use deck_streak_coordination::recompute::habits::HABITS_STEP;
     use deck_streak_coordination::recompute::mint::MINT_STEP;
+    use deck_streak_coordination::recompute::progress::PROGRESS_STEP;
     use deck_streak_coordination::recompute::records::RECORDS_STEP;
     use deck_streak_coordination::recompute::streaks::STREAKS_STEP;
     use deck_streak_coordination::recompute::xp::XP_STEP;
@@ -758,12 +814,35 @@ mod tests {
                 (Phase::RollupAndScore, ANALYTICS_STEP),
                 (Phase::BaseXp, XP_STEP),
                 (Phase::StreaksAndGovernor, STREAKS_STEP),
+                (Phase::DaySteps, PROGRESS_STEP),
                 (Phase::DaySteps, HABITS_STEP),
                 (Phase::DerivedBonuses, DAY_BONUSES_STEP),
                 (Phase::CoinMint, MINT_STEP),
                 (Phase::Awards, BADGES_STEP),
                 (Phase::Awards, RECORDS_STEP),
+                (Phase::Awards, BAND_BADGES_STEP),
             ]
+        );
+    }
+
+    /// A22: Road to C2's two steps run in production, the progress step in phase 4 right after the
+    /// streaks step and the band badge step in phase 7 right after the records step (SPEC-077 R6).
+    #[test]
+    fn the_recompute_fold_registers_road_to_c2s_steps() {
+        let fold = recompute_fold(AnalyticsSettings::default()).expect("every step in its phase");
+        let steps = fold.steps();
+        let at = |step: (Phase, &str)| steps.iter().position(|registered| *registered == step);
+        let streaks = at((Phase::StreaksAndGovernor, STREAKS_STEP)).expect("the streaks step");
+        assert_eq!(
+            at((Phase::DaySteps, PROGRESS_STEP)),
+            Some(streaks + 1),
+            "the progress step is registered in phase 4, right after the streaks step"
+        );
+        let records = at((Phase::Awards, RECORDS_STEP)).expect("the records step");
+        assert_eq!(
+            at((Phase::Awards, BAND_BADGES_STEP)),
+            Some(records + 1),
+            "the band badge step is registered in phase 7, right after the records step"
         );
     }
 
@@ -772,10 +851,11 @@ mod tests {
         let fold = recompute_fold(AnalyticsSettings::default()).expect("every step in its phase");
         let steps = fold.steps();
         assert_eq!(
-            steps.get(2..5),
+            steps.get(2..6),
             Some(
                 &[
                     (Phase::StreaksAndGovernor, STREAKS_STEP),
+                    (Phase::DaySteps, PROGRESS_STEP),
                     (Phase::DaySteps, HABITS_STEP),
                     (Phase::DerivedBonuses, DAY_BONUSES_STEP),
                 ][..]

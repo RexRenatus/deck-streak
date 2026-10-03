@@ -149,3 +149,17 @@ The delivery decided each question the SPEC left open against its alternatives:
 SPEC-041; SPEC-049, SPEC-050 and SPEC-052 (the W1 kinds routed through it); the notifications-policy
 pack's "Changing the policy" section; docs/schematics/streaks-and-governor-state-machine.md for the
 lapse id.
+
+### Amendment (#297)
+
+The last Bad bullet of the Consequences now leaves unread only these: a request's method or a
+table's name assembled from parts; a source of a kind the census does not read other than SQL; a
+re-export under another name other than by a `pub use`; a `pub` wrapper that hands out a write to
+the feed or the held queue, or a table's name; and a test file that a shipped script runs, or a path
+a unit assembles from a specifier or an environment variable. The rest of that bullet is closed in
+the census by ADR-324 (SPEC-041 §11 and §12): a file that `include!`, `include_str!` or
+`include_bytes!` pulls in, and a module `#[path]` brings in, is read under its own path; SQL is
+read, and only the router's two migrations may name the feed or the held queue; a symlink, a unit
+that runs a test file, and a reply of the bot's command handler visible outside its module are
+refused. Chosen against keeping those units named, which would leave unread a file the census can
+name by a literal (#297).
