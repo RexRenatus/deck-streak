@@ -12,8 +12,9 @@ use axum::http::StatusCode;
 use axum::http::header::CONTENT_TYPE;
 use axum::response::{IntoResponse, Response};
 use axum::routing::get;
+use deck_streak_coordination::progress_view::{StoredProgress, progress_view};
 use deck_streak_identity::{OwnerSession, Sessions};
-use deck_streak_kernel::Courses;
+use deck_streak_kernel::{Courses, KernelError};
 use serde_json::{Value, json};
 
 use crate::health::Readiness;
@@ -49,8 +50,42 @@ pub(crate) fn routes(access: OwnerAccess, readiness: Readiness, courses: Courses
 
 /// `GET /api/progress`.
 async fn progress(_owner: OwnerSession, State(progress): State<Progress>) -> Response {
-    let _unread = (&progress.readiness, &progress.courses);
-    answer(&json!({ "courses": [] }))
+    let Some(db) = progress.readiness.database() else {
+        return refused(StatusCode::SERVICE_UNAVAILABLE, "database_not_open");
+    };
+    match progress_view(db, &progress.courses).await {
+        Ok(view) => {
+            let courses: Vec<Value> = view.iter().map(course).collect();
+            answer(&json!({ "courses": courses }))
+        }
+        Err(error) => unreadable(&error, "progress_unreadable"),
+    }
+}
+
+/// One course's stored progress as the route answers it.
+fn course(stored: &StoredProgress) -> Value {
+    let bands: Vec<Value> = stored
+        .bands
+        .iter()
+        .map(|band| {
+            json!({
+                "band": band.band,
+                "total": band.total,
+                "mature": band.mature,
+                "pct": band.pct,
+                "achieved": band.achieved,
+            })
+        })
+        .collect();
+    json!({
+        "code": stored.course,
+        "name": stored.name,
+        "flag": stored.flag,
+        "mastery_pct": stored.mastery_pct,
+        "current_band": stored.current_band,
+        "current_unit": stored.current_unit,
+        "bands": bands,
+    })
 }
 
 /// 200 with `body` as JSON.
@@ -61,4 +96,17 @@ fn answer(body: &Value) -> Response {
         body.to_string(),
     )
         .into_response()
+}
+
+/// A refusal: its status, and a JSON body naming its reason code alone.
+fn refused(status: StatusCode, reason: &'static str) -> Response {
+    tracing::warn!(reason, "a progress read was refused");
+    let body = json!({ "reason": reason }).to_string();
+    (status, [(CONTENT_TYPE, "application/json")], body).into_response()
+}
+
+/// A read that failed: 500 with its reason code, and the error only in the log.
+fn unreadable(error: &KernelError, reason: &'static str) -> Response {
+    tracing::error!(%error, reason, "a progress read failed");
+    refused(StatusCode::INTERNAL_SERVER_ERROR, reason)
 }

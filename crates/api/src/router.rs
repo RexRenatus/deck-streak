@@ -148,7 +148,8 @@ impl ApiState {
     }
 
     /// This state, rendering the badge catalog's descriptions from the configured `courses`
-    /// (SPEC-073 R16). Without them the descriptions take their generic wording.
+    /// (SPEC-073 R16) and keeping Road to C2's progress to them (SPEC-077 R15). Without them the
+    /// descriptions take their generic wording and the progress route answers no course.
     #[must_use]
     pub fn with_courses(mut self, courses: Courses) -> Self {
         self.courses = Some(courses);

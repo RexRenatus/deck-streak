@@ -68,6 +68,11 @@ async fn store(db: &Db, course: &str, name: &str, band: &str, unit: Option<i64>,
 /// The API as the daemon builds it, over a migrated and empty database, for the synthetic owner
 /// and bot and the synthetic courses, on a manual clock.
 async fn app(scratch: &TempDir) -> (Db, Router) {
+    app_with(scratch, true).await
+}
+
+/// The same app; when `open` is false the readiness never learns of the database.
+async fn app_with(scratch: &TempDir, open: bool) -> (Db, Router) {
     let db = Db::open(&scratch.path().join("deck_streak.db"))
         .await
         .expect("the database opens");
@@ -79,7 +84,9 @@ async fn app(scratch: &TempDir) -> (Db, Router) {
     );
     let access = OwnerAccess::new(gate, clock, StudyDayRule::default());
     let readiness = Readiness::new();
-    readiness.database_opened(db.clone());
+    if open {
+        readiness.database_opened(db.clone());
+    }
     let courses = Courses::parse(COURSES).expect("the synthetic courses parse");
     let state = ApiState::new(readiness)
         .with_owner(access)
@@ -237,6 +244,42 @@ async fn the_progress_route_answers_only_the_owner() {
             "bands": bands
         }]}),
         "the configured course's stored progress, whole; the stale row is absent"
+    );
+    db.close().await;
+}
+
+/// The progress route answers 503 `database_not_open` while the database is not open, and 500
+/// `progress_unreadable`, its reason code alone, when the stored progress cannot be read, each as
+/// JSON, as the badge routes do. Mutation coverage beside A16, not a criterion.
+#[tokio::test]
+async fn the_progress_route_names_why_it_cannot_answer() {
+    let scratch = tempfile::tempdir().expect("a temporary directory");
+    let (closed_db, closed) = app_with(&scratch, false).await;
+    let owner = cookie_of(&handshake(&closed, OWNER_PAYLOAD).await);
+    let refused = get(&closed, PROGRESS_PATH, Some(&owner)).await;
+    assert_eq!(refused.status, StatusCode::SERVICE_UNAVAILABLE);
+    assert_eq!(refused.json(), json!({"reason": "database_not_open"}));
+    assert_eq!(
+        refused.headers.get(CONTENT_TYPE).map(HeaderValue::as_bytes),
+        Some(&b"application/json"[..])
+    );
+    closed_db.close().await;
+
+    let scratch = tempfile::tempdir().expect("a temporary directory");
+    let (db, open) = app(&scratch).await;
+    let owner = cookie_of(&handshake(&open, OWNER_PAYLOAD).await);
+    let mut write = db.write().await.expect("a write");
+    sqlx::query("ALTER TABLE language_progress RENAME TO gone_language_progress")
+        .execute(&mut *write)
+        .await
+        .expect("the table is renamed away");
+    write.commit().await.expect("the commit");
+    let broken = get(&open, PROGRESS_PATH, Some(&owner)).await;
+    assert_eq!(broken.status, StatusCode::INTERNAL_SERVER_ERROR);
+    assert_eq!(broken.json(), json!({"reason": "progress_unreadable"}));
+    assert_eq!(
+        broken.headers.get(CONTENT_TYPE).map(HeaderValue::as_bytes),
+        Some(&b"application/json"[..])
     );
     db.close().await;
 }
