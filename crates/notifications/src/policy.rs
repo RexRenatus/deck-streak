@@ -433,6 +433,18 @@ impl Policy {
                 reason: format!("it lacks {}, which the router records", reason.as_str()),
             });
         }
+        if let Some(reply) = self
+            .replies
+            .iter()
+            .find(|reply| self.kinds.contains_key(reply.as_str()))
+        {
+            return Err(PolicyError::Malformed {
+                key: "replies".to_owned(),
+                reason: format!(
+                    "it names {reply}, a declared kind: a notification is judged, never skipped as a reply"
+                ),
+            });
+        }
         Ok(())
     }
 }
