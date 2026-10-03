@@ -578,3 +578,16 @@ A27: red at 4bcec28a: a #[path] to a file the tree does not hold, and one inside
 A28: red at 4bcec28a: a unit that runs a file in a test directory, and a drop-in that runs a test file by its name, are refused; a tool named test, a test directory under src/ and a shipped script are not (left: [])
 A29: red at 4bcec28a: a reply defined pub, pub(crate) or in a trait impl for the handler is refused, and a private one is not (left: [])
 ```
+
+The seams were then filled (de97462c), and the six tests passed with every other test of the
+target (`test result: ok. 12 passed; 0 failed`). A15 examined the new populations on the tree: 23
+brought-in files, 42 unit path tokens and 17 reply definitions, with nothing refused.
+
+```red-first
+A24: green at de97462c
+A25: green at de97462c
+A26: green at de97462c
+A27: green at de97462c
+A28: green at de97462c
+A29: green at de97462c
+```
