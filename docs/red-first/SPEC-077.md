@@ -101,3 +101,36 @@ A19: green at edc6c555
 A20: red at d7bd6425: AssertionError: examined 0 pending counts: the population is empty, so nothing was judged: expected 0 to be greater than 0
 A20: green at f25690b7
 ```
+
+## Addendum, 2026-10-03: the test edits inside A16's, A17's and A18's green commits
+
+Each green commit below also changed test files beside its criterion's test. None of them changed
+that test: the bodies of `the_progress_route_answers_only_the_owner` (A16),
+`the_law_route_answers_only_the_owner` (A17) and `progress_shows_each_course_band_and_mastery`
+(A18) are byte-equal at their red and green commits. What else each changed:
+
+- **bcde9feb (A16's green).** `crates/api/tests/progress_routes.rs` moves the app's builder into
+  `app_with(scratch, open)`, which marks the database opened only when `open` is true; `app` calls
+  it with `true`, so every existing test builds the same app as before. Its one removed line,
+  `readiness.database_opened(db.clone());`, is that move. It adds
+  `the_progress_route_names_why_it_cannot_answer`, mutation coverage beside A16. It adds
+  `crates/coordination/tests/progress_view.rs` whole, the tests of the progress view (T28) added
+  with the view they test; neither is red-first evidence of a criterion.
+- **8a878792 (A17's green).** `crates/api/tests/law_routes.rs` makes the same `app_with` move, with
+  the same one removed line, and adds `seed_law`,
+  `the_law_route_answers_the_stored_block_with_its_line_keys` and
+  `the_law_route_names_why_it_cannot_answer`, mutation coverage beside A17.
+- **42666e15 (A18's green).** `crates/bot/tests/commands.rs`: the menu's test lists `progress`
+  beside the eleven commands it listed and names twelve; the rendered messages gain `progress`,
+  `progress-none` and `progress-failed`, with the new goldens `progress-none.msg.json` and
+  `progress-failed.msg.json`; the `help` and `start` goldens each gain the `/progress` line and keep
+  every line they had, in order. `crates/bot/tests/progress_commands.rs` adds three tests beside
+  A18's. `crates/daemon/tests/role_bot.rs` adds `start_role_with`, which passes further settings to
+  the role, creates its state directory with `create_dir_all` in place of `create_dir`, so a state
+  directory the progress test has already seeded is kept, and adds
+  `the_bot_role_answers_progress_from_the_courses_its_settings_name`. No assertion narrowed.
+
+After the last green, the reader tests' positive controls in `law.test.ts` and `progress.test.ts`
+assert a value the reader returns where they asserted only that it was not null, and
+`the_view_is_empty_before_the_first_recompute` asserts that two courses are configured beside its
+empty view. Each tightens a test that is not a criterion's.
