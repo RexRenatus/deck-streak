@@ -373,3 +373,11 @@ calls and their non-text arguments only.
   - `scripts/mutation-equivalent.d/deck-streak-notifications.json` (added): the guard of
     `Router::send_bot` recorded equivalent, since a non-celebration reaches it only at T0 or T2;
   - `crates/api/src/notifications_routes.rs` is unchanged: the feed item it serves carries the tier.
+
+## 11. Amendment (#572, SPEC-326): the streak facts are read from the streaks store
+
+Coordination now reads the language streak's stored facts through the router's database before
+every celebration route and every flush (SPEC-326, ADR-327), so R5's cap and R11's re-cap apply.
+The sentences "none until SPEC-076 supplies them" (section 4's `ladder_facts.rs` row), "The streak
+facts are absent until SPEC-076 lands" (section 6) and "is none until SPEC-076 lands" (section 10)
+are superseded by this section, and a failed read routes and flushes nothing (ADR-327).
