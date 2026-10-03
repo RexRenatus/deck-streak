@@ -1270,7 +1270,7 @@ in another. ADR-291 states the class; this section states it as criteria.
   is crossed with the search entries and the layouts of the tool: 384 members. Every exit crossed
   with every route: 768. The census reads 442 spawner-reference members and 568 unread-import
   members, and each is refused. Its escape population is those 1010 members and their count of
-  escapes is 0.
+  escapes is 0, as the builder reported; no independent verify measured this population.
 - **Every mutant is red by assertion.** The generated mutants of `resolve_tool`, `_backstop`,
   `_exit_refusal`, `run_tool` and `run_in_own_group` and the six unrunnable-exit targets number 136
   once duplicates are removed: 135 fail a test by assertion and 1 is equivalent, and none is red
@@ -1321,7 +1321,8 @@ be two files. ADR-291 states the class; this section states it as criteria.
   which `PATH` changes: 40 members. The unread-reach test generates 679 members (held modules and
   private names of every read module, frame attributes, the dunders of `type`, and nine named
   forms), and the annotation test 19. The census escape population is those members and its count
-  of escapes is 0, with five benign sources refused by none.
+  of escapes is 0, with five benign sources refused by none, as the builder reported; no independent
+  verify measured this population.
 - **Every mutant is red by assertion.** The 171 generated mutants of `referenced`, `READ_MODULES`
   and the census's new lines: 124 fail a test by assertion when the modules run, and of the other
   47 (three of which failed by an error alone) 44 fail by assertion form by form, each form one
