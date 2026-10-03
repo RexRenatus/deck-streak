@@ -263,6 +263,42 @@ fn lease_token(now: UtcMillis) -> String {
     (now.epoch_millis() + FLUSH_LEASE_MS).to_string()
 }
 
+/// The policy's kind whose switch [`seed_celebrations_off`] writes.
+const CELEBRATION_KIND: &str = "celebration";
+
+/// Seeds the celebrations' switch off where no value is stored, so no celebration leaves the box
+/// before the cutover checklist turns it on (#402 items 8 and 11; SPEC-319 R4). It is an insert
+/// that ignores an existing row: a value the owner or the checklist stored is never overwritten.
+/// A policy whose celebration kind names no switch has none to seed.
+///
+/// # Errors
+///
+/// [`KernelError::Database`] when the setting cannot be written.
+pub async fn seed_celebrations_off(
+    policy: &Policy,
+    db: &Db,
+    now: UtcMillis,
+) -> Result<(), KernelError> {
+    let Some(kind) = policy.kind(CELEBRATION_KIND) else {
+        return Ok(());
+    };
+    let Some(setting) = kind.setting() else {
+        return Ok(());
+    };
+    let mut write = db.write().await?;
+    sqlx::query(
+        "INSERT INTO notification_settings (key, value, created_at) VALUES (?, ?, ?) \
+         ON CONFLICT (key) DO NOTHING",
+    )
+    .bind(setting)
+    .bind(policy.comeback.disable_value.as_str())
+    .bind(now.epoch_millis())
+    .execute(&mut *write)
+    .await?;
+    write.commit().await?;
+    Ok(())
+}
+
 /// What the rules decided before any delivery call.
 enum Verdict {
     Withhold(Reason),
@@ -355,6 +391,9 @@ pub struct Router {
     clock: Arc<dyn Clock>,
     rule: StudyDayRule,
     bot: Option<Arc<dyn BotTransport>>,
+    /// Whether a bot celebration this router cannot send, for want of a transport, is held for the
+    /// processes that hold the bot's credentials rather than withheld (SPEC-319 R2).
+    holding: bool,
     /// When the last bot send failed: the outage breaker is open for the cooldown after it.
     failed_at: Mutex<Option<UtcMillis>>,
     /// When the last reaction was refused: the reaction breaker is open for the cooldown after it
@@ -383,6 +422,7 @@ impl Router {
             clock,
             rule,
             bot: None,
+            holding: false,
             failed_at: Mutex::new(None),
             reaction_failed_at: Mutex::new(None),
         }
@@ -392,6 +432,16 @@ impl Router {
     #[must_use]
     pub fn with_bot(mut self, bot: Arc<dyn BotTransport>) -> Self {
         self.bot = Some(bot);
+        self
+    }
+
+    /// This router, holding each bot celebration it cannot send for want of a transport: it is
+    /// deferred `send` and kept on the queue for the processes that hold the bot's credentials to
+    /// flush (SPEC-319 R2, ADR-319). Any other bot occasion with no transport is still withheld
+    /// `no_notifier` and its key released.
+    #[must_use]
+    pub fn holding(mut self) -> Self {
+        self.holding = true;
         self
     }
 
@@ -832,6 +882,9 @@ impl Router {
         }
         Ok(match surface {
             Surface::MiniApp => Verdict::SendInApp,
+            Surface::Bot if self.bot.is_none() && self.holding && celebration => {
+                Verdict::Defer(Hold::Send)
+            }
             Surface::Bot if self.bot.is_none() => Verdict::Withhold(Reason::NoNotifier),
             Surface::Bot if self.breaker_open(now) => {
                 if celebration {

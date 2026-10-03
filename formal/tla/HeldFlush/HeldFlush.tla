@@ -36,6 +36,22 @@
 (*                             abandoned by its token, its claim kept.     *)
 (*   ledger.rs::release_claims - every other row the failed flush still    *)
 (*                             claims goes back to held.                   *)
+(*   router.rs::after_claim  - a holding router, which no bot transport    *)
+(*                             joins, defers a celebration "send" outside  *)
+(*                             the window and holds it; inside the window  *)
+(*                             it is held "quiet" first, as before (#571). *)
+(*   sync_request.rs::answer - the bot flushes only after it observes the  *)
+(*                             owner's request answered by a sync that ran *)
+(*                             and succeeded; when its answer bound        *)
+(*                             expires (StillRunning) it flushes nothing.  *)
+(*                                                                         *)
+(* SendHold = TRUE is the design at head (#571): every recompute cycle of  *)
+(* the job holds a router with no transport, so the owner's sync outside   *)
+(* the window holds its celebrations before the bot's flush that follows  *)
+(* its answer, and that flush may never run. SendHold = FALSE is the model *)
+(* before it, kept by MCHeldFlush.cfg and the round witnesses unchanged.   *)
+(* The hold's value ("send" or "quiet") is not modelled: a flush takes     *)
+(* both alike.                                                             *)
 (*                                                                         *)
 (* Claimed = TRUE is the design at head: the take claims each row it will  *)
 (* send, and a lapsed foreign claim is abandoned as "may have been sent".   *)
@@ -71,13 +87,16 @@
 \* @phx covers crates/notifications/src/ledger.rs anchor=abandon_pushed digest=sha256:27b148a1223b16cc2a4c97d882c56cdfec475427c64746a739ddce072f129d99
 \* @phx covers crates/notifications/src/ledger.rs anchor=release_claims digest=sha256:6b4130909dc46b10d1ad4ed744290bb4b260c8a45190966f4d2fe224ed9ba05c
 \* @phx covers crates/coordination/src/held_flush.rs anchor=perform digest=sha256:ce5564d067389de1f76446b44708cc4aa7e1fb1a73e6776eece05603afba8fe3
-\* @phx cites #291
+\* @phx covers crates/notifications/src/router.rs anchor=after_claim digest=sha256:321ba8b66c2bed868712441daa8e6384aed8deadee7f07d57936eeb0cf918e86
+\* @phx covers crates/daemon/src/sync_request.rs anchor=answer digest=sha256:01ef6b24af2316fccad6685edbc89518024d3d236af9d86ad1f7d213c0ae9de0
+\* @phx cites #291, #571
 \* @phx property NoDoubleDelivery ramp=report
 \* @phx property HeldReachesOrAbandons ramp=report
 \* @phx witness witness/OnlyTheSyncFlusher.cfg kills=HeldReachesOrAbandons
 \* @phx witness witness/NoSerialisation.cfg kills=NoDoubleDelivery
 \* @phx witness witness/LeaseLapses.cfg kills=NoDoubleDelivery
 \* @phx witness witness/ReleaseOnFail.cfg kills=NoDoubleDelivery
+\* @phx witness witness/a-hold-outside-the-window-with-no-later-flush.cfg kills=HeldReachesOrAbandons
 EXTENDS Naturals, FiniteSets
 
 CONSTANTS Items,        \* the celebrations that may be raised
@@ -89,7 +108,8 @@ CONSTANTS Items,        \* the celebrations that may be raised
           SchedAt,      \* the positions at which a scheduled flush may start
           Serialised,   \* TRUE when a running flush's unlapsed lease excludes a second one
           Claimed,      \* TRUE when the take claims each row it sends (held -> sending)
-          NamedOnFail   \* TRUE when a failed flush names its pushed row rather than give it back
+          NamedOnFail,  \* TRUE when a failed flush names its pushed row rather than give it back
+          SendHold      \* TRUE when the owner's sync holds a celebration outside the window
 
 Flushers == {"sync", "sched"}
 Quiet(t) == t < QuietEnd
@@ -157,6 +177,30 @@ Hold(i) == /\ Quiet(t)
            /\ st' = [st EXCEPT ![i] = "held"]
            /\ heldAt' = [heldAt EXCEPT ![i] = t]
            /\ UNCHANGED <<t, claim, claimUntil, sends, pc, snap, pend, lock, leaseUntil, fired>>
+
+\* A celebration the owner's sync raises while the window is open is held for the senders
+\* (router.rs::after_claim on the holding router, #571): the job's router has no transport, so it
+\* holds the row before the bot's flush that follows the sync's answer, which is the "sync"
+\* flusher's trigger at this position. A flush already running keeps its own snapshot.
+HoldSend(i) == /\ SendHold
+               /\ ~Quiet(t)
+               /\ st[i] = "none"
+               /\ Fires("sync")
+               /\ "sync" \notin fired
+               /\ st' = [st EXCEPT ![i] = "held"]
+               /\ heldAt' = [heldAt EXCEPT ![i] = t]
+               /\ UNCHANGED <<t, claim, claimUntil, sends, pc, snap, pend, lock, leaseUntil, fired>>
+
+\* The bot's answer bound expires before the owner's request is answered
+\* (sync_request.rs::answer answers StillRunning and flushes nothing): the flush that follows the
+\* sync is due and does not run. Only with SendHold, whose sync flusher is the bot's flush after
+\* the answer.
+Unanswered == /\ SendHold
+              /\ Fires("sync")
+              /\ "sync" \notin fired
+              /\ pc["sync"] = "idle"
+              /\ fired' = fired \cup {"sync"}
+              /\ UNCHANGED <<t, st, claim, claimUntil, heldAt, sends, pc, snap, pend, lock, leaseUntil>>
 
 \* A flush starts: it needs the window open and a free lease, reads the held queue in one
 \* transaction, abandons what is past the age limit, and keeps the rest to send. When rows are
@@ -264,7 +308,8 @@ Finished == /\ t = Horizon
             /\ UNCHANGED vars
 
 Next == \/ Tick
-        \/ \E i \in Items : Hold(i)
+        \/ \E i \in Items : Hold(i) \/ HoldSend(i)
+        \/ Unanswered
         \/ \E f \in Flushers : Take(f) \/ Skip(f) \/ Finish(f) \/ Crash(f) \/ Fail(f)
         \/ \E f \in Flushers, i \in Items : Push(f, i) \/ Mark(f, i)
         \/ Finished
