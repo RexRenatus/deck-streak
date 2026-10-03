@@ -50,7 +50,8 @@ R1. One reader, `tools/table-census/table_census.rs`, included by path into the 
     with any number of hashes, byte, raw byte and C strings, characters and byte characters; the
     words inside `stringify!` are pieces too.
 R2. The reader follows `include!`, `include_str!`, `include_bytes!` and `#[path]` by their literal
-    path: a Rust file is lexed, any other file is one piece. An include whose path is not one literal
+    path, as rustc reads each: a file `include!` or `#[path]` reads is lexed as Rust, and a file
+    `include_str!` or `include_bytes!` reads is one piece. An include whose path is not one literal
     is refused by name, but for a path joined onto `env!("OUT_DIR")`, which is disclosed (#585). An
     include of a literal path the reader cannot read is refused by name.
 R3. The pieces of every file outside the owner, workspace-wide, are one pool, case-folded in ASCII.
@@ -154,5 +155,7 @@ outside `src` (tests, benches, examples and build scripts), which no census read
 
 ## 7. The mutation rows
 
-Band `S32400-S32499`, in `scripts/mutation-rows.d/S32400-S32499.json`: S32401 to S32426, each proved
-with `python3 scripts/mutation_rows.py prove --row <id>` on a committed tree.
+Band `S32400-S32499`, in `scripts/mutation-rows.d/S32400-S32499.json`: S32401 to S32429, each proved
+with `python3 scripts/mutation_rows.py prove --row <id>` on a committed tree. S32427 to S32429 pin
+R2's three include arms (ruling 108): an include joined onto `env!("OUT_DIR")` is disclosed, only
+that variable is, and an include of a literal path the reader cannot read is refused.

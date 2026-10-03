@@ -56,7 +56,8 @@ decoded pieces refuses every join shape at once, and a pool needs no parser.
   every literal as rustc does. The words inside `stringify!` are pieces. Numbers, `true` and `false`
   are pieces, since `concat!` joins them.
 - `include!`, `include_str!`, `include_bytes!` and `#[path]` are followed by their literal path,
-  relative to the including file's folder: a Rust file is lexed, any other file is one piece. A path
+  relative to the including file's folder, as rustc reads each: a file `include!` or `#[path]` reads
+  is lexed as Rust, and a file `include_str!` or `include_bytes!` reads is one piece. A path
   joined onto `env!("OUT_DIR")` is counted and disclosed (#585): build-script output is a route the
   reader does not reach, and the settle census's own tests plant that shape. Any other non-literal
   path, and a literal path the reader cannot read, is refused by name.
@@ -89,7 +90,7 @@ decoded pieces refuses every join shape at once, and a pool needs no parser.
 ### Confirmation
 
 `crates/progression/tests/ledger_census.rs` (A1, A4, A5), `crates/progression/tests/xp_census.rs`
-(A2), `crates/economy/tests/wallet_census.rs` (A3); rows S32401 to S32421.
+(A2), `crates/economy/tests/wallet_census.rs` (A3); rows S32401 to S32421 and S32427 to S32429.
 
 ## What would make this wrong
 
