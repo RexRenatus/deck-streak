@@ -55,3 +55,5 @@ A3 to A6 were read green at ce165b6b by their fence commands, each `Ran 1 test`,
 whole of `test_mutation_verdict.py` there reads `Ran 34 tests`, `OK`. A1, A2 and A7 were read
 green on the implementation's tree before its commit, whose content is ce165b6b's, and CI's
 `hygiene` job runs both of their modules at the pushed head.
+
+MUTATION COVERAGE (ruling 144, green at the base by design): `test_a_listing_that_needs_exactly_the_shard_cap_is_sized_at_the_cap` sizes a listing that needs exactly `MAX_SHARDS` shards, so the `MAX_SHARDS + 1` bound of `fewest_shards` is held by a test and by row S32706; it decides no criterion.
