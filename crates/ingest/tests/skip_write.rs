@@ -63,7 +63,6 @@ fn zone(rule: &str) -> MutexGuard<'static, ()> {
     held
 }
 
-/// Prints how many items a check examined and refuses zero (the tdd pack's examined contract).
 /// Changes the process's zone to `rule` while the caller holds the target's lock, and waits until
 /// chrono reads it.
 fn rezone(_held: &MutexGuard<'static, ()>, rule: &str) {
@@ -71,6 +70,7 @@ fn rezone(_held: &MutexGuard<'static, ()>, rule: &str) {
     thread::sleep(ZONE_SETTLES);
 }
 
+/// Prints how many items a check examined and refuses zero (the tdd pack's examined contract).
 fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
     println!("examined {} {what}", items.len());
     assert!(
@@ -1540,9 +1540,10 @@ fn a_take_holds_to_the_study_day_and_writes_no_setting_when_the_engines_day_or_z
 
     // A zone that observes daylight saving refuses, whether its daylight period is in effect now
     // or begins later in the current or the next calendar year, and when it is set after the
-    // service started under a rule with none.
+    // service started under a rule with none. A rule's start is read in standard time and its end
+    // in daylight time, so `later` starts at 19:00 UTC and ends at 21:00 UTC on the year's last day.
     let in_effect = ("AAA-1BBB,J1/0,J365/23", 120);
-    let later = ("AAA-1BBB,J365/22,J365/23", 60);
+    let later = ("AAA-1BBB,J365/20,J365/23", 60);
     for (rule, minutes) in [in_effect, later, in_effect] {
         let _zone = zone(rule);
         let setup = SkipSetup {
