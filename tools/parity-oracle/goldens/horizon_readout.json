@@ -1,0 +1,3499 @@
+{
+  "adapter": "with_card_rows_and_a_dial",
+  "cases": [
+    {
+      "class": "empty",
+      "input": {
+        "cards": [],
+        "desired_retention_pct": 90.0,
+        "today": 100
+      },
+      "output": {
+        "beyond_horizon": 0,
+        "desired_retention_pct": 90.0,
+        "due_later": 0,
+        "excluded_count": 0,
+        "honest_text": "That curve stays flat because nothing is being started: a flat forward curve is not an achievement, it is the signature of a collection that has stopped taking on new material. Two levers create future obligation \u2014 the daily new-card dial (priced at ~8 reviews over a new card's lifetime) and your desired_retention (currently 90%).",
+        "is_flat": true,
+        "new_card_lifetime_reviews": 8,
+        "new_count": 0,
+        "other_cards": 0,
+        "peak_day": 0,
+        "peak_reviews": 0,
+        "relief_text": "Your real obligation for the next 30 days is 0 reviews. Total. Of the other 0 cards \u2014 0 never started, 0 suspended or buried, 0 due later than 30 days out \u2014 every one is something you own, not something you owe.",
+        "total_cards": 0,
+        "window_days": 30,
+        "window_reviews": 0
+      }
+    },
+    {
+      "class": "excluded",
+      "input": {
+        "cards": [
+          [
+            -1,
+            2,
+            2773,
+            0,
+            1
+          ],
+          [
+            -2,
+            2,
+            2773,
+            0,
+            1
+          ],
+          [
+            -3,
+            2,
+            2773,
+            0,
+            1
+          ]
+        ],
+        "desired_retention_pct": 90.0,
+        "today": 2770
+      },
+      "output": {
+        "beyond_horizon": 0,
+        "desired_retention_pct": 90.0,
+        "due_later": 0,
+        "excluded_count": 3,
+        "honest_text": "That curve stays flat because nothing is being started: a flat forward curve is not an achievement, it is the signature of a collection that has stopped taking on new material. Two levers create future obligation \u2014 the daily new-card dial (priced at ~8 reviews over a new card's lifetime) and your desired_retention (currently 90%).",
+        "is_flat": true,
+        "new_card_lifetime_reviews": 8,
+        "new_count": 0,
+        "other_cards": 3,
+        "peak_day": 0,
+        "peak_reviews": 0,
+        "relief_text": "Your real obligation for the next 30 days is 0 reviews. Total. Of the other 3 cards \u2014 0 never started, 3 suspended or buried, 0 due later than 30 days out \u2014 every one is something you own, not something you owe.",
+        "total_cards": 3,
+        "window_days": 30,
+        "window_reviews": 0
+      }
+    },
+    {
+      "class": "type-new",
+      "input": {
+        "cards": [
+          [
+            2,
+            0,
+            2775,
+            0,
+            3
+          ],
+          [
+            1,
+            0,
+            1780000000,
+            0,
+            1
+          ]
+        ],
+        "desired_retention_pct": 90.0,
+        "today": 2770
+      },
+      "output": {
+        "beyond_horizon": 0,
+        "desired_retention_pct": 90.0,
+        "due_later": 0,
+        "excluded_count": 0,
+        "honest_text": "That curve stays flat because nothing is being started: a flat forward curve is not an achievement, it is the signature of a collection that has stopped taking on new material. Two levers create future obligation \u2014 the daily new-card dial (priced at ~8 reviews over a new card's lifetime) and your desired_retention (currently 90%).",
+        "is_flat": true,
+        "new_card_lifetime_reviews": 8,
+        "new_count": 4,
+        "other_cards": 4,
+        "peak_day": 0,
+        "peak_reviews": 0,
+        "relief_text": "Your real obligation for the next 30 days is 0 reviews. Total. Of the other 4 cards \u2014 4 never started, 0 suspended or buried, 0 due later than 30 days out \u2014 every one is something you own, not something you owe.",
+        "total_cards": 4,
+        "window_days": 30,
+        "window_reviews": 0
+      }
+    },
+    {
+      "class": "queue-new",
+      "input": {
+        "cards": [
+          [
+            0,
+            1,
+            2775,
+            0,
+            2
+          ],
+          [
+            0,
+            2,
+            7,
+            0,
+            4
+          ]
+        ],
+        "desired_retention_pct": 90.0,
+        "today": 2770
+      },
+      "output": {
+        "beyond_horizon": 0,
+        "desired_retention_pct": 90.0,
+        "due_later": 0,
+        "excluded_count": 0,
+        "honest_text": "That curve stays flat because nothing is being started: a flat forward curve is not an achievement, it is the signature of a collection that has stopped taking on new material. Two levers create future obligation \u2014 the daily new-card dial (priced at ~8 reviews over a new card's lifetime) and your desired_retention (currently 90%).",
+        "is_flat": true,
+        "new_card_lifetime_reviews": 8,
+        "new_count": 6,
+        "other_cards": 6,
+        "peak_day": 0,
+        "peak_reviews": 0,
+        "relief_text": "Your real obligation for the next 30 days is 0 reviews. Total. Of the other 6 cards \u2014 6 never started, 0 suspended or buried, 0 due later than 30 days out \u2014 every one is something you own, not something you owe.",
+        "total_cards": 6,
+        "window_days": 30,
+        "window_reviews": 0
+      }
+    },
+    {
+      "class": "new",
+      "input": {
+        "cards": [
+          [
+            0,
+            0,
+            4000,
+            0,
+            5
+          ]
+        ],
+        "desired_retention_pct": 90.0,
+        "today": 2770
+      },
+      "output": {
+        "beyond_horizon": 0,
+        "desired_retention_pct": 90.0,
+        "due_later": 0,
+        "excluded_count": 0,
+        "honest_text": "That curve stays flat because nothing is being started: a flat forward curve is not an achievement, it is the signature of a collection that has stopped taking on new material. Two levers create future obligation \u2014 the daily new-card dial (priced at ~8 reviews over a new card's lifetime) and your desired_retention (currently 90%).",
+        "is_flat": true,
+        "new_card_lifetime_reviews": 8,
+        "new_count": 5,
+        "other_cards": 5,
+        "peak_day": 0,
+        "peak_reviews": 0,
+        "relief_text": "Your real obligation for the next 30 days is 0 reviews. Total. Of the other 5 cards \u2014 5 never started, 0 suspended or buried, 0 due later than 30 days out \u2014 every one is something you own, not something you owe.",
+        "total_cards": 5,
+        "window_days": 30,
+        "window_reviews": 0
+      }
+    },
+    {
+      "class": "intraday-1",
+      "input": {
+        "cards": [
+          [
+            1,
+            1,
+            1780000000,
+            0,
+            2
+          ]
+        ],
+        "desired_retention_pct": 90.0,
+        "today": 2770
+      },
+      "output": {
+        "beyond_horizon": 0,
+        "desired_retention_pct": 90.0,
+        "due_later": 0,
+        "excluded_count": 0,
+        "honest_text": "That curve stays flat because nothing is being started: a flat forward curve is not an achievement, it is the signature of a collection that has stopped taking on new material. Two levers create future obligation \u2014 the daily new-card dial (priced at ~8 reviews over a new card's lifetime) and your desired_retention (currently 90%).",
+        "is_flat": true,
+        "new_card_lifetime_reviews": 8,
+        "new_count": 0,
+        "other_cards": 0,
+        "peak_day": 0,
+        "peak_reviews": 0,
+        "relief_text": "Your real obligation for the next 30 days is 2 reviews. Total. Of the other 0 cards \u2014 0 never started, 0 suspended or buried, 0 due later than 30 days out \u2014 every one is something you own, not something you owe.",
+        "total_cards": 2,
+        "window_days": 30,
+        "window_reviews": 2
+      }
+    },
+    {
+      "class": "intraday-4",
+      "input": {
+        "cards": [
+          [
+            4,
+            2,
+            1780000000,
+            0,
+            3
+          ]
+        ],
+        "desired_retention_pct": 90.0,
+        "today": 2770
+      },
+      "output": {
+        "beyond_horizon": 0,
+        "desired_retention_pct": 90.0,
+        "due_later": 0,
+        "excluded_count": 0,
+        "honest_text": "That curve stays flat because nothing is being started: a flat forward curve is not an achievement, it is the signature of a collection that has stopped taking on new material. Two levers create future obligation \u2014 the daily new-card dial (priced at ~8 reviews over a new card's lifetime) and your desired_retention (currently 90%).",
+        "is_flat": true,
+        "new_card_lifetime_reviews": 8,
+        "new_count": 0,
+        "other_cards": 0,
+        "peak_day": 0,
+        "peak_reviews": 0,
+        "relief_text": "Your real obligation for the next 30 days is 3 reviews. Total. Of the other 0 cards \u2014 0 never started, 0 suspended or buried, 0 due later than 30 days out \u2014 every one is something you own, not something you owe.",
+        "total_cards": 3,
+        "window_days": 30,
+        "window_reviews": 3
+      }
+    },
+    {
+      "class": "day-relearn",
+      "input": {
+        "cards": [
+          [
+            3,
+            3,
+            2775,
+            0,
+            2
+          ],
+          [
+            3,
+            3,
+            2761,
+            0,
+            1
+          ]
+        ],
+        "desired_retention_pct": 90.0,
+        "today": 2770
+      },
+      "output": {
+        "beyond_horizon": 0,
+        "desired_retention_pct": 90.0,
+        "due_later": 0,
+        "excluded_count": 0,
+        "honest_text": "That curve stays flat because nothing is being started: a flat forward curve is not an achievement, it is the signature of a collection that has stopped taking on new material. Two levers create future obligation \u2014 the daily new-card dial (priced at ~8 reviews over a new card's lifetime) and your desired_retention (currently 90%).",
+        "is_flat": true,
+        "new_card_lifetime_reviews": 8,
+        "new_count": 0,
+        "other_cards": 0,
+        "peak_day": 5,
+        "peak_reviews": 2,
+        "relief_text": "Your real obligation for the next 30 days is 3 reviews. Total. Of the other 0 cards \u2014 0 never started, 0 suspended or buried, 0 due later than 30 days out \u2014 every one is something you own, not something you owe.",
+        "total_cards": 3,
+        "window_days": 30,
+        "window_reviews": 3
+      }
+    },
+    {
+      "class": "legacy-borrowed",
+      "input": {
+        "cards": [
+          [
+            2,
+            2,
+            -40,
+            9,
+            3
+          ],
+          [
+            3,
+            2,
+            -1,
+            9,
+            1
+          ]
+        ],
+        "desired_retention_pct": 90.0,
+        "today": 2770
+      },
+      "output": {
+        "beyond_horizon": 0,
+        "desired_retention_pct": 90.0,
+        "due_later": 0,
+        "excluded_count": 0,
+        "honest_text": "That curve stays flat because nothing is being started: a flat forward curve is not an achievement, it is the signature of a collection that has stopped taking on new material. Two levers create future obligation \u2014 the daily new-card dial (priced at ~8 reviews over a new card's lifetime) and your desired_retention (currently 90%).",
+        "is_flat": true,
+        "new_card_lifetime_reviews": 8,
+        "new_count": 0,
+        "other_cards": 0,
+        "peak_day": 0,
+        "peak_reviews": 0,
+        "relief_text": "Your real obligation for the next 30 days is 4 reviews. Total. Of the other 0 cards \u2014 0 never started, 0 suspended or buried, 0 due later than 30 days out \u2014 every one is something you own, not something you owe.",
+        "total_cards": 4,
+        "window_days": 30,
+        "window_reviews": 4
+      }
+    },
+    {
+      "class": "modern-borrowed",
+      "input": {
+        "cards": [
+          [
+            2,
+            2,
+            2773,
+            9,
+            2
+          ],
+          [
+            2,
+            2,
+            2767,
+            9,
+            1
+          ]
+        ],
+        "desired_retention_pct": 90.0,
+        "today": 2770
+      },
+      "output": {
+        "beyond_horizon": 0,
+        "desired_retention_pct": 90.0,
+        "due_later": 0,
+        "excluded_count": 0,
+        "honest_text": "That curve stays flat because nothing is being started: a flat forward curve is not an achievement, it is the signature of a collection that has stopped taking on new material. Two levers create future obligation \u2014 the daily new-card dial (priced at ~8 reviews over a new card's lifetime) and your desired_retention (currently 90%).",
+        "is_flat": true,
+        "new_card_lifetime_reviews": 8,
+        "new_count": 0,
+        "other_cards": 0,
+        "peak_day": 3,
+        "peak_reviews": 2,
+        "relief_text": "Your real obligation for the next 30 days is 3 reviews. Total. Of the other 0 cards \u2014 0 never started, 0 suspended or buried, 0 due later than 30 days out \u2014 every one is something you own, not something you owe.",
+        "total_cards": 3,
+        "window_days": 30,
+        "window_reviews": 3
+      }
+    },
+    {
+      "class": "unknown-queue",
+      "input": {
+        "cards": [
+          [
+            5,
+            2,
+            2779,
+            0,
+            2
+          ],
+          [
+            -4,
+            2,
+            1780000000,
+            0,
+            1
+          ],
+          [
+            7,
+            2,
+            3,
+            0,
+            1
+          ]
+        ],
+        "desired_retention_pct": 90.0,
+        "today": 2770
+      },
+      "output": {
+        "beyond_horizon": 0,
+        "desired_retention_pct": 90.0,
+        "due_later": 0,
+        "excluded_count": 0,
+        "honest_text": "That curve stays flat because nothing is being started: a flat forward curve is not an achievement, it is the signature of a collection that has stopped taking on new material. Two levers create future obligation \u2014 the daily new-card dial (priced at ~8 reviews over a new card's lifetime) and your desired_retention (currently 90%).",
+        "is_flat": true,
+        "new_card_lifetime_reviews": 8,
+        "new_count": 0,
+        "other_cards": 0,
+        "peak_day": 0,
+        "peak_reviews": 0,
+        "relief_text": "Your real obligation for the next 30 days is 4 reviews. Total. Of the other 0 cards \u2014 0 never started, 0 suspended or buried, 0 due later than 30 days out \u2014 every one is something you own, not something you owe.",
+        "total_cards": 4,
+        "window_days": 30,
+        "window_reviews": 4
+      }
+    },
+    {
+      "class": "negative-today",
+      "input": {
+        "cards": [
+          [
+            2,
+            2,
+            -5,
+            9,
+            2
+          ],
+          [
+            2,
+            2,
+            -5,
+            0,
+            3
+          ],
+          [
+            2,
+            2,
+            20,
+            0,
+            1
+          ]
+        ],
+        "desired_retention_pct": 90.0,
+        "today": -10
+      },
+      "output": {
+        "beyond_horizon": 0,
+        "desired_retention_pct": 90.0,
+        "due_later": 1,
+        "excluded_count": 0,
+        "honest_text": "That curve stays flat because nothing is being started: a flat forward curve is not an achievement, it is the signature of a collection that has stopped taking on new material. Two levers create future obligation \u2014 the daily new-card dial (priced at ~8 reviews over a new card's lifetime) and your desired_retention (currently 90%).",
+        "is_flat": true,
+        "new_card_lifetime_reviews": 8,
+        "new_count": 0,
+        "other_cards": 1,
+        "peak_day": 5,
+        "peak_reviews": 3,
+        "relief_text": "Your real obligation for the next 30 days is 5 reviews. Total. Of the other 1 cards \u2014 0 never started, 0 suspended or buried, 1 due later than 30 days out \u2014 every one is something you own, not something you owe.",
+        "total_cards": 6,
+        "window_days": 30,
+        "window_reviews": 5
+      }
+    },
+    {
+      "class": "overdue",
+      "input": {
+        "cards": [
+          [
+            2,
+            2,
+            2769,
+            0,
+            2
+          ],
+          [
+            2,
+            2,
+            2370,
+            0,
+            1
+          ],
+          [
+            2,
+            2,
+            2770,
+            0,
+            4
+          ]
+        ],
+        "desired_retention_pct": 90.0,
+        "today": 2770
+      },
+      "output": {
+        "beyond_horizon": 0,
+        "desired_retention_pct": 90.0,
+        "due_later": 0,
+        "excluded_count": 0,
+        "honest_text": "That curve stays flat because nothing is being started: a flat forward curve is not an achievement, it is the signature of a collection that has stopped taking on new material. Two levers create future obligation \u2014 the daily new-card dial (priced at ~8 reviews over a new card's lifetime) and your desired_retention (currently 90%).",
+        "is_flat": true,
+        "new_card_lifetime_reviews": 8,
+        "new_count": 0,
+        "other_cards": 0,
+        "peak_day": 0,
+        "peak_reviews": 0,
+        "relief_text": "Your real obligation for the next 30 days is 7 reviews. Total. Of the other 0 cards \u2014 0 never started, 0 suspended or buried, 0 due later than 30 days out \u2014 every one is something you own, not something you owe.",
+        "total_cards": 7,
+        "window_days": 30,
+        "window_reviews": 7
+      }
+    },
+    {
+      "class": "edge-364",
+      "input": {
+        "cards": [
+          [
+            2,
+            2,
+            3134,
+            0,
+            2
+          ],
+          [
+            2,
+            2,
+            3133,
+            0,
+            1
+          ]
+        ],
+        "desired_retention_pct": 90.0,
+        "today": 2770
+      },
+      "output": {
+        "beyond_horizon": 0,
+        "desired_retention_pct": 90.0,
+        "due_later": 3,
+        "excluded_count": 0,
+        "honest_text": "That curve stays flat because nothing is being started: a flat forward curve is not an achievement, it is the signature of a collection that has stopped taking on new material. Two levers create future obligation \u2014 the daily new-card dial (priced at ~8 reviews over a new card's lifetime) and your desired_retention (currently 90%).",
+        "is_flat": true,
+        "new_card_lifetime_reviews": 8,
+        "new_count": 0,
+        "other_cards": 3,
+        "peak_day": 364,
+        "peak_reviews": 2,
+        "relief_text": "Your real obligation for the next 30 days is 0 reviews. Total. Of the other 3 cards \u2014 0 never started, 0 suspended or buried, 3 due later than 30 days out \u2014 every one is something you own, not something you owe.",
+        "total_cards": 3,
+        "window_days": 30,
+        "window_reviews": 0
+      }
+    },
+    {
+      "class": "edge-365",
+      "input": {
+        "cards": [
+          [
+            2,
+            2,
+            3135,
+            0,
+            3
+          ],
+          [
+            2,
+            2,
+            3136,
+            0,
+            1
+          ],
+          [
+            2,
+            2,
+            3134,
+            0,
+            1
+          ]
+        ],
+        "desired_retention_pct": 90.0,
+        "today": 2770
+      },
+      "output": {
+        "beyond_horizon": 4,
+        "desired_retention_pct": 90.0,
+        "due_later": 5,
+        "excluded_count": 0,
+        "honest_text": "That curve stays flat because nothing is being started: a flat forward curve is not an achievement, it is the signature of a collection that has stopped taking on new material. Two levers create future obligation \u2014 the daily new-card dial (priced at ~8 reviews over a new card's lifetime) and your desired_retention (currently 90%).",
+        "is_flat": true,
+        "new_card_lifetime_reviews": 8,
+        "new_count": 0,
+        "other_cards": 5,
+        "peak_day": 364,
+        "peak_reviews": 1,
+        "relief_text": "Your real obligation for the next 30 days is 0 reviews. Total. Of the other 5 cards \u2014 0 never started, 0 suspended or buried, 5 due later than 30 days out \u2014 every one is something you own, not something you owe.",
+        "total_cards": 5,
+        "window_days": 30,
+        "window_reviews": 0
+      }
+    },
+    {
+      "class": "window-29",
+      "input": {
+        "cards": [
+          [
+            2,
+            2,
+            2799,
+            0,
+            6
+          ],
+          [
+            2,
+            2,
+            2800,
+            0,
+            7
+          ]
+        ],
+        "desired_retention_pct": 90.0,
+        "today": 2770
+      },
+      "output": {
+        "beyond_horizon": 0,
+        "desired_retention_pct": 90.0,
+        "due_later": 7,
+        "excluded_count": 0,
+        "honest_text": "That curve stays flat because nothing is being started: a flat forward curve is not an achievement, it is the signature of a collection that has stopped taking on new material. Two levers create future obligation \u2014 the daily new-card dial (priced at ~8 reviews over a new card's lifetime) and your desired_retention (currently 90%).",
+        "is_flat": true,
+        "new_card_lifetime_reviews": 8,
+        "new_count": 0,
+        "other_cards": 7,
+        "peak_day": 30,
+        "peak_reviews": 7,
+        "relief_text": "Your real obligation for the next 30 days is 6 reviews. Total. Of the other 7 cards \u2014 0 never started, 0 suspended or buried, 7 due later than 30 days out \u2014 every one is something you own, not something you owe.",
+        "total_cards": 13,
+        "window_days": 30,
+        "window_reviews": 6
+      }
+    },
+    {
+      "class": "window-30",
+      "input": {
+        "cards": [
+          [
+            2,
+            2,
+            2800,
+            0,
+            7
+          ],
+          [
+            2,
+            2,
+            2801,
+            0,
+            1
+          ]
+        ],
+        "desired_retention_pct": 90.0,
+        "today": 2770
+      },
+      "output": {
+        "beyond_horizon": 0,
+        "desired_retention_pct": 90.0,
+        "due_later": 8,
+        "excluded_count": 0,
+        "honest_text": "That curve stays flat because nothing is being started: a flat forward curve is not an achievement, it is the signature of a collection that has stopped taking on new material. Two levers create future obligation \u2014 the daily new-card dial (priced at ~8 reviews over a new card's lifetime) and your desired_retention (currently 90%).",
+        "is_flat": true,
+        "new_card_lifetime_reviews": 8,
+        "new_count": 0,
+        "other_cards": 8,
+        "peak_day": 30,
+        "peak_reviews": 7,
+        "relief_text": "Your real obligation for the next 30 days is 0 reviews. Total. Of the other 8 cards \u2014 0 never started, 0 suspended or buried, 8 due later than 30 days out \u2014 every one is something you own, not something you owe.",
+        "total_cards": 8,
+        "window_days": 30,
+        "window_reviews": 0
+      }
+    },
+    {
+      "class": "peak-25",
+      "input": {
+        "cards": [
+          [
+            2,
+            2,
+            2780,
+            0,
+            25
+          ],
+          [
+            2,
+            2,
+            2781,
+            0,
+            3
+          ]
+        ],
+        "desired_retention_pct": 90.0,
+        "today": 2770
+      },
+      "output": {
+        "beyond_horizon": 0,
+        "desired_retention_pct": 90.0,
+        "due_later": 0,
+        "excluded_count": 0,
+        "honest_text": "That curve stays flat because nothing is being started: a flat forward curve is not an achievement, it is the signature of a collection that has stopped taking on new material. Two levers create future obligation \u2014 the daily new-card dial (priced at ~8 reviews over a new card's lifetime) and your desired_retention (currently 90%).",
+        "is_flat": true,
+        "new_card_lifetime_reviews": 8,
+        "new_count": 0,
+        "other_cards": 0,
+        "peak_day": 10,
+        "peak_reviews": 25,
+        "relief_text": "Your real obligation for the next 30 days is 28 reviews. Total. Of the other 0 cards \u2014 0 never started, 0 suspended or buried, 0 due later than 30 days out \u2014 every one is something you own, not something you owe.",
+        "total_cards": 28,
+        "window_days": 30,
+        "window_reviews": 28
+      }
+    },
+    {
+      "class": "peak-26",
+      "input": {
+        "cards": [
+          [
+            2,
+            2,
+            2780,
+            0,
+            26
+          ],
+          [
+            2,
+            2,
+            2781,
+            0,
+            3
+          ]
+        ],
+        "desired_retention_pct": 90.0,
+        "today": 2770
+      },
+      "output": {
+        "beyond_horizon": 0,
+        "desired_retention_pct": 90.0,
+        "due_later": 0,
+        "excluded_count": 0,
+        "honest_text": "That curve is not flat \u2014 day 10 alone carries 26 reviews \u2014 so this collection has not stopped taking on new material, and the number above is a 30-day window rather than a verdict on the year. Two levers create future obligation \u2014 the daily new-card dial (priced at ~8 reviews over a new card's lifetime) and your desired_retention (currently 90%).",
+        "is_flat": false,
+        "new_card_lifetime_reviews": 8,
+        "new_count": 0,
+        "other_cards": 0,
+        "peak_day": 10,
+        "peak_reviews": 26,
+        "relief_text": "Your real obligation for the next 30 days is 29 reviews. Total. Of the other 0 cards \u2014 0 never started, 0 suspended or buried, 0 due later than 30 days out \u2014 every one is something you own, not something you owe.",
+        "total_cards": 29,
+        "window_days": 30,
+        "window_reviews": 29
+      }
+    },
+    {
+      "class": "peak-tie",
+      "input": {
+        "cards": [
+          [
+            2,
+            2,
+            2779,
+            0,
+            30
+          ],
+          [
+            2,
+            2,
+            2775,
+            0,
+            30
+          ]
+        ],
+        "desired_retention_pct": 90.0,
+        "today": 2770
+      },
+      "output": {
+        "beyond_horizon": 0,
+        "desired_retention_pct": 90.0,
+        "due_later": 0,
+        "excluded_count": 0,
+        "honest_text": "That curve is not flat \u2014 day 5 alone carries 30 reviews \u2014 so this collection has not stopped taking on new material, and the number above is a 30-day window rather than a verdict on the year. Two levers create future obligation \u2014 the daily new-card dial (priced at ~8 reviews over a new card's lifetime) and your desired_retention (currently 90%).",
+        "is_flat": false,
+        "new_card_lifetime_reviews": 8,
+        "new_count": 0,
+        "other_cards": 0,
+        "peak_day": 5,
+        "peak_reviews": 30,
+        "relief_text": "Your real obligation for the next 30 days is 60 reviews. Total. Of the other 0 cards \u2014 0 never started, 0 suspended or buried, 0 due later than 30 days out \u2014 every one is something you own, not something you owe.",
+        "total_cards": 60,
+        "window_days": 30,
+        "window_reviews": 60
+      }
+    },
+    {
+      "class": "peak-late-tie",
+      "input": {
+        "cards": [
+          [
+            2,
+            2,
+            2775,
+            0,
+            30
+          ],
+          [
+            2,
+            2,
+            2779,
+            0,
+            31
+          ]
+        ],
+        "desired_retention_pct": 90.0,
+        "today": 2770
+      },
+      "output": {
+        "beyond_horizon": 0,
+        "desired_retention_pct": 90.0,
+        "due_later": 0,
+        "excluded_count": 0,
+        "honest_text": "That curve is not flat \u2014 day 9 alone carries 31 reviews \u2014 so this collection has not stopped taking on new material, and the number above is a 30-day window rather than a verdict on the year. Two levers create future obligation \u2014 the daily new-card dial (priced at ~8 reviews over a new card's lifetime) and your desired_retention (currently 90%).",
+        "is_flat": false,
+        "new_card_lifetime_reviews": 8,
+        "new_count": 0,
+        "other_cards": 0,
+        "peak_day": 9,
+        "peak_reviews": 31,
+        "relief_text": "Your real obligation for the next 30 days is 61 reviews. Total. Of the other 0 cards \u2014 0 never started, 0 suspended or buried, 0 due later than 30 days out \u2014 every one is something you own, not something you owe.",
+        "total_cards": 61,
+        "window_days": 30,
+        "window_reviews": 61
+      }
+    },
+    {
+      "class": "peak-day-1",
+      "input": {
+        "cards": [
+          [
+            2,
+            2,
+            2771,
+            0,
+            40
+          ],
+          [
+            2,
+            2,
+            2772,
+            0,
+            40
+          ]
+        ],
+        "desired_retention_pct": 90.0,
+        "today": 2770
+      },
+      "output": {
+        "beyond_horizon": 0,
+        "desired_retention_pct": 90.0,
+        "due_later": 0,
+        "excluded_count": 0,
+        "honest_text": "That curve is not flat \u2014 day 1 alone carries 40 reviews \u2014 so this collection has not stopped taking on new material, and the number above is a 30-day window rather than a verdict on the year. Two levers create future obligation \u2014 the daily new-card dial (priced at ~8 reviews over a new card's lifetime) and your desired_retention (currently 90%).",
+        "is_flat": false,
+        "new_card_lifetime_reviews": 8,
+        "new_count": 0,
+        "other_cards": 0,
+        "peak_day": 1,
+        "peak_reviews": 40,
+        "relief_text": "Your real obligation for the next 30 days is 80 reviews. Total. Of the other 0 cards \u2014 0 never started, 0 suspended or buried, 0 due later than 30 days out \u2014 every one is something you own, not something you owe.",
+        "total_cards": 80,
+        "window_days": 30,
+        "window_reviews": 80
+      }
+    },
+    {
+      "class": "peak-day-364",
+      "input": {
+        "cards": [
+          [
+            2,
+            2,
+            3134,
+            0,
+            40
+          ],
+          [
+            2,
+            2,
+            2970,
+            0,
+            39
+          ]
+        ],
+        "desired_retention_pct": 90.0,
+        "today": 2770
+      },
+      "output": {
+        "beyond_horizon": 0,
+        "desired_retention_pct": 90.0,
+        "due_later": 79,
+        "excluded_count": 0,
+        "honest_text": "That curve is not flat \u2014 day 364 alone carries 40 reviews \u2014 so this collection has not stopped taking on new material, and the number above is a 30-day window rather than a verdict on the year. Two levers create future obligation \u2014 the daily new-card dial (priced at ~8 reviews over a new card's lifetime) and your desired_retention (currently 90%).",
+        "is_flat": false,
+        "new_card_lifetime_reviews": 8,
+        "new_count": 0,
+        "other_cards": 79,
+        "peak_day": 364,
+        "peak_reviews": 40,
+        "relief_text": "Your real obligation for the next 30 days is 0 reviews. Total. Of the other 79 cards \u2014 0 never started, 0 suspended or buried, 79 due later than 30 days out \u2014 every one is something you own, not something you owe.",
+        "total_cards": 79,
+        "window_days": 30,
+        "window_reviews": 0
+      }
+    },
+    {
+      "class": "arrears-only",
+      "input": {
+        "cards": [
+          [
+            2,
+            2,
+            2720,
+            0,
+            500
+          ],
+          [
+            1,
+            2,
+            1780000000,
+            0,
+            20
+          ]
+        ],
+        "desired_retention_pct": 90.0,
+        "today": 2770
+      },
+      "output": {
+        "beyond_horizon": 0,
+        "desired_retention_pct": 90.0,
+        "due_later": 0,
+        "excluded_count": 0,
+        "honest_text": "That curve stays flat because nothing is being started: a flat forward curve is not an achievement, it is the signature of a collection that has stopped taking on new material. Two levers create future obligation \u2014 the daily new-card dial (priced at ~8 reviews over a new card's lifetime) and your desired_retention (currently 90%).",
+        "is_flat": true,
+        "new_card_lifetime_reviews": 8,
+        "new_count": 0,
+        "other_cards": 0,
+        "peak_day": 0,
+        "peak_reviews": 0,
+        "relief_text": "Your real obligation for the next 30 days is 520 reviews. Total. Of the other 0 cards \u2014 0 never started, 0 suspended or buried, 0 due later than 30 days out \u2014 every one is something you own, not something you owe.",
+        "total_cards": 520,
+        "window_days": 30,
+        "window_reviews": 520
+      }
+    },
+    {
+      "class": "grouped-1000",
+      "input": {
+        "cards": [
+          [
+            0,
+            0,
+            5,
+            0,
+            1000
+          ],
+          [
+            -1,
+            2,
+            5,
+            0,
+            999
+          ]
+        ],
+        "desired_retention_pct": 90.0,
+        "today": 2770
+      },
+      "output": {
+        "beyond_horizon": 0,
+        "desired_retention_pct": 90.0,
+        "due_later": 0,
+        "excluded_count": 999,
+        "honest_text": "That curve stays flat because nothing is being started: a flat forward curve is not an achievement, it is the signature of a collection that has stopped taking on new material. Two levers create future obligation \u2014 the daily new-card dial (priced at ~8 reviews over a new card's lifetime) and your desired_retention (currently 90%).",
+        "is_flat": true,
+        "new_card_lifetime_reviews": 8,
+        "new_count": 1000,
+        "other_cards": 1999,
+        "peak_day": 0,
+        "peak_reviews": 0,
+        "relief_text": "Your real obligation for the next 30 days is 0 reviews. Total. Of the other 1,999 cards \u2014 1,000 never started, 999 suspended or buried, 0 due later than 30 days out \u2014 every one is something you own, not something you owe.",
+        "total_cards": 1999,
+        "window_days": 30,
+        "window_reviews": 0
+      }
+    },
+    {
+      "class": "grouped-12345",
+      "input": {
+        "cards": [
+          [
+            -2,
+            2,
+            5,
+            0,
+            12345
+          ],
+          [
+            2,
+            2,
+            2810,
+            0,
+            12345
+          ],
+          [
+            2,
+            2,
+            2773,
+            0,
+            26
+          ]
+        ],
+        "desired_retention_pct": 90.0,
+        "today": 2770
+      },
+      "output": {
+        "beyond_horizon": 0,
+        "desired_retention_pct": 90.0,
+        "due_later": 12345,
+        "excluded_count": 12345,
+        "honest_text": "That curve is not flat \u2014 day 40 alone carries 12,345 reviews \u2014 so this collection has not stopped taking on new material, and the number above is a 30-day window rather than a verdict on the year. Two levers create future obligation \u2014 the daily new-card dial (priced at ~8 reviews over a new card's lifetime) and your desired_retention (currently 90%).",
+        "is_flat": false,
+        "new_card_lifetime_reviews": 8,
+        "new_count": 0,
+        "other_cards": 24690,
+        "peak_day": 40,
+        "peak_reviews": 12345,
+        "relief_text": "Your real obligation for the next 30 days is 26 reviews. Total. Of the other 24,690 cards \u2014 0 never started, 12,345 suspended or buried, 12,345 due later than 30 days out \u2014 every one is something you own, not something you owe.",
+        "total_cards": 24716,
+        "window_days": 30,
+        "window_reviews": 26
+      }
+    },
+    {
+      "class": "grouped-million",
+      "input": {
+        "cards": [
+          [
+            0,
+            0,
+            5,
+            0,
+            1234567
+          ],
+          [
+            2,
+            2,
+            2772,
+            0,
+            1
+          ]
+        ],
+        "desired_retention_pct": 90.0,
+        "today": 2770
+      },
+      "output": {
+        "beyond_horizon": 0,
+        "desired_retention_pct": 90.0,
+        "due_later": 0,
+        "excluded_count": 0,
+        "honest_text": "That curve stays flat because nothing is being started: a flat forward curve is not an achievement, it is the signature of a collection that has stopped taking on new material. Two levers create future obligation \u2014 the daily new-card dial (priced at ~8 reviews over a new card's lifetime) and your desired_retention (currently 90%).",
+        "is_flat": true,
+        "new_card_lifetime_reviews": 8,
+        "new_count": 1234567,
+        "other_cards": 1234567,
+        "peak_day": 2,
+        "peak_reviews": 1,
+        "relief_text": "Your real obligation for the next 30 days is 1 reviews. Total. Of the other 1,234,567 cards \u2014 1,234,567 never started, 0 suspended or buried, 0 due later than 30 days out \u2014 every one is something you own, not something you owe.",
+        "total_cards": 1234568,
+        "window_days": 30,
+        "window_reviews": 1
+      }
+    },
+    {
+      "class": "dial",
+      "input": {
+        "cards": [
+          [
+            2,
+            2,
+            2774,
+            0,
+            2
+          ],
+          [
+            0,
+            0,
+            3,
+            0,
+            1
+          ],
+          [
+            -1,
+            2,
+            3,
+            0,
+            1
+          ]
+        ],
+        "desired_retention_pct": 92.5,
+        "today": 2770
+      },
+      "output": {
+        "beyond_horizon": 0,
+        "desired_retention_pct": 92.5,
+        "due_later": 0,
+        "excluded_count": 1,
+        "honest_text": "That curve stays flat because nothing is being started: a flat forward curve is not an achievement, it is the signature of a collection that has stopped taking on new material. Two levers create future obligation \u2014 the daily new-card dial (priced at ~8 reviews over a new card's lifetime) and your desired_retention (currently 92%).",
+        "is_flat": true,
+        "new_card_lifetime_reviews": 8,
+        "new_count": 1,
+        "other_cards": 2,
+        "peak_day": 4,
+        "peak_reviews": 2,
+        "relief_text": "Your real obligation for the next 30 days is 2 reviews. Total. Of the other 2 cards \u2014 1 never started, 1 suspended or buried, 0 due later than 30 days out \u2014 every one is something you own, not something you owe.",
+        "total_cards": 4,
+        "window_days": 30,
+        "window_reviews": 2
+      }
+    },
+    {
+      "class": "dial",
+      "input": {
+        "cards": [
+          [
+            2,
+            2,
+            2774,
+            0,
+            2
+          ],
+          [
+            0,
+            0,
+            3,
+            0,
+            1
+          ],
+          [
+            -1,
+            2,
+            3,
+            0,
+            1
+          ]
+        ],
+        "desired_retention_pct": 93.5,
+        "today": 2770
+      },
+      "output": {
+        "beyond_horizon": 0,
+        "desired_retention_pct": 93.5,
+        "due_later": 0,
+        "excluded_count": 1,
+        "honest_text": "That curve stays flat because nothing is being started: a flat forward curve is not an achievement, it is the signature of a collection that has stopped taking on new material. Two levers create future obligation \u2014 the daily new-card dial (priced at ~8 reviews over a new card's lifetime) and your desired_retention (currently 94%).",
+        "is_flat": true,
+        "new_card_lifetime_reviews": 8,
+        "new_count": 1,
+        "other_cards": 2,
+        "peak_day": 4,
+        "peak_reviews": 2,
+        "relief_text": "Your real obligation for the next 30 days is 2 reviews. Total. Of the other 2 cards \u2014 1 never started, 1 suspended or buried, 0 due later than 30 days out \u2014 every one is something you own, not something you owe.",
+        "total_cards": 4,
+        "window_days": 30,
+        "window_reviews": 2
+      }
+    },
+    {
+      "class": "dial",
+      "input": {
+        "cards": [
+          [
+            2,
+            2,
+            2774,
+            0,
+            2
+          ],
+          [
+            0,
+            0,
+            3,
+            0,
+            1
+          ],
+          [
+            -1,
+            2,
+            3,
+            0,
+            1
+          ]
+        ],
+        "desired_retention_pct": 0.5,
+        "today": 2770
+      },
+      "output": {
+        "beyond_horizon": 0,
+        "desired_retention_pct": 0.5,
+        "due_later": 0,
+        "excluded_count": 1,
+        "honest_text": "That curve stays flat because nothing is being started: a flat forward curve is not an achievement, it is the signature of a collection that has stopped taking on new material. Two levers create future obligation \u2014 the daily new-card dial (priced at ~8 reviews over a new card's lifetime) and your desired_retention (currently 0%).",
+        "is_flat": true,
+        "new_card_lifetime_reviews": 8,
+        "new_count": 1,
+        "other_cards": 2,
+        "peak_day": 4,
+        "peak_reviews": 2,
+        "relief_text": "Your real obligation for the next 30 days is 2 reviews. Total. Of the other 2 cards \u2014 1 never started, 1 suspended or buried, 0 due later than 30 days out \u2014 every one is something you own, not something you owe.",
+        "total_cards": 4,
+        "window_days": 30,
+        "window_reviews": 2
+      }
+    },
+    {
+      "class": "dial",
+      "input": {
+        "cards": [
+          [
+            2,
+            2,
+            2774,
+            0,
+            2
+          ],
+          [
+            0,
+            0,
+            3,
+            0,
+            1
+          ],
+          [
+            -1,
+            2,
+            3,
+            0,
+            1
+          ]
+        ],
+        "desired_retention_pct": 90.0,
+        "today": 2770
+      },
+      "output": {
+        "beyond_horizon": 0,
+        "desired_retention_pct": 90.0,
+        "due_later": 0,
+        "excluded_count": 1,
+        "honest_text": "That curve stays flat because nothing is being started: a flat forward curve is not an achievement, it is the signature of a collection that has stopped taking on new material. Two levers create future obligation \u2014 the daily new-card dial (priced at ~8 reviews over a new card's lifetime) and your desired_retention (currently 90%).",
+        "is_flat": true,
+        "new_card_lifetime_reviews": 8,
+        "new_count": 1,
+        "other_cards": 2,
+        "peak_day": 4,
+        "peak_reviews": 2,
+        "relief_text": "Your real obligation for the next 30 days is 2 reviews. Total. Of the other 2 cards \u2014 1 never started, 1 suspended or buried, 0 due later than 30 days out \u2014 every one is something you own, not something you owe.",
+        "total_cards": 4,
+        "window_days": 30,
+        "window_reviews": 2
+      }
+    },
+    {
+      "class": "dial",
+      "input": {
+        "cards": [
+          [
+            2,
+            2,
+            2774,
+            0,
+            2
+          ],
+          [
+            0,
+            0,
+            3,
+            0,
+            1
+          ],
+          [
+            -1,
+            2,
+            3,
+            0,
+            1
+          ]
+        ],
+        "desired_retention_pct": 87.4,
+        "today": 2770
+      },
+      "output": {
+        "beyond_horizon": 0,
+        "desired_retention_pct": 87.4,
+        "due_later": 0,
+        "excluded_count": 1,
+        "honest_text": "That curve stays flat because nothing is being started: a flat forward curve is not an achievement, it is the signature of a collection that has stopped taking on new material. Two levers create future obligation \u2014 the daily new-card dial (priced at ~8 reviews over a new card's lifetime) and your desired_retention (currently 87%).",
+        "is_flat": true,
+        "new_card_lifetime_reviews": 8,
+        "new_count": 1,
+        "other_cards": 2,
+        "peak_day": 4,
+        "peak_reviews": 2,
+        "relief_text": "Your real obligation for the next 30 days is 2 reviews. Total. Of the other 2 cards \u2014 1 never started, 1 suspended or buried, 0 due later than 30 days out \u2014 every one is something you own, not something you owe.",
+        "total_cards": 4,
+        "window_days": 30,
+        "window_reviews": 2
+      }
+    },
+    {
+      "class": "dial",
+      "input": {
+        "cards": [
+          [
+            2,
+            2,
+            2774,
+            0,
+            2
+          ],
+          [
+            0,
+            0,
+            3,
+            0,
+            1
+          ],
+          [
+            -1,
+            2,
+            3,
+            0,
+            1
+          ]
+        ],
+        "desired_retention_pct": 100.0,
+        "today": 2770
+      },
+      "output": {
+        "beyond_horizon": 0,
+        "desired_retention_pct": 100.0,
+        "due_later": 0,
+        "excluded_count": 1,
+        "honest_text": "That curve stays flat because nothing is being started: a flat forward curve is not an achievement, it is the signature of a collection that has stopped taking on new material. Two levers create future obligation \u2014 the daily new-card dial (priced at ~8 reviews over a new card's lifetime) and your desired_retention (currently 100%).",
+        "is_flat": true,
+        "new_card_lifetime_reviews": 8,
+        "new_count": 1,
+        "other_cards": 2,
+        "peak_day": 4,
+        "peak_reviews": 2,
+        "relief_text": "Your real obligation for the next 30 days is 2 reviews. Total. Of the other 2 cards \u2014 1 never started, 1 suspended or buried, 0 due later than 30 days out \u2014 every one is something you own, not something you owe.",
+        "total_cards": 4,
+        "window_days": 30,
+        "window_reviews": 2
+      }
+    },
+    {
+      "class": "dial",
+      "input": {
+        "cards": [
+          [
+            2,
+            2,
+            2774,
+            0,
+            2
+          ],
+          [
+            0,
+            0,
+            3,
+            0,
+            1
+          ],
+          [
+            -1,
+            2,
+            3,
+            0,
+            1
+          ]
+        ],
+        "desired_retention_pct": 1.5,
+        "today": 2770
+      },
+      "output": {
+        "beyond_horizon": 0,
+        "desired_retention_pct": 1.5,
+        "due_later": 0,
+        "excluded_count": 1,
+        "honest_text": "That curve stays flat because nothing is being started: a flat forward curve is not an achievement, it is the signature of a collection that has stopped taking on new material. Two levers create future obligation \u2014 the daily new-card dial (priced at ~8 reviews over a new card's lifetime) and your desired_retention (currently 2%).",
+        "is_flat": true,
+        "new_card_lifetime_reviews": 8,
+        "new_count": 1,
+        "other_cards": 2,
+        "peak_day": 4,
+        "peak_reviews": 2,
+        "relief_text": "Your real obligation for the next 30 days is 2 reviews. Total. Of the other 2 cards \u2014 1 never started, 1 suspended or buried, 0 due later than 30 days out \u2014 every one is something you own, not something you owe.",
+        "total_cards": 4,
+        "window_days": 30,
+        "window_reviews": 2
+      }
+    },
+    {
+      "class": "dial",
+      "input": {
+        "cards": [
+          [
+            2,
+            2,
+            2774,
+            0,
+            2
+          ],
+          [
+            0,
+            0,
+            3,
+            0,
+            1
+          ],
+          [
+            -1,
+            2,
+            3,
+            0,
+            1
+          ]
+        ],
+        "desired_retention_pct": 2.5,
+        "today": 2770
+      },
+      "output": {
+        "beyond_horizon": 0,
+        "desired_retention_pct": 2.5,
+        "due_later": 0,
+        "excluded_count": 1,
+        "honest_text": "That curve stays flat because nothing is being started: a flat forward curve is not an achievement, it is the signature of a collection that has stopped taking on new material. Two levers create future obligation \u2014 the daily new-card dial (priced at ~8 reviews over a new card's lifetime) and your desired_retention (currently 2%).",
+        "is_flat": true,
+        "new_card_lifetime_reviews": 8,
+        "new_count": 1,
+        "other_cards": 2,
+        "peak_day": 4,
+        "peak_reviews": 2,
+        "relief_text": "Your real obligation for the next 30 days is 2 reviews. Total. Of the other 2 cards \u2014 1 never started, 1 suspended or buried, 0 due later than 30 days out \u2014 every one is something you own, not something you owe.",
+        "total_cards": 4,
+        "window_days": 30,
+        "window_reviews": 2
+      }
+    },
+    {
+      "class": "dial",
+      "input": {
+        "cards": [
+          [
+            2,
+            2,
+            2774,
+            0,
+            2
+          ],
+          [
+            0,
+            0,
+            3,
+            0,
+            1
+          ],
+          [
+            -1,
+            2,
+            3,
+            0,
+            1
+          ]
+        ],
+        "desired_retention_pct": 0.0,
+        "today": 2770
+      },
+      "output": {
+        "beyond_horizon": 0,
+        "desired_retention_pct": 0.0,
+        "due_later": 0,
+        "excluded_count": 1,
+        "honest_text": "That curve stays flat because nothing is being started: a flat forward curve is not an achievement, it is the signature of a collection that has stopped taking on new material. Two levers create future obligation \u2014 the daily new-card dial (priced at ~8 reviews over a new card's lifetime) and your desired_retention (currently 0%).",
+        "is_flat": true,
+        "new_card_lifetime_reviews": 8,
+        "new_count": 1,
+        "other_cards": 2,
+        "peak_day": 4,
+        "peak_reviews": 2,
+        "relief_text": "Your real obligation for the next 30 days is 2 reviews. Total. Of the other 2 cards \u2014 1 never started, 1 suspended or buried, 0 due later than 30 days out \u2014 every one is something you own, not something you owe.",
+        "total_cards": 4,
+        "window_days": 30,
+        "window_reviews": 2
+      }
+    },
+    {
+      "class": "dial",
+      "input": {
+        "cards": [
+          [
+            2,
+            2,
+            2774,
+            0,
+            2
+          ],
+          [
+            0,
+            0,
+            3,
+            0,
+            1
+          ],
+          [
+            -1,
+            2,
+            3,
+            0,
+            1
+          ]
+        ],
+        "desired_retention_pct": 89.5,
+        "today": 2770
+      },
+      "output": {
+        "beyond_horizon": 0,
+        "desired_retention_pct": 89.5,
+        "due_later": 0,
+        "excluded_count": 1,
+        "honest_text": "That curve stays flat because nothing is being started: a flat forward curve is not an achievement, it is the signature of a collection that has stopped taking on new material. Two levers create future obligation \u2014 the daily new-card dial (priced at ~8 reviews over a new card's lifetime) and your desired_retention (currently 90%).",
+        "is_flat": true,
+        "new_card_lifetime_reviews": 8,
+        "new_count": 1,
+        "other_cards": 2,
+        "peak_day": 4,
+        "peak_reviews": 2,
+        "relief_text": "Your real obligation for the next 30 days is 2 reviews. Total. Of the other 2 cards \u2014 1 never started, 1 suspended or buried, 0 due later than 30 days out \u2014 every one is something you own, not something you owe.",
+        "total_cards": 4,
+        "window_days": 30,
+        "window_reviews": 2
+      }
+    },
+    {
+      "class": "dial",
+      "input": {
+        "cards": [
+          [
+            2,
+            2,
+            2774,
+            0,
+            2
+          ],
+          [
+            0,
+            0,
+            3,
+            0,
+            1
+          ],
+          [
+            -1,
+            2,
+            3,
+            0,
+            1
+          ]
+        ],
+        "desired_retention_pct": 90.49999999999999,
+        "today": 2770
+      },
+      "output": {
+        "beyond_horizon": 0,
+        "desired_retention_pct": 90.49999999999999,
+        "due_later": 0,
+        "excluded_count": 1,
+        "honest_text": "That curve stays flat because nothing is being started: a flat forward curve is not an achievement, it is the signature of a collection that has stopped taking on new material. Two levers create future obligation \u2014 the daily new-card dial (priced at ~8 reviews over a new card's lifetime) and your desired_retention (currently 90%).",
+        "is_flat": true,
+        "new_card_lifetime_reviews": 8,
+        "new_count": 1,
+        "other_cards": 2,
+        "peak_day": 4,
+        "peak_reviews": 2,
+        "relief_text": "Your real obligation for the next 30 days is 2 reviews. Total. Of the other 2 cards \u2014 1 never started, 1 suspended or buried, 0 due later than 30 days out \u2014 every one is something you own, not something you owe.",
+        "total_cards": 4,
+        "window_days": 30,
+        "window_reviews": 2
+      }
+    },
+    {
+      "input": {
+        "cards": [
+          [
+            1,
+            0,
+            1780002770,
+            0,
+            2
+          ],
+          [
+            2,
+            2,
+            2778,
+            0,
+            31
+          ],
+          [
+            4,
+            2,
+            2950,
+            0,
+            22
+          ],
+          [
+            2,
+            2,
+            1780002770,
+            7,
+            26
+          ],
+          [
+            -2,
+            1,
+            3033,
+            0,
+            7
+          ],
+          [
+            -2,
+            1,
+            3480,
+            0,
+            17
+          ],
+          [
+            -1,
+            3,
+            2793,
+            0,
+            15
+          ],
+          [
+            4,
+            1,
+            1780002770,
+            0,
+            18
+          ],
+          [
+            -1,
+            2,
+            3508,
+            0,
+            18
+          ],
+          [
+            3,
+            2,
+            2938,
+            0,
+            9
+          ],
+          [
+            4,
+            2,
+            2916,
+            0,
+            34
+          ],
+          [
+            0,
+            2,
+            2828,
+            0,
+            19
+          ],
+          [
+            -3,
+            2,
+            3517,
+            7,
+            34
+          ],
+          [
+            -3,
+            1,
+            1780002770,
+            0,
+            1
+          ],
+          [
+            -2,
+            3,
+            3122,
+            0,
+            17
+          ],
+          [
+            6,
+            0,
+            3569,
+            0,
+            2
+          ],
+          [
+            0,
+            1,
+            1780002770,
+            0,
+            11
+          ],
+          [
+            -3,
+            3,
+            2908,
+            0,
+            27
+          ],
+          [
+            1,
+            0,
+            2938,
+            0,
+            13
+          ],
+          [
+            0,
+            0,
+            1780002770,
+            7,
+            9
+          ],
+          [
+            6,
+            0,
+            2969,
+            0,
+            13
+          ],
+          [
+            6,
+            2,
+            2947,
+            0,
+            14
+          ],
+          [
+            2,
+            3,
+            1780002770,
+            0,
+            1
+          ],
+          [
+            1,
+            0,
+            3166,
+            0,
+            26
+          ],
+          [
+            2,
+            0,
+            3361,
+            0,
+            1
+          ],
+          [
+            3,
+            0,
+            1780002770,
+            0,
+            1
+          ],
+          [
+            -1,
+            2,
+            2890,
+            0,
+            3
+          ],
+          [
+            0,
+            1,
+            1780002770,
+            0,
+            38
+          ],
+          [
+            2,
+            2,
+            1780002770,
+            0,
+            25
+          ],
+          [
+            3,
+            2,
+            2941,
+            7,
+            6
+          ]
+        ],
+        "desired_retention_pct": 89.5,
+        "today": 0
+      },
+      "output": {
+        "beyond_horizon": 98,
+        "desired_retention_pct": 89.5,
+        "due_later": 98,
+        "excluded_count": 139,
+        "honest_text": "That curve stays flat because nothing is being started: a flat forward curve is not an achievement, it is the signature of a collection that has stopped taking on new material. Two levers create future obligation \u2014 the daily new-card dial (priced at ~8 reviews over a new card's lifetime) and your desired_retention (currently 90%).",
+        "is_flat": true,
+        "new_card_lifetime_reviews": 8,
+        "new_count": 135,
+        "other_cards": 372,
+        "peak_day": 0,
+        "peak_reviews": 0,
+        "relief_text": "Your real obligation for the next 30 days is 88 reviews. Total. Of the other 372 cards \u2014 135 never started, 139 suspended or buried, 98 due later than 30 days out \u2014 every one is something you own, not something you owe.",
+        "total_cards": 460,
+        "window_days": 30,
+        "window_reviews": 88
+      }
+    },
+    {
+      "input": {
+        "cards": [
+          [
+            2,
+            1,
+            2975,
+            7,
+            22
+          ],
+          [
+            2,
+            1,
+            2823,
+            0,
+            6
+          ],
+          [
+            2,
+            0,
+            2890,
+            0,
+            35
+          ],
+          [
+            -1,
+            2,
+            3137,
+            0,
+            24
+          ],
+          [
+            2,
+            3,
+            2815,
+            7,
+            34
+          ],
+          [
+            2,
+            1,
+            3170,
+            0,
+            33
+          ],
+          [
+            4,
+            2,
+            3057,
+            7,
+            18
+          ],
+          [
+            2,
+            1,
+            1780002770,
+            0,
+            32
+          ],
+          [
+            -1,
+            2,
+            1780002770,
+            0,
+            35
+          ],
+          [
+            -2,
+            2,
+            1780002770,
+            0,
+            24
+          ],
+          [
+            2,
+            1,
+            1780002770,
+            0,
+            31
+          ],
+          [
+            6,
+            1,
+            3203,
+            0,
+            2
+          ],
+          [
+            4,
+            0,
+            3191,
+            0,
+            18
+          ],
+          [
+            0,
+            2,
+            2919,
+            0,
+            7
+          ],
+          [
+            -1,
+            2,
+            2778,
+            0,
+            31
+          ],
+          [
+            2,
+            2,
+            1780002770,
+            0,
+            9
+          ],
+          [
+            1,
+            3,
+            3021,
+            7,
+            29
+          ],
+          [
+            6,
+            3,
+            2987,
+            0,
+            13
+          ],
+          [
+            0,
+            2,
+            2964,
+            7,
+            30
+          ],
+          [
+            -2,
+            2,
+            3065,
+            0,
+            14
+          ],
+          [
+            1,
+            1,
+            3065,
+            7,
+            7
+          ],
+          [
+            2,
+            3,
+            2865,
+            0,
+            19
+          ],
+          [
+            -1,
+            0,
+            3591,
+            0,
+            19
+          ],
+          [
+            3,
+            1,
+            3001,
+            0,
+            8
+          ],
+          [
+            1,
+            2,
+            1780002770,
+            0,
+            39
+          ],
+          [
+            6,
+            2,
+            1780002770,
+            0,
+            12
+          ],
+          [
+            -1,
+            0,
+            1780002770,
+            0,
+            11
+          ],
+          [
+            0,
+            2,
+            2859,
+            7,
+            28
+          ],
+          [
+            2,
+            1,
+            3017,
+            0,
+            29
+          ],
+          [
+            -2,
+            3,
+            2752,
+            0,
+            23
+          ]
+        ],
+        "desired_retention_pct": 87.4,
+        "today": 5000
+      },
+      "output": {
+        "beyond_horizon": 72,
+        "desired_retention_pct": 87.4,
+        "due_later": 72,
+        "excluded_count": 181,
+        "honest_text": "That curve stays flat because nothing is being started: a flat forward curve is not an achievement, it is the signature of a collection that has stopped taking on new material. Two levers create future obligation \u2014 the daily new-card dial (priced at ~8 reviews over a new card's lifetime) and your desired_retention (currently 87%).",
+        "is_flat": true,
+        "new_card_lifetime_reviews": 8,
+        "new_count": 118,
+        "other_cards": 371,
+        "peak_day": 0,
+        "peak_reviews": 0,
+        "relief_text": "Your real obligation for the next 30 days is 271 reviews. Total. Of the other 371 cards \u2014 118 never started, 181 suspended or buried, 72 due later than 30 days out \u2014 every one is something you own, not something you owe.",
+        "total_cards": 642,
+        "window_days": 30,
+        "window_reviews": 271
+      }
+    },
+    {
+      "input": {
+        "cards": [
+          [
+            3,
+            2,
+            1780002770,
+            0,
+            24
+          ],
+          [
+            -3,
+            0,
+            3035,
+            0,
+            15
+          ],
+          [
+            6,
+            0,
+            3221,
+            0,
+            1
+          ],
+          [
+            4,
+            1,
+            1780002770,
+            7,
+            6
+          ],
+          [
+            1,
+            2,
+            1780002770,
+            0,
+            22
+          ],
+          [
+            -2,
+            2,
+            1780002770,
+            0,
+            3
+          ],
+          [
+            2,
+            1,
+            3079,
+            0,
+            19
+          ],
+          [
+            -3,
+            0,
+            2999,
+            7,
+            18
+          ],
+          [
+            4,
+            2,
+            1780002770,
+            0,
+            21
+          ],
+          [
+            -3,
+            0,
+            1780002770,
+            7,
+            12
+          ],
+          [
+            -1,
+            1,
+            3611,
+            0,
+            10
+          ],
+          [
+            1,
+            0,
+            3336,
+            7,
+            14
+          ],
+          [
+            -2,
+            0,
+            1780002770,
+            0,
+            33
+          ],
+          [
+            2,
+            2,
+            2926,
+            0,
+            2
+          ],
+          [
+            2,
+            0,
+            3574,
+            7,
+            30
+          ],
+          [
+            1,
+            0,
+            2752,
+            0,
+            33
+          ],
+          [
+            1,
+            2,
+            1780002770,
+            0,
+            6
+          ],
+          [
+            6,
+            2,
+            3183,
+            0,
+            26
+          ],
+          [
+            -3,
+            2,
+            1780002770,
+            0,
+            1
+          ],
+          [
+            2,
+            0,
+            2993,
+            0,
+            34
+          ],
+          [
+            -3,
+            0,
+            1780002770,
+            0,
+            15
+          ],
+          [
+            2,
+            1,
+            1780002770,
+            0,
+            34
+          ],
+          [
+            -2,
+            0,
+            3630,
+            7,
+            30
+          ],
+          [
+            2,
+            0,
+            1780002770,
+            7,
+            6
+          ],
+          [
+            -1,
+            1,
+            1780002770,
+            0,
+            36
+          ],
+          [
+            4,
+            3,
+            3030,
+            0,
+            19
+          ],
+          [
+            -3,
+            1,
+            1780002770,
+            7,
+            21
+          ],
+          [
+            2,
+            2,
+            1780002770,
+            0,
+            24
+          ],
+          [
+            0,
+            2,
+            3133,
+            0,
+            4
+          ],
+          [
+            0,
+            2,
+            2831,
+            0,
+            7
+          ]
+        ],
+        "desired_retention_pct": 90.0,
+        "today": -3
+      },
+      "output": {
+        "beyond_horizon": 103,
+        "desired_retention_pct": 90.0,
+        "due_later": 103,
+        "excluded_count": 194,
+        "honest_text": "That curve stays flat because nothing is being started: a flat forward curve is not an achievement, it is the signature of a collection that has stopped taking on new material. Two levers create future obligation \u2014 the daily new-card dial (priced at ~8 reviews over a new card's lifetime) and your desired_retention (currently 90%).",
+        "is_flat": true,
+        "new_card_lifetime_reviews": 8,
+        "new_count": 129,
+        "other_cards": 426,
+        "peak_day": 0,
+        "peak_reviews": 0,
+        "relief_text": "Your real obligation for the next 30 days is 100 reviews. Total. Of the other 426 cards \u2014 129 never started, 194 suspended or buried, 103 due later than 30 days out \u2014 every one is something you own, not something you owe.",
+        "total_cards": 526,
+        "window_days": 30,
+        "window_reviews": 100
+      }
+    },
+    {
+      "input": {
+        "cards": [
+          [
+            2,
+            2,
+            3004,
+            0,
+            28
+          ],
+          [
+            0,
+            2,
+            3568,
+            0,
+            16
+          ],
+          [
+            2,
+            2,
+            2958,
+            0,
+            14
+          ],
+          [
+            0,
+            2,
+            1780002770,
+            0,
+            10
+          ],
+          [
+            2,
+            3,
+            2944,
+            0,
+            31
+          ],
+          [
+            0,
+            3,
+            1780002770,
+            0,
+            31
+          ],
+          [
+            1,
+            0,
+            3294,
+            0,
+            15
+          ],
+          [
+            -2,
+            0,
+            2808,
+            7,
+            34
+          ],
+          [
+            -3,
+            3,
+            2978,
+            0,
+            21
+          ],
+          [
+            0,
+            1,
+            3188,
+            0,
+            35
+          ],
+          [
+            4,
+            0,
+            1780002770,
+            7,
+            22
+          ],
+          [
+            2,
+            2,
+            3120,
+            0,
+            26
+          ],
+          [
+            2,
+            1,
+            2877,
+            0,
+            3
+          ],
+          [
+            -1,
+            1,
+            2800,
+            0,
+            6
+          ],
+          [
+            2,
+            1,
+            2762,
+            0,
+            26
+          ],
+          [
+            -2,
+            2,
+            1780002770,
+            0,
+            4
+          ],
+          [
+            2,
+            2,
+            3208,
+            7,
+            27
+          ],
+          [
+            3,
+            0,
+            1780002770,
+            0,
+            37
+          ],
+          [
+            6,
+            3,
+            1780002770,
+            0,
+            21
+          ],
+          [
+            -2,
+            3,
+            3175,
+            0,
+            33
+          ],
+          [
+            -3,
+            2,
+            1780002770,
+            7,
+            22
+          ],
+          [
+            -3,
+            1,
+            3037,
+            7,
+            19
+          ],
+          [
+            -2,
+            2,
+            1780002770,
+            7,
+            39
+          ],
+          [
+            3,
+            1,
+            3210,
+            0,
+            25
+          ],
+          [
+            3,
+            0,
+            2862,
+            7,
+            31
+          ],
+          [
+            4,
+            3,
+            2953,
+            0,
+            34
+          ],
+          [
+            -1,
+            2,
+            1780002770,
+            0,
+            37
+          ],
+          [
+            2,
+            1,
+            3163,
+            0,
+            6
+          ],
+          [
+            4,
+            2,
+            2806,
+            0,
+            16
+          ],
+          [
+            -1,
+            0,
+            2795,
+            0,
+            31
+          ]
+        ],
+        "desired_retention_pct": 1.5,
+        "today": 2770
+      },
+      "output": {
+        "beyond_horizon": 58,
+        "desired_retention_pct": 1.5,
+        "due_later": 160,
+        "excluded_count": 246,
+        "honest_text": "That curve is not flat \u2014 day 174 alone carries 31 reviews \u2014 so this collection has not stopped taking on new material, and the number above is a 30-day window rather than a verdict on the year. Two levers create future obligation \u2014 the daily new-card dial (priced at ~8 reviews over a new card's lifetime) and your desired_retention (currently 2%).",
+        "is_flat": false,
+        "new_card_lifetime_reviews": 8,
+        "new_count": 197,
+        "other_cards": 603,
+        "peak_day": 174,
+        "peak_reviews": 31,
+        "relief_text": "Your real obligation for the next 30 days is 97 reviews. Total. Of the other 603 cards \u2014 197 never started, 246 suspended or buried, 160 due later than 30 days out \u2014 every one is something you own, not something you owe.",
+        "total_cards": 700,
+        "window_days": 30,
+        "window_reviews": 97
+      }
+    },
+    {
+      "input": {
+        "cards": [
+          [
+            -1,
+            2,
+            3137,
+            0,
+            13
+          ],
+          [
+            -2,
+            3,
+            3248,
+            0,
+            4
+          ],
+          [
+            2,
+            2,
+            3544,
+            0,
+            2
+          ],
+          [
+            2,
+            1,
+            1780002770,
+            7,
+            36
+          ],
+          [
+            -1,
+            1,
+            1780002770,
+            7,
+            13
+          ],
+          [
+            6,
+            1,
+            1780002770,
+            0,
+            20
+          ],
+          [
+            2,
+            3,
+            2874,
+            0,
+            25
+          ],
+          [
+            2,
+            0,
+            3047,
+            7,
+            39
+          ],
+          [
+            6,
+            3,
+            1780002770,
+            0,
+            26
+          ],
+          [
+            -2,
+            3,
+            1780002770,
+            0,
+            33
+          ],
+          [
+            2,
+            0,
+            1780002770,
+            0,
+            38
+          ],
+          [
+            3,
+            1,
+            2958,
+            0,
+            9
+          ],
+          [
+            4,
+            3,
+            3513,
+            0,
+            24
+          ],
+          [
+            4,
+            1,
+            3148,
+            0,
+            14
+          ],
+          [
+            0,
+            2,
+            2774,
+            7,
+            9
+          ],
+          [
+            2,
+            2,
+            1780002770,
+            0,
+            37
+          ],
+          [
+            1,
+            1,
+            3112,
+            7,
+            38
+          ],
+          [
+            6,
+            0,
+            2819,
+            0,
+            14
+          ],
+          [
+            2,
+            0,
+            1780002770,
+            0,
+            31
+          ],
+          [
+            -1,
+            2,
+            2783,
+            0,
+            18
+          ],
+          [
+            -1,
+            0,
+            2940,
+            0,
+            17
+          ],
+          [
+            6,
+            0,
+            1780002770,
+            7,
+            3
+          ],
+          [
+            6,
+            0,
+            2808,
+            0,
+            11
+          ],
+          [
+            6,
+            0,
+            1780002770,
+            0,
+            15
+          ],
+          [
+            -3,
+            1,
+            2873,
+            0,
+            10
+          ],
+          [
+            3,
+            0,
+            1780002770,
+            7,
+            8
+          ],
+          [
+            0,
+            0,
+            1780002770,
+            0,
+            27
+          ],
+          [
+            2,
+            0,
+            2822,
+            0,
+            26
+          ],
+          [
+            -1,
+            3,
+            1780002770,
+            0,
+            17
+          ],
+          [
+            2,
+            0,
+            1780002770,
+            7,
+            17
+          ]
+        ],
+        "desired_retention_pct": 0.0,
+        "today": -3
+      },
+      "output": {
+        "beyond_horizon": 109,
+        "desired_retention_pct": 0.0,
+        "due_later": 109,
+        "excluded_count": 125,
+        "honest_text": "That curve stays flat because nothing is being started: a flat forward curve is not an achievement, it is the signature of a collection that has stopped taking on new material. Two levers create future obligation \u2014 the daily new-card dial (priced at ~8 reviews over a new card's lifetime) and your desired_retention (currently 0%).",
+        "is_flat": true,
+        "new_card_lifetime_reviews": 8,
+        "new_count": 238,
+        "other_cards": 472,
+        "peak_day": 0,
+        "peak_reviews": 0,
+        "relief_text": "Your real obligation for the next 30 days is 122 reviews. Total. Of the other 472 cards \u2014 238 never started, 125 suspended or buried, 109 due later than 30 days out \u2014 every one is something you own, not something you owe.",
+        "total_cards": 594,
+        "window_days": 30,
+        "window_reviews": 122
+      }
+    },
+    {
+      "input": {
+        "cards": [
+          [
+            4,
+            1,
+            2800,
+            0,
+            18
+          ],
+          [
+            -2,
+            1,
+            1780002770,
+            7,
+            20
+          ],
+          [
+            6,
+            2,
+            2851,
+            0,
+            19
+          ],
+          [
+            -2,
+            2,
+            1780002770,
+            7,
+            18
+          ],
+          [
+            2,
+            0,
+            1780002770,
+            0,
+            31
+          ],
+          [
+            0,
+            0,
+            1780002770,
+            0,
+            23
+          ],
+          [
+            -2,
+            2,
+            2991,
+            7,
+            21
+          ],
+          [
+            6,
+            2,
+            2778,
+            7,
+            11
+          ],
+          [
+            2,
+            3,
+            2795,
+            7,
+            35
+          ],
+          [
+            2,
+            3,
+            3222,
+            7,
+            21
+          ],
+          [
+            2,
+            2,
+            3034,
+            0,
+            1
+          ],
+          [
+            -2,
+            2,
+            1780002770,
+            0,
+            9
+          ],
+          [
+            3,
+            2,
+            2831,
+            0,
+            2
+          ],
+          [
+            2,
+            2,
+            1780002770,
+            0,
+            10
+          ],
+          [
+            -1,
+            1,
+            1780002770,
+            0,
+            36
+          ],
+          [
+            -1,
+            3,
+            3633,
+            7,
+            27
+          ],
+          [
+            6,
+            1,
+            1780002770,
+            0,
+            18
+          ],
+          [
+            2,
+            3,
+            1780002770,
+            0,
+            4
+          ],
+          [
+            -2,
+            2,
+            2870,
+            0,
+            20
+          ],
+          [
+            2,
+            1,
+            3072,
+            0,
+            14
+          ],
+          [
+            2,
+            0,
+            3271,
+            0,
+            2
+          ],
+          [
+            3,
+            1,
+            3238,
+            7,
+            2
+          ],
+          [
+            -2,
+            2,
+            1780002770,
+            0,
+            34
+          ],
+          [
+            1,
+            1,
+            3493,
+            0,
+            30
+          ],
+          [
+            -2,
+            2,
+            3474,
+            0,
+            25
+          ],
+          [
+            1,
+            2,
+            1780002770,
+            0,
+            4
+          ],
+          [
+            2,
+            0,
+            3281,
+            0,
+            12
+          ],
+          [
+            6,
+            3,
+            3149,
+            0,
+            18
+          ],
+          [
+            2,
+            2,
+            1780002770,
+            0,
+            4
+          ],
+          [
+            -3,
+            2,
+            1780002770,
+            0,
+            34
+          ]
+        ],
+        "desired_retention_pct": 92.5,
+        "today": -3
+      },
+      "output": {
+        "beyond_horizon": 93,
+        "desired_retention_pct": 92.5,
+        "due_later": 93,
+        "excluded_count": 244,
+        "honest_text": "That curve stays flat because nothing is being started: a flat forward curve is not an achievement, it is the signature of a collection that has stopped taking on new material. Two levers create future obligation \u2014 the daily new-card dial (priced at ~8 reviews over a new card's lifetime) and your desired_retention (currently 92%).",
+        "is_flat": true,
+        "new_card_lifetime_reviews": 8,
+        "new_count": 68,
+        "other_cards": 405,
+        "peak_day": 0,
+        "peak_reviews": 0,
+        "relief_text": "Your real obligation for the next 30 days is 118 reviews. Total. Of the other 405 cards \u2014 68 never started, 244 suspended or buried, 93 due later than 30 days out \u2014 every one is something you own, not something you owe.",
+        "total_cards": 523,
+        "window_days": 30,
+        "window_reviews": 118
+      }
+    },
+    {
+      "input": {
+        "cards": [
+          [
+            -2,
+            3,
+            3167,
+            0,
+            29
+          ],
+          [
+            -2,
+            0,
+            3161,
+            0,
+            34
+          ],
+          [
+            -1,
+            3,
+            1780002770,
+            0,
+            29
+          ],
+          [
+            1,
+            0,
+            2881,
+            0,
+            28
+          ],
+          [
+            2,
+            3,
+            3181,
+            0,
+            24
+          ],
+          [
+            3,
+            2,
+            3145,
+            0,
+            32
+          ],
+          [
+            0,
+            2,
+            3578,
+            0,
+            6
+          ],
+          [
+            -2,
+            0,
+            2826,
+            0,
+            28
+          ],
+          [
+            6,
+            3,
+            3065,
+            0,
+            14
+          ],
+          [
+            6,
+            2,
+            1780002770,
+            0,
+            17
+          ],
+          [
+            -1,
+            2,
+            1780002770,
+            0,
+            20
+          ],
+          [
+            6,
+            3,
+            3176,
+            0,
+            33
+          ],
+          [
+            2,
+            2,
+            1780002770,
+            7,
+            27
+          ],
+          [
+            2,
+            0,
+            2830,
+            0,
+            13
+          ],
+          [
+            0,
+            1,
+            3366,
+            0,
+            11
+          ],
+          [
+            4,
+            3,
+            3021,
+            0,
+            37
+          ],
+          [
+            6,
+            1,
+            1780002770,
+            0,
+            8
+          ],
+          [
+            1,
+            2,
+            1780002770,
+            0,
+            28
+          ],
+          [
+            -1,
+            0,
+            3042,
+            0,
+            39
+          ],
+          [
+            6,
+            2,
+            2952,
+            0,
+            28
+          ],
+          [
+            6,
+            2,
+            2740,
+            0,
+            17
+          ],
+          [
+            3,
+            3,
+            2880,
+            0,
+            14
+          ],
+          [
+            1,
+            0,
+            2754,
+            0,
+            36
+          ],
+          [
+            1,
+            2,
+            1780002770,
+            7,
+            22
+          ],
+          [
+            2,
+            1,
+            2832,
+            0,
+            36
+          ],
+          [
+            4,
+            2,
+            1780002770,
+            0,
+            25
+          ],
+          [
+            2,
+            2,
+            1780002770,
+            7,
+            17
+          ],
+          [
+            2,
+            3,
+            1780002770,
+            0,
+            10
+          ],
+          [
+            0,
+            2,
+            1780002770,
+            0,
+            25
+          ],
+          [
+            2,
+            0,
+            1780002770,
+            7,
+            6
+          ]
+        ],
+        "desired_retention_pct": 93.5,
+        "today": 0
+      },
+      "output": {
+        "beyond_horizon": 160,
+        "desired_retention_pct": 93.5,
+        "due_later": 160,
+        "excluded_count": 179,
+        "honest_text": "That curve stays flat because nothing is being started: a flat forward curve is not an achievement, it is the signature of a collection that has stopped taking on new material. Two levers create future obligation \u2014 the daily new-card dial (priced at ~8 reviews over a new card's lifetime) and your desired_retention (currently 94%).",
+        "is_flat": true,
+        "new_card_lifetime_reviews": 8,
+        "new_count": 125,
+        "other_cards": 464,
+        "peak_day": 0,
+        "peak_reviews": 0,
+        "relief_text": "Your real obligation for the next 30 days is 229 reviews. Total. Of the other 464 cards \u2014 125 never started, 179 suspended or buried, 160 due later than 30 days out \u2014 every one is something you own, not something you owe.",
+        "total_cards": 693,
+        "window_days": 30,
+        "window_reviews": 229
+      }
+    },
+    {
+      "input": {
+        "cards": [
+          [
+            0,
+            1,
+            3007,
+            0,
+            4
+          ],
+          [
+            2,
+            0,
+            3389,
+            0,
+            14
+          ],
+          [
+            1,
+            0,
+            2917,
+            0,
+            15
+          ],
+          [
+            6,
+            0,
+            1780002770,
+            7,
+            28
+          ],
+          [
+            3,
+            2,
+            3354,
+            0,
+            39
+          ],
+          [
+            2,
+            2,
+            3581,
+            0,
+            18
+          ],
+          [
+            -1,
+            2,
+            1780002770,
+            0,
+            9
+          ],
+          [
+            3,
+            2,
+            1780002770,
+            0,
+            24
+          ],
+          [
+            -3,
+            3,
+            3029,
+            7,
+            29
+          ],
+          [
+            -1,
+            0,
+            3031,
+            0,
+            28
+          ],
+          [
+            3,
+            2,
+            1780002770,
+            0,
+            7
+          ],
+          [
+            4,
+            0,
+            3133,
+            0,
+            15
+          ],
+          [
+            0,
+            2,
+            3060,
+            0,
+            20
+          ],
+          [
+            -3,
+            3,
+            3616,
+            0,
+            6
+          ],
+          [
+            -3,
+            2,
+            3452,
+            0,
+            20
+          ],
+          [
+            2,
+            0,
+            1780002770,
+            0,
+            25
+          ],
+          [
+            2,
+            2,
+            1780002770,
+            0,
+            17
+          ],
+          [
+            6,
+            1,
+            2880,
+            0,
+            19
+          ],
+          [
+            -1,
+            0,
+            1780002770,
+            0,
+            24
+          ],
+          [
+            1,
+            0,
+            3544,
+            0,
+            17
+          ],
+          [
+            6,
+            1,
+            3263,
+            0,
+            24
+          ],
+          [
+            -3,
+            1,
+            1780002770,
+            0,
+            17
+          ],
+          [
+            -3,
+            1,
+            2753,
+            0,
+            8
+          ],
+          [
+            -1,
+            0,
+            3134,
+            7,
+            33
+          ],
+          [
+            0,
+            3,
+            2958,
+            7,
+            35
+          ],
+          [
+            6,
+            0,
+            3030,
+            0,
+            14
+          ],
+          [
+            0,
+            0,
+            3332,
+            0,
+            32
+          ],
+          [
+            1,
+            3,
+            3158,
+            7,
+            7
+          ],
+          [
+            2,
+            2,
+            1780002770,
+            0,
+            34
+          ],
+          [
+            6,
+            3,
+            3635,
+            0,
+            18
+          ]
+        ],
+        "desired_retention_pct": 89.5,
+        "today": 2770
+      },
+      "output": {
+        "beyond_horizon": 139,
+        "desired_retention_pct": 89.5,
+        "due_later": 139,
+        "excluded_count": 174,
+        "honest_text": "That curve stays flat because nothing is being started: a flat forward curve is not an achievement, it is the signature of a collection that has stopped taking on new material. Two levers create future obligation \u2014 the daily new-card dial (priced at ~8 reviews over a new card's lifetime) and your desired_retention (currently 90%).",
+        "is_flat": true,
+        "new_card_lifetime_reviews": 8,
+        "new_count": 219,
+        "other_cards": 532,
+        "peak_day": 0,
+        "peak_reviews": 0,
+        "relief_text": "Your real obligation for the next 30 days is 68 reviews. Total. Of the other 532 cards \u2014 219 never started, 174 suspended or buried, 139 due later than 30 days out \u2014 every one is something you own, not something you owe.",
+        "total_cards": 600,
+        "window_days": 30,
+        "window_reviews": 68
+      }
+    }
+  ],
+  "function": "horizon.build_readout",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Builds the same Card rows, calls build_readout at the case's day number with the case's desired retention as its input and returns the HorizonReadout's fields; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_091.py",
+  "registry_sha256": "a185de1ccfea0c8ea9c71b97c224fe4334a685005183174a5ed6533c306548e6",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

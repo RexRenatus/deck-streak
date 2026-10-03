@@ -1,0 +1,38 @@
+{
+  "cases": [
+    {
+      "input": {
+        "name": "horizon.HORIZON_DAYS"
+      },
+      "output": 365
+    },
+    {
+      "input": {
+        "name": "horizon.WINDOW_DAYS"
+      },
+      "output": 30
+    },
+    {
+      "input": {
+        "name": "horizon.FLAT_PEAK_REVIEWS"
+      },
+      "output": 25
+    },
+    {
+      "input": {
+        "name": "divest.NEW_CARD_LIFETIME_REVIEWS"
+      },
+      "output": 8
+    }
+  ],
+  "function": "horizon.constants",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "constants",
+  "registry": "tools/parity-oracle/registry/spec_091.py",
+  "registry_sha256": "a185de1ccfea0c8ea9c71b97c224fe4334a685005183174a5ed6533c306548e6",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}
