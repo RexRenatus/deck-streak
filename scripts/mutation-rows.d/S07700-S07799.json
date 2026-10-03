@@ -23,10 +23,10 @@
         "S07703-MATURE-INTERVAL",
         "curriculum",
         "src/progress.rs",
-        "pub const PROGRESS_MATURE_IVL_DAYS: i64 = 21;\n",
-        "pub const PROGRESS_MATURE_IVL_DAYS: i64 = 22;\n",
+        "    if card.kind == 2 && card.interval >= mature_ivl {\n",
+        "    if card.kind == 2 && card.interval > mature_ivl {\n",
         "progress_goldens::card_mastery_matches_the_predecessors_golden",
-        "with no memory state a review card is mature from an interval of 21 days (SPEC-077 R2)"
+        "with no memory state a review card is mature from an interval of 21 days, the bound itself included (SPEC-077 R2); the constant's value is pinned by the constants golden"
       ],
       [
         "S07704-DECAY-CLAMP",
