@@ -6,7 +6,7 @@
 \* @phx covers crates/coordination/src/recompute/records.rs anchor=evaluate digest=sha256:5aa0de349398bcf888dfaadd1437dbe027b2e4d82ba3ec530c3ad5f7bab08218
 \* @phx covers crates/coordination/src/recompute/records.rs anchor=upsert digest=sha256:0702ef24ebd40778731306415bead309ef68954c2c858320eb32ed78b2f1bc4e
 \* @phx covers crates/coordination/src/recompute/records.rs anchor=offer_records digest=sha256:94d4c086e62de5ee1bc65547fa613409b603a137fb3e5e24a0e70c82bac9243c
-\* @phx covers crates/coordination/src/sync_cycle.rs anchor=sync_cycle digest=sha256:b8158a6a2359166e7b55a5dbbb15189d50cdbeebd84c20a0805067046c31dc6c
+\* @phx covers crates/coordination/src/sync_cycle.rs anchor=sync_cycle digest=sha256:d32903aaea6eed5fa397ca99b5cfcea5ffbbe4540e1420a0503e8861c1b79add
 \* @phx covers crates/coordination/src/level_up.rs anchor=announce_level_up digest=sha256:acbb8923e76fbd4ab77949a119c1ad3a87de6f41737e65b89df689875e851dd0
 \* @phx covers crates/notifications/src/router.rs anchor=route digest=sha256:7bcf52fe22d886b3d71dfa0fa8e6dfb1d266a9a6b1662bada5482a2cd0c54dcb
 \* @phx covers crates/notifications/src/ledger.rs anchor=claim digest=sha256:0116ef4925de04614d09ac18952c0a0b0f7248fd65f5d4f6ca555448836a6ab7
@@ -80,7 +80,12 @@
 \* - the backfill and revisit writes run no badge or record step (mod.rs's
 \*   Evaluation::runs_today_only_rules is Settle and Current only), so the backfill's write with
 \*   no offers before it awards nothing, and the offers after the revisit write are the Offer that
-\*   follows the current day's Commit.
+\*   follows the current day's Commit;
+\* - the landmarks' offers (SPEC-102 section 11, ADR-322; tla/LandmarkOnce models them), re-read
+\*   2026-10-03: sync_cycle.rs::sync_cycle reads the whole log's study days once and hands the fold
+\*   the awards' offers and then the landmarks' in turn, so every offer call runs the awards' offer
+\*   as before and then routes landmark keys and moves the landmarks' own cursor in writes of their
+\*   own, never an award's row or mark: a stuttering step of these variables, re-stamped.
 (***************************************************************************)
 EXTENDS Naturals
 
