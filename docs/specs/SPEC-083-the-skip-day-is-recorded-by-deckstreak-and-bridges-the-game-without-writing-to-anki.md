@@ -1014,3 +1014,36 @@ answered as not positive and credits nothing.
 - **T18** (section 4, edited row). `crates/coordination/tests/relight_order.rs`, `deck-streak-coordination`: its census
   of linked statics counts 18, not 17, for the tariff's `static LADDER: LazyLock<Vec<i64>> = LazyLock::new(parse);`,
   counted as progression's `static XP` is. Without that one change the census fails at the green code.
+
+Section 4's rows this part does not build, one line each, as the preflight's manifest reading wants them (section 10 names the same
+rows in prose, with the part that delivers each):
+
+- `crates/ingest/tests/skip_zero_upload.rs`: unchanged in this part; delivered by E4b.
+- `crates/ingest/tests/skip_census.rs`: unchanged in this part; delivered by E4b.
+- `crates/ingest/tests/support/synthetic.rs`: unchanged in this part; delivered by E4b.
+- `.cargo/config.toml`: unchanged in this part; delivered by E4b.
+- `deploy/deck-streak.env.example`: unchanged in this part; delivered by E4b.
+- `crates/economy/Cargo.toml`: unchanged, as section 10 says.
+- `crates/coordination/tests/skip_callers.rs`: unchanged in this part; delivered by E4c.
+- `crates/api/src/skip_routes.rs`: unchanged in this part; delivered by E4c.
+- `crates/api/src/router.rs`: unchanged in this part; delivered by E4c.
+- `crates/api/tests/skip_routes.rs`: unchanged in this part; delivered by E4c.
+- `crates/bot/src/skip_commands.rs`: unchanged in this part; delivered by E4c.
+- `crates/bot/src/commands.rs`: unchanged in this part; delivered by E4c.
+- `crates/bot/tests/skip_commands.rs`: unchanged in this part; delivered by E4c.
+- `crates/daemon/src/wiring.rs`: unchanged in this part; delivered by E4c.
+- `web/app/src/routes/skip/+page.svelte`: unchanged in this part; delivered by E4c.
+- `web/app/src/lib/skip/SkipSheet.svelte`: unchanged in this part; delivered by E4c.
+- `web/app/src/lib/skip/api.ts`: unchanged in this part; delivered by E4c.
+- `web/app/src/lib/skip/skip-sheet.test.ts`: unchanged in this part; delivered by E4c.
+- `web/app/src/lib/routes.ts`: unchanged in this part; delivered by E4c.
+- `docs/OWNER-SETUP.md`: unchanged in this part; delivered by E4c.
+
+Files this part edits that section 4 does not list, each a consequence of a row above:
+
+- **T19** (section 4, added rows). `crates/coordination/tests/lapse.rs` passes the empty skip set to `open_lapse`, whose
+  signature now takes it. `crates/ingest/tests/settings.rs` gains the test of the skip search's one-expression
+  refusal by name. `formal/lean/Formal.lean` imports `Formal.SkipTariff`, and `formal/lean/Formal/Vectors.lean` imports
+  `Formal.SkipTariffVectors` and routes the entry `SkipTariff` to it; `formal/lean/Formal/SkipTariffVectors.lean` is the
+  writer of `formal/vectors/skip-tariff.jsonl`, in the house form of the wallet's. `formal/tla/RelightOrder/RelightOrder.tla`
+  carries the restamped digest of its `govern` cover, after the skip set entered `govern`.
