@@ -38,6 +38,105 @@
         "format!(\"({configured})\")",
         "skip_record::the_search_and_day_spec_equal_the_parity_goldens",
         "the configured search is wrapped to review cards only, as the predecessor wraps it, before the holds (SPEC-083 R3, A7)"
+      ],
+      [
+        "S08305-THE-LAST-PRICE-REPEATS",
+        "economy",
+        "src/tariff.rs",
+        "ladder.get(earlier.min(last))",
+        "ladder.get(earlier)",
+        "skip_tariff::the_tariff_ladder_is_read_from_economy_json_and_equals_the_golden",
+        "every skip of a month from the ladder's last step on costs the last price, never the 0 an unclamped read finds past the ladder's end (SPEC-083 R8, R10, A14)"
+      ],
+      [
+        "S08306-THE-TARIFF-IS-A-PURCHASE",
+        "coordination",
+        "src/skip/mod.rs",
+        "wallet::debit_floored_on(",
+        "wallet::debit_capped_on(",
+        "skip_flow::the_tariff_charged_matches_the_parity_golden_outside_the_loss_cap",
+        "the tariff is charged through the floor-clipped debit, outside the daily loss cap, never clipped by the cap a fine obeys (SPEC-083 R8, T3, T15, A11)"
+      ],
+      [
+        "S08307-AN-UNFUNDED-SKIP-APPLIES",
+        "coordination",
+        "src/skip/mod.rs",
+        "let unfunded = paid < price;",
+        "let unfunded = paid > price;",
+        "skip_flow::an_unfunded_skip_still_applies_and_records_the_shortfall",
+        "a skip the wallet cannot fully fund still applies and records that its tariff went unfunded (SPEC-083 R8, A12)"
+      ],
+      [
+        "S08308-THE-REFUND-LANDS-ON-THE-UNDO-DAY",
+        "coordination",
+        "src/skip/mod.rs",
+        "let refunded_on = rule.study_day(undone_at);",
+        "let refunded_on = skip.day;",
+        "skip_flow::undo_refunds_what_the_skip_paid_on_the_undo_day",
+        "the undo's refund is credited on the study day the undo was recorded on, never on the skip's own day (SPEC-083 R9, T4, A13)"
+      ],
+      [
+        "S08320-THE-CHARGE-IS-KEYED-TO-THE-SKIPS-DAY",
+        "coordination",
+        "src/skip/mod.rs",
+        "let charged_on = skip.day;",
+        "let charged_on = StudyDay::from_epoch_day(now.epoch_millis().div_euclid(86_400_000));",
+        "skip_flow::the_tariff_and_its_refund_are_taken_once_per_skip",
+        "the charge is keyed to the skip's own study day, so a settlement retried on a later day charges once (SPEC-083 T3, ADR-321 D6, A46)"
+      ],
+      [
+        "S08321-THE-REFUND-IS-KEYED-TO-THE-UNDOS-DAY",
+        "coordination",
+        "src/skip/mod.rs",
+        "let refunded_on = rule.study_day(undone_at);",
+        "let refunded_on = rule.study_day(now);",
+        "skip_flow::the_tariff_and_its_refund_are_taken_once_per_skip",
+        "the refund is keyed to the study day the undo was recorded on, so an undo retried on a later day credits once (SPEC-083 T4, ADR-321 D6, A46)"
+      ],
+      [
+        "S08322-THE-SPREAD-STARTS-A-DAY-AHEAD",
+        "ingest",
+        "src/skip.rs",
+        "pub const SKIP_SPREAD_MIN_DAYS: i64 = 1;",
+        "pub const SKIP_SPREAD_MIN_DAYS: i64 = 2;",
+        "skip_record::the_skip_constants_equal_the_predecessors",
+        "the day spec's spread starts one day ahead, the predecessor's constants.SKIP_SPREAD_MIN_DAYS (SPEC-083 T12, A45)"
+      ],
+      [
+        "S08323-THE-SPREAD-ENDS-THREE-DAYS-AHEAD",
+        "ingest",
+        "src/skip.rs",
+        "pub const SKIP_SPREAD_MAX_DAYS: i64 = 3;",
+        "pub const SKIP_SPREAD_MAX_DAYS: i64 = 4;",
+        "skip_record::the_skip_constants_equal_the_predecessors",
+        "the day spec's spread ends three days ahead, the predecessor's constants.SKIP_SPREAD_MAX_DAYS (SPEC-083 T12, A45)"
+      ],
+      [
+        "S08324-THE-DEFAULT-SEARCH-IS-THE-PREDECESSORS",
+        "ingest",
+        "src/skip.rs",
+        "pub const SKIP_DEFAULT_SEARCH: &str = \"prop:due=0 -is:suspended -is:buried\";",
+        "pub const SKIP_DEFAULT_SEARCH: &str = \"prop:due=0 -is:suspended\";",
+        "skip_record::the_skip_constants_equal_the_predecessors",
+        "the default search keeps suspended and buried cards out, the predecessor's constants.SKIP_DEFAULT_SEARCH (SPEC-083 T12, A45)"
+      ],
+      [
+        "S08325-THE-CARD-GUARD-IS-FIVE-THOUSAND",
+        "ingest",
+        "src/skip.rs",
+        "pub const SKIP_MAX_CARDS: usize = 5000;",
+        "pub const SKIP_MAX_CARDS: usize = 5001;",
+        "skip_record::the_skip_constants_equal_the_predecessors",
+        "the card guard's bound is 5,000, the predecessor's constants.SKIP_MAX_CARDS (SPEC-083 R21, T12, A45)"
+      ],
+      [
+        "S08326-THE-BRIDGE-CAP-IS-THREE-A-MONTH",
+        "ingest",
+        "src/skip.rs",
+        "pub const SKIP_BRIDGE_MONTHLY_CAP: u32 = 3;",
+        "pub const SKIP_BRIDGE_MONTHLY_CAP: u32 = 4;",
+        "skip_record::the_skip_constants_equal_the_predecessors",
+        "the monthly bridge cap the record carries is 3, the predecessor's constants.SKIP_BRIDGE_MONTHLY_CAP (SPEC-083 T12, A45)"
       ]
     ]
   }
