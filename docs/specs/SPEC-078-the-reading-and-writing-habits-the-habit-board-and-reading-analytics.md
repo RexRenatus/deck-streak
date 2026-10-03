@@ -411,6 +411,7 @@ This part's files:
 | `privacy.json` | repo | changed: the `minutes-log` category |
 | `PRIVACY.md` | repo | changed: the `minutes-log` line |
 | `scripts/mutation-rows.d/S07800-S07899.json` | repo | added: the rows of section 9 |
+| `scripts/mutation-rows.d/S07200-S07299.json` | repo | changed: `S07206-DERIVED-ONLY` re-anchored on settle's `is_derived` check, its mutant and killer unchanged |
 | `changelog.d/feat-habits-078.md` | repo | added |
 | `.sqlx/` | workspace | changed: the offline cache for the new queries |
 | `Cargo.lock` | workspace | changed |
