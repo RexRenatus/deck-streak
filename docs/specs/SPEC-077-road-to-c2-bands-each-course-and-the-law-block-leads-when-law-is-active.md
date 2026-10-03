@@ -512,3 +512,13 @@ New:
 - T9, R16. Old: "`today` uses this SPEC's law block rendering (SPEC-086)." New: "SPEC-086's `today`
   will use this SPEC's law block rendering; no `today` exists at this delivery's base."
 ```
+- T17, R11 and A12, the law track summary golden's `negative_ledger` case. Its stub store holds a
+  law row of -30 beside one of 10 on the same day, and the predecessor sums them to -20. Here
+  neither XP table takes a negative amount (each column is `CHECK (amount >= 0)`: XP is never
+  confiscable, CHARTER 5), so that row cannot be stored and the block reads 10. A12 seeds every
+  case's rows as the golden writes them, asserts that this case is the only one with a row the
+  tables refuse, and compares the block's lifetime and day XP with the golden's less the refused
+  rows; every other field, the level included, is compared as the golden states it. The golden is
+  unchanged. The block's day XP is read by `SqliteXpLedger::track_day_total` in
+  `crates/progression/src/ledger.rs`, already in the manifest by T5, and its query's cache entry
+  joins `.sqlx/`, also in the manifest.
