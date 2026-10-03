@@ -576,3 +576,13 @@ New:
   that reads the crate root with `include_str!` and asserts the declaration, as ruling 44 accepted
   for S08137. The guards sit in the three test files above, so section 4's lines for the band file
   and its tests cover them.
+- T20, the two findings of the mutation verdict on the pull request's earlier head (ruling 53). The
+  band threshold mutant `replace > with >= in course_progress` in `crates/curriculum/src/progress.rs`
+  is declared equivalent by one record in `scripts/mutation-equivalent.d/deck-streak-curriculum.json`,
+  reached by `progress_goldens::course_progress_matches_the_predecessors_golden`; the count is
+  unsigned and a zero count reads 0.0, so the two comparisons agree on every input and the code of
+  that line is unchanged. The `+=` mutant in the lenient reader of `crates/ingest/src/memory_state.rs`
+  stopped the memory cap's tests, so `leniently` now computes the end of each in-string piece once,
+  `let next = at + first + escaped;`, and uses it for both the slice and the advance. Behaviour is
+  unchanged and the existing tests pass as they were. A mutant that stalls `next` spins without
+  allocating and ends as a timeout, and one that moves it below the position panics on the slice.
