@@ -388,7 +388,7 @@ This part's files:
 | `crates/notifications/tests/one_router.rs` | `deck-streak-notifications` | changed: the command handler's replies and their named callers gain `read`, `undo` and `habit_callback` |
 | `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | changed: the habit step in `Phase::DaySteps`, and A24 in its tests |
 | `crates/daemon/src/role_bot.rs` | `deck-streak-daemon` | changed: the bot's commands get the courses and the router |
-| `crates/bot/src/habits_commands.rs` | `deck-streak-bot` | added: `/read`, `/undo` and their callbacks |
+| `crates/bot/src/habits_commands.rs` | `deck-streak-bot` | added: /read, /undo and their callbacks |
 | `crates/bot/src/commands.rs` | `deck-streak-bot` | changed: the command table and the owner's menu gain `read` and `undo`; `with_habits` |
 | `crates/bot/src/lib.rs` | `deck-streak-bot` | changed: the habits commands module |
 | `crates/bot/tests/habits_commands.rs` | `deck-streak-bot` | added: A25 to A29 |
@@ -552,3 +552,7 @@ insert-only; the body above is unchanged.
 - **T4** (manifest, the move). The planned copy,
   `docs/specs/planned/SPEC-078-the-reading-and-writing-habits-the-habit-board-and-reading-analytics.md`,
   is removed: this part moves the SPEC out of the planned directory and delivers it here.
+- **T5** (manifest, a probe's reading). Section 4's row for `crates/bot/src/habits_commands.rs`
+  names the commands /read and /undo in plain text rather than in backticks, because the SDD probe
+  reads a backticked token that starts with a slash as a path outside the repository. It is the one
+  edit above these amendments, and it changes no requirement, criterion or path.
