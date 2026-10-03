@@ -1,0 +1,3448 @@
+{
+  "cases": [
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 0,
+        "since_legendary": 0,
+        "u": 0.009999999999999898
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 0,
+        "since_legendary": 0,
+        "u": 0.010000000000000009
+      },
+      "output": "epic"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 0,
+        "since_legendary": 0,
+        "u": 0.01000000000000012
+      },
+      "output": "epic"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 0,
+        "since_legendary": 0,
+        "u": 0.07999999999999996
+      },
+      "output": "epic"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 0,
+        "since_legendary": 0,
+        "u": 0.08000000000000007
+      },
+      "output": "rare"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 0,
+        "since_legendary": 0,
+        "u": 0.08000000000000018
+      },
+      "output": "rare"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 0,
+        "since_legendary": 0,
+        "u": 0.29999999999999993
+      },
+      "output": "rare"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 0,
+        "since_legendary": 0,
+        "u": 0.30000000000000004
+      },
+      "output": "common"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 0,
+        "since_legendary": 0,
+        "u": 0.30000000000000016
+      },
+      "output": "common"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 0,
+        "since_legendary": 0,
+        "u": 0.0
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 0,
+        "since_legendary": 0,
+        "u": 1.1102230246251565e-16
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 0,
+        "since_legendary": 0,
+        "u": 0.5
+      },
+      "output": "common"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 0,
+        "since_legendary": 0,
+        "u": 0.9999999999999999
+      },
+      "output": "common"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 3,
+        "since_legendary": 5,
+        "u": 0.009999999999999898
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 3,
+        "since_legendary": 5,
+        "u": 0.010000000000000009
+      },
+      "output": "epic"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 3,
+        "since_legendary": 5,
+        "u": 0.01000000000000012
+      },
+      "output": "epic"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 3,
+        "since_legendary": 5,
+        "u": 0.07999999999999996
+      },
+      "output": "epic"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 3,
+        "since_legendary": 5,
+        "u": 0.08000000000000007
+      },
+      "output": "rare"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 3,
+        "since_legendary": 5,
+        "u": 0.08000000000000018
+      },
+      "output": "rare"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 3,
+        "since_legendary": 5,
+        "u": 0.29999999999999993
+      },
+      "output": "rare"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 3,
+        "since_legendary": 5,
+        "u": 0.30000000000000004
+      },
+      "output": "common"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 3,
+        "since_legendary": 5,
+        "u": 0.30000000000000016
+      },
+      "output": "common"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 3,
+        "since_legendary": 5,
+        "u": 0.0
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 3,
+        "since_legendary": 5,
+        "u": 1.1102230246251565e-16
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 3,
+        "since_legendary": 5,
+        "u": 0.5
+      },
+      "output": "common"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 3,
+        "since_legendary": 5,
+        "u": 0.9999999999999999
+      },
+      "output": "common"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 8,
+        "since_legendary": 8,
+        "u": 0.009999999999999898
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 8,
+        "since_legendary": 8,
+        "u": 0.010000000000000009
+      },
+      "output": "epic"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 8,
+        "since_legendary": 8,
+        "u": 0.01000000000000012
+      },
+      "output": "epic"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 8,
+        "since_legendary": 8,
+        "u": 0.07999999999999996
+      },
+      "output": "epic"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 8,
+        "since_legendary": 8,
+        "u": 0.08000000000000007
+      },
+      "output": "rare"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 8,
+        "since_legendary": 8,
+        "u": 0.08000000000000018
+      },
+      "output": "rare"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 8,
+        "since_legendary": 8,
+        "u": 0.29999999999999993
+      },
+      "output": "rare"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 8,
+        "since_legendary": 8,
+        "u": 0.30000000000000004
+      },
+      "output": "common"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 8,
+        "since_legendary": 8,
+        "u": 0.30000000000000016
+      },
+      "output": "common"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 8,
+        "since_legendary": 8,
+        "u": 0.0
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 8,
+        "since_legendary": 8,
+        "u": 1.1102230246251565e-16
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 8,
+        "since_legendary": 8,
+        "u": 0.5
+      },
+      "output": "common"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 8,
+        "since_legendary": 8,
+        "u": 0.9999999999999999
+      },
+      "output": "common"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 9,
+        "since_legendary": 10,
+        "u": 0.009999999999999898
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 9,
+        "since_legendary": 10,
+        "u": 0.010000000000000009
+      },
+      "output": "epic"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 9,
+        "since_legendary": 10,
+        "u": 0.01000000000000012
+      },
+      "output": "epic"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 9,
+        "since_legendary": 10,
+        "u": 0.1299999999999999
+      },
+      "output": "epic"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 9,
+        "since_legendary": 10,
+        "u": 0.13
+      },
+      "output": "rare"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 9,
+        "since_legendary": 10,
+        "u": 0.13000000000000012
+      },
+      "output": "rare"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 9,
+        "since_legendary": 10,
+        "u": 0.34999999999999987
+      },
+      "output": "rare"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 9,
+        "since_legendary": 10,
+        "u": 0.35
+      },
+      "output": "common"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 9,
+        "since_legendary": 10,
+        "u": 0.3500000000000001
+      },
+      "output": "common"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 9,
+        "since_legendary": 10,
+        "u": 0.0
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 9,
+        "since_legendary": 10,
+        "u": 1.1102230246251565e-16
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 9,
+        "since_legendary": 10,
+        "u": 0.5
+      },
+      "output": "common"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 9,
+        "since_legendary": 10,
+        "u": 0.9999999999999999
+      },
+      "output": "common"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 10,
+        "since_legendary": 20,
+        "u": 0.009999999999999898
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 10,
+        "since_legendary": 20,
+        "u": 0.010000000000000009
+      },
+      "output": "epic"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 10,
+        "since_legendary": 20,
+        "u": 0.01000000000000012
+      },
+      "output": "epic"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 10,
+        "since_legendary": 20,
+        "u": 0.17999999999999994
+      },
+      "output": "epic"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 10,
+        "since_legendary": 20,
+        "u": 0.18000000000000005
+      },
+      "output": "rare"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 10,
+        "since_legendary": 20,
+        "u": 0.18000000000000016
+      },
+      "output": "rare"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 10,
+        "since_legendary": 20,
+        "u": 0.3999999999999999
+      },
+      "output": "rare"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 10,
+        "since_legendary": 20,
+        "u": 0.4
+      },
+      "output": "common"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 10,
+        "since_legendary": 20,
+        "u": 0.40000000000000013
+      },
+      "output": "common"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 10,
+        "since_legendary": 20,
+        "u": 0.0
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 10,
+        "since_legendary": 20,
+        "u": 1.1102230246251565e-16
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 10,
+        "since_legendary": 20,
+        "u": 0.5
+      },
+      "output": "common"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 10,
+        "since_legendary": 20,
+        "u": 0.9999999999999999
+      },
+      "output": "common"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 11,
+        "since_legendary": 30,
+        "u": 0.009999999999999898
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 11,
+        "since_legendary": 30,
+        "u": 0.010000000000000009
+      },
+      "output": "epic"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 11,
+        "since_legendary": 30,
+        "u": 0.01000000000000012
+      },
+      "output": "epic"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 11,
+        "since_legendary": 30,
+        "u": 0.22999999999999987
+      },
+      "output": "epic"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 11,
+        "since_legendary": 30,
+        "u": 0.22999999999999998
+      },
+      "output": "rare"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 11,
+        "since_legendary": 30,
+        "u": 0.2300000000000001
+      },
+      "output": "rare"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 11,
+        "since_legendary": 30,
+        "u": 0.44999999999999996
+      },
+      "output": "rare"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 11,
+        "since_legendary": 30,
+        "u": 0.45000000000000007
+      },
+      "output": "common"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 11,
+        "since_legendary": 30,
+        "u": 0.4500000000000002
+      },
+      "output": "common"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 11,
+        "since_legendary": 30,
+        "u": 0.0
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 11,
+        "since_legendary": 30,
+        "u": 1.1102230246251565e-16
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 11,
+        "since_legendary": 30,
+        "u": 0.5
+      },
+      "output": "common"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 11,
+        "since_legendary": 30,
+        "u": 0.9999999999999999
+      },
+      "output": "common"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 12,
+        "since_legendary": 38,
+        "u": 0.009999999999999898
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 12,
+        "since_legendary": 38,
+        "u": 0.010000000000000009
+      },
+      "output": "epic"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 12,
+        "since_legendary": 38,
+        "u": 0.01000000000000012
+      },
+      "output": "epic"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 12,
+        "since_legendary": 38,
+        "u": 0.2799999999999999
+      },
+      "output": "epic"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 12,
+        "since_legendary": 38,
+        "u": 0.28
+      },
+      "output": "rare"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 12,
+        "since_legendary": 38,
+        "u": 0.28000000000000014
+      },
+      "output": "rare"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 12,
+        "since_legendary": 38,
+        "u": 0.4999999999999999
+      },
+      "output": "rare"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 12,
+        "since_legendary": 38,
+        "u": 0.5
+      },
+      "output": "common"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 12,
+        "since_legendary": 38,
+        "u": 0.5000000000000001
+      },
+      "output": "common"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 12,
+        "since_legendary": 38,
+        "u": 0.0
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 12,
+        "since_legendary": 38,
+        "u": 1.1102230246251565e-16
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 12,
+        "since_legendary": 38,
+        "u": 0.5
+      },
+      "output": "common"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 12,
+        "since_legendary": 38,
+        "u": 0.9999999999999999
+      },
+      "output": "common"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 10.0,
+        "since_epic": 0,
+        "since_legendary": 0,
+        "u": 0.009999999999999898
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 10.0,
+        "since_epic": 0,
+        "since_legendary": 0,
+        "u": 0.010000000000000009
+      },
+      "output": "epic"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 10.0,
+        "since_epic": 0,
+        "since_legendary": 0,
+        "u": 0.01000000000000012
+      },
+      "output": "epic"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 10.0,
+        "since_epic": 0,
+        "since_legendary": 0,
+        "u": 0.17999999999999994
+      },
+      "output": "epic"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 10.0,
+        "since_epic": 0,
+        "since_legendary": 0,
+        "u": 0.18000000000000005
+      },
+      "output": "rare"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 10.0,
+        "since_epic": 0,
+        "since_legendary": 0,
+        "u": 0.18000000000000016
+      },
+      "output": "rare"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 10.0,
+        "since_epic": 0,
+        "since_legendary": 0,
+        "u": 0.3999999999999999
+      },
+      "output": "rare"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 10.0,
+        "since_epic": 0,
+        "since_legendary": 0,
+        "u": 0.4
+      },
+      "output": "common"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 10.0,
+        "since_epic": 0,
+        "since_legendary": 0,
+        "u": 0.40000000000000013
+      },
+      "output": "common"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 10.0,
+        "since_epic": 0,
+        "since_legendary": 0,
+        "u": 0.0
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 10.0,
+        "since_epic": 0,
+        "since_legendary": 0,
+        "u": 1.1102230246251565e-16
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 10.0,
+        "since_epic": 0,
+        "since_legendary": 0,
+        "u": 0.5
+      },
+      "output": "common"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 10.0,
+        "since_epic": 0,
+        "since_legendary": 0,
+        "u": 0.9999999999999999
+      },
+      "output": "common"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 10.0,
+        "since_epic": 5,
+        "since_legendary": 7,
+        "u": 0.009999999999999898
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 10.0,
+        "since_epic": 5,
+        "since_legendary": 7,
+        "u": 0.010000000000000009
+      },
+      "output": "epic"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 10.0,
+        "since_epic": 5,
+        "since_legendary": 7,
+        "u": 0.01000000000000012
+      },
+      "output": "epic"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 10.0,
+        "since_epic": 5,
+        "since_legendary": 7,
+        "u": 0.17999999999999994
+      },
+      "output": "epic"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 10.0,
+        "since_epic": 5,
+        "since_legendary": 7,
+        "u": 0.18000000000000005
+      },
+      "output": "rare"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 10.0,
+        "since_epic": 5,
+        "since_legendary": 7,
+        "u": 0.18000000000000016
+      },
+      "output": "rare"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 10.0,
+        "since_epic": 5,
+        "since_legendary": 7,
+        "u": 0.3999999999999999
+      },
+      "output": "rare"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 10.0,
+        "since_epic": 5,
+        "since_legendary": 7,
+        "u": 0.4
+      },
+      "output": "common"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 10.0,
+        "since_epic": 5,
+        "since_legendary": 7,
+        "u": 0.40000000000000013
+      },
+      "output": "common"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 10.0,
+        "since_epic": 5,
+        "since_legendary": 7,
+        "u": 0.0
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 10.0,
+        "since_epic": 5,
+        "since_legendary": 7,
+        "u": 1.1102230246251565e-16
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 10.0,
+        "since_epic": 5,
+        "since_legendary": 7,
+        "u": 0.5
+      },
+      "output": "common"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 10.0,
+        "since_epic": 5,
+        "since_legendary": 7,
+        "u": 0.9999999999999999
+      },
+      "output": "common"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 10.0,
+        "since_epic": 12,
+        "since_legendary": 3,
+        "u": 0.009999999999999898
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 10.0,
+        "since_epic": 12,
+        "since_legendary": 3,
+        "u": 0.010000000000000009
+      },
+      "output": "epic"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 10.0,
+        "since_epic": 12,
+        "since_legendary": 3,
+        "u": 0.01000000000000012
+      },
+      "output": "epic"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 10.0,
+        "since_epic": 12,
+        "since_legendary": 3,
+        "u": 0.3799999999999999
+      },
+      "output": "epic"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 10.0,
+        "since_epic": 12,
+        "since_legendary": 3,
+        "u": 0.38
+      },
+      "output": "rare"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 10.0,
+        "since_epic": 12,
+        "since_legendary": 3,
+        "u": 0.3800000000000001
+      },
+      "output": "rare"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 10.0,
+        "since_epic": 12,
+        "since_legendary": 3,
+        "u": 0.5999999999999999
+      },
+      "output": "rare"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 10.0,
+        "since_epic": 12,
+        "since_legendary": 3,
+        "u": 0.6
+      },
+      "output": "common"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 10.0,
+        "since_epic": 12,
+        "since_legendary": 3,
+        "u": 0.6000000000000001
+      },
+      "output": "common"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 10.0,
+        "since_epic": 12,
+        "since_legendary": 3,
+        "u": 0.0
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 10.0,
+        "since_epic": 12,
+        "since_legendary": 3,
+        "u": 1.1102230246251565e-16
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 10.0,
+        "since_epic": 12,
+        "since_legendary": 3,
+        "u": 0.5
+      },
+      "output": "rare"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 10.0,
+        "since_epic": 12,
+        "since_legendary": 3,
+        "u": 0.9999999999999999
+      },
+      "output": "common"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 20.0,
+        "since_epic": 4,
+        "since_legendary": 4,
+        "u": 0.009999999999999898
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 20.0,
+        "since_epic": 4,
+        "since_legendary": 4,
+        "u": 0.010000000000000009
+      },
+      "output": "epic"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 20.0,
+        "since_epic": 4,
+        "since_legendary": 4,
+        "u": 0.01000000000000012
+      },
+      "output": "epic"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 20.0,
+        "since_epic": 4,
+        "since_legendary": 4,
+        "u": 0.2799999999999999
+      },
+      "output": "epic"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 20.0,
+        "since_epic": 4,
+        "since_legendary": 4,
+        "u": 0.28
+      },
+      "output": "rare"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 20.0,
+        "since_epic": 4,
+        "since_legendary": 4,
+        "u": 0.28000000000000014
+      },
+      "output": "rare"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 20.0,
+        "since_epic": 4,
+        "since_legendary": 4,
+        "u": 0.4999999999999999
+      },
+      "output": "rare"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 20.0,
+        "since_epic": 4,
+        "since_legendary": 4,
+        "u": 0.5
+      },
+      "output": "common"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 20.0,
+        "since_epic": 4,
+        "since_legendary": 4,
+        "u": 0.5000000000000001
+      },
+      "output": "common"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 20.0,
+        "since_epic": 4,
+        "since_legendary": 4,
+        "u": 0.0
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 20.0,
+        "since_epic": 4,
+        "since_legendary": 4,
+        "u": 1.1102230246251565e-16
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 20.0,
+        "since_epic": 4,
+        "since_legendary": 4,
+        "u": 0.5
+      },
+      "output": "common"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 20.0,
+        "since_epic": 4,
+        "since_legendary": 4,
+        "u": 0.9999999999999999
+      },
+      "output": "common"
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 33.0,
+        "since_epic": 0,
+        "since_legendary": 0,
+        "u": 0.009999999999999898
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 33.0,
+        "since_epic": 0,
+        "since_legendary": 0,
+        "u": 0.010000000000000009
+      },
+      "output": "epic"
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 33.0,
+        "since_epic": 0,
+        "since_legendary": 0,
+        "u": 0.01000000000000012
+      },
+      "output": "epic"
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 33.0,
+        "since_epic": 0,
+        "since_legendary": 0,
+        "u": 0.4099999999999999
+      },
+      "output": "epic"
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 33.0,
+        "since_epic": 0,
+        "since_legendary": 0,
+        "u": 0.41000000000000003
+      },
+      "output": "rare"
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 33.0,
+        "since_epic": 0,
+        "since_legendary": 0,
+        "u": 0.41000000000000014
+      },
+      "output": "rare"
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 33.0,
+        "since_epic": 0,
+        "since_legendary": 0,
+        "u": 0.6299999999999999
+      },
+      "output": "rare"
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 33.0,
+        "since_epic": 0,
+        "since_legendary": 0,
+        "u": 0.63
+      },
+      "output": "common"
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 33.0,
+        "since_epic": 0,
+        "since_legendary": 0,
+        "u": 0.6300000000000001
+      },
+      "output": "common"
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 33.0,
+        "since_epic": 0,
+        "since_legendary": 0,
+        "u": 0.0
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 33.0,
+        "since_epic": 0,
+        "since_legendary": 0,
+        "u": 1.1102230246251565e-16
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 33.0,
+        "since_epic": 0,
+        "since_legendary": 0,
+        "u": 0.5
+      },
+      "output": "rare"
+    },
+    {
+      "class": "ceiling",
+      "input": {
+        "buff_pts": 33.0,
+        "since_epic": 0,
+        "since_legendary": 0,
+        "u": 0.9999999999999999
+      },
+      "output": "common"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 5.5,
+        "since_epic": 8,
+        "since_legendary": 1,
+        "u": 0.009999999999999898
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 5.5,
+        "since_epic": 8,
+        "since_legendary": 1,
+        "u": 0.010000000000000009
+      },
+      "output": "epic"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 5.5,
+        "since_epic": 8,
+        "since_legendary": 1,
+        "u": 0.01000000000000012
+      },
+      "output": "epic"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 5.5,
+        "since_epic": 8,
+        "since_legendary": 1,
+        "u": 0.1349999999999999
+      },
+      "output": "epic"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 5.5,
+        "since_epic": 8,
+        "since_legendary": 1,
+        "u": 0.135
+      },
+      "output": "rare"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 5.5,
+        "since_epic": 8,
+        "since_legendary": 1,
+        "u": 0.13500000000000012
+      },
+      "output": "rare"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 5.5,
+        "since_epic": 8,
+        "since_legendary": 1,
+        "u": 0.35499999999999987
+      },
+      "output": "rare"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 5.5,
+        "since_epic": 8,
+        "since_legendary": 1,
+        "u": 0.355
+      },
+      "output": "common"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 5.5,
+        "since_epic": 8,
+        "since_legendary": 1,
+        "u": 0.3550000000000001
+      },
+      "output": "common"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 5.5,
+        "since_epic": 8,
+        "since_legendary": 1,
+        "u": 0.0
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 5.5,
+        "since_epic": 8,
+        "since_legendary": 1,
+        "u": 1.1102230246251565e-16
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 5.5,
+        "since_epic": 8,
+        "since_legendary": 1,
+        "u": 0.5
+      },
+      "output": "common"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 5.5,
+        "since_epic": 8,
+        "since_legendary": 1,
+        "u": 0.9999999999999999
+      },
+      "output": "common"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 12.0,
+        "since_epic": 12,
+        "since_legendary": 2,
+        "u": 0.009999999999999898
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 12.0,
+        "since_epic": 12,
+        "since_legendary": 2,
+        "u": 0.010000000000000009
+      },
+      "output": "epic"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 12.0,
+        "since_epic": 12,
+        "since_legendary": 2,
+        "u": 0.01000000000000012
+      },
+      "output": "epic"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 12.0,
+        "since_epic": 12,
+        "since_legendary": 2,
+        "u": 0.3999999999999999
+      },
+      "output": "epic"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 12.0,
+        "since_epic": 12,
+        "since_legendary": 2,
+        "u": 0.4
+      },
+      "output": "rare"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 12.0,
+        "since_epic": 12,
+        "since_legendary": 2,
+        "u": 0.40000000000000013
+      },
+      "output": "rare"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 12.0,
+        "since_epic": 12,
+        "since_legendary": 2,
+        "u": 0.6199999999999999
+      },
+      "output": "rare"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 12.0,
+        "since_epic": 12,
+        "since_legendary": 2,
+        "u": 0.62
+      },
+      "output": "common"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 12.0,
+        "since_epic": 12,
+        "since_legendary": 2,
+        "u": 0.6200000000000001
+      },
+      "output": "common"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 12.0,
+        "since_epic": 12,
+        "since_legendary": 2,
+        "u": 0.0
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 12.0,
+        "since_epic": 12,
+        "since_legendary": 2,
+        "u": 1.1102230246251565e-16
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 12.0,
+        "since_epic": 12,
+        "since_legendary": 2,
+        "u": 0.5
+      },
+      "output": "rare"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 12.0,
+        "since_epic": 12,
+        "since_legendary": 2,
+        "u": 0.9999999999999999
+      },
+      "output": "common"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 11,
+        "since_legendary": 0,
+        "u": 0.0
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 11,
+        "since_legendary": 0,
+        "u": 0.5
+      },
+      "output": "common"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 11,
+        "since_legendary": 0,
+        "u": 0.9999999999999999
+      },
+      "output": "common"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 11,
+        "since_legendary": 20,
+        "u": 0.0
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 11,
+        "since_legendary": 20,
+        "u": 0.5
+      },
+      "output": "common"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 11,
+        "since_legendary": 20,
+        "u": 0.9999999999999999
+      },
+      "output": "common"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 11,
+        "since_legendary": 37,
+        "u": 0.0
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 11,
+        "since_legendary": 37,
+        "u": 0.5
+      },
+      "output": "common"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 11,
+        "since_legendary": 37,
+        "u": 0.9999999999999999
+      },
+      "output": "common"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 11,
+        "since_legendary": 38,
+        "u": 0.0
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 11,
+        "since_legendary": 38,
+        "u": 0.5
+      },
+      "output": "common"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 11,
+        "since_legendary": 38,
+        "u": 0.9999999999999999
+      },
+      "output": "common"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 11,
+        "since_legendary": 39,
+        "u": 0.0
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 11,
+        "since_legendary": 39,
+        "u": 0.5
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 11,
+        "since_legendary": 39,
+        "u": 0.9999999999999999
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 11,
+        "since_legendary": 40,
+        "u": 0.0
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 11,
+        "since_legendary": 40,
+        "u": 0.5
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 11,
+        "since_legendary": 40,
+        "u": 0.9999999999999999
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 11,
+        "since_legendary": 41,
+        "u": 0.0
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 11,
+        "since_legendary": 41,
+        "u": 0.5
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 11,
+        "since_legendary": 41,
+        "u": 0.9999999999999999
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 11,
+        "since_legendary": 80,
+        "u": 0.0
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 11,
+        "since_legendary": 80,
+        "u": 0.5
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 11,
+        "since_legendary": 80,
+        "u": 0.9999999999999999
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 12,
+        "since_legendary": 0,
+        "u": 0.0
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 12,
+        "since_legendary": 0,
+        "u": 0.5
+      },
+      "output": "common"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 12,
+        "since_legendary": 0,
+        "u": 0.9999999999999999
+      },
+      "output": "common"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 12,
+        "since_legendary": 20,
+        "u": 0.0
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 12,
+        "since_legendary": 20,
+        "u": 0.5
+      },
+      "output": "common"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 12,
+        "since_legendary": 20,
+        "u": 0.9999999999999999
+      },
+      "output": "common"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 12,
+        "since_legendary": 37,
+        "u": 0.0
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 12,
+        "since_legendary": 37,
+        "u": 0.5
+      },
+      "output": "common"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 12,
+        "since_legendary": 37,
+        "u": 0.9999999999999999
+      },
+      "output": "common"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 12,
+        "since_legendary": 38,
+        "u": 0.0
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 12,
+        "since_legendary": 38,
+        "u": 0.5
+      },
+      "output": "common"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 12,
+        "since_legendary": 38,
+        "u": 0.9999999999999999
+      },
+      "output": "common"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 12,
+        "since_legendary": 39,
+        "u": 0.0
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 12,
+        "since_legendary": 39,
+        "u": 0.5
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 12,
+        "since_legendary": 39,
+        "u": 0.9999999999999999
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 12,
+        "since_legendary": 40,
+        "u": 0.0
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 12,
+        "since_legendary": 40,
+        "u": 0.5
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 12,
+        "since_legendary": 40,
+        "u": 0.9999999999999999
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 12,
+        "since_legendary": 41,
+        "u": 0.0
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 12,
+        "since_legendary": 41,
+        "u": 0.5
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 12,
+        "since_legendary": 41,
+        "u": 0.9999999999999999
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 12,
+        "since_legendary": 80,
+        "u": 0.0
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 12,
+        "since_legendary": 80,
+        "u": 0.5
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 12,
+        "since_legendary": 80,
+        "u": 0.9999999999999999
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 13,
+        "since_legendary": 0,
+        "u": 0.0
+      },
+      "output": "epic"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 13,
+        "since_legendary": 0,
+        "u": 0.5
+      },
+      "output": "epic"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 13,
+        "since_legendary": 0,
+        "u": 0.9999999999999999
+      },
+      "output": "epic"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 13,
+        "since_legendary": 20,
+        "u": 0.0
+      },
+      "output": "epic"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 13,
+        "since_legendary": 20,
+        "u": 0.5
+      },
+      "output": "epic"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 13,
+        "since_legendary": 20,
+        "u": 0.9999999999999999
+      },
+      "output": "epic"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 13,
+        "since_legendary": 37,
+        "u": 0.0
+      },
+      "output": "epic"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 13,
+        "since_legendary": 37,
+        "u": 0.5
+      },
+      "output": "epic"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 13,
+        "since_legendary": 37,
+        "u": 0.9999999999999999
+      },
+      "output": "epic"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 13,
+        "since_legendary": 38,
+        "u": 0.0
+      },
+      "output": "epic"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 13,
+        "since_legendary": 38,
+        "u": 0.5
+      },
+      "output": "epic"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 13,
+        "since_legendary": 38,
+        "u": 0.9999999999999999
+      },
+      "output": "epic"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 13,
+        "since_legendary": 39,
+        "u": 0.0
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 13,
+        "since_legendary": 39,
+        "u": 0.5
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 13,
+        "since_legendary": 39,
+        "u": 0.9999999999999999
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 13,
+        "since_legendary": 40,
+        "u": 0.0
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 13,
+        "since_legendary": 40,
+        "u": 0.5
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 13,
+        "since_legendary": 40,
+        "u": 0.9999999999999999
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 13,
+        "since_legendary": 41,
+        "u": 0.0
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 13,
+        "since_legendary": 41,
+        "u": 0.5
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 13,
+        "since_legendary": 41,
+        "u": 0.9999999999999999
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 13,
+        "since_legendary": 80,
+        "u": 0.0
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 13,
+        "since_legendary": 80,
+        "u": 0.5
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 13,
+        "since_legendary": 80,
+        "u": 0.9999999999999999
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 14,
+        "since_legendary": 0,
+        "u": 0.0
+      },
+      "output": "epic"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 14,
+        "since_legendary": 0,
+        "u": 0.5
+      },
+      "output": "epic"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 14,
+        "since_legendary": 0,
+        "u": 0.9999999999999999
+      },
+      "output": "epic"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 14,
+        "since_legendary": 20,
+        "u": 0.0
+      },
+      "output": "epic"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 14,
+        "since_legendary": 20,
+        "u": 0.5
+      },
+      "output": "epic"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 14,
+        "since_legendary": 20,
+        "u": 0.9999999999999999
+      },
+      "output": "epic"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 14,
+        "since_legendary": 37,
+        "u": 0.0
+      },
+      "output": "epic"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 14,
+        "since_legendary": 37,
+        "u": 0.5
+      },
+      "output": "epic"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 14,
+        "since_legendary": 37,
+        "u": 0.9999999999999999
+      },
+      "output": "epic"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 14,
+        "since_legendary": 38,
+        "u": 0.0
+      },
+      "output": "epic"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 14,
+        "since_legendary": 38,
+        "u": 0.5
+      },
+      "output": "epic"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 14,
+        "since_legendary": 38,
+        "u": 0.9999999999999999
+      },
+      "output": "epic"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 14,
+        "since_legendary": 39,
+        "u": 0.0
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 14,
+        "since_legendary": 39,
+        "u": 0.5
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 14,
+        "since_legendary": 39,
+        "u": 0.9999999999999999
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 14,
+        "since_legendary": 40,
+        "u": 0.0
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 14,
+        "since_legendary": 40,
+        "u": 0.5
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 14,
+        "since_legendary": 40,
+        "u": 0.9999999999999999
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 14,
+        "since_legendary": 41,
+        "u": 0.0
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 14,
+        "since_legendary": 41,
+        "u": 0.5
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 14,
+        "since_legendary": 41,
+        "u": 0.9999999999999999
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 14,
+        "since_legendary": 80,
+        "u": 0.0
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 14,
+        "since_legendary": 80,
+        "u": 0.5
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 14,
+        "since_legendary": 80,
+        "u": 0.9999999999999999
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 15,
+        "since_legendary": 0,
+        "u": 0.0
+      },
+      "output": "epic"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 15,
+        "since_legendary": 0,
+        "u": 0.5
+      },
+      "output": "epic"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 15,
+        "since_legendary": 0,
+        "u": 0.9999999999999999
+      },
+      "output": "epic"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 15,
+        "since_legendary": 20,
+        "u": 0.0
+      },
+      "output": "epic"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 15,
+        "since_legendary": 20,
+        "u": 0.5
+      },
+      "output": "epic"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 15,
+        "since_legendary": 20,
+        "u": 0.9999999999999999
+      },
+      "output": "epic"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 15,
+        "since_legendary": 37,
+        "u": 0.0
+      },
+      "output": "epic"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 15,
+        "since_legendary": 37,
+        "u": 0.5
+      },
+      "output": "epic"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 15,
+        "since_legendary": 37,
+        "u": 0.9999999999999999
+      },
+      "output": "epic"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 15,
+        "since_legendary": 38,
+        "u": 0.0
+      },
+      "output": "epic"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 15,
+        "since_legendary": 38,
+        "u": 0.5
+      },
+      "output": "epic"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 15,
+        "since_legendary": 38,
+        "u": 0.9999999999999999
+      },
+      "output": "epic"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 15,
+        "since_legendary": 39,
+        "u": 0.0
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 15,
+        "since_legendary": 39,
+        "u": 0.5
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 15,
+        "since_legendary": 39,
+        "u": 0.9999999999999999
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 15,
+        "since_legendary": 40,
+        "u": 0.0
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 15,
+        "since_legendary": 40,
+        "u": 0.5
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 15,
+        "since_legendary": 40,
+        "u": 0.9999999999999999
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 15,
+        "since_legendary": 41,
+        "u": 0.0
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 15,
+        "since_legendary": 41,
+        "u": 0.5
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 15,
+        "since_legendary": 41,
+        "u": 0.9999999999999999
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 15,
+        "since_legendary": 80,
+        "u": 0.0
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 15,
+        "since_legendary": 80,
+        "u": 0.5
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 15,
+        "since_legendary": 80,
+        "u": 0.9999999999999999
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 30,
+        "since_legendary": 0,
+        "u": 0.0
+      },
+      "output": "epic"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 30,
+        "since_legendary": 0,
+        "u": 0.5
+      },
+      "output": "epic"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 30,
+        "since_legendary": 0,
+        "u": 0.9999999999999999
+      },
+      "output": "epic"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 30,
+        "since_legendary": 20,
+        "u": 0.0
+      },
+      "output": "epic"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 30,
+        "since_legendary": 20,
+        "u": 0.5
+      },
+      "output": "epic"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 30,
+        "since_legendary": 20,
+        "u": 0.9999999999999999
+      },
+      "output": "epic"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 30,
+        "since_legendary": 37,
+        "u": 0.0
+      },
+      "output": "epic"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 30,
+        "since_legendary": 37,
+        "u": 0.5
+      },
+      "output": "epic"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 30,
+        "since_legendary": 37,
+        "u": 0.9999999999999999
+      },
+      "output": "epic"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 30,
+        "since_legendary": 38,
+        "u": 0.0
+      },
+      "output": "epic"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 30,
+        "since_legendary": 38,
+        "u": 0.5
+      },
+      "output": "epic"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 30,
+        "since_legendary": 38,
+        "u": 0.9999999999999999
+      },
+      "output": "epic"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 30,
+        "since_legendary": 39,
+        "u": 0.0
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 30,
+        "since_legendary": 39,
+        "u": 0.5
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 30,
+        "since_legendary": 39,
+        "u": 0.9999999999999999
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 30,
+        "since_legendary": 40,
+        "u": 0.0
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 30,
+        "since_legendary": 40,
+        "u": 0.5
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 30,
+        "since_legendary": 40,
+        "u": 0.9999999999999999
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 30,
+        "since_legendary": 41,
+        "u": 0.0
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 30,
+        "since_legendary": 41,
+        "u": 0.5
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 30,
+        "since_legendary": 41,
+        "u": 0.9999999999999999
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 30,
+        "since_legendary": 80,
+        "u": 0.0
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 30,
+        "since_legendary": 80,
+        "u": 0.5
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "guarantee",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 30,
+        "since_legendary": 80,
+        "u": 0.9999999999999999
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 0,
+        "since_legendary": 0,
+        "u": -0.25
+      },
+      "output": "legendary"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 0,
+        "since_legendary": 0,
+        "u": 1.0
+      },
+      "output": "common"
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 0,
+        "since_legendary": 0,
+        "u": 1.5
+      },
+      "output": "common"
+    },
+    {
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 4,
+        "since_legendary": 40,
+        "u": 0.30241055708705966
+      },
+      "output": "legendary"
+    },
+    {
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 9,
+        "since_legendary": 10,
+        "u": 0.654853759827793
+      },
+      "output": "common"
+    },
+    {
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 1,
+        "since_legendary": 6,
+        "u": 0.8134805734267538
+      },
+      "output": "common"
+    },
+    {
+      "input": {
+        "buff_pts": 20.0,
+        "since_epic": 9,
+        "since_legendary": 28,
+        "u": 0.9488107295699826
+      },
+      "output": "common"
+    },
+    {
+      "input": {
+        "buff_pts": 10.0,
+        "since_epic": 5,
+        "since_legendary": 40,
+        "u": 0.39963207657459976
+      },
+      "output": "legendary"
+    },
+    {
+      "input": {
+        "buff_pts": 20.0,
+        "since_epic": 1,
+        "since_legendary": 40,
+        "u": 0.8547436374383836
+      },
+      "output": "legendary"
+    },
+    {
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 3,
+        "since_legendary": 36,
+        "u": 0.16293211218500003
+      },
+      "output": "rare"
+    },
+    {
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 1,
+        "since_legendary": 5,
+        "u": 0.4036321807370912
+      },
+      "output": "common"
+    },
+    {
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 4,
+        "since_legendary": 16,
+        "u": 0.5669449636603587
+      },
+      "output": "common"
+    },
+    {
+      "input": {
+        "buff_pts": 10.0,
+        "since_epic": 14,
+        "since_legendary": 1,
+        "u": 0.2353938216958289
+      },
+      "output": "epic"
+    },
+    {
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 13,
+        "since_legendary": 14,
+        "u": 0.4679192093771526
+      },
+      "output": "epic"
+    },
+    {
+      "input": {
+        "buff_pts": 10.0,
+        "since_epic": 12,
+        "since_legendary": 41,
+        "u": 0.02595999527572712
+      },
+      "output": "legendary"
+    },
+    {
+      "input": {
+        "buff_pts": 10.0,
+        "since_epic": 11,
+        "since_legendary": 41,
+        "u": 0.2737447163572755
+      },
+      "output": "legendary"
+    },
+    {
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 8,
+        "since_legendary": 27,
+        "u": 0.547605342231112
+      },
+      "output": "common"
+    },
+    {
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 14,
+        "since_legendary": 7,
+        "u": 0.8115502189023923
+      },
+      "output": "epic"
+    },
+    {
+      "input": {
+        "buff_pts": 0.0,
+        "since_epic": 5,
+        "since_legendary": 14,
+        "u": 0.8570993329818204
+      },
+      "output": "common"
+    }
+  ],
+  "function": "gamification.chests.roll_rarity",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "function",
+  "registry": "tools/parity-oracle/registry/spec_081.py",
+  "registry_sha256": "67257e9dfbf5070946f9cabbe897df72d7f71fa60cd8414cf384b5c83d530274",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

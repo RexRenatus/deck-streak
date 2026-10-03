@@ -17,8 +17,11 @@
   smoke bombs), SPEC-041 (the router), SPEC-084 (the reveal tiers; until it lands a reveal renders
   as SPEC-041's line), SPEC-026 (the bot's callbacks), SPEC-028 (the Mini App shell).
   **Mutation band:** `S08100-S08199`.
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-081.md` (ADR-016).
+- **Status:** delivered by E2 in part (moved from `docs/specs/planned/` with its tests, ADR-016):
+  the quests core of #102 and #103 in one pull request built in four parts. Section 3c names the
+  criteria the next pull requests deliver: E2b wires the core (the fold's steps, the use cases, the
+  API, the bot, the Mini App, the odds page), E2c is #104 and E3 (#107) is the shop's arms.
+  `docs/red-first/SPEC-081.md` and ADR-081's acceptance come with the last part of E2.
 
 ## 1. The problem, measured
 
@@ -228,17 +231,8 @@ R22. No identifier this delivery declares in the quests context says `lootbox` o
 | A10 | the sweep resolves stale chests, pays an untapped Epic 50 and spares yesterday's vaulted chests | `the_sweep_matches_the_predecessors_golden` |
 | A11 | token activation equals the golden: the oldest held token, one window at a time, two hours | `token_activation_matches_the_predecessors_golden` |
 | A12 | the token bonus equals the golden, split by study day and capped per token | `the_token_bonus_matches_the_predecessors_golden` |
-| A13 | the Perfect Week equals the golden: skip days lower the bar, the cap of 2, one settlement a week | `the_perfect_week_matches_the_predecessors_golden` |
-| A14 | no message or string promises a smoke-bomb spend | `test_no_copy_promises_a_smoke_bomb_spend` |
 | A15 | the chest and token constants equal the golden and `economy.json` | `the_chest_constants_equal_the_golden_and_economy_json` |
-| A16 | the odds page states every rarity's odds and both guarantees as `economy.json` declares them | `states every rarity's odds and both guarantees as economy.json declares them` |
-| A17 | the open animation plays the rarity the server stored and never draws | `plays the stored rarity and never draws` |
-| A18 | the chest step settles a closed day's chests once and grants none for a past day the first recompute backfills; their XP is granted once and the token bonus settled in phase 5 | `the_chest_step_settles_a_closed_day_once` |
-| A19 | the chest routes answer the owner's session only | `the_chest_routes_answer_only_the_owner` |
-| A20 | a chest callback opens a chest once, for the owner only | `a_chest_callback_opens_once_for_the_owner_only` |
 | A21 | the six tables are exported and erased, `pity` and `chest_settings` reset in place | `the_chest_tables_are_exported_and_erased` |
-| A22 | the shop's answer lists the tokens held, the active window's end and the smoke bombs held, and its Activate activates the oldest held token | `the_shop_answer_lists_tokens_and_smoke_bombs_and_activates_the_oldest` |
-| A23 | the shop screen shows the token card and the smoke bombs held | `shows the token card and the smoke bombs held on the shop` |
 
 ```acceptance
 A1: cargo test -p deck-streak-quests --test chests_sessions -- --exact sessions_and_their_effort_match_the_predecessors_goldens
@@ -253,17 +247,8 @@ A9: cargo test -p deck-streak-quests --test chests_open -- --exact a_capped_free
 A10: cargo test -p deck-streak-quests --test chests_open -- --exact the_sweep_matches_the_predecessors_golden
 A11: cargo test -p deck-streak-quests --test tokens_window -- --exact token_activation_matches_the_predecessors_golden
 A12: cargo test -p deck-streak-quests --test tokens_window -- --exact the_token_bonus_matches_the_predecessors_golden
-A13: cargo test -p deck-streak-quests --test chests_inventory -- --exact the_perfect_week_matches_the_predecessors_golden
-A14: python3 -m unittest discover -s scripts/tests -p test_chests_copy.py -k test_no_copy_promises_a_smoke_bomb_spend
 A15: cargo test -p deck-streak-quests --test chests_roll -- --exact the_chest_constants_equal_the_golden_and_economy_json
-A16: pnpm exec vitest run web/app/src/lib/chests/odds.test.ts -t "states every rarity's odds and both guarantees as economy.json declares them"
-A17: pnpm exec vitest run web/app/src/lib/chests/open.test.ts -t "plays the stored rarity and never draws"
-A18: cargo test -p deck-streak-coordination --test chests_steps -- --exact the_chest_step_settles_a_closed_day_once
-A19: cargo test -p deck-streak-api --test chests_routes -- --exact the_chest_routes_answer_only_the_owner
-A20: cargo test -p deck-streak-bot --test chests_callbacks -- --exact a_chest_callback_opens_once_for_the_owner_only
 A21: cargo test -p deck-streak-quests --test chests_rights -- --exact the_chest_tables_are_exported_and_erased
-A22: cargo test -p deck-streak-bot --test chests_shop -- --exact the_shop_answer_lists_tokens_and_smoke_bombs_and_activates_the_oldest
-A23: pnpm exec vitest run web/app/src/lib/chests/shop-tokens.test.ts -t "shows the token card and the smoke bombs held on the shop"
 ```
 
 ## 3a. What the box run judges
@@ -282,6 +267,43 @@ deferred for this delivery.
 | B4 | over `web/app/src/routes/chests/` (the inventory and the odds page, in both colour schemes), the rendered screens meet WCAG 2.2 AA | the accessibility pack |
 | B5 | over the chest and smoke-bomb strings in `web/app/messages/*.json` and the message texts in `crates/coordination/src/chests/`, no copy states a false urgency, misstates an odd, or promises what the code cannot do | the ux-laws pack |
 | B6 | over the identifiers declared in `crates/quests/src/`, none says a word the lexicon replaces for `chest` or `coin` | the ddd probe's lexicon locks |
+
+## 3c. Delivered by the next pull requests
+
+This SPEC lands in four pull requests. This one (E2) delivers the quests core of #102 and #103 in
+four parts: part 1 the sessions, the effort floor, the roll, the payout, the constants and their
+goldens (A1, A2, A3, A15); part 2 the draw, the pity, the store, the migration and the grant step's
+quests side with the challenge and weekly chests (A4 to A7); part 3 opening, the Epic's choice, the
+sweep, token activation and the bonus rule (A8 to A12); part 4 the data rights (A21), the privacy
+declaration, the context map and the mutation rows. E2b wires the core into the fold, the use cases,
+the API, the bot, the Mini App and the odds page; E2c is #104 (the Perfect Week and its smoke bombs);
+E3 (#107) delivers the shop's arms. The table below holds the criteria a later pull request
+delivers, each row naming that pull request, and the lines under it are their fence lines, each
+prefixed with that pull request. A later pull request moves each of its criteria back verbatim: the
+row into section 3's table, without the `delivered by` column, and the fence line into the
+acceptance fence, without the prefix.
+
+| id | criterion | decided by | delivered by |
+|---|---|---|---|
+| A13 | the Perfect Week equals the golden: skip days lower the bar, the cap of 2, one settlement a week | `the_perfect_week_matches_the_predecessors_golden` | E2c |
+| A14 | no message or string promises a smoke-bomb spend | `test_no_copy_promises_a_smoke_bomb_spend` | E2c |
+| A16 | the odds page states every rarity's odds and both guarantees as `economy.json` declares them | `states every rarity's odds and both guarantees as economy.json declares them` | E2b |
+| A17 | the open animation plays the rarity the server stored and never draws | `plays the stored rarity and never draws` | E2b |
+| A18 | the chest step settles a closed day's chests once and grants none for a past day the first recompute backfills; their XP is granted once and the token bonus settled in phase 5 | `the_chest_step_settles_a_closed_day_once` | E2b |
+| A19 | the chest routes answer the owner's session only | `the_chest_routes_answer_only_the_owner` | E2b |
+| A20 | a chest callback opens a chest once, for the owner only | `a_chest_callback_opens_once_for_the_owner_only` | E2b |
+| A22 | the shop's answer lists the tokens held, the active window's end and the smoke bombs held, and its Activate activates the oldest held token | `the_shop_answer_lists_tokens_and_smoke_bombs_and_activates_the_oldest` | E3 |
+| A23 | the shop screen shows the token card and the smoke bombs held | `shows the token card and the smoke bombs held on the shop` | E3 |
+
+E2c: A13: cargo test -p deck-streak-quests --test chests_inventory -- --exact the_perfect_week_matches_the_predecessors_golden
+E2c: A14: python3 -m unittest discover -s scripts/tests -p test_chests_copy.py -k test_no_copy_promises_a_smoke_bomb_spend
+E2b: A16: pnpm exec vitest run web/app/src/lib/chests/odds.test.ts -t "states every rarity's odds and both guarantees as economy.json declares them"
+E2b: A17: pnpm exec vitest run web/app/src/lib/chests/open.test.ts -t "plays the stored rarity and never draws"
+E2b: A18: cargo test -p deck-streak-coordination --test chests_steps -- --exact the_chest_step_settles_a_closed_day_once
+E2b: A19: cargo test -p deck-streak-api --test chests_routes -- --exact the_chest_routes_answer_only_the_owner
+E2b: A20: cargo test -p deck-streak-bot --test chests_callbacks -- --exact a_chest_callback_opens_once_for_the_owner_only
+E3: A22: cargo test -p deck-streak-bot --test chests_shop -- --exact the_shop_answer_lists_tokens_and_smoke_bombs_and_activates_the_oldest
+E3: A23: pnpm exec vitest run web/app/src/lib/chests/shop-tokens.test.ts -t "shows the token card and the smoke bombs held on the shop"
 
 ## 4. File manifest
 
@@ -454,3 +476,170 @@ Each adapter builds what JSON cannot carry and calls the predecessor; none compu
 | `S08108-EPIC-FALLBACK-FIFTY` | `crates/quests/src/chests.rs` | an untapped Epic resolves to 50 XP | `chests_open::the_sweep_matches_the_predecessors_golden` |
 | `S08109-TOKEN-CAP-THREE-HUNDRED` | `crates/quests/src/tokens.rs` | a token's bonus is capped at 300 XP a study day | `tokens_window::the_token_bonus_matches_the_predecessors_golden` |
 | `S08110-ONE-CHEST-PER-SESSION-KEY` | `migrations/008101_quests_chests_tokens_and_inventory.sql` | the unique key that makes a session's roll happen once (a script-mutation row whose cargo killer is in `deck-streak-quests`) | `chests_grant::a_second_recompute_never_rolls_a_session_again` |
+
+## 10. Amendments, 2026-10-02: what E2 corrects beside the manifest, and the criteria it no longer lists
+
+Section 3's table now holds only the criteria this pull request delivers (A1 to A12, A15 and A21):
+the rows of A13, A14, A16 to A20, A22 and A23 moved out of it, and each stays verbatim in section
+3c's table with its fence line there. This section is insert-only: section 4's table and the text
+above are unchanged, and each finding below names the text it replaces.
+
+- **T1. Section 4 gains a row.** Add `| \`crates/progression/src/settle.rs\` |
+  \`deck-streak-progression\` | changed: the derived registry admits \`2x:<token id>\` (ADR-072's
+  registry, R13) |`. The settle port refuses `2x:<token id>` as not derived until it does.
+- **T2. Where the steps register.** Section 4, the row of `crates/coordination/src/recompute/mod.rs`:
+  old "changed: the steps registered in their phases"; new "changed: the `chests` module, and the
+  chest arm of `AwardOffers::offer` (ADR-303)". The row of `crates/daemon/src/wiring.rs`: old
+  "changed: the chest port joined to the grant, settle and freeze ports"; new "changed: the chest
+  step and the sweep registered in phase 4 and the token bonus in phase 5
+  (`recompute_fold_with_relights`)".
+- **T3. R7 and "Decided by".** R7, old "otherwise it is sealed and announced through the router as
+  the celebration event `chest` with no rarity"; new "otherwise it is sealed, and its announcement
+  is owed: the chest row carries an announced mark, and the fold's offers hand it to the router
+  between the fold's writes (ADR-303) as the celebration event `chest` with no rarity, marking it
+  once the router answers". ADR-303 joins the "Decided by" list, because the fold's steps run inside
+  the day's write and its offers run between writes.
+- **T4. R9's freeze.** Old "The freeze goes through the streaks' `grant_freeze` with the reason
+  `chest`;"; new "The freeze goes through the streaks' freeze port with the reason `chest`, in the
+  same write that settles the choice (`grant_freeze_on`, a connection-level twin of
+  `grant_freeze`, as `grant_on` is of the grant port);". Section 4 gains the row
+  `crates/coordination/src/freeze.rs`, changed, because two concurrent picks could each pay a freeze
+  otherwise.
+- **T6. The shop arms are E3's.** Section 4's rows of `crates/bot/src/shop_commands.rs` and
+  `web/app/src/routes/shop/+page.svelte` name files that do not exist at this base, so neither is
+  changed by this SPEC's E2. Those rows, the rows of `crates/bot/tests/chests_shop.rs` and
+  `web/app/src/lib/chests/shop-tokens.test.ts`, A22, A23 and the shop sentences of R19 and R20 are
+  delivered by E3 (#107), as section 3c lists.
+- **T7. R21 after the #104 split.** Old "six tables"; new "four tables (`chests`, `pity`,
+  `xp_tokens`, `chest_settings`) by `migrations/008101_quests_chests_and_tokens.sql`; `inventory` and
+  `perfect_weeks` by `migrations/008102_quests_inventory_and_perfect_weeks.sql` (E2c)". Section 8's
+  table follows R21, and the migration's name in section 4 and in row S08110 is the new one.
+- **T8. What quests cannot compute.** R1, old "capped as analytics caps it"; new "capped at the cap
+  the caller passes (coordination passes analytics' `ANSWER_TIME_CAP_SECONDS`; quests does not depend
+  on analytics, docs/CONTEXT-MAP.md)". R4 and R13 each gain "as the caller computes it" after
+  "review XP at the base rate".
+- **T9. R17's freeze caps.** The constants golden lists `STREAK_FREEZE_CAP` and
+  `FREEZE_DROP_MONTHLY_CAP`, which are the streaks context's constants; quests declares neither. R17
+  ends "equal the golden's chest entries; its two freeze caps are held by the streaks context's own
+  constants".
+
+The manifest rows this pull request's first part does not touch, each left as section 4 names it
+and delivered by a later part or pull request:
+
+- `crates/quests/src/draw.rs`: unchanged in this part; delivered by a later part or pull request
+- `crates/quests/src/pity.rs`: unchanged in this part; delivered by a later part or pull request
+- `crates/quests/src/chest_store.rs`: unchanged in this part; delivered by a later part or pull request
+- `crates/quests/src/inventory.rs`: unchanged in this part; delivered by a later part or pull request
+- `crates/quests/src/data_rights.rs`: unchanged in this part; delivered by a later part or pull request
+- `crates/quests/tests/chests_grant.rs`: unchanged in this part; delivered by a later part or pull request
+- `crates/quests/tests/chests_open.rs`: unchanged in this part; delivered by a later part or pull request
+- `crates/quests/tests/chests_inventory.rs`: unchanged in this part; delivered by a later part or pull request
+- `crates/quests/tests/chests_rights.rs`: unchanged in this part; delivered by a later part or pull request
+- `crates/quests/tests/tokens_window.rs`: unchanged in this part; delivered by a later part or pull request
+- `migrations/008101_quests_chests_tokens_and_inventory.sql`: unchanged in this part; delivered by a later part or pull request
+- `crates/coordination/src/chests/mod.rs`: unchanged in this part; delivered by a later part or pull request
+- `crates/coordination/src/chests/messages.rs`: unchanged in this part; delivered by a later part or pull request
+- `crates/coordination/src/recompute/chests.rs`: unchanged in this part; delivered by a later part or pull request
+- `crates/coordination/src/recompute/mod.rs`: unchanged in this part; delivered by a later part or pull request
+- `crates/coordination/src/lib.rs`: unchanged in this part; delivered by a later part or pull request
+- `crates/coordination/src/data_rights_registry.rs`: unchanged in this part; delivered by a later part or pull request
+- `crates/coordination/tests/data_rights_symmetry.rs`: unchanged in this part; delivered by a later part or pull request
+- `crates/coordination/tests/chests_steps.rs`: unchanged in this part; delivered by a later part or pull request
+- `crates/daemon/src/wiring.rs`: unchanged in this part; delivered by a later part or pull request
+- `crates/api/src/chests_routes.rs`: unchanged in this part; delivered by a later part or pull request
+- `crates/api/src/router.rs`: unchanged in this part; delivered by a later part or pull request
+- `crates/api/tests/chests_routes.rs`: unchanged in this part; delivered by a later part or pull request
+- `crates/bot/src/chests_commands.rs`: unchanged in this part; delivered by a later part or pull request
+- `crates/bot/src/commands.rs`: unchanged in this part; delivered by a later part or pull request
+- `crates/bot/tests/chests_callbacks.rs`: unchanged in this part; delivered by a later part or pull request
+- `crates/bot/src/shop_commands.rs`: unchanged in this part; delivered by a later part or pull request
+- `crates/bot/tests/chests_shop.rs`: unchanged in this part; delivered by a later part or pull request
+- `web/app/src/routes/chests/+page.svelte`: unchanged in this part; delivered by a later part or pull request
+- `web/app/src/routes/chests/odds/+page.svelte`: unchanged in this part; delivered by a later part or pull request
+- `web/app/src/lib/chests/api.ts`: unchanged in this part; delivered by a later part or pull request
+- `web/app/src/lib/chests/ChestCard.svelte`: unchanged in this part; delivered by a later part or pull request
+- `web/app/src/lib/chests/TokenCard.svelte`: unchanged in this part; delivered by a later part or pull request
+- `web/app/src/lib/chests/odds.test.ts`: unchanged in this part; delivered by a later part or pull request
+- `web/app/src/lib/chests/open.test.ts`: unchanged in this part; delivered by a later part or pull request
+- `web/app/src/routes/shop/+page.svelte`: unchanged in this part; delivered by a later part or pull request
+- `web/app/src/lib/chests/shop-tokens.test.ts`: unchanged in this part; delivered by a later part or pull request
+- `web/app/src/lib/routes.ts`: unchanged in this part; delivered by a later part or pull request
+- `web/app/src/lib/startapp.ts`: unchanged in this part; delivered by a later part or pull request
+- `web/app/messages/*.json`: unchanged in this part; delivered by a later part or pull request
+- `economy.json`: unchanged in this part; delivered by a later part or pull request
+- `scripts/tests/test_chests_copy.py`: unchanged in this part; delivered by a later part or pull request
+- `tools/parity-oracle/goldens/session_chests_granted.json`: unchanged in this part; delivered by a later part or pull request
+- `tools/parity-oracle/goldens/challenge_chest.json`: unchanged in this part; delivered by a later part or pull request
+- `tools/parity-oracle/goldens/weekly_chest.json`: unchanged in this part; delivered by a later part or pull request
+- `tools/parity-oracle/goldens/open_chest.json`: unchanged in this part; delivered by a later part or pull request
+- `tools/parity-oracle/goldens/pick_epic_prize.json`: unchanged in this part; delivered by a later part or pull request
+- `tools/parity-oracle/goldens/sweep_stale_chests.json`: unchanged in this part; delivered by a later part or pull request
+- `tools/parity-oracle/goldens/activate_double_xp.json`: unchanged in this part; delivered by a later part or pull request
+- `tools/parity-oracle/goldens/recompute_token_xp.json`: unchanged in this part; delivered by a later part or pull request
+- `tools/parity-oracle/goldens/smoke_bomb.json`: unchanged in this part; delivered by a later part or pull request
+- `scripts/mutation-rows.d/S08100-S08199.json`: unchanged in this part; delivered by a later part or pull request
+- `docs/CONTEXT-MAP.md`: unchanged in this part; delivered by a later part or pull request
+- `privacy.json`: unchanged in this part; delivered by a later part or pull request
+- `PRIVACY.md`: unchanged in this part; delivered by a later part or pull request
+- `docs/schematics/quests-and-chests-lifecycle.md`: unchanged in this part; delivered by a later part or pull request
+- `docs/decisions/ADR-081-a-chest-is-rolled-once-from-the-os-generator-and-stored-with-its-pity.md`: unchanged in this part; delivered by a later part or pull request
+- `docs/red-first/SPEC-081.md`: unchanged in this part; delivered by a later part or pull request
+- `Cargo.lock`: unchanged in this part; delivered by a later part or pull request
+- `.sqlx/`: unchanged in this part; delivered by a later part or pull request
+
+Part 4 additions (2026-10-03), insert-only like the findings above:
+
+- **T10. A21 is four tables in this pull request.** R21 and A21 name six tables; migration
+  `008101_quests_chests_and_tokens.sql` creates four (T7), so the quests data-rights port declares
+  `chests` and `xp_tokens` exported and erased, and `pity` (both counters to 0) and `chest_settings`
+  (3 and 21) exported and reset in place. `inventory` and `perfect_weeks` join the port with their
+  migration (E2c). A21's test is `the_chest_tables_are_exported_and_erased`, beside a declaration
+  test for the four tables' rows.
+- **T11. Manifest additions.** Section 4 gains these rows, each added by this pull request:
+  `crates/quests/Cargo.toml` (changed: `serde_json` joins `[dependencies]`, for the port's exported
+  and reset rows; the dev-dependency stays for the goldens' float parsing),
+  `formal/tla/ChestOpenedOnce/{ChestOpenedOnce.tla, MCChestOpenedOnce.cfg, witness/*.cfg}`,
+  `formal/tla/TokenWindow/{TokenWindow.tla, MCTokenWindow.cfg, witness/*.cfg}`,
+  `formal/lean/Formal/{TokenBonus.lean, TokenBonusVectors.lean}`, `formal/lean/Formal/Vectors.lean`,
+  `formal/vectors/token-bonus.jsonl`, `crates/quests/tests/formal_vectors_token_bonus.rs`,
+  `crates/quests/tests/formal_vectors_chest.rs`, the goldens
+  `tools/parity-oracle/goldens/{sweep_stale_chests, activate_double_xp, recompute_token_xp}.json`,
+  `changelog.d/chests-e2-102-103.md` and `docs/CONTEXT-MAP.md` (four register rows and the quests
+  externals). `crates/quests/src/tokens.rs` also holds the token store.
+- **T12. The data-rights rows are delivered.** The rows for `crates/quests/src/data_rights.rs`,
+  `crates/quests/tests/chests_rights.rs`, `crates/coordination/src/data_rights_registry.rs`,
+  `crates/coordination/tests/data_rights_symmetry.rs`, `scripts/mutation-rows.d/S08100-S08199.json`,
+  `docs/CONTEXT-MAP.md`, `privacy.json`, `PRIVACY.md`, `docs/red-first/SPEC-081.md` and `.sqlx/` read
+  "unchanged in this part" above and are delivered by this pull request. The rows of `Cargo.lock`
+  and the chest store, draw, pity, token and sweep code are delivered by the earlier parts.
+- **T13. The port credits nothing.** Open and sweep answer payouts, the choice answers a token id
+  or a freeze, and the settlement answers token bonuses; each is for the caller's own grant, settle
+  or freeze port, inside the caller's one write (BEGIN IMMEDIATE), and a payout is granted only from
+  those answers. This pull request writes no caller; the chest step and the routes are E2b.
+- **T14. One more manifest row.** `crates/coordination/tests/relight_order.rs` (changed: its
+  allow-list of the statics the crates coordination links gains the registry's `QUESTS` port, as it
+  holds `ECONOMY`; the census refuses a static it does not list).
+- **T15. The boundary tests (mutation coverage only).** `crates/quests/tests/chests_boundaries.rs`
+  (new) holds four tests through the crate's public API. `a_stored_choice_reads_back_as_the_choice_it_names`
+  reads `''`, `token`, `freeze` and an unknown name, and kills the stored-choice reader answering
+  none for every name and the reader losing its `freeze` arm. `a_draw_exactly_on_the_legendary_boundary_is_not_legendary`
+  draws at exactly the Legendary odds and kills the boundary comparison turning `<` into `<=`.
+  `a_chest_that_pays_nothing_answers_no_payout` opens a chest that pays 0 and kills the payout
+  guard turning `>` into `>=`. `the_quests_lib_publishes_the_data_rights_module` reads the lib's
+  source for the public data rights declaration and is the killer of row S08137
+  (`scripts/mutation-rows.d/S08100-S08199.json`), which makes that declaration private.
+- **T16. Files the diff carries that no section names by path.** Section 4 and T11, T14 and T15
+  name every other file of the diff, by path, by brace set or by directory. These eight were named
+  by neither: `formal/lean/Formal/Chest.lean`, `formal/lean/Formal/ChestVectors.lean`,
+  `formal/tla/ChestRolledOnce/ChestRolledOnce.tla`, `formal/tla/ChestRolledOnce/MCChestRolledOnce.cfg`,
+  the three `formal/tla/ChestRolledOnce/witness/*.cfg` files (`a-chest-table-with-no-unique-key.cfg`,
+  `a-chest-written-before-its-draw.cfg` and `a-pity-written-apart-from-its-chest.cfg`) and
+  `formal/vectors/chest.jsonl`. Each is added by this pull request: the chest roll's Lean model and
+  its vectors, and the roll-once TLA+ model with its three witnesses.
+- **T17. Three corrections that cannot be edits, because this section is insert-only.** (a) T15's
+  "holds four tests through the crate's public API" reads: three of its tests run through the
+  crate's public API, and one, `the_quests_lib_publishes_the_data_rights_module`, is a source-text
+  guard that reads `crates/quests/src/lib.rs` through `include_str!`. (b) The amendments have no
+  T5: the numbering runs from T4 to T6, and T5 is not used. (c) This section's opening paragraph
+  says "the text above are unchanged"; it reads: the text above is unchanged except section 3c and
+  the status lines.
