@@ -62,9 +62,13 @@ Measured at dev `02758d4`:
 - D4, follow a `#[path]` outside the notifications crate: chosen, because a test file a shipped
   crate compiles is shipped code. The module's target is read as Rust under its own path, and a
   target not in the tree or a `#[path]` inside a block is refused (#297).
+- D4, keep a `#[path]` named: rejected, because its target is a literal the census can read, so
+  naming it leaves ordinary code unread (#297).
 - D5, refuse a unit or drop-in that runs a test file: chosen, because the release ships
   `agent/tests/` and the census reads no test file. A path runs one by a test directory with no
   `src` before it or by a test file's name (#297).
+- D5, keep a unit's paths named: rejected, because a unit's path is a literal the census can
+  read, so naming it leaves a test file the release ships unread (#297).
 - D6, refuse a reply visible outside the handler's module: chosen, because with every reply private
   the compiler refuses a call from outside the handler's module, and A15's named callers already
   hold a call inside it. A reply is visible when it is defined `pub`, `pub(...)` or in a trait impl
