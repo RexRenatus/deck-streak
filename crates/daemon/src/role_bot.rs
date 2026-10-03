@@ -14,6 +14,9 @@
 //! The owner's `/sync` runs no cycle in this role: it requests the sync job (SPEC-059). The
 //! compiled notification policy is read at start, and a policy it refuses refuses start by its key;
 //! the router built over it is joined to this role's transport (SPEC-041 R13).
+//!
+//! The owner's media is saved into the vault inbox the api role's quick capture uses, when the vault
+//! is configured (SPEC-118 R6); with none, the owner is told the capture was not saved.
 
 use std::cell::Cell;
 use std::sync::Arc;
@@ -130,6 +133,9 @@ pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), BotRoleEr
     }
     if let Some(notes) = drill_vault::open(env) {
         commands = commands.with_drills(notes);
+    }
+    if let Some(captures) = wiring::inbox_captures(env) {
+        commands = commands.with_capture(captures);
     }
 
     let heartbeat = Cell::new(None);

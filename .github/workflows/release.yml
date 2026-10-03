@@ -16,9 +16,13 @@ on:
 permissions:
   contents: read
 
+# One tag's runs take turns (the tag's group), a running one is never cancelled and a waiting one is
+# not replaced: `queue: max` keeps up to a hundred waiting runs in the group and cancels any beyond
+# them, where the default keeps one and replaces it (ADR-292).
 concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
+  queue: max
 
 jobs:
   release:

@@ -33,13 +33,18 @@ use deck_streak_analytics::settings::AnalyticsSettings;
 use deck_streak_bot::{OwnerChat, Scores, SyncAnswer, SyncOutcome, Transport};
 use deck_streak_coordination::courses::{CoursesDisagree, agree};
 use deck_streak_coordination::delivery::{DeliveryCounts, DeliveryMarker};
+use deck_streak_coordination::inbox_capture::{InboxCaptures, LayoutInForce, RealFs};
 use deck_streak_coordination::instruments::{
     BoxFuture, Frame, InstrumentListing, InstrumentRunner, InstrumentService, Instruments,
     OnDemandRefusal, ReadSource, StoredReport,
 };
 use deck_streak_coordination::obligations::Obligations;
 use deck_streak_coordination::recompute::analytics_step::AnalyticsStep;
+use deck_streak_coordination::recompute::badges::BadgesStep;
 use deck_streak_coordination::recompute::day_bonuses::DayBonusesStep;
+use deck_streak_coordination::recompute::mint::MintStep;
+use deck_streak_coordination::recompute::records::RecordsStep;
+use deck_streak_coordination::recompute::streaks::{RelightDue, StreaksStep};
 use deck_streak_coordination::recompute::xp::XpStep;
 use deck_streak_coordination::recompute::{Fold, FoldError, Phase};
 use deck_streak_coordination::sync_cycle::{
@@ -63,6 +68,7 @@ use deck_streak_kernel::{
 };
 use deck_streak_notifications::{Policy, Router};
 use deck_streak_readings::taxonomy::{Taxonomy, TaxonomyError, TaxonomyPath};
+use deck_streak_vault::config::{VAULT_ROOT, VaultRoot};
 
 /// The directory systemd gives a unit for its state (`StateDirectory=`), where the database lives.
 pub const STATE_DIRECTORY: &str = "STATE_DIRECTORY";
@@ -165,22 +171,75 @@ fn take_open_lock(path: &Path) -> io::Result<File> {
     Ok(file)
 }
 
+/// The vault inbox's captures for the `api` role's quick capture and the `bot` role's media
+/// (SPEC-118 R4, R6, R10): the configured vault root and the layout in force, or `None` when the
+/// role saves no capture. The vault is an owner choice (ADR-011), so an unset root is not a start
+/// refusal: the api role's route then answers 503 `vault_not_open`, and the bot role answers the
+/// owner's media with its failed-save line. A root of the wrong shape, or a layout file that cannot
+/// be read or is not a layout, is logged by its rule, never by its value, and saves no capture
+/// either. Nothing is created here: each capture locates the inbox anew (R4).
+#[must_use]
+pub fn inbox_captures(env: &Environment) -> Option<Arc<InboxCaptures<RealFs>>> {
+    let root = match env.optional::<VaultRoot>(VAULT_ROOT) {
+        Ok(Some(root)) => root,
+        Ok(None) => {
+            tracing::info!("no vault is configured, so no capture is saved");
+            return None;
+        }
+        Err(error) => {
+            tracing::warn!(%error, "the vault root is refused, so no capture is saved");
+            return None;
+        }
+    };
+    let layout = match LayoutInForce::from_env(env) {
+        Ok(layout) => layout,
+        Err(error) => {
+            tracing::warn!(%error, "the vault layout is refused, so no capture is saved");
+            return None;
+        }
+    };
+    Some(Arc::new(InboxCaptures::new(
+        RealFs,
+        root.path().to_path_buf(),
+        layout,
+    )))
+}
+
 /// The recompute's fold, with every step registered in its phase (SPEC-071 R19): phase 1's
 /// analytics step, counting leeches by `analytics`. A later SPEC registers its step here, in its
-/// own phase, without touching the fold.
+/// own phase, without touching the fold. The badge step awards against no configured course.
 ///
 /// # Errors
 ///
 /// [`FoldError::OutsidePhase`] when a step is registered outside its phase.
 pub fn recompute_fold(analytics: AnalyticsSettings) -> Result<Fold, FoldError> {
+    recompute_fold_with_relights(analytics, Courses::default()).map(|(fold, _due)| fold)
+}
+
+/// [`recompute_fold`] over the owner's `courses`, which the badge step awards against (SPEC-073
+/// R4), and the handle the streaks step answers its due relights on, for the cycle that routes
+/// them after the fold's commit (SPEC-076 R27).
+///
+/// # Errors
+///
+/// [`FoldError::OutsidePhase`] when a step is registered outside its phase.
+pub fn recompute_fold_with_relights(
+    analytics: AnalyticsSettings,
+    courses: Courses,
+) -> Result<(Fold, RelightDue), FoldError> {
     let mut fold = Fold::default();
     fold.register(
         Phase::RollupAndScore,
         Box::new(AnalyticsStep::new(analytics)),
     )?;
     fold.register(Phase::BaseXp, Box::new(XpStep))?;
+    let (streaks, due) = StreaksStep::new();
+    fold.register(Phase::StreaksAndGovernor, Box::new(streaks))?;
     fold.register(Phase::DerivedBonuses, Box::new(DayBonusesStep))?;
-    Ok(fold)
+    fold.register(Phase::CoinMint, Box::new(MintStep))?;
+    fold.register(Phase::Awards, Box::new(BadgesStep::new(courses)))?;
+    fold.register(Phase::Awards, Box::new(RecordsStep))?;
+    Ok((fold, due))
 }
 
 /// Why a role's recompute cannot start. Each names a setting or a step, never a value.
@@ -212,6 +271,7 @@ pub enum RecomputeError {
 pub struct RecomputeSetup {
     courses: Courses,
     fold: Arc<Fold>,
+    relights: RelightDue,
     instruments: Option<Arc<Instruments>>,
 }
 
@@ -233,10 +293,12 @@ impl RecomputeSetup {
         db.record_courses_digest(courses.digest())
             .await
             .map_err(RecomputeError::Digest)?;
-        let fold = recompute_fold(AnalyticsSettings::from_env(env)?)?;
+        let (fold, relights) =
+            recompute_fold_with_relights(AnalyticsSettings::from_env(env)?, courses.clone())?;
         Ok(Self {
             courses,
             fold: Arc::new(fold),
+            relights,
             instruments: None,
         })
     }
@@ -269,7 +331,9 @@ impl RecomputeSetup {
         rule: StudyDayRule,
     ) -> CycleParts<E> {
         let digest = self.courses.digest().map(str::to_owned);
-        let parts = parts.with_fold(Arc::clone(&self.fold), db, rule, digest);
+        let parts = parts
+            .with_fold(Arc::clone(&self.fold), db, rule, digest)
+            .with_relights(self.relights.clone());
         match &self.instruments {
             Some(instruments) => parts.with_instruments(Arc::clone(instruments)),
             None => parts,
@@ -555,6 +619,11 @@ impl deck_streak_agent::MemoryPort for DrillGradesMemory {
     }
 }
 
+/// The one way a test captures log lines (SPEC-024, the 2026-09-30 amendment).
+#[cfg(test)]
+#[path = "../../../tools/log-capture/capture.rs"]
+mod log_capture;
+
 #[cfg(test)]
 mod tests {
     use std::ffi::OsString;
@@ -577,10 +646,16 @@ mod tests {
     use deck_streak_analytics::settings::AnalyticsSettings;
     use deck_streak_coordination::recompute::Phase;
     use deck_streak_coordination::recompute::analytics_step::ANALYTICS_STEP;
+    use deck_streak_coordination::recompute::badges::BADGES_STEP;
     use deck_streak_coordination::recompute::day_bonuses::DAY_BONUSES_STEP;
+    use deck_streak_coordination::recompute::mint::MINT_STEP;
+    use deck_streak_coordination::recompute::records::RECORDS_STEP;
+    use deck_streak_coordination::recompute::streaks::STREAKS_STEP;
     use deck_streak_coordination::recompute::xp::XP_STEP;
 
     use super::{OwnerSyncCycle, RecomputeSetup, TransportMarker, answer_of, recompute_fold};
+
+    use super::log_capture;
 
     /// A run of the given outcome, with synthetic instants.
     fn run(outcome: Result<(), ReasonCode>) -> SyncRun {
@@ -646,14 +721,18 @@ mod tests {
     }
 
     #[test]
-    fn the_recompute_fold_registers_the_analytics_and_xp_steps_in_their_phases() {
+    fn the_recompute_fold_registers_the_analytics_xp_and_streak_steps_in_their_phases() {
         let fold = recompute_fold(AnalyticsSettings::default()).expect("every step in its phase");
         assert_eq!(
             fold.steps(),
             [
                 (Phase::RollupAndScore, ANALYTICS_STEP),
                 (Phase::BaseXp, XP_STEP),
+                (Phase::StreaksAndGovernor, STREAKS_STEP),
                 (Phase::DerivedBonuses, DAY_BONUSES_STEP),
+                (Phase::CoinMint, MINT_STEP),
+                (Phase::Awards, BADGES_STEP),
+                (Phase::Awards, RECORDS_STEP),
             ]
         );
     }
@@ -986,14 +1065,13 @@ mod tests {
     struct Refusals(Arc<Mutex<Vec<Logged>>>);
 
     impl Refusals {
-        /// Captures the refusals logged on the test's thread while the guard and the second
-        /// dispatcher live. `tracing` asks only the reaching thread's dispatcher about a callsite
-        /// while one dispatcher is registered, so a refusal another test's thread reached first
-        /// would be cached as never enabled; a second dispatcher makes it ask every live one.
-        fn capture() -> (Self, tracing::subscriber::DefaultGuard, tracing::Dispatch) {
+        /// Captures the refusals logged on the test's thread while the guard lives. The capture
+        /// goes through `log_capture`, so a refusal another test's thread reached first is not
+        /// cached as never enabled.
+        fn capture() -> (Self, log_capture::CaptureGuard) {
             let refusals = Self::default();
-            let guard = tracing::subscriber::set_default(refusals.clone());
-            (refusals, guard, tracing::Dispatch::new(Self::default()))
+            let guard = log_capture::hold_capture(refusals.clone());
+            (refusals, guard)
         }
 
         /// The refusals logged since the last call.
@@ -1090,7 +1168,7 @@ mod tests {
     /// each time on a fresh ledger, and refuses by its step's code, logged under the step's name.
     #[tokio::test(flavor = "multi_thread")]
     async fn every_failing_step_refuses_the_owners_sync_by_its_own_code_and_name() {
-        let (refusals, _logging, _every) = Refusals::capture();
+        let (refusals, _logging) = Refusals::capture();
         for (step, code) in RUN_STEPS.iter().chain(CYCLE_STEPS) {
             let mut drives = 0;
             for _ in 0..2 {
