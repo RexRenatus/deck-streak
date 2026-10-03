@@ -27,7 +27,9 @@ use deck_streak_coordination::data_rights_registry::{erase_all, export_all};
 use deck_streak_coordination::drills::{self, DrillMeta, DrillNotes, RealFs, Surface};
 use deck_streak_coordination::inbox_capture::{Capture, Captured, InboxCaptures, Source};
 use deck_streak_coordination::instruments::InstrumentService;
+use deck_streak_coordination::progression::badges_view::earned_badges;
 use deck_streak_coordination::progression::level_view::level_view;
+use deck_streak_coordination::progression::records_view::records_now;
 use deck_streak_coordination::score::day_score;
 use deck_streak_coordination::streak_views::streak_view;
 use deck_streak_identity::Owner;
@@ -35,6 +37,9 @@ use deck_streak_kernel::{Clock, Db, Environment, Setting, SettingsError, StudyDa
 use deck_streak_notifications::owner_message;
 use frankenstein::types::{BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo};
 
+use crate::badges_commands::{
+    badges_failed_reply, badges_reply, records_failed_reply, records_reply,
+};
 use crate::capture::{self, Choice, MAX_DOWNLOAD_BYTES, Outcome};
 use crate::drill_commands::{self, ANSWER_PREFIX, VIEW_PREFIX};
 use crate::gate::{self, Admission, OwnerCallback, OwnerMessage};
@@ -65,7 +70,7 @@ pub struct MenuEntry {
 }
 
 /// The owner's menu, in the order the menu shows it.
-pub const MENU: [MenuEntry; 9] = [
+pub const MENU: [MenuEntry; 11] = [
     MenuEntry {
         command: "score",
         description: "Show today's score",
@@ -77,6 +82,14 @@ pub const MENU: [MenuEntry; 9] = [
     MenuEntry {
         command: "streak",
         description: "Show your streaks",
+    },
+    MenuEntry {
+        command: "badges",
+        description: "Show your badges",
+    },
+    MenuEntry {
+        command: "records",
+        description: "Show your personal records",
     },
     MenuEntry {
         command: "drills",
@@ -234,6 +247,8 @@ fn command_lines() -> String {
         "/score shows today's score",
         "/level shows your level and XP",
         "/streak shows your streaks",
+        "/badges shows your badges",
+        "/records shows your personal records",
         "/drills lists the law drills to answer",
         "/drill picks a law drill by type",
         "/sync syncs your collection now",
@@ -560,6 +575,8 @@ impl<S: OwnerSync> Commands<S> {
             Some("score") => self.score().await,
             Some("level") => self.level().await,
             Some("streak") => self.streak().await,
+            Some("badges") => self.badges().await,
+            Some("records") => self.records().await,
             Some("drills") => self.drills().await,
             Some("drill") => self.drill(&message.text).await,
             None if self.pending_drill.is_some() => self.drill_answer(&message.text).await,
@@ -689,6 +706,31 @@ impl<S: OwnerSync> Commands<S> {
             Err(error) => {
                 tracing::error!(%error, "the owner's streaks could not be read");
                 streak_failed_reply()
+            }
+        };
+        self.send(reply).await;
+    }
+
+    /// `/badges`: the twenty most recently awarded badges, newest first (SPEC-073 R18).
+    async fn badges(&self) {
+        let reply = match earned_badges(&self.db).await {
+            Ok(earned) => badges_reply(&earned),
+            Err(error) => {
+                tracing::error!(%error, "the owner's badges could not be read");
+                badges_failed_reply()
+            }
+        };
+        self.send(reply).await;
+    }
+
+    /// `/records`: each record, then the record to chase (SPEC-073 R18).
+    async fn records(&self) {
+        let today = self.rule.study_day(self.clock.now());
+        let reply = match records_now(&self.db, today).await {
+            Ok(view) => records_reply(&view),
+            Err(error) => {
+                tracing::error!(%error, "the owner's records could not be read");
+                records_failed_reply()
             }
         };
         self.send(reply).await;

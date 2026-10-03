@@ -9,6 +9,8 @@ SPEC = REPO / "docs" / "specs" / "SPEC-024-identity-initdata-and-owner-pin.md"
 RECORD = REPO / "docs" / "red-first" / "SPEC-024.md"
 KILLER = REPO / "crates" / "kernel" / "tests" / "log_capture_class.rs"
 NESTED = "a_capture_nested_inside_a_capture_on_one_thread_is_refused"
+STRUCK = re.compile(r"~~.*?~~")
+ROUTED_COUNT = re.compile(r"\b\d+ routed\b")
 AMENDMENT = re.compile(r"^## 10\. Amendment, 2026-10-01: .+$", re.MULTILINE)
 
 
@@ -46,6 +48,24 @@ class TheKillersOwnExemptionIsStated(unittest.TestCase):
     def test_the_code_admits_exactly_those_two_names_in_the_killer(self):
         code = KILLER.read_text(encoding="utf-8")
         self.assertIn('(matches!(token, "callsite" | "set_interest") && name == KILLER)', code)
+
+
+def routed_counts(row):
+    """Every `<n> routed` the row states once its struck spans are removed."""
+    return ROUTED_COUNT.findall(STRUCK.sub("", row))
+
+
+class TheRoutedCountHasOneHome(unittest.TestCase):
+    def test_the_a18_row_states_no_routed_count(self):
+        self.assertEqual(len(routed_counts("| A18 | x: 15 routed, none raw | t |")), 1)
+        self.assertEqual(routed_counts("| A18 | x: ~~15 routed,~~ none raw | t |"), [])
+        rows = [line for line in spec().splitlines() if line.startswith("| A18 |")]
+        self.assertEqual(len(rows), 1, "SPEC-024 must hold exactly one A18 row")
+        self.assertEqual(
+            routed_counts(rows[0]),
+            [],
+            "the census test's assertion holds the routed count, so the A18 row states none",
+        )
 
 
 class TheRecordNamesTheNestedCaptureTest(unittest.TestCase):

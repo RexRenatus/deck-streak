@@ -309,7 +309,7 @@ Its criteria, A17 and A18, are defined in the section below.
 | id | criterion | decided by |
 |---|---|---|
 | A17 | a capture made with either entry of the helper keeps a line another thread reached first, even when that thread's callsite registration straddled the capture's, and registers only after the floor is the global default, in a child whose dispatcher registry starts empty | `log_capture_class` test |
-| A18 | every install, creation or registration token the census names, in any file the census reads, goes through the helper: 15 routed, none raw, and the one production global default is the only other | `log_capture_class` test |
+| A18 | every install, creation or registration token the census names, in any file the census reads, goes through the helper: ~~15 routed,~~ none raw, and the one production global default is the only other; the census test's own assertion holds the routed count (section 13) | `log_capture_class` test |
 
 ```acceptance
 A17: cargo test -p deck-streak-kernel --test log_capture_class -- --exact a_capture_keeps_a_line_another_thread_reached_first
@@ -366,3 +366,14 @@ A19's first test holds a capture on another thread for its span, so the inner re
 whatever the binary's other tests hold; with no scoped default anywhere, the inner call would read
 the floor. The nesting test, `a_capture_nested_inside_a_capture_on_one_thread_is_refused`, is
 unchanged and still reads the nesting message through both entries.
+
+## 13. Amendment, 2026-10-02: the routed count has one home
+
+Insert-only under ruling (i) of SPEC-038 section 8: every earlier byte is kept in order, and the amendment is the struck count and the clause in A18's row and this section.
+
+- **The measurement.** At dev `50e4797a`, A18's row (section 9, line 312) states "15 routed", and the census killer `crates/kernel/tests/log_capture_class.rs` asserts `assert_eq!(routed, 19, "{report}");` (line 1588). The assertion moved across five commits while the row moved once; `git log -L1588,1588:crates/kernel/tests/log_capture_class.rs` prints that history.
+- **The decision.** A count in prose goes stale with every delivery that routes a capture, and the killer's assertion is already the count's one home. A18's row therefore strikes its count and points at the census test's own assertion. Sections 8 and 11 keep the counts they state as written: each is that amendment's own record.
+- **Chosen against.** A parity test that holds the row's number equal to the killer's assertion was rejected: it would make every delivery that routes a capture amend SPEC-024, a SPEC outside its context, for a count the killer already holds. Rewriting the rows in place was rejected: SPEC-038 section 8 ruling (i) binds a delivered SPEC to insert-only amendment.
+- **What holds the row.** `scripts/tests/test_log_capture_wording.py`, the case `test_the_a18_row_states_no_routed_count`, refuses a routed count in A18's row once its struck spans are removed. It pins wording, not a criterion.
+- **Insertions this amendment makes:** the struck count and the clause in A18's row, and this section.
+- **Files this amendment touches:** `docs/specs/SPEC-024-identity-initdata-and-owner-pin.md`, `docs/red-first/SPEC-024.md`, `scripts/tests/test_log_capture_wording.py` and `changelog.d/docs-census-count-and-planned-status.md`.

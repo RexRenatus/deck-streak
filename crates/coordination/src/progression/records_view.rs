@@ -2,10 +2,10 @@
 //! beat, today's live value for its kind, and the record today is closest to
 //! (`bot.py:CommandBot._render_records`, through progression's chase).
 
-use deck_streak_kernel::StudyDay;
+use deck_streak_kernel::{Db, KernelError, StudyDay};
 use deck_streak_progression::records::{BoardLine, RecordKind, chase};
 
-use crate::recompute::records::StoredRecord;
+use crate::recompute::records::{StoredRecord, stored_records};
 
 /// The current day's live totals the view compares each record with.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -67,6 +67,25 @@ pub fn records_view(stored: &[StoredRecord], live: LiveDay) -> RecordsView {
         .collect();
     let chase = chase(&board).and_then(|(at, gap)| lines.get(at).map(|line| (line.kind, gap)));
     RecordsView { lines, chase }
+}
+
+/// The records view for `today`: every stored record against today's stored rollup, its score,
+/// study reviews and seconds (R13, R17; `celebrations.py:records_board`).
+///
+/// # Errors
+///
+/// [`KernelError::Database`] when a read fails.
+pub async fn records_now(db: &Db, today: StudyDay) -> Result<RecordsView, KernelError> {
+    let mut connection = db.reader().acquire().await?;
+    let stored = stored_records(&mut connection).await?;
+    let live = deck_streak_analytics::rollup::stored(&mut connection, today)
+        .await?
+        .map_or_else(LiveDay::default, |day| LiveDay {
+            score: day.score.total,
+            reviews: day.metrics.reviews,
+            seconds: day.metrics.seconds,
+        });
+    Ok(records_view(&stored, live))
 }
 
 /// Today's live value for `kind`: the score, the study reviews, or the whole minutes of their
