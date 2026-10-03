@@ -18,6 +18,9 @@ anki.workspace = true
 # (ADR-083; the version Cargo.lock already pins through the engine).
 chrono.workspace = true
 deck-streak-kernel.workspace = true
+# SPEC-083 R20 and ADR-321 D17, D20: the preview's digest over the listed card ids, and the take's
+# backup checked against the working copy it was copied from.
+sha2.workspace = true
 # SPEC-022 section 7: the data-rights port's rows are JSON values.
 serde_json = { workspace = true, features = ["float_roundtrip"] }
 # SPEC-022 section 7: the kernel's Db hands out sqlx types, and sync_runs' queries are checked into
@@ -26,6 +29,14 @@ sqlx.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["rt", "time"] }
 tracing.workspace = true
+
+# SPEC-083 section 3: the take's tests set and remove `TZ` in their own process, which edition 2024
+# makes unsafe and this workspace forbids; this one target is compiled at edition 2021, where both
+# calls are safe. Every test in it holds the target's one lock and sets the zone it runs in.
+[[test]]
+name = "skip_write"
+path = "tests/skip_write.rs"
+edition = "2021"
 
 [dev-dependencies]
 # ADR-029: the parity oracle's golden reader, included by path.

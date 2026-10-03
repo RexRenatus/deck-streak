@@ -29,6 +29,20 @@ BUDGET = DEPLOY / "host-budget.json"
 ENV_EXAMPLE = DEPLOY / "deck-streak.env.example"
 SCRUB = REPO / "scripts" / "public-scrub.py"
 ADR = REPO / "docs" / "decisions" / "ADR-032-deploy-templates-and-the-host-budget.md"
+LITESTREAM_CONFIG = DEPLOY / "litestream.yml"
+DAILY_COPY = DEPLOY / "scripts" / "backup.py"
+# SPEC-083 R34 (ADR-321 D4, D17): the take's backup of the owner's collection, and its partial while
+# the restore check runs, sit beside the private copy in the directory systemd gives the units
+# (StateDirectory=deck-streak), named for the skip. They never leave the host and are no standing
+# copy, so no Litestream database or directory and no daily copy's name may reach them.
+STATE_DIRECTORY = "/var/lib/deck-streak"
+SKIP_BACKUP_NAMES = ("skip-backup-1.anki2", "skip-backup-1.anki2.partial")
+# The daily copy's two names: the one file it copies, and the pattern of the copies it keeps and
+# prunes (SPEC-064 R9).
+DAILY_COPY_NAMES = (
+    ("DATABASE_NAME", re.compile(r'^DATABASE_NAME = "([^"]+)"$', re.M)),
+    ("COPY_NAME", re.compile(r'^COPY_NAME = re\.compile\(r"([^"]+)"\)$', re.M)),
+)
 # SPEC-064's units: the replicator's, the daily backup's and the drill's ceilings are decided here,
 # and the share it raised (ADR-032 keeps a dated note).
 ADR_BACKUPS = (
@@ -1046,8 +1060,9 @@ class NoSecretInTheEnvironment(unittest.TestCase):
             self.assertNotIn(key, SYSTEMD_SETS, f"{where}: systemd sets {key}")
             self.assertIn(
                 key,
-                # The replica's bucket is read by Litestream's configuration, not by a role.
-                declared | {"RUST_LOG", "DECKSTREAK_REPLICA_BUCKET"},
+                # The replica's bucket is read by Litestream's configuration, not by a role; the
+                # zone is read by chrono's `Local`, as the engine reads it (SPEC-083 R3).
+                declared | {"RUST_LOG", "TZ", "DECKSTREAK_REPLICA_BUCKET"},
                 f"{where}: no role reads {key}",
             )
         self.assertLessEqual(set(REQUIRED_SETTINGS), {key for _, key, _ in settings})
@@ -1076,6 +1091,98 @@ class NoSecretInTheEnvironment(unittest.TestCase):
                     "environment"
                 ]
             ],
+        )
+
+
+def litestream_items(text):
+    """Each `dbs:` item of a Litestream configuration, as a dict of the item's own keys (`path`, or
+    `dir` with `pattern` and `recursive`) to (line, value). A nested block's keys, such as a
+    replica's own `path`, are not the item's."""
+    items = []
+    top = None
+    dash = None
+    for number, raw in enumerate(text.splitlines(), start=1):
+        body = raw.strip()
+        if not body or body.startswith("#"):
+            continue
+        indent = len(raw) - len(raw.lstrip())
+        if indent == 0:
+            top = body.partition(":")[0]
+            dash = None
+            continue
+        if top != "dbs":
+            continue
+        if body.startswith("- ") and dash in (None, indent):
+            dash = indent
+            items.append({})
+            body = body[2:]
+            indent += 2
+        if not items or indent != dash + 2:
+            continue
+        key, colon, value = body.partition(":")
+        if colon:
+            items[-1][key.strip()] = (number, value.strip().strip("\"'"))
+    return items
+
+
+def skip_backup_reachers(litestream_where, litestream_text, daily_where, daily_text):
+    """Each line of a Litestream configuration or of the daily copy's script that would carry the
+    skip's backup off the host or into a standing copy, as `<file>:<line>: <reason>`; empty when
+    none does (SPEC-083 A55)."""
+    return []
+
+
+class TheSkipBackupStaysOnTheHost(unittest.TestCase):
+    def test_no_replica_or_daily_copy_reaches_the_skip_backup(self):
+        litestream = LITESTREAM_CONFIG.read_text(encoding="utf-8")
+        daily = DAILY_COPY.read_text(encoding="utf-8")
+        examined("Litestream database item(s)", litestream_items(litestream))
+        examined("skip backup name(s)", SKIP_BACKUP_NAMES)
+        self.assertEqual(
+            skip_backup_reachers(
+                "deploy/litestream.yml", litestream, "deploy/scripts/backup.py", daily
+            ),
+            [],
+        )
+        # The census judges. A database path whose pattern names the backup, a directory over the
+        # state directory, and a daily copy that copies or keeps the backup's name are each refused
+        # by file and line; a replica's own `path` is not a database's.
+        replica = (
+            f"    replica:\n      type: gcs\n      path: {STATE_DIRECTORY}/skip-backup-1.anki2\n"
+        )
+        planted = (
+            "dbs:\n"
+            f"  - path: {STATE_DIRECTORY}/deck_streak.db\n{replica}"
+            f"  - path: {STATE_DIRECTORY}/skip-backup-*.anki2*\n{replica}"
+            f'  - dir: {STATE_DIRECTORY}\n    pattern: "*.anki2"\n{replica}'
+            "  - dir: /var/lib\n    recursive: true\n"
+        )
+        planted_daily = daily.replace(
+            'DATABASE_NAME = "deck_streak.db"', 'DATABASE_NAME = "skip-backup-1.anki2"'
+        ).replace('COPY_NAME = re.compile(r"', 'COPY_NAME = re.compile(r".*|')
+        self.assertNotEqual(planted_daily, daily)
+        database = daily.splitlines().index('DATABASE_NAME = "deck_streak.db"') + 1
+        copies = next(
+            n for n, line in enumerate(daily.splitlines(), 1) if line.startswith("COPY_NAME = ")
+        )
+        backup, partial = (f"{STATE_DIRECTORY}/{name}" for name in SKIP_BACKUP_NAMES)
+        self.assertEqual(
+            skip_backup_reachers("planted.yml", planted, "planted.py", planted_daily),
+            [
+                f"planted.yml:6: replicates {backup}",
+                f"planted.yml:6: replicates {partial}",
+                f"planted.yml:10: replicates {backup}",
+                f"planted.yml:15: replicates {backup}",
+                f"planted.yml:15: replicates {partial}",
+                f"planted.py:{database}: DATABASE_NAME copies skip-backup-1.anki2",
+                f"planted.py:{copies}: COPY_NAME keeps skip-backup-1.anki2",
+                f"planted.py:{copies}: COPY_NAME keeps skip-backup-1.anki2.partial",
+            ],
+        )
+        # A daily copy whose names the census cannot read is refused, never passed.
+        self.assertEqual(
+            skip_backup_reachers("planted.yml", "dbs:\n", "planted.py", ""),
+            ["planted.py: names no DATABASE_NAME", "planted.py: names no COPY_NAME"],
         )
 
 
