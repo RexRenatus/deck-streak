@@ -1,0 +1,54 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S32700-THE-CENSUS-TERM-IS-THE-MEASURED-788",
+        "scripts/mutation-verdict.py",
+        "\"deck-streak-progression\": 788",
+        "\"deck-streak-progression\": 0",
+        "the settle census's term is the 788 s measured in the pull request's CI, the slower census test after its latest start, and a progression mutant is projected with it (SPEC-327 R4)",
+        "test_mutation_verdict.ACensusPackagePaysTheCensus.test_each_mutant_of_a_census_package_is_projected_with_the_census"
+      ],
+      [
+        "S32701-EACH-CENSUS-MUTANT-PAYS-THE-TERM",
+        "scripts/mutation-verdict.py",
+        "SECONDS_PER_MUTANT.get(package, highest) + CENSUS_SECONDS.get(package, 0)",
+        "SECONDS_PER_MUTANT.get(package, highest)",
+        "each mutant of a package that holds the settle census costs its table cost plus the census term, since its own tests run the census (SPEC-327 R4)",
+        "test_mutation_verdict.ACensusPackagePaysTheCensus.test_each_mutant_of_a_census_package_is_projected_with_the_census"
+      ],
+      [
+        "S32702-THE-BASELINE-PAYS-THE-CENSUS",
+        "scripts/mutation-verdict.py",
+        "    return BASELINE_SECONDS + sum(CENSUS_SECONDS.get(package, 0) for package in set(packages))\n",
+        "    return BASELINE_SECONDS\n",
+        "a plan whose listing names a census package pays the census in each shard's baseline, and writes that baseline into the plan (SPEC-327 R5)",
+        "test_mutation_verdict.ACensusPackagePaysTheCensus.test_a_plan_naming_a_census_package_pays_the_census_once_in_its_baseline"
+      ],
+      [
+        "S32703-THE-BASELINE-PAYS-THE-CENSUS-ONCE",
+        "scripts/mutation-verdict.py",
+        "for package in set(packages))",
+        "for package in packages)",
+        "the baseline pays a census package's term once, however many of its mutants the listing holds (SPEC-327 R5)",
+        "test_mutation_verdict.ACensusPackagePaysTheCensus.test_a_plan_naming_a_census_package_pays_the_census_once_in_its_baseline"
+      ],
+      [
+        "S32704-A-DISPATCH-PAYS-THE-CENSUS-BASELINE",
+        "scripts/mutation-verdict.py",
+        "        baseline = baseline_seconds([str(entry.get(\"package\")) for entry in listed])\n",
+        "        baseline = BASELINE_SECONDS\n",
+        "a package dispatch is sized with the same census baseline as the pull request's plan (SPEC-327 R6)",
+        "test_mutation_verdict.ACensusPackagePaysTheCensus.test_a_dispatch_of_a_census_package_is_sized_with_the_census"
+      ],
+      [
+        "S32705-THE-RUN-STEP-KEEPS-THE-1200-SECOND-BUDGET",
+        ".github/workflows/ci.yml",
+        "--shard \"$SHARD/$SHARDS\" --timeout 1200 --build-timeout 600 --output \"$out\"",
+        "--shard \"$SHARD/$SHARDS\" --timeout 300 --build-timeout 600 --output \"$out\"",
+        "the pull request's mutation run, its baseline included, keeps the 1200 s per-mutant budget that covers the settle census; 300 s timed every progression baseline out (SPEC-327 R1)",
+        "test_dispatch_shards.EveryMutationCommandKeepsTheGatesBounds.test_every_cargo_mutants_command_carries_the_gates_own_bounds"
+      ]
+    ]
+  }
+}
