@@ -395,8 +395,17 @@ impl CollectionWrite for RslibEngine {
         cards: &[i64],
         spec: &str,
     ) -> Result<(), EngineError> {
-        let _ = (collection, cards, spec);
-        Ok(())
+        let mut col = open(collection)?;
+        let ids: Vec<CardId> = cards.iter().copied().map(CardId).collect();
+        // No context key: with one the engine records the spec as a setting, and the reschedule
+        // changes no setting (R23).
+        let moved = col
+            .set_due_date(&ids, spec, None)
+            .map(|_| ())
+            .map_err(bounded);
+        let closed = col.close(None).map_err(bounded);
+        moved?;
+        closed
     }
 
     async fn write_sync(&self, collection: &Path, login: &SyncLogin) -> WriteSync {
