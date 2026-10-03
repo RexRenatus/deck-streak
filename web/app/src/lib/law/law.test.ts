@@ -84,8 +84,8 @@ describe('the law reader', () => {
 
   it('refuses a body that is not the law answer, whole', () => {
     // positive controls: the bodies every case below spoils one part of
-    expect(parseLaw(LAW)).not.toBeNull();
-    expect(parseLaw(EMPTY)).not.toBeNull();
+    expect(parseLaw(LAW)?.lines).toEqual(['total_xp', 'streak', 'xp_today', 'dues', 'mastery', 'leeches']);
+    expect(parseLaw(EMPTY)?.level).toBe(1);
 
     const fields: [string, unknown][] = [
       ['shown', 'true'],
@@ -145,7 +145,8 @@ describe('the law tiers reader', () => {
   });
 
   it('refuses a body that is not the tiers answer, whole', () => {
-    expect(parseLawTiers(TIERS)).not.toBeNull();
+    // a positive control: the body every case below spoils one table of
+    expect(parseLawTiers(TIERS)?.cards).toEqual({ T1: 0, T2: 1, T3: 2, T4: 3, none: 4 });
 
     const tables: unknown[] = [
       null,

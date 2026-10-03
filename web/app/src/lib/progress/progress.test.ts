@@ -59,7 +59,7 @@ describe('the progress reader', () => {
 
   it('refuses a body that is not the progress answer, whole', () => {
     // a positive control: the body every case below spoils one field of
-    expect(parseProgress({ courses: [COURSE] })).not.toBeNull();
+    expect(parseProgress({ courses: [COURSE] })?.courses.map((read) => read.code)).toEqual(['de']);
 
     const bodies: unknown[] = [null, undefined, 'courses', [], {}, { courses: null }, { courses: {} }];
     const course: [string, unknown][] = [
