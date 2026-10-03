@@ -546,3 +546,9 @@ insert-only; the body above is unchanged.
 - **T3** (manifest, the formal settings' test). `scripts/tests/test_formal_config.py` is changed:
   its `EXPECTED` table names `tla/HabitXpFollowsItsLog`'s entry budget, 300, the value this part
   adds to `config/formal.json`, because that test holds the committed file equal to the table.
+
+## 11. Amendments, 2026-10-03: the manifest's own records
+
+- **T4** (manifest, the move). The planned copy,
+  `docs/specs/planned/SPEC-078-the-reading-and-writing-habits-the-habit-board-and-reading-analytics.md`,
+  is removed: this part moves the SPEC out of the planned directory and delivers it here.

@@ -47,3 +47,31 @@ Correction: A31 is decided by two commands, and only its first was red at 8fdc46
 tables a port exports or erases, and no port named `minutes_log` until the habits port joined the
 registry at green, so it had nothing new to judge at red. It is a guard that holds at green, not
 red-first evidence (ruling 107, item 4).
+
+Green: every fenced criterion passed by its exact name at 52c607a7, the green commit, in one call
+over the eight crates (`--no-fail-fast -- --test-threads=1`), and no crate, migration or query
+cache changed after it. A31's two commands both passed there.
+
+```red-first
+A1: green at 52c607a7
+A2: green at 52c607a7
+A4c: green at 52c607a7
+A3: green at 52c607a7
+A4: green at 52c607a7
+A4b: green at 52c607a7
+A5: green at 52c607a7
+A5b: green at 52c607a7
+A6: green at 52c607a7
+A6b: green at 52c607a7
+A30: green at 52c607a7
+A14: green at 52c607a7
+A22: green at 52c607a7
+A23: green at 52c607a7
+A24: green at 52c607a7
+A25: green at 52c607a7
+A26: green at 52c607a7
+A27: green at 52c607a7
+A28: green at 52c607a7
+A29: green at 52c607a7
+A31: green at 52c607a7
+```

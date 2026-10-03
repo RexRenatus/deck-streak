@@ -37,34 +37,35 @@ a per-course source, what a stale Undo button does, and who announces a level a 
   entry's day and `readgoal:<code>` on its week's first study day, with the owner's correction as
   their cause and `closed` when the day is before today: chosen because the log and its XP commit
   together or not at all.
-- The log write committed first and the settle in a write of its own, with the fold to heal what a
-  failure between them left: rejected because after an undo the heal can never lower a closed day
-  (a recompute keeps the larger amount), so a failure between the two writes over-pays that day for
-  good.
-- The fold's habit step, `HabitsStep` in `Phase::DaySteps` inside each evaluated day's write,
-  settling `read:<code>` for every course with an entry or a held `read:` row on the day, and
-  `readgoal:<code>` only when the day is its week's first study day, from that week's minutes:
-  chosen because each day's write touches only that day's rows.
+- Two writes, rejected because after an undo the fold's heal can never lower a closed day: the log
+  write committed first and the settle in a write of its own, with the fold to heal what a failure
+  between them left; a recompute keeps the larger amount, so a failure between the two writes
+  over-pays that day for good.
+- The fold's habit step, chosen because each day's write touches only that day's rows: `HabitsStep`
+  in `Phase::DaySteps` inside each evaluated day's write, settling `read:<code>` for every course
+  with an entry or a held `read:` row on the day, and `readgoal:<code>` only when the day is its
+  week's first study day, from that week's minutes.
 - Settling a week's bonus from every later day's evaluation: rejected because it writes another
   day's row inside a day's write, a step the fold's one-settle-per-day order does not take.
-- A second registry, `DERIVED_PREFIXES` (`"read:"` and `"readgoal:"`, one per line), and
-  `is_derived(source)`, which admits one of the nine names or a prefix followed by a valid course
-  code, with `settle` refusing `!is_derived(source)`: chosen because the nine names and their pinned
-  test stand, and part 078b adds `"write:"` as one more line.
+- A second registry, chosen because the nine names and their pinned test stand: `DERIVED_PREFIXES`
+  (`"read:"` and `"readgoal:"`, one per line), and `is_derived(source)`, which admits one of the
+  nine names or a prefix followed by a valid course code, with `settle` refusing
+  `!is_derived(source)`; part 078b adds `"write:"` as one more line.
 - Turning the nine names into a list of patterns: rejected because it breaks the registry's
   pinned-whole test and every reader of the array.
 - Passing the configured `Courses` into `settle`: rejected because it changes the signature for every
   caller and the census's probe on `settle`, to check what the course code's own shape already
   checks.
-- The Undo button carries its entry's id, `hb:u:<id>`, and removes that entry only while it is still
-  the newest; otherwise it removes nothing and says to send `/undo`, which removes the newest entry
-  whatever its day: chosen because a button never removes an entry it did not show.
+- The Undo button carries its entry's id, chosen because a button never removes an entry it did not
+  show: the button's data is `hb:u:<id>`, and it removes that entry only while it is still the
+  newest; otherwise it removes nothing and says to send `/undo`, which removes the newest entry
+  whatever its day.
 - The predecessor's button, which removes the newest entry whatever it was rendered for: rejected
   because a stale button then removes an entry the owner never saw on it.
-- The use case reads the level before and after its write, and after commit calls
-  `announce_level_up(router, before, after, today)`, whose once-ever key `level:N` keeps a sync cycle
-  and a habit write from both celebrating one level: chosen because every adapter of the use case
-  gets the announcement without remembering it.
+- The use case announces the level-up after commit, chosen because every adapter of the use case
+  gets the announcement without remembering it: it reads the level before and after its write, and
+  after commit calls `announce_level_up(router, before, after, today)`, whose once-ever key
+  `level:N` keeps a sync cycle and a habit write from both celebrating one level.
 - The bot adapter announcing the level-up: rejected because every later adapter (part 078b's toggle,
   part 078c's routes) must then remember to.
 - Leaving the level-up to the next sync cycle: rejected because that cycle reads `before` after the
@@ -72,8 +73,9 @@ a per-course source, what a stale Undo button does, and who announces a level a 
 - Recording the closed-day residue: an undo that lowers a closed day's `read:` amount leaves the
   day's derived bonuses and the coins minted from its base as they were settled at its close, and
   SPEC-078 names this in an exclusion citing #93: chosen because it couples habits to nothing else.
-- An undo that re-derives progression's derived bonuses and economy's mint for the closed day:
-  rejected because it makes a habit use case reach into two other contexts' settled history.
+- An undo that re-derives the closed day's bonuses and mint, rejected because it makes a habit use
+  case reach into two other contexts' settled history: progression's derived bonuses and economy's
+  mint for the closed day.
 
 ## Decision Outcome
 
