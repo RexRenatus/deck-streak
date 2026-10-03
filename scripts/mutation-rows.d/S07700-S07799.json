@@ -180,6 +180,33 @@
         "    let marked = sqlx::query(\n        \"UPDATE band_milestones SET celebrated_at = ?3 \\\n         WHERE course = ?1 AND band = ?2 AND baseline = 0\",\n    )\n    .bind(course)\n    .bind(band)\n    .bind(at)\n",
         "progress_store::a_band_up_is_marked_once",
         "a band-up is marked once: a second mark finds it marked, writes nothing and answers false (SPEC-077 R7; ADR-303). The mutant runs the statement unchecked, since a changed checked statement has no offline cache entry"
+      ],
+      [
+        "S07723-INGEST-MEMORY-STATE-PUBLIC",
+        "ingest",
+        "src/lib.rs",
+        "pub mod memory_state;\n",
+        "#[doc(hidden)]\npub mod memory_state;\n",
+        "memory_state_boundaries::the_crate_root_declares_the_memory_state_module_publicly",
+        "the crate root declares the memory state module public and bare (SPEC-077 R1). The killer is a source-text guard, since the mutant builds and no behaviour test reads the declaration"
+      ],
+      [
+        "S07724-CURRICULUM-MODULES-PUBLIC",
+        "curriculum",
+        "src/lib.rs",
+        "pub mod data_rights;\npub mod law;\npub mod progress;\npub mod store;\npub mod unit_bands;\n",
+        "#[doc(hidden)]\npub mod data_rights;\npub mod law;\npub mod progress;\npub mod store;\npub mod unit_bands;\n",
+        "store_boundaries::the_crate_root_declares_the_curriculum_modules_publicly",
+        "the crate root declares curriculum's five modules public and bare (SPEC-077 R6, R18). The killer is a source-text guard, since the mutant builds and no behaviour test reads the declarations"
+      ],
+      [
+        "S07725-COORDINATION-LAW-PUBLIC",
+        "coordination",
+        "src/lib.rs",
+        "pub mod law;\n",
+        "#[doc(hidden)]\npub mod law;\n",
+        "progress_step_boundaries::the_crate_root_declares_the_law_module_publicly",
+        "the crate root declares the law block module public and bare (SPEC-077 R10). The killer is a source-text guard, since the mutant builds and no behaviour test reads the declaration"
       ]
     ],
     "CARGO_KILLED_SCRIPT_MUTATIONS": [

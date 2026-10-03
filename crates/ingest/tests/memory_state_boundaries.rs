@@ -139,3 +139,14 @@ fn a_number_shaped_run_inside_a_string_is_not_read_as_a_number() {
     let state = parse(Some(r#"{"s":2,"k":"\u1e999","d":4}"#)).expect("a state");
     assert_eq!(state.difficulty.to_bits(), 4.0_f64.to_bits());
 }
+
+/// A source-text guard: the crate root declares the memory state module, public and bare, between
+/// its neighbours. Row S07723 mutates this declaration, a change no behaviour test can see.
+#[test]
+fn the_crate_root_declares_the_memory_state_module_publicly() {
+    let root = include_str!("../src/lib.rs");
+    assert!(
+        root.contains("pub mod lock;\npub mod memory_state;\npub mod reader;\n"),
+        "the crate root declares `pub mod memory_state;` with no attribute before it"
+    );
+}

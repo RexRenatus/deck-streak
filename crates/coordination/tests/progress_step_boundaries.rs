@@ -192,3 +192,14 @@ async fn an_owed_band_up_is_offered_under_its_own_courses_name() {
         "each band-up carries its own course's flag and name, or its code when erased"
     );
 }
+
+/// A source-text guard: the crate root declares the law module, public and bare, between its
+/// neighbours. Row S07725 mutates this declaration, a change no behaviour test can see.
+#[test]
+fn the_crate_root_declares_the_law_module_publicly() {
+    let root = include_str!("../src/lib.rs");
+    assert!(
+        root.contains("pub mod lapse;\npub mod law;\npub mod ledger;\n"),
+        "the crate root declares `pub mod law;` with no attribute before it"
+    );
+}

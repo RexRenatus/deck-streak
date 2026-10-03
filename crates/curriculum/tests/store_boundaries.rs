@@ -346,3 +346,17 @@ async fn law_dues_are_none_before_the_first_write_and_read_back_after() {
         "a second write replaces the dues"
     );
 }
+
+/// A source-text guard: the crate root declares its five modules, public and bare, as one block after the crate's lint attributes.
+/// Row S07724 mutates this block, a change no behaviour test can see.
+#[test]
+fn the_crate_root_declares_the_curriculum_modules_publicly() {
+    let root = include_str!("../src/lib.rs");
+    assert!(
+        root.contains(
+            "clippy::all)]\n\npub mod data_rights;\npub mod law;\npub mod progress;\npub mod store;\n\
+             pub mod unit_bands;\n"
+        ),
+        "the crate root declares its five modules with no attribute among them"
+    );
+}
