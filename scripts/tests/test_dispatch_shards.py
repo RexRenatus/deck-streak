@@ -38,6 +38,11 @@ COUNT = "${{ needs.size.outputs.shards }}"
 # digit or a decimal appended to either value is not the gate's bound.
 # The bounds are four whole words: only a blank or an end may stand on either side.
 BOUNDED = re.compile(r"(?<!\S)" + re.escape(BOUNDS) + r"(?!\S)")
+#: The bounds' four words. A fixture that stands for the gate's bounds is spelled from them, so it
+#: passes or fails for its own reason (a quoting, a redirection, a matrix value), never because
+#: the bound moved (SPEC-327).
+TIMEOUT_FLAG, TIMEOUT_SECONDS, BUILD_FLAG, BUILD_SECONDS = BOUNDS.split()
+TIMEOUT, BUILD = f"{TIMEOUT_FLAG} {TIMEOUT_SECONDS}", f"{BUILD_FLAG} {BUILD_SECONDS}"
 
 
 def entries(package, count):
@@ -209,8 +214,8 @@ class TheWorkflowReadsTheOneCount(unittest.TestCase):
             "--list",
             "--json",
             "--in-place",
-            "--timeout 300",
-            "--build-timeout 600",
+            TIMEOUT,
+            BUILD,
         ):
             for command in commands:
                 self.assertIn(flag, command)
@@ -524,15 +529,15 @@ def grammar_texts():
             text = form.format(w=word, h=word[:1], t=word[1:])
             spelled.append(" ".join(words[:n] + [text] + words[n + 1 :]) + "\n")
     spelled += [
-        'cargo mutants "--timeout 300" "--build-timeout 600"\n',
+        f'cargo mutants "{TIMEOUT}" "{BUILD}"\n',
         "cargo mu$()tants --in-place\n",
         "cargo mu${X-}tants --in-place\n",
         "c$()argo mutants --in-place\n",
-        "cargo mutants --timeout\\ 300 --build-timeout\\ 600\n",
-        "cargo mutants '--timeout 300 --build-timeout 600'\n",
-        "cargo mutants --timeout 300\\\n --build-timeout 600\n",
-        "cargo mutants --timeout 300 --build-timeout 600 -- x\n",
-        "cargo mutants -- --timeout 300 --build-timeout 600\n",
+        f"cargo mutants {TIMEOUT_FLAG}\\ {TIMEOUT_SECONDS} {BUILD_FLAG}\\ {BUILD_SECONDS}\n",
+        f"cargo mutants '{BOUNDS}'\n",
+        f"cargo mutants {TIMEOUT}\\\n {BUILD}\n",
+        f"cargo mutants {BOUNDS} -- x\n",
+        f"cargo mutants -- {BOUNDS}\n",
         "$'\\x63argo' $'\\x6dutants' --in-place\n",
     ]
     axes["words"] = spelled
@@ -578,13 +583,13 @@ def grammar_texts():
         for inner in (u, f"{u}; echo", f"{u} &&", f"{lead}; {u}")
     ]
     axes["redirections"] = [
-        "cargo mutants --timeout 300>x --build-timeout 600\n",
-        "cargo mutants --timeout 300 2>/dev/null --build-timeout 600\n",
-        "cargo mutants --timeout 300 {fd}>/dev/null --build-timeout 600\n",
-        "cargo mutants --timeout 300 >x 600\n",
-        "cargo mutants --timeout 300 --build-timeout 600>/dev/null\n",
-        "cargo mutants --timeout 300 --build-timeout 600 2>&1\n",
-        "cargo mutants --timeout 300 --build-timeout <<<600\n",
+        f"cargo mutants {TIMEOUT}>x {BUILD}\n",
+        f"cargo mutants {TIMEOUT} 2>/dev/null {BUILD}\n",
+        f"cargo mutants {TIMEOUT} {{fd}}>/dev/null {BUILD}\n",
+        f"cargo mutants {TIMEOUT} >x {BUILD_SECONDS}\n",
+        f"cargo mutants {BOUNDS}>/dev/null\n",
+        f"cargo mutants {BOUNDS} 2>&1\n",
+        f"cargo mutants {TIMEOUT} {BUILD_FLAG} <<<{BUILD_SECONDS}\n",
         f">x {lead}\n",
         f"{u} > >(echo {b})\n",
     ]
@@ -644,7 +649,7 @@ def grammar_texts():
         "cargo mutants ${{ inputs.bounds }}\n",
         f"{lead}\necho ${{{{ inputs.bounds }}}}\n",
         f"cargo mutants {b} ${{{{ inputs.bounds }}}}\n",
-        "cargo mutants --timeout 30${{ matrix.shard }} --build-timeout 600\n",
+        f"cargo mutants {TIMEOUT[:-1]}${{{{ matrix.shard }}}} {BUILD}\n",
     ]
     # A text handed on (to a shell, through a pipe or a here-document, or spelled inside an
     # expansion), each carrying the command in a spelling of its own.
@@ -826,13 +831,13 @@ def grammar_members():
     # Another shell reads the text by its own grammar, which the oracle does not run: not stated.
     members.append(("structure", grammar_workflow(lead, shell="sh"), None))
     # A matrix `include` adds a value that the key's own list does not hold.
-    included = grammar_workflow("cargo mutants --timeout 30${{ matrix.shard }} --build-timeout 600")
+    included = grammar_workflow(f"cargo mutants {TIMEOUT[:-1]}${{{{ matrix.shard }}}} {BUILD}")
     included = included.replace(
         "    steps:",
         "    strategy:\n      matrix:\n        shard: [0]\n"
         "        include:\n          - shard: 1\n    steps:",
     )
-    texts = [f"cargo mutants --timeout 30{v} --build-timeout 600\n" for v in "01"]
+    texts = [f"cargo mutants {TIMEOUT[:-1]}{v} {BUILD}\n" for v in "01"]
     members.append(("structure", included, texts))
     return members
 
@@ -1264,11 +1269,11 @@ class EveryMutationCommandKeepsTheGatesBounds(unittest.TestCase):
 HEAD_COMMANDS = {
     "size": (
         'cargo mutants --no-shuffle --list --json --in-place ${PACKAGE:+--package "$PACKAGE"} '
-        '--timeout 300 --build-timeout 600 > "$RUNNER_TEMP/size/package.json"'
+        '--timeout 1200 --build-timeout 600 > "$RUNNER_TEMP/size/package.json"'
     ),
     "rust": (
         'cargo mutants --no-shuffle -vV --in-place ${PACKAGE:+--package "$PACKAGE"} '
-        '--sharding round-robin --shard "$SHARD/$SHARDS" --timeout 300 --build-timeout 600 '
+        '--sharding round-robin --shard "$SHARD/$SHARDS" --timeout 1200 --build-timeout 600 '
         '--output "$RUNNER_TEMP/mutation" || rc=$?'
     ),
 }
@@ -1555,7 +1560,7 @@ SPY = """#!{shell}
 {{ printf '%s\\0' "${{0##*/}}"; for a in "$@"; do printf '%s\\0' "$a"; done; }} > "$SPY_LOG"
 """
 SPY_WORDS = ("--", "-", "-x", "--report", "--report=x", "-h", "", " ", "a b", "\n", "é", "cargo")
-SPY_WORDS += ("--timeout", "300")
+SPY_WORDS += (TIMEOUT_FLAG, TIMEOUT_SECONDS)
 SPY_VALUES = ("r", "", " ", "a b", "é", "-1", "--", "-x", "--report", "--report=r")
 SPY_SIZE = 374
 
