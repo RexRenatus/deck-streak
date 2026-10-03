@@ -1094,3 +1094,41 @@ pub fn build_skip(path: &Path, cards: &[(i64, SkipCard)], setup: SkipSetup) -> P
         Planned { decks, filtered }
     })
 }
+
+/// One review-log row, as a skip's tests judge it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct LogRow {
+    /// The card the row belongs to.
+    pub card: i64,
+    /// The row's type: 4 for the engine's manual reschedule.
+    pub kind: i64,
+    /// The answer: 0 for the engine's manual reschedule.
+    pub ease: i64,
+}
+
+/// Every review-log row of the collection at `path`, oldest first, read by the engine's own
+/// connection (SPEC-083 R18).
+///
+/// # Panics
+///
+/// When the engine cannot open the collection or the read fails.
+pub fn review_log(path: &Path) -> Vec<LogRow> {
+    with_engine(path, |col| {
+        let mut statement = col
+            .storage
+            .db()
+            .prepare("select cid, type, ease from revlog order by id")
+            .expect("the review log's read is prepared");
+        statement
+            .query_map((), |row| {
+                Ok(LogRow {
+                    card: row.get(0)?,
+                    kind: row.get(1)?,
+                    ease: row.get(2)?,
+                })
+            })
+            .expect("the review log is read")
+            .map(|row| row.expect("a review-log row"))
+            .collect()
+    })
+}

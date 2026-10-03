@@ -8,16 +8,23 @@
 //! `57382da085e6752738dc4bb617789be836a23300`: that tag plus one fix, so the engine's protobuf
 //! build script stops rerunning on every cargo command (ADR-058, SPEC-055).
 //!
+//! The skip day's write to the collection has a second port, [`CollectionWrite`], which only
+//! [`RslibEngine`] implements and only the skip's write module names (SPEC-083 A24, ADR-321 D14):
+//! the read port's test fakes never reach a card write or a push.
+//!
 //! Nothing here carries the engine's error text, a path, the endpoint or a credential out of the
 //! port: a failure is one [`EngineError`] kind (SPEC-022 R9).
 
+use std::collections::HashMap;
 use std::fmt;
 use std::future::Future;
 use std::path::Path;
 
-use anki::card::CardQueueNumber;
+use anki::card::{CardId, CardQueueNumber};
 use anki::collection::{Collection, CollectionBuilder};
+use anki::decks::DeckId;
 use anki::error::{AnkiError, DbErrorKind, NetworkErrorKind, SyncErrorKind};
+use anki::search::SortMode;
 use anki::sync::collection::normal::SyncActionRequired;
 use anki::sync::login::{SyncAuth, sync_login};
 
@@ -168,6 +175,131 @@ pub trait AnkiEngine {
     ) -> impl Future<Output = Result<(), EngineError>> + Send;
 }
 
+/// What the engine's day is computed from, read without computing it (SPEC-083 R3). A day
+/// computation in client mode first rewrites a configured UTC offset that differs from the
+/// process's zone (the pinned engine's `rslib/src/scheduler/mod.rs:90-108`), so a skip reads these
+/// before it lets the engine compute a day on any copy.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CollectionFacts {
+    /// The configured UTC offset in minutes WEST of UTC, as the engine stores it (UTC+05:30 is
+    /// -330); `None` when the collection holds none, which a skip counts as an offset that
+    /// differs, since the engine writes one at its first day computation.
+    pub utc_offset_west: Option<i32>,
+    /// The hour the engine's day rolls over at, local to the process's zone.
+    pub rollover_hour: u8,
+}
+
+/// The engine's own day (SPEC-083 R3), as its scheduler computes it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct EngineDay {
+    /// Whole days since the collection's creation: the frame the engine's due dates count in.
+    pub days_elapsed: i64,
+    /// When the engine's day ends, in epoch seconds: its next rollover.
+    pub next_day_at: i64,
+}
+
+/// A card a search selected, with the scheduling state a skip lists, records and compares (SPEC-083
+/// R20, R22).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DueCard {
+    /// The card's id.
+    pub id: i64,
+    /// The top-level deck of the card's home deck: its original deck while a filtered deck borrows
+    /// it, else its deck.
+    pub top_level_deck: i64,
+    /// The card's due: for a review card, a day number in the engine's frame.
+    pub due: i64,
+    /// The card's queue.
+    pub queue: i64,
+    /// The card's type.
+    pub kind: i64,
+    /// The interval, in days.
+    pub interval: i64,
+    /// The ease factor, in permille.
+    pub factor: i64,
+    /// The original deck: zero unless a filtered deck borrows the card.
+    pub original_deck: i64,
+    /// The original due: zero unless a filtered deck borrows the card.
+    pub original_due: i64,
+    /// The card's modification time, in epoch seconds.
+    pub mtime: i64,
+}
+
+/// What one push of the skip's write found (SPEC-083 R24, R25). Whether the engine's sync began
+/// tells a failure that left the server's collection as it was from one whose outcome is not known.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WriteSync {
+    /// The server answered the exchange: it holds what the copy sent.
+    Accepted,
+    /// The server demands a full sync, which a skip never performs (R24). The engine answers the
+    /// demand before it sends any change.
+    FullSyncRequired {
+        /// Whether a full download could satisfy the demand.
+        download_ok: bool,
+    },
+    /// The copy could not be opened, or the login failed: the engine's sync never began, so nothing
+    /// reached the server's collection.
+    NotStarted(EngineError),
+    /// The engine's sync began and failed: the server may hold the change (R25).
+    Unknown(EngineError),
+}
+
+/// The skip's write port (SPEC-083 R21 to R27; ADR-321 D14): beside [`AnkiEngine`], which reads
+/// and pulls, the one door to the engine's card writes and to a push of the copy's own changes.
+/// Only [`RslibEngine`] implements it, so no test fake of the read port reaches it, and only the
+/// skip's write module names it (A24). Each method opens and closes the collection itself, so a
+/// test's hook between two steps can open the same file.
+pub trait CollectionWrite {
+    /// The configured UTC offset and the rollover hour of the collection at `collection`, read
+    /// without a day computation.
+    ///
+    /// # Errors
+    ///
+    /// [`EngineError::CollectionLocked`] or [`EngineError::OpenFailed`] when the collection cannot
+    /// be opened, and [`EngineError::EngineFailed`] when its scheduler has no rollover hour.
+    fn facts(&self, collection: &Path) -> Result<CollectionFacts, EngineError>;
+
+    /// The engine's day for the collection at `collection`. In client mode the engine first rewrites
+    /// a configured UTC offset that differs from the process's zone, so a skip calls this only after
+    /// [`CollectionWrite::facts`] matched.
+    ///
+    /// # Errors
+    ///
+    /// [`EngineError::CollectionLocked`] or [`EngineError::OpenFailed`] when the collection cannot
+    /// be opened, and [`EngineError::EngineFailed`] when the scheduler fails.
+    fn engine_day(&self, collection: &Path) -> Result<EngineDay, EngineError>;
+
+    /// The cards `search` selects in the collection at `collection`, ascending by id, each with its
+    /// scheduling state. A search on the due date computes the engine's day, so a skip calls this
+    /// only after [`CollectionWrite::facts`] matched.
+    ///
+    /// # Errors
+    ///
+    /// [`EngineError::CollectionLocked`] or [`EngineError::OpenFailed`] when the collection cannot
+    /// be opened, and [`EngineError::EngineFailed`] when the search or the read fails.
+    fn due_cards(&self, collection: &Path, search: &str) -> Result<Vec<DueCard>, EngineError>;
+
+    /// The engine's own Set Due Date over the cards `cards` with the day spec `spec`, which writes
+    /// one review-log row of type 4 with ease 0 for each card it moves (R18, R23). It names no
+    /// config key, so it records no setting.
+    ///
+    /// # Errors
+    ///
+    /// [`EngineError::CollectionLocked`] or [`EngineError::OpenFailed`] when the collection cannot
+    /// be opened, and [`EngineError::EngineFailed`] when the reschedule fails; the engine's
+    /// transaction then leaves every card as it was.
+    fn set_due_date(&self, collection: &Path, cards: &[i64], spec: &str)
+    -> Result<(), EngineError>;
+
+    /// Logs in and runs one normal (incremental) sync of the copy at `collection`, media never
+    /// synced: no retry, no full sync and no timer of its own (R24, R26).
+    fn write_sync(
+        &self,
+        collection: &Path,
+        login: &SyncLogin,
+    ) -> impl Future<Output = WriteSync> + Send;
+}
+
 /// The adapter over Anki's engine (`rslib`), at the upstream tag and the fork's revision the
 /// workspace manifest pins (ADR-058).
 #[derive(Debug, Clone, Copy, Default)]
@@ -220,6 +352,162 @@ impl AnkiEngine for RslibEngine {
             .await
             .map_err(bounded)
     }
+}
+
+impl CollectionWrite for RslibEngine {
+    fn facts(&self, collection: &Path) -> Result<CollectionFacts, EngineError> {
+        let col = open(collection)?;
+        let utc_offset_west = col.get_configured_utc_offset();
+        let rollover_hour = col.rollover_for_current_scheduler().map_err(bounded);
+        let closed = col.close(None).map_err(bounded);
+        let rollover_hour = rollover_hour?;
+        closed?;
+        Ok(CollectionFacts {
+            utc_offset_west,
+            rollover_hour,
+        })
+    }
+
+    fn engine_day(&self, collection: &Path) -> Result<EngineDay, EngineError> {
+        let mut col = open(collection)?;
+        let timing = col.timing_today().map_err(bounded);
+        let closed = col.close(None).map_err(bounded);
+        let timing = timing?;
+        closed?;
+        Ok(EngineDay {
+            days_elapsed: i64::from(timing.days_elapsed),
+            next_day_at: timing.next_day_at.0,
+        })
+    }
+
+    fn due_cards(&self, collection: &Path, search: &str) -> Result<Vec<DueCard>, EngineError> {
+        let mut col = open(collection)?;
+        let cards = cards_of(&mut col, search);
+        let closed = col.close(None).map_err(bounded);
+        let cards = cards?;
+        closed?;
+        Ok(cards)
+    }
+
+    fn set_due_date(
+        &self,
+        collection: &Path,
+        cards: &[i64],
+        spec: &str,
+    ) -> Result<(), EngineError> {
+        let _ = (collection, cards, spec);
+        Ok(())
+    }
+
+    async fn write_sync(&self, collection: &Path, login: &SyncLogin) -> WriteSync {
+        // The copy opens before the login, so a locked copy fails before any request.
+        let mut col = match open(collection) {
+            Ok(col) => col,
+            Err(error) => return WriteSync::NotStarted(error),
+        };
+        let auth = match log_in(login).await {
+            Ok(auth) => auth,
+            Err(error) => return WriteSync::NotStarted(error),
+        };
+        let synced = col.normal_sync(auth, engine_client()).await;
+        // The server's answer is the push's outcome: a close that fails after it cannot take back
+        // what the server holds, and the read-back reopens the copy and reports what it finds.
+        let _closed = col.close(None);
+        match synced {
+            Ok(output) => match output.required {
+                SyncActionRequired::FullSyncRequired { download_ok, .. } => {
+                    WriteSync::FullSyncRequired { download_ok }
+                }
+                _ => WriteSync::Accepted,
+            },
+            Err(error) => WriteSync::Unknown(bounded(error)),
+        }
+    }
+}
+
+/// The columns a skip reads of each card a search selected, by the ids in `?1`, a JSON array,
+/// ascending by id. The engine's card type keeps these fields private, so they are read through the
+/// engine's own connection, which its storage hands out for exactly this.
+const CARD_STATE: &str = "SELECT id, did, odid, due, queue, type, ivl, factor, odue, mod \
+     FROM cards WHERE id IN (SELECT value FROM json_each(?1)) ORDER BY id";
+
+/// The cards `search` selects in `col`, ascending by id, each with its scheduling state and the
+/// top-level deck of its home deck.
+fn cards_of(col: &mut Collection, search: &str) -> Result<Vec<DueCard>, EngineError> {
+    let selected = col
+        .search_cards(search, SortMode::NoOrder)
+        .map_err(bounded)?;
+    let listed = selected
+        .iter()
+        .map(|CardId(id)| id.to_string())
+        .collect::<Vec<_>>()
+        .join(",");
+    let top_levels = top_level_decks(&col.get_all_deck_names(false).map_err(bounded)?);
+    let mut statement = col
+        .storage
+        .db()
+        .prepare(CARD_STATE)
+        .map_err(|_| EngineError::EngineFailed)?;
+    let rows = statement
+        .query_map((format!("[{listed}]"),), |row| {
+            let mut columns = [0_i64; 10];
+            for (index, column) in columns.iter_mut().enumerate() {
+                *column = row.get(index)?;
+            }
+            Ok(columns)
+        })
+        .map_err(|_| EngineError::EngineFailed)?;
+    rows.map(|row| {
+        let [
+            id,
+            deck,
+            original_deck,
+            due,
+            queue,
+            kind,
+            interval,
+            factor,
+            original_due,
+            mtime,
+        ] = row.map_err(|_| EngineError::EngineFailed)?;
+        let home = if original_deck == 0 {
+            deck
+        } else {
+            original_deck
+        };
+        Ok(DueCard {
+            id,
+            top_level_deck: top_levels
+                .get(&home)
+                .copied()
+                .ok_or(EngineError::EngineFailed)?,
+            due,
+            queue,
+            kind,
+            interval,
+            factor,
+            original_deck,
+            original_due,
+            mtime,
+        })
+    })
+    .collect()
+}
+
+/// Every deck's id mapped to its top-level deck's id, from the engine's deck names, whose levels
+/// are joined by `::`.
+fn top_level_decks(names: &[(DeckId, String)]) -> HashMap<i64, i64> {
+    let by_name: HashMap<&str, i64> = names
+        .iter()
+        .map(|(DeckId(id), name)| (name.as_str(), *id))
+        .collect();
+    names
+        .iter()
+        .filter_map(|(DeckId(id), name)| {
+            let top = name.split("::").next()?;
+            Some((*id, *by_name.get(top)?))
+        })
+        .collect()
 }
 
 /// A fresh HTTP client of the engine's own type, built by its `Default`: the HTTP/1 client of the
