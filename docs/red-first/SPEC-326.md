@@ -39,3 +39,27 @@ At the same commit `cargo clippy -p deck-streak-coordination -p deck-streak-noti
 deck-streak-daemon --all-targets -- -D warnings` and `cargo fmt --check` exit 0, and the DDD
 probe reads `DDD lexicon-locks OK: examined 3107 declaration(s) in 120 file(s)`. No test file
 changed between the red commit and the green one.
+
+## The mutation rows
+
+Proved at 43edbcb5 by `python3 scripts/mutation_rows.py prove --band S32600-S32699`, which read
+`rows: examined 14: killed 14, survived 0, void 0` and exited 0. Each killer ran without the
+mutant, selecting one test that passed, then with it, selecting one test that failed, and each
+target's bytes were restored and checked by sha256.
+
+```
+S32600-THE-FACTS-ARE-THE-LANGUAGE-STREAKS: KILLED at 43edbcb5: control selected 1 and passed; mutant selected 1 and failed
+S32601-THE-FACTS-CARRY-THE-CURRENT-LENGTH: KILLED at 43edbcb5: control selected 1 and passed; mutant selected 1 and failed
+S32602-THE-FACTS-CARRY-THE-LONGEST-LENGTH: KILLED at 43edbcb5: control selected 1 and passed; mutant selected 1 and failed
+S32603-THE-FACTS-CARRY-THE-LAST-STUDY-DAY: KILLED at 43edbcb5: control selected 1 and passed; mutant selected 1 and failed
+S32604-THE-OCCASION-CARRIES-THE-FACTS: KILLED at 43edbcb5: control selected 1 and passed; mutant selected 1 and failed
+S32605-A-FAILED-READ-ROUTES-NOTHING: KILLED at 43edbcb5: control selected 1 and passed; mutant selected 1 and failed
+S32606-A-FAILED-READ-FLUSHES-NOTHING: KILLED at 43edbcb5: control selected 1 and passed; mutant selected 1 and failed
+S32607-THE-FLUSH-CARRIES-THE-FACTS: KILLED at 43edbcb5: control selected 1 and passed; mutant selected 1 and failed
+S32608-AN-AWARD-IS-ROUTED-WITH-THE-FACTS: KILLED at 43edbcb5: control selected 1 and passed; mutant selected 1 and failed
+S32609-THE-LEVEL-UP-IS-ROUTED-WITH-THE-FACTS: KILLED at 43edbcb5: control selected 1 and passed; mutant selected 1 and failed
+S32610-THE-RELIGHT-IS-ROUTED-WITH-THE-FACTS: KILLED at 43edbcb5: control selected 1 and passed; mutant selected 1 and failed
+S32611-THE-HELD-FLUSH-JOB-RE-CAPS: KILLED at 43edbcb5: control selected 1 and passed; mutant selected 1 and failed
+S32612-THE-CYCLES-FLUSH-RE-CAPS: KILLED at 43edbcb5: control selected 1 and passed; mutant selected 1 and failed
+S32613-THE-BOTS-FLUSH-RE-CAPS: KILLED at 43edbcb5: control selected 1 and passed; mutant selected 1 and failed
+```
