@@ -25,7 +25,10 @@ A5: green at 00f814d8
 Two assertions were narrowed at the green commit 00f814d, to the criterion's own wording: the cycle's
 badge also earns the first level, so the queue holds a second row for the level-up. A2 reads the
 rows held for the badge's key, and A3 reads the pushes that name the badge: exactly one. Neither
-was widened to pass; A1, A4 and A5 are unchanged.
+was widened to pass; A1, A4 and A5 are unchanged. At e884ccca the narrowed A3 fails
+`assertion `left == right` failed: exactly one push names the held badge (Ran { sends: 0 }): []`
+(left 0, right 1), and the narrowed A2 fails at its unchanged first assertion; the A3 fence line
+quotes the earlier body.
 
 Mutation rows, proved at 82b22151 (`rows: examined 6: killed 6, survived 0, void 0`):
 

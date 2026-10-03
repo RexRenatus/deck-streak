@@ -602,6 +602,5 @@ above are false after it, and each now reads as follows:
   recompute cycle of the job role, scheduled or the owner's, holds a router with no bot transport
   that holds each celebration it routes for the senders (SPEC-319, ADR-319); the job role still
   loads no bot credential, and the flush after its sync does nothing.
-- **R15's three flushers.** "The flush after a scheduled sync" is that flush, which does nothing.
-  The senders are the bot's flush after the owner's request is answered and the scheduled step
-  (R14).
+- R15's "the flush after a scheduled sync" is that no-op; the senders are the bot's flush after the
+  owner's request is answered and the scheduled step (R14).

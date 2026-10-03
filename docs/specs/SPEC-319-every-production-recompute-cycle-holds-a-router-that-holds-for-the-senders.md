@@ -109,7 +109,7 @@ here and kept out of the fence above, which names tests only.
 | `crates/notifications/src/router.rs` | `deck-streak-notifications` | changed: the `holding` flag and `Router::holding`, one arm of `after_claim`, and `seed_celebrations_off` |
 | `crates/notifications/tests/router.rs` | `deck-streak-notifications` | changed: A5; `seeding_the_celebrations_switch_stores_off_and_keeps_a_stored_value` |
 | `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | changed: the policy and the seed in `RecomputeSetup::load`, the router in `RecomputeSetup::cycle`, `holding_router`, two `RecomputeError` variants, the module note |
-| `crates/daemon/tests/recompute_router.rs` | `deck-streak-daemon` | added: A1 to A4 |
+| `crates/daemon/tests/recompute_router.rs` | `deck-streak-daemon` | added: A1 to A4, and R4's refusal (a_switch_that_cannot_be_seeded_refuses_the_load) |
 | `formal/tla/HeldFlush/HeldFlush.tla` | formal | changed: `SendHold`, `HoldSend`, `Unanswered`, two covers |
 | `formal/tla/HeldFlush/MCHeldFlush.cfg` | formal | changed: `SendHold = FALSE` |
 | `formal/tla/HeldFlush/witness/LeaseLapses.cfg`, `formal/tla/HeldFlush/witness/NoSerialisation.cfg`, `formal/tla/HeldFlush/witness/OnlyTheSyncFlusher.cfg`, `formal/tla/HeldFlush/witness/ReleaseOnFail.cfg` | formal | changed: `SendHold = FALSE` |
@@ -154,12 +154,12 @@ Band `S31900-S31999`. Each row is proved after the green commit by
 
 | row | target | what it guards | killer |
 |---|---|---|---|
-| `S31900-HOLDING-DEFERS-SEND` | `crates/notifications/src/router.rs` | the holding arm defers a celebration `send` rather than withholding it | `router::a_holding_router_holds_a_celebration_it_cannot_send` |
-| `S31901-HOLDING-CELEBRATIONS-ONLY` | `crates/notifications/src/router.rs` | only a celebration is held; a nudge is still withheld | `router::a_holding_router_holds_a_celebration_it_cannot_send` |
-| `S31902-HOLDING-SETS-FLAG` | `crates/notifications/src/router.rs` | `holding()` sets the flag | `router::a_holding_router_holds_a_celebration_it_cannot_send` |
-| `S31903-CYCLE-ATTACHES-ROUTER` | `crates/daemon/src/wiring.rs` | `RecomputeSetup::cycle` attaches the router | `recompute_router::the_production_recompute_offers_an_owed_award_to_the_router` |
-| `S31904-SEED-KEEPS-STORED` | `crates/notifications/src/router.rs` | the seed ignores an existing row | `recompute_router::a_fresh_start_seeds_the_celebrations_switch_off` |
-| `S31905-LOAD-SEEDS-SWITCH` | `crates/daemon/src/wiring.rs` | `RecomputeSetup::load` seeds the switch | `recompute_router::a_fresh_start_seeds_the_celebrations_switch_off` |
+| `S31900-A-HELD-CELEBRATION-IS-DEFERRED-NOT-WITHHELD` | `crates/notifications/src/router.rs` | the holding arm defers a celebration `send` rather than withholding it | `router::a_holding_router_holds_a_celebration_it_cannot_send` |
+| `S31901-ONLY-A-CELEBRATION-IS-HELD` | `crates/notifications/src/router.rs` | only a celebration is held; a nudge is still withheld | `router::a_holding_router_holds_a_celebration_it_cannot_send` |
+| `S31902-HOLDING-SETS-THE-FLAG` | `crates/notifications/src/router.rs` | `holding()` sets the flag | `router::a_holding_router_holds_a_celebration_it_cannot_send` |
+| `S31903-A-RECOMPUTE-CYCLE-ATTACHES-THE-ROUTER` | `crates/daemon/src/wiring.rs` | `RecomputeSetup::cycle` attaches the router | `recompute_router::the_production_recompute_offers_an_owed_award_to_the_router` |
+| `S31904-THE-SEED-NEVER-OVERWRITES-A-STORED-VALUE` | `crates/notifications/src/router.rs` | the seed ignores an existing row | `recompute_router::a_fresh_start_seeds_the_celebrations_switch_off` |
+| `S31905-LOAD-SEEDS-THE-SWITCH` | `crates/daemon/src/wiring.rs` | `RecomputeSetup::load` seeds the switch | `recompute_router::a_fresh_start_seeds_the_celebrations_switch_off` |
 
 ## 8. References
 

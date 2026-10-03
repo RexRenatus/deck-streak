@@ -16,7 +16,7 @@ use std::sync::{Arc, Mutex, PoisonError};
 
 use deck_streak_coordination::obligations::Obligations;
 use deck_streak_coordination::sync_cycle::{CycleParts, Recompute, sync_cycle};
-use deck_streak_daemon::wiring::RecomputeSetup;
+use deck_streak_daemon::wiring::{RecomputeError, RecomputeSetup};
 use deck_streak_ingest::engine::{
     AnkiEngine, EngineError, NewCardQueue, RslibEngine, SyncLogin, SyncOutcome,
 };
@@ -389,5 +389,27 @@ async fn a_fresh_start_seeds_the_celebrations_switch_off() {
         switch(&stored.db).await.as_deref(),
         Some("1"),
         "a value already stored is never overwritten"
+    );
+}
+
+/// R4: a seed that cannot be written refuses the load with `RecomputeError::Switch`.
+#[tokio::test]
+async fn a_switch_that_cannot_be_seeded_refuses_the_load() {
+    let service = service().await;
+    let mut write = service.db.write().await.expect("a write");
+    sqlx::query(
+        "CREATE TRIGGER refuse_the_seed BEFORE INSERT ON notification_settings \
+         BEGIN SELECT RAISE(ABORT, 'the seed is refused'); END",
+    )
+    .execute(&mut *write)
+    .await
+    .expect("the fault is installed");
+    write.commit().await.expect("the fault commits");
+
+    let refused = RecomputeSetup::load(&service.env, &service.db).await;
+
+    assert!(
+        matches!(refused, Err(RecomputeError::Switch(_))),
+        "a seed that cannot be written refuses the load: {refused:?}"
     );
 }
