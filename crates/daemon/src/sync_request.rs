@@ -12,6 +12,7 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use deck_streak_bot::{OwnerSync, Scores, SyncAnswer, SyncOutcome, SyncRefusal};
+use deck_streak_coordination::ladder_facts::flush_re_capped;
 use deck_streak_ingest::state::{RefusalReason, SqliteIngestState};
 use deck_streak_ingest::sync_runs::{RunStatus, SqliteSyncRuns};
 use deck_streak_kernel::{Clock, Db, Environment, KernelError, Setting, SettingsError, UtcMillis};
@@ -102,7 +103,7 @@ impl Flush for NoFlush {
 
 impl Flush for Arc<Router> {
     async fn flush(&self) -> Result<(), KernelError> {
-        let flushed = Router::flush(self).await?;
+        let flushed = flush_re_capped(self).await?;
         tracing::info!(?flushed, "the notification router flushed");
         Ok(())
     }

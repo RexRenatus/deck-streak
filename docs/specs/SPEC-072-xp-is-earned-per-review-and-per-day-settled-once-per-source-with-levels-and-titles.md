@@ -832,3 +832,27 @@ says so and says what holds instead.
 ```acceptance
 A36: cargo test -p deck-streak-progression --test xp_census -- --exact verify_round_seven_population_is_judged_as_each_case_expects_on_any_target the_order_pair_p3_is_judged_alike_in_both_orders_on_one_target a_target_copied_from_another_trees_census_does_not_move_the_verdict a_git_package_carrying_the_owners_name_beside_a_members_script_is_refused_by_name a_git_package_carrying_the_owners_name_beside_an_edited_pin_is_refused_by_name a_git_package_carrying_the_owners_name_beside_a_disarmed_owner_is_refused_by_name the_owners_manifest_under_another_package_name_is_refused_by_name an_owner_without_a_build_script_is_refused_by_name the_owner_is_the_member_at_its_manifest_and_every_other_lookup_is_unique_or_refused a_variable_the_tree_does_not_set_does_not_move_the_verdict a_cargo_configuration_above_the_tree_is_refused_by_name a_cargo_configuration_in_cargos_home_is_refused_by_name a_members_code_reading_a_variable_the_host_sets_is_refused_by_name a_git_url_reused_with_other_content_is_judged_as_a_fresh_url main_round_seven_generation_is_refused_by_name
 ```
+
+## 16. Amendment, 2026-10-03: the owner's own operation, and the census reads joined names
+
+SPEC-324 amends the settle census twice, and ADR-197 round 9 and ADR-325 decide it.
+
+- **The owner's own operation is refused.** Section 12's first out-of-reach bullet, a wrapper
+  function, a function pointer or a generic in progression's own code that calls `settle`, is no
+  longer disclosed: a use that rustc reports in progression's own package, by a target that is not
+  a test, a bench or an example, is refused by name unless it is written inside a `use` declaration
+  or in a file of `OWNER_ADMITS`, which admits none. An import and a re-export stay accepted, and
+  round 6 follows them to their callers as before.
+- **The table's name is read joined.** Beside its own reader, the census adds the shared reader of
+  `tools/table-census/table_census.rs`: every crate's literals outside progression, decoded as rustc
+  decodes them, pooled workspace-wide and refused where they can assemble `xp_settlement` in any
+  case; an unread `concat!` argument beside part of the name and an include it cannot name or read
+  are refused by name.
+- **Still disclosed by kind**, now tracked by issue 586 in place of issue 445: progression's own code
+  reading the census's cfg; a doctest and a compile test; code a procedural macro writes; another
+  package's build script; an `include!` of a recompute file; a registry or git package's own code;
+  and builds in mixed debug-assertion states. Each stays as sections 12 and 14 state it.
+
+The criteria are SPEC-324's: A2 (the joined name), A6 (the owner's own operation, and an admitted
+file accepted) and A7 (a re-export progression's macro writes), each decided by its fenced command
+there.

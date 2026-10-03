@@ -68,10 +68,28 @@
 (* names each item of a recap it pushed as it names its one pending item.  *)
 (* A crash is a flusher that stops at any step and keeps its lease until   *)
 (* it lapses.                                                              *)
+(*                                                                         *)
+(* #572's re-read (SPEC-326, ADR-327), re-read 2026-10-03:                 *)
+(* held_flush.rs::perform and sync_cycle.rs::flush now call                *)
+(* ladder_facts::flush_re_capped, and the bot's Flush for its router       *)
+(* (sync_request.rs, which answer calls) does the same: it reads the       *)
+(* stored language streak (streak_state) on a reader connection, then      *)
+(* calls flush_with with those facts. The read comes before the window     *)
+(* check and the take, writes nothing, and moves no variable here: a       *)
+(* stuttering step, re-stamped. The facts change only the tier a row       *)
+(* renders at, and tiers are not modelled. Two abstractions follow, both   *)
+(* #589's. (1) A read that fails returns before the take, as flush_with's  *)
+(* own store errors before its take do, and no action models that return   *)
+(* (Skip is guarded by the quiet window or a held lease): the due flush    *)
+(* does nothing, perform answers flush_failed and the queue keeps its      *)
+(* holds, so no item is pushed, settled or lost. (2) A fold that commits a *)
+(* streak break between a flusher's read and its render renders one held   *)
+(* item uncapped once: a tier, never a second delivery or a loss, so no    *)
+(* property here moves.                                                    *)
 (***************************************************************************)
 
 \* @phx covers crates/notifications/src/router.rs anchor=flush_with digest=sha256:5f33914fd28d7a51534214bce2d92b9376944c8de0e7f0713d4e7970645ee40c
-\* @phx covers crates/coordination/src/sync_cycle.rs anchor=flush digest=sha256:1605c377223f24c33169b84f764e5f19827a3cc438966d0dac77678485a6caf9
+\* @phx covers crates/coordination/src/sync_cycle.rs anchor=flush digest=sha256:2eb91716c48a8ca083f04e3c616e74b3eada9170c6acdece15f8cc9ac6fcb885
 \* @phx covers crates/notifications/src/ledger.rs anchor=held digest=sha256:97376a0d613769622abb5be37b7ed6ac5fb86000532d7113cdcd664fdeca0898
 \* @phx covers crates/notifications/src/ledger.rs anchor=settle digest=sha256:95f76e72966a185f5e72a64fbfd4e573a25ad4d079dd0e131507645743c5c2d4
 \* @phx covers crates/notifications/src/ledger.rs anchor=claim_held digest=sha256:42ff80c0883f9903a23c150616238b44851549386810b589999349c20366f6ff
@@ -86,7 +104,7 @@
 \* @phx covers crates/notifications/src/router.rs anchor=flush_reactions digest=sha256:13137019ed5ae0b93cbbf7a3d4a06908b73df641bf54139acee344515d637845
 \* @phx covers crates/notifications/src/ledger.rs anchor=abandon_pushed digest=sha256:27b148a1223b16cc2a4c97d882c56cdfec475427c64746a739ddce072f129d99
 \* @phx covers crates/notifications/src/ledger.rs anchor=release_claims digest=sha256:6b4130909dc46b10d1ad4ed744290bb4b260c8a45190966f4d2fe224ed9ba05c
-\* @phx covers crates/coordination/src/held_flush.rs anchor=perform digest=sha256:ce5564d067389de1f76446b44708cc4aa7e1fb1a73e6776eece05603afba8fe3
+\* @phx covers crates/coordination/src/held_flush.rs anchor=perform digest=sha256:56597606620e6ea9e38cfa496098aeb7c981be3a80c80999bf6d47fb36e8742a
 \* @phx covers crates/notifications/src/router.rs anchor=after_claim digest=sha256:321ba8b66c2bed868712441daa8e6384aed8deadee7f07d57936eeb0cf918e86
 \* @phx covers crates/daemon/src/sync_request.rs anchor=answer digest=sha256:01ef6b24af2316fccad6685edbc89518024d3d236af9d86ad1f7d213c0ae9de0
 \* @phx cites #291, #571
