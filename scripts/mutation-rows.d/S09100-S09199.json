@@ -32,8 +32,8 @@
         "S09111-BEYOND-EDGE",
         "curriculum",
         "src/horizon.rs",
-        "Ok(day) if day >= HORIZON_DAYS => beyond_horizon += 1,",
-        "Ok(day) if day > HORIZON_DAYS => beyond_horizon += 1,",
+        "Ok(day) if day < HORIZON_DAYS => bump(&mut curve, day),",
+        "Ok(day) if day <= HORIZON_DAYS => bump(&mut curve, day),",
         "horizon_goldens::the_horizon_matches_the_predecessors_golden",
         "a card due on day 365 is beyond the horizon, so it is counted there and never lost or folded into day 364 (SPEC-091 R6, A8)"
       ],

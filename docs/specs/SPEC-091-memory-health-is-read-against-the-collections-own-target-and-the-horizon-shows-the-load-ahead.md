@@ -401,6 +401,7 @@ Section 4's paths this pull request does not touch:
 - `tools/parity-oracle/goldens/stability_depth.json`: unchanged in this part; delivered by CU3 (#90)
 - `tools/parity-oracle/goldens/memory.constants.json`: unchanged in this part; delivered by CU3 (#90)
 - `docs/schematics/curriculum-readouts-and-the-can-do-pass.md`: unchanged in this part; delivered by CU3 (#90)
+- **T12** (section 9). `compute_horizon` counts an offset `usize` cannot hold and a day past the horizon in ONE arm, with no change in behaviour, so the beyond-horizon tests reach it; no mutant is recorded equivalent and `scripts/mutation-equivalent.d/deck-streak-curriculum.json` is not added (T11's condition). Row `S09111` keeps its id, killer and note and is re-anchored onto the in-horizon arm (mutant `<` to `<=`), because the refactor removed its old anchor line.
 
 ## 11. Acceptance criteria of the 2026-10-03 amendment
 
