@@ -145,7 +145,7 @@ sequenceDiagram
   T->>M: spawn, handing it the endpoint and the copy's path
   M->>S: log in, then full download (or open and queue, with no server)
   M-->>T: VmHWM, read when the operation returns
-  T->>T: the copy holds every card and review; VmHWM within 256 MiB
+  T->>T: the copy holds every card and review#59; VmHWM within 256 MiB
   T->>S: close its stdin, so it exits
 ```
 
