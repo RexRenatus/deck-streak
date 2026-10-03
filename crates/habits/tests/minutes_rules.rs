@@ -9,6 +9,14 @@
 use deck_streak_habits::minutes::{goal_bonus, goal_source, most_used, read_source};
 use deck_streak_kernel::CourseCode;
 
+/// One case of the most-used course: the week's minutes, all time's, the course expected and why.
+type Case = (
+    &'static [(&'static str, u32)],
+    &'static [(&'static str, u32)],
+    Option<&'static str>,
+    &'static str,
+);
+
 fn minutes(rows: &[(&str, u32)]) -> Vec<(String, u32)> {
     rows.iter()
         .map(|(code, minutes)| ((*code).to_owned(), *minutes))
@@ -30,7 +38,7 @@ fn the_weekly_bonus_is_earned_from_the_goal_up() {
 
 #[test]
 fn the_most_used_course_is_the_first_holding_the_most_minutes() {
-    let cases: [(&[(&str, u32)], &[(&str, u32)], Option<&str>, &str); 6] = [
+    let cases: [Case; 6] = [
         (
             &[("qaa", 30), ("qab", 45)],
             &[],
