@@ -586,3 +586,33 @@ and delivered by a later part or pull request:
 - `docs/red-first/SPEC-081.md`: unchanged in this part; delivered by a later part or pull request
 - `Cargo.lock`: unchanged in this part; delivered by a later part or pull request
 - `.sqlx/`: unchanged in this part; delivered by a later part or pull request
+
+Part 4 additions (2026-10-03), insert-only like the findings above:
+
+- **T10. A21 is four tables in this pull request.** R21 and A21 name six tables; migration
+  `008101_quests_chests_and_tokens.sql` creates four (T7), so the quests data-rights port declares
+  `chests` and `xp_tokens` exported and erased, and `pity` (both counters to 0) and `chest_settings`
+  (3 and 21) exported and reset in place. `inventory` and `perfect_weeks` join the port with their
+  migration (E2c). A21's test is `the_chest_tables_are_exported_and_erased`, beside a declaration
+  test for the four tables' rows.
+- **T11. Manifest additions.** Section 4 gains these rows, each added by this pull request:
+  `crates/quests/Cargo.toml` (changed: `serde_json` joins `[dependencies]`, for the port's exported
+  and reset rows; the dev-dependency stays for the goldens' float parsing),
+  `formal/tla/ChestOpenedOnce/{ChestOpenedOnce.tla, MCChestOpenedOnce.cfg, witness/*.cfg}`,
+  `formal/tla/TokenWindow/{TokenWindow.tla, MCTokenWindow.cfg, witness/*.cfg}`,
+  `formal/lean/Formal/{TokenBonus.lean, TokenBonusVectors.lean}`, `formal/lean/Formal/Vectors.lean`,
+  `formal/vectors/token-bonus.jsonl`, `crates/quests/tests/formal_vectors_token_bonus.rs`,
+  `crates/quests/tests/formal_vectors_chest.rs`, the goldens
+  `tools/parity-oracle/goldens/{sweep_stale_chests, activate_double_xp, recompute_token_xp}.json`,
+  `changelog.d/chests-e2-102-103.md` and `docs/CONTEXT-MAP.md` (four register rows and the quests
+  externals). `crates/quests/src/tokens.rs` also holds the token store.
+- **T12. The data-rights rows are delivered.** The rows for `crates/quests/src/data_rights.rs`,
+  `crates/quests/tests/chests_rights.rs`, `crates/coordination/src/data_rights_registry.rs`,
+  `crates/coordination/tests/data_rights_symmetry.rs`, `scripts/mutation-rows.d/S08100-S08199.json`,
+  `docs/CONTEXT-MAP.md`, `privacy.json`, `PRIVACY.md`, `docs/red-first/SPEC-081.md` and `.sqlx/` read
+  "unchanged in this part" above and are delivered by this pull request. The rows of `Cargo.lock`
+  and the chest store, draw, pity, token and sweep code are delivered by the earlier parts.
+- **T13. The port credits nothing.** Open and sweep answer payouts, the choice answers a token id
+  or a freeze, and the settlement answers token bonuses; each is for the caller's own grant, settle
+  or freeze port, inside the caller's one write (BEGIN IMMEDIATE), and a payout is granted only from
+  those answers. This pull request writes no caller; the chest step and the routes are E2b.
