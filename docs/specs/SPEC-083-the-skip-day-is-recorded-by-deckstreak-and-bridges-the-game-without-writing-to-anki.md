@@ -1007,3 +1007,10 @@ Correction: T3's New text says "A price of 0 makes no call.", which the code doe
 request of 0 as nothing requested and writes no movement, so a free skip pays nothing and moves no
 coin. `settle_undone` likewise asks `refund_on` for what the skip paid, and a refund of 0 is
 answered as not positive and credits nothing.
+
+- **T17** (section 4, edited row). `crates/economy/tests/wallet_census.rs`, `deck-streak-economy`: the census of the
+  files that name the coin ledger admits `crates/economy/src/tariff.rs`, whose `paid_on` reads what a skip paid by its
+  source and reference, as section 10 says it does. Without that one line the census fails at the green code.
+- **T18** (section 4, edited row). `crates/coordination/tests/relight_order.rs`, `deck-streak-coordination`: its census
+  of linked statics counts 18, not 17, for the tariff's `static LADDER: LazyLock<Vec<i64>> = LazyLock::new(parse);`,
+  counted as progression's `static XP` is. Without that one change the census fails at the green code.
