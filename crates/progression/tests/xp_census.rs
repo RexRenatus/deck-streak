@@ -2924,7 +2924,12 @@ fn s2_population() -> Vec<Planted> {
             if label.contains("names the file") {
                 files.push(("crates/m/src/call.in".to_owned(), call.clone()));
             }
-            add("S2 B build scripts", label.to_owned(), target, false, files);
+            // SPEC-324 R2 (ruling 115, under ruling 108 (1)): an include joined onto any variable
+            // but OUT_DIR fails closed, so the census refuses this control by construction, with
+            // the line "crates/m/src/lib.rs includes a file the census cannot name, so it cannot
+            // read it for xp_settlement".
+            let refused = label.contains("names the file");
+            add("S2 B build scripts", label.to_owned(), target, refused, files);
         }
         add(
             "S2 B build scripts",
@@ -3884,7 +3889,7 @@ impl KillerWorker {
 /// condition 2): a population that loses or changes a tree fails here, not only one that shrinks.
 const KILLER_POPULATION: (usize, &str) = (
     2218,
-    "eaafc8da1c7d34a8bfa4d8794360caf5b930097866d62bf0f88e1e5e5f4e44ca",
+    "f5f615e6ce0c85098b00b2c87b6de5b8fb5bab962b744bf0c316b112d0ea75b3",
 );
 
 #[test]
