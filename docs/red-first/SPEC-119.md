@@ -148,6 +148,9 @@ null as a type. It adds no criterion and no acceptance line.
 
 ### Test and code changes between the red and green commits
 
+All three are in the green commit, 8b96d52f, which is the only commit between the red and green
+commits that edits a test file.
+
 - `crates/daemon/tests/roles.rs:104`: the usage line's expected roles grow from
   `api, bot, job, data;` to `api, bot, job, data, mcp;`, because the role set grows by `mcp`. It is
   an amendment of the assertion's subject, not a weakening; nothing else in that file changed.
