@@ -1,11 +1,11 @@
 ------------------------- MODULE HabitXpFollowsItsLog -------------------------
-\* @phx covers crates/coordination/src/habits/minutes.rs anchor=log_minutes digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/coordination/src/habits/minutes.rs anchor=undo_newest digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/coordination/src/habits/minutes.rs anchor=undo_entry digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/coordination/src/recompute/habits.rs anchor=evaluate digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/habits/src/minutes.rs anchor=week_start digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/progression/src/settle.rs anchor=settle digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/coordination/src/level_up.rs anchor=announce_level_up digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers crates/coordination/src/habits/minutes.rs anchor=log_minutes digest=sha256:2fe935f11a32dfd0d3d1ea7f9c5c5887ed3d8e24386e0836a2aa66a64e5ef7fb
+\* @phx covers crates/coordination/src/habits/minutes.rs anchor=undo_newest digest=sha256:0fed056c4122026b7d0ad27958adf607a614fff28d230cbd0b171f66a0a30796
+\* @phx covers crates/coordination/src/habits/minutes.rs anchor=undo_entry digest=sha256:03a6924131cbf448b1345682ee01eaf800bc14ed049bce84f3bb838e1900b432
+\* @phx covers crates/coordination/src/recompute/habits.rs anchor=evaluate digest=sha256:5df571be96ed9c281260841fd0662ab7f93621d47146761987714bbd01fde192
+\* @phx covers crates/habits/src/minutes.rs anchor=week_start digest=sha256:580735cd07aed4417ba20cad976d40ff325b4860fbbeacc4f2d02669e9356e4a
+\* @phx covers crates/progression/src/settle.rs anchor=settle digest=sha256:d5473de04ebe9964bea0c7755b0ac7116ea5d9a45e62a8e342a9a5ff1771eeb7
+\* @phx covers crates/coordination/src/level_up.rs anchor=announce_level_up digest=sha256:acbb8923e76fbd4ab77949a119c1ad3a87de6f41737e65b89df689875e851dd0
 \* @phx cites #93
 \* @phx property ReadXpFollowsTheLog ramp=report
 \* @phx property GoalBonusFollowsItsWeek ramp=report

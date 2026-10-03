@@ -4,7 +4,7 @@
 \* @phx covers crates/coordination/src/recompute/mod.rs anchor=register digest=sha256:c4ea8f4bef00e1f3b17ad8d80af338db958189a32fcd6f623cf8b18b71fb03a2
 \* @phx covers crates/coordination/src/recompute/mod.rs anchor=run digest=sha256:7a383ba01872f4dde46ccb5220fa492de1f89498adf71774cae868e3e0b7acbb
 \* @phx covers crates/economy/src/wallet.rs anchor=settle_mint_on digest=sha256:f527db16a0f325855b0278d2ffa535cd1ba5b2428a5b876138ce606fc4ee0633
-\* @phx covers crates/progression/src/settle.rs anchor=settle digest=sha256:9872f0859a95fb7f19be47343abdc7227cdde7e7d0ea913a7372c7a402b47dbe
+\* @phx covers crates/progression/src/settle.rs anchor=settle digest=sha256:d5473de04ebe9964bea0c7755b0ac7116ea5d9a45e62a8e342a9a5ff1771eeb7
 \* @phx covers crates/coordination/src/recompute/mint.rs anchor=phase digest=sha256:a0fb8d223f853cd70d7107472d703c985558145bb83d2203a6ff4063844156e1
 \* @phx covers crates/coordination/src/recompute/mint.rs anchor=evaluate digest=sha256:27aadb0475e92829e5a94f133713d8ea336074638fb394d8b4a4932b1f7dc5e4
 \* @phx cites #106
