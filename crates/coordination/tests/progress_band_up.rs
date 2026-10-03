@@ -132,6 +132,63 @@ async fn the_first_sighting_of_a_course_is_a_silent_baseline() {
     assert_eq!(badges(db).await, [], "the unchanged band awards no badge");
 }
 
+/// MUTATION COVERAGE (R6): the progress step runs for the current study day only. A closed day's
+/// settle, at the end of the day or not, a backfilled day and a revisited day each record no
+/// milestone and store no progress; the current day then records the course's baseline, the
+/// positive control that the step and its fixture write at all.
+#[tokio::test]
+async fn the_progress_step_runs_for_the_current_day_only() {
+    let scratch = scratch().await;
+    let db = &scratch.db;
+    let data = window();
+    let progress = ProgressStep::new(courses(), AnalyticsSettings::default());
+
+    let closed = [
+        Evaluation::Settle { end_of_day: true },
+        Evaluation::Settle { end_of_day: false },
+        Evaluation::Backfill {
+            reviews_changed: true,
+        },
+        Evaluation::Revisit {
+            reviews_changed: true,
+        },
+    ];
+    for evaluation in closed {
+        run_step(db, &progress, &data, 0, (D0 - 1, evaluation), at(D0, 12)).await;
+        assert_eq!(
+            milestones(db).await,
+            [],
+            "{evaluation:?}: a day that is not the current one records no milestone"
+        );
+        assert_eq!(
+            stored_bands(db).await,
+            [],
+            "{evaluation:?}: a day that is not the current one stores no progress"
+        );
+    }
+    println!("examined {} closed-day evaluation(s)", closed.len());
+
+    run_step(
+        db,
+        &progress,
+        &data,
+        0,
+        (D0, Evaluation::Current),
+        at(D0, 12),
+    )
+    .await;
+    assert_eq!(
+        milestones(db).await,
+        [("be".to_owned(), "B1".to_owned(), D0, 1, true)],
+        "the current day records the course's first sighting as a silent baseline"
+    );
+    assert_eq!(
+        stored_bands(db).await,
+        [("be".to_owned(), "B1".to_owned())],
+        "the current day stores the course's progress"
+    );
+}
+
 /// The bands in their order. In a golden case's courses each band is one unit of its own: A1 is
 /// unit 1 and C2 is unit 6.
 const BANDS: [&str; 6] = ["A1", "A2", "B1", "B2", "C1", "C2"];
