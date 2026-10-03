@@ -23,10 +23,12 @@ use deck_streak_analytics::settings::AnalyticsSettings;
 use deck_streak_coordination::recompute::band_badges::BandBadgesStep;
 use deck_streak_coordination::recompute::progress::ProgressStep;
 use deck_streak_coordination::recompute::{AwardOffers, Evaluation, Offers};
+use deck_streak_curriculum::data_rights::CurriculumDataRights;
 use deck_streak_ingest::reader::{Card, CollectionData};
-use deck_streak_kernel::{CourseCode, Courses, Db, UtcMillis};
+use deck_streak_kernel::{CourseCode, Courses, DataRights, Db, UtcMillis};
 use deck_streak_notifications::ladder::{budget_exempt, requested_tier};
 use deck_streak_notifications::{Policy, Tier};
+use deck_streak_progression::grant::GrantScope;
 use serde_json::{Value, json};
 use support::{D0, Recorder, at, badges, card, day, run_step, scratch};
 
@@ -551,5 +553,91 @@ async fn band_ups_match_the_predecessors_golden_and_pay_once() {
     assert!(
         offered_band_ups > 0,
         "no case offered a band-up, so the offers were never judged"
+    );
+}
+
+/// The window without unit 12's card: A1 and A2 are achieved and the course's current band is A2.
+fn a2_window() -> CollectionData {
+    let mut data = window();
+    data.cards.retain(|card| card.deck_id != 3);
+    data.deck_names.remove(&3);
+    data
+}
+
+/// One recompute of study day `number` as the current day, at its noon: phase 4's progress step,
+/// then phase 7's band badge step, each in its own write as the fold runs them.
+async fn recompute_on(db: &Db, data: &CollectionData, number: i64) {
+    let courses = courses();
+    let now = at(number, 12);
+    let progress = ProgressStep::new(courses.clone(), AnalyticsSettings::default());
+    run_step(db, &progress, data, 0, (number, Evaluation::Current), now).await;
+    let band_badges = BandBadgesStep::new(courses);
+    run_step(
+        db,
+        &band_badges,
+        data,
+        0,
+        (number, Evaluation::Current),
+        now,
+    )
+    .await;
+}
+
+/// Every XP grant, as `(source, scope, amount, study day)`, by source and day.
+async fn scoped_grants(db: &Db) -> Vec<(String, String, i64, i64)> {
+    sqlx::query_as(
+        "SELECT source, scope, amount, study_day FROM xp_ledger ORDER BY source, study_day",
+    )
+    .fetch_all(db.reader())
+    .await
+    .expect("the XP ledger")
+}
+
+/// MUTATION COVERAGE (R6, R18; S07726): a band-up's XP is granted once ever. When the owner erases
+/// the curriculum's data, its milestone rows go and the XP ledger stays; the course is seen again as
+/// a silent baseline, and when it reaches the same band on a later study day the milestone is
+/// recorded again but its XP is not paid again. A grant scoped to its study day would be.
+#[tokio::test]
+async fn a_band_up_is_paid_once_ever_even_after_its_milestone_is_erased() {
+    let scratch = scratch().await;
+    let db = &scratch.db;
+    seed(db, &[("be".to_owned(), "A2".to_owned())], &[]).await;
+    let once = (
+        "bandup:be:b1".to_owned(),
+        GrantScope::Once.as_str().to_owned(),
+        500,
+        D0,
+    );
+
+    recompute_on(db, &window(), D0).await;
+    assert_eq!(
+        scoped_grants(db).await,
+        std::slice::from_ref(&once),
+        "the band-up from A2 to B1 is paid once, scoped once"
+    );
+
+    let mut write = db.write().await.expect("a write");
+    CurriculumDataRights
+        .erase(&mut write)
+        .await
+        .expect("the curriculum's data erases");
+    write.commit().await.expect("the erase commits");
+    assert_eq!(milestones(db).await, [], "the erase leaves no milestone");
+
+    recompute_on(db, &a2_window(), D0 + 1).await;
+    recompute_on(db, &window(), D0 + 2).await;
+    assert_eq!(
+        milestones(db).await,
+        [
+            ("be".to_owned(), "A2".to_owned(), D0 + 1, 1, true),
+            ("be".to_owned(), "B1".to_owned(), D0 + 2, 0, false),
+        ],
+        "after the erase the course is a silent baseline at A2, then reaches B1 again, recorded \
+         again and not as a baseline"
+    );
+    assert_eq!(
+        scoped_grants(db).await,
+        [once],
+        "the band B1 reached again is not paid again: the ledger holds the first grant alone"
     );
 }

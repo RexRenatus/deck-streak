@@ -13,7 +13,9 @@ import {
   type Envelope,
   type Listing
 } from './insights/insights';
+import { parseLaw, parseLawTiers, type LawTiersView, type LawView } from './law/law';
 import { parseLevel, type LevelView } from './level/level';
+import { parseProgress, type ProgressView } from './progress/progress';
 import { parseRecords, type RecordsView } from './records/records';
 import { parseGovernor, parseStreak, type StreakView } from './streak/streak';
 import { parseScore, type ScoreToday } from './score/score';
@@ -75,6 +77,12 @@ export interface Api {
   badges(): Promise<Answer<BadgesView>>;
   /** The owner's personal records, today's distance to each, and the chase (SPEC-073 R17). */
   records(): Promise<Answer<RecordsView>>;
+  /** Each configured course's Road to C2: its mastery, band, unit and six band cells (SPEC-077 R15). */
+  progress(): Promise<Answer<ProgressView>>;
+  /** The law block: its shown lines, in the server's order, and its pending counts (SPEC-077 R15). */
+  law(): Promise<Answer<LawView>>;
+  /** The law cards and today's law XP by tier (SPEC-072 R24). */
+  lawTiers(): Promise<Answer<LawTiersView>>;
   /** The owner's unseen in-app celebrations, each with its tier (SPEC-084 R10). */
   feed(): Promise<Answer<FeedItem[]>>;
   /** The instruments the owner can read (SPEC-094 R18). */
@@ -190,6 +198,9 @@ export function createApi(options: ApiOptions): Api {
     },
     badges: () => read('/api/badges', parseBadges),
     records: () => read('/api/records', parseRecords),
+    progress: () => read('/api/progress', parseProgress),
+    law: () => read('/api/law', parseLaw),
+    lawTiers: () => read('/api/level/law-tiers', parseLawTiers),
     feed: () => read(FEED_PATH, parseFeed),
     wallet: (before) => read(walletPath(before), parseWallet),
     insights: () => read('/api/insights', parseListings),

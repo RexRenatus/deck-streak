@@ -207,6 +207,69 @@
         "#[doc(hidden)]\npub mod law;\n",
         "progress_step_boundaries::the_crate_root_declares_the_law_module_publicly",
         "the crate root declares the law block module public and bare (SPEC-077 R10). The killer is a source-text guard, since the mutant builds and no behaviour test reads the declaration"
+      ],
+      [
+        "S07726-BAND-UP-GRANT-ONCE",
+        "coordination",
+        "src/recompute/progress.rs",
+        "scope: GrantScope::Once,",
+        "scope: GrantScope::PerDay,",
+        "progress_band_up::a_band_up_is_paid_once_ever_even_after_its_milestone_is_erased",
+        "a band-up's XP is granted with scope once, so a band whose milestone was erased is not paid again on a later study day (SPEC-077 R6, T30; ruling 77 P2)"
+      ],
+      [
+        "S07727-THE-PROGRESS-ROUTE-ASKS-FOR-THE-OWNER",
+        "api",
+        "src/progress_routes.rs",
+        "async fn progress(_owner: OwnerSession, ",
+        "async fn progress(",
+        "progress_routes::the_progress_route_answers_only_the_owner",
+        "GET /api/progress takes the owner's session before it reads anything, so no session, an unknown one or an ended one answers 401 with the reason alone and no progress (SPEC-077 A16, R15)"
+      ],
+      [
+        "S07728-THE-LAW-ROUTE-ASKS-FOR-THE-OWNER",
+        "api",
+        "src/law_routes.rs",
+        "async fn law(_owner: OwnerSession, ",
+        "async fn law(",
+        "law_routes::the_law_route_answers_only_the_owner",
+        "GET /api/law takes the owner's session before it reads anything, so no session, an unknown one or an ended one answers 401 with the reason alone and no law block (SPEC-077 A17, R14)"
+      ],
+      [
+        "S07729-LAW-DUES-PENDING-IS-NULL",
+        "api",
+        "src/law_routes.rs",
+        "\"dues\": block.dues,",
+        "\"dues\": block.dues.unwrap_or(0),",
+        "law_routes::the_law_route_answers_only_the_owner",
+        "pending law dues answer null, never 0: an empty database's law block carries no dues count (SPEC-077 A17, R14). The json! macro's arguments are outside cargo-mutants' reach, so the row is hand-written"
+      ],
+      [
+        "S07730-THE-PROGRESS-STEP-IS-REGISTERED",
+        "daemon",
+        "src/wiring.rs",
+        "    fold.register(\n        Phase::DaySteps,\n        Box::new(ProgressStep::new(courses.clone(), analytics)),\n    )?;\n",
+        "",
+        "lib::wiring::tests::the_recompute_fold_registers_road_to_c2s_steps",
+        "the production fold registers the progress step in phase 4, so each course's progress, the law dues and the band-ups are stored (SPEC-077 A22, R6)"
+      ],
+      [
+        "S07731-THE-BAND-BADGE-STEP-IS-REGISTERED",
+        "daemon",
+        "src/wiring.rs",
+        "    fold.register(Phase::Awards, Box::new(BandBadgesStep::new(courses)))?;\n",
+        "",
+        "lib::wiring::tests::the_recompute_fold_registers_road_to_c2s_steps",
+        "the production fold registers the band badge step in phase 7, after the records step, so a band-up's badge is awarded (SPEC-077 A22, R6)"
+      ],
+      [
+        "S07732-THE-LIVE-BAND-READS-THE-SUBJECTS-COURSE",
+        "daemon",
+        "src/wiring.rs",
+        "course.code.as_str() == area",
+        "course.code.as_str() != area",
+        "progress_live_band::the_persona_engine_reads_the_live_band",
+        "the live band answers the stored band of the configured course the subject's area names, and of no other (SPEC-077 A9, R8)"
       ]
     ],
     "CARGO_KILLED_SCRIPT_MUTATIONS": [

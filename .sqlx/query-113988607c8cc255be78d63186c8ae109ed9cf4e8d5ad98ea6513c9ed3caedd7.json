@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE skip_days SET state = 'applied', cards_moved = ?2, tariff_unfunded = ?3 WHERE id = ?1 AND state = 'pending'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "113988607c8cc255be78d63186c8ae109ed9cf4e8d5ad98ea6513c9ed3caedd7"
+}

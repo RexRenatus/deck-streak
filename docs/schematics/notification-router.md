@@ -121,3 +121,35 @@ flowchart LR
 The lapse context comes from the governor, through the caller (ADR-041). The bot role's owner
 `/sync` flushes through the router over its transport; the job role's scheduled cycle has no bot
 transport, so its flush does nothing until a job that sends joins one.
+
+## The census's reach (#297)
+
+Kind: data flow. Read at DeckStreak `dev` 02758d4 (`crates/notifications/tests/one_router.rs`,
+`crates/kernel/src/db.rs:34`, `.github/workflows/release.yml:89-90`). What A15's census reads, what
+it brings in after the walk, and what it refuses because it cannot follow it (SPEC-041 §11 and §12,
+ADR-324).
+
+```mermaid
+flowchart TD
+  tree["the committed tree"] --> walk{{"shipped_sources: the walker"}}
+  walk -- "a skipped or test directory" --> skip["not met"]
+  walk -- "a symlink in a walked place" --> r1["refused: is a symlink, which the census neither reads nor follows"]
+  walk -- "a shipped kind: Rust, script, web, shell, SQL, a unit or drop-in, a #35;! first line" --> read["read under its own path"]
+  read -- "Rust" --> bring{{"brought_in: each include and #35;[path] outside a #35;[cfg(test)] module"}}
+  bring -- "include!(literal)" --> asrust["read as Rust under its own path"]
+  bring -- "include_str! or include_bytes!(literal)" --> astext["read as text under its own path"]
+  bring -- "#35;[path = literal] outside the notifications crate" --> asrust
+  bring -- "not one literal, not in the tree, or #35;[path] inside a block" --> r2["refused by path:line"]
+  asrust --> bring
+  asrust --> rules
+  astext --> rules
+  read --> rules{{"census_read: the rules of each path"}}
+  rules -- "SQL outside the router's two migrations names the feed or the queue" --> r3["refused: names the feed or the queue"]
+  rules -- "a unit's path through a test directory or to a test file" --> r4["refused: runs a test file the census does not read"]
+  rules -- "commands.rs: a reply pub, pub(...) or in a trait impl" --> r5["refused: visible outside the handler's module"]
+  rules -- "every other rule A15 holds" --> a15["A15: no delivery around the port"]
+```
+
+A brought-in file is read once, whichever include or `#[path]` reaches it first, and a Rust one is
+followed in turn. What stays unread is named in SPEC-041 §11: a name assembled from parts, a kind
+other than SQL, a re-export by binding, a `pub` wrapper, and a test file a shipped script runs.

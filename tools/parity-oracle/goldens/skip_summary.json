@@ -1,0 +1,455 @@
+{
+  "adapter": "summary_of",
+  "cases": [
+    {
+      "class": "empty",
+      "input": {
+        "rows": [],
+        "today": 20150
+      },
+      "output": {
+        "all_time": 0,
+        "cards_moved_all_time": 0,
+        "last_day": null,
+        "this_month": 0
+      }
+    },
+    {
+      "class": "inactive-ignored",
+      "input": {
+        "rows": [
+          {
+            "applied": false,
+            "cards_moved": 9,
+            "day": 20150,
+            "undone": false
+          },
+          {
+            "applied": true,
+            "cards_moved": 4,
+            "day": 20149,
+            "undone": true
+          },
+          {
+            "applied": true,
+            "cards_moved": 5,
+            "day": 20148,
+            "undone": false
+          }
+        ],
+        "today": 20150
+      },
+      "output": {
+        "all_time": 1,
+        "cards_moved_all_time": 5,
+        "last_day": 20148,
+        "this_month": 1
+      }
+    },
+    {
+      "input": {
+        "rows": [
+          {
+            "applied": true,
+            "cards_moved": 20,
+            "day": 20127,
+            "undone": false
+          },
+          {
+            "applied": false,
+            "cards_moved": 26,
+            "day": 20134,
+            "undone": true
+          }
+        ],
+        "today": 20159
+      },
+      "output": {
+        "all_time": 1,
+        "cards_moved_all_time": 20,
+        "last_day": 20127,
+        "this_month": 0
+      }
+    },
+    {
+      "input": {
+        "rows": [
+          {
+            "applied": true,
+            "cards_moved": 26,
+            "day": 20150,
+            "undone": false
+          },
+          {
+            "applied": true,
+            "cards_moved": 21,
+            "day": 20138,
+            "undone": false
+          }
+        ],
+        "today": 20156
+      },
+      "output": {
+        "all_time": 2,
+        "cards_moved_all_time": 47,
+        "last_day": 20150,
+        "this_month": 1
+      }
+    },
+    {
+      "input": {
+        "rows": [
+          {
+            "applied": true,
+            "cards_moved": 31,
+            "day": 20165,
+            "undone": false
+          },
+          {
+            "applied": true,
+            "cards_moved": 2,
+            "day": 20145,
+            "undone": false
+          },
+          {
+            "applied": true,
+            "cards_moved": 18,
+            "day": 20158,
+            "undone": true
+          },
+          {
+            "applied": true,
+            "cards_moved": 1,
+            "day": 20106,
+            "undone": false
+          },
+          {
+            "applied": true,
+            "cards_moved": 14,
+            "day": 20133,
+            "undone": false
+          }
+        ],
+        "today": 20171
+      },
+      "output": {
+        "all_time": 4,
+        "cards_moved_all_time": 48,
+        "last_day": 20165,
+        "this_month": 1
+      }
+    },
+    {
+      "input": {
+        "rows": [
+          {
+            "applied": true,
+            "cards_moved": 19,
+            "day": 20167,
+            "undone": false
+          },
+          {
+            "applied": true,
+            "cards_moved": 28,
+            "day": 20142,
+            "undone": false
+          },
+          {
+            "applied": false,
+            "cards_moved": 27,
+            "day": 20141,
+            "undone": true
+          }
+        ],
+        "today": 20186
+      },
+      "output": {
+        "all_time": 2,
+        "cards_moved_all_time": 47,
+        "last_day": 20167,
+        "this_month": 0
+      }
+    },
+    {
+      "input": {
+        "rows": [
+          {
+            "applied": false,
+            "cards_moved": 8,
+            "day": 20145,
+            "undone": false
+          },
+          {
+            "applied": true,
+            "cards_moved": 38,
+            "day": 20123,
+            "undone": true
+          },
+          {
+            "applied": true,
+            "cards_moved": 11,
+            "day": 20147,
+            "undone": false
+          },
+          {
+            "applied": true,
+            "cards_moved": 0,
+            "day": 20145,
+            "undone": false
+          },
+          {
+            "applied": true,
+            "cards_moved": 25,
+            "day": 20109,
+            "undone": false
+          }
+        ],
+        "today": 20160
+      },
+      "output": {
+        "all_time": 3,
+        "cards_moved_all_time": 36,
+        "last_day": 20147,
+        "this_month": 0
+      }
+    },
+    {
+      "input": {
+        "rows": [
+          {
+            "applied": false,
+            "cards_moved": 29,
+            "day": 20167,
+            "undone": true
+          },
+          {
+            "applied": true,
+            "cards_moved": 6,
+            "day": 20135,
+            "undone": true
+          },
+          {
+            "applied": true,
+            "cards_moved": 19,
+            "day": 20165,
+            "undone": false
+          },
+          {
+            "applied": true,
+            "cards_moved": 14,
+            "day": 20128,
+            "undone": true
+          },
+          {
+            "applied": true,
+            "cards_moved": 33,
+            "day": 20118,
+            "undone": true
+          },
+          {
+            "applied": false,
+            "cards_moved": 26,
+            "day": 20142,
+            "undone": false
+          },
+          {
+            "applied": true,
+            "cards_moved": 15,
+            "day": 20133,
+            "undone": true
+          },
+          {
+            "applied": false,
+            "cards_moved": 8,
+            "day": 20138,
+            "undone": true
+          }
+        ],
+        "today": 20179
+      },
+      "output": {
+        "all_time": 1,
+        "cards_moved_all_time": 19,
+        "last_day": 20165,
+        "this_month": 0
+      }
+    },
+    {
+      "input": {
+        "rows": [
+          {
+            "applied": true,
+            "cards_moved": 0,
+            "day": 20162,
+            "undone": false
+          },
+          {
+            "applied": true,
+            "cards_moved": 25,
+            "day": 20159,
+            "undone": false
+          },
+          {
+            "applied": false,
+            "cards_moved": 23,
+            "day": 20164,
+            "undone": true
+          },
+          {
+            "applied": true,
+            "cards_moved": 0,
+            "day": 20131,
+            "undone": false
+          },
+          {
+            "applied": true,
+            "cards_moved": 18,
+            "day": 20133,
+            "undone": false
+          },
+          {
+            "applied": false,
+            "cards_moved": 6,
+            "day": 20125,
+            "undone": false
+          },
+          {
+            "applied": true,
+            "cards_moved": 0,
+            "day": 20146,
+            "undone": true
+          }
+        ],
+        "today": 20185
+      },
+      "output": {
+        "all_time": 4,
+        "cards_moved_all_time": 43,
+        "last_day": 20162,
+        "this_month": 0
+      }
+    },
+    {
+      "input": {
+        "rows": [
+          {
+            "applied": false,
+            "cards_moved": 11,
+            "day": 20111,
+            "undone": false
+          },
+          {
+            "applied": true,
+            "cards_moved": 6,
+            "day": 20133,
+            "undone": false
+          },
+          {
+            "applied": false,
+            "cards_moved": 13,
+            "day": 20150,
+            "undone": true
+          },
+          {
+            "applied": false,
+            "cards_moved": 5,
+            "day": 20111,
+            "undone": false
+          }
+        ],
+        "today": 20183
+      },
+      "output": {
+        "all_time": 1,
+        "cards_moved_all_time": 6,
+        "last_day": 20133,
+        "this_month": 0
+      }
+    },
+    {
+      "input": {
+        "rows": [
+          {
+            "applied": true,
+            "cards_moved": 8,
+            "day": 20152,
+            "undone": false
+          },
+          {
+            "applied": true,
+            "cards_moved": 25,
+            "day": 20131,
+            "undone": false
+          },
+          {
+            "applied": true,
+            "cards_moved": 29,
+            "day": 20134,
+            "undone": false
+          },
+          {
+            "applied": true,
+            "cards_moved": 14,
+            "day": 20145,
+            "undone": false
+          },
+          {
+            "applied": true,
+            "cards_moved": 21,
+            "day": 20138,
+            "undone": false
+          }
+        ],
+        "today": 20187
+      },
+      "output": {
+        "all_time": 5,
+        "cards_moved_all_time": 97,
+        "last_day": 20152,
+        "this_month": 0
+      }
+    },
+    {
+      "input": {
+        "rows": [
+          {
+            "applied": true,
+            "cards_moved": 5,
+            "day": 20131,
+            "undone": true
+          },
+          {
+            "applied": true,
+            "cards_moved": 34,
+            "day": 20149,
+            "undone": false
+          },
+          {
+            "applied": true,
+            "cards_moved": 8,
+            "day": 20141,
+            "undone": false
+          }
+        ],
+        "today": 20174
+      },
+      "output": {
+        "all_time": 2,
+        "cards_moved_all_time": 42,
+        "last_day": 20149,
+        "this_month": 1
+      }
+    }
+  ],
+  "function": "skip.summarize_skips",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Builds the rows and today from epoch days and returns the summary's counts, the last day as an epoch day or null; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_083.py",
+  "registry_sha256": "0c428fdeae0892916e2bf37e7140a46b8a351178a0365cb1b2b584bea75a9004",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

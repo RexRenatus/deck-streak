@@ -235,6 +235,60 @@ for (const [scheme, themeParams] of Object.entries(THEMES)) {
           }
         })
       );
+      // The progress screen: one course with its six band cells, two achieved and the current band
+      // marked (SPEC-077 R17, B3).
+      await page.route('**/api/progress', (intercepted) =>
+        intercepted.fulfill({
+          json: {
+            courses: [
+              {
+                code: 'fr',
+                name: 'French',
+                flag: '\u{1F1EB}\u{1F1F7}',
+                mastery_pct: 41.5,
+                current_band: 'B1',
+                current_unit: 7,
+                bands: ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].map((band, i) => ({
+                  band,
+                  total: 100,
+                  mature: i < 2 ? 100 : 30,
+                  pct: i < 2 ? 92 : 30,
+                  achieved: i < 2
+                }))
+              }
+            ]
+          }
+        })
+      );
+      // The law tab: three shown lines and one pending count (SPEC-077 R17, B3). The level screen's
+      // glob ends at /api/level, so the law tiers have their own.
+      await page.route('**/api/law', (intercepted) =>
+        intercepted.fulfill({
+          json: {
+            shown: true,
+            level_shown: true,
+            lines: ['total_xp', 'streak', 'xp_today'],
+            streak: 4,
+            xp_today: 30,
+            total_xp: 900,
+            level: 3,
+            dues: null,
+            dues_pending: true,
+            leeches: 2,
+            leeches_pending: false,
+            mastery: 61,
+            mastery_pending: false
+          }
+        })
+      );
+      await page.route('**/api/level/law-tiers', (intercepted) =>
+        intercepted.fulfill({
+          json: {
+            cards: { T1: 5, T2: 4, T3: 3, T4: 2, none: 1 },
+            xp_today: { T1: 10, T2: 8, T3: 6, T4: 4, none: 2 }
+          }
+        })
+      );
       await page.emulateMedia({ colorScheme: scheme as 'light' | 'dark' });
     });
 

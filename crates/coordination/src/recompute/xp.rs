@@ -24,6 +24,7 @@ use deck_streak_progression::settle::{
 use sqlx::SqliteConnection;
 
 use super::{DayEvaluation, DayStep, Evaluation, Phase};
+use crate::skip::days::skip_days;
 
 /// The name the fold's report gives this step.
 pub const XP_STEP: &str = "progression.base_xp";
@@ -197,8 +198,9 @@ async fn arm(day: &DayEvaluation<'_>, write: &mut SqliteConnection) -> Result<()
         .await?
         .unwrap_or(0);
     let held = is_ascendant_day(write, day.day).await?;
-    // No store of declared skip days exists yet, so no day is one.
-    if ascendant_arms(held, false, reviews, i64::from(backlog_zero)) {
+    // A skip day is armed by nothing: the day before earned no buff for a day that was not studied.
+    let skip = skip_days(write).await?.contains(&day.day);
+    if ascendant_arms(held, skip, reviews, i64::from(backlog_zero)) {
         arm_ascendant(write, day.day, day.facts.now).await?;
     }
     Ok(())
