@@ -235,11 +235,11 @@ async fn the_output_schema_admits_each_pending_number_as_null() {
     let reply = served.post("/mcp", Some(&law_token()), &list_tools()).await;
     assert_eq!(reply.status, 200, "tools/list: {}", reply.text());
     let result = reply.result();
-    let schema = result["tools"]
+    let tool = result["tools"]
         .as_array()
         .and_then(|tools| tools.iter().find(|tool| tool["name"] == "get_law_track"))
-        .map(|tool| tool["outputSchema"].clone())
-        .unwrap_or_else(|| panic!("get_law_track declares no output schema: {result}"));
+        .unwrap_or_else(|| panic!("get_law_track is not served: {result}"));
+    let schema = &tool["outputSchema"];
 
     // Every pending number at once: the dues before the first recompute stores them, and the
     // leeches and the mastery while the leech port is not wired. SPEC-119 declares the three

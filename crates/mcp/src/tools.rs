@@ -60,7 +60,8 @@ impl LawTrackSource for LedgerLawTrack {
 
 /// `get_law_track`'s answer: the roster golden's fields, in its order (R15). A number the ledger
 /// cannot answer yet is null, never 0 (SPEC-077 R12; ADR-329 D7), and the output schema requires
-/// each field, a pending one included.
+/// each field, a pending one included. `required` alone would declare a pending field as its inner
+/// number, refusing the null it answers, so each pending field also names `null` among its types.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, schemars::JsonSchema)]
 #[schemars(crate = "rmcp::schemars")]
 pub struct LawTrack {
@@ -73,13 +74,13 @@ pub struct LawTrack {
     /// The level of `total_xp`.
     pub level: i64,
     /// The backlog plus the cards due today, or null before the first recompute stores them.
-    #[schemars(required)]
+    #[schemars(required, extend("type" = ["integer", "null"]))]
     pub dues: Option<i64>,
     /// The active law leeches, or null while the leech port is not wired (#133).
-    #[schemars(required)]
+    #[schemars(required, extend("type" = ["integer", "null"]))]
     pub leech_total: Option<i64>,
     /// The law mastery pillar rounded to 2 places, or null while the leeches are pending (#133).
-    #[schemars(required)]
+    #[schemars(required, extend("type" = ["number", "null"]))]
     pub mastery: Option<f64>,
 }
 
