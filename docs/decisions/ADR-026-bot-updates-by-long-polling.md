@@ -136,3 +136,9 @@ SPEC-026's A7 and A8; the telegram-platform bot-api rows in the box run (ADR-069
 
 ADR-007; SPEC-026; the telegram-platform pack ("Webhook or long polling"); the predecessor's
 `bot.py:CommandBot.run` and `_drain_offset`.
+
+## Amendment (ADR-323, #257)
+
+The deferral of notifications-policy's `message-metadata` row to #257, recorded above, ended at
+ADR-323: the policy declares the duty `bot-commands` in its `replies` list, so the row skips the
+command replies and counts them, and a reply is still not a notification kind.
