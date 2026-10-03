@@ -1,5 +1,5 @@
-//! The compiler holds the router's port, and a census reads the ways around it (SPEC-041 A2, A15;
-//! R1).
+//! The compiler holds the router's port, and a census reads the ways around it (SPEC-041 A2, A15,
+//! A24 to A29; R1).
 //!
 //! A2: each bot transport call takes the router's `Pass`, which no other module can make, so a
 //! call of the port anywhere else does not compile. One compile-fail case for each way a pass
@@ -10,37 +10,46 @@
 //! (`TRYBUILD=overwrite`).
 //!
 //! A15: a delivery can go around the port and never take a pass. The census reads every shipped
-//! source of these kinds: the Rust, Python and web source files, the Mini App's HTML among them,
-//! and the shell scripts by their extensions, a script with none by its `#!` first line, and the
-//! systemd units of every type and their drop-ins. It leaves out symlinks, test files, test
-//! directories outside a `src/`, and in a Rust file its comments and `#[cfg(test)]` modules.
-//! Outside the bot's sources nothing may name the Bot API's host, a send or delivery method of the
-//! pinned client's table, in the API's spelling or a client's, or the bot's `DEFAULT_API_URL`,
-//! SPEC-031's alert path aside; inside them such a method is named only by its own named send. The
-//! client's whole table is listed with its version, and every method in it is a send, a delivery or
-//! not a delivery, in one class only (`the_census_classifies_every_method_of_the_pinned_client`):
-//! the reads, the deletions and unpins, bot and session configuration, a sticker's emoji, keywords,
-//! mask, position, bare uploads and a set's removal, chat administration without user-visible text, and business,
-//! star and gift account state are the 91 of `NOT_DELIVERIES`, which carry no content the bot
-//! chose that a user sees, and are classified, not held (#297). The bot's `send_html`, its
-//! `edit_html` and its command handler are used only at named call sites, and each of the ten named
-//! sends is found exactly once; the handler's replies and its dispatch
-//! are called only by their named callers. Only the router's ledger, router and data-rights
-//! modules, which own their writes, name the Mini App's feed or the held queue, which a flush
-//! delivers; because the ledger's writes to the queue are private to the notifications crate, only
-//! they name the ledger in that crate's sources, the root's declaration of it aside; and no source
-//! of that crate carries `#[path]`, `#[macro_export]` or `#[macro_use]`, or re-exports the ledger,
-//! its feed's and queue's tables or its writes to the feed and the queue by a `pub use`. The
-//! refusals are proved on the reviews' deliveries around the port, which the test holds as text,
-//! and on a tree it writes for the walker.
+//! source of these kinds: the Rust, Python, web and SQL source files, the Mini App's HTML and every
+//! migration among them, and the shell scripts by their extensions, a script with none by its `#!`
+//! first line, and the systemd units of every type and their drop-ins. It leaves out test files,
+//! test directories outside a `src/`, and in a Rust file its comments and `#[cfg(test)]` modules.
+//! It reads each file a Rust source pulls in under that file's own path, with every rule of that
+//! path: by `include!` as Rust, by `include_str!` or `include_bytes!` as text, and by a module's
+//! `#[path]` as Rust, and so on through what those files pull in (A24, A27). It refuses what it
+//! cannot follow: a symlink in a place it walks (A26); an include whose argument is not one string
+//! literal, or whose file the tree does not hold; a `#[path]` to a file the tree does not hold, or
+//! inside an inline module; a unit or drop-in that runs a file in a test directory, or a test file
+//! by its name (A28); and a reply of the command handler made visible outside its module, `pub`,
+//! `pub(...)` or in a trait impl for the handler (A29). Outside the bot's sources nothing may name
+//! the Bot API's host, a send or delivery method of the pinned client's table, in the API's
+//! spelling or a client's, or the bot's `DEFAULT_API_URL`, SPEC-031's alert path aside; inside them
+//! such a method is named only by its own named send. The client's whole table is listed with its
+//! version, and every method in it is a send, a delivery or not a delivery, in one class only
+//! (`the_census_classifies_every_method_of_the_pinned_client`): the reads, the deletions and
+//! unpins, bot and session configuration, a sticker's emoji, keywords, mask, position, bare uploads
+//! and a set's removal, chat administration without user-visible text, and business, star and gift
+//! account state are the 91 of `NOT_DELIVERIES`, which carry no content the bot chose that a user
+//! sees, and are classified, not held (#297). The bot's `send_html`, its `edit_html` and its
+//! command handler are used only at named call sites, and each of the ten named sends is found
+//! exactly once; the handler's replies and its dispatch are called only by their named callers.
+//! Only the router's ledger, router and data-rights modules, which own their writes, and the
+//! router's two migrations, which create the tables, name the Mini App's feed or the held queue,
+//! which a flush delivers; because the ledger's writes to the queue are private to the
+//! notifications crate, only they name the ledger in that crate's sources, the root's declaration
+//! of it aside; and no source of that crate carries `#[path]`, `#[macro_export]` or `#[macro_use]`,
+//! or re-exports the ledger, its feed's and queue's tables or its writes to the feed and the queue
+//! by a `pub use`. The refusals are proved on the reviews' deliveries around the port, which the
+//! test holds as text, and on a tree it writes for the walker.
 //!
 //! The census guards ordinary code, not code written to evade it, which review catches. A text
 //! census reads names, not requests, statements or what the compiler resolves, so these go unread
-//! (#297): a request, or a table's name, assembled from parts, in which no name it reads appears;
-//! `include!` of a file of a kind it does not read; a source of such a kind; a symlink; a test file
-//! pulled in by `#[path]` outside the notifications crate, or run by a unit; and a re-export other
-//! than by a `pub use`, or a `pub` wrapper, that hands out a write to the feed or the held queue
-//! under a name the census does not hold.
+//! (#297, ADR-324): a request, or a table's name, assembled from parts, in which no name it reads
+//! appears; a source of a kind it does not read, SQL aside, that no Rust source pulls in; a
+//! re-export other than by a `pub use`, such as a binding of an item to a new name, or a `pub`
+//! wrapper, that hands out a write to the feed or the held queue under a name the census does not
+//! hold; and a test file that a shipped script runs, or a path a unit assembles from a specifier or
+//! an environment variable.
 
 // An integration test is test code: its helpers panic on a failed fixture, and the examined count
 // is printed on purpose.
@@ -80,10 +89,11 @@ const TEST_DIRECTORIES: [&str; 7] = [
 ];
 
 /// A shipped source's extensions: the Rust, Python and web sources, the Mini App's HTML among them,
-/// whose inline scripts run in the owner's client, and the shell scripts.
-const SHIPPED_EXTENSIONS: [&str; 17] = [
+/// whose inline scripts run in the owner's client, the shell scripts, and SQL, whose migrations
+/// run at every start.
+const SHIPPED_EXTENSIONS: [&str; 18] = [
     "rs", "py", "ts", "js", "mjs", "cjs", "mts", "cts", "tsx", "jsx", "svelte", "vue", "astro",
-    "html", "sh", "bash", "zsh",
+    "html", "sh", "bash", "zsh", "sql",
 ];
 
 /// The systemd unit types, each a unit file's suffix (`systemd.unit(5)`). A unit is shipped whatever
@@ -575,6 +585,10 @@ const GUARDED: [(&str, &str); 4] = [
 /// dispatch are private to it, so only it can call them.
 const COMMANDS: (&str, &str) = ("crates/bot/src/commands.rs", "crates/bot/src/commands/");
 
+/// The command handler's type, which a trait impl in its module would hand a reply to any caller
+/// of the trait.
+const HANDLER: &str = "Commands";
+
 /// The command handler's replies, `send` and the thirteen that send one (`export`, `ask_erase`,
 /// `sync`, `score`, `level`, `streak`, the progression replies `badges` and `records`, SPEC-073 R18,
 /// and the drill replies `drills`, `drill`, `drill_view`, `drill_ask` and `drill_answer`, SPEC-110
@@ -642,14 +656,34 @@ const COMMAND_CALLERS: [(&str, &str); 31] = [
 /// the Bot API delivers to the bot.
 const HANDLER_ENTRY: (&str, &str, &str) = ("crates/bot/src/poll.rs", "run", "handle");
 
+/// The router's migrations, the only sources outside its modules that may name the Mini App's feed
+/// and the held queue: the first creates both tables, and the second adds the queue's claim.
+const ROUTER_MIGRATIONS: [&str; 2] = [
+    "migrations/004101_notifications_router.sql",
+    "migrations/004102_notifications_queue_claim.sql",
+];
+
+/// The router's modules that own a table, each as its path from the tree's root: only they and the
+/// router's migrations may name it.
+struct Owners([&'static str; 3]);
+
+impl Owners {
+    /// Whether the source at `path` may name the table: one of its modules, or one of the router's
+    /// migrations.
+    fn contains(&self, path: &&str) -> bool {
+        let migration = ROUTER_MIGRATIONS.contains(path);
+        self.0.contains(path) || migration
+    }
+}
+
 /// The router's modules, the only sources that may name the Mini App's feed: the ledger, which
 /// writes and reads it; the router, whose `push_in_app` appends to it; and the data-rights port,
 /// which exports and erases it.
-const FEED_MODULES: [&str; 3] = [
+const FEED_MODULES: Owners = Owners([
     "crates/notifications/src/ledger.rs",
     "crates/notifications/src/router.rs",
     "crates/notifications/src/data_rights.rs",
-];
+]);
 
 /// The Mini App's feed's table, named in SQL in any case.
 const FEED_TABLE_NAME: &str = "in_app_feed";
@@ -662,11 +696,11 @@ const FEED_NAMES: [&str; 2] = ["FEED_TABLE", "append_feed"];
 /// router, their one caller, which holds, flushes and retries; and the data-rights port, which
 /// exports and erases it. A write to the queue anywhere else is a delivery around the router,
 /// because a flush delivers what the queue holds.
-const QUEUE_MODULES: [&str; 3] = [
+const QUEUE_MODULES: Owners = Owners([
     "crates/notifications/src/ledger.rs",
     "crates/notifications/src/router.rs",
     "crates/notifications/src/data_rights.rs",
-];
+]);
 
 /// The held queue's table, named in SQL in any case.
 const QUEUE_TABLE_NAME: &str = "notification_queue";
@@ -1433,6 +1467,18 @@ impl Census {
             .map(|(path, line, what)| format!("{path}:{line}: {what}"))
             .collect()
     }
+
+    /// Each finding in order, so a census compares equal whatever order the tree was read in.
+    fn sort(&mut self) {
+        self.refusals.sort();
+        self.sends.sort();
+        self.callers.sort();
+        self.callers.dedup();
+        self.api_urls.sort();
+        self.requests.sort();
+        self.unit_paths.sort();
+        self.replies.sort();
+    }
 }
 
 /// A form the census cannot read is refused: the base URL named inside a string literal (an
@@ -1469,14 +1515,7 @@ fn census(sources: &[(String, String)]) -> Census {
 fn census_read(sources: &[(String, String)], brought: &[(String, bool)]) -> Census {
     let mut found = Census::default();
     for (path, text) in sources {
-        let rust = brought.iter().find(|(file, _)| file == path).map_or_else(
-            || {
-                Path::new(path)
-                    .extension()
-                    .is_some_and(|extension| extension == "rs")
-            },
-            |&(_, rust)| rust,
-        );
+        let rust = read_as_rust(path, brought);
         let (code, structure) = if rust {
             rust_code(text)
         } else {
@@ -1520,10 +1559,7 @@ fn census_read(sources: &[(String, String)], brought: &[(String, bool)]) -> Cens
                     .push((path.clone(), line_of(&code, at), format!("names {name}")));
             }
         }
-        let (directory, name) = path.rsplit_once('/').unwrap_or(("", path));
-        if a_unit(name) || a_unit_drop_in(Path::new(directory), name) {
-            unit_paths(&mut found, path, &code);
-        }
+        unit_paths(&mut found, path, &code);
         if rust {
             for (name, definer) in GUARDED {
                 for at in identifiers(&structure, name) {
@@ -1570,27 +1606,120 @@ fn census_read(sources: &[(String, String)], brought: &[(String, bool)]) -> Cens
             }
         }
     }
-    found.refusals.sort();
-    found.sends.sort();
-    found.callers.sort();
-    found.callers.dedup();
-    found.api_urls.sort();
-    found.requests.sort();
-    found.unit_paths.sort();
-    found.replies.sort();
+    found.sort();
     found
 }
 
+/// Whether the source at `path` is read as Rust: as `brought` says for a file it names, and by its
+/// extension otherwise.
+fn read_as_rust(path: &str, brought: &[(String, bool)]) -> bool {
+    brought.iter().find(|(file, _)| file == path).map_or_else(
+        || {
+            Path::new(path)
+                .extension()
+                .is_some_and(|extension| extension == "rs")
+        },
+        |&(_, rust)| rust,
+    )
+}
+
 /// Each path the unit or drop-in at `path` names, found in `found`, and each that runs a test file
-/// refused.
+/// refused; a source that is neither names none here. A token of a line, split at a space or an `=`
+/// and unquoted, is a path when it holds a `/`, and it runs a test file when it passes through a
+/// test directory with no `src` before it, or ends in a file named as a test file. A line systemd
+/// reads as a comment, its first character past any space a `#` or a `;` (`systemd.syntax(7)`),
+/// runs nothing, so it names no path.
 fn unit_paths(found: &mut Census, path: &str, text: &str) {
-    let _ = (found, path, text);
+    let (directory, name) = path.rsplit_once('/').unwrap_or(("", path));
+    if !a_unit(name) && !a_unit_drop_in(Path::new(directory), name) {
+        return;
+    }
+    for (index, line) in text.lines().enumerate() {
+        if line.trim_start().starts_with(['#', ';']) {
+            continue;
+        }
+        for token in line.split(|c: char| c.is_whitespace() || c == '=') {
+            let token = token.trim_matches(['"', '\'']);
+            if !token.contains('/') {
+                continue;
+            }
+            found
+                .unit_paths
+                .push((path.to_owned(), index + 1, token.to_owned()));
+            let parts: Vec<&str> = token.split('/').collect();
+            let name = parts.last().copied().unwrap_or_default();
+            let through_tests = through_a_test_directory(&parts);
+            let named_as_a_test = a_test_file(name);
+            if through_tests || named_as_a_test {
+                found.refusals.push((
+                    path.to_owned(),
+                    index + 1,
+                    format!("runs {token}, a test file the census does not read"),
+                ));
+            }
+        }
+    }
+}
+
+/// Whether the path whose parts are `parts` passes through a test directory: only its directories
+/// are read, its last part aside, and none after a `src`, under which a directory named as tests
+/// are ships like any other.
+fn through_a_test_directory(parts: &[&str]) -> bool {
+    let directories = &parts[..parts.len().saturating_sub(1)];
+    directories
+        .iter()
+        .take_while(|&&part| part != "src")
+        .any(|part| TEST_DIRECTORIES.contains(part))
 }
 
 /// Each definition of the command handler's replies and dispatch in the handler's module at
-/// `path`, found in `found`, and each visible outside the module refused.
+/// `path`, found in `found`, and each visible outside the module refused: one defined `pub` or
+/// `pub(...)`, or inside a trait impl for the handler, which any caller of the trait reaches.
 fn reply_definitions(found: &mut Census, path: &str, code: &str, structure: &str) {
-    let _ = (found, path, code, structure);
+    for name in COMMAND_REPLIES {
+        for at in identifiers(structure, name) {
+            if !defined(structure, at) {
+                continue;
+            }
+            found.replies.push((path.to_owned(), name.to_owned()));
+            let keyword = structure[..at].trim_end().len() - 2;
+            let marked = visible(unqualified(&structure[..keyword]));
+            let in_a_trait = in_a_trait_impl(structure, at);
+            if marked || in_a_trait {
+                found.refusals.push((
+                    path.to_owned(),
+                    line_of(code, at),
+                    format!("defines {name} visible outside the handler's module"),
+                ));
+            }
+        }
+    }
+}
+
+/// `before`, the text ahead of a `fn` keyword, without the qualifiers a function may carry between
+/// its visibility and its keyword: `async`, `const`, `unsafe` and `extern`.
+fn unqualified(before: &str) -> &str {
+    let mut before = before.trim_end();
+    while let Some(rest) = ["async", "const", "unsafe", "extern"]
+        .into_iter()
+        .find_map(|word| {
+            before
+                .strip_suffix(word)
+                .filter(|rest| rest.chars().next_back().is_none_or(|c| !ident(c)))
+        })
+    {
+        before = rest.trim_end();
+    }
+    before
+}
+
+/// Whether the byte `at` of `structure` is inside a trait impl for the command handler: the
+/// innermost `impl` that holds it names a trait `for` the handler's type.
+fn in_a_trait_impl(structure: &str, at: usize) -> bool {
+    innermost(structure, "impl", at).is_some_and(|(start, open)| {
+        let header = &structure[start + 4..open];
+        header.split_whitespace().any(|word| word == "for") && self_type(header) == HANDLER
+    })
 }
 
 /// Each name of `REQUEST_NAMES` in the bot's source `path`, found at its named request site or
@@ -2184,15 +2313,235 @@ struct Walk {
     refusals: Vec<String>,
 }
 
-/// The files the sources of `walk` pull in, read into it under their own paths.
+/// The macros that compile a file into a Rust source, each with whether the file is read as Rust:
+/// `include!` compiles it as Rust, and `include_str!` and `include_bytes!` as data, which a census
+/// of its text reads as any other text.
+const INCLUDES: [(&str, bool); 3] = [
+    ("include", true),
+    ("include_str", false),
+    ("include_bytes", false),
+];
+
+/// The files the sources of `walk` pull in, read into it under their own paths, each once: each
+/// file a Rust source includes, and each module it brings in by `#[path]`, and so on through what
+/// those pull in. What the census cannot follow is refused. Inside the notifications crate a
+/// `#[path]` is no way in: the census refuses it there (A15).
 fn brought_in(root: &Path, walk: &mut Walk) {
-    let _ = (root, &walk.brought);
+    let mut pending: Vec<usize> = (0..walk.sources.len())
+        .filter(|&index| {
+            Path::new(&walk.sources[index].0)
+                .extension()
+                .is_some_and(|extension| extension == "rs")
+        })
+        .collect();
+    while let Some(index) = pending.pop() {
+        let path = walk.sources[index].0.clone();
+        let (code, structure) = rust_code(&walk.sources[index].1);
+        let mut files = Vec::new();
+        includes(
+            root,
+            &path,
+            &code,
+            &structure,
+            &mut files,
+            &mut walk.refusals,
+        );
+        if !path.starts_with(LEDGER.0) {
+            path_modules(
+                root,
+                &path,
+                &code,
+                &structure,
+                &mut files,
+                &mut walk.refusals,
+            );
+        }
+        for (file, rust) in files {
+            if walk.sources.iter().any(|(read, _)| *read == file) {
+                continue;
+            }
+            let bytes = fs::read(root.join(&file)).expect("a brought-in file");
+            let text = String::from_utf8_lossy(&bytes).into_owned();
+            walk.sources.push((file.clone(), text));
+            walk.brought.push((file, rust));
+            if rust {
+                pending.push(walk.sources.len() - 1);
+            }
+        }
+    }
+    walk.sources.sort();
+    walk.brought.sort();
+    walk.refusals.sort();
+}
+
+/// Each file the Rust source at `path` includes, outside its comments and test modules, pushed to
+/// `files` with whether it is read as Rust; an include the census cannot follow is refused: one
+/// whose argument is not one string literal, which only a build can name, or whose file the tree
+/// does not hold.
+fn includes(
+    root: &Path,
+    path: &str,
+    code: &str,
+    structure: &str,
+    files: &mut Vec<(String, bool)>,
+    refusals: &mut Vec<String>,
+) {
+    for (include, rust) in INCLUDES {
+        for at in identifiers(structure, include) {
+            let Some(bang) = structure[at + include.len()..]
+                .trim_start()
+                .strip_prefix('!')
+            else {
+                continue;
+            };
+            let bang = bang.trim_start();
+            if !bang.starts_with(['(', '[', '{']) {
+                continue;
+            }
+            let open = structure.len() - bang.len();
+            let close = matching(structure, open);
+            let name = literal_name(&code[open + 1..close]);
+            if let Some(file) = name.and_then(|name| resolved(root, path, name)) {
+                files.push((file, rust));
+                continue;
+            }
+            let refused = name.map_or_else(
+                || String::from("includes a file the census cannot name"),
+                |name| format!("includes {name}, which is not in the tree"),
+            );
+            refusals.push(format!("{path}:{}: {refused}", line_of(code, at)));
+        }
+    }
+}
+
+/// Each module the Rust source at `path` brings in by `#[path = "..."]`, outside its comments and
+/// test modules, pushed to `files` as Rust; one the census cannot follow is refused: one inside a
+/// block, whose path the compiler resolves against the modules around it, one whose value is not
+/// one string literal, and one whose file the tree does not hold. An attribute on anything but a
+/// module brings nothing in.
+fn path_modules(
+    root: &Path,
+    path: &str,
+    code: &str,
+    structure: &str,
+    files: &mut Vec<(String, bool)>,
+    refusals: &mut Vec<String>,
+) {
+    for (at, _) in structure.match_indices("#[") {
+        let end = at + attribute_end(&structure[at..]);
+        let inside = structure.get(at + 2..end - 1).unwrap_or_default();
+        let Some(key) = identifiers(inside, "path").find(|&key| {
+            let rest = inside[key + 4..].trim_start();
+            rest.starts_with('=') && !rest.starts_with("==")
+        }) else {
+            continue;
+        };
+        if !a_module_follows(past_visibility(&structure[end..])) {
+            continue;
+        }
+        let from = at + 2 + key + 4;
+        let value = from + structure[from..].find('=').expect("the key's =") + 1;
+        let stop = structure[value..]
+            .find([',', ')', ']'])
+            .map_or(structure.len(), |to| value + to);
+        let name = literal_name(&code[value..stop]);
+        let before = &structure[..at];
+        let in_a_block = before.matches('{').count() > before.matches('}').count();
+        let file = name
+            .filter(|_| !in_a_block)
+            .and_then(|name| resolved(root, path, name));
+        if let Some(file) = file {
+            files.push((file, true));
+            continue;
+        }
+        let why = match name {
+            _ if in_a_block => String::from(
+                "brings in a module by #[path] inside a block, which the census cannot resolve",
+            ),
+            Some(name) => format!("brings in {name} by #[path], which is not in the tree"),
+            None => String::from("brings in a module by a #[path] the census cannot name"),
+        };
+        refusals.push(format!("{path}:{}: {why}", line_of(code, at)));
+    }
+}
+
+/// The item `rest` starts with, past its attributes and its visibility, `pub` or `pub(...)`.
+fn past_visibility(rest: &str) -> &str {
+    let mut rest = rest.trim_start();
+    while rest.starts_with('#') {
+        rest = rest[attribute_end(rest)..].trim_start();
+    }
+    let Some(after) = rest
+        .strip_prefix("pub")
+        .filter(|after| !after.starts_with(ident))
+    else {
+        return rest;
+    };
+    let after = after.trim_start();
+    after.strip_prefix('(').map_or(after, |inner| {
+        inner
+            .find(')')
+            .map_or(inner, |close| inner[close + 1..].trim_start())
+    })
+}
+
+/// The byte of the bracket that closes the one at `open` in `structure`, of any of the three
+/// kinds, or the end of `structure` when none closes it.
+fn matching(structure: &str, open: usize) -> usize {
+    let mut depth = 0_i64;
+    for (at, byte) in structure.bytes().enumerate().skip(open) {
+        match byte {
+            b'(' | b'[' | b'{' => depth += 1,
+            b')' | b']' | b'}' => {
+                depth -= 1;
+                if depth == 0 {
+                    return at;
+                }
+            }
+            _ => {}
+        }
+    }
+    structure.len()
+}
+
+/// The file a macro's argument or an attribute's value names, when it is one plain string literal,
+/// with no quote and no escape inside it, and at most one trailing comma.
+fn literal_name(argument: &str) -> Option<&str> {
+    let argument = argument.trim();
+    let argument = argument.strip_suffix(',').unwrap_or(argument).trim_end();
+    let name = argument.strip_prefix('"')?.strip_suffix('"')?;
+    (!name.contains(['"', '\\'])).then_some(name)
+}
+
+/// The path from the root of the file `name` names, resolved against the directory of the source
+/// at `path` as the compiler resolves it, when the tree holds a file there: none when `name` is
+/// absolute, climbs above the root, or names no file, a symlink among them.
+fn resolved(root: &Path, path: &str, name: &str) -> Option<String> {
+    if name.starts_with('/') {
+        return None;
+    }
+    let mut parts: Vec<&str> = path.split('/').collect();
+    parts.pop();
+    for part in name.split('/') {
+        match part {
+            "" | "." => {}
+            ".." => {
+                parts.pop()?;
+            }
+            _ => parts.push(part),
+        }
+    }
+    let file = parts.join("/");
+    fs::symlink_metadata(root.join(&file))
+        .is_ok_and(|metadata| metadata.is_file())
+        .then_some(file)
 }
 
 /// Every shipped source under `root`, as its path from the root and its text, in path order: a
 /// file of a shipped kind by its name, a unit of any type, a script by its `#!` first line, and a
 /// unit's drop-in. A directory under a `src/` is always entered, whatever its name; elsewhere the
-/// skipped and the test directories are left out. A symlink is neither read nor followed.
+/// skipped and the test directories are left out. A symlink in a place the walk enters is neither
+/// read nor followed, and is refused.
 fn shipped_sources(root: &Path) -> Walk {
     let mut walk = Walk::default();
     let found = &mut walk.sources;
@@ -2203,6 +2552,13 @@ fn shipped_sources(root: &Path) -> Walk {
             let entry = entry.expect("a directory entry");
             let kind = entry.file_type().expect("a file type");
             let name = entry.file_name().to_string_lossy().into_owned();
+            if kind.is_symlink() {
+                walk.refusals.push(format!(
+                    "{}: is a symlink, which the census neither reads nor follows",
+                    relative(root, &entry.path()).join("/")
+                ));
+                continue;
+            }
             if kind.is_dir() {
                 let left_out = !under_sources
                     && (SKIPPED_DIRECTORIES.contains(&name.as_str())
@@ -2224,6 +2580,7 @@ fn shipped_sources(root: &Path) -> Walk {
         }
     }
     found.sort();
+    walk.refusals.sort();
     walk
 }
 
@@ -2238,6 +2595,15 @@ fn relative(root: &Path, path: &Path) -> Vec<String> {
 
 /// Whether a file named `name` is a shipped source: one of the shipped extensions, and no test.
 fn shipped(name: &str) -> bool {
+    let Some((_, extension)) = name.rsplit_once('.') else {
+        return false;
+    };
+    SHIPPED_EXTENSIONS.contains(&extension) && !a_test_file(name)
+}
+
+/// Whether a file named `name` is named as a test file: a Python test by its name, or a script's
+/// test or spec by its inner extension.
+fn a_test_file(name: &str) -> bool {
     let Some((stem, extension)) = name.rsplit_once('.') else {
         return false;
     };
@@ -2246,7 +2612,7 @@ fn shipped(name: &str) -> bool {
     let script_test = Path::new(stem)
         .extension()
         .is_some_and(|inner| inner == "test" || inner == "spec");
-    SHIPPED_EXTENSIONS.contains(&extension) && !python_test && !script_test
+    python_test || script_test
 }
 
 /// Whether a file named `name` is a systemd unit, of any type and whatever its name.
@@ -2460,12 +2826,23 @@ fn no_delivery_goes_around_the_port() {
         Vec::<String>::new(),
         "the tree holds a symlink, or pulls in a file the census cannot follow"
     );
+    examined("brought-in file(s)", walk.brought.clone());
     let sources = walk.sources;
     let tree = census_read(&sources, &walk.brought);
     assert_eq!(
         tree.refused(),
         Vec::<String>::new(),
         "a delivery goes around the port"
+    );
+    examined("unit path token(s)", tree.unit_paths.clone());
+    examined("reply definition(s)", tree.replies.clone());
+    let mut replies: Vec<&str> = tree.replies.iter().map(|(_, name)| name.as_str()).collect();
+    replies.sort_unstable();
+    let mut the_handlers = COMMAND_REPLIES.to_vec();
+    the_handlers.sort_unstable();
+    assert_eq!(
+        replies, the_handlers,
+        "each of the handler's replies and its dispatch is defined once, in its module"
     );
     let mut named: Vec<(String, String, String)> = NAMED_SENDS
         .iter()
@@ -3336,7 +3713,9 @@ fn a_unit_that_runs_a_test_file_is_refused() {
         ),
         (
             "deploy/systemd/deck-streak-backup.service",
-            "[Service]\nExecCondition=/usr/bin/test -f /var/lib/deck-streak/ready\n\
+            "# Its schedule is pinned by agent/tests/test_backup.py.\n[Service]\n\
+             ExecCondition=/usr/bin/test -f /var/lib/deck-streak/ready\n\
+             ; ExecStart=/usr/local/lib/deck-streak/current/agent/tests/run.sh\n\
              ExecStart=/usr/bin/python3 /usr/local/lib/deck-streak/current/deploy/scripts/backup.py\n\
              ReadOnlyPaths=/usr/local/lib/deck-streak/current/crates/agent/src/tests/\n",
         ),
