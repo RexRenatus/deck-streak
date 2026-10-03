@@ -400,7 +400,7 @@ fn the_role_reads_its_tokens_only_through_the_loader() {
         let text = fs::read_to_string(&path).expect("a source");
         sources.push((path.display().to_string(), text));
     }
-    println!("examined {} source file(s)", sources.len());
+    let sources = examined("source file(s)", sources);
     assert!(sources.len() > 1, "examined no adapter source");
     let found: Vec<String> = sources
         .iter()
@@ -414,4 +414,14 @@ fn the_role_reads_its_tokens_only_through_the_loader() {
         other_reads("planted", planted),
         vec!["planted: fs::read_to_string(", "planted: read_to_string("]
     );
+}
+
+/// Prints how many items a check examined and refuses zero (the tdd pack's examined contract).
+fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
+    println!("examined {} {what}", items.len());
+    assert!(
+        !items.is_empty(),
+        "examined 0 {what}: the population is empty, so nothing was judged"
+    );
+    items
 }
