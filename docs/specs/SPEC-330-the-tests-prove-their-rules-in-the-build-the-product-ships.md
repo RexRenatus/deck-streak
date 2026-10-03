@@ -67,7 +67,7 @@ fails `bash scripts/check.sh test-release` and passes without it, and a planted 
 | `scripts/tests/test_ship_profile.py` | gate | A1 and A2 |
 | `scripts/tests/test_ci_workflows.py` | gate | the job in the owner layout, the compile set and the `ci` needs |
 | `scripts/tests/test_check_gate.py` | gate | the stage's tools |
-| `docs/TESTING.md`, `CLAUDE.md` | docs | the stage in the roster line |
+| `docs/TESTING.md` | docs | the job in the layout table |
 | `docs/specs/SPEC-330-...md`, `docs/decisions/ADR-330-...md`, `docs/red-first/SPEC-330.md`, `changelog.d/ci-ship-profile-473.md` | docs | added |
 
 ## 5. What this does NOT do

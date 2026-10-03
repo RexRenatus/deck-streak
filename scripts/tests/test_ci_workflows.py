@@ -43,6 +43,8 @@ INTO_MAIN = {
 OWNER_LAYOUT = {
     "rust": ["fmt", "clippy", "test", "doctest", "audit-rust"],
     "engine": ["test-engine"],
+    # The release job runs the workspace's tests in the shipped profile (SPEC-330).
+    "release": ["test-release"],
     "web": ["web", "audit-web"],
     "hygiene": ["python", "scrub", "secrets"],
 }
@@ -51,7 +53,7 @@ RUST_CACHE = ["~/.cargo/registry/index/", "~/.cargo/registry/cache/", "~/.cargo/
 BROWSERS = ["~/.cache/ms-playwright"]
 # The stages that compile Rust: python's among them, because a guard test builds the ingest crate
 # twice (SPEC-055 A2), and test-engine, which builds the engine set's tests (R13).
-COMPILES_RUST = {"clippy", "test", "doctest", "python", "test-engine"}
+COMPILES_RUST = {"clippy", "test", "doctest", "python", "test-engine", "test-release"}
 # The one build tool Anki's engine needs: protoc 31.1, at the version and archive digest Anki's own
 # build pins (ADR-022).
 PROTOC_VERSION = "31.1"
