@@ -567,7 +567,7 @@ of this amendment, A24 to A27, are defined in the criteria table and fence of se
 changed by this amendment: `scripts/tests/test_verdict_folds.py` (added),
 `scripts/mutation-rows.d/S08700-S08799.json` (eight rows), `docs/red-first/SPEC-087.md` (a dated
 addendum), `scripts/tests/test_not_started_legs.py` (the run helper takes the resolved shell, and
-its callers pass it) and `changelog.d/test-verdict-folds-454.md` (added). It changes no Rust and no workflow
+its callers pass it), `scripts/tests/test_ci_workflows.py` (the read-site census's table names the read sites this amendment adds or changes) and `changelog.d/test-verdict-folds-454.md` (added). It changes no Rust and no workflow
 (#454).
 
 ## 11. Acceptance criteria of the amendment of 2026-09-30 (A24 to A27, #454)
