@@ -41,17 +41,17 @@ Measured at dev `02758d4`:
 
 ## Considered Options (the alternatives it was chosen against)
 
-- D1, follow each `include!`, `include_str!` and `include_bytes!` whose argument is one string
-  literal, read the file under its own path (as Rust from `include!`, as text otherwise) and refuse
-  one the census cannot name or find: chosen, because the 23 includes at dev are literals and none
-  names a held name (#297).
+- D1, follow each literal include: chosen, because the 23 includes at dev are literals and none
+  names a held name. Each `include!`, `include_str!` and `include_bytes!` whose argument is one
+  string literal is followed, its file read under its own path (as Rust from `include!`, as text
+  otherwise), and one the census cannot name or find is refused (#297).
 - D1, keep includes named: rejected, because the file the compiler includes is a literal the census
   can read, so naming it leaves ordinary code unread (#297).
 - D1, refuse every include outright: rejected, because it would red on 23 ordinary includes, the
   policy file and the persona files among them (#297).
-- D2, SQL joins the shipped kinds, and only the router's two migrations may name the feed or the
-  held queue: chosen, because a migration runs at every start, so a write to the queue in one is a
-  delivery the flush makes (#297).
+- D2, SQL is a shipped kind: chosen, because a migration runs at every start, so a write to the
+  queue in one is a delivery the flush makes. Only the router's two migrations may name the feed or
+  the held queue (#297).
 - D2, read every file of every kind: rejected, because 1227 files at dev are of kinds the census
   does not read, 639 Markdown and 335 JSON among them, and the prose under `docs/` names
   `sendMessage` throughout (#297).
@@ -59,20 +59,21 @@ Measured at dev `02758d4`:
   followed, so a delivery behind one would go unread, and the tree holds none (#297).
 - D3, follow symlinks: rejected, because a link can leave the tree or loop, and what it points at
   is read under a path that is not its own (#297).
-- D4, follow a module's `#[path = "…"]` outside the notifications crate, read its target as Rust
-  under its own path, and refuse a target not in the tree or a `#[path]` inside a block: chosen,
-  because a test file a shipped crate compiles is shipped code (#297).
-- D5, refuse a unit or drop-in whose path runs a test file, by a test directory with no `src`
-  before it or by a test file's name: chosen, because the release ships `agent/tests/` and the
-  census reads no test file (#297).
-- D6, refuse a reply of the command handler defined `pub`, `pub(...)` or in a trait impl for the
-  handler: chosen, because with every reply private the compiler refuses a call from outside the
-  handler's module, and A15's named callers already hold a call inside it (#297).
+- D4, follow a `#[path]` outside the notifications crate: chosen, because a test file a shipped
+  crate compiles is shipped code. The module's target is read as Rust under its own path, and a
+  target not in the tree or a `#[path]` inside a block is refused (#297).
+- D5, refuse a unit or drop-in that runs a test file: chosen, because the release ships
+  `agent/tests/` and the census reads no test file. A path runs one by a test directory with no
+  `src` before it or by a test file's name (#297).
+- D6, refuse a reply visible outside the handler's module: chosen, because with every reply private
+  the compiler refuses a call from outside the handler's module, and A15's named callers already
+  hold a call inside it. A reply is visible when it is defined `pub`, `pub(...)` or in a trait impl
+  for the handler (#297).
 - D6, a census of the replies' calls across the bot crate: rejected, because it needs name
   resolution through `use … as` and traits, which the compiler's privacy already does (#297).
-- Keeping classes 1, 2b's other kinds, 5 and 6a, a regex over constant initializers or wrapper
-  bodies: rejected, because one `use … as` inside a block defeats it, so the census would claim to
-  resolve names it cannot (#297).
+- Closing classes 1, 2b's other kinds, 5 and 6a by a regex: rejected, because one `use … as` inside
+  a block defeats it, so the census would claim to resolve names it cannot. The regex would read
+  constant initializers or wrapper bodies (#297).
 - Keeping class 6a, a census of the router modules' 95 `pub` lines: rejected, because it holds
   names, not writes, and adds friction to every router delivery while the queue's writes are
   already `pub(crate)` (#297).
