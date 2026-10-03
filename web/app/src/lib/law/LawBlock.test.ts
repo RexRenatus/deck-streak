@@ -109,6 +109,7 @@ describe('the law block', () => {
     const pending = screen.queryByRole('list', { name: 'Not counted yet' });
     const items = examined('pending counts', pending ? within(pending).queryAllByRole('listitem') : []);
     expect(items.map(textOf)).toEqual(['Law mastery: pending', 'Active law leeches: pending']);
+    expect(textOf(screen.queryByRole('heading', { level: 3 }))).toBe('Not counted yet');
   });
 
   it('shows the law cards and today\'s law XP by tier', () => {
