@@ -33,6 +33,7 @@ deck-streak-privacy       (export, erase and purge over every context's data-rig
 deck-streak-coordination  (use cases and scheduled jobs across contexts)  depends on: kernel, ingest, identity, analytics, progression, streaks, curriculum, economy, quests, habits, focus, discipline, markets, notifications, readings, vault, agent, insights, publishing, privacy
 deck-streak-api           (axum HTTPS adapter for the Mini App)  depends on: kernel, identity, notifications, coordination
 deck-streak-bot           (Telegram Bot API adapter)  depends on: kernel, identity, notifications, coordination
+deck-streak-mcp           (MCP adapter: the bearer guard, its grants and its limiter; the server arrives with #157)  depends on: kernel
 deck-streak-daemon        (composition root: the deckstreakd binary)  depends on: kernel, ingest, identity, analytics, progression, streaks, curriculum, economy, quests, habits, focus, discipline, markets, notifications, readings, vault, agent, insights, publishing, privacy, coordination, api, bot
 deck-streak-migration     (one-off import of v9's schema 24, planned)  depends on: kernel, analytics, progression, streaks, curriculum, economy, quests, habits, focus, discipline, markets, notifications, readings, vault
 miniapp   web/app/src     (the SvelteKit Mini App)  depends on: nothing internal
