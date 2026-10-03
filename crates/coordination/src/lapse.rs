@@ -1,8 +1,8 @@
 //! The open lapse, read from the window a caller read (SPEC-049 R15; ADR-088).
 //!
 //! It counts the qualifying reviews of each study day the window holds (ingest's
-//! [`is_study_event`], on the days SPEC-020's study-day rule gave [`RecomputeFacts`]), passes an
-//! empty skip set until the skip day exists (#108), and returns the open lapse's id as the
+//! [`is_study_event`], on the days SPEC-020's study-day rule gave [`RecomputeFacts`]), takes the
+//! skip set from its caller, who reads it where it reads the record (ADR-321 D12), and returns the open lapse's id as the
 //! kernel's [`StudyDay`], which an occasion's lapse context carries as it is (SPEC-041 R3). It
 //! opens no collection: the window is its caller's, and it holds no rule of its own, the rule is
 //! streaks' [`open_lapse`].
@@ -23,7 +23,7 @@ use crate::recompute::RecomputeFacts;
 /// Every day the window holds a review on has a row, with a count of zero when none of that day's
 /// rows is a study event, so a manual or rescheduling entry never closes a run.
 #[must_use]
-pub fn open_lapse(facts: &RecomputeFacts<'_>) -> Option<StudyDay> {
+pub fn open_lapse(facts: &RecomputeFacts<'_>, skips: &BTreeSet<StudyDay>) -> Option<StudyDay> {
     let review_counts: BTreeMap<StudyDay, u32> = facts
         .data
         .reviews
@@ -42,10 +42,5 @@ pub fn open_lapse(facts: &RecomputeFacts<'_>) -> Option<StudyDay> {
             *count = count.saturating_add(studied);
             rows
         });
-    lapse::open_lapse(
-        facts.today,
-        &review_counts,
-        &BTreeSet::new(),
-        LAPSE_AFTER_SILENT_DAYS,
-    )
+    lapse::open_lapse(facts.today, &review_counts, skips, LAPSE_AFTER_SILENT_DAYS)
 }

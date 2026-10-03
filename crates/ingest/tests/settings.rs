@@ -6,7 +6,8 @@ use std::ffi::OsString;
 use std::os::unix::ffi::OsStringExt;
 
 use deck_streak_ingest::settings::{
-    INCLUDE_DECKS, LAW_DECK_ROOT, STATE_DIRECTORY, SYNC_ENDPOINT, ScopeSettings, SyncSettings,
+    INCLUDE_DECKS, LAW_DECK_ROOT, SKIP_SEARCH, STATE_DIRECTORY, SYNC_ENDPOINT, ScopeSettings,
+    SkipSearch, SyncSettings,
 };
 use deck_streak_kernel::{Environment, SettingsError};
 
@@ -166,5 +167,34 @@ fn each_malformed_setting_is_refused_naming_its_whole_shape() {
             setting: INCLUDE_DECKS,
             expected: "top-level deck-name prefixes, separated by commas",
         })
+    );
+}
+
+#[test]
+fn a_skip_search_that_is_not_one_expression_refuses_start_by_name() {
+    let unset = SkipSearch::from_env(&Environment::from_vars([("UNRELATED", "1")]))
+        .expect("an unset search is the default");
+    assert_eq!(unset.as_str(), "prop:due=0 -is:suspended -is:buried");
+    let set = SkipSearch::from_env(&Environment::from_vars([(SKIP_SEARCH, "deck:Synthetic")]))
+        .expect("one expression starts");
+    assert_eq!(set.as_str(), "deck:Synthetic");
+    assert_eq!(
+        format!("{set:?}"),
+        "SkipSearch(..)",
+        "the debug form never prints the search"
+    );
+    let value = "deck:X) or (deck:X";
+    let refused = SkipSearch::from_env(&Environment::from_vars([(SKIP_SEARCH, value)]));
+    assert_eq!(
+        refused,
+        Err(SettingsError::Malformed {
+            setting: SKIP_SEARCH,
+            expected: "one Anki search expression"
+        })
+    );
+    let named = refused.map(|_| ()).unwrap_err().to_string();
+    assert!(
+        named.contains(SKIP_SEARCH) && !named.contains(value),
+        "{named}"
     );
 }

@@ -182,3 +182,11 @@ A15) stays the proof for every sync of the private copy.
 CHARTER constraint 4; SPEC-001 §14 (the gate-6 amendment); ADR-011 (side by side); ADR-037;
 ADR-089; SPEC-022 R6, R7 and R14; SPEC-023 R2; SPEC-083;
 `docs/schematics/skip-day-record-and-effects.md`; #108; #164; #266; #269.
+
+Note (2026-10-03, #108, read under ADR-301): the Decision Outcome bullet "CHARTER constraint 4
+stands as written: the skip day is the only write back to Anki." reads under ADR-301, the owner's
+decision at #514, which amended that constraint: its sentence is kept, and DeckStreak writes to the
+collection only through declared write classes, each with its own ADR in ADR-089's form. The skip
+day is ADR-301's first declared write class, and its ceiling is the approval rung. Every other line
+above is kept as it was. This ADR stays proposed; SPEC-083 section 10 (T7) and ADR-321 record when
+and how it is accepted.

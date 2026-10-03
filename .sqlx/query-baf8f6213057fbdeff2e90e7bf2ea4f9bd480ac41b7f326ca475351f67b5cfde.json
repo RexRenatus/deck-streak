@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM skip_card_snapshot",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "baf8f6213057fbdeff2e90e7bf2ea4f9bd480ac41b7f326ca475351f67b5cfde"
+}

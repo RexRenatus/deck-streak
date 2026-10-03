@@ -47,7 +47,7 @@ fn open(today: i64, reviews: Vec<Review>) -> Option<i64> {
         UtcMillis::from_epoch_millis(at(today)),
         None,
     );
-    open_lapse(&facts).map(StudyDay::epoch_day)
+    open_lapse(&facts, &BTreeSet::new()).map(StudyDay::epoch_day)
 }
 
 #[test]
@@ -136,7 +136,7 @@ fn open_under(rule: StudyDayRule, now: i64, reviews: Vec<Review>) -> Option<i64>
         deck_names: BTreeMap::new(),
     };
     let facts = RecomputeFacts::new(&data, rule, UtcMillis::from_epoch_millis(now), None);
-    open_lapse(&facts).map(StudyDay::epoch_day)
+    open_lapse(&facts, &BTreeSet::new()).map(StudyDay::epoch_day)
 }
 
 /// A rule as the judges read it: its offset in minutes and its rollover hour.
