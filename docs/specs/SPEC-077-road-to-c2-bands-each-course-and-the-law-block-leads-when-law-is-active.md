@@ -588,3 +588,4 @@ New:
   allocating and ends as a timeout, and one that moves it below the position panics on the slice.
 - T21, T5 and T10. `crates/api/src/badges_routes.rs` and the coordination progress view for the API and the bot are delivered by CU85b, whose first part wires the stored mature cards into `GET /api/milestone` (R17a); until then the route answers `pending`.
 - `crates/api/src/badges_routes.rs`: unchanged in this pull request; delivered by CU85b
+- T22, the merge of live `dev`. `crates/curriculum/tests/horizon_goldens.rs`, which the horizon slice (SPEC-091) added, builds a `Card` and so gains one line, `memory: None`, inside its one `Card { .. }` literal, as the files listed under T15 do; `crates/curriculum/tests/store_boundaries.rs` and S07724 name the crate root's six modules, `horizon` among them, since the merge added that module.
