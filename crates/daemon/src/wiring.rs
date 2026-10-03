@@ -29,6 +29,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, OnceLock};
 
+use deck_streak_agent::{CefrBand, LiveBand, Subject, SubjectKind};
 use deck_streak_analytics::settings::AnalyticsSettings;
 use deck_streak_bot::{OwnerChat, Scores, SyncAnswer, SyncOutcome, Transport};
 use deck_streak_coordination::courses::{CoursesDisagree, agree};
@@ -52,6 +53,7 @@ use deck_streak_coordination::recompute::{Fold, FoldError, Phase};
 use deck_streak_coordination::sync_cycle::{
     CycleError, CycleParts, CycleReport, Recompute, sync_cycle,
 };
+use deck_streak_curriculum::store::stored_bands;
 use deck_streak_identity::Owner;
 use deck_streak_ingest::engine::{AnkiEngine, RslibEngine};
 use deck_streak_ingest::gate::{ChangeGate, GateError};
@@ -65,8 +67,8 @@ use deck_streak_ingest::window::WindowError;
 use deck_streak_insights::dark_fields::DarkFields;
 use deck_streak_kernel::{
     Clock, Conventions, ConventionsError, Courses, CoursesError, CredentialLoader,
-    CredentialsDirectory, Db, Environment, KernelError, Offload, Redactor, Setting, SettingsError,
-    StudyDayRule, SystemClock,
+    CredentialsDirectory, Db, Environment, KernelError, Offload, PortFuture, Redactor, Setting,
+    SettingsError, StudyDayRule, SystemClock,
 };
 use deck_streak_notifications::{Policy, Router};
 use deck_streak_readings::taxonomy::{Taxonomy, TaxonomyError, TaxonomyPath};
@@ -268,13 +270,29 @@ impl CurriculumLiveBand {
     }
 }
 
-impl deck_streak_agent::LiveBand for CurriculumLiveBand {
-    fn band<'a>(
-        &'a self,
-        _subject: &'a deck_streak_agent::Subject,
-    ) -> deck_streak_kernel::PortFuture<'a, Option<deck_streak_agent::CefrBand>> {
-        let _unread = (&self.db, &self.courses);
-        Box::pin(async { Ok(None) })
+impl LiveBand for CurriculumLiveBand {
+    fn band<'a>(&'a self, subject: &'a Subject) -> PortFuture<'a, Option<CefrBand>> {
+        Box::pin(async move {
+            if subject.kind() != SubjectKind::Language {
+                return Ok(None);
+            }
+            let Some((_kind, area)) = subject.as_str().split_once('/') else {
+                return Ok(None);
+            };
+            let configured = self
+                .courses
+                .courses()
+                .iter()
+                .find(|course| course.code.as_str() == area);
+            let Some(course) = configured else {
+                return Ok(None);
+            };
+            let mut connection = self.db.reader().acquire().await?;
+            let bands = stored_bands(&mut connection).await?;
+            Ok(bands
+                .get(course.code.as_str())
+                .and_then(|band| CefrBand::parse(band)))
+        })
     }
 }
 
