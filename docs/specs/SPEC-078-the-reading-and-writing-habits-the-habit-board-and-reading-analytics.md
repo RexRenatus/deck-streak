@@ -296,8 +296,9 @@ A31: cargo test -p deck-streak-coordination --test data_rights_symmetry -- --exa
 ```
 
 Amended existing tests, which keep their names and are not red-first evidence:
-`commands::the_menu_is_registered_for_the_owners_chat_only` (the two new commands on a new line of its
-set, eleven commands to thirteen), `commands::every_golden_message_is_what_the_bot_sends` (its
+`commands::the_menu_is_registered_for_the_owners_chat_only` (the two new commands joined to its
+set's existing line, which rustfmt keeps as one line, eleven commands to
+thirteen), `commands::every_golden_message_is_what_the_bot_sends` (its
 `rendered()` gains the new replies), and
 `wiring::tests::the_recompute_fold_registers_the_analytics_xp_and_streak_steps_in_their_phases` (one
 line for the habit step).
@@ -556,3 +557,48 @@ insert-only; the body above is unchanged.
   names the commands /read and /undo in plain text rather than in backticks, because the SDD probe
   reads a backticked token that starts with a slash as a path outside the repository. It is the one
   edit above these amendments, and it changes no requirement, criterion or path.
+
+## 12. Amendments, 2026-10-03: the update merge with dev
+
+The update merge with `dev` meets exact lists and counts that this part and `dev` each grew. Each
+now holds both sides' items: it grows by exactly `dev`'s items and stays exact, so each is an
+addition and none is a weakening. Each is recorded here, insert-only. Above these amendments,
+section 3's amended-tests paragraph now says that the two new commands join their set's existing
+line.
+
+- **T6** (A24, the fold's order). `wiring::tests::the_recompute_fold_registers_the_habit_step_in_the_day_steps_phase`
+  reads the exact slice `steps.get(2..6)`, the streaks step, the progress step, the habit step and
+  the day bonuses step, where it read `steps.get(2..5)` without the progress step. `dev`
+  registers Road to C2's progress step in `Phase::DaySteps` right after the streaks step, and the
+  habit step is registered after it. `dev`'s `the_recompute_fold_registers_road_to_c2s_steps` is
+  unchanged. The progress step reads no XP that the habit step settles: its band-up grant reads back
+  only its own key's row.
+- **T7** (the fold's exact list).
+  `wiring::tests::the_recompute_fold_registers_the_analytics_xp_and_streak_steps_in_their_phases`
+  holds `dev`'s `(Phase::DaySteps, PROGRESS_STEP)` and `(Phase::Awards, BAND_BADGES_STEP)` beside
+  this part's `(Phase::DaySteps, HABITS_STEP)`, which follows the progress step. The list is still
+  the whole registration, in its order.
+- **T8** (the owner's menu). `crates/bot/src/commands.rs`'s `MENU` holds 14 entries, where this part
+  held 13: `dev`'s `progress` follows `records`, and `read` and `undo` stay last.
+- **T9** (the menu's set). `commands::the_menu_is_registered_for_the_owners_chat_only` gains
+  `progress` on the line that holds `read` and `undo`, and its message counts fourteen commands. At
+  the merge the set goes from twelve commands to fourteen.
+- **T10** (a golden). `crates/bot/tests/messages/help.msg.json` gains `dev`'s line for /progress
+  after the line for /records, and the lines for /read and /undo stay last.
+- **T11** (a golden). `crates/bot/tests/messages/start.msg.json` gains the same line in the same
+  place.
+- **T12** (the census of statics). `crates/coordination/tests/relight_order.rs`'s `STATICS` holds 19,
+  where T1 made it 18: `dev`'s `static LADDER` in `crates/economy/src/tariff.rs` sits beside
+  `static HABITS`. Its doc comment is `dev`'s, which names the parsed skip tariff ladder.
+- **T13** (the one-router census). `crates/notifications/tests/one_router.rs`'s `COMMAND_REPLIES`
+  holds 21, where T2 made it 20, because it gains `dev`'s `progress`. Its doc comment now counts
+  seventeen replies that send one, where it counted sixteen, and `dev`'s `HANDLER` block stays above
+  it.
+- **T14** (the one-router census). `COMMAND_CALLERS` holds 39, where T2 made it 37, because it gains
+  `dev`'s two edges: `Commands::on_message` to `progress`, and `Commands::progress` to `send`.
+- **T15** (the data-rights seeds). `crates/coordination/tests/data_rights_symmetry.rs`'s `SEEDS`
+  holds 41, where this part made it 39, because it gains `dev`'s seeds for `skip_days` and
+  `skip_card_snapshot`.
+- **T16** (the formal settings). `config/formal.json`'s entry budgets and the `EXPECTED` table of
+  `scripts/tests/test_formal_config.py`, which T3 holds equal, now hold `dev`'s `tla/LandmarkOnce`
+  (420) beside `tla/HabitXpFollowsItsLog` (300), in name order.
