@@ -1,7 +1,9 @@
 //! The `bot` role runs the bot's loop under the shared lifecycle: it drains what was queued before
 //! it started, tells systemd it is ready once the first long poll is issued, answers the owner,
 //! requests the owner's `/sync` through the sync job's request file, and on SIGTERM confirms its
-//! offset, says it is stopping and exits 0 (SPEC-026 R1, R2, R11, R13; ADR-025, ADR-026).
+//! offset, says it is stopping and exits 0 (SPEC-026 R1, R2, R11, R13; ADR-025, ADR-026). With a
+//! courses file named in its settings, it answers the owner's progress command from those courses
+//! (SPEC-077 R16).
 //!
 //! It runs the built binary against the bot's own fake Bot API on a loopback port, with a temporary
 //! state directory, a temporary credentials directory of synthetic credentials, and a temporary
@@ -20,9 +22,12 @@ use std::path::Path;
 use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
 
+use deck_streak_curriculum::progress::{BandProgress, CourseProgress};
+use deck_streak_curriculum::store::put_progress;
 use deck_streak_daemon::lifecycle::WATCHDOG_USEC;
 use deck_streak_ingest::state::SqliteIngestState;
-use deck_streak_kernel::Db;
+use deck_streak_kernel::courses::COURSES_FILE;
+use deck_streak_kernel::{CourseCode, Db, UtcMillis};
 use fake_bot_api::{APP_URL, Answer, Call, FakeBotApi, OWNER, TOKEN, owner_says, payload};
 use serde_json::json;
 
@@ -67,13 +72,23 @@ fn credentials(parent: &Path) -> std::path::PathBuf {
 /// Starts `deckstreakd bot` against `fake`, in `directory`: its state, its credentials and its
 /// notify socket, whose other end is returned, reading with a short timeout.
 fn start_role(fake: &FakeBotApi, directory: &Path) -> (Role, UnixDatagram) {
+    start_role_with(fake, directory, &[])
+}
+
+/// Starts the role as [`start_role`] does, with the further `settings` set, each to a path. A
+/// state directory a test has already seeded is kept.
+fn start_role_with(
+    fake: &FakeBotApi,
+    directory: &Path,
+    settings: &[(&str, &Path)],
+) -> (Role, UnixDatagram) {
     let socket_path = directory.join("notify.socket");
     let socket = UnixDatagram::bind(&socket_path).expect("the notify socket binds");
     socket
         .set_read_timeout(Some(Duration::from_millis(250)))
         .expect("a read timeout");
     let state = directory.join("state");
-    std::fs::create_dir(&state).expect("the state directory");
+    std::fs::create_dir_all(&state).expect("the state directory");
     let child = Command::new(env!("CARGO_BIN_EXE_deckstreakd"))
         .arg("bot")
         .env_clear()
@@ -89,6 +104,7 @@ fn start_role(fake: &FakeBotApi, directory: &Path) -> (Role, UnixDatagram) {
         )
         .env("NOTIFY_SOCKET", &socket_path)
         .env(WATCHDOG_USEC, "5000000")
+        .envs(settings.iter().copied())
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .spawn()
@@ -235,4 +251,73 @@ async fn the_bot_role_drains_answers_the_owner_and_stops_on_sigterm() {
         "the /sync marked the owner's rescore"
     );
     db.close().await;
+}
+
+/// One synthetic course, which the courses file the role's settings name configures.
+const COURSES: &str = r#"{"schema":"deckstreak.courses.v1","courses":[
+{"code":"qaa","name":"Course Qaa","flag":"F","deck_root":"Qaa","alias":"a","writing":false,
+"unit_bands":{"A1":[1,4]}}]}"#;
+
+/// Stores course `qaa`'s progress in the database the role opens under `state`, as a recompute
+/// would.
+async fn store_progress(state: &Path) {
+    std::fs::create_dir(state).expect("the state directory");
+    let db = Db::open(&state.join("deck_streak.db"))
+        .await
+        .expect("the database opens");
+    let progress = CourseProgress {
+        code: CourseCode::new("qaa").expect("a course code"),
+        name: "Course Qaa".to_owned(),
+        flag: "F".to_owned(),
+        total_cards: 8,
+        mature_cards: 5,
+        mastery_pct: 62.5,
+        current_band: "A1",
+        bands: vec![BandProgress {
+            band: "A1",
+            total: 8,
+            mature: 5,
+            pct: 62.5,
+            achieved: false,
+        }],
+        current_unit: Some(2),
+    };
+    let mut write = db.write().await.expect("a write");
+    put_progress(&mut write, &progress, UtcMillis::from_epoch_millis(1_000))
+        .await
+        .expect("the progress writes");
+    write.commit().await.expect("the progress commits");
+    db.close().await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn the_bot_role_answers_progress_from_the_courses_its_settings_name() {
+    let fake = FakeBotApi::start().await;
+    fake.script(
+        "getUpdates",
+        [
+            // Queued before the start: drained, never answered.
+            Answer::updates(vec![owner_says(1, "/start")]),
+            Answer::updates(vec![owner_says(5, "/progress")]),
+        ],
+    );
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    store_progress(&directory.path().join("state")).await;
+    let courses = directory.path().join("courses.json");
+    std::fs::write(&courses, COURSES).expect("the courses file");
+    let (_role, _socket) = start_role_with(&fake, directory.path(), &[(COURSES_FILE, &courses)]);
+
+    tokio::time::timeout(
+        DEADLINE,
+        fake.until(|calls| calls.iter().any(|call| call.method == "sendMessage")),
+    )
+    .await
+    .expect("the progress command answered");
+    let sends = fake.calls_of("sendMessage");
+    assert_eq!(
+        payload(&sends[0])["text"],
+        json!("<b>Road to C2</b>\nF <b>Course Qaa</b>: A1, 63% mastery, unit 2"),
+        "the stored progress of the course the settings name; a role that read no course would say \
+         none is stored yet"
+    );
 }

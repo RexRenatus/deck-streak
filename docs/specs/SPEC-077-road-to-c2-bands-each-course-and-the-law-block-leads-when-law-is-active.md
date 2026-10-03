@@ -671,6 +671,10 @@ SPEC-086 places the block first there (#69).
 | `S07731-THE-BAND-BADGE-STEP-IS-REGISTERED` | `crates/daemon/src/wiring.rs` | the production fold registers the band badge step in phase 7 | `lib::wiring::tests::the_recompute_fold_registers_road_to_c2s_steps` |
 | `S07732-THE-LIVE-BAND-READS-THE-SUBJECTS-COURSE` | `crates/daemon/src/wiring.rs` | the live band answers the stored band of the course the subject's area names, and of no other | `progress_live_band::the_persona_engine_reads_the_live_band` |
 
+- T31, section 4 also gains `crates/daemon/tests/role_bot.rs` (changed: the bot role answers the
+  progress command from the courses its settings name, which observes the courses `role_bot.rs`
+  passes to the bot's handlers; mutation coverage and not a criterion).
+
 ## 12. Acceptance criteria of the 2026-10-03 amendment
 
 | id | criterion | decided by |

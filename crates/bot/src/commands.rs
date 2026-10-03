@@ -27,6 +27,7 @@ use deck_streak_coordination::data_rights_registry::{erase_all, export_all};
 use deck_streak_coordination::drills::{self, DrillMeta, DrillNotes, RealFs, Surface};
 use deck_streak_coordination::inbox_capture::{Capture, Captured, InboxCaptures, Source};
 use deck_streak_coordination::instruments::InstrumentService;
+use deck_streak_coordination::progress_view::progress_view;
 use deck_streak_coordination::progression::badges_view::earned_badges;
 use deck_streak_coordination::progression::level_view::level_view;
 use deck_streak_coordination::progression::records_view::records_now;
@@ -43,7 +44,7 @@ use crate::badges_commands::{
 use crate::capture::{self, Choice, MAX_DOWNLOAD_BYTES, Outcome};
 use crate::drill_commands::{self, ANSWER_PREFIX, VIEW_PREFIX};
 use crate::gate::{self, Admission, OwnerCallback, OwnerMessage};
-use crate::progress_commands::progress_reply;
+use crate::progress_commands::{progress_failed_reply, progress_reply};
 use crate::score_commands::{score_failed_reply, score_reply};
 use crate::streak_commands::{streak_failed_reply, streak_reply};
 use crate::transport::{Download, Incoming, Sent, Transport, escape_attribute, escape_html};
@@ -71,7 +72,7 @@ pub struct MenuEntry {
 }
 
 /// The owner's menu, in the order the menu shows it.
-pub const MENU: [MenuEntry; 11] = [
+pub const MENU: [MenuEntry; 12] = [
     MenuEntry {
         command: "score",
         description: "Show today's score",
@@ -91,6 +92,10 @@ pub const MENU: [MenuEntry; 11] = [
     MenuEntry {
         command: "records",
         description: "Show your personal records",
+    },
+    MenuEntry {
+        command: "progress",
+        description: "Show your Road to C2",
     },
     MenuEntry {
         command: "drills",
@@ -250,6 +255,7 @@ fn command_lines() -> String {
         "/streak shows your streaks",
         "/badges shows your badges",
         "/records shows your personal records",
+        "/progress shows each course's Road to C2",
         "/drills lists the law drills to answer",
         "/drill picks a law drill by type",
         "/sync syncs your collection now",
@@ -748,10 +754,19 @@ impl<S: OwnerSync> Commands<S> {
         self.send(reply).await;
     }
 
-    /// `/progress`: each configured course's Road to C2 (SPEC-077 R15, R16).
+    /// `/progress`: each configured course's Road to C2 (SPEC-077 R15, R16), the courses the
+    /// daemon configured, or none when it configured none.
     async fn progress(&self) {
-        let _unread = &self.courses;
-        self.send(progress_reply(&[], &self.app)).await;
+        let unconfigured = Courses::default();
+        let courses = self.courses.as_ref().unwrap_or(&unconfigured);
+        let reply = match progress_view(&self.db, courses).await {
+            Ok(view) => progress_reply(&view, &self.app),
+            Err(error) => {
+                tracing::error!(%error, "the owner's progress could not be read");
+                progress_failed_reply()
+            }
+        };
+        self.send(reply).await;
     }
 
     /// `/drills`: the unanswered drills (SPEC-110 R13).
