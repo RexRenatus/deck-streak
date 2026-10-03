@@ -53,6 +53,17 @@
 \*
 \* MintReadsTheFinalBase covers settle.rs::settle too: SPEC-078 changes only its first line, the
 \* registry test, from the nine names to is_derived, which refuses before any write.
+\*
+\* Two abstractions, re-read against the covered spans when they were first stamped:
+\* - Undo announces nothing here, and the code's undo_newest and undo_entry skip the announcement:
+\*   an undo only lowers or keeps the held amounts, so the level after it is never above the level
+\*   before it, and announce_level_up routes nothing when after <= before. The skipped call is a
+\*   stutter.
+\* - log_minutes reads `before` just before its write and `after` just after its commit
+\*   (minutes.rs::level_before, celebrate); the model reads both inside LogMinutes. A fold commit
+\*   that lands between the read and the write, or between the commit and the read, can make the
+\*   use case see a crossing the cycle also sees; both route the one key level:N, and the router's
+\*   once-ever dedupe absorbs the second, which is what ALevelUpIsCelebratedOnce states.
 (***************************************************************************)
 EXTENDS Integers, Sequences, FiniteSets
 

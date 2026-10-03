@@ -106,6 +106,12 @@ Init ==
 
 \* progression settle.rs::settle under the recompute's cause: a row held closed, or settled closed,
 \* is only raised (held.amount.max(request.amount)); an open row is replaced
+\* Re-read of settle.rs::settle for SPEC-078 (2026-10-03): its registry test moved from the nine
+\* names to settle.rs::is_derived, which also admits `read:<code>` and `readgoal:<code>` for a
+\* valid course code, and still refuses before any write. It moves none of base, held or mint on
+\* any path: a stuttering step. SPEC-078's habit step (recompute/habits.rs, phase 4) settles those
+\* counted sources inside the same write, before phase 6, so it is part of the write's one base
+\* update above.
 Settled(d, closed, r) == IF held[d] \/ closed THEN Max(base[d], r) ELSE r
 
 \* wallet.rs::settle_mint_on: a closed settle, or a raise, keeps held.max(amount); an open lowering
