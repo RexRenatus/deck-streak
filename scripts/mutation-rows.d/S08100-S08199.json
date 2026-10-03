@@ -315,6 +315,15 @@
         "token.window_ends_at <= now.epoch_millis()",
         "tokens_window::the_token_bonus_matches_the_predecessors_golden",
         "a token is consumed only once its window has ended (SPEC-081 R13, A12)"
+      ],
+      [
+        "S08137-THE-QUESTS-LIB-PUBLISHES-DATA-RIGHTS",
+        "quests",
+        "src/lib.rs",
+        "pub mod data_rights;",
+        "mod data_rights;",
+        "chests_rights::the_quests_port_declares_its_tables_and_their_reset_rows",
+        "the data rights module is public, because the composition root reads the quests port through it (SPEC-081 R21, A21)"
       ]
     ],
     "CARGO_KILLED_SCRIPT_MUTATIONS": [
