@@ -15,6 +15,7 @@
 #![warn(missing_docs, clippy::all)]
 
 pub mod data_rights;
+pub mod horizon;
 pub mod law;
 pub mod progress;
 pub mod store;
