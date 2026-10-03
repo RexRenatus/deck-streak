@@ -68,6 +68,7 @@ fails `bash scripts/check.sh test-release` and passes without it, and a planted 
 | `scripts/tests/test_ci_workflows.py` | gate | the job in the owner layout, the compile set and the `ci` needs |
 | `scripts/tests/test_check_gate.py` | gate | the stage's tools |
 | `docs/TESTING.md` | docs | the job in the layout table |
+| `crates/kernel/tests/logging.rs` | test | `each_json_line_opens_with_its_journal_priority` reads the build's static max level (ruling 150) |
 | `docs/specs/SPEC-330-...md`, `docs/decisions/ADR-330-...md`, `docs/red-first/SPEC-330.md`, `changelog.d/ci-ship-profile-473.md` | docs | added |
 
 ## 5. What this does NOT do
