@@ -48,6 +48,14 @@
         "--shard \"$SHARD/$SHARDS\" --timeout 300 --build-timeout 600 --output \"$out\"",
         "the pull request's mutation run, its baseline included, keeps the 1200 s per-mutant budget that covers the settle census; 300 s timed every progression baseline out (SPEC-327 R1)",
         "test_dispatch_shards.EveryMutationCommandKeepsTheGatesBounds.test_every_cargo_mutants_command_carries_the_gates_own_bounds"
+      ],
+      [
+        "S32706-THE-SIZER-TRIES-THE-SHARD-CAP",
+        "scripts/mutation-verdict.py",
+        "range(1, MAX_SHARDS + 1)",
+        "range(1, MAX_SHARDS - 1)",
+        "the sizer tries every shard count up to and including the cap, so a listing that needs exactly the cap is sized and never refused (SPEC-129 R2)",
+        "test_mutation_verdict.TheShardsFitTheirBound.test_a_listing_that_needs_exactly_the_shard_cap_is_sized_at_the_cap"
       ]
     ]
   }
