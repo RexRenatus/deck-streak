@@ -25,8 +25,8 @@ use deck_streak_bot::{ApiUrl, Commands, MiniAppUrl, Transport, TransportError};
 use deck_streak_identity::owner::TELEGRAM_BOT_TOKEN;
 use deck_streak_identity::{IdentityError, Owner};
 use deck_streak_kernel::{
-    Clock, ConventionsError, CredentialLoader, CredentialsDirectory, Environment, KernelSettings,
-    Offload, Redactor, SettingsError, SystemClock,
+    Clock, ConventionsError, Courses, CredentialLoader, CredentialsDirectory, Environment,
+    KernelSettings, Offload, Redactor, SettingsError, SystemClock,
 };
 use deck_streak_notifications::{Policy, PolicyError};
 
@@ -137,6 +137,7 @@ pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), BotRoleEr
     if let Some(captures) = wiring::inbox_captures(env) {
         commands = commands.with_capture(captures);
     }
+    commands = commands.with_courses(courses(env));
 
     let heartbeat = Cell::new(None);
     deck_streak_bot::run(&transport, &mut commands, shutdown.received(), || {
@@ -153,4 +154,17 @@ pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), BotRoleEr
     db.close().await;
     tracing::info!("the bot role stopped");
     Ok(())
+}
+
+/// The courses the owner's progress command answers from (SPEC-077 R16): the configured ones, or
+/// none when the setting refuses, which the log says. A refused setting never refuses start: the
+/// bot's other commands read no course.
+fn courses(env: &Environment) -> Courses {
+    match Courses::load(env) {
+        Ok(courses) => courses,
+        Err(error) => {
+            tracing::warn!(%error, "the progress command reads no course: the setting refused");
+            Courses::default()
+        }
+    }
 }
