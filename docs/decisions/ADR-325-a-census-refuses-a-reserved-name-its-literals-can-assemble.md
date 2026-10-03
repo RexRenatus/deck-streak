@@ -29,9 +29,10 @@ owner without refusing what no one joins, and without a parser?
 
 ## Considered Options (the alternatives it was chosen against)
 
-- One shared reader that decodes every literal, follows includes by literal path, pools every piece
-  outside the owner workspace-wide in ASCII case, and refuses when the pool can assemble the name,
-  added beside each census's own reader (chosen).
+- One shared reader, added beside each census's own: chosen, because one rule over a pool of
+  decoded pieces refuses every join shape at once. It decodes every literal, follows includes by
+  literal path, pools every piece outside the owner workspace-wide in ASCII case, and refuses when
+  the pool can assemble the name.
 - A follower that joins only adjacent literals and the arguments of one `concat!`, in order: lost,
   because it misses `format!`, `+` joins, constants joined in another file or crate, and pieces
   written in another order.
