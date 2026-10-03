@@ -1,4 +1,4 @@
-{"schema":"phx.formal.vectors.v1","entry":"SkipTariff","covers":"crates/economy/src/tariff.rs","anchor":"price","digest":"sha256:0000000000000000000000000000000000000000000000000000000000000000","vectors":77}
+{"schema":"phx.formal.vectors.v1","entry":"SkipTariff","covers":"crates/economy/src/tariff.rs","anchor":"price","digest":"sha256:63276c8915de3c34258f19c98f14295994ad8be124c0faade868064bfb378039","vectors":77}
 {"rule":"price","earlier":0,"price":0}
 {"rule":"price","earlier":1,"price":50}
 {"rule":"price","earlier":2,"price":100}
