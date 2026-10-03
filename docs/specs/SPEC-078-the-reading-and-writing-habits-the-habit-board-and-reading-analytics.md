@@ -543,3 +543,6 @@ insert-only; the body above is unchanged.
   `COMMAND_CALLERS` gains six edges, from 31 to 37: `Commands::on_message` to `read` and to `undo`,
   `Commands::on_callback` to `habit_callback`, and each of `Commands::read`, `Commands::undo` and
   `Commands::habit_callback` to `send`. Every reply still reaches the chat through the router's port.
+- **T3** (manifest, the formal settings' test). `scripts/tests/test_formal_config.py` is changed:
+  its `EXPECTED` table names `tla/HabitXpFollowsItsLog`'s entry budget, 300, the value this part
+  adds to `config/formal.json`, because that test holds the committed file equal to the table.
