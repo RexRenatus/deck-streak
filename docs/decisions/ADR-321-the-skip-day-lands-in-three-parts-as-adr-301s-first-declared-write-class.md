@@ -17,13 +17,14 @@ changes, and the band a result must clear. ADR-301's #518 note on (b) states no 
 retention for the backup. ADR-089's #518 budget note leaves the dwell and the band to #108.
 SPEC-082 has since landed the wallet's floor-clipped debit and its refund, each once per key.
 
-Six questions follow:
+Seven questions follow:
 - How does SPEC-083 land now?
 - What are ADR-083's status and the branch's two body edits?
 - Where does the backup live, and how long is it kept?
 - What stops the class?
 - Which study day carries the tariff and its refund?
 - What is the class's formal decision?
+- Which of the month's skips does a take or a retry count when it prices the skip?
 
 ## Decision Drivers
 
@@ -72,10 +73,13 @@ Six questions follow:
 - D11, filtering the wallet's movement list: rejected, because a movement carries no reference, so the list cannot name the skip that paid (#108).
 - D12, the open lapse (`lapse.rs`) taking the skip set as a parameter that its caller reads from `skip/days.rs`: chosen, because the function is synchronous over a window its caller read, and it opens no connection (#108).
 - D12, a skip set carried on the recompute's facts: rejected, because the fold would then read the set for every step, and the two views outside the fold would still need the port, so there would be two ways to reach one set (#108).
+- D13, the tariff's price on a take or a retry counting the other applied skips not undone in the skip's calendar month on an earlier study day only: chosen, because the count then depends only on days before the skip's own, so a retry prices the skip as its first attempt did. All 13 cases of the `skip_tariff` golden agree, since each holds its rows on days at or before the skip's day (#108).
+- D13, every other applied skip of the month not undone: rejected, because a retry of a free skip would then be charged once a later skip of the month had applied (#108).
+- D13, storing the price on the row at take time: rejected, because the row would become a second write site for the tariff, and the refund would then read a row value rather than the sum the ledger records as paid (#108).
 
 ## Decision Outcome
 
-Chosen options: D1 to D12 as chosen above, with these rulings.
+Chosen options: D1 to D13 as chosen above, with these rulings.
 
 1. **The slice (D7).** E4a delivers R1, R2's record half, R3's search, day spec and setting, R4 to
    R13, R17 and R33. Its criteria are A1 to A4, A7, A8, A10 to A18, A23, A33, A45 and A46.
@@ -103,6 +107,9 @@ Chosen options: D1 to D12 as chosen above, with these rulings.
 6. **Dwell, band and change points (D8; R37).** None applies. The change budget stays ADR-089's:
    R21's `SKIP_MAX_CARDS`.
 7. **The formal decision (D9; R38).** As chosen above.
+8. **The tariff's count (D13).** A take or a retry prices the skip at the count of the other applied
+   skips not undone in its calendar month on an earlier study day. Adopted by the architect's
+   ruling 73 of 2026-10-03.
 
 ### Consequences
 
