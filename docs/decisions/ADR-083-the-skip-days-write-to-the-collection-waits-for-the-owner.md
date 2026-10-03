@@ -1,5 +1,5 @@
 ---
-status: "accepted"
+status: "proposed"
 date: "2026-09-28"
 decision-makers: "@RexRenatus (owner, at #266), the DeckStreak architect"
 ---
