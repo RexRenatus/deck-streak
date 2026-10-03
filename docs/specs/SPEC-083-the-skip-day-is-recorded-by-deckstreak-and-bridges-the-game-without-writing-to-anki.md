@@ -1066,6 +1066,11 @@ model and these amendments.
 - **U14** (section 5, added bullets for this part). This part builds no undo (E4c, #108); no
   compare or settlement of a pending row (E4c, #108); no spawned task and no wait that answers
   `pending` (E4c, #108); and neither of the backup erase's two call sites (E4c, #108).
+- **U15** (section 4, U4's row `crates/coordination/tests/data_rights_symmetry.rs`, the probe's
+  census admission). `SEEDS` grows from 40 statements to 41: one `UPDATE` moves the seeded
+  `write_class_stop` row to stopped (`set_by = 'counts'`), so the probe judges a stop the erase
+  must keep; the exempt tables `erase_leaves_the_cron_fire_ledger_and_the_schema_table_untouched`
+  examines, and the erase's kept list it compares, gain `write_class_stop`.
 
 ## 13. Acceptance criteria of the 2026-10-03 amendment (E4b)
 
