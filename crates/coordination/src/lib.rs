@@ -21,6 +21,7 @@ pub mod data_rights_registry;
 pub mod delivery;
 pub mod drills;
 pub mod freeze;
+pub mod habits;
 pub mod held_flush;
 pub mod inbox_capture;
 pub mod instruments;

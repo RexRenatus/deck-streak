@@ -1,0 +1,470 @@
+{
+  "adapter": "with_a_stub_log",
+  "cases": [
+    {
+      "class": "none",
+      "input": {
+        "entries": [],
+        "today": 20103
+      },
+      "output": null
+    },
+    {
+      "class": "this week",
+      "input": {
+        "entries": [
+          [
+            "qab",
+            20101,
+            40
+          ],
+          [
+            "qaa",
+            20102,
+            30
+          ]
+        ],
+        "today": 20103
+      },
+      "output": "qab"
+    },
+    {
+      "class": "a tie this week",
+      "input": {
+        "entries": [
+          [
+            "qab",
+            20101,
+            30
+          ],
+          [
+            "qaa",
+            20102,
+            30
+          ]
+        ],
+        "today": 20103
+      },
+      "output": "qaa"
+    },
+    {
+      "class": "all time",
+      "input": {
+        "entries": [
+          [
+            "qab",
+            20092,
+            20
+          ],
+          [
+            "qaa",
+            20093,
+            50
+          ]
+        ],
+        "today": 20103
+      },
+      "output": "qaa"
+    },
+    {
+      "class": "an all-time tie",
+      "input": {
+        "entries": [
+          [
+            "qab",
+            20092,
+            25
+          ],
+          [
+            "qaa",
+            20093,
+            25
+          ]
+        ],
+        "today": 20103
+      },
+      "output": "qab"
+    },
+    {
+      "class": "the week before the rollover",
+      "input": {
+        "entries": [
+          [
+            "qaa",
+            20100,
+            90
+          ],
+          [
+            "qab",
+            20101,
+            10
+          ]
+        ],
+        "today": 20101
+      },
+      "output": "qab"
+    },
+    {
+      "input": {
+        "entries": [
+          [
+            "qaa",
+            20090,
+            4
+          ],
+          [
+            "qab",
+            20091,
+            53
+          ],
+          [
+            "qaa",
+            20095,
+            14
+          ],
+          [
+            "qaa",
+            20097,
+            41
+          ],
+          [
+            "qab",
+            20105,
+            75
+          ],
+          [
+            "qab",
+            20107,
+            53
+          ]
+        ],
+        "today": 20107
+      },
+      "output": "qab"
+    },
+    {
+      "input": {
+        "entries": [
+          [
+            "qab",
+            20093,
+            43
+          ],
+          [
+            "qab",
+            20097,
+            12
+          ]
+        ],
+        "today": 20097
+      },
+      "output": "qab"
+    },
+    {
+      "input": {
+        "entries": [
+          [
+            "qaa",
+            20089,
+            5
+          ],
+          [
+            "qaa",
+            20093,
+            13
+          ],
+          [
+            "qaa",
+            20099,
+            25
+          ],
+          [
+            "qab",
+            20102,
+            89
+          ],
+          [
+            "qab",
+            20103,
+            40
+          ],
+          [
+            "qab",
+            20105,
+            21
+          ]
+        ],
+        "today": 20105
+      },
+      "output": "qab"
+    },
+    {
+      "input": {
+        "entries": [
+          [
+            "qaa",
+            20087,
+            8
+          ],
+          [
+            "qaa",
+            20090,
+            103
+          ],
+          [
+            "qab",
+            20094,
+            36
+          ],
+          [
+            "qaa",
+            20094,
+            89
+          ],
+          [
+            "qab",
+            20095,
+            77
+          ]
+        ],
+        "today": 20095
+      },
+      "output": "qab"
+    },
+    {
+      "input": {
+        "entries": [
+          [
+            "qaa",
+            20091,
+            22
+          ],
+          [
+            "qab",
+            20095,
+            119
+          ],
+          [
+            "qaa",
+            20100,
+            89
+          ],
+          [
+            "qaa",
+            20101,
+            100
+          ],
+          [
+            "qab",
+            20104,
+            45
+          ],
+          [
+            "qaa",
+            20107,
+            15
+          ]
+        ],
+        "today": 20107
+      },
+      "output": "qaa"
+    },
+    {
+      "input": {
+        "entries": [
+          [
+            "qaa",
+            20088,
+            108
+          ],
+          [
+            "qaa",
+            20092,
+            15
+          ],
+          [
+            "qab",
+            20093,
+            1
+          ],
+          [
+            "qab",
+            20100,
+            87
+          ],
+          [
+            "qab",
+            20103,
+            59
+          ]
+        ],
+        "today": 20103
+      },
+      "output": "qab"
+    },
+    {
+      "input": {
+        "entries": [
+          [
+            "qab",
+            20088,
+            2
+          ],
+          [
+            "qaa",
+            20090,
+            74
+          ],
+          [
+            "qaa",
+            20092,
+            12
+          ],
+          [
+            "qab",
+            20101,
+            33
+          ],
+          [
+            "qaa",
+            20104,
+            85
+          ]
+        ],
+        "today": 20104
+      },
+      "output": "qaa"
+    },
+    {
+      "input": {
+        "entries": [
+          [
+            "qaa",
+            20087,
+            66
+          ],
+          [
+            "qaa",
+            20088,
+            21
+          ],
+          [
+            "qaa",
+            20093,
+            119
+          ]
+        ],
+        "today": 20093
+      },
+      "output": "qaa"
+    },
+    {
+      "input": {
+        "entries": [
+          [
+            "qaa",
+            20091,
+            50
+          ],
+          [
+            "qaa",
+            20091,
+            28
+          ],
+          [
+            "qaa",
+            20095,
+            26
+          ],
+          [
+            "qaa",
+            20096,
+            13
+          ],
+          [
+            "qab",
+            20100,
+            17
+          ],
+          [
+            "qab",
+            20103,
+            114
+          ]
+        ],
+        "today": 20103
+      },
+      "output": "qab"
+    },
+    {
+      "input": {
+        "entries": [
+          [
+            "qab",
+            20089,
+            63
+          ],
+          [
+            "qaa",
+            20107,
+            23
+          ]
+        ],
+        "today": 20107
+      },
+      "output": "qaa"
+    },
+    {
+      "input": {
+        "entries": [
+          [
+            "qab",
+            20096,
+            109
+          ],
+          [
+            "qaa",
+            20107,
+            117
+          ]
+        ],
+        "today": 20107
+      },
+      "output": "qaa"
+    },
+    {
+      "input": {
+        "entries": [
+          [
+            "qab",
+            20093,
+            19
+          ],
+          [
+            "qaa",
+            20098,
+            1
+          ],
+          [
+            "qab",
+            20106,
+            8
+          ]
+        ],
+        "today": 20106
+      },
+      "output": "qab"
+    }
+  ],
+  "function": "pipeline_layers.habits.HabitsLayer.most_used_reading_lang",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Drives it on a stand-in layer over a stub store holding the case's entries, weekly sums grouped by code in code order and rows in the order they were logged, with the layer's day fixed at the case's day; returns the code, or none; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_078.py",
+  "registry_sha256": "347514aed5b93b8dfbc646986978680620d4d0c5c3fdf4253a8231bc28e56603",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

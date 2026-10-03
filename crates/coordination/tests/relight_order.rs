@@ -1292,7 +1292,7 @@ const ROUTE_STATE: [(&str, &str); 15] = [
 /// Every `static` item and thread-local in the source of every crate coordination links, written
 /// out: two run sequences, the data-rights registry's entries, the migrator, the parsed XP economy
 /// and the parsed skip tariff ladder. None is a count per day.
-const STATICS: [(&str, &str); 18] = [
+const STATICS: [(&str, &str); 19] = [
     (
         "crates/agent/src/gate.rs",
         "static STAGE_SEQUENCE: AtomicU64 = AtomicU64::new(0);",
@@ -1348,6 +1348,10 @@ const STATICS: [(&str, &str); 18] = [
     (
         "crates/coordination/src/data_rights_registry.rs",
         "static QUESTS: QuestsDataRights = QuestsDataRights;",
+    ),
+    (
+        "crates/coordination/src/data_rights_registry.rs",
+        "static HABITS: HabitsDataRights = HabitsDataRights;",
     ),
     (
         "crates/coordination/src/data_rights_registry.rs",
