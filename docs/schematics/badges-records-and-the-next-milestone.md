@@ -21,7 +21,7 @@ flowchart LR
   offer -->|event + dedupe key| router[notifications router: one send per key]
   router -->|answered| mark[set celebrated_at from the services clock, own write]
   api[GET /api/badges, /records, /milestone] --> views[coordination views]
-  bot[/badges, /records] --> views
+  bot["/badges, /records"] --> views
   milestone[progression::milestone::next_milestone] --> views
 ```
 

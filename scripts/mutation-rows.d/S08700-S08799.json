@@ -288,6 +288,70 @@
         "    broken: int = 1\n",
         "a run reads as having broken no test until the child reports a count (SPEC-087 R6)",
         "test_mutation_python_judge_kills.TheRanReportStartsEmpty.test_a_ran_is_empty_until_a_child_reports"
+      ],
+      [
+        "S08766-THE-RUST-JUDGES-EXIT-IS-COLLECTED",
+        ".github/workflows/ci.yml",
+        "--whole \"$reports/mutation-plan/whole.json\" || status=$?",
+        "--whole \"$reports/mutation-plan/whole.json\" || true",
+        "the Rust judge's exit is thrown away where the step collects it, so a failing Rust judge cannot fail the verdict (SPEC-087 R17)",
+        "test_verdict_folds.TheVerdictStepFailsOnEachJudgeAlone.test_the_step_fails_when_any_one_command_alone_fails_with_any_of_its_exits"
+      ],
+      [
+        "S08767-THE-ORACLE-JUDGES-EXIT-IS-COLLECTED",
+        ".github/workflows/ci.yml",
+        "|| oracle=$?",
+        "|| true",
+        "the oracle judge's exit is thrown away where the step collects it (SPEC-087 R17)",
+        "test_verdict_folds.TheVerdictStepFailsOnEachJudgeAlone.test_the_step_fails_when_any_one_command_alone_fails_with_any_of_its_exits"
+      ],
+      [
+        "S08768-THE-ORACLE-JUDGES-EXIT-IS-FOLDED",
+        ".github/workflows/ci.yml",
+        "          if [ \"$status\" -eq 0 ]; then status=$oracle; fi\n",
+        "",
+        "the oracle judge's collected exit is never folded into the step's status (SPEC-087 R17)",
+        "test_verdict_folds.TheVerdictStepFailsOnEachJudgeAlone.test_the_step_fails_when_any_one_command_alone_fails_with_any_of_its_exits"
+      ],
+      [
+        "S08769-THE-SCRIPTS-JUDGES-EXIT-IS-COLLECTED",
+        ".github/workflows/ci.yml",
+        "|| scripts=$?",
+        "|| true",
+        "the scripts judge's exit is thrown away where the step collects it (SPEC-087 R17)",
+        "test_verdict_folds.TheVerdictStepFailsOnEachJudgeAlone.test_the_step_fails_when_any_one_command_alone_fails_with_any_of_its_exits"
+      ],
+      [
+        "S08770-THE-SCRIPTS-JUDGES-EXIT-IS-FOLDED",
+        ".github/workflows/ci.yml",
+        "          if [ \"$status\" -eq 0 ]; then status=$scripts; fi\n",
+        "",
+        "the scripts judge's collected exit is never folded into the step's status (SPEC-087 R17)",
+        "test_verdict_folds.TheVerdictStepFailsOnEachJudgeAlone.test_the_step_fails_when_any_one_command_alone_fails_with_any_of_its_exits"
+      ],
+      [
+        "S08771-THE-LEGS-CHECKS-EXIT-IS-COLLECTED",
+        ".github/workflows/ci.yml",
+        "|| legs=$?",
+        "|| true",
+        "the legs check's exit is thrown away where the step collects it (SPEC-087 R17)",
+        "test_verdict_folds.TheVerdictStepFailsOnEachJudgeAlone.test_the_step_fails_when_any_one_command_alone_fails_with_any_of_its_exits"
+      ],
+      [
+        "S08772-THE-LEGS-CHECKS-EXIT-IS-FOLDED",
+        ".github/workflows/ci.yml",
+        "          if [ \"$status\" -eq 0 ]; then status=$legs; fi\n",
+        "",
+        "the legs check's collected exit is never folded into the step's status (SPEC-087 R17)",
+        "test_verdict_folds.TheVerdictStepFailsOnEachJudgeAlone.test_the_step_fails_when_any_one_command_alone_fails_with_any_of_its_exits"
+      ],
+      [
+        "S08773-THE-STEP-EXITS-WITH-ITS-STATUS",
+        ".github/workflows/ci.yml",
+        "          exit \"$status\"\n",
+        "          exit 0\n",
+        "the verdict step exits success whatever its folded status is (SPEC-087 R17)",
+        "test_verdict_folds.TheVerdictStepFailsOnEachJudgeAlone.test_the_step_fails_when_any_one_command_alone_fails_with_any_of_its_exits"
       ]
     ]
   }
