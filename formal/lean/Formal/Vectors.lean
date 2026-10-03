@@ -1,5 +1,6 @@
 import Formal.ChestVectors
 import Formal.ExchangeVectors
+import Formal.HabitWritingVectors
 import Formal.NextMilestoneVectors
 import Formal.OpenLapseVectors
 import Formal.RoadToC2Vectors
@@ -25,6 +26,7 @@ def main (args : List String) : IO UInt32 := do
   match args with
   | ["Chest"] => Formal.ChestVectors.run
   | ["Exchange"] => Formal.ExchangeVectors.run
+  | ["HabitWriting"] => Formal.HabitWritingVectors.run
   | ["NextMilestone"] => Formal.NextMilestoneVectors.run
   | ["OpenLapse"] => Formal.OpenLapseVectors.run
   | ["RoadToC2"] => Formal.RoadToC2Vectors.run
