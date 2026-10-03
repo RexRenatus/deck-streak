@@ -28,7 +28,7 @@ Measured at dev `78f46a2c` on the maintainer's machine, with the library's test 
   "multi_thread")]` (`wiring.rs:766`, `:802`, `:835`, `:862`, `:1195`). With no `worker_threads`,
   each builds a runtime of C workers, C being the host's core count, and libtest runs them at once.
   Sampling `/proc/<pid>/status` during one run of `wiring::tests` gives a peak of five runtimes of C
-  workers each plus fewer than twenty other threads, so the module's demand grows with the host.
+  workers each plus a small fixed number of other threads, so the module's demand grows with the host.
 - **A deterministic reproduction.** In a shell whose `ulimit -u` is set 100 tasks above the count of
   tasks the user already runs, the module fails 5 of its 12 tests, exactly the five multi-thread
   tests, each panicking at its `expect("the database opens")` with `Database(Io(Os { code: 11, kind:

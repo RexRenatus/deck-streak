@@ -33,6 +33,7 @@ its tests run under?
 - Switch the five tests to the current-thread flavor: lost, because it changes what they exercise, one thread for the test body and every task it spawns, where the bound keeps the flavor and fixes only its size.
 - One worker (`worker_threads = 1`): lost, because a single worker leaves nothing to steal work from another; two is the smallest runtime that still schedules across workers.
 - Retry the open in `Db::open` when the OS refuses a thread: lost, because the cause is not in the production path, and a retry would hide a real resource refusal from a running service.
+- Raise the task limit (`ulimit -u`) where the tests run: lost, because it moves the bound into each host's settings and hides the demand instead of bounding it; the module's need would still grow with the host's cores.
 - Commit a test that re-runs the module in a child process under a lowered `ulimit -u`: lost, because that limit counts every task the user runs, so the verdict would depend on whatever else runs at that moment; a flaky test would replace a flaky test. The budgeted run stays a measurement, quoted in the red-first record.
 
 ## Decision Outcome
