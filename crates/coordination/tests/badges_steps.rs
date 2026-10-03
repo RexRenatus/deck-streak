@@ -763,3 +763,89 @@ fn the_award_offers_print_their_type_without_their_router() {
     let offers = AwardOffers::new(Arc::new(Recorder::default()));
     assert_eq!(format!("{offers:?}"), "AwardOffers { .. }");
 }
+
+/// The offers in turn print each offer they hold, in the order they run it.
+#[test]
+fn the_offers_in_turn_print_each_offer_in_order() {
+    let offers = deck_streak_coordination::recompute::OffersInTurn::new(vec![
+        Box::new(AwardOffers::new(Arc::new(Recorder::default()))),
+        Box::new(AwardOffers::new(Arc::new(Recorder::default()))),
+    ]);
+    assert_eq!(
+        format!("{offers:?}"),
+        "[AwardOffers { .. }, AwardOffers { .. }]"
+    );
+}
+
+/// The landmarks' offers print their type and how many study days they hold, and leave out the
+/// router they hand each landmark to.
+#[test]
+fn the_landmark_offers_print_their_study_days_without_their_router() {
+    let offers = deck_streak_coordination::recompute::landmarks::LandmarkOffers::new(
+        Arc::new(Recorder::default()),
+        vec![
+            deck_streak_kernel::StudyDay::from_epoch_day(20_000),
+            deck_streak_kernel::StudyDay::from_epoch_day(20_001),
+        ],
+        &collection(Vec::new(), Vec::new()),
+        StudyDayRule::default(),
+    );
+    assert_eq!(
+        format!("{offers:?}"),
+        "LandmarkOffers { study_days: 2, .. }"
+    );
+}
+
+/// An offer call whose settle cursor is already the landmarks' cursor takes no write: made while
+/// another write holds the lock, it answers at once rather than waiting out the busy timeout
+/// (ADR-303, ADR-322).
+#[tokio::test]
+async fn an_offer_with_nothing_to_move_takes_no_write() {
+    use deck_streak_coordination::recompute::landmarks::LandmarkOffers;
+    let scratch = scratch().await;
+    let db = &scratch.db;
+    seed_rollups(db, &[RollupSeed::scored(D0 + 5, 0)]).await;
+    let mut write = db.write().await.expect("a write");
+    deck_streak_analytics::rollup::record_settled(
+        &mut write,
+        day(D0 + 5),
+        UtcMillis::from_epoch_millis(at(D0 + 5, 23)),
+    )
+    .await
+    .expect("the day settles");
+    write.commit().await.expect("the settle commits");
+    let study_days = vec![day(D0 + 1), day(D0 + 2)];
+    let data = collection(Vec::new(), Vec::new());
+    let (now, today) = (UtcMillis::from_epoch_millis(at(D0 + 6, 12)), day(D0 + 6));
+    // The first recompute seeds the mark and the cursor at yesterday, the day settled.
+    LandmarkOffers::new(
+        Arc::new(Recorder::default()),
+        study_days.clone(),
+        &data,
+        StudyDayRule::default(),
+    )
+    .offer(db, now, today)
+    .await
+    .expect("the first recompute offers");
+    let offers = LandmarkOffers::new(
+        Arc::new(Recorder::default()),
+        study_days,
+        &data,
+        StudyDayRule::default(),
+    );
+    offers
+        .offer(db, now, today)
+        .await
+        .expect("the second recompute offers");
+    let held = db.write().await.expect("another write holds the lock");
+    let answer = tokio::time::timeout(
+        std::time::Duration::from_secs(5),
+        offers.offer(db, now, today),
+    )
+    .await;
+    drop(held);
+    assert!(
+        matches!(answer, Ok(Ok(()))),
+        "an offer with nothing to move waited on the write lock: {answer:?}"
+    );
+}
