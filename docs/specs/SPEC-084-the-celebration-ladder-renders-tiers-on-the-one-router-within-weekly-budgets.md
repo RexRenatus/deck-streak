@@ -374,7 +374,7 @@ calls and their non-text arguments only.
     `Router::send_bot` recorded equivalent, since a non-celebration reaches it only at T0 or T2;
   - `crates/api/src/notifications_routes.rs` is unchanged: the feed item it serves carries the tier.
 
-## 11. Amendment (#572, SPEC-326): the streak facts are read from the streaks store
+## 11. Amendments, 2026-10-03: the streak facts are read from the streaks store (#572, SPEC-326)
 
 Coordination now reads the language streak's stored facts through the router's database before
 every celebration route and every flush (SPEC-326, ADR-327), so R5's cap and R11's re-cap apply.
