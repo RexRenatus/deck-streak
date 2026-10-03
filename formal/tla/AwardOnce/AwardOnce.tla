@@ -72,6 +72,19 @@
 \*   runs, and the loop goes on from the owed day. offer_owed still runs before every owed day's
 \*   write, the rolled-back one included, so Pre and DrainSkip stand as they were, and the
 \*   rolled-back write awards nothing and commits nothing: a stuttering step of these variables.
+\* - #572's re-read (SPEC-326, ADR-327), re-read 2026-10-03: level_up.rs::announce_level_up now
+\*   reads the stored language streak (ladder_facts::with_streak_facts: streak_state on a reader
+\*   connection) before its route, and the occasion carries the facts, so the router caps its tier
+\*   on a streak-break day. announce_level_up abstracts to Offer's router call after the fold's last
+\*   write, on a key of its own, level:<n>, claimed once-ever by ledger.rs::claim (Router(d),
+\*   OnceKey, CelebrateAtMostOnce); only the cycle whose recompute crossed the level raises it, and
+\*   it has no mark: design "literal"'s shape, for its own key. The read writes nothing and moves no
+\*   variable: a stutter, re-stamped. A read that fails is the router call with no answer
+\*   (OfferMiss), with nothing claimed or sent, a subset of that arm; the line is lost as on any
+\*   router error, and no property here counts it, since it has no award row. The Celebrate port's
+\*   own read (recompute/mod.rs, outside every cover) is the same: before each badge or record route
+\*   it reads the row, and its error is DrainMiss or OfferMiss, the award left unmarked and still
+\*   owed.
 \* Abstractions, each a stuttering of the model's variables:
 \* - the offers read the unmarked rows on a reader, then route; DrainOffer reads and routes in one
 \*   step. A row replaced between the read and the route is offered under its own day's key, its

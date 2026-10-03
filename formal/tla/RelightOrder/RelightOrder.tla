@@ -136,6 +136,17 @@
 (*    The landmarks' offers route landmark keys and move their own cursor  *)
 (*    in writes of their own, and touch no relight grant, due row or       *)
 (*    route: no variable here moves, a stutter, re-stamped.                *)
+(*  - #572's re-read (SPEC-326, ADR-327), re-read 2026-10-03:              *)
+(*    announce_relight now reads the stored language streak (streak_state  *)
+(*    on a reader connection) before its route, and the occasion carries   *)
+(*    the facts, so the router caps its tier (SPEC-084 R5): on a relight's *)
+(*    own day the streak is back to one and was once longer, so the router *)
+(*    decides it at T1, a reaction, or silent on a transport with none,    *)
+(*    never the line. The tier is the router's decision, and L1 is stated  *)
+(*    above the router. The read writes nothing and moves no variable      *)
+(*    here: a stutter, re-stamped. A read that fails is announce_relight   *)
+(*    refused before routing, which claims and sends nothing (RouteFail(d) *)
+(*    with no claim, named above): the day stays due.                      *)
 (***************************************************************************)
 EXTENDS Naturals, FiniteSets
 
