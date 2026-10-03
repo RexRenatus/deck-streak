@@ -146,10 +146,93 @@ fi
 echo "mv $*" >> "$STUB_LOG/moves.log"
 exec /usr/bin/mv "$@"
 """
-HOST = r"""#!/bin/bash
+# The ONE list of `argv[0]` values the host stand-in runs: the word deploy.sh puts after the
+# elevation command when the tests leave the setting empty. Anything else is refused by name.
+HOST_ALLOWED = ("bash",)
+HOST = (
+    r"""#!/bin/bash
 echo "host" >> "$STUB_LOG/host.log"
+printf '%s\n' "${1-}" >> "$STUB_LOG/host-argv0.log"
+allowed=(@ALLOWED@)
+ok=
+for shape in ${allowed[@]+"${allowed[@]}"}; do
+  [ "${1-}" != "$shape" ] || ok=1
+done
+if [ -z "$ok" ]; then
+  printf 'host stand-in: refusing %s: not a command the deploy tests use\n' "${1-}" >&2
+  exit 97
+fi
 exec "$@"
 """
+).replace("@ALLOWED@", " ".join(shlex.quote(name) for name in HOST_ALLOWED))
+
+ELEVATE = "DECKSTREAK_DEPLOY_ELEVATE"
+
+
+def sourced_names(sourced):
+    """The variable names a file sourced before the script sets, judged by its EFFECT: only
+    straight-line `NAME=value` and `export NAME=value` lines (and blanks and comments) are read.
+    A line of any other shape (a branch, an `unset`, a call) could undo or hide a name, so a file
+    holding one is refused rather than guessed at."""
+    names = set()
+    for line in Path(sourced).read_bytes().splitlines():
+        if not line.strip() or line.lstrip().startswith(b"#"):
+            continue
+        match = re.fullmatch(rb"(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)=.*", line)
+        if match is None:
+            raise AssertionError(
+                f"a sourced file holds a line that is not a plain setting: {line!r}"
+            )
+        names.add(match.group(1))
+    return names
+
+
+def setting_names(received, sourced=None):
+    """The variable names an environment sets: a mapping's keys, a list's `NAME=value` entries (a
+    bare name is not a variable), and the names a file sourced before the script sets."""
+    if isinstance(received, dict):
+        names = {os.fsencode(key) for key in received}
+    else:
+        names = {
+            os.fsencode(entry).split(b"=", 1)[0] for entry in received if b"=" in os.fsencode(entry)
+        }
+    if sourced is not None:
+        names |= sourced_names(sourced)
+    return names
+
+
+def launch(argv, received, *, sourced=None, cwd=None, env=None, text=False):
+    """Start a deploy script in a session of its own, so a timeout ends it and its children.
+
+    The ONE place a deploy script is started. The environment the program will SEE (`env`, and
+    the file sourced before it) must name the elevation setting, and so must the entries the
+    caller says it received; otherwise the script's own fallback could be what a test runs. An
+    `env` of None is refused: the child would inherit whatever the test process holds."""
+    wanted = ELEVATE.encode()
+    if env is None:
+        raise AssertionError(f"the environment does not name {ELEVATE}")
+    for seen in (received, env):
+        if wanted not in setting_names(seen, sourced):
+            raise AssertionError(f"the environment does not name {ELEVATE}")
+    child = subprocess.Popen(
+        argv,
+        cwd=cwd,
+        env=env,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=text,
+        start_new_session=True,
+    )
+    try:
+        out, err = child.communicate(timeout=60)
+    except subprocess.TimeoutExpired:
+        os.killpg(child.pid, signal.SIGKILL)
+        child.communicate()
+        raise
+    return subprocess.CompletedProcess(child.args, child.returncode, out, err)
+
+
 CONTRACT = {
     "schema": "deckstreak.rail-contract.v1",
     "note": "synthetic",
@@ -346,23 +429,8 @@ class World:
 
     def run(self, script, *args, **env):
         """Run a script in a session of its own, so a timeout ends the script and its children."""
-        child = subprocess.Popen(
-            ["bash", str(script), *args],
-            cwd=self.tmp,
-            env={**self.env, **env},
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            start_new_session=True,
-        )
-        try:
-            out, err = child.communicate(timeout=60)
-        except subprocess.TimeoutExpired:
-            os.killpg(child.pid, signal.SIGKILL)
-            child.communicate()
-            raise
-        return subprocess.CompletedProcess(child.args, child.returncode, out, err)
+        merged = {**self.env, **env}
+        return launch(["bash", str(script), *args], merged, cwd=self.tmp, env=merged, text=True)
 
     def deploy(self, tag, **env):
         assert DEPLOY.is_file(), f"{DEPLOY.relative_to(REPO)} does not exist"
@@ -1584,15 +1652,8 @@ sys.exit(f"execve failed: errno {ctypes.get_errno()}")
         environ = {os.fsencode(k): os.fsencode(v) for k, v in {**w.env, **plain}.items()}
         for i, name in enumerate(examined("unnamed setting(s)", sorted(unnamed - listed))):
             script, args = steps[("install first", "removal")[i % 2]][1:3]
-            done = subprocess.run(
-                ["bash", str(script), *args],
-                cwd=w.tmp,
-                env={**environ, name: os.fsencode(w.tmp / "unnamed")},
-                stdin=subprocess.DEVNULL,
-                capture_output=True,
-                timeout=60,
-                check=False,
-            )
+            named = {**environ, name: os.fsencode(w.tmp / "unnamed")}
+            done = launch(["bash", str(script), *args], named, cwd=w.tmp, env=named)
             self.assertEqual(
                 done.returncode, 1, f"{name!r} : a step ran with a setting it does not name"
             )
@@ -1625,7 +1686,7 @@ sys.exit(f"execve failed: errno {ctypes.get_errno()}")
         }
         for case, (entries, lead, said) in examined("odd environment(s)", sorted(odd.items())):
             for args in (("caddy-install", "v1.0.0"), ("caddy-remove",)):
-                done = subprocess.run(
+                done = launch(
                     [
                         sys.executable,
                         "-c",
@@ -1635,11 +1696,10 @@ sys.exit(f"execve failed: errno {ctypes.get_errno()}")
                         str(DEPLOY),
                         *args,
                     ],
+                    entries,
+                    sourced=held if lead else None,
                     cwd=w.tmp,
-                    stdin=subprocess.DEVNULL,
-                    capture_output=True,
-                    timeout=60,
-                    check=False,
+                    env=dict(entry.split(b"=", 1) for entry in entries if b"=" in entry),
                 )
                 self.assertEqual(done.returncode, 1, f"{case}, {args[0]}: {done.stderr!r}")
                 self.assertIn(said, done.stderr, f"{case}, {args[0]}")

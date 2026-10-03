@@ -2943,6 +2943,7 @@ BENIGN_BUILTINS = frozenset(
         "bool",
         "bytearray",
         "bytes",
+        "callable",
         "chr",
         "classmethod",
         "dict",
@@ -2952,6 +2953,7 @@ BENIGN_BUILTINS = frozenset(
         "format",
         "frozenset",
         "hasattr",
+        "id",
         "int",
         "isinstance",
         "iter",
@@ -6101,7 +6103,7 @@ class WorkflowFilesAreReadAsBytes(unittest.TestCase):
         examined("read or dynamic builtin names planted", sites)
         self.assertGreater(len(others), 0)
         self.assertIn("memoryview", others)
-        self.assertIn("callable", others)
+        self.assertIn("slice", others)
         body = "".join(f"\n\ndef plant_{name}():\n    return {name}\n" for name in others + sites)
         said = set(self.plant_problems(body))
         for name in others:
