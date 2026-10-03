@@ -763,7 +763,7 @@ mod tests {
         );
     }
 
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn the_owners_sync_marks_the_rescore_before_it_reads_its_settings() {
         let directory = tempfile::tempdir().expect("a temporary directory");
         let db = Db::open(&directory.path().join("deck_streak.db"))
@@ -799,7 +799,7 @@ mod tests {
         db.close().await;
     }
 
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn the_owners_sync_without_a_credentials_directory_is_refused_by_its_own_code() {
         let directory = tempfile::tempdir().expect("a temporary directory");
         let db = Db::open(&directory.path().join("deck_streak.db"))
@@ -832,7 +832,7 @@ mod tests {
         db.close().await;
     }
 
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn the_owners_sync_that_cannot_mark_the_rescore_is_refused_by_its_own_code() {
         let directory = tempfile::tempdir().expect("a temporary directory");
         let db = Db::open(&directory.path().join("deck_streak.db"))
@@ -859,7 +859,7 @@ mod tests {
         );
     }
 
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn the_owners_cycle_that_cannot_read_its_run_record_is_refused_by_the_sync_code() {
         let directory = tempfile::tempdir().expect("a temporary directory");
         let credentials = directory.path().join("credentials");
@@ -1192,7 +1192,7 @@ mod tests {
 
     /// A16: every step whose failure refuses the owner's sync is driven by its own fault, twice,
     /// each time on a fresh ledger, and refuses by its step's code, logged under the step's name.
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn every_failing_step_refuses_the_owners_sync_by_its_own_code_and_name() {
         let (refusals, _logging) = Refusals::capture();
         for (step, code) in RUN_STEPS.iter().chain(CYCLE_STEPS) {
@@ -1346,7 +1346,7 @@ mod tests {
 
     /// A1 (#577, SPEC-325 R2): a runtime built from the module's multi-thread attribute runs two
     /// workers, read from the runtime itself, not one worker per core of the host.
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn a_multi_thread_wiring_test_runs_on_two_workers_whatever_the_host() {
         assert_eq!(
             tokio::runtime::Handle::current().metrics().num_workers(),
