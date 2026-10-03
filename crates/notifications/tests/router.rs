@@ -767,3 +767,72 @@ async fn the_in_app_feed_serves_each_item_once_in_order() {
     );
     assert_eq!(second, Vec::<FeedItem>::new(), "each item is served once");
 }
+
+/// SPEC-319 A5 (R1): outside the window, a holding router with no transport defers a bot
+/// celebration `send` and holds it for the senders; it still withholds a nudge `no_notifier` and
+/// releases its key; and a router that does not hold still withholds the celebration.
+#[tokio::test]
+async fn a_holding_router_holds_a_celebration_it_cannot_send() {
+    let harness = Harness::without_bot(at(DAY, 12, 0)).await;
+    let holding = Router::new(
+        Arc::clone(&harness.policy),
+        harness.db.clone(),
+        harness.clock.clone(),
+        StudyDayRule::default(),
+    )
+    .holding();
+    let nudge = harness.occasion(
+        "habit",
+        "habit:check-in",
+        Surface::Bot,
+        Tier::T2,
+        DAY,
+        LapseContext::NoLapse,
+    );
+
+    let held = holding
+        .route(&harness.celebration("record:streak", Surface::Bot))
+        .await
+        .expect("a decision");
+    let withheld = holding.route(&nudge).await.expect("a decision");
+    let plain = harness
+        .router
+        .route(&harness.celebration("record:best-day", Surface::Bot))
+        .await
+        .expect("a decision");
+
+    assert_eq!(
+        held,
+        Decision::Deferred {
+            surface: Surface::Bot,
+            hold: Hold::Send
+        },
+        "the celebration is held for the senders"
+    );
+    let no_notifier = Decision::Withheld {
+        surface: Surface::Bot,
+        reason: Reason::NoNotifier,
+    };
+    assert_eq!(withheld, no_notifier, "a nudge is never held");
+    assert_eq!(plain, no_notifier, "a router that does not hold is unchanged");
+    let queue: Vec<(String, String, String)> = harness
+        .queue()
+        .await
+        .into_iter()
+        .map(|row| (row.key, row.state, row.hold))
+        .collect();
+    assert_eq!(
+        queue,
+        [(
+            "record:streak".to_owned(),
+            "held".to_owned(),
+            "send".to_owned()
+        )],
+        "only the celebration is held"
+    );
+    assert_eq!(
+        harness.deliveries().await,
+        1,
+        "the held celebration keeps its claim; the nudge's key is released"
+    );
+}
