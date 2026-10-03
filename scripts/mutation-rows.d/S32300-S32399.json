@@ -1,0 +1,53 @@
+{
+  "tables": {
+    "CARGO_KILLED_SCRIPT_MUTATIONS": [
+      [
+        "S32300-THE-COMMAND-REPLIES-ARE-A-DECLARED-REPLY-CLASS",
+        "notifications-policy.json",
+        "    \"bot-commands\"",
+        "    \"bot-command\"",
+        "notifications",
+        "policy::every_golden_is_a_declared_notification_or_a_declared_reply",
+        "the policy names the duty of the 26 command replies in its replies list; a misspelt duty leaves every golden an undeclared reply and the list's entry carried by no golden; a string in a JSON file is no cargo-mutants mutation, so a script row"
+      ]
+    ],
+    "MUTATIONS": [
+      [
+        "S32301-THE-POLICY-READS-ITS-REPLIES",
+        "notifications",
+        "src/policy.rs",
+        "    \"replies\",",
+        "    \"deviations\",",
+        "policy::a_reply_that_names_a_declared_kind_is_refused_at_start",
+        "replies is a top-level key the loader knows; with it missing from TOP_KEYS (a duplicate keeps the length) parse answers UnknownKey, not Malformed, so A2 fails"
+      ],
+      [
+        "S32302-A-REPLY-NAMED-AS-A-KIND-IS-REFUSED",
+        "notifications",
+        "src/policy.rs",
+        ".find(|reply| self.kinds.contains_key(reply.as_str()))",
+        ".find(|reply| self.kinds.contains_key(reply.as_str()) && false)",
+        "policy::a_reply_that_names_a_declared_kind_is_refused_at_start",
+        "check() refuses a replies entry that names a declared kind; without the refusal a reply could be an alert or a nudge"
+      ],
+      [
+        "S32303-A-KINDLESS-GOLDEN-OUTSIDE-THE-REPLIES-IS-REFUSED",
+        "notifications",
+        "tests/policy.rs",
+        "if kindless && !replies.iter().any(|reply| reply == duty) {",
+        "if kindless && !replies.iter().any(|reply| reply == duty) && false {",
+        "policy::every_golden_is_a_declared_notification_or_a_declared_reply",
+        "rule (a): a kind-less golden whose duty the policy does not declare a reply is a fault; the planted daily-digest golden is then not refused"
+      ],
+      [
+        "S32304-A-REPLY-NO-GOLDEN-CARRIES-IS-REFUSED",
+        "notifications",
+        "tests/policy.rs",
+        "if !carried {",
+        "if !carried && false {",
+        "policy::every_golden_is_a_declared_notification_or_a_declared_reply",
+        "rule (b): a replies entry that is the duty of no kind-less golden is a fault; the planted ghost duty is then not refused"
+      ]
+    ]
+  }
+}
