@@ -25,8 +25,10 @@
   job table), SPEC-021 (the six files of a table) and SPEC-029 (the goldens); and #291, the flush at
   the quiet window's end, which delivers what the morning's recompute raises. **Mutation band:**
   `S10200-S10299`.
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-102.md` (ADR-016).
+- **Status:** delivered in part (moved from `docs/specs/planned/` with its tests and
+  `docs/red-first/SPEC-102.md`, ADR-016): ART1a delivered #127's landmarks, their due rule and texts,
+  and the study days of the whole scoped log (ADR-318); #127's second part delivers the landmarks step
+  and the first run, #128 the milestone pings and queue zero, and #121 the pinned widget (section 3c).
 
 ## 1. The problem, measured
 
@@ -239,77 +241,19 @@ R23. `migrations/010203_notifications_widget_side_by_side_default.sql` seeds `wi
 | A2 | the due landmarks are exactly those dated the day | `only_the_landmarks_dated_the_day_are_due` |
 | A3 | the texts equal the golden `landmark_text` at the ordinals 1, 2, 3, 4, 11, 12, 13, 21, 111 and 121, both anniversary variants and the study day's | `the_landmark_text_matches_the_parity_golden` |
 | A4 | the step and the templates equal the golden `landmarks.constants` | `the_landmark_constants_equal_the_predecessors` |
-| A5 | the milestone text equals the golden `milestone_text` | `the_milestone_text_matches_the_parity_golden` |
-| A6 | a T4 and a T5 throw the occasion's dice, one without a dice throws the default, and a deferred occasion keeps its dice through the flush | `an_occasions_dice_is_thrown_and_kept_through_a_deferral` |
-| A7 | the widget text equals the golden `widget_text`, the broke-today line included | `the_widget_text_matches_the_parity_golden` |
-| A8 | the mood equals the golden `widget_mood` in each of its seven outcomes, at reviews equal to the goal and one below, a goal of 0, and the hours 17, 18, 21 and 22 | `the_widget_mood_matches_the_parity_golden` |
-| A9 | the mood line is absent at `widget_mood` `"0"` and present when it is unset or any other value | `the_mood_switch_turns_the_mood_line_off_only_at_zero` |
-| A10 | the quest lines and the footer equal the golden `widget_payload`: a sealed quest, a completed one, targets of 1 and 15, each footer line alone and all four, an unset goal and a day with no rollup | `the_widget_payload_matches_the_parity_golden` |
-| A11 | the first refresh of a study day sends silently with the Open app row, pins it, unpins the day before's widget, stores the row and records one send | `the_first_refresh_of_a_day_sends_pins_and_unpins_the_day_before` |
-| A12 | a refresh whose text is unchanged pushes nothing, re-pins nothing and records nothing | `an_unchanged_widget_is_never_sent_again_or_re_pinned` |
-| A13 | a changed refresh edits the message with the same row, and a "message is not modified" answer counts as edited | `a_changed_widget_is_edited_in_place_and_not_modified_is_success` |
-| A14 | a failed edit sends anew and pins, replacing the message id; a failed send records `no_notifier`, keeps the row and opens the breaker, and a refresh while it is open pushes nothing | `a_failed_edit_sends_anew_and_a_failed_send_keeps_the_row` |
-| A15 | at `widget_enabled` `"0"` a first or changed refresh is withheld with `nudges_disabled`, and nothing is pushed | `the_widget_switch_stops_every_push` |
-| A16 | a first or changed refresh inside the quiet window is withheld with `quiet_hours`, and the first refresh after the window sends it | `quiet_hours_hold_the_widget_until_the_window_ends` |
-| A17 | the refreshes make the golden `widget_update`'s calls, in order | `the_refreshes_make_the_parity_goldens_calls` |
-| A18 | a T5 unpins and pins the day's widget after its own pin, and a T5 with no widget stored re-pins nothing | `a_t5_re_pins_the_days_widget` |
-| A19 | the kind `widget` is declared with its class, tier, dedupe and setting, a recorded deviation, and the transport names its three calls | `the_widget_kind_and_its_calls_are_declared` |
-| A20 | `widget_enabled` is seeded off, an existing value is kept, and `widget_mood` is left unset | `the_widget_switch_starts_off_beside_the_predecessor` |
-| A21 | `widget_messages` is exported and erased by notifications' port | `the_widget_messages_are_exported_and_erased` |
-| A22 | `push_widget` sends silently with its row and answers the message id, `push_pin` pins that id silently and `push_unpin` unpins it | `the_widget_calls_send_silently_and_pin_and_unpin_by_id` |
-| A23 | `push_edit` answers unchanged for "message is not modified", and failed for any other refusal | `an_edit_reads_not_modified_as_unchanged` |
 | A24 | the study days are every study day of a scoped study event of the whole log, once each and oldest first: a review out of scope, a review that is not a study event, and two reviews on one day | `the_study_days_are_every_scoped_study_event_day_once` |
-| A25 | each study day the fold settles or evaluates raises the landmarks due that day, with their events, keys and texts, and a second recompute raises none | `each_evaluated_day_raises_its_due_landmarks_once` |
-| A26 | the first run stores the mark and raises at most one landmark, equal to the golden `landmarks_run`, and a later run with the mark raises every due one | `the_first_run_seeds_the_mark_and_raises_at_most_one` |
-| A27 | an anniversary is the honest variant when the streak's last study day is not the day evaluated, and the plain one when it is | `the_anniversary_is_honest_on_a_day_without_study` |
-| A28 | a study day with a `backlog_zero` grant above 0 raises one `queue_zero` occasion, epic, with the dice and the golden `queue_zero_ping`'s text, and a second recompute raises none | `queue_zero_is_raised_once_for_a_cleared_study_day` |
-| A29 | a declared skip day with no review, and a study day whose `backlog_zero` is 0, raise no `queue_zero` | `a_skip_day_or_an_open_queue_raises_no_queue_zero` |
-| A30 | the badge occasion carries its badge's milestone text with the streak as of the day evaluated | `the_badge_occasion_carries_the_milestone_text` |
-| A31 | the level-up occasion carries the reached level's milestone text | `the_level_up_occasion_carries_the_milestone_text` |
-| A32 | the widget reads the rollup's reviews and due-today count, the streak's length, last study day and longest, the strength, the open lapse, the goal, the skip set, the day's quests, the week's quest, the Ascendant day, the token's end, the wager's days and stake and the local hour, and a fixture that changes any one of them changes the text | `the_widget_reads_every_input_it_names` |
-| A33 | the owner's sync cycle refreshes the widget after its recompute, a failed sync refreshes nothing, and the scheduled sync's cycle attempts no send | `the_owners_sync_cycle_refreshes_the_widget_and_the_scheduled_one_sends_nothing` |
-| A34 | the job `widget_refresh` fires hourly at minute 44 without catch-up, off every predecessor, reserved and private-rail minute and the sync's slot, and its timer and the rail contract hold the calendar | `the_widget_job_keeps_off_every_reserved_minute` |
 
 ```acceptance
 A1: cargo test -p deck-streak-notifications --test landmarks -- --exact the_landmarks_match_the_parity_golden
 A2: cargo test -p deck-streak-notifications --test landmarks -- --exact only_the_landmarks_dated_the_day_are_due
 A3: cargo test -p deck-streak-notifications --test landmarks -- --exact the_landmark_text_matches_the_parity_golden
 A4: cargo test -p deck-streak-notifications --test landmarks -- --exact the_landmark_constants_equal_the_predecessors
-A5: cargo test -p deck-streak-notifications --test milestones -- --exact the_milestone_text_matches_the_parity_golden
-A6: cargo test -p deck-streak-notifications --test milestones -- --exact an_occasions_dice_is_thrown_and_kept_through_a_deferral
-A7: cargo test -p deck-streak-notifications --test widget -- --exact the_widget_text_matches_the_parity_golden
-A8: cargo test -p deck-streak-notifications --test widget -- --exact the_widget_mood_matches_the_parity_golden
-A9: cargo test -p deck-streak-notifications --test widget -- --exact the_mood_switch_turns_the_mood_line_off_only_at_zero
-A10: cargo test -p deck-streak-notifications --test widget -- --exact the_widget_payload_matches_the_parity_golden
-A11: cargo test -p deck-streak-notifications --test widget_router -- --exact the_first_refresh_of_a_day_sends_pins_and_unpins_the_day_before
-A12: cargo test -p deck-streak-notifications --test widget_router -- --exact an_unchanged_widget_is_never_sent_again_or_re_pinned
-A13: cargo test -p deck-streak-notifications --test widget_router -- --exact a_changed_widget_is_edited_in_place_and_not_modified_is_success
-A14: cargo test -p deck-streak-notifications --test widget_router -- --exact a_failed_edit_sends_anew_and_a_failed_send_keeps_the_row
-A15: cargo test -p deck-streak-notifications --test widget_router -- --exact the_widget_switch_stops_every_push
-A16: cargo test -p deck-streak-notifications --test widget_router -- --exact quiet_hours_hold_the_widget_until_the_window_ends
-A17: cargo test -p deck-streak-notifications --test widget_router -- --exact the_refreshes_make_the_parity_goldens_calls
-A18: cargo test -p deck-streak-notifications --test widget_router -- --exact a_t5_re_pins_the_days_widget
-A19: cargo test -p deck-streak-notifications --test widget_router -- --exact the_widget_kind_and_its_calls_are_declared
-A20: cargo test -p deck-streak-notifications --test widget_router -- --exact the_widget_switch_starts_off_beside_the_predecessor
-A21: cargo test -p deck-streak-notifications --test widget_router -- --exact the_widget_messages_are_exported_and_erased
-A22: cargo test -p deck-streak-bot --test widget_transport -- --exact the_widget_calls_send_silently_and_pin_and_unpin_by_id
-A23: cargo test -p deck-streak-bot --test widget_transport -- --exact an_edit_reads_not_modified_as_unchanged
 A24: cargo test -p deck-streak-ingest --test study_days -- --exact the_study_days_are_every_scoped_study_event_day_once
-A25: cargo test -p deck-streak-coordination --test landmarks_step -- --exact each_evaluated_day_raises_its_due_landmarks_once
-A26: cargo test -p deck-streak-coordination --test landmarks_step -- --exact the_first_run_seeds_the_mark_and_raises_at_most_one
-A27: cargo test -p deck-streak-coordination --test landmarks_step -- --exact the_anniversary_is_honest_on_a_day_without_study
-A28: cargo test -p deck-streak-coordination --test queue_zero_step -- --exact queue_zero_is_raised_once_for_a_cleared_study_day
-A29: cargo test -p deck-streak-coordination --test queue_zero_step -- --exact a_skip_day_or_an_open_queue_raises_no_queue_zero
-A30: cargo test -p deck-streak-coordination --test milestone_texts -- --exact the_badge_occasion_carries_the_milestone_text
-A31: cargo test -p deck-streak-coordination --test milestone_texts -- --exact the_level_up_occasion_carries_the_milestone_text
-A32: cargo test -p deck-streak-coordination --test widget_step -- --exact the_widget_reads_every_input_it_names
-A33: cargo test -p deck-streak-coordination --test widget_step -- --exact the_owners_sync_cycle_refreshes_the_widget_and_the_scheduled_one_sends_nothing
-A34: cargo test -p deck-streak-coordination --test widget_job -- --exact the_widget_job_keeps_off_every_reserved_minute
 ```
 
-A11 to A18 run the router over a recording transport on a manual clock; A22 and A23 run the bot
-transport against a recording Bot API stand-in. A25 to A31 run the recompute over a temporary
-deployment with synthetic reviews.
+A24 runs the reader over a synthetic collection built in a temporary directory; A1 to A4 run the
+port over the parity goldens. The remaining criteria are in section 3c, with the test setting each
+runs in.
 
 ## 3a. What the box run judges
 
@@ -326,6 +270,81 @@ delivery claims none of it.
 | B2 | the kind `widget` carries its deviation, and its class is one the pack admits and not exempt from quiet hours, over `notifications-policy.json` | the notifications-policy pack |
 | B3 | `push_widget`, `push_edit` and `push_unpin` are called only in the router module, over the shipped sources under `crates/` | the notifications-policy pack |
 | B4 | the widget's send, edit, pin and unpin calls stay within the Bot API's rules and its Open app button is a URL button, over `crates/bot/src/transport.rs` and `crates/notifications/src/widget.rs` | the telegram-platform pack |
+
+## 3c. Delivered by the next pull requests
+
+This SPEC lands in parts. ART1a (this pull request, #127's first part) delivers the landmarks' rule,
+their due rule and texts, and the study days of the whole scoped log: the criteria of section 3's
+table. #127's second part delivers the landmarks step, the first run and the mark; #128 delivers the
+milestone pings and queue zero; #121 delivers the pinned widget. The table below holds the criteria a
+later pull request delivers, each row naming that pull request, and the lines under it are their fence
+lines, each prefixed with that pull request. A later pull request moves each of its criteria back
+verbatim: the row into section 3's table, without the `delivered by` column, and the fence line into
+the acceptance fence, without the prefix. A11 to A18 run the router over a recording transport on a
+manual clock; A22 and A23 run the bot transport against a recording Bot API stand-in; A25 to A31 run
+the recompute over a temporary deployment with synthetic reviews.
+
+| id | criterion | decided by | delivered by |
+|---|---|---|---|
+| A5 | the milestone text equals the golden `milestone_text` | `the_milestone_text_matches_the_parity_golden` | #128 |
+| A6 | a T4 and a T5 throw the occasion's dice, one without a dice throws the default, and a deferred occasion keeps its dice through the flush | `an_occasions_dice_is_thrown_and_kept_through_a_deferral` | #128 |
+| A7 | the widget text equals the golden `widget_text`, the broke-today line included | `the_widget_text_matches_the_parity_golden` | #121 |
+| A8 | the mood equals the golden `widget_mood` in each of its seven outcomes, at reviews equal to the goal and one below, a goal of 0, and the hours 17, 18, 21 and 22 | `the_widget_mood_matches_the_parity_golden` | #121 |
+| A9 | the mood line is absent at `widget_mood` `"0"` and present when it is unset or any other value | `the_mood_switch_turns_the_mood_line_off_only_at_zero` | #121 |
+| A10 | the quest lines and the footer equal the golden `widget_payload`: a sealed quest, a completed one, targets of 1 and 15, each footer line alone and all four, an unset goal and a day with no rollup | `the_widget_payload_matches_the_parity_golden` | #121 |
+| A11 | the first refresh of a study day sends silently with the Open app row, pins it, unpins the day before's widget, stores the row and records one send | `the_first_refresh_of_a_day_sends_pins_and_unpins_the_day_before` | #121 |
+| A12 | a refresh whose text is unchanged pushes nothing, re-pins nothing and records nothing | `an_unchanged_widget_is_never_sent_again_or_re_pinned` | #121 |
+| A13 | a changed refresh edits the message with the same row, and a "message is not modified" answer counts as edited | `a_changed_widget_is_edited_in_place_and_not_modified_is_success` | #121 |
+| A14 | a failed edit sends anew and pins, replacing the message id; a failed send records `no_notifier`, keeps the row and opens the breaker, and a refresh while it is open pushes nothing | `a_failed_edit_sends_anew_and_a_failed_send_keeps_the_row` | #121 |
+| A15 | at `widget_enabled` `"0"` a first or changed refresh is withheld with `nudges_disabled`, and nothing is pushed | `the_widget_switch_stops_every_push` | #121 |
+| A16 | a first or changed refresh inside the quiet window is withheld with `quiet_hours`, and the first refresh after the window sends it | `quiet_hours_hold_the_widget_until_the_window_ends` | #121 |
+| A17 | the refreshes make the golden `widget_update`'s calls, in order | `the_refreshes_make_the_parity_goldens_calls` | #121 |
+| A18 | a T5 unpins and pins the day's widget after its own pin, and a T5 with no widget stored re-pins nothing | `a_t5_re_pins_the_days_widget` | #121 |
+| A19 | the kind `widget` is declared with its class, tier, dedupe and setting, a recorded deviation, and the transport names its three calls | `the_widget_kind_and_its_calls_are_declared` | #121 |
+| A20 | `widget_enabled` is seeded off, an existing value is kept, and `widget_mood` is left unset | `the_widget_switch_starts_off_beside_the_predecessor` | #121 |
+| A21 | `widget_messages` is exported and erased by notifications' port | `the_widget_messages_are_exported_and_erased` | #121 |
+| A22 | `push_widget` sends silently with its row and answers the message id, `push_pin` pins that id silently and `push_unpin` unpins it | `the_widget_calls_send_silently_and_pin_and_unpin_by_id` | #121 |
+| A23 | `push_edit` answers unchanged for "message is not modified", and failed for any other refusal | `an_edit_reads_not_modified_as_unchanged` | #121 |
+| A25 | each study day the fold settles or evaluates raises the landmarks due that day, with their events, keys and texts, and a second recompute raises none | `each_evaluated_day_raises_its_due_landmarks_once` | #127 part b |
+| A26 | the first run stores the mark and raises at most one landmark, equal to the golden `landmarks_run`, and a later run with the mark raises every due one | `the_first_run_seeds_the_mark_and_raises_at_most_one` | #127 part b |
+| A27 | an anniversary is the honest variant when the streak's last study day is not the day evaluated, and the plain one when it is | `the_anniversary_is_honest_on_a_day_without_study` | #127 part b |
+| A28 | a study day with a `backlog_zero` grant above 0 raises one `queue_zero` occasion, epic, with the dice and the golden `queue_zero_ping`'s text, and a second recompute raises none | `queue_zero_is_raised_once_for_a_cleared_study_day` | #128 |
+| A29 | a declared skip day with no review, and a study day whose `backlog_zero` is 0, raise no `queue_zero` | `a_skip_day_or_an_open_queue_raises_no_queue_zero` | #128 |
+| A30 | the badge occasion carries its badge's milestone text with the streak as of the day evaluated | `the_badge_occasion_carries_the_milestone_text` | #128 |
+| A31 | the level-up occasion carries the reached level's milestone text | `the_level_up_occasion_carries_the_milestone_text` | #128 |
+| A32 | the widget reads the rollup's reviews and due-today count, the streak's length, last study day and longest, the strength, the open lapse, the goal, the skip set, the day's quests, the week's quest, the Ascendant day, the token's end, the wager's days and stake and the local hour, and a fixture that changes any one of them changes the text | `the_widget_reads_every_input_it_names` | #121 |
+| A33 | the owner's sync cycle refreshes the widget after its recompute, a failed sync refreshes nothing, and the scheduled sync's cycle attempts no send | `the_owners_sync_cycle_refreshes_the_widget_and_the_scheduled_one_sends_nothing` | #121 |
+| A34 | the job `widget_refresh` fires hourly at minute 44 without catch-up, off every predecessor, reserved and private-rail minute and the sync's slot, and its timer and the rail contract hold the calendar | `the_widget_job_keeps_off_every_reserved_minute` | #121 |
+
+#128: A5: cargo test -p deck-streak-notifications --test milestones -- --exact the_milestone_text_matches_the_parity_golden
+#128: A6: cargo test -p deck-streak-notifications --test milestones -- --exact an_occasions_dice_is_thrown_and_kept_through_a_deferral
+#121: A7: cargo test -p deck-streak-notifications --test widget -- --exact the_widget_text_matches_the_parity_golden
+#121: A8: cargo test -p deck-streak-notifications --test widget -- --exact the_widget_mood_matches_the_parity_golden
+#121: A9: cargo test -p deck-streak-notifications --test widget -- --exact the_mood_switch_turns_the_mood_line_off_only_at_zero
+#121: A10: cargo test -p deck-streak-notifications --test widget -- --exact the_widget_payload_matches_the_parity_golden
+#121: A11: cargo test -p deck-streak-notifications --test widget_router -- --exact the_first_refresh_of_a_day_sends_pins_and_unpins_the_day_before
+#121: A12: cargo test -p deck-streak-notifications --test widget_router -- --exact an_unchanged_widget_is_never_sent_again_or_re_pinned
+#121: A13: cargo test -p deck-streak-notifications --test widget_router -- --exact a_changed_widget_is_edited_in_place_and_not_modified_is_success
+#121: A14: cargo test -p deck-streak-notifications --test widget_router -- --exact a_failed_edit_sends_anew_and_a_failed_send_keeps_the_row
+#121: A15: cargo test -p deck-streak-notifications --test widget_router -- --exact the_widget_switch_stops_every_push
+#121: A16: cargo test -p deck-streak-notifications --test widget_router -- --exact quiet_hours_hold_the_widget_until_the_window_ends
+#121: A17: cargo test -p deck-streak-notifications --test widget_router -- --exact the_refreshes_make_the_parity_goldens_calls
+#121: A18: cargo test -p deck-streak-notifications --test widget_router -- --exact a_t5_re_pins_the_days_widget
+#121: A19: cargo test -p deck-streak-notifications --test widget_router -- --exact the_widget_kind_and_its_calls_are_declared
+#121: A20: cargo test -p deck-streak-notifications --test widget_router -- --exact the_widget_switch_starts_off_beside_the_predecessor
+#121: A21: cargo test -p deck-streak-notifications --test widget_router -- --exact the_widget_messages_are_exported_and_erased
+#121: A22: cargo test -p deck-streak-bot --test widget_transport -- --exact the_widget_calls_send_silently_and_pin_and_unpin_by_id
+#121: A23: cargo test -p deck-streak-bot --test widget_transport -- --exact an_edit_reads_not_modified_as_unchanged
+#127b: A25: cargo test -p deck-streak-coordination --test landmarks_step -- --exact each_evaluated_day_raises_its_due_landmarks_once
+#127b: A26: cargo test -p deck-streak-coordination --test landmarks_step -- --exact the_first_run_seeds_the_mark_and_raises_at_most_one
+#127b: A27: cargo test -p deck-streak-coordination --test landmarks_step -- --exact the_anniversary_is_honest_on_a_day_without_study
+#128: A28: cargo test -p deck-streak-coordination --test queue_zero_step -- --exact queue_zero_is_raised_once_for_a_cleared_study_day
+#128: A29: cargo test -p deck-streak-coordination --test queue_zero_step -- --exact a_skip_day_or_an_open_queue_raises_no_queue_zero
+#128: A30: cargo test -p deck-streak-coordination --test milestone_texts -- --exact the_badge_occasion_carries_the_milestone_text
+#128: A31: cargo test -p deck-streak-coordination --test milestone_texts -- --exact the_level_up_occasion_carries_the_milestone_text
+#121: A32: cargo test -p deck-streak-coordination --test widget_step -- --exact the_widget_reads_every_input_it_names
+#121: A33: cargo test -p deck-streak-coordination --test widget_step -- --exact the_owners_sync_cycle_refreshes_the_widget_and_the_scheduled_one_sends_nothing
+#121: A34: cargo test -p deck-streak-coordination --test widget_job -- --exact the_widget_job_keeps_off_every_reserved_minute
 
 ## 4. File manifest
 
@@ -477,3 +496,72 @@ row's mutant makes a loop or a wait unbounded.
 | `S10220-REPIN-AFTER-T5` | `crates/notifications/src/router.rs` | a T5 re-pins the day's widget | `widget_router::a_t5_re_pins_the_days_widget` |
 | `S10221-NOT-MODIFIED-IS-SUCCESS` | `crates/bot/src/transport.rs` | "message is not modified" is unchanged | `widget_transport::an_edit_reads_not_modified_as_unchanged` |
 | `S10222-WIDGET-AT-MINUTE-44` | `crates/coordination/src/jobs.rs` | the job fires at minute 44 | `widget_job::the_widget_job_keeps_off_every_reserved_minute` |
+
+## 10. Amendments, 2026-10-03: what ART1a delivers, the scoped read, and the goldens' day token
+
+Section 3's table now holds only the criteria this pull request delivers, A1 to A4 and A24: the rows of A5 to A23 and A25 to A34 moved out of it, and each stays verbatim in section 3c's table with its fence line there, as section 3c says a later pull request moves it back. The manifest in section 4 is otherwise unchanged. The Status line is the one body edit besides sections 3 and 3c.
+
+**10.1, the manifest (section 4).** Old: `| `crates/notifications/src/landmarks.rs` | `deck-streak-notifications` | added: the landmarks, the due rule, the texts and the high-water mark |` New: `| `crates/notifications/src/landmarks.rs` | `deck-streak-notifications` | added: the landmarks, the due rule and the texts (ART1a); the high-water mark (#127's second part) |`
+
+This part adds these files, which section 4 does not name:
+
+- `docs/decisions/ADR-318-the-landmarks-are-ported-as-a-pure-rule-first-and-an-anniversary-is-read-from-the-study-days-own-calendar.md`: the landmarks are ported as a pure rule first, and an anniversary is read from the study days' own calendar.
+- `changelog.d/landmarks-art1a-127.md`: the changelog fragment of this part.
+
+**10.2, a deviation section 1 lacks** (insert-only; it adds a bullet to section 1's deviations). New: The study days are read from the scoped log (ADR-095, SPEC-023 R2): a review of a deck out of scope, or of a card since deleted, is not counted, where the predecessor's read of the whole revlog counts both. The first study day and the study-day ordinals can therefore differ from the predecessor's on one collection, and a key imported from its ledger can name another day; the router's once-ever key still raises each key once (#127).
+
+**10.3, section 7.** Old: `| `goldens/landmark_text.json` | `landmarks.py:render_landmark`, `landmarks.py:_ordinal_label` | adapter | landmarks at the ordinals 1, 2, 3, 4, 11, 12, 13, 21, 111 and 121, each event, and both anniversary variants |` New: `| `goldens/landmark_text.json` | `landmarks.py:render_landmark`, `landmarks.py:_ordinal_label` | adapter | landmarks at the ordinals 1, 2, 3, 4, 11, 12, 13, 21, 111 and 121, each event, and both anniversary variants; each text writes its date as the token `{day:N}`, N its epoch day (the oracle's README), so the golden holds no calendar date |`
+
+**10.4, section 7.** Old: `| `goldens/landmarks.constants.json` | `landmarks.py` | constants | `LANDMARK_DAY_STEP`, `LANDMARK_HIGH_WATER_KEY` and the three templates |` New: `| `goldens/landmarks.constants.json` | `landmarks.py`, `constants.py` | constants | `LANDMARK_DAY_STEP`, `LANDMARK_HIGH_WATER_KEY`, `ANNIVERSARY_EVENT_TYPE`, `STUDY_DAY_EVENT_TYPE` and the three templates, which `constants.py` defines and `landmarks.py` imports |`
+
+**10.5, R5 and R9 under ADR-303** (insert-only; no Old is replaced here). New: ADR-303, accepted after this SPEC was written, keeps every celebration out of the fold's writes: the router opens its own write, and owed awards are offered between the writes. R5's and R9's "raises ... through the router" in the awards phase is read under it, and the pull request that delivers each amends it (#127's second part, #128).
+
+**10.6, section 5** (#571 is filed for it; this amendment applies). Old: `- It gives the scheduled sync's recompute no router, so a landmark or a queue zero that recompute decides is not raised, like every awards-phase celebration of that recompute (SPEC-072 R14, SPEC-073 R4); whether the scheduled sync gains a router is #291's.` (the bullet of section 5, which wraps over three lines there) New: `- It gives the scheduled sync's recompute no router, so a landmark or a queue zero that recompute decides is not raised, like every awards-phase celebration of that recompute (SPEC-072 R14, SPEC-073 R4); #291 closed with the held flush as its own job and gave no recompute a router, so whether a recompute gains one is #571.`
+
+Manifest rows this part does not touch (each delivered by a later part or left as it is):
+
+- `crates/notifications/src/milestone.rs`: unchanged in this part.
+- `crates/notifications/src/widget.rs`: unchanged in this part.
+- `crates/notifications/src/occasion.rs`: unchanged in this part.
+- `crates/notifications/src/router.rs`: unchanged in this part.
+- `crates/notifications/tests/one_router.rs`: unchanged in this part.
+- `crates/notifications/src/transport.rs`: unchanged in this part.
+- `crates/notifications/src/ledger.rs`: unchanged in this part.
+- `crates/notifications/src/policy.rs`: unchanged in this part.
+- `crates/notifications/src/data_rights.rs`: unchanged in this part.
+- `crates/notifications/tests/milestones.rs`: unchanged in this part.
+- `crates/notifications/tests/widget.rs`: unchanged in this part.
+- `crates/notifications/tests/widget_router.rs`: unchanged in this part.
+- `crates/coordination/src/recompute/landmarks.rs`: unchanged in this part.
+- `crates/coordination/src/recompute/queue_zero.rs`: unchanged in this part.
+- `crates/coordination/src/recompute/mod.rs`: unchanged in this part.
+- `crates/coordination/src/recompute/badges.rs`: unchanged in this part.
+- `crates/coordination/src/progression/level_view.rs`: unchanged in this part.
+- `crates/coordination/src/widget.rs`: unchanged in this part.
+- `crates/coordination/src/sync_cycle.rs`: unchanged in this part.
+- `crates/coordination/src/jobs.rs`: unchanged in this part.
+- `crates/coordination/src/lib.rs`: unchanged in this part.
+- `crates/coordination/src/data_rights_registry.rs`: unchanged in this part.
+- `crates/coordination/tests/landmarks_step.rs`: unchanged in this part.
+- `crates/coordination/tests/queue_zero_step.rs`: unchanged in this part.
+- `crates/coordination/tests/milestone_texts.rs`: unchanged in this part.
+- `crates/coordination/tests/widget_step.rs`: unchanged in this part.
+- `crates/coordination/tests/widget_job.rs`: unchanged in this part.
+- `crates/coordination/tests/data_rights_symmetry.rs`: unchanged in this part.
+- `crates/bot/src/transport.rs`: unchanged in this part.
+- `crates/bot/tests/widget_transport.rs`: unchanged in this part.
+- `crates/daemon/src/wiring.rs`: unchanged in this part.
+- `crates/daemon/tests/roles.rs`: unchanged in this part.
+- `migrations/010201_notifications_widget_messages.sql`: unchanged in this part.
+- `migrations/010202_notifications_queue_dice.sql`: unchanged in this part.
+- `migrations/010203_notifications_widget_side_by_side_default.sql`: unchanged in this part.
+- `notifications-policy.json`: unchanged in this part.
+- `deploy/systemd/deck-streak-job-send@widget_refresh.timer`: unchanged in this part.
+- `deploy/rail-contract.json`: unchanged in this part.
+- `docs/CONTEXT-MAP.md`: unchanged in this part.
+- `privacy.json`: unchanged in this part.
+- `PRIVACY.md`: unchanged in this part.
+- `docs/schematics/landmarks-milestones-and-the-pinned-widget.md`: unchanged in this part.
+- `docs/decisions/ADR-109-the-widget-is-one-silent-pinned-message-a-study-day-edited-in-place-through-the-router.md`: unchanged in this part.
+
+The row `crates/notifications/src/lib.rs` is changed in this part for the module `landmarks` only; the modules `milestone` and `widget` are #128's and #121's.
