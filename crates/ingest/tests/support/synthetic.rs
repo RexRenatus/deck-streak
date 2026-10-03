@@ -1132,3 +1132,33 @@ pub fn review_log(path: &Path) -> Vec<LogRow> {
             .collect()
     })
 }
+
+/// Plays another client changing cards' due dates in the collection at `path`: each `(card, due)`
+/// is written with a new modification time and as unsynced, so that client's next sync sends it
+/// (SPEC-083 A39).
+///
+/// # Panics
+///
+/// When the collection does not hold a card.
+pub fn change_cards(path: &Path, cards: &[(i64, i64)]) {
+    with_engine(path, |col| {
+        let now = i64::try_from(
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("the clock is past the epoch")
+                .as_secs(),
+        )
+        .expect("seconds fit an i64");
+        for (card, due) in cards {
+            let changed = col
+                .storage
+                .db()
+                .execute(
+                    "update cards set due = ?, mod = ?, usn = -1 where id = ?",
+                    (due, now, card),
+                )
+                .expect("the card is updated");
+            assert_eq!(changed, 1, "the collection holds the card {card}");
+        }
+    });
+}

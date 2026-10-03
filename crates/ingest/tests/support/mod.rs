@@ -735,3 +735,17 @@ fn sync_setting_from_another_client(runtime: &Runtime, mut col: Collection, endp
     col.close(None)
         .unwrap_or_else(|error| panic!("the other client closes its collection: {error}"));
 }
+
+/// Plays the owner's other Anki client sending what it changed in the collection at `collection`
+/// to the server at `endpoint` with the engine's own normal sync (SPEC-083 A39). No code of this
+/// workspace runs here.
+///
+/// # Panics
+///
+/// When the engine fails.
+pub fn sync_on_another_client(runtime: &Runtime, collection: &Path, endpoint: &str) {
+    let col = CollectionBuilder::new(collection)
+        .build()
+        .unwrap_or_else(|error| panic!("the other client opens its collection: {error}"));
+    sync_setting_from_another_client(runtime, col, endpoint);
+}

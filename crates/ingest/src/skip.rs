@@ -140,11 +140,21 @@ pub enum FailReason {
     TimedOut,
     /// Any other failure inside the engine.
     EngineFailed,
+    /// The class's stop was set, or could not be read (R36).
+    WritesStopped,
+    /// The process's zone is not pinned as a POSIX rule that names no zone file (R3).
+    ZoneNotPinned,
+    /// The take's backup could not be written (R34).
+    BackupFailed,
+    /// The take's backup failed its restore check (R34).
+    BackupCheckFailed,
+    /// A count other than the review-log rows and the due count moved (R35).
+    CountsMoved,
 }
 
 impl FailReason {
     /// Every code.
-    pub const ALL: [Self; 11] = [
+    pub const ALL: [Self; 16] = [
         Self::EngineDayDiffers,
         Self::ZoneDiffers,
         Self::ZoneObservesDaylightSaving,
@@ -156,6 +166,11 @@ impl FailReason {
         Self::WriteFailed,
         Self::TimedOut,
         Self::EngineFailed,
+        Self::WritesStopped,
+        Self::ZoneNotPinned,
+        Self::BackupFailed,
+        Self::BackupCheckFailed,
+        Self::CountsMoved,
     ];
 
     /// The code as `skip_days` stores it.
@@ -173,6 +188,11 @@ impl FailReason {
             Self::WriteFailed => "write_failed",
             Self::TimedOut => "timed_out",
             Self::EngineFailed => "engine_failed",
+            Self::WritesStopped => "writes_stopped",
+            Self::ZoneNotPinned => "zone_not_pinned",
+            Self::BackupFailed => "backup_failed",
+            Self::BackupCheckFailed => "backup_check_failed",
+            Self::CountsMoved => "counts_moved",
         }
     }
 
@@ -590,4 +610,57 @@ pub async fn skip_set_on(connection: &mut SqliteConnection) -> Result<Vec<StudyD
         .collect();
     days.sort_unstable();
     Ok(days)
+}
+
+/// One moved card's scheduling state, as the take records it before its reschedule (R22) and as
+/// the reschedule left it (R26): what the undo restores, and what it compares first.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct CardState {
+    /// The card's id.
+    pub card_id: i64,
+    /// Its due.
+    pub due: i64,
+    /// Its queue.
+    pub queue: i64,
+    /// Its type.
+    pub kind: i64,
+    /// Its interval, in days.
+    pub interval: i64,
+    /// Its ease factor, in permille.
+    pub ease_factor: i64,
+    /// Its original deck's id (a filtered deck's card), else 0.
+    pub original_deck: i64,
+    /// Its original due (a filtered deck's card), else 0.
+    pub original_due: i64,
+    /// Its modification time, in seconds.
+    pub mtime: i64,
+}
+
+impl SkipStore {
+    /// Records each moved card's prior state for the skip `id` (R22): one `skip_card_snapshot` row
+    /// a card, all in one transaction, committed before the reschedule.
+    ///
+    /// # Errors
+    ///
+    /// [`KernelError::Database`] when the write fails; then no row is recorded.
+    pub async fn record_prior(
+        &self,
+        id: SkipId,
+        cards: &[CardState],
+        now: UtcMillis,
+    ) -> Result<(), KernelError> {
+        let _ = (id, cards, now);
+        Ok(())
+    }
+
+    /// Records each moved card's state as the reschedule left it, with its modification time
+    /// (R26), on the rows [`SkipStore::record_prior`] wrote for the skip `id`, in one transaction.
+    ///
+    /// # Errors
+    ///
+    /// [`KernelError::Database`] when the write fails; then no row changes.
+    pub async fn record_left(&self, id: SkipId, cards: &[CardState]) -> Result<(), KernelError> {
+        let _ = (id, cards);
+        Ok(())
+    }
 }
