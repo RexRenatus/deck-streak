@@ -194,10 +194,10 @@
         "S07724-CURRICULUM-MODULES-PUBLIC",
         "curriculum",
         "src/lib.rs",
-        "pub mod data_rights;\npub mod law;\npub mod progress;\npub mod store;\npub mod unit_bands;\n",
-        "#[doc(hidden)]\npub mod data_rights;\npub mod law;\npub mod progress;\npub mod store;\npub mod unit_bands;\n",
+        "pub mod data_rights;\npub mod horizon;\npub mod law;\npub mod progress;\npub mod store;\npub mod unit_bands;\n",
+        "#[doc(hidden)]\npub mod data_rights;\npub mod horizon;\npub mod law;\npub mod progress;\npub mod store;\npub mod unit_bands;\n",
         "store_boundaries::the_crate_root_declares_the_curriculum_modules_publicly",
-        "the crate root declares curriculum's five modules public and bare (SPEC-077 R6, R18). The killer is a source-text guard, since the mutant builds and no behaviour test reads the declarations"
+        "the crate root declares curriculum's six modules public and bare (SPEC-077 R6, R18). The killer is a source-text guard, since the mutant builds and no behaviour test reads the declarations"
       ],
       [
         "S07725-COORDINATION-LAW-PUBLIC",
