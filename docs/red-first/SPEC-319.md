@@ -22,7 +22,7 @@ A4: green at 00f814d8
 A5: green at 00f814d8
 ```
 
-Two assertions were narrowed at the green commit, to the criterion's own wording: the cycle's
+Two assertions were narrowed at the green commit 00f814d, to the criterion's own wording: the cycle's
 badge also earns the first level, so the queue holds a second row for the level-up. A2 reads the
 rows held for the badge's key, and A3 reads the pushes that name the badge: exactly one. Neither
 was widened to pass; A1, A4 and A5 are unchanged.

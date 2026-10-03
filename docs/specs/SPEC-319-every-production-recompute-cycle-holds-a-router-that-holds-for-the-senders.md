@@ -112,7 +112,7 @@ here and kept out of the fence above, which names tests only.
 | `crates/daemon/tests/recompute_router.rs` | `deck-streak-daemon` | added: A1 to A4 |
 | `formal/tla/HeldFlush/HeldFlush.tla` | formal | changed: `SendHold`, `HoldSend`, `Unanswered`, two covers |
 | `formal/tla/HeldFlush/MCHeldFlush.cfg` | formal | changed: `SendHold = FALSE` |
-| `formal/tla/HeldFlush/witness/LeaseLapses.cfg`, `witness/NoSerialisation.cfg`, `witness/OnlyTheSyncFlusher.cfg`, `witness/ReleaseOnFail.cfg` | formal | changed: `SendHold = FALSE` |
+| `formal/tla/HeldFlush/witness/LeaseLapses.cfg`, `formal/tla/HeldFlush/witness/NoSerialisation.cfg`, `formal/tla/HeldFlush/witness/OnlyTheSyncFlusher.cfg`, `formal/tla/HeldFlush/witness/ReleaseOnFail.cfg` | formal | changed: `SendHold = FALSE` |
 | `formal/tla/HeldFlush/MCHeldSendHold.cfg` | formal | added: report mode, `SendHold = TRUE` |
 | `formal/tla/HeldFlush/witness/a-hold-outside-the-window-with-no-later-flush.cfg` | formal | added |
 | `scripts/mutation-rows.d/S31900-S31999.json` | repo | added: rows S31900 to S31905 |
