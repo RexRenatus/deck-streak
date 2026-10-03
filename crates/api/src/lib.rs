@@ -31,6 +31,7 @@ pub mod health;
 pub mod inbox_capture_route;
 pub mod insights_routes;
 pub mod notifications_routes;
+pub mod progress_routes;
 pub mod router;
 pub mod serve;
 pub mod session_routes;

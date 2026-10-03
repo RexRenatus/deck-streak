@@ -57,6 +57,7 @@ use crate::health::{self, Readiness};
 use crate::inbox_capture_route;
 use crate::insights_routes;
 use crate::notifications_routes;
+use crate::progress_routes;
 use crate::session_routes::{self, OwnerAccess};
 use crate::streak_routes;
 use crate::wallet_routes;
@@ -193,6 +194,11 @@ pub fn router(state: ApiState) -> Router {
                 .merge(streak_routes::routes(access.clone(), readiness.clone()))
                 .merge(wallet_routes::routes(access.clone(), readiness.clone()))
                 .merge(badges_routes::routes(
+                    access.clone(),
+                    readiness.clone(),
+                    courses.clone(),
+                ))
+                .merge(progress_routes::routes(
                     access.clone(),
                     readiness.clone(),
                     courses,
