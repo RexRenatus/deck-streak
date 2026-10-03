@@ -572,3 +572,29 @@ async fn a_habit_writers_debug_shows_its_rule_and_instant_only() {
         "the router's presence, the rule and the instant; the database is left out"
     );
 }
+
+#[test]
+fn the_habit_step_is_named_for_the_folds_report() {
+    assert_eq!(
+        fold().steps(),
+        [(Phase::DaySteps, "habits.reading_xp")],
+        "the report and the log name the step habits.reading_xp"
+    );
+}
+
+#[tokio::test]
+async fn the_recompute_settles_a_past_day_closed_and_today_open() {
+    let scratch = TempDir::new().expect("a scratch directory");
+    let db = database(&scratch).await;
+    plant(&db, "qaa", MONDAY - 1, 30).await;
+    plant(&db, "qaa", MONDAY, 40).await;
+    recompute(&fold(), &db, &no_reviews(), noon(MONDAY)).await;
+    assert_eq!(
+        closed_rows(&db, MONDAY - 7, SUNDAY + 7).await,
+        [
+            (MONDAY - 1, "read:qaa".to_owned(), 60, true),
+            (MONDAY, "read:qaa".to_owned(), 80, false),
+        ],
+        "Sunday is settled closed, the current Monday open"
+    );
+}
