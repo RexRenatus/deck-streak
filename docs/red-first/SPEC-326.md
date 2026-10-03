@@ -63,3 +63,22 @@ S32611-THE-HELD-FLUSH-JOB-RE-CAPS: KILLED at 43edbcb5: control selected 1 and pa
 S32612-THE-CYCLES-FLUSH-RE-CAPS: KILLED at 43edbcb5: control selected 1 and passed; mutant selected 1 and failed
 S32613-THE-BOTS-FLUSH-RE-CAPS: KILLED at 43edbcb5: control selected 1 and passed; mutant selected 1 and failed
 ```
+
+## The held-path pin (ruling 131)
+
+`relight_order::with_no_owner_message_every_committed_grant_is_routed_once_rendered_or_held`,
+committed at a86d7881, is a characterization pin and makes no red-first claim. It pins what the
+green commit 24a391dd already ships under ruling 112 Q-3: the relight read with the stored streak,
+so capped at T1 on its return day. Ruling 131 changed the failure-point test beside it so that
+every cycle records an owner message, and this pin keeps the path production takes most often,
+with no owner message, exercised over the same twenty cases. It was GREEN at its first run, on the
+bytes committed at a86d7881, by its exact name: `examined 20 relight order case(s) with no owner
+message`, `where each case's relight went: {"Held": 5, "Rendered": 11, "Unrouted": 4}`, `test
+result: ok. 1 passed; 0 failed`. The five held cases are those whose relight is routed on its
+return day; the eleven rendered ones are routed on a later day (at the settle, or in the cycle
+after a restart), which is no streak-break day, so each renders its one line.
+
+A control shows it is not vacuous: with relight.rs's read replaced by row S32610's no-op, so the
+relight is routed uncapped, the same run fails at its assertion with five `HELD` breaks, one per
+case routed on its return day, each a line sent where the hold was owed. relight.rs was then
+restored, and its sha256 checked equal to the committed file's.
