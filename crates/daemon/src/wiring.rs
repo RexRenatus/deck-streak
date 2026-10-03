@@ -647,8 +647,10 @@ mod tests {
     use deck_streak_coordination::recompute::Phase;
     use deck_streak_coordination::recompute::analytics_step::ANALYTICS_STEP;
     use deck_streak_coordination::recompute::badges::BADGES_STEP;
+    use deck_streak_coordination::recompute::band_badges::BAND_BADGES_STEP;
     use deck_streak_coordination::recompute::day_bonuses::DAY_BONUSES_STEP;
     use deck_streak_coordination::recompute::mint::MINT_STEP;
+    use deck_streak_coordination::recompute::progress::PROGRESS_STEP;
     use deck_streak_coordination::recompute::records::RECORDS_STEP;
     use deck_streak_coordination::recompute::streaks::STREAKS_STEP;
     use deck_streak_coordination::recompute::xp::XP_STEP;
@@ -734,6 +736,27 @@ mod tests {
                 (Phase::Awards, BADGES_STEP),
                 (Phase::Awards, RECORDS_STEP),
             ]
+        );
+    }
+
+    /// A22: Road to C2's two steps run in production, the progress step in phase 4 right after the
+    /// streaks step and the band badge step in phase 7 right after the records step (SPEC-077 R6).
+    #[test]
+    fn the_recompute_fold_registers_road_to_c2s_steps() {
+        let fold = recompute_fold(AnalyticsSettings::default()).expect("every step in its phase");
+        let steps = fold.steps();
+        let at = |step: (Phase, &str)| steps.iter().position(|registered| *registered == step);
+        let streaks = at((Phase::StreaksAndGovernor, STREAKS_STEP)).expect("the streaks step");
+        assert_eq!(
+            at((Phase::DaySteps, PROGRESS_STEP)),
+            Some(streaks + 1),
+            "the progress step is registered in phase 4, right after the streaks step"
+        );
+        let records = at((Phase::Awards, RECORDS_STEP)).expect("the records step");
+        assert_eq!(
+            at((Phase::Awards, BAND_BADGES_STEP)),
+            Some(records + 1),
+            "the band badge step is registered in phase 7, right after the records step"
         );
     }
 
