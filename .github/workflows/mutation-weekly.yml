@@ -88,9 +88,9 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/size"
           if [ -n "$PACKAGE" ]; then
-            cargo mutants --no-shuffle --list --json --in-place --package="$PACKAGE" --timeout 300 --build-timeout 600 > "$RUNNER_TEMP/size/package.json"
+            cargo mutants --no-shuffle --list --json --in-place --package="$PACKAGE" --timeout 1200 --build-timeout 600 > "$RUNNER_TEMP/size/package.json"
           else
-            cargo mutants --no-shuffle --list --json --in-place --timeout 300 --build-timeout 600 > "$RUNNER_TEMP/size/package.json"
+            cargo mutants --no-shuffle --list --json --in-place --timeout 1200 --build-timeout 600 > "$RUNNER_TEMP/size/package.json"
           fi
       - name: the shards, the fewest whose slowest is projected within its bound
         id: size
@@ -151,8 +151,9 @@ jobs:
           fallback: none
       # Round-robin spreads the engine's crates, whose mutants cost minutes each, across every
       # shard. In place, cargo-mutants applies no multiplier and bounds no build unless told:
-      # --timeout bounds each mutant's tests and --build-timeout each mutant's build (the tool's
-      # timeouts chapter); the unmutated baseline's build is never bounded. A dispatch that names a
+      # --timeout bounds each mutant's tests and the unmutated baseline's, and --build-timeout each
+      # mutant's build (the tool's timeouts chapter); the baseline's build is never bounded. The
+      # 1200 s covers the settle census's 788 s with a 1.5 margin (SPEC-327). A dispatch that names a
       # package sweeps its mutants alone, round-robin over the shards its own listing sized (SPEC-129),
       # and a run with no package sweeps 32; the input reaches the shell through the environment,
       # never interpolated into it.
@@ -165,9 +166,9 @@ jobs:
           mkdir -p "$RUNNER_TEMP/mutation"
           rc=0
           if [ -n "$PACKAGE" ]; then
-            python3 scripts/memory_scope.py --report "$RUNNER_TEMP/mutation" -- cargo mutants --no-shuffle -vV --in-place --package="$PACKAGE" --sharding round-robin --shard "$SHARD/$SHARDS" --timeout 300 --build-timeout 600 --output "$RUNNER_TEMP/mutation" || rc=$?
+            python3 scripts/memory_scope.py --report "$RUNNER_TEMP/mutation" -- cargo mutants --no-shuffle -vV --in-place --package="$PACKAGE" --sharding round-robin --shard "$SHARD/$SHARDS" --timeout 1200 --build-timeout 600 --output "$RUNNER_TEMP/mutation" || rc=$?
           else
-            python3 scripts/memory_scope.py --report "$RUNNER_TEMP/mutation" -- cargo mutants --no-shuffle -vV --in-place --sharding round-robin --shard "$SHARD/$SHARDS" --timeout 300 --build-timeout 600 --output "$RUNNER_TEMP/mutation" || rc=$?
+            python3 scripts/memory_scope.py --report "$RUNNER_TEMP/mutation" -- cargo mutants --no-shuffle -vV --in-place --sharding round-robin --shard "$SHARD/$SHARDS" --timeout 1200 --build-timeout 600 --output "$RUNNER_TEMP/mutation" || rc=$?
           fi
           echo "$rc" > "$RUNNER_TEMP/mutation/cargo-mutants.exit"
           echo "cargo-mutants exited $rc"
@@ -319,7 +320,7 @@ jobs:
       - name: the whole tree's mutants, in the order the shards take them
         run: |
           mkdir -p "$RUNNER_TEMP/listing"
-          cargo mutants --no-shuffle --list --json --in-place --timeout 300 --build-timeout 600 > "$RUNNER_TEMP/listing/whole.json"
+          cargo mutants --no-shuffle --list --json --in-place --timeout 1200 --build-timeout 600 > "$RUNNER_TEMP/listing/whole.json"
       - name: the whole Python population's mutants, which every Python record is bound against
         run: python3 scripts/mutation_python.py list --all --out "$RUNNER_TEMP/listing/python-whole.json"
       - name: keep the listing
@@ -434,7 +435,7 @@ jobs:
           shard="$RUNNER_TEMP/reports/mutants-shard-0"
           mkdir -p "$shard"
           rc=0
-          python3 scripts/memory_scope.py --report "$shard" -- cargo mutants --no-shuffle -vV --in-place -f crates/kernel/src/clock.rs --timeout 300 --build-timeout 600 --output "$shard" || rc=$?
+          python3 scripts/memory_scope.py --report "$shard" -- cargo mutants --no-shuffle -vV --in-place -f crates/kernel/src/clock.rs --timeout 1200 --build-timeout 600 --output "$shard" || rc=$?
           echo "$rc" > "$shard/cargo-mutants.exit"
           echo "cargo-mutants exited $rc"
       - name: one row, as the rows job proves it
