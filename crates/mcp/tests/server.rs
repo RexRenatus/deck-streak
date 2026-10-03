@@ -277,9 +277,13 @@ async fn serve_answers_a_request_before_its_shutdown_resolves_then_returns() {
     .expect("a loopback port");
     let address = listener.local_addr().expect("the bound address");
     let (stop, stopped) = tokio::sync::oneshot::channel::<()>();
-    let serving = tokio::spawn(deck_streak_mcp::server::serve(listener, router, async move {
-        drop(stopped.await);
-    }));
+    let serving = tokio::spawn(deck_streak_mcp::server::serve(
+        listener,
+        router,
+        async move {
+            drop(stopped.await);
+        },
+    ));
     let served = Served { address, guard };
 
     let answer = served

@@ -10,8 +10,8 @@
 #![allow(clippy::expect_used, clippy::print_stdout)]
 
 use std::ffi::OsStr;
-use std::os::unix::net::UnixDatagram;
 use std::fs;
+use std::os::unix::net::UnixDatagram;
 use std::process::{Command, Output};
 use std::sync::Arc;
 
