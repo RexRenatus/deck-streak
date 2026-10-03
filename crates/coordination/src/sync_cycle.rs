@@ -78,9 +78,9 @@ impl ObligationSource for OwedSettle {
 }
 
 /// What one cycle needs: the syncer, the reader of its copy, the gate over the service's database,
-/// the registered obligations, the clock, and the notification router it flushes, when it has one.
-/// The runner's port for the `sync` job (`runner::SyncCycle`) is implemented over them in the
-/// composition root.
+/// the registered obligations, the clock, and the notification router it routes the awards, the
+/// level-up and the relights through and flushes, when it has one. The runner's port for the
+/// `sync` job (`runner::SyncCycle`) is implemented over them in the composition root.
 pub struct CycleParts<E> {
     syncer: Syncer<E, SqliteSyncRuns>,
     reader: CollectionReader,
@@ -126,7 +126,8 @@ impl<E: AnkiEngine + Sync> CycleParts<E> {
         }
     }
 
-    /// These parts, flushing `router` after every sync that ran and succeeded (SPEC-041 R7).
+    /// These parts, routing the cycle's celebrations through `router` and flushing it after every
+    /// sync that ran and succeeded (SPEC-041 R7).
     #[must_use]
     pub fn with_flush(mut self, router: Arc<Router>) -> Self {
         self.router = Some(router);
@@ -379,12 +380,12 @@ async fn run_instruments(instruments: &Instruments) {
     }
 }
 
-/// The router's flush, after a sync that ran and succeeded (SPEC-041 R7), carrying the streak's
-/// facts the ladder re-caps each held celebration for (SPEC-084 R11; none until SPEC-076). A flush
-/// that cannot run is logged and never fails the sync it follows: the queue keeps its holds for the
-/// next.
+/// The router's flush, after a sync that ran and succeeded (SPEC-041 R7), carrying the language
+/// streak's facts as stored, which the ladder re-caps each held celebration for (SPEC-084 R11;
+/// SPEC-326). A flush that cannot run, or whose facts cannot be read, is logged and never fails
+/// the sync it follows: the queue keeps its holds for the next.
 async fn flush(router: &Router) {
-    match router.flush_with(ladder_facts::streak_facts()).await {
+    match ladder_facts::flush_re_capped(router).await {
         Ok(flushed) => tracing::info!(?flushed, "the notification router flushed"),
         Err(error) => tracing::error!(%error, "the notification router could not flush"),
     }

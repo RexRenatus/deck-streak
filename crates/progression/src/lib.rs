@@ -18,16 +18,22 @@
 //! award port over `badges_earned`, the study conditions and the hour windows; [`records`] the
 //! record detection and the record to chase; and [`milestone`] the three ladders and the nearest
 //! rung.
+//!
+//! The personal board and the XP exchange readout (SPEC-075, ADR-075): [`board`] ranks the
+//! learner's own stored days and labels the board's rows; [`exchange`] reads both XP tables and
+//! folds them into each source bucket's XP per graduated card.
 #![forbid(unsafe_code)]
 #![deny(unused_must_use)]
 #![warn(missing_docs, clippy::all)]
 
 pub mod badges;
+pub mod board;
 pub mod bonus;
 pub mod buffs;
 pub mod consistency;
 pub mod data_rights;
 pub mod economy_config;
+pub mod exchange;
 pub mod grant;
 pub mod ledger;
 pub mod level;

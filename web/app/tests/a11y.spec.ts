@@ -110,6 +110,25 @@ for (const [scheme, themeParams] of Object.entries(THEMES)) {
           }
         })
       );
+      // The XP exchange readout on the level screen: one bucket with a rate and one no card
+      // graduated for, whose undefined rate is text (SPEC-075 R9).
+      await page.route('**/api/xp/exchange*', (intercepted) =>
+        intercepted.fulfill({
+          json: {
+            window: null,
+            rates: [
+              {
+                source: 'focus',
+                total_xp: 50,
+                graduated_cards: 0,
+                rate: null,
+                rate_defined: false
+              },
+              { source: 'reviews', total_xp: 10, graduated_cards: 4, rate: 2.5, rate_defined: true }
+            ]
+          }
+        })
+      );
       // The wallet, for the header on every screen and the /wallet screen: a balance, today's loss
       // limit, a mint and a fine, and an older page, so the button that asks for it is audited too
       // (SPEC-082 R15, R17).
@@ -158,6 +177,32 @@ for (const [scheme, themeParams] of Object.entries(THEMES)) {
                 family: 'habit',
                 progress: null
               }
+            ]
+          }
+        })
+      );
+      // The personal board on the records screen: a best day, today, the streak and the level
+      // (SPEC-075 R3).
+      await page.route('**/api/board', (intercepted) =>
+        intercepted.fulfill({
+          json: {
+            rows: [
+              {
+                kind: 'best_day',
+                emoji: '\u{1F3C5}',
+                label: 'Best day',
+                value: 90,
+                study_day: '2001-02-01'
+              },
+              {
+                kind: 'today',
+                emoji: '\u{1F4C5}',
+                label: 'Today',
+                value: 77,
+                study_day: '2001-02-03'
+              },
+              { kind: 'streak', emoji: '\u{1F525}', label: 'Streak', value: 3, longest: 9 },
+              { kind: 'level', emoji: '\u26A1', label: 'Level', value: 7, title: 'Adept' }
             ]
           }
         })
