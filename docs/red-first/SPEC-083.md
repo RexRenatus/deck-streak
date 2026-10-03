@@ -159,8 +159,6 @@ at 5ca21228.
 ```red-first
 A5: red at 0fa34058: skip_write.rs:740, Failed(engine_failed) != Accepted
 A5: green at 5677cf5a
-A6: red at 0fa34058: skip_zero_upload.rs:193, a refused take (preview_changed) answered Failed(engine_failed)
-A6: green at 5ca21228
 A9: red at c46626ab: skip_write.rs:49, examined 0 review-log row(s) the reschedule wrote
 A9: green at 091bb53b
 A24: red at 10a72541: examined 0 engine card write call(s) inside impl CollectionWrite for RslibEngine
@@ -181,10 +179,6 @@ A38: red at 0fa34058: skip_write.rs:997, Failed{EngineFailed}
 A38: green at 5677cf5a
 A39: red at 0fa34058: skip_write.rs:1028, Failed != Accepted
 A39: green at 5677cf5a
-A40: red at 0fa34058: skip_write.rs:1194, the engine's rollover hour differs: the preview refuses; left: Listed, right: Refused(EngineDayDiffers)
-A40: green at 5ca21228
-A44: red at 0fa34058: skip_write.rs:1194, unset: the preview refuses; left: Listed, right: Refused(ZoneNotPinned)
-A44: green at 5677cf5a
 A47: red at 0fa34058: skip_write.rs:687, backup_check_failed answered as Failed{EngineFailed}
 A47: green at 5677cf5a
 A48: red at 0fa34058: skip_write.rs:1083, Failed{EngineFailed}
@@ -199,6 +193,19 @@ A55: red at d4b60742: Lists differ: [] != ['planted.yml:6: replicates /var/lib/d
 A55: green at 3a7e628d
 A56: red at 0fa34058: skip_write.rs:1179, it answers what it removed; left: 0, right: 3
 A56: green at 5677cf5a
+```
+
+These are the take arms' readings of A6, A40 and A44. The three criteria stay in SPEC-083 section 3c
+until E4c lands their undo arms and moves each row, fence line and record line back; they are kept
+here, outside the fence, so that no criterion is bound whole on its take arm alone.
+
+```text
+A6: red at 0fa34058: skip_zero_upload.rs:193, a refused take (preview_changed) answered Failed(engine_failed)
+A6: green at 5ca21228
+A40: red at 0fa34058: skip_write.rs:1194, the engine's rollover hour differs: the preview refuses; left: Listed, right: Refused(EngineDayDiffers)
+A40: green at 5ca21228
+A44: red at 0fa34058: skip_write.rs:1194, unset: the preview refuses; left: Listed, right: Refused(ZoneNotPinned)
+A44: green at 5677cf5a
 ```
 
 ## Mutation cures (ruling 76)
@@ -234,3 +241,9 @@ placed first in a copy of the stub state (the parent of 5677cf5a, 0fa34058, expo
 and failed there, `skip_write.rs:1290`, `the refusal is answered, not silent`, left `Failed {
 reason: EngineFailed, preview: None }`, right `Failed { reason: WritesStopped, preview: None }`. At the
 head the test passes (`1 passed`).
+
+Correction (ruling 146): the six lines naming A6, A40 and A44 moved out of the red-first fence into the
+text block above, byte-equal and in order. SPEC-083 section 3c delivers each of the three whole only when
+E4c has landed its undo arms, and the part that lands second moves the row back, so they are not criteria
+of this delivery; a fence line would bind each whole on its take arm alone. This amends ruling 143's
+"no existing record line is edited" for these six lines only, which were this delivery's own and unpushed.
