@@ -184,3 +184,20 @@ fn the_landmark_constants_equal_the_predecessors() {
     });
     println!("{examined}");
 }
+
+#[test]
+fn the_anniversary_walk_stops_at_its_cap() {
+    let today: StudyDay = "+11975-01-01".parse().expect("a far study day");
+    let found = compute_landmarks(&[StudyDay::from_epoch_day(0)], today);
+    let anniversaries: Vec<&Landmark> = found
+        .iter()
+        .filter(|item| item.event == ANNIVERSARY_EVENT_TYPE)
+        .collect();
+    assert_eq!(anniversaries.len(), 10_000);
+    let last = anniversaries.last().expect("an anniversary");
+    assert_eq!(last.key, "landmark:anniv:10000");
+    assert_eq!(
+        last.day,
+        "+11970-01-01".parse::<StudyDay>().expect("the cap's day")
+    );
+}
