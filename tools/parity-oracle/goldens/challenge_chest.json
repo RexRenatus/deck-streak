@@ -1,0 +1,1348 @@
+{
+  "adapter": "with_a_stub_challenge",
+  "cases": [
+    {
+      "class": "challenge",
+      "input": {
+        "draws": [
+          0.009999999999999898,
+          0.5
+        ],
+        "existing": [],
+        "since_epic": 0,
+        "since_legendary": 0,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "challenge",
+            "payout_xp": 150,
+            "rarity": "legendary",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "since_epic": 1,
+        "since_legendary": 0
+      }
+    },
+    {
+      "class": "challenge",
+      "input": {
+        "draws": [
+          0.010000000000000009,
+          0.5
+        ],
+        "existing": [],
+        "since_epic": 0,
+        "since_legendary": 0,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "challenge",
+            "payout_xp": 0,
+            "rarity": "epic",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "since_epic": 0,
+        "since_legendary": 1
+      }
+    },
+    {
+      "class": "challenge",
+      "input": {
+        "draws": [
+          0.01000000000000012,
+          0.5
+        ],
+        "existing": [],
+        "since_epic": 0,
+        "since_legendary": 0,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "challenge",
+            "payout_xp": 0,
+            "rarity": "epic",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "since_epic": 0,
+        "since_legendary": 1
+      }
+    },
+    {
+      "class": "challenge",
+      "input": {
+        "draws": [
+          0.17999999999999994,
+          0.5
+        ],
+        "existing": [],
+        "since_epic": 0,
+        "since_legendary": 0,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "challenge",
+            "payout_xp": 0,
+            "rarity": "epic",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "since_epic": 0,
+        "since_legendary": 1
+      }
+    },
+    {
+      "class": "challenge",
+      "input": {
+        "draws": [
+          0.18000000000000005,
+          0.5
+        ],
+        "existing": [],
+        "since_epic": 0,
+        "since_legendary": 0,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "challenge",
+            "payout_xp": 45,
+            "rarity": "rare",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "since_epic": 1,
+        "since_legendary": 1
+      }
+    },
+    {
+      "class": "challenge",
+      "input": {
+        "draws": [
+          0.18000000000000016,
+          0.5
+        ],
+        "existing": [],
+        "since_epic": 0,
+        "since_legendary": 0,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "challenge",
+            "payout_xp": 45,
+            "rarity": "rare",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "since_epic": 1,
+        "since_legendary": 1
+      }
+    },
+    {
+      "class": "challenge",
+      "input": {
+        "draws": [
+          0.3999999999999999,
+          0.5
+        ],
+        "existing": [],
+        "since_epic": 0,
+        "since_legendary": 0,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "challenge",
+            "payout_xp": 45,
+            "rarity": "rare",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "since_epic": 1,
+        "since_legendary": 1
+      }
+    },
+    {
+      "class": "challenge",
+      "input": {
+        "draws": [
+          0.4,
+          0.5
+        ],
+        "existing": [],
+        "since_epic": 0,
+        "since_legendary": 0,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "challenge",
+            "payout_xp": 18,
+            "rarity": "common",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "since_epic": 1,
+        "since_legendary": 1
+      }
+    },
+    {
+      "class": "challenge",
+      "input": {
+        "draws": [
+          0.40000000000000013,
+          0.5
+        ],
+        "existing": [],
+        "since_epic": 0,
+        "since_legendary": 0,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "challenge",
+            "payout_xp": 18,
+            "rarity": "common",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "since_epic": 1,
+        "since_legendary": 1
+      }
+    },
+    {
+      "class": "challenge",
+      "input": {
+        "draws": [
+          0.009999999999999898,
+          0.5
+        ],
+        "existing": [],
+        "since_epic": 9,
+        "since_legendary": 3,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "challenge",
+            "payout_xp": 150,
+            "rarity": "legendary",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "since_epic": 10,
+        "since_legendary": 0
+      }
+    },
+    {
+      "class": "challenge",
+      "input": {
+        "draws": [
+          0.010000000000000009,
+          0.5
+        ],
+        "existing": [],
+        "since_epic": 9,
+        "since_legendary": 3,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "challenge",
+            "payout_xp": 0,
+            "rarity": "epic",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "since_epic": 0,
+        "since_legendary": 4
+      }
+    },
+    {
+      "class": "challenge",
+      "input": {
+        "draws": [
+          0.01000000000000012,
+          0.5
+        ],
+        "existing": [],
+        "since_epic": 9,
+        "since_legendary": 3,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "challenge",
+            "payout_xp": 0,
+            "rarity": "epic",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "since_epic": 0,
+        "since_legendary": 4
+      }
+    },
+    {
+      "class": "challenge",
+      "input": {
+        "draws": [
+          0.22999999999999987,
+          0.5
+        ],
+        "existing": [],
+        "since_epic": 9,
+        "since_legendary": 3,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "challenge",
+            "payout_xp": 0,
+            "rarity": "epic",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "since_epic": 0,
+        "since_legendary": 4
+      }
+    },
+    {
+      "class": "challenge",
+      "input": {
+        "draws": [
+          0.22999999999999998,
+          0.5
+        ],
+        "existing": [],
+        "since_epic": 9,
+        "since_legendary": 3,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "challenge",
+            "payout_xp": 45,
+            "rarity": "rare",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "since_epic": 10,
+        "since_legendary": 4
+      }
+    },
+    {
+      "class": "challenge",
+      "input": {
+        "draws": [
+          0.2300000000000001,
+          0.5
+        ],
+        "existing": [],
+        "since_epic": 9,
+        "since_legendary": 3,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "challenge",
+            "payout_xp": 45,
+            "rarity": "rare",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "since_epic": 10,
+        "since_legendary": 4
+      }
+    },
+    {
+      "class": "challenge",
+      "input": {
+        "draws": [
+          0.44999999999999996,
+          0.5
+        ],
+        "existing": [],
+        "since_epic": 9,
+        "since_legendary": 3,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "challenge",
+            "payout_xp": 45,
+            "rarity": "rare",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "since_epic": 10,
+        "since_legendary": 4
+      }
+    },
+    {
+      "class": "challenge",
+      "input": {
+        "draws": [
+          0.45000000000000007,
+          0.5
+        ],
+        "existing": [],
+        "since_epic": 9,
+        "since_legendary": 3,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "challenge",
+            "payout_xp": 18,
+            "rarity": "common",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "since_epic": 10,
+        "since_legendary": 4
+      }
+    },
+    {
+      "class": "challenge",
+      "input": {
+        "draws": [
+          0.4500000000000002,
+          0.5
+        ],
+        "existing": [],
+        "since_epic": 9,
+        "since_legendary": 3,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "challenge",
+            "payout_xp": 18,
+            "rarity": "common",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "since_epic": 10,
+        "since_legendary": 4
+      }
+    },
+    {
+      "class": "challenge",
+      "input": {
+        "draws": [
+          0.009999999999999898,
+          0.5
+        ],
+        "existing": [],
+        "since_epic": 12,
+        "since_legendary": 0,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "challenge",
+            "payout_xp": 150,
+            "rarity": "legendary",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "since_epic": 13,
+        "since_legendary": 0
+      }
+    },
+    {
+      "class": "challenge",
+      "input": {
+        "draws": [
+          0.010000000000000009,
+          0.5
+        ],
+        "existing": [],
+        "since_epic": 12,
+        "since_legendary": 0,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "challenge",
+            "payout_xp": 0,
+            "rarity": "epic",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "since_epic": 0,
+        "since_legendary": 1
+      }
+    },
+    {
+      "class": "challenge",
+      "input": {
+        "draws": [
+          0.01000000000000012,
+          0.5
+        ],
+        "existing": [],
+        "since_epic": 12,
+        "since_legendary": 0,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "challenge",
+            "payout_xp": 0,
+            "rarity": "epic",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "since_epic": 0,
+        "since_legendary": 1
+      }
+    },
+    {
+      "class": "challenge",
+      "input": {
+        "draws": [
+          0.3799999999999999,
+          0.5
+        ],
+        "existing": [],
+        "since_epic": 12,
+        "since_legendary": 0,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "challenge",
+            "payout_xp": 0,
+            "rarity": "epic",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "since_epic": 0,
+        "since_legendary": 1
+      }
+    },
+    {
+      "class": "challenge",
+      "input": {
+        "draws": [
+          0.38,
+          0.5
+        ],
+        "existing": [],
+        "since_epic": 12,
+        "since_legendary": 0,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "challenge",
+            "payout_xp": 45,
+            "rarity": "rare",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "since_epic": 13,
+        "since_legendary": 1
+      }
+    },
+    {
+      "class": "challenge",
+      "input": {
+        "draws": [
+          0.3800000000000001,
+          0.5
+        ],
+        "existing": [],
+        "since_epic": 12,
+        "since_legendary": 0,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "challenge",
+            "payout_xp": 45,
+            "rarity": "rare",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "since_epic": 13,
+        "since_legendary": 1
+      }
+    },
+    {
+      "class": "challenge",
+      "input": {
+        "draws": [
+          0.5999999999999999,
+          0.5
+        ],
+        "existing": [],
+        "since_epic": 12,
+        "since_legendary": 0,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "challenge",
+            "payout_xp": 45,
+            "rarity": "rare",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "since_epic": 13,
+        "since_legendary": 1
+      }
+    },
+    {
+      "class": "challenge",
+      "input": {
+        "draws": [
+          0.6,
+          0.5
+        ],
+        "existing": [],
+        "since_epic": 12,
+        "since_legendary": 0,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "challenge",
+            "payout_xp": 18,
+            "rarity": "common",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "since_epic": 13,
+        "since_legendary": 1
+      }
+    },
+    {
+      "class": "challenge",
+      "input": {
+        "draws": [
+          0.6000000000000001,
+          0.5
+        ],
+        "existing": [],
+        "since_epic": 12,
+        "since_legendary": 0,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "challenge",
+            "payout_xp": 18,
+            "rarity": "common",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "since_epic": 13,
+        "since_legendary": 1
+      }
+    },
+    {
+      "class": "challenge",
+      "input": {
+        "draws": [
+          0.99,
+          0.5
+        ],
+        "existing": [],
+        "since_epic": 13,
+        "since_legendary": 0,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "challenge",
+            "payout_xp": 0,
+            "rarity": "epic",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "since_epic": 0,
+        "since_legendary": 1
+      }
+    },
+    {
+      "class": "challenge",
+      "input": {
+        "draws": [
+          0.0,
+          0.5
+        ],
+        "existing": [],
+        "since_epic": 13,
+        "since_legendary": 0,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "challenge",
+            "payout_xp": 0,
+            "rarity": "epic",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "since_epic": 0,
+        "since_legendary": 1
+      }
+    },
+    {
+      "class": "challenge",
+      "input": {
+        "draws": [
+          0.99,
+          0.5
+        ],
+        "existing": [],
+        "since_epic": 13,
+        "since_legendary": 39,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "challenge",
+            "payout_xp": 150,
+            "rarity": "legendary",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "since_epic": 14,
+        "since_legendary": 0
+      }
+    },
+    {
+      "class": "challenge",
+      "input": {
+        "draws": [
+          0.0,
+          0.5
+        ],
+        "existing": [],
+        "since_epic": 13,
+        "since_legendary": 39,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "challenge",
+            "payout_xp": 150,
+            "rarity": "legendary",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "since_epic": 14,
+        "since_legendary": 0
+      }
+    },
+    {
+      "class": "challenge",
+      "input": {
+        "draws": [
+          0.99,
+          0.5
+        ],
+        "existing": [],
+        "since_epic": 5,
+        "since_legendary": 39,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "challenge",
+            "payout_xp": 150,
+            "rarity": "legendary",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "since_epic": 6,
+        "since_legendary": 0
+      }
+    },
+    {
+      "class": "challenge",
+      "input": {
+        "draws": [
+          0.0,
+          0.5
+        ],
+        "existing": [],
+        "since_epic": 5,
+        "since_legendary": 39,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "challenge",
+            "payout_xp": 150,
+            "rarity": "legendary",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "since_epic": 6,
+        "since_legendary": 0
+      }
+    },
+    {
+      "class": "challenge",
+      "input": {
+        "draws": [
+          0.99,
+          0.5
+        ],
+        "existing": [],
+        "since_epic": 20,
+        "since_legendary": 50,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "challenge",
+            "payout_xp": 150,
+            "rarity": "legendary",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "since_epic": 21,
+        "since_legendary": 0
+      }
+    },
+    {
+      "class": "challenge",
+      "input": {
+        "draws": [
+          0.0,
+          0.5
+        ],
+        "existing": [],
+        "since_epic": 20,
+        "since_legendary": 50,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "challenge",
+            "payout_xp": 150,
+            "rarity": "legendary",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "since_epic": 21,
+        "since_legendary": 0
+      }
+    },
+    {
+      "class": "challenge",
+      "input": {
+        "draws": [
+          0.99,
+          0.5
+        ],
+        "existing": [],
+        "since_epic": 0,
+        "since_legendary": 0,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "challenge",
+            "payout_xp": 18,
+            "rarity": "common",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "since_epic": 1,
+        "since_legendary": 1
+      }
+    },
+    {
+      "class": "challenge",
+      "input": {
+        "draws": [
+          0.0,
+          0.5
+        ],
+        "existing": [],
+        "since_epic": 0,
+        "since_legendary": 0,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "challenge",
+            "payout_xp": 150,
+            "rarity": "legendary",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "since_epic": 1,
+        "since_legendary": 0
+      }
+    },
+    {
+      "class": "challenge",
+      "input": {
+        "draws": [
+          0.30000000000000004,
+          0.9999999999999999
+        ],
+        "existing": [],
+        "since_epic": 0,
+        "since_legendary": 0,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "challenge",
+            "payout_xp": 60,
+            "rarity": "rare",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "since_epic": 1,
+        "since_legendary": 1
+      }
+    },
+    {
+      "class": "challenge",
+      "input": {
+        "draws": [
+          0.30000000000000004,
+          0.0
+        ],
+        "existing": [],
+        "since_epic": 0,
+        "since_legendary": 0,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "challenge",
+            "payout_xp": 30,
+            "rarity": "rare",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "since_epic": 1,
+        "since_legendary": 1
+      }
+    },
+    {
+      "class": "challenge",
+      "input": {
+        "draws": [
+          0.5,
+          0.9999999999999999
+        ],
+        "existing": [],
+        "since_epic": 0,
+        "since_legendary": 0,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "challenge",
+            "payout_xp": 25,
+            "rarity": "common",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "since_epic": 1,
+        "since_legendary": 1
+      }
+    },
+    {
+      "class": "challenge",
+      "input": {
+        "draws": [
+          0.5,
+          0.0
+        ],
+        "existing": [],
+        "since_epic": 0,
+        "since_legendary": 0,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "challenge",
+            "payout_xp": 10,
+            "rarity": "common",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "since_epic": 1,
+        "since_legendary": 1
+      }
+    },
+    {
+      "class": "challenge",
+      "input": {
+        "draws": [
+          0.30241055708705966,
+          0.20303340194020225
+        ],
+        "existing": [
+          {
+            "origin": "challenge",
+            "session_start_ms": 0
+          }
+        ],
+        "since_epic": 0,
+        "since_legendary": 0,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [],
+        "since_epic": 0,
+        "since_legendary": 0
+      }
+    },
+    {
+      "class": "challenge",
+      "input": {
+        "draws": [
+          0.654853759827793,
+          0.05395992726234955
+        ],
+        "existing": [
+          {
+            "origin": "weekly",
+            "session_start_ms": 0
+          },
+          {
+            "origin": "session",
+            "session_start_ms": 1700024400000
+          },
+          {
+            "origin": "session",
+            "session_start_ms": 1700028000000
+          },
+          {
+            "origin": "session",
+            "session_start_ms": 1700031600000
+          }
+        ],
+        "since_epic": 0,
+        "since_legendary": 0,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "challenge",
+            "payout_xp": 10,
+            "rarity": "common",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "since_epic": 1,
+        "since_legendary": 1
+      }
+    },
+    {
+      "input": {
+        "draws": [
+          0.15001678172970434,
+          0.25015406763448944
+        ],
+        "existing": [],
+        "since_epic": 6,
+        "since_legendary": 26,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "challenge",
+            "payout_xp": 0,
+            "rarity": "epic",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "since_epic": 0,
+        "since_legendary": 27
+      }
+    },
+    {
+      "input": {
+        "draws": [
+          0.8239638564113423,
+          0.39963207657459976
+        ],
+        "existing": [],
+        "since_epic": 5,
+        "since_legendary": 30,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "challenge",
+            "payout_xp": 16,
+            "rarity": "common",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "since_epic": 6,
+        "since_legendary": 31
+      }
+    },
+    {
+      "input": {
+        "draws": [
+          0.657482307228477,
+          0.18544837349500565
+        ],
+        "existing": [],
+        "since_epic": 5,
+        "since_legendary": 40,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "challenge",
+            "payout_xp": 150,
+            "rarity": "legendary",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "since_epic": 6,
+        "since_legendary": 0
+      }
+    },
+    {
+      "input": {
+        "draws": [
+          0.8098661861961292,
+          0.41268638680743386
+        ],
+        "existing": [],
+        "since_epic": 10,
+        "since_legendary": 33,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "challenge",
+            "payout_xp": 16,
+            "rarity": "common",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "since_epic": 11,
+        "since_legendary": 34
+      }
+    },
+    {
+      "input": {
+        "draws": [
+          0.4036321807370912,
+          0.16750292516945486
+        ],
+        "existing": [],
+        "since_epic": 9,
+        "since_legendary": 15,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "challenge",
+            "payout_xp": 35,
+            "rarity": "rare",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "since_epic": 10,
+        "since_legendary": 16
+      }
+    },
+    {
+      "input": {
+        "draws": [
+          0.6101266305315137,
+          0.5135658694504792
+        ],
+        "existing": [],
+        "since_epic": 3,
+        "since_legendary": 16,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "challenge",
+            "payout_xp": 18,
+            "rarity": "common",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "since_epic": 4,
+        "since_legendary": 17
+      }
+    },
+    {
+      "input": {
+        "draws": [
+          0.5351066700671802,
+          0.4679192093771526
+        ],
+        "existing": [],
+        "since_epic": 2,
+        "since_legendary": 39,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "challenge",
+            "payout_xp": 150,
+            "rarity": "legendary",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "since_epic": 3,
+        "since_legendary": 0
+      }
+    },
+    {
+      "input": {
+        "draws": [
+          0.47513893791728,
+          0.02595999527572712
+        ],
+        "existing": [],
+        "since_epic": 13,
+        "since_legendary": 14,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "challenge",
+            "payout_xp": 0,
+            "rarity": "epic",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "since_epic": 0,
+        "since_legendary": 15
+      }
+    }
+  ],
+  "function": "pipeline_layers.loot.LootLayer._pay_quest",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Pays the challenge slot once on a stand-in layer over the same stub store with random.SystemRandom patched to the case's draws; returns the chest inserted and the counters after it; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_081.py",
+  "registry_sha256": "67257e9dfbf5070946f9cabbe897df72d7f71fa60cd8414cf384b5c83d530274",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

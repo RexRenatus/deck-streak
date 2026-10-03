@@ -14,6 +14,7 @@ use deck_streak_kernel::{DataRights, Db, KernelDataRights};
 use deck_streak_notifications::data_rights::NotificationsDataRights;
 use deck_streak_privacy::{Erasure, Export, PrivacyError};
 use deck_streak_progression::data_rights::ProgressionDataRights;
+use deck_streak_quests::data_rights::QuestsDataRights;
 use deck_streak_readings::data_rights::ReadingsDataRights;
 use deck_streak_streaks::data_rights::StreaksDataRights;
 use deck_streak_vault::data_rights::VaultDataRights;
@@ -41,6 +42,9 @@ static AGENT: AgentDataRights = AgentDataRights;
 /// The economy's port: the coin ledger exported and erased, the shop's row reset in place
 /// (SPEC-082).
 static ECONOMY: EconomyDataRights = EconomyDataRights;
+/// The quests' port: the chests and the double-XP tokens exported and erased, the pity counters and
+/// the chest settings reset in place (SPEC-081).
+static QUESTS: QuestsDataRights = QuestsDataRights;
 /// The vault's port: the law drill answers and grades, and the inbox captures' rows, exported and
 /// erased, and never a note or a captured file (SPEC-110, SPEC-118, ADR-118).
 static VAULT: VaultDataRights = VaultDataRights;
@@ -52,8 +56,8 @@ static COORDINATION: CoordinationDataRights = CoordinationDataRights;
 
 /// Every stateful context's port, in the order an erase runs them: the kernel, ingest, analytics
 /// (SPEC-071), curriculum (SPEC-077), progression (SPEC-040), notifications (SPEC-041), readings
-/// (SPEC-045), the agent (SPEC-043), streaks (SPEC-076), the economy (SPEC-082), the vault
-/// (SPEC-110) and coordination.
+/// (SPEC-045), the agent (SPEC-043), streaks (SPEC-076), the economy (SPEC-082), the quests
+/// (SPEC-081), the vault (SPEC-110) and coordination.
 /// Identity keeps its sessions in memory (ADR-024), so it has no table and no port.
 #[must_use]
 pub fn ports() -> Vec<&'static dyn DataRights> {
@@ -68,6 +72,7 @@ pub fn ports() -> Vec<&'static dyn DataRights> {
         &AGENT,
         &STREAKS,
         &ECONOMY,
+        &QUESTS,
         &VAULT,
         &COORDINATION,
     ]

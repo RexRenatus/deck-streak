@@ -1131,6 +1131,13 @@ version = "0.2.0"
 dependencies = [
  "deck-streak-ingest",
  "deck-streak-kernel",
+ "getrandom 0.4.3",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "tempfile",
+ "thiserror",
+ "tokio",
 ]
 
 [[package]]

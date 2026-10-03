@@ -1099,6 +1099,10 @@ const STATICS: [(&str, &str); 16] = [
     ),
     (
         "crates/coordination/src/data_rights_registry.rs",
+        "static QUESTS: QuestsDataRights = QuestsDataRights;",
+    ),
+    (
+        "crates/coordination/src/data_rights_registry.rs",
         "static COORDINATION: CoordinationDataRights = CoordinationDataRights;",
     ),
     (
