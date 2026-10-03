@@ -83,8 +83,20 @@ impl SqliteXpLedger {
         track: Track,
         study_day: StudyDay,
     ) -> Result<XpTotal, KernelError> {
-        let _ = study_day;
-        self.track_total(track).await
+        let track = track.as_str();
+        let day = study_day.epoch_day();
+        let total = sqlx::query_scalar!(
+            r#"SELECT (SELECT COALESCE(SUM(amount), 0) FROM xp_ledger
+                           WHERE track = ?1 AND study_day = ?2)
+                    + (SELECT COALESCE(SUM(amount), 0) FROM xp_settlement
+                           WHERE track = ?1 AND study_day = ?2)
+                    AS "total!: u64""#,
+            track,
+            day
+        )
+        .fetch_one(self.db.reader())
+        .await?;
+        Ok(XpTotal::new(total))
     }
 }
 

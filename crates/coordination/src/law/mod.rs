@@ -8,8 +8,12 @@
 //! pillar are pending, never 0, and the pillar is not computed (R12). The dues are pending before
 //! the first recompute stores them (R10).
 
+use deck_streak_curriculum::law::mastery_pillar;
+use deck_streak_curriculum::store::law_dues;
 use deck_streak_kernel::{Db, KernelError, StudyDay, Track};
 use deck_streak_progression::ledger::SqliteXpLedger;
+use deck_streak_progression::xp::level_for;
+use deck_streak_streaks::store::state;
 
 /// The law block's numbers, as every surface reads them.
 ///
@@ -62,11 +66,31 @@ pub struct LawLines {
 
 impl LawBlock {
     /// The lines the block holds, or `None` when it is omitted (R13).
+    ///
+    /// A pending count reads as zero here. The block is omitted when the streak, the day's XP,
+    /// the lifetime XP and the active leeches are all zero; inside it the dues show only above
+    /// zero, and the pillar and the leeches only while leeches are active.
     #[must_use]
     pub fn lines(&self) -> Option<LawLines> {
+        let leeches = self.leech_active.unwrap_or(0);
+        if self.streak == 0 && self.xp_today == 0 && self.total_xp == 0 && leeches == 0 {
+            return None;
+        }
+        let mastery = self.mastery.is_some_and(|pillar| pillar.abs() > 0.0);
+        let shown = [
+            (LawLine::TotalXp, self.total_xp != 0),
+            (LawLine::Streak, self.streak != 0),
+            (LawLine::XpToday, self.xp_today != 0),
+            (LawLine::Dues, self.dues.is_some_and(|dues| dues > 0)),
+            (LawLine::Mastery, leeches != 0 && mastery),
+            (LawLine::Leeches, leeches != 0),
+        ];
         Some(LawLines {
-            lines: Vec::new(),
-            level_shown: false,
+            lines: shown
+                .into_iter()
+                .filter_map(|(line, show)| show.then_some(line))
+                .collect(),
+            level_shown: self.total_xp != 0 && self.level != 0,
         })
     }
 }
@@ -82,17 +106,28 @@ pub async fn law_block(
     today: StudyDay,
     leeches: Option<u32>,
 ) -> Result<LawBlock, KernelError> {
-    let total = SqliteXpLedger::new(db.clone())
-        .track_total(Track::Law)
-        .await?;
-    let _ = (today, leeches, total);
+    let ledger = SqliteXpLedger::new(db.clone());
+    let total = ledger.track_total(Track::Law).await?;
+    let xp_today = ledger.track_day_total(Track::Law, today).await?;
+    let mut transaction = db.reader().begin().await?;
+    let connection = &mut *transaction;
+    let streak = state(connection, "law")
+        .await?
+        .map_or(0, |state| state.current);
+    let dues = law_dues(connection).await?;
+    let leech_active = leeches.map(i64::from);
     Ok(LawBlock {
-        streak: 0,
-        xp_today: 0,
-        total_xp: 0,
-        level: 0,
-        dues: Some(0),
-        leech_active: Some(0),
-        mastery: Some(100.0),
+        streak: i64::from(streak),
+        xp_today: signed(xp_today.get()),
+        total_xp: signed(total.get()),
+        level: i64::from(level_for(total).get()),
+        dues: dues.map(|dues| i64::from(dues.backlog) + i64::from(dues.due_today)),
+        leech_active,
+        mastery: leech_active.map(mastery_pillar),
     })
+}
+
+/// An XP sum as the block carries it; no ledger holds a sum past `i64::MAX`.
+fn signed(amount: u64) -> i64 {
+    i64::try_from(amount).unwrap_or(i64::MAX)
 }
