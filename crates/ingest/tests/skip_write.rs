@@ -12,6 +12,7 @@
 #[rustfmt::skip]
 mod support;
 
+use std::fmt::Write as _;
 use std::sync::{Mutex, MutexGuard, PoisonError};
 use std::thread;
 use std::time::Duration;
@@ -127,12 +128,16 @@ fn default_search() -> SkipSearch {
 fn digest_by_hand(ids: &[i64]) -> String {
     let mut ascending = ids.to_vec();
     ascending.sort_unstable();
-    let text: String = ascending.iter().map(|id| format!("{id}\n")).collect();
+    let mut text = String::new();
+    for id in ascending {
+        writeln!(text, "{id}").expect("a String takes the text");
+    }
     let sum = Sha256::digest(text.as_bytes());
-    sum.iter()
-        .take(16)
-        .map(|byte| format!("{byte:02x}"))
-        .collect()
+    let mut hex = String::new();
+    for byte in sum.iter().take(16) {
+        write!(hex, "{byte:02x}").expect("a String takes the text");
+    }
+    hex
 }
 
 #[test]

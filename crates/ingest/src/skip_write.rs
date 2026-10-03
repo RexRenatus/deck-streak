@@ -56,6 +56,9 @@ pub enum PreviewError {
     Engine(#[from] EngineError),
 }
 
+/// The lowercase hexadecimal digits, by value.
+const HEX_DIGITS: &[u8; 16] = b"0123456789abcdef";
+
 /// The digest of a list of card ids (D20): the first 128 bits of SHA-256 over the ids in ascending
 /// order, each written in decimal and ended by a line feed, as 32 lowercase hexadecimal digits.
 /// The order the ids arrive in does not change it.
@@ -67,10 +70,12 @@ pub fn list_digest(ids: &[i64]) -> String {
     for id in ascending {
         hasher.update(format!("{id}\n").as_bytes());
     }
-    hasher.finalize()[..16]
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect()
+    let mut hex = String::with_capacity(32);
+    for byte in &hasher.finalize()[..16] {
+        hex.push(char::from(HEX_DIGITS[usize::from(byte >> 4)]));
+        hex.push(char::from(HEX_DIGITS[usize::from(byte & 0x0f)]));
+    }
+    hex
 }
 
 /// The preview (R20): the class's stop first, and while it is set nothing else is read; otherwise,
