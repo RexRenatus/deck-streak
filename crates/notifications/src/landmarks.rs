@@ -44,8 +44,9 @@ pub fn compute_landmarks(study_days: &[StudyDay], today: StudyDay) -> Vec<Landma
         return Vec::new();
     };
     let mut found = Vec::new();
-    let years = (year_of(today) - year_of(origin) + 1).max(0);
-    for ordinal in 1..=years {
+    // The anniversaries rise year by year, so the exits below (no date, or the first one past
+    // `today`) end the walk, and no year bound is needed.
+    for ordinal in 1_i128.. {
         let Some(day) = anniversary(origin, ordinal) else {
             break;
         };
@@ -120,11 +121,6 @@ fn ordinal_label(value: u32) -> String {
         }
     };
     format!("{value}{suffix}")
-}
-
-/// The calendar year of `day`, read from its ISO rendering, which may carry a sign.
-fn year_of(day: StudyDay) -> i128 {
-    split_iso(day).0
 }
 
 /// The year and the `-MM-DD` tail of `day`'s ISO rendering.
