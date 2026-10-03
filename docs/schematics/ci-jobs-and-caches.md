@@ -91,6 +91,22 @@ A pull request restores from its base branch's scope and from `main`'s; GitHub c
 pull request might write to its own merge ref, and the workflow never writes from one: every
 `actions/cache/save` step is conditioned on a push to `dev` or `main`.
 
+The settle census (SPEC-072 A12, section 14) has no cache of its own, and restores nothing a
+verdict reads. Each census compiles in an empty target directory under `target/tmp/settle-census`,
+made for that census and removed when it ends, so the Rust cache's `target/` can carry nothing
+there that a later census reads, and every census compile in the `rust` job is cold.
+
+```mermaid
+flowchart LR
+  tree[the tree judged] --> meta[cargo metadata, locked and offline]
+  meta --> owner{the member at crates/progression/Cargo.toml, unique?}
+  owner -->|no| refuse[refused by name]
+  owner -->|yes| empty[an empty target of its own]
+  empty --> passes[the census's passes, an environment it names]
+  passes --> verdict[the verdict]
+  empty --> removed[removed when the census ends]
+```
+
 ## One stage, in whichever job runs it
 
 ```mermaid

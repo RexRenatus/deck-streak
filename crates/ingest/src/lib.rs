@@ -26,6 +26,7 @@ pub mod skip;
 pub mod skip_write;
 pub mod state;
 pub mod structure;
+pub mod study_days;
 pub mod sync;
 pub mod sync_runs;
 pub mod tier;

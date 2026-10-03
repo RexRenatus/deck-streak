@@ -93,3 +93,6 @@ Cites SPEC-041 (the router core and its census), ADR-041 (the router core), ADR-
 sync a study day), ADR-052 (deep links are URL buttons), ADR-011 and ADR-027 (the job minutes),
 ADR-012 (the parity oracle), SPEC-084 (the ladder's T5 pin) and SPEC-100 (the button rows). SPEC-102
 builds it.
+
+Amended by ADR-319 (#571): the scheduled sync's cycle carries a router with no bot transport. It
+can send nothing, so the widget rule above holds: that cycle refreshes nothing.

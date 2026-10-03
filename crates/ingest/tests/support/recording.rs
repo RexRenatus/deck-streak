@@ -277,12 +277,14 @@ async fn relay(
     let body = read_body(&mut client, &head).await?;
     let request_line = head.lines().next().unwrap_or_default().to_owned();
     let path = request_line.split_whitespace().nth(1).unwrap_or_default();
+    let method = path.rsplit('/').next().unwrap_or_default().to_owned();
+    let recorded = decoded(&method, &body);
     requests
         .lock()
         .expect("the recorded requests")
         .push(Recorded {
-            method: path.rsplit('/').next().unwrap_or_default().to_owned(),
-            body: decoded(&body),
+            method,
+            body: recorded,
         });
 
     let mut server = TcpStream::connect(upstream).await?;
@@ -373,14 +375,18 @@ async fn read_body(reader: &mut BufReader<TcpStream>, head: &str) -> io::Result<
     Ok(body)
 }
 
-/// A body as the server reads it: zstd-decompressed JSON, or `null` when there is none or when it
-/// is not JSON (an `upload` carries a whole collection file, which is not).
-fn decoded(body: &[u8]) -> Value {
+/// A body as the server reads it: zstd-decompressed JSON, or `null` when there is none. Only an
+/// `upload` carries a body that is not JSON (a whole collection file); every other request's body
+/// that does not parse is a failure here, never a `null` the recorder would pass over.
+fn decoded(method: &str, body: &[u8]) -> Value {
     if body.is_empty() {
         return Value::Null;
     }
     let json = zstd::decode_all(body).expect("the engine compresses every request body with zstd");
-    serde_json::from_slice(&json).unwrap_or(Value::Null)
+    if method == "upload" {
+        return serde_json::from_slice(&json).unwrap_or(Value::Null);
+    }
+    serde_json::from_slice(&json).expect("every request body is JSON")
 }
 
 /// The server's answer with `connection: close` in its head, so the client never reuses the

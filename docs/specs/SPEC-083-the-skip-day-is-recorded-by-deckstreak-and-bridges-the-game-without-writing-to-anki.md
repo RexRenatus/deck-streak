@@ -601,7 +601,7 @@ B5 (section 3a) are judged when E4c adds their files.
 | A44 | (i, v) the service's zone is pinned: on a synthetic collection that passes every other check (its configured UTC offset equal to the offset of the zone the test process then reads, and the engine's day the study day), with `TZ` unset in the test process, and in turn with `TZ` empty, `localtime`, `:/etc/localtime`, `/etc/localtime`, a relative name holding a `..` segment, `GMT0` (a zone file whose name also parses as a rule with no daylight period), `Etc/UTC` (a zone file whose name does not parse as a rule), and a value that names no zone file and does not parse as a POSIX rule, each planted alone, a preview, a take and an undo each refuse before any request or write with the bounded reason that the zone is not pinned, and the private copy's bytes are unchanged; with `TZ` holding the POSIX rules `UTC0` and `IST-5:30`, which name no zone file, none of the three refuses for the pin; and the checks read the process's zone only through chrono's `Local`, never from `TZ` or a zone file themselves: in `crates/ingest/src/skip_write.rs` only the pin reads `TZ` or opens a zone directory, and nothing names `/etc/localtime` | `the_skip_refuses_a_zone_the_service_does_not_pin` | E4b (take arms), E4c (undo arms) |
 | A50 | the undo's counts move only the wrapped search's due count, and a planted extra change ends it writing nothing | `the_undos_counts_move_only_the_due_count` | E4c |
 | A51 | only the owner's command sets and clears the class's stop, each after a confirm | `only_the_owners_command_sets_and_clears_the_classs_stop` | E4c |
-| A52 | while the class's stop is set the undo refuses with writes_stopped before any request or write, and a stop set during an undo ends it before its push | `the_undo_refuses_while_the_classs_stop_is_set` | E4c |
+| A57 | while the class's stop is set the undo refuses with writes_stopped before any request or write, and a stop set during an undo ends it before its push | `the_undo_refuses_while_the_classs_stop_is_set` | E4c |
 
 E4b: A6: cargo test -p deck-streak-ingest --test skip_zero_upload -- --exact every_path_but_the_take_and_the_undo_records_zero_uploads
 E4c: A19: cargo test -p deck-streak-bot --test skip_commands -- --exact skip_and_cheat_answer_the_preview_with_confirm_and_cancel
@@ -621,7 +621,7 @@ E4c: A43: cargo test -p deck-streak-coordination --test skip_callers -- --exact 
 E4b: A44: cargo test -p deck-streak-ingest --test skip_write -- --exact the_skip_refuses_a_zone_the_service_does_not_pin
 E4c: A50: cargo test -p deck-streak-ingest --test skip_undo -- --exact the_undos_counts_move_only_the_due_count
 E4c: A51: cargo test -p deck-streak-bot --test skip_commands -- --exact only_the_owners_command_sets_and_clears_the_classs_stop
-E4c: A52: cargo test -p deck-streak-ingest --test skip_undo -- --exact the_undo_refuses_while_the_classs_stop_is_set
+E4c: A57: cargo test -p deck-streak-ingest --test skip_undo -- --exact the_undo_refuses_while_the_classs_stop_is_set
 
 ## 4. File manifest
 
@@ -994,12 +994,89 @@ A45: cargo test -p deck-streak-ingest --test skip_record -- --exact the_skip_con
 A46: cargo test -p deck-streak-coordination --test skip_flow -- --exact the_tariff_and_its_refund_are_taken_once_per_skip
 ```
 
-## 12. Amendments, 2026-10-03: the take's write, its backup, restore check, counts and stop (E4b, #108)
+## 12. Amendments, 2026-10-03, continued: the vectors' consumer, two census lines and one correction
+
+Appended after section 11 and insert-only, as section 10 is: nothing above this heading changes.
+
+- **T16** (section 4, added row). `crates/economy/tests/formal_vectors_skip_tariff.rs` added,
+  `deck-streak-economy`: the Rust consumer of `formal/vectors/skip-tariff.jsonl`, in the house form
+  of `crates/economy/tests/formal_vectors_wallet.rs`. For every vector `lean/SkipTariff` writes,
+  economy's `price`, the floor-clipped debit of that price over a wallet holding the vector's
+  balance, and the refund of what `paid_on` reads back answer as the port does.
+
+Correction: T3's New text says "A price of 0 makes no call.", which the code does not do.
+`settle_applied` asks `debit_floored_on` for the price even when it is 0; the wallet answers a
+request of 0 as nothing requested and writes no movement, so a free skip pays nothing and moves no
+coin. `settle_undone` likewise asks `refund_on` for what the skip paid, and a refund of 0 is
+answered as not positive and credits nothing.
+
+- **T17** (section 4, edited row). `crates/economy/tests/wallet_census.rs`, `deck-streak-economy`: the census of the
+  files that name the coin ledger admits `crates/economy/src/tariff.rs`, whose `paid_on` reads what a skip paid by its
+  source and reference, as section 10 says it does. Without that one line the census fails at the green code.
+- **T18** (section 4, edited row). `crates/coordination/tests/relight_order.rs`, `deck-streak-coordination`: its census
+  of linked statics counts 18, not 17, for the tariff's `static LADDER: LazyLock<Vec<i64>> = LazyLock::new(parse);`,
+  counted as progression's `static XP` is. Without that one change the census fails at the green code.
+
+Section 4's rows this part does not build, one line each, as the preflight's manifest reading wants them (section 10 names the same
+rows in prose, with the part that delivers each):
+
+- `crates/ingest/tests/skip_zero_upload.rs`: unchanged in this part; delivered by E4b.
+- `crates/ingest/tests/skip_census.rs`: unchanged in this part; delivered by E4b.
+- `crates/ingest/tests/support/synthetic.rs`: unchanged in this part; delivered by E4b.
+- `.cargo/config.toml`: unchanged in this part; delivered by E4b.
+- `deploy/deck-streak.env.example`: unchanged in this part; delivered by E4b.
+- `crates/economy/Cargo.toml`: unchanged, as section 10 says.
+- `crates/coordination/tests/skip_callers.rs`: unchanged in this part; delivered by E4c.
+- `crates/api/src/skip_routes.rs`: unchanged in this part; delivered by E4c.
+- `crates/api/src/router.rs`: unchanged in this part; delivered by E4c.
+- `crates/api/tests/skip_routes.rs`: unchanged in this part; delivered by E4c.
+- `crates/bot/src/skip_commands.rs`: unchanged in this part; delivered by E4c.
+- `crates/bot/src/commands.rs`: unchanged in this part; delivered by E4c.
+- `crates/bot/tests/skip_commands.rs`: unchanged in this part; delivered by E4c.
+- `crates/daemon/src/wiring.rs`: unchanged in this part; delivered by E4c.
+- `web/app/src/routes/skip/+page.svelte`: unchanged in this part; delivered by E4c.
+- `web/app/src/lib/skip/SkipSheet.svelte`: unchanged in this part; delivered by E4c.
+- `web/app/src/lib/skip/api.ts`: unchanged in this part; delivered by E4c.
+- `web/app/src/lib/skip/skip-sheet.test.ts`: unchanged in this part; delivered by E4c.
+- `web/app/src/lib/routes.ts`: unchanged in this part; delivered by E4c.
+- `docs/OWNER-SETUP.md`: unchanged in this part; delivered by E4c.
+
+Files this part edits that section 4 does not list, each a consequence of a row above:
+
+- **T19** (section 4, added rows). `crates/coordination/tests/lapse.rs` passes the empty skip set to `open_lapse`, whose
+  signature now takes it. `crates/ingest/tests/settings.rs` gains the test of the skip search's one-expression
+  refusal by name. `formal/lean/Formal.lean` imports `Formal.SkipTariff`, and `formal/lean/Formal/Vectors.lean` imports
+  `Formal.SkipTariffVectors` and routes the entry `SkipTariff` to it; `formal/lean/Formal/SkipTariffVectors.lean` is the
+  writer of `formal/vectors/skip-tariff.jsonl`, in the house form of the wallet's. `formal/tla/RelightOrder/RelightOrder.tla`
+  carries the restamped digest of its `govern` cover, after the skip set entered `govern`.
+
+The three rows of section 4 the first list missed:
+
+- `crates/ingest/src/engine.rs`: unchanged in this part; delivered by E4b.
+- `crates/ingest/tests/skip_write.rs`: unchanged in this part; delivered by E4b.
+- `crates/ingest/tests/skip_undo.rs`: unchanged in this part; delivered by E4c.
+
+## 13. Acceptance criteria of the 2026-10-03 amendment, continued: D13 pinned
+
+Appended after section 12 and insert-only: nothing above this heading changes. ADR-321 D13 prices a
+skip by the month's other applied skips not undone on an EARLIER study day, so a retry is priced as
+its first attempt was, whatever applied after it. A46 holds the charge once per skip; this criterion
+holds the price against a skip of a later day.
+
+| id | criterion | decided by |
+|---|---|---|
+| A52 | a retry is priced as its first attempt was, free or priced, after a skip of a later study day of the month applies, and that later skip never charges the earlier one | `a_retry_is_priced_as_its_first_attempt_after_a_later_skip_applies` |
+
+```acceptance
+A52: cargo test -p deck-streak-coordination --test skip_flow -- --exact a_retry_is_priced_as_its_first_attempt_after_a_later_skip_applies
+```
+
+## 14. Amendments, 2026-10-03: the take's write, its backup, restore check, counts and stop (E4b, #108)
 
 This part (E4b, #108) moves A5, A9, A24 to A26, A28, A29, A34, A36, A38, A39 and A47 to A49 back
 from section 3c, each verbatim: the row into section 3's table without its `delivered by` column,
 and the line into section 3's acceptance fence without its `E4b: ` prefix. A6, A40 and A44 stay in
-section 3c until E4c delivers their undo arms, and section 3c gains A52 for E4c (U11). Apart from
+section 3c until E4c delivers their undo arms, and section 3c gains A57 for E4c (U11). Apart from
 those moves the body above is not edited: the amendments below are recorded here and are not
 applied to it; each Old is the body's text and each New is what it reads from this pull request on.
 The act R34 and A47 call the restore drill is named the backup's restore check in the code, the
@@ -1047,9 +1124,9 @@ model and these amendments.
   New: `gains `skip_days`, `skip_card_snapshot` and `write_class_stop``.
 - **U10** (section 10, its last paragraph). Old: `so row 620's condition does` New: `so that row's
   condition does` (the row moved to line 648 at E4a; the sentence names it already).
-- **U11** (section 3c, added row, E4c): `| A52 | while the class's stop is set the undo refuses
+- **U11** (section 3c, added row, E4c): `| A57 | while the class's stop is set the undo refuses
   with writes_stopped before any request or write, and a stop set during an undo ends it before its
-  push | `the_undo_refuses_while_the_classs_stop_is_set` | E4c |`, with its fence line `E4c: A52:
+  push | `the_undo_refuses_while_the_classs_stop_is_set` | E4c |`, with its fence line `E4c: A57:
   cargo test -p deck-streak-ingest --test skip_undo -- --exact
   the_undo_refuses_while_the_classs_stop_is_set`. Both are in section 3c from this part on.
 - **U12** (R25, the take's bounded reasons). New: the take's refusals this part adds are five codes
@@ -1072,7 +1149,7 @@ model and these amendments.
   must keep; the exempt tables `erase_leaves_the_cron_fire_ledger_and_the_schema_table_untouched`
   examines, and the erase's kept list it compares, gain `write_class_stop`.
 
-## 13. Acceptance criteria of the 2026-10-03 amendment (E4b)
+## 15. Acceptance criteria of the 2026-10-03 amendment (E4b)
 
 | id | criterion | decided by |
 |---|---|---|

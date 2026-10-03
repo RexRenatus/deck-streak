@@ -1,7 +1,7 @@
--- @phx covers crates/economy/src/tariff.rs anchor=price digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/economy/src/wallet.rs anchor=debit_floored_on digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/coordination/src/skip/mod.rs anchor=settle_applied digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/coordination/src/skip/mod.rs anchor=settle_undone digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+-- @phx covers crates/economy/src/tariff.rs anchor=price digest=sha256:63276c8915de3c34258f19c98f14295994ad8be124c0faade868064bfb378039
+-- @phx covers crates/economy/src/wallet.rs anchor=debit_floored_on digest=sha256:b453615922d0bf5aa4f940affbbdd8273c361ac82165aff2c2094299c87f9bbd
+-- @phx covers crates/coordination/src/skip/mod.rs anchor=settle_applied digest=sha256:7df3e27a07ba3c716aef05c9eb92ce04d5e1b727eaf8543da0f6eb0c41445faa
+-- @phx covers crates/coordination/src/skip/mod.rs anchor=settle_undone digest=sha256:61aa16597ae2e193cf7a29d4606a0def0d356b2d28672b102eadb08705dbb350
 -- @phx vectors formal/vectors/skip-tariff.jsonl
 -- @phx cites #108
 -- @phx theorem the_price_is_a_ladder_entry ramp=report
@@ -39,9 +39,11 @@ total functions over `Int` and `Nat`.
 is `Nat` and the entries are `Int`, read with `min` and a default of 0, which neither overflows nor
 wraps, so the port is exact. `debit_floored_on` pays `min(amount, max(0, balance - WALLET_FLOOR))`
 on a key it has not written, and nothing for a request of 0 or less; a retry on a written key
-answers the amount held, which is this port's first answer. `settle_applied` prices the skip, makes
-no call at a price of 0, and records the shortfall; `settle_undone` credits what the skip paid only
-when it is more than 0. The ladder is `economy.json`'s `streak.skip_tariff_coins` and the floor is
+answers the amount held, which is this port's first answer. `settle_applied` prices the skip, asks
+`debit_floored_on` for that price even when it is 0, which pays nothing and writes no movement, and
+records the shortfall; `settle_undone` asks `refund_on` for what the skip paid, which credits it
+only when it is more than 0. The ports' guards on 0 answer what those two calls answer. The ladder
+is `economy.json`'s `streak.skip_tariff_coins` and the floor is
 `WALLET_FLOOR` (`crates/economy/src/constants.rs`); the vectors carry both to the Rust test, which
 fails if either moves.
 
@@ -77,13 +79,15 @@ def debitFlooredOn (amount balance : Int) : Int :=
   if amount ≤ 0 then 0 else min amount (max (balance - walletFloor) 0)
 
 /-- `settle_applied`'s charge: the skip's price, the amount paid, and whether the skip went
-unfunded. A price of 0 makes no call. -/
+unfunded. At a price of 0 the code still asks the wallet, which pays nothing for a request of 0,
+so the guard here answers the same 0. -/
 def settleApplied (earlier : Nat) (balance : Int) : Int × Int × Bool :=
   let charged := price skipTariffCoins earlier
   let paid := if 0 < charged then debitFlooredOn charged balance else 0
   (charged, paid, decide (paid < charged))
 
-/-- `settle_undone`'s refund: what the skip paid, credited only when it is more than 0. -/
+/-- `settle_undone`'s refund: what the skip paid, which `refund_on` credits only when it is more
+than 0. -/
 def settleUndone (paid : Int) : Int :=
   if 0 < paid then paid else 0
 

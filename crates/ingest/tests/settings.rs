@@ -178,11 +178,19 @@ fn a_skip_search_that_is_not_one_expression_refuses_start_by_name() {
     let set = SkipSearch::from_env(&Environment::from_vars([(SKIP_SEARCH, "deck:Synthetic")]))
         .expect("one expression starts");
     assert_eq!(set.as_str(), "deck:Synthetic");
+    assert_eq!(
+        format!("{set:?}"),
+        "SkipSearch(..)",
+        "the debug form never prints the search"
+    );
     let value = "deck:X) or (deck:X";
     let refused = SkipSearch::from_env(&Environment::from_vars([(SKIP_SEARCH, value)]));
-    assert!(
-        matches!(refused, Err(SettingsError::Malformed { setting, .. }) if setting == SKIP_SEARCH),
-        "{refused:?}"
+    assert_eq!(
+        refused,
+        Err(SettingsError::Malformed {
+            setting: SKIP_SEARCH,
+            expected: "one Anki search expression"
+        })
     );
     let named = refused.map(|_| ()).unwrap_err().to_string();
     assert!(

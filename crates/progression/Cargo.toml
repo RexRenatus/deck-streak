@@ -27,6 +27,8 @@ serde.workspace = true
 # The goldens' floats are compared bit for bit, so the reader parses them exactly: serde_json's
 # default parser is best-effort and can land one unit in the last place away (SPEC-071 section 7).
 serde_json = { workspace = true, features = ["float_roundtrip"] }
+# SPEC-072 A12: the census pins progression's build script by its SHA-256.
+sha2.workspace = true
 # ADR-020's temporary database, and two concurrent grants on tokio's multi-thread runtime (A3).
 tempfile.workspace = true
 tokio = { workspace = true, features = ["macros", "rt", "rt-multi-thread", "sync"] }
