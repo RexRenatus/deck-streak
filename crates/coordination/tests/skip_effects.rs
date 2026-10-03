@@ -194,11 +194,20 @@ async fn events(db: &Db) -> Vec<(i64, i64, String)> {
         .collect()
 }
 
-/// The events of study day `number`.
-fn of_day(events: &[(i64, i64, String)], number: i64) -> Vec<(i64, i64, String)> {
+/// The events that spent a freeze.
+fn consumed(events: &[(i64, i64, String)]) -> Vec<(i64, i64, String)> {
     events
         .iter()
-        .filter(|(event_day, _, _)| *event_day == number)
+        .filter(|(_, _, reason)| reason == "consumed")
+        .cloned()
+        .collect()
+}
+
+/// The events dated on or before study day `last`.
+fn through(events: &[(i64, i64, String)], last: i64) -> Vec<(i64, i64, String)> {
+    events
+        .iter()
+        .filter(|(event_day, _, _)| *event_day <= last)
         .cloned()
         .collect()
 }
@@ -272,15 +281,15 @@ async fn a_skip_day_bridges_both_streaks_without_a_freeze() {
         skipped_events.len()
     );
     assert_eq!(
-        of_day(&skipped_events, D0 - 2),
+        consumed(&skipped_events),
         Vec::new(),
-        "the skip day spends no freeze and breaks nothing"
+        "the skip day spends no freeze"
     );
-    assert!(
-        of_day(&control_events, D0 - 2)
-            .iter()
-            .any(|(_, _, reason)| reason == "consumed"),
-        "without the skip the gap spends a freeze: {control_events:?}"
+    // The walk that resumes on D0 - 1 is the one that meets the gap, so the event is dated there.
+    assert_eq!(
+        consumed(&control_events),
+        [(D0 - 1, -1, "consumed".to_owned())],
+        "without the skip the gap spends a freeze"
     );
     let (control_language, skipped_language) = (
         streak(&control, "language").await.expect("a language row"),
@@ -431,7 +440,7 @@ async fn after_an_undo_the_day_is_a_missed_day_at_the_next_recompute() {
     daily(&fold, &db, &data, D0 - 3..=D0 - 1).await;
     let settled = events(&db).await;
     assert_eq!(
-        of_day(&settled, D0 - 2),
+        consumed(&settled),
         Vec::new(),
         "while the skip stands its day is bridged"
     );
@@ -448,8 +457,8 @@ async fn after_an_undo_the_day_is_a_missed_day_at_the_next_recompute() {
         after.len()
     );
     assert_eq!(
-        of_day(&after, D0 - 2),
-        Vec::new(),
+        through(&after, D0 - 2),
+        through(&settled, D0 - 2),
         "the transitions already settled stay as they were"
     );
     assert_eq!(
