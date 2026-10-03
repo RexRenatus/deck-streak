@@ -147,6 +147,8 @@
 (*    here: a stutter, re-stamped. A read that fails is announce_relight   *)
 (*    refused before routing, which claims and sends nothing (RouteFail(d) *)
 (*    with no claim, named above): the day stays due.                      *)
+(*    Ruling 131's reading of L1: the router decides each committed grant  *)
+(*    once, rendered or held; the tier it renders at is the ladder's.      *)
 (***************************************************************************)
 EXTENDS Naturals, FiniteSets
 
