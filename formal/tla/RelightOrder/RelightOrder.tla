@@ -1,6 +1,6 @@
 ---------------------------- MODULE RelightOrder ----------------------------
 \* @phx covers crates/coordination/src/relight.rs anchor=route_due_relights digest=sha256:c3ed617f7a2a14414ff87af6acc9acf08fb37cb1d9231b7bd75ed31702451aec
-\* @phx covers crates/coordination/src/relight.rs anchor=announce_relight digest=sha256:9f527fa62497e4a68978e0da4fd845c774a1035cb92ec875744648252e794caf
+\* @phx covers crates/coordination/src/relight.rs anchor=announce_relight digest=sha256:518ee9a829041443c5a92b7e4343fa97d84c573c4d7d895a1cfbfb71f649a9c4
 \* @phx covers crates/coordination/src/sync_cycle.rs anchor=sync_cycle digest=sha256:d32903aaea6eed5fa397ca99b5cfcea5ffbbe4540e1420a0503e8861c1b79add
 \* @phx covers crates/coordination/src/recompute/mod.rs anchor=run digest=sha256:7a383ba01872f4dde46ccb5220fa492de1f89498adf71774cae868e3e0b7acbb
 \* @phx covers crates/coordination/src/recompute/mod.rs anchor=runs_today_only_rules digest=sha256:f924a917b193bcfc4a5e0a9a39b45e5b8cb67f8be0b5cc1d6e765f0bc27f5e67

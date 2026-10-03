@@ -7,7 +7,7 @@
 \* @phx covers crates/coordination/src/recompute/records.rs anchor=upsert digest=sha256:0702ef24ebd40778731306415bead309ef68954c2c858320eb32ed78b2f1bc4e
 \* @phx covers crates/coordination/src/recompute/records.rs anchor=offer_records digest=sha256:94d4c086e62de5ee1bc65547fa613409b603a137fb3e5e24a0e70c82bac9243c
 \* @phx covers crates/coordination/src/sync_cycle.rs anchor=sync_cycle digest=sha256:d32903aaea6eed5fa397ca99b5cfcea5ffbbe4540e1420a0503e8861c1b79add
-\* @phx covers crates/coordination/src/level_up.rs anchor=announce_level_up digest=sha256:acbb8923e76fbd4ab77949a119c1ad3a87de6f41737e65b89df689875e851dd0
+\* @phx covers crates/coordination/src/level_up.rs anchor=announce_level_up digest=sha256:57e63cd0b8c6a8a153f6242d33eea4ab14ed493d8a98e6f4ef6538a8f471d303
 \* @phx covers crates/notifications/src/router.rs anchor=route digest=sha256:7bcf52fe22d886b3d71dfa0fa8e6dfb1d266a9a6b1662bada5482a2cd0c54dcb
 \* @phx covers crates/notifications/src/ledger.rs anchor=claim digest=sha256:0116ef4925de04614d09ac18952c0a0b0f7248fd65f5d4f6ca555448836a6ab7
 \* @phx cites #74, #75, #76
