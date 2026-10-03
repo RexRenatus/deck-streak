@@ -1,6 +1,6 @@
 ---------------------------- MODULE RelightOrder ----------------------------
 \* @phx covers crates/coordination/src/relight.rs anchor=route_due_relights digest=sha256:c3ed617f7a2a14414ff87af6acc9acf08fb37cb1d9231b7bd75ed31702451aec
-\* @phx covers crates/coordination/src/relight.rs anchor=announce_relight digest=sha256:9f527fa62497e4a68978e0da4fd845c774a1035cb92ec875744648252e794caf
+\* @phx covers crates/coordination/src/relight.rs anchor=announce_relight digest=sha256:518ee9a829041443c5a92b7e4343fa97d84c573c4d7d895a1cfbfb71f649a9c4
 \* @phx covers crates/coordination/src/sync_cycle.rs anchor=sync_cycle digest=sha256:d32903aaea6eed5fa397ca99b5cfcea5ffbbe4540e1420a0503e8861c1b79add
 \* @phx covers crates/coordination/src/recompute/mod.rs anchor=run digest=sha256:7a383ba01872f4dde46ccb5220fa492de1f89498adf71774cae868e3e0b7acbb
 \* @phx covers crates/coordination/src/recompute/mod.rs anchor=runs_today_only_rules digest=sha256:f924a917b193bcfc4a5e0a9a39b45e5b8cb67f8be0b5cc1d6e765f0bc27f5e67
@@ -136,6 +136,19 @@
 (*    The landmarks' offers route landmark keys and move their own cursor  *)
 (*    in writes of their own, and touch no relight grant, due row or       *)
 (*    route: no variable here moves, a stutter, re-stamped.                *)
+(*  - #572's re-read (SPEC-326, ADR-327), re-read 2026-10-03:              *)
+(*    announce_relight now reads the stored language streak (streak_state  *)
+(*    on a reader connection) before its route, and the occasion carries   *)
+(*    the facts, so the router caps its tier (SPEC-084 R5): on a relight's *)
+(*    own day the streak is back to one and was once longer, so the router *)
+(*    decides it at T1, a reaction, or silent on a transport with none,    *)
+(*    never the line. The tier is the router's decision, and L1 is stated  *)
+(*    above the router. The read writes nothing and moves no variable      *)
+(*    here: a stutter, re-stamped. A read that fails is announce_relight   *)
+(*    refused before routing, which claims and sends nothing (RouteFail(d) *)
+(*    with no claim, named above): the day stays due.                      *)
+(*    Ruling 131's reading of L1: the router decides each committed grant  *)
+(*    once, rendered or held; the tier it renders at is the ladder's.      *)
 (***************************************************************************)
 EXTENDS Naturals, FiniteSets
 

@@ -1123,3 +1123,21 @@ and the changelog fragment `changelog.d/lapse-count-534.md`. It changes `docs/re
 ## 36. Amendment, 2026-10-02: the Status names the delivery
 
 Insert-only under ruling (i) of SPEC-038 section 8: every earlier byte is kept in order. The first insertion is in the Status line of the header: the delivery that moved this SPEC out of `docs/specs/planned/` (#446, ADR-016) and the closing marks that strike the old "planned" wording, which a SPEC in `docs/specs/` no longer states. The second insertion, in section 3's fence: A35's line gains its row's second test as a second `--exact` filter (`the_outside_freezes_join_the_language_row_within_zero_and_three`), which the row already named and the line did not select; A43's own line already ran it, so no criterion changes. This section is the last insertion.
+
+## 37. Amendments, 2026-10-03: the relight's one celebration is routed at the ladder's tier (#572)
+
+Insert-only: every earlier byte is kept in order, and this section is the only insertion.
+SPEC-326 reads the stored language streak before the relight is routed, and SPEC-084 R5 caps
+every celebration of the study day the streak broke on, the relight included. So the relight's
+celebration renders at the tier the ladder decides: T1 on its return day, which is the day the
+streak broke (SPEC-084 R5), and so a reaction to the owner's latest message or, with none fresh,
+a hold for the flush; a relight first routed on a later day is raised on no break day and renders
+its line. R27's "one send per episode" (section 12) reads "one routed celebration per episode".
+R28's L1, "every committed grant is celebrated" (section 19), reads "every committed grant is
+routed exactly once, rendered or held for the flush", and S1's "at most one celebration is sent"
+counts a held celebration as the one; a held celebration's delivery is the held flush's property
+(`HeldReachesOrAbandons` in `formal/tla/HeldFlush`), not R28's.
+`crates/coordination/tests/relight_order.rs` holds both readings: its failure-point test records an
+owner message before every route, so the one celebration is a rendered line or reaction, and
+`with_no_owner_message_every_committed_grant_is_routed_once_rendered_or_held` runs the same cases
+with no owner message and holds the held path.
