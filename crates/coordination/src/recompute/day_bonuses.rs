@@ -14,6 +14,7 @@ use sqlx::SqliteConnection;
 
 use super::xp::settle_source;
 use super::{DayEvaluation, DayStep, Evaluation, Phase};
+use crate::skip::days::skip_epoch_days;
 
 /// The name the fold's report gives this step.
 pub const DAY_BONUSES_STEP: &str = "progression.derived_bonuses";
@@ -49,7 +50,7 @@ impl DayStep for DayBonusesStep {
             );
             let run = on_pace_run(
                 &recent_scores(write, facts.study_days(), day.day).await?,
-                &BTreeSet::new(),
+                &skip_epoch_days(write).await?,
                 day.day.epoch_day(),
             );
             let buff = is_ascendant_day(write, day.day).await?;

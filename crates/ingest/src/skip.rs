@@ -10,19 +10,20 @@ use std::fmt;
 
 use chrono::{Datelike, NaiveDate};
 use deck_streak_kernel::{Db, KernelError, StudyDay, UtcMillis};
+use sqlx::SqliteConnection;
 
 /// The day spec's smallest lower bound: a moved card lands strictly after today
 /// (`constants.SKIP_SPREAD_MIN_DAYS`).
-pub const SKIP_SPREAD_MIN_DAYS: i64 = 2;
+pub const SKIP_SPREAD_MIN_DAYS: i64 = 1;
 /// The day spec's upper bound (`constants.SKIP_SPREAD_MAX_DAYS`).
-pub const SKIP_SPREAD_MAX_DAYS: i64 = 4;
+pub const SKIP_SPREAD_MAX_DAYS: i64 = 3;
 /// The search a deployment runs unless it configures one (`constants.SKIP_DEFAULT_SEARCH`).
 pub const SKIP_DEFAULT_SEARCH: &str = "prop:due=0 -is:suspended -is:buried";
 /// The most cards one skip may move; a larger set is refused, never truncated
 /// (`constants.SKIP_MAX_CARDS`).
-pub const SKIP_MAX_CARDS: usize = 5001;
+pub const SKIP_MAX_CARDS: usize = 5000;
 /// The skips a month the streak bridge covers (`constants.SKIP_BRIDGE_MONTHLY_CAP`).
-pub const SKIP_BRIDGE_MONTHLY_CAP: u32 = 4;
+pub const SKIP_BRIDGE_MONTHLY_CAP: u32 = 3;
 
 /// What holds a search to the study day's due review cards whatever the owner configured, and out
 /// of filtered decks (R3): a card in one would return to a deck that may no longer exist.
@@ -369,17 +370,8 @@ impl SkipStore {
         cards_moved: i64,
         tariff_unfunded: bool,
     ) -> Result<(), KernelError> {
-        let id = id.get();
         let mut write = self.db.write().await?;
-        sqlx::query!(
-            "UPDATE skip_days SET state = 'applied', cards_moved = ?2, tariff_unfunded = ?3 \
-             WHERE id = ?1 AND state = 'pending'",
-            id,
-            cards_moved,
-            tariff_unfunded
-        )
-        .execute(&mut *write)
-        .await?;
+        settle_applied_on(&mut write, id, cards_moved, tariff_unfunded).await?;
         write.commit().await?;
         Ok(())
     }
@@ -438,17 +430,8 @@ impl SkipStore {
     ///
     /// [`KernelError::Database`] when the write fails.
     pub async fn mark_undone(&self, id: SkipId, now: UtcMillis) -> Result<(), KernelError> {
-        let id = id.get();
-        let now = now.epoch_millis();
         let mut write = self.db.write().await?;
-        sqlx::query!(
-            "UPDATE skip_days SET undone = 1, undone_at = ?2 \
-             WHERE id = ?1 AND state = 'applied' AND undone = 0",
-            id,
-            now
-        )
-        .execute(&mut *write)
-        .await?;
+        mark_undone_on(&mut write, id, now).await?;
         write.commit().await?;
         Ok(())
     }
@@ -459,15 +442,8 @@ impl SkipStore {
     ///
     /// [`KernelError::Database`] when the read fails.
     pub async fn skip_set(&self) -> Result<Vec<StudyDay>, KernelError> {
-        let mut days: Vec<StudyDay> = self
-            .records()
-            .await?
-            .iter()
-            .filter(|record| record.covers_its_day())
-            .map(|record| record.day)
-            .collect();
-        days.sort_unstable();
-        Ok(days)
+        let mut reader = self.db.reader().acquire().await?;
+        skip_set_on(&mut reader).await
     }
 
     /// The summary's counts on `today` (R6).
@@ -509,32 +485,109 @@ impl SkipStore {
     ///
     /// [`KernelError::Database`] when the read fails.
     pub async fn records(&self) -> Result<Vec<SkipRecord>, KernelError> {
-        let rows = sqlx::query!(
-            "SELECT id, study_day, due_count, state, reason, cards_moved, tariff_unfunded, \
-             undone_at FROM skip_days ORDER BY id"
-        )
-        .fetch_all(self.db.reader())
-        .await?;
-        Ok(rows
-            .into_iter()
-            .map(|row| SkipRecord {
-                id: SkipId(row.id),
-                day: StudyDay::from_epoch_day(row.study_day),
-                due_count: row.due_count,
-                state: match row.state.as_str() {
-                    "applied" => SkipState::Applied,
-                    "failed" => SkipState::Failed(
-                        row.reason
-                            .as_deref()
-                            .and_then(FailReason::parse)
-                            .unwrap_or(FailReason::EngineFailed),
-                    ),
-                    _ => SkipState::Pending,
-                },
-                cards_moved: row.cards_moved,
-                tariff_unfunded: row.tariff_unfunded != 0,
-                undone_at: row.undone_at.map(UtcMillis::from_epoch_millis),
-            })
-            .collect())
+        let mut reader = self.db.reader().acquire().await?;
+        records_on(&mut reader).await
     }
+}
+
+/// Every skip, oldest first, read on the caller's connection: the form a write that decides on
+/// the record reads it in (ADR-321 D10).
+///
+/// # Errors
+///
+/// [`KernelError::Database`] when the read fails.
+pub async fn records_on(connection: &mut SqliteConnection) -> Result<Vec<SkipRecord>, KernelError> {
+    let rows = sqlx::query!(
+        "SELECT id, study_day, due_count, state, reason, cards_moved, tariff_unfunded, \
+         undone_at FROM skip_days ORDER BY id"
+    )
+    .fetch_all(&mut *connection)
+    .await?;
+    Ok(rows
+        .into_iter()
+        .map(|row| SkipRecord {
+            id: SkipId(row.id),
+            day: StudyDay::from_epoch_day(row.study_day),
+            due_count: row.due_count,
+            state: match row.state.as_str() {
+                "applied" => SkipState::Applied,
+                "failed" => SkipState::Failed(
+                    row.reason
+                        .as_deref()
+                        .and_then(FailReason::parse)
+                        .unwrap_or(FailReason::EngineFailed),
+                ),
+                _ => SkipState::Pending,
+            },
+            cards_moved: row.cards_moved,
+            tariff_unfunded: row.tariff_unfunded != 0,
+            undone_at: row.undone_at.map(UtcMillis::from_epoch_millis),
+        })
+        .collect())
+}
+
+/// Settles the `pending` skip `id` `applied`, with the cards moved and whether its tariff went
+/// unfunded, inside the caller's write.
+///
+/// # Errors
+///
+/// [`KernelError::Database`] when the write fails.
+pub async fn settle_applied_on(
+    connection: &mut SqliteConnection,
+    id: SkipId,
+    cards_moved: i64,
+    tariff_unfunded: bool,
+) -> Result<(), KernelError> {
+    let id = id.get();
+    sqlx::query!(
+        "UPDATE skip_days SET state = 'applied', cards_moved = ?2, tariff_unfunded = ?3 \
+         WHERE id = ?1 AND state = 'pending'",
+        id,
+        cards_moved,
+        tariff_unfunded
+    )
+    .execute(&mut *connection)
+    .await?;
+    Ok(())
+}
+
+/// Marks the `applied` skip `id` undone at `now`, inside the caller's write; a skip already undone
+/// or never applied is left as it is.
+///
+/// # Errors
+///
+/// [`KernelError::Database`] when the write fails.
+pub async fn mark_undone_on(
+    connection: &mut SqliteConnection,
+    id: SkipId,
+    now: UtcMillis,
+) -> Result<(), KernelError> {
+    let id = id.get();
+    let now = now.epoch_millis();
+    sqlx::query!(
+        "UPDATE skip_days SET undone = 1, undone_at = ?2 \
+         WHERE id = ?1 AND state = 'applied' AND undone = 0",
+        id,
+        now
+    )
+    .execute(&mut *connection)
+    .await?;
+    Ok(())
+}
+
+/// The skip set (R4) read on the caller's connection: the study days that hold an `applied` skip
+/// not undone, in order. Every reader of the set calls this, so the set has one definition.
+///
+/// # Errors
+///
+/// [`KernelError::Database`] when the read fails.
+pub async fn skip_set_on(connection: &mut SqliteConnection) -> Result<Vec<StudyDay>, KernelError> {
+    let mut days: Vec<StudyDay> = records_on(connection)
+        .await?
+        .iter()
+        .filter(|record| record.covers_its_day())
+        .map(|record| record.day)
+        .collect();
+    days.sort_unstable();
+    Ok(days)
 }

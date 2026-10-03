@@ -3,6 +3,7 @@
 
 use std::collections::BTreeSet;
 
+use deck_streak_ingest::skip::skip_set_on;
 use deck_streak_kernel::{KernelError, StudyDay};
 use sqlx::SqliteConnection;
 
@@ -11,15 +12,10 @@ use sqlx::SqliteConnection;
 /// # Errors
 ///
 /// [`KernelError::Database`] when the read fails.
-#[allow(
-    clippy::unused_async,
-    reason = "the red stub keeps the green signature, which reads the record"
-)]
 pub async fn skip_days(
     connection: &mut SqliteConnection,
 ) -> Result<BTreeSet<StudyDay>, KernelError> {
-    let _ = connection;
-    Ok(BTreeSet::new())
+    Ok(skip_set_on(connection).await?.into_iter().collect())
 }
 
 /// The same set as epoch day numbers, as the consistency run reads it.

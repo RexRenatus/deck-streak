@@ -437,7 +437,7 @@ async fn after_an_undo_the_day_is_a_missed_day_at_the_next_recompute() {
     let scratch = TempDir::new().expect("a scratch directory");
     let db = database(&scratch).await;
     let id = skip(&db, D0 - 2).await;
-    daily(&fold, &db, &data, D0 - 3..=D0 - 1).await;
+    daily(&fold, &db, &data, D0 - 3..D0).await;
     let settled = events(&db).await;
     assert_eq!(
         consumed(&settled),
