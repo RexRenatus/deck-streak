@@ -1,0 +1,302 @@
+{
+  "adapter": "with_the_catalog",
+  "cases": [
+    {
+      "class": "catalog",
+      "input": {},
+      "output": [
+        [
+          "first_steps",
+          "First Steps",
+          "\ud83d\udc5f",
+          "Your first ever review",
+          0
+        ],
+        [
+          "week_warrior",
+          "Week Warrior",
+          "\ud83d\udd25",
+          "7-day streak",
+          0
+        ],
+        [
+          "monthly_monk",
+          "Monthly Monk",
+          "\ud83e\uddd8",
+          "30-day streak",
+          0
+        ],
+        [
+          "century_flame",
+          "Century Flame",
+          "\ud83d\udcaf\ud83d\udd25",
+          "100-day streak",
+          0
+        ],
+        [
+          "year_of_iron",
+          "Year of Iron",
+          "\ud83d\uddd3\ufe0f\ud83d\udc51",
+          "365-day streak",
+          0
+        ],
+        [
+          "grinder",
+          "Grinder",
+          "\u2699\ufe0f",
+          "1,000 lifetime reviews",
+          0
+        ],
+        [
+          "marathoner",
+          "Marathoner",
+          "\ud83c\udfc3",
+          "10,000 lifetime reviews",
+          0
+        ],
+        [
+          "centurion_day",
+          "Centurion Day",
+          "\ud83d\udee1\ufe0f",
+          "100+ reviews in one day",
+          0
+        ],
+        [
+          "sharpshooter",
+          "Sharpshooter",
+          "\ud83c\udfaf",
+          "90%+ true retention over 7 days",
+          0
+        ],
+        [
+          "sniper_elite",
+          "Sniper Elite",
+          "\ud83c\udfaf\u2728",
+          "95%+ mature retention over 30 days",
+          0
+        ],
+        [
+          "inbox_zero",
+          "Inbox Zero",
+          "\ud83d\udced",
+          "Cleared the due queue to zero",
+          0
+        ],
+        [
+          "backlog_slayer",
+          "Backlog Slayer",
+          "\ud83d\udc09\u2694\ufe0f",
+          "Cleared a 200+ card backlog in a day",
+          0
+        ],
+        [
+          "night_owl",
+          "Night Owl",
+          "\ud83e\udd89",
+          "50+ reviews between midnight and rollover",
+          0
+        ],
+        [
+          "early_bird",
+          "Early Bird",
+          "\ud83d\udc26",
+          "50+ reviews in the early morning",
+          0
+        ],
+        [
+          "comeback_kid",
+          "Comeback Kid",
+          "\ud83d\udcaa",
+          "Returned after breaking a 7+ day streak",
+          0
+        ],
+        [
+          "maturity_milestone",
+          "Maturity Milestone",
+          "\ud83c\udf33",
+          "100 cards reached mature",
+          0
+        ],
+        [
+          "forest_guardian",
+          "Forest Guardian",
+          "\ud83c\udf32\ud83c\udf32",
+          "1,000 mature cards",
+          0
+        ],
+        [
+          "leech_tamer",
+          "Leech Tamer",
+          "\ud83e\udeb1\u2705",
+          "Zero unhandled leeches",
+          0
+        ],
+        [
+          "polyglot",
+          "Polyglot",
+          "\ud83c\udf0d",
+          "Studied 3+ decks in one day",
+          0
+        ],
+        [
+          "globetrotter",
+          "Globetrotter",
+          "\ud83d\uddfa\ufe0f",
+          "Reviewed 5+ decks in a week",
+          0
+        ],
+        [
+          "perfect_week",
+          "Perfect Week",
+          "\u2705",
+          "7/7 days scoring 75+",
+          0
+        ],
+        [
+          "legendary_day",
+          "Legendary Day",
+          "\ud83c\udfc6",
+          "A perfect daily score of 100",
+          0
+        ],
+        [
+          "speed_demon",
+          "Speed Demon",
+          "\u26a1",
+          "100+ reviews averaging under 6 seconds",
+          0
+        ],
+        [
+          "iron_will",
+          "Iron Will",
+          "\ud83e\uddbe",
+          "30 days, no misses, no freezes used",
+          0
+        ],
+        [
+          "first_page",
+          "First Page",
+          "\ud83d\udcd6",
+          "Logged your first reading session",
+          0
+        ],
+        [
+          "quill_initiate",
+          "Quill Initiate",
+          "\u270d\ufe0f",
+          "Logged your first writing day",
+          0
+        ],
+        [
+          "ink_week",
+          "Ink Week",
+          "\u270d\ufe0f\ud83d\udd25",
+          "7-day all-CJK writing streak",
+          0
+        ],
+        [
+          "ink_month",
+          "Ink Month",
+          "\u270d\ufe0f\ud83c\udf19",
+          "30-day all-CJK writing streak",
+          0
+        ],
+        [
+          "ink_century",
+          "Ink Century",
+          "\u270d\ufe0f\ud83d\udcaf",
+          "100-day all-CJK writing streak",
+          0
+        ],
+        [
+          "bookworm_week",
+          "Bookworm Week",
+          "\ud83d\udcda\u2705",
+          "Hit the 3.5h reading goal in every language",
+          0
+        ],
+        [
+          "polyglot_reader",
+          "Polyglot Reader",
+          "\ud83d\udcda\ud83c\udf0d",
+          "Read in all 5 languages in one week",
+          0
+        ],
+        [
+          "marathon_reader",
+          "Marathon Reader",
+          "\ud83d\udcd6\ud83c\udfc3",
+          "Logged 10 hours of reading in one week",
+          0
+        ],
+        [
+          "focus_initiate",
+          "Focus Initiate",
+          "\u23f3",
+          "Completed your first focus block",
+          0
+        ],
+        [
+          "deep_work_day",
+          "Deep Work Day",
+          "\ud83e\uddd8\u200d\u2642\ufe0f",
+          "Hit the 50-min focus goal in a day",
+          0
+        ],
+        [
+          "deep_diver",
+          "Deep Diver",
+          "\ud83c\udf0a",
+          "Completed a single 90-minute focus block",
+          0
+        ],
+        [
+          "focus_week",
+          "Focus Week",
+          "\u23f3\ud83d\udd25",
+          "7-day focus streak",
+          0
+        ],
+        [
+          "focus_month",
+          "Focus Month",
+          "\u23f3\ud83c\udf19",
+          "30-day focus streak",
+          0
+        ],
+        [
+          "monk_mode",
+          "Monk Mode",
+          "\ud83d\uded5",
+          "10 hours of focus in one week",
+          0
+        ],
+        [
+          "deep_work_centurion",
+          "Deep Work Centurion",
+          "\ud83c\udfdb\ufe0f",
+          "100 completed focus blocks",
+          0
+        ],
+        [
+          "subject_devotee",
+          "Subject Devotee",
+          "\ud83c\udf93\ud83d\udd25",
+          "50 focus blocks on one subject",
+          0
+        ]
+      ]
+    }
+  ],
+  "function": "constants.BADGES",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Reads the catalog and returns each badge's key, name, emoji, description and tier, in catalog order; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_073.py",
+  "registry_sha256": "798450938bfbda152c320bc1a6255e977bd75fa65a0a9d1120f7c1331954793f",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

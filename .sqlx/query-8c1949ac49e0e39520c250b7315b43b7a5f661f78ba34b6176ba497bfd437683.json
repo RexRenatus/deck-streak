@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO inbox_captures\n             (stem, capture_key, kind, source, attachment, captured_at, created_at)\n         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6) ON CONFLICT DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": []
+  },
+  "hash": "8c1949ac49e0e39520c250b7315b43b7a5f661f78ba34b6176ba497bfd437683"
+}

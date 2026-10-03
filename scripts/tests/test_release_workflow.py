@@ -12,7 +12,7 @@ import unittest
 from pathlib import Path
 
 from _support import REPO, examined
-from test_ci_workflows import PINNED, action, entries, read_hardened
+from test_ci_workflows import PINNED, action, entries, read_hardened, workflow_file_text
 
 RELEASE = REPO / ".github" / "workflows" / "release.yml"
 JOB_WRITES = {"contents": "write", "id-token": "write", "attestations": "write"}
@@ -125,7 +125,7 @@ class TheReleaseWorkflowIsHardened(unittest.TestCase):
             if action(step) == "actions/setup-node":
                 self.assertEqual(step["with"].get("package-manager-cache"), "false")
             self.assertNotIn("rust-cache", action(step))
-        text = RELEASE.read_text(encoding="utf-8")
+        text = workflow_file_text(RELEASE)
         secrets = re.findall(r"secrets\.([A-Za-z_]+)", text)
         self.assertEqual(sorted(set(secrets) - {"GITHUB_TOKEN"}), [], "a secret but the token")
         self.assertNotRegex(text, r"(?m)^\s*(pull_request|workflow_run|schedule)")
@@ -144,7 +144,7 @@ class TheReleaseWorkflowIsHardened(unittest.TestCase):
         releases = [r for r in releases if r.startswith("gh release ")]
         self.assertEqual(len(releases), 3, releases)
         self.assertEqual(holders, releases, "only the gh release steps hold the token")
-        text = RELEASE.read_text(encoding="utf-8")
+        text = workflow_file_text(RELEASE)
         self.assertEqual(text.count("github.token"), 3, "the token is named three times")
 
 

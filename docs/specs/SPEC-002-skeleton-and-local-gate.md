@@ -53,6 +53,7 @@ R10. Every workflow runs on GitHub-hosted runners with a read-only token and act
 | A8 | the Mini App's smoke test observes its heading | `pnpm exec vitest run web/app/src/lib/smoke.test.ts -t "renders the DeckStreak heading"` |
 | A9 | CI runs every stage of the local gate | `python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k ci_runs_every_stage_of_the_local_gate` |
 | ~~A10~~ | the pack runner refuses a wiring that forgets a pack | `python3 -m unittest discover -s scripts/tests -p test_pack_wiring.py -k the_runner_refuses_a_wiring_that_forgets_a_pack` |
+| A11 | a SPEC in docs/specs/ never states its Status as planned | `python3 -m unittest discover -s scripts/tests -p test_planned_specs.py -k no_judged_spec_reads_planned` |
 
 ```acceptance
 A1: cargo test -p deck-streak-daemon --test workspace -- --exact every_crate_is_named_for_its_context_directory
@@ -71,6 +72,9 @@ A9: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k ci_
 ```
 ```retired
 A10: python3 -m unittest discover -s scripts/tests -p test_pack_wiring.py -k the_runner_refuses_a_wiring_that_forgets_a_pack
+```
+```acceptance
+A11: python3 -m unittest discover -s scripts/tests -p test_planned_specs.py -k no_judged_spec_reads_planned
 ```
 
 ## 4. File manifest
@@ -130,3 +134,12 @@ The retired criteria, why their subject is gone, and what judges it now:
 Amendment (2026-09-28): names of the maintainer's private tooling were replaced with 'the box-run
 packs' and neutral names for their repository, binary and checkout under the public-text rule
 (ADR-059).
+
+## 8. Amendment, 2026-10-02: a delivered SPEC never reads planned
+
+Insert-only under ruling (i) of SPEC-038 section 8: every earlier byte is kept in order. It inserts:
+
+- section 3: the criteria row of A11 after A10's row, and an `` ```acceptance `` fence for it after the last `` ```retired `` fence;
+- this section.
+
+The rule: ADR-016's move from `docs/specs/planned/` to `docs/specs/` makes a SPEC judged, and its Status then names the delivery that moved it and never reads "planned". A11's test, `test_no_judged_spec_reads_planned` in `scripts/tests/test_planned_specs.py`, reads the Status line of every judged SPEC with its struck spans removed. It was red on two files, SPEC-076 and SPEC-094, whose Status each still read "planned"; their one insertion each, naming #446 and #403, is the fix.

@@ -16,6 +16,7 @@
 #![warn(missing_docs, clippy::all)]
 
 pub mod clock;
+pub mod conventions;
 pub mod courses;
 pub mod credentials;
 pub mod data_rights;
@@ -24,6 +25,7 @@ pub mod error;
 pub mod ids;
 pub mod logging;
 pub mod offload;
+pub mod pynum;
 pub mod redact;
 pub mod settings;
 pub mod study_day;
@@ -31,6 +33,7 @@ pub mod track;
 pub mod verdict;
 
 pub use clock::{Clock, ManualClock, SystemClock, UtcMillis};
+pub use conventions::{Conventions, ConventionsError, Direction};
 pub use courses::{CourseCode, Courses, CoursesError};
 pub use credentials::{CredentialLoader, Secret};
 pub use data_rights::{

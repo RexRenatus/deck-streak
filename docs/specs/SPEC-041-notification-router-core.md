@@ -115,6 +115,9 @@ R14. The typed policy reads every key of the file, and names the key `defer_fanf
 | A13 | the in-app feed serves its items to the owner's session and refuses any other caller with no item | `the_in_app_feed_answers_only_the_owner` |
 | A14 | the notifications data-rights port lists its five tables as exported and erased, and an erase empties them | `the_notification_tables_are_exported_and_erased` |
 | A15 | the census reads every shipped source of these kinds: the Rust, Python and web source files, the Mini App's HTML among them, the shell scripts by extension or by a `#!` first line, and the systemd units of every type and their drop-ins; it leaves out symlinks, test files, test directories outside a `src/`, and in a Rust file its comments and `#[cfg(test)]` modules. In what it reads, no name it holds appears outside its place: outside the bot's sources nothing names the Bot API's host, a send or delivery method of the pinned client's table, or the bot's `DEFAULT_API_URL`, SPEC-031's alert path aside; inside them such a method is named only by its own named send; the bot's `send_html`, `edit_html` and command handler are used only at named sites, and the handler's own replies and dispatch are called only by their named callers; only the router's modules name the in-app feed or the held queue, and in the notifications crate only they name its ledger, the root's declaration of it aside; no source of that crate carries `#[path]`, `#[macro_export]` or `#[macro_use]`, or re-exports the ledger, its feed's and queue's tables or its writes to the feed and the queue by a `pub use`; every method of the pinned client's table is a send, a delivery or not a delivery, in one class only; and each of the eight named sends is found once | `no_delivery_goes_around_the_port` |
+| A16 | the census refuses a hand-built Bot API send URL that names the bot's `api_url`, wherever the bot crate's transport builds it: `api_url` is read only by `Transport::send_document` and `Transport::send_photo`, the two multipart sends the pinned client cannot make, and by the constructor `Transport::with_waits`, which composes it once with the token; every other read of it, in a `format!`, a `concat!`, a `String` push, a helper function, a `const`'s path, or a string literal's inline argument, is refused, over every Bot API method the transport names, every form, and every function of the transport outside the named sites | `a_hand_built_send_url_is_refused_wherever_the_transport_builds_it` |
+| A17 | in the bot's sources, a request whose Bot API method the census cannot read is refused outside its named request site: every name through which one is made, the pinned client's generic requests `request`, `request_with_form_data` and `request_with_possible_form_data`, its HTTP client `client`, and the HTTP crate `reqwest`, is found only at its named site, as often as the shipped site names it; any other mention is refused at its line, and a second one at a site by the count, over eight request forms in every function of the bot's sources and at every place outside a function | `a_request_the_census_cannot_read_is_refused_wherever_the_bot_makes_it` |
+| A18 | a use of one of four reqwest paths, the client type `reqwest::Client` and the calls `reqwest::get`, `reqwest::Client::new` and `reqwest::Client::builder`, is named by the compiler's resolved path, not by a text token: `clippy.toml` names these four, so a use of one under any name a source binds it to, by a `use`, a re-export or a `type` alias, is flagged by the workspace's clippy stage under `-D warnings`; the only suppression of either lint in the workspace is an `#[expect]` with a reason at the bot transport's client construction, and any other suppression of them or of a lint group that holds them (`clippy::style`, `clippy::all`, `warnings`), whether an item's or a crate's, through `cfg_attr`, in a manifest's `[lints]` table or as a compiler flag, and a `clippy.toml` that no longer names the four paths, is refused, over every spelling, form and place of a generated population | `clippy_names_the_four_paths_that_make_reqwests_client`, `the_only_suppression_of_the_rule_is_an_expect_at_a_named_transport_site`, `a_suppression_of_the_rule_or_of_its_group_is_refused_wherever_it_is_planted` |
 
 ```acceptance
 A1: cargo test -p deck-streak-notifications --test policy -- --exact the_typed_policy_reads_every_key_of_the_file
@@ -132,6 +135,9 @@ A12: cargo test -p deck-streak-notifications --test deferral -- --exact a_flush_
 A13: cargo test -p deck-streak-api --test notifications_feed -- --exact the_in_app_feed_answers_only_the_owner
 A14: cargo test -p deck-streak-notifications --test rights -- --exact the_notification_tables_are_exported_and_erased
 A15: cargo test -p deck-streak-notifications --test one_router -- --exact no_delivery_goes_around_the_port
+A16: cargo test -p deck-streak-notifications --test one_router -- --exact a_hand_built_send_url_is_refused_wherever_the_transport_builds_it
+A17: cargo test -p deck-streak-notifications --test one_router -- --exact a_request_the_census_cannot_read_is_refused_wherever_the_bot_makes_it
+A18: cargo test -p deck-streak-notifications --test request_allow_list
 ```
 
 ## 3a. What the box run judges
@@ -170,6 +176,8 @@ the verdict of a run with that wiring is posted as the `box/packs` status at the
 | `crates/notifications/tests/rights.rs` | `deck-streak-notifications` | added |
 | `crates/notifications/tests/policy.rs` | `deck-streak-notifications` | added: A1, A3, and the policy's refusals |
 | `crates/notifications/tests/one_router.rs` | `deck-streak-notifications` | added: A2, and A15's census, which reads the shipped sources of the kinds A15 names and refuses in them a delivery around the port by a name it holds; code written to evade it goes unread (§5, #297) |
+| `crates/notifications/tests/request_allow_list.rs` | `deck-streak-notifications` | added: A18, which audits the allow-list of the compiler's request rule: `clippy.toml`'s four paths, the one `#[expect]` at the transport, and every other suppression of the two lints or of a group that holds them |
+| `clippy.toml` | repo | changed: names reqwest's client type and its three constructors as disallowed, each with its reason (A18) |
 | `crates/notifications/tests/ui/push_outside_the_router.rs`, `.stderr` | `deck-streak-notifications` | added: A2's compile-fail fixture and the refusal it records |
 | `crates/notifications/tests/ui/pass_by_default.rs`, `.stderr`, `crates/notifications/tests/ui/pass_kept_by_a_clone.rs`, `.stderr` | `deck-streak-notifications` | added: A2's fixtures for a pass made by `Default` and one kept by cloning a borrowed pass, each with the refusal it records |
 | `crates/notifications/tests/support/mod.rs` | `deck-streak-notifications` | added: the tests' database, clock and recording transport |
@@ -231,6 +239,31 @@ the verdict of a run with that wiring is posted as the `box/packs` status at the
     a `pub` wrapper: a function, a macro or a constant that hands out a write to the feed or the
     held queue, or a table's name, under a name the census does not hold, or a reply of the bot's
     command handler made `pub` and called from outside the handler's module (#297).
+  - the bot's base URL read without the field's name: through an accessor or a `Debug` print of the
+    pinned client's bot, and a name for it that a macro assembles, which no text census reads. Every
+    form that names the field `api_url`, as an identifier or inside a string literal's inline
+    argument, is read, and one it cannot read is refused rather than passed (#429).
+  - a request written over a raw socket (tokio's `TcpStream`) to a plain-HTTP local Bot API server,
+    which names none of the request names (#429);
+  - two compensating edits that move a `reqwest` mention between places the census names alike, in
+    no function, which the count reads as unchanged (#429);
+  - a new HTTP dependency in another crate: `Cargo.lock` gives an HTTP client to the bot crate
+    alone, so it needs a change of the lock, which review sees (#429).
+- A use of one of the four reqwest paths in `clippy.toml` is named by the compiler's resolved path
+  (A18, #429), so the forms above that bind one of them to a name of the source's own are closed,
+  and what the rule still cannot read is each of these:
+  - a request over a raw socket (tokio's `TcpStream`) or through an HTTP crate other than reqwest:
+    the four paths in `clippy.toml` are reqwest's, and such a request names none of them (#429);
+  - a request through the pinned client's generic requests, which name no reqwest path at the call:
+    the text census's request names read them, as A17 states, and the compiler's rule does not (#429);
+  - two compensating edits that move a `reqwest` mention between places the census names alike, in
+    no function: the count still reads them as unchanged, but a client made at the new place names
+    one of the four paths, which the compiler's rule flags (#429);
+  - a new HTTP dependency in another crate: it needs a change of the lock, which review sees, and
+    it names no reqwest path (#429).
+  - a reqwest client value obtained without naming the type or one of its listed constructors: the
+    four paths in `clippy.toml` flag a use that names one of them, and this form was not measured
+    (#429).
 
 ## 6. Risks
 
@@ -407,3 +440,154 @@ the verdict of a run with that wiring is posted as the `box/packs` status at the
   - The command handler: its replies (`send`, and `export`, `ask_erase`, `sync` and `score`, which send one)
     and its dispatch (`on_message`, `on_callback`) are called only by their named callers, the
     handler and the dispatch, each of which the census finds in the tree.
+- **A16: the transport's base URL (#429).** `api_url` joins the census's guarded names, beside
+  `send_html`, `edit_html` and `handle`, defined in `crates/bot/src/transport.rs`: every use of it is
+  a named site or a refusal, so a request URL built from it anywhere else is refused whatever builds
+  the URL. The named sites are the two sends that make a multipart request by hand and the
+  constructor that composes the base URL with the token once. The constructor is a third site than
+  the issue named: the census cannot read the builder's argument without it, and it makes no
+  request. A read of the name inside a string literal, which the census blanks, is refused at any
+  other place, so the inline form `{api_url}` is not a way round. The three planted requests of
+  A15 that hold `api_url` (`celebrate.rs`, `copy.rs` and `rich.rs`) gain the refusals this rule
+  adds, so their expected lines grew by two each; no line was removed. The population is read from
+  the transport: the methods it names, six forms and every function outside the named sites.
+- **A17: a request the census cannot read (#429).** The census reads a typed call of the pinned client
+  by its method's name. Every other request carries its method as a string or a URL, which no identifier
+  search reads, and the Bot API takes any case of a method's name. So the bot's sources are held to one
+  rule: every name through which such a request is made (the client's generic requests, its HTTP client
+  and the HTTP crate) is found only at its named request site, as often as the shipped site names it
+  (`REQUEST_SITES`, 21 mentions), and any other mention is refused at its line, a second one at a site by
+  the count. The named sites are the update poll's generic request, the constructor that builds the
+  client, the two multipart sends and their forms, and the transport's use of the crate in no function.
+  The three planted requests of A15 (`celebrate.rs`, `copy.rs` and `rich.rs`) gain one refusal each; no
+  line was removed. Each named site's read of `api_url` is counted once by A15's test. The population is
+  eight request forms in every function of the eight bot sources and at three places outside a function.
+- **A18: request capability by the compiler's resolved path (#429).** The text census reads a name, so
+  reqwest's client bound to a name of the source's own, by an alias, by its own type name or by a
+  `type` or `pub use` binding, added no mention it counts and passed. Clippy resolves the path of every
+  use through such a binding, so `clippy.toml` now names `reqwest::Client` as a disallowed type and
+  `reqwest::get`, `reqwest::Client::new` and `reqwest::Client::builder` as disallowed methods, each with
+  its reason, and the workspace's clippy stage, which runs every target under `-D warnings`, refuses a
+  use of one. The bot transport's construction of its client is the one legitimate site, and it carries
+  an `#[expect]` for each lint with a reason, so a site that stops needing it is itself a warning. Those
+  annotations are the audited allow-list: `request_allow_list.rs` refuses any other suppression of the
+  two lints, any suppression of a lint group that holds them in every spelling a crate accepts, and a
+  `clippy.toml` that no longer names the four paths. It reads files as text, which is right for an
+  audit of the allow-list, and clippy does the resolving. The text census of A15 to A17 stays: it reads
+  the Bot API's method names, and its claim narrows to the forms that name a token. The population is
+  1,920 planted suppressions: eight spellings of a lint or of a group that holds it, twelve attribute forms
+  (an `allow` and an `expect`, with and without a reason, beside another lint, over lines, in a
+  `cfg_attr`, and as a crate's inner attribute) at up to three places (before an item, before a
+  statement, and at the top of a file), in each of the bot's eight sources. The test file
+  changed once between the red and the green commit, in the style of the workspace's lints (a range,
+  a `let` chain, a file-extension helper and an `expect` allowance for a test crate), with no
+  assertion touched.
+
+## 8. Amendment: the held queue is flushed once the quiet window ends (#291)
+
+R7 flushes the held queue after every successful sync. The scheduled sync runs inside the default
+quiet window, so on that path the flush finds the window closed and delivers nothing, and a
+celebration held overnight waits for a sync that happens to land after the window. This amendment
+adds a flush of its own, outside the window, and states the class it closes: **every held
+notification reaches the owner at most once, and ends delivered or abandoned by name, on every path that can flush.**
+
+- **R14: a scheduled flush step, outside the window.** The job table gains `held_flush`, a daily job
+  at 07:36 UTC with catch-up, its own timer and its own job run, never a step of a readings job
+  (#39). The window the router reads ends at 07:30, and the step fires after it. A missed fire is
+  replayed by the timer up to 360 minutes late (13:36), which is still outside the window. A hold
+  raised at the window's start (23:00) is 516 minutes old at the 07:36 fire and 876 minutes old at the
+  latest replay, against the 720-minute limit: a fire replayed after 11:00 abandons that hold by name
+  in the recap line instead of delivering it, so a missed fire can cost a hold its delivery and
+  never its name. ADR-300 records the choice, and why the catch-up bound is not shortened.
+- **R15: the window is read when the flush sends.** A flush inside the window delivers nothing and
+  answers `QuietHours`; a flush after it delivers each hold it finds and abandons by name a hold
+  past its age limit, in the recap line R7 already prints. The three flushers are the flush after a
+  scheduled sync, the scheduled step, and the flush after an owner-triggered sync.
+- **R16: one flush at a time.** A flush takes a lease before its first send, held as the setting
+  `flush_lease` whose value is the instant it lapses, ten minutes after it was taken. A flush that
+  finds an unlapsed lease answers `Busy` and sends nothing; a flush releases its own lease when it
+  ends, by its token, so a flush that outlived its lease never releases the lease of the flush that
+  took over, and a lease whose flush died lapses on its own. The lease is the queue's coarse
+  exclusion; it is not what keeps one item from being sent twice, because it lapses after ten
+  minutes while its holder may still be sending.
+- **R16a: a held item is claimed, sent and settled, at most once.** In its first transaction the
+  flush moves each held row it will send from `held` to `sending`, writing its lease token in the
+  row's `claim`, by one update that matches only `held` rows; a row another flush claimed is never
+  read for sending. A push is made only for a row the flush claimed, and the settle that removes the
+  row, the relatch after a failed send and the abandonment each match that token. A flush that ends
+  gives back the rows it claimed and did not reach. A flush that finds a `sending` row whose claim has
+  lapsed (a claim is the instant its lease lapses) abandons it by name, "may have been sent", and
+  never pushes it, whether its claimant died after the push reached the owner or is still sending
+  past its lease. An abandonment reaches a log line naming the item, its claimant and why (expired,
+  over the queue bound, send failed, or may have been sent), and the recap line names it. Every held
+  item therefore ends delivered once, or abandoned by name; one whose fate is unknown is named, not
+  resent.
+- **R16b: a row the flush pushed is never given back.** A row joins the flush's pushed set when its
+  push answers delivered, before the write that settles it: a full render's row when its render
+  answers delivered, a held reaction's row when its reaction answers delivered, and every row the
+  recap line rolls up when the recap's push answers delivered. When the flush ends, on success or on
+  error, its release first abandons each row of the pushed set that it still claims, with its claim
+  kept, and only then gives back to `held` every other row it still claims. So when the write after
+  a delivered push fails (the settle, the decision record or its commit), the flush ends with that
+  error, and the row it pushed is never given back to `held` and never pushed again: a log line
+  names the item, its claimant and "may have been sent", and the next recap names it "may have been
+  sent". A row the failed flush never pushed is given back untouched and reaches the owner at a
+  later flush. The release is one write with the lease's release; when that write fails too, the
+  rows stay claimed, and R16a abandons them by name once their claim lapses.
+- **R17: the job process has a router.** Only the bot's process held a router, so the scheduled job's
+  process built none. The `held_flush` job builds its own from the policy, the owner's chat and the
+  bot's credentials, through a service drop-in that loads the same two credentials the bot loads. The
+  job answers done for a flush that ran, one inside the window and one that found the lease taken;
+  it answers not delivered while the outage breaker is open, and fails by name with `no_notifier`
+  when no bot is joined or `flush_failed` when the flush errs.
+- **The surface.** The flush sends through the bot's transport and records its decisions in the
+  decision ledger the Mini App feed reads, so both surfaces see the same decisions.
+- **What this does NOT do.**
+  - It is not a readings step: the readings jobs are #39's, and the flush is its own job.
+  - It does not re-check the window at each send of one flush: a flush that starts just before the
+    window opens delivers its held items under the check made at its start (#291).
+  - It adds no table. It adds one column, `claim`, and the state `sending`, to `notification_queue`
+    (migration 004102, a rebuild of the table that re-creates every index and trigger the old table
+    had, of which there were none), and the lease stays a settings row that the data-rights export
+    lists while it is held (#291).
+  - It does not resend a row whose claimant is gone: that row is abandoned by name, "may have been
+    sent", so a send that reached the owner and was never settled is never doubled (#291).
+
+File manifest of the amendment:
+
+| path | change |
+|---|---|
+| `crates/notifications/src/router.rs` | the lease, the `Busy` answer, the flush's split into the lease and the delivery, and the claim, token-matched settle and named abandonment |
+| `crates/notifications/src/ledger.rs` | the claim of held rows, the token-matched settle, relatch and abandon, and the lapsed-claim abandonment |
+| `migrations/004102_notifications_queue_claim.sql` | the `sending` state and the `claim` column (a STRICT rebuild) |
+| `crates/notifications/src/data_rights.rs` | the export and erasure of the `claim` column |
+| `crates/coordination/src/held_flush.rs` | the job's work and its answers |
+| `crates/coordination/src/jobs.rs` | the `held_flush` entry of the job table |
+| `crates/daemon/src/role_job.rs` | the job process builds its router and runs `held_flush` |
+| `deploy/systemd/deck-streak-job@held_flush.timer` | the timer, at 07:36 UTC with catch-up |
+| `deploy/systemd/deck-streak-job@held_flush.service.d/20-bot-credentials.conf` | the bot's two credentials for the job |
+| `deploy/README.md`, `deploy/rail-contract.json` | the schedule and credential rows, and the rail's calendar |
+| `crates/coordination/tests/held_flush.rs`, `held_flush_calendar.rs`, `held_flush_answers.rs` | A19, A20 and A21 |
+| `crates/notifications/tests/flush_lease.rs`, `flush_outlives_lease.rs` | A20's lease cases, and the cases of a flush that outlives its lease or dies after its push |
+| `crates/notifications/tests/flush_fails_after_push.rs` | A23: a flush whose write after a delivered push fails |
+| `formal/tla/HeldFlush/` | the model of two flushers over one queue |
+
+## 9. Acceptance criteria of the held-flush amendment
+
+| # | criterion | test |
+|---|---|---|
+| A19 | over every flusher (the flush after a scheduled sync, the scheduled step, the flush after an owner-triggered sync), every clock position of the window read from the policy (before it, at its start, inside, at its end, after it, across midnight) and every hold state (fresh, at the age limit, past it, already delivered), the delivered set and the abandoned set are exactly the expected ones, and a flush inside the window delivers nothing | `every_flusher_delivers_once_or_abandons_by_name_and_only_while_the_window_is_open` |
+| A20 | a flush that finds an unlapsed lease answers `Busy` and sends nothing, a lease that lapsed this instant is taken over, the lease holds ten minutes and is released when the flush ends | `two_flushers_over_one_queue_never_send_one_item_twice`, `a_flush_finds_an_unlapsed_lease_and_sends_nothing`, `a_lease_that_lapsed_this_instant_is_taken_over`, `the_lease_holds_for_ten_minutes_and_is_released_when_the_flush_ends` |
+| A22 | a held item reaches the owner at most once: a flush that outlives its lease is never doubled by a second flush, a flush that dies after its push reached is never resent and is named "may have been sent", a row another flush claimed is never sent, a late settle by a flush that lost its claim removes nothing, every abandonment reaches a log line naming the item and its claimant, and the claim migration keeps every index and trigger | `a_flush_that_outlives_its_lease_is_never_doubled_by_a_second_flush`, `a_flush_that_dies_after_its_send_reached_is_never_resent`, `a_row_another_flush_claimed_inside_its_claim_is_never_sent`, `a_late_settle_by_a_flush_that_lost_its_claim_removes_nothing`, `a_lapsed_claim_is_abandoned_by_name_in_the_log`, `a_failed_send_that_spent_its_retries_is_abandoned_by_name_in_the_log`, `the_claim_migration_keeps_every_index_and_trigger_the_queue_had` |
+| A21 | every flush step of the job table and of the deploy templates fires outside the quiet window read from the policy, a slot inside it is told from one outside it, and the job answers done, not delivered or a named refusal for each answer of the flush | `every_flush_step_of_the_job_table_fires_outside_the_quiet_window`, `every_flush_step_of_the_deploy_templates_fires_outside_the_quiet_window`, `the_check_tells_a_slot_inside_the_window_from_one_outside_it`, `a_flush_that_ran_and_one_inside_the_window_are_done`, `a_flush_whose_lease_is_held_elsewhere_is_done`, `an_open_breaker_is_a_send_attempted_and_nothing_delivered`, `a_router_with_no_bot_is_a_named_refusal` |
+| A23 | a flush whose write after a delivered push fails never pushes that row again and names it "may have been sent", for a full render, a row the recap line rolls up and a held reaction alike, and a row the failed flush never pushed is given back and reaches the owner at a later flush; a log line names the pushed item, its claimant and "may have been sent" | `a_settle_that_fails_after_a_full_render_is_not_followed_by_a_second_push`, `a_settle_that_fails_after_a_recap_is_not_followed_by_a_second_delivery`, `a_settle_that_fails_after_a_reaction_is_not_followed_by_a_second_reaction`, `a_row_the_failed_flush_never_pushed_reaches_the_owner_at_a_later_flush`, `a_settle_that_fails_after_a_push_names_the_item_and_its_claimant_in_the_log` |
+
+```acceptance
+A19: cargo test -p deck-streak-coordination --test held_flush -- --exact every_flusher_delivers_once_or_abandons_by_name_and_only_while_the_window_is_open
+A20: cargo test -p deck-streak-coordination --test held_flush -- --exact two_flushers_over_one_queue_never_send_one_item_twice
+A20: cargo test -p deck-streak-notifications --test flush_lease
+A22: cargo test -p deck-streak-notifications --test flush_outlives_lease
+A21: cargo test -p deck-streak-coordination --test held_flush_calendar
+A21: cargo test -p deck-streak-coordination --test held_flush_answers
+A23: cargo test -p deck-streak-notifications --test flush_fails_after_push
+```

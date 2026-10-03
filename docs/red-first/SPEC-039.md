@@ -257,6 +257,144 @@ A45 has two tests, and the fence holds one line for the criterion; the other tes
 test_a_bin_killer_beside_a_tests_bin_rs_is_refused: AssertionError: 'census: S00060-BIN-SHADOW: its killer bin::tests::three_triples_to_nine crates/fix has a test target bin, which the bin kind shadows' not found in 'examined 1 row(s)\n'
 ```
 
+## Addendum: the `bin` kind reads what the compiler builds (section 19, issue #405)
+
+The tests of A46 to A49 were committed first, alone, at a3d4ff9b, against the runner as it stood
+on `dev`. They fail by assertion, not by error: the generated population agreed with the oracle on
+75 of its 165 members, and each planted shape of the issue failed
+for its own reason. The runner's fix went green at 9595183f. The population was then widened (over
+`cfg`, lexemes and blocks at e43c60ef, over target dedupe, dotted paths and unpathed tables at
+349d2423) and A50's refusals and A51's predicate test were added with them (A51 at da82cca3), each green on arrival against the fixed
+reader and proved by the mutants listed in the pull request.
+
+```red-first
+A46: red at a3d4ff9b: AssertionError: 75 != 165 : a member was neither agreed nor refused
+A46: green at 9595183f
+A47: red at a3d4ff9b: AssertionError: Lists differ: ['src/main.rs', 'src/x.rs'] != ['src/main.rs']
+A47: green at 9595183f
+A48: red at a3d4ff9b: AssertionError: KillerUnresolved not raised
+A48: green at 9595183f
+A49: red at a3d4ff9b: AssertionError: "holds 2 binaries," does not match "crates/fix holds 3 binaries, and a bin killer names none of them"
+A49: green at 9595183f
+A50: not red: its first cases passed against the unchanged runner, and the cases added with the fix's widening (a file module in a block, a malformed declaration, a missing binary file) test code the fix introduced
+A51: not red: it tests `cfg_value`, which the fix introduced and `dev` does not have, so there is no runner to fail; mutants of the function prove it instead
+```
+
+The examined lines: at the fix (9595183f) the population read `examined 165 generated crate
+layouts` and `agreed with the oracle 162, refused by name 3`; at da82cca3 it reads `examined 268
+generated crate layouts` and `agreed with the oracle 247, refused by name 21`, and A51 reads
+`examined 2406 predicates` with `329 decided, every one equal to rustc's value`. At 630c25db and at
+bc6ee994 it reads `examined 316 generated crate layouts` and `agreed with the oracle 292, refused
+by name 24`. Those two commits pin the token reader's nested block comments and then bound that
+scan by the input's length; the test added at 630c25db reads `nested block comment shapes examined
+5` and passes at both, so the bound changed no reading the test sees.
+
+## Addendum: the five classes the population did not hold (section 21, issue #405, 2026-10-01)
+
+The families of section 21 were committed first, alone, at 24ec6c76, against the reader as it
+stood at 6d3a9638. They fail by assertion, and the failing members are those of the five classes:
+a `mod` inside a macro invocation, a path through `..`, a dotfile, an absolute path, and a manifest
+with no `edition` key. The reader's fix went green at 87d385df. A53 pins a bound the reader already
+had, so it is not red.
+
+```red-first
+A52: red at 24ec6c76: AssertionError: 1186 != 1610 : a member was neither agreed nor refused
+A52: green at 87d385df
+A53: not red: it pins the block-comment bound the reader already had; under the mutant that shortens the bound by three it fails with AssertionError: '/*x' reads ['x'], where [] is due
+```
+
+The planted refusals of A50 for an edition the reader cannot decide were red at 24ec6c76 for their
+own reason:
+
+```text
+AssertionError: KillerUnresolved not raised
+```
+
+The examined lines at 87d385df read `examined 1610 generated crate layouts` and `agreed with the
+oracle 1523, refused by name 87`, and the block-comment test reads `examined 13344 block comments
+left open`.
+
+## Addendum, 2026-10-01: a docstring-only script change is named (issue #485)
+
+A61 to A64 are the acceptance criteria of section 29, made by issue #485's delivery, and A64 also
+closes issue #455. Each was written red at 095f02e, where the plan reads a docstring as a code line
+and the PLAN paragraph of `scripts/mutation-verdict.py` names neither leg `ci` admits a skip from
+nor the `scripts` output, and each red fails by assertion. A61 to A63 are green at fca5457, which
+adds the `docstring-only` case to the plan; A64 is green at e56feb2, which corrects the paragraph.
+The original lines above stand.
+
+```red-first
+A61: red at 095f02e: AssertionError: "mutation: plan: scripts does not apply: not-applicable: docstring-only: every changed script's syntax tree equals its base's once docstrings are set aside: scripts/guard.py\n" not found in 'mutation: plan: diff: the local run is judged on its diff\nmutation: plan: 1 changed path(s): rust 0, web 0, oracle 0, scripts 1, other 0 (base 1ed1a24, head 4bba867)\nmutation: plan: rust does not apply: not-applicable: the diff changes no rust production file\nmutation: plan: web does not apply: not-applicable: the diff changes no web production file\nmutation: plan: oracle does not apply: not-applicable: the diff changes no oracle production file\nmutation: plan: scripts applies: 2 production code line(s) in 1 file(s)\nmutation: plan: 0 row(s) selected: none\n'
+A61: green at fca5457
+A62: red at 095f02e: AssertionError: Lists differ: ["a module docstring: read ('applies', Non[505 chars]'])"] != []
+A62: green at fca5457
+A63: red at 095f02e: AssertionError: Lists differ: ["two docstring-only files: read ('applies[392 chars]'])"] != []
+A63: green at fca5457
+A64: red at 095f02e: AssertionError: Lists differ: [] != ['mutation-rows', 'mutation-rust']
+A64: green at e56feb2
+```
+
+A64's test holds two subtests, and the fence holds one line for the criterion; the other
+subtest's red at 095f02e, verbatim:
+
+```text
+test_the_plan_paragraph_names_the_legs_ci_admits_and_the_outputs_it_writes [the step outputs the plan writes]: AssertionError: Lists differ: ['case', 'mutate', 'oracle', 'rows', 'rust', 'scope', 'web'] != ['case', 'mutate', 'oracle', 'rows', 'rust', 'scope', 'scripts', 'web']
+```
+
+The house Python mutant runner, run over this delivery's diff at e56feb2, listed 50 mutants of
+`scripts/mutation-verdict.py`, killed 49 and left one surviving: `replace continue with break in
+docstring_only`, at the `continue` that passes over a file outside the `scripts` class. 2082197 adds
+two members to A62, a docstring change beside a change to a file outside the class, which is named,
+and a code change in a later script with a file outside the class between, which applies. It also
+limits A62's check of the runner's listing to the files whose lines the plan set aside, since a file
+outside the class is no source the runner lists. Under that mutant A62 then reads 2 mismatches, one
+for each new member, and the runner at 2082197, over that one mutant, reads `killed 1, survived 0`,
+its killer A62. The 20-member A62 is red at 095f02e's plan, by assertion:
+
+```text
+A62 at 2082197's test, over 095f02e's plan: AssertionError: Lists differ: ["a module docstring: read ('applies', Non[637 chars]'])"] != []
+```
+
+At bfb00d2 the tests read without a site the census in `scripts/tests/test_ci_workflows.py` counts
+as dynamic: A62's control empties each statement list in place, A62's and A63's in-process verdict
+reads the plan through `dataclasses.asdict`, and A64 reads the `legs` function from the script's
+syntax tree. Each reading is unchanged, and A61 to A64 as bfb00d2 writes them are red at 095f02e's
+code by the same assertions as above, A62 with 7 mismatches.
+
+## Addendum, 2026-10-02: the plan reads a declared encoding from the bytes (issue #485, round 2)
+
+The PEP 263 class is criterion A65 of the SPEC, a population of its own beside A62's. The plan parsed the file's text after decoding it as UTF-8,
+and a text source ignores a coding declaration, so a declaration that changes a value, one that
+stops the head compiling and an unknown encoding were each named docstring-only. The plan now
+parses the bytes, so a declared encoding decides the tree compared, and a file whose bytes are not
+UTF-8 still fails closed. The new test is selected by
+
+```text
+python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k a_declared_encoding_decides_the_tree_compared
+```
+
+It is red at 5bcbe0124973347119134cc11c91edfd529d9c92 by assertion; four of its six members fail, the declared UTF-8 control and the
+member whose bytes are not UTF-8 read as before:
+
+```red-first
+A65: red at 5bcbe0124973347119134cc11c91edfd529d9c92: AssertionError: Lists differ: ["a latin-1 escape rewritten as raw bytes,[463 chars]ne)"] != []
+A65: green at c3845425ac8f886636cdab6326529e174302bb55
+```
+
+```text
+Ran 1 test
+
+FAILED (failures=1)
+cookie population: 6 member(s); mismatches 4
+```
+
+The first red line names, verbatim, `a latin-1 escape rewritten as raw bytes, a value changes: read
+('named', ['scripts/cookie.py']), expected ('applies', None)`. At c3845425ac8f886636cdab6326529e174302bb55 the whole module reads
+`Ran 30 tests` and OK, and the population reads `cookie population: 6 member(s); mismatches 0`.
+
+The module now holds seven members, the seventh (a latin-1 declaration removed beside a
+docstring edit) being mutation coverage added after the round-2 PASS, green at its own commit and
+not red-first evidence.
 ## Addendum, 2026-09-29: a missing tool is a refusal (issue #431)
 
 A46 to A49 are the acceptance criteria of section 20, made by issue #431's delivery. A46 to A48

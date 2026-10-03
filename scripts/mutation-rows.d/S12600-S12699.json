@@ -1,0 +1,214 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S12600-A-THE-SLOT-CHECK-IS-KEPT",
+        "scripts/mutation-verdict.py",
+        "        elif report.get(\"shard\") != f\"{shard}/{planned}\":\n",
+        "        elif False:\n",
+        "a report is read only when its own shard field names the slot it sits in, so a copy of another shard's report, or a swap, is refused by name (SPEC-126 A8)",
+        "test_mutation_python_shard_binding.TheReportIsBoundToItsSlotAndItsListing.test_a_report_counts_only_in_its_own_slot"
+      ],
+      [
+        "S12601-B-A-FOREIGN-SLOT-FIELD-IS-NOT-ONLY-AN-ABSENT-ONE",
+        "scripts/mutation-verdict.py",
+        "        elif report.get(\"shard\") != f\"{shard}/{planned}\":\n",
+        "        elif report.get(\"shard\") is None:\n",
+        "a shard field that names another slot is refused as much as an absent one (SPEC-126 A8)",
+        "test_mutation_python_shard_binding.TheReportIsBoundToItsSlotAndItsListing.test_a_report_counts_only_in_its_own_slot"
+      ],
+      [
+        "S12602-C-THE-LISTING-CHECK-IS-KEPT",
+        "scripts/mutation-verdict.py",
+        "        elif (drift := shard_listing_drift(plan, shard, report)) is not None:\n",
+        "        elif False:\n",
+        "a report is read only when it examined the mutants the plan lists for its shard (SPEC-126 A9)",
+        "test_mutation_python_shard_binding.TheReportIsBoundToItsSlotAndItsListing.test_a_report_counts_only_the_mutants_its_shard_lists"
+      ],
+      [
+        "S12603-D-THE-LISTING-IS-COMPARED-BY-NAME-NOT-BY-COUNT",
+        "scripts/mutation-verdict.py",
+        "    if not missing and not extra:\n",
+        "    if len(missing) == len(extra):\n",
+        "a report holding as many mutants as listed, but not the same ones, differs from the listing (SPEC-126 A9)",
+        "test_mutation_python_shard_binding.TheReportIsBoundToItsSlotAndItsListing.test_a_report_counts_only_the_mutants_its_shard_lists"
+      ],
+      [
+        "S12604-E-AN-EXTRA-MUTANT-IS-REFUSED",
+        "scripts/mutation-verdict.py",
+        "    extra = sorted((examined - listed).elements())\n",
+        "    extra = []\n",
+        "a mutant the plan did not list for the shard, another shard's or none's, or a repeat of its own, is refused (SPEC-126 A9)",
+        "test_mutation_python_shard_binding.TheReportIsBoundToItsSlotAndItsListing.test_a_report_counts_only_the_mutants_its_shard_lists"
+      ],
+      [
+        "S12605-F-A-MISSING-MUTANT-IS-REFUSED",
+        "scripts/mutation-verdict.py",
+        "    missing = sorted((listed - examined).elements())\n",
+        "    missing = []\n",
+        "a report trimmed of a listed mutant is refused, so the verdict never counts less work than the plan promised (SPEC-126 A9)",
+        "test_mutation_python_shard_binding.TheReportIsBoundToItsSlotAndItsListing.test_a_report_counts_only_the_mutants_its_shard_lists"
+      ],
+      [
+        "S12606-G-EACH-SHARD-IS-COMPARED-TO-ITS-OWN-LISTING",
+        "scripts/mutation-verdict.py",
+        "            if isinstance(entry, dict) and entry.get(\"shard\") == shard\n",
+        "            if isinstance(entry, dict)\n",
+        "a shard report is held against the listing of its own shard and no other (SPEC-126 A9)",
+        "test_mutation_python_shard_binding.TheReportIsBoundToItsSlotAndItsListing.test_a_report_counts_only_in_its_own_slot"
+      ],
+      [
+        "S12607-I-A-SLOT-OF-ANOTHER-COUNT-IS-REFUSED",
+        "scripts/mutation-verdict.py",
+        "        elif report.get(\"shard\") != f\"{shard}/{planned}\":\n",
+        "        elif str(report.get(\"shard\")).split(\"/\")[0] != str(shard):\n",
+        "the shard field is compared whole, so a report of a run sized to another count is refused (SPEC-126 A8)",
+        "test_mutation_python_shard_binding.TheReportIsBoundToItsSlotAndItsListing.test_a_report_counts_only_in_its_own_slot"
+      ],
+      [
+        "S12608-J-A-FILES-OF-ANOTHER-TYPE-IS-REFUSED",
+        "scripts/mutation-verdict.py",
+        "    if not isinstance(files, list):\n",
+        "    if False:\n",
+        "a report whose files is not a list is refused by name, never iterated (SPEC-126 A10)",
+        "test_mutation_python_shard_binding.TheBindingAndTheJudgeReadOneReport.test_a_report_is_read_as_the_judge_reads_it"
+      ],
+      [
+        "S12609-K-AN-ENTRY-OF-ANOTHER-TYPE-IS-REFUSED",
+        "scripts/mutation-verdict.py",
+        "        if not isinstance(entry, dict):\n",
+        "        if False:\n",
+        "an entry of a report's files that is not an object is refused by name (SPEC-126 A10)",
+        "test_mutation_python_shard_binding.TheBindingAndTheJudgeReadOneReport.test_a_report_is_read_as_the_judge_reads_it"
+      ],
+      [
+        "S12610-L-A-MUTANTS-OF-ANOTHER-TYPE-IS-REFUSED",
+        "scripts/mutation-verdict.py",
+        "        if not isinstance(mutants, list):\n",
+        "        if False:\n",
+        "an entry whose mutants is not a list, truthy or falsy, is refused by name (SPEC-126 A10)",
+        "test_mutation_python_shard_binding.TheBindingAndTheJudgeReadOneReport.test_a_report_is_read_as_the_judge_reads_it"
+      ],
+      [
+        "S12611-M-A-RECORD-OF-ANOTHER-TYPE-IS-REFUSED",
+        "scripts/mutation-verdict.py",
+        "            if not isinstance(mutant, dict):\n",
+        "            if False:\n",
+        "a mutant record that is not an object is refused by name (SPEC-126 A10)",
+        "test_mutation_python_shard_binding.TheBindingAndTheJudgeReadOneReport.test_a_report_is_read_as_the_judge_reads_it"
+      ],
+      [
+        "S12612-N-AN-OUTCOME-OFF-THE-RUNNERS-VOCABULARY-IS-REFUSED",
+        "scripts/mutation-verdict.py",
+        "            if not isinstance(outcome, str) or outcome not in mutation_python.OUTCOMES:\n",
+        "            if not isinstance(outcome, str):\n",
+        "an outcome the runner does not name is refused by name, so the judge never counts a survivor as nothing (SPEC-126 A10)",
+        "test_mutation_python_shard_binding.TheBindingAndTheJudgeReadOneReport.test_a_report_is_read_as_the_judge_reads_it"
+      ],
+      [
+        "S12613-O-A-MUTANT-UNDER-AN-UNREAD-PATH-IS-REFUSED",
+        "scripts/mutation-verdict.py",
+        "            if mutants:\n",
+        "            if False:\n",
+        "a mutant filed under an entry whose path no applicable class reads is refused by name (SPEC-126 A10)",
+        "test_mutation_python_shard_binding.TheBindingAndTheJudgeReadOneReport.test_a_report_is_read_as_the_judge_reads_it"
+      ],
+      [
+        "S12614-P-ONLY-AN-APPLICABLE-CLASS-IS-READ",
+        "scripts/mutation-verdict.py",
+        "        if isinstance(classes.get(name), dict) and classes[name].get(\"applies\")\n",
+        "        if isinstance(classes.get(name), dict)\n",
+        "a path is read only when its class applies in the plan, so a mutant under another class's path is refused (SPEC-126 A10)",
+        "test_mutation_python_shard_binding.TheBindingAndTheJudgeReadOneReport.test_a_report_is_read_as_the_judge_reads_it"
+      ],
+      [
+        "S12615-Q-BYTE-READERS-OF-ANOTHER-TYPE-ARE-REFUSED",
+        "scripts/mutation-verdict.py",
+        "        if readers and not isinstance(readers, list):\n",
+        "        if False:\n",
+        "an entry whose byte readers is not a list is refused by name, never iterated (SPEC-126 A10)",
+        "test_mutation_python_shard_binding.TheBindingAndTheJudgeReadOneReport.test_a_report_is_read_as_the_judge_reads_it"
+      ],
+      [
+        "S12616-R-A-READ-REFUSAL-IS-VOID-NOT-SAID",
+        "scripts/mutation-verdict.py",
+        "            verdict.void(f\"{where}: {refusal}\")\n",
+        "            verdict.say(f\"{where}: {refusal}\")\n",
+        "a report the reader refuses is VOID naming its shard, not a line said and passed over (SPEC-126 A10)",
+        "test_mutation_python_shard_binding.TheBindingAndTheJudgeReadOneReport.test_a_report_is_read_as_the_judge_reads_it"
+      ],
+      [
+        "S12617-S-A-MUTANT-IS-NAMED-AS-TEXT",
+        "scripts/mutation-verdict.py",
+        "        str(mutant.get(\"name\")) for entry in report[\"files\"] for mutant in entry.get(\"mutants\", [])\n",
+        "        mutant.get(\"name\") for entry in report[\"files\"] for mutant in entry.get(\"mutants\", [])\n",
+        "a mutant's name is read as text, so a name of another type differs from the listing and is refused, never a crash (SPEC-126 A10)",
+        "test_mutation_python_shard_binding.TheBindingAndTheJudgeReadOneReport.test_a_report_is_read_as_the_judge_reads_it"
+      ],
+      [
+        "S12618-T-A-PLAN-LISTING-THAT-IS-NOT-A-LIST-REFUSES",
+        "scripts/mutation-verdict.py",
+        "    if held is None or not isinstance(held.get(\"mutants\"), list):\n",
+        "    if held is None:\n",
+        "a plan whose listing for a shard is not a list refuses the shard's report (SPEC-126 A9)",
+        "test_mutation_python_shard_binding.TheReportIsBoundToItsSlotAndItsListing.test_a_plan_that_lists_no_mutants_for_a_shard_refuses_its_report"
+      ],
+      [
+        "S12619-U-A-PLAN-WITH-NO-LISTING-REFUSES",
+        "scripts/mutation-verdict.py",
+        "        return \"the plan lists no mutants for this shard\"\n",
+        "        return None\n",
+        "a plan with no listing for a shard refuses the shard's report (SPEC-126 A9)",
+        "test_mutation_python_shard_binding.TheReportIsBoundToItsSlotAndItsListing.test_a_plan_that_lists_no_mutants_for_a_shard_refuses_its_report"
+      ],
+      [
+        "S12620-V-A-SKIPPED-ENTRY-DOES-NOT-END-THE-READ",
+        "scripts/mutation-verdict.py",
+        "                return [], f\"it files {len(mutants)} mutant(s) under {path}, which no class reads\"\n            continue\n",
+        "                return [], f\"it files {len(mutants)} mutant(s) under {path}, which no class reads\"\n            break\n",
+        "an entry under a path no class reads, with no mutants, is skipped and the reader goes on: a later entry that holds a refusal is still read and refused by name (SPEC-126 A10)",
+        "test_mutation_python_shard_binding.ASkippedEntryDoesNotHideALaterOne.test_a_skipped_entry_before_a_bad_one_is_refused"
+      ],
+      [
+        "S12621-V-A-DRIFT-TAIL-NAMES-THE-EXTRA-MUTANTS",
+        "scripts/mutation-verdict.py",
+        "        f\"({', '.join(missing[:3])}) and {len(extra)} extra ({', '.join(extra[:3])})\"\n",
+        "        f\"({', '.join(missing[:3])}) and {len(extra)} extra ()\"\n",
+        "the drift refusal names the first three extra mutants as well as the first three missing ones; a tail that drops the extra names is refused by the pin on the whole line (SPEC-126 A10)",
+        "test_mutation_python_shard_binding.EveryVariablePartOfAMessageIsPinned.test_a_mutated_field_of_an_asserted_message_fails_a_pin"
+      ],
+      [
+        "S12622-V-A-RECORD-REFUSAL-NAMES-ITS-PATH",
+        "scripts/mutation-verdict.py",
+        "f\"a mutant record of {path} is a {type(mutant).__name__}, not an object\"",
+        "f\"a mutant record of  is a {type(mutant).__name__}, not an object\"",
+        "the refusal of a mutant record that is not an object names the path of the entry that holds it (SPEC-126 A10)",
+        "test_mutation_python_shard_binding.TheReportIsBoundToItsSlotAndItsListing.test_a_mutant_record_that_is_not_an_object_is_an_extra_mutant"
+      ],
+      [
+        "S12623-V-A-RECORD-REFUSAL-NAMES-ITS-TYPE",
+        "scripts/mutation-verdict.py",
+        "f\"a mutant record of {path} is a {type(mutant).__name__}, not an object\"",
+        "f\"a mutant record of {path} is a , not an object\"",
+        "the refusal of a mutant record that is not an object names the type of the record it found (SPEC-126 A10)",
+        "test_mutation_python_shard_binding.TheReportIsBoundToItsSlotAndItsListing.test_a_mutant_record_that_is_not_an_object_is_an_extra_mutant"
+      ],
+      [
+        "S12624-V-A-DRIFT-TAIL-COUNTS-ARE-NOT-SWAPPED",
+        "scripts/mutation-verdict.py",
+        "f\"it did not examine the mutants the plan lists for it: {len(missing)} missing \"\n        f\"({', '.join(missing[:3])}) and {len(extra)} extra ({', '.join(extra[:3])})\"",
+        "f\"it did not examine the mutants the plan lists for it: {len(extra)} missing \"\n        f\"({', '.join(missing[:3])}) and {len(missing)} extra ({', '.join(extra[:3])})\"",
+        "the drift refusal reads its missing count first and its extra count second; a tail that swaps them is refused by the pin on a report that drops one listed mutant and adds two (SPEC-126 A10)",
+        "test_mutation_python_shard_binding.EveryVariablePartOfAMessageIsPinned.test_a_mutated_field_of_an_asserted_message_fails_a_pin"
+      ],
+      [
+        "S12625-V-A-DRIFT-TAIL-MISSING-COUNT-IS-COUNTED",
+        "scripts/mutation-verdict.py",
+        "f\"it did not examine the mutants the plan lists for it: {len(missing)} missing \"\n        f\"({', '.join(missing[:3])}) and {len(extra)} extra ({', '.join(extra[:3])})\"",
+        "f\"it did not examine the mutants the plan lists for it: {4} missing \"\n        f\"({', '.join(missing[:3])}) and {len(extra)} extra ({', '.join(extra[:3])})\"",
+        "the drift refusal counts the missing mutants rather than printing a constant; a tail that prints the constant 4 is refused by the pin on a report that drops one listed mutant and adds two (SPEC-126 A10)",
+        "test_mutation_python_shard_binding.EveryVariablePartOfAMessageIsPinned.test_a_mutated_field_of_an_asserted_message_fails_a_pin"
+      ]
+    ]
+  }
+}

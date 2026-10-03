@@ -1,0 +1,21 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT EXISTS (SELECT 1 FROM coin_ledger WHERE source = ?1 AND reference = ?2)\n               AS \"ever!: bool\"",
+  "describe": {
+    "columns": [
+      {
+        "name": "ever!: bool",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "234ac5b4f9e123e92e1ab9506f476f4df585ea27579158b6dc81d0b49f3833be"
+}

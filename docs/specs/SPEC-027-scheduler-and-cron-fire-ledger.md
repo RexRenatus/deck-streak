@@ -276,3 +276,73 @@ database.
 
 Amendment (2026-09-28): passages describing another service's operations were replaced with neutral
 reserved minutes, or removed, under the public-text rule (ADR-059).
+
+## 8. Amendments, 2026-10-02: what each count of the job table's spread pins (#462)
+
+Insert-only: every earlier byte is kept in order, and this amendment inserts sections 8 and 9.
+
+- **Two counts, two pins.** A17's spread judges the scheduled sync at every rollover hour (24), at
+  five UTC offsets and on 30 study days. The examined count is the number of fires judged: it pins
+  the population's size, 3,600. The distinct count is the number of different members the judges
+  were handed: a member is the rollover hour and the UTC offset of the rule a judge is handed and
+  the instant it is handed, each recorded inside the judge's own call from what it was handed,
+  never from the generator's loop variables. It pins the spread itself, 3,600, a figure the test
+  computes as 24 x 5 x 30 outside the generator.
+- **Why both.** A generator that folds members (an offset listed twice, an hour listed twice, a
+  day listed twice) still judges 3,600 fires, so the examined count cannot see it; the distinct
+  count reads 2,880, 3,450 or 3,480 and refuses it. The check that one sync follows the last one's
+  study day by exactly one runs after the spread is judged, so a repeated day is refused by the
+  distinct count, the criterion's reason, and not by that check.
+- **What A18 holds.** Three generator plants, a repeated offset, a repeated hour and a repeated
+  day, each read red by the distinct count, with the examined count unchanged. The mutation row
+  S02701 folds the member record (it records one offset for every judge) and reads KILLED by A17.
+
+The amendment changes `crates/coordination/tests/job_table.rs` (A17's spread, now judged by
+members it records, and A18), `docs/red-first/SPEC-027.md` (the lines of this date) and this SPEC,
+and it adds `scripts/mutation-rows.d/S02700-S02799.json` (the band's first row, S02701) and shares
+the changelog fragment `changelog.d/fold-settles-once-311.md` with SPEC-071's amendment of this
+date. A17's criterion and its fenced command are unchanged.
+
+Section 4's rows that the amendment leaves as they are:
+
+- `crates/coordination/src/jobs.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/coordination/src/ledger.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/coordination/src/runner.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/coordination/src/liveness.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/coordination/src/maintenance.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/coordination/src/delivery.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/coordination/src/data_rights.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/coordination/src/lib.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/coordination/Cargo.toml`: unchanged by the amendment of 2026-10-02.
+- `crates/coordination/tests/ledger.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/coordination/tests/runner.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/coordination/tests/liveness.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/coordination/tests/maintenance.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/coordination/tests/data_rights.rs`: unchanged by the amendment of 2026-10-02.
+- `Cargo.lock`: unchanged by the amendment of 2026-10-02.
+- `crates/daemon/src/role_job.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/daemon/src/main.rs`: unchanged by the amendment of 2026-10-02.
+- `crates/daemon/tests/roles.rs`: unchanged by the amendment of 2026-10-02.
+- `migrations/002701_coordination_cron_fires.sql`: unchanged by the amendment of 2026-10-02.
+- `.sqlx/`: unchanged by the amendment of 2026-10-02.
+- `tools/parity-oracle/registry/spec_027.py`: unchanged by the amendment of 2026-10-02.
+- `tools/parity-oracle/goldens/cron_ledger.json`: unchanged by the amendment of 2026-10-02.
+- `tools/parity-oracle/goldens/catchup.json`: unchanged by the amendment of 2026-10-02.
+- `tools/parity-oracle/goldens/tick_minutes.json`: unchanged by the amendment of 2026-10-02.
+- `tools/parity-oracle/goldens/signed_skew.json`: unchanged by the amendment of 2026-10-02.
+- `tools/parity-oracle/goldens/rollover_skew.json`: unchanged by the amendment of 2026-10-02.
+- `tools/parity-oracle/goldens/predecessor_schedule.json`: unchanged by the amendment of 2026-10-02.
+- `tools/parity-oracle/goldens/scheduler.constants.json`: unchanged by the amendment of 2026-10-02.
+- `docs/CONTEXT-MAP.md`: unchanged by the amendment of 2026-10-02.
+- `docs/schematics/cron-fire-ledger-and-catch-up.md`: unchanged by the amendment of 2026-10-02.
+- `docs/decisions/ADR-027-scheduled-jobs-as-systemd-timers-with-a-ledger.md`: unchanged by the amendment of 2026-10-02.
+
+## 9. Acceptance criteria of the 2026-10-02 spread amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A18 | a spread whose generator folds its members (a repeated offset, a repeated hour, a repeated day) reads red by its distinct member count, with its examined count unchanged | `a_spread_that_folds_its_members_reads_red_by_the_distinct_count` |
+
+```acceptance
+A18: cargo test -p deck-streak-coordination --test job_table -- --exact a_spread_that_folds_its_members_reads_red_by_the_distinct_count
+```

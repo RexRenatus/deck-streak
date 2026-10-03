@@ -23,6 +23,40 @@
 #   _READY_SECONDS, _READY_POLL, _KEEP   the host's paths and the readiness and keep settings
 set -euo pipefail
 
+# Every setting the script reads, named once (ADR-198). A Caddy step refuses any other deploy
+# setting, in the environment it received or among its variables, before it reads or writes
+# anything, so a name it does not list can never choose where it writes.
+SETTINGS='
+DECKSTREAK_DEPLOY_REPO DECKSTREAK_DEPLOY_HOST DECKSTREAK_DEPLOY_ELEVATE DECKSTREAK_DEPLOY_CHECKOUT
+DECKSTREAK_DEPLOY_ROOT DECKSTREAK_DEPLOY_UNIT_DIR DECKSTREAK_DEPLOY_ENV_FILE
+DECKSTREAK_DEPLOY_CADDY_DIR DECKSTREAK_DEPLOY_CADDYFILE DECKSTREAK_DEPLOY_CADDY_CONFIG
+DECKSTREAK_DEPLOY_READY_SECONDS DECKSTREAK_DEPLOY_READY_POLL DECKSTREAK_DEPLOY_KEEP
+'
+case "${1:-}" in
+caddy-install | caddy-remove)
+    for name in ${!DECKSTREAK_DEPLOY_@}; do
+        named=
+        for setting in $SETTINGS; do [ "$name" != "$setting" ] || named=1; done
+        [ -n "$named" ] || { echo "deploy: $name is not a setting of deploy.sh" >&2; exit 1; }
+    done
+    # Bash makes a variable only of a name it can spell, yet hands every other entry to what it
+    # runs, so the refusal also reads each entry the step received, as the kernel keeps it.
+    mapfile -t -d '' received </proc/self/environ && [ "${#received[@]}" -gt 0 ] ||
+        { echo "deploy: the environment this step received could not be read" >&2; exit 1; }
+    given=' '
+    for entry in "${received[@]}"; do
+        key=${entry%%=*}
+        case $key in DECKSTREAK_DEPLOY_*) ;; *) continue ;; esac
+        named=
+        for setting in $SETTINGS; do [ "$key" != "$setting" ] || named=1; done
+        [ -n "$named" ] || { echo "deploy: $key is not a setting of deploy.sh" >&2; exit 1; }
+        [ "$key" != "$entry" ] || { echo "deploy: $key is given without a value" >&2; exit 1; }
+        case $given in *" $key "*) echo "deploy: $key is given twice" >&2; exit 1 ;; esac
+        given="$given$key "
+    done
+    ;;
+esac
+
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 ROOT=${DECKSTREAK_DEPLOY_ROOT:-/usr/local/lib/deck-streak}
 UNIT_DIR=${DECKSTREAK_DEPLOY_UNIT_DIR:-/etc/systemd/system}
@@ -253,23 +287,30 @@ block=$dir/deck-streak.caddy
 copy=$dir/deck-streak.candidate
 kept=$file.previous
 had=
-[ -f "$block" ] && { had=$block.previous; cp -p "$block" "$had"; }
-cat >"$block"
-cp -p "$file" "$copy"
-grep -qxF "$line" "$copy" || printf "%s\n" "$line" >>"$copy"
 put_back_block() {
-    if [ -n "$had" ]; then mv -T "$had" "$block"; else find "$block" -delete; fi
+    if [ -n "$had" ]; then mv -T "$had" "$block"; else [ ! -f "$block" ] || find "$block" -delete; fi
 }
 undo() {
-    find "$copy" -delete
+    [ ! -f "$copy" ] || find "$copy" -delete
     put_back_block
     echo "deploy: the Caddy configuration was refused" >&2
     exit 1
 }
+[ -w "$dir" ] && [ -f "$file" ] || { echo "deploy: the Caddy configuration was refused" >&2; exit 1; }
+[ -w "$(dirname -- "$file")" ] || { echo "deploy: the Caddy configuration was refused" >&2; exit 1; }
+for path in "$block" "$block.previous" "$copy" "$kept"; do
+    { [ ! -e "$path" ] && [ ! -L "$path" ]; } ||
+        [ -z "$(find "$path" -maxdepth 0 \( ! -type f -o -links +1 \) -print)" ] ||
+        { echo "deploy: the Caddy configuration was refused" >&2; exit 1; }
+done
+[ -f "$block" ] && { had=$block.previous; cp -p "$block" "$had" || { echo "deploy: the Caddy configuration was refused" >&2; exit 1; }; }
+cat >"$block" || undo
+cp -p "$file" "$copy" || undo
+grep -qxF "$line" "$copy" || printf "%s\n" "$line" >>"$copy" || undo
 caddy validate --adapter caddyfile --config "$copy" || undo
 caddy adapt --adapter caddyfile --config "$copy" --validate >/dev/null || undo
-cp -p "$file" "$kept"
-mv -T "$copy" "$file"
+cp -p "$file" "$kept" || undo
+mv -T "$copy" "$file" || { find "$kept" -delete; undo; }
 if ! caddy reload --config "$file"; then
     mv -T "$kept" "$file"
     put_back_block
@@ -298,6 +339,17 @@ unwritten() {
     echo "deploy: the candidate Caddyfile could not be written" >&2
     exit 1
 }
+[ -w "$dir" ] && [ -f "$file" ] || { echo "deploy: the candidate Caddyfile could not be written" >&2; exit 1; }
+[ -w "$(dirname -- "$file")" ] || { echo "deploy: the candidate Caddyfile could not be written" >&2; exit 1; }
+[ ! -L "$copy" ] || unwritten
+[ ! -e "$copy" ] || [ -z "$(find "$copy" -maxdepth 0 \( -type p -o -type s -o -type b -o -type c -o -type f -links +1 \) -print)" ] ||
+    { echo "deploy: the candidate Caddyfile could not be written" >&2; exit 1; }
+for name in "$block" "$block.previous" "$kept"; do
+    if [ -e "$name" ] || [ -L "$name" ]; then
+        [ -z "$(find "$name" -maxdepth 0 \( -links +1 -o ! -type f \) -print)" ] ||
+            { echo "deploy: the candidate Caddyfile could not be written" >&2; exit 1; }
+    fi
+done
 : >"$copy" || unwritten
 grep -vxF "$line" "$file" >"$copy" || [ "$?" -eq 1 ] || unwritten
 caddy validate --adapter caddyfile --config "$copy" || { [ ! -f "$copy" ] || find "$copy" -delete; echo "deploy: refused" >&2; exit 1; }

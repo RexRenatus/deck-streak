@@ -320,7 +320,18 @@ class Box:
         path.write_text(json.dumps(data, indent=2), encoding="utf-8")
         self.repin()
 
-    def run(self, *args, red=(), void=(), error=(), closed=(), gh="fake", unset=()):
+    def run(
+        self,
+        *args,
+        red=(),
+        void=(),
+        error=(),
+        closed=(),
+        gh="fake",
+        unset=(),
+        cards=True,
+        keep=False,
+    ):
         """Run the real driver with the fake runner; (the finished process, the runner's calls).
 
         The fake gh answers CLOSED for each issue `closed` names and OPEN for any other. `gh` set
@@ -344,8 +355,12 @@ class Box:
             TMPDIR=str(self.temp_root),
             PYTHONDONTWRITEBYTECODE="1",
         )
-        for inherited in ("FAKE_GH_FAIL", "GH_REPO", *unset):
+        for inherited in ("FAKE_GH_FAIL", "GH_REPO", "BOX_PACKS_KEEP", *unset):
             env.pop(inherited, None)
+        if not cards:
+            env.pop("BOX_PACKS_OUT")
+        if keep:
+            env["BOX_PACKS_KEEP"] = "1"
         if gh is None:
             env["PATH"] = str(self.tools_without_gh())
         else:
@@ -979,6 +994,43 @@ class OwnedDataCannotDrift(unittest.TestCase):
         done, _ = box.run()
         self.assertEqual(done.returncode, 2, done.stdout)
         self.assertIn("skills/packs/sample/gone.json", "".join(void_lines(done.stdout)))
+
+
+class TheRunnerCleansUpItsCards(unittest.TestCase):
+    """The cards directory a run creates is removed when the run ends (issue 531)."""
+
+    def test_the_created_cards_directory_is_gone_after_every_end(self):
+        ends = {
+            "pass": {},
+            "fail": {"red": ["alpha.second"]},
+            "error": {"gh": "offline"},
+        }
+        codes = {"pass": 0, "fail": 1, "error": 2}
+        for end, options in ends.items():
+            with self.subTest(end=end):
+                box = Box(self)
+                before = sorted(entry.name for entry in box.temp_root.iterdir())
+                done, _ = box.run(cards=False, **options)
+                self.assertEqual(done.returncode, codes[end], done.stdout + done.stderr)
+                after = sorted(entry.name for entry in box.temp_root.iterdir())
+                self.assertEqual(after, before, "the run left an entry in the temp root")
+
+    def test_a_given_or_kept_cards_directory_survives_the_run(self):
+        box = Box(self)
+        box.cards.mkdir(parents=True, exist_ok=True)
+        done, _ = box.run()
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertTrue(box.cards.is_dir(), "a BOX_PACKS_OUT directory was removed")
+        self.assertTrue(any(box.cards.iterdir()), "its cards did not survive")
+        before = {entry.name for entry in box.temp_root.iterdir()}
+        done, _ = box.run(cards=False, keep=True)
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        made = {entry.name for entry in box.temp_root.iterdir()} - before
+        kept = [name for name in made if name.startswith("deckstreak-box-cards.")]
+        self.assertEqual(len(kept), 1, made)
+        path = box.temp_root / kept[0]
+        self.assertTrue(any(path.iterdir()), "the kept cards are missing")
+        self.assertIn(f"cards: {path}", done.stderr)
 
 
 class TheRunPostsOneVerdict(unittest.TestCase):

@@ -10,6 +10,7 @@ import importlib.util
 import json
 import math
 import os
+import re
 import subprocess
 import sys
 import unittest
@@ -310,7 +311,8 @@ class TheVerdictReadsThePythonReports(unittest.TestCase):
 
     def test_a_python_class_that_examined_nothing_is_void(self):
         fixture = changed_fixture(self, both=True)
-        shard_the_plan(fixture, listed(SCRIPT, SCRIPT_HEAD) + listed(GENERATOR, GENERATOR_HEAD))
+        # The plan lists no mutant, so the one report that examined none is what it lists.
+        shard_the_plan(fixture, [])
         empty = fixture.out / "empty"
         write_shard(empty, 0, report_of([]))
         for klass in ("scripts", "oracle"):
@@ -323,13 +325,20 @@ class TheVerdictReadsThePythonReports(unittest.TestCase):
         # examines its own one.
         whole = fixture.out / "whole"
         script_only = "replace + with - in guard"
+        gen_only = "replace * with / in gen"
+        # The plan for this run lists just those two, so the report examined what it lists.
+        shard_the_plan(
+            fixture,
+            [m for m in listed(SCRIPT, SCRIPT_HEAD) if m["mutant"] == script_only]
+            + [m for m in listed(GENERATOR, GENERATOR_HEAD) if m["mutant"] == gen_only],
+        )
         write_shard(
             whole,
             0,
             report_of(
                 [
                     file_entry(SCRIPT, SCRIPT_HEAD, {}, only=script_only),
-                    file_entry(GENERATOR, GENERATOR_HEAD, {}, only="replace * with / in gen"),
+                    file_entry(GENERATOR, GENERATOR_HEAD, {}, only=gen_only),
                 ]
             ),
         )
@@ -438,19 +447,16 @@ class TheVerdictReadsThePythonReports(unittest.TestCase):
         self.assertRegex(named.stdout, rf"(?m)^examined {killed}$")
 
     def test_a_missing_or_partial_python_shard_is_void(self):
-        fixture = changed_fixture(self)
-        entries = [
-            {"name": f"scripts/guard.py:{n}:1: replace + with - in guard", "file": SCRIPT}
-            for n in range(1, 82)
-        ]
-        shard_the_plan(fixture, entries)
-        entry = file_entry(SCRIPT, SCRIPT_HEAD, {})
+        text = "".join(f"def f{i}(x):\n    return x + {i}\n" for i in range(27))
+        fixture = changed_fixture(self, head_text=text)
+        shard_the_plan(fixture, listed(SCRIPT, text))
+        entries = [file_entry(SCRIPT, text, {}, slot=(shard, 3)) for shard in range(3)]
         whole = fixture.out / "whole"
         for shard in range(3):
-            write_shard(whole, shard, report_of([entry], shard=f"{shard}/3"))
+            write_shard(whole, shard, report_of([entries[shard]], shard=f"{shard}/3"))
         green = judged(fixture, "scripts", whole)
         self.assertEqual(green.returncode, 0, green.stdout + green.stderr)
-        self.assertRegex(green.stdout, rf"(?m)^examined {3 * len(entry['mutants'])}$")
+        self.assertRegex(green.stdout, r"(?m)^examined 81$")
         cases = {
             "last": (2, None, "no report"),
             "first": (0, None, "no report"),
@@ -465,7 +471,7 @@ class TheVerdictReadsThePythonReports(unittest.TestCase):
                 write_shard(
                     reports,
                     shard,
-                    report_of([entry], shard=f"{shard}/3"),
+                    report_of([entries[shard]], shard=f"{shard}/3"),
                     raw=raw if shard == broken else None,
                 )
             done = judged(fixture, "scripts", reports)
@@ -676,13 +682,11 @@ class TheVerdictReadsThePythonReports(unittest.TestCase):
         )
         numbers = [
             int(n)
-            for n in __import__("re")
-            .search(
+            for n in re.search(
                 r"table: python: listed (\d+), killed (\d+), equivalent (\d+), unexplained (\d+), "
                 r"unviable (\d+)",
                 table.stdout,
-            )
-            .groups()
+            ).groups()
         ]
         self.assertEqual(numbers[0], sum(numbers[1:]))
         self.assertIn("table: python: UNEXPLAINED", table.stdout)

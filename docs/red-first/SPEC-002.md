@@ -27,3 +27,10 @@ A10: not red: the runner's refusal preceded its test; the test pins it with a pl
 
 Amendment (2026-09-28): the lines of A3, A4 and A10 moved into a `` ```retired `` fence, by inserted
 fence lines, because SPEC-056 retired those criteria when it removed their tests.
+
+```red-first
+A11: red at 8a4b3c1d: test_planned_specs.py -k no_judged_spec_reads_planned FAILED: AssertionError: Lists differ: ['SPEC-076-the-language-and-law-streaks-fr[165 chars].md'] != [] : a SPEC in docs/specs/ is delivered, so it never reads planned (examined 63 judged SPECs; SPEC-076 and SPEC-094 read planned)
+A11: green at a2678538
+```
+
+A11 at a2678538: `test_planned_specs.py -k no_judged_spec_reads_planned` reads `Ran 3 tests`, `OK`.
