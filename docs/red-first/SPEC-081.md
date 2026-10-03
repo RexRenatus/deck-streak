@@ -48,5 +48,17 @@ Not red-first lines, by design:
 - the second A21 test, `the_quests_port_declares_its_tables_and_their_reset_rows`, is mutation
   coverage for the declaration's rows.
 
+Disclosures of assertions rewritten between a red commit and its green commit:
+
+- 0b76ff9 rewrote one assertion in `chests_roll.rs`, the constants test (A15's): the session gap in
+  minutes was compared as a float against the engine's milliseconds, and is now compared through the
+  file's `same` helper. It sits in the constants test, not in the bodies of A1 to A3, whose recorded
+  failures above are the ones the earlier bodies printed at e685d64; the constants test also gained
+  an `allow` for its length. The change made the comparison exact, not looser.
+- e18f113 rewrote the draw-fraction assertions in `chests_grant.rs` to compare each fraction's bits
+  where they compared floats. That test (`a_draw_is_the_top_53_bits_as_a_fraction_below_one`) is mutation
+  coverage and carries no red-first line; the bodies of A4 to A7 are unchanged between 3afc3f9 and
+  e18f113 in the assertions their recorded failures name.
+
 A6's red comes from its positive control (chests [] against 3): its absence assertions pass on a
 no-write stub, and are not counted as red.
