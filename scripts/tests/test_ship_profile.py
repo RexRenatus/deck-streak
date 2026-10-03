@@ -9,7 +9,7 @@ import tomllib
 import unittest
 from pathlib import Path
 
-import yaml
+from test_ci_workflows import read_hardened, workflow_file_text
 
 ROOT = Path(__file__).resolve().parents[2]
 STAGE = "test-release"
@@ -31,7 +31,7 @@ def stage_body(check):
 
 class TheReleaseStageTestsTheShippedProfile(unittest.TestCase):
     def test_the_release_stage_is_in_the_gate_roster_and_runs_the_release_profile(self):
-        check = (ROOT / "scripts" / "check.sh").read_text(encoding="utf-8")
+        check = workflow_file_text(ROOT / "scripts" / "check.sh")
         roster = re.search(r"(?m)^STAGES_ALL=\(([^)]*)\)", check).group(1).split()
         self.assertIn(STAGE, examined("gate stages", roster))
         body = stage_body(check)
@@ -39,7 +39,7 @@ class TheReleaseStageTestsTheShippedProfile(unittest.TestCase):
             self.assertIn(needle, body)
 
     def test_the_release_stage_runs_in_one_ci_job_the_aggregate_needs(self):
-        workflow = yaml.safe_load((ROOT / ".github" / "workflows" / "ci.yml").read_text())
+        workflow = read_hardened(ROOT / ".github" / "workflows" / "ci.yml")
         jobs = workflow["jobs"]
         calls = [
             name
@@ -53,7 +53,7 @@ class TheReleaseStageTestsTheShippedProfile(unittest.TestCase):
 
 class ClippyRefusesBuildSelectedMacros(unittest.TestCase):
     def test_clippy_refuses_cfg_and_option_env_each_with_a_reason(self):
-        config = tomllib.loads((ROOT / "clippy.toml").read_text(encoding="utf-8"))
+        config = tomllib.loads(workflow_file_text(ROOT / "clippy.toml"))
         entries = {
             e["path"]: e for e in examined("disallowed macros", config.get("disallowed-macros", []))
         }
