@@ -409,3 +409,10 @@ Round four, the red-first lines (appended; the record above is not edited):
 - Green at d09e464e (and at c185f22b, which adds only documents): `hygiene` ran 853 tests in
   `scripts/tests`, `OK`, with `examined 557 state-and-call member(s)`; `mutation-rows` ran
   `examined 146: killed 146, survived 0, void 0`.
+
+Correction (verify round 5; appended, the record above is not edited):
+
+- The round-two line "8e3d0c79 added 121 lines" counts the non-blank lines; `git show --numstat`
+  reads 127 added and 1 removed.
+- The round-four green was measured at c185f22b by its CI run. d09e464e carries no CI run, and
+  c185f22b differs from it by four documentation files only.
