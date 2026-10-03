@@ -1047,3 +1047,9 @@ Files this part edits that section 4 does not list, each a consequence of a row 
   `Formal.SkipTariffVectors` and routes the entry `SkipTariff` to it; `formal/lean/Formal/SkipTariffVectors.lean` is the
   writer of `formal/vectors/skip-tariff.jsonl`, in the house form of the wallet's. `formal/tla/RelightOrder/RelightOrder.tla`
   carries the restamped digest of its `govern` cover, after the skip set entered `govern`.
+
+The three rows of section 4 the first list missed:
+
+- `crates/ingest/src/engine.rs`: unchanged in this part; delivered by E4b.
+- `crates/ingest/tests/skip_write.rs`: unchanged in this part; delivered by E4b.
+- `crates/ingest/tests/skip_undo.rs`: unchanged in this part; delivered by E4c.
