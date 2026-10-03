@@ -208,7 +208,7 @@ pub async fn chests_of_day(
     .await?;
     rows.into_iter()
         .map(|row| {
-            stored(ChestRow {
+            stored(&ChestRow {
                 id: row.id,
                 study_day: row.study_day,
                 origin: &row.origin,
@@ -241,7 +241,7 @@ pub async fn chest(
     .fetch_optional(&mut *connection)
     .await?;
     row.map(|row| {
-        stored(ChestRow {
+        stored(&ChestRow {
             id: row.id,
             study_day: row.study_day,
             origin: &row.origin,
@@ -274,7 +274,7 @@ pub async fn unresolved_chests(
     .await?;
     rows.into_iter()
         .map(|row| {
-            stored(ChestRow {
+            stored(&ChestRow {
                 id: row.id,
                 study_day: row.study_day,
                 origin: &row.origin,
@@ -375,7 +375,7 @@ struct ChestRow<'a> {
 }
 
 /// The chest a stored row holds, refused when a value is outside its column's rule.
-fn stored(row: ChestRow<'_>) -> Result<StoredChest, ChestError> {
+fn stored(row: &ChestRow<'_>) -> Result<StoredChest, ChestError> {
     Ok(StoredChest {
         id: row.id,
         study_day: StudyDay::from_epoch_day(row.study_day),
