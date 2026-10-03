@@ -26,9 +26,9 @@ use deck_streak_coordination::recompute::{AwardOffers, Evaluation, Offers};
 use deck_streak_curriculum::data_rights::CurriculumDataRights;
 use deck_streak_ingest::reader::{Card, CollectionData};
 use deck_streak_kernel::{CourseCode, Courses, DataRights, Db, UtcMillis};
-use deck_streak_progression::grant::GrantScope;
 use deck_streak_notifications::ladder::{budget_exempt, requested_tier};
 use deck_streak_notifications::{Policy, Tier};
+use deck_streak_progression::grant::GrantScope;
 use serde_json::{Value, json};
 use support::{D0, Recorder, at, badges, card, day, run_step, scratch};
 
@@ -572,15 +572,25 @@ async fn recompute_on(db: &Db, data: &CollectionData, number: i64) {
     let progress = ProgressStep::new(courses.clone(), AnalyticsSettings::default());
     run_step(db, &progress, data, 0, (number, Evaluation::Current), now).await;
     let band_badges = BandBadgesStep::new(courses);
-    run_step(db, &band_badges, data, 0, (number, Evaluation::Current), now).await;
+    run_step(
+        db,
+        &band_badges,
+        data,
+        0,
+        (number, Evaluation::Current),
+        now,
+    )
+    .await;
 }
 
 /// Every XP grant, as `(source, scope, amount, study day)`, by source and day.
 async fn scoped_grants(db: &Db) -> Vec<(String, String, i64, i64)> {
-    sqlx::query_as("SELECT source, scope, amount, study_day FROM xp_ledger ORDER BY source, study_day")
-        .fetch_all(db.reader())
-        .await
-        .expect("the XP ledger")
+    sqlx::query_as(
+        "SELECT source, scope, amount, study_day FROM xp_ledger ORDER BY source, study_day",
+    )
+    .fetch_all(db.reader())
+    .await
+    .expect("the XP ledger")
 }
 
 /// MUTATION COVERAGE (R6, R18; S07726): a band-up's XP is granted once ever. When the owner erases
@@ -602,7 +612,7 @@ async fn a_band_up_is_paid_once_ever_even_after_its_milestone_is_erased() {
     recompute_on(db, &window(), D0).await;
     assert_eq!(
         scoped_grants(db).await,
-        [once.clone()],
+        std::slice::from_ref(&once),
         "the band-up from A2 to B1 is paid once, scoped once"
     );
 
