@@ -21,8 +21,7 @@ does the gate prove the tests' rules in the shipped build, and keep such code fr
 
 ## Considered Options (the alternatives it was chosen against)
 
-- A gate stage that runs `cargo nextest run --release` over the workspace minus the engine set -
-  chosen: it is the shipped build's own flags, nothing is declared that could drift from them.
+- A gate stage that runs `cargo nextest run --release` over the workspace minus the engine set - chosen, because it is the shipped build's own flags and nothing is declared that could drift from them.
 - A named test profile inheriting from release (`[profile.release-test]`) - lost: a second profile
   to keep equal to release by hand, and a build that shares no artifacts with `--release`, so it
   costs the same compile as `--release` with a way to diverge.
