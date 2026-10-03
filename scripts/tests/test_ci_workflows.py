@@ -5262,15 +5262,6 @@ DYNAMIC_IMPORTS = {
         ),
     ),
     **allowed(
-        "the state table's own change method, by a name the table holds; it imports nothing and runs nothing but the test's own method",
-        (
-            "test_deploy_scripts",
-            "EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.situation",
-            "getattr(self, change)",
-            1,
-        ),
-    ),
-    **allowed(
         "a member of the lister module, by a name the test lists",
         ("test_mutation_python_lister_kills", "pick", "getattr(m, name)", 1),
     ),

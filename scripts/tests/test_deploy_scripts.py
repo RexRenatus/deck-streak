@@ -2661,6 +2661,27 @@ exec /usr/bin/@NAME@ "$@"
         for name in ("tools.log", "args.log"):
             (w.log / name).write_text("", encoding="utf-8")
 
+    def changes(self):
+        """The change methods of STATE_TABLE, each under the name the table holds, so a state's
+        change is found by a lookup in this one mapping and never by a name read from data."""
+        return {
+            "drop_current": self.drop_current,
+            "unship_the_new_unit": self.unship_the_new_unit,
+            "make_unready": self.make_unready,
+            "plant_the_same_tag": self.plant_the_same_tag,
+            "plant_a_stale_partial": self.plant_a_stale_partial,
+            "plant_an_undeletable_partial": self.plant_an_undeletable_partial,
+            "plant_a_partly_deletable_partial": self.plant_a_partly_deletable_partial,
+            "lock_a_drop_in": self.lock_a_drop_in,
+            "drop_the_unit_directory": self.drop_the_unit_directory,
+            "keep_more_than_keep": self.keep_more_than_keep,
+            "lock_the_root_parent": self.lock_the_root_parent,
+            "corrupt_the_manifest": self.corrupt_the_manifest,
+            "refuse_the_effective_check": self.refuse_the_effective_check,
+            "lock_the_check_file": self.lock_the_check_file,
+            "keep_more_over_a_partly_deletable": self.keep_more_over_a_partly_deletable,
+        }
+
     def situation(self, tmp, verb, state):
         """A world in `state`, armed, and the argv of `verb` in it."""
         base, change, _ = self.STATE_TABLE[state]
@@ -2687,7 +2708,7 @@ exec /usr/bin/@NAME@ "$@"
                 w.ship("v1.1.0", **fresh)
                 argv = [DEPLOY if verb == "install" else ROLLBACK, "v1.1.0"]
         # The modes a change locks, which every run from this world restores when it ends.
-        w.locked = getattr(self, change)(w, good, argv) if change else []
+        w.locked = self.changes()[change](w, good, argv) if change else []
         for name in ("tools.log", "args.log"):
             (w.log / name).write_text("", encoding="utf-8")
         return w, good, argv
