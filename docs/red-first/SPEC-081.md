@@ -62,3 +62,12 @@ Disclosures of assertions rewritten between a red commit and its green commit:
 
 A6's red comes from its positive control (chests [] against 3): its absence assertions pass on a
 no-write stub, and are not counted as red.
+
+Correction (verify round 1): the A15 red line above locates its failure at `chests_roll.rs:195:5`, not
+`:194:5`: at e685d641 the `assert!(same(` that compares the token window hours starts on line 195, column 5.
+The "Not red-first lines" bullet that lists the draw-fraction test beside the held-key test does not hold
+for it as written: `a_draw_is_the_top_53_bits_as_a_fraction_below_one` was added at 3afc3f98, in the commit that
+wrote the grant step's chests, and its assertions were rewritten at e18f1133 (the disclosure above).
+Whether it was red at 3afc3f98 and green at e18f1133 was not replayed for this correction, because the
+build of those revisions needs a tool that was not available to this run, so no draw or
+threshold is quoted.
