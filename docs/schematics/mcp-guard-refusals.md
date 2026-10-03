@@ -39,7 +39,10 @@ flowchart TD
   match -->|yes| path{"the path is the MCP path"}
   path -->|no| r404["404"]
   path -->|yes| tool{"the tool's scope is in the grant"}
-  tool -->|no| terr["a tool error whose whole text is unauthorized, no data"]
+  tool -->|no| slimit{"five or more fresh failures in the token's bucket"}
+  slimit -->|yes| terr["a tool error whose whole text is unauthorized, no data"]
+  slimit -->|no| srec["the failure recorded, the bucket kept newest, the oldest beyond 512 evicted"]
+  srec --> terr
   tool -->|yes| uc["the owning SPEC's use case through coordination"]
 ```
 
@@ -54,3 +57,9 @@ with the process.
 SPEC-119 §9 lists each plant (a guard that admits no header, a scope check skipped, a token compared
 with `==`, the limiter consulted before the match, and the rest) with the criterion it must redden
 and its mutation row.
+
+## Change note
+
+2026-10-03 (SPEC-119 T14, #158): a scope refusal passes through the limiter with the token's
+bucket before the tool error, as R13 and A20 say; the flowchart had sent it straight to the tool
+error. Nothing else changed.
