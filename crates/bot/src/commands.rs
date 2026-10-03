@@ -33,7 +33,7 @@ use deck_streak_coordination::progression::records_view::records_now;
 use deck_streak_coordination::score::day_score;
 use deck_streak_coordination::streak_views::streak_view;
 use deck_streak_identity::Owner;
-use deck_streak_kernel::{Clock, Db, Environment, Setting, SettingsError, StudyDayRule};
+use deck_streak_kernel::{Clock, Courses, Db, Environment, Setting, SettingsError, StudyDayRule};
 use deck_streak_notifications::owner_message;
 use frankenstein::types::{BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo};
 
@@ -43,6 +43,7 @@ use crate::badges_commands::{
 use crate::capture::{self, Choice, MAX_DOWNLOAD_BYTES, Outcome};
 use crate::drill_commands::{self, ANSWER_PREFIX, VIEW_PREFIX};
 use crate::gate::{self, Admission, OwnerCallback, OwnerMessage};
+use crate::progress_commands::progress_reply;
 use crate::score_commands::{score_failed_reply, score_reply};
 use crate::streak_commands::{streak_failed_reply, streak_reply};
 use crate::transport::{Download, Incoming, Sent, Transport, escape_attribute, escape_html};
@@ -436,6 +437,8 @@ pub struct Commands<S> {
     pending_drill: Option<String>,
     /// The vault inbox the owner's media is saved into, when the daemon wired it (SPEC-118 R6).
     captures: Option<Arc<InboxCaptures<RealFs>>>,
+    /// The configured courses, whose stored progress the progress command shows (SPEC-077 R15).
+    courses: Option<Courses>,
 }
 
 impl<S: OwnerSync> Commands<S> {
@@ -464,6 +467,7 @@ impl<S: OwnerSync> Commands<S> {
             drills: None,
             pending_drill: None,
             captures: None,
+            courses: None,
         }
     }
 
@@ -493,6 +497,13 @@ impl<S: OwnerSync> Commands<S> {
     #[must_use]
     pub fn with_capture(mut self, captures: Arc<InboxCaptures<RealFs>>) -> Self {
         self.captures = Some(captures);
+        self
+    }
+
+    /// These handlers, showing the stored progress of the configured `courses` (SPEC-077 R15).
+    #[must_use]
+    pub fn with_courses(mut self, courses: Courses) -> Self {
+        self.courses = Some(courses);
         self
     }
 
@@ -577,6 +588,7 @@ impl<S: OwnerSync> Commands<S> {
             Some("streak") => self.streak().await,
             Some("badges") => self.badges().await,
             Some("records") => self.records().await,
+            Some("progress") => self.progress().await,
             Some("drills") => self.drills().await,
             Some("drill") => self.drill(&message.text).await,
             None if self.pending_drill.is_some() => self.drill_answer(&message.text).await,
@@ -734,6 +746,12 @@ impl<S: OwnerSync> Commands<S> {
             }
         };
         self.send(reply).await;
+    }
+
+    /// `/progress`: each configured course's Road to C2 (SPEC-077 R15, R16).
+    async fn progress(&self) {
+        let _unread = &self.courses;
+        self.send(progress_reply(&[], &self.app)).await;
     }
 
     /// `/drills`: the unanswered drills (SPEC-110 R13).
