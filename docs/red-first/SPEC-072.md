@@ -319,3 +319,27 @@ At 8632611d the population prints `examined 46 case(s) of verify round 7's popul
 A36: red at 09c160bb: assertion `left == right` failed: cases judged wrongly: 7; disagreements: 2
 A36: green at 8632611d
 ```
+
+Correction (verify round 8): this appends to the A36 record above and rewrites none of it.
+The red at 09c160bb was measured as `cases judged wrongly: 7; disagreements: 2`, a panic through
+`assert!` with no `left == right` prefix, so the `assertion \`left == right\` failed:` words of the
+red line above are not what that commit printed. The prose before the red line says 09c160bb
+commits the round-8 tests alone; the truer sense is that 09c160bb commits the round-8 tests over
+the census of the round before, except two refusals that
+`the_census_refuses_what_the_compiler_is_not_asked` expects (a git package reaching the owner, a
+file read outside the tree), which 8632611d adds with the fix. The killing assertions for the rows
+S07300 and S07301 were therefore written with the fix in 8632611d, not at the red commit 09c160bb,
+and their red is re-measured at 11ed460b31d58b4ce51560e716298501b6fffc37 by two named plants, each
+the row's own replacement applied alone to `crates/progression/tests/xp_census.rs` and each
+restored byte-equal. The plant of S07300 (`if !inside {` replaced by
+`if !inside && file.is_empty() {`) fails `the_census_refuses_what_the_compiler_is_not_asked` at
+`xp_census.rs:1615:9` with the message `planted [...]` naming the file read outside the tree and
+the one refusal that came back, `crates/coordination/src/lib.rs calls settle outside the recompute
+steps, and only the owner's correction may`, where the refusal that the file lies outside the tree
+is missing. The plant of S07301 (`if !package["source"].is_null() && reaching.contains(id) {`
+replaced by `if package["source"].is_null() && reaching.contains(id) {`) fails the same test at
+the same assertion with a message that lists `.cargo/config.toml configures cargo, and the census
+compiles with cargo's own defaults` and `deck-streak-habits comes from  and reaches the owner
+through the graph, so the census cannot name its callers`: the plant makes the census refuse a
+package with no source, which the case expects to be accepted, so the refusals returned are not
+the ones expected. Each of the two plants left the test red, and each was restored byte-equal.
