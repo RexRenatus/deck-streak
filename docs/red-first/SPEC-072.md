@@ -103,4 +103,243 @@ A30: red at 1f4b006: assertion `left == right` failed: one line, for the level r
 A30: green at 578a351
 A31: red at 8467b95: {"reason":"law_tiers_unavailable"}; left: 503; right: 200
 A31: green at 6d82561
+A32: red at eb6119fa: assertion `left == right` failed; left: [], right: ["crates/coordination/src/shortcut.rs calls settle outside the recompute steps, and only the owner's correction may", "crates/quests/src/chained_user.rs calls settle through tally_again, progression's alias of settle, and only coordination's code may", ...]
+A32: green at d2697435
+A33: red at 99fbf46d: assertion `left == right` failed; left: [], right: ["crates/markets/src/via_prog.rs calls settle through tally, progression's alias of settle, and only coordination's code may"]
+A33: green at 7a6a659d
+A34: red at 05cfedf2: assertion `left == right` failed: trees the census judges wrongly: 829 (members escaping: 815; controls judged wrongly: 14)
+A34: green at 078fc173
 ```
+
+Addendum (2026-09-29, issue 397): A32 was added by the census amendment (ADR-197). Its test was
+committed alone beside the unchanged census (eb6119fa), where the planted renamed re-exports and
+their callers produced no refusal, and it failed by assertion, over the whole test file with only
+its own test failing. The green commit (d2697435) edits a test file, `xp_census.rs`, because the
+census is that file's own code: it reads progression's re-exports there. A12 stays green through
+both commits, with the same examined counts on the real tree (157 crate source files, 15
+migrations, 8 planted crate source files).
+
+Addendum (2026-09-29, round 1 of the review of issue 397). Two fixes, each with its tests committed
+alone first, at a head where each failed by assertion, then its code.
+
+The grouped module renaming and the chain read before its link (A32's second test). Red at
+3742e717: `panicked at crates/progression/tests/xp_census.rs:576:5:` with
+"assertion `left == right` failed", the left list holding the `crate_link_user.rs` and
+`early_user.rs` refusals and lacking `crates/quests/src/ledger_user.rs calls settle through
+ledger, progression's alias of settle, and only coordination's code may`; 2 passed, 1 failed.
+Green at 311dddede: 3 passed. Two mutants of the census survived the census before this test and
+are killed by it: the alias loop run as a single pass (`M1-fixpoint-single-pass: SURVIVED (2
+passed)`) and a `)` that never counts as public (`M14-restricted-pub-not-public: SURVIVED (2
+passed)`); after it, each is KILLED by
+`the_census_follows_a_grouped_module_renaming_and_a_chain_read_before_its_link`.
+
+The crate alias, the type alias, the `pub(` close and the word match (A33). Red at 99fbf46d: 3
+passed, 4 failed, each by assertion, and each with its own line:
+
+- `the_census_follows_a_crate_alias`, at `xp_census.rs:624:5`: `left: []`, `right:
+  ["crates/markets/src/via_prog.rs calls settle through tally, progression's alias of settle, and
+  only coordination's code may"]`.
+- `the_census_follows_a_type_alias`, at `xp_census.rs:650:5`: `left: []`, `right:
+  ["crates/quests/src/typed.rs calls settle through Wrapped, progression's alias of
+  SettleRequest, and only coordination's code may"]`.
+- `a_private_alias_behind_an_attribute_is_not_a_reexport`, at `xp_census.rs:686:5`: left holds
+  `crates/quests/src/homonym.rs calls settle through gated` and the `link.rs` refusal; right holds
+  the `link.rs` refusal alone.
+- `the_operation_is_matched_as_a_word_not_a_prefix`, at `xp_census.rs:717:5`: left holds
+  `crates/quests/src/day.rs calls settle, and only coordination's code may` besides the two owed
+  refusals; right holds the two.
+
+Green at 7a6a659d: 7 passed. Both green commits, 311dddede and 7a6a659d, edit a test file,
+`xp_census.rs`, because the census is that file's own code; no assertion changes between either
+red and its green. A12 keeps its examined counts on the real tree through every commit
+(159 crate source files, 15 migrations, 8 planted crate source files), the same as at the base of
+the round. The three rows S07230 to S07232 were proved KILLED by their full ids on a committed
+tree: `rows: examined 3: killed 3, survived 0, void 0`.
+
+Addendum (2026-09-29, round 2 of the review of issue 397). The class of names bound to
+progression's crate was reopened by six spellings, so the fix is one rule and one generated test.
+
+The population test, `the_census_refuses_every_member_of_the_binding_population`, was committed
+alone (a7049a43) beside the unchanged census. Red: `panicked at
+crates/progression/tests/xp_census.rs:953:5:` by assertion, `class members: examined 30`, and all 30
+members escaped the census. The fix (f94ee7eb) makes it green: 11 passed, the same 30 members
+refused and the 30 controls (the 10 binding forms naming a crate that is not progression, in the
+same spelling, each with the three caller shapes) accepted.
+Its green commit edits a test file, `xp_census.rs`, because the census is that file's own code. Its
+two helper bindings were renamed (`fill` to `expand`, `file` to `caller`) for clippy's
+`similar_names`; no assertion changed.
+
+The three tests of the class rule, applied alone to the census of 724b8d74 (the round-2 head, the
+census a7049a43 leaves unchanged), are red: 7 passed, 3 failed, each by assertion (at
+`xp_census.rs:811`, `:893` and `:963` in the order named),
+`the_census_reads_a_raw_identifier_as_its_plain_name`,
+`the_census_follows_a_crate_alias_however_it_is_written` and
+`the_census_follows_a_crate_renamed_by_a_manifest`; green at f94ee7eb.
+
+Rows S07233-CENSUS-MANIFEST-RENAME, S07234-CENSUS-GLOB-OPENS-MEMBER and
+S07235-CENSUS-RAW-IDENTIFIER, each `KILLED: its killer passed without the mutant and failed with it`
+on a committed tree. A12 on the real tree reads 160 crate source files, 15 migrations, 8 planted
+crate source files; the file count is one higher than round 1 because the merged base added a
+source file.
+
+Addendum (2026-09-30, round 3 of the review of issue 397). The class of callers was reopened across
+member crates and past comments, so the population test is regenerated from tables and the census
+takes one rule.
+
+The generated population test, and the manifest test's unreadable manifest, were committed alone
+(dddd87e2) beside the unchanged census. Red, each by assertion:
+`panicked at crates/progression/tests/xp_census.rs:1697:5:`, "members that escape the census: 864
+of 12307", the first escaping member `comment in a manifest: F07 manifest table /
+crates/@M/Cargo.toml / after a header, line 0`, the test printing `class members: examined 12307`
+and `class members escaping: 864; class controls refused: 9153`; and
+`panicked at crates/progression/tests/xp_census.rs:1906:5:` in
+`the_census_follows_a_crate_renamed_by_a_manifest`, whose refused list lacked the unreadable
+manifest; 9 passed, 2 failed. The rule (24a77705) makes both green: 11 passed,
+`class members escaping: 0; class controls refused: 0`, the 12307 members refused, the 12338
+controls accepted and every manifest read to its end. Its green commit edits a test file,
+`xp_census.rs`, because the census is that file's own code; no assertion changed between the red
+and the green.
+
+A stratified sample of 2571 cases of the population, every axis value with members and controls,
+was compiled under the pinned toolchain (cargo 1.97.0 `metadata`, rustc 1.97.0 `--emit=metadata`,
+edition 2024): rc 0 for each. Each member was compiled beside progression as the one crate that
+defines `settle`, and each control beside another crate in its place, but for a private glob's
+control, which is compiled beside progression and calls its holder's own function.
+
+A12 on the real tree reads 160 crate source files, 15 migrations, 8 planted crate source files, and
+refuses none, as before the round.
+
+Addendum (2026-09-30, round 6 of the review of issue 397). Round 5's review generated a population
+from Cargo's documentation, TOML 1.0 and the Rust Reference and found the textual census open again,
+so the compiler becomes the census (ADR-197, its decision of round 6; section 12).
+
+The killer, `the_census_refuses_every_caller_the_compiler_finds`, was committed alone (05cfedf2)
+beside the unchanged census of round 3. Red, by assertion: `panicked at
+crates/progression/tests/xp_census.rs:4211:5:` with "assertion `left == right` failed: trees the
+census judges wrongly: 829", the left side naming the first tree judged wrongly that a worker
+reported (an escaping member of the reading-scope axis in each run measured), the test printing
+`killer examined 2218 tree(s)` with `members escaping: 815; controls judged wrongly: 14`; 11 passed,
+1 failed. The census of round 6 (078fc173) makes it green: `killer examined 2218 tree(s)` with
+`members escaping: 0; controls judged wrongly: 0`, each of its 17 axes printing its examined members
+and controls. The green commit edits a test file, `xp_census.rs`, because the census is that file's
+own code, and it adds the probe to progression's production code: the build script
+`crates/progression/build.rs` and the `cfg_attr` on `settle`, neither of which changes a build
+without the census's variable. No assertion of the killer changed between the red and the green.
+
+The population's validity was confirmed under the pinned toolchain (cargo and rustc 1.97.0, edition
+2024) apart from the census, in four builds of each case (debug assertions on and off, each with the
+unwind and the abort panic strategy): round 5's cases were labelled by its own compile of every
+case, and a stratified sample of 142 cases, one member and one control of each of round 5's axes and
+every case of the axes this round adds, gave rc 0 in all four builds for 141. The one other,
+`concat_idents!`, gave rc 101 in each, since the macro is unstable on a stable toolchain, and it is
+not in the population: no caller can write it on this toolchain.
+
+Round 4's population (12307 members and 12338 controls, round 3's 144 and 144 among them) was judged
+by this census once, outside CI: every member refused by its own caller's file and every control
+accepted.
+
+A12 on the real tree compiles every target of every workspace package in the four passes, and its
+libraries and binaries alone in four more, since members have dev-dependencies, and refuses none.
+
+Addendum (2026-09-30, round 7 of the review of issue 397). Round 6's review found that a build
+script's cfg, read by code in a package that cannot name `settle`, can hide a call the census's
+four passes never compile. ADR-197's decision of round 7 refuses the shape by the resolve graph:
+every package with a build script that is, or depends on, progression is refused, and progression's
+own build script is admitted at one pinned digest.
+
+The tests were committed alone (8c883728) beside the unchanged census of round 6, whose file is
+`crates/progression/tests/xp_census.rs`. Six tests are new; on the unchanged census four are red by
+assertion and two are green, as they are meant to be:
+
+- `a_build_script_in_a_package_that_depends_on_settle_is_refused_by_name` is red: the package with
+  the build script is accepted (`refused by name: []`).
+- `a_one_byte_edit_of_progressions_build_script_is_refused_on_the_pin` is red (`refused on the pin:
+  []`).
+- `a_corrupt_lock_file_is_refused_by_the_fail_closed_arm` is red: the census refuses, but with
+  cargo's own words and not the census's by-name refusal that the test reads.
+- `the_census_refuses_every_build_script_that_can_name_settle` is red: "every build-script member is
+  refused, naming its package", `left: 0`, `right: 104`, the test printing `examined 0 build-script
+  member(s) of 104 generated`.
+- `a_build_script_in_a_package_that_cannot_name_settle_is_accepted` is green, as a control: nothing
+  refuses a build script that cannot reach `settle`.
+- `the_git_dependency_build_scripts_are_measured_and_the_kind_is_disclosed` is green, since it only
+  prints: it reports `examined 26 git-dependency build-script member(s), 15 refused`, the same 15
+  by their caller's file as the census of round 6 refuses, and it asserts nothing about the rest,
+  which are the disclosed kind (SPEC-072 section 12).
+
+The graph refusal (dfd9ca1e) makes the four green: 104 of 104 build-script members are refused,
+naming their package, and 104 of 104 controls are accepted. The green commit edits the census, which
+is that file's own code, and adds `sha2` to progression's dev-dependencies for the pin. Three more
+tests came with the green commit and were never red: the edge kinds, a build script reached through
+a build dependency, through a dev dependency, and in a package that depends on progression by name.
+Their red is that of the tests above (a build script beside a dependency on progression is accepted
+by the earlier census), and each is pinned by a row (S07276 to S07285).
+
+The killer's counts do not change with the speed-ups: `killer examined 2218 tree(s)` with `members
+escaping: 0; controls judged wrongly: 0`, each of its 17 axes printing the same examined members and
+controls before and after the change that keeps one target for each worker. A12 on the real tree
+reads 170 crate source files, 16 migrations and 13 planted crate source files, and refuses none.
+
+A35, round 7: the record in the form the probes read.
+
+```red-first
+A35: red at 8c883728: assertion `left == right` failed: every build-script member is refused, naming its package; left: 0, right: 104
+A35: green at dfd9ca1e
+```
+
+A36, round 8: the census's verdict depends only on the tree it judges, and its owner is found by the
+path of its manifest. 09c160bb commits the round-8 tests alone, over the census of the round before;
+14 of them are red by assertion there (`test result: FAILED. 21 passed; 14 failed`), and 8632611d
+makes them green (`35 passed; 0 failed; 1 ignored`). Each red line, by test:
+
+- the owner's lookup over nine synthetic graphs (no member at the owner's manifest, two, a renamed
+  owner, a path, git or registry package carrying its name, no build script, two): every graph is
+  accepted, `left: [... "the owner renamed: Ok([])", ...]`, `right: []`;
+- the owner without a build script, the owner's manifest under another package name, and each of
+  three graphs with a git package carrying the owner's name (beside an edited pin, a member's script,
+  a disarmed owner): each `[]` where a refusal by name is asserted;
+- a cargo configuration above the tree, and one in cargo's home: `[]` where a refusal is asserted;
+- a member's code reading a variable the host sets: `[]` where a refusal is asserted;
+- a variable the tree does not set, on a tree that reads it: `left: []`, `right: ["crates/m/src/lib.rs
+  calls settle, and only coordination's code may"]`;
+- a target copied from another tree's census: the same `left: []` against the same `right`;
+- the order pair on one target: `left: [[caller], []]`, `right: [[], [caller]]`, so the verdict of
+  the second tree follows the first;
+- the ten trees of main's round-7 generation: several are accepted (`[]`) where a refusal by name is asserted;
+- the population of 46 cases: `cases judged wrongly: 7; disagreements: 2`, each disagreement a
+  verdict on a warmed target that differs from the verdict on a fresh one.
+
+Two tests are green by design at the red commit: the one that names each use in its package and file
+(the restore of a test the census's earlier change had weakened, red under the plant of S07284), and
+the one that judges a reused git URL as a fresh URL, which the lock file already pins.
+
+At 8632611d the population prints `examined 46 case(s) of verify round 7's population, digest b0fbee86a359b5cc5b3a963a38cd1e1afb629c2d7b18ab00c5242d103c4d28f0`, the differential `seed 0x4250008, 10 chain(s), 40 warmed verdict(s) compared with the fresh one; disagreements: 0`, and the killer `examined 2218 tree(s)` with `members escaping: 0; controls judged wrongly: 0`.
+
+```red-first
+A36: red at 09c160bb: assertion `left == right` failed: cases judged wrongly: 7; disagreements: 2
+A36: green at 8632611d
+```
+
+Correction (verify round 8): this appends to the A36 record above and rewrites none of it.
+The red at 09c160bb was measured as `cases judged wrongly: 7; disagreements: 2`, a panic through
+`assert!` with no `left == right` prefix, so the `assertion \`left == right\` failed:` words of the
+red line above are not what that commit printed. The prose before the red line says 09c160bb
+commits the round-8 tests alone; the truer sense is that 09c160bb commits the round-8 tests over
+the census of the round before, except two refusals that
+`the_census_refuses_what_the_compiler_is_not_asked` expects (a git package reaching the owner, a
+file read outside the tree), which 8632611d adds with the fix. The killing assertions for the rows
+S07300 and S07301 were therefore written with the fix in 8632611d, not at the red commit 09c160bb,
+and their red is re-measured at 11ed460b31d58b4ce51560e716298501b6fffc37 by two named plants, each
+the row's own replacement applied alone to `crates/progression/tests/xp_census.rs` and each
+restored byte-equal. The plant of S07300 (`if !inside {` replaced by
+`if !inside && file.is_empty() {`) fails `the_census_refuses_what_the_compiler_is_not_asked` at
+`xp_census.rs:1615:9` with the message `planted [...]` naming the file read outside the tree and
+the one refusal that came back, `crates/coordination/src/lib.rs calls settle outside the recompute
+steps, and only the owner's correction may`, where the refusal that the file lies outside the tree
+is missing. The plant of S07301 (`if !package["source"].is_null() && reaching.contains(id) {`
+replaced by `if package["source"].is_null() && reaching.contains(id) {`) fails the same test at
+the same assertion with a message that lists `.cargo/config.toml configures cargo, and the census
+compiles with cargo's own defaults` and `deck-streak-habits comes from  and reaches the owner
+through the graph, so the census cannot name its callers`: the plant makes the census refuse a
+package with no source, which the case expects to be accepted, so the refusals returned are not
+the ones expected. Each of the two plants left the test red, and each was restored byte-equal.
