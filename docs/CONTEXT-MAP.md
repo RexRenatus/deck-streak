@@ -199,6 +199,10 @@ context each migration names equal to the owner this register gives each table i
 | `governor_state` | `streaks` | `migrations/007601_streaks_state_and_governor.sql` (SPEC-076) | reset in place: no anchor, not standby, no notice day |
 | `coin_ledger` | `economy` | `migrations/008201_economy_wallet_and_shop.sql` (SPEC-082) | exported and erased |
 | `economy_state` | `economy` | `migrations/008201_economy_wallet_and_shop.sql` (SPEC-082) | reset in place: no pass and no surcharge |
+| `chests` | `quests` | `migrations/008101_quests_chests_and_tokens.sql` (SPEC-081) | exported and erased |
+| `pity` | `quests` | `migrations/008101_quests_chests_and_tokens.sql` (SPEC-081) | reset in place: both counters to 0 |
+| `xp_tokens` | `quests` | `migrations/008101_quests_chests_and_tokens.sql` (SPEC-081) | exported and erased |
+| `chest_settings` | `quests` | `migrations/008101_quests_chests_and_tokens.sql` (SPEC-081) | reset in place: the defaults (3 chests a day, vaulted from hour 21) |
 | `notification_decisions` | `notifications` | `migrations/004101_notifications_router.sql` (SPEC-041) | exported and erased |
 | `notification_deliveries` | `notifications` | `migrations/004101_notifications_router.sql` (SPEC-041) | exported and erased |
 | `notification_queue` | `notifications` | `migrations/004101_notifications_router.sql` (SPEC-041) | exported and erased |
@@ -213,6 +217,12 @@ context each migration names equal to the owner this register gives each table i
 | `drill_answers` | `vault` | `migrations/011001_vault_drills.sql` (SPEC-110) | exported and erased; an erase never deletes a note (ADR-118) |
 | `drill_grades` | `vault` | `migrations/011001_vault_drills.sql` (SPEC-110) | exported and erased; an erase never deletes a note (ADR-118) |
 | `inbox_captures` | `vault` | `migrations/011801_vault_inbox_captures.sql` (SPEC-118) | exported and erased; an erase never deletes a capture or its stub (ADR-118) |
+
+The quests context reaches outside the workspace for three things and no further inside it: its
+chests are rolled from the operating system's generator (`getrandom`), its stores run on the
+caller's connection (`sqlx`), and its refusals are typed (`thiserror`). Its data-rights port also
+writes its rows as JSON (`serde_json`). None of them is an edge to another context: the map's
+line for `deck-streak-quests` stays `depends on: kernel, ingest` (SPEC-081 R5, R21).
 
 ## Overloaded words, held apart
 

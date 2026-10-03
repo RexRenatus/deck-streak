@@ -1,0 +1,62 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id, activated_at, window_ends_at, consumed FROM xp_tokens WHERE activated_at > 0 ORDER BY id",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "xp_tokens",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "activated_at",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "xp_tokens",
+            "name": "activated_at"
+          }
+        }
+      },
+      {
+        "name": "window_ends_at",
+        "ordinal": 2,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "xp_tokens",
+            "name": "window_ends_at"
+          }
+        }
+      },
+      {
+        "name": "consumed",
+        "ordinal": 3,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "xp_tokens",
+            "name": "consumed"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "8dd0723a96882743d8c3b206c08eb45bcfaecd0ec4954d45670052498a23cf52"
+}
