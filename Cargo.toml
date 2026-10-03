@@ -49,6 +49,7 @@ deck-streak-privacy = { path = "crates/privacy" }
 deck-streak-coordination = { path = "crates/coordination" }
 deck-streak-api = { path = "crates/api" }
 deck-streak-bot = { path = "crates/bot" }
+deck-streak-mcp = { path = "crates/mcp" }
 deck-streak-daemon = { path = "crates/daemon" }
 # ADR-029: the parity oracle's golden reader. So far only a proving crate's dev-dependencies name
 # them; later ADRs cite ADR-029 rather than admitting them again.

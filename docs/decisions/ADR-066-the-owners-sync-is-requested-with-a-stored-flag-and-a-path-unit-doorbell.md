@@ -60,3 +60,7 @@ The bot keeps its router and flushes it when its port observes the owner's reque
 
 `crates/daemon/tests/roles.rs` (the job is told by the flag alone), `crates/daemon/tests/sync_request.rs`
 and `scripts/tests/test_sync_path.py`, and the S059xx rows.
+
+Amended by ADR-319 (#571): the job's recompute cycle carries a router with no bot transport, which
+holds each celebration for the bot's flush and the held flush. The job still holds no bot
+credential, so this page's rejection of a job that joins the bot's router stands.

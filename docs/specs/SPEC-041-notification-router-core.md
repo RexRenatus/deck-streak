@@ -591,3 +591,16 @@ A21: cargo test -p deck-streak-coordination --test held_flush_calendar
 A21: cargo test -p deck-streak-coordination --test held_flush_answers
 A23: cargo test -p deck-streak-notifications --test flush_fails_after_push
 ```
+
+## 10. Amendment: every recompute cycle holds a router that holds for the senders (#571)
+
+SPEC-319 and ADR-319 attach a router to every recompute cycle of the job role. Two statements
+above are false after it, and each now reads as follows:
+
+- **R13's roles note** ("The job role's scheduled cycle carries no router yet: a flush without a
+  bot transport would do nothing, and the first job that sends joins one (#39).") now reads: Every
+  recompute cycle of the job role, scheduled or the owner's, holds a router with no bot transport
+  that holds each celebration it routes for the senders (SPEC-319, ADR-319); the job role still
+  loads no bot credential, and the flush after its sync does nothing.
+- R15's "the flush after a scheduled sync" is that no-op; the senders are the bot's flush after the
+  owner's request is answered and the scheduled step (R14).

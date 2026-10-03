@@ -26,6 +26,7 @@
 
 pub mod data_rights;
 pub mod ladder;
+pub mod landmarks;
 pub mod ledger;
 pub mod occasion;
 pub mod owner_message;

@@ -1,0 +1,177 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S11902-CORE-REQUIRED",
+        "mcp",
+        "src/grants.rs",
+        "            loader.load(CORE_CREDENTIAL)?.expose(),",
+        "            loader.load(CORE_CREDENTIAL).as_ref().map_or(&*\"m\".repeat(MIN_CREDENTIAL_CHARS), |secret| secret.expose()),",
+        "settings::the_core_credential_is_required",
+        "a missing core credential starts the role on a placeholder grant instead of refusing start by its id (SPEC-119 R6, A2)"
+      ],
+      [
+        "S11903-ONLY-MISSING-GRANTS-NOTHING",
+        "mcp",
+        "src/grants.rs",
+        "            Err(CredentialError::Missing { .. }) => None,",
+        "            Err(_) => None,",
+        "settings::a_broken_scope_credential_refuses_start",
+        "only a missing scope credential grants nothing; an empty, unreadable or non-text one refuses start (SPEC-119 R6, A3, A4)"
+      ],
+      [
+        "S11904-MIN-LENGTH",
+        "mcp",
+        "src/grants.rs",
+        "        if token.chars().count() < MIN_CREDENTIAL_CHARS {",
+        "        if token.chars().count() <= MIN_CREDENTIAL_CHARS {",
+        "settings::a_short_credential_refuses_start",
+        "a 32-character token starts and a 31-character one refuses start, so the minimum is inclusive (SPEC-119 R7, A5)"
+      ],
+      [
+        "S11905-SHARED-VALUE",
+        "mcp",
+        "src/grants.rs",
+        "            && bool::from(law_track.digest.ct_eq(&core.digest))",
+        "            && bool::from(law_track.digest.ct_ne(&core.digest))",
+        "settings::two_credentials_with_one_value_refuse_start",
+        "two credentials holding one value refuse start (SPEC-119 R7, A6)"
+      ],
+      [
+        "S11907-ABSENT-REFUSED",
+        "mcp",
+        "src/guard.rs",
+        "        Err(self.refuse(bucket, Scope::Core))",
+        "        if headers.get(AUTHORIZATION).is_none() {\n            return Ok(Granted { scopes: Scopes::NONE.with(Scope::Core), bucket });\n        }\n        Err(self.refuse(bucket, Scope::Core))",
+        "guard::a_request_with_no_bearer_is_refused",
+        "a request with no Authorization header is refused and the server never sees it (SPEC-119 R9, R11, A9)"
+      ],
+      [
+        "S11908-SCHEME",
+        "mcp",
+        "src/guard.rs",
+        "    if !scheme.eq_ignore_ascii_case(b\"Bearer\") {",
+        "    if scheme.is_empty() {",
+        "guard::a_malformed_bearer_is_refused",
+        "another scheme than Bearer is refused as an absent header is (SPEC-119 R9, A10)"
+      ],
+      [
+        "S11909-EMPTY-TOKEN",
+        "mcp",
+        "src/guard.rs",
+        "    if token.is_empty() || !token.iter().all(u8::is_ascii_graphic) {",
+        "    if !token.iter().all(u8::is_ascii_graphic) {",
+        "guard::a_malformed_bearer_is_refused",
+        "an empty token after Bearer is malformed and is bucketed as a malformed header, not as the absent one (SPEC-119 R9, A10)"
+      ],
+      [
+        "S11910-DIGEST-MATCH",
+        "mcp",
+        "src/guard.rs",
+        "            .map(|grant| (grant.scopes, grant.digest.ct_eq(&presented)))",
+        "            .map(|grant| (grant.scopes, subtle::Choice::from(u8::from(grant.digest == presented))))",
+        "guard_census::the_guard_compares_only_digests_in_constant_time",
+        "a presented token is matched against every grant by a constant-time digest comparison, never by == (SPEC-119 R10, A16)"
+      ],
+      [
+        "S11912-ONE-WORD",
+        "mcp",
+        "src/guard.rs",
+        "        refused()\n",
+        "        let mut response = refused();\n        if self.outcome == Outcome::RateLimited {\n            *response.body_mut() = Body::from(\"rate limited\");\n        }\n        response\n",
+        "guard::every_request_refusal_is_the_same_response",
+        "a rate-limited refusal is byte for byte the same response as every other refusal, so a client cannot tell a limit from a wrong token (SPEC-119 R11, A12)"
+      ],
+      [
+        "S11913-SIXTH-FAILURE",
+        "mcp",
+        "src/limiter.rs",
+        "            if failures.at.len() >= MAX_FAILURES {",
+        "            if failures.at.len() > MAX_FAILURES {",
+        "limiter::the_limiter_matches_its_golden",
+        "the sixth failure inside the window is the first one limited (SPEC-119 R13, A17)"
+      ],
+      [
+        "S11914-WINDOW-EDGE",
+        "mcp",
+        "src/limiter.rs",
+        "    now.epoch_millis().saturating_sub(at) < WINDOW_MILLIS",
+        "    now.epoch_millis().saturating_sub(at) <= WINDOW_MILLIS",
+        "limiter::the_limiter_matches_its_golden",
+        "a failure 60.000 seconds old has left the window while one 59.999 seconds old is still inside it (SPEC-119 R13, A17)"
+      ],
+      [
+        "S11915-LIMITED-UNRECORDED",
+        "mcp",
+        "src/limiter.rs",
+        "                return Outcome::RateLimited;",
+        "                record_failure(&mut buckets, bucket, now);\n                return Outcome::RateLimited;",
+        "limiter::the_limiter_matches_its_golden",
+        "a limited failure records nothing, so a refused client's history does not grow while it is limited (SPEC-119 R13, A17)"
+      ],
+      [
+        "S11916-EVICTION",
+        "mcp",
+        "src/limiter.rs",
+        "    while buckets.len() > MAX_BUCKETS {",
+        "    while buckets.len() > MAX_BUCKETS + 1 {",
+        "limiter::the_limiter_matches_its_golden",
+        "the 513th bucket evicts the oldest, so the table never holds more than its cap (SPEC-119 R13, A17)"
+      ],
+      [
+        "S11917-MATCH-FIRST",
+        "mcp",
+        "src/guard.rs",
+        "            if scopes.holds(Scope::Core) {",
+        "            if scopes.holds(Scope::Core) && self.limiter.snapshot().iter().all(|(held, at)| *held != Bucket::of(token) || at.len() < 5) {",
+        "limiter::a_granted_token_never_limits_itself",
+        "a granted token is matched before the limiter is read, so ten out-of-scope failures never limit it (SPEC-119 R13, A20)"
+      ],
+      [
+        "S11918-NO-TOKEN-LOGGED",
+        "mcp",
+        "src/guard.rs",
+        "        Err(self.refuse(bucket, Scope::Core))",
+        "        tracing::warn!(token = ?token.map(String::from_utf8_lossy), \"refused\");\n        Err(self.refuse(bucket, Scope::Core))",
+        "limiter::a_refusal_logs_the_bucket_and_never_the_token",
+        "a refusal logs its outcome, bucket and scope and never the token or the header value (SPEC-119 R14, A21)"
+      ],
+      [
+        "S11928-GRANT-SCOPES",
+        "mcp",
+        "src/guard.rs",
+        "        if granted.scopes.holds(scope) {",
+        "        if granted.scopes.holds(Scope::Core) {",
+        "guard::each_grant_holds_its_scopes_and_no_other",
+        "a grant is allowed only its own scopes, so the law-track token cannot reach a tool outside its scope (SPEC-119 R12, R13, A40, T13)"
+      ],
+      [
+        "S11929-UNPRESENTABLE",
+        "mcp",
+        "src/grants.rs",
+        "        if !token.bytes().all(|byte| byte.is_ascii_graphic()) {",
+        "        if token.is_empty() {",
+        "settings::a_short_credential_refuses_start",
+        "a loaded token holding a byte outside 0x21 to 0x7E, which no request can present, refuses start by its id (SPEC-119 R7, A5, T15)"
+      ],
+      [
+        "S11930-MIN-CREDENTIAL-CHARS",
+        "mcp",
+        "src/settings.rs",
+        "pub const MIN_CREDENTIAL_CHARS: usize = 32;",
+        "pub const MIN_CREDENTIAL_CHARS: usize = 31;",
+        "settings::a_short_credential_refuses_start",
+        "the shortest token a grant accepts is 32 characters, so a 31-character token refuses start (SPEC-119 R7, A5)"
+      ],
+      [
+        "S11931-FORBID-UNSAFE",
+        "mcp",
+        "src/lib.rs",
+        "#![forbid(unsafe_code)]",
+        "#![deny(unsafe_code)]",
+        "guard_census::the_crate_root_forbids_unsafe_code",
+        "the crate root forbids unsafe code outright, so a deny that a later attribute could lift is refused (SPEC-119)"
+      ]
+    ]
+  }
+}
