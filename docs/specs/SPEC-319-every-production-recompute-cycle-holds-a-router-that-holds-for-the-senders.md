@@ -132,7 +132,7 @@ here and kept out of the fence above, which names tests only.
 - Known deviation: a row the holding router holds is stored with the hold `send`, so a recap that
   rolls it up reads "(send failures)" and one abandoned at the age limit reads "(gave up retrying,
   unseen)" (`router.rs::recap`, lines 1346-1360 at `6773f6e`), though no send failed. No new hold
-  value and no migration is added for it (#571).
+  value and no migration is added for it; the wording is #575's.
 - It adds no send budget: the queue's bound (20, `deferral.queue_max`) abandons the rest by name at
   hold time, and a flush renders at most two in full and one recap line (#571).
 

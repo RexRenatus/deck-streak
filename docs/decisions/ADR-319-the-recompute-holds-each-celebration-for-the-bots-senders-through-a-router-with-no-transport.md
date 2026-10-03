@@ -33,7 +33,7 @@ lose every award by name. Which router does the recompute hold, and who sends wh
 - The recompute in the bot process: lost, because SPEC-059 moved the owner's cycle into the job, and the bot does not read the collection.
 - An outbox table of celebrations for the bot to raise: lost, because ADR-303 already rejected an outbox; the queue already holds a deferred celebration with its claim.
 - The senders offer the owed awards themselves: lost, because the level-up is decided in memory during the cycle (`sync_cycle.rs:321-327`), and #127 part b needs the collection, which only the job reads.
-- A new hold value `sender`: lost, because the queue's `CHECK (hold IN ('quiet','send'))` needs a migration that rebuilds the table; the recap's wording is recorded as a known deviation instead (SPEC-319 section 5).
+- A new hold value `sender`: lost, because the queue's `CHECK (hold IN ('quiet','send'))` needs a migration that rebuilds the table; the recap's wording is recorded as a known deviation instead (SPEC-319 section 5, #575).
 - The switch seeded by a migration: lost, because a migration seeds every database the kernel opens, and 20 files in five crates build a notification router and name a celebration, so each celebration they expect sent would turn withheld; the seed runs where the recompute starts instead.
 - No seed: lost, because #402 item 11's hold is in force until the owner answers, and this delivery is the first to let a celebration leave the box.
 
@@ -67,7 +67,7 @@ the bot's credentials, and changes no covered item of the cycle.
   in its bound waits for the next 07:36 flush, which abandons it by name when it is past 720
   minutes.
 - Bad, because a held row is stored `send`, so a recap reads "(send failures)" though no send
-  failed (SPEC-319 section 5).
+  failed (SPEC-319 section 5, #575).
 - Neutral, because until the cutover checklist turns the switch on, every celebration is withheld
   `nudges_disabled` and marked, which is #402's hold.
 
