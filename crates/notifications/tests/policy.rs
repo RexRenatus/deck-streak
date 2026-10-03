@@ -3,7 +3,7 @@
 //! unknown key, a malformed value, an undeclared kind or budget, and a missing withhold reason.
 
 // An integration test is test code: its fixtures panic on a failed setup.
-#![allow(clippy::expect_used)]
+#![allow(clippy::expect_used, clippy::print_stdout)]
 
 use std::fs;
 use std::path::{Path, PathBuf};
