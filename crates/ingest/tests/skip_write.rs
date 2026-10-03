@@ -27,8 +27,8 @@ use deck_streak_ingest::skip::{
     SKIP_SPREAD_MIN_DAYS,
 };
 use deck_streak_ingest::skip_write::{
-    erase_backups, list_digest, preview, take, NoHooks, Preview, PreviewCard, TakeAnswer,
-    TakeHooks, TakePorts, TakeRequest,
+    erase_backups, list_digest, moved_counts, preview, take, Counts, NoHooks, Preview, PreviewCard,
+    TakeAnswer, TakeHooks, TakePorts, TakeRequest,
 };
 use deck_streak_ingest::sync_runs::{SqliteSyncRuns, Trigger};
 use deck_streak_ingest::write_class_stop::{ClassStop, StopSetter, WriteClassStop};
@@ -1149,6 +1149,28 @@ fn the_card_guard_refuses_a_large_set_and_an_empty_set_writes_nothing() {
     );
 }
 
+/// A36's bound: a set of exactly [`SKIP_MAX_CARDS`] cards passes the card guard. Its take reaches
+/// the backup, whose planted change then ends it with nothing written.
+#[test]
+fn the_card_guard_admits_a_set_of_exactly_its_bound() {
+    const TEST: &str = "the_card_guard_admits_a_set_of_exactly_its_bound";
+    if support::role().as_deref() == Some(support::SERVER) {
+        return support::serve();
+    }
+    let _zone = zone(UTC);
+    let bound = synthetic::skip_due_reviews(SKIP_MAX_CARDS);
+    let scene = Scene::served(TEST, &bound, SkipSetup::UTC, StudyDayRule::default());
+    let digest = Some(scene.digest());
+    let changed = at(Point::AfterBackup, |partial| {
+        let mut bytes = std::fs::read(partial).expect("the partial backup is read");
+        bytes.push(0);
+        std::fs::write(partial, bytes).expect("the partial backup is changed");
+    });
+    let before = scene.bytes();
+    let (skip, answer) = scene.take(digest, changed);
+    scene.wrote_nothing(skip, &answer, FailReason::BackupCheckFailed, &before);
+}
+
 #[test]
 fn a_custom_search_moves_only_the_study_days_due_review_cards() {
     const TEST: &str = "a_custom_search_moves_only_the_study_days_due_review_cards";
@@ -1325,6 +1347,86 @@ fn the_takes_counts_move_only_the_review_log_rows_and_the_due_count() {
         panic!("the moved count did not set the class's stop");
     };
     assert_eq!((set_by, reason.as_str()), (StopSetter::Counts, "cards"));
+}
+
+/// A48's comparison (R35) on counts the test states: only the review-log rows and the reschedule's
+/// rows up by the moved cards and the due count down by them pass, and any other move names the
+/// first count that moved. The values make adding, subtracting, multiplying and dividing by the
+/// moved count disagree.
+#[test]
+fn the_counts_name_the_first_count_a_reschedule_does_not_explain() {
+    let _zone = zone(UTC);
+    let moved = 3;
+    let before = Counts {
+        cards: 40,
+        notes: 30,
+        review_log_rows: 10,
+        reschedule_rows: 4,
+        cards_by_queue_and_type: vec![((0, 0), 15), ((2, 2), 25)],
+        due: 12,
+    };
+    let after = Counts {
+        review_log_rows: 13,
+        reschedule_rows: 7,
+        due: 9,
+        ..before.clone()
+    };
+    assert_eq!(
+        moved_counts(&before, &after, moved),
+        None,
+        "a reschedule of {moved} cards explains every count"
+    );
+    let moves = vec![
+        (
+            "cards",
+            Counts {
+                cards: 41,
+                ..after.clone()
+            },
+        ),
+        (
+            "notes",
+            Counts {
+                notes: 31,
+                ..after.clone()
+            },
+        ),
+        (
+            "cards_by_queue_and_type",
+            Counts {
+                cards_by_queue_and_type: vec![((0, 0), 16), ((2, 2), 24)],
+                ..after.clone()
+            },
+        ),
+        (
+            "review_log_rows",
+            Counts {
+                review_log_rows: 14,
+                ..after.clone()
+            },
+        ),
+        (
+            "reschedule_rows",
+            Counts {
+                reschedule_rows: 8,
+                ..after.clone()
+            },
+        ),
+        (
+            "due",
+            Counts {
+                due: 10,
+                ..after.clone()
+            },
+        ),
+    ];
+    for (name, moved_after) in examined("count(s) that moved", moves) {
+        assert_eq!(
+            moved_counts(&before, &moved_after, moved),
+            Some(name),
+            "{name} moved"
+        );
+    }
 }
 
 #[test]
@@ -1620,4 +1722,54 @@ fn the_skip_refuses_a_zone_the_service_does_not_pin() {
     for (number, inside) in examined("line(s) reading TZ or a zone directory", reads) {
         assert!(inside, "line {number} reads the zone outside the pin");
     }
+}
+
+/// A44's grammar: the pin refuses a rule outside the POSIX grammar and pins one inside it, each
+/// arm of the parser judged by a rule that breaks only that arm and names no zone file.
+#[test]
+fn the_pin_refuses_a_rule_outside_the_posix_grammar() {
+    let held = zone(UTC);
+    let outside = vec![
+        // text after the offset that is no daylight zone's name
+        "UTC0X",
+        // an offset past 24 hours
+        "UTC25",
+        // a quoted name under three characters
+        "<U>0",
+        // a quoted name holding a character outside letters, digits, `+` and `-`
+        "<U.C>0",
+        // a Julian day below 1
+        "AAA0BBB,J0,J1",
+        // a day that is not decimal digits
+        "AAA0BBB,J+1,J2",
+        // a month past 12
+        "AAA0BBB,M13.1.0,M1.1.0",
+    ];
+    for rule in examined("rule(s) outside the grammar", outside) {
+        rezone(&held, rule);
+        let scene = Scene::offline(&SKIP_CARDS, SkipSetup::UTC, StudyDayRule::default());
+        assert_eq!(
+            scene.preview(),
+            Preview::Refused(FailReason::ZoneNotPinned),
+            "{rule}: the pin refuses it"
+        );
+    }
+
+    // A quoted name inside the grammar is pinned, and the preview lists.
+    rezone(&held, "<UTC>0");
+    let scene = Scene::offline(&SKIP_CARDS, SkipSetup::UTC, StudyDayRule::default());
+    assert!(
+        matches!(scene.preview(), Preview::Listed { .. }),
+        "<UTC>0 is pinned"
+    );
+
+    // A month rule inside the grammar is pinned, then refused for its daylight period.
+    let month = "AAA0BBB,M3.2.0,M11.1.0";
+    rezone(&held, month);
+    let scene = Scene::offline(&SKIP_CARDS, SkipSetup::UTC, StudyDayRule::default());
+    assert_eq!(
+        scene.preview(),
+        Preview::Refused(FailReason::ZoneObservesDaylightSaving),
+        "{month} is pinned and observes daylight saving"
+    );
 }
