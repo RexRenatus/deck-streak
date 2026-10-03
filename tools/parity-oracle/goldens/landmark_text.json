@@ -867,7 +867,7 @@
   "kind": "adapter",
   "note": "Builds a predecessor Landmark of the case's event, ordinal and day, renders it plain and gap_honest, and writes each text's date as its day token; cases drawn under CPython 3.12.12.",
   "registry": "tools/parity-oracle/registry/spec_102.py",
-  "registry_sha256": "459ffd874367cbddc3c8e878e145fed36864fbe702feb38f6a18d94589114293",
+  "registry_sha256": "8808464e91f7efe1e3e1b6850a9fbca5a574ae84739af504a4811de2b0c4c231",
   "schema": "phx.parity-golden.v1",
   "seed": 20,
   "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
