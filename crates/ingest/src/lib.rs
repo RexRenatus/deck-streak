@@ -24,6 +24,7 @@ pub mod reader;
 pub mod settings;
 pub mod state;
 pub mod structure;
+pub mod study_days;
 pub mod sync;
 pub mod sync_runs;
 pub mod tier;
