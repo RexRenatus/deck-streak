@@ -82,3 +82,22 @@ A22: green at 23641fae
   `near(a, b)`, a 1e-9 tolerance, because clippy's `float_cmp` refuses `a == b`. That loosened the
   criterion and the record did not say so. 21f7465b27acce0010850ae3854c1a1fa2117109 restores exact
   equality with `a.to_bits() == b.to_bits()`; A5's red line at a26ed3ad is unchanged.
+
+## Addendum, 2026-10-03: the Mini App part
+
+The second part of the second pull request delivers A19 and A20, each committed before the rule it
+tests, red on a compiling stub: A19's course ladder at 6ab922f1, a stub that draws no band cell, made
+green by edc6c555; A20's law block at d7bd6425, a stub that renders each count `?? 0`, made green by
+f25690b7. Each red line was replayed at fe1ff5dd with the red commit's three files put back
+(`CourseLadder.svelte`, `CourseLadder.test.ts` and `progress.ts`; `LawBlock.svelte`,
+`LawBlock.test.ts` and `law.ts`), running the criterion's own fence command: each exited 1 with
+`Tests  1 failed (1)`, at `CourseLadder.test.ts:49:19` and `LawBlock.test.ts:44:19`. Each green
+line's run printed `1 passed`, at fe1ff5dd, whose `web/app/src/lib/progress/` and
+`web/app/src/lib/law/` are byte-equal to the green commits'.
+
+```red-first
+A19: red at 6ab922f1: AssertionError: examined 0 band cells: the population is empty, so nothing was judged: expected 0 to be greater than 0
+A19: green at edc6c555
+A20: red at d7bd6425: AssertionError: examined 0 pending counts: the population is empty, so nothing was judged: expected 0 to be greater than 0
+A20: green at f25690b7
+```
