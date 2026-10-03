@@ -546,7 +546,7 @@ gave an outside caller two names that the census never looks for, and the caller
 | A32 | a renamed re-export of `settle`, its request or its module in progression's `src` is followed, including a module renamed inside a group (`settle::{self as ledger}`) and a chain whose link is read after the alias that uses it, and a caller outside coordination that names only the new names is refused by file, alias and original | progression `xp_census` tests: the fence's test, and `the_census_follows_a_grouped_module_renaming_and_a_chain_read_before_its_link` |
 
 ```acceptance
-A32: cargo test -p deck-streak-progression --test xp_census -- --exact the_census_reads_progressions_own_reexports_as_it_reads_the_other_crates
+A32: cargo test -p deck-streak-progression --test xp_census -- --exact the_census_reads_progressions_own_reexports_as_it_reads_the_other_crates the_census_follows_a_grouped_module_renaming_and_a_chain_read_before_its_link
 ```
 
 ## 12. Amendment, 2026-09-30, round 6: the compiler is the census
@@ -734,8 +734,8 @@ stands, and the compiler decides it.
 
 ```acceptance
 A33: cargo test -p deck-streak-progression --test xp_census -- --exact the_census_follows_a_crate_alias
-A34: cargo test -p deck-streak-progression --test xp_census -- --exact the_census_refuses_every_caller_the_compiler_finds
-A35: cargo test -p deck-streak-progression --test xp_census -- --exact the_census_refuses_every_build_script_that_can_name_settle
+A34: cargo test -p deck-streak-progression --test xp_census -- --exact the_census_refuses_every_caller_the_compiler_finds the_census_refuses_what_the_compiler_is_not_asked the_census_names_each_use_in_its_package_and_file the_census_compiles_with_cargos_own_defaults the_census_fails_by_name_past_its_expansion_limit the_census_fails_by_name_past_its_cargo_limit the_killer_plants_progressions_own_probe
+A35: cargo test -p deck-streak-progression --test xp_census -- --exact the_census_refuses_every_build_script_that_can_name_settle a_build_script_in_a_package_that_depends_on_settle_is_refused_by_name a_build_script_in_a_package_that_cannot_name_settle_is_accepted a_one_byte_edit_of_progressions_build_script_is_refused_on_the_pin a_corrupt_lock_file_is_refused_by_the_fail_closed_arm a_build_script_reached_through_a_build_dependency_is_refused a_build_script_reached_through_a_dev_dependency_is_refused
 ```
 
 ## 14. Amendment, 2026-09-30, round 8: the census judges the tree alone
@@ -811,14 +811,16 @@ says so and says what holds instead.
 - **Cost.** Every census compile is cold, so the `rust` job pays each compile in full. The pull
   request's body carries the `rust` job's wall time on `dev` without this change, at this change,
   and the increment, each read from CI.
-- **Rows.** S07290 to S07299: the owner found by path, the decoy refusal, the renamed owner, the
+- **Rows.** S07290 to S07301: the owner found by path, the decoy refusal, the renamed owner, the
   owner without a script, the ambiguous owner, the empty target, the cleared environment, the
-  configuration above the tree, the configuration in cargo's home, and a member reading a variable
-  the host sets. Each is killed by a test of `xp_census.rs` and proved KILLED by its full id on a
-  committed tree.
+  configuration above the tree, the configuration in cargo's home, a member reading a variable
+  the host sets, a member reading a file outside the tree, and a registry or git package that
+  reaches the owner. Each is killed by a test of `xp_census.rs` and proved KILLED by its full id
+  on a committed tree.
 - **Files.** `crates/progression/tests/xp_census.rs`, `.github/workflows/ci.yml` (the census's
   cache removed), `docs/schematics/ci-jobs-and-caches.md`,
-  `scripts/mutation-rows.d/S07200-S07299.json`, `docs/decisions/ADR-197-*.md`,
+  `scripts/mutation-rows.d/S07200-S07299.json`, `scripts/mutation-rows.d/S07300-S07399.json`,
+  `docs/decisions/ADR-197-*.md`,
   `docs/red-first/SPEC-072.md` and `changelog.d/settle-census-397.md`.
 
 ## 15. Acceptance criteria of section 14's amendment
@@ -828,5 +830,5 @@ says so and says what holds instead.
 | A36 | the census's verdict depends only on the tree it judges: the owner is the member at progression's manifest path, and a graph where it cannot be told is refused by name; every lookup is keyed by id, unique or refused; each census compiles in an empty target, with an environment it names; a cargo configuration above the tree or in cargo's home, and a member's read beyond the tree, are refused by name; and a tree's verdict on a target another tree used equals its verdict on a fresh one | progression `xp_census` tests: `verify_round_seven_population_is_judged_as_each_case_expects_on_any_target`, `the_order_pair_p3_is_judged_alike_in_both_orders_on_one_target`, `a_target_copied_from_another_trees_census_does_not_move_the_verdict`, `a_git_package_carrying_the_owners_name_beside_a_members_script_is_refused_by_name`, `a_git_package_carrying_the_owners_name_beside_an_edited_pin_is_refused_by_name`, `a_git_package_carrying_the_owners_name_beside_a_disarmed_owner_is_refused_by_name`, `the_owners_manifest_under_another_package_name_is_refused_by_name`, `an_owner_without_a_build_script_is_refused_by_name`, `the_owner_is_the_member_at_its_manifest_and_every_other_lookup_is_unique_or_refused`, `a_variable_the_tree_does_not_set_does_not_move_the_verdict`, `a_cargo_configuration_above_the_tree_is_refused_by_name`, `a_cargo_configuration_in_cargos_home_is_refused_by_name`, `a_members_code_reading_a_variable_the_host_sets_is_refused_by_name`, `a_git_url_reused_with_other_content_is_judged_as_a_fresh_url` and `main_round_seven_generation_is_refused_by_name` |
 
 ```acceptance
-A36: cargo test -p deck-streak-progression --test xp_census -- --exact verify_round_seven_population_is_judged_as_each_case_expects_on_any_target
+A36: cargo test -p deck-streak-progression --test xp_census -- --exact verify_round_seven_population_is_judged_as_each_case_expects_on_any_target the_order_pair_p3_is_judged_alike_in_both_orders_on_one_target a_target_copied_from_another_trees_census_does_not_move_the_verdict a_git_package_carrying_the_owners_name_beside_a_members_script_is_refused_by_name a_git_package_carrying_the_owners_name_beside_an_edited_pin_is_refused_by_name a_git_package_carrying_the_owners_name_beside_a_disarmed_owner_is_refused_by_name the_owners_manifest_under_another_package_name_is_refused_by_name an_owner_without_a_build_script_is_refused_by_name the_owner_is_the_member_at_its_manifest_and_every_other_lookup_is_unique_or_refused a_variable_the_tree_does_not_set_does_not_move_the_verdict a_cargo_configuration_above_the_tree_is_refused_by_name a_cargo_configuration_in_cargos_home_is_refused_by_name a_members_code_reading_a_variable_the_host_sets_is_refused_by_name a_git_url_reused_with_other_content_is_judged_as_a_fresh_url main_round_seven_generation_is_refused_by_name
 ```

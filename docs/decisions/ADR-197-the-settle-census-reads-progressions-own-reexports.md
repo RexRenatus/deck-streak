@@ -328,6 +328,6 @@ The options were chosen against:
 What stays disclosed by kind, as main's round-6 ruling decided, is named in SPEC-072 section 14 and
 tracked by issue 445: progression's own code reading the census's cfg, which the pin does not cover
 (the proc-macro bullet of round 6 is one instance of it); and the build-time code of a package that
-cannot name `settle`, which cargo runs during the census's compile. Rows S07290 to S07299 pin the
-owner's lookup, the empty target, the environment and the refusals of configuration and of reads
-beyond the tree.
+cannot name `settle`, which cargo runs during the census's compile. Rows S07290 to S07301 pin the
+owner's lookup, the empty target, the environment, the refusals of configuration and of reads
+beyond the tree, and the refusal of a registry or git package that reaches the owner.
