@@ -1321,6 +1321,66 @@ mod tests {
             }
         );
     }
+
+    /// The one spelling a multi-thread test of this module wears (#577, SPEC-325 R1): two
+    /// workers whatever the host's core count, so the tests libtest runs at once draw a bounded
+    /// number of threads, and the driver's thread for each connection is never refused for them.
+    const BOUNDED_MULTI_THREAD: &str =
+        "#[tokio::test(flavor = \"multi_thread\", worker_threads = 2)]";
+
+    /// The multi-thread `tokio::test` attributes in `source`, and those among them that are not
+    /// [`BOUNDED_MULTI_THREAD`], each as its trimmed line.
+    fn multi_thread_attributes(source: &str) -> (Vec<&str>, Vec<&str>) {
+        let attributes: Vec<&str> = source
+            .lines()
+            .map(str::trim)
+            .filter(|line| line.starts_with("#[tokio::test(") && line.contains("multi_thread"))
+            .collect();
+        let unbounded = attributes
+            .iter()
+            .copied()
+            .filter(|line| *line != BOUNDED_MULTI_THREAD)
+            .collect();
+        (attributes, unbounded)
+    }
+
+    /// A1 (#577, SPEC-325 R2): a runtime built from the module's multi-thread attribute runs two
+    /// workers, read from the runtime itself, not one worker per core of the host.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn a_multi_thread_wiring_test_runs_on_two_workers_whatever_the_host() {
+        assert_eq!(
+            tokio::runtime::Handle::current().metrics().num_workers(),
+            2,
+            "the runtime runs the attribute's two workers, not one per core of the host"
+        );
+    }
+
+    /// A2 (#577, SPEC-325 R3): every multi-thread `tokio::test` in this file wears the bounded
+    /// attribute, so the module's peak thread count does not grow with the host; a planted
+    /// unbounded attribute is refused by its line.
+    #[test]
+    fn every_multi_thread_wiring_test_bounds_its_runtime_to_two_workers() {
+        let (attributes, unbounded) = multi_thread_attributes(include_str!("wiring.rs"));
+        assert_eq!(
+            unbounded,
+            Vec::<&str>::new(),
+            "each multi-thread test names worker_threads = 2"
+        );
+        println!(
+            "examined {} multi-thread test attribute(s)",
+            attributes.len()
+        );
+        assert!(
+            !attributes.is_empty(),
+            "examined 0 multi-thread test attributes: the population is empty, so nothing was judged"
+        );
+        let planted = "    #[tokio::test(flavor = \"multi_thread\")]\n    async fn planted() {}\n";
+        assert_eq!(
+            multi_thread_attributes(planted).1,
+            vec!["#[tokio::test(flavor = \"multi_thread\")]"],
+            "a planted unbounded attribute is refused by its line"
+        );
+    }
 }
 
 /// Why the instruments cannot be built. Each names a setting, never a value.
