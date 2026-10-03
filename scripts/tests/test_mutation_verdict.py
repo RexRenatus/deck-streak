@@ -854,6 +854,13 @@ class TheShardsFitTheirBound(unittest.TestCase):
         self.assertEqual(plan["shards"]["count"], 1)
         self.assertEqual(json.loads(outputs.get("matrix", "null")), [0])
 
+    def test_a_listing_that_needs_exactly_the_shard_cap_is_sized_at_the_cap(self):
+        module = verdict_module()
+        # One mutant per shard fits (baseline + 3000 <= bound); two to a shard do not, so the
+        # fewest is the cap itself, and a search that stops short of it would refuse the listing.
+        costs = [3000] * module.MAX_SHARDS
+        self.assertEqual(module.fewest_shards(costs, module.BASELINE_SECONDS), module.MAX_SHARDS)
+
 
 def sharded(test):
     """A fixture whose diff lists three shards' worth of the costliest mutants: (the fixture, each
