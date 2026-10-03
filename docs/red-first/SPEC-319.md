@@ -15,4 +15,23 @@ A2: red at e884ccca: assertion `left == right` failed: the badge is deferred, ne
 A3: red at e884ccca: assertion `left == right` failed: one push delivers the held badge (Ran { sends: 0 }): []; left: 0, right: 1
 A4: red at e884ccca: assertion `left == right` failed: a fresh start seeds the celebrations' switch off; left: None, right: Some("0")
 A5: red at e884ccca: error[E0599]: no method named `holding` found for struct `Router` in the current scope (crates/notifications/tests/router.rs, the `.holding()` call)
+A1: green at 00f814d8
+A2: green at 00f814d8
+A3: green at 00f814d8
+A4: green at 00f814d8
+A5: green at 00f814d8
 ```
+
+Two assertions were narrowed at the green commit, to the criterion's own wording: the cycle's
+badge also earns the first level, so the queue holds a second row for the level-up. A2 reads the
+rows held for the badge's key, and A3 reads the pushes that name the badge: exactly one. Neither
+was widened to pass; A1, A4 and A5 are unchanged.
+
+Mutation rows, proved at 82b22151 (`rows: examined 6: killed 6, survived 0, void 0`):
+
+- S31900: KILLED
+- S31901: KILLED
+- S31902: KILLED
+- S31903: KILLED
+- S31904: KILLED (in the cargo-killed script table, killer crate `daemon`)
+- S31905: KILLED
