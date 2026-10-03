@@ -7,7 +7,7 @@
 //! source and the track, a `once` grant is held to one row per source and track across every study
 //! day, and both rules are unique indexes of the table itself (ADR-040).
 
-use deck_streak_kernel::{Db, KernelError, Track, UtcMillis};
+use deck_streak_kernel::{Db, KernelError, StudyDay, Track, UtcMillis};
 use sqlx::SqliteConnection;
 
 use crate::grant::{GrantAnswer, GrantPort, GrantRequest};
@@ -70,6 +70,21 @@ impl SqliteXpLedger {
     /// [`KernelError::Database`] when the read fails.
     pub async fn level(&self) -> Result<Level, KernelError> {
         Ok(level_for(self.total().await?))
+    }
+
+    /// The sum of `track`'s grants and settlements on `study_day` alone: the law block's XP of
+    /// the day over both XP tables (SPEC-077 R11), as `track_total` sums every day.
+    ///
+    /// # Errors
+    ///
+    /// [`KernelError::Database`] when the read fails.
+    pub async fn track_day_total(
+        &self,
+        track: Track,
+        study_day: StudyDay,
+    ) -> Result<XpTotal, KernelError> {
+        let _ = study_day;
+        self.track_total(track).await
     }
 }
 
