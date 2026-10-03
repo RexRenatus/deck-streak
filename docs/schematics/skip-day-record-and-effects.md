@@ -152,18 +152,15 @@ flowchart TD
   take["the take's outcome, or the start-up settlement of a pending row"] --> applied{"applied?"}
   applied -- "no" --> failed["settle failed: no charge"]
   applied -- "yes" --> tx["one write transaction, BEGIN IMMEDIATE"]
-  tx --> count["count the month's other applied skips not undone"]
+  tx --> count["count the month's other applied skips not undone on an earlier study day"]
   count --> price["price: the ladder from economy.json at that count, clamped to its last entry"]
-  price --> zero{"price 0?"}
-  zero -- "yes" --> settle["settle applied, unfunded false"]
-  zero -- "no" --> debit["floor-clipped debit, source skip_tariff, the skip's id, the skip's own study day"]
-  debit --> settle2["settle applied, unfunded when paid is below the price"]
+  price --> debit["floor-clipped debit, source skip_tariff, the skip's id, the skip's own study day"]
+  debit --> settle["settle applied, unfunded when paid is below the price"]
   undo["the undo, accepted"] --> utx["one write transaction"]
   utx --> mark["mark undone at the undo's instant"]
   mark --> paid["read what the skip paid, by source and the skip's id"]
-  paid --> credit{"paid above 0?"}
-  credit -- "yes" --> refund["refund, source skip_tariff_refund, the skip's id, the undo's recorded study day"]
-  credit -- "no" --> nothing["no credit"]
+  paid --> refund["refund, source skip_tariff_refund, the skip's id, the undo's recorded study day"]
+  refund --> commit["commit"]
 ```
 
 A retry on any later study day finds the same ledger key `(study_day, source, reference)`, so the
