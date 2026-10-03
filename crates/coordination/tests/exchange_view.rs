@@ -61,10 +61,10 @@ fn the_exchange_window_matches_the_parity_golden() {
 /// A migrated database in `scratch` holding grants and settled rows inside and outside the last
 /// three days, and the rollups their days' graduations come from.
 ///
-/// Inside the window (19_998 to 20_000): `quest:1` 30 and `quest:2` 45 granted on 20_000, which
-/// graduated 4 cards; `reviews` settled 12 on 19_999 (2 graduated) and 20 on 20_000; `focus`
-/// granted 9 on 19_998, which has no rollup. Outside it: `quest:3` 500 granted and `reviews` 99
-/// settled on 19_990, which graduated 50.
+/// Inside the window (`19_998` to `20_000`): `quest:1` 30 and `quest:2` 45 granted on `20_000`, which
+/// graduated 4 cards; `reviews` settled 12 on `19_999` (2 graduated) and 20 on `20_000`; `focus`
+/// granted 9 on `19_998`, which has no rollup. Outside it: `quest:3` 500 granted and `reviews` 99
+/// settled on `19_990`, which graduated 50.
 async fn seeded(scratch: &tempfile::TempDir) -> Db {
     let db = Db::open(&scratch.path().join("deck_streak.db"))
         .await
@@ -129,6 +129,9 @@ fn the_seeded_window() -> Vec<SourceRate> {
     ]
 }
 
+/// One XP row as the dump reads it: table, id, day, source, track, amount, closed, created.
+type XpRowDump = (String, i64, i64, String, String, i64, String, i64);
+
 /// Every row of both XP tables, in table and id order, as text.
 async fn every_xp_row(db: &Db) -> Vec<String> {
     let mut read = db.reader().acquire().await.expect("a reader");
@@ -139,11 +142,10 @@ async fn every_xp_row(db: &Db) -> Vec<String> {
         "SELECT 'settlement', id, study_day, source, track, amount, CAST(closed AS TEXT), \
          created_at FROM xp_settlement ORDER BY id",
     ] {
-        let found: Vec<(String, i64, i64, String, String, i64, String, i64)> =
-            sqlx::query_as(statement)
-                .fetch_all(&mut *read)
-                .await
-                .expect("the XP rows are read");
+        let found: Vec<XpRowDump> = sqlx::query_as(statement)
+            .fetch_all(&mut *read)
+            .await
+            .expect("the XP rows are read");
         rows.extend(found.into_iter().map(|row| format!("{row:?}")));
     }
     rows

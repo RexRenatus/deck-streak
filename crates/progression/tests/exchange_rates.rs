@@ -149,7 +149,7 @@ fn the_bucket_of_a_source_matches_the_parity_golden() {
 }
 
 /// A migrated database in `scratch` holding one grant and two settled rows, each table with a row
-/// inside the window 19_998 to 20_000 and one outside it.
+/// inside the window `19_998` to `20_000` and one outside it.
 async fn seeded(scratch: &tempfile::TempDir) -> Db {
     let db = Db::open(&scratch.path().join("deck_streak.db"))
         .await
