@@ -24,3 +24,21 @@ Part a, A24, `cargo test -p deck-streak-ingest --test study_days` (1 failed, 0 p
 
 - A24 `the_study_days_are_every_scoped_study_event_day_once`: `left: []`, `right:
   [StudyDay(10000), StudyDay(19001), StudyDay(19005), StudyDay(19020)]`.
+
+The reading, one line per criterion: red at the test commit, green at the implementation commit.
+
+```red-first
+A1: red at be50d156: assertion `left == right` failed: the case {"study_days":[11323],"today":11688}: left [], right [("landmark:anniv:1", "landmark_anniversary", 1, StudyDay(11688))]
+A1: green at a8ffb874
+A2: red at be50d156: assertion `left == right` failed: the case {"study_days":[11323],"today":11688}: left [], right ["landmark:anniv:1"]
+A2: green at a8ffb874
+A3: red at be50d156: assertion `left == right` failed: the case {"day":19860,"event":"landmark_anniversary","ordinal":1}: left "", right a text of the 1st anniversary
+A3: green at a8ffb874
+A4: red at be50d156: assertion `left == right` failed: landmarks.LANDMARK_DAY_STEP: left 0, right 25
+A4: green at a8ffb874
+A24: red at be50d156: assertion `left == right` failed: left [], right [StudyDay(10000), StudyDay(19001), StudyDay(19005), StudyDay(19020)]
+A24: green at a8ffb874
+```
+
+The green run reads `test result: ok. 4 passed` for `tests/landmarks.rs` and `test result: ok. 1
+passed` for `tests/study_days.rs`.
