@@ -91,8 +91,8 @@ every course in it is confirmed on that day. -/
 def AllConfirmedExactly (f : List α → List (α × Int) → List Int) : Prop :=
   ∀ writing rows day, day ∈ f writing rows ↔ writing ≠ [] ∧ ∀ code ∈ writing, (code, day) ∈ rows
 
-theorem no_day_is_all_confirmed_over_no_writing_course :
-    AllConfirmedExactly (allConfirmedDays (α := α)) := by
+/-- `all_confirmed_days` over any course type: the day is all-confirmed exactly as claimed. -/
+theorem all_confirmed_days_exactly : AllConfirmedExactly (allConfirmedDays (α := α)) := by
   intro writing rows day
   cases writing with
   | nil => simp [allConfirmedDays]
@@ -105,27 +105,38 @@ theorem no_day_is_all_confirmed_over_no_writing_course :
     · rintro ⟨_, hall⟩
       exact ⟨⟨(c, day), hall c (List.mem_cons_self), rfl⟩, hall⟩
 
-theorem the_writing_day_pays_each_confirmed_course_and_the_bonus_only_over_a_full_set :
+/-- `writing_day_xp` over any course type: each course and the bonus pay as claimed. -/
+theorem writing_day_xp_pays_as_claimed :
     PaysEachCourseAndTheBonusOnlyOverAFullSet (writingDayXp (α := α)) := by
   intro writing day rows
   refine ⟨rfl, ?_⟩
-  have h := no_day_is_all_confirmed_over_no_writing_course writing rows day
+  have h := all_confirmed_days_exactly writing rows day
   simp only [writingDayXp, h]
 
 end Port
 
-/-- One confirmation, of course 0 on epoch day 0. -/
-def oneRow : List (Nat × Int) := [(0, 0)]
+/-! The claims are stated over `String`, the course code's text, as the code reads it. -/
+
+theorem the_writing_day_pays_each_confirmed_course_and_the_bonus_only_over_a_full_set :
+    PaysEachCourseAndTheBonusOnlyOverAFullSet (writingDayXp (α := String)) :=
+  writing_day_xp_pays_as_claimed
+
+theorem no_day_is_all_confirmed_over_no_writing_course :
+    AllConfirmedExactly (allConfirmedDays (α := String)) :=
+  all_confirmed_days_exactly
+
+/-- One confirmation, of a synthetic course on epoch day 0. -/
+def oneRow : List (String × Int) := [("qaa", 0)]
 
 theorem the_predecessors_subset_rule_pays_the_bonus_over_no_writing_course :
-    ¬ PaysEachCourseAndTheBonusOnlyOverAFullSet (writingDayXpPredecessor (α := Nat)) := by
+    ¬ PaysEachCourseAndTheBonusOnlyOverAFullSet (writingDayXpPredecessor (α := String)) := by
   intro h
   have h1 := (h [] 0 []).2
   revert h1
   decide
 
 theorem an_empty_writing_set_confirms_every_day :
-    ¬ AllConfirmedExactly (allConfirmedDaysPredecessor (α := Nat)) := by
+    ¬ AllConfirmedExactly (allConfirmedDaysPredecessor (α := String)) := by
   intro h
   have h1 := h [] oneRow 0
   revert h1
