@@ -553,3 +553,26 @@ New:
 | `S07720-BAND-UP-KEY-LOWERCASE` | `crates/coordination/src/recompute/progress.rs` | the dedupe key spells the band lowercased | `progress_band_up::band_ups_match_the_predecessors_golden_and_pay_once` |
 | `S07721-BAND-UP-THIRD-ARM` | `crates/coordination/src/recompute/mod.rs` | the offers hand every owed band-up to the router | `progress_band_up::band_ups_match_the_predecessors_golden_and_pay_once` |
 | `S07722-BAND-UP-MARK-ONCE` | `crates/curriculum/src/store.rs` | a band-up is marked once | `progress_store::a_band_up_is_marked_once` |
+
+- T19, mutation coverage of the CU85a files, none an acceptance criterion. Three new test files
+  kill the missed mutants of the diff by file, each through the crate's public API:
+  `crates/ingest/tests/memory_state_boundaries.rs` holds the memory state's field-by-field equality
+  (bits semantics, so a NaN equals itself and 0.0 differs from -0.0) and the lenient parse's
+  escapes, multibyte characters and number-shaped runs inside strings;
+  `crates/curriculum/tests/store_boundaries.rs` holds the progress rows' round trip and replace,
+  the stored bands, the milestones with their baseline flag and mark, the band-ups per day and
+  owed oldest first, and the law dues read back as none, then written, then replaced; and
+  `crates/coordination/tests/progress_step_boundaries.rs` holds the two steps' exact registered
+  names, the band-up line and key spelled exactly, the law dues counted from the law track's cards
+  only, and an owed band-up offered under its own course's flag and name, or its code once erased.
+  One mutant in `crates/curriculum/src/progress.rs` is equivalent and is not killed: the band's
+  achieved test reads `count > 0 && pct >= CEFR_BAND_ACHIEVED_PCT`, and the mutant reads `count >= 0`.
+  The count is unsigned, so the mutant's guard is always true, and the only count it changes is
+  zero, whose percentage is 0.0 and fails the threshold test either way, so no band reads
+  differently. The three `lib.rs` files each
+  carry one row in the band file, `S07723-INGEST-MEMORY-STATE-PUBLIC`,
+  `S07724-CURRICULUM-MODULES-PUBLIC` and `S07725-COORDINATION-LAW-PUBLIC`. Each mutant prefixes the
+  changed `pub mod` lines with `#[doc(hidden)]`, which builds; its killer is a source-text guard
+  that reads the crate root with `include_str!` and asserts the declaration, as ruling 44 accepted
+  for S08137. The guards sit in the three test files above, so section 4's lines for the band file
+  and its tests cover them.
