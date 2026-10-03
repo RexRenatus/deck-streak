@@ -1,7 +1,7 @@
--- @phx covers crates/economy/src/tariff.rs anchor=price digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/economy/src/wallet.rs anchor=debit_floored_on digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/coordination/src/skip/mod.rs anchor=settle_applied digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/coordination/src/skip/mod.rs anchor=settle_undone digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+-- @phx covers crates/economy/src/tariff.rs anchor=price digest=sha256:63276c8915de3c34258f19c98f14295994ad8be124c0faade868064bfb378039
+-- @phx covers crates/economy/src/wallet.rs anchor=debit_floored_on digest=sha256:b453615922d0bf5aa4f940affbbdd8273c361ac82165aff2c2094299c87f9bbd
+-- @phx covers crates/coordination/src/skip/mod.rs anchor=settle_applied digest=sha256:7df3e27a07ba3c716aef05c9eb92ce04d5e1b727eaf8543da0f6eb0c41445faa
+-- @phx covers crates/coordination/src/skip/mod.rs anchor=settle_undone digest=sha256:61aa16597ae2e193cf7a29d4606a0def0d356b2d28672b102eadb08705dbb350
 -- @phx vectors formal/vectors/skip-tariff.jsonl
 -- @phx cites #108
 -- @phx theorem the_price_is_a_ladder_entry ramp=report
