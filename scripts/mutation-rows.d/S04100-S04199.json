@@ -819,6 +819,15 @@
         "            let in_a_trait = in_a_trait_impl(structure, at) && false;",
         "one_router::a_command_reply_made_visible_outside_its_module_is_refused",
         "a command reply defined in a trait impl for the handler is visible wherever the trait is, and is refused (SPEC-041 A29, #297); the census is test code, which cargo-mutants never mutates, and the mutant reads no definition as in a trait impl, so the planted trait-impl reply goes unrefused"
+      ],
+      [
+        "S04194-A-UNIT-COMMENT-LINE-IS-SKIPPED",
+        "notifications",
+        "tests/one_router.rs",
+        "        if line.trim_start().starts_with(['#', ';']) {",
+        "        if line.trim_start().starts_with(['#', ';']) && false {",
+        "one_router::a_unit_that_runs_a_test_file_is_refused",
+        "the census skips a unit or drop-in line whose first non-space character is # or ;, which systemd reads as a comment and never runs (ruling 97, SPEC-041 A28, #297); the census is test code, which cargo-mutants never mutates, and the mutant skips no comment line, so the planted # and ; lines naming a test file are refused"
       ]
     ],
     "CARGO_KILLED_SCRIPT_MUTATIONS": [

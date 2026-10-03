@@ -672,7 +672,7 @@ File manifest of the amendment:
 | `docs/decisions/ADR-041-notification-router-core.md` | an amendment to its last Bad bullet |
 | `docs/schematics/notification-router.md` | the census's reach |
 | `docs/red-first/SPEC-041.md` | A24 to A29's red and green lines |
-| `scripts/mutation-rows.d/S04100-S04199.json` | rows S04182 to S04193 |
+| `scripts/mutation-rows.d/S04100-S04199.json` | rows S04182 to S04194 |
 | `changelog.d/census-reach-297.md` | the changelog fragment |
 
 ## 12. Acceptance criteria of the census's reach (#297)

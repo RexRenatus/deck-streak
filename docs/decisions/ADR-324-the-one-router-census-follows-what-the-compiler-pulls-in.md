@@ -98,7 +98,7 @@ or an environment variable. No production code changes; every rule is test code.
 
 ### Confirmation
 
-SPEC-041's A15 and A24 to A29, and the rows S04182 to S04193.
+SPEC-041's A15 and A24 to A29, and the rows S04182 to S04194.
 
 ## What would make this wrong
 
