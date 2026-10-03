@@ -991,3 +991,19 @@ since the wallet's ports answer no such read and the refund owes exactly that am
 A45: cargo test -p deck-streak-ingest --test skip_record -- --exact the_skip_constants_equal_the_predecessors
 A46: cargo test -p deck-streak-coordination --test skip_flow -- --exact the_tariff_and_its_refund_are_taken_once_per_skip
 ```
+
+## 12. Amendments, 2026-10-03, continued: the vectors' consumer, two census lines and one correction
+
+Appended after section 11 and insert-only, as section 10 is: nothing above this heading changes.
+
+- **T16** (section 4, added row). `crates/economy/tests/formal_vectors_skip_tariff.rs` added,
+  `deck-streak-economy`: the Rust consumer of `formal/vectors/skip-tariff.jsonl`, in the house form
+  of `crates/economy/tests/formal_vectors_wallet.rs`. For every vector `lean/SkipTariff` writes,
+  economy's `price`, the floor-clipped debit of that price over a wallet holding the vector's
+  balance, and the refund of what `paid_on` reads back answer as the port does.
+
+Correction: T3's New text says "A price of 0 makes no call.", which the code does not do.
+`settle_applied` asks `debit_floored_on` for the price even when it is 0; the wallet answers a
+request of 0 as nothing requested and writes no movement, so a free skip pays nothing and moves no
+coin. `settle_undone` likewise asks `refund_on` for what the skip paid, and a refund of 0 is
+answered as not positive and credits nothing.
