@@ -331,3 +331,52 @@ tracked by issue 445: progression's own code reading the census's cfg, which the
 cannot name `settle`, which cargo runs during the census's compile. Rows S07290 to S07301 pin the
 owner's lookup, the empty target, the environment, the refusals of configuration and of reads
 beyond the tree, and the refusal of a registry or git package that reaches the owner.
+
+### Decision, round 9: the owner's own operation is refused unless the owner admits it
+
+Round 6 followed progression's re-exports to their callers and left progression's own code that
+calls `settle` disclosed, since rustc reports it as progression's own use. Issue 445 asked for that
+use to be judged. Round 9 refuses it: a use of `settle` that rustc reports in progression's own
+package, by a target that is not a test, a bench or an example, is refused by name unless it is
+written inside a `use` declaration or in a file of `OWNER_ADMITS`, which admits none (SPEC-324 R6).
+
+- The census records where each use is written: the innermost file of the repository that its
+  primary span, or a macro call site it was expanded from, lies in, and the byte its span starts
+  at. rustc counts bytes, so the census finds the `use` declarations of that file with the shared
+  reader's lexer, which keeps byte offsets (SPEC-324 R1), and never with the character walk of its
+  own `strip`.
+- Measured before the rule was written: rustc reports the probe's deprecation on an import, at the
+  path inside the `use`; on a wrapper and a function pointer, at the path; on a re-export a macro
+  writes in its own body, at the definition, inside the macro's `use`; on a re-export whose path is
+  a macro's argument, at the invocation; and on an import in a function body, inside its `use`. So
+  an import and a re-export stay accepted, every killer tree's two `pub use` lines among them, and
+  a wrapper, a function pointer and a generic are refused.
+- The round-6 test plants `crates/progression/src/inner.rs`, a wrapper, and expected it accepted.
+  Under this round it is refused, and its expected list gains that one line in its sorted place
+  (ruling 99, Q-e): a strengthening, no line removed.
+
+Chosen against:
+
+- follow the owner's wrappers to their callers, by deprecating each wrapper in a scratch copy and
+  compiling again: a follower that misses closures, trait impls, statics and pointers, and that
+  multiplies the census's compiles;
+- refuse every use in progression that is not an aid's, imports included: it refuses every killer
+  tree's `pub use` lines and reverses round 6;
+- admit by file, `lib.rs` first: a wrapper written in `lib.rs` would pass;
+- leave the wrapper disclosed: issue 445's first box stays unmet.
+
+Good, because a second door to the operation in the owner's own code is now a refusal by name
+rather than a disclosure, and the owner opens one only by naming its file in `OWNER_ADMITS`, a
+reviewed change.
+
+Bad, because a re-export whose path a macro takes as its argument is reported at the invocation and
+so is refused although it only re-exports: a loud false refusal, which the owner answers by writing
+the `pub use` itself or by admitting the file. And a unit test inside progression's `src` that calls
+`settle` is refused, since cargo names a library's own test compile with the library's kind; the
+tree holds none.
+
+What stays disclosed by kind moves from issue 445 to issue 586, which SPEC-072 section 16 names:
+progression's own code reading the census's cfg, doctests and compile tests, procedural macros, other
+packages' build scripts, an `include!` of a recompute file, registry code and builds in mixed
+debug-assertion states. Rows S32422 to S32426 pin the rule, the aids' exemption, the import test,
+the admitted files and the byte the census reads.

@@ -15,6 +15,16 @@ use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+// The generated population of the table's spellings (SPEC-324, ADR-029's include by path).
+#[macro_use]
+#[path = "../../../tools/table-census/population.rs"]
+mod population;
+// The shared reader of every crate's literals (SPEC-324 R1 to R5), included by path as above.
+#[path = "../../../tools/table-census/table_census.rs"]
+mod table_census;
+
+use population::Spelling;
+
 /// The table the census guards.
 const TABLE: &str = "xp_ledger";
 /// The context that owns it (docs/CONTEXT-MAP.md).
@@ -118,6 +128,9 @@ fn census(root: &Path) -> Census {
             census.sources.push(name);
         }
     }
+    census
+        .refused
+        .extend(table_census::refusals(root, TABLE, OWNER, &census.naming));
     for migration in files(&root.join("migrations"), "sql") {
         let name = relative(root, &migration);
         let file = migration
@@ -221,4 +234,200 @@ fn only_the_grant_port_writes_the_xp_ledger() {
              migrations may",
         ]
     );
+}
+
+/// How many spellings of `xp_ledger` the population plants: its 9 splits in 9 forms each, and the
+/// 14 members of the literal family (SPEC-324 A1).
+const JOINED_SPELLINGS: usize = 95;
+
+/// The literal family of `xp_ledger`: each member spells the name in a way no line of code shows
+/// as written, and rustc, not the census, evaluates it.
+fn family() -> Vec<(&'static str, String)> {
+    vec![
+        spell!("xp\x5fledger"),
+        spell!("xp\u{5f}ledger"),
+        spell!(
+            "xp_\
+             ledger"
+        ),
+        spell!(concat!(r##"xp_"##, r#"ledger"#)),
+        spell!(['x', 'p', '_', 'l', 'e', 'd', 'g', 'e', 'r']),
+        spell!(concat!(concat!("xp", "_"), "ledger")),
+        spell!(concat!(stringify!(xp_), stringify!(ledger))),
+        spell!("XP_LEDGER"),
+        spell!(b"xp\x5fledger"),
+        spell!(c"xp\x5fledger"),
+        spell!([b'x', b'p', b'\x5f', b'l', b'e', b'd', b'g', b'e', b'r']),
+        spell!(concat!("Xp_", "LeDgEr")),
+        spell!(concat!('x', 'p', "_ledger")),
+        spell!("\x78\x70\x5f\x6c\x65\x64\x67\x65\x72"),
+    ]
+}
+
+/// Every spelling of the table's name the population plants: each split in every form, in quests
+/// with a piece in streaks, then each member of the family. Plain concatenation and rustc decide
+/// that each one is the name.
+fn spellings() -> Vec<Spelling> {
+    let mut found = Vec::new();
+    for (index, split) in population::splits(TABLE).iter().enumerate() {
+        assert_eq!(
+            split.concat(),
+            TABLE,
+            "the split {split:?} joins to the name"
+        );
+        let forms = population::planted(split, index, "quests", "streaks");
+        assert_eq!(forms.len(), population::FORMS);
+        found.extend(forms);
+    }
+    for (index, (text, value)) in family().into_iter().enumerate() {
+        assert_eq!(
+            value.to_ascii_lowercase(),
+            TABLE,
+            "rustc reads {text} as the name"
+        );
+        found.push(population::spelled(text, index, "quests"));
+    }
+    found
+}
+
+/// What the census refuses in a tree that holds `spelling` alone. No planted file names the table
+/// as written, so the census's line reader alone can refuse none of them.
+fn census_of(spelling: &Spelling) -> Vec<String> {
+    let planted = tempfile::tempdir().expect("a temporary directory");
+    for (path, text) in &spelling.files {
+        assert!(
+            !text.contains(TABLE),
+            "{path} of {} names {TABLE} as written",
+            spelling.label
+        );
+        plant(planted.path(), path, text);
+    }
+    census(planted.path()).refused
+}
+
+#[test]
+fn a_reserved_name_joined_from_literals_is_refused_in_every_spelling() {
+    // Every spelling, each in a tree of its own, is refused by the name of every file holding a
+    // piece of it; the same spelling inside progression is not refused.
+    let spellings = examined("joined spelling(s)", spellings());
+    assert_eq!(spellings.len(), JOINED_SPELLINGS);
+    for spelling in &spellings {
+        let mut expected: Vec<String> = spelling
+            .files
+            .iter()
+            .map(|(path, _)| {
+                format!(
+                    "{path} spells {TABLE} from literals, joined or in another case, and only \
+                     {OWNER}'s code may"
+                )
+            })
+            .collect();
+        expected.sort();
+        assert_eq!(census_of(spelling), expected, "{}", spelling.label);
+        let owned = spelling.in_crate(OWNER);
+        assert_eq!(census_of(&owned), Vec::<String>::new(), "{}", owned.label);
+    }
+}
+
+#[test]
+fn pieces_that_do_not_cover_the_name_are_not_refused() {
+    // Each near miss comes one character short of the name, in every form, and each control joins
+    // a value the census cannot read beside pieces that are no part of the name, as the real tree's
+    // two `concat!` calls do. None is refused.
+    let mut trees = Vec::new();
+    for (index, split) in population::near_misses(TABLE).iter().enumerate() {
+        assert_eq!(
+            split.concat().len(),
+            TABLE.len() - 1,
+            "{split:?} is one short"
+        );
+        trees.extend(population::planted(split, index, "quests", "streaks"));
+    }
+    let controls = [
+        "pub const PRIVACY: &str = concat!(env!(\"CARGO_PKG_REPOSITORY\"), \"/blob/main/PRIVACY.md\");\n",
+        r#"macro_rules! health_body {
+    ($word:literal) => {
+        concat!(
+            "{\"status\":\"",
+            $word,
+            "\",\"version\":\"",
+            env!("CARGO_PKG_VERSION"),
+            "\"}"
+        )
+    };
+}
+"#,
+        "pub const HOME_LEDGE: &str = concat!(env!(\"HOME\"), \"/ledge\");\n",
+    ];
+    for (index, text) in controls.into_iter().enumerate() {
+        trees.push(Spelling {
+            label: format!("control {index}"),
+            files: vec![(
+                format!("crates/quests/src/c{index:03}_control.rs"),
+                text.to_owned(),
+            )],
+        });
+    }
+    let trees = examined("near miss and control tree(s)", trees);
+    for tree in &trees {
+        assert_eq!(census_of(tree), Vec::<String>::new(), "{}", tree.label);
+    }
+}
+
+#[test]
+fn a_name_the_census_cannot_resolve_fails_closed() {
+    // A value the census cannot read, joined beside part of the name, and an include whose file
+    // the census cannot name or cannot read, are each refused by name. An include joined onto
+    // `OUT_DIR` is a build script's output, which SPEC-324 discloses (#585): it is not refused.
+    let file = "crates/quests/src/fail.rs";
+    let joins = format!(
+        "{file} joins a value the census cannot read beside part of {TABLE}, and only {OWNER}'s \
+         code may"
+    );
+    let unnamed =
+        format!("{file} includes a file the census cannot name, so it cannot read it for {TABLE}");
+    let unread =
+        format!("{file} includes ../queries/missing.sql, which the census cannot read for {TABLE}");
+    let cases = examined(
+        "unresolvable case(s)",
+        vec![
+            (
+                "pub const JOINED: &str = concat!(env!(\"PREFIX\"), \"_ledger\");\n",
+                vec![joins.clone()],
+            ),
+            (
+                "pub const JOINED: &str = concat!(\"xp\", tail!());\n",
+                vec![joins.clone()],
+            ),
+            (
+                "macro_rules! joined {\n    ($head:expr) => {\n        concat!($head, \"r\")\n    };\n}\n",
+                vec![joins],
+            ),
+            (
+                "pub const QUERY: &str = include_str!(env!(\"QUERY_FILE\"));\n",
+                vec![unnamed.clone()],
+            ),
+            (
+                "macro_rules! query {\n    ($file:literal) => {\n        include_str!($file)\n    };\n}\n",
+                vec![unnamed.clone()],
+            ),
+            (
+                "include!(concat!(env!(\"CALL_FILE\"), \"/step.rs\"));\n",
+                vec![unnamed],
+            ),
+            (
+                "pub const QUERY: &str = include_str!(\"../queries/missing.sql\");\n",
+                vec![unread],
+            ),
+            (
+                "include!(concat!(env!(\"OUT_DIR\"), \"/step.rs\"));\n",
+                Vec::new(),
+            ),
+        ],
+    );
+    for (text, expected) in &cases {
+        let planted = tempfile::tempdir().expect("a temporary directory");
+        plant(planted.path(), file, text);
+        assert_eq!(census(planted.path()).refused, *expected, "{text}");
+    }
 }

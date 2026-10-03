@@ -20,6 +20,8 @@ import { parseRecords, type RecordsView } from './records/records';
 import { parseGovernor, parseStreak, type StreakView } from './streak/streak';
 import { parseScore, type ScoreToday } from './score/score';
 import { parseWallet, walletPath, type WalletView } from './economy/wallet';
+import { parseBoard, type BoardView } from './records/board';
+import { parseExchange, type ExchangeView } from './level/exchange';
 import { telegram } from './telegram.svelte';
 
 /**
@@ -65,6 +67,10 @@ export interface Api {
   score(): Promise<Answer<ScoreToday>>;
   /** The owner's level, today's XP and the consistency run (SPEC-072 R23). */
   level(): Promise<Answer<LevelView>>;
+  /** The owner's board: best day, today, the language streak and the level (SPEC-075 R3). */
+  board(): Promise<Answer<BoardView>>;
+  /** The XP exchange readout over every day: each bucket's XP per graduation (SPEC-075 R9). */
+  exchange(): Promise<Answer<ExchangeView>>;
   /** Both streak tracks and the governor's verdict (SPEC-076 R20, R21). */
   streak(): Promise<Answer<StreakView>>;
   /** The owner's earned badges, newest first, and the locked ones with progress (SPEC-073 R16). */
@@ -181,6 +187,8 @@ export function createApi(options: ApiOptions): Api {
     me: () => read('/api/me', parseMe),
     score: () => read('/api/score', parseScore),
     level: () => read('/api/level', parseLevel),
+    board: () => read('/api/board', parseBoard),
+    exchange: () => read('/api/xp/exchange', parseExchange),
     streak: async () => {
       const streak = await read('/api/streak', parseStreak);
       if (streak.kind !== 'ok') return streak;

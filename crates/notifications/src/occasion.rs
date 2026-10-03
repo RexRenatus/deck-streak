@@ -314,8 +314,9 @@ pub struct Occasion {
     streak: Option<StreakFacts>,
 }
 
-/// The language streak's facts on a study day, which the streaks context supplies (SPEC-076) and
-/// the ladder reads for the streak-break cap (SPEC-084 R5). None arrive until SPEC-076 lands.
+/// The language streak's facts on a study day, which coordination reads from the streaks context
+/// (SPEC-076, SPEC-326) and the ladder reads for the streak-break cap (SPEC-084 R5). An occasion
+/// without them reads no break.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct StreakFacts {
     /// The streak's last study day, if it has one.

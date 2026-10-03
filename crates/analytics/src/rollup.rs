@@ -466,6 +466,34 @@ pub async fn recent_totals(
         .collect())
 }
 
+/// Each stored day's graduations in `window` (its first and last day, both included), or of every
+/// stored day when there is no window: the denominator the XP exchange readout divides by
+/// (SPEC-075 R4). A day with no rollup is absent, which the readout counts as 0.
+///
+/// # Errors
+///
+/// [`KernelError::Database`] when the read fails.
+pub async fn graduations(
+    connection: &mut SqliteConnection,
+    window: Option<(StudyDay, StudyDay)>,
+) -> Result<BTreeMap<StudyDay, i64>, KernelError> {
+    let (first, last) = window.map_or((i64::MIN, i64::MAX), |(first, last)| {
+        (first.epoch_day(), last.epoch_day())
+    });
+    let rows = sqlx::query!(
+        r#"SELECT study_day AS "study_day!", graduations FROM daily_rollup
+           WHERE study_day BETWEEN ?1 AND ?2"#,
+        first,
+        last
+    )
+    .fetch_all(connection)
+    .await?;
+    Ok(rows
+        .into_iter()
+        .map(|row| (StudyDay::from_epoch_day(row.study_day), row.graduations))
+        .collect())
+}
+
 /// The rollup repository's reads over the service's database, for the surfaces.
 #[derive(Clone, Debug)]
 pub struct RollupStore {
