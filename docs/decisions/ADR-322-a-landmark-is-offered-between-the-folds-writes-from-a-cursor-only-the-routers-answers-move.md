@@ -103,9 +103,16 @@ landmark across every call and every race.
 SPEC-102 A25 to A27 and A35 to A39 drive the sync cycle with the real router over a temporary
 deployment; rows S10205 to S10207 and S10223 to S10228; `formal/tla/LandmarkOnce` checks
 `FirstRunAtMostOne`, `CelebrateAtMostOnce` and `NoSilentLoss`, and each of its six witnesses is
-caught. Its budget row in `config/formal.json` is the measured wall time of
-`formal check --entry tla/LandmarkOnce` times 1.5, rounded up to a minute: measured by the build
-at its last code edit and recorded in the commit that adds the row.
+caught. Its budget row in `config/formal.json` is `"tla/LandmarkOnce": 420`, admitted by the
+architect seat's ruling 89. `formal check --entry tla/LandmarkOnce` read `FORMAL OK` in 244 s of
+wall time on the maintainer's machine, at the commit that added the entry: three properties, each
+checked over the same model config of 2,343,337 distinct states, plus the six witnesses. The row is
+244 x 1.5 = 366 s, rounded up to a multiple of 60 s, so 420 s. The ruling chose this row over a
+smaller model config or a lower state floor, because each narrows what the entry reaches and the
+floor stays at `states >= 2343337`. It also chose it over folding the three properties into one
+checker run, because the checker runs one per property, which is the tool's shape and not this
+delivery's. The entry is measured again at the delivery's final head, and the row holds only while
+1.5 times that measurement, rounded up to a minute, stays at or below 420 s.
 
 ## What would make this wrong
 
