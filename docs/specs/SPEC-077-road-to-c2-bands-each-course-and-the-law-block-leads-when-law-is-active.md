@@ -181,12 +181,16 @@ R19. Every constant this SPEC uses (the stability target, the mature interval an
 | A6 | a card whose unit falls in no configured band, and a card with no course, are not counted | `a_unit_outside_every_configured_band_is_not_counted` |
 | A7 | the band-ups of every case equal the golden of `_persist_progress`, and each grant, badge and celebration is written once over two recomputes | `band_ups_match_the_predecessors_golden_and_pay_once` |
 | A8 | a course seen for the first time records a silent baseline and pays nothing | `the_first_sighting_of_a_course_is_a_silent_baseline` |
+| A9 | the persona engine reads the live band of the course a language subject names, and the roster's band for a subject with none | `the_persona_engine_reads_the_live_band` |
 | A10 | curriculum's data-rights port lists its three tables as exported and erased, and an erase leaves them empty | `the_curriculum_tables_are_exported_and_erased` |
 | A11 | the law mastery pillar of every case equals the golden of `scoring.py:law_mastery_pillar` | `the_law_mastery_pillar_matches_the_predecessors_golden` |
 | A12 | the law block's fields for every case equal the golden of `DigestsLayer.law_track_summary` | `the_law_block_matches_the_predecessors_golden` |
 | A13 | the block is omitted with no law activity, and its lines follow the golden of `telegram.py:render_law_block`'s shown rule | `the_law_block_is_omitted_without_law_activity` |
 | A14 | before the first recompute the law dues are pending, never 0 | `law_dues_are_pending_before_the_first_recompute` |
 | A15 | the active law leeches and the law mastery pillar are pending until the leech port is wired | `law_leeches_are_pending_until_the_leech_port_is_wired` |
+| A16 | the progress route answers the owner and refuses every other caller with no data | `the_progress_route_answers_only_the_owner` |
+| A17 | the law route answers the owner and refuses every other caller with no data | `the_law_route_answers_only_the_owner` |
+| A18 | `/progress` states each course's band, mastery and current unit as the route does | `progress_shows_each_course_band_and_mastery` |
 | A21 | the next milestone reads the sum of the courses' stored mature cards, and stays pending before the first recompute stores a course | `the_milestone_reads_the_courses_mature_cards` |
 
 ```acceptance
@@ -198,12 +202,16 @@ A5: cargo test -p deck-streak-curriculum --test progress_goldens -- --exact the_
 A6: cargo test -p deck-streak-curriculum --test progress_unit_bands -- --exact a_unit_outside_every_configured_band_is_not_counted
 A7: cargo test -p deck-streak-coordination --test progress_band_up -- --exact band_ups_match_the_predecessors_golden_and_pay_once
 A8: cargo test -p deck-streak-coordination --test progress_band_up -- --exact the_first_sighting_of_a_course_is_a_silent_baseline
+A9: cargo test -p deck-streak-daemon --test progress_live_band -- --exact the_persona_engine_reads_the_live_band
 A10: cargo test -p deck-streak-curriculum --test progress_store -- --exact the_curriculum_tables_are_exported_and_erased
 A11: cargo test -p deck-streak-curriculum --test law_goldens -- --exact the_law_mastery_pillar_matches_the_predecessors_golden
 A12: cargo test -p deck-streak-coordination --test law_block -- --exact the_law_block_matches_the_predecessors_golden
 A13: cargo test -p deck-streak-coordination --test law_block -- --exact the_law_block_is_omitted_without_law_activity
 A14: cargo test -p deck-streak-coordination --test law_block -- --exact law_dues_are_pending_before_the_first_recompute
 A15: cargo test -p deck-streak-coordination --test law_block -- --exact law_leeches_are_pending_until_the_leech_port_is_wired
+A16: cargo test -p deck-streak-api --test progress_routes -- --exact the_progress_route_answers_only_the_owner
+A17: cargo test -p deck-streak-api --test law_routes -- --exact the_law_route_answers_only_the_owner
+A18: cargo test -p deck-streak-bot --test progress_commands -- --exact progress_shows_each_course_band_and_mastery
 A21: cargo test -p deck-streak-coordination --test progress_milestone -- --exact the_milestone_reads_the_courses_mature_cards
 ```
 
@@ -233,18 +241,10 @@ consumer, the port `LiveBand` over curriculum's stored band, is CU85b's first pa
 
 | id | criterion | decided by | delivered by |
 |---|---|---|---|
-| A9 | the persona engine reads the live band of the course a language subject names, and the roster's band for a subject with none | `the_persona_engine_reads_the_live_band` | CU85b |
-| A16 | the progress route answers the owner and refuses every other caller with no data | `the_progress_route_answers_only_the_owner` | CU85b |
-| A17 | the law route answers the owner and refuses every other caller with no data | `the_law_route_answers_only_the_owner` | CU85b |
-| A18 | `/progress` states each course's band, mastery and current unit as the route does | `progress_shows_each_course_band_and_mastery` | CU85b |
 | A19 | the progress screen draws each band cell with its mastery and marks the current unit | `draws each band cell with its mastery and the current unit` | CU85b |
 | A20 | the law tab renders a pending count as pending, never as zero | `renders a pending count as pending, never zero` | CU85b |
 | B3 | over `web/app/src/routes/progress/+page.svelte`, `web/app/src/routes/law/+page.svelte`, `web/app/src/lib/progress/` and `web/app/src/lib/law/`: both screens pass the accessibility audit in both Telegram colour schemes | the accessibility pack | CU85b |
 
-CU85b: A9: cargo test -p deck-streak-daemon --test progress_live_band -- --exact the_persona_engine_reads_the_live_band
-CU85b: A16: cargo test -p deck-streak-api --test progress_routes -- --exact the_progress_route_answers_only_the_owner
-CU85b: A17: cargo test -p deck-streak-api --test law_routes -- --exact the_law_route_answers_only_the_owner
-CU85b: A18: cargo test -p deck-streak-bot --test progress_commands -- --exact progress_shows_each_course_band_and_mastery
 CU85b: A19: pnpm exec vitest run web/app/src/lib/progress/CourseLadder.test.ts -t "draws each band cell with its mastery and the current unit"
 CU85b: A20: pnpm exec vitest run web/app/src/lib/law/LawBlock.test.ts -t "renders a pending count as pending, never zero"
 
@@ -589,3 +589,94 @@ New:
 - T21, T5 and T10. `crates/api/src/badges_routes.rs` and the coordination progress view for the API and the bot are delivered by CU85b, whose first part wires the stored mature cards into `GET /api/milestone` (R17a); until then the route answers `pending`.
 - `crates/api/src/badges_routes.rs`: unchanged in this pull request; delivered by CU85b
 - T22, the merge of live `dev`. `crates/curriculum/tests/horizon_goldens.rs`, which the horizon slice (SPEC-091) added, builds a `Card` and so gains one line, `memory: None`, inside its one `Card { .. }` literal, as the files listed under T15 do; `crates/curriculum/tests/store_boundaries.rs` and S07724 name the crate root's six modules, `horizon` among them, since the merge added that module.
+
+## 11. Amendments, 2026-10-03: what the second pull request corrects, and what it adds beside the manifest
+
+The second pull request (CU85b) lands in two parts on one branch. Its first part delivers R6's
+registration in the production fold (T4), R8 as T7 amends it, R14's view half, R15 and R16's
+progress command; its second part delivers the Mini App's two screens. It moves A9, A16, A17 and
+A18 back into section 3, verbatim, as section 3c directs: each row into section 3's table without
+its `delivered by` column, and each fence line into the acceptance fence without its prefix. A19,
+A20 and B3 stay in section 3c for the second part. Section 10 is unchanged; the lines below
+correct earlier lines as T1 to T22 do, and section 12 holds the one criterion this amendment adds.
+
+- T23, R17a (T10) and T21. T10's New, "wires it into SPEC-073's milestone view and
+  `GET /api/milestone`, which stop answering `pending`", becomes "wires it into SPEC-073's
+  milestone view (`stored_mature`, A21). The milestone route keeps answering `pending`: SPEC-073
+  R15 also reads the lifetime study reviews, which no table stores (#560), so an answer now would
+  be computed from a stand-in. It answers from stored inputs once they are stored (#579)." T21's
+  "whose first part wires the stored mature cards into `GET /api/milestone` (R17a); until then the
+  route answers `pending`" becomes "which corrects the milestone route's documentation only; the
+  route answers `pending` until its lifetime-review input is stored (#579, #560)". The route's
+  code, and rows `S07321` and `S07322`, are unchanged; its two doc comments in
+  `crates/api/src/badges_routes.rs` say why it stays `pending`.
+- T24, R16, T9 and T16. T16's New for T9 is replaced; the Old and New lines are held in the block
+  below, as T16's are.
+
+```text
+Old:
+SPEC-086's `today` will use this SPEC's law block rendering; no `today` exists at this delivery's
+base.
+New:
+SPEC-086's `today` (the bot's command and the owner's today view) will use this SPEC's law block
+rendering. At this delivery's base the bot has no `today` command, and the Mini App's Today screen
+(SPEC-028; the route table's `TODAY`, its root route) shows the study day and no law block;
+SPEC-086 places the block first there (#69).
+```
+
+- T25, R14 and section 4's `crates/bot/src/progress_commands.rs`. R14's Old, "This SPEC provides
+  the law block's view and its bot rendering;", becomes "This SPEC provides the law block's view;
+  its bot rendering arrives with SPEC-086's `today`, its only bot caller (#69);". The manifest
+  row's Old, "added: /progress and the law block's rendering", becomes "added: the progress
+  command". A rendering with test callers only would be code no production path reaches.
+- T26, R8 (T7) and A9. The adapter is `CurriculumLiveBand` in `crates/daemon/src/wiring.rs`, behind
+  the agent's `LiveBand` port: a subject of kind language whose area is a configured course's code
+  answers the band curriculum stores for that course, and any other subject, or a course with no
+  stored row, answers no band, so the roster's band applies. Its production caller is the persona
+  engine's output path, which #566 owns: at this delivery's base no production code calls
+  `Roster::parse`, `Frontmatter::new` or `resolve_band`. Until it does, A9 is the adapter's only
+  caller.
+- T27, R6 and T4. `recompute_fold_with_relights` in `crates/daemon/src/wiring.rs` registers the
+  progress step in phase 4 and the band badge step in phase 7 after the records step, so the
+  production fold stores each course's progress, the law dues, the band-ups and their badges.
+  A22 decides it. The in-file test of the fold's steps,
+  `the_recompute_fold_registers_the_analytics_xp_and_streak_steps_in_their_phases`, gains both, so
+  it lists the nine steps.
+- T28, T5's coordination progress view. `crates/coordination/src/progress_view.rs` (added: the
+  stored progress of the configured courses, ordered by name, which the progress route and the
+  progress command both read; it re-exports curriculum's `StoredProgress` and `StoredBand`, since
+  neither the API nor the bot depends on curriculum), `crates/coordination/tests/progress_view.rs`
+  (added: the filter and the order, mutation coverage and not a criterion) and
+  `crates/coordination/src/lib.rs` (changed: the module).
+- T29, section 4 gains these files: `crates/api/src/lib.rs` and `crates/bot/src/lib.rs` (changed:
+  the new modules); `crates/bot/tests/commands.rs` (changed: the twelve menu commands);
+  `crates/bot/tests/messages/progress.msg.json`, `crates/bot/tests/messages/progress-none.msg.json`
+  and `crates/bot/tests/messages/progress-failed.msg.json` (added: the progress command's golden
+  messages); `crates/bot/tests/messages/start.msg.json` and `crates/bot/tests/messages/help.msg.json`
+  (changed: the progress command's line); `crates/daemon/src/role_bot.rs` (changed: the bot reads
+  the configured courses); `crates/api/src/badges_routes.rs` (changed: documentation only, T23);
+  and `crates/coordination/tests/progress_band_up.rs` (changed: the band-up is paid once ever,
+  mutation coverage and not a criterion, as T18's two tests are).
+- T30, section 9 and section 4's band file. The band file also holds the seven rows below, and
+  section 4's line for it covers them. `S07726`'s killer is the new coordination test T29 names;
+  the others are criteria's tests.
+
+| row | target | what it guards | killer |
+|---|---|---|---|
+| `S07726-BAND-UP-GRANT-ONCE` | `crates/coordination/src/recompute/progress.rs` | a band-up's XP is granted with scope once, so a band whose milestone was erased is not paid again on a later study day | `progress_band_up::a_band_up_is_paid_once_ever_even_after_its_milestone_is_erased` |
+| `S07727-THE-PROGRESS-ROUTE-ASKS-FOR-THE-OWNER` | `crates/api/src/progress_routes.rs` | the progress route takes the owner's session before it reads anything | `progress_routes::the_progress_route_answers_only_the_owner` |
+| `S07728-THE-LAW-ROUTE-ASKS-FOR-THE-OWNER` | `crates/api/src/law_routes.rs` | the law route takes the owner's session before it reads anything | `law_routes::the_law_route_answers_only_the_owner` |
+| `S07729-LAW-DUES-PENDING-IS-NULL` | `crates/api/src/law_routes.rs` | pending law dues answer null, never 0 | `law_routes::the_law_route_answers_only_the_owner` |
+| `S07730-THE-PROGRESS-STEP-IS-REGISTERED` | `crates/daemon/src/wiring.rs` | the production fold registers the progress step in phase 4 | `lib::wiring::tests::the_recompute_fold_registers_road_to_c2s_steps` |
+| `S07731-THE-BAND-BADGE-STEP-IS-REGISTERED` | `crates/daemon/src/wiring.rs` | the production fold registers the band badge step in phase 7 | `lib::wiring::tests::the_recompute_fold_registers_road_to_c2s_steps` |
+| `S07732-THE-LIVE-BAND-READS-THE-SUBJECTS-COURSE` | `crates/daemon/src/wiring.rs` | the live band answers the stored band of the course the subject's area names, and of no other | `progress_live_band::the_persona_engine_reads_the_live_band` |
+
+## 12. Acceptance criteria of the 2026-10-03 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A22 | the production recompute fold registers the progress step in phase 4 and the band badge step in phase 7, after the records step | `the_recompute_fold_registers_road_to_c2s_steps` |
+
+```acceptance
+A22: cargo test -p deck-streak-daemon --lib -- --exact wiring::tests::the_recompute_fold_registers_road_to_c2s_steps
+```
