@@ -18,8 +18,9 @@ const server = vi.hoisted(() => {
   };
   // The XP exchange readout (SPEC-075 R9) answers at once, with a fixed body or the status
   // `exchange.status` names, so every case above it reads the level alone.
-  const exchange = {
+  const exchange: { status: number; body: unknown; held: Promise<void> | null } = {
     status: 200,
+    held: null,
     body: {
       window: null,
       rates: [{ source: 'reviews', total_xp: 10, graduated_cards: 4, rate: 2.5, rate_defined: true }]
@@ -28,6 +29,7 @@ const server = vi.hoisted(() => {
   const fetch = vi.fn(async (input: RequestInfo | URL) => {
     if (String(input) === '/api/session') return new Response(null, { status: state.session });
     if (String(input) === '/api/xp/exchange') {
+      if (exchange.held !== null) await exchange.held;
       return exchange.status === 200
         ? Response.json(exchange.body)
         : new Response(null, { status: exchange.status });
@@ -118,6 +120,29 @@ describe('the level screen page', () => {
     expect(screen.queryByRole('status')).toBeNull();
     expect(screen.queryByRole('alert')).toBeNull();
     expect(server.fetch.mock.calls.map(([input]) => String(input))).toContain('/api/xp/exchange');
+  });
+
+  it('waits with a status in place of the readout, then shows it', async () => {
+    server.state.score = 200;
+    server.state.body = LEVELED;
+    let release = () => undefined as void;
+    server.exchange.held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    render(Level);
+
+    await vi.waitFor(() => {
+      expect(screen.queryByRole('heading', { name: 'Your level' })?.tagName).toBe('H2');
+      expect(screen.queryByRole('status')?.textContent).toBe('Loading…');
+    });
+    expect(screen.queryByRole('heading', { name: 'XP exchange rates' })).toBeNull();
+    release();
+    server.exchange.held = null;
+    await vi.waitFor(() =>
+      expect(screen.queryByRole('heading', { name: 'XP exchange rates' })?.tagName).toBe('H2')
+    );
+    expect(screen.queryByRole('status')).toBeNull();
   });
 
   it('says the server could not be reached in place of the readout, and keeps the level', async () => {
