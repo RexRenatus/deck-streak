@@ -38,7 +38,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-use anki::collection::CollectionBuilder;
+use anki::collection::{Collection, CollectionBuilder};
 use anki::scheduler::answering::{CardAnswer, Rating};
 use anki::sync::http_server::{SimpleServer, SyncServerConfig, default_ip_header};
 use anki::sync::login::sync_login;
@@ -685,6 +685,41 @@ pub fn change_setting_on_another_client(
         .unwrap_or_else(|error| panic!("the other client opens its collection: {error}"));
     col.set_config_json(key, &value, false)
         .unwrap_or_else(|error| panic!("the other client changes a setting: {error}"));
+    sync_setting_from_another_client(runtime, col, endpoint);
+}
+
+/// The collection's configured UTC offset, in minutes west of UTC, as the engine's config table
+/// keys it: another client changes it with [`change_setting_on_another_client`] and removes it with
+/// [`remove_setting_on_another_client`] (SPEC-083 A40).
+pub const UTC_OFFSET_KEY: &str = "localOffset";
+/// The collection's rollover hour, as the engine's config table keys it (SPEC-083 A40).
+pub const ROLLOVER_KEY: &str = "rollover";
+
+/// Plays the owner's other Anki client removing one setting: removes `key` from the collection at
+/// `collection`, then sends the change to the server at `endpoint` with the engine's own normal
+/// sync. A client whose config is newer sends its whole config table, which replaces the server's
+/// (`rslib/src/storage/config/mod.rs`, `set_all_config`), so the server is left without the
+/// setting: A40's server with no configured UTC offset. No code of this workspace runs here.
+///
+/// # Panics
+///
+/// When the engine fails.
+pub fn remove_setting_on_another_client(
+    runtime: &Runtime,
+    collection: &Path,
+    endpoint: &str,
+    key: &str,
+) {
+    let mut col = CollectionBuilder::new(collection)
+        .build()
+        .unwrap_or_else(|error| panic!("the other client opens its collection: {error}"));
+    col.remove_config(key)
+        .unwrap_or_else(|error| panic!("the other client removes a setting: {error}"));
+    sync_setting_from_another_client(runtime, col, endpoint);
+}
+
+/// The other client's login and normal sync of a changed setting, then the collection's close.
+fn sync_setting_from_another_client(runtime: &Runtime, mut col: Collection, endpoint: &str) {
     let mut auth = runtime
         .block_on(sync_login(
             USERNAME,
