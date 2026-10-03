@@ -1,7 +1,7 @@
 ------------------------------ MODULE BearerGuard ------------------------------
-\* @phx covers crates/mcp/src/limiter.rs anchor=decide digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/mcp/src/guard.rs anchor=admit digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/mcp/src/guard.rs anchor=authorize digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers crates/mcp/src/limiter.rs anchor=decide digest=sha256:bcefd88248e57233b19a103ff347af2c194f6f1aa0c5789739fcf1fcfae2cc0f
+\* @phx covers crates/mcp/src/guard.rs anchor=admit digest=sha256:f5d836baf1f741ad7eec12d9cca354a3e217f8787675893f1f8593ad5f322629
+\* @phx covers crates/mcp/src/guard.rs anchor=authorize digest=sha256:e49a37c49fee067b96c789218a107d9b34e2980ec7d2f469ac10997beac36e33
 \* @phx cites #158
 \* @phx property GrantedAlwaysAdmitted ramp=report
 \* @phx property FreshFailuresAtMostMax ramp=report
