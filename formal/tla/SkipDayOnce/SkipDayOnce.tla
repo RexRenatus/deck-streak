@@ -1,11 +1,11 @@
 ---------------------------- MODULE SkipDayOnce ----------------------------
-\* @phx covers crates/ingest/src/skip.rs anchor=begin digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/ingest/src/skip.rs anchor=latest_undoable digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/ingest/src/skip.rs anchor=records_on digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/ingest/src/skip.rs anchor=settle_applied_on digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/ingest/src/skip.rs anchor=mark_undone_on digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/coordination/src/skip/mod.rs anchor=settle_applied digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/coordination/src/skip/mod.rs anchor=settle_undone digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers crates/ingest/src/skip.rs anchor=begin digest=sha256:0363a7b54992969173ddb6f01a37173e803066bad4bb30479179a720777e12b5
+\* @phx covers crates/ingest/src/skip.rs anchor=latest_undoable digest=sha256:f6d4e84bbfdb88a6894172e053242c37cd861cf263d2c158f2feaeccf5a9a2c9
+\* @phx covers crates/ingest/src/skip.rs anchor=records_on digest=sha256:53306e5a71d58ec3f2d16252a54c5fe04c462f628a6ec66d5df735f702028d2d
+\* @phx covers crates/ingest/src/skip.rs anchor=settle_applied_on digest=sha256:96b6af6dd6de41484246f2f3941696426b58216e05bc52fb6aaa37312fea3de4
+\* @phx covers crates/ingest/src/skip.rs anchor=mark_undone_on digest=sha256:e0b7e7f4960a51ec999bad57b0697441235c38383fdf5bbdbcf267df67dd658a
+\* @phx covers crates/coordination/src/skip/mod.rs anchor=settle_applied digest=sha256:7df3e27a07ba3c716aef05c9eb92ce04d5e1b727eaf8543da0f6eb0c41445faa
+\* @phx covers crates/coordination/src/skip/mod.rs anchor=settle_undone digest=sha256:61aa16597ae2e193cf7a29d4606a0def0d356b2d28672b102eadb08705dbb350
 \* @phx cites #108
 \* @phx property AtMostOneActivePerDay ramp=report
 \* @phx property ChargedOnlyWhenApplied ramp=report
