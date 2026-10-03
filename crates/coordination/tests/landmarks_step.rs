@@ -9,7 +9,6 @@
 #![allow(clippy::expect_used)]
 
 #[path = "../../../tools/parity-oracle/golden.rs"]
-#[allow(dead_code)]
 mod golden;
 
 #[path = "awards_support/mod.rs"]
@@ -286,6 +285,7 @@ async fn open_copy(path: &Path) -> SqliteConnection {
     SqliteConnectOptions::from_str("sqlite://")
         .expect("options")
         .filename(path)
+        .collation("unicase", str::cmp)
         .connect()
         .await
         .expect("the copy opens for writing")

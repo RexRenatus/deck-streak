@@ -28,6 +28,7 @@ pub mod analytics_step;
 pub mod badges;
 pub mod band_badges;
 pub mod day_bonuses;
+pub mod landmarks;
 pub mod mint;
 pub mod progress;
 pub mod records;
@@ -327,6 +328,38 @@ impl Offers for AwardOffers {
             }
             if let Err(error) = progress::offer_band_ups(&*self.celebrate, db, now, today).await {
                 tracing::error!(%error, "the owed band-ups could not be offered");
+            }
+            Ok(())
+        })
+    }
+}
+
+/// Several offers run in turn on every offer call (SPEC-102 R5, ADR-322): the sync cycle hands the
+/// fold the awards' offers and then the landmarks'. An offer that fails is logged and leaves what
+/// it owed for the next call; it never stops the ones after it, nor the fold.
+pub struct OffersInTurn(Vec<Box<dyn Offers>>);
+
+impl OffersInTurn {
+    /// The offers `offers`, run in this order.
+    #[must_use]
+    pub fn new(offers: Vec<Box<dyn Offers>>) -> Self {
+        Self(offers)
+    }
+}
+
+impl fmt::Debug for OffersInTurn {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_list().entries(&self.0).finish()
+    }
+}
+
+impl Offers for OffersInTurn {
+    fn offer<'a>(&'a self, db: &'a Db, now: UtcMillis, today: StudyDay) -> PortFuture<'a, ()> {
+        Box::pin(async move {
+            for offers in &self.0 {
+                if let Err(error) = offers.offer(db, now, today).await {
+                    tracing::error!(%error, ?offers, "an offer could not run");
+                }
             }
             Ok(())
         })
