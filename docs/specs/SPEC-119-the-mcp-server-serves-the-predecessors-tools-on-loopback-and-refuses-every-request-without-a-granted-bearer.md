@@ -518,6 +518,10 @@ names the line of the SPEC as planned, before this pull request moved it.
   (`McpError::WeakCredential`),`. And A5's Old: `a 31-character token refuses start by its id, and a 32-character one starts`
   New: `a 31-character token refuses start by its id, a 32-character one starts, and a token
   ending in a carriage return refuses start by its id as unpresentable`.
+- **T16** (manifest, the capture census). This pull request also edits one line under the kernel
+  crate: `crates/kernel/tests/log_capture_class.rs` (line 1588, the routed-capture count 19 becomes
+  20). A21's capture in `crates/mcp/tests/limiter.rs` goes through the helper, so the census still
+  demands every capture routed and its count equals the measured population (ruling 72).
 
 Decided also by ADR-320 (the part split, the kernel edge only, the wall clock, an unpresentable
 credential refused at load).
