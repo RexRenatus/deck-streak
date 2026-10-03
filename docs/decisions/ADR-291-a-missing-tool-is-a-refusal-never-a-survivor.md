@@ -122,7 +122,7 @@ mutant no test could tell from the original, `replace "." with "" in resolve_too
 (`Path("") == Path(".")`), was chosen against recording it as equivalent: the runner reads
 `Path(part)` and the mutant no longer exists. The census refuses dynamic reach (SPEC-039 A74).
 
-Round 3 states the class as one rule: the tool the runner judges is the tool the spawn runs, and every refusal is one whole outcome, for every spawn route. Its tests generate 384 child-directory members and 768 whole-outcome members; the census reads 442 spawner-reference members and 568 unread-import members and each is refused, so its escape population of 1010 has 0 escapes (SPEC-039 A75 to A77). Every generated mutant of the runner's resolution and spawn helpers (136) is red by assertion except 1 equivalent, and of the census (88) all but 3 equivalent are red by assertion, with none red by an error alone.
+Round 3 states the class as one rule: the tool the runner judges is the tool the spawn runs, and every refusal is one whole outcome, for every spawn route. Its tests generate 384 child-directory members and 768 whole-outcome members; the census reads 442 spawner-reference members and 568 unread-import members and each is refused, so its escape population of 1010 has 0 escapes as the builder reported; no independent verify measured this population (SPEC-039 A75 to A77). Every generated mutant of the runner's resolution and spawn helpers (136) is red by assertion except 1 equivalent, and of the census (88) all but 3 equivalent are red by assertion, with none red by an error alone.
 
 Round 4 closes the last route by which the judged file and the run file could differ. The resolver
 returns the judged file and `run_tool` and `run_in_own_group` spawn it with `executable=` that
