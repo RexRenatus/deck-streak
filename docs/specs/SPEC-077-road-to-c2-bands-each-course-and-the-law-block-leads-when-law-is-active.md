@@ -586,3 +586,5 @@ New:
   `let next = at + first + escaped;`, and uses it for both the slice and the advance. Behaviour is
   unchanged and the existing tests pass as they were. A mutant that stalls `next` spins without
   allocating and ends as a timeout, and one that moves it below the position panics on the slice.
+- T21, T5 and T10. `crates/api/src/badges_routes.rs` and the coordination progress view for the API and the bot are delivered by CU85b, whose first part wires the stored mature cards into `GET /api/milestone` (R17a); until then the route answers `pending`.
+- `crates/api/src/badges_routes.rs`: unchanged in this pull request; delivered by CU85b

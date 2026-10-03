@@ -67,3 +67,8 @@ A21: green at 4b713129
   `progress_store::a_band_up_is_marked_once` were green when committed; each pins a rule that
   already held, and each is the killer of a row the SPEC's T18 names (S07715 and S07722), proved
   by its mutant and not recorded here as red-first evidence.
+- **A5's comparison was changed and the change went undisclosed.** 58c946eb changed the A5 test,
+  `the_curriculum_constants_equal_the_predecessors`, from `a == b` at its red commit a26ed3ad to
+  `near(a, b)`, a 1e-9 tolerance, because clippy's `float_cmp` refuses `a == b`. That loosened the
+  criterion and the record did not say so. 21f7465b27acce0010850ae3854c1a1fa2117109 restores exact
+  equality with `a.to_bits() == b.to_bits()`; A5's red line at a26ed3ad is unchanged.
