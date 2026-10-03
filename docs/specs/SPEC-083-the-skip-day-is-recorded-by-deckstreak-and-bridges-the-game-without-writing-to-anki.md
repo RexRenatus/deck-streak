@@ -1053,3 +1053,18 @@ The three rows of section 4 the first list missed:
 - `crates/ingest/src/engine.rs`: unchanged in this part; delivered by E4b.
 - `crates/ingest/tests/skip_write.rs`: unchanged in this part; delivered by E4b.
 - `crates/ingest/tests/skip_undo.rs`: unchanged in this part; delivered by E4c.
+
+## 13. Acceptance criteria of the 2026-10-03 amendment, continued: D13 pinned
+
+Appended after section 12 and insert-only: nothing above this heading changes. ADR-321 D13 prices a
+skip by the month's other applied skips not undone on an EARLIER study day, so a retry is priced as
+its first attempt was, whatever applied after it. A46 holds the charge once per skip; this criterion
+holds the price against a skip of a later day.
+
+| id | criterion | decided by |
+|---|---|---|
+| A52 | a retry is priced as its first attempt was, free or priced, after a skip of a later study day of the month applies, and that later skip never charges the earlier one | `a_retry_is_priced_as_its_first_attempt_after_a_later_skip_applies` |
+
+```acceptance
+A52: cargo test -p deck-streak-coordination --test skip_flow -- --exact a_retry_is_priced_as_its_first_attempt_after_a_later_skip_applies
+```

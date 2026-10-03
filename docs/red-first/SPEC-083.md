@@ -86,3 +86,14 @@ A45: green at 2669bc8
 A46: red at 16712c8: skip_flow.rs:430, the tariff is charged once, on the skip's day; left: [], right: [(20105, -100)]
 A46: green at 2669bc8
 ```
+
+## D13 is pinned by a test of a later skip (round 1 of the review)
+
+A52's red was measured by one named plant, not by a committed stub. In
+`crates/coordination/src/skip/mod.rs`'s `earlier_in_month`, `.filter(|record| record.day < day &&
+month.is_some())` became `.filter(|record| record.day != day && month.is_some())`, D13's own rejected
+alternative. A52's fenced command then failed, rc 101, by its assertion "a retry is priced as its
+first attempt" (a free skip's retry was charged 50 after a later skip applied), where A46 and the
+whole `skip_flow` target had passed. The file was restored byte-equal (its sha256
+`cab3b04df4e339dc25962c2c2de27f1793b3131e4ed22463a4e977c73a3bcb70` before and after), and no commit
+holds the plant.

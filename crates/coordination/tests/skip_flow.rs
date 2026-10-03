@@ -453,3 +453,51 @@ async fn the_tariff_and_its_refund_are_taken_once_per_skip() {
     assert_eq!(refunded, 100);
     assert_eq!(balance(&db).await, 500, "the wallet is whole again");
 }
+
+/// D13: a retry prices the skip as its first attempt did, whatever applied after it. A free skip
+/// (the month's first) and a priced one (one earlier skip) are each settled, a skip of a LATER day
+/// of the month applies, and the retry the day after must neither charge nor reprice.
+#[tokio::test]
+async fn a_retry_is_priced_as_its_first_attempt_after_a_later_skip_applies() {
+    let skip_day = 20_105;
+    for earlier in [false, true] {
+        let scratch = TempDir::new().expect("a scratch directory");
+        let db = database(&scratch).await;
+        fund(&db, skip_day, 500).await;
+        if earlier {
+            plant(&db, skip_day - 1, 3, false).await;
+        }
+        let id = SkipStore::new(db.clone())
+            .begin(day(skip_day), None, at(skip_day, 10))
+            .await
+            .expect("the take is recorded");
+        let first = settle_applied(&db, id, 3, at(skip_day, 12))
+            .await
+            .expect("the settlement writes");
+        plant(&db, skip_day + 1, 3, false).await;
+        let retried = settle_applied(&db, id, 3, at(skip_day + 2, 12))
+            .await
+            .expect("the retry writes");
+        let price = if earlier { 50 } else { 0 };
+        let expected = Some(Settlement {
+            price,
+            paid: price,
+            unfunded: false,
+        });
+        assert_eq!(
+            (first, retried),
+            (expected, expected),
+            "a retry is priced as its first attempt: earlier={earlier}"
+        );
+        let charged: Vec<(i64, i64)> = if earlier {
+            vec![(skip_day, -50)]
+        } else {
+            Vec::new()
+        };
+        assert_eq!(
+            movements(&db, TARIFF_SOURCE, id).await,
+            charged,
+            "a later skip of the month never charges this one: earlier={earlier}"
+        );
+    }
+}
