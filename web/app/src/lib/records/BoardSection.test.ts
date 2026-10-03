@@ -76,6 +76,19 @@ describe('BoardSection', () => {
     ]);
   });
 
+  it('shows a day, a longest run or a title only where the server sent one', () => {
+    render(BoardSection, { props: { view: BOARD } });
+
+    expect(
+      examined('board row(s)', boardItems()).map((item) => Array.from(item.children).map(textOf))
+    ).toEqual([
+      ['🏅', 'Best day', '90', '2025-01-11'],
+      ['📅', 'Today', '77', '2025-01-14'],
+      ['🔥', 'Streak', '3', 'Longest run 9 days'],
+      ['⚡', 'Level', '9', 'Seedling']
+    ]);
+  });
+
   it('names its section by its heading', () => {
     render(BoardSection, { props: { view: BOARD } });
 
