@@ -276,6 +276,10 @@ S07230 to S07240. Round 6's rows, S07241 to S07275, pin the census's refusals by
 its attribution, its bounds, its environment and the probe itself, each killed by a planted-tree
 test; round 7's rows pin the graph refusal, its edges and its pin.
 
+## More Information
+
+Issue 397; SPEC-072 (its amendment of 2026-09-29); ADR-072; issue 350, which delivered the census.
+
 ### Decision, round 8: the verdict depends only on the tree it judges
 
 Round 8 states the rule the census keeps: its verdict depends only on the tree it judges. The design
@@ -327,7 +331,3 @@ tracked by issue 445: progression's own code reading the census's cfg, which the
 cannot name `settle`, which cargo runs during the census's compile. Rows S07290 to S07299 pin the
 owner's lookup, the empty target, the environment and the refusals of configuration and of reads
 beyond the tree.
-
-## More Information
-
-Issue 397; SPEC-072 (its amendment of 2026-09-29); ADR-072; issue 350, which delivered the census.
