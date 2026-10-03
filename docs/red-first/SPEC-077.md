@@ -39,6 +39,16 @@ A15: red at 6fd5308f: panicked at crates/coordination/tests/law_block.rs:310:5: 
 A15: green at 4b713129
 A21: red at 6fd5308f: panicked at crates/coordination/tests/progress_milestone.rs:67:5: assertion `left == right` failed: the configured courses' stored mature cards, summed; an unconfigured course is not; left: None, right: Some(115)
 A21: green at 4b713129
+A9: red at 2943b041: panicked at crates/daemon/tests/progress_live_band.rs:117:5: assertion `left == right` failed: the stored current band of the configured course the subject names
+A9: green at 4d29499f
+A16: red at 95f3c98e: panicked at crates/api/tests/progress_routes.rs:228:5: assertion `left == right` failed: the configured course's stored progress, whole; the stale row is absent
+A16: green at bcde9feb
+A17: red at 95563f6a: panicked at crates/api/tests/law_routes.rs:190:5: assertion `left == right` failed: the law block over an empty database, whole
+A17: green at 8a878792
+A18: red at 25207b0c: panicked at crates/bot/tests/progress_commands.rs:77:5: assertion `left == right` failed
+A18: green at 42666e15
+A22: red at e1fe64f7: panicked at crates/daemon/src/wiring.rs:750:9: assertion `left == right` failed: the progress step is registered in phase 4, right after the streaks step
+A22: green at 23641fae
 ```
 
 ## Disclosures
