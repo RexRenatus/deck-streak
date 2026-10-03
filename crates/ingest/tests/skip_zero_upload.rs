@@ -13,6 +13,7 @@
 
 mod support;
 
+use std::cell::Cell;
 use std::path::Path;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
@@ -23,7 +24,7 @@ use deck_streak_ingest::skip::{FailReason, SKIP_MAX_CARDS, SkipRefusal, SkipStor
 use deck_streak_ingest::skip_write::{
     NoHooks, Preview, TakeAnswer, TakeHooks, TakePorts, TakeRequest, preview, take,
 };
-use deck_streak_ingest::sync::SYNC_TIMEOUT_SECS;
+use deck_streak_ingest::sync::{OWNER_SYNC_DEBOUNCE_SECS, SYNC_TIMEOUT_SECS};
 use deck_streak_ingest::sync_runs::{SqliteSyncRuns, Trigger};
 use deck_streak_ingest::write_class_stop::WriteClassStop;
 use deck_streak_kernel::{Db, Environment, StudyDay, StudyDayRule, UtcMillis};
@@ -62,6 +63,9 @@ struct Scene {
     store: SkipStore,
     stop: WriteClassStop,
     search: SkipSearch,
+    /// How far past the real instant the next sync's clock reads: each sync one debounce past the
+    /// last, so the owner's sync that follows a path runs rather than answering debounced.
+    ahead: Cell<i64>,
 }
 
 impl Scene {
@@ -69,7 +73,9 @@ impl Scene {
         let runtime = support::runtime();
         let scratch = tempfile::tempdir().expect("a scratch directory");
         let base = scratch.path().join("server");
-        synthetic::build_skip(&support::server_collection(&base), cards, setup);
+        let collection = support::server_collection(&base);
+        synthetic::build_skip(&collection, cards, setup);
+        synthetic::as_served(&collection);
         let server = SyncServer::start(TEST, &base);
         let recording = Recording::start(server.endpoint());
         let fixture = Fixture::new(recording.endpoint());
@@ -85,6 +91,7 @@ impl Scene {
             _server: server,
             fixture,
             db,
+            ahead: Cell::new(0),
         };
         scene.sync(Trigger::Owner);
         scene
@@ -94,8 +101,10 @@ impl Scene {
         let syncer = self.fixture.syncer(
             RslibEngine,
             SqliteSyncRuns::new(self.db.clone()),
-            support::clock_at(now().epoch_millis()),
+            support::clock_at(now().epoch_millis() + self.ahead.get()),
         );
+        self.ahead
+            .set(self.ahead.get() + (OWNER_SYNC_DEBOUNCE_SECS + 1) * 1000);
         self.runtime
             .block_on(syncer.sync(trigger))
             .expect("the sync runs");
@@ -143,9 +152,9 @@ impl Scene {
         self.runtime.block_on(take(&ports, &request, hooks))
     }
 
-    fn digest(&self) -> Option<String> {
+    fn digest(&self) -> String {
         match self.preview() {
-            Preview::Listed { digest, .. } => Some(digest),
+            Preview::Listed { digest, .. } => digest,
             other => panic!("the preview listed nothing: {other:?}"),
         }
     }
@@ -171,6 +180,14 @@ impl Scene {
         println!("{name}: {} request(s), 0 local change(s)", requests.len());
         requests.len()
     }
+}
+
+/// The take answered `failed` with `reason`.
+fn failed_with(answer: &TakeAnswer, reason: FailReason) {
+    assert!(
+        matches!(answer, TakeAnswer::Failed { reason: got, .. } if *got == reason),
+        "{reason:?}: {answer:?}"
+    );
 }
 
 #[test]
@@ -210,58 +227,33 @@ fn every_path_but_the_take_and_the_undo_records_zero_uploads() {
     paths += usize::from(
         scene.zero("a refused take: preview_changed", |scene| {
             let answer = scene.take(None, Arc::new(NoHooks));
-            assert!(
-                matches!(
-                    answer,
-                    TakeAnswer::Failed {
-                        reason: FailReason::PreviewChanged,
-                        ..
-                    }
-                ),
-                "{answer:?}"
-            );
+            failed_with(&answer, FailReason::PreviewChanged);
         }) > 0,
     );
     paths += usize::from(
         scene.zero("a failed take: backup_check_failed", |scene| {
-            let answer = scene.take(scene.digest(), Arc::new(SpoilTheBackup));
-            assert!(
-                matches!(
-                    answer,
-                    TakeAnswer::Failed {
-                        reason: FailReason::BackupCheckFailed,
-                        ..
-                    }
-                ),
-                "{answer:?}"
-            );
+            let answer = scene.take(Some(scene.digest()), Arc::new(SpoilTheBackup));
+            failed_with(&answer, FailReason::BackupCheckFailed);
         }) > 0,
     );
     let other = scene.scratch.path().join("other.anki2");
     std::fs::copy(scene.fixture.copy(), &other).expect("the other client's copy");
     paths += usize::from(
         scene.zero("an aborted take: full_sync_required", |scene| {
-            let digest = scene.digest();
+            let digest = Some(scene.digest());
             support::upload_from_another_client(&scene.runtime, &other, scene.recording.endpoint());
             scene.recording.clear();
             let answer = scene.take(digest, Arc::new(NoHooks));
-            assert!(
-                matches!(
-                    answer,
-                    TakeAnswer::Failed {
-                        reason: FailReason::FullSyncRequired,
-                        ..
-                    }
-                ),
-                "{answer:?}"
-            );
+            failed_with(&answer, FailReason::FullSyncRequired);
         }) > 0,
     );
 
     // Nothing is requested after the answers, over a wait longer than the syncer's timeout.
     scene.recording.clear();
     let wait = Duration::from_secs_f64(SYNC_TIMEOUT_SECS + 1.0);
-    scene.runtime.block_on(tokio::time::sleep(wait));
+    scene
+        .runtime
+        .block_on(async { tokio::time::sleep(wait).await });
     assert_eq!(
         scene.recording.requests().len(),
         0,
@@ -274,17 +266,8 @@ fn every_path_but_the_take_and_the_undo_records_zero_uploads() {
     );
     paths += usize::from(
         large.zero("a refused take: too_many_cards", |scene| {
-            let answer = scene.take(scene.digest(), Arc::new(NoHooks));
-            assert!(
-                matches!(
-                    answer,
-                    TakeAnswer::Failed {
-                        reason: FailReason::TooManyCards,
-                        ..
-                    }
-                ),
-                "{answer:?}"
-            );
+            let answer = scene.take(Some(scene.digest()), Arc::new(NoHooks));
+            failed_with(&answer, FailReason::TooManyCards);
         }) > 0,
     );
 
@@ -302,16 +285,7 @@ fn every_path_but_the_take_and_the_undo_records_zero_uploads() {
     paths += usize::from(
         differs.zero("a refused take, the offset differing", |scene| {
             let answer = scene.take(None, Arc::new(NoHooks));
-            assert!(
-                matches!(
-                    answer,
-                    TakeAnswer::Failed {
-                        reason: FailReason::ZoneDiffers,
-                        ..
-                    }
-                ),
-                "{answer:?}"
-            );
+            failed_with(&answer, FailReason::ZoneDiffers);
         }) > 0,
     );
     println!("examined {paths} path(s), each with its owner's sync");

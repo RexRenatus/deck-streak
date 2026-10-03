@@ -64,6 +64,13 @@ fn zone(rule: &str) -> MutexGuard<'static, ()> {
 }
 
 /// Prints how many items a check examined and refuses zero (the tdd pack's examined contract).
+/// Changes the process's zone to `rule` while the caller holds the target's lock, and waits until
+/// chrono reads it.
+fn rezone(_held: &MutexGuard<'static, ()>, rule: &str) {
+    std::env::set_var("TZ", rule);
+    thread::sleep(ZONE_SETTLES);
+}
+
 fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
     println!("examined {} {what}", items.len());
     assert!(
@@ -169,7 +176,7 @@ fn the_preview_names_a_set_stop_and_who_set_it() {
             &fixture.settings(),
             &default_search(),
             &stop,
-            today(&StudyDayRule::default()),
+            today(StudyDayRule::default()),
             StudyDayRule::default(),
         ))
         .expect("the preview answers");
@@ -224,7 +231,7 @@ fn a_missing_stop_row_reads_as_stopped() {
             &fixture.settings(),
             &default_search(),
             &stop,
-            today(&StudyDayRule::default()),
+            today(StudyDayRule::default()),
             StudyDayRule::default(),
         ))
         .expect("the preview answers");
@@ -266,18 +273,7 @@ fn the_preview_lists_the_cards_and_a_changed_list_writes_nothing() {
 
     // The list: exactly the cards the default search moves, each card of every other kind left out,
     // ascending by id, each under its top-level deck, with its digest. The private copy is unchanged.
-    let before = std::fs::read(&copy).expect("the copy is read");
-    let shown = runtime
-        .block_on(preview(
-            &RslibEngine,
-            &fixture.settings(),
-            &search,
-            &stop,
-            today(&StudyDayRule::default()),
-            StudyDayRule::default(),
-        ))
-        .expect("the preview answers");
-    assert_eq!(std::fs::read(&copy).expect("the copy is read"), before);
+    let shown = preview_unchanged(&runtime, &fixture, &search, &stop);
     let Preview::Listed { cards, digest } = shown else {
         panic!("the preview listed nothing: {shown:?}");
     };
@@ -307,18 +303,7 @@ fn the_preview_lists_the_cards_and_a_changed_list_writes_nothing() {
         &copy,
         &format!("update cards set due = due - 10 where id = {joined}"),
     );
-    let before = std::fs::read(&copy).expect("the copy is read");
-    let shown = runtime
-        .block_on(preview(
-            &RslibEngine,
-            &fixture.settings(),
-            &search,
-            &stop,
-            today(&StudyDayRule::default()),
-            StudyDayRule::default(),
-        ))
-        .expect("the preview answers");
-    assert_eq!(std::fs::read(&copy).expect("the copy is read"), before);
+    let shown = preview_unchanged(&runtime, &fixture, &search, &stop);
     let Preview::Listed {
         cards,
         digest: changed,
@@ -342,7 +327,7 @@ fn the_preview_lists_the_cards_and_a_changed_list_writes_nothing() {
     let rule = StudyDayRule::default();
     for confirm in [None, Some(digest.clone())] {
         let skip = runtime
-            .block_on(store.begin(today(&rule), None, now()))
+            .block_on(store.begin(today(rule), None, now()))
             .expect("the take's row is begun");
         let before = std::fs::read(&copy).expect("the copy is read");
         let ports = TakePorts {
@@ -355,7 +340,7 @@ fn the_preview_lists_the_cards_and_a_changed_list_writes_nothing() {
         };
         let request = TakeRequest {
             skip,
-            day: today(&rule),
+            day: today(rule),
             rule,
             digest: confirm.clone(),
             now: now(),
@@ -383,13 +368,39 @@ fn the_preview_lists_the_cards_and_a_changed_list_writes_nothing() {
     }
 }
 
+/// One preview of the fixture's private copy under the default rule, which leaves the copy's bytes
+/// as they were.
+fn preview_unchanged(
+    runtime: &Runtime,
+    fixture: &Fixture,
+    search: &SkipSearch,
+    stop: &WriteClassStop,
+) -> Preview {
+    let before = std::fs::read(fixture.copy()).expect("the copy is read");
+    let shown = runtime
+        .block_on(preview(
+            &RslibEngine,
+            &fixture.settings(),
+            search,
+            stop,
+            today(StudyDayRule::default()),
+            StudyDayRule::default(),
+        ))
+        .expect("the preview answers");
+    assert_eq!(
+        std::fs::read(fixture.copy()).expect("the copy is read"),
+        before
+    );
+    shown
+}
+
 /// The instant now.
 fn now() -> UtcMillis {
     UtcMillis::from_system_time(SystemTime::now())
 }
 
 /// The study day now under `rule`.
-fn today(rule: &StudyDayRule) -> StudyDay {
+fn today(rule: StudyDayRule) -> StudyDay {
     rule.study_day(now())
 }
 
@@ -472,14 +483,16 @@ struct Scene {
 impl Scene {
     fn build(
         test: Option<&str>,
-        served: Option<(&[(i64, SkipCard)], SkipSetup)>,
+        seeded: Option<(&[(i64, SkipCard)], SkipSetup)>,
         rule: StudyDayRule,
     ) -> Self {
         let runtime = support::runtime();
         let scratch = tempfile::tempdir().expect("a scratch directory");
         let base = scratch.path().join("server");
-        if let Some((cards, setup)) = served {
-            synthetic::build_skip(&support::server_collection(&base), cards, setup);
+        if let Some((cards, setup)) = seeded {
+            let served = support::server_collection(&base);
+            synthetic::build_skip(&served, cards, setup);
+            synthetic::as_served(&served);
         }
         let server = test.map(|test| {
             let _ = support::server_collection(&base);
@@ -563,22 +576,22 @@ impl Scene {
                 &self.fixture.settings(),
                 &default_search(),
                 &self.stop,
-                today(&self.rule),
+                today(self.rule),
                 self.rule,
             ))
             .expect("the preview answers")
     }
 
-    fn digest(&self) -> Option<String> {
+    fn digest(&self) -> String {
         match self.preview() {
-            Preview::Listed { digest, .. } => Some(digest),
+            Preview::Listed { digest, .. } => digest,
             other => panic!("the preview listed nothing: {other:?}"),
         }
     }
 
     fn begin(&self) -> SkipId {
         self.runtime
-            .block_on(self.store.begin(today(&self.rule), None, now()))
+            .block_on(self.store.begin(today(self.rule), None, now()))
             .expect("the take's row is begun")
     }
 
@@ -615,7 +628,7 @@ impl Scene {
         };
         let request = TakeRequest {
             skip,
-            day: today(&self.rule),
+            day: today(self.rule),
             rule: self.rule,
             digest,
             now: now(),
@@ -693,7 +706,7 @@ impl Scene {
 
     /// Sets the class's stop from a hook's own thread, as the owner or a count would.
     fn stop_setter(&self) -> impl Fn(&Path) + Send + Sync + 'static {
-        let path = self.scratch.path().join("deckstreak.db");
+        let path = self.fixture.scratch().join("deckstreak.db");
         move |_: &Path| {
             let runtime = support::runtime();
             runtime.block_on(async {
@@ -754,6 +767,32 @@ fn upload_empty(runtime: &Runtime, scratch: &Path, endpoint: &str) {
     let empty = scratch.join("empty.anki2");
     synthetic::build_skip(&empty, &[], SkipSetup::UTC);
     support::upload_from_another_client(runtime, &empty, endpoint);
+}
+
+/// The take's push carried no upload, no grave, no note, and never a configured UTC offset other
+/// than the collection's (A5).
+fn pushed_no_other_change(recording: &Recording) {
+    for request in recording.requests() {
+        assert_ne!(request.method, "upload", "no upload");
+        assert_ne!(request.method, "applyGraves", "no grave");
+        if request.method == "applyChunk" {
+            assert!(
+                request.body["chunk"]["notes"]
+                    .as_array()
+                    .is_none_or(Vec::is_empty),
+                "no note is pushed"
+            );
+        }
+        if let Some(settings) = request.settings() {
+            assert_eq!(
+                settings
+                    .get(support::UTC_OFFSET_KEY)
+                    .and_then(serde_json::Value::as_i64),
+                Some(-330),
+                "the configured UTC offset is never changed"
+            );
+        }
+    }
 }
 
 #[test]
@@ -837,27 +876,7 @@ fn a_take_pushes_exactly_the_previewed_cards_and_their_review_log_rows() {
             rows, expected,
             "fsrs {fsrs}: one review-log row of type 4 with ease 0 a card"
         );
-        for request in recording.requests() {
-            assert_ne!(request.method, "upload", "no upload");
-            assert_ne!(request.method, "applyGraves", "no grave");
-            if request.method == "applyChunk" {
-                assert!(
-                    request.body["chunk"]["notes"]
-                        .as_array()
-                        .is_none_or(Vec::is_empty),
-                    "no note is pushed"
-                );
-            }
-            if let Some(settings) = request.settings() {
-                assert_eq!(
-                    settings
-                        .get(support::UTC_OFFSET_KEY)
-                        .and_then(serde_json::Value::as_i64),
-                    Some(-330),
-                    "the configured UTC offset is never changed"
-                );
-            }
-        }
+        pushed_no_other_change(recording);
         assert!(
             scene.bytes() == before,
             "fsrs {fsrs}: the private copy's bytes are unchanged"
@@ -875,21 +894,34 @@ fn a_full_sync_demand_at_the_converge_aborts_the_take_writing_nothing() {
     let _zone = zone(UTC);
     // One a download would resolve: another client forced a one-way sync.
     let scene = Scene::served(TEST, &SKIP_CARDS, SkipSetup::UTC, StudyDayRule::default());
-    let digest = scene.digest();
+    let digest = Some(scene.digest());
     let other = scene.other("other.anki2");
     support::upload_from_another_client(&scene.runtime, &other, scene.endpoint());
     scene.clear();
     let before = scene.bytes();
     let (skip, answer) = scene.take(digest, no_hooks());
     scene.wrote_nothing(skip, &answer, FailReason::FullSyncRequired, &before);
+    no_snapshot_and_no_backup(&scene, skip);
 
     // One only an upload would resolve: the server holds an empty collection.
     let scene = Scene::build(Some(TEST), None, StudyDayRule::default());
     synthetic::build_skip(&scene.copy(), &SKIP_CARDS, SkipSetup::UTC);
-    let digest = scene.digest();
+    let digest = Some(scene.digest());
     let before = scene.bytes();
     let (skip, answer) = scene.take(digest, no_hooks());
     scene.wrote_nothing(skip, &answer, FailReason::FullSyncRequired, &before);
+    no_snapshot_and_no_backup(&scene, skip);
+}
+
+/// A take the converge aborted got no further (R21): no snapshot row and no backup beside the
+/// private copy.
+fn no_snapshot_and_no_backup(scene: &Scene, skip: SkipId) {
+    assert_eq!(scene.snapshot(skip), Vec::new(), "no snapshot row");
+    assert_eq!(
+        scene.beside("skip-backup"),
+        Vec::<String>::new(),
+        "no backup"
+    );
 }
 
 #[test]
@@ -901,7 +933,7 @@ fn a_full_sync_demand_at_the_push_aborts_the_take_writing_nothing() {
     let _zone = zone(UTC);
     for download in [true, false] {
         let scene = Scene::served(TEST, &SKIP_CARDS, SkipSetup::UTC, StudyDayRule::default());
-        let digest = scene.digest();
+        let digest = Some(scene.digest());
         let other = scene.other("other.anki2");
         let endpoint = scene.endpoint().to_owned();
         let scratch = scene.scratch.path().to_owned();
@@ -954,10 +986,10 @@ fn the_prior_state_is_recorded_before_any_card_changes() {
     }
     let _zone = zone(UTC);
     let scene = Scene::served(TEST, &SKIP_CARDS, SkipSetup::UTC, StudyDayRule::default());
-    let digest = scene.digest();
+    let digest = Some(scene.digest());
     let moved = synthetic::skip_moved(&SKIP_CARDS);
     let skip = scene.begin();
-    let path = scene.scratch.path().join("deckstreak.db");
+    let path = scene.fixture.scratch().join("deckstreak.db");
     let seen = Arc::new(Mutex::new(None));
     let saw = Arc::clone(&seen);
     // The take stops between the prior state's commit and the reschedule.
@@ -1009,7 +1041,7 @@ fn a_card_reviewed_during_the_take_is_listed_to_the_owner() {
     let _zone = zone(UTC);
     for point in [Point::AfterSnapshot, Point::BeforePush] {
         let scene = Scene::served(TEST, &SKIP_CARDS, SkipSetup::UTC, StudyDayRule::default());
-        let digest = scene.digest();
+        let digest = Some(scene.digest());
         let other = scene.other("other.anki2");
         let endpoint = scene.endpoint().to_owned();
         let reviewer = other.clone();
@@ -1018,7 +1050,12 @@ fn a_card_reviewed_during_the_take_is_listed_to_the_owner() {
                 // A tie keeps the working copy's card: land a whole second after the reschedule.
                 thread::sleep(Duration::from_millis(2100));
             }
-            support::review_on_another_client(&support::runtime(), &reviewer, &endpoint, 1);
+            support::review_card_on_another_client(
+                &support::runtime(),
+                &reviewer,
+                &endpoint,
+                SKIP_FLOOR + 1,
+            );
         });
         let (_, answer) = scene.take(digest, review);
         let studied: Vec<i64> = synthetic::review_log(&other)
@@ -1057,7 +1094,7 @@ fn the_card_guard_refuses_a_large_set_and_an_empty_set_writes_nothing() {
     let _zone = zone(UTC);
     let large = synthetic::skip_due_reviews(SKIP_MAX_CARDS + 1);
     let scene = Scene::served(TEST, &large, SkipSetup::UTC, StudyDayRule::default());
-    let digest = scene.digest();
+    let digest = Some(scene.digest());
     let before = scene.bytes();
     let (skip, answer) = scene.take(digest, no_hooks());
     scene.wrote_nothing(skip, &answer, FailReason::TooManyCards, &before);
@@ -1068,7 +1105,7 @@ fn the_card_guard_refuses_a_large_set_and_an_empty_set_writes_nothing() {
         (SKIP_FLOOR + 2, SkipCard::OtherDay(5)),
     ];
     let scene = Scene::served(TEST, &none, SkipSetup::UTC, StudyDayRule::default());
-    let digest = scene.digest();
+    let digest = Some(scene.digest());
     let before = scene.bytes();
     let (skip, answer) = scene.take(digest, no_hooks());
     assert_eq!(
@@ -1089,7 +1126,10 @@ fn the_card_guard_refuses_a_large_set_and_an_empty_set_writes_nothing() {
         Vec::<String>::new(),
         "no request carried a change"
     );
-    assert!(scene.bytes() == before);
+    assert!(
+        scene.bytes() == before,
+        "the private copy's bytes are unchanged"
+    );
     assert_eq!(
         scene.beside("skip-backup"),
         Vec::<String>::new(),
@@ -1119,7 +1159,7 @@ fn a_custom_search_moves_only_the_study_days_due_review_cards() {
             &scene.fixture.settings(),
             &wide,
             &scene.stop,
-            today(&scene.rule),
+            today(scene.rule),
             scene.rule,
         ))
         .expect("the preview answers");
@@ -1160,7 +1200,7 @@ fn a_card_that_changed_between_the_preview_and_the_converge_is_left_alone() {
     }
     let _zone = zone(UTC);
     let scene = Scene::served(TEST, &SKIP_CARDS, SkipSetup::UTC, StudyDayRule::default());
-    let digest = scene.digest();
+    let digest = Some(scene.digest());
     let other = scene.other("other.anki2");
     let joined = SKIP_FLOOR + 12;
     let rescheduled = SKIP_FLOOR + 1;
@@ -1199,7 +1239,7 @@ fn the_takes_backup_passes_its_restore_check_before_any_card_changes() {
     let _zone = zone(UTC);
     // A backup whose check fails ends the take with nothing written and nothing pushed.
     let scene = Scene::served(TEST, &SKIP_CARDS, SkipSetup::UTC, StudyDayRule::default());
-    let digest = scene.digest();
+    let digest = Some(scene.digest());
     let changed = at(Point::AfterBackup, |partial| {
         let mut bytes = std::fs::read(partial).expect("the partial backup is read");
         bytes.push(0);
@@ -1221,7 +1261,7 @@ fn the_takes_backup_passes_its_restore_check_before_any_card_changes() {
 
     // A backup that passes: it is checked before any card changes.
     let scene = Scene::served(TEST, &SKIP_CARDS, SkipSetup::UTC, StudyDayRule::default());
-    let digest = scene.digest();
+    let digest = Some(scene.digest());
     let seen = Arc::new(Mutex::new(Vec::new()));
     let saw = Arc::clone(&seen);
     let unchanged = at(Point::AfterBackup, move |partial| {
@@ -1251,7 +1291,7 @@ fn the_takes_counts_move_only_the_review_log_rows_and_the_due_count() {
     }
     let _zone = zone(UTC);
     let scene = Scene::served(TEST, &SKIP_CARDS, SkipSetup::UTC, StudyDayRule::default());
-    let digest = scene.digest();
+    let digest = Some(scene.digest());
     let (_, answer) = scene.take(digest, no_hooks());
     assert!(matches!(answer, TakeAnswer::Accepted { .. }), "{answer:?}");
     assert_eq!(
@@ -1261,7 +1301,7 @@ fn the_takes_counts_move_only_the_review_log_rows_and_the_due_count() {
 
     // A planted extra change: one card deleted after the prior state's commit.
     let scene = Scene::served(TEST, &SKIP_CARDS, SkipSetup::UTC, StudyDayRule::default());
-    let digest = scene.digest();
+    let digest = Some(scene.digest());
     let planted = at(Point::AfterSnapshot, |working| {
         synthetic::delete_cards(working, &[SKIP_FLOOR + 5]);
     });
@@ -1283,7 +1323,7 @@ fn the_take_refuses_while_the_classs_stop_is_set() {
     }
     let _zone = zone(UTC);
     let scene = Scene::served(TEST, &SKIP_CARDS, SkipSetup::UTC, StudyDayRule::default());
-    let digest = scene.digest();
+    let digest = Some(scene.digest());
     (scene.stop_setter())(Path::new(""));
     let before = scene.bytes();
     let (skip, answer) = scene.take(digest, no_hooks());
@@ -1292,7 +1332,7 @@ fn the_take_refuses_while_the_classs_stop_is_set() {
 
     // A stop set during a take ends it before its push.
     let scene = Scene::served(TEST, &SKIP_CARDS, SkipSetup::UTC, StudyDayRule::default());
-    let digest = scene.digest();
+    let digest = Some(scene.digest());
     let set = at(Point::BeforePush, scene.stop_setter());
     let before = scene.bytes();
     let (skip, answer) = scene.take(digest, set);
@@ -1316,7 +1356,7 @@ fn the_backup_sits_beside_the_copy_owner_only_and_one_is_kept() {
     std::fs::write(&older, b"an older backup").expect("an older backup is planted");
 
     // A take whose check fails keeps the older backup and leaves no partial file.
-    let digest = scene.digest();
+    let digest = Some(scene.digest());
     let changed = at(Point::AfterBackup, |partial| {
         std::fs::write(partial, b"not the working copy").expect("the partial backup is changed");
     });
@@ -1337,7 +1377,7 @@ fn the_backup_sits_beside_the_copy_owner_only_and_one_is_kept() {
     );
 
     // A take whose check passes replaces it: one backup, owner-only, named for its skip.
-    let digest = scene.digest();
+    let digest = Some(scene.digest());
     let (skip, answer) = scene.take(digest, no_hooks());
     assert!(matches!(answer, TakeAnswer::Accepted { .. }), "{answer:?}");
     let name = format!("skip-backup-{}.anki2", skip.get());
@@ -1445,7 +1485,7 @@ fn a_take_holds_to_the_study_day_and_writes_no_setting_when_the_engines_day_or_z
 
     // Another client changes the server's setting after the private copy's last sync: the private
     // copy passes, the converge brings the change, and the take pushes nothing.
-    let _zone = zone(UTC);
+    let utc = zone(UTC);
     let cases: [(&str, Option<i64>, FailReason); 3] = [
         (support::UTC_OFFSET_KEY, Some(-330), FailReason::ZoneDiffers),
         (support::ROLLOVER_KEY, Some(5), FailReason::EngineDayDiffers),
@@ -1453,8 +1493,14 @@ fn a_take_holds_to_the_study_day_and_writes_no_setting_when_the_engines_day_or_z
     ];
     for (key, value, reason) in cases {
         let scene = Scene::served(TEST, &SKIP_CARDS, SkipSetup::UTC, StudyDayRule::default());
-        let digest = scene.digest();
+        let digest = Some(scene.digest());
         let other = scene.other("other.anki2");
+        // A client keeps a configured offset only in a zone of that offset: the engine rewrites
+        // it to the zone's before every sync it makes (`local_utc_offset_for_user`).
+        let elsewhere = key == support::UTC_OFFSET_KEY && value == Some(-330);
+        if elsewhere {
+            rezone(&utc, IST);
+        }
         match value {
             Some(value) => support::change_setting_on_another_client(
                 &scene.runtime,
@@ -1470,12 +1516,15 @@ fn a_take_holds_to_the_study_day_and_writes_no_setting_when_the_engines_day_or_z
                 key,
             ),
         }
+        if elsewhere {
+            rezone(&utc, UTC);
+        }
         scene.clear();
         let before = scene.bytes();
         let (skip, answer) = scene.take(digest, no_hooks());
         scene.wrote_nothing(skip, &answer, reason, &before);
     }
-    drop(_zone);
+    drop(utc);
 
     // A zone that observes daylight saving refuses, whether its daylight period is in effect now
     // or begins later in the current or the next calendar year, and when it is set after the

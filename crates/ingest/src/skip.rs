@@ -649,7 +649,29 @@ impl SkipStore {
         cards: &[CardState],
         now: UtcMillis,
     ) -> Result<(), KernelError> {
-        let _ = (id, cards, now);
+        let skip = id.get();
+        let created = now.epoch_millis();
+        let mut write = self.db.write().await?;
+        for card in cards {
+            sqlx::query(
+                "INSERT INTO skip_card_snapshot (skip_id, card_id, prior_due, prior_queue, \
+                 prior_type, prior_interval, prior_ease_factor, prior_original_deck_id, \
+                 prior_original_due, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+            )
+            .bind(skip)
+            .bind(card.card_id)
+            .bind(card.due)
+            .bind(card.queue)
+            .bind(card.kind)
+            .bind(card.interval)
+            .bind(card.ease_factor)
+            .bind(card.original_deck)
+            .bind(card.original_due)
+            .bind(created)
+            .execute(&mut *write)
+            .await?;
+        }
+        write.commit().await?;
         Ok(())
     }
 
@@ -660,7 +682,26 @@ impl SkipStore {
     ///
     /// [`KernelError::Database`] when the write fails; then no row changes.
     pub async fn record_left(&self, id: SkipId, cards: &[CardState]) -> Result<(), KernelError> {
-        let _ = (id, cards);
+        let skip = id.get();
+        let mut write = self.db.write().await?;
+        for card in cards {
+            sqlx::query(
+                "UPDATE skip_card_snapshot SET left_due = ?3, left_queue = ?4, left_type = ?5, \
+                 left_interval = ?6, left_ease_factor = ?7, left_mtime = ?8 \
+                 WHERE skip_id = ?1 AND card_id = ?2",
+            )
+            .bind(skip)
+            .bind(card.card_id)
+            .bind(card.due)
+            .bind(card.queue)
+            .bind(card.kind)
+            .bind(card.interval)
+            .bind(card.ease_factor)
+            .bind(card.mtime)
+            .execute(&mut *write)
+            .await?;
+        }
+        write.commit().await?;
         Ok(())
     }
 }

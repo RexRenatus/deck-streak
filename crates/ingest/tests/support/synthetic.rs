@@ -1061,6 +1061,9 @@ pub fn build_skip(path: &Path, cards: &[(i64, SkipCard)], setup: SkipSetup) -> P
             .expect("FSRS is switched");
         let timing = col.timing_today().expect("the engine reads its day");
         let today = i64::from(timing.days_elapsed);
+        // Today's unbury has run, so the buried card is one buried today: no sync unburies it.
+        col.set_config_json("lastUnburied", &today, false)
+            .expect("the last unburied day is today");
         let db = col.storage.db();
         db.execute_batch("begin").expect("a transaction opens");
         for (position, (id, card)) in cards.iter().enumerate() {
@@ -1134,8 +1137,9 @@ pub fn review_log(path: &Path) -> Vec<LogRow> {
 }
 
 /// Plays another client changing cards' due dates in the collection at `path`: each `(card, due)`
-/// is written with a new modification time and as unsynced, so that client's next sync sends it
-/// (SPEC-083 A39).
+/// is written with a new modification time and as unsynced, and the collection's modified stamp
+/// moves, so that client's next sync sends it (SPEC-083 A39): a sync whose stamps are equal on
+/// both sides exchanges nothing.
 ///
 /// # Panics
 ///
@@ -1159,6 +1163,43 @@ pub fn change_cards(path: &Path, cards: &[(i64, i64)]) {
                 )
                 .expect("the card is updated");
             assert_eq!(changed, 1, "the collection holds the card {card}");
+        }
+        col.storage
+            .db()
+            .execute("update col set mod = ?", (now * 1000,))
+            .expect("the collection's modified stamp moves");
+    });
+}
+
+/// The tables whose rows carry an update sequence number in the engine's schema.
+const USN_TABLES: [&str; 10] = [
+    "cards",
+    "notes",
+    "revlog",
+    "graves",
+    "decks",
+    "deck_config",
+    "notetypes",
+    "templates",
+    "tags",
+    "config",
+];
+
+/// Makes the collection at `path` a server's: every row the builder wrote as unsynced (update
+/// sequence number -1, which the engine writes in client mode) is marked synced, as a server never
+/// holds an unsynced row. A full download then carries no pending change into the private copy,
+/// so the private copy's first change after it is the only one its next sync sends.
+///
+/// # Panics
+///
+/// When a statement fails.
+pub fn as_served(path: &Path) {
+    with_engine(path, |col| {
+        for table in USN_TABLES {
+            col.storage
+                .db()
+                .execute(&format!("update {table} set usn = 0 where usn = -1"), ())
+                .unwrap_or_else(|error| panic!("{table}'s rows are marked synced: {error}"));
         }
     });
 }
