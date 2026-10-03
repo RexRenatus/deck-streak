@@ -1120,7 +1120,12 @@ repository per member and run the plan in-process; A62's control runs the same p
 plan's tree reader replaced by one that sets every string expression aside, wherever it stands,
 and must find a mismatch. A64 reads `ci.yml`'s admission loop, the `legs` verb's source and the step
 outputs the plan writes for a fixture's diff.
-## 19. Amendment, 2026-09-29: a missing tool is a refusal
+
+## 30. Amendment, 2026-09-29: a missing tool is a refusal
+
+Sections 23 to 26 and criteria A54 to A60 are not used: this amendment held sections 19 to 26 and
+criteria A46 to A60 until it merged dev, where sections 19 to 22 and criteria A46 to A53 had landed
+first.
 
 Issue #431: `scripts/mutation_rows.py prove` ended with an uncaught `FileNotFoundError`, and exit
 1, which is `EXIT_SURVIVED`, when a row's killer was a cargo test and `cargo` was not on `PATH`. A
@@ -1145,7 +1150,7 @@ section states it.
   every `OSError` of the spawn (an error that names the working directory is still re-raised), and
   both read exit 126 and exit 127 of the tool they spawned as the refusal, `cannot be run` and `is
   not found`. `main` alone turns the refusal into the line and the exit code. No other function
-  spawns a process, and the census of the module's own source (A47, A51, A52) refuses a function
+  spawns a process, and the census of the module's own source (A67, A71, A72) refuses a function
   that does, by any name the standard library gives a spawner (`subprocess`, `os.system`,
   `os.popen`, `os.exec*`, `os.spawn*`, `os.posix_spawn*`, `os.fork*`, `os.startfile`, `pty`,
   `asyncio`'s subprocess calls and the loop's `subprocess_exec` and `subprocess_shell`) and through
@@ -1164,37 +1169,37 @@ section states it.
   rows leg skip its toolchain, which is the later lever this refusal makes safe (#431). It changes
   no verdict logic other than a missing tool's, and no existing row other than S03935 (#431).
 
-## 20. Acceptance criteria of the 2026-09-29 (#431) amendment
+## 31. Acceptance criteria of the 2026-09-29 (#431) amendment
 
 | id | criterion | decided by |
 |---|---|---|
-| A46 | for every spawn site of the runner, every tool it can spawn (`git`, `cargo`, the interpreter, `bash`, `sh`), every one of the six unrunnable modes and every verb that reaches the site, the verb exits 2, prints exactly one `REFUSED` line naming the tool, prints no traceback and no verdict line, and leaves the target's bytes and the tree's tracked state as they were; the population's count is printed | `test_mutation_rows_missing_tool.py` |
-| A47 | the spawn sites read from the module's own source are exactly the sites the population covers, and no function outside `run_tool` and `run_in_own_group` spawns a process by any name (A51) | `test_mutation_rows_missing_tool.py` |
-| A48 | `count`, `ids` and `census` spawn nothing and succeed with every tool unrunnable | `test_mutation_rows_missing_tool.py` |
-| A49 | a shell parser that cannot be run refuses the proof naming it, exit 2 and no verdict, where section 12 left the mutant VOID | `test_mutation_rows.py` |
-| A50 | a tool behind a `PATH` entry the runner cannot look at is found as the spawn finds it, and `prove` does not end in a traceback | `test_mutation_rows_missing_tool.py` |
-| A51 | no function outside the two helpers spawns a process by any name the standard library documents for a spawner, or through an aliasing import | `test_mutation_rows_missing_tool.py` |
-| A52 | the census reads every documented spawner, spelled every way of reaching it | `test_mutation_rows_missing_tool.py` |
+| A66 | for every spawn site of the runner, every tool it can spawn (`git`, `cargo`, the interpreter, `bash`, `sh`), every one of the six unrunnable modes and every verb that reaches the site, the verb exits 2, prints exactly one `REFUSED` line naming the tool, prints no traceback and no verdict line, and leaves the target's bytes and the tree's tracked state as they were; the population's count is printed | `test_mutation_rows_missing_tool.py` |
+| A67 | the spawn sites read from the module's own source are exactly the sites the population covers, and no function outside `run_tool` and `run_in_own_group` spawns a process by any name (A71) | `test_mutation_rows_missing_tool.py` |
+| A68 | `count`, `ids` and `census` spawn nothing and succeed with every tool unrunnable | `test_mutation_rows_missing_tool.py` |
+| A69 | a shell parser that cannot be run refuses the proof naming it, exit 2 and no verdict, where section 12 left the mutant VOID | `test_mutation_rows.py` |
+| A70 | a tool behind a `PATH` entry the runner cannot look at is found as the spawn finds it, and `prove` does not end in a traceback | `test_mutation_rows_missing_tool.py` |
+| A71 | no function outside the two helpers spawns a process by any name the standard library documents for a spawner, or through an aliasing import | `test_mutation_rows_missing_tool.py` |
+| A72 | the census reads every documented spawner, spelled every way of reaching it | `test_mutation_rows_missing_tool.py` |
 
 ```acceptance
-A46: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb
-A47: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k every_spawn_site_the_module_holds_has_a_scenario_and_owns_no_raw_spawn
-A48: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k a_verb_that_spawns_nothing_runs_with_every_tool_unrunnable
-A49: python3 -m unittest discover -s scripts/tests -p test_mutation_rows.py -k a_missing_parser_is_a_refusal_naming_it
-A50: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k a_path_entry_the_runner_cannot_look_at_is_passed_over_as_the_spawn_passes_it
-A51: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k no_code_outside_the_helpers_spawns_a_process_by_any_other_name
-A52: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k the_census_reads_every_documented_spawner_by_every_way_of_reaching_it
+A66: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb
+A67: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k every_spawn_site_the_module_holds_has_a_scenario_and_owns_no_raw_spawn
+A68: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k a_verb_that_spawns_nothing_runs_with_every_tool_unrunnable
+A69: python3 -m unittest discover -s scripts/tests -p test_mutation_rows.py -k a_missing_parser_is_a_refusal_naming_it
+A70: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k a_path_entry_the_runner_cannot_look_at_is_passed_over_as_the_spawn_passes_it
+A71: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k no_code_outside_the_helpers_spawns_a_process_by_any_other_name
+A72: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k the_census_reads_every_documented_spawner_by_every_way_of_reaching_it
 ```
 
-A46 to A48 build a temporary git repository per member with the suite's own fixture, and run the
+A66 to A68 build a temporary git repository per member with the suite's own fixture, and run the
 runner as a child process whose `PATH` holds real `git`, `bash` and `sh` except the tool under
 test, which is in one of the six modes above (the interpreter's case replaces `sys.executable` in
 the child). The population is 180 members: every site, tool, mode and verb alone in `PATH`, and
 the searched tools again behind the entry the runner cannot look at. The cargo build site's member serves the control run from
 a shim that then makes itself unrunnable, so the refusal comes from the mutant's build and the
-member asserts the shim was reached. A49's test keeps A41's fixture and its bare `PATH`.
+member asserts the shim was reached. A69's test keeps A41's fixture and its bare `PATH`.
 
-## 21. Amendment, 2026-09-30: every refusal is read whole, and the census refuses what it cannot read
+## 32. Amendment, 2026-09-30: every refusal is read whole, and the census refuses what it cannot read
 
 Round 1 of #431 made the runner refuse a tool it cannot run, and CI's `mutation-verdict` then
 generated mutants of the refusal's own lines: 43 generated and 23 hand rows examined, 14 survived,
@@ -1228,22 +1233,22 @@ class; this section states it as criteria.
   forms with all 34 documented spawners, 578 members, and asserts every one refused, and that the
   runner's own source and four benign sources are not.
 - **What it does NOT do.** It does not read a spawn built from a string handed to a shell by a
-  caller outside `scripts/mutation_rows.py`; the census reads that one file, as A47 does (#431). It
+  caller outside `scripts/mutation_rows.py`; the census reads that one file, as A67 does (#431). It
   changes no timeout, drops no test and narrows no mutation diff (#431).
 
-## 22. Acceptance criteria of the 2026-09-30 (#431) round 2
+## 33. Acceptance criteria of the 2026-09-30 (#431) round 2
 
 | id | criterion | decided by |
 |---|---|---|
-| A53 | every refusal's whole text and tool, and each branch that chooses it, at each spawn route, over the population it generates: 16 reasons by route, 260 errnos, 768 exits | `test_mutation_rows_refusal.py` |
-| A54 | the census refuses each of 17 ways of reaching a spawner by a name built at run time, crossed with the 34 documented spawners (578 members), and refuses nothing the runner's source holds | `test_mutation_rows_missing_tool.py` |
+| A73 | every refusal's whole text and tool, and each branch that chooses it, at each spawn route, over the population it generates: 16 reasons by route, 260 errnos, 768 exits | `test_mutation_rows_refusal.py` |
+| A74 | the census refuses each of 17 ways of reaching a spawner by a name built at run time, crossed with the 34 documented spawners (578 members), and refuses nothing the runner's source holds | `test_mutation_rows_missing_tool.py` |
 
 ```acceptance
-A53: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_refusal.py -k each_reason_is_refused_whole_at_every_route
-A54: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k the_census_refuses_every_spelling_it_cannot_read_by_every_way_of_reaching_a_spawner
+A73: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_refusal.py -k each_reason_is_refused_whole_at_every_route
+A74: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k the_census_refuses_every_spelling_it_cannot_read_by_every_way_of_reaching_a_spawner
 ```
 
-## 23. Amendment, 2026-09-30: the judged tool is the tool the spawn runs
+## 34. Amendment, 2026-09-30: the judged tool is the tool the spawn runs
 
 Rounds 1 and 2 of #431 resolved a tool in one place and spawned it in another, and the two did not
 read the same directory. A relative `PATH` candidate (an empty entry, `.`, a relative entry, or a
@@ -1273,24 +1278,24 @@ in another. ADR-291 states the class; this section states it as criteria.
   equivalent (a fallback name that no source reads, `names[0]` against `names[-1]` over a list of
   one, and a `return None` against falling off the end).
 - **What it does NOT do.** It does not read a spawn built by a caller outside
-  `scripts/mutation_rows.py`, as A47 does not (#431). It changes no timeout, drops no test and
+  `scripts/mutation_rows.py`, as A67 does not (#431). It changes no timeout, drops no test and
   narrows no mutation diff (#431).
 
-## 24. Acceptance criteria of the 2026-09-30 (#431) round 3
+## 35. Acceptance criteria of the 2026-09-30 (#431) round 3
 
 | id | criterion | decided by |
 |---|---|---|
-| A55 | a relative `PATH` candidate is read in the directory the child runs in, so the file judged is the file run, at every spawn route | `test_mutation_rows_refusal.py` |
-| A56 | the census refuses a spawner reached by reference or through another module, for every documented spawner | `test_mutation_rows_missing_tool.py` |
-| A57 | the census refuses an import it has not read, for every module a spawner can be reached through | `test_mutation_rows_missing_tool.py` |
+| A75 | a relative `PATH` candidate is read in the directory the child runs in, so the file judged is the file run, at every spawn route | `test_mutation_rows_refusal.py` |
+| A76 | the census refuses a spawner reached by reference or through another module, for every documented spawner | `test_mutation_rows_missing_tool.py` |
+| A77 | the census refuses an import it has not read, for every module a spawner can be reached through | `test_mutation_rows_missing_tool.py` |
 
 ```acceptance
-A55: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_refusal.py -k test_a_relative_candidate_is_read_in_the_directory_the_child_runs_in
-A56: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k test_the_census_refuses_a_spawner_it_reaches_by_reference_or_through_another_module
-A57: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k test_the_census_refuses_an_import_it_has_not_read
+A75: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_refusal.py -k test_a_relative_candidate_is_read_in_the_directory_the_child_runs_in
+A76: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k test_the_census_refuses_a_spawner_it_reaches_by_reference_or_through_another_module
+A77: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k test_the_census_refuses_an_import_it_has_not_read
 ```
 
-## 25. Amendment, 2026-09-30: the spawn runs the file the runner judged
+## 36. Amendment, 2026-09-30: the spawn runs the file the runner judged
 
 Round 3 made the resolver read a relative candidate where the child reads it. The spawn still
 searched `PATH` a second time, and CPython's search continues past any candidate the kernel refuses
@@ -1329,19 +1334,19 @@ be two files. ADR-291 states the class; this section states it as criteria.
   census replay as before. One test reads the judged file from a relative working directory, where
   the resolver must return an absolute path, since the spawn changes directory before it runs it.
 - **What it does NOT do.** It does not hold when `PATH` changes between the judge and the spawn
-  (#431). It reads the runner's one file, as A47 does (#431). It changes no timeout, drops no test
+  (#431). It reads the runner's one file, as A67 does (#431). It changes no timeout, drops no test
   and narrows no mutation diff (#431).
 
-## 26. Acceptance criteria of the 2026-09-30 (#431) round 4
+## 37. Acceptance criteria of the 2026-09-30 (#431) round 4
 
 | id | criterion | decided by |
 |---|---|---|
-| A58 | the file the kernel executes is the file the runner judged, for four kernel refusals, three positions on `PATH` and three spawn routes, and a `PATH` that changes | `test_mutation_rows_refusal.py` |
-| A59 | the census refuses every name that reaches what it has not read, over 679 generated members | `test_mutation_rows_missing_tool.py` |
-| A60 | the census reads an annotation that holds code as code, and names each refusal whole | `test_mutation_rows_missing_tool.py` |
+| A78 | the file the kernel executes is the file the runner judged, for four kernel refusals, three positions on `PATH` and three spawn routes, and a `PATH` that changes | `test_mutation_rows_refusal.py` |
+| A79 | the census refuses every name that reaches what it has not read, over 679 generated members | `test_mutation_rows_missing_tool.py` |
+| A80 | the census reads an annotation that holds code as code, and names each refusal whole | `test_mutation_rows_missing_tool.py` |
 
 ```acceptance
-A58: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_refusal.py -k test_the_spawn_runs_the_file_it_judged_by_every_route
-A59: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k test_the_census_refuses_every_name_that_reaches_what_it_has_not_read
-A60: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k test_the_census_names_each_refusal_and_reads_annotations_and_dotted_names_whole
+A78: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_refusal.py -k test_the_spawn_runs_the_file_it_judged_by_every_route
+A79: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k test_the_census_refuses_every_name_that_reaches_what_it_has_not_read
+A80: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k test_the_census_names_each_refusal_and_reads_annotations_and_dotted_names_whole
 ```

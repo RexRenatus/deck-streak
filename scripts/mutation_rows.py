@@ -256,7 +256,7 @@ def load_tree(root: pathlib.Path | str) -> object:
 
 
 class ToolMissing(Exception):
-    """A process the runner must spawn has an executable that cannot be run (SPEC-039 A46).
+    """A process the runner must spawn has an executable that cannot be run (SPEC-039 A66).
 
     Absent from `PATH`, present but not executable, a directory at the name, a file the kernel
     will not execute, or a wrapper that exits 126 or 127 because a program it needs cannot be: one

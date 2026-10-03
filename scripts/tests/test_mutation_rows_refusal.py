@@ -1,4 +1,4 @@
-"""Every refusal a missing tool makes is read WHOLE (SPEC-039 A53, ADR-291, issue #431).
+"""Every refusal a missing tool makes is read WHOLE (SPEC-039 A73, ADR-291, issue #431).
 
 THE CLASS. A refusal is decided by its exact text and by the branch that chooses it. A test that
 asserts only that a refusal happened, or that its line holds a word of the reason, leaves every

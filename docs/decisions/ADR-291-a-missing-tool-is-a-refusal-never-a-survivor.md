@@ -78,7 +78,7 @@ the runner already gives every other input it cannot examine.
   `prove_row`'s `finally` restores the target, so the digest is unchanged.
 - `parses` no longer returns "is not installed"; a shell that cannot be run is a `ToolMissing`.
   This supersedes A41's missing-parser clause only. SPEC-039 stays insert-only: A41's text on dev
-  is not edited, and the amendment (sections 19 and 20) says what it supersedes.
+  is not edited, and the amendment (sections 30 and 31) says what it supersedes.
 
 **Who reads exit 2, measured** (every consumer of the runner's exit code):
 
@@ -120,9 +120,9 @@ errno of `errno.errorcode` and every exit from 0 to 255 at every spawn route, ea
 whole `ToolMissing`; it is the first module the mutation map runs for the runner. The one
 mutant no test could tell from the original, `replace "." with "" in resolve_tool`
 (`Path("") == Path(".")`), was chosen against recording it as equivalent: the runner reads
-`Path(part)` and the mutant no longer exists. The census refuses dynamic reach (SPEC-039 A54).
+`Path(part)` and the mutant no longer exists. The census refuses dynamic reach (SPEC-039 A74).
 
-Round 3 states the class as one rule: the tool the runner judges is the tool the spawn runs, and every refusal is one whole outcome, for every spawn route. Its tests generate 384 child-directory members and 768 whole-outcome members; the census reads 442 spawner-reference members and 568 unread-import members and each is refused, so its escape population of 1010 has 0 escapes (SPEC-039 A55 to A57). Every generated mutant of the runner's resolution and spawn helpers (136) is red by assertion except 1 equivalent, and of the census (88) all but 3 equivalent are red by assertion, with none red by an error alone.
+Round 3 states the class as one rule: the tool the runner judges is the tool the spawn runs, and every refusal is one whole outcome, for every spawn route. Its tests generate 384 child-directory members and 768 whole-outcome members; the census reads 442 spawner-reference members and 568 unread-import members and each is refused, so its escape population of 1010 has 0 escapes (SPEC-039 A75 to A77). Every generated mutant of the runner's resolution and spawn helpers (136) is red by assertion except 1 equivalent, and of the census (88) all but 3 equivalent are red by assertion, with none red by an error alone.
 
 Round 4 closes the last route by which the judged file and the run file could differ. The resolver
 returns the judged file and `run_tool` and `run_in_own_group` spawn it with `executable=` that
@@ -137,5 +137,5 @@ because the runner has no writer between the two statements (#431).
 
 ## More Information
 
-Issue #431. SPEC-039 sections 19 and 20 (A46 to A49), which amend section 12 (A41). ADR-057,
+Issue #431. SPEC-039 sections 30 and 31 (A66 to A69), which amend section 12 (A41). ADR-057,
 ADR-073 and ADR-196 decide the runner's other exit codes and its process group.

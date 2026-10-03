@@ -395,11 +395,12 @@ The first red line names, verbatim, `a latin-1 escape rewritten as raw bytes, a 
 The module now holds seven members, the seventh (a latin-1 declaration removed beside a
 docstring edit) being mutation coverage added after the round-2 PASS, green at its own commit and
 not red-first evidence.
+
 ## Addendum, 2026-09-29: a missing tool is a refusal (issue #431)
 
-A46 to A49 are the acceptance criteria of section 20, made by issue #431's delivery. A46 to A48
+A66 to A69 are the acceptance criteria of section 31, made by issue #431's delivery. A66 to A68
 were written red at 932358d, against the runner as dev holds it, where the runner spawns `git`,
-`cargo`, the interpreter, `bash` and `sh` with no check of its own; A49's updated test was written
+`cargo`, the interpreter, `bash` and `sh` with no check of its own; A69's updated test was written
 red at 27646b2. Each is green at b1bd758, which adds the check to the runner. At 932358d the file
 reads `FAILED (failures=73)` over 75 members: 64 members fail with a traceback (`'Traceback'
 unexpectedly found`), 8 with a `bash` or `sh` that left the mutant VOID and exit 3 where the rule
@@ -407,16 +408,16 @@ says 2, and the census of spawn sites fails with `['git', 'parses', 'builds'] !=
 failures name no path outside the repository. The original lines above stand.
 
 ```red-first
-A46: red at 932358d: AssertionError: 'Traceback' unexpectedly found in 'Traceback (most recent call last):
-A46: green at b1bd758
-A47: red at 932358d: AssertionError: Lists differ: ['git', 'parses', 'builds'] != []
-A47: green at b1bd758
-A49: red at 27646b2: AssertionError: 3 != 2 : S00032-NO-PARSER: VOID: the mutant is unchecked: bash is not installed
-A49: green at b1bd758
-A48: not red: count, ids and census spawn nothing, so they already exit 0 at dev; a spawn planted in the count branch reds it
+A66: red at 932358d: AssertionError: 'Traceback' unexpectedly found in 'Traceback (most recent call last):
+A66: green at b1bd758
+A67: red at 932358d: AssertionError: Lists differ: ['git', 'parses', 'builds'] != []
+A67: green at b1bd758
+A69: red at 27646b2: AssertionError: 3 != 2 : S00032-NO-PARSER: VOID: the mutant is unchecked: bash is not installed
+A69: green at b1bd758
+A68: not red: count, ids and census spawn nothing, so they already exit 0 at dev; a spawn planted in the count branch reds it
 ```
 
-**A48 is `not red`, and takes no green line.** `count`, `ids` and `census` spawn nothing, so they
+**A68 is `not red`, and takes no green line.** `count`, `ids` and `census` spawn nothing, so they
 already exit 0 with every tool unrunnable at dev. The plant that turns it red is a spawn in the
 `count` branch (`tracked_changes(root)` first in that `try`), which reads `AssertionError: 1 != 0 :
 Traceback (most recent call last):` from `test_a_verb_that_spawns_nothing_runs_with_every_tool_unrunnable`.
@@ -435,7 +436,7 @@ the population (100 members); and the cargo build site's member asserts that its
 control run, so the refusal is the mutant build's. Each closes a plant that stayed green: see the
 plants below.
 
-**Supersession, A41's missing-parser clause (SPEC-039 section 12), by A49.** Two assertions of
+**Supersession, A41's missing-parser clause (SPEC-039 section 12), by A69.** Two assertions of
 `test_mutation_rows.py` changed, each recorded old then new, verbatim. Neither was removed, skipped
 or weakened: the first reads the same fact with the refusal's code and line, and the second
 reads it as the exception the parser now raises. The parser-timeout assertions are unchanged.
@@ -504,23 +505,23 @@ The addendum above stands as history; where it counts modes or members, this one
 the head. The head's population is 180 members, over six modes (absent, not executable, a directory,
 a script whose interpreter line names a missing program, an empty file with the execute bit, and a
 wrapper whose program is missing), and every searched tool again behind a `PATH` entry the runner
-cannot look at, plus 3 quiet verbs, 4 spawn sites and 127 spawner spellings. A50 to A52 are the
-criteria this round adds to section 20.
+cannot look at, plus 3 quiet verbs, 4 spawn sites and 127 spawner spellings. A70 to A72 are the
+criteria this round adds to section 31.
 
 The killer file was committed alone at adf4fbf8, against the runner as the earlier commits left it,
 and read `FAILED (failures=80)` over `Ran 5 tests`, `examined 180 missing-tool member(s)`, by
 assertion in every case. The rule and the census extension are green at 8574e9f4, with `Ran 6 tests`
-and `OK`. A50 is red at adf4fbf8; A51 passes there because the census the file already held reads
-the two spellings it named. A52 is the census's own test and was added at 8574e9f4.
+and `OK`. A70 is red at adf4fbf8; A71 passes there because the census the file already held reads
+the two spellings it named. A72 is the census's own test and was added at 8574e9f4.
 
 ```red-first
-A50: red at adf4fbf8: AssertionError: 1 != 0 : Traceback (most recent call last):
-A50: green at 8574e9f4
-A51: not red: the census at adf4fbf8 reads the spellings it holds, so it exits OK there; a spawn by another stdlib name planted in `git` reds it (S03981)
-A52: not red: it is new at 8574e9f4, beside the census it tests; against the census without `os.startfile`, the loop's two methods and `from os import *` it reads `FAILED (failures=28)`
+A70: red at adf4fbf8: AssertionError: 1 != 0 : Traceback (most recent call last):
+A70: green at 8574e9f4
+A71: not red: the census at adf4fbf8 reads the spellings it holds, so it exits OK there; a spawn by another stdlib name planted in `git` reds it (S03981)
+A72: not red: it is new at 8574e9f4, beside the census it tests; against the census without `os.startfile`, the loop's two methods and `from os import *` it reads `FAILED (failures=28)`
 ```
 
-**A51 and A52 are `not red`, and take no green line.** A52's red is a measurement, not a commit:
+**A71 and A72 are `not red`, and take no green line.** A72's red is a measurement, not a commit:
 the test was run against the census as it stood before its extension and failed by assertion
 (`AssertionError: [] == [] : from os import *`, and the `os.startfile` spellings), then the census
 was extended and the test passed.
@@ -533,29 +534,29 @@ head, where the population is larger (plant a reads 174 here, not 72); this tabl
 reproduces.
 
 ```text
-S03960-A46-MISSING-TOOL-READS-AS-A-SURVIVOR                  (failures=174)   AssertionError: 1 != 2 : prove: REFUSED: missing tool: git: not found on PATH
-S03961-A46-MISSING-TOOL-READS-AS-VOID                        (failures=174)   AssertionError: 3 != 2 : prove: REFUSED: missing tool: git: not found on PATH
-S03962-A46-RETIRED-MISSING-TOOL-READS-AS-OK                  (failures=6)     AssertionError: 0 != 2 : retired: REFUSED: missing tool: git: not found on PATH
-S03963-A47-GIT-SPAWNS-WITHOUT-THE-CHECK                      (failures=35)    AssertionError: 'Traceback' unexpectedly found in 'Traceback (most recent call last):
-S03964-A47-PARSER-SPAWNS-WITHOUT-THE-CHECK                   (failures=62)    AssertionError: 'Traceback' unexpectedly found in 'Traceback (most recent call last):
-S03965-A47-BUILD-SPAWNS-WITHOUT-THE-CHECK                    (failures=32)    AssertionError: 'Traceback' unexpectedly found in 'Traceback (most recent call last):
-S03966-A46-KILLER-GROUP-SPAWNS-WITHOUT-RESOLVING             (failures=19)    AssertionError: False is not true : prove: REFUSED: missing tool: cargo: Permission denied
-S03967-A46-A-REFUSED-PROOF-KEEPS-ITS-MUTANT                  (failures=90)    AssertionError: 4 != 2 : prove: RESTORE FAILED: crates/fix/src/lib.rs was not restored byte for byte after S00002-CARGO
-S03968-A46-THE-REFUSAL-LINE-DROPS-THE-TOOL                   (failures=174)   AssertionError: 'git' not found in 'prove: REFUSED' : prove: REFUSED
-S03969-A46-A-FILE-WITHOUT-THE-EXECUTE-BIT-RESOLVES           (failures=30)    AssertionError: False is not true : prove: REFUSED: missing tool: git: Permission denied
-S03970-A46-A-DIRECTORY-READS-AS-ABSENT                       (failures=30)    AssertionError: False is not true : prove: REFUSED: missing tool: git: not found on PATH
-S03971-A46-THE-PATH-SEARCH-IGNORES-THE-CHILDS-PATH           (failures=90)    AssertionError: False is not true : prove: REFUSED: missing tool: git: Permission denied
-S03972-A46-A-SPAWN-THAT-FAILS-AFTER-RESOLUTION-IS-A-TRACEBAC (failures=58)    AssertionError: 'Traceback' unexpectedly found in 'Traceback (most recent call last):
-S03973-A46-A-PATH-ENTRY-THE-RUNNER-CANNOT-LOOK-AT-STOPS-THE- (failures=55)    AssertionError: 1 != 0 : Traceback (most recent call last):
-S03974-A46-RUN-TOOL-CATCHES-ONLY-THREE-SPAWN-ERRORS          (failures=24)    AssertionError: 'Traceback' unexpectedly found in 'Traceback (most recent call last):
-S03975-A46-THE-PROCESS-GROUP-SPAWN-CATCHES-ONLY-THREE-ERRORS (failures=10)    AssertionError: 'Traceback' unexpectedly found in 'Traceback (most recent call last):
-S03976-A46-A-CHECKED-EXIT-OF-A-MISSING-PROGRAM-IS-A-TRACEBAC (failures=6)     AssertionError: 'Traceback' unexpectedly found in 'Traceback (most recent call last):
-S03977-A46-RUN-TOOL-READS-EXIT-126-127-AS-A-RESULT           (failures=15)    AssertionError: 3 != 2 : S00002-CARGO: VOID: the mutant does not build
-S03978-A46-THE-PROCESS-GROUP-READS-EXIT-126-127-AS-A-RESULT  (failures=9)     AssertionError: 3 != 2 : S00002-CARGO: VOID: its killer selected 0 tests, not one
-S03979-A46-EXIT-126-IS-NOT-A-REFUSAL                         (failures=5)     AssertionError: 'Traceback' unexpectedly found in 'Traceback (most recent call last):
-S03980-A46-EXIT-127-IS-NOT-A-REFUSAL                         (failures=25)    AssertionError: 'Traceback' unexpectedly found in 'Traceback (most recent call last):
-S03981-A47-A-SPAWN-BY-ANOTHER-STDLIB-NAME-SKIPS-THE-TOOL-CHE (failures=35)    AssertionError: 'Traceback' unexpectedly found in 'Traceback (most recent call last):
-S03982-A47-AN-ALIASING-IMPORT-OF-A-SPAWNER-IS-NOT-SEEN       (failures=1)     AssertionError: Lists differ: ['import subprocess as sp'] != []
+S03960-A66-MISSING-TOOL-READS-AS-A-SURVIVOR                  (failures=174)   AssertionError: 1 != 2 : prove: REFUSED: missing tool: git: not found on PATH
+S03961-A66-MISSING-TOOL-READS-AS-VOID                        (failures=174)   AssertionError: 3 != 2 : prove: REFUSED: missing tool: git: not found on PATH
+S03962-A66-RETIRED-MISSING-TOOL-READS-AS-OK                  (failures=6)     AssertionError: 0 != 2 : retired: REFUSED: missing tool: git: not found on PATH
+S03963-A67-GIT-SPAWNS-WITHOUT-THE-CHECK                      (failures=35)    AssertionError: 'Traceback' unexpectedly found in 'Traceback (most recent call last):
+S03964-A67-PARSER-SPAWNS-WITHOUT-THE-CHECK                   (failures=62)    AssertionError: 'Traceback' unexpectedly found in 'Traceback (most recent call last):
+S03965-A67-BUILD-SPAWNS-WITHOUT-THE-CHECK                    (failures=32)    AssertionError: 'Traceback' unexpectedly found in 'Traceback (most recent call last):
+S03966-A66-KILLER-GROUP-SPAWNS-WITHOUT-RESOLVING             (failures=19)    AssertionError: False is not true : prove: REFUSED: missing tool: cargo: Permission denied
+S03967-A66-A-REFUSED-PROOF-KEEPS-ITS-MUTANT                  (failures=90)    AssertionError: 4 != 2 : prove: RESTORE FAILED: crates/fix/src/lib.rs was not restored byte for byte after S00002-CARGO
+S03968-A66-THE-REFUSAL-LINE-DROPS-THE-TOOL                   (failures=174)   AssertionError: 'git' not found in 'prove: REFUSED' : prove: REFUSED
+S03969-A66-A-FILE-WITHOUT-THE-EXECUTE-BIT-RESOLVES           (failures=30)    AssertionError: False is not true : prove: REFUSED: missing tool: git: Permission denied
+S03970-A66-A-DIRECTORY-READS-AS-ABSENT                       (failures=30)    AssertionError: False is not true : prove: REFUSED: missing tool: git: not found on PATH
+S03971-A66-THE-PATH-SEARCH-IGNORES-THE-CHILDS-PATH           (failures=90)    AssertionError: False is not true : prove: REFUSED: missing tool: git: Permission denied
+S03972-A66-A-SPAWN-THAT-FAILS-AFTER-RESOLUTION-IS-A-TRACEBAC (failures=58)    AssertionError: 'Traceback' unexpectedly found in 'Traceback (most recent call last):
+S03973-A66-A-PATH-ENTRY-THE-RUNNER-CANNOT-LOOK-AT-STOPS-THE- (failures=55)    AssertionError: 1 != 0 : Traceback (most recent call last):
+S03974-A66-RUN-TOOL-CATCHES-ONLY-THREE-SPAWN-ERRORS          (failures=24)    AssertionError: 'Traceback' unexpectedly found in 'Traceback (most recent call last):
+S03975-A66-THE-PROCESS-GROUP-SPAWN-CATCHES-ONLY-THREE-ERRORS (failures=10)    AssertionError: 'Traceback' unexpectedly found in 'Traceback (most recent call last):
+S03976-A66-A-CHECKED-EXIT-OF-A-MISSING-PROGRAM-IS-A-TRACEBAC (failures=6)     AssertionError: 'Traceback' unexpectedly found in 'Traceback (most recent call last):
+S03977-A66-RUN-TOOL-READS-EXIT-126-127-AS-A-RESULT           (failures=15)    AssertionError: 3 != 2 : S00002-CARGO: VOID: the mutant does not build
+S03978-A66-THE-PROCESS-GROUP-READS-EXIT-126-127-AS-A-RESULT  (failures=9)     AssertionError: 3 != 2 : S00002-CARGO: VOID: its killer selected 0 tests, not one
+S03979-A66-EXIT-126-IS-NOT-A-REFUSAL                         (failures=5)     AssertionError: 'Traceback' unexpectedly found in 'Traceback (most recent call last):
+S03980-A66-EXIT-127-IS-NOT-A-REFUSAL                         (failures=25)    AssertionError: 'Traceback' unexpectedly found in 'Traceback (most recent call last):
+S03981-A67-A-SPAWN-BY-ANOTHER-STDLIB-NAME-SKIPS-THE-TOOL-CHE (failures=35)    AssertionError: 'Traceback' unexpectedly found in 'Traceback (most recent call last):
+S03982-A67-AN-ALIASING-IMPORT-OF-A-SPAWNER-IS-NOT-SEEN       (failures=1)     AssertionError: Lists differ: ['import subprocess as sp'] != []
 ```
 
 Two more plants were run and have no row of their own. Removing the spawn-error backstop reads
@@ -569,7 +570,7 @@ S03982, and S03971 and S03972 were the round's first two.
 
 ## Addendum, 2026-09-30: every refusal is read whole (issue #431, round 2)
 
-A53 and A54 are the criteria of section 22. Round 1 pushed with `mutation-verdict` red: 14 generated
+A73 and A74 are the criteria of section 33. Round 1 pushed with `mutation-verdict` red: 14 generated
 mutants of the refusal's own lines survived. The whole-value tests are green at 1361a265 (`Ran 9
 tests`, `OK`, 5 examined member lists: 16 reasons by route, 260 errno members, 768 exit members) and
 are `not red` at the head they test, because the code already refuses correctly; the plants are
@@ -581,14 +582,14 @@ census test was committed alone at edb24a2c and reads `FAILED (failures=551)` ov
 census that refuses them is green at 23b303b9.
 
 ```red-first
-A53: not red: the code at dev + round 1 already refuses correctly; the generated mutants of the refusal and spawn helpers are measured at round 3 (136 examined: 135 red by assertion, 1 equivalent, 0 error-only)
-A54: red at edb24a2c: AssertionError: [] == [] : import os
-A54: green at 23b303b9
+A73: not red: the code at dev + round 1 already refuses correctly; the generated mutants of the refusal and spawn helpers are measured at round 3 (136 examined: 135 red by assertion, 1 equivalent, 0 error-only)
+A74: red at edb24a2c: AssertionError: [] == [] : import os
+A74: green at 23b303b9
 ```
 
 ## Addendum, 2026-09-30: the judged tool is the tool the spawn runs (issue #431, round 3)
 
-A55 to A57 are the criteria of section 24. The tests were committed alone at 3c8a340a: the child
+A75 to A77 are the criteria of section 35. The tests were committed alone at 3c8a340a: the child
 directory test with the refusal module, and the two census tests over a census that read neither a
 reference nor an import it had not been given. Each fails by assertion and by no error: the child
 directory test reads `FAILED (failures=180)` over 384 members, the reference and other-module test
@@ -611,17 +612,17 @@ survivors change a fallback name that no source reads, `names[0]` to `names[-1]`
 one, and a `return None` that ends the function anyway.
 
 ```red-first
-A55: red at 3c8a340a: AssertionError: Tuples differ: ('refused', 'missing tool: refusal-probe-tool: not found on PATH') != ('ran', 'CHILD')
-A55: green at fecfe85e
-A56: red at 3c8a340a: AssertionError: [] == [] : import subprocess
-A56: green at fecfe85e
-A57: red at 3c8a340a: AssertionError: [] == [] : import _abc
-A57: green at fecfe85e
+A75: red at 3c8a340a: AssertionError: Tuples differ: ('refused', 'missing tool: refusal-probe-tool: not found on PATH') != ('ran', 'CHILD')
+A75: green at fecfe85e
+A76: red at 3c8a340a: AssertionError: [] == [] : import subprocess
+A76: green at fecfe85e
+A77: red at 3c8a340a: AssertionError: [] == [] : import _abc
+A77: green at fecfe85e
 ```
 
 ## Addendum, 2026-09-30: the spawn runs the file the runner judged (issue #431, round 4)
 
-A58 to A60 are the criteria of section 26. The tests were committed alone at 146eb84c: the judged-file
+A78 to A80 are the criteria of section 37. The tests were committed alone at 146eb84c: the judged-file
 test with the refusal module, and the two census tests over a census that reads neither what a read
 module reaches nor an annotation that holds code. Each fails by assertion and by no error: the
 judged-file test reads `FAILED (failures=40)` over 40 members, the unread-reach test 603 of 679 and
@@ -640,10 +641,10 @@ examined 442 spawner reference member(s), 568 unread import member(s), 679 unrea
 ```
 
 ```red-first
-A58: red at 146eb84c: AssertionError: Tuples differ: ('ran', 'LATER') != ('refused', 'missing tool: refusal-probe-tool: No such file or directory')
-A58: green at d5420d4b
-A59: red at 146eb84c: AssertionError: [] == [] : import argparse
-A59: green at d5420d4b
-A60: red at 146eb84c: AssertionError: [] == [] : import subprocess
-A60: green at d5420d4b
+A78: red at 146eb84c: AssertionError: Tuples differ: ('ran', 'LATER') != ('refused', 'missing tool: refusal-probe-tool: No such file or directory')
+A78: green at d5420d4b
+A79: red at 146eb84c: AssertionError: [] == [] : import argparse
+A79: green at d5420d4b
+A80: red at 146eb84c: AssertionError: [] == [] : import subprocess
+A80: green at d5420d4b
 ```

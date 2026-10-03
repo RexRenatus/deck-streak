@@ -1,4 +1,4 @@
-"""A tool the runner needs and cannot run is a refusal, never a survivor (SPEC-039 A46 to A48,
+"""A tool the runner needs and cannot run is a refusal, never a survivor (SPEC-039 A66 to A68,
 ADR-291, issue #431).
 
 THE CLASS. Every process `scripts/mutation_rows.py` spawns, under every verb that reaches it, ends
@@ -515,7 +515,7 @@ class Member:
 
 
 class TheMissingToolPopulation(unittest.TestCase):
-    """SPEC-039 A46 to A48: the population is derived from the module's own spawn sites."""
+    """SPEC-039 A66 to A68: the population is derived from the module's own spawn sites."""
 
     def test_every_spawn_site_the_module_holds_has_a_scenario_and_owns_no_raw_spawn(self):
         sites, raw_outside = spawn_sites()
