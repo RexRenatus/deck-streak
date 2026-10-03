@@ -9,8 +9,9 @@
 - **Prerequisites:** SPEC-071 (the rollups, their scores and graduations), SPEC-072 (both XP tables,
   the level and its title, the level screen), SPEC-073 (the records screen the board joins), SPEC-076
   (the language streak and its longest). **Mutation band:** `S07500-S07599`.
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-075.md` (ADR-016).
+- **Status:** delivered by #592, which moved it from `docs/specs/planned/` with its tests and
+  `docs/red-first/SPEC-075.md` (ADR-016). ~~planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
+  `docs/specs/` with its tests and `docs/red-first/SPEC-075.md` (ADR-016).~~
 
 ## 1. The problem, measured
 
