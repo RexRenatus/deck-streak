@@ -711,6 +711,123 @@
         "            pushed_ids.extend(rolled.iter().map(|row| row.id).filter(|_| false));\n",
         "flush_fails_after_push::a_settle_that_fails_after_a_recap_is_not_followed_by_a_second_delivery",
         "every row a delivered recap rolled up joins the flush's pushed set before the settle, so a failed settle names them rather than delivers them again (SPEC-041 R16b)"
+      ],
+      [
+        "S04182-A-SYMLINK-IN-A-WALKED-PLACE-IS-REFUSED",
+        "notifications",
+        "tests/one_router.rs",
+        "            if kind.is_symlink() {",
+        "            if kind.is_symlink() && false {",
+        "one_router::a_symlink_in_a_walked_place_is_refused",
+        "the walker refuses a symlink in a place it walks, to a file or to a directory, and neither reads nor follows it (SPEC-041 A26, #297); the census is test code, which cargo-mutants never mutates, and the mutant never takes the symlink branch, so both planted symlinks go unrefused"
+      ],
+      [
+        "S04183-AN-INCLUDED-RUST-FILE-IS-READ",
+        "notifications",
+        "tests/one_router.rs",
+        "    (\"include\", true),",
+        "    (\"include_str\", false),",
+        "one_router::an_included_file_is_read_and_one_the_census_cannot_follow_is_refused",
+        "a file include! brings in is read as Rust under its own path (SPEC-041 A24, #297); the census is test code, which cargo-mutants never mutates, and the mutant follows include_str! a second time in place of include!, so the array keeps its length and the planted include! file is never read"
+      ],
+      [
+        "S04184-AN-INCLUDED-TEXT-FILE-IS-READ",
+        "notifications",
+        "tests/one_router.rs",
+        "    (\"include_str\", false),",
+        "    (\"include_bytes\", false),",
+        "one_router::an_included_file_is_read_and_one_the_census_cannot_follow_is_refused",
+        "a file include_str! brings in is read as text under its own path (SPEC-041 A24, #297); the census is test code, which cargo-mutants never mutates, and the mutant follows include_bytes! a second time in place of include_str!, so the array keeps its length and the planted include_str! file is never read"
+      ],
+      [
+        "S04185-AN-INCLUDE-THE-CENSUS-CANNOT-FOLLOW-IS-REFUSED",
+        "notifications",
+        "tests/one_router.rs",
+        "            refusals.push(format!(\"{path}:{}: {refused}\", line_of(code, at)));",
+        "            drop(refused);",
+        "one_router::an_included_file_is_read_and_one_the_census_cannot_follow_is_refused",
+        "an include whose file the census cannot name, or which the tree does not hold, is refused (SPEC-041 A24, #297); the census is test code, which cargo-mutants never mutates, and the mutant drops the refusal, so both planted includes go unrefused"
+      ],
+      [
+        "S04186-SQL-IS-A-SHIPPED-KIND",
+        "notifications",
+        "tests/one_router.rs",
+        "\"zsh\", \"sql\",",
+        "\"zsh\", \"sh\",",
+        "one_router::a_migration_outside_the_routers_names_neither_the_feed_nor_the_queue",
+        "SQL is a shipped kind, so the walker reads every migration (SPEC-041 A25, #297); the census is test code, which cargo-mutants never mutates, and the mutant lists sh a second time in place of sql, so the array keeps its length and no migration is read"
+      ],
+      [
+        "S04187-ONLY-THE-ROUTERS-MIGRATIONS-NAME-THE-QUEUE",
+        "notifications",
+        "tests/one_router.rs",
+        "        let migration = ROUTER_MIGRATIONS.contains(path);",
+        "        let migration = path.ends_with(\".sql\");",
+        "one_router::a_migration_outside_the_routers_names_neither_the_feed_nor_the_queue",
+        "only the router's two migrations may name the feed and the held queue (SPEC-041 A25, #297); the census is test code, which cargo-mutants never mutates, and the mutant admits every SQL file, so a planted migration outside the router's that names them goes unrefused"
+      ],
+      [
+        "S04188-A-MODULE-BROUGHT-IN-BY-PATH-IS-READ",
+        "notifications",
+        "tests/one_router.rs",
+        "            files.push((file, true));",
+        "            drop(file);",
+        "one_router::a_module_brought_in_by_path_is_read_and_one_the_census_cannot_follow_is_refused",
+        "a module #[path] brings in is read as Rust under its own path (SPEC-041 A27, #297); the census is test code, which cargo-mutants never mutates, and the mutant drops the followed file, so the planted module is never read"
+      ],
+      [
+        "S04189-A-PATH-THE-CENSUS-CANNOT-FOLLOW-IS-REFUSED",
+        "notifications",
+        "tests/one_router.rs",
+        "        refusals.push(format!(\"{path}:{}: {why}\", line_of(code, at)));",
+        "        drop(why);",
+        "one_router::a_module_brought_in_by_path_is_read_and_one_the_census_cannot_follow_is_refused",
+        "a #[path] to a file the tree does not hold, or one inside an inline module, is refused (SPEC-041 A27, #297); the census is test code, which cargo-mutants never mutates, and the mutant drops the refusal, so both planted paths go unrefused"
+      ],
+      [
+        "S04190-A-UNIT-PATH-THROUGH-A-TEST-DIRECTORY-IS-REFUSED",
+        "notifications",
+        "tests/one_router.rs",
+        "            let through_tests = through_a_test_directory(&parts);",
+        "            let through_tests = through_a_test_directory(&parts) && false;",
+        "one_router::a_unit_that_runs_a_test_file_is_refused",
+        "a unit or drop-in path through a test directory, with no src before it, runs a test file and is refused (SPEC-041 A28, #297); the census is test code, which cargo-mutants never mutates, and the mutant reads no path as passing through a test directory, so the planted unit that runs a file under tests/ goes unrefused"
+      ],
+      [
+        "S04191-A-UNIT-PATH-TO-A-TEST-FILE-IS-REFUSED",
+        "notifications",
+        "tests/one_router.rs",
+        "            let named_as_a_test = a_test_file(name);",
+        "            let named_as_a_test = a_test_file(name) && false;",
+        "one_router::a_unit_that_runs_a_test_file_is_refused",
+        "a unit or drop-in path to a file named as a test file runs it and is refused (SPEC-041 A28, #297); the census is test code, which cargo-mutants never mutates, and the mutant reads no file name as a test file's, so the planted drop-in that runs a test script by its name goes unrefused"
+      ],
+      [
+        "S04192-A-VISIBLE-REPLY-IS-REFUSED",
+        "notifications",
+        "tests/one_router.rs",
+        "            let marked = visible(unqualified(&structure[..keyword]));",
+        "            let marked = visible(unqualified(&structure[..keyword])) && false;",
+        "one_router::a_command_reply_made_visible_outside_its_module_is_refused",
+        "a command reply defined pub or pub(crate) is visible outside the handler's module and is refused (SPEC-041 A29, #297); the census is test code, which cargo-mutants never mutates, and the mutant reads no definition as marked visible, so the planted pub and pub(crate) replies go unrefused"
+      ],
+      [
+        "S04193-A-REPLY-IN-A-TRAIT-IMPL-IS-REFUSED",
+        "notifications",
+        "tests/one_router.rs",
+        "            let in_a_trait = in_a_trait_impl(structure, at);",
+        "            let in_a_trait = in_a_trait_impl(structure, at) && false;",
+        "one_router::a_command_reply_made_visible_outside_its_module_is_refused",
+        "a command reply defined in a trait impl for the handler is visible wherever the trait is, and is refused (SPEC-041 A29, #297); the census is test code, which cargo-mutants never mutates, and the mutant reads no definition as in a trait impl, so the planted trait-impl reply goes unrefused"
+      ],
+      [
+        "S04194-A-UNIT-COMMENT-LINE-IS-SKIPPED",
+        "notifications",
+        "tests/one_router.rs",
+        "        if line.trim_start().starts_with(['#', ';']) {",
+        "        if line.trim_start().starts_with(['#', ';']) && false {",
+        "one_router::a_unit_that_runs_a_test_file_is_refused",
+        "the census skips a unit or drop-in line whose first non-space character is # or ;, which systemd reads as a comment and never runs (ruling 97, SPEC-041 A28, #297); the census is test code, which cargo-mutants never mutates, and the mutant skips no comment line, so the planted # and ; lines naming a test file are refused"
       ]
     ],
     "CARGO_KILLED_SCRIPT_MUTATIONS": [

@@ -561,3 +561,33 @@ that mutant, as for the lease tests of round 1: against it the test fails by ass
 `flush_fails_after_push.rs:356` (`one line names the pushed item: []`, `7 passed; 1 failed`), and
 against the code the eight tests pass (`test result: ok. 8 passed; 0 failed`). The workspace's
 capture census counts its capture, 16 routed where it counted 15.
+
+## The census's reach (#297)
+
+The six tests of A24 to A29 came first (4bcec28a), with the seams they call stubbed: the walk's
+`brought_in`, the units' `unit_paths` and the handler's `reply_definitions` did nothing, and the
+walker refused no symlink. Each failed by assertion on its planted case with nothing refused
+(`left: []`), and only those six failed (`test result: FAILED. 6 passed; 6 failed`); A15
+(`no_delivery_goes_around_the_port`) was among the six that passed.
+
+```red-first
+A24: red at 4bcec28a: an include of a file only a build names, and of one the tree does not hold, is refused, and one in a test module is not followed (left: [])
+A25: red at 4bcec28a: the walker reads every migration (left: [])
+A26: red at 4bcec28a: a symlink to a file and one to a directory, each in a place the walker walks, are refused, and one in a place it leaves out is never met (left: [])
+A27: red at 4bcec28a: a #[path] to a file the tree does not hold, and one inside an inline module, are refused, and one in a test module is not followed (left: [])
+A28: red at 4bcec28a: a unit that runs a file in a test directory, and a drop-in that runs a test file by its name, are refused; a tool named test, a test directory under src/ and a shipped script are not (left: [])
+A29: red at 4bcec28a: a reply defined pub, pub(crate) or in a trait impl for the handler is refused, and a private one is not (left: [])
+```
+
+The seams were then filled (de97462c), and the six tests passed with every other test of the
+target (`test result: ok. 12 passed; 0 failed`). A15 examined the new populations on the tree: 23
+brought-in files, 42 unit path tokens and 17 reply definitions, with nothing refused.
+
+```red-first
+A24: green at de97462c
+A25: green at de97462c
+A26: green at de97462c
+A27: green at de97462c
+A28: green at de97462c
+A29: green at de97462c
+```
