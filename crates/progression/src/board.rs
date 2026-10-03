@@ -136,18 +136,45 @@ impl BoardRow {
 /// The best day among `totals`, which are most recent first: the highest score, and on a tie the
 /// most recent of the tied days, as Python's `max` keeps the first maximum it meets.
 #[must_use]
-pub fn best_day(_totals: &[DayScore]) -> Option<DayScore> {
-    None
+pub fn best_day(totals: &[DayScore]) -> Option<DayScore> {
+    let (first, rest) = totals.split_first()?;
+    let mut best = *first;
+    for total in rest {
+        if total.score > best.score {
+            best = *total;
+        }
+    }
+    Some(best)
 }
 
 /// The board of `totals` (most recent first), `today`, the language `streak` and the `level` the
 /// total reaches.
 #[must_use]
 pub fn board_rows(
-    _totals: &[DayScore],
-    _today: StudyDay,
-    _streak: BoardStreak,
-    _level: &LevelInfo,
+    totals: &[DayScore],
+    today: StudyDay,
+    streak: BoardStreak,
+    level: &LevelInfo,
 ) -> Vec<BoardRow> {
-    Vec::new()
+    let mut rows = Vec::with_capacity(4);
+    if let Some(best) = best_day(totals) {
+        rows.push(BoardRow::BestDay {
+            score: best.score,
+            day: best.day,
+        });
+        let score = totals
+            .iter()
+            .find(|total| total.day == today)
+            .map_or(0, |total| total.score);
+        rows.push(BoardRow::Today { score, day: today });
+    }
+    rows.push(BoardRow::Streak {
+        current: streak.current,
+        longest: streak.longest,
+    });
+    rows.push(BoardRow::Level {
+        level: level.level.get(),
+        title: level.title,
+    });
+    rows
 }

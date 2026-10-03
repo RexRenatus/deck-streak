@@ -8,7 +8,7 @@
 //! (ADR-075). It writes nothing.
 
 use deck_streak_kernel::{Db, KernelError, StudyDay};
-use deck_streak_progression::exchange::SourceRate;
+use deck_streak_progression::exchange::{SourceRate, exchange_rates, xp_rows};
 
 /// The most days a window spans, as the predecessor's `get_xp_exchange_rates` tool caps it. A
 /// read-window parameter, never an economy constant.
@@ -26,8 +26,15 @@ pub struct ExchangeView {
 /// The window of the last `days` days ending `today`, at most [`EXCHANGE_WINDOW_CAP`] of them; none,
 /// meaning every day, when `days` is 0 or less.
 #[must_use]
-pub fn exchange_window(_days: i64, _today: StudyDay) -> Option<(StudyDay, StudyDay)> {
-    None
+pub fn exchange_window(days: i64, today: StudyDay) -> Option<(StudyDay, StudyDay)> {
+    if days <= 0 {
+        return None;
+    }
+    let span = days.min(EXCHANGE_WINDOW_CAP);
+    Some((
+        StudyDay::from_epoch_day(today.epoch_day() - (span - 1)),
+        today,
+    ))
 }
 
 /// The readout of the last `days` days ending `today` (every day when `days` is 0 or less).
@@ -36,9 +43,17 @@ pub fn exchange_window(_days: i64, _today: StudyDay) -> Option<(StudyDay, StudyD
 ///
 /// [`KernelError::Database`] when a read fails.
 pub async fn exchange_view(
-    _db: &Db,
-    _today: StudyDay,
-    _days: i64,
+    db: &Db,
+    today: StudyDay,
+    days: i64,
 ) -> Result<ExchangeView, KernelError> {
-    Ok(ExchangeView::default())
+    let window = exchange_window(days, today);
+    let mut transaction = db.reader().begin().await?;
+    let connection = &mut *transaction;
+    let rows = xp_rows(connection, window).await?;
+    let graduations = deck_streak_analytics::rollup::graduations(connection, window).await?;
+    Ok(ExchangeView {
+        window,
+        rates: exchange_rates(&rows, &graduations),
+    })
 }

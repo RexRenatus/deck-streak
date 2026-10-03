@@ -474,10 +474,24 @@ pub async fn recent_totals(
 ///
 /// [`KernelError::Database`] when the read fails.
 pub async fn graduations(
-    _connection: &mut SqliteConnection,
-    _window: Option<(StudyDay, StudyDay)>,
+    connection: &mut SqliteConnection,
+    window: Option<(StudyDay, StudyDay)>,
 ) -> Result<BTreeMap<StudyDay, i64>, KernelError> {
-    Ok(BTreeMap::new())
+    let (first, last) = window.map_or((i64::MIN, i64::MAX), |(first, last)| {
+        (first.epoch_day(), last.epoch_day())
+    });
+    let rows = sqlx::query!(
+        r#"SELECT study_day AS "study_day!", graduations FROM daily_rollup
+           WHERE study_day BETWEEN ?1 AND ?2"#,
+        first,
+        last
+    )
+    .fetch_all(connection)
+    .await?;
+    Ok(rows
+        .into_iter()
+        .map(|row| (StudyDay::from_epoch_day(row.study_day), row.graduations))
+        .collect())
 }
 
 /// The rollup repository's reads over the service's database, for the surfaces.
