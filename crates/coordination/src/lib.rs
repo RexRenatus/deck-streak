@@ -27,6 +27,7 @@ pub mod instruments;
 pub mod jobs;
 pub mod ladder_facts;
 pub mod lapse;
+pub mod law;
 pub mod ledger;
 pub mod level_up;
 pub mod liveness;

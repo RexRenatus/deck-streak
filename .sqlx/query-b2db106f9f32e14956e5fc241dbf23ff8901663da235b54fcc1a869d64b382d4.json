@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM law_dues",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "b2db106f9f32e14956e5fc241dbf23ff8901663da235b54fcc1a869d64b382d4"
+}

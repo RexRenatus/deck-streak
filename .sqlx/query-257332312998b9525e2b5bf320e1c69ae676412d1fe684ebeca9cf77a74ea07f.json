@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM band_milestones",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "257332312998b9525e2b5bf320e1c69ae676412d1fe684ebeca9cf77a74ea07f"
+}

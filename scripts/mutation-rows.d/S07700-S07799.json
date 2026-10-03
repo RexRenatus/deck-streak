@@ -1,0 +1,233 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S07701-STABILITY-TARGET",
+        "curriculum",
+        "src/progress.rs",
+        "pub const PROGRESS_STABILITY_TARGET_DAYS: f64 = 100.0;\n",
+        "pub const PROGRESS_STABILITY_TARGET_DAYS: f64 = 90.0;\n",
+        "progress_goldens::card_mastery_matches_the_predecessors_golden",
+        "a card's stability score reaches 1 at a stability of 100 days (SPEC-077 R2)"
+      ],
+      [
+        "S07702-SUSPENDED-SCORES-ZERO",
+        "curriculum",
+        "src/progress.rs",
+        "    if card.queue == -1 {\n",
+        "    if card.queue == -9 {\n",
+        "progress_goldens::card_mastery_matches_the_predecessors_golden",
+        "a card in queue -1 scores a mastery of 0, whatever its memory state (SPEC-077 R2)"
+      ],
+      [
+        "S07703-MATURE-INTERVAL",
+        "curriculum",
+        "src/progress.rs",
+        "    if card.kind == 2 && card.interval >= mature_ivl {\n",
+        "    if card.kind == 2 && card.interval > mature_ivl {\n",
+        "progress_goldens::card_mastery_matches_the_predecessors_golden",
+        "with no memory state a review card is mature from an interval of 21 days, the bound itself included (SPEC-077 R2); the constant's value is pinned by the constants golden"
+      ],
+      [
+        "S07704-DECAY-CLAMP",
+        "curriculum",
+        "src/progress.rs",
+        "    let exponent = -magnitude.clamp(MIN_ABS_DECAY, MAX_ABS_DECAY);\n",
+        "    let exponent = -magnitude;\n",
+        "progress_goldens::card_mastery_matches_the_predecessors_golden",
+        "the forgetting curve's decay magnitude is clamped, so a corrupt decay still scores as the predecessor scores it (SPEC-077 R2)"
+      ],
+      [
+        "S07705-DEFAULT-DECAY",
+        "ingest",
+        "src/memory_state.rs",
+        "pub const DEFAULT_DECAY: f64 = 0.2;\n",
+        "pub const DEFAULT_DECAY: f64 = 0.3;\n",
+        "progress_memory_state::the_memory_state_parse_matches_the_predecessors_golden",
+        "a memory state with no decay stored reads the default decay of 0.2 (SPEC-077 R1)"
+      ],
+      [
+        "S07706-ACHIEVED-AT-EIGHTY",
+        "curriculum",
+        "src/progress.rs",
+        "pub const CEFR_BAND_ACHIEVED_PCT: f64 = 80.0;\n",
+        "pub const CEFR_BAND_ACHIEVED_PCT: f64 = 90.0;\n",
+        "progress_goldens::course_progress_matches_the_predecessors_golden",
+        "a band is achieved when its cards' mean mastery reaches 80% (SPEC-077 R4)"
+      ],
+      [
+        "S07707-MATURE-MASTERY-HALF",
+        "curriculum",
+        "src/progress.rs",
+        "pub const MATURE_MASTERY_THRESHOLD: f64 = 0.5;\n",
+        "pub const MATURE_MASTERY_THRESHOLD: f64 = 0.6;\n",
+        "progress_goldens::course_progress_matches_the_predecessors_golden",
+        "a card counts as mature from a mastery of 0.5 (SPEC-077 R4)"
+      ],
+      [
+        "S07708-BAND-UP-XP",
+        "curriculum",
+        "src/progress.rs",
+        "pub const XP_BONUS_BAND_UP: i64 = 500;\n",
+        "pub const XP_BONUS_BAND_UP: i64 = 400;\n",
+        "progress_goldens::the_curriculum_constants_equal_the_predecessors",
+        "a band-up pays 500 XP (SPEC-077 R7)"
+      ],
+      [
+        "S07710-LAW-LEECH-PENALTY",
+        "curriculum",
+        "src/law.rs",
+        "pub const MASTERY_LEECH_PENALTY: f64 = 3.0;\n",
+        "pub const MASTERY_LEECH_PENALTY: f64 = 4.0;\n",
+        "law_goldens::the_law_mastery_pillar_matches_the_predecessors_golden",
+        "each active law leech takes three points off the law mastery pillar (SPEC-077 R9)"
+      ],
+      [
+        "S07711-FIRST-SIGHTING-SILENT",
+        "coordination",
+        "src/recompute/progress.rs",
+        "                    let _ = store::record_milestone(write, &baseline).await?;\n",
+        "                    let _ = store::record_milestone(write, &baseline).await?;\n                    grant_band_up(write, course.code.as_str(), band, day.day, facts.now)\n                        .await?;\n",
+        "progress_band_up::the_first_sighting_of_a_course_is_a_silent_baseline",
+        "a course's first sighting is a silent baseline that pays no XP (SPEC-077 R7)"
+      ],
+      [
+        "S07713-ERASE-LAW-DUES",
+        "curriculum",
+        "src/data_rights.rs",
+        "            sqlx::query!(\"DELETE FROM law_dues\")\n                .execute(connection)\n                .await?;\n",
+        "",
+        "progress_store::the_curriculum_tables_are_exported_and_erased",
+        "an erase deletes the stored law dues, so they read as pending again (SPEC-077 R10, R18)"
+      ],
+      [
+        "S07714-BAND-UP-LATER-ONLY",
+        "curriculum",
+        "src/progress.rs",
+        "        (Some(held), Some(reached)) if reached > held => BandStep::BandUp(current),\n",
+        "        (Some(held), Some(reached)) if reached >= held => BandStep::BandUp(current),\n",
+        "formal_vectors_road_to_c2::the_road_to_c2_rules_answer_every_lean_vector",
+        "only a band later than the stored one is a band-up; the stored band itself is unchanged (SPEC-077 R7)"
+      ],
+      [
+        "S07715-PROGRESS-CURRENT-DAY-ONLY",
+        "coordination",
+        "src/recompute/progress.rs",
+        "        if day.evaluation != Evaluation::Current {\n",
+        "        if !day.evaluation.runs_today_only_rules() {\n",
+        "progress_band_up::the_progress_step_runs_for_the_current_day_only",
+        "the progress step runs for the current study day only, never at a closed day's settle (SPEC-077 R6)"
+      ],
+      [
+        "S07716-UNIT-OVERFLOW-IS-NO-UNIT",
+        "curriculum",
+        "src/progress.rs",
+        "                    significant.parse().ok()\n",
+        "                    significant.parse().ok().or(Some(0))\n",
+        "progress_goldens::the_unit_parse_matches_the_predecessors_golden",
+        "a unit beyond u32 is no unit, never unit 0 (SPEC-077 R3)"
+      ],
+      [
+        "S07717-PILLAR-CAP",
+        "curriculum",
+        "src/law.rs",
+        "    let penalty = (MASTERY_LEECH_PENALTY * law_leech_active as f64).min(MASTERY_LEECH_PENALTY_CAP);\n",
+        "    let penalty = MASTERY_LEECH_PENALTY * law_leech_active as f64;\n",
+        "formal_vectors_road_to_c2::the_road_to_c2_rules_answer_every_lean_vector",
+        "the leeches take at most 30 points off the law mastery pillar (SPEC-077 R9)"
+      ],
+      [
+        "S07718-CURRENT-BAND-CONTIGUOUS",
+        "curriculum",
+        "src/progress.rs",
+        "                contiguous = false;\n",
+        "                contiguous = true;\n",
+        "formal_vectors_road_to_c2::the_road_to_c2_rules_answer_every_lean_vector",
+        "a course's current band is the last of the achieved run from A1, so an achieved band after an unachieved one is not current (SPEC-077 R5)"
+      ],
+      [
+        "S07719-OFFER-MARK-AFTER-ANSWER",
+        "coordination",
+        "src/recompute/progress.rs",
+        "            tracing::warn!(key = %celebration.key, %error, \"the router did not answer; the band-up stays owed\");\n            continue;\n",
+        "            tracing::warn!(key = %celebration.key, %error, \"the router did not answer; the band-up stays owed\");\n",
+        "progress_band_up::band_ups_match_the_predecessors_golden_and_pay_once",
+        "a band-up's mark is set only once the router has answered, so one it did not answer stays owed (SPEC-077 R7; ADR-303)"
+      ],
+      [
+        "S07720-BAND-UP-KEY-LOWERCASE",
+        "coordination",
+        "src/recompute/progress.rs",
+        "pub fn band_up_key(course: &str, band: &str) -> String {\n    format!(\"bandup:{course}:{}\", band.to_ascii_lowercase())\n",
+        "pub fn band_up_key(course: &str, band: &str) -> String {\n    format!(\"bandup:{course}:{}\", band)\n",
+        "progress_band_up::band_ups_match_the_predecessors_golden_and_pay_once",
+        "the band-up's dedupe key spells the band lowercased, as the key's grammar requires (SPEC-077 R7; ADR-077)"
+      ],
+      [
+        "S07721-BAND-UP-THIRD-ARM",
+        "coordination",
+        "src/recompute/mod.rs",
+        "            if let Err(error) = progress::offer_band_ups(&*self.celebrate, db, now, today).await {\n                tracing::error!(%error, \"the owed band-ups could not be offered\");\n            }\n",
+        "",
+        "progress_band_up::band_ups_match_the_predecessors_golden_and_pay_once",
+        "the fold's offers hand every owed band-up to the router, after the badges and the records (SPEC-077 R7; ADR-077)"
+      ],
+      [
+        "S07722-BAND-UP-MARK-ONCE",
+        "curriculum",
+        "src/store.rs",
+        "    let marked = sqlx::query!(\n        \"UPDATE band_milestones SET celebrated_at = ?3 \\\n         WHERE course = ?1 AND band = ?2 AND baseline = 0 AND celebrated_at IS NULL\",\n        course,\n        band,\n        at\n    )\n",
+        "    let marked = sqlx::query(\n        \"UPDATE band_milestones SET celebrated_at = ?3 \\\n         WHERE course = ?1 AND band = ?2 AND baseline = 0\",\n    )\n    .bind(course)\n    .bind(band)\n    .bind(at)\n",
+        "progress_store::a_band_up_is_marked_once",
+        "a band-up is marked once: a second mark finds it marked, writes nothing and answers false (SPEC-077 R7; ADR-303). The mutant runs the statement unchecked, since a changed checked statement has no offline cache entry"
+      ],
+      [
+        "S07723-INGEST-MEMORY-STATE-PUBLIC",
+        "ingest",
+        "src/lib.rs",
+        "pub mod memory_state;\n",
+        "#[doc(hidden)]\npub mod memory_state;\n",
+        "memory_state_boundaries::the_crate_root_declares_the_memory_state_module_publicly",
+        "the crate root declares the memory state module public and bare (SPEC-077 R1). The killer is a source-text guard, since the mutant builds and no behaviour test reads the declaration"
+      ],
+      [
+        "S07724-CURRICULUM-MODULES-PUBLIC",
+        "curriculum",
+        "src/lib.rs",
+        "pub mod data_rights;\npub mod horizon;\npub mod law;\npub mod progress;\npub mod store;\npub mod unit_bands;\n",
+        "#[doc(hidden)]\npub mod data_rights;\npub mod horizon;\npub mod law;\npub mod progress;\npub mod store;\npub mod unit_bands;\n",
+        "store_boundaries::the_crate_root_declares_the_curriculum_modules_publicly",
+        "the crate root declares curriculum's six modules public and bare (SPEC-077 R6, R18). The killer is a source-text guard, since the mutant builds and no behaviour test reads the declarations"
+      ],
+      [
+        "S07725-COORDINATION-LAW-PUBLIC",
+        "coordination",
+        "src/lib.rs",
+        "pub mod law;\n",
+        "#[doc(hidden)]\npub mod law;\n",
+        "progress_step_boundaries::the_crate_root_declares_the_law_module_publicly",
+        "the crate root declares the law block module public and bare (SPEC-077 R10). The killer is a source-text guard, since the mutant builds and no behaviour test reads the declaration"
+      ]
+    ],
+    "CARGO_KILLED_SCRIPT_MUTATIONS": [
+      [
+        "S07709-ONE-MILESTONE-PER-BAND",
+        "migrations/007701_curriculum_road_to_c2_and_law.sql",
+        "    PRIMARY KEY (course, band),\n",
+        "    PRIMARY KEY (course, band, study_day),\n",
+        "coordination",
+        "progress_band_up::band_ups_match_the_predecessors_golden_and_pay_once",
+        "the key on the course and the band holds one milestone per band, so a band reached again after a drop records nothing and pays nothing (SPEC-077 R7)"
+      ],
+      [
+        "S07712-BASELINE-WRITTEN-MARKED",
+        "crates/curriculum/src/store.rs",
+        "    let marked = milestone.baseline.then_some(at);\n",
+        "    let marked: Option<i64> = None;\n",
+        "coordination",
+        "progress_band_up::the_first_sighting_of_a_course_is_a_silent_baseline",
+        "a first sighting's baseline is written marked, so it owes no celebration (SPEC-077 R7; ADR-303). killed: the CHECK refuses the mutant's row; A8 fails at its expect"
+      ]
+    ]
+  }
+}
