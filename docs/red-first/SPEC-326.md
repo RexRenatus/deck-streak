@@ -22,19 +22,20 @@ A4: red at d1d11f5d: assertion `left == right` failed: the job re-caps with the 
 A5: red at d1d11f5d: assertion `left == right` failed: the bot's flush re-caps with the stored streak, as a flush handed the break's facts does; left: ["message: synthetic held celebration"], right: ["reaction to 4242: 🎉"]
 A6: red at d1d11f5d: assertion `left == right` failed: the cycle's flush re-caps with the stored streak, as a flush handed the break's facts does; left: ["message: synthetic held celebration"], right: ["reaction to 4242: 🎉"]
 A7: red at d1d11f5d: a streak that cannot be read leaves the award unanswered, so it stays owed: Ok(())
-A1: green at 24a391dd: running 1 test; test result: ok. 1 passed; 0 failed
-A2: green at 24a391dd: running 1 test; test result: ok. 1 passed; 0 failed
-A3: green at 24a391dd: running 1 test; test result: ok. 1 passed; 0 failed
-A4: green at 24a391dd: running 1 test; test result: ok. 1 passed; 0 failed
-A5: green at 24a391dd: running 1 test; test result: ok. 1 passed; 0 failed
-A6: green at 24a391dd: running 1 test; test result: ok. 1 passed; 0 failed
-A7: green at 24a391dd: running 1 test; test result: ok. 1 passed; 0 failed
+A1: green at 24a391dd
+A2: green at 24a391dd
+A3: green at 24a391dd
+A4: green at 24a391dd
+A5: green at 24a391dd
+A6: green at 24a391dd
+A7: green at 24a391dd
 ```
 
 The existing test in `level_up_cycle.rs`, `a_sync_cycle_announces_a_level_reached_once`, passes at
 d1d11f5d beside the new one.
 
-Each criterion then ran by its exact name at 24a391dd, the implementation's commit, and passed.
+Each criterion then ran by its exact name at 24a391dd, the implementation's commit, and passed:
+each run read `running 1 test` and `test result: ok. 1 passed; 0 failed`.
 At the same commit `cargo clippy -p deck-streak-coordination -p deck-streak-notifications -p
 deck-streak-daemon --all-targets -- -D warnings` and `cargo fmt --check` exit 0, and the DDD
 probe reads `DDD lexicon-locks OK: examined 3107 declaration(s) in 120 file(s)`. No test file
