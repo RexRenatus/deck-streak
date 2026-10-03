@@ -491,3 +491,84 @@ async fn a_habit_write_that_raises_the_level_is_announced_once() {
     assert!(logged.is_ok(), "{logged:?}");
     assert_eq!(pushes().len(), 1, "a level is announced once ever");
 }
+
+/// Every `read:` and `readgoal:` row settled from `first` to `last`, as day, source, amount and
+/// whether its day was closed when it was settled.
+async fn closed_rows(db: &Db, first: i64, last: i64) -> Vec<(i64, String, u32, bool)> {
+    let mut write = db.write().await.expect("a write");
+    let mut rows = Vec::new();
+    for day in first..=last {
+        for row in settled_of_day(&mut write, StudyDay::from_epoch_day(day))
+            .await
+            .expect("the settled rows read")
+        {
+            if row.source.starts_with("read:") || row.source.starts_with("readgoal:") {
+                rows.push((day, row.source, row.amount, row.closed));
+            }
+        }
+    }
+    rows.sort();
+    rows
+}
+
+#[tokio::test]
+async fn an_entry_settles_its_own_day_open_and_an_earlier_week_start_closed() {
+    let scratch = TempDir::new().expect("a scratch directory");
+    let db = database(&scratch).await;
+    log(&db, MONDAY + 1, Course::Token("qaa"), 30).await;
+    assert_eq!(
+        closed_rows(&db, MONDAY - 7, SUNDAY + 7).await,
+        [
+            (MONDAY, "readgoal:qaa".to_owned(), 0, true),
+            (MONDAY + 1, "read:qaa".to_owned(), 60, false),
+        ],
+        "Tuesday's entry: today's read: is open, Monday's readgoal: is closed"
+    );
+}
+
+#[tokio::test]
+async fn an_entry_on_its_weeks_first_day_settles_that_day_open() {
+    let scratch = TempDir::new().expect("a scratch directory");
+    let db = database(&scratch).await;
+    log(&db, MONDAY, Course::Token("qab"), 30).await;
+    assert_eq!(
+        closed_rows(&db, MONDAY - 7, SUNDAY + 7).await,
+        [
+            (MONDAY, "read:qab".to_owned(), 60, false),
+            (MONDAY, "readgoal:qab".to_owned(), 0, false),
+        ],
+        "Monday's entry: the week's first day is today, so both rows are open"
+    );
+}
+
+#[tokio::test]
+async fn an_undo_on_a_later_day_settles_the_entrys_day_closed() {
+    let scratch = TempDir::new().expect("a scratch directory");
+    let db = database(&scratch).await;
+    log(&db, MONDAY + 1, Course::Token("qaa"), 30).await;
+    let undone = undo_newest(&writer(&db, None, noon(MONDAY + 3))).await;
+    assert!(
+        matches!(undone, Ok(Undone::Removed { minutes: 30, .. })),
+        "{undone:?}"
+    );
+    assert_eq!(
+        closed_rows(&db, MONDAY - 7, SUNDAY + 7).await,
+        [
+            (MONDAY, "readgoal:qaa".to_owned(), 0, true),
+            (MONDAY + 1, "read:qaa".to_owned(), 0, true),
+        ],
+        "undone on Thursday: Tuesday's read: and Monday's readgoal: are both closed"
+    );
+}
+
+#[tokio::test]
+async fn a_habit_writers_debug_shows_its_rule_and_instant_only() {
+    let scratch = TempDir::new().expect("a scratch directory");
+    let db = database(&scratch).await;
+    assert_eq!(
+        format!("{:?}", writer(&db, None, noon(MONDAY))),
+        "HabitWriter { router: false, rule: StudyDayRule { rollover_hour: Hour(4), \
+         utc_offset: UtcOffset(0) }, now: UtcMillis(1736769600000), .. }",
+        "the router's presence, the rule and the instant; the database is left out"
+    );
+}
