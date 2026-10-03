@@ -24,5 +24,16 @@
   "records_to_go": "今天还差 {gap}",
   "records_reached": "今天已达成",
   "records_toward": "今天距 {label}",
-  "records_chase": "冲刺：今天距「{label}」还差 {gap}。"
+  "records_chase": "冲刺：今天距「{label}」还差 {gap}。",
+  "progress_title": "通往 C2 之路",
+  "progress_none": "通往 C2 之路还没有课程：下次同步后就会出现。",
+  "progress_summary": "等级 {band}，掌握度 {mastery}%。",
+  "progress_unit": "当前单元：{unit}",
+  "progress_no_unit": "还没有单元",
+  "progress_bands": "{name}，按等级",
+  "progress_band_mastery": "掌握度 {pct}%",
+  "progress_band_mature": "{total} 张中 {mature} 张已熟练",
+  "progress_band_achieved": "已达成",
+  "progress_band_current": "当前等级",
+  "progress_band_meter": "{band} 掌握度"
 }

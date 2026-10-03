@@ -24,5 +24,16 @@
   "records_to_go": "오늘 {gap} 남음",
   "records_reached": "오늘 달성",
   "records_toward": "오늘의 {label} 진행",
-  "records_chase": "도전해 보세요: 오늘 “{label}”까지 {gap} 남았어요."
+  "records_chase": "도전해 보세요: 오늘 “{label}”까지 {gap} 남았어요.",
+  "progress_title": "C2로 가는 길",
+  "progress_none": "C2로 가는 길에 아직 코스가 없습니다. 다음 동기화 후에 나타납니다.",
+  "progress_summary": "{band} 단계, 숙련도 {mastery}%.",
+  "progress_unit": "현재 단원: {unit}",
+  "progress_no_unit": "아직 단원이 없습니다",
+  "progress_bands": "{name}, 단계별",
+  "progress_band_mastery": "숙련도 {pct}%",
+  "progress_band_mature": "{total}장 중 {mature}장 숙달",
+  "progress_band_achieved": "달성",
+  "progress_band_current": "현재 단계",
+  "progress_band_meter": "{band} 숙련도"
 }

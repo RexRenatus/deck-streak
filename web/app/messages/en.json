@@ -98,5 +98,16 @@
   "capture_save": "Save to inbox",
   "capture_saving": "Saving…",
   "capture_saved": "Saved as {name}",
-  "capture_failed": "Not saved. Your text is still here, so try again in a moment."
+  "capture_failed": "Not saved. Your text is still here, so try again in a moment.",
+  "progress_title": "Road to C2",
+  "progress_none": "Road to C2 has no course yet: it appears after your next sync.",
+  "progress_summary": "Band {band}, {mastery}% mastery.",
+  "progress_unit": "Current unit: {unit}",
+  "progress_no_unit": "No unit yet",
+  "progress_bands": "{name}, band by band",
+  "progress_band_mastery": "{pct}% mastery",
+  "progress_band_mature": "{mature} of {total} mature",
+  "progress_band_achieved": "Achieved",
+  "progress_band_current": "Current band",
+  "progress_band_meter": "{band} mastery"
 }

@@ -24,5 +24,16 @@
   "records_to_go": "今日はあと {gap}",
   "records_reached": "今日達成",
   "records_toward": "今日の {label} への進み具合",
-  "records_chase": "狙い目：今日「{label}」まであと {gap}。"
+  "records_chase": "狙い目：今日「{label}」まであと {gap}。",
+  "progress_title": "C2への道",
+  "progress_none": "C2への道にはまだコースがありません。次の同期のあとに表示されます。",
+  "progress_summary": "レベル {band}、習熟度 {mastery}%。",
+  "progress_unit": "現在のユニット：{unit}",
+  "progress_no_unit": "ユニットはまだありません",
+  "progress_bands": "{name}（レベル別）",
+  "progress_band_mastery": "習熟度 {pct}%",
+  "progress_band_mature": "{total} 枚中 {mature} 枚が定着",
+  "progress_band_achieved": "達成",
+  "progress_band_current": "現在のレベル",
+  "progress_band_meter": "{band} の習熟度"
 }

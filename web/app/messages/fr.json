@@ -24,5 +24,16 @@
   "records_to_go": "Encore {gap} aujourd’hui",
   "records_reached": "Atteint aujourd’hui",
   "records_toward": "Aujourd’hui vers {label}",
-  "records_chase": "À battre : encore {gap} pour « {label} » aujourd’hui."
+  "records_chase": "À battre : encore {gap} pour « {label} » aujourd’hui.",
+  "progress_title": "La route vers C2",
+  "progress_none": "La route vers C2 n'a pas encore de cours : ils apparaîtront après votre prochaine synchronisation.",
+  "progress_summary": "Niveau {band}, maîtrise {mastery} %.",
+  "progress_unit": "Unité actuelle : {unit}",
+  "progress_no_unit": "Pas encore d'unité",
+  "progress_bands": "{name}, niveau par niveau",
+  "progress_band_mastery": "Maîtrise {pct} %",
+  "progress_band_mature": "{mature} cartes mûres sur {total}",
+  "progress_band_achieved": "Atteint",
+  "progress_band_current": "Niveau actuel",
+  "progress_band_meter": "Maîtrise de {band}"
 }

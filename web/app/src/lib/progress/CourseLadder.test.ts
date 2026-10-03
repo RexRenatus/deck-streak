@@ -58,14 +58,23 @@ describe('the course ladder', () => {
       'C1 0% mastery 0 of 0 mature',
       'C2 0% mastery 0 of 0 mature'
     ]);
-    // each cell's meter is the band's mastery
-    expect(cells.map((cell) => cell.querySelector('meter')?.getAttribute('value'))).toEqual([
-      '91.5',
-      '82.25',
-      '31.75',
-      '4.4',
-      '0',
-      '0'
+    // each cell's meter is the band's mastery, out of 100, named by its band
+    const meters = cells.map((cell) => cell.querySelector('meter'));
+    expect(meters.map((meter) => [meter?.min, meter?.max, meter?.value])).toEqual([
+      [0, 100, 91.5],
+      [0, 100, 82.25],
+      [0, 100, 31.75],
+      [0, 100, 4.4],
+      [0, 100, 0],
+      [0, 100, 0]
+    ]);
+    expect(meters.map((meter) => meter?.getAttribute('aria-label'))).toEqual([
+      'A1 mastery',
+      'A2 mastery',
+      'B1 mastery',
+      'B2 mastery',
+      'C1 mastery',
+      'C2 mastery'
     ]);
 
     // the current band's cell is marked, and no other
@@ -77,5 +86,15 @@ describe('the course ladder', () => {
     expect(textOf(heading?.parentElement?.querySelector('[data-course-summary]'))).toBe(
       'Band A2, 42% mastery. Current unit: 14'
     );
+  });
+
+  it('names the course as its region, and says so when no unit is current yet', () => {
+    render(CourseLadder, { course: course({ code: 'fr', name: 'French', flag: '🇫🇷', currentUnit: null, currentBand: 'A1' }) });
+
+    const region = screen.queryByRole('region', { name: 'French' });
+    expect(textOf(region?.querySelector('[data-course-summary]'))).toBe('Band A1, 42% mastery. No unit yet');
+    const cells = examined('band cells', region ? within(region).queryAllByRole('listitem') : []);
+    expect(cells.map((cell) => cell.getAttribute('aria-current'))).toEqual(['step', null, null, null, null, null]);
+    expect(cells.filter((cell) => textOf(cell).endsWith('Current band')).map((cell) => cell.dataset.band)).toEqual(['A1']);
   });
 });
