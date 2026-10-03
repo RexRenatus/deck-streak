@@ -1,0 +1,86 @@
+{
+  "adapter": "over_no_grants",
+  "cases": [
+    {
+      "class": "token",
+      "input": {
+        "value": "synthetic-bucket-token"
+      },
+      "output": "3f2b438df4401cf2"
+    },
+    {
+      "class": "token",
+      "input": {
+        "value": "synthetic-long-tttttttttttttttttttttttttttttttttttttttt"
+      },
+      "output": "ceef0d6021458d40"
+    },
+    {
+      "class": "malformed",
+      "input": {
+        "value": "Bearer"
+      },
+      "output": "710e0dbdd4229985"
+    },
+    {
+      "class": "malformed",
+      "input": {
+        "value": "Bearer "
+      },
+      "output": "35e5a9632e18bc9a"
+    },
+    {
+      "class": "malformed",
+      "input": {
+        "value": "Bearer  two-spaces"
+      },
+      "output": "618d7282df211158"
+    },
+    {
+      "class": "malformed",
+      "input": {
+        "value": "Bearer one two"
+      },
+      "output": "7472ce09bae0142a"
+    },
+    {
+      "class": "malformed",
+      "input": {
+        "value": "Token synthetic-scheme"
+      },
+      "output": "60c7816c24f9d4b1"
+    },
+    {
+      "class": "multibyte",
+      "input": {
+        "value": "Bearer caf\u00e9-\u00fcn\u00efcode"
+      },
+      "output": "035b2e9e581aca90"
+    },
+    {
+      "class": "multibyte",
+      "input": {
+        "value": "\u6f22\u5b57"
+      },
+      "output": "c6d297713595d2f5"
+    },
+    {
+      "class": "empty",
+      "input": {
+        "value": ""
+      },
+      "output": "d49b7aa9e721ee8d"
+    }
+  ],
+  "function": "mcp_auth.DrillAuth._bucket_id",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Builds a DrillAuth over no grants and calls the function on value: a synthetic token, a malformed header's whole value, a multibyte value or the empty value; returns the bucket it answered; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_119.py",
+  "registry_sha256": "e103a6f7a592d19aa7d71e41c4d60d5f73a0cbb2e9cc553253f17699dfad8611",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

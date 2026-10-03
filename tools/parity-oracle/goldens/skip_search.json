@@ -1,0 +1,61 @@
+{
+  "adapter": "through_the_guarded_open",
+  "cases": [
+    {
+      "class": "default",
+      "input": {
+        "search": "prop:due=0 -is:suspended -is:buried"
+      },
+      "output": [
+        "(prop:due=0 -is:suspended -is:buried) -is:new -is:learn"
+      ]
+    },
+    {
+      "class": "custom",
+      "input": {
+        "search": "deck:Spanish prop:due=0"
+      },
+      "output": [
+        "(deck:Spanish prop:due=0) -is:new -is:learn"
+      ]
+    },
+    {
+      "class": "custom",
+      "input": {
+        "search": "tag:daily or deck:Math"
+      },
+      "output": [
+        "(tag:daily or deck:Math) -is:new -is:learn"
+      ]
+    },
+    {
+      "class": "custom",
+      "input": {
+        "search": "\"deck:Two Words\" -tag:hard"
+      },
+      "output": [
+        "(\"deck:Two Words\" -tag:hard) -is:new -is:learn"
+      ]
+    },
+    {
+      "class": "custom",
+      "input": {
+        "search": "prop:due=0 -is:suspended -is:buried (deck:A or deck:B)"
+      },
+      "output": [
+        "(prop:due=0 -is:suspended -is:buried (deck:A or deck:B)) -is:new -is:learn"
+      ]
+    }
+  ],
+  "function": "sync.AnkiSyncer._skip_day_blocking",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Runs the blocking skip on a stand-in syncer whose guarded open yields a stand-in collection: its login answers a token, the converge succeeds, and its card search records the query and finds no card, so the function returns before any write; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_083.py",
+  "registry_sha256": "0c428fdeae0892916e2bf37e7140a46b8a351178a0365cb1b2b584bea75a9004",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

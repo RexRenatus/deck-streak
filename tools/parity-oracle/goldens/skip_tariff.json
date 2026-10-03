@@ -1,0 +1,547 @@
+{
+  "adapter": "charge_of",
+  "cases": [
+    {
+      "class": "first-free",
+      "input": {
+        "balance": 500,
+        "rows": [
+          {
+            "applied": true,
+            "cards_moved": 3,
+            "day": 20219,
+            "undone": false
+          }
+        ],
+        "skip_id": 1,
+        "today": 20219
+      },
+      "output": {
+        "answer": {
+          "tariff": 0,
+          "tariff_paid": 0,
+          "unfunded": false
+        },
+        "deltas": [],
+        "details": []
+      }
+    },
+    {
+      "class": "ladder-top",
+      "input": {
+        "balance": 500,
+        "rows": [
+          {
+            "applied": true,
+            "cards_moved": 3,
+            "day": 20219,
+            "undone": false
+          },
+          {
+            "applied": true,
+            "cards_moved": 3,
+            "day": 20220,
+            "undone": false
+          },
+          {
+            "applied": true,
+            "cards_moved": 3,
+            "day": 20221,
+            "undone": false
+          },
+          {
+            "applied": true,
+            "cards_moved": 3,
+            "day": 20222,
+            "undone": false
+          }
+        ],
+        "skip_id": 4,
+        "today": 20222
+      },
+      "output": {
+        "answer": {
+          "tariff": 100,
+          "tariff_paid": 100,
+          "unfunded": false
+        },
+        "deltas": [
+          {
+            "day": 20222,
+            "delta": -100,
+            "ref": "4",
+            "source": "skip_tariff"
+          }
+        ],
+        "details": []
+      }
+    },
+    {
+      "class": "unfunded",
+      "input": {
+        "balance": 20,
+        "rows": [
+          {
+            "applied": true,
+            "cards_moved": 3,
+            "day": 20219,
+            "undone": false
+          },
+          {
+            "applied": true,
+            "cards_moved": 3,
+            "day": 20220,
+            "undone": false
+          }
+        ],
+        "skip_id": 2,
+        "today": 20220
+      },
+      "output": {
+        "answer": {
+          "tariff": 50,
+          "tariff_paid": 20,
+          "unfunded": true
+        },
+        "deltas": [
+          {
+            "day": 20220,
+            "delta": -20,
+            "ref": "2",
+            "source": "skip_tariff"
+          }
+        ],
+        "details": [
+          "applied (tariff unfunded)"
+        ]
+      }
+    },
+    {
+      "class": "month-boundary",
+      "input": {
+        "balance": 500,
+        "rows": [
+          {
+            "applied": true,
+            "cards_moved": 3,
+            "day": 20208,
+            "undone": false
+          },
+          {
+            "applied": true,
+            "cards_moved": 3,
+            "day": 20207,
+            "undone": false
+          },
+          {
+            "applied": true,
+            "cards_moved": 3,
+            "day": 20209,
+            "undone": false
+          }
+        ],
+        "skip_id": 3,
+        "today": 20209
+      },
+      "output": {
+        "answer": {
+          "tariff": 0,
+          "tariff_paid": 0,
+          "unfunded": false
+        },
+        "deltas": [],
+        "details": []
+      }
+    },
+    {
+      "class": "undone-not-counted",
+      "input": {
+        "balance": 500,
+        "rows": [
+          {
+            "applied": true,
+            "cards_moved": 3,
+            "day": 20221,
+            "undone": false
+          },
+          {
+            "applied": true,
+            "cards_moved": 2,
+            "day": 20219,
+            "undone": true
+          }
+        ],
+        "skip_id": 3,
+        "today": 20221
+      },
+      "output": {
+        "answer": {
+          "tariff": 0,
+          "tariff_paid": 0,
+          "unfunded": false
+        },
+        "deltas": [],
+        "details": []
+      }
+    },
+    {
+      "input": {
+        "balance": 50,
+        "rows": [
+          {
+            "applied": true,
+            "cards_moved": 3,
+            "day": 20116,
+            "undone": false
+          },
+          {
+            "applied": true,
+            "cards_moved": 3,
+            "day": 20115,
+            "undone": false
+          }
+        ],
+        "skip_id": 87,
+        "today": 20116
+      },
+      "output": {
+        "answer": {
+          "tariff": 50,
+          "tariff_paid": 50,
+          "unfunded": false
+        },
+        "deltas": [
+          {
+            "day": 20116,
+            "delta": -50,
+            "ref": "87",
+            "source": "skip_tariff"
+          }
+        ],
+        "details": []
+      }
+    },
+    {
+      "input": {
+        "balance": 100,
+        "rows": [
+          {
+            "applied": true,
+            "cards_moved": 3,
+            "day": 20157,
+            "undone": false
+          },
+          {
+            "applied": true,
+            "cards_moved": 3,
+            "day": 20156,
+            "undone": false
+          },
+          {
+            "applied": true,
+            "cards_moved": 3,
+            "day": 20155,
+            "undone": false
+          },
+          {
+            "applied": true,
+            "cards_moved": 3,
+            "day": 20154,
+            "undone": false
+          },
+          {
+            "applied": true,
+            "cards_moved": 3,
+            "day": 20153,
+            "undone": false
+          }
+        ],
+        "skip_id": 22,
+        "today": 20157
+      },
+      "output": {
+        "answer": {
+          "tariff": 100,
+          "tariff_paid": 100,
+          "unfunded": false
+        },
+        "deltas": [
+          {
+            "day": 20157,
+            "delta": -100,
+            "ref": "22",
+            "source": "skip_tariff"
+          }
+        ],
+        "details": []
+      }
+    },
+    {
+      "input": {
+        "balance": 50,
+        "rows": [
+          {
+            "applied": true,
+            "cards_moved": 3,
+            "day": 20104,
+            "undone": false
+          },
+          {
+            "applied": true,
+            "cards_moved": 3,
+            "day": 20103,
+            "undone": false
+          },
+          {
+            "applied": true,
+            "cards_moved": 3,
+            "day": 20102,
+            "undone": false
+          },
+          {
+            "applied": true,
+            "cards_moved": 3,
+            "day": 20101,
+            "undone": false
+          }
+        ],
+        "skip_id": 14,
+        "today": 20104
+      },
+      "output": {
+        "answer": {
+          "tariff": 100,
+          "tariff_paid": 50,
+          "unfunded": true
+        },
+        "deltas": [
+          {
+            "day": 20104,
+            "delta": -50,
+            "ref": "14",
+            "source": "skip_tariff"
+          }
+        ],
+        "details": [
+          "applied (tariff unfunded)"
+        ]
+      }
+    },
+    {
+      "input": {
+        "balance": 30,
+        "rows": [
+          {
+            "applied": true,
+            "cards_moved": 3,
+            "day": 20137,
+            "undone": false
+          },
+          {
+            "applied": true,
+            "cards_moved": 3,
+            "day": 20136,
+            "undone": false
+          },
+          {
+            "applied": true,
+            "cards_moved": 3,
+            "day": 20135,
+            "undone": false
+          },
+          {
+            "applied": true,
+            "cards_moved": 3,
+            "day": 20134,
+            "undone": false
+          }
+        ],
+        "skip_id": 58,
+        "today": 20137
+      },
+      "output": {
+        "answer": {
+          "tariff": 100,
+          "tariff_paid": 30,
+          "unfunded": true
+        },
+        "deltas": [
+          {
+            "day": 20137,
+            "delta": -30,
+            "ref": "58",
+            "source": "skip_tariff"
+          }
+        ],
+        "details": [
+          "applied (tariff unfunded)"
+        ]
+      }
+    },
+    {
+      "input": {
+        "balance": 50,
+        "rows": [
+          {
+            "applied": true,
+            "cards_moved": 3,
+            "day": 20120,
+            "undone": false
+          },
+          {
+            "applied": true,
+            "cards_moved": 3,
+            "day": 20119,
+            "undone": false
+          }
+        ],
+        "skip_id": 81,
+        "today": 20120
+      },
+      "output": {
+        "answer": {
+          "tariff": 0,
+          "tariff_paid": 0,
+          "unfunded": false
+        },
+        "deltas": [],
+        "details": []
+      }
+    },
+    {
+      "input": {
+        "balance": 100,
+        "rows": [
+          {
+            "applied": true,
+            "cards_moved": 3,
+            "day": 20105,
+            "undone": false
+          },
+          {
+            "applied": true,
+            "cards_moved": 3,
+            "day": 20104,
+            "undone": false
+          },
+          {
+            "applied": true,
+            "cards_moved": 3,
+            "day": 20103,
+            "undone": false
+          },
+          {
+            "applied": true,
+            "cards_moved": 3,
+            "day": 20102,
+            "undone": false
+          }
+        ],
+        "skip_id": 81,
+        "today": 20105
+      },
+      "output": {
+        "answer": {
+          "tariff": 100,
+          "tariff_paid": 100,
+          "unfunded": false
+        },
+        "deltas": [
+          {
+            "day": 20105,
+            "delta": -100,
+            "ref": "81",
+            "source": "skip_tariff"
+          }
+        ],
+        "details": []
+      }
+    },
+    {
+      "input": {
+        "balance": 30,
+        "rows": [
+          {
+            "applied": true,
+            "cards_moved": 3,
+            "day": 20105,
+            "undone": false
+          },
+          {
+            "applied": true,
+            "cards_moved": 3,
+            "day": 20104,
+            "undone": false
+          },
+          {
+            "applied": true,
+            "cards_moved": 3,
+            "day": 20103,
+            "undone": false
+          },
+          {
+            "applied": true,
+            "cards_moved": 3,
+            "day": 20102,
+            "undone": false
+          }
+        ],
+        "skip_id": 27,
+        "today": 20105
+      },
+      "output": {
+        "answer": {
+          "tariff": 100,
+          "tariff_paid": 30,
+          "unfunded": true
+        },
+        "deltas": [
+          {
+            "day": 20105,
+            "delta": -30,
+            "ref": "27",
+            "source": "skip_tariff"
+          }
+        ],
+        "details": [
+          "applied (tariff unfunded)"
+        ]
+      }
+    },
+    {
+      "input": {
+        "balance": 30,
+        "rows": [
+          {
+            "applied": true,
+            "cards_moved": 3,
+            "day": 20112,
+            "undone": false
+          }
+        ],
+        "skip_id": 13,
+        "today": 20112
+      },
+      "output": {
+        "answer": {
+          "tariff": 0,
+          "tariff_paid": 0,
+          "unfunded": false
+        },
+        "deltas": [],
+        "details": []
+      }
+    }
+  ],
+  "function": "pipeline_layers.economy.EconomyLayer._charge_skip_tariff",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Runs the charge on a stub store answering the case's skip rows and balance, and records the coin delta and the detail it writes; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_083.py",
+  "registry_sha256": "0c428fdeae0892916e2bf37e7140a46b8a351178a0365cb1b2b584bea75a9004",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

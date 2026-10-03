@@ -49,6 +49,7 @@ deck-streak-privacy = { path = "crates/privacy" }
 deck-streak-coordination = { path = "crates/coordination" }
 deck-streak-api = { path = "crates/api" }
 deck-streak-bot = { path = "crates/bot" }
+deck-streak-mcp = { path = "crates/mcp" }
 deck-streak-daemon = { path = "crates/daemon" }
 # ADR-029: the parity oracle's golden reader. So far only a proving crate's dev-dependencies name
 # them; later ADRs cite ADR-029 rather than admitting them again.
@@ -59,6 +60,7 @@ serde_json = "1.0.151"
 sqlx = { version = "0.9.0", default-features = false, features = ["runtime-tokio", "sqlite", "migrate", "macros"] }
 tokio = "~1.53"
 thiserror = "2.0.21"
+chrono = { version = "0.4.45", default-features = false, features = ["clock"] }
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", default-features = false, features = ["fmt", "json", "env-filter"] }
 # ADR-020: a temporary database or collection, in tests only.

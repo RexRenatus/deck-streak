@@ -46,7 +46,7 @@ sequenceDiagram
   W->>V: push by a second normal sync, the moved cards and their review-log rows
   Note over W,V: a full or one-way sync demand aborts here too, and nothing was pushed
   I->>I: read each moved card back, record applied, and discard the working copy
-  C->>E: purchase the tariff, clipped to the wallet, outside the daily loss cap
+  C->>E: debit the tariff, floor-clipped, outside the daily loss cap, keyed to the skip's own study day
   C-->>S: cards moved, and every card left alone listed
 ```
 
@@ -136,3 +136,79 @@ The skip may be taken again on the same study day after an undo: the migration's
 skip `pending` or `applied` and not undone per study day, not one row. The review-log rows the
 reschedule wrote stay after an undo, because an incremental sync carries none away, and the read
 never counts them as study events (SPEC-023 R2).
+
+## Amended by SPEC-083 section 10 (2026-10-03)
+
+Read at DeckStreak `dev` 8fba25c. SPEC-083 lands in three parts (ADR-321): E4a the record, the
+preview without its card list, the tariff and its refund, and the skip set's port with its seven
+readers; E4b the take's write with its backup, restore drill, counts and the class's stop; E4c the
+undo, the use cases, the bot, the API, the Mini App and the daemon's wiring. The diagrams below are
+drawn before E4b's code. Where they differ from the ones above, section 10 governs.
+
+### The settlement: the charge and the refund, once per skip (T3, T4; E4a)
+
+```mermaid
+flowchart TD
+  take["the take's outcome, or the start-up settlement of a pending row"] --> applied{"applied?"}
+  applied -- "no" --> failed["settle failed: no charge"]
+  applied -- "yes" --> tx["one write transaction, BEGIN IMMEDIATE"]
+  tx --> count["count the month's other applied skips not undone on an earlier study day"]
+  count --> price["price: the ladder from economy.json at that count, clamped to its last entry"]
+  price --> debit["floor-clipped debit, source skip_tariff, the skip's id, the skip's own study day"]
+  debit --> settle["settle applied, unfunded when paid is below the price"]
+  undo["the undo, accepted"] --> utx["one write transaction"]
+  utx --> mark["mark undone at the undo's instant"]
+  mark --> paid["read what the skip paid, by source and the skip's id"]
+  paid --> refund["refund, source skip_tariff_refund, the skip's id, the undo's recorded study day"]
+  refund --> commit["commit"]
+```
+
+A retry on any later study day finds the same ledger key `(study_day, source, reference)`, so the
+debit and the refund each move coins once. The skip set's port, `skip/days.rs`, is the one reader
+of `skip_days` in coordination: the streaks step twice, the XP step, the day bonuses, the streak
+view and the level view call it, and the open lapse takes the set its caller read from it.
+
+### The class's backup, restore drill and counts (R34, R35; E4b)
+
+```mermaid
+sequenceDiagram
+  participant I as ingest skip write
+  participant W as working copy
+  participant B as backup beside the private copy
+  participant T as throwaway collection
+  participant L as ledger
+  I->>L: read the class's stop, and refuse writes_stopped when it is set
+  W->>W: converge by one normal sync
+  I->>W: count the cards, the notes, the review-log rows, each queue and type pair, and the due count the wrapped search selects
+  I->>W: close the converged working copy
+  I->>B: copy it whole, mode 0600, named for the skip
+  B->>T: copy the backup to a throwaway collection
+  I->>T: open it with the engine, and count it the same way
+  Note over I,T: a backup not written, or counts that differ, fails the take before any card changes
+  I->>B: replace the last backup only now, after this one's check passed
+  I->>L: commit each card's prior state
+  W->>W: Set Due Date on the previewed cards
+  I->>W: count again
+  Note over I,W: only the review-log rows, up by the cards moved, and the due count, down by them, may move
+  I->>L: any other count moved: set the class's stop, write nothing, push nothing
+  I->>L: read the class's stop again before the push
+  W->>W: push by a second normal sync
+```
+
+The backup is host-only: never in a bucket, never in Litestream's replica and never in ADR-064's
+daily copy. DeckStreak never restores it; the owner restores it by the owner's own import, because
+a restore reaches the server only by a full upload. The data-rights erase removes it, and the
+export leaves it out.
+
+### The class's stop (R36; E4b, E4c)
+
+```mermaid
+stateDiagram-v2
+  [*] --> clear
+  clear --> stopped: a count moved, recorded with who and why
+  clear --> stopped: the owner's command, after a confirm
+  stopped --> clear: only the owner's authenticated command handler, after a confirm
+  stopped --> stopped: a take or an undo refuses writes_stopped
+```
+
+While the stop is set nothing writes, an undo included, and the preview says so.

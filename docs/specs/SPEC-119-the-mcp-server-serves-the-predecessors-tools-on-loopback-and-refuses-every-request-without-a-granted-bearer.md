@@ -8,14 +8,16 @@
   concurrency bound sheds instead of queueing), ADR-037 (owner triggers of the sync), ADR-054 (no-AI
   mode is the default), ADR-059 (public text describes DeckStreak only), ADR-067 (the loader refuses
   an empty credential by its id), ADR-119 (the server is Rust on `rmcp`, in its own adapter crate,
-  on loopback) and ADR-121 (the guard fails closed on every request, compares digests in constant
-  time, and keeps the predecessor's limiter).
+  on loopback), ADR-121 (the guard fails closed on every request, compares digests in constant
+  time, and keeps the predecessor's limiter) and ADR-320 (the guard lands first, as a library of
+  the adapter crate with the kernel edge only; the server and its tools follow).
 - **Prerequisites:** SPEC-020, SPEC-021, SPEC-022, SPEC-066, SPEC-071, SPEC-072, SPEC-073,
   SPEC-075, SPEC-076, SPEC-077, SPEC-078, SPEC-079, SPEC-080, SPEC-083, SPEC-085, SPEC-086, SPEC-090,
   SPEC-091, SPEC-092 and SPEC-093 (planned, W4) and SPEC-110. **Mutation band:**
   `S11900-S11999`.
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-119.md` (ADR-016).
+- **Status:** delivered in part (moved from `docs/specs/planned/` with its tests and
+  `docs/red-first/SPEC-119.md`, ADR-016): #158's pull request delivers the guard (section 3,
+  ADR-320); #157 delivers the server and its tools, and the drill tools follow R19 (section 3c).
 
 ## 1. The problem, measured
 
@@ -182,22 +184,21 @@ R23. **The chart resources.** Each name of SPEC-085 R6's closed set is a resourc
 
 ## 3. Acceptance criteria
 
+This pull request (#158) delivers the guard: the criteria of this table, and A40 (section 11). The
+rest of the SPEC is #157's and the drill tools' (section 3c), and moves back here when they
+deliver it.
+
 | id | criterion | decided by |
 |---|---|---|
-| A1 | `127.0.0.1` and `::1` are accepted; `0.0.0.0`, `::`, a private-range address, unset and unparseable each refuse start naming `DECKSTREAK_MCP_LISTEN` | `the_listen_address_must_be_loopback` |
 | A2 | a missing, empty, unreadable or non-text `mcp-core-token` each refuses start by its id | `the_core_credential_is_required` |
 | A3 | a missing law-track or drills credential grants nothing, and the core token still starts the role | `a_missing_scope_credential_grants_nothing` |
 | A4 | an empty, unreadable or non-text law-track or drills credential refuses start by its id | `a_broken_scope_credential_refuses_start` |
 | A5 | a 31-character token refuses start by its id, and a 32-character one starts | `a_short_credential_refuses_start` |
 | A6 | two credentials holding one value refuse start | `two_credentials_with_one_value_refuse_start` |
-| A7 | with the drill tools off, the drills credential is never read: an empty one does not refuse start | `the_drills_credential_is_read_only_when_drills_are_on` |
-| A8 | `DECKSTREAK_MCP_DRILLS` unset or `off` is off, `on` is on, and any other value refuses start | `the_drills_setting_is_off_unless_it_reads_on` |
 | A9 | a request with no `Authorization` header, `initialize` among them, is answered 401 `unauthorized` with `WWW-Authenticate: Bearer`, and the server never sees it | `a_request_with_no_bearer_is_refused` |
 | A10 | an empty header, `Bearer` alone, an empty token, another scheme, two headers, a token holding a space and a token holding a non-ASCII byte are each refused as A9 | `a_malformed_bearer_is_refused` |
 | A11 | a token differing in its last character, a prefix of a granted token, and a granted token with one character added are each refused as A9 | `a_wrong_bearer_is_refused` |
 | A12 | the absent, empty, malformed, wrong and rate-limited refusals are byte for byte the same response, the date header aside | `every_request_refusal_is_the_same_response` |
-| A13 | the core token reaches every core tool and no other; the law-track token adds `get_law_track`; the drills token adds the drill tools; `bearer` in lower case is accepted | `each_grant_reaches_its_scopes_and_no_other` |
-| A14 | a tool outside the token's scope answers a tool error whose whole text is `unauthorized`, and no data | `a_tool_outside_the_scope_answers_unauthorized` |
 | A15 | a granted token in the query string, with no header, is refused as A9 | `a_token_in_the_query_string_is_ignored` |
 | A16 | in `crates/mcp/src/`, a token, digest or header value is compared only by `ct_eq` over SHA-256 digests, in one fold with no early exit; a planted `==` on a token is refused | `the_guard_compares_only_digests_in_constant_time` |
 | A17 | the limiter equals its golden: the fifth and sixth failures, 59.999 and 60.000 seconds after the first, a limited failure recording nothing, the eleventh failure's history, and the 513th bucket's eviction | `the_limiter_matches_its_golden` |
@@ -205,40 +206,17 @@ R23. **The chart resources.** Each name of SPEC-085 R6's closed set is a resourc
 | A19 | the limiter's constants and the denial word equal the golden | `the_guard_constants_match_the_golden` |
 | A20 | after ten out-of-scope failures, the core token still reaches every core tool | `a_granted_token_never_limits_itself` |
 | A21 | each refusal writes one `warn` event with its outcome, bucket and scope, and no event holds the token, the header's value or a full digest | `a_refusal_logs_the_bucket_and_never_the_token` |
-| A22 | `/health`, `/metrics` and `/` answer 404 to a granted bearer and 401 to none | `only_the_mcp_path_is_served` |
-| A23 | a body over 64 KiB is refused and runs no tool | `a_body_over_64_kib_is_refused` |
-| A24 | a request whose Host is not a loopback name is refused and runs no tool | `a_foreign_host_is_refused` |
-| A25 | with 8 requests held in a scripted use case, a ninth is answered 503 within 5 seconds | `the_ninth_request_in_flight_is_shed` |
-| A26 | with the drill tools off, the roster equals the golden's 33 tools | `the_roster_matches_the_golden_with_drills_off` |
-| A27 | with the drill tools on, the roster equals the golden's 35 tools | `the_roster_matches_the_golden_with_drills_on` |
-| A28 | each clamp equals its golden, the cases 0, 1, 200, 201, 62, 63, 3650 and 3651 among them, and the exchange window ends on today's study day | `the_clamps_match_the_golden` |
-| A29 | a writer whose use case fails answers a tool error, never a result carrying `ok: false` | `a_failed_write_is_a_tool_error` |
-| A30 | `erase_all_data` with `confirm` empty, `erase` or `ERASE ` answers the golden's refusal and erases nothing; `ERASE` empties every table | `erase_runs_only_with_the_word_erase` |
-| A31 | `export_data` answers the data-rights registry's export document | `export_answers_the_data_rights_document` |
-| A32 | `force_sync` answers `full`, `skipped` and `read_failed` as its golden does, and another cycle error answers `sync failed` | `force_sync_reports_each_recompute_value` |
-| A33 | `get_law_track` answers exactly the golden's numeric fields | `the_law_track_answers_numbers_only` |
-| A34 | the drill list and view equal the golden: 25 of 26 drills, a 121-character title, bodies of 4000 and 4001 characters, a multibyte title | `the_drill_tools_match_the_golden` |
-| A35 | the ids `a/b`, `a\b`, `..`, the empty id and an unknown id answer `drill not found`, and the audit event carries a 12-character reference and never the id | `an_unsafe_or_unknown_drill_is_not_found` |
-| A36 | the drill reference equals its golden | `the_drill_ref_matches_the_golden` |
-| A37 | the resources are exactly SPEC-085 R6's names as `charts://<name>`, each `application/json` with the route's payload, and an unknown name is a resource error | `each_chart_resource_answers_its_series` |
-| A38 | `deckstreakd mcp` is a role, not refused as an unknown one | `the_mcp_role_is_a_known_role` |
-| A39 | with the scripted loader answering `Missing` for `mcp-core-token`, a token-shaped value in the process environment, on the command line and in a file of the working directory still refuses start by its id | `the_role_reads_its_tokens_only_through_the_loader` |
 
 ```acceptance
-A1: cargo test -p deck-streak-mcp --test settings -- --exact the_listen_address_must_be_loopback
 A2: cargo test -p deck-streak-mcp --test settings -- --exact the_core_credential_is_required
 A3: cargo test -p deck-streak-mcp --test settings -- --exact a_missing_scope_credential_grants_nothing
 A4: cargo test -p deck-streak-mcp --test settings -- --exact a_broken_scope_credential_refuses_start
 A5: cargo test -p deck-streak-mcp --test settings -- --exact a_short_credential_refuses_start
 A6: cargo test -p deck-streak-mcp --test settings -- --exact two_credentials_with_one_value_refuse_start
-A7: cargo test -p deck-streak-mcp --test settings -- --exact the_drills_credential_is_read_only_when_drills_are_on
-A8: cargo test -p deck-streak-mcp --test settings -- --exact the_drills_setting_is_off_unless_it_reads_on
 A9: cargo test -p deck-streak-mcp --test guard -- --exact a_request_with_no_bearer_is_refused
 A10: cargo test -p deck-streak-mcp --test guard -- --exact a_malformed_bearer_is_refused
 A11: cargo test -p deck-streak-mcp --test guard -- --exact a_wrong_bearer_is_refused
 A12: cargo test -p deck-streak-mcp --test guard -- --exact every_request_refusal_is_the_same_response
-A13: cargo test -p deck-streak-mcp --test guard -- --exact each_grant_reaches_its_scopes_and_no_other
-A14: cargo test -p deck-streak-mcp --test guard -- --exact a_tool_outside_the_scope_answers_unauthorized
 A15: cargo test -p deck-streak-mcp --test guard -- --exact a_token_in_the_query_string_is_ignored
 A16: cargo test -p deck-streak-mcp --test guard_census -- --exact the_guard_compares_only_digests_in_constant_time
 A17: cargo test -p deck-streak-mcp --test limiter -- --exact the_limiter_matches_its_golden
@@ -246,24 +224,6 @@ A18: cargo test -p deck-streak-mcp --test limiter -- --exact the_bucket_matches_
 A19: cargo test -p deck-streak-mcp --test limiter -- --exact the_guard_constants_match_the_golden
 A20: cargo test -p deck-streak-mcp --test limiter -- --exact a_granted_token_never_limits_itself
 A21: cargo test -p deck-streak-mcp --test limiter -- --exact a_refusal_logs_the_bucket_and_never_the_token
-A22: cargo test -p deck-streak-mcp --test server -- --exact only_the_mcp_path_is_served
-A23: cargo test -p deck-streak-mcp --test server -- --exact a_body_over_64_kib_is_refused
-A24: cargo test -p deck-streak-mcp --test server -- --exact a_foreign_host_is_refused
-A25: cargo test -p deck-streak-mcp --test server -- --exact the_ninth_request_in_flight_is_shed
-A26: cargo test -p deck-streak-mcp --test roster -- --exact the_roster_matches_the_golden_with_drills_off
-A27: cargo test -p deck-streak-mcp --test roster -- --exact the_roster_matches_the_golden_with_drills_on
-A28: cargo test -p deck-streak-mcp --test tools -- --exact the_clamps_match_the_golden
-A29: cargo test -p deck-streak-mcp --test tools -- --exact a_failed_write_is_a_tool_error
-A30: cargo test -p deck-streak-mcp --test tools -- --exact erase_runs_only_with_the_word_erase
-A31: cargo test -p deck-streak-mcp --test tools -- --exact export_answers_the_data_rights_document
-A32: cargo test -p deck-streak-mcp --test tools -- --exact force_sync_reports_each_recompute_value
-A33: cargo test -p deck-streak-mcp --test tools -- --exact the_law_track_answers_numbers_only
-A34: cargo test -p deck-streak-mcp --test drills -- --exact the_drill_tools_match_the_golden
-A35: cargo test -p deck-streak-mcp --test drills -- --exact an_unsafe_or_unknown_drill_is_not_found
-A36: cargo test -p deck-streak-mcp --test drills -- --exact the_drill_ref_matches_the_golden
-A37: cargo test -p deck-streak-mcp --test resources -- --exact each_chart_resource_answers_its_series
-A38: cargo test -p deck-streak-daemon --test roles -- --exact the_mcp_role_is_a_known_role
-A39: cargo test -p deck-streak-mcp --test settings -- --exact the_role_reads_its_tokens_only_through_the_loader
 ```
 
 ## 3a. What the box run judges
@@ -279,6 +239,72 @@ not change when it merges.
 | B1 | over every binary of the workspace that serves HTTP, `deckstreakd` with its `mcp` role among them: no secret is read from the environment, every request body read is bounded, and a concurrency bound holds | the rust-service pack |
 | B2 | over the same binaries: request headers are marked sensitive before the trace layer logs them, so no `Authorization` value reaches the journal, and no log field carries a secret | the observability pack |
 | B3 | over the units under `deploy/systemd/`, `deck-streak-mcp.service` among them: the service's type, restart, sandbox and memory settings, its credentials passed as credentials and never in an `Environment=` line, and its memory within the budget the other units leave | the durable-services pack |
+
+B1 to B3 are judged when #157 adds the role, its binary path and its unit; #158's pull request
+adds no binary and no unit.
+
+## 3c. Delivered by the next pull requests
+
+This SPEC lands in parts. This one (#158) delivers the guard as a library of `deck-streak-mcp`:
+R1's crate with its kernel edge only, R6 to R11, R13 and R14 for the core and law-track
+credentials, R12's scope decision, A2 to A6, A9 to A12, A15 to A21, and A40 (section 11). #157
+delivers the server: R1's `coordination` edge and `deck-streak-daemon`'s line, R2 to R5, the tool
+error that carries R12's decision, R15 to R18 and R20 to R23. The drill tools follow R19, with
+#157 and #158. The table below holds the criteria those parts deliver, each row naming its part,
+and the lines under it are their fence lines, each prefixed `SERVER: ` or `DRILLS: `. Each part
+moves its criteria back verbatim: the row into section 3's table, without the `delivered by`
+column, and the fence line into the acceptance fence, without the prefix. B1 to B3 (section 3a)
+are judged when #157 adds their files.
+
+| id | criterion | decided by | delivered by |
+|---|---|---|---|
+| A1 | `127.0.0.1` and `::1` are accepted; `0.0.0.0`, `::`, a private-range address, unset and unparseable each refuse start naming `DECKSTREAK_MCP_LISTEN` | `the_listen_address_must_be_loopback` | #157 |
+| A7 | with the drill tools off, the drills credential is never read: an empty one does not refuse start | `the_drills_credential_is_read_only_when_drills_are_on` | #157 and #158, with the drill tools (R19) |
+| A8 | `DECKSTREAK_MCP_DRILLS` unset or `off` is off, `on` is on, and any other value refuses start | `the_drills_setting_is_off_unless_it_reads_on` | #157 and #158, with the drill tools (R19) |
+| A13 | the core token reaches every core tool and no other; the law-track token adds `get_law_track`; the drills token adds the drill tools; `bearer` in lower case is accepted | `each_grant_reaches_its_scopes_and_no_other` | #157 |
+| A14 | a tool outside the token's scope answers a tool error whose whole text is `unauthorized`, and no data | `a_tool_outside_the_scope_answers_unauthorized` | #157 |
+| A22 | `/health`, `/metrics` and `/` answer 404 to a granted bearer and 401 to none | `only_the_mcp_path_is_served` | #157 |
+| A23 | a body over 64 KiB is refused and runs no tool | `a_body_over_64_kib_is_refused` | #157 |
+| A24 | a request whose Host is not a loopback name is refused and runs no tool | `a_foreign_host_is_refused` | #157 |
+| A25 | with 8 requests held in a scripted use case, a ninth is answered 503 within 5 seconds | `the_ninth_request_in_flight_is_shed` | #157 |
+| A26 | with the drill tools off, the roster equals the golden's 33 tools | `the_roster_matches_the_golden_with_drills_off` | #157 |
+| A27 | with the drill tools on, the roster equals the golden's 35 tools | `the_roster_matches_the_golden_with_drills_on` | #157 and #158, with the drill tools (R19) |
+| A28 | each clamp equals its golden, the cases 0, 1, 200, 201, 62, 63, 3650 and 3651 among them, and the exchange window ends on today's study day | `the_clamps_match_the_golden` | #157 |
+| A29 | a writer whose use case fails answers a tool error, never a result carrying `ok: false` | `a_failed_write_is_a_tool_error` | #157 |
+| A30 | `erase_all_data` with `confirm` empty, `erase` or `ERASE ` answers the golden's refusal and erases nothing; `ERASE` empties every table | `erase_runs_only_with_the_word_erase` | #157 |
+| A31 | `export_data` answers the data-rights registry's export document | `export_answers_the_data_rights_document` | #157 |
+| A32 | `force_sync` answers `full`, `skipped` and `read_failed` as its golden does, and another cycle error answers `sync failed` | `force_sync_reports_each_recompute_value` | #157 |
+| A33 | `get_law_track` answers exactly the golden's numeric fields | `the_law_track_answers_numbers_only` | #157 |
+| A34 | the drill list and view equal the golden: 25 of 26 drills, a 121-character title, bodies of 4000 and 4001 characters, a multibyte title | `the_drill_tools_match_the_golden` | #157 and #158, with the drill tools (R19) |
+| A35 | the ids `a/b`, `a\b`, `..`, the empty id and an unknown id answer `drill not found`, and the audit event carries a 12-character reference and never the id | `an_unsafe_or_unknown_drill_is_not_found` | #157 and #158, with the drill tools (R19) |
+| A36 | the drill reference equals its golden | `the_drill_ref_matches_the_golden` | #157 and #158, with the drill tools (R19) |
+| A37 | the resources are exactly SPEC-085 R6's names as `charts://<name>`, each `application/json` with the route's payload, and an unknown name is a resource error | `each_chart_resource_answers_its_series` | #157 |
+| A38 | `deckstreakd mcp` is a role, not refused as an unknown one | `the_mcp_role_is_a_known_role` | #157 |
+| A39 | with the scripted loader answering `Missing` for `mcp-core-token`, a token-shaped value in the process environment, on the command line and in a file of the working directory still refuses start by its id | `the_role_reads_its_tokens_only_through_the_loader` | #157 |
+
+SERVER: A1: cargo test -p deck-streak-mcp --test settings -- --exact the_listen_address_must_be_loopback
+DRILLS: A7: cargo test -p deck-streak-mcp --test settings -- --exact the_drills_credential_is_read_only_when_drills_are_on
+DRILLS: A8: cargo test -p deck-streak-mcp --test settings -- --exact the_drills_setting_is_off_unless_it_reads_on
+SERVER: A13: cargo test -p deck-streak-mcp --test guard -- --exact each_grant_reaches_its_scopes_and_no_other
+SERVER: A14: cargo test -p deck-streak-mcp --test guard -- --exact a_tool_outside_the_scope_answers_unauthorized
+SERVER: A22: cargo test -p deck-streak-mcp --test server -- --exact only_the_mcp_path_is_served
+SERVER: A23: cargo test -p deck-streak-mcp --test server -- --exact a_body_over_64_kib_is_refused
+SERVER: A24: cargo test -p deck-streak-mcp --test server -- --exact a_foreign_host_is_refused
+SERVER: A25: cargo test -p deck-streak-mcp --test server -- --exact the_ninth_request_in_flight_is_shed
+SERVER: A26: cargo test -p deck-streak-mcp --test roster -- --exact the_roster_matches_the_golden_with_drills_off
+DRILLS: A27: cargo test -p deck-streak-mcp --test roster -- --exact the_roster_matches_the_golden_with_drills_on
+SERVER: A28: cargo test -p deck-streak-mcp --test tools -- --exact the_clamps_match_the_golden
+SERVER: A29: cargo test -p deck-streak-mcp --test tools -- --exact a_failed_write_is_a_tool_error
+SERVER: A30: cargo test -p deck-streak-mcp --test tools -- --exact erase_runs_only_with_the_word_erase
+SERVER: A31: cargo test -p deck-streak-mcp --test tools -- --exact export_answers_the_data_rights_document
+SERVER: A32: cargo test -p deck-streak-mcp --test tools -- --exact force_sync_reports_each_recompute_value
+SERVER: A33: cargo test -p deck-streak-mcp --test tools -- --exact the_law_track_answers_numbers_only
+DRILLS: A34: cargo test -p deck-streak-mcp --test drills -- --exact the_drill_tools_match_the_golden
+DRILLS: A35: cargo test -p deck-streak-mcp --test drills -- --exact an_unsafe_or_unknown_drill_is_not_found
+DRILLS: A36: cargo test -p deck-streak-mcp --test drills -- --exact the_drill_ref_matches_the_golden
+SERVER: A37: cargo test -p deck-streak-mcp --test resources -- --exact each_chart_resource_answers_its_series
+SERVER: A38: cargo test -p deck-streak-daemon --test roles -- --exact the_mcp_role_is_a_known_role
+SERVER: A39: cargo test -p deck-streak-mcp --test settings -- --exact the_role_reads_its_tokens_only_through_the_loader
 
 ## 4. File manifest
 
@@ -420,3 +446,136 @@ criterion must fail. A plant with a row is also that row's mutant.
 | the bearer is read from a `token` query parameter | A15 | none (an addition, not a mutation) |
 | the bucket map grows without eviction | A17 | `S11916-EVICTION` |
 | the token is compared with `==` | A16 | `S11910-DIGEST-MATCH` |
+
+## 10. Amendments, 2026-10-03: the guard lands first (#158), and what #157 and the drill tools deliver
+
+Section 3's table now holds only the criteria this pull request delivers; every other row moved,
+verbatim, to section 3c with its fence line, and A40 is added in section 11. The body above is
+otherwise as planned. The amendments below are recorded here and are not applied to it; each Old
+is the body's text and each New is what it reads from this pull request on. A line number below
+names the line of the SPEC as planned, before this pull request moved it.
+
+- **T1** (R1, lines 43-44; the Old is one sentence across a line break, quoted with its break
+  folded to one space). Old: `it depends on `deck-streak-kernel` and `deck-streak-coordination`, and `deck-streak-daemon` depends on it.`
+  New: `from #158's pull request it depends on `deck-streak-kernel` only, and the map's fence gains
+  its line with that one edge; #157's pull request adds `deck-streak-coordination` and names the
+  crate in `deck-streak-daemon`'s line, each edge in the change that first uses it (ADR-002,
+  ADR-320).`
+- **T2** (R10, line 81). Old: `No other comparison of a token, a digest or the header exists in the crate.`
+  New: `Every other comparison of a token or a digest in the crate is a `ct_eq` of two SHA-256
+  digests (R7's sharing rule is the one), and the header is read only by R9's parser, which
+  compares its scheme and never its token. A bucket (R13) is a map key, not a digest, under this
+  rule.`
+- **T3** (R13, line 97). Old: `the token when one parses, else the header's whole value, else `\x00absent`;`
+  New: `the token when one parses, else the first `Authorization` header's whole value as bytes,
+  and `\x00absent` when that value is empty or no header is present (`_bucket_id` maps an empty
+  value so);`
+- **T4** (R13, lines 98-99, its break folded). Old: `with 5 or more fresh failures the outcome is `rate_limited` and nothing is recorded;`
+  New: `with 5 or more fresh failures the outcome is `rate_limited` and nothing is recorded (the
+  bucket's stale failures are dropped and its place among the buckets is kept, as
+  `_is_rate_limited` does); a bucket leaves only by eviction, never by age;`
+- **T5** (A3, line 189). Old: `a missing law-track or drills credential grants nothing` New: `a
+  missing law-track credential grants nothing (the drills credential's half is delivered with
+  R19)`.
+- **T6** (A4, line 190). Old: `an empty, unreadable or non-text law-track or drills credential refuses start by its id`
+  New: `an empty, unreadable or non-text law-track credential refuses start by its id (the drills
+  credential's half is delivered with R19)`.
+- **T7** (A17 at line 203, and the same words in section 7 at line 355). Old: `the eleventh failure's history`
+  New: `the eleventh failure recorded through the recorder itself keeping the newest ten (through
+  the guard a bucket never holds more than five, so `_record_failure` is called directly)`.
+- **T8** (A20, line 206). Old: `after ten out-of-scope failures, the core token still reaches every core tool`
+  New: `after ten out-of-scope failures through the guard's scope check, the core token is still
+  admitted by the request layer and allowed `core` (every core tool is A13's, #157)`.
+- **T9** (section 7, `mcp_auth_bucket`, line 354). Old: `| function | synthetic tokens, the empty token among them |`
+  New: `| adapter | a `DrillAuth` over no grants, calling `_bucket_id` on a synthetic token, a
+  malformed header's whole value, a multibyte value and the empty value |`.
+- **T10** (section 7, `mcp_auth_limiter`, line 355). Old: `a `DrillAuth` over synthetic grants and a scripted clock:`
+  New: `a `DrillAuth` over synthetic grants and synthetic scope names, with a clock the case sets
+  (one instant for every read inside one call; times in whole milliseconds), each call's outcome
+  read from the predecessor's own warning and its buckets from its failure map:`.
+- **T11** (section 7, `mcp_auth.constants`, line 353). Old: `` `SCOPE_LAW_TRACK`, `SCOPE_DRILLS` ``
+  New: `` `SCOPE_LAW_TRACK` (`SCOPE_DRILLS` is registered with R19) ``.
+- **T12** (manifest). This pull request also adds
+  `docs/decisions/ADR-320-the-mcp-guard-lands-first-as-a-library-with-the-kernel-edge-only.md` and
+  `formal/tla/BearerGuard/` (the model, `MCBearerGuard.cfg`, four `witness/*.cfg`);
+  `crates/mcp/Cargo.toml` adds `sha2`, `subtle`, `axum`, `tower`, `thiserror` and `tracing` now,
+  and `rmcp`, `schemars` and tower's `limit` and `load-shed` with #157; `Cargo.toml` gains the
+  member and its workspace line only.
+- **T13** (section 9). Row `S11928-GRANT-SCOPES` (`crates/mcp/src/guard.rs`, a grant is allowed
+  only its own scopes, `guard::each_grant_holds_its_scopes_and_no_other`) is added; S11911's
+  tool-level row stays #157's.
+- **T14** (the schematic, R13 and A20). `docs/schematics/mcp-guard-refusals.md`'s flowchart sent a
+  scope refusal (`tool -->|no|`) straight to the tool error, past the limiter, while R13 and A20
+  send it through the limiter with the token's bucket. This pull request routes it through the
+  limiter's decision before the tool error, with the schematic's own change note. ADR-121 is not
+  edited: ADR-320 records that A7, A8, A13, A14, S11906 and S11911 of its Confirmation are
+  delivered later.
+- **T15** (R7, line 66, and A5, line 191). Old: `A loaded token shorter than 32 characters refuses start by its id (`McpError::WeakCredential`),`
+  New: `A loaded token holding any byte outside 0x21 to 0x7E, which R9 lets no request present (a
+  credential file written with a carriage return before its newline keeps one), refuses start by
+  its id (`McpError::UnpresentableCredential`, the id and never the value), before its length is
+  read; a loaded token shorter than 32 characters refuses start by its id
+  (`McpError::WeakCredential`),`. And A5's Old: `a 31-character token refuses start by its id, and a 32-character one starts`
+  New: `a 31-character token refuses start by its id, a 32-character one starts, and a token
+  ending in a carriage return refuses start by its id as unpresentable`.
+- **T16** (manifest, the capture census). This pull request also edits one line under the kernel
+  crate: `crates/kernel/tests/log_capture_class.rs` (line 1588, the routed-capture count 19 becomes
+  20). A21's capture in `crates/mcp/tests/limiter.rs` goes through the helper, so the census still
+  demands every capture routed and its count equals the measured population (ruling 72).
+
+Decided also by ADR-320 (the part split, the kernel edge only, the wall clock, an unpresentable
+credential refused at load).
+
+This pull request's rows in band `S11900-S11999` are S11902 to S11905, S11907 to S11910, S11912
+to S11918, `S11928-GRANT-SCOPES` (T13) and `S11929-UNPRESENTABLE` (T15: `crates/mcp/src/grants.rs`,
+a loaded token holding a byte outside 0x21 to 0x7E refuses start, killer
+`settings::a_short_credential_refuses_start`). S11901, S11911 and S11919 to S11925 stay #157's;
+S11906, S11926 and S11927 follow with the drill tools (R19).
+
+Files this pull request adds that section 4 and T12 do not name:
+`crates/mcp/tests/fixtures/planted_token_compare.rs.fixture` (added: A16's planted comparison,
+never compiled).
+
+Section 4's paths this pull request does not touch:
+
+- `crates/mcp/src/server.rs`: unchanged in this part; delivered by #157
+- `crates/mcp/src/tools.rs`: unchanged in this part; delivered by #157
+- `crates/mcp/src/drills.rs`: unchanged in this part; delivered with the drill tools (R19)
+- `crates/mcp/src/resources.rs`: unchanged in this part; delivered by #157
+- `crates/mcp/tests/server.rs`: unchanged in this part; delivered by #157
+- `crates/mcp/tests/roster.rs`: unchanged in this part; delivered by #157
+- `crates/mcp/tests/tools.rs`: unchanged in this part; delivered by #157
+- `crates/mcp/tests/drills.rs`: unchanged in this part; delivered with the drill tools (R19)
+- `crates/mcp/tests/resources.rs`: unchanged in this part; delivered by #157
+- `crates/daemon/Cargo.toml`: unchanged in this part; delivered by #157
+- `crates/daemon/src/role_mcp.rs`: unchanged in this part; delivered by #157
+- `crates/daemon/src/main.rs`: unchanged in this part; delivered by #157
+- `crates/daemon/src/lib.rs`: unchanged in this part; delivered by #157
+- `crates/daemon/src/wiring.rs`: unchanged in this part; delivered by #157
+- `crates/daemon/tests/roles.rs`: unchanged in this part; delivered by #157
+- `deploy/systemd/deck-streak-mcp.service`: unchanged in this part; delivered by #157
+- `deny.toml` and `stack.json`: unchanged in this part (no new external crate); `rmcp` is admitted by #157
+- `tools/parity-oracle/goldens/mcp_roster.json`: unchanged in this part; delivered by #157, with
+  `mcp_clamps.json`, `mcp_erase_confirm.json` and `mcp_sync_out.json`; the drill goldens follow
+  R19
+
+## 11. Acceptance criteria of the 2026-10-03 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A40 | through the guard's layer, the core token's request reaches the inner service once carrying `{core}` and the law-track token's carrying `{core, law_track}`, `bearer` in lower case among them; and the guard's scope check allows each grant exactly its scopes | `each_grant_holds_its_scopes_and_no_other` |
+
+```acceptance
+A40: cargo test -p deck-streak-mcp --test guard -- --exact each_grant_holds_its_scopes_and_no_other
+```
+
+## 12. Mutation round 1
+
+Each test below was red first against its own hand plant, and the file was restored byte-equal.
+
+- `grants::tests::or_if_keeps_a_scope_already_held`: `Scopes::or_if` with `|` replaced by `^` fails it.
+- `grants::tests::a_grant_debug_names_its_type_and_never_its_token`: `Grant`'s `Debug` replaced by
+  `Ok(Default::default())` fails it. Both live in a `#[cfg(test)]` module appended to
+  `crates/mcp/src/grants.rs`, because `or_if` and `Grant` are `pub(crate)`.
+- `guard_census::the_crate_root_forbids_unsafe_code`: row `S11931-FORBID-UNSAFE` replaces the crate
+  root's `#![forbid(unsafe_code)]` with `#![deny(unsafe_code)]`, and the test reads `src/lib.rs`.
