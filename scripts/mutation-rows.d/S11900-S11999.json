@@ -171,6 +171,96 @@
         "#![deny(unsafe_code)]",
         "guard_census::the_crate_root_forbids_unsafe_code",
         "the crate root forbids unsafe code outright, so a deny that a later attribute could lift is refused (SPEC-119)"
+      ],
+      [
+        "S11901-LOOPBACK",
+        "mcp",
+        "src/settings.rs",
+        "        if address.ip().is_loopback() {",
+        "        if !address.ip().is_multicast() {",
+        "settings::the_listen_address_must_be_loopback",
+        "only a loopback address is accepted as the listen address, so an unspecified or routable one refuses start naming the setting (SPEC-119 R3, A1)"
+      ],
+      [
+        "S11911-SCOPE-CHECK",
+        "mcp",
+        "src/tools.rs",
+        "        if self.guard.authorize(granted, Scope::LawTrack).is_err() {",
+        "        if self.guard.authorize(granted, Scope::Core).is_err() {",
+        "guard::a_tool_outside_the_scope_answers_unauthorized",
+        "get_law_track asks the guard for law_track before it reads, so a core-token call answers unauthorized and reads nothing (SPEC-119 R17, A14)"
+      ],
+      [
+        "S11919-BODY-CAP",
+        "mcp",
+        "src/server.rs",
+        "pub const BODY_LIMIT_BYTES: usize = 64 * 1024;",
+        "pub const BODY_LIMIT_BYTES: usize = 64 * 1024 + 1;",
+        "server::a_body_over_64_kib_is_refused",
+        "the body cap is 64 KiB, so a body one byte over it is refused (SPEC-119 R2, A23)"
+      ],
+      [
+        "S11920-SHED",
+        "mcp",
+        "src/server.rs",
+        "pub const MAX_IN_FLIGHT: usize = 8;",
+        "pub const MAX_IN_FLIGHT: usize = 9;",
+        "server::the_ninth_request_in_flight_is_shed",
+        "past 8 requests in flight a ninth is shed with 503 at once; the test's wait is bounded, so a queued ninth fails it rather than hangs (SPEC-119 R4, A25)"
+      ],
+      [
+        "S11932-LOOPBACK-HOSTS",
+        "mcp",
+        "src/server.rs",
+        "        .with_allowed_hosts(loopback_hosts())",
+        "        .disable_allowed_hosts()",
+        "server::a_foreign_host_is_refused",
+        "the transport admits only the loopback names as Host, so a request naming another host is refused (SPEC-119 R3, A24)"
+      ],
+      [
+        "S11933-STATELESS-JSON",
+        "mcp",
+        "src/server.rs",
+        "        .with_json_response(true)",
+        "        .with_json_response(false)",
+        "server::initialize_answers_json_and_no_session_id",
+        "the transport keeps no session and answers JSON, never an event stream (SPEC-119 R2, A45)"
+      ],
+      [
+        "S11934-LAW-PENDING",
+        "mcp",
+        "src/tools.rs",
+        "            leech_total: block.leech_active,",
+        "            leech_total: block.leech_active.or(Some(0)),",
+        "tools::the_pending_law_numbers_answer_null_never_zero",
+        "a pending leech count answers null, never 0 (SPEC-119; ADR-329 D7; A42)"
+      ],
+      [
+        "S11935-MASTERY-ROUND",
+        "mcp",
+        "src/tools.rs",
+        "    deck_streak_kernel::pynum::round(mastery, 2)",
+        "    mastery",
+        "tools::the_law_track_answers_numbers_only",
+        "a present mastery is rounded to 2 places as the predecessor rounds it, half to even, so 0.125 answers 0.12 (SPEC-119, A33)"
+      ],
+      [
+        "S11936-GUARD-WIRED",
+        "mcp",
+        "src/server.rs",
+        "            .layer(GuardLayer::new(guard))",
+        "            .layer({ drop(GuardLayer::new(guard)); tower::layer::util::Identity::new() })",
+        "server::the_served_stack_refuses_initialize_without_a_bearer",
+        "the guard's layer is in the served stack, so an initialize with no bearer answers 401 unauthorized (SPEC-119, A43)"
+      ],
+      [
+        "S11937-MCP-ROLE",
+        "daemon",
+        "src/main.rs",
+        "    const NAMES: [&'static str; 5] = [\"api\", \"bot\", \"job\", \"data\", \"mcp\"];",
+        "    const NAMES: [&'static str; 5] = [\"api\", \"bot\", \"job\", \"data\", \"mpc\"];",
+        "roles::the_mcp_role_is_a_known_role",
+        "deckstreakd's usage line names the mcp role among the roles (SPEC-119, A38)"
       ]
     ]
   }
