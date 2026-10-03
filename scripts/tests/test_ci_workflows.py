@@ -5350,6 +5350,57 @@ DYNAMIC_IMPORTS = {
             1,
         ),
     ),
+    **allowed(
+        "the missing-tool test's own site census, which parses the runner's source text as a syntax tree: it imports a module by the name a plant gives it, and reaches an attribute by a name a node holds, to decide whether the census would see that reach; it reads no workflow file and brings in no module of the test directory",
+        (
+            "test_mutation_rows_missing_tool",
+            "TheMissingToolPopulation.test_the_census_refuses_every_name_that_reaches_what_it_has_not_read",
+            "importlib.import_module(name)",
+            2,
+        ),
+        (
+            "test_mutation_rows_missing_tool",
+            "TheMissingToolPopulation.test_the_census_refuses_every_name_that_reaches_what_it_has_not_read",
+            "vars(module)",
+            1,
+        ),
+        ("test_mutation_rows_missing_tool", "reached_module", "getattr(base, node.attr, None)", 1),
+        ("test_mutation_rows_missing_tool", "referenced", "getattr(source, alias.name, None)", 1),
+        ("test_mutation_rows_missing_tool", "referenced", "importlib.import_module(name)", 1),
+        (
+            "test_mutation_rows_missing_tool",
+            "referenced",
+            "importlib.import_module(node.module)",
+            1,
+        ),
+    ),
+    **allowed(
+        "an import of this repository's own script module by its constant name, `import mutation_rows`, after a sys.path insert of the constant scripts directory; it reads no workflow file",
+        ("test_mutation_rows_refusal", "<module>", "import mutation_rows as runner", 1),
+    ),
+    **allowed(
+        "reads the standard `errno` table and the `__cause__` of an exception the test holds, to compare a refusal's reason with the error that caused it; it reads no file and no workflow",
+        ("test_mutation_rows_refusal", "<module>", "errno.errorcode", 1),
+        (
+            "test_mutation_rows_refusal",
+            "TheRefusalIsReadWhole.test_a_spawn_error_that_names_something_else_is_not_a_refusal",
+            "errno.ENOENT",
+            2,
+        ),
+        (
+            "test_mutation_rows_refusal",
+            "TheRefusalIsReadWhole.test_every_errno_at_the_spawn_is_the_same_refusal_naming_the_tool",
+            "refused.__cause__",
+            1,
+        ),
+        (
+            "test_mutation_rows_refusal",
+            "TheRefusalIsReadWhole.test_only_the_two_exits_of_a_program_that_cannot_run_are_refusals_at_every_route",
+            "raised.exception.__cause__",
+            1,
+        ),
+        ("test_mutation_rows_refusal", "outcome", "error.__cause__", 2),
+    ),
 }
 
 

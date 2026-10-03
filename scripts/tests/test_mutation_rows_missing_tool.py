@@ -221,11 +221,11 @@ def raw_spawns(source=None):
     for function in ast.walk(tree):
         if isinstance(function, ast.FunctionDef) and function.name in HELPERS:
             for call in ast.walk(function):
-                inside[id(call)] = function.name
+                inside[call] = function.name
     for node in ast.walk(tree):
         dynamic = dynamic_reach(node)
         if dynamic:
-            outside.append(f"{inside.get(id(node), 'outside the helpers')}: {dynamic}")
+            outside.append(f"{inside.get(node, 'outside the helpers')}: {dynamic}")
         if isinstance(node, ast.ImportFrom) and node.module in SPAWNING_MODULES:
             outside += [
                 f"from {node.module} import {alias.name}"
@@ -244,7 +244,7 @@ def raw_spawns(source=None):
         elif isinstance(node, ast.Call) and (
             ANY_SPAWN.match(ast.unparse(node.func)) or LOOP_SPAWN.search(ast.unparse(node.func))
         ):
-            where = inside.get(id(node))
+            where = inside.get(node)
             spawn = f"{where or 'outside the helpers'}: {ast.unparse(node.func)}"
             (owned if where else outside).append(spawn)
     outside += referenced(tree, inside)
@@ -296,7 +296,7 @@ def referenced(tree, inside):
     `module.attribute` (a non-spawner, non-dunder, non-module attribute) or as the function of a
     call; anything else (a value, an argument, a default, a base class, a dunder, a module reached
     through another module's attribute) is a spawn the census cannot read, and so is refused."""
-    parents = {id(child): node for node in ast.walk(tree) for child in ast.iter_child_nodes(node)}
+    parents = {child: node for node in ast.walk(tree) for child in ast.iter_child_nodes(node)}
     annotations = set()
     for node in ast.walk(tree):
         held = []
@@ -309,7 +309,7 @@ def referenced(tree, inside):
         # An annotation is evaluated when its line runs, so one that holds code (a call, a
         # lambda, an assignment) is read as code; only a type named by names is passed over.
         held = [part for part in held if not any(map(runs_code, ast.walk(part)))]
-        annotations.update(id(sub) for part in held for sub in ast.walk(part))
+        annotations.update(sub for part in held for sub in ast.walk(part))
     spawners = {f"{m}.{n}" for m, names in DOCUMENTED_SPAWNERS.items() for n in names}
     found, bound = [], {}
     for node in ast.walk(tree):
@@ -319,9 +319,9 @@ def referenced(tree, inside):
                     name = alias.name if alias.asname else alias.name.split(".")[0]
                     bound[alias.asname or name] = importlib.import_module(name)
     for node in ast.walk(tree):
-        if id(node) in annotations:
+        if node in annotations:
             continue
-        where = inside.get(id(node), "outside the helpers")
+        where = inside.get(node, "outside the helpers")
         if isinstance(node, ast.ImportFrom) and (node.module or "").split(".")[0] in READ_MODULES:
             try:
                 source = importlib.import_module(node.module)
@@ -347,9 +347,9 @@ def referenced(tree, inside):
                     "through another module"
                 )
     for node in ast.walk(tree):
-        if id(node) in annotations:
+        if node in annotations:
             continue
-        where = inside.get(id(node), "outside the helpers")
+        where = inside.get(node, "outside the helpers")
         if isinstance(node, ast.Import):
             found += [
                 f"{where}: import {alias.name}: a module the census has not read"
@@ -366,14 +366,14 @@ def referenced(tree, inside):
                 f"{where}: {ast.unparse(node)}: {node.attr} reached through another module"
             )
         elif isinstance(node, ast.Name) and node.id in SPAWNING_MODULES:
-            parent = parents.get(id(node))
+            parent = parents.get(node)
             read = (
                 isinstance(parent, ast.Attribute)
                 and parent.value is node
                 and not parent.attr.startswith("__")
             )
             if read and f"{node.id}.{parent.attr}" in spawners:
-                call = parents.get(id(parent))
+                call = parents.get(parent)
                 read = isinstance(call, ast.Call) and call.func is parent
             if not read:
                 shown = ast.unparse(parent if isinstance(parent, ast.Attribute) else node)
