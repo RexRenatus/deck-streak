@@ -1,0 +1,50 @@
+{
+  "cases": [
+    {
+      "input": {
+        "name": "mcp_auth._RATE_LIMIT_WINDOW_SECS"
+      },
+      "output": 60.0
+    },
+    {
+      "input": {
+        "name": "mcp_auth._RATE_LIMIT_MAX_FAILURES"
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "name": "mcp_auth._RATE_LIMIT_MAX_BUCKETS"
+      },
+      "output": 512
+    },
+    {
+      "input": {
+        "name": "mcp_auth._RATE_LIMIT_BUCKET_HISTORY_CAP"
+      },
+      "output": 10
+    },
+    {
+      "input": {
+        "name": "mcp_auth.DENIED_MESSAGE"
+      },
+      "output": "unauthorized"
+    },
+    {
+      "input": {
+        "name": "mcp_auth.SCOPE_LAW_TRACK"
+      },
+      "output": "law_track"
+    }
+  ],
+  "function": "mcp_auth.constants",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "constants",
+  "registry": "tools/parity-oracle/registry/spec_119.py",
+  "registry_sha256": "e103a6f7a592d19aa7d71e41c4d60d5f73a0cbb2e9cc553253f17699dfad8611",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}
