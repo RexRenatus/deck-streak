@@ -992,16 +992,12 @@ fn zone_pin() -> bool {
     let Some(value) = value.to_str() else {
         return false;
     };
-    let shaped = !value.is_empty()
-        && value != "localtime"
-        && !value.starts_with(':')
-        && !value.starts_with('/')
-        && !value.split('/').any(|part| part == "..");
-    shaped
+    // The grammar refuses an empty value, `localtime`, a path and a `..` part, so only a rule
+    // reaches the zone directories' probe.
+    is_posix_rule(value)
         && !ZONE_DIRECTORIES
             .iter()
             .any(|directory| Path::new(directory).join(value).exists())
-        && is_posix_rule(value)
 }
 
 /// Whether `rule` parses as a POSIX zone rule: a name, an offset, and optionally a daylight name,
