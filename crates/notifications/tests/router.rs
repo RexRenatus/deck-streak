@@ -12,6 +12,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use deck_streak_kernel::{StudyDayRule, UtcOffset};
+use deck_streak_notifications::router::seed_celebrations_off;
 use deck_streak_notifications::{Decision, Hold, LapseContext, Reason, Router, Surface, Tier};
 use support::{DAY, Harness, Recorded, at};
 
@@ -837,5 +838,53 @@ async fn a_holding_router_holds_a_celebration_it_cannot_send() {
         harness.deliveries().await,
         1,
         "the held celebration keeps its claim; the nudge's key is released"
+    );
+}
+
+/// The celebrations' switch is seeded off where none is stored, and a stored value is kept
+/// (SPEC-319 R4; seat ruling 68: the notifications crate's own killer of the seeding stub).
+#[tokio::test]
+async fn seeding_the_celebrations_switch_stores_off_and_keeps_a_stored_value() {
+    async fn stored(harness: &Harness, setting: &str) -> Option<String> {
+        sqlx::query_scalar("SELECT value FROM notification_settings WHERE key = ?")
+            .bind(setting)
+            .fetch_optional(harness.db.reader())
+            .await
+            .expect("the setting is read")
+    }
+
+    let fresh = Harness::new(at(DAY, 12, 0)).await;
+    let kind = fresh
+        .policy
+        .kind("celebration")
+        .expect("the policy declares the celebration kind");
+    let setting = kind
+        .setting()
+        .expect("the celebration kind names a switch")
+        .to_owned();
+    assert_eq!(
+        stored(&fresh, &setting).await,
+        None,
+        "nothing is stored yet"
+    );
+    seed_celebrations_off(&fresh.policy, &fresh.db, at(DAY, 12, 0))
+        .await
+        .expect("the switch is seeded");
+    assert_eq!(
+        stored(&fresh, &setting).await.as_deref(),
+        Some("0"),
+        "a fresh store is seeded off, at the policy's disable value"
+    );
+
+    let kept = Harness::new(at(DAY, 12, 0)).await;
+    let other = "1";
+    kept.set(&setting, other).await;
+    seed_celebrations_off(&kept.policy, &kept.db, at(DAY, 12, 0))
+        .await
+        .expect("the seed ignores a stored value");
+    assert_eq!(
+        stored(&kept, &setting).await.as_deref(),
+        Some(other),
+        "a stored value is never overwritten"
     );
 }
