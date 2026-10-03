@@ -425,3 +425,36 @@ fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
     );
     items
 }
+
+/// The shape the listen setting's parser names, spelled here as the census reads it (F1).
+const LISTEN_SHAPE: &str = "a socket address with a port";
+
+#[test]
+fn every_listen_refusal_reads_its_own_text() {
+    assert_eq!(
+        ListenRefusal::Unset.to_string(),
+        "it is required and is not set"
+    );
+    assert_eq!(
+        ListenRefusal::NotAnAddress.to_string(),
+        format!("it is not {LISTEN_SHAPE}")
+    );
+    assert_eq!(
+        ListenRefusal::NotAnAddress.to_string(),
+        "it is not a socket address with a port"
+    );
+    assert_eq!(
+        ListenRefusal::NotLoopback.to_string(),
+        "it is not a loopback address"
+    );
+}
+
+#[test]
+fn a_listen_address_reads_as_the_socket_address_it_holds() {
+    let v4 = ListenAddress::loopback(SocketAddr::from((Ipv4Addr::LOCALHOST, 8123)))
+        .expect("a loopback address");
+    assert_eq!(v4.to_string(), "127.0.0.1:8123");
+    let v6 = ListenAddress::loopback(SocketAddr::from((Ipv6Addr::LOCALHOST, 9000)))
+        .expect("a loopback address");
+    assert_eq!(v6.to_string(), "[::1]:9000");
+}

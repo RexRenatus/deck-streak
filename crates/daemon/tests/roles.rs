@@ -10,6 +10,7 @@
 #![allow(clippy::expect_used, clippy::print_stdout)]
 
 use std::ffi::OsStr;
+use std::os::unix::net::UnixDatagram;
 use std::fs;
 use std::process::{Command, Output};
 use std::sync::Arc;
@@ -953,5 +954,58 @@ fn the_mcp_role_is_a_known_role() {
     assert!(
         message.contains("the roles are: api, bot, job, data, mcp;"),
         "{message}"
+    );
+}
+
+#[test]
+fn the_mcp_role_that_cannot_open_its_database_says_stopping_on_its_notify_socket() {
+    // The database's path holds a directory, so the open refuses after the role has bound its
+    // listener and made its notifier: the role leaves before it serves, and `stop_before_serving`
+    // is what tells systemd `STOPPING=1` on the way out.
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let state = directory.path().join("state");
+    fs::create_dir_all(state.join(DATABASE_FILE)).expect("a directory where the database goes");
+    let credentials = directory.path().join("credentials");
+    fs::create_dir(&credentials).expect("the credentials directory");
+    for (id, stem) in [
+        ("mcp-core-token", "stopping-core"),
+        ("mcp-law-track-token", "stopping-law"),
+    ] {
+        let value = format!("{stem}-{}", "k".repeat(32));
+        fs::write(credentials.join(id), format!("{value}\n")).expect("a credential");
+    }
+    let socket_path = directory.path().join("notify.socket");
+    let socket = UnixDatagram::bind(&socket_path).expect("the notify socket binds");
+    socket
+        .set_nonblocking(true)
+        .expect("a non-blocking notify socket");
+
+    let output = deckstreakd(
+        &["mcp"],
+        &[
+            ("STATE_DIRECTORY", state.as_os_str()),
+            ("CREDENTIALS_DIRECTORY", credentials.as_os_str()),
+            ("DECKSTREAK_MCP_LISTEN", OsStr::new("127.0.0.1:0")),
+            ("NOTIFY_SOCKET", socket_path.as_os_str()),
+        ],
+    );
+    assert_eq!(output.status.code(), Some(1), "{}", describe(&output));
+
+    // The child has exited, so every datagram it sent is already queued.
+    let mut seen = Vec::new();
+    let mut buffer = [0_u8; 256];
+    while let Ok(length) = socket.recv(&mut buffer) {
+        seen.push(String::from_utf8_lossy(&buffer[..length]).into_owned());
+    }
+    assert!(
+        seen.iter().any(|message| message == "READY=1"),
+        "the role was bound and ready before it refused; seen: {seen:?}"
+    );
+    assert_eq!(
+        seen.iter()
+            .filter(|message| message.as_str() == "STOPPING=1")
+            .count(),
+        1,
+        "the role did not say STOPPING=1 once; seen: {seen:?}"
     );
 }

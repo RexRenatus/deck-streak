@@ -260,3 +260,41 @@ async fn initialize_answers_json_and_no_session_id() {
     );
     assert_eq!(list.header("mcp-session-id"), None);
 }
+
+#[tokio::test(flavor = "current_thread")]
+async fn serve_answers_a_request_before_its_shutdown_resolves_then_returns() {
+    let law = ScriptedLaw::answering(full_block());
+    let guard = support::guard();
+    let router = deck_streak_mcp::server::router(law, Arc::clone(&guard));
+    let listener = deck_streak_mcp::server::bind(
+        deck_streak_mcp::ListenAddress::loopback(std::net::SocketAddr::from((
+            std::net::Ipv4Addr::LOCALHOST,
+            0,
+        )))
+        .expect("a loopback address"),
+    )
+    .await
+    .expect("a loopback port");
+    let address = listener.local_addr().expect("the bound address");
+    let (stop, stopped) = tokio::sync::oneshot::channel::<()>();
+    let serving = tokio::spawn(deck_streak_mcp::server::serve(listener, router, async move {
+        drop(stopped.await);
+    }));
+    let served = Served { address, guard };
+
+    let answer = served
+        .post("/mcp", Some(&core_token()), &initialize())
+        .await;
+    assert_eq!(answer.status, 200, "initialize: {}", answer.text());
+    assert!(
+        !serving.is_finished(),
+        "serve returned before its shutdown resolved"
+    );
+
+    stop.send(()).expect("serve still waits on its shutdown");
+    let finished = tokio::time::timeout(BOUND, serving)
+        .await
+        .expect("serve returns within the bound once its shutdown resolves")
+        .expect("the serving task does not panic");
+    finished.expect("serve ends without an error");
+}
