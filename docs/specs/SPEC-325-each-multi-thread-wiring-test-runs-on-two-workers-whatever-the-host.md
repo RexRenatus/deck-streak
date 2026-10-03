@@ -60,17 +60,20 @@ R5. `cargo test -p deck-streak-daemon --lib wiring::tests` passes on default par
 |---|---|---|
 | A1 | a runtime built from the module's multi-thread attribute runs two workers, not the host's core count | `cargo test -p deck-streak-daemon --lib -- --exact wiring::tests::a_multi_thread_wiring_test_runs_on_two_workers_whatever_the_host` |
 | A2 | every multi-thread `tokio::test` attribute in `wiring.rs` is the bounded spelling, the census examines at least one, and a planted unbounded attribute is refused by its line | `cargo test -p deck-streak-daemon --lib -- --exact wiring::tests::every_multi_thread_wiring_test_bounds_its_runtime_to_two_workers` |
-| A3 | the module passes on default parallel threads, 10 consecutive runs; under the section 1 budget the base fails five multi-thread tests with the issue's message and the head passes | `cargo test -p deck-streak-daemon --lib wiring::tests` |
+| A3 | the module passes on default parallel threads, 10 consecutive runs; under the section 1 budget the base fails five multi-thread tests with the issue's message and the head passes | `cargo test -p deck-streak-daemon --lib wiring::tests::` |
 
 ```acceptance
 A1: cargo test -p deck-streak-daemon --lib -- --exact wiring::tests::a_multi_thread_wiring_test_runs_on_two_workers_whatever_the_host
 A2: cargo test -p deck-streak-daemon --lib -- --exact wiring::tests::every_multi_thread_wiring_test_bounds_its_runtime_to_two_workers
-A3: cargo test -p deck-streak-daemon --lib wiring::tests
+A3: cargo test -p deck-streak-daemon --lib wiring::tests::
 ```
 
-A3's ten runs and its budgeted runs are measured and quoted in `docs/red-first/SPEC-325.md`. The
-budget is evidence, never a gate: it counts every task the user runs, so a committed test under it
-would depend on whatever else runs at that moment (ADR-326).
+A3 spells the module's filter with its trailing `::`, so the filter names the module's path
+rather than a test name; it selects the same 14 tests as #577's `wiring::tests`, as the library
+test binary's `--list` shows for both. A3's ten runs and its budgeted runs are measured and quoted
+in `docs/red-first/SPEC-325.md`. The budget is evidence, never a gate: it counts every task the
+user runs, so a committed test under it would depend on whatever else runs at that moment
+(ADR-326).
 
 ## 4. File manifest
 

@@ -6,9 +6,10 @@ still unbounded, A1's own included, and the module ran before the cure. A1 and A
 assertion, and they are the only two of the module's 14 tests that fail on an unloaded run:
 `test result: FAILED. 12 passed; 2 failed`.
 
-A3 is the module command itself. Its red is the issue's own failure, reproduced deterministically
-in a shell whose `ulimit -u` is set 100 tasks above the count of tasks the user already runs
-(SPEC-325 section 1). The budget is evidence, never a gate (ADR-326).
+A3 is the module command itself, its fence spelling the filter `wiring::tests::`, which selects
+the same 14 tests as #577's `wiring::tests`. Its red is the issue's own failure, reproduced
+deterministically in a shell whose `ulimit -u` is set 100 tasks above the count of tasks the user
+already runs (SPEC-325 section 1). The budget is evidence, never a gate (ADR-326).
 
 ```red-first
 A1: red at 21d366c5: assertion `left == right` failed: the runtime runs the attribute's two workers, not one per core of the host; left: the host's core count, right: 2
@@ -59,8 +60,8 @@ runs 1 to 10: test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 1 fil
 
 ## The acceptance runs
 
-At 6234909b, `cargo test -j 1 -p deck-streak-daemon --lib wiring::tests` on default parallel
-threads, ten consecutive runs, then the daemon library whole once:
+At 6234909b, `cargo test -j 1 -p deck-streak-daemon --lib wiring::tests`, #577's own command, on
+default parallel threads, ten consecutive runs, then the daemon library whole once:
 
 ```text
 acceptance run 1 rc=0 test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out

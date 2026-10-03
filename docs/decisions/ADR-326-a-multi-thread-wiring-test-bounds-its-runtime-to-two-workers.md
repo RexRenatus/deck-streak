@@ -27,7 +27,7 @@ its tests run under?
 
 ## Considered Options (the alternatives it was chosen against)
 
-- Bound each multi-thread test's runtime to two workers with `worker_threads = 2` (chosen).
+- Bound each multi-thread test's runtime to two workers with `worker_threads = 2`: chosen, because it removes the growth with the host while keeping every test, its flavor and its parallel run.
 - Give each test its own temporary directory or database path: lost, because each test already has one (SPEC-325 section 1), so it would cure nothing.
 - Serialise the module (`--test-threads=1` in a gate, a test mutex, a serial attribute): lost, because it weakens #577's acceptance, which runs on parallel threads, hides the demand instead of bounding it, and a serial attribute is a new dependency.
 - Switch the five tests to the current-thread flavor: lost, because it changes what they exercise, one thread for the test body and every task it spawns, where the bound keeps the flavor and fixes only its size.
