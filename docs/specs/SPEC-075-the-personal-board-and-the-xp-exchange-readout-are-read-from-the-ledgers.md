@@ -203,3 +203,143 @@ level; the readout reads both XP tables and analytics' rollups.
 | `S07505-ONE-GRADUATION-DAY-PER-BUCKET` | `crates/progression/src/exchange.rs` | a day's graduations count once per bucket | `exchange_rates::the_exchange_readout_matches_the_parity_golden` |
 | `S07506-THE-BUCKET-PREFIX` | `crates/progression/src/exchange.rs` | a source's bucket ends at its first colon | `exchange_rates::the_bucket_of_a_source_matches_the_parity_golden` |
 | `S07507-THE-WINDOW-CAP` | `crates/coordination/src/progression/exchange_view.rs` | a window reads at most 3650 study days | `exchange_view::the_exchange_window_matches_the_parity_golden` |
+
+## 10. Amendments, 2026-10-03: where each read lives, at promotion
+
+Promoted by the delivery that builds it (ADR-016). The sections above are kept byte for byte; this
+section and the ones after it are appended, and ADR-075 decides them. Five things the text above
+says are corrected here, each measured at `dev` a9d2b73:
+
+1. **The XP rows are read in progression.** R5 and row S07504 above place the two-table read in
+   coordination's `exchange_view.rs`. Progression's census test (`crates/progression/tests/xp_census.rs`,
+   ADR-072) refuses every crate but progression whose source names the settled table. So
+   progression's `exchange.rs` reads the window's rows of both XP tables (`exchange::xp_rows`),
+   analytics answers the window's graduations (`rollup::graduations`, new), and coordination's
+   `exchange_view.rs` joins the two and computes the window, naming neither XP table. R5 holds as
+   written; only the place it is met moves.
+2. **Each row's killer is in its row's crate.** Row S07502 above pairs a progression target with a
+   coordination killer, which selects no test under `-p deck-streak-progression`. Section 14
+   restates S07502 with a progression killer, and S07504 on progression's two-table read.
+3. **The views and the routes join existing modules.** The manifest above names coordination's
+   `lib.rs` for the two views; they are declared in coordination's `progression/mod.rs`, beside the
+   level and records views. It also adds an api module of its own and changes the router; instead
+   `GET /api/board` joins `crates/api/src/badges_routes.rs`, beside `GET /api/records`, and
+   `GET /api/xp/exchange` joins `crates/api/src/xp_routes.rs`, beside `GET /api/level`, each through
+   the module's existing router. The api test file keeps the name `crates/api/tests/board_routes.rs`,
+   so A2's fence line stands.
+4. **Re-pricing belongs to #281.** Sections 1 and 5 cite #267 for the per-source re-pricing. The
+   owner decided at #267 to revive it as #281 (SPEC-001 §14), and #80's third box, per-source
+   multipliers that never re-price a past grant, travels with it. This delivery delivers #80's
+   readout and its window, and leaves the multipliers to #281.
+5. **The pure rules are proved.** The text above names no formal entry, though the best day's tie
+   order, the bucket, the once-per-day denominator, the defined flag and the capped window are pure
+   functions. A Lean entry proves them (R12).
+
+Two readings the text above leaves implicit are written down:
+
+- The best day reads at most 365 rollup rows on or before today, as R1 says, so a rollup after today
+  is never read. The recompute writes no day after the current study day, so the predecessor's read,
+  which has no upper bound, and this one agree on every store DeckStreak can hold.
+- #80 says the window is clamped to 1..3650. The predecessor's code reads a window of 0 or less as
+  every day, as R6 says, and the golden decides.
+
+## 11. Requirements of the 2026-10-03 amendment
+
+R10. The readout's three reads (the grants, the settled rows and the graduations) are one read
+     transaction, so a rate never divides one recompute's XP by another recompute's graduations.
+R11. Each route answers its failures by name. `GET /api/board` answers 401 without the owner's
+     session, 503 `database_not_open` before the database is open, and 500 `board_unreadable` when
+     a read fails. `GET /api/xp/exchange` answers 400 `invalid_days` when `days` is not an integer,
+     401 without the owner's session, 503 `database_not_open` and 500 `exchange_unreadable`, and
+     reads every day when `days` is absent.
+R12. `formal/lean/Formal/Exchange.lean` proves six theorems of its ports of the bucket, the
+     readout's fold, the best day and the window, each with a witness that a mutated port violates
+     it, and the readout answers every vector of `formal/vectors/exchange.jsonl`.
+
+## 12. Acceptance criteria of the 2026-10-03 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A11 | a tie for the best score goes to the most recent of the tied days | `the_best_day_on_a_tie_is_the_most_recent` |
+| A12 | the window's XP rows come from both XP tables: a settled row inside the window is read and one outside it is not | `the_window_rows_read_both_xp_tables` |
+| A13 | the readout answers every vector the Lean entry writes, a defined rate equal to the total over the graduations | `exchange_rates_answers_every_lean_vector` |
+| A14 | the exchange route refuses a `days` that is not an integer with 400 `invalid_days` | `the_exchange_route_refuses_a_malformed_window` |
+| A15 | the exchange route answers an undefined rate as JSON null beside `rate_defined` false | `the_exchange_route_answers_null_for_an_undefined_rate` |
+| A16 | the graduations of a window are each day's own, and no day outside the window is answered | `the_graduations_of_a_window_are_each_days_own` |
+| A17 | the board route answers its rows in order, its whole body equal to the expected JSON | `the_board_route_answers_its_rows_in_order` |
+
+```acceptance
+A11: cargo test -p deck-streak-progression --test board_rows -- --exact the_best_day_on_a_tie_is_the_most_recent
+A12: cargo test -p deck-streak-progression --test exchange_rates -- --exact the_window_rows_read_both_xp_tables
+A13: cargo test -p deck-streak-progression --test formal_vectors_exchange -- --exact exchange_rates_answers_every_lean_vector
+A14: cargo test -p deck-streak-api --test board_routes -- --exact the_exchange_route_refuses_a_malformed_window
+A15: cargo test -p deck-streak-api --test board_routes -- --exact the_exchange_route_answers_null_for_an_undefined_rate
+A16: cargo test -p deck-streak-analytics --test rollup_graduations -- --exact the_graduations_of_a_window_are_each_days_own
+A17: cargo test -p deck-streak-api --test board_routes -- --exact the_board_route_answers_its_rows_in_order
+```
+
+No test can observe R10's torn read deterministically, so R10 has no criterion and no row: ADR-075
+and review hold it.
+
+## 13. Amendments, 2026-10-03: the files this delivery adds or changes
+
+Against the manifest of section 4:
+
+- `crates/progression/tests/board_rows.rs`: added: A11.
+- `crates/progression/tests/formal_vectors_exchange.rs`: added: A13.
+- `crates/progression/tests/exchange_rates.rs`: added: A3 to A5, and A12.
+- `crates/analytics/src/rollup.rs`: changed: `graduations`, a window's graduations by day.
+- `crates/analytics/tests/rollup_graduations.rs`: added: A16.
+- `crates/coordination/src/progression/mod.rs`: changed: the two views' modules.
+- `crates/api/src/badges_routes.rs`: changed: `GET /api/board`.
+- `crates/api/src/xp_routes.rs`: changed: `GET /api/xp/exchange`.
+- `crates/api/tests/board_routes.rs`: added: A2, A14, A15 and A17.
+- `web/app/src/lib/records/board.test.ts`: added: the board parser's refusals.
+- `web/app/src/lib/level/exchange.test.ts`: added: the readout parser's refusals.
+- `web/app/src/lib/api.ts`: changed: `board()` and `exchange()`.
+- `web/app/src/routes/records.test.ts`: changed: its stub answers `/api/board`.
+- `web/app/src/routes/level.test.ts`: changed: its stub answers `/api/xp/exchange`.
+- `web/app/messages/en.json`, `web/app/messages/es.json`, `web/app/messages/fr.json`,
+  `web/app/messages/ja.json`, `web/app/messages/ko.json`, `web/app/messages/zh-Hans.json`,
+  `web/app/messages/zh-Hant.json`: changed: the board's and the card's messages.
+- `web/app/tests/a11y.spec.ts`: changed: stubs for the two new paths.
+- `formal/lean/Formal/Exchange.lean`: added: the Lean entry (R12).
+- `formal/lean/Formal/ExchangeVectors.lean`: added: its vector writer.
+- `formal/lean/Formal/Vectors.lean`: changed: the writer's arm.
+- `formal/vectors/exchange.jsonl`: added: the vectors A13 answers.
+- `docs/decisions/ADR-075-the-board-and-the-exchange-readout-are-read-models-joined-in-coordination.md`: added.
+- `docs/schematics/the-personal-board-and-the-exchange-readout.md`: added: the data flow.
+- `changelog.d/feat-board-exchange-075.md`: the fragment section 4 names.
+- `crates/coordination/src/lib.rs`: unchanged; the views are declared in its progression module.
+- `crates/api/src/board_routes.rs`: unchanged; it is not added, and the routes join two existing modules.
+- `crates/api/src/router.rs`: unchanged; no route is registered there.
+
+## 14. Amendments, 2026-10-03: the mutation rows
+
+Rows S07502 and S07504 are restated; S07508 to S07516 are added. Every row is in
+`scripts/mutation-rows.d/S07500-S07599.json`, its killer in its row's own crate.
+
+| row | target | what it guards | killer |
+|---|---|---|---|
+| `S07501-THE-BOARD-WINDOW` | `crates/coordination/src/progression/board_view.rs` | the best day is read among the 365 most recent rollups | `board_view::the_board_matches_the_parity_golden` |
+| `S07502-THE-LATEST-BEST-DAY-ON-A-TIE` | `crates/progression/src/board.rs` | a tie for the best score goes to the most recent day | `board_rows::the_best_day_on_a_tie_is_the_most_recent` |
+| `S07503-AN-UNDEFINED-RATE` | `crates/progression/src/exchange.rs` | a bucket with no graduation has no rate | `exchange_rates::a_bucket_with_no_graduation_has_an_undefined_rate` |
+| `S07504-BOTH-XP-TABLES` | `crates/progression/src/exchange.rs` | the window's rows hold the settled XP beside the grants | `exchange_rates::the_window_rows_read_both_xp_tables` |
+| `S07505-ONE-GRADUATION-DAY-PER-BUCKET` | `crates/progression/src/exchange.rs` | a day's graduations count once per bucket | `exchange_rates::the_exchange_readout_matches_the_parity_golden` |
+| `S07506-THE-BUCKET-PREFIX` | `crates/progression/src/exchange.rs` | a source's bucket ends at its first colon | `exchange_rates::the_bucket_of_a_source_matches_the_parity_golden` |
+| `S07507-THE-WINDOW-CAP` | `crates/coordination/src/progression/exchange_view.rs` | a window spans at most 3650 study days | `exchange_view::the_exchange_window_matches_the_parity_golden` |
+| `S07508-EVERY-DAY-AT-ZERO` | `crates/coordination/src/progression/exchange_view.rs` | a window of 0 spans every day | `exchange_view::the_exchange_window_matches_the_parity_golden` |
+| `S07509-THE-WINDOW-ENDS-TODAY` | `crates/coordination/src/progression/exchange_view.rs` | a window of N spans N days ending today | `exchange_view::the_exchange_window_matches_the_parity_golden` |
+| `S07510-THE-BOARD-ROUTE-ASKS-FOR-THE-OWNER` | `crates/api/src/badges_routes.rs` | the board answers the owner's session only | `board_routes::the_board_and_exchange_routes_answer_only_the_owner` |
+| `S07511-THE-EXCHANGE-ROUTE-ASKS-FOR-THE-OWNER` | `crates/api/src/xp_routes.rs` | the readout answers the owner's session only | `board_routes::the_board_and_exchange_routes_answer_only_the_owner` |
+| `S07512-BOARD-PATH` | `crates/api/src/badges_routes.rs` | the board's path is `/api/board` | `board_routes::the_board_and_exchange_routes_answer_only_the_owner` |
+| `S07513-EXCHANGE-PATH` | `crates/api/src/xp_routes.rs` | the readout's path is `/api/xp/exchange` | `board_routes::the_board_and_exchange_routes_answer_only_the_owner` |
+| `S07514-A-MALFORMED-WINDOW-IS-REFUSED` | `crates/api/src/xp_routes.rs` | a `days` that is not an integer is refused by name | `board_routes::the_exchange_route_refuses_a_malformed_window` |
+| `S07515-THE-BOARD-READS-THE-LANGUAGE-STREAK` | `crates/coordination/src/progression/board_view.rs` | the board's streak is the language streak | `board_view::the_board_matches_the_parity_golden` |
+| `S07516-AN-UNDEFINED-RATE-IS-NULL` | `crates/api/src/xp_routes.rs` | an undefined rate is JSON null, never 0 | `board_routes::the_exchange_route_answers_null_for_an_undefined_rate` |
+
+## 15. Amendments, 2026-10-03: the Status names the delivery
+
+The Status line at the top reads planned. This SPEC is delivered by the pull request that closes
+#79 and #80: it moved the SPEC to `docs/specs/` with its tests and `docs/red-first/SPEC-075.md`
+(ADR-016), and the status is delivered.
