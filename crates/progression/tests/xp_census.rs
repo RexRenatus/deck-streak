@@ -41,6 +41,9 @@ use sha2::{Digest, Sha256};
 #[macro_use]
 #[path = "../../../tools/table-census/population.rs"]
 mod population;
+// The shared reader of every crate's literals (SPEC-324 R1 to R5), included by path as above.
+#[path = "../../../tools/table-census/table_census.rs"]
+mod table_census;
 
 use population::Spelling;
 
@@ -67,6 +70,9 @@ const RUSTFLAGS: [&str; 2] = ["--force-warn", "deprecated"];
 /// Coordination's targets that are not its product: a test, a bench or an example may call
 /// `settle` with any cause.
 const CALLER_AIDS: [&str; 3] = ["test", "bench", "example"];
+/// The files of progression's own code that progression admits may call `settle` beside its own
+/// re-exports (#445): none, so every wrapper of the operation in progression is refused by name.
+const OWNER_ADMITS: [&str; 0] = [];
 /// The longest one cargo run of the census may take before the census fails by name.
 const CARGO_LIMIT: Duration = Duration::from_mins(30);
 /// The longest chain of macro calls the census follows from one use of `settle`: past it the
@@ -443,14 +449,37 @@ fn written_in(message: &Value, workspace: &Path, target: &Path) -> Result<Vec<St
     Ok(chain)
 }
 
+/// Where a use of `settle` is written: the innermost file of the repository its primary span or a
+/// macro call site it was expanded from lies in, by its path under the workspace, and the byte the
+/// span starts at there (rustc counts bytes), or none when no file of the repository holds it.
+fn innermost(message: &Value, workspace: &Path, target: &Path) -> Option<(String, usize)> {
+    let (workspace, target) = (canonical(workspace), canonical(target));
+    let primary = message["message"]["spans"]
+        .as_array()?
+        .iter()
+        .find(|span| span["is_primary"] == true)?;
+    std::iter::successors(Some(primary), |span| {
+        Some(&span["expansion"]["span"]).filter(|next| next.is_object())
+    })
+    .take(EXPANSION_LIMIT)
+    .find_map(|span| {
+        let path = canonical(&workspace.join(span["file_name"].as_str()?));
+        let byte = usize::try_from(span["byte_start"].as_u64()?).ok()?;
+        (path.starts_with(&workspace) && !path.starts_with(&target))
+            .then(|| (under(&workspace, &path), byte))
+    })
+}
+
 /// One use of `settle` rustc reported: the folder of the package cargo compiled it in, the kind of
 /// the target, the repository's files it is written in (innermost first), and the file it is
 /// named by: the outermost of those, or the target's root when the code is not the repository's.
+/// `at` is where it is written: the innermost of those files and the byte its span starts at.
 struct Use {
     folder: String,
     kind: String,
     chain: Vec<String>,
     file: String,
+    at: Option<(String, usize)>,
 }
 
 /// The `--config` arguments of one pass: every package the workspace compiles, each named, with
@@ -886,6 +915,7 @@ fn compiled_uses(root: &Path, target: &Path) -> Result<(Vec<Use>, Vec<String>), 
                         Some([kind]) => kind.as_str().unwrap_or_default().to_owned(),
                         _ => String::new(),
                     },
+                    at: innermost(&message, &workspace, target),
                     file: chain.last().cloned().unwrap_or_else(|| {
                         under(
                             &workspace,
@@ -1012,6 +1042,34 @@ fn outside_the_steps(root: &Path, used: &Use) -> Option<String> {
         .cloned()
 }
 
+/// The refusal of `used` by the owner rule (#445), if any: a use of `settle` in progression's own
+/// package, by a target that is not a test, a bench or an example, in a file `admits` does not
+/// name, written outside every `use` declaration of its innermost file. A re-export or an import
+/// is the owner's own wiring; a wrapper, a function pointer or a generic is a second door to the
+/// operation. A use the census cannot place in a file of the repository is refused.
+fn owners_own_operation(root: &Path, used: &Use, admits: &[&str]) -> Option<String> {
+    if used.folder != format!("crates/{OWNER}") || CALLER_AIDS.iter().any(|aid| *aid == used.kind) {
+        return None;
+    }
+    if admits.contains(&used.file.as_str()) {
+        return None;
+    }
+    if let Some((file, offset)) = &used.at {
+        let text = fs::read_to_string(root.join(file)).unwrap_or_default();
+        if table_census::use_declarations(&text)
+            .iter()
+            .any(|range| range.contains(offset))
+        {
+            return None;
+        }
+    }
+    Some(format!(
+        "{} calls settle inside {OWNER}'s own code, and only {CALLER}'s code may unless {OWNER} \
+         admits it",
+        used.file
+    ))
+}
+
 /// The census of the workspace at `root`, whose code is checked in `target`, a target directory
 /// apart from every other build: cargo holds the running build's own directory.
 fn census_in(root: &Path, target: &Path) -> Census {
@@ -1042,6 +1100,9 @@ fn census_in(root: &Path, target: &Path) -> Census {
             census.sources.push(name);
         }
     }
+    census
+        .refused
+        .extend(table_census::refusals(root, TABLE, OWNER, &census.naming));
     // Each census compiles in a target directory of its own, made empty under `target` and removed
     // when the census ends, so no build output, build-script output or fingerprint that another
     // build wrote can serve this one (SPEC-072 §12, round 8).
@@ -1063,6 +1124,9 @@ fn census_in(root: &Path, target: &Path) -> Census {
         Ok((uses, read)) => {
             census.refused.extend(read);
             for used in uses {
+                census
+                    .refused
+                    .extend(owners_own_operation(root, &used, &OWNER_ADMITS));
                 if used.folder == format!("crates/{OWNER}") {
                     continue;
                 }
@@ -1296,8 +1360,9 @@ fn the_census_reads_progressions_own_reexports_as_it_reads_the_other_crates() {
     // Progression re-exports `settle` under other names, one through another alias, one inside a
     // nested module and one through the renamed module. A caller outside coordination that names
     // only the new names never spells `settle`, and the compiler reports it all the same.
-    // Progression's own use of the names, coordination's callers by the same rules as before, a
-    // mention in a comment and a crate's own function of an alias's name are not refused.
+    // Progression's own re-exports and imports of the names, coordination's callers by the same
+    // rules as before, a mention in a comment and a crate's own function of an alias's name are not
+    // refused. Progression's own wrapper in `inner.rs` is, since progression admits no file (#445).
     let planted = tempfile::tempdir().expect("a temporary directory");
     plant_workspace(planted.path());
     plant(
@@ -1392,6 +1457,8 @@ fn the_census_reads_progressions_own_reexports_as_it_reads_the_other_crates() {
         [
             "crates/coordination/src/shortcut.rs calls settle outside the recompute steps, and \
              only the owner's correction may",
+            "crates/progression/src/inner.rs calls settle inside progression's own code, and only \
+             coordination's code may unless progression admits it",
             "crates/quests/src/chained_user.rs calls settle, and only coordination's code may",
             "crates/quests/src/module_user.rs calls settle, and only coordination's code may",
             "crates/quests/src/nested_user.rs calls settle, and only coordination's code may",
@@ -6278,6 +6345,31 @@ fn the_owners_own_operation_is_refused_unless_it_admits_it() {
             owners_own("crates/progression/src/wrapper.rs"),
         ]
     );
+}
+
+#[test]
+fn an_admitted_file_of_the_owner_is_accepted() {
+    // A wrapper progression's library writes is refused while progression admits no file, and
+    // accepted once progression admits the file the use is named by.
+    let planted = tempfile::tempdir().expect("a temporary directory");
+    let file = "crates/progression/src/wrapper.rs";
+    let text = "pub fn wrap() -> usize {\n    crate::settle::settle()\n}\n";
+    plant(planted.path(), file, text);
+    let used = Use {
+        folder: format!("crates/{OWNER}"),
+        kind: "lib".to_owned(),
+        chain: vec![file.to_owned()],
+        file: file.to_owned(),
+        at: Some((
+            file.to_owned(),
+            text.rfind("settle()").expect("the call is planted"),
+        )),
+    };
+    assert_eq!(
+        owners_own_operation(planted.path(), &used, &[]),
+        Some(owners_own(file))
+    );
+    assert_eq!(owners_own_operation(planted.path(), &used, &[file]), None);
 }
 
 #[test]

@@ -20,6 +20,9 @@ use std::path::{Path, PathBuf};
 #[macro_use]
 #[path = "../../../tools/table-census/population.rs"]
 mod population;
+// The shared reader of every crate's literals (SPEC-324 R1 to R5), included by path as above.
+#[path = "../../../tools/table-census/table_census.rs"]
+mod table_census;
 
 use population::Spelling;
 
@@ -126,6 +129,9 @@ fn census(root: &Path) -> Census {
             census.sources.push(name);
         }
     }
+    census
+        .refused
+        .extend(table_census::refusals(root, TABLE, OWNER, &census.naming));
     for migration in files(&root.join("migrations"), "sql") {
         let name = relative(root, &migration);
         let file = migration
