@@ -65,7 +65,7 @@ A22: green at ab99ab8
 A23: red at 611eb8e: AssertionError: 1 != 0 : deck-streak-privacy: 1 unexplained mutant(s) in its row (the opening sweep, run 36533127814 at c8d8a30, read listed 29, killed 25, equivalent 0, unexplained 1, unviable 3)
 A23: green at 63f47ca
 A24: red at 74c32fd: AssertionError: 81 != 0 : miniapp: 81 unexplained mutant(s) in its row (the opening sweep, run 36499404209 at a7b8025, read listed 274, killed 193, equivalent 0, unexplained 81, unviable 0)
-A24: green at 1efacb7
+A24: green at 8cae191
 A28: red at e260627: AssertionError in each of its four subtests, each for its own reason: 'True is not false : the rust class applies on test lines [31, 36, 43, 47, 53]' (the test-only diff); 'Lists differ: [46, 58] != [58]' (the mixed diff counted its test module's line as production code); "'mutation: plan: rust applies: 3 production code line(s) in 1 file(s)' not found" (the production-only diff's plan named no production line); and '3 != 0 : mutation: shards: VOID the rust class applies and ... holds no cargo-mutants listing' (cargo-mutants' empty --in-diff output read as no listing)
 A28: green at 8c87e5b
 A19: red at 8eba7ef: AssertionError: 16 != 0 : deck-streak-identity: 16 unexplained mutant(s) in its row (opening sweep run 36511057164 listed 143, killed 97, equivalent 0, unexplained 16, unviable 30)
@@ -177,9 +177,14 @@ its killer passing without the mutant and failing with it, with the file restore
 A28's own red and green lines stand, since the plan at dd734e5 read every line as production and
 the new line adds no red of its own.
 
-A24's green line names 1efacb7, the row commit, in place of 3195635: the dev merge at 5a6b1ae read
-`12 != 18` and d1ffc87 read `12 != 5` until the row was refilled from run 36508131543 at d1ffc87
-(listed 367, killed 362, equivalent 5, unexplained 0, unviable 0).
+A24's green line names 8cae191, the row commit, in place of 1efacb7, which had itself replaced
+3195635: the dev merge at 5a6b1ae read `12 != 18` and d1ffc87 read `12 != 5` until 1efacb7 refilled
+the row from run 36508131543 at d1ffc87. The dev merge at 3f95107 then brought dev's nine records
+beside #309's five, and it and 6ee777d read `5 != 14 : miniapp: equivalent against its fragment`
+until 8cae191 refilled the row from run 37085974717 at 6ee777d (listed 1647, killed 1632,
+equivalent 14, unexplained 0, unviable 1). Between A24's red and green, 2bf094e, 15b4085 and
+d1ffc87 added and changed the Mini App's web tests that kill its mutants; none of them touches
+A24's own test, `scripts/tests/test_mutation_campaign.py`.
 
 A18 is the kernel's row of section 7. Its opening sweep, the weekly battery dispatched with
 `package=deck-streak-kernel` (run 36502933533 at the base, dev a7b8025), listed 368 mutants, all 33
