@@ -8,6 +8,24 @@
       "evidence": "route gives a non-celebration the tier rendered(requested), and rendered answers only Tier::T0 or Tier::T2. At T0 render answers Outcome::Delivered(Tier::T0) with no call, and push answers Pushed::Delivered with no call, which delivered maps to Outcome::Delivered(Tier::T0). At T2 render answers delivered(bot.push_message(&PASS, text).await, Tier::T2), and push with a joined bot calls bot.push_message(&PASS, text) once, which the same delivered maps at Tier::T2. With no bot the guard is never read, since the arm matches Some(bot) only. send_bot has one caller, route; the flush renders through render directly.",
       "reached_by": "router::a_nudge_raised_in_the_mini_app_goes_to_the_bot",
       "issue": "#120"
+    },
+    {
+      "file": "crates/notifications/src/landmarks.rs",
+      "mutant": "replace > with >= in ordinal_label",
+      "anchor": "(value % 100) > 10 && (value % 100) < 14",
+      "reason": "`>=` adds only `value % 100 == 10` to the `th` arm, and the other arm already yields `th` for it (10 % 10 == 0 falls to `_ => \"th\"`), so no input changes its label.",
+      "evidence": "The unit test landmarks::tests::the_th_guard_and_the_match_arm_agree_at_the_ten_and_fourteen_edges measures both arms at 10, 14, 110 and 114: the `match value % 10` arm answers `th` at each, and ordinal_label answers 10th, 14th, 110th and 114th, the same label the guard arm gives. 11, 12, 13, 111, 112 and 113 stay `th` through the guard, whose match arm alone would not.",
+      "reached_by": "landmarks::the_landmark_text_matches_the_parity_golden",
+      "issue": "#127"
+    },
+    {
+      "file": "crates/notifications/src/landmarks.rs",
+      "mutant": "replace < with <= in ordinal_label",
+      "anchor": "(value % 100) > 10 && (value % 100) < 14",
+      "reason": "`<=` adds only `value % 100 == 14` to the `th` arm, and the other arm already yields `th` for it (14 % 10 == 4 falls to `_ => \"th\"`), so no input changes its label.",
+      "evidence": "The unit test landmarks::tests::the_th_guard_and_the_match_arm_agree_at_the_ten_and_fourteen_edges measures both arms at 10, 14, 110 and 114: the `match value % 10` arm answers `th` at each, and ordinal_label answers 10th, 14th, 110th and 114th, the same label the guard arm gives. 11, 12, 13, 111, 112 and 113 stay `th` through the guard, whose match arm alone would not.",
+      "reached_by": "landmarks::the_landmark_text_matches_the_parity_golden",
+      "issue": "#127"
     }
   ]
 }

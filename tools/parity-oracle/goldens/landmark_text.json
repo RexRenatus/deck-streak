@@ -1,0 +1,874 @@
+{
+  "adapter": "with_a_landmark",
+  "cases": [
+    {
+      "class": "ordinal-1",
+      "input": {
+        "day": 19860,
+        "event": "landmark_anniversary",
+        "ordinal": 1
+      },
+      "output": {
+        "gap_honest": "\ud83d\uddd3\ufe0f <b>1st anniversary</b> on {day:19860}\nThe anniversary does not need a streak.",
+        "plain": "\ud83d\uddd3\ufe0f <b>1st anniversary</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-2",
+      "input": {
+        "day": 19860,
+        "event": "landmark_anniversary",
+        "ordinal": 2
+      },
+      "output": {
+        "gap_honest": "\ud83d\uddd3\ufe0f <b>2nd anniversary</b> on {day:19860}\nThe anniversary does not need a streak.",
+        "plain": "\ud83d\uddd3\ufe0f <b>2nd anniversary</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-3",
+      "input": {
+        "day": 19860,
+        "event": "landmark_anniversary",
+        "ordinal": 3
+      },
+      "output": {
+        "gap_honest": "\ud83d\uddd3\ufe0f <b>3rd anniversary</b> on {day:19860}\nThe anniversary does not need a streak.",
+        "plain": "\ud83d\uddd3\ufe0f <b>3rd anniversary</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-4",
+      "input": {
+        "day": 19860,
+        "event": "landmark_anniversary",
+        "ordinal": 4
+      },
+      "output": {
+        "gap_honest": "\ud83d\uddd3\ufe0f <b>4th anniversary</b> on {day:19860}\nThe anniversary does not need a streak.",
+        "plain": "\ud83d\uddd3\ufe0f <b>4th anniversary</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-5",
+      "input": {
+        "day": 19860,
+        "event": "landmark_anniversary",
+        "ordinal": 5
+      },
+      "output": {
+        "gap_honest": "\ud83d\uddd3\ufe0f <b>5th anniversary</b> on {day:19860}\nThe anniversary does not need a streak.",
+        "plain": "\ud83d\uddd3\ufe0f <b>5th anniversary</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-10",
+      "input": {
+        "day": 19860,
+        "event": "landmark_anniversary",
+        "ordinal": 10
+      },
+      "output": {
+        "gap_honest": "\ud83d\uddd3\ufe0f <b>10th anniversary</b> on {day:19860}\nThe anniversary does not need a streak.",
+        "plain": "\ud83d\uddd3\ufe0f <b>10th anniversary</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-teen-11",
+      "input": {
+        "day": 19860,
+        "event": "landmark_anniversary",
+        "ordinal": 11
+      },
+      "output": {
+        "gap_honest": "\ud83d\uddd3\ufe0f <b>11th anniversary</b> on {day:19860}\nThe anniversary does not need a streak.",
+        "plain": "\ud83d\uddd3\ufe0f <b>11th anniversary</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-teen-12",
+      "input": {
+        "day": 19860,
+        "event": "landmark_anniversary",
+        "ordinal": 12
+      },
+      "output": {
+        "gap_honest": "\ud83d\uddd3\ufe0f <b>12th anniversary</b> on {day:19860}\nThe anniversary does not need a streak.",
+        "plain": "\ud83d\uddd3\ufe0f <b>12th anniversary</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-teen-13",
+      "input": {
+        "day": 19860,
+        "event": "landmark_anniversary",
+        "ordinal": 13
+      },
+      "output": {
+        "gap_honest": "\ud83d\uddd3\ufe0f <b>13th anniversary</b> on {day:19860}\nThe anniversary does not need a streak.",
+        "plain": "\ud83d\uddd3\ufe0f <b>13th anniversary</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-14",
+      "input": {
+        "day": 19860,
+        "event": "landmark_anniversary",
+        "ordinal": 14
+      },
+      "output": {
+        "gap_honest": "\ud83d\uddd3\ufe0f <b>14th anniversary</b> on {day:19860}\nThe anniversary does not need a streak.",
+        "plain": "\ud83d\uddd3\ufe0f <b>14th anniversary</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-20",
+      "input": {
+        "day": 19860,
+        "event": "landmark_anniversary",
+        "ordinal": 20
+      },
+      "output": {
+        "gap_honest": "\ud83d\uddd3\ufe0f <b>20th anniversary</b> on {day:19860}\nThe anniversary does not need a streak.",
+        "plain": "\ud83d\uddd3\ufe0f <b>20th anniversary</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-21",
+      "input": {
+        "day": 19860,
+        "event": "landmark_anniversary",
+        "ordinal": 21
+      },
+      "output": {
+        "gap_honest": "\ud83d\uddd3\ufe0f <b>21st anniversary</b> on {day:19860}\nThe anniversary does not need a streak.",
+        "plain": "\ud83d\uddd3\ufe0f <b>21st anniversary</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-22",
+      "input": {
+        "day": 19860,
+        "event": "landmark_anniversary",
+        "ordinal": 22
+      },
+      "output": {
+        "gap_honest": "\ud83d\uddd3\ufe0f <b>22nd anniversary</b> on {day:19860}\nThe anniversary does not need a streak.",
+        "plain": "\ud83d\uddd3\ufe0f <b>22nd anniversary</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-23",
+      "input": {
+        "day": 19860,
+        "event": "landmark_anniversary",
+        "ordinal": 23
+      },
+      "output": {
+        "gap_honest": "\ud83d\uddd3\ufe0f <b>23rd anniversary</b> on {day:19860}\nThe anniversary does not need a streak.",
+        "plain": "\ud83d\uddd3\ufe0f <b>23rd anniversary</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-24",
+      "input": {
+        "day": 19860,
+        "event": "landmark_anniversary",
+        "ordinal": 24
+      },
+      "output": {
+        "gap_honest": "\ud83d\uddd3\ufe0f <b>24th anniversary</b> on {day:19860}\nThe anniversary does not need a streak.",
+        "plain": "\ud83d\uddd3\ufe0f <b>24th anniversary</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-25",
+      "input": {
+        "day": 19860,
+        "event": "landmark_anniversary",
+        "ordinal": 25
+      },
+      "output": {
+        "gap_honest": "\ud83d\uddd3\ufe0f <b>25th anniversary</b> on {day:19860}\nThe anniversary does not need a streak.",
+        "plain": "\ud83d\uddd3\ufe0f <b>25th anniversary</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-50",
+      "input": {
+        "day": 19860,
+        "event": "landmark_anniversary",
+        "ordinal": 50
+      },
+      "output": {
+        "gap_honest": "\ud83d\uddd3\ufe0f <b>50th anniversary</b> on {day:19860}\nThe anniversary does not need a streak.",
+        "plain": "\ud83d\uddd3\ufe0f <b>50th anniversary</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-100",
+      "input": {
+        "day": 19860,
+        "event": "landmark_anniversary",
+        "ordinal": 100
+      },
+      "output": {
+        "gap_honest": "\ud83d\uddd3\ufe0f <b>100th anniversary</b> on {day:19860}\nThe anniversary does not need a streak.",
+        "plain": "\ud83d\uddd3\ufe0f <b>100th anniversary</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-101",
+      "input": {
+        "day": 19860,
+        "event": "landmark_anniversary",
+        "ordinal": 101
+      },
+      "output": {
+        "gap_honest": "\ud83d\uddd3\ufe0f <b>101st anniversary</b> on {day:19860}\nThe anniversary does not need a streak.",
+        "plain": "\ud83d\uddd3\ufe0f <b>101st anniversary</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-102",
+      "input": {
+        "day": 19860,
+        "event": "landmark_anniversary",
+        "ordinal": 102
+      },
+      "output": {
+        "gap_honest": "\ud83d\uddd3\ufe0f <b>102nd anniversary</b> on {day:19860}\nThe anniversary does not need a streak.",
+        "plain": "\ud83d\uddd3\ufe0f <b>102nd anniversary</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-103",
+      "input": {
+        "day": 19860,
+        "event": "landmark_anniversary",
+        "ordinal": 103
+      },
+      "output": {
+        "gap_honest": "\ud83d\uddd3\ufe0f <b>103rd anniversary</b> on {day:19860}\nThe anniversary does not need a streak.",
+        "plain": "\ud83d\uddd3\ufe0f <b>103rd anniversary</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-teen-111",
+      "input": {
+        "day": 19860,
+        "event": "landmark_anniversary",
+        "ordinal": 111
+      },
+      "output": {
+        "gap_honest": "\ud83d\uddd3\ufe0f <b>111th anniversary</b> on {day:19860}\nThe anniversary does not need a streak.",
+        "plain": "\ud83d\uddd3\ufe0f <b>111th anniversary</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-teen-112",
+      "input": {
+        "day": 19860,
+        "event": "landmark_anniversary",
+        "ordinal": 112
+      },
+      "output": {
+        "gap_honest": "\ud83d\uddd3\ufe0f <b>112th anniversary</b> on {day:19860}\nThe anniversary does not need a streak.",
+        "plain": "\ud83d\uddd3\ufe0f <b>112th anniversary</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-teen-113",
+      "input": {
+        "day": 19860,
+        "event": "landmark_anniversary",
+        "ordinal": 113
+      },
+      "output": {
+        "gap_honest": "\ud83d\uddd3\ufe0f <b>113th anniversary</b> on {day:19860}\nThe anniversary does not need a streak.",
+        "plain": "\ud83d\uddd3\ufe0f <b>113th anniversary</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-121",
+      "input": {
+        "day": 19860,
+        "event": "landmark_anniversary",
+        "ordinal": 121
+      },
+      "output": {
+        "gap_honest": "\ud83d\uddd3\ufe0f <b>121st anniversary</b> on {day:19860}\nThe anniversary does not need a streak.",
+        "plain": "\ud83d\uddd3\ufe0f <b>121st anniversary</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-122",
+      "input": {
+        "day": 19860,
+        "event": "landmark_anniversary",
+        "ordinal": 122
+      },
+      "output": {
+        "gap_honest": "\ud83d\uddd3\ufe0f <b>122nd anniversary</b> on {day:19860}\nThe anniversary does not need a streak.",
+        "plain": "\ud83d\uddd3\ufe0f <b>122nd anniversary</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-123",
+      "input": {
+        "day": 19860,
+        "event": "landmark_anniversary",
+        "ordinal": 123
+      },
+      "output": {
+        "gap_honest": "\ud83d\uddd3\ufe0f <b>123rd anniversary</b> on {day:19860}\nThe anniversary does not need a streak.",
+        "plain": "\ud83d\uddd3\ufe0f <b>123rd anniversary</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-200",
+      "input": {
+        "day": 19860,
+        "event": "landmark_anniversary",
+        "ordinal": 200
+      },
+      "output": {
+        "gap_honest": "\ud83d\uddd3\ufe0f <b>200th anniversary</b> on {day:19860}\nThe anniversary does not need a streak.",
+        "plain": "\ud83d\uddd3\ufe0f <b>200th anniversary</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-teen-211",
+      "input": {
+        "day": 19860,
+        "event": "landmark_anniversary",
+        "ordinal": 211
+      },
+      "output": {
+        "gap_honest": "\ud83d\uddd3\ufe0f <b>211th anniversary</b> on {day:19860}\nThe anniversary does not need a streak.",
+        "plain": "\ud83d\uddd3\ufe0f <b>211th anniversary</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-teen-212",
+      "input": {
+        "day": 19860,
+        "event": "landmark_anniversary",
+        "ordinal": 212
+      },
+      "output": {
+        "gap_honest": "\ud83d\uddd3\ufe0f <b>212th anniversary</b> on {day:19860}\nThe anniversary does not need a streak.",
+        "plain": "\ud83d\uddd3\ufe0f <b>212th anniversary</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-teen-213",
+      "input": {
+        "day": 19860,
+        "event": "landmark_anniversary",
+        "ordinal": 213
+      },
+      "output": {
+        "gap_honest": "\ud83d\uddd3\ufe0f <b>213th anniversary</b> on {day:19860}\nThe anniversary does not need a streak.",
+        "plain": "\ud83d\uddd3\ufe0f <b>213th anniversary</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-1",
+      "input": {
+        "day": 19860,
+        "event": "landmark_study_day",
+        "ordinal": 1
+      },
+      "output": {
+        "gap_honest": "\ud83d\udcda <b>1st earned study days</b> on {day:19860}",
+        "plain": "\ud83d\udcda <b>1st earned study days</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-2",
+      "input": {
+        "day": 19860,
+        "event": "landmark_study_day",
+        "ordinal": 2
+      },
+      "output": {
+        "gap_honest": "\ud83d\udcda <b>2nd earned study days</b> on {day:19860}",
+        "plain": "\ud83d\udcda <b>2nd earned study days</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-3",
+      "input": {
+        "day": 19860,
+        "event": "landmark_study_day",
+        "ordinal": 3
+      },
+      "output": {
+        "gap_honest": "\ud83d\udcda <b>3rd earned study days</b> on {day:19860}",
+        "plain": "\ud83d\udcda <b>3rd earned study days</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-4",
+      "input": {
+        "day": 19860,
+        "event": "landmark_study_day",
+        "ordinal": 4
+      },
+      "output": {
+        "gap_honest": "\ud83d\udcda <b>4th earned study days</b> on {day:19860}",
+        "plain": "\ud83d\udcda <b>4th earned study days</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-5",
+      "input": {
+        "day": 19860,
+        "event": "landmark_study_day",
+        "ordinal": 5
+      },
+      "output": {
+        "gap_honest": "\ud83d\udcda <b>5th earned study days</b> on {day:19860}",
+        "plain": "\ud83d\udcda <b>5th earned study days</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-10",
+      "input": {
+        "day": 19860,
+        "event": "landmark_study_day",
+        "ordinal": 10
+      },
+      "output": {
+        "gap_honest": "\ud83d\udcda <b>10th earned study days</b> on {day:19860}",
+        "plain": "\ud83d\udcda <b>10th earned study days</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-teen-11",
+      "input": {
+        "day": 19860,
+        "event": "landmark_study_day",
+        "ordinal": 11
+      },
+      "output": {
+        "gap_honest": "\ud83d\udcda <b>11th earned study days</b> on {day:19860}",
+        "plain": "\ud83d\udcda <b>11th earned study days</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-teen-12",
+      "input": {
+        "day": 19860,
+        "event": "landmark_study_day",
+        "ordinal": 12
+      },
+      "output": {
+        "gap_honest": "\ud83d\udcda <b>12th earned study days</b> on {day:19860}",
+        "plain": "\ud83d\udcda <b>12th earned study days</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-teen-13",
+      "input": {
+        "day": 19860,
+        "event": "landmark_study_day",
+        "ordinal": 13
+      },
+      "output": {
+        "gap_honest": "\ud83d\udcda <b>13th earned study days</b> on {day:19860}",
+        "plain": "\ud83d\udcda <b>13th earned study days</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-14",
+      "input": {
+        "day": 19860,
+        "event": "landmark_study_day",
+        "ordinal": 14
+      },
+      "output": {
+        "gap_honest": "\ud83d\udcda <b>14th earned study days</b> on {day:19860}",
+        "plain": "\ud83d\udcda <b>14th earned study days</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-20",
+      "input": {
+        "day": 19860,
+        "event": "landmark_study_day",
+        "ordinal": 20
+      },
+      "output": {
+        "gap_honest": "\ud83d\udcda <b>20th earned study days</b> on {day:19860}",
+        "plain": "\ud83d\udcda <b>20th earned study days</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-21",
+      "input": {
+        "day": 19860,
+        "event": "landmark_study_day",
+        "ordinal": 21
+      },
+      "output": {
+        "gap_honest": "\ud83d\udcda <b>21st earned study days</b> on {day:19860}",
+        "plain": "\ud83d\udcda <b>21st earned study days</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-22",
+      "input": {
+        "day": 19860,
+        "event": "landmark_study_day",
+        "ordinal": 22
+      },
+      "output": {
+        "gap_honest": "\ud83d\udcda <b>22nd earned study days</b> on {day:19860}",
+        "plain": "\ud83d\udcda <b>22nd earned study days</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-23",
+      "input": {
+        "day": 19860,
+        "event": "landmark_study_day",
+        "ordinal": 23
+      },
+      "output": {
+        "gap_honest": "\ud83d\udcda <b>23rd earned study days</b> on {day:19860}",
+        "plain": "\ud83d\udcda <b>23rd earned study days</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-24",
+      "input": {
+        "day": 19860,
+        "event": "landmark_study_day",
+        "ordinal": 24
+      },
+      "output": {
+        "gap_honest": "\ud83d\udcda <b>24th earned study days</b> on {day:19860}",
+        "plain": "\ud83d\udcda <b>24th earned study days</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-25",
+      "input": {
+        "day": 19860,
+        "event": "landmark_study_day",
+        "ordinal": 25
+      },
+      "output": {
+        "gap_honest": "\ud83d\udcda <b>25th earned study days</b> on {day:19860}",
+        "plain": "\ud83d\udcda <b>25th earned study days</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-50",
+      "input": {
+        "day": 19860,
+        "event": "landmark_study_day",
+        "ordinal": 50
+      },
+      "output": {
+        "gap_honest": "\ud83d\udcda <b>50th earned study days</b> on {day:19860}",
+        "plain": "\ud83d\udcda <b>50th earned study days</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-100",
+      "input": {
+        "day": 19860,
+        "event": "landmark_study_day",
+        "ordinal": 100
+      },
+      "output": {
+        "gap_honest": "\ud83d\udcda <b>100th earned study days</b> on {day:19860}",
+        "plain": "\ud83d\udcda <b>100th earned study days</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-101",
+      "input": {
+        "day": 19860,
+        "event": "landmark_study_day",
+        "ordinal": 101
+      },
+      "output": {
+        "gap_honest": "\ud83d\udcda <b>101st earned study days</b> on {day:19860}",
+        "plain": "\ud83d\udcda <b>101st earned study days</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-102",
+      "input": {
+        "day": 19860,
+        "event": "landmark_study_day",
+        "ordinal": 102
+      },
+      "output": {
+        "gap_honest": "\ud83d\udcda <b>102nd earned study days</b> on {day:19860}",
+        "plain": "\ud83d\udcda <b>102nd earned study days</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-103",
+      "input": {
+        "day": 19860,
+        "event": "landmark_study_day",
+        "ordinal": 103
+      },
+      "output": {
+        "gap_honest": "\ud83d\udcda <b>103rd earned study days</b> on {day:19860}",
+        "plain": "\ud83d\udcda <b>103rd earned study days</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-teen-111",
+      "input": {
+        "day": 19860,
+        "event": "landmark_study_day",
+        "ordinal": 111
+      },
+      "output": {
+        "gap_honest": "\ud83d\udcda <b>111th earned study days</b> on {day:19860}",
+        "plain": "\ud83d\udcda <b>111th earned study days</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-teen-112",
+      "input": {
+        "day": 19860,
+        "event": "landmark_study_day",
+        "ordinal": 112
+      },
+      "output": {
+        "gap_honest": "\ud83d\udcda <b>112th earned study days</b> on {day:19860}",
+        "plain": "\ud83d\udcda <b>112th earned study days</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-teen-113",
+      "input": {
+        "day": 19860,
+        "event": "landmark_study_day",
+        "ordinal": 113
+      },
+      "output": {
+        "gap_honest": "\ud83d\udcda <b>113th earned study days</b> on {day:19860}",
+        "plain": "\ud83d\udcda <b>113th earned study days</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-121",
+      "input": {
+        "day": 19860,
+        "event": "landmark_study_day",
+        "ordinal": 121
+      },
+      "output": {
+        "gap_honest": "\ud83d\udcda <b>121st earned study days</b> on {day:19860}",
+        "plain": "\ud83d\udcda <b>121st earned study days</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-122",
+      "input": {
+        "day": 19860,
+        "event": "landmark_study_day",
+        "ordinal": 122
+      },
+      "output": {
+        "gap_honest": "\ud83d\udcda <b>122nd earned study days</b> on {day:19860}",
+        "plain": "\ud83d\udcda <b>122nd earned study days</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-123",
+      "input": {
+        "day": 19860,
+        "event": "landmark_study_day",
+        "ordinal": 123
+      },
+      "output": {
+        "gap_honest": "\ud83d\udcda <b>123rd earned study days</b> on {day:19860}",
+        "plain": "\ud83d\udcda <b>123rd earned study days</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-200",
+      "input": {
+        "day": 19860,
+        "event": "landmark_study_day",
+        "ordinal": 200
+      },
+      "output": {
+        "gap_honest": "\ud83d\udcda <b>200th earned study days</b> on {day:19860}",
+        "plain": "\ud83d\udcda <b>200th earned study days</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-teen-211",
+      "input": {
+        "day": 19860,
+        "event": "landmark_study_day",
+        "ordinal": 211
+      },
+      "output": {
+        "gap_honest": "\ud83d\udcda <b>211th earned study days</b> on {day:19860}",
+        "plain": "\ud83d\udcda <b>211th earned study days</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-teen-212",
+      "input": {
+        "day": 19860,
+        "event": "landmark_study_day",
+        "ordinal": 212
+      },
+      "output": {
+        "gap_honest": "\ud83d\udcda <b>212th earned study days</b> on {day:19860}",
+        "plain": "\ud83d\udcda <b>212th earned study days</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "ordinal-teen-213",
+      "input": {
+        "day": 19860,
+        "event": "landmark_study_day",
+        "ordinal": 213
+      },
+      "output": {
+        "gap_honest": "\ud83d\udcda <b>213th earned study days</b> on {day:19860}",
+        "plain": "\ud83d\udcda <b>213th earned study days</b> on {day:19860}"
+      }
+    },
+    {
+      "class": "leap-day",
+      "input": {
+        "day": 19782,
+        "event": "landmark_anniversary",
+        "ordinal": 4
+      },
+      "output": {
+        "gap_honest": "\ud83d\uddd3\ufe0f <b>4th anniversary</b> on {day:19782}\nThe anniversary does not need a streak.",
+        "plain": "\ud83d\uddd3\ufe0f <b>4th anniversary</b> on {day:19782}"
+      }
+    },
+    {
+      "class": "early-day",
+      "input": {
+        "day": 10592,
+        "event": "landmark_anniversary",
+        "ordinal": 25
+      },
+      "output": {
+        "gap_honest": "\ud83d\uddd3\ufe0f <b>25th anniversary</b> on {day:10592}\nThe anniversary does not need a streak.",
+        "plain": "\ud83d\uddd3\ufe0f <b>25th anniversary</b> on {day:10592}"
+      }
+    },
+    {
+      "class": "leap-day",
+      "input": {
+        "day": 19782,
+        "event": "landmark_study_day",
+        "ordinal": 4
+      },
+      "output": {
+        "gap_honest": "\ud83d\udcda <b>4th earned study days</b> on {day:19782}",
+        "plain": "\ud83d\udcda <b>4th earned study days</b> on {day:19782}"
+      }
+    },
+    {
+      "class": "early-day",
+      "input": {
+        "day": 10592,
+        "event": "landmark_study_day",
+        "ordinal": 25
+      },
+      "output": {
+        "gap_honest": "\ud83d\udcda <b>25th earned study days</b> on {day:10592}",
+        "plain": "\ud83d\udcda <b>25th earned study days</b> on {day:10592}"
+      }
+    },
+    {
+      "input": {
+        "day": 12822,
+        "event": "landmark_anniversary",
+        "ordinal": 134
+      },
+      "output": {
+        "gap_honest": "\ud83d\uddd3\ufe0f <b>134th anniversary</b> on {day:12822}\nThe anniversary does not need a streak.",
+        "plain": "\ud83d\uddd3\ufe0f <b>134th anniversary</b> on {day:12822}"
+      }
+    },
+    {
+      "input": {
+        "day": 15046,
+        "event": "landmark_study_day",
+        "ordinal": 294
+      },
+      "output": {
+        "gap_honest": "\ud83d\udcda <b>294th earned study days</b> on {day:15046}",
+        "plain": "\ud83d\udcda <b>294th earned study days</b> on {day:15046}"
+      }
+    },
+    {
+      "input": {
+        "day": 22824,
+        "event": "landmark_anniversary",
+        "ordinal": 211
+      },
+      "output": {
+        "gap_honest": "\ud83d\uddd3\ufe0f <b>211th anniversary</b> on {day:22824}\nThe anniversary does not need a streak.",
+        "plain": "\ud83d\uddd3\ufe0f <b>211th anniversary</b> on {day:22824}"
+      }
+    },
+    {
+      "input": {
+        "day": 13594,
+        "event": "landmark_anniversary",
+        "ordinal": 53
+      },
+      "output": {
+        "gap_honest": "\ud83d\uddd3\ufe0f <b>53rd anniversary</b> on {day:13594}\nThe anniversary does not need a streak.",
+        "plain": "\ud83d\uddd3\ufe0f <b>53rd anniversary</b> on {day:13594}"
+      }
+    },
+    {
+      "input": {
+        "day": 24221,
+        "event": "landmark_study_day",
+        "ordinal": 243
+      },
+      "output": {
+        "gap_honest": "\ud83d\udcda <b>243rd earned study days</b> on {day:24221}",
+        "plain": "\ud83d\udcda <b>243rd earned study days</b> on {day:24221}"
+      }
+    },
+    {
+      "input": {
+        "day": 16043,
+        "event": "landmark_study_day",
+        "ordinal": 107
+      },
+      "output": {
+        "gap_honest": "\ud83d\udcda <b>107th earned study days</b> on {day:16043}",
+        "plain": "\ud83d\udcda <b>107th earned study days</b> on {day:16043}"
+      }
+    }
+  ],
+  "function": "landmarks.render_landmark",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Builds a predecessor Landmark of the case's event, ordinal and day, renders it plain and gap_honest, and writes each text's date as its day token; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_102.py",
+  "registry_sha256": "459ffd874367cbddc3c8e878e145fed36864fbe702feb38f6a18d94589114293",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}
