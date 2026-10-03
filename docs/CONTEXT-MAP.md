@@ -223,12 +223,19 @@ context each migration names equal to the owner this register gives each table i
 | `drill_answers` | `vault` | `migrations/011001_vault_drills.sql` (SPEC-110) | exported and erased; an erase never deletes a note (ADR-118) |
 | `drill_grades` | `vault` | `migrations/011001_vault_drills.sql` (SPEC-110) | exported and erased; an erase never deletes a note (ADR-118) |
 | `inbox_captures` | `vault` | `migrations/011801_vault_inbox_captures.sql` (SPEC-118) | exported and erased; an erase never deletes a capture or its stub (ADR-118) |
+| `minutes_log` | `habits` | `migrations/007801_habits_minutes_log.sql` (SPEC-078) | exported and erased |
 
 The quests context reaches outside the workspace for three things and no further inside it: its
 chests are rolled from the operating system's generator (`getrandom`), its stores run on the
 caller's connection (`sqlx`), and its refusals are typed (`thiserror`). Its data-rights port also
 writes its rows as JSON (`serde_json`). None of them is an edge to another context: the map's
 line for `deck-streak-quests` stays `depends on: kernel, ingest` (SPEC-081 R5, R21).
+
+The habits context reaches outside the workspace for three things and no further inside it: its
+minutes log's queries run on the caller's connection (`sqlx`), an entry's refusals are typed
+(`thiserror`), and its data-rights port writes its rows as JSON (`serde_json`). None of them is an
+edge to another context: the map's line for `deck-streak-habits` stays `depends on: kernel`
+(SPEC-078 R21).
 
 ## Overloaded words, held apart
 

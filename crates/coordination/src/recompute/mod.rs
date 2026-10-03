@@ -28,6 +28,7 @@ pub mod analytics_step;
 pub mod badges;
 pub mod band_badges;
 pub mod day_bonuses;
+pub mod habits;
 pub mod landmarks;
 pub mod mint;
 pub mod progress;
@@ -45,6 +46,8 @@ use deck_streak_kernel::{
 };
 use deck_streak_notifications::{DedupeKey, LapseContext, Occasion, Policy, Router, Surface, Tier};
 use sqlx::SqliteConnection;
+
+use crate::ladder_facts;
 
 /// The phases a day's steps run in.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -387,6 +390,7 @@ impl Celebrate for Router {
             )
             .map_err(refused)?
             .with_event(celebration.event, None);
+            let occasion = ladder_facts::with_streak_facts(self.db(), occasion).await?;
             self.route(&occasion).await.map(|_| ())
         })
     }

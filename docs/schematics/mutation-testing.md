@@ -35,7 +35,7 @@ flowchart TD
   shards --> matrix[the matrix 0 to n-1, and the plan artifact every job reads]
 
   subgraph mutation-rust: one job per shard k of n
-    matrix --> cm[cargo mutants --in-place --in-diff git.diff --sharding round-robin --shard k/n --timeout 300 --build-timeout 600]
+    matrix --> cm[cargo mutants --in-place --in-diff git.diff --sharding round-robin --shard k/n --timeout 1200 --build-timeout 600]
     cm --> outcomes[(mutation-rust-shard-k: outcomes.json and the exit)]
   end
 
@@ -89,8 +89,8 @@ the ones that happened to report.
 | plan | the diff, `git diff HEAD^1...HEAD`, written to `git.diff` | the new side of the diff is the checked-out tree, so cargo-mutants never exits 5 on a mismatch |
 | classes | each changed path | R2's globs, exactly; a test, a script or a document is never production |
 | lines | each production file's new-side changed lines | blank and comment lines are counted apart; a file whose hunks only delete reads not-applicable with its count; in Rust, a line whose every token lies inside an item cargo-mutants never mutates for a test attribute (`#[cfg(test)]`, `#[test]`, `#[tokio::test]`) is test-only, counted apart and never a code line (SPEC-057 R22) |
-| shards | cargo-mutants' own listing of the diff's mutants, `--list --json` | each shard's projected time, the baseline's 346 s and each of its mutants' package cost, within an hour; the fewest shards that fit; more than 256 refused, never capped |
-| cargo-mutants | the diff, the tree, the shard `k/n` | `--in-place` on the checkout, round-robin as the plan projected, `--timeout 300` on each mutant's tests and `--build-timeout 600` on its build, the shard job's `timeout-minutes` of 120; its exit is recorded, never trusted alone |
+| shards | cargo-mutants' own listing of the diff's mutants, `--list --json` | each shard's projected time, the baseline's 346 s and each of its mutants' package cost, plus the settle census's 788 s for each mutant of a package that holds it and once in the baseline (SPEC-327), within an hour; the fewest shards that fit; more than 256 refused, never capped |
+| cargo-mutants | the diff, the tree, the shard `k/n` | `--in-place` on the checkout, round-robin as the plan projected, `--timeout 1200` on each mutant's tests and the baseline's (SPEC-327) and `--build-timeout 600` on its build, the shard job's `timeout-minutes` of 120; its exit is recorded, never trusted alone |
 | Stryker | every changed web production file, whole | the whole file, so a survivor already there is the pull request's (rule 5); `thresholds.break` 100 |
 | rows | the selected rows | the runner's own refusals (section 3); the report lists every row with its verdict |
 | retired | the rows at `HEAD^1` against the rows at `HEAD` | a row gone while its target stays needs an entry in `scripts/mutation-rows.retired.json` |
@@ -129,7 +129,7 @@ flowchart LR
   sched[schedule, weekly: live once the file is on main] --> checkout[checkout dev]
   dispatch[workflow_dispatch at any ref that holds the file: package empty, a crate, or miniapp] --> checkout
   prtrig[a pull request that changes the workflow] --> rehearsal[rehearsal: one file, one row, one Stryker file, the drafts; files nothing]
-  checkout --> shards[rust, unless the scope is miniapp: cargo mutants --package the scope's crate, if any, --sharding round-robin --shard k/32, k = 0..31, --in-place --timeout 300 --build-timeout 600]
+  checkout --> shards[rust, unless the scope is miniapp: cargo mutants --package the scope's crate, if any, --sharding round-robin --shard k/32, k = 0..31, --in-place --timeout 1200 --build-timeout 600]
   checkout --> webfull[web, with no scope or miniapp: stryker run, whole]
   checkout --> rowsall[rows, with no scope: prove every row]
   checkout --> listing[listing: cargo mutants --list --json, the whole tree, nothing built]
@@ -227,3 +227,35 @@ flowchart TD
 | the verdict | each shard's artifact, the plan's listing | a shard with no artifact reads `not started` only when the listing gives it no mutant; the reports' mutants must equal the listing's count |
 | `legs` | each leg's result, the plan | a skip the listing owed is VOID by name; a result that is not a job's is VOID |
 | `ci` | every need's result | `skipped` admitted from the two legs alone, once each; `mutation-verdict` must succeed |
+
+## 7. The sizer charges the settle census (SPEC-327, ADR-328)
+
+Read at DeckStreak `dev` bb1fab8. One `--timeout` bounds the unmutated baseline's whole test run
+and each mutant's, so it must cover the settle census's two tests in `deck-streak-progression`,
+measured at 788 s with their start offset (SPEC-327 section 1). The bound is `--timeout 1200` on
+every command, and the sizer charges the census where it is paid: once per mutant of the package,
+and once in the baseline of every shard whose plan lists that package. A package the census table
+does not name is sized exactly as before.
+
+```mermaid
+flowchart TD
+  listing[the plan's listing: one package per mutant] --> costs[mutant_costs: the table cost, plus the census term of the mutant's package]
+  listing --> base[baseline_seconds: 371, plus the census term of each named package, counted once]
+  costs --> fewest[fewest_shards: the least count whose slowest projection fits 3600 s]
+  base --> fewest
+  fewest --> projected[projected: each shard starts at the baseline and takes its round-robin mutants]
+  projected --> plan[the plan: shard count, projected seconds, baseline seconds]
+  plan --> legs[one mutation-rust leg per shard, each mutant's tests bounded at 1200 s]
+  legs --> mutant{a mutant's tests, the census included}
+  mutant -->|a test fails| caught([caught])
+  mutant -->|every test passes| missed([missed])
+  mutant -->|past 1200 s| timeout([timeout, scored killed as before])
+```
+
+| step | what crosses | guard |
+|---|---|---|
+| `CENSUS_SECONDS` | `deck-streak-progression` to 788 s, a table apart from `SECONDS_PER_MUTANT` | a package it does not name pays 0, so no unnamed package is charged the table's highest twice |
+| `mutant_costs` | each listed package | table cost plus census term; rows S32700 and S32701 |
+| `baseline_seconds` | the listing's packages, as a set | 371 plus each named package's term once; rows S32702 and S32703 |
+| `shards` and `size` | the computed baseline, into `fewest_shards` and `projected` | the pull request's plan and the package dispatch both pay it; row S32704 |
+| every `cargo mutants` command | `--timeout 1200 --build-timeout 600` | `BOUNDS` and the byte pins hold each command to it; rows S12904 to S12909 and S32705 |

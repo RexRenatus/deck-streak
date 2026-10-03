@@ -856,6 +856,13 @@ SECONDS_PER_MUTANT = {
 #: The unmutated baseline each shard builds and tests before its first mutant: the mean over the
 #: same 31 shards, rounded up.
 BASELINE_SECONDS = 371
+#: Seconds the settle census adds to a run of its package's tests, by package (SPEC-327): its
+#: slower test passed at 736.931 s in the `rust` job of run 37131363071 (test.log:1373), started up
+#: to 51 s into the run, so 788. It is paid by each mutant of the package and once by the baseline
+#: of a plan that lists one. It is read from that pull request's CI, not from the weekly battery,
+#: until a weekly run re-derives it; a table apart from `SECONDS_PER_MUTANT`, whose highest is the
+#: cost of every package that table does not name.
+CENSUS_SECONDS = {"deck-streak-progression": 788}
 #: A shard's projected time may reach an hour, half its job's timeout-minutes of 120: the shards of
 #: runs 36373915578 and 36384080819 took from 0.66 to 1.33 times this table's projection (R18).
 SHARD_BOUND_SECONDS = 3600
@@ -863,10 +870,10 @@ SHARD_BOUND_SECONDS = 3600
 MAX_SHARDS = 256
 
 
-def projected(costs: list[int], count: int) -> list[int]:
+def projected(costs: list[int], count: int, baseline: int) -> list[int]:
     """Each of `count` round-robin shards' projected seconds: the baseline, then mutant `i` in
     shard `i mod count`, as cargo-mutants assigns them."""
-    totals = [BASELINE_SECONDS] * count
+    totals = [baseline] * count
     for index, cost in enumerate(costs):
         totals[index % count] += cost
     return totals
@@ -874,17 +881,28 @@ def projected(costs: list[int], count: int) -> list[int]:
 
 def mutant_costs(packages: list[str]) -> list[int]:
     """Each mutant's projected seconds, by its package; a package the table does not name costs
-    the table's highest."""
+    the table's highest, and a package that holds the settle census adds its term."""
     highest = max(SECONDS_PER_MUTANT.values())
-    return [SECONDS_PER_MUTANT.get(package, highest) for package in packages]
+    return [
+        SECONDS_PER_MUTANT.get(package, highest) + CENSUS_SECONDS.get(package, 0)
+        for package in packages
+    ]
 
 
-def fewest_shards(costs: list[int]) -> int | None:
+def baseline_seconds(packages: list[str]) -> int:
+    """The baseline each shard of a listing runs: its tests cover every package the listing
+    names, so each census package's term is paid once, however many of its mutants are listed."""
+    return BASELINE_SECONDS + sum(CENSUS_SECONDS.get(package, 0) for package in set(packages))
+
+
+def fewest_shards(costs: list[int], baseline: int = BASELINE_SECONDS) -> int | None:
     """The fewest round-robin shards whose slowest is projected within the bound, or None when
     even `MAX_SHARDS` do not fit. The one function the per-pull-request plan and a package
     dispatch's sizing share (SPEC-129 R2)."""
     fitting = (
-        n for n in range(1, MAX_SHARDS + 1) if max(projected(costs, n)) <= SHARD_BOUND_SECONDS
+        n
+        for n in range(1, MAX_SHARDS + 1)
+        if max(projected(costs, n, baseline)) <= SHARD_BOUND_SECONDS
     )
     return next(fitting, None)
 
@@ -907,7 +925,8 @@ def size(listed_path: str | None, package: str | None) -> int:
             )
             return EXIT_VOID
         costs = mutant_costs([str(entry.get("package")) for entry in listed])
-        fewest = fewest_shards(costs)
+        baseline = baseline_seconds([str(entry.get("package")) for entry in listed])
+        fewest = fewest_shards(costs, baseline)
         if fewest is None:
             print(
                 f"mutation: size: REFUSED: {len(listed)} mutant(s), projected at {sum(costs)} s "
@@ -916,7 +935,7 @@ def size(listed_path: str | None, package: str | None) -> int:
             )
             return EXIT_FAIL
         count = fewest
-        times = projected(costs, count)
+        times = projected(costs, count, baseline)
         note = (
             f"{len(listed)} listed mutant(s), projected at {sum(costs)} s serially, the slowest "
             f"at {max(times)} s of its {SHARD_BOUND_SECONDS} s bound"
@@ -1008,7 +1027,8 @@ def shards(
             )
         mutants = [(str(entry.get("name")), str(entry.get("package"))) for entry in listed]
     costs = mutant_costs([package for _, package in mutants])
-    count = fewest_shards(costs)
+    baseline = baseline_seconds([package for _, package in mutants])
+    count = fewest_shards(costs, baseline)
     if count is None:
         print(
             f"mutation: shards: REFUSED: {len(mutants)} mutant(s), projected at {sum(costs)} s "
@@ -1016,11 +1036,11 @@ def shards(
             "most a job matrix holds: split the change, since a run is never capped"
         )
         return EXIT_FAIL
-    times = projected(costs, count)
+    times = projected(costs, count, baseline)
     plan["shards"] = {
         "count": count,
         "bound_seconds": SHARD_BOUND_SECONDS,
-        "baseline_seconds": BASELINE_SECONDS,
+        "baseline_seconds": baseline,
         "serial_seconds": sum(costs),
         "shards": [
             {

@@ -1,0 +1,21 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT COALESCE(SUM(minutes), 0) AS \"minutes!: i64\" FROM minutes_log\n           WHERE code = ?1 AND study_day BETWEEN ?2 AND ?3",
+  "describe": {
+    "columns": [
+      {
+        "name": "minutes!: i64",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "96fad2fea3fa13b5b08000d3d7c1f0aa2223609cb7685032df4401c4a93f5918"
+}

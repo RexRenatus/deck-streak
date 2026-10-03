@@ -12,6 +12,10 @@
 //!
 //! The badges and records read coordination's views, the ones the bot's `/badges` and `/records`
 //! read too.
+//!
+//! - `GET /api/board` answers the personal board (SPEC-075 R2, #79): the learner's best day, today,
+//!   language streak and level, each its kind, emoji, label and value, in the order the board shows
+//!   them. It ranks the learner against their own past, never against another person.
 
 use axum::Router;
 use axum::extract::{FromRef, State};
@@ -20,6 +24,7 @@ use axum::http::header::CONTENT_TYPE;
 use axum::response::{IntoResponse, Response};
 use axum::routing::get;
 use deck_streak_coordination::progression::badges_view::badges_view;
+use deck_streak_coordination::progression::board_view::board_view;
 use deck_streak_coordination::progression::records_view::records_now;
 use deck_streak_identity::{OwnerSession, Sessions};
 use deck_streak_kernel::{Courses, KernelError};
@@ -34,6 +39,8 @@ pub const BADGES_PATH: &str = "/api/badges";
 pub const RECORDS_PATH: &str = "/api/records";
 /// The next milestone.
 pub const MILESTONE_PATH: &str = "/api/milestone";
+/// The personal board.
+pub const BOARD_PATH: &str = "/api/board";
 
 /// What the badge, record and milestone routes share.
 #[derive(Clone)]
@@ -54,6 +61,7 @@ pub(crate) fn routes(access: OwnerAccess, readiness: Readiness, courses: Courses
     Router::new()
         .route(BADGES_PATH, get(badges))
         .route(RECORDS_PATH, get(records))
+        .route(BOARD_PATH, get(board))
         .route(MILESTONE_PATH, get(milestone))
         .with_state(Badges {
             access,
@@ -133,6 +141,41 @@ async fn records(_owner: OwnerSession, State(badges): State<Badges>) -> Response
             answer(&json!({ "records": records, "chase": chase }))
         }
         Err(error) => unreadable(&error, "records_unreadable"),
+    }
+}
+
+/// `GET /api/board`: the board's rows in order, each with its day, longest run or title where it
+/// has one.
+async fn board(_owner: OwnerSession, State(badges): State<Badges>) -> Response {
+    let Some(db) = badges.readiness.database() else {
+        return refused(StatusCode::SERVICE_UNAVAILABLE, "database_not_open");
+    };
+    match board_view(db, badges.access.study_day()).await {
+        Ok(rows) => {
+            let rows: Vec<Value> = rows
+                .iter()
+                .map(|row| {
+                    let mut line = json!({
+                        "kind": row.kind(),
+                        "emoji": row.emoji(),
+                        "label": row.label(),
+                        "value": row.value(),
+                    });
+                    if let Some(day) = row.study_day() {
+                        line["study_day"] = json!(day.to_string());
+                    }
+                    if let Some(longest) = row.longest() {
+                        line["longest"] = json!(longest);
+                    }
+                    if let Some(title) = row.title() {
+                        line["title"] = json!(title);
+                    }
+                    line
+                })
+                .collect();
+            answer(&json!({ "rows": rows }))
+        }
+        Err(error) => unreadable(&error, "board_unreadable"),
     }
 }
 

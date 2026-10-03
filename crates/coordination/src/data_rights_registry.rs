@@ -9,6 +9,7 @@ use deck_streak_agent::data_rights::AgentDataRights;
 use deck_streak_analytics::data_rights::AnalyticsDataRights;
 use deck_streak_curriculum::data_rights::CurriculumDataRights;
 use deck_streak_economy::data_rights::EconomyDataRights;
+use deck_streak_habits::data_rights::HabitsDataRights;
 use deck_streak_ingest::data_rights::IngestDataRights;
 use deck_streak_kernel::{DataRights, Db, KernelDataRights};
 use deck_streak_notifications::data_rights::NotificationsDataRights;
@@ -45,6 +46,8 @@ static ECONOMY: EconomyDataRights = EconomyDataRights;
 /// The quests' port: the chests and the double-XP tokens exported and erased, the pity counters and
 /// the chest settings reset in place (SPEC-081).
 static QUESTS: QuestsDataRights = QuestsDataRights;
+/// The habits' port: the minutes log exported and erased (SPEC-078).
+static HABITS: HabitsDataRights = HabitsDataRights;
 /// The vault's port: the law drill answers and grades, and the inbox captures' rows, exported and
 /// erased, and never a note or a captured file (SPEC-110, SPEC-118, ADR-118).
 static VAULT: VaultDataRights = VaultDataRights;
@@ -57,7 +60,7 @@ static COORDINATION: CoordinationDataRights = CoordinationDataRights;
 /// Every stateful context's port, in the order an erase runs them: the kernel, ingest, analytics
 /// (SPEC-071), curriculum (SPEC-077), progression (SPEC-040), notifications (SPEC-041), readings
 /// (SPEC-045), the agent (SPEC-043), streaks (SPEC-076), the economy (SPEC-082), the quests
-/// (SPEC-081), the vault (SPEC-110) and coordination.
+/// (SPEC-081), the habits (SPEC-078), the vault (SPEC-110) and coordination.
 /// Identity keeps its sessions in memory (ADR-024), so it has no table and no port.
 #[must_use]
 pub fn ports() -> Vec<&'static dyn DataRights> {
@@ -73,6 +76,7 @@ pub fn ports() -> Vec<&'static dyn DataRights> {
         &STREAKS,
         &ECONOMY,
         &QUESTS,
+        &HABITS,
         &VAULT,
         &COORDINATION,
     ]

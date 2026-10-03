@@ -15,7 +15,9 @@ use deck_streak_coordination::recompute::{DayEvaluation, DayStep, Fold, FoldInpu
 use deck_streak_coordination::relight::route_due_relights;
 use deck_streak_ingest::reader::{Card, CollectionData, Review};
 use deck_streak_kernel::{Db, ManualClock, PortFuture, StudyDay, StudyDayRule, Track, UtcMillis};
-use deck_streak_notifications::{BotTransport, Pass, Policy, PushFuture, Pushed, Router};
+use deck_streak_notifications::{
+    BotTransport, Pass, Policy, PushFuture, Pushed, Router, owner_message,
+};
 use sqlx::{Row, SqliteConnection};
 use tempfile::TempDir;
 
@@ -242,6 +244,21 @@ impl BotTransport for Recording {
             Pushed::Delivered
         })
     }
+
+    fn push_reaction<'a>(
+        &'a self,
+        _pass: &'a Pass,
+        message_id: i64,
+        emoji: &'a str,
+    ) -> PushFuture<'a> {
+        Box::pin(async move {
+            self.0
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner)
+                .push(format!("reaction to {message_id}: {emoji}"));
+            Pushed::Delivered
+        })
+    }
 }
 
 #[tokio::test]
@@ -260,6 +277,9 @@ async fn a_second_recompute_routes_the_relight_and_one_send_is_recorded() {
     let (fold, due) = fold(None);
     recompute(&fold, &db, &history(0), at(D0 - 1, 12), D0 - 1).await;
     let today = StudyDay::from_epoch_day(D0);
+    owner_message::record(&db, 1, UtcMillis::from_epoch_millis(at(D0, 12)))
+        .await
+        .expect("the owner's sync message is recorded");
     for now in [at(D0, 12), at(D0, 18)] {
         recompute(&fold, &db, &history(3), now, D0).await;
         assert_eq!(
@@ -279,7 +299,7 @@ async fn a_second_recompute_routes_the_relight_and_one_send_is_recorded() {
     assert_eq!(
         bot.pushes().len(),
         1,
-        "the router's once-ever dedupe sends one line"
+        "the router's once-ever dedupe renders one celebration"
     );
     assert_eq!(grants(&db).await, vec![(D0, 100)]);
 }

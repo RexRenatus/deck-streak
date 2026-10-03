@@ -445,6 +445,14 @@ impl Router {
         self
     }
 
+    /// The router's own database. A caller that holds only the router reads what the ladder needs
+    /// from the same store the router decides and flushes in: coordination reads the language
+    /// streak's facts here before each celebration route and flush (SPEC-326, ADR-327).
+    #[must_use]
+    pub const fn db(&self) -> &Db {
+        &self.db
+    }
+
     /// Routes `photo` for `occasion` to the owner's chat, in the rules' order (SPEC-132 R4): the
     /// kind's switch, the claim of its key, the quiet window and the breaker, then one
     /// `push_photo`. A photo asks T2 whatever its event asks, so it never spends a T4 or T5 of the

@@ -7,7 +7,7 @@
 
 use deck_streak_kernel::{Db, StudyDay, Track, UtcMillis};
 use deck_streak_progression::settle::{
-    DERIVED_SOURCES, SettleCause, SettleError, SettleRequest, settle,
+    DERIVED_PREFIXES, DERIVED_SOURCES, SettleCause, SettleError, SettleRequest, is_derived, settle,
 };
 
 const AT: i64 = 1_700_000_000_000;
@@ -165,6 +165,57 @@ async fn settle_refuses_a_source_outside_the_derived_registry() {
         rows(&db).await.len(),
         DERIVED_SOURCES.len(),
         "every derived source settles"
+    );
+}
+
+#[tokio::test]
+async fn the_habit_sources_are_derived_only_with_a_course_code() {
+    let (_directory, db) = database().await;
+    assert_eq!(
+        DERIVED_PREFIXES,
+        ["read:", "readgoal:"],
+        "the habit prefixes"
+    );
+    for source in ["read:qaa", "readgoal:qaa"] {
+        assert!(is_derived(source), "{source} is derived");
+        assert_eq!(
+            settled(
+                &db,
+                &request(source, 7, false),
+                SettleCause::OwnersCorrection
+            )
+            .await,
+            7,
+            "{source} settles"
+        );
+    }
+    for source in [
+        "read:",
+        "read:QAA",
+        "readgoal:a b",
+        "reading:read:r1",
+        "readgoal:",
+        "read",
+    ] {
+        assert!(!is_derived(source), "{source:?} is not derived");
+        let mut write = db.write().await.expect("a write");
+        let refusal = settle(
+            &mut write,
+            &request(source, 7, false),
+            SettleCause::OwnersCorrection,
+            UtcMillis::from_epoch_millis(AT),
+        )
+        .await;
+        assert!(
+            matches!(refusal, Err(SettleError::NotDerived)),
+            "{source:?} is refused as not derived: {refusal:?}"
+        );
+        write.commit().await.expect("commit");
+    }
+    assert_eq!(
+        rows(&db).await.len(),
+        2,
+        "only the two habit sources were written"
     );
 }
 

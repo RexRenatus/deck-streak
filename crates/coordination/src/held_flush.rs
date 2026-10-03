@@ -3,7 +3,7 @@
 
 use deck_streak_notifications::{Flushed, Router};
 
-use crate::ladder_facts::streak_facts;
+use crate::ladder_facts;
 use crate::runner::{Done, Fire, Reason, Work};
 
 /// The job's work: one flush of the router's held queue. A flush that finds the window closed or
@@ -22,7 +22,7 @@ impl<'a> HeldFlushWork<'a> {
 
 impl Work for HeldFlushWork<'_> {
     async fn perform(&self, _fire: &Fire) -> Result<Done, Reason> {
-        match self.router.flush_with(streak_facts()).await {
+        match ladder_facts::flush_re_capped(self.router).await {
             Ok(Flushed::Ran { .. } | Flushed::QuietHours | Flushed::Busy) => Ok(Done::Done),
             Ok(Flushed::BreakerOpen) => Ok(Done::NotDelivered),
             Ok(Flushed::NoNotifier) => Err(Reason::new("no_notifier")),

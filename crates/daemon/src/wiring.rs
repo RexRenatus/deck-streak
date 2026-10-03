@@ -45,6 +45,7 @@ use deck_streak_coordination::recompute::analytics_step::AnalyticsStep;
 use deck_streak_coordination::recompute::badges::BadgesStep;
 use deck_streak_coordination::recompute::band_badges::BandBadgesStep;
 use deck_streak_coordination::recompute::day_bonuses::DayBonusesStep;
+use deck_streak_coordination::recompute::habits::HabitsStep;
 use deck_streak_coordination::recompute::mint::MintStep;
 use deck_streak_coordination::recompute::progress::ProgressStep;
 use deck_streak_coordination::recompute::records::RecordsStep;
@@ -246,6 +247,7 @@ pub fn recompute_fold_with_relights(
         Phase::DaySteps,
         Box::new(ProgressStep::new(courses.clone(), analytics)),
     )?;
+    fold.register(Phase::DaySteps, Box::new(HabitsStep))?;
     fold.register(Phase::DerivedBonuses, Box::new(DayBonusesStep))?;
     fold.register(Phase::CoinMint, Box::new(MintStep))?;
     fold.register(Phase::Awards, Box::new(BadgesStep::new(courses.clone())))?;
@@ -729,6 +731,7 @@ mod tests {
     use deck_streak_coordination::recompute::badges::BADGES_STEP;
     use deck_streak_coordination::recompute::band_badges::BAND_BADGES_STEP;
     use deck_streak_coordination::recompute::day_bonuses::DAY_BONUSES_STEP;
+    use deck_streak_coordination::recompute::habits::HABITS_STEP;
     use deck_streak_coordination::recompute::mint::MINT_STEP;
     use deck_streak_coordination::recompute::progress::PROGRESS_STEP;
     use deck_streak_coordination::recompute::records::RECORDS_STEP;
@@ -812,6 +815,7 @@ mod tests {
                 (Phase::BaseXp, XP_STEP),
                 (Phase::StreaksAndGovernor, STREAKS_STEP),
                 (Phase::DaySteps, PROGRESS_STEP),
+                (Phase::DaySteps, HABITS_STEP),
                 (Phase::DerivedBonuses, DAY_BONUSES_STEP),
                 (Phase::CoinMint, MINT_STEP),
                 (Phase::Awards, BADGES_STEP),
@@ -839,6 +843,24 @@ mod tests {
             at((Phase::Awards, BAND_BADGES_STEP)),
             Some(records + 1),
             "the band badge step is registered in phase 7, right after the records step"
+        );
+    }
+
+    #[test]
+    fn the_recompute_fold_registers_the_habit_step_in_the_day_steps_phase() {
+        let fold = recompute_fold(AnalyticsSettings::default()).expect("every step in its phase");
+        let steps = fold.steps();
+        assert_eq!(
+            steps.get(2..6),
+            Some(
+                &[
+                    (Phase::StreaksAndGovernor, STREAKS_STEP),
+                    (Phase::DaySteps, PROGRESS_STEP),
+                    (Phase::DaySteps, HABITS_STEP),
+                    (Phase::DerivedBonuses, DAY_BONUSES_STEP),
+                ][..]
+            ),
+            "the habit step is phase 4's, after the streaks and before the derived bonuses (SPEC-078 R5)"
         );
     }
 

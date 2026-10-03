@@ -1,0 +1,150 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S07801-TWO-XP-A-MINUTE",
+        "habits",
+        "src/minutes.rs",
+        "pub const READING_XP_PER_MIN: u32 = 2;",
+        "pub const READING_XP_PER_MIN: u32 = 3;",
+        "habits_minutes::the_minutes_xp_matches_the_predecessors_golden",
+        "a minute of reading earns two XP; another rate moves every amount the golden fixes (SPEC-078 R3)"
+      ],
+      [
+        "S07802-DAILY-CAP-240",
+        "habits",
+        "src/minutes.rs",
+        "pub const READING_XP_DAILY_CAP_PER_LANG: u32 = 240;",
+        "pub const READING_XP_DAILY_CAP_PER_LANG: u32 = 250;",
+        "habits_minutes::the_minutes_xp_matches_the_predecessors_golden",
+        "a course's reading XP on a study day stops at 240; a higher cap pays the golden's capped days more (SPEC-078 R3)"
+      ],
+      [
+        "S07803-ENTRY-BOUND-600",
+        "habits",
+        "src/minutes.rs",
+        "pub const READING_MAX_ENTRY_MIN: u32 = 600;",
+        "pub const READING_MAX_ENTRY_MIN: u32 = 601;",
+        "habits_minutes::an_entry_resolves_its_course_and_refuses_minutes_outside_the_bounds",
+        "an entry of more than 600 minutes is refused; a wider bound logs 601 (SPEC-078 R1)"
+      ],
+      [
+        "S07804-NOTE-CUT-AT-200",
+        "habits",
+        "src/minutes.rs",
+        "pub const NOTE_MAX_CHARS: usize = 200;",
+        "pub const NOTE_MAX_CHARS: usize = 201;",
+        "habits_minutes::an_entry_resolves_its_course_and_refuses_minutes_outside_the_bounds",
+        "an entry's note is cut at 200 characters; a longer cut keeps the 201st (SPEC-078 R1)"
+      ],
+      [
+        "S07805-SIX-PRESETS",
+        "habits",
+        "src/minutes.rs",
+        "pub const READING_PRESETS: [u32; 6] = [10, 15, 20, 30, 45, 60];",
+        "pub const READING_PRESETS: [u32; 6] = [10, 15, 20, 30, 45, 90];",
+        "habits_constants::the_habit_constants_equal_the_predecessors",
+        "the picker's six minute presets equal the predecessor's; another preset changes the row the owner taps (SPEC-078 R2, R22)"
+      ],
+      [
+        "S07806-WEEKLY-GOAL-210",
+        "habits",
+        "src/minutes.rs",
+        "pub const READING_WEEKLY_GOAL_MIN: u32 = 210;",
+        "pub const READING_WEEKLY_GOAL_MIN: u32 = 200;",
+        "habits_constants::the_habit_constants_equal_the_predecessors",
+        "a course's weekly goal is 210 minutes; a lower goal pays the bonus early (SPEC-078 R3)"
+      ],
+      [
+        "S07807-GOAL-BONUS-150",
+        "habits",
+        "src/minutes.rs",
+        "pub const READING_GOAL_XP_BONUS: u32 = 150;",
+        "pub const READING_GOAL_XP_BONUS: u32 = 100;",
+        "habits_constants::the_habit_constants_equal_the_predecessors",
+        "a reached weekly goal pays 150 XP; another bonus moves the week's settled amount (SPEC-078 R3)"
+      ],
+      [
+        "S07808-WEEK-STARTS-ON-THE-STUDY-MONDAY",
+        "habits",
+        "src/minutes.rs",
+        "(number + 3).rem_euclid(WEEK_DAYS)",
+        "(number + 4).rem_euclid(WEEK_DAYS)",
+        "habits_minutes::a_study_days_week_starts_on_its_monday",
+        "a study week starts on its Monday; a shifted week pays the bonus on the wrong first day (SPEC-078 R3)"
+      ],
+      [
+        "S07809-AN-UNDO-REDERIVES-ITS-ENTRYS-WEEK",
+        "coordination",
+        "src/habits/minutes.rs",
+        "settle_entry(write, code, removed.day, week_start(removed.day), today, at).await?;",
+        "settle_entry(write, code, removed.day, week_start(today), today, at).await?;",
+        "habits_minutes::undo_restores_the_prior_settled_xp",
+        "an undo settles its own entry's week again, never the current one; else the removed week keeps its bonus (SPEC-078 R4)"
+      ],
+      [
+        "S07810-AN-UNDO-LOWERS-A-CLOSED-DAY-AS-THE-OWNER",
+        "coordination",
+        "src/habits/minutes.rs",
+        "const UNDO_CAUSE: SettleCause = SettleCause::OwnersCorrection;",
+        "const UNDO_CAUSE: SettleCause = SettleCause::Recompute;",
+        "habits_minutes::undo_restores_the_prior_settled_xp",
+        "a habit write settles as the owner's correction, so an undo lowers a closed day; the recompute's cause only raises it (SPEC-078 R4, R5, ADR-072). Also refused by xp_census::only_progression_writes_xp_settlement_and_only_coordination_settles"
+      ],
+      [
+        "S07811-A-STALE-BUTTON-REMOVES-NOTHING",
+        "coordination",
+        "src/habits/minutes.rs",
+        "if newest.id != entry {",
+        "if false {",
+        "habits_minutes::a_stale_undo_removes_nothing",
+        "an entry's Undo button removes it only while it is the newest; without the guard an old button removes a newer entry (SPEC-078 R4, ADR-078)"
+      ],
+      [
+        "S07812-THE-STEP-SETTLES-THE-WEEKS-BONUS",
+        "coordination",
+        "src/recompute/habits.rs",
+        "if is_week_start(day.day) {",
+        "if false {",
+        "habits_minutes::the_recompute_heals_a_habit_settle_left_undone",
+        "the habit step settles a course's weekly bonus on its week's first study day; without it a lost bonus settle is never healed (SPEC-078 R5)"
+      ],
+      [
+        "S07813-THE-HABIT-STEP-IS-REGISTERED",
+        "daemon",
+        "src/wiring.rs",
+        "    fold.register(Phase::DaySteps, Box::new(HabitsStep))?;\n",
+        "",
+        "lib::wiring::tests::the_recompute_fold_registers_the_habit_step_in_the_day_steps_phase",
+        "the production fold registers the habit step in the day steps' phase; unregistered, no recompute settles the minutes log (SPEC-078 R5)"
+      ],
+      [
+        "S07814-READGOAL-IS-A-DERIVED-PREFIX",
+        "progression",
+        "src/settle.rs",
+        "\"readgoal:\", // SPEC-078 R3",
+        "\"readgoals:\", // SPEC-078 R3",
+        "xp_settle::the_habit_sources_are_derived_only_with_a_course_code",
+        "readgoal: is a derived prefix; another prefix refuses every weekly bonus settle (SPEC-078 R3)"
+      ],
+      [
+        "S07815-A-PREFIX-NEEDS-A-COURSE-CODE",
+        "progression",
+        "src/settle.rs",
+        ".is_some_and(|code| CourseCode::new(code).is_some())",
+        ".is_some_and(|_| true)",
+        "xp_settle::the_habit_sources_are_derived_only_with_a_course_code",
+        "a derived prefix admits only a valid course code after it; without the check any text settles (SPEC-078 R3)"
+      ],
+      [
+        "S07816-A-HABIT-LEVEL-UP-IS-ANNOUNCED",
+        "coordination",
+        "src/habits/minutes.rs",
+        "Ok(after) => announce_level_up(router, before, after, today)",
+        "Ok(after) => announce_level_up(router, after, after, today)",
+        "habits_minutes::a_habit_write_that_raises_the_level_is_announced_once",
+        "a habit write that crosses a level announces it once through the one router; announced from its own level, no crossing is seen (SPEC-078 R18)"
+      ]
+    ]
+  }
+}

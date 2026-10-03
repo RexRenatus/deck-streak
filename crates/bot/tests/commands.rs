@@ -20,13 +20,19 @@ use deck_streak_bot::commands::{
     CONFIRM_ERASE, EXPORT_FILE_NAME, MENU, MINI_APP_URL, Reply, erase_done_reply,
     erase_failed_reply, export_caption, export_failed_reply, help_reply, sync_reply,
 };
+use deck_streak_bot::habits_commands::{
+    logged_reply, no_courses_reply, pick_course_reply, presets_reply, read_failed_reply,
+    refused_minutes_reply, undo_done_reply, undo_failed_reply, undo_nothing_reply,
+    undo_stale_reply, unknown_course_reply, usage_reply,
+};
 use deck_streak_bot::progress_commands::{progress_failed_reply, progress_reply};
 use deck_streak_bot::score_commands::{score_failed_reply, score_reply};
 use deck_streak_bot::{MiniAppUrl, Scores, Sent, SyncAnswer, SyncOutcome, SyncRefusal};
 use deck_streak_coordination::data_rights_registry::export_all;
+use deck_streak_coordination::habits::Logged;
 use deck_streak_coordination::progress_view::StoredProgress;
 use deck_streak_coordination::score::{DayScore, Pillars};
-use deck_streak_kernel::{Db, StudyDay, UtcMillis};
+use deck_streak_kernel::{CourseCode, Courses, Db, StudyDay, UtcMillis};
 use deck_streak_kernel::{Environment, SettingsError};
 use fake_bot_api::{
     APP_URL, Bench, OWNER, STRANGER, ScriptedSync, golden_send, incoming, messages_directory,
@@ -119,9 +125,9 @@ async fn the_menu_is_registered_for_the_owners_chat_only() {
         registered,
         BTreeSet::from([
             "privacy", "export", "delete", "sync", "score", "level", "streak", "badges", "records",
-            "progress", "drills", "drill"
+            "progress", "drills", "drill", "read", "undo"
         ]),
-        "the twelve commands of the menu"
+        "the fourteen commands of the menu"
     );
     for (entry, command) in MENU
         .iter()
@@ -358,10 +364,56 @@ fn stored_progress() -> Vec<StoredProgress> {
     ]
 }
 
+/// Two synthetic courses, `qaa` and `qab`, for the reading replies (SPEC-078).
+fn habit_courses() -> Courses {
+    Courses::parse(
+        r#"{"schema": "deckstreak.courses.v1", "courses": [
+            {"code": "qaa", "name": "Course Qaa", "flag": "F", "deck_root": "Qaa", "alias": "a",
+             "writing": false, "unit_bands": {}},
+            {"code": "qab", "name": "Course Qab", "flag": "F", "deck_root": "Qab", "alias": "b",
+             "writing": true, "unit_bands": {}}
+        ], "focus_subjects": []}"#,
+    )
+    .expect("the synthetic courses parse")
+}
+
+/// A logged entry of course `qaa`, for the reading replies.
+fn logged(entry_id: i64, minutes: u32, day_minutes: u32, week_minutes: u32) -> Logged {
+    Logged {
+        entry_id,
+        code: CourseCode::new("qaa").expect("a synthetic code"),
+        minutes,
+        day_minutes,
+        day_xp: (day_minutes * 2).min(240),
+        week_minutes,
+        goal_bonus: if week_minutes >= 210 { 150 } else { 0 },
+    }
+}
+
 /// Every message the bot renders, by its golden's name.
 fn rendered() -> Vec<(&'static str, Reply)> {
     let synced = |sync, scores| Ok(SyncAnswer { sync, scores });
+    let qab = CourseCode::new("qab").expect("a synthetic code");
     vec![
+        (
+            "read-logged",
+            logged_reply(&logged(1, 20, 20, 20), "Course Qaa"),
+        ),
+        (
+            "read-goal-reached",
+            logged_reply(&logged(2, 190, 210, 210), "Course Qaa"),
+        ),
+        ("read-pick-course", pick_course_reply(&habit_courses())),
+        ("read-presets", presets_reply(&qab, "Course Qab")),
+        ("read-usage", usage_reply()),
+        ("read-refused-minutes", refused_minutes_reply()),
+        ("read-unknown-course", unknown_course_reply("x<y")),
+        ("read-no-courses", no_courses_reply()),
+        ("read-failed", read_failed_reply()),
+        ("undo-done", undo_done_reply("Course Qaa", 30)),
+        ("undo-nothing", undo_nothing_reply()),
+        ("undo-stale", undo_stale_reply()),
+        ("undo-failed", undo_failed_reply()),
         (
             "score",
             score_reply(Some(&scored(72, ("SOLID", "\u{2705}"), 40, Some(87.5)))),

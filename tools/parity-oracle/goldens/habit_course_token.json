@@ -1,0 +1,179 @@
+{
+  "adapter": "with_synthetic_courses",
+  "cases": [
+    {
+      "class": "edge",
+      "input": {
+        "token": "qaa"
+      },
+      "output": "qaa"
+    },
+    {
+      "class": "edge",
+      "input": {
+        "token": "qab"
+      },
+      "output": "qab"
+    },
+    {
+      "class": "edge",
+      "input": {
+        "token": "QAA"
+      },
+      "output": "qaa"
+    },
+    {
+      "class": "edge",
+      "input": {
+        "token": " qab "
+      },
+      "output": "qab"
+    },
+    {
+      "class": "edge",
+      "input": {
+        "token": "a"
+      },
+      "output": "qaa"
+    },
+    {
+      "class": "edge",
+      "input": {
+        "token": "B"
+      },
+      "output": "qab"
+    },
+    {
+      "class": "edge",
+      "input": {
+        "token": "c"
+      },
+      "output": null
+    },
+    {
+      "class": "edge",
+      "input": {
+        "token": "qac"
+      },
+      "output": null
+    },
+    {
+      "class": "edge",
+      "input": {
+        "token": ""
+      },
+      "output": null
+    },
+    {
+      "class": "edge",
+      "input": {
+        "token": "aa"
+      },
+      "output": null
+    },
+    {
+      "class": "edge",
+      "input": {
+        "token": "qa"
+      },
+      "output": null
+    },
+    {
+      "class": "edge",
+      "input": {
+        "token": "1"
+      },
+      "output": null
+    },
+    {
+      "class": "edge",
+      "input": {
+        "token": "q-a"
+      },
+      "output": null
+    },
+    {
+      "input": {
+        "token": "q "
+      },
+      "output": null
+    },
+    {
+      "input": {
+        "token": "q"
+      },
+      "output": null
+    },
+    {
+      "input": {
+        "token": "aA"
+      },
+      "output": null
+    },
+    {
+      "input": {
+        "token": "aabq"
+      },
+      "output": null
+    },
+    {
+      "input": {
+        "token": "BAAb"
+      },
+      "output": null
+    },
+    {
+      "input": {
+        "token": "q "
+      },
+      "output": null
+    },
+    {
+      "input": {
+        "token": "qAa"
+      },
+      "output": "qaa"
+    },
+    {
+      "input": {
+        "token": "AabB"
+      },
+      "output": null
+    },
+    {
+      "input": {
+        "token": "ab"
+      },
+      "output": null
+    },
+    {
+      "input": {
+        "token": "a"
+      },
+      "output": "qaa"
+    },
+    {
+      "input": {
+        "token": "q "
+      },
+      "output": null
+    },
+    {
+      "input": {
+        "token": "q q"
+      },
+      "output": null
+    }
+  ],
+  "function": "curriculum.resolve_lang",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Replaces the course and alias tables with two synthetic courses, qaa (alias a) and qab (alias b), and returns the code the token resolves to, or none; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_078.py",
+  "registry_sha256": "347514aed5b93b8dfbc646986978680620d4d0c5c3fdf4253a8231bc28e56603",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

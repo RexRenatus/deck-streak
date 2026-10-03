@@ -26,6 +26,7 @@ pub mod chunk;
 pub mod commands;
 pub mod drill_commands;
 pub mod gate;
+pub mod habits_commands;
 pub mod poll;
 pub mod progress_commands;
 pub mod score_commands;

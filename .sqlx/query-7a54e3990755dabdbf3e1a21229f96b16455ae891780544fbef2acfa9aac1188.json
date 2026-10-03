@@ -1,0 +1,33 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT code AS \"code!\", SUM(minutes) AS \"minutes!: i64\" FROM minutes_log\n           GROUP BY code ORDER BY MIN(id)",
+  "describe": {
+    "columns": [
+      {
+        "name": "code!",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "minutes_log",
+            "name": "code"
+          }
+        }
+      },
+      {
+        "name": "minutes!: i64",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      true,
+      false
+    ]
+  },
+  "hash": "7a54e3990755dabdbf3e1a21229f96b16455ae891780544fbef2acfa9aac1188"
+}
