@@ -345,7 +345,7 @@ fn pieces_that_do_not_cover_the_name_are_not_refused() {
     }
     let controls = [
         "pub const PRIVACY: &str = concat!(env!(\"CARGO_PKG_REPOSITORY\"), \"/blob/main/PRIVACY.md\");\n",
-        r##"macro_rules! health_body {
+        r#"macro_rules! health_body {
     ($word:literal) => {
         concat!(
             "{\"status\":\"",
@@ -356,7 +356,7 @@ fn pieces_that_do_not_cover_the_name_are_not_refused() {
         )
     };
 }
-"##,
+"#,
         "pub const HOME_LEDGE: &str = concat!(env!(\"HOME\"), \"/ledge\");\n",
     ];
     for (index, text) in controls.into_iter().enumerate() {

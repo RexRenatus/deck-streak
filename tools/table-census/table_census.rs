@@ -106,7 +106,7 @@ fn string(characters: &[(usize, char)], at: usize) -> (String, usize) {
 /// opens one.
 fn raw_string(characters: &[(usize, char)], at: usize) -> Option<(String, usize)> {
     let character = |index: usize| characters.get(index).map(|(_, found)| *found);
-    let hashes = (at..)
+    let hashes = (at..characters.len())
         .take_while(|index| character(*index) == Some('#'))
         .count();
     if character(at + hashes) != Some('"') {
@@ -530,15 +530,14 @@ impl Reader<'_> {
                 && attribute == "path"
             {
                 self.includes += 1;
-                match tokens.get(at + 4..at + 6) {
-                    Some([Token::Literal(written), Token::Punct(']')]) => {
-                        self.follow(file, &normal(&folder.join(written)), written, Kind::Rust);
-                        at += 6;
-                    }
-                    _ => {
-                        self.unnamed(file, &[]);
-                        at += 4;
-                    }
+                if let Some([Token::Literal(written), Token::Punct(']')]) =
+                    tokens.get(at + 4..at + 6)
+                {
+                    self.follow(file, &normal(&folder.join(written)), written, Kind::Rust);
+                    at += 6;
+                } else {
+                    self.unnamed(file, &[]);
+                    at += 4;
                 }
                 continue;
             }

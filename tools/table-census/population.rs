@@ -16,6 +16,7 @@
 #![allow(dead_code)]
 
 use std::ffi::CStr;
+use std::fmt::Write as _;
 
 /// The forms each split of a name is planted in: `concat!`, `+`, `format!`, two constants in one
 /// file, a constant in another file, a constant in another crate, a sqlx-style `+` query, an
@@ -62,39 +63,52 @@ pub fn splits(name: &str) -> Vec<Vec<String>> {
     found
 }
 
+/// The constants `P<from>` onward of a split whose pieces Rust quotes as `quoted`, one a line.
+fn consts(quoted: &[String], from: usize) -> String {
+    let mut text = String::new();
+    for (at, piece) in quoted.iter().enumerate().skip(from) {
+        writeln!(text, "const P{at}: &str = {piece};").expect("a string takes every write");
+    }
+    text
+}
+
+/// The names `P<from>` onward of a split of `count` pieces, joined by commas.
+fn names(count: usize, from: usize) -> String {
+    (from..count)
+        .map(|at| format!("P{at}"))
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+/// A file that declares the constants `P1` onward of a split and whose `joined()` concatenates
+/// `first` with them.
+fn joined(quoted: &[String], first: &str) -> String {
+    format!(
+        "{}pub fn joined() -> String {{\n    [{first}, {}].concat()\n}}\n",
+        consts(quoted, 1),
+        names(quoted.len(), 1)
+    )
+}
+
+/// The spelling of `split`, numbered by `stem`, in the form `form`, held by `files`.
+fn spelling(stem: &str, split: &[String], form: &str, files: Vec<(String, String)>) -> Spelling {
+    Spelling {
+        label: format!("{stem} {form} of {}", split.join("|")),
+        files,
+    }
+}
+
 /// The `FORMS` spellings of one split, numbered `index`, in the crate `member`; the crate form puts
 /// its first piece in the crate `other`. Every file of a spelling holds a piece of it.
 pub fn planted(split: &[String], index: usize, member: &str, other: &str) -> Vec<Spelling> {
     let stem = format!("s{index:03}");
     let source = format!("crates/{member}/src");
     let quoted: Vec<String> = split.iter().map(|piece| format!("{piece:?}")).collect();
-    let consts = |from: usize| -> String {
-        (from..split.len())
-            .map(|at| format!("const P{at}: &str = {};\n", quoted[at]))
-            .collect()
-    };
-    let names = |from: usize| -> String {
-        (from..split.len())
-            .map(|at| format!("P{at}"))
-            .collect::<Vec<_>>()
-            .join(", ")
-    };
-    let joined = |first: &str| -> String {
-        format!(
-            "{}pub fn joined() -> String {{\n    [{first}, {}].concat()\n}}\n",
-            consts(1),
-            names(1)
-        )
-    };
-    let first = format!("pub const P0: &str = {};\n", quoted[0]);
     let template = format!("{}{}", split[0], "{}".repeat(split.len() - 1));
-    let query = format!("DELETE FROM {}", split[0]);
-    let spelling = |form: &str, files: Vec<(String, String)>| Spelling {
-        label: format!("{stem} {form} of {}", split.join("|")),
-        files,
-    };
-    vec![
+    let mut found = vec![
         spelling(
+            &stem,
+            split,
             "concat",
             vec![(
                 format!("{source}/{stem}_concat.rs"),
@@ -102,6 +116,8 @@ pub fn planted(split: &[String], index: usize, member: &str, other: &str) -> Vec
             )],
         ),
         spelling(
+            &stem,
+            split,
             "plus",
             vec![(
                 format!("{source}/{stem}_plus.rs"),
@@ -113,6 +129,8 @@ pub fn planted(split: &[String], index: usize, member: &str, other: &str) -> Vec
             )],
         ),
         spelling(
+            &stem,
+            split,
             "format",
             vec![(
                 format!("{source}/{stem}_format.rs"),
@@ -123,27 +141,52 @@ pub fn planted(split: &[String], index: usize, member: &str, other: &str) -> Vec
             )],
         ),
         spelling(
+            &stem,
+            split,
             "consts",
             vec![(
                 format!("{source}/{stem}_consts.rs"),
                 format!(
                     "{}pub fn joined() -> String {{\n    [{}].concat()\n}}\n",
-                    consts(0),
-                    names(0)
+                    consts(&quoted, 0),
+                    names(split.len(), 0)
                 ),
             )],
         ),
+    ];
+    found.extend(last_five_forms(split, &stem, &quoted, member, other));
+    found
+}
+
+/// The last five of `planted`'s forms, in its order, of one split numbered by `stem` whose pieces
+/// Rust quotes as `quoted`: a constant in another file, a constant in the crate `other`, a
+/// sqlx-style query, an `include_str!` of a text piece and a `#[path]` module holding a piece.
+fn last_five_forms(
+    split: &[String],
+    stem: &str,
+    quoted: &[String],
+    member: &str,
+    other: &str,
+) -> Vec<Spelling> {
+    let source = format!("crates/{member}/src");
+    let first = format!("pub const P0: &str = {};\n", quoted[0]);
+    let query = format!("DELETE FROM {}", split[0]);
+    vec![
         spelling(
+            stem,
+            split,
             "file",
             vec![
                 (format!("{source}/{stem}_file_pieces.rs"), first.clone()),
                 (
                     format!("{source}/{stem}_file.rs"),
-                    joined(&format!("super::{stem}_file_pieces::P0")),
+                    joined(quoted, &format!("super::{stem}_file_pieces::P0")),
                 ),
             ],
         ),
         spelling(
+            stem,
+            split,
             "crate",
             vec![
                 (
@@ -152,11 +195,16 @@ pub fn planted(split: &[String], index: usize, member: &str, other: &str) -> Vec
                 ),
                 (
                     format!("{source}/{stem}_crate.rs"),
-                    joined(&format!("deck_streak_{other}::{stem}_crate_pieces::P0")),
+                    joined(
+                        quoted,
+                        &format!("deck_streak_{other}::{stem}_crate_pieces::P0"),
+                    ),
                 ),
             ],
         ),
         spelling(
+            stem,
+            split,
             "sqlx",
             vec![(
                 format!("{source}/{stem}_sqlx.rs"),
@@ -167,6 +215,8 @@ pub fn planted(split: &[String], index: usize, member: &str, other: &str) -> Vec
             )],
         ),
         spelling(
+            stem,
+            split,
             "text",
             vec![
                 (
@@ -175,11 +225,16 @@ pub fn planted(split: &[String], index: usize, member: &str, other: &str) -> Vec
                 ),
                 (
                     format!("{source}/{stem}_text.rs"),
-                    joined(&format!("include_str!(\"../queries/{stem}_piece.sql\")")),
+                    joined(
+                        quoted,
+                        &format!("include_str!(\"../queries/{stem}_piece.sql\")"),
+                    ),
                 ),
             ],
         ),
         spelling(
+            stem,
+            split,
             "module",
             vec![
                 (format!("crates/{member}/shared/{stem}_piece.rs"), first),
@@ -187,7 +242,7 @@ pub fn planted(split: &[String], index: usize, member: &str, other: &str) -> Vec
                     format!("{source}/{stem}_module.rs"),
                     format!(
                         "#[path = \"../shared/{stem}_piece.rs\"]\nmod piece;\n{}",
-                        joined("piece::P0")
+                        joined(quoted, "piece::P0")
                     ),
                 ),
             ],

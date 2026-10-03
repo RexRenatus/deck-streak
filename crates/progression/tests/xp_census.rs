@@ -1355,6 +1355,26 @@ fn only_progression_writes_xp_settlement_and_only_coordination_settles() {
     );
 }
 
+/// Plants progression's re-exports of `settle` under other names at `root` (one through another
+/// alias, one inside a nested module and one through the renamed module) and its own wrapper of
+/// `settle` in `inner.rs`.
+fn plant_progressions_aliases(root: &Path) {
+    plant(
+        root,
+        "crates/progression/src/lib.rs",
+        "pub mod settle;\nmod inner;\n\
+         pub use settle::{\n    SettleCause,\n    SettledRow,\n    settle as tally,\n    SettleRequest as TallyRequest,\n    settled_of_day,\n};\n\
+         pub use settle as ledger_write;\n\
+         pub use self::tally as tally_again;\n\
+         pub mod api {\n    pub use super::settle::settle as run_it;\n}\n",
+    );
+    plant(
+        root,
+        "crates/progression/src/inner.rs",
+        "use crate::settle::settle as tally;\npub fn own() -> usize { tally() }\n",
+    );
+}
+
 #[test]
 fn the_census_reads_progressions_own_reexports_as_it_reads_the_other_crates() {
     // Progression re-exports `settle` under other names, one through another alias, one inside a
@@ -1365,20 +1385,7 @@ fn the_census_reads_progressions_own_reexports_as_it_reads_the_other_crates() {
     // refused. Progression's own wrapper in `inner.rs` is, since progression admits no file (#445).
     let planted = tempfile::tempdir().expect("a temporary directory");
     plant_workspace(planted.path());
-    plant(
-        planted.path(),
-        "crates/progression/src/lib.rs",
-        "pub mod settle;\nmod inner;\n\
-         pub use settle::{\n    SettleCause,\n    SettledRow,\n    settle as tally,\n    SettleRequest as TallyRequest,\n    settled_of_day,\n};\n\
-         pub use settle as ledger_write;\n\
-         pub use self::tally as tally_again;\n\
-         pub mod api {\n    pub use super::settle::settle as run_it;\n}\n",
-    );
-    plant(
-        planted.path(),
-        "crates/progression/src/inner.rs",
-        "use crate::settle::settle as tally;\npub fn own() -> usize { tally() }\n",
-    );
+    plant_progressions_aliases(planted.path());
     plant_member(
         planted.path(),
         "streaks",
@@ -2929,7 +2936,13 @@ fn s2_population() -> Vec<Planted> {
             // the line "crates/m/src/lib.rs includes a file the census cannot name, so it cannot
             // read it for xp_settlement".
             let refused = label.contains("names the file");
-            add("S2 B build scripts", label.to_owned(), target, refused, files);
+            add(
+                "S2 B build scripts",
+                label.to_owned(),
+                target,
+                refused,
+                files,
+            );
         }
         add(
             "S2 B build scripts",
