@@ -745,24 +745,14 @@ where
     let db = Db::open_foreign_read_only(path)
         .await
         .map_err(|_| FailReason::EngineFailed)?;
-    let read = read_counts(&db).await;
+    let read = read_counts(&db, i64::try_from(due).unwrap_or(i64::MAX)).await;
     db.close().await;
-    let (cards, notes, review_log_rows, reschedule_rows, cards_by_queue_and_type) =
-        read.map_err(|_| FailReason::EngineFailed)?;
-    Ok(Counts {
-        cards,
-        notes,
-        review_log_rows,
-        reschedule_rows,
-        cards_by_queue_and_type,
-        due: i64::try_from(due).unwrap_or(i64::MAX),
-    })
+    read.map_err(|_| FailReason::EngineFailed)
 }
 
-/// The counts' five reads, on one read-only connection.
-async fn read_counts(
-    db: &ForeignDb,
-) -> Result<(i64, i64, i64, i64, Vec<((i64, i64), i64)>), sqlx::Error> {
+/// The counts' five reads, on one read-only connection, beside the due count `due` the engine
+/// read.
+async fn read_counts(db: &ForeignDb, due: i64) -> Result<Counts, sqlx::Error> {
     let reader = db.reader();
     let cards = sqlx::query_scalar::<_, i64>("SELECT count(*) FROM cards")
         .fetch_one(reader)
@@ -785,7 +775,14 @@ async fn read_counts(
     .into_iter()
     .map(|(queue, kind, count)| ((queue, kind), count))
     .collect();
-    Ok((cards, notes, rows, reschedules, by_kind))
+    Ok(Counts {
+        cards,
+        notes,
+        review_log_rows: rows,
+        reschedule_rows: reschedules,
+        cards_by_queue_and_type: by_kind,
+        due,
+    })
 }
 
 /// The backup's restore check (D17): the partial backup at `partial` holds the working copy at
