@@ -6,8 +6,9 @@
 //!   input is stored, that input's value against its threshold.
 //! - `GET /api/records` answers each stored record with its value, day and the value it beat,
 //!   today's live value and its distance from the record, and the record to chase.
-//! - `GET /api/milestone` answers `pending`: Road to C2 supplies no mature-card sum yet (R15, #85),
-//!   so nothing is read and nothing is computed from a stand-in.
+//! - `GET /api/milestone` answers `pending`: Road to C2 stores the mature-card sum, but R15's
+//!   milestone also reads the lifetime study reviews, which no table stores yet (#560, #579), so
+//!   nothing is read and nothing is computed from a stand-in.
 //!
 //! The badges and records read coordination's views, the ones the bot's `/badges` and `/records`
 //! read too.
@@ -135,8 +136,9 @@ async fn records(_owner: OwnerSession, State(badges): State<Badges>) -> Response
     }
 }
 
-/// `GET /api/milestone`: `pending`, read from nothing, until Road to C2 supplies the mature-card
-/// sum the next milestone is computed from (R15, #85).
+/// `GET /api/milestone`: `pending`, read from nothing, until the lifetime study reviews the next
+/// milestone is also computed from are stored (R15; #560, #579). The stored mature-card sum alone
+/// would make the answer a stand-in.
 async fn milestone(_owner: OwnerSession) -> Response {
     answer(&json!({ "status": "pending" }))
 }

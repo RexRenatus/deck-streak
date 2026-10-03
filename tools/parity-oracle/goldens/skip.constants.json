@@ -1,0 +1,54 @@
+{
+  "cases": [
+    {
+      "input": {
+        "name": "constants.SKIP_TARIFF_LADDER"
+      },
+      "output": [
+        0,
+        50,
+        100
+      ]
+    },
+    {
+      "input": {
+        "name": "constants.SKIP_DEFAULT_SEARCH"
+      },
+      "output": "prop:due=0 -is:suspended -is:buried"
+    },
+    {
+      "input": {
+        "name": "constants.SKIP_SPREAD_MIN_DAYS"
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "name": "constants.SKIP_SPREAD_MAX_DAYS"
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "name": "constants.SKIP_MAX_CARDS"
+      },
+      "output": 5000
+    },
+    {
+      "input": {
+        "name": "constants.SKIP_BRIDGE_MONTHLY_CAP"
+      },
+      "output": 3
+    }
+  ],
+  "function": "skip.constants",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "constants",
+  "registry": "tools/parity-oracle/registry/spec_083.py",
+  "registry_sha256": "0c428fdeae0892916e2bf37e7140a46b8a351178a0365cb1b2b584bea75a9004",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

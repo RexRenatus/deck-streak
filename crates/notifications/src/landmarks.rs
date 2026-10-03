@@ -87,6 +87,32 @@ pub fn compute_landmarks(study_days: &[StudyDay], today: StudyDay) -> Vec<Landma
     found
 }
 
+/// The setting the predecessor stores once, on its first run (`landmarks.py:LANDMARK_HIGH_WATER_KEY`):
+/// the mark that a run has happened, never read again to suppress a landmark (SPEC-102 R6).
+pub const LANDMARK_HIGH_WATER_KEY: &str = "landmark_high_water";
+
+/// The mark a first run stores, exactly the predecessor's `json.dumps(state, sort_keys=True)`:
+/// `{"anniversary": A, "seeded": true, "study_day": S}`, A and S the highest anniversary and
+/// study-day ordinals among `landmarks`, 0 when there are none (`landmarks.py:run_landmarks`).
+/// These are the bytes the v9 import carries as stored, so they are written by hand rather than
+/// by a serializer whose separators could differ.
+#[must_use]
+pub fn high_water_mark(landmarks: &[Landmark]) -> String {
+    let anniversary = highest_ordinal(landmarks, ANNIVERSARY_EVENT_TYPE);
+    let study_day = highest_ordinal(landmarks, STUDY_DAY_EVENT_TYPE);
+    format!("{{\"anniversary\": {anniversary}, \"seeded\": true, \"study_day\": {study_day}}}")
+}
+
+/// The highest ordinal among the landmarks of `event`, or 0.
+fn highest_ordinal(landmarks: &[Landmark], event: &str) -> u32 {
+    landmarks
+        .iter()
+        .filter(|landmark| landmark.event == event)
+        .map(|landmark| landmark.ordinal)
+        .max()
+        .unwrap_or(0)
+}
+
 /// The landmarks dated exactly `today`.
 #[must_use]
 pub fn due_today(landmarks: &[Landmark], today: StudyDay) -> Vec<&Landmark> {

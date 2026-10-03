@@ -2,6 +2,7 @@ import Formal.ChestVectors
 import Formal.NextMilestoneVectors
 import Formal.OpenLapseVectors
 import Formal.RoadToC2Vectors
+import Formal.SkipTariffVectors
 import Formal.TokenBonusVectors
 import Formal.WalletVectors
 
@@ -25,6 +26,7 @@ def main (args : List String) : IO UInt32 := do
   | ["NextMilestone"] => Formal.NextMilestoneVectors.run
   | ["OpenLapse"] => Formal.OpenLapseVectors.run
   | ["RoadToC2"] => Formal.RoadToC2Vectors.run
+  | ["SkipTariff"] => Formal.SkipTariffVectors.run
   | ["TokenBonus"] => Formal.TokenBonusVectors.run
   | ["Wallet"] => Formal.WalletVectors.run
   | _ =>

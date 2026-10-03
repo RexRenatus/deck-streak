@@ -178,16 +178,19 @@ fn only_the_wallet_writes_the_coin_ledger() {
     examined("migration(s)", found.migrations.clone());
     assert_eq!(found.refused, Vec::<String>::new());
     // The positive artifact: the wallet's ports write the table, the data-rights port exports and
-    // erases it, economy's own migration creates it, and no other file names it.
+    // erases it, economy's own migration creates it, the skip tariff reads what one skip paid by its
+    // source and reference and writes nothing (SPEC-083 T4), and no other file names it.
     let naming: BTreeSet<&str> = found.naming.iter().map(String::as_str).collect();
     assert_eq!(
         naming,
         BTreeSet::from([
             "crates/economy/src/data_rights.rs",
+            "crates/economy/src/tariff.rs",
             "crates/economy/src/wallet.rs",
             "migrations/008201_economy_wallet_and_shop.sql",
         ]),
-        "the wallet, the data-rights port and economy's migration name the table, and nothing else"
+        "the wallet, the data-rights port, the tariff's read and economy's migration name the table, \
+         and nothing else"
     );
 
     // A planted crate whose code names the table, and a planted migration of another context that

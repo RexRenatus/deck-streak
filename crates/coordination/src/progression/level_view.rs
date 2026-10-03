@@ -6,7 +6,6 @@
 //! The API's `GET /api/level` and the bot's `/level` both read [`level_view`], so the numbers
 //! cannot drift between them.
 
-use std::collections::BTreeSet;
 use std::future::Future;
 use std::pin::Pin;
 
@@ -19,6 +18,8 @@ use deck_streak_progression::economy_config::xp;
 use deck_streak_progression::ledger::SqliteXpLedger;
 use deck_streak_progression::level::{LevelInfo, level_info};
 use deck_streak_progression::{SettledRow, settled_of_day};
+
+use crate::skip::days::skip_epoch_days;
 
 /// The owner's level and the day's XP, as the surfaces show them.
 #[derive(Clone, Debug, PartialEq)]
@@ -59,7 +60,11 @@ pub async fn level_view(db: &Db, today: StudyDay) -> Result<LevelView, KernelErr
         }
         number -= 1;
     }
-    let run = on_pace_run(&scores, &BTreeSet::new(), today.epoch_day());
+    let run = on_pace_run(
+        &scores,
+        &skip_epoch_days(&mut connection).await?,
+        today.epoch_day(),
+    );
     let (multiplier, multiplier_after_a_miss) = projected_multiplier_drop(run);
     Ok(LevelView {
         study_day: today,

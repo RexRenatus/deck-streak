@@ -2,7 +2,7 @@
 \* @phx covers crates/coordination/src/recompute/mod.rs anchor=run digest=sha256:7a383ba01872f4dde46ccb5220fa492de1f89498adf71774cae868e3e0b7acbb
 \* @phx covers crates/analytics/src/rollup.rs anchor=settle_cursor digest=sha256:2571fa2f5d4ae18a4571c59f3f6911ba61a864f2bb2cee248288ec9a189976c1
 \* @phx covers crates/analytics/src/rollup.rs anchor=record_settled digest=sha256:41ddfd54e6f21de292b44e7c58a0157155b5b3a40ff3d50a4c7cb68805695b2c
-\* @phx covers crates/coordination/src/sync_cycle.rs anchor=sync_cycle digest=sha256:b8158a6a2359166e7b55a5dbbb15189d50cdbeebd84c20a0805067046c31dc6c
+\* @phx covers crates/coordination/src/sync_cycle.rs anchor=sync_cycle digest=sha256:d32903aaea6eed5fa397ca99b5cfcea5ffbbe4540e1420a0503e8861c1b79add
 \* @phx covers crates/kernel/src/db.rs anchor=write digest=sha256:c3d700eda268a6f46c7eea0aabcd2f62d8fc0aeffbe03d1cd1e8437a88bdb916
 \* @phx cites #311
 \* @phx property SettleOnce ramp=report
@@ -44,7 +44,12 @@
 \*   first settled day are outside the settle set (SPEC-071's amendment of 2026-10-02, #311), and no
 \*   variable here holds a row;
 \* - the offers between writes (mod.rs::offer_owed) run in transactions of their own and touch
-\*   neither the cursor nor settled_at (AwardOnce models them).
+\*   neither the cursor nor settled_at (AwardOnce models them);
+\* - the landmarks' offers, re-read 2026-10-03 (SPEC-102 section 11, ADR-322; LandmarkOnce models
+\*   them): sync_cycle reads the whole log's study days once before the fold and hands it the
+\*   awards' offers and then the landmarks' in turn. The landmarks' offers read the settle cursor
+\*   and write only their own settings, never the cursor nor settled_at: a stuttering step,
+\*   re-stamped.
 \*
 \* Re-read of mod.rs::run on 2026-10-02, against #311's fix (ADR-313): the owed loop's write now
 \* reads rollup.rs::settle_cursor first; `owed != day` rolls the write back and sets the loop's day
