@@ -102,3 +102,11 @@ two places, neither an expected value, a case or a comparison. The copy's connec
 review table, and the rename re-reads an index of the copy collated `unicase`; at e1b1442d that arm
 was never reached, since A39 failed first at the badge-then-landmark assertion. And it drops an
 `#[allow(dead_code)]` on the golden module, which the module already carries.
+
+A later commit, after the green, edits the same file once more, to read whole populations: the keys
+the router delivered and the lines the bot sent are now read unfiltered, where they had kept only the
+landmarks', and A39's failed read asserts that no delivered key is a landmark's. Every expected value
+stands, and the eight tests read `test result: ok. 8 passed` with no filter, so the filter had
+dropped no member. In notifications' `the_mark_is_the_predecessors_json_for_every_golden_run`, each
+of the ten golden runs is asserted: a run that wrote a mark against its bytes, and a run that wrote
+none against the stored mark it found.

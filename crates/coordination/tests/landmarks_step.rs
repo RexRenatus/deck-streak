@@ -248,25 +248,15 @@ impl Deployment {
         write.commit().await.expect("the write commits");
     }
 
-    /// The landmark keys the router delivered, in the order it claimed them.
-    async fn landmark_keys(&self) -> Vec<String> {
+    /// Every key the router delivered, in the order it claimed them.
+    async fn delivered_keys(&self) -> Vec<String> {
         let mut read = self.db.reader().acquire().await.expect("a reader");
         sqlx::query_scalar::<_, String>(
-            "SELECT dedupe_key FROM notification_deliveries \
-             WHERE dedupe_key LIKE 'landmark:%' ORDER BY id",
+            "SELECT dedupe_key FROM notification_deliveries ORDER BY id",
         )
         .fetch_all(&mut *read)
         .await
         .expect("the deliveries read")
-    }
-
-    /// Every line the bot sent that is a landmark's.
-    fn landmark_lines(&self) -> Vec<String> {
-        self.bot
-            .sent()
-            .into_iter()
-            .filter(|line| line.contains("anniversary") || line.contains("earned study days"))
-            .collect()
     }
 
     /// An owed badge: earned, its celebration not yet marked.
@@ -413,8 +403,8 @@ async fn run_golden_case(case: &golden::Case) -> (Option<String>, Vec<String>, V
     deployment.cycle_at(today).await;
     (
         deployment.setting(MARK).await,
-        deployment.landmark_keys().await,
-        deployment.landmark_lines(),
+        deployment.delivered_keys().await,
+        deployment.bot.sent(),
     )
 }
 
@@ -435,19 +425,19 @@ async fn each_evaluated_day_raises_its_due_landmarks_once() {
     let deployment = Deployment::new(&early, ANNIVERSARY - 1, false).await;
     deployment.cycle_at(ANNIVERSARY - 1).await;
     assert!(
-        deployment.landmark_keys().await.is_empty(),
+        deployment.delivered_keys().await.is_empty(),
         "nothing is due on 19999"
     );
 
     add_reviews(&deployment.copy, &[ANNIVERSARY, ANNIVERSARY + 1]).await;
     deployment.cycle_at(ANNIVERSARY + 1).await;
     assert_eq!(
-        deployment.landmark_keys().await,
+        deployment.delivered_keys().await,
         ["landmark:day:25", "landmark:anniv:1"],
         "the day evaluated's landmark first, then the settled day's"
     );
     assert_eq!(
-        deployment.landmark_lines(),
+        deployment.bot.sent(),
         [
             text("landmark:day:25", ANNIVERSARY + 1, false),
             text("landmark:anniv:1", ANNIVERSARY, false),
@@ -457,7 +447,7 @@ async fn each_evaluated_day_raises_its_due_landmarks_once() {
 
     deployment.cycle_at(ANNIVERSARY + 2).await;
     assert_eq!(
-        deployment.landmark_lines().len(),
+        deployment.bot.sent().len(),
         2,
         "a later recompute raises none of them again"
     );
@@ -496,7 +486,7 @@ async fn the_anniversary_is_honest_on_a_day_without_study() {
     let unstudied = Deployment::new(&[ORIGIN, ORIGIN + 40], ANNIVERSARY, false).await;
     unstudied.cycle_at(ANNIVERSARY).await;
     assert_eq!(
-        unstudied.landmark_lines(),
+        unstudied.bot.sent(),
         [text("landmark:anniv:1", ANNIVERSARY, true)],
         "the honest variant on a day without study"
     );
@@ -504,7 +494,7 @@ async fn the_anniversary_is_honest_on_a_day_without_study() {
     let studied = Deployment::new(&[ORIGIN, ORIGIN + 40, ANNIVERSARY], ANNIVERSARY, false).await;
     studied.cycle_at(ANNIVERSARY).await;
     assert_eq!(
-        studied.landmark_lines(),
+        studied.bot.sent(),
         [text("landmark:anniv:1", ANNIVERSARY, false)],
         "the plain variant on a day studied"
     );
@@ -523,7 +513,7 @@ async fn an_unanswered_landmark_keeps_the_cursor_and_is_offered_again() {
         .await;
     deployment.cycle_at(ANNIVERSARY + 1).await;
     assert!(
-        deployment.landmark_keys().await.is_empty(),
+        deployment.delivered_keys().await.is_empty(),
         "the router answered nothing"
     );
     assert_eq!(
@@ -537,12 +527,12 @@ async fn an_unanswered_landmark_keeps_the_cursor_and_is_offered_again() {
         .await;
     deployment.cycle_at(ANNIVERSARY + 2).await;
     assert_eq!(
-        deployment.landmark_keys().await,
+        deployment.delivered_keys().await,
         ["landmark:anniv:1"],
         "the next recompute offers it again"
     );
     assert_eq!(
-        deployment.landmark_lines(),
+        deployment.bot.sent(),
         [text("landmark:anniv:1", ANNIVERSARY, true)],
         "and the router sends it once"
     );
@@ -563,7 +553,7 @@ async fn the_first_run_never_moves_the_cursor_past_a_landmark_it_did_not_raise()
     let deployment = Deployment::new(&days, ANNIVERSARY, true).await;
     deployment.cycle_at(ANNIVERSARY).await;
     assert_eq!(
-        deployment.landmark_keys().await,
+        deployment.delivered_keys().await,
         ["landmark:anniv:1"],
         "the first run raises the first due landmark only"
     );
@@ -575,7 +565,7 @@ async fn the_first_run_never_moves_the_cursor_past_a_landmark_it_did_not_raise()
 
     deployment.cycle_at(ANNIVERSARY + 1).await;
     assert_eq!(
-        deployment.landmark_keys().await,
+        deployment.delivered_keys().await,
         ["landmark:anniv:1", "landmark:day:25"],
         "a later run raises the seed day's other landmark"
     );
@@ -597,7 +587,7 @@ async fn an_imported_mark_raises_todays_landmarks_and_no_history() {
         "the cursor is stored at yesterday"
     );
     assert_eq!(
-        deployment.landmark_keys().await,
+        deployment.delivered_keys().await,
         ["landmark:day:25"],
         "today's landmark is raised, and yesterday's anniversary is history"
     );
@@ -653,7 +643,11 @@ async fn the_sync_cycle_offers_the_landmarks_after_the_awards() {
         "a failed whole-log read offers no landmark, and the awards still go"
     );
     assert!(
-        failing.landmark_keys().await.is_empty(),
+        failing
+            .delivered_keys()
+            .await
+            .iter()
+            .all(|key| !key.starts_with("landmark:")),
         "no landmark is delivered"
     );
     assert_eq!(

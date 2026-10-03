@@ -193,23 +193,25 @@ fn the_mark_is_the_predecessors_json_for_every_golden_run() {
     let cases = golden::read(&golden::committed("landmarks_run")).expect("the run golden");
     let mut examined = 0;
     for case in &cases.cases {
-        let Some(written) = case.output["mark_written"].as_str() else {
-            continue;
-        };
         let landmarks =
             compute_landmarks(&days(&case.input["study_days"]), day(&case.input["today"]));
-        assert_eq!(
-            high_water_mark(&landmarks),
-            written,
-            "the mark of {}",
-            case.input
-        );
+        match case.output["mark_written"].as_str() {
+            Some(written) => assert_eq!(
+                high_water_mark(&landmarks),
+                written,
+                "the mark of {}",
+                case.input
+            ),
+            // A run that found the mark stored writes none, so it has no bytes to compare.
+            None => assert!(
+                case.input["mark"].is_string(),
+                "a run writes no mark only when one is stored: {}",
+                case.input
+            ),
+        }
         examined += 1;
     }
-    assert!(
-        examined >= 6,
-        "the golden holds the runs that wrote a mark: {examined}"
-    );
+    assert_eq!(examined, 10, "every landmarks_run case is examined");
     println!("examined {examined} landmarks_run marks");
 }
 
