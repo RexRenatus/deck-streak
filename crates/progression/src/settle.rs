@@ -27,6 +27,20 @@ pub const DERIVED_SOURCES: [&str; 9] = [
     "ascendant",
 ];
 
+/// The derived prefixes (SPEC-078 R3; ADR-078): a habit's source is one of them followed by a
+/// valid course code, so the registry stays closed without naming the owner's courses.
+pub const DERIVED_PREFIXES: [&str; 2] = [
+    "read:",     // SPEC-078 R3
+    "readgoal:", // SPEC-078 R3
+];
+
+/// Whether `source` is a derived one: one of [`DERIVED_SOURCES`], or one of [`DERIVED_PREFIXES`]
+/// followed by a valid course code (SPEC-078 R3).
+#[must_use]
+pub fn is_derived(source: &str) -> bool {
+    DERIVED_SOURCES.contains(&source)
+}
+
 /// Why a settlement was asked for.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SettleCause {
@@ -75,7 +89,7 @@ pub async fn settle(
     cause: SettleCause,
     at: UtcMillis,
 ) -> Result<u32, SettleError> {
-    if !DERIVED_SOURCES.contains(&request.source) {
+    if !is_derived(request.source) {
         return Err(SettleError::NotDerived);
     }
     let day = request.study_day.epoch_day();

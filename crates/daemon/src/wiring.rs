@@ -674,6 +674,7 @@ mod tests {
     use deck_streak_coordination::recompute::analytics_step::ANALYTICS_STEP;
     use deck_streak_coordination::recompute::badges::BADGES_STEP;
     use deck_streak_coordination::recompute::day_bonuses::DAY_BONUSES_STEP;
+    use deck_streak_coordination::recompute::habits::HABITS_STEP;
     use deck_streak_coordination::recompute::mint::MINT_STEP;
     use deck_streak_coordination::recompute::records::RECORDS_STEP;
     use deck_streak_coordination::recompute::streaks::STREAKS_STEP;
@@ -760,6 +761,23 @@ mod tests {
                 (Phase::Awards, BADGES_STEP),
                 (Phase::Awards, RECORDS_STEP),
             ]
+        );
+    }
+
+    #[test]
+    fn the_recompute_fold_registers_the_habit_step_in_the_day_steps_phase() {
+        let fold = recompute_fold(AnalyticsSettings::default()).expect("every step in its phase");
+        let steps = fold.steps();
+        assert_eq!(
+            steps.get(2..5),
+            Some(
+                &[
+                    (Phase::StreaksAndGovernor, STREAKS_STEP),
+                    (Phase::DaySteps, HABITS_STEP),
+                    (Phase::DerivedBonuses, DAY_BONUSES_STEP),
+                ][..]
+            ),
+            "the habit step is phase 4's, after the streaks and before the derived bonuses (SPEC-078 R5)"
         );
     }
 

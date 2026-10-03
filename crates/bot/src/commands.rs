@@ -25,6 +25,7 @@ use std::sync::Arc;
 
 use deck_streak_coordination::data_rights_registry::{erase_all, export_all};
 use deck_streak_coordination::drills::{self, DrillMeta, DrillNotes, RealFs, Surface};
+use deck_streak_coordination::habits::HabitWriter;
 use deck_streak_coordination::inbox_capture::{Capture, Captured, InboxCaptures, Source};
 use deck_streak_coordination::instruments::InstrumentService;
 use deck_streak_coordination::progression::badges_view::earned_badges;
@@ -33,8 +34,8 @@ use deck_streak_coordination::progression::records_view::records_now;
 use deck_streak_coordination::score::day_score;
 use deck_streak_coordination::streak_views::streak_view;
 use deck_streak_identity::Owner;
-use deck_streak_kernel::{Clock, Db, Environment, Setting, SettingsError, StudyDayRule};
-use deck_streak_notifications::owner_message;
+use deck_streak_kernel::{Clock, Courses, Db, Environment, Setting, SettingsError, StudyDayRule};
+use deck_streak_notifications::{Router, owner_message};
 use frankenstein::types::{BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo};
 
 use crate::badges_commands::{
@@ -436,6 +437,15 @@ pub struct Commands<S> {
     pending_drill: Option<String>,
     /// The vault inbox the owner's media is saved into, when the daemon wired it (SPEC-118 R6).
     captures: Option<Arc<InboxCaptures<RealFs>>>,
+    /// The owner's courses and the router the minutes log answers through (SPEC-078 R2).
+    habits: Option<Habits>,
+}
+
+/// What the minutes log's commands need beyond the handlers' own: the owner's courses, and the
+/// router a level a habit write crosses is announced through (SPEC-078 R18).
+struct Habits {
+    courses: Courses,
+    router: Arc<Router>,
 }
 
 impl<S: OwnerSync> Commands<S> {
@@ -464,6 +474,7 @@ impl<S: OwnerSync> Commands<S> {
             drills: None,
             pending_drill: None,
             captures: None,
+            habits: None,
         }
     }
 
@@ -494,6 +505,24 @@ impl<S: OwnerSync> Commands<S> {
     pub fn with_capture(mut self, captures: Arc<InboxCaptures<RealFs>>) -> Self {
         self.captures = Some(captures);
         self
+    }
+
+    /// These handlers, logging the owner's reading minutes against `courses` and announcing a
+    /// level a habit write crosses through `router` (SPEC-078 R2, R18).
+    #[must_use]
+    pub fn with_habits(mut self, courses: Courses, router: Arc<Router>) -> Self {
+        self.habits = Some(Habits { courses, router });
+        self
+    }
+
+    /// The writer a habit use case runs with, at the clock's now.
+    fn habit_writer<'a>(&'a self, habits: &'a Habits) -> HabitWriter<'a> {
+        HabitWriter {
+            db: &self.db,
+            router: Some(&habits.router),
+            rule: self.rule,
+            now: self.clock.now(),
+        }
     }
 
     /// The owner's chat: in a private chat, the chat's id is the user's.

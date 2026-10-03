@@ -1008,6 +1008,12 @@ name = "deck-streak-habits"
 version = "0.2.0"
 dependencies = [
  "deck-streak-kernel",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "tempfile",
+ "thiserror",
+ "tokio",
 ]
 
 [[package]]
