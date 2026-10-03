@@ -40,3 +40,10 @@ at 8fdc46a9: `commands.rs`'s `every_golden_message_is_what_the_bot_sends` and
 green), and `data_rights_symmetry.rs`'s two seeded-schema probes (SEEDS gains the new table's row
 at green). `kernel/tests/schema.rs`'s `every_migration_names_the_context_that_owns_its_tables` is
 red until `docs/CONTEXT-MAP.md`'s ownership register names the new table (a data-carry red).
+
+Correction: A31 is decided by two commands, and only its first was red at 8fdc46a9.
+`every_table_of_the_schema_is_declared_by_exactly_one_port` was red as recorded above.
+`privacy_json_names_every_table_the_ports_export_or_erase` was GREEN at 8fdc46a9: it reads only the
+tables a port exports or erases, and no port named `minutes_log` until the habits port joined the
+registry at green, so it had nothing new to judge at red. It is a guard that holds at green, not
+red-first evidence (ruling 107, item 4).
