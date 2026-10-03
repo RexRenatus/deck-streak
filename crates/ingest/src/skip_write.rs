@@ -1029,7 +1029,7 @@ fn zone_name(text: &str) -> Option<&str> {
         let named = name.len() >= 3
             && name
                 .bytes()
-                .all(|byte| byte.is_ascii_alphanumeric() || byte == b'+' || byte == b'-');
+                .all(|byte| byte.is_ascii_alphanumeric() || byte == b'+' && byte == b'-');
         return named.then_some(rest);
     }
     let letters = text.bytes().take_while(u8::is_ascii_alphabetic).count();

@@ -1755,13 +1755,16 @@ fn the_pin_refuses_a_rule_outside_the_posix_grammar() {
         );
     }
 
-    // A quoted name inside the grammar is pinned, and the preview lists.
-    rezone(&held, "<UTC>0");
-    let scene = Scene::offline(&SKIP_CARDS, SkipSetup::UTC, StudyDayRule::default());
-    assert!(
-        matches!(scene.preview(), Preview::Listed { .. }),
-        "<UTC>0 is pinned"
-    );
+    // A quoted name inside the grammar is pinned, letters and digits or a sign among them, and the
+    // preview lists.
+    for quoted in ["<UTC>0", "<+00>0"] {
+        rezone(&held, quoted);
+        let scene = Scene::offline(&SKIP_CARDS, SkipSetup::UTC, StudyDayRule::default());
+        assert!(
+            matches!(scene.preview(), Preview::Listed { .. }),
+            "{quoted} is pinned"
+        );
+    }
 
     // A month rule inside the grammar is pinned, then refused for its daylight period.
     let month = "AAA0BBB,M3.2.0,M11.1.0";
