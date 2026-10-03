@@ -1018,8 +1018,8 @@ pub struct SkipSetup {
 }
 
 impl SkipSetup {
-    /// The workspace's pinned zone (`UTC0`, `.cargo/config.toml`), the engine's default rollover
-    /// hour and FSRS off.
+    /// The zone the skip's tests pin in their own process (`UTC0`, SPEC-083 section 3), the
+    /// engine's default rollover hour and FSRS off.
     pub const UTC: Self = Self {
         utc_offset_west: Some(0),
         rollover: 4,

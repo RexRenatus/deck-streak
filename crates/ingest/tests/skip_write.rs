@@ -41,8 +41,8 @@ use tokio::runtime::Runtime;
 
 /// An endpoint no test here contacts.
 const ENDPOINT: &str = "http://127.0.0.1:9/";
-/// The workspace's pinned zone (`.cargo/config.toml`): a POSIX rule that names no zone file, at
-/// the zero offset, with no daylight period.
+/// The zone the service pins and each test here sets itself (SPEC-083 R3): a POSIX rule that names
+/// no zone file, at the zero offset, with no daylight period.
 const UTC: &str = "UTC0";
 /// How long a test waits after it changes `TZ`: chrono reads the variable again at most once a
 /// second on each thread.

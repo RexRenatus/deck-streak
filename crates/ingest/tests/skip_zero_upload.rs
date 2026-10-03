@@ -5,35 +5,62 @@
 //! sync, a preview, each refused take, an aborted take and a failed one, and the owner's sync that
 //! follows each, record zero uploads and zero local changes, and the private copy's bytes stay as
 //! its own sync left them; nothing is requested after a refused, aborted or failed take's answer,
-//! over a wait longer than the syncer's timeout. The process's zone is the workspace's pin.
+//! over a wait longer than the syncer's timeout. The test pins the process's zone itself, as the
+//! service pins its own (SPEC-083 section 3): this target is compiled at edition 2021 so that it
+//! sets `TZ` without `unsafe`, and its one test holds the target's lock for its whole run.
 
 // An integration test is test code: its helpers panic on a fixture that cannot be built, and it
 // prints the examined counts on purpose.
 #![allow(clippy::expect_used, clippy::print_stdout)]
 
+// The support module is shared with the crate's edition-2024 targets, which format it; formatted
+// from this edition-2021 root it would be sorted the other way, so this root leaves it alone.
+#[rustfmt::skip]
 mod support;
 
 use std::cell::Cell;
 use std::path::Path;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
+use std::thread;
 use std::time::{Duration, SystemTime};
 
 use deck_streak_ingest::engine::RslibEngine;
 use deck_streak_ingest::settings::SkipSearch;
-use deck_streak_ingest::skip::{FailReason, SKIP_MAX_CARDS, SkipRefusal, SkipStore};
+use deck_streak_ingest::skip::{FailReason, SkipRefusal, SkipStore, SKIP_MAX_CARDS};
 use deck_streak_ingest::skip_write::{
-    NoHooks, Preview, TakeAnswer, TakeHooks, TakePorts, TakeRequest, preview, take,
+    preview, take, NoHooks, Preview, TakeAnswer, TakeHooks, TakePorts, TakeRequest,
 };
 use deck_streak_ingest::sync::{OWNER_SYNC_DEBOUNCE_SECS, SYNC_TIMEOUT_SECS};
 use deck_streak_ingest::sync_runs::{SqliteSyncRuns, Trigger};
 use deck_streak_ingest::write_class_stop::WriteClassStop;
 use deck_streak_kernel::{Db, Environment, StudyDay, StudyDayRule, UtcMillis};
-use support::recording::{Recording, local_change};
-use support::synthetic::{self, SKIP_CARDS, SkipCard, SkipSetup};
+use support::recording::{local_change, Recording};
+use support::synthetic::{self, SkipCard, SkipSetup, SKIP_CARDS};
 use support::{Fixture, SyncServer};
 use tokio::runtime::Runtime;
 
 const TEST: &str = "every_path_but_the_take_and_the_undo_records_zero_uploads";
+/// The zone the service pins (SPEC-083 R3): a POSIX rule that names no zone file, at the zero
+/// offset, with no daylight period.
+const UTC: &str = "UTC0";
+/// How long the test waits after it changes `TZ`: chrono reads the variable again at most once a
+/// second on each thread.
+const ZONE_SETTLES: Duration = Duration::from_millis(1100);
+
+/// The target's one lock: the zone is the process's, and `cargo test` runs a target's tests on
+/// threads of one process.
+static LOCK: Mutex<()> = Mutex::new(());
+
+/// Takes the target's one lock and sets the zone the test runs in, waiting for chrono to read it
+/// again when it changed.
+fn zone(rule: &str) -> MutexGuard<'static, ()> {
+    let held = LOCK.lock().unwrap_or_else(PoisonError::into_inner);
+    if std::env::var("TZ").ok().as_deref() != Some(rule) {
+        std::env::set_var("TZ", rule);
+        thread::sleep(ZONE_SETTLES);
+    }
+    held
+}
 
 fn now() -> UtcMillis {
     UtcMillis::from_system_time(SystemTime::now())
@@ -195,6 +222,7 @@ fn every_path_but_the_take_and_the_undo_records_zero_uploads() {
     if support::role().as_deref() == Some(support::SERVER) {
         return support::serve();
     }
+    let _zone = zone(UTC);
     let scene = Scene::new(&SKIP_CARDS, SkipSetup::UTC);
     let mut paths = 0;
     paths +=
