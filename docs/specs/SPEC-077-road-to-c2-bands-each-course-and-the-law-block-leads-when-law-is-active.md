@@ -191,6 +191,8 @@ R19. Every constant this SPEC uses (the stability target, the mature interval an
 | A16 | the progress route answers the owner and refuses every other caller with no data | `the_progress_route_answers_only_the_owner` |
 | A17 | the law route answers the owner and refuses every other caller with no data | `the_law_route_answers_only_the_owner` |
 | A18 | `/progress` states each course's band, mastery and current unit as the route does | `progress_shows_each_course_band_and_mastery` |
+| A19 | the progress screen draws each band cell with its mastery and marks the current unit | `draws each band cell with its mastery and the current unit` |
+| A20 | the law tab renders a pending count as pending, never as zero | `renders a pending count as pending, never zero` |
 | A21 | the next milestone reads the sum of the courses' stored mature cards, and stays pending before the first recompute stores a course | `the_milestone_reads_the_courses_mature_cards` |
 
 ```acceptance
@@ -212,6 +214,8 @@ A15: cargo test -p deck-streak-coordination --test law_block -- --exact law_leec
 A16: cargo test -p deck-streak-api --test progress_routes -- --exact the_progress_route_answers_only_the_owner
 A17: cargo test -p deck-streak-api --test law_routes -- --exact the_law_route_answers_only_the_owner
 A18: cargo test -p deck-streak-bot --test progress_commands -- --exact progress_shows_each_course_band_and_mastery
+A19: pnpm exec vitest run web/app/src/lib/progress/CourseLadder.test.ts -t "draws each band cell with its mastery and the current unit"
+A20: pnpm exec vitest run web/app/src/lib/law/LawBlock.test.ts -t "renders a pending count as pending, never zero"
 A21: cargo test -p deck-streak-coordination --test progress_milestone -- --exact the_milestone_reads_the_courses_mature_cards
 ```
 
@@ -227,6 +231,7 @@ change when it merges.
 |---|---|---|
 | B1 | over `privacy.json`, `PRIVACY.md` and `crates/curriculum/src/data_rights.rs`: the `course-progress` and `law-dues` categories name their three tables with purpose, basis and retention, and export and erase cover all three | the privacy-gdpr pack |
 | B2 | over `notifications-policy.json` and every file under `crates/coordination/src/`: `band_up` stays T5 and budget-exempt, and the band-up's celebration goes through the one router | the notifications-policy pack |
+| B3 | over `web/app/src/routes/progress/+page.svelte`, `web/app/src/routes/law/+page.svelte`, `web/app/src/lib/progress/` and `web/app/src/lib/law/`: both screens pass the accessibility audit in both Telegram colour schemes | the accessibility pack |
 
 ## 3c. Delivered by the next pull request
 
@@ -238,15 +243,6 @@ naming it, and the lines under it are their fence lines, each prefixed with it. 
 its criteria back verbatim: the row into section 3's table (or section 3a's, for B3), without the
 `delivered by` column, and the fence line into the acceptance fence, without the prefix. R8's
 consumer, the port `LiveBand` over curriculum's stored band, is CU85b's first part.
-
-| id | criterion | decided by | delivered by |
-|---|---|---|---|
-| A19 | the progress screen draws each band cell with its mastery and marks the current unit | `draws each band cell with its mastery and the current unit` | CU85b |
-| A20 | the law tab renders a pending count as pending, never as zero | `renders a pending count as pending, never zero` | CU85b |
-| B3 | over `web/app/src/routes/progress/+page.svelte`, `web/app/src/routes/law/+page.svelte`, `web/app/src/lib/progress/` and `web/app/src/lib/law/`: both screens pass the accessibility audit in both Telegram colour schemes | the accessibility pack | CU85b |
-
-CU85b: A19: pnpm exec vitest run web/app/src/lib/progress/CourseLadder.test.ts -t "draws each band cell with its mastery and the current unit"
-CU85b: A20: pnpm exec vitest run web/app/src/lib/law/LawBlock.test.ts -t "renders a pending count as pending, never zero"
 
 ## 4. File manifest
 
@@ -684,3 +680,33 @@ SPEC-086 places the block first there (#69).
 ```acceptance
 A22: cargo test -p deck-streak-daemon --lib -- --exact wiring::tests::the_recompute_fold_registers_road_to_c2s_steps
 ```
+
+## 13. Amendments, 2026-10-03, continued: the Mini App part
+
+The second part of the second pull request delivers the Mini App's two screens, the progress
+screen and the law tab, and closes section 3c as its prose directs. Sections 4 to 12 are unchanged;
+the lines below add to section 4 as T29 and T31 do.
+
+- T32, section 3c. CU85b's last criteria move back verbatim: A19 and A20 into section 3's table
+  without the `delivered by` column, and their fence lines into the acceptance fence without the
+  prefix, between A18 and A21; B3 into section 3a's table, after B2. Section 3c keeps its prose and
+  holds no row and no fence line.
+- T33, section 4 gains these files: `web/app/src/lib/api.ts` (changed: the clients of the progress
+  route, the law route and SPEC-072's law-tiers route, each through the one session);
+  `web/app/tests/a11y.spec.ts` (changed: the three routes' answers, so the accessibility audit
+  renders both screens in both of Telegram's colour schemes, B3); `web/app/messages/*.json`
+  (changed: the two screens' strings, in each of the seven locales); and
+  `changelog.d/feat-road-to-c2-077b.md` (added: this part's changelog fragment).
+- T34, section 4 also gains four test files, each mutation coverage and not a criterion, because the
+  Mini App's mutation run mutates every changed file whole: `web/app/src/lib/progress/progress.test.ts`
+  and `web/app/src/lib/law/law.test.ts` (added: each reader refuses, whole, a body that is not its
+  route's answer), and `web/app/src/routes/progress.test.ts` and `web/app/src/routes/law.test.ts`
+  (added: each screen waits with a status, reads its routes, and shows the alert for a server it
+  cannot reach or a session it cannot renew).
+- T35, R17 and the startapp token table. No startapp token opens either screen: the progress
+  command's button opens the progress screen by its path (R16), and the law tab is opened by its
+  path. The token table's test held its destinations equal to the route table, so
+  `web/app/src/lib/startapp.test.ts` (changed) now holds the destinations, with the two screens the
+  route table opens by path alone, equal to the route table, and holds that neither screen's name
+  is a token. A new screen still needs a token or a place in that list. The token table itself is
+  unchanged.
