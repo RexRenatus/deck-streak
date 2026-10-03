@@ -288,6 +288,50 @@
       "erase": "anonymise"
     },
     {
+      "id": "chests",
+      "data": "every chest you earned: the study day, whether a study session, the daily challenge or the weekly quest earned it, the session's start, its rarity, the XP it pays, its state, the Epic prize you chose and whether its arrival was announced",
+      "source": "derived",
+      "stores": ["chests.*"],
+      "purpose": "rolling each chest once, paying it once on the study day it was earned, and never rolling the same session again",
+      "lawful_basis": "contract",
+      "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "delete"
+    },
+    {
+      "id": "chest-pity",
+      "data": "the pity row: how many chests came since your last Epic and since your last Legendary",
+      "source": "derived",
+      "stores": ["pity.*"],
+      "purpose": "guaranteeing an Epic and a Legendary after a fixed run of chests",
+      "lawful_basis": "contract",
+      "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "anonymise"
+    },
+    {
+      "id": "xp-tokens",
+      "data": "every double-XP token: the chest it came from, when it was granted, when it was activated, when its window ends and whether it is spent",
+      "source": "derived",
+      "stores": ["xp_tokens.*"],
+      "purpose": "activating each token once, opening its two-hour window, and paying its bonus at most once per study day",
+      "lawful_basis": "contract",
+      "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "delete"
+    },
+    {
+      "id": "chest-settings",
+      "data": "the chest settings' one row: the most chests a study day holds and the hour from which a new chest is vaulted",
+      "source": "learner-input",
+      "stores": ["chest_settings.*"],
+      "purpose": "honouring your choices of how many chests a study day holds and when they wait in the vault",
+      "lawful_basis": "contract",
+      "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "anonymise"
+    },
+    {
       "id": "law-drills",
       "data": "which law drills the owner answered, from which surface and on which study day, and each graded drill's type, subject, accepted XP and the study day it was graded; never a drill's text or an answer, which stay in the owner's notes",
       "source": "learner-input",

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE chests SET state = 'resolved' WHERE id = ?1 AND state = 'opened'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "ba381c499a7e5acd2bfb65a30f390382dd1b883345c88b33263bf2aa2f4c87ef"
+}

@@ -92,6 +92,9 @@ class TheCampaignTable(unittest.TestCase):
     def test_the_progression_row_reads_no_unexplained_mutant(self):
         self.assert_closed("deck-streak-progression")
 
+    def test_the_miniapp_row_reads_no_unexplained_mutant(self):
+        self.assert_closed("miniapp")
+
 
 if __name__ == "__main__":
     unittest.main()

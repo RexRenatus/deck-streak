@@ -154,3 +154,39 @@ A22: green at 1e386cf
 A23: red at 6394621: AssertionError: False is not true : mutation-python uploads mutation-python-shard-0 and the verdict downloads nothing that matches it
 A23: green at 63b9336
 ```
+
+Addendum, 2026-09-30 (issue #454, the amendment's A24). The test of A24 was committed
+(d632590d) beside one planted fold removal in `ci.yml`, the scripts judge's line
+`if [ "$status" -eq 0 ]; then status=$scripts; fi`, because the folds already hold at `dev`, so a
+new test alone cannot be red. The whole file ran one test, red by assertion for the planted
+removal. Restoring the line (4cb52f6e) turned it green; the green commit edits no test file.
+
+```red-first
+A24: red at d632590d: AssertionError: 0 != 1 : judge:scripts alone, exit 1:
+A24: green at 4cb52f6e
+A25: red at 12a45d84: AssertionError: 1 == 1 : judge:rust piped through | tee "$RUNNER_TEMP/{n}.log" kept its exit 1
+A25: green at 9d0daeb4
+```
+
+A25 (round 1 of #454). Its test was committed (12a45d84) beside the run helper as it stood, which
+ran the step under `bash -eo pipefail`, a stronger shell than the one GitHub resolves for a step
+naming none (`bash -e {0}`). Under pipefail a piped command keeps its exit, so the harness
+self-test failed by assertion, and so did the census test, whose first cut refused nothing. The
+resolver (9d0daeb4) runs the step under the resolved shell and refuses the undrivable capture.
+
+Rows S08766 to S08773 are the companions of the killing test of A24, each proved KILLED by its
+full id on a clean committed tree.
+
+A26 and A27 (round 2 of #454). The populations of the resolver (57 placements) and of the census
+(30 plants) were committed (e4a543d1) against the resolver and census as round 1 left them, which
+read a `shell:` or `defaults:` it could not parse as absent and judged a line only when it held
+`$?` or a pipe status. Both tests fail by assertion: the resolver population had 27 placements
+read as a shell GitHub does not run, and the census population passed 27 of its 30 plants unseen.
+The default-deny resolver and census (8414b6c5) turn both green with 0 escaping and 0 silent, as the builder reported; no independent verify measured either population.
+
+```red-first
+A26: red at e4a543d1: AssertionError: step template bash {0}: read ['bash', '-e'] where GitHub runs ['bash']
+A26: green at 8414b6c5
+A27: red at e4a543d1: AssertionError: N2 `if ! cmd; then other=1; fi`: passed the census unseen
+A27: green at 8414b6c5
+```
