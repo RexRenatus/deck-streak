@@ -1418,6 +1418,11 @@ struct Census {
     /// Each name of a request the census cannot read, at its named request site, as (path,
     /// function, name), in order: once per mention.
     requests: Vec<(String, String, String)>,
+    /// Each path a unit or a drop-in names, as (path, line, the path it names), in order.
+    unit_paths: Vec<(String, usize, String)>,
+    /// Each definition of the command handler's replies and dispatch in its module, as (path,
+    /// name), in order.
+    replies: Vec<(String, String)>,
 }
 
 impl Census {
@@ -1456,11 +1461,22 @@ fn literal_refusals(
 
 /// The census of `sources`, each a path from the tree's root and its text.
 fn census(sources: &[(String, String)]) -> Census {
+    census_read(sources, &[])
+}
+
+/// The census of `sources`, each a path from the tree's root and its text: a file `brought` names
+/// is read as Rust or as text as it says, and any other by its extension.
+fn census_read(sources: &[(String, String)], brought: &[(String, bool)]) -> Census {
     let mut found = Census::default();
     for (path, text) in sources {
-        let rust = Path::new(path)
-            .extension()
-            .is_some_and(|extension| extension == "rs");
+        let rust = brought.iter().find(|(file, _)| file == path).map_or_else(
+            || {
+                Path::new(path)
+                    .extension()
+                    .is_some_and(|extension| extension == "rs")
+            },
+            |&(_, rust)| rust,
+        );
         let (code, structure) = if rust {
             rust_code(text)
         } else {
@@ -1504,6 +1520,10 @@ fn census(sources: &[(String, String)]) -> Census {
                     .push((path.clone(), line_of(&code, at), format!("names {name}")));
             }
         }
+        let (directory, name) = path.rsplit_once('/').unwrap_or(("", path));
+        if a_unit(name) || a_unit_drop_in(Path::new(directory), name) {
+            unit_paths(&mut found, path, &code);
+        }
         if rust {
             for (name, definer) in GUARDED {
                 for at in identifiers(&structure, name) {
@@ -1536,6 +1556,7 @@ fn census(sources: &[(String, String)]) -> Census {
             }
             if path == COMMANDS.0 || path.starts_with(COMMANDS.1) {
                 command_callers(&mut found, path, &code, &structure);
+                reply_definitions(&mut found, path, &code, &structure);
             }
             if path.starts_with(LEDGER.0) {
                 for (at, what) in carrying_attributes(&structure)
@@ -1555,7 +1576,21 @@ fn census(sources: &[(String, String)]) -> Census {
     found.callers.dedup();
     found.api_urls.sort();
     found.requests.sort();
+    found.unit_paths.sort();
+    found.replies.sort();
     found
+}
+
+/// Each path the unit or drop-in at `path` names, found in `found`, and each that runs a test file
+/// refused.
+fn unit_paths(found: &mut Census, path: &str, text: &str) {
+    let _ = (found, path, text);
+}
+
+/// Each definition of the command handler's replies and dispatch in the handler's module at
+/// `path`, found in `found`, and each visible outside the module refused.
+fn reply_definitions(found: &mut Census, path: &str, code: &str, structure: &str) {
+    let _ = (found, path, code, structure);
 }
 
 /// Each name of `REQUEST_NAMES` in the bot's source `path`, found at its named request site or
@@ -2136,12 +2171,31 @@ fn blank(text: &str, start: usize, end: usize) -> String {
     out
 }
 
+/// What a walk of a tree found: the sources it read, the files they bring in, and what it refused.
+#[derive(Debug, Default)]
+struct Walk {
+    /// Each source read, the files brought in among them, as its path from the root and its text,
+    /// in path order.
+    sources: Vec<(String, String)>,
+    /// Each file brought in, as its path from the root and whether it is read as Rust, in path
+    /// order.
+    brought: Vec<(String, bool)>,
+    /// Each refusal, as `path: what` or `path:line: what`, in order.
+    refusals: Vec<String>,
+}
+
+/// The files the sources of `walk` pull in, read into it under their own paths.
+fn brought_in(root: &Path, walk: &mut Walk) {
+    let _ = (root, &walk.brought);
+}
+
 /// Every shipped source under `root`, as its path from the root and its text, in path order: a
 /// file of a shipped kind by its name, a unit of any type, a script by its `#!` first line, and a
 /// unit's drop-in. A directory under a `src/` is always entered, whatever its name; elsewhere the
 /// skipped and the test directories are left out. A symlink is neither read nor followed.
-fn shipped_sources(root: &Path) -> Vec<(String, String)> {
-    let mut found = Vec::new();
+fn shipped_sources(root: &Path) -> Walk {
+    let mut walk = Walk::default();
+    let found = &mut walk.sources;
     let mut pending = vec![root.to_path_buf()];
     while let Some(directory) = pending.pop() {
         let under_sources = relative(root, &directory).iter().any(|part| part == "src");
@@ -2170,7 +2224,7 @@ fn shipped_sources(root: &Path) -> Vec<(String, String)> {
         }
     }
     found.sort();
-    found
+    walk
 }
 
 /// The parts of `path` below `root`, each as text.
@@ -2337,6 +2391,12 @@ fn no_delivery_goes_around_the_port() {
         fs::write(&file, text).expect("a planted source");
     }
     let walked = shipped_sources(tree.path());
+    assert_eq!(
+        walked.refusals,
+        Vec::<String>::new(),
+        "the walker refuses nothing in a tree with no symlink"
+    );
+    let walked = walked.sources;
     let paths: Vec<&str> = walked.iter().map(|(path, _)| path.as_str()).collect();
     assert_eq!(
         paths,
@@ -2392,8 +2452,16 @@ fn no_delivery_goes_around_the_port() {
         .ancestors()
         .nth(2)
         .expect("the tree's root, two levels above the crate");
-    let sources = examined("shipped source(s)", shipped_sources(root));
-    let tree = census(&sources);
+    let mut walk = shipped_sources(root);
+    walk.sources = examined("shipped source(s)", walk.sources);
+    brought_in(root, &mut walk);
+    assert_eq!(
+        walk.refusals,
+        Vec::<String>::new(),
+        "the tree holds a symlink, or pulls in a file the census cannot follow"
+    );
+    let sources = walk.sources;
+    let tree = census_read(&sources, &walk.brought);
     assert_eq!(
         tree.refused(),
         Vec::<String>::new(),
@@ -2892,7 +2960,10 @@ fn a_request_the_census_cannot_read_is_refused_wherever_the_bot_makes_it() {
         .ancestors()
         .nth(2)
         .expect("the tree's root");
-    let bot: Vec<(String, String)> = shipped_sources(root)
+    let walk = shipped_sources(root);
+    assert_eq!(walk.refusals, Vec::<String>::new(), "the walker refuses");
+    let bot: Vec<(String, String)> = walk
+        .sources
         .into_iter()
         .filter(|(path, _)| {
             path.starts_with(BOT_SOURCES)
@@ -2968,5 +3039,399 @@ fn a_request_the_census_cannot_read_is_refused_wherever_the_bot_makes_it() {
         missed.len(),
         members.len(),
         missed.first().map_or("", String::as_str)
+    );
+}
+
+/// Writes each file of `files`, as (path, bytes), under `root`, with its directories.
+fn plant(root: &Path, files: &[(&str, &[u8])]) {
+    for (path, bytes) in files {
+        let file = root.join(path);
+        fs::create_dir_all(file.parent().expect("a planted file's directory"))
+            .expect("a planted directory");
+        fs::write(&file, bytes).expect("a planted file");
+    }
+}
+
+/// A source that the compiler builds from files beside it: a Rust file by `include!`, a page by
+/// `include_str!` and an icon by `include_bytes!`, a file only a build names, a file the tree does
+/// not hold, and, in a test module, a fixture the tree does not hold either.
+const A_SOURCE_THAT_INCLUDES: &str = r#"//! Celebrations compiled in from files beside the source.
+
+include!("generated.in");
+
+/// The page a celebration posts, compiled in as text.
+pub const PAGE: &str = include_str!("../page.txt");
+
+/// The icon a celebration shows, compiled in as bytes.
+pub const ICON: &[u8] = include_bytes!("../icon.bin");
+
+include!(concat!(env!("OUT_DIR"), "/celebrate.rs"));
+
+/// A note compiled in from a file the tree does not hold.
+pub const NOTE: &str = include_str!("missing.txt");
+
+#[cfg(test)]
+mod tests {
+    const FIXTURE: &str = include_str!("fixture-not-in-the-tree.txt");
+}
+"#;
+
+/// The Rust file `include!` brings in: a send around the router, and a further include.
+const AN_INCLUDED_SEND: &str = r#"/// A celebration sent straight to the owner through the bot's transport, around the router.
+pub async fn celebrate_around_the_router(transport: &Transport, owner: Owner) {
+    let _sent = transport
+        .send_html(owner.user().get(), "a celebration the router never decided", None)
+        .await;
+}
+
+include!("nested.in");
+"#;
+
+/// The Rust file the included one brings in: a write to the held queue, around the router.
+const A_NESTED_HOLD: &str = r#"/// A celebration held for the flush, written around the router.
+pub async fn hold_around_the_router(pool: &SqlitePool) {
+    let _held = sqlx::query("INSERT INTO notification_queue (dedupe_key) VALUES ('celebrate')")
+        .execute(pool)
+        .await;
+}
+"#;
+
+#[test]
+fn an_included_file_is_read_and_one_the_census_cannot_follow_is_refused() {
+    let tree = tempfile::tempdir().expect("a temporary tree");
+    let mut icon = vec![0x89, b'P', b'N', b'G', 0xff, 0xfe, b'\n'];
+    icon.extend_from_slice(b"in_app_feed");
+    icon.extend_from_slice(&[0x00, 0xff]);
+    plant(
+        tree.path(),
+        &[
+            (
+                "crates/daemon/src/celebrate.rs",
+                A_SOURCE_THAT_INCLUDES.as_bytes(),
+            ),
+            (
+                "crates/daemon/src/generated.in",
+                AN_INCLUDED_SEND.as_bytes(),
+            ),
+            ("crates/daemon/src/nested.in", A_NESTED_HOLD.as_bytes()),
+            (
+                "crates/daemon/page.txt",
+                b"Celebrate at https://api.telegram.org/bot{token}/sendMessage\n",
+            ),
+            ("crates/daemon/icon.bin", &icon),
+        ],
+    );
+    let mut walk = shipped_sources(tree.path());
+    brought_in(tree.path(), &mut walk);
+    assert_eq!(
+        walk.refusals,
+        [
+            "crates/daemon/src/celebrate.rs:11: includes a file the census cannot name",
+            "crates/daemon/src/celebrate.rs:14: includes missing.txt, which is not in the tree",
+        ],
+        "an include of a file only a build names, and of one the tree does not hold, is refused, \
+         and one in a test module is not followed"
+    );
+    assert_eq!(
+        walk.brought,
+        [
+            (String::from("crates/daemon/icon.bin"), false),
+            (String::from("crates/daemon/page.txt"), false),
+            (String::from("crates/daemon/src/generated.in"), true),
+            (String::from("crates/daemon/src/nested.in"), true),
+        ],
+        "the files the source includes are brought in, as Rust from include! and as text \
+         otherwise, and so is the file an included one includes"
+    );
+    assert_eq!(
+        census_read(&walk.sources, &walk.brought).refused(),
+        [
+            "crates/daemon/icon.bin:2: names in_app_feed",
+            "crates/daemon/page.txt:1: names api.telegram.org",
+            "crates/daemon/page.txt:1: names sendMessage",
+            "crates/daemon/src/generated.in:4: calls send_html in celebrate_around_the_router, not \
+             a named call site",
+            "crates/daemon/src/nested.in:3: names notification_queue",
+        ],
+        "each included file is read under its own path with every rule of that path"
+    );
+}
+
+#[test]
+fn a_migration_outside_the_routers_names_neither_the_feed_nor_the_queue() {
+    let tree = tempfile::tempdir().expect("a temporary tree");
+    plant(
+        tree.path(),
+        &[
+            (
+                "migrations/004101_notifications_router.sql",
+                b"-- The router's tables: the feed and the held queue.\n\
+                  CREATE TABLE in_app_feed (id INTEGER PRIMARY KEY) STRICT;\n\
+                  CREATE TABLE notification_queue (id INTEGER PRIMARY KEY) STRICT;\n",
+            ),
+            (
+                "migrations/004102_notifications_queue_claim.sql",
+                b"-- The held queue's claim.\n\
+                  ALTER TABLE notification_queue ADD COLUMN claim TEXT;\n",
+            ),
+            (
+                "migrations/009901_celebrate_on_upgrade.sql",
+                b"-- A celebration held at the next start, written around the router.\n\
+                  INSERT INTO notification_queue (dedupe_key) VALUES ('celebrate');\n",
+            ),
+            (
+                "migrations/009902_feed_on_upgrade.sql",
+                b"-- A feed item appended at the next start, written around the router.\n\
+                  INSERT INTO in_app_feed (dedupe_key) VALUES ('celebrate');\n",
+            ),
+        ],
+    );
+    let walk = shipped_sources(tree.path());
+    let paths: Vec<&str> = walk.sources.iter().map(|(path, _)| path.as_str()).collect();
+    assert_eq!(
+        paths,
+        [
+            "migrations/004101_notifications_router.sql",
+            "migrations/004102_notifications_queue_claim.sql",
+            "migrations/009901_celebrate_on_upgrade.sql",
+            "migrations/009902_feed_on_upgrade.sql",
+        ],
+        "the walker reads every migration"
+    );
+    assert_eq!(
+        census(&walk.sources).refused(),
+        [
+            "migrations/009901_celebrate_on_upgrade.sql:2: names notification_queue",
+            "migrations/009902_feed_on_upgrade.sql:2: names in_app_feed",
+        ],
+        "a migration outside the router's two names neither the held queue nor the feed"
+    );
+}
+
+#[test]
+fn a_symlink_in_a_walked_place_is_refused() {
+    let outside = tempfile::tempdir().expect("a temporary place outside the tree");
+    plant(
+        outside.path(),
+        &[
+            ("celebrate.sh", A_SCRIPT_RUN_BY_ITS_SHELL.as_bytes()),
+            (
+                "lib/celebrate.ts",
+                b"await fetch('https://api.telegram.org/bot' + token + '/sendMessage');\n",
+            ),
+        ],
+    );
+    let tree = tempfile::tempdir().expect("a temporary tree");
+    plant(
+        tree.path(),
+        &[
+            ("deploy/scripts/backup.sh", b"echo backup\n"),
+            ("web/app/src/app.html", b"<!doctype html>\n"),
+        ],
+    );
+    let links = [
+        ("celebrate.sh", "deploy/scripts/celebrate.sh"),
+        ("lib", "web/app/src/lib"),
+        ("lib", "node_modules/celebrate"),
+        ("celebrate.sh", "crates/daemon/tests/celebrate.sh"),
+    ];
+    for (target, link) in links {
+        let link = tree.path().join(link);
+        fs::create_dir_all(link.parent().expect("a link's directory")).expect("a directory");
+        std::os::unix::fs::symlink(outside.path().join(target), link).expect("a symlink");
+    }
+    let walk = shipped_sources(tree.path());
+    assert_eq!(
+        walk.refusals,
+        [
+            "deploy/scripts/celebrate.sh: is a symlink, which the census neither reads nor follows",
+            "web/app/src/lib: is a symlink, which the census neither reads nor follows",
+        ],
+        "a symlink to a file and one to a directory, each in a place the walker walks, are \
+         refused, and one in a place it leaves out is never met"
+    );
+    let paths: Vec<&str> = walk.sources.iter().map(|(path, _)| path.as_str()).collect();
+    assert_eq!(
+        paths,
+        ["deploy/scripts/backup.sh", "web/app/src/app.html"],
+        "the walker reads the files and follows no symlink"
+    );
+}
+
+/// The daemon's entry, with a module brought in from a test directory by `#[path]`, one from a
+/// file the tree does not hold, one inside an inline module, and one in a test module.
+const AN_ENTRY_WITH_PATHS: &str = r#"//! The daemon's entry, with modules brought in by path.
+
+#[path = "../tests/support/celebrate.rs"]
+mod celebrate;
+
+#[path = "missing.rs"]
+pub(crate) mod missing;
+
+mod outer {
+    #[path = "inner.rs"]
+    mod inner;
+}
+
+#[cfg(test)]
+#[path = "../tests/support/fixture.rs"]
+mod fixture;
+"#;
+
+#[test]
+fn a_module_brought_in_by_path_is_read_and_one_the_census_cannot_follow_is_refused() {
+    let tree = tempfile::tempdir().expect("a temporary tree");
+    plant(
+        tree.path(),
+        &[
+            ("crates/daemon/src/main.rs", AN_ENTRY_WITH_PATHS.as_bytes()),
+            (
+                "crates/daemon/tests/support/celebrate.rs",
+                AROUND_THE_PORT_IN_A_MODULE.as_bytes(),
+            ),
+        ],
+    );
+    let mut walk = shipped_sources(tree.path());
+    brought_in(tree.path(), &mut walk);
+    assert_eq!(
+        walk.refusals,
+        [
+            "crates/daemon/src/main.rs:10: brings in a module by #[path] inside a block, which \
+             the census cannot resolve",
+            "crates/daemon/src/main.rs:6: brings in missing.rs by #[path], which is not in the \
+             tree",
+        ],
+        "a #[path] to a file the tree does not hold, and one inside an inline module, are \
+         refused, and one in a test module is not followed"
+    );
+    assert_eq!(
+        walk.brought,
+        [(
+            String::from("crates/daemon/tests/support/celebrate.rs"),
+            true
+        )],
+        "the module a #[path] names is brought in from a test directory, as Rust"
+    );
+    assert_eq!(
+        census_read(&walk.sources, &walk.brought).refused(),
+        [
+            "crates/daemon/tests/support/celebrate.rs:6: calls send_html in \
+             celebrate_around_the_router, not a named call site",
+        ],
+        "the module is read under its own path with every rule of that path"
+    );
+}
+
+#[test]
+fn a_unit_that_runs_a_test_file_is_refused() {
+    let units = [
+        (
+            "deploy/systemd/deck-streak-page.service",
+            "[Service]\nType=oneshot\nExecStart=/usr/local/lib/deck-streak/current/agent/tests/run.sh\n",
+        ),
+        (
+            "deploy/systemd/deck-streak-bot.service.d/page.conf",
+            "[Service]\nExecStartPost=/usr/bin/python3 \
+             /usr/local/lib/deck-streak/current/deploy/scripts/test_page.py\n",
+        ),
+        (
+            "deploy/systemd/deck-streak-backup.service",
+            "[Service]\nExecCondition=/usr/bin/test -f /var/lib/deck-streak/ready\n\
+             ExecStart=/usr/bin/python3 /usr/local/lib/deck-streak/current/deploy/scripts/backup.py\n\
+             ReadOnlyPaths=/usr/local/lib/deck-streak/current/crates/agent/src/tests/\n",
+        ),
+    ];
+    let found = census(&units.map(|(path, text)| (path.to_owned(), text.to_owned())));
+    assert_eq!(
+        found.refused(),
+        [
+            "deploy/systemd/deck-streak-bot.service.d/page.conf:2: runs \
+             /usr/local/lib/deck-streak/current/deploy/scripts/test_page.py, a test file the \
+             census does not read",
+            "deploy/systemd/deck-streak-page.service:3: runs \
+             /usr/local/lib/deck-streak/current/agent/tests/run.sh, a test file the census does \
+             not read",
+        ],
+        "a unit that runs a file in a test directory, and a drop-in that runs a test file by its \
+         name, are refused; a tool named test, a test directory under src/ and a shipped script \
+         are not"
+    );
+    assert_eq!(
+        found.unit_paths.len(),
+        8,
+        "every path the units name is read: {:?}",
+        found.unit_paths
+    );
+}
+
+/// The command handler's module with three replies made visible outside it, `pub`, `pub(crate)`
+/// and in a trait impl, and one kept private.
+const REPLIES_MADE_VISIBLE: &str = r#"impl<S: OwnerSync> Commands<S> {
+    /// The streak reply, made visible to every caller of the handler.
+    pub async fn streak(&self) {
+        self.send(Reply::from("a streak")).await;
+    }
+
+    /// The score reply, made visible to the crate.
+    pub(crate) async fn score(&self) {
+        self.send(Reply::from("a score")).await;
+    }
+
+    /// The level reply, private to the handler's module, as the handler's own are.
+    async fn level(&self) {
+        self.send(Reply::from("a level")).await;
+    }
+}
+
+impl<S: OwnerSync> Replies for Commands<S> {
+    /// The sync reply, inside a trait impl, which any caller of the trait reaches.
+    async fn sync(&self) {
+        self.send(Reply::from("a sync")).await;
+    }
+}
+"#;
+
+#[test]
+fn a_command_reply_made_visible_outside_its_module_is_refused() {
+    let planted = census(&[(COMMANDS.0.to_owned(), REPLIES_MADE_VISIBLE.to_owned())]);
+    assert_eq!(
+        planted.refused(),
+        [
+            "crates/bot/src/commands.rs:3: defines streak visible outside the handler's module",
+            "crates/bot/src/commands.rs:8: defines score visible outside the handler's module",
+            "crates/bot/src/commands.rs:20: defines sync visible outside the handler's module",
+        ],
+        "a reply defined pub, pub(crate) or in a trait impl for the handler is refused, and a \
+         private one is not"
+    );
+    let names: Vec<&str> = planted
+        .replies
+        .iter()
+        .map(|(_, name)| name.as_str())
+        .collect();
+    assert_eq!(names, ["level", "score", "streak", "sync"]);
+
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .ancestors()
+        .nth(2)
+        .expect("the tree's root");
+    let handler = fs::read_to_string(root.join(COMMANDS.0)).expect("the handler's module");
+    let committed = census(&[(COMMANDS.0.to_owned(), handler)]);
+    assert_eq!(
+        committed.refused(),
+        Vec::<String>::new(),
+        "the handler's own replies are private"
+    );
+    let mut names: Vec<&str> = committed
+        .replies
+        .iter()
+        .map(|(_, name)| name.as_str())
+        .collect();
+    names.sort_unstable();
+    let mut replies = COMMAND_REPLIES.to_vec();
+    replies.sort_unstable();
+    assert_eq!(
+        names, replies,
+        "each of the handler's replies and its dispatch is defined once in its module"
     );
 }
