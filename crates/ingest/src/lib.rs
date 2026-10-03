@@ -22,6 +22,7 @@ pub mod lock;
 pub mod reader;
 pub mod settings;
 pub mod state;
+pub mod study_days;
 pub mod structure;
 pub mod sync;
 pub mod sync_runs;
