@@ -126,10 +126,167 @@ def rendered_env(step, needs, results):
     return env
 
 
-def bash(script, env):
-    """A script as a GitHub-hosted runner's default shell runs it."""
+#: The argv GitHub runs a step's script with, by the `shell:` the workflow text resolves to. An
+#: explicit `bash` runs with pipefail and `sh` with errexit; the unspecified default is `bash -e`.
+SHELLS = {
+    "bash": ["bash", "--noprofile", "--norc", "-eo", "pipefail"],
+    "sh": ["sh", "-e"],
+    None: ["bash", "-e"],
+}
+#: The flags a custom `shell:` template may carry after its command, per command. A template adds
+#: no fail-fast of its own, so its argv is exactly its words before `{0}`.
+TEMPLATE_FLAGS = {
+    "bash": {"-e", "-o", "-eo", "pipefail", "--noprofile", "--norc", "-x"},
+    "sh": {"-e", "-x"},
+}
+MENTIONS_A_SHELL = re.compile(r"(?i)\b(shell|defaults)\b")
+
+
+def readable(block):
+    """A block's lines without blank lines, comment-only lines and `run:` scalar bodies.
+
+    What a `shell:` or `defaults:` mention could mean is judged on these lines only; a script's own
+    words are not YAML keys.
+    """
+    kept, skip_above = [], None
+    for line in block.splitlines():
+        if not line.strip():
+            continue
+        if line.lstrip().startswith("#"):
+            continue
+        indent = len(line) - len(line.lstrip())
+        if skip_above is not None:
+            if indent > skip_above:
+                continue
+            skip_above = None
+        key = re.match(r"^( *)(- )?run: *[^ {\[]", line)
+        if key:
+            skip_above = len(key.group(1)) + (2 if key.group(2) else 0)
+            continue
+        kept.append(line)
+    return kept
+
+
+def shell_value(raw, where):
+    """The argv a `shell:` value means, or a refusal by name: only `bash`, `sh` and a template of
+    their commands are read; every other spelling is a form this resolver does not read."""
+    if re.fullmatch(r"[a-z]+", raw):
+        if raw in SHELLS:
+            return list(SHELLS[raw])
+        raise AssertionError(
+            f"the workflow names the shell {raw} at {where}, which no scenario models"
+        )
+    words = raw.split(" ")
+    flags = TEMPLATE_FLAGS.get(words[0])
+    if flags is not None and words[-1] == "{0}" and set(words[1:-1]) <= flags:
+        return words[:-1]
+    raise AssertionError(
+        f"the workflow's shell at {where} is {raw!r}, a form the resolver does not read"
+    )
+
+
+def defaults_shell(lines, indent, where):
+    """The shell of one `defaults:` block among `lines` (each at `indent` or deeper), else None.
+
+    Every line that names a shell or defaults must sit in the one canonical block
+    (`defaults:` / `run:` / `shell:` or `working-directory:`, one space after each colon).
+    """
+    pad = " " * indent
+    mentions = [i for i, line in enumerate(lines) if MENTIONS_A_SHELL.search(line)]
+    if not mentions:
+        return None
+
+    def refuse(line):
+        raise AssertionError(
+            f"{where} names a default in a form the resolver does not read: {line.strip()}"
+        )
+
+    heads = [i for i, line in enumerate(lines) if line == f"{pad}defaults:"]
+    if len(heads) != 1 or lines[heads[0] + 1 : heads[0] + 2] != [f"{pad}  run:"]:
+        refuse(lines[mentions[0]])
+    start = end = heads[0] + 2
+    while end < len(lines) and re.fullmatch(
+        rf"{pad}    (shell|working-directory): (\S.*)", lines[end]
+    ):
+        end += 1
+    for at in mentions:
+        if not heads[0] <= at < end:
+            refuse(lines[at])
+    if end < len(lines) and len(lines[end]) - len(lines[end].lstrip()) > indent + 4:
+        refuse(lines[end])
+    named = [lines[at].split(": ", 1)[1] for at in range(start, end) if "shell:" in lines[at]]
+    if len(named) > 1:
+        refuse(lines[start])
+    return shell_value(named[0], where) if named else None
+
+
+def step_shell(step):
+    """The shell a step names for itself: one `shell: value` line at the step's key indent."""
+    lines = readable(step)
+    found = None
+    for at, line in enumerate(lines):
+        if not MENTIONS_A_SHELL.search(line):
+            continue
+        own = re.fullmatch(r"        shell: (\S.*)", line)
+        deeper = at + 1 < len(lines) and len(lines[at + 1]) - len(lines[at + 1].lstrip()) > 8
+        if own is None or found is not None or deeper:
+            raise AssertionError(
+                f"the step names its shell in a form the resolver does not read: {line.strip()}"
+            )
+        found = own.group(1)
+    return None if found is None else shell_value(found, "the step")
+
+
+def job_shell(job):
+    """The shell a job's `defaults.run` names, read outside its steps."""
+    outside, in_steps = [], False
+    for line in readable(job):
+        indent = len(line) - len(line.lstrip())
+        if line == "    steps:":
+            in_steps = True
+            continue
+        if in_steps and (indent > 4 or line.startswith("    - ")):
+            continue
+        in_steps = False
+        if indent >= 4:
+            outside.append(line)
+    return defaults_shell(outside, 4, "the job")
+
+
+def workflow_shell(text):
+    """The shell the workflow's own top-level `defaults:` names, wherever the key sits."""
+    top = []
+    for line in readable(text):
+        if not line.startswith(" "):
+            top.append([line])
+        elif top:
+            top[-1].append(line)
+    named = [
+        line
+        for group in top
+        if not group[0].startswith("name:") and MENTIONS_A_SHELL.search(group[0])
+        for line in group
+    ]
+    return defaults_shell(named, 0, "the workflow")
+
+
+def shell_of(step, job, text):
+    """The argv of the shell GitHub resolves for a step from the workflow text.
+
+    The step's `shell:`, else the job's and then the workflow's `defaults.run.shell`, else the
+    unspecified default `bash -e {0}`. Default-deny: a placement the resolver cannot read in its
+    canonical form is refused by name, and never treated as absent, so it cannot fall through to a
+    less specific shell. Every placement is read before precedence picks one.
+    """
+    placements = [step_shell(step), job_shell(job), workflow_shell(text)]
+    return next((argv for argv in placements if argv is not None), list(SHELLS[None]))
+
+
+def bash(script, env, shell):
+    """A step's script as GitHub runs it: the step's `shell:`, else the job's and then the
+    workflow's `defaults.run.shell`, else the unspecified default `bash -e {0}`."""
     return subprocess.run(
-        ["bash", "--noprofile", "--norc", "-eo", "pipefail", "-c", script],
+        [*shell, "-c", script],
         env=env,
         capture_output=True,
         text=True,
@@ -411,7 +568,7 @@ class ALegWithNothingToExamineIsNotStarted(unittest.TestCase):
         for where, changed, expected in examined("need results", scenarios):
             results = dict(dict.fromkeys(needs, "success"), **changed)
             env = dict(rendered_env(step, needs, results), PATH=os.environ["PATH"])
-            done = bash(script, env)
+            done = bash(script, env, shell_of(step, aggregate, workflow(CI)))
             self.assertEqual(done.returncode, expected, f"{where}: {done.stdout}{done.stderr}")
             for leg in LEGS:
                 if expected == 0 and results[leg] == "skipped":
@@ -446,7 +603,7 @@ class ALegWithNothingToExamineIsNotStarted(unittest.TestCase):
                 for name, value in results.items()
             )
             env = dict(rendered_env(step, needs, results), PATH=os.environ["PATH"])
-            done = bash(script, env)
+            done = bash(script, env, shell_of(step, aggregate, workflow(CI)))
             where = f"{need} {result}, {context}"
             self.assertEqual(done.returncode, 0 if admitted else 1, f"{where}: {done.stdout}")
 
@@ -483,7 +640,7 @@ class ALegWithNothingToExamineIsNotStarted(unittest.TestCase):
                 ORACLE_RC=str(oracle),
                 LEGS_RC=str(legs_rc),
             )
-            done = bash(script, env)
+            done = bash(script, env, shell_of(step, job, workflow(CI)))
             self.assertEqual(done.returncode, expected, f"{where}: {done.stdout}{done.stderr}")
             calls = log.read_text(encoding="utf-8").splitlines()
             checked = [call for call in calls if " legs " in f" {call} "]

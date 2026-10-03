@@ -12,3 +12,5 @@
 #![forbid(unsafe_code)]
 #![deny(unused_must_use)]
 #![warn(missing_docs, clippy::all)]
+
+pub mod horizon;

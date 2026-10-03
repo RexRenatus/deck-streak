@@ -2943,6 +2943,7 @@ BENIGN_BUILTINS = frozenset(
         "bool",
         "bytearray",
         "bytes",
+        "callable",
         "chr",
         "dict",
         "dir",
@@ -2951,6 +2952,7 @@ BENIGN_BUILTINS = frozenset(
         "format",
         "frozenset",
         "hasattr",
+        "id",
         "int",
         "isinstance",
         "iter",
@@ -4552,13 +4554,13 @@ NOT_WORKFLOW_READS = {
         (
             "test_not_started_legs",
             "ALegWithNothingToExamineIsNotStarted.test_ci_admits_a_not_started_leg_and_no_other_skip",
-            "bash(script, env)",
+            "bash(script, env, shell_of(step, aggregate, workflow(CI)))",
             1,
         ),
         (
             "test_not_started_legs",
             "ALegWithNothingToExamineIsNotStarted.test_ci_admits_a_skip_from_the_two_legs_and_from_no_other_need",
-            "bash(script, env)",
+            "bash(script, env, shell_of(step, aggregate, workflow(CI)))",
             1,
         ),
         (
@@ -4576,7 +4578,7 @@ NOT_WORKFLOW_READS = {
         (
             "test_not_started_legs",
             "ALegWithNothingToExamineIsNotStarted.test_the_verdict_step_fails_on_the_legs_check",
-            "bash(script, env)",
+            "bash(script, env, shell_of(step, job, workflow(CI)))",
             1,
         ),
     ),
@@ -4683,11 +4685,11 @@ NOT_WORKFLOW_READS = {
         ),
     ),
     **allowed(
-        "runs a step's shell cut from a workflow's loader-read text under bash; its output is the step's verdict, never a workflow",
+        "runs a step's shell cut from a workflow's loader-read text under the shell argv shell_of resolved from that text; its output is the step's verdict, never a workflow",
         (
             "test_not_started_legs",
             "bash",
-            "subprocess.run(['bash', '--noprofile', '--norc', '-eo', 'pipefail', '-c', script], env=env, capture_output=True, text=True, timeout=60, check=False)",
+            "subprocess.run([*shell, '-c', script], env=env, capture_output=True, text=True, timeout=60, check=False)",
             1,
         ),
     ),
@@ -4926,6 +4928,53 @@ NOT_WORKFLOW_READS = {
     **allowed(
         "calls the derivation of the exception classes, which reads no file; its value is a set of builtin names",
         ("test_ci_workflows", "census_problems", "builtin_exception_names()", 1),
+    ),
+    **allowed(
+        "calls bash, which runs a step's shell cut from a workflow's loader-read text under the shell argv shell_of resolved from that text, over a shim directory; its output is the step's verdict, never a workflow",
+        (
+            "test_verdict_folds",
+            "Driver.run",
+            "bash(script, env, shell_of(self.step, self.job, workflow(CI)))",
+            1,
+        ),
+    ),
+    **allowed(
+        "a log the step's shim wrote to a scratch file; never handed to the reader",
+        ("test_verdict_folds", "Driver.run", "log.read_text(encoding='utf-8')", 1),
+    ),
+    **allowed(
+        "calls Driver.run, which runs a step's shell over a planted script and shims, and reads the shim's log; outputs, never a workflow",
+        (
+            "test_verdict_folds",
+            "TheCensusJudgesEveryCommandByWhereItSits.test_every_command_form_is_driven_by_the_harness_or_refused_by_name",
+            "driver.run(planted_script, key, rc)",
+            1,
+        ),
+        (
+            "test_verdict_folds",
+            "TheVerdictStepFailsOnEachJudgeAlone.test_the_harness_sees_a_pipe_that_loses_a_recorded_exit",
+            "driver.run(mutated, key, rc)",
+            1,
+        ),
+        (
+            "test_verdict_folds",
+            "TheVerdictStepFailsOnEachJudgeAlone.test_the_step_fails_when_any_one_command_alone_fails_with_any_of_its_exits",
+            "driver.run(script, key, rc)",
+            1,
+        ),
+    ),
+    **allowed(
+        "the verdict tool's own source file, read for its exit constants; a production script, never the reader",
+        ("test_verdict_folds", "nonzero_exits", "TOOL.read_text(encoding='utf-8')", 1),
+    ),
+    **allowed(
+        "runs the census's guard test over a planted copy of the test tree; the census reads the copy's module sources through module_sources and reports problems, and no workflow's text reaches another reader through the call",
+        (
+            "test_ci_workflows",
+            "WorkflowFilesAreReadAsBytes.test_the_census_is_red_on_every_planted_site",
+            "case.run(result)",
+            1,
+        ),
     ),
 }
 
@@ -6095,7 +6144,7 @@ class WorkflowFilesAreReadAsBytes(unittest.TestCase):
         examined("read or dynamic builtin names planted", sites)
         self.assertGreater(len(others), 0)
         self.assertIn("memoryview", others)
-        self.assertIn("callable", others)
+        self.assertIn("slice", others)
         body = "".join(f"\n\ndef plant_{name}():\n    return {name}\n" for name in others + sites)
         said = set(self.plant_problems(body))
         for name in others:

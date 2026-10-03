@@ -1,5 +1,5 @@
 ---
-status: "proposed"
+status: "accepted"
 date: "2026-09-28"
 decision-makers: "@RexRenatus (owner), the DeckStreak architect"
 ---
@@ -100,3 +100,44 @@ SPEC-081 (the chests, their pity and their surfaces); ADR-024 (the admission of 
 ADR-071 (the recompute that grants them); the predecessor's `gamification/chests.py` and
 `pipeline_layers/loot.py`; the game-economy pack's teaching on rolls; `getrandom`'s `u64`
 (Context7 `/rust-random/getrandom`).
+
+## Amendment (2026-10-02)
+
+The one write is the caller's. The chest row and the pity counters after it are written inside
+the connection the caller passes, which the caller holds inside its own write (the fold's write of
+the study day, opened by the kernel's `Db::write` with `BEGIN IMMEDIATE`), as the progression
+ledger's `grant_on` and `settle` are. The chest port never opens, commits or rolls back a write of
+its own. As the code holds it (`crates/quests/src/chests.rs`, `crates/quests/src/chest_store.rs`):
+
+- `grant_session_chests_on` and `grant_challenge_chest_on` take `&mut SqliteConnection` and take
+  both draws for a chest, the rarity's and the payout's, before anything is written for it.
+- A draw's `Err` returns before any write in that step: no chest row and no pity change for the
+  session it was taken for, and none for any later session of the request.
+- `insert_chest` writes the row with `ON CONFLICT DO NOTHING` against the migration's unique
+  key, and `set_pity` runs only when the insert took a row, so a held key moves no pity.
+- Chests granted earlier in the same step stay in the caller's open write, each with its pity.
+  Whether that write commits is the caller's decision: committing keeps them, rolling back keeps
+  none, and either way every stored chest has its pity and the failed session is left for a
+  later recompute to roll.
+- A store error is answered the same way, with the write open. Between a chest's insert and its
+  pity it leaves the chest without its pity in that write, so a caller rolls back on one.
+
+### Considered Options (the alternatives it was chosen against)
+
+- The chest and its pity in the caller's write - chosen: one commit keeps the counters equal to
+  the chests, and the fold already holds a write for the study day.
+- A separate write of the port's own after the fold - rejected because a crash between the two
+  writes re-rolls the chest or loses the pity: the fold's day is stored and the chest is not, or
+  the chest is stored and its pity is not.
+- A deferred queue of chest grants, written later - rejected because it needs a second store,
+  and the queue and the chests would then have to be kept consistent across their own writes.
+
+### Confirmation
+
+`formal/tla/ChestRolledOnce` checks that recomputes with draws that fail, under any order of the
+callers' writes and either end of each, store at most one chest per key, keep the pity equal to
+the stored chests and store no chest for a failed draw; each property has a witness the checker
+catches (no unique key, the pity in a write of its own, the insert before the draw).
+`formal/lean/Formal/Chest.lean` proves the roll's guarantees, the Epic odds' ceiling and the
+payout's cap for every input, and its vectors tie the port to the Rust rules
+(`crates/quests/tests/formal_vectors_chest.rs`).

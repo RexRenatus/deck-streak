@@ -1,5 +1,7 @@
+import Formal.ChestVectors
 import Formal.NextMilestoneVectors
 import Formal.OpenLapseVectors
+import Formal.TokenBonusVectors
 import Formal.WalletVectors
 
 /-!
@@ -18,8 +20,10 @@ lists it as support.
 
 def main (args : List String) : IO UInt32 := do
   match args with
+  | ["Chest"] => Formal.ChestVectors.run
   | ["NextMilestone"] => Formal.NextMilestoneVectors.run
   | ["OpenLapse"] => Formal.OpenLapseVectors.run
+  | ["TokenBonus"] => Formal.TokenBonusVectors.run
   | ["Wallet"] => Formal.WalletVectors.run
   | _ =>
     IO.eprintln s!"usage: lean --run Formal/Vectors.lean <Entry>; no vectors for {args}"
