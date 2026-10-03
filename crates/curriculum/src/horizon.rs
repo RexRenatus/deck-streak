@@ -92,9 +92,8 @@ pub fn compute_horizon(cards: &[Card], today: i64) -> HorizonScan {
         }
         let offset = card.due.saturating_sub(today).max(0);
         match usize::try_from(offset) {
-            Ok(day) if day >= HORIZON_DAYS => beyond_horizon += 1,
-            Ok(day) => bump(&mut curve, day),
-            Err(_) => beyond_horizon += 1,
+            Ok(day) if day < HORIZON_DAYS => bump(&mut curve, day),
+            _ => beyond_horizon += 1,
         }
     }
     HorizonScan {
