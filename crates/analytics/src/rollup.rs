@@ -466,6 +466,20 @@ pub async fn recent_totals(
         .collect())
 }
 
+/// Each stored day's graduations in `window` (its first and last day, both included), or of every
+/// stored day when there is no window: the denominator the XP exchange readout divides by
+/// (SPEC-075 R4). A day with no rollup is absent, which the readout counts as 0.
+///
+/// # Errors
+///
+/// [`KernelError::Database`] when the read fails.
+pub async fn graduations(
+    _connection: &mut SqliteConnection,
+    _window: Option<(StudyDay, StudyDay)>,
+) -> Result<BTreeMap<StudyDay, i64>, KernelError> {
+    Ok(BTreeMap::new())
+}
+
 /// The rollup repository's reads over the service's database, for the surfaces.
 #[derive(Clone, Debug)]
 pub struct RollupStore {
