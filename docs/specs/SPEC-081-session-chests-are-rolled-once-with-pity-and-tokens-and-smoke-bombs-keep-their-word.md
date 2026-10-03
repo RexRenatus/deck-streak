@@ -619,3 +619,12 @@ Part 4 additions (2026-10-03), insert-only like the findings above:
 - **T14. One more manifest row.** `crates/coordination/tests/relight_order.rs` (changed: its
   allow-list of the statics the crates coordination links gains the registry's `QUESTS` port, as it
   holds `ECONOMY`; the census refuses a static it does not list).
+- **T15. The boundary tests (mutation coverage only).** `crates/quests/tests/chests_boundaries.rs`
+  (new) holds four tests through the crate's public API. `a_stored_choice_reads_back_as_the_choice_it_names`
+  reads `''`, `token`, `freeze` and an unknown name, and kills the stored-choice reader answering
+  none for every name and the reader losing its `freeze` arm. `a_draw_exactly_on_the_legendary_boundary_is_not_legendary`
+  draws at exactly the Legendary odds and kills the boundary comparison turning `<` into `<=`.
+  `a_chest_that_pays_nothing_answers_no_payout` opens a chest that pays 0 and kills the payout
+  guard turning `>` into `>=`. `the_quests_lib_publishes_the_data_rights_module` reads the lib's
+  source for the public data rights declaration and is the killer of row S08137
+  (`scripts/mutation-rows.d/S08100-S08199.json`), which makes that declaration private.
