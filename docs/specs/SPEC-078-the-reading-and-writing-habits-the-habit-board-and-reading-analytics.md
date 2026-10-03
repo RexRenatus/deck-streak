@@ -527,3 +527,19 @@ S07819 stay free for a fix round; 078b takes S07820 to S07839; S07840 to S07899 
 S07810's mutant is also refused by
 `xp_census::only_progression_writes_xp_settlement_and_only_coordination_settles`, which holds a
 coordination caller outside the recompute to the owner's correction as its cause.
+
+## 10. Amendments, 2026-10-03: the census admissions this part makes
+
+Two census tests hold a population that this part grows. Each admission is recorded here,
+insert-only; the body above is unchanged.
+
+- **T1** (manifest, the census of statics). `crates/coordination/tests/relight_order.rs` admits
+  habits' data-rights port, `static HABITS: HabitsDataRights = HabitsDataRights;` in
+  `crates/coordination/src/data_rights_registry.rs`, into `STATICS`, whose count goes from 17 to 18.
+  The census still requires every `static` item in the source of every crate coordination links to
+  be written out in that table, and the new one is a registry entry, not a count per day.
+- **T2** (manifest, the one-router census). `crates/notifications/tests/one_router.rs` admits the
+  minutes log's replies. `COMMAND_REPLIES` gains `read`, `undo` and `habit_callback`, from 17 to 20.
+  `COMMAND_CALLERS` gains six edges, from 31 to 37: `Commands::on_message` to `read` and to `undo`,
+  `Commands::on_callback` to `habit_callback`, and each of `Commands::read`, `Commands::undo` and
+  `Commands::habit_callback` to `send`. Every reply still reaches the chat through the router's port.
