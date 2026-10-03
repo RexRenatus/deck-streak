@@ -276,10 +276,10 @@
       [
         "S03935-A-MISSING-PARSER-FAILS-CLOSED",
         "scripts/mutation_rows.py",
-        "        return f\"the mutant is unchecked: {parser} is not installed\"\n",
-        "        return None\n",
-        "a shell that is not installed leaves the mutant unchecked and VOID, never passed (SPEC-039 section 12, A41)",
-        "test_mutation_rows.TheRunnerParseChecksAShellMutant.test_a_missing_parser_leaves_the_mutant_unchecked_and_void"
+        "        done = run_tool(\n            [parser, \"-n\"],\n",
+        "        done = subprocess.run(\n            [parser, \"-n\"],\n",
+        "a shell that cannot be run is a refusal naming it, never a traceback and never a pass (SPEC-039 A66, superseding A41's VOID for a missing parser)",
+        "test_mutation_rows.TheRunnerParseChecksAShellMutant.test_a_missing_parser_is_a_refusal_naming_it"
       ],
       [
         "S03936-A-HUNG-PARSER-FAILS-CLOSED",
@@ -408,6 +408,190 @@
         "            if False:\n",
         "a crate holding `tests/bin.rs` or `tests/bin/main.rs` is refused for a `bin::` killer by name, so a killer written for that file never runs the binary's own test of the same path (SPEC-039 section 15, A45)",
         "test_mutation_rows.TheBinKillerFollowsRustcAndRefusesAShadow.test_a_bin_killer_beside_a_tests_bin_rs_is_refused"
+      ],
+      [
+        "S03960-A66-MISSING-TOOL-READS-AS-A-SURVIVOR",
+        "scripts/mutation_rows.py",
+        "            print(f\"prove: REFUSED: {refusal}\")\n            return EXIT_REFUSED\n",
+        "            print(f\"prove: REFUSED: {refusal}\")\n            return EXIT_SURVIVED\n",
+        "a missing tool ends the prove verb with the survivor's exit code, where #431 crashed into it (SPEC-039 A66)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03961-A66-MISSING-TOOL-READS-AS-VOID",
+        "scripts/mutation_rows.py",
+        "            print(f\"prove: REFUSED: {refusal}\")\n            return EXIT_REFUSED\n",
+        "            print(f\"prove: REFUSED: {refusal}\")\n            return EXIT_VOID\n",
+        "a missing tool ends the prove verb as a VOID report would, not as the refusal it is (SPEC-039 A66)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03962-A66-RETIRED-MISSING-TOOL-READS-AS-OK",
+        "scripts/mutation_rows.py",
+        "        print(f\"retired: REFUSED: {refusal}\")\n        return EXIT_REFUSED\n",
+        "        print(f\"retired: REFUSED: {refusal}\")\n        return EXIT_OK\n",
+        "a missing tool ends the retirement check as a pass (SPEC-039 A66)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03963-A67-GIT-SPAWNS-WITHOUT-THE-CHECK",
+        "scripts/mutation_rows.py",
+        "    return run_tool(\n        [\"git\", \"-C\"",
+        "    return subprocess.run(\n        [\"git\", \"-C\"",
+        "the git helper spawns around the tool check, so a missing git is a traceback (SPEC-039 A66, A67)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03964-A67-PARSER-SPAWNS-WITHOUT-THE-CHECK",
+        "scripts/mutation_rows.py",
+        "        done = run_tool(\n            [parser, \"-n\"],",
+        "        done = subprocess.run(\n            [parser, \"-n\"],",
+        "the parse check spawns around the tool check, so a missing shell is a traceback (SPEC-039 A66, A67)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03965-A67-BUILD-SPAWNS-WITHOUT-THE-CHECK",
+        "scripts/mutation_rows.py",
+        "        done = run_tool(\n            [\"cargo\", \"test\", \"--locked\", \"-p\", killer.package, *flags, \"--no-run\"],",
+        "        done = subprocess.run(\n            [\"cargo\", \"test\", \"--locked\", \"-p\", killer.package, *flags, \"--no-run\"],",
+        "the mutant's build spawns around the tool check, so a missing cargo is a traceback (SPEC-039 A66, A67)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03966-A66-KILLER-GROUP-SPAWNS-WITHOUT-RESOLVING",
+        "scripts/mutation_rows.py",
+        "    judged = resolve_tool(command, env, cwd)\n    try:\n        process = subprocess.Popen(",
+        "    judged = command[0]\n    try:\n        process = subprocess.Popen(",
+        "the killer's process group is started without resolving its executable, so the refusal loses its reason (SPEC-039 A66)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03967-A66-A-REFUSED-PROOF-KEEPS-ITS-MUTANT",
+        "scripts/mutation_rows.py",
+        "    finally:\n        target.write_bytes(original)\n",
+        "    finally:\n        if sys.exc_info()[0] is not ToolMissing:\n            target.write_bytes(original)\n",
+        "a refusal that ends a proof leaves the mutant installed in the target (SPEC-039 A66)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03968-A66-THE-REFUSAL-LINE-DROPS-THE-TOOL",
+        "scripts/mutation_rows.py",
+        "print(f\"prove: REFUSED: {refusal}\")",
+        "print(\"prove: REFUSED\")",
+        "the refusal line does not name the missing tool (SPEC-039 A66)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03969-A66-A-FILE-WITHOUT-THE-EXECUTE-BIT-RESOLVES",
+        "scripts/mutation_rows.py",
+        "            if os.access(candidate, os.X_OK):",
+        "            if os.access(candidate, os.F_OK):",
+        "a file that is not executable is taken for a tool that can run (SPEC-039 A66)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03970-A66-A-DIRECTORY-READS-AS-ABSENT",
+        "scripts/mutation_rows.py",
+        "        if candidate.is_dir():\n            failure = \"is a directory\"\n        elif candidate.is_file():",
+        "        if candidate.is_file():",
+        "a directory at the tool's name is reported as an absent tool, not as what it is (SPEC-039 A66)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03971-A66-THE-PATH-SEARCH-IGNORES-THE-CHILDS-PATH",
+        "scripts/mutation_rows.py",
+        "        path = (env if env is not None else os.environ).get(\"PATH\", os.defpath)",
+        "        path = os.defpath",
+        "the tool is searched along the default PATH, not the one the child gets, so a tool the child cannot run is taken for one it can (SPEC-039 A66)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03972-A66-A-SPAWN-THAT-FAILS-AFTER-RESOLUTION-IS-A-TRACEBACK",
+        "scripts/mutation_rows.py",
+        "    if error.filename in (command[0], judged) or error.filename is None:",
+        "    if False:",
+        "a spawn that fails for its executable after resolution passed (a bad interpreter line, a file the kernel will not execute) is a traceback, not the refusal (SPEC-039 A66)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03973-A66-A-PATH-ENTRY-THE-RUNNER-CANNOT-LOOK-AT-STOPS-THE-SEARCH",
+        "scripts/mutation_rows.py",
+        "        try:\n            candidate.stat()\n        except OSError:\n            continue\n",
+        "        candidate.stat()\n",
+        "a PATH entry the runner may not search (or cannot name) ends the search with a traceback, where the spawn's own search passes over it (SPEC-039 A66)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_path_entry_the_runner_cannot_look_at_is_passed_over_as_the_spawn_passes_it"
+      ],
+      [
+        "S03974-A66-RUN-TOOL-CATCHES-ONLY-THREE-SPAWN-ERRORS",
+        "scripts/mutation_rows.py",
+        "    except OSError as error:\n        refusal = _backstop(error, command, judged)\n        if refusal is None:\n            raise\n        raise refusal from error\n    refusal = _exit_refusal(done.returncode, command)",
+        "    except (FileNotFoundError, PermissionError, NotADirectoryError) as error:\n        refusal = _backstop(error, command, judged)\n        if refusal is None:\n            raise\n        raise refusal from error\n    refusal = _exit_refusal(done.returncode, command)",
+        "a file the kernel will not execute (an empty file with the execute bit) raises a plain OSError out of run_tool, a traceback and not the refusal (SPEC-039 A66)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03975-A66-THE-PROCESS-GROUP-SPAWN-CATCHES-ONLY-THREE-ERRORS",
+        "scripts/mutation_rows.py",
+        "    except OSError as error:\n        refusal = _backstop(error, command, judged)\n        if refusal is None:\n            raise\n        raise refusal from error\n    try:\n        stdout, stderr",
+        "    except (FileNotFoundError, PermissionError, NotADirectoryError) as error:\n        refusal = _backstop(error, command, judged)\n        if refusal is None:\n            raise\n        raise refusal from error\n    try:\n        stdout, stderr",
+        "a file the kernel will not execute raises a plain OSError out of the process-group spawn, a traceback and not the refusal (SPEC-039 A66)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03976-A66-A-CHECKED-EXIT-OF-A-MISSING-PROGRAM-IS-A-TRACEBACK",
+        "scripts/mutation_rows.py",
+        "        refusal = _exit_refusal(error.returncode, command)\n",
+        "        refusal = None\n",
+        "a tool run with check=True that exits 126 or 127 ends as a CalledProcessError traceback, not the refusal (SPEC-039 A66)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03977-A66-RUN-TOOL-READS-EXIT-126-127-AS-A-RESULT",
+        "scripts/mutation_rows.py",
+        "    refusal = _exit_refusal(done.returncode, command)\n",
+        "    refusal = None\n",
+        "a tool that exits 126 or 127 through run_tool is taken for a check that ran, so its output reads as a verdict (SPEC-039 A66)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03978-A66-THE-PROCESS-GROUP-READS-EXIT-126-127-AS-A-RESULT",
+        "scripts/mutation_rows.py",
+        "    refusal = _exit_refusal(process.returncode, command)\n",
+        "    refusal = None\n",
+        "a killer that exits 126 or 127 through the process-group spawn is taken for a test that ran, so it reads as VOID and not as the refusal (SPEC-039 A66)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03979-A66-EXIT-126-IS-NOT-A-REFUSAL",
+        "scripts/mutation_rows.py",
+        "    126: \"exit 126: a program it needs cannot be run\",\n",
+        "    126: None,\n",
+        "exit 126, which a wrapper gives when a program it needs cannot be run, is taken for the tool's own result (SPEC-039 A66)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03980-A66-EXIT-127-IS-NOT-A-REFUSAL",
+        "scripts/mutation_rows.py",
+        "    127: \"exit 127: a program it needs is not found\",\n",
+        "    127: None,\n",
+        "exit 127, which a wrapper gives when a program it needs is not found, is taken for the tool's own result (SPEC-039 A66)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03981-A67-A-SPAWN-BY-ANOTHER-STDLIB-NAME-SKIPS-THE-TOOL-CHECK",
+        "scripts/mutation_rows.py",
+        "    return run_tool(\n        [\"git\", \"-C\", str(root), *args], capture_output=True, text=True, check=True\n    ).stdout\n",
+        "    return subprocess.check_output([\"git\", \"-C\", str(root), *args], text=True)\n",
+        "a spawn by a standard-library name the site census does not list (check_output) skips the tool check and is not seen by the census (SPEC-039 A67)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_no_code_outside_the_helpers_spawns_a_process_by_any_other_name"
+      ],
+      [
+        "S03982-A67-AN-ALIASING-IMPORT-OF-A-SPAWNER-IS-NOT-SEEN",
+        "scripts/mutation_rows.py",
+        "import signal\nimport subprocess\n",
+        "import signal\nimport subprocess\nimport subprocess as sp\n",
+        "an import that reaches a spawner under another name is a spawn the site census cannot see (SPEC-039 A67)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_no_code_outside_the_helpers_spawns_a_process_by_any_other_name"
       ],
       [
         "S03986-A-CARGO-INFERS-TARGETS-ONLY-WHILE-AUTODISCOVERY-IS-ON",

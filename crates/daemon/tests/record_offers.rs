@@ -61,6 +61,7 @@ fn answers(count: i64) -> CollectionData {
             track: Track::Language,
             course: None,
             tier: None,
+            memory: None,
         }],
         created_at: UtcMillis::from_epoch_millis(at(TODAY - 1_000, 12)),
         deck_names: BTreeMap::from([(1, "Synthetic".to_owned())]),

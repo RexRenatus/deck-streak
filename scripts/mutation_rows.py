@@ -255,8 +255,107 @@ def load_tree(root: pathlib.Path | str) -> object:
     return assemble(parse_document(MONOLITH, text), tree_fragments(root))
 
 
+class ToolMissing(Exception):
+    """A process the runner must spawn has an executable that cannot be run (SPEC-039 A66).
+
+    Absent from `PATH`, present but not executable, a directory at the name, a file the kernel
+    will not execute, or a wrapper that exits 126 or 127 because a program it needs cannot be: one
+    fact, and it is a refusal, because the runner could not run a check and a check it could not run says
+    nothing about the mutant (#431). `main` is the one place that turns it into a line and exit 2.
+    """
+
+    def __init__(self, tool: str, why: str) -> None:
+        super().__init__(f"missing tool: {tool}: {why}")
+        self.tool = tool
+
+
+def resolve_tool(
+    command: list[str], env: dict[str, str] | None, cwd: pathlib.Path | str | None = None
+) -> str:
+    """The file `command[0]` names for the spawn, or ToolMissing when it names nothing that runs.
+
+    A name with a slash is the path itself; a bare name is searched along the `PATH` the child
+    will get (`env`, else this process's), as the spawn would. A candidate that cannot even be
+    looked at (an entry the runner may not search, a name too long) is passed over, as the spawn's
+    own search passes over it: it is neither the tool nor a reason to stop looking. A relative
+    candidate (an empty, `.` or relative entry, or a relative name with a slash) is read in `cwd`,
+    the directory the child runs in, because that is where the spawn reads it. The file judged is
+    returned as a path that reads the same from any directory, and the spawn runs exactly it: the
+    spawn's own search passes over a candidate the kernel will not run and would start a LATER one,
+    so a spawn by name could run a file the runner never judged.
+    """
+    base = pathlib.Path(cwd) if cwd is not None else pathlib.Path()
+    name = command[0]
+    if "/" in name:
+        candidates = [base / name]
+    else:
+        path = (env if env is not None else os.environ).get("PATH", os.defpath)
+        candidates = [base / part / name for part in path.split(os.pathsep)]
+    failure = "not found on PATH" if "/" not in name else "no such file"
+    for candidate in candidates:
+        try:
+            candidate.stat()
+        except OSError:
+            continue
+        if candidate.is_dir():
+            failure = "is a directory"
+        elif candidate.is_file():
+            if os.access(candidate, os.X_OK):
+                judged = candidate if candidate.is_absolute() else pathlib.Path.cwd() / candidate
+                return os.fspath(judged)
+            failure = "not executable"
+    raise ToolMissing(name, failure)
+
+
+def _backstop(error: OSError, command: list[str], judged: str | None = None) -> ToolMissing | None:
+    """A spawn that still fails for the executable after resolution passed (a race, a bad
+    interpreter line, a file the kernel will not execute): the same refusal, unless the error
+    names something else (the cwd)."""
+    if error.filename in (command[0], judged) or error.filename is None:
+        return ToolMissing(command[0], error.strerror or "cannot be run")
+    return None
+
+
+#: The exits a shell or `env` gives when a program it was asked to run is not found (127) or is
+#: found and cannot be run (126). A tool that is a wrapper whose `#!/usr/bin/env` line names a
+#: missing interpreter starts, and ends with one of them: 126 when a `PATH` entry could not be
+#: searched on the way, 127 otherwise.
+UNRUNNABLE_EXITS = {
+    126: "exit 126: a program it needs cannot be run",
+    127: "exit 127: a program it needs is not found",
+}
+
+
+def _exit_refusal(returncode: int, command: list[str]) -> ToolMissing | None:
+    """A tool that started and reported that a program it needs cannot be run: the same refusal."""
+    why = UNRUNNABLE_EXITS.get(returncode)
+    return None if why is None else ToolMissing(command[0], why)
+
+
+def run_tool(command: list[str], **kwargs) -> subprocess.CompletedProcess:
+    """`subprocess.run` with the executable resolved first; every spawn but the process-group
+    one goes through here, so no call site can skip the check."""
+    judged = resolve_tool(command, kwargs.get("env"), kwargs.get("cwd"))
+    try:
+        done = subprocess.run(command, executable=judged, **kwargs)
+    except subprocess.CalledProcessError as error:
+        refusal = _exit_refusal(error.returncode, command)
+        if refusal is None:
+            raise
+        raise refusal from error
+    except OSError as error:
+        refusal = _backstop(error, command, judged)
+        if refusal is None:
+            raise
+        raise refusal from error
+    refusal = _exit_refusal(done.returncode, command)
+    if refusal is not None:
+        raise refusal
+    return done
+
+
 def git(root: pathlib.Path, *args: str) -> str:
-    return subprocess.run(
+    return run_tool(
         ["git", "-C", str(root), *args], capture_output=True, text=True, check=True
     ).stdout
 
@@ -878,15 +977,23 @@ def run_in_own_group(
     Raises:
         subprocess.TimeoutExpired: The command outran `timeout`; its group is already dead.
     """
-    process = subprocess.Popen(
-        command,
-        cwd=cwd,
-        env=env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        process_group=0,
-    )
+    judged = resolve_tool(command, env, cwd)
+    try:
+        process = subprocess.Popen(
+            command,
+            executable=judged,
+            cwd=cwd,
+            env=env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            process_group=0,
+        )
+    except OSError as error:
+        refusal = _backstop(error, command, judged)
+        if refusal is None:
+            raise
+        raise refusal from error
     try:
         stdout, stderr = process.communicate(timeout=timeout)
     except subprocess.TimeoutExpired:
@@ -899,6 +1006,9 @@ def run_in_own_group(
             process.wait()
         for pipe in (process.stdout, process.stderr):
             pipe.close()
+    refusal = _exit_refusal(process.returncode, command)
+    if refusal is not None:
+        raise refusal
     return subprocess.CompletedProcess(command, process.returncode, stdout, stderr)
 
 
@@ -952,17 +1062,15 @@ def shell_parser(target: str, text: bytes) -> str | None:
 
 def parses(parser: str, mutated: bytes) -> str | None:
     """None when the shell reads the mutated bytes, else why it does not: `<parser> -n` reads
-    them from stdin and runs nothing, and a missing shell fails closed."""
+    them from stdin and runs nothing. A shell that cannot be run raises ToolMissing (a refusal)."""
     try:
-        done = subprocess.run(
+        done = run_tool(
             [parser, "-n"],
             input=mutated,
             capture_output=True,
             timeout=PARSE_SECONDS,
             check=False,
         )
-    except FileNotFoundError:
-        return f"the mutant is unchecked: {parser} is not installed"
     except subprocess.TimeoutExpired:
         return f"the mutant is unchecked: {parser} -n timed out"
     if done.returncode == 0:
@@ -987,7 +1095,7 @@ def builds(root: pathlib.Path, row: Row, killer: Killer, mutated: bytes) -> str 
             return refusal
     if killer.kind == "cargo":
         flags = cargo_flags(killer)
-        done = subprocess.run(
+        done = run_tool(
             ["cargo", "test", "--locked", "-p", killer.package, *flags, "--no-run"],
             cwd=root,
             env=dict(os.environ, CARGO_TERM_COLOR="never"),
@@ -1195,13 +1303,20 @@ def main(argv: list[str] | None = None) -> int:
     if args.verb == "prove":
         if not (args.all or args.row or args.band or args.rows_from):
             parser.error("prove needs --all, --row, --band or --rows-from")
-        return prove(root, args)
+        try:
+            return prove(root, args)
+        except ToolMissing as refusal:
+            print(f"prove: REFUSED: {refusal}")
+            return EXIT_REFUSED
     if not args.base:
         parser.error("retired needs --base")
     try:
         return retired(root, args.base)
     except (OSError, json.JSONDecodeError, PopulationRefused, UnresolvableTarget) as refusal:
         print(f"mutation_rows: REFUSED: {refusal}", file=sys.stderr)
+        return EXIT_REFUSED
+    except ToolMissing as refusal:
+        print(f"retired: REFUSED: {refusal}")
         return EXIT_REFUSED
 
 

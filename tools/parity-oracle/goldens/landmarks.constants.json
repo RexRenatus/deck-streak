@@ -1,0 +1,56 @@
+{
+  "cases": [
+    {
+      "input": {
+        "name": "landmarks.LANDMARK_DAY_STEP"
+      },
+      "output": 25
+    },
+    {
+      "input": {
+        "name": "landmarks.LANDMARK_HIGH_WATER_KEY"
+      },
+      "output": "landmark_high_water"
+    },
+    {
+      "input": {
+        "name": "landmarks.ANNIVERSARY_EVENT_TYPE"
+      },
+      "output": "landmark_anniversary"
+    },
+    {
+      "input": {
+        "name": "landmarks.STUDY_DAY_EVENT_TYPE"
+      },
+      "output": "landmark_study_day"
+    },
+    {
+      "input": {
+        "name": "constants.__LANDMARK_ANNIVERSARY_TEMPLATE"
+      },
+      "output": "\ud83d\uddd3\ufe0f <b>{ordinal} anniversary</b> on {day}"
+    },
+    {
+      "input": {
+        "name": "constants.__LANDMARK_ANNIVERSARY_GAP_TEMPLATE"
+      },
+      "output": "\ud83d\uddd3\ufe0f <b>{ordinal} anniversary</b> on {day}\nThe anniversary does not need a streak."
+    },
+    {
+      "input": {
+        "name": "constants.__LANDMARK_STUDY_DAY_TEMPLATE"
+      },
+      "output": "\ud83d\udcda <b>{ordinal} earned study days</b> on {day}"
+    }
+  ],
+  "function": "landmarks.constants",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "constants",
+  "registry": "tools/parity-oracle/registry/spec_102.py",
+  "registry_sha256": "459ffd874367cbddc3c8e878e145fed36864fbe702feb38f6a18d94589114293",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

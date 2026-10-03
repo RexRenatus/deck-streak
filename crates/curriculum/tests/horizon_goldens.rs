@@ -56,6 +56,7 @@ fn cards(rows: &Value) -> Vec<Card> {
             track: Track::Language,
             course: None,
             tier: None,
+            memory: None,
         };
         let copies = usize::try_from(integer(&row[4])).expect("a copy count");
         built.extend(std::iter::repeat_n(card, copies));

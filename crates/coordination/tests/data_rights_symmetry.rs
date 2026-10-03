@@ -32,7 +32,7 @@ use tempfile::TempDir;
 /// Statements that leave every table of the schema holding rows no erase leaves: 101 rows in each
 /// table that takes rows, so an export that pages or limits its read comes up short (the
 /// predecessor's lesson), and every column a reset writes moved off its reset value.
-const SEEDS: [&str; 35] = [
+const SEEDS: [&str; 38] = [
     "UPDATE settings_generation SET generation = 7, courses_digest = '0123456789abcdef' \
      WHERE id = 1",
     "UPDATE ingest_state SET anchor_newest_review_id = 1700000000123, anchor_card_count = 57, \
@@ -193,6 +193,23 @@ const SEEDS: [&str; 35] = [
      1000 * i, CASE i % 3 WHEN 0 THEN 'filed' ELSE 'captured' END, \
      CASE i % 3 WHEN 0 THEN 'Synthetic folder' ELSE NULL END, \
      CASE i % 3 WHEN 0 THEN 20000 + i ELSE NULL END, 1000 * i FROM n",
+    "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 101) \
+     INSERT INTO language_progress (course, name, flag, mastery_pct, current_band, mature_cards, \
+     total_cards, current_unit, bands, updated_at, created_at) \
+     SELECT 'c' || i, 'Course ' || i, 'f', i / 2.0, \
+     CASE i % 6 WHEN 0 THEN 'A1' WHEN 1 THEN 'A2' WHEN 2 THEN 'B1' WHEN 3 THEN 'B2' \
+     WHEN 4 THEN 'C1' ELSE 'C2' END, i % 5, i % 5 + 3, \
+     CASE i % 4 WHEN 0 THEN NULL ELSE i END, \
+     '[{\"band\":\"A1\",\"total\":3,\"mature\":2,\"pct\":70.5,\"achieved\":false}]', \
+     2000 * i, 1000 * i FROM n",
+    "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 101) \
+     INSERT INTO band_milestones (course, band, study_day, baseline, celebrated_at, created_at) \
+     SELECT 'c' || i, CASE i % 6 WHEN 0 THEN 'A1' WHEN 1 THEN 'A2' WHEN 2 THEN 'B1' \
+     WHEN 3 THEN 'B2' WHEN 4 THEN 'C1' ELSE 'C2' END, 20000 + i, i % 2, \
+     CASE WHEN i % 2 = 1 THEN 1000 * i WHEN i % 3 = 0 THEN NULL ELSE 5000 + i END, \
+     1000 * i FROM n",
+    "INSERT INTO law_dues (id, study_day, backlog, due_today, updated_at, created_at) \
+     VALUES (1, 20100, 4, 6, 5000, 1000)",
 ];
 
 /// Prints how many items a check examined and refuses zero (the tdd pack's examined contract).
