@@ -45,13 +45,10 @@ pub struct Entry {
 
 /// The reading XP of `minutes` of one course on one study day.
 #[must_use]
-pub const fn reading_xp(minutes: u32) -> u32 {
-    let xp = minutes.saturating_mul(READING_XP_PER_MIN);
-    if xp > READING_XP_DAILY_CAP_PER_LANG {
-        READING_XP_DAILY_CAP_PER_LANG
-    } else {
-        xp
-    }
+pub fn reading_xp(minutes: u32) -> u32 {
+    minutes
+        .saturating_mul(READING_XP_PER_MIN)
+        .min(READING_XP_DAILY_CAP_PER_LANG)
 }
 
 /// The weekly bonus of `minutes` of one course in one study week.
