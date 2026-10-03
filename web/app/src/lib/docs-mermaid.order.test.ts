@@ -1,7 +1,7 @@
 /**
  * SPEC-195. The mutation run tries every mutant against the tests that cover it, in file order, and
  * stops at the first one that fails. The generated-population tests are the ones that kill nearly
- * every mutant of the generator and the reader, and the two docs-wide tests cost seconds each, so the
+ * every mutant of the generator and the reader, and the two docs-wide tests are the costliest to run, so the
  * population tests come first and the docs-wide tests after them. This guard holds that order and
  * the set of tests in `docs-mermaid.test.ts` (none dropped, none twice), and the populations those
  * tests judge.

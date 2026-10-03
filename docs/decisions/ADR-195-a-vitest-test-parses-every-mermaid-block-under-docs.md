@@ -120,8 +120,8 @@ generator unexamined, which would make the mutation run examine nothing for it. 
 
 Both are exact devDependencies of `web/app`. They come from the existing lockfile through the
 existing `pnpm install --frozen-lockfile` step. That step runs first in the `web` job, whose
-`scripts/check.sh web` runs `pnpm -r test` (its log on this pull request shows the install, then
-`examined 193 mermaid blocks`), and in both Stryker jobs (`mutation-web` and the weekly battery's
+`scripts/check.sh web` runs `pnpm -r test` (its log at this head shows the install, then
+`examined 205 mermaid blocks`), and in both Stryker jobs (`mutation-web` and the weekly battery's
 `web`) before Stryker starts Vitest. Nothing is fetched at test time, and no step is added. `pnpm audit` over the lockfile reports no advisory. The test
 imports the parser statically, so without it the test file fails to load and the `web` job fails:
 it is never skipped.
@@ -250,7 +250,7 @@ not, and no diagram is drawn at or after that point.
 | round 6's reader | 1,993 | 249 | 13,640 | 0 |
 | (a) review's probe: block quotes and list items counted against 99, and every line that opens with `<` and a letter, `/`, `!` or `?` refused | 0 | 110 | 13,643 | 10 lines |
 | (b) (a) with a tag name folded to lower case, a list marker before a tab, and a lone carriage return as a line end | 0 | 110 | 13,643 | 10 lines |
-| (c) chosen: (a)'s depth, a page bound, the seven HTML block start conditions, and a tag trusted only in a code span cmark-gfm forms alike | 0 | 0 | 13,439 | 0 |
+| (c) chosen: (a)'s depth, a page bound, the seven HTML block start conditions, and a tag trusted only in a code span the reader's checks find cmark-gfm forms alike | 0 | 0 | 13,439 | 0 |
 
 (b) reads every text as (a) does: the round-6 reader already folds a tag name, takes a list marker
 before a tab and splits on a lone carriage return, so the three are gaps in the test, not in the

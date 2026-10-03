@@ -45,15 +45,18 @@ R5. **A refusal names the block:** the file's path under `docs/` and the block's
 
 R6. **The check agrees with the renderer.** On the blocks the renderer was run over, the check refuses
 exactly the blocks the renderer exits non-zero for: eight of 183 before the fix, and none of the 191
-the merged tree holds after it.
+the merged tree held when the renderer was run; the tree at this head holds 205, and the check
+parses each.
 
-R7. **The eight blocks are fixed by ids and syntax only.** Every label renders the same text: a
+R7. **The nine blocks (eight on dev when the check was written, and dev's badges block merged
+after it) are fixed by ids and syntax only.** Every label renders the same text: a
 `;` becomes the entity `#59;` (rendered as `;`), and an edge label holding `(` or `@` is quoted.
 
 R8. **A planted block whose node id is a reserved word is refused, and the same block with another
 id is accepted,** in the check's own test.
 
-R9. **Every `mermaid` fence GitHub renders as a diagram is read, and none that GitHub shows as code;
+R9. **Every `mermaid` fence GitHub renders as a diagram is read, and, over the 103,050 texts the oracle
+judged, none that GitHub shows as code;
 a form the reader does not read as GitHub does is refused by name.** GitHub renders Markdown with
 cmark-gfm and draws a diagram for each `<pre lang="mermaid">` in the HTML it makes, and only a
 fenced code block whose language word is `mermaid`, or raw HTML, writes one. The reader,
@@ -179,7 +182,7 @@ part of the gate.
 | `docs/schematics/owner-session.md` | repo | changed: R7, two blocks |
 | `docs/schematics/service-lifecycle.md` | repo | changed: R7, one block |
 | `docs/schematics/sync-cycle-and-change-gate.md` | repo | changed: R7, one block |
-| docs/schematics/badges-records-and-the-next-milestone.md | repo | changed: R7, one block (merged from dev after the check was written) |
+| `docs/schematics/badges-records-and-the-next-milestone.md` | repo | changed: R7, one block (merged from dev after the check was written) |
 | `docs/specs/SPEC-195-every-mermaid-block-under-docs-parses-and-a-check-keeps-it-so.md` | repo | added |
 | `docs/decisions/ADR-195-a-vitest-test-parses-every-mermaid-block-under-docs.md` | repo | added |
 | `docs/red-first/SPEC-195.md` | repo | added |
