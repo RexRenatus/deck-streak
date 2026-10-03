@@ -290,3 +290,11 @@ imports no pack probe, and the telegram-platform payload rows judge the same fil
   WTFPL, is admitted by one exception for that crate alone, never for the workspace. frankenstein
   depends on `paste`, whose RustSec notice RUSTSEC-2024-0436 says it is unmaintained, not
   vulnerable; deny.toml ignores it by its id and why, as it does the engine's six such notices.
+
+## 8. Amendment: the replies are a declared reply class (#257)
+
+R12's deferral, and the manifest row's, ended at SPEC-323. The policy names `bot-commands` in its
+top-level `replies` list, so notifications-policy's `message-metadata` row skips the 26 command
+replies and counts them (`replies skipped 26: bot-commands=26`), and the box run no longer defers
+that row. The replies stay goldens with no `kind`, judged on their payload by the telegram-platform
+rows and by A16. Decided by ADR-323.
