@@ -276,7 +276,11 @@ async fn every_request_refusal_is_the_same_response() {
     for _ in 0..5 {
         answers.push((
             "wrong",
-            send(&guard, request("initialize", &[wrong_header.clone()])).await,
+            send(
+                &guard,
+                request("initialize", std::slice::from_ref(&wrong_header)),
+            )
+            .await,
         ));
     }
     let mut headers = HeaderMap::new();

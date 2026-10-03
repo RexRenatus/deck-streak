@@ -1,4 +1,4 @@
-//! DeckStreak's MCP adapter (SPEC-119; ADR-119, ADR-121, ADR-320).
+//! The MCP adapter (SPEC-119; ADR-119, ADR-121, ADR-320).
 //!
 //! This part is the fail-closed bearer guard alone (#158): the grants read from the credentials
 //! directory, the request layer that answers every request without a granted bearer before the

@@ -8,15 +8,18 @@ use std::sync::Arc;
 use std::task::{Context, Poll};
 
 use axum::body::Body;
-use axum::http::{HeaderMap, Request, Response};
+use axum::http::header::{AUTHORIZATION, WWW_AUTHENTICATE};
+use axum::http::{HeaderMap, HeaderValue, Request, Response, StatusCode};
 use deck_streak_kernel::Clock;
+use sha2::{Digest, Sha256};
+use subtle::ConstantTimeEq;
 use tower::{Layer, Service};
 
 use crate::grants::{Grants, Scope, Scopes};
 use crate::limiter::{Bucket, Limiter, Outcome};
 
 /// The one word every refusal answers (`mcp_auth.py:DENIED_MESSAGE`).
-pub const DENIED: &str = "";
+pub const DENIED: &str = "unauthorized";
 
 /// What a request's matched grant holds, and the bucket its token's failures go to. The layer
 /// inserts it into the request's extensions, where a tool reads it.
@@ -55,11 +58,42 @@ impl Refusal {
         &self.bucket
     }
 
-    /// The response every refusal answers.
+    /// The response every refusal answers, whatever its outcome (R12).
     #[must_use]
     pub fn into_response(self) -> Response<Body> {
-        Response::new(Body::empty())
+        refused()
     }
+}
+
+/// The one refusal: 401, `WWW-Authenticate: Bearer` and the body [`DENIED`], with no other header
+/// (R12). A rate-limited refusal answers it too, so a caller cannot tell the limiter tripped.
+fn refused() -> Response<Body> {
+    let mut response = Response::new(Body::from(DENIED));
+    *response.status_mut() = StatusCode::UNAUTHORIZED;
+    response
+        .headers_mut()
+        .insert(WWW_AUTHENTICATE, HeaderValue::from_static("Bearer"));
+    response
+}
+
+/// The token a request's `Authorization` header presents (R9): exactly one header, the scheme
+/// `Bearer` in any case, one space, then a non-empty token of bytes 0x21 to 0x7E. Anything else
+/// presents none.
+fn presented(headers: &HeaderMap) -> Option<&[u8]> {
+    let mut values = headers.get_all(AUTHORIZATION).iter();
+    let value = values.next()?;
+    if values.next().is_some() {
+        return None;
+    }
+    let (scheme, rest) = value.as_bytes().split_at_checked(6)?;
+    if !scheme.eq_ignore_ascii_case(b"Bearer") {
+        return None;
+    }
+    let token = rest.strip_prefix(b" ")?;
+    if token.is_empty() || !token.iter().all(u8::is_ascii_graphic) {
+        return None;
+    }
+    Some(token)
 }
 
 /// The grants and the limiter every request and every scope check shares.
@@ -90,11 +124,23 @@ impl Guard {
     ///
     /// A [`Refusal`] when no granted token is presented.
     pub fn admit(&self, headers: &HeaderMap) -> Result<Granted, Refusal> {
-        let _ = (headers, &self.grants);
-        Err(Refusal {
-            outcome: Outcome::Denied,
-            bucket: Bucket::of(&[]),
-        })
+        let token = presented(headers);
+        if let Some(token) = token {
+            let scopes = self.matched(token);
+            if scopes.holds(Scope::Core) {
+                return Ok(Granted {
+                    scopes,
+                    bucket: Bucket::of(token),
+                });
+            }
+        }
+        // The bucket is the token's when one parses, else the first header's whole value.
+        let bucket = Bucket::of(token.unwrap_or_else(|| {
+            headers
+                .get(AUTHORIZATION)
+                .map_or(&[][..], HeaderValue::as_bytes)
+        }));
+        Err(self.refuse(bucket, Scope::Core))
     }
 
     /// Allows `scope` to an admitted request whose grant holds it, or refuses it (R12, R13).
@@ -103,8 +149,33 @@ impl Guard {
     ///
     /// A [`Refusal`] when the grant does not hold the scope.
     pub fn authorize(&self, granted: &Granted, scope: Scope) -> Result<(), Refusal> {
-        let _ = (granted, scope);
-        Ok(())
+        if granted.scopes.holds(scope) {
+            return Ok(());
+        }
+        Err(self.refuse(granted.bucket.clone(), scope))
+    }
+
+    /// The scopes of the grant whose digest equals the presented token's, folded over every grant
+    /// with no early exit and compared by `ct_eq` alone (R10).
+    fn matched(&self, token: &[u8]) -> Scopes {
+        let presented: [u8; 32] = Sha256::digest(token).into();
+        self.grants
+            .grants()
+            .iter()
+            .map(|grant| (grant.scopes, grant.digest.ct_eq(&presented)))
+            .fold(Scopes::NONE, Scopes::or_if)
+    }
+
+    /// A refusal in `bucket` while asking for `scope`: the limiter decides it, and one warning
+    /// names the outcome, the bucket and the scope, and never the token (R13, R14).
+    fn refuse(&self, bucket: Bucket, scope: Scope) -> Refusal {
+        let outcome = self.limiter.refuse(&bucket);
+        tracing::warn!(
+            outcome = outcome.name(),
+            bucket = bucket.as_str(),
+            scope = scope.name()
+        );
+        Refusal { outcome, bucket }
     }
 }
 

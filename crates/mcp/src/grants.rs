@@ -1,10 +1,13 @@
 //! The scopes and the grants (SPEC-119 R6 to R8, R10; ADR-320).
 
 use std::fmt;
+use std::iter;
 
-use deck_streak_kernel::CredentialLoader;
+use deck_streak_kernel::{CredentialError, CredentialLoader};
+use sha2::{Digest, Sha256};
+use subtle::{Choice, ConditionallySelectable, ConstantTimeEq};
 
-use crate::settings::McpError;
+use crate::settings::{CORE_CREDENTIAL, LAW_TRACK_CREDENTIAL, MIN_CREDENTIAL_CHARS, McpError};
 
 /// A scope a grant can hold (R8). The set is closed: `core` and `law_track` (ADR-320 D5).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -57,6 +60,13 @@ impl Scopes {
         self.0 & scope.bit() != 0
     }
 
+    /// This set with `other`'s scopes added when `choice` is set, chosen in constant time: the
+    /// guard's match folds every grant's scopes and digest comparison through it, with no branch
+    /// on a digest (R10).
+    pub(crate) fn or_if(self, (other, choice): (Self, Choice)) -> Self {
+        Self(self.0 | u8::conditional_select(&0, &other.0, choice))
+    }
+
     /// The names of the scopes the set holds, in [`Scope::ALL`]'s order.
     #[must_use]
     pub fn names(self) -> Vec<&'static str> {
@@ -68,33 +78,100 @@ impl Scopes {
     }
 }
 
+/// One grant: its token's SHA-256 digest, computed once at load, and the scopes it holds (R8).
+/// The token itself is never kept.
+pub(crate) struct Grant {
+    /// The SHA-256 digest of the grant's token.
+    pub(crate) digest: [u8; 32],
+    /// The scopes the grant holds.
+    pub(crate) scopes: Scopes,
+}
+
+impl Grant {
+    /// The grant of the credential `id` holding `token`, or why it refuses start (R7 as amended by
+    /// T15): a byte outside 0x21 to 0x7E first, which no request can present, then fewer than
+    /// [`MIN_CREDENTIAL_CHARS`] characters.
+    fn of(id: &'static str, token: &str, scopes: Scopes) -> Result<Self, McpError> {
+        if !token.bytes().all(|byte| byte.is_ascii_graphic()) {
+            return Err(McpError::UnpresentableCredential { id });
+        }
+        if token.chars().count() < MIN_CREDENTIAL_CHARS {
+            return Err(McpError::WeakCredential { id });
+        }
+        Ok(Self {
+            digest: Sha256::digest(token.as_bytes()).into(),
+            scopes,
+        })
+    }
+}
+
+impl fmt::Debug for Grant {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Grant")
+            .field("scopes", &self.scopes)
+            .finish_non_exhaustive()
+    }
+}
+
 /// The grants the guard matches a presented token against, loaded once at start.
 pub struct Grants {
-    scopes: Vec<Scopes>,
+    grants: Vec<Grant>,
 }
 
 impl Grants {
     /// Reads the core and law-track credentials through the loader and makes each a grant.
     ///
+    /// The core credential is required, so every loader error refuses start by its id. A missing
+    /// law-track credential grants nothing, and any other loader error refuses start by its id
+    /// (R6). Two credentials holding one value refuse start (R7).
+    ///
     /// # Errors
     ///
     /// [`McpError`] naming the credential that refuses start.
     pub fn load(loader: &CredentialLoader) -> Result<Self, McpError> {
-        let _ = loader;
-        Ok(Self { scopes: Vec::new() })
+        let core = Grant::of(
+            CORE_CREDENTIAL,
+            loader.load(CORE_CREDENTIAL)?.expose(),
+            Scopes::NONE.with(Scope::Core),
+        )?;
+        let law_track = match loader.load(LAW_TRACK_CREDENTIAL) {
+            Ok(secret) => Some(Grant::of(
+                LAW_TRACK_CREDENTIAL,
+                secret.expose(),
+                Scopes::NONE.with(Scope::Core).with(Scope::LawTrack),
+            )?),
+            Err(CredentialError::Missing { .. }) => None,
+            Err(error) => return Err(error.into()),
+        };
+        if let Some(law_track) = &law_track
+            && bool::from(law_track.digest.ct_eq(&core.digest))
+        {
+            return Err(McpError::SharedCredential {
+                first: CORE_CREDENTIAL,
+                second: LAW_TRACK_CREDENTIAL,
+            });
+        }
+        Ok(Self {
+            grants: iter::once(core).chain(law_track).collect(),
+        })
     }
 
     /// The scopes each grant holds, in load order: the core credential's first.
     #[must_use]
     pub fn scopes(&self) -> Vec<Scopes> {
-        self.scopes.clone()
+        self.grants.iter().map(|grant| grant.scopes).collect()
+    }
+
+    /// Every grant, for the guard's match.
+    pub(crate) fn grants(&self) -> &[Grant] {
+        &self.grants
     }
 }
 
 impl fmt::Debug for Grants {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Grants")
-            .field("scopes", &self.scopes)
+            .field("scopes", &self.scopes())
             .finish_non_exhaustive()
     }
 }

@@ -232,8 +232,7 @@ fn the_guard_constants_match_the_golden() {
             .cases
             .iter()
             .find(|case| case.input["name"] == name)
-            .map(|case| case.output.clone())
-            .unwrap_or_else(|| panic!("the constant {name}"))
+            .map_or_else(|| panic!("the constant {name}"), |case| case.output.clone())
     };
     let seconds = constant("mcp_auth._RATE_LIMIT_WINDOW_SECS")
         .as_f64()

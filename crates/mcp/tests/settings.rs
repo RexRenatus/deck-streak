@@ -7,7 +7,7 @@
 use std::fs;
 
 use deck_streak_kernel::{CredentialError, CredentialLoader, CredentialsDirectory, Redactor};
-use deck_streak_mcp::{Grants, McpError};
+use deck_streak_mcp::{Grants, McpError, Scopes};
 
 const CORE: &str = "mcp-core-token";
 const LAW_TRACK: &str = "mcp-law-track-token";
@@ -55,11 +55,7 @@ fn load(credentials: &[(&str, Credential)]) -> Result<Grants, McpError> {
 
 /// The scope names each loaded grant holds, in load order.
 fn scope_names(grants: &Grants) -> Vec<Vec<&'static str>> {
-    grants
-        .scopes()
-        .into_iter()
-        .map(|scopes| scopes.names())
-        .collect()
+    grants.scopes().into_iter().map(Scopes::names).collect()
 }
 
 /// The broken forms of a credential the loader refuses: empty, unreadable and non-text.
