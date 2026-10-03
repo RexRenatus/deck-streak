@@ -1,0 +1,34 @@
+[package]
+name = "deck-streak-mcp"
+description = "DeckStreak's MCP adapter. See docs/CONTEXT-MAP.md."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+deck-streak-kernel.workspace = true
+# ADR-003 and ADR-320: the guard's layer answers in axum's HTTP types and body (SPEC-119 R11).
+axum.workspace = true
+# ADR-003 and ADR-320: the guard is a tower `Layer` around the server's service (SPEC-119 R11).
+tower.workspace = true
+# ADR-024 and ADR-320: each grant's SHA-256 digest, compared in constant time (SPEC-119 R10), and
+# the limiter's bucket (R13).
+sha2.workspace = true
+subtle.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+# ADR-020's temporary directory holds the credentials; tower's `service_fn` and `oneshot` and
+# tokio drive the guard's layer; ADR-029's golden reader takes serde.
+tempfile.workspace = true
+tokio = { workspace = true, features = ["macros", "rt"] }
+tower = { workspace = true, features = ["util"] }
+serde.workspace = true
+serde_json.workspace = true

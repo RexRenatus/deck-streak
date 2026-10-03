@@ -2,6 +2,24 @@
   "tables": {
     "MUTATIONS": [
       [
+        "S07300-CENSUS-REFUSES-A-FILE-READ-OUTSIDE-THE-TREE",
+        "progression",
+        "tests/xp_census.rs",
+        "if !inside {",
+        "if !inside && file.is_empty() {",
+        "xp_census::the_census_refuses_what_the_compiler_is_not_asked",
+        "a member's code that reads a file outside the tree is refused by name (SPEC-072 A36)"
+      ],
+      [
+        "S07301-CENSUS-REFUSES-A-SOURCED-PACKAGE-REACHING-THE-OWNER",
+        "progression",
+        "tests/xp_census.rs",
+        "if !package[\"source\"].is_null() && reaching.contains(id) {",
+        "if package[\"source\"].is_null() && reaching.contains(id) {",
+        "xp_census::the_census_refuses_what_the_compiler_is_not_asked",
+        "a registry or git package that reaches the owner through the graph is refused by name (SPEC-072 A36)"
+      ],
+      [
         "S07304-LEGENDARY-DAY-AT-ONE-HUNDRED",
         "progression",
         "src/badges/conditions.rs",

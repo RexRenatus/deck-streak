@@ -22,7 +22,8 @@
 //! each cycle its fold.
 //! The notification router's bot transport is the bot's `OwnerChat`, joined to the router here by
 //! [`router`] (SPEC-041 R13), and the owner's `/sync` flushes that router after a sync that
-//! succeeds (R7).
+//! succeeds (R7). Every recompute cycle [`RecomputeSetup::cycle`] hands out holds a router with no
+//! transport, which holds the celebrations it routes for those senders (SPEC-319).
 
 use std::fs::{File, OpenOptions};
 use std::io;
@@ -317,14 +318,22 @@ pub enum RecomputeError {
     /// A step was registered outside its phase (R19).
     #[error(transparent)]
     Fold(#[from] FoldError),
+    /// The notification policy the cycles' router reads does not parse (SPEC-319 R4).
+    #[error(transparent)]
+    Policy(#[from] deck_streak_notifications::PolicyError),
+    /// The celebrations' switch could not be seeded (SPEC-319 R4).
+    #[error("the celebrations' switch could not be seeded")]
+    Switch(#[source] KernelError),
 }
 
 /// What every cycle of a role recomputes with, loaded once at the role's start (SPEC-071 R1, R3,
-/// R4, R15): the owner's courses, and the fold.
+/// R4, R15): the owner's courses, the fold, and the notification policy of the router every cycle
+/// holds (SPEC-319 R1).
 #[derive(Clone, Debug)]
 pub struct RecomputeSetup {
     courses: Courses,
     fold: Arc<Fold>,
+    policy: Arc<Policy>,
     relights: RelightDue,
     instruments: Option<Arc<Instruments>>,
 }
@@ -332,7 +341,9 @@ pub struct RecomputeSetup {
 impl RecomputeSetup {
     /// Loads the owner's courses from `env` (R1), refuses start when they disagree with the
     /// readings taxonomy (R3), records their digest with the settings generation in `db`, which
-    /// bumps the generation when they changed (R4), and builds the fold (R19).
+    /// bumps the generation when they changed (R4), and builds the fold (R19). It compiles the
+    /// notification policy and seeds the celebrations' switch off where none is stored (SPEC-319
+    /// R4).
     ///
     /// # Errors
     ///
@@ -349,9 +360,14 @@ impl RecomputeSetup {
             .map_err(RecomputeError::Digest)?;
         let (fold, relights) =
             recompute_fold_with_relights(AnalyticsSettings::from_env(env)?, courses.clone())?;
+        let policy = Arc::new(Policy::compiled()?);
+        deck_streak_notifications::router::seed_celebrations_off(&policy, db, SystemClock.now())
+            .await
+            .map_err(RecomputeError::Switch)?;
         Ok(Self {
             courses,
             fold: Arc::new(fold),
+            policy,
             relights,
             instruments: None,
         })
@@ -376,7 +392,8 @@ impl RecomputeSetup {
         CollectionReader::new(settings, scope, offload).with_courses(self.courses.clone())
     }
 
-    /// `parts`, recomputing through the fold over `db`, with study days decided by `rule` (R15).
+    /// `parts`, recomputing through the fold over `db`, with study days decided by `rule` (R15),
+    /// and holding the router of [`holding_router`] (SPEC-319 R1).
     #[must_use]
     pub fn cycle<E: AnkiEngine + Sync>(
         &self,
@@ -386,8 +403,9 @@ impl RecomputeSetup {
     ) -> CycleParts<E> {
         let digest = self.courses.digest().map(str::to_owned);
         let parts = parts
-            .with_fold(Arc::clone(&self.fold), db, rule, digest)
-            .with_relights(self.relights.clone());
+            .with_fold(Arc::clone(&self.fold), db.clone(), rule, digest)
+            .with_relights(self.relights.clone())
+            .with_flush(Arc::new(holding_router(Arc::clone(&self.policy), db, rule)));
         match &self.instruments {
             Some(instruments) => parts.with_instruments(Arc::clone(instruments)),
             None => parts,
@@ -513,6 +531,14 @@ pub fn router(
 ) -> Router {
     Router::new(Arc::new(policy), db, Arc::new(SystemClock), rule)
         .with_bot(Arc::new(OwnerChat::new(transport, owner)))
+}
+
+/// The router every recompute cycle holds (SPEC-319 R1, R2, R3): `policy` over `db`, reading study
+/// days by `rule` on the system's clock, with no bot transport. It holds each bot celebration it
+/// routes for the processes that hold the bot's credentials, so the job loads none (ADR-066).
+#[must_use]
+pub fn holding_router(policy: Arc<Policy>, db: Db, rule: StudyDayRule) -> Router {
+    Router::new(policy, db, Arc::new(SystemClock), rule).holding()
 }
 
 /// A step of the owner's sync whose failure refuses it (SPEC-128 A16; ADR-193): the four reads
