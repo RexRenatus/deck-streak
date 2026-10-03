@@ -87,8 +87,8 @@
 \* @phx covers crates/notifications/src/ledger.rs anchor=abandon_pushed digest=sha256:27b148a1223b16cc2a4c97d882c56cdfec475427c64746a739ddce072f129d99
 \* @phx covers crates/notifications/src/ledger.rs anchor=release_claims digest=sha256:6b4130909dc46b10d1ad4ed744290bb4b260c8a45190966f4d2fe224ed9ba05c
 \* @phx covers crates/coordination/src/held_flush.rs anchor=perform digest=sha256:ce5564d067389de1f76446b44708cc4aa7e1fb1a73e6776eece05603afba8fe3
-\* @phx covers crates/notifications/src/router.rs anchor=after_claim digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/daemon/src/sync_request.rs anchor=answer digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers crates/notifications/src/router.rs anchor=after_claim digest=sha256:321ba8b66c2bed868712441daa8e6384aed8deadee7f07d57936eeb0cf918e86
+\* @phx covers crates/daemon/src/sync_request.rs anchor=answer digest=sha256:01ef6b24af2316fccad6685edbc89518024d3d236af9d86ad1f7d213c0ae9de0
 \* @phx cites #291, #571
 \* @phx property NoDoubleDelivery ramp=report
 \* @phx property HeldReachesOrAbandons ramp=report
