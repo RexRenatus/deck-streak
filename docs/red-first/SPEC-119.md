@@ -60,3 +60,15 @@ A21: green at 0d677be17905ee568f2e3e5e70f6149663d9dc30
 A40: red at 3b7ab54213d2d89cf514cfbb384d8a6263990435: each_grant_holds_its_scopes_and_no_other panicked at crates/mcp/tests/guard.rs:340: the core token, left [] right [Some(["core"])]
 A40: green at 0d677be17905ee568f2e3e5e70f6149663d9dc30
 ```
+
+## Mutation round 0: the tests that kill the guard's surviving mutants
+
+Each test lives in `crates/mcp/tests/scopes_and_service.rs` and was run against its own hand-applied
+plant before it was committed; the plant was restored byte-equal.
+
+```
+M1: plant crates/mcp/src/grants.rs:54 `self.0 | scope.bit()` -> `self.0 ^ scope.bit()`: adding_a_scope_already_held_keeps_it_held panicked at crates/mcp/tests/scopes_and_service.rs:75:5: assertion `left == right` failed: core added twice, left Scopes(0) right Scopes(1)
+M3: plant crates/mcp/src/grants.rs `<impl fmt::Debug for Grants>::fmt` -> `Ok(Default::default())`: the_grants_debug_names_its_type_and_never_a_token panicked at crates/mcp/tests/scopes_and_service.rs:87:5
+M5: plant crates/mcp/src/guard.rs `GuardService::poll_ready` -> `Poll::from(Ok(()))`: the_guard_service_is_pending_while_its_inner_service_is panicked at crates/mcp/tests/scopes_and_service.rs:95:5
+S11930: row on crates/mcp/src/settings.rs `MIN_CREDENTIAL_CHARS` 32 -> 31, killer settings::a_short_credential_refuses_start
+```

@@ -153,6 +153,15 @@
         "        if token.is_empty() {",
         "settings::a_short_credential_refuses_start",
         "a loaded token holding a byte outside 0x21 to 0x7E, which no request can present, refuses start by its id (SPEC-119 R7, A5, T15)"
+      ],
+      [
+        "S11930-MIN-CREDENTIAL-CHARS",
+        "mcp",
+        "src/settings.rs",
+        "pub const MIN_CREDENTIAL_CHARS: usize = 32;",
+        "pub const MIN_CREDENTIAL_CHARS: usize = 31;",
+        "settings::a_short_credential_refuses_start",
+        "the shortest token a grant accepts is 32 characters, so a 31-character token refuses start (SPEC-119 R7, A5)"
       ]
     ]
   }
