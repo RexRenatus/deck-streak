@@ -492,6 +492,234 @@ async fn every_failure_point_later_sync_and_crash_keeps_one_celebration_per_comm
     );
 }
 
+/// [`cycle`] with no owner message recorded before the route: the path production takes most
+/// often. A relight the ladder caps at T1 on its return day (SPEC-084 R5) then has no message to
+/// react to, so the router holds it for the flush (`Held(Quiet)`) and sends nothing.
+async fn unwritten_cycle(
+    world: &World,
+    process: &mut Process,
+    data: &CollectionData,
+    now: i64,
+    crash: bool,
+) -> Ended {
+    let today = match fold(world, process, data, now, crash).await {
+        Ok(today) => today,
+        Err(ended) => return ended,
+    };
+    route_due_relights(&world.router, &process.due, &world.db, today)
+        .await
+        .expect("the due relights route");
+    Ended::Routed
+}
+
+/// One decision the router recorded for a relight's key.
+#[derive(Debug, PartialEq, Eq)]
+struct Decided {
+    arm: String,
+    reason: Option<String>,
+    tier_rendered: String,
+    study_day: i64,
+}
+
+/// One row the router's queue holds for a relight's key.
+#[derive(Debug, PartialEq, Eq)]
+struct Queued {
+    state: String,
+    hold: String,
+    tier_pending: String,
+}
+
+/// Every decision the router recorded for the relight of `day`, oldest first.
+async fn decisions(db: &Db, day: i64) -> Vec<Decided> {
+    let mut write = db.write().await.expect("a write");
+    sqlx::query(
+        "SELECT arm, reason, tier_rendered, study_day FROM notification_decisions \
+         WHERE dedupe_key = ?1 ORDER BY id",
+    )
+    .bind(format!("relight:{day}"))
+    .fetch_all(&mut *write)
+    .await
+    .expect("the decisions read")
+    .into_iter()
+    .map(|row| Decided {
+        arm: row.get(0),
+        reason: row.get(1),
+        tier_rendered: row.get(2),
+        study_day: row.get(3),
+    })
+    .collect()
+}
+
+/// Every row the router's queue holds for the relight of `day`, oldest first.
+async fn queued(db: &Db, day: i64) -> Vec<Queued> {
+    let mut write = db.write().await.expect("a write");
+    sqlx::query(
+        "SELECT state, hold, tier_pending FROM notification_queue WHERE dedupe_key = ?1 \
+         ORDER BY id",
+    )
+    .bind(format!("relight:{day}"))
+    .fetch_all(&mut *write)
+    .await
+    .expect("the queue reads")
+    .into_iter()
+    .map(|row| Queued {
+        state: row.get(0),
+        hold: row.get(1),
+        tier_pending: row.get(2),
+    })
+    .collect()
+}
+
+/// Where a case's relight went with no owner message.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Went {
+    /// Routed on its return day, capped at T1 and held for the flush.
+    Held,
+    /// Routed on a later day, which is no streak-break day, and rendered as its line.
+    Rendered,
+    /// No grant committed, so nothing was routed.
+    Unrouted,
+}
+
+/// Runs `case` as [`run`] does, through [`unwritten_cycle`], so no owner message is ever recorded,
+/// and answers the properties it breaks for the relight day `D0`, and where its relight went.
+/// S1: at most one routed celebration, a held one counting as routed. S2: none for a grant that
+/// did not commit. L1: a committed grant routed exactly once, rendered or held. On its return day
+/// the relight is held at T1 for the owner to write, and no message is sent at all; on a later day
+/// it renders its one line, and no reaction is made.
+async fn run_unwritten(case: Case) -> (Vec<String>, Went) {
+    let world = world().await;
+    let mut process = start();
+    let ended = unwritten_cycle(&world, &mut process, &history(0), at(D0 - 1, 12), false).await;
+    assert_eq!(ended, Ended::Routed, "the eve's cycle routes");
+    let first = match case.grant_at {
+        GrantAt::Current => D0,
+        GrantAt::Settle => D0 + 1,
+    };
+    let failing = match case.failure {
+        Failure::None => None,
+        Failure::GrantWrite => Some(D0),
+        Failure::LaterWrite => Some(D0 + 1),
+    };
+    *process.armed.lock().unwrap_or_else(PoisonError::into_inner) = failing;
+    let later = history(if case.later_qualifies { 3 } else { 2 });
+    let mut crash = case.crash;
+    for (data, now) in [
+        (&history(3), at(first, 12)),
+        (&later, at(first, 18)),
+        (&later, at(first + 1, 12)),
+        (&later, at(first + 1, 18)),
+        (&later, at(first + 2, 12)),
+    ] {
+        if unwritten_cycle(&world, &mut process, data, now, crash).await == Ended::Crashed {
+            crash = false;
+        }
+    }
+    let granted = grants(&world.db).await.contains(&D0);
+    let (claims, _) = decided(&world.db, D0).await;
+    let decisions = decisions(&world.db, D0).await;
+    let queued = queued(&world.db, D0).await;
+    let pushes = world
+        .bot
+        .0
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner)
+        .clone();
+    let routed: Vec<&Decided> = decisions
+        .iter()
+        .filter(|decision| decision.arm == "send" || decision.arm == "defer")
+        .collect();
+    let mut broken = Vec::new();
+    if routed.len() > 1 || claims > 1 {
+        broken.push(format!(
+            "S1 {case:?}: {} routed celebrations, {claims} claims",
+            routed.len()
+        ));
+    }
+    if !granted && (claims > 0 || !routed.is_empty() || !queued.is_empty() || !pushes.is_empty()) {
+        broken.push(format!(
+            "S2 {case:?}: a celebration with no committed grant: {decisions:?} {queued:?} {pushes:?}"
+        ));
+    }
+    if granted && routed.len() != 1 {
+        broken.push(format!(
+            "L1 {case:?}: a committed grant routed {} times",
+            routed.len()
+        ));
+    }
+    let went = match routed.as_slice() {
+        [one] if one.study_day == D0 => {
+            let held = Decided {
+                arm: "defer".to_owned(),
+                reason: Some("quiet".to_owned()),
+                tier_rendered: "T0".to_owned(),
+                study_day: D0,
+            };
+            let on_queue = Queued {
+                state: "held".to_owned(),
+                hold: "quiet".to_owned(),
+                tier_pending: "T1".to_owned(),
+            };
+            if **one != held || queued != vec![on_queue] || !pushes.is_empty() {
+                broken.push(format!(
+                    "HELD {case:?}: on its return day the relight is held at T1 and nothing is \
+                     sent: {decisions:?} {queued:?} {pushes:?}"
+                ));
+            }
+            Went::Held
+        }
+        [one] => {
+            let lines = pushes
+                .iter()
+                .filter(|push| !push.starts_with("reaction to "))
+                .count();
+            if one.arm != "send" || one.tier_rendered != "T2" || lines != 1 || pushes.len() != 1 {
+                broken.push(format!(
+                    "LINE {case:?}: on a later day the relight renders its one line: \
+                     {decisions:?} {queued:?} {pushes:?}"
+                ));
+            }
+            Went::Rendered
+        }
+        _ => Went::Unrouted,
+    };
+    (broken, went)
+}
+
+/// Ruling 131's pin of the path production takes most often: the same failure-point, later-sync
+/// and crash cases as
+/// [`every_failure_point_later_sync_and_crash_keeps_one_celebration_per_committed_grant`], with no
+/// owner message ever recorded. S1, S2 and L1 hold per relight day with a held celebration counted
+/// as routed; a relight routed on its return day is held and sends nothing, and one routed on a
+/// later day renders its line. Some case must reach the held path.
+#[tokio::test]
+async fn with_no_owner_message_every_committed_grant_is_routed_once_rendered_or_held() {
+    let cases = population();
+    println!(
+        "examined {} relight order case(s) with no owner message",
+        cases.len()
+    );
+    assert!(!cases.is_empty(), "examined 0 cases: nothing was judged");
+    let mut broken = Vec::new();
+    let mut went = BTreeMap::new();
+    for case in cases {
+        let (case_broken, case_went) = run_unwritten(case).await;
+        broken.extend(case_broken);
+        *went.entry(format!("{case_went:?}")).or_insert(0_u32) += 1;
+    }
+    println!("where each case's relight went: {went:?}");
+    assert_eq!(
+        broken,
+        Vec::<String>::new(),
+        "S1, S2 and L1 hold with no owner message, a relight on its return day is held and sends \
+         nothing, and one on a later day renders its line"
+    );
+    assert!(
+        went.get("Held").copied().unwrap_or(0) > 0,
+        "examined 0 held relights: the held path was not reached"
+    );
+}
+
 /// The route-failure seam (A51, A52), created by the test in its own database: a table of the keys
 /// whose route fails, and a trigger on each write of the router's ledger. A key listed under
 /// `claim` fails the router's claim of it, so nothing is claimed or sent; a key listed under
