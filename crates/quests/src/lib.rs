@@ -14,6 +14,7 @@
 
 pub mod chest_store;
 pub mod chests;
+pub mod data_rights;
 pub mod draw;
 pub mod pity;
 pub mod sessions;

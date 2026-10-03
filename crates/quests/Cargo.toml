@@ -21,6 +21,8 @@ getrandom.workspace = true
 sqlx.workspace = true
 # SPEC-081 R5: a failed draw or store read is a typed error the caller matches on.
 thiserror.workspace = true
+# SPEC-081 R21: the data-rights port's exported rows and reset rows are JSON values.
+serde_json.workspace = true
 
 [dev-dependencies]
 # ADR-029: the parity oracle's golden reader, compiled into the goldens tests by path.
