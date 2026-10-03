@@ -12,7 +12,7 @@ mod support;
 use deck_streak_ingest::skip::{
     FailReason, SKIP_BRIDGE_MONTHLY_CAP, SKIP_DEFAULT_SEARCH, SKIP_MAX_CARDS, SKIP_SPREAD_MAX_DAYS,
     SKIP_SPREAD_MIN_DAYS, SearchRefusal, SkipRefusal, SkipRow, SkipState, SkipStore,
-    calendar_month, skip_search, skip_spec, summarize_skips,
+    calendar_month, is_one_expression, skip_search, skip_spec, summarize_skips,
 };
 use deck_streak_kernel::{StudyDay, UtcMillis};
 use serde_json::Value;
@@ -303,4 +303,130 @@ fn the_skip_constants_equal_the_predecessors() {
         6,
         "every constant the golden records: {names:?}"
     );
+}
+
+#[test]
+fn a_fail_reason_displays_as_its_stored_code() {
+    for reason in FailReason::ALL {
+        assert_eq!(
+            reason.to_string(),
+            reason.as_str(),
+            "the display is the code the record stores"
+        );
+        assert!(!reason.to_string().is_empty());
+    }
+}
+
+#[test]
+fn a_quoted_or_escaped_character_is_text_to_the_one_expression_check() {
+    for one in [
+        "deck:\"a)\"",
+        "deck:\"a(\"",
+        "deck:a\\\"b",
+        "deck:a\\(b",
+        "deck:a\\)b",
+        "(deck:a) or (deck:b)",
+    ] {
+        assert!(is_one_expression(one), "{one:?} is one expression");
+    }
+    for not_one in ["deck:a\\\\\"b", "deck:\"a\\\"", ")(", "((a)"] {
+        assert!(
+            !is_one_expression(not_one),
+            "{not_one:?} is not one expression"
+        );
+    }
+}
+
+#[tokio::test]
+async fn the_record_reads_back_what_each_write_settled() {
+    let (_fixture, skips, _db) = store().await;
+    let funded = skips.begin(day(20_001), None, at(1)).await.expect("a");
+    let unfunded = skips.begin(day(20_002), None, at(2)).await.expect("b");
+    skips
+        .settle_applied(funded, 7, false)
+        .await
+        .expect("settle");
+    skips
+        .settle_applied(unfunded, 5, true)
+        .await
+        .expect("settle");
+    let records = skips.records().await.expect("the rows read");
+    assert_eq!(
+        records
+            .iter()
+            .map(|record| (record.id, record.tariff_unfunded))
+            .collect::<Vec<_>>(),
+        vec![(funded, false), (unfunded, true)],
+        "the shortfall flag is read as written"
+    );
+}
+
+#[tokio::test]
+async fn the_summary_tallies_only_an_applied_skip_not_undone() {
+    let (_fixture, skips, _db) = store().await;
+    let applied = skips.begin(day(20_001), None, at(1)).await.expect("a");
+    let pending = skips.begin(day(20_002), None, at(2)).await.expect("b");
+    let failed = skips.begin(day(20_003), None, at(3)).await.expect("c");
+    let undone = skips.begin(day(20_004), None, at(4)).await.expect("d");
+    skips
+        .settle_applied(applied, 7, false)
+        .await
+        .expect("settle");
+    skips
+        .settle_failed(failed, FailReason::WriteFailed)
+        .await
+        .expect("settle");
+    skips
+        .settle_applied(undone, 4, false)
+        .await
+        .expect("settle");
+    skips.mark_undone(undone, at(5)).await.expect("undone");
+    let summary = skips.summary(day(20_005)).await.expect("the summary reads");
+    assert_eq!(
+        (
+            summary.this_month,
+            summary.all_time,
+            summary.last_day,
+            summary.cards_moved_all_time
+        ),
+        (1, 1, Some(day(20_001)), 7),
+        "a pending, failed or undone skip is not tallied (R6): {pending:?}"
+    );
+}
+
+#[tokio::test]
+async fn open_on_finds_only_a_pending_or_applied_skip_not_undone_on_that_day() {
+    let (_fixture, skips, _db) = store().await;
+    let undone = skips.begin(day(20_001), None, at(1)).await.expect("a");
+    let failed = skips.begin(day(20_002), None, at(2)).await.expect("b");
+    let pending = skips.begin(day(20_003), None, at(3)).await.expect("c");
+    let applied = skips.begin(day(20_004), None, at(4)).await.expect("d");
+    skips
+        .settle_applied(undone, 1, false)
+        .await
+        .expect("settle");
+    skips.mark_undone(undone, at(5)).await.expect("undone");
+    skips
+        .settle_failed(failed, FailReason::TimedOut)
+        .await
+        .expect("settle");
+    skips
+        .settle_applied(applied, 1, false)
+        .await
+        .expect("settle");
+    let open = |number: i64| {
+        let skips = skips.clone();
+        async move {
+            skips
+                .open_on(day(number))
+                .await
+                .expect("the read answers")
+                .map(|record| record.id)
+        }
+    };
+    assert_eq!(open(20_001).await, None, "an undone skip is not open");
+    assert_eq!(open(20_002).await, None, "a failed skip is not open");
+    assert_eq!(open(20_003).await, Some(pending), "a pending skip is open");
+    assert_eq!(open(20_004).await, Some(applied), "an applied skip is open");
+    assert_eq!(open(20_010).await, None, "a day with no skip has none open");
 }

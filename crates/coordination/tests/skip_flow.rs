@@ -15,7 +15,7 @@ use deck_streak_coordination::skip::{
 use deck_streak_economy::tariff::{REFUND_SOURCE, TARIFF_SOURCE};
 use deck_streak_economy::wallet::{DepositAnswer, SqliteWallet};
 use deck_streak_ingest::skip::{
-    SKIP_DEFAULT_SEARCH, SkipId, SkipRecord, SkipState, SkipStore, skip_search,
+    FailReason, SKIP_DEFAULT_SEARCH, SkipId, SkipRecord, SkipState, SkipStore, skip_search,
 };
 use deck_streak_kernel::{Db, StudyDay, StudyDayRule, UtcMillis};
 use serde_json::Value;
@@ -498,6 +498,37 @@ async fn a_retry_is_priced_as_its_first_attempt_after_a_later_skip_applies() {
             movements(&db, TARIFF_SOURCE, id).await,
             charged,
             "a later skip of the month never charges this one: earlier={earlier}"
+        );
+    }
+}
+
+/// A skip the settlement must not touch: one that was undone, and one that failed, answer `None`
+/// and write no movement (the guard in `settle_applied` is an either, never a both).
+#[tokio::test]
+async fn an_undone_or_a_failed_skip_is_never_settled_applied() {
+    let skip_day = 20_105;
+    let scratch = TempDir::new().expect("a scratch directory");
+    let db = database(&scratch).await;
+    fund(&db, skip_day, 500).await;
+    let undone = plant(&db, skip_day - 2, 3, true).await;
+    let skips = SkipStore::new(db.clone());
+    let failed = skips
+        .begin(day(skip_day - 1), None, at(skip_day - 1, 10))
+        .await
+        .expect("the take is recorded");
+    skips
+        .settle_failed(failed, FailReason::PushFailed)
+        .await
+        .expect("the failure settles");
+    for (label, id) in [("undone", undone), ("failed", failed)] {
+        let settled = settle_applied(&db, id, 3, at(skip_day, 12))
+            .await
+            .expect("the settlement answers");
+        assert_eq!(settled, None, "a {label} skip is not settled");
+        assert_eq!(
+            movements(&db, TARIFF_SOURCE, id).await,
+            Vec::<(i64, i64)>::new(),
+            "a {label} skip is never charged"
         );
     }
 }
