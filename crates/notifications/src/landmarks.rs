@@ -147,3 +147,38 @@ fn anniversary(origin: StudyDay, n: i128) -> Option<StudyDay> {
     let fallback = format!("{head}{}28", &tail[..4]);
     fallback.parse::<StudyDay>().ok()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::ordinal_label;
+
+    /// The suffix the `match value % 10` arm alone gives.
+    fn match_arm(value: u32) -> &'static str {
+        match value % 10 {
+            1 => "st",
+            2 => "nd",
+            3 => "rd",
+            _ => "th",
+        }
+    }
+
+    #[test]
+    fn the_th_guard_and_the_match_arm_agree_at_the_ten_and_fourteen_edges() {
+        for value in [10_u32, 14, 110, 114] {
+            assert_eq!(match_arm(value), "th", "match arm at {value}");
+            assert_eq!(
+                ordinal_label(value),
+                format!("{value}th"),
+                "label at {value}"
+            );
+        }
+        for value in [11_u32, 12, 13, 111, 112, 113] {
+            assert_ne!(match_arm(value), "th", "the guard is needed at {value}");
+            assert_eq!(
+                ordinal_label(value),
+                format!("{value}th"),
+                "label at {value}"
+            );
+        }
+    }
+}

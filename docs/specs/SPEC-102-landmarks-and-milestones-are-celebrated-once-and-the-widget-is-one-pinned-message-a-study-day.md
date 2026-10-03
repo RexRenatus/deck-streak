@@ -397,6 +397,7 @@ the recompute over a temporary deployment with synthetic reviews.
 | `tools/parity-oracle/registry/spec_102.py` | tools | added: the adapters |
 | `tools/parity-oracle/goldens/` | tools | added: the goldens of section 7 |
 | `scripts/mutation-rows.d/S10200-S10299.json` | scripts | added: the rows of section 9 |
+| `scripts/mutation-equivalent.d/deck-streak-notifications.json` | scripts | changed: the two equivalent `ordinal_label` mutants (ruling-53 records) |
 | `docs/CONTEXT-MAP.md` | docs | changed: the register of DeckStreak's own tables gains `widget_messages` |
 | `privacy.json` | repo | changed: the table's category |
 | `PRIVACY.md` | repo | changed: one line for the category |
