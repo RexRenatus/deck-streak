@@ -12,6 +12,7 @@ import importlib.util
 import io
 import itertools
 import json
+import math
 import os
 import re
 import shutil
@@ -26,6 +27,7 @@ from unittest import mock
 
 from _mutants_finder import BOUNDS, Refused, mutants_in, run_texts
 from _support import REPO, examined
+from test_mutation_verdict import verdict_module
 from test_mutation_workflows import VERDICT, WEEKLY, WORKFLOWS, jobs, listed, shard, workflow
 
 WHOLE = 32
@@ -1027,6 +1029,26 @@ def bash_runs(scripts):
                 (bounded if hit else unbounded).add(n)
         assert 0 in unbounded and 1 in bounded and 1 not in unbounded, "a control misread"
         return unbounded, bounded
+
+
+#: The settle census's measured need in seconds, the one literal SPEC-327 A1 holds the gate's
+#: budget and the sizer's census term to: the slower census test passed at 736.931 s in run
+#: 37131363071's `rust` job (`check-stage-logs-rust` test.log:1373), and nextest started the census
+#: tests up to 51 s into a shard's baseline run (the three shard logs' Summary less SIGTERM), so a
+#: run that holds them needs 51 + 737 = 788 s.
+CENSUS_NEED_SECONDS = 788
+
+
+class TheGatesTimeoutCoversTheCensus(unittest.TestCase):
+    """SPEC-327 A1 (R1, R3): the per-mutant budget covers the census's need with a 1.5 margin,
+    and the sizer charges that need as its census term."""
+
+    def test_the_gates_timeout_covers_the_census_with_its_margin(self):
+        words = BOUNDS.split()
+        timeout = int(words[words.index("--timeout") + 1])
+        self.assertGreaterEqual(timeout, math.ceil(1.5 * CENSUS_NEED_SECONDS), BOUNDS)
+        module = verdict_module()
+        self.assertEqual(module.CENSUS_SECONDS["deck-streak-progression"], CENSUS_NEED_SECONDS)
 
 
 class EveryMutationCommandKeepsTheGatesBounds(unittest.TestCase):

@@ -870,6 +870,95 @@ def sharded(test):
     return fixture, [shard["mutants"] for shard in plan["shards"]["shards"]]
 
 
+#: The package the settle census lives in (SPEC-327). Every value the class below expects is
+#: computed from literals, never from the sizer's own constants: progression's table cost is the
+#: table's highest, 126 s, coordination's 64 s and the api's 54 s, the baseline 371 s, and the
+#: census term 788 s, the slower census test's 736.931 s in run 37131363071's `rust` job
+#: (test.log:1373) after a start of up to 51 s.
+CENSUS_PACKAGE = "deck-streak-progression"
+
+
+def census_shards(test, packages):
+    """`shards` over a fixture plan whose listing holds one mutant of each package given, in that
+    order: the plan's shards."""
+    fixture = Fixture(test)
+    fixture.head({LIB: LIB_TEXT.replace("x * 2", "x + x")})
+    fixture.plan()
+    done, plan, _ = run_shards(fixture, listing(packages))
+    test.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+    return plan["shards"]
+
+
+class ACensusPackagePaysTheCensus(unittest.TestCase):
+    """SPEC-327 A3 to A6 (R4 to R6): a mutant of progression is projected with the settle census's
+    788 s, and a plan or a dispatch that lists one pays the term once in its baseline."""
+
+    def test_each_mutant_of_a_census_package_is_projected_with_the_census(self):
+        sharding = census_shards(self, [CENSUS_PACKAGE, CENSUS_PACKAGE, "deck-streak-coordination"])
+        # Each progression mutant costs 126 + 788 = 914 s; the coordination mutant 64 s, as at the
+        # base.
+        self.assertEqual(sharding["serial_seconds"], 914 + 914 + 64)
+        self.assertEqual(sharding["count"], 1)
+        # One shard: the baseline, 371 + 788 = 1159 s, then the three mutants.
+        projected = [shard["projected_seconds"] for shard in sharding["shards"]]
+        self.assertEqual(projected, [1159 + 914 + 914 + 64])
+        other = census_shards(self, ["deck-streak-coordination"] * 3)
+        self.assertEqual(other["serial_seconds"], 3 * 64)
+        self.assertEqual([shard["projected_seconds"] for shard in other["shards"]], [371 + 3 * 64])
+
+    def test_a_plan_naming_a_census_package_pays_the_census_once_in_its_baseline(self):
+        sharding = census_shards(self, [CENSUS_PACKAGE, CENSUS_PACKAGE, "deck-streak-coordination"])
+        # Two progression mutants pay the term once: 371 + 788, never 371 + 2 * 788.
+        self.assertEqual(sharding["baseline_seconds"], 371 + 788)
+        other = census_shards(self, ["deck-streak-coordination", "deck-streak-api"])
+        self.assertEqual(other["baseline_seconds"], 371)
+        self.assertEqual([shard["projected_seconds"] for shard in other["shards"]], [371 + 64 + 54])
+
+    def test_the_592_listing_fits_its_bound(self):
+        # #592's own listing (run 37131363071's plan): 67 mutants in listing order. The analytics
+        # package is not in the table, so it costs the table's highest, 126 s.
+        packages = (
+            ["deck-streak-analytics"] * 4
+            + ["deck-streak-api"] * 8
+            + ["deck-streak-coordination"] * 10
+            + [CENSUS_PACKAGE] * 45
+        )
+        sharding = census_shards(self, packages)
+        projected = [shard["projected_seconds"] for shard in sharding["shards"]]
+        self.assertEqual(sharding["count"], 23)
+        self.assertEqual(max(projected), 3113)
+        self.assertTrue(all(seconds <= 3600 for seconds in projected), projected)
+        self.assertEqual(sharding["serial_seconds"], 4 * 126 + 8 * 54 + 10 * 64 + 45 * 914)
+        held = [name for shard in sharding["shards"] for name in shard["mutants"]]
+        self.assertEqual(len(examined("listed mutants held by a shard", held)), 67)
+
+    def test_a_dispatch_of_a_census_package_is_sized_with_the_census(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            path = Path(scratch) / "package.json"
+            path.write_text(json.dumps(listing([CENSUS_PACKAGE] * 3)), encoding="utf-8")
+            sink = Path(scratch) / "output"
+            sink.touch()
+            done = subprocess.run(
+                [sys.executable, str(VERDICT), "size", "--listed", str(path)]
+                + ["--package", CENSUS_PACKAGE],
+                capture_output=True,
+                text=True,
+                env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1", GITHUB_OUTPUT=str(sink)),
+                timeout=300,
+                check=False,
+            )
+            written = sink.read_text(encoding="utf-8")
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        # Three mutants at 914 s on a 1159 s baseline: one shard projects 3901 s, past the bound,
+        # so two, the slowest 1159 + 2 * 914.
+        self.assertIn(
+            "mutation: size: 2 shard(s) for 3 listed mutant(s), projected at 2742 s serially, "
+            "the slowest at 2987 s of its 3600 s bound",
+            done.stdout,
+        )
+        self.assertEqual(written, "shards=2\nmatrix=[0, 1]\n")
+
+
 def shard_outcomes(names, missed=(), total=None):
     """A shard's outcomes.json, as cargo-mutants writes it: every one of `names` caught but the
     `missed` ones. `total` above the count is a report left partial."""

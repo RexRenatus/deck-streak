@@ -4432,6 +4432,12 @@ NOT_WORKFLOW_READS = {
     **allowed(
         "calls a helper that runs the verdict script, a step's shell or the verdict module over planted reports; outputs, never a workflow",
         (
+            "test_dispatch_shards",
+            "TheGatesTimeoutCoversTheCensus.test_the_gates_timeout_covers_the_census_with_its_margin",
+            "verdict_module()",
+            1,
+        ),
+        (
             "test_not_started_legs",
             "ALegWithNothingToExamineIsNotStarted.test_a_leg_the_listing_gives_nothing_reads_not_started",
             "judge(reports)",
@@ -4666,6 +4672,15 @@ NOT_WORKFLOW_READS = {
             "test_not_started_legs",
             "ALegWithNothingToExamineIsNotStarted.test_an_examined_sum_that_differs_from_the_listing_is_refused",
             "outcomes_of(whole).read_text(encoding='utf-8')",
+            1,
+        ),
+    ),
+    **allowed(
+        "a constant of the verdict module, loaded by path by verdict_module; a production module's table, never the reader",
+        (
+            "test_dispatch_shards",
+            "TheGatesTimeoutCoversTheCensus.test_the_gates_timeout_covers_the_census_with_its_margin",
+            "module.CENSUS_SECONDS",
             1,
         ),
     ),
