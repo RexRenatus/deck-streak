@@ -31,6 +31,7 @@ fn a_state_differing_in_stability_alone_is_not_equal() {
         stability: 12.75,
         ..base()
     };
+    assert_eq!(other.stability.to_bits(), 12.75_f64.to_bits());
     assert_ne!(base(), other);
 }
 
@@ -40,6 +41,7 @@ fn a_state_differing_in_difficulty_alone_is_not_equal() {
         difficulty: 4.5,
         ..base()
     };
+    assert_eq!(other.difficulty.to_bits(), 4.5_f64.to_bits());
     assert_ne!(base(), other);
 }
 
@@ -49,6 +51,7 @@ fn a_state_differing_in_decay_alone_is_not_equal() {
         decay: 0.31,
         ..base()
     };
+    assert_eq!(other.decay.to_bits(), 0.31_f64.to_bits());
     assert_ne!(base(), other);
 }
 
@@ -58,6 +61,7 @@ fn a_state_differing_in_desired_retention_alone_is_not_equal() {
         desired_retention: Some(0.85),
         ..base()
     };
+    assert_eq!(other.desired_retention, Some(0.85));
     assert_ne!(base(), other);
     let none = MemoryState {
         desired_retention: None,
@@ -72,6 +76,7 @@ fn a_state_differing_in_last_review_alone_is_not_equal() {
         last_review_sec: Some(1_700_000_001),
         ..base()
     };
+    assert_eq!(other.last_review_sec, Some(1_700_000_001));
     assert_ne!(base(), other);
     let none = MemoryState {
         last_review_sec: None,
@@ -109,6 +114,8 @@ fn an_escaped_unicode_key_is_read_under_its_decoded_name() {
 fn a_backslash_before_a_multibyte_char_does_not_split_it() {
     // An invalid escape: the text is not JSON, so the parse answers none, and must not panic.
     assert_eq!(parse(Some("{\"k\":\"\\\u{e9}\",\"s\":3}")), None);
+    let valid = parse(Some("{\"k\":\"\\n\",\"s\":3}")).expect("a state");
+    assert_eq!(valid.stability.to_bits(), 3.0_f64.to_bits());
 }
 
 #[test]
