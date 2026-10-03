@@ -13,8 +13,9 @@
   number), SPEC-077 (each card's memory state and retrievability), SPEC-085 (the chart loader),
   SPEC-090 (the kernel's numeric port) and SPEC-092 (the strand parse input readiness reads).
   **Mutation band:** `S09100-S09199`.
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-091.md` (ADR-016).
+- **Status:** delivered in part (moved from `docs/specs/planned/` with its tests and
+  `docs/red-first/SPEC-091.md`, ADR-016): #91's pull request delivers the horizon (R6, the
+  horizon's constants, A8, A9 and A19, ADR-317); CU3 (#90) delivers the rest (section 3c).
 
 ## 1. The problem, measured
 
@@ -117,46 +118,17 @@ R12. Every constant this SPEC uses (the retrievable and at-risk edges, the matur
 
 ## 3. Acceptance criteria
 
+This pull request (#91) delivers the horizon: the criteria of this table. The rest of the SPEC
+is CU3's (#90), and moves back here when CU3 delivers it.
+
 | id | criterion | decided by |
 |---|---|---|
-| A1 | memory health equals the golden of `coaching.py:_memory_health` | `memory_health_matches_the_predecessors_golden` |
-| A2 | the desired retention equals the golden of `coaching.py:_collection_desired_pct` | `the_desired_retention_matches_the_predecessors_golden` |
-| A3 | calibration equals the golden of `coaching.py:_calibration` | `calibration_matches_the_predecessors_golden` |
-| A4 | the advice equals the golden of `coaching.py:_retention_advice` | `retention_advice_matches_the_predecessors_golden` |
-| A5 | the mature trend equals the golden of `coaching.py:_mature_trend` | `the_mature_trend_matches_the_predecessors_golden` |
-| A6 | input readiness equals the golden of `comprehension.py:compute_input_readiness` | `input_readiness_matches_the_predecessors_golden` |
-| A7 | stability depth equals the golden of `comprehension.py:compute_stability_depth` | `stability_depth_matches_the_predecessors_golden` |
 | A8 | the horizon equals the golden of `horizon.py:compute_horizon` | `the_horizon_matches_the_predecessors_golden` |
 | A9 | the horizon's readout equals the golden of `horizon.py:build_readout` | `the_horizon_readout_matches_the_predecessors_golden` |
-| A10 | every memory constant equals `goldens/memory.constants.json` | `the_memory_constants_equal_the_predecessors` |
-| A11 | the step passes the rollups newest first, so calibration reads the latest seven | `the_memory_step_reads_the_newest_rollups` |
-| A12 | two recomputes store one row per kind and scope, and the second replaces the first | `the_memory_readouts_are_replaced_once_per_recompute` |
-| A13 | `memory_readouts` is exported and erased by curriculum's port | `the_memory_readouts_are_exported_and_erased` |
-| A14 | both routes answer the owner and refuse every other caller with no data | `the_memory_routes_answer_only_the_owner` |
-| A15 | `/memory` states each readout the route states | `memory_states_each_readout` |
-| A16 | each gauge states its value as text beside its meter | `states each gauge value as text` |
-| A17 | the horizon chart states the thirty-day obligation and both levers as text | `states the obligation and both levers as text` |
-| A18 | the step passes the collection's day number, so the horizon buckets by due minus that number | `the_memory_step_passes_the_collections_day_number` |
 
 ```acceptance
-A1: cargo test -p deck-streak-curriculum --test memory_goldens -- --exact memory_health_matches_the_predecessors_golden
-A2: cargo test -p deck-streak-curriculum --test memory_goldens -- --exact the_desired_retention_matches_the_predecessors_golden
-A3: cargo test -p deck-streak-curriculum --test memory_goldens -- --exact calibration_matches_the_predecessors_golden
-A4: cargo test -p deck-streak-curriculum --test memory_goldens -- --exact retention_advice_matches_the_predecessors_golden
-A5: cargo test -p deck-streak-curriculum --test memory_goldens -- --exact the_mature_trend_matches_the_predecessors_golden
-A6: cargo test -p deck-streak-curriculum --test memory_goldens -- --exact input_readiness_matches_the_predecessors_golden
-A7: cargo test -p deck-streak-curriculum --test memory_goldens -- --exact stability_depth_matches_the_predecessors_golden
 A8: cargo test -p deck-streak-curriculum --test horizon_goldens -- --exact the_horizon_matches_the_predecessors_golden
 A9: cargo test -p deck-streak-curriculum --test horizon_goldens -- --exact the_horizon_readout_matches_the_predecessors_golden
-A10: cargo test -p deck-streak-curriculum --test memory_goldens -- --exact the_memory_constants_equal_the_predecessors
-A11: cargo test -p deck-streak-coordination --test memory_step -- --exact the_memory_step_reads_the_newest_rollups
-A12: cargo test -p deck-streak-coordination --test memory_step -- --exact the_memory_readouts_are_replaced_once_per_recompute
-A13: cargo test -p deck-streak-curriculum --test memory_store -- --exact the_memory_readouts_are_exported_and_erased
-A14: cargo test -p deck-streak-api --test memory_routes -- --exact the_memory_routes_answer_only_the_owner
-A15: cargo test -p deck-streak-bot --test memory_commands -- --exact memory_states_each_readout
-A16: pnpm exec vitest run web/app/src/lib/memory/MemoryGauges.test.ts -t "states each gauge value as text"
-A17: pnpm exec vitest run web/app/src/lib/memory/HorizonChart.test.ts -t "states the obligation and both levers as text"
-A18: cargo test -p deck-streak-coordination --test memory_step -- --exact the_memory_step_passes_the_collections_day_number
 ```
 
 ## 3a. What the box run judges
@@ -171,6 +143,52 @@ when it merges.
 |---|---|---|
 | B1 | over `privacy.json`, `PRIVACY.md` and `crates/curriculum/src/data_rights.rs`: the `memory-health` category names `memory_readouts` with its purpose, basis and retention, and export and erase cover it | the privacy-gdpr pack |
 | B2 | over `web/app/src/routes/memory/+page.svelte` and every file under `web/app/src/lib/memory/`: the gauges and the horizon chart pass the accessibility audit in both Telegram colour schemes | the accessibility pack |
+
+## 3c. Delivered by the next pull requests
+
+This SPEC lands in two pull requests, in order. This one (#91) delivers the horizon: R6, the
+horizon's constants of R12, A8, A9 and A19. CU3 (#90) delivers memory health, calibration, readiness,
+depth and the mature trend, the step, the table, the routes, the command and the Mini App tab. The
+table below holds the criteria CU3 delivers, each row naming that pull request, and the lines under
+it are their fence lines, each prefixed `CU3: `. CU3 moves each of its criteria back verbatim: the
+row into section 3's table, without the `delivered by` column, and the fence line into the
+acceptance fence, without the prefix. B1 and B2 (section 3a) are judged when CU3 adds their files.
+
+| id | criterion | decided by | delivered by |
+|---|---|---|---|
+| A1 | memory health equals the golden of `coaching.py:_memory_health` | `memory_health_matches_the_predecessors_golden` | CU3 (#90) |
+| A2 | the desired retention equals the golden of `coaching.py:_collection_desired_pct` | `the_desired_retention_matches_the_predecessors_golden` | CU3 (#90) |
+| A3 | calibration equals the golden of `coaching.py:_calibration` | `calibration_matches_the_predecessors_golden` | CU3 (#90) |
+| A4 | the advice equals the golden of `coaching.py:_retention_advice` | `retention_advice_matches_the_predecessors_golden` | CU3 (#90) |
+| A5 | the mature trend equals the golden of `coaching.py:_mature_trend` | `the_mature_trend_matches_the_predecessors_golden` | CU3 (#90) |
+| A6 | input readiness equals the golden of `comprehension.py:compute_input_readiness` | `input_readiness_matches_the_predecessors_golden` | CU3 (#90) |
+| A7 | stability depth equals the golden of `comprehension.py:compute_stability_depth` | `stability_depth_matches_the_predecessors_golden` | CU3 (#90) |
+| A10 | every memory constant equals `goldens/memory.constants.json` | `the_memory_constants_equal_the_predecessors` | CU3 (#90) |
+| A11 | the step passes the rollups newest first, so calibration reads the latest seven | `the_memory_step_reads_the_newest_rollups` | CU3 (#90) |
+| A12 | two recomputes store one row per kind and scope, and the second replaces the first | `the_memory_readouts_are_replaced_once_per_recompute` | CU3 (#90) |
+| A13 | `memory_readouts` is exported and erased by curriculum's port | `the_memory_readouts_are_exported_and_erased` | CU3 (#90) |
+| A14 | both routes answer the owner and refuse every other caller with no data | `the_memory_routes_answer_only_the_owner` | CU3 (#90) |
+| A15 | `/memory` states each readout the route states | `memory_states_each_readout` | CU3 (#90) |
+| A16 | each gauge states its value as text beside its meter | `states each gauge value as text` | CU3 (#90) |
+| A17 | the horizon chart states the thirty-day obligation and both levers as text | `states the obligation and both levers as text` | CU3 (#90) |
+| A18 | the step passes the collection's day number, so the horizon buckets by due minus that number | `the_memory_step_passes_the_collections_day_number` | CU3 (#90) |
+
+CU3: A1: cargo test -p deck-streak-curriculum --test memory_goldens -- --exact memory_health_matches_the_predecessors_golden
+CU3: A2: cargo test -p deck-streak-curriculum --test memory_goldens -- --exact the_desired_retention_matches_the_predecessors_golden
+CU3: A3: cargo test -p deck-streak-curriculum --test memory_goldens -- --exact calibration_matches_the_predecessors_golden
+CU3: A4: cargo test -p deck-streak-curriculum --test memory_goldens -- --exact retention_advice_matches_the_predecessors_golden
+CU3: A5: cargo test -p deck-streak-curriculum --test memory_goldens -- --exact the_mature_trend_matches_the_predecessors_golden
+CU3: A6: cargo test -p deck-streak-curriculum --test memory_goldens -- --exact input_readiness_matches_the_predecessors_golden
+CU3: A7: cargo test -p deck-streak-curriculum --test memory_goldens -- --exact stability_depth_matches_the_predecessors_golden
+CU3: A10: cargo test -p deck-streak-curriculum --test memory_goldens -- --exact the_memory_constants_equal_the_predecessors
+CU3: A11: cargo test -p deck-streak-coordination --test memory_step -- --exact the_memory_step_reads_the_newest_rollups
+CU3: A12: cargo test -p deck-streak-coordination --test memory_step -- --exact the_memory_readouts_are_replaced_once_per_recompute
+CU3: A13: cargo test -p deck-streak-curriculum --test memory_store -- --exact the_memory_readouts_are_exported_and_erased
+CU3: A14: cargo test -p deck-streak-api --test memory_routes -- --exact the_memory_routes_answer_only_the_owner
+CU3: A15: cargo test -p deck-streak-bot --test memory_commands -- --exact memory_states_each_readout
+CU3: A16: pnpm exec vitest run web/app/src/lib/memory/MemoryGauges.test.ts -t "states each gauge value as text"
+CU3: A17: pnpm exec vitest run web/app/src/lib/memory/HorizonChart.test.ts -t "states the obligation and both levers as text"
+CU3: A18: cargo test -p deck-streak-coordination --test memory_step -- --exact the_memory_step_passes_the_collections_day_number
 
 ## 4. File manifest
 
@@ -284,3 +302,112 @@ predecessor at `27ee2bc` (SPEC-029). Every case is synthetic.
 | `S09107-DAY-NUMBER-QUEUES` | `crates/curriculum/src/horizon.rs` | only queues 2 and 3 are bucketed | `horizon_goldens::the_horizon_matches_the_predecessors_golden` |
 | `S09108-HORIZON-DAYS` | `crates/curriculum/src/horizon.rs` | the 365-day horizon | `memory_goldens::the_memory_constants_equal_the_predecessors` |
 | `S09109-ONE-ROW-PER-KIND` | `migrations/009101_curriculum_memory_readouts.sql` | the key on `memory_readouts (kind, scope)` (a script row; the cargo killer) | `memory_step::the_memory_readouts_are_replaced_once_per_recompute` |
+
+## 10. Amendments, 2026-10-03: the horizon lands first (#91), and what CU3 (#90) delivers
+
+Section 3's table now holds only the criteria this pull request delivers, A8 and A9; every other
+row moved, verbatim, to section 3c with its fence line, and A19 is added in section 11. The body
+above is otherwise as planned. The amendments below are recorded here and are not applied to it;
+each Old is the body's text and each New is what it reads from this pull request on.
+
+- **T1** (header). Old: `SPEC-090 (the kernel's numeric port) and SPEC-092`. New: `SPEC-302 (the
+  kernel's numeric port, which carries SPEC-090's R1) and SPEC-092`.
+- **T2** (section 1, prerequisites). Old: `SPEC-085, SPEC-090 and SPEC-092, as the header`. New:
+  `SPEC-085, SPEC-302 and SPEC-092, as the header`.
+- **T3** (R2). Old: `through the kernel's median and rounding (SPEC-090).`. New: `through the
+  kernel's median and rounding (SPEC-302).`
+- **T4** (R6). Old: `its new and owed-now counts and its 30-day obligation`. New: `index 0 holding
+  what is owed now (arrears, intraday cards, a borrowed card's filtered position and any queue the
+  port does not know), its beyond-horizon, new, excluded and total counts, and its 30-day
+  obligation`.
+- **T5** (R6, across the wrap). Old: `(`horizon.py:build_readout`, with R2's desired retention).`.
+  New: `(`horizon.py:build_readout`), given the desired retention as its input; CU3's memory step
+  passes it R2's value (section 3c).` The predecessor's `coaching.py:horizon_readout` only passes
+  R2's desired retention into `build_readout`, so it is CU3's memory step.
+- **T6** (R12, across the wrap). Old: `introduced, the horizon's 365 days, 30-day window, flat peak
+  of 25 and queue sets) equals `goldens/memory.constants.json`, held by a test.`. New: `introduced)
+  equals `goldens/memory.constants.json`, held by a test. The horizon's 365 days, 30-day window,
+  flat peak of 25 and the price of a new card, 8 lifetime reviews
+  (`divest.NEW_CARD_LIFETIME_REVIEWS`, which `build_readout` reads), equal
+  `goldens/horizon.constants.json`, held by a test (A19). Its three queue sets are sets, which a
+  constants golden cannot hold, so A8's cases in every queue prove them.`
+- **T7** (section 7, the `memory.constants` row). Old: `the `comprehension` and `horizon` module
+  constants`. New: `the `comprehension` module constants`; and a new row after it:
+  `horizon.constants` | `horizon.HORIZON_DAYS`, `WINDOW_DAYS`, `FLAT_PEAK_REVIEWS`;
+  `divest.NEW_CARD_LIFETIME_REVIEWS` | constants | none.
+- **T8** (section 9, row `S09108-HORIZON-DAYS`). Old: `memory_goldens::the_memory_constants_equal_the_predecessors`.
+  New: `horizon_goldens::the_horizon_constants_equal_the_predecessors`.
+- **T9** (section 1). Old: `with a negative due holds a filtered position, and only queues 2 and 3`.
+  New: `with a negative due holds a filtered position and is owed now, a queue the port does not
+  know is owed now, and only queues 2 and 3`.
+- **T10** (section 7). The `horizon` adapter also builds an unknown queue, a negative day origin and
+  cards given as rows with a copy count; the `horizon_readout` adapter builds the same rows with
+  desired retentions at half-way ties and copy counts past 1,000.
+- **T11** (section 4). Files this pull request adds or changes that section 4 does not name:
+  `crates/curriculum/Cargo.toml` (changed: `serde` and `serde_json` with `float_roundtrip` as
+  dev-dependencies for the golden reader, ADR-029), `tools/parity-oracle/goldens/horizon.constants.json`
+  (added), `docs/decisions/ADR-317-the-horizon-lands-first-as-a-pure-readout-and-holds-its-own-price-of-a-new-card.md`
+  (added) and `scripts/mutation-equivalent.d/deck-streak-curriculum.json` (added only if a mutant
+  is recorded equivalent).
+
+Decided also by ADR-317 (the horizon's slice, the price of a new card, the constants golden and the
+readout's two format specs).
+
+New mutation rows in band `S09100-S09199` beside `S09107` and `S09108`, from `S09110`: the overdue
+clamp (`S09110`), the beyond-horizon edge (`S09111`), the new-card disjunction (`S09112`), the
+flat-peak edge (`S09113`), the forward peak's start (`S09114`), the window (`S09115`) and the price
+of a new card (`S09116`). `S09101` to `S09106` and `S09109` stay CU3's.
+
+Section 4's paths this pull request does not touch:
+
+- `crates/curriculum/src/memory.rs`: unchanged in this part; delivered by CU3 (#90)
+- `crates/curriculum/src/comprehension.rs`: unchanged in this part; delivered by CU3 (#90)
+- `crates/curriculum/src/memory_store.rs`: unchanged in this part; delivered by CU3 (#90)
+- `crates/curriculum/src/data_rights.rs`: unchanged in this part; delivered by CU3 (#90)
+- `crates/curriculum/tests/memory_goldens.rs`: unchanged in this part; delivered by CU3 (#90)
+- `crates/curriculum/tests/memory_store.rs`: unchanged in this part; delivered by CU3 (#90)
+- `migrations/009101_curriculum_memory_readouts.sql`: unchanged in this part; delivered by CU3 (#90)
+- `crates/coordination/src/recompute/memory.rs`: unchanged in this part; delivered by CU3 (#90)
+- `crates/coordination/src/recompute/mod.rs`: unchanged in this part; delivered by CU3 (#90)
+- `crates/daemon/src/wiring.rs`: unchanged in this part; delivered by CU3 (#90)
+- `crates/coordination/src/memory.rs`: unchanged in this part; delivered by CU3 (#90)
+- `crates/coordination/src/lib.rs`: unchanged in this part; delivered by CU3 (#90)
+- `crates/coordination/tests/memory_step.rs`: unchanged in this part; delivered by CU3 (#90)
+- `crates/api/src/memory_routes.rs`: unchanged in this part; delivered by CU3 (#90)
+- `crates/api/src/router.rs`: unchanged in this part; delivered by CU3 (#90)
+- `crates/api/tests/memory_routes.rs`: unchanged in this part; delivered by CU3 (#90)
+- `crates/bot/src/memory_commands.rs`: unchanged in this part; delivered by CU3 (#90)
+- `crates/bot/src/commands.rs`: unchanged in this part; delivered by CU3 (#90)
+- `crates/bot/tests/memory_commands.rs`: unchanged in this part; delivered by CU3 (#90)
+- `web/app/src/routes/memory/+page.svelte`: unchanged in this part; delivered by CU3 (#90)
+- `web/app/src/lib/memory/memory.ts`: unchanged in this part; delivered by CU3 (#90)
+- `web/app/src/lib/memory/MemoryGauges.svelte`: unchanged in this part; delivered by CU3 (#90)
+- `web/app/src/lib/memory/MemoryGauges.test.ts`: unchanged in this part; delivered by CU3 (#90)
+- `web/app/src/lib/memory/HorizonChart.svelte`: unchanged in this part; delivered by CU3 (#90)
+- `web/app/src/lib/memory/HorizonChart.test.ts`: unchanged in this part; delivered by CU3 (#90)
+- `web/app/src/lib/routes.ts`: unchanged in this part; delivered by CU3 (#90)
+- `docs/CONTEXT-MAP.md`: unchanged in this part; delivered by CU3 (#90)
+- `crates/coordination/src/data_rights_registry.rs`: unchanged in this part; delivered by CU3 (#90)
+- `crates/coordination/tests/data_rights_symmetry.rs`: unchanged in this part; delivered by CU3 (#90)
+- `privacy.json`: unchanged in this part; delivered by CU3 (#90)
+- `PRIVACY.md`: unchanged in this part; delivered by CU3 (#90)
+- `.sqlx/`: unchanged in this part; delivered by CU3 (#90)
+- `tools/parity-oracle/goldens/memory_health.json`: unchanged in this part; delivered by CU3 (#90)
+- `tools/parity-oracle/goldens/desired_retention.json`: unchanged in this part; delivered by CU3 (#90)
+- `tools/parity-oracle/goldens/calibration.json`: unchanged in this part; delivered by CU3 (#90)
+- `tools/parity-oracle/goldens/retention_advice.json`: unchanged in this part; delivered by CU3 (#90)
+- `tools/parity-oracle/goldens/mature_trend.json`: unchanged in this part; delivered by CU3 (#90)
+- `tools/parity-oracle/goldens/input_readiness.json`: unchanged in this part; delivered by CU3 (#90)
+- `tools/parity-oracle/goldens/stability_depth.json`: unchanged in this part; delivered by CU3 (#90)
+- `tools/parity-oracle/goldens/memory.constants.json`: unchanged in this part; delivered by CU3 (#90)
+- `docs/schematics/curriculum-readouts-and-the-can-do-pass.md`: unchanged in this part; delivered by CU3 (#90)
+
+## 11. Acceptance criteria of the 2026-10-03 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A19 | every horizon constant equals `goldens/horizon.constants.json` | `the_horizon_constants_equal_the_predecessors` |
+
+```acceptance
+A19: cargo test -p deck-streak-curriculum --test horizon_goldens -- --exact the_horizon_constants_equal_the_predecessors
+```
