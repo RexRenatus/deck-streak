@@ -15,5 +15,5 @@
 ### Changed
 
 - The recompute registers Road to C2's progress step and its band badge step, so a band-up is
-  stored, paid and celebrated in production, once ever, even after the learner's data is erased.
+  stored, paid and celebrated in production, once ever, even after its milestone is erased.
 - The persona engine's band adapter reads a course's live band from its stored progress.
