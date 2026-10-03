@@ -84,7 +84,7 @@ sequenceDiagram
   A->>D: Db::open: pragmas, then every migration
   A->>L: unlock, explicitly, then close
   L-->>B: granted
-  B->>D: Db::open: pragmas; every migration is already applied
+  B->>D: Db::open: pragmas#59; every migration is already applied
   B->>L: unlock, then close
 ```
 

@@ -18,13 +18,13 @@ stateDiagram-v2
   Validating --> Refused401: no hash, repeated key, a field that does not decode, forged, no auth_date or user.id
   Validating --> Refused401: auth_date older than the bound, or more than 60 s ahead (init_data_stale)
   Validating --> Refused403: valid and fresh, but user.id is not the owner
-  Validating --> Live: owner: the session the request carried ends; a NEW 32-byte id, only its SHA-256 kept; oldest evicted past 8
+  Validating --> Live: owner: the session the request carried ends#59; a NEW 32-byte id, only its SHA-256 kept#59; oldest evicted past 8
   Live --> Live: a request with the cookie refreshes the idle timer
   Live --> Ended: 30 minutes without a request
   Live --> Ended: 8 hours after it began
   Live --> Ended: DELETE /api/session (cookie cleared)
   Live --> Ended: the process restarts (the store is in memory)
-  Ended --> [*]: the next call answers 401; the Mini App re-handshakes once
+  Ended --> [*]: the next call answers 401#59; the Mini App re-handshakes once
 ```
 
 ## Who holds what
@@ -92,7 +92,7 @@ sequenceDiagram
   G-->>R: the owner
   R->>S: end the session the request carried, then open a new one
   S-->>R: a new id, hex, only here in the clear
-  R-->>M: 200 and Set-Cookie __Host-deckstreak_session=id; Path=/; Max-Age=28800; Secure; HttpOnly; SameSite=Strict
+  R-->>M: 200 and Set-Cookie __Host-deckstreak_session=id#59; Path=/#59; Max-Age=28800#59; Secure#59; HttpOnly#59; SameSite=Strict
   M->>R: GET /api/me with the cookie alone
   R->>S: OwnerSession: the live session, its idle timer refreshed (else 401 no_session)
   R-->>M: {"study_day": "YYYY-MM-DD"}, from the kernel's rule and clock
