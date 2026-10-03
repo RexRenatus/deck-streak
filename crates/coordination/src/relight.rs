@@ -7,6 +7,7 @@ use deck_streak_notifications::{
 };
 use deck_streak_streaks::constants::RELIGHT_XP;
 
+use crate::ladder_facts;
 use crate::recompute::streaks::RelightDue;
 
 /// The event the line is raised for: the policy's celebration kind, which has no `record` of its
@@ -39,6 +40,7 @@ pub async fn announce_relight(
         LapseContext::NoLapse,
     )
     .map_err(refused)?;
+    let occasion = ladder_facts::with_streak_facts(router.db(), occasion).await?;
     router.route(&occasion).await.map(Some)
 }
 
