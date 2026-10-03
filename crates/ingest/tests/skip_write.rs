@@ -817,16 +817,28 @@ fn a_take_pushes_exactly_the_previewed_cards_and_their_review_log_rows() {
             "fsrs {fsrs}: the preview lists the study day's cards"
         );
 
+        // After the preview, another client makes a card due today that the preview did not list:
+        // the take's converge brings it in and the search then selects it, yet it never moves.
+        let joined = SKIP_FLOOR + 12;
+        let other = scene.other("other.anki2");
+        let today_due = RslibEngine
+            .due_cards(&other, "prop:due=0")
+            .expect("the other client's copy reads")[0]
+            .due;
+        synthetic::change_cards(&other, &[(joined, today_due)]);
+        support::sync_on_another_client(&scene.runtime, &other, scene.endpoint());
+        scene.clear();
+
         let before = scene.bytes();
         let (skip, answer) = scene.take(Some(digest), no_hooks());
         assert_eq!(
             answer,
             TakeAnswer::Accepted {
                 moved: moved.clone(),
-                left_alone: Vec::new(),
+                left_alone: vec![joined],
                 read_back: Vec::new()
             },
-            "fsrs {fsrs}"
+            "fsrs {fsrs}: the card the preview did not list is left alone"
         );
         let pushed = examined("pushed card(s)", scene.pushed());
         let ids: Vec<i64> = pushed.iter().map(|card| card.id).collect();
