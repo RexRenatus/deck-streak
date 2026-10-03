@@ -183,6 +183,33 @@ pub async fn settled_amount(
     .await
 }
 
+/// The study days of `track` that `source` settled XP on, oldest first: the days the track's
+/// reviews are settled above nothing, which is the days it has a study review (ADR-302 D4).
+///
+/// # Errors
+///
+/// [`sqlx::Error`] when the read fails.
+pub async fn settled_days(
+    connection: &mut SqliteConnection,
+    source: &str,
+    track: Track,
+) -> Result<Vec<StudyDay>, sqlx::Error> {
+    let track_word = track.as_str();
+    let rows = sqlx::query!(
+        r#"SELECT study_day AS "study_day!: i64", amount AS "amount!: i64" FROM xp_settlement
+           WHERE source = ?1 AND track = ?2 ORDER BY study_day"#,
+        source,
+        track_word
+    )
+    .fetch_all(connection)
+    .await?;
+    Ok(rows
+        .into_iter()
+        .filter(|row| row.amount > 0)
+        .map(|row| StudyDay::from_epoch_day(row.study_day))
+        .collect())
+}
+
 /// Every source and amount `study_day` holds in both XP tables, on both tracks: the rows the day
 /// base is taken over (SPEC-072 R17).
 ///

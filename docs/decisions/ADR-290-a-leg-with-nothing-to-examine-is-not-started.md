@@ -129,3 +129,12 @@ lists no Rust mutant: `mutation-rust` not started, `mutation-verdict` and `ci` p
 ## More Information
 
 SPEC-290, issue #435, SPEC-039 R3, R4, R11 and R18, SPEC-038, ADR-057.
+
+## Amendment, 2026-09-30: the recorded runs belong to two pull requests (#455)
+
+Made after the delivery, insert-only: every earlier byte is kept in order. The Rust class applying
+with an empty listing is cited twice above as "run 36604153634, #362". #362 is an issue. The run
+was on the branch `fix/agent-gate-362`, pull request #388, at 24077ccbcb1e. Read both citations as
+run 36604153634 of #388. SPEC-290 section 9 carries the same correction for its run 36624231257,
+which ran on pull request #410, not on issue #396. The decision, its alternatives and its
+consequences are unchanged.

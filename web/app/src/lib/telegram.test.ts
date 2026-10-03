@@ -2,7 +2,12 @@
  * @vitest-environment jsdom
  */
 import { describe, expect, it, vi } from 'vitest';
-import { connect, NO_INSETS, type Insets } from './telegram.svelte';
+import type { Insets } from './telegram.svelte';
+
+// The module is imported inside each test. It builds the app's wrapper when it loads, so a
+// mutant of that construction fails the test that loads it, where a static import would fail the
+// whole file before any test ran.
+const loaded = () => import('./telegram.svelte');
 
 // SPEC-028 R2, A7. Telegram's script throws WebAppMethodUnsupported when a method is called on a
 // client older than the Bot API version that added it. The versions below are read from
@@ -101,7 +106,8 @@ function stubAt(version: string) {
 }
 
 describe('the one Telegram wrapper', () => {
-  it('the wrapper calls ready once and gates each method by version', () => {
+  it('the wrapper calls ready once and gates each method by version', async () => {
+    const { connect, NO_INSETS } = await loaded();
     // the first Mini App version, the versions that added what the wrapper gates, and the newest
     const matrix = ['6.0', '6.9', '7.10', '8.0', '9.6'];
     const outcomes = matrix.map((version) => {
@@ -139,7 +145,8 @@ describe('the one Telegram wrapper', () => {
     );
   });
 
-  it('the wrapper reads the launch once and follows the theme and the viewport', () => {
+  it('the wrapper reads the launch once and follows the theme and the viewport', async () => {
+    const { connect, NO_INSETS } = await loaded();
     const stub = stubAt('9.6');
     const wrapper = connect({ Telegram: { WebApp: stub.webApp } });
 
@@ -166,7 +173,8 @@ describe('the one Telegram wrapper', () => {
     expect(stub.webApp.openLink).toHaveBeenCalledWith('https://example.org/a');
   });
 
-  it('outside Telegram the wrapper says so and never throws', () => {
+  it('outside Telegram the wrapper says so and never throws', async () => {
+    const { connect, NO_INSETS } = await loaded();
     for (const host of [undefined, {}, { Telegram: {} }]) {
       const wrapper = connect(host);
 
@@ -175,6 +183,87 @@ describe('the one Telegram wrapper', () => {
       expect([wrapper.inside, wrapper.launchData, wrapper.startParam]).toEqual([false, null, null]);
       expect(wrapper.openLink('https://example.org/')).toBe(false);
       expect(wrapper.safeAreaInset).toEqual(NO_INSETS);
+    }
+  });
+  it('outside Telegram the wrapper reports the defaults of a page that is not in a client', async () => {
+    const { connect, NO_INSETS } = await loaded();
+    for (const host of [undefined, {}, { Telegram: {} }]) {
+      const wrapper = connect(host);
+
+      expect(wrapper.platform).toBe('unknown');
+      expect(wrapper.version).toBe('');
+      expect(wrapper.colorScheme).toBe('light');
+      expect(wrapper.themeParams).toEqual({});
+      expect(wrapper.viewportStableHeight).toBeNull();
+      expect(wrapper.contentSafeAreaInset).toEqual({ top: 0, bottom: 0, left: 0, right: 0 });
+    }
+    expect(NO_INSETS).toEqual({ top: 0, bottom: 0, left: 0, right: 0 });
+    expect(Object.isFrozen(NO_INSETS)).toBe(true);
+  });
+
+  it('a launch with no data has no start parameter, and a launch without one has none either', async () => {
+    const { connect, NO_INSETS } = await loaded();
+    const empty = stubAt('9.6');
+    empty.webApp.initData = '';
+    const bare = stubAt('9.6');
+    bare.webApp.initData = 'auth_date=1&hash=synthetic';
+
+    const first = connect({ Telegram: { WebApp: empty.webApp } });
+    const second = connect({ Telegram: { WebApp: bare.webApp } });
+
+    expect([first.inside, first.launchData, first.startParam]).toEqual([true, null, null]);
+    expect([second.launchData, second.startParam]).toEqual([bare.webApp.initData, null]);
+  });
+
+  it('a client that sends no platform or version leaves the defaults', async () => {
+    const { connect, NO_INSETS } = await loaded();
+    const stub = stubAt('9.6');
+    const webApp = { ...stub.webApp, platform: undefined, version: undefined } as unknown as typeof stub.webApp;
+
+    const wrapper = connect({ Telegram: { WebApp: webApp } });
+
+    expect([wrapper.platform, wrapper.version]).toEqual(['unknown', '']);
+  });
+
+  it('a viewport change with no payload is ignored', async () => {
+    const { connect, NO_INSETS } = await loaded();
+    const stub = stubAt('9.6');
+    const wrapper = connect({ Telegram: { WebApp: stub.webApp } });
+    stub.webApp.viewportStableHeight = 300;
+
+    expect(() => stub.emit('viewportChanged')).not.toThrow();
+
+    expect(wrapper.viewportStableHeight).toBe(640);
+  });
+
+  it('the safe areas follow their own events, each on its own field', async () => {
+    const { connect, NO_INSETS } = await loaded();
+    const stub = stubAt('9.6');
+    const wrapper = connect({ Telegram: { WebApp: stub.webApp } });
+    const moved: Insets = { top: 10, bottom: 20, left: 30, right: 40 };
+    const covered: Insets = { top: 1, bottom: 2, left: 3, right: 4 };
+
+    stub.webApp.safeAreaInset = moved;
+    stub.webApp.contentSafeAreaInset = covered;
+    stub.emit('safeAreaChanged');
+    expect(wrapper.safeAreaInset).toEqual(moved);
+    expect(wrapper.contentSafeAreaInset).toEqual(HEADER);
+    stub.emit('contentSafeAreaChanged');
+
+    expect(wrapper.contentSafeAreaInset).toEqual(covered);
+    expect(wrapper.safeAreaInset).toEqual(moved);
+  });
+
+  it('the app wrapper reads the page it runs in', async () => {
+    vi.resetModules();
+    const stub = stubAt('9.6');
+    vi.stubGlobal('Telegram', { WebApp: stub.webApp });
+    try {
+      const fresh = await import('./telegram.svelte');
+      expect(fresh.telegram.inside).toBe(true);
+      expect(fresh.telegram.startParam).toBe('about');
+    } finally {
+      vi.unstubAllGlobals();
     }
   });
 });

@@ -14,3 +14,11 @@ workspace = true
 [dependencies]
 deck-streak-kernel.workspace = true
 deck-streak-ingest.workspace = true
+
+# The parity oracle's golden reader, compiled into this crate's tests by path (ADR-029). Test
+# support only.
+[dev-dependencies]
+serde.workspace = true
+# The goldens' floats are compared bit for bit, so the reader parses them exactly: serde_json's
+# default parser is best-effort and can land one unit in the last place away (SPEC-071 section 7).
+serde_json = { workspace = true, features = ["float_roundtrip"] }

@@ -66,3 +66,17 @@ read nothing, and A19's on the driver refusing the unknown key.
 
 The three mutation rows of the band S05600 to S05699 were proved at a9ff442: each killer passed
 without its mutant and failed with it (killed 3, survived 0, void 0).
+
+## Addendum, 2026-10-02: the owned email rule (SPEC-056 section 9)
+
+```red-first
+A21: red at 7e5c3e7: AssertionError: Lists differ: ['note.md:13: email', 'note.md:14: email', ... ] != [] : each line is a unit path, so none is an address
+A21: green at 26cfdb5
+A22: not red: pins that a real address is found in each of eight contexts; the old rule already found it, so the test guards the refreshed rule and proves no new behaviour
+A23: not red: pins that an address at a reserved domain passes; the old rule already passed it, so the test guards the refreshed rule and proves no new behaviour
+```
+
+At 7e5c3e7 the unit path population read `examined 300 lines, mismatches 216`: the old rule flags
+a unit path of a type the scrub's own code does not name and a path whose directory suffix is
+`.wants`, `.requires` or `.upholds`. A22 read `examined 24 lines, mismatches 0` and A23 passed on
+18 lines at both commits. No mutation row is added: the change is data.

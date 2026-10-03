@@ -876,3 +876,478 @@ What it amends, and why: the Python that guards the repository was proved only b
 rows, so a weak test of a guard script had no measure. The decision and what it was chosen
 against are ADR-073; the requirements and criteria are SPEC-087's. The criteria of this SPEC
 stand; SPEC-087's A1 to A22 are added beside them.
+
+## 19. Amendment, 2026-09-30: the `bin` killer kind reads what the compiler builds (issue #405)
+
+Made by ADR-299, insert-only under ruling (i) of SPEC-038 section 8: every earlier byte is kept in
+order. Section 15 gave a `bin::<path>` killer a binary of its own, and three readings in it were
+wrong for a crate whose layout the compiler reads differently from the runner:
+
+1. a `mod` declaration carrying a `#[path]` attribute contributed the file `name.rs` to the module
+   walk, so a stray default file the compiler never builds was read as the binary's module;
+2. the refusal of a crate that shadows the kind read only `tests/bin.rs` and `tests/bin/main.rs`,
+   so a `[[test]]` target named `bin` at any other path was not refused;
+3. the refusal's binary count came from the manifest's tables and the files under `src/bin/`, and
+   could count a module file as a binary.
+
+The rule that replaces them is one rule, and not three patches: the `bin` kind's census,
+selection and refusal read the crate's source files, test targets and binaries exactly as the
+compiler and cargo define them. Each layout is read so, or the reader refuses it by name: no file
+the compiler does not build is read as a module, no target cargo builds is missed, and every count
+a message states equals cargo's own. Anything the reader cannot decide is refused by name and never
+read open.
+
+What the reader now does, each clause decided by the tests of section 20:
+
+- **Targets.** Binaries and test targets are the explicit `[[bin]]` and `[[test]]` tables plus
+  what cargo infers: `src/main.rs` named for the package, `src/bin/*.rs` and `src/bin/*/main.rs`,
+  `tests/*.rs` and `tests/*/main.rs`. `autobins = false` and `autotests = false` switch inference
+  off, `src/main.rs` included. An inferred target is dropped when an explicit one has its name or
+  its path, and a table with no path takes the path inferred for its name. A switch that is not a
+  boolean, and a table with no name and no path, are refused by name.
+- **The shadow.** A test target named `bin`, declared or inferred, at any path, is refused.
+- **The count.** The binaries of a crate are the set above. A crate that does not hold exactly one
+  is refused with its count, and a binary whose file does not exist is refused by name.
+- **Modules.** The walk reads a root file as `rustc --test` does: a `mod name;` reads `name.rs` or
+  `name/mod.rs` beside its parent (under the parent's own directory when the parent is not a
+  `mod.rs` or the root), an inline `mod name { }` adds a directory level, and a `#[path]` module,
+  or one under a `cfg` that is false in a test build, contributes no file and its inline body is
+  skipped. The `cfg` predicates decided are `test` and `not`, `all` and `any` over it, and any
+  other predicate is refused by name. The lexemes of strings, raw strings, characters, lifetimes,
+  raw identifiers and comments are read as the compiler reads them. An inner `#![cfg`, an
+  `include!`, a `cfg_attr` on a module, and a file module declared inside a block the compiler
+  builds, are refused by name.
+
+The killer of the rule is a generated population with a compiler oracle, never a hand list: binary
+layouts crossed with test layouts are judged against `cargo metadata --no-deps`, module layouts
+crossed with crate-root positions against `rustc --test --emit=dep-info`, and a generated set of
+`cfg` predicates against `rustc`. Every member agrees with the oracle or is refused by name, and
+each test prints and asserts its `examined` figure. A new layout row in an axis table joins the
+population by itself. The oracle runs cargo and rustc in scratch crates only.
+
+The rows `S03986` to `S03995` pin the lines this amendment changes, and the four rows of section
+15's band that anchored on moved lines (`S03947`, `S03949`, `S03950`, `S03951`) are re-anchored.
+
+## 20. Acceptance criteria of the 2026-09-30 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A46 | every member of the generated population (binary layouts x test layouts, module layouts x root positions) is read as cargo and the compiler read it, or is refused by name, and the figure examined equals the one the axis tables derive | `test_bin_kind_census.py` |
+| A47 | a `mod` with `#[path]` contributes no source file, so a stray default `name.rs` is not read as a module of the binary | `test_bin_kind_census.py` |
+| A48 | a `[[test]]` target named `bin` at any path is refused as the kind's shadow | `test_bin_kind_census.py` |
+| A49 | the refusal's binary count is cargo's own and never counts a module file | `test_bin_kind_census.py` |
+| A50 | what the reader cannot decide (a non-boolean switch, a table with no name or path, a file module in a block, a malformed declaration, a missing binary file) is refused by name | `test_bin_kind_census.py` |
+| A51 | every `cfg` predicate over `test`, `not`, `all` and `any` that the reader decides is the value `rustc --test` gives it, and one over `test` and logic alone is always decided | `test_bin_kind_census.py` |
+
+```acceptance
+A46: python3 -m unittest discover -s scripts/tests -p test_bin_kind_census.py -k test_every_layout_agrees_with_cargo_and_the_compiler_or_is_refused_by_name
+A47: python3 -m unittest discover -s scripts/tests -p test_bin_kind_census.py -k test_a_path_module_contributes_no_source_file_so_a_stray_default_is_not_read
+A48: python3 -m unittest discover -s scripts/tests -p test_bin_kind_census.py -k test_a_declared_test_target_named_bin_is_refused_at_any_path
+A49: python3 -m unittest discover -s scripts/tests -p test_bin_kind_census.py -k test_the_refusal_counts_binaries_as_cargo_does_and_never_a_module_file
+A50: python3 -m unittest discover -s scripts/tests -p test_bin_kind_census.py -k test_what_the_reader_cannot_decide_is_refused_by_name
+A51: python3 -m unittest discover -s scripts/tests -p test_bin_kind_census.py -k test_every_decided_predicate_is_what_rustc_builds_and_the_rest_is_undecided
+```
+
+File manifest of the amendment: `scripts/mutation_rows.py` (the reader),
+`scripts/tests/test_bin_kind_census.py` (new), `scripts/mutation-rows.d/S03900-S03999.json` (the
+rows), `docs/decisions/ADR-299-the-bin-kind-reads-what-the-compiler-builds.md`,
+`docs/red-first/SPEC-039.md`, and a changelog fragment.
+
+Issue #405 is closed by this delivery.
+
+
+## 21. Amendment, 2026-10-01: the five classes the population did not hold
+
+Made by ADR-299's amendment, insert-only under ruling (i) of SPEC-038 section 8. The rule of
+section 19 stands. Five classes of layout were read differently from cargo and rustc because the
+population of section 20 held none of their members, and each is now a generated family of that
+population:
+
+1. **A `mod` among a macro invocation's tokens.** The token walk read every `mod` token, so one
+   inside `stringify!(..)`, an invoked `m![..]` or a `macro_rules!` body was read as a declaration.
+   Only the macro's expansion decides what such tokens declare, so the reader refuses the file by
+   name, under every delimiter, `()`, `[]` and `{}`: "holds a mod in a macro invocation, which only
+   its expansion decides". An invocation holding no `mod`, and one inside a module the test build
+   drops, are read as before.
+2. **A declared path through `..`.** Cargo compares a declared path by component, after joining it
+   to the package's directory: a `.` and a doubled separator collapse, a `..` does not. The reader
+   compares the same key, so `src/../src/main.rs` does not drop the target inferred at
+   `src/main.rs`, as cargo does not.
+3. **Dotfiles.** Cargo's inference skips an entry whose name starts with a dot, under `src/bin/`
+   and `tests/`, file or directory. The reader skips it too.
+4. **An absolute declared path.** It is not joined to the package's directory and is spelled
+   relative to the crate when it names a file inside it, so one naming a file inside the crate
+   drops the target inferred at that file, as cargo drops it, and the binary is named at its path
+   inside the workspace.
+5. **Edition 2015.** A manifest with no `edition` key is edition 2015, and under it a `[[bin]]` or
+   `[[test]]` table switches that kind's inference off unless `autobins` or `autotests` says
+   otherwise. An edition inherited with `edition.workspace = true` is read from the nearest
+   workspace manifest above the crate. An edition the reader cannot decide (a value that is not a
+   string, or an inherited one with no workspace edition to inherit) is refused by name where the
+   reader needs it.
+
+Section 19's clause that an inferred target is dropped when an explicit one has "its path" reads,
+under this amendment, "its declared path, compared as cargo compares it": an unpathed table names
+no path. The population crosses each declared shape (a `[[bin]]` at `src/main.rs`, a `[[bin]]` at a
+`src/bin/` file, a `[[test]]` at `tests/bin.rs`) with six spellings of its path, each dotfile shape
+with each companion, every binary layout with every test layout under edition 2021 and with no
+edition key, every binary layout under an edition 2015 and 2021 inherited from the workspace, and
+each macro shape with each delimiter and root position. A new row in any of those tables joins
+the population by itself, and the test prints and asserts its `examined` figure.
+
+The block-comment arm of the token reader is bounded by the text's length. A comment left open
+drops every character to the end of the text, which a new test pins at every short tail, so a
+bound that stops early is seen.
+
+The rows `S03997` to `S03999` pin lines this amendment changes, and `S03996` pins the
+block-comment bound that A53 tests.
+
+## 22. Acceptance criteria of the 2026-10-01 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A52 | every member of the five families of section 21 (declared paths in six spellings, dotfiles, editions stated, absent and inherited, macro invocations under every delimiter) is read as cargo and the compiler read it, or is refused by name, and the figure examined equals the one the axis tables derive | `test_bin_kind_census.py` |
+| A53 | a block comment left open drops every character to the end of the text, at every tail of up to five characters, and at every length by the scan's bound | `test_bin_kind_census.py` |
+
+```acceptance
+A52: python3 -m unittest discover -s scripts/tests -p test_bin_kind_census.py -k test_every_layout_agrees_with_cargo_and_the_compiler_or_is_refused_by_name
+A53: python3 -m unittest discover -s scripts/tests -p test_bin_kind_census.py -k test_a_block_comment_left_open_drops_every_character_to_the_end_of_the_text
+```
+
+File manifest of the amendment: `scripts/mutation_rows.py` (the reader),
+`scripts/tests/test_bin_kind_census.py` (the families and the new test),
+`scripts/mutation-rows.d/S03900-S03999.json` (the rows),
+`docs/decisions/ADR-299-the-bin-kind-reads-what-the-compiler-builds.md`,
+`docs/red-first/SPEC-039.md`, and the changelog fragment.
+
+## 27. Amendment, 2026-10-01: a docstring-only script change reads a named case (#485)
+
+Made by issue #485's delivery, insert-only under ruling (i) of SPEC-038 section 8: every earlier
+byte is kept in order. It inserts sections 27 to 29 only. Sections 19 to 26 were held by
+deliveries still open when it was written, so it starts at 27.
+
+What it amends, and why:
+
+- **R4 read a docstring as a code line.** R4 counts every changed line that is neither blank nor a
+  comment as a code line, and the plan reads a Python file with Python's own tokenizer, where a
+  docstring is a string token. A change to a guard script's docstrings alone therefore made the
+  `scripts` class apply, while `scripts/mutation_python.py` never mutates a docstring: its lister
+  skips the first statement of a module, class, function or async function body when that
+  statement is a string constant. The class examined nothing, and its verdict was VOID (#485).
+  Measured at `56ce963` on a fixture whose one script had its module and function docstrings
+  reworded, in the order CI runs the steps: the plan read `scripts applies: 2 production code
+  line(s) in 1 file(s)`, the runner `listed 0`, and `judge --class scripts` printed `VOID the
+  scripts class applies and nothing was examined` and exited 3.
+- **The rule (ADR-307).** When R4 makes the `scripts` class apply, the plan reads each changed
+  `scripts/*.py` at the diff's merge-base and at its head, and compares their syntax trees:
+  Python's own `ast`, positions excluded, with docstrings set aside. A docstring is only the first
+  statement of a module's, a class's, a function's or an async function's body, and only when
+  that statement is a bare string constant. Every other string expression stays code. When every
+  changed script's trees are equal so read, the class does not apply. Its case reads
+  `not-applicable: docstring-only: `, then each file whose change it set aside; `judge --class
+  scripts` names each such file on a line of its own and passes, and nothing reads VOID.
+- **It fails closed.** Each of these leaves the class applying exactly as R4 makes it: a script
+  added or deleted, and so a rename, since the plan reads the diff with `--no-renames`; a script
+  that does not parse at either side; a script that is not UTF-8; a diff with other than one
+  merge-base; and any other difference between the two trees. A script that is not UTF-8 on a
+  line the plan reads as text still stops the plan before it reports any class, as it did at
+  `56ce963`, because the plan reads the diff and the head's file as UTF-8.
+- **What it sets aside is what the runner never mutates.** The runner's lister skips that same
+  statement of the same four nodes (`skipped_nodes` in `scripts/mutation_python.py`), so no mutant
+  the class listed before is lost: A62 lists each named member's mutants at its head and finds
+  none on a line the rule set aside.
+- **Two consequences, read and accepted.**
+  - 6 of the 8 guard scripts pass the start of their module docstring to `argparse` as the
+    description `--help` prints, so a change there alters that text. The runner never mutated a
+    docstring, so the class never examined it, and the named case loses nothing the class
+    examined.
+  - The rule is the tree, so a change that re-lays code without changing its tree (`x*3` to
+    `x * 3`) reads the same case. Its tree is the base's, and so is its behaviour; the weekly
+    battery's `python` job still sweeps every listed file whole (SPEC-087 R14).
+- **The docstring of `scripts/mutation-verdict.py` (#455).** Its PLAN paragraph said each case is
+  named "because `ci` fails on a skipped need but a leg LEGS reads as not started", which section
+  17 made untrue: `ci` admits a skip from `mutation-rust` and `mutation-rows` and from no other
+  need, and `legs` judges each of the two against the plan. The paragraph now names the two legs,
+  and the step outputs it lists now include `scripts`, which the plan has written since section
+  18.
+- **SPEC-087 is not amended.** Its R1 cites R4 for the class's `not-applicable` readings, and this
+  case is R4's.
+
+What it does not change:
+
+- the oracle's Python, Rust and the Mini App: the rule reads only the `scripts` class (#485);
+- the case of a diff the `scripts` class did not already apply to, such as a change of comments or
+  deletions alone (#485);
+- the runner, which emits no docstring mutant and lists what it listed before (#485);
+- the doc comment in `tools/log-capture/capture.rs` that #511 names, which another delivery
+  corrects (#511).
+
+Issue #485 is closed by this delivery, and so is #455, whose last line this section's docstring
+change corrects.
+
+## 28. Amendments, 2026-10-01: the files of section 27
+
+| file | context | change |
+|---|---|---|
+| `docs/specs/SPEC-039-every-change-proves-its-tests-kill-its-mutants.md` | `repo` | changed by section 27: sections 27 to 29 |
+| `docs/decisions/ADR-307-a-docstring-only-script-change-is-named-by-its-syntax-tree.md` | `repo` | added by section 27 |
+| `scripts/mutation-verdict.py` | `repo` | changed by section 27: the plan's `docstring-only` case, the verdict's line for each file it names, and the PLAN paragraph of the module docstring (#455) |
+| `scripts/tests/test_mutation_verdict.py` | `repo` | changed by section 27: A61 to A64 |
+| `docs/red-first/SPEC-039.md` | `repo` | changed by section 27: A61 to A64's record |
+| `changelog.d/fix-docstring-only-485.md` | `repo` | added by section 27 |
+
+## 29. Acceptance criteria of the 2026-10-01 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A61 | a change to one script's docstrings alone is named: the plan reads `not-applicable: docstring-only:` naming the file, the runner lists no mutant, and `judge --class scripts` names the file on its own line, passes and reads no VOID; the same docstring change beside a code change in the same file applies as R4 says, and the verdict counts the runner's mutants of the code line as examined | `test_mutation_verdict.py` |
+| A62 | over a population of script edits, each printing `examined N` (a docstring changed at each of the four positions, a method's, and one grown to three lines; a string statement that is not first; a string used as a value; a code change beside a docstring change in one file; two files of which only one is docstring-only; a file outside the class changed beside a docstring change, and between a docstring-only script and a later script's code change; a file added, deleted and renamed; a parse error at either side; a script that is not UTF-8), every member that changes a tree outside docstrings keeps the class applying, only the docstring-only members are named, and no line a named member set aside holds a runner mutant; a planted plan that sets every string expression aside as a docstring is caught | `test_mutation_verdict.py` |
+| A63 | the definition's edges: an f-string or a bytes literal first in a body, and a string first in an `if` block, stay code; two docstring-only files are both named; a docstring-only file beside a comment-only one names only the first, and the second keeps its own reading; a re-layout with an equal tree reads the named case | `test_mutation_verdict.py` |
+| A64 | the PLAN paragraph of `scripts/mutation-verdict.py`'s module docstring names exactly the legs `ci` admits a skip from and `legs` judges, and exactly the step outputs the plan writes | `test_mutation_verdict.py` |
+| A65 | the PEP 263 class: the plan parses a script's bytes, so a declared encoding decides the tree compared; over seven members printing `examined N`, a latin-1 escape rewritten as raw bytes, a declaration changed from utf-8 to latin-1 beside a docstring edit, a latin-1 declaration that stops the new side parsing and an unknown encoding each apply, a declared UTF-8 script changed in its docstring alone is named, and a declared script whose bytes are not UTF-8 is refused as at the base | `test_mutation_verdict.py` |
+
+```acceptance
+A61: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k a_docstring_only_change_is_named_and_a_code_change_beside_it_is_examined
+A62: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k the_named_case_narrows_no_member_of_a_population_of_script_edits
+A63: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k the_docstring_is_only_the_first_bare_string_of_a_body
+A64: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k the_plan_paragraph_names_the_legs_ci_admits_and_the_outputs_it_writes
+A65: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k a_declared_encoding_decides_the_tree_compared
+```
+
+A61 runs the plan, the runner's `list` and `run`, `shards` and `judge` as subprocesses, in the
+order CI runs them, over a fixture repository built at run time. A62 and A63 build one fixture
+repository per member and run the plan in-process; A62's control runs the same population with the
+plan's tree reader replaced by one that sets every string expression aside, wherever it stands,
+and must find a mismatch. A64 reads `ci.yml`'s admission loop, the `legs` verb's source and the step
+outputs the plan writes for a fixture's diff.
+
+## 30. Amendment, 2026-09-29: a missing tool is a refusal
+
+Sections 23 to 26 and criteria A54 to A60 are not used: this amendment held sections 19 to 26 and
+criteria A46 to A60 until it merged dev, where sections 19 to 22 and criteria A46 to A53 had landed
+first.
+
+Issue #431: `scripts/mutation_rows.py prove` ended with an uncaught `FileNotFoundError`, and exit
+1, which is `EXIT_SURVIVED`, when a row's killer was a cargo test and `cargo` was not on `PATH`. A
+run that could not start a check said "a mutant survived". ADR-291 decides the class, and this
+section states it.
+
+- **The rule.** Every process the runner spawns, under every verb that reaches it, ends the verb
+  with ONE line naming the tool and exit 2 (`EXIT_REFUSED`) when its executable cannot be run,
+  for any reason the operating system gives. Six modes are read: absent from `PATH`, present but
+  not executable, a directory at the name, a script whose interpreter line names a missing
+  program, an empty file with the execute bit (the kernel will not execute it), and a wrapper
+  whose interpreter line resolves but whose program is missing (it starts and ends with exit
+  127, or 126 behind a `PATH` entry the runner cannot search). The tool may sit alone in `PATH` or
+  behind an entry the runner cannot look at (a name too long to stat), which is passed over as the
+  spawn's own search passes over it. It is never a traceback, never exit 1, never a verdict line
+  and never `KILLED`. A mutant that was installed
+  is restored byte for byte, by digest, before the verb ends. The line reads
+  `<verb>: REFUSED: missing tool: <name as spawned>: <why>`, with the verb `prove` or `retired`.
+- **One place.** The executable is resolved in one place, before the spawn: `run_tool` for a
+  command that is run to its end, and `run_in_own_group` for a killer. A spawn that still fails
+  for its executable after resolution passed is mapped to the same refusal: both helpers catch
+  every `OSError` of the spawn (an error that names the working directory is still re-raised), and
+  both read exit 126 and exit 127 of the tool they spawned as the refusal, `cannot be run` and `is
+  not found`. `main` alone turns the refusal into the line and the exit code. No other function
+  spawns a process, and the census of the module's own source (A67, A71, A72) refuses a function
+  that does, by any name the standard library gives a spawner (`subprocess`, `os.system`,
+  `os.popen`, `os.exec*`, `os.spawn*`, `os.posix_spawn*`, `os.fork*`, `os.startfile`, `pty`,
+  `asyncio`'s subprocess calls and the loop's `subprocess_exec` and `subprocess_shell`) and through
+  every import that reaches one (`import subprocess as sp`, `from subprocess import run as r`,
+  `from os import *`).
+- **A missing parser joins the class.** Section 12 (A41) made a shell that is not installed leave
+  the mutant unchecked and VOID. That clause, and only that clause, is superseded: a shell that
+  cannot be run is the same fact as a missing killer tool, the runner could not run a check, so it
+  is a refusal and the verb exits 2. A41's other readings stand unchanged: a parse check that
+  outlives its bound is still VOID, a mutant that does not parse is still VOID, and `-n` still
+  keeps the check from running the mutant. A41's text above is not edited.
+- **Reading at the verdict.** Exit 2 writes no report, so `mutation-verdict.py` reads the leg as
+  "selected and no rows report", which is VOID, and the weekly run's step fails on a non-zero
+  exit. Nothing reads 2 as a pass or as a usage error to ignore (ADR-291 quotes each reader).
+- **What it does NOT do.** It adds no tool to any leg's setup (#431), and it does not make the
+  rows leg skip its toolchain, which is the later lever this refusal makes safe (#431). It changes
+  no verdict logic other than a missing tool's, and no existing row other than S03935 (#431).
+
+## 31. Acceptance criteria of the 2026-09-29 (#431) amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A66 | for every spawn site of the runner, every tool it can spawn (`git`, `cargo`, the interpreter, `bash`, `sh`), every one of the six unrunnable modes and every verb that reaches the site, the verb exits 2, prints exactly one `REFUSED` line naming the tool, prints no traceback and no verdict line, and leaves the target's bytes and the tree's tracked state as they were; the population's count is printed | `test_mutation_rows_missing_tool.py` |
+| A67 | the spawn sites read from the module's own source are exactly the sites the population covers, and no function outside `run_tool` and `run_in_own_group` spawns a process by any name (A71) | `test_mutation_rows_missing_tool.py` |
+| A68 | `count`, `ids` and `census` spawn nothing and succeed with every tool unrunnable | `test_mutation_rows_missing_tool.py` |
+| A69 | a shell parser that cannot be run refuses the proof naming it, exit 2 and no verdict, where section 12 left the mutant VOID | `test_mutation_rows.py` |
+| A70 | a tool behind a `PATH` entry the runner cannot look at is found as the spawn finds it, and `prove` does not end in a traceback | `test_mutation_rows_missing_tool.py` |
+| A71 | no function outside the two helpers spawns a process by any name the standard library documents for a spawner, or through an aliasing import | `test_mutation_rows_missing_tool.py` |
+| A72 | the census reads every documented spawner, spelled every way of reaching it | `test_mutation_rows_missing_tool.py` |
+
+```acceptance
+A66: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb
+A67: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k every_spawn_site_the_module_holds_has_a_scenario_and_owns_no_raw_spawn
+A68: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k a_verb_that_spawns_nothing_runs_with_every_tool_unrunnable
+A69: python3 -m unittest discover -s scripts/tests -p test_mutation_rows.py -k a_missing_parser_is_a_refusal_naming_it
+A70: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k a_path_entry_the_runner_cannot_look_at_is_passed_over_as_the_spawn_passes_it
+A71: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k no_code_outside_the_helpers_spawns_a_process_by_any_other_name
+A72: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k the_census_reads_every_documented_spawner_by_every_way_of_reaching_it
+```
+
+A66 to A68 build a temporary git repository per member with the suite's own fixture, and run the
+runner as a child process whose `PATH` holds real `git`, `bash` and `sh` except the tool under
+test, which is in one of the six modes above (the interpreter's case replaces `sys.executable` in
+the child). The population is 180 members: every site, tool, mode and verb alone in `PATH`, and
+the searched tools again behind the entry the runner cannot look at. The cargo build site's member serves the control run from
+a shim that then makes itself unrunnable, so the refusal comes from the mutant's build and the
+member asserts the shim was reached. A69's test keeps A41's fixture and its bare `PATH`.
+
+## 32. Amendment, 2026-09-30: every refusal is read whole, and the census refuses what it cannot read
+
+Round 1 of #431 made the runner refuse a tool it cannot run, and CI's `mutation-verdict` then
+generated mutants of the refusal's own lines: 43 generated and 23 hand rows examined, 14 survived,
+none explained. The tests asserted that a refusal happened, or that its line held a word of the
+reason, so a mutant of the text or of the branch that chose it read the same. ADR-291 states the
+class; this section states it as criteria.
+
+- **The rule.** Every refusal is decided by a whole-value assertion. Its exact text, `missing tool:
+  <name as spawned>: <why>`, and the tool it names are compared whole, and each branch that chooses
+  it is selected by a test that fails if the branch changes: the empty and `.` `PATH` entries, a
+  name holding `/`, a candidate that is absent, a directory or not executable, the child's `PATH`
+  (and not this process's), an `OSError` of every errno the operating system names, at both
+  spawns, whether it names the tool, nothing or something else (the working directory), and every
+  exit from 0 to 255 at every helper, of which 126 and 127 are the refusal and no other is.
+- **The population is generated.** Reasons, errnos (`errno.errorcode`) and exits are read from
+  their own tables and crossed with the spawn routes, and the member counts are printed and
+  asserted. The tests are in `test_mutation_rows_refusal.py`, which the map in
+  `scripts/mutation-python.json` runs first against every generated mutant of the runner.
+- **No mutant is declared equivalent.** `pathlib.Path(part or ".")` named the working directory
+  twice, because `Path("") == Path(".")`, so replacing `"."` with `""` changed no path and no test
+  could tell them apart. The runner now reads `pathlib.Path(part)`: an empty `PATH` entry is the
+  working directory by pathlib's own reading, and the test that pins both spellings stays green.
+  The equivalent mutant is removed rather than recorded (#431).
+- **The census refuses a spawner it cannot read.** A spawner reached by a name built at run time
+  is a spawn no reading of the source can see. The census refuses the way of reaching one, wherever
+  it appears and whatever it is given, and does not list spellings: the names `getattr`, `vars`,
+  `globals`, `locals`, `eval`, `exec`, `compile`, `__import__`, `import_module` and
+  `__builtins__`; the attributes `__import__`, `import_module`, `__dict__`, `__builtins__`,
+  `__globals__` and `modules` (so `sys.modules[...]` too); and any import of `importlib`,
+  `builtins`, `imp`, `runpy`, `code` or `codeop`, or of `modules` from `sys`. A test crosses 17 such
+  forms with all 34 documented spawners, 578 members, and asserts every one refused, and that the
+  runner's own source and four benign sources are not.
+- **What it does NOT do.** It does not read a spawn built from a string handed to a shell by a
+  caller outside `scripts/mutation_rows.py`; the census reads that one file, as A67 does (#431). It
+  changes no timeout, drops no test and narrows no mutation diff (#431).
+
+## 33. Acceptance criteria of the 2026-09-30 (#431) round 2
+
+| id | criterion | decided by |
+|---|---|---|
+| A73 | every refusal's whole text and tool, and each branch that chooses it, at each spawn route, over the population it generates: 16 reasons by route, 260 errnos, 768 exits | `test_mutation_rows_refusal.py` |
+| A74 | the census refuses each of 17 ways of reaching a spawner by a name built at run time, crossed with the 34 documented spawners (578 members), and refuses nothing the runner's source holds | `test_mutation_rows_missing_tool.py` |
+
+```acceptance
+A73: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_refusal.py -k each_reason_is_refused_whole_at_every_route
+A74: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k the_census_refuses_every_spelling_it_cannot_read_by_every_way_of_reaching_a_spawner
+```
+
+## 34. Amendment, 2026-09-30: the judged tool is the tool the spawn runs
+
+Rounds 1 and 2 of #431 resolved a tool in one place and spawned it in another, and the two did not
+read the same directory. A relative `PATH` candidate (an empty entry, `.`, a relative entry, or a
+name holding a `/`) is read by the spawn in the directory the CHILD runs in, and the resolver read
+it in the runner's own. A tool could be judged runnable in one directory and be run, or be refused,
+in another. ADR-291 states the class; this section states it as criteria.
+
+- **The rule.** The tool the runner judges is the tool the spawn runs, and every refusal is one
+  whole outcome, for every spawn route. `resolve_tool(command, env, cwd)` searches the child's
+  `PATH` and reads each relative candidate in the child's working directory, and `run_tool` and
+  `run_in_own_group` each pass the `cwd` they spawn with. With no `cwd` the child inherits the
+  runner's, which is the directory the resolver reads.
+- **The census reaches a spawner by any name.** It refuses a spawner reached by reference or
+  through another module: an alias, `functools.partial`, `operator.attrgetter`, `__getattribute__`,
+  a subclass, a default argument, `posixpath.os`, `os.path.os`, and the other modules that spawn.
+  It refuses an import it has not read: the modules the runner imports are derived
+  (`READ_MODULES`), not listed, and a module the census does not read is refused by name.
+- **The populations are generated and their counts are asserted.** The child's working directory
+  is crossed with the search entries and the layouts of the tool: 384 members. Every exit crossed
+  with every route: 768. The census reads 442 spawner-reference members and 568 unread-import
+  members, and each is refused. Its escape population is those 1010 members and their count of
+  escapes is 0, as the builder reported; no independent verify measured this population.
+- **Every mutant is red by assertion.** The generated mutants of `resolve_tool`, `_backstop`,
+  `_exit_refusal`, `run_tool` and `run_in_own_group` and the six unrunnable-exit targets number 136
+  once duplicates are removed: 135 fail a test by assertion and 1 is equivalent, and none is red
+  by an error alone. The generated mutants of the census number 88: 85 fail by assertion and 3 are
+  equivalent (a fallback name that no source reads, `names[0]` against `names[-1]` over a list of
+  one, and a `return None` against falling off the end).
+- **What it does NOT do.** It does not read a spawn built by a caller outside
+  `scripts/mutation_rows.py`, as A67 does not (#431). It changes no timeout, drops no test and
+  narrows no mutation diff (#431).
+
+## 35. Acceptance criteria of the 2026-09-30 (#431) round 3
+
+| id | criterion | decided by |
+|---|---|---|
+| A75 | a relative `PATH` candidate is read in the directory the child runs in, so the file judged is the file run, at every spawn route | `test_mutation_rows_refusal.py` |
+| A76 | the census refuses a spawner reached by reference or through another module, for every documented spawner | `test_mutation_rows_missing_tool.py` |
+| A77 | the census refuses an import it has not read, for every module a spawner can be reached through | `test_mutation_rows_missing_tool.py` |
+
+```acceptance
+A75: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_refusal.py -k test_a_relative_candidate_is_read_in_the_directory_the_child_runs_in
+A76: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k test_the_census_refuses_a_spawner_it_reaches_by_reference_or_through_another_module
+A77: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k test_the_census_refuses_an_import_it_has_not_read
+```
+
+## 36. Amendment, 2026-09-30: the spawn runs the file the runner judged
+
+Round 3 made the resolver read a relative candidate where the child reads it. The spawn still
+searched `PATH` a second time, and CPython's search continues past any candidate the kernel refuses
+to execute (a bad interpreter line, an empty or unknown-format file, an interpreter without the
+execute bit) to a LATER copy on `PATH`. The file the runner judged and the file that ran could then
+be two files. ADR-291 states the class; this section states it as criteria.
+
+- **The rule.** `resolve_tool(command, env, cwd)` returns the judged file as a path that reads the
+  same from any directory, and `run_tool` and `run_in_own_group` spawn it with `executable=` that
+  path. A candidate the kernel refuses is one whole refusal, `missing tool: <name>: <why>`, and never
+  a run of a later copy. `_backstop` reads the judged path as the filename of the error it maps.
+- **Scope.** This holds for every working directory, every `PATH`, every position of the judged
+  file on `PATH` and every spawn route. It does not hold when `PATH` is changed between the judge
+  and the spawn. The runner has no writer between those two statements, so that axis is out of scope
+  and is not claimed closed (#431).
+- **The census refuses a name that reaches what it has not read.** A name reached through a module
+  the census reads is refused unless what it reaches is itself read: a module the census has not
+  read, a private name of a read module, a frame's own tables, and the dunders of the class graph.
+  An annotation that holds code (a call, a lambda, an assignment expression, a comprehension) is
+  read as code, since it runs when the function or the variable is defined.
+- **The populations are generated and their counts are asserted.** The judged-file test crosses four
+  kernel refusals with three positions on `PATH` and three spawn routes, and adds four members in
+  which `PATH` changes: 40 members. The unread-reach test generates 679 members (held modules and
+  private names of every read module, frame attributes, the dunders of `type`, and nine named
+  forms), and the annotation test 19. The census escape population is those members and its count
+  of escapes is 0, with five benign sources refused by none, as the builder reported; no independent
+  verify measured this population.
+- **Every mutant is red by assertion.** The 171 generated mutants of `referenced`, `READ_MODULES`
+  and the census's new lines: 124 fail a test by assertion when the modules run, and of the other
+  47 (three of which failed by an error alone) 44 fail by assertion form by form, each form one
+  source that the unmutated census handles and the mutant does not. Three are equivalent: a fallback
+  that is never read, and `importlib` and `runpy` added to the read modules, which change the
+  verdict of no form because `dynamic_reach` already refuses each of them. The 140 generated mutants
+  of the resolver and spawn helpers at this head number 138 red by assertion and 2 equivalent (a
+  `return None` replaced by `pass` in `_backstop`, and a join of an absolute candidate to the
+  working directory, which returns the candidate); none is red by an error alone. The 88 of the
+  census replay as before. One test reads the judged file from a relative working directory, where
+  the resolver must return an absolute path, since the spawn changes directory before it runs it.
+- **What it does NOT do.** It does not hold when `PATH` changes between the judge and the spawn
+  (#431). It reads the runner's one file, as A67 does (#431). It changes no timeout, drops no test
+  and narrows no mutation diff (#431).
+
+## 37. Acceptance criteria of the 2026-09-30 (#431) round 4
+
+| id | criterion | decided by |
+|---|---|---|
+| A78 | the file the kernel executes is the file the runner judged, for four kernel refusals, three positions on `PATH` and three spawn routes, and a `PATH` that changes | `test_mutation_rows_refusal.py` |
+| A79 | the census refuses every name that reaches what it has not read, over 679 generated members | `test_mutation_rows_missing_tool.py` |
+| A80 | the census reads an annotation that holds code as code, and names each refusal whole | `test_mutation_rows_missing_tool.py` |
+
+```acceptance
+A78: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_refusal.py -k test_the_spawn_runs_the_file_it_judged_by_every_route
+A79: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k test_the_census_refuses_every_name_that_reaches_what_it_has_not_read
+A80: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k test_the_census_names_each_refusal_and_reads_annotations_and_dotted_names_whole
+```

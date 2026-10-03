@@ -87,7 +87,6 @@ CELLS = {
     },
     "SCRIPT_MUTATIONS": {"find": 2, "replace": 3, "crate": None, "killer": 5, "description": 4},
 }
-MOD_DECLARATION = re.compile(r"(?m)^\s*(?:pub(?:\([^)]*\))?\s+)?mod\s+([A-Za-z_][A-Za-z0-9_]*)\s*;")
 CARGO_KILLER = re.compile(r"[A-Za-z_][A-Za-z0-9_]*(?:::[A-Za-z_][A-Za-z0-9_]*)+")
 SCRIPT_KILLER = re.compile(
     r"[A-Za-z_][A-Za-z0-9_]*\.[A-Za-z_][A-Za-z0-9_]*\.[A-Za-z_][A-Za-z0-9_]*"
@@ -256,8 +255,107 @@ def load_tree(root: pathlib.Path | str) -> object:
     return assemble(parse_document(MONOLITH, text), tree_fragments(root))
 
 
+class ToolMissing(Exception):
+    """A process the runner must spawn has an executable that cannot be run (SPEC-039 A66).
+
+    Absent from `PATH`, present but not executable, a directory at the name, a file the kernel
+    will not execute, or a wrapper that exits 126 or 127 because a program it needs cannot be: one
+    fact, and it is a refusal, because the runner could not run a check and a check it could not run says
+    nothing about the mutant (#431). `main` is the one place that turns it into a line and exit 2.
+    """
+
+    def __init__(self, tool: str, why: str) -> None:
+        super().__init__(f"missing tool: {tool}: {why}")
+        self.tool = tool
+
+
+def resolve_tool(
+    command: list[str], env: dict[str, str] | None, cwd: pathlib.Path | str | None = None
+) -> str:
+    """The file `command[0]` names for the spawn, or ToolMissing when it names nothing that runs.
+
+    A name with a slash is the path itself; a bare name is searched along the `PATH` the child
+    will get (`env`, else this process's), as the spawn would. A candidate that cannot even be
+    looked at (an entry the runner may not search, a name too long) is passed over, as the spawn's
+    own search passes over it: it is neither the tool nor a reason to stop looking. A relative
+    candidate (an empty, `.` or relative entry, or a relative name with a slash) is read in `cwd`,
+    the directory the child runs in, because that is where the spawn reads it. The file judged is
+    returned as a path that reads the same from any directory, and the spawn runs exactly it: the
+    spawn's own search passes over a candidate the kernel will not run and would start a LATER one,
+    so a spawn by name could run a file the runner never judged.
+    """
+    base = pathlib.Path(cwd) if cwd is not None else pathlib.Path()
+    name = command[0]
+    if "/" in name:
+        candidates = [base / name]
+    else:
+        path = (env if env is not None else os.environ).get("PATH", os.defpath)
+        candidates = [base / part / name for part in path.split(os.pathsep)]
+    failure = "not found on PATH" if "/" not in name else "no such file"
+    for candidate in candidates:
+        try:
+            candidate.stat()
+        except OSError:
+            continue
+        if candidate.is_dir():
+            failure = "is a directory"
+        elif candidate.is_file():
+            if os.access(candidate, os.X_OK):
+                judged = candidate if candidate.is_absolute() else pathlib.Path.cwd() / candidate
+                return os.fspath(judged)
+            failure = "not executable"
+    raise ToolMissing(name, failure)
+
+
+def _backstop(error: OSError, command: list[str], judged: str | None = None) -> ToolMissing | None:
+    """A spawn that still fails for the executable after resolution passed (a race, a bad
+    interpreter line, a file the kernel will not execute): the same refusal, unless the error
+    names something else (the cwd)."""
+    if error.filename in (command[0], judged) or error.filename is None:
+        return ToolMissing(command[0], error.strerror or "cannot be run")
+    return None
+
+
+#: The exits a shell or `env` gives when a program it was asked to run is not found (127) or is
+#: found and cannot be run (126). A tool that is a wrapper whose `#!/usr/bin/env` line names a
+#: missing interpreter starts, and ends with one of them: 126 when a `PATH` entry could not be
+#: searched on the way, 127 otherwise.
+UNRUNNABLE_EXITS = {
+    126: "exit 126: a program it needs cannot be run",
+    127: "exit 127: a program it needs is not found",
+}
+
+
+def _exit_refusal(returncode: int, command: list[str]) -> ToolMissing | None:
+    """A tool that started and reported that a program it needs cannot be run: the same refusal."""
+    why = UNRUNNABLE_EXITS.get(returncode)
+    return None if why is None else ToolMissing(command[0], why)
+
+
+def run_tool(command: list[str], **kwargs) -> subprocess.CompletedProcess:
+    """`subprocess.run` with the executable resolved first; every spawn but the process-group
+    one goes through here, so no call site can skip the check."""
+    judged = resolve_tool(command, kwargs.get("env"), kwargs.get("cwd"))
+    try:
+        done = subprocess.run(command, executable=judged, **kwargs)
+    except subprocess.CalledProcessError as error:
+        refusal = _exit_refusal(error.returncode, command)
+        if refusal is None:
+            raise
+        raise refusal from error
+    except OSError as error:
+        refusal = _backstop(error, command, judged)
+        if refusal is None:
+            raise
+        raise refusal from error
+    refusal = _exit_refusal(done.returncode, command)
+    if refusal is not None:
+        raise refusal
+    return done
+
+
 def git(root: pathlib.Path, *args: str) -> str:
-    return subprocess.run(
+    return run_tool(
         ["git", "-C", str(root), *args], capture_output=True, text=True, check=True
     ).stdout
 
@@ -390,67 +488,326 @@ def package_of(root: pathlib.Path, crate: str) -> str:
         raise KillerUnresolved(f"crates/{crate} holds no readable Cargo package") from error
 
 
-def binary_of(root: pathlib.Path, crate: str) -> tuple[str, str]:
-    """The one binary of `crates/<crate>`: its name and its root source, from the manifest.
-
-    A `[[bin]]` table names it; a manifest with none holds the package's own binary at
-    `src/main.rs`. A crate with two binaries, or with any under `src/bin/`, is refused, since a
-    `bin::` killer names no binary and the runner never guesses one."""
+def manifest_of(root: pathlib.Path, crate: str) -> dict:
+    """The parsed manifest of `crates/<crate>`, refused by name when it has no package."""
     where = f"crates/{crate}"
     try:
         manifest = tomllib.loads((root / where / "Cargo.toml").read_text(encoding="utf-8"))
-        package = manifest["package"]["name"]
+        manifest["package"]["name"]
     except (OSError, KeyError, tomllib.TOMLDecodeError) as error:
         raise KillerUnresolved(f"{where} holds no readable Cargo package") from error
-    declared = manifest.get("bin", [])
-    discovered = (
-        sorted((root / where / "src" / "bin").glob("*"))
-        if (root / where / "src" / "bin").is_dir()
-        else []
-    )
-    binaries = (
-        len(declared)
-        + len(discovered)
-        + (0 if declared else int((root / where / "src" / "main.rs").is_file()))
-    )
-    if binaries > 1:
+    return manifest
+
+
+def inferred_targets(crate_dir: pathlib.Path, folder: str) -> dict[str, str]:
+    """Cargo's auto-discovery under `folder`: each `<name>.rs` and each `<name>/main.rs`, as
+    `name -> path` relative to the crate. An entry whose name starts with a dot is skipped, as
+    cargo skips it."""
+    found: dict[str, str] = {}
+    directory = crate_dir / folder
+    if directory.is_dir():
+        for entry in sorted(directory.iterdir()):
+            if entry.name.startswith("."):
+                continue
+            if entry.is_file() and entry.suffix == ".rs":
+                found[entry.stem] = f"{folder}/{entry.name}"
+            elif entry.is_dir() and (entry / "main.rs").is_file():
+                found[entry.name] = f"{folder}/{entry.name}/main.rs"
+    return found
+
+
+def path_key(crate_dir: pathlib.Path, path: str) -> str:
+    """The key cargo compares a declared `path` by: the crate's directory joined with it, compared
+    by component, so `.` and a doubled separator drop out, a `..` stays and an absolute path
+    stands alone. A key inside the crate is spelled relative to it, as inferred paths are."""
+    base = crate_dir.absolute()
+    joined = base / path
+    return (joined.relative_to(base) if joined.is_relative_to(base) else joined).as_posix()
+
+
+def edition_of(root: pathlib.Path, crate: str, package: dict) -> str:
+    """The edition cargo builds `crates/<crate>` in: its `edition` key, the nearest workspace's
+    `[workspace.package]` edition under `edition.workspace = true`, and 2015 when there is no key.
+    An edition the reader cannot read is refused by name."""
+    where = f"crates/{crate}"
+    edition = package.get("edition", "2015")
+    if edition == {"workspace": True}:
+        manifests = [
+            root / folder / "Cargo.toml" for folder in pathlib.PurePosixPath(where).parents
+        ]
+        try:
+            tables = [
+                tomllib.loads(m.read_text(encoding="utf-8")) for m in manifests if m.is_file()
+            ]
+        except tomllib.TOMLDecodeError:
+            tables = []
+        workspace = next((t["workspace"] for t in tables if "workspace" in t), {})
+        edition = workspace.get("package", {}).get("edition")
+    if not isinstance(edition, str):
+        raise KillerUnresolved(f"{where} sets an edition the reader cannot decide")
+    return edition
+
+
+def cargo_targets(root: pathlib.Path, crate: str) -> tuple[list[tuple[str, str]], list[str]]:
+    """The binaries (name, path) and the test target names of `crates/<crate>`, as cargo builds
+    them: the manifest's `[[bin]]` and `[[test]]` tables, then the auto-discovered targets unless
+    `autobins` or `autotests` is false, an inferred target dropped when an explicit one has its
+    name or its declared path (`path_key`). A table with no path takes the auto-discovered path of
+    its name. With no `autobins` or `autotests` key, a declared table switches its kind's
+    inference off in the 2015 edition (`edition_of`) and leaves it on in every later one."""
+    where = f"crates/{crate}"
+    manifest = manifest_of(root, crate)
+    package = manifest["package"]
+    crate_dir = root / where
+    bins = inferred_targets(crate_dir, "src/bin")
+    if (crate_dir / "src" / "main.rs").is_file():
+        bins[package["name"]] = "src/main.rs"
+    tests = inferred_targets(crate_dir, "tests")
+    targets: dict[str, list[tuple[str, str]]] = {}
+    for kind, table, inferred, switch, fallback in (
+        ("bin", "bin", bins, "autobins", "src/main.rs"),
+        ("test", "test", tests, "autotests", None),
+    ):
+        auto = package.get(switch, True)
+        if not isinstance(auto, bool):
+            raise KillerUnresolved(f"{where} sets {switch} to something other than a boolean")
+        explicit: list[tuple[str, str]] = []
+        paths: set[str] = set()
+        for entry in manifest.get(table, []):
+            name, path = entry.get("name"), entry.get("path")
+            if isinstance(path, str):
+                paths.add(path_key(crate_dir, path))
+            if path is None and isinstance(name, str):
+                path = inferred.get(name, fallback or f"tests/{name}.rs")
+            if not isinstance(name, str) or not isinstance(path, str):
+                raise KillerUnresolved(f"{where} declares a {kind} with no name or path")
+            explicit.append((name, path))
+        if table in manifest and switch not in package:
+            auto = edition_of(root, crate, package) != "2015"
+        names = {name for name, _path in explicit}
+        found = [
+            (name, path)
+            for name, path in (inferred.items() if auto else [])
+            if name not in names and path not in paths
+        ]
+        targets[kind] = explicit + found
+    return targets["bin"], [name for name, _path in targets["test"]]
+
+
+def binary_of(root: pathlib.Path, crate: str) -> tuple[str, str]:
+    """The one binary of `crates/<crate>`: its name and its root source, as cargo builds it.
+
+    The binaries are counted as cargo counts them (`cargo_targets`): a `[[bin]]` table, the
+    package's own `src/main.rs`, and each auto-discovered `src/bin/<name>.rs` and
+    `src/bin/<name>/main.rs`, never a module file beside them. A crate with no binary or two is
+    refused, since a `bin::` killer names no binary and the runner never guesses one."""
+    where = f"crates/{crate}"
+    binaries, _tests = cargo_targets(root, crate)
+    if len(binaries) != 1:
         raise KillerUnresolved(
-            f"{where} holds {binaries} binaries, and a bin killer names none of them"
+            f"{where} holds {len(binaries)} binaries, and a bin killer names none of them"
         )
-    if not declared:
-        entry: dict = {"name": package}
-    else:
-        entry = declared[0]
-    name, path = entry.get("name"), entry.get("path", "src/main.rs")
-    if not isinstance(name, str) or not isinstance(path, str):
-        raise KillerUnresolved(f"{where} declares a binary with no name or path")
+    name, path = binaries[0]
     if not (root / where / path).is_file():
         raise KillerUnresolved(
             f"{where} declares the binary {name} at {path}, which does not exist"
         )
-    return name, f"{where}/{path}"
+    file, inside = (root / where / path).resolve(), root.resolve()
+    return name, (file.relative_to(inside) if file.is_relative_to(inside) else file).as_posix()
+
+
+def cfg_value(tokens: list[str]) -> bool | None:
+    """The value of the cfg predicate `tokens` in a `--test` build, or None when the reader
+    cannot decide it: only `test` is decided, under `not`, `all` and `any`, and a name that
+    holds in no build of a test (a feature, a target, any other name) is never guessed."""
+    if tokens == ["test"]:
+        return True
+    if tokens[:1] in (["not"], ["all"], ["any"]) and tokens[1:2] == ["("]:
+        parts: list[list[str]] = [[]]
+        depth = 0
+        for token in tokens[2:-1]:
+            depth += {"(": 1, ")": -1}.get(token, 0)
+            if token == "," and depth == 0:
+                parts.append([])
+            else:
+                parts[-1].append(token)
+        values = [cfg_value(part) for part in parts if part]
+        if tokens[0] == "not":
+            return None if len(values) != 1 or values[0] is None else not values[0]
+        if tokens[0] == "all":
+            return False if False in values else (None if None in values else True)
+        return True if True in values else (None if None in values else False)
+    return None
+
+
+RUST_TOKEN = re.compile(
+    r"""
+      (?P<space>\s+)
+    | (?P<line>//[^\n]*)
+    | (?P<raw>(?:br|cr|r)(?P<hashes>\#*)")
+    | (?P<string>(?:b|c)?")
+    | (?P<char>b?'(?:\\[^\n]+?|[^\\\n])')
+    | (?P<lifetime>'[A-Za-z_][A-Za-z0-9_]*)
+    | (?P<ident>(?:r\#)?[A-Za-z_][A-Za-z0-9_]*|[0-9][A-Za-z0-9_.]*)
+    | (?P<block>/\*)
+    | (?P<punct>.)
+    """,
+    re.VERBOSE | re.DOTALL,
+)
+
+
+def rust_tokens(text: str) -> list[str]:
+    """The tokens of Rust source `text` with comments dropped, and a string, raw string, character
+    or lifetime reduced to its opening lexeme (`"`, `r#"`, `'a'`), which names no identifier and
+    no brace, so that a `mod` or a brace inside one is never read."""
+    tokens: list[str] = []
+    position = 0
+    while position < len(text):
+        match = RUST_TOKEN.match(text, position)
+        assert match is not None
+        kind = match.lastgroup
+        position = match.end()
+        if kind == "raw":
+            closing = re.compile('"' + match.group("hashes")).search(text, position)
+            position = closing.end() if closing else len(text)
+        elif kind == "string":
+            while position < len(text) and text[position] != '"':
+                position += 2 if text[position] == "\\" else 1
+            position += 1
+        elif kind == "block":
+            depth, opened = 1, position
+            for _ in range(len(text)):  # each pass consumes a character, so this ends the scan
+                if depth == 0:
+                    pass
+                elif text.startswith("/*", position):
+                    depth, position = depth + 1, position + 2
+                elif text.startswith("*/", position):
+                    depth, position = depth - 1, position + 2
+                else:
+                    position += 1
+            position = max(position, opened)
+        if kind not in ("space", "line", "block"):
+            tokens.append(match.group(0))
+    return tokens
+
+
+def module_files(file: pathlib.Path, root_file: pathlib.Path) -> list[pathlib.Path]:
+    """The files the module declarations of `file` name, as rustc resolves them in a `--test`
+    build. A declaration behind `#[cfg(not(test))]`, or carrying `#[path]`, contributes none
+    (a `#[path]` file is one the reader does not follow); one the reader cannot decide, a cfg
+    other than `test`, an `include!`, a `mod` inside a block or a `cfg_attr` on a module, is
+    refused by name."""
+    where = file.as_posix()
+    tokens = rust_tokens(file.read_text(encoding="utf-8"))
+    home = file.parent if file == root_file or file.name == "mod.rs" else file.parent / file.stem
+    frames: list[str] = []  # one per open brace: a module's name, "skip" or "block"
+    attributes: list[list[str]] = []
+    children: list[pathlib.Path] = []
+    index = 0
+    while index < len(tokens):
+        token = tokens[index]
+        if token == "#":
+            inner = tokens[index + 1 : index + 2] == ["!"]
+            start = index + (2 if inner else 1)
+            if tokens[start : start + 1] != ["["]:
+                index += 1
+                continue
+            depth, end = 0, start
+            while end < len(tokens):
+                depth += {"[": 1, "]": -1}.get(tokens[end], 0)
+                if depth == 0:
+                    break
+                end += 1
+            body = tokens[start + 1 : end]
+            if inner and body[:1] == ["cfg"]:
+                raise KillerUnresolved(
+                    f"{where} carries an inner cfg attribute the reader cannot decide"
+                )
+            if not inner and "skip" not in frames:
+                attributes.append(body)
+            index = end
+            continue
+        if token == "include" and tokens[index + 1 : index + 2] == ["!"]:
+            raise KillerUnresolved(
+                f"{where} includes source with include!, which the reader does not follow"
+            )
+        if token == "!" and "skip" not in frames:
+            # A macro invocation's tokens follow its `!`, after the name a `macro_rules!` defines,
+            # in parentheses, brackets or braces. They declare nothing until the macro expands.
+            start = index + 1
+            if start < len(tokens) and re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", tokens[start]):
+                start += 1
+            depth, end = 0, start
+            for end in range(start, len(tokens)):  # never past the text's end
+                depth += {"(": 1, "[": 1, "{": 1, ")": -1, "]": -1, "}": -1}.get(tokens[end], 0)
+                if depth <= 0:
+                    break
+            if "mod" in tokens[start:end]:
+                raise KillerUnresolved(
+                    f"{where} holds a mod in a macro invocation, which only its expansion decides"
+                )
+        if token == "{":
+            frames.append("block")
+        elif token == "}":
+            if frames:
+                frames.pop()
+        if token == "mod" and "skip" not in frames:
+            declaration = tokens[index + 1 : index + 3]
+            if (
+                len(declaration) != 2
+                or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", declaration[0])
+                or declaration[1] not in (";", "{")
+            ):
+                raise KillerUnresolved(f"{where} holds a mod declaration the reader cannot decide")
+            name, after = declaration
+            built, followed = True, True
+            for attribute in attributes:
+                if attribute[:1] == ["cfg_attr"]:
+                    raise KillerUnresolved(f"{where} holds a cfg_attr on mod {name}")
+                if attribute[:1] == ["cfg"]:
+                    value = cfg_value(attribute[2:-1] if attribute[1:2] == ["("] else [])
+                    if value is None:
+                        raise KillerUnresolved(
+                            f"{where} holds a cfg on mod {name} the reader cannot decide"
+                        )
+                    built = built and value
+                if attribute[:2] == ["path", "="]:
+                    followed = False
+            attributes = []
+            if after == "{":
+                frames.append(name if built and followed else "skip")
+                index += 3
+                continue
+            if built and followed:
+                if "block" in frames:
+                    raise KillerUnresolved(f"{where} declares mod {name} inside a block")
+                base = home.joinpath(*frames)
+                child = next(
+                    (c for c in (base / f"{name}.rs", base / name / "mod.rs") if c.is_file()), None
+                )
+                if child:
+                    children.append(child)
+            index += 3
+            continue
+        if token in (";", "{", "}"):
+            attributes = []
+        index += 1
+    return children
 
 
 def module_sources(root_file: pathlib.Path) -> list[pathlib.Path]:
     """The source files of the module tree that starts at `root_file`, in declaration order: the
-    file itself, then each `mod name;` it declares, as `name.rs` or `name/mod.rs` beside the root
-    (whatever its name, as rustc reads a crate root) or a `mod.rs`, and under a directory named for
-    the file otherwise. `#[path]` is not followed."""
+    file itself, then each module it declares (`module_files`), as `name.rs` or `name/mod.rs`
+    beside the root (whatever its name, as rustc reads a crate root) or a `mod.rs`, and under a
+    directory named for the file otherwise. A module with `#[path]` adds no file."""
     found: list[pathlib.Path] = []
 
     def walk(file: pathlib.Path) -> None:
         if file in found:
             return
         found.append(file)
-        home = (
-            file.parent if file == root_file or file.name == "mod.rs" else file.parent / file.stem
-        )
-        text = file.read_text(encoding="utf-8")
-        for name in MOD_DECLARATION.findall(text):
-            for child in (home / f"{name}.rs", home / name / "mod.rs"):
-                if child.is_file():
-                    walk(child)
-                    break
+        for child in module_files(file, root_file):
+            walk(child)
 
     walk(root_file)
     return found
@@ -485,8 +842,7 @@ def locate_killer(root: pathlib.Path, row: Row) -> Killer:
         if target == "lib":
             where = f"crates/{row.crate}/src"
         elif target == "bin":
-            shadowed = [crate / "tests" / "bin.rs", crate / "tests" / "bin" / "main.rs"]
-            if any(candidate.is_file() for candidate in shadowed):
+            if "bin" in cargo_targets(root, row.crate)[1]:
                 raise KillerUnresolved(
                     f"crates/{row.crate} has a test target bin, which the bin kind shadows"
                 )
@@ -621,15 +977,23 @@ def run_in_own_group(
     Raises:
         subprocess.TimeoutExpired: The command outran `timeout`; its group is already dead.
     """
-    process = subprocess.Popen(
-        command,
-        cwd=cwd,
-        env=env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        process_group=0,
-    )
+    judged = resolve_tool(command, env, cwd)
+    try:
+        process = subprocess.Popen(
+            command,
+            executable=judged,
+            cwd=cwd,
+            env=env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            process_group=0,
+        )
+    except OSError as error:
+        refusal = _backstop(error, command, judged)
+        if refusal is None:
+            raise
+        raise refusal from error
     try:
         stdout, stderr = process.communicate(timeout=timeout)
     except subprocess.TimeoutExpired:
@@ -642,6 +1006,9 @@ def run_in_own_group(
             process.wait()
         for pipe in (process.stdout, process.stderr):
             pipe.close()
+    refusal = _exit_refusal(process.returncode, command)
+    if refusal is not None:
+        raise refusal
     return subprocess.CompletedProcess(command, process.returncode, stdout, stderr)
 
 
@@ -695,17 +1062,15 @@ def shell_parser(target: str, text: bytes) -> str | None:
 
 def parses(parser: str, mutated: bytes) -> str | None:
     """None when the shell reads the mutated bytes, else why it does not: `<parser> -n` reads
-    them from stdin and runs nothing, and a missing shell fails closed."""
+    them from stdin and runs nothing. A shell that cannot be run raises ToolMissing (a refusal)."""
     try:
-        done = subprocess.run(
+        done = run_tool(
             [parser, "-n"],
             input=mutated,
             capture_output=True,
             timeout=PARSE_SECONDS,
             check=False,
         )
-    except FileNotFoundError:
-        return f"the mutant is unchecked: {parser} is not installed"
     except subprocess.TimeoutExpired:
         return f"the mutant is unchecked: {parser} -n timed out"
     if done.returncode == 0:
@@ -730,7 +1095,7 @@ def builds(root: pathlib.Path, row: Row, killer: Killer, mutated: bytes) -> str 
             return refusal
     if killer.kind == "cargo":
         flags = cargo_flags(killer)
-        done = subprocess.run(
+        done = run_tool(
             ["cargo", "test", "--locked", "-p", killer.package, *flags, "--no-run"],
             cwd=root,
             env=dict(os.environ, CARGO_TERM_COLOR="never"),
@@ -938,13 +1303,20 @@ def main(argv: list[str] | None = None) -> int:
     if args.verb == "prove":
         if not (args.all or args.row or args.band or args.rows_from):
             parser.error("prove needs --all, --row, --band or --rows-from")
-        return prove(root, args)
+        try:
+            return prove(root, args)
+        except ToolMissing as refusal:
+            print(f"prove: REFUSED: {refusal}")
+            return EXIT_REFUSED
     if not args.base:
         parser.error("retired needs --base")
     try:
         return retired(root, args.base)
     except (OSError, json.JSONDecodeError, PopulationRefused, UnresolvableTarget) as refusal:
         print(f"mutation_rows: REFUSED: {refusal}", file=sys.stderr)
+        return EXIT_REFUSED
+    except ToolMissing as refusal:
+        print(f"retired: REFUSED: {refusal}")
         return EXIT_REFUSED
 
 

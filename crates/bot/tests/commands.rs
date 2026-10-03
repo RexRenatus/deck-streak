@@ -15,6 +15,7 @@ mod fake_bot_api;
 
 use std::collections::BTreeSet;
 
+use deck_streak_bot::badges_commands::{badges_failed_reply, records_failed_reply};
 use deck_streak_bot::commands::{
     CONFIRM_ERASE, EXPORT_FILE_NAME, MENU, MINI_APP_URL, Reply, erase_done_reply,
     erase_failed_reply, export_caption, export_failed_reply, help_reply, sync_reply,
@@ -115,9 +116,10 @@ async fn the_menu_is_registered_for_the_owners_chat_only() {
     assert_eq!(
         registered,
         BTreeSet::from([
-            "privacy", "export", "delete", "sync", "score", "level", "drills", "drill"
+            "privacy", "export", "delete", "sync", "score", "level", "streak", "badges", "records",
+            "drills", "drill"
         ]),
-        "the eight commands of the menu"
+        "the eleven commands of the menu"
     );
     for (entry, command) in MENU
         .iter()
@@ -341,6 +343,8 @@ fn rendered() -> Vec<(&'static str, Reply)> {
         ),
         ("score-none", score_reply(None)),
         ("score-failed", score_failed_reply()),
+        ("badges-failed", badges_failed_reply()),
+        ("records-failed", records_failed_reply()),
         ("help", help_reply()),
         ("export-failed", export_failed_reply()),
         ("erase-done-log-held", erase_done_reply(true)),
@@ -531,4 +535,56 @@ fn the_mini_app_url_is_https() {
             expected: "an https: URL that names a host",
         })
     );
+}
+
+/// A service that answers nothing: only its presence on the handlers is looked at.
+struct NoInstruments;
+
+impl deck_streak_coordination::instruments::InstrumentService for NoInstruments {
+    fn list(
+        &self,
+    ) -> deck_streak_coordination::instruments::BoxFuture<
+        '_,
+        Result<
+            Vec<deck_streak_coordination::instruments::InstrumentListing>,
+            deck_streak_kernel::KernelError,
+        >,
+    > {
+        Box::pin(async { Ok(Vec::new()) })
+    }
+    fn report<'a>(
+        &'a self,
+        _id: &'a str,
+    ) -> deck_streak_coordination::instruments::BoxFuture<
+        'a,
+        Result<
+            Option<deck_streak_coordination::instruments::StoredReport>,
+            deck_streak_kernel::KernelError,
+        >,
+    > {
+        Box::pin(async { Ok(None) })
+    }
+    fn run<'a>(
+        &'a self,
+        _id: &'a str,
+    ) -> deck_streak_coordination::instruments::BoxFuture<
+        'a,
+        Result<
+            deck_streak_coordination::instruments::StoredReport,
+            deck_streak_coordination::instruments::OnDemandRefusal,
+        >,
+    > {
+        Box::pin(async { Err(deck_streak_coordination::instruments::OnDemandRefusal::Unknown) })
+    }
+}
+
+#[tokio::test]
+async fn the_handlers_hold_the_instruments_only_once_they_are_handed_them() {
+    let bench = Bench::start().await;
+    let without = bench.commands(ScriptedSync::default());
+    assert!(without.instruments().is_none());
+    let with = bench
+        .commands(ScriptedSync::default())
+        .with_instruments(std::sync::Arc::new(NoInstruments));
+    assert!(with.instruments().is_some());
 }

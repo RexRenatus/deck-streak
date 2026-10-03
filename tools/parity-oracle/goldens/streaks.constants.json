@@ -1,0 +1,123 @@
+{
+  "cases": [
+    {
+      "input": {
+        "name": "constants.STREAK_START_FREEZES"
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "name": "constants.STREAK_FREEZE_CAP"
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "name": "constants.STREAK_DAYS_PER_FREEZE"
+      },
+      "output": 7
+    },
+    {
+      "input": {
+        "name": "constants.STREAK_COMEBACK_MIN"
+      },
+      "output": 7
+    },
+    {
+      "input": {
+        "name": "constants.STREAK_HEAT"
+      },
+      "output": [
+        [
+          365,
+          "\ud83c\udf1f\u2604\ufe0f\ud83c\udf1f"
+        ],
+        [
+          100,
+          "\u2604\ufe0f"
+        ],
+        [
+          30,
+          "\ud83d\udd25\ud83d\udd25\ud83d\udd25"
+        ],
+        [
+          7,
+          "\ud83d\udd25\ud83d\udd25"
+        ],
+        [
+          1,
+          "\ud83d\udd25"
+        ],
+        [
+          0,
+          ""
+        ]
+      ]
+    },
+    {
+      "input": {
+        "name": "constants.FREEZE_DROP_MONTHLY_CAP"
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "name": "constants.STRENGTH_HALF_LIFE_DAYS"
+      },
+      "output": 13
+    },
+    {
+      "input": {
+        "name": "constants.STRENGTH_ARM_THRESHOLD"
+      },
+      "output": 0.6
+    },
+    {
+      "input": {
+        "name": "constants.LAPSE_AFTER_SILENT_DAYS"
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "name": "constants.RELIGHT_CARDS"
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "name": "constants.RELIGHT_XP"
+      },
+      "output": 100
+    },
+    {
+      "input": {
+        "name": "gamification.strength.STRENGTH_DECAY"
+      },
+      "output": 0.9480775143391714
+    },
+    {
+      "input": {
+        "name": "pipeline_layers.governor._SILENCE_WALK_CAP_DAYS"
+      },
+      "output": 120
+    },
+    {
+      "input": {
+        "name": "pipeline_layers.governor._STRENGTH_PERSIST_DAYS"
+      },
+      "output": 400
+    }
+  ],
+  "function": "streaks.constants",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "constants",
+  "registry": "tools/parity-oracle/registry/spec_076.py",
+  "registry_sha256": "e854e46aac5a5887cc38b12c7cfafd31275845828f9c77a4d12fb1e38248b20c",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

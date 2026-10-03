@@ -38,7 +38,22 @@ A15: red at fbfc7b57eb9b: assertion `left == right` failed: left: [push_message,
 A15: green at caa7cca8e7dc
 A16: red at cd05a8b0c3a1: assertion `left == right` failed: 513 emoji are 1,026 units left: None right: Some(Caption)
 A16: green at bf506ce3b394
+A17: red at cb142394e372: 392 of 600 captions are misjudged, e.g. ascii in <b> with parsed 1023: the photo path says false, the share Ready { id: "synthetic-prepared" }
+A17: green at 1ac918e43fe5
+A18: red at cb142394e372: the bound is one named function
+A18: green at 1ac918e43fe5
 ```
+
+## The share's caption bound (#430)
+
+The population of A17 is 600 captions: eight character classes by three lengths (1,023, 1,024 and
+1,025 UTF-16 units), each plain, inside each of eight entity tags and beside each of four character
+references, the tags and references at the bound as written and as parsed. At the red commit
+(cb142394e372) the share had no bound: 392 of the 600 were misjudged, the share taking every caption
+the photo refused. The other 208 were not red, for their true reason: their caption is within the
+bound as written, so the photo and the share both take it, and they hold the population's accepted
+side. `Prepared::Refused` was the compiling stub, so the red is by assertion. A18 read the sources
+and found no `check_caption` function to name.
 
 ## Test edits after the red commit
 

@@ -1,0 +1,3 @@
+### Fixed
+
+- `deploy.sh caddy-install` now undoes every write it made and prints its refusal on every early exit; `caddy-remove` checks the same four paths as the install's guard, and both scripts check every directory they write or undo, the Caddy directory and the live Caddyfile's own, before they write; either Caddy step refuses any `DECKSTREAK_DEPLOY_` entry of its environment it does not list, whatever follows the prefix, and a setting it receives twice or without a value, before it reads or writes anything, unless a name outside the prefix stops it first, an entry that can already run any code in the step (#423, #424).

@@ -112,3 +112,39 @@ sync of the private copy.
 
 CHARTER constraint 4; ADR-037 (conditions (a) to (d)); ADR-083; SPEC-083; SPEC-022 R14 and A15;
 SPEC-023 R2; SPEC-001 §14; #266; #108.
+
+Amendment (2026-10-01): guardrails (i), (ii), (iii) and (iv) are amended by ADR-301, the owner's
+decision at #514, and their text above is kept as it was. DeckStreak writes to the collection only
+through declared write classes, each with its own ADR in ADR-089's form. The skip day is the
+first such class, at the approval rung. (i): the only writes ever made are each declared write
+class's exact changes and their exact inverses, and every other path records zero uploads against
+the recording fake sync server. (ii) binds every class: incremental sync only, and on any full or
+one-way sync demand the write aborts and writes nothing. (iii): the owner's explicit declaration
+becomes the approval rung; at the autonomous rung, promotion by a passed trial, the guard metric's
+own undo and the kill switch replace it, and the batch rides the study day's one scheduled sync.
+(iv): each batch records the prior state and is previewed, and its undo writes only cards whose
+current state still equals what the batch wrote. (v) stands, and each class's ADR extends it to
+that class's exact changes and their inverse.
+
+Note (2026-10-01, #518, the skip day's rung): in the amendment above, "at the approval rung" reads
+more exactly as a ceiling. Its ceiling is the approval rung, because the owner's skip declaration
+approves each batch. The sources are ADR-301's skip day paragraph under "The amended clauses" and
+guardrail (iii) above, which runs the write only on the owner's explicit skip declaration.
+
+Note (2026-10-01, #518, the skip day's budget): ADR-301 (c) requires each write class's ADR to state
+its change budget, its dwell time between changes and the band a result must clear. ADR-301 grants the
+skip day no exemption: part (c) binds it as it binds every class. This note states what a delivered
+document on dev decides for each of the three, and what it leaves open.
+
+- Change budget. The skip's reschedule is bounded to the study day's due review cards (guardrail (i)
+  above; ADR-301 (a): "ADR-089 (i) bounds it to those cards"), and its preview names every card it
+  moves (guardrail (iv) above). The planned SPEC-083 R21 refuses a set of more than `SKIP_MAX_CARDS`,
+  the planned golden constant (5,000), with `too_many_cards` before any change.
+- Dwell. No dwell time between changes is decided. The nearest planned rule is the planned SPEC-083 R2:
+  a study day that already holds a pending or applied skip, not undone, refuses a second take with
+  `already_skipped`. It bounds a day to one pending or applied skip that is not undone; it is not a dwell between changes.
+  The same rule adds: "After an undo the day can be skipped again."
+- Band. No band a result must clear is decided. ADR-301 (c) has a class reach the autonomous rung only
+  after a pre-registered n-of-1 trial passes, and the skip day's ceiling is the approval rung, so no
+  trial of the skip day is decided, and with it no band. The dwell and the band are left to #108,
+  "Skip / cheat day (the one Anki write path)", the issue of the planned SPEC-083.
