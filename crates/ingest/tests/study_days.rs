@@ -32,11 +32,7 @@ const fn review(day: i64, hour: i64, card: i64, kind: i64, ease: i64) -> Planned
     }
 }
 
-const CARDS: [PlannedCard; 3] = [
-    card(2001, "Law"),
-    card(2002, "Maths"),
-    card(2003, "Law"),
-];
+const CARDS: [PlannedCard; 3] = [card(2001, "Law"), card(2002, "Maths"), card(2003, "Law")];
 
 const REVIEWS: [PlannedReview; 10] = [
     // A study event older than any ingest window: the whole log is read.

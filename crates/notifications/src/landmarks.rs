@@ -9,17 +9,17 @@
 use deck_streak_kernel::StudyDay;
 
 /// Every this many earned study days is a landmark.
-pub const LANDMARK_DAY_STEP: usize = 0;
+pub const LANDMARK_DAY_STEP: usize = 25;
 /// The event name of an anniversary landmark.
-pub const ANNIVERSARY_EVENT_TYPE: &str = "";
+pub const ANNIVERSARY_EVENT_TYPE: &str = "landmark_anniversary";
 /// The event name of an earned-study-day landmark.
-pub const STUDY_DAY_EVENT_TYPE: &str = "";
+pub const STUDY_DAY_EVENT_TYPE: &str = "landmark_study_day";
 /// The anniversary's text.
-pub const ANNIVERSARY_TEMPLATE: &str = "";
+pub const ANNIVERSARY_TEMPLATE: &str = "\u{1f5d3}\u{fe0f} <b>{ordinal} anniversary</b> on {day}";
 /// The anniversary's text when the streak is not current.
-pub const ANNIVERSARY_GAP_TEMPLATE: &str = "";
+pub const ANNIVERSARY_GAP_TEMPLATE: &str = "\u{1f5d3}\u{fe0f} <b>{ordinal} anniversary</b> on {day}\nThe anniversary does not need a streak.";
 /// The earned-study-day landmark's text.
-pub const STUDY_DAY_TEMPLATE: &str = "";
+pub const STUDY_DAY_TEMPLATE: &str = "\u{1f4da} <b>{ordinal} earned study days</b> on {day}";
 
 /// One historical event; it carries no text derived from the collection.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -37,20 +37,117 @@ pub struct Landmark {
 /// The landmarks that have landed by `today`, oldest first.
 #[must_use]
 pub fn compute_landmarks(study_days: &[StudyDay], today: StudyDay) -> Vec<Landmark> {
-    let _ = (study_days, today);
-    Vec::new()
+    let mut days: Vec<StudyDay> = study_days.to_vec();
+    days.sort();
+    days.dedup();
+    let Some(&origin) = days.first() else {
+        return Vec::new();
+    };
+    let mut found = Vec::new();
+    let years = (year_of(today) - year_of(origin) + 1).max(0);
+    for ordinal in 1..=years {
+        let Some(day) = anniversary(origin, ordinal) else {
+            break;
+        };
+        if day > today {
+            break;
+        }
+        let Ok(ordinal) = u32::try_from(ordinal) else {
+            break;
+        };
+        found.push(Landmark {
+            key: format!("landmark:anniv:{ordinal}"),
+            event: ANNIVERSARY_EVENT_TYPE,
+            ordinal,
+            day,
+        });
+    }
+    for ordinal in (LANDMARK_DAY_STEP..=days.len()).step_by(LANDMARK_DAY_STEP) {
+        let day = days[ordinal - 1];
+        if day > today {
+            break;
+        }
+        let Ok(ordinal) = u32::try_from(ordinal) else {
+            break;
+        };
+        found.push(Landmark {
+            key: format!("landmark:day:{ordinal}"),
+            event: STUDY_DAY_EVENT_TYPE,
+            ordinal,
+            day,
+        });
+    }
+    found.sort_by(|a, b| a.day.cmp(&b.day).then_with(|| a.key.cmp(&b.key)));
+    found
 }
 
 /// The landmarks dated exactly `today`.
 #[must_use]
 pub fn due_today(landmarks: &[Landmark], today: StudyDay) -> Vec<&Landmark> {
-    let _ = (landmarks, today);
-    Vec::new()
+    landmarks
+        .iter()
+        .filter(|landmark| landmark.day == today)
+        .collect()
 }
 
 /// The text of `landmark`; `gap_honest` drops the anniversary's congratulation of a streak.
 #[must_use]
 pub fn render_landmark(landmark: &Landmark, gap_honest: bool) -> String {
-    let _ = (landmark, gap_honest);
-    String::new()
+    let template = if landmark.event == ANNIVERSARY_EVENT_TYPE {
+        if gap_honest {
+            ANNIVERSARY_GAP_TEMPLATE
+        } else {
+            ANNIVERSARY_TEMPLATE
+        }
+    } else {
+        STUDY_DAY_TEMPLATE
+    };
+    template
+        .replace("{ordinal}", &ordinal_label(landmark.ordinal))
+        .replace("{day}", &landmark.day.to_string())
+}
+
+/// `1st`, `2nd`, `3rd` and `Nth`, with 11 to 13 always `th` (`landmarks.py:_ordinal_label`).
+fn ordinal_label(value: u32) -> String {
+    let suffix = if (value % 100) > 10 && (value % 100) < 14 {
+        "th"
+    } else {
+        match value % 10 {
+            1 => "st",
+            2 => "nd",
+            3 => "rd",
+            _ => "th",
+        }
+    };
+    format!("{value}{suffix}")
+}
+
+/// The calendar year of `day`, read from its ISO rendering, which may carry a sign.
+fn year_of(day: StudyDay) -> i128 {
+    split_iso(day).0
+}
+
+/// The year and the `-MM-DD` tail of `day`'s ISO rendering.
+fn split_iso(day: StudyDay) -> (i128, String) {
+    let text = day.to_string();
+    let cut = text.len().saturating_sub(6);
+    let year = text[..cut].parse::<i128>().unwrap_or(0);
+    (year, text[cut..].to_string())
+}
+
+/// The `n`th anniversary of `origin`: the same month and day `n` years on, falling back to the
+/// 28th when that date does not exist (a 29 February); `None` when even that is refused.
+fn anniversary(origin: StudyDay, n: i128) -> Option<StudyDay> {
+    let (year, tail) = split_iso(origin);
+    let year = year + n;
+    let head = if (0..=9999).contains(&year) {
+        format!("{year:04}")
+    } else {
+        format!("{year:+05}")
+    };
+    if let Ok(day) = format!("{head}{tail}").parse::<StudyDay>() {
+        return Some(day);
+    }
+    let fallback = format!("{head}{}28", &tail[..4]);
+    fallback.parse::<StudyDay>().ok()
 }

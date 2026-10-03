@@ -1,6 +1,8 @@
 //! The historical landmarks (SPEC-102 A1 to A4): the landmarks, the days due, the texts and the
 //! constants equal the goldens of the predecessor's `landmarks.py`.
 
+#![allow(clippy::expect_used)]
+
 #[path = "../../../tools/parity-oracle/golden.rs"]
 mod golden;
 
@@ -81,11 +83,13 @@ fn seen(found: &[Landmark]) -> Vec<(String, String, i64, StudyDay)> {
 #[test]
 fn the_landmarks_match_the_parity_golden() {
     let examined = golden::each_case("landmarks", |case| {
-        let found = compute_landmarks(
-            &days(&case.input["study_days"]),
-            day(&case.input["today"]),
+        let found = compute_landmarks(&days(&case.input["study_days"]), day(&case.input["today"]));
+        assert_eq!(
+            seen(&found),
+            expected_landmarks(&case.output),
+            "{}",
+            case.input
         );
-        assert_eq!(seen(&found), expected_landmarks(&case.output), "{}", case.input);
     });
     println!("{examined}");
 }
@@ -107,11 +111,7 @@ fn only_the_landmarks_dated_the_day_are_due() {
             .collect();
         assert_eq!(due, expected, "{}", case.input);
         assert!(
-            found
-                .iter()
-                .filter(|item| item.day == today)
-                .count()
-                == due.len(),
+            found.iter().filter(|item| item.day == today).count() == due.len(),
             "{}",
             case.input
         );
@@ -157,7 +157,10 @@ fn the_landmark_constants_equal_the_predecessors() {
         let name = case.input["name"].as_str().expect("a name");
         match name {
             "landmarks.LANDMARK_DAY_STEP" => {
-                assert_eq!(i64::try_from(LANDMARK_DAY_STEP).unwrap(), integer(&case.output));
+                assert_eq!(
+                    i64::try_from(LANDMARK_DAY_STEP).unwrap(),
+                    integer(&case.output)
+                );
             }
             "landmarks.ANNIVERSARY_EVENT_TYPE" => {
                 assert_eq!(ANNIVERSARY_EVENT_TYPE, case.output.as_str().unwrap());
