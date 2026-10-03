@@ -333,13 +333,16 @@ fn a_reserved_name_joined_from_literals_is_refused_in_every_spelling() {
 /// and its `_` once, in five shapes each.
 const LONE_CHARACTER_TREES: usize = 105;
 
+/// One of SPEC-331 A1's lone shapes: its label, and the file it writes around a character.
+type LoneShape = (&'static str, fn(char) -> String);
+
 /// SPEC-331 A1's population for the census's own name. At each position of the name, the piece
 /// before it and the piece after it are lone literals in two files, and its character is a lone
 /// literal in a third, in each of five lone shapes: a method argument (#600's `strip_prefix` line
 /// among them), a `matches!` arm, a format template, a named `const` used alone, and a split set.
 /// A letter is planted in both cases. Each tree is a label and its planted files.
 fn lone_character_trees() -> Vec<(String, Vec<(String, String)>)> {
-    let shapes: [(&str, fn(char) -> String); 5] = [
+    let shapes: [LoneShape; 5] = [
         ("method argument", |c| {
             format!("pub fn c(date: &str) -> Option<&str> {{\n    date.strip_prefix({c:?})\n}}\n")
         }),
