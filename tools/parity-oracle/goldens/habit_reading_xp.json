@@ -1,0 +1,242 @@
+{
+  "cases": [
+    {
+      "class": "edge",
+      "input": {
+        "minutes_today": 0
+      },
+      "output": 0
+    },
+    {
+      "class": "edge",
+      "input": {
+        "minutes_today": 1
+      },
+      "output": 2
+    },
+    {
+      "class": "edge",
+      "input": {
+        "minutes_today": 2
+      },
+      "output": 4
+    },
+    {
+      "class": "edge",
+      "input": {
+        "minutes_today": 59
+      },
+      "output": 118
+    },
+    {
+      "class": "edge",
+      "input": {
+        "minutes_today": 60
+      },
+      "output": 120
+    },
+    {
+      "class": "edge",
+      "input": {
+        "minutes_today": 119
+      },
+      "output": 238
+    },
+    {
+      "class": "edge",
+      "input": {
+        "minutes_today": 120
+      },
+      "output": 240
+    },
+    {
+      "class": "edge",
+      "input": {
+        "minutes_today": 121
+      },
+      "output": 240
+    },
+    {
+      "class": "edge",
+      "input": {
+        "minutes_today": 150
+      },
+      "output": 240
+    },
+    {
+      "class": "edge",
+      "input": {
+        "minutes_today": 240
+      },
+      "output": 240
+    },
+    {
+      "class": "edge",
+      "input": {
+        "minutes_today": 599
+      },
+      "output": 240
+    },
+    {
+      "class": "edge",
+      "input": {
+        "minutes_today": 600
+      },
+      "output": 240
+    },
+    {
+      "input": {
+        "minutes_today": 154
+      },
+      "output": 240
+    },
+    {
+      "input": {
+        "minutes_today": 266
+      },
+      "output": 240
+    },
+    {
+      "input": {
+        "minutes_today": 690
+      },
+      "output": 240
+    },
+    {
+      "input": {
+        "minutes_today": 650
+      },
+      "output": 240
+    },
+    {
+      "input": {
+        "minutes_today": 103
+      },
+      "output": 206
+    },
+    {
+      "input": {
+        "minutes_today": 335
+      },
+      "output": 240
+    },
+    {
+      "input": {
+        "minutes_today": 586
+      },
+      "output": 240
+    },
+    {
+      "input": {
+        "minutes_today": 173
+      },
+      "output": 240
+    },
+    {
+      "input": {
+        "minutes_today": 27
+      },
+      "output": 54
+    },
+    {
+      "input": {
+        "minutes_today": 421
+      },
+      "output": 240
+    },
+    {
+      "input": {
+        "minutes_today": 416
+      },
+      "output": 240
+    },
+    {
+      "input": {
+        "minutes_today": 76
+      },
+      "output": 152
+    },
+    {
+      "input": {
+        "minutes_today": 105
+      },
+      "output": 210
+    },
+    {
+      "input": {
+        "minutes_today": 128
+      },
+      "output": 240
+    },
+    {
+      "input": {
+        "minutes_today": 326
+      },
+      "output": 240
+    },
+    {
+      "input": {
+        "minutes_today": 485
+      },
+      "output": 240
+    },
+    {
+      "input": {
+        "minutes_today": 594
+      },
+      "output": 240
+    },
+    {
+      "input": {
+        "minutes_today": 460
+      },
+      "output": 240
+    },
+    {
+      "input": {
+        "minutes_today": 421
+      },
+      "output": 240
+    },
+    {
+      "input": {
+        "minutes_today": 213
+      },
+      "output": 240
+    },
+    {
+      "input": {
+        "minutes_today": 204
+      },
+      "output": 240
+    },
+    {
+      "input": {
+        "minutes_today": 324
+      },
+      "output": 240
+    },
+    {
+      "input": {
+        "minutes_today": 640
+      },
+      "output": 240
+    },
+    {
+      "input": {
+        "minutes_today": 697
+      },
+      "output": 240
+    }
+  ],
+  "function": "habits.reading_xp",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "function",
+  "registry": "tools/parity-oracle/registry/spec_078.py",
+  "registry_sha256": "347514aed5b93b8dfbc646986978680620d4d0c5c3fdf4253a8231bc28e56603",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

@@ -1,0 +1,12 @@
+{
+  "duty": "bot-commands",
+  "schema": "phx.duty.message.v1",
+  "send": {
+    "link_preview_options": {
+      "is_disabled": true
+    },
+    "parse_mode": "HTML",
+    "text": "The entry could not be removed, so nothing changed. Send /undo to try again."
+  },
+  "x-message": "undo-failed"
+}

@@ -41,7 +41,7 @@
         "S07206-DERIVED-ONLY",
         "progression",
         "src/settle.rs",
-        "if !DERIVED_SOURCES.contains(&request.source) {",
+        "if !is_derived(request.source) {",
         "if DERIVED_SOURCES.is_empty() {",
         "xp_settle::settle_refuses_a_source_outside_the_derived_registry",
         "settle accepts only a source in the derived registry (SPEC-072 R7, A11)"

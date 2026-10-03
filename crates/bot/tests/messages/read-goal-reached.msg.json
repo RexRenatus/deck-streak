@@ -1,0 +1,22 @@
+{
+  "duty": "bot-commands",
+  "schema": "phx.duty.message.v1",
+  "send": {
+    "link_preview_options": {
+      "is_disabled": true
+    },
+    "parse_mode": "HTML",
+    "reply_markup": {
+      "inline_keyboard": [
+        [
+          {
+            "callback_data": "hb:u:2",
+            "text": "Undo"
+          }
+        ]
+      ]
+    },
+    "text": "Logged 190 minutes of reading for <b>Course Qaa</b>.\nToday: 210 minutes, 240 XP.\nThis week: 210 minutes, so the weekly goal is reached: +150 XP."
+  },
+  "x-message": "read-goal-reached"
+}

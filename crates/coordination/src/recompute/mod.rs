@@ -28,6 +28,7 @@ pub mod analytics_step;
 pub mod badges;
 pub mod band_badges;
 pub mod day_bonuses;
+pub mod habits;
 pub mod landmarks;
 pub mod mint;
 pub mod progress;
