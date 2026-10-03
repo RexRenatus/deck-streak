@@ -1,6 +1,11 @@
 ---------------------------- MODULE SkipDayOnce ----------------------------
 \* @phx covers crates/ingest/src/skip.rs anchor=begin digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
 \* @phx covers crates/ingest/src/skip.rs anchor=latest_undoable digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers crates/ingest/src/skip.rs anchor=records_on digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers crates/ingest/src/skip.rs anchor=settle_applied_on digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers crates/ingest/src/skip.rs anchor=mark_undone_on digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers crates/coordination/src/skip/mod.rs anchor=settle_applied digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers crates/coordination/src/skip/mod.rs anchor=settle_undone digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
 \* @phx cites #108
 \* @phx property AtMostOneActivePerDay ramp=report
 \* @phx property ChargedOnlyWhenApplied ramp=report
@@ -37,9 +42,10 @@
 \* settlement and the start-up settlement both settle the row by it, and either may also never run
 \* (R25 leaves a row pending). Each settler runs at most once a row, so a row sees at most two
 \* settlements, on any study day. The undo's settlement runs once and may be retried once. Every
-\* price is positive and every debit pays something: a price of 0 makes no call and a debit the
-\* empty wallet clips to 0 is refunded as 0, so both only remove movements, and every property
-\* bounds movements. The price itself and the amount paid are lean/SkipTariff's.
+\* price is positive and every debit pays something: a price of 0 asks the wallet for 0, which
+\* writes no movement, and a debit the empty wallet clips to 0 is refunded as 0, so both only
+\* remove movements, and every property bounds movements. The price itself and the amount paid
+\* are lean/SkipTariff's.
 \*
 \* Switches: each is TRUE in the code as built, and its FALSE arm is the defect its witness names.
 (***************************************************************************)
