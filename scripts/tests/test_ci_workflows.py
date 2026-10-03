@@ -4966,7 +4966,7 @@ NOT_WORKFLOW_READS = {
         ("test_verdict_folds", "nonzero_exits", "TOOL.read_text(encoding='utf-8')", 1),
     ),
     **allowed(
-        "runs the census class over a planted copy of the test tree; the census reads its files through the loader and reports problems, and no workflow's text reaches another reader through the call",
+        "runs the census's guard test over a planted copy of the test tree; the census reads the copy's module sources through module_sources and reports problems, and no workflow's text reaches another reader through the call",
         (
             "test_ci_workflows",
             "WorkflowFilesAreReadAsBytes.test_the_census_is_red_on_every_planted_site",
