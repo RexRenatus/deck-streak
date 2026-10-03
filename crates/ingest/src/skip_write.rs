@@ -11,8 +11,9 @@ use std::io;
 use sha2::{Digest, Sha256};
 
 use crate::engine::{CollectionWrite, EngineError};
+use crate::lock::CollectionLock;
 use crate::settings::{SkipSearch, SyncSettings};
-use crate::skip::SearchRefusal;
+use crate::skip::{SearchRefusal, skip_search};
 use crate::write_class_stop::{ClassStop, WriteClassStop};
 
 /// One card the preview lists (R20): its id, its top-level deck's id and its current due.
@@ -86,9 +87,28 @@ pub async fn preview<W: CollectionWrite>(
     search: &SkipSearch,
     stop: &WriteClassStop,
 ) -> Result<Preview, PreviewError> {
-    let _ = (writer, settings, search, stop);
+    let read = stop.read_stop().await;
+    if read.is_stopped() {
+        return Ok(Preview::Stopped(read));
+    }
+    let wrapped = skip_search(search.as_str())?;
+    let held = CollectionLock::new(settings.lock_path())
+        .shared()
+        .await
+        .map_err(PreviewError::Lock)?;
+    let due = writer.due_cards(&settings.copy_path(), &wrapped);
+    held.release().map_err(PreviewError::Lock)?;
+    let cards: Vec<PreviewCard> = due?
+        .into_iter()
+        .map(|card| PreviewCard {
+            id: card.id,
+            top_level_deck: card.top_level_deck,
+            due: card.due,
+        })
+        .collect();
+    let ids: Vec<i64> = cards.iter().map(|card| card.id).collect();
     Ok(Preview::Listed {
-        cards: Vec::new(),
-        digest: String::new(),
+        digest: list_digest(&ids),
+        cards,
     })
 }

@@ -311,13 +311,14 @@ fn only_the_skip_write_reaches_an_engine_write_or_a_push() {
         found.writes_inside.clone(),
     );
     assert_eq!(found.refused, Vec::<String>::new());
-    // The positive artifacts: the port alone names the engine's crate, and the port names the write
-    // port, which only the skip's write module may name beside it.
+    // The positive artifacts: the port alone names the engine's crate, and the write port is named
+    // by exactly the port and the skip's write module.
     let naming: BTreeSet<&str> = found.naming_engine.iter().map(String::as_str).collect();
     assert_eq!(naming, BTreeSet::from([ENGINE]));
     let naming: BTreeSet<&str> = found.naming_port.iter().map(String::as_str).collect();
-    assert!(
-        naming.contains(ENGINE) && naming.is_subset(&BTreeSet::from([ENGINE, SKIP_WRITE])),
-        "the write port is named by the port and at most the skip's write module: {naming:?}"
+    assert_eq!(
+        naming,
+        BTreeSet::from([ENGINE, SKIP_WRITE]),
+        "the write port is named by exactly the port and the skip's write module"
     );
 }
