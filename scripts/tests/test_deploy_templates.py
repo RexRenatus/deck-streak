@@ -10,6 +10,7 @@ absence it asserts is paired with a planted template it must refuse. No test wri
 instance name literally (SPEC-032 R10): each is built at run time from its template and its id.
 """
 
+import fnmatch
 import ipaddress
 import json
 import re
@@ -17,7 +18,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import _units
 from _support import REPO, examined
@@ -1128,8 +1129,40 @@ def litestream_items(text):
 def skip_backup_reachers(litestream_where, litestream_text, daily_where, daily_text):
     """Each line of a Litestream configuration or of the daily copy's script that would carry the
     skip's backup off the host or into a standing copy, as `<file>:<line>: <reason>`; empty when
-    none does (SPEC-083 A55)."""
-    return []
+    none does (SPEC-083 A55). A database's `path` reaches a backup it matches as a pattern; a
+    directory reaches one inside it, or below it when recursive, whose name its `pattern` matches,
+    and a directory with no pattern is read as matching every name. The daily copy reaches a
+    backup when the one file it copies or the copies it keeps and prunes match its name; a script
+    whose names the census cannot read is refused, never passed."""
+    found = []
+    backups = [PurePosixPath(STATE_DIRECTORY) / name for name in SKIP_BACKUP_NAMES]
+    for item in litestream_items(litestream_text):
+        if "path" in item:
+            number, path = item["path"]
+            for backup in backups:
+                if fnmatch.fnmatchcase(str(backup), path):
+                    found.append(f"{litestream_where}:{number}: replicates {backup}")
+        if "dir" in item:
+            number, directory = item["dir"]
+            pattern = item.get("pattern", (number, "*"))[1]
+            recursive = item.get("recursive", (number, "false"))[1] == "true"
+            root = PurePosixPath(directory)
+            for backup in backups:
+                inside = backup.parent == root or (recursive and root in backup.parents)
+                if inside and fnmatch.fnmatchcase(backup.name, pattern):
+                    found.append(f"{litestream_where}:{number}: replicates {backup}")
+    for key, expression in DAILY_COPY_NAMES:
+        match = expression.search(daily_text)
+        if match is None:
+            found.append(f"{daily_where}: names no {key}")
+            continue
+        number = daily_text.count("\n", 0, match.start()) + 1
+        for name in SKIP_BACKUP_NAMES:
+            if key == "DATABASE_NAME" and fnmatch.fnmatchcase(name, match.group(1)):
+                found.append(f"{daily_where}:{number}: {key} copies {name}")
+            if key == "COPY_NAME" and re.search(match.group(1), name):
+                found.append(f"{daily_where}:{number}: {key} keeps {name}")
+    return found
 
 
 class TheSkipBackupStaysOnTheHost(unittest.TestCase):
