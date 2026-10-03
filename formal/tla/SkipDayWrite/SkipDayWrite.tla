@@ -1,11 +1,11 @@
 ---------------------------- MODULE SkipDayWrite ----------------------------
-\* @phx covers crates/ingest/src/skip_write.rs anchor=take digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/ingest/src/skip_write.rs anchor=restore_check digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/ingest/src/skip_write.rs anchor=moved_counts digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/ingest/src/skip.rs anchor=record_prior digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/ingest/src/skip.rs anchor=record_left digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/ingest/src/write_class_stop.rs anchor=read_stop digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/ingest/src/write_class_stop.rs anchor=set_by_counts digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers crates/ingest/src/skip_write.rs anchor=take digest=sha256:de7de3e104f15af30720a506cd0aab812bfbd9bec30a7ebfc3ee240da9ed680a
+\* @phx covers crates/ingest/src/skip_write.rs anchor=restore_check digest=sha256:4a6c45c6c7d8321f08bb84ab9180e95384d1e31efe1a03ef49d80c5fdc4cce40
+\* @phx covers crates/ingest/src/skip_write.rs anchor=moved_counts digest=sha256:627202da8c20881c8aa9f6aa9f18408975fd26af7adedaa9830cb18157f69244
+\* @phx covers crates/ingest/src/skip.rs anchor=record_prior digest=sha256:c292d9a66e0a6b80e39037eb33bb23bc9250e74cd10fbd7fd7c6fabce9649865
+\* @phx covers crates/ingest/src/skip.rs anchor=record_left digest=sha256:90baf127d75873844710bfafdb0f8e2b8c1f86d32e048706355403e323a6c418
+\* @phx covers crates/ingest/src/write_class_stop.rs anchor=read_stop digest=sha256:b695c99b28172bfd0ee413ceb777da75dbfc9d6d6774618a56fb623f23df5d51
+\* @phx covers crates/ingest/src/write_class_stop.rs anchor=set_by_counts digest=sha256:15578e86520cdcfac315e36f07be6dbe3eda73b4e3bf664866b5010f0068ed2e
 \* @phx cites #108
 \* @phx property NoUploadOutsidePreview ramp=report
 \* @phx property FullSyncDemandWritesNothing ramp=report
@@ -48,6 +48,16 @@
 \* step 12 (an engine that wrote more than Set Due Date's own rows). A merge of the take's push
 \* with another client's later review is abstracted to the take's card arriving: A34's read-back
 \* lists such a card, and no property here reads it.
+\*
+\* Re-read against the covered code as built (skip_write.rs::take and its steps): day_and_zone and
+\* bound_to_preview on the private copy are Start; the working copy and converge_outcome are
+\* Converge; day_and_zone on the working copy is Recheck; select, with its answer before any backup
+\* when nothing moves, is Select; the counts before are the stutter above; backup and
+\* skip_write.rs::restore_check are Backup and Check; skip.rs::record_prior inside reschedule, before
+\* the engine's Set Due Date, is Snapshot then Reschedule; the counts after, moved_counts and
+\* write_class_stop.rs::set_by_counts are Counts; skip.rs::record_left is Left;
+\* write_class_stop.rs::read_stop before the push is step 14; the second write_sync is Push. The
+\* read-back after an accepted push writes nothing and is a stutter.
 \*
 \* Switches: each is FALSE in the code as built, and its TRUE arm is the defect its witness names.
 (***************************************************************************)
