@@ -1376,7 +1376,7 @@ fn the_counts_name_the_first_count_a_reschedule_does_not_explain() {
         None,
         "a reschedule of {moved} cards explains every count"
     );
-    let moves = vec![
+    let rescheduled_moves = vec![
         (
             "cards",
             Counts {
@@ -1420,7 +1420,7 @@ fn the_counts_name_the_first_count_a_reschedule_does_not_explain() {
             },
         ),
     ];
-    for (name, moved_after) in examined("count(s) that moved", moves) {
+    for (name, moved_after) in examined("count(s) that moved", rescheduled_moves) {
         assert_eq!(
             moved_counts(&before, &moved_after, moved),
             Some(name),
