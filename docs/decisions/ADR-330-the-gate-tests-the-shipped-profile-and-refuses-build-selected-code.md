@@ -50,6 +50,11 @@ build, and the release job is expected to take about as long as the whole `rust`
 - Good, because a build-selected `cfg!` or `option_env!` fails clippy until it is allowed by name.
 - Bad, because one more job compiles the workspace; it runs in parallel with the others, so the
   pull request's wall time grows only if it is the slowest.
+- Measured, not chosen: a pinned dependency enables the tracing crate's `release_max_level_debug`
+  feature, which Cargo unifies into the workspace, so `trace!` is compiled out of the shipped
+  daemon. The logging test that probes every level therefore reads the build's static maximum
+  level and expects exactly the levels at or below it, with the TRACE line absent when it is
+  compiled out; the dev build still expects all five.
 
 ### Confirmation
 

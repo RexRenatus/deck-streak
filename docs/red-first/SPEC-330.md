@@ -23,3 +23,22 @@ A1 unplanted: the release stage over the workspace passes (the full release run:
 A2 planted `cfg!(debug_assertions)`: error: use of a disallowed macro `std::cfg` (crates/kernel/src/lib.rs:54:8)
 A2 planted `option_env!("PLANT")`: error: use of a disallowed macro `std::option_env`
 ```
+
+## Amendment: the logging test states the build under test (ruling 150)
+
+The full release run found one red, `each_json_line_opens_with_its_journal_priority`: a pinned
+dependency's `release_max_level_debug` compiles `trace!` out of the shipped build (ADR-330). The
+test now reads `tracing::level_filters::STATIC_MAX_LEVEL` and expects exactly the probe levels at
+or below it, with the TRACE line absent when the build compiles it out. Measured at 30943a65 with
+the stage's own flags (`cargo nextest run --locked --no-fail-fast --release`, `-j 1`, the kernel
+and ingest crates so the workspace's feature unification applies):
+
+```text
+before, --release : FAIL each_json_line_opens_with_its_journal_priority
+  left: ["ERROR", "WARN", "INFO", "DEBUG"], right: ["ERROR", "WARN", "INFO", "DEBUG", "TRACE"]
+before, dev       : PASS (1 test run: 1 passed)
+after,  --release : PASS (1 test run: 1 passed)
+after,  dev       : PASS (1 test run: 1 passed)
+plant (the literal five-level list restored, never committed), --release : FAIL, same left and right
+kernel crate, all tests: --release 84 passed, 5 skipped; dev 84 passed, 5 skipped
+```
