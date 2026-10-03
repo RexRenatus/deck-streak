@@ -50,3 +50,15 @@ A16: green at 7f5e751
 A17: red at ce0c995: assertion `left == right` failed; left: 404, right: 200
 A17: green at 7f5e751
 ```
+
+The web criteria A9 and A10 (ruling 101), appended by the builder that delivered the Mini App. Each
+was run by its fence command at its red commit (3b80599), against an inert `BoardSection.svelte` and
+an inert `ExchangeCard.svelte` that rendered nothing, and failed by assertion: the test's population
+guard found no board row and no readout row to judge.
+
+```red-first
+A9: red at 3b80599: AssertionError: examined 0 board row(s): the population is empty, so nothing was judged: expected 0 to be greater than 0
+A9: green at b81606b
+A10: red at 3b80599: AssertionError: examined 0 readout row(s): the population is empty, so nothing was judged: expected 0 to be greater than 0
+A10: green at b81606b
+```
