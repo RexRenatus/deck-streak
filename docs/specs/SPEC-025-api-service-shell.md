@@ -240,3 +240,104 @@ fresh database from two tasks released together, 64 times.
   library's typed errors), both admitted by ADR-003; tokio's `test-util`, `io-util` and `net` and
   tower's `util` are dev features of admitted crates. tower-http is 0.7.1, the current release; the
   layers R4 names keep their API there.
+
+## 8. Amendment, 2026-09-29: a failed lifecycle test leaves no daemon running
+
+Issue 366. Three `deckstreakd api` daemons and one `deckstreakd bot` were found running long after
+the tests that started them.
+
+- **Measured.** A lifecycle test that failed before its stop step left its daemon running when the
+  daemon was silent (no log output, no watchdog): a logging daemon aborts on the broken pipe at its
+  next write, so only a silent one survives. The `bot` role's child, with its output on null,
+  survived a SIGKILL of the test, which runs no destructor.
+- **The guard.** `crates/daemon/tests/lifecycle.rs` owns its child through `Daemon`, which keeps the
+  waiter thread. Its drop sends SIGTERM through the system `kill` (the crates forbid unsafe code and
+  admit no signal dependency), waits on the waiter's message for a bound, sends SIGKILL if the child
+  is still running, and joins the waiter only once the child is reaped. A flag the waiter sets
+  before it reports keeps the signals off a reused pid. Every test that spawns the daemon uses it.
+- **A16.** A test runs a scenario that fails before its stop step through this binary and the
+  harness, and asserts the daemon is gone; the daemon was running before the failure. Fence:
+  `cargo test -p deck-streak-daemon --test lifecycle -- --exact
+  a_failing_lifecycle_test_leaves_no_daemon_running`.
+- **The `bot` case, ruled.** The orchestrator ruled a process-group kill in the row runner's killer
+  run (both kinds; the parse and build-only calls unchanged): the killer leads its own group, a
+  timeout kills the group and reaps, and any other exit kills it while the leader lives. **A17**
+  is its test, with a grandchild that outlives the bound. Chosen against: a parent-death signal
+  set in `pre_exec` (needs `unsafe`), a daemon that watches its parent (a production change), and
+  the drop guard alone (a destructor does not run on SIGKILL). `process_group(0)` was measured
+  sufficient, so no new session is made. Limits: an external SIGKILL of the test alone, a SIGTERM
+  of the runner itself, and a descendant that leaves the group are not covered.
+- **Rows** S02501 to S02505, in `scripts/mutation-rows.d/S02500-S02599.json`: the guard's drop made
+  a no-op, its SIGKILL fallback removed, the group kill removed, the group not created, and the
+  cleanup on an interrupted run removed. One known survivor: the `ProcessLookupError` suppression
+  in `kill_group`, which only tolerates a group that is already gone.
+
+## 9. Acceptance criteria of the 2026-09-29 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A16 | a lifecycle test that fails before its stop step leaves no daemon running | daemon `lifecycle` test |
+| A17 | a killer that outlives the row runner's bound leaves no descendant running when the run returns | `test_mutation_rows_group` test |
+
+```acceptance
+A16: cargo test -p deck-streak-daemon --test lifecycle -- --exact a_failing_lifecycle_test_leaves_no_daemon_running
+A17: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_group.py -k test_the_grandchild_of_a_timed_out_killer_is_gone_when_the_run_returns
+```
+
+## 10. Amendment, 2026-09-29 (2): a signal or a held pipe cannot strand a killer
+
+Issue 409, which follows section 8's process-group kill (issue 366). Review of that change found
+three edges in `run_in_own_group`. This amendment is insert-only under ruling (i) of SPEC-038
+section 8: every earlier byte is kept in order, and this section and section 11 are the only
+insertions.
+
+- **It replaces a stated limit by a guarantee.** Section 8 lists "a SIGTERM of the runner itself"
+  among the cases the group kill does not cover. That limit is withdrawn: a SIGTERM of the runner,
+  to its pid or to its whole process group (as `timeout -s TERM` and a job cancel send it), now
+  leaves no process of the killer's group running. The other limits of section 8 stand, among them
+  a descendant that leaves the group, which is not reached.
+- **The signal (A18).** The killer leads a group of its own, so a signal to the
+  runner's group no longer reaches it, and the default SIGTERM action ends the runner without its
+  `finally` blocks. `main()` now installs a SIGTERM handler that exits with status 128 plus the
+  signal number, so the exception unwinds through `run_in_own_group`'s cleanup, which ends the
+  group exactly as it does on an interrupt. SIGINT is untouched (A21).
+- **The held pipe (A19).** After a timeout the group is killed and the runner used to collect the
+  killer's output. A descendant that left the group and still holds the output pipes kept that
+  collection waiting until it exited, although a timed-out run discards the output. The timed-out
+  path now waits for the killer's leader only, so the run returns at its bound whatever a
+  descendant outside the group holds. Such an escapee is not the runner's to reap: it is neither
+  ended nor waited for, and the test asserts it is still running when the run returns. The test's
+  bound is the killer's bound plus a margin of ten seconds, against an escapee that lives forty:
+  ending the group and reaping its leader take milliseconds, so only a run that waits for the
+  escapee can exceed it.
+- **The pipes (A20).** Every way out of the run (the normal end, a timeout, an interrupt and the
+  exit the SIGTERM handler raises) closes both pipes. The normal path and a timeout with no
+  escapee already closed them through `communicate`; the interrupt and exit paths left both open.
+- **Unchanged.** The killers' output is still captured on the normal path, the examined counts of
+  `count`, `ids` and `census` differ only by the three rows below, a `prove` of the earlier rows
+  reads as before, and no timeout is raised.
+- **Rows** S02506 to S02508, in `scripts/mutation-rows.d/S02500-S02599.json`: the SIGTERM handler
+  removed, `communicate()` restored on the timed-out path, and the pipe close removed. Each
+  killer selects one test, and each row was proved KILLED by its full id.
+- **Files.** `scripts/mutation_rows.py`, `scripts/tests/test_mutation_rows_group.py`,
+  `scripts/mutation-rows.d/S02500-S02599.json`, `docs/red-first/SPEC-025.md`, this SPEC,
+  `docs/decisions/ADR-196-a-sigterm-ends-the-runner-through-its-cleanup-and-a-timeout-waits-only-for-the-leader.md`
+  and `changelog.d/runner-signals-409.md`.
+- **Limits.** A descendant that leaves the group is still not reached, and a SIGKILL of the runner
+  runs no cleanup.
+
+## 11. Acceptance criteria of the 2026-09-29 (2) amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A18 | a SIGTERM of the row runner, to its pid or to its group, leaves no process of the killer's group running | `test_mutation_rows_group` tests |
+| A19 | a timed-out killer whose descendant left the group and holds the output pipes returns at its bound | `test_mutation_rows_group` test |
+| A20 | every path of a killer run closes both pipes: normal, timeout, interrupt and the SIGTERM exit | `test_mutation_rows_group` tests |
+| A21 | a SIGINT of the row runner still ends the killer's group | `test_mutation_rows_group` test |
+
+```acceptance
+A18: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_group.py -k test_sigterm_to_the_runner
+A19: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_group.py -k test_a_timed_out_killer_returns_at_its_bound_whatever_an_escapee_holds
+A20: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_group.py -k APipeIsClosedOnEveryPath
+A21: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_group.py -k test_sigint_to_the_runner_ends_the_killers_group
+```

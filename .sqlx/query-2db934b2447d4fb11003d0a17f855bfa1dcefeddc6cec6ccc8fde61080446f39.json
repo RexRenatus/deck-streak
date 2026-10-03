@@ -1,0 +1,122 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id, study_day, origin, session_start, rarity, payout_xp, state, choice, announced FROM chests WHERE state IN ('sealed', 'vaulted', 'opened') ORDER BY id",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "chests",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "study_day",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "chests",
+            "name": "study_day"
+          }
+        }
+      },
+      {
+        "name": "origin",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "chests",
+            "name": "origin"
+          }
+        }
+      },
+      {
+        "name": "session_start",
+        "ordinal": 3,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "chests",
+            "name": "session_start"
+          }
+        }
+      },
+      {
+        "name": "rarity",
+        "ordinal": 4,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "chests",
+            "name": "rarity"
+          }
+        }
+      },
+      {
+        "name": "payout_xp",
+        "ordinal": 5,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "chests",
+            "name": "payout_xp"
+          }
+        }
+      },
+      {
+        "name": "state",
+        "ordinal": 6,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "chests",
+            "name": "state"
+          }
+        }
+      },
+      {
+        "name": "choice",
+        "ordinal": 7,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "chests",
+            "name": "choice"
+          }
+        }
+      },
+      {
+        "name": "announced",
+        "ordinal": 8,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "chests",
+            "name": "announced"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "2db934b2447d4fb11003d0a17f855bfa1dcefeddc6cec6ccc8fde61080446f39"
+}

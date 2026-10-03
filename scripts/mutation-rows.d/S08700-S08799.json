@@ -1,0 +1,358 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S08701-A-HUNG-MUTANT-IS-VOID-NEVER-KILLED",
+        "scripts/mutation_python.py",
+        "    if ran.timed_out:\n        return \"timeout\", []\n",
+        "    if ran.timed_out:\n        return \"killed\", []\n",
+        "a mutant whose tests outlive their bound reads timeout, never killed, so its pull request is VOID until a test bounds the wait (SPEC-087 R6, A7)",
+        "test_mutation_python.TheRunnerJudgesEachMutant.test_a_mutant_whose_tests_hang_is_void_never_killed"
+      ],
+      [
+        "S08702-A-DIRTY-TREE-IS-REFUSED",
+        "scripts/mutation_python.py",
+        "    if dirty:\n        return usage(",
+        "    if dirty and not dirty:\n        return usage(",
+        "a tree with a tracked change is refused before any mutant is installed, because a restore would discard the change (SPEC-087 R5, A3)",
+        "test_mutation_python.TheRunnerJudgesEachMutant.test_the_runner_refuses_a_dirty_tree_before_it_mutates"
+      ],
+      [
+        "S08703-AN-EMPTY-CONTROL-IS-VOID",
+        "scripts/mutation_python.py",
+        "control.failed or control.ran == 0:",
+        "control.failed or control.ran == -1:",
+        "a control that selected no test voids its file, since every mutant would read survived against nothing (SPEC-087 R6, A4)",
+        "test_mutation_python.TheRunnerJudgesEachMutant.test_a_red_or_empty_control_voids_its_file"
+      ],
+      [
+        "S08704-A-BYTE-READER-IS-NEVER-A-KILLER",
+        "scripts/mutation_python.py",
+        "lambda: self.tests(entry, record[\"byte_readers\"], self.args.failfast, bound)",
+        "lambda: self.tests(entry, [], self.args.failfast, bound)",
+        "a test that fails on the sentinel reads the file's own bytes, is named, and is left out of every mutant's run, so it is never a killer (SPEC-087 R6, A5)",
+        "test_mutation_python.TheRunnerJudgesEachMutant.test_a_test_that_fails_on_the_sentinel_is_named_and_never_a_killer"
+      ],
+      [
+        "S08705-A-SPAN-HOLDS-ITS-CHANGED-LINE",
+        "scripts/mutation_python.py",
+        "mutant.start_line <= n <= mutant.end_line",
+        "mutant.start_line == n",
+        "a mutant is selected when any line of its span changed, not only its first (SPEC-087 R4, A2)",
+        "test_mutation_python.TheRunnerListsItsMutants.test_the_plan_selects_the_changed_lines_mutants_and_the_shards_partition_them"
+      ],
+      [
+        "S08706-AN-ANNOTATION-IS-NEVER-MUTATED",
+        "scripts/mutation_python.py",
+        "            elif isinstance(node, ast.AnnAssign):\n                skipped.add(id(node.annotation))\n",
+        "            elif isinstance(node, ast.AnnAssign):\n                pass\n",
+        "an annotated assignment's annotation lists no mutant, since a string annotation is text no test runs (SPEC-087 R3, A1)",
+        "test_mutation_python.TheRunnerListsItsMutants.test_the_runner_lists_exactly_the_operator_sets_mutants"
+      ],
+      [
+        "S08707-THE-RESTORE-IS-CHECKED-BY-DIGEST",
+        "scripts/mutation_python.py",
+        "    if now != mutation_rows.sha256(original):",
+        "    if now == mutation_rows.sha256(original):",
+        "every mutant is restored and the restored bytes are compared by digest with the bytes read before; a difference is a failed restore that stops the run (SPEC-087 R7, A9)",
+        "test_mutation_python.TheRunnerJudgesEachMutant.test_every_mutant_is_restored_byte_for_byte_and_a_failed_restore_stops_the_run"
+      ],
+      [
+        "S08708-AN-UNPARSABLE-MUTANT-IS-NEVER-A-KILL",
+        "scripts/mutation_python.py",
+        "    except (SyntaxError, ValueError):\n        return \"unviable\", []\n",
+        "    except (SyntaxError, ValueError):\n        return \"killed\", []\n",
+        "a mutant that does not parse is unviable and runs no test, never a kill (SPEC-087 R6, A8)",
+        "test_mutation_python.TheRunnerJudgesEachMutant.test_a_mutant_that_does_not_parse_is_unviable_and_runs_no_test"
+      ],
+      [
+        "S08709-AN-UNCOVERED-MUTANT-IS-EXAMINED",
+        "scripts/mutation_python.py",
+        "counts[\"examined\"] = counts[\"killed\"] + counts[\"survived\"] + counts[\"uncovered\"]",
+        "counts[\"examined\"] = counts[\"killed\"] + counts[\"survived\"]",
+        "a mutant of a file with no test module is uncovered and counts as examined, so it can fail the run (SPEC-087 R7, A6)",
+        "test_mutation_python.TheRunnerJudgesEachMutant.test_a_file_with_no_test_module_reads_every_mutant_uncovered"
+      ],
+      [
+        "S08710-A-GUARD-SCRIPT-IS-ITS-OWN-CLASS",
+        "scripts/mutation-verdict.py",
+        "SCRIPTS = re.compile(r\"scripts/[^/]+\\.py\")",
+        "SCRIPTS = re.compile(r\"scripts/.+\\.py\")",
+        "a guard script directly under scripts/ is class scripts, and a test beneath scripts/tests/ is not (SPEC-087 R1, A13)",
+        "test_mutation_python_verdict.TheVerdictReadsThePythonReports.test_a_guard_script_is_its_own_class_and_its_tests_are_not"
+      ],
+      [
+        "S08711-A-PYTHON-CLASS-THAT-EXAMINED-NOTHING-IS-VOID",
+        "scripts/mutation-verdict.py",
+        "    if verdict.examined == 0:\n        verdict.void(f\"the {klass} class applies",
+        "    if verdict.examined == -1:\n        verdict.void(f\"the {klass} class applies",
+        "a Python class that applies and examined no mutant and no row is VOID, never a pass (SPEC-087 R11, A17)",
+        "test_mutation_python_verdict.TheVerdictReadsThePythonReports.test_a_python_class_that_examined_nothing_is_void"
+      ],
+      [
+        "S08712-A-PYTHON-SURVIVOR-FAILS",
+        "scripts/mutation-verdict.py",
+        "verdict.fail(f\"SURVIVED {name}{held_twice(excused)}\")",
+        "verdict.say(f\"SURVIVED {name}{held_twice(excused)}\")",
+        "a survived Python mutant that no record binds fails the verdict (SPEC-087 R11, A15)",
+        "test_mutation_python_verdict.TheVerdictReadsThePythonReports.test_a_python_survivor_fails_and_a_timeout_is_void_by_name"
+      ],
+      [
+        "S08713-A-PYTHON-TIMEOUT-IS-VOID",
+        "scripts/mutation-verdict.py",
+        "if outcome in (\"timeout\", \"void\"):\n                verdict.void(f\"{outcome}: {name}\")",
+        "if outcome in (\"void\",):\n                verdict.void(f\"{outcome}: {name}\")",
+        "a Python mutant whose tests timed out is VOID by name, never counted as killed (SPEC-087 R11, A15)",
+        "test_mutation_python_verdict.TheVerdictReadsThePythonReports.test_a_python_survivor_fails_and_a_timeout_is_void_by_name"
+      ],
+      [
+        "S08714-EVERY-PROMISED-PYTHON-SHARD-REPORTS",
+        "scripts/mutation-verdict.py",
+        "    for shard in range(planned):\n        where = f\"mutation-python-shard-{shard}\"",
+        "    for shard in range(planned - 1):\n        where = f\"mutation-python-shard-{shard}\"",
+        "every Python shard the plan promised is read, the last included, and one that never reported is VOID by name (SPEC-087 R11, A16)",
+        "test_mutation_python_verdict.TheVerdictReadsThePythonReports.test_a_missing_or_partial_python_shard_is_void"
+      ],
+      [
+        "S08715-A-PYTHON-RECORD-CARRIES-ITS-ARGUMENT",
+        "scripts/mutation-verdict.py",
+        "RECORD_FIELDS = (\"file\", \"mutant\", \"anchor\", \"reason\", \"evidence\", \"issue\")",
+        "RECORD_FIELDS = (\"file\", \"mutant\", \"anchor\", \"reason\", \"issue\")",
+        "an equivalence record carries its evidence, the code fact a reviewer checks its reason against; without it the census refuses the record (SPEC-087 R12, A19)",
+        "test_mutation_python_verdict.TheVerdictReadsThePythonReports.test_the_census_holds_a_python_record_whole"
+      ],
+      [
+        "S08716-THE-SENTINEL-TEXT",
+        "scripts/mutation_python.py",
+        "SENTINEL = \"\\n# mutation-python sentinel\\n\"",
+        "SENTINEL = \"\\n# other\\n\"",
+        "the sentinel appended to a file to find a test that reads its bytes is this exact text (SPEC-087 R6)",
+        "test_mutation_python.TheRunnersConstantsAreNamedWhole.test_the_sentinel_is_the_exact_text_a_byte_reader_is_run_against"
+      ],
+      [
+        "S08717-THE-CONTROL-BOUND",
+        "scripts/mutation_python.py",
+        "CONTROL_SECONDS = 900.0",
+        "CONTROL_SECONDS = 1.0",
+        "a control or a sentinel run with no --test-seconds may run fifteen minutes, so a slow honest control is not read as a hang (SPEC-087 R6)",
+        "test_mutation_python.TheRunnersConstantsAreNamedWhole.test_a_control_without_a_bound_may_run_fifteen_minutes"
+      ],
+      [
+        "S08718-THE-OUTCOMES-ORDER",
+        "scripts/mutation_python.py",
+        "OUTCOMES = (\"killed\", \"survived\", \"uncovered\", \"unviable\", \"timeout\", \"void\")",
+        "OUTCOMES = (\"survived\", \"killed\", \"uncovered\", \"unviable\", \"timeout\", \"void\")",
+        "the report counts its outcomes in this order (SPEC-087 R7)",
+        "test_mutation_python.TheRunnersConstantsAreNamedWhole.test_the_outcomes_are_in_the_order_the_report_counts_them"
+      ],
+      [
+        "S08719-A-NEWLINE-IS-LF-CR-OR-BOTH",
+        "scripts/mutation_python.py",
+        "NEWLINE = re.compile(r\"\\r\\n|\\r|\\n\")",
+        "NEWLINE = re.compile(r\"\\n\")",
+        "a line ends at a line feed, a carriage return or both, as Python's own tokenizer reads it (SPEC-087 R3)",
+        "test_mutation_python.TheRunnersConstantsAreNamedWhole.test_a_newline_is_a_line_feed_a_carriage_return_or_both"
+      ],
+      [
+        "S08720-THE-QUIET-COMMENT-TOKEN",
+        "scripts/mutation_python.py",
+        "        tokenize.COMMENT,\n",
+        "",
+        "the comment token carries no code, so a line holding only it is quiet and no operator site sits on it (SPEC-087 R3)",
+        "test_mutation_python.TheRunnersConstantsAreNamedWhole.test_the_quiet_tokens_are_the_six_kinds_that_carry_no_code"
+      ],
+      [
+        "S08721-THE-QUIET-NL-TOKEN",
+        "scripts/mutation_python.py",
+        "        tokenize.NL,\n",
+        "",
+        "the nl token carries no code, so a line holding only it is quiet and no operator site sits on it (SPEC-087 R3)",
+        "test_mutation_python.TheRunnersConstantsAreNamedWhole.test_the_quiet_tokens_are_the_six_kinds_that_carry_no_code"
+      ],
+      [
+        "S08722-THE-QUIET-NEWLINE-TOKEN",
+        "scripts/mutation_python.py",
+        "        tokenize.NEWLINE,\n",
+        "",
+        "the newline token carries no code, so a line holding only it is quiet and no operator site sits on it (SPEC-087 R3)",
+        "test_mutation_python.TheRunnersConstantsAreNamedWhole.test_the_quiet_tokens_are_the_six_kinds_that_carry_no_code"
+      ],
+      [
+        "S08723-THE-QUIET-INDENT-TOKEN",
+        "scripts/mutation_python.py",
+        "        tokenize.INDENT,\n",
+        "",
+        "the indent token carries no code, so a line holding only it is quiet and no operator site sits on it (SPEC-087 R3)",
+        "test_mutation_python.TheRunnersConstantsAreNamedWhole.test_the_quiet_tokens_are_the_six_kinds_that_carry_no_code"
+      ],
+      [
+        "S08724-THE-QUIET-DEDENT-TOKEN",
+        "scripts/mutation_python.py",
+        "        tokenize.DEDENT,\n",
+        "",
+        "the dedent token carries no code, so a line holding only it is quiet and no operator site sits on it (SPEC-087 R3)",
+        "test_mutation_python.TheRunnersConstantsAreNamedWhole.test_the_quiet_tokens_are_the_six_kinds_that_carry_no_code"
+      ],
+      [
+        "S08725-THE-QUIET-ENDMARKER-TOKEN",
+        "scripts/mutation_python.py",
+        "        tokenize.ENDMARKER,\n",
+        "",
+        "the endmarker token carries no code, so a line holding only it is quiet and no operator site sits on it (SPEC-087 R3)",
+        "test_mutation_python.TheRunnersConstantsAreNamedWhole.test_the_quiet_tokens_are_the_six_kinds_that_carry_no_code"
+      ],
+      [
+        "S08726-THE-VERDICT-WRITES-NO-BYTECODE",
+        "scripts/audit-web-verdict.py",
+        "sys.dont_write_bytecode = True",
+        "sys.dont_write_bytecode = False",
+        "the verdict script writes no bytecode beside the tree it judges (SPEC-087 R8)",
+        "test_audit_web.TheVerdictScriptStatesItself.test_the_verdict_script_writes_no_bytecode"
+      ],
+      [
+        "S08727-THE-VERDICT-USAGE-OPENS-WITH-THE-FIRST-LINE",
+        "scripts/audit-web-verdict.py",
+        "description=__doc__.splitlines()[0]",
+        "description=__doc__.splitlines()[1]",
+        "the usage text opens with the script's first docstring line (SPEC-087 R8)",
+        "test_audit_web.TheVerdictScriptStatesItself.test_the_usage_text_opens_with_the_scripts_first_line"
+      ],
+      [
+        "S08742-THE-RUNNER-STOPS-BYTECODE-BEFORE-IT-IMPORTS",
+        "scripts/mutation_python.py",
+        "sys.dont_write_bytecode = True\n",
+        "sys.dont_write_bytecode = False\n",
+        "the runner turns bytecode off before it imports the rows module, so an import writes no cache beside the tree it mutates (SPEC-087 R5)",
+        "test_mutation_python_lister_kills.TheModuleHoldsItsConstants.test_importing_the_runner_stops_bytecode_and_puts_its_directory_first"
+      ],
+      [
+        "S08743-THE-RUNNER-DIRECTORY-COMES-FIRST-ON-THE-PATH",
+        "scripts/mutation_python.py",
+        "sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))\n",
+        "sys.path.insert(1, str(pathlib.Path(__file__).resolve().parent))\n",
+        "the runner's own directory is first on the import path, so its sibling modules load from it and not from a same-named module found earlier (SPEC-087 R5)",
+        "test_mutation_python_lister_kills.TheModuleHoldsItsConstants.test_importing_the_runner_stops_bytecode_and_puts_its_directory_first"
+      ],
+      [
+        "S08744-THE-LONGEST-OLD-TEXT-IS-FORTY-CHARACTERS",
+        "scripts/mutation_python.py",
+        "LONGEST_OLD = 40\n",
+        "LONGEST_OLD = 41\n",
+        "a mutant's old text is shown whole to forty characters and cut to thirty-seven and three dots beyond, so a record's name stays short and stable (SPEC-087 R3)",
+        "test_mutation_python_lister_kills.TheModuleHoldsItsConstants.test_the_longest_old_text_is_forty_characters_and_cut_to_thirty_seven_and_dots"
+      ],
+      [
+        "S08745-A-MUTANT-RECORD-IS-FROZEN",
+        "scripts/mutation_python.py",
+        "@dataclass(frozen=True, slots=True)\nclass Mutant:",
+        "@dataclass(frozen=False, slots=True)\nclass Mutant:",
+        "a listed mutant cannot be reassigned, so the record a plan selects is the record the run installs (SPEC-087 R3)",
+        "test_mutation_python_lister_kills.TheModuleHoldsItsConstants.test_a_mutant_is_frozen_and_has_slots"
+      ],
+      [
+        "S08746-A-MUTANT-RECORD-HAS-SLOTS",
+        "scripts/mutation_python.py",
+        "@dataclass(frozen=True, slots=True)\nclass Mutant:",
+        "@dataclass(frozen=True, slots=False)\nclass Mutant:",
+        "a listed mutant holds only its declared fields, so a stray attribute cannot ride into a report (SPEC-087 R3)",
+        "test_mutation_python_lister_kills.TheModuleHoldsItsConstants.test_a_mutant_is_frozen_and_has_slots"
+      ],
+      [
+        "S08762-A-RAN-IS-SLOTTED",
+        "scripts/mutation_python.py",
+        "@dataclass(slots=True)\nclass Ran:",
+        "@dataclass(slots=False)\nclass Ran:",
+        "a child run's report is a slotted dataclass, so a stray attribute on it is refused (SPEC-087 R6)",
+        "test_mutation_python_judge_kills.TheRanReportStartsEmpty.test_a_ran_is_empty_until_a_child_reports"
+      ],
+      [
+        "S08763-A-RAN-HAS-REPORTED-NOTHING",
+        "scripts/mutation_python.py",
+        "    reported: bool = False\n",
+        "    reported: bool = True\n",
+        "a run reads as not reported until the child's report line is found, so a run that printed none is void (SPEC-087 R6)",
+        "test_mutation_python_judge_kills.TheRanReportStartsEmpty.test_a_ran_is_empty_until_a_child_reports"
+      ],
+      [
+        "S08764-A-RAN-HAS-RUN-NOTHING",
+        "scripts/mutation_python.py",
+        "    ran: int = 0\n",
+        "    ran: int = 1\n",
+        "a run reads as having run no test until the child reports a count, so an empty control is void (SPEC-087 R6)",
+        "test_mutation_python_judge_kills.TheRanReportStartsEmpty.test_a_ran_is_empty_until_a_child_reports"
+      ],
+      [
+        "S08765-A-RAN-HAS-BROKEN-NOTHING",
+        "scripts/mutation_python.py",
+        "    broken: int = 0\n",
+        "    broken: int = 1\n",
+        "a run reads as having broken no test until the child reports a count (SPEC-087 R6)",
+        "test_mutation_python_judge_kills.TheRanReportStartsEmpty.test_a_ran_is_empty_until_a_child_reports"
+      ],
+      [
+        "S08766-THE-RUST-JUDGES-EXIT-IS-COLLECTED",
+        ".github/workflows/ci.yml",
+        "--whole \"$reports/mutation-plan/whole.json\" || status=$?",
+        "--whole \"$reports/mutation-plan/whole.json\" || true",
+        "the Rust judge's exit is thrown away where the step collects it, so a failing Rust judge cannot fail the verdict (SPEC-087 R17)",
+        "test_verdict_folds.TheVerdictStepFailsOnEachJudgeAlone.test_the_step_fails_when_any_one_command_alone_fails_with_any_of_its_exits"
+      ],
+      [
+        "S08767-THE-ORACLE-JUDGES-EXIT-IS-COLLECTED",
+        ".github/workflows/ci.yml",
+        "|| oracle=$?",
+        "|| true",
+        "the oracle judge's exit is thrown away where the step collects it (SPEC-087 R17)",
+        "test_verdict_folds.TheVerdictStepFailsOnEachJudgeAlone.test_the_step_fails_when_any_one_command_alone_fails_with_any_of_its_exits"
+      ],
+      [
+        "S08768-THE-ORACLE-JUDGES-EXIT-IS-FOLDED",
+        ".github/workflows/ci.yml",
+        "          if [ \"$status\" -eq 0 ]; then status=$oracle; fi\n",
+        "",
+        "the oracle judge's collected exit is never folded into the step's status (SPEC-087 R17)",
+        "test_verdict_folds.TheVerdictStepFailsOnEachJudgeAlone.test_the_step_fails_when_any_one_command_alone_fails_with_any_of_its_exits"
+      ],
+      [
+        "S08769-THE-SCRIPTS-JUDGES-EXIT-IS-COLLECTED",
+        ".github/workflows/ci.yml",
+        "|| scripts=$?",
+        "|| true",
+        "the scripts judge's exit is thrown away where the step collects it (SPEC-087 R17)",
+        "test_verdict_folds.TheVerdictStepFailsOnEachJudgeAlone.test_the_step_fails_when_any_one_command_alone_fails_with_any_of_its_exits"
+      ],
+      [
+        "S08770-THE-SCRIPTS-JUDGES-EXIT-IS-FOLDED",
+        ".github/workflows/ci.yml",
+        "          if [ \"$status\" -eq 0 ]; then status=$scripts; fi\n",
+        "",
+        "the scripts judge's collected exit is never folded into the step's status (SPEC-087 R17)",
+        "test_verdict_folds.TheVerdictStepFailsOnEachJudgeAlone.test_the_step_fails_when_any_one_command_alone_fails_with_any_of_its_exits"
+      ],
+      [
+        "S08771-THE-LEGS-CHECKS-EXIT-IS-COLLECTED",
+        ".github/workflows/ci.yml",
+        "|| legs=$?",
+        "|| true",
+        "the legs check's exit is thrown away where the step collects it (SPEC-087 R17)",
+        "test_verdict_folds.TheVerdictStepFailsOnEachJudgeAlone.test_the_step_fails_when_any_one_command_alone_fails_with_any_of_its_exits"
+      ],
+      [
+        "S08772-THE-LEGS-CHECKS-EXIT-IS-FOLDED",
+        ".github/workflows/ci.yml",
+        "          if [ \"$status\" -eq 0 ]; then status=$legs; fi\n",
+        "",
+        "the legs check's collected exit is never folded into the step's status (SPEC-087 R17)",
+        "test_verdict_folds.TheVerdictStepFailsOnEachJudgeAlone.test_the_step_fails_when_any_one_command_alone_fails_with_any_of_its_exits"
+      ],
+      [
+        "S08773-THE-STEP-EXITS-WITH-ITS-STATUS",
+        ".github/workflows/ci.yml",
+        "          exit \"$status\"\n",
+        "          exit 0\n",
+        "the verdict step exits success whatever its folded status is (SPEC-087 R17)",
+        "test_verdict_folds.TheVerdictStepFailsOnEachJudgeAlone.test_the_step_fails_when_any_one_command_alone_fails_with_any_of_its_exits"
+      ]
+    ]
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S02501-THE-GUARD-STOPS-A-RUNNING-CHILD",
+        "daemon",
+        "tests/lifecycle.rs",
+        "        if !self.reaped.load(Ordering::SeqCst) {",
+        "        if false {",
+        "lifecycle::a_failing_lifecycle_test_leaves_no_daemon_running",
+        "a lifecycle test's guard signals a child that is still running when it drops (#366); a guard whose drop does nothing leaves the daemon a failed test started running"
+      ],
+      [
+        "S02502-THE-GUARD-ENDS-A-CHILD-THAT-IGNORES-SIGTERM",
+        "daemon",
+        "tests/lifecycle.rs",
+        "            if self.exited.recv_timeout(self.bound).is_err() {",
+        "            if false {",
+        "lifecycle::a_child_that_ignores_sigterm_is_killed_after_the_bound",
+        "the guard sends SIGKILL once the bound passes with the child still running (#366); without the fallback a child that traps SIGTERM outlives its guard"
+      ]
+    ],
+    "SCRIPT_MUTATIONS": [
+      [
+        "S02503-A-TIMED-OUT-KILLER-LOSES-ITS-GROUP",
+        "scripts/mutation_rows.py",
+        "        os.killpg(process.pid, signal.SIGKILL)",
+        "        pass",
+        "a killer the runner ends takes its whole process group with it (#366); without the group kill the direct child dies and its test binary's children run on",
+        "test_mutation_rows_group.ATimedOutKillerLeavesNothingRunning.test_the_grandchild_of_a_timed_out_killer_is_gone_when_the_run_returns"
+      ],
+      [
+        "S02504-THE-KILLER-RUNS-IN-ITS-OWN-GROUP",
+        "scripts/mutation_rows.py",
+        "        process_group=0,",
+        "        process_group=None,",
+        "the killer leads a process group of its own, so the group kill reaches its descendants and never the runner's own (#366)",
+        "test_mutation_rows_group.ATimedOutKillerLeavesNothingRunning.test_the_grandchild_of_a_timed_out_killer_is_gone_when_the_run_returns"
+      ],
+      [
+        "S02505-AN-INTERRUPTED-RUN-ENDS-THE-GROUP",
+        "scripts/mutation_rows.py",
+        "        if process.poll() is None:",
+        "        if False:",
+        "any way out of a killer run other than its timeout, an interrupt for one, still ends the killer's group while its leader runs (#366)",
+        "test_mutation_rows_group.ATimedOutKillerLeavesNothingRunning.test_an_interrupted_run_ends_the_killers_group_too"
+      ],
+      [
+        "S02506-A-SIGTERM-ENDS-THE-RUNNER-THROUGH-ITS-CLEANUP",
+        "scripts/mutation_rows.py",
+        "    signal.signal(signal.SIGTERM, lambda signum, _frame: sys.exit(128 + signum))",
+        "    pass",
+        "a SIGTERM of the runner, to its pid or its group, ends it through its cleanup so the killer's group ends too (#409); without the handler the default action leaves the group running",
+        "test_mutation_rows_group.ASignalledRunnerEndsTheKillersGroup.test_sigterm_to_the_runner_ends_the_killers_group"
+      ],
+      [
+        "S02507-A-TIMED-OUT-KILLER-IS-NOT-WAITED-ON-FOR-ITS-PIPES",
+        "scripts/mutation_rows.py",
+        "        kill_group(process)\n        process.wait()\n        raise",
+        "        kill_group(process)\n        process.communicate()\n        raise",
+        "a timed-out killer returns at its bound whatever a descendant outside the group holds (#409); collecting its output after the kill waits on pipes the descendant keeps open",
+        "test_mutation_rows_group.AHeldPipeDoesNotHoldATimedOutKiller.test_a_timed_out_killer_returns_at_its_bound_whatever_an_escapee_holds"
+      ],
+      [
+        "S02508-EVERY-WAY-OUT-CLOSES-BOTH-PIPES",
+        "scripts/mutation_rows.py",
+        "            pipe.close()",
+        "            pass",
+        "every way out of a killer run closes its stdout and stderr pipes (#409); without the close an interrupted run leaves both open",
+        "test_mutation_rows_group.APipeIsClosedOnEveryPath.test_an_interrupted_run_closes_both_pipes"
+      ]
+    ]
+  }
+}

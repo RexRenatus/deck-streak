@@ -1,0 +1,703 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S19201-THE-FOLDER-SETTING-STATES-ITS-SHAPE",
+        "vault",
+        "src/config.rs",
+        "\"one folder name: not empty, not hidden, and with no slash or control character\";",
+        "\"one folder name: not empty, not hidden, and with no slash or control character PLANTED\";",
+        "confinement::the_vault_settings_refuse_by_name_and_never_by_value",
+        "a refused FolderName value names the shape the setting accepts, word for word (SPEC-192 R3, A9)"
+      ],
+      [
+        "S19202-THE-SYNC-ENDPOINT-STATES-ITS-SHAPE",
+        "ingest",
+        "src/settings.rs",
+        "const SHAPE: &'static str = \"an http: or https: URL that names a host\";",
+        "const SHAPE: &'static str = \"an http: or https: URL that names a host PLANTED\";",
+        "settings::each_malformed_setting_is_refused_naming_its_whole_shape",
+        "a refused SyncEndpoint value names the shape the setting accepts, word for word (SPEC-192 R3, A5)"
+      ],
+      [
+        "S19203-THE-STATE-DIRECTORY-STATES-ITS-SHAPE",
+        "ingest",
+        "src/settings.rs",
+        "const SHAPE: &'static str = \"an absolute path\";",
+        "const SHAPE: &'static str = \"an absolute path PLANTED\";",
+        "settings::each_malformed_setting_is_refused_naming_its_whole_shape",
+        "a refused StateDirectory value names the shape the setting accepts, word for word (SPEC-192 R3, A5)"
+      ],
+      [
+        "S19204-THE-INCLUDE-LIST-STATES-ITS-SHAPE",
+        "ingest",
+        "src/settings.rs",
+        "const SHAPE: &'static str = \"top-level deck-name prefixes, separated by commas\";",
+        "const SHAPE: &'static str = \"top-level deck-name prefixes, separated by commas PLANTED\";",
+        "settings::each_malformed_setting_is_refused_naming_its_whole_shape",
+        "a refused IncludeDecks value names the shape the setting accepts, word for word (SPEC-192 R3, A5)"
+      ],
+      [
+        "S19205-THE-LAW-ROOT-STATES-ITS-SHAPE",
+        "ingest",
+        "src/settings.rs",
+        "const SHAPE: &'static str = \"a top-level deck name\";",
+        "const SHAPE: &'static str = \"a top-level deck name PLANTED\";",
+        "settings::each_malformed_setting_is_refused_naming_its_whole_shape",
+        "a refused LawDeckRoot value names the shape the setting accepts, word for word (SPEC-192 R3, A5)"
+      ],
+      [
+        "S19206-THE-COURSES-FILE-STATES-ITS-SHAPE",
+        "kernel",
+        "src/courses.rs",
+        "const SHAPE: &'static str = \"an absolute file path\";",
+        "const SHAPE: &'static str = \"an absolute file path PLANTED\";",
+        "courses_config::the_courses_file_refuses_a_duplicate_or_overlapping_course",
+        "a refused CoursesPath value names the shape the setting accepts, word for word (SPEC-192 R3, A6)"
+      ],
+      [
+        "S19207-THE-HOUR-SETTING-STATES-ITS-SHAPE",
+        "kernel",
+        "src/settings.rs",
+        "const SHAPE: &'static str = \"a whole hour from 0 to 23\";",
+        "const SHAPE: &'static str = \"a whole hour from 0 to 23 PLANTED\";",
+        "settings::a_malformed_setting_is_refused_by_name_without_its_value",
+        "a refused Hour value names the shape the setting accepts, word for word (SPEC-192 R3, A7)"
+      ],
+      [
+        "S19208-THE-UTC-OFFSET-STATES-ITS-SHAPE",
+        "kernel",
+        "src/settings.rs",
+        "const SHAPE: &'static str = \"whole minutes east of UTC, from -720 to 840\";",
+        "const SHAPE: &'static str = \"whole minutes east of UTC, from -720 to 840 PLANTED\";",
+        "settings::a_malformed_setting_is_refused_by_name_without_its_value",
+        "a refused UtcOffset value names the shape the setting accepts, word for word (SPEC-192 R3, A7)"
+      ],
+      [
+        "S19209-THE-OFFLOAD-WORKERS-STATE-THEIR-SHAPE",
+        "kernel",
+        "src/settings.rs",
+        "const SHAPE: &'static str = \"a whole number of workers from 1 to 512\";",
+        "const SHAPE: &'static str = \"a whole number of workers from 1 to 512 PLANTED\";",
+        "settings::a_malformed_setting_is_refused_by_name_without_its_value",
+        "a refused OffloadWorkers value names the shape the setting accepts, word for word (SPEC-192 R3, A7)"
+      ],
+      [
+        "S19210-THE-CREDENTIALS-DIRECTORY-STATES-ITS-SHAPE",
+        "kernel",
+        "src/settings.rs",
+        "const SHAPE: &'static str = \"an absolute directory path\";",
+        "const SHAPE: &'static str = \"an absolute directory path PLANTED\";",
+        "settings::a_malformed_setting_is_refused_by_name_without_its_value",
+        "a refused CredentialsDirectory value names the shape the setting accepts, word for word (SPEC-192 R3, A7)"
+      ],
+      [
+        "S19211-THE-LEECH-THRESHOLD-STATES-ITS-SHAPE",
+        "analytics",
+        "src/settings.rs",
+        "const SHAPE: &'static str = \"a whole number of lapses from 1 to 1000\";",
+        "const SHAPE: &'static str = \"a whole number of lapses from 1 to 1000 PLANTED\";",
+        "rollup_metrics::a_malformed_leech_threshold_is_refused_naming_its_whole_shape",
+        "a refused LeechThreshold value names the shape the setting accepts, word for word (SPEC-192 R3, A2)"
+      ],
+      [
+        "S19212-THE-MINI-APP-URL-STATES-ITS-SHAPE",
+        "bot",
+        "src/commands.rs",
+        "const SHAPE: &'static str = \"an https: URL that names a host\";",
+        "const SHAPE: &'static str = \"an https: URL that names a host PLANTED\";",
+        "commands::the_mini_app_url_is_https",
+        "a refused MiniAppUrl value names the shape the setting accepts, word for word (SPEC-192 R3, A3)"
+      ],
+      [
+        "S19213-THE-API-URL-STATES-ITS-SHAPE",
+        "bot",
+        "src/transport.rs",
+        "const SHAPE: &'static str = \"an https: URL, or an http: URL of a loopback host, with no path\";",
+        "const SHAPE: &'static str = \"an https: URL, or an http: URL of a loopback host, with no path PLANTED\";",
+        "transport::the_api_url_is_https_or_loopback_http",
+        "a refused ApiUrl value names the shape the setting accepts, word for word (SPEC-192 R3, A4)"
+      ],
+      [
+        "S19214-THE-TAXONOMY-PATH-STATES-ITS-SHAPE",
+        "readings",
+        "src/taxonomy.rs",
+        "const SHAPE: &'static str = \"an absolute path to the taxonomy file\";",
+        "const SHAPE: &'static str = \"an absolute path to the taxonomy file PLANTED\";",
+        "topics::a_taxonomy_file_that_names_a_deck_badly_is_refused_whole_and_never_quoted",
+        "a refused TaxonomyPath value names the shape the setting accepts, word for word (SPEC-192 R3, A8)"
+      ],
+      [
+        "S19215-THE-REQUEST-FILE-STATES-ITS-SHAPE",
+        "daemon",
+        "src/sync_request.rs",
+        "const SHAPE: &'static str = \"an absolute file path\";",
+        "const SHAPE: &'static str = \"an absolute file path PLANTED\";",
+        "sync_request::a_relative_request_path_is_refused_naming_its_whole_shape",
+        "a refused RequestFile value names the shape the setting accepts, word for word (SPEC-192 R3, A10)"
+      ]
+    ],
+    "SCRIPT_MUTATIONS": [
+      [
+        "S19216-THE-GUARD-TRACKS-NESTED-BLOCK-COMMENTS",
+        "scripts/tests/test_setting_shapes.py",
+        "depth += {\"/*\": 1, \"*/\": -1}.get(step, 0)",
+        "depth += {\"*/\": -1}.get(step, 0)",
+        "a block comment nested in another ends only at its own outermost close, so a shape spelled after an inner close but still inside the comment does not count (SPEC-192 A15)",
+        "test_setting_shapes.TheGuardReadsRustSource.test_a_shape_only_a_block_comment_spells_is_refused"
+      ],
+      [
+        "S19217-THE-GUARD-RECOGNISES-RAW-STRINGS",
+        "scripts/tests/test_setting_shapes.py",
+        "raw = RAW.match(text, end) if name in (\"r\", \"br\", \"cr\") else None",
+        "raw = None",
+        "a raw string holding a `//` is a string, so a shape a test spells after it still counts (SPEC-192 A15)",
+        "test_setting_shapes.TheGuardReadsRustSource.test_a_shape_a_test_spells_after_a_url_on_its_line_is_pinned"
+      ],
+      [
+        "S19218-THE-GUARD-RECOGNISES-CHAR-LITERALS",
+        "scripts/tests/test_setting_shapes.py",
+        "        literal = CHAR.match(text, at)\n        if literal:\n            return \"literal\", suffix(text, literal.end())\n",
+        "",
+        "a quote character literal opens no string, so a comment after it is still a comment and its spelling does not count (SPEC-192 A15)",
+        "test_setting_shapes.TheGuardJudgesAPlantedTree.test_a_shape_only_a_comment_spells_is_refused"
+      ],
+      [
+        "S19221-THE-GUARD-READS-ESCAPES-INSIDE-STRINGS",
+        "scripts/tests/test_setting_shapes.py",
+        "QUOTED = re.compile(r'\"(?:[^\"\\\\]|\\\\.)*\"', re.DOTALL)",
+        "QUOTED = re.compile(r'\"[^\"]*\"', re.DOTALL)",
+        "an escaped quote does not end a string, so a `//` after it is still inside the string and a shape a test spells later still counts (SPEC-192 A15)",
+        "test_setting_shapes.TheGuardReadsRustSource.test_a_shape_a_test_spells_after_a_url_on_its_line_is_pinned"
+      ],
+      [
+        "S19222-THE-OWN-SHAPE-CONSTANT-IS-NEVER-A-SPELLING",
+        "scripts/tests/test_setting_shapes.py",
+        "if inside and (path.relative_to(base), (at, at + len(literal))) not in constants:",
+        "if inside:",
+        "the implementation's own `SHAPE` constant is never a spelling of itself, even inside a test module, so a shape only that constant spells is refused (SPEC-192 A15)",
+        "test_setting_shapes.TheGuardJudgesAPlantedTree.test_a_shape_only_its_own_constant_spells_is_refused_by_crate_impl_and_literal"
+      ],
+      [
+        "S19223-NO-OTHER-SOURCE-FILE-IS-A-SPELLING",
+        "scripts/tests/test_setting_shapes.py",
+        "candidates += [base / file]",
+        "candidates += sorted((base / \"src\").rglob(\"*.rs\"))",
+        "a source file of the crate other than the implementation's own is not read for a spelling, so a production line there does not pin a shape (SPEC-192 A15)",
+        "test_setting_shapes.TheGuardJudgesAPlantedTree.test_a_shape_only_a_production_line_of_the_crate_spells_is_refused"
+      ],
+      [
+        "S19224-THE-GUARD-READS-THE-OUT-OF-LINE-TEST-MODULE",
+        "scripts/tests/test_setting_shapes.py",
+        " + out_of_line(base / file)\n",
+        "\n",
+        "the file of a `#[cfg(test)] mod tests;` the implementation's own file declares is read as its test module (SPEC-192 A13)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_a_module_file_beside_the_own_file_is_its_test_module"
+      ],
+      [
+        "S19225-THE-GUARD-READS-IMPLEMENTATIONS-FROM-COMMENT-FREE-SOURCE",
+        "scripts/tests/test_setting_shapes.py",
+        "        text = lexed(path.read_text(encoding=\"utf-8\"))\n",
+        "        text = path.read_text(encoding=\"utf-8\")\n",
+        "the `SHAPE` literal is read from comment-free text, so a constant only a comment inside the implementation spells is not its shape (SPEC-192 A14, A19)",
+        "test_setting_shapes.TheGuardReadsAnImplementationByToken.test_every_spelling_is_read_or_refused_as_written"
+      ],
+      [
+        "S19227-A-MODULE-FILE-NEEDS-A-CFG-TEST-ATTRIBUTE",
+        "scripts/tests/test_setting_shapes.py",
+        "    return [file for file, attributes in declared(own) if test_only(attributes)]",
+        "    return [file for file, attributes in declared(own)]",
+        "a `mod tests;` whose attributes do not make it a test module is production code, so its file is not read as the implementation's test module (SPEC-192 A13)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_a_file_that_is_no_declared_test_module_is_not_read_as_one"
+      ],
+      [
+        "S19228-A-RAW-STRING-CLOSES-ONLY-AT-ITS-OWN-HASH-COUNT",
+        "scripts/tests/test_setting_shapes.py",
+        "close = text.find('\"' + raw.group(1), raw.end())",
+        "close = text.find('\"', raw.end())",
+        "a raw string with hashes ends at a quote followed by the same number of hashes, so a quote inside it does not end it and a `//` after that quote is still inside the string (SPEC-192 A15)",
+        "test_setting_shapes.TheGuardReadsRustSource.test_a_shape_a_test_spells_after_a_url_on_its_line_is_pinned"
+      ],
+      [
+        "S19229-A-BYTE-RAW-STRING-IS-A-TOKEN",
+        "scripts/tests/test_setting_shapes.py",
+        "if name in (\"r\", \"br\", \"cr\") else None",
+        "if name in (\"r\", \"cr\") else None",
+        "a byte raw string holding a `//` is a string, so the token pattern must open on `br`, and a shape a test spells after it still counts (SPEC-192 A15)",
+        "test_setting_shapes.TheGuardReadsRustSource.test_a_shape_a_test_spells_after_a_url_on_its_line_is_pinned"
+      ],
+      [
+        "S19230-A-RAW-STRING-TOKEN-TAKES-ANY-HASH-COUNT",
+        "scripts/tests/test_setting_shapes.py",
+        "RAW = re.compile(r\"(#*)\\\"\")",
+        "RAW = re.compile(r\"(#?)\\\"\")",
+        "a raw string fenced by two or more hashes is a string, so the token pattern must open on any hash count (SPEC-192 A15)",
+        "test_setting_shapes.TheGuardReadsRustSource.test_a_shape_a_test_spells_after_a_url_on_its_line_is_pinned"
+      ],
+      [
+        "S19233-A-CHAR-LITERAL-MAY-BE-AN-ESCAPE",
+        "scripts/tests/test_setting_shapes.py",
+        "CHAR = re.compile(r\"'(?:\\\\(?:x[0-9a-fA-F]{2}|u\\{[0-9a-fA-F]{1,6}\\}|.)|[^\\\\'\\n])'\")",
+        "CHAR = re.compile(r\"'(?:[^\\\\'\\n])'\")",
+        "an escaped character literal such as `'\\\"'` opens no string, so a comment after it is still a comment (SPEC-192 A15)",
+        "test_setting_shapes.TheGuardJudgesAPlantedTree.test_a_shape_only_a_comment_spells_is_refused"
+      ],
+      [
+        "S19234-A-CHAR-ESCAPE-MAY-BE-A-QUOTE",
+        "scripts/tests/test_setting_shapes.py",
+        "CHAR = re.compile(r\"'(?:\\\\(?:x[0-9a-fA-F]{2}|u\\{[0-9a-fA-F]{1,6}\\}|.)|[^\\\\'\\n])'\")",
+        "CHAR = re.compile(r\"'(?:\\\\(?:x[0-9a-fA-F]{2}|u\\{[0-9a-fA-F]{1,6}\\})|[^\\\\'\\n])'\")",
+        "the escape of a character literal may be any character, a quote included, so `'\\\"'` is one literal (SPEC-192 A15)",
+        "test_setting_shapes.TheGuardJudgesAPlantedTree.test_a_shape_only_a_comment_spells_is_refused"
+      ],
+      [
+        "S19235-A-BLOCK-COMMENT-STEPS-OVER-ITS-DELIMITERS",
+        "scripts/tests/test_setting_shapes.py",
+        "end += 2 if step in (\"/*\", \"*/\") else 1",
+        "end += 1",
+        "the block-comment scan steps over a two-character delimiter whole, so `*/` closes at its slash and an impl after it is examined (SPEC-192 A14)",
+        "test_setting_shapes.TheGuardIgnoresAnImplementationInAComment.test_a_block_comment_holding_an_impl_is_not_examined"
+      ],
+      [
+        "S19236-A-BLOCK-COMMENT-SCAN-STARTS-AFTER-ITS-OPENER",
+        "scripts/tests/test_setting_shapes.py",
+        "depth, end = 1, start + 2",
+        "depth, end = 1, start + 1",
+        "the scan of a block comment starts after its `/*`, so `/*/` is an opener and not an opener and a closer (SPEC-192 A15)",
+        "test_setting_shapes.TheGuardReadsRustSource.test_a_shape_only_a_block_comment_spells_is_refused"
+      ],
+      [
+        "S19237-A-BLANKED-COMMENT-KEEPS-ITS-NEWLINES",
+        "scripts/tests/test_setting_shapes.py",
+        "[c if c == \"\\n\" else \" \" for c in text[start:end]]",
+        "[\" \" for c in text[start:end]]",
+        "blanking a comment keeps its newlines, so the text after it keeps its line and an impl there is still examined (SPEC-192 A14)",
+        "test_setting_shapes.TheGuardIgnoresAnImplementationInAComment.test_a_block_comment_holding_an_impl_is_not_examined"
+      ],
+      [
+        "S19238-AN-OUT-OF-LINE-MODULE-MAY-BE-PUB",
+        "scripts/tests/test_setting_shapes.py",
+        "    if at >= first and found[at][:2] == (\"close\", \")\"):\n        at = pairs[at] - 1\n        if found[at][:2] != (\"word\", \"pub\"):\n            return None\n",
+        "",
+        "a `#[cfg(test)] pub(crate) mod tests;` is a test module too, so its file is read for a spelling (SPEC-192 A13)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_a_module_file_beside_the_own_file_is_its_test_module"
+      ],
+      [
+        "S19245-A-TEST-MODULE-SPAN-COUNTS-NESTED-BRACES",
+        "scripts/tests/test_setting_shapes.py",
+        "            stack.pop()\n",
+        "            stack.pop(0)\n",
+        "a brace that opens inside the test module is counted, so the module's span ends at its own closing brace (SPEC-192 A12)",
+        "test_setting_shapes.TheGuardReadsRustSource.test_a_shape_the_own_files_test_module_spells_is_pinned"
+      ],
+      [
+        "S19246-A-TEST-MODULE-MAY-CARRY-OTHER-ATTRIBUTES",
+        "scripts/tests/test_setting_shapes.py",
+        "            at = pairs[at] - 2\n",
+        "            at = pairs[at] - 2\n            break\n",
+        "a `#[cfg(test)]` followed by another attribute still opens the test module (SPEC-192 A12)",
+        "test_setting_shapes.TheGuardReadsRustSource.test_a_shape_the_own_files_test_module_spells_is_pinned"
+      ],
+      [
+        "S19247-A-TEST-MODULE-MAY-BE-PUB",
+        "scripts/tests/test_setting_shapes.py",
+        "    at -= at >= first and found[at][:2] == (\"word\", \"pub\")\n",
+        "",
+        "a `#[cfg(test)] pub mod tests {` opens the test module too (SPEC-192 A12)",
+        "test_setting_shapes.TheGuardReadsRustSource.test_a_shape_the_own_files_test_module_spells_is_pinned"
+      ],
+      [
+        "S19248-A-ROW-PINS-ONLY-THE-LITERAL-IT-FINDS",
+        "scripts/tests/test_setting_shapes.py",
+        "row[1] == crate and row[2] == file.as_posix() and literal in row[3]",
+        "row[1] == crate and row[2] == file.as_posix()",
+        "a row of the implementation's own file pins the shape only when its find holds the literal (SPEC-192 A11)",
+        "test_setting_shapes.TheGuardJudgesAPlantedTree.test_a_row_of_another_file_does_not_pin_it"
+      ],
+      [
+        "S19249-A-ROW-PINS-ONLY-ITS-OWN-CRATE",
+        "scripts/tests/test_setting_shapes.py",
+        "row[1] == crate and row[2] == file.as_posix() and literal in row[3]",
+        "row[2] == file.as_posix() and literal in row[3]",
+        "a row pins only an implementation of the crate it names (SPEC-192 A11)",
+        "test_setting_shapes.TheGuardJudgesAPlantedTree.test_a_row_of_another_file_does_not_pin_it"
+      ],
+      [
+        "S19250-AN-IMPL-WITH-NO-LITERAL-IS-REFUSED",
+        "scripts/tests/test_setting_shapes.py",
+        "        if literal is None\n        or not (",
+        "        if not (",
+        "an implementation whose `SHAPE` is no string literal is refused as unpinned and never crashes the guard (SPEC-192 A11)",
+        "test_setting_shapes.TheGuardJudgesAPlantedTree.test_a_shape_two_implementations_of_one_crate_share_needs_a_row_of_each_file"
+      ],
+      [
+        "S19251-ONLY-THE-OWN-CRATES-CONSTANTS-ARE-EXCLUDED",
+        "scripts/tests/test_setting_shapes.py",
+        "if holder == crate and span",
+        "if span",
+        "the `SHAPE` constants excluded from the spellings are those of the implementation's own crate (SPEC-192 A11)",
+        "test_setting_shapes.TheGuardJudgesAPlantedTree.test_a_shape_only_its_own_constant_spells_is_refused_by_crate_impl_and_literal"
+      ],
+      [
+        "S19252-AN-IMPL-READS-TO-THE-NEXT-IMPL",
+        "scripts/tests/test_setting_shapes.py",
+        "found[brace][2], found[pairs[brace]][3]",
+        "found[brace][2], found[-1][3]",
+        "the `SHAPE` literal of an implementation is read inside its own braces, so a later impl's literal is not read as its own (SPEC-192 A11, A19)",
+        "test_setting_shapes.TheGuardJudgesAPlantedTree.test_a_shape_two_implementations_of_one_crate_share_needs_a_row_of_each_file"
+      ],
+      [
+        "S19253-A-SHAPE-LITERAL-MAY-HOLD-AN-ESCAPED-QUOTE",
+        "scripts/tests/test_setting_shapes.py",
+        "(\"(?:[^\"\\\\]|\\\\.)*\")",
+        "(\"[^\"]*\")",
+        "a `SHAPE` literal holding an escaped quote is read whole (SPEC-192 A11)",
+        "test_setting_shapes.TheGuardJudgesAPlantedTree.test_a_shape_a_test_of_the_crate_spells_is_pinned"
+      ],
+      [
+        "S19254-THE-TESTS-DIRECTORY-IS-READ-RECURSIVELY",
+        "scripts/tests/test_setting_shapes.py",
+        "roots = [*tests.glob(\"*.rs\"), *tests.glob(\"*/main.rs\")]",
+        "roots = [*tests.glob(\"*.rs\")]",
+        "a test in a subdirectory of the crate's `tests/` is a test of the crate where cargo builds one, its `tests/<dir>/main.rs` root (SPEC-192 A11, #449)",
+        "test_setting_shapes.TheGuardJudgesAPlantedTree.test_a_shape_a_test_of_the_crate_spells_is_pinned"
+      ],
+      [
+        "S19255-THE-SRC-DIRECTORY-IS-READ-RECURSIVELY",
+        "scripts/tests/test_setting_shapes.py",
+        "glob(\"*/src/**/*.rs\")",
+        "glob(\"*/src/*.rs\")",
+        "an implementation in a subdirectory of `src` is found (SPEC-192 R1)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_the_module_of_a_lib_file_is_read_from_the_crates_src_directory"
+      ],
+      [
+        "S19256-A-DECLARATION-INSIDE-A-BLOCK-IS-NOT-FOLLOWED",
+        "scripts/tests/test_setting_shapes.py",
+        "        at = pairs[at] + 1 if found[at][0] == \"open\" else at + 1\n",
+        "        at += 1\n",
+        "a `mod tests;` inside an inline module is not resolved beside the file, so a stale top-level file spelling the shape pins nothing (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19257-A-PATH-WORD-ON-THE-DECLARATION-IS-NOT-READ",
+        "scripts/tests/test_setting_shapes.py",
+        "        if run is None or any(w.removeprefix(\"r#\") == \"path\" for each in run for w in each):\n",
+        "        if run is None:\n",
+        "a `mod tests;` whose attributes carry `path` in any spelling is not read, so a stale default file beside it pins nothing (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_a_file_that_is_no_declared_test_module_is_not_read_as_one"
+      ],
+      [
+        "S19258-A-MODULE-FILE-BESIDE-THE-OWN-FILE-IS-A-PLACE",
+        "scripts/tests/test_setting_shapes.py",
+        "for folder in (own.with_suffix(\"\"), own.parent)",
+        "for folder in (own.with_suffix(\"\"),)",
+        "a crate root, a `src/bin` file and a `mod.rs` read their modules beside themselves, so the file beside the own file is read (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_the_module_of_a_lib_file_is_read_from_the_crates_src_directory"
+      ],
+      [
+        "S19259-THE-MODULE-DIRECTORY-IS-A-PLACE",
+        "scripts/tests/test_setting_shapes.py",
+        "for folder in (own.with_suffix(\"\"), own.parent)",
+        "for folder in (own.parent,)",
+        "a file that is not a module root reads its modules from its own module directory, so that directory is searched (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_a_module_directory_with_a_mod_file_is_its_test_module"
+      ],
+      [
+        "S19260-AN-AMBIGUOUS-CHOICE-IS-NOT-READ",
+        "scripts/tests/test_setting_shapes.py",
+        "if len(found) == 1:",
+        "if found:",
+        "when rustc could read more than one file for the module none is read, so a stale second file pins nothing (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19261-A-MODULE-DIRECTORY-MOD-FILE-IS-A-CANDIDATE",
+        "scripts/tests/test_setting_shapes.py",
+        "(folder / f\"{name}.rs\", folder / name / \"mod.rs\")",
+        "(folder / f\"{name}.rs\",)",
+        "`name/mod.rs` is a file rustc could read for the module, so it is read (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_a_module_directory_with_a_mod_file_is_its_test_module"
+      ],
+      [
+        "S19262-A-NAME-RS-FILE-IS-A-CANDIDATE",
+        "scripts/tests/test_setting_shapes.py",
+        "(folder / f\"{name}.rs\", folder / name / \"mod.rs\")",
+        "(folder / name / \"mod.rs\",)",
+        "`name.rs` is a file rustc could read for the module, so it is read (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_a_module_file_beside_the_own_file_is_its_test_module"
+      ],
+      [
+        "S19263-ALL-IS-FALSE-WHEN-ONE-ARGUMENT-IS-FALSE",
+        "scripts/tests/test_setting_shapes.py",
+        "\"all\": lambda values: False if False in values else None if None in values else True,",
+        "\"all\": lambda values: True if True in values else None if None in values else False,",
+        "`all` is false when one argument is false and unknown when one is unknown, so `#[cfg(any())]` beside `#[cfg(test)]` makes no test module (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19264-ANY-WITH-AN-UNKNOWN-ARGUMENT-IS-UNKNOWN",
+        "scripts/tests/test_setting_shapes.py",
+        "\"any\": lambda values: True if True in values else None if None in values else False,",
+        "\"any\": lambda values: True if True in values else False,",
+        "`any` with an unknown argument and no true one is unknown, so `#[cfg(any(test, x))]` may compile without `test` and is no test module (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19265-NOT-NEGATES-ITS-ARGUMENT",
+        "scripts/tests/test_setting_shapes.py",
+        "else not values[0],",
+        "else values[0],",
+        "`not` negates its argument, so `#[cfg(not(test))]` beside `#[cfg(test)]` makes no test module (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19266-A-TEST-MODULE-IS-REMOVED-WITHOUT-TEST",
+        "scripts/tests/test_setting_shapes.py",
+        "    return held == [True, False]\n",
+        "    return held[0] is True\n",
+        "a test module is one the attributes remove without `test`, so a module kept in every build is production code (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19268-THE-MODULES-INNER-ATTRIBUTES-DECIDE-TOO",
+        "scripts/tests/test_setting_shapes.py",
+        "            files.append((found[0], inner + run + leading(body, pairs, 0, len(body))[0]))\n",
+        "            files.append((found[0], inner + run))\n",
+        "the inner attributes that open a module's body or file are part of its run, so `#![cfg(any())]` makes no test module (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19270-A-KEY-VALUE-OPTION-IS-UNKNOWN",
+        "scripts/tests/test_setting_shapes.py",
+        "        return None, at + 3\n",
+        "        return False, at + 3\n",
+        "a key-value option such as `feature = \"slow\"` is unknown, so `#[cfg(any(test, feature = \"slow\"))]` makes no test module (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19271-AN-OPTION-OTHER-THAN-TEST-IS-UNKNOWN",
+        "scripts/tests/test_setting_shapes.py",
+        "    return (test if word == \"test\" else None), at + 1\n",
+        "    return (test if word == \"test\" else False), at + 1\n",
+        "an option other than `test` is unknown, so `#[cfg(any(test, x))]` makes no test module (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19272-A-CFG-ATTR-WHOSE-PREDICATE-FAILS-KEEPS-ITS-ITEM",
+        "scripts/tests/test_setting_shapes.py",
+        "    return KLEENE[\"any\"]([KLEENE[\"not\"]([value]), KLEENE[\"all\"](kept)])\n",
+        "    return KLEENE[\"all\"](kept)\n",
+        "a `cfg_attr` keeps its item when its predicate fails, so `#[cfg_attr(test, cfg(test))]` alone is kept without `test` and makes no test module (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19273-A-CFG-ATTR-CAN-REMOVE-ITS-ITEM",
+        "scripts/tests/test_setting_shapes.py",
+        "    if words[0] not in (\"cfg\", \"cfg_attr\"):\n",
+        "    if words[0] not in (\"cfg\",):\n",
+        "a `cfg_attr` that applies a `cfg` can remove its item, so `#[cfg_attr(test, cfg(x))]` beside `#[cfg(test)]` makes no test module (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19275-AN-OUT-OF-LINE-DECLARATION-OPENS-NO-SPAN",
+        "scripts/tests/test_setting_shapes.py",
+        "        if found[at + 2][1] != \"{\":\n            continue\n",
+        "",
+        "`mod tests;` opens no inline span, so the production lines after it are not read as test code (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_a_module_file_beside_the_own_file_is_its_test_module"
+      ],
+      [
+        "S19276-AN-INLINE-DECLARATION-READS-NO-FILE",
+        "scripts/tests/test_setting_shapes.py",
+        "        if tokens[at + 2][1] != \";\":\n            continue\n",
+        "",
+        "`mod tests { ... }` reads no module file, so a stale `tests.rs` beside it pins nothing (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19277-A-RAW-MODULE-NAME-IS-READ",
+        "scripts/tests/test_setting_shapes.py",
+        "name = unraw(found[at + 1][1])",
+        "name = found[at + 1][1]",
+        "`mod r#tests;` names the module `tests`, so its file is read as the test module (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19278-A-BYTE-ORDER-MARK-IS-NO-TOKEN",
+        "scripts/tests/test_setting_shapes.py",
+        "    at = 1 if text.startswith(\"\\ufeff\") else 0\n",
+        "    at = 0\n",
+        "a byte order mark that opens a file is stripped, as rustc strips it, so the file is read and not refused (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19279-A-SHEBANG-LINE-IS-NO-ATTRIBUTE",
+        "scripts/tests/test_setting_shapes.py",
+        "    if text.startswith(\"#!\", at) and not following(text, at + 2).startswith(\"[\"):\n",
+        "    if False:\n",
+        "a first line `#!` that no `[` follows is a shebang, which rustc removes, so the inner attributes after it are still read (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19280-AN-INNER-ATTRIBUTE-THAT-OPENS-A-FILE-IS-NO-SHEBANG",
+        "scripts/tests/test_setting_shapes.py",
+        " and not following(text, at + 2).startswith(\"[\")",
+        "",
+        "a `#!` that a `[` follows opens an inner attribute and is no shebang, so it is read and the file is not refused (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19281-A-COMMENT-AFTER-A-SHEBANG-MARK-IS-SKIPPED",
+        "scripts/tests/test_setting_shapes.py",
+        "        elif end is not None and documents(text, at) is None:\n            at = end\n",
+        "",
+        "a plain comment between `#!` and `[` does not make the `#!` a shebang, so `#!/**/[cfg(any())]` removes the file (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19282-AN-INNER-DOC-COMMENT-IS-AN-INNER-ATTRIBUTE",
+        "scripts/tests/test_setting_shapes.py",
+        "        return \"inner\"\n",
+        "        return \"outer\"\n",
+        "`//!` and `/*! */` are inner doc attributes, so an inner run read over one reaches the `#![cfg(...)]` after it (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19283-AN-OUTER-DOC-COMMENT-IS-AN-OUTER-ATTRIBUTE",
+        "scripts/tests/test_setting_shapes.py",
+        "        return \"outer\"\n",
+        "        return \"inner\"\n",
+        "`///` and `/** */` are outer doc attributes, so an outer run read back over one reaches the attributes before it (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19284-A-LINE-SEPARATOR-IS-WHITESPACE",
+        "scripts/tests/test_setting_shapes.py",
+        "SPACE = \"\\t\\n\\x0b\\x0c\\r \\x85\\u200e\\u200f\\u2028\\u2029\"",
+        "SPACE = \"\\t\\n\\x0b\\x0c\\r \\x85\\u200e\\u200f\"",
+        "the Reference's whitespace holds U+2028 and U+2029, so a file whose tokens one separates is read and not refused (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19285-A-RAW-IDENTIFIER-IS-ONE-TOKEN",
+        "scripts/tests/test_setting_shapes.py",
+        "        if name == \"r\" and after == \"#\":\n",
+        "        if False:\n",
+        "`r#name` is one identifier and no reserved prefix, so a file that holds one is read and not refused (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19286-A-C-STRING-IS-ONE-TOKEN",
+        "scripts/tests/test_setting_shapes.py",
+        "{\"b\": (QUOTED, CHAR), \"c\": (QUOTED,)}",
+        "{\"b\": (QUOTED, CHAR)}",
+        "a C string `c\"...\"` is one literal, so a `//` or `/*` inside it opens no comment (SPEC-192 R8, #434)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19287-A-RAW-C-STRING-IS-ONE-TOKEN",
+        "scripts/tests/test_setting_shapes.py",
+        "if name in (\"r\", \"br\", \"cr\") else None",
+        "if name in (\"r\", \"br\") else None",
+        "a raw C string `cr#\"...\"#` is one literal, closed at its own fence, so a `//` or `/*` inside it opens no comment (SPEC-192 R8, #434)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19288-A-BYTE-CHARACTER-IS-ONE-TOKEN",
+        "scripts/tests/test_setting_shapes.py",
+        "{\"b\": (QUOTED, CHAR), \"c\": (QUOTED,)}",
+        "{\"b\": (QUOTED,), \"c\": (QUOTED,)}",
+        "a byte character `b'\"'` is one literal, so the quote inside it opens no string (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19289-AN-INNER-ATTRIBUTE-MAY-BE-SPACED",
+        "scripts/tests/test_setting_shapes.py",
+        "        elif [t[:2] for t in found[at : at + 3]] == [\n",
+        "        elif found[at][3] == found[at + 1][2] == found[at + 2][2] - 1 and [t[:2] for t in found[at : at + 3]] == [\n",
+        "whitespace or a comment may stand between an inner attribute's `#`, `!` and `[`, so `# ![cfg(any())]` still removes the module (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19290-AN-OUTER-ATTRIBUTE-MAY-BE-SPACED",
+        "scripts/tests/test_setting_shapes.py",
+        "and pairs[at] > first and is_pound(found[pairs[at] - 1])",
+        "and pairs[at] > first and is_pound(found[pairs[at] - 1]) and found[pairs[at] - 1][3] == found[pairs[at]][2]",
+        "whitespace or a comment may stand between an outer attribute's `#` and `[`, so `# [cfg(test)]` is read as rustc reads it (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19291-AN-INLINE-MODULES-INNER-ATTRIBUTES-DECIDE-TOO",
+        "scripts/tests/test_setting_shapes.py",
+        "own + run + inner",
+        "own + run",
+        "the inner attributes that open an inline module's body are part of its run, so `mod tests { #![cfg(any())] }` makes no test module (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19292-ONLY-A-FILE-A-CRATE-ROOT-REACHES-IS-READ",
+        "scripts/tests/test_setting_shapes.py",
+        "    if base / file in reached(base / \"src\"):\n",
+        "    if True:\n",
+        "the own file's test modules are read only when a crate root reaches the file through modules kept under `--cfg test`, so a file rustc does not compile under test pins nothing (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19293-THE-WALK-FOLLOWS-ONLY-KEPT-DECLARATIONS",
+        "scripts/tests/test_setting_shapes.py",
+        "            if kept is True:\n                todo.append(path)\n",
+        "            todo.append(path)\n",
+        "the walk from the crate roots follows a declaration only when its attributes keep it under `--cfg test`, so a file below `#[cfg(any())] mod a;` is not reached (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19294-THE-WALK-JUDGES-UNDER-TEST",
+        "scripts/tests/test_setting_shapes.py",
+        "condition(each, True) for each in attributes])\n            except",
+        "condition(each, False) for each in attributes])\n            except",
+        "the walk judges each declaration with `test` set, so a module kept only without `--cfg test` is not reached (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19295-CFG-IN-ANOTHER-SPELLING-DECIDES-NOTHING",
+        "scripts/tests/test_setting_shapes.py",
+        "        if any(word.removeprefix(\"r#\") in (\"cfg\", \"cfg_attr\") for word in words):\n            raise ValueError(words)\n",
+        "",
+        "an attribute that names `cfg` or `cfg_attr` in a spelling the guard does not evaluate (`r#cfg`, a path) leaves the run undecided, so the module is not read (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19296-AN-INNER-RUN-IS-READ-TO-ITS-END",
+        "scripts/tests/test_setting_shapes.py",
+        "            at = pairs[at + 2] + 1\n",
+        "            at = pairs[at + 2] + 1\n            break\n",
+        "an inner run is read past its first attribute, so `#![doc = ...]` then `#![cfg(x)]` leaves the module undecided (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19297-A-KEY-VALUE-OPTION-ENDS-AFTER-ITS-VALUE",
+        "scripts/tests/test_setting_shapes.py",
+        "        return None, at + 3\n",
+        "        return None, at + 2\n",
+        "a key-value option `feature = \"slow\"` is read to the end of its value, so a `cfg_attr` under one still decides the run (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19298-A-NUMBER-IS-ONE-TOKEN",
+        "scripts/tests/test_setting_shapes.py",
+        "    number = NUMBER.match(text, at)\n",
+        "    number = None\n",
+        "a number literal with its suffix is one token, so a file that holds one is read and not refused (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardIgnoresAnImplementationInAComment.test_a_block_comment_holding_an_impl_is_not_examined"
+      ],
+      [
+        "S19299-A-LIFETIME-OPENS-NO-CHARACTER",
+        "scripts/tests/test_setting_shapes.py",
+        "        return \"lifetime\", name.end()\n",
+        "        raise ValueError(at)\n",
+        "a lifetime `'a` is one token and opens no character literal, so a file that holds one is read and not refused (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardJudgesAPlantedTree.test_a_generic_implementation_is_examined"
+      ]
+    ]
+  }
+}

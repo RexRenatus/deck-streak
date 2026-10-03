@@ -5,31 +5,58 @@ The workflows are read as text, job by job, the way `test_ci_workflows.py` reads
 block under its two-space name, and a step is the block under its `- ` at six spaces.
 """
 
+import ast
+import copy
 import json
 import os
 import re
 import subprocess
 import sys
 import tempfile
+import textwrap
 import unittest
 from pathlib import Path
 
+from _mutants_finder import CARGO, Refused, mutants_in, run_texts
 from _support import REPO, examined
+from test_ci_workflows import workflow_file_text, workflow_files
 
 WORKFLOWS = REPO / ".github" / "workflows"
 WEEKLY = WORKFLOWS / "mutation-weekly.yml"
 CI = WORKFLOWS / "ci.yml"
 VERDICT = REPO / "scripts" / "mutation-verdict.py"
 BRIEF = REPO / "docs" / "BUILDER-BRIEF.md"
+ZERO_SCOPE = {
+    "in_force": True,
+    "state": "done",
+    "reason": None,
+    "oom": 0,
+    "oom_kill": 0,
+    "max": 0,
+    "peak_percent": 0,
+}
 EXAMINED = re.compile(r"^examined (\d+)", re.MULTILINE)
 INSTALL = re.compile(r"(?m)^\s*tool: cargo-mutants@27\.1\.0$")
+#: Each mutation job's job-level conditions (SPEC-290): the plan and the web job always start, the
+#: verdict runs whatever its needs returned, and a leg is not started only when the plan's listing
+#: gives it nothing to examine.
+JOB_CONDITIONS = {
+    "mutation-plan": [],
+    "mutation-rust": ["${{ needs.mutation-plan.outputs.listed != '0' }}"],
+    "mutation-rows": [
+        "${{ needs.mutation-plan.outputs.rows == 'true' || "
+        "needs.mutation-plan.outputs.scope == 'diff' }}"
+    ],
+    "mutation-verdict": ["${{ always() }}"],
+    "mutation-web": [],
+}
 
 
 def workflow(path):
     """The workflow's text; its absence is the criterion failing, never a crash."""
     if not path.is_file():
         raise AssertionError(f"{path.relative_to(REPO)} does not exist")
-    return path.read_text(encoding="utf-8")
+    return workflow_file_text(path)
 
 
 def jobs(text):
@@ -230,12 +257,11 @@ class TheWeeklyBattery(unittest.TestCase):
         self.assertRegex(text, r"(?ms)^  pull_request:\n.*?paths:\n.*?mutation-weekly\.yml")
         found = jobs(text)
         rust = found.get("rust", "")
-        denominator = re.search(r"--shard \$\{\{ matrix\.shard \}\}/(\d+)", rust)
-        self.assertIsNotNone(denominator, "the rust job does not shard")
-        matrix = re.search(r"(?m)^\s+shard: \[([0-9, ]+)\]$", rust)
-        self.assertIsNotNone(matrix, "the rust job names no shard matrix")
-        shards = sorted(int(value) for value in matrix.group(1).split(","))
-        self.assertEqual(shards, list(range(int(denominator.group(1)))))
+        # The legs are the sized matrix and the denominator is the size step's own count
+        # (SPEC-129 R4); a scheduled run and a dispatch with no package size to 32.
+        self.assertRegex(rust, r"(?m)^\s+SHARDS: \$\{\{ needs\.size\.outputs\.shards \}\}$")
+        self.assertIn('--shard "$SHARD/$SHARDS"', rust)
+        self.assertIn("shard: ${{ fromJSON(needs.size.outputs.matrix) }}", rust)
         mutating = [
             name
             for name, job in found.items()
@@ -272,17 +298,15 @@ class TheWeeklyBattery(unittest.TestCase):
 
     def test_the_battery_counts_every_report_its_jobs_promise(self):
         found = jobs(workflow(WEEKLY))
-        matrix = re.search(r"(?m)^\s+shard: \[([0-9, ]+)\]$", found.get("rust", ""))
-        self.assertIsNotNone(matrix, "the rust job names no shard matrix")
-        shards = len(matrix.group(1).split(","))
+        sized = r'"\$SHARDS"'
         for name, promised in examined(
-            "jobs that judge a battery", [("survivors", shards), ("rehearsal", 1)]
+            "jobs that judge a battery", [("survivors", sized), ("rehearsal", "1")]
         ):
             counted = [
                 step for step in steps(found.get(name, "")) if "mutation-verdict.py battery" in step
             ]
             self.assertEqual(len(counted), 1, f"{name} never counts the battery's reports")
-            self.assertRegex(counted[0], rf"--shards {promised}\b", name)
+            self.assertRegex(counted[0], rf"--shards {promised}(?!\d)", name)
             # It runs whatever the jobs before it returned, and it is the job's last word.
             self.assertRegex(counted[0], r"if: \$\{\{ always\(\) \}\}", name)
             self.assertEqual(steps(found[name])[-1], counted[0], f"{name}: a step follows it")
@@ -299,11 +323,12 @@ class TheMutationJobsGateEveryPullRequest(unittest.TestCase):
             job = found[name]
             self.assertRegex(aggregate, rf"needs: \[[^\]]*\b{name}\b", f"ci does not need {name}")
             self.assertNotRegex(job, r"actions/cache@|actions/cache/save@", name)
-            # A job-level if may only make a job run: ci reads a skipped need as failed.
+            # A job-level if may only make a job run, but on the plan's listing: ci reads a skipped
+            # need as failed, and admits a skip from the two legs a listing can leave with nothing
+            # to examine (SPEC-290 R2, R3, R8). Each condition is admitted by job name, and only it.
             conditions = re.findall(r"(?m)^    if: (.*)$", job)
-            allowed = ["${{ always() }}"] if name == "mutation-verdict" else []
             self.assertEqual(
-                conditions, allowed, f"{name} may be skipped, which ci reads as failed"
+                conditions, JOB_CONDITIONS[name], f"{name} may be skipped, which ci reads as failed"
             )
             if name != "mutation-verdict":
                 self.assertTrue(uploads_always(job), f"{name} keeps no report when it fails")
@@ -364,25 +389,563 @@ class TheShardsAreThePlans(unittest.TestCase):
         # The verdict runs whatever the shards returned, reads every artifact, and counts the
         # shards the plan promised rather than the ones that reported.
         self.assertRegex(
-            verdict, r"(?m)^    needs: \[mutation-plan, mutation-rust, mutation-rows\]$"
+            verdict,
+            r"(?m)^    needs: \[mutation-plan, mutation-rust, mutation-python, mutation-rows\]$",
         )
         self.assertRegex(verdict, r"(?m)^    if: \$\{\{ always\(\) \}\}$")
-        self.assertRegex(verdict, r"(?m)^\s+pattern: mutation-\*$")
+        self.assertRegex(verdict, r"(?m)^\s+pattern: mutation-rust-shard-\*$")
         self.assertRegex(verdict, r"judge [^\n]*--class rust [^\n]*--shard-reports ")
 
 
+#: The guard's module, read here as text and never imported: its tests load the wrapper, and this
+#: module stays runnable where they do not (SPEC-129 section 12, ADR-312).
+GUARD = Path(__file__).parent / "test_dispatch_shards.py"
+
+
+def wrapper_assignments(text):
+    """The value of each module-level assignment to `WRAPPER` in a module's text, read by
+    `ast.literal_eval` from `ast.parse`, so the module is never imported (ADR-312)."""
+    return [
+        ast.literal_eval(node.value)
+        for node in ast.parse(text).body
+        if isinstance(node, (ast.Assign, ast.AnnAssign))
+        and node.value is not None
+        and any(
+            isinstance(target, ast.Name) and target.id == "WRAPPER"
+            for target in (node.targets if isinstance(node, ast.Assign) else [node.target])
+        )
+    ]
+
+
+#: Every module-level assignment to `WRAPPER` in the guard's text; exactly one is the wrapper's form.
+FORMS = wrapper_assignments(GUARD.read_text(encoding="utf-8"))
+WRAPPER = FORMS[0] if len(FORMS) == 1 else ()
+WRAPPED = " ".join(WRAPPER)
+
+
+def after_separator(words, program):
+    """Where the command the wrapper runs begins: the word after the first standalone `--` that
+    follows the wrapper's form, `WRAPPER` as the guard's text spells it; after any other program
+    the words are that program's, so None (#533). The guard also checks each option word against
+    its wrapper's parser, which this module cannot load, so here an option the guard would refuse
+    reads as accepted: the scan over-finds, and fails closed (SPEC-129 section 12, ADR-312)."""
+    end = program + len(WRAPPER)
+    if not WRAPPER or [w.value for w in words[program:end]] != list(WRAPPER):
+        return None
+    if any(w.dynamic for w in words[program:end]):
+        return None
+    for k in range(end, len(words)):
+        if not words[k].dynamic and words[k].value == "--":
+            return k + 1 if k + 1 < len(words) else None
+    return None
+
+
+def every_program_separator(words, program):
+    """The reading section 10 of SPEC-129 gave this scan, kept only as the control of the separated
+    population (#533): the word after the first standalone `--` that follows any program which is
+    not cargo."""
+    if words[program].value.rsplit("/", 1)[-1] in CARGO:
+        return None
+    for k in range(program + 1, len(words)):
+        if not words[k].dynamic and words[k].value == "--":
+            return k + 1 if k + 1 < len(words) else None
+    return None
+
+
+def mutants_commands(directory, wrapped=None):
+    """(workflow name, command line) for every `cargo mutants` command of the directory's
+    workflows, found by the one finder the dispatch-shard guard uses; a workflow the finder
+    refuses is answered with the refusal, which carries no bounds. `wrapped` stands in for the
+    scan's own recognizer, `after_separator`, in a control."""
+    reading = after_separator if wrapped is None else wrapped
+    found = []
+    for path in workflow_files(directory):
+        try:
+            texts = run_texts(workflow_file_text(path))
+            found += [
+                (path.name, command)
+                for text in texts
+                for command in mutants_in(text, wrapped=reading)
+            ]
+        except Refused as refusal:
+            found.append((path.name, f"refused: {refusal}"))
+    return found
+
+
+def mutants_jobs(directory):
+    """(workflow name, job name, job block) for every job that runs `cargo mutants`, found by the
+    same finder; a job it refuses to read counts as running one."""
+    found = []
+    for path in workflow_files(directory):
+        for name, job in jobs(workflow_file_text(path)).items():
+            try:
+                texts = run_texts(f"jobs:\n  {name}:\n{job}")
+                runs = any(mutants_in(text, wrapped=after_separator) for text in texts)
+            except Refused:
+                runs = True
+            if runs:
+                found.append((path.name, name, job))
+    return found
+
+
+PLANTED_MUTANTS = (
+    "name: planted\njobs:\n  shard:\n    runs-on: ubuntu-24.04\n    steps:\n"
+    "      - run: cargo mutants --in-place\n"
+)
+
+
 class EveryRunIsBounded(unittest.TestCase):
+    def test_the_mutants_command_scan_reads_a_workflow_saved_with_the_yaml_suffix(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            (Path(scratch) / "planted.yaml").write_text(PLANTED_MUTANTS, encoding="utf-8")
+            commands = mutants_commands(Path(scratch))
+        self.assertEqual(commands, [("planted.yaml", "cargo mutants --in-place")])
+
+    def test_the_mutants_job_scan_reads_a_workflow_saved_with_the_yaml_suffix(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            (Path(scratch) / "planted.yaml").write_text(PLANTED_MUTANTS, encoding="utf-8")
+            running = mutants_jobs(Path(scratch))
+        self.assertEqual([(name, job) for name, job, _ in running], [("planted.yaml", "shard")])
+
     def test_every_cargo_mutants_command_bounds_its_builds_and_its_tests(self):
         # --timeout bounds each test run; under --in-place no build is bounded unless
         # --build-timeout says so (the tool's own timeouts chapter).
-        commands = [
-            (path.name, command)
-            for path in sorted(WORKFLOWS.glob("*.yml"))
-            for command in re.findall(r"cargo mutants [^\n]*", path.read_text(encoding="utf-8"))
-        ]
-        for name, command in examined("cargo-mutants commands", commands):
+        for name, command in examined("cargo-mutants commands", mutants_commands(WORKFLOWS)):
             self.assertRegex(command, r"--timeout \d+", f"{name}: {command}")
             self.assertRegex(command, r"--build-timeout \d+", f"{name}: {command}")
+
+
+SPELLINGS = (
+    (
+        "a toolchain selector",
+        "cargo +nightly mutants --in-place",
+        "cargo +nightly mutants --in-place",
+    ),
+    (
+        "the hyphenated binary",
+        "cargo-mutants mutants --in-place",
+        "cargo-mutants mutants --in-place",
+    ),
+    ("two blanks", "cargo  mutants --in-place", "cargo  mutants --in-place"),
+    (
+        "an option before the subcommand",
+        "cargo --config net.retry=2 mutants --in-place",
+        "cargo --config net.retry=2 mutants --in-place",
+    ),
+    ("the end of a line", "cargo mutants", "cargo mutants"),
+    (
+        "a wrapper's words after its separator",
+        f"{WRAPPED} --report out -- cargo mutants --in-place",
+        "cargo mutants --in-place",
+    ),
+)
+
+
+def planted(command):
+    """A workflow whose one job runs `command`."""
+    return (
+        "name: planted\njobs:\n  shard:\n    runs-on: ubuntu-24.04\n    steps:\n"
+        f"      - run: {command}\n"
+    )
+
+
+#: The finder's one home; the copy check reads its text and never imports it again.
+FINDER = Path(__file__).parent / "_mutants_finder.py"
+#: A definition spelled with the finder's own name and first argument (section 10's census).
+FINDER_NAME = re.compile(r"(?m)^def mutants_(of\(words|in\(text)")
+FUNCTIONS = (ast.FunctionDef, ast.AsyncFunctionDef)
+#: The one helper equal to a finder function by accident (SPEC-129 section 12): a line's count of
+#: leading blanks, the arithmetic any reader of indented text writes, and no copy of the finder.
+FLOOR = (("test_ci_workflows.py", "_indent", "indent_of"),)
+
+
+def functions_of(text):
+    """Every function a module's text defines, at any depth, in the order `ast.walk` meets them."""
+    return [node for node in ast.walk(ast.parse(text)) if isinstance(node, FUNCTIONS)]
+
+
+def walk_in_order(node):
+    """Every node under `node`, itself first, in the order of its fields: source order."""
+    yield node
+    for child in ast.iter_child_nodes(node):
+        yield from walk_in_order(child)
+
+
+def normal_body(function, own=None):
+    """The body of `function` as `ast.dump` text, its docstring dropped and every name it binds
+    renamed in order of first appearance: its own name, its arguments, the names it stores, its
+    exception names and the functions and classes it nests. Two bodies equal under this reading
+    are one body, whatever their names and their wrapping (#532).
+
+    `own` is a finder function's name that `function` calls where the finder calls itself. In a
+    copy that call is a free name, so it is renamed as the copy's own name is, and a copy of a
+    finder function that calls itself by its name reads equal to it too (#532)."""
+    body = function.body
+    if (
+        body
+        and isinstance(body[0], ast.Expr)
+        and isinstance(body[0].value, ast.Constant)
+        and isinstance(body[0].value.value, str)
+    ):
+        body = body[1:]
+    module = ast.Module(body=copy.deepcopy(body), type_ignores=[])
+    a = function.args
+    local = {function.name}
+    local |= {x.arg for x in (*a.posonlyargs, *a.args, *a.kwonlyargs, a.vararg, a.kwarg) if x}
+    for node in ast.walk(module):
+        if isinstance(node, ast.Name) and not isinstance(node.ctx, ast.Load):
+            local.add(node.id)
+        elif isinstance(node, ast.ExceptHandler) and node.name:
+            local.add(node.name)
+        elif isinstance(node, ast.arg):
+            local.add(node.arg)
+        elif isinstance(node, (*FUNCTIONS, ast.ClassDef)):
+            local.add(node.name)
+    order = {function.name: "_self"}
+
+    def new(name):
+        if name == own:
+            return "_self"
+        return order.setdefault(name, f"_{len(order)}") if name in local else name
+
+    for node in walk_in_order(module):
+        if isinstance(node, ast.Name):
+            node.id = new(node.id)
+        elif isinstance(node, ast.arg):
+            node.arg = new(node.arg)
+        elif isinstance(node, ast.ExceptHandler) and node.name:
+            node.name = new(node.name)
+        elif isinstance(node, (*FUNCTIONS, ast.ClassDef)):
+            node.name = new(node.name)
+    return ast.dump(module)
+
+
+def calls_itself_as(function, selves):
+    """The finder function that `function` copies by calling it where the finder calls itself, or
+    None. `selves` maps each finder function's name to its normalised bodies; only a name the
+    function loads is tried, and only an equal body under that same name is a copy (#532)."""
+    called = {
+        node.id
+        for node in ast.walk(function)
+        if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load)
+    }
+    for own in sorted(called & selves.keys()):
+        if normal_body(function, own) in selves[own]:
+            return own
+    return None
+
+
+def definitions_of_the_finder(directory):
+    """[(file, line, def name, the finder function it copies)] for every copy of a finder function
+    under `directory`, at any depth, outside the finder's own file: a `def` whose body equals a
+    finder function's under `normal_body`, whatever its name and also where it calls the finder
+    function by name as the finder calls itself, or a `def` spelled with the finder's own name and
+    first argument, whatever its body (#532; SPEC-129 section 12). Each file is read as text,
+    never imported."""
+    bodies, selves = {}, {}
+    for function in functions_of(FINDER.read_text(encoding="utf-8")):
+        bodies.setdefault(normal_body(function), function.name)
+        selves.setdefault(function.name, set()).add(normal_body(function))
+    root = Path(directory)
+    found = []
+    for path in sorted(p for p in root.rglob("*.py") if "__pycache__" not in p.parts):
+        if path.relative_to(root) == Path(FINDER.name):
+            continue
+        text = path.read_text(encoding="utf-8")
+        hits = {}
+        for function in functions_of(text):
+            finder = bodies.get(normal_body(function))
+            if finder is None:
+                finder = calls_itself_as(function, selves)
+            if finder is not None:
+                hits.setdefault(function.lineno, (function.name, finder))
+        for match in FINDER_NAME.finditer(text):
+            name = f"mutants_{match.group(1)[:2]}"
+            hits.setdefault(text.count("\n", 0, match.start()) + 1, (name, name))
+        found += [
+            (path.relative_to(root).as_posix(), line, name, finder)
+            for line, (name, finder) in sorted(hits.items())
+        ]
+    return found
+
+
+def renamed(function, n):
+    """A copy of `function` named `copy_<n>`, its own name, arguments and locals renamed and its
+    docstring replaced; `ast.unparse` then writes it in its own wrapping, not the finder's."""
+    planted = copy.deepcopy(function)
+    a = planted.args
+    names = {function.name: f"copy_{n}"}
+    for arg in (*a.posonlyargs, *a.args, *a.kwonlyargs, a.vararg, a.kwarg):
+        if arg is not None:
+            names[arg.arg] = f"renamed_{arg.arg}"
+    for node in ast.walk(planted):
+        if isinstance(node, ast.Name) and not isinstance(node.ctx, ast.Load):
+            names.setdefault(node.id, f"renamed_{node.id}")
+        elif isinstance(node, ast.ExceptHandler) and node.name:
+            names.setdefault(node.name, f"renamed_{node.name}")
+    for node in ast.walk(planted):
+        if isinstance(node, ast.Name):
+            node.id = names.get(node.id, node.id)
+        elif isinstance(node, ast.arg):
+            node.arg = names.get(node.arg, node.arg)
+        elif isinstance(node, ast.ExceptHandler) and node.name:
+            node.name = names[node.name]
+    planted.name = names[function.name]
+    body = planted.body
+    if body and isinstance(body[0], ast.Expr) and isinstance(body[0].value, ast.Constant):
+        body = body[1:]
+    planted.body = [ast.Expr(ast.Constant("A planted copy, under another name.")), *body]
+    return planted
+
+
+class EveryMutantsSpellingIsFound(unittest.TestCase):
+    def test_each_spelling_of_the_command_is_found_by_the_command_scan(self):
+        for what, command, found in SPELLINGS:
+            with self.subTest(what), tempfile.TemporaryDirectory() as scratch:
+                (Path(scratch) / "planted.yml").write_text(planted(command), encoding="utf-8")
+                commands = mutants_commands(Path(scratch))
+                self.assertEqual([name for name, _ in commands], ["planted.yml"], what)
+                self.assertEqual([c.split() for _, c in commands], [found.split()], what)
+
+    def test_each_spelling_of_the_command_is_found_by_the_job_scan(self):
+        for what, command, _ in SPELLINGS:
+            with self.subTest(what), tempfile.TemporaryDirectory() as scratch:
+                (Path(scratch) / "planted.yml").write_text(planted(command), encoding="utf-8")
+                running = mutants_jobs(Path(scratch))
+                self.assertEqual(
+                    [(name, job) for name, job, _ in running], [("planted.yml", "shard")], what
+                )
+
+    def test_a_job_without_the_command_is_found_by_neither_scan(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            (Path(scratch) / "planted.yml").write_text(
+                planted("cargo nextest run"), encoding="utf-8"
+            )
+            (Path(scratch) / "control.yml").write_text(
+                planted("cargo mutants --in-place"), encoding="utf-8"
+            )
+            commands = mutants_commands(Path(scratch))
+            running = mutants_jobs(Path(scratch))
+        self.assertEqual([name for name, _ in commands], ["control.yml"])
+        self.assertEqual([name for name, _, _ in running], ["control.yml"])
+
+    def test_the_finder_is_defined_once_and_a_planted_copy_is_caught(self):
+        defined = definitions_of_the_finder(Path(__file__).parent)
+        self.assertEqual(tuple((path, name, finder) for path, _, name, finder in defined), FLOOR)
+        with tempfile.TemporaryDirectory() as scratch:
+            for name in ("one.py", "two.py"):
+                (Path(scratch) / name).write_text("def mutants_in(text, handed=False):\n    pass\n")
+            copies = definitions_of_the_finder(scratch)
+        self.assertEqual(
+            [(path, line, name) for path, line, name, _ in copies],
+            [("one.py", 1, "mutants_in"), ("two.py", 1, "mutants_in")],
+        )
+
+    def test_a_renamed_and_rewrapped_copy_of_each_finder_function_is_caught(self):
+        functions = examined("finder functions", functions_of(FINDER.read_text(encoding="utf-8")))
+        with tempfile.TemporaryDirectory() as scratch:
+            deeper = Path(scratch) / "deeper"
+            deeper.mkdir()
+            planted = "\n\n".join(ast.unparse(renamed(f, n)) for n, f in enumerate(functions))
+            (deeper / "copies.py").write_text(planted + "\n", encoding="utf-8")
+            copies = definitions_of_the_finder(scratch)
+        self.assertEqual(
+            [(path, name, finder) for path, _, name, finder in copies],
+            [("deeper/copies.py", f"copy_{n}", f.name) for n, f in enumerate(functions)],
+        )
+
+    def test_a_literal_copy_of_each_finder_function_under_another_name_is_caught(self):
+        text = FINDER.read_text(encoding="utf-8")
+        functions = examined("finder functions", functions_of(text))
+        lines = text.splitlines(keepends=True)
+        forms = {
+            "literal.py": ("def literal_{}(", ""),
+            "method.py": ("def method_{}(", "    "),
+            "waited.py": ("async def waited_{}(", ""),
+        }
+        with tempfile.TemporaryDirectory() as scratch:
+            for name, (spelling, pad) in forms.items():
+                planted = ["class Holder:\n"] if pad else []
+                for n, f in enumerate(functions):
+                    source = textwrap.dedent("".join(lines[f.lineno - 1 : f.end_lineno]))
+                    copied = source.replace(f"def {f.name}(", spelling.format(n), 1)
+                    self.assertNotEqual(copied, source, f.name)
+                    planted.append("\n" + textwrap.indent(copied, pad))
+                (Path(scratch) / name).write_text("".join(planted), encoding="utf-8")
+            copies = definitions_of_the_finder(scratch)
+        for name, (spelling, _) in forms.items():
+            with self.subTest(name):
+                self.assertEqual(
+                    [(def_name, finder) for path, _, def_name, finder in copies if path == name],
+                    [
+                        (spelling.format(n)[:-1].split()[-1], f.name)
+                        for n, f in enumerate(functions)
+                    ],
+                )
+
+    def test_a_copy_with_changed_logic_is_caught_only_under_the_finders_name(self):
+        suspect = next(
+            f for f in functions_of(FINDER.read_text(encoding="utf-8")) if f.name == "suspect"
+        )
+        changed = ast.unparse(suspect).replace("'mutants'", "'mutant'", 1)
+        self.assertNotEqual(changed, ast.unparse(suspect))
+        own = changed.replace("def suspect(text):", "def mutants_in(text, handed=False):", 1)
+        fresh = changed.replace("def suspect(text):", "def suspicious(text):", 1)
+        with tempfile.TemporaryDirectory() as scratch:
+            (Path(scratch) / "own.py").write_text(own + "\n", encoding="utf-8")
+            (Path(scratch) / "fresh.py").write_text(fresh + "\n", encoding="utf-8")
+            copies = definitions_of_the_finder(scratch)
+        self.assertEqual(
+            [(path, name, finder) for path, _, name, finder in copies],
+            [("own.py", "mutants_in", "mutants_in")],
+        )
+
+
+#: The programs of the separated population (#533), each bare and with options before its `--`.
+#: Only the guard's wrapper runs the words after its separator. Its options are the one its parser
+#: declares, `--report`, given a literal value, a double-quoted expansion, and joined by `=`.
+SEPARATED = {
+    "echo": ("echo", "echo -n -e"),
+    "env": ("env", "env -i HOME=/tmp"),
+    "timeout": ("timeout", "timeout -k 5 300"),
+    "git": ("git", "git -C . --no-pager"),
+    "python3 <script>": ("python3 scripts/x.py", "python3 -I scripts/x.py --report out"),
+    "the wrapper": (
+        WRAPPED,
+        f"{WRAPPED} --report out",
+        f'{WRAPPED} --report "$OUT"',
+        f"{WRAPPED} --report=out",
+    ),
+}
+COMMAND = "cargo mutants --in-place"
+#: What the guard reads of each program's members, written from the text of its `wrapped` and of
+#: the finder, never computed here: the wrapper's form is followed to the command after its `--`,
+#: and after any other program `cargo mutants` is refused, since that program decides its words.
+GUARD_READS = {
+    "echo": "refused",
+    "env": "refused",
+    "timeout": "refused",
+    "git": "refused",
+    "python3 <script>": "refused",
+    "the wrapper": COMMAND,
+}
+SEPARATORS = ("--", '"--"')
+FORMS_OF_RUN = (
+    ("one line", "      - run: {}\n"),
+    ("block", "      - run: |\n          {}\n          echo done\n"),
+)
+#: Where the scan departs from the guard (SPEC-129 section 12): each member's words before the
+#: command, what the guard reads (from its rule) and what the scan reads.
+NAMED_LIMITS = {
+    "over-find": (
+        (f"{WRAPPED} --cap 1 --", "refused", COMMAND),
+        (f"{WRAPPED} --report $OUT --", "refused", COMMAND),
+        (f"{WRAPPED} $SEP --", "refused", COMMAND),
+        (f"{WRAPPED} --report --", "refused", COMMAND),
+    ),
+    "value-dash-dash": ((f"{WRAPPED} --report -- --", COMMAND, "refused"),),
+}
+#: Each over-find member's twin after a script that is not the wrapper, which both refuse.
+TWINS = (
+    "python3 scripts/x.py --cap 1 --",
+    "python3 scripts/x.py --report $OUT --",
+    "python3 scripts/x.py $SEP --",
+    "python3 scripts/x.py --report --",
+)
+
+
+def separated_population():
+    """[(program, member, run step)]: each program's words, a separator and the command, in a
+    one-line `run:` and in a `run: |` block whose next line runs another command."""
+    return [
+        (
+            program,
+            f"{prefix} {separator} {COMMAND} ({form})",
+            step.format(f"{prefix} {separator} {COMMAND}"),
+        )
+        for program, prefixes in SEPARATED.items()
+        for prefix in prefixes
+        for separator in SEPARATORS
+        for form, step in FORMS_OF_RUN
+    ]
+
+
+def scan_reads(steps, wrapped=None):
+    """What the command scan reads of each run step, saved as its own workflow: its commands joined
+    by ` | `, `refused`, or `nothing`."""
+    with tempfile.TemporaryDirectory() as scratch:
+        for n, step in enumerate(steps):
+            (Path(scratch) / f"m{n:03d}.yml").write_text(
+                "name: planted\njobs:\n  shard:\n    runs-on: ubuntu-24.04\n    steps:\n" + step,
+                encoding="utf-8",
+            )
+        found = mutants_commands(Path(scratch), wrapped)
+    reads = {}
+    for name, command in found:
+        read = "refused" if command.startswith("refused: ") else command
+        reads.setdefault(int(name[1:4]), []).append(read)
+    return [" | ".join(reads.get(n, ["nothing"])) for n in range(len(steps))]
+
+
+class TheScanReadsTheWrappersForm(unittest.TestCase):
+    def test_the_wrapper_form_is_read_once_from_the_guards_text(self):
+        self.assertEqual(len(FORMS), 1, f"module-level assignments to WRAPPER: {FORMS}")
+        self.assertIsInstance(WRAPPER, tuple)
+        self.assertEqual([type(word) for word in WRAPPER], [str, str])
+        self.assertEqual(wrapper_assignments("def f():\n    WRAPPER = ('a', 'b')\n"), [])
+        twice = "WRAPPER = ('a', 'b')\nOTHER = ('x',)\nWRAPPER: tuple = ('c', 'd')\n"
+        self.assertEqual(wrapper_assignments(twice), [("a", "b"), ("c", "d")])
+
+    def test_the_scan_and_the_guard_agree_on_every_separated_member(self):
+        members = examined("separated members", separated_population())
+        reads = scan_reads([step for _, _, step in members])
+        mismatches = [
+            f"{member}: the scan reads {read}, the guard {GUARD_READS[program]}"
+            for (program, member, _), read in zip(members, reads, strict=True)
+            if read != GUARD_READS[program]
+        ]
+        print(
+            f"examined {len(members)}, mismatches {len(mismatches)}; named limits "
+            f"{len(NAMED_LIMITS)}: {', '.join(NAMED_LIMITS)}"
+        )
+        self.assertEqual(mismatches, [])
+        self.assertEqual({program for program, _, _ in members}, set(GUARD_READS))
+        limited = {prefix for cases in NAMED_LIMITS.values() for prefix, _, _ in cases}
+        self.assertEqual(
+            [m for _, m, _ in members if any(m.startswith(f"{p} ") for p in limited)], []
+        )
+
+    def test_the_old_reading_disagrees_on_every_program_but_the_wrapper(self):
+        members = examined("separated members", separated_population())
+        reads = scan_reads([step for _, _, step in members], wrapped=every_program_separator)
+        mismatched = {program: 0 for program in SEPARATED}
+        for (program, member, _), read in zip(members, reads, strict=True):
+            if read != GUARD_READS[program]:
+                mismatched[program] += 1
+                print(f"old reading: {member}: reads {read}, the guard {GUARD_READS[program]}")
+        sizes = {program: 4 * len(prefixes) for program, prefixes in SEPARATED.items()}
+        self.assertEqual(
+            mismatched,
+            {program: 0 if program == "the wrapper" else sizes[program] for program in SEPARATED},
+        )
+
+    def test_the_scan_departs_from_the_guard_only_at_its_two_named_limits(self):
+        cases = [
+            (name, prefix, guard, scan)
+            for name, members in NAMED_LIMITS.items()
+            for prefix, guard, scan in members
+        ]
+        cases += [("twin", prefix, "refused", "refused") for prefix in TWINS]
+        reads = scan_reads([f"      - run: {prefix} {COMMAND}\n" for _, prefix, _, _ in cases])
+        self.assertEqual(
+            [(name, prefix, read) for (name, prefix, _, _), read in zip(cases, reads, strict=True)],
+            [(name, prefix, scan) for name, prefix, _, scan in cases],
+        )
+        for name, prefix, guard, scan in cases:
+            if name == "twin":
+                self.assertEqual(guard, scan, prefix)
+            else:
+                self.assertNotEqual(guard, scan, prefix)
 
 
 class TheBuilderBriefTeachesTheRules(unittest.TestCase):
@@ -414,12 +977,7 @@ class CargoMutantsRunsTheGatesTestTool(unittest.TestCase):
         # binary, unless its configuration says otherwise (SPEC-039 R1, measured in section 8).
         config = (REPO / ".cargo" / "mutants.toml").read_text(encoding="utf-8")
         self.assertRegex(config, r'(?m)^test_tool = "nextest"$')
-        running = [
-            (path.name, name, job)
-            for path in sorted(WORKFLOWS.glob("*.yml"))
-            for name, job in jobs(path.read_text(encoding="utf-8")).items()
-            if "cargo mutants" in job
-        ]
+        running = mutants_jobs(WORKFLOWS)
         for workflow_name, name, job in examined("jobs that run cargo-mutants", running):
             self.assertRegex(
                 job,
@@ -449,6 +1007,7 @@ def shard(reports, number, entries, code="2"):
     """Shard `number`'s artifact: its exit and, unless `entries` is None, its outcomes.json."""
     directory = reports / f"mutants-shard-{number}"
     (directory / "mutants.out").mkdir(parents=True)
+    (directory / "memory-scope.json").write_text(json.dumps(ZERO_SCOPE), encoding="utf-8")
     (directory / "cargo-mutants.exit").write_text(f"{code}\n", encoding="utf-8")
     if entries is None:
         return
@@ -498,9 +1057,14 @@ class TheBatteryTakesAScope(unittest.TestCase):
         rust = found.get("rust", "")
         self.assertRegex(rust, r"(?m)^    if: \$\{\{ [^\n]*inputs\.package != 'miniapp'")
         self.assertRegex(rust, r"(?m)^\s+PACKAGE: \$\{\{ inputs\.package \}\}$")
-        command = re.search(r"cargo mutants [^\n]*", rust).group(0)
-        self.assertIn(SCOPED, command)
-        self.assertRegex(command, r"--shard \$\{\{ matrix\.shard \}\}/32")
+        commands = re.findall(r"cargo mutants [^\n]*", rust)
+        self.assertEqual(len(commands), 2, "the shard runs one branch per package state")
+        self.assertIn('--package="$PACKAGE"', commands[0])
+        self.assertNotIn("--package", commands[1])
+        for command in commands:
+            self.assertIn('--shard "$SHARD/$SHARDS"', command)
+        self.assertRegex(rust, r"(?m)^\s+SHARD: \$\{\{ matrix\.shard \}\}$")
+        self.assertRegex(rust, r"(?m)^\s+SHARDS: \$\{\{ needs\.size\.outputs\.shards \}\}$")
         for name, job in examined("battery jobs", list(found.items())):
             for block in re.findall(r"(?ms)^        run: [|]?\n?(.*?)(?=^      - |\Z)", job):
                 self.assertNotIn("inputs.package", block, f"{name} interpolates the input")

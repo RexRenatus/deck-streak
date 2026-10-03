@@ -1,4 +1,23 @@
+import { parseBadges, type BadgesView } from './badges/badges';
+import {
+  CAPTURE_PATH,
+  captureBody,
+  parseSaved,
+  type CaptureRequest,
+  type Saved
+} from './capture/capture';
+import { FEED_PATH, parseFeed, type FeedItem } from './ladder/feed';
+import {
+  parseEnvelope,
+  parseListings,
+  type Envelope,
+  type Listing
+} from './insights/insights';
+import { parseLevel, type LevelView } from './level/level';
+import { parseRecords, type RecordsView } from './records/records';
+import { parseGovernor, parseStreak, type StreakView } from './streak/streak';
 import { parseScore, type ScoreToday } from './score/score';
+import { parseWallet, walletPath, type WalletView } from './economy/wallet';
 import { telegram } from './telegram.svelte';
 
 /**
@@ -42,6 +61,27 @@ export interface Api {
   me(): Promise<Answer<Me>>;
   /** The current study day's score (SPEC-071 R20). */
   score(): Promise<Answer<ScoreToday>>;
+  /** The owner's level, today's XP and the consistency run (SPEC-072 R23). */
+  level(): Promise<Answer<LevelView>>;
+  /** Both streak tracks and the governor's verdict (SPEC-076 R20, R21). */
+  streak(): Promise<Answer<StreakView>>;
+  /** The owner's earned badges, newest first, and the locked ones with progress (SPEC-073 R16). */
+  badges(): Promise<Answer<BadgesView>>;
+  /** The owner's personal records, today's distance to each, and the chase (SPEC-073 R17). */
+  records(): Promise<Answer<RecordsView>>;
+  /** The owner's unseen in-app celebrations, each with its tier (SPEC-084 R10). */
+  feed(): Promise<Answer<FeedItem[]>>;
+  /** The instruments the owner can read (SPEC-094 R18). */
+  insights(): Promise<Answer<Listing[]>>;
+  /** One instrument's latest report; null when it has not run yet. */
+  insight(id: string): Promise<Answer<Envelope | null>>;
+  /**
+   * The wallet and one page of its movements, newest first: the first page, or the page after the
+   * movement `before` (SPEC-082 R15).
+   */
+  wallet(before?: number): Promise<Answer<WalletView>>;
+  /** Saves a quick capture into the vault's inbox, once per capture id (SPEC-118 R10). */
+  capture(request: CaptureRequest): Promise<Answer<Saved>>;
 }
 
 /** How opening a session ended: a session, a refusal only reopening the app can answer, or no answer. */
@@ -80,10 +120,11 @@ export function createApi(options: ApiOptions): Api {
   }
 
   /**
-   * A same-origin GET that carries the session cookie alone: its response, `'reopen'` when only
-   * reopening the app can help, or null when no answer came.
+   * A same-origin request that carries the session cookie alone, a GET unless `init` says
+   * otherwise: its response, `'reopen'` when only reopening the app can help, or null when no
+   * answer came. A renewal repeats the request as it was, body and all.
    */
-  async function get(path: string): Promise<Response | 'reopen' | null> {
+  async function call(path: string, init: RequestInit = {}): Promise<Response | 'reopen' | null> {
     let renewed = false;
     for (;;) {
       if (stopped) return 'reopen';
@@ -101,7 +142,7 @@ export function createApi(options: ApiOptions): Api {
       }
       let response: Response;
       try {
-        response = await send(path, { credentials: 'same-origin' });
+        response = await send(path, { ...init, credentials: 'same-origin' });
       } catch {
         return null;
       }
@@ -119,7 +160,7 @@ export function createApi(options: ApiOptions): Api {
 
   /** A GET of `path` whose JSON body `parse` reads: its value, or why there is none. */
   async function read<T>(path: string, parse: (body: unknown) => T | null): Promise<Answer<T>> {
-    const response = await get(path);
+    const response = await call(path);
     if (response === 'reopen') return { kind: 'reopen' };
     if (response === null || !response.ok) {
       return { kind: 'unavailable' };
@@ -130,7 +171,38 @@ export function createApi(options: ApiOptions): Api {
 
   return {
     me: () => read('/api/me', parseMe),
-    score: () => read('/api/score', parseScore)
+    score: () => read('/api/score', parseScore),
+    level: () => read('/api/level', parseLevel),
+    streak: async () => {
+      const streak = await read('/api/streak', parseStreak);
+      if (streak.kind !== 'ok') return streak;
+      const governor = await read('/api/governor', parseGovernor);
+      if (governor.kind !== 'ok') return governor;
+      return { kind: 'ok', value: { ...streak.value, governor: governor.value } };
+    },
+    badges: () => read('/api/badges', parseBadges),
+    records: () => read('/api/records', parseRecords),
+    feed: () => read(FEED_PATH, parseFeed),
+    wallet: (before) => read(walletPath(before), parseWallet),
+    insights: () => read('/api/insights', parseListings),
+    insight: (id) =>
+      read(`/api/insights/${encodeURIComponent(id)}`, (body) => {
+        const parsed = parseEnvelope(body);
+        return parsed === undefined ? null : { value: parsed };
+      }).then((answer) =>
+        answer.kind === 'ok' ? { kind: 'ok', value: answer.value.value } : answer
+      ),
+    capture: async (request) => {
+      const response = await call(CAPTURE_PATH, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: captureBody(request)
+      });
+      if (response === 'reopen') return { kind: 'reopen' };
+      if (response === null) return { kind: 'unavailable' };
+      const saved = parseSaved(response.status, await response.json().catch(() => null));
+      return saved === null ? { kind: 'unavailable' } : { kind: 'ok', value: saved };
+    }
   };
 }
 

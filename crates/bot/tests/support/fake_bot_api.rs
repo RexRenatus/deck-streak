@@ -39,7 +39,7 @@ use axum::body::Bytes;
 use axum::extract::{Path as UrlPath, State};
 use axum::http::{HeaderMap, StatusCode, header};
 use axum::response::{IntoResponse, Response};
-use axum::routing::post;
+use axum::routing::{get, post};
 use deck_streak_bot::transport::{Incoming, Waits};
 use deck_streak_bot::{
     ApiUrl, Commands, MiniAppUrl, OwnerSync, SyncAnswer, SyncRefusal, Transport,
@@ -163,10 +163,25 @@ impl Answer {
     }
 }
 
+/// What the fake's file route serves for one download (SPEC-118 R8).
+#[derive(Clone, Debug)]
+pub enum Served {
+    /// These bytes, with a 200.
+    Bytes(Vec<u8>),
+    /// This status and no file.
+    Status(u16),
+    /// These bytes, with a 200, answered only after the request has been held this long.
+    Held(Vec<u8>, Duration),
+}
+
+/// The method name a download's [`Call`] is recorded under: a file's URL names no Bot API method.
+pub const DOWNLOAD: &str = "download";
+
 #[derive(Default)]
 struct Inner {
     calls: Vec<Call>,
     scripts: HashMap<String, VecDeque<Answer>>,
+    files: VecDeque<Served>,
     next_message_id: i64,
 }
 
@@ -197,6 +212,7 @@ impl FakeBotApi {
         };
         let app = Router::new()
             .route("/{bot}/{method}", post(answer))
+            .route("/file/{bot}/{*path}", get(serve_file))
             .with_state(fake.clone());
         tokio::spawn(async move {
             axum::serve(listener, app).await.expect("the fake serves");
@@ -234,6 +250,11 @@ impl FakeBotApi {
             .entry(method.to_owned())
             .or_default()
             .extend(answers);
+    }
+
+    /// Queues `served` for the next download from the file route, before its unscripted 404.
+    pub fn serve_file(&self, served: Served) {
+        self.inner.lock().unwrap().files.push_back(served);
     }
 
     /// Every call so far, in order.
@@ -473,7 +494,7 @@ async fn answer(
         let message_id = inner.next_message_id;
         let sends = matches!(
             method.as_str(),
-            "sendMessage" | "editMessageText" | "sendDocument"
+            "sendMessage" | "editMessageText" | "sendDocument" | "sendDice" | "sendPhoto"
         );
         inner.calls.push(Call {
             method: method.clone(),
@@ -505,6 +526,37 @@ async fn answer(
     }
 }
 
+/// The file route (`{api}/file/bot<token>/<file_path>`): records the download as a [`DOWNLOAD`]
+/// call holding its path, and serves what was queued, or a 404.
+async fn serve_file(
+    State(fake): State<FakeBotApi>,
+    UrlPath((bot, path)): UrlPath<(String, String)>,
+) -> Response {
+    let served = {
+        let mut inner = fake.inner.lock().unwrap();
+        inner.calls.push(Call {
+            method: DOWNLOAD.to_owned(),
+            body: json!({"path": path}),
+            at: Instant::now(),
+            token_ok: bot == format!("bot{TOKEN}"),
+            message_id: None,
+        });
+        inner.files.pop_front()
+    };
+    fake.changed.notify_waiters();
+    match served {
+        Some(Served::Bytes(bytes)) => (StatusCode::OK, bytes).into_response(),
+        Some(Served::Status(status)) => StatusCode::from_u16(status)
+            .expect("a status")
+            .into_response(),
+        Some(Served::Held(bytes, held)) => {
+            tokio::time::sleep(held).await;
+            (StatusCode::OK, bytes).into_response()
+        }
+        None => StatusCode::NOT_FOUND.into_response(),
+    }
+}
+
 /// Telegram's own answer when nothing is scripted.
 async fn unscripted(method: &str, body: &Value, message_id: i64) -> Response {
     match method {
@@ -513,7 +565,27 @@ async fn unscripted(method: &str, body: &Value, message_id: i64) -> Response {
             tokio::time::sleep(Duration::from_secs(timeout).min(LONG_POLL_HOLD)).await;
             ok(&Value::Array(Vec::new()))
         }
-        "sendMessage" | "editMessageText" | "sendDocument" => {
+        "savePreparedInlineMessage" => ok(&json!({"id": "prepared-1", "expiration_date": 0})),
+        "sendPhoto" => {
+            let chat = body
+                .get("chat_id")
+                .and_then(|chat| chat.as_i64().or_else(|| chat.as_str()?.parse().ok()))
+                .unwrap_or(OWNER);
+            // The sizes the Bot API answers come smallest to largest; here the largest is in the
+            // middle, and the last is longest by its sides but smallest by its area, so a reader that
+            // takes the first, the last or the widest size takes the wrong one.
+            ok(&json!({
+                "message_id": message_id,
+                "date": 0,
+                "chat": {"id": chat, "type": "private"},
+                "photo": [
+                    {"file_id": "size-small", "file_unique_id": "a", "width": 90, "height": 60},
+                    {"file_id": "size-large", "file_unique_id": "b", "width": 1280, "height": 853},
+                    {"file_id": "size-wide", "file_unique_id": "c", "width": 4000, "height": 20},
+                ],
+            }))
+        }
+        "sendMessage" | "editMessageText" | "sendDocument" | "sendDice" => {
             let chat = body
                 .get("chat_id")
                 .and_then(|chat| chat.as_i64().or_else(|| chat.as_str()?.parse().ok()))

@@ -4,7 +4,8 @@
 //! The scheduler's daily `sync` job and the owner's `/sync` call it (SPEC-027, SPEC-026); no other
 //! job syncs (ADR-037). In order, it reads the record as it stands (the gate's run-history term is
 //! the run before this cycle's), syncs (the syncer owns the run's guards, retries and record),
-//! collects every registered obligation's deadlines, and asks the change gate. Then it either reads
+//! flushes the notification router when the sync ran and succeeded and the parts carry a router
+//! (SPEC-041 R7), collects every registered obligation's deadlines, and asks the change gate. Then it either reads
 //! the window and recomputes, or leaves the skip the gate recorded. The recompute runs the fold over
 //! the window it read (SPEC-071 R15; [`crate::recompute`]), with the study day in which the latest
 //! successful sync started, so a day closed before that sync is settled and every later day stays
@@ -23,9 +24,16 @@ use deck_streak_ingest::sync::{SyncError, SyncReport, Syncer};
 use deck_streak_ingest::sync_runs::{SqliteSyncRuns, SyncRunStore, Trigger};
 use deck_streak_ingest::window::{WindowError, read_window};
 use deck_streak_kernel::{Clock, Db, KernelError, PortFuture, StudyDayRule, UtcMillis};
+use deck_streak_notifications::Router;
+use deck_streak_progression::ledger::SqliteXpLedger;
 
+use crate::instruments::Instruments;
+use crate::ladder_facts;
+use crate::level_up::announce_level_up;
 use crate::obligations::{ObligationSource, Obligations};
-use crate::recompute::{Fold, FoldInput};
+use crate::recompute::streaks::RelightDue;
+use crate::recompute::{AwardOffers, Fold, FoldInput, Offers};
+use crate::relight::route_due_relights;
 
 /// The name of the settle a closed study day is owed, as an obligation (SPEC-071 R15): the source's
 /// name, and the label of its deadline, which the gate's reason and the log carry.
@@ -69,15 +77,19 @@ impl ObligationSource for OwedSettle {
 }
 
 /// What one cycle needs: the syncer, the reader of its copy, the gate over the service's database,
-/// the registered obligations and the clock. The runner's port for the `sync` job
-/// (`runner::SyncCycle`) is implemented over them in the composition root.
+/// the registered obligations, the clock, and the notification router it flushes, when it has one.
+/// The runner's port for the `sync` job (`runner::SyncCycle`) is implemented over them in the
+/// composition root.
 pub struct CycleParts<E> {
     syncer: Syncer<E, SqliteSyncRuns>,
     reader: CollectionReader,
     gate: ChangeGate,
     obligations: Obligations,
     clock: Arc<dyn Clock>,
+    router: Option<Arc<Router>>,
     fold: Option<CycleFold>,
+    relights: Option<RelightDue>,
+    instruments: Option<Arc<Instruments>>,
 }
 
 /// The fold a cycle's recompute runs (SPEC-071 R15): the fold with its registered steps, the
@@ -106,8 +118,18 @@ impl<E: AnkiEngine + Sync> CycleParts<E> {
             gate,
             obligations,
             clock,
+            router: None,
             fold: None,
+            relights: None,
+            instruments: None,
         }
+    }
+
+    /// These parts, flushing `router` after every sync that ran and succeeded (SPEC-041 R7).
+    #[must_use]
+    pub fn with_flush(mut self, router: Arc<Router>) -> Self {
+        self.router = Some(router);
+        self
     }
 
     /// This cycle, running `fold` after every recompute's read (SPEC-071 R15): its steps write
@@ -134,6 +156,22 @@ impl<E: AnkiEngine + Sync> CycleParts<E> {
             rule,
             courses_digest,
         });
+        self
+    }
+
+    /// This cycle, routing the relights `due` names after each fold's commit (SPEC-076 R27), as the
+    /// level-up is announced.
+    #[must_use]
+    pub fn with_relights(mut self, due: RelightDue) -> Self {
+        self.relights = Some(due);
+        self
+    }
+
+    /// This cycle, running `instruments` after every sync's recompute (SPEC-094 R7). A role builds
+    /// them once, at start, and shares them with every cycle it runs.
+    #[must_use]
+    pub fn with_instruments(mut self, instruments: Arc<Instruments>) -> Self {
+        self.instruments = Some(instruments);
         self
     }
 
@@ -220,6 +258,11 @@ where
 {
     let history = cycle.gate.history().await.map_err(CycleError::History)?;
     let sync = cycle.syncer.sync(trigger).await?;
+    if let (Some(router), SyncReport::Ran { run, .. }) = (&cycle.router, &sync)
+        && run.outcome.is_ok()
+    {
+        flush(router).await;
+    }
     let sync_ok = match &sync {
         SyncReport::Ran { run, .. } => run.outcome.is_ok(),
         // A refusal or a debounce made no request: the copy is the last sync's, and the record's
@@ -251,17 +294,42 @@ where
                     .await
                     .map_err(CycleError::Recompute)?
                     .map(|run| run.study_day);
+                // The awards' celebrations go to the cycle's router between the fold's writes
+                // (SPEC-073 R4, R11; ADR-303).
+                let offers = cycle
+                    .router
+                    .as_ref()
+                    .map(|router| AwardOffers::new(router.clone()));
                 let input = FoldInput {
                     data: &window.data,
                     rule: fold.rule,
                     now: checked.now,
                     synced_in,
                     courses_digest: fold.courses_digest.as_deref(),
+                    // The lifetime the badges read starts from the study events below the window.
+                    base_reviews: u64::try_from(window.base.count).unwrap_or(0),
+                    offers: offers.as_ref().map(|offers| offers as &dyn Offers),
                 };
+                // The level before the recompute's first write, against the level after its last
+                // (SPEC-072 R14): no level is stored, so the ledger says both.
+                let ledger = SqliteXpLedger::new(fold.db.clone());
+                let before = ledger.level().await.map_err(CycleError::Recompute)?;
                 fold.fold
                     .run(&fold.db, &input)
                     .await
                     .map_err(CycleError::Recompute)?;
+                if let Some(router) = &cycle.router {
+                    let after = ledger.level().await.map_err(CycleError::Recompute)?;
+                    let today = fold.rule.study_day(checked.now);
+                    if let Err(error) = announce_level_up(router, before, after, today).await {
+                        tracing::error!(%error, "the level-up line could not be raised");
+                    }
+                    if let Some(due) = &cycle.relights
+                        && let Err(error) = route_due_relights(router, due, &fold.db, today).await
+                    {
+                        tracing::error!(%error, "the due relights could not be read");
+                    }
+                }
             }
             cycle.gate.recomputed(&checked).await?;
             Recompute::Ran {
@@ -271,5 +339,28 @@ where
             }
         }
     };
+    if let Some(instruments) = &cycle.instruments {
+        run_instruments(instruments).await;
+    }
     Ok(CycleReport { sync, recompute })
+}
+
+/// The instruments step, after a sync's recompute (SPEC-094 R7). A step that cannot run is logged
+/// and never fails the sync it follows: every instrument stays due for the next.
+async fn run_instruments(instruments: &Instruments) {
+    match instruments.step().await {
+        Ok(step) => tracing::info!(?step, "the instruments step ran"),
+        Err(error) => tracing::error!(%error, "the instruments step could not run"),
+    }
+}
+
+/// The router's flush, after a sync that ran and succeeded (SPEC-041 R7), carrying the streak's
+/// facts the ladder re-caps each held celebration for (SPEC-084 R11; none until SPEC-076). A flush
+/// that cannot run is logged and never fails the sync it follows: the queue keeps its holds for the
+/// next.
+async fn flush(router: &Router) {
+    match router.flush_with(ladder_facts::streak_facts()).await {
+        Ok(flushed) => tracing::info!(?flushed, "the notification router flushed"),
+        Err(error) => tracing::error!(%error, "the notification router could not flush"),
+    }
 }

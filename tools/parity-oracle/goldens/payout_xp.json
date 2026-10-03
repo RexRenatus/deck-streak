@@ -1,0 +1,9630 @@
+{
+  "adapter": "with_session_xp",
+  "cases": [
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.0
+      },
+      "output": 10
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 1.1102230246251565e-16
+      },
+      "output": 10
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.5
+      },
+      "output": 18
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.9999999999999999
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 1.0
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": -0.5
+      },
+      "output": 10
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 1.5
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.0
+      },
+      "output": 10
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.0
+      },
+      "output": 10
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 1.1102230246251565e-16
+      },
+      "output": 10
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.0625
+      },
+      "output": 11
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.06249999999999989
+      },
+      "output": 10
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.06250000000000011
+      },
+      "output": 11
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.125
+      },
+      "output": 12
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.12499999999999989
+      },
+      "output": 11
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.1250000000000001
+      },
+      "output": 12
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.1875
+      },
+      "output": 13
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.1874999999999999
+      },
+      "output": 12
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.1875000000000001
+      },
+      "output": 13
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.25
+      },
+      "output": 14
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.2499999999999999
+      },
+      "output": 13
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.2500000000000001
+      },
+      "output": 14
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.3125
+      },
+      "output": 15
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.3124999999999999
+      },
+      "output": 14
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.3125000000000001
+      },
+      "output": 15
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.375
+      },
+      "output": 16
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.3749999999999999
+      },
+      "output": 15
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.3750000000000001
+      },
+      "output": 16
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.4375
+      },
+      "output": 17
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.4374999999999999
+      },
+      "output": 16
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.4375000000000001
+      },
+      "output": 17
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.5
+      },
+      "output": 18
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.4999999999999999
+      },
+      "output": 17
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.5000000000000001
+      },
+      "output": 18
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.5625
+      },
+      "output": 19
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.5624999999999999
+      },
+      "output": 18
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.5625000000000001
+      },
+      "output": 19
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.625
+      },
+      "output": 20
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.6249999999999999
+      },
+      "output": 19
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.6250000000000001
+      },
+      "output": 20
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.6875
+      },
+      "output": 21
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.6874999999999999
+      },
+      "output": 20
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.6875000000000001
+      },
+      "output": 21
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.75
+      },
+      "output": 22
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.7499999999999999
+      },
+      "output": 21
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.7500000000000001
+      },
+      "output": 22
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.8125
+      },
+      "output": 23
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.8124999999999999
+      },
+      "output": 22
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.8125000000000001
+      },
+      "output": 23
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.875
+      },
+      "output": 24
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.8749999999999999
+      },
+      "output": 23
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.8750000000000001
+      },
+      "output": 24
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.9375
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.9374999999999999
+      },
+      "output": 24
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.9375000000000001
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 1.0
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.9999999999999999
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 0,
+        "u": 0.9999999999999999
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1,
+        "u": 0.0
+      },
+      "output": 10
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1,
+        "u": 1.5
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1,
+        "u": 0.06250000000000011
+      },
+      "output": 11
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1,
+        "u": 0.1875000000000001
+      },
+      "output": 13
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1,
+        "u": 0.3125000000000001
+      },
+      "output": 15
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1,
+        "u": 0.4375000000000001
+      },
+      "output": 17
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1,
+        "u": 0.5625000000000001
+      },
+      "output": 19
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1,
+        "u": 0.6875000000000001
+      },
+      "output": 21
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1,
+        "u": 0.8125000000000001
+      },
+      "output": 23
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1,
+        "u": 0.9375000000000001
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 83,
+        "u": 0.0
+      },
+      "output": 10
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 83,
+        "u": 1.5
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 83,
+        "u": 0.06250000000000011
+      },
+      "output": 11
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 83,
+        "u": 0.1875000000000001
+      },
+      "output": 13
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 83,
+        "u": 0.3125000000000001
+      },
+      "output": 15
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 83,
+        "u": 0.4375000000000001
+      },
+      "output": 17
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 83,
+        "u": 0.5625000000000001
+      },
+      "output": 19
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 83,
+        "u": 0.6875000000000001
+      },
+      "output": 21
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 83,
+        "u": 0.8125000000000001
+      },
+      "output": 23
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 83,
+        "u": 0.9375000000000001
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 84,
+        "u": 0.0
+      },
+      "output": 10
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 84,
+        "u": 1.5
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 84,
+        "u": 0.06250000000000011
+      },
+      "output": 11
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 84,
+        "u": 0.1875000000000001
+      },
+      "output": 13
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 84,
+        "u": 0.3125000000000001
+      },
+      "output": 15
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 84,
+        "u": 0.4375000000000001
+      },
+      "output": 17
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 84,
+        "u": 0.5625000000000001
+      },
+      "output": 19
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 84,
+        "u": 0.6875000000000001
+      },
+      "output": 21
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 84,
+        "u": 0.8125000000000001
+      },
+      "output": 23
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 84,
+        "u": 0.9375000000000001
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 85,
+        "u": 0.0
+      },
+      "output": 10
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 85,
+        "u": 1.5
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 85,
+        "u": 0.06250000000000011
+      },
+      "output": 11
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 85,
+        "u": 0.1875000000000001
+      },
+      "output": 13
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 85,
+        "u": 0.3125000000000001
+      },
+      "output": 15
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 85,
+        "u": 0.4375000000000001
+      },
+      "output": 17
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 85,
+        "u": 0.5625000000000001
+      },
+      "output": 19
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 85,
+        "u": 0.6875000000000001
+      },
+      "output": 21
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 85,
+        "u": 0.8125000000000001
+      },
+      "output": 23
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 85,
+        "u": 0.9375000000000001
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 99,
+        "u": 0.0
+      },
+      "output": 10
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 99,
+        "u": 1.5
+      },
+      "output": 26
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 99,
+        "u": 0.06250000000000011
+      },
+      "output": 11
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 99,
+        "u": 0.1875000000000001
+      },
+      "output": 13
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 99,
+        "u": 0.3125000000000001
+      },
+      "output": 15
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 99,
+        "u": 0.4375000000000001
+      },
+      "output": 17
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 99,
+        "u": 0.5625000000000001
+      },
+      "output": 19
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 99,
+        "u": 0.6875000000000001
+      },
+      "output": 21
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 99,
+        "u": 0.8125000000000001
+      },
+      "output": 23
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 99,
+        "u": 0.9375000000000001
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.0
+      },
+      "output": 10
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 1.1102230246251565e-16
+      },
+      "output": 10
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.5
+      },
+      "output": 18
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.9999999999999999
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 1.0
+      },
+      "output": 26
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": -0.5
+      },
+      "output": 10
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 1.5
+      },
+      "output": 26
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.0
+      },
+      "output": 10
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.0
+      },
+      "output": 10
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 1.1102230246251565e-16
+      },
+      "output": 10
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.0625
+      },
+      "output": 11
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.06249999999999989
+      },
+      "output": 10
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.06250000000000011
+      },
+      "output": 11
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.125
+      },
+      "output": 12
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.12499999999999989
+      },
+      "output": 11
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.1250000000000001
+      },
+      "output": 12
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.1875
+      },
+      "output": 13
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.1874999999999999
+      },
+      "output": 12
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.1875000000000001
+      },
+      "output": 13
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.25
+      },
+      "output": 14
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.2499999999999999
+      },
+      "output": 13
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.2500000000000001
+      },
+      "output": 14
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.3125
+      },
+      "output": 15
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.3124999999999999
+      },
+      "output": 14
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.3125000000000001
+      },
+      "output": 15
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.375
+      },
+      "output": 16
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.3749999999999999
+      },
+      "output": 15
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.3750000000000001
+      },
+      "output": 16
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.4375
+      },
+      "output": 17
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.4374999999999999
+      },
+      "output": 16
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.4375000000000001
+      },
+      "output": 17
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.5
+      },
+      "output": 18
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.4999999999999999
+      },
+      "output": 17
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.5000000000000001
+      },
+      "output": 18
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.5625
+      },
+      "output": 19
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.5624999999999999
+      },
+      "output": 18
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.5625000000000001
+      },
+      "output": 19
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.625
+      },
+      "output": 20
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.6249999999999999
+      },
+      "output": 19
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.6250000000000001
+      },
+      "output": 20
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.6875
+      },
+      "output": 21
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.6874999999999999
+      },
+      "output": 20
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.6875000000000001
+      },
+      "output": 21
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.75
+      },
+      "output": 22
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.7499999999999999
+      },
+      "output": 21
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.7500000000000001
+      },
+      "output": 22
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.8125
+      },
+      "output": 23
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.8124999999999999
+      },
+      "output": 22
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.8125000000000001
+      },
+      "output": 23
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.875
+      },
+      "output": 24
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.8749999999999999
+      },
+      "output": 23
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.8750000000000001
+      },
+      "output": 24
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.9375
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.9374999999999999
+      },
+      "output": 24
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.9375000000000001
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 1.0
+      },
+      "output": 26
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.9999999999999999
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 100,
+        "u": 0.9999999999999999
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 101,
+        "u": 0.0
+      },
+      "output": 10
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 101,
+        "u": 1.5
+      },
+      "output": 26
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 101,
+        "u": 0.06250000000000011
+      },
+      "output": 11
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 101,
+        "u": 0.1875000000000001
+      },
+      "output": 13
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 101,
+        "u": 0.3125000000000001
+      },
+      "output": 15
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 101,
+        "u": 0.4375000000000001
+      },
+      "output": 17
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 101,
+        "u": 0.5625000000000001
+      },
+      "output": 19
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 101,
+        "u": 0.6875000000000001
+      },
+      "output": 21
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 101,
+        "u": 0.8125000000000001
+      },
+      "output": 23
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 101,
+        "u": 0.9375000000000001
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 116,
+        "u": 0.0
+      },
+      "output": 10
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 116,
+        "u": 1.5
+      },
+      "output": 26
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 116,
+        "u": 0.06250000000000011
+      },
+      "output": 11
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 116,
+        "u": 0.1875000000000001
+      },
+      "output": 13
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 116,
+        "u": 0.3125000000000001
+      },
+      "output": 15
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 116,
+        "u": 0.4375000000000001
+      },
+      "output": 17
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 116,
+        "u": 0.5625000000000001
+      },
+      "output": 19
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 116,
+        "u": 0.6875000000000001
+      },
+      "output": 21
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 116,
+        "u": 0.8125000000000001
+      },
+      "output": 23
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 116,
+        "u": 0.9375000000000001
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 117,
+        "u": 0.0
+      },
+      "output": 10
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 117,
+        "u": 1.5
+      },
+      "output": 26
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 117,
+        "u": 0.06250000000000011
+      },
+      "output": 11
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 117,
+        "u": 0.1875000000000001
+      },
+      "output": 13
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 117,
+        "u": 0.3125000000000001
+      },
+      "output": 15
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 117,
+        "u": 0.4375000000000001
+      },
+      "output": 17
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 117,
+        "u": 0.5625000000000001
+      },
+      "output": 19
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 117,
+        "u": 0.6875000000000001
+      },
+      "output": 21
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 117,
+        "u": 0.8125000000000001
+      },
+      "output": 23
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 117,
+        "u": 0.9375000000000001
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 150,
+        "u": 0.0
+      },
+      "output": 10
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 150,
+        "u": 1.5
+      },
+      "output": 26
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 150,
+        "u": 0.06250000000000011
+      },
+      "output": 11
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 150,
+        "u": 0.1875000000000001
+      },
+      "output": 13
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 150,
+        "u": 0.3125000000000001
+      },
+      "output": 15
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 150,
+        "u": 0.4375000000000001
+      },
+      "output": 17
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 150,
+        "u": 0.5625000000000001
+      },
+      "output": 19
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 150,
+        "u": 0.6875000000000001
+      },
+      "output": 21
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 150,
+        "u": 0.8125000000000001
+      },
+      "output": 23
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 150,
+        "u": 0.9375000000000001
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 199,
+        "u": 0.0
+      },
+      "output": 10
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 199,
+        "u": 1.5
+      },
+      "output": 26
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 199,
+        "u": 0.06250000000000011
+      },
+      "output": 11
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 199,
+        "u": 0.1875000000000001
+      },
+      "output": 13
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 199,
+        "u": 0.3125000000000001
+      },
+      "output": 15
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 199,
+        "u": 0.4375000000000001
+      },
+      "output": 17
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 199,
+        "u": 0.5625000000000001
+      },
+      "output": 19
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 199,
+        "u": 0.6875000000000001
+      },
+      "output": 21
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 199,
+        "u": 0.8125000000000001
+      },
+      "output": 23
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 199,
+        "u": 0.9375000000000001
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.0
+      },
+      "output": 10
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 1.1102230246251565e-16
+      },
+      "output": 10
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.5
+      },
+      "output": 18
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.9999999999999999
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 1.0
+      },
+      "output": 26
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": -0.5
+      },
+      "output": 10
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 1.5
+      },
+      "output": 26
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.0
+      },
+      "output": 10
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.0
+      },
+      "output": 10
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 1.1102230246251565e-16
+      },
+      "output": 10
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.0625
+      },
+      "output": 11
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.06249999999999989
+      },
+      "output": 10
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.06250000000000011
+      },
+      "output": 11
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.125
+      },
+      "output": 12
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.12499999999999989
+      },
+      "output": 11
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.1250000000000001
+      },
+      "output": 12
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.1875
+      },
+      "output": 13
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.1874999999999999
+      },
+      "output": 12
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.1875000000000001
+      },
+      "output": 13
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.25
+      },
+      "output": 14
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.2499999999999999
+      },
+      "output": 13
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.2500000000000001
+      },
+      "output": 14
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.3125
+      },
+      "output": 15
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.3124999999999999
+      },
+      "output": 14
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.3125000000000001
+      },
+      "output": 15
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.375
+      },
+      "output": 16
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.3749999999999999
+      },
+      "output": 15
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.3750000000000001
+      },
+      "output": 16
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.4375
+      },
+      "output": 17
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.4374999999999999
+      },
+      "output": 16
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.4375000000000001
+      },
+      "output": 17
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.5
+      },
+      "output": 18
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.4999999999999999
+      },
+      "output": 17
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.5000000000000001
+      },
+      "output": 18
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.5625
+      },
+      "output": 19
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.5624999999999999
+      },
+      "output": 18
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.5625000000000001
+      },
+      "output": 19
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.625
+      },
+      "output": 20
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.6249999999999999
+      },
+      "output": 19
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.6250000000000001
+      },
+      "output": 20
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.6875
+      },
+      "output": 21
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.6874999999999999
+      },
+      "output": 20
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.6875000000000001
+      },
+      "output": 21
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.75
+      },
+      "output": 22
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.7499999999999999
+      },
+      "output": 21
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.7500000000000001
+      },
+      "output": 22
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.8125
+      },
+      "output": 23
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.8124999999999999
+      },
+      "output": 22
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.8125000000000001
+      },
+      "output": 23
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.875
+      },
+      "output": 24
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.8749999999999999
+      },
+      "output": 23
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.8750000000000001
+      },
+      "output": 24
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.9375
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.9374999999999999
+      },
+      "output": 24
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.9375000000000001
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 1.0
+      },
+      "output": 26
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.9999999999999999
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 200,
+        "u": 0.9999999999999999
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 201,
+        "u": 0.0
+      },
+      "output": 10
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 201,
+        "u": 1.5
+      },
+      "output": 26
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 201,
+        "u": 0.06250000000000011
+      },
+      "output": 11
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 201,
+        "u": 0.1875000000000001
+      },
+      "output": 13
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 201,
+        "u": 0.3125000000000001
+      },
+      "output": 15
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 201,
+        "u": 0.4375000000000001
+      },
+      "output": 17
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 201,
+        "u": 0.5625000000000001
+      },
+      "output": 19
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 201,
+        "u": 0.6875000000000001
+      },
+      "output": 21
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 201,
+        "u": 0.8125000000000001
+      },
+      "output": 23
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 201,
+        "u": 0.9375000000000001
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 333,
+        "u": 0.0
+      },
+      "output": 10
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 333,
+        "u": 1.5
+      },
+      "output": 26
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 333,
+        "u": 0.06250000000000011
+      },
+      "output": 11
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 333,
+        "u": 0.1875000000000001
+      },
+      "output": 13
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 333,
+        "u": 0.3125000000000001
+      },
+      "output": 15
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 333,
+        "u": 0.4375000000000001
+      },
+      "output": 17
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 333,
+        "u": 0.5625000000000001
+      },
+      "output": 19
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 333,
+        "u": 0.6875000000000001
+      },
+      "output": 21
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 333,
+        "u": 0.8125000000000001
+      },
+      "output": 23
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 333,
+        "u": 0.9375000000000001
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 334,
+        "u": 0.0
+      },
+      "output": 10
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 334,
+        "u": 1.5
+      },
+      "output": 26
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 334,
+        "u": 0.06250000000000011
+      },
+      "output": 11
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 334,
+        "u": 0.1875000000000001
+      },
+      "output": 13
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 334,
+        "u": 0.3125000000000001
+      },
+      "output": 15
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 334,
+        "u": 0.4375000000000001
+      },
+      "output": 17
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 334,
+        "u": 0.5625000000000001
+      },
+      "output": 19
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 334,
+        "u": 0.6875000000000001
+      },
+      "output": 21
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 334,
+        "u": 0.8125000000000001
+      },
+      "output": 23
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 334,
+        "u": 0.9375000000000001
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.0
+      },
+      "output": 10
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 1.1102230246251565e-16
+      },
+      "output": 10
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.5
+      },
+      "output": 18
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.9999999999999999
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 1.0
+      },
+      "output": 26
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": -0.5
+      },
+      "output": 10
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 1.5
+      },
+      "output": 26
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.0
+      },
+      "output": 10
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.0
+      },
+      "output": 10
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 1.1102230246251565e-16
+      },
+      "output": 10
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.0625
+      },
+      "output": 11
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.06249999999999989
+      },
+      "output": 10
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.06250000000000011
+      },
+      "output": 11
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.125
+      },
+      "output": 12
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.12499999999999989
+      },
+      "output": 11
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.1250000000000001
+      },
+      "output": 12
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.1875
+      },
+      "output": 13
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.1874999999999999
+      },
+      "output": 12
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.1875000000000001
+      },
+      "output": 13
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.25
+      },
+      "output": 14
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.2499999999999999
+      },
+      "output": 13
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.2500000000000001
+      },
+      "output": 14
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.3125
+      },
+      "output": 15
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.3124999999999999
+      },
+      "output": 14
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.3125000000000001
+      },
+      "output": 15
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.375
+      },
+      "output": 16
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.3749999999999999
+      },
+      "output": 15
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.3750000000000001
+      },
+      "output": 16
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.4375
+      },
+      "output": 17
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.4374999999999999
+      },
+      "output": 16
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.4375000000000001
+      },
+      "output": 17
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.5
+      },
+      "output": 18
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.4999999999999999
+      },
+      "output": 17
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.5000000000000001
+      },
+      "output": 18
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.5625
+      },
+      "output": 19
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.5624999999999999
+      },
+      "output": 18
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.5625000000000001
+      },
+      "output": 19
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.625
+      },
+      "output": 20
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.6249999999999999
+      },
+      "output": 19
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.6250000000000001
+      },
+      "output": 20
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.6875
+      },
+      "output": 21
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.6874999999999999
+      },
+      "output": 20
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.6875000000000001
+      },
+      "output": 21
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.75
+      },
+      "output": 22
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.7499999999999999
+      },
+      "output": 21
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.7500000000000001
+      },
+      "output": 22
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.8125
+      },
+      "output": 23
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.8124999999999999
+      },
+      "output": 22
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.8125000000000001
+      },
+      "output": 23
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.875
+      },
+      "output": 24
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.8749999999999999
+      },
+      "output": 23
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.8750000000000001
+      },
+      "output": 24
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.9375
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.9374999999999999
+      },
+      "output": 24
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.9375000000000001
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 1.0
+      },
+      "output": 26
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.9999999999999999
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": 1000000,
+        "u": 0.9999999999999999
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": -40,
+        "u": 0.0
+      },
+      "output": 10
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": -40,
+        "u": 1.5
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": -40,
+        "u": 0.06250000000000011
+      },
+      "output": 11
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": -40,
+        "u": 0.1875000000000001
+      },
+      "output": 13
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": -40,
+        "u": 0.3125000000000001
+      },
+      "output": 15
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": -40,
+        "u": 0.4375000000000001
+      },
+      "output": 17
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": -40,
+        "u": 0.5625000000000001
+      },
+      "output": 19
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": -40,
+        "u": 0.6875000000000001
+      },
+      "output": 21
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": -40,
+        "u": 0.8125000000000001
+      },
+      "output": 23
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "common",
+        "session_xp": -40,
+        "u": 0.9375000000000001
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.0
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 1.1102230246251565e-16
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.5
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.9999999999999999
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 1.0
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": -0.5
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 1.5
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.0
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.0
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 1.1102230246251565e-16
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.03225806451612903
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.03225806451612892
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.03225806451612914
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.06451612903225806
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.06451612903225795
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.06451612903225817
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.0967741935483871
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.09677419354838698
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.0967741935483872
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.12903225806451613
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.12903225806451601
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.12903225806451624
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.16129032258064516
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.16129032258064505
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.16129032258064527
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.1935483870967742
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.19354838709677408
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.1935483870967743
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.22580645161290322
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.2258064516129031
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.22580645161290333
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.25806451612903225
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.25806451612903214
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.25806451612903236
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.2903225806451613
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.2903225806451612
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.2903225806451614
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.3225806451612903
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.3225806451612902
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.3225806451612904
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.3548387096774194
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.35483870967741926
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.3548387096774195
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.3870967741935484
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.38709677419354827
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.3870967741935485
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.41935483870967744
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.4193548387096773
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.41935483870967755
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.45161290322580644
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.45161290322580633
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.45161290322580655
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.4838709677419355
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.4838709677419354
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.4838709677419356
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.5161290322580645
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.5161290322580644
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.5161290322580646
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.5483870967741935
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.5483870967741934
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.5483870967741936
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.5806451612903226
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.5806451612903225
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.5806451612903227
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.6129032258064516
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.6129032258064515
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.6129032258064517
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.6451612903225806
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.6451612903225805
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.6451612903225807
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.6774193548387096
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.6774193548387095
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.6774193548387097
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.7096774193548387
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.7096774193548386
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.7096774193548389
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.7419354838709677
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.7419354838709676
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.7419354838709679
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.7741935483870968
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.7741935483870966
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.7741935483870969
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.8064516129032258
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.8064516129032256
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.8064516129032259
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.8387096774193549
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.8387096774193548
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.838709677419355
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.8709677419354839
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.8709677419354838
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.870967741935484
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.9032258064516129
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.9032258064516128
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.903225806451613
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.9354838709677419
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.9354838709677418
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.935483870967742
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.967741935483871
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.9677419354838709
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.9677419354838711
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 1.0
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.9999999999999999
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 0,
+        "u": 0.9999999999999999
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1,
+        "u": 0.0
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1,
+        "u": 1.5
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1,
+        "u": 0.03225806451612914
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1,
+        "u": 0.0967741935483872
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1,
+        "u": 0.16129032258064527
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1,
+        "u": 0.22580645161290333
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1,
+        "u": 0.2903225806451614
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1,
+        "u": 0.3548387096774195
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1,
+        "u": 0.41935483870967755
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1,
+        "u": 0.4838709677419356
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1,
+        "u": 0.5483870967741936
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1,
+        "u": 0.6129032258064517
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1,
+        "u": 0.6774193548387097
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1,
+        "u": 0.7419354838709679
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1,
+        "u": 0.8064516129032259
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1,
+        "u": 0.870967741935484
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1,
+        "u": 0.935483870967742
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1,
+        "u": 0.9999999999999999
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 83,
+        "u": 0.0
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 83,
+        "u": 1.5
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 83,
+        "u": 0.03225806451612914
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 83,
+        "u": 0.0967741935483872
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 83,
+        "u": 0.16129032258064527
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 83,
+        "u": 0.22580645161290333
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 83,
+        "u": 0.2903225806451614
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 83,
+        "u": 0.3548387096774195
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 83,
+        "u": 0.41935483870967755
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 83,
+        "u": 0.4838709677419356
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 83,
+        "u": 0.5483870967741936
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 83,
+        "u": 0.6129032258064517
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 83,
+        "u": 0.6774193548387097
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 83,
+        "u": 0.7419354838709679
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 83,
+        "u": 0.8064516129032259
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 83,
+        "u": 0.870967741935484
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 83,
+        "u": 0.935483870967742
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 83,
+        "u": 0.9999999999999999
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 84,
+        "u": 0.0
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 84,
+        "u": 1.5
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 84,
+        "u": 0.03225806451612914
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 84,
+        "u": 0.0967741935483872
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 84,
+        "u": 0.16129032258064527
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 84,
+        "u": 0.22580645161290333
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 84,
+        "u": 0.2903225806451614
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 84,
+        "u": 0.3548387096774195
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 84,
+        "u": 0.41935483870967755
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 84,
+        "u": 0.4838709677419356
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 84,
+        "u": 0.5483870967741936
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 84,
+        "u": 0.6129032258064517
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 84,
+        "u": 0.6774193548387097
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 84,
+        "u": 0.7419354838709679
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 84,
+        "u": 0.8064516129032259
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 84,
+        "u": 0.870967741935484
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 84,
+        "u": 0.935483870967742
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 84,
+        "u": 0.9999999999999999
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 85,
+        "u": 0.0
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 85,
+        "u": 1.5
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 85,
+        "u": 0.03225806451612914
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 85,
+        "u": 0.0967741935483872
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 85,
+        "u": 0.16129032258064527
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 85,
+        "u": 0.22580645161290333
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 85,
+        "u": 0.2903225806451614
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 85,
+        "u": 0.3548387096774195
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 85,
+        "u": 0.41935483870967755
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 85,
+        "u": 0.4838709677419356
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 85,
+        "u": 0.5483870967741936
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 85,
+        "u": 0.6129032258064517
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 85,
+        "u": 0.6774193548387097
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 85,
+        "u": 0.7419354838709679
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 85,
+        "u": 0.8064516129032259
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 85,
+        "u": 0.870967741935484
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 85,
+        "u": 0.935483870967742
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 85,
+        "u": 0.9999999999999999
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 99,
+        "u": 0.0
+      },
+      "output": 29
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 99,
+        "u": 1.5
+      },
+      "output": 29
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 99,
+        "u": 0.03225806451612914
+      },
+      "output": 29
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 99,
+        "u": 0.0967741935483872
+      },
+      "output": 29
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 99,
+        "u": 0.16129032258064527
+      },
+      "output": 29
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 99,
+        "u": 0.22580645161290333
+      },
+      "output": 29
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 99,
+        "u": 0.2903225806451614
+      },
+      "output": 29
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 99,
+        "u": 0.3548387096774195
+      },
+      "output": 29
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 99,
+        "u": 0.41935483870967755
+      },
+      "output": 29
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 99,
+        "u": 0.4838709677419356
+      },
+      "output": 29
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 99,
+        "u": 0.5483870967741936
+      },
+      "output": 29
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 99,
+        "u": 0.6129032258064517
+      },
+      "output": 29
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 99,
+        "u": 0.6774193548387097
+      },
+      "output": 29
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 99,
+        "u": 0.7419354838709679
+      },
+      "output": 29
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 99,
+        "u": 0.8064516129032259
+      },
+      "output": 29
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 99,
+        "u": 0.870967741935484
+      },
+      "output": 29
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 99,
+        "u": 0.935483870967742
+      },
+      "output": 29
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 99,
+        "u": 0.9999999999999999
+      },
+      "output": 29
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.0
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 1.1102230246251565e-16
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.5
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.9999999999999999
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 1.0
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": -0.5
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 1.5
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.0
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.0
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 1.1102230246251565e-16
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.03225806451612903
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.03225806451612892
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.03225806451612914
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.06451612903225806
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.06451612903225795
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.06451612903225817
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.0967741935483871
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.09677419354838698
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.0967741935483872
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.12903225806451613
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.12903225806451601
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.12903225806451624
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.16129032258064516
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.16129032258064505
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.16129032258064527
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.1935483870967742
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.19354838709677408
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.1935483870967743
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.22580645161290322
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.2258064516129031
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.22580645161290333
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.25806451612903225
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.25806451612903214
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.25806451612903236
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.2903225806451613
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.2903225806451612
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.2903225806451614
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.3225806451612903
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.3225806451612902
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.3225806451612904
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.3548387096774194
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.35483870967741926
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.3548387096774195
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.3870967741935484
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.38709677419354827
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.3870967741935485
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.41935483870967744
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.4193548387096773
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.41935483870967755
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.45161290322580644
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.45161290322580633
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.45161290322580655
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.4838709677419355
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.4838709677419354
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.4838709677419356
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.5161290322580645
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.5161290322580644
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.5161290322580646
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.5483870967741935
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.5483870967741934
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.5483870967741936
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.5806451612903226
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.5806451612903225
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.5806451612903227
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.6129032258064516
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.6129032258064515
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.6129032258064517
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.6451612903225806
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.6451612903225805
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.6451612903225807
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.6774193548387096
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.6774193548387095
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.6774193548387097
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.7096774193548387
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.7096774193548386
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.7096774193548389
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.7419354838709677
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.7419354838709676
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.7419354838709679
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.7741935483870968
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.7741935483870966
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.7741935483870969
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.8064516129032258
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.8064516129032256
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.8064516129032259
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.8387096774193549
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.8387096774193548
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.838709677419355
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.8709677419354839
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.8709677419354838
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.870967741935484
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.9032258064516129
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.9032258064516128
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.903225806451613
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.9354838709677419
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.9354838709677418
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.935483870967742
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.967741935483871
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.9677419354838709
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.9677419354838711
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 1.0
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.9999999999999999
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 100,
+        "u": 0.9999999999999999
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 101,
+        "u": 0.0
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 101,
+        "u": 1.5
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 101,
+        "u": 0.03225806451612914
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 101,
+        "u": 0.0967741935483872
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 101,
+        "u": 0.16129032258064527
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 101,
+        "u": 0.22580645161290333
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 101,
+        "u": 0.2903225806451614
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 101,
+        "u": 0.3548387096774195
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 101,
+        "u": 0.41935483870967755
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 101,
+        "u": 0.4838709677419356
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 101,
+        "u": 0.5483870967741936
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 101,
+        "u": 0.6129032258064517
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 101,
+        "u": 0.6774193548387097
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 101,
+        "u": 0.7419354838709679
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 101,
+        "u": 0.8064516129032259
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 101,
+        "u": 0.870967741935484
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 101,
+        "u": 0.935483870967742
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 101,
+        "u": 0.9999999999999999
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 116,
+        "u": 0.0
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 116,
+        "u": 1.5
+      },
+      "output": 34
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 116,
+        "u": 0.03225806451612914
+      },
+      "output": 31
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 116,
+        "u": 0.0967741935483872
+      },
+      "output": 33
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 116,
+        "u": 0.16129032258064527
+      },
+      "output": 34
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 116,
+        "u": 0.22580645161290333
+      },
+      "output": 34
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 116,
+        "u": 0.2903225806451614
+      },
+      "output": 34
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 116,
+        "u": 0.3548387096774195
+      },
+      "output": 34
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 116,
+        "u": 0.41935483870967755
+      },
+      "output": 34
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 116,
+        "u": 0.4838709677419356
+      },
+      "output": 34
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 116,
+        "u": 0.5483870967741936
+      },
+      "output": 34
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 116,
+        "u": 0.6129032258064517
+      },
+      "output": 34
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 116,
+        "u": 0.6774193548387097
+      },
+      "output": 34
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 116,
+        "u": 0.7419354838709679
+      },
+      "output": 34
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 116,
+        "u": 0.8064516129032259
+      },
+      "output": 34
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 116,
+        "u": 0.870967741935484
+      },
+      "output": 34
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 116,
+        "u": 0.935483870967742
+      },
+      "output": 34
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 116,
+        "u": 0.9999999999999999
+      },
+      "output": 34
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 117,
+        "u": 0.0
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 117,
+        "u": 1.5
+      },
+      "output": 35
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 117,
+        "u": 0.03225806451612914
+      },
+      "output": 31
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 117,
+        "u": 0.0967741935483872
+      },
+      "output": 33
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 117,
+        "u": 0.16129032258064527
+      },
+      "output": 35
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 117,
+        "u": 0.22580645161290333
+      },
+      "output": 35
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 117,
+        "u": 0.2903225806451614
+      },
+      "output": 35
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 117,
+        "u": 0.3548387096774195
+      },
+      "output": 35
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 117,
+        "u": 0.41935483870967755
+      },
+      "output": 35
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 117,
+        "u": 0.4838709677419356
+      },
+      "output": 35
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 117,
+        "u": 0.5483870967741936
+      },
+      "output": 35
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 117,
+        "u": 0.6129032258064517
+      },
+      "output": 35
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 117,
+        "u": 0.6774193548387097
+      },
+      "output": 35
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 117,
+        "u": 0.7419354838709679
+      },
+      "output": 35
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 117,
+        "u": 0.8064516129032259
+      },
+      "output": 35
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 117,
+        "u": 0.870967741935484
+      },
+      "output": 35
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 117,
+        "u": 0.935483870967742
+      },
+      "output": 35
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 117,
+        "u": 0.9999999999999999
+      },
+      "output": 35
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 150,
+        "u": 0.0
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 150,
+        "u": 1.5
+      },
+      "output": 45
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 150,
+        "u": 0.03225806451612914
+      },
+      "output": 31
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 150,
+        "u": 0.0967741935483872
+      },
+      "output": 33
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 150,
+        "u": 0.16129032258064527
+      },
+      "output": 35
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 150,
+        "u": 0.22580645161290333
+      },
+      "output": 37
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 150,
+        "u": 0.2903225806451614
+      },
+      "output": 39
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 150,
+        "u": 0.3548387096774195
+      },
+      "output": 41
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 150,
+        "u": 0.41935483870967755
+      },
+      "output": 43
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 150,
+        "u": 0.4838709677419356
+      },
+      "output": 45
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 150,
+        "u": 0.5483870967741936
+      },
+      "output": 45
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 150,
+        "u": 0.6129032258064517
+      },
+      "output": 45
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 150,
+        "u": 0.6774193548387097
+      },
+      "output": 45
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 150,
+        "u": 0.7419354838709679
+      },
+      "output": 45
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 150,
+        "u": 0.8064516129032259
+      },
+      "output": 45
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 150,
+        "u": 0.870967741935484
+      },
+      "output": 45
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 150,
+        "u": 0.935483870967742
+      },
+      "output": 45
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 150,
+        "u": 0.9999999999999999
+      },
+      "output": 45
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 199,
+        "u": 0.0
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 199,
+        "u": 1.5
+      },
+      "output": 59
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 199,
+        "u": 0.03225806451612914
+      },
+      "output": 31
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 199,
+        "u": 0.0967741935483872
+      },
+      "output": 33
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 199,
+        "u": 0.16129032258064527
+      },
+      "output": 35
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 199,
+        "u": 0.22580645161290333
+      },
+      "output": 37
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 199,
+        "u": 0.2903225806451614
+      },
+      "output": 39
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 199,
+        "u": 0.3548387096774195
+      },
+      "output": 41
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 199,
+        "u": 0.41935483870967755
+      },
+      "output": 43
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 199,
+        "u": 0.4838709677419356
+      },
+      "output": 45
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 199,
+        "u": 0.5483870967741936
+      },
+      "output": 47
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 199,
+        "u": 0.6129032258064517
+      },
+      "output": 49
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 199,
+        "u": 0.6774193548387097
+      },
+      "output": 51
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 199,
+        "u": 0.7419354838709679
+      },
+      "output": 53
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 199,
+        "u": 0.8064516129032259
+      },
+      "output": 55
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 199,
+        "u": 0.870967741935484
+      },
+      "output": 57
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 199,
+        "u": 0.935483870967742
+      },
+      "output": 59
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 199,
+        "u": 0.9999999999999999
+      },
+      "output": 59
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.0
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 1.1102230246251565e-16
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.5
+      },
+      "output": 45
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.9999999999999999
+      },
+      "output": 60
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 1.0
+      },
+      "output": 60
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": -0.5
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 1.5
+      },
+      "output": 60
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.0
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.0
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 1.1102230246251565e-16
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.03225806451612903
+      },
+      "output": 31
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.03225806451612892
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.03225806451612914
+      },
+      "output": 31
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.06451612903225806
+      },
+      "output": 32
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.06451612903225795
+      },
+      "output": 31
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.06451612903225817
+      },
+      "output": 32
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.0967741935483871
+      },
+      "output": 33
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.09677419354838698
+      },
+      "output": 32
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.0967741935483872
+      },
+      "output": 33
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.12903225806451613
+      },
+      "output": 34
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.12903225806451601
+      },
+      "output": 33
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.12903225806451624
+      },
+      "output": 34
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.16129032258064516
+      },
+      "output": 35
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.16129032258064505
+      },
+      "output": 34
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.16129032258064527
+      },
+      "output": 35
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.1935483870967742
+      },
+      "output": 36
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.19354838709677408
+      },
+      "output": 35
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.1935483870967743
+      },
+      "output": 36
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.22580645161290322
+      },
+      "output": 37
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.2258064516129031
+      },
+      "output": 36
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.22580645161290333
+      },
+      "output": 37
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.25806451612903225
+      },
+      "output": 38
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.25806451612903214
+      },
+      "output": 37
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.25806451612903236
+      },
+      "output": 38
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.2903225806451613
+      },
+      "output": 39
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.2903225806451612
+      },
+      "output": 38
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.2903225806451614
+      },
+      "output": 39
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.3225806451612903
+      },
+      "output": 40
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.3225806451612902
+      },
+      "output": 39
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.3225806451612904
+      },
+      "output": 40
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.3548387096774194
+      },
+      "output": 41
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.35483870967741926
+      },
+      "output": 40
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.3548387096774195
+      },
+      "output": 41
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.3870967741935484
+      },
+      "output": 42
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.38709677419354827
+      },
+      "output": 41
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.3870967741935485
+      },
+      "output": 42
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.41935483870967744
+      },
+      "output": 43
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.4193548387096773
+      },
+      "output": 42
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.41935483870967755
+      },
+      "output": 43
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.45161290322580644
+      },
+      "output": 44
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.45161290322580633
+      },
+      "output": 43
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.45161290322580655
+      },
+      "output": 44
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.4838709677419355
+      },
+      "output": 45
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.4838709677419354
+      },
+      "output": 44
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.4838709677419356
+      },
+      "output": 45
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.5161290322580645
+      },
+      "output": 46
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.5161290322580644
+      },
+      "output": 45
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.5161290322580646
+      },
+      "output": 46
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.5483870967741935
+      },
+      "output": 47
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.5483870967741934
+      },
+      "output": 46
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.5483870967741936
+      },
+      "output": 47
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.5806451612903226
+      },
+      "output": 48
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.5806451612903225
+      },
+      "output": 47
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.5806451612903227
+      },
+      "output": 48
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.6129032258064516
+      },
+      "output": 49
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.6129032258064515
+      },
+      "output": 48
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.6129032258064517
+      },
+      "output": 49
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.6451612903225806
+      },
+      "output": 50
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.6451612903225805
+      },
+      "output": 49
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.6451612903225807
+      },
+      "output": 50
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.6774193548387096
+      },
+      "output": 51
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.6774193548387095
+      },
+      "output": 50
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.6774193548387097
+      },
+      "output": 51
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.7096774193548387
+      },
+      "output": 52
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.7096774193548386
+      },
+      "output": 51
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.7096774193548389
+      },
+      "output": 52
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.7419354838709677
+      },
+      "output": 53
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.7419354838709676
+      },
+      "output": 52
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.7419354838709679
+      },
+      "output": 53
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.7741935483870968
+      },
+      "output": 54
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.7741935483870966
+      },
+      "output": 53
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.7741935483870969
+      },
+      "output": 54
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.8064516129032258
+      },
+      "output": 55
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.8064516129032256
+      },
+      "output": 54
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.8064516129032259
+      },
+      "output": 55
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.8387096774193549
+      },
+      "output": 56
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.8387096774193548
+      },
+      "output": 55
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.838709677419355
+      },
+      "output": 56
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.8709677419354839
+      },
+      "output": 57
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.8709677419354838
+      },
+      "output": 56
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.870967741935484
+      },
+      "output": 57
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.9032258064516129
+      },
+      "output": 58
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.9032258064516128
+      },
+      "output": 57
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.903225806451613
+      },
+      "output": 58
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.9354838709677419
+      },
+      "output": 59
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.9354838709677418
+      },
+      "output": 58
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.935483870967742
+      },
+      "output": 59
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.967741935483871
+      },
+      "output": 60
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.9677419354838709
+      },
+      "output": 59
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.9677419354838711
+      },
+      "output": 60
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 1.0
+      },
+      "output": 60
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.9999999999999999
+      },
+      "output": 60
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 200,
+        "u": 0.9999999999999999
+      },
+      "output": 60
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 201,
+        "u": 0.0
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 201,
+        "u": 1.5
+      },
+      "output": 60
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 201,
+        "u": 0.03225806451612914
+      },
+      "output": 31
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 201,
+        "u": 0.0967741935483872
+      },
+      "output": 33
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 201,
+        "u": 0.16129032258064527
+      },
+      "output": 35
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 201,
+        "u": 0.22580645161290333
+      },
+      "output": 37
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 201,
+        "u": 0.2903225806451614
+      },
+      "output": 39
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 201,
+        "u": 0.3548387096774195
+      },
+      "output": 41
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 201,
+        "u": 0.41935483870967755
+      },
+      "output": 43
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 201,
+        "u": 0.4838709677419356
+      },
+      "output": 45
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 201,
+        "u": 0.5483870967741936
+      },
+      "output": 47
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 201,
+        "u": 0.6129032258064517
+      },
+      "output": 49
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 201,
+        "u": 0.6774193548387097
+      },
+      "output": 51
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 201,
+        "u": 0.7419354838709679
+      },
+      "output": 53
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 201,
+        "u": 0.8064516129032259
+      },
+      "output": 55
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 201,
+        "u": 0.870967741935484
+      },
+      "output": 57
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 201,
+        "u": 0.935483870967742
+      },
+      "output": 59
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 201,
+        "u": 0.9999999999999999
+      },
+      "output": 60
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 333,
+        "u": 0.0
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 333,
+        "u": 1.5
+      },
+      "output": 61
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 333,
+        "u": 0.03225806451612914
+      },
+      "output": 31
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 333,
+        "u": 0.0967741935483872
+      },
+      "output": 33
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 333,
+        "u": 0.16129032258064527
+      },
+      "output": 35
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 333,
+        "u": 0.22580645161290333
+      },
+      "output": 37
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 333,
+        "u": 0.2903225806451614
+      },
+      "output": 39
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 333,
+        "u": 0.3548387096774195
+      },
+      "output": 41
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 333,
+        "u": 0.41935483870967755
+      },
+      "output": 43
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 333,
+        "u": 0.4838709677419356
+      },
+      "output": 45
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 333,
+        "u": 0.5483870967741936
+      },
+      "output": 47
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 333,
+        "u": 0.6129032258064517
+      },
+      "output": 49
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 333,
+        "u": 0.6774193548387097
+      },
+      "output": 51
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 333,
+        "u": 0.7419354838709679
+      },
+      "output": 53
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 333,
+        "u": 0.8064516129032259
+      },
+      "output": 55
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 333,
+        "u": 0.870967741935484
+      },
+      "output": 57
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 333,
+        "u": 0.935483870967742
+      },
+      "output": 59
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 333,
+        "u": 0.9999999999999999
+      },
+      "output": 60
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 334,
+        "u": 0.0
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 334,
+        "u": 1.5
+      },
+      "output": 61
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 334,
+        "u": 0.03225806451612914
+      },
+      "output": 31
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 334,
+        "u": 0.0967741935483872
+      },
+      "output": 33
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 334,
+        "u": 0.16129032258064527
+      },
+      "output": 35
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 334,
+        "u": 0.22580645161290333
+      },
+      "output": 37
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 334,
+        "u": 0.2903225806451614
+      },
+      "output": 39
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 334,
+        "u": 0.3548387096774195
+      },
+      "output": 41
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 334,
+        "u": 0.41935483870967755
+      },
+      "output": 43
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 334,
+        "u": 0.4838709677419356
+      },
+      "output": 45
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 334,
+        "u": 0.5483870967741936
+      },
+      "output": 47
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 334,
+        "u": 0.6129032258064517
+      },
+      "output": 49
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 334,
+        "u": 0.6774193548387097
+      },
+      "output": 51
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 334,
+        "u": 0.7419354838709679
+      },
+      "output": 53
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 334,
+        "u": 0.8064516129032259
+      },
+      "output": 55
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 334,
+        "u": 0.870967741935484
+      },
+      "output": 57
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 334,
+        "u": 0.935483870967742
+      },
+      "output": 59
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 334,
+        "u": 0.9999999999999999
+      },
+      "output": 60
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.0
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 1.1102230246251565e-16
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.5
+      },
+      "output": 45
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.9999999999999999
+      },
+      "output": 60
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 1.0
+      },
+      "output": 61
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": -0.5
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 1.5
+      },
+      "output": 61
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.0
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.0
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 1.1102230246251565e-16
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.03225806451612903
+      },
+      "output": 31
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.03225806451612892
+      },
+      "output": 30
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.03225806451612914
+      },
+      "output": 31
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.06451612903225806
+      },
+      "output": 32
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.06451612903225795
+      },
+      "output": 31
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.06451612903225817
+      },
+      "output": 32
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.0967741935483871
+      },
+      "output": 33
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.09677419354838698
+      },
+      "output": 32
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.0967741935483872
+      },
+      "output": 33
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.12903225806451613
+      },
+      "output": 34
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.12903225806451601
+      },
+      "output": 33
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.12903225806451624
+      },
+      "output": 34
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.16129032258064516
+      },
+      "output": 35
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.16129032258064505
+      },
+      "output": 34
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.16129032258064527
+      },
+      "output": 35
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.1935483870967742
+      },
+      "output": 36
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.19354838709677408
+      },
+      "output": 35
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.1935483870967743
+      },
+      "output": 36
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.22580645161290322
+      },
+      "output": 37
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.2258064516129031
+      },
+      "output": 36
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.22580645161290333
+      },
+      "output": 37
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.25806451612903225
+      },
+      "output": 38
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.25806451612903214
+      },
+      "output": 37
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.25806451612903236
+      },
+      "output": 38
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.2903225806451613
+      },
+      "output": 39
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.2903225806451612
+      },
+      "output": 38
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.2903225806451614
+      },
+      "output": 39
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.3225806451612903
+      },
+      "output": 40
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.3225806451612902
+      },
+      "output": 39
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.3225806451612904
+      },
+      "output": 40
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.3548387096774194
+      },
+      "output": 41
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.35483870967741926
+      },
+      "output": 40
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.3548387096774195
+      },
+      "output": 41
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.3870967741935484
+      },
+      "output": 42
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.38709677419354827
+      },
+      "output": 41
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.3870967741935485
+      },
+      "output": 42
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.41935483870967744
+      },
+      "output": 43
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.4193548387096773
+      },
+      "output": 42
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.41935483870967755
+      },
+      "output": 43
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.45161290322580644
+      },
+      "output": 44
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.45161290322580633
+      },
+      "output": 43
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.45161290322580655
+      },
+      "output": 44
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.4838709677419355
+      },
+      "output": 45
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.4838709677419354
+      },
+      "output": 44
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.4838709677419356
+      },
+      "output": 45
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.5161290322580645
+      },
+      "output": 46
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.5161290322580644
+      },
+      "output": 45
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.5161290322580646
+      },
+      "output": 46
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.5483870967741935
+      },
+      "output": 47
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.5483870967741934
+      },
+      "output": 46
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.5483870967741936
+      },
+      "output": 47
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.5806451612903226
+      },
+      "output": 48
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.5806451612903225
+      },
+      "output": 47
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.5806451612903227
+      },
+      "output": 48
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.6129032258064516
+      },
+      "output": 49
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.6129032258064515
+      },
+      "output": 48
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.6129032258064517
+      },
+      "output": 49
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.6451612903225806
+      },
+      "output": 50
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.6451612903225805
+      },
+      "output": 49
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.6451612903225807
+      },
+      "output": 50
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.6774193548387096
+      },
+      "output": 51
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.6774193548387095
+      },
+      "output": 50
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.6774193548387097
+      },
+      "output": 51
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.7096774193548387
+      },
+      "output": 52
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.7096774193548386
+      },
+      "output": 51
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.7096774193548389
+      },
+      "output": 52
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.7419354838709677
+      },
+      "output": 53
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.7419354838709676
+      },
+      "output": 52
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.7419354838709679
+      },
+      "output": 53
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.7741935483870968
+      },
+      "output": 54
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.7741935483870966
+      },
+      "output": 53
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.7741935483870969
+      },
+      "output": 54
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.8064516129032258
+      },
+      "output": 55
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.8064516129032256
+      },
+      "output": 54
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.8064516129032259
+      },
+      "output": 55
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.8387096774193549
+      },
+      "output": 56
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.8387096774193548
+      },
+      "output": 55
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.838709677419355
+      },
+      "output": 56
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.8709677419354839
+      },
+      "output": 57
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.8709677419354838
+      },
+      "output": 56
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.870967741935484
+      },
+      "output": 57
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.9032258064516129
+      },
+      "output": 58
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.9032258064516128
+      },
+      "output": 57
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.903225806451613
+      },
+      "output": 58
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.9354838709677419
+      },
+      "output": 59
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.9354838709677418
+      },
+      "output": 58
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.935483870967742
+      },
+      "output": 59
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.967741935483871
+      },
+      "output": 60
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.9677419354838709
+      },
+      "output": 59
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.9677419354838711
+      },
+      "output": 60
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 1.0
+      },
+      "output": 61
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.9999999999999999
+      },
+      "output": 60
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": 1000000,
+        "u": 0.9999999999999999
+      },
+      "output": 60
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": -40,
+        "u": 0.0
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": -40,
+        "u": 1.5
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": -40,
+        "u": 0.03225806451612914
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": -40,
+        "u": 0.0967741935483872
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": -40,
+        "u": 0.16129032258064527
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": -40,
+        "u": 0.22580645161290333
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": -40,
+        "u": 0.2903225806451614
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": -40,
+        "u": 0.3548387096774195
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": -40,
+        "u": 0.41935483870967755
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": -40,
+        "u": 0.4838709677419356
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": -40,
+        "u": 0.5483870967741936
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": -40,
+        "u": 0.6129032258064517
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": -40,
+        "u": 0.6774193548387097
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": -40,
+        "u": 0.7419354838709679
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": -40,
+        "u": 0.8064516129032259
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": -40,
+        "u": 0.870967741935484
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": -40,
+        "u": 0.935483870967742
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "rare",
+        "session_xp": -40,
+        "u": 0.9999999999999999
+      },
+      "output": 25
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "legendary",
+        "session_xp": 0,
+        "u": 0.0
+      },
+      "output": 150
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "legendary",
+        "session_xp": 0,
+        "u": 0.5
+      },
+      "output": 150
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "legendary",
+        "session_xp": 0,
+        "u": 0.9999999999999999
+      },
+      "output": 150
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "legendary",
+        "session_xp": 100,
+        "u": 0.0
+      },
+      "output": 150
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "legendary",
+        "session_xp": 100,
+        "u": 0.5
+      },
+      "output": 150
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "legendary",
+        "session_xp": 100,
+        "u": 0.9999999999999999
+      },
+      "output": 150
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "legendary",
+        "session_xp": 1000000,
+        "u": 0.0
+      },
+      "output": 150
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "legendary",
+        "session_xp": 1000000,
+        "u": 0.5
+      },
+      "output": 150
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "legendary",
+        "session_xp": 1000000,
+        "u": 0.9999999999999999
+      },
+      "output": 150
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "epic",
+        "session_xp": 0,
+        "u": 0.0
+      },
+      "output": 0
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "epic",
+        "session_xp": 0,
+        "u": 0.5
+      },
+      "output": 0
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "epic",
+        "session_xp": 0,
+        "u": 0.9999999999999999
+      },
+      "output": 0
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "epic",
+        "session_xp": 100,
+        "u": 0.0
+      },
+      "output": 0
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "epic",
+        "session_xp": 100,
+        "u": 0.5
+      },
+      "output": 0
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "epic",
+        "session_xp": 100,
+        "u": 0.9999999999999999
+      },
+      "output": 0
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "epic",
+        "session_xp": 1000000,
+        "u": 0.0
+      },
+      "output": 0
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "epic",
+        "session_xp": 1000000,
+        "u": 0.5
+      },
+      "output": 0
+    },
+    {
+      "class": "cap",
+      "input": {
+        "rarity": "epic",
+        "session_xp": 1000000,
+        "u": 0.9999999999999999
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "rarity": "rare",
+        "session_xp": 670,
+        "u": 0.20303340194020225
+      },
+      "output": 36
+    },
+    {
+      "input": {
+        "rarity": "rare",
+        "session_xp": 833,
+        "u": 0.8230457434559072
+      },
+      "output": 55
+    },
+    {
+      "input": {
+        "rarity": "common",
+        "session_xp": 653,
+        "u": 0.25015406763448944
+      },
+      "output": 14
+    },
+    {
+      "input": {
+        "rarity": "epic",
+        "session_xp": 427,
+        "u": 0.8239638564113423
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "rarity": "rare",
+        "session_xp": 875,
+        "u": 0.657482307228477
+      },
+      "output": 50
+    },
+    {
+      "input": {
+        "rarity": "common",
+        "session_xp": 166,
+        "u": 0.8098661861961292
+      },
+      "output": 22
+    },
+    {
+      "input": {
+        "rarity": "rare",
+        "session_xp": 71,
+        "u": 0.485284601788496
+      },
+      "output": 25
+    },
+    {
+      "input": {
+        "rarity": "rare",
+        "session_xp": 389,
+        "u": 0.16750292516945486
+      },
+      "output": 35
+    },
+    {
+      "input": {
+        "rarity": "legendary",
+        "session_xp": 1413,
+        "u": 0.6101266305315137
+      },
+      "output": 150
+    },
+    {
+      "input": {
+        "rarity": "legendary",
+        "session_xp": 1445,
+        "u": 0.5351066700671802
+      },
+      "output": 150
+    },
+    {
+      "input": {
+        "rarity": "rare",
+        "session_xp": 26,
+        "u": 0.1120248973700394
+      },
+      "output": 25
+    },
+    {
+      "input": {
+        "rarity": "legendary",
+        "session_xp": 1422,
+        "u": 0.2737447163572755
+      },
+      "output": 150
+    },
+    {
+      "input": {
+        "rarity": "legendary",
+        "session_xp": 1138,
+        "u": 0.547605342231112
+      },
+      "output": 150
+    },
+    {
+      "input": {
+        "rarity": "epic",
+        "session_xp": 831,
+        "u": 0.32934291683679884
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "rarity": "common",
+        "session_xp": 1188,
+        "u": 0.2503765534414685
+      },
+      "output": 14
+    },
+    {
+      "input": {
+        "rarity": "epic",
+        "session_xp": 238,
+        "u": 0.4480468486678353
+      },
+      "output": 0
+    }
+  ],
+  "function": "gamification.chests.payout_xp",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Passes the case's session review XP as the predecessor's third argument; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_081.py",
+  "registry_sha256": "67257e9dfbf5070946f9cabbe897df72d7f71fa60cd8414cf384b5c83d530274",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

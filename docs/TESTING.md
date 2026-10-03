@@ -75,8 +75,10 @@ on GitHub-hosted runners, in five jobs that start together (ADR-055):
 | `hygiene` | `python scrub secrets` |
 
 Every stage runs in exactly one job, and the aggregate `ci` check, which the rulesets require, needs
-all five with `workflow-lint` and `base-is-dev`. Each stage checks its own tools first, so a missing
-tool fails that stage by name wherever it runs.
+all five with `workflow-lint` and `base-is-dev`.
+The required `ci` is always the pull request's own run: a push to `dev` or `main` reports it as
+`ci (push)`. Each stage checks its own tools first, so a missing tool fails that stage by name
+wherever it runs.
 
 `audit-web` audits every package `pnpm-lock.yaml` resolves, the development dependencies too: the
 Mini App ships as a static build, so its packages are all development dependencies. It runs
@@ -109,6 +111,10 @@ request cancels the run it supersedes; a push to `dev` or `main` is never cancel
 `$CHECK_LOG_DIR`, and each CI job uploads them as its own artifact, whatever the verdict.
 
 ## Coverage and mutation
+
+The repository's Python guard scripts are mutated by `scripts/mutation_python.py`, one CI job
+`mutation-python` per shard (ADR-073); a survivor fails the verdict unless it is recorded in
+`scripts/mutation-equivalent.d/python.json`.
 
 A test proves something only if it fails on a wrong program. Mutation rows (the mutation-rows
 pack's practice) are added for game math and gates as they land.

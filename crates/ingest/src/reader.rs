@@ -24,7 +24,9 @@ use sqlx::AssertSqlSafe;
 use tokio::runtime::Handle;
 
 use crate::lock::CollectionLock;
+use crate::memory_state::{MemoryState, parse as parse_memory};
 use crate::settings::{DECK_SEPARATOR, ScopeSettings, SyncSettings};
+use crate::tier::{Tier, parse_tier};
 
 /// `SQLite`'s primary result code for a write refused because the database is read-only
 /// (`SQLITE_READONLY`); every extended code of it keeps this in its low byte.
@@ -36,7 +38,8 @@ const DECK_NAMES: &str = "SELECT id, name FROM decks ORDER BY id";
 /// The cards whose home deck (the original deck while a filtered deck borrows the card) is one of
 /// the ids in `?1`, a JSON array: [`Card::home_deck_id`] in SQL, as the predecessor's recount
 /// wrote it.
-const CARDS: &str = "SELECT id, nid, did, odid, queue, type, due, ivl, factor, reps, lapses \
+const CARDS: &str = "SELECT id, nid, did, odid, queue, type, due, ivl, factor, reps, lapses, \
+     (SELECT n.tags FROM notes n WHERE n.id = cards.nid), cards.data \
      FROM cards WHERE (CASE WHEN odid != 0 THEN odid ELSE did END) IN (SELECT value FROM json_each(?1)) \
      ORDER BY id";
 /// The revlog rows newer than the floor `?1` of the cards whose home deck is one of the ids in
@@ -50,7 +53,21 @@ const REVIEWS: &str = "SELECT r.id, r.cid, r.ease, r.ivl, r.lastIvl, r.factor, r
 const CREATED: &str = "SELECT crt FROM col ORDER BY id LIMIT 1";
 
 /// A card row as [`CARDS`] selects it.
-type CardRow = (i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64);
+type CardRow = (
+    i64,
+    i64,
+    i64,
+    i64,
+    i64,
+    i64,
+    i64,
+    i64,
+    i64,
+    i64,
+    i64,
+    Option<String>,
+    Option<String>,
+);
 /// A review row as [`REVIEWS`] selects it.
 type ReviewRow = (i64, i64, i64, i64, i64, i64, i64, i64);
 
@@ -106,6 +123,12 @@ pub struct Card {
     /// The card's course: the course whose deck root is its home deck's top-level name, or none
     /// (SPEC-071 R2). Only the code travels with the card.
     pub course: Option<CourseCode>,
+    /// The Bloom tier of the card's note (SPEC-072 R3), reduced from its tags inside the read; the
+    /// tags themselves never leave ingest.
+    pub tier: Option<Tier>,
+    /// The card's memory state, parsed from its stored data inside the read (SPEC-077 R1); none
+    /// when the scheduler stored no readable one.
+    pub memory: Option<MemoryState>,
 }
 
 impl Card {
@@ -282,6 +305,7 @@ impl CollectionReader {
             let cards = cards
                 .into_iter()
                 .map(|row| {
+                    let tier = row.11.as_deref().and_then(parse_tier);
                     let (id, note_id, deck_id, original_deck_id, queue, kind) =
                         (row.0, row.1, row.2, row.3, row.4, row.5);
                     let mut card = Card {
@@ -298,6 +322,8 @@ impl CollectionReader {
                         lapses: row.10,
                         track: Track::Language,
                         course: None,
+                        tier,
+                        memory: parse_memory(row.12.as_deref()),
                     };
                     card.track = track(card.home_deck_id());
                     card.course = course_of(&courses, name_of(card.home_deck_id()));

@@ -569,6 +569,21 @@ pub fn move_due(path: &Path, card: i64, due: i64) {
     });
 }
 
+/// Sets the tags of the note `note` in the collection at `path`, as tagging it on another device
+/// does.
+///
+/// # Panics
+///
+/// When the engine or the statement fails.
+pub fn set_tags(path: &Path, note: i64, tags: &str) {
+    with_engine(path, |col| {
+        col.storage
+            .db()
+            .execute("update notes set tags = ? where id = ?", (tags, note))
+            .expect("the note's tags are set");
+    });
+}
+
 /// Deletes the cards `ids` from the collection at `path`, leaving their reviews behind, as deleting a
 /// card on another device does before its log is pruned.
 ///
@@ -770,4 +785,35 @@ pub fn reader(
         ScopeSettings::from_env(&Environment::from_vars(variables)).expect("the scope parses");
     let offload = Offload::new(OffloadWorkers::new(1).expect("one worker"), clock);
     deck_streak_ingest::reader::CollectionReader::new(settings, scope, offload)
+}
+
+/// Runs `sql`, a batch of statements, through the engine's own connection on the collection at
+/// `path`: the way a test shapes a collection the engine would not.
+///
+/// # Panics
+///
+/// When the engine cannot open the collection or the batch fails.
+pub fn run_sql(path: &Path, sql: &str) {
+    with_engine(path, |col| {
+        col.storage
+            .db()
+            .execute_batch(sql)
+            .expect("the statement batch runs");
+    });
+}
+
+/// The id of the stock note type named `name`.
+///
+/// # Panics
+///
+/// When the engine has no such note type.
+#[must_use]
+pub fn notetype_id(path: &Path, name: &str) -> i64 {
+    with_engine(path, |col| {
+        col.get_notetype_by_name(name)
+            .expect("the note types are read")
+            .unwrap_or_else(|| panic!("the engine has no note type {name}"))
+            .id
+            .0
+    })
 }

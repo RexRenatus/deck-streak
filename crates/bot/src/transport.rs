@@ -16,6 +16,10 @@
 //! The bot token is part of every request's URL, so nothing here logs a URL, a request or an
 //! answer's body: a line names the method, the attempt and the Bot API's error code, and never a
 //! message's text.
+//!
+//! [`OwnerChat`] is the bot's side of the notification router's transport port (SPEC-041 R13): the
+//! router's pushes go to the owner's chat through the same [`Transport::send_html`], and the
+//! ladder's renders (SPEC-084 R8; ADR-084) through the transport's reveal, dice, reaction and pin.
 
 use std::fmt;
 use std::future::Future;
@@ -25,17 +29,26 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
+use deck_streak_identity::Owner;
 use deck_streak_kernel::{Environment, Secret, Setting, SettingsError};
+use deck_streak_notifications::{
+    BotTransport, FileId, Pass, Photo, PhotoFuture, PhotoPushed, Prepared, PushFuture, Pushed,
+    ShareFuture,
+};
 use frankenstein::client_reqwest::Bot;
+use frankenstein::inline_mode::{InlineQueryResult, InlineQueryResultCachedPhoto, MaybeCached};
 use frankenstein::methods::{
     AnswerCallbackQueryParams, DeleteMyCommandsParams, DeleteWebhookParams, EditMessageTextParams,
-    GetUpdatesParams, SendChatActionParams, SendMessageParams, SetMyCommandsParams,
+    GetFileParams, GetUpdatesParams, PinChatMessageParams, SavePreparedInlineMessageParams,
+    SendChatActionParams, SendDiceParams, SendMessageParams, SetMessageReactionParams,
+    SetMyCommandsParams,
 };
 use frankenstein::reqwest;
 use frankenstein::response::{ErrorResponse, MethodResponse};
 use frankenstein::types::{
     AllowedUpdate, BotCommand, BotCommandScope, BotCommandScopeChat, ChatAction,
-    InlineKeyboardMarkup, LinkPreviewOptions, Message, ReplyMarkup,
+    InlineKeyboardMarkup, LinkPreviewOptions, Message, ReactionType, ReactionTypeEmoji,
+    ReplyMarkup,
 };
 use frankenstein::updates::Update;
 use frankenstein::{AsyncTelegramApi, ParseMode};
@@ -43,11 +56,12 @@ use serde_json::Value;
 
 use crate::chunk;
 
-/// The Bot API's base URL, without the `/bot<token>` part. Unset, it is [`DEFAULT_API_URL`]; set,
-/// it must be `https:`, or `http:` to a loopback host (a local Bot API server, or a test's fake).
+/// The Bot API's base URL, without the `/bot<token>` part. Unset, it is Telegram's own; set, it
+/// must be `https:`, or `http:` to a loopback host (a local Bot API server, or a test's fake).
 pub const API_URL: &str = "DECKSTREAK_BOT_API_URL";
-/// Telegram's own Bot API.
-pub const DEFAULT_API_URL: &str = "https://api.telegram.org";
+/// Telegram's own Bot API. Private to the bot, so no other crate can build a request on it
+/// (SPEC-041 A15).
+pub(crate) const DEFAULT_API_URL: &str = "https://api.telegram.org";
 
 /// The longest text one message may carry, in UTF-16 units after entity parsing (the Bot API's
 /// `sendMessage`; the telegram-platform pack). The predecessor's `constants.py:TELEGRAM_MAX_LEN`,
@@ -65,6 +79,10 @@ pub const DEFAULT_RETRY_AFTER: Duration = Duration::from_secs(1);
 /// ([`crate::poll::LONG_POLL_SECONDS`]), so a poll that returns empty is never cut off: the
 /// predecessor's `bot.py:CommandBot` client, proved by `goldens/bot.timeouts.json`.
 pub const HTTP_TIMEOUT: Duration = Duration::from_mins(1);
+
+/// How long one file's download may take, from its request to its last byte: a file the bot
+/// fetches reaches 20 MB (SPEC-118 R8), which [`HTTP_TIMEOUT`] is not sized for.
+pub const DOWNLOAD_TIMEOUT: Duration = Duration::from_mins(5);
 
 /// What Telegram answers an edit that would change nothing: a 400 an edit counts as delivered.
 const NOT_MODIFIED: &str = "message is not modified";
@@ -99,7 +117,7 @@ impl ApiUrl {
         (secure || local).then(|| Self(text.to_owned()))
     }
 
-    /// The base URL [`API_URL`] names, or [`DEFAULT_API_URL`] when it is unset.
+    /// The base URL [`API_URL`] names, or Telegram's own when it is unset.
     ///
     /// # Errors
     ///
@@ -313,9 +331,37 @@ impl Waits for TokioTimer {
     }
 }
 
+/// A file the Bot API holds for download (`getFile`).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RemoteFile {
+    /// Its path below the Bot API's file URL.
+    pub path: String,
+    /// Its size, when the Bot API declared one.
+    pub size: Option<u64>,
+}
+
+/// How a file's download ended (SPEC-118 R8).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Download {
+    /// Every byte arrived and was kept.
+    Complete {
+        /// How many bytes arrived.
+        bytes: u64,
+    },
+    /// The stream passed its cap and was stopped.
+    OverCap,
+    /// No answer, a refusal, or a stream broken before its end.
+    Failed,
+    /// The receiver refused a chunk.
+    NotKept,
+}
+
 /// The Bot API transport: frankenstein's async client, the counts of what it sent, and its waits.
 pub struct Transport {
     bot: Bot,
+    /// The Bot API's file URL, `{api}/file/bot{token}`: it holds the token, so it is never printed
+    /// or logged.
+    files: String,
     waits: Arc<dyn Waits>,
     attempted: AtomicU64,
     delivered: AtomicU64,
@@ -353,6 +399,14 @@ impl Transport {
         timeout: Duration,
         waits: Arc<dyn Waits>,
     ) -> Result<Self, TransportError> {
+        #[expect(
+            clippy::disallowed_types,
+            reason = "the transport is the one place the bot's HTTP client is made"
+        )]
+        #[expect(
+            clippy::disallowed_methods,
+            reason = "the transport is the one place the bot's HTTP client is made"
+        )]
         let client = reqwest::Client::builder()
             .connect_timeout(timeout)
             .timeout(timeout)
@@ -364,6 +418,7 @@ impl Transport {
             .build();
         Ok(Self {
             bot,
+            files: format!("{}/file/bot{}", api.as_str(), token.expose()),
             waits,
             attempted: AtomicU64::new(0),
             delivered: AtomicU64::new(0),
@@ -509,6 +564,66 @@ impl Transport {
         Sent::Delivered { message_id }
     }
 
+    /// Sends a dice with `emoji` to `chat`, the topper of a T4 and a T5 celebration (SPEC-084 R8).
+    /// Counted as [`Transport::send_html`] counts: a dice is a message.
+    pub async fn send_dice(&self, chat: i64, emoji: &str) -> Sent {
+        self.attempted.fetch_add(1, Ordering::Relaxed);
+        let params = SendDiceParams::builder().chat_id(chat).emoji(emoji).build();
+        let (bot, params) = (&self.bot, &params);
+        let sent = self
+            .with_attempts("sendDice", move || async move {
+                match bot.send_dice(params).await {
+                    Ok(answer) => Attempt::Done(answer.result.message_id),
+                    Err(error) => Attempt::from_error(&error),
+                }
+            })
+            .await;
+        let Some(message_id) = sent else {
+            return Sent::Failed;
+        };
+        self.delivered.fetch_add(1, Ordering::Relaxed);
+        Sent::Delivered { message_id }
+    }
+
+    /// Reacts with `emoji` to the message `message_id` in `chat`, the T1 celebration (SPEC-084 R9).
+    /// A reaction is no message, so it is not counted. Whether the Bot API took it.
+    pub async fn set_message_reaction(&self, chat: i64, message_id: i32, emoji: &str) -> bool {
+        let reaction = ReactionType::Emoji(ReactionTypeEmoji::builder().emoji(emoji).build());
+        let params = SetMessageReactionParams::builder()
+            .chat_id(chat)
+            .message_id(message_id)
+            .reaction(vec![reaction])
+            .build();
+        let (bot, params) = (&self.bot, &params);
+        self.with_attempts("setMessageReaction", move || async move {
+            match bot.set_message_reaction(params).await {
+                Ok(_) => Attempt::Done(()),
+                Err(error) => Attempt::from_error(&error),
+            }
+        })
+        .await
+        .is_some()
+    }
+
+    /// Pins the message `message_id` in `chat` without a notification, the T5 celebration's card
+    /// (SPEC-084 R8). A pin is no message, so it is not counted. Whether the Bot API took it.
+    pub async fn pin_chat_message(&self, chat: i64, message_id: i32) -> bool {
+        let params = PinChatMessageParams::builder()
+            .chat_id(chat)
+            .message_id(message_id)
+            .disable_notification(true)
+            .build();
+        let (bot, params) = (&self.bot, &params);
+        self.with_attempts("pinChatMessage", move || async move {
+            match bot.pin_chat_message(params).await {
+                Ok(_) => Attempt::Done(()),
+                Err(error) => Attempt::from_error(&error),
+            }
+        })
+        .await
+        .is_some()
+    }
+
     /// Sends `bytes` to `chat` as the document `file_name`, with the HTML caption `caption` when it
     /// fits [`MAX_CAPTION_UTF16`]. The document is uploaded from memory as `multipart/form-data`,
     /// through frankenstein's own client and its re-export of reqwest, because frankenstein's
@@ -548,6 +663,136 @@ impl Transport {
         };
         self.delivered.fetch_add(1, Ordering::Relaxed);
         Sent::Delivered { message_id }
+    }
+
+    /// Sends `bytes` to `chat` as a photo with the HTML caption `caption`, in ONE request: a photo
+    /// is never retried, because a lost answer to a send that arrived would send it twice, and the
+    /// router already holds the failure. The image is uploaded from memory as `multipart/form-data`
+    /// (frankenstein's `sendPhoto` uploads only from a path on disk). The answer is the file id of
+    /// the largest size Telegram holds, or `None` on any refusal, rate limit, garbage or silence.
+    pub async fn send_photo(&self, chat: i64, bytes: &[u8], caption: &str) -> Option<String> {
+        self.attempted.fetch_add(1, Ordering::Relaxed);
+        let url = format!("{}/sendPhoto", self.bot.api_url);
+        let form = photo_form(chat, bytes, caption).ok()?;
+        let answer = self
+            .bot
+            .client
+            .post(url)
+            .multipart(form)
+            .send()
+            .await
+            .ok()?;
+        if !answer.status().is_success() {
+            return None;
+        }
+        let body = answer.text().await.ok()?;
+        let sent = serde_json::from_str::<MethodResponse<Message>>(&body).ok()?;
+        let file_id = sent
+            .result
+            .photo?
+            .into_iter()
+            .max_by_key(|size| u64::from(size.width) * u64::from(size.height))?
+            .file_id;
+        self.delivered.fetch_add(1, Ordering::Relaxed);
+        Some(file_id)
+    }
+
+    /// The file `file_id` names, as the Bot API holds it for download (`getFile`), or `None` when
+    /// every attempt failed or the answer names no path (SPEC-118 R8).
+    pub async fn file(&self, file_id: &str) -> Option<RemoteFile> {
+        let params = GetFileParams::builder().file_id(file_id).build();
+        let (bot, params) = (&self.bot, &params);
+        let file = self
+            .with_attempts("getFile", move || async move {
+                match bot.get_file(params).await {
+                    Ok(answer) => Attempt::Done(answer.result),
+                    Err(error) => Attempt::from_error(&error),
+                }
+            })
+            .await?;
+        Some(RemoteFile {
+            path: file.file_path?,
+            size: file.file_size,
+        })
+    }
+
+    /// Streams the file at the Bot API's `path`, handing each chunk to `keep` as it arrives, within
+    /// [`DOWNLOAD_TIMEOUT`] (SPEC-118 R8). The stream stops as soon as it passes `cap` bytes, before
+    /// that chunk is kept, and as soon as `keep` refuses a chunk. The file's URL holds the token,
+    /// so a failure is logged by its status alone, never by its URL or the client's error.
+    pub async fn download(
+        &self,
+        path: &str,
+        cap: u64,
+        mut keep: impl FnMut(&[u8]) -> bool,
+    ) -> Download {
+        let failed = |code: u64| {
+            tracing::warn!(method = "download", code, "a file download failed");
+            Download::Failed
+        };
+        let url = format!("{}/{path}", self.files);
+        let Ok(mut response) = self
+            .bot
+            .client
+            .get(url)
+            .timeout(DOWNLOAD_TIMEOUT)
+            .send()
+            .await
+        else {
+            return failed(NO_ANSWER);
+        };
+        let status = response.status();
+        if !status.is_success() {
+            return failed(u64::from(status.as_u16()));
+        }
+        let mut received: u64 = 0;
+        loop {
+            match response.chunk().await {
+                Ok(Some(chunk)) => {
+                    let length = u64::try_from(chunk.len()).unwrap_or(u64::MAX);
+                    received = received.saturating_add(length);
+                    if received > cap {
+                        tracing::warn!(method = "download", cap, "a file download passed its cap");
+                        return Download::OverCap;
+                    }
+                    if !keep(&chunk) {
+                        return Download::NotKept;
+                    }
+                }
+                Ok(None) => return Download::Complete { bytes: received },
+                Err(_) => return failed(NO_ANSWER),
+            }
+        }
+    }
+
+    /// Prepares the photo `file_id` with the HTML caption `caption` as an inline message the owner
+    /// `user` can share, in ONE call: a cached photo result the owner can send to a user, a bot, a
+    /// group or a channel. The id it is prepared under, or `None` on any failure.
+    pub async fn save_prepared_inline_message(
+        &self,
+        user: u64,
+        file_id: &str,
+        caption: &str,
+    ) -> Option<String> {
+        let photo = InlineQueryResultCachedPhoto::builder()
+            .id("share")
+            .photo_file_id(file_id)
+            .caption(caption)
+            .parse_mode(ParseMode::Html)
+            .build();
+        let params = SavePreparedInlineMessageParams::builder()
+            .user_id(user)
+            .result(InlineQueryResult::Photo(MaybeCached::Cached(photo)))
+            .allow_user_chats(true)
+            .allow_bot_chats(true)
+            .allow_group_chats(true)
+            .allow_channel_chats(true)
+            .build();
+        self.bot
+            .save_prepared_inline_message(&params)
+            .await
+            .ok()
+            .map(|answer| answer.result.id)
     }
 
     /// Answers the callback query `callback_id`, so the client stops its progress indicator (R9).
@@ -657,6 +902,152 @@ impl Transport {
     }
 }
 
+/// The bot's side of the notification router's transport port (SPEC-041 R13): every push goes to
+/// the owner's private chat, whose id is the owner's user id, through [`Transport::send_html`], so
+/// a pushed text is HTML, chunked and retried as every message of the bot is. The composition root
+/// joins it to the router; only the router can call it (the router's `Pass`).
+pub struct OwnerChat {
+    transport: Arc<Transport>,
+    chat: i64,
+}
+
+impl OwnerChat {
+    /// The owner's chat, over `transport`.
+    #[must_use]
+    pub const fn new(transport: Arc<Transport>, owner: Owner) -> Self {
+        Self {
+            transport,
+            chat: owner.user().get(),
+        }
+    }
+
+    /// Sends `text` as a line: what a reveal or a pinned message falls back to when its own message
+    /// did not arrive (SPEC-084 R8).
+    async fn line(&self, text: &str) -> Pushed {
+        match self.transport.send_html(self.chat, text, None).await {
+            Sent::Delivered { .. } => Pushed::Delivered,
+            Sent::Failed => Pushed::Failed,
+        }
+    }
+}
+
+impl BotTransport for OwnerChat {
+    fn push_message<'a>(&'a self, _pass: &'a Pass, text: &'a str) -> PushFuture<'a> {
+        Box::pin(async move {
+            match self.transport.send_html(self.chat, text, None).await {
+                Sent::Delivered { .. } => Pushed::Delivered,
+                Sent::Failed => Pushed::Failed,
+            }
+        })
+    }
+
+    fn push_reveal<'a>(
+        &'a self,
+        _pass: &'a Pass,
+        placeholder: &'a str,
+        text: &'a str,
+        pause: Duration,
+    ) -> PushFuture<'a> {
+        Box::pin(async move {
+            let Sent::Delivered { message_id } =
+                self.transport.send_html(self.chat, placeholder, None).await
+            else {
+                return self.line(text).await;
+            };
+            self.transport.wait(pause).await;
+            match self.transport.edit_html(self.chat, message_id, text).await {
+                Sent::Delivered { .. } => Pushed::Delivered,
+                Sent::Failed => self.line(text).await,
+            }
+        })
+    }
+
+    fn push_dice<'a>(&'a self, _pass: &'a Pass, emoji: &'a str) -> PushFuture<'a> {
+        Box::pin(async move {
+            match self.transport.send_dice(self.chat, emoji).await {
+                Sent::Delivered { .. } => Pushed::Delivered,
+                Sent::Failed => Pushed::Failed,
+            }
+        })
+    }
+
+    fn push_photo<'a>(
+        &'a self,
+        _pass: &'a Pass,
+        photo: &'a Photo,
+        caption: &'a str,
+    ) -> PhotoFuture<'a> {
+        Box::pin(async move {
+            match self
+                .transport
+                .send_photo(self.chat, photo.bytes(), caption)
+                .await
+                .and_then(|id| FileId::new(id).ok())
+            {
+                Some(file_id) => PhotoPushed::Delivered { file_id },
+                None => PhotoPushed::Failed,
+            }
+        })
+    }
+
+    fn prepare_share<'a>(
+        &'a self,
+        _pass: &'a Pass,
+        file: &'a FileId,
+        caption: &'a str,
+    ) -> ShareFuture<'a> {
+        Box::pin(async move {
+            let Ok(user) = u64::try_from(self.chat) else {
+                return Prepared::Failed;
+            };
+            match self
+                .transport
+                .save_prepared_inline_message(user, file.as_str(), caption)
+                .await
+            {
+                Some(id) => Prepared::Ready { id },
+                None => Prepared::Failed,
+            }
+        })
+    }
+
+    fn push_reaction<'a>(
+        &'a self,
+        _pass: &'a Pass,
+        message_id: i64,
+        emoji: &'a str,
+    ) -> PushFuture<'a> {
+        Box::pin(async move {
+            // A message id the Bot API's type cannot hold names no message of the owner's chat.
+            let Ok(message_id) = i32::try_from(message_id) else {
+                return Pushed::Failed;
+            };
+            if self
+                .transport
+                .set_message_reaction(self.chat, message_id, emoji)
+                .await
+            {
+                Pushed::Delivered
+            } else {
+                Pushed::Failed
+            }
+        })
+    }
+
+    fn push_pin<'a>(&'a self, _pass: &'a Pass, text: &'a str) -> PushFuture<'a> {
+        Box::pin(async move {
+            let Sent::Delivered { message_id } =
+                self.transport.send_html(self.chat, text, None).await
+            else {
+                return self.line(text).await;
+            };
+            // The pin is the card's frame, not its message: the message arrived either way.
+            let _pinned = self.transport.pin_chat_message(self.chat, message_id).await;
+            Pushed::Delivered
+        })
+    }
+}
+
 /// The `multipart/form-data` body of one `sendDocument`: the chat, the caption as HTML when there
 /// is one, and the document, as JSON.
 fn document_form(
@@ -676,6 +1067,31 @@ fn document_form(
             .text("parse_mode", "HTML")
     };
     Ok(form.part("document", document))
+}
+
+/// The multipart form of a `sendPhoto`: the chat, the HTML caption when there is one, and the image
+/// as a file part whose type is read from its signature.
+fn photo_form(
+    chat: i64,
+    bytes: &[u8],
+    caption: &str,
+) -> Result<reqwest::multipart::Form, reqwest::Error> {
+    let (name, mime) = if bytes.starts_with(&[0xFF, 0xD8]) {
+        ("photo.jpg", "image/jpeg")
+    } else {
+        ("photo.png", "image/png")
+    };
+    let photo = reqwest::multipart::Part::bytes(bytes.to_vec())
+        .file_name(name)
+        .mime_str(mime)?;
+    let form = reqwest::multipart::Form::new().text("chat_id", chat.to_string());
+    let form = if caption.is_empty() {
+        form
+    } else {
+        form.text("caption", caption.to_owned())
+            .text("parse_mode", "HTML")
+    };
+    Ok(form.part("photo", photo))
 }
 
 /// The attempt a `sendDocument` answer comes to: its message id, or its refusal.

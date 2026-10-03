@@ -11,9 +11,12 @@
 //! SIGTERM the loop finishes the batch in hand and confirms its offset; the role says `STOPPING=1`,
 //! closes the database and returns.
 //!
-//! The owner's `/sync` runs a sync cycle in this role (R11), through wiring's [`OwnerSyncCycle`].
-//! Its recompute is loaded once, when the database is open: the owner's courses, refused when they
-//! disagree with the readings taxonomy, their digest recorded, and the fold (SPEC-071 R1, R3, R4).
+//! The owner's `/sync` runs no cycle in this role: it requests the sync job (SPEC-059). The
+//! compiled notification policy is read at start, and a policy it refuses refuses start by its key;
+//! the router built over it is joined to this role's transport (SPEC-041 R13).
+//!
+//! The owner's media is saved into the vault inbox the api role's quick capture uses, when the vault
+//! is configured (SPEC-118 R6); with none, the owner is told the capture was not saved.
 
 use std::cell::Cell;
 use std::sync::Arc;
@@ -22,14 +25,15 @@ use deck_streak_bot::{ApiUrl, Commands, MiniAppUrl, Transport, TransportError};
 use deck_streak_identity::owner::TELEGRAM_BOT_TOKEN;
 use deck_streak_identity::{IdentityError, Owner};
 use deck_streak_kernel::{
-    Clock, CredentialLoader, CredentialsDirectory, Environment, KernelSettings, Offload, Redactor,
-    SettingsError, SystemClock,
+    Clock, ConventionsError, CredentialLoader, CredentialsDirectory, Environment, KernelSettings,
+    Offload, Redactor, SettingsError, SystemClock,
 };
+use deck_streak_notifications::{Policy, PolicyError};
 
+use crate::drill_vault;
 use crate::lifecycle::{self, Notifier, NotifyState, ShutdownSignal};
-use crate::wiring::{
-    self, OwnerSyncCycle, RecomputeError, RecomputeSetup, StateDirectory, WiringError,
-};
+use crate::sync_request::{self, FileDoorbell, SqliteRequestLedger, SyncRequester, TokioPause};
+use crate::wiring::{self, StateDirectory, WiringError};
 
 /// Why the `bot` role stopped with an error.
 #[derive(Debug, thiserror::Error)]
@@ -49,10 +53,12 @@ pub enum BotRoleError {
     /// The database could not be opened.
     #[error("the database could not be opened")]
     Database(#[source] WiringError),
-    /// The recompute could not start: the courses, the readings taxonomy, their agreement, the
-    /// courses' digest or the fold refused it (SPEC-071).
+    /// The owner's note conventions refused start (SPEC-094 R2; ADR-096).
     #[error(transparent)]
-    Recompute(#[from] RecomputeError),
+    Conventions(#[from] ConventionsError),
+    /// The compiled notification policy refused start, by its key.
+    #[error(transparent)]
+    Policy(#[from] PolicyError),
 }
 
 /// Runs the `bot` role until SIGTERM (or SIGINT), and returns once the batch in hand is handled
@@ -68,6 +74,7 @@ pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), BotRoleEr
     let state = StateDirectory::from_env(env)?;
     let app = MiniAppUrl::from_env(env)?;
     let api = ApiUrl::from_env(env)?;
+    let request = sync_request::request_path(env)?;
     let credentials = CredentialsDirectory::from_env(env)?;
     let loader = CredentialLoader::new(credentials, redactor.clone());
     let owner = Owner::load(&loader)?;
@@ -81,6 +88,7 @@ pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), BotRoleEr
         }
         .into());
     }
+    let policy = Policy::compiled()?;
     let transport = Arc::new(Transport::new(&api, &token)?);
     let notifier = Notifier::from_env(env);
     let shutdown = ShutdownSignal::install().map_err(BotRoleError::Signals)?;
@@ -90,21 +98,27 @@ pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), BotRoleEr
     let db = wiring::open_database(&offload, &state)
         .await
         .map_err(BotRoleError::Database)?;
-    let recompute = match RecomputeSetup::load(env, &db).await {
-        Ok(recompute) => recompute,
-        Err(error) => {
-            db.close().await;
-            return Err(error.into());
-        }
-    };
-    let sync = OwnerSyncCycle::new(
-        env.clone(),
-        redactor.clone(),
+    let router = wiring::router(
+        policy,
         db.clone(),
-        offload,
         kernel.study_day_rule,
-        recompute,
+        Arc::clone(&transport),
+        owner,
     );
+    let sync = SyncRequester::new(
+        SystemClock,
+        SqliteRequestLedger::new(db.clone()),
+        FileDoorbell::new(request),
+        TokioPause,
+    )
+    .with_flush(Arc::new(router));
+    let instruments = wiring::instruments_for_role(
+        env,
+        db.clone(),
+        &state,
+        offload.clone(),
+        kernel.study_day_rule,
+    )?;
     let mut commands = Commands::new(
         Arc::clone(&transport),
         owner,
@@ -114,6 +128,15 @@ pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), BotRoleEr
         kernel.study_day_rule,
         clock,
     );
+    if let Some(instruments) = instruments {
+        commands = commands.with_instruments(instruments);
+    }
+    if let Some(notes) = drill_vault::open(env) {
+        commands = commands.with_drills(notes);
+    }
+    if let Some(captures) = wiring::inbox_captures(env) {
+        commands = commands.with_capture(captures);
+    }
 
     let heartbeat = Cell::new(None);
     deck_streak_bot::run(&transport, &mut commands, shutdown.received(), || {

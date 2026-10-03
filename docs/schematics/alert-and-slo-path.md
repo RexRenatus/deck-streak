@@ -17,7 +17,7 @@ flowchart LR
   watch -->|new oom_kill or max| fail2[exit 1]
   watch -->|new high, or crossing 90 percent of memory.max| journal
   units[api, bot, job units: exit non-zero, a watchdog or an OOM kill] --> fail3[unit failed]
-  fail1 & fail2 & fail3 -->|OnFailure=deck-streak-alert@%n.service| alert[alert-telegram.sh]
+  fail1 & fail2 & fail3 -->|"OnFailure=deck-streak-alert@%n.service"| alert[alert-telegram.sh]
   journal -->|the failed run's last five error lines| alert
   creds[$CREDENTIALS_DIRECTORY: telegram-bot-token, owner-user-id] --> alert
   alert -->|URL and fields through curl --config on stdin| tg((Telegram sendMessage))
@@ -35,9 +35,12 @@ flowchart LR
 `deck-streak-alert@.service` is the one alert path. Its instance is the failed unit's full name, so
 a job instance's failure makes an instance whose name holds a second `@`, which systemd accepts:
 `%i` is everything after the first `@` (systemd.unit(5)). It names no `OnFailure=` itself: a page
-that fails must not start a page about the page. It reads no settings file and writes nothing: it
-holds only its two credentials, the journal group that lets it quote the failed run's lines, and
-the network.
+that fails must not start a page about the page. Its own refusal of an empty credential (SPEC-066
+R3) is one line at error priority naming the credential and exit 1, before any request, so the
+instance stays failed, in `systemctl --failed` and the journal; a page about it needs a route that
+does not depend on the alert sender (#285). It reads no settings file and writes nothing: it holds
+only its two credentials, the journal group that lets it quote the failed run's lines, and the
+network.
 
 ```mermaid
 sequenceDiagram
@@ -47,9 +50,12 @@ sequenceDiagram
   participant curl
   systemd->>alert: %i, MONITOR_UNIT, MONITOR_SERVICE_RESULT, MONITOR_INVOCATION_ID
   alert->>alert: read telegram-bot-token and owner-user-id from $CREDENTIALS_DIRECTORY
+  opt a credential is empty (SPEC-066 R3)
+    alert-->>systemd: one line at priority 3 naming it, exit 1: the instance stays failed, no request
+  end
   alert->>journal: that run's error lines (the unit's, when no run is named)
   journal-->>alert: at most the last five
-  alert->>alert: the text: unit, result, lines; at most 3500 bytes, cut at a character boundary
+  alert->>alert: the text: unit, result, lines#59; at most 3500 bytes, cut at a character boundary
   alert->>curl: --config - on stdin: url, chat_id, text (never argv)
   curl->>curl: POST sendMessage, three retries
 ```

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE coin_ledger SET delta = ?1 WHERE study_day = ?2 AND source = ?3 AND reference = ?4",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "8705fb2313673b1293ac7d6703735f136ae9cd9d9b9856d28293f9df4eb31499"
+}

@@ -1,0 +1,74 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT drill_id AS \"drill_id!\", drill_type, subject, xp, study_day\n           FROM drill_grades WHERE subject = ?1\n           ORDER BY created_at DESC, rowid DESC LIMIT ?2",
+  "describe": {
+    "columns": [
+      {
+        "name": "drill_id!",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "drill_grades",
+            "name": "drill_id"
+          }
+        }
+      },
+      {
+        "name": "drill_type",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "drill_grades",
+            "name": "drill_type"
+          }
+        }
+      },
+      {
+        "name": "subject",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "drill_grades",
+            "name": "subject"
+          }
+        }
+      },
+      {
+        "name": "xp",
+        "ordinal": 3,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "drill_grades",
+            "name": "xp"
+          }
+        }
+      },
+      {
+        "name": "study_day",
+        "ordinal": 4,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "drill_grades",
+            "name": "study_day"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "5d86179d30396a2d79c79ad55a4699b0a0bcb6e35e8a7dad32370394d0fccfc9"
+}

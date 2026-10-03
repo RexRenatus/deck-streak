@@ -12,15 +12,17 @@
 //! ```
 //!
 //! The two sync commands read the endpoint from `DECKSTREAK_SYNC_ENDPOINT`, and the account from
-//! `$CREDENTIALS_DIRECTORY/anki-sync-username` and `anki-sync-password`, as the service will
-//! (ADR-010): a credential never arrives as an argument or an environment variable.
+//! `$CREDENTIALS_DIRECTORY/anki-sync-username` and `anki-sync-password` through the kernel's
+//! loader, as the sync's login does (ADR-010): a credential never arrives as an argument or an
+//! environment variable, and a missing or empty one refuses by its id (SPEC-066 R6).
 
 use std::env;
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::ExitCode;
 
 use deck_streak_ingest::engine::{AnkiEngine, RslibEngine, SyncLogin};
+use deck_streak_ingest::settings::{SYNC_PASSWORD, SYNC_USERNAME};
+use deck_streak_kernel::{CredentialLoader, CredentialsDirectory, Redactor};
 
 const USAGE: &str = "usage: engine_probe queue|sync|download <collection>";
 
@@ -82,21 +84,25 @@ fn runtime() -> Result<tokio::runtime::Runtime, String> {
         .map_err(|_| "no tokio runtime could be built".to_owned())
 }
 
-/// The login the service will use: the endpoint is a setting, the account a credential.
+/// The login the service will use: the endpoint is a setting, the account two credentials the
+/// kernel's loader reads by their ids, each refusal answered with its message, which names the id.
 fn login() -> Result<SyncLogin, String> {
     let endpoint = env::var("DECKSTREAK_SYNC_ENDPOINT")
         .map_err(|_| "the setting DECKSTREAK_SYNC_ENDPOINT is not set".to_owned())?;
-    let credentials = env::var_os("CREDENTIALS_DIRECTORY")
-        .map(PathBuf::from)
+    let directory = env::var_os("CREDENTIALS_DIRECTORY")
         .ok_or_else(|| "CREDENTIALS_DIRECTORY is not set".to_owned())?;
-    let credential = |id: &str| {
-        fs::read_to_string(credentials.join(id))
-            .map(|value| value.strip_suffix('\n').unwrap_or(&value).to_owned())
-            .map_err(|_| format!("the credential {id} is missing"))
-    };
+    let directory = CredentialsDirectory::new(directory)
+        .ok_or_else(|| "CREDENTIALS_DIRECTORY is not an absolute path".to_owned())?;
+    let loader = CredentialLoader::new(directory, Redactor::new());
+    let username = loader
+        .load(SYNC_USERNAME)
+        .map_err(|refusal| refusal.to_string())?;
+    let password = loader
+        .load(SYNC_PASSWORD)
+        .map_err(|refusal| refusal.to_string())?;
     Ok(SyncLogin::new(
         endpoint,
-        credential("anki-sync-username")?,
-        credential("anki-sync-password")?,
+        username.expose(),
+        password.expose(),
     ))
 }

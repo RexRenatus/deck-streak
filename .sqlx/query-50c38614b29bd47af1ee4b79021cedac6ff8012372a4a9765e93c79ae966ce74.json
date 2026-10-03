@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM xp_settlement",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "50c38614b29bd47af1ee4b79021cedac6ff8012372a4a9765e93c79ae966ce74"
+}

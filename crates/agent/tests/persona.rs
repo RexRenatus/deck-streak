@@ -393,7 +393,7 @@ fn a_roster_outside_the_repository_fills_the_four_slots() {
     let outside = tempfile::tempdir().expect("a temporary directory outside the repository");
     let file = outside.path().join("roster.json");
     fs::write(&file, synthetic_roster().to_string()).expect("the synthetic roster is written");
-    let env = Environment::from_vars([(ROSTER, file.as_os_str())]);
+    let env = Environment::from_vars([("DECKSTREAK_AGENT_ROSTER", file.as_os_str())]);
     let path: RosterPath = env
         .required(ROSTER)
         .expect("the setting names the roster by an absolute path");
@@ -430,7 +430,10 @@ fn a_roster_outside_the_repository_fills_the_four_slots() {
     let relative = Environment::from_vars([(ROSTER, "agent/roster.json")]);
     assert!(matches!(
         relative.required::<RosterPath>(ROSTER),
-        Err(SettingsError::Malformed { .. })
+        Err(SettingsError::Malformed {
+            expected: "an absolute file path",
+            ..
+        })
     ));
 }
 

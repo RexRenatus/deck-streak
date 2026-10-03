@@ -46,6 +46,9 @@ const server = vi.hoisted(() => {
 describe('Today', () => {
   afterEach(() => {
     vi.useRealTimers();
+    server.statuses.me = 200;
+    server.statuses.session = 200;
+    server.fetch.mockClear();
   });
 
   it("Today shows the server's study day, not the device date", async () => {
@@ -63,6 +66,41 @@ describe('Today', () => {
       '/api/session',
       '/api/me'
     ]);
+  });
+
+  // The session the first test opened stays open in the shared client, so each of these asks
+  // /api/me alone; the test that ends the session comes last.
+  it('Today names the app and the screen, and waits with a status until the server answers', async () => {
+    let answer: (response: Response) => void = () => undefined;
+    server.fetch.mockImplementationOnce(
+      () => new Promise<Response>((resolve) => (answer = resolve))
+    );
+
+    render(Today);
+
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('DeckStreak');
+    expect(document.body.textContent).toContain('Turn your daily Anki reviews into a streak worth keeping.');
+    expect(screen.getByRole('heading', { level: 2 }).textContent).toBe('Study day');
+    expect(screen.getByRole('status').textContent).toBe('Loading…');
+    expect(screen.queryByRole('alert')).toBeNull();
+
+    await vi.waitFor(() => expect(server.fetch).toHaveBeenCalledTimes(1));
+    answer(Response.json({ study_day: '2001-02-03' }));
+    await screen.findByText('Saturday, February 3, 2001');
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.getByRole('link', { name: 'About' }).getAttribute('href')).toBe('/about');
+  });
+
+  it('Today says the server could not be reached, and does not ask to reopen', async () => {
+    server.statuses.me = 500;
+
+    render(Today);
+
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toContain('DeckStreak could not reach its server');
+    expect(alert.textContent).not.toContain('Reopen');
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(document.querySelector('time')).toBeNull();
   });
 
   it('Today asks the owner to reopen DeckStreak when the session cannot be renewed', async () => {

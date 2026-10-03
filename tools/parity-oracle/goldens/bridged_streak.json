@@ -1,0 +1,592 @@
+{
+  "adapter": "bridging",
+  "cases": [
+    {
+      "class": "no-days",
+      "input": {
+        "days": [],
+        "skip_days": [],
+        "today": 20000
+      },
+      "output": 0
+    },
+    {
+      "class": "a-law-day-today",
+      "input": {
+        "days": [
+          19998,
+          19999,
+          20000
+        ],
+        "skip_days": [],
+        "today": 20000
+      },
+      "output": 3
+    },
+    {
+      "class": "no-law-review-yet",
+      "input": {
+        "days": [
+          19997,
+          19998,
+          19999
+        ],
+        "skip_days": [],
+        "today": 20000
+      },
+      "output": 3
+    },
+    {
+      "class": "a-missed-day",
+      "input": {
+        "days": [
+          19996,
+          19997,
+          19999,
+          20000
+        ],
+        "skip_days": [],
+        "today": 20000
+      },
+      "output": 2
+    },
+    {
+      "class": "a-missed-day-yesterday",
+      "input": {
+        "days": [
+          19996,
+          19997,
+          19998
+        ],
+        "skip_days": [],
+        "today": 20000
+      },
+      "output": 0
+    },
+    {
+      "class": "skip-in-the-run",
+      "input": {
+        "days": [
+          19996,
+          19997,
+          19999,
+          20000
+        ],
+        "skip_days": [
+          19998
+        ],
+        "today": 20000
+      },
+      "output": 4
+    },
+    {
+      "class": "skip-today",
+      "input": {
+        "days": [
+          19997,
+          19998,
+          19999
+        ],
+        "skip_days": [
+          20000
+        ],
+        "today": 20000
+      },
+      "output": 3
+    },
+    {
+      "class": "skip-yesterday-and-today",
+      "input": {
+        "days": [
+          19996,
+          19997
+        ],
+        "skip_days": [
+          19998,
+          19999,
+          20000
+        ],
+        "today": 20000
+      },
+      "output": 2
+    },
+    {
+      "class": "skip-at-the-far-end",
+      "input": {
+        "days": [
+          19998,
+          19999,
+          20000
+        ],
+        "skip_days": [
+          19997,
+          19996
+        ],
+        "today": 20000
+      },
+      "output": 3
+    },
+    {
+      "class": "skips-only",
+      "input": {
+        "days": [],
+        "skip_days": [
+          19999,
+          20000
+        ],
+        "today": 20000
+      },
+      "output": 0
+    },
+    {
+      "class": "skip-past-the-run",
+      "input": {
+        "days": [
+          19999,
+          20000
+        ],
+        "skip_days": [
+          19995
+        ],
+        "today": 20000
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "days": [
+          19987,
+          19990,
+          19992,
+          19995,
+          19996,
+          19997,
+          19998,
+          20000
+        ],
+        "skip_days": [
+          19985,
+          19986
+        ],
+        "today": 19999
+      },
+      "output": 4
+    },
+    {
+      "input": {
+        "days": [
+          19990,
+          19994
+        ],
+        "skip_days": [
+          19987,
+          19998
+        ],
+        "today": 19999
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "days": [
+          19993,
+          19994,
+          19997,
+          19998,
+          19999
+        ],
+        "skip_days": [],
+        "today": 20000
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "days": [
+          19991,
+          19992,
+          19995
+        ],
+        "skip_days": [
+          19992,
+          19993,
+          19997,
+          20000
+        ],
+        "today": 20000
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "days": [
+          19986,
+          19990,
+          19991,
+          19992,
+          19993,
+          19996,
+          19999,
+          20000
+        ],
+        "skip_days": [
+          19987,
+          19995
+        ],
+        "today": 20000
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "days": [
+          19987,
+          19989,
+          19993,
+          19996,
+          19997
+        ],
+        "skip_days": [
+          19987,
+          19994,
+          19995,
+          19999
+        ],
+        "today": 20000
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "days": [
+          19986,
+          19988,
+          19990,
+          19991,
+          19995,
+          19997,
+          19998,
+          19999,
+          20000
+        ],
+        "skip_days": [],
+        "today": 20000
+      },
+      "output": 4
+    },
+    {
+      "input": {
+        "days": [
+          19990
+        ],
+        "skip_days": [
+          19991,
+          19998
+        ],
+        "today": 20000
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "days": [
+          19987,
+          19991,
+          19992,
+          19993,
+          19994,
+          19995,
+          19996,
+          19997,
+          20000
+        ],
+        "skip_days": [
+          19993,
+          19994,
+          19997
+        ],
+        "today": 20000
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "days": [
+          19985,
+          19986,
+          19988,
+          19991,
+          19993,
+          19994,
+          19995,
+          19996,
+          19997,
+          19998,
+          20000
+        ],
+        "skip_days": [
+          19991,
+          19994,
+          19997
+        ],
+        "today": 19999
+      },
+      "output": 6
+    },
+    {
+      "input": {
+        "days": [
+          19988,
+          19989,
+          19991,
+          19992,
+          19996,
+          19997,
+          19999,
+          20000
+        ],
+        "skip_days": [
+          19986,
+          19997,
+          19998
+        ],
+        "today": 19999
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "days": [
+          19990,
+          19998,
+          20000
+        ],
+        "skip_days": [],
+        "today": 20000
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "days": [
+          19991,
+          19997,
+          19999,
+          20000
+        ],
+        "skip_days": [
+          19994
+        ],
+        "today": 19999
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "days": [
+          19986,
+          19988,
+          19989,
+          19991,
+          19992,
+          19996,
+          19998,
+          19999,
+          20000
+        ],
+        "skip_days": [
+          19985,
+          19990,
+          19998
+        ],
+        "today": 20000
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "days": [
+          19986,
+          19988,
+          19989,
+          19990,
+          19991,
+          19994,
+          19996,
+          19998,
+          19999,
+          20000
+        ],
+        "skip_days": [],
+        "today": 19999
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "days": [
+          19991,
+          19996,
+          20000
+        ],
+        "skip_days": [
+          19989
+        ],
+        "today": 19999
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "days": [
+          19986,
+          19987,
+          19988,
+          19993,
+          19996,
+          20000
+        ],
+        "skip_days": [
+          19985,
+          19991,
+          19998
+        ],
+        "today": 19999
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "days": [
+          19985,
+          19986,
+          19993,
+          19996
+        ],
+        "skip_days": [
+          19990,
+          19996
+        ],
+        "today": 20000
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "days": [
+          19985,
+          19988,
+          19989,
+          19991,
+          19992,
+          19994,
+          19995,
+          19996,
+          19999
+        ],
+        "skip_days": [
+          19998,
+          20000
+        ],
+        "today": 20000
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "days": [
+          19990,
+          19992,
+          19993,
+          19996,
+          19998
+        ],
+        "skip_days": [
+          19992,
+          19997
+        ],
+        "today": 20000
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "days": [
+          19985,
+          19998,
+          19999
+        ],
+        "skip_days": [
+          19985,
+          19988,
+          19997
+        ],
+        "today": 20000
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "days": [
+          19985,
+          19986,
+          19987,
+          19991,
+          19994,
+          19995,
+          19996,
+          19997
+        ],
+        "skip_days": [
+          19986,
+          19988,
+          19998
+        ],
+        "today": 19999
+      },
+      "output": 4
+    },
+    {
+      "input": {
+        "days": [
+          19985,
+          19987,
+          19989,
+          19991,
+          19994,
+          19997
+        ],
+        "skip_days": [
+          19989,
+          19991,
+          19993,
+          19995
+        ],
+        "today": 20000
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "days": [],
+        "skip_days": [
+          19988,
+          19996
+        ],
+        "today": 19999
+      },
+      "output": 0
+    }
+  ],
+  "function": "analytics.bridged_streak",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Builds the law study days, the day asked about and the skip days from epoch day numbers, and returns the run the bridged streak counts; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_076.py",
+  "registry_sha256": "e854e46aac5a5887cc38b12c7cfafd31275845828f9c77a4d12fb1e38248b20c",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

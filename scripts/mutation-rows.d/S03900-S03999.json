@@ -224,6 +224,486 @@
         "    if not document.get(\"mutate\"):\n",
         "a mutate list other than R2's web production code is refused (SPEC-039 R2, R6)",
         "test_mutation_workflows.TheConfigurationCheckSeesWhatStrykerReads.test_the_configuration_check_refuses_what_stryker_would_read_otherwise"
+      ],
+      [
+        "S03929-A-SHELL-MUTANT-IS-PARSE-CHECKED",
+        "scripts/mutation_rows.py",
+        "        refusal = parses(parser, mutated)\n",
+        "        refusal = None\n",
+        "a shell target's mutant is parse-checked, and one that does not parse is VOID (SPEC-039 section 12, A41)",
+        "test_mutation_rows.TheRunnerParseChecksAShellMutant.test_a_bash_mutant_that_does_not_parse_is_void_not_a_kill"
+      ],
+      [
+        "S03930-A-BASH-SCRIPT-IS-CHECKED-BY-BASH",
+        "scripts/mutation_rows.py",
+        "        return \"bash\" if named.group(1) == \"bash\" else \"sh\"\n",
+        "        return \"sh\"\n",
+        "a bash script is parse-checked by bash, so an array assignment sh refuses does not void a mutant that parses (SPEC-039 section 12, A41)",
+        "test_mutation_rows.TheRunnerParseChecksAShellMutant.test_a_bash_mutant_that_parses_and_is_caught_is_killed"
+      ],
+      [
+        "S03931-A-SHEBANG-ALONE-MAKES-A-SHELL-SCRIPT",
+        "scripts/mutation_rows.py",
+        "    if named:\n",
+        "    if named and False:\n",
+        "a script with no shell extension is a shell script when its shebang names a shell (SPEC-039 section 12, A41)",
+        "test_mutation_rows.TheRunnerParseChecksAShellMutant.test_a_shebang_alone_makes_a_target_a_shell_script"
+      ],
+      [
+        "S03932-THE-PARSER-READS-THE-MUTATED-BYTES",
+        "scripts/mutation_rows.py",
+        "            input=mutated,\n",
+        "            input=b\"\",\n",
+        "the parser reads the mutant's bytes, never the original's (SPEC-039 section 12, A41)",
+        "test_mutation_rows.TheRunnerParseChecksAShellMutant.test_a_posix_sh_mutant_that_does_not_parse_is_void_not_a_kill"
+      ],
+      [
+        "S03933-A-SHELL-EXIT-OF-ZERO-IS-A-PARSE",
+        "scripts/mutation_rows.py",
+        "    if done.returncode == 0:\n        return None\n",
+        "    if done.returncode != 0:\n        return None\n",
+        "a mutant the shell reads without error goes on to its killer, and one it refuses does not (SPEC-039 section 12, A41)",
+        "test_mutation_rows.TheRunnerParseChecksAShellMutant.test_a_posix_sh_mutant_that_parses_and_is_caught_is_killed"
+      ],
+      [
+        "S03934-THE-PARSER-IS-ASKED-TO-READ-NOT-RUN",
+        "scripts/mutation_rows.py",
+        "            [parser, \"-n\"],\n",
+        "            [parser],\n",
+        "the parse check passes `-n`, so it reads the mutant and never executes it (SPEC-039 section 12, A41)",
+        "test_mutation_rows.TheRunnerParseChecksAShellMutant.test_the_parse_check_reads_the_mutant_and_never_runs_it"
+      ],
+      [
+        "S03935-A-MISSING-PARSER-FAILS-CLOSED",
+        "scripts/mutation_rows.py",
+        "        done = run_tool(\n            [parser, \"-n\"],\n",
+        "        done = subprocess.run(\n            [parser, \"-n\"],\n",
+        "a shell that cannot be run is a refusal naming it, never a traceback and never a pass (SPEC-039 A66, superseding A41's VOID for a missing parser)",
+        "test_mutation_rows.TheRunnerParseChecksAShellMutant.test_a_missing_parser_is_a_refusal_naming_it"
+      ],
+      [
+        "S03936-A-HUNG-PARSER-FAILS-CLOSED",
+        "scripts/mutation_rows.py",
+        "        return f\"the mutant is unchecked: {parser} -n timed out\"\n",
+        "        return None\n",
+        "a parse check that outlives its bound leaves the mutant unchecked and VOID, never passed (SPEC-039 section 12, A41)",
+        "test_mutation_rows.TheRunnerParseChecksAShellMutant.test_a_parser_that_hangs_leaves_the_mutant_unchecked_and_void"
+      ],
+      [
+        "S03937-A-BASH-EXTENSION-IS-A-BASH-SCRIPT",
+        "scripts/mutation_rows.py",
+        "    if target.endswith(\".bash\"):\n",
+        "    if False:\n",
+        "a `.bash` target with no shebang is a shell script, so its unparsed mutant is VOID (SPEC-039 section 12, A41)",
+        "test_mutation_rows.TheRunnerParseChecksAShellMutant.test_a_bash_extension_mutant_that_does_not_parse_is_void"
+      ],
+      [
+        "S03938-AN-SH-EXTENSION-IS-A-SHELL-SCRIPT",
+        "scripts/mutation_rows.py",
+        "    if target.endswith(\".sh\"):\n",
+        "    if False:\n",
+        "a `.sh` target with no shebang is a shell script, so its unparsed mutant is VOID (SPEC-039 section 12, A41)",
+        "test_mutation_rows.TheRunnerParseChecksAShellMutant.test_an_sh_extension_mutant_that_does_not_parse_is_void"
+      ],
+      [
+        "S03939-AN-SH-EXTENSION-IS-READ-BY-SH",
+        "scripts/mutation_rows.py",
+        "    if target.endswith(\".sh\"):\n        return \"sh\"\n",
+        "    if target.endswith(\".sh\"):\n        return \"bash\"\n",
+        "a `.sh` target with no shebang is read by sh, so a construct only bash reads is VOID (SPEC-039 section 12, A41)",
+        "test_mutation_rows.TheRunnerParseChecksAShellMutant.test_an_sh_extension_with_no_shebang_is_read_by_sh"
+      ],
+      [
+        "S03940-A-BASH-EXTENSION-IS-READ-BY-BASH",
+        "scripts/mutation_rows.py",
+        "    if target.endswith(\".bash\"):\n        return \"bash\"\n",
+        "    if target.endswith(\".bash\"):\n        return \"sh\"\n",
+        "a `.bash` target with no shebang is read by bash, so an array it uses does not void a caught mutant (SPEC-039 section 12, A41)",
+        "test_mutation_rows.TheRunnerParseChecksAShellMutant.test_a_bash_extension_with_no_shebang_is_read_by_bash"
+      ],
+      [
+        "S03941-A-CARGO-KILLED-SHELL-MUTANT-IS-PARSED",
+        "scripts/mutation_rows.py",
+        "    if parser is not None:\n",
+        "    if parser is not None and killer.kind != \"cargo\":\n",
+        "a shell target with a cargo killer is parse-checked before it is built (SPEC-039 section 12, A41)",
+        "test_mutation_rows.TheRunnerParseChecksAShellMutant.test_a_shell_target_with_a_cargo_killer_is_parsed_first_and_built_second"
+      ],
+      [
+        "S03942-AN-SH-SHEBANG-IS-READ-BY-SH",
+        "scripts/mutation_rows.py",
+        "        return \"bash\" if named.group(1) == \"bash\" else \"sh\"\n",
+        "        return \"bash\"\n",
+        "a script whose shebang names sh is read by sh, so a construct only bash reads is VOID (SPEC-039 section 12, A41)",
+        "test_mutation_rows.TheRunnerParseChecksAShellMutant.test_a_bash_only_mutant_of_an_sh_shebang_script_is_void"
+      ],
+      [
+        "S03943-A-DASH-SHEBANG-NAMES-A-SHELL",
+        "scripts/mutation_rows.py",
+        "(sh|bash|dash)(?=",
+        "(sh|bash)(?=",
+        "a shebang naming dash makes a target a shell script (SPEC-039 section 12, A41)",
+        "test_mutation_rows.TheRunnerParseChecksAShellMutant.test_a_dash_shebang_makes_a_target_a_shell_script"
+      ],
+      [
+        "S03944-A-SHELL-EXIT-OF-ONE-IS-A-REFUSAL",
+        "scripts/mutation_rows.py",
+        "    if done.returncode == 0:\n",
+        "    if done.returncode <= 1:\n",
+        "only an exit of zero is a parse: `bash -n` exits 1 on an array left open at the end of its input, so that mutant is VOID, never a kill (SPEC-039 section 12, A41)",
+        "test_mutation_rows.TheRunnerParseChecksAShellMutant.test_a_bash_mutant_refused_with_exit_one_is_void"
+      ],
+      [
+        "S03945-A-BIN-KILLER-RUNS-CARGO-WITH-BIN",
+        "scripts/mutation_rows.py",
+        "        return [\"--bin\", killer.binary]\n",
+        "        return [\"--lib\"]\n",
+        "a `bin::` killer runs `cargo test --bin <binary>`, the binary's own unit tests, never the library's (SPEC-039 section 15, A42)",
+        "test_mutation_rows.TheBinKillerRunsTheBinarysOwnUnitTests.test_a_bin_killer_runs_cargo_test_on_the_binary_by_its_exact_path"
+      ],
+      [
+        "S03946-A-BIN-KILLER-SELECTING-NOTHING-IS-VOID",
+        "scripts/mutation_rows.py",
+        "    if control.selected != 1:\n",
+        "    if control.selected != 1 and killer.target != \"bin\":\n",
+        "a `bin::` killer that selects no test is VOID and its mutant is never installed, so a plant that selects nothing never reads KILLED (SPEC-039 section 15, A43)",
+        "test_mutation_rows.TheBinKillerRunsTheBinarysOwnUnitTests.test_a_bin_killer_that_selects_no_test_is_void_and_never_killed"
+      ],
+      [
+        "S03947-A-BIN-KILLERS-BINARY-IS-READ-FROM-ITS-MANIFEST",
+        "scripts/mutation_rows.py",
+        "    name, path = binaries[0]\n",
+        "    name, path = manifest_of(root, crate)[\"package\"][\"name\"], \"src/main.rs\"\n",
+        "a `bin::` killer's binary is the one the crate's `[[bin]]` table names, never the package's name by guess (SPEC-039 section 15, A42)",
+        "test_mutation_rows.TheBinKillerRunsTheBinarysOwnUnitTests.test_a_bin_killers_binary_is_read_from_its_manifest_and_never_guessed"
+      ],
+      [
+        "S03948-A-BIN-KILLER-IS-RESOLVED-IN-THE-BINARYS-SOURCES",
+        "scripts/mutation_rows.py",
+        "            sources = module_sources(root / killer.file)\n",
+        "            sources = sorted((root / killer.file).parent.rglob(\"*.rs\"))\n",
+        "a `bin::` killer names a test in the binary's own module tree, so a test of the library beside it is refused by the census (SPEC-039 section 15, A44)",
+        "test_mutation_rows.TheBinKillerRunsTheBinarysOwnUnitTests.test_a_bin_killer_outside_the_binarys_sources_is_refused_by_the_census"
+      ],
+      [
+        "S03949-A-BINARYS-MODULES-ARE-FOLLOWED",
+        "scripts/mutation_rows.py",
+        "        for child in module_files(file, root_file):\n",
+        "        for child in ():\n",
+        "a `bin::` killer in a module the binary's root declares resolves, because the module tree is followed from the root (SPEC-039 section 15, A44)",
+        "test_mutation_rows.TheBinKillerRunsTheBinarysOwnUnitTests.test_a_bin_killer_outside_the_binarys_sources_is_refused_by_the_census"
+      ],
+      [
+        "S03950-A-BINARYS-MODULES-SIT-BESIDE-ITS-ROOT",
+        "scripts/mutation_rows.py",
+        "    home = file.parent if file == root_file or file.name == \"mod.rs\" else file.parent / file.stem\n",
+        "    home = file.parent if file.name == \"mod.rs\" else file.parent / file.stem\n",
+        "a binary's crate root declares its modules beside itself whatever its file is named, as rustc reads a crate root, so a `bin::` killer in a module of `src/other.rs` resolves (SPEC-039 section 15, A45)",
+        "test_mutation_rows.TheBinKillerFollowsRustcAndRefusesAShadow.test_a_module_beside_a_root_not_named_main_resolves"
+      ],
+      [
+        "S03951-A-BIN-KILLER-BESIDE-A-TESTS-BIN-RS-IS-REFUSED",
+        "scripts/mutation_rows.py",
+        "            if \"bin\" in cargo_targets(root, row.crate)[1]:\n",
+        "            if False:\n",
+        "a crate holding `tests/bin.rs` or `tests/bin/main.rs` is refused for a `bin::` killer by name, so a killer written for that file never runs the binary's own test of the same path (SPEC-039 section 15, A45)",
+        "test_mutation_rows.TheBinKillerFollowsRustcAndRefusesAShadow.test_a_bin_killer_beside_a_tests_bin_rs_is_refused"
+      ],
+      [
+        "S03960-A66-MISSING-TOOL-READS-AS-A-SURVIVOR",
+        "scripts/mutation_rows.py",
+        "            print(f\"prove: REFUSED: {refusal}\")\n            return EXIT_REFUSED\n",
+        "            print(f\"prove: REFUSED: {refusal}\")\n            return EXIT_SURVIVED\n",
+        "a missing tool ends the prove verb with the survivor's exit code, where #431 crashed into it (SPEC-039 A66)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03961-A66-MISSING-TOOL-READS-AS-VOID",
+        "scripts/mutation_rows.py",
+        "            print(f\"prove: REFUSED: {refusal}\")\n            return EXIT_REFUSED\n",
+        "            print(f\"prove: REFUSED: {refusal}\")\n            return EXIT_VOID\n",
+        "a missing tool ends the prove verb as a VOID report would, not as the refusal it is (SPEC-039 A66)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03962-A66-RETIRED-MISSING-TOOL-READS-AS-OK",
+        "scripts/mutation_rows.py",
+        "        print(f\"retired: REFUSED: {refusal}\")\n        return EXIT_REFUSED\n",
+        "        print(f\"retired: REFUSED: {refusal}\")\n        return EXIT_OK\n",
+        "a missing tool ends the retirement check as a pass (SPEC-039 A66)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03963-A67-GIT-SPAWNS-WITHOUT-THE-CHECK",
+        "scripts/mutation_rows.py",
+        "    return run_tool(\n        [\"git\", \"-C\"",
+        "    return subprocess.run(\n        [\"git\", \"-C\"",
+        "the git helper spawns around the tool check, so a missing git is a traceback (SPEC-039 A66, A67)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03964-A67-PARSER-SPAWNS-WITHOUT-THE-CHECK",
+        "scripts/mutation_rows.py",
+        "        done = run_tool(\n            [parser, \"-n\"],",
+        "        done = subprocess.run(\n            [parser, \"-n\"],",
+        "the parse check spawns around the tool check, so a missing shell is a traceback (SPEC-039 A66, A67)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03965-A67-BUILD-SPAWNS-WITHOUT-THE-CHECK",
+        "scripts/mutation_rows.py",
+        "        done = run_tool(\n            [\"cargo\", \"test\", \"--locked\", \"-p\", killer.package, *flags, \"--no-run\"],",
+        "        done = subprocess.run(\n            [\"cargo\", \"test\", \"--locked\", \"-p\", killer.package, *flags, \"--no-run\"],",
+        "the mutant's build spawns around the tool check, so a missing cargo is a traceback (SPEC-039 A66, A67)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03966-A66-KILLER-GROUP-SPAWNS-WITHOUT-RESOLVING",
+        "scripts/mutation_rows.py",
+        "    judged = resolve_tool(command, env, cwd)\n    try:\n        process = subprocess.Popen(",
+        "    judged = command[0]\n    try:\n        process = subprocess.Popen(",
+        "the killer's process group is started without resolving its executable, so the refusal loses its reason (SPEC-039 A66)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03967-A66-A-REFUSED-PROOF-KEEPS-ITS-MUTANT",
+        "scripts/mutation_rows.py",
+        "    finally:\n        target.write_bytes(original)\n",
+        "    finally:\n        if sys.exc_info()[0] is not ToolMissing:\n            target.write_bytes(original)\n",
+        "a refusal that ends a proof leaves the mutant installed in the target (SPEC-039 A66)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03968-A66-THE-REFUSAL-LINE-DROPS-THE-TOOL",
+        "scripts/mutation_rows.py",
+        "print(f\"prove: REFUSED: {refusal}\")",
+        "print(\"prove: REFUSED\")",
+        "the refusal line does not name the missing tool (SPEC-039 A66)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03969-A66-A-FILE-WITHOUT-THE-EXECUTE-BIT-RESOLVES",
+        "scripts/mutation_rows.py",
+        "            if os.access(candidate, os.X_OK):",
+        "            if os.access(candidate, os.F_OK):",
+        "a file that is not executable is taken for a tool that can run (SPEC-039 A66)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03970-A66-A-DIRECTORY-READS-AS-ABSENT",
+        "scripts/mutation_rows.py",
+        "        if candidate.is_dir():\n            failure = \"is a directory\"\n        elif candidate.is_file():",
+        "        if candidate.is_file():",
+        "a directory at the tool's name is reported as an absent tool, not as what it is (SPEC-039 A66)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03971-A66-THE-PATH-SEARCH-IGNORES-THE-CHILDS-PATH",
+        "scripts/mutation_rows.py",
+        "        path = (env if env is not None else os.environ).get(\"PATH\", os.defpath)",
+        "        path = os.defpath",
+        "the tool is searched along the default PATH, not the one the child gets, so a tool the child cannot run is taken for one it can (SPEC-039 A66)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03972-A66-A-SPAWN-THAT-FAILS-AFTER-RESOLUTION-IS-A-TRACEBACK",
+        "scripts/mutation_rows.py",
+        "    if error.filename in (command[0], judged) or error.filename is None:",
+        "    if False:",
+        "a spawn that fails for its executable after resolution passed (a bad interpreter line, a file the kernel will not execute) is a traceback, not the refusal (SPEC-039 A66)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03973-A66-A-PATH-ENTRY-THE-RUNNER-CANNOT-LOOK-AT-STOPS-THE-SEARCH",
+        "scripts/mutation_rows.py",
+        "        try:\n            candidate.stat()\n        except OSError:\n            continue\n",
+        "        candidate.stat()\n",
+        "a PATH entry the runner may not search (or cannot name) ends the search with a traceback, where the spawn's own search passes over it (SPEC-039 A66)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_path_entry_the_runner_cannot_look_at_is_passed_over_as_the_spawn_passes_it"
+      ],
+      [
+        "S03974-A66-RUN-TOOL-CATCHES-ONLY-THREE-SPAWN-ERRORS",
+        "scripts/mutation_rows.py",
+        "    except OSError as error:\n        refusal = _backstop(error, command, judged)\n        if refusal is None:\n            raise\n        raise refusal from error\n    refusal = _exit_refusal(done.returncode, command)",
+        "    except (FileNotFoundError, PermissionError, NotADirectoryError) as error:\n        refusal = _backstop(error, command, judged)\n        if refusal is None:\n            raise\n        raise refusal from error\n    refusal = _exit_refusal(done.returncode, command)",
+        "a file the kernel will not execute (an empty file with the execute bit) raises a plain OSError out of run_tool, a traceback and not the refusal (SPEC-039 A66)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03975-A66-THE-PROCESS-GROUP-SPAWN-CATCHES-ONLY-THREE-ERRORS",
+        "scripts/mutation_rows.py",
+        "    except OSError as error:\n        refusal = _backstop(error, command, judged)\n        if refusal is None:\n            raise\n        raise refusal from error\n    try:\n        stdout, stderr",
+        "    except (FileNotFoundError, PermissionError, NotADirectoryError) as error:\n        refusal = _backstop(error, command, judged)\n        if refusal is None:\n            raise\n        raise refusal from error\n    try:\n        stdout, stderr",
+        "a file the kernel will not execute raises a plain OSError out of the process-group spawn, a traceback and not the refusal (SPEC-039 A66)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03976-A66-A-CHECKED-EXIT-OF-A-MISSING-PROGRAM-IS-A-TRACEBACK",
+        "scripts/mutation_rows.py",
+        "        refusal = _exit_refusal(error.returncode, command)\n",
+        "        refusal = None\n",
+        "a tool run with check=True that exits 126 or 127 ends as a CalledProcessError traceback, not the refusal (SPEC-039 A66)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03977-A66-RUN-TOOL-READS-EXIT-126-127-AS-A-RESULT",
+        "scripts/mutation_rows.py",
+        "    refusal = _exit_refusal(done.returncode, command)\n",
+        "    refusal = None\n",
+        "a tool that exits 126 or 127 through run_tool is taken for a check that ran, so its output reads as a verdict (SPEC-039 A66)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03978-A66-THE-PROCESS-GROUP-READS-EXIT-126-127-AS-A-RESULT",
+        "scripts/mutation_rows.py",
+        "    refusal = _exit_refusal(process.returncode, command)\n",
+        "    refusal = None\n",
+        "a killer that exits 126 or 127 through the process-group spawn is taken for a test that ran, so it reads as VOID and not as the refusal (SPEC-039 A66)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03979-A66-EXIT-126-IS-NOT-A-REFUSAL",
+        "scripts/mutation_rows.py",
+        "    126: \"exit 126: a program it needs cannot be run\",\n",
+        "    126: None,\n",
+        "exit 126, which a wrapper gives when a program it needs cannot be run, is taken for the tool's own result (SPEC-039 A66)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03980-A66-EXIT-127-IS-NOT-A-REFUSAL",
+        "scripts/mutation_rows.py",
+        "    127: \"exit 127: a program it needs is not found\",\n",
+        "    127: None,\n",
+        "exit 127, which a wrapper gives when a program it needs is not found, is taken for the tool's own result (SPEC-039 A66)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03981-A67-A-SPAWN-BY-ANOTHER-STDLIB-NAME-SKIPS-THE-TOOL-CHECK",
+        "scripts/mutation_rows.py",
+        "    return run_tool(\n        [\"git\", \"-C\", str(root), *args], capture_output=True, text=True, check=True\n    ).stdout\n",
+        "    return subprocess.check_output([\"git\", \"-C\", str(root), *args], text=True)\n",
+        "a spawn by a standard-library name the site census does not list (check_output) skips the tool check and is not seen by the census (SPEC-039 A67)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_no_code_outside_the_helpers_spawns_a_process_by_any_other_name"
+      ],
+      [
+        "S03982-A67-AN-ALIASING-IMPORT-OF-A-SPAWNER-IS-NOT-SEEN",
+        "scripts/mutation_rows.py",
+        "import signal\nimport subprocess\n",
+        "import signal\nimport subprocess\nimport subprocess as sp\n",
+        "an import that reaches a spawner under another name is a spawn the site census cannot see (SPEC-039 A67)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_no_code_outside_the_helpers_spawns_a_process_by_any_other_name"
+      ],
+      [
+        "S03986-A-CARGO-INFERS-TARGETS-ONLY-WHILE-AUTODISCOVERY-IS-ON",
+        "scripts/mutation_rows.py",
+        "            for name, path in (inferred.items() if auto else [])\n",
+        "            for name, path in inferred.items()\n",
+        "a crate that sets `autobins` or `autotests` to false builds no inferred target, so the census does not count one (SPEC-039 section 19, A46)",
+        "test_bin_kind_census.TheBinKindReadsWhatTheCompilerBuilds.test_every_layout_agrees_with_cargo_and_the_compiler_or_is_refused_by_name"
+      ],
+      [
+        "S03987-A-AN-INFERRED-TARGET-YIELDS-TO-AN-EXPLICIT-ONE-OF-ITS-NAME",
+        "scripts/mutation_rows.py",
+        "            if name not in names and path not in paths\n",
+        "            if path not in paths\n",
+        "an inferred target is dropped when an explicit table has its name, as cargo drops it (SPEC-039 section 19, A46)",
+        "test_bin_kind_census.TheBinKindReadsWhatTheCompilerBuilds.test_every_layout_agrees_with_cargo_and_the_compiler_or_is_refused_by_name"
+      ],
+      [
+        "S03988-A-AN-INFERRED-TARGET-YIELDS-TO-AN-EXPLICIT-ONE-AT-ITS-PATH",
+        "scripts/mutation_rows.py",
+        "            if name not in names and path not in paths\n",
+        "            if name not in names\n",
+        "an inferred target is dropped when an explicit table has its path, as cargo drops it (SPEC-039 section 19, A46)",
+        "test_bin_kind_census.TheBinKindReadsWhatTheCompilerBuilds.test_every_layout_agrees_with_cargo_and_the_compiler_or_is_refused_by_name"
+      ],
+      [
+        "S03989-A-CFG-TEST-IS-TRUE-IN-A-TEST-BUILD",
+        "scripts/mutation_rows.py",
+        "    if tokens == [\"test\"]:\n        return True\n",
+        "    if tokens == [\"test\"]:\n        return False\n",
+        "`cfg(test)` holds in the `--test` build the binary's unit tests run in, so a module behind it is read (SPEC-039 section 19, A51)",
+        "test_bin_kind_census.TheCfgPredicatesAgreeWithTheCompiler.test_every_decided_predicate_is_what_rustc_builds_and_the_rest_is_undecided"
+      ],
+      [
+        "S03990-A-CFG-ARGUMENTS-SPLIT-AT-TOP-LEVEL-COMMAS",
+        "scripts/mutation_rows.py",
+        "            if token == \",\" and depth == 0:\n",
+        "            if token == \",\":\n",
+        "the arguments of `all` and `any` split at the commas outside a nested call, so `all(any(a, b), c)` is read as two arguments (SPEC-039 section 19, A51)",
+        "test_bin_kind_census.TheCfgPredicatesAgreeWithTheCompiler.test_every_decided_predicate_is_what_rustc_builds_and_the_rest_is_undecided"
+      ],
+      [
+        "S03991-A-A-MODULE-IN-AN-INLINE-MODULE-SITS-IN-ITS-DIRECTORY",
+        "scripts/mutation_rows.py",
+        "                base = home.joinpath(*frames)\n",
+        "                base = home\n",
+        "a `mod x;` inside an inline `mod outer { }` reads `outer/x.rs`, as rustc does (SPEC-039 section 19, A46)",
+        "test_bin_kind_census.TheBinKindReadsWhatTheCompilerBuilds.test_every_layout_agrees_with_cargo_and_the_compiler_or_is_refused_by_name"
+      ],
+      [
+        "S03992-A-AN-INNER-ATTRIBUTE-IS-NOT-AN-ITEMS-ATTRIBUTE",
+        "scripts/mutation_rows.py",
+        "            if not inner and \"skip\" not in frames:\n",
+        "            if \"skip\" not in frames:\n",
+        "an inner attribute such as `#![allow(..)]` does not attach to the next module declaration (SPEC-039 section 19, A46)",
+        "test_bin_kind_census.TheBinKindReadsWhatTheCompilerBuilds.test_every_layout_agrees_with_cargo_and_the_compiler_or_is_refused_by_name"
+      ],
+      [
+        "S03993-A-INCLUDE-IS-REFUSED-ONLY-AS-A-MACRO-CALL",
+        "scripts/mutation_rows.py",
+        "        if token == \"include\" and tokens[index + 1 : index + 2] == [\"!\"]:\n",
+        "        if token == \"include\":\n",
+        "`include!` is refused by name and an identifier named `include` is not (SPEC-039 section 19, A46)",
+        "test_bin_kind_census.TheBinKindReadsWhatTheCompilerBuilds.test_every_layout_agrees_with_cargo_and_the_compiler_or_is_refused_by_name"
+      ],
+      [
+        "S03994-A-THE-BINARY-COUNT-IS-CARGOS",
+        "scripts/mutation_rows.py",
+        "    if len(binaries) != 1:\n",
+        "    if len(binaries) > 1:\n",
+        "a crate that builds no binary is refused with its count of zero, as one that builds two is (SPEC-039 section 19, A49)",
+        "test_bin_kind_census.ThePlantedShapesOfTheIssue.test_what_the_reader_cannot_decide_is_refused_by_name"
+      ],
+      [
+        "S03995-A-A-RAW-STRING-ENDS-AT-ITS-OWN-HASHES",
+        "scripts/mutation_rows.py",
+        "            closing = re.compile('\"' + match.group(\"hashes\")).search(text, position)\n",
+        "            closing = re.compile('\"').search(text, position)\n",
+        "a raw string ends at the quote followed by its own number of hashes, so a quoted declaration inside it is not read (SPEC-039 section 19, A46)",
+        "test_bin_kind_census.TheBinKindReadsWhatTheCompilerBuilds.test_every_layout_agrees_with_cargo_and_the_compiler_or_is_refused_by_name"
+      ],
+      [
+        "S03996-A-A-BLOCK-COMMENT-LEFT-OPEN-RUNS-TO-THE-END-OF-THE-TEXT",
+        "scripts/mutation_rows.py",
+        "            for _ in range(len(text)):  # each pass consumes a character, so this ends the scan\n",
+        "            for _ in range(len(text) - 3):  # each pass consumes a character, so this ends the scan\n",
+        "a block comment left open drops every character to the end of the text, so a scan bound that stops early is seen (SPEC-039 section 21, A53)",
+        "test_bin_kind_census.ThePlantedShapesOfTheIssue.test_a_block_comment_left_open_drops_every_character_to_the_end_of_the_text"
+      ],
+      [
+        "S03997-A-A-MOD-IN-A-MACRO-INVOCATION-IS-REFUSED",
+        "scripts/mutation_rows.py",
+        "            if \"mod\" in tokens[start:end]:\n",
+        "            if False:\n",
+        "a `mod` among a macro invocation's tokens, under any delimiter, is refused by name, since only the expansion decides what it declares (SPEC-039 section 21, A52)",
+        "test_bin_kind_census.TheBinKindReadsWhatTheCompilerBuilds.test_every_layout_agrees_with_cargo_and_the_compiler_or_is_refused_by_name"
+      ],
+      [
+        "S03998-A-A-DECLARED-PATH-IS-COMPARED-BY-CARGOS-KEY",
+        "scripts/mutation_rows.py",
+        "    return (joined.relative_to(base) if joined.is_relative_to(base) else joined).as_posix()\n",
+        "    return posixpath.normpath(path)\n",
+        "a declared path is compared as cargo compares it, so a `..` is kept and an absolute path stands alone (SPEC-039 section 21, A52)",
+        "test_bin_kind_census.TheBinKindReadsWhatTheCompilerBuilds.test_every_layout_agrees_with_cargo_and_the_compiler_or_is_refused_by_name"
+      ],
+      [
+        "S03999-A-EDITION-2015-TABLES-SWITCH-INFERENCE-OFF",
+        "scripts/mutation_rows.py",
+        "            auto = edition_of(root, crate, package) != \"2015\"\n",
+        "            auto = True\n",
+        "under edition 2015 a declared `[[bin]]` or `[[test]]` table switches its kind's inference off unless `autobins` or `autotests` is set (SPEC-039 section 21, A52)",
+        "test_bin_kind_census.TheBinKindReadsWhatTheCompilerBuilds.test_every_layout_agrees_with_cargo_and_the_compiler_or_is_refused_by_name"
       ]
     ]
   }

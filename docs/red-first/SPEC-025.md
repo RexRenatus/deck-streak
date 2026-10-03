@@ -54,3 +54,43 @@ A14: green at 33a877a
 A15: red at 6fcf6e0: round 1: role 1 failed to start: Err(Kernel(Migrate(ExecuteMigration(Database(SqliteError { code: 1, message: "table settings_generation already exists" }), 2001))))
 A15: green at 33a877a
 ```
+
+## Addendum, 2026-09-29: a failed lifecycle test leaves no daemon running (issue 366)
+
+The child guard was committed as a stub whose drop did nothing (0af311f), beside the tests; the
+guard followed (07d9b4e). The runner's process-group kill was committed the same way: a test
+beside the unchanged runner (97b11c3), then the kill (9f49316).
+
+```red-first
+A16: red at 0af311f: the daemon was still running after its test failed
+A16: green at 07d9b4e
+A17: red at 97b11c3: the grandchild of a timed-out killer is still running
+A17: green at 9f49316
+```
+
+Two later commits tighten the tests, not the criteria. aba7e3e stops the guard joining a waiter
+whose child outlived every signal, and the killer-group test is bounded in its own thread; both
+because a mutant of the guard or of the kill made its killer wait for ever instead of failing.
+
+## Addendum, 2026-09-29 (2): a signal or a held pipe cannot strand a killer (issue 409)
+
+The tests were committed first (6d97ee2), beside the unchanged runner, and the whole file was run:
+`Ran 11 tests ... FAILED (failures=5)`, the five being the two SIGTERM tests, the held-pipe test
+and the two pipe tests of the interrupt and exit paths. The SIGINT test and the pipe tests of the
+normal and timed-out paths passed against the unchanged runner, as they should: SIGINT was already
+handled, and a timeout with no escapee already closed both pipes through `communicate`.
+
+One later commit edits a test file between the red and the green: 27b5ccc makes the tests wait for
+the runner process they start, so no process outlives its test. It changes no assertion; the whole
+file was replayed at 27b5ccc against the unchanged runner and failed the same five tests. The
+runner's fix followed (09b56bb).
+
+```red-first
+A18: red at 6d97ee2: the killer 3738255 still runs after a SIGTERM of the runner
+A18: green at 09b56bb
+A19: red at 6d97ee2: the run was still waiting on the escapee's pipes after 12.0s
+A19: green at 09b56bb
+A20: red at 6d97ee2: the stdout pipe was left open
+A20: green at 09b56bb
+A21: not red: a SIGINT of the runner already ended the killer's group; the test holds that behaviour
+```

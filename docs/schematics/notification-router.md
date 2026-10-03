@@ -1,45 +1,123 @@
 # Schematic: the notification router's decision
 
-Kind: data flow and decision order. Read at DeckStreak `main` ce3683d (`notifications-policy.json`,
-ADR-011, docs/schematics/streaks-and-governor-state-machine.md), at the predecessor's `27ee2bc`
+Kind: data flow and decision order, a held celebration's state machine, and the joins. Read at
+DeckStreak `main` ce3683d (`notifications-policy.json`, ADR-011,
+docs/schematics/streaks-and-governor-state-machine.md), at the predecessor's `27ee2bc`
 (`quiet_hours.py:in_quiet_hours`, `pipeline_layers/celebrations.py:CelebrationsLayer.celebrate` and
 `flush_deferred_celebrations`), and at the packs vendored from `19bb0f3` (notifications-policy: the
-decision ledger, the withhold reasons, `one-router`). Added by SPEC-041.
+decision ledger, the withhold reasons, `one-router`). Added by SPEC-041, and brought to the design it
+delivered at `dev` f5322b2 (SPEC-041 §7; ADR-041's decisions at delivery).
+
+## The decision
 
 ```mermaid
 flowchart TD
-  occ["occasion: kind, dedupe key, origin, tier, payload, study day, lapse context"] --> route{{"route (crates/notifications/src/router.rs)"}}
-  route --> s1{"kind's setting off?"}
+  occ["occasion: kind, dedupe key, origin, tier, text, study day, lapse context"] --> route{{"route (crates/notifications/src/router.rs), inside one write"}}
+  route --> s1{"kind's setting at 0?"}
   s1 -- "yes" --> w1["withhold: nudges_disabled"]
-  s1 -- "no" --> s2{"delivered already in the kind's dedupe scope?"}
-  s2 -- "yes" --> w2["withhold: already_recorded"]
-  s2 -- "no" --> s3{"a nudge in an open lapse, and not a comeback-budget kind?"}
+  s1 -- "no" --> s2{"claim the key in the kind's dedupe scope: inserted?"}
+  s2 -- "no: a delivery holds it" --> w2["withhold: already_recorded"]
+  s2 -- "yes" --> s3{"a nudge in an open lapse, and not a comeback-budget kind?"}
   s3 -- "yes" --> w3["withhold: lapse"]
-  s3 -- "no" --> s4{"inside 23:00 to 07:30?"}
-  s4 -- "celebration" --> defer["defer: queue of at most 20"]
-  s4 -- "nudge" --> w4["withhold: quiet_hours"]
+  s3 -- "no" --> s4{"inside the quiet window (23:00 to 07:30, or the owner's)?"}
+  s4 -- "celebration" --> defer["defer: held, reason quiet"]
+  s4 -- "nudge or digest" --> w4["withhold: quiet_hours"]
   s4 -- "alert, or outside" --> s5{"a comeback past 3 per lapse, or within 3 study days of the last?"}
   s5 -- "yes" --> w5["withhold: budget_spent"]
   s5 -- "no" --> s6{"surface: a celebration from a Mini App request goes in-app, all else to the bot"}
-  s6 --> s7{"transport answers?"}
+  s6 -- "mini-app" --> app["send: push_in_app appends the feed item in the same write"]
+  s6 -- "bot" --> s7{"a bot transport joined, and the breaker closed?"}
+  s7 -- "no, a celebration with the breaker open" --> held["defer: held, reason send"]
   s7 -- "no" --> w6["withhold: no_notifier"]
-  s7 -- "yes" --> send["send: push_message and the other bot calls, or push_in_app"]
-  send -- "failed" --> hold["hold: first time kept, 2 retries, 60-second breaker"]
-  send -- "sent" --> delivery["record the delivery"]
-  w1 --> ledger[("decision ledger: kind with :withheld appended")]
+  s7 -- "yes" --> bot["commit the claim, then push_message with the router's Pass"]
+  bot -- "failed, a celebration" --> fail["defer: held, reason send, tries 1; breaker opens"]
+  bot -- "failed, anything else" --> release["withhold: no_notifier; the claim released; breaker opens"]
+  bot -- "delivered" --> sent["send"]
+  w1 --> ledger[("decision ledger: a withhold's kind with :withheld appended")]
   w2 --> ledger
   w3 --> ledger
   w4 --> ledger
   w5 --> ledger
   w6 --> ledger
   defer --> ledger
-  hold --> ledger
-  delivery --> ledger
-  flush["flush after each successful sync, outside quiet hours"] --> defer
-  flush -- "at most 2 in full, the rest one rollup line, older than 720 minutes abandoned by name" --> send
+  held --> ledger
+  fail --> ledger
+  release --> ledger
+  app --> ledger
+  sent --> ledger
 ```
 
-The five delivery calls the policy's `router.transport` names are called only inside the router
-module; the bot implements its four in `crates/bot/src/transport.rs`, and `push_in_app` appends to the
-in-app feed that `GET /api/notifications/feed` serves to the owner. The lapse context comes from the
-governor, through the caller (ADR-041).
+A withhold after rule 2 deletes the claim inside the same write, so a key is claimed exactly when
+it was sent or held. Three guards hold the router's paths, each on its own and each reading only
+what it names:
+
+- **The port's call, by the compiler (SPEC-041 A2).** Only the router module can make a `Pass`, and
+  each bot transport call takes one, so a call of the port outside the module does not compile: the
+  pass has a private field, no `Default` and no `Clone`. `push_in_app` is private to the module.
+- **A delivery around the port, by a census (A15).** A source that never calls the port could still
+  reach the owner through the bot's own send, edit or command handler, a raw request to the Bot API
+  or a call of one of the send or delivery methods of the pinned client's table, a write to the Mini
+  App's feed, or a write to the held queue, which a flush delivers. The census reads the shipped
+  sources of the kinds A15 names (the Rust, Python and web sources, the Mini App's HTML among them,
+  the shell scripts by extension or `#!` first line, and the systemd units of every type and their
+  drop-ins) and refuses in them each such delivery by a name it holds: outside the bot's sources
+  nothing names the Bot API's host, a send or delivery method of the pinned client's table, or the
+  bot's `DEFAULT_API_URL`, SPEC-031's alert path aside; inside them such a method is named only by
+  its own named send; the bot's `send_html`, `edit_html` and command handler are used only at named
+  call sites, and the handler's replies and dispatch only by their named callers; only the router's
+  modules name the feed or the held queue, and in the notifications crate the ledger, whose writes
+  to the queue are private to it, the root's declaration aside; and no source of that crate carries
+  `#[path]`, `#[macro_export]` or `#[macro_use]`, or re-exports the ledger, its feed's and queue's
+  tables or its writes to the feed and the queue by a `pub use`. The client's whole table is listed
+  with its version and each method in it is a send, a delivery or not a delivery, in one class only;
+  the 91 that are not held (the reads, deletions and unpins, bot and session configuration, a
+  sticker's emoji, keywords, mask, position, bare uploads and a set's removal, chat administration without
+  user-visible text, and business, star and gift account state) carry no content the bot chose
+  that a user sees, and are classified, not held (#297). The census guards ordinary code, not code
+  written to evade it, which review catches: a request or a table's name assembled from parts,
+  `include!`, a symlink, a test file pulled in by `#[path]` or run by a unit, a re-export other than
+  by a `pub use`, and a `pub` wrapper go unread (#297).
+- **A call the policy names, by the box run (§3a B1).** The `one-router` row refuses a call of
+  `push_message`, `push_dice`, `push_reaction`, `push_pin`, `push_photo`, `prepare_share` or `push_in_app` outside `router.rs`.
+
+## A held celebration
+
+```mermaid
+stateDiagram-v2
+  [*] --> held: deferred in quiet hours, or held after a failed send
+  held --> held: a flush's render or recap fails, tries at most 2 (the first deferral time kept)
+  held --> delivered: a flush renders it in full (at most 2), or its recap line is delivered
+  held --> abandoned: older than 720 minutes at a flush
+  held --> abandoned: a failed send past 2 retries
+  held --> abandoned: the lowest-ranked when a 21st is deferred
+  abandoned --> named: a recap line naming it is delivered
+  delivered --> [*]
+  named --> [*]
+```
+
+A flush does nothing without a bot transport, inside the quiet window, or while the breaker is
+open; its first failed render ends it. Each render, re-hold and abandonment is a decision in the
+ledger; an abandonment is withheld with `quiet_hours` or `no_notifier`, by what held it.
+
+## The joins
+
+```mermaid
+flowchart LR
+  subgraph notifications["deck-streak-notifications"]
+    policy["policy.rs: the file, compiled in and parsed at start"]
+    router["router.rs: route, flush, push_in_app, Pass"]
+    ledger2["ledger.rs: decisions, deliveries, queue, feed, settings"]
+    port["transport.rs: BotTransport"]
+  end
+  bot["deck-streak-bot: transport.rs implements BotTransport on its Transport"] --> port
+  wiring["deck-streak-daemon wiring.rs: the router over the bot's transport"] --> router
+  cycle["deck-streak-coordination sync_cycle.rs: flush after a sync that succeeded"] --> router
+  api["deck-streak-api notifications_routes.rs: GET /api/notifications/feed, owner only"] --> ledger2
+  router --> ledger2
+  router --> port
+  router --> policy
+```
+
+The lapse context comes from the governor, through the caller (ADR-041). The bot role's owner
+`/sync` flushes through the router over its transport; the job role's scheduled cycle has no bot
+transport, so its flush does nothing until a job that sends joins one.

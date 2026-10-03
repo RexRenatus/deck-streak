@@ -300,3 +300,35 @@ it, its condition deleted, inverted, widened or narrowed, a list read by its fir
 read, the walk cut short three ways, the finding's place changed, and the `env` refusal dropped or
 made the only one: 19 of 19 killed. At 1ae727b, before the pin, the same 19 left C14 and C19 alive.
 The test file did not change after 9f19b06.
+
+## Second amendment (section 8): A14 and A15
+
+The tests were committed (58574a9) before the workflow changed. In that red run the whole test file
+ran and only A14 and A15 failed.
+
+```red-first
+A14: red at 58574a9: AssertionError: None != "${{ github.event_name == 'pull_request' && 'ci' || 'ci (push)' }}" : the aggregate job's name
+A14: green at 3de33c5
+A15: red at 58574a9: AssertionError: 'ci' unexpectedly found in {'ci', 'fragment'} : ci.yml: push reports ci
+A15: green at 3de33c5
+```
+
+Rows S03401 to S03403 (`scripts/mutation-rows.d/S03400-S03499.json`) were proved with
+`python3 scripts/mutation_rows.py prove --band S03400-S03499`, the file restored by its digest:
+3 examined, 3 killed, 0 survived, 0 VOID. Each row's killer is A14. `census` and `ids` are clean.
+
+DISCLOSURE: A14's and A15's bodies changed after their red commit (58574a9), in three commits after the green commit, each red against 58574a9's workflow. 39f81ac added the positive assertion that the push name `ci (push)` is judged. d24c0b6 made both arms of the evaluated form non-empty, added the empty-arm form to A14's refusals, and read a one-line `on:` trigger in either form, so A15 judges every job's name under every event that is not `pull_request`. Under each, A14 and A15 fail at 58574a9's workflow and pass at the head. The fix round after them added the second-arm empty form (`'ci' || ''`) to A14's refusals, which kills the mutant that lets the second arm be empty, and factored A15's events reading into `judged_events` with its own self-check over the scalar, list and mapping forms and a `pull_request`-only trigger, which kills the mutant that reverts the scalar branch.
+
+The third amendment (section 9 of the SPEC, issue #360) adds A16.
+
+```red-first
+A16: red at 71ad257: AssertionError: 'Release model: no-back-merge (ADR-034)' not found in the lines of RELEASING.md
+A16: green at 5c5dc26
+```
+
+DISCLOSURE: A16's body changed after its red commit (71ad257). It now reads the declaration as the
+only line of the runbook that begins `Release model:`, and as the first non-blank line under the
+heading of section 5. The red line above quotes the earlier body. The new body fails by assertion
+at 71ad257's runbook and at dev's runbook, both with
+`AssertionError: Lists differ: [] != ['Release model: no-back-merge (ADR-034)']`, and it passes at
+the head.

@@ -24,6 +24,9 @@ use tracing::field::{Field, Visit};
 use tracing::span::{Attributes, Id, Record};
 use tracing::{Event, Metadata, Subscriber};
 
+#[path = "../../../tools/log-capture/capture.rs"]
+mod log_capture;
+
 /// The synthetic bot token the payloads are signed for.
 const BOT_TOKEN: &str = "synthetic-webapp-signing-token";
 /// Another synthetic bot's token, for a forged payload.
@@ -233,7 +236,7 @@ fn init_data_never_reaches_the_log() {
     let forged = payload(&ours, &forged_hash);
 
     let captured = Captured::default();
-    let outcomes = tracing::subscriber::with_default(captured.clone(), || {
+    let outcomes = log_capture::with_capture(captured.clone(), || {
         [
             gate.admit(&admitted, now),
             gate.admit(&stranger, now),
@@ -311,6 +314,8 @@ fn a_missing_owner_credential_refuses_start_by_its_id() {
     let malformed = [
         (OWNER_USER_ID, "the-owner", BOT_TOKEN),
         (OWNER_USER_ID, "-4242", BOT_TOKEN),
+        (OWNER_USER_ID, "+4242", BOT_TOKEN),
+        (OWNER_USER_ID, "0", BOT_TOKEN),
         (TELEGRAM_BOT_TOKEN, owner_id.as_str(), "   "),
     ];
     for (id, owner_value, token_value) in examined("malformed credential(s)", malformed.to_vec()) {
@@ -347,4 +352,11 @@ fn a_missing_owner_credential_refuses_start_by_its_id() {
             .map(Owner::user),
         Ok(TelegramUserId::new(OWNER))
     );
+}
+
+/// An owner's `Debug` names the type and shows no user id.
+#[test]
+fn an_owner_debug_shows_no_user_id() {
+    let owner = Owner::new(TelegramUserId::new(OWNER));
+    assert_eq!(format!("{owner:?}"), "Owner(..)");
 }

@@ -13,7 +13,7 @@ a fragment to a verdict, is drawn in `docs/schematics/mutation-equivalence-recor
 flowchart TD
   pr[a pull request into dev, or a release pull request into main] --> merge[the merge ref: HEAD^1 is the base's tip]
   push[a push to dev or main] --> names{does its subject name the pull request it merges?}
-  names -->|Merge pull request #N, or a squash's title ending (#N)| na([every job: not-applicable, naming #N, whose jobs judged this tree])
+  names -->|"Merge pull request #N, or a squash's title ending (#N)"| na([every job: not-applicable, naming #N, whose jobs judged this tree])
   names -->|no| first[its first-parent diff, HEAD^1...HEAD]
   merge --> plan[mutation-plan: mutation-verdict.py plan: git diff HEAD^1...HEAD, once, to git.diff]
   first --> plan
@@ -178,3 +178,52 @@ runs `table` over the same scope, whose line is the step's last.
 | `MUTATIONS` | crate directory | file in the crate | find | replace | killer `<target>::<test path>` | description |
 | `CARGO_KILLED_SCRIPT_MUTATIONS` | path from the root | find | replace | killer's crate | killer `<target>::<test path>` | description |
 | `SCRIPT_MUTATIONS` | path from the root | find | replace | description | killer `<module>.<Class>.<method>` | |
+
+## 6. A leg with nothing to examine is not started (SPEC-290, ADR-290)
+
+Section 1 draws every leg as started. SPEC-290 lets two of them not start, and the decision is the
+plan's listing, read in each leg's job-level condition before its matrix is expanded; a leg's
+absence decides nothing. The verdict and `ci` keep every refusal: a shard the listing promises and
+that reported nothing is VOID by name, and a skipped leg reads as correct only where the listing
+says it had nothing to examine.
+
+```mermaid
+flowchart TD
+  plan[mutation-plan: the listing, then shards] --> outs[its outputs: listed, rows, scope, and the matrix, unchanged]
+  outs --> rustcond{mutation-rust: is listed not 0?}
+  rustcond -->|yes| rustlegs[one leg per shard of the matrix, as before]
+  rustcond -->|no: no shard lists a mutant, whether or not the Rust class applies| rustskip([mutation-rust not started: skipped])
+  outs --> rowscond{mutation-rows: a row selected, or the scope is diff?}
+  rowscond -->|yes| rowsleg[the selected rows proved, then the retirement check on a diff]
+  rowscond -->|no: a push that merges a pull request| rowsskip([mutation-rows not started: skipped])
+  rustlegs --> judge
+  rustskip --> judge
+  rowsleg --> judge
+  rowsskip --> judge
+  judge[mutation-verdict, if always: judge each shard 0 to n-1] --> shard{the shard's artifact}
+  shard -->|whole| counted[its report counted]
+  shard -->|absent, and the listing gives the shard no mutant| notstarted[not started: nothing examined, the rows carry the count]
+  shard -->|absent or partial, and the listing gives the shard mutants| voidshard([VOID: the shard, by name])
+  counted --> total{the reports' mutants equal the listing's count?}
+  total -->|no| voidsum([VOID: both counts named])
+  total -->|yes| verdictok[the class judged as before]
+  notstarted --> verdictok
+  verdictok --> legcheck[legs: each skipped leg against the plan]
+  legcheck -->|skipped while the listing owed it work| voidleg([VOID: the leg and what it owed, by name])
+  legcheck -->|skipped with nothing to examine, or started| legok[the legs read correct]
+  voidshard --> gate
+  voidsum --> gate
+  voidleg --> gate
+  legok --> gate
+  gate{ci, if always: every need success, a skipped mutation-rust or mutation-rows admitted once each}
+  gate -->|a need failed or was cancelled, the verdict skipped or failed, another job skipped| red([ci fails])
+  gate -->|otherwise| green([ci passes])
+```
+
+| step | what crosses | guard |
+|---|---|---|
+| `shards` | the listing, into the plan and the step outputs | `listed` is the count of mutants the shards hold, `0` when the Rust class does not apply; the shard count and the matrix are unchanged |
+| a leg's `if:` | the plan's outputs alone | `listed != '0'` for the rust leg; `rows == 'true' \|\| scope == 'diff'` for the rows leg, so the retirement check runs on every diff |
+| the verdict | each shard's artifact, the plan's listing | a shard with no artifact reads `not started` only when the listing gives it no mutant; the reports' mutants must equal the listing's count |
+| `legs` | each leg's result, the plan | a skip the listing owed is VOID by name; a result that is not a job's is VOID |
+| `ci` | every need's result | `skipped` admitted from the two legs alone, once each; `mutation-verdict` must succeed |
