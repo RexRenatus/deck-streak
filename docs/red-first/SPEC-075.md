@@ -67,3 +67,4 @@ Disclosure for A9 and A10: the green commit b81606b also adds test material, and
 carries the new `exchange.test.ts` and `board.test.ts` for the two parsers, 13 added lines in
 `BoardSection.test.ts` and new cases in the two route tests, with no existing assertion edited,
 removed or skipped; the red commit 3b80599 held the A9 and A10 tests as they stand.
+It also adds 45 lines to `web/app/tests/a11y.spec.ts`: two route stubs, `/api/xp/exchange` and `/api/board`, so the accessibility run renders the card and the section; no existing line there is edited.
