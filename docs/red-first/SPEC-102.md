@@ -47,3 +47,5 @@ Disclosure: the green commit a8ffb874 also touches the two test files `crates/in
 `crates/notifications/tests/landmarks.rs`. It is `cargo fmt` re-wrapping the `assert_eq!` calls, one array
 constant and one iterator chain, plus the file attribute `#![allow(clippy::expect_used)]` that the crate's other
 test files carry. No expected value, no case and no comparison changed.
+
+The anniversary walk's cap (ruling 66, SPEC-102 10.7): the test `the_anniversary_walk_stops_at_its_cap` in `crates/notifications/tests/landmarks.rs` was red at f92a24b5, run as `cargo test -p deck-streak-notifications --test landmarks the_anniversary_walk_stops_at_its_cap`: assertion `left == right` failed: left 10005, right 10000. It is green at 141f1d2f, the commit that adds the constant `ANNIVERSARY_WALK_CAP`.

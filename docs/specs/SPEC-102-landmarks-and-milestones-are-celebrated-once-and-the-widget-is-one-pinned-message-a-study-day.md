@@ -566,3 +566,5 @@ Manifest rows this part does not touch (each delivered by a later part or left a
 - `docs/decisions/ADR-109-the-widget-is-one-silent-pinned-message-a-study-day-edited-in-place-through-the-router.md`: unchanged in this part.
 
 The row `crates/notifications/src/lib.rs` is changed in this part for the module `landmarks` only; the modules `milestone` and `widget` are #128's and #121's.
+
+**10.7, the anniversary walk's cap (ruling 66)** (insert-only). The anniversary walk stops at 10,000 anniversaries, whatever its exits do. The predecessor's calendar holds the years 1 to 9999, so it holds no walk longer than 9,998 anniversaries, and the goldens span at most 22,424 days, so the cap binds no input the predecessor can hold. The test `the_anniversary_walk_stops_at_its_cap` observes it: one study day at 1970-01-01 and a today 10,005 years on yield exactly 10,000 anniversaries, the last `landmark:anniv:10000` dated `+11970-01-01`.
