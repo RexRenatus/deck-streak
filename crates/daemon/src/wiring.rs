@@ -41,8 +41,10 @@ use deck_streak_coordination::instruments::{
 use deck_streak_coordination::obligations::Obligations;
 use deck_streak_coordination::recompute::analytics_step::AnalyticsStep;
 use deck_streak_coordination::recompute::badges::BadgesStep;
+use deck_streak_coordination::recompute::band_badges::BandBadgesStep;
 use deck_streak_coordination::recompute::day_bonuses::DayBonusesStep;
 use deck_streak_coordination::recompute::mint::MintStep;
+use deck_streak_coordination::recompute::progress::ProgressStep;
 use deck_streak_coordination::recompute::records::RecordsStep;
 use deck_streak_coordination::recompute::streaks::{RelightDue, StreaksStep};
 use deck_streak_coordination::recompute::xp::XpStep;
@@ -207,7 +209,8 @@ pub fn inbox_captures(env: &Environment) -> Option<Arc<InboxCaptures<RealFs>>> {
 
 /// The recompute's fold, with every step registered in its phase (SPEC-071 R19): phase 1's
 /// analytics step, counting leeches by `analytics`. A later SPEC registers its step here, in its
-/// own phase, without touching the fold. The badge step awards against no configured course.
+/// own phase, without touching the fold. The badge step awards against no configured course, and
+/// Road to C2's steps read none.
 ///
 /// # Errors
 ///
@@ -217,8 +220,9 @@ pub fn recompute_fold(analytics: AnalyticsSettings) -> Result<Fold, FoldError> {
 }
 
 /// [`recompute_fold`] over the owner's `courses`, which the badge step awards against (SPEC-073
-/// R4), and the handle the streaks step answers its due relights on, for the cycle that routes
-/// them after the fold's commit (SPEC-076 R27).
+/// R4) and Road to C2's progress and band badge steps read (SPEC-077 R6), and the handle the
+/// streaks step answers its due relights on, for the cycle that routes them after the fold's
+/// commit (SPEC-076 R27).
 ///
 /// # Errors
 ///
@@ -235,10 +239,15 @@ pub fn recompute_fold_with_relights(
     fold.register(Phase::BaseXp, Box::new(XpStep))?;
     let (streaks, due) = StreaksStep::new();
     fold.register(Phase::StreaksAndGovernor, Box::new(streaks))?;
+    fold.register(
+        Phase::DaySteps,
+        Box::new(ProgressStep::new(courses.clone(), analytics)),
+    )?;
     fold.register(Phase::DerivedBonuses, Box::new(DayBonusesStep))?;
     fold.register(Phase::CoinMint, Box::new(MintStep))?;
-    fold.register(Phase::Awards, Box::new(BadgesStep::new(courses)))?;
+    fold.register(Phase::Awards, Box::new(BadgesStep::new(courses.clone())))?;
     fold.register(Phase::Awards, Box::new(RecordsStep))?;
+    fold.register(Phase::Awards, Box::new(BandBadgesStep::new(courses)))?;
     Ok((fold, due))
 }
 
@@ -758,10 +767,12 @@ mod tests {
                 (Phase::RollupAndScore, ANALYTICS_STEP),
                 (Phase::BaseXp, XP_STEP),
                 (Phase::StreaksAndGovernor, STREAKS_STEP),
+                (Phase::DaySteps, PROGRESS_STEP),
                 (Phase::DerivedBonuses, DAY_BONUSES_STEP),
                 (Phase::CoinMint, MINT_STEP),
                 (Phase::Awards, BADGES_STEP),
                 (Phase::Awards, RECORDS_STEP),
+                (Phase::Awards, BAND_BADGES_STEP),
             ]
         );
     }
