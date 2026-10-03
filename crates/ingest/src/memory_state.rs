@@ -52,9 +52,10 @@ fn leniently(text: &str) -> String {
             } else {
                 0
             };
-            out.push_str(&text[at..at + first + escaped]);
+            let next = at + first + escaped;
+            out.push_str(&text[at..next]);
             in_string = byte != b'"';
-            at += first + escaped;
+            at = next;
             continue;
         }
         if byte == b'"' {
