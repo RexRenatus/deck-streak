@@ -215,3 +215,58 @@ stateDiagram-v2
 ```
 
 While the stop is set nothing writes, an undo included, and the preview says so.
+
+### Amended by E4b (2026-10-03): the fourth hook, the stop's fail-closed read and the backup's erase
+
+Drawn before E4b's code, at E4a's committed head `2669bc8a`, and appended: nothing above is edited.
+The take runs its steps on a row the caller began, under the exclusive collection lock; every
+refusal settles that row `failed` with one code and writes neither the collection nor a request,
+and every exit discards the working copy. Its test seam has four hooks, each a no-op in production.
+
+```mermaid
+sequenceDiagram
+  participant I as ingest skip write
+  participant P as private copy
+  participant W as working copy
+  participant B as backup beside the private copy
+  participant L as ledger
+  participant S as sync server
+  I->>L: read the stop, a missing row read as set: writes_stopped
+  I->>P: the pin, the zone, the offset and the engine's day, then the list and its digest
+  P->>W: copy
+  W->>S: converge, one normal sync
+  Note over I,W: hook after the converge
+  I->>W: the offset and the engine's day again, then the moved set and counts C0
+  W->>B: the partial backup, mode 0600
+  Note over I,B: hook after the backup's write, before its restore check
+  I->>B: the restore check, then rename and remove the older backup
+  I->>L: each moved card's prior state
+  Note over I,L: hook after the snapshot's commit
+  I->>W: Set Due Date, counts C1, then the state each card was left in
+  Note over I,W: hook before the push
+  I->>L: read the stop again: writes_stopped
+  W->>S: push, one normal sync
+```
+
+```mermaid
+stateDiagram-v2
+  [*] --> read
+  read --> clear: the row is present and not stopped
+  read --> stopped: the row is present and stopped
+  read --> stopped: the row is missing, read fail-closed
+  clear --> [*]: the take goes on
+  stopped --> [*]: writes_stopped, nothing written
+```
+
+The backup's erase is ingest's `erase_backups` over the private copy's directory: it removes every
+skip backup and partial backup there and no other file. E4c calls it from both of the erase's
+callers, the bot's delete and the daemon's erase role, after the ledger's erase commits; the
+ledger's own erase keeps the stop's row, which is exempt.
+
+```mermaid
+flowchart LR
+  E[the ledger's erase commits] --> X[erase_backups over the private copy's directory]
+  X --> R1[every skip-backup file removed]
+  X --> R2[every partial backup removed]
+  X --> K[every other file kept]
+```
