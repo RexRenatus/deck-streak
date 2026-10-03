@@ -1,0 +1,51 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S10200-DAY-STEP-25",
+        "notifications",
+        "src/landmarks.rs",
+        "pub const LANDMARK_DAY_STEP: usize = 25;",
+        "pub const LANDMARK_DAY_STEP: usize = 26;",
+        "landmarks::the_landmarks_match_the_parity_golden",
+        "a study-day landmark falls on every 25th earned study day, as the golden of compute_landmarks says (SPEC-102 R1)"
+      ],
+      [
+        "S10201-LEAP-DAY-TO-28",
+        "notifications",
+        "src/landmarks.rs",
+        "format!(\"{head}{}28\", &tail[..4])",
+        "format!(\"{head}{}27\", &tail[..4])",
+        "landmarks::the_landmarks_match_the_parity_golden",
+        "an origin on 29 February has its anniversary in a common year on the 28th (SPEC-102 R1)"
+      ],
+      [
+        "S10202-ANNIVERSARY-ON-THE-DAY",
+        "notifications",
+        "src/landmarks.rs",
+        "anniversary(origin, ordinal) else {\n            break;\n        };\n        if day > today {",
+        "anniversary(origin, ordinal) else {\n            break;\n        };\n        if day >= today {",
+        "landmarks::the_landmarks_match_the_parity_golden",
+        "an anniversary dated the day evaluated is kept, only a later one ends the list (SPEC-102 R1)"
+      ],
+      [
+        "S10203-TEENS-TAKE-TH",
+        "notifications",
+        "src/landmarks.rs",
+        "(value % 100) > 10 && (value % 100) < 14",
+        "(value % 100) > 11 && (value % 100) < 14",
+        "landmarks::the_landmark_text_matches_the_parity_golden",
+        "the ordinals 11, 12 and 13 take th, as the golden of the text says (SPEC-102 R4)"
+      ],
+      [
+        "S10204-DUE-ON-THE-DAY",
+        "notifications",
+        "src/landmarks.rs",
+        ".filter(|landmark| landmark.day == today)",
+        ".filter(|landmark| landmark.day <= today)",
+        "landmarks::only_the_landmarks_dated_the_day_are_due",
+        "only the landmarks dated the day are due, never an earlier one (SPEC-102 R3)"
+      ]
+    ]
+  }
+}

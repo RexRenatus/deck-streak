@@ -70,6 +70,7 @@ fn data(reviews: Vec<Review>) -> CollectionData {
             track: Track::Language,
             course: None,
             tier: None,
+            memory: None,
         }],
         created_at: UtcMillis::from_epoch_millis(at(CREATED, 12)),
         deck_names: BTreeMap::from([(1, "Synthetic".to_owned())]),
@@ -1043,7 +1044,7 @@ const ROUTE_STATE: [(&str, &str); 15] = [
 /// Every `static` item and thread-local in the source of every crate coordination links, written
 /// out: two run sequences, the data-rights registry's entries, the migrator and the parsed XP
 /// economy. None is a count per day.
-const STATICS: [(&str, &str); 16] = [
+const STATICS: [(&str, &str); 17] = [
     (
         "crates/agent/src/gate.rs",
         "static STAGE_SEQUENCE: AtomicU64 = AtomicU64::new(0);",
@@ -1063,6 +1064,10 @@ const STATICS: [(&str, &str); 16] = [
     (
         "crates/coordination/src/data_rights_registry.rs",
         "static ANALYTICS: AnalyticsDataRights = AnalyticsDataRights;",
+    ),
+    (
+        "crates/coordination/src/data_rights_registry.rs",
+        "static CURRICULUM: CurriculumDataRights = CurriculumDataRights;",
     ),
     (
         "crates/coordination/src/data_rights_registry.rs",

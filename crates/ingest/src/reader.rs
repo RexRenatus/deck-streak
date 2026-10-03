@@ -24,6 +24,7 @@ use sqlx::AssertSqlSafe;
 use tokio::runtime::Handle;
 
 use crate::lock::CollectionLock;
+use crate::memory_state::{MemoryState, parse as parse_memory};
 use crate::settings::{DECK_SEPARATOR, ScopeSettings, SyncSettings};
 use crate::tier::{Tier, parse_tier};
 
@@ -38,7 +39,7 @@ const DECK_NAMES: &str = "SELECT id, name FROM decks ORDER BY id";
 /// the ids in `?1`, a JSON array: [`Card::home_deck_id`] in SQL, as the predecessor's recount
 /// wrote it.
 const CARDS: &str = "SELECT id, nid, did, odid, queue, type, due, ivl, factor, reps, lapses, \
-     (SELECT n.tags FROM notes n WHERE n.id = cards.nid) \
+     (SELECT n.tags FROM notes n WHERE n.id = cards.nid), cards.data \
      FROM cards WHERE (CASE WHEN odid != 0 THEN odid ELSE did END) IN (SELECT value FROM json_each(?1)) \
      ORDER BY id";
 /// The revlog rows newer than the floor `?1` of the cards whose home deck is one of the ids in
@@ -64,6 +65,7 @@ type CardRow = (
     i64,
     i64,
     i64,
+    Option<String>,
     Option<String>,
 );
 /// A review row as [`REVIEWS`] selects it.
@@ -124,6 +126,9 @@ pub struct Card {
     /// The Bloom tier of the card's note (SPEC-072 R3), reduced from its tags inside the read; the
     /// tags themselves never leave ingest.
     pub tier: Option<Tier>,
+    /// The card's memory state, parsed from its stored data inside the read (SPEC-077 R1); none
+    /// when the scheduler stored no readable one.
+    pub memory: Option<MemoryState>,
 }
 
 impl Card {
@@ -318,6 +323,7 @@ impl CollectionReader {
                         track: Track::Language,
                         course: None,
                         tier,
+                        memory: parse_memory(row.12.as_deref()),
                     };
                     card.track = track(card.home_deck_id());
                     card.course = course_of(&courses, name_of(card.home_deck_id()));

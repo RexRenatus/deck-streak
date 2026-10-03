@@ -931,6 +931,9 @@ dependencies = [
  "deck-streak-kernel",
  "serde",
  "serde_json",
+ "sqlx",
+ "tempfile",
+ "tokio",
 ]
 
 [[package]]
@@ -1071,6 +1074,23 @@ name = "deck-streak-markets"
 version = "0.2.0"
 dependencies = [
  "deck-streak-kernel",
+]
+
+[[package]]
+name = "deck-streak-mcp"
+version = "0.2.0"
+dependencies = [
+ "axum",
+ "deck-streak-kernel",
+ "serde",
+ "serde_json",
+ "sha2 0.11.0",
+ "subtle",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "tower",
+ "tracing",
 ]
 
 [[package]]

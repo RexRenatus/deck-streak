@@ -7,6 +7,7 @@
 
 use deck_streak_agent::data_rights::AgentDataRights;
 use deck_streak_analytics::data_rights::AnalyticsDataRights;
+use deck_streak_curriculum::data_rights::CurriculumDataRights;
 use deck_streak_economy::data_rights::EconomyDataRights;
 use deck_streak_ingest::data_rights::IngestDataRights;
 use deck_streak_kernel::{DataRights, Db, KernelDataRights};
@@ -26,6 +27,9 @@ static KERNEL: KernelDataRights = KernelDataRights;
 static INGEST: IngestDataRights = IngestDataRights;
 /// Analytics' port: the daily rollups and per-course statistics exported and erased (SPEC-071).
 static ANALYTICS: AnalyticsDataRights = AnalyticsDataRights;
+/// Curriculum's port: each course's stored progress, its band milestones and the law dues exported
+/// and erased (SPEC-077).
+static CURRICULUM: CurriculumDataRights = CurriculumDataRights;
 /// Progression's port: the XP ledger, the settled XP, the day buffs, the badges and the records exported and erased (SPEC-040, SPEC-072).
 static PROGRESSION: ProgressionDataRights = ProgressionDataRights;
 /// Notifications' port: the router's decisions, deliveries, queue, feed and settings exported and
@@ -51,8 +55,9 @@ static STREAKS: StreaksDataRights = StreaksDataRights;
 static COORDINATION: CoordinationDataRights = CoordinationDataRights;
 
 /// Every stateful context's port, in the order an erase runs them: the kernel, ingest, analytics
-/// (SPEC-071), progression (SPEC-040), notifications (SPEC-041), readings (SPEC-045), the agent
-/// (SPEC-043), streaks (SPEC-076), the economy (SPEC-082), the quests (SPEC-081), the vault (SPEC-110) and coordination.
+/// (SPEC-071), curriculum (SPEC-077), progression (SPEC-040), notifications (SPEC-041), readings
+/// (SPEC-045), the agent (SPEC-043), streaks (SPEC-076), the economy (SPEC-082), the quests
+/// (SPEC-081), the vault (SPEC-110) and coordination.
 /// Identity keeps its sessions in memory (ADR-024), so it has no table and no port.
 #[must_use]
 pub fn ports() -> Vec<&'static dyn DataRights> {
@@ -60,6 +65,7 @@ pub fn ports() -> Vec<&'static dyn DataRights> {
         &KERNEL,
         &INGEST,
         &ANALYTICS,
+        &CURRICULUM,
         &PROGRESSION,
         &NOTIFICATIONS,
         &READINGS,

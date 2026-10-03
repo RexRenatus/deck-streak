@@ -92,6 +92,7 @@ const fn card(id: i64, due: i64, interval: i64, lapses: i64) -> Card {
         track: Track::Language,
         course: None,
         tier: None,
+        memory: None,
     }
 }
 

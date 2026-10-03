@@ -12,6 +12,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use deck_streak_kernel::{StudyDayRule, UtcOffset};
+use deck_streak_notifications::router::seed_celebrations_off;
 use deck_streak_notifications::{Decision, Hold, LapseContext, Reason, Router, Surface, Tier};
 use support::{DAY, Harness, Recorded, at};
 
@@ -766,4 +767,124 @@ async fn the_in_app_feed_serves_each_item_once_in_order() {
         [item("synthetic badge:one"), item("synthetic badge:two")]
     );
     assert_eq!(second, Vec::<FeedItem>::new(), "each item is served once");
+}
+
+/// SPEC-319 A5 (R1): outside the window, a holding router with no transport defers a bot
+/// celebration `send` and holds it for the senders; it still withholds a nudge `no_notifier` and
+/// releases its key; and a router that does not hold still withholds the celebration.
+#[tokio::test]
+async fn a_holding_router_holds_a_celebration_it_cannot_send() {
+    let harness = Harness::without_bot(at(DAY, 12, 0)).await;
+    let holding = Router::new(
+        Arc::clone(&harness.policy),
+        harness.db.clone(),
+        harness.clock.clone(),
+        StudyDayRule::default(),
+    )
+    .holding();
+    let nudge = harness.occasion(
+        "habit",
+        "habit:check-in",
+        Surface::Bot,
+        Tier::T2,
+        DAY,
+        LapseContext::NoLapse,
+    );
+
+    let held = holding
+        .route(&harness.celebration("record:streak", Surface::Bot))
+        .await
+        .expect("a decision");
+    let withheld = holding.route(&nudge).await.expect("a decision");
+    let plain = harness
+        .router
+        .route(&harness.celebration("record:best-day", Surface::Bot))
+        .await
+        .expect("a decision");
+
+    assert_eq!(
+        held,
+        Decision::Deferred {
+            surface: Surface::Bot,
+            hold: Hold::Send
+        },
+        "the celebration is held for the senders"
+    );
+    let no_notifier = Decision::Withheld {
+        surface: Surface::Bot,
+        reason: Reason::NoNotifier,
+    };
+    assert_eq!(withheld, no_notifier, "a nudge is never held");
+    assert_eq!(
+        plain, no_notifier,
+        "a router that does not hold is unchanged"
+    );
+    let queue: Vec<(String, String, String)> = harness
+        .queue()
+        .await
+        .into_iter()
+        .map(|row| (row.key, row.state, row.hold))
+        .collect();
+    assert_eq!(
+        queue,
+        [(
+            "record:streak".to_owned(),
+            "held".to_owned(),
+            "send".to_owned()
+        )],
+        "only the celebration is held"
+    );
+    assert_eq!(
+        harness.deliveries().await,
+        1,
+        "the held celebration keeps its claim; the nudge's key is released"
+    );
+}
+
+/// The celebrations' switch is seeded off where none is stored, and a stored value is kept
+/// (SPEC-319 R4; seat ruling 68: the notifications crate's own killer of the seeding stub).
+#[tokio::test]
+async fn seeding_the_celebrations_switch_stores_off_and_keeps_a_stored_value() {
+    async fn stored(harness: &Harness, setting: &str) -> Option<String> {
+        sqlx::query_scalar("SELECT value FROM notification_settings WHERE key = ?")
+            .bind(setting)
+            .fetch_optional(harness.db.reader())
+            .await
+            .expect("the setting is read")
+    }
+
+    let fresh = Harness::new(at(DAY, 12, 0)).await;
+    let kind = fresh
+        .policy
+        .kind("celebration")
+        .expect("the policy declares the celebration kind");
+    let setting = kind
+        .setting()
+        .expect("the celebration kind names a switch")
+        .to_owned();
+    assert_eq!(
+        stored(&fresh, &setting).await,
+        None,
+        "nothing is stored yet"
+    );
+    seed_celebrations_off(&fresh.policy, &fresh.db, at(DAY, 12, 0))
+        .await
+        .expect("the switch is seeded");
+    assert_eq!(
+        stored(&fresh, &setting).await.as_deref(),
+        Some("0"),
+        "a fresh store is seeded off, at the policy's disable value"
+    );
+
+    let kept = Harness::new(at(DAY, 12, 0)).await;
+    let other = "1";
+    kept.set(&setting, other).await;
+    seed_celebrations_off(&kept.policy, &kept.db, at(DAY, 12, 0))
+        .await
+        .expect("the seed ignores a stored value");
+    assert_eq!(
+        stored(&kept, &setting).await.as_deref(),
+        Some(other),
+        "a stored value is never overwritten"
+    );
 }

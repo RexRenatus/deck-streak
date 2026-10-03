@@ -14,6 +14,10 @@ workspace = true
 [dependencies]
 deck-streak-kernel.workspace = true
 deck-streak-ingest.workspace = true
+# SPEC-077 R6, R18: the store's and the data-rights port's queries run through the kernel's Db,
+# checked into .sqlx/, and their rows and the stored bands are JSON values (ADR-003, ADR-029).
+serde_json.workspace = true
+sqlx.workspace = true
 
 # The parity oracle's golden reader, compiled into this crate's tests by path (ADR-029). Test
 # support only.
@@ -22,3 +26,6 @@ serde.workspace = true
 # The goldens' floats are compared bit for bit, so the reader parses them exactly: serde_json's
 # default parser is best-effort and can land one unit in the last place away (SPEC-071 section 7).
 serde_json = { workspace = true, features = ["float_roundtrip"] }
+# The store's and the port's tests: a file-backed database per test (SPEC-077 A10).
+tempfile.workspace = true
+tokio = { workspace = true, features = ["macros", "rt"] }

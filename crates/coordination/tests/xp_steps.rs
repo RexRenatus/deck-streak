@@ -86,6 +86,7 @@ const fn card(id: i64, due: i64, track: Track, tier: Option<Tier>) -> Card {
         track,
         course: None,
         tier,
+        memory: None,
     }
 }
 
