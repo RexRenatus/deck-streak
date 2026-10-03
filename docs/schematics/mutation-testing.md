@@ -13,7 +13,7 @@ a fragment to a verdict, is drawn in `docs/schematics/mutation-equivalence-recor
 flowchart TD
   pr[a pull request into dev, or a release pull request into main] --> merge[the merge ref: HEAD^1 is the base's tip]
   push[a push to dev or main] --> names{does its subject name the pull request it merges?}
-  names -->|Merge pull request #N, or a squash's title ending (#N)| na([every job: not-applicable, naming #N, whose jobs judged this tree])
+  names -->|"Merge pull request #N, or a squash's title ending (#N)"| na([every job: not-applicable, naming #N, whose jobs judged this tree])
   names -->|no| first[its first-parent diff, HEAD^1...HEAD]
   merge --> plan[mutation-plan: mutation-verdict.py plan: git diff HEAD^1...HEAD, once, to git.diff]
   first --> plan
