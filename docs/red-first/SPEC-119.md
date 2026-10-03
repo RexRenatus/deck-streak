@@ -157,3 +157,14 @@ null as a type. It adds no criterion and no acceptance line.
   reaches the new `mcp` role at green, and it refused the listen refusal's first wording. The
   refusal's `Display` for an unset address now reads "it is required and is not set"; the change
   is in `crates/mcp/src/settings.rs`, and the census is unchanged.
+
+### A test change after the green commit
+
+- `crates/mcp/tests/settings.rs`, A39's test: its source census printed its count by hand, and the
+  tdd probe's examined-counts class refused the file, which walks a directory without the house
+  `examined` contract. The census now passes its sources through an `examined` helper appended at
+  the end of the file, which prints the count and refuses an empty population; its own
+  `more than one source` assertion is kept. The new body was run at the red commit, in a scratch
+  copy of that commit with only this file replaced: only A1's and A39's tests failed of the file's
+  7, and A39 panicked at `crates/mcp/tests/settings.rs:372`, the mcp role's source is missing,
+  the failure its fence line above quotes.
