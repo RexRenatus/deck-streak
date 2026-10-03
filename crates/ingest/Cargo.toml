@@ -16,7 +16,7 @@ workspace = true
 anki.workspace = true
 deck-streak-kernel.workspace = true
 # SPEC-022 section 7: the data-rights port's rows are JSON values.
-serde_json.workspace = true
+serde_json = { workspace = true, features = ["float_roundtrip"] }
 # SPEC-022 section 7: the kernel's Db hands out sqlx types, and sync_runs' queries are checked into
 # .sqlx/.
 sqlx.workspace = true

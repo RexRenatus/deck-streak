@@ -153,6 +153,7 @@ fn card(row: &Value) -> Card {
         track: Track::Language,
         course: None,
         tier: None,
+        memory: None,
     }
 }
 

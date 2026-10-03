@@ -94,6 +94,7 @@ const fn card(id: i64) -> Card {
         track: Track::Language,
         course: None,
         tier: None,
+        memory: None,
     }
 }
 

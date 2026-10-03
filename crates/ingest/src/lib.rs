@@ -19,6 +19,7 @@ pub mod data_rights;
 pub mod engine;
 pub mod gate;
 pub mod lock;
+pub mod memory_state;
 pub mod reader;
 pub mod settings;
 pub mod state;
