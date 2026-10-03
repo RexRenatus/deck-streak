@@ -2312,7 +2312,7 @@ class EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused(Case):
         (
             "rollback-kept",
             "corrupt-manifest",
-        ): "the fresh-manifest options apply only to the v1.1.0 ship, which the pair does not build",
+        ): "the kept pair ships v1.1.0 without the fresh-manifest options, so they never apply to it",
         (
             "rollback-kept",
             "effective-refused",
