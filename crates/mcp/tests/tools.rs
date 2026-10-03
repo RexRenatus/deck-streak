@@ -1,7 +1,8 @@
 //! SPEC-119 A33, A41 and A42 (section 14): `get_law_track` answers the roster golden's fields,
 //! numbers only, with mastery rounded to 2 places; its name, annotations, parameters and output
 //! fields equal its entry of `goldens/mcp_roster.json`; and a pending leech count or mastery answers
-//! null, never 0 (R15 to R17; SPEC-077 R12; ADR-329 D7).
+//! null, never 0 (R15 to R17; SPEC-077 R12; ADR-329 D7). The output schema admits each pending
+//! number as null, as the SPEC's pending-null rule declares them nullable and required.
 //!
 //! Every call goes through the served stack with the law-track token, built from parts.
 
@@ -200,6 +201,83 @@ async fn each_served_tool_matches_its_roster_golden_entry() {
             declared,
             fields.iter().collect::<BTreeSet<_>>(),
             "{name}'s output properties"
+        );
+    }
+}
+
+/// Whether the JSON Schema `schema` admits `value` by its type: its `type`, one name or a list of
+/// them, or any branch of its `anyOf`. A schema that names no type admits nothing here, so a field
+/// the schema leaves blank cannot pass by saying nothing.
+fn admits(schema: &Value, value: &Value) -> bool {
+    if let Some(branches) = schema["anyOf"].as_array() {
+        return branches.iter().any(|branch| admits(branch, value));
+    }
+    let names: Vec<&str> = match &schema["type"] {
+        Value::String(name) => vec![name.as_str()],
+        Value::Array(names) => names.iter().filter_map(Value::as_str).collect(),
+        _ => Vec::new(),
+    };
+    names.iter().any(|name| match *name {
+        "null" => value.is_null(),
+        "integer" => value.is_i64() || value.is_u64(),
+        "number" => value.is_number(),
+        "boolean" => value.is_boolean(),
+        "string" => value.is_string(),
+        "array" => value.is_array(),
+        "object" => value.is_object(),
+        _ => false,
+    })
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn the_output_schema_admits_each_pending_number_as_null() {
+    let served = Served::start(ScriptedLaw::answering(full_block())).await;
+    let reply = served.post("/mcp", Some(&law_token()), &list_tools()).await;
+    assert_eq!(reply.status, 200, "tools/list: {}", reply.text());
+    let result = reply.result();
+    let schema = result["tools"]
+        .as_array()
+        .and_then(|tools| tools.iter().find(|tool| tool["name"] == "get_law_track"))
+        .map(|tool| tool["outputSchema"].clone())
+        .unwrap_or_else(|| panic!("get_law_track declares no output schema: {result}"));
+
+    // Every pending number at once: the dues before the first recompute stores them, and the
+    // leeches and the mastery while the leech port is not wired. SPEC-119 declares the three
+    // nullable and required, so a client that checks an answer against the schema accepts both.
+    let pending = LawBlock {
+        dues: None,
+        leech_active: None,
+        mastery: None,
+        ..full_block()
+    };
+    let (pending_answer, _) = law_track_answer(pending).await;
+    let (full_answer, _) = law_track_answer(full_block()).await;
+
+    let fields = golden_fields();
+    println!("examined {} output field(s)", fields.len());
+    assert!(
+        !fields.is_empty(),
+        "examined 0 output fields: the population is empty, so nothing was judged"
+    );
+    for field in &fields {
+        let declared = &schema["properties"][field];
+        for answer in [&pending_answer, &full_answer] {
+            let value = answer
+                .get(field)
+                .unwrap_or_else(|| panic!("the answer holds no {field}: {answer:?}"));
+            assert!(
+                admits(declared, value),
+                "the output schema's {field} ({declared}) refuses the answered {value}"
+            );
+        }
+    }
+
+    // A number the ledger always answers stays a number: null is admitted only where it is pending.
+    for field in ["streak", "xp_today", "total_xp", "level"] {
+        let declared = &schema["properties"][field];
+        assert!(
+            !admits(declared, &Value::Null),
+            "the output schema's {field} ({declared}) admits null"
         );
     }
 }
