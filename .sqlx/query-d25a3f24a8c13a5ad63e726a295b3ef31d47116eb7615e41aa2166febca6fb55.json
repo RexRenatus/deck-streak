@@ -1,0 +1,218 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id AS \"id!\", skip_id, card_id, prior_due, prior_queue, prior_type,\n                  prior_interval, prior_ease_factor, prior_original_deck_id,\n                  prior_original_due, left_due, left_queue, left_type, left_interval,\n                  left_ease_factor, left_mtime, created_at\n           FROM skip_card_snapshot ORDER BY id",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "skip_card_snapshot",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "skip_id",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "skip_card_snapshot",
+            "name": "skip_id"
+          }
+        }
+      },
+      {
+        "name": "card_id",
+        "ordinal": 2,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "skip_card_snapshot",
+            "name": "card_id"
+          }
+        }
+      },
+      {
+        "name": "prior_due",
+        "ordinal": 3,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "skip_card_snapshot",
+            "name": "prior_due"
+          }
+        }
+      },
+      {
+        "name": "prior_queue",
+        "ordinal": 4,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "skip_card_snapshot",
+            "name": "prior_queue"
+          }
+        }
+      },
+      {
+        "name": "prior_type",
+        "ordinal": 5,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "skip_card_snapshot",
+            "name": "prior_type"
+          }
+        }
+      },
+      {
+        "name": "prior_interval",
+        "ordinal": 6,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "skip_card_snapshot",
+            "name": "prior_interval"
+          }
+        }
+      },
+      {
+        "name": "prior_ease_factor",
+        "ordinal": 7,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "skip_card_snapshot",
+            "name": "prior_ease_factor"
+          }
+        }
+      },
+      {
+        "name": "prior_original_deck_id",
+        "ordinal": 8,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "skip_card_snapshot",
+            "name": "prior_original_deck_id"
+          }
+        }
+      },
+      {
+        "name": "prior_original_due",
+        "ordinal": 9,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "skip_card_snapshot",
+            "name": "prior_original_due"
+          }
+        }
+      },
+      {
+        "name": "left_due",
+        "ordinal": 10,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "skip_card_snapshot",
+            "name": "left_due"
+          }
+        }
+      },
+      {
+        "name": "left_queue",
+        "ordinal": 11,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "skip_card_snapshot",
+            "name": "left_queue"
+          }
+        }
+      },
+      {
+        "name": "left_type",
+        "ordinal": 12,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "skip_card_snapshot",
+            "name": "left_type"
+          }
+        }
+      },
+      {
+        "name": "left_interval",
+        "ordinal": 13,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "skip_card_snapshot",
+            "name": "left_interval"
+          }
+        }
+      },
+      {
+        "name": "left_ease_factor",
+        "ordinal": 14,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "skip_card_snapshot",
+            "name": "left_ease_factor"
+          }
+        }
+      },
+      {
+        "name": "left_mtime",
+        "ordinal": 15,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "skip_card_snapshot",
+            "name": "left_mtime"
+          }
+        }
+      },
+      {
+        "name": "created_at",
+        "ordinal": 16,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "skip_card_snapshot",
+            "name": "created_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "d25a3f24a8c13a5ad63e726a295b3ef31d47116eb7615e41aa2166febca6fb55"
+}

@@ -6,7 +6,7 @@
 \* @phx covers crates/coordination/src/recompute/mod.rs anchor=runs_today_only_rules digest=sha256:f924a917b193bcfc4a5e0a9a39b45e5b8cb67f8be0b5cc1d6e765f0bc27f5e67
 \* @phx covers crates/coordination/src/recompute/streaks.rs anchor=evaluate digest=sha256:bcafac597ac0e93e481c3c161efd5e28ed055657b74040ff7306c76066dc52f9
 \* @phx covers crates/coordination/src/recompute/streaks.rs anchor=relight digest=sha256:19cb334d99817721cecf6432554bbd9cbcb501c80c5fdf2aa9d94dd425a16ed7
-\* @phx covers crates/coordination/src/recompute/streaks.rs anchor=govern digest=sha256:324be39547b7c4d90412f6d3823f5f83f9e6717084550ee505126dcf7a44f84c
+\* @phx covers crates/coordination/src/recompute/streaks.rs anchor=govern digest=sha256:37c4c03b2a7e959a0212e03b17a722b2cb56ae9f7e5286d4386ebcfcac157c70
 \* @phx covers crates/coordination/src/recompute/streaks.rs anchor=pending digest=sha256:a40a08f18c1aec095c3787bf9422d0213fa264c9cab5fa1347105907aec9475c
 \* @phx covers crates/coordination/src/recompute/streaks.rs anchor=routed digest=sha256:2b5a85a622b7f2b612570a5abc5c2a76663e2242839ca0eba636158800dd9455
 \* @phx covers crates/coordination/src/recompute/streaks.rs anchor=RelightDue digest=sha256:0d175dbdba0ba57216894e424f90d61d679a279bf5b8415e6d06ea5867f7f549

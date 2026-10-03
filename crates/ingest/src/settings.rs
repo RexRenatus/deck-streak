@@ -12,6 +12,8 @@ use std::path::PathBuf;
 
 use deck_streak_kernel::{Environment, Setting, SettingsError};
 
+use crate::skip::{SKIP_DEFAULT_SEARCH, is_one_expression};
+
 /// The sync server's URL (required).
 pub const SYNC_ENDPOINT: &str = "DECKSTREAK_SYNC_ENDPOINT";
 /// The directory systemd passes a unit with `StateDirectory=`; the copy and its lock live there.
@@ -27,6 +29,8 @@ pub const LOCK_FILE: &str = "collection.lock";
 /// The top-level deck-name prefixes whose decks are read, comma-separated; empty or unset reads every
 /// deck (SPEC-023 R2).
 pub const INCLUDE_DECKS: &str = "DECKSTREAK_INCLUDE_DECKS";
+/// The search a skip day moves cards by, optional (SPEC-083 R3); unset, [`SKIP_DEFAULT_SEARCH`].
+pub const SKIP_SEARCH: &str = "DECKSTREAK_SKIP_SEARCH";
 /// The top-level deck name the law track's decks start with, optional (SPEC-023 R3).
 pub const LAW_DECK_ROOT: &str = "DECKSTREAK_LAW_DECK_ROOT";
 /// The separator of a deck's name as the collection stores it: the text before the first one is the
@@ -279,5 +283,45 @@ impl ScopeSettings {
                  read until one does"
             );
         }
+    }
+}
+
+/// The configured skip search (SPEC-083 R3): one expression, so the wrap's group and the holds that
+/// follow it cannot be closed early. Its `Debug` never prints it: a search names the owner's decks.
+#[derive(Clone, PartialEq, Eq)]
+pub struct SkipSearch(String);
+
+impl SkipSearch {
+    /// The search, as set, or the default when none was.
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+
+    /// Reads the search from `env`: unset or empty is [`SKIP_DEFAULT_SEARCH`]; a search that is not
+    /// one expression refuses start, and nothing else is checked here (the zone is checked at each
+    /// preview, take and undo).
+    ///
+    /// # Errors
+    ///
+    /// [`SettingsError::Malformed`] naming [`SKIP_SEARCH`] when the search is not one expression.
+    pub fn from_env(env: &Environment) -> Result<Self, SettingsError> {
+        Ok(env
+            .optional(SKIP_SEARCH)?
+            .unwrap_or_else(|| Self(SKIP_DEFAULT_SEARCH.to_owned())))
+    }
+}
+
+impl fmt::Debug for SkipSearch {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("SkipSearch(..)")
+    }
+}
+
+impl Setting for SkipSearch {
+    const SHAPE: &'static str = "one Anki search expression";
+
+    fn parse(text: &str) -> Option<Self> {
+        is_one_expression(text).then(|| Self(text.to_owned()))
     }
 }
