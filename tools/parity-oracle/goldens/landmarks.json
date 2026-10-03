@@ -1,0 +1,2679 @@
+{
+  "adapter": "with_synthetic_reviews",
+  "cases": [
+    {
+      "class": "no-study-day",
+      "input": {
+        "non_study_days": [],
+        "study_days": [],
+        "today": 11323
+      },
+      "output": {
+        "due": [],
+        "landmarks": []
+      }
+    },
+    {
+      "class": "no-study-day",
+      "input": {
+        "non_study_days": [
+          11320,
+          11323,
+          11363
+        ],
+        "study_days": [],
+        "today": 11323
+      },
+      "output": {
+        "due": [],
+        "landmarks": []
+      }
+    },
+    {
+      "class": "one-day",
+      "input": {
+        "non_study_days": [],
+        "study_days": [
+          11323
+        ],
+        "today": 11323
+      },
+      "output": {
+        "due": [],
+        "landmarks": []
+      }
+    },
+    {
+      "class": "one-day",
+      "input": {
+        "non_study_days": [],
+        "study_days": [
+          11323
+        ],
+        "today": 11687
+      },
+      "output": {
+        "due": [],
+        "landmarks": []
+      }
+    },
+    {
+      "class": "anniversary-on-the-day",
+      "input": {
+        "non_study_days": [],
+        "study_days": [
+          11323
+        ],
+        "today": 11688
+      },
+      "output": {
+        "due": [
+          "landmark:anniv:1"
+        ],
+        "landmarks": [
+          {
+            "day": 11688,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:1",
+            "ordinal": 1
+          }
+        ]
+      }
+    },
+    {
+      "class": "anniversary-the-day-after",
+      "input": {
+        "non_study_days": [],
+        "study_days": [
+          11323
+        ],
+        "today": 11687
+      },
+      "output": {
+        "due": [],
+        "landmarks": []
+      }
+    },
+    {
+      "class": "anniversary-kept-after",
+      "input": {
+        "non_study_days": [],
+        "study_days": [
+          11323
+        ],
+        "today": 11689
+      },
+      "output": {
+        "due": [],
+        "landmarks": [
+          {
+            "day": 11688,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:1",
+            "ordinal": 1
+          }
+        ]
+      }
+    },
+    {
+      "class": "leap-day-origin",
+      "input": {
+        "non_study_days": [],
+        "study_days": [
+          11016
+        ],
+        "today": 11379
+      },
+      "output": {
+        "due": [],
+        "landmarks": []
+      }
+    },
+    {
+      "class": "leap-day-origin",
+      "input": {
+        "non_study_days": [],
+        "study_days": [
+          11016
+        ],
+        "today": 11380
+      },
+      "output": {
+        "due": [],
+        "landmarks": []
+      }
+    },
+    {
+      "class": "leap-day-origin",
+      "input": {
+        "non_study_days": [],
+        "study_days": [
+          11016
+        ],
+        "today": 11381
+      },
+      "output": {
+        "due": [
+          "landmark:anniv:1"
+        ],
+        "landmarks": [
+          {
+            "day": 11381,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:1",
+            "ordinal": 1
+          }
+        ]
+      }
+    },
+    {
+      "class": "leap-day-origin",
+      "input": {
+        "non_study_days": [],
+        "study_days": [
+          11016
+        ],
+        "today": 11382
+      },
+      "output": {
+        "due": [],
+        "landmarks": [
+          {
+            "day": 11381,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:1",
+            "ordinal": 1
+          }
+        ]
+      }
+    },
+    {
+      "class": "leap-day-origin",
+      "input": {
+        "non_study_days": [],
+        "study_days": [
+          11016
+        ],
+        "today": 11383
+      },
+      "output": {
+        "due": [],
+        "landmarks": [
+          {
+            "day": 11381,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:1",
+            "ordinal": 1
+          }
+        ]
+      }
+    },
+    {
+      "class": "leap-day-origin-is-the-29th-again",
+      "input": {
+        "non_study_days": [],
+        "study_days": [
+          11016
+        ],
+        "today": 12476
+      },
+      "output": {
+        "due": [],
+        "landmarks": [
+          {
+            "day": 11381,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:1",
+            "ordinal": 1
+          },
+          {
+            "day": 11746,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:2",
+            "ordinal": 2
+          },
+          {
+            "day": 12111,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:3",
+            "ordinal": 3
+          }
+        ]
+      }
+    },
+    {
+      "class": "leap-day-origin-is-the-29th-again",
+      "input": {
+        "non_study_days": [],
+        "study_days": [
+          11016
+        ],
+        "today": 12477
+      },
+      "output": {
+        "due": [
+          "landmark:anniv:4"
+        ],
+        "landmarks": [
+          {
+            "day": 11381,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:1",
+            "ordinal": 1
+          },
+          {
+            "day": 11746,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:2",
+            "ordinal": 2
+          },
+          {
+            "day": 12111,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:3",
+            "ordinal": 3
+          },
+          {
+            "day": 12477,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:4",
+            "ordinal": 4
+          }
+        ]
+      }
+    },
+    {
+      "class": "leap-day-origin-is-the-29th-again",
+      "input": {
+        "non_study_days": [],
+        "study_days": [
+          11016
+        ],
+        "today": 12478
+      },
+      "output": {
+        "due": [],
+        "landmarks": [
+          {
+            "day": 11381,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:1",
+            "ordinal": 1
+          },
+          {
+            "day": 11746,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:2",
+            "ordinal": 2
+          },
+          {
+            "day": 12111,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:3",
+            "ordinal": 3
+          },
+          {
+            "day": 12477,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:4",
+            "ordinal": 4
+          }
+        ]
+      }
+    },
+    {
+      "class": "leap-day-origin-many-years",
+      "input": {
+        "non_study_days": [],
+        "study_days": [
+          11016,
+          11416
+        ],
+        "today": 15400
+      },
+      "output": {
+        "due": [],
+        "landmarks": [
+          {
+            "day": 11381,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:1",
+            "ordinal": 1
+          },
+          {
+            "day": 11746,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:2",
+            "ordinal": 2
+          },
+          {
+            "day": 12111,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:3",
+            "ordinal": 3
+          },
+          {
+            "day": 12477,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:4",
+            "ordinal": 4
+          },
+          {
+            "day": 12842,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:5",
+            "ordinal": 5
+          },
+          {
+            "day": 13207,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:6",
+            "ordinal": 6
+          },
+          {
+            "day": 13572,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:7",
+            "ordinal": 7
+          },
+          {
+            "day": 13938,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:8",
+            "ordinal": 8
+          },
+          {
+            "day": 14303,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:9",
+            "ordinal": 9
+          },
+          {
+            "day": 14668,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:10",
+            "ordinal": 10
+          },
+          {
+            "day": 15033,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:11",
+            "ordinal": 11
+          },
+          {
+            "day": 15399,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:12",
+            "ordinal": 12
+          }
+        ]
+      }
+    },
+    {
+      "class": "century-leap-year",
+      "input": {
+        "non_study_days": [],
+        "study_days": [
+          10650
+        ],
+        "today": 11382
+      },
+      "output": {
+        "due": [],
+        "landmarks": [
+          {
+            "day": 11015,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:1",
+            "ordinal": 1
+          },
+          {
+            "day": 11381,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:2",
+            "ordinal": 2
+          }
+        ]
+      }
+    },
+    {
+      "class": "study-day-24",
+      "input": {
+        "non_study_days": [],
+        "study_days": [
+          11323,
+          11324,
+          11325,
+          11326,
+          11327,
+          11328,
+          11329,
+          11330,
+          11331,
+          11332,
+          11333,
+          11334,
+          11335,
+          11336,
+          11337,
+          11338,
+          11339,
+          11340,
+          11341,
+          11342,
+          11343,
+          11344,
+          11345,
+          11346
+        ],
+        "today": 11346
+      },
+      "output": {
+        "due": [],
+        "landmarks": []
+      }
+    },
+    {
+      "class": "study-day-25",
+      "input": {
+        "non_study_days": [],
+        "study_days": [
+          11323,
+          11324,
+          11325,
+          11326,
+          11327,
+          11328,
+          11329,
+          11330,
+          11331,
+          11332,
+          11333,
+          11334,
+          11335,
+          11336,
+          11337,
+          11338,
+          11339,
+          11340,
+          11341,
+          11342,
+          11343,
+          11344,
+          11345,
+          11346,
+          11347
+        ],
+        "today": 11347
+      },
+      "output": {
+        "due": [
+          "landmark:day:25"
+        ],
+        "landmarks": [
+          {
+            "day": 11347,
+            "event": "landmark_study_day",
+            "key": "landmark:day:25",
+            "ordinal": 25
+          }
+        ]
+      }
+    },
+    {
+      "class": "study-day-26",
+      "input": {
+        "non_study_days": [],
+        "study_days": [
+          11323,
+          11324,
+          11325,
+          11326,
+          11327,
+          11328,
+          11329,
+          11330,
+          11331,
+          11332,
+          11333,
+          11334,
+          11335,
+          11336,
+          11337,
+          11338,
+          11339,
+          11340,
+          11341,
+          11342,
+          11343,
+          11344,
+          11345,
+          11346,
+          11347,
+          11348
+        ],
+        "today": 11348
+      },
+      "output": {
+        "due": [],
+        "landmarks": [
+          {
+            "day": 11347,
+            "event": "landmark_study_day",
+            "key": "landmark:day:25",
+            "ordinal": 25
+          }
+        ]
+      }
+    },
+    {
+      "class": "study-day-49",
+      "input": {
+        "non_study_days": [],
+        "study_days": [
+          11323,
+          11324,
+          11325,
+          11326,
+          11327,
+          11328,
+          11329,
+          11330,
+          11331,
+          11332,
+          11333,
+          11334,
+          11335,
+          11336,
+          11337,
+          11338,
+          11339,
+          11340,
+          11341,
+          11342,
+          11343,
+          11344,
+          11345,
+          11346,
+          11347,
+          11348,
+          11349,
+          11350,
+          11351,
+          11352,
+          11353,
+          11354,
+          11355,
+          11356,
+          11357,
+          11358,
+          11359,
+          11360,
+          11361,
+          11362,
+          11363,
+          11364,
+          11365,
+          11366,
+          11367,
+          11368,
+          11369,
+          11370,
+          11371
+        ],
+        "today": 11371
+      },
+      "output": {
+        "due": [],
+        "landmarks": [
+          {
+            "day": 11347,
+            "event": "landmark_study_day",
+            "key": "landmark:day:25",
+            "ordinal": 25
+          }
+        ]
+      }
+    },
+    {
+      "class": "study-day-50",
+      "input": {
+        "non_study_days": [],
+        "study_days": [
+          11323,
+          11324,
+          11325,
+          11326,
+          11327,
+          11328,
+          11329,
+          11330,
+          11331,
+          11332,
+          11333,
+          11334,
+          11335,
+          11336,
+          11337,
+          11338,
+          11339,
+          11340,
+          11341,
+          11342,
+          11343,
+          11344,
+          11345,
+          11346,
+          11347,
+          11348,
+          11349,
+          11350,
+          11351,
+          11352,
+          11353,
+          11354,
+          11355,
+          11356,
+          11357,
+          11358,
+          11359,
+          11360,
+          11361,
+          11362,
+          11363,
+          11364,
+          11365,
+          11366,
+          11367,
+          11368,
+          11369,
+          11370,
+          11371,
+          11372
+        ],
+        "today": 11372
+      },
+      "output": {
+        "due": [
+          "landmark:day:50"
+        ],
+        "landmarks": [
+          {
+            "day": 11347,
+            "event": "landmark_study_day",
+            "key": "landmark:day:25",
+            "ordinal": 25
+          },
+          {
+            "day": 11372,
+            "event": "landmark_study_day",
+            "key": "landmark:day:50",
+            "ordinal": 50
+          }
+        ]
+      }
+    },
+    {
+      "class": "study-day-51",
+      "input": {
+        "non_study_days": [],
+        "study_days": [
+          11323,
+          11324,
+          11325,
+          11326,
+          11327,
+          11328,
+          11329,
+          11330,
+          11331,
+          11332,
+          11333,
+          11334,
+          11335,
+          11336,
+          11337,
+          11338,
+          11339,
+          11340,
+          11341,
+          11342,
+          11343,
+          11344,
+          11345,
+          11346,
+          11347,
+          11348,
+          11349,
+          11350,
+          11351,
+          11352,
+          11353,
+          11354,
+          11355,
+          11356,
+          11357,
+          11358,
+          11359,
+          11360,
+          11361,
+          11362,
+          11363,
+          11364,
+          11365,
+          11366,
+          11367,
+          11368,
+          11369,
+          11370,
+          11371,
+          11372,
+          11373
+        ],
+        "today": 11373
+      },
+      "output": {
+        "due": [],
+        "landmarks": [
+          {
+            "day": 11347,
+            "event": "landmark_study_day",
+            "key": "landmark:day:25",
+            "ordinal": 25
+          },
+          {
+            "day": 11372,
+            "event": "landmark_study_day",
+            "key": "landmark:day:50",
+            "ordinal": 50
+          }
+        ]
+      }
+    },
+    {
+      "class": "study-day-75",
+      "input": {
+        "non_study_days": [],
+        "study_days": [
+          11323,
+          11324,
+          11325,
+          11326,
+          11327,
+          11328,
+          11329,
+          11330,
+          11331,
+          11332,
+          11333,
+          11334,
+          11335,
+          11336,
+          11337,
+          11338,
+          11339,
+          11340,
+          11341,
+          11342,
+          11343,
+          11344,
+          11345,
+          11346,
+          11347,
+          11348,
+          11349,
+          11350,
+          11351,
+          11352,
+          11353,
+          11354,
+          11355,
+          11356,
+          11357,
+          11358,
+          11359,
+          11360,
+          11361,
+          11362,
+          11363,
+          11364,
+          11365,
+          11366,
+          11367,
+          11368,
+          11369,
+          11370,
+          11371,
+          11372,
+          11373,
+          11374,
+          11375,
+          11376,
+          11377,
+          11378,
+          11379,
+          11380,
+          11381,
+          11382,
+          11383,
+          11384,
+          11385,
+          11386,
+          11387,
+          11388,
+          11389,
+          11390,
+          11391,
+          11392,
+          11393,
+          11394,
+          11395,
+          11396,
+          11397
+        ],
+        "today": 11397
+      },
+      "output": {
+        "due": [
+          "landmark:day:75"
+        ],
+        "landmarks": [
+          {
+            "day": 11347,
+            "event": "landmark_study_day",
+            "key": "landmark:day:25",
+            "ordinal": 25
+          },
+          {
+            "day": 11372,
+            "event": "landmark_study_day",
+            "key": "landmark:day:50",
+            "ordinal": 50
+          },
+          {
+            "day": 11397,
+            "event": "landmark_study_day",
+            "key": "landmark:day:75",
+            "ordinal": 75
+          }
+        ]
+      }
+    },
+    {
+      "class": "study-day-100",
+      "input": {
+        "non_study_days": [],
+        "study_days": [
+          11323,
+          11324,
+          11325,
+          11326,
+          11327,
+          11328,
+          11329,
+          11330,
+          11331,
+          11332,
+          11333,
+          11334,
+          11335,
+          11336,
+          11337,
+          11338,
+          11339,
+          11340,
+          11341,
+          11342,
+          11343,
+          11344,
+          11345,
+          11346,
+          11347,
+          11348,
+          11349,
+          11350,
+          11351,
+          11352,
+          11353,
+          11354,
+          11355,
+          11356,
+          11357,
+          11358,
+          11359,
+          11360,
+          11361,
+          11362,
+          11363,
+          11364,
+          11365,
+          11366,
+          11367,
+          11368,
+          11369,
+          11370,
+          11371,
+          11372,
+          11373,
+          11374,
+          11375,
+          11376,
+          11377,
+          11378,
+          11379,
+          11380,
+          11381,
+          11382,
+          11383,
+          11384,
+          11385,
+          11386,
+          11387,
+          11388,
+          11389,
+          11390,
+          11391,
+          11392,
+          11393,
+          11394,
+          11395,
+          11396,
+          11397,
+          11398,
+          11399,
+          11400,
+          11401,
+          11402,
+          11403,
+          11404,
+          11405,
+          11406,
+          11407,
+          11408,
+          11409,
+          11410,
+          11411,
+          11412,
+          11413,
+          11414,
+          11415,
+          11416,
+          11417,
+          11418,
+          11419,
+          11420,
+          11421,
+          11422
+        ],
+        "today": 11422
+      },
+      "output": {
+        "due": [
+          "landmark:day:100"
+        ],
+        "landmarks": [
+          {
+            "day": 11347,
+            "event": "landmark_study_day",
+            "key": "landmark:day:25",
+            "ordinal": 25
+          },
+          {
+            "day": 11372,
+            "event": "landmark_study_day",
+            "key": "landmark:day:50",
+            "ordinal": 50
+          },
+          {
+            "day": 11397,
+            "event": "landmark_study_day",
+            "key": "landmark:day:75",
+            "ordinal": 75
+          },
+          {
+            "day": 11422,
+            "event": "landmark_study_day",
+            "key": "landmark:day:100",
+            "ordinal": 100
+          }
+        ]
+      }
+    },
+    {
+      "class": "25th-before-today",
+      "input": {
+        "non_study_days": [],
+        "study_days": [
+          11323,
+          11324,
+          11325,
+          11326,
+          11327,
+          11328,
+          11329,
+          11330,
+          11331,
+          11332,
+          11333,
+          11334,
+          11335,
+          11336,
+          11337,
+          11338,
+          11339,
+          11340,
+          11341,
+          11342,
+          11343,
+          11344,
+          11345,
+          11346,
+          11347
+        ],
+        "today": 11346
+      },
+      "output": {
+        "due": [],
+        "landmarks": []
+      }
+    },
+    {
+      "class": "25th-after-the-last",
+      "input": {
+        "non_study_days": [],
+        "study_days": [
+          11323,
+          11324,
+          11325,
+          11326,
+          11327,
+          11328,
+          11329,
+          11330,
+          11331,
+          11332,
+          11333,
+          11334,
+          11335,
+          11336,
+          11337,
+          11338,
+          11339,
+          11340,
+          11341,
+          11342,
+          11343,
+          11344,
+          11345,
+          11346,
+          11347
+        ],
+        "today": 11377
+      },
+      "output": {
+        "due": [],
+        "landmarks": [
+          {
+            "day": 11347,
+            "event": "landmark_study_day",
+            "key": "landmark:day:25",
+            "ordinal": 25
+          }
+        ]
+      }
+    },
+    {
+      "class": "anniversary-and-25th-on-one-day",
+      "input": {
+        "non_study_days": [],
+        "study_days": [
+          11323,
+          11324,
+          11325,
+          11326,
+          11327,
+          11328,
+          11329,
+          11330,
+          11331,
+          11332,
+          11333,
+          11334,
+          11335,
+          11336,
+          11337,
+          11338,
+          11339,
+          11340,
+          11341,
+          11342,
+          11343,
+          11344,
+          11345,
+          11346,
+          11688
+        ],
+        "today": 11688
+      },
+      "output": {
+        "due": [
+          "landmark:anniv:1",
+          "landmark:day:25"
+        ],
+        "landmarks": [
+          {
+            "day": 11688,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:1",
+            "ordinal": 1
+          },
+          {
+            "day": 11688,
+            "event": "landmark_study_day",
+            "key": "landmark:day:25",
+            "ordinal": 25
+          }
+        ]
+      }
+    },
+    {
+      "class": "anniversary-and-25th-on-one-day",
+      "input": {
+        "non_study_days": [],
+        "study_days": [
+          11323,
+          11324,
+          11325,
+          11326,
+          11327,
+          11328,
+          11329,
+          11330,
+          11331,
+          11332,
+          11333,
+          11334,
+          11335,
+          11336,
+          11337,
+          11338,
+          11339,
+          11340,
+          11341,
+          11342,
+          11343,
+          11344,
+          11345,
+          11346,
+          11688
+        ],
+        "today": 11689
+      },
+      "output": {
+        "due": [],
+        "landmarks": [
+          {
+            "day": 11688,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:1",
+            "ordinal": 1
+          },
+          {
+            "day": 11688,
+            "event": "landmark_study_day",
+            "key": "landmark:day:25",
+            "ordinal": 25
+          }
+        ]
+      }
+    },
+    {
+      "class": "25th-on-the-day-after-an-anniversary",
+      "input": {
+        "non_study_days": [],
+        "study_days": [
+          11323,
+          11324,
+          11325,
+          11326,
+          11327,
+          11328,
+          11329,
+          11330,
+          11331,
+          11332,
+          11333,
+          11334,
+          11335,
+          11336,
+          11337,
+          11338,
+          11339,
+          11340,
+          11341,
+          11342,
+          11343,
+          11344,
+          11345,
+          11346,
+          11689
+        ],
+        "today": 11689
+      },
+      "output": {
+        "due": [
+          "landmark:day:25"
+        ],
+        "landmarks": [
+          {
+            "day": 11688,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:1",
+            "ordinal": 1
+          },
+          {
+            "day": 11689,
+            "event": "landmark_study_day",
+            "key": "landmark:day:25",
+            "ordinal": 25
+          }
+        ]
+      }
+    },
+    {
+      "class": "many-years",
+      "input": {
+        "non_study_days": [],
+        "study_days": [
+          11323,
+          11333,
+          11343,
+          11353,
+          11363,
+          11373,
+          11383,
+          11393,
+          11403,
+          11413,
+          11423,
+          11433,
+          11443,
+          11453,
+          11463,
+          11473,
+          11483,
+          11493,
+          11503,
+          11513,
+          11523,
+          11533,
+          11543,
+          11553,
+          11563,
+          11573,
+          11583,
+          11593,
+          11603,
+          11613,
+          11623,
+          11633,
+          11643,
+          11653,
+          11663,
+          11673,
+          11683,
+          11693,
+          11703,
+          11713,
+          11723,
+          11733,
+          11743,
+          11753,
+          11763,
+          11773,
+          11783,
+          11793,
+          11803,
+          11813,
+          11823,
+          11833,
+          11843,
+          11853,
+          11863,
+          11873,
+          11883,
+          11893,
+          11903,
+          11913,
+          11923,
+          11933,
+          11943,
+          11953,
+          11963,
+          11973,
+          11983,
+          11993,
+          12003,
+          12013,
+          12023,
+          12033,
+          12043,
+          12053,
+          12063,
+          12073,
+          12083,
+          12093,
+          12103,
+          12113,
+          12123,
+          12133,
+          12143,
+          12153,
+          12163,
+          12173,
+          12183,
+          12193,
+          12203,
+          12213,
+          12223,
+          12233,
+          12243,
+          12253,
+          12263,
+          12273,
+          12283,
+          12293,
+          12303,
+          12313
+        ],
+        "today": 12313
+      },
+      "output": {
+        "due": [
+          "landmark:day:100"
+        ],
+        "landmarks": [
+          {
+            "day": 11563,
+            "event": "landmark_study_day",
+            "key": "landmark:day:25",
+            "ordinal": 25
+          },
+          {
+            "day": 11688,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:1",
+            "ordinal": 1
+          },
+          {
+            "day": 11813,
+            "event": "landmark_study_day",
+            "key": "landmark:day:50",
+            "ordinal": 50
+          },
+          {
+            "day": 12053,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:2",
+            "ordinal": 2
+          },
+          {
+            "day": 12063,
+            "event": "landmark_study_day",
+            "key": "landmark:day:75",
+            "ordinal": 75
+          },
+          {
+            "day": 12313,
+            "event": "landmark_study_day",
+            "key": "landmark:day:100",
+            "ordinal": 100
+          }
+        ]
+      }
+    },
+    {
+      "class": "many-years",
+      "input": {
+        "non_study_days": [],
+        "study_days": [
+          11323,
+          11333,
+          11343,
+          11353,
+          11363,
+          11373,
+          11383,
+          11393,
+          11403,
+          11413,
+          11423,
+          11433,
+          11443,
+          11453,
+          11463,
+          11473,
+          11483,
+          11493,
+          11503,
+          11513,
+          11523,
+          11533,
+          11543,
+          11553,
+          11563,
+          11573,
+          11583,
+          11593,
+          11603,
+          11613,
+          11623,
+          11633,
+          11643,
+          11653,
+          11663,
+          11673,
+          11683,
+          11693,
+          11703,
+          11713,
+          11723,
+          11733,
+          11743,
+          11753,
+          11763,
+          11773,
+          11783,
+          11793,
+          11803,
+          11813,
+          11823,
+          11833,
+          11843,
+          11853,
+          11863,
+          11873,
+          11883,
+          11893,
+          11903,
+          11913,
+          11923,
+          11933,
+          11943,
+          11953,
+          11963,
+          11973,
+          11983,
+          11993,
+          12003,
+          12013,
+          12023,
+          12033,
+          12043,
+          12053,
+          12063,
+          12073,
+          12083,
+          12093,
+          12103,
+          12113,
+          12123,
+          12133,
+          12143,
+          12153,
+          12163,
+          12173,
+          12183,
+          12193,
+          12203,
+          12213,
+          12223,
+          12233,
+          12243,
+          12253,
+          12263,
+          12273,
+          12283,
+          12293,
+          12303,
+          12313
+        ],
+        "today": 11823
+      },
+      "output": {
+        "due": [],
+        "landmarks": [
+          {
+            "day": 11563,
+            "event": "landmark_study_day",
+            "key": "landmark:day:25",
+            "ordinal": 25
+          },
+          {
+            "day": 11688,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:1",
+            "ordinal": 1
+          },
+          {
+            "day": 11813,
+            "event": "landmark_study_day",
+            "key": "landmark:day:50",
+            "ordinal": 50
+          }
+        ]
+      }
+    },
+    {
+      "class": "not-study-events",
+      "input": {
+        "non_study_days": [
+          10923,
+          11322,
+          11328,
+          11353,
+          12123
+        ],
+        "study_days": [
+          11323,
+          11324,
+          11325,
+          11326,
+          11327,
+          11328,
+          11329,
+          11330,
+          11331,
+          11332,
+          11333,
+          11334,
+          11335,
+          11336,
+          11337,
+          11338,
+          11339,
+          11340,
+          11341,
+          11342,
+          11343,
+          11344,
+          11345,
+          11346,
+          11347,
+          11348,
+          11349,
+          11350,
+          11351,
+          11352
+        ],
+        "today": 11352
+      },
+      "output": {
+        "due": [],
+        "landmarks": [
+          {
+            "day": 11347,
+            "event": "landmark_study_day",
+            "key": "landmark:day:25",
+            "ordinal": 25
+          }
+        ]
+      }
+    },
+    {
+      "class": "not-study-events-before-the-origin",
+      "input": {
+        "non_study_days": [
+          11323
+        ],
+        "study_days": [
+          11333
+        ],
+        "today": 11698
+      },
+      "output": {
+        "due": [
+          "landmark:anniv:1"
+        ],
+        "landmarks": [
+          {
+            "day": 11698,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:1",
+            "ordinal": 1
+          }
+        ]
+      }
+    },
+    {
+      "class": "today-before-the-origin",
+      "input": {
+        "non_study_days": [],
+        "study_days": [
+          11323,
+          11324,
+          11325,
+          11326,
+          11327,
+          11328,
+          11329,
+          11330,
+          11331,
+          11332,
+          11333,
+          11334,
+          11335,
+          11336,
+          11337,
+          11338,
+          11339,
+          11340,
+          11341,
+          11342,
+          11343,
+          11344,
+          11345,
+          11346,
+          11347,
+          11348,
+          11349,
+          11350,
+          11351,
+          11352
+        ],
+        "today": 11318
+      },
+      "output": {
+        "due": [],
+        "landmarks": []
+      }
+    },
+    {
+      "input": {
+        "non_study_days": [],
+        "study_days": [
+          21342,
+          21362,
+          21363,
+          21364,
+          21385,
+          21386,
+          21393,
+          21409,
+          21428,
+          21444,
+          21449,
+          21452,
+          21487,
+          21491,
+          21503,
+          21504,
+          21509,
+          21513,
+          21527,
+          21529,
+          21531,
+          21537,
+          21540,
+          21545,
+          21549,
+          21560,
+          21561,
+          21573,
+          21576,
+          21578,
+          21579,
+          21585,
+          21594,
+          21596,
+          21614,
+          21618,
+          21647,
+          21651,
+          21658,
+          21672,
+          21674,
+          21675,
+          21684,
+          21690,
+          21727,
+          21734,
+          21736,
+          21742,
+          21747,
+          21751,
+          21760,
+          21765,
+          21784,
+          21787,
+          21796,
+          21801,
+          21817,
+          21824,
+          21829,
+          21834,
+          21857,
+          21863,
+          21864,
+          21870,
+          21885,
+          21898,
+          21901,
+          21910,
+          21918,
+          21939,
+          21953,
+          21954,
+          21955,
+          21962,
+          21977,
+          21983,
+          21987,
+          21991,
+          22008,
+          22011,
+          22019,
+          22021,
+          22025,
+          22044,
+          22132,
+          22136,
+          22161,
+          22167,
+          22169,
+          22171,
+          22180,
+          22181,
+          22196,
+          22213,
+          22215,
+          22224,
+          22231,
+          22254,
+          22258,
+          22270,
+          22274,
+          22309,
+          22345,
+          22375,
+          22388,
+          22398,
+          22401,
+          22417,
+          22424
+        ],
+        "today": 21617
+      },
+      "output": {
+        "due": [],
+        "landmarks": [
+          {
+            "day": 21549,
+            "event": "landmark_study_day",
+            "key": "landmark:day:25",
+            "ordinal": 25
+          }
+        ]
+      }
+    },
+    {
+      "input": {
+        "non_study_days": [],
+        "study_days": [
+          10855,
+          10857,
+          10858,
+          10860,
+          10864,
+          10871,
+          10882,
+          10889,
+          10892,
+          10935,
+          10953,
+          10958,
+          10977,
+          10987,
+          10994,
+          11011,
+          11037,
+          11038,
+          11045,
+          11053,
+          11054,
+          11055,
+          11092,
+          11127,
+          11133,
+          11137,
+          11141,
+          11145,
+          11151,
+          11217,
+          11237,
+          11262,
+          11274,
+          11283,
+          11321,
+          11322,
+          11341,
+          11371,
+          11416,
+          11419,
+          11429,
+          11430,
+          11450,
+          11453,
+          11457,
+          11458,
+          11461,
+          11488,
+          11504,
+          11540,
+          11548,
+          11564,
+          11567,
+          11587,
+          11595,
+          11597,
+          11603,
+          11615,
+          11620,
+          11629,
+          11644,
+          11658,
+          11661,
+          11664,
+          11680,
+          11682,
+          11737,
+          11757,
+          11769,
+          11773,
+          11790,
+          11798,
+          11812,
+          11827,
+          11849,
+          11858,
+          11929,
+          11934,
+          11937
+        ],
+        "today": 11764
+      },
+      "output": {
+        "due": [],
+        "landmarks": [
+          {
+            "day": 11133,
+            "event": "landmark_study_day",
+            "key": "landmark:day:25",
+            "ordinal": 25
+          },
+          {
+            "day": 11221,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:1",
+            "ordinal": 1
+          },
+          {
+            "day": 11540,
+            "event": "landmark_study_day",
+            "key": "landmark:day:50",
+            "ordinal": 50
+          },
+          {
+            "day": 11586,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:2",
+            "ordinal": 2
+          }
+        ]
+      }
+    },
+    {
+      "input": {
+        "non_study_days": [],
+        "study_days": [
+          15955,
+          15983,
+          16074,
+          16156,
+          16161,
+          16167,
+          16169,
+          16183,
+          16193,
+          16271,
+          16292,
+          16342,
+          16386,
+          16453,
+          16454,
+          16466,
+          16499,
+          16511,
+          16532,
+          16575,
+          16625,
+          16628,
+          16662,
+          16698,
+          16704,
+          16856,
+          16868,
+          16896,
+          16914,
+          16940,
+          16943,
+          16987
+        ],
+        "today": 17105
+      },
+      "output": {
+        "due": [],
+        "landmarks": [
+          {
+            "day": 16320,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:1",
+            "ordinal": 1
+          },
+          {
+            "day": 16685,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:2",
+            "ordinal": 2
+          },
+          {
+            "day": 16704,
+            "event": "landmark_study_day",
+            "key": "landmark:day:25",
+            "ordinal": 25
+          },
+          {
+            "day": 17051,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:3",
+            "ordinal": 3
+          }
+        ]
+      }
+    },
+    {
+      "input": {
+        "non_study_days": [],
+        "study_days": [
+          10776,
+          10829,
+          10834,
+          10842,
+          10844,
+          10889,
+          10893,
+          10909,
+          10928,
+          10937,
+          10948,
+          10949,
+          10950,
+          10988,
+          10992,
+          10995,
+          11017,
+          11025,
+          11029,
+          11053,
+          11055,
+          11062,
+          11067,
+          11103,
+          11104,
+          11109,
+          11113,
+          11119,
+          11130,
+          11142,
+          11143,
+          11147,
+          11166,
+          11176,
+          11178,
+          11199,
+          11255,
+          11256,
+          11284,
+          11294,
+          11316,
+          11327,
+          11337,
+          11345,
+          11347,
+          11352,
+          11377,
+          11379,
+          11381,
+          11390,
+          11404,
+          11440,
+          11449,
+          11499,
+          11516,
+          11527,
+          11555,
+          11575,
+          11588,
+          11609,
+          11611,
+          11646,
+          11659,
+          11661,
+          11664,
+          11667,
+          11687,
+          11712,
+          11721,
+          11723,
+          11728,
+          11744,
+          11768,
+          11782,
+          11786,
+          11791,
+          11795,
+          11799,
+          11802,
+          11815,
+          11816,
+          11822,
+          11846,
+          11849
+        ],
+        "today": 10961
+      },
+      "output": {
+        "due": [],
+        "landmarks": []
+      }
+    },
+    {
+      "input": {
+        "non_study_days": [],
+        "study_days": [
+          21033,
+          21034,
+          21061,
+          21083,
+          21096,
+          21103,
+          21120,
+          21139,
+          21147,
+          21159,
+          21162,
+          21179,
+          21214,
+          21224,
+          21225,
+          21247,
+          21273,
+          21276,
+          21287,
+          21337,
+          21355,
+          21357,
+          21375,
+          21397,
+          21402,
+          21416,
+          21419,
+          21448,
+          21479,
+          21492,
+          21494,
+          21501,
+          21510,
+          21519,
+          21530,
+          21555,
+          21571,
+          21596,
+          21618,
+          21619,
+          21632,
+          21639,
+          21643,
+          21662,
+          21705,
+          21720,
+          21753,
+          21766,
+          21777,
+          21830,
+          21856,
+          21894,
+          21905,
+          21917,
+          21936,
+          21945,
+          21957,
+          21979,
+          21983,
+          22071,
+          22077,
+          22111,
+          22125
+        ],
+        "today": 22060
+      },
+      "output": {
+        "due": [],
+        "landmarks": [
+          {
+            "day": 21399,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:1",
+            "ordinal": 1
+          },
+          {
+            "day": 21402,
+            "event": "landmark_study_day",
+            "key": "landmark:day:25",
+            "ordinal": 25
+          },
+          {
+            "day": 21764,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:2",
+            "ordinal": 2
+          },
+          {
+            "day": 21830,
+            "event": "landmark_study_day",
+            "key": "landmark:day:50",
+            "ordinal": 50
+          }
+        ]
+      }
+    },
+    {
+      "input": {
+        "non_study_days": [],
+        "study_days": [
+          19478,
+          19486,
+          19497,
+          19499,
+          19506,
+          19507,
+          19516,
+          19522,
+          19525,
+          19526,
+          19528,
+          19529,
+          19530,
+          19543,
+          19545,
+          19580,
+          19584,
+          19613,
+          19618,
+          19619,
+          19648,
+          19664,
+          19680,
+          19683,
+          19688,
+          19715,
+          19718,
+          19733,
+          19744,
+          19777,
+          19778,
+          19791,
+          19794,
+          19825,
+          19837,
+          19891,
+          19905,
+          19945,
+          19985,
+          20005,
+          20008,
+          20040,
+          20048,
+          20050,
+          20059,
+          20071,
+          20097,
+          20105,
+          20106,
+          20111,
+          20119,
+          20127,
+          20158,
+          20173,
+          20187,
+          20189,
+          20198,
+          20222,
+          20236,
+          20250,
+          20281,
+          20337,
+          20354,
+          20356,
+          20387,
+          20400,
+          20404,
+          20416,
+          20430,
+          20437,
+          20447,
+          20487,
+          20510,
+          20517,
+          20518,
+          20531,
+          20552,
+          20553
+        ],
+        "today": 20922
+      },
+      "output": {
+        "due": [],
+        "landmarks": [
+          {
+            "day": 19688,
+            "event": "landmark_study_day",
+            "key": "landmark:day:25",
+            "ordinal": 25
+          },
+          {
+            "day": 19844,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:1",
+            "ordinal": 1
+          },
+          {
+            "day": 20111,
+            "event": "landmark_study_day",
+            "key": "landmark:day:50",
+            "ordinal": 50
+          },
+          {
+            "day": 20209,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:2",
+            "ordinal": 2
+          },
+          {
+            "day": 20518,
+            "event": "landmark_study_day",
+            "key": "landmark:day:75",
+            "ordinal": 75
+          },
+          {
+            "day": 20574,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:3",
+            "ordinal": 3
+          }
+        ]
+      }
+    },
+    {
+      "input": {
+        "non_study_days": [],
+        "study_days": [
+          11420,
+          11439,
+          11486,
+          11498,
+          11500,
+          11507,
+          11537,
+          11550,
+          11586,
+          11634,
+          11636,
+          11657,
+          11685,
+          11718,
+          11740,
+          11781,
+          11784,
+          11789,
+          11801,
+          11821,
+          11828,
+          11834,
+          11836,
+          11860,
+          11861,
+          11881,
+          11896,
+          11905,
+          11918,
+          11919,
+          11927,
+          11930,
+          11938,
+          11976,
+          11997,
+          11999,
+          12004,
+          12029,
+          12052,
+          12060,
+          12083,
+          12096,
+          12125,
+          12130,
+          12154,
+          12291,
+          12308,
+          12314,
+          12338,
+          12351,
+          12355,
+          12362,
+          12363,
+          12375,
+          12391,
+          12423,
+          12425,
+          12436,
+          12440,
+          12448,
+          12474,
+          12480,
+          12486,
+          12502
+        ],
+        "today": 11716
+      },
+      "output": {
+        "due": [],
+        "landmarks": []
+      }
+    },
+    {
+      "input": {
+        "non_study_days": [],
+        "study_days": [
+          20318,
+          20336,
+          20348,
+          20362,
+          20365,
+          20373,
+          20397,
+          20405,
+          20411,
+          20412,
+          20446,
+          20462,
+          20466,
+          20479,
+          20494,
+          20500,
+          20537,
+          20556,
+          20570,
+          20589,
+          20593,
+          20609,
+          20624,
+          20681,
+          20730,
+          20746,
+          20759,
+          20760,
+          20772,
+          20775,
+          20778,
+          20780,
+          20799,
+          20832,
+          20840,
+          20864,
+          20883,
+          20955,
+          20984,
+          20990,
+          21008,
+          21016,
+          21072,
+          21108,
+          21124,
+          21133,
+          21168,
+          21176,
+          21216,
+          21260,
+          21283,
+          21285,
+          21303,
+          21361,
+          21363,
+          21386,
+          21387
+        ],
+        "today": 20798
+      },
+      "output": {
+        "due": [],
+        "landmarks": [
+          {
+            "day": 20683,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:1",
+            "ordinal": 1
+          },
+          {
+            "day": 20730,
+            "event": "landmark_study_day",
+            "key": "landmark:day:25",
+            "ordinal": 25
+          }
+        ]
+      }
+    },
+    {
+      "input": {
+        "non_study_days": [],
+        "study_days": [
+          17716,
+          17774,
+          17962,
+          18009,
+          18300,
+          18434
+        ],
+        "today": 18122
+      },
+      "output": {
+        "due": [],
+        "landmarks": [
+          {
+            "day": 18081,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:1",
+            "ordinal": 1
+          }
+        ]
+      }
+    },
+    {
+      "input": {
+        "non_study_days": [],
+        "study_days": [
+          10332,
+          10350,
+          10361,
+          10367,
+          10384,
+          10402,
+          10404,
+          10408,
+          10413,
+          10424,
+          10440,
+          10462,
+          10466,
+          10473,
+          10492,
+          10499,
+          10507,
+          10511,
+          10517,
+          10531,
+          10536,
+          10543,
+          10551,
+          10563,
+          10576,
+          10581,
+          10582,
+          10586,
+          10589,
+          10598,
+          10601,
+          10602,
+          10632,
+          10666,
+          10691,
+          10702,
+          10707,
+          10709,
+          10717,
+          10725,
+          10747,
+          10750,
+          10764,
+          10768,
+          10775,
+          10776,
+          10790,
+          10795,
+          10825,
+          10826,
+          10833,
+          10845,
+          10851,
+          10856,
+          10904,
+          10909,
+          10939,
+          10964,
+          10971,
+          10975,
+          10976,
+          10981,
+          10992,
+          10993,
+          10996,
+          11013,
+          11024,
+          11047,
+          11084,
+          11102,
+          11107,
+          11108,
+          11129,
+          11146,
+          11174,
+          11180,
+          11193,
+          11198,
+          11202,
+          11205,
+          11220,
+          11225,
+          11228,
+          11229,
+          11250,
+          11254,
+          11276,
+          11279,
+          11283,
+          11291,
+          11296,
+          11309,
+          11313,
+          11346,
+          11350,
+          11352,
+          11362,
+          11368,
+          11378,
+          11385,
+          11400,
+          11413
+        ],
+        "today": 11708
+      },
+      "output": {
+        "due": [],
+        "landmarks": [
+          {
+            "day": 10576,
+            "event": "landmark_study_day",
+            "key": "landmark:day:25",
+            "ordinal": 25
+          },
+          {
+            "day": 10697,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:1",
+            "ordinal": 1
+          },
+          {
+            "day": 10826,
+            "event": "landmark_study_day",
+            "key": "landmark:day:50",
+            "ordinal": 50
+          },
+          {
+            "day": 11063,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:2",
+            "ordinal": 2
+          },
+          {
+            "day": 11174,
+            "event": "landmark_study_day",
+            "key": "landmark:day:75",
+            "ordinal": 75
+          },
+          {
+            "day": 11385,
+            "event": "landmark_study_day",
+            "key": "landmark:day:100",
+            "ordinal": 100
+          },
+          {
+            "day": 11428,
+            "event": "landmark_anniversary",
+            "key": "landmark:anniv:3",
+            "ordinal": 3
+          }
+        ]
+      }
+    }
+  ],
+  "function": "landmarks.compute_landmarks",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Builds synthetic predecessor Reviews on each case study day and Reviews that are not study events on the case's other days, with the default CollectionConfig, checks each by the predecessor's own study_day, calls compute_landmarks at the case's day and due_today at the same day; returns the landmarks and the due keys; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_102.py",
+  "registry_sha256": "459ffd874367cbddc3c8e878e145fed36864fbe702feb38f6a18d94589114293",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}
