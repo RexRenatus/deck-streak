@@ -45,3 +45,10 @@ mutant by that crate's own tests, so `seeding_the_celebrations_switch_stores_off
 `seed_celebrations_off` stub. Planted with the body replaced by `Ok(())`, it fails by assertion at
 `crates/notifications/tests/router.rs:873:5` (`a fresh store is seeded off, at the policy's disable
 value`, left `None`, right `Some("0")`); restored, it passes.
+
+Seat ruling 75: `a_switch_that_cannot_be_seeded_refuses_the_load` (R4,
+`crates/daemon/tests/recompute_router.rs`) is a plant record, since the refusal is already in the
+code. Planted with `.map_err(RecomputeError::Switch)?;` replaced by `.unwrap_or(());` in
+`crates/daemon/src/wiring.rs` `RecomputeSetup::load`, it fails by assertion at
+`crates/daemon/tests/recompute_router.rs:411:5` (`a seed that cannot be written refuses the load:
+Ok(RecomputeSetup { ... })`; `test result: FAILED. 4 passed; 1 failed`); restored, it passes.
