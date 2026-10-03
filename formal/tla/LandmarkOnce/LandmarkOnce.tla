@@ -1,7 +1,11 @@
 ---------------------------- MODULE LandmarkOnce ----------------------------
-\* @phx covers crates/coordination/src/sync_cycle.rs anchor=sync_cycle digest=sha256:b8158a6a2359166e7b55a5dbbb15189d50cdbeebd84c20a0805067046c31dc6c
+\* @phx covers crates/coordination/src/sync_cycle.rs anchor=sync_cycle digest=sha256:d32903aaea6eed5fa397ca99b5cfcea5ffbbe4540e1420a0503e8861c1b79add
 \* @phx covers crates/notifications/src/router.rs anchor=route digest=sha256:7bcf52fe22d886b3d71dfa0fa8e6dfb1d266a9a6b1662bada5482a2cd0c54dcb
 \* @phx covers crates/notifications/src/ledger.rs anchor=claim digest=sha256:0116ef4925de04614d09ac18952c0a0b0f7248fd65f5d4f6ca555448836a6ab7
+\* @phx covers crates/coordination/src/recompute/landmarks.rs anchor=offer digest=sha256:7a5116f17849e3a0eb5363c9c8f412ab8f92d53aa96b2a37bb42d59bc417f578
+\* @phx covers crates/notifications/src/landmark_settings.rs anchor=seed digest=sha256:3376636e702a9c7cd01c3f29a45a5a8b78f590fe887c2f068c9c65487e415522
+\* @phx covers crates/notifications/src/landmark_settings.rs anchor=advance digest=sha256:55d91fc84104cf9208b03be714e2e14be9e327e8eea5fd0dfa9babc8e7c441dc
+\* @phx covers crates/coordination/src/sync_cycle.rs anchor=cycle_offers digest=sha256:218a80a952eb748deca312c3b55512a45a6e8113f7b6fd141d5337c026dbf299
 \* @phx cites #127, #571
 \* @phx property FirstRunAtMostOne ramp=report
 \* @phx property CelebrateAtMostOnce ramp=report
