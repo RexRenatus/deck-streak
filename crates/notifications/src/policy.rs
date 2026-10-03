@@ -28,7 +28,7 @@ const POLICY_FILE: &str = include_str!("../../../notifications-policy.json");
 const CELEBRATION_BUDGET: &str = "celebration";
 
 /// The file's top-level keys, each once.
-const TOP_KEYS: [&str; 18] = [
+const TOP_KEYS: [&str; 19] = [
     "schema",
     "surfaces",
     "router",
@@ -47,6 +47,7 @@ const TOP_KEYS: [&str; 18] = [
     "holdout",
     "withhold",
     "deviations",
+    "replies",
 ];
 
 /// The notification policy.
@@ -70,6 +71,9 @@ pub struct Policy {
     holdout: Holdout,
     withhold: Withhold,
     deviations: Vec<Deviation>,
+    /// The duties of the command replies, which no kind describes (SPEC-323). Only the box run's
+    /// `message-metadata` check reads them; nothing in production does.
+    replies: Vec<String>,
 }
 
 /// The router the policy names: its module, its symbol and each surface's delivery calls.
@@ -353,6 +357,7 @@ impl Policy {
             holdout: section(&object, "holdout")?,
             withhold: section(&object, "withhold")?,
             deviations: section(&object, "deviations")?,
+            replies: section(&object, "replies")?,
         };
         policy.check()?;
         Ok(policy)

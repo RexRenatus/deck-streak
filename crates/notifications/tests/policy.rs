@@ -6,7 +6,7 @@
 #![allow(clippy::expect_used)]
 
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use deck_streak_notifications::occasion::{Class, DedupeScope, Tier};
 use deck_streak_notifications::policy::{Deviation, POLICY_SCHEMA};
@@ -226,4 +226,140 @@ fn the_policy_refuses_text_that_is_not_an_object() {
             "{text} is refused"
         );
     }
+}
+
+/// Prints how many items a check examined and refuses zero (the tdd pack's examined contract).
+fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
+    println!("examined {} {what}", items.len());
+    assert!(
+        !items.is_empty(),
+        "examined 0 {what}: the population is empty, so nothing was judged"
+    );
+    items
+}
+
+/// Every `*.msg.json` under `dir`, as its path from the root and its JSON.
+fn collect_goldens(root: &Path, dir: &Path, found: &mut Vec<(String, Value)>) {
+    let mut entries: Vec<_> = fs::read_dir(dir)
+        .expect("the directory reads")
+        .map(|entry| entry.expect("an entry").path())
+        .collect();
+    entries.sort();
+    for path in entries {
+        let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+        if path.is_dir() {
+            if !["target", "node_modules", ".git"].contains(&name) {
+                collect_goldens(root, &path, found);
+            }
+        } else if name.ends_with(".msg.json") {
+            let text = fs::read_to_string(&path).expect("the golden reads");
+            let golden = serde_json::from_str(&text).expect("the golden is JSON");
+            let shown = path.strip_prefix(root).unwrap_or(&path);
+            found.push((shown.display().to_string(), golden));
+        }
+    }
+}
+
+/// What is wrong with the selection of command replies: a kind-less golden whose duty the policy
+/// does not declare a reply, and a declared reply that is the duty of no kind-less golden.
+fn selection_faults(replies: &[String], goldens: &[(String, Value)]) -> Vec<String> {
+    let mut faults = Vec::new();
+    for (path, golden) in goldens {
+        let kindless = golden.get("kind").is_none();
+        let duty = golden.get("duty").and_then(Value::as_str).unwrap_or("");
+        if kindless && !replies.iter().any(|reply| reply == duty) {
+            faults.push(format!("{path}: duty {duty} is not a declared reply"));
+        }
+    }
+    for reply in replies {
+        let carried = goldens.iter().any(|(_, golden)| {
+            golden.get("kind").is_none()
+                && golden.get("duty").and_then(Value::as_str) == Some(reply.as_str())
+        });
+        if !carried {
+            faults.push(format!(
+                "replies entry {reply} is the duty of no kind-less golden"
+            ));
+        }
+    }
+    faults
+}
+
+#[test]
+fn every_golden_is_a_declared_notification_or_a_declared_reply() {
+    let root = root();
+    let mut found = Vec::new();
+    collect_goldens(&root, &root, &mut found);
+    let goldens = examined("golden message(s)", found);
+    let replies: Vec<String> = file()["replies"]
+        .as_array()
+        .expect("the replies list")
+        .iter()
+        .map(|reply| reply.as_str().expect("a duty name").to_owned())
+        .collect();
+
+    assert_eq!(
+        selection_faults(&replies, &goldens),
+        Vec::<String>::new(),
+        "every committed golden is a notification or a declared reply"
+    );
+
+    let mut planted = goldens.clone();
+    planted.push((
+        "planted/digest.msg.json".to_owned(),
+        json!({"duty": "daily-digest", "schema": "phx.duty.message.v1"}),
+    ));
+    assert_eq!(
+        selection_faults(&replies, &planted),
+        ["planted/digest.msg.json: duty daily-digest is not a declared reply"],
+        "a kind-less golden of an undeclared duty is refused by name"
+    );
+    let mut ghost = replies.clone();
+    ghost.push("ghost-duty".to_owned());
+    assert_eq!(
+        selection_faults(&ghost, &goldens),
+        ["replies entry ghost-duty is the duty of no kind-less golden"],
+        "a declared reply no golden carries is refused by name"
+    );
+    let mut null_kind = goldens;
+    null_kind.push((
+        "planted/null.msg.json".to_owned(),
+        json!({"duty": "bot-commands", "kind": null}),
+    ));
+    assert_eq!(
+        selection_faults(&replies, &null_kind),
+        Vec::<String>::new(),
+        "a golden that carries a kind key, even null, is a notification for the probe, not a reply"
+    );
+}
+
+#[test]
+fn a_reply_that_names_a_declared_kind_is_refused_at_start() {
+    let mut named = file();
+    named["replies"] = json!(["bot-commands", "alert"]);
+    let mut missing = file();
+    missing
+        .as_object_mut()
+        .expect("an object")
+        .remove("replies");
+    let mut declared = file();
+    declared["replies"] = json!(["bot-commands"]);
+
+    assert!(
+        matches!(
+            refusal(&named),
+            Some(PolicyError::Malformed { ref key, ref reason })
+                if key == "replies" && reason.contains("alert")
+        ),
+        "a reply that names a declared kind is refused"
+    );
+    assert_eq!(
+        refusal(&missing),
+        Some(PolicyError::Missing { key: "replies" })
+    );
+    assert_eq!(
+        refusal(&declared),
+        None,
+        "a duty that is no kind is admitted"
+    );
 }
