@@ -124,3 +124,87 @@ adapter that writes `minutes_log` outside `coordination::habits`. SPEC-078 (R3, 
 section 5); ADR-041; ADR-071; ADR-072; ADR-087; the predecessor's
 `pipeline_layers/habits.py:HabitsLayer.record_reading`, `undo_last_reading` and
 `_recompute_reading_xp`, and `bot.py:CommandBot._callback_log_reading` at `27ee2bc`; #93.
+
+## Amendment, 2026-10-03: part 078b (#94)
+
+SPEC-078 part 078b adds the writing habit and the habit badges (SPEC-078 section 13). The writing
+confirmation is a third habit write beside an entry and an undo, the fold gains a writing step, and
+phase 7 gains a second awarding step. Each choice below names the option it beat.
+
+### Considered options
+
+- One write per toggle, holding the log change and both settles, chosen because a confirmation
+  cleared on a day that later closes must lower its `write:` rows in the write that cleared it, as
+  an undo lowers `read:` (the decision above, unchanged).
+- A toggle whose settles are a write of their own, rejected because a failure between the two
+  writes leaves a cleared day paid, and a recompute never lowers a closed day (ADR-072).
+- A chip that carries its study day, `hb:w:<code>:<epoch day>`, chosen because a tap after the
+  rollover then toggles nothing rather than a day the owner was not shown.
+- A chip with no day, rejected because after the rollover it toggles today, a day its checklist
+  never showed.
+- A separate writing step in its own file, chosen because part 078a's habit step, its row S07813
+  and its cover `recompute/habits.rs anchor=evaluate` stay as they landed and proved.
+- Writing settles added to part 078a's habit step, rejected because it re-anchors a landed row and
+  re-stamps a landed cover, and a second `evaluate` in one file resolves no anchor.
+- Refusing a writing course coded `all` at start, through the existing `Malformed` refusal, chosen
+  because its `write:<code>` would be the bonus's source `write:all`, and every role shares the
+  refusal while no caller matches a new variant.
+- Renaming the bonus's source, rejected because the settled history and the predecessor's import
+  both name `write:all`.
+- A new `CoursesError::Reserved` variant, rejected because `Malformed` with a new shape keeps every
+  caller and adds no Display arm.
+- No bonus and no streak over an empty writing set, chosen because a bonus for confirming nothing
+  pays XP the mint reads; the predecessor's subset test pays it.
+- Porting the predecessor's empty-set answers, rejected because they pay the bonus and the reading
+  badges for no course at all.
+- Habit badges awarded by the fold only, in a second phase-7 step before the badge step, chosen
+  because one actor awards and the offers already drain every unmarked badge through the router.
+- An award after each owner write as well, rejected because it is a second award-and-celebrate actor
+  that the AwardOnce model does not hold.
+- The badge context of the evaluated day, chosen because a settle that catches up an owed day judges
+  it by its own week.
+- The wall clock's today, rejected because a catch-up settle would judge an owed day by a later week.
+- Named reply methods `Commands::write` and `Commands::unwrite` with census entries, chosen because
+  the one-router census names every reply method, and the admission is recorded once.
+- Replies built inside `on_message`, rejected because the census could not name them by method.
+- A chip tap answered with a new message, chosen because the edit the bot has carries no keyboard.
+- An in-place edit of the checklist, rejected for this part and filed as its own successor (#601).
+- The six constants added to the constants golden, A14's test gaining six arms, chosen because the
+  golden is the one record of the predecessor's values and the test stays exact.
+- A second constants test for this part's values, rejected because two tests would then hold one
+  golden.
+- A Lean proof of the writing day's rule and of `all_confirmed_days`, chosen because the rule decides
+  XP the mint reads and its empty-set arm departs from the predecessor, so the parity golden cannot
+  judge that arm.
+- The parity golden alone, rejected because it closes every case but the empty-set arm, and that is
+  the arm that would pay.
+
+### Decision outcome
+
+Chosen: one write per toggle, the chip that carries its day, the separate writing step, `all`
+refused at start, no bonus and no streak over an empty set, the fold as the one awarder of habit
+badges over the evaluated day's context, named reply methods with their census entries, a new
+message per tap, the grown constants golden, and Lean beside the TLA+ model.
+
+### Consequences
+
+- Good, because a toggle, an entry, an undo and a recompute serialise on the write base, and each
+  leaves the settled `write:` amounts equal to the rule over the log it committed.
+- Good, because a chip tapped after the rollover changes nothing.
+- Good, because no configuration pays the writing bonus, an ink badge or a reading badge for no
+  course.
+- Bad, because a habit badge is awarded only when the fold next runs, not at the moment of the write
+  that earned it.
+- Bad, because a tap leaves the old checklist in the chat and answers below it (#601).
+
+### Confirmation
+
+SPEC-078 section 14: A7 to A10d, A14b, A19, A19a, A19b, A22b, A23b and A32 to A37. The formal entry
+`formal/tla/HabitXpFollowsItsLog/` gains `WritingXpFollowsItsConfirmations` and
+`AChipTogglesOnlyItsOwnDay`, each with its witness; `formal/tla/AwardOnce/` covers the habit badges
+step; `lean/HabitWriting` proves the writing day's rule and the all-confirmed days.
+
+What would make this wrong: a writing path that cannot share the settle's write, such as an adapter
+that writes `writing_log` outside `coordination::habits::writing`, or a second awarder of habit
+badges outside the fold. The predecessor's `habits.py:writing_day_xp`, `writing_streak` and
+`evaluate_habit_badges` at `27ee2bc`; #94.

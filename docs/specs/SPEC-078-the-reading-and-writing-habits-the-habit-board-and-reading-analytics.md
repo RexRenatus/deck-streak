@@ -602,3 +602,241 @@ line.
 - **T16** (the formal settings). `config/formal.json`'s entry budgets and the `EXPECTED` table of
   `scripts/tests/test_formal_config.py`, which T3 holds equal, now hold `dev`'s `tla/LandmarkOnce`
   (420) beside `tla/HabitXpFollowsItsLog` (300), in name order.
+
+## 13. Amendments, 2026-10-03: part 078b (#94)
+
+Part 078b delivers the writing habit and the habit badges: R6 to R9, R17 as amended here, R18 for
+the writing toggle, R21's `writing_log` and R22 for the constants it uses. This section holds its
+prose, its rows, its census admissions, its amended tests and its files; section 14 holds its
+criteria and their fence. Everything above these amendments is unchanged, section 3c included.
+
+Section 3c says that a later pull request moves each of its criteria back verbatim. For part 078b
+that sentence is superseded: its criteria, section 3c's 078b rows among them, are delivered in
+section 14, and neither section 3's table nor section 3c is edited.
+
+R17 is amended (ruling 93 Q-h): a habit badge is awarded by the fold only, in phase 7, by a habit
+badges step registered right before the badge step, and never by an owner's write. Each award goes
+through SPEC-073's award port with its mark unset, and the offers that already drain every unmarked
+badge celebrate it through the router, once, under `badge:<key>:<tier>`. The badges are judged for
+the evaluated study day, never the wall clock's.
+
+How part 078b builds R6 to R9 (ADR-078's amendment of this date decides each choice):
+
+- **The log.** `writing_log` holds one row per confirmed writing course and study day: the code,
+  the study day and `created_at`, `STRICT`, with the primary key on the code and the study day.
+  A confirmation is a row, and clearing it deletes the row.
+- **The writing courses** are the configured courses marked `writing`, never a fixed list. A study
+  day pays 75 for each confirmed writing course as `write:<code>`, and 100 as `write:all` only when
+  the writing set is non-empty and every writing course is confirmed. With no writing course
+  configured nothing is settled, no writing streak counts and no ink badge is earned: this departs
+  from the predecessor, whose subset test pays the 100 over an empty set.
+- **The reserved code.** A writing course coded `all` is refused at start, naming the setting and no
+  value: its `write:<code>` would be the bonus's own source.
+- **The registry.** `DERIVED_PREFIXES` gains `write:`, followed by a valid course code as the two
+  reading prefixes are.
+- **The toggle.** `coordination::habits::writing::{confirm, clear, toggle}` each run ONE write
+  holding the log change and the day's settles of `write:<code>` and `write:all`, as the owner's
+  correction, and announce a level crossed after commit, as the minutes log's use cases do.
+- **The chip carries its day.** A checklist chip's data is `hb:w:<code>:<epoch day>`, at most 34
+  bytes. A tap whose day is no longer the current study day toggles nothing and answers with today's
+  checklist. `/write` and `/unwrite` act on the current study day. A tap's answer is a new message.
+- **The writing step.** A separate phase-4 step, registered right after the habit step, settles each
+  evaluated day's `write:` sources from `writing_log` inside that day's write: every writing course,
+  every code already held as a `write:<code>` row on that day, and `write:all`, a zero skipped where
+  no row exists, as the recompute.
+- **The streaks.** The writing streak counts the consecutive study days, ending on the evaluated day
+  or the day before, on which every writing course was confirmed; each writing course has its own
+  streak. One helper decides which days are all confirmed, and it returns none for an empty set.
+- **The badge context** is built for the evaluated day from the logs through it: the entries of
+  each log, the writing streak, the configured courses read in the day's week, the week's minutes
+  and whether every configured course met the weekly goal. `polyglot_reader` and `bookworm_week`
+  need at least one configured course, which departs from the predecessor's `0 >= 0` and `all([])`.
+- **The bot.** `/write <course>...` resolves every token first and refuses the whole command when
+  one names no writing course; `/unwrite <course>` clears; bare `/write` or `/unwrite` answers with
+  the checklist: per writing course its mark, flag, name and own streak, then the writing streak. No
+  reply names a course code. The owner's menu gains `write` and `unwrite`.
+- **Privacy.** `privacy.json` gains the category `writing-log`, `PRIVACY.md` its line, habits'
+  data-rights port declares `writing_log` exported and erased, and the context map's register of
+  DeckStreak's own tables gains its row.
+
+Rows S07820 to S07835, in `scripts/mutation-rows.d/S07800-S07899.json` (section 9 reserved S07820
+to S07839 for this part):
+
+| row | target | what it guards | killer |
+|---|---|---|---|
+| `S07820-SEVENTY-FIVE-A-WRITING-DAY` | `crates/habits/src/writing.rs` | 75 a confirmed writing course | `writing_goldens::the_writing_xp_matches_the_predecessors_golden` |
+| `S07821-WRITING-ALL-BONUS` | `crates/habits/src/writing.rs` | the bonus of 100 | `writing_goldens::the_writing_xp_matches_the_predecessors_golden` |
+| `S07822-NO-WRITING-COURSE-PAYS-NOTHING` | `crates/habits/src/writing.rs` | no day is all confirmed over no writing course | `writing_goldens::no_writing_xp_is_settled_without_a_writing_course` |
+| `S07823-ONE-CONFIRMATION-A-DAY` | `migrations/007802_habits_writing_log.sql` | a course is confirmed at most once a study day | `habits_store::a_course_is_confirmed_once_a_day` |
+| `S07824-STREAK-ENDS-TODAY-OR-YESTERDAY` | `crates/habits/src/writing.rs` | the streak ends on the day or the day before | `writing_goldens::the_writing_streaks_match_the_predecessors_golden` |
+| `S07825-STREAK-NEEDS-EVERY-WRITING-COURSE` | `crates/habits/src/writing.rs` | a day counts only when every writing course is confirmed | `writing_goldens::the_writing_streaks_match_the_predecessors_golden` |
+| `S07826-INK-WEEK-AT-7` | `crates/habits/src/writing.rs` | the ink week at 7 days | `habits_constants::the_habit_constants_equal_the_predecessors` |
+| `S07827-MARATHON-AT-600` | `crates/habits/src/badges.rs` | the marathon at 600 minutes a week | `habits_constants::the_habit_constants_equal_the_predecessors` |
+| `S07828-A-CHIP-TOGGLES-ONLY-ITS-OWN-DAY` | `crates/coordination/src/habits/writing.rs` | a chip drawn for a closed day toggles nothing | `writing_toggle::a_chip_for_a_closed_day_toggles_nothing` |
+| `S07829-WRITE-IS-A-DERIVED-PREFIX` | `crates/progression/src/settle.rs` | `write:` is a derived prefix | `xp_settle::the_writing_sources_are_derived_only_with_a_course_code` |
+| `S07830-A-WRITING-COURSE-IS-NOT-CODED-ALL` | `crates/kernel/src/courses.rs` | a writing course coded `all` is refused | `courses_config::a_writing_course_coded_all_is_refused` |
+| `S07831-THE-HABIT-BADGES-STEP-IS-REGISTERED` | `crates/daemon/src/wiring.rs` | the production fold registers the habit badges step | `wiring::tests::the_recompute_fold_registers_the_habit_badges_step_in_the_awards_phase` |
+| `S07832-READING-BADGES-NEED-A-COURSE` | `crates/habits/src/badges.rs` | the reading-set badges need a configured course | `habits_badges_rules::no_course_badge_is_earned_without_its_courses` |
+| `S07833-INK-MONTH-AT-30` | `crates/habits/src/writing.rs` | the ink month at 30 days | `habits_constants::the_habit_constants_equal_the_predecessors` |
+| `S07834-INK-CENTURY-AT-100` | `crates/habits/src/writing.rs` | the ink century at 100 days | `habits_constants::the_habit_constants_equal_the_predecessors` |
+| `S07835-THE-WRITING-STEP-IS-REGISTERED` | `crates/daemon/src/wiring.rs` | the production fold registers the writing step | `wiring::tests::the_recompute_fold_registers_the_writing_step_after_the_habit_step` |
+
+S07817 to S07819 stay free for a fix round of part 078a, and S07836 to S07839 for one of part 078b.
+
+The exact lists, sets, arrays and counts that part 078b grows. Each grows by exactly this part's
+items and stays exact, so each is an addition and none is a weakening (ruling 132 Q-14); each is
+recorded here, insert-only.
+
+- **T17** (A24, the fold's order). `wiring::tests::the_recompute_fold_registers_the_habit_step_in_the_day_steps_phase`
+  reads the exact slice `steps.get(2..7)`: the streaks step, the progress step, the habit step, the
+  writing step and the day bonuses step, where it read `steps.get(2..6)` without the writing step.
+- **T18** (the fold's exact list).
+  `wiring::tests::the_recompute_fold_registers_the_analytics_xp_and_streak_steps_in_their_phases`
+  gains `(Phase::DaySteps, WRITING_STEP)` right after `(Phase::DaySteps, HABITS_STEP)` and
+  `(Phase::Awards, HABIT_BADGES_STEP)` right before `(Phase::Awards, BADGES_STEP)`.
+- **T19** (A23, the derived prefixes).
+  `xp_settle::the_habit_sources_are_derived_only_with_a_course_code` asserts `DERIVED_PREFIXES`
+  equal to `["read:", "readgoal:", "write:"]`, where it named the two reading prefixes.
+- **T20** (A14, the constants). `habits_constants::the_habit_constants_equal_the_predecessors` gains
+  six arms, one for each constant this part adds to `habits.constants`, and its examined count goes
+  from 6 to 12, the count of the golden's cases.
+- **T21** (A22, habits' data rights). `habits_store::the_habit_tables_are_exported_and_erased`
+  asserts the declaration `[(MINUTES_LOG_TABLE, true), (WRITING_LOG_TABLE, true)]` and two exported
+  tables, where it named `minutes_log` alone; its rows and its erase still judge `minutes_log`.
+- **T22** (the owner's menu). `crates/bot/src/commands.rs`'s `MENU` holds 16 entries, where it held
+  14: `write` and `unwrite` follow `undo`.
+- **T23** (the menu's set). `commands::the_menu_is_registered_for_the_owners_chat_only` gains
+  `write` and `unwrite`, and its message counts sixteen commands.
+- **T24** (a golden). `crates/bot/tests/messages/help.msg.json` gains the lines for /write and
+  /unwrite after the line for /undo.
+- **T25** (a golden). `crates/bot/tests/messages/start.msg.json` gains the same lines in the same
+  place.
+- **T26** (the goldens the bot sends). `commands::every_golden_message_is_what_the_bot_sends`
+  renders the seven writing replies beside the minutes log's.
+- **T27** (the one-router census). `crates/notifications/tests/one_router.rs`'s `COMMAND_REPLIES`
+  holds 23, where it held 21: it gains `write` and `unwrite`. The pull request's weakening table
+  records this admission once, under ruling 104 Q-8, in ruling 98's shape.
+- **T28** (the one-router census). `COMMAND_CALLERS` holds 43, where it held 39: it gains
+  `Commands::on_message` to `write` and to `unwrite`, and each of `Commands::write` and
+  `Commands::unwrite` to `send`. A chip tap is answered inside `habit_callback`, which already sends.
+- **T29** (the data-rights seeds). `crates/coordination/tests/data_rights_symmetry.rs`'s `SEEDS`
+  holds 42, where it held 41: it gains a seeded `writing_log` row.
+
+Part 078b's files:
+
+- Added: `migrations/007802_habits_writing_log.sql`, `crates/habits/src/writing.rs`,
+  `crates/habits/src/badges.rs`, `crates/habits/tests/writing_goldens.rs`,
+  `crates/habits/tests/habits_badges_rules.rs`, `crates/habits/tests/formal_vectors_habit_writing.rs`,
+  `crates/coordination/src/habits/writing.rs`, `crates/coordination/src/recompute/writing.rs`,
+  `crates/coordination/src/recompute/habit_badges.rs`, `crates/coordination/tests/writing_toggle.rs`,
+  `crates/coordination/tests/habits_badges.rs`, `crates/bot/tests/messages/write-chips.msg.json`,
+  `crates/bot/tests/messages/write-confirmed.msg.json`, `crates/bot/tests/messages/write-cleared.msg.json`,
+  `crates/bot/tests/messages/write-not-a-writing-course.msg.json`,
+  `crates/bot/tests/messages/write-no-writing-course.msg.json`,
+  `crates/bot/tests/messages/write-day-closed.msg.json`, `crates/bot/tests/messages/write-failed.msg.json`,
+  `tools/parity-oracle/goldens/habit_writing_xp.json`, `tools/parity-oracle/goldens/habit_writing_streak.json`,
+  `tools/parity-oracle/goldens/habit_badges.json`, `formal/tla/HabitXpFollowsItsLog/MCHabitWriting.cfg`,
+  `formal/tla/HabitXpFollowsItsLog/witness/a-toggle-whose-settle-is-a-write-of-its-own.cfg`,
+  `formal/tla/HabitXpFollowsItsLog/witness/a-writing-bonus-paid-with-no-writing-course.cfg`,
+  `formal/tla/HabitXpFollowsItsLog/witness/a-chip-tap-that-toggles-the-day-it-is-tapped-on.cfg`,
+  `formal/lean/Formal/HabitWriting.lean`, `formal/lean/Formal/HabitWritingVectors.lean`,
+  `formal/vectors/habit-writing.jsonl`, `changelog.d/feat-habits-078b.md` and the new `.sqlx/`
+  query files.
+- Changed: `crates/habits/src/lib.rs`, `crates/habits/src/store.rs`, `crates/habits/src/data_rights.rs`,
+  `crates/habits/tests/habits_store.rs`, `crates/habits/tests/habits_constants.rs`,
+  `crates/kernel/src/courses.rs`, `crates/kernel/tests/courses_config.rs`,
+  `crates/progression/src/settle.rs`, `crates/progression/tests/xp_settle.rs`,
+  `crates/coordination/src/habits/mod.rs`, `crates/coordination/src/habits/minutes.rs` (three
+  helpers widened to `pub(super)`), `crates/coordination/src/recompute/mod.rs` (two `pub mod` lines),
+  `crates/coordination/src/recompute/habits.rs` (one helper widened to `pub(super)`),
+  `crates/coordination/tests/data_rights_symmetry.rs`, `crates/bot/src/habits_commands.rs`,
+  `crates/bot/src/commands.rs`, `crates/bot/tests/habits_commands.rs`, `crates/bot/tests/commands.rs`,
+  `crates/bot/tests/messages/help.msg.json`, `crates/bot/tests/messages/start.msg.json`,
+  `crates/notifications/tests/one_router.rs`, `crates/daemon/src/wiring.rs`, `privacy.json`,
+  `PRIVACY.md`, `docs/CONTEXT-MAP.md`, `tools/parity-oracle/registry/spec_078.py`, every golden that
+  registry builds (its sha256 moves), `scripts/mutation-rows.d/S07800-S07899.json`,
+  `formal/tla/HabitXpFollowsItsLog/HabitXpFollowsItsLog.tla`,
+  `formal/tla/HabitXpFollowsItsLog/MCHabitXpFollowsItsLog.cfg`, `formal/tla/AwardOnce/AwardOnce.tla`,
+  `formal/lean/Formal/Vectors.lean`, `docs/decisions/ADR-078-habit-xp-is-settled-in-the-write-that-changes-its-log.md`,
+  `docs/schematics/habit-xp-settles-from-its-log.md`, `docs/red-first/SPEC-078.md` and this SPEC.
+- `crates/coordination/src/recompute/badges.rs`: unchanged; the existing offers celebrate a habit badge.
+- `crates/coordination/src/progression/badges_view.rs`: unchanged; the habit keys' progress is the board's.
+- `crates/progression/src/badges/catalog.rs`: unchanged; it already holds the eight habit keys.
+- `crates/bot/src/transport.rs`: unchanged; a chip tap's answer is a new message.
+- `crates/daemon/src/role_bot.rs`: unchanged; the bot's courses loader is part 078a's.
+- `deploy/config/courses.example.json`: unchanged.
+- `config/formal.json`: unchanged; the TLA+ entry keeps its budget of 300 and a Lean entry takes no line.
+- `scripts/tests/test_formal_config.py`: unchanged.
+- `crates/habits/src/board.rs`: unchanged in this part; delivered by 078c.
+- `crates/habits/tests/habits_board.rs`: unchanged in this part; delivered by 078c.
+- `crates/api/src/habits_routes.rs`: unchanged in this part; delivered by 078c.
+- `crates/api/src/router.rs`: unchanged in this part; delivered by 078c.
+- `crates/api/tests/habits_routes.rs`: unchanged in this part; delivered by 078c.
+- `web/app/src/routes/habits/`: unchanged in this part; delivered by 078c.
+- `web/app/src/lib/habits/`: unchanged in this part; delivered by 078c.
+- `web/app/src/lib/routes.ts`: unchanged in this part; delivered by 078c.
+- `crates/habits/src/analytics.rs`: unchanged in this part; delivered by 078d.
+- `crates/habits/tests/habits_analytics.rs`: unchanged in this part; delivered by 078d.
+
+What part 078b does NOT do, each owned by a tracked item:
+
+- It builds no Mini App writing chip, no habits route and no board streak counter (#95). Those
+  routes owe no formal model of their own only while they call
+  `coordination::habits::writing::{confirm, clear, toggle}` and nothing else (#95).
+- It does not edit the checklist message in place after a chip tap: the edit carries no keyboard
+  today, so a tap answers with a new message (#601).
+- It imports none of the predecessor's writing confirmations (#61).
+- It sends no evening nudge for an unconfirmed writing day (#97).
+- It proves no Lean theorem of the reading rules, which the predecessor's goldens close (#93).
+
+## 14. Acceptance criteria of the 2026-10-03 amendment (part 078b)
+
+| id | criterion | decided by |
+|---|---|---|
+| A7 | each day's writing XP equals the golden of `writing_day_xp` over synthetic writing courses | `the_writing_xp_matches_the_predecessors_golden` |
+| A8 | the writing streaks equal the goldens of `writing_streak` and `writing_streaks_by_lang` | `the_writing_streaks_match_the_predecessors_golden` |
+| A9 | with no writing course, no `write:` source is settled, even over a planted row of a former writing course | `no_writing_xp_is_settled_without_a_writing_course` |
+| A10 | toggling a course twice restores the day's settled writing XP | `toggling_twice_restores_the_days_writing_xp` |
+| A10b | a course is confirmed at most once a study day | `a_course_is_confirmed_once_a_day` |
+| A10c | a chip drawn for a closed day toggles nothing (planted rollover) | `a_chip_for_a_closed_day_toggles_nothing` |
+| A10d | the writing step settles each evaluated day's writing from its log | `the_writing_step_settles_each_days_writing_from_its_log` |
+| A14b | the writing and badge constants equal `habits.constants.json` | `the_habit_constants_equal_the_predecessors` (amended, T20) |
+| A19a | the habit badge conditions equal the golden of `evaluate_habit_badges` | `the_habit_badge_conditions_match_the_predecessors_golden` |
+| A19b | no ink badge without a writing course; no `polyglot_reader` or `bookworm_week` without a course | `no_course_badge_is_earned_without_its_courses` |
+| A19 | the habit badges of every case are awarded once and celebrated once, by the fold | `habit_badges_are_awarded_once_as_the_predecessors_golden` |
+| A22b | `writing_log` is exported and erased | `the_writing_log_is_exported_and_erased` |
+| A23b | the `write:` sources are derived only with a course code | `the_writing_sources_are_derived_only_with_a_course_code` |
+| A32 | a writing course coded `all` is refused, naming the setting and no value | `a_writing_course_coded_all_is_refused` |
+| A33 | /write and /unwrite confirm, clear and refuse as their goldens say | `write_confirms_clears_and_refuses_as_its_goldens_say` |
+| A34 | the writing commands join the owner's menu | `the_writing_commands_join_the_owners_menu` |
+| A35 | the fold registers the habit badges step in the awards phase, right before the badge step | `the_recompute_fold_registers_the_habit_badges_step_in_the_awards_phase` |
+| A35b | the fold registers the writing step in the day-steps phase, right after the habit step | `the_recompute_fold_registers_the_writing_step_after_the_habit_step` |
+| A36 | every writing chip fits Telegram's 64 bytes and names its day | `every_writing_chip_fits_telegrams_bound_and_names_its_day` |
+| A37 | the writing day's XP equals the Lean port's vectors | `the_writing_xp_equals_the_lean_ports_vectors` |
+
+```acceptance
+A7: cargo test -p deck-streak-habits --test writing_goldens -- --exact the_writing_xp_matches_the_predecessors_golden
+A8: cargo test -p deck-streak-habits --test writing_goldens -- --exact the_writing_streaks_match_the_predecessors_golden
+A9: cargo test -p deck-streak-habits --test writing_goldens -- --exact no_writing_xp_is_settled_without_a_writing_course
+A10: cargo test -p deck-streak-coordination --test writing_toggle -- --exact toggling_twice_restores_the_days_writing_xp
+A10b: cargo test -p deck-streak-habits --test habits_store -- --exact a_course_is_confirmed_once_a_day
+A10c: cargo test -p deck-streak-coordination --test writing_toggle -- --exact a_chip_for_a_closed_day_toggles_nothing
+A10d: cargo test -p deck-streak-coordination --test writing_toggle -- --exact the_writing_step_settles_each_days_writing_from_its_log
+A14b: cargo test -p deck-streak-habits --test habits_constants -- --exact the_habit_constants_equal_the_predecessors
+A19a: cargo test -p deck-streak-habits --test habits_badges_rules -- --exact the_habit_badge_conditions_match_the_predecessors_golden
+A19b: cargo test -p deck-streak-habits --test habits_badges_rules -- --exact no_course_badge_is_earned_without_its_courses
+A19: cargo test -p deck-streak-coordination --test habits_badges -- --exact habit_badges_are_awarded_once_as_the_predecessors_golden
+A22b: cargo test -p deck-streak-habits --test habits_store -- --exact the_writing_log_is_exported_and_erased
+A23b: cargo test -p deck-streak-progression --test xp_settle -- --exact the_writing_sources_are_derived_only_with_a_course_code
+A32: cargo test -p deck-streak-kernel --test courses_config -- --exact a_writing_course_coded_all_is_refused
+A33: cargo test -p deck-streak-bot --test habits_commands -- --exact write_confirms_clears_and_refuses_as_its_goldens_say
+A34: cargo test -p deck-streak-bot --test habits_commands -- --exact the_writing_commands_join_the_owners_menu
+A35: cargo test -p deck-streak-daemon --lib -- --exact wiring::tests::the_recompute_fold_registers_the_habit_badges_step_in_the_awards_phase
+A35b: cargo test -p deck-streak-daemon --lib -- --exact wiring::tests::the_recompute_fold_registers_the_writing_step_after_the_habit_step
+A36: cargo test -p deck-streak-bot --test habits_commands -- --exact every_writing_chip_fits_telegrams_bound_and_names_its_day
+A37: cargo test -p deck-streak-habits --test formal_vectors_habit_writing -- --exact the_writing_xp_equals_the_lean_ports_vectors
+```
+
+Section 3c's `078b:`-prefixed lines are not fence lines; this fence holds part 078b's criteria
+alone. A31 (section 3's two `data_rights_symmetry` lines) re-judges `writing_log` under the same
+names once its seed is added (T29).
