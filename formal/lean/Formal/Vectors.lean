@@ -1,4 +1,5 @@
 import Formal.ChestVectors
+import Formal.ExchangeVectors
 import Formal.NextMilestoneVectors
 import Formal.OpenLapseVectors
 import Formal.RoadToC2Vectors
@@ -22,6 +23,7 @@ lists it as support.
 def main (args : List String) : IO UInt32 := do
   match args with
   | ["Chest"] => Formal.ChestVectors.run
+  | ["Exchange"] => Formal.ExchangeVectors.run
   | ["NextMilestone"] => Formal.NextMilestoneVectors.run
   | ["OpenLapse"] => Formal.OpenLapseVectors.run
   | ["RoadToC2"] => Formal.RoadToC2Vectors.run
