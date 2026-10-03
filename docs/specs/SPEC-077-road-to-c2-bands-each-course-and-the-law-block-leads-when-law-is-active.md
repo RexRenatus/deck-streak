@@ -424,8 +424,8 @@ correction below replaces its Old text with its New text.
 - T8, section 4, `crates/curriculum/src/law.rs`. Old: "added: the law mastery pillar and the law
   dues". New: "added: the law mastery pillar and the law dues' stored value (coordination counts them
   with analytics' card snapshot over the law cards)", because curriculum may not depend on analytics.
-- T9, R16. Old: "`/today` uses this SPEC's law block rendering (SPEC-086)." New: "SPEC-086's `/today`
-  will use this SPEC's law block rendering; no `/today` exists at this delivery's base."
+- T9, R16. Old: "`today` uses this SPEC's law block rendering (SPEC-086)." New: "SPEC-086's `today`
+  will use this SPEC's law block rendering; no `today` exists at this delivery's base."
 - T10, R17a. Old: "wires it into SPEC-073's milestone view, which stops answering `pending`". New:
   "wires it into SPEC-073's milestone view and `GET /api/milestone`, which stop answering `pending`".
 
@@ -498,3 +498,17 @@ Rows this pull request does not touch, delivered by CU85b:
   coordination links", because the census refuses a static of
   `crates/coordination/src/data_rights_registry.rs` that it does not write out, and this
   delivery's store part added that static.
+- T16, T9's two lines in this section. T9 spelt the bot's today command, a route and not a file,
+  with a leading slash, which reads as a path outside the repository; at this delivery's base the
+  Mini App's routes hold no today directory and no bot source names the command, so T9 now names
+  it by the plain word `today`. The Old and New lines, verbatim, are held in the block below, so
+  the Old spelling is quoted and not named. No other line of this SPEC moves.
+
+```text
+Old:
+- T9, R16. Old: "`/today` uses this SPEC's law block rendering (SPEC-086)." New: "SPEC-086's `/today`
+  will use this SPEC's law block rendering; no `/today` exists at this delivery's base."
+New:
+- T9, R16. Old: "`today` uses this SPEC's law block rendering (SPEC-086)." New: "SPEC-086's `today`
+  will use this SPEC's law block rendering; no `today` exists at this delivery's base."
+```
