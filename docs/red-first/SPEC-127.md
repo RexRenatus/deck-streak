@@ -394,3 +394,18 @@ The text above is not edited. Each sentence it corrects is quoted as `old`; `new
     comma-separated list so that two calls can fail in one run.
   - f52e410c added one assertion to the first-install parent member (the run ends non-zero), and
     9b1ad830 replaced it with an assertion that the last line begins with `deploy:`.
+
+Round four, the red-first lines (appended; the record above is not edited):
+
+- R0 (8a7d5314): the census class of `test_ci_workflows` ran `FAILED (failures=4)` before the fix,
+  three for `classmethod` (a name the census cannot place) and one for the unlisted
+  `getattr(self, change)` site; after it, `Ran 7 tests`, `OK`.
+- C3 (e73b0557): the same-tag rollback member left the not-a-state list and runs as a member.
+- C1 (d0522c9b, the last test commit d09e464e): the test of a rollback to a kept release that is
+  not whole is `not red` against the host script as it stands, because the guard already existed;
+  its red is the mutant of row `S12700-A-THE-KEPT-RELEASE-MUST-BE-WHOLE` (the guard replaced by
+  `|| :`). CI line, run 37077835014: `S12700-A-THE-KEPT-RELEASE-MUST-BE-WHOLE: KILLED: its killer
+  passed without the mutant and failed with it`.
+- Green at d09e464e (and at c185f22b, which adds only documents): `hygiene` ran 853 tests in
+  `scripts/tests`, `OK`, with `examined 557 state-and-call member(s)`; `mutation-rows` ran
+  `examined 146: killed 146, survived 0, void 0`.
