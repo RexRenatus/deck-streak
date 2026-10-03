@@ -182,7 +182,7 @@ A26 and A27 (round 2 of #454). The populations of the resolver (57 placements) a
 read a `shell:` or `defaults:` it could not parse as absent and judged a line only when it held
 `$?` or a pipe status. Both tests fail by assertion: the resolver population had 27 placements
 read as a shell GitHub does not run, and the census population passed 27 of its 30 plants unseen.
-The default-deny resolver and census (8414b6c5) turn both green with 0 escaping and 0 silent.
+The default-deny resolver and census (8414b6c5) turn both green with 0 escaping and 0 silent, as the builder reported; no independent verify measured either population.
 
 ```red-first
 A26: red at e4a543d1: AssertionError: step template bash {0}: read ['bash', '-e'] where GitHub runs ['bash']
