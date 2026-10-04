@@ -1711,7 +1711,13 @@ fn the_skip_refuses_a_zone_the_service_does_not_pin() {
     // Only the pin reads TZ or opens a zone directory, and nothing names the host's zone file.
     let mut in_pin = false;
     let mut reads = Vec::new();
-    for (number, line) in SKIP_WRITE_SOURCE.lines().enumerate() {
+    // The module's own tests come last (clippy's items_after_test_module refuses code after
+    // them) and one of them hands a child process its zone, so the scan ends where they begin.
+    for (number, line) in SKIP_WRITE_SOURCE
+        .lines()
+        .enumerate()
+        .take_while(|(_, line)| *line != "#[cfg(test)]")
+    {
         if line.starts_with("fn zone_pin") || line.starts_with("pub fn zone_pin") {
             in_pin = true;
         }
