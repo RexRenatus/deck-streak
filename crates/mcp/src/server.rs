@@ -6,8 +6,9 @@
 //! by the matched route, the request id copied to the answer, a caught panic and a timeout; then
 //! the bearer guard; then the bound of [`MAX_IN_FLIGHT`] requests, shed at once with 503 past it,
 //! and the body cap of [`BODY_LIMIT_BYTES`] (R4, R11; ADR-329 D5). The guard sits outside the
-//! bound, so a request it refuses never takes a slot, and inside the trace, so its `Authorization`
-//! header is redacted before the span records the request.
+//! bound, so a request it refuses is answered without waiting for a slot and holds none past its
+//! refusal, and inside the trace, so its `Authorization` header is redacted before the span
+//! records the request.
 
 use std::future::Future;
 use std::io;

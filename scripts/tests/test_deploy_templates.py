@@ -137,6 +137,8 @@ CREDENTIAL_SOURCES = {
     "TELEGRAM_BOT_TOKEN": REPO / "crates" / "identity" / "src" / "owner.rs",
     "SYNC_USERNAME": REPO / "crates" / "ingest" / "src" / "settings.rs",
     "SYNC_PASSWORD": REPO / "crates" / "ingest" / "src" / "settings.rs",
+    "CORE_CREDENTIAL": REPO / "crates" / "mcp" / "src" / "settings.rs",
+    "LAW_TRACK_CREDENTIAL": REPO / "crates" / "mcp" / "src" / "settings.rs",
 }
 # Which credentials each service's role reads: the api's owner gate (SPEC-024, SPEC-025), the bot's
 # transport, owner gate and `/sync` (SPEC-026 R1, R11), and the `sync` job's syncer (SPEC-022,
@@ -146,10 +148,12 @@ CREDENTIAL_SOURCES = {
 # instance's drop-in carries the bot token and the owner's id, which its router sends with (#291),
 # so the template's reading is the four. SPEC-031's alert
 # reads the bot token and the owner's id, whose private chat it pages (R3);
-# the evaluator and the watch read none.
+# the evaluator and the watch read none. The MCP server's guard reads its core token and its
+# law-track token (SPEC-119 R6; ADR-332).
 ROLE_CREDENTIALS = {
     "deck-streak-api.service": ("OWNER_USER_ID", "TELEGRAM_BOT_TOKEN"),
     "deck-streak-bot.service": ("OWNER_USER_ID", "TELEGRAM_BOT_TOKEN"),
+    "deck-streak-mcp.service": ("CORE_CREDENTIAL", "LAW_TRACK_CREDENTIAL"),
     f"{JOB_TEMPLATE}@.service": (
         "SYNC_USERNAME",
         "SYNC_PASSWORD",
@@ -167,11 +171,12 @@ ROLE_CREDENTIALS = {
 ROLES = {
     "deck-streak-api.service": "api",
     "deck-streak-bot.service": "bot",
+    "deck-streak-mcp.service": "mcp",
     f"{JOB_TEMPLATE}@.service": "job %i",
 }
 # The settings a role requires, which the committed example must therefore name (SPEC-025 R6,
-# SPEC-022 R5); systemd sets STATE_DIRECTORY and CREDENTIALS_DIRECTORY itself.
-REQUIRED_SETTINGS = ("DECKSTREAK_API_LISTEN", "DECKSTREAK_SYNC_ENDPOINT")
+# SPEC-022 R5, SPEC-119 R3); systemd sets STATE_DIRECTORY and CREDENTIALS_DIRECTORY itself.
+REQUIRED_SETTINGS = ("DECKSTREAK_API_LISTEN", "DECKSTREAK_SYNC_ENDPOINT", "DECKSTREAK_MCP_LISTEN")
 SYSTEMD_SETS = ("STATE_DIRECTORY", "CREDENTIALS_DIRECTORY")
 
 # R1: the lifecycle of the two long-running services.
@@ -192,10 +197,12 @@ JOB_SERVICE = {
     "IOSchedulingClass": "idle",
     "TimeoutStartSec": "30min",
 }
-# ADR-032's delivery: the daemons' CPU and task caps.
+# ADR-032's delivery: the daemons' CPU and task caps. The MCP server's quota is taken from the
+# API's, so the daemons' quotas still fit the share's CPUs (ADR-332).
 DAEMON_CAPS = {
-    "deck-streak-api.service": {"CPUQuota": "100%", "TasksMax": "64"},
+    "deck-streak-api.service": {"CPUQuota": "75%", "TasksMax": "64"},
     "deck-streak-bot.service": {"CPUQuota": "50%", "TasksMax": "64"},
+    "deck-streak-mcp.service": {"CPUQuota": "25%", "TasksMax": "32"},
 }
 # R2: the identity and hardening of every service, each at the value the pack's rows score.
 HARDENING = {
@@ -235,6 +242,7 @@ PER_SERVICE = {
     # service: (StateDirectory, EnvironmentFile, RestrictAddressFamilies, SupplementaryGroups)
     "deck-streak-api.service": ("deck-streak", ENVIRONMENT_FILE, ROLES_NETWORK, None),
     "deck-streak-bot.service": ("deck-streak", ENVIRONMENT_FILE, ROLES_NETWORK, None),
+    "deck-streak-mcp.service": ("deck-streak", ENVIRONMENT_FILE, ROLES_NETWORK, None),
     f"{JOB_TEMPLATE}@.service": ("deck-streak", ENVIRONMENT_FILE, ROLES_NETWORK, None),
     f"{ALERT_TEMPLATE}@.service": (None, None, ROLES_NETWORK, "systemd-journal"),
     SLO_SERVICE: ("deck-streak-slo", None, "AF_UNIX", "systemd-journal"),
@@ -919,7 +927,12 @@ class TheTemplatesFitTheHostBudget(unittest.TestCase):
         oneshots = [u.name for u in units if not _units.long_running(u)]
         self.assertEqual(
             daemons,
-            ["deck-streak-api.service", "deck-streak-bot.service", LITESTREAM_SERVICE_NAME],
+            [
+                "deck-streak-api.service",
+                "deck-streak-bot.service",
+                LITESTREAM_SERVICE_NAME,
+                "deck-streak-mcp.service",
+            ],
         )
         self.assertEqual(
             sorted(oneshots),
@@ -935,13 +948,19 @@ class TheTemplatesFitTheHostBudget(unittest.TestCase):
             ),
         )
         worst = sum(ceilings[unit] for unit in daemons) + max(ceilings[unit] for unit in oneshots)
-        # ADR-064's arithmetic: 128 + 96 + 64 for the daemons, and the job's 384, still the largest.
-        self.assertEqual(worst, size("672M"))
+        # ADR-064's arithmetic with ADR-332's daemon: the four daemons, and the job, still the
+        # largest, which fill the share exactly.
+        self.assertEqual(worst, size("704M"))
         self.assertLessEqual(worst, size(share), "the worst case exceeds DeckStreak's share")
-        # The daemons' CPU quotas fit the share's CPUs.
-        quotas = [
-            int(last(u, "Service", "CPUQuota").rstrip("%")) for u in units if u.name in daemons
-        ]
+        # The daemons' CPU quotas fit the share's CPUs; a daemon with no quota is refused by name.
+        quotas = []
+        for unit in units:
+            if unit.name in daemons:
+                quota = last(unit, "Service", "CPUQuota")
+                self.assertIsNotNone(
+                    quota, f"{unit.rel} has no CPUQuota, so it cannot be shown to fit"
+                )
+                quotas.append(int(quota.rstrip("%")))
         self.assertLessEqual(sum(quotas), 100 * budget()["cpus"], quotas)
 
 
@@ -1294,7 +1313,12 @@ class CredentialsComeFromTheSocket(unittest.TestCase):
 
 class TheServicesRunTheirRoles(unittest.TestCase):
     def test_every_service_runs_its_role_with_the_lifecycle_r1_names(self):
-        for unit in services():
+        units = services()
+        # Every role and every daemon's caps the tables name runs in a shipped unit: the tables
+        # drift in neither direction.
+        shipped = {unit.name for unit in units}
+        self.assertLessEqual(set(ROLES) | set(DAEMON_CAPS), shipped, "a role with no unit")
+        for unit in units:
             identifier = unit.name.removesuffix(".service") if "@" not in unit.name else "%N"
             self.assertEqual(last(unit, "Service", "SyslogIdentifier"), identifier, unit.rel)
             if unit.name in SCRIPTS:
@@ -1354,7 +1378,12 @@ class TheServicesRunTheirRoles(unittest.TestCase):
         self.assertLessEqual(OBSERVABILITY_TIMERS, {timer.name for timer in timers})
 
     def test_every_service_carries_the_hardening_r2_names(self):
-        for unit in services():
+        units = services()
+        # The per-service table names every shipped service and no other.
+        self.assertEqual(
+            sorted(PER_SERVICE), [unit.name for unit in units], "the per-service table"
+        )
+        for unit in units:
             for key, value in HARDENING.items():
                 self.assertEqual(
                     unit.values("Service", key), [value] if value else [], f"{unit.rel} {key}"
