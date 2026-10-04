@@ -18,6 +18,105 @@
         "    ()\n",
         "bindings_generator::a8_the_generator_refuses_a_build_without_its_feature",
         "built without the bindgen feature, the generator refuses every run, naming the feature on stderr with exit status 2, never exits 0 having written no bindings: cargo-mutants' own mutant of the generator's main, its body replaced with (), written as a row so the band proves its killer (SPEC-336 R10, A8)"
+      ],
+      [
+        "S33602-THE-CENSUS-READS-EVERY-OPTIONAL-EDGE",
+        "progression",
+        "tests/xp_census.rs",
+        "    arguments.push(\"--all-features\".to_owned());\n",
+        "    arguments.push(\"--quiet\".to_owned());\n",
+        "xp_census::a10_a_build_script_that_reaches_settle_only_under_a_feature_is_refused",
+        "the census reads the graph with every feature on, so a build script whose package reaches progression only through an optional dependency a feature turns on is refused as one that can name settle, never read as one that cannot (SPEC-336 R11, A10)"
+      ],
+      [
+        "S33603-THE-CENSUS-GATHERS-EACH-MEMBERS-FEATURES",
+        "progression",
+        "tests/xp_census.rs",
+        "                declared.extend(features.map(|(feature, _)| format!(\"{name}/{feature}\")));\n",
+        "                let _ = features;\n",
+        "xp_census::a9_a_call_under_a_feature_in_another_crate_is_refused_for_the_call",
+        "the census gathers every feature each member declares, so it compiles the code under them, never only the build with no feature on (SPEC-336 R11, A9)"
+      ],
+      [
+        "S33604-THE-CENSUS-TURNS-EACH-DEFAULT-OFF",
+        "progression",
+        "tests/xp_census.rs",
+        "                flags.push(\"--no-default-features\".to_owned());\n",
+        "                flags.push(\"--quiet\".to_owned());\n",
+        "xp_census::a9_a_call_under_a_feature_in_another_crate_is_refused_for_the_call",
+        "the census turns each member's default off unless the combination holds it, so a call under a default feature's absence is compiled and refused for the call (SPEC-336 R11, A9)"
+      ],
+      [
+        "S33605-THE-CENSUS-PASSES-EACH-COMBINATION",
+        "progression",
+        "tests/xp_census.rs",
+        "                    flags.extend([\"--features\".to_owned(), features]);\n",
+        "                    drop(features);\n",
+        "xp_census::a9_a_call_under_a_feature_in_another_crate_is_refused_for_the_call",
+        "the census passes each combination's features to cargo, so a call under a declared feature is compiled and refused for the call, never left beneath a feature no pass turns on (SPEC-336 R11, A9)"
+      ],
+      [
+        "S33606-THE-CENSUS-COMPILES-EVERY-COMBINATION",
+        "progression",
+        "tests/xp_census.rs",
+        "    (0..1_usize << declared.len())\n",
+        "    (0..=declared.len())\n",
+        "xp_census::a9_a_call_under_a_feature_in_another_crate_is_refused_for_the_call",
+        "the census compiles two to the power of the declared features' count, every combination, so a call under two features together is compiled and refused for the call (SPEC-336 R11, A9)"
+      ],
+      [
+        "S33607-THE-CENSUS-SETS-EACH-FEATURE-OF-ITS-COMBINATION",
+        "progression",
+        "tests/xp_census.rs",
+        "                .filter(|(at, _)| (mask >> at) & 1 == 1)\n",
+        "                .filter(|(_, _)| mask & 1 == 1)\n",
+        "xp_census::a9_a_call_under_a_feature_in_another_crate_is_refused_for_the_call",
+        "each combination holds exactly the features its bits name, so a call under one feature and another's absence is compiled and refused for the call (SPEC-336 R11, A9)"
+      ],
+      [
+        "S33608-THE-CENSUS-REFUSES-A-FEATURE-ANOTHER-PACKAGE-NAMES",
+        "progression",
+        "tests/xp_census.rs",
+        "            if !turned_on.is_empty() {\n",
+        "            if false {\n",
+        "xp_census::a11_a_feature_another_package_turns_on_is_refused_by_name",
+        "a member whose feature another package turns on is refused by name, because the census could never compile it without that feature, never compiled as though its code under the feature's absence were seen (SPEC-336 R11, A11)"
+      ],
+      [
+        "S33609-THE-CENSUS-REFUSES-A-DEFAULT-ANOTHER-PACKAGE-KEEPS",
+        "progression",
+        "tests/xp_census.rs",
+        "            if *default && dependency[\"uses_default_features\"] == true {\n",
+        "            if false {\n",
+        "xp_census::a11_a_feature_another_package_turns_on_is_refused_by_name",
+        "a dependency that keeps a member's non-empty default turns that default on, and the member is refused by name for it (SPEC-336 R11, A11)"
+      ],
+      [
+        "S33610-THE-CENSUS-BOUNDS-ITS-COMBINATIONS",
+        "progression",
+        "tests/xp_census.rs",
+        "    if declared.len() > FEATURE_LIMIT {\n",
+        "    if declared.len() >= FEATURE_LIMIT {\n",
+        "xp_census::a12_the_census_compiles_every_combination_up_to_its_feature_limit_and_refuses_past_it",
+        "members declaring exactly FEATURE_LIMIT features are compiled in every combination and accepted; only past it is the tree refused by name (SPEC-336 R11, A12)"
+      ],
+      [
+        "S33611-THE-CENSUS-FEATURE-LIMIT-IS-THREE",
+        "progression",
+        "tests/xp_census.rs",
+        "const FEATURE_LIMIT: usize = 3;\n",
+        "const FEATURE_LIMIT: usize = 4;\n",
+        "xp_census::a12_the_census_compiles_every_combination_up_to_its_feature_limit_and_refuses_past_it",
+        "the bound on the declared features is three, eight combinations of every selection and pass, and a fourth feature is refused by name; raising it is a reviewed change (SPEC-336 R11, A12)"
+      ],
+      [
+        "S33612-THE-CENSUS-READS-A-DEFAULT-THAT-TURNS-ON-A-FEATURE",
+        "progression",
+        "tests/xp_census.rs",
+        "                    .is_some_and(|default| !default.is_empty());\n",
+        "                    .is_none_or(|_| true);\n",
+        "xp_census::a11_a_feature_another_package_turns_on_is_refused_by_name",
+        "a member whose default is absent or empty has nothing a dependent keeping its default turns on, so the refusal names only the features the dependent names (SPEC-336 R11, A11)"
       ]
     ]
   }

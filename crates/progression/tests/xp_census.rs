@@ -711,9 +711,12 @@ fn build_scripts(root: &Path, metadata: &Value) -> Result<Vec<String>, Vec<Strin
 /// directory, made empty for this census alone and apart from every other build.
 #[allow(clippy::too_many_lines)]
 fn compiled_uses(root: &Path, target: &Path) -> Result<(Vec<Use>, Vec<String>), Vec<String>> {
-    let arguments: Vec<String> = ["metadata", "--format-version", "1", "--locked", "--offline"]
+    let mut arguments: Vec<String> = ["metadata", "--format-version", "1", "--locked", "--offline"]
         .map(str::to_owned)
         .to_vec();
+    // Every feature on, so the graph the census reads holds every optional edge a feature can turn
+    // on, and a build script that reaches settle only through one is refused (SPEC-336 R11).
+    arguments.push("--all-features".to_owned());
     let (ok, stdout, stderr) =
         cargo(root, &arguments, CARGO_LIMIT).map_err(|reason| vec![reason])?;
     if !ok {
@@ -744,6 +747,8 @@ fn compiled_uses(root: &Path, target: &Path) -> Result<(Vec<Use>, Vec<String>), 
     let mut names = BTreeSet::new();
     let mut tested = false;
     let mut built = BTreeSet::from(["Cargo.toml".to_owned()]);
+    let mut declared: BTreeSet<String> = BTreeSet::new();
+    let mut with_features: BTreeMap<&str, (String, bool)> = BTreeMap::new();
     for package in metadata["packages"].as_array().into_iter().flatten() {
         let id = package["id"].as_str().unwrap_or_default();
         let manifest = Path::new(package["manifest_path"].as_str().unwrap_or_default());
@@ -760,9 +765,13 @@ fn compiled_uses(root: &Path, target: &Path) -> Result<(Vec<Use>, Vec<String>), 
                 .as_object()
                 .is_some_and(|features| !features.is_empty())
             {
-                refused.push(format!(
-                    "{folder}/Cargo.toml declares a feature, and the census compiles none"
-                ));
+                let name = package["name"].as_str().unwrap_or_default();
+                let features = package["features"].as_object().into_iter().flatten();
+                declared.extend(features.map(|(feature, _)| format!("{name}/{feature}")));
+                let default = package["features"]["default"]
+                    .as_array()
+                    .is_some_and(|default| !default.is_empty());
+                with_features.insert(name, (folder.clone(), default));
             }
             if package["targets"]
                 .as_array()
@@ -792,6 +801,47 @@ fn compiled_uses(root: &Path, target: &Path) -> Result<(Vec<Use>, Vec<String>), 
             ));
         }
         folders.insert(id, folder);
+    }
+    // A feature another package turns on, by naming it or by keeping its member's default, is on
+    // in every build of the workspace, so the census could never compile that member without it as
+    // a build of the member alone does: the member is refused by name (SPEC-336 R11).
+    for package in metadata["packages"].as_array().into_iter().flatten() {
+        for dependency in package["dependencies"].as_array().into_iter().flatten() {
+            let Some((member, default)) = dependency["name"]
+                .as_str()
+                .and_then(|name| with_features.get(name))
+            else {
+                continue;
+            };
+            let mut turned_on: Vec<&str> = dependency["features"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(Value::as_str)
+                .collect();
+            if *default && dependency["uses_default_features"] == true {
+                turned_on.push("default");
+            }
+            if !turned_on.is_empty() {
+                let dependent = folders
+                    .get(package["id"].as_str().unwrap_or_default())
+                    .cloned()
+                    .unwrap_or_default();
+                refused.push(format!(
+                    "{dependent} turns on the feature(s) {} of {member}, so the census cannot \
+                     compile {member} without them",
+                    turned_on.join(", ")
+                ));
+            }
+        }
+    }
+    if declared.len() > FEATURE_LIMIT {
+        refused.push(format!(
+            "the members declare {} features ({}), and the census compiles every combination of \
+             at most {FEATURE_LIMIT}",
+            declared.len(),
+            declared.iter().cloned().collect::<Vec<_>>().join(", ")
+        ));
     }
     let mut found = Vec::new();
     manifests(root, root, &mut found);
@@ -840,6 +890,24 @@ fn compiled_uses(root: &Path, target: &Path) -> Result<(Vec<Use>, Vec<String>), 
     if tested {
         selections.push(&[]);
     }
+    // Each selection under every combination of the members' features, each member's default off
+    // unless the combination holds it, so code under any feature, under a feature's absence or
+    // under any mix of them is compiled in some pass (SPEC-336 R11, ruling 202 (2a)).
+    let declared: Vec<String> = declared.into_iter().collect();
+    let selections: Vec<Vec<String>> = selections
+        .iter()
+        .flat_map(|selection| {
+            combinations(&declared).into_iter().map(move |features| {
+                let mut flags: Vec<String> =
+                    selection.iter().map(|flag| (*flag).to_owned()).collect();
+                flags.push("--no-default-features".to_owned());
+                if !features.is_empty() {
+                    flags.extend(["--features".to_owned(), features]);
+                }
+                flags
+            })
+        })
+        .collect();
     let mut uses = Vec::new();
     let mut read = BTreeMap::new();
     for selection in selections {
@@ -853,7 +921,7 @@ fn compiled_uses(root: &Path, target: &Path) -> Result<(Vec<Use>, Vec<String>), 
             .map(str::to_owned)
             .to_vec();
             arguments.push(target.to_string_lossy().into_owned());
-            arguments.extend(selection.iter().map(|flag| (*flag).to_owned()));
+            arguments.extend(selection.iter().cloned());
             arguments.push("--locked".to_owned());
             arguments.extend(pass(on, abort, &names));
             let (ok, stdout, stderr) =
@@ -931,6 +999,22 @@ fn compiled_uses(root: &Path, target: &Path) -> Result<(Vec<Use>, Vec<String>), 
         uses,
         outside_the_tree(&tree, &workspace, &canonical(target), &read),
     ))
+}
+
+/// Every combination of `declared` (each `package/feature`), the empty one first, each joined by
+/// commas as `--features` takes them: two to the power of their count.
+fn combinations(declared: &[String]) -> Vec<String> {
+    (0..1_usize << declared.len())
+        .map(|mask| {
+            declared
+                .iter()
+                .enumerate()
+                .filter(|(at, _)| (mask >> at) & 1 == 1)
+                .map(|(_, feature)| feature.as_str())
+                .collect::<Vec<_>>()
+                .join(",")
+        })
+        .collect()
 }
 
 /// Every file outside the tree, and every variable the host sets, that the workspace's own code
@@ -3679,11 +3763,13 @@ fn s2_population() -> Vec<Planted> {
                 ),
             ],
         );
+        // The census compiles every combination of the declared features (SPEC-336 R11), so this
+        // tree's control, whose call reaches the other crate, is judged as any control is.
         add(
             "S2 C configuration",
             "a feature gates the call".to_owned(),
             target,
-            true,
+            false,
             vec![
                 (
                     "crates/m/Cargo.toml".to_owned(),
@@ -4130,7 +4216,7 @@ impl KillerWorker {
 /// condition 2): a population that loses or changes a tree fails here, not only one that shrinks.
 const KILLER_POPULATION: (usize, &str) = (
     2218,
-    "f5f615e6ce0c85098b00b2c87b6de5b8fb5bab962b744bf0c316b112d0ea75b3",
+    "0f751b329ce43ff551fb10055dae26695d6a6e513da21157c4f368a1d87fe32a",
 );
 
 #[test]
