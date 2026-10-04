@@ -29,9 +29,10 @@ pub const DERIVED_SOURCES: [&str; 9] = [
 
 /// The derived prefixes (SPEC-078 R3; ADR-078): a habit's source is one of them followed by a
 /// valid course code, so the registry stays closed without naming the owner's courses.
-pub const DERIVED_PREFIXES: [&str; 2] = [
+pub const DERIVED_PREFIXES: [&str; 3] = [
     "read:",     // SPEC-078 R3
     "readgoal:", // SPEC-078 R3
+    "write:",    // SPEC-078 R7
 ];
 
 /// Whether `source` is a derived one: one of [`DERIVED_SOURCES`], or one of [`DERIVED_PREFIXES`]

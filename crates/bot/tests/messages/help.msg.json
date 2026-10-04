@@ -6,6 +6,6 @@
       "is_disabled": true
     },
     "parse_mode": "HTML",
-    "text": "These are the commands I answer:\n/score shows today's score\n/level shows your level and XP\n/streak shows your streaks\n/badges shows your badges\n/records shows your personal records\n/progress shows each course's Road to C2\n/drills lists the law drills to answer\n/drill picks a law drill by type\n/sync syncs your collection now\n/export sends you a copy of your data\n/delete erases your data\n/privacy says how your data is kept\n/read logs your reading minutes\n/undo removes your last reading entry"  },
+    "text": "These are the commands I answer:\n/score shows today's score\n/level shows your level and XP\n/streak shows your streaks\n/badges shows your badges\n/records shows your personal records\n/progress shows each course's Road to C2\n/drills lists the law drills to answer\n/drill picks a law drill by type\n/sync syncs your collection now\n/export sends you a copy of your data\n/delete erases your data\n/privacy says how your data is kept\n/read logs your reading minutes\n/undo removes your last reading entry\n/write confirms today's writing\n/unwrite undoes today's writing confirmation"  },
   "x-message": "help"
 }

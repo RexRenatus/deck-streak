@@ -14,6 +14,7 @@ maintainer's machine, only when run there (SPEC-062, below).
 | `systemd/deck-streak-api.service` | the `api` role: the HTTP service the Mini App calls, `Type=notify` with a watchdog |
 | `systemd/deck-streak-bot.service` | the `bot` role: the Telegram bot's long-polling transport, `Type=notify` with a watchdog |
 | `systemd/deck-streak-mcp.service` | the `mcp` role: the MCP server the owner's agent calls on a loopback address, `Type=notify` with a watchdog; installed by a deploy and first started by the owner (SPEC-119, ADR-332) |
+| `systemd/deck-streak-sync-server.service`, `scripts/sync-server.sh` | the engine's own sync server for the owner's Anki clients, which the release ships as `bin/anki-sync-server`, `Type=exec` on a loopback address; its launcher reads the two sync users from the unit's credentials, refuses an entry that is not a user name and a pbkdf2-sha256 hash, and execs the server (SPEC-337, ADR-347) |
 | `systemd/deck-streak-job@.service` | one run of one job of coordination's job table, `deckstreakd job <id>`, a `oneshot` |
 | `systemd/deck-streak-job@<id>.timer` | one timer per job of the table (`sync`, `maintenance`, `liveness`, `drill_postback`, `held_flush`), each starting the job instance of its own name |
 | `systemd/deck-streak-job@sync (path unit)` | the owner's `/sync` doorbell: a change of the request file starts `deck-streak-job@sync` (service unit), and it loads no credential (SPEC-059) |
@@ -42,12 +43,15 @@ that unit (ADR-061).
 | `/etc/deck-streak/deck-streak.env` | every service's `EnvironmentFile=`, required | the settings file, from `deck-streak.env.example` |
 | `/usr/local/lib/deck-streak/current/deploy/` | the alert's, the evaluator's and the watch's `ExecStart=` | the release's copy of this directory's `scripts/` and `slo.json`, under the same root |
 | UTC, at the default rollover hour 4 | every timer's `OnCalendar=` | the deployment's zone, and each job timer's rollover hour, rendered with the two settings that name them (ADR-027); the evaluator's and the watch's timers fire every few minutes in any zone, and take the deployment's zone all the same, so no calendar is left in UTC |
-| `{$DECKSTREAK_HOST}`, `{$DECKSTREAK_WEB_ROOT}`, `{$DECKSTREAK_API_UPSTREAM}` | the Caddy block | the Mini App's host name, the release's web build, and the API's listen address |
+| `{$DECKSTREAK_HOST}`, `{$DECKSTREAK_WEB_ROOT}`, `{$DECKSTREAK_API_UPSTREAM}`, `{$DECKSTREAK_SYNC_UPSTREAM}` | the Caddy block | the Mini App's host name, the release's web build, the API's listen address and the sync server's |
 | the system user and group `deck-streak` | every service's `User=` and `Group=` | the user itself |
 | `/run/deck-streak-credentials/socket` | every `LoadCredential=` line | the credential socket, its fetch helper and its map (ADR-038) |
 
 `DECKSTREAK_API_UPSTREAM` is the same address as the setting `DECKSTREAK_API_LISTEN`: Caddy proxies
-`/api/*` to the API's own loopback listener (ADR-007).
+`/api/*` to the API's own loopback listener (ADR-007). `DECKSTREAK_SYNC_UPSTREAM` is the same
+address as `DECKSTREAK_SYNC_SERVER_LISTEN`: Caddy proxies `/anki-sync/` to the sync server's own
+loopback listener, with the prefix stripped, its health route closed and the request body bounded
+at the server's own payload limit (SPEC-337 R4; ADR-347 D4).
 
 ## Credentials
 
@@ -64,6 +68,7 @@ file, and no template carries a secret's value.
 | `deck-streak-job@.service` | none | the sync login is loaded by the sync job alone: its instance's drop-in in `systemd/` carries `anki-sync-username` and `anki-sync-password` (SPEC-022, SPEC-062 R14), and the rail's map answers them to that instance alone |
 | `deck-streak-job@.service`, `held_flush` instance | `owner-user-id`, `telegram-bot-token` | the held flush alone sends to the owner's chat (#291): its instance's drop-in in `systemd/` carries the two, and no other job requests them |
 | `deck-streak-alert@.service` | `owner-user-id`, `telegram-bot-token` | the page: the bot's token, and the owner's id, which is the owner's private chat (SPEC-031) |
+| `deck-streak-sync-server.service` | `sync-server-owner`, `sync-server-staging` | the sync server's two users, the owner's and the staging user (ADR-344), each a user name and a pbkdf2-sha256 hash, never a password; its launcher, `scripts/sync-server.sh`, refuses any other shape and hands them to the server (SPEC-337 R2, ADR-347) |
 
 systemd names the unit in the address it binds for each credential, so a job's credentials reach
 the socket under the job instance's name. The rail's map names the template, and an instance
@@ -191,7 +196,7 @@ and the two before it, and prunes only after a ready switch.
 `rollback.sh vX.Y.W` makes a kept release current again with no download, or deploys a release the
 host no longer keeps through the same verification. `deploy.sh caddy-install vX.Y.Z` renders the
 block with `scripts/render-caddy.py` from the private configuration (`DECKSTREAK_DEPLOY_CADDY_CONFIG`,
-a JSON object with `host`, `web_root` and `api_upstream`), adds it and one `import` line to a copy
+a JSON object with `host`, `web_root`, `api_upstream` and `sync_upstream`), adds it and one `import` line to a copy
 of the Caddyfile, runs `caddy validate` and `caddy adapt --validate` on the copy, moves it into
 place and reloads; a refusal leaves the live file as it was, and a reload that fails puts the
 previous block and Caddyfile back, reloads them and exits non-zero (SPEC-127).
@@ -217,12 +222,13 @@ without its core token. Its first start is the owner's, in two steps (ADR-332):
 
 ## The host budget
 
-`host-budget.json` records DeckStreak's share, `"memory": "704M"` and `"cpus": 2`, and each unit's
-ceilings, which the unit's `MemoryHigh=` and `MemoryMax=` equal (ADR-032). The long-running units'
-ceilings plus the largest oneshot's fit the share, and the daemons' `CPUQuota=` (the API's, the
-bot's, the replicator's and the MCP server's) fit its CPUs. The alert template, the SLO evaluator
-and the memory watch carry their own entries (SPEC-031); since they run beside the jobs, every
-ceiling reached at once passes the share (SPEC-031 §6).
+`host-budget.json` records DeckStreak's share, `"memory": "1152M"` and `"cpus": 2`, and each unit's
+ceilings, which the unit's `MemoryHigh=` and `MemoryMax=` equal (ADR-032). The five long-running
+units' ceilings plus the largest oneshot's fill the share exactly, and their `CPUQuota=` values,
+75% each for the API and the sync server, 20% for the bot and 15% each for the replicator and the
+MCP server, divide its CPUs exactly (ADR-064 and ADR-032 as SPEC-337 amends them, ADR-347). The
+alert template, the SLO evaluator and the memory watch carry their own entries (SPEC-031); since
+they run beside the jobs, every ceiling reached at once passes the share (SPEC-031 §6).
 
 ## Writing about an instance
 

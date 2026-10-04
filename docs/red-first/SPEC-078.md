@@ -134,3 +134,122 @@ daemon's wiring test, in another package, and its closed flag only by the amount
 `read:qaa` read closed `false` and the current Monday's `true`, expected `true` and `false`).
 
 Ruling 156 closes the last missed mutant of the habits read tree, `crates/habits/src/minutes.rs` line 50, `>` replaced by `>=` in `reading_xp`. The clamp answered the cap on both sides of `xp == cap`, so no test could tell the two operators apart, and an equivalent record is not admitted. `reading_xp` is now `minutes.saturating_mul(READING_XP_PER_MIN).min(READING_XP_DAILY_CAP_PER_LANG)`, a minimum with no comparison to mutate, and it is no longer `const` because `Ord::min` is not callable there; every caller is a runtime call. Readings: the old and new bodies agree on 200002 of 200002 inputs (`minutes` 0 to 200000 and `u32::MAX`); `the_minutes_xp_matches_the_predecessors_golden` examined 36 cases before and after; the habits and coordination packages pass whole; clippy with `-D warnings` and `cargo fmt --check` are clean; the two body replacements cargo-mutants can still generate, `0` and `1`, each fail that golden test (`running 1 test`, 1 failed) in a scratch copy restored byte for byte.
+
+## Part 078b, the writing habit and the habit badges
+
+The SPEC amendment, ADR-078's amendment and the schematic were committed first (00a7f32e), then the
+HabitXpFollowsItsLog writing extension, lean/HabitWriting and their claims (78e331d0, 54df290f,
+d976e2fc), then the goldens (d9d46738), then the migration, the habits crate's stubs and their
+tests (0455dc58). The kernel and progression criteria, the coordination use cases and steps, the
+daemon's two fold tests, the bot's `/write` and `/unwrite` and the badge golden's constructible
+random cases followed at 875ff0f7, each a stub that compiles against the tests. Every fenced
+criterion of section 14 ran red at 875ff0f7, by its exact name, in ONE call over the eight crates
+(`cargo test -j 1 -p <the eight> --no-fail-fast -- --test-threads=1`, rc 101, 25 tests failed, no
+compile error), each by assertion.
+
+```red-first
+A7: red at 875ff0f7: assertion `left == right` failed: {"codes":["qaa"],"done":["qaa"]}; left: [["write:all",0],["write:qaa",0]], right: [["write:all",100],["write:qaa",75]]
+A8: red at 875ff0f7: assertion `left == right` failed: {"codes":["qaa","qab"],"rows":[...],"today":20104}; left: {"all":0,"by_course":{"qaa":0,"qab":0}}, right: {"all":3,"by_course":{"qaa":3,"qab":3}}
+A9: red at 875ff0f7: assertion `left == right` failed: no day is all confirmed over no writing course; left: {StudyDay(20097)..StudyDay(20104)}, right: {}
+A10: red at 875ff0f7: assertion `left == right` failed: one toggle settles the course's 75 and the day's bonus of 100; left: {}, right: {"write:all": 100, "write:qab": 75}
+A10b: red at 875ff0f7: assertion `left == right` failed: written once a day; left: (false, false, false, false), right: (true, false, true, true)
+A10c: red at 875ff0f7: a Monday chip tapped on Tuesday answers with Tuesday's checklist and toggles nothing: Ok(Done(Checklist { day: StudyDay(20102), lines: [], streak: 0 }))
+A10d: red at 875ff0f7: assertion `left == right` failed: the day's writing is settled from its log, and a held row the log does not pay is zeroed; left: [("write:qaa", 75)], right: [("write:all", 100), ("write:qaa", 0), ("write:qab", 75)]
+A14b: not red: an existing test amended by T20 (the writing and badge constants added to its golden), not a criterion written red first; it read left Number(0), right Number(75) at 875ff0f7 and is recorded so
+A19a: red at 875ff0f7: assertion `left == right` failed: {"all_langs_goal_met":false,"langs_read_this_week":0,"reading_entries":0,"week_total_min":0,"writing_all_streak":0,"writing_entries":0}; left: ["ink_week","ink_month","ink_century","marathon_reader"], right: []
+A19b: red at 875ff0f7: ink_week is not earned without its courses: ["quill_initiate", "ink_week", "ink_month", "ink_century", "bookworm_week", "polyglot_reader", "marathon_reader"]
+A19: red at 875ff0f7: assertion `left == right` failed: each badge of Some("one reading entry") is awarded once, for the evaluated day, and marked; left: [], right: [("first_page", 0, 20107, true)]
+A22b: red at 875ff0f7: writing_log is declared exported and erased
+A23b: red at 875ff0f7: write:qaa is derived
+A32: red at 875ff0f7: a writing course coded all is refused: Ok(Courses { .. code: CourseCode("all") .. writing: true .. })
+A33: red at 875ff0f7: assertion `left == right` failed: bare /write; left: the help reply, right: the write-chips golden
+A34: red at 875ff0f7: assertion `left == right` failed: /write is in the menu; left: None, right: Some("Confirm today's writing")
+A35: red at 875ff0f7: assertion `left == right` failed: the habit badges step is registered in phase 7, right before the badge step; left: None, right: Some(6)
+A35b: red at 875ff0f7: assertion `left == right` failed: the writing step is registered in phase 4, right after the habit step; left: None, right: Some(5)
+A36: red at 875ff0f7: assertion `left == right` failed: one chip per writing course, naming the checklist's day; left: [], right: ["hb:w:qab:20102"]
+A37: red at 875ff0f7: assertion `left == right` failed: the two amounts; left: (Some(75), Some(100)), right: (Some(0), Some(0))
+```
+
+Amended tests are not red-first evidence and are recorded only so a reader knows why they were red
+at 875ff0f7: `habits_constants.rs`'s `the_habit_constants_equal_the_predecessors` (A14b, T20:
+`constants.WRITING_XP_PER_DAY`, left `Number(0)`, right `Number(75)`); `commands.rs`'s
+`every_golden_message_is_what_the_bot_sends` (T26: the seven writing goldens are rendered by no
+builder yet); and `data_rights_symmetry.rs`'s `every_table_of_the_schema_is_declared_by_exactly_one_port`
+(`writing_log is declared by no port`), `the_exported_tables_equal_the_erased_tables_over_every_port`
+and `erase_leaves_the_cron_fire_ledger_and_the_schema_table_untouched` (`writing_log holds no row:
+give it one in SEEDS`, T29). `kernel/tests/schema.rs`'s
+`every_migration_names_the_context_that_owns_its_tables` is red until `docs/CONTEXT-MAP.md`'s
+ownership register names `writing_log` (a data-carry red). The menu test
+`the_menu_is_registered_for_the_owners_chat_only` (T23) was green at 875ff0f7: the menu moves at
+green.
+
+Green: every fenced criterion of part 078b passed by its exact name at 4015d25c, the green commit,
+in one call over the eight crates (`cargo test -j 1 -p <the eight> --no-fail-fast --
+--test-threads=1`, rc 0, 819 passed, 0 failed), and no crate, migration or query cache changed
+after it. The amended tests named above (T20's constants test, T26's goldens, T29's three
+`data_rights_symmetry.rs` probes, T23's menu test and the CONTEXT-MAP probe) passed in the same
+call.
+
+```red-first
+A7: green at 4015d25c
+A8: green at 4015d25c
+A9: green at 4015d25c
+A10: green at 4015d25c
+A10b: green at 4015d25c
+A10c: green at 4015d25c
+A10d: green at 4015d25c
+A19a: green at 4015d25c
+A19b: green at 4015d25c
+A19: green at 4015d25c
+A22b: green at 4015d25c
+A23b: green at 4015d25c
+A32: green at 4015d25c
+A33: green at 4015d25c
+A34: green at 4015d25c
+A35: green at 4015d25c
+A35b: green at 4015d25c
+A36: green at 4015d25c
+A37: green at 4015d25c
+```
+
+Five tests were written at green as mutation coverage, each in the crate that owns the code it
+judges, and are not red-first evidence: `writing_goldens.rs`'s
+`the_writing_courses_are_the_configured_courses_marked_writing` (`writing_courses`),
+`habits_store.rs`'s `the_reading_entries_are_counted_through_a_day` (`entries_through`), and
+`writing_toggle.rs`'s `the_writing_step_settles_a_past_day_closed_and_today_open` (the writing
+step's `closed`), `confirm_and_clear_write_only_a_writing_course` and
+`every_writing_write_answers_no_writing_course_without_one` (`confirm`, `clear` and `toggle`'s
+refusals). A mutant runs only its own package's tests, so the bot's `/write` test never judged the
+coordination use cases. All five passed in the same call.
+
+Commit 70a2a9d is the green commit's edit of tests between the red and the green, disclosed here. Every
+removed line is a census or a count that grew by exactly this part's items, each recorded as a T-line of
+SPEC-078 section 13 (additions while the list stays exact, never relaxed assertions): the menu's
+`the fourteen commands` text and list (T22, T23) and the two goldens that name the commands (T24, T25);
+`SEEDS` 41 to 42 (T29); `COMMAND_REPLIES` 21 to 23 and `COMMAND_CALLERS` 39 to 43 in the one-router census
+(T27, T28, ruling 104 Q-8); and `habits_store.rs`'s `the_habit_tables_are_exported_and_erased`, whose two
+assertions over one table became assertions over both habit tables (T21). The other removed lines are
+imports. No assertion was relaxed, no test was removed or skipped.
+
+Six tests were written at green as mutation coverage, each in the crate that owns the code it judges,
+and are not red-first evidence: they answer the six mutants of this part's own code that CI's
+mutation verdict found missed at 845f6419 (run 37179203547), and no criterion is added or edited. A
+mutant runs only its own package's tests, so the daemon's habit badges step test never ran against a
+coordination mutant. In `habits_badges.rs`, `the_habit_badges_step_is_named_for_the_folds_report`
+kills the step's name replaced by `"xyzzy"` and by `""` (each read `left: [(Awards, "xyzzy")]` and
+`left: [(Awards, "")]` against `habits.badges`); `an_awarded_habit_badge_keeps_its_catalogs_name_and_emoji`
+kills the badge lookup's `==` replaced by `!=` (`left: (0, "First Steps", ...)` against the catalog's
+`First Page`), since the stored name and emoji were never read before; and
+`a_course_not_configured_counts_toward_no_courses_goal` kills the course minutes lookup's `==`
+replaced by `!=` (the unconfigured `qzz` logged the goal, the configured `qab` nothing, and
+`bookworm_week` was awarded). In `writing_toggle.rs`, `the_writing_step_is_named_for_the_folds_report`
+kills the writing step's name replaced by `""` and by `"xyzzy"` (each read the second step's name
+wrong against `habits.writing_xp`). Each kill was proved by plant: the exact mutant of its MISSED
+line was applied to the tree, the one killer ran by its exact name (`running 1 test`) and failed as
+quoted, and the file was restored byte for byte (sha256 equal); every killer passes on the
+unmutated tree.
+
+Correction (verify round 2): commit 70a2a9d also removed one census line of `xp_settle.rs`,
+`["read:", "readgoal:"]`, which grew by this part's `write:` prefix (T19); it is a census growth, not a relaxed assertion.
+
+Correction (verify round 2): four tests, K1 to K4, kill the six mutants.

@@ -173,8 +173,13 @@ PAGING_KEYS = {
         "StartLimitBurst",
         "StartLimitIntervalSec",
         "Wants",
+        # The sync server's one advisory waiver, with its why (SPEC-337 R2; the durable-services
+        # pack reads it, systemd ignores it).
+        WAIVE_KEY,
     ),
-    "Install": ("WantedBy",),
+    # `Also=` acts when the unit is enabled or disabled, never on a start or a failure
+    # (systemctl(1)); its one value is the sync server's snapshot window (ADR-347 D12).
+    "Install": ("Also", "WantedBy"),
     "Service": (
         "CPUQuota",
         "CapabilityBoundingSet",
@@ -182,6 +187,7 @@ PAGING_KEYS = {
         "ExecStart",
         "Group",
         "IOSchedulingClass",
+        "KillSignal",
         "LoadCredential",
         "LockPersonality",
         "MemoryDenyWriteExecute",
@@ -236,6 +242,10 @@ PAGING_VALUES = {
     ("Unit", "After"): ("network-online.target",),
     ("Unit", "Wants"): ("network-online.target",),
     ("Service", "ReadWritePaths"): ("/run/deck-streak-sync",),
+    # The sync server drains on an interrupt alone (SPEC-337 R2), so its stop signal is that one.
+    ("Service", "KillSignal"): ("SIGINT",),
+    # Enabling the sync server enables its snapshot window, and disabling it removes the window.
+    ("Install", "Also"): ("deck-streak-sync-snapshot.service",),
 }
 
 

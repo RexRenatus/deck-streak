@@ -250,7 +250,7 @@ async fn settle_entry(
 }
 
 /// Settles `amount` of `source` on `day`, on the language track, as the owner's correction.
-async fn settle_owner(
+pub(super) async fn settle_owner(
     write: &mut SqliteConnection,
     day: StudyDay,
     source: &str,
@@ -278,7 +278,7 @@ async fn settle_owner(
 
 /// The level before a habit write, when there is a router to announce a crossing through. A read
 /// that fails is logged, and the write goes on unannounced.
-async fn level_before(writer: &HabitWriter<'_>) -> Option<Level> {
+pub(super) async fn level_before(writer: &HabitWriter<'_>) -> Option<Level> {
     writer.router?;
     match SqliteXpLedger::new(writer.db.clone()).level().await {
         Ok(level) => Some(level),
@@ -291,7 +291,7 @@ async fn level_before(writer: &HabitWriter<'_>) -> Option<Level> {
 
 /// Announces the level a committed habit write crossed from `before`, through the one router and
 /// its once-ever key `level:<n>` (SPEC-078 R18). A failure is logged: the entry stands.
-async fn celebrate(writer: &HabitWriter<'_>, before: Option<Level>, today: StudyDay) {
+pub(super) async fn celebrate(writer: &HabitWriter<'_>, before: Option<Level>, today: StudyDay) {
     let (Some(router), Some(before)) = (writer.router, before) else {
         return;
     };

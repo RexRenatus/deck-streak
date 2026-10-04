@@ -28,12 +28,14 @@ pub mod analytics_step;
 pub mod badges;
 pub mod band_badges;
 pub mod day_bonuses;
+pub mod habit_badges;
 pub mod habits;
 pub mod landmarks;
 pub mod mint;
 pub mod progress;
 pub mod records;
 pub mod streaks;
+pub mod writing;
 pub mod xp;
 
 use std::collections::{BTreeMap, BTreeSet};

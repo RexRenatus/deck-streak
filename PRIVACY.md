@@ -46,13 +46,16 @@ inventory, in the form the repository's privacy checks read.
 | `inbox-captures` | each capture you sent to your vault inbox from the bot or the Mini App: its name, its retry key, its kind, where it came from, its attachment's file name, when it was captured, and whether and where it was filed; the captions, texts and attachments themselves stay in your own vault | saving each capture once, answering a resend with the first capture's name, and letting the inbox curator file it; no model reads a capture unless the curator's route is configured, and a journal capture never | contract | until account deletion |
 | `research-instruments` | the latest report of each research instrument that reads your collection: its study day, its findings about your own cards and note types, and any read that failed | showing you what each instrument last found, and running each weekly one once in seven study days | contract | until account deletion |
 | `minutes-log` | each reading entry you logged: the course, the study day, the minutes, the note you added if any (up to 200 characters), and when it was written | settling each course's reading XP of the day and its weekly bonus from your entries, and removing the newest entry when you undo it | contract | until account deletion |
+| `writing-log` | each study day you confirmed writing in a writing course: the course, the study day, and when it was confirmed | earning the writing XP and counting the writing streaks | contract | until account deletion |
 
 The lawful basis of each is the contract (GDPR Article 6(1)(b)): the service you run needs it. None
 is kept for a fixed period. Each is kept until you erase it, which is how an account is deleted here.
 
 Outside its database, DeckStreak holds a private copy of your collection, your own Anki data,
-refreshed from your sync server; and, in memory only, your Telegram user id in a signed-in session,
-and the bot's place in the queue of your messages. The bot reads the messages and button taps you
+refreshed from your sync server; when the owner runs the sync server on the same host, that
+server's store (each sync user's collection, media index and media files) and its daily snapshots;
+and, in memory only, your Telegram user id in a signed-in session, and the bot's place in the queue
+of your messages. The bot reads the messages and button taps you
 send it to answer them, keeps none of their text, and answers nobody but you.
 
 ## Your copy of your data, and erasing it
@@ -88,6 +91,12 @@ You can also export and erase on the host that runs DeckStreak:
 - **The private copy of your collection** is your own Anki data: an erase leaves it, and the next
   sync would restore it from your sync server. Removing it means removing the sync credential, a
   step of the owner's setup.
+- **The sync server's snapshots** are copies of the sync server's store, your own Anki data, taken
+  each day while that server is stopped for a few seconds. An erase leaves them, as it leaves the
+  server's store. The host keeps the newest three archives and removes the oldest when a fourth is
+  in place; each archive is also copied to an offsite bucket that admits no public access and no
+  listing, where it is kept as long as the bucket's own retention, which the owner sets when
+  creating it. Removing them is a step of the owner's setup.
 - **The cron-fire ledger** records which scheduled jobs ran, and none of your data. It is kept
   after an erase and pruned after 90 days, so an erase can never make a notification send twice.
 
