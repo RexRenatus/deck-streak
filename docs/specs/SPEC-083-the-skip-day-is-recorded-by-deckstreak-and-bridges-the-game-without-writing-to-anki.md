@@ -1164,3 +1164,17 @@ A54: cargo test -p deck-streak-ingest --test skip_write -- --exact the_preview_n
 A55: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k test_no_replica_or_daily_copy_reaches_the_skip_backup
 A56: cargo test -p deck-streak-ingest --test skip_write -- --exact the_backup_erase_removes_every_backup_and_nothing_else
 ```
+
+Amendment (ruling 149): the zero-upload target's zone is pinned in its own process, and `.cargo/config.toml` is not delivered.
+This replaces the mechanism section 3 names for the test process's zone (the `[env]` entry that sets `TZ` to `UTC0`):
+that file configures Cargo, and the workspace's census of the settlement table reads it as a file that names the table's
+spelling, so the delivery's head failed `only_progression_writes_xp_settlement_and_only_coordination_settles`. The file is
+removed. The zero-upload target (`crates/ingest/Cargo.toml`, its `[[test]]` entry) is compiled at edition 2021 through
+Cargo's per-target `edition` field, as `skip_write` already is; its one test takes a lock for the whole run and sets
+`TZ` to `UTC0` itself through a `zone()` helper copied from `skip_write`, so it reads the zone it needs without a file
+that configures every process Cargo runs. Two manifest rows change: the row `.cargo/config.toml` of section 4 (added: `TZ`
+set to `UTC0`) is withdrawn, and U-line's "`.cargo/config.toml` (E4b)" of section 10 and its "unchanged in this part"
+manifest row are met by the file's absence; `crates/ingest/Cargo.toml` and `crates/ingest/tests/skip_zero_upload.rs`
+carry the pin instead. A6, A40 and A44 are unchanged in their words, and their take arms stay outside the red-first
+fence until E4c lands the undo arms. After the merge of dev into this branch, U15's `SEEDS` holds 42 statements, one
+more than dev's own: both sides added one.

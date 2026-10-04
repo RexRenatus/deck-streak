@@ -247,3 +247,16 @@ text block above, byte-equal and in order. SPEC-083 section 3c delivers each of 
 E4c has landed its undo arms, and the part that lands second moves the row back, so they are not criteria
 of this delivery; a fence line would bind each whole on its take arm alone. This amends ruling 143's
 "no existing record line is edited" for these six lines only, which were this delivery's own and unpushed.
+
+Correction (ruling 149): the zero-upload target's zone is pinned in its own process and `.cargo/config.toml` is
+removed (86c222e1), and the branch has absorbed dev by the merge commit af19cbba1d3a. Red: at 72f78b8f (the pushed head),
+the workspace's settlement census test `only_progression_writes_xp_settlement_and_only_coordination_settles` failed
+(`xp_census.rs:1168:5`, one entry naming `.cargo/config.toml` as a file that configures Cargo; 0 passed, 1 failed).
+Green: at 86c222e1 the same test passed, `skip_write` passed (23 tests) and `skip_zero_upload` passed (1 test) with no
+config file; at the merge head (62dcc94f9a0a, the merge plus the `SEEDS` recount) the census targets `xp_census`,
+`ledger_census` and `wallet_census` pass (51 passed, 0 failed), the settlement test among them. The cites in this
+record's lines for A5 (`skip_write.rs:740`), A25, A36, A47 and A49 (`skip_write.rs:687`) were stale at 0fa34058, where
+those lines read `.block_on(` and `}`; measured at 0fa34058, the A5 assertion is the `assert_eq!` opening at `:783`
+(`TakeAnswer::Accepted { .. }`, whose `Failed(engine_failed) != Accepted` is the red) and the A25, A36, A47 and A49
+assertion is the `assert!` at `:712` in `wrote_nothing`, whose message is `the take answers {reason}: {answer:?}`
+(`:714`). The fence lines are not edited.

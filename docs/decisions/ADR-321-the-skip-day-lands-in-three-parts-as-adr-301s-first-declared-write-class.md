@@ -201,3 +201,23 @@ above is edited. Each decision names what it was chosen against.
   70 bytes, over Telegram's 64-byte callback data. It is the first 128 bits of sha256 over the
   listed ids in ascending order, each in decimal and ended by a line feed, as 32 lowercase hex
   characters, so `sk:go:<digest>` is 38 bytes.
+
+## Amendment (ruling 149): the zero-upload target pins its own zone
+
+The zone for the zero-upload target is set by the test itself, in its own process, and `.cargo/config.toml` is
+removed. It was chosen against the candidates below, each measured without the config file on the zero-upload test:
+
+- **No mechanism**: the test is red at its first preview assertion
+  (`matches!(scene.preview(), Preview::Listed { .. })`, `skip_zero_upload.rs:205`), because the process zone is
+  whatever the runner holds. Rejected: it is the failure the pin exists to cure.
+- **(b) Re-exec the test binary as a child with the zone set through `Command::env`**: 1 passed. Rejected: it passes
+  for the same reason (a) does, and adds a second process whose own environment the test must keep, with no
+  reading the in-process pin does not already give; the head's census reads neither.
+- **(c) A build script in the ingest crate that emits `cargo::rustc-env` for `TZ`**: 1 passed under `cargo test`,
+  but the same binary run directly was red at `:205`. Rejected: it is the `[env]` pin in another spelling, a value
+  fixed at compile time that only Cargo's own runner honours, and it reads as green where the binary alone does not.
+
+Chosen: **(a)**, the target compiled at edition 2021 through the per-target field (where `set_var` is safe, so no
+`unsafe` is written, as `skip_write`), one lock for the test's whole run, `TZ` set to `UTC0` by a `zone()` helper. 1
+passed on the zero-upload test with no config file. What would make this wrong: Cargo removing the per-target
+`edition` field (it already warns that the field is deprecated), at which point both targets need one other route.
