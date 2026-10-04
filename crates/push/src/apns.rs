@@ -289,6 +289,15 @@ fn reason(answer: &Answer) -> Option<String> {
         .map(str::to_owned)
 }
 
+/// Apple's `timestamp` on a 410: when it last knew the device's token as valid, in epoch
+/// milliseconds.
+fn timestamp(answer: &Answer) -> Option<UtcMillis> {
+    error_json(answer)?
+        .get("timestamp")?
+        .as_i64()
+        .map(UtcMillis::from_epoch_millis)
+}
+
 /// Whether APNs refused the provider token as expired, which earns R3's one resend.
 fn expired(answer: &Answer) -> bool {
     answer.status.as_u16() == 403 && reason(answer).as_deref() == Some(EXPIRED_TOKEN)
@@ -298,6 +307,9 @@ fn expired(answer: &Answer) -> bool {
 fn read(answer: &Answer) -> Sent {
     match answer.status.as_u16() {
         200..=299 => Sent::Delivered,
+        410 => Sent::Gone {
+            since: timestamp(answer),
+        },
         403 => Sent::Rejected(Refusal::ProviderToken),
         _ => Sent::Failed(Unreached::Unexpected),
     }
