@@ -14,9 +14,10 @@ index, a method's index and the request's protobuf bytes go in, and the response
 (`Backend::run_service_method`). Amgi (github.com/antigluten/amgi) carries that shape through a
 four-function C FFI into the same call.
 
-Five things had to be decided: where the FFI surface lives, which bindings generator and version it
-is built with, how the generator is run, where the framework is built, and how a default-feature
-test reaches the generator's binary.
+Six things had to be decided: where the FFI surface lives, which bindings generator and version it
+is built with, how the generator is run, where the framework is built, how a default-feature test
+reaches the generator's binary, and how the settle census (SPEC-072, ADR-197), which refused every
+member that declares a feature because it compiled none, judges the adapter's `bindgen` feature.
 
 ## Decision Drivers
 
@@ -29,6 +30,9 @@ test reaches the generator's binary.
 - A workspace build that does not need the generator or a static library must not pay for either.
 - The pull request's mutation run passes no feature, so every mutant cargo-mutants lists in the
   adapter must be built, and caught, by a default-feature test.
+- The settle census guards progression's own invariant, that only coordination settles, over every
+  member. A change to it must refuse every shape it refused before that hides a call, and may
+  admit a member only because its code under every feature was compiled and found clean.
 
 ## Considered Options (the alternatives it was chosen against)
 
@@ -75,15 +79,37 @@ test reaches the generator's binary.
 - D5, the mutation run given `--features bindgen` - lost: a change to the shared mutation
   configuration for one binary's mutant, and every crate's mutation run would build under a
   feature only this adapter declares.
+- D6, the census compiles every combination of the members' features, with each member's default
+  off unless the combination holds it, reads the graph with every feature on, and refuses a
+  feature another package turns on and a fourth feature - chosen, because every build a member's
+  features allow is then compiled in some pass, so a call under a feature, under its absence or
+  under any mix is refused for the call, and the adapter is admitted only after its code under
+  `bindgen` is compiled and found clean. It lives in progression's test because the invariant is
+  progression's, and it adds no dependency edge.
+- D6, admitting the adapter by name - lost: the census would carry another context's name and
+  skip whatever code that crate holds under a feature, a weakening for every later change to it.
+- D6, dropping the adapter's `bindgen` feature - lost: D3 and D5 rest on it, and the generator
+  would then be built in every build of the workspace.
+- D6, the generator in a crate of its own - lost: D3 rejected a second crate for this spike, and
+  the census would still refuse that crate's feature.
+- D6, one more pass with `--all-features` only - lost: code under a feature's absence, such as
+  `cfg(not(feature = "x"))` beside a default feature, is compiled in no pass.
+- D6, one pass per feature, each alone - lost: code under two features together, or under one
+  feature and another's absence, is compiled in no pass.
+- D6, one `-p` build per member - lost: a member's code that a dependent's feature request
+  changes, and a macro another member expands, are compiled only as the workspace build compiles
+  them, and the passes then differ from the workspace build the census reads.
 
 ## Decision Outcome
 
 Chosen options: D1 one adapter crate depending on the engine alone, D2 the exact pin, D3 the
-generator behind the adapter's `bindgen` feature, D4 the macOS job admitted by file name, and D5
-a generator binary that every build compiles and that refuses without the feature, because
-together they keep the FFI surface out of every context, generate the bindings from the version
-the library links, charge the static library and the generator to the one workflow that needs
-them, and leave no mutant of the adapter outside the default-feature tests.
+generator behind the adapter's `bindgen` feature, D4 the macOS job admitted by file name, D5
+a generator binary that every build compiles and that refuses without the feature, and D6 a
+settle census that compiles every combination of the declared features, because together they
+keep the FFI surface out of every context, generate the bindings from the version the library
+links, charge the static library and the generator to the one workflow that needs them, leave no
+mutant of the adapter outside the default-feature tests, and leave no code under a feature unseen
+by the census.
 
 ### Consequences
 
@@ -102,12 +128,21 @@ them, and leave no mutant of the adapter outside the default-feature tests.
 - Bad, because the macOS protobuf compiler's digest is Anki's own pin for that archive, and the
   hardening test's protoc guard reads only the Linux pin; the job's checksum step fails on a
   mismatch, but no test compares the two pins.
+- Good, because the census now refuses a call to `settle` under any combination of features for
+  the call itself, where before it refused the feature and never compiled the code beneath it.
+- Bad, because each declared feature doubles the census's compiles of the workspace, so the census
+  refuses a fourth feature by name, and raising that bound is a reviewed change.
+- Bad, because a member whose feature another package turns on is refused outright, though its
+  code might be clean: the census cannot compile it without the feature, as a build of that member
+  alone does.
 
 ### Confirmation
 
 SPEC-336 A1 to A6 round-trip each allowed call and refuse unlisted ones on a synthetic collection;
 A7 holds the runner admission; A8 holds the generator's refusal without its feature, and row
-S33601 proves it kills the empty `main`; `refusal_text` holds each refusal's text. The workflow fails on a
+S33601 proves it kills the empty `main`; `refusal_text` holds each refusal's text. A9 to A12 hold
+the census's combinations, its graph and its two refusals, each beside a control, and the rows
+from S33602 prove each part of the change is observed; A13 and A14 judge the real tree. The workflow fails on a
 builtin clang module in the modulemap and on generated Swift that does not typecheck against either
 slice's headers. `cargo deny` and the lockfile check hold the pin.
 

@@ -1,10 +1,12 @@
 # SPEC-336: a native client reaches the engine through one allow-listed FFI crate
 
 - **Issue:** #615, the app campaign's FFI spike. **Context(s):** `deck-streak-ffi`, an adapter at
-  the edge that depends on no context.
+  the edge that depends on no context; and `deck-streak-progression`, whose settle census (a test
+  of the context's own invariant, SPEC-072) now compiles the features the members declare.
 - **Decided by:** ADR-345 (one adapter crate, the UniFFI pin, the generator behind a feature, the
-  macOS job, and a generator binary that refuses without its feature), resting on ADR-022 and
-  ADR-058 for the engine.
+  macOS job, a generator binary that refuses without its feature, and a settle census that
+  compiles every combination of the declared features), resting on ADR-022 and ADR-058 for the
+  engine and ADR-197 for the census.
 - **Status:** a spike, delivered by the draft pull request that adds this file, with its tests and
   `docs/red-first/SPEC-336.md`. **Mutation band:** S33600-S33699.
 
@@ -63,6 +65,18 @@ R10. Every build of the adapter builds the generator's binary. Built without the
     feature, it holds none of the generator's code and refuses every run: one line on stderr that
     names the feature and the command that builds it, nothing on stdout, and exit status 2. Built
     with the feature, its `main` runs the generator as before.
+R11. The settle census (`crates/progression/tests/xp_census.rs`) reads the workspace's graph with
+    every feature on, and compiles each selection in each pass once for every combination of the
+    features the members declare, each member's default off unless the combination holds it. A
+    call to `settle` outside coordination is then refused for the call under any feature, under a
+    feature's absence and under any mix of them, and a build script that reaches progression only
+    through an optional dependency is refused as one that can name `settle`. It refuses by name a
+    member whose feature another package turns on, by naming it or by keeping its default, and a
+    workspace whose members declare more than three features. It admits no member by name.
+R12. The adapter passes the workspace's censuses as they stand: the log-capture census reads no
+    capture in it, because the engine constructor's parameter is `message` and carries no install
+    token, and the settle census compiles its `bindgen` feature under R11 and finds no use of
+    `settle` in it.
 
 ## 3. Acceptance criteria
 
@@ -76,6 +90,12 @@ R10. Every build of the adapter builds the generator's binary. Built without the
 | A6 | four unlisted pairs are each refused `NotAllowed`, and the collection keeps serving | `cargo test -p deck-streak-ffi --test round_trip -- --exact a6_refuses_an_unlisted_call_and_keeps_serving` |
 | A7 | the macOS runner is admitted to `xcframework.yml` alone, by file name | `python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_the_admitted_runner_is_admitted_to_its_one_workflow_only` |
 | A8 | built without `bindgen`, the generator refuses the workflow's own library-mode call: exit status 2, the feature named on stderr, nothing on stdout | `cargo test -p deck-streak-ffi --test bindings_generator -- --exact a8_the_generator_refuses_a_build_without_its_feature` |
+| A9 | a call to `settle` in habits under a declared feature, under a default feature's absence, under one feature and another's absence, and under two features together is each refused for the call alone, as the same call under no feature is | `cargo test -p deck-streak-progression --test xp_census -- --exact a9_a_call_under_a_feature_in_another_crate_is_refused_for_the_call` |
+| A10 | a build script whose package reaches progression only through an optional dependency a feature turns on is refused as one that can name `settle`, as one reaching it through a dependency that is always on is | `cargo test -p deck-streak-progression --test xp_census -- --exact a10_a_build_script_that_reaches_settle_only_under_a_feature_is_refused` |
+| A11 | a member whose feature another package turns on, by naming it or by keeping its default, is refused by name; one depended on with its default off is accepted | `cargo test -p deck-streak-progression --test xp_census -- --exact a11_a_feature_another_package_turns_on_is_refused_by_name` |
+| A12 | members declaring three features are compiled in every combination and accepted; four are refused by name | `cargo test -p deck-streak-progression --test xp_census -- --exact a12_the_census_compiles_every_combination_up_to_its_feature_limit_and_refuses_past_it` |
+| A13 | the log-capture census over the real tree, the adapter included, finds every capture going through the helper | `cargo test -p deck-streak-kernel --test log_capture_class -- --exact every_capture_in_the_workspace_goes_through_the_helper` |
+| A14 | the settle census over the real tree, the adapter and its feature included, finds only coordination settling | `cargo test -p deck-streak-progression --test xp_census -- --exact only_progression_writes_xp_settlement_and_only_coordination_settles` |
 
 ```acceptance
 A1: cargo test -p deck-streak-ffi --test round_trip -- --exact a1_opens_a_synthetic_collection
@@ -86,13 +106,21 @@ A5: cargo test -p deck-streak-ffi --test round_trip -- --exact a5_undoes_the_ans
 A6: cargo test -p deck-streak-ffi --test round_trip -- --exact a6_refuses_an_unlisted_call_and_keeps_serving
 A7: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_the_admitted_runner_is_admitted_to_its_one_workflow_only
 A8: cargo test -p deck-streak-ffi --test bindings_generator -- --exact a8_the_generator_refuses_a_build_without_its_feature
+A9: cargo test -p deck-streak-progression --test xp_census -- --exact a9_a_call_under_a_feature_in_another_crate_is_refused_for_the_call
+A10: cargo test -p deck-streak-progression --test xp_census -- --exact a10_a_build_script_that_reaches_settle_only_under_a_feature_is_refused
+A11: cargo test -p deck-streak-progression --test xp_census -- --exact a11_a_feature_another_package_turns_on_is_refused_by_name
+A12: cargo test -p deck-streak-progression --test xp_census -- --exact a12_the_census_compiles_every_combination_up_to_its_feature_limit_and_refuses_past_it
+A13: cargo test -p deck-streak-kernel --test log_capture_class -- --exact every_capture_in_the_workspace_goes_through_the_helper
+A14: cargo test -p deck-streak-progression --test xp_census -- --exact only_progression_writes_xp_settlement_and_only_coordination_settles
 ```
 
 Every test builds its own synthetic collection with the engine's API; no real collection data is
 read. `refusal_text::each_refusal_reads_as_its_own_sentence` holds R3's text and is MUTATION
 COVERAGE, not a criterion (`docs/red-first/SPEC-336.md`). A8's test is also the killer of row
 S33601, which installs cargo-mutants' own mutant of the generator's `main`. R6 to R8, and R10's
-build with the feature, are measured by the workflow's run, in section 7.
+build with the feature, are measured by the workflow's run, in section 7. A9 to A12 plant small
+workspaces in a temporary directory; A13 and A14 judge the real tree, and their tests are the
+kernel's and progression's own, unchanged in what they judge.
 
 ## 4. File manifest
 
@@ -108,6 +136,7 @@ build with the feature, are measured by the workflow's run, in section 7.
 | `crates/ffi/tests/round_trip.rs` | `deck-streak-ffi` | added |
 | `crates/ffi/tests/refusal_text.rs` | `deck-streak-ffi` | added |
 | `crates/ffi/tests/bindings_generator.rs` | `deck-streak-ffi` | added: A8, R10 |
+| `crates/progression/tests/xp_census.rs` | `deck-streak-progression` | the settle census compiles every combination of the declared features: R11, A9 to A12 |
 | `.github/workflows/xcframework.yml` | none (CI) | added |
 | `scripts/tests/test_ci_workflows.py` | none (the gate) | the runner admission and its test |
 | `scripts/mutation-rows.d/S33600-S33699.json` | none (the gate) | added |
@@ -128,6 +157,11 @@ build with the feature, are measured by the workflow's run, in section 7.
 - It allows no call beyond the five in R2; a client that needs another call widens the table in a
   delivery of its own, with its round trip (#347).
 - It reaches no DeckStreak table or use case, and the daemon does not compose the adapter (#233).
+- It changes no other census: the log-capture census and its install vocabulary stay as they are,
+  and the adapter's parameter was renamed instead (#615).
+- The settle census compiles at most three declared features, because each one doubles its
+  compiles; a workspace that declares a fourth is refused until the bound is raised in review
+  (#615).
 
 ## 6. Risks
 
@@ -144,6 +178,9 @@ build with the feature, are measured by the workflow's run, in section 7.
   missing.
 - The macOS protobuf compiler's digest is Anki's own pin, and the hardening test's protoc guard
   reads only the Linux pin. Detected by the job's own checksum step, which fails on a mismatch.
+- The settle census now compiles the real workspace twice as many times, once without the
+  adapter's feature and once with it. Detected by A14's duration in the CI run, against
+  `CARGO_LIMIT`, which fails the census by name past its bound.
 
 ## 7. Measured by the XCFramework workflow
 

@@ -114,3 +114,32 @@ Neither arm is a function of its own: `main` holds both, each a statement behind
 cargo-mutants lists one mutant for the binary, `replace main with ()`, and the default-feature
 mutation run builds the arm that mutant changes. A function behind `cfg(feature = "bindgen")` would
 be listed, never built, and read missed.
+
+## The settle census and the adapter's feature
+
+The settle census is progression's test of its own invariant, that only coordination settles
+(SPEC-072, ADR-197). It refused every member that declared a feature, because it compiled none,
+so the adapter's `bindgen` feature made it refuse the real tree. It now compiles every build the
+members' features allow (ADR-345 D6, R11) and judges the adapter's code as it judges any member's.
+
+```mermaid
+flowchart TD
+  meta["cargo metadata with every feature on"] --> graph["the graph: every optional edge a feature can turn on"]
+  graph --> scripts{"a build script that reaches progression?"}
+  scripts -- "yes" --> refuse1(["refused: it can name settle"])
+  scripts -- "no" --> members["each member's declared features, as package/feature"]
+  members --> forced{"does another package turn one on, by naming it or keeping its default?"}
+  forced -- "yes" --> refuse2(["refused by name: the census cannot compile the member without it"])
+  forced -- "no" --> bound{"more than three features declared?"}
+  bound -- "yes" --> refuse3(["refused by name: the bound on the combinations"])
+  bound -- "no" --> combos["every combination, the empty one first"]
+  combos --> check["cargo check per selection, per combination, per pass: --no-default-features, then --features with the combination"]
+  check --> uses["every use of settle rustc reports, in any of those builds"]
+  uses --> judge{"outside coordination?"}
+  judge -- "yes" --> refuse4(["refused for the call"])
+  judge -- "no" --> pass(["accepted: the adapter, under and without bindgen, holds no use"])
+```
+
+A member whose feature another package turns on is refused rather than compiled, because that
+feature is on in every workspace build, so code under its absence would be compiled in no pass,
+though a build of the member alone compiles it. The census admits no member by name.
