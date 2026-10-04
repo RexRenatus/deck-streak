@@ -587,6 +587,86 @@ class WorkflowsAreHardened(unittest.TestCase):
                         getattr(case, HARDENING_PIN)()
 
 
+APPLE_PATHS = [
+    "crates/ffi/**",
+    "ios/**",
+    "Cargo.lock",
+    "Cargo.toml",
+    "rust-toolchain.toml",
+    ".github/workflows/xcframework.yml",
+    ".github/workflows/apple-on-change.yml",
+]
+PULL_REQUEST_ONLY = (
+    "github.event.pull_request",
+    "github.head_ref",
+    "github.base_ref",
+    "github.event.number",
+    "GITHUB_HEAD_REF",
+    "GITHUB_BASE_REF",
+)
+
+
+def pull_request_reads(text):
+    """Every line of a workflow that reads a context only a pull request has."""
+    return [
+        line.strip()
+        for line in text.splitlines()
+        if not line.lstrip().startswith("#") and any(read in line for read in PULL_REQUEST_ONLY)
+    ]
+
+
+def cargo_commands(text):
+    """Every `cargo` command of a workflow's run scripts, backslash continuations joined."""
+    joined = re.sub(r"\\\n\s*", " ", text)
+    return [
+        match.group(1).strip()
+        for match in re.finditer(
+            r"(?m)^[^#\n]*?\b(cargo (?:rustc|run|build|test|check)\b[^\n]*)", joined
+        )
+    ]
+
+
+class TheAppleBuildRunsFromOneBody(unittest.TestCase):
+    """SPEC-344: one job body, xcframework.yml, called by a change caller and a tag caller."""
+
+    def test_the_change_caller_runs_the_build_on_each_apple_path(self):
+        self.assertIn("apple-on-change.yml", [p.name for p in workflow_files(WORKFLOWS)])
+        caller = load("apple-on-change.yml")
+        self.assertEqual(
+            caller["on"],
+            {
+                "pull_request": {
+                    "branches": ["dev"],
+                    "types": ["opened", "synchronize", "reopened"],
+                    "paths": APPLE_PATHS,
+                }
+            },
+        )
+        self.assertEqual(caller["jobs"], {"apple": {"uses": "./.github/workflows/xcframework.yml"}})
+        paths = caller["on"]["pull_request"]["paths"]
+        runs = (
+            "crates/ffi/src/lib.rs",
+            "ios/Harness/Info.plist",
+            "Cargo.lock",
+            "Cargo.toml",
+            "rust-toolchain.toml",
+            ".github/workflows/xcframework.yml",
+        )
+        idle = (
+            "crates/api/src/main.rs",
+            "docs/specs/x.md",
+            "web/app/package.json",
+            "Cargo.toml.orig",
+            "deploy/host-budget.json",
+        )
+        for changed in examined("changed paths", runs + idle):
+            self.assertEqual(
+                any(path_glob(glob).fullmatch(changed) for glob in paths),
+                changed in runs,
+                changed,
+            )
+
+
 def triggers(workflow):
     """{event: [branch, ...]} from a workflow's `on:` block, read without a YAML library. A branch
     list may be a flow list (`branches: [dev, main]`) or a block list (`- dev` lines)."""
