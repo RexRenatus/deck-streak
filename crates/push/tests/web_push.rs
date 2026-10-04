@@ -9,7 +9,7 @@ use std::time::Duration;
 
 use base64ct::{Base64UrlUnpadded, Encoding};
 use deck_streak_push::{
-    BuildError, CollapseKey, Notification, Origin, PushServices, Sent, WebPushSender,
+    BuildError, CollapseKey, Notification, Origin, PushServices, Refusal, Sent, WebPushSender,
     WebPushSettings,
 };
 use serde_json::json;
@@ -236,4 +236,40 @@ async fn a15_try_later_answers_carry_retry_after_and_are_not_retried() {
     );
     assert_eq!(unavailable, Sent::RetryLater { after: None });
     assert_eq!(service.fake.received().len(), 2, "one request each");
+}
+
+#[tokio::test]
+async fn a17_an_oversize_plaintext_is_refused_before_any_request() {
+    let service = FakePushService::start().await;
+    let key = TestKey::generate();
+    let browser = TestSubscriber::generate();
+    let sender = build_sender(&key, listing(&[&service]));
+    let subscription = sender
+        .subscription(&service.endpoint(), &browser.p256dh(), &browser.auth())
+        .expect("a listed endpoint is admitted");
+    // The plaintext is `{"title":T,"body":B}`; the test measures its own frame.
+    let frame = json!({"title": "Synthetic title", "body": ""})
+        .to_string()
+        .len();
+    let sized = |plaintext: usize| {
+        Notification::new(
+            "Synthetic title",
+            &"x".repeat(plaintext - frame),
+            Duration::from_secs(60),
+        )
+    };
+
+    assert_eq!(
+        sender.deliver(&subscription, &sized(3993)).await,
+        Sent::Delivered
+    );
+    assert_eq!(
+        sender.deliver(&subscription, &sized(3994)).await,
+        Sent::Rejected(Refusal::TooLarge)
+    );
+
+    let received = service.fake.received();
+    assert_eq!(received.len(), 1, "the oversize message made no request");
+    let delivered = FakePushService::plaintext(&received[0], &browser).expect("it decrypts");
+    assert_eq!(delivered.to_string().len(), 3993);
 }
