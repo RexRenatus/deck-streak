@@ -43,6 +43,10 @@ A18: red at 64530a2: AssertionError: expected { id: 2, ok: false, …(2) } to de
 A18: green at ab2d6e8
 A19: red at 64530a2: assertion `left == right` failed: note 0's fields left: (17, 16) right: (200, 200)
 A19: green at ab2d6e8
+A20: red at 0c69c04: AssertionError: expected [ { id: 1, ok: false, …(2) } ] to deeply equal []
+A20: green at 88b7342
+A21: red at 0c69c04: AssertionError: expected 1 to be 2 // Object.is equality
+A21: green at 88b7342
 ```
 
 ## What each pair disclosed
@@ -99,3 +103,10 @@ A19: green at ab2d6e8
   of the `memory` operation, and no client test sent it, so a mutant of the client's request could
   survive. The test that asserts `{ id: 1, op: 'memory' }` and the number it resolves to was written
   over the implemented client to kill those mutants, and is not a red-first test.
+- **A20 and A21 joined the SPEC with their own commit (17a784c), as R13.** At 0c69c04 the tests
+  passed the listener's own origin to `serve` and to `EngineClient`, which the code then ignored,
+  so the red is the missing check itself: the Worker answered a request that named another origin,
+  and the client settled a request on a reply that named one. The same commit gave every existing
+  test's `serve` and `EngineClient` the origin argument, which the code did not yet read; Vitest
+  strips types and ran them green. At 88b7342 Vitest read `Tests  319 passed (319)` across the
+  app, and `svelte-check` read 0 errors and 0 warnings over 1306 files.
