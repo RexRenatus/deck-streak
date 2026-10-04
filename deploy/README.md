@@ -43,12 +43,15 @@ that unit (ADR-061).
 | `/etc/deck-streak/deck-streak.env` | every service's `EnvironmentFile=`, required | the settings file, from `deck-streak.env.example` |
 | `/usr/local/lib/deck-streak/current/deploy/` | the alert's, the evaluator's and the watch's `ExecStart=` | the release's copy of this directory's `scripts/` and `slo.json`, under the same root |
 | UTC, at the default rollover hour 4 | every timer's `OnCalendar=` | the deployment's zone, and each job timer's rollover hour, rendered with the two settings that name them (ADR-027); the evaluator's and the watch's timers fire every few minutes in any zone, and take the deployment's zone all the same, so no calendar is left in UTC |
-| `{$DECKSTREAK_HOST}`, `{$DECKSTREAK_WEB_ROOT}`, `{$DECKSTREAK_API_UPSTREAM}` | the Caddy block | the Mini App's host name, the release's web build, and the API's listen address |
+| `{$DECKSTREAK_HOST}`, `{$DECKSTREAK_WEB_ROOT}`, `{$DECKSTREAK_API_UPSTREAM}`, `{$DECKSTREAK_SYNC_UPSTREAM}` | the Caddy block | the Mini App's host name, the release's web build, the API's listen address and the sync server's |
 | the system user and group `deck-streak` | every service's `User=` and `Group=` | the user itself |
 | `/run/deck-streak-credentials/socket` | every `LoadCredential=` line | the credential socket, its fetch helper and its map (ADR-038) |
 
 `DECKSTREAK_API_UPSTREAM` is the same address as the setting `DECKSTREAK_API_LISTEN`: Caddy proxies
-`/api/*` to the API's own loopback listener (ADR-007).
+`/api/*` to the API's own loopback listener (ADR-007). `DECKSTREAK_SYNC_UPSTREAM` is the same
+address as `DECKSTREAK_SYNC_SERVER_LISTEN`: Caddy proxies `/anki-sync/` to the sync server's own
+loopback listener, with the prefix stripped, its health route closed and the request body bounded
+at the server's own payload limit (SPEC-337 R4; ADR-347 D4).
 
 ## Credentials
 
@@ -193,7 +196,7 @@ and the two before it, and prunes only after a ready switch.
 `rollback.sh vX.Y.W` makes a kept release current again with no download, or deploys a release the
 host no longer keeps through the same verification. `deploy.sh caddy-install vX.Y.Z` renders the
 block with `scripts/render-caddy.py` from the private configuration (`DECKSTREAK_DEPLOY_CADDY_CONFIG`,
-a JSON object with `host`, `web_root` and `api_upstream`), adds it and one `import` line to a copy
+a JSON object with `host`, `web_root`, `api_upstream` and `sync_upstream`), adds it and one `import` line to a copy
 of the Caddyfile, runs `caddy validate` and `caddy adapt --validate` on the copy, moves it into
 place and reloads; a refusal leaves the live file as it was, and a reload that fails puts the
 previous block and Caddyfile back, reloads them and exits non-zero (SPEC-127).
