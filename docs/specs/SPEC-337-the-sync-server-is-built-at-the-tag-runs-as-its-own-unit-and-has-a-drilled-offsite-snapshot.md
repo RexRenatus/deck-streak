@@ -6,8 +6,8 @@
   form, the runbook's place), under ADR-340 (the move), ADR-058 and ADR-336 (the fork), ADR-032 (the
   host budget), ADR-064 (the backup), ADR-010 and ADR-038 (the credentials).
 - **Status:** delivered in parts by the pull requests that add and extend this file. This part
-  delivers R1 (section 3) and the measurement R3 needs (section 1); section 7 names the parts after
-  it and what each waits on. **Mutation band:** S33700-S33799 (section 8).
+  delivers R1 to R3 (section 3) and the measurement R3 needs (section 1); section 7 names the parts
+  after it. **Mutation band:** S33700-S33799 (section 8).
 
 ## 1. The problem, measured
 
@@ -28,6 +28,11 @@ with the server binary this SPEC's build step produces.
 
 So the server's own entry, sized from the peak, cannot fit the share as it stands: a resize is the
 owner's decision (ADR-340, "What would make this wrong"; ADR-032), and this SPEC changes no share.
+
+Note on the share row: the share was then moved by the owner's decision to 1152 MiB, recorded as
+ADR-064's and ADR-032's amendments of this delivery; ADR-347's amendment splits the share's two
+processors among the five daemons (the API 75%, the sync server 50%, the bot, the replicator and
+the MCP server 25% each). The row above stays as it was measured.
 
 ## 2. Requirements
 
@@ -64,16 +69,22 @@ R7. Every new Python or shell function a test owns, and the release step's guard
 
 ## 3. Acceptance criteria
 
-This part's criteria (R1). Section 7 holds the rest.
+This part's criteria (R1 to R3). Section 7 holds the rest.
 
 | id | criterion | decided by |
 |---|---|---|
 | A1 | the release builds the server after the tag guard and the protobuf compiler, from the fork and commit read at run time (no 40-hex literal in the step), and installs it into the tarball before the manifest is written | `python3 -m unittest discover -s scripts/tests -p test_release_workflow.py -k test_the_sync_server_is_built_after_the_guard_and_shipped_in_the_tarball` |
 | A2 | run under bash with cargo stubbed, the step passes the patch entry's fork and commit to `cargo install --locked`, and refuses a manifest with no patch entry, a branch for a commit and a short commit before cargo runs; at the tree's own manifest it builds the fork, not upstream | `python3 -m unittest discover -s scripts/tests -p test_release_workflow.py -k test_the_build_step_reads_the_fork_and_the_commit_from_the_engines_patch_entry` |
+| A3 | the unit runs the release's launcher, carries the hardening set and the one waiver with its why, equals its own budget entry, which holds the measured peak under `MemoryHigh=`, and the share holds it: the five daemons and the largest job fill 1152M, and their quotas divide the two processors as ADR-347 splits them | `python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k test_the_sync_server_runs_hardened_within_its_entry_and_the_share_holds_it` |
+| A4 | the unit's two credentials are in the socket form under two distinct ids the launcher declares, no unit passes a user through its environment and no settings line names one, and no file under `deploy/` or `docs/` holds a password hash | `python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k test_the_sync_servers_two_users_come_from_the_socket_and_never_an_environment` |
+| A5 | the launcher refuses a missing, empty or unhashed entry, a name that leaves the data directory, two users of one name and an address that is not loopback with a port, each by name and before the server runs, and never prints an entry; otherwise it clears what the server would read and execs it with the two users, `PASSWORDS_HASHED`, its state directory and its address | `python3 -m unittest discover -s scripts/tests -p test_sync_server_launcher.py -k test_the_launcher_refuses_a_bad_entry_and_execs_the_server_with_hashed_users` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_release_workflow.py -k test_the_sync_server_is_built_after_the_guard_and_shipped_in_the_tarball
 A2: python3 -m unittest discover -s scripts/tests -p test_release_workflow.py -k test_the_build_step_reads_the_fork_and_the_commit_from_the_engines_patch_entry
+A3: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k test_the_sync_server_runs_hardened_within_its_entry_and_the_share_holds_it
+A4: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k test_the_sync_servers_two_users_come_from_the_socket_and_never_an_environment
+A5: python3 -m unittest discover -s scripts/tests -p test_sync_server_launcher.py -k test_the_launcher_refuses_a_bad_entry_and_execs_the_server_with_hashed_users
 ```
 
 ## 4. File manifest
@@ -89,22 +100,26 @@ A2: python3 -m unittest discover -s scripts/tests -p test_release_workflow.py -k
 | `scripts/tests/test_ci_workflows.py` | tests | changed (one census entry for A2's process) | this |
 | `scripts/mutation-rows.d/S33700-S33799.json` | tests | added | this |
 | `changelog.d/sync-server-packaging-337.md` | docs | added | this |
-| `deploy/systemd/deck-streak-sync-server.service`, `deploy/scripts/sync-server.sh` | deploy | added | the unit's |
-| `deploy/host-budget.json`, `docs/decisions/ADR-032-deploy-templates-and-the-host-budget.md` (a note) | deploy | changed | the unit's |
-| `deploy/deck-streak.env.example`, `deploy/README.md` | deploy | changed | the unit's |
+| `deploy/systemd/deck-streak-sync-server.service`, `deploy/scripts/sync-server.sh` | deploy | added | this |
+| `deploy/systemd/deck-streak-bot.service`, `deploy/systemd/deck-streak-litestream.service` (`CPUQuota=25%`) | deploy | changed | this |
+| `deploy/host-budget.json`, `deploy/rail-contract.json` | deploy | changed | this |
+| `docs/decisions/ADR-032-deploy-templates-and-the-host-budget.md`, `docs/decisions/ADR-064-deckstreak-backs-up-with-its-own-units-and-never-the-collection.md` (each an amendment) | docs | changed | this |
+| `deploy/deck-streak.env.example`, `deploy/README.md` | deploy | changed | this |
+| `scripts/tests/test_deploy_templates.py`, `scripts/tests/_units.py` | tests | changed | this |
+| `scripts/tests/test_sync_server_launcher.py` | tests | added | this |
 | `deploy/caddy/deck-streak.caddy`, `deploy/scripts/render-caddy.py` | deploy | changed | the route's |
 | `deploy/scripts/backup.py`, `deploy/scripts/restore-drill.sh`, `deploy/systemd/deck-streak-backup.service`, `deploy/systemd/deck-streak-restore-drill.service` | deploy | changed | the snapshot's |
 | `PRIVACY.md`, `privacy.json` | privacy | changed (the snapshot as a store) | the snapshot's |
 | `docs/runbooks/sync-server-cutover.md` | docs | added | the runbook's |
-| `scripts/tests/test_deploy_templates.py`, `scripts/tests/test_caddy_render.py`, `scripts/tests/test_backup_units.py`, a launcher test module | tests | changed or added | each part's |
+| `scripts/tests/test_caddy_render.py`, `scripts/tests/test_backup_units.py` | tests | changed | each part's |
 
 ## 5. What this does NOT do
 
 - It runs nothing on any host: the install, the unit's first start, the route's install, the
   bucket's creation and its access policy, and every cutover step are commands the seat records in
   #161 before any run.
-- It raises no share. The unit's entry waits on the owner's decision on a resize, which section 1's
-  measurement informs (#617).
+- It moves the share once, to the owner's decided 1152 MiB, and leaves no room in it: the next
+  long-running unit needs the share moved first, by ADR-064's record (#617).
 - The security review of the server, the browser's sync credential and the route before the server
   faces the internet is ADR-340's, with any host finding in #167.
 - The browser client's sync and the one-way upload's snapshot check (SPEC-334 R8, R9) are the app
@@ -131,9 +146,6 @@ A2: python3 -m unittest discover -s scripts/tests -p test_release_workflow.py -k
 
 | id | criterion | delivered by |
 |---|---|---|
-| A3 | the unit renders, carries the hardening set, equals its budget entry, and the share holds it | the unit's part, after the owner's decision on the share (#617) |
-| A4 | the unit's two credentials are in the socket form and no unit passes a user through its environment | the unit's part |
-| A5 | the launcher refuses a missing, empty or unhashed entry and execs the server with `PASSWORDS_HASHED` set | the unit's part |
 | A6 | the block renders with the route, the redirect, the stripped prefix, the hidden health route, the body bound and the buffer, and names the path | the route's part |
 | A7 | the snapshot holds each user's checked databases and media with their digests, and a failed check leaves the previous snapshots | the snapshot's part |
 | A8 | the drill restores the newest archive into a scratch directory, checks it and opens the collection, and fails on a corrupt archive | the snapshot's part |
