@@ -56,6 +56,44 @@ def phc(password, salt):
     return f"$pbkdf2-sha256$i={rounds},l=32${unpadded_b64(salt)}${unpadded_b64(digest)}"
 
 
+def shaped(name, rounds, salt, digest, length="32"):
+    """A user entry in the PHC form with every part chosen by the caller, so a shape the launcher
+    must refuse is built as plainly as one it admits; `length=None` leaves `l=` out."""
+    parameters = f"i={rounds}" + ("" if length is None else f",l={length}")
+    return f"{name}:$pbkdf2-sha256${parameters}${salt}${digest}"
+
+
+def launched(root, label, planted):
+    """The launcher's exit, standard output and standard error, run as its unit runs it over a
+    planted release under `root`, with the credentials `planted` names by id."""
+    release = root / "release"
+    script = release / "deploy" / "scripts" / "sync-server.sh"
+    if not script.exists():
+        script.parent.mkdir(parents=True)
+        (release / "bin").mkdir()
+        shutil.copy2(LAUNCHER, script)
+        server = release / "bin" / "anki-sync-server"
+        server.write_text(STUB, encoding="utf-8")
+        server.chmod(0o755)
+        (root / "state").mkdir()
+    credentials = root / "credentials" / label.replace(" ", "-").replace("'", "")
+    credentials.mkdir(parents=True)
+    for ident, entry in planted.items():
+        (credentials / ident).write_text(f"{entry}\n", encoding="utf-8")
+    done = subprocess.run(
+        [str(script)],
+        env={
+            "PATH": os.environ["PATH"],
+            "CREDENTIALS_DIRECTORY": str(credentials),
+            "STATE_DIRECTORY": str(root / "state"),
+            "DECKSTREAK_SYNC_SERVER_LISTEN": LISTEN,
+        },
+        capture_output=True,
+        text=True,
+    )
+    return done.returncode, done.stdout, done.stderr
+
+
 class TheLauncherStartsTheServerWithHashedUsers(unittest.TestCase):
     def test_the_launcher_refuses_a_bad_entry_and_execs_the_server_with_hashed_users(self):
         self.assertTrue(LAUNCHER.is_file(), f"no launcher at {LAUNCHER.relative_to(REPO)}")
@@ -220,6 +258,60 @@ class TheLauncherStartsTheServerWithHashedUsers(unittest.TestCase):
             for entry in planted.values():
                 if entry:
                     self.assertNotIn(entry.partition(":")[2] or entry, err, label)
+
+    def test_the_launcher_admits_only_the_house_hash_shape(self):
+        """SPEC-340 A12 (R10; ADR-351 D8): the house's shape is 600000 to 999999 rounds, an
+        optional `l=32`, a 16-byte salt and a 32-byte digest, each in canonical unpadded standard
+        base64. The launcher starts the server on that shape and refuses every departure."""
+        salt = os.urandom(16)
+        digest = hashlib.pbkdf2_hmac("sha256", b"scratch-owner", salt, 600_000, 32)
+        good_salt, good_digest = unpadded_b64(salt), unpadded_b64(digest)
+        staging = f"staging:{phc('scratch-staging', b'scratch-salt-two')}"
+        admitted = {
+            "the house's rounds and length": shaped("owner", 600000, good_salt, good_digest),
+            "no length": shaped("owner", 600000, good_salt, good_digest, None),
+            "the most rounds": shaped("owner", 999999, good_salt, good_digest),
+        }
+        refused = {
+            "rounds below the floor": shaped("owner", 599999, good_salt, good_digest),
+            "rounds above the ceiling": shaped("owner", 1000000, good_salt, good_digest),
+            "one round": shaped("owner", 1, good_salt, good_digest),
+            "a sixteen-byte digest": shaped(
+                "owner", 600000, good_salt, unpadded_b64(digest[:16]), "16"
+            ),
+            "a fifteen-byte salt": shaped("owner", 600000, unpadded_b64(salt[:15]), good_digest),
+            "a thirty-one-byte digest": shaped(
+                "owner", 600000, good_salt, unpadded_b64(digest[:31])
+            ),
+            "a salt not in canonical form": shaped(
+                "owner", 600000, good_salt[:-1] + "B", good_digest
+            ),
+            "a digest not in canonical form": shaped(
+                "owner", 600000, good_salt, good_digest[:-1] + "B"
+            ),
+        }
+        got = {}
+        with tempfile.TemporaryDirectory() as scratch:
+            root = Path(scratch)
+            for label in examined("hash shape case(s)", sorted({**admitted, **refused})):
+                entry = admitted.get(label) or refused[label]
+                got[label] = launched(root, label, {OWNER: entry, STAGING: staging})
+        for label, entry in refused.items():
+            code, out, err = got[label]
+            # Refused before the server runs, by name, and the hash it read is never printed.
+            self.assertEqual((code, out), (1, ""), label)
+            self.assertEqual(
+                err,
+                f"sync-server: the credential {OWNER} is not a user name and a pbkdf2-sha256 hash "
+                "of the house's shape\n",
+                label,
+            )
+            self.assertNotIn(entry.partition(":")[2], err, label)
+        for label, entry in admitted.items():
+            code, out, err = got[label]
+            self.assertEqual(code, 0, label)
+            self.assertIn(f"SYNC_USER1={entry}\n", out, label)
+            self.assertEqual(err, "", label)
 
 
 if __name__ == "__main__":
