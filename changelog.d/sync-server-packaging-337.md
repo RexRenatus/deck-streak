@@ -18,3 +18,10 @@
 - Tests that hold the unit's hardening, its budget entry, the share, its two credentials and the
   absence of any password hash in the tree, and that run the launcher over its starts and its
   refusals with the server stubbed, with mutation rows for each of its checks.
+- The sync server is served on the web app's origin under `/anki-sync/` (SPEC-337, ADR-347, #617):
+  the bare path redirects to the slash form, the prefix is stripped, the server's health route
+  answers 404 at the edge, the request body is bounded at the server's own payload limit and the
+  proxy reads with a larger buffer; render-caddy fills a fourth key, the sync server's loopback
+  upstream, checked as the API's is and refused under its own name.
+- Tests that render the block with the route and run render-caddy over the fourth key, with mutation
+  rows for the key, its check, the refusal's name and each line of the route.
