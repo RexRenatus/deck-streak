@@ -36,6 +36,9 @@ SERVER_READS = (
 STUB = "#!/bin/sh\n" + "".join(
     f'printf "{name}=%s\\n" "${{{name}-<unset>}}"\n' for name in SERVER_READS
 )
+# The launcher's refusal of an entry that is not a name and a hash of the house's shape (SPEC-340
+# R10).
+SHAPE = "is not a user name and a pbkdf2-sha256 hash of the house's shape"
 # The standard base64 alphabet. The PHC form spells its salt and its hash in it, without padding.
 B64_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 
@@ -132,27 +135,27 @@ class TheLauncherStartsTheServerWithHashedUsers(unittest.TestCase):
             "a plain password": (
                 {OWNER: "owner:scratch-owner", STAGING: staging},
                 {},
-                f"the credential {OWNER} is not a user name and a pbkdf2-sha256 hash",
+                f"the credential {OWNER} {SHAPE}",
             ),
             "no name": (
                 {OWNER: ":" + owner.partition(":")[2], STAGING: staging},
                 {},
-                f"the credential {OWNER} is not a user name and a pbkdf2-sha256 hash",
+                f"the credential {OWNER} {SHAPE}",
             ),
             "a name that leaves the data directory": (
                 {OWNER: "../owner" + owner[len("owner") :], STAGING: staging},
                 {},
-                f"the credential {OWNER} is not a user name and a pbkdf2-sha256 hash",
+                f"the credential {OWNER} {SHAPE}",
             ),
             "a hash of another scheme": (
                 {OWNER: owner.replace("$pbkdf2-sha256$", "$argon2id$"), STAGING: staging},
                 {},
-                f"the credential {OWNER} is not a user name and a pbkdf2-sha256 hash",
+                f"the credential {OWNER} {SHAPE}",
             ),
             "a hash with no salt": (
                 {OWNER: owner.rsplit("$", 2)[0] + "$" + owner.rsplit("$", 1)[1], STAGING: staging},
                 {},
-                f"the credential {OWNER} is not a user name and a pbkdf2-sha256 hash",
+                f"the credential {OWNER} {SHAPE}",
             ),
             "one name twice": (
                 {OWNER: owner, STAGING: "owner" + staging[len("staging") :]},
@@ -300,12 +303,7 @@ class TheLauncherStartsTheServerWithHashedUsers(unittest.TestCase):
             code, out, err = got[label]
             # Refused before the server runs, by name, and the hash it read is never printed.
             self.assertEqual((code, out), (1, ""), label)
-            self.assertEqual(
-                err,
-                f"sync-server: the credential {OWNER} is not a user name and a pbkdf2-sha256 hash "
-                "of the house's shape\n",
-                label,
-            )
+            self.assertEqual(err, f"sync-server: the credential {OWNER} {SHAPE}\n", label)
             self.assertNotIn(entry.partition(":")[2], err, label)
         for label, entry in admitted.items():
             code, out, err = got[label]
