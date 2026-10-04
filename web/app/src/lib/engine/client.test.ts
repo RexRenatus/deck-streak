@@ -79,4 +79,17 @@ describe('EngineClient', () => {
     port.reply({ id: 1, ok: false, code: 'engine-failed', message: 'late' });
     expect(client.waiting).toBe(0);
   });
+
+  it('memory asks for the linear memory and resolves to its bytes', async () => {
+    // SPEC-338 A18: the page reads the Worker's memory through its own request
+    const port = new FakePort();
+    const client = new EngineClient(port);
+    const memory = client.memory();
+
+    expect(port.sent).toEqual([{ id: 1, op: 'memory' }]);
+    expect(client.waiting).toBe(1);
+    port.reply({ id: 1, ok: true, value: 37683200 });
+    await expect(memory).resolves.toBe(37683200);
+    expect(client.waiting).toBe(0);
+  });
 });
