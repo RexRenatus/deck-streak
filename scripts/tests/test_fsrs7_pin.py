@@ -9,8 +9,9 @@ The lockfile holds exactly two packages of the upstream scheduler crate, `fsrs`:
   depends on (`fsrs7`).
 
 The two share a name and a version string, so cargo writes a dependency on either as
-`name version (source)`. A dependency on a package whose name is unique is written `name`, and one
-whose name is shared by versions `name version`. All three forms are read.
+`name version (source)`, where a git source is written without the `#<commit>` fragment that the
+package's own `source` line ends with. A dependency on a package whose name is unique is written
+`name`, and one whose name is shared by versions `name version`. All three forms are read.
 """
 
 import re
@@ -57,6 +58,11 @@ def manifest_findings(manifest):
     return found, entry["rev"]
 
 
+def referenced(source):
+    """A package's source as a dependency string writes it: a git source loses its `#<commit>`."""
+    return source.split("#", 1)[0] if source is not None else None
+
+
 def resolved(dependency, packages):
     """The one package a lockfile dependency string names, or None."""
     spelled = DEPENDENCY.match(dependency)
@@ -67,7 +73,7 @@ def resolved(dependency, packages):
         for package in packages
         if package["name"] == spelled["name"]
         and spelled["version"] in (None, package.get("version"))
-        and spelled["source"] in (None, package.get("source"))
+        and spelled["source"] in (None, referenced(package.get("source")))
     ]
     return matches[0] if len(matches) == 1 else None
 
@@ -144,7 +150,12 @@ def pinned_source(rev=PLANTED_REV):
     return f"git+{FSRS_RS}?rev={rev}#{rev}"
 
 
-PINNED = f"fsrs 6.6.2 ({pinned_source()})"
+def pinned_reference(rev=PLANTED_REV):
+    """A dependency on the pinned package, spelled as cargo writes it."""
+    return f"fsrs 6.6.2 ({referenced(pinned_source(rev))})"
+
+
+PINNED = pinned_reference()
 
 
 def planted_manifest(entry=None):
@@ -225,7 +236,7 @@ class EachResolvesItsOwnScheduler(unittest.TestCase):
                 planted_lock(
                     {
                         "anki": [RELEASED],
-                        CRATE: [f"fsrs 6.6.2 ({pinned_source(PLANTED_OTHER)})", RELEASED],
+                        CRATE: [pinned_reference(PLANTED_OTHER), RELEASED],
                     },
                     pinned=pinned_source(PLANTED_OTHER),
                 ),
