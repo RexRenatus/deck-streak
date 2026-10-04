@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import config from '../../svelte.config.js';
+import { PAGE_FRAME_SRC } from './card/policy.js';
 
 // SPEC-028 R1, R14, A13; ADR-007. SvelteKit writes the page's policy into a meta element at build
 // and adds a sha256 hash for each inline script it generates (kit.csp in hash mode), so the only
@@ -27,7 +28,8 @@ describe('the page policy', () => {
       'script-src': ['self', TELEGRAM],
       'object-src': ['none'],
       'base-uri': ['self'],
-      'connect-src': ['self']
+      'connect-src': ['self'],
+      'frame-src': ['none']
     });
     // the page shell runs one script, Telegram's, by its URL: nothing is inlined into it
     const scripts = [...SHELL.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)].map(
@@ -53,5 +55,24 @@ describe('the page policy', () => {
 
     expect(policy).toBeGreaterThan(-1);
     expect(policy).toBeLessThan(telegram);
+  });
+
+  it('the page policy lets no frame navigate', () => {
+    // SPEC-341 R5, A2 (SEC01-F13). A frame's own navigation, one the card frame starts itself
+    // included, is checked against the embedding page's frame-src, so 'none' holds every frame to
+    // the srcdoc document it was given; the value is the card module's, which the card harness
+    // serves too.
+    const directives = config.kit?.csp?.directives;
+
+    expect(directives?.['frame-src']).toEqual(['none']);
+    expect(directives?.['frame-src']).toBe(PAGE_FRAME_SRC);
+    // and the card frame adds no other directive to the page policy
+    expect(Object.keys(directives ?? {}).sort()).toEqual([
+      'base-uri',
+      'connect-src',
+      'frame-src',
+      'object-src',
+      'script-src'
+    ]);
   });
 });
