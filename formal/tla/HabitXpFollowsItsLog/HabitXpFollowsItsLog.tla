@@ -9,6 +9,7 @@
 \* @phx covers crates/coordination/src/habits/writing.rs anchor=confirm digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
 \* @phx covers crates/coordination/src/habits/writing.rs anchor=clear digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
 \* @phx covers crates/coordination/src/habits/writing.rs anchor=toggle digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers crates/coordination/src/habits/writing.rs anchor=write_day digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
 \* @phx covers crates/coordination/src/recompute/writing.rs anchor=evaluate digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
 \* @phx covers crates/habits/src/writing.rs anchor=all_confirmed_days digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
 \* @phx cites #93, #94
@@ -87,6 +88,10 @@
 \* rejected early-read design). A chip carries the day it was drawn for (hb:w:<code>:<epoch day>):
 \* Draw is the bot drawing today's chips, Tap a press on one, and the toggle refuses a chip whose
 \* day is not today and answers with today's chips.
+\* - confirm, clear and toggle each make their change through habits/writing.rs::write_day, the one
+\*   helper that writes the confirmation and settles every writing course and write:all in one
+\*   write; a /write naming two courses is two Toggles with no step between them, a state the
+\*   model reaches.
 \* - habits/src/writing.rs::all_confirmed_days returns no day over an empty writing set, so write:all
 \*   is WAll: the bonus only when WCourses is not empty and every course in it is confirmed.
 \* - The write: rows carry no closed flag here. A row is held closed only by a settle on a day
