@@ -95,6 +95,31 @@ def load_gate():
     return module
 
 
+def call_measure(function, tool, path):
+    """One of the gate's measuring functions, called in its own process so a tool's output that
+    reaches the process's own stdout cannot reach the test runner's. Its last line is the figure,
+    or VOID when the gate refused."""
+    program = (
+        "import importlib.util, sys\n"
+        "spec = importlib.util.spec_from_file_location('web_engine_size', sys.argv[1])\n"
+        "gate = importlib.util.module_from_spec(spec)\n"
+        "spec.loader.exec_module(gate)\n"
+        "from pathlib import Path\n"
+        "try:\n"
+        "    figure = getattr(gate, sys.argv[2])(sys.argv[3], Path(sys.argv[4]))\n"
+        "except gate.Void:\n"
+        "    figure = 'VOID'\n"
+        "sys.stdout.flush()\n"
+        "sys.stdout.write('\\n' + str(figure) + '\\n')\n"
+    )
+    done = subprocess.run(
+        [sys.executable, "-c", program, str(GATE), function, str(tool), str(path)],
+        capture_output=True,
+        check=False,
+    )
+    return done.stdout.decode("utf-8", "replace").strip().split("\n")[-1]
+
+
 class TheSizeGate(unittest.TestCase):
     def test_a_module_over_the_budget_fails_the_gate(self):
         # Each file is under the budget alone; together they are over it.
@@ -170,7 +195,6 @@ class TheSizeGate(unittest.TestCase):
             sys.dont_write_bytecode = before
 
     def test_a_compressor_that_fails_or_prints_nothing_is_void(self):
-        gate = load_gate()
         with tempfile.TemporaryDirectory() as tmp:
             planted = Path(tmp) / "planted"
             planted.write_bytes(SMALL_BINDINGS)
@@ -181,14 +205,13 @@ class TheSizeGate(unittest.TestCase):
                 fake = Path(tmp) / f"fake-{code}"
                 fake.write_text(f"#!/bin/sh\nprintf '%s' '{output}'\nexit {code}\n")
                 fake.chmod(0o700)
-                with self.assertRaises(gate.Void, msg=f"gzip {why}"):
-                    gate.gzip_size(str(fake), planted)
+                self.assertEqual(call_measure("gzip_size", fake, planted), "VOID", f"gzip {why}")
                 if output:
-                    with self.assertRaises(gate.Void, msg=f"node {why}"):
-                        gate.brotli_size(str(fake), planted)
+                    self.assertEqual(
+                        call_measure("brotli_size", fake, planted), "VOID", f"node {why}"
+                    )
 
     def test_a_brotli_figure_is_read_as_text(self):
-        gate = load_gate()
         with tempfile.TemporaryDirectory() as tmp:
             planted = Path(tmp) / "planted"
             planted.write_bytes(SMALL_BINDINGS)
@@ -196,7 +219,7 @@ class TheSizeGate(unittest.TestCase):
             # The Arabic-Indic digit three: a digit as text, and no digit as bytes.
             fake.write_text("#!/bin/sh\nprintf '\\331\\243'\n")
             fake.chmod(0o700)
-            self.assertEqual(gate.brotli_size(str(fake), planted), 3)
+            self.assertEqual(call_measure("brotli_size", fake, planted), "3")
 
     def test_the_command_line_names_itself_and_requires_both_files(self):
         helped = subprocess.run(
