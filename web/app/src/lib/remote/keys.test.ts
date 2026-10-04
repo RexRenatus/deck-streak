@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { resolve, type Action, type Side } from './actions';
+import { resolve, sideAfter, type Action, type Side } from './actions';
 import { readKey, type KeyInput } from './keys';
 
 // SPEC-343 R13, R14, A26, A27: Anki's desktop keys fire their actions, a mapped key's default
@@ -91,5 +91,27 @@ describe('the key reader', () => {
       expect(fire(keydown(key), 'question'), `${key} on the question side`).toBeNull();
     }
     expect(fire(keydown('1', { ctrlKey: true }), 'question')).toBeNull();
+  });
+
+  // MUTATION COVERAGE (R14): green when written. Show answer moves the review to the answer side,
+  // each grade back to the question side, and every other action, or nothing, leaves the side.
+  it('the side moves by the action that fired', () => {
+    const MOVES: [Action | null, Side, Side][] = [
+      ['show-answer', 'question', 'answer'],
+      ['again', 'answer', 'question'],
+      ['hard', 'answer', 'question'],
+      ['good', 'answer', 'question'],
+      ['easy', 'answer', 'question'],
+      ['undo', 'answer', 'answer'],
+      ['bury', 'answer', 'answer'],
+      ['flag', 'answer', 'answer'],
+      ['replay', 'answer', 'answer'],
+      [null, 'answer', 'answer'],
+      [null, 'question', 'question']
+    ];
+    for (const [action, side, after] of MOVES) {
+      expect(sideAfter(action, side), `${String(action)} on the ${side} side`).toBe(after);
+    }
+    console.log(`examined ${MOVES.length} moves`);
   });
 });

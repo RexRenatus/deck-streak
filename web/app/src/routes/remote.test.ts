@@ -41,23 +41,29 @@ class FakeSentinel {
 
 class FakeWakeLock {
   requests = 0;
-  #pending: ((sentinel: FakeSentinel) => void)[] = [];
+  #pending: { resolve: (sentinel: FakeSentinel) => void; reject: (error: unknown) => void }[] = [];
 
   request(_type: 'screen'): Promise<FakeSentinel> {
     this.requests += 1;
-    return new Promise((resolve) => this.#pending.push(resolve));
+    return new Promise((resolve, reject) => this.#pending.push({ resolve, reject }));
   }
 
   grant(): FakeSentinel {
     const sentinel = new FakeSentinel();
-    this.#pending.shift()?.(sentinel);
+    this.#pending.shift()?.resolve(sentinel);
     return sentinel;
+  }
+
+  deny(name: string): void {
+    this.#pending.shift()?.reject(new DOMException('synthetic refusal', name));
   }
 }
 
 let gamepads: FakePad[] = [];
 let visibility: DocumentVisibilityState = 'visible';
 let frames: FrameRequestCallback[] = [];
+let frameIds = 0;
+let cancelled: number[] = [];
 let lock: FakeWakeLock;
 
 /** Runs the animation frame the screen asked for, then lets Svelte update the page. */
@@ -87,9 +93,15 @@ beforeEach(() => {
   gamepads = [];
   visibility = 'visible';
   frames = [];
+  frameIds = 0;
+  cancelled = [];
   lock = new FakeWakeLock();
-  vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => frames.push(callback));
-  vi.stubGlobal('cancelAnimationFrame', () => undefined);
+  vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
+    frames.push(callback);
+    frameIds += 1;
+    return frameIds;
+  });
+  vi.stubGlobal('cancelAnimationFrame', (id: number) => cancelled.push(id));
   vi.spyOn(performance, 'now').mockReturnValue(1234.4);
   Object.defineProperty(navigator, 'getGamepads', { configurable: true, value: () => gamepads });
   Object.defineProperty(navigator, 'wakeLock', { configurable: true, value: lock });
@@ -153,5 +165,96 @@ describe('the remote harness', () => {
     }
     const rows = logRows();
     expect([rows.length, rows[0][2], rows[199][2]]).toEqual([200, '"x" Synthetic249', '"x" Synthetic50']);
+  });
+
+  // MUTATION COVERAGE: green when written, after the screen. Each holds a branch of the screen that
+  // A33 does not examine: what each source logs and when a frame logs nothing, a disconnect's own
+  // effects, the refusal's name, the condition's gamepad part, and what closing the screen undoes.
+
+  it('each source logs its raw input, and a frame that changed nothing logs nothing', async () => {
+    render(Remote);
+    const remote = pad(1, 'synthetic pad', 'standard');
+    gamepads = [null as unknown as FakePad, remote];
+    window.dispatchEvent(Object.assign(new Event('gamepadconnected'), { gamepad: remote }));
+    runFrame();
+    runFrame();
+    remote.buttons[0].pressed = true;
+    remote.buttons[2].pressed = true;
+    runFrame();
+    runFrame();
+    remote.buttons[0].pressed = false;
+    remote.buttons[2].pressed = false;
+    runFrame();
+    await fireEvent.click(screen.getByRole('button', { name: 'Open the review' }));
+    expect(screen.getByRole('button', { name: 'Close the review' })).toBeTruthy();
+    visibility = 'hidden';
+    document.dispatchEvent(new Event('visibilitychange'));
+    window.dispatchEvent(Object.assign(new Event('gamepaddisconnected'), { gamepad: remote }));
+    flushSync();
+
+    // oldest first: source, raw input, action, visibility, lock
+    expect(logRows().map((row) => row.slice(1)).reverse()).toEqual([
+      ['visibility', 'visible', '', 'visible', 'off'],
+      ['connection', 'connected 1', '', 'visible', 'off'],
+      ['gamepad', '[]', '', 'visible', 'off'],
+      ['gamepad', '[0 2]', 'show-answer', 'visible', 'off'],
+      ['gamepad', '[0 2]', 'replay', 'visible', 'off'],
+      ['gamepad', '[]', '', 'visible', 'off'],
+      ['review', 'true', '', 'visible', 'off'],
+      ['lock', 'requesting', '', 'visible', 'requesting'],
+      ['visibility', 'hidden', '', 'hidden', 'requesting'],
+      ['lock', 'cancelling', '', 'hidden', 'cancelling'],
+      ['connection', 'disconnected 1', '', 'hidden', 'cancelling']
+    ]);
+  });
+
+  it('a disconnect drops its gamepad at once, and its return is a new baseline', async () => {
+    render(Remote);
+    const first = pad(0, 'synthetic first', 'standard');
+    const second = pad(1, 'synthetic second', 'standard');
+    gamepads = [first, second];
+    runFrame();
+    await fireEvent.click(screen.getByRole('button', { name: 'Open the review' }));
+    const sentinel = lock.grant();
+    await waitFor(() => expect(shown('Wake lock')).toBe('held'));
+
+    window.dispatchEvent(Object.assign(new Event('gamepaddisconnected'), { gamepad: second }));
+    flushSync();
+    expect([shown('Gamepad'), shown('Wake lock')]).toEqual(['synthetic first', 'held']);
+
+    window.dispatchEvent(Object.assign(new Event('gamepaddisconnected'), { gamepad: first }));
+    flushSync();
+    expect([shown('Gamepad'), shown('Wake lock'), sentinel.released]).toEqual([null, 'off', 1]);
+    expect(screen.getByText('No gamepad yet. Press a button on it to connect it.')).toBeTruthy();
+
+    // the browser still names the first gamepad, its button already down: a baseline fires nothing
+    first.buttons[0].pressed = true;
+    gamepads = [first];
+    runFrame();
+    expect([shown('Gamepad'), shown('Side')]).toEqual(['synthetic first', 'question']);
+  });
+
+  it('a refusal shows its name, the lock waits for a gamepad, and closing the screen releases it', async () => {
+    const { unmount } = render(Remote);
+    expect(shown('Refusal')).toBe('None');
+    await fireEvent.click(screen.getByRole('button', { name: 'Open the review' }));
+    expect([lock.requests, shown('Wake lock')]).toEqual([0, 'off']);
+
+    gamepads = [pad(0, 'synthetic remote', 'standard')];
+    runFrame();
+    expect([lock.requests, shown('Wake lock')]).toEqual([1, 'requesting']);
+    lock.deny('NotAllowedError');
+    await waitFor(() => expect(shown('Wake lock')).toBe('refused'));
+    expect(shown('Refusal')).toBe('NotAllowedError');
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Close the review' }));
+    await fireEvent.click(screen.getByRole('button', { name: 'Open the review' }));
+    expect(lock.requests).toBe(2);
+    const sentinel = lock.grant();
+    await waitFor(() => expect(shown('Wake lock')).toBe('held'));
+
+    const pending = frameIds;
+    unmount();
+    expect([sentinel.released, cancelled]).toEqual([1, [pending]]);
   });
 });
