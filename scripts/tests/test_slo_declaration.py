@@ -168,5 +168,71 @@ class TheApiSloBurnsAsDeclared(unittest.TestCase):
         self.assertIn("owner", policy["escalation"])
 
 
+MCP_UNIT = "deck-streak-mcp.service"
+
+
+def mcp_slo(body):
+    """The one SLO over the MCP server's unit."""
+    slos = examined("SLO(s) declared", body["slos"])
+    found = [slo for slo in slos if slo["unit"] == MCP_UNIT]
+    if len(found) != 1:
+        raise AssertionError(f"{len(found)} SLO(s) over {MCP_UNIT}, not one")
+    return found[0]
+
+
+class TheMcpSloBurnsAsDeclared(unittest.TestCase):
+    def test_the_mcp_slo_counts_the_same_response_events_as_the_api(self):
+        body = declaration()
+        slo = mcp_slo(body)
+        self.assertEqual(slo["id"], "mcp-availability")
+        self.assertEqual(slo["sli"], api_slo(body)["sli"])
+        self.assertEqual((slo["objective"], slo["window_days"]), (0.95, 28))
+        self.assertEqual(slo["expected_events_per_hour"], 1)
+        self.assertTrue(slo["rationale"].strip())
+
+    def test_the_mcp_slo_pages_and_tickets_to_telegram_with_exact_burn_rates(self):
+        slo = mcp_slo(declaration())
+        alerts = examined("alert(s) of the MCP SLO", slo["alerts"])
+        self.assertEqual(burn_refusals(slo), [])
+        declared = {
+            alert["severity"]: (
+                alert["long_window"],
+                alert["short_window"],
+                alert["budget_consumed"],
+                alert["burn_rate"],
+                alert["route"],
+            )
+            for alert in alerts
+        }
+        self.assertEqual(
+            declared,
+            {
+                "page": ("6h", "30m", 0.05, 5.6, "telegram"),
+                "ticket": ("3d", "6h", 0.1, 0.9333, "telegram"),
+            },
+        )
+
+    def test_one_failed_call_cannot_page_at_the_expected_traffic(self):
+        slo = mcp_slo(declaration())
+        page = next(alert for alert in slo["alerts"] if alert["severity"] == "page")
+        budget = 1 - exact(slo["objective"])
+        # Events the page's long window holds, against the count below which one failure pages.
+        held = exact(slo["expected_events_per_hour"]) * hours(page["long_window"])
+        needed = 1 / (exact(page["burn_rate"]) * budget)
+        self.assertGreaterEqual(held, needed, f"{held} events held, {float(needed):.2f} needed")
+
+
+class EverySloIsDeclaredAgainstAShippedUnit(unittest.TestCase):
+    def test_every_slo_names_a_shipped_unit_and_burns_as_declared(self):
+        shipped = {path.name for path in SYSTEMD.iterdir()}
+        slos = examined("SLO(s) declared", declaration()["slos"])
+        self.assertEqual([slo["unit"] for slo in slos if slo["unit"] not in shipped], [])
+        # Both daemons that answer requests are among them.
+        self.assertTrue({API_UNIT, MCP_UNIT} <= {slo["unit"] for slo in slos})
+        for slo in slos:
+            examined(f"alert(s) of {slo['id']}", slo["alerts"])
+            self.assertEqual(burn_refusals(slo), [], slo["id"])
+
+
 if __name__ == "__main__":
     unittest.main()

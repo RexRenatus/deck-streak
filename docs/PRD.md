@@ -51,3 +51,15 @@ SPEC-001 lists every requirement, and the per-wave SPECs carry each one's accept
 
 - The owned domain for the landing page and the Mini App (OWNER-SETUP).
 - The owner's decisions on the predecessor's inert features, one issue each.
+
+## Amendments
+
+Amendment (the app-surfaces ruling): the third non-goal is amended by the owner's signed ruling
+`docs/rulings/OWNER-RULING-2026-10-04-app-surfaces.md`, and ADR-338 and ADR-339 carry it, since it
+names the stock scheduler's output. The non-goal's text above is kept as it was. The ruling words
+what replaces it:
+
+> **PRD non-goal 3** reads: "Any countdown, exam date or forward-looking timeline on DeckStreak's
+> game, public or AI surfaces." The study client shows the stock scheduler's output as Anki does:
+> the next interval on the answer buttons, a card's due date, the browser's Due column and the
+> future-due forecast. Charter 12 is unchanged.
