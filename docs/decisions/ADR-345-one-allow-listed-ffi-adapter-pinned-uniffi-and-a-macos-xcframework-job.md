@@ -79,13 +79,13 @@ member that declares a feature because it compiled none, judges the adapter's `b
 - D5, the mutation run given `--features bindgen` - lost: a change to the shared mutation
   configuration for one binary's mutant, and every crate's mutation run would build under a
   feature only this adapter declares.
-- D6, the census compiles every combination of the members' features, with each member's default
-  off unless the combination holds it, reads the graph with every feature on, and refuses a
-  feature another package turns on and a fourth feature - chosen, because every build a member's
-  features allow is then compiled in some pass, so a call under a feature, under its absence or
-  under any mix is refused for the call, and the adapter is admitted only after its code under
-  `bindgen` is compiled and found clean. It lives in progression's test because the invariant is
-  progression's, and it adds no dependency edge.
+- D6, the census compiles every combination of the members' features - chosen, because every build
+  a member's features allow is then compiled in some pass: it reads the graph with every feature
+  on, compiles each combination with each member's default off unless the combination holds it,
+  and refuses a feature another package turns on and a fourth feature, so a call under a feature,
+  under its absence or under any mix is refused for the call, and the adapter is admitted only
+  after its code under `bindgen` is compiled and found clean. It lives in progression's test
+  because the invariant is progression's, and it adds no dependency edge.
 - D6, admitting the adapter by name - lost: the census would carry another context's name and
   skip whatever code that crate holds under a feature, a weakening for every later change to it.
 - D6, dropping the adapter's `bindgen` feature - lost: D3 and D5 rest on it, and the generator
