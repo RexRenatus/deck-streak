@@ -1,0 +1,29 @@
+[package]
+name = "deck-streak-ffi"
+description = "DeckStreak's FFI adapter: the engine's allow-listed backend for a native client. See docs/CONTEXT-MAP.md."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# ADR-022 and ADR-058: Anki's engine, whose protobuf backend this adapter puts behind its allow-list
+# (SPEC-336 R1). It depends on nothing else of DeckStreak's (ADR-345 D1).
+anki.workspace = true
+# ADR-345 D2: the bindings generator's runtime and macros, pinned exactly.
+uniffi.workspace = true
+
+[features]
+# ADR-345 D3: the Swift bindings generator, built only by the XCFramework workflow; a workspace
+# build without the feature compiles none of it.
+bindgen = ["uniffi/cli", "uniffi/cargo-metadata"]
+
+[[bin]]
+name = "uniffi-bindgen-swift"
+path = "src/bin/uniffi-bindgen-swift.rs"
+required-features = ["bindgen"]
