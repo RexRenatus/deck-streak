@@ -227,6 +227,8 @@ class EverySloIsDeclaredAgainstAShippedUnit(unittest.TestCase):
         shipped = {path.name for path in SYSTEMD.iterdir()}
         slos = examined("SLO(s) declared", declaration()["slos"])
         self.assertEqual([slo["unit"] for slo in slos if slo["unit"] not in shipped], [])
+        # Both daemons that answer requests are among them.
+        self.assertTrue({API_UNIT, MCP_UNIT} <= {slo["unit"] for slo in slos})
         for slo in slos:
             examined(f"alert(s) of {slo['id']}", slo["alerts"])
             self.assertEqual(burn_refusals(slo), [], slo["id"])
