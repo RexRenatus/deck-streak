@@ -164,8 +164,13 @@ phase 7 gains a second awarding step. Each choice below names the option it beat
 - The badge context of the evaluated day, chosen because a settle that catches up an owed day judges
   it by its own week.
 - The wall clock's today, rejected because a catch-up settle would judge an owed day by a later week.
-- Named reply methods `Commands::write` and `Commands::unwrite` with census entries, chosen because
-  the one-router census names every reply method, and the admission is recorded once.
+- Named reply methods `Commands::confirm_writing` and `Commands::clear_writing` with census entries,
+  answering the commands `/write` and `/unwrite`, chosen because the one-router census names every
+  reply method, and the admission is recorded once.
+- Reply methods named `write` and `unwrite`, rejected because the census counts every `.write(` in
+  the handler's module as a call of the reply, so the capture download's stream write in
+  `Commands::save_media` would read as an unnamed caller, and naming that caller would be a false
+  edge.
 - Replies built inside `on_message`, rejected because the census could not name them by method.
 - A chip tap answered with a new message, chosen because the edit the bot has carries no keyboard.
 - An in-place edit of the checklist, rejected for this part and filed as its own successor (#601).

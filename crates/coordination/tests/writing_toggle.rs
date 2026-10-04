@@ -9,7 +9,7 @@
 
 use std::collections::BTreeMap;
 
-use deck_streak_coordination::habits::writing::toggle;
+use deck_streak_coordination::habits::writing::{clear, confirm, toggle};
 use deck_streak_coordination::habits::{Checklist, ChecklistLine, HabitWriter, Written};
 use deck_streak_coordination::recompute::habits::HabitsStep;
 use deck_streak_coordination::recompute::writing::WritingStep;
@@ -291,4 +291,128 @@ async fn the_writing_step_settles_each_days_writing_from_its_log() {
         amounts(&db, MONDAY).await.is_empty(),
         "a day with no confirmation holds no writing XP"
     );
+}
+
+/// Every `write:` row settled on `day`, as source, amount and whether its day was closed when it
+/// was settled, by source.
+async fn closed_write_rows(db: &Db, day: i64) -> Vec<(String, u32, bool)> {
+    let mut write = db.write().await.expect("a write");
+    let mut rows: Vec<(String, u32, bool)> =
+        settled_of_day(&mut write, StudyDay::from_epoch_day(day))
+            .await
+            .expect("the settled rows read")
+            .into_iter()
+            .filter(|row| row.source.starts_with("write:"))
+            .map(|row| (row.source, row.amount, row.closed))
+            .collect();
+    rows.sort();
+    rows
+}
+
+#[tokio::test]
+async fn the_writing_step_settles_a_past_day_closed_and_today_open() {
+    let scratch = TempDir::new().expect("a scratch directory");
+    let db = database(&scratch).await;
+    plant_confirmation(&db, "qab", MONDAY - 1).await;
+    plant_confirmation(&db, "qab", MONDAY).await;
+    recompute(&db, noon(MONDAY)).await;
+    assert_eq!(
+        closed_write_rows(&db, MONDAY - 1).await,
+        [
+            ("write:all".to_owned(), 100, true),
+            ("write:qab".to_owned(), 75, true),
+        ],
+        "Sunday is settled closed"
+    );
+    assert_eq!(
+        closed_write_rows(&db, MONDAY).await,
+        [
+            ("write:all".to_owned(), 100, false),
+            ("write:qab".to_owned(), 75, false),
+        ],
+        "the current Monday is settled open"
+    );
+}
+
+#[tokio::test]
+async fn confirm_and_clear_write_only_a_writing_course() {
+    let scratch = TempDir::new().expect("a scratch directory");
+    let db = database(&scratch).await;
+    let now = noon(MONDAY);
+
+    let reading = confirm(&writer(&db, now), &courses(), &["b", "a"]).await;
+    assert!(
+        matches!(reading, Ok(Written::NotAWritingCourse)),
+        "a reading-only course refuses the whole confirmation: {reading:?}"
+    );
+    assert!(confirmations(&db).await.is_empty(), "nothing was confirmed");
+    assert!(amounts(&db, MONDAY).await.is_empty(), "nothing was settled");
+
+    let confirmed = confirm(&writer(&db, now), &courses(), &["b"]).await;
+    assert!(
+        matches!(&confirmed, Ok(Written::Done(checklist)) if *checklist == qab_checklist(MONDAY, true)),
+        "{confirmed:?}"
+    );
+    assert_eq!(confirmations(&db).await, [("qab".to_owned(), MONDAY)]);
+    assert_eq!(amounts(&db, MONDAY).await, confirmed_day());
+
+    let refused = clear(&writer(&db, now), &courses(), "qaa").await;
+    assert!(
+        matches!(refused, Ok(Written::NotAWritingCourse)),
+        "a reading-only course clears nothing: {refused:?}"
+    );
+    assert_eq!(
+        amounts(&db, MONDAY).await,
+        confirmed_day(),
+        "the day still holds its XP"
+    );
+
+    let cleared = clear(&writer(&db, now), &courses(), "qab").await;
+    assert!(
+        matches!(&cleared, Ok(Written::Done(checklist)) if *checklist == qab_checklist(MONDAY, false)),
+        "{cleared:?}"
+    );
+    assert!(
+        confirmations(&db).await.is_empty(),
+        "the confirmation is cleared"
+    );
+    assert!(
+        amounts(&db, MONDAY).await.is_empty(),
+        "the day's writing XP is gone"
+    );
+}
+
+#[tokio::test]
+async fn every_writing_write_answers_no_writing_course_without_one() {
+    let scratch = TempDir::new().expect("a scratch directory");
+    let db = database(&scratch).await;
+    let now = noon(MONDAY);
+    let none = Courses::default();
+    let confirmed = confirm(&writer(&db, now), &none, &["qab"]).await;
+    let cleared = clear(&writer(&db, now), &none, "qab").await;
+    let toggled = toggle(
+        &writer(&db, now),
+        &none,
+        code("qab"),
+        StudyDay::from_epoch_day(MONDAY),
+    )
+    .await;
+    assert!(
+        matches!(confirmed, Ok(Written::NoWritingCourse))
+            && matches!(cleared, Ok(Written::NoWritingCourse))
+            && matches!(toggled, Ok(Written::NoWritingCourse)),
+        "{confirmed:?} {cleared:?} {toggled:?}"
+    );
+    let reading = toggle(
+        &writer(&db, now),
+        &courses(),
+        code("qaa"),
+        StudyDay::from_epoch_day(MONDAY),
+    )
+    .await;
+    assert!(
+        matches!(reading, Ok(Written::NotAWritingCourse)),
+        "a reading-only chip toggles nothing: {reading:?}"
+    );
+    assert!(confirmations(&db).await.is_empty(), "nothing was confirmed");
 }

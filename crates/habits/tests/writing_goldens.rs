@@ -10,10 +10,10 @@
 mod golden;
 
 use deck_streak_habits::writing::{
-    WRITE_ALL_SOURCE, all_confirmed_days, course_streaks, write_source, writing_day_xp,
-    writing_streak,
+    WRITE_ALL_SOURCE, all_confirmed_days, course_streaks, write_source, writing_courses,
+    writing_day_xp, writing_streak,
 };
-use deck_streak_kernel::{CourseCode, StudyDay};
+use deck_streak_kernel::{CourseCode, Courses, StudyDay};
 use serde_json::{Value, json};
 
 /// The study day every writing XP case is read on.
@@ -121,5 +121,30 @@ fn no_writing_xp_is_settled_without_a_writing_course() {
     assert!(
         course_streaks(&[], &rows, day).is_empty(),
         "no course has a streak"
+    );
+}
+
+#[test]
+fn the_writing_courses_are_the_configured_courses_marked_writing() {
+    // Three synthetic courses: the first reads only, the other two write, in the file's order.
+    let courses = Courses::parse(
+        r#"{"schema": "deckstreak.courses.v1", "courses": [
+            {"code": "qac", "name": "Course Qac", "flag": "F", "deck_root": "Qac", "alias": "c",
+             "writing": true, "unit_bands": {}},
+            {"code": "qaa", "name": "Course Qaa", "flag": "F", "deck_root": "Qaa", "alias": "a",
+             "writing": false, "unit_bands": {}},
+            {"code": "qab", "name": "Course Qab", "flag": "F", "deck_root": "Qab", "alias": "b",
+             "writing": true, "unit_bands": {}}
+        ], "focus_subjects": []}"#,
+    )
+    .expect("the synthetic courses parse");
+    assert_eq!(
+        writing_courses(&courses),
+        [code("qac"), code("qab")],
+        "the writing courses, in the file's order, without the reading-only course"
+    );
+    assert!(
+        writing_courses(&Courses::default()).is_empty(),
+        "no course configured, no writing course"
     );
 }

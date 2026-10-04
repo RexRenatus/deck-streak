@@ -714,11 +714,13 @@ recorded here, insert-only.
 - **T26** (the goldens the bot sends). `commands::every_golden_message_is_what_the_bot_sends`
   renders the seven writing replies beside the minutes log's.
 - **T27** (the one-router census). `crates/notifications/tests/one_router.rs`'s `COMMAND_REPLIES`
-  holds 23, where it held 21: it gains `write` and `unwrite`. The pull request's weakening table
-  records this admission once, under ruling 104 Q-8, in ruling 98's shape.
+  holds 23, where it held 21: it gains `confirm_writing` and `clear_writing`, the reply methods of
+  `/write` and `/unwrite`. The pull request's weakening table records this admission once, under
+  ruling 104 Q-8, in ruling 98's shape.
 - **T28** (the one-router census). `COMMAND_CALLERS` holds 43, where it held 39: it gains
-  `Commands::on_message` to `write` and to `unwrite`, and each of `Commands::write` and
-  `Commands::unwrite` to `send`. A chip tap is answered inside `habit_callback`, which already sends.
+  `Commands::on_message` to `confirm_writing` and to `clear_writing`, and each of
+  `Commands::confirm_writing` and `Commands::clear_writing` to `send`. A chip tap is answered inside
+  `habit_callback`, which already sends.
 - **T29** (the data-rights seeds). `crates/coordination/tests/data_rights_symmetry.rs`'s `SEEDS`
   holds 42, where it held 41: it gains a seeded `writing_log` row.
 

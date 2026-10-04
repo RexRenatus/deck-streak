@@ -3,13 +3,24 @@
 //! `write:all`, as the recompute. It heals a writing write whose settle was left undone, and a
 //! source the log or the courses no longer hold settles to nothing where its row exists.
 
-use deck_streak_kernel::{Courses, PortFuture};
+use std::collections::BTreeMap;
+
+use deck_streak_habits::store;
+use deck_streak_habits::writing::{
+    WRITE_ALL_SOURCE, write_source, writing_courses, writing_day_xp,
+};
+use deck_streak_kernel::{CourseCode, Courses, PortFuture};
+use deck_streak_progression::settle::settled_of_day;
 use sqlx::SqliteConnection;
 
-use super::{DayEvaluation, DayStep, Phase};
+use super::habits::settle_habit;
+use super::{DayEvaluation, DayStep, Evaluation, Phase};
 
 /// The name the fold's report gives this step.
 pub const WRITING_STEP: &str = "habits.writing_xp";
+
+/// The prefix of every writing source.
+const WRITE_PREFIX: &str = "write:";
 
 /// The writing step, over the owner's courses.
 #[derive(Debug)]
@@ -36,11 +47,33 @@ impl DayStep for WritingStep {
 
     fn evaluate<'a>(
         &'a self,
-        _day: &'a DayEvaluation<'a>,
-        _write: &'a mut SqliteConnection,
+        day: &'a DayEvaluation<'a>,
+        write: &'a mut SqliteConnection,
     ) -> PortFuture<'a, ()> {
         Box::pin(async move {
-            let _ = &self.courses;
+            let closed = !matches!(day.evaluation, Evaluation::Current);
+            let at = day.facts.now;
+            let rows: Vec<_> = store::confirmations_between(write, day.day, day.day)
+                .await?
+                .into_iter()
+                .filter_map(|(code, logged)| CourseCode::new(&code).map(|code| (code, logged)))
+                .collect();
+            let xp = writing_day_xp(&writing_courses(&self.courses), day.day, &rows);
+            let mut sources: BTreeMap<String, u32> = settled_of_day(write, day.day)
+                .await?
+                .into_iter()
+                .filter(|row| row.source.starts_with(WRITE_PREFIX))
+                .map(|row| (row.source, 0))
+                .collect();
+            sources.extend(
+                xp.courses
+                    .iter()
+                    .map(|(code, amount)| (write_source(*code), *amount)),
+            );
+            sources.insert(WRITE_ALL_SOURCE.to_owned(), xp.all);
+            for (source, amount) in sources {
+                settle_habit(write, day.day, &source, amount, closed, at).await?;
+            }
             Ok(())
         })
     }

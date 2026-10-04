@@ -45,11 +45,13 @@ use deck_streak_coordination::recompute::analytics_step::AnalyticsStep;
 use deck_streak_coordination::recompute::badges::BadgesStep;
 use deck_streak_coordination::recompute::band_badges::BandBadgesStep;
 use deck_streak_coordination::recompute::day_bonuses::DayBonusesStep;
+use deck_streak_coordination::recompute::habit_badges::HabitBadgesStep;
 use deck_streak_coordination::recompute::habits::HabitsStep;
 use deck_streak_coordination::recompute::mint::MintStep;
 use deck_streak_coordination::recompute::progress::ProgressStep;
 use deck_streak_coordination::recompute::records::RecordsStep;
 use deck_streak_coordination::recompute::streaks::{RelightDue, StreaksStep};
+use deck_streak_coordination::recompute::writing::WritingStep;
 use deck_streak_coordination::recompute::xp::XpStep;
 use deck_streak_coordination::recompute::{Fold, FoldError, Phase};
 use deck_streak_coordination::sync_cycle::{
@@ -248,8 +250,12 @@ pub fn recompute_fold_with_relights(
         Box::new(ProgressStep::new(courses.clone(), analytics)),
     )?;
     fold.register(Phase::DaySteps, Box::new(HabitsStep))?;
+    let writing = WritingStep::new(courses.clone());
+    fold.register(Phase::DaySteps, Box::new(writing))?;
     fold.register(Phase::DerivedBonuses, Box::new(DayBonusesStep))?;
     fold.register(Phase::CoinMint, Box::new(MintStep))?;
+    let habit_badges = HabitBadgesStep::new(courses.clone());
+    fold.register(Phase::Awards, Box::new(habit_badges))?;
     fold.register(Phase::Awards, Box::new(BadgesStep::new(courses.clone())))?;
     fold.register(Phase::Awards, Box::new(RecordsStep))?;
     fold.register(Phase::Awards, Box::new(BandBadgesStep::new(courses)))?;
@@ -818,8 +824,10 @@ mod tests {
                 (Phase::StreaksAndGovernor, STREAKS_STEP),
                 (Phase::DaySteps, PROGRESS_STEP),
                 (Phase::DaySteps, HABITS_STEP),
+                (Phase::DaySteps, WRITING_STEP),
                 (Phase::DerivedBonuses, DAY_BONUSES_STEP),
                 (Phase::CoinMint, MINT_STEP),
+                (Phase::Awards, HABIT_BADGES_STEP),
                 (Phase::Awards, BADGES_STEP),
                 (Phase::Awards, RECORDS_STEP),
                 (Phase::Awards, BAND_BADGES_STEP),
@@ -853,12 +861,13 @@ mod tests {
         let fold = recompute_fold(AnalyticsSettings::default()).expect("every step in its phase");
         let steps = fold.steps();
         assert_eq!(
-            steps.get(2..6),
+            steps.get(2..7),
             Some(
                 &[
                     (Phase::StreaksAndGovernor, STREAKS_STEP),
                     (Phase::DaySteps, PROGRESS_STEP),
                     (Phase::DaySteps, HABITS_STEP),
+                    (Phase::DaySteps, WRITING_STEP),
                     (Phase::DerivedBonuses, DAY_BONUSES_STEP),
                 ][..]
             ),

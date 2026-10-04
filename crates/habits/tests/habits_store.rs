@@ -5,9 +5,11 @@
 // An integration test is test code: its helpers panic on a failed fixture.
 #![allow(clippy::expect_used)]
 
-use deck_streak_habits::data_rights::{HABITS_CONTEXT, HabitsDataRights, MINUTES_LOG_TABLE};
+use deck_streak_habits::data_rights::{
+    HABITS_CONTEXT, HabitsDataRights, MINUTES_LOG_TABLE, WRITING_LOG_TABLE,
+};
 use deck_streak_habits::store::{
-    clear_writing, confirm_writing, confirmations_between, confirmations_through,
+    clear_writing, confirm_writing, confirmations_between, confirmations_through, entries_through,
 };
 use deck_streak_kernel::{DataRights, Db, Disposition, StudyDay, UtcMillis};
 
@@ -36,7 +38,10 @@ async fn the_habit_tables_are_exported_and_erased() {
             )
         })
         .collect();
-    assert_eq!(tables, [(MINUTES_LOG_TABLE, true)]);
+    assert_eq!(
+        tables,
+        [(MINUTES_LOG_TABLE, true), (WRITING_LOG_TABLE, true)]
+    );
 
     let mut write = db.write().await.expect("a write");
     sqlx::query(
@@ -47,7 +52,7 @@ async fn the_habit_tables_are_exported_and_erased() {
     .await
     .expect("two synthetic entries");
     let exported = port.export(&mut write).await.expect("the export");
-    assert_eq!(exported.len(), 1, "one table");
+    assert_eq!(exported.len(), 2, "two tables");
     assert_eq!(exported[0].table, MINUTES_LOG_TABLE);
     assert_eq!(exported[0].rows.len(), 2, "every entry is exported");
     assert_eq!(exported[0].rows[0]["note"], "synthetic note");
@@ -171,5 +176,39 @@ async fn the_writing_log_is_exported_and_erased() {
         .await
         .expect("the count");
     assert_eq!(left, 0, "an erase leaves the writing log empty");
+    write.commit().await.expect("commit");
+}
+
+#[tokio::test]
+async fn the_reading_entries_are_counted_through_a_day() {
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let db = database(&directory).await;
+    let mut write = db.write().await.expect("a write");
+    sqlx::query(
+        "INSERT INTO minutes_log (code, study_day, minutes, note, created_at) \
+         VALUES ('qaa', 20101, 10, '', 1000), ('qab', 20102, 20, '', 2000), \
+         ('qaa', 20102, 30, '', 3000), ('qaa', 20104, 40, '', 4000)",
+    )
+    .execute(&mut *write)
+    .await
+    .expect("four synthetic entries");
+    let mut counted = Vec::new();
+    for day in [20_100, 20_101, 20_102, 20_103, 20_104] {
+        let through = entries_through(&mut write, StudyDay::from_epoch_day(day))
+            .await
+            .expect("a count");
+        counted.push((day, through));
+    }
+    assert_eq!(
+        counted,
+        [
+            (20_100, 0),
+            (20_101, 1),
+            (20_102, 3),
+            (20_103, 3),
+            (20_104, 4)
+        ],
+        "every entry on or before the day, and none after it"
+    );
     write.commit().await.expect("commit");
 }

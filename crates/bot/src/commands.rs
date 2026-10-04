@@ -25,7 +25,10 @@ use std::sync::Arc;
 
 use deck_streak_coordination::data_rights_registry::{erase_all, export_all};
 use deck_streak_coordination::drills::{self, DrillMeta, DrillNotes, RealFs, Surface};
-use deck_streak_coordination::habits::{Course, HabitWriter, log_minutes, undo_entry, undo_newest};
+use deck_streak_coordination::habits::writing::{checklist, clear, confirm, toggle};
+use deck_streak_coordination::habits::{
+    Course, HabitWriter, Written, log_minutes, undo_entry, undo_newest, writing_courses,
+};
 use deck_streak_coordination::inbox_capture::{Capture, Captured, InboxCaptures, Source};
 use deck_streak_coordination::instruments::InstrumentService;
 use deck_streak_coordination::progress_view::progress_view;
@@ -46,9 +49,10 @@ use crate::capture::{self, Choice, MAX_DOWNLOAD_BYTES, Outcome};
 use crate::drill_commands::{self, ANSWER_PREFIX, VIEW_PREFIX};
 use crate::gate::{self, Admission, OwnerCallback, OwnerMessage};
 use crate::habits_commands::{
-    HABIT_PREFIX, HabitCallback, ReadRequest, course_name, no_courses_reply, parse_callback,
-    parse_read, pick_course_reply, presets_reply, read_outcome_reply, undo_nothing_reply,
-    undo_outcome_reply, usage_reply,
+    HABIT_PREFIX, HabitCallback, ReadRequest, checklist_reply, course_name, no_courses_reply,
+    no_writing_course_reply, parse_callback, parse_read, pick_course_reply, presets_reply,
+    read_outcome_reply, undo_nothing_reply, undo_outcome_reply, usage_reply, write_cleared_reply,
+    write_confirmed_reply, writing_tokens, written_reply,
 };
 use crate::progress_commands::{progress_failed_reply, progress_reply};
 use crate::score_commands::{score_failed_reply, score_reply};
@@ -78,7 +82,7 @@ pub struct MenuEntry {
 }
 
 /// The owner's menu, in the order the menu shows it.
-pub const MENU: [MenuEntry; 14] = [
+pub const MENU: [MenuEntry; 16] = [
     MenuEntry {
         command: "score",
         description: "Show today's score",
@@ -134,6 +138,14 @@ pub const MENU: [MenuEntry; 14] = [
     MenuEntry {
         command: "undo",
         description: "Undo the last reading entry",
+    },
+    MenuEntry {
+        command: "write",
+        description: "Confirm today's writing",
+    },
+    MenuEntry {
+        command: "unwrite",
+        description: "Undo today's writing confirmation",
     },
 ];
 
@@ -278,6 +290,8 @@ fn command_lines() -> String {
         "/privacy says how your data is kept",
         "/read logs your reading minutes",
         "/undo removes your last reading entry",
+        "/write confirms today's writing",
+        "/unwrite undoes today's writing confirmation",
     ]
     .join("\n")
 }
@@ -641,6 +655,8 @@ impl<S: OwnerSync> Commands<S> {
             Some("progress") => self.progress().await,
             Some("read") => self.read(&message.text).await,
             Some("undo") => self.undo().await,
+            Some("write") => self.confirm_writing(&message.text).await,
+            Some("unwrite") => self.clear_writing(&message.text).await,
             Some("drills") => self.drills().await,
             Some("drill") => self.drill(&message.text).await,
             None if self.pending_drill.is_some() => self.drill_answer(&message.text).await,
@@ -857,7 +873,55 @@ impl<S: OwnerSync> Commands<S> {
         self.send(undo_outcome_reply(&habits.courses, undone)).await;
     }
 
-    /// A habit button: a course's presets, a preset's entry, or an entry's undo (SPEC-078 R2, R4).
+    /// `/write`: confirms today's writing in each writing course the text names, or answers with
+    /// today's checklist when it names none (SPEC-078 R6 to R8). With no writing course configured,
+    /// there is nothing to confirm, and the answer says so.
+    async fn confirm_writing(&self, text: &str) {
+        let Some(habits) = self.habits.as_ref() else {
+            return self.send(no_writing_course_reply()).await;
+        };
+        let tokens = writing_tokens(text);
+        let reply = if tokens.is_empty() {
+            self.writing_checklist(habits).await
+        } else {
+            let writer = self.habit_writer(habits);
+            let written = confirm(&writer, &habits.courses, &tokens).await;
+            written_reply(&habits.courses, written, write_confirmed_reply)
+        };
+        self.send(reply).await;
+    }
+
+    /// `/unwrite`: clears today's confirmation of the writing course the text names, or answers
+    /// with today's checklist when it names none (SPEC-078 R6 to R8).
+    async fn clear_writing(&self, text: &str) {
+        let Some(habits) = self.habits.as_ref() else {
+            return self.send(no_writing_course_reply()).await;
+        };
+        let tokens = writing_tokens(text);
+        let reply = if tokens.is_empty() {
+            self.writing_checklist(habits).await
+        } else {
+            let writer = self.habit_writer(habits);
+            let written = clear(&writer, &habits.courses, &tokens.join(" ")).await;
+            written_reply(&habits.courses, written, write_cleared_reply)
+        };
+        self.send(reply).await;
+    }
+
+    /// Today's writing checklist, or that no writing course is configured.
+    async fn writing_checklist(&self, habits: &Habits) -> Reply {
+        let written = if writing_courses(&habits.courses).is_empty() {
+            Ok(Written::NoWritingCourse)
+        } else {
+            checklist(&self.habit_writer(habits), &habits.courses)
+                .await
+                .map(Written::Done)
+        };
+        written_reply(&habits.courses, written, checklist_reply)
+    }
+
+    /// A habit button: a course's presets, a preset's entry, an entry's undo, or a writing chip's
+    /// toggle (SPEC-078 R2, R4, R8).
     async fn habit_callback(&self, data: &str) {
         let (Some(habits), Some(callback)) = (self.habits.as_ref(), parse_callback(data)) else {
             tracing::info!(
@@ -882,7 +946,11 @@ impl<S: OwnerSync> Commands<S> {
                 let undone = undo_entry(&self.habit_writer(habits), entry).await;
                 undo_outcome_reply(&habits.courses, undone)
             }
-            HabitCallback::Writing { .. } => return,
+            HabitCallback::Writing { code, day } => {
+                let writer = self.habit_writer(habits);
+                let toggled = toggle(&writer, &habits.courses, code, day).await;
+                written_reply(&habits.courses, toggled, checklist_reply)
+            }
         };
         self.send(reply).await;
     }

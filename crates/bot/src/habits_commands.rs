@@ -84,6 +84,13 @@ pub fn writing_data(code: &CourseCode, day: StudyDay) -> String {
     format!("{WRITING_PREFIX}{}:{}", code.as_str(), day.epoch_day())
 }
 
+/// The course tokens a `/write` or `/unwrite` carries after its command, in order: none for the
+/// bare command.
+#[must_use]
+pub fn writing_tokens(text: &str) -> Vec<&str> {
+    text.split_whitespace().skip(1).collect()
+}
+
 /// The habit button `data` names, or `None` when it names none.
 #[must_use]
 pub fn parse_callback(data: &str) -> Option<HabitCallback> {
@@ -374,55 +381,123 @@ pub fn undo_outcome_reply(courses: &Courses, undone: Result<Undone, HabitError>)
     }
 }
 
-/// The writing checklist of `checklist` over `courses`, with one toggle chip per writing course.
+/// The writing checklist of `checklist` over `courses`, with one toggle chip per writing course:
+/// each course's mark, flag, name and own streak, then the writing streak. No line names a code.
 #[must_use]
-pub fn checklist_reply(_courses: &Courses, _checklist: &Checklist) -> Reply {
-    Reply::text(String::new())
+pub fn checklist_reply(courses: &Courses, checklist: &Checklist) -> Reply {
+    let mut lines = vec!["✍️ <b>Today's writing</b>".to_owned()];
+    let mut chips = Vec::new();
+    for line in &checklist.lines {
+        let Some(course) = courses
+            .courses()
+            .iter()
+            .find(|course| course.code == line.code)
+        else {
+            continue;
+        };
+        let mark = if line.confirmed { "✅" } else { "⬜" };
+        lines.push(format!(
+            "{mark} {} {} — {}🔥",
+            escape_html(&course.flag),
+            escape_html(&course.name),
+            line.streak
+        ));
+        chips.push(vec![
+            InlineKeyboardButton::builder()
+                .text(format!("{mark} {}", course.name))
+                .callback_data(writing_data(&line.code, checklist.day))
+                .build(),
+        ]);
+    }
+    let days = if checklist.streak == 1 { "day" } else { "days" };
+    lines.push(format!(
+        "🔥 Writing streak: <b>{}</b> {days}",
+        checklist.streak
+    ));
+    lines.push("<i>Tap a course to toggle it.</i>".to_owned());
+    Reply {
+        text: lines.join("\n"),
+        keyboard: Some(
+            InlineKeyboardMarkup::builder()
+                .inline_keyboard(chips)
+                .build(),
+        ),
+    }
+}
+
+/// The checklist of `checklist` over `courses`, after the sentence `said`.
+fn said_with_checklist(said: &str, courses: &Courses, checklist: &Checklist) -> Reply {
+    let mut reply = checklist_reply(courses, checklist);
+    reply.text = format!("{said}\n\n{}", reply.text);
+    reply
 }
 
 /// The answer once today's writing was confirmed, with the checklist.
 #[must_use]
-pub fn write_confirmed_reply(_courses: &Courses, _checklist: &Checklist) -> Reply {
-    Reply::text(String::new())
+pub fn write_confirmed_reply(courses: &Courses, checklist: &Checklist) -> Reply {
+    said_with_checklist("Today's writing is confirmed.", courses, checklist)
 }
 
 /// The answer once today's writing confirmation was cleared, with the checklist.
 #[must_use]
-pub fn write_cleared_reply(_courses: &Courses, _checklist: &Checklist) -> Reply {
-    Reply::text(String::new())
+pub fn write_cleared_reply(courses: &Courses, checklist: &Checklist) -> Reply {
+    said_with_checklist(
+        "Today's writing confirmation is cleared.",
+        courses,
+        checklist,
+    )
 }
 
 /// The answer to a chip drawn for a day that has closed, with today's checklist.
 #[must_use]
-pub fn write_day_closed_reply(_courses: &Courses, _checklist: &Checklist) -> Reply {
-    Reply::text(String::new())
+pub fn write_day_closed_reply(courses: &Courses, checklist: &Checklist) -> Reply {
+    said_with_checklist(
+        "That checklist was for a day that has closed, so nothing changed. Here is today's.",
+        courses,
+        checklist,
+    )
 }
 
 /// The answer when a token names no writing course.
 #[must_use]
 pub fn not_a_writing_course_reply() -> Reply {
-    Reply::text(String::new())
+    Reply::text(
+        "That is not one of your writing courses, so nothing changed. Send /write alone to see \
+         them."
+            .to_owned(),
+    )
 }
 
 /// The answer when no writing course is configured.
 #[must_use]
 pub fn no_writing_course_reply() -> Reply {
-    Reply::text(String::new())
+    Reply::text("No writing course is configured, so there is no writing to confirm.".to_owned())
 }
 
 /// The answer when the writing could not be written.
 #[must_use]
 pub fn write_failed_reply() -> Reply {
-    Reply::text(String::new())
+    Reply::text(
+        "Your writing could not be saved, so nothing changed. Send /write to try again.".to_owned(),
+    )
 }
 
 /// The answer to a writing write that ended as `written`, over `courses`, where `done` words a
 /// write that changed the log.
 #[must_use]
 pub fn written_reply(
-    _courses: &Courses,
-    _written: Result<Written, HabitError>,
-    _done: fn(&Courses, &Checklist) -> Reply,
+    courses: &Courses,
+    written: Result<Written, HabitError>,
+    done: fn(&Courses, &Checklist) -> Reply,
 ) -> Reply {
-    Reply::text(String::new())
+    match written {
+        Ok(Written::Done(checklist)) => done(courses, &checklist),
+        Ok(Written::DayClosed(checklist)) => write_day_closed_reply(courses, &checklist),
+        Ok(Written::NotAWritingCourse) => not_a_writing_course_reply(),
+        Ok(Written::NoWritingCourse) => no_writing_course_reply(),
+        Err(error) => {
+            tracing::error!(%error, "the owner's writing was not written");
+            write_failed_reply()
+        }
+    }
 }

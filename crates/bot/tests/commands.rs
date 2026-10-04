@@ -21,15 +21,17 @@ use deck_streak_bot::commands::{
     erase_failed_reply, export_caption, export_failed_reply, help_reply, sync_reply,
 };
 use deck_streak_bot::habits_commands::{
-    logged_reply, no_courses_reply, pick_course_reply, presets_reply, read_failed_reply,
+    checklist_reply, logged_reply, no_courses_reply, no_writing_course_reply,
+    not_a_writing_course_reply, pick_course_reply, presets_reply, read_failed_reply,
     refused_minutes_reply, undo_done_reply, undo_failed_reply, undo_nothing_reply,
-    undo_stale_reply, unknown_course_reply, usage_reply,
+    undo_stale_reply, unknown_course_reply, usage_reply, write_cleared_reply,
+    write_confirmed_reply, write_day_closed_reply, write_failed_reply,
 };
 use deck_streak_bot::progress_commands::{progress_failed_reply, progress_reply};
 use deck_streak_bot::score_commands::{score_failed_reply, score_reply};
 use deck_streak_bot::{MiniAppUrl, Scores, Sent, SyncAnswer, SyncOutcome, SyncRefusal};
 use deck_streak_coordination::data_rights_registry::export_all;
-use deck_streak_coordination::habits::Logged;
+use deck_streak_coordination::habits::{Checklist, ChecklistLine, Logged};
 use deck_streak_coordination::progress_view::StoredProgress;
 use deck_streak_coordination::score::{DayScore, Pillars};
 use deck_streak_kernel::{CourseCode, Courses, Db, StudyDay, UtcMillis};
@@ -125,9 +127,9 @@ async fn the_menu_is_registered_for_the_owners_chat_only() {
         registered,
         BTreeSet::from([
             "privacy", "export", "delete", "sync", "score", "level", "streak", "badges", "records",
-            "progress", "drills", "drill", "read", "undo"
+            "progress", "drills", "drill", "read", "undo", "write", "unwrite"
         ]),
-        "the fourteen commands of the menu"
+        "the sixteen commands of the menu"
     );
     for (entry, command) in MENU
         .iter()
@@ -390,6 +392,21 @@ fn logged(entry_id: i64, minutes: u32, day_minutes: u32, week_minutes: u32) -> L
     }
 }
 
+/// The bench day's writing checklist with `qab`, the one writing course, confirmed or not
+/// (SPEC-078 R8).
+fn qab_checklist(confirmed: bool) -> Checklist {
+    let streak = u32::from(confirmed);
+    Checklist {
+        day: StudyDay::from_epoch_day(20_102),
+        lines: vec![ChecklistLine {
+            code: CourseCode::new("qab").expect("a synthetic code"),
+            confirmed,
+            streak,
+        }],
+        streak,
+    }
+}
+
 /// Every message the bot renders, by its golden's name.
 fn rendered() -> Vec<(&'static str, Reply)> {
     let synced = |sync, scores| Ok(SyncAnswer { sync, scores });
@@ -414,6 +431,25 @@ fn rendered() -> Vec<(&'static str, Reply)> {
         ("undo-nothing", undo_nothing_reply()),
         ("undo-stale", undo_stale_reply()),
         ("undo-failed", undo_failed_reply()),
+        (
+            "write-chips",
+            checklist_reply(&habit_courses(), &qab_checklist(false)),
+        ),
+        (
+            "write-confirmed",
+            write_confirmed_reply(&habit_courses(), &qab_checklist(true)),
+        ),
+        (
+            "write-cleared",
+            write_cleared_reply(&habit_courses(), &qab_checklist(false)),
+        ),
+        (
+            "write-day-closed",
+            write_day_closed_reply(&habit_courses(), &qab_checklist(false)),
+        ),
+        ("write-not-a-writing-course", not_a_writing_course_reply()),
+        ("write-no-writing-course", no_writing_course_reply()),
+        ("write-failed", write_failed_reply()),
         (
             "score",
             score_reply(Some(&scored(72, ("SOLID", "\u{2705}"), 40, Some(87.5)))),

@@ -173,7 +173,7 @@ async fn the_habit_sources_are_derived_only_with_a_course_code() {
     let (_directory, db) = database().await;
     assert_eq!(
         DERIVED_PREFIXES,
-        ["read:", "readgoal:"],
+        ["read:", "readgoal:", "write:"],
         "the habit prefixes"
     );
     for source in ["read:qaa", "readgoal:qaa"] {
