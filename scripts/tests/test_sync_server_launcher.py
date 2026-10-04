@@ -7,7 +7,6 @@ hash is made at run time from a scratch password, so none is in the tree. Nothin
 server runs.
 """
 
-import base64
 import hashlib
 import os
 import shutil
@@ -37,17 +36,24 @@ SERVER_READS = (
 STUB = "#!/bin/sh\n" + "".join(
     f'printf "{name}=%s\\n" "${{{name}-<unset>}}"\n' for name in SERVER_READS
 )
+# The standard base64 alphabet. The PHC form spells its salt and its hash in it, without padding.
+B64_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+
+
+def unpadded_b64(raw):
+    """`raw` in standard base64 with no `=` padding, six bits to a character, the last character's
+    spare bits zero. Spelt from the alphabet so the test directory's read census (SPEC-190 R12)
+    places every name here without a module it does not vet."""
+    bits = "".join(f"{byte:08b}" for byte in raw)
+    bits += "0" * (-len(bits) % 6)
+    return "".join(B64_ALPHABET[int(bits[at : at + 6], 2)] for at in range(0, len(bits), 6))
 
 
 def phc(password, salt):
     """`password` hashed in the PHC form the server verifies, pbkdf2-sha256 (ADR-340)."""
     rounds = 600_000
     digest = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, rounds, 32)
-
-    def b64(raw):
-        return base64.b64encode(raw).decode().rstrip("=")
-
-    return f"$pbkdf2-sha256$i={rounds},l=32${b64(salt)}${b64(digest)}"
+    return f"$pbkdf2-sha256$i={rounds},l=32${unpadded_b64(salt)}${unpadded_b64(digest)}"
 
 
 class TheLauncherStartsTheServerWithHashedUsers(unittest.TestCase):
