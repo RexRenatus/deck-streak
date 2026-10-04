@@ -17,7 +17,8 @@ names none.
 | the new server | `deck-streak-sync-server.service` on a loopback address, behind the Caddy block's `/anki-sync/` route (SPEC-337 R2, R4) |
 | its store | the unit's own state directory, one directory per sync user, each holding `collection.anki2`, `media.db` and `media/` |
 | its two users | the owner's and the staging user's (ADR-344), read from the credential socket as a user name and a pbkdf2-sha256 hash each (ADR-347 D2) |
-| its snapshot | `deck-streak-sync-snapshot.service`, a stopped-server window the daily backup's run pulls in: the server is stopped for a few seconds, its store is copied, and the server is started again whatever the copy does; the backup then checks the copy, archives it and copies the archive offsite, and the weekly drill restores the newest (ADR-347 D12) |
+| its user | the system user and group `deck-streak-sync`, which the server, its window, its archive and its sync drill run as, and no other unit (SPEC-340 R2; ADR-351 D1) |
+| its snapshot | `deck-streak-sync-snapshot.service`, a stopped-server window the daily backup's run pulls in: the server is stopped for a few seconds, its store is copied, and the server is started again whatever the copy does; `deck-streak-sync-archive.service` then checks the copy, archives it and copies the archive offsite, and `deck-streak-sync-restore-drill.service`, which the restore drill pulls in, restores the newest (ADR-347 D12; ADR-351 D1) |
 | the old server | untouched by every step; the rollback points every client back at it |
 
 ## The hold
@@ -46,8 +47,12 @@ to be the cutover's own.
 ## Before the window
 
 - The release that carries `bin/anki-sync-server` is deployed from its tag (`RELEASING.md`).
+- The rail has created the system user and group `deck-streak-sync`, with no login shell, no home
+  and no other group (the owner's go, #161).
 - The offsite bucket exists with no public access and no listing, and the host's identity may only
-  create objects in it; its retention is the owner's choice (the owner's go, #161).
+  create objects in it. Its lifecycle rule deletes each object `P30D` after it is written, the
+  period `PRIVACY.md` states, and the owner checks the rule before the window (the owner's go,
+  #161).
 - The settings file names `DECKSTREAK_SNAPSHOT_COPY` and `DECKSTREAK_SNAPSHOT_BUCKET`, and the copy
   command is checked under the backup unit's sandbox (the owner's go, #161).
 - Each unit's `CPUQuota=` equals ADR-347 D7's split (the owner's go, #161).
@@ -60,10 +65,21 @@ to be the cutover's own.
 
 ### `started`: the unit started over an empty store
 
-A host step, on the owner's go (#161). On the host: the unit's two credentials go into the
-credential store the rail reads (ADR-038), its listen address and the rail's drop-in are installed,
-the Caddy block is rendered with its fourth key and installed, and the unit is enabled and started,
-which enables its snapshot window as well. Its store holds no collection: no user has synced.
+A host step, on the owner's go (#161). Each of the unit's two entries, the owner's and the staging
+user's, is made on the maintainer's machine by the standard library's command, which takes a
+16-byte salt from `os.urandom(16)`, reads the password with `getpass` and never echoes it, and
+derives a 32-byte digest in 600000 rounds, the house's shape (`l=32`; SPEC-340 R10):
+
+```
+python3 -c 'import base64, getpass, hashlib, os; s = os.urandom(16); d = hashlib.pbkdf2_hmac("sha256", getpass.getpass().encode(), s, 600000, 32); b = lambda raw: base64.b64encode(raw).decode().rstrip("="); print(f"owner:$pbkdf2-sha256$i=600000,l=32${b(s)}${b(d)}")'
+```
+
+For the staging user, `staging` takes the place of `owner`. Each entry goes straight into the
+credential store, and is never printed to a log, a file in a repository or a chat (ADR-347 D13).
+On the host: the unit's two credentials go into the credential store the rail reads (ADR-038), its
+listen address and the rail's drop-in are installed, the Caddy block is rendered with its fourth
+key and installed, and the unit is enabled and started, which enables its snapshot window, its
+archive and its sync drill as well. Its store holds no collection: no user has synced.
 Check that the unit is active and that a login of the staging user through the route is answered.
 A failure here moves nothing of the owner's: `rolled_back` is only the unit stopped.
 
@@ -76,9 +92,9 @@ then one sync each way. Record the upload's client-side result beside the read-b
 desktop asks at its next sync if the client reported the upload as failed. When it needs no change
 to the deploy, the staging user's full upload of a collection of ADR-022's shape is the hold's
 reading (a), recorded as (b) says; (c) applies to it. Then one run of the daily backup, after which
-the server is active again and a generation was archived and copied offsite, and one run of the
-restore drill, which restores the newest archive. A failed rehearsal stops the cutover here: nothing
-of the owner's has moved.
+the server is active again and the archive unit archived a generation and copied it offsite, and
+one run of the restore drill, whose sync drill restores the newest archive. A failed rehearsal stops
+the cutover here: nothing of the owner's has moved.
 
 ### `final_sync`: every client synced once against the old server
 
@@ -102,8 +118,8 @@ desktop reports. Whatever it reports, nothing is uploaded again before `read_bac
 
 ### `read_back`: the server's collection read back
 
-A host step, on the owner's go (#161). On the host, as DeckStreak's user and read only, the owner's
-collection in the new store is opened and its cards and notes counted. A full upload closes the
+A host step, on the owner's go (#161). On the host, as the sync server's user, `deck-streak-sync`,
+and read only, the owner's collection in the new store is opened and its cards and notes counted. A full upload closes the
 collection on the server, and a read-only read of it succeeds while the server runs (SPEC-337 §6).
 
 - The counts equal desktop's from `frozen`: the upload landed, whatever desktop reported. Do not
@@ -127,16 +143,29 @@ sync allows (SPEC-334 R8, R9, #617).
 ### `rekeyed`: a new sync password on the new server
 
 A host step, on the owner's go (#161). A new password's pbkdf2-sha256 hash, made on the maintainer's
-machine, replaces the owner's entry in the credential store, the unit is restarted, and each client
-logs in again with the new password. The old server keeps the old password, so this is the last
-state: a rollback before it never meets a password the old server lacks. The cutover is then live,
-and the old server is kept until the owner retires it.
+machine by the same command as `started` (`os.urandom(16)`, `getpass`, 600000 rounds, `l=32`),
+replaces the owner's entry in the credential store, the unit is restarted, and each client logs in
+again with the new password. The old server keeps the old password, so this is the last state: a
+rollback before it never meets a password the old server lacks. The cutover is then live, and the
+old server is kept until the owner retires it.
+
+The server makes each client's key from the user name and the stored hash, so the hash is a secret
+of the password's class, and the key has no lifetime of its own (ADR-347 D13). This step is taken
+again, on the owner's go, whenever one of its two triggers holds:
+
+- a synced device is lost: any new hash retires every key, so a new hash, with a new salt, is
+  enough, and every other client logs in again;
+- the credential store may have been exposed: a new password as well, since the hash is made from
+  the password.
+
+The new entry goes straight into the credential store, and is never printed to a log, a file in a
+repository or a chat.
 
 ### `rolled_back`: every client back on the old server
 
 A host step, on the owner's go (#161). Any step from `started` to `app` that fails rolls back: the
-new unit is stopped and disabled on the host, which removes its snapshot window from the daily
-backup too, and each client that was repointed is pointed back at the old server, desktop last, and
+new unit is stopped and disabled on the host, which removes its snapshot window, its archive and
+its sync drill too, and each client that was repointed is pointed back at the old server, desktop last, and
 syncs once. The old server holds the state of the freeze, so nothing
 studied before it is lost. A study made on the new server after `uploaded` is not on the old server:
 the runbook rolls back before any study on the new server, or not at all.
