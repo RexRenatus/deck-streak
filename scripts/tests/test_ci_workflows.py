@@ -1782,7 +1782,7 @@ class TheGateRunsInParallelJobs(unittest.TestCase):
             self.assertIsNone(workflow["jobs"][job].get("needs"), f"{job} waits on another job")
         needs = workflow["jobs"]["ci"]["needs"]
         # SPEC-039 adds the five mutation jobs beside the gate's five, each a need of ci; SPEC-087
-        # adds the sixth, the Python runner's shards.
+        # adds the sixth, the Python runner's shards. SPEC-341 adds the planted card suite.
         mutation = [
             "mutation-plan",
             "mutation-python",
@@ -1792,7 +1792,8 @@ class TheGateRunsInParallelJobs(unittest.TestCase):
             "mutation-web",
         ]
         self.assertEqual(
-            sorted(needs), sorted([*OWNER_LAYOUT, *mutation, "workflow-lint", "base-is-dev"])
+            sorted(needs),
+            sorted([*OWNER_LAYOUT, *mutation, "workflow-lint", "base-is-dev", "card-sandbox"]),
         )
 
     def test_every_stage_runs_in_exactly_one_ci_job(self):
