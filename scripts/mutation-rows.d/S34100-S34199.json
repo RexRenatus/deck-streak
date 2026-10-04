@@ -12,8 +12,8 @@
       [
         "S34102-THE-CARD-JOB-INSTALLS-WEBKIT",
         ".github/workflows/ci.yml",
-        "--only-shell chromium webkit\n",
-        "--only-shell chromium\n",
+        "--only-shell chromium webkit\n      - name: the planted cards",
+        "--only-shell chromium\n      - name: the planted cards",
         "the card-sandbox job stops installing WebKit, so the suite runs in one engine (SPEC-341 R12, A13)",
         "test_ci_workflows.TheCardSandboxRunsInBothEngines.test_the_card_sandbox_job_runs_the_planted_suite_in_both_engines"
       ],
