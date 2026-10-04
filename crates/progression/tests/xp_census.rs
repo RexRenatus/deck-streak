@@ -6476,8 +6476,10 @@ fn spells_the_table(path: &str) -> String {
     )
 }
 
-/// SPEC-331 A2's joins (the design's plants P1 to P13, B4 to B7 and B9): each is a real join of
-/// the name from pieces, and each is refused by exactly the files holding its pieces.
+/// SPEC-331 A2's joins (the design's plants P1 to P13, B4 to B7 and B9, and P14): each is a real
+/// join of the name from pieces, and each is refused by exactly the files holding its pieces. P14
+/// joins two files that reach nothing of each other in another case, so only the pool's case
+/// folding refuses it.
 #[allow(clippy::too_many_lines)]
 fn join_plants() -> Vec<Plant> {
     vec![
@@ -6690,6 +6692,19 @@ fn join_plants() -> Vec<Plant> {
                 ),
             ],
         ),
+        (
+            "P14 case variant across crates: a multi-char piece returned by a fn in another crate",
+            vec![
+                (
+                    "crates/quests/src/p14_prefix.rs",
+                    "pub fn prefix() -> &'static str {\n    \"XP_\"\n}\n",
+                ),
+                (
+                    "crates/streaks/src/p14_join.rs",
+                    "pub fn joined() -> String {\n    format!(\"{}Settlement\", deck_streak_quests::p14_prefix::prefix())\n}\n",
+                ),
+            ],
+        ),
     ]
 }
 
@@ -6745,8 +6760,8 @@ fn disclosed_plants() -> Vec<Plant> {
     ]
 }
 
-/// The number of SPEC-331 A2's join plants: P1 to P13, B4 to B7 and B9.
-const JOIN_PLANTS: usize = 18;
+/// The number of SPEC-331 A2's join plants: P1 to P14, B4 to B7 and B9.
+const JOIN_PLANTS: usize = 19;
 
 /// The number of SPEC-331 A3's disclosed plants: B1, B2 and B8.
 const DISCLOSED_PLANTS: usize = 3;
