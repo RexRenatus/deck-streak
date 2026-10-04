@@ -41,3 +41,25 @@ A5: red at 33139e68: AssertionError: False is not true : no launcher at deploy/s
 At 71c77362 A4 prints `examined 573 file(s) under deploy/ and docs/` and A5 `examined 17 launcher
 case(s)`: the two starts and fifteen refusals, each run through the launcher with the server
 stubbed.
+
+The route's tests (A6) were committed alone (d0fd24c7), with the block and render-caddy untouched:
+render-caddy's test gives the configuration a fourth key, `sync_upstream`, and the block's test asks
+for the two sync handles. At that commit both fail by assertion; the block's existing test fails too,
+because it counts five handles. The deploy scripts' Caddy install gains the same fourth key there;
+that module is decided by CI by name and never run on the box. The block's route and render-caddy's
+fourth key followed (c949e7e5).
+
+```red-first
+A6: red at d0fd24c7: AssertionError: 1 != 0 : REFUSE: the configuration holds sync_upstream, which the block has no placeholder for
+A6: green at c949e7e5
+```
+
+A6's second command was red at the same commit, by assertion:
+
+```text
+A6: red at d0fd24c7: AssertionError: unexpectedly None : no handle for /anki-sync
+```
+
+At c949e7e5 render-caddy's test prints `examined 4 required key(s)` and `examined 2 upstream
+key(s)`, each upstream refused under its own key for twelve shapes, and test_deploy_templates reads
+`Ran 28 tests ... OK`.

@@ -69,7 +69,7 @@ R7. Every new Python or shell function a test owns, and the release step's guard
 
 ## 3. Acceptance criteria
 
-This part's criteria (R1 to R3). Section 7 holds the rest.
+This part's criteria (R1 to R4). Section 7 holds the rest.
 
 | id | criterion | decided by |
 |---|---|---|
@@ -78,6 +78,7 @@ This part's criteria (R1 to R3). Section 7 holds the rest.
 | A3 | the unit runs the release's launcher, carries the hardening set and the one waiver with its why, equals its own budget entry, which holds the measured peak under `MemoryHigh=`, and the share holds it: the five daemons and the largest job fill 1152M, and their quotas divide the two processors as ADR-347 splits them | `python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k test_the_sync_server_runs_hardened_within_its_entry_and_the_share_holds_it` |
 | A4 | the unit's two credentials are in the socket form under two distinct ids the launcher declares, no unit passes a user through its environment and no settings line names one, and no file under `deploy/` or `docs/` holds a password hash | `python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k test_the_sync_servers_two_users_come_from_the_socket_and_never_an_environment` |
 | A5 | the launcher refuses a missing, empty or unhashed entry, a name that leaves the data directory, two users of one name and an address that is not loopback with a port, each by name and before the server runs, and never prints an entry; otherwise it clears what the server would read and execs it with the two users, `PASSWORDS_HASHED`, its state directory and its address | `python3 -m unittest discover -s scripts/tests -p test_sync_server_launcher.py -k test_the_launcher_refuses_a_bad_entry_and_execs_the_server_with_hashed_users` |
+| A6 | the block renders with the route, the redirect, the stripped prefix, the hidden health route, the body bound and the buffer, and names the path: render-caddy fills a fourth key, the sync server's upstream, checked as the API's is and refused under its own name | `python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k test_the_caddy_block_routes_the_sync_server_under_its_own_path`, `python3 -m unittest discover -s scripts/tests -p test_caddy_render.py -k test_the_render_refuses_placeholders_and_keeps_the_headers` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_release_workflow.py -k test_the_sync_server_is_built_after_the_guard_and_shipped_in_the_tarball
@@ -85,7 +86,12 @@ A2: python3 -m unittest discover -s scripts/tests -p test_release_workflow.py -k
 A3: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k test_the_sync_server_runs_hardened_within_its_entry_and_the_share_holds_it
 A4: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k test_the_sync_servers_two_users_come_from_the_socket_and_never_an_environment
 A5: python3 -m unittest discover -s scripts/tests -p test_sync_server_launcher.py -k test_the_launcher_refuses_a_bad_entry_and_execs_the_server_with_hashed_users
+A6: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k test_the_caddy_block_routes_the_sync_server_under_its_own_path
+A6: python3 -m unittest discover -s scripts/tests -p test_caddy_render.py -k test_the_render_refuses_placeholders_and_keeps_the_headers
 ```
+
+The deploy scripts' own Caddy install (`scripts/tests/test_deploy_scripts.py`) also renders the
+block with the fourth key; that module is decided by CI by name and is never run on the box.
 
 ## 4. File manifest
 
@@ -107,11 +113,12 @@ A5: python3 -m unittest discover -s scripts/tests -p test_sync_server_launcher.p
 | `deploy/deck-streak.env.example`, `deploy/README.md` | deploy | changed | this |
 | `scripts/tests/test_deploy_templates.py`, `scripts/tests/_units.py` | tests | changed | this |
 | `scripts/tests/test_sync_server_launcher.py` | tests | added | this |
-| `deploy/caddy/deck-streak.caddy`, `deploy/scripts/render-caddy.py` | deploy | changed | the route's |
+| `deploy/caddy/deck-streak.caddy`, `deploy/scripts/render-caddy.py` | deploy | changed | this |
+| `scripts/tests/test_caddy_render.py`, `scripts/tests/test_deploy_scripts.py` (the Caddy configuration's fourth key) | tests | changed | this |
 | `deploy/scripts/backup.py`, `deploy/scripts/restore-drill.sh`, `deploy/systemd/deck-streak-backup.service`, `deploy/systemd/deck-streak-restore-drill.service` | deploy | changed | the snapshot's |
 | `PRIVACY.md`, `privacy.json` | privacy | changed (the snapshot as a store) | the snapshot's |
 | `docs/runbooks/sync-server-cutover.md` | docs | added | the runbook's |
-| `scripts/tests/test_caddy_render.py`, `scripts/tests/test_backup_units.py` | tests | changed | each part's |
+| `scripts/tests/test_backup_units.py` | tests | changed | the snapshot's |
 
 ## 5. What this does NOT do
 
@@ -146,7 +153,6 @@ A5: python3 -m unittest discover -s scripts/tests -p test_sync_server_launcher.p
 
 | id | criterion | delivered by |
 |---|---|---|
-| A6 | the block renders with the route, the redirect, the stripped prefix, the hidden health route, the body bound and the buffer, and names the path | the route's part |
 | A7 | the snapshot holds each user's checked databases and media with their digests, and a failed check leaves the previous snapshots | the snapshot's part |
 | A8 | the drill restores the newest archive into a scratch directory, checks it and opens the collection, and fails on a corrupt archive | the snapshot's part |
 | A9 | the runbook holds every state of the schematic's sequence in order, each host step marked as the owner's go | the runbook's part |
@@ -155,8 +161,14 @@ A5: python3 -m unittest discover -s scripts/tests -p test_sync_server_launcher.p
 
 S33700-S33799. This part's rows hold the release step's guard and its tarball line against A1 and
 A2: a step that admits a branch or a short commit, a build without `--locked`, a second copy of the
-pin, and a tarball without the server. The later parts add rows for the launcher, render-caddy's
-new placeholder, the snapshot and the drill.
+pin, and a tarball without the server (S33701-S33705). The launcher's rows hold A5 (S33706-S33722):
+an entry that is not a name and a pbkdf2-sha256 hash, an empty or missing entry, an address that is
+not loopback or an octet or port out of range, a setting that would reach the server, two users of
+one name, the hashed-users switch, the data directory, a missing credentials or state directory, and
+a refusal that would not fail the unit. The route's
+rows hold A6 (S33723-S33735): render-caddy's fourth key, its check and a refusal that names the
+wrong key, and the block's redirect, prefix, hidden health route, body bound, buffer and upstream.
+The later parts add rows for the snapshot and the drill.
 
 ## 9. References
 
