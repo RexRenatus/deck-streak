@@ -1,21 +1,27 @@
-import { readFileSync } from 'node:fs';
-import { describe, expect, it } from 'vitest';
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { describe, expect, it, vi } from 'vitest';
 import type { EngineModule, SessionDeps } from './session';
-import {
-  ENGINE_BASE,
-  ENGINE_BINDINGS,
-  ENGINE_MODULE,
-  browserDeps,
-  probeStorage,
-  serve,
-  start,
-  takeLock
-} from './worker';
+
+/** The module under test, loaded inside each test. It starts itself when it loads, so a fault in
+ * that start must fail a test: a static import that throws fails the file's load, which reports
+ * no test at all, and StrykerJS reads a mutant nothing reported on as one that survived. */
+const worker = () => import('./worker');
 
 // SPEC-338 A13: the Worker's entry. The file names are derived here from the crate's manifest, as
 // wasm-bindgen derives them, never read from the code under test.
+
+/** The repository root, found by walking up to the workspace file. A fixed `../../../../../` would
+ * miss it when StrykerJS runs this file from its sandbox, which sits below `web/app/.stryker-tmp`. */
+function repositoryRoot(from: string): string {
+  for (let dir = from; ; dir = dirname(dir)) {
+    if (existsSync(join(dir, 'pnpm-workspace.yaml'))) return dir;
+    if (dirname(dir) === dir) throw new Error(`no pnpm-workspace.yaml above ${from}`);
+  }
+}
+
 const MANIFEST = readFileSync(
-  new URL('../../../../../crates/web-engine/Cargo.toml', import.meta.url),
+  join(repositoryRoot(import.meta.dirname), 'crates', 'web-engine', 'Cargo.toml'),
   'utf8'
 );
 const CRATE = /^name = "([a-z-]+)"$/m.exec(MANIFEST)?.[1] ?? '';
@@ -57,6 +63,7 @@ function bindings() {
 
 describe('the Worker entry', () => {
   it('the worker serves the session on its own scope', async () => {
+    const { ENGINE_BASE, ENGINE_BINDINGS, ENGINE_MODULE, browserDeps, serve } = await worker();
     const scope = new FakeScope();
     serve(scope, NO_BROWSER, 'https://app.example');
     await scope.send({ id: 4, op: 'next' });
@@ -87,6 +94,7 @@ describe('the Worker entry', () => {
   it('the worker ignores a message from another origin', async () => {
     // SPEC-338 A20: a sender of another origin is not answered; the empty origin a dedicated
     // Worker's channel carries, and the Worker's own origin, are
+    const { serve } = await worker();
     const scope = new FakeScope();
     serve(scope, NO_BROWSER, 'https://app.example');
     await scope.send({ id: 1, op: 'next' }, 'https://other.example');
@@ -100,6 +108,7 @@ describe('the Worker entry', () => {
   });
 
   it('starts only in a dedicated Worker, serving from the origin root', async () => {
+    const { start } = await worker();
     expect(start({})).toBe(false);
     const scope = Object.assign(new FakeScope(), {
       DedicatedWorkerGlobalScope: class {},
@@ -131,6 +140,7 @@ describe('the Worker entry', () => {
   });
 
   it('the lock is held for the Worker life, or answers busy or unsupported', async () => {
+    const { takeLock } = await worker();
     const asked: [string, object][] = [];
     let kept: unknown;
     const locks = (granted: boolean) =>
@@ -154,6 +164,7 @@ describe('the Worker entry', () => {
   });
 
   it('the storage probe names why OPFS is refused', async () => {
+    const { probeStorage } = await worker();
     const handle = { createSyncAccessHandle() {} };
     const refused = new Error('An error occurred while getting the directory handle');
     const cases: [string, Parameters<typeof probeStorage>, string | null][] = [
@@ -168,6 +179,57 @@ describe('the Worker entry', () => {
     expect(cases.length).toBeGreaterThan(0);
     for (const [name, args, expected] of cases) {
       expect([name, await probeStorage(...args)]).toEqual([name, expected]);
+    }
+  });
+
+  it("the browser's side reads the Worker's own Web Locks and storage, and names what is missing", async () => {
+    // written after green, to kill the mutants StrykerJS found that no test observed
+    const { browserDeps } = await worker();
+    const base = new URL('https://app.example/engine/');
+    const load = () => Promise.reject(new Error('no engine here'));
+    const bare = browserDeps(base, load, {});
+    expect(await bare.lock('deck-streak-collection')).toBe('unsupported');
+    expect(await bare.storage()).toBe('this browser has no origin private file system');
+    const directory = async () => ({}) as FileSystemDirectoryHandle;
+    const noHandle = browserDeps(base, load, { navigator: { storage: { getDirectory: directory } } });
+    expect(await noHandle.storage()).toBe('this browser has no SyncAccessHandle');
+    const asked: string[] = [];
+    const locks = {
+      request: (name: string, _options: object, grant: (lock: object | null) => unknown) => {
+        asked.push(name);
+        grant(null);
+        return Promise.resolve();
+      }
+    } as unknown as LockManager;
+    expect(await browserDeps(base, load, { navigator: { locks } }).lock('deck-streak-collection')).toBe(
+      'busy'
+    );
+    expect(asked).toEqual(['deck-streak-collection']);
+  });
+
+  it('the default loader imports the bindings from the base it is given', async () => {
+    // written after green: nothing is served at this base, so the import's own refusal names the
+    // URL it was asked for, which only a real import of the bindings' URL can do
+    const { browserDeps } = await worker();
+    const base = new URL('file:///nowhere-deck-streak-engine/engine/');
+    await expect(browserDeps(base).load()).rejects.toThrow(`nowhere-deck-streak-engine/engine/${STEM}.js`);
+  });
+
+  it('the module serves itself when a dedicated Worker loads it', async () => {
+    // written after green: the module's own last line starts it, on the Worker's global scope
+    const scope = new FakeScope();
+    vi.stubGlobal('DedicatedWorkerGlobalScope', class {});
+    vi.stubGlobal('location', { href: 'https://app.example/assets/worker-abc.js', origin: 'https://app.example' });
+    vi.stubGlobal('addEventListener', scope.addEventListener.bind(scope));
+    vi.stubGlobal('postMessage', scope.postMessage.bind(scope));
+    try {
+      vi.resetModules();
+      await worker();
+      await scope.send({ id: 1, op: 'next' });
+      expect(scope.posted).toEqual([{ id: 1, ok: false, code: 'not-open', message: 'next before open' }]);
+    } finally {
+      vi.unstubAllGlobals();
+      vi.resetModules();
     }
   });
 });

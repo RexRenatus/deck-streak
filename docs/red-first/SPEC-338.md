@@ -110,3 +110,18 @@ A21: green at 88b7342
   test's `serve` and `EngineClient` the origin argument, which the code did not yet read; Vitest
   strips types and ran them green. At 88b7342 Vitest read `Tests  319 passed (319)` across the
   app, and `svelte-check` read 0 errors and 0 warnings over 1306 files.
+- **StrykerJS's survivors were killed after green, by tests and by two behaviour-neutral
+  rewrites.** Over `protocol.ts`, `client.ts`, `session.ts`, `persistence.ts` and `worker.ts`, the
+  first run read all 63 of `worker.ts`'s mutants as not covered: `worker.test.ts` read the crate's
+  manifest by a fixed `../../../../../`, which from StrykerJS's sandbox below `web/app/.stryker-tmp`
+  names no file, so the test file failed to load and reported no test. It now walks up to
+  `pnpm-workspace.yaml`, as `docs-mermaid.test.ts` does. Three survivors in `session.ts` were
+  equivalent: the initial `'idle'`, the initial empty reason and the `'closed'` a close set each
+  changed no answer, since every state other than `open` and the ended ones answered alike. The
+  session now holds an open flag and an ended record of code and reason, and its eight tests,
+  unchanged, read green over it. Eight survivors in `worker.ts` were killed by three tests written
+  after green: the browser's side over missing Web Locks and storage, the default loader's URL, and
+  the module starting itself in a dedicated Worker. The test file loads the module inside each
+  test, so a fault in its own start fails a test rather than the file's load, and the default
+  loader is a function, so its mutant is decided when it is called rather than when the module
+  loads. The last run read 322 mutants, 322 killed, and Vitest read `Tests  322 passed (322)`.
