@@ -841,6 +841,8 @@ What this part does not do:
 - It adds no Caddy route: the server listens on a loopback address alone (R3), #157.
 - It serves no further tool or resource: later parts of #157.
 - It loads no third credential and registers no parked tool: #158.
+- It declares no service level objective for the server in `deploy/slo.json`: its traffic is
+  the owner's agent alone, and an objective for it waits on that traffic measured, #157.
 
 ## 16. Acceptance criteria of the 2026-10-04 amendment
 

@@ -173,3 +173,50 @@ commits that edits a test file.
   the failure its fence line above quotes.
 
 Correction (fix round 1): CI at 8ded90ac named two findings, and this round adds tests only, with no production change. F1: `test_setting_shapes` refused `mcp::SocketSetting`'s shape literal, `"a socket address with a port"`, and `crates/mcp/tests/settings.rs::every_listen_refusal_reads_its_own_text` now spells that exact quoted literal in a compiled test item (the census reads green, 76 tests). F2: four mutants were missed, and each has one killing test in its own crate, each proved by a hand plant of the CI mutant's replacement that the killer failed and a restore sha256-equal: `ListenRefusal`'s `Display` (settings.rs:80) by `every_listen_refusal_reads_its_own_text`, `ListenAddress`'s `Display` (settings.rs:130) by `a_listen_address_reads_as_the_socket_address_it_holds`, `serve` (server.rs:171) by `serve_answers_a_request_before_its_shutdown_resolves_then_returns` (mcp), and `stop_before_serving` (role_mcp.rs:58) by `the_mcp_role_that_cannot_open_its_database_says_stopping_on_its_notify_socket` (daemon, `tests/roles.rs`). These are MUTATION COVERAGE tests, green at the base 8ded90ac and so not red-first. The green commit is 16034804fd524cb1bc2d8c838b5d17029fcd07ef.
+
+## #157, part b: the server's unit
+
+The red commit adds the MCP server's unit to the template tests' tables and nothing else: its role,
+its two credentials and their sources, its required setting, its hardening row, its processor
+ceiling beside the API's lowered one, and the share's worst case moved to the four daemons and the
+largest job. Each criterion below ran over the whole test file at the red commit, and exactly A47 to
+A51 failed, each for the unit's absence. The green commit adds the unit, its budget entry, its rail
+rows, the example's setting and the ADR rows.
+
+```red-first
+A46: not red: its test reads the units, the host budget and the ADR rows, and no table the red commit can change, so the unit's absence cannot red it from a test-only commit; at the green commit, the MCP server's budget entry removed in a scratch copy reds it
+A47: red at 482e00f6bf8197123bc6ec7d70b052e828dd1a7a: the_daemons_and_the_largest_job_fit_the_stack_share failed at scripts/tests/test_deploy_templates.py:928: the daemon list, Lists differ, First extra element 3: 'deck-streak-mcp.service'
+A47: green at 73732b90c8a2b7a9d31be62bdb5dcf7bd3e5323c
+A48: red at 482e00f6bf8197123bc6ec7d70b052e828dd1a7a: every_service_runs_its_role_with_the_lifecycle_r1_names failed at scripts/tests/test_deploy_templates.py:1320: the roles and daemon caps, with 'deck-streak-mcp.service' among them, not less than or equal to the shipped units: a role with no unit
+A48: green at 73732b90c8a2b7a9d31be62bdb5dcf7bd3e5323c
+A49: red at 482e00f6bf8197123bc6ec7d70b052e828dd1a7a: every_unit_that_loads_a_credential_fails_and_pages_on_a_refusal failed at scripts/tests/test_deploy_templates.py:1407: Items in the second set but not the first: 'deck-streak-mcp.service'
+A49: green at 73732b90c8a2b7a9d31be62bdb5dcf7bd3e5323c
+A50: red at 482e00f6bf8197123bc6ec7d70b052e828dd1a7a: no_unit_passes_a_secret_through_its_environment failed at scripts/tests/test_deploy_templates.py:1072: the required settings, with 'DECKSTREAK_MCP_LISTEN' among them, not less than or equal to the committed example's settings
+A50: green at 73732b90c8a2b7a9d31be62bdb5dcf7bd3e5323c
+A51: red at 482e00f6bf8197123bc6ec7d70b052e828dd1a7a: every_service_carries_the_hardening_r2_names failed at scripts/tests/test_deploy_templates.py:1383: the per-service table, Lists differ, First differing element 6: 'deck-streak-mcp.service'
+A51: green at 73732b90c8a2b7a9d31be62bdb5dcf7bd3e5323c
+A52: not red: its test lives in scripts/tests/test_rail_contract.py, which this part does not change, and it holds the rail contract equal to the templates, so with neither the unit nor its rows present it is green; at the green commit, the unit's two rail rows removed in a scratch copy red it
+```
+
+The two `not red` criteria are shown able to fail by those plants, each run against the green
+commit in a scratch copy and restored byte for byte after: A46 failed with the MCP server's budget
+entry removed, and A52 failed with its two rail rows removed. The share test fails closed on each
+of the unit's ceilings too: with the unit's `MemoryMax=` removed, A47 failed with
+`deploy/systemd/deck-streak-mcp.service has no MemoryMax, so it cannot be shown to fit`, and with
+its `CPUQuota=` removed, with `deploy/systemd/deck-streak-mcp.service has no CPUQuota, so it cannot
+be shown to fit`.
+
+### A correction to part a's A1 line
+
+Part a's A1 red line writes its failure as "the unspecified address was not refused as
+NotLoopback". Replayed at that red commit, 43f6d989d35769b4e11f3d8436a660c9795398ce, with the
+replayed tree's `deck-streak-mcp` compiled afresh, A1's command failed with
+`the_listen_address_must_be_loopback` panicking at `crates/mcp/tests/settings.rs:268:18`, and the
+failure it observed reads:
+
+```text
+"0.0.0.0:8790" was not refused as NotLoopback: Ok(ListenAddress(0.0.0.0:8790))
+```
+
+This is an addition: the line above it stands as it was recorded, and this quote is the failure as
+observed.
