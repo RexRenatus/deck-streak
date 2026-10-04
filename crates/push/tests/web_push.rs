@@ -17,7 +17,7 @@ use serde_json::json;
 use support::fake_push_service::FakePushService;
 use support::keys::{CONTACT, ENDPOINT_PATH, TestKey, TestSubscriber};
 use support::rfc8291::Undecrypted;
-use support::{DEADLINE, Recorded, START, clock};
+use support::{Answer, DEADLINE, Recorded, START, clock};
 
 /// A sender whose list holds `services`, signing with `key`.
 fn build_sender(key: &TestKey, services: PushServices) -> WebPushSender {
@@ -186,4 +186,27 @@ async fn a13_ttl_urgency_and_topic_carry_the_expiry_and_the_collapse_key() {
         headers(&received[1]),
         (Some("0".to_owned()), Some("normal".to_owned()), None)
     );
+}
+
+#[tokio::test]
+async fn a14_a_404_or_410_reports_the_subscription_gone() {
+    let service = FakePushService::start().await;
+    let key = TestKey::generate();
+    let browser = TestSubscriber::generate();
+    let sender = build_sender(&key, listing(&[&service]));
+    let subscription = sender
+        .subscription(&service.endpoint(), &browser.p256dh(), &browser.auth())
+        .expect("a listed endpoint is admitted");
+    service
+        .fake
+        .script([Answer::status(404), Answer::status(410)]);
+
+    let first = sender.deliver(&subscription, &notification()).await;
+    let second = sender.deliver(&subscription, &notification()).await;
+
+    assert_eq!(
+        (first, second),
+        (Sent::Gone { since: None }, Sent::Gone { since: None })
+    );
+    assert_eq!(service.fake.received().len(), 2, "one request each");
 }
