@@ -55,6 +55,12 @@
       "test_deploy_templates"
     ]
   },
+  "scripts/web-engine-size.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_web_engine_size"
+    ]
+  },
   "scripts/write-back-issues.py": {
     "dir": "scripts/tests",
     "modules": []

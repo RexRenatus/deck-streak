@@ -19,10 +19,12 @@ const config = {
     // frame-ancestors; the Caddy block's header does (SPEC-032). A frame's own navigation, one the
     // card frame starts itself included, is checked against this page's frame-src, so the card
     // module's 'none' holds every frame to the document it was given (SPEC-341 R5, SEC01-F13).
+    // `wasm-unsafe-eval` admits WebAssembly compilation for the web engine (SPEC-338 R7, ADR-349), and neither `eval` nor
+    // `new Function`, which `unsafe-eval` would.
     csp: {
       mode: 'hash',
       directives: {
-        'script-src': ['self', 'https://telegram.org'],
+        'script-src': ['self', 'https://telegram.org', 'wasm-unsafe-eval'],
         'object-src': ['none'],
         'base-uri': ['self'],
         'connect-src': ['self'],

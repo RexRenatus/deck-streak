@@ -34,11 +34,18 @@ deck-streak-coordination  (use cases and scheduled jobs across contexts)  depend
 deck-streak-api           (axum HTTPS adapter for the Mini App)  depends on: kernel, identity, notifications, coordination
 deck-streak-bot           (Telegram Bot API adapter)  depends on: kernel, identity, notifications, coordination
 deck-streak-mcp           (MCP adapter: the bearer guard, the server and its tools)  depends on: kernel, coordination
+deck-streak-ffi           (FFI adapter for a native client: the engine's backend behind an allow-list; ADR-345)  depends on: nothing
 deck-streak-daemon        (composition root: the deckstreakd binary)  depends on: kernel, ingest, identity, analytics, progression, streaks, curriculum, economy, quests, habits, focus, discipline, markets, notifications, readings, vault, agent, insights, publishing, privacy, coordination, api, bot, mcp
 deck-streak-migration     (one-off import of v9's schema 24, planned)  depends on: kernel, analytics, progression, streaks, curriculum, economy, quests, habits, focus, discipline, markets, notifications, readings, vault
+deck-streak-web-engine    (Anki's engine on wasm32 in the web client's Worker: the study calls over OPFS)  depends on: nothing
 miniapp   web/app/src     (the SvelteKit Mini App)  depends on: nothing internal
 landing   web/site/src    (the Astro landing page, planned)  depends on: nothing internal
 ```
+
+`deck-streak-ffi` is the one adapter that depends on no context: it puts Anki's engine, an
+external crate and not a context, behind a constant allow-list for a native client, and it
+reaches no DeckStreak table or use case (SPEC-336, ADR-345 D1). The daemon does not compose it:
+a native client links it into its own binary.
 
 `deck-streak-migration` and `landing` are PLANNED: they have no code yet, so the probe counts
 them and judges none of their edges until the wave that builds them (W8 and W7).

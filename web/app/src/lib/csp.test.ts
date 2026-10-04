@@ -8,6 +8,16 @@ import { PAGE_FRAME_SRC } from './card/policy.js';
 // scripts that run are the app's own files, those hashed scripts and Telegram's. The directives a
 // meta element cannot carry (frame-ancestors) are the Caddy header's (SPEC-032).
 const TELEGRAM = 'https://telegram.org';
+// SPEC-338 R7, ADR-349: the web engine's Worker compiles WebAssembly, which this keyword admits and
+// `'unsafe-eval'` would admit with `eval` beside it.
+const WASM = 'wasm-unsafe-eval';
+// SPEC-028's policy, before SPEC-338: what the page admitted with no engine.
+const BEFORE: Record<string, readonly string[]> = {
+  'script-src': ['self', TELEGRAM],
+  'object-src': ['none'],
+  'base-uri': ['self'],
+  'connect-src': ['self']
+};
 const SHELL = readFileSync(new URL('../app.html', import.meta.url), 'utf8');
 
 /** The sources in `sources` that would let a script run without the page vouching for it. */
@@ -25,7 +35,7 @@ describe('the page policy', () => {
 
     expect(csp?.mode).toBe('hash');
     expect(csp?.directives).toEqual({
-      'script-src': ['self', TELEGRAM],
+      'script-src': ['self', TELEGRAM, WASM],
       'object-src': ['none'],
       'base-uri': ['self'],
       'connect-src': ['self'],
@@ -46,6 +56,26 @@ describe('the page policy', () => {
       'https:'
     ]);
     expect(unsafe(csp?.directives?.['script-src'] ?? [])).toEqual([]);
+  });
+
+  it('the page policy admits WebAssembly compilation and nothing else new', () => {
+    const directives = (config.kit?.csp?.directives ?? {}) as Record<string, readonly string[]>;
+    const difference = (from: typeof BEFORE, to: typeof BEFORE) =>
+      Object.entries(from).flatMap(([directive, sources]) =>
+        sources
+          .filter((source) => !(to[directive] ?? []).includes(source))
+          .map((source) => `${directive} ${source}`)
+      );
+
+    // two sources are new, WebAssembly's keyword in script-src and the card frame's frame-src
+    // 'none' (SPEC-341 R13), and SPEC-028's policy is whole
+    expect(difference(directives, BEFORE)).toEqual([`script-src ${WASM}`, 'frame-src none']);
+    expect(difference(BEFORE, directives)).toEqual([]);
+    // and the keyword is not the general eval: the judgement admits it and refuses that
+    expect(unsafe([WASM, `'${WASM}'`, "'unsafe-eval'", 'unsafe-eval'])).toEqual([
+      "'unsafe-eval'",
+      'unsafe-eval'
+    ]);
   });
 
   it('the page sends no referrer to another origin', () => {
