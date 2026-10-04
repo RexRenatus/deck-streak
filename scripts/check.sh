@@ -10,7 +10,7 @@
 # stderr; stdout, which a reader quotes, never names it (SPEC-056 R4). Each stage first checks the
 # tools it runs:
 # a missing tool FAILS that stage by name, with its install hint, because a gate that silently
-# skipped a stage would report green having examined nothing. CI runs these stages in four parallel
+# skipped a stage would report green having examined nothing. CI runs these stages in five parallel
 # jobs, each stage in exactly one of them (ADR-055).
 set -uo pipefail
 
@@ -26,9 +26,9 @@ fi
 mkdir -p "$LOG_DIR"
 TIMINGS="$LOG_DIR/timings.tsv"
 
-# In CI's order: the rust job, the engine job, the web job, the hygiene job. The packs are judged
+# In CI's order: the rust job, the engine job, the release job, the web job, the hygiene job. The packs are judged
 # on the maintainer's box by scripts/box-packs.sh, never here (ADR-069).
-STAGES_ALL=(fmt clippy test doctest audit-rust test-engine web audit-web python scrub secrets)
+STAGES_ALL=(fmt clippy test doctest audit-rust test-engine test-release web audit-web python scrub secrets)
 if [ "$#" -gt 0 ]; then STAGES=("$@"); else STAGES=("${STAGES_ALL[@]}"); fi
 
 # The engine set (SPEC-038 R13), defined here and nowhere else: SPEC-022's two test binaries that
@@ -116,6 +116,15 @@ stage_test_engine() {
     need_cargo && need_nextest && need_protoc &&
         cargo nextest run --workspace --locked --no-fail-fast -E "$ENGINE_TESTS" \
             ${targets[@]+"${targets[@]}"} ${slice[@]+"${slice[@]}"}
+}
+
+stage_test_release() {
+    # The workspace's tests in the profile the daemon ships from (release.yml builds with
+    # --release; the workspace sets no [profile.release]), so a rule that holds only with debug
+    # assertions on fails here (SPEC-330, ADR-330). Every test `test` runs; the engine set stays
+    # with test-engine, and engine_budget has its own release run in engine-measure.yml.
+    need_cargo && need_nextest && need_protoc &&
+        cargo nextest run --workspace --locked --no-fail-fast --release -E "not ($ENGINE_TESTS)"
 }
 
 stage_doctest() { need_cargo && need_protoc && cargo test --doc --workspace --locked; }
