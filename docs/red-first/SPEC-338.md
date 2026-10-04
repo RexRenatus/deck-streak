@@ -125,3 +125,25 @@ A21: green at 88b7342
   test, so a fault in its own start fails a test rather than the file's load, and the default
   loader is a function, so its mutant is decided when it is called rather than when the module
   loads. The last run read 322 mutants, 322 killed, and Vitest read `Tests  322 passed (322)`.
+- **CI's first run at the build head read red on three causes, and each was cured after it.** Run
+  37204869130 read `Ran 898 tests`, `FAILED (failures=7)` in `hygiene`; `1445 tests run: 1443
+  passed, 2 failed` in `rust`; and `mutation-plan` refused with `scripts/web-engine-size.py: the map
+  omits this population file`, which ran no mutation battery at all. 824f42a mapped the size gate,
+  listed the four reads the census named and aligned two tests; f95a974 added the locked fetch
+  step to the `rust` and `release` jobs; 6d74b0a renamed the `init` export's Rust function and kept
+  its JavaScript name. A16's test was not red-first (the CI-only suite is never run locally): its
+  first reading was red on its own message, `the web-engine job runs no the size gate`, cured at
+  824f42a by the producer, not by its expectation. The rebuilt bindings hold `export function
+  init(` once and no `create_backend`, and the kernel's capture census reads `0 raw capture(s)`.
+- **The batteries the refused map hid were run locally and their survivors killed after green.**
+  Over the synthetic notes, 14 of 33 mutants survived: every draw of the generator, the syllable
+  table and the field loop's bound, because the one test judged only a length and a count. e2570b4
+  added a test that judges `fields` draw for draw against an independent SplitMix64, whose
+  published seed-0 vectors pin the reference, over a population in which more than a thousand
+  fronts end exactly on 200 characters; the rerun read 27 caught, 4 unviable and 2 timeouts, 0
+  missed. Over the size gate, 12 of 53 mutants survived: its bytecode switch, its two failure
+  tests, the text reading of node's figure, its program name, help text and required options.
+  c07ec1f measured the fake tools in their own process and the rerun read 53 killed, 0 survived.
+  These are mutation coverage written at green, not red-first evidence. The 41 mutants listed in
+  the `wasm32`-only module build natively as the unchanged crate, so each carries an equivalent
+  record naming the browser test that runs the function.
