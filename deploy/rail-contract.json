@@ -166,6 +166,18 @@
       "section": "Timer",
       "key": "OnCalendar",
       "neutral": ["*-*-* *:00/5:00 UTC"]
+    },
+    {
+      "unit": "deck-streak-sync-server.service",
+      "section": "Service",
+      "key": "ExecStart",
+      "neutral": ["/usr/local/lib/deck-streak/current/deploy/scripts/sync-server.sh"]
+    },
+    {
+      "unit": "deck-streak-sync-server.service",
+      "section": "Service",
+      "key": "EnvironmentFile",
+      "neutral": ["/etc/deck-streak/deck-streak.env"]
     }
   ]
 }

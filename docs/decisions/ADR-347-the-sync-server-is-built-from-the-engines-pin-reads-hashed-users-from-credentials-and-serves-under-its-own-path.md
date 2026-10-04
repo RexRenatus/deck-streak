@@ -125,3 +125,40 @@ server faces the internet (ADR-340).
 ADR-340, ADR-058, ADR-336, ADR-344, ADR-032, ADR-064, ADR-062, ADR-060, ADR-025, ADR-010, ADR-038,
 ADR-321; SPEC-337, SPEC-334, SPEC-064; `docs/schematics/sync-server-packaging-and-cutover.md`; #617,
 #161, #167.
+
+## Amendment: the unit's share (SPEC-337)
+
+The share is moved: ADR-064's amendment of this delivery sets it to 1152 MiB, so the unit's entry
+no longer waits. This amendment replaces the Decision Outcome's sentence that the entry waits on a
+resize and the consequence that the unit cannot be installed until the share is decided; the rest
+of that section stands.
+
+D7, the share and the processors:
+
+- `deck-streak-sync-server.service` takes `MemoryHigh=384M` and `MemoryMax=448M`, and the share's
+  two processors are split among the five daemons, 200% in all: the API 75%, the sync server 50%,
+  the bot 25%, the replicator 25% and the MCP server 25%. The five daemons' ceilings (768M) and the
+  largest job's (384M) fill the share of 1152M exactly, and the share test asserts both figures
+  EQUAL — chosen, because a full upload is the heaviest burst measured and a client waits on it,
+  while the bot's traffic waits on the host and the replicator ships write-ahead-log frames.
+- Taking the sync server's room from the API: rejected because the API serves the clients' path.
+- 25% of a processor for the sync server: rejected because a full upload is bound by the processor
+  and the client waits on it.
+
+D8, where the credential ids live:
+
+- The two credential ids, `sync-server-owner` and `sync-server-staging`, are shell constants in the
+  launcher, `readonly SYNC_SERVER_OWNER=...`, which the deploy-template tests read as they read a
+  Rust `pub const` — chosen, because the launcher is the one program that reads them.
+- A Rust constant in a crate: rejected because no program would read it, so the census would hold
+  a name nothing uses.
+
+D9, what the server reads:
+
+- The launcher clears every `SYNC_` variable, `PASSWORDS_HASHED` and `MAX_SYNC_PAYLOAD_MEGS` from
+  its environment before it sets its own, so the server reads exactly two users, its state
+  directory and its loopback address, and its payload limit stays its own default of 100 MiB, the
+  bound the Caddy block holds the request body to — chosen, because the edge's bound and the
+  server's must be the same number.
+- Passing the environment through: rejected because a stray `SYNC_USER3` would add a user and a
+  stray payload limit would let the server and the edge disagree.

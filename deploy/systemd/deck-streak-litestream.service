@@ -34,7 +34,7 @@ SyslogIdentifier=deck-streak-litestream
 # The budget is deploy/host-budget.json's entry for this unit (ADR-032, ADR-064).
 MemoryHigh=48M
 MemoryMax=64M
-CPUQuota=50%
+CPUQuota=25%
 TasksMax=64
 UMask=0077
 NoNewPrivileges=yes
