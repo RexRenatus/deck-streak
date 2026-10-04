@@ -37,6 +37,7 @@ admits the module.
 - The cargo `cdylib` before the size pass: rejected because it is not what ships, and it reads larger than the shipped module.
 - One archive of both files: rejected because a browser fetches them separately, and an archive's compression shares a dictionary they never share.
 - Gate on brotli: rejected because ADR-336 accepted the budget in gzip -9, and the host may serve either.
+- Brotli by Python's `brotli` package or the brotli CLI: rejected because neither is in Python's standard library or among the tools the job installs, while node, which the job sets up for the browser tests, carries brotli in its `zlib` at the CLI's defaults (quality 11, a 2^24-byte window).
 
 ### How the policy admits the module
 
@@ -57,7 +58,9 @@ Chosen options: the first under each heading above.
   The two files are `deck_streak_web_engine_bg.wasm` and `deck_streak_web_engine.js`.
 - **The gate.** `scripts/web-engine-size.py` prints each file's raw, `gzip -9` and brotli sizes and
   the `gzip -9` total against 8000000. It exits 0 when the total is at most the budget, 1 above it,
-  and 2 (VOID) when a file is missing or empty.
+  and 2 (VOID) when a file is missing or empty or a compressor is absent, so no figure is printed
+  as measured that was not. `gzip` runs with `-n`, so a file's name adds nothing to its size;
+  brotli is node's `zlib` at quality 11 with a 2^24-byte window.
 - **The policy.** `script-src` reads `'self' https://telegram.org 'wasm-unsafe-eval'`; every other
   directive is unchanged.
 

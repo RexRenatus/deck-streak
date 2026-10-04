@@ -80,7 +80,8 @@ R8. CI's `web-engine` job builds the module (`cargo build --release --target
     wasm32-unknown-unknown`, `wasm-bindgen --target web`, `wasm-opt -Oz`) and
     `scripts/web-engine-size.py` fails it when the module plus its JS bindings exceed 8000000 bytes
     `gzip -9` (ADR-336's budget), records their brotli size beside it, and reads VOID, never a
-    pass, when either file is missing or empty. The `ci` aggregate needs the job (ADR-349).
+    pass, when either file is missing or empty or a compressor is absent. The `ci` aggregate needs
+    the job (ADR-349).
 R9. In Chromium and WebKit under Playwright, with a persistent profile, the built module opens a
     synthetic collection, answers a card and undoes the answer correctly, keeps the collection
     across a page reload, and refuses a second tab; WebKit's ephemeral context reads
