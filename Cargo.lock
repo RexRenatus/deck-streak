@@ -1096,6 +1096,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "deck-streak-engine-core"
+version = "0.2.0"
+dependencies = [
+ "anki",
+ "anki_proto",
+ "prost",
+ "serde_json",
+]
+
+[[package]]
 name = "deck-streak-ffi"
 version = "0.2.0"
 dependencies = [
