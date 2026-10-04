@@ -58,11 +58,10 @@ it has no global pool.
   includes and the items it names.
 - (a), a one-character piece counts only where its own file joins it: lost, because of two reasons.
   Its file joins it inside `concat!`, `format!`, a `+`, an array of two or more, or a `const`.
-  - The defect survives in shapes as ordinary as #600's: a format template (`format!("M{n}")`), a
-    named const used alone, and a split set (`split(['M', '.'])`). A1 still refuses 39, 63 and 51
-    trees.
-  - A char-by-char push sequence in one file (P6) and a character pushed between two other files'
-    constants (P9) escape.
+  The defect survives in shapes as ordinary as #600's: a format template (`format!("M{n}")`), a
+  named const used alone, and a split set (`split(['M', '.'])`). A1 still refuses 39, 63 and 51
+  trees. A char-by-char push sequence in one file (P6) and a character pushed between two other
+  files' constants (P9) escape.
 - (b), a minimum piece length of two plus a per-file char-by-char refusal: lost, because it drops
   SPEC-324's own spellings. The `file`, `crate`, `text` and `module` forms of every split
   that leaves a single character escape, 12 per name. So do the one-character constants joined from
@@ -72,10 +71,10 @@ it has no global pool.
   argument (B5) escape, the shape ADR-325 gave for rejecting a per-crate pool.
 - (d+fn), (d) with `fn` items followed by name as well: lost, because of its width. It keeps B1, B2
   and B8 refused, but names are matched unqualified, so `new`, `from` and `fmt` collide.
-  - At dev, each file's reach draws on a mean of 44.6 holder files (max 133, the defect's own scale)
-    against (d)'s 2.9 (max 26), and holds 13.06 one-character pieces against 3.18.
-  - It rebuilds a near-workspace pool keyed by common names.
-  - It still misses a character carried through two calls.
+  At dev, each file's reach draws on a mean of 44.6 holder files (max 133, the defect's own scale)
+  against (d)'s 2.9 (max 26), and holds 13.06 one-character pieces against 3.18. It rebuilds a
+  near-workspace pool keyed by common names, and it still misses a character carried through two
+  calls.
 - Editing #600's literal, admitting it, or exempting its file: lost, because the defect is the
   census's (ruling 155). The next lone `l` or `m` in any crate would trip it again, as the
   fragility census shows.
