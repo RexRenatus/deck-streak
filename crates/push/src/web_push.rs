@@ -135,7 +135,11 @@ impl WebPushSender {
 
     /// Sends `notification` to `subscription` and reads the answer into one outcome.
     pub async fn deliver(&self, subscription: &Subscription, notification: &Notification) -> Sent {
-        self.attempt(subscription, notification).await
+        let sent = self.attempt(subscription, notification).await;
+        // One line per call, built from the outcome alone: never a token, an endpoint or a
+        // path (R8).
+        tracing::info!(sender = "web-push", outcome = sent.name(), "push answered");
+        sent
     }
 
     /// One call: the body encrypted to the subscription, one request, and its answer read.

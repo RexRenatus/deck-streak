@@ -164,7 +164,11 @@ impl ApnsSender {
 
     /// Sends `notification` to `device` and reads the answer into one outcome.
     pub async fn deliver(&self, device: &Device, notification: &Notification) -> Sent {
-        self.attempt(device, notification).await
+        let sent = self.attempt(device, notification).await;
+        // One line per call, built from the outcome alone: never a token, an endpoint or a
+        // path (R8).
+        tracing::info!(sender = "apns", outcome = sent.name(), "push answered");
+        sent
     }
 
     /// One call: the request, and R3's one resend when APNs refuses the token as expired.
