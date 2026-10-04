@@ -1560,17 +1560,21 @@ type PlantedRefusal<'a> = (Vec<(&'a str, &'a str)>, Vec<&'a str>);
 #[allow(clippy::too_many_lines)]
 fn the_census_refuses_what_the_compiler_is_not_asked() {
     // Each tree is a valid workspace at `ws` holding one thing the census does not compile or
-    // cannot see through: a member's feature, a cargo configuration in either spelling cargo reads,
-    // a package in the repository outside the workspace, a proc-macro member, a path package
-    // outside the repository, a git package that depends on progression, a lock file cargo would
-    // have to change, code that does not compile, and coordination's use of `settle` in a file
-    // outside the repository, which no file of the repository places. Each is refused by name,
-    // with exactly the refusals its case names: a git package that reaches progression is refused
-    // for its dependency and for the graph edge, and coordination's file outside the repository for
-    // its cause and for being read from outside the tree.
+    // cannot see through: a member's feature another member turns on, a cargo configuration in
+    // either spelling cargo reads, a package in the repository outside the workspace, a proc-macro
+    // member, a path package outside the repository, a git package that depends on progression, a
+    // lock file cargo would have to change, code that does not compile, and coordination's use of
+    // `settle` in a file outside the repository, which no file of the repository places. Each is
+    // refused by name, with exactly the refusals its case names: a git package that reaches
+    // progression is refused for its dependency and for the graph edge, and coordination's file
+    // outside the repository for its cause and for being read from outside the tree.
     const HABITS: &str =
         "[package]\nname = \"deck-streak-habits\"\nversion = \"0.1.0\"\nedition = \"2024\"\n\n";
     let features = format!("{HABITS}[features]\nquiet = []\n");
+    let turned_on = format!(
+        "{}deck-streak-habits = {{ path = \"../habits\", features = [\"quiet\"] }}\n",
+        manifest_of("streaks", &[])
+    );
     let proc_macro = format!("{HABITS}[lib]\nproc-macro = true\n");
     let aside = format!("{HABITS}[dependencies]\naside = {{ path = \"../../../aside\" }}\n");
     let patched = format!(
@@ -1585,8 +1589,12 @@ fn the_census_refuses_what_the_compiler_is_not_asked() {
     let coordination = manifest_of(CALLER, &[OWNER]);
     let trees: [PlantedRefusal<'_>; 10] = [
         (
-            vec![("ws/crates/habits/Cargo.toml", &features)],
-            vec!["crates/habits/Cargo.toml declares a feature, and the census compiles none"],
+            vec![
+                ("ws/crates/habits/Cargo.toml", &features),
+                ("ws/crates/streaks/Cargo.toml", &turned_on),
+                ("ws/crates/streaks/src/lib.rs", "pub fn quiet() {}\n"),
+            ],
+            vec!["crates/streaks turns on the feature(s) quiet of crates/habits"],
         ),
         (
             vec![("ws/.cargo/config.toml", "[build]\nincremental = false\n")],
@@ -1701,6 +1709,226 @@ fn the_census_refuses_what_the_compiler_is_not_asked() {
             "planted {files:?}: {refused:?}"
         );
     }
+}
+
+/// The most features the members of the workspace may declare together, `default` and each optional
+/// dependency's own feature counted: the census compiles every combination of them in every pass,
+/// two to the power of their count, so past this many it refuses the tree by name rather than
+/// compile that many workspaces (SPEC-336 R11, ADR-345 D6).
+const FEATURE_LIMIT: usize = 3;
+
+/// The refusal of a call to `settle` in habits' library, a member other than coordination.
+const HABITS_CALL: &str = "crates/habits/src/lib.rs calls settle, and only coordination's code may";
+
+/// Plants a workspace at `root` whose habits depends on progression, declares `features` (a
+/// manifest's `[features]` table, or nothing) and holds `lib` as its library, and answers what the
+/// census refuses there.
+fn census_of_habits(root: &Path, features: &str, lib: &str) -> Vec<String> {
+    plant_workspace(root);
+    plant(
+        root,
+        "crates/habits/Cargo.toml",
+        &format!("{}\n{features}", manifest_of("habits", &[OWNER])),
+    );
+    plant(root, "crates/habits/src/lib.rs", lib);
+    census(root).refused
+}
+
+#[test]
+fn a9_a_call_under_a_feature_in_another_crate_is_refused_for_the_call() {
+    // SPEC-336 R11, A9 (ruling 202 (2a)): the census compiles every combination of the features
+    // the members declare, with each member's default off unless the combination holds it, so a
+    // call to `settle` in a crate other than progression is refused for the call whichever
+    // combination compiles it: under a feature, under a default feature's absence, under one
+    // feature and another's absence, and under two features together. The control is the same
+    // call under no feature, which the census refused before it compiled any feature.
+    let call = |cfg: &str| {
+        format!("{cfg}pub fn sneak() -> usize {{\n    deck_streak_progression::settle()\n}}\n")
+    };
+    let two = "[features]\nfast = []\nslow = []\n";
+    let cases = vec![
+        (
+            "the control, a call under no feature",
+            String::new(),
+            call(""),
+        ),
+        (
+            "a call under a declared feature",
+            "[features]\nslow = []\n".to_owned(),
+            call("#[cfg(feature = \"slow\")]\n"),
+        ),
+        (
+            "a call under the absence of a default feature",
+            "[features]\ndefault = [\"slow\"]\nslow = []\n".to_owned(),
+            call("#[cfg(not(feature = \"slow\"))]\n"),
+        ),
+        (
+            "a call under one feature and the absence of another",
+            two.to_owned(),
+            call("#[cfg(all(feature = \"fast\", not(feature = \"slow\")))]\n"),
+        ),
+        (
+            "a call under two features together",
+            two.to_owned(),
+            call("#[cfg(all(feature = \"fast\", feature = \"slow\"))]\n"),
+        ),
+    ];
+    let cases = examined("planted call(s) under the members' features", cases);
+    let judged: Vec<(&str, Vec<String>)> = cases
+        .iter()
+        .map(|(label, features, lib)| {
+            let planted = tempfile::tempdir().expect("a temporary directory");
+            (*label, census_of_habits(planted.path(), features, lib))
+        })
+        .collect();
+    let refused_for_the_call = judged
+        .iter()
+        .filter(|(_, refused)| refused == &[HABITS_CALL])
+        .count();
+    assert_eq!(
+        refused_for_the_call,
+        cases.len(),
+        "each call is refused for the call and for nothing else: {judged:#?}"
+    );
+}
+
+#[test]
+fn a10_a_build_script_that_reaches_settle_only_under_a_feature_is_refused() {
+    // SPEC-336 R11, A10: the graph the census reads holds every feature the members declare, so a
+    // build script in a package that reaches progression only through an optional dependency its
+    // feature turns on is refused as one that can name settle. The control reaches progression
+    // through a dependency that is always on, which the census refused before.
+    let script = "fn main() {}\n";
+    let always = manifest_of("habits", &[OWNER]);
+    let optional = format!(
+        "{}\n[dependencies]\n{PROGRESSION_PACKAGE} = {{ path = \"../progression\", optional = \
+         true }}\n\n[features]\nscored = [\"dep:{PROGRESSION_PACKAGE}\"]\n",
+        "[package]\nname = \"deck-streak-habits\"\nversion = \"0.1.0\"\nedition = \"2024\"\n"
+    );
+    let cases = examined(
+        "planted build script(s) reaching settle",
+        vec![
+            ("the control, an edge that is always on", always),
+            ("an edge a feature turns on", optional),
+        ],
+    );
+    let refusal = "deck-streak-habits has a build script and can name settle, and a build \
+                   script's cfg is one the census's passes never set";
+    let judged: Vec<(&str, Vec<String>)> = cases
+        .iter()
+        .map(|(label, manifest)| {
+            let planted = tempfile::tempdir().expect("a temporary directory");
+            let root = planted.path();
+            plant_workspace(root);
+            plant(root, "crates/habits/Cargo.toml", manifest);
+            plant(root, "crates/habits/build.rs", script);
+            plant(root, "crates/habits/src/lib.rs", "pub fn quiet() {}\n");
+            (*label, census(root).refused)
+        })
+        .collect();
+    let refused_for_the_script = judged
+        .iter()
+        .filter(|(_, refused)| refused == &[refusal])
+        .count();
+    assert_eq!(
+        refused_for_the_script,
+        cases.len(),
+        "each build script is refused for the script and for nothing else: {judged:#?}"
+    );
+}
+
+#[test]
+fn a11_a_feature_another_package_turns_on_is_refused_by_name() {
+    // SPEC-336 R11, A11: a member whose feature another package's dependency turns on, by naming it
+    // or by keeping the member's default, is one the census cannot compile without that feature,
+    // as a build of the member alone does, so it is refused by name. The control depends on the
+    // member with its default off and names no feature, and is accepted with every combination
+    // compiled.
+    let habits = |features: &str| format!("{}\n{features}", manifest_of("habits", &[OWNER]));
+    let streaks = |dependency: &str| format!("{}{dependency}\n", manifest_of("streaks", &[]));
+    let cases = vec![
+        (
+            "a dependency that names the feature",
+            habits("[features]\nquiet = []\n"),
+            streaks("deck-streak-habits = { path = \"../habits\", features = [\"quiet\"] }"),
+            vec![
+                "crates/streaks turns on the feature(s) quiet of crates/habits, so the census \
+                  cannot compile crates/habits without them",
+            ],
+        ),
+        (
+            "a dependency that keeps the default",
+            habits("[features]\ndefault = [\"quiet\"]\nquiet = []\n"),
+            streaks("deck-streak-habits = { path = \"../habits\" }"),
+            vec![
+                "crates/streaks turns on the feature(s) default of crates/habits, so the census \
+                  cannot compile crates/habits without them",
+            ],
+        ),
+        (
+            "the control, a dependency with the default off",
+            habits("[features]\ndefault = [\"quiet\"]\nquiet = []\n"),
+            streaks("deck-streak-habits = { path = \"../habits\", default-features = false }"),
+            Vec::new(),
+        ),
+    ];
+    let cases = examined("planted dependent(s) of a member's feature", cases);
+    let mut judged = Vec::new();
+    for (label, habits, streaks, expected) in &cases {
+        let planted = tempfile::tempdir().expect("a temporary directory");
+        let root = planted.path();
+        plant_workspace(root);
+        plant(root, "crates/habits/Cargo.toml", habits);
+        plant(root, "crates/habits/src/lib.rs", "pub fn quiet() {}\n");
+        plant(root, "crates/streaks/Cargo.toml", streaks);
+        plant(root, "crates/streaks/src/lib.rs", "pub fn quiet() {}\n");
+        let refused = census(root).refused;
+        judged.push((*label, refused == *expected, refused));
+    }
+    let as_expected = judged.iter().filter(|(_, right, _)| *right).count();
+    assert_eq!(
+        as_expected,
+        cases.len(),
+        "each tree is judged as its case expects: {judged:#?}"
+    );
+}
+
+#[test]
+fn a12_the_census_compiles_every_combination_up_to_its_feature_limit_and_refuses_past_it() {
+    // SPEC-336 R11, A12: a workspace whose members declare `FEATURE_LIMIT` features is compiled in
+    // every combination and accepted, and one that declares one more is refused by name before it
+    // compiles any.
+    let declaring = |count: usize| {
+        let mut table = "[features]\n".to_owned();
+        for at in 0..count {
+            writeln!(table, "f{at} = []").expect("a string takes every write");
+        }
+        table
+    };
+    let cases = examined(
+        "planted feature count(s) at and past the limit",
+        vec![FEATURE_LIMIT, FEATURE_LIMIT + 1],
+    );
+    let judged: Vec<(usize, Vec<String>)> = cases
+        .iter()
+        .map(|count| {
+            let planted = tempfile::tempdir().expect("a temporary directory");
+            let refused =
+                census_of_habits(planted.path(), &declaring(*count), "pub fn quiet() {}\n");
+            (*count, refused)
+        })
+        .collect();
+    let past = format!(
+        "the members declare {} features (deck-streak-habits/f0, deck-streak-habits/f1, \
+         deck-streak-habits/f2, deck-streak-habits/f3), and the census compiles every \
+         combination of at most {FEATURE_LIMIT}",
+        FEATURE_LIMIT + 1
+    );
+    assert_eq!(
+        judged,
+        vec![(FEATURE_LIMIT, Vec::new()), (FEATURE_LIMIT + 1, vec![past])],
+        "the tree at the limit is accepted and the tree past it refused by name"
+    );
 }
 
 #[test]
@@ -5206,7 +5434,10 @@ const R7_NAMED: [(&str, &str); 35] = [
         "H06 ",
         "deck-streak-m has a build script and can name settle",
     ),
-    ("H07 ", "crates/m/Cargo.toml declares a feature"),
+    (
+        "H07 ",
+        "deck-streak-m has a build script and can name settle",
+    ),
     (
         "H08 ",
         "deck-streak-m has a build script and can name settle",
