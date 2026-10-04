@@ -1,7 +1,7 @@
 ------------------------- MODULE SyncSnapshotWindow -------------------------
-\* @phx covers deploy/scripts/backup.py anchor=window digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers deploy/scripts/backup.py anchor=copy_stopped digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers deploy/scripts/backup.py anchor=refuse_a_holder digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers deploy/scripts/backup.py anchor=window digest=sha256:b9e9aa5dead439dfd5ba5318a7a083b7cd9c74ad87a0f3f0f0cb690af6db8431
+\* @phx covers deploy/scripts/backup.py anchor=copy_stopped digest=sha256:c4a13976b4ee1a275a4deee7961f1a1ea7dc100dc7401ceb42ab1c5299cf0147
+\* @phx covers deploy/scripts/backup.py anchor=refuse_a_holder digest=sha256:6917f2b2a52e57ac1e48006e8dc87a6e255f788c316115d9a4b9c9de892a5cd0
 \* @phx cites #617, #647
 \* @phx property CopyOnlyWhileStopped ramp=report
 \* @phx property PairFromOneGeneration ramp=report
