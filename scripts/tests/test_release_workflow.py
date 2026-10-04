@@ -2,7 +2,9 @@
 R2; ADR-062, ADR-017, ADR-034). It runs on a push of a SemVer tag only, proves the tag's commit is
 on `main` on a full-history checkout, creates a draft, attaches one tarball with its digests and a
 build-provenance attestation, and publishes after the last upload (A8). Its token is read-only
-except in its one job, every action is pinned, and no step saves a cache (A9)."""
+except in its one job, every action is pinned, and no step saves a cache (A9). It builds the sync
+server from the fork and the commit the engine's patch entry pins, and ships it in the same tarball
+(SPEC-337 A1, A2)."""
 
 import os
 import re
@@ -17,6 +19,7 @@ from test_ci_workflows import PINNED, action, entries, read_hardened, workflow_f
 RELEASE = REPO / ".github" / "workflows" / "release.yml"
 JOB_WRITES = {"contents": "write", "id-token": "write", "attestations": "write"}
 ATTEST = "actions/attest-build-provenance"
+UPSTREAM = "https://github.com/ankitects/anki.git"
 
 
 def tag_glob(pattern):
@@ -198,6 +201,94 @@ class TheTagGuardRuns(unittest.TestCase):
             self.assertEqual(verdicts["v1.0.0"], 0, f"an annotated tag on main: {verdicts}")
             self.assertNotEqual(verdicts["v1.1.0"], 0, f"a lightweight tag: {verdicts}")
             self.assertNotEqual(verdicts["v2.0.0"], 0, f"a tag off main: {verdicts}")
+
+
+class TheReleaseBuildsTheSyncServer(unittest.TestCase):
+    """SPEC-337 R1 (ADR-347 D1): the release builds the sync server from the fork and the commit
+    the engine's patch entry pins, after the tag guard and the protobuf compiler, and ships it in
+    the tarball that the manifest, the digests and the attestation cover."""
+
+    def test_the_sync_server_is_built_after_the_guard_and_shipped_in_the_tarball(self):
+        steps = steps_of(read_release())
+        ancestor = index_of(steps, "merge-base --is-ancestor")
+        protoc = index_of(steps, "protoc", key="name")
+        server = index_of(steps, "cargo install")
+        tarball = index_of(steps, "MANIFEST.sha256")
+        create = index_of(steps, "gh release create")
+        self.assertLess(ancestor, server, "the tag is proved on main before the server is built")
+        self.assertLess(protoc, server, "the engine needs the protobuf compiler")
+        self.assertLess(server, tarball, "the server is built before the tarball is assembled")
+        self.assertLess(tarball, create, "the tarball is assembled before the draft")
+        run = str(steps[server]["run"])
+        self.assertIn("--locked", run, "the fork's own lockfile builds the server")
+        self.assertIn('"$RUNNER_TEMP/sync-server"', run, "the server is installed outside the tree")
+        self.assertNotRegex(run, r"[0-9a-f]{40}", "the step holds no second copy of the commit")
+        packed = str(steps[tarball]["run"])
+        line = (
+            'install -m 0755 "$RUNNER_TEMP/sync-server/bin/anki-sync-server" '
+            '"$stage/bin/anki-sync-server"'
+        )
+        self.assertIn(line, packed, "the tarball carries the server as bin/anki-sync-server")
+        self.assertLess(
+            packed.index(line),
+            packed.index("MANIFEST.sha256"),
+            "the manifest is written after the server is staged, so its digests cover it",
+        )
+
+    def test_the_build_step_reads_the_fork_and_the_commit_from_the_engines_patch_entry(self):
+        steps = steps_of(read_release())
+        run = str(steps[index_of(steps, "cargo install")]["run"])
+        fork = "https://example.org/planted/anki.git"
+        rev = "0123456789abcdef0123456789abcdef01234567"
+        patch = f'[patch."{UPSTREAM}"]\nanki = {{ git = "{fork}", rev = "%s" }}\n'
+        manifests = {
+            "pinned": patch % rev,
+            "unpatched": "[workspace]\nmembers = []\n",
+            "a branch": patch % "main",
+            "a short rev": patch % rev[:12],
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            stub = tmp / "bin" / "cargo"
+            stub.parent.mkdir()
+            stub.write_text('#!/bin/sh\necho "cargo $*"\n', encoding="utf-8")
+            stub.chmod(0o755)
+            script = tmp / "build.sh"
+            script.write_text(run, encoding="utf-8")
+            roots = {"the tree": REPO}
+            for name, manifest in manifests.items():
+                roots[name] = tmp / name.replace(" ", "-")
+                roots[name].mkdir()
+                (roots[name] / "Cargo.toml").write_text(manifest, encoding="utf-8")
+            runner = tmp / "runner"
+            path = os.pathsep.join([str(stub.parent), os.environ["PATH"]])
+            outcomes = {}
+            for name in examined("manifest roots", roots):
+                done = subprocess.run(
+                    ["bash", "-e", str(script)],
+                    cwd=roots[name],
+                    env={**os.environ, "PATH": path, "RUNNER_TEMP": str(runner)},
+                    capture_output=True,
+                    text=True,
+                )
+                outcomes[name] = (done.returncode, done.stdout.strip())
+        installed = f"--root {runner}/sync-server anki-sync-server"
+        self.assertEqual(
+            outcomes["pinned"],
+            (0, f"cargo install --locked --git {fork} --rev {rev} {installed}"),
+            "the step passes the patch entry's fork and commit to cargo",
+        )
+        for name in ("unpatched", "a branch", "a short rev"):
+            code, out = outcomes[name]
+            self.assertNotEqual(code, 0, f"{name}: the step refuses it")
+            self.assertEqual(out, "", f"{name}: refused before cargo runs")
+        code, out = outcomes["the tree"]
+        self.assertEqual(code, 0, f"the tree's own manifest: {out}")
+        self.assertRegex(
+            out,
+            rf"^cargo install --locked --git https://\S+ --rev [0-9a-f]{{40}} {re.escape(installed)}$",
+        )
+        self.assertNotIn(UPSTREAM, out, "the tree's server is the fork's, not upstream's")
 
 
 if __name__ == "__main__":

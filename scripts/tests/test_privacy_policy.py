@@ -86,6 +86,9 @@ def copies(data):
         "the service journal": ("journal", in_words(data["logs"]["retention"])),
         "the private copy of the collection": ("collection", "sync", "credential"),
         "the cron-fire ledger": ("cron-fire ledger", f"{ledger_days()} days"),
+        # The sync server's store is copied in its window and archived (SPEC-337 R5): no table of
+        # the inventory holds it, so the policy names it here, with where its copies are kept.
+        "the sync server's snapshots": ("snapshot", "sync server", "three", "offsite"),
     }
 
 
@@ -109,7 +112,7 @@ class ThePolicyDisclosesWhatAnEraseLeaves(unittest.TestCase):
         self.assertEqual(undisclosed_categories(policy, categories), [])
         disclosed = examined("copies an erase cannot reach", list(copies(data)))
         self.assertEqual(undisclosed_copies(policy, data), [])
-        self.assertEqual(len(disclosed), 4)
+        self.assertEqual(len(disclosed), 5)
         # A policy that leaves a copy out, or a category's retention, is refused by name.
         without_replica = "\n".join(
             line for line in policy.splitlines() if "replica" not in line.casefold()

@@ -53,10 +53,11 @@ is kept for a fixed period. Each is kept until you erase it, which is how an acc
 
 Outside its database, DeckStreak holds a private copy of your collection, your own Anki data,
 refreshed from your sync server, and beside it the one backup of that copy a skip day's write makes
-before it changes a card, which an erase removes and an export leaves out; and, in memory only, your
-Telegram user id in a signed-in session, and the bot's place in the queue of your messages. The bot
-reads the messages and button taps you send it to answer them, keeps none of their text, and answers
-nobody but you.
+before it changes a card, which an erase removes and an export leaves out; when the owner runs the
+sync server on the same host, that server's store (each sync user's collection, media index and
+media files) and its daily snapshots; and, in memory only, your Telegram user id in a signed-in
+session, and the bot's place in the queue of your messages. The bot reads the messages and button
+taps you send it to answer them, keeps none of their text, and answers nobody but you.
 
 ## Your copy of your data, and erasing it
 
@@ -91,6 +92,12 @@ You can also export and erase on the host that runs DeckStreak:
 - **The private copy of your collection** is your own Anki data: an erase leaves it, and the next
   sync would restore it from your sync server. Removing it means removing the sync credential, a
   step of the owner's setup.
+- **The sync server's snapshots** are copies of the sync server's store, your own Anki data, taken
+  each day while that server is stopped for a few seconds. An erase leaves them, as it leaves the
+  server's store. The host keeps the newest three archives and removes the oldest when a fourth is
+  in place; each archive is also copied to an offsite bucket that admits no public access and no
+  listing, where it is kept as long as the bucket's own retention, which the owner sets when
+  creating it. Removing them is a step of the owner's setup.
 - **The cron-fire ledger** records which scheduled jobs ran, and none of your data. It is kept
   after an erase and pruned after 90 days, so an erase can never make a notification send twice.
 

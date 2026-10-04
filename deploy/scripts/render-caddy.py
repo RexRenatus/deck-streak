@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""render-caddy: DeckStreak's Caddy block, with its three placeholders filled (SPEC-062 R7;
-ADR-061, ADR-007).
+"""render-caddy: DeckStreak's Caddy block, with its four placeholders filled (SPEC-062 R7;
+ADR-061, ADR-007; the sync server's upstream, SPEC-337 R4 and ADR-347 D4).
 
     python3 deploy/scripts/render-caddy.py --config FILE [--template FILE] [--out FILE]
 
-The configuration is a JSON object with `host`, `web_root` and `api_upstream`, kept where the
-deployment keeps its own values; the template is the release's `deploy/caddy/deck-streak.caddy`.
-The output is the template with only its three placeholders replaced. The render refuses, writing
+The configuration is a JSON object with `host`, `web_root`, `api_upstream` and `sync_upstream`,
+kept where the deployment keeps its own values; the template is the release's
+`deploy/caddy/deck-streak.caddy`. The output is the template with only its four placeholders
+replaced. The render refuses, writing
 nothing: a missing key (named), a value that is not the shape its placeholder takes (a host name,
 an absolute path, a loopback `host:port`), any value that could carry another placeholder or open
 a directive, and a `{$` left in the output. Exit 0 rendered, 1 refused, 2 unreadable input.
@@ -22,6 +23,7 @@ PLACEHOLDERS = {
     "host": "{$DECKSTREAK_HOST}",
     "web_root": "{$DECKSTREAK_WEB_ROOT}",
     "api_upstream": "{$DECKSTREAK_API_UPSTREAM}",
+    "sync_upstream": "{$DECKSTREAK_SYNC_UPSTREAM}",
 }
 HOST = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9-]{1,63})*$")
 WEB_ROOT = re.compile(r"^/[A-Za-z0-9._@+/-]*$")
@@ -42,20 +44,34 @@ def check_web_root(value):
         raise Refused("web_root is not an absolute path of plain characters")
 
 
-def check_upstream(value):
+def check_upstream(key, value):
+    """One loopback upstream, the API's or the sync server's; a refusal names its key."""
     found = UPSTREAM.match(value)
     if not found:
-        raise Refused("api_upstream is not a loopback host:port")
+        raise Refused(f"{key} is not a loopback host:port")
     address, port = found.groups()
     if address is not None:
         octets = [int(part) for part in address.split(".")]
         if octets[0] != 127 or any(part > 255 for part in octets):
-            raise Refused("api_upstream is not a loopback address")
+            raise Refused(f"{key} is not a loopback address")
     if not 0 < int(port) < 65536:
-        raise Refused("api_upstream's port is out of range")
+        raise Refused(f"{key}'s port is out of range")
 
 
-CHECKS = {"host": check_host, "web_root": check_web_root, "api_upstream": check_upstream}
+def check_api_upstream(value):
+    check_upstream("api_upstream", value)
+
+
+def check_sync_upstream(value):
+    check_upstream("sync_upstream", value)
+
+
+CHECKS = {
+    "host": check_host,
+    "web_root": check_web_root,
+    "api_upstream": check_api_upstream,
+    "sync_upstream": check_sync_upstream,
+}
 
 
 def render(config, template):

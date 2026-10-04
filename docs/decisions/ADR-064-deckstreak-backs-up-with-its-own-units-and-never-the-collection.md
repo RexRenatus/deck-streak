@@ -115,3 +115,28 @@ ADR-332 adds a fourth daemon, `deck-streak-mcp.service` (SPEC-119), with the cei
 of this date records. The worst case is now the four daemons and the largest job, 704M, which fits
 the share of 704M with nothing left over: the next unit needs the share moved first, by this
 record's decision. The rest of this record stands.
+
+## Amendment (SPEC-337): the share is 1152 MiB
+
+ADR-347 adds a fifth daemon, `deck-streak-sync-server.service` (SPEC-337), the engine's own sync
+server for the owner's Anki clients, with `MemoryHigh=384M` and `MemoryMax=448M` from a measured
+full upload of ADR-022's synthetic collection. The note above found no room left in the share, so
+the share moves first, as that note requires: it becomes `"memory": "1152M"`, from 704M.
+
+The worst case is the five daemons' ceilings, 128M for the API, 96M for the bot, 32M for the MCP
+server, 64M for the replicator and 448M for the sync server (768M), plus the largest job, 384M:
+1152M, which fills the share of 1152M exactly.
+
+The share's two processors are split by ADR-347 D7 among the five daemons, 200% in all:
+
+| unit | CPUQuota |
+|---|---|
+| `deck-streak-api.service` | 75% |
+| `deck-streak-sync-server.service` | 75% |
+| `deck-streak-bot.service` | 20% |
+| `deck-streak-litestream.service` | 15% |
+| `deck-streak-mcp.service` | 15% |
+
+The replicator's quota moves from 50% to 15%, since it ships write-ahead-log frames and a
+snapshot and waits on the network more than on a processor; the budget table above keeps its
+memory ceilings. The rest of this record stands.
