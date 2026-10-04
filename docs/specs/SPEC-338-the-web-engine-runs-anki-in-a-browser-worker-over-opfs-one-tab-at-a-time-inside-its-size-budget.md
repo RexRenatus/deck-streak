@@ -185,13 +185,13 @@ test only. CI's `web-engine` job runs the Playwright tests over the module it bu
 | `web/app/src/lib/csp.test.ts` | `miniapp` | A6 |
 | `web/app/src/lib/engine/protocol.ts` | `miniapp` | added: the Worker's requests, replies and error codes |
 | `web/app/src/lib/engine/client.ts` | `miniapp` | added: `EngineClient` |
-| `web/app/src/lib/engine/client.test.ts` | `miniapp` | added: A7 |
+| `web/app/src/lib/engine/client.test.ts` | `miniapp` | added: A7, A21 |
 | `web/app/src/lib/engine/session.ts` | `miniapp` | added: the Worker's session: lock, storage, engine |
 | `web/app/src/lib/engine/session.test.ts` | `miniapp` | added: A8 to A11, A18 |
 | `web/app/src/lib/engine/persistence.ts` | `miniapp` | added: the persistence request |
 | `web/app/src/lib/engine/persistence.test.ts` | `miniapp` | added: A12 |
 | `web/app/src/lib/engine/worker.ts` | `miniapp` | added: the Worker's entry |
-| `web/app/src/lib/engine/worker.test.ts` | `miniapp` | added: A13 |
+| `web/app/src/lib/engine/worker.test.ts` | `miniapp` | added: A13, A20 |
 | `web/app/engine-harness/index.html` | `miniapp` | added: the page the browser tests drive |
 | `web/app/engine-harness/main.ts` | `miniapp` | added: the page's script |
 | `web/app/vite.engine.config.ts` | `miniapp` | added: builds and serves the harness under the page's policy |
