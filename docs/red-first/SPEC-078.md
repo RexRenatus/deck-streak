@@ -230,3 +230,21 @@ SPEC-078 section 13 (additions while the list stays exact, never relaxed asserti
 (T27, T28, ruling 104 Q-8); and `habits_store.rs`'s `the_habit_tables_are_exported_and_erased`, whose two
 assertions over one table became assertions over both habit tables (T21). The other removed lines are
 imports. No assertion was relaxed, no test was removed or skipped.
+
+Six tests were written at green as mutation coverage, each in the crate that owns the code it judges,
+and are not red-first evidence: they answer the six mutants of this part's own code that CI's
+mutation verdict found missed at 845f6419 (run 37179203547), and no criterion is added or edited. A
+mutant runs only its own package's tests, so the daemon's habit badges step test never ran against a
+coordination mutant. In `habits_badges.rs`, `the_habit_badges_step_is_named_for_the_folds_report`
+kills the step's name replaced by `"xyzzy"` and by `""` (each read `left: [(Awards, "xyzzy")]` and
+`left: [(Awards, "")]` against `habits.badges`); `an_awarded_habit_badge_keeps_its_catalogs_name_and_emoji`
+kills the badge lookup's `==` replaced by `!=` (`left: (0, "First Steps", ...)` against the catalog's
+`First Page`), since the stored name and emoji were never read before; and
+`a_course_not_configured_counts_toward_no_courses_goal` kills the course minutes lookup's `==`
+replaced by `!=` (the unconfigured `qzz` logged the goal, the configured `qab` nothing, and
+`bookworm_week` was awarded). In `writing_toggle.rs`, `the_writing_step_is_named_for_the_folds_report`
+kills the writing step's name replaced by `""` and by `"xyzzy"` (each read the second step's name
+wrong against `habits.writing_xp`). Each kill was proved by plant: the exact mutant of its MISSED
+line was applied to the tree, the one killer ran by its exact name (`running 1 test`) and failed as
+quoted, and the file was restored byte for byte (sha256 equal); every killer passes on the
+unmutated tree.
