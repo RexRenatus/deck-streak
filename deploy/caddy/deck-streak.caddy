@@ -1,8 +1,9 @@
 # DeckStreak's site block (SPEC-032 R6; ADR-007, ADR-025, ADR-032): the Mini App's static build
-# with its SPA fallback, /api/* proxied to the API's loopback listener, the health routes closed at
-# the edge, a robots.txt that disallows everything, and the security headers on every response.
-# Its three environment placeholders are Caddy's own syntax, and the private rail supplies their
-# values when it installs the block (deploy/README.md); nothing in it is one host's value.
+# with its SPA fallback, /api/* proxied to the API's loopback listener, the sync server under
+# /anki-sync/ proxied to its own (SPEC-337 R4; ADR-347 D4), the health routes closed at the edge, a
+# robots.txt that disallows everything, and the security headers on every response. Its four
+# environment placeholders are Caddy's own syntax, and the private rail supplies their values when
+# it installs the block (deploy/README.md); nothing in it is one host's value.
 {$DECKSTREAK_HOST} {
 	# Every response, the API's included. The operations are deferred until the response is
 	# written, so they also replace what the upstream sent.
@@ -32,6 +33,30 @@
 		@health path /api/livez /api/readyz
 		respond @health 404
 		reverse_proxy {$DECKSTREAK_API_UPSTREAM}
+	}
+
+	# The sync server, on this origin because a browser's sync is same-origin (ADR-347 D4). The bare
+	# path goes to the slash form; `*` is the matcher, so the target is not read as one.
+	handle /anki-sync {
+		redir * /anki-sync/ 308
+	}
+
+	handle /anki-sync/* {
+		# The server's own routes begin /sync/ and /msync/. uri runs before respond and
+		# reverse_proxy in Caddy's directive order, so both see the server's own path.
+		uri strip_prefix /anki-sync
+		# The server's health route answers on loopback only, as the API's do (ADR-025).
+		@sync_health path /health
+		respond @sync_health 404
+		# The server's own payload limit, 100 MiB, so the edge refuses only what the server would.
+		request_body {
+			max_size 100MiB
+		}
+		reverse_proxy {$DECKSTREAK_SYNC_UPSTREAM} {
+			transport http {
+				read_buffer 512KiB
+			}
+		}
 	}
 
 	# Every other route is the SPA's: a file of the build, or the fallback page the client routes.

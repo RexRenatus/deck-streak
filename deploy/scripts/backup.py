@@ -4,17 +4,32 @@
 Copies the live database with SQLite's online backup API into a temporary file beside the backups
 directory, runs `PRAGMA integrity_check` on the copy, renames it into place and keeps the newest
 KEEP copies. It exits non-zero on any failed step and leaves the copies that were there untouched:
-a copy is pruned only after a new one is in place. It copies the database and nothing else: not the
+a copy is pruned only after a new one is in place. It copies the database and not the ingest's
 collection copy, which the day's sync downloads again (ADR-037), and not a credential.
+
+It also snapshots the sync server's store (SPEC-337 R5; ADR-347 D5, D12), in two parts:
+
+- `--sync-window` is the copy, run by deck-streak-sync-snapshot.service while the server is
+  stopped: each user's collection and media index by the online backup, refused at once when a
+  running server holds either, and the media files, as one generation that is published by a rename
+  only when whole. The unit starts the server again whether this exits 0 or 1.
+- The daily run, after the server is started again, checks the newest generation's databases with
+  `PRAGMA integrity_check`, writes a manifest of sha256 digests, renames the generation into an
+  archive, copies both offsite by the command and bucket the settings name (with arguments, no
+  shell) and keeps the newest KEEP archives.
 
 Standard library only, so the unit needs no interpreter of its own.
 """
 
 import argparse
+import hashlib
 import os
 import re
+import shlex
 import sqlite3
+import subprocess
 import sys
+import tarfile
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -27,6 +42,26 @@ COPY_PREFIX = "deck_streak-"
 COPY_SUFFIX = ".db"
 STAMP_FORMAT = "%Y%m%dT%H%M%SZ"
 COPY_NAME = re.compile(r"^deck_streak-\d{8}T\d{6}Z\.db$")
+# The sync server's store and what the window copies of each user's folder (the engine's layout).
+SYNC_BASE = "/var/lib/deck-streak-sync-server"
+SNAPSHOTS = "sync-snapshots"
+SNAPSHOT_DATABASES = ("collection.anki2", "media.db")
+GENERATION_NAME = re.compile(r"^gen-\d{8}T\d{6}Z\.tar$")
+ARCHIVE_NAME = re.compile(r"^sync-\d{8}T\d{6}Z\.tar$")
+MANIFEST_NAME = re.compile(r"^sync-\d{8}T\d{6}Z\.sha256$")
+# Fixed names, each rewritten in place by the next run, so a failed run leaves nothing to collect.
+WINDOW_PARTIAL = ".window.tar.tmp"
+WINDOW_COPY = ".window.db"
+CHECK_COPY = ".check.db"
+MANIFEST_PARTIAL = ".manifest.tmp"
+# The settings that name the offsite copy (deploy/deck-streak.env.example).
+SNAPSHOT_COPY = "DECKSTREAK_SNAPSHOT_COPY"
+SNAPSHOT_BUCKET = "DECKSTREAK_SNAPSHOT_BUCKET"
+CHUNK = 1 << 20
+
+
+class Held(Exception):
+    """A running server holds the database: the window copies only a stopped one."""
 
 
 def parse_stamp(text):
@@ -62,9 +97,10 @@ def copy_database(source, target):
         origin.close()
 
 
-def prune(backups, keep):
-    """Remove every copy but the newest `keep`, newest by the instant its name carries."""
-    names = sorted(p.name for p in backups.iterdir() if COPY_NAME.match(p.name))
+def prune(backups, keep, pattern=COPY_NAME):
+    """Remove every file `pattern` names but the newest `keep`, newest by the instant its name
+    carries."""
+    names = sorted(p.name for p in backups.iterdir() if pattern.match(p.name))
     for name in names[: max(len(names) - keep, 0)]:
         (backups / name).unlink()
 
@@ -97,17 +133,162 @@ def run(database, backups, keep, now):
             os.unlink(scratch)
 
 
+def refuse_a_holder(status, remaining, total):
+    """The online backup's progress callback: a busy or locked step means a running server holds
+    the file, and raising ends the backup at once instead of retrying (ADR-347 D12)."""
+    if status in (sqlite3.SQLITE_BUSY, sqlite3.SQLITE_LOCKED):
+        raise Held("a running server holds the database; the window copies only a stopped one")
+
+
+def copy_stopped(source, target):
+    """The online backup of `source` into `target`, refused at once when another process holds
+    `source`: no busy wait, and a busy step ends the copy."""
+    origin = sqlite3.connect(f"file:{source}?mode=ro", uri=True, timeout=0)
+    try:
+        destination = sqlite3.connect(target)
+        try:
+            origin.backup(destination, progress=refuse_a_holder)
+            destination.execute("PRAGMA journal_mode=DELETE")
+        finally:
+            destination.close()
+    finally:
+        origin.close()
+
+
+def emptied(path):
+    """Truncate a fixed working file to nothing, so no copy of a user's data rests in it."""
+    if path.exists():
+        os.truncate(path, 0)
+
+
+def window(base, snapshots, now):
+    """The stopped-server window's copy (ADR-347 D12): 0 when the generation is whole and
+    published, 1 otherwise. It only copies; every check runs after the server is up again."""
+    base = Path(base)
+    snapshots = Path(snapshots)
+    scratch = snapshots / WINDOW_COPY
+    try:
+        snapshots.mkdir(parents=True, exist_ok=True)
+        os.chmod(snapshots, 0o700)
+        users = sorted(p for p in base.iterdir() if p.is_dir())
+        if not users:
+            print("backup: the sync server's store holds no user", file=sys.stderr)
+            return 1
+        partial = snapshots / WINDOW_PARTIAL
+        with open(partial, "wb") as handle:
+            os.fchmod(handle.fileno(), 0o600)
+            with tarfile.open(fileobj=handle, mode="w") as generation:
+                for user in users:
+                    for name in SNAPSHOT_DATABASES:
+                        if (user / name).is_file():
+                            copy_stopped(user / name, scratch)
+                            generation.add(scratch, arcname=f"{user.name}/{name}")
+                    media = user / "media"
+                    files = sorted(media.iterdir()) if media.is_dir() else []
+                    for item in files:
+                        if item.is_file():
+                            generation.add(item, arcname=f"{user.name}/media/{item.name}")
+            handle.flush()
+            os.fsync(handle.fileno())
+        stamp = now.astimezone(timezone.utc).strftime(STAMP_FORMAT)
+        os.replace(partial, snapshots / f"gen-{stamp}.tar")
+        return 0
+    except (OSError, sqlite3.Error, tarfile.TarError, Held) as error:
+        print(f"backup: the window's copy failed: {error}", file=sys.stderr)
+        return 1
+    finally:
+        emptied(scratch)
+
+
+def checked_manifest(generation, scratch):
+    """The manifest lines of a generation's members, or None when a database fails its check."""
+    lines = []
+    with tarfile.open(generation) as archive:
+        for member in archive.getmembers():
+            if not member.isfile():
+                print(f"backup: {member.name} is not a file", file=sys.stderr)
+                return None
+            digest = hashlib.sha256()
+            source = archive.extractfile(member)
+            is_database = member.name.rsplit("/", 1)[-1] in SNAPSHOT_DATABASES
+            with open(scratch, "wb") as target:
+                os.fchmod(target.fileno(), 0o600)
+                for chunk in iter(lambda: source.read(CHUNK), b""):
+                    digest.update(chunk)
+                    if is_database:
+                        target.write(chunk)
+            if is_database and not integrity_ok(scratch):
+                print(f"backup: {member.name} failed its integrity check", file=sys.stderr)
+                return None
+            lines.append(f"{digest.hexdigest()}  {member.name}\n")
+    return lines
+
+
+def archive(snapshots, environ):
+    """The daily run's part of the snapshot, after the window: 0 when there is no generation or
+    the newest is checked, archived and copied offsite; 1 on any failed step."""
+    snapshots = Path(snapshots)
+    if not snapshots.is_dir():
+        return 0
+    generations = sorted(p.name for p in snapshots.iterdir() if GENERATION_NAME.match(p.name))
+    if not generations:
+        return 0
+    command = shlex.split(environ.get(SNAPSHOT_COPY, ""))
+    bucket = environ.get(SNAPSHOT_BUCKET, "")
+    if not command or not bucket:
+        print(
+            f"backup: {SNAPSHOT_COPY} and {SNAPSHOT_BUCKET} name the offsite copy", file=sys.stderr
+        )
+        return 1
+    newest = generations[-1]
+    stamp = newest[len("gen-") : -len(".tar")]
+    scratch = snapshots / CHECK_COPY
+    try:
+        lines = checked_manifest(snapshots / newest, scratch)
+        if lines is None:
+            return 1
+        partial = snapshots / MANIFEST_PARTIAL
+        with open(partial, "w", encoding="utf-8") as handle:
+            os.fchmod(handle.fileno(), 0o600)
+            handle.writelines(lines)
+        manifest = snapshots / f"sync-{stamp}.sha256"
+        tar = snapshots / f"sync-{stamp}.tar"
+        os.replace(partial, manifest)
+        os.replace(snapshots / newest, tar)
+        done = subprocess.run([*command, str(tar), str(manifest), bucket], check=False)
+        if done.returncode != 0:
+            print(f"backup: the offsite copy exited {done.returncode}", file=sys.stderr)
+            return 1
+        for pattern in (ARCHIVE_NAME, MANIFEST_NAME, GENERATION_NAME):
+            prune(snapshots, KEEP, pattern)
+        return 0
+    except (OSError, sqlite3.Error, tarfile.TarError) as error:
+        print(f"backup: the snapshot's archive failed: {error}", file=sys.stderr)
+        return 1
+    finally:
+        emptied(scratch)
+
+
 def main(argv=None, now=None):
-    state = os.environ.get("STATE_DIRECTORY", "/var/lib/deck-streak").split(":")[0]
+    states = os.environ.get("STATE_DIRECTORY", "/var/lib/deck-streak").split(":")
+    state = states[0]
     parser = argparse.ArgumentParser(description="DeckStreak's daily database backup")
     parser.add_argument("--database", default=str(Path(state) / DATABASE_NAME))
     parser.add_argument("--backups", default=str(Path(state) / "backups"))
     parser.add_argument("--keep", type=int, default=KEEP)
+    parser.add_argument("--sync-window", action="store_true")
+    parser.add_argument("--sync-base", default=states[1] if len(states) > 1 else SYNC_BASE)
+    parser.add_argument("--snapshots", default=str(Path(state) / SNAPSHOTS))
     args = parser.parse_args(argv)
+    now = now or datetime.now(timezone.utc)
+    if args.sync_window:
+        return window(args.sync_base, args.snapshots, now)
     if args.keep < 1:
         print("backup: --keep must be at least 1", file=sys.stderr)
         return 1
-    return run(args.database, args.backups, args.keep, now or datetime.now(timezone.utc))
+    copied = run(args.database, args.backups, args.keep, now)
+    archived = archive(args.snapshots, os.environ)
+    return max(copied, archived)
 
 
 if __name__ == "__main__":

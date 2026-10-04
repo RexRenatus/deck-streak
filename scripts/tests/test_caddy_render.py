@@ -1,11 +1,12 @@
 """The Caddy block is rendered for the host from private configuration (SPEC-062 R7; ADR-061,
-ADR-007). The render fills the block's three placeholders, refuses one left unfilled, a value that
+ADR-007). The render fills the block's four placeholders, refuses one left unfilled, a value that
 carries another placeholder or could open a directive, and an upstream that is not loopback, and
-its output keeps every header SPEC-032 R6 requires (A7).
+its output keeps every header SPEC-032 R6 requires (A7). The fourth is the sync server's upstream
+(SPEC-337 A6; ADR-347 D4).
 
     python3 deploy/scripts/render-caddy.py --config FILE [--template FILE] [--out FILE]
 
-The configuration is a JSON object with `host`, `web_root` and `api_upstream`."""
+The configuration is a JSON object with `host`, `web_root`, `api_upstream` and `sync_upstream`."""
 
 import json
 import subprocess
@@ -25,7 +26,10 @@ GOOD = {
     "host": "app.example.org",
     "web_root": "/usr/local/lib/deck-streak/current/web",
     "api_upstream": "127.0.0.1:8080",
+    "sync_upstream": "127.0.0.1:8081",
 }
+# The two loopback upstreams the render checks alike: the API's and the sync server's.
+UPSTREAMS = ("api_upstream", "sync_upstream")
 HEADERS = (
     'Strict-Transport-Security "max-age=31536000; includeSubDomains"',
     'X-Content-Type-Options "nosniff"',
@@ -64,32 +68,41 @@ class TheCaddyRender(unittest.TestCase):
             template.replace("{$DECKSTREAK_HOST}", GOOD["host"])
             .replace("{$DECKSTREAK_WEB_ROOT}", GOOD["web_root"])
             .replace("{$DECKSTREAK_API_UPSTREAM}", GOOD["api_upstream"])
+            .replace("{$DECKSTREAK_SYNC_UPSTREAM}", GOOD["sync_upstream"])
         )
-        self.assertEqual(text, expected, "the render changes only the three placeholders")
-        for missing in ("host", "web_root", "api_upstream"):
+        self.assertEqual(text, expected, "the render changes only the four placeholders")
+        for missing in examined("required key(s)", tuple(GOOD)):
             config = {k: v for k, v in GOOD.items() if k != missing}
             done = render(config)
             self.assertNotEqual(done.returncode, 0, f"a config without {missing}")
             self.assertEqual(done.stdout, "", "a refusal writes no block")
             self.assertIn(missing, done.stderr)
-        for upstream in (
-            f"{PRIVATE_V4}:8080",
-            "0.0.0.0:8080",
-            f"{PUBLIC_V4}:8080",
-            "example.org:8080",
-            "127.0.0.1.example.org:8080",
-            "http://127.0.0.1:8080",
-            "127.0.0.1",
-            f"127.0.0.1:8080 {PRIVATE_V4}:8080",
-        ):
-            done = render({**GOOD, "api_upstream": upstream})
-            self.assertNotEqual(done.returncode, 0, f"the upstream {upstream} is not loopback")
-            self.assertEqual(done.stdout, "")
-        for upstream in ("127.0.0.1:8080", "localhost:8080", "[::1]:8080", "127.0.1.1:9000"):
-            done = render({**GOOD, "api_upstream": upstream})
-            self.assertEqual(done.returncode, 0, f"{upstream}: {done.stderr}")
+        for key in examined("upstream key(s)", UPSTREAMS):
+            for upstream in (
+                f"{PRIVATE_V4}:8080",
+                "0.0.0.0:8080",
+                f"{PUBLIC_V4}:8080",
+                "example.org:8080",
+                "127.0.0.1.example.org:8080",
+                "http://127.0.0.1:8080",
+                "127.0.0.1",
+                f"127.0.0.1:8080 {PRIVATE_V4}:8080",
+                "127.0.0.256:8080",
+                "127.0.0.1:0",
+                "127.0.0.1:65536",
+                "127.0.0.1:8081\n\trespond 200",
+            ):
+                done = render({**GOOD, key: upstream})
+                self.assertNotEqual(done.returncode, 0, f"the {key} {upstream!r} is not loopback")
+                self.assertEqual(done.stdout, "")
+                # The refusal names the key it refused, never the other upstream's.
+                self.assertIn(f"REFUSE: {key}", done.stderr)
+            for upstream in ("127.0.0.1:8080", "localhost:8080", "[::1]:8080", "127.0.1.1:9000"):
+                done = render({**GOOD, key: upstream})
+                self.assertEqual(done.returncode, 0, f"{key} {upstream}: {done.stderr}")
         for key, value in (
             ("host", "{$DECKSTREAK_API_UPSTREAM}"),
+            ("host", "{$DECKSTREAK_SYNC_UPSTREAM}"),
             ("host", "app.example.org {\n\trespond 200\n}\nx"),
             ("host", "https://app.example.org"),
             ("web_root", "relative/web"),

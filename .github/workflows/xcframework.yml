@@ -1,0 +1,148 @@
+name: xcframework
+
+# The FFI adapter as an XCFramework for an iPhone and an iPad (SPEC-336 R6 to R9, ADR-345 D3 and
+# D4): the adapter's static library for a device (aarch64-apple-ios) and for the simulator on Apple
+# silicon (aarch64-apple-ios-sim), the Swift bindings generated in library mode by the generator the
+# adapter itself builds, a check that the generated modulemap names no builtin clang module, one
+# XCFramework holding both slices, and a consumer check that typechecks the generated Swift against
+# each slice's own headers. It publishes the build time, each slice's size and both checks as the
+# run's summary and as the `xcframework` artifact, beside the framework and the bindings. It runs on
+# a pull request into dev that changes the adapter, the lockfile or this workflow, and on a
+# dispatch. No secret is used, the token is read-only, and every action is pinned by its full
+# commit SHA.
+on:
+  pull_request:
+    branches: [dev]
+    types: [opened, synchronize, reopened]
+    paths:
+      - "crates/ffi/**"
+      - "Cargo.lock"
+      - ".github/workflows/xcframework.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A pull request's runs share its ref's group, and a newer push to it cancels the run it supersedes
+# (SPEC-190). Any other event has a group of its own, its run id, so it is never cancelled.
+concurrency:
+  group: xcframework-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  xcframework:
+    runs-on: macos-26
+    timeout-minutes: 120
+    env:
+      REPORT: ${{ github.workspace }}/xcframework-report
+      # The protobuf compiler the engine's build needs: the version ADR-022 pins, and the macOS
+      # archive and digest Anki's own build pins for it (build/ninja_gen/src/protobuf.rs at the
+      # engine's tag).
+      PROTOC_VERSION: "31.1"
+      PROTOC_MACOS_DIGEST: 99ea004549c139f46da5638187a85bbe422d78939be0fa01af1aa8ab672e395f
+      # The lowest iOS the consumer check typechecks the bindings for.
+      IOS_DEPLOYMENT: "17.0"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: the pinned Rust toolchain and its two iOS targets, before the clock starts
+        run: |
+          rustup show
+          rustup target add aarch64-apple-ios aarch64-apple-ios-sim
+      - name: protoc, checksum-verified
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/protoc.zip" "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-osx-universal_binary.zip"
+          echo "$PROTOC_MACOS_DIGEST  $RUNNER_TEMP/protoc.zip" | shasum -a 256 -c -
+          unzip -q "$RUNNER_TEMP/protoc.zip" -d "$RUNNER_TEMP/protoc"
+      - name: the two static libraries, clocked from the first compile to the second archive
+        run: |
+          export PROTOC="$RUNNER_TEMP/protoc/bin/protoc"
+          mkdir -p "$REPORT"
+          sysctl -n hw.ncpu > "$REPORT/runner-cpus"
+          started=$(date +%s)
+          for target in aarch64-apple-ios aarch64-apple-ios-sim; do
+            cargo rustc --locked --release -p deck-streak-ffi --lib --crate-type staticlib --target "$target"
+          done
+          echo "$(( $(date +%s) - started ))" > "$REPORT/build-seconds"
+      - name: the Swift bindings, in library mode over the device library
+        run: |
+          export PROTOC="$RUNNER_TEMP/protoc/bin/protoc"
+          started=$(date +%s)
+          cargo run --locked -p deck-streak-ffi --features bindgen --bin uniffi-bindgen-swift -- \
+            target/aarch64-apple-ios/release/libdeck_streak_ffi.a bindings \
+            --swift-sources --headers --modulemap \
+            --module-name deck_streak_ffiFFI --modulemap-filename module.modulemap
+          echo "$(( $(date +%s) - started ))" > "$REPORT/bindgen-seconds"
+          ls bindings
+      - name: the modulemap check, which a builtin clang module refuses
+        run: |
+          cp bindings/module.modulemap "$REPORT/module.modulemap"
+          if grep -n '_Builtin_' bindings/module.modulemap; then
+            echo fail > "$REPORT/modulemap"
+            exit 1
+          fi
+          echo pass > "$REPORT/modulemap"
+      - name: the XCFramework, device and simulator slices
+        run: |
+          mkdir -p headers
+          cp bindings/deck_streak_ffiFFI.h bindings/module.modulemap headers/
+          xcodebuild -create-xcframework \
+            -library target/aarch64-apple-ios/release/libdeck_streak_ffi.a -headers headers \
+            -library target/aarch64-apple-ios-sim/release/libdeck_streak_ffi.a -headers headers \
+            -output DeckStreakFFI.xcframework
+          find DeckStreakFFI.xcframework -name '*.a' -exec stat -f '%N %z' {} \; | tee "$REPORT/slices"
+      - name: the consumer check, the generated Swift typechecked against each slice's headers
+        run: |
+          echo fail > "$REPORT/consumer"
+          for slice in ios-arm64:iphoneos: ios-arm64-simulator:iphonesimulator:-simulator; do
+            IFS=: read -r dir sdk suffix <<< "$slice"
+            target="arm64-apple-ios${IOS_DEPLOYMENT}${suffix}"
+            xcrun --sdk "$sdk" swiftc -typecheck -target "$target" \
+              -I "DeckStreakFFI.xcframework/$dir/Headers" bindings/deck_streak_ffi.swift
+            echo "$dir typechecks"
+          done
+          echo pass > "$REPORT/consumer"
+      - name: the report
+        if: ${{ always() }}
+        run: |
+          python3 - <<'PY'
+          import os, pathlib
+          report = pathlib.Path(os.environ["REPORT"])
+          def read(name):
+              path = report / name
+              return path.read_text().strip() if path.is_file() else ""
+          def minutes(name):
+              seconds = read(name)
+              return f"{int(seconds) / 60:.1f} minutes" if seconds else "not measured"
+          rows = [
+              ("two static libraries, release", minutes("build-seconds")),
+              ("Swift bindings, library mode", minutes("bindgen-seconds")),
+              ("modulemap names no builtin clang module", read("modulemap") or "not measured"),
+              ("generated Swift typechecks against each slice", read("consumer") or "not measured"),
+          ]
+          for line in read("slices").splitlines():
+              path, size = line.rsplit(" ", 1)
+              rows.append((f"slice `{path.split('/')[1]}`", f"{int(size) / 1048576:.1f} MiB"))
+          lines = [
+              f"`xcframework.yml` on a GitHub-hosted runner with {read('runner-cpus')} CPUs:",
+              "",
+              "| measure | measured |",
+              "|---|---|",
+          ] + [f"| {name} | {value} |" for name, value in rows]
+          text = "\n".join(lines) + "\n"
+          (report / "report.md").write_text(text)
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as summary:
+              summary.write("## XCFramework (SPEC-336)\n\n" + text)
+          print(text)
+          PY
+      - name: upload the XCFramework, the bindings and the report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: xcframework
+          path: |
+            DeckStreakFFI.xcframework/
+            bindings/
+            xcframework-report/
+          if-no-files-found: warn
