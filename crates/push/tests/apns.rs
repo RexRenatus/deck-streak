@@ -277,3 +277,30 @@ async fn a7_try_later_answers_are_reported_and_not_retried() {
 
     assert_eq!(outcomes, vec![Sent::RetryLater { after: None }; 3]);
 }
+
+#[tokio::test]
+async fn a8_an_oversize_payload_is_refused_before_any_request() {
+    let rig = Rig::start().await;
+    // The payload is `{"aps":{"alert":{"title":T,"body":B}}}`; the test measures its own frame.
+    let frame = json!({"aps": {"alert": {"title": "Synthetic title", "body": ""}}})
+        .to_string()
+        .len();
+    let sized = |payload: usize| {
+        Notification::new(
+            "Synthetic title",
+            &"x".repeat(payload - frame),
+            Duration::from_secs(3600),
+        )
+    };
+
+    assert_eq!(
+        rig.deliver(&sized(4097)).await,
+        Sent::Rejected(Refusal::TooLarge)
+    );
+    assert_eq!(rig.received().len(), 0, "the oversize payload made no request");
+    assert_eq!(rig.deliver(&sized(4096)).await, Sent::Delivered);
+
+    let received = rig.received();
+    assert_eq!(received.len(), 1);
+    assert_eq!(received[0].body.len(), 4096);
+}
