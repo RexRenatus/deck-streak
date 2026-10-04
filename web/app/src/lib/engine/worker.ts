@@ -1,5 +1,6 @@
 // The web engine's Worker entry (SPEC-338 R3, ADR-348): the session served on the Worker's own
 // scope, over the browser's Web Locks, origin private file system and the module the build ships.
+import { admitsOrigin } from './protocol';
 import type { EngineModule, LockAnswer, SessionDeps } from './session';
 import { Session } from './session';
 
@@ -26,10 +27,12 @@ export type ImportModule = (url: string) => Promise<unknown>;
 const importModule: ImportModule = (url) => import(/* @vite-ignore */ url);
 
 /** Answers each message on `scope` with the session's reply, on the same scope. A dedicated
- * Worker hears only the page that started it, so no other origin can reach the session. */
-export function serve(scope: WorkerScope, deps: SessionDeps): Session {
+ * Worker hears only the page that started it; a message that names another origin than `origin`,
+ * the Worker's own, is still not heard, and gets no reply (SPEC-338 R13). */
+export function serve(scope: WorkerScope, deps: SessionDeps, origin: string): Session {
   const session = new Session(deps);
   scope.addEventListener('message', (event) => {
+    if (!admitsOrigin(event.origin, origin)) return;
     void session.handle(event.data).then((reply) => scope.postMessage(reply));
   });
   return session;
@@ -89,8 +92,13 @@ export function browserDeps(
 /** Serves the session when `scope` is a dedicated Worker's; true when it did. */
 export function start(scope: object = globalThis, load: ImportModule = importModule): boolean {
   if (!('DedicatedWorkerGlobalScope' in scope)) return false;
-  const worker = scope as unknown as WorkerScope & WorkerGlobals & { location: { href: string } };
-  serve(worker, browserDeps(new URL(ENGINE_BASE, worker.location.href), load, worker));
+  const worker = scope as unknown as WorkerScope &
+    WorkerGlobals & { location: { href: string; origin: string } };
+  serve(
+    worker,
+    browserDeps(new URL(ENGINE_BASE, worker.location.href), load, worker),
+    worker.location.origin
+  );
   return true;
 }
 

@@ -87,3 +87,10 @@ export function parseRequest(data: unknown): Parsed {
   if (malformed !== undefined) return { id, message: `${op}'s ${malformed} is malformed` };
   return { request: fields as unknown as Request };
 }
+
+/** Whether a listener hears a message, by its sender's origin (SPEC-338 R13, ASVS 5.0.0 3.5.5). A
+ * dedicated Worker's channel delivers each message with an empty origin, both ways; a message that
+ * names an origin other than the listener's own came from somewhere else, and is not heard. */
+export function admitsOrigin(sender: string, own: string): boolean {
+  return sender === '' || sender === own;
+}

@@ -1,6 +1,7 @@
 // The page's side of the web engine: EngineClient, which numbers each request and settles it by
 // the reply that carries its id (SPEC-338 R3, ADR-348).
 import type { Body, ErrorCode, Opened, Rating, Reply, Snapshot } from './protocol';
+import { admitsOrigin } from './protocol';
 
 /** The Worker as the client sees it: a port to post to and hear from. */
 export interface EnginePort {
@@ -23,9 +24,12 @@ export class EngineClient {
   readonly #pending = new Map<number, { resolve(value: unknown): void; reject(error: Error): void }>();
   #next = 1;
 
-  constructor(port: EnginePort) {
+  /** `origin` is the page's own: a reply that names any other is not heard (SPEC-338 R13). */
+  constructor(port: EnginePort, origin: string) {
     this.#port = port;
-    port.addEventListener('message', (event) => this.#settle(event.data));
+    port.addEventListener('message', (event) => {
+      if (admitsOrigin(event.origin, origin)) this.#settle(event.data);
+    });
   }
 
   /** How many requests await their reply. */

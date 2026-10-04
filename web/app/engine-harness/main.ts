@@ -40,7 +40,7 @@ window.harness = {
     const worker = new Worker(new URL('../src/lib/engine/worker.ts', import.meta.url), {
       type: 'module'
     });
-    this.client = new EngineClient(worker);
+    this.client = new EngineClient(worker, location.origin);
     return this.client;
   },
   requestPersistence,
