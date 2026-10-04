@@ -27,7 +27,7 @@ It is carried by the web delivery (SPEC-341); the iPhone and iPad delivery's own
   absence, because an absence-only test passes when the probe is blind.
 - No Swift is compiled outside CI; the iOS half's proof is read from its macOS CI run.
 
-## Decisions
+## Decisions, and the alternatives each was chosen against
 
 ### D1. No card script runs, on either platform
 
