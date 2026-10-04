@@ -217,7 +217,7 @@ without its core token. Its first start is the owner's, in two steps (ADR-332):
 
 ## The host budget
 
-`host-budget.json` records DeckStreak's share, `"memory": "640M"` and `"cpus": 2`, and each unit's
+`host-budget.json` records DeckStreak's share, `"memory": "704M"` and `"cpus": 2`, and each unit's
 ceilings, which the unit's `MemoryHigh=` and `MemoryMax=` equal (ADR-032). The long-running units'
 ceilings plus the largest oneshot's fit the share, and the API's and the bot's `CPUQuota=` fit its
 CPUs. The alert template, the SLO evaluator and the memory watch carry their own entries (SPEC-031);

@@ -116,3 +116,16 @@ more than the law block answers: `dues` is present only once the first recompute
 two nulls hold only while #133 is open. It reads instead: "Good, because the agent reads four
 numbers that are always present, `dues` once the first recompute has run, and two honest nulls
 while #133 is open."
+
+## Amendment (ruling 173): D5's account of the slot
+
+Insert-only; the text above is not rewritten, and every decision stands. D5's rejected-option line
+and the first Consequences bullet say that a refused request "never takes a slot". That is
+stronger than the stack does: the guard's layer sits outside the concurrency bound, so a refused
+request is answered without waiting for a slot and holds none past its refusal, but it does hold a
+permit of the global limit from the readiness poll to the end of its call, within one poll. D5
+reads instead: "a refused request is answered without waiting for a slot and holds none past its
+refusal". The first Consequences bullet reads instead: "Good, because a refused request is answered
+without waiting for a slot and holds none past its refusal, so a client without a token cannot shed
+the owner's agent." The correction matches the module doc of `crates/mcp/src/server.rs`; the
+residual one-poll window is disclosed under #157.
