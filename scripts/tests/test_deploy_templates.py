@@ -1258,6 +1258,21 @@ class TheCaddyBlock(unittest.TestCase):
         for each in examined("handle(s)", block.find("handle")):
             self.assertEqual(each.find("log"), [], f"the handle {each.tokens[1:]} logs")
 
+    def test_the_sync_route_carries_no_web_cookie(self):
+        """SPEC-340 A11; ADR-351 D7: the edge sends no `Cookie` header up to the sync server and
+        passes no `Set-Cookie` header down from it, whatever the cookie's attributes are."""
+        block = site()
+        route = handle(block, f"{SYNC_PATH}/*")
+        self.assertIsNotNone(route, f"no handle for {SYNC_PATH}/*")
+        proxy = route.one("reverse_proxy")
+        self.assertEqual(
+            [child.tokens for child in proxy.children if child.tokens[0].startswith("header_")],
+            [["header_up", "-Cookie"], ["header_down", "-Set-Cookie"]],
+        )
+        # The API's route is the web session's, so it keeps its cookie.
+        api = handle(block, "/api/*")
+        self.assertEqual([child.tokens for child in api.one("reverse_proxy").children], [])
+
 
 class NoPrivateValue(unittest.TestCase):
     def test_no_deploy_template_names_a_private_value(self):
