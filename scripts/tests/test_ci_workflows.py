@@ -30,6 +30,11 @@ WORKFLOWS = REPO / ".github" / "workflows"
 PINNED = re.compile(r"^[\w.-]+/[\w.-]+(?:/[\w.-]+)*@[0-9a-f]{40}$")
 STAGES = re.compile(r"^STAGES_ALL=\(([^)]*)\)", re.M)
 THIS_REPOSITORY = "RexRenatus/deck-streak"
+# The one workflow admitted to a runner that is not a pinned Ubuntu image, and the one runner it is
+# admitted to (SPEC-336, ADR-345 D4): the XCFramework job needs Apple's SDKs, which only a macOS
+# runner holds. The admission is by the workflow's file name, so the same runner under any other
+# name is refused, and this workflow on any other runner is refused.
+ADMITTED_RUNNERS = {"xcframework.yml": "macos-26"}
 # A pull request into main, as the github context presents it; each test changes what it needs.
 INTO_MAIN = {
     "github.event_name": "pull_request",
@@ -73,6 +78,14 @@ CACHE_BY_THEMSELVES = (
     "astral-sh/setup-uv",
     "ruby/setup-ruby",
 )
+
+
+def admitted_runner(name):
+    """The pattern every runner of the workflow `name` must match: a pinned Ubuntu image (SPEC-002
+    A9), or, for the one workflow ADMITTED_RUNNERS names, its one runner exactly (SPEC-336 R9)."""
+    if name in ADMITTED_RUNNERS:
+        return f"^{re.escape(ADMITTED_RUNNERS[name])}$"
+    return r"^ubuntu-\d\d\.\d\d$"
 
 
 def workflow_file_text(path):
@@ -121,7 +134,18 @@ class WorkflowsAreHardened(unittest.TestCase):
             runners += [(path.name, runner) for runner in entries(workflow, "runs-on")]
         for name, runner in examined("runs-on values", runners):
             # A list or a mapping of labels is read as its text, so the pattern refuses it by name.
-            self.assertRegex(str(runner), r"^ubuntu-\d\d\.\d\d$", f"{name} runs on {runner}")
+            self.assertRegex(str(runner), admitted_runner(name), f"{name} runs on {runner}")
+
+    def test_the_admitted_runner_is_admitted_to_its_one_workflow_only(self):
+        # SPEC-336 R9: the admitted workflow passes on its runner and is refused on any other, and
+        # its runner is refused under any other name (PLANTED_KEYS plants it in the control too).
+        for name, admitted in examined("admitted runners", list(ADMITTED_RUNNERS.items())):
+            self.assertRegex(admitted, admitted_runner(name))
+            for runner in ("macos-15", "ubuntu-24.04", [admitted], "self-hosted"):
+                self.assertNotRegex(str(runner), admitted_runner(name))
+            for other in ("planted.yml", "ci.yml", name.replace(".yml", ".yaml"), f"x{name}"):
+                self.assertNotRegex(admitted, admitted_runner(other))
+        self.assertRegex("ubuntu-24.04", admitted_runner("ci.yml"))
 
     def test_ci_runs_every_stage_of_the_local_gate(self):
         stages = STAGES.search((REPO / "scripts" / "check.sh").read_text()).group(1).split()
@@ -2295,6 +2319,12 @@ PLANTED_KEYS = (
         "    runs-on: ubuntu-24.04",
         '    "runs-on": [self-hosted, linux]',
         r"planted\.yml runs on \['self-hosted', 'linux'\]$",
+    ),
+    (
+        HARDENING_RUNNER,
+        "    runs-on: ubuntu-24.04",
+        "    runs-on: macos-26",
+        r"planted\.yml runs on macos-26$",
     ),
     (
         HARDENING_RUNNER,
