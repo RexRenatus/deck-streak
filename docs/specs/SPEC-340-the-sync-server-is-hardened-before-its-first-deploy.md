@@ -217,6 +217,7 @@ copied from the cured file.
   fork's lockfile (S34017), and a short commit admitted (S34018).
 - The seal (A15): a sealed file accepted without its header (S34019), an unset seal command that
   copies anyway (S34020), and a sealed file left on the host (S34021).
+- The hash's length (A12): a length other than thirty-two admitted (S34022).
 
 A9's job is held by its test and by the workflow parsers, decided by CI by name; no row mutates the
 release workflow in this band.
