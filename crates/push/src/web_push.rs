@@ -6,10 +6,10 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use base64ct::{Base64UrlUnpadded, Encoding};
-use deck_streak_kernel::Clock;
+use deck_streak_kernel::{Clock, UtcMillis};
 use http_body_util::Full;
 use hyper::body::Bytes;
-use hyper::header::{CONTENT_ENCODING, CONTENT_TYPE};
+use hyper::header::{AUTHORIZATION, CONTENT_ENCODING, CONTENT_TYPE};
 use hyper::{Request, Uri};
 use p256::PublicKey;
 use serde_json::json;
@@ -18,6 +18,10 @@ use web_push_native::Auth;
 use crate::client::{Answer, Client, Versions};
 use crate::jwt::Signer;
 use crate::{BuildError, Notification, Origin, PushServices, Sent, Unreached};
+
+/// How long a VAPID token is valid for: RFC 8292 allows at most 24 hours, and 12 leaves a push
+/// service's clock room to differ (R5).
+const VAPID_LIFETIME: Duration = Duration::from_mins(12 * 60);
 
 /// What a web push sender is built from. The key is the VAPID signing key's PKCS#8 PEM text, which
 /// production reads through the kernel's credential loader (#640); the contact and the list are
@@ -132,12 +136,6 @@ impl WebPushSender {
 
     /// One call: the body encrypted to the subscription, one request, and its answer read.
     async fn attempt(&self, subscription: &Subscription, notification: &Notification) -> Sent {
-        let _ = (
-            &self.contact,
-            &self.signer,
-            &self.clock,
-            &subscription.origin,
-        );
         let plaintext = json!({"title": notification.title(), "body": notification.body()})
             .to_string()
             .into_bytes();
@@ -145,7 +143,7 @@ impl WebPushSender {
         else {
             return Sent::Failed(Unreached::Request);
         };
-        let Some(request) = Self::request(subscription, body) else {
+        let Some(request) = self.request(subscription, body) else {
             return Sent::Failed(Unreached::Request);
         };
         match self.client.post(request).await {
@@ -154,13 +152,29 @@ impl WebPushSender {
         }
     }
 
-    /// The request carrying `body`, the encrypted message, to `subscription`'s endpoint.
-    fn request(subscription: &Subscription, body: Vec<u8>) -> Option<Request<Full<Bytes>>> {
+    /// The request carrying `body`, the encrypted message, to `subscription`'s endpoint, with
+    /// its VAPID token; `None` when the token cannot be signed or a header cannot carry a value.
+    fn request(&self, subscription: &Subscription, body: Vec<u8>) -> Option<Request<Full<Bytes>>> {
+        let token = self.vapid_token(subscription.origin.as_str(), self.clock.now())?;
+        let vapid = format!("vapid t={token}, k={}", self.signer.public_key());
         Request::post(subscription.endpoint.as_str())
+            .header(AUTHORIZATION, vapid)
             .header(CONTENT_ENCODING, "aes128gcm")
             .header(CONTENT_TYPE, "application/octet-stream")
             .body(Full::new(Bytes::from(body)))
             .ok()
+    }
+}
+
+impl WebPushSender {
+    /// RFC 8292's token for `audience`, the endpoint's origin, minted at `now`: ES256 over
+    /// `{"typ","alg"}` and `{"aud","exp","sub"}`, valid for [`VAPID_LIFETIME`] (R5).
+    fn vapid_token(&self, audience: &str, now: UtcMillis) -> Option<String> {
+        let lifetime = i64::try_from(VAPID_LIFETIME.as_secs()).ok()?;
+        let expiry = now.epoch_millis().div_euclid(1000).saturating_add(lifetime);
+        let header = json!({"typ": "JWT", "alg": "ES256"});
+        let claims = json!({"aud": audience, "exp": expiry, "sub": self.contact});
+        self.signer.token(&header, &claims)
     }
 }
 
