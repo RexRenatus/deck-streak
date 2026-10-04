@@ -75,6 +75,7 @@ back would prove only that the file was written.
 | `docs/specs/SPEC-335-the-engine-builds-for-wasm32-and-studies-in-a-browser-worker-over-opfs.md` | none: the spike record | added |
 | `docs/decisions/ADR-346-the-engine-builds-for-wasm32-behind-gates-on-the-fork-and-a-worker-harness-measures-it.md` | none: the spike record | added |
 | `docs/decisions/ADR-336-the-web-client-runs-the-engine-in-the-browser-on-wasm-with-a-server-side-fallback.md` | none: the spike record | changed: `status: accepted`, and GO, the measurements and the size budget in its decision outcome |
+| `docs/schematics/app-clients-engine-and-sync.md` | none: the spike record | changed: one edge label states REL-01 (dev builds always sync to the staging sync user) |
 | `changelog.d/spike-wasm-engine-335.md` | none: the spike record | added |
 
 ## 5. What this does NOT do

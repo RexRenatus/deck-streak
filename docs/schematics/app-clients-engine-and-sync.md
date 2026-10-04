@@ -140,7 +140,7 @@ flowchart LR
 flowchart LR
   devtip["dev tip"] -- "manual dispatch after an iOS delivery lands (ADR-344)" --> devjob["macOS job: build number = dev's first-parent commit count"]
   devjob --> internal["internal TestFlight: dev app id, the owner the only tester"]
-  internal -. "until both rulings are on dev and the sync cutover is done" .-> staging["staging sync user"]
+  internal -. "always, REL-01: real data comes only from a SemVer tag on main" .-> staging["staging sync user"]
   tag["SemVer tag on main"] --> release["release job: the tag's version, main's first-parent count"]
   release --> realapp["internal TestFlight: the app id that holds real data"]
 ```
