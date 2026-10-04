@@ -74,7 +74,7 @@ jobs:
           set -euo pipefail
           pin="$(python3 -c 'import tomllib; entry = tomllib.load(open("Cargo.toml", "rb"))["patch"]["https://github.com/ankitects/anki.git"]["anki"]; print(entry["git"], entry["rev"])')"
           read -r fork rev <<< "$pin"
-          if ! [[ "$rev" =~ ^[0-9a-f]{40}$ ]]; then
+          if ! grep -Eqx '[0-9a-f]{40}' <<< "$rev"; then
             echo "the engine's patch entry pins $rev, not a full commit" >&2
             exit 1
           fi
