@@ -113,7 +113,7 @@ class TheLauncherStartsTheServerWithHashedUsers(unittest.TestCase):
             "one name twice": (
                 {OWNER: owner, STAGING: "owner" + staging[len("staging") :]},
                 {},
-                "both users are named owner",
+                "both users have the same name",
             ),
             "an address that is not loopback": (
                 good,
