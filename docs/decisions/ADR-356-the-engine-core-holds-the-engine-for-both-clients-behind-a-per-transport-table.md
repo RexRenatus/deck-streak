@@ -58,9 +58,8 @@ admits, and how the containment test enumerates callers. This ADR decides them.
 
 ### One table for two transports
 
-- One ordinary table whose rows carry a native and a web mark, read through the transport a
-  dispatcher is started on: chosen because each pair is named once and each transport admits
-  exactly what its client calls today.
+- One ordinary table whose rows carry a native and a web mark, read through the transport a dispatcher is started on: chosen because
+  each pair is named once and each transport admits exactly what its client calls today.
 - The union of both lists for both transports: rejected because it gives the native client
   `CloseCollection` and `AddNotes`, which it does not call, and reddens the native refusal test and
   round-trip test that pin (3,1) as refused.
@@ -69,9 +68,8 @@ admits, and how the containment test enumerates callers. This ADR decides them.
 
 ### The adapters' own tables
 
-- Keep `ffi/src/allow_list.rs` and `web-engine/src/study.rs` unchanged, each checked first as today,
-  and hold each equal to its transport's column with a parity test in the core: chosen because it
-  moves no mutation row, leaves the harness's concurrent edit to the allow-list untouched, and
+- Keep `ffi/src/allow_list.rs` and `web-engine/src/study.rs` unchanged, each checked first as today, and hold each equal to its transport's column with a parity test in the core: chosen because
+  it moves no mutation row, leaves the harness's concurrent edit to the allow-list untouched, and
   keeps each adapter's boundary readable at the adapter.
 - Move both tables into the core and re-export them: rejected because `S33804` and `S33805` could
   not leave `study.rs` while it stays, the harness edits `allow_list.rs` concurrently, and the web
@@ -95,17 +93,16 @@ admits, and how the containment test enumerates callers. This ADR decides them.
 - The adapters as modules of the core, with a `pub(crate)` constructor: rejected because the
   umbrella FFI crate links the core beside the XP and FSRS-7 crates (ADR-335), and the web engine is
   its own `cdylib` (ADR-348), so neither adapter can be a module of the core.
-- The settle census's compiler-found callers (a deprecation under a census cfg, every target
-  checked): rejected because the web adapter's entry compiles only for `wasm32`, so a native pass
-  never reports it, and a `wasm32` pass needs the C toolchain only the `web-engine` job carries;
-  the graph already bounds the callers to two crates.
+- The settle census's compiler-found callers (a deprecation under a census cfg, every target checked): rejected because
+  the web adapter's entry compiles only for `wasm32`, so a native pass never reports it, and a
+  `wasm32` pass needs the C toolchain only the `web-engine` job carries; the graph already bounds
+  the callers to two crates.
 
 ### How a gesture's one target is checked
 
-- The gesture names one target; `run_exempt` decodes the request as its write's own message,
-  refuses it unless it names exactly that target, and passes the engine the message it checked,
-  re-encoded: chosen because the ruling admits one gesture's own write on the one thing it names,
-  and the engine then runs exactly what was checked.
+- The gesture names one target; `run_exempt` decodes the request as its write's own message, refuses it unless it names exactly that target, and passes the engine the message it checked, re-encoded: chosen because
+  the ruling admits one gesture's own write on the one thing it names, and the engine then runs
+  exactly what was checked.
 - Typed constructors in the core that build each request: rejected because every tap's request
   shape would be written twice, once in the client and once in the core.
 - No target check: rejected because a Forget gesture on one card could carry every card of a
@@ -127,16 +124,14 @@ admits, and how the containment test enumerates callers. This ADR decides them.
 
 ### What the core does with the engine's database door
 
-- Closed reads (`Read::NoteCount`, `Read::CardSnapshot(id)`) whose statements the core holds:
-  chosen because the door takes any SQL, writes included, and a table of service pairs cannot see
-  it.
+- Closed reads (`Read::NoteCount`, `Read::CardSnapshot(id)`) whose statements the core holds: chosen because
+  the door takes any SQL, writes included, and a table of service pairs cannot see it.
 - Leave the door to the web adapter: rejected for that reason.
 
 ### How the containment test reads the workspace
 
-- Every member's sources, examples, tests and build script, with the mirror's seven lines that name
-  an engine write or its own port method held by text, each with its reason: chosen because a new
-  line fails by name and no part of the tree is unread.
+- Every member's sources, examples, tests and build script, with the mirror's seven lines that name an engine write or its own port method held by text, each with its reason: chosen because
+  a new line fails by name and no part of the tree is unread.
 - Exclude test code: rejected because it leaves a blind spot, and the one engine upload in the
   tree today is a test fixture's.
 - Move the mirror's engine port behind the core: rejected because the mirror is a server context
