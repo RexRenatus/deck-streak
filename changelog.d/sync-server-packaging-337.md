@@ -43,6 +43,9 @@
   removes the window.
 - Tests that hold the window's ordering, its restart on success and failure, its bound and its lack
   of any condition or new privilege, run the copy against a held database and a planted failure,
-  and run the daily archive and the drill over scratch stores; a TLA+ model of the window,
+  and run the daily archive and the drill over scratch stores, with mutation rows for the window's
+  refusal and its lack of a busy wait, the copy published only when whole, each check, the
+  manifest's digests, the offsite copy's arguments and its two settings, the three archives kept,
+  and the drill's newest archive, digests, database checks and refusal; a TLA+ model of the window,
   `formal/tla/SyncSnapshotWindow`, with a witness for each of its four properties; and the privacy
   policy's disclosure of the snapshots among the copies an erase cannot reach.
