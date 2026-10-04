@@ -259,3 +259,21 @@ async fn a6_a_refused_device_token_is_never_retried() {
         )
     );
 }
+
+#[tokio::test]
+async fn a7_try_later_answers_are_reported_and_not_retried() {
+    let rig = Rig::start().await;
+    rig.development.fake.script([
+        refusal(429, "TooManyRequests"),
+        refusal(500, "InternalServerError"),
+        refusal(503, "ServiceUnavailable"),
+    ]);
+
+    let mut outcomes = Vec::new();
+    for sent in 1..=3 {
+        outcomes.push(rig.deliver(&alert()).await);
+        assert_eq!(rig.received().len(), sent, "one request each");
+    }
+
+    assert_eq!(outcomes, vec![Sent::RetryLater { after: None }; 3]);
+}
