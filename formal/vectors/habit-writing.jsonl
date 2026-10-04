@@ -1,4 +1,4 @@
-{"schema":"phx.formal.vectors.v1","entry":"HabitWriting","covers":"crates/habits/src/writing.rs","anchor":"writing_day_xp","digest":"sha256:0000000000000000000000000000000000000000000000000000000000000000","vectors":41}
+{"schema":"phx.formal.vectors.v1","entry":"HabitWriting","covers":"crates/habits/src/writing.rs","anchor":"writing_day_xp","digest":"sha256:35b9f19b5387b8a71cd4bfb4a85f2da3c85b0b122196949e2bf076cc28fc8ad8","vectors":41}
 {"rule":"constants","WRITING_XP_PER_DAY":75,"WRITING_XP_ALL_THREE_BONUS":100}
 {"rule":"writing_day_xp","writing":[],"day":19680,"rows":[],"courses":[],"all":0}
 {"rule":"writing_day_xp","writing":[],"day":19680,"rows":[["qaa",19680]],"courses":[],"all":0}
