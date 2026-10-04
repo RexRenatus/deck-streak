@@ -1,5 +1,9 @@
 //! SPEC-338 A1, A2 and A17: the study rule the web engine's `wasm32` module runs, judged natively.
 
+// The examined helper prints its count on purpose; clippy.toml's in-test allowances cover only
+// `#[test]` bodies.
+#![allow(clippy::print_stdout)]
+
 use deck_streak_web_engine::study::{Answer, STUDY_CALLS, StudyError, admit, service};
 
 fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {

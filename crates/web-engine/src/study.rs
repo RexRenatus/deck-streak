@@ -24,21 +24,35 @@ impl Answer {
     /// # Errors
     /// [`StudyError::RatingOutOfRange`] for any other number, before anything reaches the engine.
     pub fn from_wire(rating: u32) -> Result<Self, StudyError> {
-        let _ = rating;
-        Ok(Self::Again)
+        match rating {
+            1 => Ok(Self::Again),
+            2 => Ok(Self::Hard),
+            3 => Ok(Self::Good),
+            4 => Ok(Self::Easy),
+            other => Err(StudyError::RatingOutOfRange(other)),
+        }
     }
 
     /// Anki's `Rating` value for this answer, 0 to 3.
     #[must_use]
     pub fn rating(self) -> i32 {
-        0
+        match self {
+            Self::Again => 0,
+            Self::Hard => 1,
+            Self::Good => 2,
+            Self::Easy => 3,
+        }
     }
 
     /// The next state this answer selects out of the scheduler's four, in their field order.
     #[must_use]
     pub fn pick<T>(self, again: T, hard: T, good: T, easy: T) -> T {
-        let _ = (hard, good, easy);
-        again
+        match self {
+            Self::Again => again,
+            Self::Hard => hard,
+            Self::Good => good,
+            Self::Easy => easy,
+        }
     }
 }
 
@@ -73,10 +87,11 @@ pub const STUDY_CALLS: [(u32, u32, &str); 8] = [
 /// # Errors
 /// [`StudyError::CallRefused`] for a pair outside [`STUDY_CALLS`].
 pub fn admit(service: u32, method: u32) -> Result<&'static str, StudyError> {
-    Ok(STUDY_CALLS
+    STUDY_CALLS
         .iter()
         .find(|&&(s, m, _)| (s, m) == (service, method))
-        .map_or("unlisted", |&(_, _, name)| name))
+        .map(|&(_, _, name)| name)
+        .ok_or(StudyError::CallRefused { service, method })
 }
 
 /// Why the study rule refused a request.
