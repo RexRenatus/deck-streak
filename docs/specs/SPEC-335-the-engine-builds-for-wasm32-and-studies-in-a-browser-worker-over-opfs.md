@@ -89,6 +89,11 @@ back would prove only that the file was written.
 - It measures no brotli size: only `gzip -9` (#626).
 - It measures no module size with the translation table loaded apart from the engine: only the
   table's generated source was measured (#626).
+- It measures no other build profile: no link-time optimisation and no size-first optimisation
+  level, only the release profile followed by `wasm-opt -Oz` (#626).
+- It measures no collection of realistic size: the scenario seeds 300 synthetic notes only (#626).
+- It runs no media and no import or export on wasm32: the scenario opens, answers and undoes only
+  (#626).
 - It builds no fallback for a browser context that refuses OPFS, as WebKit's ephemeral context does
   (#626).
 - It adds no CI size-budget gate, pins none of the spike's fork commits in `Cargo.toml` and appends
