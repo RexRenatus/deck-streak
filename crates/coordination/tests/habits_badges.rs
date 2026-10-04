@@ -18,6 +18,8 @@ mod golden;
 use deck_streak_coordination::recompute::Evaluation;
 use deck_streak_coordination::recompute::badges::offer_badges;
 use deck_streak_coordination::recompute::habit_badges::HabitBadgesStep;
+use deck_streak_coordination::recompute::{Fold, Phase};
+use deck_streak_habits::minutes::READING_WEEKLY_GOAL_MIN;
 use deck_streak_kernel::{Courses, Db, UtcMillis};
 use deck_streak_progression::badges::catalog::catalog;
 use serde_json::Value;
@@ -211,4 +213,106 @@ async fn habit_badges_are_awarded_once_as_the_predecessors_golden() {
             "each badge of {class:?} {input} is celebrated once"
         );
     }
+}
+
+/// A day that earns `first_page` and nothing else the test reads: one reading entry on the day.
+async fn log_entry(db: &Db, code: &str, minutes: i64) {
+    let mut write = db.write().await.expect("a write");
+    sqlx::query(
+        "INSERT INTO minutes_log (code, study_day, minutes, note, created_at) \
+         VALUES (?1, ?2, ?3, '', 1000)",
+    )
+    .bind(code)
+    .bind(SUNDAY)
+    .bind(minutes)
+    .execute(&mut *write)
+    .await
+    .expect("an entry");
+    write.commit().await.expect("the entry commits");
+}
+
+/// Runs the habit badges step once for [`SUNDAY`] over `scratch`.
+async fn run_once(scratch: &support::Scratch, courses: &Courses) {
+    let step = HabitBadgesStep::new(courses.clone());
+    let data = collection(Vec::new(), Vec::new());
+    run_step(
+        &scratch.db,
+        &step,
+        &data,
+        0,
+        (SUNDAY, Evaluation::Current),
+        at(SUNDAY, 12),
+    )
+    .await;
+}
+
+#[test]
+fn the_habit_badges_step_is_named_for_the_folds_report() {
+    let mut fold = Fold::default();
+    fold.register(Phase::Awards, Box::new(HabitBadgesStep::new(courses())))
+        .expect("the habit badges step is phase 7's");
+    assert_eq!(
+        fold.steps(),
+        [(Phase::Awards, "habits.badges")],
+        "the report and the log name the step habits.badges"
+    );
+}
+
+#[tokio::test]
+async fn an_awarded_habit_badge_keeps_its_catalogs_name_and_emoji() {
+    let courses = courses();
+    let catalog = catalog(&courses);
+    let scratch = scratch().await;
+    log_entry(&scratch.db, "qaa", 10).await;
+    run_once(&scratch, &courses).await;
+    let rows = sqlx::query_as::<_, (String, i64, String, String)>(
+        "SELECT badge_key, tier, name, emoji FROM badges_earned ORDER BY badge_key, tier",
+    )
+    .fetch_all(scratch.db.reader())
+    .await
+    .expect("the badges read");
+    println!("examined {} row(s) of badges_earned", rows.len());
+    assert!(!rows.is_empty(), "the day earns a badge");
+    for (key, tier, name, emoji) in rows {
+        let badge = catalog
+            .iter()
+            .find(|badge| badge.key == key)
+            .expect("the catalog holds the key");
+        assert_eq!(
+            (tier, name.as_str(), emoji.as_str()),
+            (
+                i64::from(badge.tier),
+                badge.name.as_str(),
+                badge.emoji.as_str()
+            ),
+            "{key} is stored with its catalog's tier, name and emoji"
+        );
+    }
+}
+
+#[tokio::test]
+async fn a_course_not_configured_counts_toward_no_courses_goal() {
+    let courses = courses();
+    let scratch = scratch().await;
+    log_entry(&scratch.db, "qaa", i64::from(READING_WEEKLY_GOAL_MIN)).await;
+    log_entry(&scratch.db, "qzz", i64::from(READING_WEEKLY_GOAL_MIN)).await;
+    run_once(&scratch, &courses).await;
+    let keys: Vec<String> = badges(&scratch.db)
+        .await
+        .into_iter()
+        .map(|(key, _, _, _)| key)
+        .collect();
+    println!("examined {} badge(s)", keys.len());
+    assert!(
+        keys.iter().any(|key| key == "first_page"),
+        "a page was read"
+    );
+    assert!(
+        !keys.iter().any(|key| key == "bookworm_week"),
+        "the configured qab read nothing, so its goal is unmet: {keys:?}"
+    );
+    assert!(
+        !keys.iter().any(|key| key == "polyglot_reader"),
+        "the configured qab read nothing, so not every course was read: {keys:?}"
+    );
 }

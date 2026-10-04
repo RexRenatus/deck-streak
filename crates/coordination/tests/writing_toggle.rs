@@ -416,3 +416,15 @@ async fn every_writing_write_answers_no_writing_course_without_one() {
     );
     assert!(confirmations(&db).await.is_empty(), "nothing was confirmed");
 }
+
+#[test]
+fn the_writing_step_is_named_for_the_folds_report() {
+    assert_eq!(
+        fold().steps(),
+        [
+            (Phase::DaySteps, "habits.reading_xp"),
+            (Phase::DaySteps, "habits.writing_xp")
+        ],
+        "the report and the log name the steps habits.reading_xp and habits.writing_xp"
+    );
+}
