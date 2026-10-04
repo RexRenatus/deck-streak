@@ -220,6 +220,7 @@ impl fmt::Debug for WebPushSender {
         formatter
             .debug_struct("WebPushSender")
             .field("signer", &self.signer)
+            .field("client", &self.client)
             .field("services", &self.services)
             .finish_non_exhaustive()
     }

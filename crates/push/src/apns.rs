@@ -358,6 +358,7 @@ impl fmt::Debug for ApnsSender {
         formatter
             .debug_struct("ApnsSender")
             .field("signer", &self.signer)
+            .field("client", &self.client)
             .field("development", &self.development)
             .field("production", &self.production)
             .finish_non_exhaustive()
