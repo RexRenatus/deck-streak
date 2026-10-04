@@ -1066,7 +1066,9 @@ class TheCaddyBlock(unittest.TestCase):
         self.assertNotIn("script-src", directives)
         self.assertNotIn("default-src", directives)
         config = (REPO / "web" / "app" / "svelte.config.js").read_text(encoding="utf-8")
-        self.assertRegex(config, r"'script-src': \['self', 'https://telegram\.org'\]")
+        self.assertRegex(
+            config, r"'script-src': \['self', 'https://telegram\.org', 'wasm-unsafe-eval'\]"
+        )
         sent = operations["Strict-Transport-Security"].split(";")
         hsts = dict(part.strip().partition("=")[::2] for part in sent)
         self.assertGreaterEqual(int(hsts["max-age"]), ONE_YEAR)

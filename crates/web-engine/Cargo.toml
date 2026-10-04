@@ -1,0 +1,29 @@
+[package]
+name = "deck-streak-web-engine"
+description = "DeckStreak's web engine: Anki's engine on wasm32 for the web client's Worker. See docs/CONTEXT-MAP.md."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+# ADR-348: a cdylib for the browser's module, and an rlib so the native tests link the study rule.
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+# ADR-348: every dependency is wasm32-only, so a native build compiles the study rule alone, and
+# the engine never joins the native graph through this crate.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+anki.workspace = true
+anki_proto.workspace = true
+js-sys.workspace = true
+prost.workspace = true
+serde_json.workspace = true
+sqlite-wasm-rs.workspace = true
+sqlite-wasm-vfs.workspace = true
+wasm-bindgen.workspace = true
+wasm-bindgen-futures.workspace = true

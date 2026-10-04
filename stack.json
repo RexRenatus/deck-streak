@@ -123,6 +123,10 @@
     {
       "item": "astro",
       "planned": true
+    },
+    {
+      "item": "rust-wasm",
+      "adr": "docs/decisions/ADR-348-the-web-engine-pins-the-forks-wasm32-patches-by-tag-and-crosses-into-a-worker-through-wasm-bindgen.md"
     }
   ]
 }
