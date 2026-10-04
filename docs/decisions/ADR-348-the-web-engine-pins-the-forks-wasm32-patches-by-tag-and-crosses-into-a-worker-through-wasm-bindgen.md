@@ -129,8 +129,8 @@ Chosen options: the first under each heading above.
 - **The peak memory** is the module's linear memory, read by the protocol's `memory` operation
   after each step; the Worker's JavaScript heap is not in it.
 - **The Mini App's embedded context** takes the same path in a frame under another site, where the
-  browser partitions OPFS and the lock by the top-level site. SPEC-338 section 7 measures it framed
-  across sites, or records it NOT MEASURED with the issue it routes to.
+  browser partitions OPFS and the lock by the top-level site. SPEC-338 section 7 measured it framed
+  across sites (M11): in both browsers the frame opens a collection of its own, answers and undoes.
 
 ### Consequences
 
