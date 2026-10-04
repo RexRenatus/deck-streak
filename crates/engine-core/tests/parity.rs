@@ -5,6 +5,12 @@
 //! to one side alone fails here by its name. The second test reads the adapters' sources, comments
 //! stripped, for the transport each starts its dispatcher on.
 
+#![allow(
+    clippy::expect_used,
+    clippy::print_stdout,
+    reason = "a failed fixture should fail its test, and an enumerating test prints what it examined"
+)]
+
 mod support;
 
 use std::collections::BTreeSet;

@@ -7,6 +7,12 @@
 //! dependency line it cannot read, are refused as unreadable rather than skipped. Each test also
 //! judges a planted tree or map, so a census that went blind fails it.
 
+#![allow(
+    clippy::expect_used,
+    clippy::print_stdout,
+    reason = "a failed fixture should fail its test, and an enumerating test prints what it examined"
+)]
+
 mod support;
 
 use std::collections::BTreeMap;
@@ -90,15 +96,12 @@ fn unquote(text: &str) -> &str {
 /// Splits `<cfg>.<rest>` after `target.`, where the cfg may be quoted and hold dots.
 fn split_target(after: &str) -> Option<(String, &str)> {
     let quote = after.chars().next().filter(|c| *c == '\'' || *c == '"');
-    let (cfg, rest) = match quote {
-        Some(quote) => {
-            let end = after[1..].find(quote)? + 1;
-            (&after[1..end], &after[end + 1..])
-        }
-        None => {
-            let end = after.find('.')?;
-            (&after[..end], &after[end..])
-        }
+    let (cfg, rest) = if let Some(quote) = quote {
+        let end = after[1..].find(quote)? + 1;
+        (&after[1..end], &after[end + 1..])
+    } else {
+        let end = after.find('.')?;
+        (&after[..end], &after[end..])
     };
     Some((cfg.to_owned(), rest.strip_prefix('.')?))
 }
@@ -110,8 +113,8 @@ fn opens(line: &str) -> Opens {
         .trim_start_matches('[')
         .trim_end_matches(']')
         .trim();
-    let (target, rest) = if inner.starts_with("target.") {
-        match split_target(&inner["target.".len()..]) {
+    let (target, rest) = if let Some(after) = inner.strip_prefix("target.") {
+        match split_target(after) {
             Some((cfg, rest)) => (Some(cfg), rest),
             None => return Opens::Unreadable,
         }
@@ -226,10 +229,8 @@ fn renames(root_manifest: &str) -> BTreeMap<String, String> {
     for line in root_manifest.lines().map(str::trim) {
         if line.starts_with('[') {
             inside = line == "[workspace.dependencies]";
-        } else if inside {
-            if let (Some(name), Some(renamed)) = (key(line), package(line)) {
-                found.insert(name, renamed);
-            }
+        } else if inside && let (Some(name), Some(renamed)) = (key(line), package(line)) {
+            found.insert(name, renamed);
         }
     }
     found
@@ -413,7 +414,7 @@ fn only_the_client_adapters_reach_the_engine_core() {
     );
 }
 
-/// The `depends on:` of each named context in the ```context-map fence of `map`, or `None`.
+/// The `depends on:` of each named context in the `context-map` fence of `map`, or `None`.
 fn declared<'a>(map: &str, contexts: &[&'a str]) -> Vec<(&'a str, Option<String>)> {
     let fence = map
         .split("```context-map\n")

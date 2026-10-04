@@ -4,6 +4,12 @@
 //! from the core, so a row the table loses, gains, renumbers or marks for the wrong transport fails
 //! here by its pair.
 
+#![allow(
+    clippy::expect_used,
+    clippy::print_stdout,
+    reason = "a failed fixture should fail its test, and an enumerating test prints what it examined"
+)]
+
 mod support;
 
 use std::collections::BTreeSet;

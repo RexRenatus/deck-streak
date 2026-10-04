@@ -5,6 +5,12 @@
 //! reply decoded from them, and each read named rather than written as SQL. The pairs are the
 //! engine's generated dispatch numbers, written here, not read from the core's table.
 
+#![allow(
+    clippy::expect_used,
+    clippy::print_stdout,
+    reason = "a failed fixture should fail its test, and an enumerating test prints what it examined"
+)]
+
 mod support;
 
 use std::time::{SystemTime, UNIX_EPOCH};
