@@ -1215,10 +1215,14 @@ class TheCaddyBlock(unittest.TestCase):
         body = route.one("request_body")
         self.assertEqual(body.tokens, ["request_body"])
         self.assertEqual([child.tokens for child in body.children], [["max_size", SYNC_BODY_LIMIT]])
-        # The proxy reaches the sync server's loopback upstream, read with the larger buffer.
+        # The proxy reaches the sync server's loopback upstream, read with the larger buffer; it
+        # drops the web cookie in both directions first (SPEC-340 R9, A11).
         proxy = route.one("reverse_proxy")
         self.assertEqual(proxy.tokens, ["reverse_proxy", "{$DECKSTREAK_SYNC_UPSTREAM}"])
-        self.assertEqual([child.tokens for child in proxy.children], [["transport", "http"]])
+        self.assertEqual(
+            [child.tokens for child in proxy.children],
+            [["header_up", "-Cookie"], ["header_down", "-Set-Cookie"], ["transport", "http"]],
+        )
         transport = proxy.one("transport", "http")
         self.assertEqual(
             [child.tokens for child in transport.children], [["read_buffer", SYNC_READ_BUFFER]]

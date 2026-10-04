@@ -69,6 +69,10 @@
 			max_size 100MiB
 		}
 		reverse_proxy {$DECKSTREAK_SYNC_UPSTREAM} {
+			# The sync server needs no web cookie and sets none on this origin (SPEC-340 R9;
+			# ADR-351 D7): the edge drops it in both directions.
+			header_up -Cookie
+			header_down -Set-Cookie
 			transport http {
 				read_buffer 512KiB
 			}
