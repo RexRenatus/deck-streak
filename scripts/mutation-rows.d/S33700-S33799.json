@@ -176,6 +176,110 @@
         "exit 0",
         "a refusal exits non-zero before the server runs, so the unit fails and pages (SPEC-337 R2, A5)",
         "test_sync_server_launcher.TheLauncherStartsTheServerWithHashedUsers.test_the_launcher_refuses_a_bad_entry_and_execs_the_server_with_hashed_users"
+      ],
+      [
+        "S33723-THE-SYNC-UPSTREAM-IS-A-PLACEHOLDER",
+        "deploy/scripts/render-caddy.py",
+        "    \"sync_upstream\": \"{$DECKSTREAK_SYNC_UPSTREAM}\",\n",
+        "",
+        "the render fills the sync server's upstream from its fourth key, so a configuration that names it renders (SPEC-337 R4, A6; ADR-347 D4)",
+        "test_caddy_render.TheCaddyRender.test_the_render_refuses_placeholders_and_keeps_the_headers"
+      ],
+      [
+        "S33724-THE-SYNC-UPSTREAM-IS-CHECKED",
+        "deploy/scripts/render-caddy.py",
+        "    check_upstream(\"sync_upstream\", value)\n",
+        "    return None\n",
+        "the sync server's upstream is checked as the API's is: a loopback host:port, nothing that reaches outward (SPEC-337 R4, A6; ADR-347 D4)",
+        "test_caddy_render.TheCaddyRender.test_the_render_refuses_placeholders_and_keeps_the_headers"
+      ],
+      [
+        "S33725-THE-SYNC-UPSTREAM-HAS-ITS-OWN-CHECK",
+        "deploy/scripts/render-caddy.py",
+        "    \"sync_upstream\": check_sync_upstream,\n",
+        "    \"sync_upstream\": check_api_upstream,\n",
+        "the sync server's upstream is checked under its own key, so a refusal names the key it refused (SPEC-337 R4, A6)",
+        "test_caddy_render.TheCaddyRender.test_the_render_refuses_placeholders_and_keeps_the_headers"
+      ],
+      [
+        "S33726-A-SHAPE-REFUSAL-NAMES-ITS-KEY",
+        "deploy/scripts/render-caddy.py",
+        "        raise Refused(f\"{key} is not a loopback host:port\")\n",
+        "        raise Refused(\"api_upstream is not a loopback host:port\")\n",
+        "an upstream that is not a loopback host:port is refused under the key that holds it (SPEC-337 R4, A6)",
+        "test_caddy_render.TheCaddyRender.test_the_render_refuses_placeholders_and_keeps_the_headers"
+      ],
+      [
+        "S33727-AN-ADDRESS-REFUSAL-NAMES-ITS-KEY",
+        "deploy/scripts/render-caddy.py",
+        "            raise Refused(f\"{key} is not a loopback address\")\n",
+        "            raise Refused(\"api_upstream is not a loopback address\")\n",
+        "an upstream address outside loopback is refused under the key that holds it (SPEC-337 R4, A6)",
+        "test_caddy_render.TheCaddyRender.test_the_render_refuses_placeholders_and_keeps_the_headers"
+      ],
+      [
+        "S33728-A-PORT-REFUSAL-NAMES-ITS-KEY",
+        "deploy/scripts/render-caddy.py",
+        "        raise Refused(f\"{key}'s port is out of range\")\n",
+        "        raise Refused(\"api_upstream's port is out of range\")\n",
+        "an upstream port out of range is refused under the key that holds it (SPEC-337 R4, A6)",
+        "test_caddy_render.TheCaddyRender.test_the_render_refuses_placeholders_and_keeps_the_headers"
+      ],
+      [
+        "S33729-THE-BARE-SYNC-PATH-REDIRECTS-PERMANENTLY",
+        "deploy/caddy/deck-streak.caddy",
+        "\t\tredir * /anki-sync/ 308\n",
+        "\t\tredir * /anki-sync/ 302\n",
+        "the bare sync path redirects to the slash form permanently, keeping the method and body (SPEC-337 R4, A6; ADR-347 D4)",
+        "test_deploy_templates.TheCaddyBlock.test_the_caddy_block_routes_the_sync_server_under_its_own_path"
+      ],
+      [
+        "S33730-THE-SYNC-PREFIX-IS-STRIPPED",
+        "deploy/caddy/deck-streak.caddy",
+        "\t\turi strip_prefix /anki-sync\n",
+        "\t\turi strip_prefix /anki\n",
+        "the sync path's prefix is stripped whole, so the server reads its own routes (SPEC-337 R4, A6; ADR-347 D4)",
+        "test_deploy_templates.TheCaddyBlock.test_the_caddy_block_routes_the_sync_server_under_its_own_path"
+      ],
+      [
+        "S33731-THE-SYNC-HEALTH-MATCHER-IS-THE-SERVERS",
+        "deploy/caddy/deck-streak.caddy",
+        "\t\t@sync_health path /health\n",
+        "\t\t@sync_health path /healthz\n",
+        "the hidden health route is the server's own, so it answers on loopback only (SPEC-337 R4, A6; ADR-025)",
+        "test_deploy_templates.TheCaddyBlock.test_the_caddy_block_routes_the_sync_server_under_its_own_path"
+      ],
+      [
+        "S33732-THE-SYNC-HEALTH-ROUTE-IS-HIDDEN",
+        "deploy/caddy/deck-streak.caddy",
+        "\t\trespond @sync_health 404\n",
+        "\t\trespond @sync_health 200\n",
+        "the server's health route answers 404 at the edge, as the API's do (SPEC-337 R4, A6; ADR-025)",
+        "test_deploy_templates.TheCaddyBlock.test_the_caddy_block_routes_the_sync_server_under_its_own_path"
+      ],
+      [
+        "S33733-THE-SYNC-BODY-BOUND-IS-THE-SERVERS",
+        "deploy/caddy/deck-streak.caddy",
+        "\t\t\tmax_size 100MiB\n",
+        "\t\t\tmax_size 100MB\n",
+        "the edge bounds a sync body at the server's own payload limit, to the byte (SPEC-337 R4, A6; ADR-347 D4)",
+        "test_deploy_templates.TheCaddyBlock.test_the_caddy_block_routes_the_sync_server_under_its_own_path"
+      ],
+      [
+        "S33734-THE-SYNC-PROXY-READS-A-LARGER-BUFFER",
+        "deploy/caddy/deck-streak.caddy",
+        "\t\t\t\tread_buffer 512KiB\n",
+        "\t\t\t\tread_buffer 4KiB\n",
+        "the proxy reads the server's responses with the larger buffer (SPEC-337 R4, A6; ADR-347 D4)",
+        "test_deploy_templates.TheCaddyBlock.test_the_caddy_block_routes_the_sync_server_under_its_own_path"
+      ],
+      [
+        "S33735-THE-SYNC-PROXY-REACHES-THE-SYNC-UPSTREAM",
+        "deploy/caddy/deck-streak.caddy",
+        "\t\treverse_proxy {$DECKSTREAK_SYNC_UPSTREAM} {\n",
+        "\t\treverse_proxy {$DECKSTREAK_API_UPSTREAM} {\n",
+        "the sync path is proxied to the sync server's own upstream, never the API's (SPEC-337 R4, A6; ADR-347 D4)",
+        "test_deploy_templates.TheCaddyBlock.test_the_caddy_block_routes_the_sync_server_under_its_own_path"
       ]
     ]
   }
