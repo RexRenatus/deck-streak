@@ -67,7 +67,10 @@ key(s)`, each upstream refused under its own key for twelve shapes, and test_dep
 The deploy scripts' Caddy install (`test_deploy_scripts.py`) is decided by CI by name and never run
 on the box, so its red at d0fd24c7 is CI's to read. d0fd24c7 was pushed alone for that reading, and
 no workflow ran on it: the branch then conflicted with its base in `deploy/README.md`, and a pull
-request in conflict runs none. That red is not read yet.
+request in conflict runs none. CI read it on a0058d2c, the merge of d0fd24c7 with its base: each
+of the Caddy install's tests in `test_deploy_scripts.py` fails with `REFUSE: the configuration
+holds sync_upstream, which the block has no placeholder for`, and `test_deploy_templates.py`'s
+route test with `no handle for /anki-sync`.
 
 The runbook's test (A9) was committed alone (9af948bd), with no runbook in the tree. At that commit
 it reads `examined 10 cutover state(s)` from the schematic and fails by assertion. The schematic's
