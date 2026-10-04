@@ -9,8 +9,8 @@ use std::time::Duration;
 
 use base64ct::{Base64UrlUnpadded, Encoding};
 use deck_streak_push::{
-    BuildError, CollapseKey, Notification, Origin, PushServices, Refusal, Sent, WebPushSender,
-    WebPushSettings,
+    BuildError, CollapseKey, Notification, Origin, PushServices, Refusal, Sent, Unreached,
+    WebPushSender, WebPushSettings,
 };
 use serde_json::json;
 
@@ -272,4 +272,110 @@ async fn a17_an_oversize_plaintext_is_refused_before_any_request() {
     assert_eq!(received.len(), 1, "the oversize message made no request");
     let delivered = FakePushService::plaintext(&received[0], &browser).expect("it decrypts");
     assert_eq!(delivered.to_string().len(), 3993);
+}
+
+// MUTATION COVERAGE: green at the base where the behaviour already stood, each holds a branch the
+// criteria above leave unexamined.
+
+#[tokio::test]
+async fn every_other_answer_is_read_by_its_status_after_one_request() {
+    let service = FakePushService::start().await;
+    let key = TestKey::generate();
+    let browser = TestSubscriber::generate();
+    let sender = build_sender(&key, listing(&[&service]));
+    let subscription = sender
+        .subscription(&service.endpoint(), &browser.p256dh(), &browser.auth())
+        .expect("a listed endpoint is admitted");
+    let table = [
+        (413, Sent::Rejected(Refusal::TooLarge)),
+        (401, Sent::Rejected(Refusal::ProviderToken)),
+        (403, Sent::Rejected(Refusal::ProviderToken)),
+        (400, Sent::Rejected(Refusal::Request)),
+        (405, Sent::Rejected(Refusal::Request)),
+        (301, Sent::Failed(Unreached::Redirect)),
+        (307, Sent::Failed(Unreached::Redirect)),
+        (202, Sent::Delivered),
+    ];
+    service
+        .fake
+        .script(table.iter().map(|(status, _)| Answer::status(*status)));
+
+    let mut read = Vec::new();
+    for _ in &table {
+        read.push(sender.deliver(&subscription, &notification()).await);
+    }
+
+    let expected: Vec<Sent> = table.iter().map(|(_, sent)| *sent).collect();
+    assert_eq!(read, expected);
+    assert_eq!(
+        service.fake.received().len(),
+        table.len(),
+        "one request each"
+    );
+}
+
+#[test]
+fn a_collapse_key_past_32_characters_is_refused() {
+    let longest = "a".repeat(32);
+    assert_eq!(
+        CollapseKey::new(&longest).map(|key| key.as_str().to_owned()),
+        Ok(longest)
+    );
+    assert_eq!(
+        CollapseKey::new("Synthetic-key_09").map(|key| key.as_str().to_owned()),
+        Ok("Synthetic-key_09".to_owned())
+    );
+    for refused in [
+        "a".repeat(33),
+        String::new(),
+        "a.b".to_owned(),
+        "a b".to_owned(),
+    ] {
+        assert_eq!(
+            CollapseKey::new(&refused),
+            Err(BuildError::CollapseKey),
+            "{refused:?} is refused"
+        );
+    }
+}
+
+#[tokio::test]
+async fn a_subscription_that_does_not_parse_is_refused() {
+    let service = FakePushService::start().await;
+    let key = TestKey::generate();
+    let browser = TestSubscriber::generate();
+    let sender = build_sender(&key, listing(&[&service]));
+    let endpoint = service.endpoint();
+    let (p256dh, auth) = (browser.p256dh(), browser.auth());
+    let not_a_point = Base64UrlUnpadded::encode_string(&[0_u8; 65]);
+    let short_auth = Base64UrlUnpadded::encode_string(&[7_u8; 15]);
+    let long_auth = Base64UrlUnpadded::encode_string(&[7_u8; 17]);
+
+    let refused = [
+        ("not a uri", p256dh.as_str(), auth.as_str()),
+        (ENDPOINT_PATH, p256dh.as_str(), auth.as_str()),
+        (endpoint.as_str(), "!!!", auth.as_str()),
+        (endpoint.as_str(), not_a_point.as_str(), auth.as_str()),
+        (endpoint.as_str(), p256dh.as_str(), "!!!"),
+        (endpoint.as_str(), p256dh.as_str(), short_auth.as_str()),
+        (endpoint.as_str(), p256dh.as_str(), long_auth.as_str()),
+    ];
+    for (endpoint, p256dh, auth) in refused {
+        assert_eq!(
+            sender.subscription(endpoint, p256dh, auth).err(),
+            Some(BuildError::Subscription),
+            "{endpoint:?} {p256dh:?} {auth:?} is refused"
+        );
+    }
+    assert_eq!(
+        sender
+            .subscription("http://push.synthetic.invalid/endpoint", &p256dh, &auth)
+            .err(),
+        Some(BuildError::Origin)
+    );
+    assert!(
+        sender.subscription(&endpoint, &p256dh, &auth).is_ok(),
+        "the well-formed control is admitted"
+    );
+    assert!(service.fake.received().is_empty(), "no parse sends");
 }
