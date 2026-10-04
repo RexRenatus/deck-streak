@@ -49,7 +49,7 @@ async fn a19_debug_holds_no_key_token_or_endpoint() {
         .expect("a listed endpoint is admitted");
     let device = Device::new(&device_token(), Environment::Development).expect("a device");
     let notification =
-        Notification::new("Synthetic title", "Synthetic body", Duration::from_secs(60));
+        Notification::new("Synthetic title", "Synthetic body", Duration::from_mins(1));
     assert_eq!(
         apns_sender.deliver(&device, &notification).await,
         Sent::Delivered

@@ -2,6 +2,12 @@
 //! provider token is verified by the fake with the test's public key; every key is generated in
 //! memory, every value is synthetic, and time moves on the kernel's manual clock, never by sleeping.
 
+#![allow(
+    clippy::expect_used,
+    reason = "a helper builds what every test needs and panics like a test, but clippy's \
+              allow-expect-in-tests reaches only #[test] functions"
+)]
+
 mod support;
 
 use std::sync::Arc;
@@ -77,11 +83,7 @@ fn device() -> Device {
 
 /// An alert that lives an hour.
 fn alert() -> Notification {
-    Notification::new(
-        "Synthetic title",
-        "Synthetic body",
-        Duration::from_secs(3600),
-    )
+    Notification::new("Synthetic title", "Synthetic body", Duration::from_hours(1))
 }
 
 /// The clock's epoch second at the start of every test.
@@ -159,9 +161,9 @@ async fn a3_the_provider_token_is_reused_inside_its_window_and_reminted_after() 
     let rig = Rig::start().await;
 
     assert_eq!(rig.deliver(&alert()).await, Sent::Delivered);
-    rig.clock.advance(Duration::from_secs(19 * 60));
+    rig.clock.advance(Duration::from_mins(19));
     assert_eq!(rig.deliver(&alert()).await, Sent::Delivered);
-    rig.clock.advance(Duration::from_secs(26 * 60));
+    rig.clock.advance(Duration::from_mins(26));
     assert_eq!(rig.deliver(&alert()).await, Sent::Delivered);
 
     let received = rig.received();
@@ -307,7 +309,7 @@ async fn a8_an_oversize_payload_is_refused_before_any_request() {
         Notification::new(
             "Synthetic title",
             &"x".repeat(payload - frame),
-            Duration::from_secs(3600),
+            Duration::from_hours(1),
         )
     };
 

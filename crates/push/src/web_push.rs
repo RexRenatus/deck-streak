@@ -21,7 +21,7 @@ use crate::{BuildError, Notification, Origin, PushServices, Refusal, Sent, Unrea
 
 /// How long a VAPID token is valid for: RFC 8292 allows at most 24 hours, and 12 leaves a push
 /// service's clock room to differ (R5).
-const VAPID_LIFETIME: Duration = Duration::from_mins(12 * 60);
+const VAPID_LIFETIME: Duration = Duration::from_hours(12);
 
 /// The most plaintext one RFC 8291 record carries in a 4096-byte message: 4096 less the 86-byte
 /// header, the 16-byte tag and the one-byte padding delimiter (R5).

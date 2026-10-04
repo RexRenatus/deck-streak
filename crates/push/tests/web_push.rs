@@ -3,6 +3,12 @@
 //! every key is generated in memory, every value is synthetic, and the clock is the kernel's manual
 //! one.
 
+#![allow(
+    clippy::expect_used,
+    reason = "a helper builds what every test needs and panics like a test, but clippy's \
+              allow-expect-in-tests reaches only #[test] functions"
+)]
+
 mod support;
 
 use std::time::Duration;
@@ -43,7 +49,7 @@ fn listing(fakes: &[&FakePushService]) -> PushServices {
 }
 
 fn notification() -> Notification {
-    Notification::new("Synthetic title", "Synthetic body", Duration::from_secs(60))
+    Notification::new("Synthetic title", "Synthetic body", Duration::from_mins(1))
 }
 
 #[tokio::test]
@@ -231,7 +237,7 @@ async fn a15_try_later_answers_carry_retry_after_and_are_not_retried() {
     assert_eq!(
         limited,
         Sent::RetryLater {
-            after: Some(Duration::from_secs(120))
+            after: Some(Duration::from_mins(2))
         }
     );
     assert_eq!(unavailable, Sent::RetryLater { after: None });
@@ -255,7 +261,7 @@ async fn a17_an_oversize_plaintext_is_refused_before_any_request() {
         Notification::new(
             "Synthetic title",
             &"x".repeat(plaintext - frame),
-            Duration::from_secs(60),
+            Duration::from_mins(1),
         )
     };
 

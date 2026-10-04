@@ -2,6 +2,12 @@
 //! test's thread logs, from any crate, holds a device token, an endpoint, a request path or a
 //! token. The lines are captured the one way the workspace captures them, the log-capture helper.
 
+#![allow(
+    clippy::expect_used,
+    reason = "a helper builds what every test needs and panics like a test, but clippy's \
+              allow-expect-in-tests reaches only #[test] functions"
+)]
+
 mod support;
 
 #[path = "../../../tools/log-capture/capture.rs"]
@@ -33,37 +39,14 @@ async fn a18_no_log_line_carries_a_token_an_endpoint_or_a_path() {
     let key = TestKey::generate();
     let apns = FakeApns::start(key.verifying()).await;
     let service = FakePushService::start().await;
-    let origin = |fake: &support::Fake| Origin::new(fake.origin()).expect("a loopback origin");
-    let apns_sender = ApnsSender::new(
-        ApnsSettings {
-            key_pem: &key.pem,
-            key_id: KEY_ID,
-            team_id: TEAM_ID,
-            topic: TOPIC,
-            development: origin(&apns.fake),
-            production: origin(&apns.fake),
-            deadline: DEADLINE,
-        },
-        clock(),
-    )
-    .expect("the APNs sender builds");
-    let web_sender = WebPushSender::new(
-        WebPushSettings {
-            key_pem: &key.pem,
-            contact: CONTACT,
-            services: PushServices::new([origin(&service.fake)]),
-            deadline: DEADLINE,
-        },
-        clock(),
-    )
-    .expect("the web push sender builds");
+    let (apns_sender, web_sender) = senders(&key, &apns, &service);
     let browser = TestSubscriber::generate();
     let subscription = web_sender
         .subscription(&service.endpoint(), &browser.p256dh(), &browser.auth())
         .expect("a listed endpoint is admitted");
     let device = Device::new(&device_token(), Environment::Development).expect("a device");
     let notification =
-        Notification::new("Synthetic title", "Synthetic body", Duration::from_secs(60));
+        Notification::new("Synthetic title", "Synthetic body", Duration::from_mins(1));
     apns.fake.script([
         Answer::status(200),
         gone("Unregistered", START),
@@ -148,6 +131,39 @@ async fn a18_no_log_line_carries_a_token_an_endpoint_or_a_path() {
         .filter(|line| held.iter().any(|value| line.contains(value.as_str())))
         .collect();
     assert!(leaking.is_empty(), "a line holds a value: {leaking:#?}");
+}
+
+/// An APNs sender whose both environments are `apns`, and a web push sender listing `service`.
+fn senders(
+    key: &TestKey,
+    apns: &FakeApns,
+    service: &FakePushService,
+) -> (ApnsSender, WebPushSender) {
+    let origin = |fake: &support::Fake| Origin::new(fake.origin()).expect("a loopback origin");
+    let apns_sender = ApnsSender::new(
+        ApnsSettings {
+            key_pem: &key.pem,
+            key_id: KEY_ID,
+            team_id: TEAM_ID,
+            topic: TOPIC,
+            development: origin(&apns.fake),
+            production: origin(&apns.fake),
+            deadline: DEADLINE,
+        },
+        clock(),
+    )
+    .expect("the APNs sender builds");
+    let web_sender = WebPushSender::new(
+        WebPushSettings {
+            key_pem: &key.pem,
+            contact: CONTACT,
+            services: PushServices::new([origin(&service.fake)]),
+            deadline: DEADLINE,
+        },
+        clock(),
+    )
+    .expect("the web push sender builds");
+    (apns_sender, web_sender)
 }
 
 /// Every line the test's thread logs, at every level and from every target: each event, and each
