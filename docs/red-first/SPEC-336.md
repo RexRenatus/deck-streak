@@ -41,11 +41,17 @@ when the record above was written.
 - `engine.rs: replace <impl fmt::Display for EngineRefusal>::fmt -> fmt::Result with
   Ok(Default::default())`: `refusal_text::each_refusal_reads_as_its_own_sentence` was added at
   e9ac46bf, after the code, and changes no production file. It is green at its base 232c2135 and at
-  its own commit. Row S33600 installs the same mutant by hand, and
-  `python3 scripts/mutation_rows.py prove --band S33600-S33699` reads it KILLED, its killer selecting
-  one test with and without the mutant and the target restored byte for byte. With the mutant the
-  test fails by assertion: `left: (Err(""), "", "")`.
+  its own commit. Row S33600 installs the same mutant by hand, and `python3 scripts/mutation_rows.py
+  prove --band S33600-S33699` reads it KILLED, its killer selecting one test with and without the
+  mutant and the target restored byte for byte. With the mutant the test fails by assertion: `left:
+  (Err(""), "", "")`.
 - `bin/uniffi-bindgen-swift.rs: replace main with ()`: not killed. The generator is built only with
   the adapter's `bindgen` feature, and no default-feature build compiles it, the pull request's
-  mutation run included, so no test of the crate can run it. Each cure changes production code, the test
-  scope or the listing, and is the seat's ruling, not this delivery's.
+  mutation run included, so no test of the crate can run it. Each cure changes production code, the
+  test scope or the listing, and is the seat's ruling, not this delivery's.
+
+The crate's whole population, measured at d49e3539 with
+`cargo mutants --no-shuffle --in-place -p deck-streak-ffi`: 10 mutants tested, 8 caught, 1 unviable
+and 1 missed. The unviable mutant replaces `allowed` with
+`Some(Box::leak(Box::new(Default::default())))`, which does not compile because `Call` has no
+`Default`. The missed mutant is the generator's `main`, above.
