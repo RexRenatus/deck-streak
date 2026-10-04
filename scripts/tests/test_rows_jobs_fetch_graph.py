@@ -94,17 +94,21 @@ class EveryRowsJobFetchesTheLockedGraph(unittest.TestCase):
 
     def test_each_proving_job_fetches_after_its_cache_restore_and_before_prove(self):
         found = []
-        for file, job, job_steps in proving_jobs():
+        proving = proving_jobs()
+        for file, job, job_steps in proving:
             found.extend(
                 line
                 for line in refusals(file, job, job_steps)
                 if "swallows" not in line and "continue-on-error" not in line
             )
+        self.assertIn(("ci.yml", "mutation-rows"), [(file, job) for file, job, _ in proving])
         self.assertEqual([], found)
 
     def test_the_fetch_step_fails_its_job_when_the_fetch_fails(self):
         found = []
-        for file, job, job_steps in proving_jobs():
+        proving = proving_jobs()
+        self.assertIn(("mutation-weekly.yml", "rows"), [(file, job) for file, job, _ in proving])
+        for file, job, job_steps in proving:
             if any(runs(step, FETCH) for step in job_steps):
                 found.extend(
                     line
@@ -131,7 +135,9 @@ class TheJudgeRefusesEachPlantedShape(unittest.TestCase):
     """The positive controls: a judge that went blind to a shape fails here."""
 
     def test_a_good_job_is_accepted(self):
-        self.assertEqual([], planted("      - run: cargo fetch --locked\n"))
+        middle = "      - run: cargo fetch --locked\n"
+        self.assertEqual(1, middle.count(FETCH))
+        self.assertEqual([], planted(middle))
 
     def test_a_job_with_no_fetch_is_refused(self):
         self.assertEqual(["planted.yml:j: no step runs `cargo fetch --locked`"], planted(""))
