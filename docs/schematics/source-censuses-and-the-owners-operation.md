@@ -58,3 +58,34 @@ flowchart TD
 A re-export a macro of progression writes in its own body is reported at the macro's definition,
 inside its `use`, so it is followed. A re-export whose path the macro takes as an argument is
 reported at the macro's call, outside any `use`, so it is refused. `OWNER_ADMITS` admits no file.
+
+## The pool and the reach (SPEC-331, ADR-331)
+
+Read at DeckStreak dev `cff914e3`. SPEC-331 amends R3: a piece of one character no longer enters
+the workspace-wide pool drawn above. It is judged only in the reach of a file.
+
+```mermaid
+flowchart TD
+  piece[a decoded, case-folded piece of a file outside the owner] --> local[the file's own pieces, every length]
+  piece --> length{two or more characters?}
+  length -->|yes| pool[the workspace-wide pool]
+  length -->|no| macro{held by a const or static whose name is a macro metavariable?}
+  macro -->|yes, fail closed| pool
+  macro -->|no| held[held: counted on the examined line]
+  file[each file the reader read] --> reach[its reach]
+  local --> reach
+  included[the pieces of every file it includes, transitively: include!, include_str!, include_bytes!, #91;path#93;] --> reach
+  named[the pieces of each const or static item it or an included file names by a word or a format placeholder] --> reach
+  pool --> poolCover{covering: does the pool cover the name?}
+  reach --> reachCover{covering: does this reach cover the name?}
+  poolCover -->|yes| refusedSpell[refused: every file holding a piece on a covering path]
+  reachCover -->|yes| refusedSpell
+  poolCover -->|no| quiet[nothing]
+  reachCover -->|no| quiet
+```
+
+An include is recorded for every includer, also when the included file was already read, so two
+files that include one file each reach its pieces. A name is matched as written, unqualified. The
+global pool is a subset of dev's pool, and each reach is a subset of it with the same holders, so
+every file the reader refuses, dev's reader refused too. A character carried to its join through a
+function's return value or argument reaches no reach, and is disclosed by SPEC-331's A3 (#585).
