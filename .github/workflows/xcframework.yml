@@ -292,20 +292,26 @@ jobs:
       - name: the tests, Debug, on the iPhone and then the iPad
         run: |
           started=$(date +%s)
+          # The measurement class runs in the Release step alone, where its figures are read.
           xcodebuild test -project ios/Harness.xcodeproj -scheme Harness -configuration Debug \
             -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" \
             -destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS" \
             -disable-concurrent-destination-testing \
+            -skip-testing:HarnessUITests/HarnessMeasureTests \
             -derivedDataPath "$RUNNER_TEMP/debug" \
             -resultBundlePath "$RESULTS/debug.xcresult" \
             CODE_SIGNING_ALLOWED=NO
           echo "$(( $(date +%s) - started ))" > "$REPORT/debug-seconds"
-      - name: the app, Release, for the simulator
+      - name: the measurements, Release, on the iPhone and then the iPad
         run: |
           started=$(date +%s)
-          xcodebuild build -project ios/Harness.xcodeproj -scheme Harness -configuration Release \
+          xcodebuild test -project ios/Harness.xcodeproj -scheme Harness -configuration Release \
             -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" \
+            -destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS" \
+            -disable-concurrent-destination-testing \
+            -only-testing:HarnessUITests/HarnessMeasureTests \
             -derivedDataPath "$RUNNER_TEMP/release" \
+            -resultBundlePath "$RESULTS/release.xcresult" \
             ONLY_ACTIVE_ARCH=YES \
             CODE_SIGNING_ALLOWED=NO
           echo "$(( $(date +%s) - started ))" > "$REPORT/release-seconds"
@@ -349,10 +355,11 @@ jobs:
         if: ${{ always() }}
         run: |
           python3 - <<'PY'
-          import json, os, pathlib, subprocess
+          import json, os, pathlib, statistics, subprocess
           report = pathlib.Path(os.environ["REPORT"])
           results = pathlib.Path(os.environ["RESULTS"])
           report.mkdir(parents=True, exist_ok=True)
+          simulators = [os.environ["IPHONE_SIM"], os.environ["IPAD_SIM"]]
           def read(name):
               path = report / name
               return path.read_text().strip() if path.is_file() else ""
@@ -363,17 +370,14 @@ jobs:
               done = subprocess.run(["xcrun", "xcresulttool", "get", "test-results", *arguments],
                                     capture_output=True, text=True)
               return json.loads(done.stdout) if done.returncode == 0 and done.stdout.strip() else None
-          rows = [
-              ("tests, Debug, both simulators", minutes("debug-seconds")),
-              ("the app, Release build", minutes("release-seconds")),
-              ("Release app bytes", read("app-bytes") or "not measured"),
-              ("Release executable bytes", read("executable-bytes") or "not measured"),
-          ]
-          cases = []
-          bundle = results / "debug.xcresult"
-          tests = tool("tests", "--path", str(bundle)) if bundle.exists() else None
-          if tests is not None:
-              (report / "debug-tests.json").write_text(json.dumps(tests, indent=1))
+          def cases_in(label):
+              """Every test case one bundle holds, each case's details written beside the report."""
+              bundle = results / f"{label}.xcresult"
+              tests = tool("tests", "--path", str(bundle)) if bundle.exists() else None
+              if tests is None:
+                  return []
+              (report / f"{label}-tests.json").write_text(json.dumps(tests, indent=1))
+              cases = []
               def walk(node):
                   if node.get("nodeType") == "Test Case":
                       cases.append(node)
@@ -386,7 +390,63 @@ jobs:
                                  "--path", str(bundle))
                   if details is not None:
                       name = case.get("nodeIdentifier", "").replace("/", "-")
-                      (report / f"details-{name}.json").write_text(json.dumps(details, indent=1))
+                      (report / f"details-{label}-{name}.json").write_text(json.dumps(details, indent=1))
+              return cases
+          def per_simulator(case):
+              """A case's result on each simulator it ran on, or its one result."""
+              devices = [child for child in case.get("children", []) if child.get("nodeType") == "Device"]
+              if not devices:
+                  return str(case.get("result"))
+              return "; ".join(f"{device.get('name')}: {device.get('result')}" for device in devices)
+          def measured(node, device=None):
+              """(simulator, metric, unit, values) for every metric a bundle holds, read without
+              trusting one schema: a `device` names the simulator its subtree ran on."""
+              if isinstance(node, list):
+                  for item in node:
+                      yield from measured(item, device)
+              elif isinstance(node, dict):
+                  if isinstance(node.get("device"), dict):
+                      device = node["device"].get("deviceName", device)
+                  values = node.get("measurements")
+                  if isinstance(values, list) and values and all(
+                          isinstance(value, (int, float)) for value in values):
+                      name = " ".join(str(node.get(key, "")) for key in ("displayName", "identifier"))
+                      yield device, name.strip(), node.get("unitOfMeasurement", ""), values
+                  for key, value in node.items():
+                      if key != "measurements":
+                          yield from measured(value, device)
+          debug_cases = cases_in("debug")
+          release_cases = cases_in("release")
+          release = results / "release.xcresult"
+          metrics = tool("metrics", "--path", str(release)) if release.exists() else None
+          found = []
+          if metrics is not None:
+              (report / "release-metrics.json").write_text(json.dumps(metrics, indent=1))
+              found = list(measured(metrics))
+          # Section 7's figures: a launch takes the median of its passes, memory the largest.
+          figures = [
+              ("M1 launch to first responsive frame, median", statistics.median,
+               lambda name: "applaunch" in name.lower() or "applicationlaunch" in name.lower()),
+              ("M1 open to deck list (signpost), median", statistics.median,
+               lambda name: "open-to-deck-list" in name),
+              ("M2 peak physical memory, largest", max,
+               lambda name: "memory" in name.lower() and "peak" in name.lower()),
+          ]
+          rows = [
+              ("tests, Debug, both simulators", minutes("debug-seconds")),
+              ("measurements, Release, both simulators", minutes("release-seconds")),
+              ("Release app bytes", read("app-bytes") or "not measured"),
+              ("Release executable bytes", read("executable-bytes") or "not measured"),
+          ]
+          for simulator in simulators:
+              for label, pick, wanted in figures:
+                  hits = [(unit, values) for device, name, unit, values in found
+                          if device and (simulator in device or device in simulator) and wanted(name)]
+                  value = "not measured"
+                  if hits:
+                      unit, values = hits[0]
+                      value = f"{pick(values):g} {unit} (of {len(values)} passes)"
+                  rows.append((f"{label}, {simulator}", value))
           lines = [
               "`xcframework.yml`'s `harness` job:",
               "",
@@ -394,9 +454,14 @@ jobs:
               "|---|---|",
           ] + [f"| {name} | {value} |" for name, value in rows]
           lines += ["", "| test | result |", "|---|---|"]
-          lines += [f"| `{c.get('nodeIdentifier')}` | {c.get('result')} |" for c in cases]
-          if not cases:
-              lines.append("| (no test result was read) | not measured |")
+          for label, cases in (("Debug", debug_cases), ("Release", release_cases)):
+              lines += [f"| {label} `{c.get('nodeIdentifier')}` | {per_simulator(c)} |" for c in cases]
+              if not cases:
+                  lines.append(f"| {label}: no test result was read | not measured |")
+          if found:
+              lines += ["", "| simulator | metric | unit | passes |", "|---|---|---|---|"]
+              lines += [f"| {device} | {name} | {unit} | {', '.join(f'{value:g}' for value in values)} |"
+                        for device, name, unit, values in found]
           symbols = read("symbols")
           if symbols:
               lines += ["", "Required-reason imports against the privacy manifest:", "", "```", symbols, "```"]

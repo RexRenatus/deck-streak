@@ -4,7 +4,8 @@
 import WebKit
 import XCTest
 
-@testable import Harness
+// A plain import: what this test reads is public, so no build of it needs the app's testability.
+import Harness
 
 /// The two layers a configuration exposes, read together so a red quotes both.
 struct Isolation: Equatable {

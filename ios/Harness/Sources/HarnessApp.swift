@@ -3,7 +3,13 @@ import SwiftUI
 /// The harness's entry point (SPEC-339, ADR-350): one window over one model.
 @main
 struct HarnessApp: App {
-    @State private var model = HarnessModel()
+    @State private var model: HarnessModel
+
+    /// Begins section 7's launch interval before anything else the app does, the model included.
+    init() {
+        Signposts.beginLaunch()
+        _model = State(initialValue: HarnessModel())
+    }
 
     var body: some Scene {
         WindowGroup {

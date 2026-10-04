@@ -15,5 +15,11 @@ struct DeckListView: View {
             Text(model.openStatus).accessibilityIdentifier("open-status")
         }
         .navigationTitle("Decks")
+        .onChange(of: model.deckNames) {
+            // Section 7's launch interval ends the first time the list shows names.
+            if !model.deckNames.isEmpty {
+                Signposts.endLaunch()
+            }
+        }
     }
 }
