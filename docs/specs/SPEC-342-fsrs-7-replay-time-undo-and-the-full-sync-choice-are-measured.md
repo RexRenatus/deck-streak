@@ -311,12 +311,32 @@ Filled from the workflow's run and from CI's `rust` job at the head of the pull 
 
 | id | measured |
 |---|---|
-| M1 | <measured> |
-| M2 | <measured> |
-| M3 | <measured> |
-| M4 | <measured> |
-| M5 | <measured> |
-| M6 to M12 | <measured>: each test's verdict and the run that produced it |
+| M1 | the `native` column of the report below: 0.1778 to 0.1937 µs per review row across the twelve cells (`fsrs7-measure` run 37237452262 at `9afb08b`) |
+| M2 | the `wasm32-wasip1` column of the report below: 0.2122 to 0.2329 µs per review row across the twelve cells (the same run) |
+| M3 | pass in all twelve cells: each cell's two checksums are equal to the printed three decimals, and the report renders only when every cell agrees to one part in 10,000 (the same run) |
+| M4 | fail (getrandom): the crate does not build for `wasm32-unknown-unknown`, and the one crate that fails is getrandom, whose web backend is not configured (the same run) |
+| M5 | 2: the engine's from the registry and `deck-streak-fsrs7`'s from fsrs-rs, each reached by its own consumer alone; A1 read `examined 2 scheduler package(s) in Cargo.lock` in `ci` run 37237452199's `hygiene` job, whose `python` stage read `ok` |
+| M6 to M12 | PASS, each, in `ci` run 37237452199's `rust` job at `9afb08b`, whose `test` stage read `ok` (`1479 tests run: 1479 passed`): A14 `u1_undo_deletes_the_answers_review_log_row_and_restores_the_card`, A15 `u2_a_normal_sync_empties_undo_and_the_synced_row_stays`, A16 `u3_an_answer_undone_before_a_sync_never_reaches_the_server`, A17 `f1_the_choice_offered_follows_which_side_is_empty`, A18 `f2_the_upload_choice_sends_one_upload_and_no_second_meta`, A19 `f3_the_download_choice_sends_one_download_and_replaces_the_collection`, A20 `f4_each_choice_loses_exactly_the_other_sides_review_log_rows`, A21 `f5_a_normal_sync_between_the_meta_and_the_upload_is_overwritten`, A22 `f6_a_download_loses_a_synced_review_the_server_no_longer_holds` |
+
+The report, as `fsrs7-measure` run 37237452262 wrote it at `9afb08b` (median of 5 runs in ms, the
+minimum to the maximum, and the median's microseconds per review row):
+
+| method | reviews | mean | cards | native | wasm32-wasip1 | checksum |
+|---|---|---|---|---|---|---|
+| single | 10000 | 8 | 1254 | 1.792 (1.782 to 1.835), 0.1792 µs | 2.164 (2.141 to 2.286), 0.2164 µs | 9177.331 |
+| single | 10000 | 32 | 314 | 1.931 (1.926 to 1.935), 0.1931 µs | 2.310 (2.306 to 2.319), 0.2310 µs | 2137.139 |
+| single | 100000 | 8 | 12504 | 17.988 (17.891 to 18.101), 0.1799 µs | 21.288 (21.229 to 21.396), 0.2129 µs | 91336.968 |
+| single | 100000 | 32 | 3136 | 19.312 (19.279 to 19.323), 0.1931 µs | 23.224 (23.146 to 24.123), 0.2322 µs | 21305.548 |
+| single | 1000000 | 8 | 125004 | 183.603 (182.947 to 184.800), 0.1836 µs | 212.226 (211.959 to 213.451), 0.2122 µs | 912933.338 |
+| single | 1000000 | 32 | 31259 | 193.577 (193.246 to 200.275), 0.1936 µs | 231.378 (231.185 to 231.819), 0.2314 µs | 212283.373 |
+| batch | 10000 | 8 | 1254 | 1.778 (1.769 to 1.786), 0.1778 µs | 2.125 (2.121 to 2.135), 0.2125 µs | 9177.331 |
+| batch | 10000 | 32 | 314 | 1.933 (1.925 to 1.939), 0.1933 µs | 2.317 (2.307 to 2.321), 0.2317 µs | 2137.139 |
+| batch | 100000 | 8 | 12504 | 17.999 (17.949 to 18.011), 0.1800 µs | 21.520 (21.416 to 22.106), 0.2152 µs | 91336.968 |
+| batch | 100000 | 32 | 3136 | 19.295 (19.275 to 19.338), 0.1930 µs | 23.288 (23.227 to 23.352), 0.2329 µs | 21305.548 |
+| batch | 1000000 | 8 | 125004 | 184.193 (183.811 to 187.123), 0.1842 µs | 212.429 (212.280 to 212.607), 0.2124 µs | 912933.338 |
+| batch | 1000000 | 32 | 31259 | 193.657 (193.485 to 193.737), 0.1937 µs | 232.014 (231.775 to 232.527), 0.2320 µs | 212283.373 |
+
+web target (`wasm32-unknown-unknown`) check: fail (getrandom)
 
 #641 reads M1 and M2's cost per review against the review-log row count that SPEC-334 row 1.2's
 collection-size measurement records. This delivery reads no figure from any real collection.

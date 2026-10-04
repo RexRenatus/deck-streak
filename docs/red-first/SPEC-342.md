@@ -78,3 +78,9 @@ A22: not red: measures the engine at the workspace's pin; no DeckStreak code mak
   initializer, so each needs a row. Each was proved at bbe8ff0 by `mutation_rows.py prove --band
   S34200-S34299` in a clean clone: `rows: examined 7: killed 7, survived 0, void 0`, with every
   control selecting one test that passed, and every mutant selecting one test that failed.
+- **A13's test gained one assertion after green, as mutation coverage, not red first.** The pull
+  request's `mutation-verdict` read one missed mutant at 9afb08b: in `web_target`, the match guard
+  `!crates.is_empty()` replaced with `true`, which would record a failing web check that names no
+  crate as `fail ()` instead of refusing it. 2c3ea4d asserts that `fail crates=` is refused by
+  name. In a git-archive export of 2c3ea4d, the test read `1 passed` without the mutant and
+  `1 failed` with it, on that assertion. It was green when written, so it adds no fence line.
