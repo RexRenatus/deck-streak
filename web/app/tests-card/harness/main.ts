@@ -66,7 +66,7 @@ if (page === 'index.html' || off === 'W4') {
   const element = document.createElement('iframe');
   element.title = 'The card';
   const shipped = frameDocument(card.html, card.css).srcdoc ?? '';
-  if (off !== null && off !== 'W1' && FRAME_SANDBOX !== null) element.setAttribute('sandbox', FRAME_SANDBOX);
+  if (off !== null && off !== 'W1') element.setAttribute('sandbox', FRAME_SANDBOX);
   if (page === 'open.html') element.srcdoc = composed('', card.css, card.html);
   else if (off === 'W1') element.srcdoc = shipped;
   else if (off === 'W2') element.srcdoc = shipped.replace(policyMeta(FRAME_POLICY), '');

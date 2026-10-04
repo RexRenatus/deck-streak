@@ -15,9 +15,9 @@ import { policyHeader } from './policy-header.ts';
 const PORT = Number(process.env.CARD_PORT ?? 4175);
 const ORIGIN = `http://127.0.0.1:${PORT}`;
 const CADDY = readFileSync(new URL('../../deploy/caddy/deck-streak.caddy', import.meta.url), 'utf8');
-const EDGE = /Content-Security-Policy\s+"([^"]+)"/.exec(CADDY)?.[1];
-if (EDGE === undefined) throw new Error('deploy/caddy/deck-streak.caddy declares no Content-Security-Policy');
-const DIRECTIVES: Readonly<Record<string, unknown>> = config.kit?.csp?.directives ?? {};
+const EDGE = /Content-Security-Policy\s+"([^"]+)"/.exec(CADDY)?.[1] ?? '';
+if (EDGE === '') throw new Error('deploy/caddy/deck-streak.caddy declares no Content-Security-Policy');
+const DIRECTIVES: Readonly<Record<string, unknown>> = { ...config.kit?.csp?.directives };
 
 /** The page policy as a variant of the harness serves it. */
 function pagePolicy(off: string | null): string {
