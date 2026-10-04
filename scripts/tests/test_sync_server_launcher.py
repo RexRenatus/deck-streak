@@ -130,6 +130,16 @@ class TheLauncherStartsTheServerWithHashedUsers(unittest.TestCase):
                 {"DECKSTREAK_SYNC_SERVER_LISTEN": "127.0.0.1:65536"},
                 "DECKSTREAK_SYNC_SERVER_LISTEN is not a loopback address with a port",
             ),
+            "port zero": (
+                good,
+                {"DECKSTREAK_SYNC_SERVER_LISTEN": "127.0.0.1:0"},
+                "DECKSTREAK_SYNC_SERVER_LISTEN is not a loopback address with a port",
+            ),
+            "an octet out of range": (
+                good,
+                {"DECKSTREAK_SYNC_SERVER_LISTEN": "127.0.0.256:8081"},
+                "DECKSTREAK_SYNC_SERVER_LISTEN is not a loopback address with a port",
+            ),
             "no address": (
                 good,
                 {"DECKSTREAK_SYNC_SERVER_LISTEN": None},

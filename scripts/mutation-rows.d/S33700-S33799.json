@@ -40,6 +40,142 @@
         "print(\"https://github.com/ankitects/anki.git\", entry[\"rev\"])",
         "the step builds the fork the patch entry names, never upstream (SPEC-337 R1, A2)",
         "test_release_workflow.TheReleaseBuildsTheSyncServer.test_the_build_step_reads_the_fork_and_the_commit_from_the_engines_patch_entry"
+      ],
+      [
+        "S33706-AN-ENTRY-IS-A-NAME-AND-A-PBKDF2-HASH",
+        "deploy/scripts/sync-server.sh",
+        "[[ \"$value\" =~ $ENTRY ]]",
+        "true",
+        "the launcher refuses a credential that is not a user name and a pbkdf2-sha256 hash, a plain password among them (SPEC-337 R2, A5)",
+        "test_sync_server_launcher.TheLauncherStartsTheServerWithHashedUsers.test_the_launcher_refuses_a_bad_entry_and_execs_the_server_with_hashed_users"
+      ],
+      [
+        "S33707-A-USER-NAME-STAYS-INSIDE-THE-DATA-DIRECTORY",
+        "deploy/scripts/sync-server.sh",
+        "readonly ENTRY='^[A-Za-z0-9_-][A-Za-z0-9._-]*:",
+        "readonly ENTRY='^[A-Za-z0-9._/-]*:",
+        "a user name is not empty and cannot start with a dot or hold a slash, so the server's directory for it stays under its data directory (SPEC-337 R2, A5)",
+        "test_sync_server_launcher.TheLauncherStartsTheServerWithHashedUsers.test_the_launcher_refuses_a_bad_entry_and_execs_the_server_with_hashed_users"
+      ],
+      [
+        "S33708-A-HASH-CARRIES-ITS-SALT",
+        "deploy/scripts/sync-server.sh",
+        "\\$[A-Za-z0-9+/]+\\$[A-Za-z0-9+/]+$'",
+        "(\\$[A-Za-z0-9+/]+)?\\$[A-Za-z0-9+/]+$'",
+        "a hash with no salt is refused at start rather than at the first login (SPEC-337 R2, A5)",
+        "test_sync_server_launcher.TheLauncherStartsTheServerWithHashedUsers.test_the_launcher_refuses_a_bad_entry_and_execs_the_server_with_hashed_users"
+      ],
+      [
+        "S33709-AN-EMPTY-ENTRY-IS-REFUSED-BY-NAME",
+        "deploy/scripts/sync-server.sh",
+        "[ -n \"$value\" ]",
+        "true",
+        "an empty credential is refused as empty, by its id (SPEC-337 R2, A5)",
+        "test_sync_server_launcher.TheLauncherStartsTheServerWithHashedUsers.test_the_launcher_refuses_a_bad_entry_and_execs_the_server_with_hashed_users"
+      ],
+      [
+        "S33710-A-MISSING-ENTRY-IS-REFUSED-BY-NAME",
+        "deploy/scripts/sync-server.sh",
+        "[ -f \"$path\" ]",
+        "true",
+        "a credential the unit did not load is refused as missing, by its id, before anything reads it (SPEC-337 R2, A5)",
+        "test_sync_server_launcher.TheLauncherStartsTheServerWithHashedUsers.test_the_launcher_refuses_a_bad_entry_and_execs_the_server_with_hashed_users"
+      ],
+      [
+        "S33711-THE-SERVER-LISTENS-ON-LOOPBACK",
+        "deploy/scripts/sync-server.sh",
+        "readonly LOOPBACK='^127\\.",
+        "readonly LOOPBACK='^[0-9]{1,3}\\.",
+        "the launcher refuses an address outside 127.0.0.0/8, so the server is reached only through the edge (SPEC-337 R2, A5)",
+        "test_sync_server_launcher.TheLauncherStartsTheServerWithHashedUsers.test_the_launcher_refuses_a_bad_entry_and_execs_the_server_with_hashed_users"
+      ],
+      [
+        "S33712-AN-OCTET-IS-AT-MOST-255",
+        "deploy/scripts/sync-server.sh",
+        "((10#$octet <= 255))",
+        "((10#$octet <= 999))",
+        "an address octet above 255 is refused (SPEC-337 R2, A5)",
+        "test_sync_server_launcher.TheLauncherStartsTheServerWithHashedUsers.test_the_launcher_refuses_a_bad_entry_and_execs_the_server_with_hashed_users"
+      ],
+      [
+        "S33713-THE-PORT-IS-AT-LEAST-ONE",
+        "deploy/scripts/sync-server.sh",
+        "((port >= 1 && port <= 65535))",
+        "((port <= 65535))",
+        "port zero is refused (SPEC-337 R2, A5)",
+        "test_sync_server_launcher.TheLauncherStartsTheServerWithHashedUsers.test_the_launcher_refuses_a_bad_entry_and_execs_the_server_with_hashed_users"
+      ],
+      [
+        "S33714-THE-PORT-IS-AT-MOST-65535",
+        "deploy/scripts/sync-server.sh",
+        "((port >= 1 && port <= 65535))",
+        "((port >= 1))",
+        "a port above 65535 is refused (SPEC-337 R2, A5)",
+        "test_sync_server_launcher.TheLauncherStartsTheServerWithHashedUsers.test_the_launcher_refuses_a_bad_entry_and_execs_the_server_with_hashed_users"
+      ],
+      [
+        "S33715-NO-INHERITED-USER-REACHES-THE-SERVER",
+        "deploy/scripts/sync-server.sh",
+        "SYNC_* | PASSWORDS_HASHED | MAX_SYNC_PAYLOAD_MEGS)",
+        "PASSWORDS_HASHED | MAX_SYNC_PAYLOAD_MEGS)",
+        "every inherited SYNC_ variable is cleared, so a stray third user never reaches the server (SPEC-337 R2, ADR-347 D9, A5)",
+        "test_sync_server_launcher.TheLauncherStartsTheServerWithHashedUsers.test_the_launcher_refuses_a_bad_entry_and_execs_the_server_with_hashed_users"
+      ],
+      [
+        "S33716-THE-PAYLOAD-LIMIT-STAYS-THE-SERVERS-OWN",
+        "deploy/scripts/sync-server.sh",
+        "SYNC_* | PASSWORDS_HASHED | MAX_SYNC_PAYLOAD_MEGS)",
+        "SYNC_* | PASSWORDS_HASHED)",
+        "an inherited payload limit is cleared, so the server's limit stays the edge's body bound (ADR-347 D9, A5)",
+        "test_sync_server_launcher.TheLauncherStartsTheServerWithHashedUsers.test_the_launcher_refuses_a_bad_entry_and_execs_the_server_with_hashed_users"
+      ],
+      [
+        "S33717-TWO-USERS-HAVE-TWO-NAMES",
+        "deploy/scripts/sync-server.sh",
+        "[ \"${owner%%:*}\" != \"${staging%%:*}\" ]",
+        "true",
+        "two users of one name are refused, since the server would keep only the last (SPEC-337 R2, A5)",
+        "test_sync_server_launcher.TheLauncherStartsTheServerWithHashedUsers.test_the_launcher_refuses_a_bad_entry_and_execs_the_server_with_hashed_users"
+      ],
+      [
+        "S33718-THE-SERVER-READS-HASHES",
+        "deploy/scripts/sync-server.sh",
+        "SYNC_USER2=\"$staging\" PASSWORDS_HASHED=1",
+        "SYNC_USER2=\"$staging\"",
+        "the server is told its users carry hashes, so it never compares a hash as a password (SPEC-337 R2, A5)",
+        "test_sync_server_launcher.TheLauncherStartsTheServerWithHashedUsers.test_the_launcher_refuses_a_bad_entry_and_execs_the_server_with_hashed_users"
+      ],
+      [
+        "S33719-THE-DATA-IS-IN-THE-UNITS-STATE-DIRECTORY",
+        "deploy/scripts/sync-server.sh",
+        "SYNC_BASE=\"$STATE_DIRECTORY\"",
+        "SYNC_BASE=\"${STATE_DIRECTORY%/*}\"",
+        "the server keeps its users' data in the unit's own state directory (SPEC-337 R2, A5)",
+        "test_sync_server_launcher.TheLauncherStartsTheServerWithHashedUsers.test_the_launcher_refuses_a_bad_entry_and_execs_the_server_with_hashed_users"
+      ],
+      [
+        "S33720-NO-CREDENTIALS-DIRECTORY-IS-REFUSED",
+        "deploy/scripts/sync-server.sh",
+        "[ -n \"${CREDENTIALS_DIRECTORY:-}\" ]",
+        "true",
+        "a start with no credentials directory is refused by name (SPEC-337 R2, A5)",
+        "test_sync_server_launcher.TheLauncherStartsTheServerWithHashedUsers.test_the_launcher_refuses_a_bad_entry_and_execs_the_server_with_hashed_users"
+      ],
+      [
+        "S33721-NO-STATE-DIRECTORY-IS-REFUSED",
+        "deploy/scripts/sync-server.sh",
+        "[ -n \"${STATE_DIRECTORY:-}\" ]",
+        "true",
+        "a start with no state directory is refused by name (SPEC-337 R2, A5)",
+        "test_sync_server_launcher.TheLauncherStartsTheServerWithHashedUsers.test_the_launcher_refuses_a_bad_entry_and_execs_the_server_with_hashed_users"
+      ],
+      [
+        "S33722-A-REFUSAL-FAILS-THE-UNIT",
+        "deploy/scripts/sync-server.sh",
+        "exit 1",
+        "exit 0",
+        "a refusal exits non-zero before the server runs, so the unit fails and pages (SPEC-337 R2, A5)",
+        "test_sync_server_launcher.TheLauncherStartsTheServerWithHashedUsers.test_the_launcher_refuses_a_bad_entry_and_execs_the_server_with_hashed_users"
       ]
     ]
   }
