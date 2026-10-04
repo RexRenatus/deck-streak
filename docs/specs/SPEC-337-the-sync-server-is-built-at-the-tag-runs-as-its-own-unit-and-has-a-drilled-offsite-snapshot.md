@@ -256,3 +256,8 @@ R5's "After the restart the backup checks each database ... and keeps three" (th
 its own unit, SPEC-340 R3, and is sealed before its copy, SPEC-340 R12); and R5's drill of the
 newest archive (the sync drill runs in its own unit, SPEC-340 R4). The bucket's retention, which
 R5 left to the owner, is `P30D` (SPEC-340 R11).
+
+SPEC-340 renames A7's test: `test_the_daily_run_checks_archives_copies_offsite_and_keeps_three` is
+`test_the_sync_archive_checks_archives_copies_offsite_and_keeps_three`, because the check, the
+copy and the three kept archives belong to the archive unit and no longer to the database's daily
+run (SPEC-340 R3).
