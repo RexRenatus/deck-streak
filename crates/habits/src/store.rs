@@ -155,3 +155,119 @@ pub async fn all_time_by_code(
         .map(|row| (row.code, minutes(row.minutes)))
         .collect())
 }
+
+/// A count of rows as the rules take it: a table never holds more rows than a `u32` counts, and
+/// one past it saturates rather than wraps.
+fn count(rows: i64) -> u32 {
+    u32::try_from(rows).unwrap_or(u32::MAX)
+}
+
+/// Confirms writing in `code` on `day`, at `at`, and answers whether a row was written: a course
+/// already confirmed that day writes nothing.
+///
+/// # Errors
+///
+/// [`sqlx::Error`] when the write fails.
+pub async fn confirm_writing(
+    connection: &mut SqliteConnection,
+    code: &str,
+    day: StudyDay,
+    at: UtcMillis,
+) -> Result<bool, sqlx::Error> {
+    let study_day = day.epoch_day();
+    let created_at = at.epoch_millis();
+    let written = sqlx::query!(
+        "INSERT OR IGNORE INTO writing_log (code, study_day, created_at) VALUES (?1, ?2, ?3)",
+        code,
+        study_day,
+        created_at,
+    )
+    .execute(connection)
+    .await?;
+    Ok(written.rows_affected() > 0)
+}
+
+/// Clears `code`'s confirmation on `day`, and answers whether one was removed.
+///
+/// # Errors
+///
+/// [`sqlx::Error`] when the write fails.
+pub async fn clear_writing(
+    connection: &mut SqliteConnection,
+    code: &str,
+    day: StudyDay,
+) -> Result<bool, sqlx::Error> {
+    let study_day = day.epoch_day();
+    let removed = sqlx::query!(
+        "DELETE FROM writing_log WHERE code = ?1 AND study_day = ?2",
+        code,
+        study_day,
+    )
+    .execute(connection)
+    .await?;
+    Ok(removed.rows_affected() > 0)
+}
+
+/// Every confirmation from `first` to `last`, both included, as its code and day, by day then
+/// code.
+///
+/// # Errors
+///
+/// [`sqlx::Error`] when the read fails.
+pub async fn confirmations_between(
+    connection: &mut SqliteConnection,
+    first: StudyDay,
+    last: StudyDay,
+) -> Result<Vec<(String, StudyDay)>, sqlx::Error> {
+    let (first, last) = (first.epoch_day(), last.epoch_day());
+    let rows = sqlx::query!(
+        "SELECT code, study_day FROM writing_log WHERE study_day BETWEEN ?1 AND ?2 \
+         ORDER BY study_day, code",
+        first,
+        last,
+    )
+    .fetch_all(connection)
+    .await?;
+    Ok(rows
+        .into_iter()
+        .map(|row| (row.code, StudyDay::from_epoch_day(row.study_day)))
+        .collect())
+}
+
+/// How many confirmations were made through `last`.
+///
+/// # Errors
+///
+/// [`sqlx::Error`] when the read fails.
+pub async fn confirmations_through(
+    connection: &mut SqliteConnection,
+    last: StudyDay,
+) -> Result<u32, sqlx::Error> {
+    let last = last.epoch_day();
+    let rows = sqlx::query_scalar!(
+        r#"SELECT COUNT(*) AS "rows!: i64" FROM writing_log WHERE study_day <= ?1"#,
+        last,
+    )
+    .fetch_one(connection)
+    .await?;
+    Ok(count(rows))
+}
+
+/// How many reading entries were logged through `last`.
+///
+/// # Errors
+///
+/// [`sqlx::Error`] when the read fails.
+pub async fn entries_through(
+    connection: &mut SqliteConnection,
+    last: StudyDay,
+) -> Result<u32, sqlx::Error> {
+    let last = last.epoch_day();
+    let rows = sqlx::query_scalar!(
+        r#"SELECT COUNT(*) AS "rows!: i64" FROM minutes_log WHERE study_day <= ?1"#,
+        last,
+    )
+    .fetch_one(connection)
+    .await?;
+    Ok(count(rows))
+}

@@ -225,6 +225,7 @@ context each migration names equal to the owner this register gives each table i
 | `drill_grades` | `vault` | `migrations/011001_vault_drills.sql` (SPEC-110) | exported and erased; an erase never deletes a note (ADR-118) |
 | `inbox_captures` | `vault` | `migrations/011801_vault_inbox_captures.sql` (SPEC-118) | exported and erased; an erase never deletes a capture or its stub (ADR-118) |
 | `minutes_log` | `habits` | `migrations/007801_habits_minutes_log.sql` (SPEC-078) | exported and erased |
+| `writing_log` | `habits` | `migrations/007802_habits_writing_log.sql` (SPEC-078) | exported and erased |
 
 The quests context reaches outside the workspace for three things and no further inside it: its
 chests are rolled from the operating system's generator (`getrandom`), its stores run on the
