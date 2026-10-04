@@ -234,19 +234,26 @@ the red-first record discloses them as not red.
 
 The `harness` job measures each figure on the commit's Release build, unsigned, on each simulator,
 and writes them to the run's summary and to `harness-report/report.md` in the `harness` artifact.
-The figures below are filled from that run.
+The figures below are run 37233368979's, at commit 33fb20d9.
 
 | measure | how it is measured | iPhone simulator | iPad simulator |
 |---|---|---|---|
-| app size, bundle | the bytes of every file in the Release simulator `Harness.app`, summed | measured by the run | the same bundle |
-| app size, executable | the bytes of the Release simulator executable, the engine linked and dead-stripped | measured by the run | the same bundle |
-| cold start, first frame | `XCTApplicationLaunchMetric(waitUntilResponsive: true)`, five measured launches after one discarded, the median | measured by the run | measured by the run |
-| cold start, open to deck list | `XCTOSSignpostMetric` over the harness's own interval, from its first line to the deck names shown, five launches after one discarded, the median | measured by the run | measured by the run |
-| memory | `XCTMemoryMetric(application:)` peak physical memory over one launch, open, list, render and answer, five passes after one discarded, the largest | measured by the run | measured by the run |
-| two static libraries and the bindings | the `xcframework` job's clock, as SPEC-336 section 7 reports it | measured by the run | |
-| the harness job | its clock, from the artifact download to the report | measured by the run | |
+| app size, bundle | the bytes of every file in the Release simulator `Harness.app`, built with no test action, summed | 35286275 bytes | the same bundle |
+| app size, executable | the bytes of the Release simulator executable, the engine linked and dead-stripped | 35145000 bytes | the same bundle |
+| cold start, first frame | `XCTApplicationLaunchMetric(waitUntilResponsive: true)`, five measured launches after one discarded, the median | 3.47 s (passes 3.03 to 3.65 s) | 10.57 s (passes 5.26 to 12.99 s) |
+| cold start, open to deck list | `XCTOSSignpostMetric` over the harness's own interval, from its first line to the deck names shown, five launches after one discarded, the median | 1.96 s (passes 1.69 to 2.18 s) | 3.03 s (passes 2.41 to 9.41 s) |
+| memory | `XCTMemoryMetric(application:)` peak physical memory over one launch, open, list, render and answer, five passes after one discarded, the largest | 58251.9 kB (passes 57727.6 to 58251.9 kB) | 70244.9 kB (the other four passes 59103.7 to 60087.0 kB) |
+| two static libraries and the bindings | the `xcframework` job's clock, as SPEC-336 section 7 reports it | 7.6 minutes for the two libraries, 1.6 minutes for the bindings; the job, 10.4 minutes | |
+| the harness job | its clock, from the artifact download to the report | 28.1 minutes, of which the Debug tests took 13.7 and the Release measurements 13.7 | |
 
-Every figure is read from the result bundle with `xcrun xcresulttool get test-results metrics`,
-and a figure the bundle does not hold reads `not measured`, never zero. A simulator runs on the
-runner's own processor and memory, so these figures compare one commit with another on one runner
-image; they are not a device's.
+The iPad simulator's passes spread widely in this run. The run before it, at b9dbe8ca (run
+37230471346), read medians of 4.00 s to the first frame and 1.99 s to the deck list on the iPad
+simulator and 4.06 s and 2.26 s on the iPhone simulator, and largest memory peaks of 63068.9 kB on
+the iPad simulator and 61987.4 kB on the iPhone simulator. So one run's figures are a reading, not
+a baseline. That run's bundle size is not quoted, because its Release app was the one the test
+action built, with the test bundle and XCTest's frameworks copied in.
+
+Every launch and memory figure is read from the result bundle with `xcrun xcresulttool get
+test-results metrics`, and a figure the bundle does not hold reads `not measured`, never zero. A
+simulator runs on the runner's own processor and memory, so these figures compare one commit with
+another on one runner image; they are not a device's.
