@@ -2325,7 +2325,7 @@ def web_engine_job_problems(workflow):
     ran = [name for _, name in found]
     wanted = [name for name, _ in WEB_ENGINE_ORDER]
     missing = [name for name in wanted if name not in ran]
-    problems += [f"the web-engine job runs no {name}" for name in missing]
+    problems += [f"the web-engine job runs no {name.removeprefix('the ')}" for name in missing]
     if not missing and ran != wanted:
         problems.append(
             f"the web-engine job runs {', '.join(ran)}, in that order, not {', '.join(wanted)}"
@@ -3883,6 +3883,15 @@ NOT_WORKFLOW_READS = {
         ),
     ),
     **allowed(
+        "the root manifest, which bindgen_version reads for the wasm-bindgen pin; never handed to the reader",
+        (
+            "test_ci_workflows",
+            "bindgen_version",
+            "(REPO / 'Cargo.toml').read_text(encoding='utf-8')",
+            1,
+        ),
+    ),
+    **allowed(
         "calls run_step, which runs a cache step's shell over a planted lockfile's text and reads its outputs",
         (
             "test_ci_workflows",
@@ -5263,6 +5272,14 @@ DYNAMIC_IMPORTS = {
             1,
         ),
         ("test_backup_units", "load_backup", "spec.loader.exec_module(module)", 1),
+        ("test_web_engine_size", "load_gate", "importlib.util.module_from_spec(spec)", 1),
+        (
+            "test_web_engine_size",
+            "load_gate",
+            "importlib.util.spec_from_file_location('web_engine_size', GATE)",
+            1,
+        ),
+        ("test_web_engine_size", "load_gate", "spec.loader.exec_module(module)", 1),
         ("test_dispatch_shards", "wrapper_module", "importlib.util.module_from_spec(spec)", 1),
         (
             "test_dispatch_shards",
