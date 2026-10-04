@@ -1,0 +1,136 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S33800-WIRE-RATING-TWO-IS-HARD",
+        "web-engine",
+        "src/study.rs",
+        "            2 => Ok(Self::Hard),",
+        "            2 => Ok(Self::Good),",
+        "study::a_rating_on_the_wire_picks_its_answer_and_its_next_state",
+        "the page's wire rating 2 is Anki's Hard; read as Good, the Hard button would schedule the card as recalled (SPEC-338 A1)"
+      ],
+      [
+        "S33801-A-WIRE-RATING-PAST-FOUR-IS-REFUSED",
+        "web-engine",
+        "src/study.rs",
+        "            4 => Ok(Self::Easy),",
+        "            4 | 5 => Ok(Self::Easy),",
+        "study::a_rating_outside_one_to_four_is_refused",
+        "a wire rating outside 1 to 4 is refused before the engine; admitting 5 as Easy would let a malformed answer through (SPEC-338 A2)"
+      ],
+      [
+        "S33802-EASY-IS-ANKIS-RATING-THREE",
+        "web-engine",
+        "src/study.rs",
+        "            Self::Easy => 3,",
+        "            Self::Easy => 2,",
+        "study::a_rating_on_the_wire_picks_its_answer_and_its_next_state",
+        "Easy is Anki's Rating 3; written as 2 the review log would record Good for an Easy answer (SPEC-338 A1)"
+      ],
+      [
+        "S33803-GOOD-PICKS-THE-GOOD-STATE",
+        "web-engine",
+        "src/study.rs",
+        "            Self::Good => good,",
+        "            Self::Good => easy,",
+        "study::a_rating_on_the_wire_picks_its_answer_and_its_next_state",
+        "Good selects the scheduler's good next state; picking easy's would lengthen every Good interval (SPEC-338 A1)"
+      ],
+      [
+        "S33804-ADMIT-MATCHES-THE-METHOD",
+        "web-engine",
+        "src/study.rs",
+        ".find(|&&(s, m, _)| (s, m) == (service, method))",
+        ".find(|&&(s, _, _)| s == service)",
+        "study::run_method_admits_only_the_study_calls",
+        "run_method admits a service and method pair of the table; matching the service alone would admit the scheduler's exempt writes, Forget and set due date among them (SPEC-338 A17)"
+      ],
+      [
+        "S33805-THE-SCHEDULER-IS-SERVICE-THIRTEEN",
+        "web-engine",
+        "src/study.rs",
+        "    pub const SCHEDULER: u32 = 13;",
+        "    pub const SCHEDULER: u32 = 14;",
+        "study::run_method_admits_only_the_study_calls",
+        "the scheduler is service 13 of the pinned commit's dispatcher; another index would refuse the queue and the answer and admit another service's methods (SPEC-338 A17)"
+      ],
+      [
+        "S33806-A-FIELD-IS-TWO-HUNDRED-CHARACTERS",
+        "web-engine",
+        "src/synthetic.rs",
+        "const FIELD_CHARACTERS: usize = 200;",
+        "const FIELD_CHARACTERS: usize = 199;",
+        "synthetic::each_synthetic_note_carries_two_fields_of_two_hundred_characters",
+        "each synthetic field is 200 characters, ADR-022's shape, so the measured collection stores what a real one would (SPEC-338 R12, A19)"
+      ],
+      [
+        "S33807-THE-BACK-IS-ITS-OWN-FIELD",
+        "web-engine",
+        "src/synthetic.rs",
+        "    [front, back]",
+        "    [front.clone(), front]",
+        "synthetic::each_synthetic_note_carries_two_fields_of_two_hundred_characters",
+        "a synthetic note's back is its own field; a note whose back repeats its front stores one field's text twice (SPEC-338 R12, A19)"
+      ]
+    ],
+    "SCRIPT_MUTATIONS": [
+      [
+        "S33810-THE-BUDGET-ITSELF-PASSES",
+        "scripts/web-engine-size.py",
+        "return EXIT_PASS if total <= BUDGET else EXIT_OVER",
+        "return EXIT_PASS if total < BUDGET else EXIT_OVER",
+        "a total of exactly 8000000 bytes gzip -9 passes and one byte more fails (SPEC-338 A3, ADR-349)",
+        "test_web_engine_size.TheSizeGate.test_a_module_over_the_budget_fails_the_gate"
+      ],
+      [
+        "S33811-THE-BUDGET-IS-EIGHT-MILLION",
+        "scripts/web-engine-size.py",
+        "BUDGET = 8_000_000",
+        "BUDGET = 9_000_000",
+        "the gate holds ADR-336's 8000000 bytes gzip -9; a larger budget passes the planted over-budget pair (SPEC-338 A3)",
+        "test_web_engine_size.TheSizeGate.test_a_module_over_the_budget_fails_the_gate"
+      ],
+      [
+        "S33812-THE-GATE-SUMS-BOTH-FILES",
+        "scripts/web-engine-size.py",
+        "        total_gzip += gzipped",
+        "        total_gzip = max(total_gzip, gzipped)",
+        "the budget holds the module plus its bindings; a gate that judged the larger file alone passes two files each under the budget and over it together (SPEC-338 A3)",
+        "test_web_engine_size.TheSizeGate.test_a_module_over_the_budget_fails_the_gate"
+      ],
+      [
+        "S33813-BROTLI-IS-QUALITY-ELEVEN",
+        "scripts/web-engine-size.py",
+        "BROTLI_PARAM_QUALITY]: 11,",
+        "BROTLI_PARAM_QUALITY]: 9,",
+        "the brotli figure is quality 11, the figure a brotli server would see; quality 9 records another size beside the budget (SPEC-338 A4)",
+        "test_web_engine_size.TheSizeGate.test_a_module_under_the_budget_passes_and_records_brotli"
+      ],
+      [
+        "S33814-AN-EMPTY-FILE-IS-VOID",
+        "scripts/web-engine-size.py",
+        "if path.stat().st_size == 0:",
+        "if path.stat().st_size < 0:",
+        "an empty module or bindings file reads VOID; measured, its few compressed bytes would pass the budget (SPEC-338 A5)",
+        "test_web_engine_size.TheSizeGate.test_a_missing_or_empty_file_is_void_not_a_pass"
+      ],
+      [
+        "S33815-A-MISSING-FILE-IS-VOID",
+        "scripts/web-engine-size.py",
+        "        if not path.is_file():",
+        "        if False:",
+        "a missing module or bindings file reads VOID by name, never a crash or a pass (SPEC-338 A5)",
+        "test_web_engine_size.TheSizeGate.test_a_missing_or_empty_file_is_void_not_a_pass"
+      ],
+      [
+        "S33816-A-MISSING-COMPRESSOR-IS-VOID",
+        "scripts/web-engine-size.py",
+        "        if found is None:",
+        "        if found is None and tool == \"gzip\":",
+        "an absent compressor reads VOID by name; without the check the gate runs no brotli and crashes instead of saying why (SPEC-338 A5)",
+        "test_web_engine_size.TheSizeGate.test_a_missing_compressor_is_void_not_a_pass"
+      ]
+    ]
+  }
+}

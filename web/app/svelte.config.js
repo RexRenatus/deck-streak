@@ -15,11 +15,13 @@ const config = {
     // inline when SvelteKit generated it: in hash mode SvelteKit writes the sha256 of each inline
     // script it emits into the fallback page's meta policy at build. Styles stay unrestricted,
     // because Svelte's transitions insert inline style elements. A meta policy cannot carry
-    // frame-ancestors; the Caddy block's header does (SPEC-032).
+    // frame-ancestors; the Caddy block's header does (SPEC-032). `wasm-unsafe-eval` admits
+    // WebAssembly compilation for the web engine (SPEC-338 R7, ADR-349), and neither `eval` nor
+    // `new Function`, which `unsafe-eval` would.
     csp: {
       mode: 'hash',
       directives: {
-        'script-src': ['self', 'https://telegram.org'],
+        'script-src': ['self', 'https://telegram.org', 'wasm-unsafe-eval'],
         'object-src': ['none'],
         'base-uri': ['self'],
         'connect-src': ['self']
