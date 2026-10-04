@@ -13,6 +13,7 @@ maintainer's machine, only when run there (SPEC-062, below).
 |---|---|
 | `systemd/deck-streak-api.service` | the `api` role: the HTTP service the Mini App calls, `Type=notify` with a watchdog |
 | `systemd/deck-streak-bot.service` | the `bot` role: the Telegram bot's long-polling transport, `Type=notify` with a watchdog |
+| `systemd/deck-streak-mcp.service` | the `mcp` role: the MCP server the owner's agent calls on a loopback address, `Type=notify` with a watchdog; installed by a deploy and first started by the owner (SPEC-119, ADR-332) |
 | `systemd/deck-streak-job@.service` | one run of one job of coordination's job table, `deckstreakd job <id>`, a `oneshot` |
 | `systemd/deck-streak-job@<id>.timer` | one timer per job of the table (`sync`, `maintenance`, `liveness`, `drill_postback`, `held_flush`), each starting the job instance of its own name |
 | `systemd/deck-streak-job@sync (path unit)` | the owner's `/sync` doorbell: a change of the request file starts `deck-streak-job@sync` (service unit), and it loads no credential (SPEC-059) |
@@ -59,6 +60,7 @@ file, and no template carries a secret's value.
 |---|---|---|
 | `deck-streak-api.service` | `owner-user-id`, `telegram-bot-token` | the owner gate over Telegram's launch data (SPEC-024) |
 | `deck-streak-bot.service` | `owner-user-id`, `telegram-bot-token` | the transport and the owner gate (SPEC-026); the owner's `/sync` holds no login, it asks the sync job (SPEC-059) |
+| `deck-streak-mcp.service` | `mcp-core-token`, `mcp-law-track-token` | the MCP server's bearer guard: the core token is required, and the law-track token grants the law track (SPEC-119 R6) |
 | `deck-streak-job@.service` | none | the sync login is loaded by the sync job alone: its instance's drop-in in `systemd/` carries `anki-sync-username` and `anki-sync-password` (SPEC-022, SPEC-062 R14), and the rail's map answers them to that instance alone |
 | `deck-streak-job@.service`, `held_flush` instance | `owner-user-id`, `telegram-bot-token` | the held flush alone sends to the owner's chat (#291): its instance's drop-in in `systemd/` carries the two, and no other job requests them |
 | `deck-streak-alert@.service` | `owner-user-id`, `telegram-bot-token` | the page: the bot's token, and the owner's id, which is the owner's private chat (SPEC-031) |
@@ -202,13 +204,25 @@ shell reads as code when it starts can run before the refusal and stop it: such 
 run any code in the step, more than an unlisted setting can do, and the refusal guards against a
 misconfigured setting, not against code already placed in the step's environment (ADR-198).
 
+## The MCP server's first start
+
+`deck-streak-mcp.service` runs the `mcp` role (SPEC-119). A deploy installs it with the other units
+and never starts it: `deploy.sh` restarts the API and the bot alone, and the role refuses start
+without its core token. Its first start is the owner's, in two steps (ADR-332):
+
+1. Store the core token in the private rail under its credential id, `mcp-core-token`, and, to
+   grant the law track, its token under `mcp-law-track-token` (SPEC-119 R6, R7).
+2. Enable and start the unit on the host (`systemctl enable --now deck-streak-mcp.service`), then
+   read its journal: a token the role refuses is named by its id, never by its value.
+
 ## The host budget
 
-`host-budget.json` records DeckStreak's share, `"memory": "640M"` and `"cpus": 2`, and each unit's
+`host-budget.json` records DeckStreak's share, `"memory": "704M"` and `"cpus": 2`, and each unit's
 ceilings, which the unit's `MemoryHigh=` and `MemoryMax=` equal (ADR-032). The long-running units'
-ceilings plus the largest oneshot's fit the share, and the API's and the bot's `CPUQuota=` fit its
-CPUs. The alert template, the SLO evaluator and the memory watch carry their own entries (SPEC-031);
-since they run beside the jobs, every ceiling reached at once passes the share (SPEC-031 §6).
+ceilings plus the largest oneshot's fit the share, and the daemons' `CPUQuota=` (the API's, the
+bot's, the replicator's and the MCP server's) fit its CPUs. The alert template, the SLO evaluator
+and the memory watch carry their own entries (SPEC-031); since they run beside the jobs, every
+ceiling reached at once passes the share (SPEC-031 §6).
 
 ## Writing about an instance
 

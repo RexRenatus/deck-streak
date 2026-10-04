@@ -779,3 +779,89 @@ A43: cargo test -p deck-streak-mcp --test server -- --exact the_served_stack_ref
 A44: cargo test -p deck-streak-mcp --test server -- --exact a_refused_request_holds_no_slot
 A45: cargo test -p deck-streak-mcp --test server -- --exact initialize_answers_json_and_no_session_id
 ```
+
+## 15. Amendments, 2026-10-04: the server's unit (#157)
+
+Part 157b of #157 (ADR-332) delivers R2's unit clause and the manifest's unit line, and B3 is
+judged over the unit. The body above and sections 3c, 13 and 14 are not edited: the criteria this
+part delivers are stated in section 16, whose fence holds them.
+
+What this part delivers:
+- R2's unit clause: `deploy/systemd/deck-streak-mcp.service` runs `deckstreakd mcp` as a
+  `Type=notify` daemon with the watchdog, the daemons' lifecycle, `OnFailure=` the alert template,
+  the full hardening set, the shared state directory and settings file, and two credentials from
+  the private rail's socket, `mcp-core-token` and `mcp-law-track-token`. No `Environment=` line
+  carries a token. The manifest's third credential waits on #158.
+- The unit's place in the share: its entry in `deploy/host-budget.json` and its row in ADR-032's
+  note of this date, with a CPU quota taken from the API's; ADR-064's note of this date records
+  that the share's memory is now full (ADR-332 D2).
+- The unit's rail entry: its neutral `ExecStart=` and `EnvironmentFile=` in
+  `deploy/rail-contract.json`.
+- R3's setting in the committed example: `DECKSTREAK_MCP_LISTEN`, a loopback address, in
+  `deploy/deck-streak.env.example`, and among the settings the template tests require.
+- The owner-started first run: a deploy installs the unit and never starts it, and
+  `deploy/README.md` names the owner's two steps (ADR-332 D3; #167).
+- B3 (section 3a), judged on the box over the units under `deploy/systemd/`, this unit among them.
+- Three text corrections ride with this part: a dated amendment of one sentence of ADR-329's
+  Consequences; the module doc of `crates/mcp/src/server.rs`, which now says what the guard's
+  place outside the bound gives a refused request, an answer without waiting for a slot and no
+  slot held past its refusal; and a correction in `docs/red-first/SPEC-119.md` that quotes A1's
+  observed failure.
+
+The files this part changes:
+- `deploy/systemd/deck-streak-mcp.service`: added: the role, its lifecycle, its two credentials and
+  its budget
+- `deploy/systemd/deck-streak-api.service`: changed (section 4 does not name it): its CPU quota
+  gives the MCP server its share (ADR-332 D2)
+- `deploy/host-budget.json`: changed (section 4 does not name it): the unit's entry
+- `deploy/rail-contract.json`: changed (section 4 does not name it): the unit's two neutral values
+- `deploy/deck-streak.env.example`: changed (section 4 does not name it): `DECKSTREAK_MCP_LISTEN`
+- `deploy/README.md`: changed (section 4 does not name it): the unit's rows and the owner's first
+  start
+- `scripts/tests/test_deploy_templates.py`: changed (section 4 does not name it): the unit in each
+  table keyed by unit, the share's worst case, the API's quota, and the role and per-service tables
+  held in both directions: A46 to A51
+- `scripts/tests/test_rail_contract.py`: unchanged in this part; it decides A52 over the unit's
+  rail entry
+- `docs/decisions/ADR-032-deploy-templates-and-the-host-budget.md`: changed (section 4 does not
+  name it): a dated note with the unit's row
+- `docs/decisions/ADR-064-deckstreak-backs-up-with-its-own-units-and-never-the-collection.md`:
+  changed (section 4 does not name it): a dated note on the share
+- `docs/decisions/ADR-332-the-mcp-servers-unit-takes-its-place-inside-the-share-and-its-first-start-is-the-owners.md`:
+  added (section 4 does not name it)
+- `docs/decisions/ADR-329-the-mcp-server-lands-as-a-role-with-one-tool-before-its-unit-and-the-law-tracks-pending-numbers-answer-null.md`:
+  changed (section 4 does not name it): a dated amendment of one Consequences sentence
+- `crates/mcp/src/server.rs`: changed: one sentence of its module doc, and no code
+- `docs/red-first/SPEC-119.md`: changed: A46 to A52, and a correction
+- `changelog.d/mcp-unit-157b.md`: added (section 4 does not name it)
+
+What this part does not do:
+- It stores no credential in the private rail and starts no unit: the owner's first start, #167.
+- It adds the unit to no restart list: `deploy/deploy.sh` is unchanged (ADR-332 D3), #167.
+- It adds no Caddy route: the server listens on a loopback address alone (R3), #157.
+- It serves no further tool or resource: later parts of #157.
+- It loads no third credential and registers no parked tool: #158.
+- It declares no service level objective for the server in `deploy/slo.json`: its traffic is
+  the owner's agent alone, and an objective for it waits on that traffic measured, #157.
+
+## 16. Acceptance criteria of the 2026-10-04 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A46 | every service's `MemoryHigh=` and `MemoryMax=` equal its host budget entry and its ADR row, `deck-streak-mcp.service` among them, and `MemoryHigh=` is below `MemoryMax=` | `test_every_unit_ceiling_matches_the_host_budget_and_high_is_below_max` |
+| A47 | the long-running units, the MCP server among them, and the largest job fit the share, and the daemons' CPU quotas fit its CPUs; a daemon with no `MemoryMax=` or `CPUQuota=` is refused by name | `test_the_daemons_and_the_largest_job_fit_the_stack_share` |
+| A48 | every service runs its role with R1's lifecycle, the MCP server as a daemon with its caps, and every role and cap the tables name has a unit | `test_every_service_runs_its_role_with_the_lifecycle_r1_names` |
+| A49 | every unit that loads a credential, the MCP server among them, fails and pages on a refusal | `test_every_unit_that_loads_a_credential_fails_and_pages_on_a_refusal` |
+| A50 | no unit passes a secret through its environment: the MCP server's tokens arrive as credentials, and the committed example names `DECKSTREAK_MCP_LISTEN` | `test_no_unit_passes_a_secret_through_its_environment` |
+| A51 | every service carries R2's hardening and its per-service values, and the per-service table names every service and no other | `test_every_service_carries_the_hardening_r2_names` |
+| A52 | the rail contract names every neutral value the templates carry, the MCP server's among them | `test_the_rail_contract_names_every_neutral_value` |
+
+```acceptance
+A46: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k every_unit_ceiling_matches_the_host_budget_and_high_is_below_max
+A47: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k the_daemons_and_the_largest_job_fit_the_stack_share
+A48: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k every_service_runs_its_role_with_the_lifecycle_r1_names
+A49: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k every_unit_that_loads_a_credential_fails_and_pages_on_a_refusal
+A50: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k no_unit_passes_a_secret_through_its_environment
+A51: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k every_service_carries_the_hardening_r2_names
+A52: python3 -m unittest discover -s scripts/tests -p test_rail_contract.py -k the_rail_contract_names_every_neutral_value
+```

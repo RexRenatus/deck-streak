@@ -144,6 +144,152 @@
         "Ok(after) => announce_level_up(router, after, after, today)",
         "habits_minutes::a_habit_write_that_raises_the_level_is_announced_once",
         "a habit write that crosses a level announces it once through the one router; announced from its own level, no crossing is seen (SPEC-078 R18)"
+      ],
+      [
+        "S07820-SEVENTY-FIVE-A-WRITING-DAY",
+        "habits",
+        "src/writing.rs",
+        "pub const WRITING_XP_PER_DAY: u32 = 75;",
+        "pub const WRITING_XP_PER_DAY: u32 = 76;",
+        "writing_goldens::the_writing_xp_matches_the_predecessors_golden",
+        "a confirmed writing course earns 75 XP on its study day; another amount moves every course amount the golden fixes (SPEC-078 R7)"
+      ],
+      [
+        "S07821-WRITING-ALL-BONUS",
+        "habits",
+        "src/writing.rs",
+        "pub const WRITING_XP_ALL_THREE_BONUS: u32 = 100;",
+        "pub const WRITING_XP_ALL_THREE_BONUS: u32 = 101;",
+        "writing_goldens::the_writing_xp_matches_the_predecessors_golden",
+        "a day with every writing course confirmed earns a bonus of 100; another bonus moves every all-confirmed day of the golden (SPEC-078 R7)"
+      ],
+      [
+        "S07822-NO-WRITING-COURSE-PAYS-NOTHING",
+        "habits",
+        "src/writing.rs",
+        "    if writing.is_empty() {",
+        "    if false {",
+        "writing_goldens::no_writing_xp_is_settled_without_a_writing_course",
+        "over no writing course no day is all confirmed; without the guard every logged day reads all confirmed and pays the bonus (SPEC-078 R7)"
+      ],
+      [
+        "S07824-STREAK-ENDS-TODAY-OR-YESTERDAY",
+        "habits",
+        "src/writing.rs",
+        "    let end = if days.contains(&day) { day } else { previous };",
+        "    let end = day;",
+        "writing_goldens::the_writing_streaks_match_the_predecessors_golden",
+        "a writing streak ends on the day when it is confirmed, else on the day before; a streak that must end today reads 0 until today is written (SPEC-078 R8)"
+      ],
+      [
+        "S07825-STREAK-NEEDS-EVERY-WRITING-COURSE",
+        "habits",
+        "src/writing.rs",
+        "                .all(|code| confirmed.contains(&(*code, *day)))",
+        "                .any(|code| confirmed.contains(&(*code, *day)))",
+        "writing_goldens::the_writing_streaks_match_the_predecessors_golden",
+        "a day counts toward the all-courses streak only when every writing course is confirmed on it; any one course would count a partial day (SPEC-078 R8)"
+      ],
+      [
+        "S07826-INK-WEEK-AT-7",
+        "habits",
+        "src/writing.rs",
+        "pub const WRITING_STREAK_WEEK: u32 = 7;",
+        "pub const WRITING_STREAK_WEEK: u32 = 8;",
+        "habits_constants::the_habit_constants_equal_the_predecessors",
+        "the ink week badge needs a writing streak of 7 days, the predecessor's; another length changes the badge the owner earns (SPEC-078 R17)"
+      ],
+      [
+        "S07827-MARATHON-AT-600",
+        "habits",
+        "src/badges.rs",
+        "pub const MARATHON_READER_WEEK_MIN: u32 = 600;",
+        "pub const MARATHON_READER_WEEK_MIN: u32 = 601;",
+        "habits_constants::the_habit_constants_equal_the_predecessors",
+        "the marathon reader badge needs 600 minutes in a study week, the predecessor's; another bound changes the badge the owner earns (SPEC-078 R17)"
+      ],
+      [
+        "S07828-A-CHIP-TOGGLES-ONLY-ITS-OWN-DAY",
+        "coordination",
+        "src/habits/writing.rs",
+        "    if chip_day != today {",
+        "    if false {",
+        "writing_toggle::a_chip_for_a_closed_day_toggles_nothing",
+        "a writing chip toggles only the study day it was drawn for; without the check a closed day's chip confirms today (SPEC-078 R6)"
+      ],
+      [
+        "S07829-WRITE-IS-A-DERIVED-PREFIX",
+        "progression",
+        "src/settle.rs",
+        "\"write:\",    // SPEC-078 R7",
+        "\"wrote:\",    // SPEC-078 R7",
+        "xp_settle::the_writing_sources_are_derived_only_with_a_course_code",
+        "write: is a derived prefix; another prefix refuses every writing settle as underived (SPEC-078 R7)"
+      ],
+      [
+        "S07830-A-WRITING-COURSE-IS-NOT-CODED-ALL",
+        "kernel",
+        "src/courses.rs",
+        "            if course.writing && course.code.as_str() == RESERVED_CODE {",
+        "            if false {",
+        "courses_config::a_writing_course_coded_all_is_refused",
+        "a writing course may not be coded all, the code the writing bonus's source reserves; without the check its write:all collides with the bonus (SPEC-078 R7)"
+      ],
+      [
+        "S07831-THE-HABIT-BADGES-STEP-IS-REGISTERED",
+        "daemon",
+        "src/wiring.rs",
+        "    fold.register(Phase::Awards, Box::new(habit_badges))?;\n",
+        "    drop(habit_badges);\n",
+        "lib::wiring::tests::the_recompute_fold_registers_the_habit_badges_step_in_the_awards_phase",
+        "the production fold registers the habit badges step in the awards phase; unregistered, no recompute awards a habit badge (SPEC-078 R17)"
+      ],
+      [
+        "S07832-READING-BADGES-NEED-A-COURSE",
+        "habits",
+        "src/badges.rs",
+        "    let has_courses = context.courses > 0;",
+        "    let has_courses = true;",
+        "habits_badges_rules::no_course_badge_is_earned_without_its_courses",
+        "the reading-set badges need a configured course; without the guard an empty set earns bookworm week and polyglot reader at once (SPEC-078 R17)"
+      ],
+      [
+        "S07833-INK-MONTH-AT-30",
+        "habits",
+        "src/writing.rs",
+        "pub const WRITING_STREAK_MONTH: u32 = 30;",
+        "pub const WRITING_STREAK_MONTH: u32 = 31;",
+        "habits_constants::the_habit_constants_equal_the_predecessors",
+        "the ink month badge needs a writing streak of 30 days, the predecessor's; another length changes the badge the owner earns (SPEC-078 R17)"
+      ],
+      [
+        "S07834-INK-CENTURY-AT-100",
+        "habits",
+        "src/writing.rs",
+        "pub const WRITING_STREAK_CENTURY: u32 = 100;",
+        "pub const WRITING_STREAK_CENTURY: u32 = 101;",
+        "habits_constants::the_habit_constants_equal_the_predecessors",
+        "the ink century badge needs a writing streak of 100 days, the predecessor's; another length changes the badge the owner earns (SPEC-078 R17)"
+      ],
+      [
+        "S07835-THE-WRITING-STEP-IS-REGISTERED",
+        "daemon",
+        "src/wiring.rs",
+        "    fold.register(Phase::DaySteps, Box::new(writing))?;\n",
+        "    drop(writing);\n",
+        "lib::wiring::tests::the_recompute_fold_registers_the_writing_step_after_the_habit_step",
+        "the production fold registers the writing step in the day steps' phase; unregistered, no recompute settles the writing log (SPEC-078 R7)"
+      ]
+    ],
+    "CARGO_KILLED_SCRIPT_MUTATIONS": [
+      [
+        "S07823-ONE-CONFIRMATION-A-DAY",
+        "migrations/007802_habits_writing_log.sql",
+        "    PRIMARY KEY (code, study_day)",
+        "    CHECK (length(code) > 0)",
+        "habits",
+        "habits_store::a_course_is_confirmed_once_a_day",
+        "a course is confirmed at most once a study day, by the table's key; without it a second confirmation writes a second row (SPEC-078 R6, A10b)"
       ]
     ]
   }

@@ -28,12 +28,20 @@ pub const COURSES_SCHEMA: &str = "deckstreak.courses.v1";
 pub const CEFR_BANDS: [&str; 6] = ["A1", "A2", "B1", "B2", "C1", "C2"];
 /// The longest course code: a language code or a short subject code.
 pub const MAX_CODE_LEN: usize = 8;
+/// The code no writing course may take (SPEC-078 R7): a writing course's XP is settled as
+/// `write:<code>`, and `write:all` is the source the day's writing bonus is settled under, so a
+/// writing course coded so would share one settled row with the bonus.
+pub const RESERVED_CODE: &str = "all";
 
 /// The shape a courses file must have, named in a refusal in place of any value.
 const FILE_SHAPE: &str = "a JSON object of the schema deckstreak.courses.v1 with a list of courses";
 /// The shape of one course.
 const COURSE_SHAPE: &str = "courses each with a code of 1 to 8 lowercase letters, digits or \
     hyphens, a name, a flag, a deck root, a one-letter alias, a writing flag and unit bands";
+/// The shape of a writing course's code, named without the reserved code itself, so the refusal
+/// quotes nothing of the file.
+const WRITING_SHAPE: &str =
+    "writing courses each with a code other than the one the writing bonus reserves";
 /// The shape of one focus subject.
 const SUBJECT_SHAPE: &str = "focus subjects each with a code, a name and a one-letter alias";
 /// The shape of a course's unit bands.
@@ -186,6 +194,9 @@ impl Courses {
         refuse_duplicates("alias", aliases)?;
         refuse_duplicates("deck root", courses.iter().map(|course| &course.deck_root))?;
         for course in &courses {
+            if course.writing && course.code.as_str() == RESERVED_CODE {
+                return Err(malformed(WRITING_SHAPE));
+            }
             check_bands(&course.unit_bands)?;
         }
         let digest = (!courses.is_empty() || !focus_subjects.is_empty())

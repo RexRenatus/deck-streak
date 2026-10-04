@@ -13,12 +13,20 @@
 //! escape and line continuation, raw strings with any number of hashes, byte, raw byte and C
 //! strings, characters and byte characters. The words inside `stringify!` are pieces too. It
 //! follows `include!` and `#[path]` into a Rust file, and `include_str!` and `include_bytes!` into
-//! one piece, by their literal paths. The pieces of every file outside the owner, workspace-wide,
-//! are one pool, folded to ASCII lower case, and the reader refuses every file holding a piece on a
-//! path that assembles the name: a piece that ends with a prefix of it, pieces equal to the parts
-//! between, and a piece that starts with the rest. A file it cannot read, a path it cannot name and
-//! a `concat!` argument it cannot read beside part of the name fail closed. An include joined onto
-//! `env!("OUT_DIR")` is a build script's output, which it counts and discloses (#585).
+//! one piece, by their literal paths. The pieces of two or more characters of every file outside
+//! the owner, workspace-wide, are one pool, folded to ASCII lower case, and the reader refuses every
+//! file holding a piece on a path that assembles the name: a piece that ends with a prefix of it,
+//! pieces equal to the parts between, and a piece that starts with the rest. A file it cannot read,
+//! a path it cannot name and a `concat!` argument it cannot read beside part of the name fail
+//! closed. An include joined onto `env!("OUT_DIR")` is a build script's output, which it counts and
+//! discloses (#585).
+//!
+//! A piece of one character is judged only in a file's reach (SPEC-331, ADR-331): the file's own
+//! pieces, the pieces of every file it includes, transitively, and the pieces of every `const` or
+//! `static` item it names by a word or a format placeholder. The same rule covers the name in a
+//! reach as in the pool, so one character in an unrelated file completes no path, while a join of
+//! named items still does. An item named by a macro's metavariable keeps even its one-character
+//! pieces in the pool, because the reader cannot read its name.
 
 // Each including crate calls only the part of the reader its tests need.
 #![allow(dead_code)]
@@ -390,6 +398,72 @@ fn rust_files(directory: &Path) -> Vec<PathBuf> {
     found
 }
 
+/// Whether `word` could be a Rust identifier, the name a word or a format placeholder writes.
+fn identifier(word: &str) -> bool {
+    let mut characters = word.chars();
+    characters
+        .next()
+        .is_some_and(|first| first.is_alphabetic() || first == '_')
+        && characters.all(|inside| inside.is_alphanumeric() || inside == '_')
+}
+
+/// For each token, the name of the `const` or `static` item whose initializer holds it, from the
+/// `=` to the `;` that ends the item. An item named by a macro's metavariable (`const $name: ..`)
+/// has a name the reader cannot read, so it is recorded as `$`, which no word can name.
+fn items_of(tokens: &[Token]) -> Vec<Option<String>> {
+    let mut found = vec![None; tokens.len()];
+    let word = |index: usize| match tokens.get(index) {
+        Some(Token::Word(text)) => Some(text.as_str()),
+        _ => None,
+    };
+    for at in 0..tokens.len() {
+        // A lifetime's `'static` declares no item.
+        let lifetime = at > 0 && tokens[at - 1] == Token::Punct('\'');
+        if !matches!(word(at), Some("const" | "static")) || lifetime {
+            continue;
+        }
+        let mut name_at = at + 1;
+        if word(name_at) == Some("mut") {
+            name_at += 1;
+        }
+        let metavariable = tokens.get(name_at) == Some(&Token::Punct('$'))
+            && word(name_at + 1).is_some_and(identifier);
+        if metavariable {
+            name_at += 1;
+        }
+        let Some(name) = word(name_at).filter(|name| identifier(name) && *name != "fn") else {
+            continue;
+        };
+        let name = if metavariable { "$" } else { name };
+        if tokens.get(name_at + 1) != Some(&Token::Punct(':')) {
+            continue;
+        }
+        let mut depth = 0_usize;
+        let (mut equals, mut end) = (None, None);
+        for (index, token) in tokens.iter().enumerate().skip(name_at + 2) {
+            if opens(token) {
+                depth += 1;
+            } else if closes(token) {
+                if depth == 0 {
+                    break;
+                }
+                depth -= 1;
+            } else if depth == 0 && *token == Token::Punct('=') && equals.is_none() {
+                equals = Some(index);
+            } else if depth == 0 && *token == Token::Punct(';') {
+                end = Some(index);
+                break;
+            }
+        }
+        if let (Some(equals), Some(end)) = (equals, end) {
+            for slot in &mut found[equals + 1..end] {
+                *slot = Some(name.to_owned());
+            }
+        }
+    }
+    found
+}
+
 /// How the reader reads an included file: as Rust (`include!`, `#[path]`) or as one piece
 /// (`include_str!`, `include_bytes!`).
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -413,6 +487,18 @@ struct Reader<'a> {
     words: usize,
     includes: usize,
     out_dir: usize,
+    /// Every file's own pieces, of every length, folded: the first part of its reach.
+    local: BTreeMap<String, BTreeSet<String>>,
+    /// The pieces of each `const` or `static` item, by its name: the file defining it, the piece.
+    items: BTreeMap<String, BTreeSet<(String, String)>>,
+    /// The words each file writes, and the names its format strings' placeholders write.
+    mentions: BTreeMap<String, BTreeSet<String>>,
+    /// The files each file includes, recorded for every includer.
+    included: BTreeMap<String, BTreeSet<String>>,
+    /// The item whose initializer holds the token being read.
+    item: Option<String>,
+    /// The one-character pieces kept out of the pool, judged only in a reach.
+    held: usize,
 }
 
 impl Reader<'_> {
@@ -431,10 +517,17 @@ impl Reader<'_> {
     }
 
     /// Adds a literal's value to the pool, cut at each brace so that a `format!` string's text
-    /// around its placeholders is a piece of its own.
+    /// around its placeholders is a piece of its own. A piece of one character stays out of the
+    /// pool, and is judged only in the reach of a file that holds, includes or names it.
     fn piece(&mut self, file: &str, value: &str) {
+        let template = value.contains(['{', '}']);
         for part in value.split(['{', '}']).filter(|part| !part.is_empty()) {
             self.pieces += 1;
+            self.reach_piece(file, part, template);
+            if part.chars().count() < 2 && self.item.as_deref() != Some("$") {
+                self.held += 1;
+                continue;
+            }
             self.pool
                 .entry(part.to_ascii_lowercase())
                 .or_default()
@@ -442,9 +535,68 @@ impl Reader<'_> {
         }
     }
 
-    /// Counts a word, and names its file when it holds the table's name in any case.
+    /// Records `part`, a piece of `file`, for the reaches: among the file's own pieces, among the
+    /// pieces of the item being read, and, cut from a format string, its placeholder's name as a
+    /// name the file writes.
+    fn reach_piece(&mut self, file: &str, part: &str, template: bool) {
+        let folded = part.to_ascii_lowercase();
+        if template {
+            let name = part.split(':').next().unwrap_or_default().trim();
+            if identifier(name) {
+                self.mentions
+                    .entry(file.to_owned())
+                    .or_default()
+                    .insert(name.to_owned());
+            }
+        }
+        if let Some(item) = &self.item {
+            self.items
+                .entry(item.clone())
+                .or_default()
+                .insert((file.to_owned(), folded.clone()));
+        }
+        self.local
+            .entry(file.to_owned())
+            .or_default()
+            .insert(folded);
+    }
+
+    /// The pool of `file`'s reach: its own pieces, the pieces of every file it includes,
+    /// transitively, and the pieces of every item it or an included file names, each held by the
+    /// file that holds it.
+    fn reach(&self, file: &str) -> BTreeMap<String, BTreeSet<String>> {
+        let mut pool: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+        let mut pending = vec![file.to_owned()];
+        let mut visited = BTreeSet::new();
+        while let Some(next) = pending.pop() {
+            if !visited.insert(next.clone()) {
+                continue;
+            }
+            for piece in self.local.get(&next).into_iter().flatten() {
+                pool.entry(piece.clone()).or_default().insert(next.clone());
+            }
+            pending.extend(self.included.get(&next).into_iter().flatten().cloned());
+        }
+        for holder in &visited {
+            for name in self.mentions.get(holder).into_iter().flatten() {
+                for (defined, piece) in self.items.get(name).into_iter().flatten() {
+                    pool.entry(piece.clone())
+                        .or_default()
+                        .insert(defined.clone());
+                }
+            }
+        }
+        pool
+    }
+
+    /// Counts a word, records it as a name its file writes, and names its file when it holds the
+    /// table's name in any case.
     fn word(&mut self, file: &str, word: &str) {
         self.words += 1;
+        self.mentions
+            .entry(file.to_owned())
+            .or_default()
+            .insert(word.to_owned());
         if word.to_ascii_lowercase().contains(self.table) {
             self.named.insert(file.to_owned());
         }
@@ -459,10 +611,17 @@ impl Reader<'_> {
             ));
             return;
         };
+        let reached = self.name_of(path);
+        self.included
+            .entry(file.to_owned())
+            .or_default()
+            .insert(reached);
         if !self.seen.insert((path.to_path_buf(), kind)) {
             return;
         }
         let included = self.name_of(path);
+        // An included file's text holds no item of the includer's.
+        self.item = None;
         let text = String::from_utf8_lossy(&bytes);
         match kind {
             Kind::Rust => self.read(path, &included, &text),
@@ -499,10 +658,14 @@ impl Reader<'_> {
     /// Reads `text`, the Rust file at `path` named `file`.
     fn read(&mut self, path: &Path, file: &str, text: &str) {
         let tokens: Vec<Token> = lex(text).into_iter().map(|(token, _)| token).collect();
+        let items = items_of(&tokens);
+        // Every file read has a reach, also one that holds no piece of its own (SPEC-331 R2).
+        self.local.entry(file.to_owned()).or_default();
         let folder = path.parent().map(Path::to_path_buf).unwrap_or_default();
         let mut stringified = 0..0;
         let mut at = 0;
         while let Some(token) = tokens.get(at) {
+            self.item.clone_from(&items[at]);
             if let Some(close) =
                 invocation(&tokens, at, &["include", "include_str", "include_bytes"])
             {
@@ -588,6 +751,12 @@ pub fn refusals(root: &Path, table: &str, owner: &str, already: &BTreeSet<String
         words: 0,
         includes: 0,
         out_dir: 0,
+        local: BTreeMap::new(),
+        items: BTreeMap::new(),
+        mentions: BTreeMap::new(),
+        included: BTreeMap::new(),
+        item: None,
+        held: 0,
     };
     let mut members: Vec<PathBuf> = fs::read_dir(reader.root.join("crates"))
         .into_iter()
@@ -614,11 +783,13 @@ pub fn refusals(root: &Path, table: &str, owner: &str, already: &BTreeSet<String
         }
     }
     println!(
-        "table census: examined {} member(s), {} file(s) outside {owner}, {} piece(s), {} word(s), \
-         {} include(s) ({} joined onto OUT_DIR, disclosed) for {table}",
+        "table census: examined {} member(s), {} file(s) outside {owner}, {} piece(s) ({} of one \
+         character, pooled only in a reach), {} word(s), {} include(s) ({} joined onto OUT_DIR, \
+         disclosed) for {table}",
         members.len(),
         reader.files,
         reader.pieces,
+        reader.held,
         reader.words,
         reader.includes,
         reader.out_dir
@@ -628,8 +799,14 @@ pub fn refusals(root: &Path, table: &str, owner: &str, already: &BTreeSet<String
         "table census: examined 0 members for {table}: the population is empty, so nothing was \
          judged"
     );
+    // The pool covers the name with pieces of two or more characters; each file's reach covers it
+    // with pieces of every length, one character included (SPEC-331 R3).
+    let mut covered = covering(table, &reader.pool);
+    for file in reader.local.keys() {
+        covered.extend(covering(table, &reader.reach(file)));
+    }
     let mut refused = reader.refused;
-    for file in covering(table, &reader.pool).union(&reader.named) {
+    for file in covered.union(&reader.named) {
         refused.insert(format!(
             "{file} spells {table} from literals, joined or in another case, and only {owner}'s \
              code may"
