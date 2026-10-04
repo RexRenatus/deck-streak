@@ -10,14 +10,15 @@ use std::time::Duration;
 use axum::http::Version;
 use deck_streak_kernel::{ManualClock, UtcMillis};
 use deck_streak_push::{
-    ApnsSender, ApnsSettings, CollapseKey, Device, Environment, Notification, Origin, Refusal, Sent,
+    ApnsSender, ApnsSettings, BuildError, CollapseKey, Device, Environment, Notification, Origin,
+    Refusal, Sent, Unreached,
 };
 use serde_json::json;
 use tokio::sync::Notify;
 
 use support::fake_apns::{FakeApns, gone, refusal};
 use support::keys::{KEY_ID, TEAM_ID, TOPIC, TestKey, device_token};
-use support::{DEADLINE, Recorded, START, clock, verify_jwt};
+use support::{Answer, DEADLINE, Recorded, START, clock, verify_jwt};
 
 /// A sender wired to a development fake and a production fake, with its key and its clock.
 struct Rig {
@@ -171,7 +172,7 @@ fn minutes(count: u64) -> Duration {
 }
 
 /// APNs's answer to a provider token it no longer accepts.
-fn expired() -> support::Answer {
+fn expired() -> Answer {
     refusal(403, "ExpiredProviderToken")
 }
 
@@ -332,4 +333,234 @@ async fn a9_each_device_reaches_its_own_environment_only() {
         (1, 1),
         "a development device reaches the development service alone"
     );
+}
+
+// MUTATION COVERAGE: each test below holds a behaviour no criterion names alone, beside its positive
+// control, so that a mutant removing it fails a test.
+
+#[tokio::test]
+async fn a_young_token_is_not_reminted_on_an_expired_answer() {
+    let rig = Rig::start().await;
+    assert_eq!(rig.deliver(&alert()).await, Sent::Delivered);
+
+    // 19 minutes on, APNs's floor forbids a new token: the refusal is the answer, with no resend.
+    rig.clock.advance(minutes(19));
+    rig.development.fake.script([expired()]);
+    assert_eq!(
+        rig.deliver(&alert()).await,
+        Sent::Rejected(Refusal::ProviderToken)
+    );
+    assert_eq!(rig.received().len(), 2, "no resend inside the floor");
+
+    // The positive control: the same refusal at 20 minutes earns the resend.
+    rig.clock.advance(minutes(1));
+    rig.development.fake.script([expired()]);
+    assert_eq!(rig.deliver(&alert()).await, Sent::Delivered);
+    let tokens: Vec<String> = rig.received().iter().map(FakeApns::raw_token).collect();
+    assert_eq!(tokens.len(), 4);
+    assert_eq!(
+        (tokens[1] == tokens[0], tokens[2] == tokens[0], tokens[3] == tokens[0]),
+        (true, true, false),
+        "no token was minted inside the floor, and one was at it"
+    );
+}
+
+#[tokio::test]
+async fn an_oversize_error_body_is_not_read_past_its_bound() {
+    let rig = Rig::start().await;
+    // An error body of `size` bytes whose reason refuses the device token.
+    let frame = json!({"reason": "BadDeviceToken", "padding": ""})
+        .to_string()
+        .len();
+    let refusing = |size: usize| {
+        Answer::status(400).body(
+            json!({"reason": "BadDeviceToken", "padding": "x".repeat(size - frame)}).to_string(),
+        )
+    };
+    rig.development
+        .fake
+        .script([refusing(4096), refusing(4097)]);
+
+    // The positive control: a body at the bound is read, and its reason decides the outcome.
+    assert_eq!(rig.deliver(&alert()).await, Sent::Rejected(Refusal::Token));
+    // Past the bound it is not read, so the reason is unknown and the status alone decides.
+    assert_eq!(
+        rig.deliver(&alert()).await,
+        Sent::Rejected(Refusal::Request)
+    );
+    assert_eq!(rig.received().len(), 2, "one request each");
+}
+
+#[tokio::test]
+async fn two_calls_refused_together_mint_one_token() {
+    let rig = Rig::start().await;
+    assert_eq!(rig.deliver(&alert()).await, Sent::Delivered);
+    rig.clock.advance(minutes(30));
+
+    // Both calls send the held token and both are refused; the second refusal is held until the
+    // first call has reminted and resent, and the clock has moved a second, so a second mint would
+    // carry a later `iat` and show.
+    let gate = Arc::new(Notify::new());
+    rig.development
+        .fake
+        .script([expired(), expired().held(&gate)]);
+    let controller = async {
+        rig.development.fake.arrived(4).await;
+        rig.clock.advance(Duration::from_secs(1));
+        gate.notify_one();
+    };
+    let notification = alert();
+    let (first, second, ()) = tokio::join!(
+        rig.deliver(&notification),
+        rig.deliver(&notification),
+        controller
+    );
+
+    assert_eq!((first, second), (Sent::Delivered, Sent::Delivered));
+    let received = rig.received();
+    let tokens: Vec<String> = received.iter().map(FakeApns::raw_token).collect();
+    assert_eq!(tokens.len(), 5, "the prime, two refused sends and two resends");
+    let held = tokens[0].clone();
+    let reminted = tokens[3].clone();
+    assert_ne!(reminted, held);
+    assert_eq!(tokens, vec![held.clone(), held.clone(), held, reminted.clone(), reminted]);
+    let minted = rig
+        .development
+        .token(&received[3])
+        .expect("the fake verifies the new token");
+    assert_eq!(minted.claims["iat"], json!(START_SECOND + 30 * 60));
+}
+
+#[tokio::test]
+async fn every_other_answer_is_read_by_its_status_after_one_request() {
+    let rig = Rig::start().await;
+    assert_eq!(rig.deliver(&alert()).await, Sent::Delivered);
+    // The held token is 20 minutes old, so only the reason keeps a 403 from earning a resend.
+    rig.clock.advance(minutes(20));
+    let table = [
+        (
+            refusal(403, "InvalidProviderToken"),
+            Sent::Rejected(Refusal::ProviderToken),
+        ),
+        (
+            refusal(413, "PayloadTooLarge"),
+            Sent::Rejected(Refusal::TooLarge),
+        ),
+        (refusal(400, "BadPriority"), Sent::Rejected(Refusal::Request)),
+        (refusal(404, "BadPath"), Sent::Rejected(Refusal::Request)),
+        (
+            refusal(405, "MethodNotAllowed"),
+            Sent::Rejected(Refusal::Request),
+        ),
+        (
+            Answer::status(301).header("location", "https://moved.synthetic.invalid"),
+            Sent::Failed(Unreached::Redirect),
+        ),
+        (
+            Answer::status(307).header("location", "https://moved.synthetic.invalid"),
+            Sent::Failed(Unreached::Redirect),
+        ),
+        (Answer::status(202), Sent::Delivered),
+    ];
+
+    let mut read = Vec::new();
+    for (count, (answer, _)) in table.iter().enumerate() {
+        rig.development.fake.script([answer.clone()]);
+        read.push(rig.deliver(&alert()).await);
+        assert_eq!(rig.received().len(), count + 2, "one request each");
+    }
+    println!("examined {} answer(s)", table.len());
+
+    let expected: Vec<Sent> = table.iter().map(|(_, sent)| *sent).collect();
+    assert_eq!(read, expected);
+}
+
+#[tokio::test]
+async fn an_answer_past_the_deadline_fails_it() {
+    // The one real wait: a short deadline against a fake that never answers.
+    let rig = Rig::with_deadline(Duration::from_millis(200)).await;
+    rig.development.fake.script([Answer::silence()]);
+
+    assert_eq!(
+        rig.deliver(&alert()).await,
+        Sent::Failed(Unreached::Deadline)
+    );
+    assert_eq!(rig.received().len(), 1);
+}
+
+#[tokio::test]
+async fn a_closed_port_fails_the_connection() {
+    let key = TestKey::generate();
+    let closed = {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("a loopback port");
+        format!("http://{}", listener.local_addr().expect("its address"))
+    };
+    let origin = Origin::new(&closed).expect("a loopback origin");
+    let sender = ApnsSender::new(
+        ApnsSettings {
+            key_pem: &key.pem,
+            key_id: KEY_ID,
+            team_id: TEAM_ID,
+            topic: TOPIC,
+            development: origin.clone(),
+            production: origin,
+            deadline: DEADLINE,
+        },
+        clock(),
+    )
+    .expect("the sender builds");
+
+    assert_eq!(
+        sender.deliver(&device(), &alert()).await,
+        Sent::Failed(Unreached::Connection)
+    );
+}
+
+#[test]
+fn a_device_token_is_hexadecimal_text_of_at_most_200_characters() {
+    let refused = [
+        String::new(),
+        "a".repeat(201),
+        "zz".repeat(32),
+        "ab/../".repeat(8),
+        format!("{} ", device_token()),
+    ];
+    let wrongly_admitted: Vec<&String> = refused
+        .iter()
+        .filter(|token| {
+            Device::new(token, Environment::Development) != Err(BuildError::DeviceToken)
+        })
+        .collect();
+    println!("examined {} refused token(s)", refused.len());
+    assert_eq!(wrongly_admitted, Vec::<&String>::new());
+
+    // The positive control: 200 hexadecimal characters, in either case, are a device.
+    for token in ["ab".repeat(100), "AB".repeat(100), "0".to_owned()] {
+        let device = Device::new(&token, Environment::Production).expect("a device token");
+        assert_eq!(device.environment(), Environment::Production);
+    }
+}
+
+#[test]
+fn a_key_that_does_not_parse_refuses_the_build() {
+    fn settings(key_pem: &str) -> ApnsSettings<'_> {
+        ApnsSettings {
+            key_pem,
+            key_id: KEY_ID,
+            team_id: TEAM_ID,
+            topic: TOPIC,
+            development: Origin::new("https://development.synthetic.invalid").expect("an origin"),
+            production: Origin::new("https://production.synthetic.invalid").expect("an origin"),
+            deadline: DEADLINE,
+        }
+    }
+
+    let refused = ApnsSender::new(settings("not a key"), clock());
+    assert_eq!(refused.err(), Some(BuildError::Key));
+
+    // The positive control: the test's own key builds a sender.
+    let key = TestKey::generate();
+    assert!(ApnsSender::new(settings(&key.pem), clock()).is_ok());
 }
