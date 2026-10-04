@@ -36,10 +36,10 @@ export function resolve(intent: Intent, side: Side): Action | null {
   return intent === 'confirm' ? 'good' : intent;
 }
 
-/** The side after `action` fires on `side`. */
-export function sideAfter(action: Action, side: Side): Side {
+/** The side after `action` fires on `side`; when nothing fired (`null`), the side stays. */
+export function sideAfter(action: Action | null, side: Side): Side {
   if (action === 'show-answer') {
     return 'answer';
   }
-  return GRADES.includes(action) ? 'question' : side;
+  return GRADES.some((grade) => grade === action) ? 'question' : side;
 }
