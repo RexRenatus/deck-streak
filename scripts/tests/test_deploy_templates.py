@@ -40,6 +40,19 @@ ADR_BACKUPS = (
 LITESTREAM_SERVICE_NAME = "deck-streak-litestream.service"
 BACKUP_SERVICE_NAME = "deck-streak-backup.service"
 DRILL_SERVICE_NAME = "deck-streak-restore-drill.service"
+# SPEC-337: the sync server, its launcher, and the settings file's one key the launcher reads.
+SYNC_SERVER_SERVICE_NAME = "deck-streak-sync-server.service"
+SYNC_LAUNCHER = DEPLOY / "scripts" / "sync-server.sh"
+# The variables the sync server reads its users from, `name:<hash>` each: only its launcher sets
+# them, from the unit's credentials, so no unit and no settings line may (ADR-347 D2).
+SYNC_SERVER_USERS = re.compile(r"SYNC_USER[0-9]*")
+# A password hash in the server's form, which nothing in the tree may hold, real or placeholder.
+PHC_HASH = re.compile(
+    r"\$pbkdf2-sha256\$i=[0-9]+(?:,l=[0-9]+)?\$[A-Za-z0-9+/]{8,}\$[A-Za-z0-9+/]{16,}"
+)
+# SPEC-337 section 1: the server's peak resident memory during one full upload of ADR-022's
+# synthetic collection, in bytes, which the unit's MemoryHigh= must hold.
+SYNC_SERVER_PEAK = 326_600 * 1024
 
 # The one release binary every service runs, from the release root's `current` link (R2).
 BINARY = "/usr/local/lib/deck-streak/current/bin/deckstreakd"
@@ -121,6 +134,19 @@ LITESTREAM_SERVICE = {
     "RestartSec": "15",
     "OOMPolicy": "kill",
     "TimeoutStopSec": "30",
+    "CPUQuota": "25%",
+}
+# SPEC-337 R2 (ADR-347 D3): the sync server runs its launcher, is active once it runs (it sends no
+# readiness), stops on an interrupt, the one signal it drains on, and holds half a processor.
+SYNC_SERVER_SERVICE = {
+    "Type": "exec",
+    "KillSignal": "SIGINT",
+    "Restart": "on-failure",
+    "RestartSec": "15",
+    "OOMPolicy": "kill",
+    "TimeoutStopSec": "30",
+    "CPUQuota": "50%",
+    "TasksMax": "64",
 }
 # The timers that start SPEC-031's units, each the service of its own name.
 OBSERVABILITY_TIMERS = {
@@ -139,6 +165,10 @@ CREDENTIAL_SOURCES = {
     "SYNC_PASSWORD": REPO / "crates" / "ingest" / "src" / "settings.rs",
     "CORE_CREDENTIAL": REPO / "crates" / "mcp" / "src" / "settings.rs",
     "LAW_TRACK_CREDENTIAL": REPO / "crates" / "mcp" / "src" / "settings.rs",
+    # The sync server's two users are read by its launcher, the one program that reads them, where
+    # each id is a shell constant (SPEC-337 R2; ADR-347 D2).
+    "SYNC_SERVER_OWNER": SYNC_LAUNCHER,
+    "SYNC_SERVER_STAGING": SYNC_LAUNCHER,
 }
 # Which credentials each service's role reads: the api's owner gate (SPEC-024, SPEC-025), the bot's
 # transport, owner gate and `/sync` (SPEC-026 R1, R11), and the `sync` job's syncer (SPEC-022,
@@ -166,6 +196,7 @@ ROLE_CREDENTIALS = {
     LITESTREAM_SERVICE_NAME: (),
     BACKUP_SERVICE_NAME: (),
     DRILL_SERVICE_NAME: (),
+    SYNC_SERVER_SERVICE_NAME: ("SYNC_SERVER_OWNER", "SYNC_SERVER_STAGING"),
 }
 # The role each service runs (R2); the job template's `%i` is its instance, the job's id.
 ROLES = {
@@ -198,10 +229,11 @@ JOB_SERVICE = {
     "TimeoutStartSec": "30min",
 }
 # ADR-032's delivery: the daemons' CPU and task caps. The MCP server's quota is taken from the
-# API's, so the daemons' quotas still fit the share's CPUs (ADR-332).
+# API's, so the daemons' quotas still fit the share's CPUs (ADR-332); the sync server's half of a
+# processor is taken from the bot's and the replicator's (ADR-347).
 DAEMON_CAPS = {
     "deck-streak-api.service": {"CPUQuota": "75%", "TasksMax": "64"},
-    "deck-streak-bot.service": {"CPUQuota": "50%", "TasksMax": "64"},
+    "deck-streak-bot.service": {"CPUQuota": "25%", "TasksMax": "64"},
     "deck-streak-mcp.service": {"CPUQuota": "25%", "TasksMax": "32"},
 }
 # R2: the identity and hardening of every service, each at the value the pack's rows score.
@@ -251,6 +283,13 @@ PER_SERVICE = {
     LITESTREAM_SERVICE_NAME: ("deck-streak", ENVIRONMENT_FILE, ROLES_NETWORK, None),
     BACKUP_SERVICE_NAME: ("deck-streak", None, "AF_UNIX", None),
     DRILL_SERVICE_NAME: ("deck-streak", ENVIRONMENT_FILE, ROLES_NETWORK, None),
+    # SPEC-337: the sync server keeps its users' data in its own directory and listens on loopback.
+    SYNC_SERVER_SERVICE_NAME: (
+        "deck-streak-sync-server",
+        ENVIRONMENT_FILE,
+        "AF_UNIX AF_INET",
+        None,
+    ),
 }
 PER_SERVICE_KEYS = (
     "StateDirectory",
@@ -289,6 +328,7 @@ WAIVED = {
     ("deck-streak-slo.timer", "calendar-not-persistent"),
     ("deck-streak-memory-watch.timer", "calendar-not-persistent"),
     ("deck-streak-litestream.service", "watchdog-missing"),
+    (SYNC_SERVER_SERVICE_NAME, "watchdog-missing"),
 }
 
 
@@ -366,7 +406,13 @@ def credential_ids():
     """Each credential id the code declares, by its constant's name."""
     found = {}
     for constant, source in CREDENTIAL_SOURCES.items():
-        match = re.search(rf'pub const {constant}: &str = "([a-z0-9-]+)";', source.read_text())
+        form = (
+            rf"(?m)^readonly {constant}=([a-z0-9-]+)$"
+            if source.suffix == ".sh"
+            else rf'pub const {constant}: &str = "([a-z0-9-]+)";'
+        )
+        # A source that is not there declares nothing, and is refused by name as one that names no id.
+        match = re.search(form, source.read_text() if source.is_file() else "")
         if match is None:
             raise AssertionError(f"{source.relative_to(REPO)} declares no {constant}")
         found[constant] = match.group(1)
@@ -374,8 +420,9 @@ def credential_ids():
 
 
 def declared_settings():
-    """Every setting the workspace's code names: a `DECKSTREAK_*` constant in `crates/*/src`."""
-    found = set()
+    """Every setting the workspace's code names: a `DECKSTREAK_*` constant in `crates/*/src`, and
+    a `DECKSTREAK_*` variable the sync server's launcher reads (SPEC-337 R2)."""
+    found = set(re.findall(r"\$\{(DECKSTREAK_[A-Z_]+)", SYNC_LAUNCHER.read_text(encoding="utf-8")))
     for source in (REPO / "crates").glob("*/src/**/*.rs"):
         found.update(
             re.findall(r'pub const [A-Z_]+: &str = "(DECKSTREAK_[A-Z_]+)";', source.read_text())
@@ -490,7 +537,11 @@ def environment_refusals(unit, ids):
     for value in unit.values("Service", "Environment") + unit.values("Service", "PassEnvironment"):
         for word in value.split():
             variable = word.partition("=")[0].strip("\"'")
-            if _units.SECRET_NAME.search(variable) or variable.lower().replace("_", "-") in ids:
+            if (
+                _units.SECRET_NAME.search(variable)
+                or variable.lower().replace("_", "-") in ids
+                or SYNC_SERVER_USERS.fullmatch(variable)
+            ):
                 refused.append(f"{unit.rel}: {variable} passes a secret through the environment")
     return refused
 
@@ -910,12 +961,15 @@ class TheTemplatesFitTheHostBudget(unittest.TestCase):
     def test_the_daemons_and_the_largest_job_fit_the_stack_share(self):
         units = services()
         share = budget()["memory"]
-        # ADR-064 decides the share and ADR-032 carries a dated note that points to it.
-        self.assertIn(f'"memory": "{share}"', ADR_BACKUPS.read_text(encoding="utf-8"), "the share")
-        self.assertIn(
-            f"## Note, 2026-09-29: the share is {int(share.rstrip('M'))} MiB",
+        # ADR-064 decides the share and ADR-032 carries a note that points to it; each record's
+        # last word on the share is an appended amendment (SPEC-337), so the last one is in force.
+        decided = re.findall(r'"memory": "(\d+M)"', ADR_BACKUPS.read_text(encoding="utf-8"))
+        self.assertEqual(decided[-1:], [share], "ADR-064's last word on the share")
+        noted = re.findall(
+            r"(?m)^## (?:Note|Amendment)\b[^\n]*: the share is (\d+) MiB",
             ADR.read_text(encoding="utf-8"),
         )
+        self.assertEqual(noted[-1:], [share.rstrip("M")], "ADR-032's last note on the share")
         ceilings = {}
         for unit in units:
             value = last(unit, "Service", "MemoryMax")
@@ -932,6 +986,7 @@ class TheTemplatesFitTheHostBudget(unittest.TestCase):
                 "deck-streak-bot.service",
                 LITESTREAM_SERVICE_NAME,
                 "deck-streak-mcp.service",
+                SYNC_SERVER_SERVICE_NAME,
             ],
         )
         self.assertEqual(
@@ -948,9 +1003,9 @@ class TheTemplatesFitTheHostBudget(unittest.TestCase):
             ),
         )
         worst = sum(ceilings[unit] for unit in daemons) + max(ceilings[unit] for unit in oneshots)
-        # ADR-064's arithmetic with ADR-332's daemon: the four daemons, and the job, still the
-        # largest, which fill the share exactly.
-        self.assertEqual(worst, size("704M"))
+        # ADR-064's arithmetic with ADR-332's daemon and SPEC-337's sync server: the five daemons,
+        # and the job, still the largest, which fill the share exactly (ADR-347).
+        self.assertEqual(worst, size("1152M"))
         self.assertLessEqual(worst, size(share), "the worst case exceeds DeckStreak's share")
         # The daemons' CPU quotas fit the share's CPUs; a daemon with no quota is refused by name.
         quotas = []
@@ -961,7 +1016,8 @@ class TheTemplatesFitTheHostBudget(unittest.TestCase):
                     quota, f"{unit.rel} has no CPUQuota, so it cannot be shown to fit"
                 )
                 quotas.append(int(quota.rstrip("%")))
-        self.assertLessEqual(sum(quotas), 100 * budget()["cpus"], quotas)
+        # The five quotas divide the share's processors exactly (ADR-347): 75, 25, 25, 25 and 50.
+        self.assertEqual(sum(quotas), 100 * budget()["cpus"], quotas)
 
 
 class TheCaddyBlock(unittest.TestCase):
@@ -1352,6 +1408,21 @@ class TheServicesRunTheirRoles(unittest.TestCase):
                     self.assertEqual(last(unit, "Unit", key), value, f"{unit.rel} {key}")
                 self.assertEqual(unit.values("Install", "WantedBy"), ["multi-user.target"])
                 continue
+            if unit.name == SYNC_SERVER_SERVICE_NAME:
+                # SPEC-337 R2: the sync server runs the release's launcher, which reads its users
+                # and execs the server the release ships, and keeps running.
+                self.assertEqual(
+                    unit.values("Service", "ExecStart"),
+                    [f"{RELEASE}/deploy/scripts/sync-server.sh"],
+                    unit.rel,
+                )
+                self.assertEqual(last(unit, "Unit", "OnFailure"), ON_FAILURE, unit.rel)
+                for key, value in SYNC_SERVER_SERVICE.items():
+                    self.assertEqual(last(unit, "Service", key), value, f"{unit.rel} {key}")
+                for key, value in DAEMON_UNIT.items():
+                    self.assertEqual(last(unit, "Unit", key), value, f"{unit.rel} {key}")
+                self.assertEqual(unit.values("Install", "WantedBy"), ["multi-user.target"])
+                continue
             role = ROLES[unit.name]
             self.assertEqual(unit.values("Service", "ExecStart"), [f"{BINARY} {role}"], unit.rel)
             self.assertEqual(last(unit, "Unit", "OnFailure"), ON_FAILURE, unit.rel)
@@ -1394,6 +1465,100 @@ class TheServicesRunTheirRoles(unittest.TestCase):
                 )
             self.assertTrue(unit.assigned("Service", "CapabilityBoundingSet"), unit.rel)
             self.assertEqual(unit.values("Service", "AmbientCapabilities"), [], unit.rel)
+
+
+class TheSyncServerRunsAsItsOwnUnit(unittest.TestCase):
+    """SPEC-337 A3 and A4 (R2, R3; ADR-347 D2, D3): the sync server's own unit, its entry in the
+    share, and its two users, which reach it as credentials and never through an environment."""
+
+    def unit(self):
+        found = [unit for unit in services() if unit.name == SYNC_SERVER_SERVICE_NAME]
+        self.assertEqual(len(found), 1, f"no {SYNC_SERVER_SERVICE_NAME} under deploy/systemd")
+        return found[0]
+
+    def test_the_sync_server_runs_hardened_within_its_entry_and_the_share_holds_it(self):
+        unit = self.unit()
+        self.assertEqual(
+            unit.values("Service", "ExecStart"), [f"{RELEASE}/deploy/scripts/sync-server.sh"]
+        )
+        for key, value in SYNC_SERVER_SERVICE.items():
+            self.assertEqual(last(unit, "Service", key), value, key)
+        for key, value in HARDENING.items():
+            self.assertEqual(unit.values("Service", key), [value] if value else [], key)
+        self.assertEqual(unit.values("Service", "StateDirectory"), ["deck-streak-sync-server"])
+        self.assertEqual(unit.values("Service", "RestrictAddressFamilies"), ["AF_UNIX AF_INET"])
+        self.assertEqual(unit.values("Unit", "OnFailure"), [ON_FAILURE])
+        # It sends no readiness and no keep-alive, so its one waiver is the watchdog's, with a why.
+        waivers = [value.split(None, 1) for value in unit.values("Unit", _units.WAIVE_KEY)]
+        self.assertEqual([waiver[0] for waiver in waivers], ["watchdog-missing"])
+        self.assertGreater(len(waivers[0][1].split()), 5, "a waiver with no why")
+        # R3: its own entry, which the unit equals, holds the measured peak below MemoryHigh=.
+        entry = budget()["units"].get(SYNC_SERVER_SERVICE_NAME)
+        self.assertEqual(entry, {"memory_high": "384M", "memory_max": "448M"})
+        high, ceiling = last(unit, "Service", "MemoryHigh"), last(unit, "Service", "MemoryMax")
+        self.assertEqual((high, ceiling), (entry["memory_high"], entry["memory_max"]))
+        self.assertGreater(size(high), SYNC_SERVER_PEAK)
+        # The share holds it: the five daemons and the largest job fill 1152M, and their quotas
+        # divide the share's two processors as ADR-347 splits them.
+        units = services()
+        daemons = [u for u in units if _units.long_running(u)]
+        jobs = [u for u in units if not _units.long_running(u)]
+        worst = sum(size(last(u, "Service", "MemoryMax")) for u in daemons) + max(
+            size(last(u, "Service", "MemoryMax")) for u in jobs
+        )
+        self.assertEqual((budget()["memory"], budget()["cpus"]), ("1152M", 2))
+        self.assertEqual(worst, size(budget()["memory"]))
+        self.assertEqual(
+            {u.name: last(u, "Service", "CPUQuota") for u in daemons},
+            {
+                "deck-streak-api.service": "75%",
+                "deck-streak-bot.service": "25%",
+                LITESTREAM_SERVICE_NAME: "25%",
+                "deck-streak-mcp.service": "25%",
+                SYNC_SERVER_SERVICE_NAME: "50%",
+            },
+        )
+
+    def test_the_sync_servers_two_users_come_from_the_socket_and_never_an_environment(self):
+        unit = self.unit()
+        ids = credential_ids()
+        owner, staging = ids["SYNC_SERVER_OWNER"], ids["SYNC_SERVER_STAGING"]
+        self.assertNotEqual(owner, staging)
+        self.assertEqual(
+            unit.values("Service", "LoadCredential"), [f"{owner}:{SOCKET}", f"{staging}:{SOCKET}"]
+        )
+        # No unit sets a user of the server, and no settings line names one.
+        for each in examined("service unit(s)", services()):
+            self.assertEqual(environment_refusals(each, set(ids.values())), [], each.rel)
+        settings = [key for _, key, _ in env_example()]
+        self.assertEqual([key for key in settings if SYNC_SERVER_USERS.fullmatch(key)], [])
+        # No hash, real or placeholder, is in the deploy files or the records.
+        files = examined(
+            "file(s) under deploy/ and docs/",
+            [p for root in (DEPLOY, REPO / "docs") for p in root.rglob("*") if p.is_file()],
+        )
+        holding = [
+            p.relative_to(REPO).as_posix()
+            for p in files
+            if PHC_HASH.search(p.read_text(encoding="utf-8", errors="replace"))
+        ]
+        self.assertEqual(holding, [])
+        # A planted unit that sets a user through its environment is refused by the variable's
+        # name; a planted hash is found.
+        with tempfile.TemporaryDirectory() as scratch:
+            planted = Path(scratch) / "deploy" / "systemd" / "planted.service"
+            planted.parent.mkdir(parents=True)
+            planted.write_text(
+                "[Unit]\nDescription=planted\n\n[Service]\nExecStart=/bin/true\n"
+                "Environment=SYNC_USER2=planted:kept PASSWORDS_HASHED=1\n"
+            )
+            (planted_unit,) = subject(scratch).services
+        self.assertEqual(
+            environment_refusals(planted_unit, set(ids.values())),
+            ["deploy/systemd/planted.service: SYNC_USER2 passes a secret through the environment"],
+        )
+        shape = "$".join(("", "pbkdf2-sha256", "i=600000,l=32", "A" * 22, "B" * 43))
+        self.assertIsNotNone(PHC_HASH.search(f"SYNC_USER1=planted:{shape}"))
 
 
 class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
@@ -1938,6 +2103,20 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
                 "Wants=network-online.target\n",
                 [refusal(7, "Service", "Wants", "network-online.target")],
             ),
+            "paging waiver, its own section": (
+                _units.PAGING_KEYS,
+                page,
+                "X-DurableServices-Waive=watchdog-missing it sends no readiness\n",
+                "",
+                [],
+            ),
+            "paging waiver, wrong section": (
+                _units.PAGING_KEYS,
+                page,
+                "",
+                "X-DurableServices-Waive=watchdog-missing kept\n",
+                [refusal(7, "Service", "X-DurableServices-Waive", "watchdog-missing kept")],
+            ),
         }
         got = {}
         for label in examined("planted unit(s) held to a list", sorted(plants)):
@@ -2034,6 +2213,12 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
                 "",
                 [refusal(4, "Unit", "Wants", "other.service")],
             ),
+            "stop signal the server does not drain on": (
+                "",
+                "KillSignal=SIGKILL\n",
+                [refusal(8, "Service", "KillSignal", "SIGKILL")],
+            ),
+            "stop signal control": ("", "KillSignal=SIGINT\n", []),
             "restart budget and ordering controls": (
                 "StartLimitIntervalSec=300\nStartLimitBurst=5\n"
                 "After=network-online.target\nWants=network-online.target\n",
