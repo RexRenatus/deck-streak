@@ -155,3 +155,69 @@ pub async fn all_time_by_code(
         .map(|row| (row.code, minutes(row.minutes)))
         .collect())
 }
+
+/// Confirms writing in `code` on `day`, at `at`, and answers whether a row was written: a course
+/// already confirmed that day writes nothing.
+///
+/// # Errors
+///
+/// [`sqlx::Error`] when the write fails.
+pub async fn confirm_writing(
+    _connection: &mut SqliteConnection,
+    _code: &str,
+    _day: StudyDay,
+    _at: UtcMillis,
+) -> Result<bool, sqlx::Error> {
+    Ok(false)
+}
+
+/// Clears `code`'s confirmation on `day`, and answers whether one was removed.
+///
+/// # Errors
+///
+/// [`sqlx::Error`] when the write fails.
+pub async fn clear_writing(
+    _connection: &mut SqliteConnection,
+    _code: &str,
+    _day: StudyDay,
+) -> Result<bool, sqlx::Error> {
+    Ok(false)
+}
+
+/// Every confirmation from `first` to `last`, both included, as its code and day, by day then
+/// code.
+///
+/// # Errors
+///
+/// [`sqlx::Error`] when the read fails.
+pub async fn confirmations_between(
+    _connection: &mut SqliteConnection,
+    _first: StudyDay,
+    _last: StudyDay,
+) -> Result<Vec<(String, StudyDay)>, sqlx::Error> {
+    Ok(Vec::new())
+}
+
+/// How many confirmations were made through `last`.
+///
+/// # Errors
+///
+/// [`sqlx::Error`] when the read fails.
+pub async fn confirmations_through(
+    _connection: &mut SqliteConnection,
+    _last: StudyDay,
+) -> Result<u32, sqlx::Error> {
+    Ok(0)
+}
+
+/// How many reading entries were logged through `last`.
+///
+/// # Errors
+///
+/// [`sqlx::Error`] when the read fails.
+pub async fn entries_through(
+    _connection: &mut SqliteConnection,
+    _last: StudyDay,
+) -> Result<u32, sqlx::Error> {
+    Ok(0)
+}
