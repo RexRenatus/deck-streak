@@ -19,6 +19,7 @@ from test_ci_workflows import PINNED, action, entries, read_hardened, workflow_f
 
 RELEASE = REPO / ".github" / "workflows" / "release.yml"
 CI = REPO / ".github" / "workflows" / "ci.yml"
+TAG_CALLER = REPO / ".github" / "workflows" / "apple-on-tag.yml"
 JOB_WRITES = {"contents": "write", "id-token": "write", "attestations": "write"}
 ATTEST = "actions/attest-build-provenance"
 UPSTREAM = "https://github.com/ankitects/anki.git"
@@ -118,6 +119,25 @@ class TheReleaseRunsOnSemverTags(unittest.TestCase):
         self.assertRegex(text, r"\bdu\b|\bwc\b|stat ", "the unpacked size is measured")
         self.assertIn(".tar.gz", steps[attest]["with"]["subject-path"])
         self.assertEqual(job["runs-on"], "ubuntu-24.04")
+
+
+class TheAppleBuildRunsOnEveryReleaseTag(unittest.TestCase):
+    def test_the_tag_caller_runs_the_build_on_every_release_tag(self):
+        """SPEC-344 A2: the tag caller runs on a push of a tag the release's filter admits and on
+        nothing else, and its one job calls the Apple job body."""
+        self.assertTrue(TAG_CALLER.is_file(), f"{TAG_CALLER.relative_to(REPO)} does not exist")
+        caller = read_hardened(TAG_CALLER)
+        on = caller["on"]
+        self.assertEqual(list(on), ["push"])
+        self.assertEqual(list(on["push"]), ["tags"])
+        self.assertEqual(on["push"]["tags"], read_release()["on"]["push"]["tags"])
+        globs = [tag_glob(pattern) for pattern in on["push"]["tags"]]
+        admitted = ["v1.2.3", "v0.0.1", "v10.20.30"]
+        refused = ["v1.2", "v1.2.3.4", "latest", "1.2.3", "v1.2.3-rc1", "v1.x.3", "vfoo"]
+        for name in examined("tag names", admitted + refused):
+            matched = any(glob.fullmatch(name) for glob in globs)
+            self.assertEqual(matched, name in admitted, f"the tag filter and `{name}`")
+        self.assertEqual(caller["jobs"], {"apple": {"uses": "./.github/workflows/xcframework.yml"}})
 
 
 class TheReleaseWorkflowIsHardened(unittest.TestCase):
