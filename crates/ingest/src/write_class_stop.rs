@@ -137,3 +137,18 @@ impl WriteClassStop {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::StopSetter;
+
+    #[test]
+    fn from_column_names_each_setter_the_row_stores() {
+        assert_eq!(StopSetter::from_column("owner"), Some(StopSetter::Owner));
+        assert_eq!(StopSetter::from_column("counts"), Some(StopSetter::Counts));
+        assert_eq!(StopSetter::from_column("other"), None);
+        for setter in [StopSetter::Owner, StopSetter::Counts] {
+            assert_eq!(StopSetter::from_column(setter.as_str()), Some(setter));
+        }
+    }
+}
