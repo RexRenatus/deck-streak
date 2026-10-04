@@ -137,7 +137,7 @@ file sets.
 
 - SPEC A1 to A5: the lone-character population, the joins, the disclosed class, the real tree, and
   SPEC-324's population.
-- The band's seven new rows, and S32411 and S32409 re-proved against their new killer.
+- The band's eight new rows (S33107 added in fix round 2), and S32411 and S32409 re-proved against their new killer.
 - A Lean entry, `TableCensusReach`: on every tree the reader's refusals are within dev's, and a lone
   file is never refused. A lone file's pieces are all of one character, none held by an item a
   macro's metavariable names; it includes no file and no file includes it; it names no other file's

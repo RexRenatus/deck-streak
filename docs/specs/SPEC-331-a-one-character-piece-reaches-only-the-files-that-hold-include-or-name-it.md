@@ -93,7 +93,7 @@ R6. The real tree's three censuses stay green. Every existing test is unchanged.
 |---|---|---|
 | A1 | the population A1 builds is planted for each census's own name. At each position `i` of the name, the pieces before and after `i` are lone literals in two files, and the character at `i` is a lone literal in a third. The third file holds it in each of five lone shapes: a method argument (#600's `strip_prefix` line among them), a `matches!` arm, a format template, a named `const` used alone, and a split set. A letter is planted in both cases. No file is refused, and the population's size is printed and asserted | `cargo test -p deck-streak-progression --test ledger_census -- --exact a_lone_character_unjoined_in_its_file_completes_no_path`, and the same test in `xp_census` and in `deck-streak-economy`'s `wallet_census` |
 | A2 | each join below is refused by the exact set of files holding its pieces: `concat!("xp_", "settlement")` in one file; a `const` holding `"xp_sett"` in one file joined with `"lement"` in another; `"XP_Settlement"`; a `stringify!` split; a char-by-char spelling in one file, as an array and as a push sequence; a one-character `const` or char array joined from another file or crate (`format!`, push, inline capture, glob import, renamed import); a one-character piece in a `static` struct field; a one-character `const` whose name a `macro_rules!` takes as an argument; multi-character pieces carried through a function's return value or argument; and a multi-character piece in another case, returned by a function in another crate, so that only the pool's case folding joins it | `cargo test -p deck-streak-progression --test xp_census -- --exact the_joins_the_census_names_stay_refused` |
-| A3 | a one-character piece that reaches its join only through a function's return value or argument, alone or beside a multi-character piece carried the same way, is not refused (the disclosed class) | `cargo test -p deck-streak-progression --test xp_census -- --exact a_character_carried_by_a_function_is_disclosed` |
+| A3 | a one-character piece that reaches its join only through a function's return value or argument, alone or beside a multi-character piece carried the same way, or only through a second step (a `const` naming another `const` across files, a renamed re-export, or an `include!` or `include_str!` inside a named item's initialiser), is not refused (the disclosed class) | `cargo test -p deck-streak-progression --test xp_census -- --exact a_character_carried_by_a_function_is_disclosed` |
 | A4 | the real tree: each census refuses nothing | `cargo test -p deck-streak-progression --test ledger_census -- --exact only_the_grant_port_writes_the_xp_ledger`, `cargo test -p deck-streak-progression --test xp_census -- --exact only_progression_writes_xp_settlement_and_only_coordination_settles`, `cargo test -p deck-streak-economy --test wallet_census -- --exact only_the_wallet_writes_the_coin_ledger` |
 | A5 | SPEC-324's population is judged as before: every spelling refused outside the owner and accepted inside it, near misses and controls accepted, fail-closed cases refused | `cargo test -p deck-streak-progression --test ledger_census -- --exact a_reserved_name_joined_from_literals_is_refused_in_every_spelling` and its `xp_census` and `wallet_census` twins, `pieces_that_do_not_cover_the_name_are_not_refused`, `a_name_the_census_cannot_resolve_fails_closed` |
 
@@ -114,12 +114,13 @@ A5: cargo test -p deck-streak-progression --test ledger_census -- --exact a_name
 ```
 
 Oracles. A1's trees are built from the name by position, so the planted set decides the expected
-verdict: none refused. A2's and A3's expected sets are the planted files. Neither oracle is the reader.
-The design harness measured A1's population at 85 trees for `xp_ledger`, 125 for `xp_settlement` and
-105 for `coin_ledger` (letters in both cases, `_` once, five shapes). dev's reader refuses every one
-of those trees (235, 355 and 295 files), so A1 is red at the base for its own reason; this SPEC's
-reader refuses none. A3 is red at the base too: dev refuses 2, 2 and 3 files. A2 is green at the base:
-it pins what dev already refuses, and the red-first record says so (`not red`).
+verdict: none refused. A2's and A3's expected sets are the planted files. Neither oracle is the
+reader. The design harness measured A1's population at 85 trees for `xp_ledger`, 125 for
+`xp_settlement` and 105 for `coin_ledger` (letters in both cases, `_` once, five shapes). dev's
+reader refuses every one of those trees (235, 355 and 295 files), so A1 is red at the base for its
+own reason; this SPEC's reader refuses none. A3 is red at the base too: dev refuses 2, 2 and 3 files
+for B1, B2 and B8, and 2 files each for O1, O2, O3 and O7 (15 in all). A2 is green at the base: it
+pins what dev already refuses, and the red-first record says so (`not red`).
 
 ## 4. File manifest
 
