@@ -137,10 +137,19 @@ PLANTED_REV = "0123456789abcdef0123456789abcdef01234567"
 PLANTED_URL_REV = "89abcdef0123456789abcdef0123456789abcdef"
 
 
-def planted_manifest(entry=None, comment="# ADR-058 (#233): the fix, until upstream carries it."):
-    """A planted root manifest whose patch takes anki from `entry`."""
+def planted_manifest(
+    entry=None, comment="# ADR-058 (#233): the fix, until upstream carries it.", others=""
+):
+    """A planted root manifest whose patch takes anki from `entry`, then the `others` lines."""
     entry = entry or f'{{ git = "{FORK}", rev = "{PLANTED_REV}" }}'
-    return f"[workspace.dependencies]\n{DEPENDENCY}\n\n{comment}\n{PATCH_HEADER}\nanki = {entry}\n"
+    return (
+        f"[workspace.dependencies]\n{DEPENDENCY}\n\n{comment}\n{PATCH_HEADER}\nanki = {entry}\n"
+        + others
+    )
+
+
+#: The patch line that takes anki_proto from the same fork commit as anki (ADR-348).
+PLANTED_PROTO = f'anki_proto = {{ git = "{FORK}", rev = "{PLANTED_REV}" }}\n'
 
 
 def planted_lock(sources=None, unused=""):
@@ -461,14 +470,63 @@ def planted_adr(
     )
 
 
+#: A planted commit at the tip of the fork's wasm32 patches (ADR-348).
+PLANTED_TIP = "fedcba9876543210fedcba9876543210fedcba98"
+#: The appended note's patch table (SPEC-338 R10).
+PATCH_TABLE_HEADER = ["patch", "commit", "reason", "removal condition"]
+
+
+def planted_note(
+    rev=PLANTED_TIP,
+    stat="22 files changed, 338 insertions(+), 69 deletions(-)",
+    last=PLANTED_TIP,
+    cited="ADR-336 and ADR-348",
+):
+    """A planted note appended to ADR-058 that moves the pin to `rev`, its patch table ending at
+    `last`."""
+    return (
+        f"\n## Note, appended by SPEC-0: the pin moves\n\n{cited} decided it. The pinned commit"
+        f" is `{rev}`.\n\n| record | measured |\n|---|---|\n"
+        f"| `git diff --stat 0.0 {rev[:7]}` on the fork | {stat} |\n\n"
+        f"| {' | '.join(PATCH_TABLE_HEADER)} |\n|---|---|---|---|\n"
+        f"| `first` | `{PLANTED_URL_REV}` | a reason | a condition |\n"
+        f"| `last` | `{last}` | a reason | a condition |\n"
+    )
+
+
 # ----------------------------------------------------------------------------------------- tests
 
 
 class TheEngineIsPatchedByRev(unittest.TestCase):
     def test_the_engine_is_patched_by_rev_to_a_commit_of_the_fork(self):
         self.assertEqual(pin_findings(planted_manifest(), planted_lock(), planted_deny()), [])
+        # ADR-348: anki_proto may join anki, from the same commit of the fork.
+        self.assertEqual(
+            pin_findings(planted_manifest(others=PLANTED_PROTO), planted_lock(), planted_deny()),
+            [],
+        )
         upstream = f"git+{UPSTREAM}?tag={TAG}#{PLANTED_URL_REV}"
         refusals = {
+            "anki_proto from another commit": (
+                planted_manifest(
+                    others=f'anki_proto = {{ git = "{FORK}", rev = "{PLANTED_URL_REV}" }}\n'
+                ),
+                planted_lock(),
+                planted_deny(),
+                [f"the patch takes anki_proto by rev {PLANTED_URL_REV}, not anki's {PLANTED_REV}"],
+            ),
+            "a third package patched": (
+                planted_manifest(
+                    others=PLANTED_PROTO
+                    + f'anki_io = {{ git = "{FORK}", rev = "{PLANTED_REV}" }}\n'
+                ),
+                planted_lock(),
+                planted_deny(),
+                [
+                    "the patch replaces ['anki', 'anki_io', 'anki_proto'], "
+                    "not anki alone or anki with anki_proto"
+                ],
+            ),
             "a patch by branch": (
                 planted_manifest(f'{{ git = "{FORK}", branch = "fix" }}'),
                 planted_lock(),
@@ -611,7 +669,31 @@ class DenyTomlIsLive(unittest.TestCase):
 class Adr058RecordsThePin(unittest.TestCase):
     def test_adr_058_records_the_pinned_commit_and_what_it_saves(self):
         self.assertEqual(confirmation_findings(planted_adr(), PLANTED_REV, "0.0"), [])
+        # SPEC-338 R10: a note appended after the Confirmation moves the pin, and the Confirmation
+        # keeps recording the fix's own commit.
+        self.assertEqual(
+            confirmation_findings(planted_adr() + planted_note(), PLANTED_TIP, "0.0"), []
+        )
         refusals = {
+            "a note whose patch table ends at another commit": (
+                planted_adr() + planted_note(last=PLANTED_URL_REV),
+                [
+                    f"ADR-058's note's patch table ends at `{PLANTED_URL_REV}`, "
+                    f"not the pinned commit `{PLANTED_TIP}`"
+                ],
+            ),
+            "a note with no diff stat": (
+                planted_adr() + planted_note(stat="a few files"),
+                [f"ADR-058's note records no `git diff --stat 0.0 {PLANTED_TIP[:7]}` count"],
+            ),
+            "a note that names neither ADR": (
+                planted_adr() + planted_note(cited="The seat"),
+                ["ADR-058's note names no ADR-336", "ADR-058's note names no ADR-348"],
+            ),
+            "a note over a Confirmation that lost the fix's diff stat": (
+                planted_adr(stat="`rslib/io/src/lib.rs`, 2 files changed") + planted_note(),
+                ["ADR-058's diff stat does not show one file, `rslib/io/src/lib.rs`"],
+            ),
             "a proposed status": (
                 planted_adr(status="proposed"),
                 ["ADR-058's status is 'proposed', not final (accepted or superseded)"],
