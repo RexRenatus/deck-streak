@@ -124,8 +124,8 @@ members' features allow (ADR-345 D6, R11) and judges the adapter's code as it ju
 
 ```mermaid
 flowchart TD
-  meta["cargo metadata with every feature on"] --> graph["the graph: every optional edge a feature can turn on"]
-  graph --> scripts{"a build script that reaches progression?"}
+  meta["cargo metadata with every feature on"] --> edges["the graph: every optional edge a feature can turn on"]
+  edges --> scripts{"a build script that reaches progression?"}
   scripts -- "yes" --> refuse1(["refused: it can name settle"])
   scripts -- "no" --> members["each member's declared features, as package/feature"]
   members --> forced{"does another package turn one on, by naming it or keeping its default?"}

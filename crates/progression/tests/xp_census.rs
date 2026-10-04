@@ -12,9 +12,10 @@
 //! with the unwind and the abort panic strategy), and every use of `settle` rustc reports is a
 //! caller, in the package cargo names: progression's own is accepted, coordination's goes to the
 //! cause rule, and any other package's is refused. What the compiler is not asked about is refused
-//! by construction: a workspace that does not build, a member's feature, a cargo configuration, a
-//! package in the repository outside the workspace, and a package from outside it that depends on
-//! progression.
+//! by construction: a workspace that does not build, a feature of one member that another member
+//! turns on, a cargo configuration, a package in the repository outside the workspace, and a
+//! package from outside it that depends on progression. The graph is read with every feature on
+//! (`--all-features`), and the passes compile every combination of the members' own features.
 //!
 //! The census's verdict depends only on the tree it judges (SPEC-072 §12, round 8). Progression is
 //! found by its manifest's path, never by its package's name, and a graph where that cannot be told
