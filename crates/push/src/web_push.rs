@@ -200,9 +200,13 @@ fn read(answer: &Answer) -> Sent {
     match answer.status.as_u16() {
         200..=299 => Sent::Delivered,
         404 | 410 => Sent::Gone { since: None },
+        413 => Sent::Rejected(Refusal::TooLarge),
+        401 | 403 => Sent::Rejected(Refusal::ProviderToken),
         429 | 500..=599 => Sent::RetryLater {
             after: answer.retry_after,
         },
+        400..=499 => Sent::Rejected(Refusal::Request),
+        300..=399 => Sent::Failed(Unreached::Redirect),
         _ => Sent::Failed(Unreached::Unexpected),
     }
 }
