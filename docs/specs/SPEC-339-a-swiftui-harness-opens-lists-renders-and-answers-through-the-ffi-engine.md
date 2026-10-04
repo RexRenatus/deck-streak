@@ -176,7 +176,7 @@ the red-first record discloses them as not red.
 | `crates/ffi/tests/render.rs` | `deck-streak-ffi` | added: A1 |
 | `crates/ffi/examples/harness-fixture.rs` | `deck-streak-ffi` | added: R11 |
 | `.github/workflows/xcframework.yml` | none (CI) | the fixture step, the two jobs, the `ios/**` path |
-| `scripts/tests/test_ci_workflows.py` | none (the gate) | A9 |
+| `scripts/tests/test_ci_workflows.py` | none (the gate) | A9 and its planted jobs; `plistlib` joins the read census's vetted modules, since A10 parses its plists with it |
 | `scripts/tests/test_ios_harness_tree.py` | none (the gate) | added: A10 and its planted trees |
 | `scripts/mutation-rows.d/S33900-S33999.json` | none (the gate) | added: the sixth pair's literal |
 | `.gitignore` | the workspace | the generated project, the placed framework, bindings and fixture, result bundles, the local signing include |
