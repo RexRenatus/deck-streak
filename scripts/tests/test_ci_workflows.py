@@ -680,6 +680,16 @@ class TheAppleBuildRunsFromOneBody(unittest.TestCase):
         self.assertNotEqual(plant, text)
         self.assertEqual(pull_request_reads(plant), ['- run: echo "${{ github.head_ref }}"'])
 
+    def test_the_apple_build_resolves_only_the_locked_graph(self):
+        text = workflow_file_text(WORKFLOWS / "xcframework.yml")
+        commands = examined("cargo commands", cargo_commands(text))
+        self.assertGreaterEqual(len(commands), 2)
+        for command in commands:
+            self.assertIn("--locked", command.split(" -- ")[0], command)
+        plant = text + "      - run: cargo build -p deck-streak-ffi\n"
+        unlocked = [c for c in cargo_commands(plant) if "--locked" not in c.split(" -- ")[0]]
+        self.assertEqual(unlocked, ["cargo build -p deck-streak-ffi"])
+
 
 def triggers(workflow):
     """{event: [branch, ...]} from a workflow's `on:` block, read without a YAML library. A branch
