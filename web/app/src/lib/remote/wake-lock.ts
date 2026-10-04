@@ -102,9 +102,13 @@ export interface Conditions {
   visible: boolean;
 }
 
-/** The name a refusal carries: a `DOMException`'s, or the error's own string. */
+/**
+ * The name a refusal carries: its `name`, as a `DOMException` has, whatever realm made it (a frame's
+ * `DOMException` is no instance of this realm's `Error`), or else the refusal's own text.
+ */
 function nameOf(error: unknown): string {
-  return error instanceof Error ? error.name : String(error);
+  const name = (error as { name?: unknown } | null | undefined)?.name;
+  return typeof name === 'string' ? name : String(error);
 }
 
 /**

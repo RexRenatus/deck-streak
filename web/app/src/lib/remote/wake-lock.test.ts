@@ -58,7 +58,11 @@ class FakeWakeLock {
   }
 
   deny(name: string): void {
-    this.#next().reject(new DOMException('synthetic refusal', name));
+    this.refuse(new DOMException('synthetic refusal', name));
+  }
+
+  refuse(error: unknown): void {
+    this.#next().reject(error);
   }
 }
 
@@ -211,5 +215,26 @@ describe('the wake lock holder', () => {
     expect(none.state).toBe('unsupported');
     none.set(ALL);
     expect(none.state).toBe('unsupported');
+  });
+
+  // MUTATION COVERAGE: green when written. A refusal is named by its `name` whatever realm made it,
+  // and one with no name, or no object at all, by its own text.
+  it('a refusal is named by its name, or else by its text', async () => {
+    const REFUSALS: [unknown, string][] = [
+      [{ name: 'NotAllowedError', message: 'from another realm' }, 'NotAllowedError'],
+      ['synthetic text', 'synthetic text'],
+      [{ name: 7 }, '[object Object]'],
+      [undefined, 'undefined'],
+      [null, 'null']
+    ];
+    for (const [error, name] of REFUSALS) {
+      const lock = new FakeWakeLock();
+      const holder = new WakeLockHolder(lock);
+      holder.set(ALL);
+      lock.refuse(error);
+      await holder.settled();
+      expect([holder.state, holder.refusal], String(error)).toEqual(['refused', name]);
+    }
+    console.log(`examined ${REFUSALS.length} refusals`);
   });
 });
