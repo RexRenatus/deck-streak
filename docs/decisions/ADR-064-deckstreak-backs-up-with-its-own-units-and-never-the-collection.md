@@ -108,3 +108,10 @@ the first restore drill on the host at gate 2, recorded privately.
 ADR-008; ADR-010; ADR-011; ADR-037; ADR-062; SPEC-021; SPEC-027; SPEC-064; the durable-services
 pack's backup stage; the Litestream documentation on `-config`, environment expansion,
 `restore -o`, snapshots and validation, read through Context7.
+
+## Note, 2026-10-04: the MCP server fills the share
+
+ADR-332 adds a fourth daemon, `deck-streak-mcp.service` (SPEC-119), with the ceilings ADR-032's note
+of this date records. The worst case is now the four daemons and the largest job, 704M, which fits
+the share of 704M with nothing left over: the next unit needs the share moved first, by this
+record's decision. The rest of this record stands.
