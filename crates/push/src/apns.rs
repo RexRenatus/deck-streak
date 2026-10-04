@@ -5,9 +5,14 @@ use std::fmt;
 use std::sync::Arc;
 use std::time::Duration;
 
-use deck_streak_kernel::Clock;
+use deck_streak_kernel::{Clock, UtcMillis};
+use http_body_util::Full;
+use hyper::Request;
+use hyper::body::Bytes;
+use hyper::header::AUTHORIZATION;
+use serde_json::json;
 
-use crate::client::{Client, Versions};
+use crate::client::{Answer, Client, Versions};
 use crate::jwt::Signer;
 use crate::{BuildError, Notification, Origin, Sent, Unreached};
 
@@ -121,9 +126,76 @@ impl ApnsSender {
 
     /// Sends `notification` to `device` and reads the answer into one outcome.
     pub async fn deliver(&self, device: &Device, notification: &Notification) -> Sent {
-        let _ = (device, notification, &self.client, &self.clock);
-        let _ = (&self.key_id, &self.team_id, &self.topic);
-        Sent::Failed(Unreached::Request)
+        let body = json!({
+            "aps": {"alert": {"title": notification.title(), "body": notification.body()}}
+        })
+        .to_string();
+        let now = self.clock.now();
+        let Some(token) = self.mint(now) else {
+            return Sent::Failed(Unreached::Request);
+        };
+        let Some(request) = self.request(device, notification, body, &token, now) else {
+            return Sent::Failed(Unreached::Request);
+        };
+        match self.client.post(request).await {
+            Ok(answer) => read(&answer),
+            Err(unreached) => Sent::Failed(unreached),
+        }
+    }
+
+    /// A provider token minted at `now`: ES256 over `{"alg","kid"}` and `{"iss","iat"}` (R3).
+    fn mint(&self, now: UtcMillis) -> Option<String> {
+        let header = json!({"alg": "ES256", "kid": self.key_id});
+        let claims = json!({"iss": self.team_id, "iat": now.epoch_millis().div_euclid(1000)});
+        self.signer.token(&header, &claims)
+    }
+
+    /// The request for `notification` to `device`, carrying `token`; `None` when a header cannot
+    /// carry a configured value.
+    fn request(
+        &self,
+        device: &Device,
+        notification: &Notification,
+        body: String,
+        token: &str,
+        now: UtcMillis,
+    ) -> Option<Request<Full<Bytes>>> {
+        let _ = &self.production;
+        let origin = &self.development;
+        let mut request = Request::post(format!("{}/3/device/{}", origin.as_str(), device.token))
+            .header(AUTHORIZATION, format!("bearer {token}"))
+            .header("apns-push-type", "alert")
+            .header("apns-priority", "10")
+            .header("apns-topic", self.topic.as_str())
+            .header(
+                "apns-expiration",
+                expiration(now, notification.time_to_live()),
+            );
+        if let Some(key) = notification.collapse_key() {
+            request = request.header("apns-collapse-id", key.as_str());
+        }
+        request.body(Full::new(Bytes::from(body))).ok()
+    }
+}
+
+/// `apns-expiration`: the epoch second after which APNs stops trying, the clock's second plus the
+/// time to live, or `0` for a notification that lives no time at all (R2).
+fn expiration(now: UtcMillis, time_to_live: Duration) -> String {
+    if time_to_live.is_zero() {
+        return "0".to_owned();
+    }
+    let seconds = i64::try_from(time_to_live.as_secs()).unwrap_or(i64::MAX);
+    now.epoch_millis()
+        .div_euclid(1000)
+        .saturating_add(seconds)
+        .to_string()
+}
+
+/// The outcome APNs's answer stands for (R4).
+fn read(answer: &Answer) -> Sent {
+    match answer.status.as_u16() {
+        200..=299 => Sent::Delivered,
+        _ => Sent::Failed(Unreached::Unexpected),
     }
 }
 
