@@ -1,0 +1,46 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S33701-THE-STEP-REFUSES-A-BRANCH-OR-A-SHORT-COMMIT",
+        ".github/workflows/release.yml",
+        "if ! [[ \"$rev\" =~ ^[0-9a-f]{40}$ ]]; then",
+        "if false; then",
+        "the release step refuses a patch entry whose rev is a branch or a short commit before cargo runs (SPEC-337 R1, A2)",
+        "test_release_workflow.TheReleaseBuildsTheSyncServer.test_the_build_step_reads_the_fork_and_the_commit_from_the_engines_patch_entry"
+      ],
+      [
+        "S33702-THE-SERVER-IS-BUILT-WITH-THE-FORKS-OWN-LOCKFILE",
+        ".github/workflows/release.yml",
+        "cargo install --locked --git",
+        "cargo install --git",
+        "the server is built with --locked, from the fork's own lockfile (SPEC-337 R1, ADR-347 D1)",
+        "test_release_workflow.TheReleaseBuildsTheSyncServer.test_the_build_step_reads_the_fork_and_the_commit_from_the_engines_patch_entry"
+      ],
+      [
+        "S33703-THE-STEP-HOLDS-NO-SECOND-COPY-OF-THE-COMMIT",
+        ".github/workflows/release.yml",
+        "--rev \"$rev\"",
+        "--rev 0123456789abcdef0123456789abcdef01234567",
+        "the step reads the commit from the patch entry at run time and holds no second copy of it (SPEC-337 R1, A1)",
+        "test_release_workflow.TheReleaseBuildsTheSyncServer.test_the_sync_server_is_built_after_the_guard_and_shipped_in_the_tarball"
+      ],
+      [
+        "S33704-THE-TARBALL-CARRIES-THE-SERVER",
+        ".github/workflows/release.yml",
+        "install -m 0755 \"$RUNNER_TEMP/sync-server/bin/anki-sync-server\" \"$stage/bin/anki-sync-server\"",
+        "true",
+        "the tarball carries the server as bin/anki-sync-server before the manifest is written (SPEC-337 R1, A1)",
+        "test_release_workflow.TheReleaseBuildsTheSyncServer.test_the_sync_server_is_built_after_the_guard_and_shipped_in_the_tarball"
+      ],
+      [
+        "S33705-THE-SERVER-IS-THE-FORKS-NOT-UPSTREAMS",
+        ".github/workflows/release.yml",
+        "print(entry[\"git\"], entry[\"rev\"])",
+        "print(\"https://github.com/ankitects/anki.git\", entry[\"rev\"])",
+        "the step builds the fork the patch entry names, never upstream (SPEC-337 R1, A2)",
+        "test_release_workflow.TheReleaseBuildsTheSyncServer.test_the_build_step_reads_the_fork_and_the_commit_from_the_engines_patch_entry"
+      ]
+    ]
+  }
+}
