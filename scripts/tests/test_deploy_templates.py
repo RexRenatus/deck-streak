@@ -42,6 +42,8 @@ BACKUP_SERVICE_NAME = "deck-streak-backup.service"
 DRILL_SERVICE_NAME = "deck-streak-restore-drill.service"
 # SPEC-337: the sync server, its launcher, and the settings file's one key the launcher reads.
 SYNC_SERVER_SERVICE_NAME = "deck-streak-sync-server.service"
+# The stopped-server window that copies the sync server's store for the snapshot (ADR-347 D12).
+SYNC_SNAPSHOT_SERVICE_NAME = "deck-streak-sync-snapshot.service"
 SYNC_LAUNCHER = DEPLOY / "scripts" / "sync-server.sh"
 # The variables the sync server reads its users from, `name:<hash>` each: only its launcher sets
 # them, from the unit's credentials, so no unit and no settings line may (ADR-347 D2).
@@ -96,6 +98,8 @@ SCRIPTS = {
     # SPEC-064: the daily backup and the weekly drill run scripts of the release as well.
     BACKUP_SERVICE_NAME: f"/usr/bin/python3 {RELEASE}/deploy/scripts/backup.py",
     DRILL_SERVICE_NAME: f"{RELEASE}/deploy/scripts/restore-drill.sh",
+    # SPEC-337: the snapshot's window runs the backup script's copy alone.
+    SYNC_SNAPSHOT_SERVICE_NAME: f"/usr/bin/python3 {RELEASE}/deploy/scripts/backup.py --sync-window",
 }
 # Their lifecycle: a oneshot each, ended before its timer is due again; the two a timer starts
 # yield to the daemons as a job does (resources.batch-priority), and the alert pages at once.
@@ -125,6 +129,9 @@ OBSERVABILITY_SERVICE = {
         "Nice": "10",
         "IOSchedulingClass": "idle",
     },
+    # The window runs with the sync server stopped, so it is bounded and does not yield (ADR-347
+    # D12; its unit waives resources.batch-priority with that why).
+    SYNC_SNAPSHOT_SERVICE_NAME: {"Type": "oneshot", "TimeoutStartSec": "15min"},
 }
 # SPEC-064 R1: the Litestream daemon, an exec service that restarts on failure and can trip its
 # start limit; it has no watchdog, since Litestream does not notify systemd.
@@ -197,6 +204,7 @@ ROLE_CREDENTIALS = {
     LITESTREAM_SERVICE_NAME: (),
     BACKUP_SERVICE_NAME: (),
     DRILL_SERVICE_NAME: (),
+    SYNC_SNAPSHOT_SERVICE_NAME: (),
     SYNC_SERVER_SERVICE_NAME: ("SYNC_SERVER_OWNER", "SYNC_SERVER_STAGING"),
 }
 # The role each service runs (R2); the job template's `%i` is its instance, the job's id.
@@ -280,9 +288,12 @@ PER_SERVICE = {
     f"{ALERT_TEMPLATE}@.service": (None, None, ROLES_NETWORK, "systemd-journal"),
     SLO_SERVICE: ("deck-streak-slo", None, "AF_UNIX", "systemd-journal"),
     WATCH_SERVICE: ("deck-streak-memory-watch", None, "AF_UNIX", None),
-    # SPEC-064: the replicator and the drill reach the bucket; the backup opens no socket.
+    # SPEC-064: the replicator and the drill reach the bucket, and so does the backup since the
+    # sync server's snapshot is copied offsite (SPEC-337 R5).
     LITESTREAM_SERVICE_NAME: ("deck-streak", ENVIRONMENT_FILE, ROLES_NETWORK, None),
-    BACKUP_SERVICE_NAME: ("deck-streak", None, "AF_UNIX", None),
+    BACKUP_SERVICE_NAME: ("deck-streak", ENVIRONMENT_FILE, ROLES_NETWORK, None),
+    # SPEC-337: the window reads the server's store, writes beside the backups, opens no socket.
+    SYNC_SNAPSHOT_SERVICE_NAME: ("deck-streak deck-streak-sync-server", None, "AF_UNIX", None),
     DRILL_SERVICE_NAME: ("deck-streak", ENVIRONMENT_FILE, ROLES_NETWORK, None),
     # SPEC-337: the sync server keeps its users' data in its own directory and listens on loopback.
     SYNC_SERVER_SERVICE_NAME: (
@@ -339,6 +350,7 @@ WAIVED = {
     ("deck-streak-memory-watch.timer", "calendar-not-persistent"),
     ("deck-streak-litestream.service", "watchdog-missing"),
     (SYNC_SERVER_SERVICE_NAME, "watchdog-missing"),
+    (SYNC_SNAPSHOT_SERVICE_NAME, "batch-priority-missing"),
 }
 
 
@@ -430,9 +442,17 @@ def credential_ids():
 
 
 def declared_settings():
-    """Every setting the workspace's code names: a `DECKSTREAK_*` constant in `crates/*/src`, and
-    a `DECKSTREAK_*` variable the sync server's launcher reads (SPEC-337 R2)."""
+    """Every setting the workspace's code names: a `DECKSTREAK_*` constant in `crates/*/src`, a
+    `DECKSTREAK_*` variable the sync server's launcher reads (SPEC-337 R2), and a `DECKSTREAK_*`
+    constant the daily backup reads for the snapshot's offsite copy (SPEC-337 R5)."""
     found = set(re.findall(r"\$\{(DECKSTREAK_[A-Z_]+)", SYNC_LAUNCHER.read_text(encoding="utf-8")))
+    found.update(
+        re.findall(
+            r'^[A-Z_]+ = "(DECKSTREAK_[A-Z_]+)"$',
+            (REPO / "deploy" / "scripts" / "backup.py").read_text(encoding="utf-8"),
+            re.MULTILINE,
+        )
+    )
     for source in (REPO / "crates").glob("*/src/**/*.rs"):
         found.update(
             re.findall(r'pub const [A-Z_]+: &str = "(DECKSTREAK_[A-Z_]+)";', source.read_text())
@@ -1009,6 +1029,7 @@ class TheTemplatesFitTheHostBudget(unittest.TestCase):
                     SLO_SERVICE,
                     BACKUP_SERVICE_NAME,
                     DRILL_SERVICE_NAME,
+                    SYNC_SNAPSHOT_SERVICE_NAME,
                 ]
             ),
         )
@@ -1441,7 +1462,10 @@ class TheServicesRunTheirRoles(unittest.TestCase):
                 )
                 for key, value in OBSERVABILITY_SERVICE[unit.name].items():
                     self.assertEqual(last(unit, "Service", key), value, f"{unit.rel} {key}")
-                self.assertEqual(unit.values("Install", "WantedBy"), [], "a timer or a failure")
+                # A timer or a failure starts each, and the backup's run starts the snapshot's
+                # window, which runs first (ADR-347 D12).
+                wanted = [BACKUP_SERVICE_NAME] if unit.name == SYNC_SNAPSHOT_SERVICE_NAME else []
+                self.assertEqual(unit.values("Install", "WantedBy"), wanted, unit.rel)
                 continue
             if unit.name == LITESTREAM_SERVICE_NAME:
                 # SPEC-064 R1: the replicator runs the binary the rail provides with the release's

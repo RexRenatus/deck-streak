@@ -177,7 +177,9 @@ PAGING_KEYS = {
         # pack reads it, systemd ignores it).
         WAIVE_KEY,
     ),
-    "Install": ("WantedBy",),
+    # `Also=` acts when the unit is enabled or disabled, never on a start or a failure
+    # (systemctl(1)); its one value is the sync server's snapshot window (ADR-347 D12).
+    "Install": ("Also", "WantedBy"),
     "Service": (
         "CPUQuota",
         "CapabilityBoundingSet",
@@ -242,6 +244,8 @@ PAGING_VALUES = {
     ("Service", "ReadWritePaths"): ("/run/deck-streak-sync",),
     # The sync server drains on an interrupt alone (SPEC-337 R2), so its stop signal is that one.
     ("Service", "KillSignal"): ("SIGINT",),
+    # Enabling the sync server enables its snapshot window, and disabling it removes the window.
+    ("Install", "Also"): ("deck-streak-sync-snapshot.service",),
 }
 
 

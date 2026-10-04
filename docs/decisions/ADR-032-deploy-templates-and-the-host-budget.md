@@ -154,6 +154,7 @@ form:
 | unit | memory_high | memory_max | why |
 |---|---|---|---|
 | `deck-streak-sync-server.service` (SPEC-337) | 384M | 448M | one full upload of ADR-022's synthetic collection peaks at about 319 MiB resident, under `MemoryHigh` |
+| `deck-streak-sync-snapshot.service` (SPEC-337) | 48M | 64M | the stopped-server window's copy streams the online backup page by page, as the daily backup does (ADR-347 D12) |
 
 The daemons' processor caps divide the share's two processors exactly, as ADR-347 D7 splits them:
 the sync server's three quarters of a processor are taken from the bot's, the replicator's and the

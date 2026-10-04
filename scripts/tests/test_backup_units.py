@@ -324,10 +324,11 @@ class BackupUnits(unittest.TestCase):
                 size_bytes(unit.last("Service", "MemoryHigh")),
                 size_bytes(unit.last("Service", "MemoryMax")),
             )
-            # The two that reach the bucket expand it from the required settings file.
+            # All three reach a bucket, the backup for the sync server's snapshot (SPEC-337 R5),
+            # and each expands it from the required settings file.
             self.assertEqual(
                 unit.values("Service", "EnvironmentFile"),
-                [] if unit.name == BACKUP else ["/etc/deck-streak/deck-streak.env"],
+                ["/etc/deck-streak/deck-streak.env"],
                 unit.name,
             )
         # The three backup copies: the script keeps three, once a day.

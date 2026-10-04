@@ -35,6 +35,20 @@
       "neutral": ["/usr/bin/python3 /usr/local/lib/deck-streak/current/deploy/scripts/backup.py"]
     },
     {
+      "unit": "deck-streak-backup.service",
+      "section": "Service",
+      "key": "EnvironmentFile",
+      "neutral": ["/etc/deck-streak/deck-streak.env"]
+    },
+    {
+      "unit": "deck-streak-sync-snapshot.service",
+      "section": "Service",
+      "key": "ExecStart",
+      "neutral": [
+        "/usr/bin/python3 /usr/local/lib/deck-streak/current/deploy/scripts/backup.py --sync-window"
+      ]
+    },
+    {
       "unit": "deck-streak-backup.timer",
       "section": "Timer",
       "key": "OnCalendar",

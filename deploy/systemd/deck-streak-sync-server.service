@@ -68,3 +68,6 @@ CapabilityBoundingSet=
 
 [Install]
 WantedBy=multi-user.target
+# Enabling the server enables the snapshot's stopped-server window in the daily backup's run, and
+# disabling it removes the window (ADR-347 D12).
+Also=deck-streak-sync-snapshot.service
