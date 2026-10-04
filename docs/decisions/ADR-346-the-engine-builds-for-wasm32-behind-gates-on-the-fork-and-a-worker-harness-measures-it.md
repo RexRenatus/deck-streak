@@ -69,7 +69,7 @@ choices; the measurements are SPEC-335's section 7.
 
 - Playwright with a persistent profile in both browsers: chosen because WebKit refuses the OPFS root in Playwright's default ephemeral context, and a persistent profile runs in both.
 - Playwright's default ephemeral context: rejected because WebKit refuses OPFS there, so WebKit could not be measured.
-- A WebKit run on a hosted CI runner from a workflow on the fork's branch: dropped because adding a workflow file to the fork needs a permission the spike's push did not hold, and the branch now carries no workflow.
+- A WebKit run on a hosted CI runner from a workflow on the fork's branch: dropped: the harness runs on a persistent local profile instead, and the branch now carries no workflow.
 
 ## Decision Outcome
 
