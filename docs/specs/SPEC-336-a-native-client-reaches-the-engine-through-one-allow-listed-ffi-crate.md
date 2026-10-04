@@ -1,7 +1,7 @@
 # SPEC-336: a native client reaches the engine through one allow-listed FFI crate
 
-- **Issue:** none yet: a spike, whose campaign issue is not filed (section 5). **Context(s):**
-  `deck-streak-ffi`, an adapter at the edge that depends on no context.
+- **Issue:** #615, the app campaign's FFI spike. **Context(s):** `deck-streak-ffi`, an adapter at
+  the edge that depends on no context.
 - **Decided by:** ADR-345 (one adapter crate, the UniFFI pin, the generator behind a feature, the
   macOS job, and a generator binary that refuses without its feature), resting on ADR-022 and
   ADR-058 for the engine.
