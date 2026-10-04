@@ -6,13 +6,16 @@ entry, `.github/workflows/release.yml`, `deploy/systemd/`, `deploy/caddy/deck-st
 `deploy/host-budget.json`) and against ADR-340 as proposed. Added by SPEC-337; ADR-347 decides
 it, under ADR-340 (the move), ADR-058 and ADR-336 (the fork), ADR-032 (the budget), ADR-064 (the
 backup), ADR-010 and ADR-038 (the credentials). Every host step in it is the owner's go (#161).
+The snapshot's window was read at this delivery's c54c898d
+(`deploy/systemd/deck-streak-sync-snapshot.service`, `deploy/scripts/backup.py`), after ADR-347 D12.
 
 ## The data flow
 
 One pin feeds the build; one tarball carries the server beside `deckstreakd`; the deploy that
 verifies the tarball (ADR-062) installs it; the unit reads its users from the credential socket;
-the edge is the only way in; the daily backup snapshots the server's data and copies it offsite;
-the weekly drill restores the copy and opens it.
+the edge is the only way in; the daily backup's run stops the server for a window, copies its
+data from that one stopped generation and starts it again, then checks, archives and copies the
+copy offsite; the weekly drill restores the copy and opens it.
 
 ```mermaid
 flowchart LR
@@ -27,7 +30,8 @@ flowchart LR
   route["the Caddy block on the web app's origin<br/>/anki-sync/ : TLS, body bound, read buffer"]
   clients["desktop, AnkiMobile, the app"]
   base["SYNC_BASE<br/>user/collection.anki2<br/>user/media.db, user/media/"]
-  snapshot["backup.py: online copy of each database,<br/>integrity_check, the media files,<br/>one archive with its digests"]
+  window["deck-streak-sync-snapshot.service, the window:<br/>the server stopped, each database's online copy<br/>and the media files from one stopped generation,<br/>published whole, the server started again"]
+  snapshot["backup.py, after the restart:<br/>integrity_check, one archive<br/>with its digests"]
   offsite["the offsite bucket, named by configuration<br/>no public access, no listing"]
   drill["restore-drill.sh: the newest archive<br/>into a scratch directory, digests,<br/>integrity_check, the collection opened"]
 
@@ -37,7 +41,7 @@ flowchart LR
   socket --> launcher --> unit
   clients -- HTTPS --> route -- loopback --> unit
   unit --> base
-  base --> snapshot --> offsite --> drill
+  base --> window --> snapshot --> offsite --> drill
 ```
 
 | edge | what crosses it | where it is decided |
@@ -46,12 +50,14 @@ flowchart LR
 | build to tarball | one binary, digested by MANIFEST.sha256 and covered by the one attestation | ADR-062, SPEC-337 R1 |
 | socket to launcher | two entries of the form `name:<PHC hash>`, never a password | ADR-347 D2, SPEC-337 R2 |
 | route to unit | requests under `/anki-sync/` with the prefix stripped; the server's health route answers 404 at the edge | ADR-347 D4, SPEC-337 R4 |
-| base to snapshot | a consistent copy of each database while the server runs (SQLite's online backup), never a file copy | ADR-347 D5, ADR-064 |
+| base to window | with the server stopped, each user's two databases by SQLite's online backup, refused at once when a process holds one, and the media files, all from one stopped generation; the server is started again on success and on failure | ADR-347 D12, SPEC-337 R5 |
+| window to snapshot | one generation, published by a rename only when whole; the check, the archive and its digests run on it after the restart | ADR-347 D12, ADR-064 |
 | offsite to drill | the archive, restored into a scratch directory the drill removes | ADR-347 D5, SPEC-337 R5 |
 
-The `base to snapshot` edge waits: the server holds each user's `media.db` locked for its whole
-life, so the online backup cannot read it while the server runs (SPEC-337 §6), and the snapshot's
-form is the owner's to choose (#617).
+The server holds each user's `media.db` locked for its whole life, so no copy reads it while the
+server runs (SPEC-337 §6); the window is where the copy reads (ADR-347 D12). The window's
+interleavings, the server's stop and start, a client's sync and the copy, are the model
+`formal/tla/SyncSnapshotWindow`'s.
 
 ## The cutover as a state sequence
 

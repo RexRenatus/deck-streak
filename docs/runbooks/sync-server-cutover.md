@@ -17,6 +17,7 @@ names none.
 | the new server | `deck-streak-sync-server.service` on a loopback address, behind the Caddy block's `/anki-sync/` route (SPEC-337 R2, R4) |
 | its store | the unit's own state directory, one directory per sync user, each holding `collection.anki2`, `media.db` and `media/` |
 | its two users | the owner's and the staging user's (ADR-344), read from the credential socket as a user name and a pbkdf2-sha256 hash each (ADR-347 D2) |
+| its snapshot | `deck-streak-sync-snapshot.service`, a stopped-server window the daily backup's run pulls in: the server is stopped for a few seconds, its store is copied, and the server is started again whatever the copy does; the backup then checks the copy, archives it and copies the archive offsite, and the weekly drill restores the newest (ADR-347 D12) |
 | the old server | untouched by every step; the rollback points every client back at it |
 
 ## The hold
@@ -56,8 +57,9 @@ to be the cutover's own.
 
 A host step, on the owner's go (#161). On the host: the unit's two credentials go into the
 credential store the rail reads (ADR-038), the Caddy block is rendered with its fourth key and
-installed, and the unit is started. Its store holds no collection: no user has synced. Check that
-the unit is active and that a login of the staging user through the route is answered. A failure
+installed, and the unit is enabled and started, which enables its snapshot window as well. Its
+store holds no collection: no user has synced. Check that the unit is active and that a login of
+the staging user through the route is answered. A failure
 here moves nothing of the owner's: `rolled_back` is only the unit stopped.
 
 ### `rehearsed`: the staging user's rehearsal
@@ -126,8 +128,9 @@ and the old server is kept until the owner retires it.
 ### `rolled_back`: every client back on the old server
 
 A host step, on the owner's go (#161). Any step from `started` to `app` that fails rolls back: the
-new unit is stopped on the host, and each client that was repointed is pointed back at the old
-server, desktop last, and syncs once. The old server holds the state of the freeze, so nothing
+new unit is stopped and disabled on the host, which removes its snapshot window from the daily
+backup too, and each client that was repointed is pointed back at the old server, desktop last, and
+syncs once. The old server holds the state of the freeze, so nothing
 studied before it is lost. A study made on the new server after `uploaded` is not on the old server:
 the runbook rolls back before any study on the new server, or not at all.
 
@@ -135,5 +138,9 @@ the runbook rolls back before any study on the new server, or not at all.
 
 - The memory watch reads the server's real peak after the first syncs (SPEC-031), against the
   figure SPEC-337 measured with ADR-022's shape.
-- Until the snapshot's part lands (SPEC-337 §6), the copies of the owner's collection are the
+- The daily backup's run takes the snapshot in its stopped-server window (ADR-347 D12). For the
+  window's few seconds no client can sync: a sync in flight is refused whole, and the client syncs
+  again at its next sync. A failed copy, or a window that outlasts its bound, starts the server
+  again and pages. Disabling the server removes the window.
+- Until the first archive is in the offsite bucket, the copies of the owner's collection are the
   clients' own, desktop's backup from `frozen`, and the old server's untouched store.

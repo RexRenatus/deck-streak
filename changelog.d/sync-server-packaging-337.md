@@ -32,3 +32,17 @@
   cutover's full upload held to a first reading under the sync server's real quota, which stops
   the cutover on a client failure or a long stall.
 - A test that reads the runbook against the schematic's states, their order and each step's go.
+- The sync server's store has a daily offsite snapshot (SPEC-337, ADR-347 D12, #617): the daily
+  backup's run pulls in a stopped-server window, `deck-streak-sync-snapshot.service`, which stops
+  the server, copies each user's two databases and media files from that one stopped generation,
+  refusing at once a database a process still holds, publishes the copy only when whole, and has
+  the server started again whether the copy succeeds or fails; the backup then checks each
+  database, archives the copy with its sha256 digests, copies the archive to an offsite bucket
+  named by configuration and keeps three, and the weekly drill restores the newest archive,
+  checks it and opens each collection. Enabling the server enables the window, and disabling it
+  removes the window.
+- Tests that hold the window's ordering, its restart on success and failure, its bound and its lack
+  of any condition or new privilege, run the copy against a held database and a planted failure,
+  and run the daily archive and the drill over scratch stores; a TLA+ model of the window,
+  `formal/tla/SyncSnapshotWindow`, with a witness for each of its four properties; and the privacy
+  policy's disclosure of the snapshots among the copies an erase cannot reach.

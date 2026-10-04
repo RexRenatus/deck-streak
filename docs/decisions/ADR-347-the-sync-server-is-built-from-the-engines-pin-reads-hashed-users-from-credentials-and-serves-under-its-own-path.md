@@ -228,3 +228,74 @@ D11, a full upload the client reports as failed:
 - Reading the collection back by a second client's full download: rejected because it adds a
   whole collection's download to the frozen window, and puts a client on the new server before
   the counts are known.
+
+## Amendment: the snapshot in a stopped-server window (SPEC-337)
+
+D5 chose SQLite's online backup of both databases while the server runs. Measured since (SPEC-337
+§6): the server holds each user's `media.db` in SQLite's exclusive locking mode for its whole life,
+so that backup is refused while the server runs, and D5's form cannot take the media index. D5's
+rejection of stopping the server ("a daily window in which no client can sync") is outweighed by
+that measurement: one owner, a window of seconds, and a client that syncs again at its next sync.
+This amendment replaces D5's chosen form for the copy and that one rejection; the archive, its
+digests, the offsite copy, the bucket's rules and the drill stand as D5 decided them. It also
+replaces the Decision Outcome's sentence that the snapshot enters the privacy record in a later
+part: this part enters it (`PRIVACY.md`, `privacy.json`).
+
+D12, the snapshot's window:
+
+- A oneshot unit of its own, `deck-streak-sync-snapshot.service`, which the daily backup's run pulls
+  in and which runs before it. Its start stops the server first (`Conflicts=` and `After=` the
+  server), copies each user's `collection.anki2` and `media.db` by the online backup with no busy
+  wait (a progress callback refuses the first busy or locked step, so a process still holding a
+  database fails the copy at once) and the `media/` files, all from the one stopped generation,
+  into one file published by a rename only when it is whole. PID 1 starts the server again whether
+  the copy succeeds or fails (`OnSuccess=` the server; `OnFailure=` the server and the alert). The
+  start is bounded (`TimeoutStartSec=`), and a timeout is a failure, so it starts the server too.
+  The integrity check, the archive, its digests and the offsite copy run on the copies in the
+  backup's own run, after the restart. The window carries no condition and is gated by being
+  enabled: the server's `[Install] Also=` names it and its `WantedBy=` is the backup, so enabling
+  the server enables the window and disabling the server removes it. Every stop and start is a job
+  PID 1 enqueues, so neither unit needs a grant and the rail is unchanged — chosen, because the
+  measured lock leaves no consistent copy of `media.db` while the server runs, and the window adds
+  no schedule, no grant and no rail change.
+- The collection and the media files without `media.db`: rejected because the collection is held
+  the same way after a normal sync, per the fork's source, and rebuilding the media index from the
+  files alone is not measured.
+- A patch to the engine fork that releases the lock: rejected because it widens the fork for an
+  operations convenience, and ADR-336 keeps the fork's patches minimal.
+- Taking the snapshot as a sync client: rejected because it puts a plaintext credential on the host
+  and costs a full download every night.
+- A condition on the window, such as a path the server's store must hold: rejected because a
+  condition is checked when the start job runs, after the stop the same transaction already holds,
+  and a skipped start fires neither `OnSuccess=` nor `OnFailure=`, which leaves the server stopped
+  (systemd.unit(5), "Conditions and Asserts"); the model's witness `a-window-gated-by-a-condition`
+  reaches exactly that state.
+- The backup stopping and starting the server by `systemctl`: rejected because the service user
+  would need a new grant to stop another unit, which is a new privilege and a change to the rail.
+- A plain file copy of the stopped databases: rejected because a server that ended without a clean
+  close leaves a write-ahead log beside its database, which a copy of the main file alone loses and
+  the online backup reads through.
+
+What else moves with it, each bounded to the snapshot:
+
+- The backup's unit reaches the bucket for the offsite copy: `RestrictAddressFamilies=` gains
+  `AF_INET` and `AF_INET6`, and it reads the settings file (`EnvironmentFile=`) for the copy's
+  command and the bucket's name. It gains no other permission.
+- The census of keys a paging unit may hold (`scripts/tests/_units.py`, `PAGING_KEYS`) admits
+  `Also=` under `[Install]`, and its table of values (`PAGING_VALUES`) bounds it to the one value,
+  the window's name; any other value is refused, by key and value.
+- The window waives the batch-priority rule with its why: it runs with the server stopped, so it
+  must not yield.
+
+The model `formal/tla/SyncSnapshotWindow` holds the window's interleavings: the copy reads only
+while the server is stopped, the archived pair comes from one generation, a client's sync in the
+window is refused whole and never half-applied, and the server is up again after every window, a
+failed copy included, under fairness on the start. Each property has a witness the check catches:
+the copy not ordered after the stop, a generation published before it is whole, a session
+committed step by step, a write that lands during the copy, a failed copy that starts nothing, and
+a window gated by a condition.
+
+What would make D12 wrong: the fork stops holding `media.db` for the server's life (the online
+backup while it runs is then D5's again); the engine stops applying a sync in one transaction (the
+refusal is then no longer whole, and the model's switch for it reads the change); or the copy
+outgrows its bound, which the window's failure pages as it pages a failed copy.

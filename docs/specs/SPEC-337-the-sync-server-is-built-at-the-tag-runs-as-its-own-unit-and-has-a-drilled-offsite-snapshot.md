@@ -3,11 +3,11 @@
 - **Issue:** #617 (the app campaign's packaging item; the host commands are #161). **Context(s):**
   none (the release workflow and the deploy templates, not a bounded context).
 - **Decided by:** ADR-347 (the build, the credential path, the unit's name, the route, the snapshot's
-  form, the runbook's place, the cutover's data path), under ADR-340 (the move), ADR-058 and ADR-336 (the fork), ADR-032 (the
+  form and its stopped-server window, the runbook's place, the cutover's data path), under ADR-340 (the move), ADR-058 and ADR-336 (the fork), ADR-032 (the
   host budget), ADR-064 (the backup), ADR-010 and ADR-038 (the credentials).
-- **Status:** delivered in parts by the pull requests that add and extend this file. This part
-  delivers R1 to R4 and R6 (section 3) and the measurement R3 needs (section 1); section 7 names the
-  part after it. **Mutation band:** S33700-S33799 (section 8).
+- **Status:** this pull request delivers R1 to R7 (section 3 and section 8), the measurement R3
+  needs (section 1) and the measurements that decided the snapshot's window (sections 6 and 10).
+  **Mutation band:** S33700-S33799 (section 8). **Model:** `formal/tla/SyncSnapshotWindow`.
 
 ## 1. The problem, measured
 
@@ -56,11 +56,17 @@ R4. The Caddy block serves the server on the web app's origin under `/anki-sync/
     redirects to the slash form, the prefix is stripped, the server's own health route answers 404
     at the edge, the request body is bounded at the server's own payload limit, and the proxy reads
     with a larger buffer; the security headers and the hidden health routes stay as they are.
-R5. The daily backup also snapshots `SYNC_BASE` (each user's two databases by SQLite's online
-    backup and `PRAGMA integrity_check`, the media files, one archive with its sha256 digests),
-    copies it to an offsite bucket whose name is configuration and which admits no public access
-    and no listing, and the weekly restore drill restores the newest archive into a scratch
-    directory, checks it and opens the collection.
+R5. The daily backup's run also snapshots `SYNC_BASE` in a stopped-server window (ADR-347 D12): a
+    oneshot unit of its own, ordered before the backup, stops the server, copies each user's two
+    databases by SQLite's online backup, refused at once when a process holds them, and the media
+    files from that one stopped generation, publishes the copy only when it is whole, and the
+    server is started again whether the copy succeeds or fails. After the restart the backup checks
+    each database with `PRAGMA integrity_check`, writes one archive with its sha256 digests, copies
+    it to an offsite bucket whose name is configuration and which admits no public access and no
+    listing, and keeps three; the weekly restore drill restores the newest archive into a scratch
+    directory, checks it and opens the collection. Enabling the server enables the window, and
+    disabling the server removes it. The privacy policy names the snapshots among the copies an
+    erase cannot reach, with where they are kept.
 R6. `docs/runbooks/sync-server-cutover.md` holds ADR-340's cutover in order, the staging rehearsal
     first, each host step marked as the owner's go (#161), the rollback, and the owner's own acts;
     it names no host, address, provider, date or secret.
@@ -69,7 +75,7 @@ R7. Every new Python or shell function a test owns, and the release step's guard
 
 ## 3. Acceptance criteria
 
-This part's criteria (R1 to R4, and R6). Section 7 holds the rest.
+Every criterion, R1 to R6; R7 is section 8's rows.
 
 | id | criterion | decided by |
 |---|---|---|
@@ -79,7 +85,10 @@ This part's criteria (R1 to R4, and R6). Section 7 holds the rest.
 | A4 | the unit's two credentials are in the socket form under two distinct ids the launcher declares, no unit passes a user through its environment and no settings line names one, and no file under `deploy/` or `docs/` holds a password hash | `python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k test_the_sync_servers_two_users_come_from_the_socket_and_never_an_environment` |
 | A5 | the launcher refuses a missing, empty or unhashed entry, a name that leaves the data directory, two users of one name and an address that is not loopback with a port, each by name and before the server runs, and never prints an entry; otherwise it clears what the server would read and execs it with the two users, `PASSWORDS_HASHED`, its state directory and its address | `python3 -m unittest discover -s scripts/tests -p test_sync_server_launcher.py -k test_the_launcher_refuses_a_bad_entry_and_execs_the_server_with_hashed_users` |
 | A6 | the block renders with the route, the redirect, the stripped prefix, the hidden health route, the body bound and the buffer, and names the path: render-caddy fills a fourth key, the sync server's upstream, checked as the API's is and refused under its own name | `python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k test_the_caddy_block_routes_the_sync_server_under_its_own_path`, `python3 -m unittest discover -s scripts/tests -p test_caddy_render.py -k test_the_render_refuses_placeholders_and_keeps_the_headers` |
+| A7 | the snapshot's window is a oneshot unit of its own that stops the server before its copy, starts it again on success and on failure, carries no condition, is bounded, needs no new privilege and is pulled in by the backup alone; a planted copy failure fails the unit and publishes nothing; a held database is refused at once and the stopped pair is copied from one generation; the daily run checks each database, archives the generation with its sha256 digests, copies it offsite and keeps three, and a generation that fails its check or has no bucket is kept and fails the run | `python3 -m unittest discover -s scripts/tests -p test_backup_units.py -k test_the_window_stops_the_server_and_starts_it_again_whatever_the_copy_does`, `python3 -m unittest discover -s scripts/tests -p test_backup_units.py -k test_a_planted_copy_failure_fails_the_unit_and_publishes_nothing`, `python3 -m unittest discover -s scripts/tests -p test_backup_units.py -k test_the_copy_reads_only_a_stopped_generation`, `python3 -m unittest discover -s scripts/tests -p test_backup_units.py -k test_the_daily_run_checks_archives_copies_offsite_and_keeps_three` |
+| A8 | the drill restores the newest archive into a scratch directory, checks its digests and both databases, opens each user's collection and removes the scratch copy; it fails on a snapshot directory with no archive and on a changed byte, naming the member | `python3 -m unittest discover -s scripts/tests -p test_backup_units.py -k test_the_drill_restores_the_newest_snapshot_and_opens_its_collections` |
 | A9 | the runbook holds every state of the schematic's sequence in order, each host step marked as the owner's go and every other step as the owner's own act, the schematic's table naming each state; the hold on the full upload has its section before the first step; the runbook holds no address, date or URL | `python3 -m unittest discover -s scripts/tests -p test_sync_server_runbook.py -k test_the_runbook_holds_every_state_of_the_cutover_in_order_each_host_step_the_owners_go` |
+| A10 | the privacy policy names the sync server's snapshots among the copies an erase cannot reach, with the three archives the host keeps and the offsite bucket | `python3 -m unittest discover -s scripts/tests -p test_privacy_policy.py -k test_the_policy_discloses_every_copy_an_erase_cannot_reach` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_release_workflow.py -k test_the_sync_server_is_built_after_the_guard_and_shipped_in_the_tarball
@@ -89,11 +98,22 @@ A4: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k
 A5: python3 -m unittest discover -s scripts/tests -p test_sync_server_launcher.py -k test_the_launcher_refuses_a_bad_entry_and_execs_the_server_with_hashed_users
 A6: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k test_the_caddy_block_routes_the_sync_server_under_its_own_path
 A6: python3 -m unittest discover -s scripts/tests -p test_caddy_render.py -k test_the_render_refuses_placeholders_and_keeps_the_headers
+A7: python3 -m unittest discover -s scripts/tests -p test_backup_units.py -k test_the_window_stops_the_server_and_starts_it_again_whatever_the_copy_does
+A7: python3 -m unittest discover -s scripts/tests -p test_backup_units.py -k test_a_planted_copy_failure_fails_the_unit_and_publishes_nothing
+A7: python3 -m unittest discover -s scripts/tests -p test_backup_units.py -k test_the_copy_reads_only_a_stopped_generation
+A7: python3 -m unittest discover -s scripts/tests -p test_backup_units.py -k test_the_daily_run_checks_archives_copies_offsite_and_keeps_three
+A8: python3 -m unittest discover -s scripts/tests -p test_backup_units.py -k test_the_drill_restores_the_newest_snapshot_and_opens_its_collections
 A9: python3 -m unittest discover -s scripts/tests -p test_sync_server_runbook.py -k test_the_runbook_holds_every_state_of_the_cutover_in_order_each_host_step_the_owners_go
+A10: python3 -m unittest discover -s scripts/tests -p test_privacy_policy.py -k test_the_policy_discloses_every_copy_an_erase_cannot_reach
 ```
 
 The deploy scripts' own Caddy install (`scripts/tests/test_deploy_scripts.py`) also renders the
 block with the fourth key; that module is decided by CI by name and is never run on the box.
+
+The window's interleavings are the model's, `formal/tla/SyncSnapshotWindow` (ADR-347 D12): the copy
+reads only while the server is stopped, the archived pair comes from one generation, a client's
+sync in the window is refused whole, and the server is up again after every window, the copy's
+failure included. Each property has a witness the check must catch.
 
 ## 4. File manifest
 
@@ -109,6 +129,7 @@ block with the fourth key; that module is decided by CI by name and is never run
 | `scripts/mutation-rows.d/S33700-S33799.json` | tests | added | this |
 | `changelog.d/sync-server-packaging-337.md` | docs | added | this |
 | `deploy/systemd/deck-streak-sync-server.service`, `deploy/scripts/sync-server.sh` | deploy | added | this |
+| `deploy/systemd/deck-streak-sync-snapshot.service` | deploy | added (the snapshot's window) | this |
 | `deploy/systemd/deck-streak-bot.service`, `deploy/systemd/deck-streak-litestream.service`, `deploy/systemd/deck-streak-mcp.service` (`CPUQuota=` 20%, 15% and 15%) | deploy | changed | this |
 | `deploy/host-budget.json`, `deploy/rail-contract.json` | deploy | changed | this |
 | `docs/decisions/ADR-032-deploy-templates-and-the-host-budget.md`, `docs/decisions/ADR-064-deckstreak-backs-up-with-its-own-units-and-never-the-collection.md` (each an amendment) | docs | changed | this |
@@ -117,11 +138,14 @@ block with the fourth key; that module is decided by CI by name and is never run
 | `scripts/tests/test_sync_server_launcher.py` | tests | added | this |
 | `deploy/caddy/deck-streak.caddy`, `deploy/scripts/render-caddy.py` | deploy | changed | this |
 | `scripts/tests/test_caddy_render.py`, `scripts/tests/test_deploy_scripts.py` (the Caddy configuration's fourth key) | tests | changed | this |
-| `deploy/scripts/backup.py`, `deploy/scripts/restore-drill.sh`, `deploy/systemd/deck-streak-backup.service`, `deploy/systemd/deck-streak-restore-drill.service` | deploy | changed | the snapshot's |
-| `PRIVACY.md`, `privacy.json` | privacy | changed (the snapshot as a store) | the snapshot's |
+| `deploy/scripts/backup.py`, `deploy/scripts/restore-drill.sh`, `deploy/systemd/deck-streak-backup.service` (the drill's unit is unchanged: the drill reads the snapshot directory beside the backups by default) | deploy | changed | this |
+| `PRIVACY.md`, `scripts/tests/test_privacy_policy.py` | privacy | changed (the snapshot as a store; `privacy.json` is unchanged, because its categories are the database's tables and the sync server's store is none) | this |
 | `docs/runbooks/sync-server-cutover.md` | docs | added | this |
 | `scripts/tests/test_sync_server_runbook.py` | tests | added | this |
-| `scripts/tests/test_backup_units.py` | tests | changed | the snapshot's |
+| `scripts/tests/test_backup_units.py` | tests | changed | this |
+| `formal/tla/SyncSnapshotWindow/SyncSnapshotWindow.tla`, `formal/tla/SyncSnapshotWindow/MCSyncSnapshotWindow.cfg`, `formal/tla/SyncSnapshotWindow/MCLiveness.cfg` | formal | added | this |
+| `formal/tla/SyncSnapshotWindow/witness/a-copy-not-ordered-after-the-stop.cfg`, `formal/tla/SyncSnapshotWindow/witness/a-generation-published-before-it-is-whole.cfg`, `formal/tla/SyncSnapshotWindow/witness/a-session-committed-step-by-step.cfg`, `formal/tla/SyncSnapshotWindow/witness/a-write-that-lands-during-the-copy.cfg`, `formal/tla/SyncSnapshotWindow/witness/a-failed-copy-that-starts-nothing.cfg`, `formal/tla/SyncSnapshotWindow/witness/a-window-gated-by-a-condition.cfg` | formal | added | this |
+| `config/formal.json`, `scripts/tests/test_formal_config.py` (the model's budget) | formal | changed | this |
 
 ## 5. What this does NOT do
 
@@ -168,15 +192,20 @@ block with the fourth key; that module is decided by CI by name and is never run
   both succeed once the server has stopped. The collection opens the same way; it read and backed up
   after a full upload and after a full download, and its lock during a normal sync is not measured.
   So ADR-347 D5's snapshot, SQLite's online backup of both databases while the server runs, cannot
-  take `media.db`: the snapshot's part waits on the owner's choice of its form (#617), and section
-  10 holds its rows unchanged.
+  take `media.db`, and ADR-347 D12 takes it in a stopped-server window inside the daily backup's
+  run instead: for the window's seconds no client can sync, a sync in flight when the server stops
+  is refused whole, and the client syncs again at its next sync. The model holds the refusal whole
+  only while the engine applies a sync in one transaction, which the pinned fork does; a fork
+  commit that changes it is read against the model when the patch entry moves.
+- A window that does not end would leave the server stopped. The unit's start is bounded, and its
+  failure, a timeout included, starts the server again and pages, as a failed copy does (A7).
+- The copy refuses a database a process still holds, so a server that has not stopped fails the
+  window instead of yielding a torn copy; the window then pages and the previous archives stay.
 
 ## 7. Delivered by the next pull requests
 
-| id | criterion | delivered by |
-|---|---|---|
-| A7 | the snapshot holds each user's checked databases and media with their digests, and a failed check leaves the previous snapshots | the snapshot's part |
-| A8 | the drill restores the newest archive into a scratch directory, checks it and opens the collection, and fails on a corrupt archive | the snapshot's part |
+Nothing. A7 and A8 waited here on the snapshot's form; ADR-347 D12 decided it, and both are in
+section 3, delivered by this pull request.
 
 ## 8. The mutation rows
 
@@ -205,14 +234,11 @@ SPEC-333 R3 is amended by this delivery: `deploy/README.md` "## The host budget"
 the bot's 20%, the replicator's 15% and the MCP server's 15%, which divide the share's two
 processors exactly.
 
-Section 6's last two risks are measurements taken after section 1, with the same server and the
-same scratch client. The second holds the snapshot's part (R5, A7, A8) until the owner chooses its
-form (#617), so its manifest rows wait, each unchanged by this part:
-
-- `deploy/scripts/backup.py` unchanged
-- `deploy/scripts/restore-drill.sh` unchanged
-- `deploy/systemd/deck-streak-backup.service` unchanged
-- `deploy/systemd/deck-streak-restore-drill.service` unchanged
-- `PRIVACY.md` unchanged
-- `privacy.json` unchanged
-- `scripts/tests/test_backup_units.py` unchanged
+Section 6's risks on the divergence and on `media.db`'s lock are measurements taken after section
+1, with the same server and the same scratch client. The lock's measurement decided the snapshot's
+form: ADR-347 D12's stopped-server window, which replaces D5's online backup while the server runs.
+A copy bounded by the online backup with no busy wait was measured against a process holding a
+database the server's way: it is refused at once, and once the holder has ended the same call
+copies the database, reading through a write-ahead log a server ended without a clean close
+leaves. R5 is restated for the window, A7 and A8 joined section 3, and the snapshot's files joined
+section 4.

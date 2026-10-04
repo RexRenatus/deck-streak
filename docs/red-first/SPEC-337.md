@@ -97,3 +97,40 @@ followed (7e3cf005), and the module reads `Ran 28 tests ... OK` there.
 A3: red at 79e1ace1: AssertionError: '50%' != '75%'
 A3: green at 7e3cf005
 ```
+
+The snapshot's window (ADR-347 D12) was tested first: its five tests in `test_backup_units.py` were
+committed alone (90f15fdf), with no window unit, no `--sync-window` arm in the backup and no
+`--snapshots` argument in the drill. At that commit each fails, A7's first and A8's by assertion.
+The window's unit, the backup's two arms, the drill's snapshot part and the two units' changes
+followed (c54c898d), where `test_backup_units.py` reads `Ran 12 tests ... OK`.
+
+```red-first
+A7: red at 90f15fdf: AssertionError: unexpectedly None : the window is a unit of its own (ADR-347 D12)
+A8: red at 90f15fdf: AssertionError: 2 != 0 : restore-drill: unknown argument --snapshots
+A7: green at c54c898d
+A8: green at c54c898d
+```
+
+A7's other three commands were red at the same commit, each before an assertion could run, because
+the unit and the backup's arguments did not exist yet:
+
+```text
+A7: red at 90f15fdf: KeyError: 'deck-streak-sync-snapshot.service' (a planted copy failure)
+A7: red at 90f15fdf: error: unrecognized arguments: --sync-window --sync-base ... --snapshots ... (the stopped generation)
+A7: red at 90f15fdf: error: unrecognized arguments: --snapshots ... (the daily run)
+```
+
+The privacy policy's disclosure (A10) was pinned alone (3d6e536d): the policy test names the sync
+server's snapshots as a fifth copy an erase cannot reach, and at that commit it reads `examined 5
+copies an erase cannot reach` and fails by assertion. The policy's bullet followed (eff7a03f).
+
+```red-first
+A10: red at 3d6e536d: AssertionError: Lists differ: ["the sync server's snapshots"] != []
+A10: green at eff7a03f
+```
+
+CI on a0058d2c read two refusals beyond the route's red, both decided by modules that are never
+run on the box: the test directory's read census refused a standard-library call in the launcher
+test's hash helper, and the workflow parsers refused the release's sync-server step, a regular
+expression test they do not read. The helper was rewritten from builtins (d11bb15e) and the step's
+test was moved to `grep` (b4c13324); CI by name on the next push decides both.
