@@ -16,12 +16,15 @@ import sqlite3
 import subprocess
 import sys
 import tempfile
+import tarfile
 import threading
+import time
 import unittest
+import unittest.mock
 from pathlib import Path
 
 from _support import REPO, examined
-from _units import env_assignments, load_subject, service_type, size_bytes
+from _units import STOPS_A_START, env_assignments, load_subject, service_type, size_bytes
 from test_deploy_templates import HARDENING
 
 DEPLOY = REPO / "deploy"
@@ -40,6 +43,10 @@ BACKUP = "deck-streak-backup.service"
 BACKUP_TIMER = "deck-streak-backup.timer"
 DRILL = "deck-streak-restore-drill.service"
 DRILL_TIMER = "deck-streak-restore-drill.timer"
+# The sync server and the window that stops it for the snapshot's copy (SPEC-337 R5; ADR-347 D12).
+SYNC_SERVER = "deck-streak-sync-server.service"
+WINDOW = "deck-streak-sync-snapshot.service"
+SNAPSHOT_FILES = ("collection.anki2", "media.db")
 NEW_SERVICES = (LITESTREAM, BACKUP, DRILL)
 # R6: the two slots, exactly, in UTC as the neutral templates are written (SPEC-032 R4).
 BACKUP_CALENDAR = "*-*-* 03:24:00 UTC"
@@ -99,6 +106,37 @@ def integrity(path):
         return connection.execute("PRAGMA integrity_check").fetchall()
     finally:
         connection.close()
+
+
+def make_sync_base(root, users=("owner", "staging"), cards=3):
+    """A stopped sync server's store, as the engine lays it out: per user a collection in WAL mode
+    with a cards table, a media index and one media file."""
+    base = Path(root) / "sync-base"
+    for user in users:
+        folder = base / user
+        (folder / "media").mkdir(parents=True)
+        collection = sqlite3.connect(folder / "collection.anki2")
+        collection.execute("PRAGMA journal_mode=WAL")
+        collection.execute("CREATE TABLE cards (id INTEGER PRIMARY KEY, nid INTEGER NOT NULL)")
+        collection.executemany("INSERT INTO cards (nid) VALUES (?)", [(n,) for n in range(cards)])
+        collection.commit()
+        collection.close()
+        media = sqlite3.connect(folder / "media.db")
+        media.execute("PRAGMA journal_mode=WAL")
+        media.execute("CREATE TABLE media (fname TEXT PRIMARY KEY, csum TEXT)")
+        media.execute("INSERT INTO media VALUES ('a.jpg', 'x')")
+        media.commit()
+        media.close()
+        (folder / "media" / "a.jpg").write_bytes(b"image bytes of " + user.encode())
+    return base
+
+
+def names_in(directory, prefix):
+    return (
+        sorted(p.name for p in Path(directory).glob(f"{prefix}*"))
+        if Path(directory).is_dir()
+        else []
+    )
 
 
 def unit_named(subject, name):
@@ -610,7 +648,7 @@ class BackupUnits(unittest.TestCase):
             DRILL_SCRIPT,
             *(
                 DEPLOY / "systemd" / n
-                for n in (LITESTREAM, BACKUP, BACKUP_TIMER, DRILL, DRILL_TIMER)
+                for n in (LITESTREAM, BACKUP, BACKUP_TIMER, DRILL, DRILL_TIMER, WINDOW)
             ),
         ]
         examined("backup files", files)
@@ -682,6 +720,302 @@ class BackupUnits(unittest.TestCase):
                 self.assertEqual(
                     result.returncode, 0, f"{path.name}: {result.stdout}{result.stderr}"
                 )
+
+
+class SyncWindow(unittest.TestCase):
+    """SPEC-337 R5, A7 and A8: the snapshot's copy runs in a window with the sync server stopped,
+    inside the daily backup's run, and the server is started again whatever the copy does
+    (ADR-347 D12; the model is formal/tla/SyncSnapshotWindow)."""
+
+    STAMPS = (
+        "2030-01-01T03:00:00Z",
+        "2030-01-02T03:00:00Z",
+        "2030-01-03T03:00:00Z",
+        "2030-01-04T03:00:00Z",
+    )
+
+    def window(self, backup, base, snapshots, stamp="2030-01-01T03:00:00Z"):
+        argv = ["--sync-window", "--sync-base", str(base), "--snapshots", str(snapshots)]
+        return backup.main(argv, now=backup.parse_stamp(stamp))
+
+    def daily(self, backup, root, snapshots, stamp, environ):
+        database = root / "deck_streak.db"
+        if not database.exists():
+            make_database(database)
+        argv = [
+            "--database",
+            str(database),
+            "--backups",
+            str(root / "backups"),
+            "--snapshots",
+            str(snapshots),
+        ]
+        with unittest.mock.patch.dict(os.environ, environ, clear=False):
+            return backup.main(argv, now=backup.parse_stamp(stamp))
+
+    def offsite(self, root):
+        """A stand-in for the rail's object-store command: it records its arguments."""
+        log = root / "offsite.jsonl"
+        stub = root / "object-store-copy"
+        stub.write_text(
+            "#!/usr/bin/env python3\nimport json, sys\n"
+            f"open({str(log)!r}, 'a').write(json.dumps(sys.argv[1:]) + '\\n')\n",
+            encoding="utf-8",
+        )
+        stub.chmod(0o755)
+        environ = {
+            "DECKSTREAK_SNAPSHOT_COPY": f"{sys.executable} {stub} --no-clobber",
+            "DECKSTREAK_SNAPSHOT_BUCKET": "example://deck-streak-example-snapshot/",
+        }
+        return environ, log
+
+    def test_the_window_stops_the_server_and_starts_it_again_whatever_the_copy_does(self):
+        subject = load_subject(REPO)
+        window = subject.units.get(WINDOW)
+        self.assertIsNotNone(window, "the window is a unit of its own (ADR-347 D12)")
+        server = subject.units[SYNC_SERVER]
+        budget = json.loads(BUDGET.read_text(encoding="utf-8"))["units"]
+        self.assertEqual(service_type(window), "oneshot")
+        self.assertEqual(
+            window.values("Service", "ExecStart"),
+            [f"/usr/bin/python3 {RELEASE_ROOT}/deploy/scripts/backup.py --sync-window"],
+        )
+        # The stop goes first: Conflicts= adds it to the start's transaction, and a stop is ordered
+        # before a start of a unit it is ordered against (systemd.unit(5)).
+        self.assertEqual(window.values("Unit", "Conflicts"), [SYNC_SERVER])
+        self.assertEqual(window.values("Unit", "After"), [SYNC_SERVER])
+        self.assertEqual(window.values("Unit", "Before"), [BACKUP])
+        # Started again whatever the copy does: PID 1 enqueues the server's start on success and on
+        # failure alike, so no grant is needed.
+        self.assertEqual(window.values("Unit", "OnSuccess"), [SYNC_SERVER])
+        self.assertEqual(window.values("Unit", "OnFailure"), [SYNC_SERVER, ALERT])
+        # A condition is checked after the stop and a skipped start fires neither, which would leave
+        # the server stopped: the window carries none, and is gated by being enabled.
+        for assignment in window.assignments:
+            self.assertFalse(assignment.key.startswith(STOPS_A_START), assignment.key)
+            self.assertNotEqual(assignment.key, "ExecCondition")
+        self.assertIn(window.last("Service", "RemainAfterExit"), (None, "no"))
+        timeout = window.last("Service", "TimeoutStartSec")
+        self.assertRegex(timeout or "", r"^\d+min$", "the window is bounded")
+        self.assertLessEqual(int(timeout[:-3]), 30)
+        # No second schedule: the daily backup pulls it in, and enabling the server enables it.
+        self.assertIsNone(subject.units.get(WINDOW.replace(".service", ".timer")))
+        self.assertEqual(window.values("Install", "WantedBy"), [BACKUP])
+        self.assertEqual(server.values("Install", "Also"), [WINDOW])
+        # No new privilege: the service user, no capability, no privileged command prefix.
+        for key, want in HARDENING.items():
+            self.assertEqual(window.last("Service", key), want, f"{WINDOW} {key}")
+        self.assertEqual(window.last("Service", "CapabilityBoundingSet"), "")
+        self.assertEqual(window.values("Service", "AmbientCapabilities"), [])
+        for key in ("ExecStart", "ExecStartPre", "ExecStartPost", "ExecStopPost"):
+            for value in window.values("Service", key):
+                self.assertFalse(value.startswith(("+", "!", "-")), value)
+        self.assertEqual(
+            [
+                p.name
+                for p in DEPLOY.rglob("*")
+                if p.suffix in (".rules", ".pkla") or "sudoers" in p.name or "polkit" in p.name
+            ],
+            [],
+            "no grant file ships",
+        )
+        # It reads the server's store and writes beside the backups.
+        self.assertEqual(
+            window.values("Service", "StateDirectory"), ["deck-streak deck-streak-sync-server"]
+        )
+        self.assertEqual(window.last("Service", "MemoryHigh"), budget[WINDOW]["memory_high"])
+        self.assertEqual(window.last("Service", "MemoryMax"), budget[WINDOW]["memory_max"])
+
+    def test_a_planted_copy_failure_fails_the_unit_and_publishes_nothing(self):
+        backup = load_backup()
+        window = load_subject(REPO).units[WINDOW]
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            base = make_sync_base(root)
+            snapshots = root / "state" / "sync-snapshots"
+            (base / "staging" / "media.db").write_bytes(b"not a database" * 300)
+            self.assertEqual(self.window(backup, base, snapshots), 1)
+            self.assertEqual(names_in(snapshots, "gen-"), [], "nothing is published")
+            # A non-zero exit fails the unit, and its failure starts the server again.
+            self.assertIn(SYNC_SERVER, window.values("Unit", "OnFailure"))
+            # The same store, sound, is copied whole, and its success starts the server again.
+            make_sync_base(root / "sound")
+            self.assertEqual(self.window(backup, root / "sound" / "sync-base", snapshots), 0)
+            self.assertEqual(names_in(snapshots, "gen-"), ["gen-20300101T030000Z.tar"])
+            self.assertEqual(window.values("Unit", "OnSuccess"), [SYNC_SERVER])
+
+    def test_the_copy_reads_only_a_stopped_generation(self):
+        backup = load_backup()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            base = make_sync_base(root)
+            snapshots = root / "sync-snapshots"
+            for held in SNAPSHOT_FILES:
+                # A running server holds the file in SQLite's exclusive locking mode.
+                holder = sqlite3.connect(base / "owner" / held)
+                holder.execute("PRAGMA locking_mode=EXCLUSIVE")
+                holder.execute("BEGIN IMMEDIATE")
+                holder.execute("COMMIT")
+                started = time.monotonic()
+                self.assertEqual(self.window(backup, base, snapshots), 1, held)
+                self.assertLess(time.monotonic() - started, 5, "a holder is refused at once")
+                self.assertEqual(names_in(snapshots, "gen-"), [], held)
+                holder.close()
+            # Stopped, the pair is copied from the one generation the store holds.
+            self.assertEqual(self.window(backup, base, snapshots), 0)
+            with tarfile.open(snapshots / "gen-20300101T030000Z.tar") as archive:
+                names = sorted(archive.getnames())
+                extracted = root / "out"
+                archive.extractall(extracted, filter="data")
+            self.assertEqual(
+                names,
+                sorted(
+                    f"{u}/{n}"
+                    for u in ("owner", "staging")
+                    for n in (*SNAPSHOT_FILES, "media/a.jpg")
+                ),
+            )
+            for user in ("owner", "staging"):
+                self.assertEqual(integrity(extracted / user / "collection.anki2"), [("ok",)])
+                copy = sqlite3.connect(extracted / user / "collection.anki2")
+                self.assertEqual(copy.execute("SELECT count(*) FROM cards").fetchone(), (3,))
+                copy.close()
+
+    def test_the_daily_run_checks_archives_copies_offsite_and_keeps_three(self):
+        backup = load_backup()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            base = make_sync_base(root)
+            snapshots = root / "sync-snapshots"
+            environ, log = self.offsite(root)
+            # No generation, no snapshot directory: the server is not installed, and the daily copy
+            # of the database runs alone.
+            self.assertEqual(self.daily(backup, root, snapshots, self.STAMPS[0], {}), 0)
+            self.assertFalse(snapshots.exists())
+            for stamp in self.STAMPS:
+                self.assertEqual(self.window(backup, base, snapshots, stamp), 0)
+                self.assertEqual(self.daily(backup, root, snapshots, stamp, environ), 0)
+            tars = names_in(snapshots, "sync-")
+            self.assertEqual(
+                tars,
+                sorted(
+                    f"sync-2030010{d}T030000Z.{k}" for d in (2, 3, 4) for k in ("sha256", "tar")
+                ),
+            )
+            self.assertEqual(names_in(snapshots, "gen-"), [], "every generation was archived")
+            calls = [json.loads(line) for line in log.read_text(encoding="utf-8").splitlines()]
+            self.assertEqual(len(calls), 4)
+            newest = snapshots / "sync-20300104T030000Z"
+            self.assertEqual(
+                calls[-1],
+                [
+                    "--no-clobber",
+                    f"{newest}.tar",
+                    f"{newest}.sha256",
+                    environ["DECKSTREAK_SNAPSHOT_BUCKET"],
+                ],
+            )
+            manifest = {}
+            for line in Path(f"{newest}.sha256").read_text(encoding="utf-8").splitlines():
+                hexdigest, name = line.split("  ", 1)
+                manifest[name] = hexdigest
+            with tarfile.open(f"{newest}.tar") as archive:
+                for member in archive.getmembers():
+                    data = archive.extractfile(member).read()
+                    self.assertEqual(manifest.pop(member.name), hashlib.sha256(data).hexdigest())
+            self.assertEqual(manifest, {})
+            # A generation with no bucket configured is kept for the next run, and the run fails.
+            self.assertEqual(self.window(backup, base, snapshots, "2030-01-05T03:00:00Z"), 0)
+            self.assertEqual(self.daily(backup, root, snapshots, "2030-01-05T03:00:00Z", {}), 1)
+            self.assertEqual(names_in(snapshots, "gen-"), ["gen-20300105T030000Z.tar"])
+            # A generation whose collection fails its check is not archived, and the run fails.
+            broken = root / "broken"
+            make_sync_base(broken)
+            (broken / "sync-base" / "owner" / "collection.anki2").write_bytes(b"x" * 4096)
+            with tarfile.open(snapshots / "gen-20300106T030000Z.tar", "w") as archive:
+                for path in sorted((broken / "sync-base").rglob("*")):
+                    if path.is_file():
+                        archive.add(path, arcname=str(path.relative_to(broken / "sync-base")))
+            self.assertEqual(
+                self.daily(backup, root, snapshots, "2030-01-06T03:00:00Z", environ), 1
+            )
+            self.assertNotIn("sync-20300106T030000Z.tar", names_in(snapshots, "sync-"))
+            self.assertEqual(len(log.read_text(encoding="utf-8").splitlines()), 4)
+
+    def drill(self, root, snapshots):
+        """The weekly drill over a sound replica and daily copy, with the snapshot directory given."""
+        state = root / "drill-state"
+        state.mkdir(exist_ok=True)
+        live = state / "deck_streak.db"
+        if not live.exists():
+            make_database(live)
+            (state / "backups").mkdir()
+            make_database(state / "backups" / "deck_streak-20300101T030000Z.db")
+            make_database(root / "replica-seed.db")
+        stub = root / "litestream"
+        stub.write_text(
+            "#!/usr/bin/env python3\nimport shutil, sys\nargs = sys.argv[1:]\n"
+            f"shutil.copyfile({str(root / 'replica-seed.db')!r}, args[args.index('-o') + 1])\n",
+            encoding="utf-8",
+        )
+        stub.chmod(0o755)
+        config = root / "litestream.yml"
+        config.write_text("dbs: []\n", encoding="utf-8")
+        scratch = root / "tmp"
+        scratch.mkdir(exist_ok=True)
+        return subprocess.run(
+            [
+                "bash",
+                str(DRILL_SCRIPT),
+                "--litestream",
+                str(stub),
+                "--config",
+                str(config),
+                "--database",
+                str(live),
+                "--backups",
+                str(state / "backups"),
+                "--snapshots",
+                str(snapshots),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=120,
+            check=False,
+            env=dict(os.environ, TMPDIR=str(scratch), PYTHONDONTWRITEBYTECODE="1"),
+        )
+
+    def test_the_drill_restores_the_newest_snapshot_and_opens_its_collections(self):
+        backup = load_backup()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            snapshots = root / "sync-snapshots"
+            # No snapshot directory: the server is not installed, and the drill is the old one.
+            done = self.drill(root, snapshots)
+            self.assertEqual(done.returncode, 0, done.stderr)
+            # A snapshot directory with no archive in it fails the drill.
+            snapshots.mkdir()
+            done = self.drill(root, snapshots)
+            self.assertEqual(done.returncode, 1, done.stderr)
+            self.assertIn("no snapshot archive", done.stderr)
+            base = make_sync_base(root)
+            environ, _ = self.offsite(root)
+            self.assertEqual(self.window(backup, base, snapshots), 0)
+            self.assertEqual(self.daily(backup, root, snapshots, self.STAMPS[0], environ), 0)
+            done = self.drill(root, snapshots)
+            self.assertEqual(done.returncode, 0, done.stderr)
+            self.assertIn("owner: 3 card(s)", done.stdout)
+            self.assertIn("staging: 3 card(s)", done.stdout)
+            self.assertEqual(sorted(p.name for p in (root / "tmp").iterdir()), [])
+            # A changed byte in the archive fails its digest.
+            archive = snapshots / "sync-20300101T030000Z.tar"
+            raw = bytearray(archive.read_bytes())
+            at = raw.index(b"image bytes of owner")
+            raw[at] ^= 0x01
+            archive.write_bytes(bytes(raw))
+            done = self.drill(root, snapshots)
+            self.assertEqual(done.returncode, 1, done.stderr)
+            self.assertIn("owner/media/a.jpg", done.stderr)
 
 
 if __name__ == "__main__":
