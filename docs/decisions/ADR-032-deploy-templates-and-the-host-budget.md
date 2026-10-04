@@ -144,3 +144,28 @@ stays a ceiling and not a reservation. The bot's and the replicator's caps are u
 | `deck-streak-mcp.service` | 25% | 32 |
 
 The rest of this record stands.
+
+## Amendment (SPEC-337): the share is 1152 MiB
+
+ADR-064's amendment of this delivery moves DeckStreak's share to 1152 MiB to hold ADR-347's sync
+server, `deck-streak-sync-server.service`, a fifth long-running unit. Its ceilings, in this record's
+form:
+
+| unit | memory_high | memory_max | why |
+|---|---|---|---|
+| `deck-streak-sync-server.service` (SPEC-337) | 384M | 448M | one full upload of ADR-022's synthetic collection peaks at about 319 MiB resident, under `MemoryHigh` |
+| `deck-streak-sync-snapshot.service` (SPEC-337) | 48M | 64M | the stopped-server window's copy streams the online backup page by page, as the daily backup does (ADR-347 D12) |
+
+The daemons' processor caps divide the share's two processors exactly, as ADR-347 D7 splits them:
+the sync server's three quarters of a processor are taken from the bot's, the replicator's and the
+MCP server's, and the API keeps its cap, since it serves the clients' path.
+
+| unit | CPUQuota | TasksMax |
+|---|---|---|
+| `deck-streak-api.service` | 75% | 64 |
+| `deck-streak-sync-server.service` | 75% | 64 |
+| `deck-streak-bot.service` | 20% | 64 |
+| `deck-streak-litestream.service` | 15% | 64 |
+| `deck-streak-mcp.service` | 15% | 32 |
+
+The rest of this record stands.

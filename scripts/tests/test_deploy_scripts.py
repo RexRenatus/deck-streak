@@ -707,6 +707,7 @@ class TheCaddyInstall(Case):
             "host": "app.example.org",
             "web_root": str(self.world.root / "current/web"),
             "api_upstream": "127.0.0.1:8080",
+            "sync_upstream": "127.0.0.1:8081",
             **extra,
         }
         path.write_text(json.dumps(data), encoding="utf-8")
@@ -724,6 +725,9 @@ class TheCaddyInstall(Case):
         block = w.caddy_dir / "deck-streak.caddy"
         self.assertTrue(block.is_file())
         self.assertNotIn("{$", block.read_text())
+        # The fourth key fills the sync server's upstream (SPEC-337 A6), beside the API's.
+        self.assertIn("reverse_proxy 127.0.0.1:8080", block.read_text())
+        self.assertIn("reverse_proxy 127.0.0.1:8081", block.read_text())
         text = caddyfile.read_text()
         self.assertTrue(text.startswith(original), "nothing already in the Caddyfile changes")
         self.assertEqual(text[len(original) :].count("import"), 1, "one import line is added")

@@ -4809,6 +4809,15 @@ NOT_WORKFLOW_READS = {
         ),
     ),
     **allowed(
+        "runs the release's sync-server build step, cut from release.yml's loader-read text, under bash with cargo stubbed, in planted manifest roots and the tree; its output is the stub's argument line",
+        (
+            "test_release_workflow",
+            "TheReleaseBuildsTheSyncServer.test_the_build_step_reads_the_fork_and_the_commit_from_the_engines_patch_entry",
+            "subprocess.run(['bash', '-e', str(script)], cwd=roots[name], env={**os.environ, 'PATH': path, 'RUNNER_TEMP': str(runner)}, capture_output=True, text=True)",
+            1,
+        ),
+    ),
+    **allowed(
         "runs git in a scratch repository with the arguments it is given; its output is a sha or nothing",
         (
             "test_release_workflow",

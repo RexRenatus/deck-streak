@@ -1,0 +1,382 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S33701-THE-STEP-REFUSES-A-BRANCH-OR-A-SHORT-COMMIT",
+        ".github/workflows/release.yml",
+        "if ! grep -Eqx '[0-9a-f]{40}' <<< \"$rev\"; then",
+        "if false; then",
+        "the release step refuses a patch entry whose rev is a branch or a short commit before cargo runs (SPEC-337 R1, A2)",
+        "test_release_workflow.TheReleaseBuildsTheSyncServer.test_the_build_step_reads_the_fork_and_the_commit_from_the_engines_patch_entry"
+      ],
+      [
+        "S33702-THE-SERVER-IS-BUILT-WITH-THE-FORKS-OWN-LOCKFILE",
+        ".github/workflows/release.yml",
+        "cargo install --locked --git",
+        "cargo install --git",
+        "the server is built with --locked, from the fork's own lockfile (SPEC-337 R1, ADR-347 D1)",
+        "test_release_workflow.TheReleaseBuildsTheSyncServer.test_the_build_step_reads_the_fork_and_the_commit_from_the_engines_patch_entry"
+      ],
+      [
+        "S33703-THE-STEP-HOLDS-NO-SECOND-COPY-OF-THE-COMMIT",
+        ".github/workflows/release.yml",
+        "--rev \"$rev\"",
+        "--rev 0123456789abcdef0123456789abcdef01234567",
+        "the step reads the commit from the patch entry at run time and holds no second copy of it (SPEC-337 R1, A1)",
+        "test_release_workflow.TheReleaseBuildsTheSyncServer.test_the_sync_server_is_built_after_the_guard_and_shipped_in_the_tarball"
+      ],
+      [
+        "S33704-THE-TARBALL-CARRIES-THE-SERVER",
+        ".github/workflows/release.yml",
+        "install -m 0755 \"$RUNNER_TEMP/sync-server/bin/anki-sync-server\" \"$stage/bin/anki-sync-server\"",
+        "true",
+        "the tarball carries the server as bin/anki-sync-server before the manifest is written (SPEC-337 R1, A1)",
+        "test_release_workflow.TheReleaseBuildsTheSyncServer.test_the_sync_server_is_built_after_the_guard_and_shipped_in_the_tarball"
+      ],
+      [
+        "S33705-THE-SERVER-IS-THE-FORKS-NOT-UPSTREAMS",
+        ".github/workflows/release.yml",
+        "print(entry[\"git\"], entry[\"rev\"])",
+        "print(\"https://github.com/ankitects/anki.git\", entry[\"rev\"])",
+        "the step builds the fork the patch entry names, never upstream (SPEC-337 R1, A2)",
+        "test_release_workflow.TheReleaseBuildsTheSyncServer.test_the_build_step_reads_the_fork_and_the_commit_from_the_engines_patch_entry"
+      ],
+      [
+        "S33706-AN-ENTRY-IS-A-NAME-AND-A-PBKDF2-HASH",
+        "deploy/scripts/sync-server.sh",
+        "[[ \"$value\" =~ $ENTRY ]]",
+        "true",
+        "the launcher refuses a credential that is not a user name and a pbkdf2-sha256 hash, a plain password among them (SPEC-337 R2, A5)",
+        "test_sync_server_launcher.TheLauncherStartsTheServerWithHashedUsers.test_the_launcher_refuses_a_bad_entry_and_execs_the_server_with_hashed_users"
+      ],
+      [
+        "S33707-A-USER-NAME-STAYS-INSIDE-THE-DATA-DIRECTORY",
+        "deploy/scripts/sync-server.sh",
+        "readonly ENTRY='^[A-Za-z0-9_-][A-Za-z0-9._-]*:",
+        "readonly ENTRY='^[A-Za-z0-9._/-]*:",
+        "a user name is not empty and cannot start with a dot or hold a slash, so the server's directory for it stays under its data directory (SPEC-337 R2, A5)",
+        "test_sync_server_launcher.TheLauncherStartsTheServerWithHashedUsers.test_the_launcher_refuses_a_bad_entry_and_execs_the_server_with_hashed_users"
+      ],
+      [
+        "S33708-A-HASH-CARRIES-ITS-SALT",
+        "deploy/scripts/sync-server.sh",
+        "\\$[A-Za-z0-9+/]+\\$[A-Za-z0-9+/]+$'",
+        "(\\$[A-Za-z0-9+/]+)?\\$[A-Za-z0-9+/]+$'",
+        "a hash with no salt is refused at start rather than at the first login (SPEC-337 R2, A5)",
+        "test_sync_server_launcher.TheLauncherStartsTheServerWithHashedUsers.test_the_launcher_refuses_a_bad_entry_and_execs_the_server_with_hashed_users"
+      ],
+      [
+        "S33709-AN-EMPTY-ENTRY-IS-REFUSED-BY-NAME",
+        "deploy/scripts/sync-server.sh",
+        "[ -n \"$value\" ]",
+        "true",
+        "an empty credential is refused as empty, by its id (SPEC-337 R2, A5)",
+        "test_sync_server_launcher.TheLauncherStartsTheServerWithHashedUsers.test_the_launcher_refuses_a_bad_entry_and_execs_the_server_with_hashed_users"
+      ],
+      [
+        "S33710-A-MISSING-ENTRY-IS-REFUSED-BY-NAME",
+        "deploy/scripts/sync-server.sh",
+        "[ -f \"$path\" ]",
+        "true",
+        "a credential the unit did not load is refused as missing, by its id, before anything reads it (SPEC-337 R2, A5)",
+        "test_sync_server_launcher.TheLauncherStartsTheServerWithHashedUsers.test_the_launcher_refuses_a_bad_entry_and_execs_the_server_with_hashed_users"
+      ],
+      [
+        "S33711-THE-SERVER-LISTENS-ON-LOOPBACK",
+        "deploy/scripts/sync-server.sh",
+        "readonly LOOPBACK='^127\\.",
+        "readonly LOOPBACK='^[0-9]{1,3}\\.",
+        "the launcher refuses an address outside 127.0.0.0/8, so the server is reached only through the edge (SPEC-337 R2, A5)",
+        "test_sync_server_launcher.TheLauncherStartsTheServerWithHashedUsers.test_the_launcher_refuses_a_bad_entry_and_execs_the_server_with_hashed_users"
+      ],
+      [
+        "S33712-AN-OCTET-IS-AT-MOST-255",
+        "deploy/scripts/sync-server.sh",
+        "((10#$octet <= 255))",
+        "((10#$octet <= 999))",
+        "an address octet above 255 is refused (SPEC-337 R2, A5)",
+        "test_sync_server_launcher.TheLauncherStartsTheServerWithHashedUsers.test_the_launcher_refuses_a_bad_entry_and_execs_the_server_with_hashed_users"
+      ],
+      [
+        "S33713-THE-PORT-IS-AT-LEAST-ONE",
+        "deploy/scripts/sync-server.sh",
+        "((port >= 1 && port <= 65535))",
+        "((port <= 65535))",
+        "port zero is refused (SPEC-337 R2, A5)",
+        "test_sync_server_launcher.TheLauncherStartsTheServerWithHashedUsers.test_the_launcher_refuses_a_bad_entry_and_execs_the_server_with_hashed_users"
+      ],
+      [
+        "S33714-THE-PORT-IS-AT-MOST-65535",
+        "deploy/scripts/sync-server.sh",
+        "((port >= 1 && port <= 65535))",
+        "((port >= 1))",
+        "a port above 65535 is refused (SPEC-337 R2, A5)",
+        "test_sync_server_launcher.TheLauncherStartsTheServerWithHashedUsers.test_the_launcher_refuses_a_bad_entry_and_execs_the_server_with_hashed_users"
+      ],
+      [
+        "S33715-NO-INHERITED-USER-REACHES-THE-SERVER",
+        "deploy/scripts/sync-server.sh",
+        "SYNC_* | PASSWORDS_HASHED | MAX_SYNC_PAYLOAD_MEGS)",
+        "PASSWORDS_HASHED | MAX_SYNC_PAYLOAD_MEGS)",
+        "every inherited SYNC_ variable is cleared, so a stray third user never reaches the server (SPEC-337 R2, ADR-347 D9, A5)",
+        "test_sync_server_launcher.TheLauncherStartsTheServerWithHashedUsers.test_the_launcher_refuses_a_bad_entry_and_execs_the_server_with_hashed_users"
+      ],
+      [
+        "S33716-THE-PAYLOAD-LIMIT-STAYS-THE-SERVERS-OWN",
+        "deploy/scripts/sync-server.sh",
+        "SYNC_* | PASSWORDS_HASHED | MAX_SYNC_PAYLOAD_MEGS)",
+        "SYNC_* | PASSWORDS_HASHED)",
+        "an inherited payload limit is cleared, so the server's limit stays the edge's body bound (ADR-347 D9, A5)",
+        "test_sync_server_launcher.TheLauncherStartsTheServerWithHashedUsers.test_the_launcher_refuses_a_bad_entry_and_execs_the_server_with_hashed_users"
+      ],
+      [
+        "S33717-TWO-USERS-HAVE-TWO-NAMES",
+        "deploy/scripts/sync-server.sh",
+        "[ \"${owner%%:*}\" != \"${staging%%:*}\" ]",
+        "true",
+        "two users of one name are refused, since the server would keep only the last (SPEC-337 R2, A5)",
+        "test_sync_server_launcher.TheLauncherStartsTheServerWithHashedUsers.test_the_launcher_refuses_a_bad_entry_and_execs_the_server_with_hashed_users"
+      ],
+      [
+        "S33718-THE-SERVER-READS-HASHES",
+        "deploy/scripts/sync-server.sh",
+        "SYNC_USER2=\"$staging\" PASSWORDS_HASHED=1",
+        "SYNC_USER2=\"$staging\"",
+        "the server is told its users carry hashes, so it never compares a hash as a password (SPEC-337 R2, A5)",
+        "test_sync_server_launcher.TheLauncherStartsTheServerWithHashedUsers.test_the_launcher_refuses_a_bad_entry_and_execs_the_server_with_hashed_users"
+      ],
+      [
+        "S33719-THE-DATA-IS-IN-THE-UNITS-STATE-DIRECTORY",
+        "deploy/scripts/sync-server.sh",
+        "SYNC_BASE=\"$STATE_DIRECTORY\"",
+        "SYNC_BASE=\"${STATE_DIRECTORY%/*}\"",
+        "the server keeps its users' data in the unit's own state directory (SPEC-337 R2, A5)",
+        "test_sync_server_launcher.TheLauncherStartsTheServerWithHashedUsers.test_the_launcher_refuses_a_bad_entry_and_execs_the_server_with_hashed_users"
+      ],
+      [
+        "S33720-NO-CREDENTIALS-DIRECTORY-IS-REFUSED",
+        "deploy/scripts/sync-server.sh",
+        "[ -n \"${CREDENTIALS_DIRECTORY:-}\" ]",
+        "true",
+        "a start with no credentials directory is refused by name (SPEC-337 R2, A5)",
+        "test_sync_server_launcher.TheLauncherStartsTheServerWithHashedUsers.test_the_launcher_refuses_a_bad_entry_and_execs_the_server_with_hashed_users"
+      ],
+      [
+        "S33721-NO-STATE-DIRECTORY-IS-REFUSED",
+        "deploy/scripts/sync-server.sh",
+        "[ -n \"${STATE_DIRECTORY:-}\" ]",
+        "true",
+        "a start with no state directory is refused by name (SPEC-337 R2, A5)",
+        "test_sync_server_launcher.TheLauncherStartsTheServerWithHashedUsers.test_the_launcher_refuses_a_bad_entry_and_execs_the_server_with_hashed_users"
+      ],
+      [
+        "S33722-A-REFUSAL-FAILS-THE-UNIT",
+        "deploy/scripts/sync-server.sh",
+        "exit 1",
+        "exit 0",
+        "a refusal exits non-zero before the server runs, so the unit fails and pages (SPEC-337 R2, A5)",
+        "test_sync_server_launcher.TheLauncherStartsTheServerWithHashedUsers.test_the_launcher_refuses_a_bad_entry_and_execs_the_server_with_hashed_users"
+      ],
+      [
+        "S33723-THE-SYNC-UPSTREAM-IS-A-PLACEHOLDER",
+        "deploy/scripts/render-caddy.py",
+        "    \"sync_upstream\": \"{$DECKSTREAK_SYNC_UPSTREAM}\",\n",
+        "",
+        "the render fills the sync server's upstream from its fourth key, so a configuration that names it renders (SPEC-337 R4, A6; ADR-347 D4)",
+        "test_caddy_render.TheCaddyRender.test_the_render_refuses_placeholders_and_keeps_the_headers"
+      ],
+      [
+        "S33724-THE-SYNC-UPSTREAM-IS-CHECKED",
+        "deploy/scripts/render-caddy.py",
+        "    check_upstream(\"sync_upstream\", value)\n",
+        "    return None\n",
+        "the sync server's upstream is checked as the API's is: a loopback host:port, nothing that reaches outward (SPEC-337 R4, A6; ADR-347 D4)",
+        "test_caddy_render.TheCaddyRender.test_the_render_refuses_placeholders_and_keeps_the_headers"
+      ],
+      [
+        "S33725-THE-SYNC-UPSTREAM-HAS-ITS-OWN-CHECK",
+        "deploy/scripts/render-caddy.py",
+        "    \"sync_upstream\": check_sync_upstream,\n",
+        "    \"sync_upstream\": check_api_upstream,\n",
+        "the sync server's upstream is checked under its own key, so a refusal names the key it refused (SPEC-337 R4, A6)",
+        "test_caddy_render.TheCaddyRender.test_the_render_refuses_placeholders_and_keeps_the_headers"
+      ],
+      [
+        "S33726-A-SHAPE-REFUSAL-NAMES-ITS-KEY",
+        "deploy/scripts/render-caddy.py",
+        "        raise Refused(f\"{key} is not a loopback host:port\")\n",
+        "        raise Refused(\"api_upstream is not a loopback host:port\")\n",
+        "an upstream that is not a loopback host:port is refused under the key that holds it (SPEC-337 R4, A6)",
+        "test_caddy_render.TheCaddyRender.test_the_render_refuses_placeholders_and_keeps_the_headers"
+      ],
+      [
+        "S33727-AN-ADDRESS-REFUSAL-NAMES-ITS-KEY",
+        "deploy/scripts/render-caddy.py",
+        "            raise Refused(f\"{key} is not a loopback address\")\n",
+        "            raise Refused(\"api_upstream is not a loopback address\")\n",
+        "an upstream address outside loopback is refused under the key that holds it (SPEC-337 R4, A6)",
+        "test_caddy_render.TheCaddyRender.test_the_render_refuses_placeholders_and_keeps_the_headers"
+      ],
+      [
+        "S33728-A-PORT-REFUSAL-NAMES-ITS-KEY",
+        "deploy/scripts/render-caddy.py",
+        "        raise Refused(f\"{key}'s port is out of range\")\n",
+        "        raise Refused(\"api_upstream's port is out of range\")\n",
+        "an upstream port out of range is refused under the key that holds it (SPEC-337 R4, A6)",
+        "test_caddy_render.TheCaddyRender.test_the_render_refuses_placeholders_and_keeps_the_headers"
+      ],
+      [
+        "S33729-THE-BARE-SYNC-PATH-REDIRECTS-PERMANENTLY",
+        "deploy/caddy/deck-streak.caddy",
+        "\t\tredir * /anki-sync/ 308\n",
+        "\t\tredir * /anki-sync/ 302\n",
+        "the bare sync path redirects to the slash form permanently, keeping the method and body (SPEC-337 R4, A6; ADR-347 D4)",
+        "test_deploy_templates.TheCaddyBlock.test_the_caddy_block_routes_the_sync_server_under_its_own_path"
+      ],
+      [
+        "S33730-THE-SYNC-PREFIX-IS-STRIPPED",
+        "deploy/caddy/deck-streak.caddy",
+        "\t\turi strip_prefix /anki-sync\n",
+        "\t\turi strip_prefix /anki\n",
+        "the sync path's prefix is stripped whole, so the server reads its own routes (SPEC-337 R4, A6; ADR-347 D4)",
+        "test_deploy_templates.TheCaddyBlock.test_the_caddy_block_routes_the_sync_server_under_its_own_path"
+      ],
+      [
+        "S33731-THE-SYNC-HEALTH-MATCHER-IS-THE-SERVERS",
+        "deploy/caddy/deck-streak.caddy",
+        "\t\t@sync_health path /health\n",
+        "\t\t@sync_health path /healthz\n",
+        "the hidden health route is the server's own, so it answers on loopback only (SPEC-337 R4, A6; ADR-025)",
+        "test_deploy_templates.TheCaddyBlock.test_the_caddy_block_routes_the_sync_server_under_its_own_path"
+      ],
+      [
+        "S33732-THE-SYNC-HEALTH-ROUTE-IS-HIDDEN",
+        "deploy/caddy/deck-streak.caddy",
+        "\t\trespond @sync_health 404\n",
+        "\t\trespond @sync_health 200\n",
+        "the server's health route answers 404 at the edge, as the API's do (SPEC-337 R4, A6; ADR-025)",
+        "test_deploy_templates.TheCaddyBlock.test_the_caddy_block_routes_the_sync_server_under_its_own_path"
+      ],
+      [
+        "S33733-THE-SYNC-BODY-BOUND-IS-THE-SERVERS",
+        "deploy/caddy/deck-streak.caddy",
+        "\t\t\tmax_size 100MiB\n",
+        "\t\t\tmax_size 100MB\n",
+        "the edge bounds a sync body at the server's own payload limit, to the byte (SPEC-337 R4, A6; ADR-347 D4)",
+        "test_deploy_templates.TheCaddyBlock.test_the_caddy_block_routes_the_sync_server_under_its_own_path"
+      ],
+      [
+        "S33734-THE-SYNC-PROXY-READS-A-LARGER-BUFFER",
+        "deploy/caddy/deck-streak.caddy",
+        "\t\t\t\tread_buffer 512KiB\n",
+        "\t\t\t\tread_buffer 4KiB\n",
+        "the proxy reads the server's responses with the larger buffer (SPEC-337 R4, A6; ADR-347 D4)",
+        "test_deploy_templates.TheCaddyBlock.test_the_caddy_block_routes_the_sync_server_under_its_own_path"
+      ],
+      [
+        "S33735-THE-SYNC-PROXY-REACHES-THE-SYNC-UPSTREAM",
+        "deploy/caddy/deck-streak.caddy",
+        "\t\treverse_proxy {$DECKSTREAK_SYNC_UPSTREAM} {\n",
+        "\t\treverse_proxy {$DECKSTREAK_API_UPSTREAM} {\n",
+        "the sync path is proxied to the sync server's own upstream, never the API's (SPEC-337 R4, A6; ADR-347 D4)",
+        "test_deploy_templates.TheCaddyBlock.test_the_caddy_block_routes_the_sync_server_under_its_own_path"
+      ],
+      [
+        "S33736-ONLY-A-HELD-DATABASE-IS-REFUSED",
+        "deploy/scripts/backup.py",
+        "    if status in (sqlite3.SQLITE_BUSY, sqlite3.SQLITE_LOCKED):",
+        "    if True:",
+        "the window's backup refuses only a busy or locked step, so a stopped database is copied and not refused (SPEC-337 R5, A7; ADR-347 D12)",
+        "test_backup_units.SyncWindow.test_the_copy_reads_only_a_stopped_generation"
+      ],
+      [
+        "S33737-A-HELD-DATABASE-IS-REFUSED-AT-ONCE",
+        "deploy/scripts/backup.py",
+        "uri=True, timeout=0)",
+        "uri=True, timeout=10)",
+        "the window opens each database with no busy wait, so a database a running server holds is refused at once and the window stays short (SPEC-337 R5, A7; ADR-347 D12)",
+        "test_backup_units.SyncWindow.test_the_copy_reads_only_a_stopped_generation"
+      ],
+      [
+        "S33738-A-GENERATION-IS-PUBLISHED-ONLY-WHEN-WHOLE",
+        "deploy/scripts/backup.py",
+        "partial = snapshots / WINDOW_PARTIAL",
+        "partial = snapshots / f\"gen-{now.astimezone(timezone.utc).strftime(STAMP_FORMAT)}.tar\"",
+        "the window writes its generation under a working name and renames it only when whole, so a failed copy publishes nothing (SPEC-337 R5, A7; ADR-347 D12)",
+        "test_backup_units.SyncWindow.test_a_planted_copy_failure_fails_the_unit_and_publishes_nothing"
+      ],
+      [
+        "S33739-A-BROKEN-DATABASE-IS-NOT-ARCHIVED",
+        "deploy/scripts/backup.py",
+        "            if is_database and not integrity_ok(scratch):",
+        "            if False:",
+        "the daily run checks each database of a generation before it archives it, so a broken collection is kept and fails the run (SPEC-337 R5, A7)",
+        "test_backup_units.SyncWindow.test_the_daily_run_checks_archives_copies_offsite_and_keeps_three"
+      ],
+      [
+        "S33740-THE-MANIFEST-DIGESTS-THE-MEMBERS-BYTES",
+        "deploy/scripts/backup.py",
+        "                    digest.update(chunk)",
+        "                    pass",
+        "each manifest line is the sha256 of its member's bytes, which the drill checks the restore against (SPEC-337 R5, A7)",
+        "test_backup_units.SyncWindow.test_the_daily_run_checks_archives_copies_offsite_and_keeps_three"
+      ],
+      [
+        "S33741-THE-OFFSITE-COPY-CARRIES-THE-MANIFEST",
+        "deploy/scripts/backup.py",
+        "[*command, str(tar), str(manifest), bucket]",
+        "[*command, str(tar), bucket]",
+        "the offsite copy carries the archive and its manifest of digests to the bucket, with arguments and no shell (SPEC-337 R5, A7; ADR-347 D5)",
+        "test_backup_units.SyncWindow.test_the_daily_run_checks_archives_copies_offsite_and_keeps_three"
+      ],
+      [
+        "S33742-THE-OFFSITE-COPY-NEEDS-ITS-BUCKET",
+        "deploy/scripts/backup.py",
+        "    if not command or not bucket:",
+        "    if not command:",
+        "a copy command with no bucket is refused, so the generation is kept and the run fails (SPEC-337 R5, A7)",
+        "test_backup_units.SyncWindow.test_the_daily_run_checks_archives_copies_offsite_and_keeps_three"
+      ],
+      [
+        "S33743-THREE-ARCHIVES-STAY-ON-THE-HOST",
+        "deploy/scripts/backup.py",
+        "prune(snapshots, KEEP, pattern)",
+        "prune(snapshots, KEEP + 1, pattern)",
+        "the daily run keeps the newest three archives and manifests on the host and prunes the rest (SPEC-337 R5, A7)",
+        "test_backup_units.SyncWindow.test_the_daily_run_checks_archives_copies_offsite_and_keeps_three"
+      ],
+      [
+        "S33744-THE-DRILL-RESTORES-THE-NEWEST-ARCHIVE",
+        "deploy/scripts/restore-drill.sh",
+        "newest = snapshots / archives[-1]",
+        "newest = snapshots / archives[0]",
+        "the drill restores the newest snapshot archive, by the instant its name carries (SPEC-337 R5, A8)",
+        "test_backup_units.SyncWindow.test_the_drill_restores_the_newest_snapshot_and_opens_its_collections"
+      ],
+      [
+        "S33745-THE-DRILL-CHECKS-EVERY-DIGEST",
+        "deploy/scripts/restore-drill.sh",
+        "    if member in manifest and sha256(target / member) != manifest[member]:",
+        "    if False:",
+        "the drill checks every restored file against its sha256 digest in the manifest and names a member that differs (SPEC-337 R5, A8)",
+        "test_backup_units.SyncWindow.test_the_drill_restores_the_newest_snapshot_and_opens_its_collections"
+      ],
+      [
+        "S33746-THE-DRILL-CHECKS-EACH-DATABASE",
+        "deploy/scripts/restore-drill.sh",
+        "        if (user / name).is_file() and not integrity(user / name):",
+        "        if False:",
+        "the drill runs the integrity check on each user's collection and media index, so a broken media index fails it though its digest holds (SPEC-337 R5, A8)",
+        "test_backup_units.SyncWindow.test_the_drill_restores_the_newest_snapshot_and_opens_its_collections"
+      ],
+      [
+        "S33747-AN-EMPTY-SNAPSHOT-DIRECTORY-IS-REFUSED-BY-NAME",
+        "deploy/scripts/restore-drill.sh",
+        "if not archives:",
+        "if False:",
+        "a snapshot directory with no archive fails the drill, which says so by name (SPEC-337 R5, A8)",
+        "test_backup_units.SyncWindow.test_the_drill_restores_the_newest_snapshot_and_opens_its_collections"
+      ]
+    ]
+  }
+}
