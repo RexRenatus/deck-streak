@@ -731,11 +731,13 @@ mod tests {
     use deck_streak_coordination::recompute::badges::BADGES_STEP;
     use deck_streak_coordination::recompute::band_badges::BAND_BADGES_STEP;
     use deck_streak_coordination::recompute::day_bonuses::DAY_BONUSES_STEP;
+    use deck_streak_coordination::recompute::habit_badges::HABIT_BADGES_STEP;
     use deck_streak_coordination::recompute::habits::HABITS_STEP;
     use deck_streak_coordination::recompute::mint::MINT_STEP;
     use deck_streak_coordination::recompute::progress::PROGRESS_STEP;
     use deck_streak_coordination::recompute::records::RECORDS_STEP;
     use deck_streak_coordination::recompute::streaks::STREAKS_STEP;
+    use deck_streak_coordination::recompute::writing::WRITING_STEP;
     use deck_streak_coordination::recompute::xp::XP_STEP;
 
     use super::{OwnerSyncCycle, RecomputeSetup, TransportMarker, answer_of, recompute_fold};
@@ -861,6 +863,36 @@ mod tests {
                 ][..]
             ),
             "the habit step is phase 4's, after the streaks and before the derived bonuses (SPEC-078 R5)"
+        );
+    }
+
+    /// A35: the habit badges step runs in production, in phase 7 right before the badge step
+    /// (SPEC-078 R17 as amended).
+    #[test]
+    fn the_recompute_fold_registers_the_habit_badges_step_in_the_awards_phase() {
+        let fold = recompute_fold(AnalyticsSettings::default()).expect("every step in its phase");
+        let steps = fold.steps();
+        let at = |step: (Phase, &str)| steps.iter().position(|registered| *registered == step);
+        let badges = at((Phase::Awards, BADGES_STEP)).expect("the badge step");
+        assert_eq!(
+            at((Phase::Awards, HABIT_BADGES_STEP)),
+            badges.checked_sub(1),
+            "the habit badges step is registered in phase 7, right before the badge step"
+        );
+    }
+
+    /// A35b: the writing step runs in production, in phase 4 right after the habit step
+    /// (SPEC-078 R6).
+    #[test]
+    fn the_recompute_fold_registers_the_writing_step_after_the_habit_step() {
+        let fold = recompute_fold(AnalyticsSettings::default()).expect("every step in its phase");
+        let steps = fold.steps();
+        let at = |step: (Phase, &str)| steps.iter().position(|registered| *registered == step);
+        let habits = at((Phase::DaySteps, HABITS_STEP)).expect("the habit step");
+        assert_eq!(
+            at((Phase::DaySteps, WRITING_STEP)),
+            Some(habits + 1),
+            "the writing step is registered in phase 4, right after the habit step"
         );
     }
 

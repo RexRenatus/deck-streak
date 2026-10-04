@@ -274,10 +274,10 @@
       "input": {
         "all_langs_goal_met": true,
         "langs_read_this_week": 2,
-        "reading_entries": 15,
-        "week_total_min": 214,
+        "reading_entries": 8,
+        "week_total_min": 526,
         "writing_all_streak": 31,
-        "writing_entries": 34
+        "writing_entries": 33
       },
       "output": [
         "first_page",
@@ -292,10 +292,10 @@
       "input": {
         "all_langs_goal_met": true,
         "langs_read_this_week": 2,
-        "reading_entries": 11,
-        "week_total_min": 438,
+        "reading_entries": 4,
+        "week_total_min": 638,
         "writing_all_streak": 120,
-        "writing_entries": 122
+        "writing_entries": 125
       },
       "output": [
         "first_page",
@@ -304,17 +304,18 @@
         "ink_month",
         "ink_century",
         "bookworm_week",
-        "polyglot_reader"
+        "polyglot_reader",
+        "marathon_reader"
       ]
     },
     {
       "input": {
         "all_langs_goal_met": false,
         "langs_read_this_week": 1,
-        "reading_entries": 13,
-        "week_total_min": 212,
+        "reading_entries": 3,
+        "week_total_min": 415,
         "writing_all_streak": 99,
-        "writing_entries": 99
+        "writing_entries": 100
       },
       "output": [
         "first_page",
@@ -357,15 +358,16 @@
       "input": {
         "all_langs_goal_met": false,
         "langs_read_this_week": 1,
-        "reading_entries": 23,
-        "week_total_min": 168,
+        "reading_entries": 10,
+        "week_total_min": 707,
         "writing_all_streak": 8,
-        "writing_entries": 10
+        "writing_entries": 9
       },
       "output": [
         "first_page",
         "quill_initiate",
-        "ink_week"
+        "ink_week",
+        "marathon_reader"
       ]
     },
     {
@@ -401,17 +403,16 @@
     },
     {
       "input": {
-        "all_langs_goal_met": true,
+        "all_langs_goal_met": false,
         "langs_read_this_week": 2,
-        "reading_entries": 20,
-        "week_total_min": 287,
+        "reading_entries": 6,
+        "week_total_min": 288,
         "writing_all_streak": 0,
-        "writing_entries": 2
+        "writing_entries": 5
       },
       "output": [
         "first_page",
         "quill_initiate",
-        "bookworm_week",
         "polyglot_reader"
       ]
     },
@@ -419,27 +420,28 @@
       "input": {
         "all_langs_goal_met": false,
         "langs_read_this_week": 1,
-        "reading_entries": 20,
-        "week_total_min": 459,
+        "reading_entries": 25,
+        "week_total_min": 615,
         "writing_all_streak": 120,
-        "writing_entries": 125
+        "writing_entries": 123
       },
       "output": [
         "first_page",
         "quill_initiate",
         "ink_week",
         "ink_month",
-        "ink_century"
+        "ink_century",
+        "marathon_reader"
       ]
     },
     {
       "input": {
         "all_langs_goal_met": true,
         "langs_read_this_week": 2,
-        "reading_entries": 9,
-        "week_total_min": 853,
+        "reading_entries": 15,
+        "week_total_min": 846,
         "writing_all_streak": 6,
-        "writing_entries": 10
+        "writing_entries": 7
       },
       "output": [
         "first_page",
@@ -453,10 +455,10 @@
       "input": {
         "all_langs_goal_met": false,
         "langs_read_this_week": 1,
-        "reading_entries": 30,
-        "week_total_min": 884,
+        "reading_entries": 29,
+        "week_total_min": 724,
         "writing_all_streak": 6,
-        "writing_entries": 11
+        "writing_entries": 6
       },
       "output": [
         "first_page",
@@ -472,7 +474,7 @@
   "kind": "adapter",
   "note": "Builds the context from the case with the reading courses replaced by two synthetic courses; returns the badge keys in the order it gives them; cases drawn under CPython 3.12.12.",
   "registry": "tools/parity-oracle/registry/spec_078.py",
-  "registry_sha256": "c96b27ea89e52dbf1298af3f92f5e8b3f3612983b1af12fc1fa0d2b673e37d3a",
+  "registry_sha256": "68cf3ad186bc9a22e82d5198cc0373af4d172d1151e9d8e9c69fe567132e2104",
   "schema": "phx.parity-golden.v1",
   "seed": 20,
   "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"

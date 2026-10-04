@@ -463,7 +463,7 @@
   "kind": "adapter",
   "note": "Drives it on a stand-in layer over a stub store holding the case's entries, weekly sums grouped by code in code order and rows in the order they were logged, with the layer's day fixed at the case's day; returns the code, or none; cases drawn under CPython 3.12.12.",
   "registry": "tools/parity-oracle/registry/spec_078.py",
-  "registry_sha256": "c96b27ea89e52dbf1298af3f92f5e8b3f3612983b1af12fc1fa0d2b673e37d3a",
+  "registry_sha256": "68cf3ad186bc9a22e82d5198cc0373af4d172d1151e9d8e9c69fe567132e2104",
   "schema": "phx.parity-golden.v1",
   "seed": 20,
   "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"

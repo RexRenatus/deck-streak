@@ -36,6 +36,7 @@ synthetic, every day an epoch day number.
 
 import asyncio
 import datetime as dt
+import math
 import types
 from unittest import mock
 
@@ -242,7 +243,11 @@ def writing_streak_cases(rng):
         ("none", {"codes": two, "rows": [], "today": today}),
         (
             "today and the two days before",
-            {"codes": two, "rows": every_course(two, [today - 2, today - 1, today]), "today": today},
+            {
+                "codes": two,
+                "rows": every_course(two, [today - 2, today - 1, today]),
+                "today": today,
+            },
         ),
         (
             "ending yesterday",
@@ -263,7 +268,11 @@ def writing_streak_cases(rng):
         ),
         (
             "one course over five days",
-            {"codes": ["qaa"], "rows": every_course(["qaa"], range(today - 4, today + 1)), "today": today},
+            {
+                "codes": ["qaa"],
+                "rows": every_course(["qaa"], range(today - 4, today + 1)),
+                "today": today,
+            },
         ),
         (
             "the day before yesterday only",
@@ -318,33 +327,59 @@ def badge_cases(rng):
         ("a streak of 99", context(writing_entries=99, writing_all_streak=99)),
         ("a streak of 100", context(writing_entries=100, writing_all_streak=100)),
         ("one course read", context(reading_entries=2, langs_read_this_week=1, week_total_min=40)),
-        ("both courses read", context(reading_entries=2, langs_read_this_week=2, week_total_min=40)),
+        (
+            "both courses read",
+            context(reading_entries=2, langs_read_this_week=2, week_total_min=40),
+        ),
         ("599 minutes", context(reading_entries=3, langs_read_this_week=1, week_total_min=599)),
         ("600 minutes", context(reading_entries=3, langs_read_this_week=1, week_total_min=600)),
         (
             "every goal met",
             context(
-                reading_entries=4, langs_read_this_week=2, week_total_min=420, all_langs_goal_met=True
+                reading_entries=4,
+                langs_read_this_week=2,
+                week_total_min=420,
+                all_langs_goal_met=True,
             ),
         ),
     ]
+    # Each random context is one a log can hold, so the fold's test can build it from entries and
+    # confirmations (A19): every goal met needs both courses at the weekly goal, and the week's
+    # minutes need the entries that carry them, at most 600 minutes an entry.
     for _ in range(16):
         streak = rng.choice([0, 1, 6, 7, 8, 29, 30, 31, 99, 100, 120])
         langs = rng.randint(0, 2)
+        goal = langs == 2 and rng.random() < 0.5
+        minutes = 0 if langs == 0 else rng.randint(420 if goal else langs, 900)
         cases.append(
             (
                 None,
                 context(
-                    reading_entries=rng.randint(0, 3) if langs == 0 else rng.randint(1, 30),
+                    reading_entries=(
+                        rng.randint(required_entries(langs, goal, minutes), 30)
+                        if langs
+                        else rng.randint(0, 3)
+                    ),
                     writing_entries=streak + rng.randint(0, 5),
                     writing_all_streak=streak,
                     langs_read_this_week=langs,
-                    week_total_min=0 if langs == 0 else rng.randint(1, 900),
-                    all_langs_goal_met=langs == 2 and rng.random() < 0.5,
+                    week_total_min=minutes,
+                    all_langs_goal_met=goal,
                 ),
             )
         )
     return cases
+
+
+def required_entries(langs, goal, minutes):
+    """The fewest entries that log `minutes` over `langs` courses in one week, at most 600 minutes
+    an entry: one course carries them all; both at the goal split them evenly, at most 450 each;
+    both short of it leave one minute to the second course."""
+    if langs == 1:
+        return math.ceil(minutes / 600)
+    if goal:
+        return 2
+    return 1 + math.ceil((minutes - 1) / 600)
 
 
 def with_two_reading_courses(evaluate, predecessor, **context):

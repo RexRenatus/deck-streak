@@ -1,17 +1,19 @@
 //! The owner's `/read` and `/undo` (SPEC-078 R2, R4; ADR-078): an entry of reading minutes, by a
 //! course and its minutes, by the minutes alone for the most-used course, or by the course picker
 //! and then a preset; and the undo of the newest entry, by the command or by a logged reply's Undo
-//! button.
+//! button. The owner's `/write` and `/unwrite` (SPEC-078 R6 to R8): a writing confirmation of the
+//! current study day, its clearing, and the checklist whose chips toggle the day they were drawn
+//! for.
 //!
 //! The rules and the use cases are coordination's (`coordination::habits`), because the bot cannot
 //! name the habits context. Every reply is HTML with the owner's token escaped, and none names a
 //! date, a time of day or a deadline.
 
 use deck_streak_coordination::habits::{
-    Course, EntryRefusal, HabitError, Logged, READING_GOAL_XP_BONUS, READING_MAX_ENTRY_MIN,
-    READING_PRESETS, READING_WEEKLY_GOAL_MIN, Undone,
+    Checklist, Course, EntryRefusal, HabitError, Logged, READING_GOAL_XP_BONUS,
+    READING_MAX_ENTRY_MIN, READING_PRESETS, READING_WEEKLY_GOAL_MIN, Undone, Written,
 };
-use deck_streak_kernel::{CourseCode, Courses};
+use deck_streak_kernel::{CourseCode, Courses, StudyDay};
 use frankenstein::types::{InlineKeyboardButton, InlineKeyboardMarkup};
 
 use crate::commands::Reply;
@@ -28,6 +30,9 @@ const MINUTES_PREFIX: &str = "hb:m:";
 
 /// A logged reply's Undo button: `hb:u:<entry id>`.
 const UNDO_PREFIX: &str = "hb:u:";
+
+/// A writing checklist's chip: `hb:w:<code>:<epoch day>`, the day it was drawn for.
+const WRITING_PREFIX: &str = "hb:w:";
 
 /// The presets a row of the preset keyboard holds.
 const PRESETS_PER_ROW: usize = 3;
@@ -46,6 +51,13 @@ pub enum HabitCallback {
     },
     /// An Undo button: remove its entry while it is the newest.
     Undo(i64),
+    /// A writing chip: toggle its course on its day, while that day is the current study day.
+    Writing {
+        /// The writing course.
+        code: CourseCode,
+        /// The study day the chip was drawn for.
+        day: StudyDay,
+    },
 }
 
 /// The data of the picker's button for `code`.
@@ -66,6 +78,12 @@ pub fn undo_data(entry: i64) -> String {
     format!("{UNDO_PREFIX}{entry}")
 }
 
+/// The data of the writing chip of `code`, drawn for `day`.
+#[must_use]
+pub fn writing_data(code: &CourseCode, day: StudyDay) -> String {
+    format!("{WRITING_PREFIX}{}:{}", code.as_str(), day.epoch_day())
+}
+
 /// The habit button `data` names, or `None` when it names none.
 #[must_use]
 pub fn parse_callback(data: &str) -> Option<HabitCallback> {
@@ -77,6 +95,12 @@ pub fn parse_callback(data: &str) -> Option<HabitCallback> {
         let code = CourseCode::new(code)?;
         let minutes = minutes.parse::<u32>().ok()?;
         return Some(HabitCallback::Minutes { code, minutes });
+    }
+    if let Some(rest) = data.strip_prefix(WRITING_PREFIX) {
+        let (code, day) = rest.split_once(':')?;
+        let code = CourseCode::new(code)?;
+        let day = StudyDay::from_epoch_day(day.parse::<i64>().ok()?);
+        return Some(HabitCallback::Writing { code, day });
     }
     let entry = data.strip_prefix(UNDO_PREFIX)?;
     entry.parse::<i64>().ok().map(HabitCallback::Undo)
@@ -348,4 +372,57 @@ pub fn undo_outcome_reply(courses: &Courses, undone: Result<Undone, HabitError>)
             undo_failed_reply()
         }
     }
+}
+
+/// The writing checklist of `checklist` over `courses`, with one toggle chip per writing course.
+#[must_use]
+pub fn checklist_reply(_courses: &Courses, _checklist: &Checklist) -> Reply {
+    Reply::text(String::new())
+}
+
+/// The answer once today's writing was confirmed, with the checklist.
+#[must_use]
+pub fn write_confirmed_reply(_courses: &Courses, _checklist: &Checklist) -> Reply {
+    Reply::text(String::new())
+}
+
+/// The answer once today's writing confirmation was cleared, with the checklist.
+#[must_use]
+pub fn write_cleared_reply(_courses: &Courses, _checklist: &Checklist) -> Reply {
+    Reply::text(String::new())
+}
+
+/// The answer to a chip drawn for a day that has closed, with today's checklist.
+#[must_use]
+pub fn write_day_closed_reply(_courses: &Courses, _checklist: &Checklist) -> Reply {
+    Reply::text(String::new())
+}
+
+/// The answer when a token names no writing course.
+#[must_use]
+pub fn not_a_writing_course_reply() -> Reply {
+    Reply::text(String::new())
+}
+
+/// The answer when no writing course is configured.
+#[must_use]
+pub fn no_writing_course_reply() -> Reply {
+    Reply::text(String::new())
+}
+
+/// The answer when the writing could not be written.
+#[must_use]
+pub fn write_failed_reply() -> Reply {
+    Reply::text(String::new())
+}
+
+/// The answer to a writing write that ended as `written`, over `courses`, where `done` words a
+/// write that changed the log.
+#[must_use]
+pub fn written_reply(
+    _courses: &Courses,
+    _written: Result<Written, HabitError>,
+    _done: fn(&Courses, &Checklist) -> Reply,
+) -> Reply {
+    Reply::text(String::new())
 }

@@ -882,6 +882,7 @@ impl<S: OwnerSync> Commands<S> {
                 let undone = undo_entry(&self.habit_writer(habits), entry).await;
                 undo_outcome_reply(&habits.courses, undone)
             }
+            HabitCallback::Writing { .. } => return,
         };
         self.send(reply).await;
     }

@@ -428,3 +428,37 @@ async fn a_changed_courses_file_bumps_the_settings_generation_once() {
     assert_eq!(content_digest(b"a"), "af63dc4c8601ec8c");
     assert_eq!(content_digest(b""), "cbf29ce484222325");
 }
+
+/// A writing course coded `all` would settle its own writing as `write:all`, the source the day's
+/// writing bonus is settled under, so two amounts would share one row: the file is refused, naming
+/// the setting and no value (SPEC-078 R7, A32). A course coded `all` that does not write is no
+/// such clash, and loads.
+#[test]
+fn a_writing_course_coded_all_is_refused() {
+    let text = edited(|file| {
+        file["courses"][0]["code"] = json!("all");
+        file["courses"][0]["writing"] = json!(true);
+    });
+    let refusal = Courses::parse(&text);
+    assert!(
+        matches!(&refusal, Err(CoursesError::Malformed { setting, .. }) if *setting == COURSES_FILE),
+        "a writing course coded all is refused: {refusal:?}"
+    );
+    let said = refusal.expect_err("refused").to_string();
+    assert!(said.contains(COURSES_FILE), "{said}");
+    for value in unquotable(&text) {
+        assert!(!said.contains(value.as_str()), "{said} quotes {value}");
+    }
+
+    let reading = edited(|file| {
+        file["courses"][1]["code"] = json!("all");
+        file["courses"][1]["writing"] = json!(false);
+    });
+    let loaded = Courses::parse(&reading).expect("a reading course coded all loads");
+    let codes: Vec<&str> = loaded
+        .courses()
+        .iter()
+        .map(|course| course.code.as_str())
+        .collect();
+    assert_eq!(codes, ["qaa", "all"]);
+}

@@ -2,7 +2,10 @@
 //! course's code, by its alias, by the minutes alone and by the picker then a preset; every refusal
 //! answered with nothing logged; the undo of the newest entry and a stale button that removes
 //! nothing; every habit button inside Telegram's bound and answered; and the two commands in the
-//! owner's menu.
+//! owner's menu. The owner's `/write` and `/unwrite` (SPEC-078 A33, A34, A36; R6 to R8): a
+//! confirmation by a course's code or alias, its clearing, the checklist, every refusal answered
+//! with nothing written, a chip drawn for a closed day that toggles nothing, every writing chip
+//! inside Telegram's bound and naming its day, and the two commands in the owner's menu.
 //!
 //! Each command goes through the bot's own handlers to a fake Bot API, over a temporary database.
 //! Every course is synthetic.
@@ -18,11 +21,11 @@ use std::sync::Arc;
 
 use deck_streak_bot::commands::{Commands, MENU};
 use deck_streak_bot::habits_commands::{
-    HABIT_PREFIX, HabitCallback, course_data, logged_reply, minutes_data, parse_callback,
-    pick_course_reply, presets_reply, undo_data,
+    HABIT_PREFIX, HabitCallback, checklist_reply, course_data, logged_reply, minutes_data,
+    parse_callback, pick_course_reply, presets_reply, undo_data, writing_data,
 };
-use deck_streak_coordination::habits::{Logged, READING_PRESETS};
-use deck_streak_kernel::{CourseCode, Courses, Db, StudyDayRule};
+use deck_streak_coordination::habits::{Checklist, ChecklistLine, Logged, READING_PRESETS};
+use deck_streak_kernel::{CourseCode, Courses, Db, StudyDay, StudyDayRule};
 use deck_streak_notifications::{Policy, Router};
 use fake_bot_api::{Bench, ScriptedSync, golden_send, incoming, owner_says, owner_taps, payload};
 use serde_json::Value;
@@ -398,4 +401,240 @@ async fn the_reading_commands_join_the_owners_menu() {
             "/{command} is registered for the owner's chat"
         );
     }
+}
+
+/// The bench's study day under the default rule (2025-01-14).
+const BENCH_DAY: i64 = 20_102;
+
+/// The writing log's rows, as code and day, in order.
+async fn confirmations(db: &Db) -> Vec<(String, i64)> {
+    sqlx::query_as("SELECT code, study_day FROM writing_log ORDER BY study_day, code")
+        .fetch_all(db.reader())
+        .await
+        .expect("the log reads")
+}
+
+/// A trigger that makes the database refuse every new confirmation, as a write that fails would.
+const REFUSE_CONFIRM: &str = "CREATE TRIGGER refuse_confirm BEFORE INSERT ON writing_log \
+                              BEGIN SELECT RAISE(ABORT, 'refused'); END";
+
+/// The bench day's checklist with `qab`, the one writing course, confirmed or not.
+fn qab_checklist(confirmed: bool) -> Checklist {
+    let streak = u32::from(confirmed);
+    Checklist {
+        day: StudyDay::from_epoch_day(BENCH_DAY),
+        lines: vec![ChecklistLine {
+            code: code("qab"),
+            confirmed,
+            streak,
+        }],
+        streak,
+    }
+}
+
+#[tokio::test]
+async fn write_confirms_clears_and_refuses_as_its_goldens_say() {
+    let bench = Bench::start().await;
+    let mut commands = habit_commands(&bench, courses());
+    let today = StudyDay::from_epoch_day(BENCH_DAY);
+
+    commands.handle(incoming(owner_says(1, "/write"))).await;
+    assert_eq!(last_send(&bench), golden_send("write-chips"), "bare /write");
+    assert!(confirmations(&bench.db).await.is_empty(), "nothing yet");
+
+    commands.handle(incoming(owner_says(2, "/write b"))).await;
+    assert_eq!(
+        last_send(&bench),
+        golden_send("write-confirmed"),
+        "by alias"
+    );
+    assert_eq!(
+        confirmations(&bench.db).await,
+        [("qab".to_owned(), BENCH_DAY)]
+    );
+
+    commands
+        .handle(incoming(owner_says(3, "/unwrite qab")))
+        .await;
+    assert_eq!(last_send(&bench), golden_send("write-cleared"), "by code");
+    assert!(confirmations(&bench.db).await.is_empty(), "cleared");
+
+    // A token that names no writing course refuses the whole command.
+    commands
+        .handle(incoming(owner_says(4, "/write qab qaa")))
+        .await;
+    assert_eq!(
+        last_send(&bench),
+        golden_send("write-not-a-writing-course"),
+        "a reading course"
+    );
+    commands
+        .handle(incoming(owner_says(5, "/unwrite x<y")))
+        .await;
+    assert_eq!(
+        last_send(&bench),
+        golden_send("write-not-a-writing-course"),
+        "no course at all"
+    );
+    assert!(confirmations(&bench.db).await.is_empty(), "nothing written");
+
+    // A chip drawn for the day before toggles nothing and answers with today's checklist.
+    let yesterday = StudyDay::from_epoch_day(BENCH_DAY - 1);
+    commands
+        .handle(incoming(owner_taps(
+            6,
+            &writing_data(&code("qab"), yesterday),
+            1,
+        )))
+        .await;
+    assert_eq!(
+        last_send(&bench),
+        golden_send("write-day-closed"),
+        "a closed day's chip"
+    );
+    assert!(confirmations(&bench.db).await.is_empty(), "nothing toggled");
+
+    commands.handle(incoming(owner_says(7, "/unwrite"))).await;
+    assert_eq!(
+        last_send(&bench),
+        golden_send("write-chips"),
+        "bare /unwrite"
+    );
+
+    // Today's chip toggles today, and answers with the toggled checklist.
+    commands
+        .handle(incoming(owner_taps(
+            8,
+            &writing_data(&code("qab"), today),
+            1,
+        )))
+        .await;
+    let toggled = checklist_reply(&courses(), &qab_checklist(true));
+    assert_eq!(last_text(&bench), toggled.text, "today's chip");
+    assert_eq!(last_buttons(&bench), [writing_data(&code("qab"), today)]);
+    assert_eq!(
+        confirmations(&bench.db).await,
+        [("qab".to_owned(), BENCH_DAY)]
+    );
+    commands
+        .handle(incoming(owner_taps(
+            9,
+            &writing_data(&code("qab"), today),
+            1,
+        )))
+        .await;
+    assert_eq!(
+        last_text(&bench),
+        checklist_reply(&courses(), &qab_checklist(false)).text,
+        "a second tap toggles it back"
+    );
+    assert!(confirmations(&bench.db).await.is_empty(), "toggled back");
+
+    // A write the database refuses.
+    refuse(&bench.db, REFUSE_CONFIRM).await;
+    commands
+        .handle(incoming(owner_says(10, "/write qab")))
+        .await;
+    assert_eq!(
+        last_send(&bench),
+        golden_send("write-failed"),
+        "a refused write"
+    );
+
+    // With no writing course configured, there is nothing to confirm.
+    let reading_only =
+        Courses::parse(&COURSES.replace(r#""writing": true"#, r#""writing": false"#))
+            .expect("the reading-only courses parse");
+    let bench = Bench::start().await;
+    let mut commands = habit_commands(&bench, reading_only);
+    for (update, text) in [(1, "/write"), (2, "/write qab"), (3, "/unwrite qab")] {
+        commands.handle(incoming(owner_says(update, text))).await;
+        assert_eq!(
+            last_send(&bench),
+            golden_send("write-no-writing-course"),
+            "{text}"
+        );
+    }
+    assert!(confirmations(&bench.db).await.is_empty(), "nothing written");
+}
+
+#[tokio::test]
+async fn every_writing_chip_fits_telegrams_bound_and_names_its_day() {
+    let longest = code("qaaaaaaa");
+    let days = [0, BENCH_DAY, i64::MAX, i64::MIN].map(StudyDay::from_epoch_day);
+    for day in days {
+        let text = writing_data(&longest, day);
+        assert!(
+            text.len() <= MAX_CALLBACK_DATA && text.starts_with(HABIT_PREFIX),
+            "{text}: {} bytes",
+            text.len()
+        );
+        assert!(
+            text.ends_with(&format!(":{}", day.epoch_day())),
+            "{text} names its day"
+        );
+        assert_eq!(
+            parse_callback(&text),
+            Some(HabitCallback::Writing { code: longest, day }),
+            "{text}"
+        );
+    }
+
+    let checklist = qab_checklist(false);
+    let reply = checklist_reply(&courses(), &checklist);
+    let rendered: Vec<String> = reply
+        .keyboard
+        .iter()
+        .flat_map(|keyboard| keyboard.inline_keyboard.iter().flatten())
+        .filter_map(|button| button.callback_data.clone())
+        .collect();
+    println!("examined {} writing chip(s)", days.len() + rendered.len());
+    assert_eq!(
+        rendered,
+        [writing_data(&code("qab"), checklist.day)],
+        "one chip per writing course, naming the checklist's day"
+    );
+    for text in &rendered {
+        assert!(text.len() <= MAX_CALLBACK_DATA, "{text}");
+    }
+    for refused in ["hb:w:", "hb:w:qab", "hb:w:qab:", "hb:w:QAB:1", "hb:w:qab:x"] {
+        assert_eq!(parse_callback(refused), None, "{refused}");
+    }
+}
+
+#[tokio::test]
+async fn the_writing_commands_join_the_owners_menu() {
+    let bench = Bench::start().await;
+    let commands = habit_commands(&bench, courses());
+    commands.register_menu().await;
+    let calls = bench.fake.calls_of("setMyCommands");
+    let registered = calls[0].body["commands"].as_array().expect("commands");
+    for (command, described) in [
+        ("write", "Confirm today's writing"),
+        ("unwrite", "Undo today's writing confirmation"),
+    ] {
+        let entry = MENU.iter().find(|entry| entry.command == command);
+        assert_eq!(
+            entry.map(|entry| entry.description),
+            Some(described),
+            "/{command} is in the menu"
+        );
+        assert!(!described.is_empty() && described.len() <= 256);
+        assert!(
+            registered
+                .iter()
+                .any(|sent| sent["command"] == command && sent["description"] == described),
+            "/{command} is registered for the owner's chat"
+        );
+    }
+    let order: Vec<&str> = MENU.iter().map(|entry| entry.command).collect();
+    let undo = order
+        .iter()
+        .position(|command| *command == "undo")
+        .expect("/undo is in the menu");
+    assert_eq!(
+        order.get(undo + 1..undo + 3),
+        Some(&["write", "unwrite"][..]),
+        "the writing commands follow /undo"
+    );
 }

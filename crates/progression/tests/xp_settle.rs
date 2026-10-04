@@ -219,6 +219,48 @@ async fn the_habit_sources_are_derived_only_with_a_course_code() {
     );
 }
 
+/// The writing sources are derived only with a course code (SPEC-078 R7, A23b): a writing
+/// course's `write:<code>`, and the day's bonus `write:all`, whose `all` is a code no writing
+/// course may take. Nothing else that starts like them is derived.
+#[tokio::test]
+async fn the_writing_sources_are_derived_only_with_a_course_code() {
+    let (_directory, db) = database().await;
+    for source in ["write:qaa", "write:all"] {
+        assert!(is_derived(source), "{source} is derived");
+        assert_eq!(
+            settled(
+                &db,
+                &request(source, 75, false),
+                SettleCause::OwnersCorrection
+            )
+            .await,
+            75,
+            "{source} settles"
+        );
+    }
+    for source in ["write:", "write:QAA", "write:a b", "writing:qaa"] {
+        assert!(!is_derived(source), "{source:?} is not derived");
+        let mut write = db.write().await.expect("a write");
+        let refusal = settle(
+            &mut write,
+            &request(source, 75, false),
+            SettleCause::OwnersCorrection,
+            UtcMillis::from_epoch_millis(AT),
+        )
+        .await;
+        assert!(
+            matches!(refusal, Err(SettleError::NotDerived)),
+            "{source:?} is refused as not derived: {refusal:?}"
+        );
+        write.commit().await.expect("commit");
+    }
+    assert_eq!(
+        rows(&db).await.len(),
+        2,
+        "only the two writing sources were written"
+    );
+}
+
 #[test]
 fn the_derived_registry_and_the_tables_are_pinned_whole() {
     assert_eq!(

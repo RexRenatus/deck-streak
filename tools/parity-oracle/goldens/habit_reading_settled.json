@@ -1142,7 +1142,7 @@
   "kind": "adapter",
   "note": "Logs the case's entries one by one into a stub store and recomputes after each for its code and day; returns every grant the store holds at the end, as day, source and amount, sorted; cases drawn under CPython 3.12.12.",
   "registry": "tools/parity-oracle/registry/spec_078.py",
-  "registry_sha256": "c96b27ea89e52dbf1298af3f92f5e8b3f3612983b1af12fc1fa0d2b673e37d3a",
+  "registry_sha256": "68cf3ad186bc9a22e82d5198cc0373af4d172d1151e9d8e9c69fe567132e2104",
   "schema": "phx.parity-golden.v1",
   "seed": 20,
   "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
