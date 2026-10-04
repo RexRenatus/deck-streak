@@ -112,6 +112,18 @@
       "neutral": ["/etc/deck-streak/deck-streak.env"]
     },
     {
+      "unit": "deck-streak-mcp.service",
+      "section": "Service",
+      "key": "ExecStart",
+      "neutral": ["/usr/local/lib/deck-streak/current/bin/deckstreakd mcp"]
+    },
+    {
+      "unit": "deck-streak-mcp.service",
+      "section": "Service",
+      "key": "EnvironmentFile",
+      "neutral": ["/etc/deck-streak/deck-streak.env"]
+    },
+    {
       "unit": "deck-streak-memory-watch.service",
       "section": "Service",
       "key": "ExecStart",

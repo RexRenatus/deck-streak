@@ -28,10 +28,11 @@ TimeoutStartSec=180
 TimeoutStopSec=30
 OOMPolicy=kill
 SyslogIdentifier=deck-streak-api
-# The budget is deploy/host-budget.json's entry for this unit (ADR-032).
+# The budget is deploy/host-budget.json's entry for this unit (ADR-032); its CPU quota gave the MCP
+# server its share and is a ceiling, not a reservation (ADR-332).
 MemoryHigh=96M
 MemoryMax=128M
-CPUQuota=100%
+CPUQuota=75%
 TasksMax=64
 UMask=0077
 NoNewPrivileges=yes
