@@ -7,6 +7,7 @@ mod support;
 
 use std::time::Duration;
 
+use base64ct::{Base64UrlUnpadded, Encoding};
 use deck_streak_push::{
     BuildError, Notification, Origin, PushServices, Sent, WebPushSender, WebPushSettings,
 };
@@ -15,7 +16,7 @@ use serde_json::json;
 use support::fake_push_service::FakePushService;
 use support::keys::{CONTACT, ENDPOINT_PATH, TestKey, TestSubscriber};
 use support::rfc8291::Undecrypted;
-use support::{DEADLINE, clock};
+use support::{DEADLINE, START, clock};
 
 /// A sender whose list holds `services`, signing with `key`.
 fn build_sender(key: &TestKey, services: PushServices) -> WebPushSender {
@@ -106,5 +107,41 @@ async fn a11_a_message_reaches_the_fake_encrypted_and_decrypts_to_its_json() {
     assert_eq!(
         FakePushService::plaintext(request, &stranger),
         Err(Undecrypted::Tag)
+    );
+}
+
+#[tokio::test]
+async fn a12_the_vapid_header_carries_a_jwt_the_fake_verifies_with_k() {
+    let service = FakePushService::start().await;
+    let key = TestKey::generate();
+    let browser = TestSubscriber::generate();
+    let sender = build_sender(&key, listing(&[&service]));
+    let subscription = sender
+        .subscription(&service.endpoint(), &browser.p256dh(), &browser.auth())
+        .expect("a listed endpoint is admitted");
+
+    assert_eq!(
+        sender.deliver(&subscription, &notification()).await,
+        Sent::Delivered
+    );
+
+    let received = service.fake.received();
+    assert_eq!(received.len(), 1);
+    let vapid = FakePushService::vapid(&received[0]).expect("vapid t=..., k=...");
+    let public = key.verifying().to_encoded_point(false);
+    assert_eq!(
+        vapid.key,
+        Base64UrlUnpadded::encode_string(public.as_bytes())
+    );
+    let verified =
+        FakePushService::token(&received[0]).expect("the fake verifies the token with k");
+    assert_eq!(verified.header, json!({"typ": "JWT", "alg": "ES256"}));
+    assert_eq!(
+        verified.claims,
+        json!({
+            "aud": service.fake.origin(),
+            "exp": START / 1000 + 12 * 60 * 60,
+            "sub": CONTACT,
+        })
     );
 }
