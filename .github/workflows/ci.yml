@@ -583,6 +583,9 @@ jobs:
           key: rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}
           restore-keys: |
             rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-
+      - name: fetch the locked crate graph (the census reads every feature)
+        if: ${{ needs.mutation-plan.outputs.rows == 'true' }}
+        run: cargo fetch --locked
       - name: the rows the diff selects (the verdict reads their report)
         if: ${{ needs.mutation-plan.outputs.rows == 'true' }}
         run: |

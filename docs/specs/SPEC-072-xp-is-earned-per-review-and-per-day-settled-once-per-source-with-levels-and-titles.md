@@ -723,6 +723,10 @@ stands, and the compiler decides it.
   `crates/progression/tests/xp_census.rs` (A12, A32, A33, A34, A35),
   `scripts/mutation-rows.d/S07200-S07299.json`, `docs/decisions/ADR-197-*.md`,
   `docs/red-first/SPEC-072.md` and `changelog.d/settle-census-397.md`.
+- **Amendment: the lock's full feature graph.** The census reads the lock's full feature graph, so
+  the environment that runs it must hold every crate the lock names, including those only a feature
+  reaches; CI's `mutation-rows` job fetches them by the lock (`cargo fetch --locked`) before it
+  proves a row.
 
 ## 13. Acceptance criteria of section 12's amendment
 
