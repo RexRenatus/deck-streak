@@ -5,35 +5,19 @@
 import { createReadStream, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, type Plugin } from 'vite';
+import { policyHeader } from './policy-header.ts';
 import svelteConfig from './svelte.config.js';
 
 /** The directory `scripts/web-engine-build.sh --out target/web-engine` writes. */
 const ENGINE_DIR = fileURLToPath(new URL('../../target/web-engine/', import.meta.url));
 
-/** The policy's keywords, which a header writes quoted; a host or scheme is written bare. */
-const KEYWORDS = new Set([
-  'self',
-  'none',
-  'unsafe-inline',
-  'unsafe-eval',
-  'wasm-unsafe-eval',
-  'unsafe-hashes',
-  'strict-dynamic',
-  'report-sample'
-]);
-
-/** The policy header SvelteKit's directives describe, keywords quoted as a header needs them. */
-export function policyHeader(directives: Record<string, string[]>): string {
-  return Object.entries(directives)
-    .map(([name, values]) =>
-      [name, ...values.map((value) => (KEYWORDS.has(value) ? `'${value}'` : value))].join(' ')
-    )
-    .join('; ');
-}
-
+/** The page policy as a header, without `frame-src`: this harness's cross-site frame test frames
+ * the harness in itself, which the page's `frame-src 'none'` would refuse (SPEC-341 R13). */
 const directives = svelteConfig.kit?.csp?.directives;
 if (directives === undefined) throw new Error('svelte.config.js names no kit.csp.directives');
-const POLICY = policyHeader(directives as Record<string, string[]>);
+const engineDirectives: Record<string, unknown> = { ...directives };
+delete engineDirectives['frame-src'];
+const POLICY = policyHeader(engineDirectives);
 
 /** The engine's files, by name, with the type each is served as. */
 const TYPES: Record<string, string> = {

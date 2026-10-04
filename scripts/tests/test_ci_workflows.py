@@ -1808,7 +1808,7 @@ class TheGateRunsInParallelJobs(unittest.TestCase):
             self.assertIsNone(workflow["jobs"][job].get("needs"), f"{job} waits on another job")
         needs = workflow["jobs"]["ci"]["needs"]
         # SPEC-039 adds the five mutation jobs beside the gate's five, each a need of ci; SPEC-087
-        # adds the sixth, the Python runner's shards.
+        # adds the sixth, the Python runner's shards. SPEC-341 adds the planted card suite.
         mutation = [
             "mutation-plan",
             "mutation-python",
@@ -1820,7 +1820,16 @@ class TheGateRunsInParallelJobs(unittest.TestCase):
         # SPEC-338 adds the web engine's job, which builds the module and holds it to its budget.
         self.assertEqual(
             sorted(needs),
-            sorted([*OWNER_LAYOUT, *mutation, "web-engine", "workflow-lint", "base-is-dev"]),
+            sorted(
+                [
+                    *OWNER_LAYOUT,
+                    *mutation,
+                    "web-engine",
+                    "workflow-lint",
+                    "base-is-dev",
+                    "card-sandbox",
+                ]
+            ),
         )
 
     def test_every_stage_runs_in_exactly_one_ci_job(self):
@@ -1863,6 +1872,37 @@ class TheGateRunsInParallelJobs(unittest.TestCase):
                 gate = next(s for s in job["steps"] if GATE_CALL.search(str(s.get("run", ""))))
                 env = dict(job.get("env") or {}, **(gate.get("env") or {}))
                 self.assertEqual(env.get("CHECK_HISTORY"), "1", f"{job_id} scans no history")
+
+
+# --- the card sandbox job (SPEC-341 A13, R12)
+# The planted card suite runs on every pull request in Chromium and in WebKit, so the job installs
+# both with their system libraries, keeps the suite's results whatever its verdict, and the
+# aggregate check waits on it.
+CARD_JOB = "card-sandbox"
+CARD_INSTALL = "pnpm --dir web/app exec playwright install --with-deps --only-shell chromium webkit"
+CARD_SUITE = "pnpm --dir web/app test:card"
+
+
+class TheCardSandboxRunsInBothEngines(unittest.TestCase):
+    def test_the_card_sandbox_job_runs_the_planted_suite_in_both_engines(self):
+        jobs = load("ci.yml")["jobs"]
+        self.assertIn(CARD_JOB, jobs, "ci.yml has no card-sandbox job")
+        steps = jobs[CARD_JOB]["steps"]
+        runs = [str(step.get("run", "")).strip() for step in steps]
+        # both engines installed once, then the suite once, after them
+        self.assertEqual(runs.count(CARD_INSTALL), 1, "the job does not install both engines once")
+        self.assertEqual(runs.count(CARD_SUITE), 1, "the job does not run the planted suite once")
+        self.assertLess(runs.index(CARD_INSTALL), runs.index(CARD_SUITE))
+        # one upload of the suite's results after it, whatever its verdict
+        uploads = [at for at, step in enumerate(steps) if action(step) == "actions/upload-artifact"]
+        self.assertEqual(len(uploads), 1, "the job does not upload the suite's results once")
+        upload = steps[uploads[0]]
+        self.assertGreater(uploads[0], runs.index(CARD_SUITE))
+        self.assertEqual(upload.get("if"), "${{ always() }}")
+        self.assertEqual(paths(upload), ["web/app/test-results/"])
+        # and the aggregate check waits on it
+        self.assertIn(CARD_JOB, jobs["ci"]["needs"])
+        examined("card-sandbox steps", steps)
 
 
 def cache_scan(directory):
