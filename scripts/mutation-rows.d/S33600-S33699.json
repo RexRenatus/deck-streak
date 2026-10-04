@@ -117,6 +117,24 @@
         "                    .is_none_or(|_| true);\n",
         "xp_census::a11_a_feature_another_package_turns_on_is_refused_by_name",
         "a member whose default is absent or empty has nothing a dependent keeping its default turns on, so the refusal names only the features the dependent names (SPEC-336 R11, A11)"
+      ],
+      [
+        "S33613-THE-CENSUS-SETS-EVERY-FEATURE-OF-A-COMBINATION-TOGETHER",
+        "progression",
+        "tests/xp_census.rs",
+        "                .filter(|(at, _)| (mask >> at) & 1 == 1)\n",
+        "                .filter(|(at, _)| (mask >> at) == 1)\n",
+        "xp_census::the_census_refuses_a_call_gated_on_two_features_together",
+        "each combination the census compiles holds every feature its mask sets, together, so a call to settle gated on two features at once, cfg(all(feature = \"a\", feature = \"b\")), is compiled in the combination that holds both and refused for the call, never left uncompiled by combinations that each hold one feature (SPEC-336 R11, ruling 205 (1))"
+      ],
+      [
+        "S33614-THE-CENSUS-COMPILES-THE-EMPTY-COMBINATION",
+        "progression",
+        "tests/xp_census.rs",
+        "    (0..1_usize << declared.len())\n",
+        "    (1..1_usize << declared.len())\n",
+        "xp_census::the_census_refuses_a_call_gated_on_a_features_absence",
+        "the census compiles the empty combination, every declared feature off, so a call to settle gated on a feature's absence, cfg(not(feature = \"a\")) with no default, is compiled and refused for the call, never left uncompiled by combinations that each hold a feature (SPEC-336 R11, ruling 205 (1))"
       ]
     ]
   }

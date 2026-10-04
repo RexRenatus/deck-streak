@@ -2015,6 +2015,92 @@ fn a12_the_census_compiles_every_combination_up_to_its_feature_limit_and_refuses
     );
 }
 
+/// Judges each planted habits (a label, its manifest's `[features]` table and its library) in a
+/// workspace of its own, and prints each verdict, so a run quotes what the census refused in each.
+fn habits_verdicts<'a>(cases: &[(&'a str, &str, String)]) -> Vec<(&'a str, Vec<String>)> {
+    cases
+        .iter()
+        .map(|(label, features, lib)| {
+            let planted = tempfile::tempdir().expect("a temporary directory");
+            let refused = census_of_habits(planted.path(), features, lib);
+            println!("verdict: {label}: {refused:?}");
+            (*label, refused)
+        })
+        .collect()
+}
+
+/// A call to `settle` in habits' library that the compiler sees only where `cfg` holds.
+fn settle_call_under(cfg: &str) -> String {
+    format!("{cfg}pub fn sneak() -> usize {{\n    deck_streak_progression::settle()\n}}\n")
+}
+
+#[test]
+fn the_census_refuses_a_call_gated_on_two_features_together() {
+    // SPEC-336 R11, ruling 205 (1)'s strengthening control: habits declares the features `a` and
+    // `b` and calls `settle` only where both are on. The census compiles the combination that holds
+    // both, so the call is refused for the call and for nothing else, as the same call under no
+    // feature is. A census whose combinations each held one feature would never compile it.
+    let cases = examined(
+        "planted call(s) gated on two features together",
+        vec![
+            (
+                "the control, a call under no feature",
+                "",
+                settle_call_under(""),
+            ),
+            (
+                "a call under cfg(all(feature = \"a\", feature = \"b\"))",
+                "[features]\na = []\nb = []\n",
+                settle_call_under("#[cfg(all(feature = \"a\", feature = \"b\"))]\n"),
+            ),
+        ],
+    );
+    let judged = habits_verdicts(&cases);
+    let refused_for_the_call = judged
+        .iter()
+        .filter(|(_, refused)| refused == &[HABITS_CALL])
+        .count();
+    assert_eq!(
+        refused_for_the_call,
+        cases.len(),
+        "each call is refused for the call and for nothing else: {judged:#?}"
+    );
+}
+
+#[test]
+fn the_census_refuses_a_call_gated_on_a_features_absence() {
+    // SPEC-336 R11, ruling 205 (1)'s strengthening control: habits declares the feature `a`, with
+    // no default, and calls `settle` only where `a` is off. The census compiles the empty
+    // combination, so the call is refused for the call and for nothing else, as the same call under
+    // no feature is. A census that compiled only the combinations holding a feature would never
+    // compile it.
+    let cases = examined(
+        "planted call(s) gated on a feature's absence",
+        vec![
+            (
+                "the control, a call under no feature",
+                "",
+                settle_call_under(""),
+            ),
+            (
+                "a call under cfg(not(feature = \"a\"))",
+                "[features]\na = []\n",
+                settle_call_under("#[cfg(not(feature = \"a\"))]\n"),
+            ),
+        ],
+    );
+    let judged = habits_verdicts(&cases);
+    let refused_for_the_call = judged
+        .iter()
+        .filter(|(_, refused)| refused == &[HABITS_CALL])
+        .count();
+    assert_eq!(
+        refused_for_the_call,
+        cases.len(),
+        "each call is refused for the call and for nothing else: {judged:#?}"
+    );
+}
+
 #[test]
 #[allow(clippy::too_many_lines)]
 fn the_census_names_each_use_in_its_package_and_file() {
