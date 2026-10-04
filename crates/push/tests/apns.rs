@@ -304,3 +304,32 @@ async fn a8_an_oversize_payload_is_refused_before_any_request() {
     assert_eq!(received.len(), 1);
     assert_eq!(received[0].body.len(), 4096);
 }
+
+#[tokio::test]
+async fn a9_each_device_reaches_its_own_environment_only() {
+    let rig = Rig::start().await;
+    let production = Device::new(&device_token(), Environment::Production).expect("a device");
+
+    assert_eq!(
+        rig.sender.deliver(&production, &alert()).await,
+        Sent::Delivered
+    );
+    assert_eq!(
+        (
+            rig.production.fake.received().len(),
+            rig.development.fake.received().len()
+        ),
+        (1, 0),
+        "a production device reaches the production service alone"
+    );
+
+    assert_eq!(rig.deliver(&alert()).await, Sent::Delivered);
+    assert_eq!(
+        (
+            rig.production.fake.received().len(),
+            rig.development.fake.received().len()
+        ),
+        (1, 1),
+        "a development device reaches the development service alone"
+    );
+}
