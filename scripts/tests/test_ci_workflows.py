@@ -1837,6 +1837,37 @@ class TheGateRunsInParallelJobs(unittest.TestCase):
                 self.assertEqual(env.get("CHECK_HISTORY"), "1", f"{job_id} scans no history")
 
 
+# --- the card sandbox job (SPEC-341 A13, R12)
+# The planted card suite runs on every pull request in Chromium and in WebKit, so the job installs
+# both with their system libraries, keeps the suite's results whatever its verdict, and the
+# aggregate check waits on it.
+CARD_JOB = "card-sandbox"
+CARD_INSTALL = "pnpm --dir web/app exec playwright install --with-deps --only-shell chromium webkit"
+CARD_SUITE = "pnpm --dir web/app test:card"
+
+
+class TheCardSandboxRunsInBothEngines(unittest.TestCase):
+    def test_the_card_sandbox_job_runs_the_planted_suite_in_both_engines(self):
+        jobs = load("ci.yml")["jobs"]
+        self.assertIn(CARD_JOB, jobs, "ci.yml has no card-sandbox job")
+        steps = jobs[CARD_JOB]["steps"]
+        runs = [str(step.get("run", "")).strip() for step in steps]
+        # both engines installed once, then the suite once, after them
+        self.assertEqual(runs.count(CARD_INSTALL), 1, "the job does not install both engines once")
+        self.assertEqual(runs.count(CARD_SUITE), 1, "the job does not run the planted suite once")
+        self.assertLess(runs.index(CARD_INSTALL), runs.index(CARD_SUITE))
+        # one upload of the suite's results after it, whatever its verdict
+        uploads = [at for at, step in enumerate(steps) if action(step) == "actions/upload-artifact"]
+        self.assertEqual(len(uploads), 1, "the job does not upload the suite's results once")
+        upload = steps[uploads[0]]
+        self.assertGreater(uploads[0], runs.index(CARD_SUITE))
+        self.assertEqual(upload.get("if"), "${{ always() }}")
+        self.assertEqual(paths(upload), ["web/app/test-results/"])
+        # and the aggregate check waits on it
+        self.assertIn(CARD_JOB, jobs["ci"]["needs"])
+        examined("card-sandbox steps", steps)
+
+
 def cache_scan(directory):
     """`cache_problems` over every workflow of a directory: the problems, then the saves found."""
     problems, saves = [], []
