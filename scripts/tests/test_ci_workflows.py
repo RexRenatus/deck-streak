@@ -43,6 +43,8 @@ INTO_MAIN = {
 OWNER_LAYOUT = {
     "rust": ["fmt", "clippy", "test", "doctest", "audit-rust"],
     "engine": ["test-engine"],
+    # The release job runs the workspace's tests in the shipped profile (SPEC-330).
+    "release": ["test-release"],
     "web": ["web", "audit-web"],
     "hygiene": ["python", "scrub", "secrets"],
 }
@@ -51,7 +53,7 @@ RUST_CACHE = ["~/.cargo/registry/index/", "~/.cargo/registry/cache/", "~/.cargo/
 BROWSERS = ["~/.cache/ms-playwright"]
 # The stages that compile Rust: python's among them, because a guard test builds the ingest crate
 # twice (SPEC-055 A2), and test-engine, which builds the engine set's tests (R13).
-COMPILES_RUST = {"clippy", "test", "doctest", "python", "test-engine"}
+COMPILES_RUST = {"clippy", "test", "doctest", "python", "test-engine", "test-release"}
 # The one build tool Anki's engine needs: protoc 31.1, at the version and archive digest Anki's own
 # build pins (ADR-022).
 PROTOC_VERSION = "31.1"
@@ -4432,6 +4434,12 @@ NOT_WORKFLOW_READS = {
     **allowed(
         "calls a helper that runs the verdict script, a step's shell or the verdict module over planted reports; outputs, never a workflow",
         (
+            "test_dispatch_shards",
+            "TheGatesTimeoutCoversTheCensus.test_the_gates_timeout_covers_the_census_with_its_margin",
+            "verdict_module()",
+            1,
+        ),
+        (
             "test_not_started_legs",
             "ALegWithNothingToExamineIsNotStarted.test_a_leg_the_listing_gives_nothing_reads_not_started",
             "judge(reports)",
@@ -4666,6 +4674,15 @@ NOT_WORKFLOW_READS = {
             "test_not_started_legs",
             "ALegWithNothingToExamineIsNotStarted.test_an_examined_sum_that_differs_from_the_listing_is_refused",
             "outcomes_of(whole).read_text(encoding='utf-8')",
+            1,
+        ),
+    ),
+    **allowed(
+        "a constant of the verdict module, loaded by path by verdict_module; a production module's table, never the reader",
+        (
+            "test_dispatch_shards",
+            "TheGatesTimeoutCoversTheCensus.test_the_gates_timeout_covers_the_census_with_its_margin",
+            "module.CENSUS_SECONDS",
             1,
         ),
     ),

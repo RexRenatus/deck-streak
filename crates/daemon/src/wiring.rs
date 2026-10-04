@@ -30,6 +30,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, OnceLock};
 
+use deck_streak_agent::{CefrBand, LiveBand, Subject, SubjectKind};
 use deck_streak_analytics::settings::AnalyticsSettings;
 use deck_streak_bot::{OwnerChat, Scores, SyncAnswer, SyncOutcome, Transport};
 use deck_streak_coordination::courses::{CoursesDisagree, agree};
@@ -42,8 +43,11 @@ use deck_streak_coordination::instruments::{
 use deck_streak_coordination::obligations::Obligations;
 use deck_streak_coordination::recompute::analytics_step::AnalyticsStep;
 use deck_streak_coordination::recompute::badges::BadgesStep;
+use deck_streak_coordination::recompute::band_badges::BandBadgesStep;
 use deck_streak_coordination::recompute::day_bonuses::DayBonusesStep;
+use deck_streak_coordination::recompute::habits::HabitsStep;
 use deck_streak_coordination::recompute::mint::MintStep;
+use deck_streak_coordination::recompute::progress::ProgressStep;
 use deck_streak_coordination::recompute::records::RecordsStep;
 use deck_streak_coordination::recompute::streaks::{RelightDue, StreaksStep};
 use deck_streak_coordination::recompute::xp::XpStep;
@@ -51,6 +55,7 @@ use deck_streak_coordination::recompute::{Fold, FoldError, Phase};
 use deck_streak_coordination::sync_cycle::{
     CycleError, CycleParts, CycleReport, Recompute, sync_cycle,
 };
+use deck_streak_curriculum::store::stored_bands;
 use deck_streak_identity::Owner;
 use deck_streak_ingest::engine::{AnkiEngine, RslibEngine};
 use deck_streak_ingest::gate::{ChangeGate, GateError};
@@ -64,8 +69,8 @@ use deck_streak_ingest::window::WindowError;
 use deck_streak_insights::dark_fields::DarkFields;
 use deck_streak_kernel::{
     Clock, Conventions, ConventionsError, Courses, CoursesError, CredentialLoader,
-    CredentialsDirectory, Db, Environment, KernelError, Offload, Redactor, Setting, SettingsError,
-    StudyDayRule, SystemClock,
+    CredentialsDirectory, Db, Environment, KernelError, Offload, PortFuture, Redactor, Setting,
+    SettingsError, StudyDayRule, SystemClock,
 };
 use deck_streak_notifications::{Policy, Router};
 use deck_streak_readings::taxonomy::{Taxonomy, TaxonomyError, TaxonomyPath};
@@ -208,7 +213,8 @@ pub fn inbox_captures(env: &Environment) -> Option<Arc<InboxCaptures<RealFs>>> {
 
 /// The recompute's fold, with every step registered in its phase (SPEC-071 R19): phase 1's
 /// analytics step, counting leeches by `analytics`. A later SPEC registers its step here, in its
-/// own phase, without touching the fold. The badge step awards against no configured course.
+/// own phase, without touching the fold. The badge step awards against no configured course, and
+/// Road to C2's steps read none.
 ///
 /// # Errors
 ///
@@ -218,8 +224,9 @@ pub fn recompute_fold(analytics: AnalyticsSettings) -> Result<Fold, FoldError> {
 }
 
 /// [`recompute_fold`] over the owner's `courses`, which the badge step awards against (SPEC-073
-/// R4), and the handle the streaks step answers its due relights on, for the cycle that routes
-/// them after the fold's commit (SPEC-076 R27).
+/// R4) and Road to C2's progress and band badge steps read (SPEC-077 R6), and the handle the
+/// streaks step answers its due relights on, for the cycle that routes them after the fold's
+/// commit (SPEC-076 R27).
 ///
 /// # Errors
 ///
@@ -236,11 +243,60 @@ pub fn recompute_fold_with_relights(
     fold.register(Phase::BaseXp, Box::new(XpStep))?;
     let (streaks, due) = StreaksStep::new();
     fold.register(Phase::StreaksAndGovernor, Box::new(streaks))?;
+    fold.register(
+        Phase::DaySteps,
+        Box::new(ProgressStep::new(courses.clone(), analytics)),
+    )?;
+    fold.register(Phase::DaySteps, Box::new(HabitsStep))?;
     fold.register(Phase::DerivedBonuses, Box::new(DayBonusesStep))?;
     fold.register(Phase::CoinMint, Box::new(MintStep))?;
-    fold.register(Phase::Awards, Box::new(BadgesStep::new(courses)))?;
+    fold.register(Phase::Awards, Box::new(BadgesStep::new(courses.clone())))?;
     fold.register(Phase::Awards, Box::new(RecordsStep))?;
+    fold.register(Phase::Awards, Box::new(BandBadgesStep::new(courses)))?;
     Ok((fold, due))
+}
+
+/// Road to C2's live band for the persona engine (SPEC-077 R8, T26): the stored current band of
+/// the configured course a language subject names, so a mentor writes at the band the owner has
+/// reached rather than the roster's. Its production caller is the persona engine's output path
+/// (#566); until that runs, A9 is its only caller.
+pub struct CurriculumLiveBand {
+    db: Db,
+    courses: Courses,
+}
+
+impl CurriculumLiveBand {
+    /// The live band over `db`'s stored course progress, for the configured `courses`.
+    #[must_use]
+    pub const fn new(db: Db, courses: Courses) -> Self {
+        Self { db, courses }
+    }
+}
+
+impl LiveBand for CurriculumLiveBand {
+    fn band<'a>(&'a self, subject: &'a Subject) -> PortFuture<'a, Option<CefrBand>> {
+        Box::pin(async move {
+            if subject.kind() != SubjectKind::Language {
+                return Ok(None);
+            }
+            let Some((_kind, area)) = subject.as_str().split_once('/') else {
+                return Ok(None);
+            };
+            let configured = self
+                .courses
+                .courses()
+                .iter()
+                .find(|course| course.code.as_str() == area);
+            let Some(course) = configured else {
+                return Ok(None);
+            };
+            let mut connection = self.db.reader().acquire().await?;
+            let bands = stored_bands(&mut connection).await?;
+            Ok(bands
+                .get(course.code.as_str())
+                .and_then(|band| CefrBand::parse(band)))
+        })
+    }
 }
 
 /// Why a role's recompute cannot start. Each names a setting or a step, never a value.
@@ -673,8 +729,11 @@ mod tests {
     use deck_streak_coordination::recompute::Phase;
     use deck_streak_coordination::recompute::analytics_step::ANALYTICS_STEP;
     use deck_streak_coordination::recompute::badges::BADGES_STEP;
+    use deck_streak_coordination::recompute::band_badges::BAND_BADGES_STEP;
     use deck_streak_coordination::recompute::day_bonuses::DAY_BONUSES_STEP;
+    use deck_streak_coordination::recompute::habits::HABITS_STEP;
     use deck_streak_coordination::recompute::mint::MINT_STEP;
+    use deck_streak_coordination::recompute::progress::PROGRESS_STEP;
     use deck_streak_coordination::recompute::records::RECORDS_STEP;
     use deck_streak_coordination::recompute::streaks::STREAKS_STEP;
     use deck_streak_coordination::recompute::xp::XP_STEP;
@@ -755,15 +814,57 @@ mod tests {
                 (Phase::RollupAndScore, ANALYTICS_STEP),
                 (Phase::BaseXp, XP_STEP),
                 (Phase::StreaksAndGovernor, STREAKS_STEP),
+                (Phase::DaySteps, PROGRESS_STEP),
+                (Phase::DaySteps, HABITS_STEP),
                 (Phase::DerivedBonuses, DAY_BONUSES_STEP),
                 (Phase::CoinMint, MINT_STEP),
                 (Phase::Awards, BADGES_STEP),
                 (Phase::Awards, RECORDS_STEP),
+                (Phase::Awards, BAND_BADGES_STEP),
             ]
         );
     }
 
-    #[tokio::test(flavor = "multi_thread")]
+    /// A22: Road to C2's two steps run in production, the progress step in phase 4 right after the
+    /// streaks step and the band badge step in phase 7 right after the records step (SPEC-077 R6).
+    #[test]
+    fn the_recompute_fold_registers_road_to_c2s_steps() {
+        let fold = recompute_fold(AnalyticsSettings::default()).expect("every step in its phase");
+        let steps = fold.steps();
+        let at = |step: (Phase, &str)| steps.iter().position(|registered| *registered == step);
+        let streaks = at((Phase::StreaksAndGovernor, STREAKS_STEP)).expect("the streaks step");
+        assert_eq!(
+            at((Phase::DaySteps, PROGRESS_STEP)),
+            Some(streaks + 1),
+            "the progress step is registered in phase 4, right after the streaks step"
+        );
+        let records = at((Phase::Awards, RECORDS_STEP)).expect("the records step");
+        assert_eq!(
+            at((Phase::Awards, BAND_BADGES_STEP)),
+            Some(records + 1),
+            "the band badge step is registered in phase 7, right after the records step"
+        );
+    }
+
+    #[test]
+    fn the_recompute_fold_registers_the_habit_step_in_the_day_steps_phase() {
+        let fold = recompute_fold(AnalyticsSettings::default()).expect("every step in its phase");
+        let steps = fold.steps();
+        assert_eq!(
+            steps.get(2..6),
+            Some(
+                &[
+                    (Phase::StreaksAndGovernor, STREAKS_STEP),
+                    (Phase::DaySteps, PROGRESS_STEP),
+                    (Phase::DaySteps, HABITS_STEP),
+                    (Phase::DerivedBonuses, DAY_BONUSES_STEP),
+                ][..]
+            ),
+            "the habit step is phase 4's, after the streaks and before the derived bonuses (SPEC-078 R5)"
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn the_owners_sync_marks_the_rescore_before_it_reads_its_settings() {
         let directory = tempfile::tempdir().expect("a temporary directory");
         let db = Db::open(&directory.path().join("deck_streak.db"))
@@ -799,7 +900,7 @@ mod tests {
         db.close().await;
     }
 
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn the_owners_sync_without_a_credentials_directory_is_refused_by_its_own_code() {
         let directory = tempfile::tempdir().expect("a temporary directory");
         let db = Db::open(&directory.path().join("deck_streak.db"))
@@ -832,7 +933,7 @@ mod tests {
         db.close().await;
     }
 
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn the_owners_sync_that_cannot_mark_the_rescore_is_refused_by_its_own_code() {
         let directory = tempfile::tempdir().expect("a temporary directory");
         let db = Db::open(&directory.path().join("deck_streak.db"))
@@ -859,7 +960,7 @@ mod tests {
         );
     }
 
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn the_owners_cycle_that_cannot_read_its_run_record_is_refused_by_the_sync_code() {
         let directory = tempfile::tempdir().expect("a temporary directory");
         let credentials = directory.path().join("credentials");
@@ -1192,7 +1293,7 @@ mod tests {
 
     /// A16: every step whose failure refuses the owner's sync is driven by its own fault, twice,
     /// each time on a fresh ledger, and refuses by its step's code, logged under the step's name.
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn every_failing_step_refuses_the_owners_sync_by_its_own_code_and_name() {
         let (refusals, _logging) = Refusals::capture();
         for (step, code) in RUN_STEPS.iter().chain(CYCLE_STEPS) {
@@ -1319,6 +1420,66 @@ mod tests {
                 attempted: 1,
                 delivered: 0
             }
+        );
+    }
+
+    /// The one spelling a multi-thread test of this module wears (#577, SPEC-325 R1): two
+    /// workers whatever the host's core count, so the tests libtest runs at once draw a bounded
+    /// number of threads, and the driver's thread for each connection is never refused for them.
+    const BOUNDED_MULTI_THREAD: &str =
+        "#[tokio::test(flavor = \"multi_thread\", worker_threads = 2)]";
+
+    /// The multi-thread `tokio::test` attributes in `source`, and those among them that are not
+    /// [`BOUNDED_MULTI_THREAD`], each as its trimmed line.
+    fn multi_thread_attributes(source: &str) -> (Vec<&str>, Vec<&str>) {
+        let attributes: Vec<&str> = source
+            .lines()
+            .map(str::trim)
+            .filter(|line| line.starts_with("#[tokio::test(") && line.contains("multi_thread"))
+            .collect();
+        let unbounded = attributes
+            .iter()
+            .copied()
+            .filter(|line| *line != BOUNDED_MULTI_THREAD)
+            .collect();
+        (attributes, unbounded)
+    }
+
+    /// A1 (#577, SPEC-325 R2): a runtime built from the module's multi-thread attribute runs two
+    /// workers, read from the runtime itself, not one worker per core of the host.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn a_multi_thread_wiring_test_runs_on_two_workers_whatever_the_host() {
+        assert_eq!(
+            tokio::runtime::Handle::current().metrics().num_workers(),
+            2,
+            "the runtime runs the attribute's two workers, not one per core of the host"
+        );
+    }
+
+    /// A2 (#577, SPEC-325 R3): every multi-thread `tokio::test` in this file wears the bounded
+    /// attribute, so the module's peak thread count does not grow with the host; a planted
+    /// unbounded attribute is refused by its line.
+    #[test]
+    fn every_multi_thread_wiring_test_bounds_its_runtime_to_two_workers() {
+        let (attributes, unbounded) = multi_thread_attributes(include_str!("wiring.rs"));
+        assert_eq!(
+            unbounded,
+            Vec::<&str>::new(),
+            "each multi-thread test names worker_threads = 2"
+        );
+        println!(
+            "examined {} multi-thread test attribute(s)",
+            attributes.len()
+        );
+        assert!(
+            !attributes.is_empty(),
+            "examined 0 multi-thread test attributes: the population is empty, so nothing was judged"
+        );
+        let planted = "    #[tokio::test(flavor = \"multi_thread\")]\n    async fn planted() {}\n";
+        assert_eq!(
+            multi_thread_attributes(planted).1,
+            vec!["#[tokio::test(flavor = \"multi_thread\")]"],
+            "a planted unbounded attribute is refused by its line"
         );
     }
 }

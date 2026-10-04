@@ -28,6 +28,8 @@ pub mod analytics_step;
 pub mod badges;
 pub mod band_badges;
 pub mod day_bonuses;
+pub mod habits;
+pub mod landmarks;
 pub mod mint;
 pub mod progress;
 pub mod records;
@@ -44,6 +46,8 @@ use deck_streak_kernel::{
 };
 use deck_streak_notifications::{DedupeKey, LapseContext, Occasion, Policy, Router, Surface, Tier};
 use sqlx::SqliteConnection;
+
+use crate::ladder_facts;
 
 /// The phases a day's steps run in.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -333,6 +337,38 @@ impl Offers for AwardOffers {
     }
 }
 
+/// Several offers run in turn on every offer call (SPEC-102 R5, ADR-322): the sync cycle hands the
+/// fold the awards' offers and then the landmarks'. An offer that fails is logged and leaves what
+/// it owed for the next call; it never stops the ones after it, nor the fold.
+pub struct OffersInTurn(Vec<Box<dyn Offers>>);
+
+impl OffersInTurn {
+    /// The offers `offers`, run in this order.
+    #[must_use]
+    pub fn new(offers: Vec<Box<dyn Offers>>) -> Self {
+        Self(offers)
+    }
+}
+
+impl fmt::Debug for OffersInTurn {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_list().entries(&self.0).finish()
+    }
+}
+
+impl Offers for OffersInTurn {
+    fn offer<'a>(&'a self, db: &'a Db, now: UtcMillis, today: StudyDay) -> PortFuture<'a, ()> {
+        Box::pin(async move {
+            for offers in &self.0 {
+                if let Err(error) = offers.offer(db, now, today).await {
+                    tracing::error!(%error, ?offers, "an offer could not run");
+                }
+            }
+            Ok(())
+        })
+    }
+}
+
 /// The router as the awards' [`Celebrate`] port: a `celebration` occasion with the award's event,
 /// on the bot (SPEC-041, SPEC-084).
 impl Celebrate for Router {
@@ -354,6 +390,7 @@ impl Celebrate for Router {
             )
             .map_err(refused)?
             .with_event(celebration.event, None);
+            let occasion = ladder_facts::with_streak_facts(self.db(), occasion).await?;
             self.route(&occasion).await.map(|_| ())
         })
     }

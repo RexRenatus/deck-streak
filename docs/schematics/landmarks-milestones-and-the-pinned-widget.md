@@ -5,7 +5,8 @@ Kind: data flow and state machine. Read at DeckStreak `dev` af0693f and at the p
 `_run_sync_cycle_impl`, `pipeline_layers/showcase.py:ShowcaseLayer._update_widget` and
 `_repin_widget`, `telegram.py:render_milestone`, `render_widget` and `widget_mood`). Added by the W5
 architect turn, under ADR-109 (the widget is one silent pinned message a study day, edited in place
-through the router). SPEC-102 builds it.
+through the router). SPEC-102 builds it. Part b (#127, ADR-322) redraws the landmarks as offers
+between the fold's writes, read at `96f6fe31`.
 
 It extends five accepted schematics without changing them: `docs/schematics/notification-router.md`
 (the decision each message goes through), `docs/schematics/celebration-ladder-on-the-router.md` (the
@@ -14,30 +15,61 @@ whose awards phase the two new steps join), `docs/schematics/sync-cycle-and-chan
 cycle whose last step refreshes the widget) and `docs/schematics/cron-fire-ledger-and-catch-up.md`
 (the hourly job's fires).
 
-## The awards phase: landmarks and queue zero
+## The awards phase: queue zero
 
-Both steps run in the seventh phase of the fold (ADR-071), after the badges, for each study day the
-fold settles and then for the current one. Each raises its occasions through the router, whose
+Queue zero runs in the seventh phase of the fold (ADR-071), after the badges, for each study day the
+fold settles and then for the current one. It raises its occasion through the router, whose
 once-ever dedupe is the guard against a second raise.
 
 ```mermaid
 flowchart TD
-  R[recompute after a sync] --> S[read the study days of the whole scoped log once]
-  S --> D{next day the fold settles or evaluates}
-  D -- none left --> E[done]
+  D{next day the fold settles or evaluates} -- none left --> E[done]
   D -- a day --> B[badges and records, with the milestone text]
-  B --> M{landmark_high_water stored}
-  M -- no --> SEED[store the mark, raise at most the first due landmark of the run]
-  M -- yes --> L[raise each landmark due that day]
-  SEED --> Q
-  L --> Q{the day holds a study review and a backlog_zero grant above 0}
+  B --> Q{the day holds a study review and a backlog_zero grant above 0}
   Q -- yes --> Z[raise queue_zero, epic, with its dice]
   Q -- no --> D
   Z --> D
 ```
 
-- An anniversary carries the honest variant when the language streak's last study day, as of the day
-  evaluated, is not that day.
+## The landmarks' offers, between the fold's writes
+
+Redrawn for #127 part b (SPEC-102 section 11, ADR-322), read at `96f6fe31`: the landmarks are no
+longer raised inside the awards phase. The sync cycle reads the study days of the whole scoped log
+once and hands the fold its offers in turn, the awards' and then the landmarks'. The fold runs them
+before each settled day's write, before the current day's write, and once more after its last write
+(ADR-303). Each landmark offer call, with today the current study day:
+
+```mermaid
+flowchart TD
+  C[sync cycle reads the study days of the whole scoped log] -- the read fails --> N[no landmark is offered and no cursor moves]
+  C -- read --> O[an offer call]
+  O --> F{this recompute's seed has run}
+  F -- no --> SEED[one write: the mark where none is stored, the cursor at yesterday where none is; the run is first when the mark was absent]
+  F -- yes --> R
+  SEED --> R[read the cursor X and the settle cursor S on one reader]
+  R --> W{first run}
+  W -- yes --> ONE[owe the first landmark due today, and no other]
+  W -- no --> OWE[owe each landmark after X and at or before S, and each due today, less the keys answered in this recompute]
+  ONE --> H[hand each owed landmark, oldest first, to the router]
+  OWE --> H
+  H --> G{first run, or no day settled}
+  G -- yes --> K[the cursor stays]
+  G -- no --> A{the router answered every owed landmark}
+  A -- yes --> T1[target is S]
+  A -- no --> T2[target is the day before the oldest unanswered, at most S]
+  T1 --> V{target after X}
+  T2 --> V
+  V -- yes --> ADV[move X to the target in a write of its own, never backwards]
+  V -- no --> K
+```
+
+- The router answers on a send, a hold and a withhold alike; only a refusal leaves a landmark
+  unanswered, and the next offer call owes it again. A key offered twice reads the router's
+  once-ever dedupe as already recorded, so it is sent once.
+- The mark is the predecessor's bytes, `{"anniversary": A, "seeded": true, "study_day": N}`, with A
+  and N the highest ordinals among the landmarks up to the day evaluated. It is stored once and
+  never overwritten; a mark imported from the predecessor makes no run first.
+- An anniversary carries the honest variant when the window holds no language study on its day.
 - A celebration raised at the morning's recompute falls in quiet hours: the router holds it, and the
   flush at the window's end delivers it (#291).
 

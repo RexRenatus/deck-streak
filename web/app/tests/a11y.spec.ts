@@ -110,6 +110,25 @@ for (const [scheme, themeParams] of Object.entries(THEMES)) {
           }
         })
       );
+      // The XP exchange readout on the level screen: one bucket with a rate and one no card
+      // graduated for, whose undefined rate is text (SPEC-075 R9).
+      await page.route('**/api/xp/exchange*', (intercepted) =>
+        intercepted.fulfill({
+          json: {
+            window: null,
+            rates: [
+              {
+                source: 'focus',
+                total_xp: 50,
+                graduated_cards: 0,
+                rate: null,
+                rate_defined: false
+              },
+              { source: 'reviews', total_xp: 10, graduated_cards: 4, rate: 2.5, rate_defined: true }
+            ]
+          }
+        })
+      );
       // The wallet, for the header on every screen and the /wallet screen: a balance, today's loss
       // limit, a mint and a fine, and an older page, so the button that asks for it is audited too
       // (SPEC-082 R15, R17).
@@ -162,6 +181,32 @@ for (const [scheme, themeParams] of Object.entries(THEMES)) {
           }
         })
       );
+      // The personal board on the records screen: a best day, today, the streak and the level
+      // (SPEC-075 R3).
+      await page.route('**/api/board', (intercepted) =>
+        intercepted.fulfill({
+          json: {
+            rows: [
+              {
+                kind: 'best_day',
+                emoji: '\u{1F3C5}',
+                label: 'Best day',
+                value: 90,
+                study_day: '2001-02-01'
+              },
+              {
+                kind: 'today',
+                emoji: '\u{1F4C5}',
+                label: 'Today',
+                value: 77,
+                study_day: '2001-02-03'
+              },
+              { kind: 'streak', emoji: '\u{1F525}', label: 'Streak', value: 3, longest: 9 },
+              { kind: 'level', emoji: '\u26A1', label: 'Level', value: 7, title: 'Adept' }
+            ]
+          }
+        })
+      );
       // The records screen: one record still ahead today, one reached, and a chase (SPEC-073 R17).
       await page.route('**/api/records', (intercepted) =>
         intercepted.fulfill({
@@ -187,6 +232,60 @@ for (const [scheme, themeParams] of Object.entries(THEMES)) {
               }
             ],
             chase: { kind: 'best_score', label: 'Best daily score', gap: 43 }
+          }
+        })
+      );
+      // The progress screen: one course with its six band cells, two achieved and the current band
+      // marked (SPEC-077 R17, B3).
+      await page.route('**/api/progress', (intercepted) =>
+        intercepted.fulfill({
+          json: {
+            courses: [
+              {
+                code: 'fr',
+                name: 'French',
+                flag: '\u{1F1EB}\u{1F1F7}',
+                mastery_pct: 41.5,
+                current_band: 'B1',
+                current_unit: 7,
+                bands: ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].map((band, i) => ({
+                  band,
+                  total: 100,
+                  mature: i < 2 ? 100 : 30,
+                  pct: i < 2 ? 92 : 30,
+                  achieved: i < 2
+                }))
+              }
+            ]
+          }
+        })
+      );
+      // The law tab: three shown lines and one pending count (SPEC-077 R17, B3). The level screen's
+      // glob ends at /api/level, so the law tiers have their own.
+      await page.route('**/api/law', (intercepted) =>
+        intercepted.fulfill({
+          json: {
+            shown: true,
+            level_shown: true,
+            lines: ['total_xp', 'streak', 'xp_today'],
+            streak: 4,
+            xp_today: 30,
+            total_xp: 900,
+            level: 3,
+            dues: null,
+            dues_pending: true,
+            leeches: 2,
+            leeches_pending: false,
+            mastery: 61,
+            mastery_pending: false
+          }
+        })
+      );
+      await page.route('**/api/level/law-tiers', (intercepted) =>
+        intercepted.fulfill({
+          json: {
+            cards: { T1: 5, T2: 4, T3: 3, T4: 2, none: 1 },
+            xp_today: { T1: 10, T2: 8, T3: 6, T4: 4, none: 2 }
           }
         })
       );

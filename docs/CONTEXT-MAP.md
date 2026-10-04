@@ -33,8 +33,8 @@ deck-streak-privacy       (export, erase and purge over every context's data-rig
 deck-streak-coordination  (use cases and scheduled jobs across contexts)  depends on: kernel, ingest, identity, analytics, progression, streaks, curriculum, economy, quests, habits, focus, discipline, markets, notifications, readings, vault, agent, insights, publishing, privacy
 deck-streak-api           (axum HTTPS adapter for the Mini App)  depends on: kernel, identity, notifications, coordination
 deck-streak-bot           (Telegram Bot API adapter)  depends on: kernel, identity, notifications, coordination
-deck-streak-mcp           (MCP adapter: the bearer guard, its grants and its limiter; the server arrives with #157)  depends on: kernel
-deck-streak-daemon        (composition root: the deckstreakd binary)  depends on: kernel, ingest, identity, analytics, progression, streaks, curriculum, economy, quests, habits, focus, discipline, markets, notifications, readings, vault, agent, insights, publishing, privacy, coordination, api, bot
+deck-streak-mcp           (MCP adapter: the bearer guard, the server and its tools)  depends on: kernel, coordination
+deck-streak-daemon        (composition root: the deckstreakd binary)  depends on: kernel, ingest, identity, analytics, progression, streaks, curriculum, economy, quests, habits, focus, discipline, markets, notifications, readings, vault, agent, insights, publishing, privacy, coordination, api, bot, mcp
 deck-streak-migration     (one-off import of v9's schema 24, planned)  depends on: kernel, analytics, progression, streaks, curriculum, economy, quests, habits, focus, discipline, markets, notifications, readings, vault
 miniapp   web/app/src     (the SvelteKit Mini App)  depends on: nothing internal
 landing   web/site/src    (the Astro landing page, planned)  depends on: nothing internal
@@ -224,12 +224,19 @@ context each migration names equal to the owner this register gives each table i
 | `drill_answers` | `vault` | `migrations/011001_vault_drills.sql` (SPEC-110) | exported and erased; an erase never deletes a note (ADR-118) |
 | `drill_grades` | `vault` | `migrations/011001_vault_drills.sql` (SPEC-110) | exported and erased; an erase never deletes a note (ADR-118) |
 | `inbox_captures` | `vault` | `migrations/011801_vault_inbox_captures.sql` (SPEC-118) | exported and erased; an erase never deletes a capture or its stub (ADR-118) |
+| `minutes_log` | `habits` | `migrations/007801_habits_minutes_log.sql` (SPEC-078) | exported and erased |
 
 The quests context reaches outside the workspace for three things and no further inside it: its
 chests are rolled from the operating system's generator (`getrandom`), its stores run on the
 caller's connection (`sqlx`), and its refusals are typed (`thiserror`). Its data-rights port also
 writes its rows as JSON (`serde_json`). None of them is an edge to another context: the map's
 line for `deck-streak-quests` stays `depends on: kernel, ingest` (SPEC-081 R5, R21).
+
+The habits context reaches outside the workspace for three things and no further inside it: its
+minutes log's queries run on the caller's connection (`sqlx`), an entry's refusals are typed
+(`thiserror`), and its data-rights port writes its rows as JSON (`serde_json`). None of them is an
+edge to another context: the map's line for `deck-streak-habits` stays `depends on: kernel`
+(SPEC-078 R21).
 
 ## Overloaded words, held apart
 

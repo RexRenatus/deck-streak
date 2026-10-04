@@ -9,8 +9,8 @@ mod golden;
 use deck_streak_kernel::StudyDay;
 use deck_streak_notifications::landmarks::{
     ANNIVERSARY_EVENT_TYPE, ANNIVERSARY_GAP_TEMPLATE, ANNIVERSARY_TEMPLATE, LANDMARK_DAY_STEP,
-    Landmark, STUDY_DAY_EVENT_TYPE, STUDY_DAY_TEMPLATE, compute_landmarks, due_today,
-    render_landmark,
+    LANDMARK_HIGH_WATER_KEY, Landmark, STUDY_DAY_EVENT_TYPE, STUDY_DAY_TEMPLATE, compute_landmarks,
+    due_today, high_water_mark, render_landmark,
 };
 use serde_json::Value;
 
@@ -177,12 +177,42 @@ fn the_landmark_constants_equal_the_predecessors() {
             "constants.__LANDMARK_STUDY_DAY_TEMPLATE" => {
                 assert_eq!(STUDY_DAY_TEMPLATE, case.output.as_str().unwrap());
             }
-            // Part b declares and asserts the high-water key (A26).
-            "landmarks.LANDMARK_HIGH_WATER_KEY" => {}
+            "landmarks.LANDMARK_HIGH_WATER_KEY" => {
+                assert_eq!(LANDMARK_HIGH_WATER_KEY, case.output.as_str().unwrap());
+            }
             other => panic!("a constant this test does not know: {other}"),
         }
     });
     println!("{examined}");
+}
+
+/// The mark the first run stores is the predecessor's bytes (SPEC-102 A38): every golden run that
+/// wrote a mark wrote the highest anniversary and study-day ordinals of the landmarks up to today.
+#[test]
+fn the_mark_is_the_predecessors_json_for_every_golden_run() {
+    let cases = golden::read(&golden::committed("landmarks_run")).expect("the run golden");
+    let mut examined = 0;
+    for case in &cases.cases {
+        let landmarks =
+            compute_landmarks(&days(&case.input["study_days"]), day(&case.input["today"]));
+        match case.output["mark_written"].as_str() {
+            Some(written) => assert_eq!(
+                high_water_mark(&landmarks),
+                written,
+                "the mark of {}",
+                case.input
+            ),
+            // A run that found the mark stored writes none, so it has no bytes to compare.
+            None => assert!(
+                case.input["mark"].is_string(),
+                "a run writes no mark only when one is stored: {}",
+                case.input
+            ),
+        }
+        examined += 1;
+    }
+    assert_eq!(examined, 10, "every landmarks_run case is examined");
+    println!("examined {examined} landmarks_run marks");
 }
 
 #[test]

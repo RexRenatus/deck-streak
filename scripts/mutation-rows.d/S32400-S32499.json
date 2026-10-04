@@ -1,0 +1,269 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S32416-THE-LEDGER-CENSUS-ADDS-THE-READERS-REFUSALS",
+        "progression",
+        "tests/ledger_census.rs",
+        ".extend(table_census::refusals(root, TABLE, OWNER, &census.naming));",
+        ".extend(table_census::refusals(root, TABLE, OWNER, &census.naming).into_iter().filter(|_| false));",
+        "ledger_census::a_reserved_name_joined_from_literals_is_refused_in_every_spelling",
+        "the ledger census adds the shared reader's refusals to its own; discarded, no joined spelling of xp_ledger is refused"
+      ],
+      [
+        "S32417-THE-LEDGER-POPULATION-HOLDS-95-SPELLINGS",
+        "progression",
+        "tests/ledger_census.rs",
+        "const JOINED_SPELLINGS: usize = 95;",
+        "const JOINED_SPELLINGS: usize = 96;",
+        "ledger_census::a_reserved_name_joined_from_literals_is_refused_in_every_spelling",
+        "the generated population of xp_ledger holds 95 spellings: 9 splits in 9 forms and 14 family members; a changed size fails the census"
+      ],
+      [
+        "S32418-THE-SETTLE-CENSUS-ADDS-THE-READERS-REFUSALS",
+        "progression",
+        "tests/xp_census.rs",
+        ".extend(table_census::refusals(root, TABLE, OWNER, &census.naming));",
+        ".extend(table_census::refusals(root, TABLE, OWNER, &census.naming).into_iter().filter(|_| false));",
+        "xp_census::a_reserved_name_joined_from_literals_is_refused_in_every_spelling",
+        "the settle census adds the shared reader's refusals to its own; discarded, no joined spelling of xp_settlement is refused"
+      ],
+      [
+        "S32419-THE-SETTLE-POPULATION-HOLDS-131-SPELLINGS",
+        "progression",
+        "tests/xp_census.rs",
+        "const JOINED_SPELLINGS: usize = 131;",
+        "const JOINED_SPELLINGS: usize = 132;",
+        "xp_census::a_reserved_name_joined_from_literals_is_refused_in_every_spelling",
+        "the generated population of xp_settlement holds 131 spellings: 13 splits in 9 forms and 14 family members"
+      ],
+      [
+        "S32420-THE-WALLET-CENSUS-ADDS-THE-READERS-REFUSALS",
+        "economy",
+        "tests/wallet_census.rs",
+        ".extend(table_census::refusals(root, TABLE, OWNER, &census.naming));",
+        ".extend(table_census::refusals(root, TABLE, OWNER, &census.naming).into_iter().filter(|_| false));",
+        "wallet_census::a_reserved_name_joined_from_literals_is_refused_in_every_spelling",
+        "the wallet census adds the shared reader's refusals to its own; discarded, no joined spelling of coin_ledger is refused"
+      ],
+      [
+        "S32421-THE-WALLET-POPULATION-HOLDS-113-SPELLINGS",
+        "economy",
+        "tests/wallet_census.rs",
+        "const JOINED_SPELLINGS: usize = 113;",
+        "const JOINED_SPELLINGS: usize = 114;",
+        "wallet_census::a_reserved_name_joined_from_literals_is_refused_in_every_spelling",
+        "the generated population of coin_ledger holds 113 spellings: 11 splits in 9 forms and 14 family members"
+      ],
+      [
+        "S32422-THE-OWNERS-OWN-OPERATION-IS-REFUSED",
+        "progression",
+        "tests/xp_census.rs",
+        ".extend(owners_own_operation(root, &used, &OWNER_ADMITS));",
+        ".extend(owners_own_operation(root, &used, &OWNER_ADMITS).filter(|_| false));",
+        "xp_census::the_owners_own_operation_is_refused_unless_it_admits_it",
+        "a use of settle in progression's own code, outside a use declaration and an admitted file, is refused (#445); discarded, the wrapper, the pointer and the generic pass"
+      ],
+      [
+        "S32423-THE-OWNERS-AIDS-MAY-CALL-SETTLE",
+        "progression",
+        "tests/xp_census.rs",
+        "CALLER_AIDS.iter().any(|aid| *aid == used.kind)",
+        "CALLER_AIDS.is_empty()",
+        "xp_census::the_owners_own_operation_is_refused_unless_it_admits_it",
+        "progression's own tests and examples may call settle; with no aid exempt, its test and example are refused"
+      ],
+      [
+        "S32424-AN-IMPORT-IN-THE-OWNER-IS-ACCEPTED",
+        "progression",
+        "tests/xp_census.rs",
+        ".any(|range| range.contains(offset))",
+        ".any(|range| range.is_empty())",
+        "xp_census::the_owners_own_operation_is_refused_unless_it_admits_it",
+        "a use written inside a use declaration is the owner's import or re-export and is accepted; with no import seen, every pub use of the library is refused"
+      ],
+      [
+        "S32425-AN-ADMITTED-FILE-IS-ACCEPTED",
+        "progression",
+        "tests/xp_census.rs",
+        "admits.contains(&used.file.as_str())",
+        "admits.contains(&used.kind.as_str())",
+        "xp_census::an_admitted_file_of_the_owner_is_accepted",
+        "a file progression admits may call settle; matched by the target's kind instead of the file, an admitted wrapper is refused"
+      ],
+      [
+        "S32426-THE-CENSUS-READS-THE-USES-BYTE",
+        "progression",
+        "tests/xp_census.rs",
+        "span[\"byte_start\"].as_u64()?",
+        "Some(0_u64)?",
+        "xp_census::the_owners_own_operation_is_refused_unless_it_admits_it",
+        "the import test reads the byte rustc reports for the use; read at the file's start, the library's re-exports and the import after multi-byte text are refused"
+      ]
+    ],
+    "CARGO_KILLED_SCRIPT_MUTATIONS": [
+      [
+        "S32401-A-HEX-ESCAPE-DECODES-TO-ITS-BYTE",
+        "tools/table-census/table_census.rs",
+        "u8::from_str_radix(&digits, 16)",
+        "u8::from_str_radix(&digits, 10)",
+        "progression",
+        "ledger_census::a_reserved_name_joined_from_literals_is_refused_in_every_spelling",
+        "a \\x escape is two hexadecimal digits; read in base ten, \\x5f decodes to nothing and the family's escaped members no longer spell the name; a script row, since the reader is test support no cargo-mutants run reaches"
+      ],
+      [
+        "S32402-A-UNICODE-ESCAPE-DECODES-TO-ITS-CHARACTER",
+        "tools/table-census/table_census.rs",
+        "u32::from_str_radix(&digits, 16)",
+        "u32::from_str_radix(&digits, 10)",
+        "progression",
+        "ledger_census::a_reserved_name_joined_from_literals_is_refused_in_every_spelling",
+        "a \\u{..} escape is hexadecimal; read in base ten, \\u{5f} decodes to nothing and the family's member no longer spells the name"
+      ],
+      [
+        "S32403-A-LINE-CONTINUATION-ADDS-NO-CHARACTER",
+        "tools/table-census/table_census.rs",
+        "            (None, after)",
+        "            (Some('\\n'), after)",
+        "progression",
+        "ledger_census::a_reserved_name_joined_from_literals_is_refused_in_every_spelling",
+        "a backslash before a newline joins the lines with nothing between them; keeping the newline splits the continued member's name"
+      ],
+      [
+        "S32404-A-RAW-STRING-CLOSES-AT-A-QUOTE-AND-ITS-HASHES",
+        "tools/table-census/table_census.rs",
+        "(1..=hashes).all(|step| character(index + step) == Some('#'))",
+        "(1..=hashes).all(|step| character(index + step) == Some('\"'))",
+        "progression",
+        "ledger_census::a_reserved_name_joined_from_literals_is_refused_in_every_spelling",
+        "a raw string with hashes closes at a quote followed by as many hashes; a reader that never closes it reads the rest of the file as one piece and loses the raw member's pieces"
+      ],
+      [
+        "S32405-A-CHARACTER-LITERAL-IS-A-PIECE",
+        "tools/table-census/table_census.rs",
+        ".then(|| (value.to_string(), at + 2))",
+        ".then(|| (String::new(), at + 2))",
+        "progression",
+        "ledger_census::a_reserved_name_joined_from_literals_is_refused_in_every_spelling",
+        "a character literal is a one-character piece; read as empty, the character-array and character-concat members no longer assemble the name"
+      ],
+      [
+        "S32406-A-START-PIECE-ENDS-WITH-A-PREFIX",
+        "tools/table-census/table_census.rs",
+        "let start = |piece: &str, at: usize| piece.ends_with(&name[..at]);",
+        "let start = |piece: &str, at: usize| piece == &name[..at];",
+        "progression",
+        "ledger_census::a_reserved_name_joined_from_literals_is_refused_in_every_spelling",
+        "a start piece may carry text before the prefix it ends with; read as exact, the sqlx form's 'DELETE FROM x' never starts the name"
+      ],
+      [
+        "S32407-AN-END-PIECE-STARTS-WITH-THE-REST",
+        "tools/table-census/table_census.rs",
+        "let end = |piece: &str, at: usize| piece.starts_with(&name[at..]);",
+        "let end = |piece: &str, at: usize| piece.starts_with(&name[at + 1..]);",
+        "progression",
+        "ledger_census::a_reserved_name_joined_from_literals_is_refused_in_every_spelling",
+        "an end piece starts with the rest of the name from its split; read one character later, no split's end piece finishes the name"
+      ],
+      [
+        "S32408-THE-MIDDLE-PIECES-ARE-READ",
+        "tools/table-census/table_census.rs",
+        "!piece.is_empty() && after < size",
+        "!piece.is_empty() && after < at",
+        "progression",
+        "ledger_census::a_reserved_name_joined_from_literals_is_refused_in_every_spelling",
+        "the pieces between a start and an end are read; with no middle, the split into single characters never assembles the name"
+      ],
+      [
+        "S32409-PIECES-ARE-FOLDED-TO-LOWER-CASE",
+        "tools/table-census/table_census.rs",
+        ".entry(part.to_ascii_lowercase())",
+        ".entry(part.to_owned())",
+        "progression",
+        "xp_census::the_joins_the_census_names_stay_refused",
+        "every piece is folded to ASCII lower case before the pool is read; unfolded, the upper-case and mixed-case members escape"
+      ],
+      [
+        "S32410-STRINGIFY-WORDS-ARE-PIECES",
+        "tools/table-census/table_census.rs",
+        "stringified = at + 3..close;",
+        "stringified = 0..0;",
+        "progression",
+        "ledger_census::a_reserved_name_joined_from_literals_is_refused_in_every_spelling",
+        "the words inside stringify! are pieces; read as words, the stringify member's two halves join unseen"
+      ],
+      [
+        "S32411-THE-POOL-IS-WORKSPACE-WIDE",
+        "tools/table-census/table_census.rs",
+        "        for source in rust_files(&member.join(\"src\")) {",
+        "        reader.pool.clear();\n        for source in rust_files(&member.join(\"src\")) {",
+        "progression",
+        "xp_census::the_joins_the_census_names_stay_refused",
+        "the pool holds every crate's pieces at once; a pool reset per crate loses the crate form, whose first piece is in another crate"
+      ],
+      [
+        "S32412-AN-INCLUDED-FILE-IS-READ",
+        "tools/table-census/table_census.rs",
+        "        if !self.seen.insert((path.to_path_buf(), kind)) {",
+        "        if self.seen.insert((path.to_path_buf(), kind)) {",
+        "progression",
+        "ledger_census::a_reserved_name_joined_from_literals_is_refused_in_every_spelling",
+        "a file an include or a #[path] module names is read the first time it is followed; skipped, the text and module forms lose their first piece"
+      ],
+      [
+        "S32413-A-NON-LITERAL-INCLUDE-FAILS-CLOSED",
+        "tools/table-census/table_census.rs",
+        "            path => self.unnamed(file, path),",
+        "            _ => {}",
+        "progression",
+        "ledger_census::a_name_the_census_cannot_resolve_fails_closed",
+        "an include whose path is not one literal is refused by name; ignored, the env! and macro-argument includes pass unread"
+      ],
+      [
+        "S32414-AN-UNREAD-CONCAT-ARGUMENT-FAILS-CLOSED",
+        "tools/table-census/table_census.rs",
+        "            _ => unread = true,",
+        "            _ => {}",
+        "progression",
+        "ledger_census::a_name_the_census_cannot_resolve_fails_closed",
+        "a concat! argument the reader cannot read, beside part of the name, is refused by name; read as nothing, the env!, macro-call and metavariable joins pass"
+      ],
+      [
+        "S32415-A-MIDDLE-PIECE-IS-EXACT",
+        "tools/table-census/table_census.rs",
+        "name[at..].starts_with(piece)",
+        "name.contains(piece)",
+        "progression",
+        "ledger_census::pieces_that_do_not_cover_the_name_are_not_refused",
+        "a middle piece is exactly the part of the name at its position; a piece anywhere in the name covers a near miss one character short"
+      ],
+      [
+        "S32427-AN-OUT-DIR-INCLUDE-IS-DISCLOSED",
+        "tools/table-census/table_census.rs",
+        "            self.out_dir += 1;\n            return;",
+        "            self.out_dir += 1;",
+        "progression",
+        "ledger_census::a_name_the_census_cannot_resolve_fails_closed",
+        "an include joined onto env!(\"OUT_DIR\") is build-script output, counted and disclosed (#585); refused, the settle census's own planted trees fail (ruling 108)"
+      ],
+      [
+        "S32428-ONLY-OUT-DIR-IS-DISCLOSED",
+        "tools/table-census/table_census.rs",
+        "            && variable == \"OUT_DIR\"",
+        "            && !variable.is_empty()",
+        "progression",
+        "ledger_census::a_name_the_census_cannot_resolve_fails_closed",
+        "only OUT_DIR is disclosed; any variable disclosed lets an include joined onto CALL_FILE pass unread (ruling 108)"
+      ],
+      [
+        "S32429-AN-INCLUDE-THE-READER-CANNOT-READ-IS-REFUSED",
+        "tools/table-census/table_census.rs",
+        "        let Ok(bytes) = fs::read(path) else {\n            self.refused.insert(format!(",
+        "        let Ok(bytes) = fs::read(path) else {\n            drop(format!(",
+        "progression",
+        "ledger_census::a_name_the_census_cannot_resolve_fails_closed",
+        "an include of a literal path the reader cannot read is refused by name; dropped, an include of a missing file passes unread (ruling 108)"
+      ]
+    ]
+  }
+}

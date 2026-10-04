@@ -579,3 +579,289 @@ Each test below was red first against its own hand plant, and the file was resto
   `crates/mcp/src/grants.rs`, because `or_if` and `Grant` are `pub(crate)`.
 - `guard_census::the_crate_root_forbids_unsafe_code`: row `S11931-FORBID-UNSAFE` replaces the crate
   root's `#![forbid(unsafe_code)]` with `#![deny(unsafe_code)]`, and the test reads `src/lib.rs`.
+
+## 13. Amendments, 2026-10-03: the server's first slice (#157) and two named rows (#158)
+
+#157 lands in parts (ADR-329). This pull request, its first part, serves the `mcp` role with one
+tool, `get_law_track`; part 157b adds the unit, and the other tools follow as their owner SPECs
+land, with A26 last. The body above and section 3c are not edited: the criteria this part delivers
+are named below and stated for this part in section 14, whose fence holds them.
+
+What this part delivers:
+- R1's last two edges: `deck-streak-mcp` depends on `deck-streak-coordination` (for
+  `law::law_block`), and `deck-streak-daemon` depends on `deck-streak-mcp`; the map's two lines
+  change in the same commit as the manifests, and no other crate gains an edge (T1 of section 10
+  named both for #157).
+- R2 without its unit: `deckstreakd mcp` (`crates/daemon/src/role_mcp.rs`) serves MCP's streamable
+  HTTP transport through `rmcp` at the one path `/mcp`, stateless (no session is kept, and no
+  session id is issued), answering `application/json`, with the allowed hosts the loopback names
+  and a request body of at most 64 KiB; any other path answers 404, and 401 without a granted
+  bearer. `deploy/systemd/deck-streak-mcp.service` is part 157b's.
+- R3: the listen setting `DECKSTREAK_MCP_LISTEN`, refused by `McpError::Listen` naming it when it is
+  unset, unparseable or not a loopback address. R4: at most 8 requests in flight, a ninth shed with
+  503 at once.
+- R12's tool error: a tool call whose grant lacks the tool's scope answers the tool error whose
+  whole text is `unauthorized`, and no data.
+- R15 to R17 for `get_law_track` alone: its name, its annotations and its output fields equal its
+  entry of `goldens/mcp_roster.json`; it takes no parameter (R15 removes the predecessor's
+  `token`); it needs `law_track` (R17); and it reads the law track through `coordination`'s
+  `law::law_block` for the kernel's study day with no leech count, as the API's law route reads it
+  (R16).
+- The pending-null rule (ADR-329): while the leech port is not wired (#133), `law_block` answers no
+  active leech count and no mastery, and the tool answers `leech_total` and `mastery` as `null`,
+  never 0, where the predecessor coerces them to 0 and 0.0 (`server.py:get_law_track`, `_law_int`,
+  `_law_float`). The output schema declares `dues`, `leech_total` and `mastery` nullable and
+  required, in the golden's order. A present mastery is rounded to 2 places as `_law_float` rounds
+  it, by the kernel's port of the predecessor's rounding.
+- The serving order, outermost first: the request id, the sensitive request headers
+  (`Authorization`, `Cookie`, `Set-Cookie`), the trace with the matched path, the sensitive
+  response headers, the request id's propagation, the panic catch, a timeout answering 408, the
+  guard's layer, the shed's error handler (503), the load shed, the global concurrency limit of 8,
+  the request body limit of 64 KiB, and then the `rmcp` service at `/mcp`. The guard sits inside
+  the trace, so its `Authorization` header is redacted before the trace logs it, and outside the
+  shed, so a refused request takes no slot (A44). The body limit is `tower-http`'s request body
+  limit, because axum's own limit bounds only its extractors and the transport reads its own body;
+  the transport's own body cap is set to the same 64 KiB.
+- The guard's new callers: the serving stack calls `Guard::admit` for every request, and the tool
+  calls `Guard::authorize` before it reads anything. `formal/tla/BearerGuard` is re-read for them:
+  for a granted token `admit` reads and writes no limiter variable, so the gap between a request's
+  admission and its tool's scope check is a stuttering step of the model, and a refused scope check
+  is the model's `Decide`. The entry's covers gain both call sites, and it is checked again (#158).
+
+The rows. This part's rows in band `S11900-S11999` are:
+
+| row | target | what it guards | killer |
+|---|---|---|---|
+| `S11901-LOOPBACK` | `crates/mcp/src/settings.rs` | only a loopback address is accepted | `settings::the_listen_address_must_be_loopback` |
+| `S11911-SCOPE-CHECK` | `crates/mcp/src/tools.rs` | the tool checks its scope before it reads | `guard::a_tool_outside_the_scope_answers_unauthorized` |
+| `S11919-BODY-CAP` | `crates/mcp/src/server.rs` | 64 KiB | `server::a_body_over_64_kib_is_refused` |
+| `S11920-SHED` | `crates/mcp/src/server.rs` | past 8 in flight a request is shed | `server::the_ninth_request_in_flight_is_shed` |
+| `S11932-LOOPBACK-HOSTS` | `crates/mcp/src/server.rs` | the allowed hosts are the loopback names | `server::a_foreign_host_is_refused` |
+| `S11933-STATELESS-JSON` | `crates/mcp/src/server.rs` | no session is kept and the answer is JSON | `server::initialize_answers_json_and_no_session_id` |
+| `S11934-LAW-PENDING` | `crates/mcp/src/tools.rs` | a pending count answers null, never 0 | `tools::the_pending_law_numbers_answer_null_never_zero` |
+| `S11935-MASTERY-ROUND` | `crates/mcp/src/tools.rs` | a present mastery is rounded to 2 places | `tools::the_law_track_answers_numbers_only` |
+| `S11936-GUARD-WIRED` | `crates/mcp/src/server.rs` | the guard's layer is in the served stack | `server::the_served_stack_refuses_initialize_without_a_bearer` |
+| `S11937-MCP-ROLE` | `crates/daemon/src/main.rs` | the role's name in the binary's roles | `roles::the_mcp_role_is_a_known_role` |
+
+The band also holds `S11930-MIN-CREDENTIAL-CHARS` (`crates/mcp/src/settings.rs`) and
+`S11931-FORBID-UNSAFE` (`crates/mcp/src/lib.rs`), which #578 delivered and section 10's rows
+paragraph did not name. S11921 to S11925 stay with the tools a later part of #157 delivers, and
+S11906, S11926 and S11927 follow with the drill tools (R19).
+
+The criteria. Section 14 states A1, A13, A14, A22, A23, A24, A25, A33, A38 and A39 for this part,
+which moves them from section 3c, and adds A41 to A45. Section 3c's A13 also names every other
+core tool and the drill tools, and its A26 the whole roster: those halves stay in section 3c with
+the parts that deliver their tools. Section 3c's fence keeps every `SERVER: ` line, and the line of
+a criterion section 14 states is read from section 14.
+
+The manifest, as this part leaves each path of section 4 and each path it adds:
+- `Cargo.toml`: changed: the workspace's `rmcp` with its server, macros and streamable HTTP server
+  features only
+- `Cargo.lock`: changed: `rmcp` and the packages it brings
+- `crates/mcp/Cargo.toml`: changed: `deck-streak-coordination`, `rmcp`, `serde`, `tokio`'s
+  listener, `tower`'s limit and load shed, and `tower-http`'s layers; `schemars` is reached through
+  `rmcp`
+- `crates/mcp/src/lib.rs`: changed: the `server` and `tools` modules
+- `crates/mcp/src/settings.rs`: changed: the listen setting and `McpError::Listen`
+- `crates/mcp/src/server.rs`: added: the transport's configuration, the serving stack, the bind and
+  the serve
+- `crates/mcp/src/tools.rs`: added: the server's tool router, `get_law_track`, its scope check and
+  its law-track port
+- `crates/mcp/src/grants.rs`: unchanged in this part (the text `formal/tla/BearerGuard` covers)
+- `crates/mcp/src/guard.rs`: unchanged in this part (the text `formal/tla/BearerGuard` covers)
+- `crates/mcp/src/limiter.rs`: unchanged in this part (the text `formal/tla/BearerGuard` covers)
+- `crates/mcp/src/resources.rs`: unchanged in this part; delivered by a later part of #157
+- `crates/mcp/src/drills.rs`: unchanged in this part; delivered with the drill tools (R19, #158)
+- `crates/mcp/tests/settings.rs`: changed: A1, A39
+- `crates/mcp/tests/guard.rs`: changed: A13, A14
+- `crates/mcp/tests/server.rs`: added: A22 to A25, A43 to A45
+- `crates/mcp/tests/tools.rs`: added: A33, A41, A42
+- `crates/mcp/tests/support/mod.rs`: added (section 4 does not name it): the served stack's test
+  client over a loopback socket, the scripted law track and the tokens built from parts, shared by
+  the three test files above
+- `crates/mcp/tests/guard_census.rs`: unchanged in this part; its census now also reads
+  `server.rs` and `tools.rs`
+- `crates/mcp/tests/limiter.rs`: unchanged in this part
+- `crates/mcp/tests/roster.rs`: unchanged in this part; delivered with A26 by the last part of #157
+- `crates/mcp/tests/drills.rs`: unchanged in this part; delivered with the drill tools (R19, #158)
+- `crates/mcp/tests/resources.rs`: unchanged in this part; delivered by a later part of #157
+- `crates/daemon/Cargo.toml`: changed: depends on `deck-streak-mcp`
+- `crates/daemon/src/role_mcp.rs`: added: the role, its lifecycle and its credentials
+- `crates/daemon/src/main.rs`: changed: the role `mcp`
+- `crates/daemon/src/lib.rs`: changed: the role's module
+- `crates/daemon/src/wiring.rs`: unchanged in this part: the role opens its database through
+  `wiring::open_database`, and no tool needs a use case wired there yet
+- `crates/daemon/tests/roles.rs`: changed: A38, and the usage line's expected roles name the fifth
+- `deploy/systemd/deck-streak-mcp.service`: unchanged in this part; delivered by part 157b of #157
+- `deny.toml`: unchanged in this part: every licence the new packages carry is already allowed
+- `stack.json`: unchanged in this part: the stack radar has no item for an MCP server
+- `docs/CONTEXT-MAP.md`: changed: the adapter's line names the server and its tools and the
+  `coordination` edge, and `deck-streak-daemon`'s line names `mcp`
+- `tools/parity-oracle/registry/spec_119.py`: changed: the `mcp_roster` golden
+- `tools/parity-oracle/goldens/mcp_roster.json`: added: the predecessor's 33 tools at its defaults,
+  each tool's name, annotations, input schema and output fields, and no description text
+- `tools/parity-oracle/goldens/mcp_auth.constants.json`: changed: its `registry_sha256` only,
+  because the registry file it names changed
+- `tools/parity-oracle/goldens/mcp_auth_bucket.json`: changed: its `registry_sha256` only
+- `tools/parity-oracle/goldens/mcp_auth_limiter.json`: changed: its `registry_sha256` only
+- `tools/parity-oracle/goldens/mcp_clamps.json`: unchanged in this part; delivered by a later part
+  of #157
+- `tools/parity-oracle/goldens/mcp_erase_confirm.json`: unchanged in this part; delivered by a
+  later part of #157
+- `tools/parity-oracle/goldens/mcp_sync_out.json`: unchanged in this part; delivered by a later
+  part of #157
+- `tools/parity-oracle/goldens/mcp_drills.constants.json`: unchanged in this part; delivered with
+  the drill tools (R19, #158)
+- `tools/parity-oracle/goldens/mcp_drill_ref.json`: unchanged in this part; delivered with the
+  drill tools (R19, #158)
+- `tools/parity-oracle/goldens/mcp_drill_view.json`: unchanged in this part; delivered with the
+  drill tools (R19, #158)
+- `scripts/mutation-rows.d/S11900-S11999.json`: changed: the ten rows above
+- `formal/tla/BearerGuard/BearerGuard.tla`: changed (section 4 does not name it): the re-read in
+  its comments and the two new covers
+- `docs/decisions/ADR-329-the-mcp-server-lands-as-a-role-with-one-tool-before-its-unit-and-the-law-tracks-pending-numbers-answer-null.md`:
+  added (section 4 does not name it)
+- `docs/decisions/ADR-320-the-mcp-guard-lands-first-as-a-library-with-the-kernel-edge-only.md`:
+  changed (section 4 does not name it): an appended amendment
+- `docs/schematics/mcp-guard-refusals.md`: unchanged in this part
+- `docs/red-first/SPEC-119.md`: changed: this part's criteria
+- `changelog.d/mcp-server-157a.md`: added
+
+What this part does not do:
+- It serves none of the 13 other core tools whose owners exist (the scores, the report, the level,
+  the badges, the streak, the progress, the skip history and its two writers, memory, export, erase
+  and the forced sync), their goldens `mcp_clamps`, `mcp_erase_confirm` and `mcp_sync_out`, A28 to
+  A32, or rows S11921 to S11925: a later part of #157.
+- It serves none of the 19 core tools whose owner SPECs are planned, and no chart resource (R23,
+  A37), and it does not decide A26, the whole roster: later parts of #157, after their owners land.
+- It adds no unit, no host budget entry and no deploy rail credential, and B3 is not judged here:
+  part 157b of #157.
+- It registers no drill tool, names no drill scope and adds none of their criteria or rows: they
+  are parked with #158.
+- It answers no leech count and no mastery while the leech port is not wired: #133.
+- It serves none of the predecessor's image chart resources, which R23 leaves out on purpose:
+  #157.
+
+## 14. Acceptance criteria of the 2026-10-03 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A1 | `DECKSTREAK_MCP_LISTEN` unset, unparseable or not loopback refuses start naming the setting | `the_listen_address_must_be_loopback` |
+| A13 | the core token reaches no `law_track` tool and the law-track token reaches `get_law_track` | `each_grant_reaches_its_scopes_and_no_other` |
+| A14 | a core-token call of `get_law_track` answers the tool error `unauthorized` and no data | `a_tool_outside_the_scope_answers_unauthorized` |
+| A22 | only `/mcp` is served; any other path answers 404 | `only_the_mcp_path_is_served` |
+| A23 | a body over 64 KiB is refused | `a_body_over_64_kib_is_refused` |
+| A24 | a request whose Host is not a loopback name is refused | `a_foreign_host_is_refused` |
+| A25 | with 8 granted requests held in flight, a ninth answers 503 at once | `the_ninth_request_in_flight_is_shed` |
+| A33 | `get_law_track` answers exactly the golden's fields, numbers only, mastery rounded to 2 places | `the_law_track_answers_numbers_only` |
+| A38 | `deckstreakd mcp` is a known role | `the_mcp_role_is_a_known_role` |
+| A39 | the role's token reads go only through the loader | `the_role_reads_its_tokens_only_through_the_loader` |
+| A41 | each served tool's name, annotations, parameters and output fields equal its roster golden entry | `each_served_tool_matches_its_roster_golden_entry` |
+| A42 | pending leeches and mastery answer null, never 0 | `the_pending_law_numbers_answer_null_never_zero` |
+| A43 | through the served stack, an `initialize` with no bearer answers 401 `unauthorized` | `the_served_stack_refuses_initialize_without_a_bearer` |
+| A44 | with 8 granted requests held in flight, a request with no bearer answers 401, not 503 | `a_refused_request_holds_no_slot` |
+| A45 | `initialize` answers `application/json` and no session id header | `initialize_answers_json_and_no_session_id` |
+
+```acceptance
+A1: cargo test -p deck-streak-mcp --test settings -- --exact the_listen_address_must_be_loopback
+A13: cargo test -p deck-streak-mcp --test guard -- --exact each_grant_reaches_its_scopes_and_no_other
+A14: cargo test -p deck-streak-mcp --test guard -- --exact a_tool_outside_the_scope_answers_unauthorized
+A22: cargo test -p deck-streak-mcp --test server -- --exact only_the_mcp_path_is_served
+A23: cargo test -p deck-streak-mcp --test server -- --exact a_body_over_64_kib_is_refused
+A24: cargo test -p deck-streak-mcp --test server -- --exact a_foreign_host_is_refused
+A25: cargo test -p deck-streak-mcp --test server -- --exact the_ninth_request_in_flight_is_shed
+A33: cargo test -p deck-streak-mcp --test tools -- --exact the_law_track_answers_numbers_only
+A38: cargo test -p deck-streak-daemon --test roles -- --exact the_mcp_role_is_a_known_role
+A39: cargo test -p deck-streak-mcp --test settings -- --exact the_role_reads_its_tokens_only_through_the_loader
+A41: cargo test -p deck-streak-mcp --test tools -- --exact each_served_tool_matches_its_roster_golden_entry
+A42: cargo test -p deck-streak-mcp --test tools -- --exact the_pending_law_numbers_answer_null_never_zero
+A43: cargo test -p deck-streak-mcp --test server -- --exact the_served_stack_refuses_initialize_without_a_bearer
+A44: cargo test -p deck-streak-mcp --test server -- --exact a_refused_request_holds_no_slot
+A45: cargo test -p deck-streak-mcp --test server -- --exact initialize_answers_json_and_no_session_id
+```
+
+## 15. Amendments, 2026-10-04: the server's unit (#157)
+
+Part 157b of #157 (ADR-332) delivers R2's unit clause and the manifest's unit line, and B3 is
+judged over the unit. The body above and sections 3c, 13 and 14 are not edited: the criteria this
+part delivers are stated in section 16, whose fence holds them.
+
+What this part delivers:
+- R2's unit clause: `deploy/systemd/deck-streak-mcp.service` runs `deckstreakd mcp` as a
+  `Type=notify` daemon with the watchdog, the daemons' lifecycle, `OnFailure=` the alert template,
+  the full hardening set, the shared state directory and settings file, and two credentials from
+  the private rail's socket, `mcp-core-token` and `mcp-law-track-token`. No `Environment=` line
+  carries a token. The manifest's third credential waits on #158.
+- The unit's place in the share: its entry in `deploy/host-budget.json` and its row in ADR-032's
+  note of this date, with a CPU quota taken from the API's; ADR-064's note of this date records
+  that the share's memory is now full (ADR-332 D2).
+- The unit's rail entry: its neutral `ExecStart=` and `EnvironmentFile=` in
+  `deploy/rail-contract.json`.
+- R3's setting in the committed example: `DECKSTREAK_MCP_LISTEN`, a loopback address, in
+  `deploy/deck-streak.env.example`, and among the settings the template tests require.
+- The owner-started first run: a deploy installs the unit and never starts it, and
+  `deploy/README.md` names the owner's two steps (ADR-332 D3; #167).
+- B3 (section 3a), judged on the box over the units under `deploy/systemd/`, this unit among them.
+- Three text corrections ride with this part: a dated amendment of one sentence of ADR-329's
+  Consequences; the module doc of `crates/mcp/src/server.rs`, which now says what the guard's
+  place outside the bound gives a refused request, an answer without waiting for a slot and no
+  slot held past its refusal; and a correction in `docs/red-first/SPEC-119.md` that quotes A1's
+  observed failure.
+
+The files this part changes:
+- `deploy/systemd/deck-streak-mcp.service`: added: the role, its lifecycle, its two credentials and
+  its budget
+- `deploy/systemd/deck-streak-api.service`: changed (section 4 does not name it): its CPU quota
+  gives the MCP server its share (ADR-332 D2)
+- `deploy/host-budget.json`: changed (section 4 does not name it): the unit's entry
+- `deploy/rail-contract.json`: changed (section 4 does not name it): the unit's two neutral values
+- `deploy/deck-streak.env.example`: changed (section 4 does not name it): `DECKSTREAK_MCP_LISTEN`
+- `deploy/README.md`: changed (section 4 does not name it): the unit's rows and the owner's first
+  start
+- `scripts/tests/test_deploy_templates.py`: changed (section 4 does not name it): the unit in each
+  table keyed by unit, the share's worst case, the API's quota, and the role and per-service tables
+  held in both directions: A46 to A51
+- `scripts/tests/test_rail_contract.py`: unchanged in this part; it decides A52 over the unit's
+  rail entry
+- `docs/decisions/ADR-032-deploy-templates-and-the-host-budget.md`: changed (section 4 does not
+  name it): a dated note with the unit's row
+- `docs/decisions/ADR-064-deckstreak-backs-up-with-its-own-units-and-never-the-collection.md`:
+  changed (section 4 does not name it): a dated note on the share
+- `docs/decisions/ADR-332-the-mcp-servers-unit-takes-its-place-inside-the-share-and-its-first-start-is-the-owners.md`:
+  added (section 4 does not name it)
+- `docs/decisions/ADR-329-the-mcp-server-lands-as-a-role-with-one-tool-before-its-unit-and-the-law-tracks-pending-numbers-answer-null.md`:
+  changed (section 4 does not name it): a dated amendment of one Consequences sentence
+- `crates/mcp/src/server.rs`: changed: one sentence of its module doc, and no code
+- `docs/red-first/SPEC-119.md`: changed: A46 to A52, and a correction
+- `changelog.d/mcp-unit-157b.md`: added (section 4 does not name it)
+
+What this part does not do:
+- It stores no credential in the private rail and starts no unit: the owner's first start, #167.
+- It adds the unit to no restart list: `deploy/deploy.sh` is unchanged (ADR-332 D3), #167.
+- It adds no Caddy route: the server listens on a loopback address alone (R3), #157.
+- It serves no further tool or resource: later parts of #157.
+- It loads no third credential and registers no parked tool: #158.
+- It declares no service level objective for the server in `deploy/slo.json`: its traffic is
+  the owner's agent alone, and an objective for it waits on that traffic measured, #157.
+
+## 16. Acceptance criteria of the 2026-10-04 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A46 | every service's `MemoryHigh=` and `MemoryMax=` equal its host budget entry and its ADR row, `deck-streak-mcp.service` among them, and `MemoryHigh=` is below `MemoryMax=` | `test_every_unit_ceiling_matches_the_host_budget_and_high_is_below_max` |
+| A47 | the long-running units, the MCP server among them, and the largest job fit the share, and the daemons' CPU quotas fit its CPUs; a daemon with no `MemoryMax=` or `CPUQuota=` is refused by name | `test_the_daemons_and_the_largest_job_fit_the_stack_share` |
+| A48 | every service runs its role with R1's lifecycle, the MCP server as a daemon with its caps, and every role and cap the tables name has a unit | `test_every_service_runs_its_role_with_the_lifecycle_r1_names` |
+| A49 | every unit that loads a credential, the MCP server among them, fails and pages on a refusal | `test_every_unit_that_loads_a_credential_fails_and_pages_on_a_refusal` |
+| A50 | no unit passes a secret through its environment: the MCP server's tokens arrive as credentials, and the committed example names `DECKSTREAK_MCP_LISTEN` | `test_no_unit_passes_a_secret_through_its_environment` |
+| A51 | every service carries R2's hardening and its per-service values, and the per-service table names every service and no other | `test_every_service_carries_the_hardening_r2_names` |
+| A52 | the rail contract names every neutral value the templates carry, the MCP server's among them | `test_the_rail_contract_names_every_neutral_value` |
+
+```acceptance
+A46: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k every_unit_ceiling_matches_the_host_budget_and_high_is_below_max
+A47: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k the_daemons_and_the_largest_job_fit_the_stack_share
+A48: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k every_service_runs_its_role_with_the_lifecycle_r1_names
+A49: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k every_unit_that_loads_a_credential_fails_and_pages_on_a_refusal
+A50: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k no_unit_passes_a_secret_through_its_environment
+A51: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k every_service_carries_the_hardening_r2_names
+A52: python3 -m unittest discover -s scripts/tests -p test_rail_contract.py -k the_rail_contract_names_every_neutral_value
+```

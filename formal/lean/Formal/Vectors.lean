@@ -1,8 +1,10 @@
 import Formal.ChestVectors
+import Formal.ExchangeVectors
 import Formal.NextMilestoneVectors
 import Formal.OpenLapseVectors
 import Formal.RoadToC2Vectors
 import Formal.SkipTariffVectors
+import Formal.TableCensusReachVectors
 import Formal.TokenBonusVectors
 import Formal.WalletVectors
 
@@ -23,10 +25,12 @@ lists it as support.
 def main (args : List String) : IO UInt32 := do
   match args with
   | ["Chest"] => Formal.ChestVectors.run
+  | ["Exchange"] => Formal.ExchangeVectors.run
   | ["NextMilestone"] => Formal.NextMilestoneVectors.run
   | ["OpenLapse"] => Formal.OpenLapseVectors.run
   | ["RoadToC2"] => Formal.RoadToC2Vectors.run
   | ["SkipTariff"] => Formal.SkipTariffVectors.run
+  | ["TableCensusReach"] => Formal.TableCensusReachVectors.run
   | ["TokenBonus"] => Formal.TokenBonusVectors.run
   | ["Wallet"] => Formal.WalletVectors.run
   | _ =>

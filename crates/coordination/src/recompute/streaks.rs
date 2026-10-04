@@ -7,8 +7,8 @@
 
 use std::collections::BTreeSet;
 
-use deck_streak_ingest::reader::is_study_event;
-use deck_streak_kernel::{Db, KernelError, PortFuture, StudyDay, Track, UtcMillis};
+use deck_streak_ingest::reader::{CollectionData, is_study_event};
+use deck_streak_kernel::{Db, KernelError, PortFuture, StudyDay, StudyDayRule, Track, UtcMillis};
 use deck_streak_progression::grant::{GrantRequest, GrantScope, GrantSource};
 use deck_streak_progression::ledger::grant_on;
 use deck_streak_progression::xp::XpAmount;
@@ -69,32 +69,36 @@ impl StreaksStep {
 }
 
 /// The study days of each track, and of both, as the facts' window holds them.
-struct StudyDays {
-    language: BTreeSet<StudyDay>,
+pub(crate) struct StudyDays {
+    /// The language track's study days, which the landmarks' offers also read (SPEC-102 R5).
+    pub(crate) language: BTreeSet<StudyDay>,
     law: BTreeSet<StudyDay>,
     any: BTreeSet<StudyDay>,
 }
 
 impl StudyDays {
     fn of(facts: &super::RecomputeFacts<'_>) -> Self {
+        Self::from_data(facts.data, facts.rule)
+    }
+
+    /// The study days of the window `data` under `rule`: they depend on the collection's data
+    /// alone, so the landmarks' offers read them as this step does.
+    pub(crate) fn from_data(data: &CollectionData, rule: StudyDayRule) -> Self {
         let mut days = Self {
             language: BTreeSet::new(),
             law: BTreeSet::new(),
             any: BTreeSet::new(),
         };
-        let tracks: std::collections::HashMap<i64, Track> = facts
-            .data
+        let tracks: std::collections::HashMap<i64, Track> = data
             .cards
             .iter()
             .map(|card| (card.id, card.track))
             .collect();
-        for review in &facts.data.reviews {
+        for review in &data.reviews {
             if !is_study_event(review.kind, review.ease) {
                 continue;
             }
-            let day = facts
-                .rule
-                .study_day(UtcMillis::from_epoch_millis(review.id));
+            let day = rule.study_day(UtcMillis::from_epoch_millis(review.id));
             days.any.insert(day);
             match tracks.get(&review.card_id) {
                 Some(Track::Law) => days.law.insert(day),

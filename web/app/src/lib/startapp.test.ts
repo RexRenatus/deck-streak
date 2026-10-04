@@ -71,12 +71,21 @@ describe('the startapp token map', () => {
     }
   });
 
+  // SPEC-077 R16, R17, T35. The progress screen and the law tab are opened by their paths alone:
+  // the progress command's button names the path, and no startapp token opens either screen. The
+  // list is exact, so any other new screen still needs a token or a place here.
+  const BY_PATH = ['/progress', '/law'];
+
   it('every destination is a screen of the route table', () => {
-    const destinations = ['today', 'about', 'insights', 'score', 'level', 'streak', 'wallet', 'badges', 'records', 'capture']
-      .map(routeFor)
-      .sort();
+    const tokens = ['today', 'about', 'insights', 'score', 'level', 'streak', 'wallet', 'badges', 'records', 'capture'];
+    const destinations = [...tokens.map(routeFor), ...BY_PATH].sort();
 
     expect(destinations).toEqual([...ROUTES].sort());
+  });
+
+  it('the progress screen and the law tab are opened by path, and no token opens either', () => {
+    expect(routeFor('progress')).toBe(TODAY);
+    expect(routeFor('law')).toBe(TODAY);
   });
 
   it('Today is the root path, and every launch without a known destination opens it', () => {

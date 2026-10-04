@@ -37,6 +37,16 @@ use std::time::{Duration, Instant};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 
+// The generated population of the table's spellings (SPEC-324, ADR-029's include by path).
+#[macro_use]
+#[path = "../../../tools/table-census/population.rs"]
+mod population;
+// The shared reader of every crate's literals (SPEC-324 R1 to R5), included by path as above.
+#[path = "../../../tools/table-census/table_census.rs"]
+mod table_census;
+
+use population::Spelling;
+
 /// The table the census guards.
 const TABLE: &str = "xp_settlement";
 /// The context that owns it (docs/CONTEXT-MAP.md).
@@ -60,6 +70,9 @@ const RUSTFLAGS: [&str; 2] = ["--force-warn", "deprecated"];
 /// Coordination's targets that are not its product: a test, a bench or an example may call
 /// `settle` with any cause.
 const CALLER_AIDS: [&str; 3] = ["test", "bench", "example"];
+/// The files of progression's own code that progression admits may call `settle` beside its own
+/// re-exports (#445): none, so every wrapper of the operation in progression is refused by name.
+const OWNER_ADMITS: [&str; 0] = [];
 /// The longest one cargo run of the census may take before the census fails by name.
 const CARGO_LIMIT: Duration = Duration::from_mins(30);
 /// The longest chain of macro calls the census follows from one use of `settle`: past it the
@@ -436,14 +449,37 @@ fn written_in(message: &Value, workspace: &Path, target: &Path) -> Result<Vec<St
     Ok(chain)
 }
 
+/// Where a use of `settle` is written: the innermost file of the repository its primary span or a
+/// macro call site it was expanded from lies in, by its path under the workspace, and the byte the
+/// span starts at there (rustc counts bytes), or none when no file of the repository holds it.
+fn innermost(message: &Value, workspace: &Path, target: &Path) -> Option<(String, usize)> {
+    let (workspace, target) = (canonical(workspace), canonical(target));
+    let primary = message["message"]["spans"]
+        .as_array()?
+        .iter()
+        .find(|span| span["is_primary"] == true)?;
+    std::iter::successors(Some(primary), |span| {
+        Some(&span["expansion"]["span"]).filter(|next| next.is_object())
+    })
+    .take(EXPANSION_LIMIT)
+    .find_map(|span| {
+        let path = canonical(&workspace.join(span["file_name"].as_str()?));
+        let byte = usize::try_from(span["byte_start"].as_u64()?).ok()?;
+        (path.starts_with(&workspace) && !path.starts_with(&target))
+            .then(|| (under(&workspace, &path), byte))
+    })
+}
+
 /// One use of `settle` rustc reported: the folder of the package cargo compiled it in, the kind of
 /// the target, the repository's files it is written in (innermost first), and the file it is
 /// named by: the outermost of those, or the target's root when the code is not the repository's.
+/// `at` is where it is written: the innermost of those files and the byte its span starts at.
 struct Use {
     folder: String,
     kind: String,
     chain: Vec<String>,
     file: String,
+    at: Option<(String, usize)>,
 }
 
 /// The `--config` arguments of one pass: every package the workspace compiles, each named, with
@@ -879,6 +915,7 @@ fn compiled_uses(root: &Path, target: &Path) -> Result<(Vec<Use>, Vec<String>), 
                         Some([kind]) => kind.as_str().unwrap_or_default().to_owned(),
                         _ => String::new(),
                     },
+                    at: innermost(&message, &workspace, target),
                     file: chain.last().cloned().unwrap_or_else(|| {
                         under(
                             &workspace,
@@ -1005,6 +1042,34 @@ fn outside_the_steps(root: &Path, used: &Use) -> Option<String> {
         .cloned()
 }
 
+/// The refusal of `used` by the owner rule (#445), if any: a use of `settle` in progression's own
+/// package, by a target that is not a test, a bench or an example, in a file `admits` does not
+/// name, written outside every `use` declaration of its innermost file. A re-export or an import
+/// is the owner's own wiring; a wrapper, a function pointer or a generic is a second door to the
+/// operation. A use the census cannot place in a file of the repository is refused.
+fn owners_own_operation(root: &Path, used: &Use, admits: &[&str]) -> Option<String> {
+    if used.folder != format!("crates/{OWNER}") || CALLER_AIDS.iter().any(|aid| *aid == used.kind) {
+        return None;
+    }
+    if admits.contains(&used.file.as_str()) {
+        return None;
+    }
+    if let Some((file, offset)) = &used.at {
+        let text = fs::read_to_string(root.join(file)).unwrap_or_default();
+        if table_census::use_declarations(&text)
+            .iter()
+            .any(|range| range.contains(offset))
+        {
+            return None;
+        }
+    }
+    Some(format!(
+        "{} calls settle inside {OWNER}'s own code, and only {CALLER}'s code may unless {OWNER} \
+         admits it",
+        used.file
+    ))
+}
+
 /// The census of the workspace at `root`, whose code is checked in `target`, a target directory
 /// apart from every other build: cargo holds the running build's own directory.
 fn census_in(root: &Path, target: &Path) -> Census {
@@ -1035,6 +1100,9 @@ fn census_in(root: &Path, target: &Path) -> Census {
             census.sources.push(name);
         }
     }
+    census
+        .refused
+        .extend(table_census::refusals(root, TABLE, OWNER, &census.naming));
     // Each census compiles in a target directory of its own, made empty under `target` and removed
     // when the census ends, so no build output, build-script output or fingerprint that another
     // build wrote can serve this one (SPEC-072 §12, round 8).
@@ -1056,6 +1124,9 @@ fn census_in(root: &Path, target: &Path) -> Census {
         Ok((uses, read)) => {
             census.refused.extend(read);
             for used in uses {
+                census
+                    .refused
+                    .extend(owners_own_operation(root, &used, &OWNER_ADMITS));
                 if used.folder == format!("crates/{OWNER}") {
                     continue;
                 }
@@ -1284,17 +1355,12 @@ fn only_progression_writes_xp_settlement_and_only_coordination_settles() {
     );
 }
 
-#[test]
-fn the_census_reads_progressions_own_reexports_as_it_reads_the_other_crates() {
-    // Progression re-exports `settle` under other names, one through another alias, one inside a
-    // nested module and one through the renamed module. A caller outside coordination that names
-    // only the new names never spells `settle`, and the compiler reports it all the same.
-    // Progression's own use of the names, coordination's callers by the same rules as before, a
-    // mention in a comment and a crate's own function of an alias's name are not refused.
-    let planted = tempfile::tempdir().expect("a temporary directory");
-    plant_workspace(planted.path());
+/// Plants progression's re-exports of `settle` under other names at `root` (one through another
+/// alias, one inside a nested module and one through the renamed module) and its own wrapper of
+/// `settle` in `inner.rs`.
+fn plant_progressions_aliases(root: &Path) {
     plant(
-        planted.path(),
+        root,
         "crates/progression/src/lib.rs",
         "pub mod settle;\nmod inner;\n\
          pub use settle::{\n    SettleCause,\n    SettledRow,\n    settle as tally,\n    SettleRequest as TallyRequest,\n    settled_of_day,\n};\n\
@@ -1303,10 +1369,23 @@ fn the_census_reads_progressions_own_reexports_as_it_reads_the_other_crates() {
          pub mod api {\n    pub use super::settle::settle as run_it;\n}\n",
     );
     plant(
-        planted.path(),
+        root,
         "crates/progression/src/inner.rs",
         "use crate::settle::settle as tally;\npub fn own() -> usize { tally() }\n",
     );
+}
+
+#[test]
+fn the_census_reads_progressions_own_reexports_as_it_reads_the_other_crates() {
+    // Progression re-exports `settle` under other names, one through another alias, one inside a
+    // nested module and one through the renamed module. A caller outside coordination that names
+    // only the new names never spells `settle`, and the compiler reports it all the same.
+    // Progression's own re-exports and imports of the names, coordination's callers by the same
+    // rules as before, a mention in a comment and a crate's own function of an alias's name are not
+    // refused. Progression's own wrapper in `inner.rs` is, since progression admits no file (#445).
+    let planted = tempfile::tempdir().expect("a temporary directory");
+    plant_workspace(planted.path());
+    plant_progressions_aliases(planted.path());
     plant_member(
         planted.path(),
         "streaks",
@@ -1385,6 +1464,8 @@ fn the_census_reads_progressions_own_reexports_as_it_reads_the_other_crates() {
         [
             "crates/coordination/src/shortcut.rs calls settle outside the recompute steps, and \
              only the owner's correction may",
+            "crates/progression/src/inner.rs calls settle inside progression's own code, and only \
+             coordination's code may unless progression admits it",
             "crates/quests/src/chained_user.rs calls settle, and only coordination's code may",
             "crates/quests/src/module_user.rs calls settle, and only coordination's code may",
             "crates/quests/src/nested_user.rs calls settle, and only coordination's code may",
@@ -2850,7 +2931,18 @@ fn s2_population() -> Vec<Planted> {
             if label.contains("names the file") {
                 files.push(("crates/m/src/call.in".to_owned(), call.clone()));
             }
-            add("S2 B build scripts", label.to_owned(), target, false, files);
+            // SPEC-324 R2 (ruling 115, under ruling 108 (1)): an include joined onto any variable
+            // but OUT_DIR fails closed, so the census refuses this control by construction, with
+            // the line "crates/m/src/lib.rs includes a file the census cannot name, so it cannot
+            // read it for xp_settlement".
+            let refused = label.contains("names the file");
+            add(
+                "S2 B build scripts",
+                label.to_owned(),
+                target,
+                refused,
+                files,
+            );
         }
         add(
             "S2 B build scripts",
@@ -3810,7 +3902,7 @@ impl KillerWorker {
 /// condition 2): a population that loses or changes a tree fails here, not only one that shrinks.
 const KILLER_POPULATION: (usize, &str) = (
     2218,
-    "eaafc8da1c7d34a8bfa4d8794360caf5b930097866d62bf0f88e1e5e5f4e44ca",
+    "f5f615e6ce0c85098b00b2c87b6de5b8fb5bab962b744bf0c316b112d0ea75b3",
 );
 
 #[test]
@@ -6095,4 +6187,894 @@ fn main_round_seven_generation_is_refused_by_name() {
         .map(|((case, _, _), refused)| format!("{case}: {refused:?}"))
         .collect();
     assert_eq!(wrong, Vec::<String>::new());
+}
+
+/// How many spellings of `xp_settlement` the population plants: its 13 splits in 9 forms each, and
+/// the 14 members of the literal family (SPEC-324 A2).
+const JOINED_SPELLINGS: usize = 131;
+
+/// The literal family of `xp_settlement`: each member spells the name in a way no line of code
+/// shows as written, and rustc, not the census, evaluates it.
+fn family() -> Vec<(&'static str, String)> {
+    vec![
+        spell!("xp\x5fsettlement"),
+        spell!("xp\u{5f}settlement"),
+        spell!(
+            "xp_\
+             settlement"
+        ),
+        spell!(concat!(r##"xp_"##, r#"settlement"#)),
+        spell!([
+            'x', 'p', '_', 's', 'e', 't', 't', 'l', 'e', 'm', 'e', 'n', 't'
+        ]),
+        spell!(concat!(concat!("xp", "_"), "settlement")),
+        spell!(concat!(stringify!(xp_), stringify!(settlement))),
+        spell!("XP_SETTLEMENT"),
+        spell!(b"xp\x5fsettlement"),
+        spell!(c"xp\x5fsettlement"),
+        spell!([
+            b'x', b'p', b'\x5f', b's', b'e', b't', b't', b'l', b'e', b'm', b'e', b'n', b't'
+        ]),
+        spell!(concat!("Xp_", "SeTtLeMeNt")),
+        spell!(concat!('x', 'p', "_settlement")),
+        spell!("\x78\x70\x5f\x73\x65\x74\x74\x6c\x65\x6d\x65\x6e\x74"),
+    ]
+}
+
+/// Every spelling of the table's name the population plants: each split in every form, in quests
+/// with a piece in streaks, then each member of the family. Plain concatenation and rustc decide
+/// that each one is the name.
+fn spellings() -> Vec<Spelling> {
+    let mut found = Vec::new();
+    for (index, split) in population::splits(TABLE).iter().enumerate() {
+        assert_eq!(
+            split.concat(),
+            TABLE,
+            "the split {split:?} joins to the name"
+        );
+        let forms = population::planted(split, index, "quests", "streaks");
+        assert_eq!(forms.len(), population::FORMS);
+        found.extend(forms);
+    }
+    for (index, (text, value)) in family().into_iter().enumerate() {
+        assert_eq!(
+            value.to_ascii_lowercase(),
+            TABLE,
+            "rustc reads {text} as the name"
+        );
+        found.push(population::spelled(text, index, "quests"));
+    }
+    found
+}
+
+#[test]
+fn a_reserved_name_joined_from_literals_is_refused_in_every_spelling() {
+    // One planted workspace holds every spelling in files no module declares, so the census reads
+    // them and compiles none, and a copy of each inside progression. Every file outside
+    // progression is refused by name, and no copy inside it is.
+    let spellings = examined("joined spelling(s)", spellings());
+    assert_eq!(spellings.len(), JOINED_SPELLINGS);
+    let planted = tempfile::tempdir().expect("a temporary directory");
+    plant_workspace(planted.path());
+    for member in ["quests", "streaks"] {
+        plant_member(
+            planted.path(),
+            member,
+            &[("src/lib.rs", "pub fn quiet() {}\n")],
+        );
+    }
+    let mut expected = Vec::new();
+    for spelling in &spellings {
+        let owned = spelling.in_crate(OWNER);
+        for (path, text) in spelling.files.iter().chain(&owned.files) {
+            assert!(
+                !text.contains(TABLE),
+                "{path} of {} names {TABLE} as written",
+                spelling.label
+            );
+            plant(planted.path(), path, text);
+        }
+        expected.extend(spelling.files.iter().map(|(path, _)| {
+            format!(
+                "{path} spells {TABLE} from literals, joined or in another case, and only \
+                 {OWNER}'s code may"
+            )
+        }));
+    }
+    expected.sort();
+    let refused = census(planted.path());
+    examined("planted crate source file(s)", refused.sources.clone());
+    assert_eq!(refused.refused, expected);
+}
+
+/// The refusal of progression's own use of `settle` in the file `file`.
+fn owners_own(file: &str) -> String {
+    format!(
+        "{file} calls settle inside {OWNER}'s own code, and only {CALLER}'s code may unless \
+         {OWNER} admits it"
+    )
+}
+
+#[test]
+fn the_owners_own_operation_is_refused_unless_it_admits_it() {
+    // A wrapper, a function pointer and a generic in progression's library are each a new
+    // operation in the owner's code, and none is admitted. Its imports (grouped, renaming the
+    // module, inside a function body, after text that is not ASCII), its tests and its examples
+    // are accepted.
+    let planted = tempfile::tempdir().expect("a temporary directory");
+    plant_workspace(planted.path());
+    plant(
+        planted.path(),
+        "crates/progression/src/lib.rs",
+        &format!(
+            "{KILLER_LIB}pub mod generic;\npub mod imports;\npub mod pointer;\npub mod unicode;\n\
+             pub mod wrapper;\n"
+        ),
+    );
+    plant(
+        planted.path(),
+        "crates/progression/src/wrapper.rs",
+        "pub fn wrapped() -> usize {\n    crate::settle::settle()\n}\n",
+    );
+    plant(
+        planted.path(),
+        "crates/progression/src/pointer.rs",
+        "pub const STEP: fn() -> usize = crate::settle::settle;\n",
+    );
+    plant(
+        planted.path(),
+        "crates/progression/src/generic.rs",
+        "pub fn run<F: Fn() -> usize>(step: F) -> usize {\n    step()\n}\n\
+         pub fn go() -> usize {\n    run(crate::settle::settle)\n}\n",
+    );
+    plant(
+        planted.path(),
+        "crates/progression/src/imports.rs",
+        "pub use crate::settle::{SettledRow, settle as grouped};\n\
+         pub use crate::settle::{self as module, settle as by_module};\n\
+         pub fn quiet() -> usize {\n    #[allow(unused_imports)]\n    \
+         use crate::settle::settle as inner;\n    0\n}\n",
+    );
+    plant(
+        planted.path(),
+        "crates/progression/src/unicode.rs",
+        &format!(
+            "pub const GREETING: &str = \"{}\";\npub use crate::settle::settle as after_unicode;\n",
+            "\u{fc}".repeat(40)
+        ),
+    );
+    plant(
+        planted.path(),
+        "crates/progression/tests/own.rs",
+        "#[test]\nfn own() {\n    let _ = deck_streak_progression::settle();\n}\n",
+    );
+    plant(
+        planted.path(),
+        "crates/progression/examples/demo.rs",
+        "fn main() {\n    let _ = deck_streak_progression::settle();\n}\n",
+    );
+    let refused = census(planted.path());
+    examined("planted crate source file(s)", refused.sources.clone());
+    assert_eq!(
+        refused.refused,
+        [
+            owners_own("crates/progression/src/generic.rs"),
+            owners_own("crates/progression/src/pointer.rs"),
+            owners_own("crates/progression/src/wrapper.rs"),
+        ]
+    );
+}
+
+#[test]
+fn an_admitted_file_of_the_owner_is_accepted() {
+    // A wrapper progression's library writes is refused while progression admits no file, and
+    // accepted once progression admits the file the use is named by.
+    let planted = tempfile::tempdir().expect("a temporary directory");
+    let file = "crates/progression/src/wrapper.rs";
+    let text = "pub fn wrap() -> usize {\n    crate::settle::settle()\n}\n";
+    plant(planted.path(), file, text);
+    let used = Use {
+        folder: format!("crates/{OWNER}"),
+        kind: "lib".to_owned(),
+        chain: vec![file.to_owned()],
+        file: file.to_owned(),
+        at: Some((
+            file.to_owned(),
+            text.rfind("settle()").expect("the call is planted"),
+        )),
+    };
+    assert_eq!(
+        owners_own_operation(planted.path(), &used, &[]),
+        Some(owners_own(file))
+    );
+    assert_eq!(owners_own_operation(planted.path(), &used, &[file]), None);
+}
+
+#[test]
+fn a_reexport_progressions_macro_writes_is_followed_or_refused() {
+    // A macro of progression that writes the re-export in its own body is followed to the member
+    // that calls the new name; a macro that takes the re-exported path as its argument is
+    // reported at that argument, outside any import, and is refused in progression.
+    let planted = tempfile::tempdir().expect("a temporary directory");
+    plant_workspace(planted.path());
+    plant(
+        planted.path(),
+        "crates/progression/src/lib.rs",
+        &format!(
+            "{KILLER_LIB}macro_rules! reexport_step {{\n    () => {{\n        \
+             pub use $crate::settle::settle as step;\n    }};\n}}\nreexport_step!();\n\
+             macro_rules! reexport {{\n    ($($path:tt)+) => {{\n        \
+             pub use $($path)+ as again;\n    }};\n}}\nreexport!(crate::settle::settle);\n"
+        ),
+    );
+    plant_member(
+        planted.path(),
+        "streaks",
+        &[
+            ("src/lib.rs", "pub mod caller;\n"),
+            (
+                "src/caller.rs",
+                "pub fn go() -> usize {\n    deck_streak_progression::step()\n}\n",
+            ),
+        ],
+    );
+    let refused = census(planted.path());
+    examined("planted crate source file(s)", refused.sources.clone());
+    assert_eq!(
+        refused.refused,
+        [
+            owners_own("crates/progression/src/lib.rs"),
+            "crates/streaks/src/caller.rs calls settle, and only coordination's code may"
+                .to_owned(),
+        ]
+    );
+}
+
+/// The literal half of the census of the tree at `root`, which compiles nothing: every file outside
+/// progression that names the table as written, and the shared reader's refusals. SPEC-331's
+/// populations of many small trees are judged by it; the compiled half is judged by the tests
+/// above.
+fn literal_census(root: &Path) -> Vec<String> {
+    let mut naming = BTreeSet::new();
+    let mut refused = Vec::new();
+    for member in members(root) {
+        let outside = member.file_name().is_some_and(|name| name != OWNER);
+        for path in files(&member.join("src"), "rs") {
+            let name = relative(root, &path);
+            if names_the_table(&fs::read_to_string(&path).expect("a readable source")) {
+                if outside {
+                    refused.push(format!("{name} names {TABLE}, and only {OWNER}'s code may"));
+                }
+                naming.insert(name);
+            }
+        }
+    }
+    refused.extend(table_census::refusals(root, TABLE, OWNER, &naming));
+    refused
+}
+
+/// One of SPEC-331's plants: its label and its files, none of which names the table as written.
+type Plant = (&'static str, Vec<(&'static str, &'static str)>);
+
+/// What the literal census refuses in a tree that holds the plant `files` alone.
+fn literal_census_of(label: &str, files: &[(&str, &str)]) -> Vec<String> {
+    let planted = tempfile::tempdir().expect("a temporary directory");
+    for (path, text) in files {
+        assert!(
+            !text.contains(TABLE),
+            "{path} of {label} names {TABLE} as written"
+        );
+        plant(planted.path(), path, text);
+    }
+    literal_census(planted.path())
+}
+
+/// The refusal of the file `path` for spelling the table from its literals.
+fn spells_the_table(path: &str) -> String {
+    format!(
+        "{path} spells {TABLE} from literals, joined or in another case, and only {OWNER}'s code may"
+    )
+}
+
+/// SPEC-331 A2's joins (the design's plants P1 to P13, B4 to B7 and B9, and P14): each is a real
+/// join of the name from pieces, and each is refused by exactly the files holding its pieces. P14
+/// joins two files that reach nothing of each other in another case, so only the pool's case
+/// folding refuses it.
+#[allow(clippy::too_many_lines)]
+fn join_plants() -> Vec<Plant> {
+    vec![
+        (
+            "P1 concat! in one file",
+            vec![(
+                "crates/quests/src/p1.rs",
+                "pub const JOINED: &str = concat!(\"xp_\", \"settlement\");\n",
+            )],
+        ),
+        (
+            "P2 const in X joined with a piece in Y",
+            vec![
+                (
+                    "crates/quests/src/p2_head.rs",
+                    "pub const HEAD: &str = \"xp_sett\";\n",
+                ),
+                (
+                    "crates/quests/src/p2_join.rs",
+                    "pub fn joined() -> String {\n    [super::p2_head::HEAD, \"lement\"].concat()\n}\n",
+                ),
+            ],
+        ),
+        (
+            "P3 case variant",
+            vec![(
+                "crates/quests/src/p3.rs",
+                "pub const NAME: &str = \"XP_Settlement\";\n",
+            )],
+        ),
+        (
+            "P4 stringify! split",
+            vec![(
+                "crates/quests/src/p4.rs",
+                "pub const JOINED: &str = concat!(stringify!(xp_), stringify!(settlement));\n",
+            )],
+        ),
+        (
+            "P5 char-by-char array in one file",
+            vec![(
+                "crates/quests/src/p5.rs",
+                "pub fn joined() -> String {\n    ['x', 'p', '_', 's', 'e', 't', 't', 'l', 'e', 'm', 'e', 'n', 't'].iter().collect()\n}\n",
+            )],
+        ),
+        (
+            "P6 char-by-char push sequence in one file",
+            vec![(
+                "crates/quests/src/p6.rs",
+                "pub fn joined() -> String {\n    let mut s = String::new();\n    s.push('x');\n    s.push('p');\n    s.push('_');\n    s.push('s');\n    s.push('e');\n    s.push('t');\n    s.push('t');\n    s.push('l');\n    s.push('e');\n    s.push('m');\n    s.push('e');\n    s.push('n');\n    s.push('t');\n    s\n}\n",
+            )],
+        ),
+        (
+            "P7 one-char middle joined in format! with consts of two other files",
+            vec![
+                (
+                    "crates/quests/src/p7_head.rs",
+                    "pub const HEAD: &str = \"xp_settle\";\n",
+                ),
+                (
+                    "crates/streaks/src/p7_tail.rs",
+                    "pub const TAIL: &str = \"ent\";\n",
+                ),
+                (
+                    "crates/quests/src/p7_join.rs",
+                    "pub fn joined() -> String {\n    format!(\"{}{}{}\", super::p7_head::HEAD, 'm', deck_streak_streaks::p7_tail::TAIL)\n}\n",
+                ),
+            ],
+        ),
+        (
+            "P8 one-char const in another crate, joined by format!",
+            vec![
+                ("crates/streaks/src/p8_m.rs", "pub const M: char = 'm';\n"),
+                (
+                    "crates/quests/src/p8_join.rs",
+                    "pub fn joined() -> String {\n    format!(\"xp_settle{}ent\", deck_streak_streaks::p8_m::M)\n}\n",
+                ),
+            ],
+        ),
+        (
+            "P9 one-char middle pushed between consts of two other files",
+            vec![
+                (
+                    "crates/quests/src/p9_head.rs",
+                    "pub const HEAD: &str = \"xp_settle\";\n",
+                ),
+                (
+                    "crates/quests/src/p9_tail.rs",
+                    "pub const TAIL: &str = \"ent\";\n",
+                ),
+                (
+                    "crates/quests/src/p9_join.rs",
+                    "pub fn joined() -> String {\n    let mut s = String::new();\n    s.push_str(super::p9_head::HEAD);\n    s.push('m');\n    s.push_str(super::p9_tail::TAIL);\n    s\n}\n",
+                ),
+            ],
+        ),
+        (
+            "P10 one-char const imported and captured inline",
+            vec![
+                (
+                    "crates/quests/src/p10_m.rs",
+                    "pub const MIDDLE: &str = \"m\";\n",
+                ),
+                (
+                    "crates/quests/src/p10_join.rs",
+                    "use super::p10_m::MIDDLE;\npub fn joined() -> String {\n    format!(\"xp_settle{MIDDLE}ent\")\n}\n",
+                ),
+            ],
+        ),
+        (
+            "P13 one-char const glob-imported and captured inline",
+            vec![
+                (
+                    "crates/quests/src/p13_m.rs",
+                    "pub const MIDDLE: &str = \"m\";\n",
+                ),
+                (
+                    "crates/quests/src/p13_join.rs",
+                    "use super::p13_m::*;\npub fn joined() -> String {\n    format!(\"xp_settle{MIDDLE}ent\")\n}\n",
+                ),
+            ],
+        ),
+        (
+            "P11 one-char const renamed on import",
+            vec![
+                (
+                    "crates/quests/src/p11_m.rs",
+                    "pub const MIDDLE: &str = \"m\";\n",
+                ),
+                (
+                    "crates/quests/src/p11_join.rs",
+                    "use super::p11_m::MIDDLE as X;\npub fn joined() -> String {\n    [\"xp_settle\", X, \"ent\"].concat()\n}\n",
+                ),
+            ],
+        ),
+        (
+            "P12 char array const in X collected and joined in Y",
+            vec![
+                (
+                    "crates/quests/src/p12_head.rs",
+                    "pub const HEAD: [char; 2] = ['x', 'p'];\n",
+                ),
+                (
+                    "crates/quests/src/p12_join.rs",
+                    "pub fn joined() -> String {\n    super::p12_head::HEAD.iter().collect::<String>() + \"_settlement\"\n}\n",
+                ),
+            ],
+        ),
+        (
+            "B4 real join: a multi-char piece returned by a fn in another crate",
+            vec![
+                (
+                    "crates/quests/src/b4_prefix.rs",
+                    "pub fn prefix() -> &'static str {\n    \"xp_\"\n}\n",
+                ),
+                (
+                    "crates/streaks/src/b4_join.rs",
+                    "pub fn joined() -> String {\n    format!(\"{}settlement\", deck_streak_quests::b4_prefix::prefix())\n}\n",
+                ),
+            ],
+        ),
+        (
+            "B5 real join: a multi-char argument passed to a fn in another crate",
+            vec![
+                (
+                    "crates/quests/src/b5_join.rs",
+                    "pub fn joined(rest: &str) -> String {\n    format!(\"xp_{rest}\")\n}\n",
+                ),
+                (
+                    "crates/streaks/src/b5_call.rs",
+                    "pub fn call() -> String {\n    deck_streak_quests::b5_join::joined(\"settlement\")\n}\n",
+                ),
+            ],
+        ),
+        (
+            "B6 real join: a multi-char piece in a struct field read in another file",
+            vec![
+                (
+                    "crates/quests/src/b6_table.rs",
+                    "pub struct Table {\n    pub head: &'static str,\n}\npub static TABLE: Table = Table { head: \"xp_sett\" };\n",
+                ),
+                (
+                    "crates/quests/src/b6_join.rs",
+                    "pub fn joined() -> String {\n    format!(\"{}lement\", super::b6_table::TABLE.head)\n}\n",
+                ),
+            ],
+        ),
+        (
+            "B9 a one-char const whose name a macro_rules! takes as an argument",
+            vec![
+                (
+                    "crates/quests/src/b9_m.rs",
+                    "macro_rules! mark {\n    ($name:ident) => {\n        pub const $name: char = 'm';\n    };\n}\nmark!(MIDDLE);\n",
+                ),
+                (
+                    "crates/quests/src/b9_join.rs",
+                    "use super::b9_m::MIDDLE;\npub fn joined() -> String {\n    format!(\"xp_settle{}ent\", MIDDLE)\n}\n",
+                ),
+            ],
+        ),
+        (
+            "B7 real join: a one-char piece in a struct field read in another file",
+            vec![
+                (
+                    "crates/quests/src/b7_table.rs",
+                    "pub struct Table {\n    pub mid: char,\n}\npub static TABLE: Table = Table { mid: 'm' };\n",
+                ),
+                (
+                    "crates/quests/src/b7_join.rs",
+                    "pub fn joined() -> String {\n    format!(\"xp_settle{}ent\", super::b7_table::TABLE.mid)\n}\n",
+                ),
+            ],
+        ),
+        (
+            "P14 case variant across crates: a multi-char piece returned by a fn in another crate",
+            vec![
+                (
+                    "crates/quests/src/p14_prefix.rs",
+                    "pub fn prefix() -> &'static str {\n    \"XP_\"\n}\n",
+                ),
+                (
+                    "crates/streaks/src/p14_join.rs",
+                    "pub fn joined() -> String {\n    format!(\"{}Settlement\", deck_streak_quests::p14_prefix::prefix())\n}\n",
+                ),
+            ],
+        ),
+        (
+            "O4 control: a one-char associated const in an impl, named by path",
+            vec![
+                (
+                    "crates/streaks/src/o4_t.rs",
+                    "pub struct T;\nimpl T {\n    pub const M: char = 'm';\n}\n",
+                ),
+                (
+                    "crates/quests/src/o4_join.rs",
+                    "pub fn joined() -> String {\n    format!(\"xp_settle{}ent\", deck_streak_streaks::o4_t::T::M)\n}\n",
+                ),
+            ],
+        ),
+        (
+            "O5 control: a one-char const in an inline module",
+            vec![
+                (
+                    "crates/streaks/src/o5_m.rs",
+                    "pub mod inner {\n    pub const M: &str = \"m\";\n}\n",
+                ),
+                (
+                    "crates/quests/src/o5_join.rs",
+                    "pub fn joined() -> String {\n    [\"xp_settle\", deck_streak_streaks::o5_m::inner::M, \"ent\"].concat()\n}\n",
+                ),
+            ],
+        ),
+        (
+            "O6 control: a one-char const with a block initialiser",
+            vec![
+                (
+                    "crates/streaks/src/o6_m.rs",
+                    "pub const M: &str = {\n    let x = \"m\";\n    x\n};\n",
+                ),
+                (
+                    "crates/quests/src/o6_join.rs",
+                    "pub fn joined() -> String {\n    format!(\"xp_settle{}ent\", deck_streak_streaks::o6_m::M)\n}\n",
+                ),
+            ],
+        ),
+    ]
+}
+
+/// SPEC-331 A3's disclosed class (the design's plants B1, B2 and B8, then O1, O2, O3 and O7): one character carried to its
+/// join only through a function's return value or argument, alone or beside a multi-character piece
+/// carried the same way, and the second-step class: a `const` naming another `const` across files, a
+/// renamed re-export, or an `include!` or `include_str!` inside a named item's initialiser (O1, O2,
+/// O3 and O7). The reader follows includes and the names of `const` and `static` items one step,
+/// never calls, so none is refused (#585).
+#[allow(clippy::too_many_lines)]
+fn disclosed_plants() -> Vec<Plant> {
+    vec![
+        (
+            "B1 boundary: a one-char value returned by a fn in another crate",
+            vec![
+                (
+                    "crates/streaks/src/b1_m.rs",
+                    "pub fn middle() -> char {\n    'm'\n}\n",
+                ),
+                (
+                    "crates/quests/src/b1_join.rs",
+                    "pub fn joined() -> String {\n    format!(\"xp_settle{}ent\", deck_streak_streaks::b1_m::middle())\n}\n",
+                ),
+            ],
+        ),
+        (
+            "B2 boundary: a one-char argument passed to a fn in another crate",
+            vec![
+                (
+                    "crates/quests/src/b2_join.rs",
+                    "pub fn joined(c: char) -> String {\n    format!(\"xp_settle{c}ent\")\n}\n",
+                ),
+                (
+                    "crates/streaks/src/b2_call.rs",
+                    "pub fn call() -> String {\n    deck_streak_quests::b2_join::joined('m')\n}\n",
+                ),
+            ],
+        ),
+        (
+            "B8 mixed: a one-char const and a multi-char fn return joined in a third file",
+            vec![
+                (
+                    "crates/quests/src/b8_mid.rs",
+                    "pub const MID: char = 'm';\n",
+                ),
+                (
+                    "crates/streaks/src/b8_tail.rs",
+                    "pub fn tail() -> &'static str {\n    \"ent\"\n}\n",
+                ),
+                (
+                    "crates/quests/src/b8_join.rs",
+                    "use super::b8_mid::MID;\npub fn joined() -> String {\n    format!(\"xp_settle{MID}{}\", deck_streak_streaks::b8_tail::tail())\n}\n",
+                ),
+            ],
+        ),
+        (
+            "O1 second step: a one-char const initialised by include_str!, named in another file",
+            vec![
+                (
+                    "crates/quests/src/o1_m.rs",
+                    "pub const M: &str = include_str!(\"o1_m.txt\");\n",
+                ),
+                ("crates/quests/src/o1_m.txt", "m"),
+                (
+                    "crates/quests/src/o1_join.rs",
+                    "pub fn joined() -> String {\n    format!(\"xp_settle{}ent\", super::o1_m::M)\n}\n",
+                ),
+            ],
+        ),
+        (
+            "O2 second step: a const alias chain, a const naming a one-char const of another crate",
+            vec![
+                ("crates/streaks/src/o2_m.rs", "pub const N: char = 'm';\n"),
+                (
+                    "crates/quests/src/o2_alias.rs",
+                    "pub const M: char = deck_streak_streaks::o2_m::N;\n",
+                ),
+                (
+                    "crates/quests/src/o2_join.rs",
+                    "pub fn joined() -> String {\n    format!(\"xp_settle{}ent\", super::o2_alias::M)\n}\n",
+                ),
+            ],
+        ),
+        (
+            "O3 second step: a one-char const re-exported under another name in a third file",
+            vec![
+                (
+                    "crates/quests/src/o3_m.rs",
+                    "pub const MIDDLE: &str = \"m\";\n",
+                ),
+                (
+                    "crates/quests/src/o3_reexport.rs",
+                    "pub use super::o3_m::MIDDLE as X;\n",
+                ),
+                (
+                    "crates/quests/src/o3_join.rs",
+                    "use super::o3_reexport::X;\npub fn joined() -> String {\n    [\"xp_settle\", X, \"ent\"].concat()\n}\n",
+                ),
+            ],
+        ),
+        (
+            "O7 second step: a one-char const initialised by include! of a Rust expression",
+            vec![
+                (
+                    "crates/quests/src/o7_m.rs",
+                    "pub const M: char = include!(\"o7_m.in\");\n",
+                ),
+                ("crates/quests/src/o7_m.in", "'m'\n"),
+                (
+                    "crates/quests/src/o7_join.rs",
+                    "pub fn joined() -> String {\n    format!(\"xp_settle{}ent\", super::o7_m::M)\n}\n",
+                ),
+            ],
+        ),
+    ]
+}
+
+/// SPEC-331 AD2's plant: a join whose own file holds no literal piece, reaching three one-piece
+/// files only through the items it names. Each of the three holds a piece, so each is refused.
+fn the_no_own_piece_join() -> Vec<Plant> {
+    vec![(
+        "AD2 no-own-piece join: a joining file that holds no literal reaches three pieces only through the items it names",
+        vec![
+            (
+                "crates/quests/src/ad2_a.rs",
+                "pub const A: &str = \"xp_settle\";\n",
+            ),
+            ("crates/quests/src/ad2_b.rs", "pub const B: char = 'm';\n"),
+            (
+                "crates/quests/src/ad2_c.rs",
+                "pub const C: &str = \"ent\";\n",
+            ),
+            (
+                "crates/quests/src/ad2_join.rs",
+                "use super::ad2_a::A;\nuse super::ad2_b::B;\nuse super::ad2_c::C;\npub fn j() -> String {\n    [A, &B.to_string(), C].concat()\n}\n",
+            ),
+        ],
+    )]
+}
+
+/// The number of SPEC-331 A2's join plants: P1 to P14, B4 to B7 and B9, and the controls O4 to O6.
+const JOIN_PLANTS: usize = 22;
+
+/// The number of SPEC-331 A3's disclosed plants: B1, B2 and B8, and the second-step routes O1, O2,
+/// O3 and O7.
+const DISCLOSED_PLANTS: usize = 7;
+
+#[test]
+fn the_joins_the_census_names_stay_refused() {
+    // SPEC-331 A2: every join the census names stays refused, each by exactly the files holding
+    // its pieces, as dev's reader refused it: a multi-character piece joined anywhere, and a
+    // one-character piece joined in its own file, through an include, or through a `const` or
+    // `static` item named by a word or a format placeholder.
+    let plants = examined("join plant(s)", join_plants());
+    assert_eq!(plants.len(), JOIN_PLANTS);
+    for (label, files) in &plants {
+        let mut expected: Vec<String> = files
+            .iter()
+            .map(|(path, _)| spells_the_table(path))
+            .collect();
+        expected.sort();
+        assert_eq!(literal_census_of(label, files), expected, "{label}");
+    }
+}
+
+#[test]
+fn a_join_in_a_file_holding_no_literal_stays_refused() {
+    // SPEC-331 R2: every file read has a reach, also one that holds no piece of its own. The
+    // joining file here holds none, so only its reach joins the three pieces, and each file
+    // holding one is refused. The joining file holds no piece and is not itself refused.
+    let plants = examined("no-own-piece join plant(s)", the_no_own_piece_join());
+    for (label, files) in &plants {
+        let mut expected: Vec<String> = files
+            .iter()
+            .filter(|(path, _)| !path.ends_with("_join.rs"))
+            .map(|(path, _)| spells_the_table(path))
+            .collect();
+        expected.sort();
+        assert_eq!(expected.len(), 3, "{label}");
+        assert_eq!(literal_census_of(label, files), expected, "{label}");
+    }
+}
+
+#[test]
+fn a_character_carried_by_a_function_is_disclosed() {
+    // SPEC-331 A3: the disclosed class is not refused, and A3 pins it, so widening or narrowing the
+    // class moves this test. The positive control writes the carried character in the join's own
+    // file, which is refused by that file, so a census that reads nothing fails here too.
+    let plants = examined("disclosed plant(s)", disclosed_plants());
+    assert_eq!(plants.len(), DISCLOSED_PLANTS);
+    let refused: Vec<(&str, Vec<String>)> = plants
+        .iter()
+        .map(|(label, files)| (*label, literal_census_of(label, files)))
+        .filter(|(_, found)| !found.is_empty())
+        .collect();
+    let files: usize = refused.iter().map(|(_, found)| found.len()).sum();
+    assert!(
+        refused.is_empty(),
+        "{files} file(s) refused in {} of {} disclosed plant(s): {refused:?}",
+        refused.len(),
+        plants.len()
+    );
+    let control = [(
+        "crates/quests/src/a3_control.rs",
+        "pub fn joined() -> String {\n    format!(\"xp_settle{}ent\", 'm')\n}\n",
+    )];
+    assert_eq!(
+        literal_census_of("A3's control", &control),
+        vec![spells_the_table("crates/quests/src/a3_control.rs")]
+    );
+}
+
+/// The number of trees in SPEC-331 A1's population for `xp_settlement`: its 12 letters in both
+/// cases and its `_` once, in five shapes each.
+const LONE_CHARACTER_TREES: usize = 125;
+
+/// One of SPEC-331 A1's lone shapes: its label, and the file it writes around a character.
+type LoneShape = (&'static str, fn(char) -> String);
+
+/// SPEC-331 A1's population for the census's own name. At each position of the name, the piece
+/// before it and the piece after it are lone literals in two files, and its character is a lone
+/// literal in a third, in each of five lone shapes: a method argument (#600's `strip_prefix` line
+/// among them), a `matches!` arm, a format template, a named `const` used alone, and a split set.
+/// A letter is planted in both cases. Each tree is a label and its planted files.
+fn lone_character_trees() -> Vec<(String, Vec<(String, String)>)> {
+    let shapes: [LoneShape; 5] = [
+        ("method argument", |c| {
+            format!("pub fn c(date: &str) -> Option<&str> {{\n    date.strip_prefix({c:?})\n}}\n")
+        }),
+        ("matches! arm", |c| {
+            format!("pub fn c(x: char) -> bool {{\n    matches!(x, {c:?})\n}}\n")
+        }),
+        ("format template", |c| {
+            format!("pub fn c(n: u32) -> String {{\n    format!(\"{c}{{n}}\")\n}}\n")
+        }),
+        ("named const used alone", |c| {
+            format!(
+                "const MARK: char = {c:?};\npub fn c(t: &str) -> Option<&str> {{\n    \
+                 t.strip_prefix(MARK)\n}}\n"
+            )
+        }),
+        ("split set", |c| {
+            format!("pub fn c(t: &str) -> usize {{\n    t.split([{c:?}, '.']).count()\n}}\n")
+        }),
+    ];
+    let mut trees = Vec::new();
+    for (at, character) in TABLE.char_indices() {
+        let before = &TABLE[..at];
+        let after = &TABLE[at + 1..];
+        let mut cases = vec![character];
+        if character.is_ascii_alphabetic() {
+            cases.push(character.to_ascii_uppercase());
+        }
+        for case in cases {
+            for (shape, text) in &shapes {
+                let mut files = Vec::new();
+                if !before.is_empty() {
+                    files.push((
+                        "crates/quests/src/a1_before.rs".to_owned(),
+                        format!(
+                            "pub fn a(t: &str) -> bool {{\n    t.starts_with({before:?})\n}}\n"
+                        ),
+                    ));
+                }
+                if !after.is_empty() {
+                    files.push((
+                        "crates/quests/src/a1_after.rs".to_owned(),
+                        format!("pub fn b(t: &str) -> bool {{\n    t.ends_with({after:?})\n}}\n"),
+                    ));
+                }
+                files.push(("crates/streaks/src/a1_char.rs".to_owned(), text(case)));
+                trees.push((format!("{TABLE}@{at} {case:?} {shape}"), files));
+            }
+        }
+    }
+    trees
+}
+
+#[test]
+fn a_lone_character_unjoined_in_its_file_completes_no_path() {
+    // SPEC-331 A1: a lone literal of one character, in a file that joins it with nothing, completes
+    // no path, whatever the other files hold, so no tree of the population is refused. The positive
+    // control joins pieces of the name in one file and is refused by that file, so a census that
+    // reads nothing fails here too.
+    let trees = examined("lone-character tree(s)", lone_character_trees());
+    assert_eq!(trees.len(), LONE_CHARACTER_TREES);
+    let mut refused = Vec::new();
+    for (label, files) in &trees {
+        let planted = tempfile::tempdir().expect("a temporary directory");
+        for (path, text) in files {
+            assert!(
+                !text.contains(TABLE),
+                "{path} of {label} names {TABLE} as written"
+            );
+            plant(planted.path(), path, text);
+        }
+        let found = literal_census(planted.path());
+        if !found.is_empty() {
+            refused.push((label.clone(), found));
+        }
+    }
+    let files: usize = refused.iter().map(|(_, found)| found.len()).sum();
+    assert!(
+        refused.is_empty(),
+        "{files} file(s) refused in {} of {} tree(s); the first: {:?}",
+        refused.len(),
+        trees.len(),
+        refused.first()
+    );
+    let middle = TABLE.len() / 2;
+    let joined = format!(
+        "pub fn joined() -> String {{\n    format!(\"{{}}{{}}{{}}\", {:?}, {:?}, {:?})\n}}\n",
+        &TABLE[..middle],
+        TABLE[middle..]
+            .chars()
+            .next()
+            .expect("the middle character")
+            .to_ascii_uppercase(),
+        &TABLE[middle + 1..]
+    );
+    assert!(
+        !joined.contains(TABLE),
+        "the control names {TABLE} as written"
+    );
+    let control = tempfile::tempdir().expect("a temporary directory");
+    plant(control.path(), "crates/quests/src/a1_joined.rs", &joined);
+    assert_eq!(
+        literal_census(control.path()),
+        vec![format!(
+            "crates/quests/src/a1_joined.rs spells {TABLE} from literals, joined or in another \
+             case, and only {OWNER}'s code may"
+        )]
+    );
 }

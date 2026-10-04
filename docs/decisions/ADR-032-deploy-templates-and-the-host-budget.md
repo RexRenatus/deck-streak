@@ -125,3 +125,22 @@ values; the committed template keeps its placeholders, valid as written.
 
 ADR-064 raises DeckStreak's share to 704 MiB to hold the replicator's ceiling of 64 MiB; its budget table
 decides the replicator's, the daily backup's and the restore drill's ceilings.
+
+## Note, 2026-10-04: the MCP server's unit (ADR-332)
+
+ADR-332 adds `deck-streak-mcp.service`, SPEC-119's MCP server, as a fourth long-running unit inside
+the share ADR-064 decides. Its ceilings, in this record's form:
+
+| unit | memory_high | memory_max | why |
+|---|---|---|---|
+| `deck-streak-mcp.service` (SPEC-119) | 24M | 32M | an axum service bounded to 8 requests and 64 KiB bodies |
+
+The daemons' processor caps move with it: the MCP server's quota is taken from the API's, whose cap
+stays a ceiling and not a reservation. The bot's and the replicator's caps are unchanged.
+
+| unit | CPUQuota | TasksMax |
+|---|---|---|
+| `deck-streak-api.service` | 75% | 64 |
+| `deck-streak-mcp.service` | 25% | 32 |
+
+The rest of this record stands.

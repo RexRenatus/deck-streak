@@ -232,10 +232,31 @@ fn each_json_line_opens_with_its_journal_priority() {
         assert_eq!(prefix, Some(priority), "{line}");
         levels.push(level);
     }
+    // The probe's levels the build under test compiles in, most severe first: the build's own
+    // static maximum decides it, so the shipped build (a dependency's `release_max_level_debug`
+    // compiles `trace!` out of it, ADR-330) is held to exactly what it can emit, and the dev
+    // build still expects all five.
+    let static_max = tracing::level_filters::STATIC_MAX_LEVEL;
+    let expected: Vec<&str> = [
+        (tracing::Level::ERROR, "ERROR"),
+        (tracing::Level::WARN, "WARN"),
+        (tracing::Level::INFO, "INFO"),
+        (tracing::Level::DEBUG, "DEBUG"),
+        (tracing::Level::TRACE, "TRACE"),
+    ]
+    .into_iter()
+    .filter(|(level, _)| *level <= static_max)
+    .map(|(_, name)| name)
+    .collect();
+    assert!(
+        expected.len() >= 4,
+        "the build compiles out more than TRACE: {static_max}"
+    );
+    assert_eq!(levels, expected, "{lines:#?}");
     assert_eq!(
-        levels,
-        ["ERROR", "WARN", "INFO", "DEBUG", "TRACE"],
-        "{lines:#?}"
+        levels.iter().any(|level| level == "TRACE"),
+        tracing::Level::TRACE <= static_max,
+        "the probe's TRACE line is present exactly when the build compiles TRACE in"
     );
 }
 

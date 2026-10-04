@@ -13,11 +13,15 @@ import {
   type Envelope,
   type Listing
 } from './insights/insights';
+import { parseLaw, parseLawTiers, type LawTiersView, type LawView } from './law/law';
 import { parseLevel, type LevelView } from './level/level';
+import { parseProgress, type ProgressView } from './progress/progress';
 import { parseRecords, type RecordsView } from './records/records';
 import { parseGovernor, parseStreak, type StreakView } from './streak/streak';
 import { parseScore, type ScoreToday } from './score/score';
 import { parseWallet, walletPath, type WalletView } from './economy/wallet';
+import { parseBoard, type BoardView } from './records/board';
+import { parseExchange, type ExchangeView } from './level/exchange';
 import { telegram } from './telegram.svelte';
 
 /**
@@ -63,12 +67,22 @@ export interface Api {
   score(): Promise<Answer<ScoreToday>>;
   /** The owner's level, today's XP and the consistency run (SPEC-072 R23). */
   level(): Promise<Answer<LevelView>>;
+  /** The owner's board: best day, today, the language streak and the level (SPEC-075 R3). */
+  board(): Promise<Answer<BoardView>>;
+  /** The XP exchange readout over every day: each bucket's XP per graduation (SPEC-075 R9). */
+  exchange(): Promise<Answer<ExchangeView>>;
   /** Both streak tracks and the governor's verdict (SPEC-076 R20, R21). */
   streak(): Promise<Answer<StreakView>>;
   /** The owner's earned badges, newest first, and the locked ones with progress (SPEC-073 R16). */
   badges(): Promise<Answer<BadgesView>>;
   /** The owner's personal records, today's distance to each, and the chase (SPEC-073 R17). */
   records(): Promise<Answer<RecordsView>>;
+  /** Each configured course's Road to C2: its mastery, band, unit and six band cells (SPEC-077 R15). */
+  progress(): Promise<Answer<ProgressView>>;
+  /** The law block: its shown lines, in the server's order, and its pending counts (SPEC-077 R15). */
+  law(): Promise<Answer<LawView>>;
+  /** The law cards and today's law XP by tier (SPEC-072 R24). */
+  lawTiers(): Promise<Answer<LawTiersView>>;
   /** The owner's unseen in-app celebrations, each with its tier (SPEC-084 R10). */
   feed(): Promise<Answer<FeedItem[]>>;
   /** The instruments the owner can read (SPEC-094 R18). */
@@ -173,6 +187,8 @@ export function createApi(options: ApiOptions): Api {
     me: () => read('/api/me', parseMe),
     score: () => read('/api/score', parseScore),
     level: () => read('/api/level', parseLevel),
+    board: () => read('/api/board', parseBoard),
+    exchange: () => read('/api/xp/exchange', parseExchange),
     streak: async () => {
       const streak = await read('/api/streak', parseStreak);
       if (streak.kind !== 'ok') return streak;
@@ -182,6 +198,9 @@ export function createApi(options: ApiOptions): Api {
     },
     badges: () => read('/api/badges', parseBadges),
     records: () => read('/api/records', parseRecords),
+    progress: () => read('/api/progress', parseProgress),
+    law: () => read('/api/law', parseLaw),
+    lawTiers: () => read('/api/level/law-tiers', parseLawTiers),
     feed: () => read(FEED_PATH, parseFeed),
     wallet: (before) => read(walletPath(before), parseWallet),
     insights: () => read('/api/insights', parseListings),

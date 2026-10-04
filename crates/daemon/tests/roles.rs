@@ -11,6 +11,7 @@
 
 use std::ffi::OsStr;
 use std::fs;
+use std::os::unix::net::UnixDatagram;
 use std::process::{Command, Output};
 use std::sync::Arc;
 
@@ -101,7 +102,7 @@ fn the_binary_runs_a_role_by_name_and_refuses_an_unknown_one() {
         let usage = first.1["message"].as_str().unwrap_or_default().to_owned();
         assert!(usage.starts_with("usage: deckstreakd <role>"), "{usage}");
         assert!(
-            usage.contains("the roles are: api, bot, job, data;"),
+            usage.contains("the roles are: api, bot, job, data, mcp;"),
             "{usage}"
         );
     }
@@ -922,5 +923,89 @@ async fn only_the_sync_job_loads_the_owners_conventions() {
         Some(0),
         "{}",
         describe(&maintenance)
+    );
+}
+
+#[test]
+fn the_mcp_role_is_a_known_role() {
+    // `deckstreakd mcp` runs the mcp role: with no listen address it refuses to start naming the
+    // setting from its first line, as a JSON event with its priority, and exits 1, not 2.
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let output = deckstreakd(
+        &["mcp"],
+        &[("STATE_DIRECTORY", directory.path().as_os_str())],
+    );
+    assert_eq!(output.status.code(), Some(1), "{}", describe(&output));
+    let lines = events(&output);
+    let first = lines.first().cloned().unwrap_or((None, Value::Null));
+    assert_eq!(first.0.as_deref(), Some("<3>"), "{}", describe(&output));
+    let refusal = first.1.to_string();
+    assert!(
+        refusal.contains("DECKSTREAK_MCP_LISTEN"),
+        "the refusal does not name the setting: {refusal}"
+    );
+
+    // The role takes no argument, and the usage line names it among the roles.
+    let usage = deckstreakd(&["mcp", "extra"], &[]);
+    assert_eq!(usage.status.code(), Some(2), "{}", describe(&usage));
+    let lines = events(&usage);
+    let first = lines.first().cloned().unwrap_or((None, Value::Null));
+    let message = first.1["message"].as_str().unwrap_or_default().to_owned();
+    assert!(
+        message.contains("the roles are: api, bot, job, data, mcp;"),
+        "{message}"
+    );
+}
+
+#[test]
+fn the_mcp_role_that_cannot_open_its_database_says_stopping_on_its_notify_socket() {
+    // The database's path holds a directory, so the open refuses after the role has bound its
+    // listener and made its notifier: the role leaves before it serves, and `stop_before_serving`
+    // is what tells systemd `STOPPING=1` on the way out.
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let state = directory.path().join("state");
+    fs::create_dir_all(state.join(DATABASE_FILE)).expect("a directory where the database goes");
+    let credentials = directory.path().join("credentials");
+    fs::create_dir(&credentials).expect("the credentials directory");
+    for (id, stem) in [
+        ("mcp-core-token", "stopping-core"),
+        ("mcp-law-track-token", "stopping-law"),
+    ] {
+        let value = format!("{stem}-{}", "k".repeat(32));
+        fs::write(credentials.join(id), format!("{value}\n")).expect("a credential");
+    }
+    let socket_path = directory.path().join("notify.socket");
+    let socket = UnixDatagram::bind(&socket_path).expect("the notify socket binds");
+    socket
+        .set_nonblocking(true)
+        .expect("a non-blocking notify socket");
+
+    let output = deckstreakd(
+        &["mcp"],
+        &[
+            ("STATE_DIRECTORY", state.as_os_str()),
+            ("CREDENTIALS_DIRECTORY", credentials.as_os_str()),
+            ("DECKSTREAK_MCP_LISTEN", OsStr::new("127.0.0.1:0")),
+            ("NOTIFY_SOCKET", socket_path.as_os_str()),
+        ],
+    );
+    assert_eq!(output.status.code(), Some(1), "{}", describe(&output));
+
+    // The child has exited, so every datagram it sent is already queued.
+    let mut seen = Vec::new();
+    let mut buffer = [0_u8; 256];
+    while let Ok(length) = socket.recv(&mut buffer) {
+        seen.push(String::from_utf8_lossy(&buffer[..length]).into_owned());
+    }
+    assert!(
+        seen.iter().any(|message| message == "READY=1"),
+        "the role was bound and ready before it refused; seen: {seen:?}"
+    );
+    assert_eq!(
+        seen.iter()
+            .filter(|message| message.as_str() == "STOPPING=1")
+            .count(),
+        1,
+        "the role did not say STOPPING=1 once; seen: {seen:?}"
     );
 }

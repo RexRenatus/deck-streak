@@ -40,6 +40,8 @@ deck-streak-privacy.workspace = true
 deck-streak-coordination.workspace = true
 deck-streak-api.workspace = true
 deck-streak-bot.workspace = true
+# ADR-119 and ADR-329: the `mcp` role serves the MCP adapter's server (SPEC-119 R1, R2).
+deck-streak-mcp.workspace = true
 # ADR-003: anyhow in the binary alone; the library's roles return thiserror types (SPEC-025).
 anyhow.workspace = true
 thiserror.workspace = true

@@ -6,8 +6,8 @@
 \* @phx covers crates/coordination/src/recompute/records.rs anchor=evaluate digest=sha256:5aa0de349398bcf888dfaadd1437dbe027b2e4d82ba3ec530c3ad5f7bab08218
 \* @phx covers crates/coordination/src/recompute/records.rs anchor=upsert digest=sha256:0702ef24ebd40778731306415bead309ef68954c2c858320eb32ed78b2f1bc4e
 \* @phx covers crates/coordination/src/recompute/records.rs anchor=offer_records digest=sha256:94d4c086e62de5ee1bc65547fa613409b603a137fb3e5e24a0e70c82bac9243c
-\* @phx covers crates/coordination/src/sync_cycle.rs anchor=sync_cycle digest=sha256:b8158a6a2359166e7b55a5dbbb15189d50cdbeebd84c20a0805067046c31dc6c
-\* @phx covers crates/coordination/src/level_up.rs anchor=announce_level_up digest=sha256:acbb8923e76fbd4ab77949a119c1ad3a87de6f41737e65b89df689875e851dd0
+\* @phx covers crates/coordination/src/sync_cycle.rs anchor=sync_cycle digest=sha256:d32903aaea6eed5fa397ca99b5cfcea5ffbbe4540e1420a0503e8861c1b79add
+\* @phx covers crates/coordination/src/level_up.rs anchor=announce_level_up digest=sha256:57e63cd0b8c6a8a153f6242d33eea4ab14ed493d8a98e6f4ef6538a8f471d303
 \* @phx covers crates/notifications/src/router.rs anchor=route digest=sha256:7bcf52fe22d886b3d71dfa0fa8e6dfb1d266a9a6b1662bada5482a2cd0c54dcb
 \* @phx covers crates/notifications/src/ledger.rs anchor=claim digest=sha256:0116ef4925de04614d09ac18952c0a0b0f7248fd65f5d4f6ca555448836a6ab7
 \* @phx cites #74, #75, #76
@@ -72,6 +72,19 @@
 \*   runs, and the loop goes on from the owed day. offer_owed still runs before every owed day's
 \*   write, the rolled-back one included, so Pre and DrainSkip stand as they were, and the
 \*   rolled-back write awards nothing and commits nothing: a stuttering step of these variables.
+\* - #572's re-read (SPEC-326, ADR-327), re-read 2026-10-03: level_up.rs::announce_level_up now
+\*   reads the stored language streak (ladder_facts::with_streak_facts: streak_state on a reader
+\*   connection) before its route, and the occasion carries the facts, so the router caps its tier
+\*   on a streak-break day. announce_level_up abstracts to Offer's router call after the fold's last
+\*   write, on a key of its own, level:<n>, claimed once-ever by ledger.rs::claim (Router(d),
+\*   OnceKey, CelebrateAtMostOnce); only the cycle whose recompute crossed the level raises it, and
+\*   it has no mark: design "literal"'s shape, for its own key. The read writes nothing and moves no
+\*   variable: a stutter, re-stamped. A read that fails is the router call with no answer
+\*   (OfferMiss), with nothing claimed or sent, a subset of that arm; the line is lost as on any
+\*   router error, and no property here counts it, since it has no award row. The Celebrate port's
+\*   own read (recompute/mod.rs, outside every cover) is the same: before each badge or record route
+\*   it reads the row, and its error is DrainMiss or OfferMiss, the award left unmarked and still
+\*   owed.
 \* Abstractions, each a stuttering of the model's variables:
 \* - the offers read the unmarked rows on a reader, then route; DrainOffer reads and routes in one
 \*   step. A row replaced between the read and the route is offered under its own day's key, its
@@ -80,7 +93,12 @@
 \* - the backfill and revisit writes run no badge or record step (mod.rs's
 \*   Evaluation::runs_today_only_rules is Settle and Current only), so the backfill's write with
 \*   no offers before it awards nothing, and the offers after the revisit write are the Offer that
-\*   follows the current day's Commit.
+\*   follows the current day's Commit;
+\* - the landmarks' offers (SPEC-102 section 11, ADR-322; tla/LandmarkOnce models them), re-read
+\*   2026-10-03: sync_cycle.rs::sync_cycle reads the whole log's study days once and hands the fold
+\*   the awards' offers and then the landmarks' in turn, so every offer call runs the awards' offer
+\*   as before and then routes landmark keys and moves the landmarks' own cursor in writes of their
+\*   own, never an award's row or mark: a stuttering step of these variables, re-stamped.
 (***************************************************************************)
 EXTENDS Naturals
 

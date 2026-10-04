@@ -1,0 +1,12 @@
+{
+  "duty": "bot-commands",
+  "schema": "phx.duty.message.v1",
+  "send": {
+    "link_preview_options": {
+      "is_disabled": true
+    },
+    "parse_mode": "HTML",
+    "text": "Your Road to C2 could not be read, so nothing is shown. Send /progress to try again."
+  },
+  "x-message": "progress-failed"
+}

@@ -10,6 +10,8 @@ use deck_streak_notifications::{
 use deck_streak_progression::level::level_title;
 use deck_streak_progression::xp::Level;
 
+use crate::ladder_facts;
+
 /// The event the line is raised for.
 pub const LEVEL_UP_KIND: &str = "celebration";
 
@@ -45,6 +47,7 @@ pub async fn announce_level_up(
         LapseContext::NoLapse,
     )
     .map_err(refused)?;
+    let occasion = ladder_facts::with_streak_facts(router.db(), occasion).await?;
     router.route(&occasion).await.map(Some)
 }
 

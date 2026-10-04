@@ -6,11 +6,16 @@
 //!   input is stored, that input's value against its threshold.
 //! - `GET /api/records` answers each stored record with its value, day and the value it beat,
 //!   today's live value and its distance from the record, and the record to chase.
-//! - `GET /api/milestone` answers `pending`: Road to C2 supplies no mature-card sum yet (R15, #85),
-//!   so nothing is read and nothing is computed from a stand-in.
+//! - `GET /api/milestone` answers `pending`: Road to C2 stores the mature-card sum, but R15's
+//!   milestone also reads the lifetime study reviews, which no table stores yet (#560, #579), so
+//!   nothing is read and nothing is computed from a stand-in.
 //!
 //! The badges and records read coordination's views, the ones the bot's `/badges` and `/records`
 //! read too.
+//!
+//! - `GET /api/board` answers the personal board (SPEC-075 R2, #79): the learner's best day, today,
+//!   language streak and level, each its kind, emoji, label and value, in the order the board shows
+//!   them. It ranks the learner against their own past, never against another person.
 
 use axum::Router;
 use axum::extract::{FromRef, State};
@@ -19,6 +24,7 @@ use axum::http::header::CONTENT_TYPE;
 use axum::response::{IntoResponse, Response};
 use axum::routing::get;
 use deck_streak_coordination::progression::badges_view::badges_view;
+use deck_streak_coordination::progression::board_view::board_view;
 use deck_streak_coordination::progression::records_view::records_now;
 use deck_streak_identity::{OwnerSession, Sessions};
 use deck_streak_kernel::{Courses, KernelError};
@@ -33,6 +39,8 @@ pub const BADGES_PATH: &str = "/api/badges";
 pub const RECORDS_PATH: &str = "/api/records";
 /// The next milestone.
 pub const MILESTONE_PATH: &str = "/api/milestone";
+/// The personal board.
+pub const BOARD_PATH: &str = "/api/board";
 
 /// What the badge, record and milestone routes share.
 #[derive(Clone)]
@@ -53,6 +61,7 @@ pub(crate) fn routes(access: OwnerAccess, readiness: Readiness, courses: Courses
     Router::new()
         .route(BADGES_PATH, get(badges))
         .route(RECORDS_PATH, get(records))
+        .route(BOARD_PATH, get(board))
         .route(MILESTONE_PATH, get(milestone))
         .with_state(Badges {
             access,
@@ -135,8 +144,44 @@ async fn records(_owner: OwnerSession, State(badges): State<Badges>) -> Response
     }
 }
 
-/// `GET /api/milestone`: `pending`, read from nothing, until Road to C2 supplies the mature-card
-/// sum the next milestone is computed from (R15, #85).
+/// `GET /api/board`: the board's rows in order, each with its day, longest run or title where it
+/// has one.
+async fn board(_owner: OwnerSession, State(badges): State<Badges>) -> Response {
+    let Some(db) = badges.readiness.database() else {
+        return refused(StatusCode::SERVICE_UNAVAILABLE, "database_not_open");
+    };
+    match board_view(db, badges.access.study_day()).await {
+        Ok(rows) => {
+            let rows: Vec<Value> = rows
+                .iter()
+                .map(|row| {
+                    let mut line = json!({
+                        "kind": row.kind(),
+                        "emoji": row.emoji(),
+                        "label": row.label(),
+                        "value": row.value(),
+                    });
+                    if let Some(day) = row.study_day() {
+                        line["study_day"] = json!(day.to_string());
+                    }
+                    if let Some(longest) = row.longest() {
+                        line["longest"] = json!(longest);
+                    }
+                    if let Some(title) = row.title() {
+                        line["title"] = json!(title);
+                    }
+                    line
+                })
+                .collect();
+            answer(&json!({ "rows": rows }))
+        }
+        Err(error) => unreadable(&error, "board_unreadable"),
+    }
+}
+
+/// `GET /api/milestone`: `pending`, read from nothing, until the lifetime study reviews the next
+/// milestone is also computed from are stored (R15; #560, #579). The stored mature-card sum alone
+/// would make the answer a stand-in.
 async fn milestone(_owner: OwnerSession) -> Response {
     answer(&json!({ "status": "pending" }))
 }
