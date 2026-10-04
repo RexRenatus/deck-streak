@@ -215,7 +215,7 @@ replayed tree's `deck-streak-mcp` compiled afresh, A1's command failed with
 failure it observed reads:
 
 ```text
-"0.0.0.0:8790" was not refused as NotLoopback: Ok(ListenAddress(0.0.0.0:8790))
+panicked at crates/mcp/tests/settings.rs:268:18: "0.0.0.0:8790" was not refused as NotLoopback: Ok(ListenAddress(0.0.0.0:8790))
 ```
 
 This is an addition: the line above it stands as it was recorded, and this quote is the failure as
