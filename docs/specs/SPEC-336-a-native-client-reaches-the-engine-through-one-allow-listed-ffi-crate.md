@@ -152,10 +152,10 @@ run's summary and `xcframework-report/report.md` in the `xcframework` artifact.
 
 | measure | measured |
 |---|---|
-| two static libraries, release | not yet run |
-| Swift bindings, library mode | not yet run |
-| modulemap names no builtin clang module | not yet run |
-| generated Swift typechecks against each slice | not yet run |
-| slice `ios-arm64` | not yet run |
-| slice `ios-arm64-simulator` | not yet run |
-| runner CPUs | not yet run |
+| two static libraries, release | 9.3 minutes (558 s) |
+| Swift bindings, library mode | 2.4 minutes (142 s) |
+| modulemap names no builtin clang module | pass |
+| generated Swift typechecks against each slice | pass |
+| slice `ios-arm64` | 81.0 MiB (84,957,000 bytes) |
+| slice `ios-arm64-simulator` | 81.0 MiB (84,899,224 bytes) |
+| runner CPUs | 3 |
