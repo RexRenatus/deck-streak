@@ -160,6 +160,69 @@ class TheSizeGate(unittest.TestCase):
             self.assertIn(f"web-engine-size: VOID: {absent} is not on PATH", out)
             self.assertNotIn("PASS", out)
 
+    def test_the_gate_keeps_python_from_writing_bytecode(self):
+        before = sys.dont_write_bytecode
+        sys.dont_write_bytecode = False
+        try:
+            load_gate()
+            self.assertTrue(sys.dont_write_bytecode)
+        finally:
+            sys.dont_write_bytecode = before
+
+    def test_a_compressor_that_fails_or_prints_nothing_is_void(self):
+        gate = load_gate()
+        with tempfile.TemporaryDirectory() as tmp:
+            planted = Path(tmp) / "planted"
+            planted.write_bytes(SMALL_BINDINGS)
+            # Each fake tool is (what it does, its exit, its output): a failure that still
+            # printed something, and a success that printed nothing, are each no measurement.
+            cases = [("exits 3 after printing", 3, "5"), ("exits 0 and prints nothing", 0, "")]
+            for why, code, output in examined("fake compressor case(s)", cases):
+                fake = Path(tmp) / f"fake-{code}"
+                fake.write_text(f"#!/bin/sh\nprintf '%s' '{output}'\nexit {code}\n")
+                fake.chmod(0o700)
+                with self.assertRaises(gate.Void, msg=f"gzip {why}"):
+                    gate.gzip_size(str(fake), planted)
+                if output:
+                    with self.assertRaises(gate.Void, msg=f"node {why}"):
+                        gate.brotli_size(str(fake), planted)
+
+    def test_a_brotli_figure_is_read_as_text(self):
+        gate = load_gate()
+        with tempfile.TemporaryDirectory() as tmp:
+            planted = Path(tmp) / "planted"
+            planted.write_bytes(SMALL_BINDINGS)
+            fake = Path(tmp) / "fake-node"
+            # The Arabic-Indic digit three: a digit as text, and no digit as bytes.
+            fake.write_text("#!/bin/sh\nprintf '\\331\\243'\n")
+            fake.chmod(0o700)
+            self.assertEqual(gate.brotli_size(str(fake), planted), 3)
+
+    def test_the_command_line_names_itself_and_requires_both_files(self):
+        helped = subprocess.run(
+            [sys.executable, str(GATE), "--help"], capture_output=True, text=True, check=False
+        )
+        words = " ".join(helped.stdout.split())
+        self.assertEqual(helped.returncode, 0, helped.stderr)
+        for line in examined(
+            "help line(s)",
+            [
+                "usage: web-engine-size",
+                "the web engine's size gate",
+                "the module a browser loads",
+                "its JS bindings",
+            ],
+        ):
+            self.assertIn(line, words)
+        for given in examined(
+            "missing option case(s)", [[], ["--module", "m"], ["--bindings", "b"]]
+        ):
+            done = subprocess.run(
+                [sys.executable, str(GATE), *given], capture_output=True, text=True, check=False
+            )
+            self.assertEqual(done.returncode, 2, f"{given}: {done.stderr}")
+            self.assertIn("required", done.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()
