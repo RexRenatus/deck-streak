@@ -10,15 +10,26 @@ use http_body_util::Full;
 use hyper::Request;
 use hyper::body::Bytes;
 use hyper::header::AUTHORIZATION;
-use serde_json::json;
+use serde_json::{Value, json};
 
 use crate::client::{Answer, Client, Versions};
 use crate::jwt::Signer;
-use crate::{BuildError, Notification, Origin, Sent, Unreached};
+use crate::{BuildError, Notification, Origin, Refusal, Sent, Unreached};
 
 /// How old a provider token may grow before the sender mints the next. APNs refuses a token
 /// older than an hour, and asks for one no more often than every 20 minutes (R3).
 const REFRESH_AGE: Duration = Duration::from_mins(45);
+
+/// The youngest a refused provider token may be for the sender to mint the next: APNs asks for a
+/// new token no more often than every 20 minutes, so a younger refusal is the key's, not the
+/// token's age (R3).
+const REMINT_FLOOR: Duration = Duration::from_mins(20);
+
+/// How many times one call resends after APNs refuses its provider token as expired (R3, R4).
+const RESENDS: u32 = 1;
+
+/// APNs's reason for a provider token it no longer accepts.
+const EXPIRED_TOKEN: &str = "ExpiredProviderToken";
 
 /// Which of APNs's two services a device registered with: a development build's, or a production
 /// build's. Chosen per device, because one owner runs both kinds of build.
@@ -140,20 +151,40 @@ impl ApnsSender {
 
     /// Sends `notification` to `device` and reads the answer into one outcome.
     pub async fn deliver(&self, device: &Device, notification: &Notification) -> Sent {
+        self.attempt(device, notification).await
+    }
+
+    /// One call: the request, and R3's one resend when APNs refuses the token as expired.
+    async fn attempt(&self, device: &Device, notification: &Notification) -> Sent {
         let body = json!({
             "aps": {"alert": {"title": notification.title(), "body": notification.body()}}
         })
         .to_string();
-        let now = self.clock.now();
-        let Some(token) = self.current_token(now) else {
+        let Some(mut token) = self.current_token(self.clock.now()) else {
             return Sent::Failed(Unreached::Request);
         };
-        let Some(request) = self.request(device, notification, body, &token.text, now) else {
-            return Sent::Failed(Unreached::Request);
-        };
-        match self.client.post(request).await {
-            Ok(answer) => read(&answer),
-            Err(unreached) => Sent::Failed(unreached),
+        let mut resent = 0;
+        loop {
+            let now = self.clock.now();
+            let Some(request) = self.request(device, notification, body.clone(), &token.text, now)
+            else {
+                return Sent::Failed(Unreached::Request);
+            };
+            let answer = match self.client.post(request).await {
+                Ok(answer) => answer,
+                Err(unreached) => return Sent::Failed(unreached),
+            };
+            if !expired(&answer) {
+                return read(&answer);
+            }
+            if resent == RESENDS {
+                return Sent::Rejected(Refusal::ProviderToken);
+            }
+            token = match self.remint(&token) {
+                Ok(fresh) => fresh,
+                Err(refused) => return refused,
+            };
+            resent += 1;
         }
     }
 
@@ -170,6 +201,24 @@ impl ApnsSender {
         let fresh = self.mint(now)?;
         *held = Some(fresh.clone());
         Some(fresh)
+    }
+
+    /// The token to resend with after APNs refused `refused` as expired, under the one lock with no
+    /// await inside it (R3). A refused token younger than [`REMINT_FLOOR`] is the refusal itself;
+    /// a held token other than the refused one was minted by a call refused alongside, and is
+    /// reused, so calls refused together mint one token between them.
+    fn remint(&self, refused: &ProviderToken) -> Result<ProviderToken, Sent> {
+        let now = self.clock.now();
+        let mut held = self.token.lock().unwrap_or_else(PoisonError::into_inner);
+        if age(now, refused.minted) < REMINT_FLOOR {
+            return Err(Sent::Rejected(Refusal::ProviderToken));
+        }
+        if let Some(current) = held.as_ref().filter(|held| held.text != refused.text) {
+            return Ok(current.clone());
+        }
+        let fresh = self.mint(now).ok_or(Sent::Failed(Unreached::Request))?;
+        *held = Some(fresh.clone());
+        Ok(fresh)
     }
 
     /// A provider token minted at `now`: ES256 over `{"alg","kid"}` and `{"iss","iat"}` (R3).
@@ -227,10 +276,29 @@ fn expiration(now: UtcMillis, time_to_live: Duration) -> String {
         .to_string()
 }
 
+/// APNs's error body as JSON, when it was read whole inside its bound and parses.
+fn error_json(answer: &Answer) -> Option<Value> {
+    serde_json::from_slice(answer.error_body.as_ref()?).ok()
+}
+
+/// The `reason` of APNs's error body, when it gave one.
+fn reason(answer: &Answer) -> Option<String> {
+    error_json(answer)?
+        .get("reason")?
+        .as_str()
+        .map(str::to_owned)
+}
+
+/// Whether APNs refused the provider token as expired, which earns R3's one resend.
+fn expired(answer: &Answer) -> bool {
+    answer.status.as_u16() == 403 && reason(answer).as_deref() == Some(EXPIRED_TOKEN)
+}
+
 /// The outcome APNs's answer stands for (R4).
 fn read(answer: &Answer) -> Sent {
     match answer.status.as_u16() {
         200..=299 => Sent::Delivered,
+        403 => Sent::Rejected(Refusal::ProviderToken),
         _ => Sent::Failed(Unreached::Unexpected),
     }
 }
