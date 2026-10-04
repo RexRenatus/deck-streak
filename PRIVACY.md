@@ -88,15 +88,21 @@ You can also export and erase on the host that runs DeckStreak:
   private copy of your collection.
 - **The service journal** keeps its log lines for at most 14 days (`P14D`), and journald then
   deletes them.
+- **The edge's log of the sync route** records, for each request to the sync route, the client's
+  address, the method, the path without its key and the status, and none of your Anki data. It is
+  kept in the service journal for at most 14 days (`P14D`), and journald then deletes it.
+- **The ban list** holds an address with five refused sync logins within ten minutes for up to one
+  day after its ban, and then releases it.
 - **The private copy of your collection** is your own Anki data: an erase leaves it, and the next
   sync would restore it from your sync server. Removing it means removing the sync credential, a
   step of the owner's setup.
 - **The sync server's snapshots** are copies of the sync server's store, your own Anki data, taken
   each day while that server is stopped for a few seconds. An erase leaves them, as it leaves the
   server's store. The host keeps the newest three archives and removes the oldest when a fourth is
-  in place; each archive is also copied to an offsite bucket that admits no public access and no
-  listing, where it is kept as long as the bucket's own retention, which the owner sets when
-  creating it. Removing them is a step of the owner's setup.
+  in place; each archive is also sealed to a key that is never on the host, and only the sealed
+  copy goes to an offsite bucket that admits no public access and no listing. It is deleted there
+  30 days (`P30D`) after it is written, by a rule the owner sets on the bucket and the cutover
+  runbook checks. Removing them is a step of the owner's setup.
 - **The cron-fire ledger** records which scheduled jobs ran, and none of your data. It is kept
   after an erase and pruned after 90 days, so an erase can never make a notification send twice.
 

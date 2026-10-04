@@ -21,6 +21,24 @@ ROLLBACK = "rolled_back"
 EDGE = re.compile(r"^\s*(\[\*\]|\w+) --> (\[\*\]|\w+)", re.M)
 ROW = re.compile(r"^\| `(\w+)` \| [^|]+ \| ([^|]+?) \|$", re.M)
 STEP = re.compile(r"^### `(\w+)`", re.M)
+# The offsite archives' period, an ISO 8601 duration: the bucket's lifecycle rule deletes each archive
+# this long after it is written, the runbook checks the rule and the policy states the period
+# (SPEC-340 R11; ADR-351 D9). One constant, so the two documents cannot drift apart.
+OFFSITE_PERIOD = "P30D"
+BEFORE_THE_WINDOW = "## Before the window"
+# What the `rekeyed` step says of the sync key: its two triggers and what each needs (SPEC-340 R1;
+# ADR-347 D13), and that the hash is never printed.
+REKEY_TRIGGERS = (
+    "a synced device is lost",
+    "the credential store may have been exposed",
+    "any new hash retires every key",
+    "a new password",
+    "never printed",
+)
+# The standard library's command that makes an entry in the house's shape (SPEC-340 R10; ADR-351
+# D8): a 16-byte salt from the system's generator, the password read without echo, 600000 rounds
+# and a 32-byte digest.
+HASH_COMMAND = ("os.urandom(16)", "getpass", "600000", "l=32")
 # What R6 keeps out of the runbook: an address, a date and a URL that would name a host.
 NAMES_A_HOST = (
     re.compile(r"\b\d{1,3}(?:\.\d{1,3}){3}\b"),
@@ -102,6 +120,31 @@ class TheCutoverRunbook(unittest.TestCase):
         )
         for pattern in NAMES_A_HOST:
             self.assertIsNone(pattern.search(runbook), f"the runbook holds {pattern.pattern}")
+
+    def step(self, state):
+        """The runbook's text for one step, which it holds exactly once."""
+        found = [text for each, text in steps(RUNBOOK.read_text(encoding="utf-8")) if each == state]
+        self.assertEqual(len(found), 1, f"the runbook holds {len(found)} `{state}` step(s)")
+        return found[0]
+
+    def test_the_rekey_step_names_its_triggers(self):
+        """SPEC-340 A1 (R1; ADR-347 D13): the client's key is made from the stored hash, so the
+        `rekeyed` step names when a new hash is due and what each trigger needs."""
+        rekeyed = self.step("rekeyed")
+        for phrase in examined("rekey phrase(s)", REKEY_TRIGGERS):
+            self.assertIn(phrase, rekeyed, phrase)
+
+    def test_the_runbook_names_the_hash_command_and_the_bucket_rule(self):
+        """SPEC-340 A13 (R10, R11; ADR-351 D8, D9): the two steps that write an entry name the
+        command that makes one in the house's shape, and the bucket's lifecycle rule is checked
+        before the window with the period the policy states."""
+        for state in ("started", "rekeyed"):
+            text = self.step(state)
+            for part in examined(f"{state} command part(s)", HASH_COMMAND):
+                self.assertIn(part, text, f"{state}: {part}")
+        before = section(RUNBOOK.read_text(encoding="utf-8"), BEFORE_THE_WINDOW)
+        self.assertIn("lifecycle rule", before)
+        self.assertIn(f"`{OFFSITE_PERIOD}`", before)
 
 
 if __name__ == "__main__":
