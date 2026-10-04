@@ -245,8 +245,10 @@ impl ApnsSender {
         token: &str,
         now: UtcMillis,
     ) -> Option<Request<Full<Bytes>>> {
-        let _ = &self.production;
-        let origin = &self.development;
+        let origin = match device.environment {
+            Environment::Development => &self.development,
+            Environment::Production => &self.production,
+        };
         let mut request = Request::post(format!("{}/3/device/{}", origin.as_str(), device.token))
             .header(AUTHORIZATION, format!("bearer {token}"))
             .header("apns-push-type", "alert")
