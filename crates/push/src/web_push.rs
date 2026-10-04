@@ -7,11 +7,15 @@ use std::time::Duration;
 
 use base64ct::{Base64UrlUnpadded, Encoding};
 use deck_streak_kernel::Clock;
-use hyper::Uri;
+use http_body_util::Full;
+use hyper::body::Bytes;
+use hyper::header::{CONTENT_ENCODING, CONTENT_TYPE};
+use hyper::{Request, Uri};
 use p256::PublicKey;
+use serde_json::json;
 use web_push_native::Auth;
 
-use crate::client::{Client, Versions};
+use crate::client::{Answer, Client, Versions};
 use crate::jwt::Signer;
 use crate::{BuildError, Notification, Origin, PushServices, Sent, Unreached};
 
@@ -123,15 +127,48 @@ impl WebPushSender {
 
     /// Sends `notification` to `subscription` and reads the answer into one outcome.
     pub async fn deliver(&self, subscription: &Subscription, notification: &Notification) -> Sent {
-        let _ = (subscription, notification, &self.client, &self.signer);
-        let _ = (&self.contact, &self.services, &self.clock);
+        self.attempt(subscription, notification).await
+    }
+
+    /// One call: the body encrypted to the subscription, one request, and its answer read.
+    async fn attempt(&self, subscription: &Subscription, notification: &Notification) -> Sent {
         let _ = (
-            &subscription.endpoint,
+            &self.contact,
+            &self.signer,
+            &self.clock,
             &subscription.origin,
-            &subscription.key,
         );
-        let _ = &subscription.auth;
-        Sent::Failed(Unreached::Request)
+        let plaintext = json!({"title": notification.title(), "body": notification.body()})
+            .to_string()
+            .into_bytes();
+        let Ok(body) = web_push_native::encrypt(plaintext, &subscription.key, &subscription.auth)
+        else {
+            return Sent::Failed(Unreached::Request);
+        };
+        let Some(request) = Self::request(subscription, body) else {
+            return Sent::Failed(Unreached::Request);
+        };
+        match self.client.post(request).await {
+            Ok(answer) => read(&answer),
+            Err(unreached) => Sent::Failed(unreached),
+        }
+    }
+
+    /// The request carrying `body`, the encrypted message, to `subscription`'s endpoint.
+    fn request(subscription: &Subscription, body: Vec<u8>) -> Option<Request<Full<Bytes>>> {
+        Request::post(subscription.endpoint.as_str())
+            .header(CONTENT_ENCODING, "aes128gcm")
+            .header(CONTENT_TYPE, "application/octet-stream")
+            .body(Full::new(Bytes::from(body)))
+            .ok()
+    }
+}
+
+/// The outcome a push service's answer stands for (R4).
+fn read(answer: &Answer) -> Sent {
+    match answer.status.as_u16() {
+        200..=299 => Sent::Delivered,
+        _ => Sent::Failed(Unreached::Unexpected),
     }
 }
 
