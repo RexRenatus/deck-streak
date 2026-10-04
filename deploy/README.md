@@ -219,9 +219,10 @@ without its core token. Its first start is the owner's, in two steps (ADR-332):
 
 `host-budget.json` records DeckStreak's share, `"memory": "704M"` and `"cpus": 2`, and each unit's
 ceilings, which the unit's `MemoryHigh=` and `MemoryMax=` equal (ADR-032). The long-running units'
-ceilings plus the largest oneshot's fit the share, and the API's and the bot's `CPUQuota=` fit its
-CPUs. The alert template, the SLO evaluator and the memory watch carry their own entries (SPEC-031);
-since they run beside the jobs, every ceiling reached at once passes the share (SPEC-031 §6).
+ceilings plus the largest oneshot's fit the share, and the daemons' `CPUQuota=` (the API's, the
+bot's, the replicator's and the MCP server's) fit its CPUs. The alert template, the SLO evaluator
+and the memory watch carry their own entries (SPEC-031); since they run beside the jobs, every
+ceiling reached at once passes the share (SPEC-031 §6).
 
 ## Writing about an instance
 

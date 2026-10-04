@@ -1,0 +1,22 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S33300-THE-MCP-SLO-KEEPS-ITS-OBJECTIVE",
+        "deploy/slo.json",
+        "\"objective\": 0.95,",
+        "\"objective\": 0.99,",
+        "the MCP server's SLO declares 0.95, not the API's 0.99: at one call an hour one failed call in six hours would page at 0.99 (SPEC-333 R1)",
+        "test_slo_declaration.TheMcpSloBurnsAsDeclared.test_the_mcp_slo_counts_the_same_response_events_as_the_api"
+      ],
+      [
+        "S33301-THE-MCP-SLO-COVERS-THE-MCP-UNIT",
+        "deploy/slo.json",
+        "\"unit\": \"deck-streak-mcp.service\",",
+        "\"unit\": \"deck-streak-bot.service\",",
+        "an SLO over the MCP server's unit exists, so the probe's obs.slo-declared finds the unit covered (SPEC-333 R1)",
+        "test_slo_declaration.TheMcpSloBurnsAsDeclared.test_the_mcp_slo_pages_and_tickets_to_telegram_with_exact_burn_rates"
+      ]
+    ]
+  }
+}
