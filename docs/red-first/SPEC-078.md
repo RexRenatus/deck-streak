@@ -155,6 +155,7 @@ A10: red at 875ff0f7: assertion `left == right` failed: one toggle settles the c
 A10b: red at 875ff0f7: assertion `left == right` failed: written once a day; left: (false, false, false, false), right: (true, false, true, true)
 A10c: red at 875ff0f7: a Monday chip tapped on Tuesday answers with Tuesday's checklist and toggles nothing: Ok(Done(Checklist { day: StudyDay(20102), lines: [], streak: 0 }))
 A10d: red at 875ff0f7: assertion `left == right` failed: the day's writing is settled from its log, and a held row the log does not pay is zeroed; left: [("write:qaa", 75)], right: [("write:all", 100), ("write:qaa", 0), ("write:qab", 75)]
+A14b: not red: an existing test amended by T20 (the writing and badge constants added to its golden), not a criterion written red first; it read left Number(0), right Number(75) at 875ff0f7 and is recorded so
 A19a: red at 875ff0f7: assertion `left == right` failed: {"all_langs_goal_met":false,"langs_read_this_week":0,"reading_entries":0,"week_total_min":0,"writing_all_streak":0,"writing_entries":0}; left: ["ink_week","ink_month","ink_century","marathon_reader"], right: []
 A19b: red at 875ff0f7: ink_week is not earned without its courses: ["quill_initiate", "ink_week", "ink_month", "ink_century", "bookworm_week", "polyglot_reader", "marathon_reader"]
 A19: red at 875ff0f7: assertion `left == right` failed: each badge of Some("one reading entry") is awarded once, for the evaluated day, and marked; left: [], right: [("first_page", 0, 20107, true)]
@@ -221,3 +222,12 @@ step's `closed`), `confirm_and_clear_write_only_a_writing_course` and
 `every_writing_write_answers_no_writing_course_without_one` (`confirm`, `clear` and `toggle`'s
 refusals). A mutant runs only its own package's tests, so the bot's `/write` test never judged the
 coordination use cases. All five passed in the same call.
+
+Commit 70a2a9d is the green commit's edit of tests between the red and the green, disclosed here. Every
+removed line is a census or a count that grew by exactly this part's items, each recorded as a T-line of
+SPEC-078 section 13 (additions while the list stays exact, never relaxed assertions): the menu's
+`the fourteen commands` text and list (T22, T23) and the two goldens that name the commands (T24, T25);
+`SEEDS` 41 to 42 (T29); `COMMAND_REPLIES` 21 to 23 and `COMMAND_CALLERS` 39 to 43 in the one-router census
+(T27, T28, ruling 104 Q-8); and `habits_store.rs`'s `the_habit_tables_are_exported_and_erased`, whose two
+assertions over one table became assertions over both habit tables (T21). The other removed lines are
+imports. No assertion was relaxed, no test was removed or skipped.
