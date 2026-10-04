@@ -24,7 +24,10 @@ interface WorkerGlobals {
 
 export type ImportModule = (url: string) => Promise<unknown>;
 
-const importModule: ImportModule = (url) => import(/* @vite-ignore */ url);
+/** The default loader: a module import of the bindings' URL, decided when it is called. */
+function importModule(url: string): Promise<unknown> {
+  return import(/* @vite-ignore */ url);
+}
 
 /** Answers each message on `scope` with the session's reply, on the same scope. A dedicated
  * Worker hears only the page that started it; a message that names another origin than `origin`,
