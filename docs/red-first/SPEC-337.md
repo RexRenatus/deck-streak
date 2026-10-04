@@ -82,3 +82,15 @@ A9: green at 39e64303
 At 39e64303 the test reads `examined 10 cutover state(s)` and `examined 10 runbook step(s)`, OK.
 Six plants of the runbook each turn it red: two steps swapped, a host step marked as the owner's own
 act, the hold's section renamed, a step's heading dropped, an address and a date.
+
+The processors were then re-split by ADR-347 D7: the sync server 75%, the bot 20%, the replicator
+and the MCP server 15% each, the API unchanged at 75%. The test module that pins the five quotas
+was changed alone (79e1ace1), with every unit untouched. At that commit `test_deploy_templates.py`
+reads `FAILED (failures=2)`, each by assertion: A3, and the role test that holds the bot's caps
+(`AssertionError: '25%' != '20%'`). The five units, the share's records and the runbook's hold
+followed (7e3cf005), and the module reads `Ran 28 tests ... OK` there.
+
+```red-first
+A3: red at 79e1ace1: AssertionError: '50%' != '75%'
+A3: green at 7e3cf005
+```
