@@ -29,6 +29,7 @@ use sqlite_wasm_vfs::sahpool::install;
 use wasm_bindgen::prelude::*;
 
 use crate::study::{Answer, admit, service};
+use crate::synthetic::fields;
 
 /// The pool's directory in OPFS, one per origin (SPEC-338 R4).
 const DIRECTORY: &str = "deck-streak";
@@ -158,7 +159,8 @@ pub fn close() -> Result<(), JsValue> {
 }
 
 /// Adds `count` synthetic Basic notes to the default deck, into an empty collection only, for the
-/// tests and the measurements. Returns the number of notes added.
+/// tests and the measurements, each with two fields of 200 characters (ADR-022's shape). Returns
+/// the number of notes added.
 #[wasm_bindgen]
 pub fn seed(count: u32) -> Result<u32, JsValue> {
     let held = query(NOTE_COUNT_SQL, &[])?;
@@ -180,10 +182,7 @@ pub fn seed(count: u32) -> Result<u32, JsValue> {
     let requests = (0..count)
         .map(|i| {
             let mut note = template.clone();
-            note.fields = vec![
-                format!("synthetic front {i}"),
-                format!("synthetic back {i}"),
-            ];
+            note.fields = Vec::from(fields(i));
             AddNoteRequest {
                 note: Some(note),
                 deck_id: DEFAULT_DECK,
@@ -263,6 +262,13 @@ pub fn snapshot(card_id: i64) -> Result<String, JsValue> {
         .cloned()
         .unwrap_or(serde_json::Value::Null)
         .to_string())
+}
+
+/// The module's linear memory in pages of 65536 bytes. Linear memory never shrinks, so a reading
+/// taken after each step is the Worker's high-water so far (SPEC-338 R3, ADR-348).
+#[wasm_bindgen]
+pub fn memory_pages() -> u32 {
+    u32::try_from(core::arch::wasm32::memory_size::<0>()).unwrap_or(u32::MAX)
 }
 
 /// The backend's protocol, held to the study calls: a service and method index, a protobuf

@@ -3,7 +3,7 @@
 // an error code and a message. Nothing else crosses: no SQL, no service index, no engine handle.
 
 /** The operations the Worker serves, and nothing else. */
-export const OPS = ['open', 'seed', 'next', 'answer', 'undo', 'snapshot', 'close'] as const;
+export const OPS = ['open', 'seed', 'next', 'answer', 'undo', 'snapshot', 'memory', 'close'] as const;
 export type Op = (typeof OPS)[number];
 
 /** Why the Worker refused a request. */
@@ -18,7 +18,7 @@ export type ErrorCode =
 export type Rating = 1 | 2 | 3 | 4;
 
 export type Request =
-  | { id: number; op: 'open' | 'next' | 'undo' | 'close' }
+  | { id: number; op: 'open' | 'next' | 'undo' | 'memory' | 'close' }
   | { id: number; op: 'seed'; count: number }
   | { id: number; op: 'answer'; rating: Rating; ms: number }
   | { id: number; op: 'snapshot'; card: bigint };
@@ -60,6 +60,7 @@ const ARGS: Record<Op, Record<string, (value: unknown) => boolean>> = {
   open: {},
   next: {},
   undo: {},
+  memory: {},
   close: {},
   seed: { count: (value) => whole(value, 1, U32) },
   answer: { rating: (value) => whole(value, 1, 4), ms: (value) => whole(value, 0, U32) },

@@ -75,6 +75,11 @@ export class EngineClient {
     return this.#send({ op: 'snapshot', card }) as Promise<Snapshot | null>;
   }
 
+  /** The module's linear memory in bytes, its high-water so far. */
+  memory(): Promise<number> {
+    return this.#send({ op: 'memory' }) as Promise<number>;
+  }
+
   close(): Promise<null> {
     return this.#send({ op: 'close' }) as Promise<null>;
   }

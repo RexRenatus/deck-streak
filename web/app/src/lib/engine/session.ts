@@ -21,7 +21,11 @@ export interface EngineModule {
   undo(): void;
   snapshot(card: bigint): string;
   last_panic(): string | undefined;
+  memory_pages(): number;
 }
+
+/** The bytes in one page of a module's linear memory. */
+export const PAGE_BYTES = 65536;
 
 /** What the session needs from the Worker's browser. */
 export interface SessionDeps {
@@ -158,6 +162,8 @@ export class Session {
       case 'undo':
         engine.undo();
         return null;
+      case 'memory':
+        return engine.memory_pages() * PAGE_BYTES;
       default:
         engine.close();
         this.#state = 'closed';
