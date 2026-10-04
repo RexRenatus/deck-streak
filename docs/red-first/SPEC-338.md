@@ -88,3 +88,14 @@ A19: green at ab2d6e8
 - **A16 has no local red.** Its judge, `web_engine_job_problems`, and its test are in
   `scripts/tests/test_ci_workflows.py`, which is never run on a builder's machine; CI runs it by
   name, over the real `ci.yml` and a planted copy for each refusal.
+- **The browser tests were not red first.** `tests-engine/engine.spec.ts` and its harness (657f0032)
+  are integration tests over a Worker, a client and a module that were already built and green, so
+  no commit holds them red. Each browser read 6 passed and 1 skipped (each skip is the other
+  browser's own case). Their negative control is section 7's M13: with `'wasm-unsafe-eval'` planted
+  out of `svelte.config.js`'s `script-src`, "opens, answers and undoes over OPFS" failed in
+  Chromium, quoting the directive the module's compilation violated, and passed again with the file
+  restored. So the harness holds the Worker to the page's own policy.
+- **`client.memory()`'s request was given its own test after green.** A18 judged the Worker's side
+  of the `memory` operation, and no client test sent it, so a mutant of the client's request could
+  survive. The test that asserts `{ id: 1, op: 'memory' }` and the number it resolves to was written
+  over the implemented client to kill those mutants, and is not a red-first test.
