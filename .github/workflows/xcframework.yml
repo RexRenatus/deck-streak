@@ -315,15 +315,24 @@ jobs:
             ONLY_ACTIVE_ARCH=YES \
             CODE_SIGNING_ALLOWED=NO
           echo "$(( $(date +%s) - started ))" > "$REPORT/release-seconds"
+      - name: the Release app, built alone
+        run: |
+          # A test build copies the unit test bundle and XCTest's frameworks into the app it hosts,
+          # so the size and the imports are read from an app built with no test action.
+          xcodebuild build -project ios/Harness.xcodeproj -scheme Harness -configuration Release \
+            -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" \
+            -derivedDataPath "$RUNNER_TEMP/release-app" \
+            ONLY_ACTIVE_ARCH=YES \
+            CODE_SIGNING_ALLOWED=NO
       - name: the Release app's size
         run: |
-          app="$RUNNER_TEMP/release/Build/Products/Release-iphonesimulator/Harness.app"
+          app="$RUNNER_TEMP/release-app/Build/Products/Release-iphonesimulator/Harness.app"
           find "$app" -type f -exec stat -f %z {} + | awk '{ total += $1 } END { print total }' > "$REPORT/app-bytes"
           stat -f %z "$app/Harness" > "$REPORT/executable-bytes"
           cat "$REPORT/app-bytes" "$REPORT/executable-bytes"
       - name: the required-reason symbols the Release executable imports, against the manifest
         run: |
-          nm -u "$RUNNER_TEMP/release/Build/Products/Release-iphonesimulator/Harness.app/Harness" > "$REPORT/imports"
+          nm -u "$RUNNER_TEMP/release-app/Build/Products/Release-iphonesimulator/Harness.app/Harness" > "$REPORT/imports"
           python3 - <<'PY'
           import os, pathlib, plistlib
           report = pathlib.Path(os.environ["REPORT"])
