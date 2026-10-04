@@ -1221,6 +1221,34 @@ class TheCaddyBlock(unittest.TestCase):
         host = listen.rpartition(":")[0].strip("[]")
         self.assertTrue(ipaddress.ip_address(host).is_loopback, listen)
 
+    def test_the_sync_route_alone_is_logged_without_its_key(self):
+        """SPEC-340 A7; ADR-351 D4: the edge writes one access log, of the sync route alone, with
+        the client's address, the method, the path and the status, and no request header and no
+        `k` parameter in it."""
+        block = site()
+        # One site-level log. It names no output, so it reaches the journal and its retention.
+        logs = block.find("log")
+        self.assertEqual([entry.tokens for entry in logs], [["log"]], "the block's access log")
+        self.assertEqual([child.tokens for child in logs[0].children], [["format", "filter"]])
+        # The filter deletes every request header and the `k` parameter, and writes JSON.
+        fields = logs[0].one("format", "filter")
+        self.assertEqual(
+            [child.tokens for child in fields.children],
+            [["request>headers", "delete"], ["request>uri", "query"], ["wrap", "json"]],
+        )
+        query = fields.one("request>uri", "query")
+        self.assertEqual([child.tokens for child in query.children], [["delete", "k"]])
+        # Every path outside the sync route is skipped, so the log holds that route alone.
+        route = handle(block, f"{SYNC_PATH}/*")
+        self.assertIsNotNone(route, f"no handle for {SYNC_PATH}/*")
+        self.assertEqual(block.one("log_skip").tokens, ["log_skip", "@not_sync"])
+        self.assertEqual(
+            block.one("@not_sync").tokens, ["@not_sync", "not", "path", *route.tokens[1:]]
+        )
+        # No route writes a log of its own beside the site's.
+        for each in examined("handle(s)", block.find("handle")):
+            self.assertEqual(each.find("log"), [], f"the handle {each.tokens[1:]} logs")
+
 
 class NoPrivateValue(unittest.TestCase):
     def test_no_deploy_template_names_a_private_value(self):
