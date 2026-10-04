@@ -1,8 +1,8 @@
--- @phx covers tools/table-census/table_census.rs anchor=covering digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers tools/table-census/table_census.rs anchor=piece digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers tools/table-census/table_census.rs anchor=reach_piece digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers tools/table-census/table_census.rs anchor=reach digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers tools/table-census/table_census.rs anchor=refusals digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+-- @phx covers tools/table-census/table_census.rs anchor=covering digest=sha256:10bb51774d8e572fbdcccf18ba58f333e76c039be60a77f807ead26bcc0271ce
+-- @phx covers tools/table-census/table_census.rs anchor=piece digest=sha256:ea02ecbfd9271524941028a0f87af47b0b41601f04bc1ec4190d3195d3bcb159
+-- @phx covers tools/table-census/table_census.rs anchor=reach_piece digest=sha256:eef998e94be660d1683d1ca43947da01368a7a323dadf6ef48858a78c456d198
+-- @phx covers tools/table-census/table_census.rs anchor=reach digest=sha256:d28dc73f951157932ce6b5ee9470fa45baef1f94d8303ce92af740d0d51e8504
+-- @phx covers tools/table-census/table_census.rs anchor=refusals digest=sha256:a389b7d2500dff709ed0e7587fe09e12766bd3f32bd2dc326666cccbec6e7ae2
 -- @phx vectors formal/vectors/table-census-reach.jsonl
 -- @phx cites #604, #585
 -- @phx theorem refused_within_dev_and_a_lone_character_spared ramp=report
