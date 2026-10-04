@@ -141,3 +141,25 @@ async fn a2_the_provider_token_is_an_es256_jwt_the_fake_verifies() {
     let stranger = TestKey::generate().verifying();
     assert_eq!(verify_jwt(&FakeApns::raw_token(&received[0]), &stranger), None);
 }
+
+#[tokio::test]
+async fn a3_the_provider_token_is_reused_inside_its_window_and_reminted_after() {
+    let rig = Rig::start().await;
+
+    assert_eq!(rig.deliver(&alert()).await, Sent::Delivered);
+    rig.clock.advance(Duration::from_secs(19 * 60));
+    assert_eq!(rig.deliver(&alert()).await, Sent::Delivered);
+    rig.clock.advance(Duration::from_secs(26 * 60));
+    assert_eq!(rig.deliver(&alert()).await, Sent::Delivered);
+
+    let received = rig.received();
+    assert_eq!(received.len(), 3);
+    let tokens: Vec<String> = received.iter().map(FakeApns::raw_token).collect();
+    assert_eq!(tokens[1], tokens[0], "19 minutes on, the token is reused");
+    assert_ne!(tokens[2], tokens[0], "45 minutes on, a new token is minted");
+    let minted = rig
+        .development
+        .token(&received[2])
+        .expect("the fake verifies the new token");
+    assert_eq!(minted.claims["iat"], json!(START_SECOND + 45 * 60));
+}
