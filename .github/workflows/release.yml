@@ -133,7 +133,7 @@ jobs:
   # entry pins, under the fork's own lockfile. It reads the repository and writes nothing, and the
   # release job needs it, so an advisory refuses the release before anything is built.
   audit-sync-server:
-    runs-on: ubuntu-24.04
+    runs-on: "ubuntu-24.04"
     timeout-minutes: 20
     permissions:
       contents: read
@@ -141,8 +141,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: the pinned Rust toolchain (rust-toolchain.toml)
-        run: rustup show
+      - name: the audit job reads the pinned Rust toolchain too
+        run: rustup show active-toolchain
       - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
         with:
           tool: cargo-deny
