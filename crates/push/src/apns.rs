@@ -321,6 +321,9 @@ fn read(answer: &Answer) -> Sent {
         },
         400 if refuses_the_device(answer) => Sent::Rejected(Refusal::Token),
         403 => Sent::Rejected(Refusal::ProviderToken),
+        429 | 500..=599 => Sent::RetryLater {
+            after: answer.retry_after,
+        },
         _ => Sent::Failed(Unreached::Unexpected),
     }
 }
