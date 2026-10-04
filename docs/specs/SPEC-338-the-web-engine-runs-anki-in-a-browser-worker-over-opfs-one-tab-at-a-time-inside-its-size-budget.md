@@ -177,8 +177,11 @@ test only. CI's `web-engine` job runs the Playwright tests over the module it bu
 | `scripts/web-engine-build.sh` | gate | added: builds the module and its bindings |
 | `scripts/web-engine-size.py` | gate | added: the size gate |
 | `scripts/tests/test_web_engine_size.py` | gate | added: A3, A4, A5 |
+| `scripts/mutation-python.json` | gate | the size gate's entry in the mutation map |
+| `scripts/mutation-equivalent.d/deck-streak-web-engine.json` | gate | added: one record for each mutant of the `wasm32`-only module, which the native build never compiles |
 | `scripts/tests/test_engine_pin.py` | gate | A14, A15: the patch takes `anki` and `anki_proto`; ADR-058's appended note |
 | `scripts/tests/test_ci_workflows.py` | gate | A16, and the `ci` aggregate's needs |
+| `scripts/tests/test_deploy_templates.py` | gate | the Caddy policy test reads the page's `script-src` with `'wasm-unsafe-eval'` |
 | `.github/workflows/ci.yml` | gate | the `web-engine` job and the `ci` job's need of it |
 | `scripts/mutation-rows.d/S33800-S33899.json` | gate | added: this SPEC's rows |
 | `web/app/svelte.config.js` | `miniapp` | `'wasm-unsafe-eval'` in `script-src` |
