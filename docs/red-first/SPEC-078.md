@@ -134,3 +134,50 @@ daemon's wiring test, in another package, and its closed flag only by the amount
 `read:qaa` read closed `false` and the current Monday's `true`, expected `true` and `false`).
 
 Ruling 156 closes the last missed mutant of the habits read tree, `crates/habits/src/minutes.rs` line 50, `>` replaced by `>=` in `reading_xp`. The clamp answered the cap on both sides of `xp == cap`, so no test could tell the two operators apart, and an equivalent record is not admitted. `reading_xp` is now `minutes.saturating_mul(READING_XP_PER_MIN).min(READING_XP_DAILY_CAP_PER_LANG)`, a minimum with no comparison to mutate, and it is no longer `const` because `Ord::min` is not callable there; every caller is a runtime call. Readings: the old and new bodies agree on 200002 of 200002 inputs (`minutes` 0 to 200000 and `u32::MAX`); `the_minutes_xp_matches_the_predecessors_golden` examined 36 cases before and after; the habits and coordination packages pass whole; clippy with `-D warnings` and `cargo fmt --check` are clean; the two body replacements cargo-mutants can still generate, `0` and `1`, each fail that golden test (`running 1 test`, 1 failed) in a scratch copy restored byte for byte.
+
+## Part 078b, the writing habit and the habit badges
+
+The SPEC amendment, ADR-078's amendment and the schematic were committed first (00a7f32e), then the
+HabitXpFollowsItsLog writing extension, lean/HabitWriting and their claims (78e331d0, 54df290f,
+d976e2fc), then the goldens (d9d46738), then the migration, the habits crate's stubs and their
+tests (0455dc58). The kernel and progression criteria, the coordination use cases and steps, the
+daemon's two fold tests, the bot's `/write` and `/unwrite` and the badge golden's constructible
+random cases followed at 875ff0f7, each a stub that compiles against the tests. Every fenced
+criterion of section 14 ran red at 875ff0f7, by its exact name, in ONE call over the eight crates
+(`cargo test -j 1 -p <the eight> --no-fail-fast -- --test-threads=1`, rc 101, 25 tests failed, no
+compile error), each by assertion.
+
+```red-first
+A7: red at 875ff0f7: assertion `left == right` failed: {"codes":["qaa"],"done":["qaa"]}; left: [["write:all",0],["write:qaa",0]], right: [["write:all",100],["write:qaa",75]]
+A8: red at 875ff0f7: assertion `left == right` failed: {"codes":["qaa","qab"],"rows":[...],"today":20104}; left: {"all":0,"by_course":{"qaa":0,"qab":0}}, right: {"all":3,"by_course":{"qaa":3,"qab":3}}
+A9: red at 875ff0f7: assertion `left == right` failed: no day is all confirmed over no writing course; left: {StudyDay(20097)..StudyDay(20104)}, right: {}
+A10: red at 875ff0f7: assertion `left == right` failed: one toggle settles the course's 75 and the day's bonus of 100; left: {}, right: {"write:all": 100, "write:qab": 75}
+A10b: red at 875ff0f7: assertion `left == right` failed: written once a day; left: (false, false, false, false), right: (true, false, true, true)
+A10c: red at 875ff0f7: a Monday chip tapped on Tuesday answers with Tuesday's checklist and toggles nothing: Ok(Done(Checklist { day: StudyDay(20102), lines: [], streak: 0 }))
+A10d: red at 875ff0f7: assertion `left == right` failed: the day's writing is settled from its log, and a held row the log does not pay is zeroed; left: [("write:qaa", 75)], right: [("write:all", 100), ("write:qaa", 0), ("write:qab", 75)]
+A19a: red at 875ff0f7: assertion `left == right` failed: {"all_langs_goal_met":false,"langs_read_this_week":0,"reading_entries":0,"week_total_min":0,"writing_all_streak":0,"writing_entries":0}; left: ["ink_week","ink_month","ink_century","marathon_reader"], right: []
+A19b: red at 875ff0f7: ink_week is not earned without its courses: ["quill_initiate", "ink_week", "ink_month", "ink_century", "bookworm_week", "polyglot_reader", "marathon_reader"]
+A19: red at 875ff0f7: assertion `left == right` failed: each badge of Some("one reading entry") is awarded once, for the evaluated day, and marked; left: [], right: [("first_page", 0, 20107, true)]
+A22b: red at 875ff0f7: writing_log is declared exported and erased
+A23b: red at 875ff0f7: write:qaa is derived
+A32: red at 875ff0f7: a writing course coded all is refused: Ok(Courses { .. code: CourseCode("all") .. writing: true .. })
+A33: red at 875ff0f7: assertion `left == right` failed: bare /write; left: the help reply, right: the write-chips golden
+A34: red at 875ff0f7: assertion `left == right` failed: /write is in the menu; left: None, right: Some("Confirm today's writing")
+A35: red at 875ff0f7: assertion `left == right` failed: the habit badges step is registered in phase 7, right before the badge step; left: None, right: Some(6)
+A35b: red at 875ff0f7: assertion `left == right` failed: the writing step is registered in phase 4, right after the habit step; left: None, right: Some(5)
+A36: red at 875ff0f7: assertion `left == right` failed: one chip per writing course, naming the checklist's day; left: [], right: ["hb:w:qab:20102"]
+A37: red at 875ff0f7: assertion `left == right` failed: the two amounts; left: (Some(75), Some(100)), right: (Some(0), Some(0))
+```
+
+Amended tests are not red-first evidence and are recorded only so a reader knows why they were red
+at 875ff0f7: `habits_constants.rs`'s `the_habit_constants_equal_the_predecessors` (A14b, T20:
+`constants.WRITING_XP_PER_DAY`, left `Number(0)`, right `Number(75)`); `commands.rs`'s
+`every_golden_message_is_what_the_bot_sends` (T26: the seven writing goldens are rendered by no
+builder yet); and `data_rights_symmetry.rs`'s `every_table_of_the_schema_is_declared_by_exactly_one_port`
+(`writing_log is declared by no port`), `the_exported_tables_equal_the_erased_tables_over_every_port`
+and `erase_leaves_the_cron_fire_ledger_and_the_schema_table_untouched` (`writing_log holds no row:
+give it one in SEEDS`, T29). `kernel/tests/schema.rs`'s
+`every_migration_names_the_context_that_owns_its_tables` is red until `docs/CONTEXT-MAP.md`'s
+ownership register names `writing_log` (a data-carry red). The menu test
+`the_menu_is_registered_for_the_owners_chat_only` (T23) was green at 875ff0f7: the menu moves at
+green.
