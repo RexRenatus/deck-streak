@@ -244,8 +244,13 @@ PAGING_VALUES = {
     ("Service", "ReadWritePaths"): ("/run/deck-streak-sync",),
     # The sync server drains on an interrupt alone (SPEC-337 R2), so its stop signal is that one.
     ("Service", "KillSignal"): ("SIGINT",),
-    # Enabling the sync server enables its snapshot window, and disabling it removes the window.
-    ("Install", "Also"): ("deck-streak-sync-snapshot.service",),
+    # Enabling the sync server enables its snapshot window, its archive and its sync drill, and
+    # disabling it removes all three (SPEC-340 R3, R4).
+    ("Install", "Also"): (
+        "deck-streak-sync-snapshot.service",
+        "deck-streak-sync-archive.service",
+        "deck-streak-sync-restore-drill.service",
+    ),
 }
 
 

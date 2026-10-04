@@ -1,7 +1,8 @@
 # The sync server's stopped-server window: the snapshot's copy, run inside the daily backup's run
 # (SPEC-337 R5; ADR-347 D12). The server holds each user's media index in SQLite's exclusive locking
 # mode for its whole life, so the copy runs with the server stopped, and only the copy does: every
-# check, the archive and the offsite copy run in deck-streak-backup.service after it.
+# check, the archive and the offsite copy run in deck-streak-sync-archive.service after it
+# (SPEC-340 R3; ADR-351 D1).
 #
 # Starting this unit stops the server first (Conflicts=, with the stop ordered before this start),
 # and PID 1 starts the server again when it ends, on success and on failure alike (OnSuccess=,
@@ -23,10 +24,11 @@ OnFailure=deck-streak-alert@%n.service
 [Service]
 Type=oneshot
 ExecStart=/usr/bin/python3 /usr/local/lib/deck-streak/current/deploy/scripts/backup.py --sync-window
-User=deck-streak
-Group=deck-streak
-# The snapshots directory it writes beside the backups, and the server's store it reads.
-StateDirectory=deck-streak deck-streak-sync-server
+# The sync family's own user and group (SPEC-340 R2; ADR-351 D1).
+User=deck-streak-sync
+Group=deck-streak-sync
+# The sync family's snapshots directory it writes, first, and the server's store it reads.
+StateDirectory=deck-streak-sync-snapshots deck-streak-sync-server
 # The window is bounded: a hung copy is stopped, which fails the unit and starts the server again.
 TimeoutStartSec=15min
 SyslogIdentifier=deck-streak-sync-snapshot

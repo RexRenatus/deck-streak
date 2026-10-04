@@ -7,16 +7,18 @@
 # itself stays where it is. It exits non-zero on any failed step, which pages through OnFailure=.
 # It restores nothing into the live database.
 #
-# When the sync server's snapshot directory exists, it also restores the newest snapshot archive
-# into the same private directory, checks every file against the archive's manifest of sha256
-# digests, runs `PRAGMA integrity_check` on each user's collection and media index, and opens each
-# collection to count its cards (SPEC-337 R5; ADR-347 D5, D12). A snapshot directory with no archive
-# fails the drill; no snapshot directory means the sync server is not installed.
+# The sync server's part, `--part sync`, restores the newest snapshot archive into a private
+# directory instead, checks every file against the archive's manifest of sha256 digests, runs
+# `PRAGMA integrity_check` on each user's collection and media index, and opens each collection to
+# count its cards (SPEC-337 R5; ADR-347 D5, D12). It runs as the sync family's own user, in a unit of
+# its own (SPEC-340 R5; ADR-351 D1), which is installed only with the server, so a missing snapshot
+# directory or one with no archive fails it.
 #
 # The migration rule: the replica is at the live database's version (it follows every commit), and a
 # daily copy is at that version or an earlier one, older after a deploy, never ahead of the live one.
 #
-# The unit passes no arguments. The flags exist so a test can run it over a synthetic tree.
+# The database's unit passes no arguments, and the part is the database's. The sync family's unit
+# passes `--part sync`. The other flags exist so a test can run it over a synthetic tree.
 set -euo pipefail
 umask 077
 
@@ -28,6 +30,7 @@ config="$here/../litestream.yml"
 database="$state/deck_streak.db"
 backups="$state/backups"
 snapshots="$state/sync-snapshots"
+part="database"
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -36,16 +39,23 @@ while [ "$#" -gt 0 ]; do
     --database) database="$2" ;;
     --backups) backups="$2" ;;
     --snapshots) snapshots="$2" ;;
+    --part) part="$2" ;;
     *) echo "restore-drill: unknown argument $1" >&2; exit 2 ;;
   esac
   shift 2
 done
+case "$part" in
+  database|sync) ;;
+  *) echo "restore-drill: unknown part $part" >&2; exit 2 ;;
+esac
 
 work="$(mktemp -d)"
 trap 'rm -rf -- "$work"' EXIT
 restored="$work/restored.db"
 daily="$work/daily.db"
 
+# The database's part. The body stays at the margin, as its here-document's Python must.
+if [ "$part" = database ]; then
 # The newest daily copy, by the instant its name carries.
 newest=""
 for candidate in "$backups"/deck_streak-*.db; do
@@ -106,8 +116,11 @@ if failed:
     sys.exit(1)
 print(f"restore-drill: replica and daily copy are sound at migration {replica} and {copy}")
 PY
+exit 0
+fi
 
-[ -d "$snapshots" ] || exit 0
+# The sync server's part.
+[ -d "$snapshots" ] || { echo "restore-drill: no snapshot directory" >&2; exit 1; }
 mkdir -- "$work/sync"
 python3 - "$snapshots" "$work/sync" <<'PY'
 import hashlib

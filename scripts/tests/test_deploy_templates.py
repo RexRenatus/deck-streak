@@ -115,6 +115,9 @@ SCRIPTS = {
     DRILL_SERVICE_NAME: f"{RELEASE}/deploy/scripts/restore-drill.sh",
     # SPEC-337: the snapshot's window runs the backup script's copy alone.
     SYNC_SNAPSHOT_SERVICE_NAME: f"/usr/bin/python3 {RELEASE}/deploy/scripts/backup.py --sync-window",
+    # SPEC-340 R3, R5: the archive and the sync drill run the same scripts' own parts.
+    SYNC_ARCHIVE_SERVICE_NAME: f"/usr/bin/python3 {RELEASE}/deploy/scripts/backup.py --sync-archive",
+    SYNC_DRILL_SERVICE_NAME: f"{RELEASE}/deploy/scripts/restore-drill.sh --part sync",
 }
 # Their lifecycle: a oneshot each, ended before its timer is due again; the two a timer starts
 # yield to the daemons as a job does (resources.batch-priority), and the alert pages at once.
@@ -147,6 +150,19 @@ OBSERVABILITY_SERVICE = {
     # The window runs with the sync server stopped, so it is bounded and does not yield (ADR-347
     # D12); no timer starts it, so resources.batch-priority does not reach it and it waives nothing.
     SYNC_SNAPSHOT_SERVICE_NAME: {"Type": "oneshot", "TimeoutStartSec": "15min"},
+    # The archive and the sync drill yield as the backup and the drill they follow do (SPEC-340).
+    SYNC_ARCHIVE_SERVICE_NAME: {
+        "Type": "oneshot",
+        "TimeoutStartSec": "30min",
+        "Nice": "10",
+        "IOSchedulingClass": "idle",
+    },
+    SYNC_DRILL_SERVICE_NAME: {
+        "Type": "oneshot",
+        "TimeoutStartSec": "1h",
+        "Nice": "10",
+        "IOSchedulingClass": "idle",
+    },
 }
 # SPEC-064 R1: the Litestream daemon, an exec service that restarts on failure and can trip its
 # start limit; it has no watchdog, since Litestream does not notify systemd.
@@ -220,6 +236,8 @@ ROLE_CREDENTIALS = {
     BACKUP_SERVICE_NAME: (),
     DRILL_SERVICE_NAME: (),
     SYNC_SNAPSHOT_SERVICE_NAME: (),
+    SYNC_ARCHIVE_SERVICE_NAME: (),
+    SYNC_DRILL_SERVICE_NAME: (),
     SYNC_SERVER_SERVICE_NAME: ("SYNC_SERVER_OWNER", "SYNC_SERVER_STAGING"),
 }
 # The role each service runs (R2); the job template's `%i` is its instance, the job's id.
@@ -1067,6 +1085,8 @@ class TheTemplatesFitTheHostBudget(unittest.TestCase):
                     BACKUP_SERVICE_NAME,
                     DRILL_SERVICE_NAME,
                     SYNC_SNAPSHOT_SERVICE_NAME,
+                    SYNC_ARCHIVE_SERVICE_NAME,
+                    SYNC_DRILL_SERVICE_NAME,
                 ]
             ),
         )
@@ -1499,9 +1519,14 @@ class TheServicesRunTheirRoles(unittest.TestCase):
                 )
                 for key, value in OBSERVABILITY_SERVICE[unit.name].items():
                     self.assertEqual(last(unit, "Service", key), value, f"{unit.rel} {key}")
-                # A timer or a failure starts each, and the backup's run starts the snapshot's
-                # window, which runs first (ADR-347 D12).
-                wanted = [BACKUP_SERVICE_NAME] if unit.name == SYNC_SNAPSHOT_SERVICE_NAME else []
+                # A timer or a failure starts each. The backup's run starts the snapshot's window,
+                # which runs first (ADR-347 D12), and the archive (SPEC-340 R3); the drill's run
+                # starts the sync drill (SPEC-340 R5).
+                wanted = {
+                    SYNC_SNAPSHOT_SERVICE_NAME: [BACKUP_SERVICE_NAME],
+                    SYNC_ARCHIVE_SERVICE_NAME: [BACKUP_SERVICE_NAME],
+                    SYNC_DRILL_SERVICE_NAME: [DRILL_SERVICE_NAME],
+                }.get(unit.name, [])
                 self.assertEqual(unit.values("Install", "WantedBy"), wanted, unit.rel)
                 continue
             if unit.name == LITESTREAM_SERVICE_NAME:

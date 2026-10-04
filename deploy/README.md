@@ -44,7 +44,8 @@ that unit (ADR-061).
 | `/usr/local/lib/deck-streak/current/deploy/` | the alert's, the evaluator's and the watch's `ExecStart=` | the release's copy of this directory's `scripts/` and `slo.json`, under the same root |
 | UTC, at the default rollover hour 4 | every timer's `OnCalendar=` | the deployment's zone, and each job timer's rollover hour, rendered with the two settings that name them (ADR-027); the evaluator's and the watch's timers fire every few minutes in any zone, and take the deployment's zone all the same, so no calendar is left in UTC |
 | `{$DECKSTREAK_HOST}`, `{$DECKSTREAK_WEB_ROOT}`, `{$DECKSTREAK_API_UPSTREAM}`, `{$DECKSTREAK_SYNC_UPSTREAM}` | the Caddy block | the Mini App's host name, the release's web build, the API's listen address and the sync server's |
-| the system user and group `deck-streak` | every service's `User=` and `Group=` | the user itself |
+| the system user and group `deck-streak` | every service's `User=` and `Group=` but the sync family's | the user itself |
+| the system user and group `deck-streak-sync` | the sync server's, its window's, its archive's and its drill's `User=` and `Group=` | the user itself, with no login shell, no home and no other group (SPEC-340 R2; ADR-351 D1) |
 | `/run/deck-streak-credentials/socket` | every `LoadCredential=` line | the credential socket, its fetch helper and its map (ADR-038) |
 
 `DECKSTREAK_API_UPSTREAM` is the same address as the setting `DECKSTREAK_API_LISTEN`: Caddy proxies

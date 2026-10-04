@@ -7,16 +7,18 @@ KEEP copies. It exits non-zero on any failed step and leaves the copies that wer
 a copy is pruned only after a new one is in place. It copies the database and not the ingest's
 collection copy, which the day's sync downloads again (ADR-037), and not a credential.
 
-It also snapshots the sync server's store (SPEC-337 R5; ADR-347 D5, D12), in two parts:
+It also snapshots the sync server's store (SPEC-337 R5; ADR-347 D5, D12), in two parts, each run
+by a unit of the sync family's own (SPEC-340 R3; ADR-351 D1):
 
 - `--sync-window` is the copy, run by deck-streak-sync-snapshot.service while the server is
   stopped: each user's collection and media index by the online backup, refused at once when a
   running server holds either, and the media files, as one generation that is published by a rename
   only when whole. The unit starts the server again whether this exits 0 or 1.
-- The daily run, after the server is started again, checks the newest generation's databases with
-  `PRAGMA integrity_check`, writes a manifest of sha256 digests, renames the generation into an
-  archive, copies both offsite by the command and bucket the settings name (with arguments, no
-  shell) and keeps the newest KEEP archives.
+- `--sync-archive` is the archive, run by deck-streak-sync-archive.service after the server is
+  started again: it checks the newest generation's databases with `PRAGMA integrity_check`, writes
+  a manifest of sha256 digests, renames the generation into an archive, copies both offsite by the
+  command and bucket the settings name (with arguments, no shell) and keeps the newest KEEP
+  archives. The database's daily run archives nothing.
 
 Standard library only, so the unit needs no interpreter of its own.
 """
@@ -225,8 +227,8 @@ def checked_manifest(generation, scratch):
 
 
 def archive(snapshots, environ):
-    """The daily run's part of the snapshot, after the window: 0 when there is no generation or
-    the newest is checked, archived and copied offsite; 1 on any failed step."""
+    """The archive unit's run (`--sync-archive`), after the window: 0 when there is no generation
+    or the newest is checked, archived and copied offsite; 1 on any failed step."""
     snapshots = Path(snapshots)
     if not snapshots.is_dir():
         return 0
@@ -277,18 +279,19 @@ def main(argv=None, now=None):
     parser.add_argument("--backups", default=str(Path(state) / "backups"))
     parser.add_argument("--keep", type=int, default=KEEP)
     parser.add_argument("--sync-window", action="store_true")
+    parser.add_argument("--sync-archive", action="store_true")
     parser.add_argument("--sync-base", default=states[1] if len(states) > 1 else SYNC_BASE)
     parser.add_argument("--snapshots", default=str(Path(state) / SNAPSHOTS))
     args = parser.parse_args(argv)
     now = now or datetime.now(timezone.utc)
     if args.sync_window:
         return window(args.sync_base, args.snapshots, now)
+    if args.sync_archive:
+        return archive(args.snapshots, os.environ)
     if args.keep < 1:
         print("backup: --keep must be at least 1", file=sys.stderr)
         return 1
-    copied = run(args.database, args.backups, args.keep, now)
-    archived = archive(args.snapshots, os.environ)
-    return max(copied, archived)
+    return run(args.database, args.backups, args.keep, now)
 
 
 if __name__ == "__main__":

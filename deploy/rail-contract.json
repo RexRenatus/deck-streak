@@ -35,18 +35,26 @@
       "neutral": ["/usr/bin/python3 /usr/local/lib/deck-streak/current/deploy/scripts/backup.py"]
     },
     {
-      "unit": "deck-streak-backup.service",
-      "section": "Service",
-      "key": "EnvironmentFile",
-      "neutral": ["/etc/deck-streak/deck-streak.env"]
-    },
-    {
       "unit": "deck-streak-sync-snapshot.service",
       "section": "Service",
       "key": "ExecStart",
       "neutral": [
         "/usr/bin/python3 /usr/local/lib/deck-streak/current/deploy/scripts/backup.py --sync-window"
       ]
+    },
+    {
+      "unit": "deck-streak-sync-archive.service",
+      "section": "Service",
+      "key": "ExecStart",
+      "neutral": [
+        "/usr/bin/python3 /usr/local/lib/deck-streak/current/deploy/scripts/backup.py --sync-archive"
+      ]
+    },
+    {
+      "unit": "deck-streak-sync-archive.service",
+      "section": "Service",
+      "key": "EnvironmentFile",
+      "neutral": ["/etc/deck-streak/deck-streak.env"]
     },
     {
       "unit": "deck-streak-backup.timer",
@@ -160,6 +168,14 @@
       "section": "Service",
       "key": "EnvironmentFile",
       "neutral": ["/etc/deck-streak/deck-streak.env"]
+    },
+    {
+      "unit": "deck-streak-sync-restore-drill.service",
+      "section": "Service",
+      "key": "ExecStart",
+      "neutral": [
+        "/usr/local/lib/deck-streak/current/deploy/scripts/restore-drill.sh --part sync"
+      ]
     },
     {
       "unit": "deck-streak-restore-drill.timer",

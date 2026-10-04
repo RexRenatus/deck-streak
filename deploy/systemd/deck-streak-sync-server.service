@@ -19,8 +19,9 @@ X-DurableServices-Waive=watchdog-missing the sync server sends no sd_notify keep
 # exec: the unit is active once the launcher has exec'd the server, which sends no readiness.
 Type=exec
 ExecStart=/usr/local/lib/deck-streak/current/deploy/scripts/sync-server.sh
-User=deck-streak
-Group=deck-streak
+# The sync family's own user and group, which no other unit runs as (SPEC-340 R2; ADR-351 D1).
+User=deck-streak-sync
+Group=deck-streak-sync
 # The users' collections and media, one directory per user; the launcher points the server here.
 StateDirectory=deck-streak-sync-server
 # The launcher reads the loopback address it listens on from this file.
@@ -68,6 +69,9 @@ CapabilityBoundingSet=
 
 [Install]
 WantedBy=multi-user.target
-# Enabling the server enables the snapshot's stopped-server window in the daily backup's run, and
-# disabling it removes the window (ADR-347 D12).
+# Enabling the server enables the snapshot's stopped-server window and its archive in the daily
+# backup's run, and its drill in the restore drill's run; disabling it removes all three (ADR-347
+# D12; ADR-351 D1).
 Also=deck-streak-sync-snapshot.service
+Also=deck-streak-sync-archive.service
+Also=deck-streak-sync-restore-drill.service

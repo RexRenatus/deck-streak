@@ -130,6 +130,7 @@ CI by name, and `docs/red-first/SPEC-340.md` records why.
 | `docs/specs/SPEC-340-the-sync-server-is-hardened-before-its-first-deploy.md` | docs | new: this SPEC |
 | `docs/decisions/ADR-351-the-sync-family-runs-as-its-own-user-its-archive-is-sealed-and-dated-and-its-route-is-logged-and-bounded.md` | docs | new: D1 to D9 |
 | `docs/decisions/ADR-347-the-sync-server-is-built-from-the-engines-pin-reads-hashed-users-from-credentials-and-serves-under-its-own-path.md` | docs | appended amendment: the sync key and its hash (D13), and the sentences ADR-351 replaces |
+| `docs/decisions/ADR-032-deploy-templates-and-the-host-budget.md` | docs | appended amendment: the two new units' ceilings, in its budget table's form |
 | `docs/specs/SPEC-337-the-sync-server-is-built-at-the-tag-runs-as-its-own-unit-and-has-a-drilled-offsite-snapshot.md` | docs | its section 10 gains a paragraph naming the requirements SPEC-340 replaces |
 | `docs/schematics/sync-server-hardening.md` | docs | new: the unit graph by user, the offsite path, the edge and the ban |
 | `docs/schematics/sync-server-packaging-and-cutover.md` | docs | one line pointing to the hardening schematic for the archive, the sync drill and the users |
@@ -154,8 +155,8 @@ CI by name, and `docs/red-first/SPEC-340.md` records why.
 | `.github/workflows/release.yml` | ci | the `audit-sync-server` job; the release job's `needs:` |
 | `scripts/audit-sync-server.sh` | ci | new |
 | `scripts/tests/_units.py` | tests | the paging census: two IP keys; `Also=` bound to three names |
-| `scripts/tests/test_deploy_templates.py` | tests | A2, A7, A10, A11; `HARDENING` and `PER_SERVICE` rows |
-| `scripts/tests/test_backup_units.py` | tests | A3, A4, A5, A15; the window test's state directory; the drill test runs each part |
+| `scripts/tests/test_deploy_templates.py` | tests | A2, A7, A10, A11; `HARDENING` and `PER_SERVICE` rows; the unit tables name the two new units |
+| `scripts/tests/test_backup_units.py` | tests | A3, A4, A5, A15; the window test's state directory; the drill test runs each part; the census counts two drills |
 | `scripts/tests/test_sync_server_launcher.py` | tests | A12 |
 | `scripts/tests/test_sync_server_runbook.py` | tests | A1, A13 |
 | `scripts/tests/test_privacy_policy.py` | tests | A14 |
