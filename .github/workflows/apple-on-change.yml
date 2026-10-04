@@ -1,0 +1,31 @@
+name: apple-on-change
+
+# The Apple build on a change (SPEC-344 R2, ADR-355 D1 and D6): a pull request into dev that
+# changes the FFI adapter, the iOS tree, the lockfile, the workspace manifest, the toolchain pin or
+# either workflow runs the one Apple job body, xcframework.yml. No secret is passed, and the token
+# is read-only.
+on:
+  pull_request:
+    branches: [dev]
+    types: [opened, synchronize, reopened]
+    paths:
+      - "crates/ffi/**"
+      - "ios/**"
+      - "Cargo.lock"
+      - "Cargo.toml"
+      - "rust-toolchain.toml"
+      - ".github/workflows/xcframework.yml"
+      - ".github/workflows/apple-on-change.yml"
+
+permissions:
+  contents: read
+
+# A pull request's runs share its ref's group, and a newer push to it cancels the run it supersedes
+# (SPEC-190). Any other event has a group of its own, its run id, so it is never cancelled.
+concurrency:
+  group: apple-on-change-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  apple:
+    uses: ./.github/workflows/xcframework.yml
