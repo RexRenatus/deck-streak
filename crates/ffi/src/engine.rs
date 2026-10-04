@@ -5,6 +5,8 @@ use std::sync::Arc;
 
 use anki::backend::{Backend, init_backend};
 
+use crate::allow_list::allowed;
+
 /// Why a call was not answered with the response's bytes. A native client reads it as a thrown
 /// error; nothing on this path panics.
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Error)]
@@ -78,9 +80,18 @@ impl Engine {
     ///
     /// [`EngineRefusal::NotAllowed`] for a call outside the allow-list, and
     /// [`EngineRefusal::Engine`] when the engine answers an allowed call with an error.
+    #[expect(
+        clippy::needless_pass_by_value,
+        reason = "a foreign caller's bytes cross the boundary owned, as the bindings pass them"
+    )]
     pub fn run(&self, service: u32, method: u32, input: Vec<u8>) -> Result<Vec<u8>, EngineRefusal> {
-        // The shape alone: no call is dispatched to the engine yet, so every call is refused.
-        let _ = (&self.backend, input);
-        Err(EngineRefusal::NotAllowed { service, method })
+        // The allow-list decides before the engine sees the call: an unlisted pair never reaches
+        // the engine's dispatch, whatever it would have done there.
+        if allowed(service, method).is_none() {
+            return Err(EngineRefusal::NotAllowed { service, method });
+        }
+        self.backend
+            .run_service_method(service, method, &input)
+            .map_err(|error| EngineRefusal::Engine { error })
     }
 }
