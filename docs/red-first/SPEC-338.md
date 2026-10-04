@@ -39,6 +39,10 @@ A12: green at 591d81f
 A13: red at 59aead3: AssertionError: expected [] to deeply equal [ { id: 4, ok: false, …(2) }, …(1) ]
 A13: green at 591d81f
 A16: not red: test_ci_workflows.py is never run locally (ruling 189); CI by name decides it
+A18: red at 64530a2: AssertionError: expected { id: 2, ok: false, …(2) } to deeply equal { id: 2, ok: true, value: 1114112 }
+A18: green at ab2d6e8
+A19: red at 64530a2: assertion `left == right` failed: note 0's fields left: (17, 16) right: (200, 200)
+A19: green at ab2d6e8
 ```
 
 ## What each pair disclosed
@@ -73,6 +77,14 @@ A16: not red: test_ci_workflows.py is never run locally (ruling 189); CI by name
   second tab's refusal, and so read red on the first tab's open, which is not A9's reason. The test
   was re-ordered so the second tab's refusal is asserted first, and the red quoted above is the
   re-ordered run.
+- **A18 and A19 joined the SPEC with their own commit (cad8c4e).** The Worker's peak memory needed
+  a reading the page could take, and section 7's realistic collection needed ADR-022's note shape,
+  so the SPEC gained both criteria before their tests. At 64530a2, A18 asked an open session for
+  `memory`, which the protocol did not yet hold, so the reply was `bad-request`; the fake engine's
+  `memory_pages` named a key `EngineModule` did not have yet, which `svelte-check` reads as a type
+  error, while Vitest strips types and ran the assertion. A19 read 250,001 notes over a stub that
+  wrote the old short fields. At ab2d6e8 `cargo test` read 4 passed across the crate's two test
+  files, and Vitest read `Tests  19 passed (19)` across the engine's files and the policy's.
 - **A16 has no local red.** Its judge, `web_engine_job_problems`, and its test are in
   `scripts/tests/test_ci_workflows.py`, which is never run on a builder's machine; CI runs it by
   name, over the real `ci.yml` and a planted copy for each refusal.
