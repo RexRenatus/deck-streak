@@ -80,14 +80,12 @@ CACHE_BY_THEMSELVES = (
 )
 
 
-def runner_refusal(name, runner):
-    """Why the workflow `name` may not run on `runner`, or None when it may: a pinned Ubuntu image
-    (SPEC-002 A9), or the one runner ADMITTED_RUNNERS admits that one workflow to (SPEC-336 R9)."""
+def admitted_runner(name):
+    """The pattern every runner of the workflow `name` must match: a pinned Ubuntu image (SPEC-002
+    A9), or, for the one workflow ADMITTED_RUNNERS names, its one runner exactly (SPEC-336 R9)."""
     if name in ADMITTED_RUNNERS:
-        allowed = str(runner) == ADMITTED_RUNNERS[name]
-    else:
-        allowed = re.search(r"^ubuntu-\d\d\.\d\d$", str(runner)) is not None
-    return None if allowed else f"{name} runs on {runner}"
+        return f"^{re.escape(ADMITTED_RUNNERS[name])}$"
+    return r"^ubuntu-\d\d\.\d\d$"
 
 
 def workflow_file_text(path):
@@ -136,18 +134,18 @@ class WorkflowsAreHardened(unittest.TestCase):
             runners += [(path.name, runner) for runner in entries(workflow, "runs-on")]
         for name, runner in examined("runs-on values", runners):
             # A list or a mapping of labels is read as its text, so the pattern refuses it by name.
-            self.assertIsNone(runner_refusal(name, runner), f"{name} runs on {runner}")
+            self.assertRegex(str(runner), admitted_runner(name), f"{name} runs on {runner}")
 
     def test_the_admitted_runner_is_admitted_to_its_one_workflow_only(self):
         # SPEC-336 R9: the admitted workflow passes on its runner and is refused on any other, and
         # its runner is refused under any other name (PLANTED_KEYS plants it in the control too).
         for name, admitted in examined("admitted runners", list(ADMITTED_RUNNERS.items())):
-            self.assertIsNone(runner_refusal(name, admitted))
+            self.assertRegex(admitted, admitted_runner(name))
             for runner in ("macos-15", "ubuntu-24.04", [admitted], "self-hosted"):
-                self.assertEqual(runner_refusal(name, runner), f"{name} runs on {runner}")
+                self.assertNotRegex(str(runner), admitted_runner(name))
             for other in ("planted.yml", "ci.yml", name.replace(".yml", ".yaml"), f"x{name}"):
-                self.assertEqual(runner_refusal(other, admitted), f"{other} runs on {admitted}")
-        self.assertIsNone(runner_refusal("ci.yml", "ubuntu-24.04"))
+                self.assertNotRegex(admitted, admitted_runner(other))
+        self.assertRegex("ubuntu-24.04", admitted_runner("ci.yml"))
 
     def test_ci_runs_every_stage_of_the_local_gate(self):
         stages = STAGES.search((REPO / "scripts" / "check.sh").read_text()).group(1).split()

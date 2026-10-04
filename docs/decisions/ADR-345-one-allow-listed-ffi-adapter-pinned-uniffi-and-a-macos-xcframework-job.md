@@ -50,9 +50,9 @@ is built with, how the generator is run, and where the framework is built.
   by the lockfile, and can drift from the scaffolding the library links.
 - D3, a second crate holding the generator - lost: not admitted for this spike, which admits one
   new crate.
-- D4, a workflow of its own on a macOS runner, building each target's static library with
-  `cargo rustc --crate-type staticlib` - chosen, because only the XCFramework build pays for a
-  static library of the engine.
+- D4, a workflow of its own on a macOS runner - chosen, because only the XCFramework build then
+  pays for a static library of the engine, which it builds per target with
+  `cargo rustc --crate-type staticlib`.
 - D4, `crate-type = ["staticlib"]` in the adapter's manifest - lost: every host build of the
   workspace would then link a static library of the whole engine.
 - D4, admitting macOS runners by pattern in the hardening test - lost: a pattern admits the runner
