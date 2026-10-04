@@ -9,7 +9,9 @@
 //! - [`allow_list`]: the calls a native client may make, and the lookup that decides one (R2).
 //! - [`engine`]: the engine handle, its typed refusal and the entry point (R1, R3).
 //!
-//! The adapter depends on the engine and on no other crate of this workspace (ADR-345 D1).
+//! Of this workspace's crates the adapter depends on the engine core (`deck-streak-engine-core`)
+//! alone (ADR-345 D1), and reaches the engine only through the core's dispatcher started on the
+//! native transport, whose native column equals the allow-list (SPEC-345 R5; ADR-356 D1, D3).
 
 #![forbid(unsafe_code)]
 
