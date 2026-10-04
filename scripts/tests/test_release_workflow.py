@@ -2,9 +2,10 @@
 R2; ADR-062, ADR-017, ADR-034). It runs on a push of a SemVer tag only, proves the tag's commit is
 on `main` on a full-history checkout, creates a draft, attaches one tarball with its digests and a
 build-provenance attestation, and publishes after the last upload (A8). Its token is read-only
-except in its one job, every action is pinned, and no step saves a cache (A9). It builds the sync
-server from the fork and the commit the engine's patch entry pins, and ships it in the same tarball
-(SPEC-337 A1, A2)."""
+except in its release job, every action is pinned, and no step saves a cache (A9). It builds the
+sync server from the fork and the commit the engine's patch entry pins, and ships it in the same
+tarball (SPEC-337 A1, A2), once a job before it has audited that server's dependency graph (SPEC-340
+A9)."""
 
 import os
 import re
@@ -54,9 +55,11 @@ def read_release():
 
 
 def steps_of(workflow):
+    """The release job's steps. The workflow's other job, the sync server's audit, builds nothing
+    and publishes nothing (SPEC-340 R7)."""
     jobs = workflow["jobs"]
-    assert len(jobs) == 1, f"the release runs {len(jobs)} jobs, not one"
-    return list(jobs.values())[0]["steps"]
+    assert sorted(jobs) == sorted([AUDIT_JOB, "release"]), f"the release runs {sorted(jobs)}"
+    return jobs["release"]["steps"]
 
 
 def index_of(steps, needle, key="run"):
@@ -78,7 +81,7 @@ class TheReleaseRunsOnSemverTags(unittest.TestCase):
         for name in examined("tag names", admitted + refused):
             matched = any(glob.fullmatch(name) for glob in globs)
             self.assertEqual(matched, name in admitted, f"the tag filter and `{name}`")
-        job = list(workflow["jobs"].values())[0]
+        job = workflow["jobs"]["release"]
         steps = steps_of(workflow)
         checkout = next(s for s in steps if action(s) == "actions/checkout")
         self.assertEqual(checkout["with"]["fetch-depth"], "0", "a full-history checkout")
@@ -121,7 +124,7 @@ class TheReleaseWorkflowIsHardened(unittest.TestCase):
     def test_the_release_workflow_is_read_only_and_pinned(self):
         workflow = read_release()
         self.assertEqual(workflow["permissions"], {"contents": "read"})
-        job = list(workflow["jobs"].values())[0]
+        job = workflow["jobs"]["release"]
         self.assertEqual(job["permissions"], JOB_WRITES)
         self.assertEqual(job["runs-on"], "ubuntu-24.04")
         refs = examined("action references", entries(workflow, "uses"))
@@ -144,7 +147,7 @@ class TheReleaseWorkflowIsHardened(unittest.TestCase):
 
     def test_the_token_reaches_the_three_gh_release_steps_alone(self):
         workflow = read_release()
-        job = list(workflow["jobs"].values())[0]
+        job = workflow["jobs"]["release"]
         self.assertNotIn("GH_TOKEN", workflow.get("env") or {}, "the workflow env holds it")
         self.assertNotIn("GH_TOKEN", job.get("env") or {}, "the job env holds it")
         steps = steps_of(workflow)
