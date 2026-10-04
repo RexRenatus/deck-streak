@@ -17,9 +17,15 @@ from _support import REPO, examined
 from test_ci_workflows import PINNED, action, entries, read_hardened, workflow_file_text
 
 RELEASE = REPO / ".github" / "workflows" / "release.yml"
+CI = REPO / ".github" / "workflows" / "ci.yml"
 JOB_WRITES = {"contents": "write", "id-token": "write", "attestations": "write"}
 ATTEST = "actions/attest-build-provenance"
 UPSTREAM = "https://github.com/ankitects/anki.git"
+# The job that audits the sync server's dependency graph before the release builds it (SPEC-340 R7;
+# ADR-351 D5), and the script it runs.
+AUDIT_JOB = "audit-sync-server"
+AUDIT_SCRIPT = "bash scripts/audit-sync-server.sh"
+INSTALL = "taiki-e/install-action"
 
 
 def tag_glob(pattern):
@@ -289,6 +295,32 @@ class TheReleaseBuildsTheSyncServer(unittest.TestCase):
             rf"^cargo install --locked --git https://\S+ --rev [0-9a-f]{{40}} {re.escape(installed)}$",
         )
         self.assertNotIn(UPSTREAM, out, "the tree's server is the fork's, not upstream's")
+
+    def test_the_release_waits_on_the_server_audit(self):
+        """SPEC-340 A9 (R7; ADR-351 D5): a job with read-only permissions audits the sync
+        server's dependency graph before the release job builds it, and the release job needs that
+        job; the release job's own permissions are unchanged."""
+        jobs = read_release()["jobs"]
+        self.assertEqual(jobs["release"].get("needs"), [AUDIT_JOB], "the release waits on it")
+        audit = jobs[AUDIT_JOB]
+        self.assertEqual(audit["permissions"], {"contents": "read"})
+        self.assertEqual(jobs["release"]["permissions"], JOB_WRITES)
+        self.assertEqual(audit["runs-on"], "ubuntu-24.04")
+        steps = audit["steps"]
+        # The release job's own pinned checkout, and ci.yml's pinned installer for cargo-deny.
+        checkout = [s for s in steps if action(s) == "actions/checkout"]
+        released = [s for s in jobs["release"]["steps"] if action(s) == "actions/checkout"]
+        self.assertEqual([s["uses"] for s in checkout], [released[0]["uses"]])
+        install = [s for s in steps if action(s) == INSTALL]
+        pinned = {
+            ref for ref in entries(read_hardened(CI), "uses") if ref.startswith(f"{INSTALL}@")
+        }
+        self.assertEqual(len(pinned), 1, pinned)
+        self.assertEqual([s["uses"] for s in install], sorted(pinned))
+        self.assertEqual(install[0]["with"]["tool"], "cargo-deny")
+        audited = index_of(steps, AUDIT_SCRIPT)
+        self.assertLess(steps.index(checkout[0]), audited)
+        self.assertLess(steps.index(install[0]), audited)
 
 
 if __name__ == "__main__":
