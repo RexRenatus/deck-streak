@@ -35,7 +35,7 @@ it fails at `P14 case variant across crates`, with both files expected and none 
 
 ## The weakening table
 
-Across `git diff cff914e3...HEAD`: no test is deleted, renamed or skipped, no planted case is
+Across `git diff 69fe44ee...HEAD` (the recorded dev; `cff914e3...` before the dev merges): no test is deleted, renamed or skipped, no planted case is
 removed, and no filter, exclusion, skip list, sample or bound is added on the test side. The
 entries are the reader's disclosed class and the two killer moves.
 
