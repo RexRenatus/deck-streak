@@ -18,7 +18,7 @@ export interface KeyInput {
 }
 
 /** The elements whose keys belong to them: a form control, a link or a button. */
-const CONTROLS = new Set(['INPUT', 'TEXTAREA', 'SELECT', 'A', 'BUTTON']);
+const CONTROLS: ReadonlySet<unknown> = new Set(['INPUT', 'TEXTAREA', 'SELECT', 'A', 'BUTTON']);
 
 /** Whether `target` is a control or editable content, whose keys are typed into it. */
 function inControl(target: EventTarget | null): boolean {
@@ -26,10 +26,7 @@ function inControl(target: EventTarget | null): boolean {
   if (element === null) {
     return false;
   }
-  return (
-    (typeof element.tagName === 'string' && CONTROLS.has(element.tagName)) ||
-    element.isContentEditable === true
-  );
+  return CONTROLS.has(element.tagName) || element.isContentEditable === true;
 }
 
 /** The intent `event`'s key names, before the event's filters. */

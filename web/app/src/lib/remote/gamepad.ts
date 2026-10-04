@@ -33,7 +33,8 @@ interface Kept {
 
 /** How far `axes` lean in `direction`'s way: positive toward it, negative away. */
 function leaning(axes: readonly number[], direction: (typeof STICK)[number]): number {
-  return (axes[direction.axis] ?? 0) * direction.sign;
+  const value = axes[direction.axis] ?? 0;
+  return direction.sign === 1 ? value : -value;
 }
 
 /**
@@ -64,10 +65,11 @@ export class GamepadReader {
   #readOne(snapshot: PadSnapshot): PadReading {
     const before = this.#kept.get(snapshot.index);
     const pressed = snapshot.buttons.flatMap((down, index) => (down ? [index] : []));
+    // A direction that was armed stays armed up to `STICK_FIRE`; any other, the first snapshot's
+    // included, is armed only below `STICK_REARM`.
     const armed = STICK.map((direction, at) => {
       const lean = leaning(snapshot.axes, direction);
-      const wasArmed = before === undefined ? lean < STICK_REARM : before.armed[at];
-      return wasArmed ? lean <= STICK_FIRE : lean < STICK_REARM;
+      return before !== undefined && before.armed[at] ? lean <= STICK_FIRE : lean < STICK_REARM;
     });
     const fired: Intent[] = [];
     if (before !== undefined && snapshot.mapping === 'standard') {
