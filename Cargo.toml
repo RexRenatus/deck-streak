@@ -78,6 +78,9 @@ axum = { version = "0.8.9", default-features = false, features = ["http1", "toki
 tower = { version = "0.5.3", default-features = false }
 tower-http = { version = "0.7.1", default-features = false }
 anyhow = "1.0.104"
+# ADR-119 and ADR-329: the official Rust MCP SDK for the MCP adapter's server (SPEC-119 R2): its
+# server, its tool macros and its streamable HTTP server transport, and nothing else.
+rmcp = { version = "3.5.0", default-features = false, features = ["server", "macros", "transport-streamable-http-server"] }
 # ADR-022 (SPEC-022): Anki's own Rust engine, for ingest only, pinned to an upstream release tag,
 # with the TLS backend Anki's own Linux build selects. SPEC-055 moved it from 26.05 to 26.09.3, and
 # the `[patch]` entry below replaces the tag with a commit of the maintainer's fork (ADR-058). An

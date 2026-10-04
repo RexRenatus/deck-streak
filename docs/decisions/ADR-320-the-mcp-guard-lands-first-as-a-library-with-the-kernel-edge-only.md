@@ -109,3 +109,9 @@ ADR-016 (a delivered SPEC moves with its tests), ADR-067 (the loader refuses an 
 ADR-119 (the server) and ADR-121 (the guard). The predecessor's guard is cited as
 `mcp_auth.py:DrillAuth.require`, `_bucket_id`, `_is_rate_limited` and `_record_failure` at
 `27ee2bc`.
+
+## Amendments, 2026-10-03: the Confirmation names two more rows (ruling 85 (b))
+
+The Confirmation's rows also include `S11930-MIN-CREDENTIAL-CHARS` and `S11931-FORBID-UNSAFE`,
+which this decision's pull request delivered (#158). This amendment records no new decision, so it
+names no rejected option.
