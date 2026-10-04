@@ -141,9 +141,19 @@ class TheEvaluatorPagesOncePerEpisode(unittest.TestCase):
             code, lines, stderr = evaluator.run(NOW)
             self.assertEqual(code, 1, "\n".join(lines) + stderr)
             self.assertEqual(len(at(lines, 3, "page")), 1, lines)
-            # Every run read the API's journal once, over its longest window, up to its now.
+            # Every run read each declared SLO's journal once, over its longest window, up to its now.
             reads = examined("journal read(s)", evaluator.journal_reads())
-            self.assertEqual(len(reads), 4)
+            units = [[arg for arg in read if arg.startswith("--unit=")] for read in reads]
+            self.assertTrue(all(len(unit) == 1 for unit in units), units)
+            declared = [
+                f"--unit={slo['unit']}"
+                for slo in json.loads(SLO.read_text(encoding="utf-8"))["slos"]
+            ]
+            read_units = [unit[0] for unit in units]
+            for unit in declared:
+                self.assertEqual(read_units.count(unit), 4, (unit, read_units))
+            self.assertEqual(set(read_units), set(declared), read_units)
+            self.assertEqual(len(reads), 4 * len(declared))
             first = reads[0]
             self.assertIn("--unit=deck-streak-api.service", first)
             self.assertIn("--output=json", first)

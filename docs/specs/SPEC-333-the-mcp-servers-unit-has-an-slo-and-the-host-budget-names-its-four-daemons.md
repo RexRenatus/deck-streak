@@ -55,6 +55,7 @@ A2: python3 -m unittest discover -s scripts/tests -p test_slo_declaration.py -k 
 | `deploy/slo.json` | deploy | the `mcp-availability` SLO |
 | `deploy/README.md` | docs | the host-budget sentence |
 | `scripts/tests/test_slo_declaration.py` | deploy | A1 and A2 |
+| `scripts/tests/test_slo_evaluator.py` | deploy | the evaluator's read count covers every declared SLO |
 | `scripts/mutation-rows.d/S33300-S33399.json` | gate | two rows |
 | `docs/specs/SPEC-333-...md`, `docs/decisions/ADR-334-...md`, `docs/red-first/SPEC-333.md`, `changelog.d/mcp-slo-157.md` | docs | added |
 
