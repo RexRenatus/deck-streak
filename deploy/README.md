@@ -226,8 +226,9 @@ without its core token. Its first start is the owner's, in two steps (ADR-332):
 ceilings, which the unit's `MemoryHigh=` and `MemoryMax=` equal (ADR-032). The five long-running
 units' ceilings plus the largest oneshot's fill the share exactly, and their `CPUQuota=` values,
 75% each for the API and the sync server, 20% for the bot and 15% each for the replicator and the
-MCP server, divide its CPUs exactly (ADR-064 and ADR-032 as SPEC-337 amends them, ADR-347). The alert template, the SLO evaluator and the memory watch carry their own entries (SPEC-031);
-since they run beside the jobs, every ceiling reached at once passes the share (SPEC-031 §6).
+MCP server, divide its CPUs exactly (ADR-064 and ADR-032 as SPEC-337 amends them, ADR-347). The
+alert template, the SLO evaluator and the memory watch carry their own entries (SPEC-031); since
+they run beside the jobs, every ceiling reached at once passes the share (SPEC-031 §6).
 
 ## Writing about an instance
 

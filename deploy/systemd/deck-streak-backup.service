@@ -1,9 +1,10 @@
 # DeckStreak's daily backup: a checked copy of the database, the newest three kept (SPEC-064 R4;
 # ADR-064), and the sync server's snapshot checked, archived and copied offsite after its
 # stopped-server window, deck-streak-sync-snapshot.service, which runs first when the server is
-# enabled (SPEC-337 R5; ADR-347 D12). deck-streak-backup.timer starts it once a day; it exits 1 on any failed step, leaving the
-# copies there untouched, so OnFailure= pages through the one alert path with its error lines. A
-# template with neutral values that the private rail fills (deploy/README.md).
+# enabled (SPEC-337 R5; ADR-347 D12). deck-streak-backup.timer starts it once a day; it exits 1 on
+# any failed step, leaving the copies there untouched, so OnFailure= pages through the one alert
+# path with its error lines. A template with neutral values that the private rail fills
+# (deploy/README.md).
 [Unit]
 Description=DeckStreak daily backup of the database
 Documentation=https://github.com/RexRenatus/deck-streak/blob/main/deploy/README.md

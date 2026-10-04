@@ -106,7 +106,7 @@ it (SPEC-337 section 7). While ADR-340 is proposed, so is this record.
 
 ### Confirmation
 
-SPEC-337's acceptance tests (A1, A2 in this part; A3 to A9 in the parts section 7 names), its rows
+SPEC-337's acceptance tests (A1 to A10, section 3), its rows
 in S33700-S33799, the staging user's rehearsal of the cutover, and the security review before the
 server faces the internet (ADR-340).
 
@@ -239,7 +239,8 @@ that measurement: one owner, a window of seconds, and a client that syncs again 
 This amendment replaces D5's chosen form for the copy and that one rejection; the archive, its
 digests, the offsite copy, the bucket's rules and the drill stand as D5 decided them. It also
 replaces the Decision Outcome's sentence that the snapshot enters the privacy record in a later
-part: this part enters it (`PRIVACY.md`, `privacy.json`).
+part: this part enters it (`PRIVACY.md`; `privacy.json` is unchanged, as SPEC-337's file
+manifest says).
 
 D12, the snapshot's window:
 

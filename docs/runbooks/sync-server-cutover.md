@@ -46,6 +46,11 @@ to be the cutover's own.
 ## Before the window
 
 - The release that carries `bin/anki-sync-server` is deployed from its tag (`RELEASING.md`).
+- The offsite bucket exists with no public access and no listing, and the host's identity may only
+  create objects in it; its retention is the owner's choice (the owner's go, #161).
+- The settings file names `DECKSTREAK_SNAPSHOT_COPY` and `DECKSTREAK_SNAPSHOT_BUCKET`, and the copy
+  command is checked under the backup unit's sandbox (the owner's go, #161).
+- Each unit's `CPUQuota=` equals ADR-347 D7's split (the owner's go, #161).
 - The security review's verdict on the server, the route and the browser's credential is in
   (ADR-340, #167).
 - The owner has chosen the window. From `final_sync` until `mobile`, no client syncs or studies
@@ -56,11 +61,11 @@ to be the cutover's own.
 ### `started`: the unit started over an empty store
 
 A host step, on the owner's go (#161). On the host: the unit's two credentials go into the
-credential store the rail reads (ADR-038), the Caddy block is rendered with its fourth key and
-installed, and the unit is enabled and started, which enables its snapshot window as well. Its
-store holds no collection: no user has synced. Check that the unit is active and that a login of
-the staging user through the route is answered. A failure
-here moves nothing of the owner's: `rolled_back` is only the unit stopped.
+credential store the rail reads (ADR-038), its listen address and the rail's drop-in are installed,
+the Caddy block is rendered with its fourth key and installed, and the unit is enabled and started,
+which enables its snapshot window as well. Its store holds no collection: no user has synced.
+Check that the unit is active and that a login of the staging user through the route is answered.
+A failure here moves nothing of the owner's: `rolled_back` is only the unit stopped.
 
 ### `rehearsed`: the staging user's rehearsal
 
@@ -70,8 +75,10 @@ from the first, the read-back on the host as `read_back` does it, the full downl
 then one sync each way. Record the upload's client-side result beside the read-back, and what
 desktop asks at its next sync if the client reported the upload as failed. When it needs no change
 to the deploy, the staging user's full upload of a collection of ADR-022's shape is the hold's
-reading (a), recorded as (b) says; (c) applies to it. A failed rehearsal stops the cutover here:
-nothing of the owner's has moved.
+reading (a), recorded as (b) says; (c) applies to it. Then one run of the daily backup, after which
+the server is active again and a generation was archived and copied offsite, and one run of the
+restore drill, which restores the newest archive. A failed rehearsal stops the cutover here: nothing
+of the owner's has moved.
 
 ### `final_sync`: every client synced once against the old server
 
