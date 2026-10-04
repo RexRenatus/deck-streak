@@ -237,3 +237,25 @@ async fn a5_a_410_reports_the_device_gone_with_its_timestamp() {
         )
     );
 }
+
+#[tokio::test]
+async fn a6_a_refused_device_token_is_never_retried() {
+    let rig = Rig::start().await;
+    rig.development.fake.script([
+        refusal(400, "BadDeviceToken"),
+        refusal(400, "DeviceTokenNotForTopic"),
+    ]);
+
+    let bad = rig.deliver(&alert()).await;
+    assert_eq!(rig.received().len(), 1, "one request");
+    let not_for_topic = rig.deliver(&alert()).await;
+    assert_eq!(rig.received().len(), 2, "one request");
+
+    assert_eq!(
+        (bad, not_for_topic),
+        (
+            Sent::Rejected(Refusal::Token),
+            Sent::Rejected(Refusal::Token)
+        )
+    );
+}
