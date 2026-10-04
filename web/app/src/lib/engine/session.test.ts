@@ -75,6 +75,11 @@ class FakeEngine implements EngineModule {
     this.calls.push(['last_panic']);
     return this.panic;
   }
+  /** The module's linear memory in 64 KiB pages: it grows with the collection, as a real one does. */
+  memory_pages() {
+    this.#call('memory_pages');
+    return 17 + this.cards.size;
+  }
 }
 
 /** A fake browser: `held` is the origin's Web Locks, shared by every tab's session given it. */
@@ -391,5 +396,26 @@ describe('the Worker session', () => {
     delete shut.failures.open;
     expect(await corrupt.session.handle({ id: 3, op: 'open' })).toMatchObject({ id: 3, ok: true });
     expect(corrupt.log).toEqual(OPENED);
+  });
+
+  it("the session reports the module's memory in bytes", async () => {
+    const engine = new FakeEngine();
+    const { session } = browser(engine);
+    await session.handle({ id: 1, op: 'open' });
+    // the module's pages of 65536 bytes, read when asked, so a reading follows each step
+    expect(await session.handle({ id: 2, op: 'memory' })).toEqual({ id: 2, ok: true, value: 17 * 65536 });
+    await session.handle({ id: 3, op: 'seed', count: 3 });
+    expect(await session.handle({ id: 4, op: 'memory' })).toEqual({ id: 4, ok: true, value: 20 * 65536 });
+    expect(engine.calls.filter(([name]) => name === 'memory_pages')).toEqual([['memory_pages'], ['memory_pages']]);
+    // memory takes no argument, and before open there is no module to read
+    expect(await session.handle({ id: 5, op: 'memory', pages: 1 })).toEqual(
+      refusal(5, 'bad-request', 'memory takes no pages')
+    );
+    const fresh = new FakeEngine();
+    const before = browser(fresh);
+    expect(await before.session.handle({ id: 1, op: 'memory' })).toEqual(
+      refusal(1, 'not-open', 'memory before open')
+    );
+    expect([before.log, fresh.calls]).toEqual([[], []]);
   });
 });

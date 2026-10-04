@@ -5,6 +5,7 @@
 //! engine never joins the native graph through it.
 
 pub mod study;
+pub mod synthetic;
 
 #[cfg(target_arch = "wasm32")]
 mod wasm;
