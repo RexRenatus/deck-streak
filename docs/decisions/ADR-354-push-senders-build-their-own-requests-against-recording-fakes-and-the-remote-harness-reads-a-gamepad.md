@@ -44,8 +44,8 @@ its licence against `deny.toml`. Both crates are MIT, both speak HTTP/2 through 
 sign provider tokens; `apns-h2` is the maintained fork of `a2` and is on the workspace's TLS stack.
 A fifth criterion decided it: whether a test can address a fake.
 
-- D1, the crate builds the APNs request itself, over hyper's pooled HTTP/2 client with a rustls
-  connector, to origins it is configured with - chosen, because CI can then point it at a loopback
+- D1, chosen: the crate builds the APNs request itself, over hyper's pooled HTTP/2 client with a
+  rustls connector, to origins it is configured with, because CI can then point it at a loopback
   fake and observe every header, the token and the body, and the request is a page of code over
   Apple's documented shape.
 - D1, `apns-h2` - lost: its endpoint is an enum of Apple's two services with no URL, connector or
@@ -55,18 +55,18 @@ A fifth criterion decided it: whether a test can address a fake.
   would carry two.
 - D1, either crate behind a trait, faked at the trait - lost: the fake would see a notification
   value and never the path, the headers or the token, which are what the spike exists to prove.
-- D2, `web-push-native` for RFC 8291's encryption, its own `vapid` feature off, the request sent
-  through D1's client and its VAPID token signed by D1's signer - chosen, because it is pure
-  RustCrypto on hash and key-derivation crates the workspace already locks, it returns an
-  `http::Request` any client can send, and it is MIT or Apache-2.0.
+- D2, chosen: `web-push-native` for RFC 8291's encryption, its own `vapid` feature off, the request
+  sent through D1's client and its VAPID token signed by D1's signer, because it is pure RustCrypto
+  on hash and key-derivation crates the workspace already locks, it returns an `http::Request` any
+  client can send, and it is MIT or Apache-2.0.
 - D2, the `web-push` crate - lost: its clients are an older hyper over a native TLS library, or a
   libcurl client, each a second HTTP and TLS stack in the workspace.
 - D2, RFC 8291 written in the crate - lost: more cryptography to own where a library already
   returns the encrypted request; the fake's own decryption (D5) is the independent check.
 - D2, `web-push-native`'s `vapid` feature - lost: it brings a general JWT library for one token
   the crate already signs for APNs, with the same curve and algorithm.
-- D3, a new adapter crate, `deck-streak-push`, depending on the kernel alone, which the daemon does
-  not compose until #640 - chosen, because it adds no edge into a context, holds both senders'
+- D3, chosen: a new adapter crate, `deck-streak-push`, depending on the kernel alone, which the
+  daemon does not compose until #640, because it adds no edge into a context, holds both senders'
   shared client, signer, origin rule and outcome once, and leaves the router's port to #640, as
   `deck-streak-ffi` stands uncomposed beside the root (ADR-345 D1).
 - D3, inside `deck-streak-notifications` - lost: the context owns no transport by its own
@@ -81,11 +81,11 @@ A fifth criterion decided it: whether a test can address a fake.
 - D3, the push crate depending on notifications now and implementing a router port - lost: ADR-341
   says the port generalises from the bot's to a transport per surface, which is #640's design; a
   spike that implemented today's `BotTransport` would decide that shape early.
-- D4, a sender is built from its signing key's PKCS#8 PEM text, parsed once into a P-256 key held
-  in memory; production reads that text through the kernel's credential loader, by role (the APNs
-  signing key, the VAPID signing key), from a unit's `LoadCredential=` (#640); the key id, team id,
-  topic and contact are configuration from the private deploy rail (SPEC-334 R20) - chosen, because
-  tests then generate keys in memory and write nothing, and production keeps the workspace's one
+- D4, chosen: a sender is built from its signing key's PKCS#8 PEM text, parsed once into a P-256 key
+  held in memory; production reads that text through the kernel's credential loader, by role (the
+  APNs signing key, the VAPID signing key), from a unit's `LoadCredential=` (#640); the key id, team
+  id, topic and contact are configuration from the private deploy rail (SPEC-334 R20), because tests
+  then generate keys in memory and write nothing, and production keeps the workspace's one
   credential path.
 - D4, a key file's path in the constructor - lost: every test would write a key to disk.
 - D4, the kernel's `Secret` in the constructor - lost: only the credential loader makes one, from a
@@ -94,12 +94,12 @@ A fifth criterion decided it: whether a test can address a fake.
   secrets, and the workspace refuses a secret read from it.
 - D4, a raw base64url scalar for the VAPID key - lost: a second key format and parser; PKCS#8 PEM,
   the form Apple issues the APNs key in, serves both.
-- D5, the fakes are axum servers on loopback ports that record every request and answer as each
-  test scripts: the APNs fake over HTTP/2 without TLS (prior knowledge), the push service fake over
-  HTTP/1.1; the APNs fake verifies the provider token's signature, and the push service fake
-  decrypts each body with its own RFC 8291 decryption, written in the test support from the RFC,
-  and verifies the VAPID token with `k` - chosen, because they observe what a platform would
-  receive, in the shape the bot's fake set.
+- D5, chosen: the fakes are axum servers on loopback ports that record every request and answer as
+  each test scripts: the APNs fake over HTTP/2 without TLS (prior knowledge), the push service fake
+  over HTTP/1.1; the APNs fake verifies the provider token's signature, and the push service fake
+  decrypts each body with its own RFC 8291 decryption, written in the test support from the RFC, and
+  verifies the VAPID token with `k`, because they observe what a platform would receive, in the
+  shape the bot's fake set.
 - D5, a fake at a trait seam - lost: it sees no header, token or ciphertext.
 - D5, TLS fakes with a test root and a host override - lost: production code would carry a
   test-only trust root and name resolution path.
@@ -110,29 +110,29 @@ A fifth criterion decided it: whether a test can address a fake.
 - D5, committing RFC 8291's published example keys to prove the fake's decryption - lost: a private
   key's shape in the public tree, which the secrets scan and review refuse; agreement between two
   independent implementations, and the owner's first device session (#629), check it instead.
-- D6, the sender reports one typed outcome per call and retries nothing, apart from one resend with
-  a new provider token after `ExpiredProviderToken` on a token at least 20 minutes old - chosen,
-  because the router already decides what a failed send becomes (a celebration held, a nudge's
-  claim released, behind its outage breaker), and Apple and push services already store a message
-  and retry its delivery until its expiry; the age check and the mint under one lock, and a
-  refused token replaced only while it is still current, so concurrent refusals mint one token.
+- D6, chosen: the sender reports one typed outcome per call and retries nothing, apart from one
+  resend with a new provider token after `ExpiredProviderToken` on a token at least 20 minutes old,
+  because the router already decides what a failed send becomes (a celebration held, a nudge's claim
+  released, behind its outage breaker), and Apple and push services already store a message and
+  retry its delivery until its expiry; the age check and the mint under one lock, and a refused
+  token replaced only while it is still current, so concurrent refusals mint one token.
 - D6, waits and attempts inside the sender, as the bot's transport has - lost: the router's attempts
   would multiply them, and waits inside a sender need a recorder in every test because tokio's paused
   time cannot hold a client's own timeout (ADR-026).
 - D6, no resend on an expired provider token - lost: the token is the sender's own state, which no
   router decision can renew.
-- D7, a subscription is admitted only when its endpoint's origin is on the sender's list of push
-  services - chosen, because the endpoint is text a client sends, and the sender is the last place
-  every caller passes before the request. The list is given to the sender when it is built and an
-  origin it does not hold is refused, so a sender built with no list refuses every endpoint; the
-  list production builds it with is #640's.
+- D7, chosen: a subscription is admitted only when its endpoint's origin is on the sender's list of
+  push services, because the endpoint is text a client sends, and the sender is the last place every
+  caller passes before the request. The list is given to the sender when it is built and an origin
+  it does not hold is refused, so a sender built with no list refuses every endpoint; the list
+  production builds it with is #640's.
 - D7, any `https:` endpoint - lost: the service would post to any URL a signed-in client names, a
   server-side request forgery.
 - D7, checking only where #640 stores a subscription - lost: a caller that reaches the sender
   another way would pass unchecked; #640 may check there as well.
-- D8, the harness's logic as pure modules under `web/app/src/lib/remote/`, and one thin screen,
-  `/remote`, in the Mini App's route table - chosen, because the web study screens reuse the
-  modules, node tests reach them with the browser's APIs stubbed, StrykerJS mutates them, and the
+- D8, chosen: the harness's logic as pure modules under `web/app/src/lib/remote/`, and one thin
+  screen, `/remote`, in the Mini App's route table, because the web study screens reuse the modules,
+  node tests reach them with the browser's APIs stubbed, StrykerJS mutates them, and the
   accessibility audit visits the screen.
 - D8, a package of its own - lost: a new workspace member with its own build, test, CI and mutation
   configuration, for a screen the web client replaces.

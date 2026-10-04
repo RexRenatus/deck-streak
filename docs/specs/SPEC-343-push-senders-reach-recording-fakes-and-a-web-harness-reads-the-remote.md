@@ -252,7 +252,7 @@ bound; a release event from a dropped lock changes nothing) are MUTATION COVERAG
 | `web/app/src/lib/remote/wake-lock.test.ts` | `miniapp` | added: A28 to A32 |
 | `web/app/src/routes/remote/+page.svelte` | `miniapp` | added: the harness screen (R16) |
 | `web/app/src/routes/remote.test.ts` | `miniapp` | added: A33 |
-| `web/app/src/lib/routes.ts` | `miniapp` | `/remote` joins the route table (A34) |
+| `web/app/src/lib/routes.ts` | `miniapp` | /remote joins the route table (A34) |
 | `web/app/src/lib/startapp.test.ts` | `miniapp` | the harness's path joins the screens opened by path alone, with no startapp token (A34) |
 | `web/app/messages/en.json` | `miniapp` | the harness's labels, in the base locale |
 | `scripts/mutation-rows.d/S34300-S34399.json` | none (the gate) | added: the sender's rows |
