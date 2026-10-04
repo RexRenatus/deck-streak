@@ -181,3 +181,43 @@ give it one in SEEDS`, T29). `kernel/tests/schema.rs`'s
 ownership register names `writing_log` (a data-carry red). The menu test
 `the_menu_is_registered_for_the_owners_chat_only` (T23) was green at 875ff0f7: the menu moves at
 green.
+
+Green: every fenced criterion of part 078b passed by its exact name at 4015d25c, the green commit,
+in one call over the eight crates (`cargo test -j 1 -p <the eight> --no-fail-fast --
+--test-threads=1`, rc 0, 819 passed, 0 failed), and no crate, migration or query cache changed
+after it. The amended tests named above (T20's constants test, T26's goldens, T29's three
+`data_rights_symmetry.rs` probes, T23's menu test and the CONTEXT-MAP probe) passed in the same
+call.
+
+```red-first
+A7: green at 4015d25c
+A8: green at 4015d25c
+A9: green at 4015d25c
+A10: green at 4015d25c
+A10b: green at 4015d25c
+A10c: green at 4015d25c
+A10d: green at 4015d25c
+A14b: green at 4015d25c
+A19a: green at 4015d25c
+A19b: green at 4015d25c
+A19: green at 4015d25c
+A22b: green at 4015d25c
+A23b: green at 4015d25c
+A32: green at 4015d25c
+A33: green at 4015d25c
+A34: green at 4015d25c
+A35: green at 4015d25c
+A35b: green at 4015d25c
+A36: green at 4015d25c
+A37: green at 4015d25c
+```
+
+Five tests were written at green as mutation coverage, each in the crate that owns the code it
+judges, and are not red-first evidence: `writing_goldens.rs`'s
+`the_writing_courses_are_the_configured_courses_marked_writing` (`writing_courses`),
+`habits_store.rs`'s `the_reading_entries_are_counted_through_a_day` (`entries_through`), and
+`writing_toggle.rs`'s `the_writing_step_settles_a_past_day_closed_and_today_open` (the writing
+step's `closed`), `confirm_and_clear_write_only_a_writing_course` and
+`every_writing_write_answers_no_writing_course_without_one` (`confirm`, `clear` and `toggle`'s
+refusals). A mutant runs only its own package's tests, so the bot's `/write` test never judged the
+coordination use cases. All five passed in the same call.
