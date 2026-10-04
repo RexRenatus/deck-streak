@@ -58,8 +58,8 @@ impl Dispatcher {
     /// # Errors
     ///
     /// The engine's reason when it cannot decode the message.
-    pub fn start(transport: Transport, init: &[u8]) -> Result<Self, String> {
-        init_backend(init).map(|backend| Self { backend, transport })
+    pub fn start(transport: Transport, message: &[u8]) -> Result<Self, String> {
+        init_backend(message).map(|backend| Self { backend, transport })
     }
 
     /// Runs one ordinary call: the request's protobuf bytes in, the response's out. The table
