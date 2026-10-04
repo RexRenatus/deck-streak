@@ -169,7 +169,7 @@ the red-first record discloses them as not red.
 | `ios/HarnessWire/Tests/HarnessWireTests/ResponseDecodingTests.swift` | `ios-harness` | added: A3 |
 | `ios/HarnessWire/swift-mutants.json` | `ios-harness` | added: the codec's hand-written mutants and their killers |
 | `crates/ffi/src/allow_list.rs` | `deck-streak-ffi` | the sixth pair: R10 |
-| `crates/ffi/tests/support/mod.rs` | `deck-streak-ffi` | added: the test support module, which declares the two files below |
+| `crates/ffi/tests/support/mod.rs` | `deck-streak-ffi` | added: the test support module: a scratch directory per test, the open request, and the two files below |
 | `crates/ffi/tests/support/synthetic.rs` | `deck-streak-ffi` | added: the synthetic builder, which the example includes alone |
 | `crates/ffi/tests/support/wire.rs` | `deck-streak-ffi` | added: the wire helpers, moved from `round_trip.rs` |
 | `crates/ffi/tests/round_trip.rs` | `deck-streak-ffi` | reads the moved helpers; its tests unchanged |
