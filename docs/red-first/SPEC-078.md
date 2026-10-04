@@ -198,7 +198,6 @@ A10: green at 4015d25c
 A10b: green at 4015d25c
 A10c: green at 4015d25c
 A10d: green at 4015d25c
-A14b: green at 4015d25c
 A19a: green at 4015d25c
 A19b: green at 4015d25c
 A19: green at 4015d25c
