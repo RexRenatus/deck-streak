@@ -192,6 +192,7 @@ impl WebPushSender {
 fn read(answer: &Answer) -> Sent {
     match answer.status.as_u16() {
         200..=299 => Sent::Delivered,
+        404 | 410 => Sent::Gone { since: None },
         _ => Sent::Failed(Unreached::Unexpected),
     }
 }
