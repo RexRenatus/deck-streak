@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 decision-makers: "@RexRenatus (owner), the DeckStreak architect"
 ---
 
@@ -35,9 +35,8 @@ build carry that ruling so that the exemption reaches the owner's own hand and n
 
 ## Decision Outcome
 
-Proposed option: the owner's UI gestures are exempt, through a token only the UI layer can
-construct, and a test proves the containment. This ADR is `accepted` once the owner-taps ruling
-is on `dev`.
+Chosen option: the owner's UI gestures are exempt, through a token only the UI layer can
+construct, and a test proves the containment. The owner-taps ruling is on `dev`, so this ADR is `accepted`.
 
 - **The engine core's allow-list.** The engine core reaches the engine's backend only through an
   allow-listed dispatcher. The exempt functions are the backend calls that make writes 1 to 8:
