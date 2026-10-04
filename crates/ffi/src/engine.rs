@@ -68,8 +68,8 @@ impl Engine {
         clippy::needless_pass_by_value,
         reason = "a foreign caller's bytes cross the boundary owned, as the bindings pass them"
     )]
-    pub fn new(init: Vec<u8>) -> Result<Arc<Self>, EngineRefusal> {
-        init_backend(&init)
+    pub fn new(message: Vec<u8>) -> Result<Arc<Self>, EngineRefusal> {
+        init_backend(&message)
             .map(|backend| Arc::new(Self { backend }))
             .map_err(|reason| EngineRefusal::Start { reason })
     }
