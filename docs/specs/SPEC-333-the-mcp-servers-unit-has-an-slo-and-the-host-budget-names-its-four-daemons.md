@@ -18,8 +18,8 @@ Measured at dev `df2a4cdb`.
   counts `RESPONSE = "finished processing request"` per unit. The SLO is measurable from the
   unit's first start.
 - `deploy/README.md` "## The host budget" says the API's and the bot's `CPUQuota=` fit the share's
-  CPUs. The share test sums four daemons': the API's 75%, the bot's 50%, the replicator's 50% and the
-  MCP server's 25% (`deploy/systemd/*.service`, `CPUQuota=` lines 35, 43, 37 and 38).
+  CPUs. The share test sums four daemons': the API's, the bot's, the replicator's and the MCP
+  server's (`deploy/systemd/*.service`, `CPUQuota=` lines 35, 43, 37 and 38).
 
 ## 2. Requirements
 

@@ -24,6 +24,7 @@ How is the unit covered, at what objective, and what does the host-budget prose 
 - D2, the README sentence names all four daemons: chosen, because the share test sums all four (#157).
 - D2, leaving the two-daemon sentence: rejected, because it understates the sum the test enforces (#157).
 - D3, the bot's unit keeps no SLO here: chosen, because its traffic waits for the host (#157).
+- D3, an SLO over the bot's unit in this delivery: rejected, because its traffic waits for the host, so its objective and windows cannot be chosen yet (#157).
 
 ## Decision Outcome
 
