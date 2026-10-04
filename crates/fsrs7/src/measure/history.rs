@@ -20,8 +20,18 @@ const REVIEW: u8 = 1;
 /// to exactly `reviews`.
 #[must_use]
 pub fn card_lengths(reviews: usize, mean: usize) -> Vec<usize> {
-    let _ = mean;
-    vec![1; reviews]
+    let cycle = 2 * mean - 1;
+    let mut lengths = Vec::new();
+    let mut total = 0;
+    for card in 0..reviews {
+        if total == reviews {
+            break;
+        }
+        let length = (card % cycle + 1).min(reviews - total);
+        lengths.push(length);
+        total += length;
+    }
+    lengths
 }
 
 /// The history's review-log rows: one card per length of [`card_lengths`], in turn. Each row's id
@@ -31,9 +41,8 @@ pub fn card_lengths(reviews: usize, mean: usize) -> Vec<usize> {
 #[must_use]
 pub fn rows(reviews: usize, mean: usize) -> Vec<RevlogRow> {
     let mut rows = Vec::with_capacity(reviews);
-    let mut cid = FIRST_CARD;
     let mut at = 0;
-    for length in card_lengths(reviews, mean) {
+    for (cid, length) in (FIRST_CARD..).zip(card_lengths(reviews, mean)) {
         for review in 0..length {
             rows.push(RevlogRow {
                 cid,
@@ -43,7 +52,6 @@ pub fn rows(reviews: usize, mean: usize) -> Vec<RevlogRow> {
             });
             at += GAP_HOURS[review % GAP_HOURS.len()] * HOUR_MS;
         }
-        cid += 1;
     }
     rows
 }

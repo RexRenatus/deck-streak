@@ -42,17 +42,15 @@ pub fn replay(
     model: &FSRS,
     items: Vec<FSRSItem>,
 ) -> Result<Vec<MemoryState>, FSRSError> {
-    let _ = model;
     match method {
-        Method::Single => Ok(items
-            .iter()
-            .map(|_| MemoryState {
-                stability: 0.0,
-                difficulty: 0.0,
-                stability_fast: 0.0,
-            })
-            .collect()),
-        Method::Batch => Ok(vec![]),
+        Method::Single => items
+            .into_iter()
+            .map(|item| model.memory_state(item, None))
+            .collect(),
+        Method::Batch => {
+            let starting_states = vec![None; items.len()];
+            model.memory_state_batch(items, starting_states)
+        }
     }
 }
 

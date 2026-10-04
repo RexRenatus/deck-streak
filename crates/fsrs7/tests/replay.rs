@@ -14,17 +14,13 @@ const INITIAL_STABILITY_FOR_GOOD: f32 = 3.9221;
 /// The most two methods' values for one card may differ by, relative to the larger.
 const RELATIVE: f64 = 1e-6;
 
-fn model() -> FSRS {
-    FSRS::new(&[]).expect("no parameters select FSRS-7's defaults")
-}
-
 fn agree(left: f64, right: f64) -> bool {
     (left - right).abs() <= RELATIVE * left.abs().max(right.abs())
 }
 
 #[test]
 fn one_good_review_replays_to_the_models_initial_stability_for_good() {
-    let model = model();
+    let model = FSRS::new(&[]).expect("no parameters select FSRS-7's defaults");
     for method in Method::ALL {
         let item = FSRSItem {
             reviews: vec![FSRSReview {
@@ -63,7 +59,7 @@ fn the_single_and_batch_methods_agree_on_every_card() {
         .map(|card| card.item)
         .collect();
     let cards = items.len();
-    let model = model();
+    let model = FSRS::new(&[]).expect("no parameters select FSRS-7's defaults");
     let single = replay::replay(Method::Single, &model, items.clone()).expect("single replays");
     let batch = replay::replay(Method::Batch, &model, items).expect("batch replays");
 

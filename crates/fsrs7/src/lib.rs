@@ -1,6 +1,6 @@
 //! The isolated FSRS-7 scheduler (ADR-338): a card's review history, replayed into FSRS-7 memory
 //! state by the upstream scheduler crate at the pinned revision (ADR-353 D1). It depends on no
-//! DeckStreak context, and never on the engine, which keeps the released crate.
+//! other context of the workspace, and never on the engine, which keeps the released crate.
 //!
 //! [`convert`] turns review-log rows into one item per card (SPEC-342 R4), [`replay`] runs the
 //! items through the model card by card or in one batch (R6), and [`measure`] is the replay-time

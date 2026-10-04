@@ -23,7 +23,9 @@ fn main() -> ExitCode {
                 let mut text = String::from("## FSRS-7 replay time (SPEC-342): refused\n\n");
                 for refusal in &refusals {
                     eprintln!("replay_report: {refusal}");
-                    text.push_str(&format!("- {refusal}\n"));
+                    text.push_str("- ");
+                    text.push_str(refusal);
+                    text.push('\n');
                 }
                 (text, ExitCode::FAILURE)
             }

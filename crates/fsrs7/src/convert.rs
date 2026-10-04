@@ -41,18 +41,46 @@ pub struct CardHistory {
 /// with no rating, are dropped (SPEC-342 R4).
 #[must_use]
 pub fn histories(rows: &[RevlogRow]) -> Vec<CardHistory> {
-    let mut cards: BTreeMap<i64, Vec<FSRSReview>> = BTreeMap::new();
-    for row in rows {
-        cards.entry(row.cid).or_default().push(FSRSReview {
-            rating: u32::from(row.ease),
-            delta_t: 0.0,
-        });
+    let mut cards: BTreeMap<i64, Vec<RevlogRow>> = BTreeMap::new();
+    for row in rows.iter().filter(|row| kept(row)) {
+        cards.entry(row.cid).or_default().push(*row);
     }
     cards
         .into_iter()
-        .map(|(cid, reviews)| CardHistory {
-            cid,
-            item: FSRSItem { reviews },
+        .map(|(cid, mut reviews)| {
+            reviews.sort_by_key(|row| row.id);
+            let mut previous = None;
+            let reviews = reviews
+                .iter()
+                .map(|row| {
+                    let delta_t = previous.map_or(0.0, |at| days(row.id - at));
+                    previous = Some(row.id);
+                    FSRSReview {
+                        rating: u32::from(row.ease),
+                        delta_t,
+                    }
+                })
+                .collect();
+            CardHistory {
+                cid,
+                item: FSRSItem { reviews },
+            }
         })
         .collect()
+}
+
+/// Whether a row is a rated review of the card's memory.
+fn kept(row: &RevlogRow) -> bool {
+    row.ease != 0 && !DROPPED_KINDS.contains(&row.kind)
+}
+
+/// An interval in milliseconds, as days.
+#[allow(
+    clippy::cast_precision_loss,
+    clippy::cast_possible_truncation,
+    reason = "FSRS-7 reads an interval as an f32 number of days; an interval of a collection's \
+              lifetime is exact in an f64 and a few days' rounding in an f32 is below its own"
+)]
+fn days(elapsed_ms: i64) -> f32 {
+    (elapsed_ms as f64 / MS_PER_DAY) as f32
 }

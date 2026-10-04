@@ -40,7 +40,10 @@ fn log(target: &str, checksums: &[f64; 12]) -> Vec<String> {
 }
 
 fn text(lines: &[String]) -> String {
-    lines.iter().map(|line| format!("{line}\n")).collect()
+    lines
+        .iter()
+        .flat_map(|line| [line.as_str(), "\n"])
+        .collect()
 }
 
 fn refused(reasons: &[&str]) -> Result<String, Vec<String>> {
