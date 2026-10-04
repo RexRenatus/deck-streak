@@ -44,3 +44,33 @@ entries are the reader's disclosed class and the two killer moves.
 | `table_census.rs` R3: a one-character piece leaves the workspace-wide pool and is pooled only in the reach of a file that holds, includes or names it; a one-character join carried through a function's return value or argument (B1, B2, B8) is no longer refused, disclosed by A3 and tracked under #585 | 38d14d2b | ruling 155 + ruling 158 |
 | S32411 AMENDMENT: its killer moves from `ledger_census::a_reserved_name_joined_from_literals_is_refused_in_every_spelling` to `xp_census::the_joins_the_census_names_stay_refused`, its anchor unchanged | a260b786 | ruling 155 + ruling 158 |
 | S32409 AMENDMENT: its killer moves from `ledger_census::a_reserved_name_joined_from_literals_is_refused_in_every_spelling` to `xp_census::the_joins_the_census_names_stay_refused` (A2, which gained P14 at 852a0656), its anchor unchanged | 4be9d764 | ruling 167 |
+| A3 population 3 -> 7 (fix round 2, ruling 177): the second-step class, a `const` naming another `const` across files, a renamed re-export, and an `include!` or `include_str!` inside a named item's initialiser (O1, O2, O3, O7), is not refused at this reader, where dev refuses each of its plants in 2 files; disclosed in SPEC-331 section 5 beside B1, B2 and B8, tracked under #585, pinned by A3's four new plants | fix-CEN1-r2 | ruling 177 |
+
+## Fix round 2: the second-step class and the no-own-piece join
+
+At 3e514c1b the verifier's monotone harness found four routes dev refuses and this reader does not,
+each a second step: a one-character `const` initialised by `include_str!` and named in another file
+(O1), a `const` alias chain across crates (O2), a re-export renamed in a third file (O3), and a
+`const` initialised by `include!` of a Rust expression file (O7). Ruling 177 disclosed the class
+and did not extend the reach: one step is SPEC-331's decision and a second step is #585's work.
+
+A3 now examines 7 disclosed plants, the three first plants and O1, O2, O3 and O7, and asserts that
+none is refused at the head. The same population was run at dev's reader, `69fe44ee`'s
+`tools/table-census/table_census.rs` written into a scratch export of the round's first commit
+(sha256 `bbab89dc...` equal to `git show 69fe44ee:<path>`). It reads `15 file(s) refused in 7 of 7
+disclosed plant(s)`, and each new plant is refused in 2 files:
+
+- O1: `o1_join.rs` and `o1_m.txt`
+- O2: `o2_join.rs` and `o2_m.rs`
+- O3: `o3_join.rs` and `o3_m.rs`
+- O7: `o7_join.rs` and `o7_m.in`
+
+The controls O4 (an associated const named by path), O5 (a const in an inline module) and O6 (a
+const with a block initialiser) joined A2's population, which now examines 22 join plants, each
+asserted refused in every file of its plant.
+
+AD2: deleting `self.local.entry(file.to_owned()).or_default();` was killed by no census test. A new
+test, `a_join_in_a_file_holding_no_literal_stays_refused`, plants three pieces in three files
+(`"xp_settle"`, `'m'` and `"ent"`) joined by a fourth file that holds no literal, and asserts that
+exactly the three files holding a piece are refused. With the statement deleted it fails with
+`left: []`, so the mutant is KILLED, and row `S33107-A-FILE-READ-HAS-A-REACH-OF-ITS-OWN` pins it.
