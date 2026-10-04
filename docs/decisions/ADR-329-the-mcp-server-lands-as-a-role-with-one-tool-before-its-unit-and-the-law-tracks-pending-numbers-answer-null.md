@@ -107,3 +107,12 @@ Issues #157, #158 and #133; SPEC-119 sections 13 and 14; SPEC-077 R12; ADR-002 (
 crate graph), ADR-025 (a bound sheds instead of queueing), ADR-119 (the server is Rust on the SDK),
 ADR-121 (the guard) and ADR-320 (the guard first). The predecessor is cited as
 `server.py:create_server`, `server.py:get_law_track`, `_law_int` and `_law_float` at `27ee2bc`.
+
+## Amendment, 2026-10-04: one Consequences sentence
+
+Insert-only; the bullet above is not rewritten, and every decision stands. The Consequences
+sentence "Good, because the agent reads five real law numbers now, and two honest nulls." claims
+more than the law block answers: `dues` is present only once the first recompute has run, and the
+two nulls hold only while #133 is open. It reads instead: "Good, because the agent reads four
+numbers that are always present, `dues` once the first recompute has run, and two honest nulls
+while #133 is open."
