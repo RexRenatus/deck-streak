@@ -20,6 +20,9 @@ use crate::{BuildError, Notification, Origin, Refusal, Sent, Unreached};
 /// older than an hour, and asks for one no more often than every 20 minutes (R3).
 const REFRESH_AGE: Duration = Duration::from_mins(45);
 
+/// The largest payload APNs accepts for a notification, in bytes (R2).
+const PAYLOAD_MAX: usize = 4096;
+
 /// The youngest a refused provider token may be for the sender to mint the next: APNs asks for a
 /// new token no more often than every 20 minutes, so a younger refusal is the key's, not the
 /// token's age (R3).
@@ -160,6 +163,9 @@ impl ApnsSender {
             "aps": {"alert": {"title": notification.title(), "body": notification.body()}}
         })
         .to_string();
+        if body.len() > PAYLOAD_MAX {
+            return Sent::Rejected(Refusal::TooLarge);
+        }
         let Some(mut token) = self.current_token(self.clock.now()) else {
             return Sent::Failed(Unreached::Request);
         };
