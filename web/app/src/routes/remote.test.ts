@@ -257,4 +257,29 @@ describe('the remote harness', () => {
     unmount();
     expect([sentinel.released, cancelled]).toEqual([1, [pending]]);
   });
+
+  // MUTATION COVERAGE: green when written. Every label the screen shows, from the base locale.
+  it('the screen labels its parts', () => {
+    render(Remote);
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Remote harness');
+    expect(document.querySelector('main > p')?.textContent).toBe(
+      'Reads a gamepad, or a remote in keyboard mode, and logs every event. It sends nothing anywhere.'
+    );
+    expect(screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent)).toEqual([
+      'Status',
+      'Gamepads',
+      'Log'
+    ]);
+    const log = screen.getByRole('table', { name: 'Log' });
+    expect(log.querySelector('caption')?.textContent).toBe('The last 200 events, the newest first');
+    expect(screen.getAllByRole('columnheader').map((header) => header.textContent)).toEqual([
+      'Time (ms)',
+      'Source',
+      'Input',
+      'Action',
+      'Visibility',
+      'Wake lock'
+    ]);
+    expect(screen.getByRole('link', { name: 'Back to Today' }).getAttribute('href')).toBe('/');
+  });
 });

@@ -15,31 +15,35 @@ import {
 
 class FakeSentinel implements SentinelLike {
   released = 0;
-  #listeners: (() => void)[] = [];
+  #listeners: [string, () => void][] = [];
 
   release(): Promise<void> {
     this.released += 1;
     return Promise.resolve();
   }
 
-  addEventListener(_type: 'release', listener: () => void): void {
-    this.#listeners.push(listener);
+  addEventListener(type: 'release', listener: () => void): void {
+    this.#listeners.push([type, listener]);
   }
 
-  /** The browser releases the lock, as it does when the page is hidden. */
+  /** The browser releases the lock, as it does when the page is hidden: a `release` event. */
   browserReleases(): void {
-    for (const listener of this.#listeners) {
-      listener();
+    for (const [type, listener] of this.#listeners) {
+      if (type === 'release') {
+        listener();
+      }
     }
   }
 }
 
 class FakeWakeLock {
   requests = 0;
+  types: string[] = [];
   #pending: { resolve: (sentinel: SentinelLike) => void; reject: (error: unknown) => void }[] = [];
 
-  request(_type: 'screen'): Promise<SentinelLike> {
+  request(type: 'screen'): Promise<SentinelLike> {
     this.requests += 1;
+    this.types.push(type);
     return new Promise((resolve, reject) => this.#pending.push({ resolve, reject }));
   }
 
@@ -236,5 +240,35 @@ describe('the wake lock holder', () => {
       expect([holder.state, holder.refusal], String(error)).toEqual(['refused', name]);
     }
     console.log(`examined ${REFUSALS.length} refusals`);
+  });
+
+  // MUTATION COVERAGE: green when written. The request asks for the screen lock, `settled` waits
+  // for an answer however late it comes, a refusal that arrives after the fall is not recorded,
+  // and the browser's release of the held lock reaches `onChange`.
+  it('the screen lock is asked for, a late answer is waited for, and every change is told', async () => {
+    const lock = new FakeWakeLock();
+    const changes: LockState[] = [];
+    const holder: WakeLockHolder = new WakeLockHolder(lock, () => changes.push(holder.state));
+    holder.set(ALL);
+    const sentinel = lock.grant();
+    await holder.settled();
+    sentinel.browserReleases();
+    expect([lock.types, changes]).toEqual([['screen'], ['requesting', 'held', 'released']]);
+
+    const late = new WakeLockHolder({
+      request: () =>
+        new Promise((resolve) => setTimeout(() => resolve(new FakeSentinel()), 0))
+    });
+    late.set(ALL);
+    await late.settled();
+    expect(late.state).toBe('held');
+
+    const fallen = new FakeWakeLock();
+    const dropped = new WakeLockHolder(fallen);
+    dropped.set(ALL);
+    dropped.set({ ...ALL, visible: false });
+    fallen.deny('NotAllowedError');
+    await dropped.settled();
+    expect([dropped.state, dropped.refusal]).toEqual(['off', null]);
   });
 });

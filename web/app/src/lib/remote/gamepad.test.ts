@@ -123,4 +123,21 @@ describe('the gamepad reader', () => {
     expect(fired(reader, pad([0, 2])), 'forgotten, then read: a new baseline').toEqual([]);
     expect(fired(reader, pad([0, 2, 3])), 'the next snapshot').toEqual(['flag']);
   });
+
+  // MUTATION COVERAGE: green when written. A stick already off the centre on the first snapshot,
+  // at the lower threshold or between the two, is armed only once it returns below the lower one.
+  it('a stick off the centre on the first snapshot fires only after it returns', () => {
+    const lean = (value: number) => pad([], [value, 0, 0, 0]);
+    const STARTS: [number, Intent[]][] = [
+      [0.2, ['good']],
+      [0.25, []],
+      [0.4, []]
+    ];
+    for (const [start, then] of STARTS) {
+      const reader = new GamepadReader();
+      expect(fired(reader, lean(start)), `${start} on the first snapshot`).toEqual([]);
+      expect(fired(reader, lean(0.6)), `${start}, then past the threshold`).toEqual(then);
+    }
+    console.log(`examined ${STARTS.length} first snapshots`);
+  });
 });
