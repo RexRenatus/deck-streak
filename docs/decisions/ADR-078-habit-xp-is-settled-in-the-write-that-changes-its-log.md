@@ -213,3 +213,9 @@ What would make this wrong: a writing path that cannot share the settle's write,
 that writes `writing_log` outside `coordination::habits::writing`, or a second awarder of habit
 badges outside the fold. The predecessor's `habits.py:writing_day_xp`, `writing_streak` and
 `evaluate_habit_badges` at `27ee2bc`; #94.
+
+### Correction (verify round 2), 2026-10-04
+- Four of part 078a's private helpers, `settle_owner`, `level_before` and `celebrate` in `coordination::habits::minutes` and
+  `settle_habit` in `coordination::recompute::habits`, widened to `pub(super)`, chosen because the writing toggle and the
+  writing step then settle, measure and celebrate through the code part 078a proved, and no row's anchor or covered span moves.
+- Copies of those helpers in the writing modules, rejected because two copies of one settle rule are free to drift apart.

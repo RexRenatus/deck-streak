@@ -248,3 +248,8 @@ wrong against `habits.writing_xp`). Each kill was proved by plant: the exact mut
 line was applied to the tree, the one killer ran by its exact name (`running 1 test`) and failed as
 quoted, and the file was restored byte for byte (sha256 equal); every killer passes on the
 unmutated tree.
+
+Correction (verify round 2): commit 70a2a9d also removed one census line of `xp_settle.rs`,
+`["read:", "readgoal:"]`, which grew by this part's `write:` prefix (T19); it is a census growth, not a relaxed assertion.
+
+Correction (verify round 2): four tests, K1 to K4, kill the six mutants.

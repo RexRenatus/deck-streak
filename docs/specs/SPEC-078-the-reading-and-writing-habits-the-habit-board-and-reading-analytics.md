@@ -758,7 +758,9 @@ Part 078b's files:
   `PRIVACY.md`, `docs/CONTEXT-MAP.md`, `tools/parity-oracle/registry/spec_078.py`, every golden that
   registry builds (its sha256 moves), `scripts/mutation-rows.d/S07800-S07899.json`,
   `formal/tla/HabitXpFollowsItsLog/HabitXpFollowsItsLog.tla`,
-  `formal/tla/HabitXpFollowsItsLog/MCHabitXpFollowsItsLog.cfg`, `formal/tla/AwardOnce/AwardOnce.tla`,
+  `formal/tla/HabitXpFollowsItsLog/MCHabitXpFollowsItsLog.cfg`, the five existing witness configurations of
+  `formal/tla/HabitXpFollowsItsLog/witness/` (each gains the writing constants' lines, insert-only),
+  `formal/tla/AwardOnce/AwardOnce.tla`,
   `formal/lean/Formal/Vectors.lean`, `docs/decisions/ADR-078-habit-xp-is-settled-in-the-write-that-changes-its-log.md`,
   `docs/schematics/habit-xp-settles-from-its-log.md`, `docs/red-first/SPEC-078.md` and this SPEC.
 - `crates/coordination/src/recompute/badges.rs`: unchanged; the existing offers celebrate a habit badge.
