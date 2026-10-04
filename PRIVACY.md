@@ -91,8 +91,8 @@ You can also export and erase on the host that runs DeckStreak:
 - **The edge's log of the sync route** records, for each request to the sync route, the client's
   address, the method, the path without its key and the status, and none of your Anki data. It is
   kept in the service journal for at most 14 days (`P14D`), and journald then deletes it.
-- **The ban list** holds an address with five refused sync logins within ten minutes for the one
-  hour of its ban, and then releases it.
+- **The ban list** holds an address with five refused sync logins within ten minutes for up to one
+  day after its ban, and then releases it.
 - **The private copy of your collection** is your own Anki data: an erase leaves it, and the next
   sync would restore it from your sync server. Removing it means removing the sync credential, a
   step of the owner's setup.

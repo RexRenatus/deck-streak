@@ -151,7 +151,7 @@ class ThePolicyDisclosesWhatAnEraseLeaves(unittest.TestCase):
         self.assertIn(window, edge[0])
         self.assertIn(f"`{data['logs']['retention']}`".casefold(), edge[0])
         self.assertTrue(
-            any("ban list" in b and "address" in b and "hour" in b for b in bullets),
+            any("ban list" in b and "address" in b and "up to one day" in b for b in bullets),
             "no bullet discloses the ban list with the ban's period",
         )
 
