@@ -9,8 +9,8 @@
 - **Schematic:** `docs/schematics/card-frame-channels.md` (the channel tables; this delivery adds
   it).
 - **Status:** this delivery builds it, with its tests and `docs/red-first/SPEC-341.md`. **Mutation
-  band:** S34100-S34199. #648 (the engine in a Worker) had not landed on `dev` at this delivery's
-  cut, so #648 carries R13's composition.
+  band:** S34100-S34199. #648 (the engine in a Worker) landed on `dev` first, so this delivery
+  carries R13's composition.
 
 ## 1. The problem, measured
 
@@ -82,7 +82,7 @@ R10. With card scripts on (the measurement variant: an `allow-scripts` token and
 R11. The card renders: a screenshot of the card frame equals the reference frame's for the
      render-proof card, and differs from a blank frame's.
 R12. A `card-sandbox` CI job runs the planted suite in both engines on every pull request, uploads
-     its results whether it passes or fails, and the aggregate `ci` job needs it.
+     whatever results the suite leaves, whether it passes or fails (a passing run leaves none), and the aggregate `ci` job needs it.
 R13. The policy composes with #648: whichever of the two lands second makes `csp.test.ts`'s exact
      directive map and WEB-1's added-directive list agree, and leaves `frame-src` out of the engine
      harness's own header, whose cross-site frame test frames the harness in itself.
