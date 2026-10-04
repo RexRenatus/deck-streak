@@ -10,9 +10,11 @@ use std::time::Duration;
 use deck_streak_push::{
     BuildError, Notification, Origin, PushServices, Sent, WebPushSender, WebPushSettings,
 };
+use serde_json::json;
 
 use support::fake_push_service::FakePushService;
-use support::keys::{CONTACT, TestKey, TestSubscriber};
+use support::keys::{CONTACT, ENDPOINT_PATH, TestKey, TestSubscriber};
+use support::rfc8291::Undecrypted;
 use support::{DEADLINE, clock};
 
 /// A sender whose list holds `services`, signing with `key`.
@@ -67,4 +69,42 @@ async fn a16_an_endpoint_off_the_list_is_refused_before_any_request() {
     assert_eq!(sent, Sent::Delivered);
     assert_eq!(listed.fake.received().len(), 1);
     assert_eq!(unlisted.fake.received().len(), 0);
+}
+
+#[tokio::test]
+async fn a11_a_message_reaches_the_fake_encrypted_and_decrypts_to_its_json() {
+    let service = FakePushService::start().await;
+    let key = TestKey::generate();
+    let browser = TestSubscriber::generate();
+    let sender = build_sender(&key, listing(&[&service]));
+    let subscription = sender
+        .subscription(&service.endpoint(), &browser.p256dh(), &browser.auth())
+        .expect("a listed endpoint is admitted");
+
+    assert_eq!(
+        sender.deliver(&subscription, &notification()).await,
+        Sent::Delivered
+    );
+
+    let received = service.fake.received();
+    assert_eq!(received.len(), 1);
+    let request = &received[0];
+    assert_eq!(
+        FakePushService::plaintext(request, &browser),
+        Ok(json!({"title": "Synthetic title", "body": "Synthetic body"}))
+    );
+    assert_eq!(request.method, "POST");
+    assert_eq!(request.path, ENDPOINT_PATH);
+    assert_eq!(request.header("content-encoding"), Some("aes128gcm"));
+    assert_eq!(
+        request.header("content-type"),
+        Some("application/octet-stream")
+    );
+
+    // The fake's decryption is its own: another browser's key does not open the body.
+    let stranger = TestSubscriber::generate();
+    assert_eq!(
+        FakePushService::plaintext(request, &stranger),
+        Err(Undecrypted::Tag)
+    );
 }
