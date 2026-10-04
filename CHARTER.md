@@ -125,3 +125,35 @@ the owner's signed ruling records. Its earlier sentence, "The skip day is the ON
 Anki.", is kept above as it was, and no longer stands alone: DeckStreak writes to the collection
 only through declared write classes, each with its own ADR in ADR-089's form. The skip day is the
 first such class, and ADR-089 is its ADR.
+
+Amendment (the app-surfaces ruling): constraint 2 is amended by the owner's signed ruling
+`docs/rulings/OWNER-RULING-2026-10-04-app-surfaces.md`, and ADR-341 carries it. Constraint 2's text
+above is kept as it was. The ruling words what replaces it:
+
+> **Charter 2: one router, one policy.** DeckStreak's surfaces are a web client, a universal iPhone
+> and iPad client and native push (APNs and web push). Every celebration and nudge still passes
+> through ONE router, so an event can never celebrate twice. The Mini App and the bot remain until
+> the new surfaces carry the router, and the v9 cutover runs on today's surfaces. Native nudges are
+> opt-in, at most one a day (NOTIF-01).
+
+Amendment (the app-surfaces ruling): constraint 4 is amended again by the same ruling,
+`docs/rulings/OWNER-RULING-2026-10-04-app-surfaces.md`. ADR-337 carries the owner's own answers and
+gestures, and ADR-338 and ADR-339 carry its scheduler sentence. Constraint 4's text above, and the
+note on ADR-301 before this one, are kept as they were. The ruling words what replaces it:
+
+> **Charter 4: pull, then read, and the owner's own study.** The private copy stays read-only for
+> the game. The study client writes the owner's own answers, and the owner's own gestures under
+> `docs/rulings/OWNER-RULING-2026-10-04-owner-taps.md`. Every other write goes through a declared
+> write class (ADR-301). An experimental model only reorders cards the stock scheduler already made
+> due (OQ4), except FSRS-7 on the one preset the owner switches (OQ1).
+
+Amendment (the app-surfaces ruling): constraint 14 is amended by the same ruling,
+`docs/rulings/OWNER-RULING-2026-10-04-app-surfaces.md`, and ADR-335 carries it with the sign-in on
+the iPhone and iPad. Constraint 14's text above is kept as it was. The ruling words what replaces
+it:
+
+> **Charter 14: one owner, on every surface.** "The service answers one owner" is unchanged. Sign-in
+> on the web and on the iPhone and iPad pins to the one owner account, which is configuration held
+> in a secret, by the methods ADR-131 and ADR-132 specify (AUTH-01). The Telegram `initData` gate
+> stays while the Mini App and the bot exist. Commands with stakes or destructive effects carry the
+> same gate on every surface. No surface opens a session before its gate is built.

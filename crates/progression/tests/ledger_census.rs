@@ -431,3 +431,126 @@ fn a_name_the_census_cannot_resolve_fails_closed() {
         assert_eq!(census(planted.path()).refused, *expected, "{text}");
     }
 }
+
+/// The number of trees in SPEC-331 A1's population for `xp_ledger`: its 8 letters in both cases
+/// and its `_` once, in five shapes each.
+const LONE_CHARACTER_TREES: usize = 85;
+
+/// One of SPEC-331 A1's lone shapes: its label, and the file it writes around a character.
+type LoneShape = (&'static str, fn(char) -> String);
+
+/// SPEC-331 A1's population for the census's own name. At each position of the name, the piece
+/// before it and the piece after it are lone literals in two files, and its character is a lone
+/// literal in a third, in each of five lone shapes: a method argument (#600's `strip_prefix` line
+/// among them), a `matches!` arm, a format template, a named `const` used alone, and a split set.
+/// A letter is planted in both cases. Each tree is a label and its planted files.
+fn lone_character_trees() -> Vec<(String, Vec<(String, String)>)> {
+    let shapes: [LoneShape; 5] = [
+        ("method argument", |c| {
+            format!("pub fn c(date: &str) -> Option<&str> {{\n    date.strip_prefix({c:?})\n}}\n")
+        }),
+        ("matches! arm", |c| {
+            format!("pub fn c(x: char) -> bool {{\n    matches!(x, {c:?})\n}}\n")
+        }),
+        ("format template", |c| {
+            format!("pub fn c(n: u32) -> String {{\n    format!(\"{c}{{n}}\")\n}}\n")
+        }),
+        ("named const used alone", |c| {
+            format!(
+                "const MARK: char = {c:?};\npub fn c(t: &str) -> Option<&str> {{\n    \
+                 t.strip_prefix(MARK)\n}}\n"
+            )
+        }),
+        ("split set", |c| {
+            format!("pub fn c(t: &str) -> usize {{\n    t.split([{c:?}, '.']).count()\n}}\n")
+        }),
+    ];
+    let mut trees = Vec::new();
+    for (at, character) in TABLE.char_indices() {
+        let before = &TABLE[..at];
+        let after = &TABLE[at + 1..];
+        let mut cases = vec![character];
+        if character.is_ascii_alphabetic() {
+            cases.push(character.to_ascii_uppercase());
+        }
+        for case in cases {
+            for (shape, text) in &shapes {
+                let mut files = Vec::new();
+                if !before.is_empty() {
+                    files.push((
+                        "crates/quests/src/a1_before.rs".to_owned(),
+                        format!(
+                            "pub fn a(t: &str) -> bool {{\n    t.starts_with({before:?})\n}}\n"
+                        ),
+                    ));
+                }
+                if !after.is_empty() {
+                    files.push((
+                        "crates/quests/src/a1_after.rs".to_owned(),
+                        format!("pub fn b(t: &str) -> bool {{\n    t.ends_with({after:?})\n}}\n"),
+                    ));
+                }
+                files.push(("crates/streaks/src/a1_char.rs".to_owned(), text(case)));
+                trees.push((format!("{TABLE}@{at} {case:?} {shape}"), files));
+            }
+        }
+    }
+    trees
+}
+
+#[test]
+fn a_lone_character_unjoined_in_its_file_completes_no_path() {
+    // SPEC-331 A1: a lone literal of one character, in a file that joins it with nothing, completes
+    // no path, whatever the other files hold, so no tree of the population is refused. The positive
+    // control joins pieces of the name in one file and is refused by that file, so a census that
+    // reads nothing fails here too.
+    let trees = examined("lone-character tree(s)", lone_character_trees());
+    assert_eq!(trees.len(), LONE_CHARACTER_TREES);
+    let mut refused = Vec::new();
+    for (label, files) in &trees {
+        let planted = tempfile::tempdir().expect("a temporary directory");
+        for (path, text) in files {
+            assert!(
+                !text.contains(TABLE),
+                "{path} of {label} names {TABLE} as written"
+            );
+            plant(planted.path(), path, text);
+        }
+        let found = census(planted.path()).refused;
+        if !found.is_empty() {
+            refused.push((label.clone(), found));
+        }
+    }
+    let files: usize = refused.iter().map(|(_, found)| found.len()).sum();
+    assert!(
+        refused.is_empty(),
+        "{files} file(s) refused in {} of {} tree(s); the first: {:?}",
+        refused.len(),
+        trees.len(),
+        refused.first()
+    );
+    let middle = TABLE.len() / 2;
+    let joined = format!(
+        "pub fn joined() -> String {{\n    format!(\"{{}}{{}}{{}}\", {:?}, {:?}, {:?})\n}}\n",
+        &TABLE[..middle],
+        TABLE[middle..]
+            .chars()
+            .next()
+            .expect("the middle character")
+            .to_ascii_uppercase(),
+        &TABLE[middle + 1..]
+    );
+    assert!(
+        !joined.contains(TABLE),
+        "the control names {TABLE} as written"
+    );
+    let control = tempfile::tempdir().expect("a temporary directory");
+    plant(control.path(), "crates/quests/src/a1_joined.rs", &joined);
+    assert_eq!(
+        census(control.path()).refused,
+        vec![format!(
+            "crates/quests/src/a1_joined.rs spells {TABLE} from literals, joined or in another \
+             case, and only {OWNER}'s code may"
+        )]
+    );
+}
