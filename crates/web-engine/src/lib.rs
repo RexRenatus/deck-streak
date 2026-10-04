@@ -3,3 +3,5 @@
 //!
 //! Every dependency is `wasm32`-only, so a native build compiles this crate root alone and the
 //! engine never joins the native graph through it.
+
+pub mod study;
