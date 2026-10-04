@@ -13,8 +13,8 @@
   an entry that is not a user name and a pbkdf2-sha256 hash, clears what the server would read, and
   execs the server on a loopback address with its data in the unit's own state directory.
 - DeckStreak's share is 1152M, recorded by amendments of ADR-064 and ADR-032, and its two
-  processors are split among the five daemons: the API 75%, the sync server 50%, the bot, the
-  replicator and the MCP server 25% each.
+  processors are split among the five daemons: the API and the sync server 75% each, the bot 20%,
+  and the replicator and the MCP server 15% each.
 - Tests that hold the unit's hardening, its budget entry, the share, its two credentials and the
   absence of any password hash in the tree, and that run the launcher over its starts and its
   refusals with the server stubbed, with mutation rows for each of its checks.
@@ -29,5 +29,6 @@
   #617): one step per state of the schematic's sequence, the data moved by a final sync and
   desktop's full upload into an empty store, the server's collection read back before any retry,
   each host step on the owner's go (#161), the old server untouched as the rollback, and the
-  cutover's full upload held until the sync server's processor share is decided.
+  cutover's full upload held to a first reading under the sync server's real quota, which stops
+  the cutover on a client failure or a long stall.
 - A test that reads the runbook against the schematic's states, their order and each step's go.

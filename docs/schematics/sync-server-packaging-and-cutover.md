@@ -61,14 +61,15 @@ EMPTY store, and the other clients take a full download from it. Nothing copies 
 store. The staging sync user (ADR-344) rehearses the same sequence on the new server first, with
 a scrubbed collection. The old server is never written by any state: the rollback repoints the
 clients to it and stops the new unit, so it is reachable from every state up to the new password.
-The cutover's full upload is HELD until the sync server's processor share is decided (SPEC-337
-§6): the window opens only once the hold is lifted.
+The cutover's full upload is held to the runbook's three conditions (ADR-347 D7): the first full
+upload under the unit's real quota is the reading that counts, taken in the rehearsal when that
+needs no change to the deploy, and a client failure or a long stall there stops the cutover.
 
 ```mermaid
 stateDiagram-v2
   [*] --> started: the review's verdict and the owner's go, the unit started over an empty store
   started --> rehearsed: the staging user's rehearsal passed
-  rehearsed --> final_sync: the hold lifted and the owner's go
+  rehearsed --> final_sync: the hold's reading passed, or is the cutover's own, and the owner's go
   final_sync --> frozen: every client synced once against the old server, then none syncs
   frozen --> uploaded: desktop repointed, its full upload into the empty store
   uploaded --> read_back: the server's collection read back and matched with desktop's counts
@@ -104,8 +105,8 @@ Where each state happens, and whose go starts it; the runbook marks each step th
 
 What the sequence holds, each a line of the runbook (`docs/runbooks/sync-server-cutover.md`):
 
-- Nothing of the owner's moves before the rehearsal passed and the hold is lifted: `final_sync` is
-  reachable only from `rehearsed`, and `rehearsed` only from `started`.
+- Nothing of the owner's moves before the rehearsal passed and the hold's reading allows it:
+  `final_sync` is reachable only from `rehearsed`, and `rehearsed` only from `started`.
 - The upload goes into an EMPTY store, by the server's own full upload; the old server's store is
   never copied (ADR-347 D10).
 - The read-back precedes any retry: a full upload the client reports as failed may have landed on

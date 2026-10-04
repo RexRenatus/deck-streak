@@ -37,10 +37,11 @@ TimeoutStartSec=180
 TimeoutStopSec=30
 OOMPolicy=kill
 SyslogIdentifier=deck-streak-bot
-# The budget is deploy/host-budget.json's entry for this unit (ADR-032).
+# The budget is deploy/host-budget.json's entry for this unit (ADR-032); the processor share is
+# ADR-347 D7's.
 MemoryHigh=64M
 MemoryMax=96M
-CPUQuota=25%
+CPUQuota=20%
 TasksMax=64
 UMask=0077
 NoNewPrivileges=yes

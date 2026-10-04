@@ -136,14 +136,52 @@ of that section stands.
 D7, the share and the processors:
 
 - `deck-streak-sync-server.service` takes `MemoryHigh=384M` and `MemoryMax=448M`, and the share's
-  two processors are split among the five daemons, 200% in all: the API 75%, the sync server 50%,
-  the bot 25%, the replicator 25% and the MCP server 25%. The five daemons' ceilings (768M) and the
+  two processors are split among the five daemons, 200% in all: the API 75%, the sync server 75%,
+  the bot 20%, the replicator 15% and the MCP server 15%. The five daemons' ceilings (768M) and the
   largest job's (384M) fill the share of 1152M exactly, and the share test asserts both figures
   EQUAL — chosen, because a full upload is the heaviest burst measured and a client waits on it,
-  while the bot's traffic waits on the host and the replicator ships write-ahead-log frames.
+  while the bot's traffic waits on the host and the replicator ships write-ahead-log frames, and
+  because the measurement below held at about 75% of a processor. This line replaces the first
+  split, which the same measurement refused (the 50% option below).
 - Taking the sync server's room from the API: rejected because the API serves the clients' path.
 - 25% of a processor for the sync server: rejected because a full upload is bound by the processor
   and the client waits on it.
+- 50% for the sync server, with the bot, the replicator and the MCP server at 25% each (the first
+  split): rejected because, measured at 50% of one processor, the client gave up at its 30-second
+  stall limit while the server completed the upload and answered it with status 200 (SPEC-337 §6).
+- 80% for the sync server, with the bot, the replicator and the MCP server at 15% each: rejected
+  because no measurement lies above 75% short of 100%, and it takes the bot's headroom for no
+  measured gain.
+- 100% for the sync server, with a third processor in the share: rejected because the longest
+  stall falls only from 14.1 s at about 75% to 12.7 s at 100%: it is the server's import and check
+  of the received collection, mostly fixed, so a whole processor buys little. It is held in reserve
+  as the share's next step: the cutover runbook's hold applies it at once, with no new decision,
+  when the first reading under the real quota fails.
+
+The measurement, ADR-022's shape (250,000 cards, 225,800,192 bytes) by one full upload, the server
+held to one processor, read two ways, since a stall can be read at the client's socket by more
+than one count:
+
+| setting | the client | longest stall, written bytes | longest stall, acknowledged bytes only |
+|---|---|---|---|
+| 100% of one processor | succeeded | 12.7 s (a margin of about 17 s on 30 s) | not read |
+| about 75% of one processor | succeeded | 14.1 s (a margin of about 16 s on 30 s) | not read |
+| 50% of one processor | failed at its 30-second limit; the server answered 200 | not read | 14.1 s |
+
+- Written bytes are the bytes the server acknowledged plus those still queued to send, read at the
+  client's socket; it is the better reading, since acknowledged bytes alone count a full send queue
+  as a stall the client is not in. The 50% reading took acknowledged bytes only, which is why a
+  14.1 s figure sits beside a client that failed at 30 s.
+- Each figure is a LOWER BOUND on the client's own stall, since the socket can be busy while the
+  client still waits on the server's answer. The client's own result, success or its timeout, is
+  the decisive reading.
+- The about-75% run held the server to one processor beside one competing process at a lower
+  scheduling priority, and the server took 73.2% of that processor; it is an approximation of a
+  quota, not a run under `CPUQuota=`. The cutover runbook therefore takes the first reading under
+  the unit's real `CPUQuota=75%` on the host, and a client failure or a stall over 20 s there stops
+  the cutover (its hold).
+- The margin holds for ADR-022's shape only: the runbook measures the full upload again before any
+  full upload of a larger collection, under the same stop.
 
 D8, where the credential ids live:
 

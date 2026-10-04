@@ -21,11 +21,26 @@ names none.
 
 ## The hold
 
-The cutover's full upload is HELD until the sync server's processor share is decided (SPEC-337 §6,
-#617). Under the unit's present `CPUQuota=50%`, a full upload of ADR-022's shape failed at the
-client's 30-second stall limit while the server completed it; at about 75% and at 100% of one
-processor it held. `started` and `rehearsed` may run while the hold stands, since neither moves the
-owner's data; no step from `final_sync` on starts until the hold is lifted.
+The sync server's processor share is decided: `CPUQuota=75%` (ADR-347 D7). Its measurement was an
+approximation of that quota, so the cutover's full upload is held to three conditions in place of
+a larger share (SPEC-337 §6):
+
+- (a) The first full upload under the unit's real `CPUQuota=75%` on the host is the reading that
+  counts. It is taken in `rehearsed`, before the owner's collection moves, by the staging user's
+  full upload of a collection of ADR-022's shape, when that needs no change to the deploy;
+  otherwise the cutover's own full upload in `uploaded` is that reading.
+- (b) Either way, the step records the client's result and its longest stall, read at the client's
+  socket as the bytes it has written, those the server acknowledged plus those still queued
+  (ADR-347 D7).
+- (c) A client failure, or a longest stall over 20 seconds, is a STOP. No step after it starts
+  except `read_back`, which is read only, and `rolled_back`, and the share's reserve in ADR-347 D7,
+  a third processor with the sync server's quota at 100%, applies at once, with no new decision,
+  before any full upload is tried again.
+
+The margin holds for ADR-022's shape only: before any full upload of a larger collection, the
+full upload is measured again as (a) and (b) say, and (c) applies. `started` and `rehearsed` move
+none of the owner's data; no step from `final_sync` on starts until (a)'s reading has passed, or is
+to be the cutover's own.
 
 ## Before the window
 
@@ -51,12 +66,15 @@ A host step, on the owner's go (#161). The whole sequence below, once, as the st
 a scrubbed collection, on two scratch desktop profiles pointed at the new server: the full upload
 from the first, the read-back on the host as `read_back` does it, the full download into the second,
 then one sync each way. Record the upload's client-side result beside the read-back, and what
-desktop asks at its next sync if the client reported the upload as failed. A failed rehearsal stops
-the cutover here: nothing of the owner's has moved.
+desktop asks at its next sync if the client reported the upload as failed. When it needs no change
+to the deploy, the staging user's full upload of a collection of ADR-022's shape is the hold's
+reading (a), recorded as (b) says; (c) applies to it. A failed rehearsal stops the cutover here:
+nothing of the owner's has moved.
 
 ### `final_sync`: every client synced once against the old server
 
-This step is the owner's own act. Once the hold is lifted and the window opens, each client syncs
+This step is the owner's own act. Once the hold's reading (a) has passed, or is to be the cutover's
+own, and the window opens, each client syncs
 against the old server, one at a time, each finished before the next starts: AnkiMobile, then the
 app, then desktop, so that desktop's sync brings every client's studies.
 
@@ -68,7 +86,7 @@ read from the Browse window over the whole collection and kept for `read_back`.
 
 ### `uploaded`: desktop's full upload into the empty store
 
-This step is the owner's own act, and only once the hold is lifted (the hold, above). Desktop's sync
+This step is the owner's own act, under the hold's conditions (the hold, above). Desktop's sync
 address is set to the new server's, under the web app's origin at `/anki-sync/`, and it logs in as
 the owner. It finds an empty server and asks for a one-way sync: choose the upload. Record what
 desktop reports. Whatever it reports, nothing is uploaded again before `read_back`.
@@ -81,7 +99,8 @@ collection on the server, and a read-only read of it succeeds while the server r
 
 - The counts equal desktop's from `frozen`: the upload landed, whatever desktop reported. Do not
   upload again (ADR-347 D11). A failure desktop reported is the divergence SPEC-337 §6 names:
-  record it for #617.
+  record it for #617. When this upload was the hold's reading, a failure or a stall over 20 seconds
+  is the hold's STOP (c), whatever the counts say.
 - The counts differ, or the store holds no collection: desktop uploads once more, and the read-back
   is repeated. A second mismatch is `rolled_back`.
 

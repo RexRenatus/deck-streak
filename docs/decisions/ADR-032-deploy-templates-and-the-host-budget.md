@@ -155,16 +155,16 @@ form:
 |---|---|---|---|
 | `deck-streak-sync-server.service` (SPEC-337) | 384M | 448M | one full upload of ADR-022's synthetic collection peaks at about 319 MiB resident, under `MemoryHigh` |
 
-The daemons' processor caps divide the share's two processors exactly, as ADR-347 splits them: the
-sync server's half of a processor is taken from the bot's and the replicator's, and the API keeps
-its cap, since it serves the clients' path.
+The daemons' processor caps divide the share's two processors exactly, as ADR-347 D7 splits them:
+the sync server's three quarters of a processor are taken from the bot's, the replicator's and the
+MCP server's, and the API keeps its cap, since it serves the clients' path.
 
 | unit | CPUQuota | TasksMax |
 |---|---|---|
 | `deck-streak-api.service` | 75% | 64 |
-| `deck-streak-sync-server.service` | 50% | 64 |
-| `deck-streak-bot.service` | 25% | 64 |
-| `deck-streak-litestream.service` | 25% | 64 |
-| `deck-streak-mcp.service` | 25% | 32 |
+| `deck-streak-sync-server.service` | 75% | 64 |
+| `deck-streak-bot.service` | 20% | 64 |
+| `deck-streak-litestream.service` | 15% | 64 |
+| `deck-streak-mcp.service` | 15% | 32 |
 
 The rest of this record stands.

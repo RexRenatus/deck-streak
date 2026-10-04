@@ -30,9 +30,9 @@ So the server's own entry, sized from the peak, cannot fit the share as it stand
 owner's decision (ADR-340, "What would make this wrong"; ADR-032), and this SPEC changes no share.
 
 Note on the share row: the share was then moved by the owner's decision to 1152 MiB, recorded as
-ADR-064's and ADR-032's amendments of this delivery; ADR-347's amendment splits the share's two
-processors among the five daemons (the API 75%, the sync server 50%, the bot, the replicator and
-the MCP server 25% each). The row above stays as it was measured.
+ADR-064's and ADR-032's amendments of this delivery; ADR-347's amendment (D7) splits the share's
+two processors among the five daemons (the API and the sync server 75% each, the bot 20%, the
+replicator and the MCP server 15% each). The row above stays as it was measured.
 
 ## 2. Requirements
 
@@ -109,7 +109,7 @@ block with the fourth key; that module is decided by CI by name and is never run
 | `scripts/mutation-rows.d/S33700-S33799.json` | tests | added | this |
 | `changelog.d/sync-server-packaging-337.md` | docs | added | this |
 | `deploy/systemd/deck-streak-sync-server.service`, `deploy/scripts/sync-server.sh` | deploy | added | this |
-| `deploy/systemd/deck-streak-bot.service`, `deploy/systemd/deck-streak-litestream.service` (`CPUQuota=25%`) | deploy | changed | this |
+| `deploy/systemd/deck-streak-bot.service`, `deploy/systemd/deck-streak-litestream.service`, `deploy/systemd/deck-streak-mcp.service` (`CPUQuota=` 20%, 15% and 15%) | deploy | changed | this |
 | `deploy/host-budget.json`, `deploy/rail-contract.json` | deploy | changed | this |
 | `docs/decisions/ADR-032-deploy-templates-and-the-host-budget.md`, `docs/decisions/ADR-064-deckstreak-backs-up-with-its-own-units-and-never-the-collection.md` (each an amendment) | docs | changed | this |
 | `deploy/deck-streak.env.example`, `deploy/README.md` | deploy | changed | this |
@@ -151,16 +151,16 @@ block with the fourth key; that module is decided by CI by name and is never run
   shape at start (R2): the unit then fails at once and pages through `OnFailure=`.
 - The peak scales with the collection uploaded whole. Section 1 measures ADR-022's shape, which is
   the budget's reference; the memory watch reads the real figure after the cutover (SPEC-031).
-- A full upload the server completes can still fail at the client. Measured with ADR-022's shape,
-  the server held to one processor: at 50% of it the client gave up at its 30-second stall limit
+- A full upload the server completes can still fail at the client. Measured with ADR-022's shape
+  and the server held to part of one processor, the client gave up at its 30-second stall limit
   while the server finished the upload and answered it with status 200 a few seconds later, so the
-  server held the new collection that the client reported as failed, a divergence; at about 75% (a
-  competing process at a lower priority on the same processor, an approximation of a quota) and at
-  100% the upload held, its longest client-side stall about 14 and 13 seconds. The stall is the
+  server held the new collection that the client reported as failed, a divergence. The stall is the
   server reading and checking the received collection before it answers, and it grows as the share
-  shrinks. The unit keeps `CPUQuota=50%` until the sync server's share is decided (#617), the
-  runbook holds the cutover's full upload until then, and its upload step reads the server's
-  collection back before any retry, so a retry never follows an upload the server completed.
+  shrinks. ADR-347 D7 records the readings, the quota they chose (`CPUQuota=75%`) and why each
+  reading is a lower bound. That figure's reading approximated a quota, so the runbook's hold takes
+  the first reading under the real quota on the host and stops the cutover on a client failure or
+  a stall over 20 seconds, and its upload step reads the server's collection back before any
+  retry, so a retry never follows an upload the server completed.
 - The server holds each user's `media.db` in SQLite's exclusive locking mode for its whole life
   (the fork's media database opens with `locking_mode=exclusive`), so no second process can read it
   while the server runs. Measured: a read and an online backup of `media.db` are refused with
@@ -199,6 +199,11 @@ ADR-340, ADR-347, ADR-058, ADR-336, ADR-344, ADR-032, ADR-064, ADR-062, ADR-010,
 `RELEASING.md`; `deploy/README.md`.
 
 ## 10. Amendments: what this part measured after section 1
+
+SPEC-333 R3 is amended by this delivery: `deploy/README.md` "## The host budget" names the
+`CPUQuota=` of five daemons, not four, at ADR-347 D7's split: the API's 75%, the sync server's 75%,
+the bot's 20%, the replicator's 15% and the MCP server's 15%, which divide the share's two
+processors exactly.
 
 Section 6's last two risks are measurements taken after section 1, with the same server and the
 same scratch client. The second holds the snapshot's part (R5, A7, A8) until the owner chooses its

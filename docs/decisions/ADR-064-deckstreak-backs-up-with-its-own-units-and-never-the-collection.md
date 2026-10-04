@@ -127,16 +127,16 @@ The worst case is the five daemons' ceilings, 128M for the API, 96M for the bot,
 server, 64M for the replicator and 448M for the sync server (768M), plus the largest job, 384M:
 1152M, which fills the share of 1152M exactly.
 
-The share's two processors are split by ADR-347 among the five daemons, 200% in all:
+The share's two processors are split by ADR-347 D7 among the five daemons, 200% in all:
 
 | unit | CPUQuota |
 |---|---|
 | `deck-streak-api.service` | 75% |
-| `deck-streak-sync-server.service` | 50% |
-| `deck-streak-bot.service` | 25% |
-| `deck-streak-litestream.service` | 25% |
-| `deck-streak-mcp.service` | 25% |
+| `deck-streak-sync-server.service` | 75% |
+| `deck-streak-bot.service` | 20% |
+| `deck-streak-litestream.service` | 15% |
+| `deck-streak-mcp.service` | 15% |
 
-The replicator's quota moves from 50% to 25%, since it ships write-ahead-log frames and a
+The replicator's quota moves from 50% to 15%, since it ships write-ahead-log frames and a
 snapshot and waits on the network more than on a processor; the budget table above keeps its
 memory ceilings. The rest of this record stands.
