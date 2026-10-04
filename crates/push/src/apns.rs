@@ -2,7 +2,7 @@
 //! provider token reused until it is 45 minutes old.
 
 use std::fmt;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
 
 use deck_streak_kernel::{Clock, UtcMillis};
@@ -15,6 +15,10 @@ use serde_json::json;
 use crate::client::{Answer, Client, Versions};
 use crate::jwt::Signer;
 use crate::{BuildError, Notification, Origin, Sent, Unreached};
+
+/// How old a provider token may grow before the sender mints the next. APNs refuses a token
+/// older than an hour, and asks for one no more often than every 20 minutes (R3).
+const REFRESH_AGE: Duration = Duration::from_mins(45);
 
 /// Which of APNs's two services a device registered with: a development build's, or a production
 /// build's. Chosen per device, because one owner runs both kinds of build.
@@ -102,6 +106,15 @@ pub struct ApnsSender {
     development: Origin,
     production: Origin,
     clock: Arc<dyn Clock>,
+    token: Mutex<Option<ProviderToken>>,
+}
+
+/// A provider token and the instant it was minted. It is never printed: neither it nor the sender
+/// that holds it writes the token into a `Debug` (R8).
+#[derive(Clone)]
+struct ProviderToken {
+    text: String,
+    minted: UtcMillis,
 }
 
 impl ApnsSender {
@@ -121,6 +134,7 @@ impl ApnsSender {
             development: settings.development,
             production: settings.production,
             clock,
+            token: Mutex::new(None),
         })
     }
 
@@ -131,10 +145,10 @@ impl ApnsSender {
         })
         .to_string();
         let now = self.clock.now();
-        let Some(token) = self.mint(now) else {
+        let Some(token) = self.current_token(now) else {
             return Sent::Failed(Unreached::Request);
         };
-        let Some(request) = self.request(device, notification, body, &token, now) else {
+        let Some(request) = self.request(device, notification, body, &token.text, now) else {
             return Sent::Failed(Unreached::Request);
         };
         match self.client.post(request).await {
@@ -143,11 +157,27 @@ impl ApnsSender {
         }
     }
 
+    /// The token to send at `now`: the one held while it is younger than [`REFRESH_AGE`], else a
+    /// new one, minted and held under the one lock with no await inside it (R3).
+    fn current_token(&self, now: UtcMillis) -> Option<ProviderToken> {
+        let mut held = self.token.lock().unwrap_or_else(PoisonError::into_inner);
+        if let Some(token) = held
+            .as_ref()
+            .filter(|token| age(now, token.minted) < REFRESH_AGE)
+        {
+            return Some(token.clone());
+        }
+        let fresh = self.mint(now)?;
+        *held = Some(fresh.clone());
+        Some(fresh)
+    }
+
     /// A provider token minted at `now`: ES256 over `{"alg","kid"}` and `{"iss","iat"}` (R3).
-    fn mint(&self, now: UtcMillis) -> Option<String> {
+    fn mint(&self, now: UtcMillis) -> Option<ProviderToken> {
         let header = json!({"alg": "ES256", "kid": self.key_id});
         let claims = json!({"iss": self.team_id, "iat": now.epoch_millis().div_euclid(1000)});
-        self.signer.token(&header, &claims)
+        let text = self.signer.token(&header, &claims)?;
+        Some(ProviderToken { text, minted: now })
     }
 
     /// The request for `notification` to `device`, carrying `token`; `None` when a header cannot
@@ -176,6 +206,12 @@ impl ApnsSender {
         }
         request.body(Full::new(Bytes::from(body))).ok()
     }
+}
+
+/// How long `minted` was before `now`; none when the clock has gone back.
+fn age(now: UtcMillis, minted: UtcMillis) -> Duration {
+    let millis = now.epoch_millis().saturating_sub(minted.epoch_millis());
+    Duration::from_millis(u64::try_from(millis).unwrap_or(0))
 }
 
 /// `apns-expiration`: the epoch second after which APNs stops trying, the clock's second plus the

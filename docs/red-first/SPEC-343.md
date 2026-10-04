@@ -11,6 +11,9 @@ A16: red at 06e4914d: assertion `left == right` failed: left: None, right: Some(
 A10: green at e90b953f
 A1: red at beb86050: assertion `left == right` failed: left: Failed(Request), right: Delivered
 A2: red at beb86050: assertion `left == right` failed: left: Failed(Request), right: Delivered
+A1: green at 7b9ca18d
+A2: green at 7b9ca18d
+A3: red at 8f2e2fbc: assertion `left == right` failed: 19 minutes on, the token is reused (left: a token with iat 1800001140, right: the token with iat 1800000000)
 A20: not red: the census judges the real tree and guards the crate's arrival; it has no behaviour of this delivery to be red for
 A21: not red: the census judges the real tree and guards the crate's arrival; it has no behaviour of this delivery to be red for
 A22: not red: the census judges the real tree and guards the crate's arrival; it has no behaviour of this delivery to be red for
