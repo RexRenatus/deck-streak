@@ -44,6 +44,21 @@ DRILL_SERVICE_NAME = "deck-streak-restore-drill.service"
 SYNC_SERVER_SERVICE_NAME = "deck-streak-sync-server.service"
 # The stopped-server window that copies the sync server's store for the snapshot (ADR-347 D12).
 SYNC_SNAPSHOT_SERVICE_NAME = "deck-streak-sync-snapshot.service"
+# SPEC-340 R3 and R4: the snapshot's archive and its drill, each a unit of its own (ADR-351 D1).
+SYNC_ARCHIVE_SERVICE_NAME = "deck-streak-sync-archive.service"
+SYNC_DRILL_SERVICE_NAME = "deck-streak-sync-restore-drill.service"
+# SPEC-340 R2: the sync family runs as its own system user and group, every other service as
+# DeckStreak's (ADR-351 D1).
+SERVICE_USER = "deck-streak"
+SYNC_USER = "deck-streak-sync"
+SYNC_FAMILY = (
+    SYNC_SERVER_SERVICE_NAME,
+    SYNC_SNAPSHOT_SERVICE_NAME,
+    SYNC_ARCHIVE_SERVICE_NAME,
+    SYNC_DRILL_SERVICE_NAME,
+)
+# The two state directories only the sync family names.
+SYNC_STATE_DIRECTORIES = {"deck-streak-sync-server", "deck-streak-sync-snapshots"}
 SYNC_LAUNCHER = DEPLOY / "scripts" / "sync-server.sh"
 # The variables the sync server reads its users from, `name:<hash>` each: only its launcher sets
 # them, from the unit's credentials, so no unit and no settings line may (ADR-347 D2).
@@ -245,10 +260,9 @@ DAEMON_CAPS = {
     "deck-streak-bot.service": {"CPUQuota": "20%", "TasksMax": "64"},
     "deck-streak-mcp.service": {"CPUQuota": "15%", "TasksMax": "32"},
 }
-# R2: the identity and hardening of every service, each at the value the pack's rows score.
+# R2: the hardening of every service, each at the value the pack's rows score; its identity is
+# `hardening(name)`'s, by family (SPEC-340 R2).
 HARDENING = {
-    "User": "deck-streak",
-    "Group": "deck-streak",
     "UMask": "0077",
     "ProtectSystem": "strict",
     "ProtectHome": "yes",
@@ -272,6 +286,15 @@ HARDENING = {
     "LockPersonality": "yes",
     "MemoryDenyWriteExecute": "yes",
 }
+
+
+def hardening(name):
+    """The identity and hardening the service `name` carries: the sync family's own user and group,
+    or DeckStreak's (SPEC-340 R2), and the hardening every service carries."""
+    user = SYNC_USER if name in SYNC_FAMILY else SERVICE_USER
+    return {"User": user, "Group": user, **HARDENING}
+
+
 # R2, R3 and SPEC-031 R6, per service: the one directory it may write, the settings file it reads,
 # the address families it may open, and the journal it may read. The roles share the state
 # directory and the settings file; SPEC-031's units read no settings, so the alert path never waits
@@ -288,13 +311,28 @@ PER_SERVICE = {
     f"{ALERT_TEMPLATE}@.service": (None, None, ROLES_NETWORK, "systemd-journal"),
     SLO_SERVICE: ("deck-streak-slo", None, "AF_UNIX", "systemd-journal"),
     WATCH_SERVICE: ("deck-streak-memory-watch", None, "AF_UNIX", None),
-    # SPEC-064: the replicator and the drill reach the bucket, and so does the backup since the
-    # sync server's snapshot is copied offsite (SPEC-337 R5).
+    # SPEC-064: the replicator and the drill reach the bucket; the backup copies the database
+    # alone, reads no settings and opens no network socket (SPEC-340 R3).
     LITESTREAM_SERVICE_NAME: ("deck-streak", ENVIRONMENT_FILE, ROLES_NETWORK, None),
-    BACKUP_SERVICE_NAME: ("deck-streak", ENVIRONMENT_FILE, ROLES_NETWORK, None),
-    # SPEC-337: the window reads the server's store, writes beside the backups, opens no socket.
-    SYNC_SNAPSHOT_SERVICE_NAME: ("deck-streak deck-streak-sync-server", None, "AF_UNIX", None),
+    BACKUP_SERVICE_NAME: ("deck-streak", None, "AF_UNIX", None),
+    # SPEC-337, SPEC-340: the window reads the server's store, writes its generation into the sync
+    # family's own directory, and opens no socket.
+    SYNC_SNAPSHOT_SERVICE_NAME: (
+        "deck-streak-sync-snapshots deck-streak-sync-server",
+        None,
+        "AF_UNIX",
+        None,
+    ),
+    # SPEC-340 R3: the archive reads the generation and reaches the bucket by the settings' copy.
+    SYNC_ARCHIVE_SERVICE_NAME: (
+        "deck-streak-sync-snapshots",
+        ENVIRONMENT_FILE,
+        ROLES_NETWORK,
+        None,
+    ),
     DRILL_SERVICE_NAME: ("deck-streak", ENVIRONMENT_FILE, ROLES_NETWORK, None),
+    # SPEC-340 R4: the sync drill restores the newest archive in a scratch directory, offline.
+    SYNC_DRILL_SERVICE_NAME: ("deck-streak-sync-snapshots", None, "AF_UNIX", None),
     # SPEC-337: the sync server keeps its users' data in its own directory and listens on loopback.
     SYNC_SERVER_SERVICE_NAME: (
         "deck-streak-sync-server",
@@ -1530,7 +1568,7 @@ class TheServicesRunTheirRoles(unittest.TestCase):
             sorted(PER_SERVICE), [unit.name for unit in units], "the per-service table"
         )
         for unit in units:
-            for key, value in HARDENING.items():
+            for key, value in hardening(unit.name).items():
                 self.assertEqual(
                     unit.values("Service", key), [value] if value else [], f"{unit.rel} {key}"
                 )
@@ -1558,7 +1596,7 @@ class TheSyncServerRunsAsItsOwnUnit(unittest.TestCase):
         )
         for key, value in SYNC_SERVER_SERVICE.items():
             self.assertEqual(last(unit, "Service", key), value, key)
-        for key, value in HARDENING.items():
+        for key, value in hardening(SYNC_SERVER_SERVICE_NAME).items():
             self.assertEqual(unit.values("Service", key), [value] if value else [], key)
         self.assertEqual(unit.values("Service", "StateDirectory"), ["deck-streak-sync-server"])
         self.assertEqual(unit.values("Service", "RestrictAddressFamilies"), ["AF_UNIX AF_INET"])
@@ -1592,6 +1630,29 @@ class TheSyncServerRunsAsItsOwnUnit(unittest.TestCase):
                 "deck-streak-mcp.service": "15%",
                 SYNC_SERVER_SERVICE_NAME: "75%",
             },
+        )
+
+    def test_the_sync_family_runs_as_its_own_user(self):
+        """SPEC-340 A2 (R2; ADR-351 D1): the sync server, its window, its archive and its sync drill
+        run as `deck-streak-sync`, every other service as `deck-streak`, and no state directory is
+        named by units of both users."""
+        units = services()
+        for unit in units:
+            want = SYNC_USER if unit.name in SYNC_FAMILY else SERVICE_USER
+            self.assertEqual(unit.values("Service", "User"), [want], unit.rel)
+            self.assertEqual(unit.values("Service", "Group"), [want], unit.rel)
+            named = set(" ".join(unit.values("Service", "StateDirectory")).split())
+            if unit.name in SYNC_FAMILY:
+                self.assertNotIn(SERVICE_USER, named, unit.rel)
+            else:
+                self.assertEqual(named & SYNC_STATE_DIRECTORIES, set(), unit.rel)
+        family = examined(
+            "sync family unit(s)", [unit.name for unit in units if unit.name in SYNC_FAMILY]
+        )
+        self.assertEqual(sorted(family), sorted(SYNC_FAMILY))
+        self.assertEqual(
+            sorted(unit.name for unit in units if unit.values("Service", "User") == [SYNC_USER]),
+            sorted(SYNC_FAMILY),
         )
 
     def test_the_sync_servers_two_users_come_from_the_socket_and_never_an_environment(self):
