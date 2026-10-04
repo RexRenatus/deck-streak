@@ -160,6 +160,14 @@
         "            Path(f\"{plain}.age\").exists()\n",
         "the sealed files are removed after the copy, whatever it does (SPEC-340 R12)",
         "test_backup_units.SyncWindow.test_the_offsite_copy_is_sealed_and_never_plain"
+      ],
+      [
+        "S34022-THE-LENGTH-IS-THIRTY-TWO",
+        "deploy/scripts/sync-server.sh",
+        "(,l=32)?",
+        "(,l=[0-9]+)?",
+        "the launcher admits a length of thirty-two alone, or none: the house's shape (SPEC-340 R10)",
+        "test_sync_server_launcher.TheLauncherStartsTheServerWithHashedUsers.test_the_launcher_admits_only_the_house_hash_shape"
       ]
     ]
   }

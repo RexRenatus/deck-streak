@@ -276,6 +276,9 @@ class TheLauncherStartsTheServerWithHashedUsers(unittest.TestCase):
             "the most rounds": shaped("owner", 999999, good_salt, good_digest),
         }
         refused = {
+            "a length other than thirty-two": shaped(
+                "owner", 600000, good_salt, good_digest, "64"
+            ),
             "rounds below the floor": shaped("owner", 599999, good_salt, good_digest),
             "rounds above the ceiling": shaped("owner", 1000000, good_salt, good_digest),
             "seven digits of rounds": shaped("owner", 6000000, good_salt, good_digest),
