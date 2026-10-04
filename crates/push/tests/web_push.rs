@@ -9,14 +9,15 @@ use std::time::Duration;
 
 use base64ct::{Base64UrlUnpadded, Encoding};
 use deck_streak_push::{
-    BuildError, Notification, Origin, PushServices, Sent, WebPushSender, WebPushSettings,
+    BuildError, CollapseKey, Notification, Origin, PushServices, Sent, WebPushSender,
+    WebPushSettings,
 };
 use serde_json::json;
 
 use support::fake_push_service::FakePushService;
 use support::keys::{CONTACT, ENDPOINT_PATH, TestKey, TestSubscriber};
 use support::rfc8291::Undecrypted;
-use support::{DEADLINE, START, clock};
+use support::{DEADLINE, Recorded, START, clock};
 
 /// A sender whose list holds `services`, signing with `key`.
 fn build_sender(key: &TestKey, services: PushServices) -> WebPushSender {
@@ -143,5 +144,46 @@ async fn a12_the_vapid_header_carries_a_jwt_the_fake_verifies_with_k() {
             "exp": START / 1000 + 12 * 60 * 60,
             "sub": CONTACT,
         })
+    );
+}
+
+#[tokio::test]
+async fn a13_ttl_urgency_and_topic_carry_the_expiry_and_the_collapse_key() {
+    let service = FakePushService::start().await;
+    let key = TestKey::generate();
+    let browser = TestSubscriber::generate();
+    let sender = build_sender(&key, listing(&[&service]));
+    let subscription = sender
+        .subscription(&service.endpoint(), &browser.p256dh(), &browser.auth())
+        .expect("a listed endpoint is admitted");
+    let keyed = notification().with_collapse_key(CollapseKey::new("streak-day").expect("a key"));
+    let at_once = Notification::new("Synthetic title", "Synthetic body", Duration::ZERO);
+
+    assert_eq!(sender.deliver(&subscription, &keyed).await, Sent::Delivered);
+    assert_eq!(
+        sender.deliver(&subscription, &at_once).await,
+        Sent::Delivered
+    );
+
+    let received = service.fake.received();
+    assert_eq!(received.len(), 2);
+    let headers = |request: &Recorded| {
+        (
+            request.header("ttl").map(str::to_owned),
+            request.header("urgency").map(str::to_owned),
+            request.header("topic").map(str::to_owned),
+        )
+    };
+    assert_eq!(
+        headers(&received[0]),
+        (
+            Some("60".to_owned()),
+            Some("normal".to_owned()),
+            Some("streak-day".to_owned())
+        )
+    );
+    assert_eq!(
+        headers(&received[1]),
+        (Some("0".to_owned()), Some("normal".to_owned()), None)
     );
 }
