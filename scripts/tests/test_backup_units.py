@@ -925,10 +925,16 @@ class SyncWindow(unittest.TestCase):
                     data = archive.extractfile(member).read()
                     self.assertEqual(manifest.pop(member.name), hashlib.sha256(data).hexdigest())
             self.assertEqual(manifest, {})
-            # A generation with no bucket configured is kept for the next run, and the run fails.
+            # A generation with no copy command or no bucket configured is kept for the next run,
+            # and the run fails: the copy needs both settings, and neither alone reaches it.
             self.assertEqual(self.window(backup, base, snapshots, "2030-01-05T03:00:00Z"), 0)
-            self.assertEqual(self.daily(backup, root, snapshots, "2030-01-05T03:00:00Z", {}), 1)
-            self.assertEqual(names_in(snapshots, "gen-"), ["gen-20300105T030000Z.tar"])
+            for key in ("", *sorted(environ)):
+                alone = {key: environ[key]} if key else {}
+                self.assertEqual(
+                    self.daily(backup, root, snapshots, "2030-01-05T03:00:00Z", alone), 1, key
+                )
+                self.assertEqual(names_in(snapshots, "gen-"), ["gen-20300105T030000Z.tar"], key)
+            self.assertEqual(len(log.read_text(encoding="utf-8").splitlines()), 4)
             # A generation whose collection fails its check is not archived, and the run fails.
             broken = root / "broken"
             make_sync_base(broken)
@@ -999,17 +1005,26 @@ class SyncWindow(unittest.TestCase):
             done = self.drill(root, snapshots)
             self.assertEqual(done.returncode, 1, done.stderr)
             self.assertIn("no snapshot archive", done.stderr)
-            base = make_sync_base(root)
+            # Two generations, the later with four cards: the drill restores the newest archive, by
+            # the instant its name carries.
             environ, _ = self.offsite(root)
-            self.assertEqual(self.window(backup, base, snapshots), 0)
-            self.assertEqual(self.daily(backup, root, snapshots, self.STAMPS[0], environ), 0)
+            for cards, stamp in ((3, self.STAMPS[0]), (4, self.STAMPS[1])):
+                store = make_sync_base(root / f"store-{cards}", cards=cards)
+                self.assertEqual(self.window(backup, store, snapshots, stamp), 0)
+                self.assertEqual(self.daily(backup, root, snapshots, stamp, environ), 0)
             done = self.drill(root, snapshots)
             self.assertEqual(done.returncode, 0, done.stderr)
-            self.assertIn("owner: 3 card(s)", done.stdout)
-            self.assertIn("staging: 3 card(s)", done.stdout)
+            lines = done.stdout.splitlines()
+            for user in ("owner", "staging"):
+                self.assertIn(f"restore-drill: {user}: 4 card(s) in the restored collection", lines)
+            self.assertIn(
+                "restore-drill: the snapshot sync-20300102T030000Z.tar restores and matches its"
+                " manifest",
+                lines,
+            )
             self.assertEqual(sorted(p.name for p in (root / "tmp").iterdir()), [])
-            # A changed byte in the archive fails its digest.
-            archive = snapshots / "sync-20300101T030000Z.tar"
+            # A changed byte in the newest archive fails its digest.
+            archive = snapshots / "sync-20300102T030000Z.tar"
             raw = bytearray(archive.read_bytes())
             at = raw.index(b"image bytes of owner")
             raw[at] ^= 0x01
@@ -1017,6 +1032,24 @@ class SyncWindow(unittest.TestCase):
             done = self.drill(root, snapshots)
             self.assertEqual(done.returncode, 1, done.stderr)
             self.assertIn("owner/media/a.jpg", done.stderr)
+            # A media index that fails its integrity check fails the drill, though every digest in
+            # its manifest holds.
+            planted = make_sync_base(root / "planted")
+            (planted / "owner" / "media.db").write_bytes(b"x" * 4096)
+            files = sorted(p for p in planted.rglob("*") if p.is_file())
+            newest = snapshots / "sync-20300103T030000Z"
+            with tarfile.open(f"{newest}.tar", "w") as archive:
+                for path in files:
+                    archive.add(path, arcname=str(path.relative_to(planted)))
+            Path(f"{newest}.sha256").write_text(
+                "".join(f"{digest(p)}  {p.relative_to(planted)}\n" for p in files), encoding="utf-8"
+            )
+            done = self.drill(root, snapshots)
+            self.assertEqual(done.returncode, 1, done.stderr)
+            self.assertIn(
+                "restore-drill: owner/media.db failed PRAGMA integrity_check",
+                done.stderr.splitlines(),
+            )
 
 
 if __name__ == "__main__":
