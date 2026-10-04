@@ -219,6 +219,11 @@ test only. CI's `web-engine` job runs the Playwright tests over the module it bu
 - It loads no translation table apart from the engine: section 7 measures the table's share of the
   module and the shipped total stays inside the budget with it embedded, so a split, which would be
   one more engine patch, is not made (#626).
+- It ships the table twice and does not cut the second copy: each literal is emitted once per
+  generic site that reads the `const` table (M4), and neither link-time optimisation nor
+  optimisation for size merges the two (M14, M15). The lever is one copy, the table held as a
+  `static`, which is one more engine patch on the fork; with both copies the total stays inside the
+  budget, so the patch is not made here (#626).
 - It runs no FSRS optimiser and no backup in the browser: those engine paths need threads or read
   the standard clock on `wasm32` (SPEC-335 section 6), and the open, answer and undo path reaches
   neither (#626).
@@ -273,3 +278,5 @@ Each row names its method. Figures are appended as they are taken and never edit
 | M11 | The Mini App's framed context | a cross-site frame opens its own collection, seeds, answers and undoes in both browsers, over storage partitioned to the frame | `engine.spec.ts` "measures the engine in a cross-site frame": one loopback name frames the harness from the other |
 | M12 | A phone-class device | NOT MEASURED: a 4x throttle of the page's CPU left the Worker at 0.93x to 1.55x of its unthrottled figures over 250,000 notes (the seed 1.09x, the queue 1.55x, an answer 0.93x, the undo 1.00x), so the throttle does not stand for a slower CPU in the Worker; a real phone is read in the owner's acceptance session (#637) | `ENGINE_CPU_THROTTLE=4`, the protocol's `Emulation.setCPUThrottlingRate` on the page, against the same run unthrottled |
 | M13 | The page's policy governs the Worker | without `'wasm-unsafe-eval'` the module does not load: the Worker answers `engine-failed`, quoting the `script-src` directive it violates | a plant of `svelte.config.js`'s `script-src`, `engine.spec.ts` "opens, answers and undoes over OPFS" in Chromium, then the file restored |
+| M14 | The spike's build variant `lto = true`, against the budget | module plus bindings: `gzip -9` 7534650 bytes, 465350 under 8000000; brotli quality 11, 3490184 (module 7525785 and 3482507, raw 23900568): no smaller than the default build (M3). The translation table is still held twice: each of the 2132 literals occurs twice, 7866014 bytes past their first copies, as in the default build, so link-time optimisation does not merge the copies | `cargo build --release --locked --target wasm32-unknown-unknown -p deck-streak-web-engine --config profile.release.lto=true`, then `wasm-bindgen --target web` and `wasm-opt -Oz` as `scripts/web-engine-build.sh` runs them, then `scripts/web-engine-size.py`; the copies counted as each literal of the i18n crate's generated `strings.rs` found in the module |
+| M15 | The spike's build variant `opt-level = "z"`, against the budget | module plus bindings: `gzip -9` 6819271 bytes, 1180729 under 8000000 and 715379 under the default build; brotli 3102287 (module 6810406 and 3094609, raw 21765975). The table is still held twice (each literal twice, 7866014 bytes past the first copies): optimising for size shrinks the code, not the table | the same, with `--config 'profile.release.opt-level="z"'`, the copies counted against that build's own `strings.rs` |
