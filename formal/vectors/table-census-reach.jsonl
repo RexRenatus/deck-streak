@@ -1,0 +1,316 @@
+{"schema":"phx.formal.vectors.v1","entry":"TableCensusReach","covers":"tools/table-census/table_census.rs","anchor":"covering","digest":"sha256:0000000000000000000000000000000000000000000000000000000000000000","vectors":315}
+{"table":"xp_ledger","tree":"xp_ledger@0 'x' method argument","dev":["crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@0 'x' matches! arm","dev":["crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@0 'x' format template","dev":["crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@0 'x' named const used alone","dev":["crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@0 'x' split set","dev":["crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@0 'X' method argument","dev":["crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@0 'X' matches! arm","dev":["crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@0 'X' format template","dev":["crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@0 'X' named const used alone","dev":["crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@0 'X' split set","dev":["crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@1 'p' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@1 'p' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@1 'p' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@1 'p' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@1 'p' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@1 'P' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@1 'P' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@1 'P' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@1 'P' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@1 'P' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@2 '_' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@2 '_' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@2 '_' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@2 '_' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@2 '_' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@3 'l' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@3 'l' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@3 'l' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@3 'l' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@3 'l' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@3 'L' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@3 'L' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@3 'L' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@3 'L' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@3 'L' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@4 'e' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@4 'e' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@4 'e' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@4 'e' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@4 'e' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@4 'E' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@4 'E' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@4 'E' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@4 'E' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@4 'E' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@5 'd' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@5 'd' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@5 'd' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@5 'd' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@5 'd' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@5 'D' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@5 'D' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@5 'D' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@5 'D' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@5 'D' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@6 'g' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@6 'g' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@6 'g' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@6 'g' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@6 'g' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@6 'G' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@6 'G' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@6 'G' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@6 'G' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@6 'G' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@7 'e' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@7 'e' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@7 'e' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@7 'e' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@7 'e' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@7 'E' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@7 'E' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@7 'E' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@7 'E' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@7 'E' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@8 'r' method argument","dev":["crates/quests/src/a1_before.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@8 'r' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@8 'r' format template","dev":["crates/quests/src/a1_before.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@8 'r' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@8 'r' split set","dev":["crates/quests/src/a1_before.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@8 'R' method argument","dev":["crates/quests/src/a1_before.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@8 'R' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@8 'R' format template","dev":["crates/quests/src/a1_before.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@8 'R' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_ledger","tree":"xp_ledger@8 'R' split set","dev":["crates/quests/src/a1_before.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@0 'x' method argument","dev":["crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@0 'x' matches! arm","dev":["crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@0 'x' format template","dev":["crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@0 'x' named const used alone","dev":["crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@0 'x' split set","dev":["crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@0 'X' method argument","dev":["crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@0 'X' matches! arm","dev":["crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@0 'X' format template","dev":["crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@0 'X' named const used alone","dev":["crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@0 'X' split set","dev":["crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@1 'p' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@1 'p' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@1 'p' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@1 'p' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@1 'p' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@1 'P' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@1 'P' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@1 'P' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@1 'P' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@1 'P' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@2 '_' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@2 '_' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@2 '_' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@2 '_' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@2 '_' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@3 's' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@3 's' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@3 's' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@3 's' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@3 's' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@3 'S' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@3 'S' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@3 'S' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@3 'S' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@3 'S' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@4 'e' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@4 'e' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@4 'e' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@4 'e' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@4 'e' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@4 'E' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@4 'E' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@4 'E' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@4 'E' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@4 'E' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@5 't' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@5 't' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@5 't' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@5 't' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@5 't' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@5 'T' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@5 'T' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@5 'T' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@5 'T' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@5 'T' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@6 't' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@6 't' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@6 't' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@6 't' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@6 't' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@6 'T' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@6 'T' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@6 'T' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@6 'T' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@6 'T' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@7 'l' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@7 'l' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@7 'l' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@7 'l' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@7 'l' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@7 'L' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@7 'L' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@7 'L' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@7 'L' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@7 'L' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@8 'e' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@8 'e' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@8 'e' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@8 'e' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@8 'e' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@8 'E' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@8 'E' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@8 'E' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@8 'E' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@8 'E' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@9 'm' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@9 'm' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@9 'm' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@9 'm' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@9 'm' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@9 'M' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@9 'M' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@9 'M' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@9 'M' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@9 'M' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@10 'e' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@10 'e' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@10 'e' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@10 'e' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@10 'e' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@10 'E' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@10 'E' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@10 'E' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@10 'E' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@10 'E' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@11 'n' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@11 'n' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@11 'n' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@11 'n' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@11 'n' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@11 'N' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@11 'N' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@11 'N' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@11 'N' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@11 'N' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@12 't' method argument","dev":["crates/quests/src/a1_before.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@12 't' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@12 't' format template","dev":["crates/quests/src/a1_before.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@12 't' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@12 't' split set","dev":["crates/quests/src/a1_before.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@12 'T' method argument","dev":["crates/quests/src/a1_before.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@12 'T' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@12 'T' format template","dev":["crates/quests/src/a1_before.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@12 'T' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"xp_settlement","tree":"xp_settlement@12 'T' split set","dev":["crates/quests/src/a1_before.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@0 'c' method argument","dev":["crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@0 'c' matches! arm","dev":["crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@0 'c' format template","dev":["crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@0 'c' named const used alone","dev":["crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@0 'c' split set","dev":["crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@0 'C' method argument","dev":["crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@0 'C' matches! arm","dev":["crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@0 'C' format template","dev":["crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@0 'C' named const used alone","dev":["crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@0 'C' split set","dev":["crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@1 'o' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@1 'o' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@1 'o' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@1 'o' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@1 'o' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@1 'O' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@1 'O' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@1 'O' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@1 'O' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@1 'O' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@2 'i' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@2 'i' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@2 'i' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@2 'i' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@2 'i' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@2 'I' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@2 'I' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@2 'I' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@2 'I' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@2 'I' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@3 'n' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@3 'n' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@3 'n' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@3 'n' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@3 'n' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@3 'N' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@3 'N' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@3 'N' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@3 'N' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@3 'N' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@4 '_' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@4 '_' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@4 '_' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@4 '_' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@4 '_' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@5 'l' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@5 'l' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@5 'l' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@5 'l' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@5 'l' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@5 'L' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@5 'L' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@5 'L' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@5 'L' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@5 'L' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@6 'e' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@6 'e' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@6 'e' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@6 'e' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@6 'e' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@6 'E' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@6 'E' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@6 'E' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@6 'E' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@6 'E' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@7 'd' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@7 'd' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@7 'd' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@7 'd' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@7 'd' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@7 'D' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@7 'D' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@7 'D' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@7 'D' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@7 'D' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@8 'g' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@8 'g' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@8 'g' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@8 'g' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@8 'g' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@8 'G' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@8 'G' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@8 'G' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@8 'G' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@8 'G' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@9 'e' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@9 'e' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@9 'e' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@9 'e' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@9 'e' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@9 'E' method argument","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@9 'E' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@9 'E' format template","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@9 'E' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@9 'E' split set","dev":["crates/quests/src/a1_before.rs","crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@10 'r' method argument","dev":["crates/quests/src/a1_before.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@10 'r' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@10 'r' format template","dev":["crates/quests/src/a1_before.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@10 'r' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@10 'r' split set","dev":["crates/quests/src/a1_before.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@10 'R' method argument","dev":["crates/quests/src/a1_before.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@10 'R' matches! arm","dev":["crates/quests/src/a1_before.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@10 'R' format template","dev":["crates/quests/src/a1_before.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@10 'R' named const used alone","dev":["crates/quests/src/a1_before.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
+{"table":"coin_ledger","tree":"coin_ledger@10 'R' split set","dev":["crates/quests/src/a1_before.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
