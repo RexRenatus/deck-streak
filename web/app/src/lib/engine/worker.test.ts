@@ -31,8 +31,8 @@ class FakeScope {
     expect(type).toBe('message');
     this.#listeners.push(listener);
   }
-  async send(data: unknown) {
-    for (const listener of this.#listeners) listener(new MessageEvent('message', { data }));
+  async send(data: unknown, origin = '') {
+    for (const listener of this.#listeners) listener(new MessageEvent('message', { data, origin }));
     // the session answers on a later turn: let it
     await new Promise((resolve) => setTimeout(resolve, 0));
   }
@@ -58,7 +58,7 @@ function bindings() {
 describe('the Worker entry', () => {
   it('the worker serves the session on its own scope', async () => {
     const scope = new FakeScope();
-    serve(scope, NO_BROWSER);
+    serve(scope, NO_BROWSER, 'https://app.example');
     await scope.send({ id: 4, op: 'next' });
     await scope.send({ id: 5, op: 'drop' });
     expect(scope.posted).toEqual([
@@ -84,11 +84,26 @@ describe('the Worker entry', () => {
     expect(inits).toEqual([{ module_or_path: new URL(`https://app.example/engine/${STEM}_bg.wasm`) }]);
   });
 
+  it('the worker ignores a message from another origin', async () => {
+    // SPEC-338 A20: a sender of another origin is not answered; the empty origin a dedicated
+    // Worker's channel carries, and the Worker's own origin, are
+    const scope = new FakeScope();
+    serve(scope, NO_BROWSER, 'https://app.example');
+    await scope.send({ id: 1, op: 'next' }, 'https://other.example');
+    expect(scope.posted).toEqual([]);
+    await scope.send({ id: 2, op: 'next' });
+    await scope.send({ id: 3, op: 'next' }, 'https://app.example');
+    expect(scope.posted).toEqual([
+      { id: 2, ok: false, code: 'not-open', message: 'next before open' },
+      { id: 3, ok: false, code: 'not-open', message: 'next before open' }
+    ]);
+  });
+
   it('starts only in a dedicated Worker, serving from the origin root', async () => {
     expect(start({})).toBe(false);
     const scope = Object.assign(new FakeScope(), {
       DedicatedWorkerGlobalScope: class {},
-      location: { href: 'https://app.example/assets/worker-abc.js' },
+      location: { href: 'https://app.example/assets/worker-abc.js', origin: 'https://app.example' },
       navigator: {
         locks: { request: async (_name: string, _options: object, grant: (lock: object) => unknown) => grant({}) },
         storage: { getDirectory: async () => ({}) }
