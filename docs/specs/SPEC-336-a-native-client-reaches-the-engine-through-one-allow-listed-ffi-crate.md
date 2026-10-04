@@ -3,7 +3,8 @@
 - **Issue:** none yet: a spike, whose campaign issue is not filed (section 5). **Context(s):**
   `deck-streak-ffi`, an adapter at the edge that depends on no context.
 - **Decided by:** ADR-345 (one adapter crate, the UniFFI pin, the generator behind a feature, the
-  macOS job), resting on ADR-022 and ADR-058 for the engine.
+  macOS job, and a generator binary that refuses without its feature), resting on ADR-022 and
+  ADR-058 for the engine.
 - **Status:** a spike, delivered by the draft pull request that adds this file, with its tests and
   `docs/red-first/SPEC-336.md`. **Mutation band:** S33600-S33699.
 
@@ -26,8 +27,11 @@ What was measured before the adapter was written:
 - The bindings generator's Swift modulemap template, read at each upstream tag, names no builtin
   clang module up to and including the pinned release and names three from the next release on
   (ADR-345 D2 holds the measurement).
-- `cargo mutants --no-shuffle --list -p deck-streak-ffi` lists 10 mutants of the adapter; the
-  generator's `main` is one of them, and it is in no default-feature build (section 6).
+- `cargo mutants --no-shuffle --list -p deck-streak-ffi` lists 10 mutants of the adapter, the
+  generator's `main` among them. While the generator's binary declared `required-features =
+  ["bindgen"]`, no default-feature build compiled it, so the whole-crate run
+  (`cargo mutants --no-shuffle --in-place -p deck-streak-ffi`) read `main` missed: 10 tested, 8
+  caught, 1 unviable, 1 missed. R10 and ADR-345 D5 make the binary reachable and A8 catches it.
 
 ## 2. Requirements
 
@@ -55,6 +59,10 @@ R8. It fails when the generated modulemap names a builtin clang module, assemble
 R9. It typechecks the generated Swift against each slice's own headers. It runs on a macOS runner,
     admitted to this one workflow by file name in the workflow hardening test, which refuses that
     runner under any other workflow and any other runner for this one.
+R10. Every build of the adapter builds the generator's binary. Built without the `bindgen`
+    feature, it holds none of the generator's code and refuses every run: one line on stderr that
+    names the feature and the command that builds it, nothing on stdout, and exit status 2. Built
+    with the feature, its `main` runs the generator as before.
 
 ## 3. Acceptance criteria
 
@@ -67,6 +75,7 @@ R9. It typechecks the generated Swift against each slice's own headers. It runs 
 | A5 | an allowed `Undo` reverts the answer, names it, and the card is new and first again | `cargo test -p deck-streak-ffi --test round_trip -- --exact a5_undoes_the_answer` |
 | A6 | four unlisted pairs are each refused `NotAllowed`, and the collection keeps serving | `cargo test -p deck-streak-ffi --test round_trip -- --exact a6_refuses_an_unlisted_call_and_keeps_serving` |
 | A7 | the macOS runner is admitted to `xcframework.yml` alone, by file name | `python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_the_admitted_runner_is_admitted_to_its_one_workflow_only` |
+| A8 | built without `bindgen`, the generator refuses the workflow's own library-mode call: exit status 2, the feature named on stderr, nothing on stdout | `cargo test -p deck-streak-ffi --test bindings_generator -- --exact a8_the_generator_refuses_a_build_without_its_feature` |
 
 ```acceptance
 A1: cargo test -p deck-streak-ffi --test round_trip -- --exact a1_opens_a_synthetic_collection
@@ -76,12 +85,14 @@ A4: cargo test -p deck-streak-ffi --test round_trip -- --exact a4_answers_the_ca
 A5: cargo test -p deck-streak-ffi --test round_trip -- --exact a5_undoes_the_answer
 A6: cargo test -p deck-streak-ffi --test round_trip -- --exact a6_refuses_an_unlisted_call_and_keeps_serving
 A7: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_the_admitted_runner_is_admitted_to_its_one_workflow_only
+A8: cargo test -p deck-streak-ffi --test bindings_generator -- --exact a8_the_generator_refuses_a_build_without_its_feature
 ```
 
 Every test builds its own synthetic collection with the engine's API; no real collection data is
 read. `refusal_text::each_refusal_reads_as_its_own_sentence` holds R3's text and is MUTATION
-COVERAGE, not a criterion (`docs/red-first/SPEC-336.md`). R6 to R8 are measured by the workflow's
-run, in section 7.
+COVERAGE, not a criterion (`docs/red-first/SPEC-336.md`). A8's test is also the killer of row
+S33601, which installs cargo-mutants' own mutant of the generator's `main`. R6 to R8, and R10's
+build with the feature, are measured by the workflow's run, in section 7.
 
 ## 4. File manifest
 
@@ -96,10 +107,12 @@ run, in section 7.
 | `crates/ffi/src/bin/uniffi-bindgen-swift.rs` | `deck-streak-ffi` | added |
 | `crates/ffi/tests/round_trip.rs` | `deck-streak-ffi` | added |
 | `crates/ffi/tests/refusal_text.rs` | `deck-streak-ffi` | added |
+| `crates/ffi/tests/bindings_generator.rs` | `deck-streak-ffi` | added: A8, R10 |
 | `.github/workflows/xcframework.yml` | none (CI) | added |
 | `scripts/tests/test_ci_workflows.py` | none (the gate) | the runner admission and its test |
 | `scripts/mutation-rows.d/S33600-S33699.json` | none (the gate) | added |
 | `docs/CONTEXT-MAP.md` | the map | the adapter's line and paragraph |
+| `docs/schematics/ffi-adapter-xcframework-and-swift-package.md` | the record | added: the adapter's components, one call, one build, and the generator's two builds |
 | `docs/red-first/SPEC-336.md` | the record | added |
 | `docs/specs/SPEC-336-a-native-client-reaches-the-engine-through-one-allow-listed-ffi-crate.md` | the record | added |
 | `docs/decisions/ADR-345-one-allow-listed-ffi-adapter-pinned-uniffi-and-a-macos-xcframework-job.md` | the record | added |
@@ -125,9 +138,10 @@ run, in section 7.
   check.
 - A runner image changes the platform SDK. Detected by the modulemap check and the consumer check,
   each of which fails the job.
-- The generator's `main` is built only with the `bindgen` feature, so no default-feature test runs
-  it, and the pull request's mutation run reports it missed. Its cure is the seat's ruling, recorded
-  in the hand-back; no row, skip or record hides it.
+- No host test runs the generator built with the `bindgen` feature: A8 holds the build without
+  it. Detected by the workflow: its bindings step fails when the generator exits nonzero or
+  writes no `bindings` directory, and each step after it fails when a generated file it reads is
+  missing.
 - The macOS protobuf compiler's digest is Anki's own pin, and the hardening test's protoc guard
   reads only the Linux pin. Detected by the job's own checksum step, which fails on a mismatch.
 

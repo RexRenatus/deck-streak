@@ -14,8 +14,9 @@ index, a method's index and the request's protobuf bytes go in, and the response
 (`Backend::run_service_method`). Amgi (github.com/antigluten/amgi) carries that shape through a
 four-function C FFI into the same call.
 
-Four things had to be decided: where the FFI surface lives, which bindings generator and version it
-is built with, how the generator is run, and where the framework is built.
+Five things had to be decided: where the FFI surface lives, which bindings generator and version it
+is built with, how the generator is run, where the framework is built, and how a default-feature
+test reaches the generator's binary.
 
 ## Decision Drivers
 
@@ -26,6 +27,8 @@ is built with, how the generator is run, and where the framework is built.
 - Apple's SDKs exist only on a macOS runner, and the workflow hardening test admits pinned Ubuntu
   images alone.
 - A workspace build that does not need the generator or a static library must not pay for either.
+- The pull request's mutation run passes no feature, so every mutant cargo-mutants lists in the
+  adapter must be built, and caught, by a default-feature test.
 
 ## Considered Options (the alternatives it was chosen against)
 
@@ -58,14 +61,29 @@ is built with, how the generator is run, and where the framework is built.
 - D4, admitting macOS runners by pattern in the hardening test - lost: a pattern admits the runner
   to every workflow, so the admission is by this workflow's file name and refuses the runner
   under any other name.
+- D5, the generator's binary built by every build of the adapter, refusing at run time without
+  the `bindgen` feature - chosen, because the default-feature mutation run then builds the
+  binary and A8 catches the mutant that empties its `main` (row S33601), while the generator's
+  code stays behind the feature: a build without it gains one binary that only prints a refusal.
+- D5, a test that runs a nested `cargo run --features bindgen` of the generator - lost: measured
+  after the crate's default test build, it compiled 42 more crates, the engine among them,
+  because the feature changes shared dependencies' feature sets, and every CI job and mutation
+  shard that tests the crate would pay that second build.
+- D5, the generator moved to `examples/` with its required feature - lost: cargo-mutants lists no
+  example, so the mutant leaves the population (9 mutants listed against 10), which is a skip,
+  not a kill.
+- D5, the mutation run given `--features bindgen` - lost: a change to the shared mutation
+  configuration for one binary's mutant, and every crate's mutation run would build under a
+  feature only this adapter declares.
 
 ## Decision Outcome
 
 Chosen options: D1 one adapter crate depending on the engine alone, D2 the exact pin, D3 the
-generator behind the adapter's `bindgen` feature, and D4 the macOS job admitted by file name,
-because together they keep the FFI surface out of every context, generate the bindings from the
-version the library links, and charge the static library and the generator to the one workflow
-that needs them.
+generator behind the adapter's `bindgen` feature, D4 the macOS job admitted by file name, and D5
+a generator binary that every build compiles and that refuses without the feature, because
+together they keep the FFI surface out of every context, generate the bindings from the version
+the library links, charge the static library and the generator to the one workflow that needs
+them, and leave no mutant of the adapter outside the default-feature tests.
 
 ### Consequences
 
@@ -76,9 +94,11 @@ that needs them.
 - Bad, because the bindings crate's internal macros crate is reached through a non-exact
   requirement, so the lockfile, not the pin, fixes its version (it resolves to 0.29.5); the
   lockfile check and `cargo deny` hold it.
-- Bad, because the generator's `main` is built only with the `bindgen` feature, so no
-  default-feature test runs it and the pull request's mutation run reports its mutant missed. How
-  it is cured is the seat's ruling (SPEC-336 section 6).
+- Good, because the mutation run builds the generator's binary, and A8 catches cargo-mutants'
+  mutant of its `main`, which row S33601 also installs by hand.
+- Bad, because every build of the adapter now compiles and links one more binary, and no host test
+  runs the generator built with the feature; the workflow's bindings step runs it on every pull
+  request that changes the adapter.
 - Bad, because the macOS protobuf compiler's digest is Anki's own pin for that archive, and the
   hardening test's protoc guard reads only the Linux pin; the job's checksum step fails on a
   mismatch, but no test compares the two pins.
@@ -86,7 +106,8 @@ that needs them.
 ### Confirmation
 
 SPEC-336 A1 to A6 round-trip each allowed call and refuse unlisted ones on a synthetic collection;
-A7 holds the runner admission; `refusal_text` holds each refusal's text. The workflow fails on a
+A7 holds the runner admission; A8 holds the generator's refusal without its feature, and row
+S33601 proves it kills the empty `main`; `refusal_text` holds each refusal's text. The workflow fails on a
 builtin clang module in the modulemap and on generated Swift that does not typecheck against either
 slice's headers. `cargo deny` and the lockfile check hold the pin.
 
