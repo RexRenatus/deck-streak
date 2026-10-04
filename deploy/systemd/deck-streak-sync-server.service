@@ -58,6 +58,10 @@ ProtectProc=invisible
 ProcSubset=pid
 # It listens on a loopback IPv4 address, and reaches nothing else.
 RestrictAddressFamilies=AF_UNIX AF_INET
+# Its only peers are on loopback, where the edge reaches it: every other address is denied, so
+# the families are not its only bound (SPEC-340 R8; ADR-351 D6).
+IPAddressAllow=localhost
+IPAddressDeny=any
 RestrictNamespaces=yes
 RestrictRealtime=yes
 RestrictSUIDSGID=yes
