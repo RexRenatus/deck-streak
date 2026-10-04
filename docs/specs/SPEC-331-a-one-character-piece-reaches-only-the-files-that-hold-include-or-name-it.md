@@ -145,6 +145,14 @@ it pins what dev already refuses, and the red-first record says so (`not red`).
   value, a function's argument, or a value built at run time, is not refused. The reader follows
   includes and the names of `const` and `static` items, never calls. A3 pins the class, and it joins
   the routes the reader does not reach (#585).
+- A one-character piece carried to its join through a SECOND step is not refused either: a `const`
+  naming another `const` across files (an alias chain, also across crates), a re-export renamed in a
+  third file, and an `include!` or `include_str!` inside a named item's initialiser. The reader
+  follows one step (a file's own pieces, the files it includes, and the items it names), and the
+  included text of an item's initialiser belongs to no item. dev refuses each of these (2 files
+  each) only because its pool holds every character. A3 pins four plants of the class (O1, O2, O3
+  and O7) beside B1, B2 and B8, so the escape is counted, and the controls O4, O5 and O6 stay refused
+  in A2. Following a second step is #585's work, not this SPEC's (#585).
 - A lone literal of two or more characters still completes a path through the workspace-wide pool:
   measured, 8, 11 and 5 runs of the three names, each 5 characters or longer. That is ADR-325's
   accepted over-approximation, unchanged here (#585).
@@ -174,7 +182,7 @@ it pins what dev already refuses, and the red-first record says so (`not red`).
   this reader. Its killer moves to A2, which gains a plant only the fold refuses: a multi-character
   piece in another case returned by a function in another crate (P14). Every other row on
   `table_census.rs` keeps its `find`, once (S32409's `.entry(part.to_ascii_lowercase())` included),
-  and is re-proved.
+  and is expected KILLED; each is re-proved at the build.
 - **Cost.** The reader judges one reach per file: about 240 small pools per census. Measured in the
   harness (std-only, optimised), all three censuses read in 0.25 s against dev's 0.13 s.
 
@@ -191,9 +199,11 @@ test that kills it:
 - a format placeholder's name is no mention (A2's glob-imported const captured inline);
 - a word is no mention (SPEC-324 A1);
 - an item named by a macro's metavariable sends its one-character pieces nowhere global (A2's
-  macro-named `const`).
+  macro-named `const`);
+- S33107, added in the fix round: a file read gets no reach of its own, so a joining file that holds
+  no literal is never judged (AD2's no-own-piece join, killed by its own test).
 
-All seven die in the design harness and at the build. The killers of S32411 and S32409 are
+The first seven die in the design harness and at the build. The killers of S32411 and S32409 are
 re-pointed to A2, as section 6 says.
 
 ## 8. SPEC-324 R3, as amended

@@ -139,10 +139,10 @@ file sets.
   SPEC-324's population.
 - The band's seven new rows, and S32411 and S32409 re-proved against their new killer.
 - A Lean entry, `TableCensusReach`: on every tree the reader's refusals are within dev's, and a lone
-  file is never refused. A lone file's pieces are all of one character; it includes no file and no
-  file includes it; it names no other file's item and no other file names its items; its own pieces
-  do not spell the name; and it neither writes the name nor fails closed. Its witness is dev's
-  reader refusing such a file.
+  file is never refused. A lone file's pieces are all of one character, none held by an item a
+  macro's metavariable names; it includes no file and no file includes it; it names no other file's
+  item and no other file names its items; its own pieces do not spell the name; and it neither
+  writes the name nor fails closed. Its witness is dev's reader refusing such a file.
 
 ## What would make this wrong
 
