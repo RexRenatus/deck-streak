@@ -218,6 +218,15 @@
         "const BACKUP_MODE: u32 = 0o644;",
         "skip_write::the_backup_sits_beside_the_copy_owner_only_and_one_is_kept",
         "the take's backup is the owner's only, mode 0600 set by set_permissions whatever the umask, a literal cargo-mutants never mutates (SPEC-083 R34, U13, A53)"
+      ],
+      [
+        "S08329-A-REFUSED-PUSH-START-FAILS-THE-TAKE",
+        "ingest",
+        "src/skip_write.rs",
+        "WriteSync::NotStarted(_) => return Err(failed(FailReason::PushFailed)),",
+        "WriteSync::NotStarted(_) => {}",
+        "skip_write::a_push_that_cannot_start_answers_push_failed_and_moves_nothing",
+        "a push the engine refuses to start fails the take with push_failed and moves nothing, never falling through to the read-back as accepted (SPEC-083 R24)"
       ]
     ]
   }

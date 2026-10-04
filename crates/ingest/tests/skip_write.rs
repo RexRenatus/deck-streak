@@ -991,6 +991,26 @@ fn a_full_sync_demand_at_the_push_aborts_the_take_writing_nothing() {
 }
 
 #[test]
+fn a_push_that_cannot_start_answers_push_failed_and_moves_nothing() {
+    const TEST: &str = "a_push_that_cannot_start_answers_push_failed_and_moves_nothing";
+    if support::role().as_deref() == Some(support::SERVER) {
+        return support::serve();
+    }
+    let _zone = zone(UTC);
+    let scene = Scene::served(TEST, &SKIP_CARDS, SkipSetup::UTC, StudyDayRule::default());
+    let digest = Some(scene.digest());
+    // The converge was good. Before the push the working copy stops being a collection the engine
+    // can open, so the push's sync is refused before it sends a request.
+    let unopenable = at(Point::BeforePush, |working| {
+        std::fs::write(working, b"not a collection").expect("the working copy is overwritten");
+    });
+    let before = scene.bytes();
+    let (skip, answer) = scene.take(digest, unopenable);
+    scene.wrote_nothing(skip, &answer, FailReason::PushFailed, &before);
+    assert_eq!(scene.pushed(), Vec::new(), "no request carried a card");
+}
+
+#[test]
 fn the_prior_state_is_recorded_before_any_card_changes() {
     const TEST: &str = "the_prior_state_is_recorded_before_any_card_changes";
     if support::role().as_deref() == Some(support::SERVER) {
