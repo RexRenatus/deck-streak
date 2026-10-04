@@ -38,7 +38,7 @@ fn field(label: &str, number: u32, draw: &mut Draw) -> String {
     let mut text = format!("{label} {number}");
     while text.len() < FIELD_CHARACTERS {
         text.push(' ');
-        for _ in 0..=draw.next() % 3 {
+        for _ in 0..=(draw.next() % 3).min(2) {
             text.push_str(draw.syllable());
         }
     }
