@@ -32,6 +32,18 @@ A6: green at 0083ccc7
 A7: not red: the admission and its test landed together in fb753166; before the admission the hardening test refused this workflow's runner (1 of 38 tests failed)
 A8: red at f84b7c46: assertion `left == right` failed: left: Ok((Some(0), "", "")) right: Ok((Some(2), "uniffi-bindgen-swift: this build holds no Swift bindings generator, because it was built without the `bindgen` feature; run it as ..", ""))
 A8: green at 61499a76
+A9: red at e3e34e37: assertion `left == right` failed: each call is refused for the call and for nothing else: left: 1 right: 5 (the control read ["crates/habits/src/lib.rs calls settle, and only coordination's code may"]; each of the four calls under a feature read only ["crates/habits/Cargo.toml declares a feature, and the census compiles none"])
+A10: red at e3e34e37: assertion `left == right` failed: each build script is refused for the script and for nothing else: left: 1 right: 2 (the edge a feature turns on read ["crates/habits/Cargo.toml declares a feature, and the census compiles none"])
+A11: red at e3e34e37: assertion `left == right` failed: each tree is judged as its case expects: left: 0 right: 3 (each tree, the control included, read ["crates/habits/Cargo.toml declares a feature, and the census compiles none"])
+A12: red at e3e34e37: assertion `left == right` failed: the tree at the limit is accepted and the tree past it refused by name: left: [(3, ["crates/habits/Cargo.toml declares a feature, and the census compiles none"]), (4, ["crates/habits/Cargo.toml declares a feature, and the census compiles none"])]
+A13: red at b91c1482: 2 capture(s) bypass the helper: ["crates/ffi/src/engine.rs:71: init", "crates/ffi/src/engine.rs:72: init"]
+A14: red at e3e34e37: assertion `left == right` failed: left: ["crates/ffi/Cargo.toml declares a feature, and the census compiles none"] right: []
+A9: green at 790ceb5d
+A10: green at 790ceb5d
+A11: green at 790ceb5d
+A12: green at 790ceb5d
+A13: green at 3ccf2769
+A14: green at 790ceb5d
 ```
 
 Two plants, never committed, show the tests can tell a wrong adapter apart (the same command, at
@@ -42,6 +54,26 @@ the allow-list check removed (every call reaches the engine): A6 FAILS, 5 of 6 p
   CloseCollection is answered Ok([]) by the engine, which closes the collection
 Undo's pair changed from (3, 8) to (3, 9): A5 FAILS, 5 of 6 pass; Undo is refused by the allow-list
 ```
+
+A9 to A14 came with ADR-345 D6 and R11 to R12. The engine constructor's parameter was renamed
+first (3ccf2769) against the log-capture census, which reads `init` as an install token: at the
+absorb of `dev` (b91c1482) A13 failed by assertion, and at the rename it passed (`cargo nextest run
+--build-jobs 1 --test-threads 1 -p deck-streak-kernel --test log_capture_class`: 8 run, 8 passed).
+The settle census's four new tests, and the changed expectations of
+`the_census_refuses_what_the_compiler_is_not_asked` and verify round 7's H07, were committed alone
+(e3e34e37). At that commit the census refused every tree whose member declared a feature before it
+compiled any code, so each planted call under a feature read only that refusal, while each control
+was refused for its own reason: 5 tests run, 0 passed, 5 failed. The census change was committed
+next (790ceb5d), with the tests unchanged: 5 passed, and the whole file green.
+
+The census's own killer, `the_census_refuses_every_caller_the_compiler_finds`, held one control
+refused by construction: a feature gating a call to the other crate's `settle`, which the census
+refused for the feature because it compiled none. Under the change it compiles the feature and
+accepts that control, as it accepts every control whose call reaches the other crate (the whole
+file at the change, before the expectation moved: 47 run, 46 passed, 1 failed, `wrong: control S2
+C configuration: a feature gates the call | accepted`, members escaping 0). So that control's
+expectation and the population's pinned digest changed in the change's commit (790ceb5d); the
+member beside it, whose call reaches `settle`, is still refused.
 
 ## Mutation coverage
 
