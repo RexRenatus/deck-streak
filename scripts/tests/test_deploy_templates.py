@@ -1170,9 +1170,11 @@ class TheCaddyBlock(unittest.TestCase):
         answer = robots.one("respond").tokens
         self.assertEqual(answer[2:], ["200"])
         self.assertEqual(answer[1].splitlines(), ["User-agent: *", "Disallow: /"])
-        # Nothing answers outside the handles, so a route cannot slip past the order above.
+        # Nothing answers outside the handles, so a route cannot slip past the order above. The log,
+        # its matcher and its skip write a record and answer nothing (SPEC-340 R6).
         self.assertEqual(
-            sorted(child.tokens[0] for child in block.children), ["handle"] * 5 + ["header"]
+            sorted(child.tokens[0] for child in block.children),
+            ["@not_sync"] + ["handle"] * 5 + ["header", "log", "log_skip"],
         )
         # The upstream is the API's own loopback listener (ADR-007), which the example names.
         listen = dict((key, value) for _, key, value in env_example())["DECKSTREAK_API_LISTEN"]

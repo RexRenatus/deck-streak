@@ -1,7 +1,8 @@
 # DeckStreak's site block (SPEC-032 R6; ADR-007, ADR-025, ADR-032): the Mini App's static build
 # with its SPA fallback, /api/* proxied to the API's loopback listener, the sync server under
 # /anki-sync/ proxied to its own (SPEC-337 R4; ADR-347 D4), the health routes closed at the edge, a
-# robots.txt that disallows everything, and the security headers on every response. Its four
+# robots.txt that disallows everything, the security headers on every response, and one access log
+# of the sync route alone, with no request header and no key in it (SPEC-340 R6). Its four
 # environment placeholders are Caddy's own syntax, and the private rail supplies their values when
 # it installs the block (deploy/README.md); nothing in it is one host's value.
 {$DECKSTREAK_HOST} {
@@ -18,6 +19,21 @@
 		Content-Security-Policy "frame-ancestors https://web.telegram.org; object-src 'none'; base-uri 'self'"
 		-Server
 	}
+
+	# The edge's one access log, of the sync route alone (SPEC-340 R6; ADR-351 D4): the client's
+	# address, the method, the path and the status. No request header is written, and the `k`
+	# parameter is removed from the path. It names no output, so it reaches the journal.
+	log {
+		format filter {
+			request>headers delete
+			request>uri query {
+				delete k
+			}
+			wrap json
+		}
+	}
+	@not_sync not path /anki-sync/*
+	log_skip @not_sync
 
 	# Answered here, before the build's own file is reached.
 	handle /robots.txt {
