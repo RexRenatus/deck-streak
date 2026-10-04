@@ -24,7 +24,7 @@ D13, "the sync key and its hash".
 
 D1, the sync family's user (SEC01-F02, the sync family's service user):
 
-- The sync server, its window, a new archive unit and a new sync drill unit run as the system user
+- The family's own user: the sync server, its window, a new archive unit and a new sync drill unit run as the system user
   and group `deck-streak-sync`, which the rail creates with no login shell, no home and no other
   group. The window's `StateDirectory=deck-streak-sync-snapshots deck-streak-sync-server` keeps its
   order, so `backup.py` reads the snapshots' root first and the store second, as it does now. The
@@ -32,8 +32,8 @@ D1, the sync family's user (SEC01-F02, the sync family's service user):
   pulled in by the backup and by the restore drill, and no unit of either user names the other's
   directory — chosen, because then no directory is shared between the two users and the window's
   body is unchanged.
-- A group-readable outbox, the sync user writing sealed archives the backup's user copies offsite:
-  rejected because it adds a marker file and a directory two users write to.
+- A group-readable outbox: rejected because it adds a marker file and a directory two users write to,
+  the sync user writing sealed archives the backup's user copies offsite.
 - `SupplementaryGroups=` on the backup to read the sync store: rejected because it is a new
   privilege, and it changes the window's modes and so the model's stamped bodies.
 - `DynamicUser=`: rejected because its user id is not fixed. A change re-owns the whole store at a
@@ -42,7 +42,7 @@ D1, the sync family's user (SEC01-F02, the sync family's service user):
 
 D2, the offsite archive's encryption (SEC01-F11, the offsite snapshot's encryption):
 
-- `archive()` seals the archive and its manifest with the command `DECKSTREAK_SNAPSHOT_SEAL` names,
+- Seal before the copy: `archive()` seals the archive and its manifest with the command `DECKSTREAK_SNAPSHOT_SEAL` names,
   a command the rail provides with a public recipients file, run as `[*seal, "--output", sealed,
   plain]` with no shell, to the owner's offline public key. It refuses a sealed file that does not
   begin with `age-encryption.org/v1`, copies only the sealed files, and removes them after the
@@ -56,7 +56,7 @@ D2, the offsite archive's encryption (SEC01-F11, the offsite snapshot's encrypti
 
 D3, the login bound (SEC01-F03, the sync route's login bound):
 
-- A ban filter and a jail, shipped as templates under `deploy/fail2ban/`, read the edge's access
+- A ban on the edge's log: a ban filter and a jail, shipped as templates under `deploy/fail2ban/`, read the edge's access
   log of the sync route through the journal. They ban an address after five refused logins at
   `/anki-sync/sync/hostKey` within ten minutes, for one hour. The rail installs them on the
   owner's go — chosen, because it needs no custom edge build and no fork change, and it reads the
@@ -69,7 +69,7 @@ D3, the login bound (SEC01-F03, the sync route's login bound):
 D4, the edge's log of the sync route (SEC01-F04, the sync route's client address in the record;
 SEC01-F05, the sync key kept out of every log; ruling 235's Q2 (b)):
 
-- One site-level `log` in JSON, with `request>headers` deleted and the `k` query parameter deleted
+- A log of the sync route alone: one site-level `log` in JSON, with `request>headers` deleted and the `k` query parameter deleted
   from `request>uri`, and `log_skip` for every path outside `/anki-sync/`. It names no output, so it
   reaches the journal and its retention — chosen, because only the edge sees the client's address,
   and deleting every header holds against any client header that carries a key.
@@ -81,7 +81,7 @@ SEC01-F05, the sync key kept out of every log; ruling 235's Q2 (b)):
 
 D5, the server's dependency audit (SEC01-F06, the sync server's dependency audit):
 
-- `scripts/audit-sync-server.sh` reads the fork and the commit from `Cargo.toml`'s patch entry, as
+- An audit in the release: `scripts/audit-sync-server.sh` reads the fork and the commit from `Cargo.toml`'s patch entry, as
   the release step does, and refuses a commit that is not 40 hex. It fetches that commit and runs
   the RustSec advisory check with the house `deny.toml` on `rslib/sync/Cargo.toml`, under the
   fork's lockfile (`--locked`). It runs in a release job, `audit-sync-server`, with
@@ -112,7 +112,7 @@ D7, the web cookie and the sync route (SEC01-F08, the web session cookie on the 
 
 D8, the hash's shape (SEC01-F09, the sync credential's hash parameters):
 
-- The launcher's entry pattern admits `i=` from 600000 to 999999, an optional `,l=32`, a 16-byte
+- The house hash shape: the launcher's entry pattern admits `i=` from 600000 to 999999, an optional `,l=32`, a 16-byte
   salt and a 32-byte digest, each in canonical unpadded standard base64. The runbook names the
   standard-library command that makes it: a 16-byte salt from `os.urandom`, `hashlib.pbkdf2_hmac`
   with sha256, 600000 rounds and a 32-byte digest, the password read without echo — chosen,
@@ -124,7 +124,7 @@ D8, the hash's shape (SEC01-F09, the sync credential's hash parameters):
 
 D9, the offsite archives' period (SEC01-F10, the offsite snapshot's retention statement):
 
-- The bucket's lifecycle rule deletes each archive `P30D` after it is written. `PRIVACY.md` states
+- A lifecycle rule on the bucket: the bucket's lifecycle rule deletes each archive `P30D` after it is written. `PRIVACY.md` states
   that period, and the runbook checks the rule before the window — chosen, because the policy then
   states a period (GDPR Art. 13(2)(a)), and the host's identity keeps its create-only permission.
 - Deletion by the archive unit: rejected because the host's identity would need delete permission

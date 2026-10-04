@@ -164,6 +164,7 @@ CI by name, and `docs/red-first/SPEC-340.md` records why.
 | `scripts/tests/test_sync_ban.py` | tests | new: A6 |
 | `scripts/tests/test_audit_sync_server.py` | tests | new: A8 |
 | `scripts/mutation-rows.d/S34000-S34099.json` | tests | new: the rows of section 8 |
+| `docs/specs/SPEC-337-the-sync-server-is-built-at-the-tag-runs-as-its-own-unit-and-has-a-drilled-offsite-snapshot.md` | docs | A7 names the renamed archive test |
 | `scripts/mutation-rows.d/S33700-S33799.json` | tests | re-anchored: S33708 and S33739 to S33743, anchor and killer only, under the same ids |
 | `changelog.d/sync-hardening-340.md` | docs | new |
 
