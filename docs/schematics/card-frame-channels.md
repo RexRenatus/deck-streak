@@ -97,7 +97,7 @@ dash means at least two layers hold it, so no single-layer variant opens it.
 | `media` | `audio src`, `video src`, `track src` | W2 | W2 |
 | `stylesheet` | `link rel=stylesheet` | W3, W2 | - |
 | `preload` | `link rel=preload` and `rel=modulepreload` | W3, W2 | - |
-| `prefetch` | `link rel=prefetch` | W3, W2 | - |
+| `prefetch` | `link rel=prefetch` | W3, W2 | - (UNOBSERVABLE in WebKit, measured: it sends no prefetch request under the suite) |
 | `preconnect` | `link rel=preconnect` (a TCP connection, no request) | W3 | W3 (UNOBSERVABLE in Chromium, measured: it opens no preconnect connection under the suite) |
 | `dns-prefetch` | `link rel=dns-prefetch` | W3 | W3 (UNOBSERVABLE: no lookup reaches a listener) |
 | `shadow-link` | a `template shadowrootmode=open` holding `link rel=preconnect` | W3 | W3 (UNOBSERVABLE in Chromium, measured: it opens no preconnect connection under the suite, in a shadow tree or out of one) |
