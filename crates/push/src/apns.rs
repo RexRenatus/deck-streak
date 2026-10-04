@@ -23,6 +23,9 @@ const REFRESH_AGE: Duration = Duration::from_mins(45);
 /// The largest payload APNs accepts for a notification, in bytes (R2).
 const PAYLOAD_MAX: usize = 4096;
 
+/// The longest a device token may be, in hexadecimal characters.
+const DEVICE_TOKEN_MAX: usize = 200;
+
 /// The youngest a refused provider token may be for the sender to mint the next: APNs asks for a
 /// new token no more often than every 20 minutes, so a younger refusal is the key's, not the
 /// token's age (R3).
@@ -59,10 +62,17 @@ impl Device {
     /// [`BuildError::DeviceToken`] when the token is empty, longer than 200 characters, or not
     /// hexadecimal: it becomes a request path, so nothing else may reach one.
     pub fn new(token: &str, environment: Environment) -> Result<Self, BuildError> {
-        Ok(Self {
-            token: token.to_owned(),
-            environment,
-        })
+        let admitted = !token.is_empty()
+            && token.len() <= DEVICE_TOKEN_MAX
+            && token.bytes().all(|byte| byte.is_ascii_hexdigit());
+        if admitted {
+            Ok(Self {
+                token: token.to_owned(),
+                environment,
+            })
+        } else {
+            Err(BuildError::DeviceToken)
+        }
     }
 
     /// The device's environment.
@@ -329,9 +339,12 @@ fn read(answer: &Answer) -> Sent {
         },
         400 if refuses_the_device(answer) => Sent::Rejected(Refusal::Token),
         403 => Sent::Rejected(Refusal::ProviderToken),
+        413 => Sent::Rejected(Refusal::TooLarge),
         429 | 500..=599 => Sent::RetryLater {
             after: answer.retry_after,
         },
+        400..=499 => Sent::Rejected(Refusal::Request),
+        300..=399 => Sent::Failed(Unreached::Redirect),
         _ => Sent::Failed(Unreached::Unexpected),
     }
 }
