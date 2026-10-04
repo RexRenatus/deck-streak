@@ -47,6 +47,30 @@ A19: green at 15a76e08
 A20: not red: the census judges the real tree and guards the crate's arrival; it has no behaviour of this delivery to be red for
 A21: not red: the census judges the real tree and guards the crate's arrival; it has no behaviour of this delivery to be red for
 A22: not red: the census judges the real tree and guards the crate's arrival; it has no behaviour of this delivery to be red for
+A23: red at 926e100f: AssertionError: button 0 pressed: expected [] to deeply equal [ 'confirm' ]
+A23: green at 79b5940f
+A24: red at 926e100f: AssertionError: expected { index: +0, …(5) } to deeply equal { index: +0, …(5) } (the stub reported no pressed indices and no axes)
+A24: green at 79b5940f
+A25: red at 926e100f: AssertionError: again past it: expected [] to deeply equal [ 'again' ]
+A25: green at 79b5940f
+A26: red at 718f48eb: AssertionError: " " {}: expected null to be 'good'
+A26: green at 8db2e8be
+A27: red at 718f48eb: AssertionError: the control: a plain key fires: expected null to be 'good'
+A27: green at 8db2e8be
+A28: red at cbb7207a: AssertionError: expected [ +0, 'off' ] to deeply equal [ 1, 'requesting' ]
+A28: green at 9b2c84f8
+A29: red at cbb7207a: AssertionError: expected [ +0, 'off' ] to deeply equal [ 1, 'requesting' ]
+A29: green at 9b2c84f8
+A30: red at cbb7207a: AssertionError: expected [ +0, 'off' ] to deeply equal [ 1, 'requesting' ]
+A30: green at 9b2c84f8
+A31: red at cbb7207a: AssertionError: expected [ +0, 'off' ] to deeply equal [ 1, 'requesting' ]
+A31: green at 9b2c84f8
+A32: red at cbb7207a: AssertionError: off on want: expected { state: 'off', effect: 'none' } to deeply equal { state: 'requesting', …(1) }
+A32: green at 9b2c84f8
+A33: red at 866692fb: AssertionError: expected [ null, null, null, null ] to deeply equal [ Array(4) ]
+A33: green at 1cb88b1d
+A34: red at 866692fb: AssertionError: expected [ '/', '/about', '/badges', …(9) ] to deeply equal [ '/', '/about', '/badges', …(10) ]
+A34: green at 1cb88b1d
 ```
 
 A16's test was committed with A10's, before any web push code, and stayed red until A11's
@@ -59,3 +83,29 @@ error body's bound, and the rest of the status table) and green at 3136418d; the
 two-calls, deadline, closed-port and key-parse tests were green at febd915b. The web push set was
 committed at b8621c0f, its status table red (left: seven `Failed(Unexpected)`, right: the table)
 and green at 2717f844; its collapse-key and subscription-parse tests were green at b8621c0f.
+
+The harness's criteria were committed red the same way. A29 to A31 share A28's first line because
+each test's first assertion is that the condition's rise requested the lock, which the stub never
+did; each test's own assertions follow it. A34 is red only once the screen exists: its red commit
+holds the screen's test and an empty page, so the route census finds a screen the table lacks, and
+its green commit adds the route to the table, the path to the paths opened without a token, and the
+manifest's row for that test file.
+
+The harness's MUTATION COVERAGE tests hold branches no criterion examines. `a gamepad that leaves
+is read again from a new baseline` was red at 926e100f (`the next snapshot: expected [] to deeply
+equal [ 'flag' ]`) and green at 79b5940f. `one request is in flight at most, and a browser with no
+wake lock reads unsupported` was red at cbb7207a (`expected 'off' to be 'cancelling'`) and green at
+9b2c84f8. The screen's set (what each source logs, a disconnect's effects, the refusal's name, the
+lock waiting for a gamepad, and closing the screen) and the side's moves were green when written,
+at a2d7e96b. The screen's refusal test found that a `DOMException` made by another realm is no
+instance of this realm's `Error`, so the holder recorded its whole text as its name; 33600830
+reads the error's `name` instead, with its own coverage test of a refusal with a name, a text, a
+non-string name, `undefined` and `null`.
+
+StrykerJS over the harness's files then left mutants alive on terms that change nothing: the
+stick's sign, which is one or minus one, a first snapshot's armed test, which is the unarmed one,
+and a tag that is not text, which is in no set. f75abccf removes those terms, behaviour unchanged.
+cef31b2a adds the coverage the rest asked for, green when written: the lock asks for the screen and
+tells every change, a stick off the centre on the first snapshot fires only after it returns, and
+the screen labels its parts. StrykerJS at that commit reads every mutant of the harness's files
+killed.
