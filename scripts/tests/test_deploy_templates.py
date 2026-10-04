@@ -134,10 +134,11 @@ LITESTREAM_SERVICE = {
     "RestartSec": "15",
     "OOMPolicy": "kill",
     "TimeoutStopSec": "30",
-    "CPUQuota": "25%",
+    "CPUQuota": "15%",
 }
 # SPEC-337 R2 (ADR-347 D3): the sync server runs its launcher, is active once it runs (it sends no
-# readiness), stops on an interrupt, the one signal it drains on, and holds half a processor.
+# readiness), stops on an interrupt, the one signal it drains on, and holds three quarters of a
+# processor (ADR-347 D7).
 SYNC_SERVER_SERVICE = {
     "Type": "exec",
     "KillSignal": "SIGINT",
@@ -145,7 +146,7 @@ SYNC_SERVER_SERVICE = {
     "RestartSec": "15",
     "OOMPolicy": "kill",
     "TimeoutStopSec": "30",
-    "CPUQuota": "50%",
+    "CPUQuota": "75%",
     "TasksMax": "64",
 }
 # The timers that start SPEC-031's units, each the service of its own name.
@@ -229,12 +230,12 @@ JOB_SERVICE = {
     "TimeoutStartSec": "30min",
 }
 # ADR-032's delivery: the daemons' CPU and task caps. The MCP server's quota is taken from the
-# API's, so the daemons' quotas still fit the share's CPUs (ADR-332); the sync server's half of a
-# processor is taken from the bot's and the replicator's (ADR-347).
+# API's, so the daemons' quotas still fit the share's CPUs (ADR-332); the sync server's three
+# quarters of a processor are taken from the bot's, the replicator's and the MCP server's (ADR-347).
 DAEMON_CAPS = {
     "deck-streak-api.service": {"CPUQuota": "75%", "TasksMax": "64"},
-    "deck-streak-bot.service": {"CPUQuota": "25%", "TasksMax": "64"},
-    "deck-streak-mcp.service": {"CPUQuota": "25%", "TasksMax": "32"},
+    "deck-streak-bot.service": {"CPUQuota": "20%", "TasksMax": "64"},
+    "deck-streak-mcp.service": {"CPUQuota": "15%", "TasksMax": "32"},
 }
 # R2: the identity and hardening of every service, each at the value the pack's rows score.
 HARDENING = {
@@ -1025,7 +1026,7 @@ class TheTemplatesFitTheHostBudget(unittest.TestCase):
                     quota, f"{unit.rel} has no CPUQuota, so it cannot be shown to fit"
                 )
                 quotas.append(int(quota.rstrip("%")))
-        # The five quotas divide the share's processors exactly (ADR-347): 75, 25, 25, 25 and 50.
+        # The five quotas divide the share's processors exactly (ADR-347): 75, 75, 20, 15 and 15.
         self.assertEqual(sum(quotas), 100 * budget()["cpus"], quotas)
 
 
@@ -1563,10 +1564,10 @@ class TheSyncServerRunsAsItsOwnUnit(unittest.TestCase):
             {u.name: last(u, "Service", "CPUQuota") for u in daemons},
             {
                 "deck-streak-api.service": "75%",
-                "deck-streak-bot.service": "25%",
-                LITESTREAM_SERVICE_NAME: "25%",
-                "deck-streak-mcp.service": "25%",
-                SYNC_SERVER_SERVICE_NAME: "50%",
+                "deck-streak-bot.service": "20%",
+                LITESTREAM_SERVICE_NAME: "15%",
+                "deck-streak-mcp.service": "15%",
+                SYNC_SERVER_SERVICE_NAME: "75%",
             },
         )
 
