@@ -1000,6 +1000,13 @@ class SyncWindow(unittest.TestCase):
                 alone = {key: environ[key]} if key else {}
                 self.assertEqual(self.archive(backup, snapshots, alone), 1, key)
                 self.assertEqual(names_in(snapshots, "gen-"), ["gen-20300105T030000Z.tar"], key)
+            # Nor does any two of the three: each missing setting alone refuses the copy.
+            for key in sorted(environ):
+                without = {name: value for name, value in environ.items() if name != key}
+                self.assertEqual(self.archive(backup, snapshots, without), 1, f"without {key}")
+                self.assertEqual(
+                    names_in(snapshots, "gen-"), ["gen-20300105T030000Z.tar"], f"without {key}"
+                )
             self.assertEqual(len(log.read_text(encoding="utf-8").splitlines()), 4)
             # A generation whose collection fails its check is not archived, and the run fails.
             broken = root / "broken"

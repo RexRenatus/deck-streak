@@ -278,6 +278,7 @@ class TheLauncherStartsTheServerWithHashedUsers(unittest.TestCase):
         refused = {
             "rounds below the floor": shaped("owner", 599999, good_salt, good_digest),
             "rounds above the ceiling": shaped("owner", 1000000, good_salt, good_digest),
+            "seven digits of rounds": shaped("owner", 6000000, good_salt, good_digest),
             "one round": shaped("owner", 1, good_salt, good_digest),
             "a sixteen-byte digest": shaped(
                 "owner", 600000, good_salt, unpadded_b64(digest[:16]), "16"
