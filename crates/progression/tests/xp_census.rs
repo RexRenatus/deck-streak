@@ -6753,6 +6753,7 @@ fn join_plants() -> Vec<Plant> {
 /// renamed re-export, or an `include!` or `include_str!` inside a named item's initialiser (O1, O2,
 /// O3 and O7). The reader follows includes and the names of `const` and `static` items one step,
 /// never calls, so none is refused (#585).
+#[allow(clippy::too_many_lines)]
 fn disclosed_plants() -> Vec<Plant> {
     vec![
         (
