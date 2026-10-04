@@ -5,3 +5,6 @@
 //! engine never joins the native graph through it.
 
 pub mod study;
+
+#[cfg(target_arch = "wasm32")]
+mod wasm;
