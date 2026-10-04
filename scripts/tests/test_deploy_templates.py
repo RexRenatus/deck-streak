@@ -543,13 +543,20 @@ def credential_lines(root):
 INSTANCE_DROPIN_ALLOWLIST = {f"{JOB_TEMPLATE}@.service": ("sync", "held_flush")}
 
 NON_UNIT_DROPIN = "deploy/journald.conf.d"
-NON_UNIT_DIRECTORIES = (NON_UNIT_DROPIN, "deploy/tmpfiles.d")
+# The ban service's filter and jail directories hold its own files, never a unit's (SPEC-340 R5).
+NON_UNIT_DIRECTORIES = (
+    NON_UNIT_DROPIN,
+    "deploy/tmpfiles.d",
+    "deploy/fail2ban/filter.d",
+    "deploy/fail2ban/jail.d",
+)
 
 
 def dropin_directory_refusals(root, allowlist=None):
     """Every `*.d/` directory under `root`'s deploy/ that is not the drop-in directory of a unit
     shipped beside it, as one line each: only `<unit name>.d/` is read with a unit (SPEC-066 R2), so
-    any other is refused, and the directories of files that are no unit (journald, tmpfiles.d) are named here.
+    any other is refused, and the directories of files that are no unit (journald, tmpfiles.d, the
+    ban service's) are named here.
     A shipped template's instance directory is admitted only for an instance `allowlist` names (by
     default INSTANCE_DROPIN_ALLOWLIST)."""
     allowed = INSTANCE_DROPIN_ALLOWLIST if allowlist is None else allowlist

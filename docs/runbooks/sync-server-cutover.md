@@ -81,6 +81,12 @@ listen address and the rail's drop-in are installed, the Caddy block is rendered
 key and installed, and the unit is enabled and started, which enables its snapshot window, its
 archive and its sync drill as well. Its store holds no collection: no user has synced.
 Check that the unit is active and that a login of the staging user through the route is answered.
+The edge validates the rendered block before its reload, and one line of the sync route is read
+from the edge's journal: it holds the client's address, the method, the path and the status, and no
+request header and no `k` parameter (SPEC-340 R6). The rail installs the ban filter from
+`deploy/fail2ban/`, checks it with the ban service's own regex tool against the journal line of one
+refused login of the staging user, and only then installs and starts the jail (SPEC-340 R5). The
+backup runs once by hand, so the first sync drill finds an archive.
 A failure here moves nothing of the owner's: `rolled_back` is only the unit stopped.
 
 ### `rehearsed`: the staging user's rehearsal
@@ -180,3 +186,7 @@ the runbook rolls back before any study on the new server, or not at all.
   again and pages. Disabling the server removes the window.
 - Until the first archive is in the offsite bucket, the copies of the owner's collection are the
   clients' own, desktop's backup from `frozen`, and the old server's untouched store.
+- The jail bans an address after five refused sync logins within ten minutes, for one hour
+  (SPEC-340 R5). An address banned by mistake, the owner's own client after mistyped passwords
+  included, is released before its hour by `fail2ban-client set deck-streak-sync unbanip
+  <address>`, on the owner's go (#161).
