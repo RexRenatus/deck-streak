@@ -280,6 +280,102 @@
         "\t\treverse_proxy {$DECKSTREAK_API_UPSTREAM} {\n",
         "the sync path is proxied to the sync server's own upstream, never the API's (SPEC-337 R4, A6; ADR-347 D4)",
         "test_deploy_templates.TheCaddyBlock.test_the_caddy_block_routes_the_sync_server_under_its_own_path"
+      ],
+      [
+        "S33736-ONLY-A-HELD-DATABASE-IS-REFUSED",
+        "deploy/scripts/backup.py",
+        "    if status in (sqlite3.SQLITE_BUSY, sqlite3.SQLITE_LOCKED):",
+        "    if True:",
+        "the window's backup refuses only a busy or locked step, so a stopped database is copied and not refused (SPEC-337 R5, A7; ADR-347 D12)",
+        "test_backup_units.SyncWindow.test_the_copy_reads_only_a_stopped_generation"
+      ],
+      [
+        "S33737-A-HELD-DATABASE-IS-REFUSED-AT-ONCE",
+        "deploy/scripts/backup.py",
+        "uri=True, timeout=0)",
+        "uri=True, timeout=10)",
+        "the window opens each database with no busy wait, so a database a running server holds is refused at once and the window stays short (SPEC-337 R5, A7; ADR-347 D12)",
+        "test_backup_units.SyncWindow.test_the_copy_reads_only_a_stopped_generation"
+      ],
+      [
+        "S33738-A-GENERATION-IS-PUBLISHED-ONLY-WHEN-WHOLE",
+        "deploy/scripts/backup.py",
+        "partial = snapshots / WINDOW_PARTIAL",
+        "partial = snapshots / f\"gen-{now.astimezone(timezone.utc).strftime(STAMP_FORMAT)}.tar\"",
+        "the window writes its generation under a working name and renames it only when whole, so a failed copy publishes nothing (SPEC-337 R5, A7; ADR-347 D12)",
+        "test_backup_units.SyncWindow.test_a_planted_copy_failure_fails_the_unit_and_publishes_nothing"
+      ],
+      [
+        "S33739-A-BROKEN-DATABASE-IS-NOT-ARCHIVED",
+        "deploy/scripts/backup.py",
+        "            if is_database and not integrity_ok(scratch):",
+        "            if False:",
+        "the daily run checks each database of a generation before it archives it, so a broken collection is kept and fails the run (SPEC-337 R5, A7)",
+        "test_backup_units.SyncWindow.test_the_daily_run_checks_archives_copies_offsite_and_keeps_three"
+      ],
+      [
+        "S33740-THE-MANIFEST-DIGESTS-THE-MEMBERS-BYTES",
+        "deploy/scripts/backup.py",
+        "                    digest.update(chunk)",
+        "                    pass",
+        "each manifest line is the sha256 of its member's bytes, which the drill checks the restore against (SPEC-337 R5, A7)",
+        "test_backup_units.SyncWindow.test_the_daily_run_checks_archives_copies_offsite_and_keeps_three"
+      ],
+      [
+        "S33741-THE-OFFSITE-COPY-CARRIES-THE-MANIFEST",
+        "deploy/scripts/backup.py",
+        "[*command, str(tar), str(manifest), bucket]",
+        "[*command, str(tar), bucket]",
+        "the offsite copy carries the archive and its manifest of digests to the bucket, with arguments and no shell (SPEC-337 R5, A7; ADR-347 D5)",
+        "test_backup_units.SyncWindow.test_the_daily_run_checks_archives_copies_offsite_and_keeps_three"
+      ],
+      [
+        "S33742-THE-OFFSITE-COPY-NEEDS-ITS-BUCKET",
+        "deploy/scripts/backup.py",
+        "    if not command or not bucket:",
+        "    if not command:",
+        "a copy command with no bucket is refused, so the generation is kept and the run fails (SPEC-337 R5, A7)",
+        "test_backup_units.SyncWindow.test_the_daily_run_checks_archives_copies_offsite_and_keeps_three"
+      ],
+      [
+        "S33743-THREE-ARCHIVES-STAY-ON-THE-HOST",
+        "deploy/scripts/backup.py",
+        "prune(snapshots, KEEP, pattern)",
+        "prune(snapshots, KEEP + 1, pattern)",
+        "the daily run keeps the newest three archives and manifests on the host and prunes the rest (SPEC-337 R5, A7)",
+        "test_backup_units.SyncWindow.test_the_daily_run_checks_archives_copies_offsite_and_keeps_three"
+      ],
+      [
+        "S33744-THE-DRILL-RESTORES-THE-NEWEST-ARCHIVE",
+        "deploy/scripts/restore-drill.sh",
+        "newest = snapshots / archives[-1]",
+        "newest = snapshots / archives[0]",
+        "the drill restores the newest snapshot archive, by the instant its name carries (SPEC-337 R5, A8)",
+        "test_backup_units.SyncWindow.test_the_drill_restores_the_newest_snapshot_and_opens_its_collections"
+      ],
+      [
+        "S33745-THE-DRILL-CHECKS-EVERY-DIGEST",
+        "deploy/scripts/restore-drill.sh",
+        "    if member in manifest and sha256(target / member) != manifest[member]:",
+        "    if False:",
+        "the drill checks every restored file against its sha256 digest in the manifest and names a member that differs (SPEC-337 R5, A8)",
+        "test_backup_units.SyncWindow.test_the_drill_restores_the_newest_snapshot_and_opens_its_collections"
+      ],
+      [
+        "S33746-THE-DRILL-CHECKS-EACH-DATABASE",
+        "deploy/scripts/restore-drill.sh",
+        "        if (user / name).is_file() and not integrity(user / name):",
+        "        if False:",
+        "the drill runs the integrity check on each user's collection and media index, so a broken media index fails it though its digest holds (SPEC-337 R5, A8)",
+        "test_backup_units.SyncWindow.test_the_drill_restores_the_newest_snapshot_and_opens_its_collections"
+      ],
+      [
+        "S33747-AN-EMPTY-SNAPSHOT-DIRECTORY-IS-REFUSED-BY-NAME",
+        "deploy/scripts/restore-drill.sh",
+        "if not archives:",
+        "if False:",
+        "a snapshot directory with no archive fails the drill, which says so by name (SPEC-337 R5, A8)",
+        "test_backup_units.SyncWindow.test_the_drill_restores_the_newest_snapshot_and_opens_its_collections"
       ]
     ]
   }

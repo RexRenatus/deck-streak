@@ -218,8 +218,15 @@ one name, the hashed-users switch, the data directory, a missing credentials or 
 a refusal that would not fail the unit. The route's
 rows hold A6 (S33723-S33735): render-caddy's fourth key, its check and a refusal that names the
 wrong key, and the block's redirect, prefix, hidden health route, body bound, buffer and upstream.
-The runbook (A9) is prose and holds no function, so it adds no row. The snapshot's part adds rows
-for the snapshot and the drill.
+The runbook (A9) is prose and holds no function, so it adds no row. The snapshot's rows hold A7
+(S33736-S33743): a stopped database refused as if held, a busy wait on a held one, a generation
+written under its final name, a broken database archived, a manifest that does not digest its
+members, an offsite copy without the manifest or without its bucket, and a fourth archive kept. The
+drill's rows hold A8 (S33744-S33747): an older archive restored, a digest or a database left
+unchecked, and an empty snapshot directory not refused by name. No row drops the window's refusal
+of a busy step: the library retries such a step with no bound and the killer holds the lock in its
+own thread, so that mutant would hang its killer rather than fail it. S33737 and the model
+`formal/tla/SyncSnapshotWindow` carry that property.
 
 ## 9. References
 
