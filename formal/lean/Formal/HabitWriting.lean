@@ -1,5 +1,5 @@
--- @phx covers crates/habits/src/writing.rs anchor=writing_day_xp digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/habits/src/writing.rs anchor=all_confirmed_days digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+-- @phx covers crates/habits/src/writing.rs anchor=writing_day_xp digest=sha256:35b9f19b5387b8a71cd4bfb4a85f2da3c85b0b122196949e2bf076cc28fc8ad8
+-- @phx covers crates/habits/src/writing.rs anchor=all_confirmed_days digest=sha256:af9283fadb48189d9f7294106da7ef5c438d9df94095b2647101efbb75970f9e
 -- @phx vectors formal/vectors/habit-writing.jsonl
 -- @phx cites #94, #93
 -- @phx theorem the_writing_day_pays_each_confirmed_course_and_the_bonus_only_over_a_full_set ramp=report

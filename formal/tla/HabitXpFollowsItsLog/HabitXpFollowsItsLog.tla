@@ -6,12 +6,12 @@
 \* @phx covers crates/habits/src/minutes.rs anchor=week_start digest=sha256:580735cd07aed4417ba20cad976d40ff325b4860fbbeacc4f2d02669e9356e4a
 \* @phx covers crates/progression/src/settle.rs anchor=settle digest=sha256:d5473de04ebe9964bea0c7755b0ac7116ea5d9a45e62a8e342a9a5ff1771eeb7
 \* @phx covers crates/coordination/src/level_up.rs anchor=announce_level_up digest=sha256:acbb8923e76fbd4ab77949a119c1ad3a87de6f41737e65b89df689875e851dd0
-\* @phx covers crates/coordination/src/habits/writing.rs anchor=confirm digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/coordination/src/habits/writing.rs anchor=clear digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/coordination/src/habits/writing.rs anchor=toggle digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/coordination/src/habits/writing.rs anchor=write_day digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/coordination/src/recompute/writing.rs anchor=evaluate digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/habits/src/writing.rs anchor=all_confirmed_days digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers crates/coordination/src/habits/writing.rs anchor=confirm digest=sha256:2e11187fc7c44b9b887fec495b5c96493a6c7611a0f2df52d5efbb7c17efa20f
+\* @phx covers crates/coordination/src/habits/writing.rs anchor=clear digest=sha256:ce5b28df53b5a9620cf0bf79c0db55568c8af16f43c622bdeab9f8ade1b0f4b4
+\* @phx covers crates/coordination/src/habits/writing.rs anchor=toggle digest=sha256:a6dccbdeda01b7507d2b5226cae29573b68d49a07673d13a368d2413f442fba6
+\* @phx covers crates/coordination/src/habits/writing.rs anchor=write_day digest=sha256:f14a84354066544ff0c4a7bd00fbac969c2fde58625955665ea1d64a1e4d1db5
+\* @phx covers crates/coordination/src/recompute/writing.rs anchor=evaluate digest=sha256:2954c0087b02f2d0732e4bbdde67bd76a7e457056d92105980524c678756fd19
+\* @phx covers crates/habits/src/writing.rs anchor=all_confirmed_days digest=sha256:af9283fadb48189d9f7294106da7ef5c438d9df94095b2647101efbb75970f9e
 \* @phx cites #93, #94
 \* @phx property ReadXpFollowsTheLog ramp=report
 \* @phx property GoalBonusFollowsItsWeek ramp=report
