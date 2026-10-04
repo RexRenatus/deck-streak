@@ -1,0 +1,15 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S33600-A-REFUSAL-READS-AS-ITS-SENTENCE",
+        "ffi",
+        "src/engine.rs",
+        "        match self {\n            Self::NotAllowed { service, method } => {\n                write!(\n                    f,\n                    \"service {service} method {method} is not on the allow-list\"\n                )\n            }\n            Self::Engine { error } => {\n                write!(f, \"the engine refused the call ({} bytes)\", error.len())\n            }\n            Self::Start { reason } => write!(f, \"the engine could not start: {reason}\"),\n        }\n",
+        "        let _ = (self, f);\n        Ok(Default::default())\n",
+        "refusal_text::each_refusal_reads_as_its_own_sentence",
+        "each refusal reads as its own sentence for the person a native client shows it to, never as empty text: cargo-mutants' own mutant of EngineRefusal's Display, its body replaced with Ok(Default::default()), written as a row so the band proves its killer (SPEC-336 R3)"
+      ]
+    ]
+  }
+}
