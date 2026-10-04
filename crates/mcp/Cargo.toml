@@ -13,22 +13,35 @@ workspace = true
 
 [dependencies]
 deck-streak-kernel.workspace = true
+# ADR-119 and ADR-329: the law track's owner, read through its use case (SPEC-119 R1, R16).
+deck-streak-coordination.workspace = true
 # ADR-003 and ADR-320: the guard's layer answers in axum's HTTP types and body (SPEC-119 R11).
 axum.workspace = true
-# ADR-003 and ADR-320: the guard is a tower `Layer` around the server's service (SPEC-119 R11).
-tower.workspace = true
 # ADR-024 and ADR-320: each grant's SHA-256 digest, compared in constant time (SPEC-119 R10), and
 # the limiter's bucket (R13).
 sha2.workspace = true
 subtle.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
+# ADR-119 and ADR-329: the MCP server, its tools and its streamable HTTP transport (SPEC-119 R2).
+rmcp.workspace = true
+# ADR-003 and ADR-320: the guard is a tower `Layer` around the server's service (SPEC-119 R11);
+# ADR-025 and ADR-329: the serving stack's bound and shed (R4).
+tower = { workspace = true, features = ["limit", "load-shed"] }
+# ADR-003 and ADR-329: the house layers around the guard, and the body cap the transport's own
+# read obeys (R2).
+tower-http = { workspace = true, features = ["catch-panic", "limit", "request-id", "sensitive-headers", "timeout", "trace"] }
+# ADR-329: the tool's structured answer (SPEC-119 R15), and the listener the role binds.
+serde.workspace = true
+tokio = { workspace = true, features = ["net"] }
 
 [dev-dependencies]
 # ADR-020's temporary directory holds the credentials; tower's `service_fn` and `oneshot` and
-# tokio drive the guard's layer; ADR-029's golden reader takes serde.
+# tokio drive the guard's layer; ADR-029's golden reader takes serde. ADR-329: the served stack's
+# tests talk to a loopback listener over a socket, hold a request on a semaphore and bound every
+# wait.
 tempfile.workspace = true
-tokio = { workspace = true, features = ["macros", "rt"] }
+tokio = { workspace = true, features = ["io-util", "macros", "net", "rt", "sync", "time"] }
 tower = { workspace = true, features = ["util"] }
 serde.workspace = true
 serde_json.workspace = true

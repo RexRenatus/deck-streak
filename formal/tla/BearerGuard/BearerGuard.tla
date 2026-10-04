@@ -2,7 +2,9 @@
 \* @phx covers crates/mcp/src/limiter.rs anchor=decide digest=sha256:bcefd88248e57233b19a103ff347af2c194f6f1aa0c5789739fcf1fcfae2cc0f
 \* @phx covers crates/mcp/src/guard.rs anchor=admit digest=sha256:f5d836baf1f741ad7eec12d9cca354a3e217f8787675893f1f8593ad5f322629
 \* @phx covers crates/mcp/src/guard.rs anchor=authorize digest=sha256:e49a37c49fee067b96c789218a107d9b34e2980ec7d2f469ac10997beac36e33
-\* @phx cites #158
+\* @phx covers crates/mcp/src/guard.rs anchor=call digest=sha256:058a78dd0ee1466af5710c5f15166d87f698f1707d1bd1025e689bc5cc4379c4
+\* @phx covers crates/mcp/src/tools.rs anchor=get_law_track digest=sha256:7aa116d9b9f2b2a7080dd4c9f42ef786b5abff041b5e7f2f2bb250a889cb754c
+\* @phx cites #158, #157
 \* @phx property GrantedAlwaysAdmitted ramp=report
 \* @phx property FreshFailuresAtMostMax ramp=report
 \* @phx property BucketsAtMostMax ramp=report
@@ -28,6 +30,18 @@
 \*   newest HistoryCap, moves the bucket newest and evicts the oldest beyond MaxBuckets;
 \* - every refusal is one response: guard.rs builds it in one function from constants (R11), and
 \*   a scope refusal carries the same word (R12).
+\*
+\* Served (#157), admission and the scope check are two steps with other requests between them,
+\* and this one decision still models both (re-read against the server's first slice):
+\* - guard.rs::call (the GuardService's) runs guard.rs::admit for every request, before the shed
+\*   and its eight slots. For a granted token admit answers before the limiter reads anything, so
+\*   the admission reads and writes none of hist, order and now: the gap until the tool's check is
+\*   a stuttering step over them.
+\* - tools.rs::get_law_track calls guard.rs::authorize for law_track before it reads the law
+\*   track. For a grant that lacks the scope, that call is this model's Decide for a request whose
+\*   token is the granted one and whose scope is law, the limiter's arm included. A request with no
+\*   admitted grant in its parts is refused before any limiter read, a stuttering step too.
+\* - Every refusal the tool answers is the one word, whatever the limiter's outcome (R12).
 \*
 \* What is abstracted:
 \* - a token is one of four: the granted token, two wrong tokens and no token at all, each with a
