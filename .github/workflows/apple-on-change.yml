@@ -28,4 +28,4 @@ concurrency:
 
 jobs:
   apple:
-    uses: ./.github/workflows/xcframework.yml
+    uses: $/.github/workflows/xcframework.yml

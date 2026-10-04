@@ -44,8 +44,8 @@
       [
         "S34406-THE-CHANGE-CALLER-CALLS-WITHOUT-A-REF",
         ".github/workflows/apple-on-change.yml",
-        "    uses: ./.github/workflows/xcframework.yml\n",
-        "    uses: ./.github/workflows/xcframework.yml@dev\n",
+        "    uses: $/.github/workflows/xcframework.yml\n",
+        "    uses: $/.github/workflows/xcframework.yml@dev\n",
         "the change caller calls the job body as a local call with no ref (SPEC-344 R2, R5)",
         "test_ci_workflows.WorkflowsAreHardened.test_a_call_job_is_a_local_call_or_pinned"
       ],
@@ -68,8 +68,8 @@
       [
         "S34409-THE-TAG-CALLER-CALLS-A-FILE-THAT-IS-HERE",
         ".github/workflows/apple-on-tag.yml",
-        "    uses: ./.github/workflows/xcframework.yml\n",
-        "    uses: ./.github/workflows/missing.yml\n",
+        "    uses: $/.github/workflows/xcframework.yml\n",
+        "    uses: $/.github/workflows/missing.yml\n",
         "the tag caller calls a workflow file that is here and takes a call (SPEC-344 R3)",
         "test_workflow_concurrency.EveryReleaseWorkflowQueuesEveryRun.test_every_workflow_that_can_hold_two_runs_of_a_release_queues_them"
       ],

@@ -33,7 +33,7 @@ PINNED = re.compile(r"^[\w.-]+/[\w.-]+(?:/[\w.-]+)*@[0-9a-f]{40}$")
 # A reusable workflow in this repository, called as GitHub reads it from the caller's own commit: the
 # release class's call shape (SPEC-190 R12) and the pin census's one admitted local call, a call
 # job's own `uses` (SPEC-344 R5).
-LOCAL_CALL = re.compile(r"\./\.github/workflows/([^/@\s]+)")
+LOCAL_CALL = re.compile(r"\$/\.github/workflows/([^/@\s]+)")
 STAGES = re.compile(r"^STAGES_ALL=\(([^)]*)\)", re.M)
 THIS_REPOSITORY = "RexRenatus/deck-streak"
 # The one workflow admitted to a runner that is not a pinned Ubuntu image, and the one runner it is
@@ -553,7 +553,7 @@ class WorkflowsAreHardened(unittest.TestCase):
             for job_id, job in (jobs if isinstance(jobs, dict) else {}).items():
                 if isinstance(job, dict) and "uses" in job:
                     found.append((path.name, job_id, job["uses"]))
-        body = "./.github/workflows/xcframework.yml"
+        body = "$/.github/workflows/xcframework.yml"
         self.assertEqual(
             sorted(found),
             [("apple-on-change.yml", "apple", body), ("apple-on-tag.yml", "apple", body)],
@@ -575,16 +575,15 @@ class WorkflowsAreHardened(unittest.TestCase):
         for planted, ref in plants:
             with self.subTest(ref), tempfile.TemporaryDirectory() as scratch:
                 (Path(scratch) / "planted.yml").write_text(planted, encoding="utf-8")
-                with mock.patch.object(sys.modules[__name__], "WORKFLOWS", Path(scratch)):
-                    case = WorkflowsAreHardened(HARDENING_PIN)
-                    case.setUp()
-                    if ref is None:
-                        getattr(case, HARDENING_PIN)()
-                        continue
-                    with self.assertRaisesRegex(
-                        AssertionError, re.escape(f"planted.yml uses {ref}") + "$"
-                    ):
-                        getattr(case, HARDENING_PIN)()
+                case = WorkflowsAreHardened("test_every_action_is_pinned_by_a_full_commit_sha")
+                case.files = workflow_files(Path(scratch))
+                if ref is None:
+                    case.test_every_action_is_pinned_by_a_full_commit_sha()
+                    continue
+                with self.assertRaisesRegex(
+                    AssertionError, re.escape(f"planted.yml uses {ref}") + "$"
+                ):
+                    case.test_every_action_is_pinned_by_a_full_commit_sha()
 
 
 APPLE_PATHS = [
@@ -642,7 +641,7 @@ class TheAppleBuildRunsFromOneBody(unittest.TestCase):
                 }
             },
         )
-        self.assertEqual(caller["jobs"], {"apple": {"uses": "./.github/workflows/xcframework.yml"}})
+        self.assertEqual(caller["jobs"], {"apple": {"uses": "$/.github/workflows/xcframework.yml"}})
         paths = caller["on"]["pull_request"]["paths"]
         runs = (
             "crates/ffi/src/lib.rs",

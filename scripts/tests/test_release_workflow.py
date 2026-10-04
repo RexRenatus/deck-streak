@@ -137,7 +137,7 @@ class TheAppleBuildRunsOnEveryReleaseTag(unittest.TestCase):
         for name in examined("tag names", admitted + refused):
             matched = any(glob.fullmatch(name) for glob in globs)
             self.assertEqual(matched, name in admitted, f"the tag filter and `{name}`")
-        self.assertEqual(caller["jobs"], {"apple": {"uses": "./.github/workflows/xcframework.yml"}})
+        self.assertEqual(caller["jobs"], {"apple": {"uses": "$/.github/workflows/xcframework.yml"}})
 
 
 class TheReleaseWorkflowIsHardened(unittest.TestCase):
