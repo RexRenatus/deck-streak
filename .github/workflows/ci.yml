@@ -62,6 +62,8 @@ jobs:
           key: rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}
           restore-keys: |
             rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-
+      - name: the locked dependency graph, every target's packages (the censuses read it offline)
+        run: cargo fetch --locked
       - name: fmt, clippy (-D warnings), test (nextest), doctest and audit-rust (cargo deny)
         env:
           CHECK_LOG_DIR: ${{ runner.temp }}/check-logs
@@ -182,6 +184,8 @@ jobs:
           key: rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}
           restore-keys: |
             rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-
+      - name: the locked dependency graph, every target's packages (the censuses read it offline)
+        run: cargo fetch --locked
       - name: test-release, the workspace's tests in the release profile
         env:
           CHECK_LOG_DIR: ${{ runner.temp }}/check-logs
