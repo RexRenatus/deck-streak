@@ -58,17 +58,17 @@ form is the owner's to choose (#617).
 ADR-340's one window, in order, with the data moved by the server's documented path (ADR-347 D10):
 every client syncs once against the old server, then desktop's full upload fills the new server's
 EMPTY store, and the other clients take a full download from it. Nothing copies the old server's
-store. The staging sync user (ADR-344) rehearses the same sequence first on a scrubbed collection.
-The old server is never written by any state: the rollback repoints the clients to it and stops the
-new unit, so it is reachable from every state between the freeze and the new password. The
-cutover's full upload is HELD until the sync server's processor share is decided (SPEC-337 §6):
-the window opens only once the hold is lifted.
+store. The staging sync user (ADR-344) rehearses the same sequence on the new server first, with
+a scrubbed collection. The old server is never written by any state: the rollback repoints the
+clients to it and stops the new unit, so it is reachable from every state up to the new password.
+The cutover's full upload is HELD until the sync server's processor share is decided (SPEC-337
+§6): the window opens only once the hold is lifted.
 
 ```mermaid
 stateDiagram-v2
-  [*] --> rehearsed: the staging user's rehearsal passed
-  rehearsed --> started: the review's verdict and the owner's go, the unit started over an empty store
-  started --> final_sync: the hold lifted and the owner's go
+  [*] --> started: the review's verdict and the owner's go, the unit started over an empty store
+  started --> rehearsed: the staging user's rehearsal passed
+  rehearsed --> final_sync: the hold lifted and the owner's go
   final_sync --> frozen: every client synced once against the old server, then none syncs
   frozen --> uploaded: desktop repointed, its full upload into the empty store
   uploaded --> read_back: the server's collection read back and matched with desktop's counts
@@ -77,6 +77,7 @@ stateDiagram-v2
   app --> rekeyed: a new sync password set on the new server
   rekeyed --> [*]: live, the old server kept until the owner retires it
   started --> rolled_back: a step fails
+  rehearsed --> rolled_back: a step fails
   final_sync --> rolled_back: a step fails
   frozen --> rolled_back: a step fails
   uploaded --> rolled_back: a step fails
@@ -90,8 +91,8 @@ Where each state happens, and whose go starts it; the runbook marks each step th
 
 | state | where | whose go |
 |---|---|---|
-| `rehearsed` | the host, the staging user's store; a scratch desktop profile | the owner's go (#161) |
 | `started` | the host: the unit and the route | the owner's go (#161) |
+| `rehearsed` | the new server, the staging user's store; two scratch desktop profiles | the owner's go (#161) |
 | `final_sync` | the owner's devices, against the old server | the owner's own act |
 | `frozen` | the owner's devices | the owner's own act |
 | `uploaded` | desktop, against the new server | the owner's own act |
@@ -103,8 +104,8 @@ Where each state happens, and whose go starts it; the runbook marks each step th
 
 What the sequence holds, each a line of the runbook (`docs/runbooks/sync-server-cutover.md`):
 
-- Nothing moves before the rehearsal passed and the hold is lifted: `final_sync` is reachable only
-  from `started`, and `started` only from `rehearsed`.
+- Nothing of the owner's moves before the rehearsal passed and the hold is lifted: `final_sync` is
+  reachable only from `rehearsed`, and `rehearsed` only from `started`.
 - The upload goes into an EMPTY store, by the server's own full upload; the old server's store is
   never copied (ADR-347 D10).
 - The read-back precedes any retry: a full upload the client reports as failed may have landed on
