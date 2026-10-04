@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 decision-makers: "@RexRenatus (owner), the DeckStreak architect"
 ---
 
@@ -36,13 +36,45 @@ happens to the fork?
 
 ## Decision Outcome
 
-Proposed option: the engine compiled to WASM, in a Worker over OPFS storage. **The decision
+Chosen option: the engine compiled to WASM, in a Worker over OPFS storage. **The decision
 outcome comes from the browser engine spike**, which is time-boxed and ends in GO or NO-GO. It
 builds the engine for `wasm32` from a branch of the fork, records the gzipped size, and opens,
 answers and undoes on a synthetic collection in a Worker over OPFS, in Chromium and WebKit under
 Playwright. On GO, the delivery that records it sets this ADR to `accepted` with the measurements
 and the size budget. On NO-GO, this ADR records the fallback as its outcome, and the web engine
 delivery builds the server-side study collection instead; SPEC-334's row 1.4 holds either way.
+
+**GO, from the browser engine spike (SPEC-335, ADR-346).** The engine builds for
+`wasm32-unknown-unknown` from the fork's spike branch. In a dedicated Worker over OPFS, through the
+SAH-pool VFS, it opens a synthetic collection of 300 notes, builds the queue, answers a card and
+undoes the answer correctly in 5 runs of 5 in Chromium and in WebKit under Playwright, and it ships
+at 7529787 bytes gzip -9. The measurements, from SPEC-335 section 7:
+
+- **Size.** The module a browser loads, after `wasm-bindgen` and `wasm-opt -Oz`: 23845690 bytes
+  raw, 7521156 bytes gzip -9. Its JS bindings: 42833 bytes raw, 8631 bytes gzip -9. Shipped total:
+  7529787 bytes gzip -9. Before the size pass, the cargo cdylib: 27394535 bytes raw, 7750461 bytes
+  gzip -9. The embedded translation table is the largest single part of the module's data: 8357373
+  bytes of generated source.
+- **Chromium**, median (min-max) of 5 runs, in milliseconds: open 1.1 (1.0-1.2), queue build 17.2
+  (13.7-18.1), answer 6.0 (5.9-9.6), undo 3.6 (3.1-7.9); module load 107.5. Undo correct 5 of 5.
+- **WebKit** (Playwright's WebKit build, headless; its clock resolves to 1 ms), the same: open 1.0,
+  queue build 7.0 (6.0-8.0), answer 3.0 (2.0-4.0), undo 2.0 (1.0-3.0); module load 261.0. Undo
+  correct 5 of 5.
+- **Undo correct** means one review-log row for the card after the answer and none after the undo,
+  with the cards table changed by the answer and restored byte-equal by the undo. The journal mode
+  reads `wal`.
+- **OPFS.** WebKit refuses the OPFS root in Playwright's default ephemeral context; a persistent
+  profile runs in both browsers.
+- **The gates.** 27 sites on the fork: 23 code sites in the engine's source and 4 manifest and
+  config entries. The engine's native check reads the same before and after them.
+
+**The size budget is 8000000 bytes gzip -9 for the shipped module plus its JS bindings.**
+
+**Not measured, and the web engine's acceptance (#626):** a phone-class device, peak memory,
+persistence across a page reload and under storage eviction, a second tab on one collection, the
+brotli size, and the module's size with the translation table loaded apart from the engine. The
+sync transport on `wasm32` is the web sync screens' (#631), and real Safari on a device is the
+owner's acceptance session's (#637).
 
 - **Storage.** The Worker keeps the collection in OPFS through a SQLite build for the browser,
   and asks for persistent storage (`navigator.storage.persist()`). Because the browser may still

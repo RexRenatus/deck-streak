@@ -93,7 +93,7 @@ async fn minutes_with_held(
 
 /// Settles `amount` of `source` on `day`, on the language track, as the recompute. A row that
 /// does not exist is not written for an amount of nothing.
-async fn settle_habit(
+pub(super) async fn settle_habit(
     write: &mut SqliteConnection,
     day: StudyDay,
     source: &str,
