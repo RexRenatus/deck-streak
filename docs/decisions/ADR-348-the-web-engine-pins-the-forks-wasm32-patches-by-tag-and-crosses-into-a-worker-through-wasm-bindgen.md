@@ -49,6 +49,12 @@ before any code does:
 - rusqlite 0.40, the spike's line: rejected because its `libsqlite3-sys` `^0.38.1` conflicts with `sqlx-sqlite` 0.9's `<0.38.0`, and no `sqlx-sqlite` release accepts 0.38.
 - Move `sqlx` instead: rejected because no release exists to move to, and the kernel's repository base is not this delivery's to change.
 
+### getrandom's browser backend in this workspace
+
+- The feature alone, which the lockfile's getrandom lines read: chosen because getrandom 0.3.4 and later and 0.4 select `wasm_js` by the feature, so the `wasm32` check of this workspace builds with no flag and no file (SPEC-338 section 7, M2).
+- A `.cargo/config.toml` setting `--cfg getrandom_backend="wasm_js"` for the target: rejected because the settle census compiles with cargo's own defaults and refuses a `.cargo/config.toml` at the root (SPEC-072 A34), and the flag selects nothing the feature does not already.
+- The flag in `RUSTFLAGS` on the build script's command line: rejected because no getrandom line this lockfile resolves needs it, and a flag nobody needs is one more setting to keep equal in two places.
+
 ### The crate and its JavaScript boundary
 
 - A workspace member `crates/web-engine` whose dependencies are all wasm32-only, exporting named study calls and an allow-listed `run_method` through `wasm-bindgen`: chosen because the native build is the target-independent study rule alone, the page reaches only the calls the study client makes, and the dynamic dispatch keeps the whole engine in the module the size gate reads.
@@ -93,8 +99,11 @@ Chosen options: the first under each heading above.
 
 - **The pin.** The root manifest's `[patch."https://github.com/ankitects/anki.git"]` entry takes
   `anki` and `anki_proto` from the fork at the tag's commit by `rev`, and the dependency lines keep
-  the upstream tag `26.09.3`. The workspace's `.cargo/config.toml` sets getrandom's backend flag for
-  `wasm32-unknown-unknown`, because a dependency's own config is never read.
+  the upstream tag `26.09.3`. No configuration file or flag selects getrandom's browser backend: the
+  lockfile's getrandom 0.3.4 and 0.4.3 select `wasm_js` by the feature the fork's
+  `getrandom-wasm-js` patch turns on, and the `wasm32` build's only settings are the C compiler and
+  archiver on the command line of `scripts/web-engine-build.sh`, which CI's job and a builder's
+  measurement both call.
 - **The crate.** `deck-streak-web-engine`, a `cdylib` and an `rlib`. Natively it holds the study
   rule (`study.rs`): a wire rating 1 to 4 to Anki's answer and the next state it selects, and the
   table of study calls `run_method` admits, by service and method index. On wasm32, `wasm.rs`

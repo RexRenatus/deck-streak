@@ -5,8 +5,10 @@
 //! own types and never Anki's (the anti-corruption layer of docs/CONTEXT-MAP.md). [`RslibEngine`]
 //! is the adapter over the engine at upstream tag `26.09.3`, which the root manifest's `[patch]`
 //! entry replaces with the maintainer's fork at revision
-//! `57382da085e6752738dc4bb617789be836a23300`: that tag plus one fix, so the engine's protobuf
-//! build script stops rerunning on every cargo command (ADR-058, SPEC-055).
+//! `c538de55a23e695234e794029fce0dafff2d36a9`, the fork's tag `deckstreak-pin-26.09.3-wasm32`:
+//! that tag plus the fix that stops the engine's protobuf build script rerunning on every cargo
+//! command (ADR-058, SPEC-055) and the web engine's `wasm32` patches, each gated off the native
+//! build (ADR-348, SPEC-338).
 //!
 //! Nothing here carries the engine's error text, a path, the endpoint or a credential out of the
 //! port: a failure is one [`EngineError`] kind (SPEC-022 R9).

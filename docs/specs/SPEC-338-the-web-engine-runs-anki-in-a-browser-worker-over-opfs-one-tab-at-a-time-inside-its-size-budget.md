@@ -147,7 +147,6 @@ test only. CI's `web-engine` job runs the Playwright tests over the module it bu
 | `crates/web-engine/tests/study.rs` | `deck-streak-web-engine` | added: A1, A2, A17 |
 | `Cargo.toml` | workspace | the crate's dependencies, and the `[patch]` entry's `rev` and `anki_proto` |
 | `Cargo.lock` | workspace | changed by `cargo` only |
-| `.cargo/config.toml` | workspace | added: the `wasm32` target's randomness backend flag |
 | `deny.toml` | workspace | the licences of the crates the module adds, if the audit names one |
 | `crates/ingest/src/engine.rs` | `deck-streak-ingest` | the doc comment names the pinned commit's ADRs, not one fix |
 | `docs/CONTEXT-MAP.md` | docs | the crate's line in the map |
@@ -239,3 +238,4 @@ Each row names its method. Figures are appended as they are taken and never edit
 | id | the SPEC-335 `(#626)` item, or this delivery's own | figure | method |
 |---|---|---|---|
 | M1 | The spike's branch in this workspace | does not resolve: `libsqlite3-sys` `^0.38.1` against `sqlx-sqlite` 0.9.0's `<0.38.0` | `cargo metadata --format-version 1` with the `[patch]` rev at `98d1455385dfea67cac832fa98f11a54004f8233` |
+| M2 | getrandom's browser backend in this workspace, with no flag and no `.cargo/config.toml` | builds: `cargo check --target wasm32-unknown-unknown -p deck-streak-web-engine` exits 0 on this lockfile's getrandom 0.3.4 and 0.4.3, each selecting `wasm_js` by its feature | the check, with only the C compiler and archiver for `wasm32` set on its command line |
