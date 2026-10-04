@@ -164,7 +164,7 @@
     {#each pads as pad (pad.index)}
       <dl class="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
         <dt>{m.remote_gamepad()}</dt>
-        <dd class="break-all">{pad.id}</dd>
+        <dd><code>{pad.id}</code></dd>
         <dt>{m.remote_mapping()}</dt>
         <dd>{pad.mapping}</dd>
         <dt>{m.remote_pressed()}</dt>
@@ -196,7 +196,7 @@
           <tr>
             <td>{entry.time}</td>
             <td>{entry.source}</td>
-            <td class="break-all">{entry.raw}</td>
+            <td><code>{entry.raw}</code></td>
             <td>{entry.action}</td>
             <td>{entry.visibility}</td>
             <td>{entry.lock}</td>
