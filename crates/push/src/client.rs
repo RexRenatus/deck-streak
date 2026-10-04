@@ -5,7 +5,7 @@ use std::fmt;
 use std::sync::Arc;
 use std::time::Duration;
 
-use http_body_util::{BodyExt, Full, LengthLimitError, Limited};
+use http_body_util::{BodyExt, Collected, Full, Limited};
 use hyper::body::Bytes;
 use hyper::header::RETRY_AFTER;
 use hyper::{HeaderMap, Request, StatusCode};
@@ -39,8 +39,8 @@ pub(crate) struct Answer {
     pub(crate) status: StatusCode,
     /// `Retry-After`, when it was sent as a number of seconds.
     pub(crate) retry_after: Option<Duration>,
-    /// The body of an answer that is not a success, when it was read inside its bound; `None` for a
-    /// success, and for a body past [`ERROR_BODY_LIMIT`].
+    /// The body of an answer that is not a success, when it was read whole inside its bound; `None`
+    /// for a success, and for a body past [`ERROR_BODY_LIMIT`] or one that broke off.
     pub(crate) error_body: Option<Bytes>,
 }
 
@@ -97,14 +97,13 @@ impl Client {
                 error_body: None,
             });
         }
-        let error_body = match Limited::new(response.into_body(), ERROR_BODY_LIMIT)
+        // A body past the bound, or one that breaks off, leaves the reason unknown: the outcome is
+        // then read from the status alone.
+        let error_body = Limited::new(response.into_body(), ERROR_BODY_LIMIT)
             .collect()
             .await
-        {
-            Ok(collected) => Some(collected.to_bytes()),
-            Err(error) if error.downcast_ref::<LengthLimitError>().is_some() => None,
-            Err(_) => return Err(Unreached::Unreadable),
-        };
+            .ok()
+            .map(Collected::to_bytes);
         Ok(Answer {
             status,
             retry_after,

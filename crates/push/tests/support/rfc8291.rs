@@ -71,7 +71,7 @@ pub fn decrypt(body: &[u8], secret: &SecretKey, auth: &[u8; 16]) -> Result<Vec<u
 
     let cipher = Aes128Gcm::new_from_slice(&cek).map_err(|_| Undecrypted::Header)?;
     let padded = cipher
-        .decrypt(Nonce::from_slice(&nonce), ciphertext)
+        .decrypt(&Nonce::from(nonce), ciphertext)
         .map_err(|_| Undecrypted::Tag)?;
 
     // RFC 8188 section 2: the last record's plaintext is followed by 2, then any zero padding.

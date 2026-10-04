@@ -104,9 +104,8 @@ impl ApnsSender {
     ///
     /// # Errors
     ///
-    /// [`BuildError::Key`] when the key does not parse, [`BuildError::Setting`] when an id or the
-    /// topic is empty or holds a character it may not, and [`BuildError::Tls`] when the connector
-    /// cannot be built.
+    /// [`BuildError::Key`] when the key does not parse, and [`BuildError::Tls`] when the connector
+    /// cannot be built. A topic no header can carry answers `Failed` on the first call.
     pub fn new(settings: ApnsSettings<'_>, clock: Arc<dyn Clock>) -> Result<Self, BuildError> {
         Ok(Self {
             client: Client::new(Versions::Http2Only, settings.deadline)?,

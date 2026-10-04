@@ -25,7 +25,6 @@ mod jwt;
 mod origin;
 mod web_push;
 
-use std::fmt;
 use std::time::Duration;
 
 pub use apns::{ApnsSender, ApnsSettings, Device, Environment};
@@ -178,8 +177,6 @@ pub enum Unreached {
     Redirect,
     /// The answer's status is none a push service sends.
     Unexpected,
-    /// The answer's body could not be read.
-    Unreadable,
     /// The request could not be built or signed.
     Request,
 }
@@ -220,16 +217,7 @@ pub enum BuildError {
     /// A collapse key is not 1 to 32 base64url characters.
     #[error("a collapse key is 1 to 32 characters of the base64url alphabet")]
     CollapseKey,
-    /// A key id, team id, topic or contact is empty or holds a character it may not.
-    #[error("a key id, team id, topic or contact is empty or holds a character it may not")]
-    Setting,
     /// The TLS connector could not be built.
     #[error("the TLS connector could not be built")]
     Tls,
-}
-
-impl fmt::Display for Sent {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.write_str(self.name())
-    }
 }

@@ -5,11 +5,15 @@ use std::fmt;
 use std::sync::Arc;
 use std::time::Duration;
 
+use base64ct::{Base64UrlUnpadded, Encoding};
 use deck_streak_kernel::Clock;
+use hyper::Uri;
+use p256::PublicKey;
+use web_push_native::Auth;
 
 use crate::client::{Client, Versions};
 use crate::jwt::Signer;
-use crate::{BuildError, Notification, PushServices, Sent, Unreached};
+use crate::{BuildError, Notification, Origin, PushServices, Sent, Unreached};
 
 /// What a web push sender is built from. The key is the VAPID signing key's PKCS#8 PEM text, which
 /// production reads through the kernel's credential loader (#640); the contact and the list are
@@ -35,12 +39,15 @@ impl fmt::Debug for WebPushSettings<'_> {
     }
 }
 
-/// A browser's push subscription, admitted by a sender whose list holds its endpoint's origin.
+/// A browser's push subscription, admitted by a sender whose list holds its endpoint's origin: its
+/// endpoint, that endpoint's origin, and the browser's P-256 public key and authentication secret,
+/// parsed once.
 #[derive(Clone)]
 pub struct Subscription {
     endpoint: String,
-    p256dh: String,
-    auth: String,
+    origin: Origin,
+    key: PublicKey,
+    auth: Auth,
 }
 
 impl fmt::Debug for Subscription {
@@ -63,8 +70,8 @@ impl WebPushSender {
     ///
     /// # Errors
     ///
-    /// [`BuildError::Key`] when the key does not parse, [`BuildError::Setting`] when the contact is
-    /// not a `mailto:` or `https:` URI, and [`BuildError::Tls`] when the connector cannot be built.
+    /// [`BuildError::Key`] when the key does not parse, and [`BuildError::Tls`] when the connector
+    /// cannot be built.
     pub fn new(settings: WebPushSettings<'_>, clock: Arc<dyn Clock>) -> Result<Self, BuildError> {
         Ok(Self {
             client: Client::new(Versions::Any, settings.deadline)?,
@@ -88,10 +95,27 @@ impl WebPushSender {
         p256dh: &str,
         auth: &str,
     ) -> Result<Subscription, BuildError> {
+        let uri: Uri = endpoint.parse().map_err(|_| BuildError::Subscription)?;
+        let (Some(scheme), Some(authority)) = (uri.scheme_str(), uri.authority()) else {
+            return Err(BuildError::Subscription);
+        };
+        let origin = Origin::new(&format!("{scheme}://{authority}"))?;
+        if !self.services.admits(&origin) {
+            return Err(BuildError::OffTheList);
+        }
+        let key = Base64UrlUnpadded::decode_vec(p256dh)
+            .ok()
+            .and_then(|point| PublicKey::from_sec1_bytes(&point).ok())
+            .ok_or(BuildError::Subscription)?;
+        let auth: [u8; 16] = Base64UrlUnpadded::decode_vec(auth)
+            .ok()
+            .and_then(|secret| secret.try_into().ok())
+            .ok_or(BuildError::Subscription)?;
         Ok(Subscription {
             endpoint: endpoint.to_owned(),
-            p256dh: p256dh.to_owned(),
-            auth: auth.to_owned(),
+            origin,
+            key,
+            auth: Auth::from(auth),
         })
     }
 
@@ -99,7 +123,8 @@ impl WebPushSender {
     pub async fn deliver(&self, subscription: &Subscription, notification: &Notification) -> Sent {
         let _ = (subscription, notification, &self.client, &self.signer);
         let _ = (&self.contact, &self.services, &self.clock);
-        let _ = (&subscription.endpoint, &subscription.p256dh, &subscription.auth);
+        let _ = (&subscription.endpoint, &subscription.origin, &subscription.key);
+        let _ = &subscription.auth;
         Sent::Failed(Unreached::Request)
     }
 }
