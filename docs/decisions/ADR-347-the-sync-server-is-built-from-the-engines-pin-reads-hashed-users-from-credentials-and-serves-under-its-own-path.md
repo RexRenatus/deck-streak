@@ -284,8 +284,9 @@ What else moves with it, each bounded to the snapshot:
 - The census of keys a paging unit may hold (`scripts/tests/_units.py`, `PAGING_KEYS`) admits
   `Also=` under `[Install]`, and its table of values (`PAGING_VALUES`) bounds it to the one value,
   the window's name; any other value is refused, by key and value.
-- The window waives the batch-priority rule with its why: it runs with the server stopped, so it
-  must not yield.
+- The window takes no batch priority and waives nothing for it: it runs with the server stopped,
+  so it must not yield, and no timer starts it, so the durable lint's batch-priority rule, which
+  judges the jobs a timer starts, does not reach it.
 
 The model `formal/tla/SyncSnapshotWindow` holds the window's interleavings: the copy reads only
 while the server is stopped, the archived pair comes from one generation, a client's sync in the

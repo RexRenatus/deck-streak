@@ -130,7 +130,7 @@ OBSERVABILITY_SERVICE = {
         "IOSchedulingClass": "idle",
     },
     # The window runs with the sync server stopped, so it is bounded and does not yield (ADR-347
-    # D12; its unit waives resources.batch-priority with that why).
+    # D12); no timer starts it, so resources.batch-priority does not reach it and it waives nothing.
     SYNC_SNAPSHOT_SERVICE_NAME: {"Type": "oneshot", "TimeoutStartSec": "15min"},
 }
 # SPEC-064 R1: the Litestream daemon, an exec service that restarts on failure and can trip its
@@ -350,7 +350,6 @@ WAIVED = {
     ("deck-streak-memory-watch.timer", "calendar-not-persistent"),
     ("deck-streak-litestream.service", "watchdog-missing"),
     (SYNC_SERVER_SERVICE_NAME, "watchdog-missing"),
-    (SYNC_SNAPSHOT_SERVICE_NAME, "batch-priority-missing"),
 }
 
 

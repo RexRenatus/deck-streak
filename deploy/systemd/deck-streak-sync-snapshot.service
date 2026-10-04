@@ -19,7 +19,6 @@ Before=deck-streak-backup.service
 OnSuccess=deck-streak-sync-server.service
 OnFailure=deck-streak-sync-server.service
 OnFailure=deck-streak-alert@%n.service
-X-DurableServices-Waive=batch-priority-missing the sync server is down while this runs, so it does not yield the processor or the disk
 
 [Service]
 Type=oneshot
