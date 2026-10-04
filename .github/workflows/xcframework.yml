@@ -240,6 +240,7 @@ jobs:
           xcodebuild build -project ios/Harness.xcodeproj -scheme Harness -configuration Release \
             -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" \
             -derivedDataPath "$RUNNER_TEMP/release" \
+            ONLY_ACTIVE_ARCH=YES \
             CODE_SIGNING_ALLOWED=NO
           echo "$(( $(date +%s) - started ))" > "$REPORT/release-seconds"
       - name: the Release app's size
