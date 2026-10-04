@@ -192,5 +192,5 @@ the runbook rolls back before any study on the new server, or not at all.
   clients' own, desktop's backup from `frozen`, and the old server's untouched store.
 - The jail bans an address after five refused sync logins within ten minutes, for one hour
   (SPEC-340 R5). An address banned by mistake, the owner's own client after mistyped passwords
-  included, is released before its hour by `fail2ban-client set deck-streak-sync unbanip
-  <address>`, on the owner's go (#161).
+  included, is released before its hour by `fail2ban-client set deck-streak-sync
+  unbanip <address>`, on the owner's go (#161).
