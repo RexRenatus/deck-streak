@@ -16,9 +16,11 @@ by a unit of the sync family's own (SPEC-340 R3; ADR-351 D1):
   only when whole. The unit starts the server again whether this exits 0 or 1.
 - `--sync-archive` is the archive, run by deck-streak-sync-archive.service after the server is
   started again: it checks the newest generation's databases with `PRAGMA integrity_check`, writes
-  a manifest of sha256 digests, renames the generation into an archive, copies both offsite by the
-  command and bucket the settings name (with arguments, no shell) and keeps the newest KEEP
-  archives. The database's daily run archives nothing.
+  a manifest of sha256 digests, renames the generation into an archive, seals both to the owner's
+  offline key by the command the settings name (SPEC-340 R12; ADR-351 D2), copies only the sealed
+  files offsite by the command and bucket the settings name (each with arguments, no shell),
+  removes the sealed files and keeps the newest KEEP archives. The database's daily run archives
+  nothing.
 
 Standard library only, so the unit needs no interpreter of its own.
 """
@@ -59,6 +61,11 @@ MANIFEST_PARTIAL = ".manifest.tmp"
 # The settings that name the offsite copy (deploy/deck-streak.env.example).
 SNAPSHOT_COPY = "DECKSTREAK_SNAPSHOT_COPY"
 SNAPSHOT_BUCKET = "DECKSTREAK_SNAPSHOT_BUCKET"
+# The command that seals the archive and its manifest to the owner's offline public key before any
+# copy (SPEC-340 R12; ADR-351 D2), and the first line every file it writes begins with: the age
+# format's version line.
+SNAPSHOT_SEAL = "DECKSTREAK_SNAPSHOT_SEAL"
+SEAL_HEADER = b"age-encryption.org/v1\n"
 CHUNK = 1 << 20
 
 
@@ -226,9 +233,26 @@ def checked_manifest(generation, scratch):
     return lines
 
 
+def sealed_copy(seal, plain):
+    """`plain` sealed by the seal command into `plain.age`, run as `[*seal, "--output", sealed,
+    plain]` with no shell (SPEC-340 R12; ADR-351 D2): the sealed file, or None when the command
+    fails or the file it wrote does not begin with the format's header."""
+    sealed = Path(f"{plain}.age")
+    done = subprocess.run([*seal, "--output", str(sealed), str(plain)], check=False)
+    if done.returncode != 0:
+        print(f"backup: the seal of {plain.name} exited {done.returncode}", file=sys.stderr)
+        return None
+    with open(sealed, "rb") as handle:
+        if handle.read(len(SEAL_HEADER)) != SEAL_HEADER:
+            print(f"backup: the seal of {plain.name} wrote no age header", file=sys.stderr)
+            return None
+    return sealed
+
+
 def archive(snapshots, environ):
     """The archive unit's run (`--sync-archive`), after the window: 0 when there is no generation
-    or the newest is checked, archived and copied offsite; 1 on any failed step."""
+    or the newest is checked, archived, sealed and copied offsite; 1 on any failed step. Only the
+    sealed files are copied, and they are removed whatever the copy does."""
     snapshots = Path(snapshots)
     if not snapshots.is_dir():
         return 0
@@ -242,9 +266,15 @@ def archive(snapshots, environ):
             f"backup: {SNAPSHOT_COPY} and {SNAPSHOT_BUCKET} name the offsite copy", file=sys.stderr
         )
         return 1
+    seal = shlex.split(environ.get(SNAPSHOT_SEAL, ""))
+    if not seal:
+        print(f"backup: {SNAPSHOT_SEAL} names the seal of the offsite copy", file=sys.stderr)
+        return 1
     newest = generations[-1]
     stamp = newest[len("gen-") : -len(".tar")]
     scratch = snapshots / CHECK_COPY
+    manifest = snapshots / f"sync-{stamp}.sha256"
+    tar = snapshots / f"sync-{stamp}.tar"
     try:
         lines = checked_manifest(snapshots / newest, scratch)
         if lines is None:
@@ -253,11 +283,12 @@ def archive(snapshots, environ):
         with open(partial, "w", encoding="utf-8") as handle:
             os.fchmod(handle.fileno(), 0o600)
             handle.writelines(lines)
-        manifest = snapshots / f"sync-{stamp}.sha256"
-        tar = snapshots / f"sync-{stamp}.tar"
         os.replace(partial, manifest)
         os.replace(snapshots / newest, tar)
-        done = subprocess.run([*command, str(tar), str(manifest), bucket], check=False)
+        sealed = [sealed_copy(seal, plain) for plain in (tar, manifest)]
+        if None in sealed:
+            return 1
+        done = subprocess.run([*command, *map(str, sealed), bucket], check=False)
         if done.returncode != 0:
             print(f"backup: the offsite copy exited {done.returncode}", file=sys.stderr)
             return 1
@@ -269,6 +300,8 @@ def archive(snapshots, environ):
         return 1
     finally:
         emptied(scratch)
+        for plain in (tar, manifest):
+            Path(f"{plain}.age").unlink(missing_ok=True)
 
 
 def main(argv=None, now=None):

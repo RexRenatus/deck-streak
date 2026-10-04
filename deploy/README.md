@@ -48,6 +48,7 @@ that unit (ADR-061).
 | the system user and group `deck-streak` | every service's `User=` and `Group=` but the sync family's | the user itself |
 | the system user and group `deck-streak-sync` | the sync server's, its window's, its archive's and its drill's `User=` and `Group=` | the user itself, with no login shell, no home and no other group (SPEC-340 R2; ADR-351 D1) |
 | `_SYSTEMD_UNIT=caddy.service` | the ban jail's `journalmatch=`, `fail2ban/jail.d/deck-streak-sync.conf` | the edge's unit on the host; the rail installs the jail and its filter into the host's ban service, the filter checked first against one refused login, on the owner's go (SPEC-340 R5; ADR-351 D3) |
+| `/usr/bin/age --recipients-file /etc/deck-streak/snapshot-recipients.txt` | the setting `DECKSTREAK_SNAPSHOT_SEAL`, `deck-streak.env.example`, which the archive unit runs | the seal command and the owner's public recipients file, which holds the offline key's public half alone; the rail installs both and checks the seal under the archive unit's sandbox, on the owner's go (SPEC-340 R12; ADR-351 D2) |
 | `/run/deck-streak-credentials/socket` | every `LoadCredential=` line | the credential socket, its fetch helper and its map (ADR-038) |
 
 `DECKSTREAK_API_UPSTREAM` is the same address as the setting `DECKSTREAK_API_LISTEN`: Caddy proxies

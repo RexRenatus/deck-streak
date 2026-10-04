@@ -99,9 +99,10 @@ You can also export and erase on the host that runs DeckStreak:
 - **The sync server's snapshots** are copies of the sync server's store, your own Anki data, taken
   each day while that server is stopped for a few seconds. An erase leaves them, as it leaves the
   server's store. The host keeps the newest three archives and removes the oldest when a fourth is
-  in place; each archive is also copied to an offsite bucket that admits no public access and no
-  listing, and deleted there 30 days (`P30D`) after it is written, by a rule the owner sets on the
-  bucket and the cutover runbook checks. Removing them is a step of the owner's setup.
+  in place; each archive is also sealed to a key that is never on the host, and only the sealed
+  copy goes to an offsite bucket that admits no public access and no listing. It is deleted there
+  30 days (`P30D`) after it is written, by a rule the owner sets on the bucket and the cutover
+  runbook checks. Removing them is a step of the owner's setup.
 - **The cron-fire ledger** records which scheduled jobs ran, and none of your data. It is kept
   after an erase and pruned after 90 days, so an erase can never make a notification send twice.
 

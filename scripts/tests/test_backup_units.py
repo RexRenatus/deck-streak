@@ -769,7 +769,8 @@ class SyncWindow(unittest.TestCase):
             return backup.main(argv)
 
     def offsite(self, root):
-        """A stand-in for the rail's object-store command: it records its arguments."""
+        """A stand-in for the rail's object-store command: it records its arguments. The settings
+        name the seal's stand-in too, since the archive copies only sealed files (SPEC-340 R12)."""
         log = root / "offsite.jsonl"
         stub = root / "object-store-copy"
         stub.write_text(
@@ -781,6 +782,7 @@ class SyncWindow(unittest.TestCase):
         environ = {
             "DECKSTREAK_SNAPSHOT_COPY": f"{sys.executable} {stub} --no-clobber",
             "DECKSTREAK_SNAPSHOT_BUCKET": "example://deck-streak-example-snapshot/",
+            "DECKSTREAK_SNAPSHOT_SEAL": self.sealer(root, "seal-offsite")[0],
         }
         return environ, log
 
@@ -976,8 +978,8 @@ class SyncWindow(unittest.TestCase):
                 calls[-1],
                 [
                     "--no-clobber",
-                    f"{newest}.tar",
-                    f"{newest}.sha256",
+                    f"{newest}.tar.age",
+                    f"{newest}.sha256.age",
                     environ["DECKSTREAK_SNAPSHOT_BUCKET"],
                 ],
             )
@@ -990,8 +992,9 @@ class SyncWindow(unittest.TestCase):
                     data = archive.extractfile(member).read()
                     self.assertEqual(manifest.pop(member.name), hashlib.sha256(data).hexdigest())
             self.assertEqual(manifest, {})
-            # A generation with no copy command or no bucket configured is kept for the next run,
-            # and the run fails: the copy needs both settings, and neither alone reaches it.
+            # A generation with no copy command, no bucket or no seal configured is kept for the
+            # next run, and the run fails: the copy needs all three settings, and none alone
+            # reaches it.
             self.assertEqual(self.window(backup, base, snapshots, "2030-01-05T03:00:00Z"), 0)
             for key in ("", *sorted(environ)):
                 alone = {key: environ[key]} if key else {}

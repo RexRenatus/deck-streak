@@ -54,7 +54,11 @@ to be the cutover's own.
   period `PRIVACY.md` states, and the owner checks the rule before the window (the owner's go,
   #161).
 - The settings file names `DECKSTREAK_SNAPSHOT_COPY` and `DECKSTREAK_SNAPSHOT_BUCKET`, and the copy
-  command is checked under the backup unit's sandbox (the owner's go, #161).
+  command is checked under the archive unit's sandbox (the owner's go, #161).
+- The settings file names `DECKSTREAK_SNAPSHOT_SEAL`, the seal command with the owner's public
+  recipients file, which holds the offline key's public half alone. The seal is checked under the
+  archive unit's sandbox by sealing a scratch file, whose first line must read
+  `age-encryption.org/v1` (SPEC-340 R12; the owner's go, #161).
 - Each unit's `CPUQuota=` equals ADR-347 D7's split (the owner's go, #161).
 - The security review's verdict on the server, the route and the browser's credential is in
   (ADR-340, #167).
