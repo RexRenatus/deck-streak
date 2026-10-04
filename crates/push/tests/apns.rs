@@ -8,14 +8,14 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use axum::http::Version;
-use deck_streak_kernel::ManualClock;
+use deck_streak_kernel::{ManualClock, UtcMillis};
 use deck_streak_push::{
     ApnsSender, ApnsSettings, CollapseKey, Device, Environment, Notification, Origin, Refusal, Sent,
 };
 use serde_json::json;
 use tokio::sync::Notify;
 
-use support::fake_apns::{FakeApns, refusal};
+use support::fake_apns::{FakeApns, gone, refusal};
 use support::keys::{KEY_ID, TEAM_ID, TOPIC, TestKey, device_token};
 use support::{DEADLINE, Recorded, START, clock, verify_jwt};
 
@@ -207,4 +207,33 @@ async fn a4_an_expired_provider_token_is_reminted_once_and_resent() {
         .token(&received[2])
         .expect("the fake verifies the new token");
     assert_eq!(reminted.claims["iat"], json!(START_SECOND + 20 * 60));
+}
+
+#[tokio::test]
+async fn a5_a_410_reports_the_device_gone_with_its_timestamp() {
+    let rig = Rig::start().await;
+    // Apple's timestamps: when it last knew each device's token as valid, in epoch milliseconds.
+    let unregistered = START - 86_400_000;
+    let expired_token = START - 3_600_000;
+    rig.development.fake.script([
+        gone("Unregistered", unregistered),
+        gone("ExpiredToken", expired_token),
+    ]);
+
+    let first = rig.deliver(&alert()).await;
+    assert_eq!(rig.received().len(), 1, "one request");
+    let second = rig.deliver(&alert()).await;
+    assert_eq!(rig.received().len(), 2, "one request");
+
+    assert_eq!(
+        (first, second),
+        (
+            Sent::Gone {
+                since: Some(UtcMillis::from_epoch_millis(unregistered))
+            },
+            Sent::Gone {
+                since: Some(UtcMillis::from_epoch_millis(expired_token))
+            },
+        )
+    );
 }
