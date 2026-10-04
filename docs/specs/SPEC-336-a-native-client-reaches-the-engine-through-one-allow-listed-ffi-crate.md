@@ -120,7 +120,11 @@ COVERAGE, not a criterion (`docs/red-first/SPEC-336.md`). A8's test is also the 
 S33601, which installs cargo-mutants' own mutant of the generator's `main`. R6 to R8, and R10's
 build with the feature, are measured by the workflow's run, in section 7. A9 to A12 plant small
 workspaces in a temporary directory; A13 and A14 judge the real tree, and their tests are the
-kernel's and progression's own, unchanged in what they judge.
+kernel's and progression's own, unchanged in what they judge. Two controls on R11,
+`the_census_refuses_a_call_gated_on_two_features_together` and
+`the_census_refuses_a_call_gated_on_a_features_absence`, plant a call under two features together
+and under a feature's absence; the census refused both when they were added, so they are MUTATION
+COVERAGE, not criteria, and they kill rows S33613 and S33614.
 
 ## 4. File manifest
 
@@ -136,7 +140,7 @@ kernel's and progression's own, unchanged in what they judge.
 | `crates/ffi/tests/round_trip.rs` | `deck-streak-ffi` | added |
 | `crates/ffi/tests/refusal_text.rs` | `deck-streak-ffi` | added |
 | `crates/ffi/tests/bindings_generator.rs` | `deck-streak-ffi` | added: A8, R10 |
-| `crates/progression/tests/xp_census.rs` | `deck-streak-progression` | the settle census compiles every combination of the declared features: R11, A9 to A12 |
+| `crates/progression/tests/xp_census.rs` | `deck-streak-progression` | the settle census compiles every combination of the declared features: R11, A9 to A12 and the two controls |
 | `.github/workflows/xcframework.yml` | none (CI) | added |
 | `scripts/tests/test_ci_workflows.py` | none (the gate) | the runner admission and its test |
 | `scripts/mutation-rows.d/S33600-S33699.json` | none (the gate) | added |

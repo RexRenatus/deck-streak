@@ -99,3 +99,18 @@ The crate's whole population, measured at 4b9516aa with
 unviable and 0 missed. The unviable mutant replaces `allowed` with
 `Some(Box::leak(Box::new(Default::default())))`, which does not compile because `Call` has no
 `Default`.
+
+Two controls on R11 are MUTATION COVERAGE, not red-first.
+`the_census_refuses_a_call_gated_on_two_features_together` plants habits' call to `settle` under
+`cfg(all(feature = "a", feature = "b"))`, and `the_census_refuses_a_call_gated_on_a_features_absence`
+plants it under `cfg(not(feature = "a"))` with no default, each beside the same call under no
+feature. They were added at 45c5e7ec, after the census change, and change no line of the census:
+the census there is 790ceb5d's, and it already refused both plants for the call, so no red was owed
+(`cargo nextest run --build-jobs 1 --test-threads 1 --no-capture -p deck-streak-progression --test
+xp_census -E 'test(/^the_census_refuses_a_call_gated_on_/)'`: 2 run, 2 passed; each plant and each
+control read `["crates/habits/src/lib.rs calls settle, and only coordination's code may"]`). Row
+S33613 installs a combination that holds only its highest feature, and row S33614 a census that
+skips the empty combination. `python3 scripts/mutation_rows.py prove --band S33600-S33699` reads
+all 15 rows of the band KILLED, each killer selecting one test with and without its mutant; replayed
+by hand, each killer fails by assertion with its plant read `[]` (S33613: `left: 1`, `right: 2`;
+S33614: `left: 0`, `right: 2`), and the census is restored byte for byte.
