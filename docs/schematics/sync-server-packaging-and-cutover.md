@@ -49,44 +49,71 @@ flowchart LR
 | base to snapshot | a consistent copy of each database while the server runs (SQLite's online backup), never a file copy | ADR-347 D5, ADR-064 |
 | offsite to drill | the archive, restored into a scratch directory the drill removes | ADR-347 D5, SPEC-337 R5 |
 
+The `base to snapshot` edge waits: the server holds each user's `media.db` locked for its whole
+life, so the online backup cannot read it while the server runs (SPEC-337 §6), and the snapshot's
+form is the owner's to choose (#617).
+
 ## The cutover as a state sequence
 
-ADR-340's one window, in order. The staging sync user (ADR-344) rehearses the same sequence first
-on a scrubbed copy. The old server is never written by any state: the rollback repoints the clients
-to it and stops the new unit, so it is reachable from every state between the freeze and the new
-password. Repointing the owner's own devices, and retiring the old server, are the owner's acts.
+ADR-340's one window, in order, with the data moved by the server's documented path (ADR-347 D10):
+every client syncs once against the old server, then desktop's full upload fills the new server's
+EMPTY store, and the other clients take a full download from it. Nothing copies the old server's
+store. The staging sync user (ADR-344) rehearses the same sequence first on a scrubbed collection.
+The old server is never written by any state: the rollback repoints the clients to it and stops the
+new unit, so it is reachable from every state between the freeze and the new password. The
+cutover's full upload is HELD until the sync server's processor share is decided (SPEC-337 §6):
+the window opens only once the hold is lifted.
 
 ```mermaid
 stateDiagram-v2
   [*] --> rehearsed: the staging user's rehearsal passed
-  rehearsed --> final_sync: the owner's go
-  final_sync --> frozen: every client synced once, then none syncs
-  frozen --> copied: the snapshot taken and copied offsite
-  copied --> drilled: the copy restored into a scratch directory and opened
-  drilled --> started: the review's verdict and the owner's go, the unit started
-  started --> desktop: desktop repointed and synced
-  desktop --> mobile: AnkiMobile repointed and synced
+  rehearsed --> started: the review's verdict and the owner's go, the unit started over an empty store
+  started --> final_sync: the hold lifted and the owner's go
+  final_sync --> frozen: every client synced once against the old server, then none syncs
+  frozen --> uploaded: desktop repointed, its full upload into the empty store
+  uploaded --> read_back: the server's collection read back and matched with desktop's counts
+  read_back --> mobile: AnkiMobile repointed, a full download
   mobile --> app: the app repointed and synced
   app --> rekeyed: a new sync password set on the new server
   rekeyed --> [*]: live, the old server kept until the owner retires it
-  frozen --> rolled_back: a step fails
-  copied --> rolled_back: a step fails
-  drilled --> rolled_back: a step fails
   started --> rolled_back: a step fails
-  desktop --> rolled_back: a step fails
+  final_sync --> rolled_back: a step fails
+  frozen --> rolled_back: a step fails
+  uploaded --> rolled_back: a step fails
+  read_back --> rolled_back: a step fails
   mobile --> rolled_back: a step fails
   app --> rolled_back: a step fails
   rolled_back --> [*]: every client points at the old server, untouched since the freeze
 ```
 
+Where each state happens, and whose go starts it; the runbook marks each step the same way:
+
+| state | where | whose go |
+|---|---|---|
+| `rehearsed` | the host, the staging user's store; a scratch desktop profile | the owner's go (#161) |
+| `started` | the host: the unit and the route | the owner's go (#161) |
+| `final_sync` | the owner's devices, against the old server | the owner's own act |
+| `frozen` | the owner's devices | the owner's own act |
+| `uploaded` | desktop, against the new server | the owner's own act |
+| `read_back` | the host: the new store, read only | the owner's go (#161) |
+| `mobile` | AnkiMobile, against the new server | the owner's own act |
+| `app` | the app, against the new server | the owner's own act |
+| `rekeyed` | the host: the owner's credential; then each client's login | the owner's go (#161) |
+| `rolled_back` | the host: the new unit stopped; then each client repointed | the owner's go (#161) |
+
 What the sequence holds, each a line of the runbook (`docs/runbooks/sync-server-cutover.md`):
 
-- Nothing moves before a restored-and-opened copy exists: `started` is reachable only from
-  `drilled`.
+- Nothing moves before the rehearsal passed and the hold is lifted: `final_sync` is reachable only
+  from `started`, and `started` only from `rehearsed`.
+- The upload goes into an EMPTY store, by the server's own full upload; the old server's store is
+  never copied (ADR-347 D10).
+- The read-back precedes any retry: a full upload the client reports as failed may have landed on
+  the server (SPEC-337 §6), so the counts decide, and the upload is repeated only when they differ
+  (ADR-347 D11).
 - One client at a time: each repoint follows the previous client's completed sync, so no two
   clients ever disagree about which server is current.
 - The old server is read by `final_sync` and by nothing after it. A study made on the new server
-  after `started` reaches the old one only by a one-way upload from that client, so the runbook
+  after `uploaded` reaches the old one only by a one-way upload from that client, so the runbook
   rolls back before any study on the new server, or not at all.
 - The new password is the last state, so a rollback never meets a password the old server lacks.
 

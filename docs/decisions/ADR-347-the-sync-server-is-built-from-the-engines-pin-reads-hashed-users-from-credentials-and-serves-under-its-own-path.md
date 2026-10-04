@@ -162,3 +162,31 @@ D9, what the server reads:
   server's must be the same number.
 - Passing the environment through: rejected because a stray `SYNC_USER3` would add a user and a
   stray payload limit would let the server and the edge disagree.
+
+## Amendment: the cutover by a full upload (SPEC-337)
+
+The cutover's data path is decided here; it replaces the schematic's earlier sequence, in which a
+snapshot of the old server's store was copied, restored and drilled before the new unit started.
+
+D10, how the data moves:
+
+- A final sync of every client against the old server, then desktop's full upload into the new
+  server's EMPTY store, and a full download for every other client — chosen, because the full
+  upload and download are the server's own documented path, and the old server stays untouched as
+  the rollback.
+- Copying the old server's store into the new one: rejected because the store's layout is the
+  server's internal one, undocumented and coupled to the server's version.
+- Uploading from a client while the old server still serves the others: rejected because two
+  servers would then each look current to some client.
+
+D11, a full upload the client reports as failed:
+
+- Before any retry, the server's collection is read back on the host, read only, and its counts are
+  matched with desktop's; the upload is repeated only when they differ — chosen, because the
+  measured divergence (SPEC-337 §6) is an upload the server completed and the client reported as
+  failed.
+- Retrying at once on the client's failure: rejected because it repeats an upload that may have
+  landed, and it hides the divergence the share must answer.
+- Reading the collection back by a second client's full download: rejected because it adds a
+  whole collection's download to the frozen window, and puts a client on the new server before
+  the counts are known.
