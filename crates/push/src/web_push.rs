@@ -52,7 +52,9 @@ pub struct Subscription {
 
 impl fmt::Debug for Subscription {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.debug_struct("Subscription").finish_non_exhaustive()
+        formatter
+            .debug_struct("Subscription")
+            .finish_non_exhaustive()
     }
 }
 
@@ -123,7 +125,11 @@ impl WebPushSender {
     pub async fn deliver(&self, subscription: &Subscription, notification: &Notification) -> Sent {
         let _ = (subscription, notification, &self.client, &self.signer);
         let _ = (&self.contact, &self.services, &self.clock);
-        let _ = (&subscription.endpoint, &subscription.origin, &subscription.key);
+        let _ = (
+            &subscription.endpoint,
+            &subscription.origin,
+            &subscription.key,
+        );
         let _ = &subscription.auth;
         Sent::Failed(Unreached::Request)
     }

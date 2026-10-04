@@ -41,7 +41,10 @@ impl FakePushService {
     }
 
     /// `request`'s plaintext, decrypted as the browser `subscriber` would.
-    pub fn plaintext(request: &Recorded, subscriber: &TestSubscriber) -> Result<Value, Undecrypted> {
+    pub fn plaintext(
+        request: &Recorded,
+        subscriber: &TestSubscriber,
+    ) -> Result<Value, Undecrypted> {
         let plaintext = decrypt(&request.body, &subscriber.secret, &subscriber.auth)?;
         Ok(serde_json::from_slice(&plaintext).expect("JSON plaintext"))
     }

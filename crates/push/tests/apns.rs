@@ -77,7 +77,11 @@ fn device() -> Device {
 
 /// An alert that lives an hour.
 fn alert() -> Notification {
-    Notification::new("Synthetic title", "Synthetic body", Duration::from_secs(3600))
+    Notification::new(
+        "Synthetic title",
+        "Synthetic body",
+        Duration::from_secs(3600),
+    )
 }
 
 /// The clock's epoch second at the start of every test.
@@ -137,11 +141,17 @@ async fn a2_the_provider_token_is_an_es256_jwt_the_fake_verifies() {
         .token(&received[0])
         .expect("the fake verifies the token with the test's public key");
     assert_eq!(verified.header, json!({"alg": "ES256", "kid": KEY_ID}));
-    assert_eq!(verified.claims, json!({"iss": TEAM_ID, "iat": START_SECOND}));
+    assert_eq!(
+        verified.claims,
+        json!({"iss": TEAM_ID, "iat": START_SECOND})
+    );
 
     // The fake's check is the signature's: another key does not verify the same token.
     let stranger = TestKey::generate().verifying();
-    assert_eq!(verify_jwt(&FakeApns::raw_token(&received[0]), &stranger), None);
+    assert_eq!(
+        verify_jwt(&FakeApns::raw_token(&received[0]), &stranger),
+        None
+    );
 }
 
 #[tokio::test]
@@ -198,10 +208,17 @@ async fn a4_an_expired_provider_token_is_reminted_once_and_resent() {
     let (sent, ()) = tokio::join!(rig.deliver(&notification), controller);
 
     let received = rig.received();
-    assert_eq!(received.len(), 3, "the send and its one resend, after the prime");
+    assert_eq!(
+        received.len(),
+        3,
+        "the send and its one resend, after the prime"
+    );
     assert_eq!(sent, Sent::Rejected(Refusal::ProviderToken));
     let tokens: Vec<String> = received.iter().map(FakeApns::raw_token).collect();
-    assert_eq!(tokens[1], tokens[0], "the refused send carried the held token");
+    assert_eq!(
+        tokens[1], tokens[0],
+        "the refused send carried the held token"
+    );
     assert_ne!(tokens[2], tokens[1], "the resend carried a new token");
     let reminted = rig
         .development
@@ -298,7 +315,11 @@ async fn a8_an_oversize_payload_is_refused_before_any_request() {
         rig.deliver(&sized(4097)).await,
         Sent::Rejected(Refusal::TooLarge)
     );
-    assert_eq!(rig.received().len(), 0, "the oversize payload made no request");
+    assert_eq!(
+        rig.received().len(),
+        0,
+        "the oversize payload made no request"
+    );
     assert_eq!(rig.deliver(&sized(4096)).await, Sent::Delivered);
 
     let received = rig.received();
@@ -359,7 +380,11 @@ async fn a_young_token_is_not_reminted_on_an_expired_answer() {
     let tokens: Vec<String> = rig.received().iter().map(FakeApns::raw_token).collect();
     assert_eq!(tokens.len(), 4);
     assert_eq!(
-        (tokens[1] == tokens[0], tokens[2] == tokens[0], tokens[3] == tokens[0]),
+        (
+            tokens[1] == tokens[0],
+            tokens[2] == tokens[0],
+            tokens[3] == tokens[0]
+        ),
         (true, true, false),
         "no token was minted inside the floor, and one was at it"
     );
@@ -419,11 +444,18 @@ async fn two_calls_refused_together_mint_one_token() {
     assert_eq!((first, second), (Sent::Delivered, Sent::Delivered));
     let received = rig.received();
     let tokens: Vec<String> = received.iter().map(FakeApns::raw_token).collect();
-    assert_eq!(tokens.len(), 5, "the prime, two refused sends and two resends");
+    assert_eq!(
+        tokens.len(),
+        5,
+        "the prime, two refused sends and two resends"
+    );
     let held = tokens[0].clone();
     let reminted = tokens[3].clone();
     assert_ne!(reminted, held);
-    assert_eq!(tokens, vec![held.clone(), held.clone(), held, reminted.clone(), reminted]);
+    assert_eq!(
+        tokens,
+        vec![held.clone(), held.clone(), held, reminted.clone(), reminted]
+    );
     let minted = rig
         .development
         .token(&received[3])
@@ -446,7 +478,10 @@ async fn every_other_answer_is_read_by_its_status_after_one_request() {
             refusal(413, "PayloadTooLarge"),
             Sent::Rejected(Refusal::TooLarge),
         ),
-        (refusal(400, "BadPriority"), Sent::Rejected(Refusal::Request)),
+        (
+            refusal(400, "BadPriority"),
+            Sent::Rejected(Refusal::Request),
+        ),
         (refusal(404, "BadPath"), Sent::Rejected(Refusal::Request)),
         (
             refusal(405, "MethodNotAllowed"),

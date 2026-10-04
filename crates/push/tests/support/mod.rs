@@ -161,9 +161,7 @@ impl Fake {
             arrived: Arc::new(Notify::new()),
             unscripted,
         };
-        let app = Router::new()
-            .fallback(answer)
-            .with_state(shared.clone());
+        let app = Router::new().fallback(answer).with_state(shared.clone());
         tokio::spawn(async move {
             axum::serve(listener, app).await.expect("the fake serves");
         });
@@ -177,12 +175,7 @@ impl Fake {
 
     /// Queues `answers`, in order.
     pub fn script(&self, answers: impl IntoIterator<Item = Answer>) {
-        self.shared
-            .script
-            .lock()
-            .unwrap()
-            .answers
-            .extend(answers);
+        self.shared.script.lock().unwrap().answers.extend(answers);
     }
 
     /// Every request so far.
