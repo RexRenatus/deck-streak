@@ -143,7 +143,7 @@ impl WebPushSender {
         else {
             return Sent::Failed(Unreached::Request);
         };
-        let Some(request) = self.request(subscription, body) else {
+        let Some(request) = self.request(subscription, notification, body) else {
             return Sent::Failed(Unreached::Request);
         };
         match self.client.post(request).await {
@@ -154,15 +154,25 @@ impl WebPushSender {
 
     /// The request carrying `body`, the encrypted message, to `subscription`'s endpoint, with
     /// its VAPID token; `None` when the token cannot be signed or a header cannot carry a value.
-    fn request(&self, subscription: &Subscription, body: Vec<u8>) -> Option<Request<Full<Bytes>>> {
+    fn request(
+        &self,
+        subscription: &Subscription,
+        notification: &Notification,
+        body: Vec<u8>,
+    ) -> Option<Request<Full<Bytes>>> {
         let token = self.vapid_token(subscription.origin.as_str(), self.clock.now())?;
         let vapid = format!("vapid t={token}, k={}", self.signer.public_key());
-        Request::post(subscription.endpoint.as_str())
+        let mut request = Request::post(subscription.endpoint.as_str())
             .header(AUTHORIZATION, vapid)
             .header(CONTENT_ENCODING, "aes128gcm")
             .header(CONTENT_TYPE, "application/octet-stream")
-            .body(Full::new(Bytes::from(body)))
-            .ok()
+            .header("urgency", "normal");
+        // RFC 8030: `TTL` is required, so it is sent even when it is zero.
+        request = request.header("ttl", notification.time_to_live().as_secs());
+        if let Some(key) = notification.collapse_key() {
+            request = request.header("topic", key.as_str());
+        }
+        request.body(Full::new(Bytes::from(body))).ok()
     }
 }
 
