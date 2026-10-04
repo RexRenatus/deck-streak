@@ -68,3 +68,21 @@ the `--tg-theme-*` variables and resets them when the chat's theme changes, so t
 without code; the wrapper (`telegram.svelte.ts`) follows `themeChanged` for any screen that needs
 the colours in script. The page takes Telegram's colour scheme (`--tg-color-scheme`), its stable
 viewport height rather than `100vh`, and its safe areas.
+
+## Amendments
+
+Amendment (the app-surfaces ruling): the first principle, "Native to Telegram", is amended by the
+owner's signed ruling `docs/rulings/OWNER-RULING-2026-10-04-app-surfaces.md`, and ADR-341 carries
+it. The principle's text above is kept as it was. The ruling words what replaces it:
+
+> **Design principle 1: an identity of its own.** A dark-first, colour-rich palette with its own
+> reference tier and role mappings, WCAG 2.2 AA in both modes. The Mini App keeps its Telegram
+> mapping until it retires.
+
+Amendment (the app-surfaces ruling): the second principle, "Calm by default", is amended by the same
+ruling, `docs/rulings/OWNER-RULING-2026-10-04-app-surfaces.md`, and ADR-341 carries it. The
+principle's text above is kept as it was. The ruling words what replaces it:
+
+> **Design principle 2: vivid in session, calm out of session.** In a session: haptics, motion,
+> sound, instant XP and ladder celebrations. Outside one: nothing pressures, shames or fabricates,
+> and at most one nudge a day. Every charter 10 anti-goal is kept.

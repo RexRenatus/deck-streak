@@ -4,6 +4,7 @@ import Formal.NextMilestoneVectors
 import Formal.OpenLapseVectors
 import Formal.RoadToC2Vectors
 import Formal.SkipTariffVectors
+import Formal.TableCensusReachVectors
 import Formal.TokenBonusVectors
 import Formal.WalletVectors
 
@@ -29,6 +30,7 @@ def main (args : List String) : IO UInt32 := do
   | ["OpenLapse"] => Formal.OpenLapseVectors.run
   | ["RoadToC2"] => Formal.RoadToC2Vectors.run
   | ["SkipTariff"] => Formal.SkipTariffVectors.run
+  | ["TableCensusReach"] => Formal.TableCensusReachVectors.run
   | ["TokenBonus"] => Formal.TokenBonusVectors.run
   | ["Wallet"] => Formal.WalletVectors.run
   | _ =>
