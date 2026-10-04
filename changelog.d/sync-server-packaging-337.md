@@ -25,3 +25,9 @@
   upstream, checked as the API's is and refused under its own name.
 - Tests that render the block with the route and run render-caddy over the fourth key, with mutation
   rows for the key, its check, the refusal's name and each line of the route.
+- The sync server's cutover runbook, `docs/runbooks/sync-server-cutover.md` (SPEC-337, ADR-347,
+  #617): one step per state of the schematic's sequence, the data moved by a final sync and
+  desktop's full upload into an empty store, the server's collection read back before any retry,
+  each host step on the owner's go (#161), the old server untouched as the rollback, and the
+  cutover's full upload held until the sync server's processor share is decided.
+- A test that reads the runbook against the schematic's states, their order and each step's go.

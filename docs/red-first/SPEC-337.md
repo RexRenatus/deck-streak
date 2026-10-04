@@ -63,3 +63,22 @@ A6: red at d0fd24c7: AssertionError: unexpectedly None : no handle for /anki-syn
 At c949e7e5 render-caddy's test prints `examined 4 required key(s)` and `examined 2 upstream
 key(s)`, each upstream refused under its own key for twelve shapes, and test_deploy_templates reads
 `Ran 28 tests ... OK`.
+
+The deploy scripts' Caddy install (`test_deploy_scripts.py`) is decided by CI by name and never run
+on the box, so its red at d0fd24c7 is CI's to read. d0fd24c7 was pushed alone for that reading, and
+no workflow ran on it: the branch then conflicted with its base in `deploy/README.md`, and a pull
+request in conflict runs none. That red is not read yet.
+
+The runbook's test (A9) was committed alone (9af948bd), with no runbook in the tree. At that commit
+it reads `examined 10 cutover state(s)` from the schematic and fails by assertion. The schematic's
+order was then corrected alone (4e1e8959, the unit started before the staging rehearsal), with the
+test unchanged and still red for the same reason, and the runbook followed (39e64303).
+
+```red-first
+A9: red at 9af948bd: AssertionError: False is not true : no runbook at docs/runbooks/sync-server-cutover.md
+A9: green at 39e64303
+```
+
+At 39e64303 the test reads `examined 10 cutover state(s)` and `examined 10 runbook step(s)`, OK.
+Six plants of the runbook each turn it red: two steps swapped, a host step marked as the owner's own
+act, the hold's section renamed, a step's heading dropped, an address and a date.
