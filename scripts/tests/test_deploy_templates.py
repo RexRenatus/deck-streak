@@ -115,7 +115,7 @@ SCRIPTS = {
     DRILL_SERVICE_NAME: f"{RELEASE}/deploy/scripts/restore-drill.sh",
     # SPEC-337: the snapshot's window runs the backup script's copy alone.
     SYNC_SNAPSHOT_SERVICE_NAME: f"/usr/bin/python3 {RELEASE}/deploy/scripts/backup.py --sync-window",
-    # SPEC-340 R3, R5: the archive and the sync drill run the same scripts' own parts.
+    # SPEC-340 R3, R4: the archive and the sync drill run the same scripts' own parts.
     SYNC_ARCHIVE_SERVICE_NAME: f"/usr/bin/python3 {RELEASE}/deploy/scripts/backup.py --sync-archive",
     SYNC_DRILL_SERVICE_NAME: f"{RELEASE}/deploy/scripts/restore-drill.sh --part sync",
 }
@@ -1521,7 +1521,7 @@ class TheServicesRunTheirRoles(unittest.TestCase):
                     self.assertEqual(last(unit, "Service", key), value, f"{unit.rel} {key}")
                 # A timer or a failure starts each. The backup's run starts the snapshot's window,
                 # which runs first (ADR-347 D12), and the archive (SPEC-340 R3); the drill's run
-                # starts the sync drill (SPEC-340 R5).
+                # starts the sync drill (SPEC-340 R4).
                 wanted = {
                     SYNC_SNAPSHOT_SERVICE_NAME: [BACKUP_SERVICE_NAME],
                     SYNC_ARCHIVE_SERVICE_NAME: [BACKUP_SERVICE_NAME],

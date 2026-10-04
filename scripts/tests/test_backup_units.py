@@ -347,7 +347,7 @@ class BackupUnits(unittest.TestCase):
         self.assertEqual(facts["replicas_lists"], 0, "0.5 takes `replica:`, not a `replicas:` list")
         for url in facts["urls"]:
             self.assertIn(url_scheme(url), OFF_HOST_SCHEMES, url)
-        # Exactly two drills, the database's and the sync family's (SPEC-340 R5), and one
+        # Exactly two drills, the database's and the sync family's (SPEC-340 R4), and one
         # Litestream unit among every unit the census reads.
         names = examined("units", subject.units)
         self.assertEqual(

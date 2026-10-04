@@ -10,9 +10,9 @@
 # The sync server's part, `--part sync`, restores the newest snapshot archive into a private
 # directory instead, checks every file against the archive's manifest of sha256 digests, runs
 # `PRAGMA integrity_check` on each user's collection and media index, and opens each collection to
-# count its cards (SPEC-337 R5; ADR-347 D5, D12). It runs as the sync family's own user, in a unit of
-# its own (SPEC-340 R5; ADR-351 D1), which is installed only with the server, so a missing snapshot
-# directory or one with no archive fails it.
+# count its cards (SPEC-337 R5; ADR-347 D5, D12). It runs as the sync family's own user, in a unit
+# of its own (SPEC-340 R4; ADR-351 D1), which is installed only with the server, so a missing
+# snapshot directory or one with no archive fails it.
 #
 # The migration rule: the replica is at the live database's version (it follows every commit), and a
 # daily copy is at that version or an earlier one, older after a deploy, never ahead of the live one.

@@ -178,7 +178,8 @@ PAGING_KEYS = {
         WAIVE_KEY,
     ),
     # `Also=` acts when the unit is enabled or disabled, never on a start or a failure
-    # (systemctl(1)); its values are the sync family's other three units (SPEC-340 R3, R4, R5).
+    # (systemctl(1)); its values are the sync family's other three units (SPEC-337 R5; SPEC-340
+    # R3, R4).
     "Install": ("Also", "WantedBy"),
     "Service": (
         "CPUQuota",
