@@ -9,6 +9,15 @@
         "        let _ = (self, f);\n        Ok(Default::default())\n",
         "refusal_text::each_refusal_reads_as_its_own_sentence",
         "each refusal reads as its own sentence for the person a native client shows it to, never as empty text: cargo-mutants' own mutant of EngineRefusal's Display, its body replaced with Ok(Default::default()), written as a row so the band proves its killer (SPEC-336 R3)"
+      ],
+      [
+        "S33601-A-GENERATOR-REFUSES-WITHOUT-ITS-FEATURE",
+        "ffi",
+        "src/bin/uniffi-bindgen-swift.rs",
+        "    #[cfg(feature = \"bindgen\")]\n    uniffi::uniffi_bindgen_swift();\n    #[cfg(not(feature = \"bindgen\"))]\n    {\n        eprintln!(\n            \"uniffi-bindgen-swift: this build holds no Swift bindings generator, because it was \\\n             built without the `bindgen` feature; run it as `cargo run -p deck-streak-ffi \\\n             --features bindgen --bin uniffi-bindgen-swift -- <arguments>`\"\n        );\n        std::process::exit(2);\n    }\n",
+        "    ()\n",
+        "bindings_generator::a8_the_generator_refuses_a_build_without_its_feature",
+        "built without the bindgen feature, the generator refuses every run, naming the feature on stderr with exit status 2, never exits 0 having written no bindings: cargo-mutants' own mutant of the generator's main, its body replaced with (), written as a row so the band proves its killer (SPEC-336 R10, A8)"
       ]
     ]
   }
