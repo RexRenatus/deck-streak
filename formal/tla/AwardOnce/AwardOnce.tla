@@ -3,6 +3,7 @@
 \* @phx covers crates/coordination/src/recompute/mod.rs anchor=offer_owed digest=sha256:0d418cb9fe6912d5780f32d0e837891e9927590bd6cc55b3aaf883ebfdf5bc00
 \* @phx covers crates/coordination/src/recompute/badges.rs anchor=evaluate digest=sha256:20660e5d08a54f50f60824125958cba6cf65c5750af0a7468ecbad0e26ffd548
 \* @phx covers crates/coordination/src/recompute/badges.rs anchor=offer_badges digest=sha256:cbf19ec6758776f6a64ffd60c45d775f30003963a3a1d2c273571016df1d3b48
+\* @phx covers crates/coordination/src/recompute/habit_badges.rs anchor=evaluate digest=sha256:b09fe79ffc9490924a1c10d655619effb7d6ae49d7daf7899c18c06b77d37171
 \* @phx covers crates/coordination/src/recompute/records.rs anchor=evaluate digest=sha256:5aa0de349398bcf888dfaadd1437dbe027b2e4d82ba3ec530c3ad5f7bab08218
 \* @phx covers crates/coordination/src/recompute/records.rs anchor=upsert digest=sha256:0702ef24ebd40778731306415bead309ef68954c2c858320eb32ed78b2f1bc4e
 \* @phx covers crates/coordination/src/recompute/records.rs anchor=offer_records digest=sha256:94d4c086e62de5ee1bc65547fa613409b603a137fb3e5e24a0e70c82bac9243c
@@ -58,6 +59,9 @@
 \*   and only while the row still holds it.
 \* - Commit (award): badges.rs::evaluate awards inside the fold's BEGIN IMMEDIATE write, its mark
 \*   unset; the progression award port's unique key answers AlreadyAwarded (UniqueKey).
+\*   habit_badges.rs::evaluate (#94) is a second Commit (award) inside the same fold write, over
+\*   habit badge keys no other step awards, offered by the same offer_badges drain; the model is
+\*   per key, so the step is a stutter of every key it does not award (re-read 2026-10-03).
 \* - Commit (record, Recheck): records.rs::upsert re-reads the kind's row inside the day's write,
 \*   names a row of another day whose mark is unset ("celebration not sent"), then upserts; a row
 \*   of the same day keeps its mark, so a best that climbs all day is one award, unless the row is
