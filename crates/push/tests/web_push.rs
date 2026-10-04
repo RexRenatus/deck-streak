@@ -210,3 +210,30 @@ async fn a14_a_404_or_410_reports_the_subscription_gone() {
     );
     assert_eq!(service.fake.received().len(), 2, "one request each");
 }
+
+#[tokio::test]
+async fn a15_try_later_answers_carry_retry_after_and_are_not_retried() {
+    let service = FakePushService::start().await;
+    let key = TestKey::generate();
+    let browser = TestSubscriber::generate();
+    let sender = build_sender(&key, listing(&[&service]));
+    let subscription = sender
+        .subscription(&service.endpoint(), &browser.p256dh(), &browser.auth())
+        .expect("a listed endpoint is admitted");
+    service.fake.script([
+        Answer::status(429).header("retry-after", "120"),
+        Answer::status(503),
+    ]);
+
+    let limited = sender.deliver(&subscription, &notification()).await;
+    let unavailable = sender.deliver(&subscription, &notification()).await;
+
+    assert_eq!(
+        limited,
+        Sent::RetryLater {
+            after: Some(Duration::from_secs(120))
+        }
+    );
+    assert_eq!(unavailable, Sent::RetryLater { after: None });
+    assert_eq!(service.fake.received().len(), 2, "one request each");
+}
