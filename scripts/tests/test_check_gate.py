@@ -31,6 +31,8 @@ TOOLS = {
     "audit-rust": ["cargo", "cargo-deny", "git"],
     # The engine set's own stage (SPEC-038 R13), which the engine job runs.
     "test-engine": ["cargo", "cargo-nextest"],
+    # The workspace's tests in the shipped profile (SPEC-330), which the release job runs.
+    "test-release": ["cargo", "cargo-nextest"],
     "web": ["node", "pnpm"],
     # The web audit's verdict reads pnpm's report in Python (SPEC-058 R4, A5).
     "audit-web": ["node", "pnpm", "python3"],
@@ -47,6 +49,7 @@ ENGINE_STAGES = {
     "test": ["cargo", "cargo-nextest"],
     "doctest": ["cargo"],
     "test-engine": ["cargo", "cargo-nextest"],
+    "test-release": ["cargo", "cargo-nextest"],
 }
 # A planted guard test that fails, and a planted oracle suite of two passing tests (SPEC-054 A13).
 PLANTED_GUARD = (

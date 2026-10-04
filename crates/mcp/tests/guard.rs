@@ -1,11 +1,15 @@
 //! SPEC-119 A9 to A12, A15 and A40: the guard's layer answers every request that presents no
 //! granted bearer before its inner service is called, with one response for every cause, and lets
-//! a granted bearer through carrying its grant's scopes (R9 to R12; T13).
+//! a granted bearer through carrying its grant's scopes (R9 to R12; T13). A13 and A14 (section
+//! 14): through the served stack, each grant reaches the tools of its scopes and no other, and a
+//! tool outside the scope answers the tool error `unauthorized` and no data (R12, R17).
 //!
 //! Every token is built from parts at run time.
 
 // An integration test is test code: its helpers panic on a failed fixture.
 #![allow(clippy::expect_used)]
+
+mod support;
 
 use std::convert::Infallible;
 use std::fmt::Write as _;
@@ -18,7 +22,7 @@ use axum::http::{HeaderMap, HeaderValue, Request, Response, StatusCode};
 use deck_streak_kernel::{
     CredentialLoader, CredentialsDirectory, ManualClock, Redactor, UtcMillis,
 };
-use deck_streak_mcp::{Granted, Grants, Guard, GuardLayer, Outcome, Scope};
+use deck_streak_mcp::{DENIED, Granted, Grants, Guard, GuardLayer, Outcome, Scope};
 use sha2::{Digest, Sha256};
 use tower::{Layer, ServiceExt, service_fn};
 
@@ -359,4 +363,78 @@ async fn each_grant_holds_its_scopes_and_no_other() {
             assert_eq!(refusal.bucket().as_str(), bucket_of(token.as_bytes()));
         }
     }
+}
+
+/// The answer of a `get_law_track` call over the served stack with `token`, and the reads the law
+/// track saw.
+async fn law_track_call(token: &str) -> (serde_json::Value, usize, support::Served) {
+    let law = support::ScriptedLaw::answering(support::full_block());
+    let served = support::Served::start(Arc::clone(&law)).await;
+    let reply = served
+        .post("/mcp", Some(token), &support::call_law_track())
+        .await;
+    assert_eq!(
+        reply.status,
+        200,
+        "a granted call is answered: {}",
+        reply.text()
+    );
+    (reply.result(), law.reads(), served)
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn each_grant_reaches_its_scopes_and_no_other() {
+    // The law-track token reaches `get_law_track`, which reads the law track once.
+    let (allowed, reads, _) = law_track_call(&support::law_token()).await;
+    assert_ne!(
+        allowed["isError"],
+        serde_json::Value::Bool(true),
+        "the law-track token: {allowed}"
+    );
+    assert!(
+        allowed["structuredContent"].is_object(),
+        "the law-track token gets the law track: {allowed}"
+    );
+    assert_eq!(reads, 1, "the law-track token's call reads once");
+
+    // The core token reaches no `law_track` tool: the call is answered, and reads nothing.
+    let (refused, reads, _) = law_track_call(&support::core_token()).await;
+    assert_eq!(
+        refused["isError"],
+        serde_json::Value::Bool(true),
+        "the core token: {refused}"
+    );
+    assert_eq!(reads, 0, "the core token's call read the law track");
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn a_tool_outside_the_scope_answers_unauthorized() {
+    let core = support::core_token();
+    let (result, reads, served) = law_track_call(&core).await;
+
+    // The tool error whose whole text is the one refusal word, and no data.
+    assert_eq!(
+        result["isError"],
+        serde_json::Value::Bool(true),
+        "a core-token call: {result}"
+    );
+    let content = result["content"].as_array().expect("the error's content");
+    assert_eq!(content.len(), 1, "one content block: {result}");
+    assert_eq!(content[0]["type"], "text", "{result}");
+    assert_eq!(content[0]["text"], DENIED, "{result}");
+    assert!(
+        result.get("structuredContent").is_none(),
+        "a refused call carries data: {result}"
+    );
+    assert_eq!(reads, 0, "a refused call read the law track");
+
+    // The refusal went through the limiter, in the core token's bucket (R13).
+    let buckets: Vec<(String, usize)> = served
+        .guard
+        .limiter()
+        .snapshot()
+        .into_iter()
+        .map(|(bucket, failures)| (bucket.as_str().to_owned(), failures.len()))
+        .collect();
+    assert_eq!(buckets, vec![(bucket_of(core.as_bytes()), 1)]);
 }

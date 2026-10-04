@@ -70,6 +70,7 @@ on GitHub-hosted runners, in five jobs that start together (ADR-055):
 |---|---|
 | `rust` | `fmt clippy test doctest audit-rust` |
 | `engine` | `test-engine`, in two slices of the engine set, one per runner |
+| `release` | `test-release`, the workspace's tests in the release profile the daemon ships from |
 | `web` | `web audit-web` |
 | `packs` | `packs` |
 | `hygiene` | `python scrub secrets` |

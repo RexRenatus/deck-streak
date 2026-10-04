@@ -72,3 +72,104 @@ M3: plant crates/mcp/src/grants.rs `<impl fmt::Debug for Grants>::fmt` -> `Ok(De
 M5: plant crates/mcp/src/guard.rs `GuardService::poll_ready` -> `Poll::from(Ok(()))`: the_guard_service_is_pending_while_its_inner_service_is panicked at crates/mcp/tests/scopes_and_service.rs:95:5
 S11930: row on crates/mcp/src/settings.rs `MIN_CREDENTIAL_CHARS` 32 -> 31, killer settings::a_short_credential_refuses_start
 ```
+
+## #157, part a: the server's first slice
+
+This section records the criteria the server's first slice delivers (SPEC-119 sections 13 and 14):
+A1, A13, A14, A22 to A25, A33, A38, A39 and A41 to A45. The order of work: the roster golden; the
+amendments and ADR-329; the tests beside stubs that compile and serve nothing, in one test-only
+commit; then the implementation, the mutation rows, and the BearerGuard re-read with its two new
+covers.
+
+Each red line below is the reading at the red commit itself. Every test of the five files was run
+there, in a scratch worktree of that commit, and only the criteria's own tests failed in each
+file: 2 of `guard`'s 8, all 7 of `server`'s, 2 of `settings`'s 7, all 3 of `tools`'s, and 1 of the
+daemon's `roles`' 18. Earlier red logs, taken on a draft of the tests before the red commit, are
+superseded: their panic lines do not match the committed tests, so none of them is quoted here.
+
+A25 and A44 are red at the red commit on their own precondition, not on their own assertion:
+nothing is served there, so no granted call reaches the law track and neither test reaches its
+slot assertion. Their own assertions were read after the green commit, in a scratch copy of the
+crate with only the layer the criterion names removed, and are disclosed as that copy's reading:
+- A25, the in-flight limit's line deleted: `the_ninth_request_in_flight_is_shed` panicked at
+  `crates/mcp/tests/server.rs:156`: the ninth request, left 200 right 503.
+- A44, the guard's layer moved inside the bound: `a_refused_request_holds_no_slot` panicked at
+  `crates/mcp/tests/server.rs:211`: refusal 0 with every slot held, left 503 right 401.
+
+A1's failure text writes the address as "the unspecified address"; A24's writes the test's
+ephemeral port as `<port>`. A38's failure is the exit status of an unknown role; its usage line
+named the roles `api, bot, job, data`.
+
+```red-first
+A1: red at 43f6d989d35769b4e11f3d8436a660c9795398ce: the_listen_address_must_be_loopback panicked at crates/mcp/tests/settings.rs:268: the unspecified address was not refused as NotLoopback
+A1: green at 8b96d52f8eea54800eb75b460610508075810714
+A13: red at 43f6d989d35769b4e11f3d8436a660c9795398ce: each_grant_reaches_its_scopes_and_no_other panicked at crates/mcp/tests/guard.rs:376: a granted call is answered, left 404 right 200
+A13: green at 8b96d52f8eea54800eb75b460610508075810714
+A14: red at 43f6d989d35769b4e11f3d8436a660c9795398ce: a_tool_outside_the_scope_answers_unauthorized panicked at crates/mcp/tests/guard.rs:376: a granted call is answered, left 404 right 200
+A14: green at 8b96d52f8eea54800eb75b460610508075810714
+A22: red at 43f6d989d35769b4e11f3d8436a660c9795398ce: only_the_mcp_path_is_served panicked at crates/mcp/tests/server.rs:77: /mcp, left 404 right 200
+A22: green at 8b96d52f8eea54800eb75b460610508075810714
+A23: red at 43f6d989d35769b4e11f3d8436a660c9795398ce: a_body_over_64_kib_is_refused panicked at crates/mcp/tests/server.rs:94: a body of 64 KiB and one byte, left 404 right 413
+A23: green at 8b96d52f8eea54800eb75b460610508075810714
+A24: red at 43f6d989d35769b4e11f3d8436a660c9795398ce: a_foreign_host_is_refused panicked at crates/mcp/tests/server.rs:123: Host example.invalid:<port>, left 404 right 403
+A24: green at 8b96d52f8eea54800eb75b460610508075810714
+A25: red at 43f6d989d35769b4e11f3d8436a660c9795398ce: the_ninth_request_in_flight_is_shed panicked at crates/mcp/tests/server.rs:146: only 0 of 8 calls reached the law track within 5s
+A25: green at 8b96d52f8eea54800eb75b460610508075810714
+A33: red at 43f6d989d35769b4e11f3d8436a660c9795398ce: the_law_track_answers_numbers_only panicked at crates/mcp/tests/tools.rs:62: get_law_track, left 404 right 200
+A33: green at 8b96d52f8eea54800eb75b460610508075810714
+A38: red at 43f6d989d35769b4e11f3d8436a660c9795398ce: the_mcp_role_is_a_known_role panicked at crates/daemon/tests/roles.rs:937: the exit status, left Some(2) right Some(1)
+A38: green at 8b96d52f8eea54800eb75b460610508075810714
+A39: red at 43f6d989d35769b4e11f3d8436a660c9795398ce: the_role_reads_its_tokens_only_through_the_loader panicked at crates/mcp/tests/settings.rs:372: the mcp role's source is missing: crates/daemon/src/role_mcp.rs
+A39: green at 8b96d52f8eea54800eb75b460610508075810714
+A41: red at 43f6d989d35769b4e11f3d8436a660c9795398ce: each_served_tool_matches_its_roster_golden_entry panicked at crates/mcp/tests/tools.rs:136: tools/list, left 404 right 200
+A41: green at 8b96d52f8eea54800eb75b460610508075810714
+A42: red at 43f6d989d35769b4e11f3d8436a660c9795398ce: the_pending_law_numbers_answer_null_never_zero panicked at crates/mcp/tests/tools.rs:62: get_law_track, left 404 right 200
+A42: green at 8b96d52f8eea54800eb75b460610508075810714
+A43: red at 43f6d989d35769b4e11f3d8436a660c9795398ce: the_served_stack_refuses_initialize_without_a_bearer panicked at crates/mcp/tests/server.rs:173: initialize without a bearer, left 404 right 401
+A43: green at 8b96d52f8eea54800eb75b460610508075810714
+A44: red at 43f6d989d35769b4e11f3d8436a660c9795398ce: a_refused_request_holds_no_slot panicked at crates/mcp/tests/server.rs:202: only 0 of 8 calls reached the law track within 5s
+A44: green at 8b96d52f8eea54800eb75b460610508075810714
+A45: red at 43f6d989d35769b4e11f3d8436a660c9795398ce: initialize_answers_json_and_no_session_id panicked at crates/mcp/tests/server.rs:229: initialize, left 404 right 200
+A45: green at 8b96d52f8eea54800eb75b460610508075810714
+```
+
+### An addition with no criterion number
+
+The green commit put `#[schemars(required)]` on each pending number's `Option` field, and schemars
+then declares the inner type alone, so the served output schema said `"type": "integer"` for
+`dues`, `leech_total` and `mastery`, which answer null while pending. SPEC-119 section 13 says the
+schema declares them nullable and required, and A41's test reads only the required list, so it
+stayed green over the defect. A new test,
+`tools::the_output_schema_admits_each_pending_number_as_null`, was committed red first: at
+598ae89ff206cb37e72a96b1b339e5b0dcb58d7f, selecting it alone, it panicked at
+`crates/mcp/tests/tools.rs:268`: the output schema's dues (an integer schema) refuses the answered
+null. It is green at 57f2fafe71bdedf5b41c4412312b59397bc8d9e5, where each field also declares
+null as a type. It adds no criterion and no acceptance line.
+
+### Test and code changes between the red and green commits
+
+All three are in the green commit, 8b96d52f, which is the only commit between the red and green
+commits that edits a test file.
+
+- `crates/daemon/tests/roles.rs:104`: the usage line's expected roles grow from
+  `api, bot, job, data;` to `api, bot, job, data, mcp;`, because the role set grows by `mcp`. It is
+  an amendment of the assertion's subject, not a weakening; nothing else in that file changed.
+- `crates/mcp/tests/support/mod.rs:165`: one `push_str(&format!(..))` became three `push_str`
+  calls, for a lint. The bytes the helper builds are the same, and no test or member changed.
+- The daemon's logging census (`logging::every_role_logs_json_with_its_priority_from_its_first_line`)
+  reaches the new `mcp` role at green, and it refused the listen refusal's first wording. The
+  refusal's `Display` for an unset address now reads "it is required and is not set"; the change
+  is in `crates/mcp/src/settings.rs`, and the census is unchanged.
+
+### A test change after the green commit
+
+- `crates/mcp/tests/settings.rs`, A39's test: its source census printed its count by hand, and the
+  tdd probe's examined-counts class refused the file, which walks a directory without the house
+  `examined` contract. The census now passes its sources through an `examined` helper appended at
+  the end of the file, which prints the count and refuses an empty population; its own
+  `more than one source` assertion is kept. The new body was run at the red commit, in a scratch
+  copy of that commit with only this file replaced: only A1's and A39's tests failed of the file's
+  7, and A39 panicked at `crates/mcp/tests/settings.rs:372`, the mcp role's source is missing,
+  the failure its fence line above quotes.
+
+Correction (fix round 1): CI at 8ded90ac named two findings, and this round adds tests only, with no production change. F1: `test_setting_shapes` refused `mcp::SocketSetting`'s shape literal, `"a socket address with a port"`, and `crates/mcp/tests/settings.rs::every_listen_refusal_reads_its_own_text` now spells that exact quoted literal in a compiled test item (the census reads green, 76 tests). F2: four mutants were missed, and each has one killing test in its own crate, each proved by a hand plant of the CI mutant's replacement that the killer failed and a restore sha256-equal: `ListenRefusal`'s `Display` (settings.rs:80) by `every_listen_refusal_reads_its_own_text`, `ListenAddress`'s `Display` (settings.rs:130) by `a_listen_address_reads_as_the_socket_address_it_holds`, `serve` (server.rs:171) by `serve_answers_a_request_before_its_shutdown_resolves_then_returns` (mcp), and `stop_before_serving` (role_mcp.rs:58) by `the_mcp_role_that_cannot_open_its_database_says_stopping_on_its_notify_socket` (daemon, `tests/roles.rs`). These are MUTATION COVERAGE tests, green at the base 8ded90ac and so not red-first. The green commit is 16034804fd524cb1bc2d8c838b5d17029fcd07ef.

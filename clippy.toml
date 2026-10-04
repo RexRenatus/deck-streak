@@ -14,3 +14,11 @@ disallowed-methods = [
     { path = "reqwest::Client::new", reason = "a request to the Bot API is made only by the bot transport's annotated site" },
     { path = "reqwest::Client::builder", reason = "a request to the Bot API is made only by the bot transport's annotated site" },
 ]
+
+# Code the build selects is compiled in one build and not the other, so a test run in the dev
+# profile may not prove the shipped release build (SPEC-330, ADR-330, #473). A use that must stay
+# is allowed by name at its site with #[expect(clippy::disallowed_macros, reason = "...")].
+disallowed-macros = [
+    { path = "std::cfg", reason = "cfg! selects code by the build configuration, so the dev-profile tests may not prove the release build the daemon ships from; the test-release stage runs the release profile, and a use that must stay is allowed by name with its reason" },
+    { path = "std::option_env", reason = "option_env! reads the build environment at compile time, so one build holds a value another does not; a use that must stay is allowed by name with its reason" },
+]
