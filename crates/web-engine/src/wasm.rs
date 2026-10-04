@@ -106,8 +106,8 @@ pub fn last_panic() -> Option<String> {
 }
 
 /// Creates the engine's backend, as the desktop's bridge does.
-#[wasm_bindgen]
-pub fn init() -> Result<(), JsValue> {
+#[wasm_bindgen(js_name = "init")]
+pub fn create_backend() -> Result<(), JsValue> {
     std::panic::set_hook(Box::new(|info| {
         let message = info.to_string();
         LAST_PANIC.with(|p| {
