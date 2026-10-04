@@ -180,7 +180,7 @@
         ".entry(part.to_ascii_lowercase())",
         ".entry(part.to_owned())",
         "progression",
-        "ledger_census::a_reserved_name_joined_from_literals_is_refused_in_every_spelling",
+        "xp_census::the_joins_the_census_names_stay_refused",
         "every piece is folded to ASCII lower case before the pool is read; unfolded, the upper-case and mixed-case members escape"
       ],
       [

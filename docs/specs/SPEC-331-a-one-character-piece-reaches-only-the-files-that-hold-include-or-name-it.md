@@ -84,15 +84,15 @@ R4. SPEC-324 R1, R2, R4 and R5 are unchanged. R4's one-character threshold for a
     one-character pieces kept out of the pool.
 R5. On every tree, every file the new reader refuses, dev's reader refuses too, so no tree that is
     green today turns red.
-R6. The real tree's three censuses stay green. Every existing test is unchanged. S32411's killer is
-    re-pointed (section 7), and the weakening table names the move.
+R6. The real tree's three censuses stay green. Every existing test is unchanged. The killers of S32411
+    and S32409 are re-pointed (sections 6 and 7), and the weakening table names each move.
 
 ## 3. Acceptance criteria
 
 | id | criterion | decided by |
 |---|---|---|
 | A1 | the population A1 builds is planted for each census's own name. At each position `i` of the name, the pieces before and after `i` are lone literals in two files, and the character at `i` is a lone literal in a third. The third file holds it in each of five lone shapes: a method argument (#600's `strip_prefix` line among them), a `matches!` arm, a format template, a named `const` used alone, and a split set. A letter is planted in both cases. No file is refused, and the population's size is printed and asserted | `cargo test -p deck-streak-progression --test ledger_census -- --exact a_lone_character_unjoined_in_its_file_completes_no_path`, and the same test in `xp_census` and in `deck-streak-economy`'s `wallet_census` |
-| A2 | each join below is refused by the exact set of files holding its pieces: `concat!("xp_", "settlement")` in one file; a `const` holding `"xp_sett"` in one file joined with `"lement"` in another; `"XP_Settlement"`; a `stringify!` split; a char-by-char spelling in one file, as an array and as a push sequence; a one-character `const` or char array joined from another file or crate (`format!`, push, inline capture, glob import, renamed import); a one-character piece in a `static` struct field; a one-character `const` whose name a `macro_rules!` takes as an argument; multi-character pieces carried through a function's return value or argument | `cargo test -p deck-streak-progression --test xp_census -- --exact the_joins_the_census_names_stay_refused` |
+| A2 | each join below is refused by the exact set of files holding its pieces: `concat!("xp_", "settlement")` in one file; a `const` holding `"xp_sett"` in one file joined with `"lement"` in another; `"XP_Settlement"`; a `stringify!` split; a char-by-char spelling in one file, as an array and as a push sequence; a one-character `const` or char array joined from another file or crate (`format!`, push, inline capture, glob import, renamed import); a one-character piece in a `static` struct field; a one-character `const` whose name a `macro_rules!` takes as an argument; multi-character pieces carried through a function's return value or argument; and a multi-character piece in another case, returned by a function in another crate, so that only the pool's case folding joins it | `cargo test -p deck-streak-progression --test xp_census -- --exact the_joins_the_census_names_stay_refused` |
 | A3 | a one-character piece that reaches its join only through a function's return value or argument, alone or beside a multi-character piece carried the same way, is not refused (the disclosed class) | `cargo test -p deck-streak-progression --test xp_census -- --exact a_character_carried_by_a_function_is_disclosed` |
 | A4 | the real tree: each census refuses nothing | `cargo test -p deck-streak-progression --test ledger_census -- --exact only_the_grant_port_writes_the_xp_ledger`, `cargo test -p deck-streak-progression --test xp_census -- --exact only_progression_writes_xp_settlement_and_only_coordination_settles`, `cargo test -p deck-streak-economy --test wallet_census -- --exact only_the_wallet_writes_the_coin_ledger` |
 | A5 | SPEC-324's population is judged as before: every spelling refused outside the owner and accepted inside it, near misses and controls accepted, fail-closed cases refused | `cargo test -p deck-streak-progression --test ledger_census -- --exact a_reserved_name_joined_from_literals_is_refused_in_every_spelling` and its `xp_census` and `wallet_census` twins, `pieces_that_do_not_cover_the_name_are_not_refused`, `a_name_the_census_cannot_resolve_fails_closed` |
@@ -167,8 +167,14 @@ it pins what dev already refuses, and the red-first record says so (`not red`).
 - **Existing evidence moved.** Under the new reader, S32411's mutant (the pool cleared per member) is
   no longer killed by SPEC-324's population, because the reach finds the crate form. Its killer moves
   to A2, which holds multi-character pieces joined across crates through a function, and the
-  weakening table names the move. Every other row on `table_census.rs` keeps its `find`, once
-  (S32409's `.entry(part.to_ascii_lowercase())` included), and is re-proved.
+  weakening table names the move. S32409's mutant (the pool no longer folded to lower case) is no
+  longer killed by SPEC-324's population either: every member it spells in another case lies in one
+  file, or in files that include or name each other, and each reach folds its own pieces. Measured
+  at the build: the mutant dies at dev's reader (`f007 "XP_LEDGER"`) and passes every census test at
+  this reader. Its killer moves to A2, which gains a plant only the fold refuses: a multi-character
+  piece in another case returned by a function in another crate (P14). Every other row on
+  `table_census.rs` keeps its `find`, once (S32409's `.entry(part.to_ascii_lowercase())` included),
+  and is re-proved.
 - **Cost.** The reader judges one reach per file: about 240 small pools per census. Measured in the
   harness (std-only, optimised), all three censuses read in 0.25 s against dev's 0.13 s.
 
@@ -187,7 +193,8 @@ test that kills it:
 - an item named by a macro's metavariable sends its one-character pieces nowhere global (A2's
   macro-named `const`).
 
-All seven die in the design harness. S32411's killer is re-pointed to A2, as section 6 says.
+All seven die in the design harness and at the build. The killers of S32411 and S32409 are
+re-pointed to A2, as section 6 says.
 
 ## 8. SPEC-324 R3, as amended
 

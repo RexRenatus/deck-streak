@@ -25,3 +25,10 @@ The reader change was committed at 38d14d2b, and the same targets then passed by
 `examined 85`, `125` and `105 lone-character tree(s)` with nothing refused, and A3 read
 `examined 3 disclosed plant(s)` with nothing refused. A2's 18 join plants stayed refused, A4's three
 real-tree censuses still refuse nothing, and A5's tests passed unchanged.
+
+A2 gained a nineteenth plant at 852a0656, P14: `"XP_"` returned by a function in one crate and
+joined with `"Settlement"` in another, so that only the pool's case folding refuses it. It was added
+after S32409's mutant (the pool not folded) survived its SPEC-324 killer at this reader, which
+folds each reach's own pieces. Measured at 852a0656 by swapping the reader file: A2 passes with
+dev's reader from `cff914e3` and with this one, so it stays not red; with S32409's mutant installed
+it fails at `P14 case variant across crates`, with both files expected and none refused.

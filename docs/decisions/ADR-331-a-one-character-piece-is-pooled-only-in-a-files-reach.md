@@ -127,6 +127,10 @@ file sets.
   characters or longer, against 22, 34 and 34 runs from 2 characters up.
 - Bad, because S32411's mutant (the pool cleared per member) is no longer killed by SPEC-324's
   population: the reach finds the crate form. Its killer moves to SPEC A2.
+- Bad, because S32409's mutant (the pool not folded to lower case) is no longer killed by SPEC-324's
+  population either: each of its members in another case lies within one reach, and a reach folds
+  its own pieces. Its killer moves to SPEC A2 too, which gains a cross-crate join in another case
+  (P14) that only the pool's fold refuses.
 - Neutral, because the reader judges one small pool per file: 0.25 s for all three censuses against
   dev's 0.13 s in the harness.
 
@@ -134,9 +138,10 @@ file sets.
 
 - SPEC A1 to A5: the lone-character population, the joins, the disclosed class, the real tree, and
   SPEC-324's population.
-- The band's seven new rows, and S32411 re-proved against its new killer.
-- A Lean entry: a lone piece unjoined in its file never completes a path, and the refusals shrink
-  monotonically.
+- The band's seven new rows, and S32411 and S32409 re-proved against their new killer.
+- A Lean entry, `TableCensusReach`: on every tree the reader's refusals are within dev's, and a file
+  whose pieces are all of one character, which includes no file and is included by none, and whose
+  named items are its own, is never refused. Its witness is dev's reader refusing such a file.
 
 ## What would make this wrong
 

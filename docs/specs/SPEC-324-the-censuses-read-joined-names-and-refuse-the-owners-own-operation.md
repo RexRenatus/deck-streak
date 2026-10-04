@@ -186,5 +186,5 @@ file that holds it, includes it, or names the item holding it.
 
 The reach, the fail-closed arm for an item whose name is a macro's metavariable, and the class this
 leaves disclosed (one character carried to its join through a function's return value or argument,
-#585) are SPEC-331's R1 to R3 and its section 5, decided by ADR-331 (ruling 158). S32411's killer
-moves to SPEC-331's A2, as SPEC-331's section 6 says; its `find` is unchanged.
+#585) are SPEC-331's R1 to R3 and its section 5, decided by ADR-331 (ruling 158). The killers of
+S32411 and S32409 move to SPEC-331's A2, as SPEC-331's section 6 says; their `find`s are unchanged.
