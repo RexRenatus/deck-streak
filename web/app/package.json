@@ -11,7 +11,8 @@
     "prepare": "svelte-kit sync || echo ''",
     "check": "paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide --emit-ts-declarations --silent && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
     "test": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:engine": "playwright test --config playwright.engine.config.ts"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
