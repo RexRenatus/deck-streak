@@ -148,6 +148,25 @@ block with the fourth key; that module is decided by CI by name and is never run
   shape at start (R2): the unit then fails at once and pages through `OnFailure=`.
 - The peak scales with the collection uploaded whole. Section 1 measures ADR-022's shape, which is
   the budget's reference; the memory watch reads the real figure after the cutover (SPEC-031).
+- A full upload the server completes can still fail at the client. Measured with ADR-022's shape,
+  the server held to one processor: at 50% of it the client gave up at its 30-second stall limit
+  while the server finished the upload and answered it with status 200 a few seconds later, so the
+  server held the new collection that the client reported as failed, a divergence; at about 75% (a
+  competing process at a lower priority on the same processor, an approximation of a quota) and at
+  100% the upload held, its longest client-side stall about 14 and 13 seconds. The stall is the
+  server reading and checking the received collection before it answers, and it grows as the share
+  shrinks. The unit keeps `CPUQuota=50%` until the sync server's share is decided (#617), the
+  runbook holds the cutover's full upload until then, and its upload step reads the server's
+  collection back before any retry, so a retry never follows an upload the server completed.
+- The server holds each user's `media.db` in SQLite's exclusive locking mode for its whole life
+  (the fork's media database opens with `locking_mode=exclusive`), so no second process can read it
+  while the server runs. Measured: a read and an online backup of `media.db` are refused with
+  `database is locked` after the server's start, after a full upload and after a full download, and
+  both succeed once the server has stopped. The collection opens the same way; it read and backed up
+  after a full upload and after a full download, and its lock during a normal sync is not measured.
+  So ADR-347 D5's snapshot, SQLite's online backup of both databases while the server runs, cannot
+  take `media.db`: the snapshot's part waits on the owner's choice of its form (#617), and section
+  10 holds its rows unchanged.
 
 ## 7. Delivered by the next pull requests
 
@@ -175,3 +194,17 @@ The later parts add rows for the snapshot and the drill.
 ADR-340, ADR-347, ADR-058, ADR-336, ADR-344, ADR-032, ADR-064, ADR-062, ADR-010, ADR-038; SPEC-334
 (row 1.3, R8, R9), SPEC-064, SPEC-062; `docs/schematics/sync-server-packaging-and-cutover.md`;
 `RELEASING.md`; `deploy/README.md`.
+
+## 10. Amendments: what this part measured after section 1
+
+Section 6's last two risks are measurements taken after section 1, with the same server and the
+same scratch client. The second holds the snapshot's part (R5, A7, A8) until the owner chooses its
+form (#617), so its manifest rows wait, each unchanged by this part:
+
+- `deploy/scripts/backup.py` unchanged
+- `deploy/scripts/restore-drill.sh` unchanged
+- `deploy/systemd/deck-streak-backup.service` unchanged
+- `deploy/systemd/deck-streak-restore-drill.service` unchanged
+- `PRIVACY.md` unchanged
+- `privacy.json` unchanged
+- `scripts/tests/test_backup_units.py` unchanged
