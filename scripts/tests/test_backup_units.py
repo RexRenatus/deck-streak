@@ -50,6 +50,8 @@ WINDOW = "deck-streak-sync-snapshot.service"
 ARCHIVE = "deck-streak-sync-archive.service"
 SYNC_DRILL = "deck-streak-sync-restore-drill.service"
 SNAPSHOT_FILES = ("collection.anki2", "media.db")
+# The first line of every sealed file (SPEC-340 R12; ADR-351 D2): the age format's version line.
+SEAL_HEADER = b"age-encryption.org/v1\n"
 NEW_SERVICES = (LITESTREAM, BACKUP, DRILL)
 # R6: the two slots, exactly, in UTC as the neutral templates are written (SPEC-032 R4).
 BACKUP_CALENDAR = "*-*-* 03:24:00 UTC"
@@ -1007,6 +1009,108 @@ class SyncWindow(unittest.TestCase):
             self.assertEqual(self.archive(backup, snapshots, environ), 1)
             self.assertNotIn("sync-20300106T030000Z.tar", names_in(snapshots, "sync-"))
             self.assertEqual(len(log.read_text(encoding="utf-8").splitlines()), 4)
+
+    def sealer(self, root, name, header=SEAL_HEADER, status=0):
+        """A stand-in for the rail's seal command (SPEC-340 R12): it records its arguments, writes
+        the file `--output` names as `header`, a marker and the plain file's bytes, and exits
+        `status`. Returned as the setting's value, with a recipients file as its leading
+        arguments, and the log of its calls."""
+        log = root / f"{name}.jsonl"
+        stub = root / name
+        stub.write_text(
+            "#!/usr/bin/env python3\nimport json, sys\nargs = sys.argv[1:]\n"
+            f"open({str(log)!r}, 'a').write(json.dumps(args) + '\\n')\n"
+            "at = args.index('--output')\n"
+            "plain = open(args[at + 2], 'rb').read()\n"
+            f"open(args[at + 1], 'wb').write({header!r} + b'sealed:' + plain)\n"
+            f"sys.exit({status})\n",
+            encoding="utf-8",
+        )
+        stub.chmod(0o755)
+        return f"{sys.executable} {stub} --recipients-file {root / 'recipients.txt'}", log
+
+    def test_the_offsite_copy_is_sealed_and_never_plain(self):
+        """SPEC-340 A15 (R12; ADR-351 D2): the archive and its manifest are sealed before any copy,
+        only the sealed files are copied, and they are removed after it; an unset seal, one that
+        fails and one that leaves no header copy nothing and fail the run."""
+        backup = load_backup()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            base = make_sync_base(root)
+            snapshots = root / "sync-snapshots"
+            bucket = "example://deck-streak-example-snapshot/"
+            # The copy stand-in records its arguments and the bytes of each file it is given.
+            copied = root / "copied.jsonl"
+            copy = root / "object-store-read"
+            copy.write_text(
+                "#!/usr/bin/env python3\nimport json, os, sys\nfiles = {\n"
+                "    a: open(a, 'rb').read().hex() for a in sys.argv[1:] if os.path.isfile(a)\n}\n"
+                f"open({str(copied)!r}, 'a').write(json.dumps([sys.argv[1:], files]) + '\\n')\n",
+                encoding="utf-8",
+            )
+            copy.chmod(0o755)
+            seal, seals = self.sealer(root, "seal")
+            environ = {
+                "DECKSTREAK_SNAPSHOT_COPY": f"{sys.executable} {copy} --no-clobber",
+                "DECKSTREAK_SNAPSHOT_BUCKET": bucket,
+                "DECKSTREAK_SNAPSHOT_SEAL": seal,
+            }
+
+            def copies():
+                if not copied.exists():
+                    return []
+                return [
+                    json.loads(line) for line in copied.read_text(encoding="utf-8").splitlines()
+                ]
+
+            self.assertEqual(self.window(backup, base, snapshots, self.STAMPS[0]), 0)
+            status = self.archive(backup, snapshots, environ)
+            newest = snapshots / "sync-20300101T030000Z"
+            self.assertEqual(
+                [argv for argv, _files in copies()],
+                [["--no-clobber", f"{newest}.tar.age", f"{newest}.sha256.age", bucket]],
+                "only the sealed files are copied",
+            )
+            self.assertEqual(status, 0)
+            # Each copied file is its plain file's seal, the format's header first.
+            files = copies()[0][1]
+            for plain in (f"{newest}.tar", f"{newest}.sha256"):
+                self.assertEqual(
+                    bytes.fromhex(files[f"{plain}.age"]),
+                    SEAL_HEADER + b"sealed:" + Path(plain).read_bytes(),
+                    plain,
+                )
+            recipients = ["--recipients-file", str(root / "recipients.txt")]
+            self.assertEqual(
+                [json.loads(line) for line in seals.read_text(encoding="utf-8").splitlines()],
+                [
+                    [*recipients, "--output", f"{newest}.tar.age", f"{newest}.tar"],
+                    [*recipients, "--output", f"{newest}.sha256.age", f"{newest}.sha256"],
+                ],
+            )
+            # The sealed files are removed, and the host keeps its plain archive for the drill.
+            self.assertEqual(sorted(p.name for p in snapshots.glob("*.age")), [])
+            self.assertEqual(
+                names_in(snapshots, "sync-"), [f"{newest.name}.sha256", f"{newest.name}.tar"]
+            )
+            # An unset seal is refused before the generation is touched; a seal that fails, or one
+            # that leaves no header, fails the run. None copies anything or leaves a sealed file.
+            refused = {
+                "unset": "",
+                "failing": self.sealer(root, "seal-failing", status=1)[0],
+                "headerless": self.sealer(root, "seal-headerless", header=b"")[0],
+            }
+            cases = examined("refused seal(s)", zip(refused.items(), self.STAMPS[1:]))
+            for (label, command), stamp in cases:
+                with self.subTest(seal=label):
+                    self.assertEqual(self.window(backup, base, snapshots, stamp), 0)
+                    generation = f"gen-{stamp.replace('-', '').replace(':', '')}.tar"
+                    settings = dict(environ, DECKSTREAK_SNAPSHOT_SEAL=command)
+                    self.assertEqual(self.archive(backup, snapshots, settings), 1)
+                    self.assertEqual(len(copies()), 1, "a refused seal copies nothing")
+                    self.assertEqual(sorted(p.name for p in snapshots.glob("*.age")), [])
+                    if not command:
+                        self.assertIn(generation, names_in(snapshots, "gen-"))
 
     def test_the_sync_drill_runs_as_its_own_unit(self):
         """SPEC-340 A5 (R4; ADR-351 D1): the snapshot's drill is a oneshot of the sync family's own,
