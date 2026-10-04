@@ -60,8 +60,8 @@ flowchart TD
   tap["DeckListView appears"] --> ask["HarnessModel.loadDecks(), on the main actor"]
   ask --> hop["await EngineSession.deckNames(): leaves the main actor"]
   hop --> encode["HarnessWire encodes GetDeckNamesRequest { include_filtered: true }"]
-  encode --> call["Engine.run(service, method, bytes), through the generated bindings"]
-  call --> lookup{"allowed(service, method)?"}
+  encode --> ffi_call["Engine.run(service, method, bytes), through the generated bindings"]
+  ffi_call --> lookup{"allowed(service, method)?"}
   lookup -- "no" --> refused(["EngineRefusal.NotAllowed, thrown in Swift"])
   lookup -- "yes" --> backend["Backend::run_service_method"]
   backend -- "Ok(bytes)" --> decode["HarnessWire decodes DeckNames: each entry's name"]
