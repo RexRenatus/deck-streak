@@ -91,7 +91,7 @@ stateDiagram-v2
   idle --> busy: open, and the lock is held elsewhere
   idle --> refused: open, and OPFS is refused
   idle --> open: open, lock and pool held, collection opened
-  open --> open: next, answer, undo, counts, snapshot
+  open --> open: seed, next, answer, undo, snapshot
   open --> closed: close
   closed --> open: open
   busy --> [*]

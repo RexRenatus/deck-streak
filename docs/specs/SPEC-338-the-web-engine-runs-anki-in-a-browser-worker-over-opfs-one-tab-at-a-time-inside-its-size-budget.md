@@ -149,6 +149,7 @@ test only. CI's `web-engine` job runs the Playwright tests over the module it bu
 | `Cargo.toml` | workspace | the crate's dependencies, and the `[patch]` entry's `rev` and `anki_proto` |
 | `Cargo.lock` | workspace | changed by `cargo` only |
 | `deny.toml` | workspace | the licences of the crates the module adds, if the audit names one |
+| `stack.json` | workspace | the `rust-wasm` element, citing ADR-348 |
 | `crates/ingest/src/engine.rs` | `deck-streak-ingest` | the doc comment names the pinned commit's ADRs, not one fix |
 | `docs/CONTEXT-MAP.md` | docs | the crate's line in the map |
 | `docs/schematics/app-clients-engine-and-sync.md` | docs | one line naming this delivery's schematic |

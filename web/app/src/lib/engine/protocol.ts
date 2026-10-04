@@ -50,6 +50,39 @@ export type Reply =
 /** The request `data` holds, or the id it carried (when readable) and why it is refused. */
 export type Parsed = { request: Request } | { id: number | null; message: string };
 
+const U32 = 2 ** 32 - 1;
+const I64 = 2n ** 63n - 1n;
+const whole = (value: unknown, least: number, most: number) =>
+  Number.isSafeInteger(value) && (value as number) >= least && (value as number) <= most;
+
+/** Each operation's arguments, and the test each must pass: the engine's own types bound them. */
+const ARGS: Record<Op, Record<string, (value: unknown) => boolean>> = {
+  open: {},
+  next: {},
+  undo: {},
+  close: {},
+  seed: { count: (value) => whole(value, 1, U32) },
+  answer: { rating: (value) => whole(value, 1, 4), ms: (value) => whole(value, 0, U32) },
+  snapshot: { card: (value) => typeof value === 'bigint' && value >= 1n && value <= I64 }
+};
+
+/** Reads a request off the wire. Anything but an operation of `OPS` with exactly its arguments,
+ * each within the engine's type, is refused here, before any engine call. */
 export function parseRequest(data: unknown): Parsed {
-  return { request: data as Request };
+  if (typeof data !== 'object' || data === null || Array.isArray(data)) {
+    return { id: null, message: 'a request is an object with an id and an op' };
+  }
+  const fields = data as Record<string, unknown>;
+  if (!whole(fields.id, 0, Number.MAX_SAFE_INTEGER)) {
+    return { id: null, message: "a request's id is a whole number from 0" };
+  }
+  const id = fields.id as number;
+  const op = fields.op as Op;
+  if (!OPS.includes(op)) return { id, message: `unknown operation ${String(op)}` };
+  const args = ARGS[op];
+  const extra = Object.keys(fields).find((key) => key !== 'id' && key !== 'op' && !Object.hasOwn(args, key));
+  if (extra !== undefined) return { id, message: `${op} takes no ${extra}` };
+  const malformed = Object.keys(args).find((key) => !args[key](fields[key]));
+  if (malformed !== undefined) return { id, message: `${op}'s ${malformed} is malformed` };
+  return { request: fields as unknown as Request };
 }

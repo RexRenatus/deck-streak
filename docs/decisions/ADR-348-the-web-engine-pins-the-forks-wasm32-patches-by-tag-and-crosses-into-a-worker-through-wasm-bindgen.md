@@ -33,6 +33,9 @@ before any code does:
 - No page script reaches an engine call the study client has not chosen to make (ADR-337).
 - The size the gate reads is the size of the engine a web client ships (ADR-346).
 - A refusal says why; nothing studies into storage that silently disappears.
+- The stack takes Rust to WebAssembly only by measured exception (`rust-wasm`): the engine must
+  schedule exactly as the engine of every other client does, it runs in a dedicated Worker, and
+  ADR-336 states its gzip budget. `stack.json` cites this ADR for it.
 
 ## Considered Options (the alternatives it was chosen against)
 

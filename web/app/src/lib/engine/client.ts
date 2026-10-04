@@ -1,6 +1,6 @@
 // The page's side of the web engine: EngineClient, which numbers each request and settles it by
 // the reply that carries its id (SPEC-338 R3, ADR-348).
-import type { Body, ErrorCode, Opened, Rating, Snapshot } from './protocol';
+import type { Body, ErrorCode, Opened, Rating, Reply, Snapshot } from './protocol';
 
 /** The Worker as the client sees it: a port to post to and hear from. */
 export interface EnginePort {
@@ -19,18 +19,36 @@ export class EngineError extends Error {
 }
 
 export class EngineClient {
+  readonly #port: EnginePort;
+  readonly #pending = new Map<number, { resolve(value: unknown): void; reject(error: Error): void }>();
+  #next = 1;
+
   constructor(port: EnginePort) {
-    void port;
+    this.#port = port;
+    port.addEventListener('message', (event) => this.#settle(event.data));
   }
 
   /** How many requests await their reply. */
   get waiting(): number {
-    return 0;
+    return this.#pending.size;
+  }
+
+  /** Settles the request a reply names by its id; anything else on the port settles nothing. */
+  #settle(data: unknown) {
+    const reply = data as Reply;
+    const pending = this.#pending.get((data as { id?: number } | null)?.id as number);
+    if (pending === undefined) return;
+    this.#pending.delete(reply.id as number);
+    if (reply.ok) pending.resolve(reply.value);
+    else pending.reject(new EngineError(reply.code, reply.message));
   }
 
   #send(body: Body): Promise<unknown> {
-    void body;
-    return Promise.resolve(undefined);
+    const id = this.#next++;
+    return new Promise((resolve, reject) => {
+      this.#pending.set(id, { resolve, reject });
+      this.#port.postMessage({ id, ...body });
+    });
   }
 
   open(): Promise<Opened> {
