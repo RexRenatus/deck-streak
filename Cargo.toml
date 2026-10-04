@@ -51,6 +51,7 @@ deck-streak-api = { path = "crates/api" }
 deck-streak-bot = { path = "crates/bot" }
 deck-streak-mcp = { path = "crates/mcp" }
 deck-streak-daemon = { path = "crates/daemon" }
+deck-streak-ffi = { path = "crates/ffi" }
 # ADR-029: the parity oracle's golden reader. So far only a proving crate's dev-dependencies name
 # them; later ADRs cite ADR-029 rather than admitting them again.
 serde = { version = "1.0.229", features = ["derive"] }
@@ -115,6 +116,12 @@ sqlite-wasm-vfs = "0.2.0"
 # ADR-040 (SPEC-040 A6): the compile-fail harness that proves an XP amount cannot be built from a
 # signed integer. A dev-dependency only; no production dependency of any context changes.
 trybuild = "1.0.121"
+# ADR-345 D2 (SPEC-336): UniFFI, the bindings generator behind the FFI adapter's one entry point,
+# pinned exactly to the last release whose generated Swift modulemap names no builtin clang module,
+# the lines that break a simulator XCFramework's consumers (ADR-345 records the measurement).
+# Default features off: the adapter's `bindgen` feature turns the generator on for the XCFramework
+# workflow alone.
+uniffi = { version = "=0.29.1", default-features = false }
 
 # ADR-058 (#233): the engine's upstream tag above, replaced by a commit of the maintainer's fork that
 # is that tag plus one fix, so the engine's protobuf build script stops rerunning on every cargo

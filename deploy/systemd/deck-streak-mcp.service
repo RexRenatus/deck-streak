@@ -31,11 +31,11 @@ TimeoutStopSec=30
 OOMPolicy=kill
 SyslogIdentifier=deck-streak-mcp
 # The budget is deploy/host-budget.json's entry for this unit (ADR-032), and its CPU quota is taken
-# from the API's (ADR-332). Both are ceilings the kernel enforces: past MemoryMax the unit is killed,
-# fails and pages, and past CPUQuota it is throttled.
+# from the API's (ADR-332), then split again by ADR-347 D7. Both are ceilings the kernel enforces:
+# past MemoryMax the unit is killed, fails and pages, and past CPUQuota it is throttled.
 MemoryHigh=24M
 MemoryMax=32M
-CPUQuota=25%
+CPUQuota=15%
 TasksMax=32
 UMask=0077
 NoNewPrivileges=yes
