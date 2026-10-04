@@ -235,6 +235,7 @@ bound; a release event from a dropped lock changes nothing) are MUTATION COVERAG
 | `crates/push/tests/web_push.rs` | `deck-streak-push` | added: A11 to A17 |
 | `crates/push/tests/logging.rs` | `deck-streak-push` | added: A18, through the log-capture helper |
 | `crates/push/tests/debug.rs` | `deck-streak-push` | added: A19 |
+| `crates/kernel/tests/log_capture_class.rs` | `deck-streak-kernel` | the census's routed count rises by one, the push crate's logging test (A22) |
 | `crates/push/tests/support/mod.rs` | `deck-streak-push` | added |
 | `crates/push/tests/support/fake_apns.rs` | `deck-streak-push` | added: the recording APNs fake |
 | `crates/push/tests/support/fake_push_service.rs` | `deck-streak-push` | added: the recording push service fake |
