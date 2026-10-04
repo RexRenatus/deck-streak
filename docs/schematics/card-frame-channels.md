@@ -98,18 +98,18 @@ dash means at least two layers hold it, so no single-layer variant opens it.
 | `stylesheet` | `link rel=stylesheet` | W3, W2 | - |
 | `preload` | `link rel=preload` and `rel=modulepreload` | W3, W2 | - |
 | `prefetch` | `link rel=prefetch` | W3, W2 | - |
-| `preconnect` | `link rel=preconnect` (a TCP connection, no request) | W3 | W3 |
+| `preconnect` | `link rel=preconnect` (a TCP connection, no request) | W3 | W3 (UNOBSERVABLE in Chromium, measured: it opens no preconnect connection under the suite) |
 | `dns-prefetch` | `link rel=dns-prefetch` | W3 | W3 (UNOBSERVABLE: no lookup reaches a listener) |
-| `shadow-link` | a `template shadowrootmode=open` holding `link rel=preconnect` | W3 | W3 (UNOBSERVABLE in an engine that ignores a preconnect in a shadow tree) |
+| `shadow-link` | a `template shadowrootmode=open` holding `link rel=preconnect` | W3 | W3 (UNOBSERVABLE in Chromium, measured: it opens no preconnect connection under the suite, in a shadow tree or out of one) |
 | `meta-refresh` | `meta http-equiv=refresh` to the listener | W3, W4, W1 in some engines | - |
 | `base` | `base href` at the listener, then a relative `img` | W3, W2, P | - |
 | `nav-self` | a full-frame link at the listener, clicked | W4 | W4 (SEC01-F13) |
 | `nav-top` | a full-frame link with `target=_top`, clicked | W1 | W1 |
 | `nav-blank` | a full-frame link with `target=_blank`, clicked | W1 | W1 |
-| `download` | a full-frame link with `download`, clicked | W1, W4 | - |
+| `download` | a full-frame link with `download`, clicked | W4 (measured in Chromium: a `download` link to another origin is followed as a navigation of the frame, which the sandbox allows); W1 stops a download itself | W4 |
 | `ping` | a same-document link with `ping` at the listener, clicked | W2, P | - |
 | `form` | a full-frame submit button in a form whose action is the listener, clicked | W1, W2, W4 | - |
-| `nested-frame` | `iframe src` at the listener, and an `iframe srcdoc` holding an `img` at the listener | W2, P (the inherited `frame-src 'none'`); the srcdoc child inherits both policies and the sandbox | - |
+| `nested-frame` | `iframe src` at the listener, and an `iframe srcdoc` holding an `img` at the listener | the `iframe src`: W2, P (the inherited `frame-src 'none'`); the srcdoc child: W2 (measured in Chromium: a `srcdoc` document is not fetched, so `frame-src` does not apply to it, and the inherited page policy admits its `img`) | W2 |
 | `external-scheme` | a full-frame `mailto:` link, clicked | W1, W4 | - (UNOBSERVABLE: no listener sees a handler launch) |
 | `object` | `object data` and `embed src` | W1, W2, P | - |
 | `script-inline` | an inline script that fetches the listener | W1, W2, P | - |
@@ -127,10 +127,11 @@ off: with them off, no card code can open one. In the same variant the `bridge` 
 BroadcastChannel stay unreached (the opaque origin), which is why a page listener, if one is ever
 added, must check `event.source` against the card frame's `contentWindow`, never `event.origin`.
 
-**What W1 does NOT stop:** a fetch, a frame's own navigation, or preconnect. **W2 does NOT stop:**
+**What W1 does NOT stop:** a fetch, a frame's own navigation (a `download` link to another origin
+included, which Chromium follows as one), or preconnect. **W2 does NOT stop:**
 a navigation of the frame, preconnect or dns-prefetch, or a peer connection from script.
 **W3 does NOT stop:** any fetch from an element it keeps. **W4 does NOT stop:** a fetch, a top
-navigation or a popup. **Scripts off does NOT stop:** markup's own fetches and navigations, which is
+navigation, a popup or a nested `srcdoc` frame, which is not fetched. **Scripts off does NOT stop:** markup's own fetches and navigations, which is
 why W2, W3 and W4 exist.
 
 **Settled by evidence:** `frame-src 'none'` does not stop a `srcdoc` frame from rendering (the

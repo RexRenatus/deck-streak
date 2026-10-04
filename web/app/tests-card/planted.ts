@@ -160,12 +160,12 @@ export const PLANTED: readonly PlantedCard[] = [
   clicks('nav-self', 'W4', (h) => `<a class="cover" href="${h}/1">open</a>`),
   clicks('nav-top', 'W1', (h) => `<a class="cover" target="_top" href="${h}/1">open</a>`),
   clicks('nav-blank', 'W1', (h) => `<a class="cover" target="_blank" href="${h}/1">open</a>`),
-  clicks('download', null, (h) => `<a class="cover" download="card.txt" href="${h}/1">save</a>`),
+  clicks('download', 'W4', (h) => `<a class="cover" download="card.txt" href="${h}/1">save</a>`),
   clicks('ping', null, (h) => `<a class="cover" href="#planted" ping="${h}/1">ping</a><p id="planted">here</p>`),
   clicks('form', null, (h) => `<form method="post" action="${h}/1"><button class="cover" type="submit">send</button></form>`),
   loads(
     'nested-frame',
-    null,
+    'W2',
     (h) => `<iframe title="nested" src="${h}/1"></iframe><iframe title="nested document" srcdoc="<img alt='' src='${h}/2'>"></iframe>`
   ),
   clicks('external-scheme', null, () => '<a class="cover" href="mailto:card@example.invalid">mail</a>'),
@@ -197,6 +197,8 @@ export const LAYERS: readonly Layer[] = ['W1', 'W2', 'W3', 'W4'];
 export const UNOBSERVABLE: readonly Unobservable[] = [
   { engine: 'chromium', id: 'dns-prefetch', why: 'a DNS lookup reaches no listener a test owns' },
   { engine: 'webkit', id: 'dns-prefetch', why: 'a DNS lookup reaches no listener a test owns' },
+  { engine: 'chromium', id: 'preconnect', why: 'measured: Chromium under the suite opens no preconnect connection' },
+  { engine: 'chromium', id: 'shadow-link', why: 'measured: Chromium under the suite opens no preconnect connection, in a shadow tree or out of one' },
   { engine: 'chromium', id: 'external-scheme', why: 'no listener sees a mail handler launch' },
   { engine: 'webkit', id: 'external-scheme', why: 'no listener sees a mail handler launch' }
 ];
