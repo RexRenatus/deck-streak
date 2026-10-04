@@ -6,5 +6,6 @@
 #![forbid(unsafe_code)]
 
 fn main() {
+    #[cfg(feature = "bindgen")]
     uniffi::uniffi_bindgen_swift();
 }

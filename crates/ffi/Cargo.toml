@@ -19,11 +19,12 @@ anki.workspace = true
 uniffi.workspace = true
 
 [features]
-# ADR-345 D3: the Swift bindings generator, built only by the XCFramework workflow; a workspace
-# build without the feature compiles none of it.
+# ADR-345 D3: the Swift bindings generator, turned on only by the XCFramework workflow; a workspace
+# build without the feature compiles none of the generator's code.
 bindgen = ["uniffi/cli", "uniffi/cargo-metadata"]
 
+# ADR-345 D5: the generator's binary is built by every build of the crate, so a default-feature
+# test runs it (SPEC-336 R10); built without `bindgen`, it holds no generator.
 [[bin]]
 name = "uniffi-bindgen-swift"
 path = "src/bin/uniffi-bindgen-swift.rs"
-required-features = ["bindgen"]
