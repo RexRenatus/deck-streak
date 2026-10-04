@@ -309,6 +309,15 @@ HEADERS = {
 # Referrer policies that never send a URL to another origin (web-security `ws.referrer-policy`).
 KEEPS_URLS = {"no-referrer", "same-origin", "strict-origin", "strict-origin-when-cross-origin"}
 ONE_YEAR = 31_536_000
+# The sync server's path on the web app's origin (ADR-347 D4): not `/sync`, whose server routes
+# begin `/sync/` and `/msync/`.
+SYNC_PATH = "/anki-sync"
+# The edge's body bound: the server's own payload limit, its default of 100 MiB
+# (`MAX_SYNC_PAYLOAD_MEGS`, which the launcher clears so the default holds; SPEC-337 A5), in Caddy's
+# binary unit so the two agree to the byte.
+SYNC_BODY_LIMIT = "100MiB"
+# The reverse proxy's read buffer for the server's large responses (ADR-347 D4).
+SYNC_READ_BUFFER = "512KiB"
 
 
 # Every advisory departure the templates declare in their units, by unit and reason (SPEC-032 R4,
@@ -1084,10 +1093,52 @@ class TheCaddyBlock(unittest.TestCase):
         self.assertEqual(answer[1].splitlines(), ["User-agent: *", "Disallow: /"])
         # Nothing answers outside the handles, so a route cannot slip past the order above.
         self.assertEqual(
-            sorted(child.tokens[0] for child in block.children), ["handle"] * 3 + ["header"]
+            sorted(child.tokens[0] for child in block.children), ["handle"] * 5 + ["header"]
         )
         # The upstream is the API's own loopback listener (ADR-007), which the example names.
         listen = dict((key, value) for _, key, value in env_example())["DECKSTREAK_API_LISTEN"]
+        host = listen.rpartition(":")[0].strip("[]")
+        self.assertTrue(ipaddress.ip_address(host).is_loopback, listen)
+
+    def test_the_caddy_block_routes_the_sync_server_under_its_own_path(self):
+        """SPEC-337 A6; ADR-347 D4: the sync server on the web app's origin, under its own path."""
+        block = site()
+        # The bare path is redirected to the slash form, so a client given either reaches the server.
+        bare = handle(block, SYNC_PATH)
+        self.assertIsNotNone(bare, f"no handle for {SYNC_PATH}")
+        self.assertEqual(
+            [child.tokens for child in bare.children], [["redir", "*", f"{SYNC_PATH}/", "308"]]
+        )
+        route = handle(block, f"{SYNC_PATH}/*")
+        self.assertIsNotNone(route, f"no handle for {SYNC_PATH}/*")
+        self.assertEqual(
+            sorted(child.tokens[0] for child in route.children),
+            ["@sync_health", "request_body", "respond", "reverse_proxy", "uri"],
+            "the route holds the strip, the hidden health route, the bound and the proxy, only",
+        )
+        # The prefix is stripped before the server reads the path; `uri` runs before `respond` and
+        # `reverse_proxy` in Caddy's directive order, so both see the server's own route.
+        self.assertEqual(route.one("uri").tokens, ["uri", "strip_prefix", SYNC_PATH])
+        # The server's health route answers 404 from outside, as the API's do (ADR-025).
+        health = route.one("@sync_health")
+        self.assertEqual(health.tokens, ["@sync_health", "path", "/health"])
+        self.assertEqual(route.one("respond").tokens, ["respond", "@sync_health", "404"])
+        # The body is bounded at the edge at the server's own limit.
+        body = route.one("request_body")
+        self.assertEqual(body.tokens, ["request_body"])
+        self.assertEqual([child.tokens for child in body.children], [["max_size", SYNC_BODY_LIMIT]])
+        # The proxy reaches the sync server's loopback upstream, read with the larger buffer.
+        proxy = route.one("reverse_proxy")
+        self.assertEqual(proxy.tokens, ["reverse_proxy", "{$DECKSTREAK_SYNC_UPSTREAM}"])
+        self.assertEqual([child.tokens for child in proxy.children], [["transport", "http"]])
+        transport = proxy.one("transport", "http")
+        self.assertEqual(
+            [child.tokens for child in transport.children], [["read_buffer", SYNC_READ_BUFFER]]
+        )
+        # The upstream is the sync server's own loopback listener, which the example names.
+        listen = dict((key, value) for _, key, value in env_example())[
+            "DECKSTREAK_SYNC_SERVER_LISTEN"
+        ]
         host = listen.rpartition(":")[0].strip("[]")
         self.assertTrue(ipaddress.ip_address(host).is_loopback, listen)
 
