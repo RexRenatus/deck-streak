@@ -6705,12 +6705,53 @@ fn join_plants() -> Vec<Plant> {
                 ),
             ],
         ),
+        (
+            "O4 control: a one-char associated const in an impl, named by path",
+            vec![
+                (
+                    "crates/streaks/src/o4_t.rs",
+                    "pub struct T;\nimpl T {\n    pub const M: char = 'm';\n}\n",
+                ),
+                (
+                    "crates/quests/src/o4_join.rs",
+                    "pub fn joined() -> String {\n    format!(\"xp_settle{}ent\", deck_streak_streaks::o4_t::T::M)\n}\n",
+                ),
+            ],
+        ),
+        (
+            "O5 control: a one-char const in an inline module",
+            vec![
+                (
+                    "crates/streaks/src/o5_m.rs",
+                    "pub mod inner {\n    pub const M: &str = \"m\";\n}\n",
+                ),
+                (
+                    "crates/quests/src/o5_join.rs",
+                    "pub fn joined() -> String {\n    [\"xp_settle\", deck_streak_streaks::o5_m::inner::M, \"ent\"].concat()\n}\n",
+                ),
+            ],
+        ),
+        (
+            "O6 control: a one-char const with a block initialiser",
+            vec![
+                (
+                    "crates/streaks/src/o6_m.rs",
+                    "pub const M: &str = {\n    let x = \"m\";\n    x\n};\n",
+                ),
+                (
+                    "crates/quests/src/o6_join.rs",
+                    "pub fn joined() -> String {\n    format!(\"xp_settle{}ent\", deck_streak_streaks::o6_m::M)\n}\n",
+                ),
+            ],
+        ),
     ]
 }
 
-/// SPEC-331 A3's disclosed class (the design's plants B1, B2 and B8): one character carried to its
+/// SPEC-331 A3's disclosed class (the design's plants B1, B2 and B8, then O1, O2, O3 and O7): one character carried to its
 /// join only through a function's return value or argument, alone or beside a multi-character piece
-/// carried the same way. The reader follows includes and the names of `const` and `static` items,
+/// carried the same way, and the second-step class: a `const` naming another `const` across files, a
+/// renamed re-export, or an `include!` or `include_str!` inside a named item's initialiser (O1, O2,
+/// O3 and O7). The reader follows includes and the names of `const` and `static` items one step,
 /// never calls, so none is refused (#585).
 fn disclosed_plants() -> Vec<Plant> {
     vec![
@@ -6757,14 +6798,97 @@ fn disclosed_plants() -> Vec<Plant> {
                 ),
             ],
         ),
+        (
+            "O1 second step: a one-char const initialised by include_str!, named in another file",
+            vec![
+                (
+                    "crates/quests/src/o1_m.rs",
+                    "pub const M: &str = include_str!(\"o1_m.txt\");\n",
+                ),
+                ("crates/quests/src/o1_m.txt", "m"),
+                (
+                    "crates/quests/src/o1_join.rs",
+                    "pub fn joined() -> String {\n    format!(\"xp_settle{}ent\", super::o1_m::M)\n}\n",
+                ),
+            ],
+        ),
+        (
+            "O2 second step: a const alias chain, a const naming a one-char const of another crate",
+            vec![
+                ("crates/streaks/src/o2_m.rs", "pub const N: char = 'm';\n"),
+                (
+                    "crates/quests/src/o2_alias.rs",
+                    "pub const M: char = deck_streak_streaks::o2_m::N;\n",
+                ),
+                (
+                    "crates/quests/src/o2_join.rs",
+                    "pub fn joined() -> String {\n    format!(\"xp_settle{}ent\", super::o2_alias::M)\n}\n",
+                ),
+            ],
+        ),
+        (
+            "O3 second step: a one-char const re-exported under another name in a third file",
+            vec![
+                (
+                    "crates/quests/src/o3_m.rs",
+                    "pub const MIDDLE: &str = \"m\";\n",
+                ),
+                (
+                    "crates/quests/src/o3_reexport.rs",
+                    "pub use super::o3_m::MIDDLE as X;\n",
+                ),
+                (
+                    "crates/quests/src/o3_join.rs",
+                    "use super::o3_reexport::X;\npub fn joined() -> String {\n    [\"xp_settle\", X, \"ent\"].concat()\n}\n",
+                ),
+            ],
+        ),
+        (
+            "O7 second step: a one-char const initialised by include! of a Rust expression",
+            vec![
+                (
+                    "crates/quests/src/o7_m.rs",
+                    "pub const M: char = include!(\"o7_m.in\");\n",
+                ),
+                ("crates/quests/src/o7_m.in", "'m'\n"),
+                (
+                    "crates/quests/src/o7_join.rs",
+                    "pub fn joined() -> String {\n    format!(\"xp_settle{}ent\", super::o7_m::M)\n}\n",
+                ),
+            ],
+        ),
     ]
 }
 
-/// The number of SPEC-331 A2's join plants: P1 to P14, B4 to B7 and B9.
-const JOIN_PLANTS: usize = 19;
+/// SPEC-331 AD2's plant: a join whose own file holds no literal piece, reaching three one-piece
+/// files only through the items it names. Each of the three holds a piece, so each is refused.
+fn the_no_own_piece_join() -> Vec<Plant> {
+    vec![(
+        "AD2 no-own-piece join: a joining file that holds no literal reaches three pieces only through the items it names",
+        vec![
+            (
+                "crates/quests/src/ad2_a.rs",
+                "pub const A: &str = \"xp_settle\";\n",
+            ),
+            ("crates/quests/src/ad2_b.rs", "pub const B: char = 'm';\n"),
+            (
+                "crates/quests/src/ad2_c.rs",
+                "pub const C: &str = \"ent\";\n",
+            ),
+            (
+                "crates/quests/src/ad2_join.rs",
+                "use super::ad2_a::A;\nuse super::ad2_b::B;\nuse super::ad2_c::C;\npub fn j() -> String {\n    [A, &B.to_string(), C].concat()\n}\n",
+            ),
+        ],
+    )]
+}
 
-/// The number of SPEC-331 A3's disclosed plants: B1, B2 and B8.
-const DISCLOSED_PLANTS: usize = 3;
+/// The number of SPEC-331 A2's join plants: P1 to P14, B4 to B7 and B9, and the controls O4 to O6.
+const JOIN_PLANTS: usize = 22;
+
+/// The number of SPEC-331 A3's disclosed plants: B1, B2 and B8, and the second-step routes O1, O2,
+/// O3 and O7.
+const DISCLOSED_PLANTS: usize = 7;
 
 #[test]
 fn the_joins_the_census_names_stay_refused() {
@@ -6780,6 +6904,24 @@ fn the_joins_the_census_names_stay_refused() {
             .map(|(path, _)| spells_the_table(path))
             .collect();
         expected.sort();
+        assert_eq!(literal_census_of(label, files), expected, "{label}");
+    }
+}
+
+#[test]
+fn a_join_in_a_file_holding_no_literal_stays_refused() {
+    // SPEC-331 R2: every file read has a reach, also one that holds no piece of its own. The
+    // joining file here holds none, so only its reach joins the three pieces, and each file
+    // holding one is refused. The joining file holds no piece and is not itself refused.
+    let plants = examined("no-own-piece join plant(s)", the_no_own_piece_join());
+    for (label, files) in &plants {
+        let mut expected: Vec<String> = files
+            .iter()
+            .filter(|(path, _)| !path.ends_with("_join.rs"))
+            .map(|(path, _)| spells_the_table(path))
+            .collect();
+        expected.sort();
+        assert_eq!(expected.len(), 3, "{label}");
         assert_eq!(literal_census_of(label, files), expected, "{label}");
     }
 }
