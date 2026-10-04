@@ -433,6 +433,7 @@ fn qab_checklist(confirmed: bool) -> Checklist {
 }
 
 #[tokio::test]
+#[allow(clippy::too_many_lines)]
 async fn write_confirms_clears_and_refuses_as_its_goldens_say() {
     let bench = Bench::start().await;
     let mut commands = habit_commands(&bench, courses());

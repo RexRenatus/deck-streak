@@ -407,30 +407,9 @@ fn qab_checklist(confirmed: bool) -> Checklist {
     }
 }
 
-/// Every message the bot renders, by its golden's name.
-fn rendered() -> Vec<(&'static str, Reply)> {
-    let synced = |sync, scores| Ok(SyncAnswer { sync, scores });
-    let qab = CourseCode::new("qab").expect("a synthetic code");
+/// Every message the writing habit renders, by its golden's name (SPEC-078 R6 to R8).
+fn writing_rendered() -> Vec<(&'static str, Reply)> {
     vec![
-        (
-            "read-logged",
-            logged_reply(&logged(1, 20, 20, 20), "Course Qaa"),
-        ),
-        (
-            "read-goal-reached",
-            logged_reply(&logged(2, 190, 210, 210), "Course Qaa"),
-        ),
-        ("read-pick-course", pick_course_reply(&habit_courses())),
-        ("read-presets", presets_reply(&qab, "Course Qab")),
-        ("read-usage", usage_reply()),
-        ("read-refused-minutes", refused_minutes_reply()),
-        ("read-unknown-course", unknown_course_reply("x<y")),
-        ("read-no-courses", no_courses_reply()),
-        ("read-failed", read_failed_reply()),
-        ("undo-done", undo_done_reply("Course Qaa", 30)),
-        ("undo-nothing", undo_nothing_reply()),
-        ("undo-stale", undo_stale_reply()),
-        ("undo-failed", undo_failed_reply()),
         (
             "write-chips",
             checklist_reply(&habit_courses(), &qab_checklist(false)),
@@ -450,6 +429,33 @@ fn rendered() -> Vec<(&'static str, Reply)> {
         ("write-not-a-writing-course", not_a_writing_course_reply()),
         ("write-no-writing-course", no_writing_course_reply()),
         ("write-failed", write_failed_reply()),
+    ]
+}
+
+/// Every message the bot renders, by its golden's name.
+fn rendered() -> Vec<(&'static str, Reply)> {
+    let synced = |sync, scores| Ok(SyncAnswer { sync, scores });
+    let qab = CourseCode::new("qab").expect("a synthetic code");
+    let mut replies = vec![
+        (
+            "read-logged",
+            logged_reply(&logged(1, 20, 20, 20), "Course Qaa"),
+        ),
+        (
+            "read-goal-reached",
+            logged_reply(&logged(2, 190, 210, 210), "Course Qaa"),
+        ),
+        ("read-pick-course", pick_course_reply(&habit_courses())),
+        ("read-presets", presets_reply(&qab, "Course Qab")),
+        ("read-usage", usage_reply()),
+        ("read-refused-minutes", refused_minutes_reply()),
+        ("read-unknown-course", unknown_course_reply("x<y")),
+        ("read-no-courses", no_courses_reply()),
+        ("read-failed", read_failed_reply()),
+        ("undo-done", undo_done_reply("Course Qaa", 30)),
+        ("undo-nothing", undo_nothing_reply()),
+        ("undo-stale", undo_stale_reply()),
+        ("undo-failed", undo_failed_reply()),
         (
             "score",
             score_reply(Some(&scored(72, ("SOLID", "\u{2705}"), 40, Some(87.5)))),
@@ -514,7 +520,9 @@ fn rendered() -> Vec<(&'static str, Reply)> {
                 reason: "nothing_scripted",
             })),
         ),
-    ]
+    ];
+    replies.extend(writing_rendered());
+    replies
 }
 
 #[tokio::test]
