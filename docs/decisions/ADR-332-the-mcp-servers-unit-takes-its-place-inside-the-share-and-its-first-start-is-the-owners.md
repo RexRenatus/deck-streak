@@ -81,7 +81,7 @@ Chosen option: one unit, in the API's shape, inside the share, first started by 
 - Good, because no deploy can start the server before its core token exists.
 - Bad, because the memory share has no headroom left: the next unit waits for an owner decision on
   the share.
-- Bad, because the API's processor ceiling is lower when the two compete, so a busy API is
+- Bad, because the API's processor ceiling is lower, so when the two compete the API is
   throttled sooner than before.
 - Bad, because the server does not run until the owner starts it, and a deploy restarts it never:
   a new release reaches it only when the owner restarts it, until a later decision adds it to the
