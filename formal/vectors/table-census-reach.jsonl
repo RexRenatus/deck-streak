@@ -1,4 +1,4 @@
-{"schema":"phx.formal.vectors.v1","entry":"TableCensusReach","covers":"tools/table-census/table_census.rs","anchor":"covering","digest":"sha256:0000000000000000000000000000000000000000000000000000000000000000","vectors":315}
+{"schema":"phx.formal.vectors.v1","entry":"TableCensusReach","covers":"tools/table-census/table_census.rs","anchor":"covering","digest":"sha256:10bb51774d8e572fbdcccf18ba58f333e76c039be60a77f807ead26bcc0271ce","vectors":315}
 {"table":"xp_ledger","tree":"xp_ledger@0 'x' method argument","dev":["crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
 {"table":"xp_ledger","tree":"xp_ledger@0 'x' matches! arm","dev":["crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
 {"table":"xp_ledger","tree":"xp_ledger@0 'x' format template","dev":["crates/quests/src/a1_after.rs","crates/streaks/src/a1_char.rs"],"reach":[]}
