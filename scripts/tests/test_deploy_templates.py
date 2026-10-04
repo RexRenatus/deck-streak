@@ -1680,6 +1680,38 @@ class TheSyncServerRunsAsItsOwnUnit(unittest.TestCase):
             sorted(SYNC_FAMILY),
         )
 
+    def test_the_sync_server_reaches_loopback_peers_only(self):
+        """SPEC-340 A10 (R8; ADR-351 D6): the server's peers are the loopback edge alone, and the
+        paging census bounds both keys, so a wider peer list is refused by key and value."""
+        unit = self.unit()
+        self.assertEqual(unit.values("Service", "IPAddressAllow"), ["localhost"])
+        self.assertEqual(unit.values("Service", "IPAddressDeny"), ["any"])
+        for key in ("IPAddressAllow", "IPAddressDeny"):
+            self.assertIn(key, _units.PAGING_KEYS["Service"], key)
+        table = _units.PAGING_VALUES
+        self.assertEqual(table.get(("Service", "IPAddressAllow")), ("localhost",))
+        self.assertEqual(table.get(("Service", "IPAddressDeny")), ("any",))
+        # A planted unit that admits every peer and clears the deny list is refused at both lines.
+        with tempfile.TemporaryDirectory() as scratch:
+            planted = Path(scratch) / "deploy" / "systemd" / "planted.service"
+            planted.parent.mkdir(parents=True)
+            planted.write_text(
+                "[Unit]\nDescription=planted\n\n[Service]\nExecStart=/bin/true\n"
+                "IPAddressAllow=any\nIPAddressDeny=\n",
+                encoding="utf-8",
+            )
+            (planted_unit,) = subject(scratch).services
+        where = "deploy/systemd/planted.service"
+        self.assertEqual(
+            value_refusals(planted_unit, table),
+            [
+                f"{where}:6: [Service] IPAddressAllow=any is not a value this unit admits for the "
+                "key, and is refused",
+                f"{where}:7: [Service] IPAddressDeny= is not a value this unit admits for the "
+                "key, and is refused",
+            ],
+        )
+
     def test_the_sync_servers_two_users_come_from_the_socket_and_never_an_environment(self):
         unit = self.unit()
         ids = credential_ids()
