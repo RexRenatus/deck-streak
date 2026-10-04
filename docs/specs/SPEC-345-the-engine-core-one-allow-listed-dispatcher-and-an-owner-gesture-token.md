@@ -169,9 +169,9 @@ The red each shows first, recorded in `docs/red-first/SPEC-345.md`:
 |---|---|---|
 | `crates/engine-core/Cargo.toml` | `deck-streak-engine-core` | added: `anki`, `anki_proto`, `prost`, `serde_json`; no feature, no `staticlib` (part 1) |
 | `crates/engine-core/src/lib.rs` | `deck-streak-engine-core` | added: the crate root, `#![forbid(unsafe_code)]` (part 1) |
-| `crates/engine-core/src/table.rs` | `deck-streak-engine-core` | added: `Transport`, the ordinary table with its transport columns, the exempt table (part 1) |
+| `crates/engine-core/src/table.rs` | `deck-streak-engine-core` | added: `Transport`, the ordinary table with its transport columns, the exempt table with its `ExemptWrite` (part 1) |
 | `crates/engine-core/src/dispatch.rs` | `deck-streak-engine-core` | added: `Dispatcher`, `Refusal`, `Read` (part 1); `run_exempt` (part 2) |
-| `crates/engine-core/src/gesture.rs` | `deck-streak-engine-core` | added: `OwnerGesture`, `ExemptWrite`, `Target` (part 2) |
+| `crates/engine-core/src/gesture.rs` | `deck-streak-engine-core` | added: `OwnerGesture`, `Target` (part 2) |
 | `crates/engine-core/tests/table.rs` | `deck-streak-engine-core` | added: A1, A2 (part 1) |
 | `crates/engine-core/tests/dispatch.rs` | `deck-streak-engine-core` | added: A3, A4 (part 1) |
 | `crates/engine-core/tests/parity.rs` | `deck-streak-engine-core` | added: A5, A6 (part 1) |
