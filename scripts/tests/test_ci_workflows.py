@@ -666,6 +666,20 @@ class TheAppleBuildRunsFromOneBody(unittest.TestCase):
                 changed,
             )
 
+    def test_one_job_body_serves_the_change_and_the_tag(self):
+        callee = load("xcframework.yml")
+        self.assertEqual(sorted(callee["on"]), ["workflow_call", "workflow_dispatch"])
+        self.assertNotIn("concurrency", callee)
+        for job_id, job in examined("callee jobs", callee["jobs"].items()):
+            self.assertEqual(job["runs-on"], ADMITTED_RUNNERS["xcframework.yml"], job_id)
+        text = workflow_file_text(WORKFLOWS / "xcframework.yml")
+        self.assertEqual(pull_request_reads(text), [])
+        plant = text.replace(
+            "    steps:\n", '    steps:\n      - run: echo "${{ github.head_ref }}"\n', 1
+        )
+        self.assertNotEqual(plant, text)
+        self.assertEqual(pull_request_reads(plant), ['- run: echo "${{ github.head_ref }}"'])
+
 
 def triggers(workflow):
     """{event: [branch, ...]} from a workflow's `on:` block, read without a YAML library. A branch
