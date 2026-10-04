@@ -230,6 +230,9 @@ const SEEDS: [&str; 42] = [
      INSERT INTO minutes_log (code, study_day, minutes, note, created_at) \
      SELECT CASE i % 2 WHEN 0 THEN 'qaa' ELSE 'qab' END, 20000 + i, 1 + i % 600, \
      CASE i % 3 WHEN 0 THEN '' ELSE 'synthetic note ' || i END, 1000 * i FROM n",
+    "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 101) \
+     INSERT INTO writing_log (code, study_day, created_at) \
+     SELECT CASE i % 2 WHEN 0 THEN 'qaa' ELSE 'qab' END, 20000 + i, 1000 * i FROM n",
 ];
 
 /// Prints how many items a check examined and refuses zero (the tdd pack's examined contract).

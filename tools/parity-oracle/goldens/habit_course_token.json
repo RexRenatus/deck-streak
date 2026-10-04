@@ -172,7 +172,7 @@
   "kind": "adapter",
   "note": "Replaces the course and alias tables with two synthetic courses, qaa (alias a) and qab (alias b), and returns the code the token resolves to, or none; cases drawn under CPython 3.12.12.",
   "registry": "tools/parity-oracle/registry/spec_078.py",
-  "registry_sha256": "347514aed5b93b8dfbc646986978680620d4d0c5c3fdf4253a8231bc28e56603",
+  "registry_sha256": "68cf3ad186bc9a22e82d5198cc0373af4d172d1151e9d8e9c69fe567132e2104",
   "schema": "phx.parity-golden.v1",
   "seed": 20,
   "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"

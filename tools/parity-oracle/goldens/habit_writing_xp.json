@@ -1,0 +1,644 @@
+{
+  "adapter": "with_done_codes",
+  "cases": [
+    {
+      "class": "one course, none confirmed",
+      "input": {
+        "codes": [
+          "qaa"
+        ],
+        "done": []
+      },
+      "output": [
+        [
+          "write:all",
+          0
+        ],
+        [
+          "write:qaa",
+          0
+        ]
+      ]
+    },
+    {
+      "class": "one course, confirmed",
+      "input": {
+        "codes": [
+          "qaa"
+        ],
+        "done": [
+          "qaa"
+        ]
+      },
+      "output": [
+        [
+          "write:all",
+          100
+        ],
+        [
+          "write:qaa",
+          75
+        ]
+      ]
+    },
+    {
+      "class": "two courses, one confirmed",
+      "input": {
+        "codes": [
+          "qaa",
+          "qab"
+        ],
+        "done": [
+          "qaa"
+        ]
+      },
+      "output": [
+        [
+          "write:all",
+          0
+        ],
+        [
+          "write:qaa",
+          75
+        ],
+        [
+          "write:qab",
+          0
+        ]
+      ]
+    },
+    {
+      "class": "two courses, both confirmed",
+      "input": {
+        "codes": [
+          "qaa",
+          "qab"
+        ],
+        "done": [
+          "qaa",
+          "qab"
+        ]
+      },
+      "output": [
+        [
+          "write:all",
+          100
+        ],
+        [
+          "write:qaa",
+          75
+        ],
+        [
+          "write:qab",
+          75
+        ]
+      ]
+    },
+    {
+      "class": "three courses, two confirmed",
+      "input": {
+        "codes": [
+          "qaa",
+          "qab",
+          "qac"
+        ],
+        "done": [
+          "qab",
+          "qac"
+        ]
+      },
+      "output": [
+        [
+          "write:all",
+          0
+        ],
+        [
+          "write:qaa",
+          0
+        ],
+        [
+          "write:qab",
+          75
+        ],
+        [
+          "write:qac",
+          75
+        ]
+      ]
+    },
+    {
+      "class": "three courses, all confirmed",
+      "input": {
+        "codes": [
+          "qaa",
+          "qab",
+          "qac"
+        ],
+        "done": [
+          "qaa",
+          "qab",
+          "qac"
+        ]
+      },
+      "output": [
+        [
+          "write:all",
+          100
+        ],
+        [
+          "write:qaa",
+          75
+        ],
+        [
+          "write:qab",
+          75
+        ],
+        [
+          "write:qac",
+          75
+        ]
+      ]
+    },
+    {
+      "class": "a code outside the set",
+      "input": {
+        "codes": [
+          "qaa",
+          "qab"
+        ],
+        "done": [
+          "qaa",
+          "qab",
+          "qzz"
+        ]
+      },
+      "output": [
+        [
+          "write:all",
+          100
+        ],
+        [
+          "write:qaa",
+          75
+        ],
+        [
+          "write:qab",
+          75
+        ]
+      ]
+    },
+    {
+      "class": "only a code outside the set",
+      "input": {
+        "codes": [
+          "qaa"
+        ],
+        "done": [
+          "qzz"
+        ]
+      },
+      "output": [
+        [
+          "write:all",
+          0
+        ],
+        [
+          "write:qaa",
+          0
+        ]
+      ]
+    },
+    {
+      "input": {
+        "codes": [
+          "qaa",
+          "qab",
+          "qac"
+        ],
+        "done": [
+          "qzz"
+        ]
+      },
+      "output": [
+        [
+          "write:all",
+          0
+        ],
+        [
+          "write:qaa",
+          0
+        ],
+        [
+          "write:qab",
+          0
+        ],
+        [
+          "write:qac",
+          0
+        ]
+      ]
+    },
+    {
+      "input": {
+        "codes": [
+          "qaa",
+          "qab",
+          "qac"
+        ],
+        "done": [
+          "qab",
+          "qac"
+        ]
+      },
+      "output": [
+        [
+          "write:all",
+          0
+        ],
+        [
+          "write:qaa",
+          0
+        ],
+        [
+          "write:qab",
+          75
+        ],
+        [
+          "write:qac",
+          75
+        ]
+      ]
+    },
+    {
+      "input": {
+        "codes": [
+          "qaa"
+        ],
+        "done": [
+          "qaa"
+        ]
+      },
+      "output": [
+        [
+          "write:all",
+          100
+        ],
+        [
+          "write:qaa",
+          75
+        ]
+      ]
+    },
+    {
+      "input": {
+        "codes": [
+          "qaa"
+        ],
+        "done": [
+          "qaa",
+          "qzz"
+        ]
+      },
+      "output": [
+        [
+          "write:all",
+          100
+        ],
+        [
+          "write:qaa",
+          75
+        ]
+      ]
+    },
+    {
+      "input": {
+        "codes": [
+          "qaa",
+          "qab",
+          "qac"
+        ],
+        "done": [
+          "qaa",
+          "qab",
+          "qac"
+        ]
+      },
+      "output": [
+        [
+          "write:all",
+          100
+        ],
+        [
+          "write:qaa",
+          75
+        ],
+        [
+          "write:qab",
+          75
+        ],
+        [
+          "write:qac",
+          75
+        ]
+      ]
+    },
+    {
+      "input": {
+        "codes": [
+          "qaa",
+          "qab"
+        ],
+        "done": [
+          "qaa",
+          "qab",
+          "qzz"
+        ]
+      },
+      "output": [
+        [
+          "write:all",
+          100
+        ],
+        [
+          "write:qaa",
+          75
+        ],
+        [
+          "write:qab",
+          75
+        ]
+      ]
+    },
+    {
+      "input": {
+        "codes": [
+          "qaa",
+          "qab"
+        ],
+        "done": [
+          "qaa",
+          "qab",
+          "qzz"
+        ]
+      },
+      "output": [
+        [
+          "write:all",
+          100
+        ],
+        [
+          "write:qaa",
+          75
+        ],
+        [
+          "write:qab",
+          75
+        ]
+      ]
+    },
+    {
+      "input": {
+        "codes": [
+          "qaa"
+        ],
+        "done": [
+          "qaa",
+          "qzz"
+        ]
+      },
+      "output": [
+        [
+          "write:all",
+          100
+        ],
+        [
+          "write:qaa",
+          75
+        ]
+      ]
+    },
+    {
+      "input": {
+        "codes": [
+          "qaa",
+          "qab",
+          "qac"
+        ],
+        "done": [
+          "qab",
+          "qac"
+        ]
+      },
+      "output": [
+        [
+          "write:all",
+          0
+        ],
+        [
+          "write:qaa",
+          0
+        ],
+        [
+          "write:qab",
+          75
+        ],
+        [
+          "write:qac",
+          75
+        ]
+      ]
+    },
+    {
+      "input": {
+        "codes": [
+          "qaa"
+        ],
+        "done": [
+          "qaa",
+          "qzz"
+        ]
+      },
+      "output": [
+        [
+          "write:all",
+          100
+        ],
+        [
+          "write:qaa",
+          75
+        ]
+      ]
+    },
+    {
+      "input": {
+        "codes": [
+          "qaa"
+        ],
+        "done": [
+          "qaa",
+          "qzz"
+        ]
+      },
+      "output": [
+        [
+          "write:all",
+          100
+        ],
+        [
+          "write:qaa",
+          75
+        ]
+      ]
+    },
+    {
+      "input": {
+        "codes": [
+          "qaa",
+          "qab",
+          "qac"
+        ],
+        "done": [
+          "qab",
+          "qzz"
+        ]
+      },
+      "output": [
+        [
+          "write:all",
+          0
+        ],
+        [
+          "write:qaa",
+          0
+        ],
+        [
+          "write:qab",
+          75
+        ],
+        [
+          "write:qac",
+          0
+        ]
+      ]
+    },
+    {
+      "input": {
+        "codes": [
+          "qaa",
+          "qab",
+          "qac"
+        ],
+        "done": [
+          "qaa",
+          "qab",
+          "qzz"
+        ]
+      },
+      "output": [
+        [
+          "write:all",
+          0
+        ],
+        [
+          "write:qaa",
+          75
+        ],
+        [
+          "write:qab",
+          75
+        ],
+        [
+          "write:qac",
+          0
+        ]
+      ]
+    },
+    {
+      "input": {
+        "codes": [
+          "qaa",
+          "qab"
+        ],
+        "done": [
+          "qaa",
+          "qab"
+        ]
+      },
+      "output": [
+        [
+          "write:all",
+          100
+        ],
+        [
+          "write:qaa",
+          75
+        ],
+        [
+          "write:qab",
+          75
+        ]
+      ]
+    },
+    {
+      "input": {
+        "codes": [
+          "qaa"
+        ],
+        "done": []
+      },
+      "output": [
+        [
+          "write:all",
+          0
+        ],
+        [
+          "write:qaa",
+          0
+        ]
+      ]
+    },
+    {
+      "input": {
+        "codes": [
+          "qaa",
+          "qab",
+          "qac"
+        ],
+        "done": [
+          "qaa",
+          "qab",
+          "qzz"
+        ]
+      },
+      "output": [
+        [
+          "write:all",
+          0
+        ],
+        [
+          "write:qaa",
+          75
+        ],
+        [
+          "write:qab",
+          75
+        ],
+        [
+          "write:qac",
+          0
+        ]
+      ]
+    }
+  ],
+  "function": "habits.writing_day_xp",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Calls it with the case's writing courses and the codes confirmed on the day; returns each grant as its source and amount, sorted; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_078.py",
+  "registry_sha256": "68cf3ad186bc9a22e82d5198cc0373af4d172d1151e9d8e9c69fe567132e2104",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

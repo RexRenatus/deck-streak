@@ -407,6 +407,17 @@
       "retention": {"until": "account-deletion"},
       "export": true,
       "erase": "delete"
+    },
+    {
+      "id": "writing-log",
+      "data": "each study day the owner confirmed writing in a writing course: the course code, the study day, and when it was confirmed",
+      "source": "learner-input",
+      "stores": ["writing_log.*"],
+      "purpose": "earning the writing XP and counting the writing streaks",
+      "lawful_basis": "contract",
+      "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "delete"
     }
   ],
   "sql": ["migrations/*.sql"],
