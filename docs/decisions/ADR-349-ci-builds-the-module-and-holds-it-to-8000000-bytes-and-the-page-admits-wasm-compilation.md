@@ -49,10 +49,11 @@ admits the module.
 
 Chosen options: the first under each heading above.
 
-- **The job.** `web-engine` runs on `ubuntu-latest`: it adds the `wasm32-unknown-unknown` target,
-  installs `protoc`, `wasm-bindgen-cli` at the crate's exact version and `wasm-opt` by checksum,
-  runs `scripts/web-engine-build.sh`, then `scripts/web-engine-size.py`, then the browser tests
-  (`pnpm test:engine`) in Chromium and WebKit. The `ci` aggregate needs it.
+- **The job.** `web-engine` runs on `ubuntu-24.04`, as every job of `ci.yml` does: it adds the
+  `wasm32-unknown-unknown` target, installs `protoc`, `wasm-bindgen-cli` at the crate's exact
+  version and `wasm-opt` by checksum, runs `scripts/web-engine-build.sh`, then
+  `scripts/web-engine-size.py`, then the browser tests (`pnpm test:engine`) in Chromium and
+  WebKit. The `ci` aggregate needs it.
 - **The build.** `cargo build --release --target wasm32-unknown-unknown -p deck-streak-web-engine`,
   then `wasm-bindgen --target web`, then `wasm-opt -Oz` with the post-MVP features the module uses.
   The two files are `deck_streak_web_engine_bg.wasm` and `deck_streak_web_engine.js`.

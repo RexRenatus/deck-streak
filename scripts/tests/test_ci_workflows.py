@@ -5,7 +5,8 @@ engine's slow tests in a job of their own, a cache is saved only by a push to de
 job that compiles Rust installs the protoc Anki's engine needs (SPEC-038). No workflow reads a
 secret but the default token, or checks out or fetches another repository (SPEC-034 A9 to A12), and
 a `.yaml` workflow is held to the hardening rules as a `.yml` one is, the hardening tests reading
-keys the way the checker does (A13)."""
+keys the way the checker does (A13). The web engine's job builds the module, holds it to its budget
+and runs the browser tests over it, and the aggregate needs it (SPEC-338 A16)."""
 
 import ast
 import builtins
@@ -20,6 +21,7 @@ import subprocess
 import sys
 import tempfile
 import textwrap
+import tomllib
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -1791,8 +1793,10 @@ class TheGateRunsInParallelJobs(unittest.TestCase):
             "mutation-verdict",
             "mutation-web",
         ]
+        # SPEC-338 adds the web engine's job, which builds the module and holds it to its budget.
         self.assertEqual(
-            sorted(needs), sorted([*OWNER_LAYOUT, *mutation, "workflow-lint", "base-is-dev"])
+            sorted(needs),
+            sorted([*OWNER_LAYOUT, *mutation, "web-engine", "workflow-lint", "base-is-dev"]),
         )
 
     def test_every_stage_runs_in_exactly_one_ci_job(self):
@@ -2242,6 +2246,248 @@ class TheEngineSetRunsInSlices(unittest.TestCase):
                 "[${{ matrix.slice }}/${{ strategy.job-total }}]",
             ],
         )
+
+
+# ------------------------------------------------- the web engine job (SPEC-338 A16, R8, R9)
+
+# The job that builds the web engine's module, holds it to ADR-336's budget and runs the browser
+# tests over it (ADR-349).
+WEB_ENGINE_JOB = "web-engine"
+# Its three steps, each found by the command its script runs, in the order the job must run them:
+# the build, the size gate over the two files the build wrote, then the browser tests over the
+# module the gate measured.
+WEB_ENGINE_ORDER = (
+    ("the build", "bash scripts/web-engine-build.sh"),
+    ("the size gate", "python3 scripts/web-engine-size.py"),
+    ("the browser tests", "test:engine"),
+)
+# The job's timeout: a cold wasm32 release build of the engine, the browsers' install and the
+# browser tests, with room for a slow run, and a hung browser ended within the hour.
+WEB_ENGINE_TIMEOUT_MINUTES = range(20, 61)
+# The release archives the job downloads: wasm-bindgen's CLI, whose version is in its URL twice,
+# and binaryen's, which carries wasm-opt.
+BINDGEN_RELEASE = re.compile(
+    r"/wasm-bindgen/releases/download/([^/\s]+)/wasm-bindgen-\1-x86_64-unknown-linux-musl\.tar\.gz"
+)
+BINARYEN_RELEASE = re.compile(r"/binaryen/releases/download/[^/\s]+/binaryen-[^/\s]+\.tar\.gz")
+
+
+def bindgen_version():
+    """The wasm-bindgen version the root manifest pins exactly (`=X.Y.Z`). The CLI that writes the
+    bindings must be that version, or its bindings do not match the module (ADR-349), so the
+    manifest is the oracle, not the workflow."""
+    manifest = tomllib.loads((REPO / "Cargo.toml").read_text(encoding="utf-8"))
+    pin = manifest["workspace"]["dependencies"]["wasm-bindgen"]
+    pin = pin if isinstance(pin, str) else str(pin.get("version", ""))
+    if not re.fullmatch(r"=\d+\.\d+\.\d+", pin):
+        raise AssertionError(f"the root manifest pins wasm-bindgen as {pin!r}, not exactly")
+    return pin[1:]
+
+
+def sha256_checked(step, variable):
+    """Whether a step checks a download against the full digest in its own `variable`: the digest
+    is 64 hex characters, and a line of its script hands it to `sha256sum -c -`."""
+    digest = str((step.get("env") or {}).get(variable, ""))
+    check = rf'echo "\${variable}  \S+" \| sha256sum -c -'
+    return bool(re.fullmatch(r"[0-9a-f]{64}", digest)) and any(
+        re.fullmatch(check, line) for line in lines_of(step.get("run"))
+    )
+
+
+def web_engine_job_problems(workflow):
+    """What a workflow gets wrong about the web engine's job (SPEC-338 R8, ADR-349): no such job,
+    one that waits on another or can be skipped, a ci that does not need it, the build, the size
+    gate and the browser tests missing or out of order, no wasm32 target added before the build, a
+    wasm-bindgen that is not the crate's exact version or a download whose digest is not checked, a
+    `RUSTFLAGS` or a `.cargo/config` anywhere in it (the build's settings are on its script's
+    command line only, ADR-348), incremental builds, or a timeout outside its band."""
+    jobs = workflow.get("jobs") or {}
+    job = jobs.get(WEB_ENGINE_JOB)
+    if job is None:
+        return ["there is no web-engine job"]
+    problems = []
+    if job.get("needs") is not None:
+        problems.append("the web-engine job waits on another job")
+    if "if" in job:
+        problems.append("the web-engine job can be skipped, and a skipped need fails ci")
+    if WEB_ENGINE_JOB not in ((jobs.get("ci") or {}).get("needs") or []):
+        problems.append(
+            "ci does not need the web-engine job, so the module's budget is not required"
+        )
+    steps = job.get("steps") or []
+    runs = [str(step.get("run", "")) for step in steps]
+    found = sorted(
+        (at, name)
+        for name, command in WEB_ENGINE_ORDER
+        for at, run in enumerate(runs)
+        if command in run
+    )
+    ran = [name for _, name in found]
+    wanted = [name for name, _ in WEB_ENGINE_ORDER]
+    missing = [name for name in wanted if name not in ran]
+    problems += [f"the web-engine job runs no {name}" for name in missing]
+    if not missing and ran != wanted:
+        problems.append(
+            f"the web-engine job runs {', '.join(ran)}, in that order, not {', '.join(wanted)}"
+        )
+    build = next((at for at, name in found if name == "the build"), len(steps))
+    if not any("rustup target add wasm32-unknown-unknown" in lines_of(run) for run in runs[:build]):
+        problems.append("the web-engine job adds no wasm32-unknown-unknown target before its build")
+    version = bindgen_version()
+    bindgen = [
+        (s, m.group(1)) for s in steps for m in BINDGEN_RELEASE.finditer(str(s.get("run", "")))
+    ]
+    if not bindgen:
+        problems.append("the web-engine job installs no wasm-bindgen release")
+    for step, installed in bindgen:
+        if installed != version:
+            problems.append(
+                f"the web-engine job installs wasm-bindgen {installed}, not the crate's {version}"
+            )
+        if not sha256_checked(step, "WASM_BINDGEN_SHA256"):
+            problems.append("the web-engine job does not check wasm-bindgen's sha256")
+    binaryen = [s for s in steps if BINARYEN_RELEASE.search(str(s.get("run", "")))]
+    if not binaryen:
+        problems.append("the web-engine job installs no binaryen release")
+    if not all(sha256_checked(step, "BINARYEN_SHA256") for step in binaryen):
+        problems.append("the web-engine job does not check binaryen's sha256")
+    held = json.dumps([workflow.get("env"), job])
+    if "RUSTFLAGS" in held or ".cargo/config" in held:
+        problems.append(
+            "the web-engine job sets RUSTFLAGS or writes a .cargo/config, where the build takes "
+            "its settings on its script's command line only"
+        )
+    if str((job.get("env") or {}).get("CARGO_INCREMENTAL")) != "0":
+        problems.append("the web-engine job builds incrementally")
+    minutes = str(job.get("timeout-minutes") or "")
+    if not minutes.isdigit() or int(minutes) not in WEB_ENGINE_TIMEOUT_MINUTES:
+        band = f"{WEB_ENGINE_TIMEOUT_MINUTES.start} to {WEB_ENGINE_TIMEOUT_MINUTES.stop - 1}"
+        problems.append(f"the web-engine job's timeout is {minutes or 'unset'}, not {band} minutes")
+    return problems
+
+
+def planted_job(text, job_id, *changes):
+    """A workflow read from `text` with each (old, new) applied in turn inside one job's block. Each
+    `old` must occur exactly once in the block when its turn comes, so a plant that changes nothing,
+    or changes a line of another job, fails by name instead of passing."""
+    block = re.search(rf"(?ms)^  {re.escape(job_id)}:\n.*?(?=^  [a-z-]+:\n|\Z)", text)
+    if block is None:
+        raise AssertionError(f"the workflow has no {job_id} job to plant in")
+    planted = block.group(0)
+    for old, new in changes:
+        if planted.count(old) != 1:
+            raise AssertionError(f"the {job_id} job holds {old!r} {planted.count(old)} times")
+        planted = planted.replace(old, new)
+    return read_workflow(text[: block.start()] + planted + text[block.end() :])
+
+
+class TheWebEngineIsHeldToItsBudget(unittest.TestCase):
+    def test_the_web_engine_job_builds_the_module_and_holds_it_to_its_budget(self):
+        text = workflow_file_text(WORKFLOWS / "ci.yml")
+        workflow = read_workflow(text)
+        job = workflow["jobs"].get(WEB_ENGINE_JOB) or {}
+        examined("web-engine job steps", job.get("steps") or [])
+        self.assertEqual(web_engine_job_problems(workflow), [])
+        # Each planted copy of the real job breaks one rule, and the judge refuses it by name.
+        version = bindgen_version()
+        size, browsers = "python3 scripts/web-engine-size.py", "pnpm --dir web/app test:engine"
+        target = "rustup target add wasm32-unknown-unknown\n"
+        incremental = 'CARGO_INCREMENTAL: "0"\n'
+        flags = (
+            "the web-engine job sets RUSTFLAGS or writes a .cargo/config, where the build takes "
+            "its settings on its script's command line only"
+        )
+        plants = {
+            "no web-engine job": (
+                "web-engine",
+                [("  web-engine:\n", "  web-engine-gone:\n")],
+                ["there is no web-engine job"],
+            ),
+            "a job that waits on another": (
+                "web-engine",
+                [("  web-engine:\n", "  web-engine:\n    needs: [rust]\n")],
+                ["the web-engine job waits on another job"],
+            ),
+            "a job that can be skipped": (
+                "web-engine",
+                [
+                    (
+                        "  web-engine:\n",
+                        "  web-engine:\n    if: ${{ github.event_name == 'push' }}\n",
+                    )
+                ],
+                ["the web-engine job can be skipped, and a skipped need fails ci"],
+            ),
+            "a ci that does not need it": (
+                "ci",
+                [(", web-engine,", ",")],
+                ["ci does not need the web-engine job, so the module's budget is not required"],
+            ),
+            "the size gate after the browser tests": (
+                "web-engine",
+                [(size, "SWAPPED"), (browsers, size), ("SWAPPED", browsers)],
+                [
+                    "the web-engine job runs the build, the browser tests, the size gate, in that "
+                    "order, not the build, the size gate, the browser tests"
+                ],
+            ),
+            "no size gate": (
+                "web-engine",
+                [(size, "python3 -c pass")],
+                ["the web-engine job runs no size gate"],
+            ),
+            "no wasm32 target": (
+                "web-engine",
+                [(target, "rustup target list --installed\n")],
+                ["the web-engine job adds no wasm32-unknown-unknown target before its build"],
+            ),
+            "another wasm-bindgen": (
+                "web-engine",
+                [
+                    (
+                        f"download/{version}/wasm-bindgen-{version}-",
+                        "download/0.0.1/wasm-bindgen-0.0.1-",
+                    )
+                ],
+                [f"the web-engine job installs wasm-bindgen 0.0.1, not the crate's {version}"],
+            ),
+            "an unchecked wasm-bindgen": (
+                "web-engine",
+                [('echo "$WASM_BINDGEN_SHA256  /tmp/wasm-bindgen.tgz" | sha256sum -c -', "true")],
+                ["the web-engine job does not check wasm-bindgen's sha256"],
+            ),
+            "an unchecked binaryen": (
+                "web-engine",
+                [('echo "$BINARYEN_SHA256  /tmp/binaryen.tgz" | sha256sum -c -', "true")],
+                ["the web-engine job does not check binaryen's sha256"],
+            ),
+            "RUSTFLAGS in the job's env": (
+                "web-engine",
+                [(incremental, incremental + "      RUSTFLAGS: -Ctarget-feature=+simd128\n")],
+                [flags],
+            ),
+            "a .cargo/config written": (
+                "web-engine",
+                [(target, target + "          mkdir -p .cargo && touch .cargo/config.toml\n")],
+                [flags],
+            ),
+            "an incremental build": (
+                "web-engine",
+                [(incremental, 'CARGO_INCREMENTAL: "1"\n')],
+                ["the web-engine job builds incrementally"],
+            ),
+            "a timeout outside the band": (
+                "web-engine",
+                [(f"timeout-minutes: {job.get('timeout-minutes')}\n", "timeout-minutes: 360\n")],
+                ["the web-engine job's timeout is 360, not 20 to 60 minutes"],
+            ),
+        }
+        for name, (job_id, changes, refusal) in examined(
+            "planted web-engine defect(s)", plants.items()
+        ):
+            with self.subTest(name):
+                planted = planted_job(text, job_id, *changes)
+                self.assertEqual(web_engine_job_problems(planted), refusal)
 
 
 # ------------------------------------------ no secret, no other repository (SPEC-034 A9 to A12)
