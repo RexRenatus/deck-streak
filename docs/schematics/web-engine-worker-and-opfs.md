@@ -43,6 +43,8 @@ flowchart LR
 
 - The page never holds the engine, the pool or a SQL handle. Its only path is `EngineClient`'s
   messages, and the Worker answers each with the request's id.
+- Both listeners check the sender's origin: a message with an empty origin, as the Worker's channel
+  delivers it, or the receiver's own origin is heard, and any other is dropped unanswered.
 - The persistence request runs on the page, because `navigator.storage.persist()` exists on the
   window only. Its answer is shown, never assumed.
 - The sync attaches inside the Worker, beside the engine, at session start and end. Its transport

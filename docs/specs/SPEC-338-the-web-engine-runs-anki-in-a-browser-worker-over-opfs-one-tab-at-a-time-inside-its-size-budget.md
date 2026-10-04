@@ -96,6 +96,10 @@ R11. Every SPEC-335 `(#626)` item, and each of the three the spike's own list ad
 R12. The synthetic collection `seed` writes has the shape of ADR-022's measured collection: each
     note carries two fields of 200 characters, and no two notes share a front, so a measurement
     at a realistic size stores and indexes what a real collection would.
+R13. Each message listener checks its sender's origin (ASVS 5.0.0 3.5.5): the Worker's on its
+    scope and `EngineClient`'s on its port admit a message whose origin is empty, as a dedicated
+    Worker's channel delivers it, or equal to the receiver's own origin, and ignore any other, with
+    no reply and no request settled (ADR-348).
 
 ## 3. Acceptance criteria
 
@@ -120,6 +124,8 @@ R12. The synthetic collection `seed` writes has the shape of ADR-022's measured 
 | A16 | CI's `web-engine` job builds the module, runs the size gate and the browser tests, and the `ci` aggregate needs it | `python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_the_web_engine_job_builds_the_module_and_holds_it_to_its_budget` |
 | A18 | The session answers `memory` with the module's linear memory in bytes, its pages times 65536, once the collection is open, and `not-open` before | `pnpm exec vitest run web/app/src/lib/engine/session.test.ts -t "the session reports the module's memory in bytes"` |
 | A19 | Each synthetic note carries two fields of 200 characters, and no two notes share a front | `cargo test -p deck-streak-web-engine --test synthetic -- --exact each_synthetic_note_carries_two_fields_of_two_hundred_characters` |
+| A20 | The Worker ignores a request from another origin, unanswered, and answers one with an empty or its own origin | `pnpm exec vitest run web/app/src/lib/engine/worker.test.ts -t "the worker ignores a message from another origin"` |
+| A21 | The client settles no request on a reply from another origin, and settles it on one with an empty or its own origin | `pnpm exec vitest run web/app/src/lib/engine/client.test.ts -t "the client ignores a reply from another origin"` |
 
 ```acceptance
 A1: cargo test -p deck-streak-web-engine --test study -- --exact a_rating_on_the_wire_picks_its_answer_and_its_next_state
@@ -141,6 +147,8 @@ A15: python3 -m unittest discover -s scripts/tests -p test_engine_pin.py -k test
 A16: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_the_web_engine_job_builds_the_module_and_holds_it_to_its_budget
 A18: pnpm exec vitest run web/app/src/lib/engine/session.test.ts -t "the session reports the module's memory in bytes"
 A19: cargo test -p deck-streak-web-engine --test synthetic -- --exact each_synthetic_note_carries_two_fields_of_two_hundred_characters
+A20: pnpm exec vitest run web/app/src/lib/engine/worker.test.ts -t "the worker ignores a message from another origin"
+A21: pnpm exec vitest run web/app/src/lib/engine/client.test.ts -t "the client ignores a reply from another origin"
 ```
 
 The browser criteria (A9, A10, A11) name their Playwright tests in the table, and their fence lines

@@ -65,6 +65,12 @@ before any code does:
 - Export only the named calls: rejected because the linker would drop the rest of the engine, and the gate would measure a fraction of what the study screens will ship (ADR-346's reason).
 - wasm-pack over `wasm-bindgen`: rejected because it adds a tool that wraps the same CLI, and the gate pins `wasm-bindgen` and `wasm-opt` directly.
 
+### Who each message listener hears
+
+- Each listener, the Worker's on its scope and the client's on its port, admits a message whose origin is empty or equal to its own origin, and ignores any other with no reply: chosen because ASVS 5.0.0 3.5.5 asks every message receiver to check its sender, a dedicated Worker's channel delivers its messages with an empty origin, so the page and its Worker always pass, and the check is one comparison in each listener.
+- Rely on the channel alone: a dedicated Worker's scope hears only the page that started it, and the client's port is that Worker, so no other sender reaches either. Rejected as the only control: it holds today, but a per-listener origin rule read both listeners as checking nothing, and a later change that handed the scope or the port to another sender would carry no check with it. It is recorded here as the reason a stricter check is not needed.
+- Admit only the empty origin: rejected because it would refuse every message in a browser that labelled a Worker's messages with the page's origin, and the receiver's own origin is never a foreign sender.
+
 ### How the page reads the Worker's peak memory
 
 - An export of the module's linear memory in pages (`memory_pages`, from `core::arch::wasm32::memory_size`), answered by a protocol `memory` operation in bytes: chosen because the module's own export is the reading, the loader keeps returning the bindings exactly as `wasm-bindgen` writes them, and linear memory never shrinks, so a reading after each step is the high-water so far.
@@ -125,6 +131,9 @@ Chosen options: the first under each heading above.
 - **The Worker.** A dedicated module Worker owns the module. It takes the Web Lock first, then
   installs the SyncAccessHandle pool in OPFS directory `deck-streak`, then loads the module and opens
   `/deck-streak/collection.anki2`. The page asks for persistent storage and shows the answer.
+- **The message boundary.** The Worker's listener and the client's each admit a message whose
+  origin is empty or their own, and ignore any other: the Worker answers nothing and the client
+  settles nothing (SPEC-338 R13).
 - **A context that refuses OPFS** answers `storage-refused` and loads no engine.
 - **The peak memory** is the module's linear memory, read by the protocol's `memory` operation
   after each step; the Worker's JavaScript heap is not in it.
@@ -147,8 +156,9 @@ Chosen options: the first under each heading above.
 
 ### Confirmation
 
-SPEC-338's A1, A2, A8 to A11, A14 and A15, the browser tests, and its section 7: the fork's commits
-and the `[patch]` rev, the native and wasm32 checks at the tag, the size, and each measured item.
+SPEC-338's A1, A2, A8 to A11, A14, A15, A20 and A21, the browser tests, and its section 7: the
+fork's commits and the `[patch]` rev, the native and wasm32 checks at the tag, the size, and each
+measured item.
 
 ## What would make this wrong
 
