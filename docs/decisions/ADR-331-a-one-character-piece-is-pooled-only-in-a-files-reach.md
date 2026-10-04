@@ -139,9 +139,11 @@ file sets.
 - SPEC A1 to A5: the lone-character population, the joins, the disclosed class, the real tree, and
   SPEC-324's population.
 - The band's seven new rows, and S32411 and S32409 re-proved against their new killer.
-- A Lean entry, `TableCensusReach`: on every tree the reader's refusals are within dev's, and a file
-  whose pieces are all of one character, which includes no file and is included by none, and whose
-  named items are its own, is never refused. Its witness is dev's reader refusing such a file.
+- A Lean entry, `TableCensusReach`: on every tree the reader's refusals are within dev's, and a lone
+  file is never refused. A lone file's pieces are all of one character; it includes no file and no
+  file includes it; it names no other file's item and no other file names its items; its own pieces
+  do not spell the name; and it neither writes the name nor fails closed. Its witness is dev's
+  reader refusing such a file.
 
 ## What would make this wrong
 

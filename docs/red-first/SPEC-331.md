@@ -32,3 +32,15 @@ after S32409's mutant (the pool not folded) survived its SPEC-324 killer at this
 folds each reach's own pieces. Measured at 852a0656 by swapping the reader file: A2 passes with
 dev's reader from `cff914e3` and with this one, so it stays not red; with S32409's mutant installed
 it fails at `P14 case variant across crates`, with both files expected and none refused.
+
+## The weakening table
+
+Across `git diff cff914e3...HEAD`: no test is deleted, renamed or skipped, no planted case is
+removed, and no filter, exclusion, skip list, sample or bound is added on the test side. The
+entries are the reader's disclosed class and the two killer moves.
+
+| entry | commit | ruling |
+|---|---|---|
+| `table_census.rs` R3: a one-character piece leaves the workspace-wide pool and is pooled only in the reach of a file that holds, includes or names it; a one-character join carried through a function's return value or argument (B1, B2, B8) is no longer refused, disclosed by A3 and tracked under #585 | 38d14d2b | ruling 155 + ruling 158 |
+| S32411 AMENDMENT: its killer moves from `ledger_census::a_reserved_name_joined_from_literals_is_refused_in_every_spelling` to `xp_census::the_joins_the_census_names_stay_refused`, its anchor unchanged | a260b786 | ruling 155 + ruling 158 |
+| S32409 AMENDMENT: its killer moves from `ledger_census::a_reserved_name_joined_from_literals_is_refused_in_every_spelling` to `xp_census::the_joins_the_census_names_stay_refused` (A2, which gained P14 at 852a0656), its anchor unchanged | 4be9d764 | none yet: asked of the seat before any push |

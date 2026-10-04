@@ -129,7 +129,7 @@ it pins what dev already refuses, and the red-first record says so (`not red`).
 | `crates/progression/tests/ledger_census.rs` | `deck-streak-progression` | A1 |
 | `crates/progression/tests/xp_census.rs` | `deck-streak-progression` | A1, A2, A3 |
 | `crates/economy/tests/wallet_census.rs` | `deck-streak-economy` | A1 |
-| `scripts/mutation-rows.d/S32400-S32499.json` | scripts | S32411's killer re-pointed to A2 (an amendment row in the weakening table) |
+| `scripts/mutation-rows.d/S32400-S32499.json` | scripts | the killers of S32411 and S32409 re-pointed to A2 (amendment rows in the weakening table) |
 | `scripts/mutation-rows.d/S33100-S33199.json` | scripts | added: the new rows |
 | `docs/specs/SPEC-331-a-one-character-piece-reaches-only-the-files-that-hold-include-or-name-it.md` | docs | added |
 | `docs/decisions/ADR-331-a-one-character-piece-is-pooled-only-in-a-files-reach.md` | docs | added |
