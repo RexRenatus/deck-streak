@@ -148,3 +148,11 @@ holds `--locked`. The rows of band `S344` prove each criterion fails on its muta
 
 SPEC-344; ADR-335 (Builds), ADR-340, ADR-345 (D1, D4); SPEC-190 for the concurrency census;
 SPEC-290 R8 for the aggregate's skips; SPEC-334 R20, rows 1.2 and 1.5.
+
+## Amendment
+
+The callers use the self-repository form, `$/.github/workflows/xcframework.yml`, and the local-call
+admission of the pin census reads that form only. Chosen against keeping the `./` form with a
+linter ignore, which is a weakening of the gate, and against pinning the linter's version, which
+is an environment pin and leaves the finding in place. The `$/` form is not subject to runtime
+file-system state and is read as a form of pinning, so D1 to D6 stand unchanged.

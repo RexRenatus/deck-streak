@@ -24,3 +24,9 @@ A6: not red: the callee resolves only the locked graph at the base, a guard that
 - The first run also read the file-read census red in `WorkflowFilesAreReadAsBytes` (its census
   test and three planted-site controls). That is not a criterion's red, and its cause is not
   settled here; the completing head's run records it by name.
+
+Correction (fix round, ruling 280): the callers' call is now spelled in the self-repository form,
+`$/.github/workflows/xcframework.yml`, and the pin census's planted controls are run without
+patching the module: each plant is read through the case's own file list. The `./` spellings quoted
+in the red records above are the history of the red runs and stay as written. This is not a new
+criterion.

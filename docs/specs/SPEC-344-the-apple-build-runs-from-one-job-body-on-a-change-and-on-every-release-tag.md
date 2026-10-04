@@ -274,3 +274,13 @@ Band `S34400` to `S34499`, `scripts/mutation-rows.d/S34400-S34499.json`, table `
 SPEC-334 (R20; rows 1.2 and 1.5), ADR-335, ADR-340, ADR-345 (D4), ADR-058, ADR-338, SPEC-336,
 SPEC-337, SPEC-339 (R12), SPEC-340, SPEC-190 (the concurrency census), SPEC-034 (the hardening
 census), `RELEASING.md` section 3.
+
+## Amendment
+
+The two callers spell their call in GitHub's dedicated self-repository form,
+`$/.github/workflows/xcframework.yml`, and `LOCAL_CALL` admits that form and no longer the
+workspace-relative `./` one. The linter's self-repository audit refuses the `./` form because it
+depends on the runner's file-system state, and the `$/` form does not and is read as a pin. Every
+requirement above that names the call, and every planted control of the pin census, reads the new
+spelling; what each asserts is unchanged. Chosen against keeping `./` with a linter ignore, which
+is a weakening, and against pinning the linter, which is an environment pin.
