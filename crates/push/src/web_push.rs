@@ -17,11 +17,15 @@ use web_push_native::Auth;
 
 use crate::client::{Answer, Client, Versions};
 use crate::jwt::Signer;
-use crate::{BuildError, Notification, Origin, PushServices, Sent, Unreached};
+use crate::{BuildError, Notification, Origin, PushServices, Refusal, Sent, Unreached};
 
 /// How long a VAPID token is valid for: RFC 8292 allows at most 24 hours, and 12 leaves a push
 /// service's clock room to differ (R5).
 const VAPID_LIFETIME: Duration = Duration::from_mins(12 * 60);
+
+/// The most plaintext one RFC 8291 record carries in a 4096-byte message: 4096 less the 86-byte
+/// header, the 16-byte tag and the one-byte padding delimiter (R5).
+const PLAINTEXT_MAX: usize = 3993;
 
 /// What a web push sender is built from. The key is the VAPID signing key's PKCS#8 PEM text, which
 /// production reads through the kernel's credential loader (#640); the contact and the list are
@@ -139,6 +143,9 @@ impl WebPushSender {
         let plaintext = json!({"title": notification.title(), "body": notification.body()})
             .to_string()
             .into_bytes();
+        if plaintext.len() > PLAINTEXT_MAX {
+            return Sent::Rejected(Refusal::TooLarge);
+        }
         let Ok(body) = web_push_native::encrypt(plaintext, &subscription.key, &subscription.auth)
         else {
             return Sent::Failed(Unreached::Request);
