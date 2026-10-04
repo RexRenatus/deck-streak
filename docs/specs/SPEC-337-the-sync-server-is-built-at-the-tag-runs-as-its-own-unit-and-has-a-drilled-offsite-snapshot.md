@@ -249,3 +249,10 @@ database the server's way: it is refused at once, and once the holder has ended 
 copies the database, reading through a write-ahead log a server ended without a clean close
 leaves. R5 is restated for the window, A7 and A8 joined section 3, and the snapshot's files joined
 section 4.
+
+SPEC-340 replaces three requirements of this part, each by ADR-351 and ADR-347's amendment D13: R2's
+"runs the server as DeckStreak's user" (the sync family runs as `deck-streak-sync`, SPEC-340 R2);
+R5's "After the restart the backup checks each database ... and keeps three" (the archive runs in
+its own unit, SPEC-340 R3, and is sealed before its copy, SPEC-340 R12); and R5's drill of the
+newest archive (the sync drill runs in its own unit, SPEC-340 R4). The bucket's retention, which
+R5 left to the owner, is `P30D` (SPEC-340 R11).
