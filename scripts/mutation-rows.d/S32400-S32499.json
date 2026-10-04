@@ -198,7 +198,7 @@
         "        for source in rust_files(&member.join(\"src\")) {",
         "        reader.pool.clear();\n        for source in rust_files(&member.join(\"src\")) {",
         "progression",
-        "ledger_census::a_reserved_name_joined_from_literals_is_refused_in_every_spelling",
+        "xp_census::the_joins_the_census_names_stay_refused",
         "the pool holds every crate's pieces at once; a pool reset per crate loses the crate form, whose first piece is in another crate"
       ],
       [
