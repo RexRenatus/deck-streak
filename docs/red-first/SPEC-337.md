@@ -91,9 +91,10 @@ and the MCP server 15% each, the API unchanged at 75%. The test module that pins
 was changed alone (79e1ace1), with every unit untouched. At that commit `test_deploy_templates.py`
 reads `FAILED (failures=2)`, each by assertion: A3, and the role test that holds the bot's caps
 (`AssertionError: '25%' != '20%'`). The five units, the share's records and the runbook's hold
-followed (7e3cf005), and the module reads `Ran 28 tests ... OK` there.
+followed (7e3cf005), and the module reads `Ran 28 tests ... OK` there. A3's fence above holds its
+first red, because the probe records one red per criterion; the re-split's red and green:
 
-```red-first
+```text
 A3: red at 79e1ace1: AssertionError: '50%' != '75%'
 A3: green at 7e3cf005
 ```
