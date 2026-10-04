@@ -211,6 +211,11 @@ fn disagreeing_checksums_and_a_missing_web_check_are_refused() {
         report::render(&native, &wasm(10_000.0), "maybe"),
         refused(&["the web-target check reads \"maybe\", not pass or fail crates=<names>"])
     );
+    assert_eq!(
+        report::render(&native, &wasm(10_000.0), "fail crates="),
+        refused(&["the web-target check reads \"fail crates=\", not pass or fail crates=<names>"]),
+        "a failing check that names no crate is refused, never recorded as a failure"
+    );
     let failing = report::render(&native, &wasm(10_000.0), "fail crates=getrandom,ring")
         .expect("a failing web-target check that names its crates is recorded, not refused");
     assert!(
