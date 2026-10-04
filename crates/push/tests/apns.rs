@@ -10,11 +10,12 @@ use std::time::Duration;
 use axum::http::Version;
 use deck_streak_kernel::ManualClock;
 use deck_streak_push::{
-    ApnsSender, ApnsSettings, CollapseKey, Device, Environment, Notification, Origin, Sent,
+    ApnsSender, ApnsSettings, CollapseKey, Device, Environment, Notification, Origin, Refusal, Sent,
 };
 use serde_json::json;
+use tokio::sync::Notify;
 
-use support::fake_apns::FakeApns;
+use support::fake_apns::{FakeApns, refusal};
 use support::keys::{KEY_ID, TEAM_ID, TOPIC, TestKey, device_token};
 use support::{DEADLINE, Recorded, START, clock, verify_jwt};
 
@@ -162,4 +163,48 @@ async fn a3_the_provider_token_is_reused_inside_its_window_and_reminted_after() 
         .token(&received[2])
         .expect("the fake verifies the new token");
     assert_eq!(minted.claims["iat"], json!(START_SECOND + 45 * 60));
+}
+
+/// The minutes a test moves its clock by, as a duration.
+fn minutes(count: u64) -> Duration {
+    Duration::from_secs(count * 60)
+}
+
+/// APNs's answer to a provider token it no longer accepts.
+fn expired() -> support::Answer {
+    refusal(403, "ExpiredProviderToken")
+}
+
+#[tokio::test]
+async fn a4_an_expired_provider_token_is_reminted_once_and_resent() {
+    let rig = Rig::start().await;
+    assert_eq!(rig.deliver(&alert()).await, Sent::Delivered);
+    rig.clock.advance(minutes(20));
+
+    // The token minted at the start is 20 minutes old and refused: one resend with a new token.
+    // That resend is refused too, and held while its token grows 20 minutes old as well, so a
+    // second resend would be admitted by age alone: only the bound of one resend stops it.
+    let gate = Arc::new(Notify::new());
+    rig.development
+        .fake
+        .script([expired(), expired().held(&gate)]);
+    let controller = async {
+        rig.development.fake.arrived(3).await;
+        rig.clock.advance(minutes(20));
+        gate.notify_one();
+    };
+    let notification = alert();
+    let (sent, ()) = tokio::join!(rig.deliver(&notification), controller);
+
+    let received = rig.received();
+    assert_eq!(received.len(), 3, "the send and its one resend, after the prime");
+    assert_eq!(sent, Sent::Rejected(Refusal::ProviderToken));
+    let tokens: Vec<String> = received.iter().map(FakeApns::raw_token).collect();
+    assert_eq!(tokens[1], tokens[0], "the refused send carried the held token");
+    assert_ne!(tokens[2], tokens[1], "the resend carried a new token");
+    let reminted = rig
+        .development
+        .token(&received[2])
+        .expect("the fake verifies the new token");
+    assert_eq!(reminted.claims["iat"], json!(START_SECOND + 20 * 60));
 }
