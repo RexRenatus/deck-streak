@@ -87,6 +87,10 @@ rmcp = { version = "3.5.0", default-features = false, features = ["server", "mac
 # the `[patch]` entry below replaces the tag with a commit of the maintainer's fork (ADR-058). An
 # Anki upgrade is a deliberate delivery that re-runs ADR-022's measurement.
 anki = { git = "https://github.com/ankitects/anki.git", tag = "26.09.3", features = ["rustls"] }
+# ADR-348 (SPEC-338): the engine's protobuf messages, from the same tag and the same fork commit as
+# the engine, for the web engine's study calls on wasm32.
+anki_proto = { git = "https://github.com/ankitects/anki.git", tag = "26.09.3" }
+prost = "0.13.5"
 # SPEC-022 section 7: the zstd the engine already brings, for the census's tests to read the
 # engine's compressed request bodies.
 zstd = "0.13.3"
@@ -101,6 +105,14 @@ getrandom = "0.4.3"
 # client brings reqwest's rustls stack; the bot reaches reqwest only through frankenstein's own
 # re-export, for the one upload frankenstein reads from a file path (ADR-026, "Decided at delivery").
 frankenstein = { version = "0.52.1", default-features = false, features = ["client-reqwest"] }
+# ADR-348 (SPEC-338): the web engine's wasm32-only crates. wasm-bindgen is pinned exactly, because
+# its CLI must match the crate's version; sqlite-wasm-rs is the SQLite the engine's rusqlite links
+# on wasm32, and sqlite-wasm-vfs its OPFS SyncAccessHandle pool.
+wasm-bindgen = "=0.2.129"
+wasm-bindgen-futures = "0.4.79"
+js-sys = "0.3.106"
+sqlite-wasm-rs = "0.5.5"
+sqlite-wasm-vfs = "0.2.0"
 # ADR-040 (SPEC-040 A6): the compile-fail harness that proves an XP amount cannot be built from a
 # signed integer. A dev-dependency only; no production dependency of any context changes.
 trybuild = "1.0.121"
@@ -114,9 +126,12 @@ uniffi = { version = "=0.29.1", default-features = false }
 # ADR-058 (#233): the engine's upstream tag above, replaced by a commit of the maintainer's fork that
 # is that tag plus one fix, so the engine's protobuf build script stops rerunning on every cargo
 # command (#228). Pinned by `rev`, never by branch, and tagged on the fork. Cargo reads patches from
-# the root manifest only. The entry goes when an upstream release carries the fix.
+# the root manifest only. The entry goes when an upstream release carries the fix. ADR-348 (SPEC-338)
+# moved the rev to the fork's tag `deckstreak-pin-26.09.3-wasm32`: that fix plus one commit per
+# wasm32 patch, and `anki_proto` from the same commit, so the web engine and ingest share one engine.
 [patch."https://github.com/ankitects/anki.git"]
-anki = { git = "https://github.com/RexRenatus/anki.git", rev = "57382da085e6752738dc4bb617789be836a23300" }
+anki = { git = "https://github.com/RexRenatus/anki.git", rev = "c538de55a23e695234e794029fce0dafff2d36a9" }
+anki_proto = { git = "https://github.com/RexRenatus/anki.git", rev = "c538de55a23e695234e794029fce0dafff2d36a9" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

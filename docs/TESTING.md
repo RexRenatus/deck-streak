@@ -74,9 +74,15 @@ on GitHub-hosted runners, in five jobs that start together (ADR-055):
 | `web` | `web audit-web` |
 | `packs` | `packs` |
 | `hygiene` | `python scrub secrets` |
+| `web-engine` | none: `scripts/web-engine-build.sh`, `scripts/web-engine-size.py`, then `test:engine` |
 
 Every stage runs in exactly one job, and the aggregate `ci` check, which the rulesets require, needs
 all five with `workflow-lint` and `base-is-dev`.
+The `web-engine` job runs no `check.sh` stage, because the engine's build for `wasm32` needs a target,
+`wasm-bindgen` and `wasm-opt` that the local gate does not require (SPEC-338, ADR-349). It builds the
+module a browser loads with its bindings, holds the two to 8000000 bytes `gzip -9` with brotli
+printed beside it, and runs the browser tests over that module in Chromium and WebKit
+(`pnpm --dir web/app test:engine`). `ci` needs it too.
 The required `ci` is always the pull request's own run: a push to `dev` or `main` reports it as
 `ci (push)`. Each stage checks its own tools first, so a missing tool fails that stage by name
 wherever it runs.

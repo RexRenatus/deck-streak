@@ -1,12 +1,23 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import config from '../../svelte.config.js';
+import { PAGE_FRAME_SRC } from './card/policy.js';
 
 // SPEC-028 R1, R14, A13; ADR-007. SvelteKit writes the page's policy into a meta element at build
 // and adds a sha256 hash for each inline script it generates (kit.csp in hash mode), so the only
 // scripts that run are the app's own files, those hashed scripts and Telegram's. The directives a
 // meta element cannot carry (frame-ancestors) are the Caddy header's (SPEC-032).
 const TELEGRAM = 'https://telegram.org';
+// SPEC-338 R7, ADR-349: the web engine's Worker compiles WebAssembly, which this keyword admits and
+// `'unsafe-eval'` would admit with `eval` beside it.
+const WASM = 'wasm-unsafe-eval';
+// SPEC-028's policy, before SPEC-338: what the page admitted with no engine.
+const BEFORE: Record<string, readonly string[]> = {
+  'script-src': ['self', TELEGRAM],
+  'object-src': ['none'],
+  'base-uri': ['self'],
+  'connect-src': ['self']
+};
 const SHELL = readFileSync(new URL('../app.html', import.meta.url), 'utf8');
 
 /** The sources in `sources` that would let a script run without the page vouching for it. */
@@ -24,10 +35,11 @@ describe('the page policy', () => {
 
     expect(csp?.mode).toBe('hash');
     expect(csp?.directives).toEqual({
-      'script-src': ['self', TELEGRAM],
+      'script-src': ['self', TELEGRAM, WASM],
       'object-src': ['none'],
       'base-uri': ['self'],
-      'connect-src': ['self']
+      'connect-src': ['self'],
+      'frame-src': ['none']
     });
     // the page shell runs one script, Telegram's, by its URL: nothing is inlined into it
     const scripts = [...SHELL.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)].map(
@@ -46,6 +58,26 @@ describe('the page policy', () => {
     expect(unsafe(csp?.directives?.['script-src'] ?? [])).toEqual([]);
   });
 
+  it('the page policy admits WebAssembly compilation and nothing else new', () => {
+    const directives = (config.kit?.csp?.directives ?? {}) as Record<string, readonly string[]>;
+    const difference = (from: typeof BEFORE, to: typeof BEFORE) =>
+      Object.entries(from).flatMap(([directive, sources]) =>
+        sources
+          .filter((source) => !(to[directive] ?? []).includes(source))
+          .map((source) => `${directive} ${source}`)
+      );
+
+    // two sources are new, WebAssembly's keyword in script-src and the card frame's frame-src
+    // 'none' (SPEC-341 R13), and SPEC-028's policy is whole
+    expect(difference(directives, BEFORE)).toEqual([`script-src ${WASM}`, 'frame-src none']);
+    expect(difference(BEFORE, directives)).toEqual([]);
+    // and the keyword is not the general eval: the judgement admits it and refuses that
+    expect(unsafe([WASM, `'${WASM}'`, "'unsafe-eval'", 'unsafe-eval'])).toEqual([
+      "'unsafe-eval'",
+      'unsafe-eval'
+    ]);
+  });
+
   it('the page sends no referrer to another origin', () => {
     // A meta referrer policy governs only what loads after it, so it precedes Telegram's script.
     const policy = SHELL.indexOf('<meta name="referrer" content="same-origin" />');
@@ -53,5 +85,24 @@ describe('the page policy', () => {
 
     expect(policy).toBeGreaterThan(-1);
     expect(policy).toBeLessThan(telegram);
+  });
+
+  it('the page policy lets no frame navigate', () => {
+    // SPEC-341 R5, A2 (SEC01-F13). A frame's own navigation, one the card frame starts itself
+    // included, is checked against the embedding page's frame-src, so 'none' holds every frame to
+    // the srcdoc document it was given; the value is the card module's, which the card harness
+    // serves too.
+    const directives = config.kit?.csp?.directives;
+
+    expect(directives?.['frame-src']).toEqual(['none']);
+    expect(directives?.['frame-src']).toBe(PAGE_FRAME_SRC);
+    // and the card frame adds no other directive to the page policy
+    expect(Object.keys(directives ?? {}).sort()).toEqual([
+      'base-uri',
+      'connect-src',
+      'frame-src',
+      'object-src',
+      'script-src'
+    ]);
   });
 });
