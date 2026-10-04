@@ -5769,6 +5769,16 @@ DYNAMIC_IMPORTS = {
         ),
         ("test_mutation_rows_refusal", "outcome", "error.__cause__", 2),
     ),
+    **allowed(
+        "reads the ban filter through configparser, the way the ban service reads it; never a workflow",
+        ("test_sync_ban", "failregexes", "configparser.BasicInterpolation()", 1),
+        (
+            "test_sync_ban",
+            "failregexes",
+            "configparser.ConfigParser(interpolation=configparser.BasicInterpolation(), inline_comment_prefixes=';')",
+            1,
+        ),
+    ),
 }
 
 

@@ -178,7 +178,8 @@ PAGING_KEYS = {
         WAIVE_KEY,
     ),
     # `Also=` acts when the unit is enabled or disabled, never on a start or a failure
-    # (systemctl(1)); its one value is the sync server's snapshot window (ADR-347 D12).
+    # (systemctl(1)); its values are the sync family's other three units (SPEC-337 R5; SPEC-340
+    # R3, R4).
     "Install": ("Also", "WantedBy"),
     "Service": (
         "CPUQuota",
@@ -187,6 +188,9 @@ PAGING_KEYS = {
         "ExecStart",
         "Group",
         "IOSchedulingClass",
+        # The sync server's peers (SPEC-340 R8), each bounded to one value below.
+        "IPAddressAllow",
+        "IPAddressDeny",
         "KillSignal",
         "LoadCredential",
         "LockPersonality",
@@ -244,8 +248,16 @@ PAGING_VALUES = {
     ("Service", "ReadWritePaths"): ("/run/deck-streak-sync",),
     # The sync server drains on an interrupt alone (SPEC-337 R2), so its stop signal is that one.
     ("Service", "KillSignal"): ("SIGINT",),
-    # Enabling the sync server enables its snapshot window, and disabling it removes the window.
-    ("Install", "Also"): ("deck-streak-sync-snapshot.service",),
+    # The sync server reaches loopback peers alone (SPEC-340 R8; ADR-351 D6).
+    ("Service", "IPAddressAllow"): ("localhost",),
+    ("Service", "IPAddressDeny"): ("any",),
+    # Enabling the sync server enables its snapshot window, its archive and its sync drill, and
+    # disabling it removes all three (SPEC-340 R3, R4).
+    ("Install", "Also"): (
+        "deck-streak-sync-snapshot.service",
+        "deck-streak-sync-archive.service",
+        "deck-streak-sync-restore-drill.service",
+    ),
 }
 
 

@@ -7,16 +7,20 @@ KEEP copies. It exits non-zero on any failed step and leaves the copies that wer
 a copy is pruned only after a new one is in place. It copies the database and not the ingest's
 collection copy, which the day's sync downloads again (ADR-037), and not a credential.
 
-It also snapshots the sync server's store (SPEC-337 R5; ADR-347 D5, D12), in two parts:
+It also snapshots the sync server's store (SPEC-337 R5; ADR-347 D5, D12), in two parts, each run
+by a unit of the sync family's own (SPEC-340 R3; ADR-351 D1):
 
 - `--sync-window` is the copy, run by deck-streak-sync-snapshot.service while the server is
   stopped: each user's collection and media index by the online backup, refused at once when a
   running server holds either, and the media files, as one generation that is published by a rename
   only when whole. The unit starts the server again whether this exits 0 or 1.
-- The daily run, after the server is started again, checks the newest generation's databases with
-  `PRAGMA integrity_check`, writes a manifest of sha256 digests, renames the generation into an
-  archive, copies both offsite by the command and bucket the settings name (with arguments, no
-  shell) and keeps the newest KEEP archives.
+- `--sync-archive` is the archive, run by deck-streak-sync-archive.service after the server is
+  started again: it checks the newest generation's databases with `PRAGMA integrity_check`, writes
+  a manifest of sha256 digests, renames the generation into an archive, seals both to the owner's
+  offline key by the command the settings name (SPEC-340 R12; ADR-351 D2), copies only the sealed
+  files offsite by the command and bucket the settings name (each with arguments, no shell),
+  removes the sealed files and keeps the newest KEEP archives. The database's daily run archives
+  nothing.
 
 Standard library only, so the unit needs no interpreter of its own.
 """
@@ -57,6 +61,11 @@ MANIFEST_PARTIAL = ".manifest.tmp"
 # The settings that name the offsite copy (deploy/deck-streak.env.example).
 SNAPSHOT_COPY = "DECKSTREAK_SNAPSHOT_COPY"
 SNAPSHOT_BUCKET = "DECKSTREAK_SNAPSHOT_BUCKET"
+# The command that seals the archive and its manifest to the owner's offline public key before any
+# copy (SPEC-340 R12; ADR-351 D2), and the first line every file it writes begins with: the age
+# format's version line.
+SNAPSHOT_SEAL = "DECKSTREAK_SNAPSHOT_SEAL"
+SEAL_HEADER = b"age-encryption.org/v1\n"
 CHUNK = 1 << 20
 
 
@@ -224,9 +233,26 @@ def checked_manifest(generation, scratch):
     return lines
 
 
+def sealed_copy(seal, plain):
+    """`plain` sealed by the seal command into `plain.age`, run as `[*seal, "--output", sealed,
+    plain]` with no shell (SPEC-340 R12; ADR-351 D2): the sealed file, or None when the command
+    fails or the file it wrote does not begin with the format's header."""
+    sealed = Path(f"{plain}.age")
+    done = subprocess.run([*seal, "--output", str(sealed), str(plain)], check=False)
+    if done.returncode != 0:
+        print(f"backup: the seal of {plain.name} exited {done.returncode}", file=sys.stderr)
+        return None
+    with open(sealed, "rb") as handle:
+        if handle.read(len(SEAL_HEADER)) != SEAL_HEADER:
+            print(f"backup: the seal of {plain.name} wrote no age header", file=sys.stderr)
+            return None
+    return sealed
+
+
 def archive(snapshots, environ):
-    """The daily run's part of the snapshot, after the window: 0 when there is no generation or
-    the newest is checked, archived and copied offsite; 1 on any failed step."""
+    """The archive unit's run (`--sync-archive`), after the window: 0 when there is no generation
+    or the newest is checked, archived, sealed and copied offsite; 1 on any failed step. Only the
+    sealed files are copied, and they are removed whatever the copy does."""
     snapshots = Path(snapshots)
     if not snapshots.is_dir():
         return 0
@@ -240,9 +266,15 @@ def archive(snapshots, environ):
             f"backup: {SNAPSHOT_COPY} and {SNAPSHOT_BUCKET} name the offsite copy", file=sys.stderr
         )
         return 1
+    seal = shlex.split(environ.get(SNAPSHOT_SEAL, ""))
+    if not seal:
+        print(f"backup: {SNAPSHOT_SEAL} names the seal of the offsite copy", file=sys.stderr)
+        return 1
     newest = generations[-1]
     stamp = newest[len("gen-") : -len(".tar")]
     scratch = snapshots / CHECK_COPY
+    manifest = snapshots / f"sync-{stamp}.sha256"
+    tar = snapshots / f"sync-{stamp}.tar"
     try:
         lines = checked_manifest(snapshots / newest, scratch)
         if lines is None:
@@ -251,11 +283,12 @@ def archive(snapshots, environ):
         with open(partial, "w", encoding="utf-8") as handle:
             os.fchmod(handle.fileno(), 0o600)
             handle.writelines(lines)
-        manifest = snapshots / f"sync-{stamp}.sha256"
-        tar = snapshots / f"sync-{stamp}.tar"
         os.replace(partial, manifest)
         os.replace(snapshots / newest, tar)
-        done = subprocess.run([*command, str(tar), str(manifest), bucket], check=False)
+        sealed = [sealed_copy(seal, plain) for plain in (tar, manifest)]
+        if None in sealed:
+            return 1
+        done = subprocess.run([*command, *map(str, sealed), bucket], check=False)
         if done.returncode != 0:
             print(f"backup: the offsite copy exited {done.returncode}", file=sys.stderr)
             return 1
@@ -267,6 +300,8 @@ def archive(snapshots, environ):
         return 1
     finally:
         emptied(scratch)
+        for plain in (tar, manifest):
+            Path(f"{plain}.age").unlink(missing_ok=True)
 
 
 def main(argv=None, now=None):
@@ -277,18 +312,19 @@ def main(argv=None, now=None):
     parser.add_argument("--backups", default=str(Path(state) / "backups"))
     parser.add_argument("--keep", type=int, default=KEEP)
     parser.add_argument("--sync-window", action="store_true")
+    parser.add_argument("--sync-archive", action="store_true")
     parser.add_argument("--sync-base", default=states[1] if len(states) > 1 else SYNC_BASE)
     parser.add_argument("--snapshots", default=str(Path(state) / SNAPSHOTS))
     args = parser.parse_args(argv)
     now = now or datetime.now(timezone.utc)
     if args.sync_window:
         return window(args.sync_base, args.snapshots, now)
+    if args.sync_archive:
+        return archive(args.snapshots, os.environ)
     if args.keep < 1:
         print("backup: --keep must be at least 1", file=sys.stderr)
         return 1
-    copied = run(args.database, args.backups, args.keep, now)
-    archived = archive(args.snapshots, os.environ)
-    return max(copied, archived)
+    return run(args.database, args.backups, args.keep, now)
 
 
 if __name__ == "__main__":
