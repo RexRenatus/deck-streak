@@ -298,6 +298,15 @@ fn timestamp(answer: &Answer) -> Option<UtcMillis> {
         .map(UtcMillis::from_epoch_millis)
 }
 
+/// Whether a 400's reason says the device token is wrong, or not for this app's topic: the same
+/// request would be refused again, so it is never retried (R4).
+fn refuses_the_device(answer: &Answer) -> bool {
+    matches!(
+        reason(answer).as_deref(),
+        Some("BadDeviceToken" | "DeviceTokenNotForTopic")
+    )
+}
+
 /// Whether APNs refused the provider token as expired, which earns R3's one resend.
 fn expired(answer: &Answer) -> bool {
     answer.status.as_u16() == 403 && reason(answer).as_deref() == Some(EXPIRED_TOKEN)
@@ -310,6 +319,7 @@ fn read(answer: &Answer) -> Sent {
         410 => Sent::Gone {
             since: timestamp(answer),
         },
+        400 if refuses_the_device(answer) => Sent::Rejected(Refusal::Token),
         403 => Sent::Rejected(Refusal::ProviderToken),
         _ => Sent::Failed(Unreached::Unexpected),
     }
