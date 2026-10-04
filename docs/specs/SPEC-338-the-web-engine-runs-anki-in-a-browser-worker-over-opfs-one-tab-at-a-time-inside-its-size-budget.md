@@ -47,12 +47,13 @@
 
 R1. A workspace member `deck-streak-web-engine` (`crates/web-engine`) builds for
     `wasm32-unknown-unknown` in release as a `cdylib`, and natively as a crate whose only code is
-    its target-independent study rule (a wire rating to Anki's answer and to the next state it
-    selects, and the table of study calls `run_method` admits), with native tests. Its `wasm32`
-    build exports, through `wasm-bindgen`, the study calls the Worker makes (install the storage,
-    open, close, seed a synthetic collection into an empty one, the next card, answer, undo, and a
-    read-only snapshot of one card) and the backend's `run_method`, which refuses by name any
-    service and method outside the table, so no exempt write of ADR-337 is reachable from the page.
+    target-independent: its study rule (a wire rating to Anki's answer and to the next state it
+    selects, and the table of study calls `run_method` admits) and the synthetic notes' fields,
+    with native tests. Its `wasm32` build exports, through `wasm-bindgen`, the study calls the
+    Worker makes (install the storage, open, close, seed a synthetic collection into an empty one,
+    the next card, answer, undo, and a read-only snapshot of one card), the module's linear memory
+    in pages, and the backend's `run_method`, which refuses by name any service and method outside
+    the table, so no exempt write of ADR-337 is reachable from the page.
 R2. The engine comes from the fork's branch `wasm32-26.09.3` at its tag
     `deckstreak-pin-26.09.3-wasm32`: ADR-058's one commit plus one commit per `wasm32` patch, ten,
     each naming its patch, its reason and its removal condition (ADR-336, ADR-348). The root
@@ -63,7 +64,9 @@ R3. A dedicated module Worker owns the engine. The page reaches it only through 
     whose requests carry an id and whose every reply carries that id with a value or an error code.
     The Worker accepts only the protocol's operations, refuses a malformed request with
     `bad-request` before it reaches the engine, and loads the engine only after the tab lock and
-    the storage are held.
+    the storage are held. Its `memory` operation answers the module's linear memory in bytes
+    (pages of 65536 bytes); that memory never shrinks, so a reading taken after each step is the
+    Worker's high-water so far, which section 7's peak memory reads.
 R4. The collection lives in OPFS through the SyncAccessHandle pool VFS, one pool directory and one
     collection path per origin. The page requests persistent storage with
     `navigator.storage.persist()` and surfaces the answer as `persisted`, `not-persisted` or
@@ -90,6 +93,9 @@ R10. ADR-058 gains an appended note naming ADR-336, ADR-348 and the patch list; 
 R11. Every SPEC-335 `(#626)` item, and each of the three the spike's own list adds, is measured
     in section 7 or decided here, each with its method, and a measurement taken by an
     approximation says so.
+R12. The synthetic collection `seed` writes has the shape of ADR-022's measured collection: each
+    note carries two fields of 200 characters, and no two notes share a front, so a measurement
+    at a realistic size stores and indexes what a real collection would.
 
 ## 3. Acceptance criteria
 
@@ -112,6 +118,8 @@ R11. Every SPEC-335 `(#626)` item, and each of the three the spike's own list ad
 | A14 | The root manifest patches `anki` and `anki_proto` by `rev` to one commit of the fork, and every engine package in the lockfile comes from it | `python3 -m unittest discover -s scripts/tests -p test_engine_pin.py -k test_the_engine_is_patched_by_rev_to_a_commit_of_the_fork` |
 | A15 | ADR-058's appended note records the pinned commit, its difference from the upstream tag and each patch | `python3 -m unittest discover -s scripts/tests -p test_engine_pin.py -k test_adr_058_records_the_pinned_commit_and_what_it_saves` |
 | A16 | CI's `web-engine` job builds the module, runs the size gate and the browser tests, and the `ci` aggregate needs it | `python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_the_web_engine_job_builds_the_module_and_holds_it_to_its_budget` |
+| A18 | The session answers `memory` with the module's linear memory in bytes, its pages times 65536, once the collection is open, and `not-open` before | `pnpm exec vitest run web/app/src/lib/engine/session.test.ts -t "the session reports the module's memory in bytes"` |
+| A19 | Each synthetic note carries two fields of 200 characters, and no two notes share a front | `cargo test -p deck-streak-web-engine --test synthetic -- --exact each_synthetic_note_carries_two_fields_of_two_hundred_characters` |
 
 ```acceptance
 A1: cargo test -p deck-streak-web-engine --test study -- --exact a_rating_on_the_wire_picks_its_answer_and_its_next_state
@@ -131,6 +139,8 @@ A13: pnpm exec vitest run web/app/src/lib/engine/worker.test.ts -t "the worker s
 A14: python3 -m unittest discover -s scripts/tests -p test_engine_pin.py -k test_the_engine_is_patched_by_rev_to_a_commit_of_the_fork
 A15: python3 -m unittest discover -s scripts/tests -p test_engine_pin.py -k test_adr_058_records_the_pinned_commit_and_what_it_saves
 A16: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_the_web_engine_job_builds_the_module_and_holds_it_to_its_budget
+A18: pnpm exec vitest run web/app/src/lib/engine/session.test.ts -t "the session reports the module's memory in bytes"
+A19: cargo test -p deck-streak-web-engine --test synthetic -- --exact each_synthetic_note_carries_two_fields_of_two_hundred_characters
 ```
 
 The browser criteria (A9, A10, A11) name their Playwright tests in the table, and their fence lines
@@ -145,7 +155,9 @@ test only. CI's `web-engine` job runs the Playwright tests over the module it bu
 | `crates/web-engine/src/lib.rs` | `deck-streak-web-engine` | added: the crate root |
 | `crates/web-engine/src/study.rs` | `deck-streak-web-engine` | added: the study rule and the call table, both targets |
 | `crates/web-engine/src/wasm.rs` | `deck-streak-web-engine` | added: the `wasm-bindgen` exports, `wasm32` only |
+| `crates/web-engine/src/synthetic.rs` | `deck-streak-web-engine` | added: the synthetic notes' fields, both targets |
 | `crates/web-engine/tests/study.rs` | `deck-streak-web-engine` | added: A1, A2, A17 |
+| `crates/web-engine/tests/synthetic.rs` | `deck-streak-web-engine` | added: A19 |
 | `Cargo.toml` | workspace | the crate's dependencies, and the `[patch]` entry's `rev` and `anki_proto` |
 | `Cargo.lock` | workspace | changed by `cargo` only |
 | `deny.toml` | workspace | the licences of the crates the module adds, if the audit names one |
@@ -167,7 +179,7 @@ test only. CI's `web-engine` job runs the Playwright tests over the module it bu
 | `web/app/src/lib/engine/client.ts` | `miniapp` | added: `EngineClient` |
 | `web/app/src/lib/engine/client.test.ts` | `miniapp` | added: A7 |
 | `web/app/src/lib/engine/session.ts` | `miniapp` | added: the Worker's session: lock, storage, engine |
-| `web/app/src/lib/engine/session.test.ts` | `miniapp` | added: A8 to A11 |
+| `web/app/src/lib/engine/session.test.ts` | `miniapp` | added: A8 to A11, A18 |
 | `web/app/src/lib/engine/persistence.ts` | `miniapp` | added: the persistence request |
 | `web/app/src/lib/engine/persistence.test.ts` | `miniapp` | added: A12 |
 | `web/app/src/lib/engine/worker.ts` | `miniapp` | added: the Worker's entry |

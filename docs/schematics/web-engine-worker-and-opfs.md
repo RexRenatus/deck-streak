@@ -91,7 +91,7 @@ stateDiagram-v2
   idle --> busy: open, and the lock is held elsewhere
   idle --> refused: open, and OPFS is refused
   idle --> open: open, lock and pool held, collection opened
-  open --> open: seed, next, answer, undo, snapshot
+  open --> open: seed, next, answer, undo, snapshot, memory
   open --> closed: close
   closed --> open: open
   busy --> [*]
@@ -101,3 +101,5 @@ stateDiagram-v2
 - `busy` and `refused` are terminal for that Worker: each answers its error code and loads no
   engine. A request other than `open` before the session is open answers `not-open`, and a
   malformed request answers `bad-request` in every state.
+- `memory` reads the module's linear memory in bytes. It never shrinks, so the reading after a
+  step is the high-water so far; the measurements read it after each step (SPEC-338 R3).

@@ -65,6 +65,12 @@ before any code does:
 - Export only the named calls: rejected because the linker would drop the rest of the engine, and the gate would measure a fraction of what the study screens will ship (ADR-346's reason).
 - wasm-pack over `wasm-bindgen`: rejected because it adds a tool that wraps the same CLI, and the gate pins `wasm-bindgen` and `wasm-opt` directly.
 
+### How the page reads the Worker's peak memory
+
+- An export of the module's linear memory in pages (`memory_pages`, from `core::arch::wasm32::memory_size`), answered by a protocol `memory` operation in bytes: chosen because the module's own export is the reading, the loader keeps returning the bindings exactly as `wasm-bindgen` writes them, and linear memory never shrinks, so a reading after each step is the high-water so far.
+- Keep the object `wasm-bindgen`'s init resolves to, and read its `memory.buffer.byteLength`: rejected because the loader would then hand the session a wrapper in place of the bindings, and the reading would rest on what the generated init happens to resolve to, which its typed surface does not promise.
+- `performance.measureUserAgentSpecificMemory()`: rejected because it needs a cross-origin isolated page, which the Mini App's page is not, and one engine of the two the tests drive implements it.
+
 ### One collection per origin
 
 - A Web Lock, `deck-streak-collection`, requested with `ifAvailable` before the pool is installed: chosen because the browser grants it to one Worker per origin and answers a second at once, so a second tab refuses by name before it touches OPFS.
@@ -111,13 +117,17 @@ Chosen options: the first under each heading above.
   rule (`study.rs`): a wire rating 1 to 4 to Anki's answer and the next state it selects, and the
   table of study calls `run_method` admits, by service and method index. On wasm32, `wasm.rs`
   exports: install the storage, init, open, close, seed (into an empty collection only, for the
-  tests and measurements), the next card, answer, undo, a read-only snapshot of one card, and
-  `run_method`, which refuses any call outside the table by name. No exempt write of ADR-337 is in
+  tests and measurements; each note two fields of 200 characters, ADR-022's shape, from the
+  target-independent `synthetic.rs`), the next card, answer, undo, a read-only snapshot of one
+  card, the module's linear memory in pages, and `run_method`, which refuses any call outside the
+  table by name. No exempt write of ADR-337 is in
   the table; the engine core and its `OwnerGesture` own them (#623).
 - **The Worker.** A dedicated module Worker owns the module. It takes the Web Lock first, then
   installs the SyncAccessHandle pool in OPFS directory `deck-streak`, then loads the module and opens
   `/deck-streak/collection.anki2`. The page asks for persistent storage and shows the answer.
 - **A context that refuses OPFS** answers `storage-refused` and loads no engine.
+- **The peak memory** is the module's linear memory, read by the protocol's `memory` operation
+  after each step; the Worker's JavaScript heap is not in it.
 - **The Mini App's embedded context** takes the same path in a frame under another site, where the
   browser partitions OPFS and the lock by the top-level site. SPEC-338 section 7 measures it framed
   across sites, or records it NOT MEASURED with the issue it routes to.
