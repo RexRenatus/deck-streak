@@ -7,6 +7,7 @@ Both files are read as plain text, one `key = value` per line under its `[sectio
 service reads them. No test runs the ban service, and the rail installs both only on the owner's
 go."""
 
+import configparser
 import re
 import unittest
 
@@ -68,8 +69,14 @@ def sections(path):
 
 
 def failregexes():
-    """The filter's failure patterns, one per line of its `failregex`."""
-    return sections(FILTER).get("Definition", {}).get("failregex", "").splitlines()
+    """The filter's failure patterns, one per line of its `failregex`, read the way the ban
+    service reads a filter file: through ConfigParser's basic interpolation with `;` opening an
+    inline comment, so a literal `%` is written `%%` in the file and is one `%` here."""
+    parser = configparser.ConfigParser(
+        interpolation=configparser.BasicInterpolation(), inline_comment_prefixes=";"
+    )
+    parser.read(FILTER, encoding="utf-8")
+    return parser.get("Definition", "failregex", fallback="").splitlines()
 
 
 def captured(line):
@@ -91,6 +98,27 @@ class TheSyncBanJail(unittest.TestCase):
         self.assertEqual(
             captured(edge_line(LOGIN, 403, CLIENT_V6)), CLIENT_V6, "a refused login over IPv6"
         )
+        self.assertEqual(
+            captured(edge_line(LOGIN + "?a=1", 403)), CLIENT, "a refused login with a query"
+        )
+        self.assertEqual(
+            captured(edge_line("https://app.example.org" + LOGIN, 403)),
+            CLIENT,
+            "a refused login in the absolute form",
+        )
+        # The method segment is decoded by the server, so a percent-encoded spelling of it, in
+        # either case of hex, is the same login.
+        for spelled in ("host%4Bey", "host%4bey", "%68ostKey", "%68%6F%73%74%4B%65%79"):
+            self.assertEqual(
+                captured(edge_line(f"/anki-sync/sync/{spelled}", 403)),
+                CLIENT,
+                f"a refused login with the method spelled {spelled}",
+            )
+        self.assertEqual(
+            captured(edge_line("/anki-sync/sync/host%4Bey?a=1", 403)),
+            CLIENT,
+            "a refused login with the method encoded and a query",
+        )
         for uri, status in examined(
             "line(s) that are not a refused sync login",
             (
@@ -98,6 +126,15 @@ class TheSyncBanJail(unittest.TestCase):
                 ("/api/x", 403),
                 ("/anki-sync/sync/meta", 403),
                 (LOGIN, 404),
+                (LOGIN + "X", 403),
+                (LOGIN + "/x", 403),
+                ("/anki-sync/sync/meta?a=1", 403),
+                ("https://app.example.org/anki-sync/sync/meta", 403),
+                (LOGIN + "?a=1", 200),
+                ("/anki-sync/sync/host%4BeyX", 403),
+                ("/anki-sync/sync/host%4Bey/x", 403),
+                ("/anki-sync/sync/host%4Aey", 403),
+                ("/anki-sync/sync/%6Fostkey", 403),
             ),
         ):
             self.assertIsNone(captured(edge_line(uri, status)), f"{status} on {uri}")

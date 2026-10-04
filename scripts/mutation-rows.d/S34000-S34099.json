@@ -100,16 +100,16 @@
       [
         "S34014-THE-BAN-COUNTS-A-REFUSED-LOGIN",
         "deploy/fail2ban/filter.d/deck-streak-sync.conf",
-        "\"status\":403",
-        "\"status\":4[0-9][0-9]",
+        "\".*\"status\":403",
+        "\".*\"status\":4[0-9][0-9]",
         "the ban filter counts a refused login alone, never any other client error (SPEC-340 R5)",
         "test_sync_ban.TheSyncBanJail.test_the_filter_matches_a_refused_sync_login_and_nothing_else"
       ],
       [
         "S34015-THE-BAN-COUNTS-THE-LOGIN-ROUTE",
         "deploy/fail2ban/filter.d/deck-streak-sync.conf",
-        "\"uri\":\"/anki-sync/sync/hostKey\"",
-        "\"uri\":\"/anki-sync/sync/[A-Za-z]+\"",
+        "(?:h|%%68)(?:o|%%6[Ff])(?:s|%%73)(?:t|%%74)(?:K|%%4[Bb])(?:e|%%65)(?:y|%%79)",
+        "[A-Za-z0-9%%]+",
         "the ban filter counts a refusal at the login route alone, never at another sync route (SPEC-340 R5)",
         "test_sync_ban.TheSyncBanJail.test_the_filter_matches_a_refused_sync_login_and_nothing_else"
       ],
