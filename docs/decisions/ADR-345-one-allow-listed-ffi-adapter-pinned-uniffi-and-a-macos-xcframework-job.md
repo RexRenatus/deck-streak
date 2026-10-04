@@ -61,10 +61,10 @@ test reaches the generator's binary.
 - D4, admitting macOS runners by pattern in the hardening test - lost: a pattern admits the runner
   to every workflow, so the admission is by this workflow's file name and refuses the runner
   under any other name.
-- D5, the generator's binary built by every build of the adapter, refusing at run time without
-  the `bindgen` feature - chosen, because the default-feature mutation run then builds the
-  binary and A8 catches the mutant that empties its `main` (row S33601), while the generator's
-  code stays behind the feature: a build without it gains one binary that only prints a refusal.
+- D5, the generator's binary in every build, refusing without `bindgen` - chosen, because the
+  default-feature mutation run then builds the binary and A8 catches the mutant that empties its
+  `main` (row S33601), while the generator's code stays behind the feature: a build without it
+  gains one binary that only prints a refusal and exits 2.
 - D5, a test that runs a nested `cargo run --features bindgen` of the generator - lost: measured
   after the crate's default test build, it compiled 42 more crates, the engine among them,
   because the feature changes shared dependencies' feature sets, and every CI job and mutation
