@@ -151,6 +151,14 @@ COVERAGE, not criteria, and they kill rows S33613 and S33614.
 | `docs/decisions/ADR-345-one-allow-listed-ffi-adapter-pinned-uniffi-and-a-macos-xcframework-job.md` | the record | added |
 | `changelog.d/spike-ffi-umbrella-336.md` | the record | added |
 
+Amendment (SPEC-339): the manifest above omits two files this delivery's pull request edited,
+named here from the file list of its merge into `dev`:
+
+| file | context | change |
+|---|---|---|
+| `.github/workflows/ci.yml` | none (CI) | the `mutation-rows` job fetches the locked crate graph (`cargo fetch --locked`) before it proves a row, because the settle census reads every feature |
+| `docs/specs/SPEC-072-xp-is-earned-per-review-and-per-day-settled-once-per-source-with-levels-and-titles.md` | the record | an amendment bullet: the census reads the lock's full feature graph, which CI fetches by the lock |
+
 ## 5. What this does NOT do
 
 - It writes no Swift, no Xcode project and no client: the Swift half has no campaign issue yet, so
@@ -190,6 +198,8 @@ COVERAGE, not criteria, and they kill rows S33613 and S33614.
 
 The workflow's run on the pull request measures R6 to R8 and R9's consumer check; its report is the
 run's summary and `xcframework-report/report.md` in the `xcframework` artifact.
+
+Amendment (SPEC-339): The figures below are run 37188070120's, at commit 0e7c5072.
 
 | measure | measured |
 |---|---|

@@ -8,6 +8,9 @@ it, under ADR-340 (the move), ADR-058 and ADR-336 (the fork), ADR-032 (the budge
 backup), ADR-010 and ADR-038 (the credentials). Every host step in it is the owner's go (#161).
 The snapshot's window was read at this delivery's c54c898d
 (`deploy/systemd/deck-streak-sync-snapshot.service`, `deploy/scripts/backup.py`), after ADR-347 D12.
+SPEC-340 moves the archive and the sync drill into units of their own, run as the sync family's
+user, seals the offsite copy and logs and bounds the route: `docs/schematics/sync-server-hardening.md`
+draws them, and where it differs from this flow's `snapshot` and `drill` nodes, it holds.
 
 ## The data flow
 

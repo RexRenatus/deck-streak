@@ -1,5 +1,5 @@
 {
-  "note": "DeckStreak's share of the host, and each unit's MemoryHigh= and MemoryMax=, which the unit must equal (ADR-032). The alert template, the SLO evaluator and the memory watch are SPEC-031's; the replica, the daily backup and the restore drill are SPEC-064's. The MCP server is SPEC-119's (ADR-332), and the sync server and its snapshot window SPEC-337's (ADR-347).",
+  "note": "DeckStreak's share of the host, and each unit's MemoryHigh= and MemoryMax=, which the unit must equal (ADR-032). The alert template, the SLO evaluator and the memory watch are SPEC-031's; the replica, the daily backup and the restore drill are SPEC-064's. The MCP server is SPEC-119's (ADR-332), the sync server and its snapshot window SPEC-337's (ADR-347), and the snapshot's archive and its drill SPEC-340's (ADR-351).",
   "memory": "1152M",
   "cpus": 2,
   "units": {
@@ -14,6 +14,8 @@
     "deck-streak-litestream.service": { "memory_high": "48M", "memory_max": "64M" },
     "deck-streak-backup.service": { "memory_high": "48M", "memory_max": "64M" },
     "deck-streak-sync-snapshot.service": { "memory_high": "48M", "memory_max": "64M" },
-    "deck-streak-restore-drill.service": { "memory_high": "96M", "memory_max": "128M" }
+    "deck-streak-restore-drill.service": { "memory_high": "96M", "memory_max": "128M" },
+    "deck-streak-sync-archive.service": { "memory_high": "48M", "memory_max": "64M" },
+    "deck-streak-sync-restore-drill.service": { "memory_high": "96M", "memory_max": "128M" }
   }
 }

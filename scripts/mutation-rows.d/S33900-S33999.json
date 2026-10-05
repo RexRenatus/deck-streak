@@ -1,0 +1,15 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S33900-THE-RENDER-PAIR-IS-THE-ENGINES-RENDER-CALL",
+        "ffi",
+        "src/allow_list.rs",
+        "        method: 6,\n        name: \"CardRenderingService.RenderExistingCard\",\n",
+        "        method: 7,\n        name: \"CardRenderingService.RenderExistingCard\",\n",
+        "render::a1_renders_the_queued_cards_question",
+        "the allow-list's sixth pair is the engine's render call, (27, 6) as its generated dispatch numbers it, so a client can render the queued card and the call reaches the engine: the method index moved to the adjacent real call, RenderUncommittedCard, leaves the render pair refused. cargo-mutants mutates no literal in a const initializer, so this row is the proof that A1 observes the pair (SPEC-339 R10, A1)"
+      ]
+    ]
+  }
+}

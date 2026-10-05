@@ -40,6 +40,7 @@ deck-streak-migration     (one-off import of v9's schema 24, planned)  depends o
 deck-streak-web-engine    (Anki's engine on wasm32 in the web client's Worker: the study calls over OPFS)  depends on: nothing
 deck-streak-push          (APNs and web push senders for a native or web client: provider and VAPID tokens, RFC 8291; ADR-354)  depends on: kernel
 miniapp   web/app/src     (the SvelteKit Mini App)  depends on: nothing internal
+ios-harness  ios/  (the SwiftUI harness over deck-streak-ffi's XCFramework; ADR-335)  depends on: nothing internal
 landing   web/site/src    (the Astro landing page, planned)  depends on: nothing internal
 ```
 

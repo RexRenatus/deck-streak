@@ -44,6 +44,21 @@ DRILL_SERVICE_NAME = "deck-streak-restore-drill.service"
 SYNC_SERVER_SERVICE_NAME = "deck-streak-sync-server.service"
 # The stopped-server window that copies the sync server's store for the snapshot (ADR-347 D12).
 SYNC_SNAPSHOT_SERVICE_NAME = "deck-streak-sync-snapshot.service"
+# SPEC-340 R3 and R4: the snapshot's archive and its drill, each a unit of its own (ADR-351 D1).
+SYNC_ARCHIVE_SERVICE_NAME = "deck-streak-sync-archive.service"
+SYNC_DRILL_SERVICE_NAME = "deck-streak-sync-restore-drill.service"
+# SPEC-340 R2: the sync family runs as its own system user and group, every other service as
+# DeckStreak's (ADR-351 D1).
+SERVICE_USER = "deck-streak"
+SYNC_USER = "deck-streak-sync"
+SYNC_FAMILY = (
+    SYNC_SERVER_SERVICE_NAME,
+    SYNC_SNAPSHOT_SERVICE_NAME,
+    SYNC_ARCHIVE_SERVICE_NAME,
+    SYNC_DRILL_SERVICE_NAME,
+)
+# The two state directories only the sync family names.
+SYNC_STATE_DIRECTORIES = {"deck-streak-sync-server", "deck-streak-sync-snapshots"}
 SYNC_LAUNCHER = DEPLOY / "scripts" / "sync-server.sh"
 # The variables the sync server reads its users from, `name:<hash>` each: only its launcher sets
 # them, from the unit's credentials, so no unit and no settings line may (ADR-347 D2).
@@ -100,6 +115,9 @@ SCRIPTS = {
     DRILL_SERVICE_NAME: f"{RELEASE}/deploy/scripts/restore-drill.sh",
     # SPEC-337: the snapshot's window runs the backup script's copy alone.
     SYNC_SNAPSHOT_SERVICE_NAME: f"/usr/bin/python3 {RELEASE}/deploy/scripts/backup.py --sync-window",
+    # SPEC-340 R3, R4: the archive and the sync drill run the same scripts' own parts.
+    SYNC_ARCHIVE_SERVICE_NAME: f"/usr/bin/python3 {RELEASE}/deploy/scripts/backup.py --sync-archive",
+    SYNC_DRILL_SERVICE_NAME: f"{RELEASE}/deploy/scripts/restore-drill.sh --part sync",
 }
 # Their lifecycle: a oneshot each, ended before its timer is due again; the two a timer starts
 # yield to the daemons as a job does (resources.batch-priority), and the alert pages at once.
@@ -132,6 +150,19 @@ OBSERVABILITY_SERVICE = {
     # The window runs with the sync server stopped, so it is bounded and does not yield (ADR-347
     # D12); no timer starts it, so resources.batch-priority does not reach it and it waives nothing.
     SYNC_SNAPSHOT_SERVICE_NAME: {"Type": "oneshot", "TimeoutStartSec": "15min"},
+    # The archive and the sync drill yield as the backup and the drill they follow do (SPEC-340).
+    SYNC_ARCHIVE_SERVICE_NAME: {
+        "Type": "oneshot",
+        "TimeoutStartSec": "30min",
+        "Nice": "10",
+        "IOSchedulingClass": "idle",
+    },
+    SYNC_DRILL_SERVICE_NAME: {
+        "Type": "oneshot",
+        "TimeoutStartSec": "1h",
+        "Nice": "10",
+        "IOSchedulingClass": "idle",
+    },
 }
 # SPEC-064 R1: the Litestream daemon, an exec service that restarts on failure and can trip its
 # start limit; it has no watchdog, since Litestream does not notify systemd.
@@ -205,6 +236,8 @@ ROLE_CREDENTIALS = {
     BACKUP_SERVICE_NAME: (),
     DRILL_SERVICE_NAME: (),
     SYNC_SNAPSHOT_SERVICE_NAME: (),
+    SYNC_ARCHIVE_SERVICE_NAME: (),
+    SYNC_DRILL_SERVICE_NAME: (),
     SYNC_SERVER_SERVICE_NAME: ("SYNC_SERVER_OWNER", "SYNC_SERVER_STAGING"),
 }
 # The role each service runs (R2); the job template's `%i` is its instance, the job's id.
@@ -245,10 +278,9 @@ DAEMON_CAPS = {
     "deck-streak-bot.service": {"CPUQuota": "20%", "TasksMax": "64"},
     "deck-streak-mcp.service": {"CPUQuota": "15%", "TasksMax": "32"},
 }
-# R2: the identity and hardening of every service, each at the value the pack's rows score.
+# R2: the hardening of every service, each at the value the pack's rows score; its identity is
+# `hardening(name)`'s, by family (SPEC-340 R2).
 HARDENING = {
-    "User": "deck-streak",
-    "Group": "deck-streak",
     "UMask": "0077",
     "ProtectSystem": "strict",
     "ProtectHome": "yes",
@@ -272,6 +304,15 @@ HARDENING = {
     "LockPersonality": "yes",
     "MemoryDenyWriteExecute": "yes",
 }
+
+
+def hardening(name):
+    """The identity and hardening the service `name` carries: the sync family's own user and group,
+    or DeckStreak's (SPEC-340 R2), and the hardening every service carries."""
+    user = SYNC_USER if name in SYNC_FAMILY else SERVICE_USER
+    return {"User": user, "Group": user, **HARDENING}
+
+
 # R2, R3 and SPEC-031 R6, per service: the one directory it may write, the settings file it reads,
 # the address families it may open, and the journal it may read. The roles share the state
 # directory and the settings file; SPEC-031's units read no settings, so the alert path never waits
@@ -288,13 +329,28 @@ PER_SERVICE = {
     f"{ALERT_TEMPLATE}@.service": (None, None, ROLES_NETWORK, "systemd-journal"),
     SLO_SERVICE: ("deck-streak-slo", None, "AF_UNIX", "systemd-journal"),
     WATCH_SERVICE: ("deck-streak-memory-watch", None, "AF_UNIX", None),
-    # SPEC-064: the replicator and the drill reach the bucket, and so does the backup since the
-    # sync server's snapshot is copied offsite (SPEC-337 R5).
+    # SPEC-064: the replicator and the drill reach the bucket; the backup copies the database
+    # alone, reads no settings and opens no network socket (SPEC-340 R3).
     LITESTREAM_SERVICE_NAME: ("deck-streak", ENVIRONMENT_FILE, ROLES_NETWORK, None),
-    BACKUP_SERVICE_NAME: ("deck-streak", ENVIRONMENT_FILE, ROLES_NETWORK, None),
-    # SPEC-337: the window reads the server's store, writes beside the backups, opens no socket.
-    SYNC_SNAPSHOT_SERVICE_NAME: ("deck-streak deck-streak-sync-server", None, "AF_UNIX", None),
+    BACKUP_SERVICE_NAME: ("deck-streak", None, "AF_UNIX", None),
+    # SPEC-337, SPEC-340: the window reads the server's store, writes its generation into the sync
+    # family's own directory, and opens no socket.
+    SYNC_SNAPSHOT_SERVICE_NAME: (
+        "deck-streak-sync-snapshots deck-streak-sync-server",
+        None,
+        "AF_UNIX",
+        None,
+    ),
+    # SPEC-340 R3: the archive reads the generation and reaches the bucket by the settings' copy.
+    SYNC_ARCHIVE_SERVICE_NAME: (
+        "deck-streak-sync-snapshots",
+        ENVIRONMENT_FILE,
+        ROLES_NETWORK,
+        None,
+    ),
     DRILL_SERVICE_NAME: ("deck-streak", ENVIRONMENT_FILE, ROLES_NETWORK, None),
+    # SPEC-340 R4: the sync drill restores the newest archive in a scratch directory, offline.
+    SYNC_DRILL_SERVICE_NAME: ("deck-streak-sync-snapshots", None, "AF_UNIX", None),
     # SPEC-337: the sync server keeps its users' data in its own directory and listens on loopback.
     SYNC_SERVER_SERVICE_NAME: (
         "deck-streak-sync-server",
@@ -487,13 +543,20 @@ def credential_lines(root):
 INSTANCE_DROPIN_ALLOWLIST = {f"{JOB_TEMPLATE}@.service": ("sync", "held_flush")}
 
 NON_UNIT_DROPIN = "deploy/journald.conf.d"
-NON_UNIT_DIRECTORIES = (NON_UNIT_DROPIN, "deploy/tmpfiles.d")
+# The ban service's filter and jail directories hold its own files, never a unit's (SPEC-340 R5).
+NON_UNIT_DIRECTORIES = (
+    NON_UNIT_DROPIN,
+    "deploy/tmpfiles.d",
+    "deploy/fail2ban/filter.d",
+    "deploy/fail2ban/jail.d",
+)
 
 
 def dropin_directory_refusals(root, allowlist=None):
     """Every `*.d/` directory under `root`'s deploy/ that is not the drop-in directory of a unit
     shipped beside it, as one line each: only `<unit name>.d/` is read with a unit (SPEC-066 R2), so
-    any other is refused, and the directories of files that are no unit (journald, tmpfiles.d) are named here.
+    any other is refused, and the directories of files that are no unit (journald, tmpfiles.d, the
+    ban service's) are named here.
     A shipped template's instance directory is admitted only for an instance `allowlist` names (by
     default INSTANCE_DROPIN_ALLOWLIST)."""
     allowed = INSTANCE_DROPIN_ALLOWLIST if allowlist is None else allowlist
@@ -1029,6 +1092,8 @@ class TheTemplatesFitTheHostBudget(unittest.TestCase):
                     BACKUP_SERVICE_NAME,
                     DRILL_SERVICE_NAME,
                     SYNC_SNAPSHOT_SERVICE_NAME,
+                    SYNC_ARCHIVE_SERVICE_NAME,
+                    SYNC_DRILL_SERVICE_NAME,
                 ]
             ),
         )
@@ -1114,9 +1179,11 @@ class TheCaddyBlock(unittest.TestCase):
         answer = robots.one("respond").tokens
         self.assertEqual(answer[2:], ["200"])
         self.assertEqual(answer[1].splitlines(), ["User-agent: *", "Disallow: /"])
-        # Nothing answers outside the handles, so a route cannot slip past the order above.
+        # Nothing answers outside the handles, so a route cannot slip past the order above. The log,
+        # its matcher and its skip write a record and answer nothing (SPEC-340 R6).
         self.assertEqual(
-            sorted(child.tokens[0] for child in block.children), ["handle"] * 5 + ["header"]
+            sorted(child.tokens[0] for child in block.children),
+            ["@not_sync"] + ["handle"] * 5 + ["header", "log", "log_skip"],
         )
         # The upstream is the API's own loopback listener (ADR-007), which the example names.
         listen = dict((key, value) for _, key, value in env_example())["DECKSTREAK_API_LISTEN"]
@@ -1150,10 +1217,14 @@ class TheCaddyBlock(unittest.TestCase):
         body = route.one("request_body")
         self.assertEqual(body.tokens, ["request_body"])
         self.assertEqual([child.tokens for child in body.children], [["max_size", SYNC_BODY_LIMIT]])
-        # The proxy reaches the sync server's loopback upstream, read with the larger buffer.
+        # The proxy reaches the sync server's loopback upstream, read with the larger buffer; it
+        # drops the web cookie in both directions first (SPEC-340 R9, A11).
         proxy = route.one("reverse_proxy")
         self.assertEqual(proxy.tokens, ["reverse_proxy", "{$DECKSTREAK_SYNC_UPSTREAM}"])
-        self.assertEqual([child.tokens for child in proxy.children], [["transport", "http"]])
+        self.assertEqual(
+            [child.tokens for child in proxy.children],
+            [["header_up", "-Cookie"], ["header_down", "-Set-Cookie"], ["transport", "http"]],
+        )
         transport = proxy.one("transport", "http")
         self.assertEqual(
             [child.tokens for child in transport.children], [["read_buffer", SYNC_READ_BUFFER]]
@@ -1164,6 +1235,49 @@ class TheCaddyBlock(unittest.TestCase):
         ]
         host = listen.rpartition(":")[0].strip("[]")
         self.assertTrue(ipaddress.ip_address(host).is_loopback, listen)
+
+    def test_the_sync_route_alone_is_logged_without_its_key(self):
+        """SPEC-340 A7; ADR-351 D4: the edge writes one access log, of the sync route alone, with
+        the client's address, the method, the path and the status, and no request header and no
+        `k` parameter in it."""
+        block = site()
+        # One site-level log. It names no output, so it reaches the journal and its retention.
+        logs = block.find("log")
+        self.assertEqual([entry.tokens for entry in logs], [["log"]], "the block's access log")
+        self.assertEqual([child.tokens for child in logs[0].children], [["format", "filter"]])
+        # The filter deletes every request header and the `k` parameter, and writes JSON.
+        fields = logs[0].one("format", "filter")
+        self.assertEqual(
+            [child.tokens for child in fields.children],
+            [["request>headers", "delete"], ["request>uri", "query"], ["wrap", "json"]],
+        )
+        query = fields.one("request>uri", "query")
+        self.assertEqual([child.tokens for child in query.children], [["delete", "k"]])
+        # Every path outside the sync route is skipped, so the log holds that route alone.
+        route = handle(block, f"{SYNC_PATH}/*")
+        self.assertIsNotNone(route, f"no handle for {SYNC_PATH}/*")
+        self.assertEqual(block.one("log_skip").tokens, ["log_skip", "@not_sync"])
+        self.assertEqual(
+            block.one("@not_sync").tokens, ["@not_sync", "not", "path", *route.tokens[1:]]
+        )
+        # No route writes a log of its own beside the site's.
+        for each in examined("handle(s)", block.find("handle")):
+            self.assertEqual(each.find("log"), [], f"the handle {each.tokens[1:]} logs")
+
+    def test_the_sync_route_carries_no_web_cookie(self):
+        """SPEC-340 A11; ADR-351 D7: the edge sends no `Cookie` header up to the sync server and
+        passes no `Set-Cookie` header down from it, whatever the cookie's attributes are."""
+        block = site()
+        route = handle(block, f"{SYNC_PATH}/*")
+        self.assertIsNotNone(route, f"no handle for {SYNC_PATH}/*")
+        proxy = route.one("reverse_proxy")
+        self.assertEqual(
+            [child.tokens for child in proxy.children if child.tokens[0].startswith("header_")],
+            [["header_up", "-Cookie"], ["header_down", "-Set-Cookie"]],
+        )
+        # The API's route is the web session's, so it keeps its cookie.
+        api = handle(block, "/api/*")
+        self.assertEqual([child.tokens for child in api.one("reverse_proxy").children], [])
 
 
 class NoPrivateValue(unittest.TestCase):
@@ -1463,9 +1577,14 @@ class TheServicesRunTheirRoles(unittest.TestCase):
                 )
                 for key, value in OBSERVABILITY_SERVICE[unit.name].items():
                     self.assertEqual(last(unit, "Service", key), value, f"{unit.rel} {key}")
-                # A timer or a failure starts each, and the backup's run starts the snapshot's
-                # window, which runs first (ADR-347 D12).
-                wanted = [BACKUP_SERVICE_NAME] if unit.name == SYNC_SNAPSHOT_SERVICE_NAME else []
+                # A timer or a failure starts each. The backup's run starts the snapshot's window,
+                # which runs first (ADR-347 D12), and the archive (SPEC-340 R3); the drill's run
+                # starts the sync drill (SPEC-340 R4).
+                wanted = {
+                    SYNC_SNAPSHOT_SERVICE_NAME: [BACKUP_SERVICE_NAME],
+                    SYNC_ARCHIVE_SERVICE_NAME: [BACKUP_SERVICE_NAME],
+                    SYNC_DRILL_SERVICE_NAME: [DRILL_SERVICE_NAME],
+                }.get(unit.name, [])
                 self.assertEqual(unit.values("Install", "WantedBy"), wanted, unit.rel)
                 continue
             if unit.name == LITESTREAM_SERVICE_NAME:
@@ -1532,7 +1651,7 @@ class TheServicesRunTheirRoles(unittest.TestCase):
             sorted(PER_SERVICE), [unit.name for unit in units], "the per-service table"
         )
         for unit in units:
-            for key, value in HARDENING.items():
+            for key, value in hardening(unit.name).items():
                 self.assertEqual(
                     unit.values("Service", key), [value] if value else [], f"{unit.rel} {key}"
                 )
@@ -1560,7 +1679,7 @@ class TheSyncServerRunsAsItsOwnUnit(unittest.TestCase):
         )
         for key, value in SYNC_SERVER_SERVICE.items():
             self.assertEqual(last(unit, "Service", key), value, key)
-        for key, value in HARDENING.items():
+        for key, value in hardening(SYNC_SERVER_SERVICE_NAME).items():
             self.assertEqual(unit.values("Service", key), [value] if value else [], key)
         self.assertEqual(unit.values("Service", "StateDirectory"), ["deck-streak-sync-server"])
         self.assertEqual(unit.values("Service", "RestrictAddressFamilies"), ["AF_UNIX AF_INET"])
@@ -1594,6 +1713,61 @@ class TheSyncServerRunsAsItsOwnUnit(unittest.TestCase):
                 "deck-streak-mcp.service": "15%",
                 SYNC_SERVER_SERVICE_NAME: "75%",
             },
+        )
+
+    def test_the_sync_family_runs_as_its_own_user(self):
+        """SPEC-340 A2 (R2; ADR-351 D1): the sync server, its window, its archive and its sync drill
+        run as `deck-streak-sync`, every other service as `deck-streak`, and no state directory is
+        named by units of both users."""
+        units = services()
+        for unit in units:
+            want = SYNC_USER if unit.name in SYNC_FAMILY else SERVICE_USER
+            self.assertEqual(unit.values("Service", "User"), [want], unit.rel)
+            self.assertEqual(unit.values("Service", "Group"), [want], unit.rel)
+            named = set(" ".join(unit.values("Service", "StateDirectory")).split())
+            if unit.name in SYNC_FAMILY:
+                self.assertNotIn(SERVICE_USER, named, unit.rel)
+            else:
+                self.assertEqual(named & SYNC_STATE_DIRECTORIES, set(), unit.rel)
+        family = examined(
+            "sync family unit(s)", [unit.name for unit in units if unit.name in SYNC_FAMILY]
+        )
+        self.assertEqual(sorted(family), sorted(SYNC_FAMILY))
+        self.assertEqual(
+            sorted(unit.name for unit in units if unit.values("Service", "User") == [SYNC_USER]),
+            sorted(SYNC_FAMILY),
+        )
+
+    def test_the_sync_server_reaches_loopback_peers_only(self):
+        """SPEC-340 A10 (R8; ADR-351 D6): the server's peers are the loopback edge alone, and the
+        paging census bounds both keys, so a wider peer list is refused by key and value."""
+        unit = self.unit()
+        self.assertEqual(unit.values("Service", "IPAddressAllow"), ["localhost"])
+        self.assertEqual(unit.values("Service", "IPAddressDeny"), ["any"])
+        for key in ("IPAddressAllow", "IPAddressDeny"):
+            self.assertIn(key, _units.PAGING_KEYS["Service"], key)
+        table = _units.PAGING_VALUES
+        self.assertEqual(table.get(("Service", "IPAddressAllow")), ("localhost",))
+        self.assertEqual(table.get(("Service", "IPAddressDeny")), ("any",))
+        # A planted unit that admits every peer and clears the deny list is refused at both lines.
+        with tempfile.TemporaryDirectory() as scratch:
+            planted = Path(scratch) / "deploy" / "systemd" / "planted.service"
+            planted.parent.mkdir(parents=True)
+            planted.write_text(
+                "[Unit]\nDescription=planted\n\n[Service]\nExecStart=/bin/true\n"
+                "IPAddressAllow=any\nIPAddressDeny=\n",
+                encoding="utf-8",
+            )
+            (planted_unit,) = subject(scratch).services
+        where = "deploy/systemd/planted.service"
+        self.assertEqual(
+            value_refusals(planted_unit, table),
+            [
+                f"{where}:6: [Service] IPAddressAllow=any is not a value this unit admits for the "
+                "key, and is refused",
+                f"{where}:7: [Service] IPAddressDeny= is not a value this unit admits for the "
+                "key, and is refused",
+            ],
         )
 
     def test_the_sync_servers_two_users_come_from_the_socket_and_never_an_environment(self):
