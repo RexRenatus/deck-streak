@@ -230,6 +230,8 @@ let DEPTH: Set<CardLayer> = [.L1, .L4, .L6, .L7]
 let UNOBSERVABLE: [String: String] = [
     "dns-prefetch": "a DNS lookup of an address literal reaches no listener a test owns",
     "prefetch": "predicted as WebKit measured on the web: it sends no prefetch request",
+    "nav-data": "measured on both simulators: WebKit refuses a page's own main-frame navigation "
+        + "to a data: URL after the delegate allows it, so the document never changes",
 ]
 
 /// The render-proof card: text, a `data:` image and a table, and no channel.

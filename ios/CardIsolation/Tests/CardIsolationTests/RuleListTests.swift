@@ -1,9 +1,11 @@
 // SPEC-349 A2: the rule list blocks every load of every type and has no exception. Its source is
-// read as JSON on the macOS host; compiling it is the simulator suite's.
+// read as JSON on the macOS host; compiling it is the simulator suite's. Beside it, the factory's
+// fail-closed path: a list that did not compile builds no view.
 import Foundation
 import XCTest
 
-import CardIsolation
+// Testable: the refusal test reaches the factory's internal `build(html:ruleList:)`.
+@testable import CardIsolation
 
 final class RuleListTests: XCTestCase {
     /// Prints how many lists were judged, and refuses zero (the tdd pack's contract).
@@ -57,5 +59,20 @@ final class RuleListTests: XCTestCase {
             let named = RuleList.weaker(plant.source)
             XCTAssertTrue(named.contains(plant.reason), "\(plant.name): \(named)")
         }
+    }
+
+    /// The factory fails closed (SPEC-349 R4, ADR-360 D4): with no compiled rule list it builds no
+    /// view at all, so no card is ever shown without the list. It kills the refusal's mutant.
+    @MainActor
+    func test_a_rule_list_that_did_not_compile_builds_no_view() {
+        var refusal: Error?
+        do {
+            _ = try CardWebViewFactory.build(html: "<p>a card</p>", ruleList: nil)
+        } catch {
+            refusal = error
+        }
+        XCTAssertEqual(
+            refusal as? CardViewRefusal, .ruleListDidNotCompile,
+            "a card view was built with no compiled rule list")
     }
 }

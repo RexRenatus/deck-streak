@@ -41,7 +41,14 @@ public struct NavigationGate: Sendable {
 
     public init() {}
 
+    /// Allows the first main-frame load and seals; cancels everything else, before or after it.
+    /// A new-window action has no target frame, so it reaches the gate as a subframe action.
     public mutating func decide(_ request: NavigationRequest) -> NavigationDecision {
-        .allow
+        let first = state == .awaitingFirstLoad
+        if first && request.isMainFrame && request.kind == .other {
+            state = .sealed
+            return .allow
+        }
+        return .cancel
     }
 }
