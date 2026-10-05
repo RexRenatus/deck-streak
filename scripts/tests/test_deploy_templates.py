@@ -17,6 +17,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import urllib.parse
 from pathlib import Path
 
 import _units
@@ -984,6 +985,111 @@ def handle(block, *matcher):
     )
 
 
+# --- the sync route's one spelling (SPEC-351 R1-R3; ADR-362 D1-D3) ------------------------
+
+# The guard's matcher name, and its one form: a negated match of the request-target as the edge
+# received it, which no rewrite in the route changes and which the access log records.
+SYNC_GUARD = "@sync_respelled"
+SYNC_GUARD_EXPRESSION = re.compile(r"!\{http\.request\.orig_uri\}\.matches\('([^'\\{}]+)'\)")
+# The server's routes under the prefix, a collection route and a media route of each shape, in
+# the spelling the server's own client sends.
+SYNC_SERVER_ROUTES = (
+    "sync/hostKey",
+    "sync/meta",
+    "sync/sanityCheck2",
+    "msync/begin",
+    "msync/mediaSanity",
+)
+SYNC_QUERIES = ("", "?a=1", "?k=x&v=y")
+SYNC_FORMS = ("", "https://app.example.org", "http://app.example.org", "https://APP.EXAMPLE.ORG")
+
+
+def outside_the_subset(pattern):
+    """What in the pattern Caddy's expression language and Python's `re` could read apart: the
+    guard is RE2 at the edge and `re` here, and the two agree on literals, `^`, `$`, `.`, classes
+    of literals and ranges, `(?:` groups and single `?`, `+` and `*` (SPEC-351 R3). Empty when
+    the pattern is inside that subset."""
+    found = []
+    if re.fullmatch(r"[A-Za-z0-9^$()?:/\[\]+*.-]+", pattern) is None:
+        found.append("a character outside the subset")
+    if "[:" in pattern:
+        found.append("a POSIX class")
+    if pattern.count("(?") != pattern.count("(?:"):
+        found.append("a group other than (?:")
+    if re.search(r"[+*?][+*]", pattern):
+        found.append("two quantifiers in a row")
+    return found
+
+
+def sync_guard(route):
+    """The pattern of the sync route's guard: the route's one `@sync_respelled` matcher, of the
+    form above, and the one `respond` that answers it 404. None when the route holds no such
+    guard, which stands for an edge that serves every spelling its handle places in the route."""
+    matchers = route.find(SYNC_GUARD)
+    if len(matchers) != 1 or len(route.find("respond", SYNC_GUARD)) != 1:
+        return None
+    if route.one("respond", SYNC_GUARD).tokens != ["respond", SYNC_GUARD, "404"]:
+        return None
+    tokens = matchers[0].tokens
+    if len(tokens) != 3 or tokens[1] != "expression":
+        return None
+    found = SYNC_GUARD_EXPRESSION.fullmatch(tokens[2])
+    return found.group(1) if found else None
+
+
+def request_path(spelling):
+    """A request-target's path: without the scheme and authority of the absolute form, and
+    without the query."""
+    return re.sub(r"^[A-Za-z][A-Za-z0-9+.-]*://[^/]*", "", spelling).partition("?")[0]
+
+
+def cleaned_segments(spelling):
+    """The path's segments as a decoding matcher reads them: every escape decoded, empty and `.`
+    segments dropped, and each `..` removing the segment before it."""
+    kept = []
+    for segment in urllib.parse.unquote(request_path(spelling)).split("/"):
+        if segment in ("", "."):
+            continue
+        if segment == "..":
+            kept = kept[:-1]
+            continue
+        kept.append(segment)
+    return kept
+
+
+def in_sync_route(spelling):
+    """Whether the handle's matcher places the request in the sync route: the path, decoded and
+    cleaned, begins with the prefix in any case and names a route below it."""
+    segments = cleaned_segments(spelling)
+    return len(segments) > 1 and segments[0].lower() == SYNC_PATH[1:]
+
+
+def serves(pattern, spelling):
+    """Whether the edge serves the request: it is in the route, and the guard, when there is one,
+    finds it."""
+    return in_sync_route(spelling) and (pattern is None or re.search(pattern, spelling) is not None)
+
+
+def respellings(path):
+    """Every other spelling of a path in the sync route, each one change away from it: a
+    character after the first as an escape in either case of hex, a letter of the prefix in the
+    other case, the prefix in capitals, an empty, `.` or `x/..` segment at each slash, and a
+    trailing `/` or `/.`."""
+    found = []
+    for index, char in enumerate(path[1:], start=1):
+        for escape in (f"%{ord(char):02X}", f"%{ord(char):02x}"):
+            found.append(path[:index] + escape + path[index + 1 :])
+    for index, char in enumerate(SYNC_PATH):
+        if char.isalpha():
+            found.append(path[:index] + char.swapcase() + path[index + 1 :])
+    found.append(SYNC_PATH.upper() + path[len(SYNC_PATH) :])
+    for index, char in enumerate(path):
+        if char == "/":
+            found += [path[:index] + extra + path[index:] for extra in ("/", "/.", "/x/..")]
+    found += [path + "/", path + "/."]
+    return [spelling for spelling in dict.fromkeys(found) if spelling != path]
+
+
 def route_constant(constant):
     source = REPO / "crates" / "api" / "src" / "health.rs"
     match = re.search(rf'pub const {constant}: &str = "([^"]+)";', source.read_text())
@@ -1203,8 +1309,16 @@ class TheCaddyBlock(unittest.TestCase):
         self.assertIsNotNone(route, f"no handle for {SYNC_PATH}/*")
         self.assertEqual(
             sorted(child.tokens[0] for child in route.children),
-            ["@sync_health", "request_body", "respond", "reverse_proxy", "uri"],
-            "the route holds the strip, the hidden health route, the bound and the proxy, only",
+            [
+                "@sync_health",
+                SYNC_GUARD,
+                "request_body",
+                "respond",
+                "respond",
+                "reverse_proxy",
+                "uri",
+            ],
+            "the route holds the strip, its guard, the hidden health route, the bound and the proxy",
         )
         # The prefix is stripped before the server reads the path; `uri` runs before `respond` and
         # `reverse_proxy` in Caddy's directive order, so both see the server's own route.
@@ -1212,7 +1326,9 @@ class TheCaddyBlock(unittest.TestCase):
         # The server's health route answers 404 from outside, as the API's do (ADR-025).
         health = route.one("@sync_health")
         self.assertEqual(health.tokens, ["@sync_health", "path", "/health"])
-        self.assertEqual(route.one("respond").tokens, ["respond", "@sync_health", "404"])
+        self.assertEqual(
+            route.one("respond", "@sync_health").tokens, ["respond", "@sync_health", "404"]
+        )
         # The body is bounded at the edge at the server's own limit.
         body = route.one("request_body")
         self.assertEqual(body.tokens, ["request_body"])
@@ -1235,6 +1351,48 @@ class TheCaddyBlock(unittest.TestCase):
         ]
         host = listen.rpartition(":")[0].strip("[]")
         self.assertTrue(ipaddress.ip_address(host).is_loopback, listen)
+
+    def test_the_sync_route_is_served_under_its_one_spelling(self):
+        """SPEC-351 A1; ADR-362 D1: the edge serves the sync route under its one spelling and
+        answers every other spelling of it 404, so nothing of that request reaches the server."""
+        route = handle(site(), f"{SYNC_PATH}/*")
+        self.assertIsNotNone(route, f"no handle for {SYNC_PATH}/*")
+        pattern = sync_guard(route)
+        spellings = examined(
+            "respelling(s) of the sync route",
+            [
+                spelling
+                for path in (f"{SYNC_PATH}/sync/hostKey", f"{SYNC_PATH}/msync/begin")
+                for spelling in respellings(path)
+            ],
+        )
+        served = [spelling for spelling in spellings if serves(pattern, spelling)]
+        self.assertEqual(
+            len(served), 0, f"{len(served)} respelling(s) of the route the edge serves"
+        )
+        # Each respelling is one the handle places in the route, so the refusal above is the
+        # guard's and not the handle's.
+        self.assertEqual(len([s for s in spellings if not in_sync_route(s)]), 0)
+        # The one spelling is served: every route of the server, with a query or none, in the
+        # origin form and the absolute form.
+        canonical = examined(
+            "spelling(s) of the server's routes as its client sends them",
+            [
+                form + f"{SYNC_PATH}/{name}" + query
+                for name in SYNC_SERVER_ROUTES
+                for query in SYNC_QUERIES
+                for form in SYNC_FORMS
+            ],
+        )
+        self.assertEqual([s for s in canonical if not serves(pattern, s)], [])
+        # The guard reads the target as received, refuses with 404, and is written in the part of
+        # its language that Python's reads alike; no spelling above holds the one character where
+        # the two still differ.
+        self.assertEqual(route.one("respond", SYNC_GUARD).tokens, ["respond", SYNC_GUARD, "404"])
+        self.assertEqual(outside_the_subset(pattern), [])
+        self.assertEqual([s for s in spellings + canonical if "\n" in s], [])
+        for planted in ("[[:alpha:]]", "a(?=b)", "a++", "a{2}", "\\d", "(?i)a"):
+            self.assertNotEqual(outside_the_subset(planted), [], planted)
 
     def test_the_sync_route_alone_is_logged_without_its_key(self):
         """SPEC-340 A7; ADR-351 D4: the edge writes one access log, of the sync route alone, with
