@@ -157,8 +157,11 @@ def git(cwd, env, *args):
 
 
 class LanePlan(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
+    @staticmethod
+    def setUpClass():
+        # The fixture repository, built once for the class. unittest calls this on the class, and
+        # a static method is a name the workflow files' read census places; a class method is not.
+        cls = LanePlan
         scratch = tempfile.TemporaryDirectory()
         cls.addClassCleanup(scratch.cleanup)
         cls.scratch = Path(scratch.name)
