@@ -1190,6 +1190,7 @@ version = "0.2.0"
 dependencies = [
  "anki",
  "deck-streak-engine-core",
+ "tokio",
  "uniffi",
 ]
 
