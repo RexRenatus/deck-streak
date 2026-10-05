@@ -6373,6 +6373,7 @@ DYNAMIC_IMPORTS = {
             "locale.setlocale(locale.LC_COLLATE, collation)",
             1,
         ),
+        ("_support", "collation_locale_available", "collation", 1),
     ),
 }
 
