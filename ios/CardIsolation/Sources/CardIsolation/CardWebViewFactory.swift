@@ -27,3 +27,12 @@ public enum CardWebViewFactory {
         WKWebView(frame: .zero, configuration: WKWebViewConfiguration())
     }
 }
+
+/// The navigation gate as the view's navigation delegate, layer L5 (SPEC-349 R3, ADR-360 D1).
+@MainActor
+final class GateAdapter: NSObject, WKNavigationDelegate {
+    /// The gate this adapter asks.
+    private(set) var gate = NavigationGate()
+    /// Every decision the gate gave, in order: the planted suite reads it.
+    private(set) var decisions: [NavigationDecision] = []
+}

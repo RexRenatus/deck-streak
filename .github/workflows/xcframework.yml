@@ -380,6 +380,17 @@ jobs:
             -resultBundlePath "$RESULTS/debug.xcresult" \
             CODE_SIGNING_ALLOWED=NO
           echo "$(( $(date +%s) - started ))" > "$REPORT/debug-seconds"
+      - name: the card view's planted suite, Debug, on the iPhone and then the iPad
+        run: |
+          # SPEC-349 A3 and A5 to A8: every planted card reaches from the reference view and
+          # nothing from the card view the factory ships, on both simulators.
+          xcodebuild test -project ios/Harness.xcodeproj -scheme CardProbe -configuration Debug \
+            -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" \
+            -destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS" \
+            -disable-concurrent-destination-testing \
+            -derivedDataPath "$RUNNER_TEMP/debug" \
+            -resultBundlePath "$RESULTS/card-probe.xcresult" \
+            CODE_SIGNING_ALLOWED=NO
       - name: the measurements, Release, on the iPhone and then the iPad
         run: |
           started=$(date +%s)
