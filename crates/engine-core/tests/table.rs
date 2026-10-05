@@ -19,7 +19,7 @@ use deck_streak_engine_core::table::{
 };
 
 /// The pairs the native adapter's allow-list holds (SPEC-345 M1).
-const NATIVE: [(u32, u32); 5] = [(3, 0), (3, 8), (7, 13), (13, 3), (13, 4)];
+const NATIVE: [(u32, u32); 6] = [(3, 0), (3, 8), (7, 13), (13, 3), (13, 4), (27, 6)];
 
 /// The web engine's study calls (SPEC-345 M4).
 const WEB: [(u32, u32); 8] = [

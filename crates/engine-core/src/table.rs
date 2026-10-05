@@ -110,7 +110,7 @@ impl Exempt {
 /// study calls (SPEC-345 M1, M4); a parity test holds each adapter's own table equal to its column.
 /// A pair one transport may make is not thereby admitted on the other: the native client neither
 /// closes the collection nor adds notes through this table (ADR-356 D2).
-pub const ORDINARY: [Ordinary; 9] = [
+pub const ORDINARY: [Ordinary; 10] = [
     Ordinary {
         service: 3,
         method: 0,
@@ -173,6 +173,13 @@ pub const ORDINARY: [Ordinary; 9] = [
         name: "NotesService.AddNotes",
         native: false,
         web: true,
+    },
+    Ordinary {
+        service: 27,
+        method: 6,
+        name: "CardRenderingService.RenderExistingCard",
+        native: true,
+        web: false,
     },
 ];
 
