@@ -61,12 +61,11 @@ D1, where the crate sits and how its revision is admitted:
 
 D2, how a wasm timing is taken in CI:
 
-- The timing example built for `wasm32-wasip1` and run under Node's V8 through `node:wasi`, with
-  Node from `.nvmrc` through the setup action the `web` job already pins; native timed on one
-  thread: chosen for three reasons:
-  - V8 is the JavaScript engine of the browser that ADR-336's Worker runs in most often;
-  - WASI gives the module a monotonic clock and an exit status without a bindings crate;
-  - one thread is what the Worker has.
+- Chosen for three reasons: the timing example built for `wasm32-wasip1` and run under Node's V8
+  through `node:wasi`, with Node from `.nvmrc` through the setup action the `web` job already pins, and
+  native timed on one thread. V8 is the JavaScript engine of the browser that ADR-336's Worker runs in
+  most often; WASI gives the module a monotonic clock and an exit status without a bindings crate; one
+  thread is what the Worker has.
 - Chromium and WebKit through Playwright, with a `wasm-bindgen` harness: rejected because it
   admits a bindings crate and a JavaScript harness before the web engine decides them (#626).
   Browser figures are #626's.
@@ -79,32 +78,25 @@ D2, how a wasm timing is taken in CI:
 
 D3, the scratch sync server:
 
-- The engine's own sync server at the workspace's pin, started by the test in a child process
-  (`SyncServer::start`, already in ingest's test support):
-  - it is stopped by closing its standard input, and killed on drop if it hangs;
-  - it serves a temporary directory on a loopback port;
-  - chosen because it is the same server code at the same commit as the server the release builds
-    (ADR-347). It runs wherever the test runs, and the `rust` job already starts it for
-    `recorder_control`.
-- The release's recipe in a job, `cargo install --git <fork> --rev <pin> anki-sync-server`, started
-  in the background and stopped by SIGINT: rejected for two reasons:
-  - it builds the engine a second time on every run;
-  - a test that needs the server either passes vacuously where the server is absent, or exists
-    only in that job.
-
-  The protocol code is the same crate at the same commit.
+- Chosen because it is the same server code at the same commit as the server the release builds
+  (ADR-347): the engine's own sync server at the workspace's pin, started by the test in a child process
+  (`SyncServer::start`, already in ingest's test support). It is stopped by closing its standard input,
+  and killed on drop if it hangs, and it serves a temporary directory on a loopback port. It runs wherever
+  the test runs, and the `rust` job already starts it for `recorder_control`.
+- The release's recipe in a job, rejected for two reasons: `cargo install --git <fork> --rev <pin>
+  anki-sync-server`, started in the background and stopped by SIGINT, builds the engine a second time on
+  every run, and a test that needs the server either passes vacuously where the server is absent, or
+  exists only in that job. The protocol code is the same crate at the same commit.
 - A stock container image of the server: rejected because it is not the workspace's pin and
   carries no provenance.
 - A scripted fake server: rejected because the probe would then measure the fake.
 
 D4, where the probes live:
 
-- `crates/ingest/tests/undo_and_full_sync.rs`, a new test binary of ingest's, run in the `test`
-  stage outside the engine set: chosen for three reasons:
-  - ingest owns the engine's sync-protocol knowledge;
-  - its test support already holds the server, the recording relay that decodes each request and
-    the synthetic collections;
-  - the probes' collections are a few cards each.
+- Chosen for three reasons: `crates/ingest/tests/undo_and_full_sync.rs`, a new test binary of ingest's,
+  run in the `test` stage outside the engine set. Ingest owns the engine's sync-protocol knowledge; its
+  test support already holds the server, the recording relay that decodes each request and the synthetic
+  collections; the probes' collections are a few cards each.
 - `deck-streak-ffi`'s tests: rejected because they would copy that support, and the adapter's
   allow-list holds no sync call.
 - A shared test-support crate: rejected because it adds a workspace member, and a map line, for
@@ -114,9 +106,9 @@ D4, where the probes live:
 
 D5, how the two packages are shown to coexist:
 
-- A dev-dependency of `deck-streak-fsrs7` on the released crate by its exact version, under the
-  key `fsrs6`, and one test binary that links both: chosen because it proves the link, not only
-  the resolution. Dev-dependencies are not context edges.
+- Chosen because it proves the link, not only the resolution: a dev-dependency of `deck-streak-fsrs7`
+  on the released crate by its exact version, under the key `fsrs6`, and one test binary that links both.
+  Dev-dependencies are not context edges.
 - The lockfile alone: rejected because it proves that cargo resolved two packages, not that one
   binary links both.
 - Linking the engine into the crate's tests: rejected because it puts the engine in the
@@ -124,9 +116,9 @@ D5, how the two packages are shown to coexist:
 
 D6, where the measurement harness lives:
 
-- In the crate's library, as a `measure` module (the synthetic history, the fixed line and the
-  report), with two examples that only call it: chosen because the harness is then tested by A7
-  and A10 to A13, and mutated with the crate.
+- Chosen because the harness is then tested by A7 and A10 to A13, and mutated with the crate: in the
+  crate's library, as a `measure` module (the synthetic history, the fixed line and the report), with two
+  examples that only call it.
 - Inline Python in the workflow, as `engine-measure.yml` does: rejected because nothing tests it,
   and a report that drops a cell would pass unseen.
 - In the examples alone: rejected because the mutation tool mutates no example.
