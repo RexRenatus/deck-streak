@@ -88,3 +88,18 @@ each proved killed by its full id.
 ## More Information
 
 #423, #424, SPEC-127, ADR-127, and the review of #415. Out of scope: #451 and #452.
+
+## Amendment (SPEC-353): which layouts serve the site
+
+Both layouts serve the site: the Caddyfile in the Caddy directory, which is the default, and a
+Caddyfile that `DECKSTREAK_DEPLOY_CADDYFILE` names elsewhere. The option this record rejected,
+refusing a Caddyfile outside the Caddy directory, stays rejected for the reason it gives.
+ADR-364 decides how the set-apart layout serves the site:
+
+- the import line names the block by its absolute path (D1);
+- each step writes and checks its candidate in the live Caddyfile's own directory (D2);
+- the Caddy directory is an absolute path of plain characters (D3).
+
+This record's decisions are unchanged. The candidate keeps its fixed name, and the four-name guard
+and the directory checks read its new place through the same variables. #452 is closed by
+SPEC-353, and #451 stays out of scope. The rest of this record stands.
