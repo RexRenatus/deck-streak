@@ -19,6 +19,11 @@ export interface SwitchStorage {
   setItem(key: string, value: string): void;
 }
 
+/** This device's storage, or none where the browser refuses to give it. */
+export function deviceStorage(): SwitchStorage | undefined {
+  return undefined;
+}
+
 /** What the input moves: the review's one handler, the side it shows, and its focus. */
 export interface InputTarget {
   act(action: Action): void;

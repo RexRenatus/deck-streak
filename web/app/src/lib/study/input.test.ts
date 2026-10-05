@@ -1,8 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { Action, Side } from '$lib/remote/actions';
 import type { PadSnapshot } from '$lib/remote/gamepad';
 import type { KeyInput } from '$lib/remote/keys';
-import { KEY_SWITCH, StudyInput, type SwitchStorage } from './input';
+import { deviceStorage, KEY_SWITCH, StudyInput, type SwitchStorage } from './input';
 
 // SPEC-350 R8, A14, A15; ADR-361. Every source reaches the review's one handler through #663's
 // modules; a switch kept per device silences the single-character keys and nothing else (WCAG
@@ -156,5 +156,24 @@ describe('the review input', () => {
     // a key that fires nothing moves nothing
     input.key(key('x'));
     expect(record.focused).toBe(4);
+  });
+
+  // Ruling 317 OQ2. A page in a frame can be refused its storage, and reading `localStorage` then
+  // throws: the switch is kept for the page alone, as with no storage at all.
+  it("the device's storage is the browser's, or none where reading it throws", () => {
+    const memory = new MemoryStorage();
+    vi.stubGlobal('localStorage', memory);
+    try {
+      expect(deviceStorage()).toBe(memory);
+      Object.defineProperty(globalThis, 'localStorage', {
+        configurable: true,
+        get: () => {
+          throw new DOMException('the storage is refused', 'SecurityError');
+        }
+      });
+      expect(deviceStorage()).toBeUndefined();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

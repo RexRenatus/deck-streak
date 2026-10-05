@@ -84,6 +84,12 @@ export type Status = ErrorCode | 'escaped' | 'done';
 /** The phases that show a side: its card, and its controls. */
 const SHOWN: ReadonlySet<Phase> = new Set<Phase>(['question', 'answer', 'busy']);
 
+/** What the frame shows: the card last shown, and its side. */
+export interface Face {
+  view: CardView;
+  side: Side;
+}
+
 export class Review {
   readonly #client: () => Promise<StudyClient>;
   readonly #now: () => number;
@@ -115,6 +121,11 @@ export class Review {
   /** The card shown, or `null` before the first and after the last. */
   get view(): CardView | null {
     return this.#view;
+  }
+
+  /** The card and side the frame shows, or `null` when it shows none. */
+  get face(): Face | null {
+    return null;
   }
 
   /** The queue's counts, as the last `card` read them. */

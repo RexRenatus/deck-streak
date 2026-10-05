@@ -253,4 +253,70 @@ describe('the review', () => {
     // the next card renders, and the status region is quiet again
     expect([review.phase, review.escaped, review.status]).toEqual(['question', false, null]);
   });
+
+  // Ruling 317 OQ1. A grade moves the side to the question as the request leaves, so the screen
+  // reads the face, the card and side last shown, which a request in flight and the next card's
+  // load keep, and which a refusal and a done deck clear.
+  it('the frame keeps its card while a request is in flight', async () => {
+    const client = new FakeClient([head(view(1)), head(view(2)), head(view(3, { css: ESCAPES })), head(null)]);
+    const review = new Review(
+      async () => client,
+      () => 0,
+      () => undefined
+    );
+    review.start();
+    expect([review.phase, review.face, review.controls]).toEqual(['loading', null, []]);
+    await review.settled();
+    expect(review.face).toEqual({ view: view(1), side: 'question' });
+
+    // a held rating keeps the rated card's answer and its controls, though the side has moved on
+    review.act('show-answer');
+    client.hold();
+    review.act('good');
+    await flush();
+    expect([review.phase, review.side, review.face, review.controls]).toEqual([
+      'busy',
+      'question',
+      { view: view(1), side: 'answer' },
+      ['again', 'hard', 'good', 'easy', 'bury', 'flag']
+    ]);
+    // the rating lands and the next card's load is held: the rated card's answer stays
+    client.release();
+    client.hold();
+    await flush();
+    expect([review.phase, review.face, review.escaped]).toEqual(['loading', { view: view(1), side: 'answer' }, false]);
+    client.release();
+    await review.settled();
+    expect(review.face).toEqual({ view: view(2), side: 'question' });
+
+    // a held flag keeps the card on screen, and its answer brings the new flag
+    client.hold();
+    review.act('flag');
+    await flush();
+    expect([review.phase, review.face]).toEqual(['busy', { view: view(2), side: 'question' }]);
+    client.release();
+    await review.settled();
+    expect(review.face).toEqual({ view: view(2, { flag: 1 }), side: 'question' });
+
+    // a refused bury clears the card, and the status region speaks instead
+    client.refusals.bury = new EngineError('collection-busy', 'another tab has the collection');
+    review.act('bury');
+    await review.settled();
+    expect([review.phase, review.face, review.escaped, review.controls]).toEqual(['refused', null, false, []]);
+
+    // a retry onto a card the frame refuses shows that card, refused, with its controls
+    review.retry();
+    await review.settled();
+    expect([review.face, review.escaped, review.controls]).toEqual([
+      { view: view(3, { css: ESCAPES }), side: 'question' },
+      true,
+      ['show-answer', 'bury', 'flag']
+    ]);
+
+    // the deck is done: nothing shows
+    review.act('show-answer');
+    review.act('easy');
+    await review.settled();
+    expect([review.phase, review.face, review.escaped, review.controls]).toEqual(['done', null, false, []]);
+  });
 });
