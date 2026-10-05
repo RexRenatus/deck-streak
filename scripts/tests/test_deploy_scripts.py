@@ -1946,7 +1946,11 @@ sys.exit(f"execve failed: errno {ctypes.get_errno()}")
                     "a letter outside ASCII": f"{w.caddy_dir}Ａ",
                 }[shape]
                 (w.tmp / directory).mkdir(parents=True, exist_ok=True)
-                env = {**self.config(), "DECKSTREAK_DEPLOY_CADDY_DIR": directory, "LC_ALL": "en_US.UTF-8"}
+                env = {
+                    **self.config(),
+                    "DECKSTREAK_DEPLOY_CADDY_DIR": directory,
+                    "LC_ALL": "en_US.UTF-8",
+                }
                 before = self.tree(w.tmp)
                 done = w.run(script, *args, **env)
                 self.assertIn(said, done.stderr, f"{label} names the setting")
