@@ -266,7 +266,7 @@ names what must be refused, so a rule that went blind fails.
 | `crates/ffi/src/voices.rs` | ffi | R6: `VoiceChoices`, `Voice` |
 | `crates/ffi/src/lib.rs` | ffi | the new modules |
 | `crates/ffi/examples/review-fixture.rs` | ffi | R8 |
-| `crates/ffi/tests/review_pairs.rs`, `crates/ffi/tests/face.rs`, `crates/ffi/tests/voices.rs`, `crates/ffi/tests/seam.rs`, `crates/ffi/tests/fixture.rs` | ffi (test) | A2, A8 to A11 |
+| `crates/ffi/tests/review_pairs.rs`, `crates/ffi/tests/face.rs`, `crates/ffi/tests/voices.rs`, `crates/ffi/tests/seam.rs`, `crates/ffi/tests/fixture.rs`, `crates/ffi/tests/refusal_text.rs` | ffi (test) | A2, A8 to A11 |
 | `crates/ffi/tests/support/review.rs` | ffi (test) | R8: the fixture's builder, shared by the example, A8 and A11 |
 | `.github/workflows/xcframework.yml` | CI | R8: the fixture written and uploaded; R20: the step and its report row |
 | `scripts/mutation-rows.d/S34800-S34899.json` | mutation | section 8 |
