@@ -284,3 +284,20 @@ depends on the runner's file-system state, and the `$/` form does not and is rea
 requirement above that names the call, and every planted control of the pin census, reads the new
 spelling; what each asserts is unchanged. Chosen against keeping `./` with a linter ignore, which
 is a weakening, and against pinning the linter, which is an environment pin.
+
+## Amendment
+
+This amendment states the readings the text above carries in its older spelling. The line it
+amends is named with each.
+
+- Line 5 (`**Decided by:**`): the decision record is `ADR-355 (D1 to D6)`, not `(D1 to D5)`.
+- Manifest: a row `scripts/mutation-rows.d/S19000-S19099.json` is added, holding the re-spelt
+  replace of the row S19024.
+- Line 98 (the calls census row): every call job, in any workflow, calls
+  `$/.github/workflows/<file>` with the file here and taking `workflow_call`.
+- Lines 122 (R2) and 127 (R3): the call, and the file whose block is the release class's, read
+  `$/.github/workflows/xcframework.yml`.
+- Line 156 (A4): the pin census admits `$/.github/workflows/xcframework.yml`; it refuses
+  `$/.github/workflows/xcframework.yml@dev`, a remote by branch, a step
+  `$/.github/workflows/xcframework.yml` and a step `./.github/actions/x`. The planted control and
+  the live tree both read the self-repository form.

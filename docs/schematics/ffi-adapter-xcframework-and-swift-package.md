@@ -151,3 +151,8 @@ The pull-request trigger described under "One build of the XCFramework" now live
 `rust-toolchain.toml`. A run on every release tag is added by `apple-on-tag.yml`, which calls the
 same job body. `xcframework.yml` itself takes `workflow_call` and `workflow_dispatch`. See
 `apple-build-on-change-and-on-tag.md`.
+
+## Amendment: the call's spelling (SPEC-344, ADR-355)
+
+The CCALL and TCALL labels and the edge label above read `uses $/.github/workflows/xcframework.yml`
+and `"$/.github/workflows/FILE"`, the self-repository form; their endpoints are unchanged.
