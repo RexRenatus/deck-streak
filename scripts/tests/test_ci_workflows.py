@@ -157,6 +157,58 @@ class WorkflowsAreHardened(unittest.TestCase):
                 self.assertNotRegex(admitted, admitted_runner(other))
         self.assertRegex("ubuntu-24.04", admitted_runner("ci.yml"))
 
+    def test_the_macos_runner_is_admitted_to_the_lane_app_jobs_only(self):
+        # SPEC-352 A22 (R15; ADR-363): the macOS image is admitted by file and job to the two
+        # lanes' `app` jobs, and refused on a lane's `plan` job, on a job named `app` in another
+        # file, and to a lane's `app` job on any other image. Every `runs-on` sits in a job, so the
+        # runner test, judging each by its job, judges every one.
+        lanes = ("testflight-internal.yml", "testflight-release.yml")
+        runner = ADMITTED_RUNNERS["xcframework.yml"]
+        for path in examined("workflow files", self.files):
+            workflow = read_hardened(path)
+            jobs = workflow.get("jobs")
+            placed = [
+                job["runs-on"]
+                for job in (jobs if isinstance(jobs, dict) else {}).values()
+                if isinstance(job, dict) and "runs-on" in job
+            ]
+            self.assertEqual(placed, entries(workflow, "runs-on"), path.name)
+        for lane in examined("lane files", lanes):
+            jobs = load(lane)["jobs"]
+            self.assertEqual((jobs.get("app") or {}).get("runs-on"), runner, lane)
+            self.assertNotEqual(jobs["plan"].get("runs-on"), runner, lane)
+        texts = {lane: workflow_file_text(WORKFLOWS / lane) for lane in lanes}
+        app, plan = f"    runs-on: {runner}\n", "    runs-on: ubuntu-24.04\n"
+        internal = texts[lanes[0]]
+        self.assertEqual((internal.count(app), internal.count(plan)), (1, 1))
+        plants = {
+            "the two lanes": (texts, None),
+            "a plan job on the macOS image": (
+                {lanes[0]: internal.replace(plan, app)},
+                f"{lanes[0]} runs on {runner}",
+            ),
+            "an app job in another file": (
+                {"planted.yml": internal},
+                f"planted.yml runs on {runner}",
+            ),
+            "an app job on another image": (
+                {lanes[0]: internal.replace(app, "    runs-on: macos-15\n")},
+                f"{lanes[0]} runs on macos-15",
+            ),
+        }
+        test = "test_no_workflow_uses_a_self_hosted_runner_or_a_privileged_trigger"
+        for label, (files, refusal) in examined("planted runners", list(plants.items())):
+            with self.subTest(label), tempfile.TemporaryDirectory() as scratch:
+                for name, text in files.items():
+                    (Path(scratch) / name).write_text(text, encoding="utf-8")
+                case = WorkflowsAreHardened(test)
+                case.files = workflow_files(Path(scratch))
+                if refusal is None:
+                    case.test_no_workflow_uses_a_self_hosted_runner_or_a_privileged_trigger()
+                    continue
+                with self.assertRaisesRegex(AssertionError, re.escape(refusal) + "$"):
+                    case.test_no_workflow_uses_a_self_hosted_runner_or_a_privileged_trigger()
+
     def test_ci_runs_every_stage_of_the_local_gate(self):
         stages = STAGES.search((REPO / "scripts" / "check.sh").read_text()).group(1).split()
         ci = workflow_file_text(WORKFLOWS / "ci.yml")
@@ -455,6 +507,122 @@ class WorkflowsAreHardened(unittest.TestCase):
         for form, (text, why) in PLANTED_UNPLACED.items():
             with self.subTest(form), self.assertRaisesRegex(AssertionError, why):
                 planted_problems(text)
+
+    def test_the_lanes_credential_reads_are_admitted_and_no_other(self):
+        # SPEC-352 A21 (R14; ADR-363): the lanes' reads are admitted by file, job and step, each
+        # part in the steps that use it, and every other shape, planted at run time from the live
+        # lane text, is refused by name. Each secret's name is read from the live preflight step
+        # and every problem is compared with each name replaced by its role word, so no message
+        # here carries one.
+        lanes = ("testflight-internal.yml", "testflight-release.yml")
+        parts = ("KEY", "KEYID", "ISSUER", "CERTIFICATE", "PASSWORD", "PROFILE")
+        reads = {
+            "preflight": set(parts),
+            "sign": {"CERTIFICATE", "PASSWORD", "PROFILE"},
+            "upload": {"KEY", "KEYID", "ISSUER"},
+        }
+        problems, judged = secret_and_checkout_problems(WORKFLOWS)
+        self.assertEqual(len(problems), 0, "a live workflow reads a secret the admission refuses")
+        roles = {}
+        for lane in examined("lane files", lanes):
+            steps = (load(lane)["jobs"].get("app") or {}).get("steps") or []
+            ids = {f"{lane}:jobs.app.steps[{n}]": step.get("id") for n, step in enumerate(steps)}
+            found = {}
+            for where, expression in judged["expressions"]:
+                variable = re.fullmatch(r"(.*\])\.env\.(\w+)", where)
+                for each in secret_reads(expression) if where.startswith(f"{lane}:") else []:
+                    step = ids.get(variable.group(1)) if variable else where
+                    found.setdefault(step, set()).add(variable.group(2) if variable else where)
+                    if step == "preflight":
+                        roles[each.removeprefix("reads the secret ")] = variable.group(2)
+            self.assertEqual(found, reads, lane)
+        self.assertEqual(sorted(roles.values()), sorted(parts))
+        secret = {role: name for name, role in roles.items()}
+
+        def masked(found):
+            return sorted(
+                re.sub(
+                    r"reads the secret (\S+)",
+                    lambda match: f"reads the {roles.get(match.group(1), 'unadmitted')} part",
+                    each,
+                )
+                for each in found
+            )
+
+        def value(part):
+            return f"${{{{ secrets.{secret[part]} }}}}"
+
+        lane = lanes[0]
+        text = workflow_file_text(WORKFLOWS / lane)
+        jobs = load(lane)["jobs"]
+        at = {step.get("id"): n for n, step in enumerate(jobs["app"]["steps"])}
+        planned = len(jobs["plan"]["steps"]) - 1
+        every = [
+            f"jobs.app.steps[{at[step]}].env.{part}: reads the {part} part"
+            for step, found in reads.items()
+            for part in found
+        ]
+        plan_run = "        run: python3 scripts/ios_lane.py plan --lane internal\n"
+        call = "    uses: $/.github/workflows/xcframework.yml\n"
+        upload_key = f"          KEY: {value('KEY')}\n"
+        job_variable = "      LANE: ${{ needs.plan.outputs.lane }}\n"
+        sign_run = "        run: python3 scripts/ios_lane.py sign\n"
+        plants = {
+            "the lane as it is": (lane, "", "", []),
+            "a read in the plan job": (
+                lane,
+                plan_run,
+                f"        env:\n          KEY: {value('KEY')}\n{plan_run}",
+                [f"jobs.plan.steps[{planned}].env.KEY: reads the KEY part"],
+            ),
+            "the lane's reads in a third file": ("planted.yml", "", "", every),
+            "a lane a pull request starts": (
+                lane,
+                "on:\n  workflow_dispatch:\n",
+                "on:\n  workflow_dispatch:\n  pull_request:\n",
+                every,
+            ),
+            "the upload step reading the certificate": (
+                lane,
+                upload_key,
+                f"{upload_key}          CERTIFICATE: {value('CERTIFICATE')}\n",
+                [f"jobs.app.steps[{at['upload']}].env.CERTIFICATE: reads the CERTIFICATE part"],
+            ),
+            # The base checker already refuses these two shapes: MUTATION COVERAGE.
+            "every secret passed to the call": (
+                lane,
+                call,
+                f"{call}    secrets: inherit\n",
+                ["jobs.framework.secrets: passes every secret to the workflow it calls"],
+            ),
+            "a secret passed to the call": (
+                lane,
+                call,
+                f"{call}    secrets:\n      KEY: {value('KEY')}\n",
+                ["jobs.framework.secrets.KEY: reads the KEY part"],
+            ),
+            "a read in the app job's own variables": (
+                lane,
+                job_variable,
+                f"      KEY: {value('KEY')}\n{job_variable}",
+                ["jobs.app.env.KEY: reads the KEY part"],
+            ),
+            "a read in a script": (
+                lane,
+                sign_run,
+                f'        run: python3 scripts/ios_lane.py sign "{value("PASSWORD")}"\n',
+                [f"jobs.app.steps[{at['sign']}].run: reads the PASSWORD part"],
+            ),
+        }
+        for label, (name, old, new, refused) in examined("planted reads", list(plants.items())):
+            with self.subTest(label), tempfile.TemporaryDirectory() as scratch:
+                if old:
+                    self.assertEqual(text.count(old), 1)
+                (Path(scratch) / name).write_text(
+                    text.replace(old, new) if old else text, encoding="utf-8"
+                )
+                found, _judged = secret_and_checkout_problems(Path(scratch))
+                self.assertEqual(masked(found), sorted(f"{name}:{each}" for each in refused))
 
     def test_this_repositorys_token_and_checkout_are_admitted(self):
         problems, judged = secret_and_checkout_problems(PLANTED / "admitted")
