@@ -9,7 +9,6 @@
   // while a card is shown, a gamepad is connected and the page is visible.
   import { onMount } from 'svelte';
   import CardFrame from '$lib/card/CardFrame.svelte';
-  import type { Rating } from '$lib/engine/protocol';
   import { m } from '$lib/paraglide/messages.js';
   import { snapshotOf } from '$lib/remote/gamepad';
   import { WakeLockHolder, type Conditions } from '$lib/remote/wake-lock';
@@ -21,27 +20,10 @@
 
   let { client }: { client: () => Promise<StudyClient> } = $props();
 
-  /** The engine harness's rating, which the red stub rates through. */
-  interface Harness extends StudyClient {
-    answer(rating: Rating, ms: number): Promise<unknown>;
-  }
-
-  /** Red stub: the screen rates through the engine harness's `answer`. */
-  async function harness(): Promise<StudyClient> {
-    const engine = (await client()) as Harness;
-    return {
-      card: () => engine.card(),
-      rate: (_card, rating, ms) => engine.answer(rating, ms).then(() => null),
-      bury: (card) => engine.bury(card),
-      flag: (card) => engine.flag(card),
-      undo: () => engine.undo()
-    };
-  }
-
   let region: HTMLElement;
 
   const review = new Review(
-    () => harness(),
+    () => client(),
     () => performance.now(),
     () => (shown = read())
   );
@@ -83,7 +65,7 @@
 
   /** The screen lock's condition, with whether a card is shown. */
   function conditions(card: boolean): Conditions {
-    return { review: card, gamepad: true, visible };
+    return { review: card, gamepad, visible };
   }
 
   function connect(event: GamepadEvent): void {

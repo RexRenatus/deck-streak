@@ -18,13 +18,14 @@
 </script>
 
 <div class="grid grid-cols-4 gap-2">
-  {#each GRADES as { grade, name } (grade)}
+  {#each GRADES as { grade, name }, index (grade)}
     <button
       type="button"
       class="flex min-h-11 min-w-11 flex-col items-center justify-center rounded-md border px-2 py-1 transition-colors duration-150 hover:bg-muted"
       onclick={() => onanswer(grade)}
     >
       <span class="font-medium">{name()}</span>
+      <span class="text-sm">{labels[index]}</span>
     </button>
   {/each}
 </div>

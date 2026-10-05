@@ -112,8 +112,9 @@ describe('the deck list', () => {
     // a refusal is announced, with a way to ask again, and no list
     expect(status()).toBe('Your collection is open in another tab. Close it there, then try again.');
     expect([screen.queryByText('Loading…'), screen.queryByRole('list')]).toEqual([null, null]);
-    await fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
-    // asking again loads again, quietly
+    // asking again loads again, quietly: the click is dispatched and drawn before the answer arrives
+    screen.getByRole('button', { name: 'Try again' }).click();
+    flushSync();
     expect([screen.queryByText('Loading…') !== null, status()]).toEqual([true, '']);
     await settle();
 
