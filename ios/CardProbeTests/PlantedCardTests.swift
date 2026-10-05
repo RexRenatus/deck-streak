@@ -456,14 +456,25 @@ final class PlantedCardTests: XCTestCase {
 
     @MainActor
     func test_the_card_renders_in_the_card_view_as_in_the_reference_view() async throws {
-        let reference = CardWebViewFactory.make(layers: [], ruleList: nil)
-        reference.loadHTMLString(RENDER, baseURL: nil)
-        let shipped = try await CardWebViewFactory.makeCardWebView(html: RENDER)
-        let blank = WKWebView(frame: .zero, configuration: WKWebViewConfiguration())
-        blank.loadHTMLString(
-            Planted.document(id: "blank", head: "", body: ""), baseURL: nil)
+        // Each view is built as the factory builds the card view (`make`, then the card as a
+        // string with no base URL) and mounted in the same main-actor turn, as the harness mounts
+        // the card view, so the reference differs from the card view only in its layers.
+        let builds: [(name: String, build: @MainActor () async throws -> WKWebView)] = [
+            ("reference", {
+                let view = CardWebViewFactory.make(layers: [], ruleList: nil)
+                view.loadHTMLString(RENDER, baseURL: nil)
+                return view
+            }),
+            ("shipped", { try await CardWebViewFactory.makeCardWebView(html: RENDER) }),
+            ("blank", {
+                let view = WKWebView(frame: .zero, configuration: WKWebViewConfiguration())
+                view.loadHTMLString(Planted.document(id: "blank", head: "", body: ""), baseURL: nil)
+                return view
+            }),
+        ]
         var shown: [String: (text: String, width: String, snapshot: ViewSnapshot)] = [:]
-        for (name, view) in examined("render views", [("reference", reference), ("shipped", shipped), ("blank", blank)]) {
+        for (name, build) in examined("render views", builds) {
+            let view = try await build()
             Probe.mount(view)
             let loaded = await Probe.loaded(view)
             // A bounded stability poll, never a fixed wait: the snapshot judged is the first that
@@ -476,10 +487,13 @@ final class PlantedCardTests: XCTestCase {
             let width = await Probe.evaluate(
                 view,
                 "String((document.getElementById('render-image') || { naturalWidth: 0 }).naturalWidth)") ?? ""
+            let geometry = "zoom=\(view.scrollView.zoomScale) offset=\(view.scrollView.contentOffset)"
+                + " inset=\(view.scrollView.adjustedContentInset)"
             view.removeFromSuperview()
             print(
                 "render \(name): loaded=\(loaded) text=\(text.debugDescription) width=\(width)"
-                    + " png=\(snapshot.png.count) bytes pixels=\(snapshot.pixels?.size ?? "none")")
+                    + " png=\(snapshot.png.count) bytes pixels=\(snapshot.pixels?.size ?? "none")"
+                    + " \(geometry)")
             shown[name] = (text, width, snapshot)
         }
         let card = try XCTUnwrap(shown["shipped"])
