@@ -88,6 +88,9 @@ jobs:
           cp -R engine-artifact/DeckStreakFFI.xcframework ios/EnginePackage/
           cp engine-artifact/bindings/deck_streak_ffi.swift ios/EnginePackage/Sources/DeckStreakFFI/
           cp engine-artifact/harness-fixture/collection.anki2 ios/Harness/Resources/
+      - name: the app icon, written
+        run: |
+          python3 scripts/ios_icon.py write ios/Harness/Assets.xcassets/AppIcon.appiconset/AppIcon.png
       - name: XcodeGen, checksum-verified
         run: |
           curl -fsSL -o "$RUNNER_TEMP/xcodegen.zip" "https://github.com/yonaskolb/XcodeGen/releases/download/${XCODEGEN_VERSION}/xcodegen.zip"

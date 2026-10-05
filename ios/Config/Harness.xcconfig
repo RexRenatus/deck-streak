@@ -1,6 +1,7 @@
-// The harness's build settings (SPEC-339 R13, ADR-350). The internal build lane inherits them:
-// it passes the real app id, the team and the build number on its own command line, and a person
-// building locally puts their own in the ignored Signing.local.xcconfig, included last.
+// The harness's build settings (SPEC-339 R13, ADR-350). The TestFlight lanes inherit them
+// (SPEC-352 R9, ADR-363): a lane's sign step writes the real app id and its signing into the
+// ignored Signing.local.xcconfig, included last, and passes the build number, the version and
+// the lane on its own command line. A person building locally puts their own in that same file.
 
 // The bundle id is read from one setting. Its committed value is a reserved name (RFC 2606's
 // `.invalid`, written reversed) that no account can register and no upload can carry.
