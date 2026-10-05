@@ -10,6 +10,7 @@
 //! - [`table`]: the transports, the ordinary table with its transport columns, the exempt table
 //!   and the decision for a pair (R2, R3).
 //! - [`dispatch`]: the dispatcher, its refusal and its fixed reads (R1, R4).
+//! - [`login_guard`]: the endpoint guard on the engine's sync login (SPEC-347 R2).
 //!
 //! The core depends on the engine and on no crate of this workspace; only the two client
 //! adapters depend on it (ADR-356 D4, held by the graph census).
@@ -17,4 +18,5 @@
 #![forbid(unsafe_code)]
 
 pub mod dispatch;
+pub mod login_guard;
 pub mod table;
