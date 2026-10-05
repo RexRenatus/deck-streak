@@ -81,7 +81,8 @@ die() {
 # the characters a Caddyfile token and an import pattern read literally (SPEC-353 R3; ADR-364 D3).
 plain_caddy_dir() {
     case $CADDY_DIR in
-    [!/]* | /*[!A-Za-z0-9._@+/-]*) die "DECKSTREAK_DEPLOY_CADDY_DIR is not an absolute path of plain characters" ;;
+    [!/]* | /*[!ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._@+/-]*)
+        die "DECKSTREAK_DEPLOY_CADDY_DIR is not an absolute path of plain characters" ;;
     esac
 }
 

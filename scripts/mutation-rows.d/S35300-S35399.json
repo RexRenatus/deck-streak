@@ -28,16 +28,16 @@
       [
         "S35304-A-RELATIVE-CADDY-DIRECTORY-IS-REFUSED",
         "deploy/deploy.sh",
-        "    [!/]* | /*[!A-Za-z0-9._@+/-]*) die",
-        "    /*[!A-Za-z0-9._@+/-]*) die",
+        "    [!/]* | /*[!ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._@+/-]*)\n",
+        "    /*[!ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._@+/-]*)\n",
         "a Caddy directory that is not an absolute path is refused, since the import line could not name the block (SPEC-353 R3)",
         "test_deploy_scripts.TheCaddyInstall.test_a_caddy_directory_the_import_line_cannot_carry_is_refused_before_the_host"
       ],
       [
         "S35305-A-CADDY-DIRECTORY-OF-OTHER-CHARACTERS-IS-REFUSED",
         "deploy/deploy.sh",
-        "    [!/]* | /*[!A-Za-z0-9._@+/-]*) die",
-        "    [!/]*) die",
+        "    [!/]* | /*[!ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._@+/-]*)\n",
+        "    [!/]*)\n",
         "a Caddy directory holding a character a Caddyfile token does not read literally is refused (SPEC-353 R3)",
         "test_deploy_scripts.TheCaddyInstall.test_a_caddy_directory_the_import_line_cannot_carry_is_refused_before_the_host"
       ],
@@ -55,6 +55,14 @@
         "caddy_remove() {\n    plain_caddy_dir\n",
         "caddy_remove() {\n",
         "the removal refuses an unfit Caddy directory before it reaches the host (SPEC-353 R3)",
+        "test_deploy_scripts.TheCaddyInstall.test_a_caddy_directory_the_import_line_cannot_carry_is_refused_before_the_host"
+      ],
+      [
+        "S35308-A-CADDY-DIRECTORY-OF-OTHER-LETTERS-IS-REFUSED-IN-EVERY-LOCALE",
+        "deploy/deploy.sh",
+        "/*[!ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._@+/-]*)",
+        "/*[!A-Za-z0-9._@+/-]*)",
+        "a Caddy directory holding a letter or digit outside ASCII is refused whatever the locale the step runs under (SPEC-353 R3)",
         "test_deploy_scripts.TheCaddyInstall.test_a_caddy_directory_the_import_line_cannot_carry_is_refused_before_the_host"
       ]
     ]
