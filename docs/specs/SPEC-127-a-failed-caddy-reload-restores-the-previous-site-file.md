@@ -379,3 +379,251 @@ and `changelog.d/fix-caddy-undo-423.md`.
   does not measure a write on a branch that none of its eight exits reaches (ADR-198; #423).
 - It does not name a failed temporary directory of the operator's own (#451), nor check the site
   import when the Caddyfile is set apart (#452).
+
+## Amendment, 2026-09-30: a temporary path that cannot be made is a named refusal
+
+`deploy.sh` makes temporary paths of two kinds: three made by `mktemp` (the release step's working
+directory in `install_tag`, the Caddy install's working directory in `caddy_install`, and the host
+script's check file) and paths the host script makes under a temporary name without `mktemp` (the
+`releases/<tag>.partial` directory that an install unpacks into and renames, and the pid-named
+`.current.<pid>` link that is renamed over `current`). When the temporary directory is absent or
+not writable, or the tool cannot run, each of them ended the script under `set -e` with only the
+tool's message and no `deploy:` line, and some of them failed after the unit files and the daemon
+reload had been written (#451).
+
+Each is now guarded in one form. The local calls end with `|| die "..."`. The host script is a
+separate shell without `die`, so its guards end with `refuse "..."`, which prints
+`deploy: the host step ...` and exits 1. The check file is the first thing the host script makes,
+before any write to the host, so a temporary directory that cannot be used leaves the host as it
+was. The script then checks that the unit directory and every existing unit drop-in directory take a
+write, saves the unit files it may replace into one archive named beside the check file, and
+stages the pid-named link before the unit files are installed. An `EXIT` trap deletes the check
+file, the saved archive, the pid-named link and an unfinished unpack, and, when the run did not finish,
+the topmost directory the run had to make (a first install's release root). Every `install` and
+`find -delete` the unit files need ends with `|| return 1`, and a failure after the first change to
+the host (a failed unit install, a failed rename over `current`, a check file that cannot be
+deleted, a refused effective configuration) removes every unit file, puts the saved ones back,
+reloads the daemon and removes an install's new release before the refusal. A step that cannot make
+its path prints one `deploy:` line naming the step (the release step, the Caddy step or the host
+step) and exits non-zero (ADR-297). The host step's refusal leaves every path as found for each
+call the tests below fail, in each verb and each state they run; the cases this leaves out are
+named in the exclusions below.
+
+The test of A40 derives the `mktemp` sites by reading `deploy.sh` and runs each with each verb that
+reaches it under each failure mode. The test of A41 measures instead of reading:
+for each of the release, the release's rollback and the rollback of a kept release it runs the verb
+once in its fixture and takes the directories whose contents changed as the population, confirms that the verb still succeeds with every other directory read-only, and then makes
+each place absent and not writable, and makes each call the host step makes to `mktemp`, `mkdir`,
+`tar`, `ln` and `mv` fail in turn. Its count, the `examined` line of the test, is
+asserted equal to the measured size and to the figure the test derives from the places and calls it
+expects. Only what the run touches joins that population.
+
+The test of A42 closes the two gaps that leaves. It reads the host body out of `deploy.sh` with a
+parser the test owns, takes every command word that can write a path (a tool, a `find` with a
+write flag, a redirection or a function that does any of these), asserts the set and the count of
+the call sites (28), and asserts that each tool is either one the test fails in turn or one it
+names as unreached, with the reason; a planted `touch`, `sed -i`, redirection or `tee` turns the
+census red. It then runs each verb from each state as an axis of the population: a host that holds a
+release, a first install (no root, no releases directory, no `current`), a rollback with `current`
+absent, and a release that ships a unit file the previous one lacks. In each of the verb and state
+pairs that exist it measures the host calls that write, asserts the set it reaches equals the set
+of tools it fails, and fails each call in turn. Two extra
+members run a stale unpack in a releases directory that cannot take a write, and a failed switch
+onto a release that ships a unit the previous one lacks. Every member asserts a non-zero exit, exactly one `deploy:` line that is the
+last line, no traceback, and every path the fixture snapshot carries byte equal before and after
+(type, mode, bytes or link target). The snapshot leaves out the fixture's `log`, `stub`, `other`,
+`origin.git` and `checkout/.git` directories and carries no directory modification time.
+
+## Acceptance criteria of the 2026-09-30 amendment
+
+| id | criterion | test |
+|---|---|---|
+| A40 | every `mktemp` call `deploy.sh` makes, when its path cannot be made (directory absent, not writable, or `mktemp` unrunnable), ends its verb with one `deploy:` line naming the step, and a non-zero exit (#451) | `test_deploy_scripts.py` `every_temporary_path_that_cannot_be_made_is_a_named_refusal` |
+| A41 | every directory each of three verbs writes in, measured from a real run, and each host call that run makes to `mktemp`, `mkdir`, `tar`, `ln` or `mv`, when it fails, ends the verb with one `deploy:` line, a non-zero exit and every fixture path as it was (#451) | `test_deploy_scripts.py` `every_place_a_verb_writes_in_and_every_temporary_path_call_is_refused` |
+
+```acceptance
+A40: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k every_temporary_path_that_cannot_be_made_is_a_named_refusal
+A41: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k every_place_a_verb_writes_in_and_every_temporary_path_call_is_refused
+```
+
+## Acceptance criteria of the 2026-09-30 amendment, second fix round
+
+| id | criterion | test |
+|---|---|---|
+| A42 | every command of the host step that can write a path, read from the script, and every verb started from each of four states (a host with a release, a first install, a rollback with `current` absent, a release shipping a unit the previous one lacks), when a write fails, ends the verb with one `deploy:` line, a non-zero exit and every fixture path as it was, directories the run made and units only the new release ships included (#451) | `test_deploy_scripts.py` `every_state_and_every_writing_call_of_the_host_step_is_refused` |
+
+```acceptance
+A42: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k every_state_and_every_writing_call_of_the_host_step_is_refused
+```
+
+Rows S12747 and S12748 pin the release step's and the Caddy step's `mktemp` guards, S12749 to S12751
+the host step's check-file guard, its refusal line and its exit, and S12752 the Caddy refusal's step
+name. S12753 to S12771 pin the guards the first fix round added (the releases directory, the
+partial directory, the unpack, the rename into place, the link, the pre-check of the directories
+and the undo of a failed switch), the local refusal lines, the release step's name and the exit of
+each refusal. S12772 to S12792 pin the trap, the check file's deletion on exit, the directory test,
+the marker of an unpack this run made, the saved archive of the unit files and each step that makes
+and uses it, the undo's two halves, the record of the release root a run made and its removal, the
+mark of a finished run, the writable check of the releases directory, and each `install` and the
+check file's `find -delete` in the unit installation. Each row is killed by the test named in it.
+The stale unpack's `find -delete` and the stale drop-in's `find -delete` have rows of their own
+(S12791 and S12792). The `check_dirs` calls at the tag's own paths are
+pre-checks whose refusals the place members of A41 already reach. Files changed: `deploy/deploy.sh`,
+`scripts/tests/test_deploy_scripts.py`, `scripts/mutation-rows.d/S12700-S12799.json`,
+`docs/red-first/SPEC-127.md`,
+`docs/decisions/ADR-297-every-temporary-path-deploy-sh-makes-is-guarded-by-a-named-refusal.md` and
+`changelog.d/fix-release-tmp-451.md`.
+
+### What this amendment does NOT do (2026-09-30)
+
+- It does not change what a successful install or removal does when every deploy setting in the
+  environment is listed (#423, #424).
+- It does not change the removal's refusal of a link at its candidate path, which stays A20 and A21 (#424).
+- It does not refuse or classify an environment name outside the `DECKSTREAK_DEPLOY_` prefix, nor
+  keep one that the shell reads as code when it starts from running before the refusal (an entry that
+  makes the shell run start-up code can already run any code in the step, more than an unlisted setting
+  can do), and A38
+  does not measure a write on a branch that none of its eight exits reaches (ADR-198; #423).
+- It does not name a failed temporary directory of the operator's own (#451), nor check the site
+  import when the Caddyfile is set apart (#452).
+- It does not guard a temporary path that a tool `deploy.sh` runs makes for itself, such as the
+  scratch files of `git` or `caddy` (#451).
+- It does not undo the exit trap's removal of the saved archive, which runs after the switch, and the test leaves a failure of that removal out of its members, because the host is already in its new state and the removal cannot put it back (#451).
+- It does not undo the prune of old releases after a finished run, nor the removals `back()` makes
+  when the service does not become ready, which run with errexit off and are reached only after the
+  same link was staged and renamed a moment before (#451).
+- It does not close a directory that changes between the pre-check and the write: `check_dirs`
+  checks a directory and the script then writes into it, so that stays a check-then-act surface
+  whose proof is follow-up #505.
+
+## Amendment, 2026-10-01: round three of the fix (issue #451); corrections as old/new pairs
+
+This amendment is appended. The text above is not edited; each sentence it corrects is quoted as
+`old` and replaced by `new`, and `new` governs.
+
+### The filter is not a bound
+
+- old: "It does not undo the exit trap's removal of the saved archive, which runs after the switch,
+  and the test leaves a failure of that removal out of its members, because the host is already in
+  its new state and the removal cannot put it back (#451)."
+- new: the trap's removal of the saved archive runs on every exit, refused runs included, and it
+  is a member. A failed removal is tried twice and ends in `|| :`, so it neither ends the shell
+  early nor leaves a `deploy:` line that is not last. The test no longer carries a carve-out for it;
+  a filter that drops a member is a weakening, not a bound, and this record does not call one a
+  bound.
+- old: "It does not undo the prune of old releases after a finished run, nor the removals `back()`
+  makes when the service does not become ready, which run with errexit off and are reached only
+  after the same link was staged and renamed a moment before (#451)."
+- new: `back()` runs with errexit on (it is the last command of an `||` list, where errexit is not
+  suspended for its own body), and the prune is guarded: an older release is asked
+  (`deletable`) before its first deletion and is left whole, with one warning line, when a
+  directory in it cannot take a write. A run that finished ends 0, leaves no temporary path and
+  leaves no release that a later verb accepts while half deleted. A not-ready run ends non-zero
+  with one `deploy:` line, last, that names the unit and whether the way back held.
+- old (deploy.sh comment and test docstring): "Each test is an `if`-shaped list, so the trap cannot
+  end the shell early." and "A run that got this far has finished its switch, so a failure there has
+  nothing left to undo (#451)."
+- new: each removal in the trap is written twice, joined by `||`, and ends in `|| :`; the
+  carve-out helper `after_the_switch()` is removed and nothing in the test filters a call by where
+  it falls in the run.
+
+### The amendment of 2026-09-30, sentence by sentence
+
+- old: "three made by `mktemp` ... and paths the host script makes under a temporary name without
+  `mktemp` (the `releases/<tag>.partial` directory ... and the pid-named `.current.<pid>` link)".
+  new: six temporary paths: the three made by `mktemp`, the `releases/<tag>.partial` directory, the
+  pid-named `.current.<pid>` link and the saved archive `<check file>.saved`; a stale unpack that is
+  set aside takes a seventh name, `releases/.stale.<pid>`.
+- old: "The script then checks that the unit directory and every existing unit drop-in directory take
+  a write, saves the unit files it may replace into one archive". new: the host script saves the
+  unit files into the archive first (the one write before the directory check) and then checks the
+  directories; the order is archive, check, link.
+- old: "so its guards end with `refuse "..."`". new: the guards end with `refuse "..."`, or with
+  `stop "..."` where the whole message is given; the host script's own first guard is `refuse`.
+- old: "A step that cannot make its path prints one `deploy:` line naming the step ... and exits
+  non-zero." new: it holds for the host step's removals too: a removal that fails is tried again and
+  then refused with one line, last; the cases not covered are the ones named in the exclusions
+  below.
+- old: "The host step's refusal leaves every path as found for each call the tests below fail, in each
+  verb and each state they run; the cases this leaves out are named in the exclusions below." new:
+  it holds for every call of every state in the registry below, with no filter, and for the pairs
+  the registry cannot build, each with its reason.
+- old: "takes every command word that can write a path (a tool, a `find` with a write flag, a
+  redirection or a function that does any of these)". new: the parser reads every operator, nested
+  substitution, backtick, trap string and reader option, and names an unknown word instead of passing
+  it; 26 spellings that escaped it are planted bodies, each red by assertion.
+- old: "asserts the set and the count of the call sites (28)". new: 252 command sites, 1 redirection
+  target and 17 writing calls, each printed `examined <n>` figure asserted equal to a figure
+  derived independently.
+- old: "runs each verb from each state as an axis of the population". new: the states are rows of one
+  registry (`STATE_TABLE`) that `situation()` reads, held at a floor (`FLOOR`) by the test; a state
+  added to the registry joins every verb by itself.
+- old: "Two extra members run a stale unpack ... and a failed switch ...". new: the extra tests are
+  named by what they measure: a stale unpack in an unwritable releases directory (2 members), an
+  unpack that cannot be deleted (1), a stale drop-in that cannot be deleted (1), a failed switch onto
+  a release that adds a unit (2), the double-fault tests of the undo (3) and of the way back (3), a
+  stale unpack that is set aside and restored (2 verbs), and an older release that cannot be deleted
+  whole (1).
+- old: "every command of the host step that can write a path ... and every verb started from each of
+  four states ...". new: see A43.
+- old: "S12772 to S12792 pin ... the saved archive of the unit files and each step that makes and
+  uses it". new: S12793 to S12799 pin the guards that had no row: the trap's removal of the saved
+  archive, the refusal of a failed undo, the refusal that follows a held undo, the move that sets a
+  stale unpack aside, the trap's restoring of it, the finished run's deletion of it and the prune's
+  question before it deletes.
+- old: "The `check_dirs` calls at the tag's own paths are pre-checks whose refusals the place members
+  of A41 already reach." new: the second `check_dirs` call (at the unpacked release) and the
+  guard of the unit-installation's stale drop-in are reached by members of A43 named in A43; no row
+  pins an anchor that the member does not kill.
+- old: "which run with errexit off". new: with errexit on (above).
+
+## Acceptance criteria of the third fix round
+
+| id | criterion | test |
+|---|---|---|
+| A43 | every host call of the host step that writes or removes a path, from every state of the registry (a host with a release, a first install, a rollback with `current` absent, a release shipping a unit the previous one lacks, a not-ready service with and without a previous release, the same tag, a stale unpack that deletes, one that cannot and one that half can, an unwritable drop-in, an absent unit directory, a third release past the keep, a first install under an unwritable parent, a corrupt manifest, a refused effective check, an unwritable check file, and a half-deletable older release), when it fails, ends the verb with one `deploy:` line that is last, names the step and a non-zero exit with every fixture path as it was; a run that finished its switch ends 0 with no temporary path and no half-deleted release (#451) | `test_deploy_scripts.py` `every_state_and_every_writing_call_of_the_host_step_is_refused` |
+
+```acceptance
+A43: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k every_state_and_every_writing_call_of_the_host_step_is_refused
+```
+
+A refusal that ends 0 is judged as a finished run only when the run's own log holds the rename over
+`current` before the failed call; any other run that ends 0 is judged by the strict arm and fails.
+The rows S12793 to S12799 are each killed by the test named in the row.
+
+### What this amendment does NOT do (2026-10-01)
+
+- It does not prove the host step as one outcome per run under interleaving or a concurrent verb;
+  that proof is follow-up #505 and its model follows the code as it is: the trap, the prune and
+  the refusal branches.
+- It does not close a directory that changes between the pre-check and the write (#505).
+
+## Amendment, 2026-10-02: round four of the fix (issue #451); corrections as old/new pairs
+
+The text above is not edited. Each sentence it corrects is quoted as `old`; `new` governs.
+
+- old: "26 spellings that escaped it are planted bodies, each red by assertion". new: the 26
+  spellings that escaped it each change what `census()` reports (an `<unknown>` word, a counted
+  writing site or an added redirection target), and the census test's pins refuse each; the
+  planted-body test is not their proof, because at this head its predicate holds for any plant, a
+  no-op plant included.
+- old: "252 command sites, 1 redirection target and 17 writing calls, each printed `examined <n>`
+  figure asserted equal to a figure derived independently". new: 252 command sites, 1 redirection
+  target and 17 writing calls, each printed as `examined <n>`; 252 and 1 are pinned literals that a
+  change to the host script updates by hand, and the per-tool counts that make up the 17 are asserted
+  equal to an independent reading of the body, while their sum is also pinned as the literal 17.
+- old: "the host script's own first guard is `refuse`". new: the host script's own first guard is a
+  `stop` that gives its whole message, that the tag is already current.
+- old: "a removal that fails is tried again and then refused with one line, last". new: the host
+  step's removal before the switch is tried once and a failure is refused with one line, last; the
+  prune's removal is tried once and a failure ends 0 with one warning line naming the release; the
+  trap's removals are tried twice and then end silently; the undo's removals are tried twice and
+  then refused with one line, and the set-aside removal is tried twice and then ends 0 with one
+  warning line.
+- old: "and for the pairs the registry cannot build, each with its reason". new: and for the pairs
+  `NOT_A_STATE` names, each with its reason: pairs the registry cannot build or that equal another
+  state, and kept-verb pairs it can build that drop no member, since the kept path reads no
+  `.partial` and runs no prune; the same-tag rollback with no kept release is a member since round
+  four.
+- old: "the double-fault tests of the undo (3) and of the way back (3)". new: the double-fault tests
+  of the undo (3) and of the way back (5).

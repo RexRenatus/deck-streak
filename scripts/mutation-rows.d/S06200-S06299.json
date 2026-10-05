@@ -60,16 +60,16 @@
       [
         "S06208-A-RELEASE-NOT-READY-IS-SWITCHED-BACK-FROM",
         "deploy/deploy.sh",
-        "        switch_to \"$prev\"\n        install_units \"$prev\"\n",
-        "        switch_to \"$rel\"\n        install_units \"$prev\"\n",
+        "switch_to \"$prev\" || switch_to \"$prev\" || problem=\"$problem the link was not put back;\"",
+        "switch_to \"$rel\" || switch_to \"$rel\" || problem=\"$problem the link was not put back;\"",
         "a release that does not become ready leaves current on the release it replaced (SPEC-062 R4, A4)",
         "test_deploy_scripts.TheDeploySwitches.test_the_deploy_switches_back_when_readiness_does_not_arrive"
       ],
       [
         "S06209-A-SWITCH-BACK-REINSTALLS-THE-PREVIOUS-UNITS",
         "deploy/deploy.sh",
-        "        switch_to \"$prev\"\n        install_units \"$prev\"\n",
-        "        switch_to \"$prev\"\n        install_units \"$rel\"\n",
+        "    unwind || problem=\"$problem the unit files were not put back;\"\n",
+        "    true\n",
         "the switch back restores the previous release's unit bytes, not the failed release's (SPEC-062 R4, A4)",
         "test_deploy_scripts.TheDeploySwitches.test_the_deploy_switches_back_when_readiness_does_not_arrive"
       ],
@@ -156,8 +156,8 @@
       [
         "S06220-A-PARTIAL-EFFECTIVE-VIEW-IS-REFUSED",
         "deploy/deploy.sh",
-        "        { echo \"deploy: ${u%.d} could not be shown\" >&2; : >\"$checked\"; break; }\n",
-        "        true\n",
+        "systemctl cat \"${u%.d}\" >>\"$checked\" || undo_and_say \"${u%.d} could not be shown\"",
+        "systemctl cat \"${u%.d}\" >>\"$checked\" || true",
         "a unit whose effective configuration cannot be shown refuses the deploy and is named (SPEC-062 R4, A15)",
         "test_deploy_scripts.APartialEffectiveConfigurationIsRefused.test_a_unit_that_cannot_be_shown_refuses_the_deploy_and_names_it"
       ],
@@ -196,8 +196,8 @@
       [
         "S06225-THE-DEPLOY-NAMES-A-UNIT-IT-CANNOT-SHOW",
         "deploy/deploy.sh",
-        "        { echo \"deploy: ${u%.d} could not be shown\" >&2; : >\"$checked\"; break; }\n",
-        "        { : >\"$checked\"; break; }\n",
+        "undo_and_say \"${u%.d} could not be shown\"",
+        "undo_and_say \"a unit could not be shown\"",
         "a unit whose effective configuration cannot be shown is named by the deploy itself (SPEC-062 R4, A15)",
         "test_deploy_scripts.APartialEffectiveConfigurationIsRefused.test_a_unit_that_cannot_be_shown_refuses_the_deploy_and_names_it"
       ],
