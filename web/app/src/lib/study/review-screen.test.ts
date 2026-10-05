@@ -446,7 +446,7 @@ describe('the review screen', () => {
   it('the screen is headed Review', async () => {
     render(ReviewScreen, { client: async () => new FakeClient([head(view(1))]) });
     await settle();
-    expect(screen.getByRole('heading', { level: 1, name: 'Review' })).not.toBeNull();
+    expect(screen.getByRole('heading', { level: 1, name: 'Review' }).textContent).toBe('Review');
   });
 
   it('the one gamepad the page already had leaves, and the lock goes with it', async () => {

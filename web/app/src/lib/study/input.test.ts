@@ -211,6 +211,10 @@ describe('the review input', () => {
       input.characterKeys = false;
     }).not.toThrow();
     expect(input.characterKeys).toBe(false);
+
+    const kept = new MemoryStorage();
+    new StudyInput(target().target, kept).characterKeys = false;
+    expect(kept.getItem('deck-streak.study.character-keys')).toBe('off');
   });
 
   it('a forgotten gamepad is read afresh: its next frame is a baseline', () => {

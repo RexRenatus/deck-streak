@@ -173,6 +173,12 @@ times, not once) and green at d1afa325.
   test runs. `tests/boundary.rs` reads that module's source, so its owed list gains three rows
   and a statement, each an added line: `deck_json`, `joined` and `undo` as functions, and the
   deck tree's seconds conversion. No assertion is rewritten and none removed.
+- **Two mutation-coverage cases gain a positive assertion.** The tdd probe read `input.test.ts`
+  "the switch is kept under its own name, and a device with none keeps no switch and throws
+  nothing" and `review-screen.test.ts` "the screen is headed Review" as asserting only absences.
+  The first now also reads the stored `off` back from the storage it wrote, an added line; the
+  second reads the heading's text instead of its presence, a stronger assertion on the same
+  element.
 - **Three rewrites with no change of behaviour.** The card request takes no event, a device with
   no storage is checked outside the try, and no intent resolves to no action; each removed a mutant
   no test could tell from the original.
