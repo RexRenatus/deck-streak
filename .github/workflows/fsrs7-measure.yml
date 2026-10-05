@@ -1,0 +1,85 @@
+name: fsrs7-measure
+
+# SPEC-342 R7 to R9: the FSRS-7 replay timed over the grid natively on one thread and as
+# wasm32-wasip1 under Node's V8 (ADR-353 D2), the web target's check recorded beside them, and one
+# report written by the crate's own `measure` module (ADR-353 D6). It runs on a pull request into dev
+# that changes the scheduler crate, the lockfile or this workflow, and publishes the report as the
+# run's summary and as the `fsrs7-measure-report` artifact. No secret is used, the token is
+# read-only, and every action is pinned by its full commit SHA.
+on:
+  pull_request:
+    branches: [dev]
+    types: [opened, synchronize, reopened]
+    paths:
+      - "crates/fsrs7/**"
+      - "Cargo.lock"
+      - ".github/workflows/fsrs7-measure.yml"
+
+permissions:
+  contents: read
+
+# A pull request's runs share its ref's group, and a newer push to it cancels the run it supersedes
+# (SPEC-190). Any other event has a group of its own, its run id, so it is never cancelled.
+concurrency:
+  group: fsrs7-measure-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  measure:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      REPORT: ${{ github.workspace }}/fsrs7-measure-report
+      RUN_ID: ${{ github.run_id }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: the pinned Rust toolchain (rust-toolchain.toml) and the two wasm targets
+        run: |
+          rustup show
+          rustup target add wasm32-wasip1 wasm32-unknown-unknown
+          mkdir -p "$REPORT"
+      - name: the native replay, on one thread
+        run: |
+          set -o pipefail
+          RAYON_NUM_THREADS=1 cargo run --release --locked -p deck-streak-fsrs7 --example replay_timing | tee "$REPORT/native.log"
+      - name: the wasm32-wasip1 build of the same harness
+        run: cargo build --release --locked --target wasm32-wasip1 -p deck-streak-fsrs7 --example replay_timing
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - name: the wasm32-wasip1 replay, under Node's V8 through node:wasi
+        run: |
+          cat > "$RUNNER_TEMP/wasi-run.mjs" <<'JS'
+          import { readFile } from 'node:fs/promises';
+          import { argv } from 'node:process';
+          import { WASI } from 'node:wasi';
+          const wasi = new WASI({ version: 'preview1', args: [argv[2]], returnOnExit: true });
+          const module = await WebAssembly.compile(await readFile(argv[2]));
+          const instance = await WebAssembly.instantiate(module, wasi.getImportObject());
+          process.exitCode = wasi.start(instance) ?? 0;
+          JS
+          set -o pipefail
+          node "$RUNNER_TEMP/wasi-run.mjs" target/wasm32-wasip1/release/examples/replay_timing.wasm | tee "$REPORT/wasm.log"
+      - name: the web target's check, recorded and never failing the job
+        if: ${{ always() }}
+        run: |
+          if cargo check --locked --target wasm32-unknown-unknown -p deck-streak-fsrs7 2> "$REPORT/web-check.log"; then
+            echo pass > "$REPORT/web-check"
+          else
+            crates=$(sed -n 's/^error: could not compile `\([^`]*\)`.*/\1/p' "$REPORT/web-check.log" | sort -u | paste -sd, -)
+            echo "fail crates=${crates}" > "$REPORT/web-check"
+          fi
+      - name: the report, from both targets' lines and the web check
+        if: ${{ always() }}
+        run: cargo run --release --locked -p deck-streak-fsrs7 --example replay_report -- "$REPORT"
+      - name: upload the report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: fsrs7-measure-report
+          path: fsrs7-measure-report/
+          if-no-files-found: warn
